@@ -53,6 +53,12 @@ export const chains = sqliteTable("chains", {
   stockCheckNote: text("stock_check_note"),
   // Per-store inventory URL template for the site checker ({storeId}/{zip}/{query} placeholders).
   siteStockUrl: text("site_stock_url"),
+  // ---- Sell-methods taxonomy (per-chain defaults; the store resolves through its chain) ----
+  // "Ways to get it" — CSV of: in_store | pickup (BOPIS) | ship (delivered). null → in_store only.
+  sellMethods: text("sell_methods"),
+  // Price/source: true = sold by the retailer at/around MSRP (first-party); false = third-party
+  // marketplace listing where price MAY exceed MSRP. Default true (most chains are first-party).
+  isMSRP: integer("is_msrp", { mode: "boolean" }).notNull().default(true),
 });
 
 /** A specific catalog product. Seeded from drops_db.json; the agent asks at the category level, but this powers future product-specific asks and matching. */

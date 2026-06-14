@@ -29,6 +29,7 @@ import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, reta
 import { haversineMi, bboxAround } from "./geo";
 import { ingestSignals, recentStockNear, latestForRetailer } from "./stock/signals";
 import { seedStockCheckIntel } from "./stock/intel";
+import { seedSellMethods } from "./stock/sellmethods";
 import { r2Config, presignPut, photoKey } from "./r2";
 import { check as rlCheck, clientIp, LIMITS } from "./ratelimit";
 import { isGmailConfigured, gmailReceiptTick } from "./gmail-receipts";
@@ -514,6 +515,8 @@ app.get("/pub/stores/near", async (c) => {
   const types = new Map(chainRows.map((x) => [x.id, x.type]));
   const names = new Map(chainRows.map((x) => [x.id, x.name]));
   const stockMethod = new Map(chainRows.map((x) => [x.id, x.stockCheckMethod]));
+  const sellMethodsByChain = new Map(chainRows.map((x) => [x.id, x.sellMethods]));
+  const isMSRPByChain = new Map(chainRows.map((x) => [x.id, x.isMSRP]));
   const mutedChains = new Set(chainRows.filter((x) => x.muted === true).map((x) => x.id));
 
   let rows: (typeof retailers.$inferSelect)[];
@@ -550,6 +553,10 @@ app.get("/pub/stores/near", async (c) => {
         sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
         callable: callable(r),
         stockCheckMethod: (r.chainId && stockMethod.get(r.chainId)) || "call", // site = check their site, no call needed
+        // Sell-methods taxonomy: how to get it (chain default), online flag, and price/source.
+        sellMethods: (((r.chainId && sellMethodsByChain.get(r.chainId)) || "in_store").split(",").map((s) => s.trim()).filter(Boolean)),
+        online: r.online === true,
+        isMSRP: r.chainId ? isMSRPByChain.get(r.chainId) !== false : true, // false = third-party, may exceed MSRP
         mapsUri: r.mapsUri || null,
         miles, openState: openState(r.hours, r.timezone) };
     })
@@ -620,6 +627,12 @@ app.post("/api/stock/ingest", async (c) => {
 // chains (the boot seed only fills blanks). Deliberate owner action, hence force.
 app.post("/api/stock/intel/reapply", async (c) => {
   const applied = await seedStockCheckIntel(true);
+  invalidateRefCache();
+  return c.json({ applied });
+});
+// Reapply the sell-methods taxonomy (data/sell_methods_intel.json) over already-seeded chains.
+app.post("/api/sell-methods/reapply", async (c) => {
+  const applied = await seedSellMethods(true);
   invalidateRefCache();
   return c.json({ applied });
 });
@@ -1556,6 +1569,13 @@ app.patch("/api/retailers/:id", async (c) => {
   const b = await c.req.json();
   const [row] = await db.update(retailers).set(b).where(eq(retailers.id, Number(c.req.param("id")))).returning();
   return c.json(row);
+});
+// Hard-delete a store (admin) — for purging test/probe rows and confirmed junk. Soft-remove
+// (active:false) hides from consumers; this removes the row entirely. Returns how many were deleted.
+app.delete("/api/retailers/:id", async (c) => {
+  const r = await db.delete(retailers).where(eq(retailers.id, Number(c.req.param("id"))));
+  invalidateRefCache();
+  return c.json({ deleted: r.rowsAffected ?? 0 });
 });
 
 // ---- Zones ----

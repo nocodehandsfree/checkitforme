@@ -7,6 +7,7 @@ import { seed } from "./seed";
 import { backfillChainTypes } from "./import-data";
 import { getSetting, setSetting } from "./settings";
 import { seedStockCheckIntel } from "../stock/intel";
+import { seedSellMethods } from "../stock/sellmethods";
 
 // Seed any MISSING status rows (never overwrites owner edits — insert-if-absent only).
 async function seedStatuses() {
@@ -79,6 +80,9 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE chains ADD COLUMN stock_check_confidence TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN stock_check_note TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN site_stock_url TEXT").catch(() => {});
+  // Sell-methods taxonomy (per-chain): "ways to get it" CSV + MSRP/first-party flag.
+  await client.execute("ALTER TABLE chains ADD COLUMN sell_methods TEXT").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN is_msrp INTEGER NOT NULL DEFAULT 1").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN external_store_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN maps_uri TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN geocode_tried_at INTEGER").catch(() => {});
@@ -164,4 +168,5 @@ export async function bootstrap() {
   }
   await backfillChainTypes(); // ensure every chain has a store-category for filtering
   await seedStockCheckIntel(); // classify chains site-rail vs call-rail (insert-if-absent)
+  await seedSellMethods();      // per-chain ways-to-get-it + MSRP flag (insert-if-absent)
 }
