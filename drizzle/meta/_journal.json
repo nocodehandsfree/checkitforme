@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1780620197586,
+      "tag": "0000_neat_peter_parker",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1780637840270,
+      "tag": "0001_eager_swordsman",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1780639715572,
+      "tag": "0002_lean_gunslinger",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1780675339276,
+      "tag": "0003_aberrant_lake",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1780680315744,
+      "tag": "0004_tired_reaper",
+      "breakpoints": true
+    }
+  ]
+}

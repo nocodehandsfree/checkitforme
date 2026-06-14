@@ -1,0 +1,40 @@
+{
+  "stores": [
+    {
+      "chain": "Walgreens",
+      "name": "Walgreens #09112",
+      "category": "pharmacy",
+      "address": "123 Main St",
+      "city": "Thousand Oaks",
+      "state": "CA",
+      "zip": "91360",
+      "lat": 34.1706,
+      "lng": -118.8376,
+      "phone": "+18055551234",
+      "timezone": "America/Los_Angeles",
+      "carries": ["Pokémon"],
+      "hours": {
+        "mon": {"open": "08:00", "close": "22:00"},
+        "tue": {"open": "08:00", "close": "22:00"},
+        "wed": {"open": "08:00", "close": "22:00"},
+        "thu": {"open": "08:00", "close": "22:00"},
+        "fri": {"open": "08:00", "close": "22:00"},
+        "sat": {"open": "09:00", "close": "21:00"},
+        "sun": {"open": "10:00", "close": "20:00"}
+      },
+      "shipmentDay": "Friday",
+      "phoneTree": "Press 4 for photo/front end",
+      "specialInstructions": "Ask the front-end/photo department. Restock best-hunt window Thu–Sat. Distributor: Excell Brands + MJ Holding (split). MSRP reliability: strict.",
+      "active": true,
+
+      "_note": "Fields below this line are OPTIONAL provider metadata — we ignore unknown keys, so keep whatever helps you.",
+      "store_id": "walgreens-09112",
+      "banner": null,
+      "vendor_stocked": "yes",
+      "source_url": "https://...",
+      "collection_method": "locator_api",
+      "collected_at": "2026-06-10T18:00:00Z",
+      "status": "ok"
+    }
+  ]
+}

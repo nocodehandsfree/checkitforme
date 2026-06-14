@@ -1,0 +1,182 @@
+// Custom telephony bridge: Twilio <Connect><Stream>  <->  ElevenLabs ConvAI WebSocket, with a
+// browser fork. Both legs are ulaw_8000, so audio is a straight passthrough. Nothing is persisted —
+// frames are relayed live and dropped. This is what unlocks live audio + per-customer caller ID.
+import { WebSocket } from "ws";
+import { config } from "../config";
+
+export interface BridgeContext {
+  agentId: string;
+  dynamicVars: Record<string, string>;
+  onConversationId?: (id: string) => void;
+  // Deterministic keypad presses, e.g. "0@3" = send the DTMF tone for 0 three seconds after the
+  // call connects ("1@3,0@9" chains presses). The turn-taking model never wakes the LLM DURING a
+  // continuous recorded greeting, so the agent physically cannot press keys then — the bridge
+  // does it instead, in code, every time.
+  dtmf?: string;
+}
+const contexts = new Map<string, BridgeContext>();
+export function setBridgeContext(room: string, ctx: BridgeContext) {
+  contexts.set(room, ctx);
+  setTimeout(() => contexts.delete(room), 5 * 60 * 1000); // auto-expire
+}
+
+/** Consume the room's keypad shortcut for TwiML <Play digits> (real carrier DTMF signaling —
+ *  IVRs listen for that, not for in-band audio tones). Consuming it here keeps the bridge's
+ *  in-band injection from double-pressing. */
+export function takeBridgeDtmf(room: string): string | null {
+  const ctx = contexts.get(room);
+  if (!ctx?.dtmf) return null;
+  const d = ctx.dtmf;
+  ctx.dtmf = undefined;
+  return d;
+}
+
+// room -> ElevenLabs conversation id (so Runnr can poll transcript/result for a bridged call)
+const conversations = new Map<string, string>();
+export function bridgeConversationId(room: string): string | null { return conversations.get(room) ?? null; }
+
+// In-memory event log so we can diagnose the bridge live (logs aren't surfacing in Railway).
+const debugLog: string[] = [];
+function log(msg: string) { debugLog.push(new Date().toISOString().slice(11, 23) + " " + msg); if (debugLog.length > 300) debugLog.shift(); }
+export function bridgeDebug(): string[] { return debugLog.slice(-60); }
+/** Allow the server (listen-socket relay) to write into the same diagnostic log. */
+export function bridgeLog(msg: string) { log(msg); }
+
+async function signedUrl(agentId: string): Promise<string | null> {
+  try {
+    const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agentId}`, { headers: { "xi-api-key": config.voice.apiKey } });
+    if (!r.ok) { log(`signedUrl HTTP ${r.status}: ${(await r.text()).slice(0, 80)}`); return null; }
+    const d = (await r.json()) as { signed_url?: string };
+    return d.signed_url ?? null;
+  } catch (e) { log(`signedUrl threw: ${String(e).slice(0, 80)}`); return null; }
+}
+
+// ---- DTMF tone synthesis (μ-law 8 kHz, same format as the Twilio stream) ----
+// G.711 μ-law encode one 16-bit PCM sample.
+function linearToMulaw(sample: number): number {
+  const BIAS = 0x84, CLIP = 32635;
+  const sign = sample < 0 ? 0x80 : 0;
+  if (sample < 0) sample = -sample;
+  if (sample > CLIP) sample = CLIP;
+  sample += BIAS;
+  let exponent = 7;
+  for (let mask = 0x4000; (sample & mask) === 0 && exponent > 0; exponent--, mask >>= 1) { /* find */ }
+  const mantissa = (sample >> (exponent + 3)) & 0x0f;
+  return ~(sign | (exponent << 4) | mantissa) & 0xff;
+}
+
+const DTMF_FREQS: Record<string, [number, number]> = {
+  "1": [697, 1209], "2": [697, 1336], "3": [697, 1477],
+  "4": [770, 1209], "5": [770, 1336], "6": [770, 1477],
+  "7": [852, 1209], "8": [852, 1336], "9": [852, 1477],
+  "*": [941, 1209], "0": [941, 1336], "#": [941, 1477],
+};
+
+/** The dual-tone for one keypad digit as μ-law 8 kHz bytes (telephone-line DTMF, ~280 ms). */
+function dtmfTone(digit: string, ms = 280): Buffer {
+  const [lo, hi] = DTMF_FREQS[digit] ?? DTMF_FREQS["0"];
+  const n = Math.round((8000 * ms) / 1000);
+  const out = Buffer.alloc(n);
+  for (let i = 0; i < n; i++) {
+    const t = i / 8000;
+    const v = Math.round((Math.sin(2 * Math.PI * lo * t) + Math.sin(2 * Math.PI * hi * t)) * 0.45 * 32767);
+    out[i] = linearToMulaw(v);
+  }
+  return out;
+}
+
+// Handle one Twilio bridge socket. `fanout` forwards audio frames to browser listeners in a room.
+export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (room: string, b64: string, track: string) => void) {
+  let streamSid = "";
+  let eleven: WebSocket | null = null;
+  let ready = false;
+  let frames = 0;
+  const pending: string[] = []; // store audio buffered until the agent WS is ready
+  let ctx = room ? contexts.get(room) : undefined;
+  log(`twilio connected room=${room.slice(0, 8)} ctx=${!!ctx}`);
+
+  async function connectEleven() {
+    if (!ctx) { log("connectEleven: NO CONTEXT"); return; }
+    const c = ctx; // narrowed
+    const url = await signedUrl(c.agentId);
+    if (!url) { log("connectEleven: no signed url -> abort"); return; }
+    log("connectEleven: opening ElevenLabs WS");
+    eleven = new WebSocket(url);
+    eleven.on("open", () => {
+      log("eleven WS open -> sending init");
+      eleven!.send(JSON.stringify({ type: "conversation_initiation_client_data", dynamic_variables: c.dynamicVars }));
+    });
+    eleven.on("message", (data: Buffer) => {
+      let m: { type?: string; audio_event?: { audio_base_64?: string }; ping_event?: { event_id?: number }; conversation_initiation_metadata_event?: { conversation_id?: string } };
+      try { m = JSON.parse(data.toString()); } catch { return; }
+      if (m.type === "conversation_initiation_metadata") {
+        ready = true;
+        // Robustly find the conversation_id anywhere in the metadata message.
+        const find = (o: unknown): string | null => {
+          if (!o || typeof o !== "object") return null;
+          for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+            if (k === "conversation_id" && typeof v === "string") return v;
+            const r = find(v); if (r) return r;
+          }
+          return null;
+        };
+        const convId = find(m);
+        if (convId) { conversations.set(room, convId); setTimeout(() => conversations.delete(room), 10 * 60 * 1000); log(`metadata: convId=${convId}`); try { c.onConversationId?.(convId); } catch (e) { log(`onConversationId threw: ${String(e).slice(0, 80)}`); } }
+        else log(`metadata but NO convId: ${JSON.stringify(m).slice(0, 200)}`);
+        for (const p of pending) eleven!.send(JSON.stringify({ user_audio_chunk: p }));
+        pending.length = 0;
+      } else if (m.type === "audio") {
+        const b64 = m.audio_event?.audio_base_64;
+        if (b64 && twilio.readyState === 1) {
+          twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
+          fanout(room, b64, "agent");
+        }
+      } else if (m.type === "ping") {
+        eleven!.send(JSON.stringify({ type: "pong", event_id: m.ping_event?.event_id }));
+      } else if (m.type === "interruption") {
+        if (twilio.readyState === 1) twilio.send(JSON.stringify({ event: "clear", streamSid }));
+      }
+    });
+    eleven.on("close", (code: number) => { log(`eleven WS close code=${code} (frames in=${frames})`); if (twilio.readyState === 1) twilio.close(); });
+    eleven.on("error", (e: Error) => log(`eleven WS error: ${e.message}`));
+  }
+
+  // Bridge-injected keypad presses (see BridgeContext.dtmf). Press happens in code at a fixed
+  // time after connect — no dependence on the LLM getting a turn during the recording.
+  const dtmfTimers: NodeJS.Timeout[] = [];
+  function sendDigit(digit: string) {
+    if (twilio.readyState !== 1 || !streamSid) { log(`dtmf ${digit}: socket not ready, skipped`); return; }
+    const b64 = dtmfTone(digit).toString("base64");
+    twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
+    fanout(room, b64, "agent"); // the live listener hears the beep — confirmation it fired
+    log(`dtmf sent: ${digit}`);
+  }
+  function scheduleDtmf(spec: string) {
+    for (const m of spec.matchAll(/([0-9*#])\s*@\s*(\d+(?:\.\d+)?)/g)) {
+      const digit = m[1], delayMs = Number(m[2]) * 1000;
+      dtmfTimers.push(setTimeout(() => sendDigit(digit), delayMs));
+      log(`dtmf scheduled: ${digit} @ ${m[2]}s`);
+    }
+  }
+
+  twilio.on("message", (data: Buffer) => {
+    let m: { event?: string; start?: { streamSid?: string; customParameters?: { room?: string } }; media?: { payload?: string } };
+    try { m = JSON.parse(data.toString()); } catch { return; }
+    if (m.event === "start") {
+      streamSid = m.start?.streamSid || streamSid;
+      if (!room && m.start?.customParameters?.room) room = m.start.customParameters.room; // Twilio puts <Parameter> here
+      if (!ctx && room) ctx = contexts.get(room);
+      log(`twilio start room=${room.slice(0, 8)} ctx=${!!ctx} -> connectEleven`);
+      if (ctx?.dtmf) scheduleDtmf(ctx.dtmf);
+      connectEleven();
+    }
+    else if (m.event === "media" && m.media?.payload) {
+      frames++;
+      const b64 = m.media.payload;
+      fanout(room, b64, "clerk"); // store/clerk audio -> browser
+      if (eleven && ready) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
+      else pending.push(b64);
+    } else if (m.event === "stop") { log("twilio stop"); if (eleven) eleven.close(); }
+  });
+  twilio.on("close", () => { log(`twilio close (frames in=${frames})`); dtmfTimers.forEach(clearTimeout); if (eleven) eleven.close(); });
+}
