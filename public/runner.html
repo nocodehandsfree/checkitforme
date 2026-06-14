@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r5" />
+<meta name="x-rev" content="names-r6" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/fungibles-64.png">
 <link rel="apple-touch-icon" href="/logos/fungibles.png">
@@ -2176,7 +2176,7 @@ async function startCheck(){
   },2500);
 }
 // --- Live-audio check (bridged through our Twilio so we can stream the call to the browser) ---
-let AUDIO_WS=null, AUDIO_CTX=null, AUDIO_NEXT={}, AUDIO_LIVE=false, LIVE_TIMERS=[], LIVE_ROOM=null, LIVE_CID=null;
+let AUDIO_WS=null, AUDIO_CTX=null, AUDIO_NEXT={}, AUDIO_LIVE=false, LIVE_TIMERS=[], LIVE_ROOM=null, LIVE_CID=null, LIVE_TR=[];
 function stopLiveTimers(){ LIVE_TIMERS.forEach(t=>clearInterval(t)); LIVE_TIMERS=[]; if(POLL){clearInterval(POLL);POLL=null;} }
 async function hangUpLive(){
   if(LIVE_ROOM){ api('/pub/bridge-hangup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({room:LIVE_ROOM})}); }
@@ -2219,13 +2219,16 @@ async function startCheckLive(){
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb){ _mb.style.display=canListen?'':'none'; if(canListen) setTimeout(()=>{ if(_mb&&$('live')&&!$('live').classList.contains('hidden')) _mb.style.display='none'; },7000); }
   $('livestore').textContent=SEL_STORE.name; $('phase').textContent=t('live.calling','📞 Calling the store…'); $('elapsed').textContent='';
-  $('live_tr').style.display='none'; $('live_tr_body').innerHTML='';
+  $('live_tr').style.display='none'; $('live_tr_body').innerHTML=''; LIVE_TR=[];
   let secs=0; const elT=setInterval(()=>{ secs+=1; $('elapsed').textContent='⏱ '+secs+'s'; },1000);
   LIVE_TIMERS=[elT];
   const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT})});
   if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x} — no call placed',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail','Could not start the call')); return; }
   LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
-  if(AUDIO_CTX){ AUDIO_WS=new WebSocket('wss://'+r.wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data); if(d.audio) playMu(d.audio,d.track); }catch(e){} }; }
+  if(AUDIO_CTX){ AUDIO_WS=new WebSocket('wss://'+r.wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data);
+    if(d.audio) playMu(d.audio,d.track);
+    else if(d.line&&d.line.text){ LIVE_TR.push(d.line.role+': '+d.line.text); $('live_tr').style.display=''; appendLiveTranscript(LIVE_TR.join('\n')); } // real-time bubbles as the call happens
+  }catch(e){} }; }
   $('phase').textContent=t('live.ringing','📞 Ringing the store…');
   let cid=null;
   POLL=setInterval(async()=>{
@@ -2233,7 +2236,7 @@ async function startCheckLive(){
     if(!cid){ const bs=await api('/pub/bridge/'+r.room); if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){} } return; }
     const o=await api('/pub/live/'+encodeURIComponent(cid));
     if(o&&o.transcript){
-      $('live_tr').style.display=''; appendLiveTranscript(o.transcript);
+      if(!LIVE_TR.length){ $('live_tr').style.display=''; appendLiveTranscript(o.transcript); } // if real-time bubbles are flowing, they're authoritative
       const lastClerk=[...o.transcript.split('\n').filter(Boolean)].reverse().find(l=>l.startsWith('Clerk:'))||'';
       const ivr=/press \d|press the|automated|thank you for calling|for .{2,30}[, ]+press|main menu|healthcare provider|para español|store hours|pharmacy/i.test(lastClerk);
       $('phase').textContent = ivr ? t('live.ivr','🔢 Navigating the phone tree…') : t('live.talking','🗣️ Talking to the store…');

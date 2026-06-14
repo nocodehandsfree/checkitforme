@@ -1891,13 +1891,20 @@ const fanout = (room: string, payloadB64: string, track: string) => {
   const msg = JSON.stringify({ audio: payloadB64, track });
   for (const ws of set) if (ws.readyState === 1) ws.send(msg);
 };
+// Real-time transcript lines from the agent bridge → browser listeners, so the chat bubbles populate
+// AS the call happens (ElevenLabs only returns the full transcript post-call).
+const relayLine = (room: string, role: string, text: string) => {
+  const set = rooms.get(room); if (!set) return;
+  const msg = JSON.stringify({ line: { role, text } });
+  for (const ws of set) if (ws.readyState === 1) ws.send(msg);
+};
 const wssTwilio = new WebSocketServer({ noServer: true });
 const wssListen = new WebSocketServer({ noServer: true });
 const wssBridge = new WebSocketServer({ noServer: true });
 
 // Full agent bridge: Twilio call audio <-> ElevenLabs ConvAI WS, forked to browser listeners.
 wssBridge.on("connection", (ws: WebSocket, _req: unknown, room: string) => {
-  handleTwilioBridge(ws, room, fanout); // fanout(room, b64, track) — bridge passes its resolved room
+  handleTwilioBridge(ws, room, fanout, relayLine); // fanout(audio) + relayLine(live transcript) — bridge passes its resolved room
 });
 wssListen.on("connection", (ws: WebSocket, _req: unknown, room: string) => { if (room) addListener(room, ws); else bridgeLog("listen socket connected with NO room — audio cannot be routed"); });
 wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {

@@ -118,7 +118,7 @@ function dtmfTone(digit: string, ms = 280): Buffer {
 }
 
 // Handle one Twilio bridge socket. `fanout` forwards audio frames to browser listeners in a room.
-export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (room: string, b64: string, track: string) => void) {
+export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (room: string, b64: string, track: string) => void, relayLine?: (room: string, role: string, text: string) => void) {
   let streamSid = "";
   let eleven: WebSocket | null = null;
   let ready = false;
@@ -148,7 +148,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       eleven!.send(JSON.stringify({ type: "conversation_initiation_client_data", dynamic_variables: c.dynamicVars }));
     });
     eleven.on("message", (data: Buffer) => {
-      let m: { type?: string; audio_event?: { audio_base_64?: string }; ping_event?: { event_id?: number }; conversation_initiation_metadata_event?: { conversation_id?: string } };
+      let m: { type?: string; audio_event?: { audio_base_64?: string }; ping_event?: { event_id?: number }; conversation_initiation_metadata_event?: { conversation_id?: string }; user_transcription_event?: { user_transcript?: string }; agent_response_event?: { agent_response?: string } };
       try { m = JSON.parse(data.toString()); } catch { return; }
       if (m.type === "conversation_initiation_metadata") {
         ready = true;
@@ -172,6 +172,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
           fanout(room, b64, "agent");
         }
+      } else if (m.type === "user_transcript") {
+        const txt = m.user_transcription_event?.user_transcript; if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
+      } else if (m.type === "agent_response") {
+        const txt = m.agent_response_event?.agent_response; if (txt) try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
       } else if (m.type === "ping") {
         eleven!.send(JSON.stringify({ type: "pong", event_id: m.ping_event?.event_id }));
       } else if (m.type === "interruption") {
