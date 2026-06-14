@@ -142,4 +142,73 @@ Redis namespace + Sentry/PostHog project + Railway vars + CI/CD setup. (Needs `R
 
 > Money/safety items #2 (call cost cap), #4 (server-side atomic billing), #5 (rate-limit money
 > endpoints + one-check-per-store-per-day) are in "Order of operations → 1. Money & safety" above.
-> RAG FAQ uses **Qdrant** (owned), not TiDB vector.
+
+---
+
+## Findings from Railway (confirmed 2026-06-14)
+
+- **`DATABASE_URL = file:/data/local.db`** — SQLite on a Railway **Volume**. So data *persists*
+  (good — explains the 100k stores surviving deploys), BUT a volume attaches to **one instance
+  only**. This is the hard blocker on horizontal scale: you literally cannot run a 2nd app
+  instance against it. **TiDB migration is the unlock** (relational + scale + the indexes).
+- **No `REDIS_URL` on the voice-caller service** — Redis exists in the project but isn't wired
+  to this app yet. Needs adding.
+- No `SENTRY_DSN` / `HELICONE_*` / `POSTHOG_*` on the service yet.
+- ✅ `TIDB_PUBLIC_KEY` + `TIDB_PRIVATE_KEY` added to Railway (placeholder — overwrite later).
+
+## Tool decisions (resolved)
+
+- **Qdrant → drop it; use TiDB for vectors too.** TiDB Serverless has built-in vector search —
+  plenty for a FAQ KB. One database for relational + RAG = fewer parts. (Reverses the earlier
+  Qdrant call since nothing's set up yet and you want consolidation.)
+- **Sentry = backend** (it's already running) — best-in-class error tracking/alerting for this
+  service. **PostHog = frontend/product** (funnels, replay, flags; can replace GA4) — that's the
+  Frontend/Admin lanes' tool, not the backend's. Don't double up on the backend.
+- **Helicone = the single LLM gateway** for all agents (admin chat, on-site customer agent,
+  Discord bot, call routing). One endpoint, cost-per-call logging (feeds cost-per-check),
+  caching, fallbacks. ⚠️ Realistic note: Helicone centralizes + observes + can route/fallback,
+  but it does **not** auto-pick "the best model" — we still set cheap-vs-premium per use case
+  (e.g. Haiku for FAQ, Sonnet for the human call). It just makes that one place + measurable.
+
+## Security & key-rotation plan
+
+- [ ] **One-time rotation of everything shared in plaintext chat:** the **Railway API token**
+  (`dc05…`) and the **TiDB private key** (`2391…`) were pasted in chat — rotate both now.
+  Sweep the rest while at it (Clerk, ElevenLabs, Stripe, Twilio, OpenAI/Anthropic, Gmail app pwd).
+- [ ] **End-of-session Railway token rotation (standing policy):** generate a fresh
+  `RAILWAY_API_TOKEN` per working session, revoke it at end of day. No long-lived token sits in
+  an agent's reach. (Owner action: Railway → Account → Tokens → revoke + reissue.)
+- [ ] **Never commit secrets** — secrets live only in Railway vars; the repo's `.gitignore`
+  already excludes `.dev.vars`. Add a CI secret-scan (gitleaks) so a key can't be merged.
+- [ ] **Least privilege:** confirm `ADMIN_TOKEN` and Clerk allowlist are tight; rotate
+  `ADMIN_TOKEN` on the same session cadence.
+
+---
+
+## Backend setup tasks (do NOW during the freeze — no repo edits)
+
+These touch infra/vars only, so they're safe while the frontend lane is live:
+
+1. [x] Add `TIDB_PUBLIC_KEY` / `TIDB_PRIVATE_KEY` to Railway.
+2. [ ] **Provision the caller TiDB database** (separate from the sports-cards DB) — create the
+   cluster/branch + a `voice_caller` database; capture its SQL connection string. *(Needs the
+   TiDB SQL connection string from the TiDB Cloud console — the API keys alone don't expose it.)*
+3. [ ] **Wire `REDIS_URL`** into the voice-caller service (point at the existing Railway Redis;
+   reserve a `caller:` key prefix / separate logical DB).
+4. [ ] **Add `SENTRY_DSN`** (backend project) to Railway.
+5. [ ] **Add `HELICONE_API_KEY`** to Railway.
+6. [ ] Draft the **API contract doc** (freeze target) from the current endpoints — ready to hand
+   to Frontend/Admin the moment we un-freeze.
+7. [ ] Draft the **CI/CD workflow** (typecheck + `test-all.sh` + gitleaks) as a file to drop in.
+
+## Backend implementation tasks (AFTER un-freeze — touch the repo)
+
+A. Contract freeze commit + `server.ts` split into route modules + de-dup helpers.
+B. CI/CD live.
+C. Money & safety: Twilio time-limit + bail enforcement; spend kill-switch; server-side atomic
+   billing; rate-limit money endpoints + one-check-per-store-per-day.
+D. Redis-backed rate limits / idempotency / locks.
+E. Queue / single-leader for schedulers.
+F. TiDB cutover + indexes + analytics-to-SQL.
+G. Sentry + Helicone SDK wiring; cost-per-check dashboard; status-page-per-service + banners.
+H. Phone-as-signup (Clerk Pro + Twilio Verify) + user-number caller ID; phone-tree auto-learn.
