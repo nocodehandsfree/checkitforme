@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Run every test suite and summarize. Usage: bash scripts/test-all.sh
+set -uo pipefail
+cd "$(dirname "$0")/.."
+TSX=./node_modules/.bin/tsx
+ENV="ELEVENLABS_API_KEY=test ELEVENLABS_AGENT_ID=test ELEVENLABS_PHONE_NUMBER_ID=test"
+FAILED=""
+
+run(){ # label, command
+  echo ""; echo "▭▭▭ $1 ▭▭▭"
+  if eval "$2"; then echo "   → $1 OK"; else echo "   → $1 FAILED"; FAILED="$FAILED $1"; fi
+}
+
+echo "═══ Fungibles / voice-caller — full test run ═══"
+run "typecheck"        "npx tsc --noEmit"
+run "unit: ratelimit"  "env DATABASE_URL=file:./.t-rl.db $ENV $TSX scripts/test-ratelimit.ts; rm -f .t-rl.db"
+run "unit: r2 presign" "$ENV $TSX scripts/test-r2.ts"
+run "unit: best-bet"   "$ENV $TSX scripts/test-bestbet.ts"
+run "unit: schedules"  "env DATABASE_URL=file:./.t-sch.db $ENV $TSX scripts/test-schedules.ts; rm -f .t-sch.db"
+run "unit: referrals"  "env DATABASE_URL=file:./.t-ref.db $ENV $TSX scripts/test-referrals.ts; rm -f .t-ref.db"
+run "unit: receipt"    "$ENV $TSX scripts/test-receipt.ts"
+run "integration: growth/CMS/community" "bash scripts/test-growth.sh"
+
+echo ""
+echo "════════════════════════════════════════════════"
+if [ -z "$FAILED" ]; then echo "  ✅ ALL SUITES PASSED"; exit 0
+else echo "  ❌ FAILED:$FAILED"; exit 1; fi

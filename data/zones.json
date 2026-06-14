@@ -1,0 +1,206 @@
+{
+  "_meta": {
+    "title": "Fungie Talk — Store Call List (SoCal Pokémon TCG)",
+    "version": "1.0",
+    "generated": "2026-06",
+    "notes": "Omitted: kiosk-only grocers, all LGS/expensive shops, Lowe's, TJ Maxx, GameStop. stockStatus 'verified' = we know they carry; 'unverified' = cold-call to confirm. shipmentDay/phoneTree/specialInstructions are per-store overrides; null = fall back to chain/category default in app."
+  },
+  "trackedLines": ["Pokémon", "One Piece TCG", "Topps NBA", "NeeDoh"],
+  "zones": [
+    {
+      "name": "Woodland Hills",
+      "centerZip": "91364",
+      "radiusMiles": 3,
+      "retailers": [
+        { "chain": "CVS", "name": "CVS — Mulholland Dr (24hr)", "address": "23357 Mulholland Dr, Woodland Hills, CA 91364", "phone": "+18182238240", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Checked empty on a prior run. 24-hour store." },
+        { "chain": "CVS", "name": "CVS — Ventura Blvd", "address": "22050 Ventura Blvd, Woodland Hills, CA 91364", "phone": "+18183462207", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "CVS", "name": "CVS — Victory Blvd", "address": "22968 Victory Blvd, Woodland Hills, CA 91367", "phone": "+18188877350", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Target", "name": "Target — Ventura Blvd Woodland Hills", "address": "20801 Ventura Blvd, Woodland Hills, CA 91364", "phone": "+18187132707", "stockStatus": "verified", "carries": ["Pokémon", "One Piece TCG"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Trading cards in a locked case near electronics; scalped fast." },
+        { "chain": "Franklin's Ace Hardware", "name": "Franklin's Ace Hardware", "address": "21936 Ventura Blvd, Woodland Hills, CA 91364", "phone": "+18183476800", "stockStatus": "verified", "carries": ["Pokémon", "NeeDoh"], "shipmentDay": "Random (often 8 AM)", "phoneTree": null, "specialInstructions": "NEW channel — shipments irregular, often arrive ~8 AM. Also stocks NeeDoh. Call to confirm." },
+        { "chain": "HomeGoods", "name": "HomeGoods — Victory Blvd", "address": "22940 Victory Blvd, Woodland Hills, CA 91367", "phone": "+18183481722", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": "Sporadic; watch for third-party repacks vs sealed TPCi." }
+      ]
+    },
+    {
+      "name": "West Hills",
+      "centerZip": "91307",
+      "radiusMiles": 2.5,
+      "retailers": [
+        { "chain": "Ross Dress for Less", "name": "Ross — Fallbrook Ave", "address": "6543 Fallbrook Ave, West Hills, CA 91307", "phone": "+18188848434", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": "Mon–Fri", "phoneTree": "Ask for front-end clerk or manager — cards kept at front registers.", "specialInstructions": "Last seen ~2 weeks ago (a customer return). Stock sporadic." },
+        { "chain": "Five Below", "name": "Five Below — Fallbrook Ave", "address": "6605 Fallbrook Ave, West Hills, CA 91307", "phone": "+18189374142", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Watch for repack mystery boxes vs real sealed product." },
+        { "chain": "Target", "name": "Target — Fallbrook Ave", "address": "6635 Fallbrook Ave, West Hills, CA 91307", "phone": "+18189992390", "stockStatus": "verified", "carries": ["Pokémon", "One Piece TCG"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Locked card case near electronics; ask associate to open." },
+        { "chain": "CVS", "name": "CVS — Fallbrook Ave", "address": "6635 Fallbrook Ave, West Hills, CA 91307", "phone": "+18188885861", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null }
+      ]
+    },
+    {
+      "name": "Chatsworth / Porter Ranch",
+      "centerZip": "91311",
+      "radiusMiles": 4,
+      "retailers": [
+        { "chain": "Walgreens", "name": "Walgreens — Devonshire St Chatsworth", "address": "20901 Devonshire St, Chatsworth, CA 91311", "phone": "+18183414339", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": "Friday", "phoneTree": null, "specialInstructions": "Confirmed Friday restock. Open till 11pm." },
+        { "chain": "Walgreens", "name": "Walgreens — Devonshire St (Northridge edge)", "address": "18515 Devonshire St, Northridge, CA 91324", "phone": "+18183631067", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "CVS", "name": "CVS — Rinaldi St Porter Ranch", "address": "19783 Rinaldi St, Porter Ranch, CA 91326", "phone": "+18183686279", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Five Below", "name": "Five Below — Rinaldi St Porter Ranch", "address": "19881 Rinaldi St, Porter Ranch, CA 91326", "phone": "+18183603775", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Five Below", "name": "Five Below — Chatsworth St (Granada Hills)", "address": "18040 Chatsworth St Suite A, Granada Hills, CA 91344", "phone": "+17472611634", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null }
+      ]
+    },
+    {
+      "name": "Canoga Park",
+      "centerZip": "91303",
+      "radiusMiles": 2.5,
+      "retailers": [
+        { "chain": "Walgreens", "name": "Walgreens — Topanga Canyon Blvd", "address": "7560 Topanga Canyon Blvd, Canoga Park, CA 91303", "phone": "+18183404031", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": "Saturday", "phoneTree": null, "specialInstructions": "Restocks Saturday; gets small + medium tins. Open till 11pm." },
+        { "chain": "Walgreens", "name": "Walgreens — Sherman Way (Winnetka)", "address": "20505 Sherman Way, Winnetka, CA 91306", "phone": "+18187196599", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": "Friday", "phoneTree": null, "specialInstructions": "Possible 'Canoga Park Friday store' — confirm this is the Friday-by-noon location." },
+        { "chain": "Big 5 Sporting Goods", "name": "Big 5 — Topanga Canyon Blvd", "address": "7000 Topanga Canyon Blvd #103, Canoga Park, CA 91303", "phone": "+18183463355", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": "Wednesday (every 2 weeks)", "phoneTree": null, "specialInstructions": "Confirmed: Wed every 2 weeks, gets sleeves + tins. Ask which week the next drop lands." },
+        { "chain": "Hot Topic", "name": "Hot Topic — Westfield Topanga", "address": "6600 Topanga Canyon Blvd #2106, Canoga Park, CA 91303", "phone": "+18183488440", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": "OK to call and check stock; gets frequent shipments.", "specialInstructions": "Frequent restocks; call-ahead friendly." },
+        { "chain": "Target", "name": "Target — Westfield Topanga", "address": "6700 Topanga Canyon Blvd, Canoga Park, CA 91303", "phone": "+18187469922", "stockStatus": "verified", "carries": ["Pokémon", "One Piece TCG"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "2nd floor. Locked card case." },
+        { "chain": "CVS", "name": "CVS — Sherman Way Canoga Park", "address": "21051 Sherman Way, Canoga Park, CA 91303", "phone": "+18183486222", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Open till ~10pm. Confirmed empty on a prior run." },
+        { "chain": "BoxLunch", "name": "BoxLunch — Westfield Topanga", "address": "6600 Topanga Canyon Blvd, Canoga Park, CA 91303", "phone": "+18189927620", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Pokémon infrequent (~weeks/months apart); occasional tins." }
+      ]
+    },
+    {
+      "name": "Reseda / Tarzana",
+      "centerZip": "91335",
+      "radiusMiles": 3.5,
+      "retailers": [
+        { "chain": "Ross Dress for Less", "name": "Ross — Victory Blvd Reseda", "address": "19373 Victory Blvd, Reseda, CA 91335", "phone": "+18183451006", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": "Mon–Fri (out by 12pm)", "phoneTree": "Ask for front-end clerk or manager — cards kept at front registers.", "specialInstructions": "Best of the three Ross stores — most recent sightings; call any day." },
+        { "chain": "Ross Dress for Less", "name": "Ross — Ventura Blvd Tarzana", "address": "19151 Ventura Blvd, Tarzana, CA 91335", "phone": "+18189961303", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": "Mon–Fri", "phoneTree": "Ask for front-end clerk or manager — cards kept at front registers.", "specialInstructions": "Sporadic; last seen ~a month ago." },
+        { "chain": "Five Below", "name": "Five Below — Victory Blvd Tarzana", "address": "19377 Victory Blvd, Tarzana, CA 91335", "phone": "+17472465801", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Big 5 Sporting Goods", "name": "Big 5 — Victory Blvd Reseda", "address": "19403 Victory Blvd, Reseda, CA 91335", "phone": "+18187761596", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Big 5 is a confirmed sleeper channel chain-wide; ask restock cadence." },
+        { "chain": "CVS", "name": "CVS — Victory Blvd Reseda (24hr)", "address": "19353 Victory Blvd, Reseda, CA 91335", "phone": "+18189964742", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Open till midnight." },
+        { "chain": "CVS", "name": "CVS — Ventura Blvd Tarzana (24hr)", "address": "18441 Ventura Blvd, Tarzana, CA 91356", "phone": "+18189961000", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "24-hour store." },
+        { "chain": "Walgreens", "name": "Walgreens — Ventura Blvd Tarzana", "address": "18568 Ventura Blvd, Tarzana, CA 91356", "phone": "+18187761363", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null }
+      ]
+    },
+    {
+      "name": "Calabasas",
+      "centerZip": "91302",
+      "radiusMiles": 3,
+      "retailers": [
+        { "chain": "Barnes & Noble", "name": "Barnes & Noble — The Commons at Calabasas", "address": "4735 Commons Way, Calabasas, CA 91302", "phone": "+18182220542", "stockStatus": "verified", "carries": ["Pokémon", "One Piece TCG"], "shipmentDay": "Tuesday / Thursday", "phoneTree": "Ask for the collectibles / front register.", "specialInstructions": "Toy/TCG section. Multi-line store — cascade to One Piece if no Pokémon." }
+      ]
+    },
+    {
+      "name": "Malibu",
+      "centerZip": "90265",
+      "radiusMiles": 6,
+      "retailers": [
+        { "chain": "CVS", "name": "CVS — Malibu Rd", "address": "23841 Malibu Rd, Malibu, CA 90265", "phone": "+13104569645", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Only verified-carrier chain in Malibu. No Walgreens/Target/Ross in town." },
+        { "chain": "Ralphs", "name": "Ralphs Fresh Fare — Malibu Rd", "address": "23841 Malibu Rd, Malibu, CA 90265", "phone": "+13104562917", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": "Grocery — cold call to see if a card rack exists." },
+        { "chain": "Pavilions", "name": "Pavilions — Heathercliff Rd", "address": "29211 Heathercliff Rd, Malibu, CA 90265", "phone": "+13104572401", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": "Grocery — cold call." }
+      ]
+    },
+    {
+      "name": "Agoura Hills",
+      "centerZip": "91301",
+      "radiusMiles": 3,
+      "retailers": [
+        { "chain": "CVS", "name": "CVS — Kanan Rd Agoura Hills", "address": "5623 Kanan Rd, Agoura Hills, CA 91301", "phone": "+18189915522", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": "Tuesday", "phoneTree": null, "specialInstructions": "TUESDAY restock exception (not the chain Wed/Thu). SCORED Chaos Rising packs + tins here. Open late." },
+        { "chain": "CVS", "name": "CVS — Agoura Rd", "address": "2791 Agoura Rd, Agoura Hills, CA 91301", "phone": "+18184954938", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "CVS", "name": "CVS — Lindero Canyon Rd Oak Park", "address": "632 Lindero Canyon Rd, Oak Park, CA 91377", "phone": "+18188891243", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null }
+      ]
+    },
+    {
+      "name": "Westlake",
+      "centerZip": "91361",
+      "radiusMiles": 3,
+      "retailers": [
+        { "chain": "Barnes & Noble", "name": "Barnes & Noble — Westlake Blvd", "address": "160 S Westlake Blvd, Thousand Oaks, CA 91362", "phone": "+18054462820", "stockStatus": "verified", "carries": ["Pokémon", "One Piece TCG"], "shipmentDay": "Tuesday / Thursday", "phoneTree": "Ask for the collectibles / front register.", "specialInstructions": "Multi-line store." }
+      ]
+    },
+    {
+      "name": "Thousand Oaks",
+      "centerZip": "91360",
+      "radiusMiles": 4,
+      "retailers": [
+        { "chain": "Tokyo Japanese Lifestyle", "name": "Tokyo Japanese Lifestyle — The Oaks Mall", "address": "472 W Hillcrest Dr, Thousand Oaks, CA 91360", "phone": "+18052173619", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Japanese imports. SCORED older-set packs here." },
+        { "chain": "Hallmark", "name": "Trudy's Hallmark — The Oaks Mall", "address": "394 W Hillcrest Dr, Thousand Oaks, CA 91360", "phone": "+18054960475", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "SCORED Chaos Rising here. Off-radar channel." },
+        { "chain": "Hot Topic", "name": "Hot Topic — The Oaks Mall", "address": "274 W Hillcrest Dr, Thousand Oaks, CA 91360", "phone": "+18054961068", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": "Ask register about recent shipments / back stock.", "specialInstructions": null },
+        { "chain": "Spencer's", "name": "Spencer's — The Oaks Mall", "address": "180 W Hillcrest Dr Suite 13, Thousand Oaks, CA 91360", "phone": "+18335430751", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Carries TCG at THIS location (not all Spencer's do)." },
+        { "chain": "BoxLunch", "name": "BoxLunch — The Oaks Mall", "address": "350 W Hillcrest Dr, Thousand Oaks, CA 91360", "phone": "+18053701607", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Dick's Sporting Goods", "name": "Dick's — Hillcrest Dr", "address": "176 W Hillcrest Dr, Thousand Oaks, CA 91360", "phone": "+18053675032", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": "Struck out on a prior run; carries sports cards + some TCG." },
+        { "chain": "Five Below", "name": "Five Below — Moorpark Rd", "address": "179 N Moorpark Rd, Thousand Oaks, CA 91360", "phone": "+18056189841", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Ross Dress for Less", "name": "Ross — N Moorpark Rd", "address": "396 N Moorpark Rd, Thousand Oaks, CA 91360", "phone": "+18054963363", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": "Mon–Fri", "phoneTree": "Ask for front-end clerk or manager — cards at front registers.", "specialInstructions": null },
+        { "chain": "Marshalls", "name": "Marshalls — N Moorpark Rd", "address": "1370 N Moorpark Rd, Thousand Oaks, CA 91360", "phone": "+18054460003", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": "Watch for repacks vs sealed." },
+        { "chain": "HomeGoods", "name": "HomeGoods — N Moorpark Rd", "address": "1332 N Moorpark Rd, Thousand Oaks, CA 91360", "phone": "+18057774856", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "CVS", "name": "CVS — 1382 N Moorpark Rd", "address": "1382 N Moorpark Rd, Thousand Oaks, CA 91360", "phone": "+18054954613", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "CVS", "name": "CVS — 60 N Moorpark Rd", "address": "60 N Moorpark Rd, Thousand Oaks, CA 91360", "phone": "+18054969310", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Dollar Tree", "name": "Dollar Tree — N Moorpark Rd", "address": "1760 N Moorpark Rd, Thousand Oaks, CA 91360", "phone": "+18053721178", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": null }
+      ]
+    },
+    {
+      "name": "Newbury Park",
+      "centerZip": "91320",
+      "radiusMiles": 3,
+      "retailers": [
+        { "chain": "Kohl's", "name": "Kohl's — Newbury Rd", "address": "1960 Newbury Rd, Newbury Park, CA 91320", "phone": "+18054998061", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Restocks periodically; Mega Evolution + BB/WF tins seen. Kohl's Cash stacks." },
+        { "chain": "CVS", "name": "CVS — 2120 Newbury Rd", "address": "2120 Newbury Rd, Newbury Park, CA 91320", "phone": "+18054990463", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "CVS", "name": "CVS — Reino Rd", "address": "451 S Reino Rd, Newbury Park, CA 91320", "phone": "+18054994006", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Dollar Tree", "name": "Dollar Tree — Wendy Dr", "address": "727 Wendy Dr, Newbury Park, CA 91320", "phone": "+18052148997", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": "Friday (~noon)", "phoneTree": null, "specialInstructions": "Employee tip: check back Fridays around noon (truck day)." },
+        { "chain": "Ross Dress for Less", "name": "Ross — W Hillcrest Dr Newbury Park", "address": "2665 W Hillcrest Dr, Newbury Park, CA 91320", "phone": "+18053750002", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": "Mon–Fri", "phoneTree": "Ask for front-end clerk or manager — cards at front registers.", "specialInstructions": null },
+        { "chain": "Walgreens", "name": "Walgreens — Ventu Park Rd", "address": "550 N Ventu Park Rd, Newbury Park, CA 91320", "phone": "+18053754052", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": "Wednesday", "phoneTree": null, "specialInstructions": "Confirmed Wednesday restock." }
+      ]
+    },
+    {
+      "name": "Camarillo",
+      "centerZip": "93010",
+      "radiusMiles": 4,
+      "retailers": [
+        { "chain": "Ross Dress for Less", "name": "Ross — W Ventura Blvd", "address": "255 W Ventura Blvd, Camarillo, CA 93010", "phone": "+18053831181", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": "Mon–Fri", "phoneTree": "Ask for front-end clerk or manager — cards at front registers.", "specialInstructions": null },
+        { "chain": "Ross Dress for Less", "name": "Ross — Las Posas Rd", "address": "2550 Las Posas Rd, Camarillo, CA 93010", "phone": "+18053831558", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": "Mon–Fri", "phoneTree": "Ask for front-end clerk or manager — cards at front registers.", "specialInstructions": null },
+        { "chain": "Five Below", "name": "Five Below — Ventura Blvd", "address": "500 Ventura Blvd Suite 1500, Camarillo, CA 93010", "phone": "+18052292879", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Staples", "name": "Staples — W Ventura Blvd", "address": "317 W Ventura Blvd, Camarillo, CA 93010", "phone": "+18053841540", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Saw a sealed-blister rack here (quiet rollout)." },
+        { "chain": "Michaels", "name": "Michaels — Ventura Blvd", "address": "351 W Ventura Blvd Center, Camarillo, CA 93010", "phone": "+18059145600", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Rare (~6-month cycle); usually clearance." },
+        { "chain": "HomeGoods", "name": "HomeGoods — W Ventura Blvd", "address": "333 W Ventura Blvd, Camarillo, CA 93010", "phone": "+18053831219", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "CVS", "name": "CVS — Arneill Rd", "address": "760 Arneill Rd, Camarillo, CA 93010", "phone": "+18054840446", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "CVS", "name": "CVS — Mission Oaks Blvd", "address": "5259 Mission Oaks Blvd, Camarillo, CA 93012", "phone": "+18054820707", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null }
+      ]
+    },
+    {
+      "name": "Oxnard",
+      "centerZip": "93030",
+      "radiusMiles": 4.5,
+      "retailers": [
+        { "chain": "Sam's Club", "name": "Sam's Club — N Rose Ave", "address": "2401 N Rose Ave, Oxnard, CA 93036", "phone": "+18059832442", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "TOP PRIORITY. Premium Collections, binder+poster historically. Plus members get early access on drops." },
+        { "chain": "Dick's Sporting Goods", "name": "Dick's — Esplanade Dr", "address": "231 W Esplanade Dr, Oxnard, CA 93036", "phone": "+18059731260", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Five Below", "name": "Five Below — Esplanade Dr", "address": "441 W Esplanade Dr, Oxnard, CA 93036", "phone": "+18052788798", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Staples", "name": "Staples — Esplanade", "address": "411 Esplanade, Oxnard, CA 93036", "phone": "+18059881781", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Marshalls", "name": "Marshalls — Ventura Blvd Oxnard", "address": "1835 Ventura Blvd, Oxnard, CA 93036", "phone": "+18054856838", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Burlington", "name": "Burlington — Channel Islands Blvd", "address": "1331 W Channel Islands Blvd, Oxnard, CA 93033", "phone": "+18052532925", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Walgreens", "name": "Walgreens — S Rose Ave", "address": "2851 S Rose Ave, Oxnard, CA 93033", "phone": "+18054835635", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Hallmark", "name": "Sue's Hallmark — Telegraph Rd Ventura", "address": "6000 Telegraph Rd, Ventura, CA 93003", "phone": "+18056442331", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Hallmark Gold Crown = off-radar Pokémon channel." },
+        { "chain": "Family Dollar", "name": "Family Dollar — Hueneme Rd", "address": "445 W Hueneme Rd, Oxnard, CA 93033", "phone": "+18052637672", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Dollar Tree", "name": "Dollar Tree — N Ventura Rd", "address": "838 N Ventura Rd, Oxnard, CA 93030", "phone": "+18052144840", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": null }
+      ]
+    },
+    {
+      "name": "Santa Paula / Fillmore",
+      "centerZip": "93060",
+      "radiusMiles": 6,
+      "retailers": [
+        { "chain": "Big 5 Sporting Goods", "name": "Big 5 — W Main St Santa Paula", "address": "568 W Main St #474, Santa Paula, CA 93060", "phone": "+18059332300", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "SCORED Chaos Rising here. Ask restock cadence." },
+        { "chain": "CVS", "name": "CVS — W Main St Santa Paula", "address": "600 W Main St, Santa Paula, CA 93060", "phone": "+18059332998", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Dollar Tree", "name": "Dollar Tree — W Main St Santa Paula", "address": "588 W Main St, Santa Paula, CA 93060", "phone": "+18053170180", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Dollar General", "name": "Dollar General — Ventura St Fillmore", "address": "1154 Ventura St, Fillmore, CA 93015", "phone": "+18055140384", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Inspect tins for reseal evidence before buying." },
+        { "chain": "Family Dollar", "name": "Family Dollar — Ventura St Fillmore", "address": "803 Ventura St, Fillmore, CA 93015", "phone": "+18052654076", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": null }
+      ]
+    },
+    {
+      "name": "Moorpark / Simi Valley",
+      "centerZip": "93065",
+      "radiusMiles": 6,
+      "retailers": [
+        { "chain": "Target", "name": "Target — Moorpark Marketplace", "address": "800 New Los Angeles Ave, Moorpark, CA 93021", "phone": "+18055300028", "stockStatus": "verified", "carries": ["Pokémon", "One Piece TCG"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Gets stock but scalped fast. Locked card case." },
+        { "chain": "Michaels", "name": "Michaels — New Los Angeles Ave Moorpark", "address": "816 New Los Angeles Ave, Moorpark, CA 93021", "phone": "+18055529140", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Rare (~6-month cycle)." },
+        { "chain": "CVS", "name": "CVS — W Los Angeles Ave Moorpark", "address": "155 W Los Angeles Ave, Moorpark, CA 93021", "phone": "+18055300996", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Walgreens", "name": "Walgreens — W Los Angeles Ave Moorpark", "address": "140 W Los Angeles Ave, Moorpark, CA 93021", "phone": "+18055299601", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Dollar Tree", "name": "Dollar Tree — Los Angeles Ave Moorpark", "address": "543-B Los Angeles Ave, Moorpark, CA 93021", "phone": "+18052922933", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Kohl's", "name": "Kohl's — Tapo Canyon Rd Simi Valley", "address": "2950 Tapo Canyon Rd, Simi Valley, CA 93063", "phone": "+18055268580", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Ross Dress for Less", "name": "Ross — Cochran St Simi Valley", "address": "2845 Cochran St, Simi Valley, CA 93065", "phone": "+18055834991", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": "Mon–Fri", "phoneTree": "Ask for front-end clerk or manager — cards at front registers.", "specialInstructions": null },
+        { "chain": "Staples", "name": "Staples — Cochran St Simi Valley", "address": "2880 Cochran St, Simi Valley, CA 93065", "phone": "+18055799700", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "HomeGoods", "name": "HomeGoods — Cochran St Simi Valley", "address": "3050 Cochran St, Simi Valley, CA 93065", "phone": "+18055810413", "stockStatus": "unverified", "carries": null, "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "Walgreens", "name": "Walgreens — Sycamore Dr Simi Valley", "address": "2417 Sycamore Dr, Simi Valley, CA 93065", "phone": "+18054263722", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": null },
+        { "chain": "CVS", "name": "CVS — Cochran St Simi Valley", "address": "2825 Cochran St, Simi Valley, CA 93065", "phone": "+18055226904", "stockStatus": "verified", "carries": ["Pokémon"], "shipmentDay": null, "phoneTree": null, "specialInstructions": "Open till 11pm." }
+      ]
+    }
+  ]
+}

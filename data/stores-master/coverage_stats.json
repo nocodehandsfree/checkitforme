@@ -1,0 +1,153 @@
+{
+  "overall": {
+    "stores_collected": 103314,
+    "national_footprint_est": 125889,
+    "coverage_pct": 82.1
+  },
+  "by_category": {
+    "dollar_discount": {
+      "label": "Dollar & discount stores",
+      "stores_collected": 38992,
+      "national_footprint_est": 39622,
+      "coverage_pct": 98.4,
+      "chains_with_data": 5,
+      "chains_total": 5
+    },
+    "pharmacy": {
+      "label": "Pharmacies",
+      "stores_collected": 16727,
+      "national_footprint_est": 16980,
+      "coverage_pct": 98.5,
+      "chains_with_data": 2,
+      "chains_total": 2
+    },
+    "hardware_farm": {
+      "label": "Hardware & farm supply",
+      "stores_collected": 9587,
+      "national_footprint_est": 9615,
+      "coverage_pct": 99.7,
+      "chains_with_data": 6,
+      "chains_total": 6
+    },
+    "big_box": {
+      "label": "Big-box retailers",
+      "stores_collected": 7073,
+      "national_footprint_est": 6874,
+      "coverage_pct": 102.9,
+      "chains_with_data": 3,
+      "chains_total": 3
+    },
+    "grocery": {
+      "label": "Grocery & supermarkets",
+      "stores_collected": 6956,
+      "national_footprint_est": 9355,
+      "coverage_pct": 74.4,
+      "chains_with_data": 30,
+      "chains_total": 31
+    },
+    "off_price": {
+      "label": "Off-price retailers",
+      "stores_collected": 6322,
+      "national_footprint_est": 6703,
+      "coverage_pct": 94.3,
+      "chains_with_data": 5,
+      "chains_total": 5
+    },
+    "sporting_goods": {
+      "label": "Sporting goods",
+      "stores_collected": 2732,
+      "national_footprint_est": 2707,
+      "coverage_pct": 100.9,
+      "chains_with_data": 6,
+      "chains_total": 6
+    },
+    "electronics_gaming": {
+      "label": "Electronics & gaming",
+      "stores_collected": 2192,
+      "national_footprint_est": 2686,
+      "coverage_pct": 81.6,
+      "chains_with_data": 3,
+      "chains_total": 3
+    },
+    "craft_hobby": {
+      "label": "Craft & hobby",
+      "stores_collected": 2117,
+      "national_footprint_est": 2270,
+      "coverage_pct": 93.3,
+      "chains_with_data": 2,
+      "chains_total": 2
+    },
+    "mall_specialty": {
+      "label": "Mall specialty",
+      "stores_collected": 1944,
+      "national_footprint_est": 2700,
+      "coverage_pct": 72.0,
+      "chains_with_data": 4,
+      "chains_total": 4
+    },
+    "convenience": {
+      "label": "Convenience stores",
+      "stores_collected": 1920,
+      "national_footprint_est": 14920,
+      "coverage_pct": 12.9,
+      "chains_with_data": 3,
+      "chains_total": 4
+    },
+    "office_supply": {
+      "label": "Office supply",
+      "stores_collected": 1682,
+      "national_footprint_est": 1838,
+      "coverage_pct": 91.5,
+      "chains_with_data": 2,
+      "chains_total": 2
+    },
+    "department": {
+      "label": "Department stores",
+      "stores_collected": 1423,
+      "national_footprint_est": 1600,
+      "coverage_pct": 88.9,
+      "chains_with_data": 2,
+      "chains_total": 2
+    },
+    "warehouse_club": {
+      "label": "Warehouse clubs",
+      "stores_collected": 1322,
+      "national_footprint_est": 1481,
+      "coverage_pct": 89.3,
+      "chains_with_data": 2,
+      "chains_total": 3
+    },
+    "greeting_card": {
+      "label": "Greeting card",
+      "stores_collected": 1092,
+      "national_footprint_est": 1103,
+      "coverage_pct": 99.0,
+      "chains_with_data": 1,
+      "chains_total": 1
+    },
+    "bookstore": {
+      "label": "Bookstores",
+      "stores_collected": 930,
+      "national_footprint_est": 1005,
+      "coverage_pct": 92.5,
+      "chains_with_data": 2,
+      "chains_total": 2
+    },
+    "military_exchange": {
+      "label": "Military exchanges",
+      "stores_collected": 303,
+      "national_footprint_est": 4330,
+      "coverage_pct": 7.0,
+      "chains_with_data": 1,
+      "chains_total": 3
+    },
+    "toy_specialty": {
+      "label": "Toy specialty",
+      "stores_collected": 0,
+      "national_footprint_est": 100,
+      "coverage_pct": 0.0,
+      "chains_with_data": 0,
+      "chains_total": 2
+    }
+  }
+}

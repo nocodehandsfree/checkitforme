@@ -1,0 +1,2221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="x-rev" content="admin-r28" />
+<title>Caller Admin — Fungibles</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%239333EA'/%3E%3Crect x='3' y='3' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='3' width='19' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='13' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='13' width='14' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='23' width='9' height='7' rx='3' fill='white'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="https://api-production-100b.up.railway.app/assets/fungibles-logo.jpeg">
+<style>
+  :root{
+    --bg:#0C0C12; --sheet:#1A1A24; --terminal:#0A0A0E;
+    --green:#4ADE80; --green-dark:#22C55E; --purple:#A78BFA; --yellow:#F4D03F;
+    --orange:#E89A4A; --red:#EF4444; --muted:#6B6B7B; --border:rgba(255,255,255,.08);
+  }
+  *{box-sizing:border-box}
+  button,select,textarea,input{font-family:inherit}
+  html{-webkit-text-size-adjust:100%}
+  html,body{max-width:100%;overflow-x:hidden}
+  header,nav,main,section,.card,.stats,.filters,.ractions{max-width:100%}
+  body{background:var(--bg);color:#cdcdd8;font-family:Inter,-apple-system,system-ui,sans-serif;margin:0;padding:0;
+    background-image:radial-gradient(1200px 500px at 50% -100px,rgba(74,222,128,.08),transparent 70%)}
+  header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;position:sticky;top:0;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:30}
+  header h1{font-size:17px;margin:0;letter-spacing:-.3px;font-weight:900}
+  header h1 b{color:var(--green)}
+  header .hmark{display:flex;align-items:center;flex:0 0 auto}
+  header .dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:livepulse 2s ease-in-out infinite}
+  @keyframes livepulse{0%,100%{opacity:1}50%{opacity:.4}}
+  /* cards lift slightly on hover — same calm depth as the consumer cards */
+  .card{transition:border-color .15s,transform .08s}
+  .card:hover{border-color:rgba(255,255,255,.14)}
+  /* section headings get the brand's green tick bar — ties admin to the front end */
+  h2{position:relative;padding-left:12px}
+  h2::before{content:"";position:absolute;left:0;top:0;bottom:2px;width:3px;border-radius:2px;background:linear-gradient(180deg,var(--purple),var(--green))}
+  header .sub{color:var(--muted);font-size:12px;margin-left:auto;font-family:ui-monospace,monospace}
+  nav{display:flex;gap:6px;padding:10px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;position:sticky;top:57px;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:29}
+  nav::-webkit-scrollbar{display:none}
+  nav button{flex:0 0 auto;background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 15px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;transition:.12s}
+  nav button:hover{color:#fff;border-color:rgba(255,255,255,.2)}
+  nav button.active{background:rgba(74,222,128,.13);border-color:rgba(74,222,128,.4);color:var(--green);box-shadow:0 0 14px rgba(74,222,128,.18)}
+  main{padding:24px 20px;max-width:1000px;margin:0 auto}
+  section{display:none} section.active{display:block;animation:secIn .16s ease}
+  @keyframes secIn{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin:0 0 14px;font-weight:800}
+  .card{background:var(--sheet);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px}
+  .row{display:flex;align-items:center;gap:12px}
+  .grow{flex:1;min-width:0}
+  .name{font-weight:700;font-size:15px}
+  .meta{color:var(--muted);font-size:12px;margin-top:2px}
+  .status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px}
+  .s-green{background:rgba(74,222,128,.14);color:var(--green)}
+  .s-red{background:rgba(239,68,68,.14);color:var(--red)}
+  .s-amber{background:rgba(232,154,74,.14);color:var(--orange)}
+  .s-gray{background:rgba(255,255,255,.06);color:var(--muted)}
+  button.act{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;border:none;padding:8px 14px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13px;
+    box-shadow:0 6px 16px -6px rgba(52,197,107,.45),inset 0 1px 0 rgba(255,255,255,.4);transition:filter .12s,transform .08s}
+  button.act:hover{filter:brightness(1.05)} button.act:active{transform:translateY(1px)}
+  button.ghost{background:transparent;border:1px solid var(--border);color:#fff;padding:8px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;transition:border-color .12s}
+  button.ghost:hover{border-color:rgba(255,255,255,.25)}
+  input,textarea{background:var(--terminal);border:1px solid var(--border);color:#fff;padding:10px 12px;border-radius:10px;font-size:16px;font-family:inherit;width:100%;max-width:100%}
+  input:focus,textarea:focus{outline:none;border-color:rgba(74,222,128,.45);box-shadow:0 0 0 2px rgba(74,222,128,.12)}
+  select{
+    -webkit-appearance:none;-moz-appearance:none;appearance:none;
+    background-color:var(--terminal);
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234ADE80' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 14px center;
+    border:1px solid var(--border);color:#cfcfd8;padding:11px 38px 11px 14px;border-radius:10px;
+    font-size:16px;font-family:inherit;width:100%;max-width:100%;cursor:pointer;transition:border-color .15s,box-shadow .15s;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  select:hover{border-color:rgba(255,255,255,.18)}
+  select:focus{outline:none;border-color:rgba(74,222,128,.45);box-shadow:0 0 0 2px rgba(74,222,128,.12)}
+  select option{background:#15151f;color:#fff}
+  label{display:block;font-size:11px;color:var(--muted);margin:10px 0 4px;text-transform:uppercase;letter-spacing:.5px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .pill{font-size:11px;color:var(--purple);background:rgba(167,139,250,.12);padding:3px 8px;border-radius:8px}
+  .transcript{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12px;color:#cfcfe0;background:var(--terminal);border-radius:10px;padding:12px;margin-top:10px}
+  .empty{color:var(--muted);font-size:13px;padding:30px;text-align:center}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--sheet);border:1px solid var(--border);padding:12px 18px;border-radius:12px;font-size:13px;opacity:0;transition:.2s}
+  .toast.show{opacity:1}
+  #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
+  .leaflet-popup-content{font-family:Inter,sans-serif}
+  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .stat{background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:12px 16px;min-width:96px;flex:1 1 auto}
+  .stat .n{font-size:22px;font-weight:800;line-height:1.1}
+  .stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;line-height:1.3;margin-top:3px}
+  .stat.green .n{color:var(--green)}
+  .chip-sm{display:inline-block;font-size:10px;color:var(--purple);background:rgba(167,139,250,.12);padding:2px 7px;border-radius:7px;margin:2px 4px 0 0}
+  .tag-verified{font-size:10px;color:var(--green);background:rgba(74,222,128,.12);padding:2px 7px;border-radius:7px}
+  .tag-unverified{font-size:10px;color:var(--orange);background:rgba(232,154,74,.12);padding:2px 7px;border-radius:7px}
+  .ractions{display:flex;gap:10px;margin-top:12px}
+  .ractions select{flex:1;min-width:0}
+  .ractions button.act{white-space:nowrap}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .filters input{flex:2;min-width:150px}
+  .filters select{flex:1;min-width:120px}
+  .chip-type{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:#9a9aac;background:rgba(255,255,255,.06);padding:2px 7px;border-radius:7px}
+  .chip-type svg{opacity:.75}
+  /* per-product counts as one box (replaces a circle per product) */
+  .carrygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
+  .carryrow{display:flex;justify-content:space-between;align-items:baseline;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:9px;padding:7px 11px;font-size:12.5px;color:var(--muted)}
+  .carryrow b{color:#fff;font-size:14px}
+  /* stores: intel reports (by type / top regions / most-checked) */
+  .repgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+  .repcol{min-width:0}
+  .repttl{font-weight:700;color:#fff;font-size:13px;margin-bottom:7px}
+  .repline{display:flex;justify-content:space-between;gap:8px;align-items:baseline;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.5px;color:var(--muted)}
+  .repline .rl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .repline b{color:#fff;flex:0 0 auto}
+  /* statuses: one grouped icon control (drawn preview + emoji key) so it doesn't read as two icons */
+  .stico{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:9px;overflow:hidden;background:#0e0e14;flex:0 0 auto}
+  .stico-prev{display:grid;place-items:center;width:34px;height:42px;background:rgba(255,255,255,.05)}
+  .stico-key{width:48px;height:42px;text-align:center;border:none!important;border-radius:0!important;background:transparent!important;font-size:16px}
+  /* stores: row select + bulk-action bar */
+  .rowchk{margin-top:6px;width:17px;height:17px;flex:0 0 auto;accent-color:var(--purple)}
+  .card.selrow{border-color:rgba(167,139,250,.5);box-shadow:inset 0 0 0 1px rgba(167,139,250,.22)}
+  .bulkbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:12px;padding:9px 14px;margin-bottom:12px}
+  .bulkbar .bchk{display:inline-flex;align-items:center;gap:7px;color:#fff;font-weight:700;font-size:13px;cursor:pointer}
+  .bulkbar .bchk input{width:17px;height:17px;accent-color:var(--purple)}
+  .daypick{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+  .day{display:flex;align-items:center;gap:6px;font-size:12px;background:var(--terminal);border:1px solid var(--border);padding:8px 12px;border-radius:9px;cursor:pointer;color:#fff;user-select:none}
+  .day input{width:auto;accent-color:var(--green)}
+  #signinwrap{display:flex;justify-content:center;align-items:flex-start;padding:40px 16px;min-height:60vh}
+  @media (max-width:820px){
+    body{font-size:15px}
+    main{padding:16px 14px}
+    header{padding:16px 14px}
+    nav{padding:10px 14px}
+    .card{padding:14px}
+    .row{flex-wrap:wrap}
+    .name{font-size:15px;overflow-wrap:anywhere}
+    .meta{overflow-wrap:anywhere}
+    .filters{flex-direction:column}
+    .filters input,.filters select{width:100%;min-width:0;flex:none}
+    .stats{gap:8px}
+    .stat{flex:1 1 28%;min-width:0;padding:10px 8px}  /* wrap to ~3 per row so 6-stat cards don't truncate */
+    .stat .n{font-size:18px;white-space:nowrap}
+    .ractions{flex-wrap:wrap}
+  }
+  /* Playbook sub-nav (mobile segmented control) */
+  .subnav{display:flex;gap:6px;margin:0 0 14px;flex-wrap:nowrap}
+  .subnav button{flex:1;min-width:0;white-space:nowrap;background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--muted);padding:9px 8px;border-radius:10px;font-weight:700;font-size:12.5px;cursor:pointer}
+  .subnav button.active{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.4);color:var(--green)}
+  /* Collapsible cards on the Test Bench */
+  details.card>summary{cursor:pointer;list-style:none;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+  details.card>summary::-webkit-details-marker{display:none}
+  details.card>summary::after{content:'';margin-left:auto;flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:rgba(255,255,255,.04) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%23b9b9c8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat;transition:transform .22s,background-color .15s,border-color .15s}
+  details.card[open]>summary::after{transform:rotate(180deg);background-color:rgba(74,222,128,.12);border-color:rgba(74,222,128,.45)}
+  .chip-draft{font-size:10px;background:#FBBF24;color:#1a1a24;border-radius:6px;padding:2px 6px;font-weight:800;margin-left:6px}
+  /* ── consumer design system ports ── */
+  .slogo{width:42px;height:42px;flex:0 0 auto;border-radius:12px;background:var(--terminal);border:1px solid var(--border);display:grid;place-items:center;overflow:hidden}
+  .slogo img{width:28px;height:28px;object-fit:contain}
+  .slogo:has(img){background:#14141d;border-color:var(--border)}
+  .slogo .mono{font-size:13px;font-weight:900;color:#d6d6e0}
+  .sname{font-weight:800;font-size:15.5px;letter-spacing:-.2px}
+  .sbranch{color:#c8c8d4;font-size:12.5px;font-weight:600;margin-top:1px}
+  .smeta{color:var(--muted);font-size:12px;margin-top:2px}
+  .sdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  .sdot.on{background:var(--green);box-shadow:0 0 6px rgba(74,222,128,.6)} .sdot.off{background:#7a7a86}
+  .vpill{display:inline-flex;flex-direction:column;align-items:center;gap:3px;text-align:center;flex:0 0 86px;max-width:86px;font-weight:800;font-size:12px;line-height:1.2}
+  .vpill .ve{font-size:22px;line-height:1}
+  .vpill.in{color:var(--green)} .vpill.out{color:var(--red)} .vpill.unk{color:var(--yellow)} .vpill.gray{color:var(--muted)} .vpill.soon{color:#F59E0B}
+  .chat{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .bub{max-width:84%;padding:9px 13px;border-radius:16px;font-size:13px;line-height:1.42;word-wrap:break-word;overflow-wrap:anywhere}
+  .bub .nm{display:block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;opacity:.75;margin-bottom:3px}
+  .bub.a{align-self:flex-end;background:linear-gradient(180deg,rgba(74,222,128,.2),rgba(74,222,128,.13));border:1px solid rgba(74,222,128,.32);color:#eafff2;border-bottom-right-radius:5px}
+  .bub.a .nm{color:var(--green)}
+  .bub.c{align-self:flex-start;background:#20202b;border:1px solid var(--border);color:#e9e9f2;border-bottom-left-radius:5px}
+  .bub.c .nm{color:var(--purple)}
+  .bub-note{align-self:center;font-size:12px;color:var(--muted);font-style:italic;text-align:center;padding:2px 0}
+  details.tr{margin-top:10px}
+  details.tr>summary{list-style:none;cursor:pointer;font-size:12px;color:var(--purple);font-weight:700;display:inline-flex;align-items:center;gap:6px}
+  details.tr>summary::-webkit-details-marker{display:none}
+  .daychip{display:inline-block;font-size:10.5px;font-weight:800;color:#cfcfd8;background:var(--terminal);border:1px solid var(--border);border-radius:7px;padding:3px 7px;margin-right:4px}
+  .daychip.on{color:var(--green);border-color:rgba(74,222,128,.4);background:rgba(74,222,128,.08)}
+  .catchip{display:inline-flex;align-items:center;gap:8px;background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:12px 16px;font-weight:800;font-size:14px}
+  .empty{color:var(--muted);font-size:13px;padding:34px 20px;text-align:center;background:var(--sheet);border:1px dashed var(--border);border-radius:16px}
+  body.authwait header,body.authwait nav,body.authwait main,body.authwait .agent-fab,body.authwait .agent-panel{display:none}
+  /* drawn-icon chrome (replaces emoji) */
+  .name{font-weight:800;display:flex;align-items:center}
+  .hdico{display:inline-flex;align-items:center;margin-right:8px;color:var(--green);flex:0 0 auto}
+  .livedot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);margin-right:9px;flex:0 0 auto;animation:livep 1.6s ease-in-out infinite}
+  @keyframes livep{0%,100%{opacity:1}50%{opacity:.32}}
+  nav button{display:inline-flex;align-items:center;gap:6px}
+  nav button svg{opacity:.85} nav button.active svg{opacity:1}
+  .subnav button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  /* second-level nav (sections within a group) — quieter than the primary tabs, wraps, never scrolls */
+  .subnav2{display:flex;gap:6px;flex-wrap:wrap;padding:9px 20px;border-bottom:1px solid var(--border);background:rgba(12,12,18,.6)}
+  .subnav2 button{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid transparent;color:var(--muted);padding:6px 13px;border-radius:16px;cursor:pointer;font-size:12.5px;font-weight:700;white-space:nowrap;transition:.12s}
+  .subnav2 button:hover{color:#fff;border-color:rgba(255,255,255,.16)}
+  .subnav2 button.active{background:rgba(167,139,250,.14);border-color:rgba(167,139,250,.42);color:#c4b5fd}
+  .subnav2 button svg{opacity:.8} .subnav2 button.active svg{opacity:1}
+  @media(max-width:560px){ .subnav2{padding:9px 14px} }
+  button.act .hdico,button.ghost .hdico{color:inherit;margin-right:6px}
+  details.card>summary .name,details.tr>summary{display:inline-flex}
+  /* headers stay bright; body copy is soft (set on body) */
+  .name,h2,.sname,.stat .n,header h1{color:#fff}
+  h2{color:var(--muted)} /* section eyebrows stay muted+caps */
+  .card .meta,.smeta{color:#9a9aac}
+  /* tighter header→copy rhythm inside cards */
+  .card>.name{margin-bottom:6px}
+  .card>.meta{margin-top:4px}
+  .empty{padding:22px 18px}
+  /* unified range sliders — match the consumer radius slider */
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;background:rgba(255,255,255,.12);outline:none;margin:8px 0}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:var(--green);border:3px solid #0C0C12;box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--green);border:3px solid #0C0C12;cursor:pointer}
+  /* day toggles + schedule grid: tighter, no bloated gaps */
+  .daypick{gap:8px}
+  /* ---- In-admin Claude agent ("Admin dev") ---- */
+  .agent-fab{position:fixed;right:20px;bottom:20px;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;z-index:60;
+    background:linear-gradient(135deg,var(--green),#22C55E);box-shadow:0 10px 28px -8px rgba(74,222,128,.6);display:grid;place-items:center;transition:transform .12s}
+  .agent-fab:active{transform:scale(.94)}
+  .agent-panel{position:fixed;right:20px;bottom:20px;z-index:61;width:min(420px,calc(100vw - 32px));height:min(620px,calc(100dvh - 90px));
+    display:flex;flex-direction:column;background:#0d0d15;border:1px solid var(--border);border-radius:18px;overflow:hidden;overscroll-behavior:contain;box-shadow:0 24px 60px -12px rgba(0,0,0,.7)}
+  .agent-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);background:rgba(74,222,128,.06)}
+  .agent-title{font-weight:800;font-size:14px;color:#fff;display:inline-flex;align-items:center;gap:8px}
+  .agent-model{margin-left:auto;margin-right:8px;max-width:170px;background:#08080c;color:#cdcdd8;border:1px solid var(--border);border-radius:9px;padding:5px 7px;font-size:11.5px;font-weight:600;cursor:pointer}
+  .agent-x{background:none;border:none;color:var(--muted);font-size:24px;line-height:1;cursor:pointer;padding:0 4px}
+  .agent-x:hover{color:#fff}
+  .agent-log{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .agent-msg{max-width:86%;padding:9px 12px;border-radius:13px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+  .agent-msg.user{align-self:flex-end;background:var(--ptint);border:1px solid var(--pline);color:#fff;border-bottom-right-radius:4px}
+  .agent-msg.bot{align-self:flex-start;background:rgba(255,255,255,.04);border:1px solid var(--border);color:#e7e7ef;border-bottom-left-radius:4px}
+  .agent-msg.err{align-self:flex-start;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5}
+  .agent-acts{align-self:flex-start;max-width:86%;display:flex;flex-direction:column;gap:4px;margin-top:-4px}
+  .agent-act{font-size:11.5px;color:var(--green);background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);border-radius:8px;padding:4px 9px;display:inline-flex;align-items:center;gap:6px}
+  .agent-empty{color:var(--muted);font-size:13px;text-align:center;margin:auto;padding:20px;line-height:1.6}
+  .agent-typing{align-self:flex-start;color:var(--muted);font-size:13px;padding:4px 2px}
+  .agent-input{display:flex;gap:8px;align-items:flex-end;padding:12px;border-top:1px solid var(--border)}
+  .agent-input textarea{flex:1;resize:none;min-height:60px;max-height:160px;background:#08080c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:11px 13px;font:inherit;font-size:14.5px;line-height:1.45}
+  body.agent-open{overflow:hidden}
+  .agent-send{flex:0 0 auto;width:40px;height:40px;border-radius:11px;border:none;cursor:pointer;background:var(--green);display:grid;place-items:center}
+  .agent-send:disabled{opacity:.4;cursor:default}
+  @media(max-width:480px){ .agent-panel{right:8px;left:8px;width:auto;bottom:8px;height:calc(100dvh - 70px)} .agent-fab{right:16px;bottom:16px} }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script async crossorigin="anonymous"
+  data-clerk-publishable-key="__CLERK_PUBLISHABLE_KEY__"
+  src="https://__CLERK_FRONTEND_API__/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+  type="text/javascript"></script>
+</head>
+<body class="authwait">
+<header>
+  <span class="hmark"><img src="/logos/fcheck.png?v=2" alt="Fungibles" width="24" height="24" style="display:block"></span>
+  <h1><b>Admin</b></h1><span class="dot" title="live"></span>
+  <span class="sub" id="clock"></span>
+</header>
+<nav id="grpnav"><!-- five groups, no horizontal scroll; sub-nav below switches sections within a group --></nav>
+<div class="subnav2" id="subnav2"></div>
+<main>
+
+  <!-- GOD VIEW: one screen of everything moving right now -->
+  <section id="dash" class="active">
+    <div class="stats" id="d_stats"></div>
+    <div class="card" id="d_live_card" style="border-color:rgba(74,222,128,.3)">
+      <div class="row" style="justify-content:space-between;align-items:baseline">
+        <div class="name">🔴 Live right now</div>
+        <div class="meta" id="d_live_n"></div>
+      </div>
+      <div id="d_live" class="meta" style="margin-top:8px">Loading…</div>
+    </div>
+    <div class="card">
+      <div class="name" style="margin-bottom:8px">⚡ Actions</div>
+      <div class="row" style="flex-wrap:wrap;gap:8px">
+        <button class="act" onclick="dashIngest()">Ingest results now</button>
+        <button class="ghost" onclick="dashTick()">Run scheduler tick</button>
+        <button class="ghost" onclick="backfillAllHours()">🕐 Look up all hours</button>
+        <button class="ghost" onclick="loadDash()">↻ Refresh</button>
+      </div>
+      <div class="meta" id="d_act_msg" style="margin-top:8px;min-height:14px"></div>
+    </div>
+    <div class="card" id="d_money_card">
+      <div class="name" style="margin-bottom:8px">💰 Money &amp; cost</div>
+      <div class="stats" id="d_money" style="margin-bottom:0"></div>
+    </div>
+    <div class="card" id="d_timing_card">
+      <div class="name" style="margin-bottom:4px">Call time &amp; cost</div>
+      <div class="meta" style="margin-bottom:8px">Time-to-human (phone-tree nav) vs. talk — ElevenLabs bills the whole connected call, so nav + hold is real cost.</div>
+      <div class="stats" id="d_timing" style="margin-bottom:6px"></div>
+      <details><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details>
+    </div>
+    <div class="card" style="border-color:rgba(251,191,36,.3)">
+      <div class="row" style="justify-content:space-between;align-items:baseline">
+        <div class="name">✂️ Bail library <span class="meta" style="font-weight:400">— proactive call cutoffs (cost control)</span></div>
+        <span id="bail_state" class="status s-gray">…</span>
+      </div>
+      <div class="meta" style="margin:8px 0 10px">Rules that cut a call once it stops being worth money. Master switch stays OFF until bench-tested — nothing changes live calls yet.</div>
+      <div id="bail_body" class="meta">Loading…</div>
+    </div>
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">📞 Recent calls</div>
+      <div id="d_recent" class="meta">Loading…</div>
+    </div>
+  </section>
+
+  <section id="retailers">
+    <h2>Store intel</h2>
+    <div class="stats" id="storeintel"></div>
+    <div id="storecarries" class="card" style="display:none"></div>
+    <details id="storereports" class="card" style="display:none"><summary><span class="name">Reports</span><span class="meta">by type · top regions · most-checked</span></summary>
+      <div id="rep_body" style="margin-top:10px"></div>
+    </details>
+    <h2>Find a store</h2>
+    <div class="filters">
+      <input id="f_search" placeholder="Search name, city, ZIP — or just pick a filter…" oninput="onAdminSearch()">
+      <select id="f_type" onchange="loadRetailers()"><option value="">All types</option></select>
+      <select id="f_region" onchange="loadRetailers()"><option value="">All regions</option></select>
+      <select id="f_zone" onchange="renderRetailers()"><option value="">All zones</option></select>
+      <select id="f_carries" onchange="loadRetailers()"><option value="">Any product</option></select>
+      <select id="f_status" onchange="loadRetailers()">
+        <option value="">Any status</option>
+        <option value="verified">Verified</option>
+        <option value="unverified">Unverified</option>
+        <option value="green">In stock now</option>
+        <option value="open">Open now</option>
+        <option value="closed">Closed now</option>
+        <option value="online">Online</option>
+        <option value="muted">Muted (chain)</option>
+        <option value="badnum">Bad / missing number</option>
+        <option value="kiosk">Has kiosk</option>
+      </select>
+      <select id="f_sort" onchange="renderRetailers()">
+        <option value="rel">Sort: best match</option>
+        <option value="name">Name A–Z</option>
+        <option value="verified">Verified first</option>
+        <option value="instock">In stock first</option>
+        <option value="recent">Recently called</option>
+        <option value="open">Open now first</option>
+      </select>
+    </div>
+    <div id="bulkbar" class="bulkbar" style="display:none">
+      <label class="bchk"><input type="checkbox" id="b_all" onchange="bulkToggleAll(this.checked)"> Select all</label>
+      <span id="b_count" class="meta"></span>
+      <span class="grow"></span>
+      <button class="ghost" onclick="bulkEdit('verify')">Mark verified</button>
+      <button class="ghost" onclick="bulkEdit('unverify')">Mark unverified</button>
+      <button class="ghost" onclick="bulkEdit('online')">Mark online</button>
+      <button class="ghost" onclick="bulkEdit('offline')">Not online</button>
+      <button class="ghost" onclick="bulkEdit('deactivate')" style="color:var(--red)">Remove</button>
+    </div>
+    <div id="retailerList"><div class="empty">Search by name, city, ZIP, or region to pull stores up.</div></div>
+    <div class="card">
+      <h2>Add a store</h2>
+      <div class="grid2">
+        <div><label>Name</label><input id="r_name" placeholder="Barnes & Noble — Brentwood"></div>
+        <div><label>Phone (E.164)</label><input id="r_phone" placeholder="+13105551234"></div>
+        <div><label>Location</label><input id="r_loc" placeholder="Brentwood, TN"></div>
+        <div><label>Timezone</label><input id="r_tz" value="America/Los_Angeles"></div>
+      </div>
+      <label>Phone tree (how to reach the right person)</label>
+      <textarea id="r_tree" rows="2" placeholder="When asked if you're a healthcare provider, say no. Then ask for the front store."></textarea>
+      <div style="margin-top:12px"><button class="act" onclick="addRetailer()">Add store</button></div>
+    </div>
+  </section>
+
+  <section id="map">
+    <h2>Store map — green = in stock, red = not in, amber = unclear, gray = uncalled</h2>
+    <div style="margin-bottom:10px"><button class="ghost" onclick="locateMe()">📍 Zoom to my location</button></div>
+    <div id="leafletmap"></div>
+    <div class="meta" style="margin-top:8px">Stores appear once they have a location (geocoded on import).</div>
+  </section>
+
+  <section id="results"><h2>Recent calls</h2>
+    <div class="filters"><select id="r_sort" onchange="renderResults()">
+      <option value="newest">Sort: newest</option>
+      <option value="oldest">Oldest</option>
+      <option value="store">Store A–Z</option>
+      <option value="outcome">Outcome — in stock first</option>
+      <option value="category">Category A–Z</option>
+    </select></div>
+    <div id="resultList"><div class="empty">Loading…</div></div></section>
+
+  <section id="schedules">
+    <h2>Schedules</h2>
+    <div id="scheduleList"><div class="empty">Loading…</div></div>
+    <div class="card">
+      <h2>New schedule</h2>
+      <div class="grid2">
+        <div><label>Name</label><input id="s_name" placeholder="Thursday B&N Pokémon"></div>
+        <div><label>Category</label><select id="s_cat"></select></div>
+        <div><label>Mode</label><select id="s_mode"><option value="restock">Restock — got a shipment in?</option><option value="carry">Carry — do you sell it?</option></select></div>
+        <div><label>Time (24h, store-local)</label><input id="s_time" placeholder="09:00"></div>
+      </div>
+      <label>Days</label>
+      <div id="s_days" class="daypick">
+        <label class="day"><input type="checkbox" value="0">Sun</label>
+        <label class="day"><input type="checkbox" value="1">Mon</label>
+        <label class="day"><input type="checkbox" value="2">Tue</label>
+        <label class="day"><input type="checkbox" value="3">Wed</label>
+        <label class="day"><input type="checkbox" value="4">Thu</label>
+        <label class="day"><input type="checkbox" value="5">Fri</label>
+        <label class="day"><input type="checkbox" value="6">Sat</label>
+      </div>
+      <label>Question</label>
+      <input id="s_q" value="Hi! I was just checking to see if you got a {category} shipment in today?">
+      <label>Clarification / what doesn't count</label>
+      <textarea id="s_clar" rows="2" placeholder="Sealed packs/tins/boxes from The Pokémon Company. Repackaged or off-brand does NOT count."></textarea>
+      <div style="margin-top:12px"><button class="act" onclick="addSchedule()">Create</button></div>
+    </div>
+  </section>
+
+  <section id="zones"><h2>Zones</h2><div id="zoneList"><div class="empty">Loading…</div></div></section>
+  <section id="catalog"><h2>Tracked categories</h2><div id="catList"><div class="empty">Loading…</div></div></section>
+
+  <section id="growth">
+    <h2>Growth &amp; Policy</h2>
+    <div class="card">
+      <div class="name" style="margin-bottom:8px">📊 Today's pulse <span class="meta" style="font-weight:400">— funnel &amp; engagement</span></div>
+      <div id="gw_pulse" class="meta">Loading…</div>
+    </div>
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">📈 Restock intel <span class="meta" style="font-weight:400">— the compounding database</span></div>
+      <div id="gw_intel" class="meta">Loading…</div>
+    </div>
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">Feature flags <span class="meta" style="font-weight:400">— flip any Lego on/off, live across every subdomain</span></div>
+      <div id="gw_flags" class="meta">Loading…</div>
+    </div>
+    <div class="card">
+      <div class="name" style="margin-bottom:8px">Pricing &amp; rewards</div>
+      <div id="gw_pricing" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
+      <div style="margin-top:12px"><button class="act" onclick="savePolicyForm()">Save pricing</button></div>
+    </div>
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">Advanced policy (raw JSON)</div>
+      <div class="meta" style="margin-bottom:8px">Source of truth. Edits here merge over defaults. Use for packs, finds headstart, privacy, etc.</div>
+      <textarea id="gw_json" spellcheck="false" style="width:100%;min-height:220px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box"></textarea>
+      <div style="margin-top:10px"><button class="act" onclick="savePolicyJson()">Save JSON</button> <button class="ghost" onclick="loadGrowth()">Reload</button></div>
+    </div>
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">Store CMS — import</div>
+      <div class="meta" style="margin-bottom:8px">Paste your research JSON (array of stores, or <code>{ "stores": [...] }</code>). Upserts by phone; region/timezone auto-derived from state. Set <code>"active": false</code> to soft-remove (e.g. Ralphs).</div>
+      <textarea id="gw_import" spellcheck="false" placeholder='[{"name":"Target — Sunset","phone":"+13105551212","address":"...","state":"CA","chain":"Target","carries":"Pokémon"}]' style="width:100%;min-height:150px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box"></textarea>
+      <div id="gw_import_msg" class="meta" style="margin:8px 0;min-height:16px"></div>
+      <div><button class="act" onclick="importStoresJson()">Import stores</button> <button class="ghost" onclick="backfillRegions()">Backfill regions</button></div>
+    </div>
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">Kiosk intel <span class="meta" style="font-weight:400">— crowd-sourced refresh times</span></div>
+      <div id="gw_kiosks" class="meta">Loading…</div>
+    </div>
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">Restock watches <span class="meta" style="font-weight:400">— customers waiting on a comeback</span></div>
+      <div id="gw_watches" class="meta">Loading…</div>
+    </div>
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">🏆 Community moderation <span class="meta" style="font-weight:400">— approve or remove "I scored!" photos</span></div>
+      <div id="gw_community" class="meta">Loading…</div>
+    </div>
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">🏪 Store requests <span class="meta" style="font-weight:400">— "don't see your store?" submissions</span></div>
+      <div id="gw_storereqs" class="meta">Loading…</div>
+    </div>
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">📍 Launch waitlist <span class="meta" style="font-weight:400">— out-of-area demand by region (rollout intel)</span></div>
+      <div id="gw_waitlist" class="meta">Loading…</div>
+    </div>
+  </section>
+
+  <section id="settings">
+    <h2>Settings</h2>
+    <div class="card"><div class="row">
+      <div class="grow"><div class="name">Never leave voicemails</div>
+        <div class="meta">Master toggle — if a call hits voicemail or an automated system, the agent hangs up without leaving a message.</div></div>
+      <button id="vmToggle" class="ghost" onclick="toggleVoicemail()">…</button>
+    </div></div>
+    <div class="card"><div class="row">
+      <div class="grow"><div class="name">Customers hear calls live</div>
+        <div class="meta">Streams call audio + a hang-up button to every customer. OFF = testing tool only (comp accounts like yours always have it).</div></div>
+      <button id="llToggle" class="ghost" onclick="toggleLiveListen()">…</button>
+    </div></div>
+  </section>
+
+  <section id="bench">
+    <h2>Test bench</h2>
+    <div id="pb_bench">
+      <div class="card" id="live_strip" style="padding:10px 14px;border-color:rgba(74,222,128,.35)">
+        <div class="meta" style="line-height:1.6">📡 <b style="color:var(--green)">LIVE on store calls:</b> <span id="ls_vals">loading…</span></div>
+        <div class="meta" id="ls_draft" style="display:none;color:#FBBF24;margin-top:4px">● Your draft differs from LIVE — store calls keep using the settings above until you apply.</div>
+      </div>
+
+      <details class="card" id="tb_voice_card">
+        <summary><span class="name">🎚️ Voice &amp; script <span class="chip-draft">DRAFT</span></span><span class="meta">tune safely → test → push live</span></summary>
+        <div class="meta" style="margin:10px 0 12px">Edits a <b>draft</b> — real store calls are untouched until you <b>Apply to ALL store calls</b>. Hear it with Call me below.</div>
+        <label>Opening line <span style="color:var(--muted)">(use <code>{category}</code> — it fills in Pokémon, One Piece, etc.)</span></label>
+        <input id="tb_opening" placeholder="Heyy! I was just checking to see if you guys got any {category} in?" oninput="updateDraftDot()">
+        <label>Speed / cadence — <span id="sb_speed_val"></span> <span style="color:var(--muted)">(left = slower &amp; calmer)</span></label>
+        <input id="sb_speed" type="range" min="0.7" max="1.2" step="0.01" style="width:100%" oninput="sbLabels()">
+        <label>Warmth / expressiveness — <span id="sb_stability_val"></span> <span style="color:var(--muted)">(left = warmer &amp; more inflection; right = steadier/flatter)</span></label>
+        <input id="sb_stability" type="range" min="0.1" max="0.9" step="0.05" style="width:100%" oninput="sbLabels()">
+        <label>Naturalness ↔ speed — <span id="sb_latency_val"></span> <span style="color:var(--muted)">(left = smoothest/most natural; right = faster but more robotic)</span></label>
+        <input id="sb_latency" type="range" min="0" max="4" step="1" style="width:100%" oninput="sbLabels()">
+        <label>⏱️ The beat — pause before it replies</label>
+        <select id="sb_beat" onchange="updateDraftDot()">
+          <option value="normal">Normal — snappy, but waits for you to finish (recommended)</option>
+          <option value="eager">Eager — fastest replies (may cut people off)</option>
+          <option value="patient">Patient — long beat, waits for a clear pause (slowest)</option>
+        </select>
+        <label>Voice model <span style="color:var(--muted)">— English agents support turbo or flash v2 only</span></label>
+        <select id="sb_model" onchange="updateDraftDot()">
+          <option value="eleven_turbo_v2">Turbo v2 — natural (recommended)</option>
+          <option value="eleven_flash_v2">Flash v2 — fastest, most robotic (IVR/testing)</option>
+        </select>
+        <label>Agent brain (LLM) <span style="color:var(--muted)">— Sonnet 4.6 = best quality; Haiku / GPT-4o-mini / Gemini Flash = cheaper &amp; faster</span></label>
+        <select id="sb_llm" onchange="updateDraftDot()">
+          <optgroup label="Claude (Anthropic)">
+            <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — best quality (recommended)</option>
+            <option value="claude-opus-4-7">Claude Opus 4.7 — most capable, priciest</option>
+            <option value="claude-sonnet-4-5">Claude Sonnet 4.5</option>
+            <option value="claude-haiku-4-5">Claude Haiku 4.5 — cheap &amp; fast</option>
+          </optgroup>
+          <optgroup label="OpenAI">
+            <option value="gpt-4o-mini">GPT-4o-mini — cheap &amp; fast</option>
+            <option value="gpt-4o">GPT-4o</option>
+            <option value="gpt-5-mini">GPT-5-mini</option>
+          </optgroup>
+          <optgroup label="Google Gemini">
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash — cheap &amp; fast</option>
+            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite — cheapest</option>
+            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+          </optgroup>
+        </select>
+        <label>📚 Saved scripts <span style="color:var(--muted)">— save a profile you like, load it back into the draft anytime</span></label>
+        <div class="row" style="gap:8px">
+          <select id="vt_preset" style="flex:1"><option value="">— saved scripts —</option></select>
+          <button class="ghost" onclick="loadPreset()">Load</button>
+          <button class="ghost" onclick="removePreset()">Delete</button>
+        </div>
+        <div class="row" style="gap:8px;margin-top:6px">
+          <input id="vt_preset_name" placeholder="name this one (e.g. 'warm v2')" style="flex:1">
+          <button class="ghost" onclick="storePreset()">Save current</button>
+        </div>
+        <div class="row" style="margin-top:14px;gap:8px">
+          <button class="act" onclick="applySandbox()" style="background:var(--yellow,#F4D03F);color:#1a1a24">Save draft</button>
+          <button class="ghost" onclick="loadSandbox()">Reload draft</button>
+        </div>
+        <div class="meta" id="sb_status" style="margin-top:8px"></div>
+        <div style="height:1px;background:var(--border);margin:14px 0"></div>
+        <button class="act" onclick="pushSandboxToStores()">✅ Apply to ALL store calls</button>
+        <div class="meta" style="margin-top:6px;color:var(--muted)">The one global switch — copies this draft (voice + opener + brain) onto the live restock + carry agents. Until you press it, store calls don't change.</div>
+        <div class="row" style="margin-top:10px"><button class="ghost" onclick="resetScript()">Reset agent script to default</button></div>
+      </details>
+
+      <details class="card" id="tb_call_card" open>
+        <summary><span class="name">🧪 The test call</span><span class="meta">the agent calls YOU as the store</span></summary>
+        <div class="meta" style="margin:10px 0 12px">Pick the store context, then answer your phone like the clerk. Runs the <b>draft</b> voice with that store's real phone-tree rules. The result records against the store (visible in Results).</div>
+        <label>Store (records the result against this one)</label>
+        <select id="sim_store" onchange="previewMaybe()"></select>
+        <label>Category to ask about</label>
+        <select id="sim_cat" onchange="previewMaybe()"></select>
+        <label>Flow</label>
+        <select id="sim_mode">
+          <option value="restock">Restock check (verified seller)</option>
+          <option value="carry">Carry check (do you sell it?)</option>
+        </select>
+        <label>Decision tree (branches off verified)</label>
+        <select id="sim_tree" onchange="syncTreeUI();previewMaybe()">
+          <option value="general">General restock — any of it counts, won't ask which set</option>
+          <option value="specific">Specific product — only greens if THAT is in</option>
+        </select>
+        <div id="sim_specific_wrap" style="display:none">
+          <label>What specific set / product? (e.g. “151 booster boxes”, “Prismatic Evolutions ETB”)</label>
+          <input id="sim_specific" placeholder="151 booster boxes">
+        </div>
+        <label>Your phone (the agent dials this)</label>
+        <input id="sim_phone" placeholder="+13106662331">
+        <label>Voice for this test <span style="color:var(--muted)">— ring with any clone; the live store voice is never touched</span></label>
+        <select id="sim_voice"><option value="">Bench default voice</option></select>
+        <div style="margin-top:14px"><button class="act" onclick="benchCall()">📞 Call me</button></div>
+      </details>
+
+      <details class="card" id="tb_preview_card" ontoggle="if(this.open)loadPreview()">
+        <summary><span class="name">🔎 Preview</span><span class="meta">the exact instructions this test will run</span></summary>
+        <div class="meta" style="margin:10px 0 8px">Assembled live for the store + category picked above: global rules + the chain's phone tree + any store override.</div>
+        <div id="pv_meta" class="meta"></div>
+        <pre id="pv_body" style="display:none;white-space:pre-wrap;max-height:380px;overflow:auto;font-size:12px;line-height:1.5;background:var(--terminal);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:10px"></pre>
+        <div style="margin-top:8px"><button class="ghost" onclick="loadPreview()">Refresh preview</button></div>
+      </details>
+
+      <div class="card" id="tb_transcript_card" style="display:none">
+        <div class="row" style="align-items:center;margin-bottom:8px">
+          <div class="grow"><div class="name">📝 Test result</div>
+            <div class="meta" id="tb_t_status">Waiting for the call to connect…</div></div>
+          <button class="ghost" onclick="hideTranscript('tb')">Clear</button>
+        </div>
+        <div id="tb_verdict" style="display:none;text-align:center;padding:14px;border-radius:12px;margin-bottom:10px;border:1px solid var(--border)"></div>
+        <div id="tb_t_summary" class="meta" style="color:#ddd;margin-bottom:8px"></div>
+        <div id="tb_t_body" class="transcript">…</div>
+      </div>
+    </div>
+    </section>
+
+    <section id="trees">
+    <h2>Phone trees &amp; mute</h2>
+    <div id="pb_trees">
+    <div class="card" style="border-color:rgba(167,139,250,.3)">
+      <div class="name" style="margin-bottom:4px">Phone trees</div>
+      <div class="meta" style="margin-bottom:14px">How the agent gets through a chain's menu to a person. Set once per chain → applies to every store.</div>
+      <label>Chain</label>
+      <select id="pt_chain" onchange="loadChainTree()"></select>
+      <label style="margin-top:10px">Navigation steps</label>
+      <textarea id="pt_tree" rows="6" style="width:100%;font-family:inherit;font-size:13px;background:var(--terminal);color:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;box-sizing:border-box" placeholder="Plain English, what to say at each menu — e.g. 'No' to healthcare provider, then 'Front store', then 'General inquiries'…"></textarea>
+      <label style="margin-top:10px">Auto-press shortcut</label>
+      <input id="pt_dtmf" placeholder="0@3" style="max-width:160px"><span class="meta" style="margin-left:10px"><code>0@3</code> = press 0 at 3s · chain: <code>1@3,0@9</code> · blank = none</span>
+      <div class="grid2" style="margin-top:10px">
+        <div><label>Answer path</label>
+          <select id="pt_path">
+            <option value="">Unclassified</option>
+            <option value="direct_human">Direct human — picks up</option>
+            <option value="simple_ivr">Simple IVR — 1–2 steps</option>
+            <option value="deep_ivr">Deep IVR — long tree</option>
+          </select></div>
+        <div><label>Avg tree seconds <span style="color:var(--muted)">— time burned before a human</span></label>
+          <input id="pt_treesecs" type="number" min="0" placeholder="e.g. 45"></div>
+      </div>
+      <div class="row" style="margin-top:10px;gap:14px;flex-wrap:wrap">
+        <label class="day" style="margin:0"><input type="checkbox" id="pt_repack"> Repack-only chain (e.g. Fairfield) — checks waste the customer's money</label>
+        <label class="day" style="margin:0"><input type="checkbox" id="pt_muted"> Muted — hidden from the consumer store list</label>
+      </div>
+      <div class="row" style="margin-top:12px;gap:8px">
+        <button class="act" onclick="saveChainTree()">Save chain</button>
+        <button class="ghost" onclick="insertCvsTemplate()">Insert CVS template</button>
+      </div>
+      <div class="meta" id="pt_status" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">All chains <span style="color:var(--muted)">— quick mute</span></div>
+      <div class="meta" style="margin-bottom:8px">Mute a chain → all its stores vanish from every city for consumers, instantly.</div>
+      <input id="pt_chainfilter" placeholder="Filter chains — e.g. Ralph's…" oninput="chainFilter(this.value)" style="margin-bottom:6px">
+      <div id="pt_chainlist" class="meta">Loading…</div>
+    </div>
+    </div>
+    </section>
+
+    <section id="statuses">
+    <h2>Statuses</h2>
+    <div id="pb_statuses">
+      <div class="card">
+        <div class="name" style="margin-bottom:4px">What customers see <span style="color:var(--muted)">— for each call outcome</span></div>
+        <div class="meta" style="margin-bottom:12px">Edit the icon, label, color or tone — the consumer + Test Bench verdicts update instantly.</div>
+        <div id="st_list"><div class="empty">Loading…</div></div>
+        <div style="height:1px;background:var(--border);margin:14px 0"></div>
+        <div class="name" style="font-size:14px;margin-bottom:8px">Add a status</div>
+        <div class="row" style="gap:8px">
+          <input id="st_new_emoji" placeholder="🟡" style="max-width:64px;text-align:center">
+          <input id="st_new_label" placeholder="Label (e.g. Holding one for you)" style="flex:1">
+        </div>
+        <input id="st_new_note" placeholder="One-line note the customer sees" style="margin-top:6px">
+        <div class="row" style="gap:8px;margin-top:6px">
+          <select id="st_new_tone" style="max-width:150px">
+            <option value="unk">neutral (gray)</option>
+            <option value="in">green — go</option>
+            <option value="out">red — no-go</option>
+          </select>
+          <button class="act" onclick="addStatus()">Add status</button>
+        </div>
+        <div class="meta" id="st_msg" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="business">
+    <h2>Business</h2>
+
+    <div class="card" id="biz_card" style="border-color:rgba(74,222,128,.3)">
+      <div class="row" style="justify-content:space-between;align-items:baseline">
+        <div class="name">💰 Business — live margins</div>
+        <div class="meta" id="biz_sub">loading…</div>
+      </div>
+      <div class="stats" id="biz_stats" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card" id="credit_card">
+      <div class="row" style="justify-content:space-between;align-items:baseline">
+        <div class="name">💳 ElevenLabs credits</div>
+        <div class="meta" id="credit_src"></div>
+      </div>
+      <div id="credit_body" class="meta" style="margin-top:8px">Loading…</div>
+      <div style="height:10px;background:var(--terminal);border-radius:6px;overflow:hidden;margin-top:10px">
+        <div id="credit_bar" style="height:100%;width:0%;background:var(--green);transition:width .3s"></div>
+      </div>
+      <div id="credit_stats" class="meta" style="margin-top:10px;line-height:1.7"></div>
+      <div id="credit_limit_wrap" style="display:none;margin-top:12px">
+        <div class="meta" style="color:#FBBF24;margin-bottom:8px">⚠️ This is an <b>estimate</b>: "used" = the last 31 days of usage (it includes calls from before any upgrade), so the % can look off. For a true, auto-updating balance, enable <b>user_read</b> on this API key in ElevenLabs → API Keys, and this widget will read your real balance with no manual entry.</div>
+        <label>Plan size (credits/month) <span style="color:var(--muted)">— enter your plan's monthly credits (Creator ≈ 100,000). Used only until user_read is on.</span></label>
+        <div class="row" style="gap:8px">
+          <input id="credit_limit" type="number" placeholder="100000" style="flex:1">
+          <button class="ghost" onclick="saveCreditLimit()">Save</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="labs">
+    <h2>Labs — experimental</h2>
+    <div class="meta" style="margin:-6px 0 14px">Store testing &amp; voice tuning moved to <b>Playbook → Test Bench</b>. Labs is the playground.</div>
+
+    <div class="card" id="voicestudio">
+      <div class="name" style="margin-bottom:4px">🎚️ Voice studio</div>
+      <div class="meta" style="margin-bottom:12px">Pick the voice every live store call speaks as — or record a new one and clone it.</div>
+      <label>Live store voice</label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="vs_select" style="flex:1;min-width:180px"></select>
+        <button class="act" onclick="vsSetActive()">Use for live calls</button>
+      </div>
+      <div id="vs_active" class="meta" style="margin-top:6px"></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+      <label>Clone a new voice — record ~30–60s of clear speech</label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+        <button class="act" id="vs_rec" onclick="vsToggleRec()">● Record</button>
+        <span id="vs_rectime" class="meta"></span>
+        <audio id="vs_play" controls style="display:none;height:34px"></audio>
+      </div>
+      <input id="vs_name" placeholder="Voice name — e.g. Branson, Jared">
+      <button class="act" id="vs_clone" onclick="vsClone()" style="margin-top:8px" disabled>Clone &amp; save voice</button>
+      <div id="vs_msg" class="meta" style="margin-top:8px;min-height:16px"></div>
+    </div>
+
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">🎙️ Talk to me</div>
+      <div class="meta" style="margin-bottom:12px">Call any number in your voice and pick the flow. Great for testing tone or just messing around.</div>
+      <label>Phone number (E.164)</label>
+      <input id="lab_phone" placeholder="+13105551234">
+      <label>First name (optional — e.g. opens with “hey what's up Matt”)</label>
+      <input id="lab_name" placeholder="Matt">
+      <label>Flow</label>
+      <select id="lab_mode">
+        <option value="open">Open conversation</option>
+        <option value="restock">Pokémon restock check</option>
+        <option value="carry">Carry check</option>
+      </select>
+      <label>Personality (for open conversation)</label>
+      <select id="lab_personality">
+        <option value="professional">Professional</option>
+        <option value="homie">Homie</option>
+        <option value="family">Family</option>
+      </select>
+      <label>Voice <span style="color:var(--muted)">— ring in any clone; the live store voice is never touched</span></label>
+      <select id="lab_voice"><option value="">Default voice</option></select>
+      <div style="margin-top:14px"><button class="act" onclick="labCall()">Call</button></div>
+    </div>
+
+    <div class="card" id="lab_transcript_card" style="display:none">
+      <div class="row" style="align-items:center;margin-bottom:8px">
+        <div class="grow"><div class="name">📝 Live transcript</div>
+          <div class="meta" id="lab_t_status">Waiting for the call to connect…</div></div>
+        <button class="ghost" onclick="hideTranscript()">Clear</button>
+      </div>
+      <div id="lab_verdict" style="display:none;text-align:center;padding:14px;border-radius:12px;margin-bottom:10px;border:1px solid var(--border)"></div>
+      <div id="lab_t_summary" class="meta" style="color:#ddd;margin-bottom:8px"></div>
+      <div id="lab_t_body" class="transcript">…</div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<!-- In-admin Claude agent ("Admin dev") — chat to manage the store DB by conversation -->
+<button id="agentFab" class="agent-fab" onclick="agentToggle()" title="Admin dev — ask me to add a store, look one up, fix details" aria-label="Admin dev agent"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9.5l-4 3.4V15.5H4z"/><path d="M8.5 10.2h7M8.5 13h4.5"/></svg></button>
+<div id="agentPanel" class="agent-panel" style="display:none">
+  <div class="agent-head">
+    <span class="agent-title"><span class="livedot" style="background:var(--green);box-shadow:0 0 8px var(--green)"></span> Admin dev</span>
+    <select id="agentModel" class="agent-model" onchange="agentSetModel(this.value)" title="Switch the brain (Claude / GPT / Gemini)"></select>
+    <button class="agent-x" onclick="agentToggle(false)" aria-label="Close">×</button>
+  </div>
+  <div id="agentLog" class="agent-log"></div>
+  <div class="agent-input">
+    <textarea id="agentInput" rows="1" placeholder="e.g. Add a card shop in Bodega Bay, CA that carries One Piece TCG" onkeydown="agentKey(event)"></textarea>
+    <button class="agent-send" id="agentSend" onclick="agentSend()" aria-label="Send"><svg width="18" height="18" viewBox="0 0 24 24" fill="#06210f"><path d="M3.4 20.5 21 12 3.4 3.5l.1 6.8L15 12 3.5 13.7z"/></svg></button>
+  </div>
+</div>
+
+<script>
+async function clerkToken(){ try{ return (window.Clerk&&window.Clerk.session) ? await window.Clerk.session.getToken() : null; }catch(e){ return null; } }
+const api = async (p, opts={}) => {
+  const t = await clerkToken();
+  const headers = Object.assign({}, opts.headers||{}, t?{Authorization:'Bearer '+t}:{});
+  return fetch(p, Object.assign({}, opts, {headers})).then(r => r.json());
+};
+const toast = (m) => { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); };
+let CATEGORIES = [];
+
+// ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
+const NAV_GROUPS={
+  pulse:    {label:'Pulse',    ico:'bolt',  tabs:[['dash','God view','bolt'],['growth','Growth','rise'],['business','Business','money']]},
+  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Stores','store'],['catalog','Catalog','tag'],['map','Map','map'],['zones','Zones','target'],['trees','Phone trees & mute','tree']]},
+  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal']]},
+  voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Labs','flask'],['bench','Test bench','sliders'],['statuses','Statuses','tag']]},
+  settings: {label:'Settings', ico:'gear',  tabs:[['settings','Settings','gear']]},
+};
+const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
+const TAB_LOADERS={ map:()=>ensureMap(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>loadDash() };
+const GROUP_LAST={}; let CUR_GROUP='pulse';
+function renderGroupNav(){
+  const nav=document.getElementById('grpnav'); if(!nav) return;
+  nav.innerHTML=Object.entries(NAV_GROUPS).map(([g,o])=>
+    `<button data-grp="${g}" onclick="showGroup('${g}')">${ICO(o.ico,16)}<span style="vertical-align:middle">${esch(o.label)}</span></button>`).join('');
+}
+function showGroup(g, sectionId){
+  const grp=NAV_GROUPS[g]; if(!grp) return; CUR_GROUP=g;
+  document.querySelectorAll('#grpnav button').forEach(b=>b.classList.toggle('active',b.dataset.grp===g));
+  const sn=document.getElementById('subnav2');
+  if(sn){ sn.style.display = grp.tabs.length>1?'flex':'none';
+    sn.innerHTML=grp.tabs.map(t=>`<button data-sec="${t[0]}" onclick="showSection('${t[0]}')">${ICO(t[2],15)}<span style="vertical-align:middle">${esch(t[1])}</span></button>`).join(''); }
+  showSection(sectionId || GROUP_LAST[g] || grp.tabs[0][0], true);
+}
+function showSection(id, fromGroup){
+  const g=SECTION_GROUP[id]; if(!g) return;
+  if(!fromGroup && g!==CUR_GROUP){ showGroup(g, id); return; }
+  GROUP_LAST[g]=id;
+  document.querySelectorAll('section').forEach(s=>s.classList.toggle('active',s.id===id));
+  document.querySelectorAll('#subnav2 button').forEach(b=>b.classList.toggle('active',b.dataset.sec===id));
+  localStorage.setItem('active_tab', id);
+  if(TAB_LOADERS[id]) TAB_LOADERS[id]();
+  try{ window.scrollTo({top:0}); }catch(_){}
+}
+
+// ---- God view: live calls + outcomes + money, one screen, auto-refreshing ----
+const secsFmt=s=>s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):(s||0)+'s';
+async function loadCallTiming(){
+  const d=await api('/api/admin/call-timing'); const el=document.getElementById('d_timing'); if(!el) return;
+  if(!d||d.error||!d.aggregate||!d.aggregate.calls){ el.innerHTML='<div class="meta">No timed calls yet — this fills in as calls come through.</div>'; const se=document.getElementById('d_timing_stores'); if(se) se.innerHTML=''; return; }
+  const a=d.aggregate, tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  el.innerHTML = tile(secsFmt(a.avgTalkSec),'avg talk','green')+tile(secsFmt(a.avgNavSec),'avg to human')+tile(secsFmt(a.avgCallSec),'avg call')+tile(a.totalMinutes+'m','total minutes')+tile(a.calls,'calls timed');
+  const se=document.getElementById('d_timing_stores');
+  if(se) se.innerHTML=(d.byStore||[]).map(s=>`<div class="repline"><span class="rl">${esch(s.name)} <span class="meta">· ${s.n} calls</span></span><b>${secsFmt(s.avgTalkSec)} talk · ${secsFmt(s.avgNavSec)} nav · ${secsFmt(s.avgCallSec)} call</b></div>`).join('')||'<div class="meta">—</div>';
+}
+async function loadDash(){
+  loadCallTiming();
+  const [o,m]=await Promise.all([api('/api/admin/overview'),api('/api/admin/metrics')]);
+  if(o&&!o.error){
+    CHAIN_STATS=o.chainStats||[]; renderChainList();
+    const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+    document.getElementById('d_stats').innerHTML=
+      st(o.live.length,'live now',o.live.length?'green':'')+
+      st(o.today.calls,'calls 24h')+st(o.today.confirms,'confirms 24h','green')+
+      st(secsFmt(o.today.avgCallSeconds||o.avgCallSeconds30d),'avg call')+
+      st((o.today.minutes||0)+'m','minutes 24h')+st(o.week.calls,'calls 7d');
+    document.getElementById('d_live_n').textContent=o.live.length?o.live.length+' active':'';
+    document.getElementById('d_live').innerHTML=o.live.length?o.live.map(c=>
+      `<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px solid var(--border)">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)"></span>
+        <b style="color:#fff">${esch(c.store)}</b><span class="pill">${esch(c.category)}</span>
+        <span style="margin-left:auto;font-family:ui-monospace,monospace">${secsFmt(c.secs)}</span></div>`).join('')
+      :'No calls in flight.';
+    // One restrained palette on God view: green = confirmed, red = not-in, neutral = everything else.
+    const tone=r=>r.confirmed===true?'s-green':r.confirmed===false?'s-red':'s-gray';
+    const tmark=r=>r.confirmed===true?vmark('✅','in',18):r.confirmed===false?vmark('❌','out',18):'';
+    const lbl=r=>r.confirmed===true?'in':r.confirmed===false?'not in':(r.status==='completed'?'no answer':esch(r.status));
+    document.getElementById('d_recent').innerHTML=(o.recentCalls||[]).map(r=>
+      `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border)">
+        <div style="flex:1;min-width:0"><b style="color:#ededf2">${esch(r.store)}</b> <span class="meta">· ${esch(r.category)} · ${new Date(r.at*1000).toLocaleTimeString()}${r.secs?(' · '+secsFmt(r.secs)):''}</span></div>
+        <span class="status ${tone(r)}" style="display:inline-flex;align-items:center;gap:5px">${tmark(r)}${lbl(r)}</span></div>`).join('')||'No calls yet.';
+  }
+  if(m&&!m.error){
+    const $$=v=>'$'+((v||0)/100).toFixed(2);
+    const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+    document.getElementById('d_money').innerHTML=
+      st($$(m.revenueCents),'revenue')+st($$(m.mrrCents)+'/mo','MRR')+st($$(m.cogs.totalCents),'COGS')+
+      st($$(m.profitCents),m.profitCents>=0?'profit':'loss',m.profitCents>=0?'green':'')+
+      st(m.users,'users')+st(m.subscribers,'members');
+  }
+  loadBail();
+}
+async function dashIngest(){ const el=document.getElementById('d_act_msg'); el.textContent='Ingesting…'; const r=await api('/api/ingest',{method:'POST'}); el.textContent=(r&&!r.error)?('✓ '+(r.finalized||0)+' call(s) finalized'):'Failed'; }
+async function dashTick(){ const el=document.getElementById('d_act_msg'); el.textContent='Running scheduler…'; const r=await api('/api/tick',{method:'POST'}); el.textContent=(r&&!r.error)?('✓ '+(r.fired||0)+' schedule(s) fired'):'Failed'; }
+
+// ---- Bail library: per-rule toggles saved to policy.bail (enforcement stays staged) ----
+let BAIL=null;
+async function loadBail(){
+  const p=await api('/api/policy'); if(!p||p.error) return; BAIL=p.bail||{};
+  const stateEl=document.getElementById('bail_state');
+  if(stateEl){ stateEl.className='status '+(BAIL.enabled?'s-green':'s-gray'); stateEl.textContent=BAIL.enabled?'● ARMED':'staged · off'; }
+  const tg=(k,lbl,sub)=>`<label style="display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer"><input type="checkbox" ${BAIL[k]?'checked':''} onchange="saveBail('${k}',this.checked)" style="width:18px;height:18px"><span><b style="color:#fff">${lbl}</b> ${sub?`<span class="meta">— ${sub}</span>`:''}</span></label>`;
+  const num=(k,lbl)=>`<label class="meta" style="display:block">${lbl}<input type="number" min="0" value="${BAIL[k]??''}" onchange="saveBail('${k}',Number(this.value)||0)" style="width:100%;margin-top:4px"></label>`;
+  document.getElementById('bail_body').innerHTML=
+    `<label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;border-bottom:1px solid var(--border);margin-bottom:6px"><input type="checkbox" ${BAIL.enabled?'checked':''} onchange="saveBail('enabled',this.checked)" style="width:18px;height:18px"><span><b style="color:${BAIL.enabled?'var(--green)':'#FBBF24'}">MASTER — enforce bail rules on live calls</b> <span class="meta">(stays OFF until enforcement is wired + bench-tested)</span></span></label>`
+    +tg('gotAnswerHangup','Got the answer → hang up','a clear yes/no lands, wrap instantly')
+    +tg('voicemailBail','Voicemail → instant bail','recording detected, never leave a message')
+    +tg('closedBail','Closed recording → instant bail','')
+    +`<div class="grid2" style="margin-top:8px">${num('ivrMaxSeconds','IVR max seconds')}${num('holdMaxSeconds','Hold max seconds')}${num('ringMaxSeconds','Ring max seconds')}${num('maxCallSeconds','Absolute cap (seconds)')}</div>`;
+}
+async function saveBail(k,v){
+  const r=await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({bail:{[k]:v}})});
+  if(r&&!r.error){ BAIL=r.bail||BAIL; toast('Bail rule saved'); if(k==='enabled') loadBail(); }
+  else toast('Could not save');
+}
+
+// --- Voice studio: list / select / record-to-clone (ElevenLabs) ---
+let VS_REC=null, VS_CHUNKS=[], VS_BLOB=null, VS_TIMER=null;
+async function loadVoices(){
+  const sel=document.getElementById('vs_select'); if(!sel) return;
+  const d=await api('/api/voices'); if(!d||d.error){ sel.innerHTML='<option>could not load voices</option>'; return; }
+  sel.innerHTML=(d.voices||[]).map(v=>`<option value="${v.id}" ${v.id===d.active?'selected':''}>${esch(v.name)}${v.cloned?' (cloned)':''}</option>`).join('');
+  const act=(d.voices||[]).find(v=>v.id===d.active);
+  document.getElementById('vs_active').textContent = act?`Live now: ${act.name}`:`Live voice id: ${d.active}`;
+  // Mirror the voice list into the "Call me" + "Talk to me" pickers (test a clone without going live).
+  const opts='<option value="">Default voice</option>'+(d.voices||[]).map(v=>`<option value="${v.id}">${esch(v.name)}${v.cloned?' (cloned)':''}${v.id===d.active?' — LIVE':''}</option>`).join('');
+  const sv=document.getElementById('sim_voice'); if(sv) sv.innerHTML=opts;
+  const lv=document.getElementById('lab_voice'); if(lv) lv.innerHTML=opts;
+}
+async function vsSetActive(){
+  const id=document.getElementById('vs_select').value; if(!id) return;
+  const r=await api('/api/voices/active',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({voiceId:id})});
+  if(r&&r.ok){ toast('Live voice updated'); loadVoices(); } else toast('Could not set voice');
+}
+async function vsToggleRec(){
+  const btn=document.getElementById('vs_rec');
+  if(VS_REC && VS_REC.state==='recording'){ VS_REC.stop(); return; }
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    VS_CHUNKS=[]; VS_REC=new MediaRecorder(stream);
+    VS_REC.ondataavailable=e=>{ if(e.data.size) VS_CHUNKS.push(e.data); };
+    VS_REC.onstop=()=>{ VS_BLOB=new Blob(VS_CHUNKS,{type:'audio/webm'}); const u=URL.createObjectURL(VS_BLOB); const a=document.getElementById('vs_play'); a.src=u; a.style.display=''; document.getElementById('vs_clone').disabled=false; stream.getTracks().forEach(t=>t.stop()); clearInterval(VS_TIMER); btn.textContent='● Record'; btn.style.color=''; };
+    VS_REC.start(); btn.textContent='■ Stop'; btn.style.color='#EF4444';
+    let s=0; const rt=document.getElementById('vs_rectime'); VS_TIMER=setInterval(()=>{ s++; rt.textContent=s+'s'; },1000);
+  }catch(e){ toast('Mic blocked — allow microphone access'); }
+}
+async function vsClone(){
+  const name=(document.getElementById('vs_name').value||'').trim();
+  if(!name){ document.getElementById('vs_msg').textContent='Name the voice first.'; return; }
+  if(!VS_BLOB){ document.getElementById('vs_msg').textContent='Record a sample first.'; return; }
+  const btn=document.getElementById('vs_clone'); btn.disabled=true; const msg=document.getElementById('vs_msg'); msg.style.color=''; msg.textContent='Cloning… (~20s)';
+  const fd=new FormData(); fd.append('name',name); fd.append('files',VS_BLOB,'sample.webm');
+  const t=await clerkToken();
+  const r=await fetch('/api/voices/clone',{method:'POST',headers:t?{Authorization:'Bearer '+t}:{},body:fd}).then(x=>x.json()).catch(()=>null);
+  btn.disabled=false;
+  if(r&&r.ok){ msg.style.color='var(--green)'; msg.textContent='✓ Cloned: '+name+' — select it above to go live.'; loadVoices(); }
+  else { msg.style.color='#EF4444'; msg.textContent='Clone failed'+(r&&r.error?': '+r.error:''); }
+}
+
+// --- Field persistence (remember what you typed across refresh) ---
+const PERSIST=['lab_phone','lab_name','lab_mode','lab_personality','sim_store','sim_cat','sim_mode','sim_tree','sim_specific','sim_phone','s_name','s_cat','s_mode','s_time','s_q','s_clar','r_name','r_phone','r_loc','r_tz','r_tree','f_search','f_type','f_zone','f_carries','f_status','f_sort'];
+function saveDays(){ localStorage.setItem('fld_s_days', [...document.querySelectorAll('#s_days input:checked')].map(c=>c.value).join(',')); }
+function restorePersist(){
+  PERSIST.forEach(id=>{ const el=document.getElementById(id); const val=localStorage.getItem('fld_'+id); if(el && val!==null) el.value=val; });
+  const days=localStorage.getItem('fld_s_days'); if(days!==null){ const set=new Set(days.split(',').filter(Boolean)); document.querySelectorAll('#s_days input').forEach(c=>c.checked=set.has(c.value)); }
+}
+document.addEventListener('input', e=>{ if(e.target.id && PERSIST.includes(e.target.id)) localStorage.setItem('fld_'+e.target.id, e.target.value); });
+document.addEventListener('change', e=>{
+  if(e.target.id && PERSIST.includes(e.target.id)) localStorage.setItem('fld_'+e.target.id, e.target.value);
+  if(e.target.closest && e.target.closest('#s_days')) saveDays();
+});
+
+function statusBadge(r){
+  const lc=r.lastCall;
+  if(!lc) return '<span class="vpill gray">'+vmark('·','gray',24)+'never called</span>';
+  if(r.green) return `<span class="vpill in">${vmark('✅','in',24)}IN · ${esch(lc.category||'')}</span>`;
+  if(lc.status==='completed'&&lc.confirmed!==true&&!lc.doesNotSell&&(lc.shipmentDayHeard||lc.shipmentDay)) return `<span class="vpill soon">${vmark('🚚','soon',24)}restock</span>`;
+  if(lc.status==='completed'&&lc.confirmed===false) return `<span class="vpill out">${vmark('❌','out',24)}not in</span>`;
+  if(lc.status==='completed') return '<span class="vpill unk">'+vmark('🤔','unk',24)+'“maybe”</span>';
+  return `<span class="vpill gray">${vmark('📵','gray',24)}${esch(lc.status||'')}</span>`;
+}
+
+// Store logos + consumer-grade name handling (same conventions as the front end).
+let LOGOS=new Map();
+async function loadLogos(){ try{ const ps=await fetch('/pub/stores').then(r=>r.json()); if(Array.isArray(ps)) LOGOS=new Map(ps.map(x=>[x.id,x.logoUrl||null])); }catch(e){} }
+function splitName(n){ const i=(n||'').search(/[—–]| - /); if(i<0) return {base:(n||'').trim(),branch:''}; return {base:n.slice(0,i).trim(),branch:n.slice(i).replace(/^[—–\-\s]+/,'').trim()}; }
+function storeTile(id,name){
+  const u=LOGOS.get(id);
+  if(u) return `<div class="slogo"><img src="${esch(u)}" alt=""></div>`;
+  const w=(name||'?').split(/\s+/).filter(Boolean);
+  return `<div class="slogo"><span class="mono">${esch(((w[0]||'?')[0]+(w[1]?w[1][0]:'')).toUpperCase())}</span></div>`;
+}
+function agoTs(unix){ if(!unix) return ''; const sec=Math.floor(Date.now()/1000-unix); if(sec<90) return 'just now'; const m=Math.floor(sec/60); if(m<60) return m+'m ago'; const h=Math.floor(m/60); if(h<24) return h+'h ago'; return Math.floor(h/24)+'d ago'; }
+function bubbles(t){
+  if(!t) return '';
+  return '<div class="chat">'+t.split('\n').filter(Boolean).map(line=>{
+    const m=line.match(/^(Agent|Clerk):\s*(.*)$/);
+    if(!m) return `<div class="bub-note">${esch(line)}</div>`;
+    const who=m[1]==='Agent'?'a':'c';
+    return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'Fungie':'Clerk'}</span>${esch(m[2])}</div>`;
+  }).join('')+'</div>';
+}
+let RETAILERS=[];
+let ADMIN_SEARCH_T=null;
+function onAdminSearch(){ clearTimeout(ADMIN_SEARCH_T); ADMIN_SEARCH_T=setTimeout(loadRetailers,300); }
+async function loadRetailers(){
+  const q=(document.getElementById('f_search')?.value||'').trim();
+  const type=document.getElementById('f_type')?.value||'', region=document.getElementById('f_region')?.value||'';
+  const carries=document.getElementById('f_carries')?.value||'', status=document.getElementById('f_status')?.value||'';
+  // Filter-first: a text search (2+ chars) OR a Type/Region/Product/Online pick pulls stores from the
+  // full DB server-side (capped). Other statuses + sort + zone refine the result client-side.
+  const wantServer = q.length>=2 || type || region || carries || status==='online';
+  if(!wantServer){ RETAILERS=[]; SEL.clear(); const el=document.getElementById('retailerList'); if(el) el.innerHTML='<div class="empty">Search by name, city, ZIP — or pick a Type, Region, Product, or Online to pull stores up.</div>'; const bb=document.getElementById('bulkbar'); if(bb) bb.style.display='none'; return; }
+  const p=new URLSearchParams();
+  if(q.length>=2) p.set('q',q);
+  if(type) p.set('type',type);
+  if(region) p.set('region',region);
+  if(carries) p.set('carries',carries);
+  if(status==='online') p.set('online','1');
+  p.set('limit','500');
+  RETAILERS = await api('/api/retailers?'+p.toString()) || [];
+  if(!Array.isArray(RETAILERS)) RETAILERS=[];
+  SEL.clear();
+  fillSimSelects();
+  renderRetailers();
+}
+// The database at a glance — DB-wide totals (exact), independent of the current search.
+async function loadStoreIntel(){
+  const el=document.getElementById('storeintel'); if(!el) return;
+  const d=await api('/api/admin/store-intel'); if(!d||d.error){ el.innerHTML=''; return; }
+  const fmt=n=>Number(n||0).toLocaleString('en-US');   // exact, comma-grouped (101,967 — not "102k")
+  const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${fmt(n)}</div><div class="l">${l}</div></div>`;
+  // Four headline tiles only — the per-product counts move into ONE box below (was a circle per product).
+  el.innerHTML = tile(d.total,'stores','green')+tile(d.callable,'callable')+tile(d.states,'states')+tile(d.chains,'chains');
+  const bp=d.byProduct||{};
+  const items=Object.entries(bp).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]);
+  const cw=document.getElementById('storecarries');
+  if(cw){ if(items.length){ cw.style.display='';
+      cw.innerHTML=`<div class="name" style="margin-bottom:8px">What they carry <span style="color:var(--muted)">— stores stocking each product</span></div>`
+        +`<div class="carrygrid">`+items.map(([p,n])=>`<div class="carryrow"><span>${esch(p)}</span><b>${fmt(n)}</b></div>`).join('')+`</div>`;
+    } else cw.style.display='none'; }
+  // Fill the store-type filter from the full chain-type list, and the product filter from the carry list.
+  if(Array.isArray(d.types)&&d.types.length) fillOptions('f_type', d.types, 'All types');
+  if(items.length) fillOptions('f_carries', items.map(([p])=>p), 'Any product');
+  fillOptions('f_region', ['West Coast','Northwest','Southwest','Midwest','Southeast','Northeast'], 'All regions');
+  // Reports — stores by type, top regions, most-checked stores.
+  const rep=document.getElementById('storereports'), rb=document.getElementById('rep_body');
+  if(rep&&rb){
+    const line=(l,n)=>`<div class="repline"><span class="rl">${esch(l)}</span><b>${fmt(n)}</b></div>`;
+    const col=(title,rows)=>`<div class="repcol"><div class="repttl">${esch(title)}</div>${rows||'<div class="meta">—</div>'}</div>`;
+    const byType=(d.byType||[]).slice(0,12).map(x=>line(x.type,x.n)).join('');
+    const regions=(d.topRegions||[]).map(x=>line(x.region,x.n)).join('');
+    const checks=(d.topChecks||[]).map(x=>line(x.location?`${x.name} · ${x.location}`:x.name,x.n)).join('');
+    if(byType||regions||checks){ rep.style.display='';
+      rb.innerHTML=`<div class="repgrid">${col('By store type',byType)}${col('Top regions',regions)}${col('Most-checked stores',checks)}</div>`;
+    } else rep.style.display='none';
+  }
+}
+function fillOptions(id, vals, allLabel){
+  const sel=document.getElementById(id); if(!sel) return; const cur=sel.value;
+  sel.innerHTML=`<option value="">${allLabel}</option>`+vals.map(x=>`<option value="${x}">${x}</option>`).join('');
+  sel.value=cur;
+}
+function hoursBadge(r){
+  const o=r.openState; if(!o||!o.label) return '';
+  return `<span style="color:${o.open?'var(--green)':'var(--red)'};font-weight:700"><span class="sdot ${o.open?'on':'off'}"></span>${esch(o.label)}</span>`;
+}
+async function refreshHours(id,btn){
+  const old=btn.textContent; btn.textContent='…'; btn.disabled=true;
+  const r=await api('/api/hours/'+id+'/refresh',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+  btn.textContent=old; btn.disabled=false;
+  if(r&&r.openState){ const t=RETAILERS.find(x=>x.id===id); if(t){ t.openState=r.openState; t.hours=r.hours; } renderRetailers(); toast('Hours updated'); }
+  else toast('Could not fetch hours');
+}
+async function backfillAllHours(){
+  toast('Looking up hours for all stores… (refreshes as they fill in)');
+  await api('/api/hours/backfill',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+  let n=0; const iv=setInterval(async()=>{ await loadRetailers(); renderRetailers();
+    const have=RETAILERS.filter(x=>x.openState&&x.openState.label).length;
+    if(have!==n){ n=have; toast('Hours: '+have+'/'+RETAILERS.length); }
+    if(have>=RETAILERS.length||(++n>60)) clearInterval(iv);
+  },8000);
+}
+// ---- Stores: filter + sort + bulk select (all client-side over the current search results) ----
+let SEL=new Set();   // store ids checked for a bulk action
+function mutedChainIds(){ try{ return new Set((CHAINS||[]).filter(c=>c.muted).map(c=>c.id)); }catch(_){ return new Set(); } }
+function storeTypeIco(t){ const s=(t||'').toLowerCase();
+  if(/groc|market|super|food/.test(s)) return 'cart';
+  if(/club|warehouse|wholesale|online|web|ecom/.test(s)) return 'box';
+  return 'store'; }
+function badNum(r){ const p=(r.phone||'').replace(/[^\d+]/g,''); return !p || p.replace(/\D/g,'').length<8; }
+function activeStoreFilters(){
+  const g=id=>document.getElementById(id)?.value||'';
+  const out=[];
+  if(g('f_search').trim()) out.push('“'+g('f_search').trim()+'”');
+  if(g('f_type')) out.push('Type: '+g('f_type'));
+  if(g('f_region')) out.push('Region: '+g('f_region'));
+  if(g('f_zone')) out.push('Zone: '+g('f_zone'));
+  if(g('f_carries')) out.push('Product: '+g('f_carries'));
+  if(g('f_status')){ const o=document.querySelector('#f_status option:checked'); out.push('Status: '+((o&&o.textContent)||g('f_status'))); }
+  return out;
+}
+function clearStoreFilters(){
+  ['f_search','f_type','f_region','f_zone','f_carries','f_status'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; localStorage.removeItem('fld_'+id); });
+  const so=document.getElementById('f_sort'); if(so) so.value='rel';
+  loadRetailers();
+}
+function filteredRetailers(){
+  const q=(document.getElementById('f_search')?.value||'').toLowerCase().trim();
+  const ft=document.getElementById('f_type')?.value||'', fz=document.getElementById('f_zone')?.value||'', fr=document.getElementById('f_region')?.value||'';
+  const fc=(document.getElementById('f_carries')?.value||'').toLowerCase(), fs=document.getElementById('f_status')?.value||'';
+  const muted=mutedChainIds();
+  let rs=RETAILERS.filter(r=>{
+    if(q && !((r.name||'').toLowerCase().includes(q) || (r.location||'').toLowerCase().includes(q) || (r.region||'').toLowerCase().includes(q) || (r.state||'').toLowerCase()===q)) return false;
+    if(ft && r.storeType!==ft) return false;
+    if(fr && r.region!==fr) return false;
+    if(fz && !(r.zones||[]).includes(fz)) return false;
+    if(fc && !((r.carries||'').toLowerCase().includes(fc))) return false;
+    if(fs==='verified' && r.stockStatus!=='verified') return false;
+    if(fs==='unverified' && r.stockStatus!=='unverified') return false;
+    if(fs==='green' && !r.green) return false;
+    if(fs==='open' && !(r.openState&&r.openState.open)) return false;
+    if(fs==='closed' && !(r.openState&&r.openState.known&&!r.openState.open)) return false;
+    if(fs==='online' && !r.online) return false;
+    if(fs==='muted' && !muted.has(r.chainId)) return false;
+    if(fs==='badnum' && !badNum(r)) return false;
+    if(fs==='kiosk' && !r.hasKiosk) return false;
+    return true;
+  });
+  const sort=document.getElementById('f_sort')?.value||'rel';
+  const lastTs=r=>(r.lastCall&&r.lastCall.startedAt)||0;
+  if(sort==='name') rs.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  else if(sort==='verified') rs.sort((a,b)=>((b.stockStatus==='verified')?1:0)-((a.stockStatus==='verified')?1:0));
+  else if(sort==='instock') rs.sort((a,b)=>(b.green?1:0)-(a.green?1:0));
+  else if(sort==='recent') rs.sort((a,b)=>lastTs(b)-lastTs(a));
+  else if(sort==='open') rs.sort((a,b)=>((b.openState&&b.openState.open)?1:0)-((a.openState&&a.openState.open)?1:0));
+  return rs;
+}
+function bulkPick(id,cb){ if(cb.checked) SEL.add(id); else SEL.delete(id); const card=cb.closest('.card'); if(card) card.classList.toggle('selrow',cb.checked); updateBulkBar(filteredRetailers()); }
+function bulkToggleAll(on){ const rs=filteredRetailers(); rs.forEach(r=>{ if(on) SEL.add(r.id); else SEL.delete(r.id); }); renderRetailers(); }
+function updateBulkBar(rs){ const bar=document.getElementById('bulkbar'); if(!bar) return;
+  bar.style.display = rs.length?'flex':'none';
+  const vis=new Set(rs.map(r=>r.id)); const selVis=[...SEL].filter(id=>vis.has(id)).length;
+  const all=document.getElementById('b_all'); if(all) all.checked = rs.length>0 && selVis===rs.length;
+  const c=document.getElementById('b_count'); if(c) c.textContent = selVis?`${selVis} selected`:''; }
+async function bulkEdit(action){
+  const rs=filteredRetailers(); const vis=new Set(rs.map(r=>r.id)); const ids=[...SEL].filter(id=>vis.has(id));
+  if(!ids.length){ toast('Tick some stores first'); return; }
+  if(action==='deactivate' && !confirm(`Remove ${ids.length} store(s) from the consumer list? (soft-remove — reversible)`)) return;
+  const body = action==='verify'?{stockStatus:'verified'} : action==='unverify'?{stockStatus:'unverified'} : action==='online'?{online:true} : action==='offline'?{online:false} : {active:false};
+  toast(`Updating ${ids.length}…`); let ok=0;
+  for(const id of ids){ const r=await api('/api/retailers/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); if(r&&!r.error) ok++; }
+  ids.forEach(id=>{ const t=RETAILERS.find(x=>x.id===id); if(t){ if('stockStatus' in body) t.stockStatus=body.stockStatus; if('online' in body) t.online=body.online; if(body.active===false) t.active=false; } });
+  if(body.active===false) RETAILERS=RETAILERS.filter(r=>r.active!==false);
+  SEL.clear(); renderRetailers(); toast(`${ok}/${ids.length} updated`);
+}
+function renderRetailers(){
+  const rs=filteredRetailers();
+  const el=document.getElementById('retailerList'); if(!el) return;
+  const hasQuery=((document.getElementById('f_search')?.value||'').trim().length>=2);
+  updateBulkBar(rs);
+  if(!rs.length){
+    const af=activeStoreFilters();
+    if(af.length){
+      const hasRegion=!!(document.getElementById('f_region')?.value);
+      el.innerHTML=`<div class="empty">No stores match: ${af.map(esch).join(' · ')}.<div style="margin-top:12px"><button class="ghost" onclick="clearStoreFilters()">Clear filters</button></div>${hasRegion?'<div class="meta" style="margin-top:10px">Tip: online / national stores (e.g. type “Online”) usually have no region — clear <b>Region</b> to include them.</div>':''}</div>`;
+    } else el.innerHTML='<div class="empty">Search by name, city, ZIP — or pick a Type, Region, Product, or Online to pull stores up.</div>';
+    return;
+  }
+  const muted=mutedChainIds();
+  el.innerHTML = rs.map(r=>{
+    const nm=splitName(r.name);
+    const metaTxt=[r.location||'', (r.zones&&r.zones.length)?r.zones[0]:''].filter(Boolean).join(' · ');
+    const ships=r.shipmentDay?`${vmark('🚚','#8a8a98',12)} ships ${esch(r.shipmentDay)}`:'';
+    const hrs=hoursBadge(r); const sel=SEL.has(r.id);
+    return `<div class="card${sel?' selrow':''}">
+    <div class="row" style="align-items:flex-start;gap:10px">
+      <input type="checkbox" class="rowchk" ${sel?'checked':''} onchange="bulkPick(${r.id},this)">
+      ${storeTile(r.id,r.name)}
+      <div class="grow" style="min-width:0">
+        <div class="sname">${esch(nm.base)} ${r.stockStatus==='verified'?'<span class="tag-verified">verified</span>':'<span class="tag-unverified">unverified</span>'}${r.storeType?` <span class="chip-type">${ICO(storeTypeIco(r.storeType),11)} ${esch(r.storeType)}</span>`:''}${muted.has(r.chainId)?' <span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.12)">muted</span>':''}${badNum(r)?' <span class="chip-sm" style="color:#FBBF24;background:rgba(251,191,36,.12)">no number</span>':''}${r.online?' <span class="chip-sm" style="color:#7DD3FC;background:rgba(125,211,252,.12)">online</span>':''}</div>
+        ${nm.branch?`<div class="sbranch">${esch(nm.branch)}</div>`:''}
+        <div class="smeta" style="display:flex;align-items:center;flex-wrap:wrap;gap:0 4px">${esch(metaTxt)}${hrs?(metaTxt?' · ':'')+hrs:''}${ships?(metaTxt||hrs?' · ':'')+ships:''}</div>
+        ${r.carries?`<div style="margin-top:5px">${r.carries.split(',').map(x=>`<span class="chip-sm">${esch(x.trim())}</span>`).join('')}</div>`:''}
+        ${r.lastCall&&r.lastCall.summary?`<div class="meta" style="margin-top:6px;color:#aaa">“${esch(r.lastCall.summary)}”</div>`:''}
+      </div>
+      ${statusBadge(r)}
+    </div>
+    <div class="ractions">
+      <select id="cn_${r.id}">${CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
+      <button class="act" onclick="callNow(${r.id})">${ICO('phone',15)} Call now</button>
+      <button class="ghost" onclick="refreshHours(${r.id},this)">Hours</button>
+    </div>
+  </div>`;}).join('');
+}
+async function labCall(){
+  const phone=v('lab_phone'); const mode=document.getElementById('lab_mode').value; const personality=document.getElementById('lab_personality').value; const name=v('lab_name');
+  const lv=document.getElementById('lab_voice'); const voiceId=lv?lv.value:'';
+  if(!phone){toast('Enter a phone number');return;}
+  toast('Calling…');
+  const r=await api('/api/talk',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone,mode,personality,name,voiceId})});
+  if(r&&r.error){toast('Error: '+r.error);return;}
+  toast('Call placed — answer it!');
+  if(r&&r.providerCallId) pollTranscript(r.providerCallId);
+}
+// --- Store simulator: agent calls YOUR phone; result records against the chosen store ---
+function fillSimSelects(){
+  const ss=document.getElementById('sim_store'); if(ss){ const cur=ss.value;
+    ss.innerHTML=RETAILERS.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(r=>`<option value="${r.id}">${r.name}${r.location?' — '+r.location:''}</option>`).join('');
+    if(cur) ss.value=cur; }
+  const sc=document.getElementById('sim_cat'); if(sc){ const cur=sc.value;
+    sc.innerHTML=CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
+    if(cur) sc.value=cur; }
+}
+
+// ---- Playbook: chain phone trees + store preview ----
+let CHAINS=[];
+const CVS_TEMPLATE="This is a CVS. The phone system is VOICE-driven — navigate by speaking, one prompt at a time, to reach a live person at the FRONT store:\n1. \"Are you a healthcare provider?\" → say \"No.\"\n2. \"Pharmacy or front store services?\" → say \"Front store services.\"\n3. \"beauty and fragrances, OTC health, or general store inquiries\" → say \"General store inquiries.\"\n4. If it stalls or repeats, say \"General store inquiries\" again each time until you hear \"transferring you now\" and a person picks up.\nThe pharmacy can be closed while the front store is open — \"pharmacy closed\" does NOT mean the store is closed; always route to the front.";
+async function loadChains(){
+  CHAINS = await api('/api/chains') || [];
+  renderChainList(); // every chain is muteable now, even with zero calls
+  const sel=document.getElementById('pt_chain'); if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML=CHAINS.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(ch=>`<option value="${ch.id}">${ch.name}${ch.phoneTreeDefault?' ✓':''}</option>`).join('');
+  if(cur) sel.value=cur;
+  loadChainTree();
+}
+function loadChainTree(){
+  const id=Number(document.getElementById('pt_chain').value);
+  const ch=CHAINS.find(c=>c.id===id);
+  document.getElementById('pt_tree').value = (ch&&ch.phoneTreeDefault) || '';
+  document.getElementById('pt_dtmf').value = (ch&&ch.dtmfShortcut) || '';
+  document.getElementById('pt_path').value = (ch&&ch.answerPath) || '';
+  document.getElementById('pt_treesecs').value = (ch&&ch.avgTreeSeconds!=null) ? ch.avgTreeSeconds : '';
+  document.getElementById('pt_repack').checked = !!(ch&&ch.repackOnly);
+  document.getElementById('pt_muted').checked = !!(ch&&ch.muted);
+  document.getElementById('pt_status').textContent = ch&&ch.phoneTreeDefault ? 'This chain has a phone tree set.' : 'No tree yet — stores of this chain use only the global rules.';
+}
+function insertCvsTemplate(){ document.getElementById('pt_tree').value=CVS_TEMPLATE; }
+async function saveChainTree(){
+  const id=Number(document.getElementById('pt_chain').value); if(!id) return;
+  const phoneTreeDefault=document.getElementById('pt_tree').value.trim();
+  const dtmfShortcut=document.getElementById('pt_dtmf').value.trim();
+  if(dtmfShortcut && !/^[0-9*#]\s*@\s*\d+(\.\d+)?(\s*,\s*[0-9*#]\s*@\s*\d+(\.\d+)?)*$/.test(dtmfShortcut)){
+    document.getElementById('pt_status').textContent='Shortcut format: digit@seconds, e.g. 0@3 or 1@3,0@9'; return;
+  }
+  document.getElementById('pt_status').textContent='Saving…';
+  const body={ phoneTreeDefault, dtmfShortcut,
+    answerPath:document.getElementById('pt_path').value||null,
+    avgTreeSeconds:Number(document.getElementById('pt_treesecs').value)||null,
+    repackOnly:document.getElementById('pt_repack').checked,
+    muted:document.getElementById('pt_muted').checked };
+  const r=await api('/api/chains/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  if(r&&r.id){ const i=CHAINS.findIndex(c=>c.id===id); if(i>=0) CHAINS[i]=r;
+    document.getElementById('pt_status').textContent='Saved ✓ — applies to every store of this chain on the next call.';
+    loadChains(); renderChainList(); }
+  else document.getElementById('pt_status').textContent='Could not save.';
+}
+// All-chains table: 30-day stats from the god view + one-tap mute/repack flips.
+const PATH_LBL={direct_human:'🙋 direct',simple_ivr:'🔢 simple IVR',deep_ivr:'🌀 deep IVR'};
+let CHAIN_STATS=[], CHAIN_FILTER='';
+function chainFilter(v){ CHAIN_FILTER=v||''; renderChainList(); }
+function renderChainList(){
+  const el=document.getElementById('pt_chainlist'); if(!el) return;
+  // EVERY chain (so you can mute one with zero calls yet, e.g. Ralph's) merged with its 30-day stats.
+  const statsById=new Map((CHAIN_STATS||[]).map(s=>[s.id,s]));
+  const base=(Array.isArray(CHAINS)&&CHAINS.length)?CHAINS.map(ch=>Object.assign({calls30d:0,confirms30d:0},statsById.get(ch.id)||{},ch,{hasTree:!!ch.phoneTreeDefault,dtmf:ch.dtmfShortcut})):CHAIN_STATS;
+  const f=CHAIN_FILTER.trim().toLowerCase();
+  let list=base.filter(ch=>!f||(ch.name||'').toLowerCase().includes(f)).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if(!list.length){ el.innerHTML='<div class="empty" style="padding:16px">'+(f?'No chains match.':'No chains loaded.')+'</div>'; return; }
+  el.innerHTML=list.map(ch=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--border);${ch.muted?'opacity:.5':''}">
+      <div style="flex:1;min-width:0">
+        <b style="color:#fff">${esch(ch.name)}</b>
+        ${ch.repackOnly?'<span class="chip-sm" style="color:#FBBF24;background:rgba(251,191,36,.12)">repack-only</span>':''}
+        ${ch.hasTree?'<span class="chip-sm">tree</span>':''}${ch.muted?'<span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.12)">muted</span>':''}
+        <div class="meta" style="font-size:11.5px">${PATH_LBL[ch.answerPath]||'unclassified'}${ch.calls30d?` · ${ch.calls30d} calls/30d · ${ch.confirms30d} confirms`:' · no calls yet'}</div>
+      </div>
+      <button class="ghost" style="font-size:12px;padding:6px 12px;${ch.muted?'color:var(--green);border-color:rgba(74,222,128,.4)':''}" onclick="quickChain(${ch.id},'muted',${!ch.muted})">${ch.muted?'Unmute':'Mute'}</button>
+      <button class="ghost" style="font-size:12px;padding:6px 10px" onclick="quickChain(${ch.id},'repackOnly',${!ch.repackOnly})">${ch.repackOnly?'Not repack':'Repack'}</button>
+    </div>`).join('');
+}
+async function quickChain(id,field,val){
+  const r=await api('/api/chains/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({[field]:val})});
+  if(r&&r.id){ toast(field==='muted'?(val?'Muted — hidden from consumers in every city':'Unmuted'):'Saved'); const s=CHAIN_STATS.find(c=>c.id===id); if(s) s[field]=val; const ch=CHAINS.find(c=>c.id===id); if(ch) ch[field]=val; renderChainList(); }
+  else toast('Could not save');
+}
+function previewMaybe(){ const d=document.getElementById('tb_preview_card'); if(d&&d.open) loadPreview(); }
+async function loadPreview(){
+  // Preview follows the Test Call selections — one set of pickers for the whole bench.
+  const rid=Number(document.getElementById('sim_store').value), cid=Number(document.getElementById('sim_cat').value);
+  if(!rid||!cid) return;
+  document.getElementById('pv_meta').textContent='Assembling…';
+  const p=await api(`/api/preview/${rid}?categoryId=${cid}`);
+  const body=document.getElementById('pv_body');
+  if(!p||p.error){ document.getElementById('pv_meta').textContent='Could not load preview.'; body.style.display='none'; return; }
+  const src = p.usedStoreOverride ? 'store override' : (p.phoneTree ? 'chain tree ('+(p.chainName||'chain')+')' : 'global rules only — no phone tree');
+  const dtmf = p.dtmf ? ` · <span style="color:var(--yellow,#F4D03F)">⌨️ auto-press ${p.dtmf}</span>` : '';
+  document.getElementById('pv_meta').innerHTML = `<b>${p.retailerName}</b> · phone-tree source: <span style="color:var(--green)">${src}</span>${dtmf}`;
+  body.textContent=p.prompt; body.style.display='';
+}
+function syncTreeUI(){ const t=document.getElementById('sim_tree'); const w=document.getElementById('sim_specific_wrap'); if(t&&w) w.style.display = t.value==='specific' ? 'block' : 'none'; }
+// Test Bench self-call: the bench agent (live brain + DRAFT voice) calls YOUR phone with the
+// chosen store's full context. Result records against the store, like the old simulator.
+async function benchCall(){
+  const retailerId=Number(document.getElementById('sim_store').value);
+  const categoryId=Number(document.getElementById('sim_cat').value);
+  const mode=document.getElementById('sim_mode').value;
+  const toNumber=v('sim_phone');
+  const tree=document.getElementById('sim_tree').value;
+  const specificProduct = tree==='specific' ? v('sim_specific') : '';
+  const sv=document.getElementById('sim_voice'); const voiceId=sv?sv.value:'';
+  if(!retailerId||!categoryId){toast('Pick a store and category');return;}
+  if(!toNumber){toast('Enter your phone number');return;}
+  if(tree==='specific'&&!specificProduct){toast('Name the specific product, or switch to general');return;}
+  toast('Calling you — answer like the clerk!');
+  const r=await api('/api/bench/call',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId,categoryId,mode,toNumber,specificProduct,voiceId})});
+  if(r&&r.error){toast('Error: '+r.error);return;}
+  if(r&&r.providerCallId) pollTranscript(r.providerCallId,'tb');
+}
+// Re-assert the agent's canonical built-in script (safety lever if experiments went sideways).
+async function resetScript(){
+  document.getElementById('sb_status').textContent='Resetting the live agent script to default…';
+  const r=await api('/api/voice-tuning',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({pushPrompt:true})});
+  document.getElementById('sb_status').textContent = (r&&r.error) ? 'Error: '+r.error : 'Script reset ✓ — the live agent runs the known-good built-in script again.';
+}
+
+// --- The LIVE strip: always shows what real store calls use right now ---
+let LIVE_VOICE=null;
+async function loadLiveStrip(){
+  const t=await api('/api/voice/live'); if(!t||t.error) return; LIVE_VOICE=t;
+  const el=document.getElementById('ls_vals'); if(!el) return;
+  const esc=s=>(s||'').replace(/</g,'&lt;');
+  el.innerHTML=`speed <b>${t.speed}</b> · warmth <b>${t.stability}</b> · naturalness <b>${t.latency}</b> · beat <b>${esc(t.turnEagerness)}</b> · brain <b>${esc((t.llm||'').replace('claude-',''))}</b><br>opener: “${esc((t.opening||'').slice(0,90))}”`;
+  updateDraftDot();
+}
+function updateDraftDot(){
+  const d=document.getElementById('ls_draft'); if(!d||!LIVE_VOICE) return;
+  const g=id=>document.getElementById(id);
+  if(!g('sb_llm')||!g('sb_llm').value) return; // draft not loaded yet
+  const same = Number(v('sb_speed'))===Number(LIVE_VOICE.speed)
+    && Number(v('sb_stability'))===Number(LIVE_VOICE.stability)
+    && Number(v('sb_latency'))===Number(LIVE_VOICE.latency)
+    && g('sb_beat').value===LIVE_VOICE.turnEagerness
+    && g('sb_llm').value===(LIVE_VOICE.llm||'')
+    && v('tb_opening')===(LIVE_VOICE.opening||'');
+  d.style.display = same?'none':'';
+}
+
+// --- Draft (test bench) voice tuning ---
+const LATENCY_LABELS=['smoothest (0)','smooth (1)','balanced (2)','fast (3)','fastest/robotic (4)'];
+function sbLabels(){
+  const g=id=>document.getElementById(id);
+  if(g('sb_speed_val')) g('sb_speed_val').textContent=g('sb_speed').value;
+  if(g('sb_stability_val')) g('sb_stability_val').textContent=g('sb_stability').value;
+  if(g('sb_latency_val')) g('sb_latency_val').textContent=LATENCY_LABELS[Number(g('sb_latency').value)]||g('sb_latency').value;
+  updateDraftDot();
+}
+async function loadSandbox(){
+  const t=await api('/api/sandbox-tuning');
+  if(!t||t.error){ const s=document.getElementById('sb_status'); if(s) s.textContent = t&&t.error ? 'Test-bench agent not configured.' : ''; return; }
+  const g=id=>document.getElementById(id);
+  if(g('sb_speed')) g('sb_speed').value=t.speed;
+  if(g('sb_stability')) g('sb_stability').value=t.stability;
+  if(g('sb_latency')) g('sb_latency').value=t.latency;
+  if(g('sb_model')&&t.modelId) g('sb_model').value=t.modelId;
+  if(g('sb_beat')&&t.turnEagerness) g('sb_beat').value=t.turnEagerness;
+  if(g('sb_llm')&&t.llm) g('sb_llm').value=t.llm;
+  if(g('tb_opening')) g('tb_opening').value=t.opening||'';
+  sbLabels();
+  const s=document.getElementById('sb_status'); if(s) s.textContent='Showing the current draft.';
+}
+function sandboxBody(){
+  return { speed:Number(v('sb_speed')), stability:Number(v('sb_stability')),
+    latency:Number(v('sb_latency')), modelId:document.getElementById('sb_model').value,
+    turnEagerness:document.getElementById('sb_beat').value,
+    llm:document.getElementById('sb_llm').value, opening:v('tb_opening') };
+}
+async function applySandbox(){
+  document.getElementById('sb_status').textContent='Saving the draft…';
+  const r=await api('/api/sandbox-tuning',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(sandboxBody())});
+  if(r&&r.error){ document.getElementById('sb_status').textContent='Error: '+r.error; return; }
+  document.getElementById('sb_status').textContent='Draft saved ✓ — store calls unchanged. Hit 📞 Call me below to hear it.';
+  updateDraftDot();
+}
+async function pushSandboxToStores(){
+  if(!confirm('Go LIVE: apply this draft (voice + opener + brain) to ALL store calls?')) return;
+  document.getElementById('sb_status').textContent='Saving draft, then applying to all stores…';
+  await api('/api/sandbox-tuning',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(sandboxBody())});
+  const r=await api('/api/sandbox-tuning/apply-to-stores',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+  if(r&&r.error){ document.getElementById('sb_status').textContent='Error: '+r.error; toast('Error: '+r.error); return; }
+  document.getElementById('sb_status').textContent='✅ LIVE on '+(r.applied||0)+' store agent(s) — every store call now uses this.';
+  toast('Applied to all store calls'); loadLiveStrip();
+}
+// --- Script library (saved tuning profiles, loaded into the DRAFT) ---
+async function loadPresets(){
+  const l=await api('/api/voice-presets'); const sel=document.getElementById('vt_preset'); if(!sel||!Array.isArray(l)) return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— saved scripts —</option>'+l.map(p=>`<option value="${(p.name||'').replace(/"/g,'&quot;')}">${(p.name||'').replace(/</g,'&lt;')}</option>`).join('');
+  sel.value=cur;
+}
+async function storePreset(){
+  const name=document.getElementById('vt_preset_name').value.trim(); if(!name){ toast('Name it first'); return; }
+  const body={ name, opening:v('tb_opening'), speed:Number(v('sb_speed')),
+    stability:Number(v('sb_stability')), llm:document.getElementById('sb_llm').value };
+  const r=await api('/api/voice-presets',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  if(r&&r.error){ toast('Error: '+r.error); return; }
+  document.getElementById('vt_preset_name').value=''; toast('Saved “'+name+'”'); await loadPresets(); document.getElementById('vt_preset').value=name;
+}
+async function loadPreset(){
+  const name=document.getElementById('vt_preset').value; if(!name){ toast('Pick a saved script'); return; }
+  const t=await api('/api/voice-presets/apply',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name})});
+  if(t&&t.error){ toast('Error: '+t.error); return; }
+  await loadSandbox(); toast('Loaded “'+name+'” into the draft — test it, then apply to stores');
+}
+async function removePreset(){
+  const name=document.getElementById('vt_preset').value; if(!name){ toast('Pick a saved script'); return; }
+  const r=await api('/api/voice-presets',{method:'DELETE',headers:{'content-type':'application/json'},body:JSON.stringify({name})});
+  if(r&&r.error){ toast('Error: '+r.error); return; }
+  toast('Deleted “'+name+'”'); await loadPresets();
+}
+// --- Live Listen (real-time call audio via Twilio media stream -> WebSocket) ---
+let LL_WS=null, LL_CTX=null, LL_NEXT={}, LL_FRAMES=0;
+const setLL=m=>{document.getElementById('ll_status').textContent=m;};
+function muLawDecode(u){ u=~u&0xFF; const sign=u&0x80,exp=(u>>4)&7,man=u&0x0F; let s=((man<<3)+0x84)<<exp; s-=0x84; return sign?-s:s; }
+function playMu(b64,track){
+  if(!LL_CTX) return; track=track||'inbound';
+  const raw=atob(b64), n=raw.length; if(!n) return;
+  const buf=LL_CTX.createBuffer(1,n,8000), ch=buf.getChannelData(0);
+  for(let i=0;i<n;i++) ch[i]=muLawDecode(raw.charCodeAt(i))/32768;
+  const src=LL_CTX.createBufferSource(); src.buffer=buf; src.connect(LL_CTX.destination);
+  if(LL_NEXT[track]==null) LL_NEXT[track]=LL_CTX.currentTime+0.35;        // per-track timeline -> agent & clerk mix
+  const at=Math.max(LL_NEXT[track], LL_CTX.currentTime+0.04);
+  src.start(at); LL_NEXT[track]=at+buf.duration;
+  if((++LL_FRAMES)%25===0) setLL('🔴 LIVE — listening… ('+Math.round(LL_FRAMES*0.02/2)+'s)');
+}
+async function callAndListen(){
+  const phone=(document.getElementById('ll_phone').value||'').trim();
+  if(!phone){ toast('Enter a store number'); return; }
+  const btn=document.getElementById('ll_btn'); btn.disabled=true; LL_FRAMES=0; LL_NEXT={};
+  setLL('Placing the call…');
+  try{ LL_CTX=new (window.AudioContext||window.webkitAudioContext)(); await LL_CTX.resume(); }catch(e){ setLL('Audio blocked by browser.'); btn.disabled=false; return; }
+  const t=await api('/api/talk',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone,mode:'restock'})});
+  if(!t||t.error||!t.providerCallId){ setLL('Could not place call: '+((t&&t.error)||'error')); btn.disabled=false; return; }
+  setLL('📞 Call placed — waiting for the store to pick up…');
+  const m=await api('/api/monitor/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({providerCallId:t.providerCallId})});
+  if(!m||m.error||!m.room){ setLL('Could not start live audio: '+((m&&m.error)||'error')); btn.disabled=false; return; }
+  const url='wss://'+m.wsHost+'/listen?room='+encodeURIComponent(m.room);
+  LL_WS=new WebSocket(url);
+  LL_WS.onopen=()=>{ setLL('🔴 LIVE — listening…'); document.getElementById('ll_stop').style.display=''; };
+  LL_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data); if(d.audio) playMu(d.audio,d.track); }catch(e){} };
+  LL_WS.onclose=()=>{ setLL('Audio ended.'); document.getElementById('ll_stop').style.display='none'; btn.disabled=false; };
+  LL_WS.onerror=()=>{ setLL('Audio connection error — the call may still be going.'); };
+}
+function stopListen(){ if(LL_WS){LL_WS.close();LL_WS=null;} if(LL_CTX){LL_CTX.close().catch(()=>{});LL_CTX=null;} LL_NEXT={}; }
+
+// --- Bridge Call (rebuild milestone 1): our own Twilio call -> our WS -> live audio in browser ---
+const setBC=m=>{document.getElementById('bc_status').textContent=m;};
+async function bridgeCall(){
+  const phone=(document.getElementById('bc_phone').value||'').trim();
+  if(!phone){ toast('Enter a number'); return; }
+  const btn=document.getElementById('bc_btn'); btn.disabled=true; LL_FRAMES=0; LL_NEXT={};
+  setBC('Starting audio…');
+  try{ LL_CTX=new (window.AudioContext||window.webkitAudioContext)(); await LL_CTX.resume(); }catch(e){ setBC('Audio blocked by browser.'); btn.disabled=false; return; }
+  const m=await api('/api/bridge/call',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({toNumber:phone})});
+  if(!m||m.error||!m.room){ setBC('Call failed: '+((m&&m.error)||'error')); btn.disabled=false; return; }
+  setBC('📞 Calling '+phone+' — connecting live audio…');
+  LL_WS=new WebSocket('wss://'+m.wsHost+'/listen?room='+encodeURIComponent(m.room));
+  LL_WS.onopen=()=>{ setBC('🔴 LIVE — answer the phone and you should hear yourself here.'); document.getElementById('bc_stop').style.display=''; };
+  LL_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data); if(d.audio) playMu(d.audio,d.track); }catch(e){} };
+  LL_WS.onclose=()=>{ setBC('Audio ended.'); document.getElementById('bc_stop').style.display='none'; btn.disabled=false; };
+  LL_WS.onerror=()=>{ setBC('Audio connection error.'); };
+}
+function bridgeStop(){ if(LL_WS){LL_WS.close();LL_WS=null;} if(LL_CTX){LL_CTX.close().catch(()=>{});LL_CTX=null;} LL_NEXT={}; document.getElementById('bc_stop').style.display='none'; document.getElementById('bc_btn').disabled=false; setBC('Stopped.'); }
+
+// --- Live transcript polling (shared by Talk + Simulate) ---
+let TRANSCRIPT_TIMER=null;
+function hideTranscript(pre){ pre=pre||'lab'; if(TRANSCRIPT_TIMER){clearInterval(TRANSCRIPT_TIMER);TRANSCRIPT_TIMER=null;} document.getElementById(pre+'_transcript_card').style.display='none'; }
+function renderTranscriptBody(t){
+  if(!t) return '<span style="color:#777">No transcript yet…</span>';
+  return t.split('\n').map(line=>{
+    const m=line.match(/^(Agent|Clerk):\s*(.*)$/);
+    if(!m) return `<div>${line.replace(/</g,'&lt;')}</div>`;
+    const who=m[1], txt=(m[2]||'').replace(/</g,'&lt;');
+    const color=who==='Agent'?'var(--green)':'#A78BFA';
+    return `<div style="margin:3px 0"><b style="color:${color}">${who}:</b> ${txt}</div>`;
+  }).join('');
+}
+// What a Runnr customer would see — rendered from the Statuses registry (single source of
+// truth, editable in Playbook → Statuses). Falls back to built-ins if a key is missing.
+// Drawn verdict marks — same crisp icons as the consumer front end (no raw emoji in chrome).
+// Pass a tone ('in'|'out'|'soon'|'unk'|'gray') or a hex color.
+function vmark(emoji,tc,size){
+  size=size||22;
+  const col=/^#/.test(tc||'')?tc:(tc==='in'?'#4ADE80':tc==='out'?'#EF4444':tc==='soon'?'#F59E0B':tc==='gray'?'#9CA3AF':'#F4D03F');
+  const sw=size<=20?2.1:1.8;
+  const W=i=>`<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">${i}</svg>`;
+  const G={
+    '✅':`<circle cx="12" cy="12" r="10" fill="${col}" stroke="none"/><path d="M7 12.4l3.2 3.2L17 9" stroke="#06210f" stroke-width="2.6"/>`,
+    '❌':`<circle cx="12" cy="12" r="9.5"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/>`,
+    '🚫':`<circle cx="12" cy="12" r="9.5"/><path d="M5.5 5.5l13 13"/>`,
+    '🕐':`<circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.5 2.5"/>`,
+    '🤔':`<circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.5A2.5 2.5 0 1 1 12 12.6v1.4M12 17v.1"/>`,
+    '📵':`<rect x="8" y="3.5" width="8" height="17" rx="2"/><path d="M10.8 18h2.4M4 4l16 16"/>`,
+    '🔒':`<rect x="6" y="10.5" width="12" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>`,
+    '⚠️':`<path d="M12 4L21 19.5H3z"/><path d="M12 10v4M12 16.7v.1"/>`,
+    '🚚':`<rect x="2.5" y="7.5" width="11" height="8" rx="1"/><path d="M13.5 9.5h3.8l3.2 3.2v2.8h-7z"/><circle cx="6.4" cy="17.6" r="1.7"/><circle cx="16.6" cy="17.6" r="1.7"/>`,
+    '·':`<circle cx="12" cy="12" r="2.6" fill="${col}" stroke="none"/>`,
+  };
+  return G[emoji]?W(G[emoji]):`<span style="font-size:${Math.round(size*.85)}px">${emoji}</span>`;
+}
+function customerVerdict(o){
+  if(o.statusKey && STATUSES[o.statusKey]){
+    const s=STATUSES[o.statusKey];
+    let n=(o.statusKey==='failed'&&o.failureReason)?o.failureReason:(s.note||'');
+    if(s.tone==='in' && o.productName) n="They've got "+o.productName+" in — go get it.";
+    return {e:s.emoji, t:s.label, c:s.color, n};
+  }
+  const askedHuman=/(^|\n)\s*Agent:/.test(o.transcript||'') && /pok|piece|topps|needoh|got any|in stock|shipment|carry/i.test((o.transcript||'').split('\n').filter(l=>/^\s*Agent:/.test(l)).join(' '));
+  if(o.status==='completed'&&o.doesNotSell) return {e:'🚫',t:"They don't carry it",c:'#EF4444',n:"This store doesn’t sell this category at all."};
+  if(o.status==='completed'&&o.soldOut) return {e:'🕐',t:'Sold out',c:'#EF4444',n:'They got some in, but it’s gone — sold out for now.'};
+  if(o.status==='completed'&&o.confirmed===true) return {e:'✅',t:'In stock',c:'#4ADE80',n:'They have it — go get it.'};
+  if(o.status==='completed'&&o.confirmed!==true&&!o.doesNotSell&&(o.shipmentDayHeard||o.shipmentDay)) return {e:'🚚',t:'Restock incoming',c:'#F59E0B',n:'Not in now — but a shipment lands '+(o.shipmentDayHeard||o.shipmentDay)+'. Be first when it drops.'};
+  if(o.status==='completed'&&o.confirmed===false) return {e:'❌',t:'Not in stock',c:'#EF4444',n:'They don’t have it right now.'};
+  if(o.status==='completed') return askedHuman?{e:'🤔',t:'No clear answer',c:'#FBBF24',n:'Got through and asked, but no clear yes/no.'}:{e:'📵',t:'Nobody answered',c:'#9CA3AF',n:'Worked the menu but no one picked up.'};
+  if(o.status==='no_answer') return {e:'📵',t:'Nobody answered',c:'#9CA3AF',n:'Rang out — no one picked up.'};
+  if(o.status==='closed') return {e:'🔒',t:'Store closed',c:'#9CA3AF',n:'They’re closed right now.'};
+  if(o.status==='failed') return {e:'⚠️',t:'Call failed',c:'#FBBF24',n:o.failureReason||'Something went wrong.'};
+  return {e:'📵',t:'Nobody answered',c:'#9CA3AF',n:'Couldn’t reach anyone.'};
+}
+function pollTranscript(cid, pre){
+  pre=pre||'lab';
+  const el=s=>document.getElementById(pre+s);
+  if(TRANSCRIPT_TIMER) clearInterval(TRANSCRIPT_TIMER);
+  el('_transcript_card').style.display='block';
+  el('_t_status').textContent='Waiting for the call to connect…';
+  el('_verdict').style.display='none';
+  el('_t_summary').textContent='';
+  el('_t_body').innerHTML='<span style="color:#777">Ringing…</span>';
+  let elapsed=0;
+  const tick=async()=>{
+    elapsed+=4;
+    const o=await api('/api/conversation/'+encodeURIComponent(cid));
+    if(o&&o.status&&o.status!=='in_progress'){
+      clearInterval(TRANSCRIPT_TIMER); TRANSCRIPT_TIMER=null;
+      el('_t_status').innerHTML='Call '+o.status;
+      const vv=customerVerdict(o), vd=el('_verdict');
+      vd.style.display=''; vd.style.borderColor=vv.c;
+      vd.innerHTML='<div style="font-size:12px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">What the customer sees</div>'
+        +'<div style="margin-bottom:2px">'+vmark(vv.e,vv.c,34)+'</div><div style="font-size:20px;font-weight:800;color:'+vv.c+'">'+vv.t+'</div>'
+        +'<div style="font-size:13px;color:#bbb;margin-top:4px">'+(vv.n||'').replace(/</g,'&lt;')+'</div>';
+      el('_t_summary').textContent=o.summary||'';
+      if(o.status==='failed'&&o.failureReason){
+        el('_t_body').innerHTML='<div style="color:#FBBF24;font-weight:600;margin-bottom:8px">⚠️ '+o.failureReason.replace(/</g,'&lt;')+'</div>'+renderTranscriptBody(o.transcript);
+      } else {
+        el('_t_body').innerHTML=renderTranscriptBody(o.transcript);
+      }
+      loadRetailers(); loadResults();
+    } else {
+      el('_t_status').textContent='In progress… ('+elapsed+'s)';
+      if(o&&o.transcript) el('_t_body').innerHTML=renderTranscriptBody(o.transcript);
+      if(elapsed>=240){ clearInterval(TRANSCRIPT_TIMER); TRANSCRIPT_TIMER=null; el('_t_status').textContent='Stopped polling (timed out). Check Results.'; }
+    }
+  };
+  TRANSCRIPT_TIMER=setInterval(tick,4000);
+}
+
+// ---- Statuses registry (Playbook → Statuses): single source of truth for verdicts ----
+let STATUSES={};
+async function loadStatusReg(){
+  const l=await api('/api/statuses'); if(!Array.isArray(l)) return;
+  STATUSES={}; l.forEach(s=>STATUSES[s.key]=s);
+  renderStatuses(l);
+}
+function escH(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+function renderStatuses(list){
+  const el=document.getElementById('st_list'); if(!el) return;
+  const rows=(list||Object.values(STATUSES)).slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
+  el.innerHTML = rows.length ? rows.map(s=>`
+    <div class="card" style="padding:10px 12px;margin-bottom:8px" data-sid="${s.id}">
+      <div class="row" style="gap:8px;align-items:center">
+        <span class="stico" title="left = the drawn icon customers see · right = the emoji key you type">
+          <span class="stico-prev">${vmark(s.emoji,s.tone,22)}</span>
+          <input value="${escH(s.emoji)}" data-f="emoji" class="stico-key">
+        </span>
+        <input value="${escH(s.label)}" data-f="label" style="flex:1" placeholder="Label">
+        <input type="color" value="${escH(s.color)}" data-f="color" style="width:46px;height:42px;padding:2px;border-radius:8px;border:1px solid var(--border);background:none">
+      </div>
+      <input value="${escH(s.note)}" data-f="note" placeholder="one-line note the customer sees" style="margin-top:6px">
+      <div class="row" style="gap:8px;margin-top:6px;align-items:center">
+        <select data-f="tone" style="max-width:140px">
+          <option value="unk"${s.tone==='unk'?' selected':''}>neutral</option>
+          <option value="in"${s.tone==='in'?' selected':''}>green — go</option>
+          <option value="out"${s.tone==='out'?' selected':''}>red — no-go</option>
+        </select>
+        <span class="meta" style="flex:1;overflow:hidden;text-overflow:ellipsis">key: <code>${escH(s.key)}</code></span>
+        <button class="ghost" onclick="saveStatus(${s.id},this)">Save</button>
+      </div>
+    </div>`).join('') : '<div class="empty">No statuses yet.</div>';
+}
+async function saveStatus(id,btn){
+  const card=btn.closest('[data-sid]'); const body={};
+  card.querySelectorAll('[data-f]').forEach(i=>{ body[i.dataset.f]=i.value; });
+  const r=await api('/api/statuses/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  if(r&&r.id){ STATUSES[r.key]=r; toast('Saved — live in Runnr + Test Bench now'); }
+  else toast('Could not save');
+}
+async function addStatus(){
+  const label=v('st_new_label'); if(!label){ toast('Give it a label'); return; }
+  const body={ key:label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''), label,
+    emoji:v('st_new_emoji')||'•', note:v('st_new_note'), tone:document.getElementById('st_new_tone').value };
+  const r=await api('/api/statuses',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  if(r&&r.id){ document.getElementById('st_msg').textContent='Added ✓ — note: DISPLAY is live, but detecting this situation on calls needs Claude to wire the extraction (tell it what the clerk says).';
+    ['st_new_label','st_new_emoji','st_new_note'].forEach(x=>document.getElementById(x).value='');
+    loadStatusReg(); }
+  else document.getElementById('st_msg').textContent='Could not add'+(r&&r.error?': '+r.error:'');
+}
+
+// ---- Playbook sub-nav ----
+function pbTab(name){ showSection(name); } // Test Bench / Phone Trees / Statuses are now top-level sections
+async function callNow(id){
+  const catId = Number(document.getElementById('cn_'+id).value);
+  toast('Dialing…');
+  await api('/api/call-now',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:id,categoryId:catId})});
+  toast('Call placed — result will appear shortly.');
+  setTimeout(loadResults, 1500);
+}
+async function mapCall(id){
+  const cat=(CATEGORIES.find(c=>/pok/i.test(c.label))||CATEGORIES[0]);
+  if(!cat){toast('No category loaded');return;}
+  toast('Dialing…');
+  await api('/api/call-now',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:id,categoryId:cat.id})});
+  toast('Call placed'); setTimeout(loadResults,1500);
+}
+async function addRetailer(){
+  const body={name:v('r_name'),phone:v('r_phone'),location:v('r_loc'),timezone:v('r_tz'),phoneTree:v('r_tree')||null};
+  if(!body.name||!body.phone){toast('Name + phone required');return;}
+  await api('/api/retailers',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  ['r_name','r_phone','r_loc','r_tree'].forEach(i=>document.getElementById(i).value='');
+  toast('Store added'); loadRetailers();
+}
+
+let RESULT_STORE_FILTER=null, RESULTS=[];
+async function loadResults(){
+  const rows=await api('/api/results');
+  RESULTS=Array.isArray(rows)?rows:[];
+  renderResults();
+}
+function renderResults(){
+  let rows=RESULTS.slice();
+  if(RESULT_STORE_FILTER) rows=rows.filter(r=>r.retailerId===RESULT_STORE_FILTER);
+  const sort=document.getElementById('r_sort')?.value||'newest';
+  const outRank=r=>r.confirmed===true?0:(r.status==='completed'&&r.confirmed!==true&&!r.doesNotSell&&(r.shipmentDayHeard||r.shipmentDay))?1:(r.status==='completed'&&r.confirmed!==false)?2:r.confirmed===false?3:4;
+  if(sort==='newest') rows.sort((a,b)=>(b.startedAt||0)-(a.startedAt||0));
+  else if(sort==='oldest') rows.sort((a,b)=>(a.startedAt||0)-(b.startedAt||0));
+  else if(sort==='store') rows.sort((a,b)=>(a.retailer||'').localeCompare(b.retailer||''));
+  else if(sort==='category') rows.sort((a,b)=>(a.category||'').localeCompare(b.category||''));
+  else if(sort==='outcome') rows.sort((a,b)=>outRank(a)-outRank(b)||(b.startedAt||0)-(a.startedAt||0));
+  const el=document.getElementById('resultList'); if(!el) return;
+  const banner = RESULT_STORE_FILTER ? `<div class="card" style="border-color:rgba(74,222,128,.3)"><div class="row"><div class="grow meta">Filtered to one store (from your alert link).</div><button class="ghost" onclick="RESULT_STORE_FILTER=null;renderResults()">Show all</button></div></div>` : '';
+  if(!rows.length){el.innerHTML=banner+'<div class="empty">No calls'+(RESULT_STORE_FILTER?' for this store yet.':' yet.')+'</div>';return;}
+  el.innerHTML=banner+rows.map(r=>{
+    const vv=customerVerdict(r);
+    const tone=(r.status==='completed'&&r.confirmed!==true&&!r.doesNotSell&&(r.shipmentDayHeard||r.shipmentDay))?'soon':r.confirmed===true?'in':r.confirmed===false?'out':(r.status==='completed'?'unk':'gray');
+    const nm=splitName(r.retailer||'?');
+    return `<div class="card"><div class="row" style="gap:12px;align-items:flex-start">
+      ${storeTile(r.retailerId,r.retailer||'?')}
+      <div class="grow" style="min-width:0">
+        <div class="sname">${esch(nm.base)} <span class="pill">${esch(r.category||'')}</span></div>
+        ${nm.branch?`<div class="sbranch">${esch(nm.branch)}</div>`:''}
+        <div class="smeta">${agoTs(r.startedAt)} · ${new Date(r.startedAt*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}${r.shipmentDayHeard?` · ${vmark('🚚','#8a8a98',13)} ships ${esch(r.shipmentDayHeard)}`:''}</div>
+      </div>
+      <span class="vpill ${tone}">${vmark(vv.e,tone,24)}${esch(vv.t)}</span>
+    </div>
+    ${r.summary?`<div class="meta" style="margin-top:9px;color:#ddd">${esch(r.summary)}</div>`:''}
+    ${r.transcript?`<details class="tr"><summary>${ICO('chat',14)} Transcript</summary>${bubbles(r.transcript)}</details>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function loadSchedules(){
+  const rows=await api('/api/schedules');
+  const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  document.getElementById('scheduleList').innerHTML = rows.length? rows.map(s=>{
+    const on=new Set(String(s.daysOfWeek||'').split(',').filter(x=>x!==''));
+    return `<div class="card"><div class="row" style="gap:12px">
+    <div class="grow">
+      <div class="sname"><span class="sdot ${s.active?'on':'off'}"></span>${esch(s.name)}</div>
+      <div class="smeta" style="margin-top:6px">${DOW.map((d,i)=>`<span class="daychip ${on.has(String(i))?'on':''}">${d}</span>`).join('')}</div>
+      <div class="smeta" style="margin-top:6px">fires ${esch(s.timeLocal)} store-local · cap ${s.maxCallSeconds}s</div>
+    </div>
+    <button class="ghost" onclick="toggleSchedule(${s.id},${!s.active})">${s.active?'Pause':'Resume'}</button>
+  </div></div>`;}).join('') : '<div class="empty">No schedules yet — build one below.</div>';
+}
+async function toggleSchedule(id,active){ await api('/api/schedules/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({active})}); loadSchedules(); }
+async function addSchedule(){
+  const days=[...document.querySelectorAll('#s_days input:checked')].map(c=>c.value).join(',');
+  const body={name:v('s_name'),categoryId:Number(v('s_cat')),mode:v('s_mode'),timeLocal:v('s_time'),daysOfWeek:days,
+    questionTemplate:v('s_q'),clarification:v('s_clar')||null,voiceId:'pm9SHWV7dZpfvnpJ6hSK'};
+  if(!body.name||!body.timeLocal||!days){toast('Name, time, and at least one day required');return;}
+  await api('/api/schedules',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  toast('Schedule created'); loadSchedules();
+}
+
+async function loadZones(){
+  const rows=await api('/api/zones');
+  if(Array.isArray(rows)) fillOptions('f_zone', [...new Set(rows.map(z=>z.name).filter(Boolean))].sort(), 'All zones'); // fill the Stores zone filter
+  document.getElementById('zoneList').innerHTML = rows.length? rows.map(z=>`<div class="card"><div class="row" style="gap:12px">
+    <div class="slogo"><span class="mono">${z.retailerIds.length}</span></div>
+    <div class="grow"><div class="sname">${esch(z.name)}</div><div class="smeta">${esch(z.centerZip||'')} · ${z.radiusMiles||'?'} mi radius · ${z.retailerIds.length} stores</div></div>
+    <button class="act" onclick="callZoneNow(${z.id},'${(z.name||'').replace(/'/g,'')}')">${ICO('phone',15)} Call zone</button>
+  </div></div>`).join('') : '<div class="empty">No zones yet — tell Claude an area and it can build one.</div>';
+}
+async function callZoneNow(id,name){
+  if(!confirm('Call every store in '+name+'? This places real calls to real stores.')) return;
+  toast('Placing calls…');
+  const r=await api('/api/zones/'+id+'/call-now',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+  toast((r.placed||0)+' calls placed'); setTimeout(loadResults,2000);
+}
+async function loadCatalog(){
+  CATEGORIES = await api('/api/categories');
+  document.getElementById('s_cat').innerHTML = CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
+  fillSimSelects();
+  // Each tracked category with how many stores carry it — turns an empty page into real intel.
+  const intel=await api('/api/admin/store-intel').catch(()=>null); const bp=(intel&&intel.byProduct)||{};
+  const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const KEY={'pokémon':'Pokemon','one piece tcg':'One Piece','topps nba':'Topps','needoh':'NeeDoh'};
+  const fmt=n=>n>=1000?(n/1000).toFixed(n>=10000?0:1)+'k':String(n);
+  document.getElementById('catList').innerHTML = CATEGORIES.map(c=>{
+    const key=KEY[(c.label||'').toLowerCase()] || Object.keys(bp).find(k=>norm(c.label).includes(norm(k)) || norm(k).includes(norm(c.label).split(' ')[0]));
+    const n=key?bp[key]:null;
+    return `<div class="card"><div class="row" style="justify-content:space-between;align-items:center;gap:12px">
+      <div class="grow"><div class="sname">${esch(c.label)}</div><div class="smeta">${n!=null?('carried in '+fmt(n)+' stores'):'tracked vertical'}</div></div>
+      ${n!=null?`<div class="stat green" style="padding:9px 15px"><div class="n">${fmt(n)}</div><div class="l">stores</div></div>`:''}
+    </div></div>`;
+  }).join('');
+}
+// --- Map + stats ---
+let MAP=null, MARKERS=null;
+function pinColor(r){
+  if(r.green) return '#4ADE80';
+  if(r.lastCall&&r.lastCall.status==='completed'&&r.lastCall.confirmed===false) return '#EF4444';
+  if(r.lastCall&&r.lastCall.status==='completed') return '#E89A4A';
+  return '#6B6B7B';
+}
+function ensureMap(){
+  if(!MAP){
+    MAP=L.map('leafletmap').setView([34.05,-118.24],10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(MAP);
+    MARKERS=L.layerGroup().addTo(MAP);
+  }
+  setTimeout(()=>{MAP.invalidateSize(); loadMap();},120);
+}
+async function loadMap(){
+  if(!MAP) return;
+  const rs=await api('/api/retailers');
+  MARKERS.clearLayers();
+  const pts=[];
+  rs.filter(r=>r.lat&&r.lng).forEach(r=>{
+    const m=L.circleMarker([r.lat,r.lng],{radius:9,color:'#0C0C12',weight:2,fillColor:pinColor(r),fillOpacity:1});
+    const lc=r.lastCall;
+    m.bindPopup(`<b>${r.name}</b><br><span style="color:#888">${r.location||''}</span><br>${lc?(lc.category+': '+(r.green?'IN':lc.confirmed===false?'not in':lc.status)):'never called'}<br><button onclick="mapCall(${r.id})" style="margin-top:8px;background:#4ADE80;color:#06210f;border:none;padding:7px 13px;border-radius:8px;font-weight:700;cursor:pointer">Call Pokémon</button>`);
+    m.addTo(MARKERS); pts.push([r.lat,r.lng]);
+  });
+  if(pts.length) MAP.fitBounds(pts,{padding:[40,40],maxZoom:13});
+}
+let ME_MARKER=null;
+function locateMe(){
+  if(!MAP){ ensureMap(); setTimeout(locateMe, 600); return; }
+  if(!navigator.geolocation){ toast('Geolocation not supported'); return; }
+  toast('Finding you…');
+  navigator.geolocation.getCurrentPosition(p=>{
+    const lat=p.coords.latitude, lng=p.coords.longitude;
+    MAP.setView([lat,lng], 13);
+    if(ME_MARKER) MAP.removeLayer(ME_MARKER);
+    ME_MARKER=L.circleMarker([lat,lng],{radius:9,color:'#fff',weight:2,fillColor:'#A78BFA',fillOpacity:1}).addTo(MAP).bindPopup('You are here').openPopup();
+  }, e=>toast('Location: '+e.message), {enableHighAccuracy:true, timeout:9000});
+}
+function loadStats(rs){
+  const green=rs.filter(r=>r.green).length;
+  const verified=rs.filter(r=>r.stockStatus==='verified').length;
+  const open=rs.filter(r=>r.openState&&r.openState.open).length;
+  const el=document.getElementById('stats'); if(!el) return;
+  el.innerHTML=
+    `<div class="stat green"><div class="n">${green}</div><div class="l">In stock now</div></div>`+
+    `<div class="stat"><div class="n">${open}</div><div class="l">Open now</div></div>`+
+    `<div class="stat"><div class="n">${rs.length}</div><div class="l">Stores</div></div>`+
+    `<div class="stat"><div class="n">${verified}</div><div class="l">Verified</div></div>`;
+}
+// --- ElevenLabs credits ---
+const fmtN = (n) => (n==null) ? '—' : Number(n).toLocaleString();
+async function loadBiz(){
+  const m=await api('/api/admin/metrics'); if(!m||m.error) return;
+  const $$=v=>'$'+(v/100).toFixed(2);
+  document.getElementById('biz_sub').textContent=m.users+' users · '+m.subscribers+' subs';
+  const stat=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  document.getElementById('biz_stats').innerHTML=
+    stat($$(m.revenueCents),'Revenue')+
+    stat($$(m.mrrCents)+'/mo','MRR')+
+    stat($$(m.cogs.totalCents),'COGS')+
+    stat($$(m.profitCents), m.profitCents>=0?'Profit':'Loss', m.profitCents>=0?'green':'')+
+    stat(m.marginPct+'%','Margin', m.marginPct>=0?'green':'')+
+    stat(m.callsMade,'Paid calls');
+}
+async function loadCredits(){
+  const c = await api('/api/credits'); if(!c || c.error) return;
+  document.getElementById('credit_src').textContent = c.source==='live' ? 'live balance' : 'estimated · last 31d';
+  if(c.limit){
+    const pctLeft = Math.max(0, Math.min(100, Math.round((c.remaining/c.limit)*100)));
+    document.getElementById('credit_body').innerHTML =
+      `<b style="color:#fff;font-size:16px">${fmtN(c.remaining)}</b> credits left of ${fmtN(c.limit)} <span style="color:var(--muted)">(${pctLeft}% left)</span>`;
+    const bar=document.getElementById('credit_bar');           // bar shows what's LEFT (full = plenty)
+    bar.style.width = pctLeft+'%';
+    bar.style.background = pctLeft<=10?'#EF4444':pctLeft<=25?'#FBBF24':'var(--green)';
+    document.getElementById('credit_stats').innerHTML =
+      `~<b style="color:#fff">${fmtN(c.callsLeft)} calls</b> left <span style="color:var(--muted)">· ElevenLabs bills the whole connected call (ring · IVR · hold · talk)</span>`
+      + (c.source==='estimated' ? ` · ${fmtN(c.used)} used in last 31d` : '')
+      + (c.resetUnix ? ` · resets ${new Date(c.resetUnix*1000).toLocaleDateString()}` : '');
+  } else {
+    document.getElementById('credit_body').innerHTML =
+      `<b style="color:#fff;font-size:16px">${fmtN(c.used)}</b> credits used <span style="color:var(--muted)">(last 31 days)</span>`;
+    document.getElementById('credit_bar').style.width = '0%';
+    document.getElementById('credit_stats').innerHTML =
+      `${fmtN(c.used)} credits used so far · enter your plan size below to see what's left`;
+  }
+  document.getElementById('credit_limit_wrap').style.display = c.source==='live' ? 'none' : 'block';
+}
+async function saveCreditLimit(){
+  const v = Number(document.getElementById('credit_limit').value)||0;
+  await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({creditLimit:v})});
+  toast('Plan size saved'); loadCredits();
+}
+
+// --- Settings ---
+let SETTINGS={};
+async function loadSettings(){
+  SETTINGS=await api('/api/settings');
+  const on = SETTINGS.voicemail_hangup !== 'false';
+  const b=document.getElementById('vmToggle');
+  if(!b) return;
+  b.textContent = on ? 'ON' : 'OFF';
+  b.style.color = on ? 'var(--green)' : 'var(--muted)';
+  b.style.borderColor = on ? 'rgba(74,222,128,.35)' : 'var(--border)';
+}
+async function toggleVoicemail(){
+  const on = SETTINGS.voicemail_hangup !== 'false';
+  await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({voicemailHangup:!on})});
+  await loadSettings(); toast('Saved');
+}
+async function loadLiveListen(){
+  const p=await api('/api/policy'); if(!p||p.error) return;
+  const on=!!(p.flags&&p.flags.liveListen);
+  const b=document.getElementById('llToggle'); if(!b) return;
+  b.textContent=on?'ON':'OFF';
+  b.style.color=on?'var(--green)':'var(--muted)';
+  b.style.borderColor=on?'rgba(74,222,128,.35)':'var(--border)';
+  b.dataset.on=on?'1':'';
+}
+async function toggleLiveListen(){
+  const b=document.getElementById('llToggle');
+  const on=b&&b.dataset.on==='1';
+  await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{liveListen:!on}})});
+  await loadLiveListen(); toast(!on?'Customers now hear calls live':'Live audio is testing-only again');
+}
+const v = (id) => document.getElementById(id).value.trim();
+
+// --- Growth & Policy ---
+let POL=null;
+const FLAG_LABELS={connectOnHuman:'Connect-on-human — bill only talk-time (don’t open the agent until a person answers)',dogfoodHours:'Dog-food hours (night-call voicemails)',driverHandoff:'Driver hand-off demo',scheduling:'Scheduled shipment-day calls',restockAlerts:'Restock alerts',kiosks:'Kiosk intel + rewards',shareCards:'Share cards',multiProduct:'Multi-product asks',specificSets:'Specific-set asks'};
+const esch=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// ---- Drawn icon system (matches the consumer front end — zero raw emoji in chrome) ----
+const ICONS={
+  bolt:'<path d="M13 2.5L5 13.5h5.5L9.5 21.5 19 9.5h-6z"/>',
+  store:'<path d="M4.5 9l1.4-4.5h12.2L19.5 9"/><path d="M5.5 9v9.5h13V9"/><path d="M9.5 18.5V14h5v4.5"/>',
+  phone:'<path d="M5 4.5h3.4l1.4 4-2.1 1.5a12 12 0 0 0 5.8 5.8l1.5-2.1 4 1.4V18a2 2 0 0 1-2.2 2A15.5 15.5 0 0 1 3 6.7 2 2 0 0 1 5 4.5z"/>',
+  tree:'<path d="M12 21V4"/><path d="M12 9.5l5-3M12 14l-5-3"/><circle cx="12" cy="3.6" r="1.7"/><circle cx="17.6" cy="6" r="1.7"/><circle cx="6.4" cy="11" r="1.7"/>',
+  rise:'<path d="M4 16.5l5.5-5.5 3 3 7-7"/><path d="M15.5 7h4v4"/>',
+  money:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v10M14.6 9.2c-.5-.9-1.4-1.4-2.6-1.4-1.5 0-2.6.8-2.6 2s1 1.7 2.6 2 2.7 1 2.7 2.2-1.2 2.1-2.7 2.1c-1.2 0-2.2-.6-2.7-1.5"/>',
+  map:'<path d="M9 4L3.5 6.2v13.8L9 17.8l6 2.2 5.5-2.2V4L15 6.2 9 4z"/><path d="M9 4v13.8M15 6.2V20"/>',
+  cal:'<rect x="4" y="5.5" width="16" height="14" rx="2.2"/><path d="M4 9.5h16M8 3.5v4M16 3.5v4"/>',
+  target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".7" fill="currentColor" stroke="none"/>',
+  tag:'<path d="M4 12.6V5a1 1 0 0 1 1-1h7.6L20 11.4 13 18.4 4 12.6z"/><circle cx="8" cy="8" r="1.3"/>',
+  flask:'<path d="M9 3.5h6M10 3.5v5.2L5.6 16.6A2 2 0 0 0 7.4 19.6h9.2a2 2 0 0 0 1.8-2.9L14 8.7V3.5"/>',
+  gear:'<circle cx="12" cy="12" r="3.1"/><path d="M12 3.6v2.4M12 18v2.4M20.4 12H18M6 12H3.6M17.7 6.3l-1.7 1.7M8 16l-1.7 1.7M17.7 17.7L16 16M8 8L6.3 6.3"/>',
+  scissors:'<circle cx="6.5" cy="7" r="2.4"/><circle cx="6.5" cy="17" r="2.4"/><path d="M8.7 8.6L20 17M8.7 15.4L20 7"/>',
+  chart:'<path d="M4 4v16h16"/><rect x="7.5" y="12" width="2.6" height="5"/><rect x="12" y="8.5" width="2.6" height="8.5"/><rect x="16.5" y="14" width="2.6" height="3"/>',
+  trophy:'<path d="M7.5 4h9v3a4.5 4.5 0 0 1-9 0z"/><path d="M7.5 5H4.5v1a3 3 0 0 0 3 3M16.5 5h3v1a3 3 0 0 1-3 3M9.5 13.5h5L14 20h-4z"/>',
+  pin:'<path d="M12 21s6-5.3 6-10a6 6 0 1 0-12 0c0 4.7 6 10 6 10z"/><circle cx="12" cy="11" r="2.3"/>',
+  sliders:'<path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2.1" fill="var(--sheet)"/><circle cx="15" cy="12" r="2.1" fill="var(--sheet)"/><circle cx="8" cy="17" r="2.1" fill="var(--sheet)"/>',
+  search:'<circle cx="11" cy="11" r="6.4"/><path d="M15.8 15.8L20 20"/>',
+  note:'<path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v4h4M9 12.5h6M9 16h6"/>',
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.5"/>',
+  box:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>',
+  key:'<circle cx="8" cy="8" r="3.4"/><path d="M10.4 10.4L20 20M16 16l2-2M18 18l2-2"/>',
+  card:'<rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M3 10h18"/>',
+  chat:'<path d="M4 5.5h16v10H9.5l-4 3.4V15.5H4z"/>',
+  check:'<circle cx="12" cy="12" r="9.5" fill="currentColor" stroke="none"/><path d="M7.5 12.4l3.1 3.1L16.5 9" stroke="#06210f" stroke-width="2.4"/>',
+  cart:'<path d="M4 5h2l1.6 9.5h9.2L19 8H7"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/>',
+};
+function ICO(name,size,color){ const i=ICONS[name]; if(!i) return ''; size=size||18;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color||'currentColor'}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto">${i}</svg>`; }
+const NAV_ICO={dash:'bolt',retailers:'store',results:'phone',playbook:'tree',growth:'rise',business:'money',map:'map',schedules:'cal',zones:'target',catalog:'tag',labs:'flask',settings:'gear'};
+const EMOJI_ICO={'⚡':'bolt','💰':'money','💳':'card','✂':'scissors','📞':'phone','📊':'chart','📈':'rise','🏆':'trophy','🏪':'store','📍':'pin','🎚':'sliders','🧪':'flask','🔎':'search','📝':'note','🌳':'tree','🏷':'tag','🎙':'mic','🎯':'target','📦':'box','🔧':'gear','⚙':'gear','🔑':'key','🗺':'map','📅':'cal','💬':'chat','✅':'check','🛒':'cart','🔴':'live'};
+// One pass: nav tabs get an icon + label; every emoji-led header/button swaps the emoji for a drawn mark.
+function decorateChrome(){
+  // Nav (groups + sub-nav) is already built with drawn icons by renderGroupNav/showGroup.
+  // Minimal like the front end: strip the leading emoji from headers/buttons to CLEAN TEXT — no generic
+  // icons cluttering titles (section headers are anchored by the green tick-bar instead). The only kept
+  // mark is the live-status dot, which is a meaningful indicator rather than decoration.
+  document.querySelectorAll('.name,.subnav button,button.act,button.ghost').forEach(el=>{ if(el.dataset.deco) return; el.dataset.deco='1';
+    const m=el.innerHTML.match(/^\s*(\p{Extended_Pictographic}[️‍\p{Extended_Pictographic}]*)\s*/u); if(!m) return;
+    const cp=[...m[1].replace(/[️‍]/g,'')][0];
+    const mark = EMOJI_ICO[cp]==='live' ? '<span class="livedot"></span>' : '';
+    el.innerHTML = mark + el.innerHTML.slice(m[0].length); });
+}
+async function loadGrowth(){
+  POL=await api('/api/policy');
+  if(!POL||POL.error){ document.getElementById('gw_flags').textContent='Could not load policy.'; return; }
+  // flags
+  const f=POL.flags||{};
+  document.getElementById('gw_flags').innerHTML=Object.keys(FLAG_LABELS).map(k=>{
+    const on=f[k]!==false&&f[k]!==undefined?f[k]:!!f[k];
+    return `<label style="display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;color:var(--text)">
+      <input type="checkbox" ${f[k]?'checked':''} onchange="toggleFlag('${k}',this.checked)" style="width:18px;height:18px">
+      <span>${FLAG_LABELS[k]}${k==='dogfoodHours'?' <span class="meta">(leave OFF until you say go)</span>':''}${k==='connectOnHuman'?' <span class="meta">(bench-test before going live — untested on real calls)</span>':''}</span></label>`;
+  }).join('');
+  // pricing
+  const p=POL.pricing||{}, sub=p.sub||{};
+  const fld=(id,lbl,val)=>`<label class="meta" style="display:block">${lbl}<input id="${id}" value="${esch(val)}" style="width:100%;margin-top:4px;background:#0e0e14;color:#fff;border:1px solid var(--border);border-radius:8px;padding:9px"></label>`;
+  document.getElementById('gw_pricing').innerHTML=
+    fld('gw_percall','Per-check price (¢)',p.perCallCents)+
+    fld('gw_minpur','Minimum top-up (¢)',p.minPurchaseCents)+
+    fld('gw_free','Free checks (new visitor)',p.freeChecks)+
+    fld('gw_kreward','Kiosk reward (checks)',(POL.rewards||{}).kioskRefreshChecks)+
+    fld('gw_subcents','Membership price (¢/mo)',sub.cents)+
+    fld('gw_subcredits','Membership checks/mo',sub.credits)+
+    fld('gw_subper','Member per-check (¢)',sub.perCallCents)+
+    fld('gw_headstart','Finds headstart (min)',(POL.finds||{}).headstartMin)+
+    fld('gw_ga4','GA4 measurement id',POL.ga4Id||'');
+  document.getElementById('gw_json').value=JSON.stringify(POL,null,2);
+  loadGwPulse(); loadGwIntel(); loadGwKiosks(); loadGwWatches(); loadGwCommunity(); loadGwWaitlist(); loadGwStoreReqs();
+}
+async function loadGwPulse(){
+  const el=document.getElementById('gw_pulse'); if(!el) return;
+  const d=await api('/api/admin/pulse');
+  if(!d||d.error){ el.textContent='No data yet.'; return; }
+  const f=d.funnel||{}, a=d.activity||{}, cm=d.community||{};
+  const stat=(n,l,c)=>`<div style="min-width:84px"><div style="font-size:21px;font-weight:800;color:${c||'var(--text)'}">${n}</div><div style="font-size:11px;color:var(--muted)">${l}</div></div>`;
+  const money=c=>'$'+((c||0)/100).toFixed(2);
+  el.innerHTML=`
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:2px 0 6px">Funnel</div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+      ${stat(f.leads||0,'leads')}${stat(f.signups||0,'signups')}${stat(f.paying||0,'paying','var(--green)')}${stat(f.members||0,'members','var(--green)')}${stat(money(f.revenueCents),'revenue','var(--green)')}
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:2px 0 6px">Activity</div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+      ${stat(a.checks||0,'checks')}${stat(a.checks24h||0,'last 24h')}${stat(a.checks7d||0,'last 7d')}${stat(a.confirms||0,'confirms','var(--green)')}
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:2px 0 6px">Community</div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap">
+      ${stat(cm.watches||0,'watching')}${stat(cm.kioskReports||0,'kiosk intel')}${stat(cm.posts||0,'scores')}${stat(cm.postsPending||0,'pending',cm.postsPending?'var(--yellow,#F4D03F)':'var(--muted)')}${stat(cm.newLeads7d||0,'new leads 7d')}
+    </div>`;
+}
+async function loadGwIntel(){
+  const el=document.getElementById('gw_intel'); if(!el) return;
+  const d=await api('/api/admin/restock-intel');
+  if(!d||d.error){ el.textContent='No intel yet.'; return; }
+  const t=d.totals||{};
+  const days=(d.shipmentDays||[]).map(x=>`${esch(x.day)} (${x.n})`).join(' · ')||'—';
+  const ago=s=>{ if(!s)return '—'; const m=Math.floor(Date.now()/1000)-s; if(m<3600)return Math.max(1,Math.floor(m/60))+'m'; if(m<86400)return Math.floor(m/3600)+'h'; return Math.floor(m/86400)+'d'; };
+  const rows=(d.topStores||[]).map(s=>`<tr><td style="padding:4px 8px 4px 0">${esch(s.store)}</td><td style="padding:4px 8px;color:var(--muted)">${esch(s.region||'—')}</td><td style="padding:4px 8px;color:var(--green);text-align:right">${s.confirms}</td><td style="padding:4px 8px;color:var(--muted)">${esch(s.bestDay||'—')}</td><td style="padding:4px 0;color:var(--muted);text-align:right">${ago(s.last)} ago</td></tr>`).join('');
+  el.innerHTML=`
+    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px">
+      <div><div style="font-size:22px;font-weight:800;color:var(--text)">${t.confirms||0}</div><div>confirmed restocks</div></div>
+      <div><div style="font-size:22px;font-weight:800;color:var(--text)">${t.confirmRate||0}%</div><div>hit rate (${t.checks||0} checks)</div></div>
+      <div><div style="font-size:22px;font-weight:800;color:var(--green)">${t.confirms7d||0}</div><div>last 7 days</div></div>
+      <div><div style="font-size:22px;font-weight:800;color:var(--text)">${t.confirms30d||0}</div><div>last 30 days</div></div>
+    </div>
+    <div style="margin-bottom:8px"><b style="color:var(--text)">Shipment days heard:</b> ${days}</div>
+    ${rows?`<table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="color:var(--muted);text-align:left"><th style="padding:0 8px 6px 0">Store</th><th style="padding:0 8px">Region</th><th style="padding:0 8px;text-align:right">Hits</th><th style="padding:0 8px">Best day</th><th style="text-align:right">Last</th></tr></thead><tbody>${rows}</tbody></table>`:'<div>No confirmed restocks logged yet.</div>'}`;
+}
+async function toggleFlag(key,on){
+  await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{[key]:on}})});
+  toast((on?'Enabled ':'Disabled ')+key); loadGrowth();
+}
+async function savePolicyForm(){
+  const n=id=>{const x=Number(document.getElementById(id).value);return isFinite(x)?x:undefined;};
+  const patch={pricing:{perCallCents:n('gw_percall'),minPurchaseCents:n('gw_minpur'),freeChecks:n('gw_free'),
+      sub:Object.assign({},(POL.pricing||{}).sub,{cents:n('gw_subcents'),credits:n('gw_subcredits'),perCallCents:n('gw_subper')})},
+    rewards:{kioskRefreshChecks:n('gw_kreward')},
+    finds:Object.assign({},POL.finds,{headstartMin:n('gw_headstart')}),
+    ga4Id:document.getElementById('gw_ga4').value.trim()};
+  await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(patch)});
+  toast('Pricing saved'); loadGrowth();
+}
+async function savePolicyJson(){
+  let body; try{ body=JSON.parse(document.getElementById('gw_json').value); }catch(e){ toast('Invalid JSON'); return; }
+  await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  toast('Policy saved'); loadGrowth();
+}
+async function importStoresJson(){
+  const msg=document.getElementById('gw_import_msg');
+  let body; try{ body=JSON.parse(document.getElementById('gw_import').value); }catch(e){ msg.style.color='#ff6b6b'; msg.textContent='Invalid JSON'; return; }
+  msg.style.color='var(--muted)'; msg.textContent='Importing…';
+  const r=await api('/api/stores/import',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  if(!r||r.error){ msg.style.color='#ff6b6b'; msg.textContent='Error: '+((r&&r.error)||'failed'); return; }
+  msg.style.color='var(--green)'; msg.textContent=`✓ ${r.inserted||0} added · ${r.updated||0} updated · ${r.deactivated||0} removed${r.skipped?(' · '+r.skipped+' skipped'):''}`;
+  loadRetailers&&loadRetailers();
+}
+async function backfillRegions(){
+  const r=await api('/api/stores/backfill-regions',{method:'POST'});
+  toast(r&&!r.error?('Regions backfilled'+(r.updated!=null?(': '+r.updated):'')):'Failed');
+}
+async function loadGwKiosks(){
+  const ks=await api('/api/kiosks');
+  const el=document.getElementById('gw_kiosks');
+  if(!Array.isArray(ks)||!ks.length){ el.textContent='No kiosk reports yet.'; return; }
+  el.innerHTML=ks.map(k=>`<div style="padding:8px 0;border-top:1px solid var(--border)"><b style="color:var(--text)">${esch(k.label)}</b> · ${esch(k.category)}<br><span style="color:var(--green)">${esch(k.refreshSummary||'—')}</span> · ${k.reports||0} report${k.reports===1?'':'s'}</div>`).join('');
+}
+async function loadGwWatches(){
+  const ws=await api('/api/watches');
+  const el=document.getElementById('gw_watches');
+  if(!Array.isArray(ws)||!ws.length){ el.textContent='No active watches.'; return; }
+  el.innerHTML=ws.map(w=>`<div style="padding:6px 0;border-top:1px solid var(--border)">${esch(w.contact)} · ${esch(w.channel)} · store #${w.retailerId} · cat #${w.categoryId} ${w.active===false?'<span class="meta">(notified)</span>':''}</div>`).join('');
+}
+async function loadGwCommunity(){
+  const el=document.getElementById('gw_community'); if(!el) return;
+  const ps=await api('/api/community');
+  if(!Array.isArray(ps)||!ps.length){ el.textContent='No community posts yet.'; return; }
+  const pend=ps.filter(p=>!p.approved).length;
+  el.innerHTML=`<div style="margin-bottom:8px;color:${pend?'var(--yellow,#F4D03F)':'var(--muted)'}">${pend?('⏳ '+pend+' awaiting review'):'All caught up'}</div>`+
+    ps.slice(0,30).map(p=>`<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border)">
+      <img src="${esch(p.imageUrl)}" style="width:46px;height:46px;border-radius:8px;object-fit:cover;background:#0e0e14">
+      <div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--text)">${esch(p.caption||'(no caption)')}</div>
+        <div class="meta" style="font-size:11px">${esch(p.handle||'anon')} · ♥${p.likes||0} ${p.approved?'<span style="color:var(--green)">✓ live</span>':'<span style="color:var(--yellow,#F4D03F)">pending</span>'}</div></div>
+      ${p.approved?`<button class="ghost" style="font-size:12px" onclick="modCommunity(${p.id},false)">Hide</button>`:`<button class="act" style="font-size:12px;padding:6px 10px" onclick="modCommunity(${p.id},true)">Approve</button>`}
+      <button class="ghost" style="font-size:12px;color:#ff8a8a" onclick="delCommunity(${p.id})">Delete</button>
+    </div>`).join('');
+}
+async function loadGwWaitlist(){
+  const el=document.getElementById('gw_waitlist'); if(!el) return;
+  const d=await api('/api/waitlist');
+  if(!d||d.error||!d.total){ el.textContent='No waitlist signups yet.'; return; }
+  const regions=(d.byRegion||[]).map(r=>`${esch(r.region)} <b style="color:var(--green)">${r.n}</b>`).join(' · ');
+  const recent=(d.recent||[]).slice(0,12).map(w=>`<div style="padding:5px 0;border-top:1px solid var(--border);font-size:12.5px">${esch(w.contact)}${w.area?(' · '+esch(w.area)):''}${w.region?(' · '+esch(w.region)):''}</div>`).join('');
+  el.innerHTML=`<div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:6px">${d.total} waiting</div><div style="margin-bottom:10px">${regions||'—'}</div>${recent}`;
+}
+async function loadGwStoreReqs(){
+  const el=document.getElementById('gw_storereqs'); if(!el) return;
+  const rs=await api('/api/store-requests');
+  if(!Array.isArray(rs)||!rs.length){ el.textContent='No store requests yet.'; return; }
+  const nw=rs.filter(r=>r.status==='new').length;
+  el.innerHTML=`<div style="margin-bottom:8px;color:${nw?'var(--yellow,#F4D03F)':'var(--muted)'}">${nw?('⏳ '+nw+' new'):'All handled'}</div>`+
+    rs.slice(0,40).map(r=>`<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border)">
+      <div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--text)"><b>${esch(r.storeName)}</b>${r.city?(' · '+esch(r.city)):''}</div>
+        <div class="meta" style="font-size:11px">${esch(r.note||'')}${r.contact?(' · '+esch(r.contact)):''} · ${r.status}</div></div>
+      ${r.status!=='added'?`<button class="act" style="font-size:12px;padding:6px 10px" onclick="srStatus(${r.id},'added')">Mark added</button>`:''}
+      <button class="ghost" style="font-size:12px;color:#ff8a8a" onclick="srStatus(${r.id},'rejected')">Reject</button>
+    </div>`).join('');
+}
+async function srStatus(id,status){ await api('/api/store-requests/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({status})}); toast('Updated'); loadGwStoreReqs(); }
+async function modCommunity(id,approved){ await api('/api/community/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({approved})}); toast(approved?'Approved':'Hidden'); loadGwCommunity(); }
+async function delCommunity(id){ await api('/api/community/'+id,{method:'DELETE'}); toast('Deleted'); loadGwCommunity(); }
+
+function clock(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString(); }
+setInterval(clock,1000); clock();
+
+async function waitForClerk(ms=7000){ const t0=Date.now(); while(!window.Clerk){ if(Date.now()-t0>ms) return false; await new Promise(r=>setTimeout(r,80)); } return true; }
+// Custom passwordless sign-in — identical look/flow to the consumer sites (no Clerk chrome,
+// no social buttons): email -> magic link (code fallback). Centered on the page.
+let AAUTH={flow:null,email:'',signIn:null,signUp:null,codeFactorId:null,forceCode:false,linkCancel:null};
+function aErr(e){ try{ return (e&&e.errors&&e.errors[0]&&(e.errors[0].longMessage||e.errors[0].message))||''; }catch(_){ return ''; } }
+function aStep(w){ ['a_email','a_link','a_code'].forEach(s=>{ const el=document.getElementById(s); if(el) el.style.display=(s===w)?'':'none'; }); }
+function aMsg(id,t){ const el=document.getElementById(id); if(el) el.textContent=t||''; }
+function aDone(res){ window.Clerk.setActive({session:res.createdSessionId}).then(()=>location.reload()); }
+function aPoll(promise){
+  promise.then(res=>{ if(res&&res.status==='complete'&&res.createdSessionId) aDone(res);
+    else aMsg('a_lerr','Link not verified yet — resend, or use a code.'); })
+  .catch(e=>{ if(AAUTH.flow==='signup'&&!AAUTH.forceCode){ aUseCode(); return; } aMsg('a_lerr',aErr(e)||'Link failed — try a code.'); });
+}
+async function aSend(){
+  const email=(document.getElementById('a_in').value||'').trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ aMsg('a_err','Enter a valid email'); return; }
+  AAUTH.email=email; aMsg('a_err','');
+  const btn=document.getElementById('a_btn'); btn.disabled=true; btn.textContent='Sending…';
+  try{
+    const client=window.Clerk.client; let si=null,isNew=false;
+    try{ si=await client.signIn.create({identifier:email}); }
+    catch(e){ if((e.errors||[]).some(x=>x.code==='form_identifier_not_found')) isNew=true; else throw e; }
+    if(!isNew&&si){
+      AAUTH.flow='signin'; AAUTH.signIn=si;
+      const fs=si.supportedFirstFactors||[];
+      const lf=fs.find(f=>f.strategy==='email_link'), cf=fs.find(f=>f.strategy==='email_code');
+      AAUTH.codeFactorId=cf?cf.emailAddressId:null;
+      if(lf&&!AAUTH.forceCode){ const fl=si.createEmailLinkFlow(); AAUTH.linkCancel=fl.cancelEmailLinkFlow;
+        aPoll(fl.startEmailLinkFlow({emailAddressId:lf.emailAddressId,redirectUrl:location.origin+'/'}));
+        aStep('a_link'); document.getElementById('a_to').textContent=email; }
+      else if(cf){ await si.prepareFirstFactor({strategy:'email_code',emailAddressId:cf.emailAddressId});
+        aStep('a_code'); document.getElementById('a_cto').textContent=email; }
+    } else {
+      AAUTH.flow='signup';
+      const su=await client.signUp.create({emailAddress:email}); AAUTH.signUp=su;
+      try{ const fl=su.createEmailLinkFlow(); AAUTH.linkCancel=fl.cancelEmailLinkFlow;
+        aPoll(fl.startEmailLinkFlow({redirectUrl:location.origin+'/'}));
+        aStep('a_link'); document.getElementById('a_to').textContent=email;
+      }catch(e){ await su.prepareEmailAddressVerification({strategy:'email_code'});
+        aStep('a_code'); document.getElementById('a_cto').textContent=email; }
+    }
+  }catch(e){ aMsg('a_err',aErr(e)||'Could not continue — try again'); }
+  finally{ btn.disabled=false; btn.textContent='Continue →'; }
+}
+async function aUseCode(){
+  try{ if(AAUTH.linkCancel) AAUTH.linkCancel(); }catch(_){}
+  AAUTH.forceCode=true; aMsg('a_lerr','');
+  try{
+    if(AAUTH.flow==='signin'&&AAUTH.signIn&&AAUTH.codeFactorId) await AAUTH.signIn.prepareFirstFactor({strategy:'email_code',emailAddressId:AAUTH.codeFactorId});
+    else if(AAUTH.flow==='signup'&&AAUTH.signUp) await AAUTH.signUp.prepareEmailAddressVerification({strategy:'email_code'});
+    else { aStep('a_email'); return; }
+    aStep('a_code'); document.getElementById('a_cto').textContent=AAUTH.email;
+  }catch(e){ aMsg('a_lerr',aErr(e)||'Could not switch to a code'); }
+}
+async function aVerify(){
+  const code=(document.getElementById('a_cin').value||'').replace(/\D/g,'');
+  if(code.length<6){ aMsg('a_cerr','Enter the 6-digit code'); return; }
+  try{
+    let res;
+    if(AAUTH.flow==='signin') res=await AAUTH.signIn.attemptFirstFactor({strategy:'email_code',code});
+    else res=await AAUTH.signUp.attemptEmailAddressVerification({code});
+    if(res&&res.status==='complete'&&res.createdSessionId) aDone(res);
+    else aMsg('a_cerr','Almost — try again');
+  }catch(e){ aMsg('a_cerr',aErr(e)||'Code did not match'); }
+}
+async function ensureAuth(){
+  const ok = await waitForClerk();
+  const pass=()=>{ document.body.classList.remove('authwait'); return true; };
+  if(!ok || !window.Clerk) return pass();          // Clerk not present -> proceed (enforcement off)
+  try{ await window.Clerk.load(); }catch(e){ return pass(); }
+  if(window.Clerk.user) return pass();             // already signed in
+  document.querySelector('header').style.display='none';
+  document.querySelector('nav').style.display='none';
+  document.querySelector('main').style.display='none';
+  let w=document.getElementById('signinwrap');
+  if(!w){ w=document.createElement('div'); w.id='signinwrap'; document.body.appendChild(w); }
+  w.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#0C0C12;background-image:radial-gradient(900px 400px at 50% -80px,rgba(74,222,128,.10),transparent 70%);z-index:50';
+  w.innerHTML=`
+  <div style="background:#1A1A24;border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:24px;max-width:460px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="display:flex;justify-content:center;margin:2px 0 12px"><img src="/logos/fungibles.png" alt="" style="height:44px;width:44px;object-fit:cover;border-radius:12px"></div>
+    <div id="a_email">
+      <h3 style="margin:0 0 4px;font-size:21px;font-weight:900">Caller Admin</h3>
+      <div style="color:#9a9aac;font-size:14px;margin-bottom:16px">Enter your email to continue.</div>
+      <input id="a_in" type="email" placeholder="you@email.com" onkeydown="if(event.key==='Enter')aSend()" style="width:100%;background:#0A0A0E;color:#fff;border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:14px 13px;font-size:16px;box-sizing:border-box;text-align:center;font-family:inherit">
+      <div id="clerk-captcha" style="margin-top:8px"></div>
+      <div id="a_err" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
+      <button id="a_btn" onclick="aSend()" style="width:100%;background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;border:none;padding:15px;border-radius:14px;font-weight:900;font-size:16px;cursor:pointer;font-family:inherit">Continue →</button>
+    </div>
+    <div id="a_link" style="display:none">
+      <h3 style="margin:0 0 4px;font-size:21px;font-weight:900">Check your email</h3>
+      <div style="color:#9a9aac;font-size:14px;margin-bottom:14px">Tap the link we sent to <b style="color:#e6e6ee" id="a_to"></b>.</div><div style="color:#6b6b7b;font-size:12px;margin:-8px 0 14px">Keep this tab open — sign-in is automatic.</div>
+      <div id="a_lerr" style="color:#ff6b6b;font-size:13px;min-height:16px"></div>
+      <div style="margin-top:10px;font-size:12.5px;color:#9a9aac;white-space:nowrap"><a onclick="aUseCode()" style="color:#A78BFA;font-weight:700;cursor:pointer">Use a code</a> · <a onclick="aStep('a_email')" style="color:#A78BFA;font-weight:700;cursor:pointer">Change email</a></div>
+    </div>
+    <div id="a_code" style="display:none">
+      <h3 style="margin:0 0 4px;font-size:21px;font-weight:900">Check your email</h3>
+      <div style="color:#9a9aac;font-size:14px;margin-bottom:14px">We sent a 6-digit code to <b style="color:#e6e6ee" id="a_cto"></b>.</div>
+      <input id="a_cin" type="text" inputmode="numeric" maxlength="6" placeholder="••••••" onkeydown="if(event.key==='Enter')aVerify()" style="width:100%;background:#0A0A0E;color:#fff;border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:14px 13px;font-size:26px;font-weight:800;letter-spacing:.5em;box-sizing:border-box;text-align:center;font-family:inherit">
+      <div id="a_cerr" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
+      <button onclick="aVerify()" style="width:100%;background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;border:none;padding:15px;border-radius:14px;font-weight:900;font-size:16px;cursor:pointer;font-family:inherit;margin-top:4px">Verify →</button>
+      <div style="margin-top:10px;font-size:13px;color:#9a9aac"><a onclick="aStep('a_email')" style="color:#A78BFA;font-weight:700;cursor:pointer">Change email</a></div>
+    </div>
+  </div>`;
+  setTimeout(()=>{try{document.getElementById('a_in').focus();}catch(e){}},80);
+  window.Clerk.addListener((e)=>{ if(e.user) location.reload(); });
+  return false;
+}
+document.addEventListener('change', e=>{ if(e.target.id==='sim_tree') syncTreeUI(); });
+
+// ---- In-admin agent ("Admin dev") — switchable brain (Claude / GPT / Gemini) ----
+let AGENT_MSGS=[], AGENT_BUSY=false, AGENT_MODEL=localStorage.getItem('agent_model')||'gpt-4o-mini', AGENT_MODELS_LOADED=false;
+async function agentLoadModels(){
+  if(AGENT_MODELS_LOADED) return; const sel=document.getElementById('agentModel'); if(!sel) return;
+  const models=await api('/api/admin/agent/models'); if(!Array.isArray(models)||!models.length) return;
+  if(!models.some(m=>m.id===AGENT_MODEL)) AGENT_MODEL=models[0].id;
+  sel.innerHTML=models.map(m=>`<option value="${m.id}"${m.id===AGENT_MODEL?' selected':''}>${esch(m.label)}</option>`).join('');
+  AGENT_MODELS_LOADED=true;
+}
+function agentSetModel(v){ AGENT_MODEL=v; localStorage.setItem('agent_model',v); }
+function agentToggle(open){
+  const p=document.getElementById('agentPanel'), fab=document.getElementById('agentFab');
+  const show = open===undefined ? p.style.display==='none' : open;
+  p.style.display = show?'flex':'none'; fab.style.display = show?'none':'grid';
+  document.body.classList.toggle('agent-open', show); // lock page scroll so the chat scrolls, not the page behind it
+  if(show){ agentLoadModels(); agentRender(); setTimeout(()=>{ const i=document.getElementById('agentInput'); if(i) i.focus(); },50); }
+}
+function agentKey(e){
+  const ta=e.target; ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,120)+'px';
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); agentSend(); }
+}
+function agentRender(){
+  const log=document.getElementById('agentLog'); if(!log) return;
+  if(!AGENT_MSGS.length){ log.innerHTML=`<div class="agent-empty">Ask me to manage stores by chatting.<br><br>“Add a card shop in Bodega Bay, CA that carries One Piece TCG”<br>“Do we have any stores in Sebastopol?”<br>“Mark store 1423 verified”</div>`; return; }
+  log.innerHTML = AGENT_MSGS.map(m=>{
+    if(m.role==='user') return `<div class="agent-msg user">${esch(m.text)}</div>`;
+    if(m.role==='error') return `<div class="agent-msg err">${esch(m.text)}</div>`;
+    const acts=(m.actions&&m.actions.length)?`<div class="agent-acts">${m.actions.map(a=>`<span class="agent-act">${ICO('check',13)} ${esch(a)}</span>`).join('')}</div>`:'';
+    return `<div class="agent-msg bot">${esch(m.text)}</div>${acts}`;
+  }).join('') + (AGENT_BUSY?`<div class="agent-typing">working…</div>`:'');
+  log.scrollTop=log.scrollHeight;
+}
+async function agentSend(){
+  if(AGENT_BUSY) return;
+  const ta=document.getElementById('agentInput'); const text=(ta.value||'').trim();
+  if(!text) return;
+  ta.value=''; ta.style.height='auto';
+  AGENT_MSGS.push({role:'user',text});
+  AGENT_BUSY=true; const sb=document.getElementById('agentSend'); if(sb) sb.disabled=true; agentRender();
+  const payload=AGENT_MSGS.filter(m=>m.role==='user'||m.role==='assistant').map(m=>({role:m.role,text:m.text}));
+  const r=await api('/api/admin/agent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({messages:payload,model:AGENT_MODEL})});
+  AGENT_BUSY=false; if(sb) sb.disabled=false;
+  if(!r || r.error){ AGENT_MSGS.push({role:'error',text:(r&&r.error)||'Something went wrong — check the server has ANTHROPIC_API_KEY.'}); agentRender(); return; }
+  AGENT_MSGS.push({role:'assistant',text:r.reply||'(done)',actions:r.actions||[]});
+  agentRender();
+  if(r.actions&&r.actions.length){ try{ loadStoreIntel(); const rt=document.getElementById('retailers'); if(rt&&rt.classList.contains('active')) loadRetailers(); }catch(e){} }
+}
+
+(async function init(){
+  if(!(await ensureAuth())) return;
+  renderGroupNav();
+  // Show the tab you were on IMMEDIATELY (before data loads) so refresh doesn't flash God view first.
+  (function(){ const sp=new URLSearchParams(location.search);
+    const want=sp.get('store')?'results':(localStorage.getItem('active_tab')||'dash');
+    const sec=SECTION_GROUP[want]?want:'dash';
+    showGroup(SECTION_GROUP[sec], sec); })();
+  await Promise.all([loadCatalog(),loadLogos()]);
+  await Promise.all([loadStoreIntel(),loadResults(),loadSchedules(),loadZones(),loadSettings(),loadLiveStrip(),loadCredits(),loadPresets(),loadBiz(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen()]);
+  const sp=new URLSearchParams(location.search);
+  restorePersist();
+  decorateChrome();
+  syncTreeUI();
+  loadRetailers(); // restored filters auto-load the list (instead of sitting empty until you touch a dropdown)
+  if(sp.get('store')){ RESULT_STORE_FILTER=Number(sp.get('store')); showSection('results'); loadResults(); }
+  setInterval(loadResults, 8000);   // live-refresh results while calls land (small table)
+  // NOTE: do NOT poll loadRetailers — at 100k stores that re-pulls a huge query every few seconds.
+  setInterval(()=>{ if(document.getElementById('dash').classList.contains('active')) loadDash(); }, 12000); // god view stays live
+  setInterval(loadCredits, 30000);  // refresh credit balance periodically
+  setInterval(()=>{ if(MAP && document.getElementById('map').classList.contains('active')) loadMap(); }, 8000);
+})();
+</script>
+</body>
+</html>

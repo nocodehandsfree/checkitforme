@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Runnr — Money Model</title>
+<style>
+  :root{--bg:#0C0C12;--sheet:#1A1A24;--terminal:#0A0A0E;--green:#4ADE80;--purple:#A78BFA;--red:#EF4444;--muted:#7a7a88;--border:rgba(255,255,255,.10)}
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;margin:0;padding:0 16px 70px;
+    background-image:radial-gradient(1200px 500px at 50% -120px,rgba(74,222,128,.10),transparent 70%)}
+  .wrap{max-width:840px;margin:0 auto}
+  .hero{text-align:center;padding:30px 0 6px}
+  .hero h1{font-size:28px;letter-spacing:-1px;font-weight:900;margin:0}.hero h1 b{color:var(--green)}
+  .hero p{color:#b9b9c8;font-size:14px;margin:7px 0 0}
+  .nav{position:sticky;top:0;z-index:30;display:flex;justify-content:center;padding:10px 0}
+  .nav span{background:rgba(74,222,128,.14);border:1px solid rgba(74,222,128,.5);color:var(--green);font-weight:800;font-size:12.5px;padding:8px 17px;border-radius:22px;backdrop-filter:blur(8px)}
+  /* cards stand out */
+  .card{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:20px 20px 22px;box-shadow:0 8px 26px rgba(0,0,0,.35);transition:border-color .25s,box-shadow .25s,transform .2s}
+  .card.focus{border-color:rgba(74,222,128,.6);box-shadow:0 0 0 1px rgba(74,222,128,.3),0 14px 40px rgba(74,222,128,.10);transform:translateY(-1px)}
+  /* bold headers */
+  .hd{display:flex;align-items:flex-start;gap:12px;margin-bottom:4px}
+  .hd .num{flex:0 0 auto;width:30px;height:30px;border-radius:9px;background:var(--terminal);border:1px solid var(--border);display:grid;place-items:center;font-weight:900;font-size:14px;color:var(--green)}
+  .hd .tt{flex:1;min-width:0}
+  .hd h2{font-size:19px;font-weight:900;letter-spacing:-.4px;margin:0;line-height:1.1}
+  .hd .stepword{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+  .hd .info{flex:0 0 auto;width:24px;height:24px;border-radius:50%;border:1px solid var(--border);background:var(--terminal);color:#cfcfd8;font-weight:800;font-size:12px;cursor:pointer;display:grid;place-items:center}
+  .eli5{display:none;margin:10px 0 2px;background:var(--terminal);border:1px solid var(--border);border-left:3px solid var(--purple);border-radius:10px;padding:11px 13px;color:#cfcfd8;font-size:12.5px;line-height:1.55}
+  .eli5.on{display:block}
+  .fields{margin-top:14px}
+  label{display:block;font-size:12.5px;font-weight:700;color:#cdcdd8;margin:13px 0 6px}
+  label .val{color:var(--green);font-weight:900}
+  label .lite{color:var(--muted);font-weight:500}
+  input[type=number],select{background:var(--terminal);border:1px solid var(--border);color:#fff;border-radius:12px;padding:11px 12px;font-size:15px;width:100%;font-family:inherit;font-weight:700}
+  select{appearance:none;-webkit-appearance:none;padding-right:36px;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M0.5 0.5h8L4.5 5.5z' fill='%23fff'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center}
+  .rng{-webkit-appearance:none;appearance:none;width:100%;height:24px;background:transparent;cursor:pointer;margin:0;display:block}
+  .rng::-webkit-slider-runnable-track{height:6px;border-radius:6px;background:linear-gradient(90deg,var(--green) 0%,var(--green) var(--fill,50%),#26262f var(--fill,50%),#26262f 100%)}
+  .rng::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;border:4px solid var(--green);box-shadow:0 3px 10px rgba(0,0,0,.5);margin-top:-9px}
+  .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .pair{display:flex;gap:6px}
+  /* dependency connector between boxes */
+  .link{display:flex;justify-content:center;margin:-2px 0}
+  .link .pill{background:var(--terminal);border:1px solid var(--border);border-radius:20px;padding:7px 15px;font-size:12px;color:#b9b9c8;font-weight:700;position:relative}
+  .link .pill b{color:var(--green)}
+  .link .pill::before{content:'';position:absolute;left:50%;top:-13px;width:2px;height:13px;background:var(--border)}
+  .link .pill::after{content:'';position:absolute;left:50%;bottom:-13px;width:2px;height:13px;background:var(--border)}
+  /* verdict */
+  .verdict{background:linear-gradient(170deg,rgba(74,222,128,.08),transparent);border:1px solid rgba(74,222,128,.45);border-radius:20px;padding:24px;text-align:center;margin:18px 0 12px}
+  .verdict .t{font-size:11px;text-transform:uppercase;letter-spacing:1.3px;color:var(--muted);font-weight:800}
+  .verdict .big{font-size:44px;font-weight:900;letter-spacing:-2px;margin:6px 0 2px}
+  .verdict .big.g{color:var(--green)}.verdict .big.r{color:var(--red)}
+  .verdict .s{color:#cdcdd8;font-size:13.5px}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 14px}
+  .kpi{background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:13px;text-align:center}
+  .kpi .l{font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase}.kpi .v{font-size:19px;font-weight:900;margin-top:4px}
+  .g{color:var(--green)}.r{color:var(--red)}.p{color:var(--purple)}
+  table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+  th{color:var(--muted);font-weight:800;text-align:right;padding:8px 4px;border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase}
+  td{padding:9px 4px;text-align:right;border-bottom:1px solid rgba(255,255,255,.05);font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left;font-weight:800}
+  .note{font-size:12px;color:var(--muted);line-height:1.6;margin-top:12px}
+</style>
+</head>
+<body><div class="wrap">
+
+<div class="hero"><h1>Will it <b>print?</b></h1><p>Go top to bottom. Tap the ⓘ on any box if you're not sure what it does.</p></div>
+<div class="nav"><span id="hint">Start with Step 1</span></div>
+
+<!-- STEP 1 -->
+<div class="card" id="s1">
+  <div class="hd"><div class="num">1</div><div class="tt"><div class="stepword">Step 1</div><h2>📞 How we make the call</h2></div><div class="info" onclick="eli('e1')">ⓘ</div></div>
+  <div class="eli5" id="e1">The actual tech that places the call: the AI <b>voice</b> that talks, the <b>brain</b> that decides what to say, and the phone line. Fancier sounds more human but costs more per minute. <b>This sets how much each call costs us.</b></div>
+  <div class="fields">
+    <label>The setup</label>
+    <select id="stack">
+      <option value="0.188">Premium — most human voice + smartest brain ($0.19/min · running today)</option>
+      <option value="0.113" selected>Optimized — same voice, lighter brain ($0.11/min)</option>
+      <option value="0.072">Hybrid — cheap until a human picks up, then premium ($0.07/min)</option>
+      <option value="0.055">Our own system — cheapest, build at big scale ($0.06/min)</option>
+    </select>
+    <label>How long an average call lasts: <span class="val" id="minV"></span> min</label>
+    <input type="range" class="rng" id="mins" min="1" max="3" step="0.1" value="2.2">
+    <label>We learn phone trees over time → calls get <span class="val" id="smartV"></span>% shorter each quarter</label>
+    <input type="range" class="rng" id="smart" min="0" max="12" step="1" value="5">
+  </div>
+</div>
+<div class="link"><div class="pill">Each call costs us <b id="dep1">$0.25</b> → feeds your margin below</div></div>
+
+<!-- STEP 2 -->
+<div class="card" id="s2">
+  <div class="hd"><div class="num">2</div><div class="tt"><div class="stepword">Step 2</div><h2>💵 What we charge people</h2></div><div class="info" onclick="eli('e2')">ⓘ</div></div>
+  <div class="eli5" id="e2"><b>Per check</b> = pay only when they use it. The three plans are <b>monthly subscriptions</b> with some checks included (extra checks billed at the per-check price). <b>Annual</b> = they pay a year upfront so we get cash now. <b>Churn</b> = the % who cancel each month.</div>
+  <div class="fields">
+    <label>Pay-as-you-go price: <span class="val" id="paygV"></span> per check</label>
+    <input type="range" class="rng" id="payg" min="0.5" max="1.5" step="0.05" value="1">
+    <div class="row" style="margin-top:4px">
+      <div><label>Hunter plan <span class="lite">$/mo · checks</span></label><div class="pair"><input id="t1p" type="number" value="7.99" step="0.5"><input id="t1c" type="number" value="15"></div></div>
+      <div><label>Flipper plan <span class="lite">$/mo · checks</span></label><div class="pair"><input id="t2p" type="number" value="19.99" step="0.5"><input id="t2c" type="number" value="50"></div></div>
+      <div><label>Whale plan <span class="lite">$/mo · checks</span></label><div class="pair"><input id="t3p" type="number" value="50" step="5"><input id="t3c" type="number" value="150"></div></div>
+    </div>
+    <div class="row" style="margin-top:4px">
+      <div><label>% who pay yearly</label><input id="annPct" type="number" value="30"></div>
+      <div><label>Yearly discount %</label><input id="annDisc" type="number" value="17"></div>
+      <div><label>Cancel each month %</label><input id="churn" type="number" value="5" step="0.5"></div>
+    </div>
+  </div>
+</div>
+<div class="link"><div class="pill">You keep <b id="dep2">$0.72</b> profit on every pay-as-you-go check</div></div>
+
+<!-- STEP 3 -->
+<div class="card" id="s3">
+  <div class="hd"><div class="num">3</div><div class="tt"><div class="stepword">Step 3</div><h2>👥 How many customers</h2></div><div class="info" onclick="eli('e3')">ⓘ</div></div>
+  <div class="eli5" id="e3">How many people use us at months 3 / 6 / 12, then a growth rate after. The <b>mix</b> is what kind: most are casual, a few are power users (flippers/whales) who make tons of calls. This drives total call volume.</div>
+  <div class="fields">
+    <div class="row">
+      <div><label>Customers at month 3</label><input id="m3" type="number" value="1000"></div>
+      <div><label>at month 6</label><input id="m6" type="number" value="5000"></div>
+      <div><label>at month 12</label><input id="m12" type="number" value="10000"></div>
+      <div><label>growth after %/mo</label><input id="g12" type="number" value="6"></div>
+    </div>
+    <div class="row" style="margin-top:4px">
+      <div><label>% Casual <span class="lite">~2 checks/mo</span></label><input id="mx0" type="number" value="50"></div>
+      <div><label>% Hunter <span class="lite">~12/mo</span></label><input id="mx1" type="number" value="30"></div>
+      <div><label>% Flipper <span class="lite">~40/mo</span></label><input id="mx2" type="number" value="15"></div>
+      <div><label>% Whale <span class="lite">~120/mo</span></label><input id="mx3" type="number" value="5"></div>
+    </div>
+  </div>
+</div>
+<div class="link"><div class="pill"><b id="dep3">22k</b> checks/mo at month 12 → revenue minus cost = profit</div></div>
+
+<!-- STEP 4 -->
+<div class="card" id="s4">
+  <div class="hd"><div class="num">4</div><div class="tt"><div class="stepword">Step 4</div><h2>🧾 Bills that don't change with volume</h2></div><div class="info" onclick="eli('e4')">ⓘ</div></div>
+  <div class="eli5" id="e4">Flat monthly costs no matter how many calls you make: servers, the login service, phone numbers. (Card-processing fees and the calling cost are already handled automatically.)</div>
+  <div class="fields"><div class="row">
+    <div><label>Servers / hosting</label><input id="cInfra" type="number" value="25"></div>
+    <div><label>Login service</label><input id="cClerk" type="number" value="25"></div>
+    <div><label>Phone numbers</label><input id="cTw" type="number" value="15"></div>
+    <div><label>Storage / misc</label><input id="cMisc" type="number" value="10"></div>
+  </div></div>
+</div>
+
+<!-- VERDICT -->
+<div class="verdict" id="verdict"></div>
+<div class="kpis" id="kpis"></div>
+<div class="card" style="border-color:rgba(167,139,250,.35)">
+  <div class="hd"><div class="num" style="color:var(--purple)">📈</div><div class="tt"><div class="stepword">The next 3 years</div><h2>Month 3 → 36</h2></div></div>
+  <table id="tl"></table>
+  <div class="note" id="notes"></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const K=n=>{n=Math.round(n); if(Math.abs(n)>=1000) return '$'+(n/1000).toFixed(n>=100000?0:1)+'k'; return '$'+n.toLocaleString();};
+const Kn=n=>{n=Math.round(n); if(n>=1000) return (n/1000).toFixed(n>=100000?0:1)+'k'; return n.toLocaleString();};
+const fmt2=n=>'$'+n.toFixed(2);
+let opened='';
+function eli(id){ const el=$(id); const on=el.classList.contains('on'); document.querySelectorAll('.eli5').forEach(e=>e.classList.remove('on')); if(!on) el.classList.add('on'); }
+const touched={s1:false,s2:false,s3:false,s4:false};
+const HINTS={s1:'Start with Step 1',s2:'Now Step 2 — your prices',s3:'Step 3 — how many customers',s4:'Last one — your monthly bills',done:'Done — read the verdict below'};
+function syncSlider(el){ el.style.setProperty('--fill',(el.value-el.min)/(el.max-el.min)*100+'%'); }
+function focusNext(){
+  const order=['s1','s2','s3','s4']; let next='done';
+  for(const k of order){ if(!touched[k]&&next==='done') next=k; }
+  order.forEach(k=>$(k).classList.toggle('focus',k===next));
+  $('hint').textContent=HINTS[next];
+}
+function actives(m){
+  const a=+$('m3').value,b=+$('m6').value,c=+$('m12').value,g=+$('g12').value/100;
+  if(m<=3) return a*m/3; if(m<=6) return a+(b-a)*(m-3)/3; if(m<=12) return b+(c-b)*(m-6)/6; return c*Math.pow(1+g,m-12);
+}
+function calc(){
+  document.querySelectorAll('.rng').forEach(syncSlider);
+  const rate=+$('stack').value, smart=+$('smart').value/100, churn=+$('churn').value/100, payg=+$('payg').value;
+  $('minV').textContent=$('mins').value; $('smartV').textContent=$('smart').value; $('paygV').textContent=fmt2(payg);
+  const baseCost=rate*+$('mins').value;
+  $('dep1').textContent=fmt2(baseCost);
+  $('dep2').textContent=fmt2(payg-baseCost-payg*0.029-0.30);
+  const tiers=[[0,0,2,+$('mx0').value/100],[+$('t1p').value,+$('t1c').value,12,+$('mx1').value/100],[+$('t2p').value,+$('t2c').value,40,+$('mx2').value/100],[+$('t3p').value,+$('t3c').value,120,+$('mx3').value/100]];
+  const annPct=+$('annPct').value/100, annDisc=+$('annDisc').value/100;
+  const fixed=+$('cInfra').value+ +$('cClerk').value+ +$('cTw').value+ +$('cMisc').value;
+  const months=[3,6,12,18,24,36], rows=[]; let annualY1=0;
+  for(const m of months){
+    const mins=Math.max(1,+$('mins').value*Math.pow(1-smart,m/3)), cc=rate*mins, A=actives(m);
+    let rev=0,checks=0,txns=0,mrr=0;
+    tiers.forEach(([p,inc,use,mix],i)=>{ const n=A*mix;
+      if(i===0){rev+=n*use*payg;checks+=n*use;txns+=n*use;}
+      else{mrr+=n*p;rev+=n*p+n*Math.max(0,use-inc)*payg;txns+=n;checks+=n*use;} });
+    const cogs=checks*cc, stripe=rev*0.029+txns*0.30, profit=rev-cogs-stripe-fixed;
+    if(m===12) annualY1=A*(tiers[1][3]*tiers[1][0]+tiers[2][3]*tiers[2][0]+tiers[3][3]*tiers[3][0])*12*(1-annDisc)*annPct;
+    rows.push({m,A,checks,cc,rev,mrr,cogs,profit,margin:rev?profit/rev:0});
+  }
+  const r12=rows[2];
+  $('dep3').textContent=Kn(r12.checks);
+  $('verdict').innerHTML=`<div class="t">Profit per month at year 1</div><div class="big ${r12.profit>0?'g':'r'}">${K(r12.profit)}</div><div class="s">${Math.round(r12.margin*100)}% margin · ${Kn(r12.A)} customers · ${K(r12.mrr)} recurring/mo</div>`;
+  $('kpis').innerHTML=`<div class="kpi"><div class="l">Cost / check</div><div class="v">${fmt2(baseCost)}</div></div><div class="kpi"><div class="l">Profit / check</div><div class="v ${payg-baseCost>0?'g':'r'}">${fmt2(payg-baseCost-payg*0.029-0.30)}</div></div><div class="kpi"><div class="l">Cash upfront · yr 1</div><div class="v p">${K(annualY1)}</div></div>`;
+  $('tl').innerHTML=`<tr><th>Month</th><th>Customers</th><th>Checks/mo</th><th>$/check</th><th>Revenue</th><th>Profit</th><th>Margin</th></tr>`+
+    rows.map(r=>`<tr><td>M${r.m}</td><td>${Kn(r.A)}</td><td>${Kn(r.checks)}</td><td>${fmt2(r.cc)}</td><td>${K(r.rev)}</td><td class="${r.profit>0?'g':'r'}" style="font-weight:900">${K(r.profit)}</td><td>${Math.round(r.margin*100)}%</td></tr>`).join('');
+  const diy=rows.find(r=>r.cogs>20000);
+  $('notes').textContent=`Calls get cheaper over time as we learn phone trees. ${diy?('Around month '+diy.m+', the calling bill passes $20k/mo — that is when building our own system pays for itself.'):'In this range, renting the voice tech stays cheaper than building our own.'} Subscriptions assume people use every included check (worst case for us).`;
+}
+document.querySelectorAll('input,select').forEach(e=>{const c=e.closest('.card'); e.addEventListener('input',()=>{ if(c&&touched[c.id]!==undefined)touched[c.id]=true; focusNext(); calc(); });});
+focusNext(); calc();
+</script>
+</div></body></html>

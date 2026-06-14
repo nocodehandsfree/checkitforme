@@ -1,0 +1,397 @@
+{
+  "AAFES (Army & Air Force Exchange)": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Academy Sports + Outdoors": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Ace Hardware": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Acme": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Albertsons": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Aldi": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Barnes & Noble": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "confirmed",
+    "stockCheckNote": "BOPIS per-store item availability; first-party TCG."
+  },
+  "Best Buy": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "confirmed",
+    "stockCheckNote": "Per-store availability API; BrickSeek/PopFindr-tracked. RULE: only trust first-party SKUs (sold by retailer, NOT marketplace) + the pickup-at-this-store signal. Positive=strong; quantities fuzzy (shrink); hot drops may disable pickup. Invite system gates buying hyped drops, not the availability feed."
+  },
+  "Bi-Mart": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Big 5 Sporting Goods": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Blain's Farm & Fleet": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Books-A-Million": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "confirmed",
+    "stockCheckNote": "BAM states it cannot check per-store inventory online; call-only."
+  },
+  "BoxLunch": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "probable",
+    "stockCheckNote": "Salesforce BOPIS per-store availability (HT sibling)."
+  },
+  "Buc-ee's": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Burlington": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "CVS": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "confirmed",
+    "stockCheckNote": "CVS has NO online visibility to store merchandise/prices; call-only (their own help docs)."
+  },
+  "City Market": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Claire's": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Costco": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "confirmed",
+    "stockCheckNote": "'Find in Warehouse' shows per-warehouse stock indicator (TCG availability varies)."
+  },
+  "Dick's Sporting Goods": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "probable",
+    "stockCheckNote": "BOPIS per-store availability."
+  },
+  "Dollar General": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "probable",
+    "stockCheckNote": "DG app shows store inventory (scan/UPC); 'estimate, not always accurate'; BrickSeek-tracked."
+  },
+  "Dollar Tree": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Dunham's Sports": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Family Dollar": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Five Below": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "probable",
+    "stockCheckNote": "BOPIS store availability on product pages."
+  },
+  "Fleet Farm": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Food 4 Less": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Fred Meyer": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Fry's": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "GameStop": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "confirmed",
+    "stockCheckNote": "Per-store 'Check store availability'; first-party TCG; PopFindr-tracked."
+  },
+  "Gelson's": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Giant Eagle": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Hallmark Gold Crown": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Harris Teeter": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Hibbett Sports": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Hobby Lobby": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "HomeGoods": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Hot Topic": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "confirmed",
+    "stockCheckNote": "Same-day BOPIS shows per-store availability on product pages."
+  },
+  "Hy-Vee": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Jewel-Osco": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "King Soopers": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Kohl's": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "confirmed",
+    "stockCheckNote": "'FREE Store Pickup Today' + 'check other stores' per-store availability."
+  },
+  "Kroger": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Lowe's": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Macy's (Toys R Us shop-in-shop)": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Mariano's": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Marshalls": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Meijer": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "probable",
+    "stockCheckNote": "Store pickup shows per-store availability."
+  },
+  "Menards": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Michaels": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "probable",
+    "stockCheckNote": "BOPIS store availability on product pages."
+  },
+  "Micro Center": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "confirmed",
+    "stockCheckNote": "Per-store inventory on product pages; shelf-accurate. Friday TCG restock."
+  },
+  "Office Depot / OfficeMax": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "confirmed",
+    "stockCheckNote": "Real-time per-store inventory, verified at checkout."
+  },
+  "Ollie's Bargain Outlet": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Pavilions": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Pick 'n Save": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Publix": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "QFC": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Ralphs": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Randalls": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Ross Dress for Less": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Safeway": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Sam's Club": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "probable",
+    "stockCheckNote": "App/site club inventory; membership may gate. RULE: only trust first-party SKUs (sold by retailer, NOT marketplace) + the pickup-at-this-store signal. Positive=strong; quantities fuzzy (shrink); hot drops may disable pickup."
+  },
+  "Scheels": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "confirmed",
+    "stockCheckNote": "Product-page 'Store Pickup' shows per-store availability."
+  },
+  "Shaw's": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Sheetz": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Smith's": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Spencer's": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Staples": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "confirmed",
+    "stockCheckNote": "'Pick Up Today' shows per-store inventory + search other stores."
+  },
+  "Star Market": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "TJ Maxx": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Target": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "confirmed",
+    "stockCheckNote": "RedSky fulfillment API returns per-store stock; BrickSeek-tracked. RULE: only trust first-party SKUs (sold by retailer, NOT marketplace) + the pickup-at-this-store signal. Positive=strong; quantities fuzzy (shrink); hot drops may disable pickup."
+  },
+  "Tom Thumb": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Tractor Supply": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Vons": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Walgreens": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "confirmed",
+    "stockCheckNote": "Product page shows in-store availability + 'Check Other Stores'; app has store-specific inventory."
+  },
+  "Walmart": {
+    "stockCheckMethod": "site",
+    "stockCheckConfidence": "probable",
+    "stockCheckNote": "Per-store availability + BrickSeek feed, but accuracy varies. RULE: only trust first-party SKUs (sold by retailer, NOT marketplace) + the pickup-at-this-store signal. Positive=strong; quantities fuzzy (shrink); hot drops may disable pickup."
+  },
+  "Wawa": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "Wegmans": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  },
+  "WinCo Foods": {
+    "stockCheckMethod": "call",
+    "stockCheckConfidence": "default",
+    "stockCheckNote": "No reliable per-store online inventory; phone to confirm stock."
+  }
+}
