@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r2" />
+<meta name="x-rev" content="names-r3" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/fungibles-64.png">
 <link rel="apple-touch-icon" href="/logos/fungibles.png">
@@ -395,7 +395,6 @@ __BRAND_HEAD__
   .earnbox .et{font-weight:800;font-size:13.5px}
   .earnbox .es{color:var(--muted);font-size:11.5px;margin-top:4px;line-height:1.35}
   .foot-bottom{display:flex;align-items:center;gap:5px;padding-top:14px;border-top:1px solid var(--border)}
-  .chrome-band{height:10px;width:100%;background:var(--accent,var(--green))}
   .foot-fav{display:flex;align-items:center;flex:0 0 auto}
   .foot-fav svg{width:24px;height:24px;border-radius:7px}
   .foot-copy{color:#7a7a86;font-size:12px;font-weight:600}
@@ -797,9 +796,6 @@ __BRAND_HEAD__
     <span class="foot-copy"><b id="footBrand" class="foot-brandname">Fungibles</b> powered by <b>Fungibles</b> · © <span id="footYear"></span></span>
   </div>
 </footer>
-<!-- Thin per-brand accent strip at the very bottom — what iOS samples to tint the browser bar when
-     you scroll to the bottom (the deliberate "chrome color"). Per vertical via --accent. -->
-<div class="chrome-band" aria-hidden="true"></div>
 
 <!-- Buy / subscribe modal -->
 <div class="overlay" id="buyOverlay" onclick="if(event.target===this)closeBuy()">
@@ -1156,7 +1152,7 @@ const I18N={ es:{
   // kiosk modal
   'k.tag':'Sabiduría colectiva','k.title':'Reporta un kiosco','k.sub':'¿Viste un kiosco de Pokémon que se recarga con horario? Comparte los tiempos — cada reporte te gana <b id="kiosk_reward">una verificación gratis</b>.','k.which':'¿Qué tienda y ubicación?','k.minutes':'Minutos de recarga <span style="color:var(--muted);font-weight:400">— cuándo cae, pasada cada hora</span>','k.every':'Cada…','k.notsure':'no estoy seguro','k.where':'¿A dónde mandamos tu verificación gratis?','k.cta':'Enviar y reclamar mi verificación →','k.submitting':'Enviando…','k.err.label':'Dinos qué tienda y ubicación','k.err.minutes':'Agrega al menos un minuto de recarga (ej. :03)','k.err.contact':'Agrega un correo o teléfono para tu verificación gratis','k.thanks.credits':'🎁 ¡Gracias! {n} agregadas','k.thanks.free':'🎁 ¡Gracias! Tu verificación gratis está lista — ve a verificar una tienda','k.thanks':'🙌 ¡Gracias por el dato!','k.reward.one':'una verificación gratis','k.reward.n':'{n} verificaciones gratis',
   // success wall
-  'sc.postbtn':'Publicar','sc.posting':'Publicando…','sc.posted.review':'🙌 ¡Publicado! Lo revisamos antes de que salga','sc.posted':'🏆 ¡Estás en el muro!','sc.err.photo':'Agrega una foto de tu logro','sc.empty':'Aún no hay logros — sé el primero en el muro','sc.prod.ph':'ej. ETB de Héroes Ascendidos',
+  'sc.postbtn':'Publicar','sc.posting':'Publicando…','sc.posted.review':'🙌 ¡Publicado! Lo revisamos antes de que salga','sc.posted':'🏆 ¡Estás en el muro!','sc.err.photo':'Agrega una foto de tu logro','sc.empty':'Sé el primero en publicar un logro','sc.empty2':'…y gana una verificación gratis.','sc.prod.ph':'ej. ETB de Héroes Ascendidos',
   'ref.sub2':'Se unen con tu enlace y hacen una verificación — <b>verificaciones gratis para los dos</b>.',
   // driver / runner teaser
   'dd.tag':'Vista previa · próximamente','dd.title':'Que un local lo recoja','dd.sub':'¿Muy lejos para manejar? Manda a un conductor de Uber/Lyft cercano a comprarlo y enviártelo — él paga <b>$0 de su bolsillo</b>, tú solo pones el bono.','dd.instock':'En stock','dd.s1':'Define el <b style="color:var(--green)">bono</b> del conductor (ej. $25) sobre su tarifa','dd.s2':'Pide el viaje en <b>Uber</b> o <b>Lyft</b> — recogida en la tienda','dd.s3':'Envía una tarjeta prepagada (producto + envío) + un mensaje listo','dd.s4':'Él lo compra, lo envía y toca <b>Listo</b> → tu bono se libera al instante','dd.sees':'lo que ve el conductor','dd.pickup':'Tienes una recogida de <span style="color:var(--green)">$25</span> 🏃','dd.applepay':'Agregar tarjeta a Apple Pay (60 seg)','dd.cta':'Quiero acceso anticipado →','dd.noted':'Anotado — te buscamos para el acceso anticipado 🤝','dd.grab':'recoger en {s} → te lo envían',
@@ -1164,7 +1160,7 @@ const I18N={ es:{
   'err.generic':'Algo salió mal — inténtalo de nuevo','err.email':'Ingresa un correo válido','err.contact':'Ingresa un correo o teléfono válido','err.pickstore':'Elige una tienda primero',
   'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó — regístrate para seguir','toast.joinalerts':'Únete gratis para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la llamada','toast.callgone':'Esa llamada ya no está disponible','toast.loadingcall':'Cargando tu llamada…','toast.translate.fail':'No se pudo traducir','toast.payment':'🎉 Pago recibido — agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada — actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó — mostrando la lista','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x} — no se hizo la llamada',
   'find.me':'Encuentra mis tiendas','find.near':'cerca de ti, abiertas ahora',
-  'scores.title':'Logros de la caza','scores.post':'Publica el tuyo →','scores.first':'El primer logro se lleva la gloria — publica el tuyo.',
+  'scores.title':'Logros de la caza','scores.post':'Publica el tuyo →','scores.first':'¡Muéstranos el botín!',
   'ho.title':'Pásalo a un conductor','ho.sub':'Él lo compra — y te lo lleva a tu puerta o te lo envía.','ho.ship':'Envíamelo','ho.home':'Tráelo a mi casa','ho.ship.btn':'📦 Envíamelo','ho.home.btn':'🏠 Tráelo a mi casa',
   'ho.ship.hint':'El empaque y el envío van en la tarjeta del conductor — lo envía de regreso y te llega el rastreo por texto.','ho.home.hint':'El conductor lo lleva directo a tu puerta — sin envío, sin esperar el correo.',
   'ho.s1.label':'Confirmar','ho.s1.title':'¿A dónde debe llegar?','ho.s1.cta':'Se ve bien →','ho.s2.label':'La oferta','ho.s2.title':'Define el bono del conductor','ho.s2.cta':'Fijar el bono →',
@@ -2920,7 +2916,7 @@ async function loadCommunity(){
   row.style.display='';
   const body=$('scoresRowBody');
   if(!Array.isArray(posts)||!posts.length){
-    body.innerHTML=`<div class="lo" style="color:var(--muted);padding:2px">${t('scores.first','First score goes up in lights — post yours.')}</div>`;
+    body.innerHTML=`<div class="lo" style="color:var(--muted);padding:2px">${t('scores.first','Show us the goods!')}</div>`;
     return;
   }
   body.innerHTML=posts.slice(0,3).map(p=>`<div class="scoretile" onclick="openSuccess()">
@@ -3043,12 +3039,17 @@ function igAv(p){
   return `<span class="av"><span class="mono">${esc(((base[0]||'?')[0]+(base[1]?base[1][0]:'')).toUpperCase())}</span></span>`;
 }
 // Scores are modular per vertical — a brand site shows only its own category's posts.
-function communityUrl(){ return '/pub/community'+((BRAND_CAT&&BRAND_CAT.id)?('?categoryId='+BRAND_CAT.id):''); }
+function communityUrl(){
+  if(!BRAND_CAT && BRAND && BRAND.category) applyBrand(); // re-resolve if categories loaded after first paint
+  if(BRAND_CAT && BRAND_CAT.id) return '/pub/community?categoryId='+BRAND_CAT.id;
+  if(BRAND && BRAND.category) return '/pub/community?categoryId=0'; // vertical site, unresolved → show NOTHING, never other verticals
+  return '/pub/community';
+}
 async function loadSuccessWall(){
   let posts=[]; try{ posts=await api(communityUrl()); }catch(e){}
   const el=$('succ_wall'); if(!el) return;
   if(!Array.isArray(posts)||!posts.length){
-    el.innerHTML=`<div class="emptybox">${ICO.trophy(AC()).replace('width="14" height="14"','width="26" height="26"')}<div class="eb-t">${t('sc.empty','Nothing posted here yet')}</div><div class="eb-s">${t('sc.empty2','Be the first to put a score on the wall.')}</div><button class="postbtn" onclick="toggleComposer(true)" style="margin:14px auto 0">${t('sc.postbtn','Post')}</button></div>`;
+    el.innerHTML=`<div class="emptybox">${ICO.trophy(AC()).replace('width="14" height="14"','width="26" height="26"')}<div class="eb-t">${t('sc.empty','Be the first to post a score')}</div><div class="eb-s">${t('sc.empty2','…and get a free check.')}</div><button class="postbtn" onclick="toggleComposer(true)" style="margin:14px auto 0">${t('sc.postbtn','Post')}</button></div>`;
     return;
   }
   el.innerHTML=posts.map(p=>{

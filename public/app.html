@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="admin-r29" />
+<meta name="x-rev" content="admin-r30" />
 <title>Caller Admin — Fungibles</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%239333EA'/%3E%3Crect x='3' y='3' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='3' width='19' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='13' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='13' width='14' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='23' width='9' height='7' rx='3' fill='white'/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="https://api-production-100b.up.railway.app/assets/fungibles-logo.jpeg">
@@ -799,7 +799,7 @@ let CATEGORIES = [];
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
   pulse:    {label:'Pulse',    ico:'bolt',  tabs:[['dash','God view','bolt'],['growth','Growth','rise'],['business','Business','money']]},
-  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Stores','store'],['catalog','Catalog','tag'],['map','Map','map'],['zones','Zones','target'],['trees','Phone trees & mute','tree'],['treelab','Tree Lab','tree']]},
+  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Stores','store'],['map','Map','map'],['zones','Zones','target'],['trees','Phone trees & mute','tree'],['treelab','Tree Lab','tree']]},
   calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Labs','flask'],['bench','Test bench','sliders'],['statuses','Statuses','tag']]},
   settings: {label:'Settings', ico:'gear',  tabs:[['settings','Settings','gear']]},
@@ -1599,10 +1599,7 @@ function renderStatuses(list){
   el.innerHTML = rows.length ? rows.map(s=>`
     <div class="card" style="padding:10px 12px;margin-bottom:8px" data-sid="${s.id}">
       <div class="row" style="gap:8px;align-items:center">
-        <span class="stico" title="left = the drawn icon customers see · right = the emoji key you type">
-          <span class="stico-prev">${vmark(s.emoji,s.tone,22)}</span>
-          <input value="${escH(s.emoji)}" data-f="emoji" class="stico-key">
-        </span>
+        <input value="${escH(s.emoji)}" data-f="emoji" style="width:54px;height:42px;text-align:center;font-size:18px;flex:0 0 auto" title="emoji customers see">
         <input value="${escH(s.label)}" data-f="label" style="flex:1" placeholder="Label">
         <input type="color" value="${escH(s.color)}" data-f="color" style="width:46px;height:42px;padding:2px;border-radius:8px;border:1px solid var(--border);background:none">
       </div>
