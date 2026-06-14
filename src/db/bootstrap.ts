@@ -66,6 +66,11 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE chains ADD COLUMN avg_tree_seconds INTEGER").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN repack_only INTEGER NOT NULL DEFAULT 0").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN muted INTEGER NOT NULL DEFAULT 0").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN tree_status TEXT").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN tree_learned_at INTEGER").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN tree_verified_at INTEGER").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN rings_direct INTEGER").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN tree_note TEXT").catch(() => {});
   // Retailers: weekly hours JSON + region grouping + soft-remove (added post-migration).
   await client.execute("ALTER TABLE retailers ADD COLUMN hours TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN state TEXT").catch(() => {});

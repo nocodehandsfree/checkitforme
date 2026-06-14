@@ -23,6 +23,7 @@ import { resolveBrand, brandSwitcher } from "./brands";
 import { getPolicy, setPolicy, publicPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
+import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { harvestHoursTick } from "./hours-harvest";
 import { createSchedule, listSchedulesDetailed, deleteSchedule, customerScheduleTick } from "./customer-schedules";
 import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, retailerMap, invalidateRefCache } from "./refcache";
@@ -1552,6 +1553,45 @@ app.get("/api/admin/call-timing", async (c) => {
     aggregate: { calls: r0(agg?.n), reached: r0(reached?.n), avgCallSec: r0(agg?.avgCall), avgNavSec: r0(reached?.avgNav), avgTalkSec: r0(reached?.avgTalk), totalMinutes: r0(Number(agg?.totalSec || 0) / 60) },
     byStore: byStore.map((r) => ({ name: (r.rid != null && names.get(r.rid)) || `#${r.rid}`, n: r0(r.n), avgCallSec: r0(r.avgCall), avgNavSec: r0(r.avgNav), avgTalkSec: r0(r.avgTalk), totalMin: r0(Number(r.totalSec || 0) / 60) })),
   });
+});
+// ---- Phone Tree Lab: discover + document + verify the route-to-a-human per brand ----
+// Place a normal call to one open, callable store of a chain; its transcript feeds the tree learner in ingest.
+async function placeChainTreeCall(chainId: number): Promise<{ ok: boolean; error?: string; retailer?: string }> {
+  const stores = await db.select().from(retailers).where(and(eq(retailers.chainId, chainId), eq(retailers.active, true))).limit(40);
+  const callable = stores.filter((s) => s.phone && !s.phone.startsWith("nophone:"));
+  if (!callable.length) return { ok: false, error: "no callable store" };
+  const cats = await cachedCategories();
+  const catId = cats[0]?.id;
+  if (!catId) return { ok: false, error: "no categories" };
+  for (const s of callable) {
+    try { await triggerCall({ retailerId: s.id, categoryId: catId }); return { ok: true, retailer: s.name }; }
+    catch { /* closed / no line — try the next store */ }
+  }
+  return { ok: false, error: "no open store right now (all closed?)" };
+}
+app.get("/api/admin/tree/list", async (c) => {
+  const chs = await db.select().from(chains).orderBy(chains.name);
+  const rows = await db.select({ cid: retailers.chainId, n: sql<number>`count(*)` }).from(retailers).where(eq(retailers.active, true)).groupBy(retailers.chainId);
+  const cnt = new Map(rows.map((r) => [r.cid, Number(r.n || 0)]));
+  return c.json({ model: TREE_MODEL, chains: chs.map((ch) => ({ id: ch.id, name: ch.name, type: ch.type, stores: cnt.get(ch.id) || 0, treeStatus: ch.treeStatus, ringsDirect: ch.ringsDirect, dtmf: ch.dtmfShortcut, answerPath: ch.answerPath, avgTreeSeconds: ch.avgTreeSeconds, note: ch.treeNote || ch.phoneTreeDefault, learnedAt: ch.treeLearnedAt, verifiedAt: ch.treeVerifiedAt, muted: ch.muted })) });
+});
+app.post("/api/admin/tree/discover", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; count?: number };
+  if (b.chainId) return c.json(await placeChainTreeCall(Number(b.chainId)));
+  const count = Math.min(Math.max(Number(b.count) || 5, 1), 25);
+  const chs = await db.select().from(chains).where(isNull(chains.treeStatus)).limit(300);
+  const names: string[] = []; let placed = 0;
+  for (const ch of chs) { if (placed >= count) break; const r = await placeChainTreeCall(ch.id); if (r.ok) { placed++; names.push(ch.name); } }
+  return c.json({ placed, names });
+});
+app.post("/api/admin/tree/verify", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; count?: number };
+  if (b.chainId) { queueTreeRelearn(Number(b.chainId)); return c.json(await placeChainTreeCall(Number(b.chainId))); }
+  const count = Math.min(Math.max(Number(b.count) || 5, 1), 25);
+  const chs = await db.select().from(chains).where(sql`${chains.treeStatus} is not null`).limit(300);
+  const names: string[] = []; let placed = 0;
+  for (const ch of chs) { if (placed >= count) break; queueTreeRelearn(ch.id); const r = await placeChainTreeCall(ch.id); if (r.ok) { placed++; names.push(ch.name); } }
+  return c.json({ placed, names });
 });
 app.get("/api/admin/agent/models", (c) => c.json(AGENT_MODELS));
 app.post("/api/admin/agent", async (c) => {
