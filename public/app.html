@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="admin-r31" />
+<meta name="x-rev" content="admin-r32" />
 <title>Caller Admin — Fungibles</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%239333EA'/%3E%3Crect x='3' y='3' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='3' width='19' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='13' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='13' width='14' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='23' width='9' height='7' rx='3' fill='white'/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="https://api-production-100b.up.railway.app/assets/fungibles-logo.jpeg">
@@ -543,6 +543,16 @@
         <div class="row" style="margin-top:10px"><button class="ghost" onclick="resetScript()">Reset agent script to default</button></div>
       </details>
 
+      <details class="card" id="tb_rotate_card">
+        <summary><span class="name">🔀 Rotation</span><span class="meta">vary the voice + opener per call so stores don't hear the same thing twice</span></summary>
+        <div class="meta" style="margin:10px 0 8px">Live store calls round-robin through these. Leave empty to use the single live voice/opener.</div>
+        <label>Opener variants <span style="color:var(--muted)">— one per line; <code>{category}</code> fills in. The agent uses the next line each call.</span></label>
+        <textarea id="rot_openers" rows="4" style="width:100%;font-family:inherit;font-size:13px;background:var(--terminal);color:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;box-sizing:border-box" placeholder="Heyy! Got any {category} in today?&#10;Hi! Quick one — any {category} land recently?&#10;Hey there! Checking if {category} is in stock?"></textarea>
+        <label style="margin-top:10px">Voice pool <span style="color:var(--muted)">— tick the voices to rotate through</span></label>
+        <div id="rot_voices" class="meta" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px">Loading voices…</div>
+        <div class="row" style="margin-top:12px;gap:8px"><button class="act" onclick="saveRotation(this)">Save rotation</button><span class="meta" id="rot_msg"></span></div>
+      </details>
+
       <details class="card" id="tb_call_card" open>
         <summary><span class="name">🧪 The test call</span><span class="meta">the agent calls YOU as the store</span></summary>
         <div class="meta" style="margin:10px 0 12px">Pick the store context, then answer your phone like the clerk. Runs the <b>draft</b> voice with that store's real phone-tree rules. The result records against the store (visible in Results).</div>
@@ -948,6 +958,23 @@ async function loadVoices(){
   const opts='<option value="">Default voice</option>'+(d.voices||[]).map(v=>`<option value="${v.id}">${esch(v.name)}${v.cloned?' (cloned)':''}${v.id===d.active?' — LIVE':''}</option>`).join('');
   const sv=document.getElementById('sim_voice'); if(sv) sv.innerHTML=opts;
   const lv=document.getElementById('lab_voice'); if(lv) lv.innerHTML=opts;
+  loadRotation(d.voices||[]);
+}
+// #5 voice/script rotation — opener variants + a voice pool that live calls round-robin through.
+async function loadRotation(voices){
+  const box=document.getElementById('rot_voices'); if(!box) return;
+  const s=await api('/api/settings')||{};
+  const pool=new Set(((s.vt_voice_pool||'').split(',').map(x=>x.trim()).filter(Boolean)));
+  box.innerHTML=(voices||[]).map(v=>`<label class="day" style="margin:0"><input type="checkbox" class="rotvoice" value="${v.id}" ${pool.has(v.id)?'checked':''}> ${esch(v.name)}${v.cloned?' (cloned)':''}</label>`).join('')||'<span class="meta">No voices.</span>';
+  const ta=document.getElementById('rot_openers'); if(ta) ta.value=s.vt_opener_variants||'';
+}
+async function saveRotation(btn){
+  const o=btn.textContent; btn.textContent='…'; btn.disabled=true;
+  const voicePool=[...document.querySelectorAll('.rotvoice:checked')].map(c=>c.value).join(',');
+  const openerVariants=(document.getElementById('rot_openers')?.value||'').trim();
+  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({voicePool,openerVariants})});
+  btn.textContent=o; btn.disabled=false;
+  const m=document.getElementById('rot_msg'); if(m) m.textContent=(r&&!r.error)?'Saved — live calls will rotate.':'Could not save';
 }
 async function vsSetActive(){
   const id=document.getElementById('vs_select').value; if(!id) return;

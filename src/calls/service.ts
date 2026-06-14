@@ -31,6 +31,14 @@ import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS } from "../voice/prom
 
 const DEFAULT_OPENER = "Heyy! I was just checking to see if you guys got any {category} in?";
 
+// Round-robin picker for call rotation (opener variants / voice pool). In-memory; resets on restart.
+const rotCounters = new Map<string, number>();
+function rotatePick<T>(key: string, list: T[]): T | undefined {
+  if (!list.length) return undefined;
+  const n = (rotCounters.get(key) ?? -1) + 1; rotCounters.set(key, n);
+  return list[n % list.length];
+}
+
 const VOICEMAIL_INSTRUCTION =
   "If you reach a voicemail, answering machine, or automated recording (a recorded greeting, an automated menu with no live person, or a beep) — do NOT say anything and end the call immediately. Never leave a message.";
 
@@ -177,7 +185,10 @@ export async function triggerCall(a: TriggerArgs) {
 
   // Warm, editable opener (Voice tuning control). {category} is interpolated.
   // Test Bench passes its DRAFT opener via openingTemplate; live calls read the vt_opening setting.
-  const openerTemplate = a.openingTemplate ?? ((await getSetting("vt_opening")) || DEFAULT_OPENER);
+  // Rotation (optional): if opener variants are set, round-robin them so the same store doesn't hear
+  // the identical line every time (same voice, slightly different phrasing next call).
+  const openerVariants = ((await getSetting("vt_opener_variants")) || "").split("\n").map((s) => s.trim()).filter(Boolean);
+  const openerTemplate = a.openingTemplate ?? (rotatePick("opener", openerVariants) || (await getSetting("vt_opening")) || DEFAULT_OPENER);
   const openingLine = openerTemplate.replace(/\{category\}/g, category.label);
 
   // Two decision trees off "verified": specific product check vs general restock.
@@ -204,7 +215,7 @@ export async function triggerCall(a: TriggerArgs) {
       productName: category.label,
       question,
       agentId,
-      voiceId: a.voiceId ?? config.voice.defaultVoiceId,
+      voiceId: a.voiceId ?? rotatePick("voice", ((await getSetting("vt_voice_pool")) || "").split(",").map((s) => s.trim()).filter(Boolean)) ?? config.voice.defaultVoiceId,
       clarification,
       openingLine: mode === "restock" ? openingLine : undefined,
       phoneTree,

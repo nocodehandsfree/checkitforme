@@ -1372,6 +1372,8 @@ app.patch("/api/settings", async (c) => {
   const b = await c.req.json();
   if (typeof b.voicemailHangup === "boolean") await setSetting("voicemail_hangup", String(b.voicemailHangup));
   if (b.creditLimit !== undefined) await setSetting("el_credit_limit", String(Math.max(0, Number(b.creditLimit) || 0)));
+  if (b.openerVariants !== undefined) await setSetting("vt_opener_variants", String(b.openerVariants || ""));
+  if (b.voicePool !== undefined) await setSetting("vt_voice_pool", String(b.voicePool || ""));
   return c.json(await allSettings());
 });
 
