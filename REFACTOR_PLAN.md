@@ -253,9 +253,9 @@ These touch infra/vars only, so they're safe while the frontend lane is live:
    reserve a `caller:` key prefix / separate logical DB).
 4. [ ] **Add `SENTRY_DSN`** (backend project) to Railway.
 5. [ ] **Add `HELICONE_API_KEY`** to Railway.
-6. [ ] Draft the **API contract doc** (freeze target) from the current endpoints — ready to hand
-   to Frontend/Admin the moment we un-freeze.
-7. [ ] Draft the **CI/CD workflow** (typecheck + `test-all.sh` + gitleaks) as a file to drop in.
+6. [x] Draft the **API contract doc** → `docs/API_CONTRACT.md` (freeze target; hand to F/E + Admin).
+7. [x] Draft the **CI/CD workflow** → `.github/workflows/voice-caller-ci.yml` (typecheck +
+   `test-all.sh` + gitleaks; triggers only on `voice-caller/**` changes).
 
 ## Backend implementation tasks (AFTER un-freeze — touch the repo)
 

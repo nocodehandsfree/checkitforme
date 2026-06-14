@@ -5,7 +5,8 @@ This is the **single onboarding doc** for the voice-caller service — read it t
 ## 📍 Docs map (where everything lives — updated 2026-06-14)
 - **This file** — onboarding (now folds in the old `KNOWLEDGE_TRANSFER.md`).
 - `README.md` — what the service is + stack.
-- `docs/STOCK_AND_GEO_API.md` — the **API contract** (the frozen interface between front/back).
+- `docs/API_CONTRACT.md` — the **API contract** (frozen front⇄back interface; the parallel-work referee).
+- `docs/STOCK_AND_GEO_API.md` — deeper detail on the stock + geo rails.
 - `GTM_READINESS.md` — nationwide launch checklist.
 - `REFACTOR_PLAN.md` — architecture, parallel-agent ownership, task lists, security plan.
 - `ROADMAP.md` / `LAUNCH_PLAN.md` — product vision + prioritized priorities.
