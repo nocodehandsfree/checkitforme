@@ -1,0 +1,1 @@
+ALTER TABLE `chains` ADD `type` text;

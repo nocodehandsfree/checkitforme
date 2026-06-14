@@ -1,0 +1,7 @@
+node_modules/
+local.db
+local.db-*
+*.db
+.dev.vars
+.wrangler/
+dist/
