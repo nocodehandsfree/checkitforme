@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="admin-r30" />
+<meta name="x-rev" content="admin-r31" />
 <title>Caller Admin — Fungibles</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%239333EA'/%3E%3Crect x='3' y='3' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='3' width='19' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='13' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='13' width='14' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='23' width='9' height='7' rx='3' fill='white'/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="https://api-production-100b.up.railway.app/assets/fungibles-logo.jpeg">
@@ -229,6 +229,7 @@
   .agent-input{display:flex;gap:8px;align-items:flex-end;padding:12px;border-top:1px solid var(--border)}
   .agent-input textarea{flex:1;resize:none;min-height:60px;max-height:160px;background:#08080c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:11px 13px;font:inherit;font-size:14.5px;line-height:1.45}
   body.agent-open{overflow:hidden}
+  .fcheck{filter:drop-shadow(0 0 3px rgba(95,246,150,.9)) drop-shadow(0 0 8px rgba(25,177,69,.55)) drop-shadow(0 0 16px rgba(19,95,41,.4))}
   .agent-send{flex:0 0 auto;width:40px;height:40px;border-radius:11px;border:none;cursor:pointer;background:var(--green);display:grid;place-items:center}
   .agent-send:disabled{opacity:.4;cursor:default}
   @media(max-width:480px){ .agent-panel{right:8px;left:8px;width:auto;bottom:8px;height:calc(100dvh - 70px)} .agent-fab{right:16px;bottom:16px} }
@@ -241,8 +242,9 @@
   type="text/javascript"></script>
 </head>
 <body class="authwait">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><radialGradient id="fgrad" cx="45%" cy="38%" r="62%"><stop offset="0%" stop-color="#5FF696"/><stop offset="45%" stop-color="#4CF286"/><stop offset="72%" stop-color="#49F382"/><stop offset="100%" stop-color="#19B145"/></radialGradient></defs></svg>
 <header>
-  <span class="hmark"><img src="/logos/fcheck.png?v=2" alt="Fungibles" width="24" height="24" style="display:block"></span>
+  <span class="hmark"><svg class="fcheck" width="24" height="24" viewBox="0 0 64 64" style="display:block"><circle cx="32" cy="32" r="29" fill="url(#fgrad)"/><path d="M19 33.5l9.5 9.5L46 24.5" fill="none" stroke="#0E0E10" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
   <h1><b>Admin</b></h1><span class="dot" title="live"></span>
   <span class="sub" id="clock"></span>
 </header>
@@ -1762,15 +1764,16 @@ function pinColor(r){
 }
 function ensureMap(){
   if(!MAP){
-    MAP=L.map('leafletmap').setView([34.05,-118.24],10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(MAP);
+    MAP=L.map('leafletmap',{zoomControl:false}).setView([34.05,-118.24],10);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',attribution:''}).addTo(MAP);
     MARKERS=L.layerGroup().addTo(MAP);
   }
   setTimeout(()=>{MAP.invalidateSize(); loadMap();},120);
 }
 async function loadMap(){
   if(!MAP) return;
-  const rs=await api('/api/retailers');
+  // Plot the stores you're currently looking at (your Stores search). Falls back to recent if none.
+  const rs=(Array.isArray(RETAILERS)&&RETAILERS.length)?RETAILERS:(await api('/api/retailers'));
   MARKERS.clearLayers();
   const pts=[];
   rs.filter(r=>r.lat&&r.lng).forEach(r=>{

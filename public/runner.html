@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r3" />
+<meta name="x-rev" content="names-r4" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/fungibles-64.png">
 <link rel="apple-touch-icon" href="/logos/fungibles.png">
@@ -397,6 +397,8 @@ __BRAND_HEAD__
   .foot-bottom{display:flex;align-items:center;gap:5px;padding-top:14px;border-top:1px solid var(--border)}
   .foot-fav{display:flex;align-items:center;flex:0 0 auto}
   .foot-fav svg{width:24px;height:24px;border-radius:7px}
+  /* brand mark glow (see BRAND.md) — size-appropriate subset of the full glow stack */
+  .fcheck{filter:drop-shadow(0 0 3px rgba(95,246,150,.9)) drop-shadow(0 0 8px rgba(25,177,69,.6)) drop-shadow(0 0 16px rgba(19,95,41,.45))}
   .foot-copy{color:#7a7a86;font-size:12px;font-weight:600}
   .foot-brandname{color:var(--accent,var(--green))}
   .langtop{appearance:none;-webkit-appearance:none;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;font-size:12px;font-weight:800;border-radius:20px;padding:7px 28px 7px 12px;cursor:pointer;flex:0 0 auto;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M0.5 0.5h8L4.5 5.5z' fill='%23ffffff'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
@@ -598,6 +600,7 @@ __BRAND_HEAD__
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><radialGradient id="fgrad" cx="45%" cy="38%" r="62%"><stop offset="0%" stop-color="#5FF696"/><stop offset="45%" stop-color="#4CF286"/><stop offset="72%" stop-color="#49F382"/><stop offset="100%" stop-color="#19B145"/></radialGradient></defs></svg>
 <header>
   <div class="brandbar">
     <div class="vsw" id="vsw">
@@ -1919,8 +1922,8 @@ const ICO={
 let FCID=0;
 // The Fungibles check — our logo-grade checkmark (secondary purple flowing into go-green).
 function FCHK(sz){ sz=sz||16;
-  // The owner's Fungibles check — their exact mark (green disc, check cut out, breaking the top-right edge).
-  return `<img src="/logos/fcheck.png?v=2" alt="" width="${sz}" height="${sz}" style="display:inline-block;vertical-align:middle;object-fit:contain">`;
+  // Brand mark per BRAND.md — glowing green disc + check void, rendered from spec (shared #fgrad gradient, glow via .fcheck).
+  return `<svg class="fcheck" width="${sz}" height="${sz}" viewBox="0 0 64 64" style="display:inline-block;vertical-align:middle"><circle cx="32" cy="32" r="29" fill="url(#fgrad)"/><path d="M19 33.5l9.5 9.5L46 24.5" fill="none" stroke="#0E0E10" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 function setI(id,html){ const e=$(id); if(e) e.innerHTML=html; }
 function renderIcons(){
