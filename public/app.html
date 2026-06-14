@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="admin-r28" />
+<meta name="x-rev" content="admin-r29" />
 <title>Caller Admin — Fungibles</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%239333EA'/%3E%3Crect x='3' y='3' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='3' width='19' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='13' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='13' width='14' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='23' width='9' height='7' rx='3' fill='white'/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="https://api-production-100b.up.railway.app/assets/fungibles-logo.jpeg">
@@ -633,6 +633,22 @@
     </div>
     </section>
 
+    <section id="treelab">
+    <h2>Phone Tree Lab</h2>
+    <div class="card">
+      <div class="meta">How to reach a human at each brand — discovered &amp; documented from call transcripts by <b id="tl_model">the cheapest model</b>. Every call teaches it; you can also trigger calls here. <b style="color:#FBBF24">Calls are real</b> — bench-test before relying on it.</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center">
+        <input id="tl_count" type="number" min="1" max="25" value="5" style="max-width:78px" title="how many brands">
+        <button class="act" onclick="tlBatch('discover')">Discover N unmapped</button>
+        <button class="ghost" onclick="tlBatch('verify')">Re-verify N mapped</button>
+        <button class="ghost" onclick="loadTreeLab()">↻ Refresh</button>
+      </div>
+      <div class="meta" id="tl_msg" style="margin-top:8px;min-height:14px"></div>
+    </div>
+    <div class="stats" id="tl_stats"></div>
+    <div id="tl_list"><div class="empty">Loading…</div></div>
+    </section>
+
     <section id="statuses">
     <h2>Statuses</h2>
     <div id="pb_statuses">
@@ -783,13 +799,13 @@ let CATEGORIES = [];
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
   pulse:    {label:'Pulse',    ico:'bolt',  tabs:[['dash','God view','bolt'],['growth','Growth','rise'],['business','Business','money']]},
-  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Stores','store'],['catalog','Catalog','tag'],['map','Map','map'],['zones','Zones','target'],['trees','Phone trees & mute','tree']]},
+  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Stores','store'],['catalog','Catalog','tag'],['map','Map','map'],['zones','Zones','target'],['trees','Phone trees & mute','tree'],['treelab','Tree Lab','tree']]},
   calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Labs','flask'],['bench','Test bench','sliders'],['statuses','Statuses','tag']]},
   settings: {label:'Settings', ico:'gear',  tabs:[['settings','Settings','gear']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ map:()=>ensureMap(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>loadDash() };
+const TAB_LOADERS={ map:()=>ensureMap(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>loadDash(), treelab:()=>loadTreeLab() };
 const GROUP_LAST={}; let CUR_GROUP='pulse';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -817,6 +833,38 @@ function showSection(id, fromGroup){
 
 // ---- God view: live calls + outcomes + money, one screen, auto-refreshing ----
 const secsFmt=s=>s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):(s||0)+'s';
+// ---- Phone Tree Lab ----
+async function loadTreeLab(){
+  const list=document.getElementById('tl_list'); if(!list) return;
+  const d=await api('/api/admin/tree/list');
+  if(!d||d.error||!Array.isArray(d.chains)){ list.innerHTML='<div class="empty">Could not load.</div>'; return; }
+  const mEl=document.getElementById('tl_model'); if(mEl&&d.model) mEl.textContent=d.model;
+  const chains=d.chains, cnt=k=>chains.filter(c=>c.treeStatus===k).length;
+  const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  const ss=document.getElementById('tl_stats'); if(ss) ss.innerHTML=st(chains.length,'brands')+st(cnt('verified'),'verified','green')+st(cnt('learned'),'learned')+st(cnt('varies'),'varies')+st(chains.filter(c=>!c.treeStatus).length,'unmapped');
+  const badge=s=>s==='verified'?'<span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.12)">verified</span>':s==='learned'?'<span class="chip-sm" style="color:#7DD3FC;background:rgba(125,211,252,.12)">learned</span>':s==='varies'?'<span class="chip-sm" style="color:#FBBF24;background:rgba(251,191,36,.12)">varies</span>':s==='failed'?'<span class="chip-sm" style="color:#fca5a5;background:rgba(239,68,68,.12)">failed</span>':'<span class="chip-sm">unmapped</span>';
+  list.innerHTML=chains.map(c=>`<div class="card" style="padding:11px 13px">
+    <div class="row" style="justify-content:space-between;align-items:baseline;gap:8px">
+      <div class="sname">${esch(c.name)} ${badge(c.treeStatus)}${c.ringsDirect?' <span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.1)">rings direct</span>':''}${c.muted?' <span class="chip-sm">muted</span>':''}</div>
+      <div class="meta">${c.stores} stores</div>
+    </div>
+    ${c.note?`<div class="meta" style="margin-top:5px;color:#cdcdd8">${esch(c.note)}</div>`:''}
+    <div class="smeta" style="margin-top:5px">${c.dtmf?`keys: <code>${esch(c.dtmf)}</code> · `:''}${c.answerPath?esch(c.answerPath)+' · ':''}${c.avgTreeSeconds?secsFmt(c.avgTreeSeconds)+' to human · ':''}${c.verifiedAt?'verified '+agoTs(c.verifiedAt):c.learnedAt?'learned '+agoTs(c.learnedAt):'never mapped'}</div>
+    <div class="ractions" style="margin-top:8px">
+      <button class="ghost" onclick="tlOne('discover',${c.id},this)">Discover</button>
+      <button class="ghost" onclick="tlOne('verify',${c.id},this)">Verify</button>
+    </div>
+  </div>`).join('')||'<div class="empty">No chains.</div>';
+}
+async function tlOne(kind,chainId,btn){ const o=btn.textContent; btn.textContent='…'; btn.disabled=true;
+  const r=await api('/api/admin/tree/'+kind,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chainId})});
+  btn.textContent=o; btn.disabled=false;
+  toast(r&&r.ok?`Calling ${r.retailer||'a store'} — ${kind} running; refresh in a minute`:`Couldn't place: ${(r&&r.error)||'error'}`);
+}
+async function tlBatch(kind){ const n=Number(document.getElementById('tl_count').value)||5; const msg=document.getElementById('tl_msg'); if(msg)msg.textContent='Placing calls…';
+  const r=await api('/api/admin/tree/'+kind,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({count:n})});
+  if(msg)msg.textContent=(r&&r.placed!=null)?`Placed ${r.placed} ${kind} call(s)${r.names&&r.names.length?': '+r.names.join(', '):''}. Results fill in as calls finish — hit Refresh.`:'Error placing calls.';
+}
 async function loadCallTiming(){
   const d=await api('/api/admin/call-timing'); const el=document.getElementById('d_timing'); if(!el) return;
   if(!d||d.error||!d.aggregate||!d.aggregate.calls){ el.innerHTML='<div class="meta">No timed calls yet — this fills in as calls come through.</div>'; const se=document.getElementById('d_timing_stores'); if(se) se.innerHTML=''; return; }

@@ -41,6 +41,13 @@ export const chains = sqliteTable("chains", {
   answerPath: text("answer_path"),
   // Average seconds burned in the phone tree before a human, learned from calls.
   avgTreeSeconds: integer("avg_tree_seconds"),
+  // ---- Phone-tree discovery (the "learn the tree" bot) ----
+  // Lifecycle of the documented tree: null/"unknown" → "learned" (mapped) → "verified" (re-confirmed) → "failed".
+  treeStatus: text("tree_status"),
+  treeLearnedAt: integer("tree_learned_at"),  // last successful discovery
+  treeVerifiedAt: integer("tree_verified_at"),// last accuracy re-check that matched
+  ringsDirect: integer("rings_direct", { mode: "boolean" }), // true = a human picks up with no menu
+  treeNote: text("tree_note"),                // plain-English summary of how to reach a human
   // Chain only sells repackaged product (e.g. Fairfield) — checks are a waste of the customer's money.
   repackOnly: integer("repack_only", { mode: "boolean" }).notNull().default(false),
   // Owner kill-switch: muted chains are hidden from the consumer store list (no calls placed).

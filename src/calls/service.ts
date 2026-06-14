@@ -23,6 +23,7 @@ async function notifyWatches(retailerId: number, categoryId: number, store: stri
 import { config } from "../config";
 import { ElevenLabsProvider } from "../voice/elevenlabs";
 import { takeBridgeNav } from "../voice/bridge";
+import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
 import { getSetting, setSetting } from "../db/settings";
@@ -506,6 +507,30 @@ export async function ingestPending(): Promise<number> {
     }).where(eq(callResults.id, row.id));
 
     const store = (await db.select().from(retailers).where(eq(retailers.id, row.retailerId)))[0];
+
+    // ---- Phone-tree learning: every call's transcript contains the store's IVR, so we can map the
+    // route to a human for the whole chain. Learn once for unmapped chains (passive), and force a
+    // re-check + compare when a verify was queued for this chain. Cheap model; skipped otherwise.
+    if (store?.chainId && outcome.status === "completed" && (outcome.transcript || "").length > 20) {
+      const ch = (await db.select().from(chains).where(eq(chains.id, store.chainId)))[0];
+      const force = ch ? consumeTreeRelearn(ch.id) : false;
+      if (ch && (force || ch.treeStatus == null)) {
+        const learned = await learnTreeFromTranscript(outcome.transcript);
+        if (learned) {
+          if (force && ch.treeStatus != null) {
+            const matched = (ch.dtmfShortcut || "") === learned.dtmf && (ch.answerPath || "") === learned.answerPath;
+            await db.update(chains).set({ treeStatus: matched ? "verified" : "varies", treeVerifiedAt: now() }).where(eq(chains.id, ch.id));
+          } else {
+            await db.update(chains).set({
+              phoneTreeDefault: ch.phoneTreeDefault || learned.note, dtmfShortcut: ch.dtmfShortcut || learned.dtmf,
+              answerPath: learned.answerPath, avgTreeSeconds: learned.avgTreeSeconds, ringsDirect: learned.ringsDirect,
+              treeNote: learned.note, treeStatus: "learned", treeLearnedAt: now(),
+            }).where(eq(chains.id, ch.id));
+          }
+        }
+      }
+    }
+
     if (primaryConfirmed === true && primaryLabel) {
       await notifyInStock(store?.name ?? "A store", primaryLabel, row.retailerId, outcome.shipmentDay);
       await notifyWatches(row.retailerId, row.categoryId, store?.name ?? "A store", primaryLabel);
