@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r7" />
+<meta name="x-rev" content="names-r8" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/fungibles-64.png">
 <link rel="apple-touch-icon" href="/logos/fungibles.png">
@@ -2196,10 +2196,10 @@ function playMu(b64,track){
   const buf=AUDIO_CTX.createBuffer(1,n,8000), ch=buf.getChannelData(0);
   for(let i=0;i<n;i++) ch[i]=muLawDecode(raw.charCodeAt(i))/32768;
   const src=AUDIO_CTX.createBufferSource(); src.buffer=buf; src.connect(AUDIO_CTX.destination);
-  if(AUDIO_NEXT[track]==null) AUDIO_NEXT[track]=AUDIO_CTX.currentTime+0.25; // per-track jitter buffer
+  if(AUDIO_NEXT[track]==null) AUDIO_NEXT[track]=AUDIO_CTX.currentTime+0.4; // per-track jitter buffer (bigger cushion = fewer underruns = less crackle)
   // If we've fallen behind (network burst / GC), resync with a fresh cushion in ONE step rather than
   // clicking on every late frame — that frame-by-frame catch-up is what makes it sound crackly.
-  if(AUDIO_NEXT[track] < AUDIO_CTX.currentTime+0.02) AUDIO_NEXT[track]=AUDIO_CTX.currentTime+0.18;
+  if(AUDIO_NEXT[track] < AUDIO_CTX.currentTime+0.05) AUDIO_NEXT[track]=AUDIO_CTX.currentTime+0.32;
   const at=AUDIO_NEXT[track];
   src.start(at); AUDIO_NEXT[track]=at+buf.duration;
 }
