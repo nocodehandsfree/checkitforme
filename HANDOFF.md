@@ -1,7 +1,18 @@
 # Fungibles / Runnr — Session Handoff (for a fresh chat)
 
-This captures everything built across the recent sessions so a new chat can pick up instantly.
-Read this top-to-bottom, then `voice-caller/BUILD_PLAN.md` for the phase-by-phase log.
+This is the **single onboarding doc** for the voice-caller service — read it top-to-bottom.
+
+## 📍 Docs map (where everything lives — updated 2026-06-14)
+- **This file** — onboarding (now folds in the old `KNOWLEDGE_TRANSFER.md`).
+- `README.md` — what the service is + stack.
+- `docs/STOCK_AND_GEO_API.md` — the **API contract** (the frozen interface between front/back).
+- `GTM_READINESS.md` — nationwide launch checklist.
+- `REFACTOR_PLAN.md` — architecture, parallel-agent ownership, task lists, security plan.
+- `ROADMAP.md` / `LAUNCH_PLAN.md` — product vision + prioritized priorities.
+- `docs/archive/` — historical done-logs (BUILD_PLAN, ROADMAP_NIGHT, ADMIN_PLAN,
+  KNOWLEDGE_TRANSFER). Kept in git, moved out of the way to save context. **Don't auto-read.**
+
+> If you're wondering where a doc went: it's in `docs/archive/` (see its README).
 
 ## What it is
 AI voice-calling service that phones retail stores to check if trading-card product is in stock,
