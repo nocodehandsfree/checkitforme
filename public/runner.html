@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r6" />
+<meta name="x-rev" content="names-r7" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/fungibles-64.png">
 <link rel="apple-touch-icon" href="/logos/fungibles.png">
@@ -1094,6 +1094,7 @@ const I18N={ es:{
   'tick.found':'¡Encontrado!','besttag':'Mejor opción','bestwhy':'buenas probabilidades ahora',
   'closednow':'— cerrado ahora mismo',
   // live view
+  'pre.had':'tenían en stock','pre.notin':'no tenían','pre.unclear':'sin respuesta clara','pre.again':'Llamaste a {s} {a} — {o}. ¿Llamar de nuevo?','pre.note':'Llamaste a {s} {a} — {o}',
   'live.mute':'🔇 Quita el silencio del teléfono para escuchar la llamada','live.calling':'📞 Llamando a la tienda…','live.ringing':'📞 Timbrando…','live.connected':'📞 Conectados — escuchando…','live.talking':'🗣️ Hablando con la tienda…','live.ivr':'🔢 Navegando el menú telefónico…','live.getting':'⏳ Obteniendo el resultado…','live.loading':'Cargando tu llamada…','live.connecting':'Conectando…',
   'live.live':'🔊 EN VIVO — estás escuchando la llamada','live.hangup':'■ Detener y colgar','live.proof':'🔴 En vivo — la conversación según sucede','live.foot':'Un momento — las tiendas contestan, te ponen en espera y conversan. Vale los 2 minutos.',
   // result page
@@ -2215,6 +2216,7 @@ async function startCheckLive(){
     AUDIO_CTX.resume();
   }catch(e){ AUDIO_CTX=null; }
   AUDIO_NEXT={}; AUDIO_LIVE=false; if($('audio_ind'))$('audio_ind').style.display='none';
+  if(!(await preCallGate())) return; // #17: last-call reminder + 24h "are you sure" (audio already unlocked above)
   $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden');
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb){ _mb.style.display=canListen?'':'none'; if(canListen) setTimeout(()=>{ if(_mb&&$('live')&&!$('live').classList.contains('hidden')) _mb.style.display='none'; },7000); }
@@ -2514,6 +2516,18 @@ async function toggleTranslate(){
 
 // --- History (per-device, localStorage) ---
 function loadHist(){ try{ return JSON.parse(localStorage.getItem('runnr_history')||'[]'); }catch{ return []; } }
+// #17 — before placing, remind me when I last called this store + the outcome; confirm a re-call within 24h.
+function lastCallFor(storeId){ return loadHist().find(e=>e.storeId===storeId&&e.ts)||null; }
+function callOutcomeLabel(e){ return e.confirmed===true?t('pre.had','they had it in stock'):e.confirmed===false?t('pre.notin',"they didn't have it"):t('pre.unclear','no clear answer'); }
+async function preCallGate(){
+  const e=lastCallFor(SEL_STORE&&SEL_STORE.id); if(!e) return true;
+  const base=(SEL_STORE.name||'').split(/[—–]| - /)[0].trim();
+  const ago=agoStr(Math.floor(e.ts/1000));
+  if(Date.now()-e.ts < 24*3600*1000) return confirm(tf('pre.again','You called {s} {a} — {o}. Call again?',{s:base,a:ago,o:callOutcomeLabel(e)}));
+  toast(tf('pre.note','You called {s} {a} — {o}',{s:base,a:ago,o:callOutcomeLabel(e)}));
+  await new Promise(r=>setTimeout(r,2200));
+  return true;
+}
 function saveCheckToHistory(o,cid){
   const cat=(CATS.find(c=>c.id===SEL_CAT)||{}).label||'';
   const cats=(ASKED_CATS&&ASKED_CATS.length)?ASKED_CATS.map(x=>x.label):(cat?[cat]:[]);
