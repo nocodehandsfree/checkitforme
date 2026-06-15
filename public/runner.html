@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r10" />
+<meta name="x-rev" content="names-r11" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/fungibles-64.png">
 <link rel="apple-touch-icon" href="/logos/fungibles.png">
@@ -82,6 +82,18 @@ __BRAND_HEAD__
   .cta .price{font-weight:700;opacity:.7;font-size:13px}
   /* dark/branded CTA variants drop the green glow (it bleeds weirdly behind black/blue buttons) */
   .cta.dark{box-shadow:0 4px 14px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08)}
+  /* Sell-methods card (docs/SELL_METHODS_PLAN.md): what's possible at THIS store — live online
+     stock, ways to get it, resale warning, notify. Non-callable chains (Micro Center, Amazon) show
+     "Buy online" here instead of a call button; callable stores get a slim notify row under the CTA. */
+  #sellmeta{display:flex;flex-direction:column;gap:9px}
+  .smwarn{background:rgba(232,154,74,.12);border:1px solid rgba(232,154,74,.4);color:#f0c79a;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:700;line-height:1.4}
+  .smline{background:var(--terminal);border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-size:13.5px;color:#e6e2f7;line-height:1.4}
+  .smchips{display:flex;flex-wrap:wrap;gap:7px}
+  .smchip{display:inline-flex;align-items:center;gap:5px;background:var(--ptint);border:1px solid var(--pline);color:#e6e2f7;border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:700}
+  .smrow{display:flex;gap:8px;flex-wrap:wrap}
+  .smbtn{flex:1 1 auto;min-width:130px;background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;border:none;border-radius:12px;padding:13px;font-weight:900;font-size:14.5px;cursor:pointer;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  .smbtn.ghost{background:var(--sheet);border:1px solid var(--pline);color:#e6e2f7}
+  .smnote{color:var(--muted);font-size:12px;line-height:1.45;text-align:center}
   /* live calling */
   .live{text-align:center;padding:30px 18px}
   .ring{width:84px;height:84px;border-radius:50%;margin:0 auto 18px;border:3px solid rgba(74,222,128,.18);border-top-color:var(--green);animation:spin 1s linear infinite;display:flex;align-items:center;justify-content:center;font-size:32px}
@@ -374,8 +386,9 @@ __BRAND_HEAD__
   @keyframes spin{to{transform:rotate(360deg)}}
   .site-footer{border-top:1px solid var(--border);margin-top:18px;padding:20px 22px 26px;background:#0e0e16}
   /* one tight link row + one meta row — and when the floating back fab is up (.fabbed),
-     the footer steps left/up so nothing hides under the thumb button */
-  body.fabbed .site-footer{padding-right:88px;padding-bottom:44px}
+     the footer reserves the fab's WHOLE corner (58px + 22px gap ≈ 80px each way) so no row —
+     copyright, socials, language — can ever sit under the thumb button. */
+  body.fabbed .site-footer{padding-right:90px;padding-bottom:92px}
   .foot-links{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:14px}
   .foot-links a{color:#8f8fa0;font-size:13px;font-weight:700;text-decoration:none;cursor:pointer}
   .foot-links a:hover{color:#fff}
@@ -593,8 +606,6 @@ __BRAND_HEAD__
        so About/Terms/socials + the divider line up flush with the card edges above */
     .foot-links,.foot-meta,.foot-bottom{max-width:632px;margin-left:auto;margin-right:auto}
   }
-  /* when the floating back button is up (scores page), slide the footer socials out from under it */
-  .fabbed .foot-social{padding-right:84px}
 </style>
 </head>
 <body>
@@ -668,6 +679,9 @@ __BRAND_HEAD__
 
     <button class="cta" id="checkBtn" onclick="startCheck()" style="display:none">Check this store</button>
     <div class="foot" id="chargefoot" style="display:none;margin-top:10px" data-i18n="charge"><b>No answer = no charge.</b> You always get the verdict.</div>
+    <!-- Sell-methods card: live online stock / ways to get it / resale warning / notify.
+         Replaces the call button for non-callable chains (Micro Center, Amazon). -->
+    <div id="sellmeta" style="display:none;margin-top:12px"></div>
 
     <!-- Secondary engagement (below the core flow) -->
 
@@ -1140,6 +1154,11 @@ const I18N={ es:{
   'lead.title':'Tu primera llamada es gratis','lead.sub':'Solo tu correo. Sin tarjeta.','lead.cta':'Hacer mi llamada gratis →','lead.wait':'Un segundo…',
   // share modal
   'share.msg':'¡Mira esto!','share.title':'Comparte el hallazgo','share.sub':'Avísale a tu gente antes de que se agote.','share.post':'𝕏  Publicar','share.sms':'💬  Mándalo','share.copy':'Copiar','share.copied':'Copiado — pégalo donde quieras 📋',
+  // sell-methods card
+  'sm.resale':'Reventa — el precio puede superar el MSRP','sm.livechk':'Consultando stock en línea…','sm.nolive':'Aún no hay señal en línea — activa un aviso de reposición',
+  'sm.in':'En stock en línea ahora','sm.low':'Poco stock en línea','sm.out':'Agotado en línea',
+  'sm.instore':'En estante','sm.pickup':'Recoger en tienda','sm.ship':'Comprar y enviar',
+  'sm.buyonline':'Comprar en línea','sm.notify':'Avísame cuando vuelva','sm.nocall':'No podemos llamar a {x} — revisa su sitio o recibe un aviso cuando se reabastezca.',
   // watch modal
   'watch.title':'Avísame cuando vuelva','watch.sub':'Te avisamos en cuanto una llamada lo confirme en stock aquí.','watch.ph':'correo o teléfono','watch.cta':'Vigilar esta tienda →','sc.photolabel':'Foto',
   'sch.body':'Llamamos a <b id="sch_store">la tienda</b> los días de envío. Te avisamos en cuanto llegue <b id="sch_cat">el producto</b>. 1 verificación por llamada.','watch.setting':'Configurando…','watch.done':"🔔 Listo — te avisamos en cuanto vuelva",
@@ -1313,6 +1332,12 @@ async function boot(){
 let PENDING_VIEW=null;
 async function initClerk(){
   const t0=Date.now(); while(!window.Clerk){ if(Date.now()-t0>9000){ window.__clerkReady=true; renderAuth(); return; } await new Promise(r=>setTimeout(r,80)); }
+  // Clerk.load() does heavy SYNCHRONOUS work when there's a signed-in session — it hydrates the User,
+  // wires up token auto-refresh, and mounts its widgets. Run inline it froze scroll for ~1s on every
+  // reload (product-switch + pull-to-refresh both reload) while logged in; logged-out has no session
+  // to hydrate, so no freeze. Defer it to idle so first paint + scrolling stay responsive — the
+  // optimistic "You" pill (renderAuth) covers the gap until the real name/credits resolve.
+  await new Promise(r=>('requestIdleCallback' in window)?requestIdleCallback(()=>r(),{timeout:1200}):setTimeout(r,200));
   try{ await window.Clerk.load(); window.Clerk.addListener(()=>refreshAuth()); }catch(e){}
   window.__clerkReady=true; // Clerk resolved — stop showing the optimistic pill
   await handleClerkLinkCallback();
@@ -2122,13 +2147,63 @@ function syncCta(){
   const b=$('checkBtn'), vv=$('ctaValue'), cf=$('chargefoot');
   const ic=`<span style="display:inline-flex;vertical-align:-3px;margin-right:6px">${ICO.call('currentColor')}</span>`;
   const wasHidden=b.style.display==='none';
-  if(SEL_STORE&&SEL_CATS.length&&MODE!=='kiosk'){
+  // Non-callable chains (Micro Center, Amazon) NEVER get a call button — the sell-methods card
+  // below carries "Buy online" + notify instead. (docs/SELL_METHODS_PLAN.md rule 1.)
+  const cantCall=SEL_STORE&&SEL_STORE.callable===false;
+  if(SEL_STORE&&SEL_CATS.length&&MODE!=='kiosk'&&!cantCall){
     b.style.display=''; if(vv)vv.style.display='none'; if(cf)cf.style.display='';
     b.innerHTML=`${ic}${t('cta.check','Check')} ${esc(SEL_STORE.name.split('—')[0].trim())} ${t('cta.for','for')} <b>${esc(catLabels())}</b> &nbsp; <span class="price">· 1 ${t('cta.checkunit','check')}</span>`;
     if(wasHidden){ b.classList.remove('armed'); void b.offsetWidth; b.classList.add('armed');
       if(window.innerWidth<900){ setTimeout(()=>{ try{ b.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){} },150); } }
   }
-  else { b.style.display='none'; b.classList.remove('armed'); if(cf)cf.style.display='none'; if(vv)vv.style.display=MODE==='kiosk'?'none':''; }
+  else { b.style.display='none'; b.classList.remove('armed'); if(cf)cf.style.display='none'; if(vv)vv.style.display=(MODE==='kiosk'||cantCall)?'none':''; }
+  renderStoreActions();
+}
+// Sell-methods card — what's actually possible at THIS store: live online stock, ways to get it,
+// resale warning, notify. Non-callable chains (Micro Center, Amazon) get "Buy online" instead of a
+// call. Contract: docs/SELL_METHODS_PLAN.md; fields come straight off /pub/stores/near (SEL_STORE).
+function renderStoreActions(){
+  const wrap=$('sellmeta'); if(!wrap) return;
+  const st=SEL_STORE;
+  const cantCall=st&&st.callable===false;
+  // Callable stores: show alongside the CTA (after a category is picked). Non-callable: show on
+  // selection — there's no call to wait for, the buy-online/notify IS the action.
+  if(!st||MODE==='kiosk'||(!cantCall&&!SEL_CATS.length)){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  const isSite=st.stockCheckMethod==='site';
+  const methods=Array.isArray(st.sellMethods)?st.sellMethods:[];
+  const nm=esc((st.name||'').split(/[—–]| - /)[0].trim());
+  const parts=[];
+  // 1. Resale warning first — consumer protection (isMSRP===false → third-party reseller).
+  if(st.isMSRP===false) parts.push(`<div class="smwarn">⚠️ ${t('sm.resale','Resale — price may be over MSRP')}</div>`);
+  // 2. Live online-stock readout for "site" chains (their site mirrors the shelf — no call needed).
+  if(isSite) parts.push(`<div class="smline" id="smlive">📡 ${t('sm.livechk','Checking live online stock…')}</div>`);
+  // 3. Ways to get it. A lone "On shelf" is dropped for callable stores (the call already implies it).
+  const chipLbl={in_store:t('sm.instore','On shelf'),pickup:t('sm.pickup','Order for pickup'),ship:t('sm.ship','Buy & ship')};
+  const chipM=methods.filter(m=>chipLbl[m]&&!(m==='in_store'&&methods.length===1&&!cantCall));
+  if(chipM.length) parts.push(`<div class="smchips">`+chipM.map(m=>`<span class="smchip">${chipLbl[m]}</span>`).join('')+`</div>`);
+  // 4. Action row. Notify is ALWAYS offered; non-callable adds a Buy-online link (filled from the
+  //    freshest online signal once it loads).
+  if(cantCall){
+    parts.push(`<div class="smrow"><a class="smbtn" id="smbuy" href="#" target="_blank" rel="noopener" style="display:none">${t('sm.buyonline','Buy online')} ↗</a><button class="smbtn ghost" onclick="openWatch()">🔔 ${t('sm.notify','Notify me when restocked')}</button></div>`);
+    parts.push(`<div class="smnote">${tf('sm.nocall','We can’t call {x} — check their site or get pinged the moment it restocks.',{x:nm})}</div>`);
+  } else {
+    parts.push(`<div class="smrow"><button class="smbtn ghost" onclick="openWatch()">🔔 ${t('sm.notify','Notify me when restocked')}</button></div>`);
+  }
+  wrap.innerHTML=parts.join(''); wrap.style.display='';
+  if(isSite||cantCall) loadLiveStock(st.id);
+}
+// Pull the freshest online stock signal for a "site"/online store and paint the readout + buy link.
+async function loadLiveStock(id){
+  let rows; try{ rows=await api('/pub/stock/store/'+id); }catch(e){ const x=$('smlive'); if(x)x.style.display='none'; return; }
+  const sig=Array.isArray(rows)?rows.find(r=>r&&r.status&&r.status!=='unknown'):null;
+  const el=$('smlive');
+  if(el){
+    if(!sig) el.innerHTML=`📡 ${t('sm.nolive','No live online signal yet — get notified when it restocks')}`;
+    else { const map={in_stock:['🟢',t('sm.in','In stock online now')],low:['🟡',t('sm.low','Low stock online')],out_of_stock:['🔴',t('sm.out','Out of stock online')]};
+      const m=map[sig.status]||['⚪',sig.status];
+      el.innerHTML=`${m[0]} <b>${esc(m[1])}</b>${sig.product?` · ${esc(sig.product)}`:''} <span style="color:var(--muted)">· ${agoStr(sig.seenAt)}</span>`; }
+  }
+  if(sig&&sig.url){ const bt=$('smbuy'); if(bt){ bt.href=sig.url; bt.style.display=''; } }
 }
 function esc(s){return (s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
 // "160 S Westlake Blvd, Thousand Oaks, CA 91362" → street + "Thousand Oaks, CA 91362"
