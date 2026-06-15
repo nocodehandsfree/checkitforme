@@ -62,6 +62,11 @@ low value — fine for now; remove once Clerk phone-signup is the real gate.
 
 ---
 
+## 🟡 9. Dependency advisories (dev-only)
+`pnpm audit --prod` → 3 advisories, all in `esbuild` (transitive via `tsx`): esbuild **dev-server**
+CORS + Windows file-read. We run via `tsx`, not `esbuild serve`, so runtime is not exposed.
+**Fix:** `pnpm up tsx` (pulls esbuild ≥0.28.1) during the next dep bump. Low urgency.
+
 ## Already covered elsewhere (cross-ref, not re-listed)
 - Client-driven / non-atomic billing → `IMPLEMENTATION_SPECS.md §3`.
 - No rate limit on money endpoints + per-store/day → `§4`.
