@@ -1874,7 +1874,8 @@ function renderStores(){
     }
     const dot=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
     const drop=shipmentDayShort(s);
-    const meta=[esc(s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', drop?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
+    // Lead with the STREET so stores sharing a city (e.g. two "Big 5 — Los Angeles") are tellable apart; fall back to city.
+    const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', drop?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
     return `<div class="store ${sel}" onclick="pickStore(${s.id})">
       <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
       <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${dot}${meta}</div></div>

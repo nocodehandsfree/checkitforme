@@ -547,7 +547,7 @@ app.get("/pub/stores/near", async (c) => {
     .map((r) => {
       const miles = hasLoc && r.lat != null && r.lng != null ? Math.round(haversineMi(lat, lng, r.lat, r.lng) * 10) / 10 : null;
       const chainName = (r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0];
-      return { id: r.id, name: r.name, location: r.location, storeType: (r.chainId && types.get(r.chainId)) || "Other",
+      return { id: r.id, name: r.name, location: r.location, address: r.address || null, storeType: (r.chainId && types.get(r.chainId)) || "Other",
         ...((l) => ({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo(chainName)),
         carries: (r.carries ?? "").split(",").map((s) => s.trim()).filter(Boolean),
         lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
