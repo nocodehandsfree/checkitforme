@@ -9,6 +9,8 @@ This is the **single onboarding doc** for the voice-caller service — read it t
 - `docs/STOCK_AND_GEO_API.md` — deeper detail on the stock + geo rails.
 - `GTM_READINESS.md` — nationwide launch checklist.
 - `REFACTOR_PLAN.md` — architecture, parallel-agent ownership, task lists, security plan.
+- `docs/IMPLEMENTATION_SPECS.md` — file-level specs for the P0/P1 backend work.
+- `docs/TIDB_MIGRATION.md` — the libsql→TiDB migration + indexing plan.
 - `ROADMAP.md` / `LAUNCH_PLAN.md` — product vision + prioritized priorities.
 - `docs/archive/` — historical done-logs (BUILD_PLAN, ROADMAP_NIGHT, ADMIN_PLAN,
   KNOWLEDGE_TRANSFER). Kept in git, moved out of the way to save context. **Don't auto-read.**
