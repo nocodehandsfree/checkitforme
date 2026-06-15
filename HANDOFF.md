@@ -13,6 +13,7 @@ This is the **single onboarding doc** for the voice-caller service — read it t
 - `docs/TIDB_MIGRATION.md` — the libsql→TiDB migration + indexing plan.
 - `docs/SECURITY_REVIEW.md` — security punch list (IDOR, XFF bypass, SVG XSS, etc.).
 - `docs/COST_MODEL.md` — cost-per-check framework + margin findings (validate EL rate).
+- `docs/DOMAIN_MIGRATION.md` — plan to move to a standalone product domain (mostly DNS/config).
 - `ROADMAP.md` / `LAUNCH_PLAN.md` — product vision + prioritized priorities.
 - `docs/archive/` — historical done-logs (BUILD_PLAN, ROADMAP_NIGHT, ADMIN_PLAN,
   KNOWLEDGE_TRANSFER). Kept in git, moved out of the way to save context. **Don't auto-read.**
