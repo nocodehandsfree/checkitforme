@@ -1,9 +1,17 @@
 // Runnr billing: per-user accounts, credits, Stripe Checkout (packs + subscription), webhooks.
 // Uses the Stripe REST API directly (no SDK) and Drizzle for the accounts table.
-import { eq } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import { db } from "./db/client";
 import { accounts } from "./db/schema";
 import { getPolicy } from "./policy";
+
+/** Constant-time string compare (length-checked) — avoids timing side-channels on HMAC checks. */
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
 
 // ---- Pricing catalog (one-time credit packs + the $4.99 subscription) ----
 export const SUB = { cents: 499, credits: 20, label: "Fungibles Membership" };
@@ -33,10 +41,13 @@ export async function getAccount(userId: string, email?: string) {
 }
 
 export async function chargeOneCredit(userId: string): Promise<boolean> {
-  const a = await getAccount(userId);
-  if (!a || a.credits <= 0) return false;
-  await db.update(accounts).set({ credits: a.credits - 1, callsMade: a.callsMade + 1 }).where(eq(accounts.clerkUserId, userId));
-  return true;
+  // Atomic guarded decrement: the WHERE credits>0 makes concurrent charges race-safe (no
+  // read-then-write window, can never go negative). rowsAffected===1 ⇒ we actually charged.
+  await getAccount(userId); // ensure the account row exists first
+  const res = await db.update(accounts)
+    .set({ credits: sql`${accounts.credits} - 1`, callsMade: sql`${accounts.callsMade} + 1` })
+    .where(and(eq(accounts.clerkUserId, userId), gt(accounts.credits, 0)));
+  return (res.rowsAffected ?? 0) > 0;
 }
 
 export async function grantCredits(userId: string, n: number, spentCents = 0) {
@@ -106,7 +117,7 @@ export async function verifyStripeSig(payload: string, header: string | null): P
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${t}.${payload}`));
   const actual = [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return actual === v1;
+  return safeEqual(actual, v1);
 }
 
 interface StripeEvent { type: string; data?: { object?: Record<string, unknown> } }
