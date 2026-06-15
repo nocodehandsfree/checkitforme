@@ -105,3 +105,30 @@ Add to the admin "Call time & cost" card:
 - **Nav+hold vs talk ratio** — the "waste %", i.e. the optimization headroom on each chain.
 - **Projected cost**: current avg vs optimized-avg, so the impact of each fix is visible.
 - Needs volume (n=1 today) — the numbers get trustworthy after a few hundred calls.
+
+---
+
+## Full cost build-up per call — 45s / 60s / 90s / 120s (2026-06-15)
+
+Owner proposes dropping the cap 180s → **90s** ("if we get through the tree fast we're rarely on
+hold long"). Every cost to serve one connected call, primary scenario = ElevenLabs @ ~$0.10/min:
+
+| Service | 45s | 60s | 90s | 120s |
+|---|---|---|---|---|
+| ElevenLabs Conversational AI (STT+TTS+turn-taking, full call @ ~$0.10/min) ⭐ | $0.075 | $0.100 | $0.150 | $0.200 |
+| Twilio outbound carrier minutes (the phone connection, full call @ ~$0.014/min) | $0.011 | $0.014 | $0.021 | $0.028 |
+| LLM — phone-tree navigation, Claude Haiku (first ~15s) ⭐ | $0.002 | $0.002 | $0.002 | $0.002 |
+| LLM — human conversation, Claude Sonnet 4.6 (talk time @ ~$0.024/min) ⭐ | $0.012 | $0.018 | $0.030 | $0.042 |
+| Twilio phone-number rental (amortized per call) | $0.001 | $0.001 | $0.001 | $0.001 |
+| Helicone LLM gateway (flat/free tier) | $0.000 | $0.000 | $0.000 | $0.000 |
+| Railway server compute (amortized per call) | $0.001 | $0.001 | $0.001 | $0.001 |
+| **TOTAL** | **$0.102** | **$0.136** | **$0.205** | **$0.274** |
+| Margin @ $0.25 price | +$0.148 | +$0.114 | +$0.045 | −$0.024 |
+
+**If EL is the credit-basis rate (~$0.22/min) instead**, totals become **$0.19 / $0.26 / $0.39 / $0.51**
+(60s already loses money at $0.25). ⭐ lines = confirm via EL invoice + Helicone.
+
+**Takeaways:** EL is ~75% of cost and scales per-second → a **90s cap** is the sweet spot
+(~$0.20 cost, healthy margin); 120s goes underwater at $0.25. DTMF press-to-front + fast bail beat
+the LLM switch for savings. Set `policy.bail.maxCallSeconds` 180 → 90 once the DTMF/switcher tech is
+validated in the field.
