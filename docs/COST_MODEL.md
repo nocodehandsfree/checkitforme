@@ -66,3 +66,42 @@ total into the spend kill-switch (§2). Then this doc's assumptions become measu
 3. **Right EL plan** — move to the per-minute ConvAI tier if we're on the credit basis.
 4. **Price** — raise per-check or push the membership (better per-call economics + predictable revenue).
 5. **Cache/skip** — one-check-per-store-per-day (§4) avoids paying for redundant calls.
+
+---
+
+## Measured data + optimization projections (2026-06-15)
+
+First admin "Call time & cost" reading (⚠️ **n=1 call — directional only, need volume**):
+`AVG CALL 1:42 (~102s)` · `AVG TO HUMAN 2s` · `AVG TALK 1:40`.
+
+**Critical truth (from the dashboard itself):** *ElevenLabs bills the WHOLE connected call* — and so
+does Twilio. So nav + hold time is full cost, and:
+- The **LLM switcher (Haiku-nav → Sonnet-human)** saves only the **LLM slice** (the smallest cost
+  component). Real, but modest in dollars — it does NOT reduce EL or Twilio minutes.
+- The **dominant lever is total call DURATION.** DTMF "press-to-front" (e.g. Walgreens `000`,
+  CVS "front store") + aggressive bail cut EL **and** Twilio together. That's the real saving.
+
+### Cost/check at key durations
+
+| | EL credit-basis (~$0.22/min) | EL ConvAI/min (~$0.10/min) |
+|---|---|---|
+| **Max at 180s cap** | **~$0.76** | **~$0.40** |
+| Current avg (~102s) | ~$0.43 | ~$0.23 |
+| **Optimized avg (~70s)** (DTMF + bail + switcher) | **~$0.29** | **~$0.15** |
+
+≈ **35% cost reduction**, almost all from shorter calls (the LLM switch is the small part). The
+cap-max only falls if the cap itself is lowered.
+
+### Validate the new tech before trusting these
+1. **DTMF press-to-front** — test per chain; document the keypad path (chains.dtmfShortcut, e.g.
+   `0@3` already supported). Biggest duration win on deep-IVR chains (CVS/Walgreens).
+2. **LLM switcher** — confirm the mid-call Haiku→Sonnet handoff works on EL's stack; measure the
+   LLM $ delta in Helicone (this is what proves its value).
+
+### Make the ROI calc compute dollars, not just minutes
+Add to the admin "Call time & cost" card:
+- **Cost split** per check: EL / Twilio / LLM (LLM from Helicone) + **margin vs perCallCents**.
+- **Avg time-to-human PER CHAIN** — ranks which phone trees to DTMF-document first (worst = costliest).
+- **Nav+hold vs talk ratio** — the "waste %", i.e. the optimization headroom on each chain.
+- **Projected cost**: current avg vs optimized-avg, so the impact of each fix is visible.
+- Needs volume (n=1 today) — the numbers get trustworthy after a few hundred calls.
