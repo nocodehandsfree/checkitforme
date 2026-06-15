@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r14" />
+<meta name="x-rev" content="names-r15" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/fungibles-64.png">
 <link rel="apple-touch-icon" href="/logos/fungibles.png">
@@ -434,6 +434,7 @@ __BRAND_HEAD__
   .tickrun:hover{animation-play-state:paused}
   @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   .tfound{color:var(--green)}
+  .trestock{color:var(--accent2,var(--purple))}
   .ticker::-webkit-scrollbar{display:none}
   @keyframes tickerIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1}}
   .tick{flex:0 0 auto;display:flex;align-items:center;gap:7px;font-size:12px;color:#c6c6d2;white-space:nowrap;font-weight:600}
@@ -1107,7 +1108,7 @@ const I18N={ es:{
   'empty.search':'Sin resultados — prueba otra búsqueda, o toca el pin para ver tiendas cerca de ti.',
   'empty.radius':'No hay tiendas abiertas en {r} mi — amplía el radio.',
   'empty.far.title':'Aún no estamos en tu zona…','empty.far.sub':'¡Llegaste temprano! Sé el primero en saber cuando {b} llegue cerca de ti.','empty.far.cta':'🔔 Avísame cuando lleguen',
-  'tick.found':'¡Encontrado!','besttag':'Mejor opción','bestwhy':'buenas probabilidades ahora',
+  'tick.found':'¡Encontrado!','tick.restock':'Reabastecimiento en camino','besttag':'Mejor opción','bestwhy':'buenas probabilidades ahora',
   'closednow':'— cerrado ahora mismo',
   // live view
   'pre.had':'tenían en stock','pre.notin':'no tenían','pre.unclear':'sin respuesta clara','pre.again':'Llamaste a {s} {a} — {o}. ¿Llamar de nuevo?','pre.note':'Llamaste a {s} {a} — {o}',
@@ -2009,7 +2010,15 @@ async function loadFinds(){
   if(BRAND_CAT) f=(Array.isArray(f)?f:[]).filter(x=>String(x.category||'').toLowerCase()===BRAND_CAT.label.toLowerCase());
   if(!Array.isArray(f)||!f.length){ el.style.display='none'; return; }
   el.style.display='block';
-  const items=f.slice(0,10).map(x=>`<div class="tick">${FCHK(16)}<b class="tfound">${t('tick.found','Found!')}</b> · ${esc(x.store)} <span class="tago">${agoStr(x.at)}</span></div>`).join('');
+  const items=f.slice(0,10).map(x=>{
+    // Two banner states: in-stock find (✓ Found!) and shipment-incoming (🚚 Restock coming). The
+    // restock state lights up for finds the server tags type:'restock' (e.g. "we get more Tuesday").
+    const restock = x.type==='restock' || x.restock===true || x.status==='restock_coming';
+    const face = restock
+      ? `<span style="display:inline-flex;color:${AC2()}">${ICO.truck(AC2())}</span><b class="trestock">${t('tick.restock','Restock coming')}</b>`
+      : `${FCHK(16)}<b class="tfound">${t('tick.found','Found!')}</b>`;
+    return `<div class="tick">${face} · ${esc(x.store)} <span class="tago">${agoStr(x.at)}</span></div>`;
+  }).join('');
   // Duplicate the row so the marquee loops seamlessly.
   el.innerHTML=`<div class="tickrun">${items}${items}</div>`;
 }
@@ -2260,7 +2269,12 @@ async function startCheck(){
   },2500);
 }
 // --- Live-audio check (bridged through our Twilio so we can stream the call to the browser) ---
-let AUDIO_WS=null, AUDIO_CTX=null, AUDIO_NEXT={}, AUDIO_LIVE=false, LIVE_TIMERS=[], LIVE_ROOM=null, LIVE_CID=null, LIVE_TR=[];
+let AUDIO_WS=null, AUDIO_CTX=null, AUDIO_NEXT={}, AUDIO_LIVE=false, LIVE_TIMERS=[], LIVE_ROOM=null, LIVE_CID=null, LIVE_TR=[], AGENT_PITCHED=false;
+// Phone-tree (IVR) language vs. our bot's real ask. The store side ("Clerk") covers BOTH the automated
+// tree AND a human, so a Clerk line alone can't mean "with a clerk". Our bot stays quiet / presses keys
+// through the tree and only delivers its stock question to a HUMAN — so AGENT_ASK is the human signal.
+const IVR_RE=/press \d|press the|press [a-z]\b|para español|for .{2,40}[ ,]+press|main menu|thank you for calling|currently closed|store hours|please hold|hold on|one moment|moment please|your call (is|may be)|automated|enter your|to speak (to|with)|the following (menu|options|prompts)|leave a (message|voicemail)|after the (tone|beep)|if you know your party|dial \d/i;
+const AGENT_ASK=/in stock|do you (have|carry|sell)|have any|y'?all have|carr(y|ying)|wondering if|calling to (see|check)|checking to see|see if (you|y'?all)|get any|got any|come in|new shipment|on the shelf|restock|booster|\bpacks?\b|\bcards?\b|\bsealed\b/i;
 function stopLiveTimers(){ LIVE_TIMERS.forEach(t=>clearInterval(t)); LIVE_TIMERS=[]; if(POLL){clearInterval(POLL);POLL=null;} }
 async function hangUpLive(){
   if(LIVE_ROOM){ api('/pub/bridge-hangup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({room:LIVE_ROOM})}); }
@@ -2304,7 +2318,7 @@ async function startCheckLive(){
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb){ _mb.style.display=canListen?'':'none'; if(canListen) setTimeout(()=>{ if(_mb&&$('live')&&!$('live').classList.contains('hidden')) _mb.style.display='none'; },7000); }
   $('livestore').textContent=SEL_STORE.name; $('phase').textContent=t('live.calling','📞 Placing the call…'); $('elapsed').textContent='';
-  $('live_tr').style.display='none'; $('live_tr_body').innerHTML=''; LIVE_TR=[];
+  $('live_tr').style.display='none'; $('live_tr_body').innerHTML=''; LIVE_TR=[]; AGENT_PITCHED=false;
   let secs=0; const elT=setInterval(()=>{ secs+=1; $('elapsed').textContent='⏱ '+secs+'s'; },1000);
   LIVE_TIMERS=[elT];
   const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT})});
@@ -2322,9 +2336,11 @@ async function startCheckLive(){
     const o=await api('/pub/live/'+encodeURIComponent(cid));
     if(o&&o.transcript){
       if(!LIVE_TR.length){ $('live_tr').style.display=''; appendLiveTranscript(o.transcript); } // if real-time bubbles are flowing, they're authoritative
-      const lastClerk=[...o.transcript.split('\n').filter(Boolean)].reverse().find(l=>l.startsWith('Clerk:'))||'';
-      const ivr=/press \d|press the|automated|thank you for calling|for .{2,30}[, ]+press|main menu|healthcare provider|para español|store hours|pharmacy/i.test(lastClerk);
-      $('phase').textContent = ivr ? t('live.ivr','🔢 Navigating the phone tree…') : t('live.talking','🙋 Talking to a clerk…');
+      const lines=o.transcript.split('\n').filter(Boolean);
+      const lastClerk=[...lines].reverse().find(l=>l.startsWith('Clerk:'))||'';
+      const pitched=AGENT_PITCHED||lines.some(l=>l.startsWith('Agent:')&&AGENT_ASK.test(l));
+      const ivr=IVR_RE.test(lastClerk);
+      $('phase').textContent = (ivr || !pitched) ? t('live.ivr','🔢 Navigating the phone tree…') : t('live.talking','🙋 Talking to a clerk…');
     } else if(secs>3 && $('phase').textContent===t('live.ringing','📞 Ringing…')){ $('phase').textContent=t('live.connected','✅ Answered — listening…'); }
     if(o && o.live===false){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); }
   },2500);
@@ -2357,9 +2373,14 @@ function renderTranscriptLines(t){ return chatBubbles(t); }
 // Drive the live stage label off each real-time line: menu language => navigating; clerk talking => with a clerk; else answered.
 function livePhaseFromText(role,text){
   if(!text) return;
-  const ivr=/press \d|press the|automated|thank you for calling|for .{2,30}[, ]+press|main menu|healthcare provider|para español|store hours|please hold|your call is important|currently closed|enter your/i.test(text);
-  if(ivr){ $('phase').textContent=t('live.ivr','🔢 Navigating the phone tree…'); return; }
-  if(role==='Clerk'){ $('phase').textContent=t('live.talking','🙋 Talking to a clerk…'); return; }
+  // Our bot's stock question only goes to a human (it's silent through the tree) — latch that.
+  if(role==='Agent' && AGENT_ASK.test(text)) AGENT_PITCHED=true;
+  if(IVR_RE.test(text)){ $('phase').textContent=t('live.ivr','🔢 Navigating the phone tree…'); return; }
+  if(role==='Clerk'){
+    // A Clerk line before our bot has pitched is still the phone tree / automated greeting, not a person.
+    $('phase').textContent = AGENT_PITCHED ? t('live.talking','🙋 Talking to a clerk…') : t('live.ivr','🔢 Navigating the phone tree…');
+    return;
+  }
   if($('phase').textContent!==t('live.talking','🙋 Talking to a clerk…')) $('phase').textContent=t('live.connected','✅ Answered — listening…');
 }
 function appendLiveTranscript(t){
