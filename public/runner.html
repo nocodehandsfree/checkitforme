@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r15" />
+<meta name="x-rev" content="names-r16" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/fungibles-64.png">
 <link rel="apple-touch-icon" href="/logos/fungibles.png">
@@ -1757,7 +1757,7 @@ function setUserLoc(lat,lng){
   const mt=$('maptoggle'); if(mt){ mt.style.display=''; mt.classList.add('glow'); } // pulse so they notice the map is tappable
   const b=$('findbtn'); if(b){ b.classList.remove('loading'); b.classList.add('on'); }
   if(MAP && $('mapview') && $('mapview').style.display==='block') placeMyPin(lat,lng,false); // keep the map pin in sync (e.g. ZIP relocate)
-  fetchNear(); loadBestBet();
+  fetchNear(); loadBestBet(); loadFinds(); // re-pull the banner localized to the new location
 }
 function findMe(after){
   if(!navigator.geolocation){ toast(t('toast.noloc','Location not supported on this device')); return; }
@@ -2005,7 +2005,10 @@ async function openPage(slug){
 }
 function closePage(){ $('pageOverlay').classList.remove('on'); }
 async function loadFinds(){
-  let f=[]; try{ f=await api('/pub/finds'); }catch(e){}
+  // Localized banner: once we know where they are, ask for finds near them (same lat/lng/radius
+  // convention as /pub/stores/near). Before location is shared it's the national feed (social proof).
+  let f=[]; const u=USER_LOC?`/pub/finds?lat=${USER_LOC.lat}&lng=${USER_LOC.lng}&radius=${Math.max(RADIUS,1)}`:'/pub/finds';
+  try{ f=await api(u); }catch(e){}
   const el=$('finds'); if(!el) return;
   if(BRAND_CAT) f=(Array.isArray(f)?f:[]).filter(x=>String(x.category||'').toLowerCase()===BRAND_CAT.label.toLowerCase());
   if(!Array.isArray(f)||!f.length){ el.style.display='none'; return; }
