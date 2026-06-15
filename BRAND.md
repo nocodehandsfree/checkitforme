@@ -6,7 +6,7 @@
 by the owner; reproducing it "from specs" is wrong every time. To place it anywhere, render an `<img>`:
 
 ```html
-<img src="/logos/fcheck.png?v=3" alt="" width="24" height="24" style="object-fit:contain;vertical-align:middle">
+<img src="/logos/fcheck.png?v=4" alt="" width="24" height="24" style="object-fit:contain;vertical-align:middle">
 ```
 - Consumer (`public/runner.html`): the `FCHK(size)` helper already returns exactly this `<img>`. Use it.
 - Admin (`public/app.html`): the header uses the same `<img>`.

@@ -3,10 +3,14 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r11" />
+<meta name="x-rev" content="names-r12" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/fungibles-64.png">
 <link rel="apple-touch-icon" href="/logos/fungibles.png">
+<!-- Clerk's bundle is the biggest external fetch on every cold load (every product switch reloads a
+     new subdomain) — warm the connection early so DNS+TLS isn't on the critical path. -->
+<link rel="preconnect" href="https://__CLERK_FRONTEND_API__" crossorigin>
+<link rel="dns-prefetch" href="https://__CLERK_FRONTEND_API__">
 <script async crossorigin="anonymous"
   data-clerk-publishable-key="__CLERK_PUBLISHABLE_KEY__"
   src="https://__CLERK_FRONTEND_API__/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
@@ -424,8 +428,9 @@ __BRAND_HEAD__
   .iconbtn:active{transform:scale(.95)}
   header .vswitch{margin:0;max-width:46vw;padding:7px 30px 7px 12px;font-size:13px;background-position:right 11px center;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
   .pill.credits{flex:0 0 auto}
-  .ticker{overflow:hidden;padding:8px 0;border-bottom:1px solid var(--border);background:rgba(74,222,128,.06);animation:tickerIn .4s ease}
-  .tickrun{display:flex;gap:26px;width:max-content;animation:marquee 32s linear infinite}
+  .ticker{overflow:hidden;padding:8px 0;border-bottom:1px solid var(--border);background:rgba(74,222,128,.06);animation:tickerIn .4s ease;contain:content}
+  .tickrun{display:flex;gap:26px;width:max-content;animation:marquee 32s linear infinite;will-change:transform}
+  @media (prefers-reduced-motion:reduce){ .tickrun{animation:none} }
   .tickrun:hover{animation-play-state:paused}
   @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   .tfound{color:var(--green)}
@@ -1309,13 +1314,17 @@ async function submitStoreReq(){
   if(!r||r.error){ $('sr_err').textContent=t('err.generic','Something went wrong — try again'); return; }
   track('storereq_submit'); closeStoreReq(); toast(t('toast.storethanks',"🙌 Thanks! We'll work on adding that store"));
 }
+// Run non-critical work (the top finds-ticker banner, the demo body) when the browser is idle, so it
+// never competes with first paint or the first scroll after a product switch (each switch is a full
+// cross-subdomain reload) — that's the "top banner pauses on switch" jank.
+const idle=(fn)=>('requestIdleCallback' in window)?requestIdleCallback(fn,{timeout:1500}):setTimeout(fn,300);
 async function boot(){
   captureReferral(); // stash any ?ref= before we clean the URL
   STORES=[];
   // PAINT FIRST — header, hero, switcher, logo, language + auth all come from injected brand data, so
   // render them instantly instead of waiting on the network (this is what made the header slow to appear).
   initGA();
-  buildSwitcher(); applyBrand(); renderIcons(); renderDemo(); buildLangSel(); applyLang();
+  buildSwitcher(); applyBrand(); renderIcons(); buildLangSel(); applyLang();
   renderAuth(); renderStores(); renderChips(); renderFooter(); initClerk();
   const sp=new URLSearchParams(location.search);
   if(sp.get('paid')){ history.replaceState({},'','/'); toast('🎉 Payment received — adding your credits…'); setTimeout(refreshAuth,2500); setTimeout(refreshAuth,6000); }
@@ -1327,7 +1336,8 @@ async function boot(){
   CATS=Array.isArray(c)?c:[];
   if(Array.isArray(st)) st.forEach(x=>RSTATUSES[x.key]=x);
   if(pol&&!pol.error){ const flags=Object.assign({},POLICY.flags,pol.flags||{}); POLICY=Object.assign(POLICY,pol); POLICY.flags=flags; }
-  applyBrand(); applyFlags(); renderDemo(); renderChips(); renderStores(); applyLang(); loadFinds();
+  applyBrand(); applyFlags(); renderChips(); renderStores(); applyLang();
+  idle(()=>{ renderDemo(); loadFinds(); }); // ticker + demo off the critical path
 }
 let PENDING_VIEW=null;
 async function initClerk(){
@@ -1948,7 +1958,7 @@ let FCID=0;
 // The Fungibles check — our logo-grade checkmark (secondary purple flowing into go-green).
 function FCHK(sz){ sz=sz||16;
   // The owner's EXACT checkmark asset (public/logos/fcheck.png). NEVER recreate it as SVG/CSS — use the file.
-  return `<img src="/logos/fcheck.png?v=3" alt="" width="${sz}" height="${sz}" style="display:inline-block;vertical-align:middle;object-fit:contain">`;
+  return `<img src="/logos/fcheck.png?v=4" alt="" width="${sz}" height="${sz}" style="display:inline-block;vertical-align:middle;object-fit:contain">`;
 }
 function setI(id,html){ const e=$(id); if(e) e.innerHTML=html; }
 function renderIcons(){
