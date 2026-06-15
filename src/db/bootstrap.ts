@@ -85,9 +85,13 @@ export async function bootstrap() {
   await client.execute("CREATE INDEX IF NOT EXISTS retailers_geo_idx ON retailers(lat, lng)").catch(() => {});
   await client.execute("CREATE INDEX IF NOT EXISTS retailers_state_idx ON retailers(state)").catch(() => {});
   await client.execute("CREATE INDEX IF NOT EXISTS retailers_zip_idx ON retailers(zip)").catch(() => {}); // master ZIP geocode
+  await client.execute("CREATE INDEX IF NOT EXISTS retailers_phone_idx ON retailers(phone)").catch(() => {}); // dedupe-by-phone on import + deactivate-by-phone
   // Finds privacy/headstart: who placed a call + whether it stays out of the public finds feed.
   await client.execute("ALTER TABLE call_results ADD COLUMN finder_user_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE call_results ADD COLUMN is_private INTEGER DEFAULT 0").catch(() => {});
+  // Per-user history (/app/history, finds attribution) + status filters used across the dashboards.
+  await client.execute("CREATE INDEX IF NOT EXISTS call_results_finder_idx ON call_results(finder_user_id)").catch(() => {});
+  await client.execute("CREATE INDEX IF NOT EXISTS call_results_status_idx ON call_results(status)").catch(() => {});
   // Referral growth loop: each account's shareable code + who referred them.
   await client.execute("ALTER TABLE accounts ADD COLUMN referral_code TEXT").catch(() => {});
   await client.execute("ALTER TABLE accounts ADD COLUMN referred_by TEXT").catch(() => {});

@@ -16,6 +16,31 @@ libSQL **embedded read-replica needs a Turso primary** = another moving part, ag
 
 This keeps the win (multi-instance + indexes) without adding Turso unless data proves we need it.
 
+## ⚠️ CRITICAL: schema truth lives in TWO places (don't trust `drizzle-kit generate`)
+
+The effective schema is **NOT** fully captured by `drizzle/0000–0004` + the meta snapshots. Most
+tables/columns added since (accounts, leads, statuses, kiosks, kiosk_reports, watches,
+customer_schedules, community_posts, waitlist, store_requests, kiosk_receipts, stock_signals,
+discord_channels, plus many `ALTER TABLE … ADD COLUMN` and all the indexes) are applied
+**idempotently in `src/db/bootstrap.ts`** as raw SQL — never added to the Drizzle migration set.
+
+Consequence: `drizzle-kit generate` against the current schema emits a migration that tries to
+**re-create existing tables** (confirmed 2026-06-14 — it would break boot). **Do not** rely on it.
+
+**Port from the live DB, not the snapshots:** introspect the running SQLite
+(`.schema` / `sqlite_master`) as the source of truth, translate THAT to MySQL, and going forward
+**make Drizzle migrations the single mechanism** in TiDB (retire the bootstrap raw-SQL drift).
+
+## Indexes — what already exists vs. what's missing
+
+`bootstrap.ts` already creates: `retailers(lat,lng)` (geo — the hot path IS indexed),
+`retailers(state)`, `retailers(zip)`, `stock_signals(retailer,seen_at)`, `stock_signals(chain,seen_at)`,
+plus the Drizzle base indexes (`retailers(chainId)`, `call_results(retailer,category)`,
+`call_results(providerCallId)`, `products(category)`, etc.).
+Added 2026-06-14: `retailers(phone)`, `call_results(finder_user_id)`, `call_results(status)`.
+At port time, reproduce ALL of these in the MySQL schema (consider `(active,lat,lng)` composite if
+profiling shows the `active` filter matters).
+
 ## Driver swap (code)
 
 - `src/db/client.ts`: `@libsql/client` + `drizzle-orm/libsql` → **`mysql2`** pool +
@@ -35,13 +60,11 @@ This keeps the win (multi-instance + indexes) without adding Turso unless data p
 - `drizzle.config.ts`: dialect `mysql`, creds from `TIDB_DATABASE_URL`.
 - `src/db/bootstrap.ts` + `migrate.ts`: switch to `drizzle-orm/mysql2/migrator`.
 
-## Indexes (do this WITH the port — the biggest read win)
+## Indexes (carry forward at port time)
 
-Add to the `retailers` table (today only `chainId` is indexed → every "stores near me" full-scans):
-- `(lat, lng)` composite — powers the bbox query in `/pub/stores/near` + `/pub/best-bet`.
-- `state`, `active`, `phone`, `zip` — power the fallback lookups + dedupe-by-phone.
-`call_results` already has `(retailerId, categoryId)` + `(providerCallId)` — add `(status)` and
-`(finderUserId)` (history + analytics). Add `charged_at` column here too (billing §3).
+See "Indexes — what already exists vs. what's missing" above. The geo path is already indexed
+(my earlier "full-scans 100k rows" claim was based on the stale Drizzle snapshots — corrected).
+Reproduce the full set in MySQL. Also add the `charged_at` column to `call_results` here (billing §3).
 
 ## Migration steps
 
