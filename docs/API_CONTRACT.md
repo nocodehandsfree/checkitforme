@@ -158,3 +158,5 @@ GET `/`, `/r`, `/s`, `/p/:slug` (+`?partial=1` → `{title,body}`), `/og/:file`,
 
 ## Change log
 - 2026-06-14 — initial freeze snapshot of the live API.
+- 2026-06-15 — verified the documented shapes against production read endpoints (policy,
+  categories, statuses, store-types, stores/near, best-bet, finds, stock/near) — all match.
