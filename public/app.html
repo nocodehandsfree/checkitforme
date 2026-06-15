@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="admin-r33" />
+<meta name="x-rev" content="admin-r34" />
 <title>Caller Admin — Fungibles</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%239333EA'/%3E%3Crect x='3' y='3' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='3' width='19' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='13' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='13' width='14' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='23' width='9' height='7' rx='3' fill='white'/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="https://api-production-100b.up.railway.app/assets/fungibles-logo.jpeg">
@@ -263,11 +263,9 @@
     <div class="card">
       <div class="name" style="margin-bottom:8px">⚡ Actions</div>
       <div class="row" style="flex-wrap:wrap;gap:8px">
-        <button class="act" onclick="dashIngest()">Ingest results now</button>
-        <button class="ghost" onclick="dashTick()">Run scheduler tick</button>
-        <button class="ghost" onclick="backfillAllHours()">🕐 Look up all hours</button>
         <button class="ghost" onclick="loadDash()">↻ Refresh</button>
       </div>
+      <div class="meta" style="margin-top:6px;color:var(--muted)">Results ingest + scheduled calls fire automatically — nothing to press here.</div>
       <div class="meta" id="d_act_msg" style="margin-top:8px;min-height:14px"></div>
     </div>
     <div class="card" id="d_money_card">
@@ -301,7 +299,8 @@
     <details id="storereports" class="card" style="display:none"><summary><span class="name">Reports</span><span class="meta">by type · top regions · most-checked</span></summary>
       <div id="rep_body" style="margin-top:10px"></div>
     </details>
-    <h2>Find a store</h2>
+    <div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">Find a store</h2>
+      <button class="ghost" onclick="showSection('map')" title="See the current results on the map" style="font-size:12px">🗺 Map these</button></div>
     <div class="filters">
       <input id="f_search" placeholder="Search name, city, ZIP — or just pick a filter…" oninput="onAdminSearch()">
       <select id="f_type" onchange="loadRetailers()"><option value="">All types</option></select>
@@ -1236,7 +1235,6 @@ function renderRetailers(){
     <div class="ractions">
       <select id="cn_${r.id}">${CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
       <button class="act" onclick="callNow(${r.id})">${ICO('phone',15)} Call now</button>
-      <button class="ghost" onclick="refreshHours(${r.id},this)">Hours</button>
     </div>
   </div>`;}).join('');
 }
