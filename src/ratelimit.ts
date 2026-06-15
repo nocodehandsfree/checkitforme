@@ -38,9 +38,15 @@ export const LIMITS: Record<string, Limit> = {
   write: { windowMs: 60_000, max: 30 },          // generic public write fallback: 30/min/IP
 };
 
-/** Best-effort client IP from common proxy headers (Railway/Cloudflare), else a stable fallback. */
+/** Client IP from trusted proxy headers. Prefer `cf-connecting-ip` — Cloudflare OVERWRITES it with
+ *  the real client IP, so (unlike the left-most `x-forwarded-for`, which the client can set freely)
+ *  it can't be spoofed to rotate fake IPs past the per-IP limits. XFF is the last resort. */
 export function clientIp(headers: { get(name: string): string | null | undefined }): string {
+  const cf = headers.get("cf-connecting-ip");
+  if (cf) return cf.trim();
+  const real = headers.get("x-real-ip");
+  if (real) return real.trim();
   const xf = headers.get("x-forwarded-for");
   if (xf) return xf.split(",")[0].trim();
-  return headers.get("cf-connecting-ip") || headers.get("x-real-ip") || "unknown";
+  return "unknown";
 }

@@ -14,7 +14,7 @@ referrers, share links, history payloads.
 **Fix:** bind `cid` → the placing account/device at call time (store on `call_results`, already
 has `finderUserId`); on read, require the requester own it (or be admin/comp). Anon device-scoped.
 
-## 🔴 2. Rate-limit bypass via spoofed `X-Forwarded-For`
+## ✅ 2. Rate-limit bypass via spoofed `X-Forwarded-For` — FIXED 2026-06-15
 `clientIp()` (`ratelimit.ts` ~L42) trusts the **first** `x-forwarded-for` value, which the client
 can set arbitrarily → rotate fake IPs to defeat every per-IP limit (free-check farming, spam).
 **Fix:** behind Cloudflare, trust **`cf-connecting-ip`** only (it's set by CF, not the client);
