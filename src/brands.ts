@@ -114,7 +114,7 @@ const BRANDS: Brand[] = [
     category: "NeeDoh",
     accent: "#EC4899",
     accent2: "#F97316",
-    logoUrl: "/logos/needoh.png",
+    logoUrl: "/logos/needoh.png?v=2",
     logoScale: 1.5,
     emoji: "🟢",
     short: "NeeDoh",
