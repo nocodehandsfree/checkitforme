@@ -6,7 +6,7 @@
 by the owner; reproducing it "from specs" is wrong every time. To place it anywhere, render an `<img>`:
 
 ```html
-<img src="/logos/fcheck.png?v=4" alt="" width="24" height="24" style="object-fit:contain;vertical-align:middle">
+<img src="/logos/fcheck.png?v=5" alt="" width="24" height="24" style="object-fit:contain;vertical-align:middle">
 ```
 - Consumer (`public/runner.html`): the `FCHK(size)` helper already returns exactly this `<img>`. Use it.
 - Admin (`public/app.html`): the header uses the same `<img>`.
@@ -16,14 +16,7 @@ by the owner; reproducing it "from specs" is wrong every time. To place it anywh
 The file is a transparent-background PNG sliced from the owner's master (the 128px tile of their
 contact sheet) — green glowing check, no label, centered.
 
-## Spec (for reference only — NOT for re-rendering)
-| Role | Hex |
-|---|---|
-| Primary green fill | `#4CF286` |
-| Bright edge | `#5FF696` |
-| Glow core | `#19B145` |
-| Outer glow | `#135F29` |
-| Background (dark only) | `#0E0E10` |
-
-Sizing: min 16px; UI 24/32/48px; logo 64–128px; clear space 25%; **dark backgrounds only.**
-Verdict/status "in-stock" check marks are a separate lightweight indicator, not this logo.
+## Spec — coming soon
+New brand-mark specs are pending from the owner. The previous spec here described a mark version we
+rolled back, so it's been removed to avoid confusion. **Until new specs land, do not infer or redraw
+the mark — use the file `public/logos/fcheck.png` exactly (see the hard rule above).**
