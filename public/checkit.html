@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r37" />
+<meta name="x-rev" content="names-r38" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -175,6 +175,7 @@ __BRAND_HEAD__
   .bub.a .nm{color:var(--green)}
   .bub.c{align-self:flex-start;background:#20202b;border:1px solid var(--border);color:#e9e9f2;border-bottom-left-radius:5px}
   .bub.c .nm{color:#8a8a98}
+  .bub.c.menu{background:#16161d;border-style:dashed;opacity:.9} .bub.c.menu .nm{color:#7a7a88}
   .bub-note{align-self:center;font-size:12px;color:var(--muted);font-style:italic;text-align:center;padding:2px 0}
   /* live bubbles pop in one at a time as the call happens */
   @keyframes bubIn{from{opacity:0;transform:translateY(10px) scale(.95)}to{opacity:1;transform:none}}
@@ -2435,13 +2436,26 @@ async function finalizeLive(cid){
   saveCheckToHistory(res, cid); showResult(res, cid);
 }
 // Render a Agent/Clerk transcript as a text-message style thread (Fungie right/green, Clerk left).
-function bubbleHTML(line){
+function bubbleHTML(line, isHuman){
   const m=line.match(/^(Agent|Clerk):\s*(.*)$/);
   if(!m) return `<div class="bub-note">${esc(line)}</div>`;
-  const who=m[1]==='Agent'?'a':'c';
-  return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'Check AI':'Store'}</span>${esc(m[2])}</div>`;
+  const isAgent=m[1]==='Agent', who=isAgent?'a':'c';
+  // The store side splits into the automated phone "Menu" vs a live "Associate" once our bot reaches a person.
+  const label=isAgent?'Check AI':(isHuman?'Associate':'Menu');
+  return `<div class="bub ${who}${(!isAgent&&!isHuman)?' menu':''}"><span class="nm">${label}</span>${esc(m[2])}</div>`;
 }
-function chatBubbles(t){ return `<div class="chat">${(t||'').split('\n').filter(Boolean).map(bubbleHTML).join('')}</div>`; }
+// Where the live-person conversation begins: the clerk greeting just before our bot asks its question
+// (it stays silent through the menu, so AGENT_ASK is the "reached a human" signal). Before that = Menu.
+function transcriptHumanStart(lines){
+  for(let i=0;i<lines.length;i++){
+    if(/^Agent:/.test(lines[i]) && AGENT_ASK.test(lines[i])){
+      for(let j=i-1;j>=0;j--){ if(/^Clerk:/.test(lines[j])) return j; if(/^Agent:/.test(lines[j])) break; }
+      return i;
+    }
+  }
+  return lines.length;
+}
+function chatBubbles(t){ const lines=(t||'').split('\n').filter(Boolean); const hs=transcriptHumanStart(lines); return `<div class="chat">${lines.map((l,i)=>bubbleHTML(l,i>=hs)).join('')}</div>`; }
 function renderTranscriptLines(t){ return chatBubbles(t); }
 // Live view: only NEW lines get appended (with a pop-in) instead of re-rendering the whole
 // thread on every poll — bubbles land one by one as the conversation actually happens.
@@ -2463,12 +2477,13 @@ function appendLiveTranscript(t){
   let chat=body.querySelector('.chat');
   if(!chat){ body.innerHTML='<div class="chat"></div>'; chat=body.querySelector('.chat'); }
   const lines=(t||'').split('\n').filter(Boolean);
+  const hs=transcriptHumanStart(lines);
   const have=chat.children.length;
-  if(lines.length<have){ chat.innerHTML=lines.map(bubbleHTML).join(''); chat.dataset.last=lines[lines.length-1]||''; return; } // transcript resynced
+  if(lines.length<have){ chat.innerHTML=lines.map((l,i)=>bubbleHTML(l,i>=hs)).join(''); chat.dataset.last=lines[lines.length-1]||''; return; } // transcript resynced
   // The newest line keeps growing while someone is mid-sentence — refresh it in place.
-  if(have>0 && chat.dataset.last!==lines[have-1]){ chat.children[have-1].outerHTML=bubbleHTML(lines[have-1]); }
+  if(have>0 && chat.dataset.last!==lines[have-1]){ chat.children[have-1].outerHTML=bubbleHTML(lines[have-1], (have-1)>=hs); }
   for(let i=have;i<lines.length;i++){
-    chat.insertAdjacentHTML('beforeend', bubbleHTML(lines[i]));
+    chat.insertAdjacentHTML('beforeend', bubbleHTML(lines[i], i>=hs));
     chat.lastElementChild.classList.add('pop');
   }
   chat.dataset.last=lines[lines.length-1]||'';
@@ -2529,7 +2544,7 @@ function showResult(o, cid){
   else if(o.status==='completed'&&o.confirmed===true){ cls='in'; big='✅'; title=t('v.in','In stock!'); note=t('note.in','They have it — go get it.'); }
   else if(o.status==='completed'&&o.confirmed===false){ cls='out'; big='❌'; title=t('v.out','Not in stock'); note=t('note.out',"They don't have it right now."); }
   else if(o.status==='completed'){ // reached the end but no yes/no extracted
-    if(asked){ cls='unk'; big='🤔'; title=t('v.unclear','Got a “maybe”'); note=t('note.unclear','A human answered but wouldn’t commit. Their exact words are below — you make the call.'); }
+    if(asked){ cls='unk'; big='🤔'; title=t('v.unclear','No clear answer'); note=t('note.unclear','A person picked up but we couldn’t get a clear yes or no — see what they said below.'); }
     else { cls='unk'; big='📵'; title=t('v.noanswer','Nobody answered'); note=t('note.noanswer.desk','Got through the menu, but no one picked up at the desk. No charge.'); }
   }
   else if(o.status==='no_answer'){ cls='unk'; big='📵'; title=t('v.noanswer','Nobody answered'); note=t('note.noanswer',"Rang and rang — nobody picked up. No charge."); }
