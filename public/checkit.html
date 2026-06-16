@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r32" />
+<meta name="x-rev" content="names-r33" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -67,7 +67,7 @@ __BRAND_HEAD__
   .store .nm{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .store .lo{color:var(--muted);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .store .sdot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:middle}
-  .store .sdot.on{background:var(--green)} .store .sdot.off{background:#7a7a86}
+  .store .sdot.on{background:#cfcfe0} .store .sdot.off{background:#7a7a86} .store .sdot.instock{background:var(--green)} .store .sdot.outstock{background:var(--red)}
   .store .smi{margin-left:auto;flex:0 0 auto;color:#c8c8d2;font-weight:800;font-size:14px;text-align:right}
   .store .smi small{display:block;color:var(--muted);font-size:10px;font-weight:700;letter-spacing:.03em}
   .store .ck{margin-left:auto;color:var(--green);font-weight:900;opacity:0;font-size:18px}
@@ -462,7 +462,7 @@ __BRAND_HEAD__
   .modetab .mti{display:inline-flex}
   .findhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}
   .opencount{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;font-weight:700;white-space:nowrap}
-  .opencount .odot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px rgba(74,222,128,.6)}
+  .opencount .odot{width:6px;height:6px;border-radius:50%;background:#cfcfe0}
   .store.best{border-color:rgba(74,222,128,.55);background:linear-gradient(100deg,rgba(74,222,128,.1),rgba(74,222,128,.02))}
   .store .ic.best{background:var(--green)}
   .besttag{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#06210f;background:var(--green);padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
@@ -1475,7 +1475,12 @@ function renderAuth(){
   // (Low-credit upsell card removed — owner asked to keep the home page uncluttered.)
   // Journey-aware reduction: visitors get the demo (they need convincing); members don't.
   // Score-sharing is a member loop — visitors only see "Add your store" inside Earn.
-  const dm=$('demo'); if(dm) dm.style.display = isAuthed() ? 'none' : '';
+  // Logged-out = the bare, focused homepage (hero + the check card). Logging in unlocks the extra
+  // modules. The Target demo + the top trust strip are retired entirely.
+  const dm=$('demo'); if(dm) dm.style.display='none';
+  const ts=$('truststrip'); if(ts) ts.style.display='none';
+  const ed=$('earndemo'); if(ed) ed.style.display = isAuthed() ? '' : 'none';
+  if(!isAuthed()){ const sr=$('scoresRow'); if(sr) sr.style.display='none'; }
 }
 function signIn(){ openAuth(); }
 function signUp(){ openAuth(); }
@@ -1859,7 +1864,7 @@ function renderMapPins(){
   (LAST_STORES||[]).forEach(s=>{
     if(s.lat==null||s.lng==null) return;
     const mi=storeMi(s);
-    const m=L.circleMarker([s.lat,s.lng],{radius:8,color:'#0C0C12',weight:1.5,fillColor:ac,fillOpacity:.95}).addTo(MAP);
+    const m=L.circleMarker([s.lat,s.lng],{radius:8,color:'#0C0C12',weight:1.5,fillColor:'#cfcfe0',fillOpacity:.95}).addTo(MAP);
     m.bindPopup(`<div class="mappop"><b>${esc(s.name)}</b><div class="mp-lo">${esc(s.location||'')}${mi!=null?' · '+(mi<10?mi.toFixed(1):Math.round(mi))+' mi':''}</div><button onclick="mapPick(${s.id})">Check this store</button></div>`);
     MAP_MARKERS.push(m); pts.push([s.lat,s.lng]);
   });
@@ -1916,7 +1921,9 @@ function renderStores(){
     if(kiosk) return USER_LOC?tf('empty.kiosk',`No kiosks mapped within ${RADIUS} mi yet — they're crowd-built. Bought from one? <a onclick="openReceipt()" style="color:var(--purple);font-weight:700;cursor:pointer">Email a receipt</a> to put it on the map.`,{r:RADIUS}):t('empty.kiosk.tap','Tap the pin to find vending machines near you.');
     if(!USER_LOC) return t('empty.search','No matches — try a different search, or tap the pin for stores near you.');
     const nearest=STORES.reduce((m,s)=>{ const d=storeMi(s); return (d!=null&&d<m)?d:m; },1e9);
-    if(nearest>50) return `<div style="text-align:center;padding:6px 4px"><div style="font-size:32px;margin-bottom:6px">📍</div><div class="nm" style="margin-bottom:4px">${t('empty.far.title',"We're not in your area… yet")}</div><div class="meta" style="margin-bottom:12px">${tf('empty.far.sub',`You're early! Be the first to know the moment ${esc(brandName())} launches near you.`,{b:esc(brandName())})}</div><button class="cta" onclick="openWaitlist()">${t('empty.far.cta','🔔 Notify me when you launch here')}</button></div>`;
+    // Only show the "not in your area" waitlist if we've searched WIDE (max radius) and still found
+    // nothing. At a small radius an empty result just means "widen" — not that we don't serve here.
+    if(nearest>50 && RADIUS>=20) return `<div style="text-align:center;padding:6px 4px"><div style="font-size:32px;margin-bottom:6px">📍</div><div class="nm" style="margin-bottom:4px">${t('empty.far.title',"We're not in your area… yet")}</div><div class="meta" style="margin-bottom:12px">${tf('empty.far.sub',`You're early! Be the first to know the moment ${esc(brandName())} launches near you.`,{b:esc(brandName())})}</div><button class="cta" onclick="openWaitlist()">${t('empty.far.cta','🔔 Notify me when you launch here')}</button></div>`;
     return tf('empty.radius',`No open stores within ${RADIUS} mi — try a bigger radius.`,{r:RADIUS});
   };
   if(!USER_LOC && !q && !kiosk){
@@ -2124,15 +2131,9 @@ function applyBrand(){
   // category so the page opens in the Pokémon experience, while the product switcher stays so visitors
   // can hop to the other verticals. Real verticals (pokemon.*, onepiece.*, …) use their own category.
   const isApex = BRAND && BRAND.key === 'runner';
-  // Apex shows the pokéball hero art (the default brand injects none) so it leads with Pokémon visually.
-  if(isApex){
-    const ha=$('heroart'); if(ha) ha.innerHTML=ICO.pokeball; document.title='Check It For Me — Is it in stock?';
-    const h1=document.querySelector('.hero h1'); if(h1) h1.innerHTML='Pokémon <span class="g">in stock?</span><br>We\'ll check for you.';
-    // Lead with Pokémon colors too (yellow), not the generic green — the apex IS the Pokémon flagship.
-    document.documentElement.style.setProperty('--accent','#FFCB05');
-    document.documentElement.style.setProperty('--accent2','#EE1515');
-  }
-  const wantCat = (BRAND && BRAND.category) || (isApex ? 'Pokémon' : null);
+  // Apex + every vertical get their brand (accent, headline, pokéball art, locked category) from the
+  // SERVER injection now — no client-side --accent override, so the color never leaks across views.
+  const wantCat = (BRAND && BRAND.category) || null;
   if(!wantCat) return;
   // Tolerant match: accent-fold + drop "TCG"/"cards" so "One Piece TCG" ↔ "One Piece" still resolves.
   const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]','g'),'').replace(/\b(tcg|cards?|trading card game)\b/g,'').replace(/[^a-z0-9]+/g,'').trim();
@@ -2551,11 +2552,15 @@ function showResult(o, cid){
   const foreign=looksForeign(proofText);
   // Translate is ONLY for English-mode users whose call reached a Spanish-speaking clerk.
   const canTranslate = (o.summary||o.transcript) && LANG!=='es' && foreign;
-  const proof = (o.summary||o.transcript) ? `
+  // Concise "what we did" recap — stages to a human + call length. Replaces the long AI narration;
+  // the transcript right below IS the detail, so we don't repeat it in prose.
+  const _fmtS = s => s>=60 ? (Math.floor(s/60)+'m'+(s%60?(' '+(s%60)+'s'):'')) : (s+'s');
+  const _navS=(typeof o.navSecs==='number'&&o.navSecs>0)?o.navSecs:null, _totS=(typeof o.durationSecs==='number'&&o.durationSecs>0)?o.durationSecs:null;
+  const recap=[_navS?('navigated their phone menu to a person in '+_navS+'s'):'reached a person', _totS?(_fmtS(_totS)+' call'):''].filter(Boolean).join(' · ');
+  const proof = (o.transcript) ? `
     <div class="proof">
       <div class="ph"><span>${ICO.lock('#7a7a88')} ${t('res.proof','Proof — what the clerk said')}</span>${canTranslate?`<button class="tbtn" id="tbtn" onclick="toggleTranslate()">${ICO.globe('currentColor')} ${t('res.translate','Translate')}</button>`:''}</div>
       <div id="proofbody">
-        ${o.summary?`<div class="summ">${esc(o.summary)}</div>`:''}
         ${tr||''}
       </div>
     </div>` : '';
@@ -2594,6 +2599,7 @@ function showResult(o, cid){
         </div>
       </div>
       ${note?`<div class="vnote">${note}</div>`:''}
+      ${recap?`<div style="color:var(--muted);font-size:11.5px;font-weight:600;margin-top:8px">🧭 We ${esc(recap)}.</div>`:''}
       ${breakdown}
       ${proof}
       ${inActions}
@@ -3101,6 +3107,7 @@ async function submitKiosk(){
 // --- Community "I scored!" wall ---
 async function loadCommunity(){
   const row=$('scoresRow'); if(!row) return;
+  if(!isAuthed()){ row.style.display='none'; return; } // scores are a member loop — hidden from logged-out visitors
   if(!(POLICY.flags||{}).community){ row.style.display='none'; return; }
   let posts=[]; try{ posts=await api(communityUrl()); }catch(e){}
   row.style.display='';
