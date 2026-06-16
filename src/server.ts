@@ -24,6 +24,7 @@ import { getPolicy, setPolicy, publicPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
+import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession } from "./calls/navigator";
 import { harvestHoursTick } from "./hours-harvest";
 import { createSchedule, listSchedulesDetailed, deleteSchedule, customerScheduleTick } from "./customer-schedules";
 import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, retailerMap, invalidateRefCache } from "./refcache";
@@ -346,6 +347,16 @@ app.all("/twiml/bridge", (c) => {
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${play}<Connect><Stream url="wss://${RAILWAY_HOST}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   return c.body(xml, 200, { "Content-Type": "text/xml" });
 });
+
+// ---- Tree Trainer v2: cheap-lane phone-tree navigator (Twilio webhooks; session id gates them) ----
+app.all("/nav/twiml", (c) => c.body(navInitialTwiml(c.req.query("session") || ""), 200, { "Content-Type": "text/xml" }));
+app.post("/nav/step", async (c) => {
+  const id = c.req.query("session") || "";
+  let speech = "";
+  try { const b = await c.req.parseBody(); speech = String(b.SpeechResult || ""); } catch { /* silent turn */ }
+  return c.body(await navStep(id, speech), 200, { "Content-Type": "text/xml" });
+});
+app.post("/nav/ended", (c) => { navEnded(c.req.query("session") || ""); return c.body("ok", 200); });
 
 // ---- Health ----
 app.get("/api/health", (c) => c.json({ ok: true }));
@@ -1594,6 +1605,54 @@ app.post("/api/admin/tree/verify", async (c) => {
   const names: string[] = []; let placed = 0;
   for (const ch of chs) { if (placed >= count) break; queueTreeRelearn(ch.id); const r = await placeChainTreeCall(ch.id); if (r.ok) { placed++; names.push(ch.name); } }
   return c.json({ placed, names });
+});
+// ---- Tree Trainer v2: document the fastest path to a human per chain (the cheap-lane navigator) ----
+app.get("/api/admin/trainer/list", async (c) => {
+  const chs = await db.select().from(chains).orderBy(chains.name);
+  const rows = await db.select({ cid: retailers.chainId, n: sql<number>`count(*)` }).from(retailers)
+    .where(and(eq(retailers.active, true), sql`${retailers.phone} not like 'nophone:%'`)).groupBy(retailers.chainId);
+  const cnt = new Map(rows.map((r) => [r.cid, Number(r.n || 0)]));
+  return c.json({ chains: chs.filter((ch) => !ch.name.startsWith("_")).map((ch) => ({
+    id: ch.id, name: ch.name, type: ch.type, callable: cnt.get(ch.id) || 0,
+    navType: ch.navType, navStatus: ch.navStatus || "unmapped", navSeconds: ch.navSeconds,
+    navConfidence: ch.navConfidence, navRecipe: ch.navRecipe ? JSON.parse(ch.navRecipe) : null,
+    navLog: ch.navLog ? JSON.parse(ch.navLog) : [], navUpdatedAt: ch.navUpdatedAt,
+  })) });
+});
+app.post("/api/admin/trainer/document", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number };
+  let r: typeof retailers.$inferSelect | undefined;
+  if (b.retailerId) r = (await db.select().from(retailers).where(eq(retailers.id, Number(b.retailerId))))[0];
+  else if (b.chainId) {
+    r = (await db.select().from(retailers).where(and(
+      eq(retailers.chainId, Number(b.chainId)), eq(retailers.active, true), sql`${retailers.phone} not like 'nophone:%'`,
+    )).limit(1))[0];
+  }
+  if (!r || !r.phone) return c.json({ error: "no callable store for that chain" }, 400);
+  if (b.chainId) await db.update(chains).set({ navStatus: "learning", navUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(chains.id, Number(b.chainId)));
+  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone);
+  return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name });
+});
+app.get("/api/admin/trainer/session/:id", (c) => {
+  const s = getNavSession(c.req.param("id"));
+  if (!s) return c.json({ error: "expired" }, 404);
+  return c.json({ id: s.id, store: s.retailerName, status: s.status, type: s.type, confidence: s.confidence,
+    elapsed: Math.round((Date.now() - s.startMs) / 1000), humanAtSec: s.humanAtSec,
+    steps: s.steps, recipe: s.recipe });
+});
+app.post("/api/admin/trainer/lock", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; recipe?: { type?: string; steps?: unknown[]; seconds?: number }; confidence?: number };
+  if (!b.chainId || !b.recipe) return c.json({ error: "chainId + recipe required" }, 400);
+  const ch = (await db.select().from(chains).where(eq(chains.id, Number(b.chainId))))[0];
+  const log = ch?.navLog ? (JSON.parse(ch.navLog) as number[]) : [];
+  if (typeof b.recipe.seconds === "number") log.push(b.recipe.seconds);
+  await db.update(chains).set({
+    navType: b.recipe.type || null, navRecipe: JSON.stringify(b.recipe),
+    navSeconds: typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null,
+    navStatus: "locked", navConfidence: typeof b.confidence === "number" ? b.confidence : null,
+    navLog: JSON.stringify(log.slice(-10)), navUpdatedAt: Math.floor(Date.now() / 1000),
+  }).where(eq(chains.id, Number(b.chainId)));
+  return c.json({ ok: true });
 });
 app.get("/api/admin/agent/models", (c) => c.json(AGENT_MODELS));
 app.post("/api/admin/agent", async (c) => {

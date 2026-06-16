@@ -66,6 +66,18 @@ export const chains = sqliteTable("chains", {
   // Price/source: true = sold by the retailer at/around MSRP (first-party); false = third-party
   // marketplace listing where price MAY exceed MSRP. Default true (most chains are first-party).
   isMSRP: integer("is_msrp", { mode: "boolean" }).notNull().default(true),
+  // ---- Tree Trainer v2: the documented "recipe" to reach a human fast ----
+  // navType: how this chain answers — "direct" (person picks up), "keypad" (press tones),
+  // "voice" (must speak, e.g. CVS). navRecipe: JSON ordered steps [{action:"say"|"press"|"wait",
+  // value, atSec}]. navSeconds: best time-to-human achieved. navStatus: unmapped|learning|review|
+  // locked. navConfidence: 0-100 from the navigator. navLog: JSON attempt history (each call's secs).
+  navType: text("nav_type"),
+  navRecipe: text("nav_recipe"),
+  navSeconds: integer("nav_seconds"),
+  navStatus: text("nav_status"),
+  navConfidence: integer("nav_confidence"),
+  navLog: text("nav_log"),
+  navUpdatedAt: integer("nav_updated_at"),
 });
 
 /** A specific catalog product. Seeded from drops_db.json; the agent asks at the category level, but this powers future product-specific asks and matching. */

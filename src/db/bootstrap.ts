@@ -88,6 +88,14 @@ export async function bootstrap() {
   // Sell-methods taxonomy (per-chain): "ways to get it" CSV + MSRP/first-party flag.
   await client.execute("ALTER TABLE chains ADD COLUMN sell_methods TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN is_msrp INTEGER NOT NULL DEFAULT 1").catch(() => {});
+  // Tree Trainer v2: the documented recipe to reach a human fast.
+  await client.execute("ALTER TABLE chains ADD COLUMN nav_type TEXT").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN nav_recipe TEXT").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN nav_seconds INTEGER").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN nav_status TEXT").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN nav_confidence INTEGER").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN nav_log TEXT").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN nav_updated_at INTEGER").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN external_store_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN maps_uri TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN geocode_tried_at INTEGER").catch(() => {});
