@@ -48,6 +48,7 @@ async function isFinderPrivate(acct: { subscription?: string | null } | null | u
 }
 import { getAccount, getAccountByPhone, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, grantCredits, SUB, PACKS } from "./billing";
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
+import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf } from "./voice/bridge";
 import { isCallingPaused, setCallingPaused, spendTodayCents } from "./redis";
@@ -417,6 +418,8 @@ app.post("/app/email", async (c) => {
   if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return c.json({ error: "invalid_email" }, 400);
   await getAccount(u.id);
   await db.update(accounts).set({ email: e || null }).where(eq(accounts.clerkUserId, u.id));
+  // Opt-in email → Brevo (newsletter/alerts). Fire-and-forget so the UI isn't blocked on Brevo.
+  if (e) brevoUpsertContact(e, { PHONE: u.phone || "" }).catch(() => {});
   return c.json({ ok: true, email: e || null });
 });
 
