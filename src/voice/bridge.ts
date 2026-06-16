@@ -130,7 +130,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   let humanAtMs = 0;          // when a human was detected (connect-on-human)
   let lastDtmfMs = 0;         // ms-after-start of the last scheduled keypress (VAD waits past this)
   let voiced = 0;             // consecutive voiced frames
-  let urlPromise: Promise<string | null> | null = null; // signed URL warmed early so connect is instant
   const startMs = Date.now();
   const VOICE_THRESH = 350;   // μ-law mean-abs energy that counts as "someone's talking" (tunable)
   const VOICE_FRAMES = 45;    // ~0.9s of sustained voice → treat as a human (tunable)
@@ -140,7 +139,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     if (!ctx) { log("connectEleven: NO CONTEXT"); return; }
     connecting = true; // from now, buffer inbound audio for the agent
     const c = ctx; // narrowed
-    const url = await (urlPromise ?? signedUrl(c.agentId)); // use the URL warmed at call start if we have it
+    const url = await signedUrl(c.agentId);
     if (!url) { log("connectEleven: no signed url -> abort"); return; }
     log("connectEleven: opening ElevenLabs WS");
     eleven = new WebSocket(url);
@@ -165,10 +164,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         const convId = find(m);
         if (convId) { conversations.set(room, convId); setTimeout(() => conversations.delete(room), 10 * 60 * 1000); if (c.connectOnHuman && humanAtMs) navByConv.set(convId, Math.max(0, Math.round((humanAtMs - startMs) / 1000))); log(`metadata: convId=${convId}`); try { c.onConversationId?.(convId); } catch (e) { log(`onConversationId threw: ${String(e).slice(0, 80)}`); } }
         else log(`metadata but NO convId: ${JSON.stringify(m).slice(0, 200)}`);
-        // Do NOT replay the buffered backlog. Flushing the audio captured during the WS handshake in
-        // one burst makes ElevenLabs' turn-taking think the caller already finished talking — so the
-        // agent doesn't wait and fires rushed/duplicate lines (the "didn't wait / said thanks twice
-        // fast" bug). Drop it; the agent's opener leads and live frames stream from here.
+        for (const p of pending) eleven!.send(JSON.stringify({ user_audio_chunk: p }));
         pending.length = 0;
       } else if (m.type === "audio") {
         const b64 = m.audio_event?.audio_base_64;
@@ -234,7 +230,6 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (ctx?.dtmf) scheduleDtmf(ctx.dtmf);
       if (ctx?.connectOnHuman) {
         log(`twilio start room=${room.slice(0, 8)} -> connect-on-human (deferring ElevenLabs until a human)`);
-        urlPromise = signedUrl(ctx.agentId); // warm the signed URL now so the human-connect handshake is instant (less audio missed)
         dtmfTimers.push(setTimeout(() => triggerConnect("hold-timeout"), (ctx.holdMaxSeconds ?? 45) * 1000));
       } else {
         log(`twilio start room=${room.slice(0, 8)} ctx=${!!ctx} -> connectEleven`);
