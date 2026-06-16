@@ -21,9 +21,9 @@ parallel without crossing. **They touch different files** (see lane breakdown).
 ## Lane breakdown (do NOT cross — each edits its own files)
 - **DevOps (backend)** — `src/best-bet.ts` / `/pub/best-bet`, `src/calls/`:
   - ✅ best-bet excludes kiosk-only from "most likely" (shelf rec).
-  - [ ] Add a **`kioskMode` flag** to the call path: when a kiosk-only store is called, pass a var to
-    the agent so the prompt asks about the **kiosk** (working/stocked), not a shelf shipment. Define
-    it in `docs/API_CONTRACT.md`.
+  - [x] **`kioskMode` defined** in `docs/API_CONTRACT.md` (optional bool on the 4 check endpoints).
+  - [ ] **Plumb `kioskMode`** through the call path: thread the request flag → the agent/call context
+    so the prompt asks about the **kiosk** (working/stocked), not a shelf shipment.
 - **Admin / Voice** — `src/voice/prompts.ts` (agent prompt/script):
   - [ ] Add the **kiosk call script**: when `kioskMode` is set, the agent asks "is your Pokémon kiosk
     working and stocked?" instead of the shipment question.

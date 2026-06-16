@@ -44,6 +44,22 @@ Auth:
   "source": "site", "url": "https://…", "seenAt": 1700000000 }
 ```
 
+### `kioskMode` (the shared seam — Website → DevOps → Voice)
+
+`kioskMode` is an **optional boolean** on the four check endpoints (`/pub/check`, `/pub/check-live`,
+`/app/check`, `/app/check-live`). Default = `false`/absent → normal shelf-shipment check.
+
+- **Website** sends `kioskMode: true` for **kiosk-only** stores (`hasKiosk:true, sellsPacks:false`)
+  — the ones shown with a "Kiosk only" badge. It does NOT send it for shelf stores.
+- **DevOps** plumbs the flag from the request → the call/agent context (a `kioskMode` var on the
+  call so the prompt builder can branch). The flag is advisory; the backend may also infer it from
+  the store's flags, but the explicit request value wins.
+- **Voice** branches the agent script on it: when set, the agent asks *"is your Pokémon kiosk
+  working and stocked?"* instead of *"did you get a shipment today?"* (`src/voice/prompts.ts`).
+
+Full feature spec (all three lanes' parts): `docs/specs/kiosk-call-flow.md`. Store-flag data model:
+`docs/specs/store-data-schema.md` §5.
+
 ---
 
 ## Consumer — `/pub/*`
@@ -76,8 +92,8 @@ Auth:
 | POST `/pub/community/upload-url` ·rl | `{ ext, contentType }` | `{ uploadUrl, publicUrl, key }` \| `{ error }` |
 | POST `/pub/community/post` ·rl | `{ imageUrl, handle, retailerId, categoryId, caption, imageKey }` | `{ ok, id, pending }` |
 | POST `/pub/community/:id/like` ·rl | — | `{ ok, likes }` |
-| **POST `/pub/check`** **[$][CHANGING]** | `{ retailerId, categoryId, specificProduct }` | `{ providerCallId, status }` \| `{ error }` · 402 no_credits · 409 store_closed |
-| **POST `/pub/check-live`** **[$][CHANGING]** | `{ retailerId, categoryId(s), specificProduct }` | `{ room, wsHost }` \| `{ error }` |
+| **POST `/pub/check`** **[$][CHANGING]** | `{ retailerId, categoryId, specificProduct, kioskMode? }` | `{ providerCallId, status }` \| `{ error }` · 402 no_credits · 409 store_closed |
+| **POST `/pub/check-live`** **[$][CHANGING]** | `{ retailerId, categoryId(s), specificProduct, kioskMode? }` | `{ room, wsHost }` \| `{ error }` |
 | GET `/pub/result/:cid` | — | `{ status, transcript, summary, confirmed, … }` |
 | GET `/pub/live/:cid` | — | `{ live, status, transcript }` |
 | POST `/pub/charge` **[$][CHANGING→removed]** | `{ cid }` | `{ balance, charged }` |
@@ -96,8 +112,8 @@ adds per-IP limits + one-check-per-store-per-day; response shapes stay the same.
 | Method · Path | Request | Response |
 |---|---|---|
 | GET `/app/me` | — | `{ credits, subscription, comp, callsMade, catalog:{sub,packs} }` |
-| **POST `/app/check`** **[$]** | `{ retailerId, categoryId, specificProduct }` | `{ providerCallId, status }` · 402 · 409 |
-| **POST `/app/check-live`** **[$]** | `{ retailerId, categoryId(s), specificProduct }` | `{ room, wsHost }` |
+| **POST `/app/check`** **[$]** | `{ retailerId, categoryId, specificProduct, kioskMode? }` | `{ providerCallId, status }` · 402 · 409 |
+| **POST `/app/check-live`** **[$]** | `{ retailerId, categoryId(s), specificProduct, kioskMode? }` | `{ room, wsHost }` |
 | GET `/app/schedules` | — | `Schedule[]` |
 | POST `/app/schedule` | `{ retailerId, categoryId, daysOfWeek, timeLocal, specificProduct, contact }` | `{ ok, schedule }` \| `{ error }` |
 | DELETE `/app/schedules/:id` | — | `{ ok }` |
@@ -160,3 +176,6 @@ GET `/`, `/r`, `/s`, `/p/:slug` (+`?partial=1` → `{title,body}`), `/og/:file`,
 - 2026-06-14 — initial freeze snapshot of the live API.
 - 2026-06-15 — verified the documented shapes against production read endpoints (policy,
   categories, statuses, store-types, stores/near, best-bet, finds, stock/near) — all match.
+- 2026-06-16 — added optional `kioskMode` to the four check endpoints (Website sends it for
+  kiosk-only stores; DevOps plumbs it to the call; Voice branches the script). Spec:
+  `docs/specs/kiosk-call-flow.md`. Additive — existing callers unaffected.

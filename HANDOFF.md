@@ -24,6 +24,13 @@ your files, your extra docs, and your current focus. Stay in your lane; request 
 `docs/API_CONTRACT.md` (the front⇄back interface). Then your role doc points you to the rest.
 
 ## How to work
+- **Run your lane autonomously.** Once you have your directive, build it end-to-end — don't stop to
+  check in. **Default-and-proceed** on any in-lane decision (note the choice in your commit). Keep
+  going until either (a) the work is done and needs human testing, or (b) you hit a genuinely
+  irreversible / cross-lane / business-policy call (deleting data, paying for data, changing another
+  lane's API contract). Fungie sets **priority + critical decisions** — not step-by-step approvals.
+- **See an issue inside your lane** (bad data, a UI glitch, ugly store names)? Just fix it — it's
+  yours, no permission needed. Cross-lane issue? File it to the owning lane, don't block.
 - Commit small; `git push`; DevOps merges → `main` → Railway auto-deploys (~2–4 min).
 - Typecheck `npx tsc --noEmit`; tests `bash scripts/test-all.sh` — **green before merge.**
 - Never break live. Risky/untested → behind a `policy` flag, default off.
