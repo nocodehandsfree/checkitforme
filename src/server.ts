@@ -293,6 +293,16 @@ app.get("/", (c) => {
   return c.html(consumer ? renderRunner(brand, host) : page("app.html"));
 });
 app.get("/r", (c) => { c.header("Cache-Control", "no-store"); return c.html(renderRunner(resolveBrand((c.req.header("host") || "").toLowerCase(), c.req.query("brand")), (c.req.header("host") || "").toLowerCase())); });
+// Verticals as PATHS on the apex (checkitforme.com/pokemon, /onepiece, /toppsbasketball, /needoh) —
+// same brand resolution as the subdomains, keyed off the slug. This is what lets the product switcher
+// link to clean same-domain paths instead of subdomain hops.
+for (const slug of ["pokemon", "onepiece", "toppsbasketball", "needoh"]) {
+  app.get(`/${slug}`, (c) => {
+    c.header("Cache-Control", "no-store");
+    const host = (c.req.header("host") || "").toLowerCase();
+    return c.html(renderRunner(resolveBrand(host, slug), host));
+  });
+}
 // Branded share cards (1200×630 PNGs) — what X/iMessage/Discord unfurl for every link.
 app.get("/og/:file", (c) => {
   const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
