@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r36" />
+<meta name="x-rev" content="names-r37" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -117,17 +117,18 @@ __BRAND_HEAD__
   .verdict .title{font-size:25px;font-weight:900;letter-spacing:-.6px;line-height:1.08}
   .verdict.in .title{color:var(--green)} .verdict.out .title{color:var(--red)} .verdict.unk .title{color:#FBBF24} .verdict.soon .title{color:#F59E0B}
   .vstore{text-align:center;color:#d6d6e0;font-size:14.5px;font-weight:600;margin-top:9px}
-  /* check-deck result banner + the small status under the store name */
-  .rstatus{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
-  .rstatus.in{color:var(--green)} .rstatus.out{color:var(--red)} .rstatus.unk{color:#FBBF24} .rstatus.soon{color:#F59E0B}
-  .resbanner{display:flex;align-items:center;gap:12px;border-radius:16px;padding:13px 15px;margin-top:14px;border:1px solid var(--border)}
-  .resbanner .rb-ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;font-size:17px;font-weight:900;color:#06210f}
-  .resbanner .rb-t{font-weight:900;font-size:16px;letter-spacing:-.3px;line-height:1.1}
-  .resbanner .rb-m{color:var(--muted);font-size:11.5px;font-weight:600;margin-top:2px}
-  .resbanner.in{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.4)} .resbanner.in .rb-ic{background:var(--green)} .resbanner.in .rb-t{color:var(--green)}
-  .resbanner.out{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.35)} .resbanner.out .rb-ic{background:var(--red);color:#fff} .resbanner.out .rb-t{color:var(--red)}
-  .resbanner.unk{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.35)} .resbanner.unk .rb-ic{background:#FBBF24} .resbanner.unk .rb-t{color:#FBBF24}
-  .resbanner.soon{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.35)} .resbanner.soon .rb-ic{background:#F59E0B} .resbanner.soon .rb-t{color:#F59E0B}
+  /* combined call header: store + verdict status + timing in one box at the top */
+  .rhead{display:flex;gap:13px;align-items:flex-start;border-radius:16px;padding:14px 15px;border:1px solid var(--border);margin-bottom:14px}
+  .rhead .railchip{flex:0 0 auto}
+  .rhead-store{font-weight:800;font-size:16px;letter-spacing:-.2px;line-height:1.15}
+  .rhead-status{font-weight:900;font-size:16px;letter-spacing:-.3px;margin-top:5px;display:flex;align-items:center;gap:8px}
+  .rhead-glyph{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:900;color:#06210f;flex:0 0 auto}
+  .rhead-meta{color:var(--muted);font-size:12px;font-weight:600;margin-top:6px;line-height:1.45}
+  .rhead-note{color:#c8c8d4;font-size:12.5px;margin-top:6px;line-height:1.4}
+  .rhead.in{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.4)} .rhead.in .rhead-status{color:var(--green)} .rhead.in .rhead-glyph{background:var(--green)}
+  .rhead.out{background:rgba(239,68,68,.09);border-color:rgba(239,68,68,.35)} .rhead.out .rhead-status{color:var(--red)} .rhead.out .rhead-glyph{background:var(--red);color:#fff}
+  .rhead.unk{background:rgba(251,191,36,.09);border-color:rgba(251,191,36,.32)} .rhead.unk .rhead-status{color:#FBBF24} .rhead.unk .rhead-glyph{background:#FBBF24}
+  .rhead.soon{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.35)} .rhead.soon .rhead-status{color:#F59E0B} .rhead.soon .rhead-glyph{background:#F59E0B}
   /* logged-out homepage = the focused view (hero + check card). Retired modules hidden for everyone. */
   #truststrip,#demo{display:none!important}
   #earndemo{display:none} body.authed #earndemo{display:block}
@@ -2606,24 +2607,23 @@ function showResult(o, cid){
   const addr=((STORES.find(x=>x.id===SEL_STORE.id)||{}).location)||SEL_STORE.location||'';
   // check-deck verdict banner + the small status line under the store name
   const fmtMS=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
-  const statusShort = cls==='in'?'In stock — confirmed':cls==='out'?'Not in stock':cls==='soon'?'Restock incoming':'No clear answer';
+  const statusShort = cls==='in'?'In stock — confirmed':cls==='out'?'Not in stock':cls==='soon'?'Restock incoming':title;
   const bannerMeta = (_totS?('done in '+fmtMS(_totS)+' · '):'') + 'transcript saved';
   const rbGlyph = cls==='in'?'✓':cls==='out'?'✕':cls==='soon'?'🚚':'?';
   $('result').innerHTML = `
     <div class="railbar" id="railbar" style="display:none"></div>
     <div class="card">
-      <div class="vsrow" style="margin-bottom:2px">
+      <div class="rhead ${cls}">
         <span class="railchip${railClass({storeId:SEL_STORE.id})}" style="display:grid">${railFace({storeId:SEL_STORE.id,storeName:SEL_STORE.name})}</span>
-        <div style="min-width:0;flex:1;text-align:left">
-          <div style="font-weight:800;font-size:15.5px;letter-spacing:-.2px">${esc(nm.base)}${nm.branch?` <span style="color:#c8c8d4;font-weight:600;font-size:13px">· ${esc(nm.branch)}</span>`:''}</div>
-          <div class="rstatus ${cls}">${esc(statusShort)}</div>
-          <div style="color:var(--muted);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${[esc(addr),esc(headLabel)].filter(Boolean).join(' · ')}</div>
+        <div style="min-width:0;flex:1">
+          <div class="rhead-store">${esc(nm.base)}${nm.branch?` <span style="color:#c8c8d4;font-weight:600;font-size:13px">· ${esc(nm.branch)}</span>`:''}</div>
+          <div class="rhead-status"><span class="rhead-glyph">${rbGlyph}</span> ${esc(statusShort)}</div>
+          <div class="rhead-meta">${[esc(addr),esc(headLabel)].filter(Boolean).join(' · ')}${bannerMeta?` · ${esc(bannerMeta)}`:''}</div>
+          ${note?`<div class="rhead-note">${note}</div>`:''}
         </div>
       </div>
       ${breakdown}
       ${proof}
-      <div class="resbanner ${cls}"><div class="rb-ic">${rbGlyph}</div><div style="min-width:0"><div class="rb-t">${title}</div><div class="rb-m">${esc(bannerMeta)}</div></div></div>
-      ${note?`<div class="vnote" style="margin-top:10px">${note}</div>`:''}
       ${inActions}
     </div>
     ${upsell}
