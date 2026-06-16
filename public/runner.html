@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r19" />
+<meta name="x-rev" content="names-r20" />
 __BRAND_HEAD__
-<link rel="icon" type="image/png" href="/logos/fungibles-64.png">
-<link rel="apple-touch-icon" href="/logos/fungibles.png">
+<link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
+<link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
 <!-- Clerk's bundle is the biggest external fetch on every cold load (every product switch reloads a
      new subdomain) — warm the connection early so DNS+TLS isn't on the critical path. -->
 <link rel="preconnect" href="https://__CLERK_FRONTEND_API__" crossorigin>
@@ -1298,7 +1298,7 @@ function applyFlags(){
 function renderFooter(){
   const L=(POLICY.links)||{}, by=$('footYear'); if(by) by.textContent=new Date().getFullYear();
   const fb=$('footBrand'); if(fb) fb.textContent='';  // the brand name lives inside the logo now
-  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/checkitforme.png?v=1" alt="Check It For Me" style="height:20px;width:auto;object-fit:contain;border-radius:0;display:block">`; }
+  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/checkitforme.png?v=2" alt="Check It For Me" style="height:20px;width:auto;object-fit:contain;border-radius:0;display:block">`; }
   // Discord + X always shown; link to policy URLs when set, else a placeholder.
   const SOC=[['discord',ICO.discord,'Discord'],['x',ICO.x,'X']];
   const el=$('footSocials'); if(!el) return;
@@ -1509,7 +1509,7 @@ function openAuth(){
   setTimeout(()=>{try{$('auth_email').focus();}catch(e){}},90);
 }
 function closeAuth(){ authCancelLink(); $('authOverlay').classList.remove('on'); }
-function authMark(){ return `<img src="/logos/checkitforme.png?v=1" alt="Check It For Me" style="height:30px;width:auto;display:block">`; }
+function authMark(){ return `<img src="/logos/checkitforme.png?v=2" alt="Check It For Me" style="height:30px;width:auto;display:block">`; }
 function authDone(){ closeAuth(); toast("✓ You're in"); track('auth_success',{flow:AUTH.flow}); refreshAuth(); }
 // Background magic-link poll: resolves the moment the user taps the link (this tab or another).
 function authLinkPoll(promise){
@@ -2087,7 +2087,7 @@ function applyBrand(){
   // can hop to the other verticals. Real verticals (pokemon.*, onepiece.*, …) use their own category.
   const isApex = BRAND && BRAND.key === 'runner';
   // Apex shows the pokéball hero art (the default brand injects none) so it leads with Pokémon visually.
-  if(isApex){ const ha=$('heroart'); if(ha) ha.innerHTML=ICO.pokeball; }
+  if(isApex){ const ha=$('heroart'); if(ha) ha.innerHTML=ICO.pokeball; document.title='Check It For Me — Is it in stock?'; }
   const wantCat = (BRAND && BRAND.category) || (isApex ? 'Pokémon' : null);
   if(!wantCat) return;
   // Tolerant match: accent-fold + drop "TCG"/"cards" so "One Piece TCG" ↔ "One Piece" still resolves.
