@@ -11,22 +11,29 @@ presentation source and the canonical feature inventory.*
 > navigates each chain's phone tree to a human, asks if a product is in stock, and returns a
 > verdict with proof — while you watch the conversation happen live.**
 
+> 🧑‍💻 **Built — and RUN — by one person.** Not just developed solo. The entire operation — adding
+> and cleaning 100K stores, tuning voices, managing live calls, moderation, pricing — is run
+> single-handedly, because an in-app AI agent and a fully modular, config-driven design do the heavy
+> lifting. *One operator runs a platform that would normally need a team.*
+
 The headline capabilities, synthesized from the catalog below:
 
+- **Operated by one person** — an in-admin AI agent runs the database by chat; a **Lego-modular**
+  architecture means a change made once propagates to every brand site automatically.
 - **The largest phone-verified retail map in the category** — **101,967 stores, every one callable**,
   across **all 51 states** and **85 chains**, tagged across **9 product categories**.
 - **Live, watchable AI phone calls** — real-time transcript bubbles, listen-in audio, and a clear
   in-stock / restock / sold-out verdict with the transcript as proof.
-- **Profit-engineered call automation** — intelligent phone-tree navigation (keypad shortcuts +
-  cheap-model nav → premium-model human conversation + auto-bail rules + hard cost cap) so every
-  call reaches a human fast and cheaply.
-- **A self-improving data moat** — every call writes back restock intel (shipment days, hit rates);
-  the platform gets smarter with each call.
+- **Profit-engineered call automation** — keypad shortcuts + cheap-model navigation → premium-model
+  human conversation + auto-bail rules + hard cost cap, so every call reaches a human fast and cheap.
+- **A self-improving data moat** — every call writes back restock intel; the platform gets smarter
+  with each call.
+- **Built to scale globally** — **multi-language ready**, white-label by subdomain, and a roadmap of
+  **AI-run customer support** (site + Discord) that escalates to a human only as a last resort.
+- **Growth built in** — dynamic, tunable free-check rewards across every viral loop.
 - **A full consumer product *and* a full operator suite** — 4 live white-label brand sites + a deep
   admin (God-view, store CMS, voice studio, analytics, live margin, AI ops agent).
-- **Voice technology** — cloned voices, per-store voice selection, and the store sees a real caller ID.
-- **Built on 16 integrated services, ~12,200 lines of code**, production-grade (custom domain, CDN,
-  WAF, CI) — at a build pace that's the story in itself *(see Velocity)*.
+- **16 integrated services, ~12,200 lines of code**, production-grade (custom domain, CDN, WAF, CI).
 
 ---
 
@@ -112,6 +119,11 @@ The headline capabilities, synthesized from the catalog below:
 
 ## 8. Growth & virality
 
+- **Dynamic free-check reward engine** — users earn free checks from every viral action, and the
+  **payout per action is tunable live, no deploy**: **refer a friend** · **add a store** · **record a
+  kiosk purchase** (email the receipt to `restocktimer@gmail.com` → we verify the *real* inventory +
+  exact products bought) · **post your score**. Each loop can be toggled on/off and its reward dialed
+  up or down as costs dictate.
 - **Referrals** — give/get free checks, auto-claim via `?ref=` links.
 - **Shareable find cards** — server-rendered OG images + find-specific landing pages that unfurl
   richly on X / iMessage / Discord.
@@ -127,12 +139,18 @@ The headline capabilities, synthesized from the catalog below:
 - **Owner-tunable pricing & flags** — change prices, packs, headstart, feature flags **live, no deploy**.
 - **Comp accounts** (unlimited for owner/testers), tiered plan sheet.
 
-## 10. Multi-brand / white-label
+## 10. Modular ("Lego") architecture & white-label
 
+- **Change once, updates everywhere** — components, status registry, pricing, rewards, and copy are
+  config-driven and shared, so an update in one place **propagates to every brand site automatically**.
+  Like Legos: snap a piece in and the whole network inherits it.
 - **4 live vertical micro-sites** — PokéFinder, One Piece, Topps NBA, NeeDoh — each its own SEO site,
   logo, colors, headline, and share card, **injected by subdomain from one codebase** (domain-agnostic).
 - **Snap-in new products** — a new vertical is a single config entry + assets.
-- **Bilingual** — full English + Spanish, including per-brand headlines.
+- **Multi-language** — full **English + Spanish live today**, and the i18n system is built so **any
+  language is a drop-in addition** (add one block and the entire site translates, per-brand headlines included).
+- **Owner-tunable without deploys** — pricing, feature flags, reward amounts, and page copy all change
+  live from the admin.
 
 ## 11. Admin / operator suite
 
@@ -146,18 +164,30 @@ The headline capabilities, synthesized from the catalog below:
   signups → paying → members), **moderation queue**, **schedules**, **admin map**, **status editor**.
 - **Live COGS / margin** — real-time revenue vs. cost (voice + payments), profit & margin %.
 
-## 12. AI agents in the platform
+## 12. AI agents — the force multiplier that lets one person run it all
 
+- **In-admin "Admin dev" agent** (Claude) — **run the entire admin by chatting**: add stores, fix
+  details, look things up, pull intel — without opening Claude or writing code. This is *how one
+  person manages a 100K-store operation.*
 - **Restock calling agent** (the core voice agent) + **carry/prospecting** + **open-conversation** agents.
-- **In-admin "Admin dev" agent** (Claude) — operates the database through conversation with real tools.
-- **Roadmapped:** 3-tier customer support (FAQ bot → Claude → human ticket) with a self-growing
-  knowledge base.
+- **Customer-facing AI (designed):** an on-site assistant that answers shopper questions and runs
+  checks, plus a **Discord support bot** — a **3-tier escalation**: free FAQ bot → Claude for the long
+  tail → open a human ticket **only** if the AI can't resolve it. One shared knowledge base across
+  admin, site, and Discord that **gets smarter as more customers ask questions**.
 
 ## 13. Platform, infra & security
 
 - **Custom domain on Cloudflare** — Worker reverse-proxy + wildcard TLS, **SSL Strict, forced HTTPS,
-  TLS 1.2+/1.3, browser-integrity, bot protection, edge rate-limiting**.
-- **Auth** (Clerk, passwordless + OAuth), **per-IP rate limits**, **signed webhooks** (Stripe + voice).
+  TLS 1.2+/1.3, browser-integrity check**.
+- **Anti-bot & anti-abuse stack** — Cloudflare **Bot Fight Mode** + **edge rate-limiting on the
+  call-placing endpoints** (kills the "spam the calls" vector), per-IP application rate limits on every
+  reward/write surface, and a designed **server-side one-check-per-store-per-day + phone-verified
+  identity** layer that makes farming free checks impractical.
+- **Reduced attack surface** — admin fully auth-gated, arbitrary-number dialing locked behind admin,
+  store additions are **submit-then-approve** (no direct public writes), signed webhooks (Stripe +
+  voice), and known vectors (rate-limit IP spoofing, timing side-channels, image XSS) catalogued and
+  being closed.
+- **Auth** (Clerk, passwordless + OAuth).
 - **Scales to 100K stores** — geo-paginated APIs, DB indexes, hot-path caching.
 - **Self-healing data** — automatic geocoding (Census + fallback), self-updating store hours harvester.
 - **Privacy by design** — text transcript + summary only, **no audio ever stored**.
@@ -192,11 +222,10 @@ The headline capabilities, synthesized from the catalog below:
 
 ## 16. Velocity
 
-> ⚠️ **Fill in the true start date** — the git history in this working copy is a *shallow clone*
-> truncated at **June 12, 2026**, and that earliest visible commit is already a mature feature, so the
-> real project start is **earlier**. Use the actual kickoff date you know.
+**From June 4 to June 16, 2026 — roughly 12 days — a single person** built *and* stood up the
+operation to run: a 100K-store national database, a live consumer product across 4 brands, a full
+operator suite, real-time AI voice calling with watch-live transcripts, an in-admin AI ops agent,
+and 16 integrated services — production-grade on a custom domain with CDN, WAF, and CI.
 
-From **[your start date]** to June 15, 2026, a single small team shipped: a 100K-store national
-database, a live consumer product across 4 brands, a full operator suite, real-time AI voice calling
-with watch-live transcripts, and 16 integrated services — production-grade on a custom domain with
-CDN, WAF, and CI. *That pace, against a category where competitors only scrape websites, is the story.*
+*One person. ~12 days. A category-leading platform — in a market where competitors only scrape
+websites that are wrong 40% of the time. That pace is the story.*

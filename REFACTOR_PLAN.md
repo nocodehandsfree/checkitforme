@@ -111,6 +111,10 @@ optimize for *less to reason about at once* + *less duplication*.)
 - Own branch (worktree), small PRs.
 - Owns the frontend asset extraction/minify work above.
 
+### Branding TODO (front-end / owner)
+- **Replace the Fungibles logo on the sign-in screen with a new "Check It For Me" logo.** Keep the
+  "powered by Fungibles" mark in the footer. (Owner is creating the new logo asset.)
+
 ## Team shape — 3 lanes (owner's call; works with strict boundaries)
 
 3 code lanes is fine **only after** the contract freeze + `server.ts` split, with hard file
