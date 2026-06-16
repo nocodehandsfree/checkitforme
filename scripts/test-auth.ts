@@ -5,7 +5,7 @@ import { bootstrap } from "../src/db/bootstrap";
 import { db } from "../src/db/client";
 import { accounts, callResults, categories, retailers } from "../src/db/schema";
 import { e164, signSession, verifySession } from "../src/auth";
-import { getAccountByPhone, getAccount, chargeOneCredit } from "../src/billing";
+import { getAccountByPhone, getAccount, chargeOneCredit, isCompAccount } from "../src/billing";
 import { chargeCallOnce } from "../src/calls/service";
 import { setPolicy } from "../src/policy";
 
@@ -55,6 +55,14 @@ async function main() {
   ok((await getAccount(PU))!.credits === 2, "NO double-charge on re-run");
   const row = (await db.select().from(callResults).where(eq(callResults.id, call.id)))[0];
   ok(row.chargedAt != null, "charged_at stamped");
+
+  console.log("▶ comp by phone (master/owner on phone-first login, no email)");
+  process.env.COMP_PHONES = "+13105550099";
+  const compA = await getAccountByPhone("+13105550099");
+  ok(isCompAccount(compA), "phone in COMP_PHONES → comp account");
+  ok(!isCompAccount(await getAccountByPhone("+13105550100")), "phone NOT in COMP_PHONES → not comp");
+  ok(isCompAccount({ email: null, phone: "+13105550099" }), "isCompAccount matches by phone");
+  ok(!isCompAccount({ email: null, phone: null }), "no email + no phone → not comp");
 
   console.log(`\n  ${fail ? "❌" : "✅"} auth/billing: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
