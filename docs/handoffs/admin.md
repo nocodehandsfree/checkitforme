@@ -38,5 +38,7 @@ admin features (God-view, store CMS UI, voice studio, Tree Trainer, analytics, p
    cheap model navigates the IVR → Sonnet takes over on human pickup → the tree is learned + written
    back. Show which model handled each phase + the cost. (`connectOnHuman` OFF except on the bench.)
 - [ ] (supports Website) "Create your agent" caller-ID panel using `/auth/callerid/start` + `/status`.
+- [ ] (voice) **Kiosk call script** — when `kioskMode` is set, the agent asks "is your Pokémon kiosk
+  working/stocked?" instead of the shipment question. Spec: `docs/specs/kiosk-call-flow.md` (`src/voice/prompts.ts`).
 
 When you finish something: move it to `docs/COMPLETED.md`; leave Current focus set for the next chat.

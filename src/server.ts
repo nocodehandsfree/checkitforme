@@ -802,6 +802,7 @@ app.get("/pub/best-bet", async (c) => {
   )).limit(1500);
   const cands = near
     .filter((r) => r.phone && r.active !== false)
+    .filter((r) => r.sellsPacks !== false) // "most likely to have it on the SHELF" — exclude kiosk-only stores (e.g. Pavilions)
     .filter((r) => openState(r.hours, r.timezone).open !== false) // open or unknown, never closed
     .filter((r) => !cat || !(r.carries) || r.carries.toLowerCase().includes(cat.toLowerCase()))
     .map((r) => {

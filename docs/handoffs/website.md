@@ -31,7 +31,11 @@ DevOps will split `server.ts` into route modules so we can both build without co
   every `/app/*` call (where the old email/Clerk token went). Use `autocomplete="one-time-code"` so
   the browser auto-fills the SMS. Until this is done, phone-first is unusable (`requirePhoneSignup`
   stays OFF). Make the "Continue/Place call" button brand-green.
-- [ ] **Stores issue** (Fungie flagged) — investigate the store list/cards on the consumer site.
+- [ ] **Kiosk / "most likely" UI** (next, after signup) — full spec: `docs/specs/kiosk-call-flow.md`.
+  Your parts: star icon (not logo) for the "most likely" store + a "Most likely" label; FIX the
+  double-green-highlight (picking another store clears the most-likely highlight); show a "Kiosk only"
+  badge + pre-call note ("We'll ask if their kiosk is working") and send `kioskMode` for those stores.
+  (Backend already excludes kiosk-only from "most likely"; the `kioskMode` flag is DevOps + Voice.)
 - [ ] Route the consumer "check" through the **bridge** (`/app/check-live`) so calls dial from the
   customer's *verified* number (the plain `/app/check` uses the house line).
 
