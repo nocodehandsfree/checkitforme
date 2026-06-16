@@ -308,6 +308,13 @@ for (const slug of ["pokemon", "onepiece", "toppsbasketball", "needoh"]) {
     return c.html(renderRunner(resolveBrand(host, slug), host));
   });
 }
+// Minimal "first-time visitor" preview of the apex homepage — same page; the client (body.peek)
+// strips it down to just the hero + the check card so the owner can eyeball the bare layout.
+app.get("/peek", (c) => {
+  c.header("Cache-Control", "no-store");
+  const host = (c.req.header("host") || "").toLowerCase();
+  return c.html(renderRunner(resolveBrand(host), host));
+});
 // Branded share cards (1200×630 PNGs) — what X/iMessage/Discord unfurl for every link.
 app.get("/og/:file", (c) => {
   const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");

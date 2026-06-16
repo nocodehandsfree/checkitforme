@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r31" />
+<meta name="x-rev" content="names-r32" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -47,6 +47,8 @@ __BRAND_HEAD__
   .hero{text-align:center;padding:12px 0 24px}
   .hero h1{font-size:30px;line-height:1.16;margin:0 0 14px;letter-spacing:-1px;font-weight:900;text-wrap:balance}
   .hero h1 .g{color:var(--accent,var(--green));white-space:nowrap}
+  /* /peek preview: strip the homepage to just the hero + the check card (first-time-visitor view) */
+  body.peek #truststrip, body.peek #demo, body.peek #earndemo, body.peek #scoresRow{display:none!important}
   @media(max-width:380px){ .hero h1{font-size:26px} }
   .hero p{color:#b9b9c8;font-size:15px;margin:0;line-height:1.5}
   .card{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:20px}
@@ -1319,6 +1321,7 @@ async function submitStoreReq(){
 const idle=(fn)=>('requestIdleCallback' in window)?requestIdleCallback(fn,{timeout:1500}):setTimeout(fn,300);
 async function boot(){
   captureReferral(); // stash any ?ref= before we clean the URL
+  if(location.pathname==='/peek') document.body.classList.add('peek'); // minimal first-time-visitor preview
   STORES=[];
   // PAINT FIRST — header, hero, switcher, logo, language + auth all come from injected brand data, so
   // render them instantly instead of waiting on the network (this is what made the header slow to appear).
@@ -2122,7 +2125,13 @@ function applyBrand(){
   // can hop to the other verticals. Real verticals (pokemon.*, onepiece.*, …) use their own category.
   const isApex = BRAND && BRAND.key === 'runner';
   // Apex shows the pokéball hero art (the default brand injects none) so it leads with Pokémon visually.
-  if(isApex){ const ha=$('heroart'); if(ha) ha.innerHTML=ICO.pokeball; document.title='Check It For Me — Is it in stock?'; }
+  if(isApex){
+    const ha=$('heroart'); if(ha) ha.innerHTML=ICO.pokeball; document.title='Check It For Me — Is it in stock?';
+    const h1=document.querySelector('.hero h1'); if(h1) h1.innerHTML='Pokémon <span class="g">in stock?</span><br>We\'ll check for you.';
+    // Lead with Pokémon colors too (yellow), not the generic green — the apex IS the Pokémon flagship.
+    document.documentElement.style.setProperty('--accent','#FFCB05');
+    document.documentElement.style.setProperty('--accent2','#EE1515');
+  }
   const wantCat = (BRAND && BRAND.category) || (isApex ? 'Pokémon' : null);
   if(!wantCat) return;
   // Tolerant match: accent-fold + drop "TCG"/"cards" so "One Piece TCG" ↔ "One Piece" still resolves.
