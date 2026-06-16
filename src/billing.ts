@@ -14,10 +14,20 @@ export const PACKS: Record<string, { credits: number; cents: number; label: stri
 };
 
 // ---- Accounts ----
+// The owner's "master line": signing in from this verified cell ties the phone account to the owner
+// email (a comp email), so the master user gets unlimited checks + master powers (any-ZIP search,
+// live-listen) the moment they log in by phone. Both are env-overridable; the defaults are the owner's
+// already-committed caller-ID number and master email.
+const OWNER_PHONE = (process.env.OWNER_PHONE || "+13106662331").trim();
+const OWNER_EMAIL = (process.env.OWNER_EMAIL || "fun@fungibles.com").trim().toLowerCase();
+
 // Comp accounts (owner/testers) get unlimited free checks — never gated, never charged.
 export function isComp(email?: string | null): boolean {
+  if (!email) return false;
+  const e = email.toLowerCase();
+  if (e === OWNER_EMAIL) return true; // the master email is always comp, even if COMP_EMAILS is unset
   const list = (process.env.COMP_EMAILS || "").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
-  return !!email && list.includes(email.toLowerCase());
+  return list.includes(e);
 }
 
 export async function getAccount(userId: string, email?: string) {
@@ -51,11 +61,17 @@ export async function grantCredits(userId: string, n: number, spentCents = 0) {
  *  signup free checks on creation. The phone IS the identity in the new (Clerk-free) model. */
 export async function getAccountByPhone(phone: string) {
   const id = `phone:${phone}`;
+  // Owner's cell → tie this phone account to the master email so comp/master powers light up on login.
+  const ownerEmail = phone === OWNER_PHONE ? OWNER_EMAIL : null;
   let row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
   if (!row) {
     const free = Math.max(0, (await getPolicy()).pricing.freeChecks || 0);
-    await db.insert(accounts).values({ clerkUserId: id, phone, callerId: phone, credits: free }).onConflictDoNothing();
+    await db.insert(accounts).values({ clerkUserId: id, phone, callerId: phone, email: ownerEmail, credits: free }).onConflictDoNothing();
     row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
+  } else if (ownerEmail && row.email !== ownerEmail) {
+    // Backfill the master tie on a phone account that predates this mapping.
+    await db.update(accounts).set({ email: ownerEmail }).where(eq(accounts.clerkUserId, id));
+    row = { ...row, email: ownerEmail };
   }
   return row;
 }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r26" />
+<meta name="x-rev" content="names-r27" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -644,12 +644,6 @@ __BRAND_HEAD__
       <div class="ts"><span class="tsi" id="tsi3"></span><span data-i18n="trust.answer">Get proof</span></div>
     </div>
 
-    <div class="card" id="upsell" style="display:none;border-color:rgba(74,222,128,.5);text-align:center">
-      <div class="name" style="margin-bottom:4px" id="upsell_title">You're out of checks</div>
-      <div class="meta" style="margin-bottom:12px" data-i18n="up.go">Plans from <b>$4.99/mo</b> — or grab a pack.</div>
-      <button class="cta" onclick="openBuy()" data-i18n="up.plans">See plans</button>
-    </div>
-
     <div class="card">
       <div class="modetabs" id="modetabs">
         <button class="modetab on" data-mode="call" onclick="setMode('call')"><span class="mti" id="mti_call"></span><span data-i18n="mode.call">Check a store</span></button>
@@ -934,7 +928,7 @@ __BRAND_HEAD__
       <div class="ordiv"><span data-i18n="auth.or">or use your cell</span></div>
       <input id="auth_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(555) 123-4567" onkeydown="if(event.key==='Enter')phoneStart()" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 13px;font-size:16px;box-sizing:border-box;text-align:center">
       <div id="auth_err" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
-      <button class="cta sm" id="auth_send" onclick="phoneStart()" style="margin-top:4px;width:100%;background:var(--accent);color:#06210f">Continue →</button>
+      <button class="cta sm" id="auth_send" onclick="phoneStart()" style="margin-top:4px;width:100%;background:var(--green);color:#06210f">Continue →</button>
     </div>
     <!-- Step 2a: magic link sent -->
     <div id="auth_step_link" style="display:none">
@@ -950,7 +944,7 @@ __BRAND_HEAD__
       <div class="meta" style="margin-bottom:16px">We texted a 6-digit code to <b id="auth_codeto" style="color:#e6e6ee"></b>.</div>
       <input id="auth_code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" onkeydown="if(event.key==='Enter')phoneVerify()" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 13px;font-size:26px;font-weight:800;letter-spacing:.5em;box-sizing:border-box;text-align:center">
       <div id="auth_codeerr" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
-      <button class="cta sm" id="auth_verify" onclick="phoneVerify()" style="margin-top:4px;width:100%;background:var(--accent);color:#06210f">Verify →</button>
+      <button class="cta sm" id="auth_verify" onclick="phoneVerify()" style="margin-top:4px;width:100%;background:var(--green);color:#06210f">Verify →</button>
       <div style="margin-top:13px;font-size:13px;color:var(--muted)">Didn't get it? <a onclick="phoneStart(true)" style="color:var(--purple);font-weight:700;cursor:pointer">Resend</a> · <a onclick="authBack()" style="color:var(--purple);font-weight:700;cursor:pointer">Change number</a></div>
     </div>
   </div>
@@ -1475,15 +1469,7 @@ function renderAuth(){
     ap.innerHTML=`<span class="dot"></span><span id="creditN">${freeUsed()?t('pill.join','Join'):t('pill.free','1 free · Join')}</span>`;
     ap.onclick=()=>signUp(); ap.classList.add('anon');
   }
-  // Low-credit reminder: surface the upsell once a paying (non-comp, non-member) account is running low.
-  const up=$('upsell');
-  if(up){
-    const c=ACCOUNT&&ACCOUNT.credits, member=!!(ACCOUNT&&ACCOUNT.subscription==='active'), comp=!!(ACCOUNT&&ACCOUNT.comp);
-    const low = isAuthed() && !comp && !member && typeof c==='number' && c<=2;
-    up.style.display = low ? '' : 'none';
-    const ut=$('upsell_title');
-    if(low && ut) ut.textContent = c<=0 ? t('up.out',"You're out of checks") : (c===1 ? t('up.left1','Just 1 check left') : tf('up.leftN',`Only ${c} checks left`,{n:c}));
-  }
+  // (Low-credit upsell card removed — owner asked to keep the home page uncluttered.)
   // Journey-aware reduction: visitors get the demo (they need convincing); members don't.
   // Score-sharing is a member loop — visitors only see "Add your store" inside Earn.
   const dm=$('demo'); if(dm) dm.style.display = isAuthed() ? 'none' : '';
