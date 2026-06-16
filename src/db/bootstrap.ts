@@ -89,6 +89,8 @@ export async function bootstrap() {
   // Finds privacy/headstart: who placed a call + whether it stays out of the public finds feed.
   await client.execute("ALTER TABLE call_results ADD COLUMN finder_user_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE call_results ADD COLUMN is_private INTEGER DEFAULT 0").catch(() => {});
+  // Server-side billing: when the finder was charged for this call (atomic idempotency guard).
+  await client.execute("ALTER TABLE call_results ADD COLUMN charged_at INTEGER").catch(() => {});
   // Per-user history (/app/history, finds attribution) + status filters used across the dashboards.
   await client.execute("CREATE INDEX IF NOT EXISTS call_results_finder_idx ON call_results(finder_user_id)").catch(() => {});
   await client.execute("CREATE INDEX IF NOT EXISTS call_results_status_idx ON call_results(status)").catch(() => {});

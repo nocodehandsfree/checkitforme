@@ -1241,9 +1241,9 @@ app.get("/app/history", async (c) => {
 app.post("/app/charge", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  const { cid } = await c.req.json();
+  // Charging is now SERVER-SIDE on call completion (ingestPending, atomic + idempotent). This
+  // endpoint no longer trusts the client to bill itself — it just returns the live balance.
   const a = await getAccount(u.id, u.email);
-  if (cid && !charged.has(cid) && !isComp(a?.email)) { charged.add(cid); await chargeOneCredit(u.id); }
   return c.json({ credits: isComp(a?.email) ? 9999 : (a?.credits ?? 0) });
 });
 // Create a Stripe Checkout session (kind = "sub" | pack key). Returns a redirect URL.
@@ -1780,14 +1780,17 @@ app.get("/api/conversation/:cid", async (c) => {
 });
 // Custom telephony bridge (milestone 1): place OUR own Twilio call; its audio streams to our WS.
 // Place a bridged Twilio call (our number -> destination) running the restock agent. Returns the room.
-async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null): Promise<{ room?: string; error?: string }> {
+async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number }): Promise<{ room?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const room = crypto.randomUUID();
-  const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331"; // our verified caller ID
+  // Dial AS the customer's verified number when we have it (phone-first model); else the house line.
+  const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined });
   const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${RAILWAY_HOST}/twiml/bridge?room=${room}` });
+  // Hard cost cap: Twilio kills the call at TimeLimit seconds, no exceptions — the profit guarantee.
+  if (opts?.timeLimitSec && opts.timeLimitSec > 0) body.set("TimeLimit", String(Math.floor(opts.timeLimitSec)));
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls.json`, {
     method: "POST",
     headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" },
@@ -1821,12 +1824,20 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   // scheduled calls use — Listen-live was previously running on the bare global prompt only.
   const v = await buildRestockVars(retailerId, primary, specificProduct, extras);
   if (!v || !v.retailer.phone) return { error: "store not found" };
+  // Phone-first: dial AS the finder's own VERIFIED number (caller_id) when present. Plus the hard
+  // duration cap from policy (the cost guarantee).
+  const pol = await getPolicy();
+  let from: string | undefined;
+  if (finder?.userId) {
+    const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, finder.userId)))[0];
+    if (acct?.callerId) from = acct.callerId; // only set after Twilio caller-ID verification
+  }
   // Log the call once it connects (we get the ElevenLabs conversation id): insert the PRIMARY result
   // row; ingest fans out each extra line into its own row from the per-category extraction.
   return placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
     db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false })
       .catch((e) => console.error("bridge call log insert:", e));
-  }, v.dtmf);
+  }, v.dtmf, { from, timeLimitSec: pol.bail.maxCallSeconds });
 }
 app.get("/pub/bridge/:room", (c) => c.json({ conversationId: bridgeConversationId(c.req.param("room")), wsHost: RAILWAY_HOST }));
 app.get("/pub/bridge-debug", (c) => c.json({ log: bridgeDebug() }));

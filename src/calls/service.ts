@@ -4,8 +4,9 @@ import { and, desc, eq, gte, inArray, isNull, like, or } from "drizzle-orm";
 import { db } from "../db/client";
 import { openState, fetchStoreHours } from "../store-hours";
 import {
-  callResults, categories, chains, retailers, scheduleTargets, schedules, watches, zoneRetailers, zones,
+  accounts, callResults, categories, chains, retailers, scheduleTargets, schedules, watches, zoneRetailers, zones,
 } from "../db/schema";
+import { chargeOneCredit, isComp } from "../billing";
 
 /** Notify every active restock-watch for this store+category that it's back in stock, once. */
 async function notifyWatches(retailerId: number, categoryId: number, store: string, label: string) {
@@ -499,6 +500,17 @@ export async function ingestPending(): Promise<number> {
       transcript: outcome.transcript,
       completedAt: now(),
     }).where(eq(callResults.id, row.id));
+
+    // Server-side billing: charge the finder ONE credit on a DEFINITIVE answer, exactly once.
+    // Atomic — only the first finalizer flips charged_at (null→now) and only it charges, so the
+    // poller, the webhook, and any retry can't double-bill, and the client can't dodge it.
+    if (row.finderUserId && outcome.status === "completed" && (primaryConfirmed === true || primaryConfirmed === false)) {
+      const won = await db.update(callResults).set({ chargedAt: now() }).where(and(eq(callResults.id, row.id), isNull(callResults.chargedAt)));
+      if ((won.rowsAffected ?? 0) > 0) {
+        const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, row.finderUserId)))[0];
+        if (acct && !isComp(acct.email)) await chargeOneCredit(row.finderUserId);
+      }
+    }
 
     const store = (await db.select().from(retailers).where(eq(retailers.id, row.retailerId)))[0];
     if (primaryConfirmed === true && primaryLabel) {

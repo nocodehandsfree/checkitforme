@@ -407,6 +407,7 @@ export const callResults = sqliteTable(
     isPrivate: integer("is_private", { mode: "boolean" }).default(false), // never show in public finds feed
     startedAt: integer("started_at").notNull().default(now),
     completedAt: integer("completed_at"),
+    chargedAt: integer("charged_at"), // when the finder was billed for this call (idempotency guard)
   },
   (t) => ({
     byRetailerCategory: index("call_results_retailer_category_idx").on(t.retailerId, t.categoryId),
