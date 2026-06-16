@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r34" />
+<meta name="x-rev" content="names-r35" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -642,7 +642,7 @@ __BRAND_HEAD__
   <div class="pill account" id="authpill" onclick="signUp()"><span class="dot"></span><span id="creditN">1 free</span></div>
 </header>
 
-<div class="ticker" id="finds"></div>
+<div class="ticker" id="finds" style="display:none"></div>
 
 <main>
   <!-- BUILDER -->
@@ -1925,10 +1925,14 @@ function renderStores(){
     if(bi<0){ const bs=STORES.find(s=>s.id===BEST.id); if(bs){ list.unshift(bs); bi=0; } }
     if(bi>0){ const [b]=list.splice(bi,1); list.unshift(b); }
   }
-  const total=list.length; list=list.slice(0,40);
+  const total=list.length;
+  // "N open" counts only stores we KNOW are open right now — never unknown-hours ones (which default
+  // to open:true server-side and were inflating the count / claiming closed stores were open).
+  const openCount = kiosk ? total : list.filter(s=>s&&s.openState&&s.openState.known&&s.openState.open).length;
+  list=list.slice(0,40);
   LAST_STORES=list; if($('mapview') && $('mapview').style.display==='block') renderMapPins();
   const cnt=$('store_count');
-  if(cnt) cnt.innerHTML = `<span class="odot"></span>${total} ${kiosk?t('count.kiosks','kiosks'):t('count.open','open')}${USER_LOC?` · ${RADIUS} mi`:''}`;
+  if(cnt) cnt.innerHTML = `<span class="odot"></span>${openCount} ${kiosk?t('count.kiosks','kiosks'):t('count.open','open')}${USER_LOC?` · ${RADIUS} mi`:''}`;
   const emptyMsg=()=>{
     if(kiosk) return USER_LOC?tf('empty.kiosk',`No kiosks mapped within ${RADIUS} mi yet — they're crowd-built. Bought from one? <a onclick="openReceipt()" style="color:var(--purple);font-weight:700;cursor:pointer">Email a receipt</a> to put it on the map.`,{r:RADIUS}):t('empty.kiosk.tap','Tap the pin to find vending machines near you.');
     if(!USER_LOC) return t('empty.search','No matches — try a different search, or tap the pin for stores near you.');
