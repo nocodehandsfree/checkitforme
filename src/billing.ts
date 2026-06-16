@@ -44,6 +44,19 @@ export async function getAccount(userId: string, email?: string) {
   return row;
 }
 
+/** Find or create the account for a phone-first user (keyed by `phone:<E.164>`), granting the
+ *  signup free checks on creation. The phone IS the identity in the new (Clerk-free) model. */
+export async function getAccountByPhone(phone: string) {
+  const id = `phone:${phone}`;
+  let row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
+  if (!row) {
+    const free = Math.max(0, (await getPolicy()).pricing.freeChecks || 0);
+    await db.insert(accounts).values({ clerkUserId: id, phone, callerId: phone, credits: free }).onConflictDoNothing();
+    row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
+  }
+  return row;
+}
+
 export async function chargeOneCredit(userId: string): Promise<boolean> {
   // Atomic guarded decrement: the WHERE credits>0 makes concurrent charges race-safe (no
   // read-then-write window, can never go negative). rowsAffected===1 ⇒ we actually charged.
