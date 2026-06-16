@@ -2,6 +2,7 @@
 // when we called and listened) and work out the fastest keypad route to a HUMAN. Runs on the cheapest
 // funded model — this is short text-in / JSON-out, so it costs a fraction of a cent per chain.
 import { config } from "../config";
+import { llm } from "../llm";
 
 // Cheapest model with credit for this job (transcript → structured route). Swap if you prefer.
 export const TREE_MODEL = "gemini-2.5-flash-lite";
@@ -31,16 +32,10 @@ Return ONLY compact JSON, no prose:
 TRANSCRIPT:
 ${transcript.slice(0, 4000)}`;
   try {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${TREE_MODEL}:generateContent?key=${config.geminiKey}`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", temperature: 0 } }),
-    });
-    if (!r.ok) return null;
+    // Routed through Helicone (see src/llm.ts) so tree-learn spend shows up tagged in the dashboard.
+    const txt = await llm(TREE_MODEL, prompt, { job: "tree-learn", json: true, temperature: 0, maxTokens: 400 });
     /* eslint-disable @typescript-eslint/no-explicit-any */
-    const d: any = await r.json();
-    const txt = ((d.candidates?.[0]?.content?.parts || []) as any[]).map((p) => p.text || "").join("");
-    const j = JSON.parse(txt);
+    const j: any = JSON.parse(txt);
     const path = ["direct_human", "simple_ivr", "deep_ivr"].includes(j.answerPath) ? j.answerPath : (j.ringsDirect ? "direct_human" : "simple_ivr");
     return {
       ringsDirect: !!j.ringsDirect,
