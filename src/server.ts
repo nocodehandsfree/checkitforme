@@ -1236,12 +1236,16 @@ app.get("/app/history", async (c) => {
     .where(inArray(callResults.finderUserId, [...ids]))
     .orderBy(desc(callResults.startedAt)).limit(80))
     .filter((r) => r.providerCallId);
-  return c.json(rows.map((r) => ({
-    cid: r.providerCallId, storeId: r.retailerId,
-    storeName: stores.get(r.retailerId)?.name || "A store",
-    categoryId: r.categoryId, category: cats.get(r.categoryId) || "",
-    ts: (r.startedAt || 0) * 1000, status: r.status, confirmed: r.confirmed,
-  })));
+  return c.json(rows.map((r) => {
+    const sName = stores.get(r.retailerId)?.name || "A store";
+    const l = chainLogoInfo(sName);
+    return {
+      cid: r.providerCallId, storeId: r.retailerId, storeName: sName,
+      categoryId: r.categoryId, category: cats.get(r.categoryId) || "",
+      ts: (r.startedAt || 0) * 1000, status: r.status, confirmed: r.confirmed,
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark,
+    };
+  }));
 });
 
 // Charge one credit for a definitive answer (idempotent per call id).
@@ -1720,11 +1724,26 @@ app.post("/api/admin/trainer/lock", async (c) => {
   const ch = (await db.select().from(chains).where(eq(chains.id, Number(b.chainId))))[0];
   const log = ch?.navLog ? (JSON.parse(ch.navLog) as number[]) : [];
   if (typeof b.recipe.seconds === "number") log.push(b.recipe.seconds);
+  // Bridge: write the locked recipe into the LIVE call's phone-tree directions so every real call to
+  // this chain navigates via it (the live agent reads chains.phoneTreeDefault as {{phone_tree}}).
+  const steps = Array.isArray(b.recipe.steps) ? (b.recipe.steps as Array<{ action?: string; value?: string }>) : [];
+  const direct = b.recipe.type === "direct" || steps.length === 0;
+  const treeText = direct
+    ? "A live person usually answers directly — no phone menu to work through."
+    : "To reach a live person: " + steps.map((s) => (s.action === "press" ? `press ${s.value}` : `say "${s.value}"`)).join(", then ") + ".";
+  const firstPress = steps.find((s) => s.action === "press");
+  const now = Math.floor(Date.now() / 1000);
   await db.update(chains).set({
     navType: b.recipe.type || null, navRecipe: JSON.stringify(b.recipe),
     navSeconds: typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null,
     navStatus: "locked", navConfidence: typeof b.confidence === "number" ? b.confidence : null,
-    navLog: JSON.stringify(log.slice(-10)), navUpdatedAt: Math.floor(Date.now() / 1000),
+    navLog: JSON.stringify(log.slice(-10)), navUpdatedAt: now,
+    // ↓ applied to live consumer calls (this is the bridge from documentation → real calls):
+    phoneTreeDefault: treeText, treeNote: treeText,
+    dtmfShortcut: firstPress ? String(firstPress.value || "") : null,
+    answerPath: steps.map((s) => `${s.action}:${s.value}`).join(">") || null,
+    ringsDirect: direct, avgTreeSeconds: typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null,
+    treeStatus: "learned", treeLearnedAt: now,
   }).where(eq(chains.id, Number(b.chainId)));
   return c.json({ ok: true });
 });

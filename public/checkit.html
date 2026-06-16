@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r38" />
+<meta name="x-rev" content="names-r39" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -1741,7 +1741,7 @@ async function restoreCall(cid, storeName, catName){
   if(!SEL_STORE.name) SEL_STORE.name=t('hist.acheck','Store check');
   if(!known && SEL_STORE.id!=null){
     const h=loadHist();
-    h.unshift({cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, categoryId:SEL_CAT, category:ct?ct.label:(catName||''), ts:Date.now(), status:o.status, confirmed:o.confirmed});
+    h.unshift({cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, logoUrl:SEL_STORE.logoUrl||null, logoWide:!!SEL_STORE.logoWide, logoDark:!!SEL_STORE.logoDark, categoryId:SEL_CAT, category:ct?ct.label:(catName||''), ts:Date.now(), status:o.status, confirmed:o.confirmed});
     localStorage.setItem('runnr_history', JSON.stringify(h.slice(0,60)));
   }
   showResult(o, cid);
@@ -2629,7 +2629,7 @@ function showResult(o, cid){
     <div class="railbar" id="railbar" style="display:none"></div>
     <div class="card">
       <div class="rhead ${cls}">
-        <span class="railchip${railClass({storeId:SEL_STORE.id})}" style="display:grid">${railFace({storeId:SEL_STORE.id,storeName:SEL_STORE.name})}</span>
+        <span class="railchip${railClass({storeId:SEL_STORE.id,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}" style="display:grid">${railFace({storeId:SEL_STORE.id,storeName:SEL_STORE.name,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}</span>
         <div style="min-width:0;flex:1">
           <div class="rhead-store">${esc(nm.base)}${nm.branch?` <span style="color:#c8c8d4;font-weight:600;font-size:13px">· ${esc(nm.branch)}</span>`:''}</div>
           <div class="rhead-status"><span class="rhead-glyph">${rbGlyph}</span> ${esc(statusShort)}</div>
@@ -2742,7 +2742,7 @@ function saveCheckToHistory(o,cid){
   const cat=(CATS.find(c=>c.id===SEL_CAT)||{}).label||'';
   const cats=(ASKED_CATS&&ASKED_CATS.length)?ASKED_CATS.map(x=>x.label):(cat?[cat]:[]);
   const h=loadHist();
-  const entry={ cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, categoryId:SEL_CAT, category:cat,
+  const entry={ cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, logoUrl:SEL_STORE.logoUrl||null, logoWide:!!SEL_STORE.logoWide, logoDark:!!SEL_STORE.logoDark, categoryId:SEL_CAT, category:cat,
               cats, categoryResults:o.categoryResults||null, ts:Date.now(), status:o.status, confirmed:o.confirmed, soldOut:!!o.soldOut, doesNotSell:!!o.doesNotSell, shipmentDay:o.shipmentDay||null, statusKey:o.statusKey||null };
   h.unshift(entry);
   localStorage.setItem('runnr_history', JSON.stringify(h.slice(0,60)));
@@ -2785,7 +2785,7 @@ async function openHistory(){
 async function openHistEntry(e){
   if(!e) return;
   if(!e.cid){ toast(t('toast.callgone','That call is no longer available')); return; } // instant hang-up: no transcript exists
-  SEL_STORE={id:e.storeId,name:e.storeName,carries:[]}; SEL_CAT=e.categoryId;
+  SEL_STORE={id:e.storeId,name:e.storeName,carries:[],logoUrl:e.logoUrl,logoWide:e.logoWide,logoDark:e.logoDark}; SEL_CAT=e.categoryId;
   SEL_CATS=e.categoryId?[e.categoryId]:[]; ASKED_CATS=(e.cats||[]).map(l=>({id:null,label:l}));
   // Replaying a past call — go straight to the transcript. Never flash the live "calling" view.
   toast(t('toast.loadingcall','Loading your call…'));
@@ -2802,10 +2802,11 @@ let RAIL_F={store:'',tone:''}, RAIL_CID=null;
 function railTone(e){ return e.confirmed===true?'in':(e.confirmed===false||e.soldOut||e.doesNotSell)?'out':'unk'; }
 function railBase(n){ return (n||'').split('—')[0].trim(); }
 // Monogram tile (transparent store logos drop in automatically once stores carry a logoUrl).
-function railClass(e){ const st=STORES.find(x=>x.id===e.storeId); return st&&st.logoUrl?((st.logoDark?' lite':'')+(st.logoWide?' widelogo':'')):''; }
+function railClass(e){ const st=STORES.find(x=>x.id===e.storeId)||{}; const lu=e.logoUrl||st.logoUrl, lw=e.logoWide??st.logoWide, ld=e.logoDark??st.logoDark; return lu?((ld?' lite':'')+(lw?' widelogo':'')):''; }
 function railFace(e){
   const st=STORES.find(x=>x.id===e.storeId);
-  if(st&&st.logoUrl) return `<img src="${esc(st.logoUrl)}" alt="" loading="lazy">`;
+  const lu=e.logoUrl||(st&&st.logoUrl);
+  if(lu) return `<img src="${esc(lu)}" alt="" loading="lazy">`;
   return storeWordmark(e.storeName, st&&st.storeType);
 }
 function railFiltered(){
