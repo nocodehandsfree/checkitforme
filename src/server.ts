@@ -1214,7 +1214,10 @@ app.post("/app/referral/claim", async (c) => {
 app.get("/app/history", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  const email = (u.email || c.req.query("email") || "").toLowerCase();
+  let email = (u.email || c.req.query("email") || "").toLowerCase();
+  // Phone-session tokens carry no email — resolve it from the account so the master's history
+  // (calls made under the email/Clerk account) unifies with the phone login.
+  if (!email) { const a = await getAccount(u.id); email = (a?.email || "").toLowerCase(); }
   const ids = new Set<string>([u.id]);
   if (email) {
     for (const a of await db.select().from(accounts)) {

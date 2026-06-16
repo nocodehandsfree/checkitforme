@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r30" />
+<meta name="x-rev" content="names-r31" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -1295,7 +1295,7 @@ function applyFlags(){
 function renderFooter(){
   const L=(POLICY.links)||{}, by=$('footYear'); if(by) by.textContent=new Date().getFullYear();
   const fb=$('footBrand'); if(fb) fb.textContent='';  // the brand name lives inside the logo now
-  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/checkitforme.png?v=2" alt="Check It For Me" style="height:20px;width:auto;object-fit:contain;border-radius:0;display:block">`; }
+  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:20px;width:auto;object-fit:contain;border-radius:0;display:block">`; }
   // Discord + X always shown; link to policy URLs when set, else a placeholder.
   const SOC=[['discord',ICO.discord,'Discord'],['x',ICO.x,'X']];
   const el=$('footSocials'); if(!el) return;
@@ -1499,7 +1499,7 @@ function openAuth(){
   setTimeout(()=>{try{$('auth_phone').focus();}catch(e){}},90);
 }
 function closeAuth(){ authCancelLink(); $('authOverlay').classList.remove('on'); }
-function authMark(){ return `<img src="/logos/checkitforme.png?v=2" alt="Check It For Me" style="height:30px;width:auto;display:block">`; }
+function authMark(){ return `<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:30px;width:auto;display:block">`; }
 function authDone(){ closeAuth(); toast("✓ You're in"); track('auth_success',{flow:AUTH.flow}); refreshAuth(); }
 // Background magic-link poll: resolves the moment the user taps the link (this tab or another).
 function authLinkPoll(promise){
@@ -2105,9 +2105,9 @@ function renderDemo(){
   body.innerHTML=`
     <div class="chat" style="margin-top:14px">
       <div class="bub-note">${t('demo.sys','Navigating phone tree…')}</div>
-      <div class="bub a"><span class="nm">CheckIt</span>${esc(d.q)}</div>
+      <div class="bub a"><span class="nm"><img src="/logos/check.png?v=1" alt="CheckIt" style="height:12px;width:auto;vertical-align:middle;display:inline-block"></span>${esc(d.q)}</div>
       <div class="bub c"><span class="nm">Clerk</span>${esc(d.a)}</div>
-      <div class="bub a"><span class="nm">CheckIt</span>${t('demo.thanks','Perfect, thanks!')}</div>
+      <div class="bub a"><span class="nm"><img src="/logos/check.png?v=1" alt="CheckIt" style="height:12px;width:auto;vertical-align:middle;display:inline-block"></span>${t('demo.thanks','Perfect, thanks!')}</div>
     </div>
     <div class="vdivide"><span data-i18n="demo.verdictlbl">the verdict</span></div>
     <div class="demoverdict">
@@ -2410,7 +2410,7 @@ function bubbleHTML(line){
   const m=line.match(/^(Agent|Clerk):\s*(.*)$/);
   if(!m) return `<div class="bub-note">${esc(line)}</div>`;
   const who=m[1]==='Agent'?'a':'c';
-  return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'CheckIt':'Clerk'}</span>${esc(m[2])}</div>`;
+  return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'<img src="/logos/check.png?v=1" alt="CheckIt" style="height:12px;width:auto;vertical-align:middle;display:inline-block">':'Clerk'}</span>${esc(m[2])}</div>`;
 }
 function chatBubbles(t){ return `<div class="chat">${(t||'').split('\n').filter(Boolean).map(bubbleHTML).join('')}</div>`; }
 function renderTranscriptLines(t){ return chatBubbles(t); }

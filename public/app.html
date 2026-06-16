@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="admin-r43" />
+<meta name="x-rev" content="admin-r44" />
 <title>Check It For Me — Admin</title>
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -242,7 +242,7 @@
 </head>
 <body class="authwait">
 <header>
-  <span class="hmark"><img src="/logos/checkitforme.png?v=2" alt="Check It For Me" style="height:20px;width:auto;object-fit:contain;display:block"></span>
+  <span class="hmark"><img src="/logos/check.png?v=1" alt="Check It For Me" style="height:20px;width:auto;object-fit:contain;display:block"></span>
   <h1><b>Admin</b></h1><span class="dot" title="live"></span>
   <span class="sub" id="clock"></span>
 </header>
@@ -1180,7 +1180,7 @@ function bubbles(t){
     const m=line.match(/^(Agent|Clerk):\s*(.*)$/);
     if(!m) return `<div class="bub-note">${esch(line)}</div>`;
     const who=m[1]==='Agent'?'a':'c';
-    return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'CheckIt':'Clerk'}</span>${esch(m[2])}</div>`;
+    return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'<img src="/logos/check.png?v=1" alt="CheckIt" style="height:12px;width:auto;vertical-align:middle;display:inline-block">':'Clerk'}</span>${esch(m[2])}</div>`;
   }).join('')+'</div>';
 }
 let RETAILERS=[];
@@ -2324,7 +2324,7 @@ async function ensureAuth(){
   w.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#0C0C12;background-image:radial-gradient(900px 400px at 50% -80px,rgba(74,222,128,.10),transparent 70%);z-index:50';
   w.innerHTML=`
   <div style="background:#1A1A24;border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:24px;max-width:460px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)">
-    <div style="display:flex;justify-content:center;margin:2px 0 12px"><img src="/logos/checkitforme.png?v=2" alt="Check It For Me" style="height:36px;width:auto;object-fit:contain"></div>
+    <div style="display:flex;justify-content:center;margin:2px 0 12px"><img src="/logos/check.png?v=1" alt="Check It For Me" style="height:36px;width:auto;object-fit:contain"></div>
     <div id="a_email">
       <h3 style="margin:0 0 4px;font-size:21px;font-weight:900">Admin</h3>
       <div style="color:#9a9aac;font-size:14px;margin-bottom:16px">Enter your email to continue.</div>

@@ -19,13 +19,16 @@ export const PACKS: Record<string, { credits: number; cents: number; label: stri
 // live-listen) the moment they log in by phone. Both are env-overridable; the defaults are the owner's
 // already-committed caller-ID number and master email.
 const OWNER_PHONE = (process.env.OWNER_PHONE || "+13106662331").trim();
-const OWNER_EMAIL = (process.env.OWNER_EMAIL || "fun@fungibles.com").trim().toLowerCase();
+// The master IDENTITY email — the account that owns history/credits across every login. This is NOT
+// process.env.OWNER_EMAIL (that var is the alerts inbox); it's the owner's comp identity. The phone
+// login ties to THIS so the master's existing history + credits follow them.
+const MASTER_EMAIL = (process.env.MASTER_EMAIL || "fun@fungibles.com").trim().toLowerCase();
 
 // Comp accounts (owner/testers) get unlimited free checks — never gated, never charged.
 export function isComp(email?: string | null): boolean {
   if (!email) return false;
   const e = email.toLowerCase();
-  if (e === OWNER_EMAIL) return true; // the master email is always comp, even if COMP_EMAILS is unset
+  if (e === MASTER_EMAIL) return true; // master email is always comp, even if COMP_EMAILS is unset
   const list = (process.env.COMP_EMAILS || "").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
   return list.includes(e);
 }
@@ -38,6 +41,12 @@ export async function getAccount(userId: string, email?: string) {
   } else if (email && !row.email) {
     await db.update(accounts).set({ email }).where(eq(accounts.clerkUserId, userId));
     row = { ...row, email };
+  }
+  // Pin the owner's phone account to the master identity so the master's history + credits unify —
+  // repairs an account created on the wrong email before the master-tie fix (runs on next /app/me).
+  if (row && userId === `phone:${OWNER_PHONE}` && (row.email || "").toLowerCase() !== MASTER_EMAIL) {
+    await db.update(accounts).set({ email: MASTER_EMAIL }).where(eq(accounts.clerkUserId, userId));
+    row = { ...row, email: MASTER_EMAIL };
   }
   return row;
 }
@@ -62,7 +71,7 @@ export async function grantCredits(userId: string, n: number, spentCents = 0) {
 export async function getAccountByPhone(phone: string) {
   const id = `phone:${phone}`;
   // Owner's cell → tie this phone account to the master email so comp/master powers light up on login.
-  const ownerEmail = phone === OWNER_PHONE ? OWNER_EMAIL : null;
+  const ownerEmail = phone === OWNER_PHONE ? MASTER_EMAIL : null;
   let row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
   if (!row) {
     const free = Math.max(0, (await getPolicy()).pricing.freeChecks || 0);
