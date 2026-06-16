@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r22" />
+<meta name="x-rev" content="names-r23" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -2045,9 +2045,11 @@ function closeSwitcher(){ const m=$('vsw_menu'); if(m) m.classList.remove('on');
 document.addEventListener('click',e=>{ const v=$('vsw'); if(v && !v.contains(e.target)) closeSwitcher(); const l=$('lsw'); if(l && !l.contains(e.target)) closeLang(); });
 function switchVertical(key){
   const sw=(window.SWITCHER||{}); const it=(sw.list||[]).find(x=>x.key===key); if(!it) return;
-  // Verticals are served as PATHS on the same domain now (checkitforme.com/pokemon, /onepiece,
-  // /toppsbasketball, /needoh) — go to the slug path, no more subdomain hops.
-  location.href = '/' + it.slug;
+  // GOAL: same-domain paths (/pokemon, /onepiece, …). But the backend 404s those right now, so we
+  // keep hopping to the working subdomain. Flip to `location.href='/'+it.slug` the moment the backend
+  // serves the slug paths.
+  const m=location.hostname.match(/(?:^|\.)((?:checkitforme|fungibles|runnr)\.[a-z]+)$/i);
+  location.href = m ? `${location.protocol}//${it.slug}.${m[1]}/` : `/r?brand=${key}`;
 }
 // Per-product "watch a call" demo. Add a category = add one entry (modular: Magic/Lorcana/Yu-Gi-Oh next).
 const DEMO_SCRIPTS={
