@@ -45,6 +45,12 @@ function rotatePick<T>(key: string, list: T[]): T | undefined {
 const VOICEMAIL_INSTRUCTION =
   "If you reach a voicemail, answering machine, or automated recording (a recorded greeting, an automated menu with no live person, or a beep) — do NOT say anything and end the call immediately. Never leave a message.";
 
+/** Kiosk-only store: has a vending kiosk but no staffed counter that sells packs. The agent asks
+ *  whether the kiosk is working/stocked rather than about a shelf shipment. Callers may also pass an
+ *  explicit kioskMode (from the check request) which wins over this inference. */
+const kioskOnly = (r: { hasKiosk?: boolean | null; sellsPacks?: boolean | null }): boolean =>
+  !!r.hasKiosk && r.sellsPacks === false;
+
 /**
  * Resolve the full set of agent dynamic variables for a restock call to a store, applying the
  * three-tier rule system: GLOBAL (the prompt itself) → CHAIN (chains.phoneTreeDefault) → STORE
@@ -56,6 +62,7 @@ export async function buildRestockVars(
   categoryId: number,
   specificProduct?: string,
   extraCategoryIds?: number[],
+  kioskMode?: boolean,
 ): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
@@ -96,6 +103,9 @@ export async function buildRestockVars(
       // any extras they multi-picked. It never auto-cascades from the store's carries field.
       other_categories: extraLabels.join(", "),
       ask_shipment_day: "",
+      // Kiosk-only store → the prompt asks about the vending kiosk, not a shelf shipment.
+      // Explicit request flag wins; otherwise inferred from the store's flags.
+      kiosk_mode: (kioskMode ?? kioskOnly(retailer)) ? "true" : "",
     },
   };
 }
@@ -152,6 +162,7 @@ interface TriggerArgs {
   openingTemplate?: string; // Test Bench: use the DRAFT opener instead of the live vt_opening setting
   finderUserId?: string;    // clerk id of whoever placed it (for finds privacy/headstart attribution)
   isPrivate?: boolean;      // keep this find out of the public feed (subscriber perk / paid privacy)
+  kioskMode?: boolean;      // kiosk-only store → agent asks about the vending kiosk, not a shelf shipment (else inferred from the store)
 }
 
 /** Most recent COMPLETED check by this finder for a store+category within `withinHours` (default 24h).
@@ -247,6 +258,8 @@ export async function triggerCall(a: TriggerArgs) {
       otherCategories: mode === "restock" ? otherCategories : [],
       askShipmentDay: a.askShipmentDay,
       voicemailPolicy,
+      // Kiosk-only store → agent asks about the vending kiosk. Explicit request flag wins; else inferred.
+      kioskMode: a.kioskMode ?? kioskOnly(retailer),
     });
     await db.update(callResults)
       .set({ providerCallId, status: "in_progress" })

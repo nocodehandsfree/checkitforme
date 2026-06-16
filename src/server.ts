@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { getCookie, setCookie } from "hono/cookie";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { WebSocketServer, type WebSocket } from "ws";
 import { and, desc, eq, gte, inArray, isNull, like, lte, or, sql } from "drizzle-orm";
@@ -79,6 +80,10 @@ app.use("/api/*", async (c, next) => {
   if (c.req.path === "/api/health") return next();
   // Admin key bypass for server-to-server store/zone management.
   if (config.adminToken && c.req.header("x-admin-token") === config.adminToken) return next();
+  // Clerk-free admin login: a signed `admin_session` cookie minted by /admin-login (token gate).
+  // This is how the operator dashboard authenticates now that Clerk is being removed.
+  const adminCookie = getCookie(c, "admin_session");
+  if (adminCookie) { const s = await verifySession(adminCookie); if (s && s.id === "admin") return next(); }
   const authz = c.req.header("authorization") ?? "";
   const tok = authz.startsWith("Bearer ") ? authz.slice(7) : "";
   if (!tok) return c.json({ error: "unauthorized" }, 401);
@@ -446,6 +451,20 @@ app.post("/app/email", async (c) => {
   // Opt-in email → Brevo (newsletter/alerts). Fire-and-forget so the UI isn't blocked on Brevo.
   if (e) brevoUpsertContact(e, { PHONE: u.phone || "" }).catch(() => {});
   return c.json({ ok: true, email: e || null });
+});
+
+// Clerk-free admin login: visit /admin-login?token=ADMIN_TOKEN once → sets a signed httpOnly
+// session cookie the /api/* gate accepts. No Clerk. The existing app.html then loads unchanged.
+app.get("/admin-login", async (c) => {
+  const token = c.req.query("token") || "";
+  if (!config.adminToken || token !== config.adminToken) return c.text("unauthorized", 401);
+  const jwt = await signSession("admin", "");
+  setCookie(c, "admin_session", jwt, { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
+  return c.redirect("/");
+});
+app.get("/admin-logout", (c) => {
+  setCookie(c, "admin_session", "", { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 0 });
+  return c.redirect("/");
 });
 
 // ---- Consumer (Runnr) public API — pay-per-check. Bypasses the /api/* Clerk gate by design. ----
@@ -1110,11 +1129,11 @@ app.post("/pub/check", async (c) => {
   // Phone-first model: no anonymous calls — every call must come from a verified-phone account.
   if ((await getPolicy()).flags.requirePhoneSignup) return c.json({ error: "signin_required" }, 401);
   if ((await pubCredits()) <= 0) return c.json({ error: "no_credits" }, 402);
-  const { retailerId, categoryId, specificProduct } = b;
+  const { retailerId, categoryId, specificProduct, kioskMode } = b;
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   try {
-    const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct });
+    const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, kioskMode });
     return c.json({ providerCallId: r.providerCallId, status: r.status });
   } catch (e) { return c.json({ error: String(e) }, 400); }
 });
@@ -1126,7 +1145,7 @@ app.post("/pub/check-live", async (c) => {
   const catIds = (Array.isArray(b.categoryIds) ? b.categoryIds : [b.categoryId]).map(Number).filter(Boolean);
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
-  const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct);
+  const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, undefined, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: RAILWAY_HOST });
 });
@@ -1199,13 +1218,13 @@ app.get("/app/me", async (c) => {
 app.post("/app/check", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  const { retailerId, categoryId, specificProduct } = await c.req.json();
+  const { retailerId, categoryId, specificProduct, kioskMode } = await c.req.json();
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
   if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
   try {
-    const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a) });
+    const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a), kioskMode });
     return c.json({ providerCallId: r.providerCallId, status: r.status });
   } catch (e) { return c.json({ error: String(e) }, 400); }
 });
@@ -1219,7 +1238,7 @@ app.post("/app/check-live", async (c) => {
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
   if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
-  const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) });
+  const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: RAILWAY_HOST });
 });
@@ -1993,13 +2012,13 @@ app.post("/pub/bridge-hangup", async (c) => {
   return c.json({ ok: true });
 });
 // Resolve a store + category, then place a bridge call to it. Used by Runnr "Listen live".
-async function bridgeStoreCall(retailerId: number, categoryIds: number[], specificProduct?: string, finder?: { userId?: string; isPrivate?: boolean }): Promise<{ room?: string; error?: string }> {
+async function bridgeStoreCall(retailerId: number, categoryIds: number[], specificProduct?: string, finder?: { userId?: string; isPrivate?: boolean }, kioskMode?: boolean): Promise<{ room?: string; error?: string }> {
   if (await isCallingPaused()) return { error: "calling_paused" }; // global spend kill-switch
   const primary = categoryIds[0];
   const extras = categoryIds.slice(1);
   // Resolve the SAME three-tier vars (global + chain + store phone tree, clarification, etc.) the
   // scheduled calls use — Listen-live was previously running on the bare global prompt only.
-  const v = await buildRestockVars(retailerId, primary, specificProduct, extras);
+  const v = await buildRestockVars(retailerId, primary, specificProduct, extras, kioskMode);
   if (!v || !v.retailer.phone) return { error: "store not found" };
   // Phone-first: dial AS the finder's own VERIFIED number (caller_id) when present. Plus the hard
   // duration cap from policy (the cost guarantee).

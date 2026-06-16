@@ -59,6 +59,9 @@ export class ElevenLabsProvider implements VoiceProvider {
             opening_line: p.openingLine ?? "",
             other_categories: (p.otherCategories ?? []).join(", "),
             ask_shipment_day: p.askShipmentDay ? "If it comes up naturally, also ask what day they usually get their shipments in." : "",
+            // Kiosk-only store: the prompt branches on this to ask about the vending kiosk
+            // (working/stocked) instead of a shelf shipment. "" = normal shelf check.
+            kiosk_mode: p.kioskMode ? "true" : "",
           },
         },
       }),
