@@ -95,6 +95,9 @@ export async function bootstrap() {
   // Referral growth loop: each account's shareable code + who referred them.
   await client.execute("ALTER TABLE accounts ADD COLUMN referral_code TEXT").catch(() => {});
   await client.execute("ALTER TABLE accounts ADD COLUMN referred_by TEXT").catch(() => {});
+  // Phone-first identity: verified cell + the caller ID we dial as (set once Twilio verifies it).
+  await client.execute("ALTER TABLE accounts ADD COLUMN phone TEXT").catch(() => {});
+  await client.execute("ALTER TABLE accounts ADD COLUMN caller_id TEXT").catch(() => {});
   // Statuses registry — the single source of truth for customer-facing call verdicts.
   await client.execute(`CREATE TABLE IF NOT EXISTS statuses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

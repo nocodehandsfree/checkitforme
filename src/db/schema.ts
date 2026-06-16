@@ -218,6 +218,10 @@ export const accounts = sqliteTable("accounts", {
   callsMade: integer("calls_made").notNull().default(0),
   referralCode: text("referral_code"),   // this user's shareable code (generated on demand)
   referredBy: text("referred_by"),        // clerk id of whoever referred them (set once)
+  // Phone-first identity: the verified cell number, and the number we dial AS for this user's calls
+  // (caller ID — set once Twilio has verified it). Free checks land on the account at signup.
+  phone: text("phone"),
+  callerId: text("caller_id"),
   createdAt: integer("created_at").notNull().default(now),
 });
 

@@ -31,7 +31,11 @@ export function isComp(email?: string | null): boolean {
 export async function getAccount(userId: string, email?: string) {
   let row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, userId)))[0];
   if (!row) {
-    await db.insert(accounts).values({ clerkUserId: userId, email: email ?? null }).onConflictDoNothing();
+    // Phone-first model: free checks land on the ACCOUNT at signup (replaces the anonymous pool).
+    // Flag-gated so the live anonymous flow is unchanged until we flip the whole model on.
+    const pol = await getPolicy();
+    const free = pol.flags.requirePhoneSignup ? Math.max(0, pol.pricing.freeChecks || 0) : 0;
+    await db.insert(accounts).values({ clerkUserId: userId, email: email ?? null, credits: free }).onConflictDoNothing();
     row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, userId)))[0];
   } else if (email && !row.email) {
     await db.update(accounts).set({ email }).where(eq(accounts.clerkUserId, userId));
