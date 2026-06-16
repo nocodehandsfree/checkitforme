@@ -50,6 +50,7 @@ import { getAccount, getAccountByPhone, chargeOneCredit, createCheckout, verifyS
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
 import { accounts } from "./db/schema";
 import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf } from "./voice/bridge";
+import { isCallingPaused, setCallingPaused, spendTodayCents } from "./redis";
 
 await bootstrap(); // apply migrations + seed catalog if empty
 
@@ -1444,6 +1445,15 @@ app.patch("/api/settings", async (c) => {
 // ---- ElevenLabs credit status (live if the key has user_read, else estimated) ----
 app.get("/api/credits", async (c) => c.json(await getCreditStatus()));
 
+// ---- Global calling kill-switch (cost runaway protection) ----
+app.get("/api/admin/calling/status", async (c) => c.json({ paused: await isCallingPaused(), spendTodayCents: await spendTodayCents() }));
+app.post("/api/admin/calling/pause", async (c) => {
+  const { paused } = await c.req.json().catch(() => ({}));
+  await setCallingPaused(paused !== false); // default to pausing
+  return c.json({ paused: await isCallingPaused() });
+});
+app.post("/api/admin/calling/resume", async (c) => { await setCallingPaused(false); return c.json({ paused: false }); });
+
 // ---- Reference data ----
 app.get("/api/categories", async (c) => c.json(await db.select().from(categories)));
 app.get("/api/chains", async (c) => c.json(await db.select().from(chains)));
@@ -1818,6 +1828,7 @@ app.post("/pub/bridge-hangup", async (c) => {
 });
 // Resolve a store + category, then place a bridge call to it. Used by Runnr "Listen live".
 async function bridgeStoreCall(retailerId: number, categoryIds: number[], specificProduct?: string, finder?: { userId?: string; isPrivate?: boolean }): Promise<{ room?: string; error?: string }> {
+  if (await isCallingPaused()) return { error: "calling_paused" }; // global spend kill-switch
   const primary = categoryIds[0];
   const extras = categoryIds.slice(1);
   // Resolve the SAME three-tier vars (global + chain + store phone tree, clarification, etc.) the

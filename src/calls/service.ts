@@ -7,6 +7,7 @@ import {
   accounts, callResults, categories, chains, retailers, scheduleTargets, schedules, watches, zoneRetailers, zones,
 } from "../db/schema";
 import { chargeOneCredit, isComp } from "../billing";
+import { isCallingPaused } from "../redis";
 
 /** Notify every active restock-watch for this store+category that it's back in stock, once. */
 async function notifyWatches(retailerId: number, categoryId: number, store: string, label: string) {
@@ -144,6 +145,7 @@ interface TriggerArgs {
 
 /** Place one call and record it. */
 export async function triggerCall(a: TriggerArgs) {
+  if (await isCallingPaused()) throw new Error("calling_paused"); // global spend kill-switch
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, a.retailerId)))[0];
   if (!retailer) throw new Error(`retailer ${a.retailerId} not found`);
   // Site-rail stores (e.g. Micro Center) carry a synthetic "nophone:" key — there is no line to dial.
