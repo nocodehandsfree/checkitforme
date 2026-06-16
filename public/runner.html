@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r17" />
+<meta name="x-rev" content="names-r18" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/fungibles-64.png">
 <link rel="apple-touch-icon" href="/logos/fungibles.png">
@@ -322,7 +322,8 @@ __BRAND_HEAD__
   /* Auth/account brand band: full-bleed banner that IS the F logo's own background —
      sampled from logos/fungibles.png so the mark sits on it seamlessly */
   #authOverlay .modal,#acctOverlay .modal{overflow:hidden}
-  #auth_logo,#acct_logo{margin:-22px -22px 16px !important;background:linear-gradient(180deg,#5B1E99,#A65CED);padding:13px 16px;display:flex;align-items:center;justify-content:flex-start}
+  /* Sign-up / account modal: no purple band — the logo sits upper-left on the modal's own grey bg. */
+  #auth_logo,#acct_logo{margin:-22px -22px 16px !important;background:var(--sheet);padding:16px 18px 4px;display:flex;align-items:center;justify-content:flex-start}
   #authOverlay .x,#acctOverlay .x{color:rgba(255,255,255,.95);z-index:2;top:8px;right:10px;width:28px;height:28px;display:grid;place-items:center;font-size:0}
   #authOverlay .x::before,#acctOverlay .x::before{content:'';width:13px;height:13px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 13 13' fill='none'%3E%3Cpath d='M2 2l9 9M11 2l-9 9' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat}
   /* OAuth: logo-only tiles in OUR chrome — same family as the footer social tiles */
@@ -2044,7 +2045,7 @@ function closeSwitcher(){ const m=$('vsw_menu'); if(m) m.classList.remove('on');
 document.addEventListener('click',e=>{ const v=$('vsw'); if(v && !v.contains(e.target)) closeSwitcher(); const l=$('lsw'); if(l && !l.contains(e.target)) closeLang(); });
 function switchVertical(key){
   const sw=(window.SWITCHER||{}); const it=(sw.list||[]).find(x=>x.key===key); if(!it) return;
-  const m=location.hostname.match(/(?:^|\.)((?:fungibles|runnr)\.[a-z]+)$/i);
+  const m=location.hostname.match(/(?:^|\.)((?:checkitforme|fungibles|runnr)\.[a-z]+)$/i);
   location.href = m ? `${location.protocol}//${it.slug}.${m[1]}/` : `/r?brand=${key}`;
 }
 // Per-product "watch a call" demo. Add a category = add one entry (modular: Magic/Lorcana/Yu-Gi-Oh next).
@@ -2081,11 +2082,15 @@ function renderDemo(){
 }
 // Vertical micro-site: it's dedicated to ONE product — lock the category and remove the whole picker.
 function applyBrand(){
-  if(!BRAND||!BRAND.category) return;
+  // Apex (checkitforme.com → the default "runner" brand) LEADS WITH POKÉMON: pre-lock the Pokémon
+  // category so the page opens in the Pokémon experience, while the product switcher stays so visitors
+  // can hop to the other verticals. Real verticals (pokemon.*, onepiece.*, …) use their own category.
+  const wantCat = (BRAND && BRAND.category) || ((BRAND && BRAND.key === 'runner') ? 'Pokémon' : null);
+  if(!wantCat) return;
   // Tolerant match: accent-fold + drop "TCG"/"cards" so "One Piece TCG" ↔ "One Piece" still resolves.
   const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]','g'),'').replace(/\b(tcg|cards?|trading card game)\b/g,'').replace(/[^a-z0-9]+/g,'').trim();
-  const want=norm(BRAND.category);
-  BRAND_CAT = CATS.find(c=>c.label.toLowerCase()===BRAND.category.toLowerCase()) || CATS.find(c=>norm(c.label)===want) || null;
+  const want=norm(wantCat);
+  BRAND_CAT = CATS.find(c=>c.label.toLowerCase()===wantCat.toLowerCase()) || CATS.find(c=>norm(c.label)===want) || null;
   if(!BRAND_CAT) return;
   const card=$('catcard'); if(card) card.style.display='none'; // the product is implied by the site
 }
@@ -2915,7 +2920,7 @@ function openHandoff(){
       <details class="ho-preview">
         <summary>👁 ${t('ho.s4.preview','Preview what the driver sees')}</summary>
         <div class="ho-dv">
-          <div class="tag">runner.fungibles.com/d/4QK9</div>
+          <div class="tag">checkitforme.com/d/4QK9</div>
           <h4>${tf('ho.dv.title',"You've got a <b>$<span class=\"ho-bk-bonus\">25</span></b> pickup 🏃",{})}</h4>
           <button class="paybtn" onclick="return false"> ${t('ho.dv.pay','Add card to Apple Pay (60 sec)')}</button>
           <ol>
@@ -2953,9 +2958,9 @@ function hoRender(){
   const m=$('ho_msg');
   if(m){
     const dropLine=HO.drop==='home'?t('ho.msg.home','drive it to my place (address in the link)'):t('ho.msg.ship','drop it at the USPS to ship — postage is on the card');
-    const txt=tf('ho.msg',"Hey! Quick paid pickup 🏃 I'll cover the item + a ${b} bonus to you on drop-off.\n\n1) Tap to add a prepaid card to Apple Pay (60 sec):\n   runner.fungibles.com/d/4QK9\n2) Inside {s}, grab 1 {p}\n3) Pay with that card (it only works for this one buy)\n4) Then {d}\n\nTap Done in the link and your ${b} hits instantly. Thank you!! 🙏",{b:HO.bonus,s:findStoreName(),p:findProductLabel(),d:dropLine});
+    const txt=tf('ho.msg',"Hey! Quick paid pickup 🏃 I'll cover the item + a ${b} bonus to you on drop-off.\n\n1) Tap to add a prepaid card to Apple Pay (60 sec):\n   checkitforme.com/d/4QK9\n2) Inside {s}, grab 1 {p}\n3) Pay with that card (it only works for this one buy)\n4) Then {d}\n\nTap Done in the link and your ${b} hits instantly. Thank you!! 🙏",{b:HO.bonus,s:findStoreName(),p:findProductLabel(),d:dropLine});
     m.dataset.raw=txt;
-    m.innerHTML=esc(txt).replace('runner.fungibles.com/d/4QK9','<span class="link">runner.fungibles.com/d/4QK9</span>');
+    m.innerHTML=esc(txt).replace('checkitforme.com/d/4QK9','<span class="link">checkitforme.com/d/4QK9</span>');
   }
 }
 function hoBonus(d){ HO.bonus=Math.max(10,Math.min(60,HO.bonus+d)); hoRender(); }
