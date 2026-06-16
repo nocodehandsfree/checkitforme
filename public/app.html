@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="admin-r42" />
+<meta name="x-rev" content="admin-r43" />
 <title>Check It For Me — Admin</title>
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -1180,7 +1180,7 @@ function bubbles(t){
     const m=line.match(/^(Agent|Clerk):\s*(.*)$/);
     if(!m) return `<div class="bub-note">${esch(line)}</div>`;
     const who=m[1]==='Agent'?'a':'c';
-    return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'Fungie':'Clerk'}</span>${esch(m[2])}</div>`;
+    return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'CheckIt':'Clerk'}</span>${esch(m[2])}</div>`;
   }).join('')+'</div>';
 }
 let RETAILERS=[];

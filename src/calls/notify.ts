@@ -18,14 +18,14 @@ export async function notifyInStock(store: string, category: string, retailerId:
         method: "POST",
         headers: { "api-key": brevoApiKey, "Content-Type": "application/json" },
         body: JSON.stringify({
-          sender: { name: "Fungie Talk", email: senderEmail },
+          sender: { name: "CheckIt", email: senderEmail },
           to: [{ email: ownerEmail }],
           subject: `🟢 In stock: ${store} — ${category}`,
           htmlContent: `<div style="font-family:Inter,Arial,sans-serif;color:#111;max-width:520px">
             <h2 style="color:#16a34a;margin:0 0 8px">${esc(store)} — ${esc(category)} is IN 🟢</h2>
             <p style="font-size:15px">${esc(line)}</p>
             <p><a href="${link}" style="display:inline-block;background:#22C55E;color:#06210f;padding:11px 18px;border-radius:8px;text-decoration:none;font-weight:700">See the call &amp; transcript →</a></p>
-            <p style="color:#999;font-size:12px">Fungie Talk</p></div>`,
+            <p style="color:#999;font-size:12px">CheckIt</p></div>`,
           textContent: `${line}\nSee the call: ${link}`,
         }),
       });
