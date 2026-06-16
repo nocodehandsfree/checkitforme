@@ -61,7 +61,9 @@ export async function getAccountByPhone(phone: string) {
   let row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
   if (!row) {
     const free = Math.max(0, (await getPolicy()).pricing.freeChecks || 0);
-    await db.insert(accounts).values({ clerkUserId: id, phone, callerId: phone, credits: free }).onConflictDoNothing();
+    // NOTE: do NOT set caller_id here — a number is only usable as a From after Twilio's caller-ID
+    // verification call (/auth/callerid). caller_id stays null until then; calls fall back to the house line.
+    await db.insert(accounts).values({ clerkUserId: id, phone, credits: free }).onConflictDoNothing();
     row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
   }
   return row;

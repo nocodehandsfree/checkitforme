@@ -31,7 +31,7 @@ async function main() {
   const a = await getAccountByPhone("+13105550001");
   ok(!!a && a.clerkUserId === "phone:+13105550001", "account keyed by phone:<E.164>");
   ok(a!.credits === 1, "signup grants freeChecks (1)");
-  ok(a!.phone === "+13105550001" && a!.callerId === "+13105550001", "phone + default caller_id set");
+  ok(a!.phone === "+13105550001" && a!.callerId == null, "phone set; caller_id stays null until Twilio-verified");
   const a2 = await getAccountByPhone("+13105550001");
   ok(a2!.credits === 1, "re-get does NOT double-grant the free check");
 

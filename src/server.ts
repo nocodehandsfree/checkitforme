@@ -961,8 +961,15 @@ app.get("/pub/community/:id/image", async (c) => {
   const m = u.match(/^data:([^;]+);base64,(.*)$/s);
   if (!m) return c.notFound();
   const buf = Buffer.from(m[2], "base64");
+  // XSS guard: never serve user content as a script-capable type (e.g. image/svg+xml can carry
+  // <script>). Whitelist raster types; anything else is forced to a non-renderable download, with
+  // no-sniff + a locked-down CSP so the browser can't execute it.
+  const SAFE_IMG = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+  const ct = SAFE_IMG.has((m[1] || "").toLowerCase()) ? m[1] : "application/octet-stream";
   c.header("Cache-Control", "public, max-age=86400");
-  return c.body(buf, 200, { "Content-Type": m[1] || "image/jpeg" });
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header("Content-Security-Policy", "default-src 'none'; sandbox");
+  return c.body(buf, 200, { "Content-Type": ct });
 });
 // Hand the phone a presigned R2 URL so it uploads the photo directly (bytes never hit our server).
 app.post("/pub/community/upload-url", async (c) => {
@@ -988,7 +995,7 @@ app.post("/pub/community/post", async (c) => {
   // Accept: our R2 public base, our own /uploads, or a small inline data-URL image (pre-R2 fallback).
   const allowed = (process.env.R2_PUBLIC_BASE || "").replace(/\/$/, "");
   const okHost = (allowed && b.imageUrl.startsWith(allowed)) || b.imageUrl.startsWith("/uploads/")
-    || (b.imageUrl.startsWith("data:image/") && b.imageUrl.length <= 500_000);
+    || (b.imageUrl.startsWith("data:image/") && !/^data:image\/svg/i.test(b.imageUrl) && b.imageUrl.length <= 500_000);
   if (!okHost) return c.json({ error: "image must be uploaded via our upload URL" }, 400);
   const u = await verifyClerkToken(c.req.header("Authorization"));
   const [row] = await db.insert(communityPosts).values({
@@ -1174,11 +1181,15 @@ app.get("/app/me", async (c) => {
   // verification before we actually dial AS it is Phase 2). Server-sourced, can't be spoofed.
   if (a && !a.phone) {
     const phone = await clerkPrimaryPhone(u.id);
-    if (phone) { await db.update(accounts).set({ phone, callerId: a.callerId ?? phone }).where(eq(accounts.clerkUserId, u.id)); a.phone = phone; }
+    if (phone) { await db.update(accounts).set({ phone }).where(eq(accounts.clerkUserId, u.id)); a.phone = phone; }
   }
   return c.json({
     credits: comp ? 9999 : (a?.credits ?? 0), subscription: comp ? "active" : (a?.subscription ?? "none"),
-    comp, callsMade: a?.callsMade ?? 0, phone: a?.phone ?? null, catalog: { sub: SUB, packs: PACKS },
+    comp, callsMade: a?.callsMade ?? 0, phone: a?.phone ?? null,
+    // caller_id is only set after Twilio's caller-ID verify call → the "create your agent" panel uses
+    // callerIdReady to know whether to prompt for it.
+    callerId: a?.callerId ?? null, callerIdReady: !!a?.callerId,
+    catalog: { sub: SUB, packs: PACKS },
   });
 });
 // Authenticated check — verifies the user has credits, places the call. Charged only on a real answer.
