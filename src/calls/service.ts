@@ -472,6 +472,19 @@ export async function getCreditStatus() {
   return shape(used, Number.isFinite(lim) && lim > 0 ? lim : null, null, "estimated");
 }
 
+/** Charge the finder ONE credit for a call, exactly once. Atomic: the `charged_at` null→now flip is
+ *  the race guard, so concurrent finalizers (poller + webhook + retries, across instances) can't
+ *  double-bill. Returns true only if a credit was actually taken (comp accounts are marked charged
+ *  but pay nothing). */
+export async function chargeCallOnce(callId: number, finderUserId: string): Promise<boolean> {
+  const won = await db.update(callResults).set({ chargedAt: Math.floor(Date.now() / 1000) })
+    .where(and(eq(callResults.id, callId), isNull(callResults.chargedAt)));
+  if ((won.rowsAffected ?? 0) === 0) return false; // already charged
+  const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, finderUserId)))[0];
+  if (acct && !isComp(acct.email)) return chargeOneCredit(finderUserId);
+  return false; // comp / no account: marked charged, no credit taken
+}
+
 /** Poll the provider for any calls still in flight and save their outcomes. Returns how many finalized. */
 export async function ingestPending(): Promise<number> {
   const pending = await db.select().from(callResults).where(
@@ -504,14 +517,9 @@ export async function ingestPending(): Promise<number> {
     }).where(eq(callResults.id, row.id));
 
     // Server-side billing: charge the finder ONE credit on a DEFINITIVE answer, exactly once.
-    // Atomic — only the first finalizer flips charged_at (null→now) and only it charges, so the
-    // poller, the webhook, and any retry can't double-bill, and the client can't dodge it.
+    // (chargeCallOnce is atomic — the poller, the webhook, and any retry can't double-bill.)
     if (row.finderUserId && outcome.status === "completed" && (primaryConfirmed === true || primaryConfirmed === false)) {
-      const won = await db.update(callResults).set({ chargedAt: now() }).where(and(eq(callResults.id, row.id), isNull(callResults.chargedAt)));
-      if ((won.rowsAffected ?? 0) > 0) {
-        const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, row.finderUserId)))[0];
-        if (acct && !isComp(acct.email)) await chargeOneCredit(row.finderUserId);
-      }
+      await chargeCallOnce(row.id, row.finderUserId);
     }
 
     const store = (await db.select().from(retailers).where(eq(retailers.id, row.retailerId)))[0];

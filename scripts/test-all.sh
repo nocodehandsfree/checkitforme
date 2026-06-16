@@ -19,6 +19,7 @@ run "unit: best-bet"   "$ENV $TSX scripts/test-bestbet.ts"
 run "unit: schedules"  "env DATABASE_URL=file:./.t-sch.db $ENV $TSX scripts/test-schedules.ts; rm -f .t-sch.db"
 run "unit: referrals"  "env DATABASE_URL=file:./.t-ref.db $ENV $TSX scripts/test-referrals.ts; rm -f .t-ref.db"
 run "unit: receipt"    "$ENV $TSX scripts/test-receipt.ts"
+  run "unit: auth/billing" "env DATABASE_URL=file:./.t-auth.db $ENV $TSX scripts/test-auth.ts; rm -f .t-auth.db"
 run "integration: growth/CMS/community" "bash scripts/test-growth.sh"
 
 echo ""
