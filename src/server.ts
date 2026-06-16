@@ -181,7 +181,7 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string): str
       ...seoGraph(brand, plainName),
     ] })}</script>`,
   ].join("\n");
-  return page("runner.html")
+  return page("checkit.html")
     .replace(/__BRAND_HEAD__/g, head)
     .replace(/__BRAND_JSON__/g, JSON.stringify({ key: brand.key, name: brand.name, category: brand.category, accent: brand.accent, accent2: brand.accent2 || brand.accent, logoUrl: brand.logoUrl || "", emoji: brand.emoji }))
     .replace(/__BRAND_LOGO__/g, brand.logo || `${brand.emoji} ${brand.name}`)
