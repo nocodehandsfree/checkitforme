@@ -236,8 +236,10 @@ export const settings = sqliteTable("settings", {
 
 /** A Runnr customer account (keyed by Clerk user id). Holds credits + subscription state. */
 export const accounts = sqliteTable("accounts", {
-  clerkUserId: text("clerk_user_id").primaryKey(),
+  clerkUserId: text("clerk_user_id").primaryKey(), // Clerk id, OR "phone:<E.164>" for phone-first users
   email: text("email"),
+  phone: text("phone"),         // E.164 cell for phone-first (Clerk-free) identity
+  callerId: text("caller_id"),  // verified caller-ID number for this account's outbound calls
   credits: integer("credits").notNull().default(0),
   subscription: text("subscription").notNull().default("none"), // "none" | "active"
   stripeCustomerId: text("stripe_customer_id"),
@@ -246,10 +248,6 @@ export const accounts = sqliteTable("accounts", {
   callsMade: integer("calls_made").notNull().default(0),
   referralCode: text("referral_code"),   // this user's shareable code (generated on demand)
   referredBy: text("referred_by"),        // clerk id of whoever referred them (set once)
-  // Phone-first identity: the verified cell number, and the number we dial AS for this user's calls
-  // (caller ID — set once Twilio has verified it). Free checks land on the account at signup.
-  phone: text("phone"),
-  callerId: text("caller_id"),
   createdAt: integer("created_at").notNull().default(now),
 });
 
