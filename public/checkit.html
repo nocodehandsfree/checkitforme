@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r33" />
+<meta name="x-rev" content="names-r34" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -117,6 +117,20 @@ __BRAND_HEAD__
   .verdict .title{font-size:25px;font-weight:900;letter-spacing:-.6px;line-height:1.08}
   .verdict.in .title{color:var(--green)} .verdict.out .title{color:var(--red)} .verdict.unk .title{color:#FBBF24} .verdict.soon .title{color:#F59E0B}
   .vstore{text-align:center;color:#d6d6e0;font-size:14.5px;font-weight:600;margin-top:9px}
+  /* check-deck result banner + the small status under the store name */
+  .rstatus{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+  .rstatus.in{color:var(--green)} .rstatus.out{color:var(--red)} .rstatus.unk{color:#FBBF24} .rstatus.soon{color:#F59E0B}
+  .resbanner{display:flex;align-items:center;gap:12px;border-radius:16px;padding:13px 15px;margin-top:14px;border:1px solid var(--border)}
+  .resbanner .rb-ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;font-size:17px;font-weight:900;color:#06210f}
+  .resbanner .rb-t{font-weight:900;font-size:16px;letter-spacing:-.3px;line-height:1.1}
+  .resbanner .rb-m{color:var(--muted);font-size:11.5px;font-weight:600;margin-top:2px}
+  .resbanner.in{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.4)} .resbanner.in .rb-ic{background:var(--green)} .resbanner.in .rb-t{color:var(--green)}
+  .resbanner.out{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.35)} .resbanner.out .rb-ic{background:var(--red);color:#fff} .resbanner.out .rb-t{color:var(--red)}
+  .resbanner.unk{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.35)} .resbanner.unk .rb-ic{background:#FBBF24} .resbanner.unk .rb-t{color:#FBBF24}
+  .resbanner.soon{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.35)} .resbanner.soon .rb-ic{background:#F59E0B} .resbanner.soon .rb-t{color:#F59E0B}
+  /* logged-out homepage = the focused view (hero + check card). Retired modules hidden for everyone. */
+  #truststrip,#demo{display:none!important}
+  #earndemo{display:none} body.authed #earndemo{display:block}
   .vstore b{color:#fff;font-weight:800}
   .vnote{text-align:center;color:var(--muted);font-size:13px;line-height:1.5;margin:7px auto 2px;max-width:330px}
   /* clean secondary action button — replaces the heavy gradient buttons */
@@ -159,7 +173,7 @@ __BRAND_HEAD__
   .bub.a{align-self:flex-end;background:linear-gradient(180deg,rgba(74,222,128,.2),rgba(74,222,128,.13));border:1px solid rgba(74,222,128,.32);color:#eafff2;border-bottom-right-radius:5px}
   .bub.a .nm{color:var(--green)}
   .bub.c{align-self:flex-start;background:#20202b;border:1px solid var(--border);color:#e9e9f2;border-bottom-left-radius:5px}
-  .bub.c .nm{color:var(--purple)}
+  .bub.c .nm{color:#8a8a98}
   .bub-note{align-self:center;font-size:12px;color:var(--muted);font-style:italic;text-align:center;padding:2px 0}
   /* live bubbles pop in one at a time as the call happens */
   @keyframes bubIn{from{opacity:0;transform:translateY(10px) scale(.95)}to{opacity:1;transform:none}}
@@ -191,7 +205,7 @@ __BRAND_HEAD__
   .plan .pp{font-weight:900;font-size:17px;white-space:nowrap}
   .plan .pp span{color:var(--muted);font-size:12px;font-weight:600}
   .psep{text-align:center;color:var(--muted);font-size:12px;margin:14px 0 4px}
-  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--accent,#4ADE80);color:#06210f;border:none;padding:12px 19px;border-radius:30px;font-weight:800;font-size:13.5px;transition:transform .25s;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.55);white-space:nowrap;display:flex;align-items:center;gap:8px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--green);color:#06210f;border:none;padding:12px 19px;border-radius:30px;font-weight:800;font-size:13.5px;transition:transform .25s;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.55);white-space:nowrap;display:flex;align-items:center;gap:8px}
   .toast svg path,.toast svg circle{stroke:#06210f}
   .toast.show{transform:translateX(-50%) translateY(0)}
   .hidden{display:none}
@@ -1475,11 +1489,9 @@ function renderAuth(){
   // (Low-credit upsell card removed — owner asked to keep the home page uncluttered.)
   // Journey-aware reduction: visitors get the demo (they need convincing); members don't.
   // Score-sharing is a member loop — visitors only see "Add your store" inside Earn.
-  // Logged-out = the bare, focused homepage (hero + the check card). Logging in unlocks the extra
-  // modules. The Target demo + the top trust strip are retired entirely.
-  const dm=$('demo'); if(dm) dm.style.display='none';
-  const ts=$('truststrip'); if(ts) ts.style.display='none';
-  const ed=$('earndemo'); if(ed) ed.style.display = isAuthed() ? '' : 'none';
+  // Logged-out = the bare, focused homepage (hero + check card). Logged-in unlocks the extra modules.
+  // Retired (demo, trust strip) + conditional (earn) modules are driven by CSS (body.authed) so no flash.
+  document.body.classList.toggle('authed', isAuthed() || localStorage.getItem('runnr_authed')==='1');
   if(!isAuthed()){ const sr=$('scoresRow'); if(sr) sr.style.display='none'; }
 }
 function signIn(){ openAuth(); }
@@ -2115,9 +2127,9 @@ function renderDemo(){
   body.innerHTML=`
     <div class="chat" style="margin-top:14px">
       <div class="bub-note">${t('demo.sys','Navigating phone tree…')}</div>
-      <div class="bub a"><span class="nm"><img src="/logos/check.png?v=1" alt="CheckIt" style="height:12px;width:auto;vertical-align:middle;display:inline-block"></span>${esc(d.q)}</div>
+      <div class="bub a"><span class="nm">Check AI</span>${esc(d.q)}</div>
       <div class="bub c"><span class="nm">Clerk</span>${esc(d.a)}</div>
-      <div class="bub a"><span class="nm"><img src="/logos/check.png?v=1" alt="CheckIt" style="height:12px;width:auto;vertical-align:middle;display:inline-block"></span>${t('demo.thanks','Perfect, thanks!')}</div>
+      <div class="bub a"><span class="nm">Check AI</span>${t('demo.thanks','Perfect, thanks!')}</div>
     </div>
     <div class="vdivide"><span data-i18n="demo.verdictlbl">the verdict</span></div>
     <div class="demoverdict">
@@ -2420,7 +2432,7 @@ function bubbleHTML(line){
   const m=line.match(/^(Agent|Clerk):\s*(.*)$/);
   if(!m) return `<div class="bub-note">${esc(line)}</div>`;
   const who=m[1]==='Agent'?'a':'c';
-  return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'<img src="/logos/check.png?v=1" alt="CheckIt" style="height:12px;width:auto;vertical-align:middle;display:inline-block">':'Clerk'}</span>${esc(m[2])}</div>`;
+  return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'Check AI':'Store'}</span>${esc(m[2])}</div>`;
 }
 function chatBubbles(t){ return `<div class="chat">${(t||'').split('\n').filter(Boolean).map(bubbleHTML).join('')}</div>`; }
 function renderTranscriptLines(t){ return chatBubbles(t); }
@@ -2586,22 +2598,26 @@ function showResult(o, cid){
 
   const nm=splitStoreName(SEL_STORE.name);
   const addr=((STORES.find(x=>x.id===SEL_STORE.id)||{}).location)||SEL_STORE.location||'';
+  // check-deck verdict banner + the small status line under the store name
+  const fmtMS=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+  const statusShort = cls==='in'?'In stock — confirmed':cls==='out'?'Not in stock':cls==='soon'?'Restock incoming':'No clear answer';
+  const bannerMeta = (_totS?('done in '+fmtMS(_totS)+' · '):'') + 'transcript saved';
+  const rbGlyph = cls==='in'?'✓':cls==='out'?'✕':cls==='soon'?'🚚':'?';
   $('result').innerHTML = `
     <div class="railbar" id="railbar" style="display:none"></div>
     <div class="card">
-      <div class="verdict ${cls}"><div class="vmark">${vicon(big,cls)}</div><div class="title">${title}</div></div>
-      <div class="vsrow">
+      <div class="vsrow" style="margin-bottom:2px">
         <span class="railchip${railClass({storeId:SEL_STORE.id})}" style="display:grid">${railFace({storeId:SEL_STORE.id,storeName:SEL_STORE.name})}</span>
         <div style="min-width:0;flex:1;text-align:left">
           <div style="font-weight:800;font-size:15.5px;letter-spacing:-.2px">${esc(nm.base)}${nm.branch?` <span style="color:#c8c8d4;font-weight:600;font-size:13px">· ${esc(nm.branch)}</span>`:''}</div>
-          ${addr?`<div style="color:var(--muted);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(addr)}</div>`:''}
-          <div style="color:#c8c8d4;font-size:12px;font-weight:700;margin-top:3px">${esc(headLabel)}</div>
+          <div class="rstatus ${cls}">${esc(statusShort)}</div>
+          <div style="color:var(--muted);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${[esc(addr),esc(headLabel)].filter(Boolean).join(' · ')}</div>
         </div>
       </div>
-      ${note?`<div class="vnote">${note}</div>`:''}
-      ${recap?`<div style="color:var(--muted);font-size:11.5px;font-weight:600;margin-top:8px">🧭 We ${esc(recap)}.</div>`:''}
       ${breakdown}
       ${proof}
+      <div class="resbanner ${cls}"><div class="rb-ic">${rbGlyph}</div><div style="min-width:0"><div class="rb-t">${title}</div><div class="rb-m">${esc(bannerMeta)}</div></div></div>
+      ${note?`<div class="vnote" style="margin-top:10px">${note}</div>`:''}
       ${inActions}
     </div>
     ${upsell}
