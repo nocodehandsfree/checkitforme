@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { getCookie, setCookie } from "hono/cookie";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { WebSocketServer, type WebSocket } from "ws";
 import { and, desc, eq, gte, inArray, isNull, like, lte, or, sql } from "drizzle-orm";
@@ -76,6 +77,10 @@ app.use("/api/*", async (c, next) => {
   if (c.req.path === "/api/health") return next();
   // Admin key bypass for server-to-server store/zone management.
   if (config.adminToken && c.req.header("x-admin-token") === config.adminToken) return next();
+  // Clerk-free admin login: a signed `admin_session` cookie minted by /admin-login (token-gated).
+  // This is how the operator dashboard authenticates as Clerk is removed.
+  const adminCookie = getCookie(c, "admin_session");
+  if (adminCookie) { const s = await verifySession(adminCookie); if (s && s.id === "admin") return next(); }
   const authz = c.req.header("authorization") ?? "";
   const tok = authz.startsWith("Bearer ") ? authz.slice(7) : "";
   if (!tok) return c.json({ error: "unauthorized" }, 401);
@@ -85,6 +90,20 @@ app.use("/api/*", async (c, next) => {
     if (allow.length && !allow.includes(String(payload.sub))) return c.json({ error: "forbidden" }, 403);
     return next();
   } catch { return c.json({ error: "unauthorized" }, 401); }
+});
+
+// Clerk-free admin login: visit /admin-login?token=ADMIN_TOKEN once → sets a signed httpOnly
+// session cookie the /api/* gate accepts. No Clerk. The existing app.html then loads unchanged.
+app.get("/admin-login", async (c) => {
+  const token = c.req.query("token") || "";
+  if (!config.adminToken || token !== config.adminToken) return c.text("unauthorized", 401);
+  const jwt = await signSession("admin", "");
+  setCookie(c, "admin_session", jwt, { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
+  return c.redirect("/");
+});
+app.get("/admin-logout", (c) => {
+  setCookie(c, "admin_session", "", { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 0 });
+  return c.redirect("/");
 });
 
 // Verify a Clerk session token from any signed-in user (Runnr customers, not just the owner allowlist).
