@@ -17,7 +17,7 @@ import { config } from "./config";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, benchTestCall, buildRestockVars, callZone, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, retailersWithStatus, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, retailersWithStatus, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher } from "./brands";
 import { getPolicy, setPolicy, publicPolicy } from "./policy";
@@ -1883,9 +1883,12 @@ app.post("/webhooks/elevenlabs", async (c) => {
         status: o.status, confirmed: o.confirmed, shipmentDayHeard: o.shipmentDay,
         summary: o.summary, transcript: o.transcript, completedAt: Math.floor(Date.now() / 1000),
       }).where(eq(callResults.id, o.callId));
-      if (o.shipmentDay) {
-        const row = (await db.select().from(callResults).where(eq(callResults.id, o.callId)))[0];
-        if (row) await db.update(retailers).set({ shipmentDay: o.shipmentDay }).where(eq(retailers.id, row.retailerId));
+      const row = (await db.select().from(callResults).where(eq(callResults.id, o.callId)))[0];
+      if (o.shipmentDay && row) await db.update(retailers).set({ shipmentDay: o.shipmentDay }).where(eq(retailers.id, row.retailerId));
+      // Server-side billing: charge the finder once on a definitive answer (idempotent — the poller
+      // may also try; charged_at guarantees exactly one charge across both paths).
+      if (row?.finderUserId && o.status === "completed" && (o.confirmed === true || o.confirmed === false)) {
+        await chargeCallOnce(o.callId, row.finderUserId);
       }
     }
     return c.json({ ok: true });
