@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="admin-r38" />
+<meta name="x-rev" content="admin-r39" />
 <title>Caller Admin — Fungibles</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%239333EA'/%3E%3Crect x='3' y='3' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='3' width='19' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='13' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='13' width='14' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='23' width='9' height='7' rx='3' fill='white'/%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="https://api-production-100b.up.railway.app/assets/fungibles-logo.jpeg">
@@ -666,6 +666,26 @@
     <div id="tl_list"><div class="empty">Loading…</div></div>
     </section>
 
+    <section id="trainer">
+    <h2>Tree Trainer</h2>
+    <div class="card">
+      <div class="meta">Document the <b>fastest path to a human</b> for each chain. Tap <b>Document</b> — our cheap navigator calls a store, listens, and works the menu (pressing or speaking) until a person answers, then records the recipe + time. Watch it live, then <b>Lock</b> it. <b style="color:#FBBF24">Calls are real.</b></div>
+      <div class="row" style="gap:8px;margin-top:10px;align-items:center">
+        <button class="ghost" onclick="loadTrainer()">↻ Refresh</button>
+        <span class="meta" id="tr_progress"></span>
+      </div>
+    </div>
+    <div class="card" id="tr_live" style="display:none;border-color:var(--green)">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div class="name" id="tr_live_store">—</div>
+        <div class="meta"><span id="tr_live_status">…</span> · <b id="tr_live_timer">0s</b></div>
+      </div>
+      <div id="tr_live_feed" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto"></div>
+      <div id="tr_live_result" style="margin-top:12px;display:none"></div>
+    </div>
+    <div id="tr_list"><div class="empty">Loading…</div></div>
+    </section>
+
     <section id="statuses">
     <h2>Statuses</h2>
     <div id="pb_statuses">
@@ -816,13 +836,13 @@ let CATEGORIES = [];
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
   pulse:    {label:'Pulse',    ico:'bolt',  tabs:[['dash','God view','bolt'],['growth','Growth','rise'],['business','Business','money'],['receipts','Receipts','tag']]},
-  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Stores','store'],['map','Map','map'],['zones','Zones','target'],['trees','Phone trees & mute','tree'],['treelab','Tree Lab','tree']]},
+  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Stores','store'],['map','Map','map'],['zones','Zones','target'],['trees','Phone trees & mute','tree'],['treelab','Tree Lab','tree'],['trainer','Tree Trainer','phone']]},
   calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Labs','flask'],['bench','Test bench','sliders'],['statuses','Statuses','tag']]},
   settings: {label:'Settings', ico:'gear',  tabs:[['settings','Settings','gear']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ map:()=>ensureMap(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>loadDash(), treelab:()=>loadTreeLab(), receipts:()=>loadReceipts() };
+const TAB_LOADERS={ map:()=>ensureMap(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>loadDash(), treelab:()=>loadTreeLab(), receipts:()=>loadReceipts(), trainer:()=>loadTrainer() };
 const GROUP_LAST={}; let CUR_GROUP='pulse';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -872,6 +892,83 @@ async function loadReceipts(){
 }
 // ---- God view: live calls + outcomes + money, one screen, auto-refreshing ----
 const secsFmt=s=>s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):(s||0)+'s';
+// ---- Tree Trainer v2: document the fastest path to a human, watch it live, lock it ----
+let TR_POLL=null, TR_SESSION=null, TR_CHAIN=null, TR_STORE='', TR_RESULT=null;
+async function loadTrainer(){
+  const list=document.getElementById('tr_list'); if(!list) return;
+  const d=await api('/api/admin/trainer/list');
+  if(!d||!Array.isArray(d.chains)){ list.innerHTML='<div class="empty">Could not load.</div>'; return; }
+  const locked=d.chains.filter(c=>c.navStatus==='locked').length;
+  const prog=document.getElementById('tr_progress'); if(prog) prog.innerHTML=`🔒 <b>${locked}</b> / ${d.chains.length} locked`;
+  const BADGE={locked:['🔒','var(--green)'],review:['👀','var(--purple)'],learning:['🟡','#FBBF24'],unmapped:['⚪','var(--muted)']};
+  const TYPE={direct:'🟢 direct',keypad:'🔢 keypad',voice:'🗣 voice'};
+  list.innerHTML=d.chains.map(c=>{
+    const m=BADGE[c.navStatus]||BADGE.unmapped;
+    const tc=c.navType?` <span class="chip-type">${TYPE[c.navType]||esch(c.navType)}</span>`:'';
+    const time=c.navSeconds!=null?` · <b>${c.navSeconds}s</b> to human`:'';
+    const imp=(c.navLog&&c.navLog.length>1)?` <span class="meta">(${c.navLog[0]}s→${c.navLog[c.navLog.length-1]}s)</span>`:'';
+    const btn=c.callable>0?`<button class="${c.navStatus==='locked'?'ghost':'act'}" data-doc="${c.id}" data-name="${esch(c.name)}">${c.navStatus==='unmapped'?'Document':'Re-run'}</button>`:'<span class="meta">no phone</span>';
+    return `<div class="card"><div class="row" style="justify-content:space-between;align-items:center;gap:10px">
+      <div style="min-width:0"><div class="name">${esch(c.name)}${tc}</div>
+      <div class="meta"><span style="color:${m[1]};font-weight:700">${m[0]} ${esch(c.navStatus)}</span>${time}${imp}</div></div>
+      <div style="flex:0 0 auto">${btn}</div></div></div>`;
+  }).join('')||'<div class="empty">No chains.</div>';
+  list.querySelectorAll('[data-doc]').forEach(b=>b.onclick=()=>trDocument(+b.dataset.doc,b.dataset.name));
+}
+async function trDocument(chainId,name){
+  TR_CHAIN=chainId; TR_STORE=name; TR_RESULT=null;
+  const live=document.getElementById('tr_live'); live.style.display='';
+  document.getElementById('tr_live_store').textContent=name;
+  document.getElementById('tr_live_status').textContent='dialing…';
+  document.getElementById('tr_live_timer').textContent='0s';
+  document.getElementById('tr_live_feed').innerHTML='';
+  document.getElementById('tr_live_result').style.display='none';
+  try{ live.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}
+  const r=await api('/api/admin/trainer/document',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chainId})});
+  if(!r||r.error){ document.getElementById('tr_live_status').textContent='✖ '+((r&&r.error)||'could not start'); return; }
+  TR_SESSION=r.sessionId;
+  if(TR_POLL) clearInterval(TR_POLL);
+  TR_POLL=setInterval(trPoll,1500); trPoll();
+}
+async function trPoll(){
+  if(!TR_SESSION) return;
+  const s=await api('/api/admin/trainer/session/'+TR_SESSION);
+  if(!s||s.error) return;
+  document.getElementById('tr_live_status').textContent=s.status;
+  document.getElementById('tr_live_timer').textContent=(s.elapsed||0)+'s';
+  const feed=document.getElementById('tr_live_feed');
+  feed.innerHTML=(s.steps||[]).map(st=>{
+    const us=st.who==='us';
+    return `<div style="align-self:${us?'flex-end':'flex-start'};max-width:82%;background:${us?'rgba(74,222,128,.14)':'var(--sheet)'};border:1px solid ${us?'rgba(74,222,128,.4)':'var(--border)'};border-radius:12px;padding:7px 11px;font-size:13px">
+      <span class="meta" style="font-size:10px">${us?'US':'STORE'} · ${st.atSec}s</span><br>${esch(st.text)}</div>`;
+  }).join('');
+  feed.scrollTop=feed.scrollHeight;
+  if(s.status==='human'||s.status==='failed'||s.status==='done'){
+    clearInterval(TR_POLL); TR_POLL=null;
+    const res=document.getElementById('tr_live_result'); res.style.display='';
+    if(s.status==='human'&&s.recipe){
+      TR_RESULT={chainId:TR_CHAIN,recipe:s.recipe,confidence:s.confidence||0};
+      const steps=s.recipe.steps.map(x=>x.action==='press'?('press '+x.value+' @'+x.atSec+'s'):('say "'+x.value+'" @'+x.atSec+'s')).join('  →  ')||'picked up directly';
+      res.innerHTML=`<div style="background:rgba(74,222,128,.1);border:1px solid var(--green);border-radius:12px;padding:12px">
+        <div class="name" style="color:var(--green)">✅ Reached a human in ${s.recipe.seconds}s · ${esch(s.recipe.type)}</div>
+        <div class="meta" style="margin-top:5px">${esch(steps)}</div>
+        <div class="row" style="gap:8px;margin-top:10px">
+          <button class="act" onclick="trLock()">🔒 Lock this recipe</button>
+          <button class="ghost" onclick="trRetry()">↻ Try again (go faster)</button></div></div>`;
+    } else {
+      res.innerHTML=`<div style="background:rgba(239,68,68,.1);border:1px solid var(--red);border-radius:12px;padding:12px">
+        <div class="name" style="color:var(--red)">✖ Didn't reach a human</div>
+        <div class="row" style="gap:8px;margin-top:10px"><button class="ghost" onclick="trRetry()">↻ Try again</button></div></div>`;
+    }
+  }
+}
+function trRetry(){ if(TR_CHAIN) trDocument(TR_CHAIN,TR_STORE); }
+async function trLock(){
+  if(!TR_RESULT) return;
+  const r=await api('/api/admin/trainer/lock',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(TR_RESULT)});
+  if(r&&r.ok){ toast('🔒 Locked'); document.getElementById('tr_live').style.display='none'; loadTrainer(); }
+  else toast('Could not lock');
+}
 // ---- Phone Tree Lab ----
 async function loadTreeLab(){
   const list=document.getElementById('tl_list'); if(!list) return;
