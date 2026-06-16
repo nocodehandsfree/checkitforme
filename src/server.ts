@@ -14,6 +14,7 @@ import {
   callResults, categories, chains, communityPosts, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, waitlist, watches, zones, zoneRetailers,
 } from "./db/schema";
 import { config } from "./config";
+import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
@@ -56,6 +57,7 @@ import { accounts } from "./db/schema";
 import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf } from "./voice/bridge";
 import { isCallingPaused, setCallingPaused, spendTodayCents } from "./redis";
 
+assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
 await bootstrap(); // apply migrations + seed catalog if empty
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -154,7 +156,7 @@ function clerkFrontendApi(pk: string): string {
     return Buffer.from(b64, "base64").toString("utf8").replace(/\$$/, "");
   } catch { return "summary-hen-61.clerk.accounts.dev"; }
 }
-const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /** FAQ + HowTo structured data per vertical — Google rich-result eligibility for the PPC/SEO push. */
 function seoGraph(brand: ReturnType<typeof resolveBrand>, plainName: string) {

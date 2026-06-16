@@ -8,6 +8,7 @@ import {
 } from "../db/schema";
 import { chargeOneCredit, isCompAccount } from "../billing";
 import { isCallingPaused } from "../redis";
+import { getPolicy } from "../policy";
 
 /** Notify every active restock-watch for this store+category that it's back in stock, once. */
 async function notifyWatches(retailerId: number, categoryId: number, store: string, label: string) {
@@ -153,6 +154,19 @@ interface TriggerArgs {
   isPrivate?: boolean;      // keep this find out of the public feed (subscriber perk / paid privacy)
 }
 
+/** Most recent COMPLETED check by this finder for a store+category within `withinHours` (default 24h).
+ *  Powers one-check-per-store-per-day dedup. */
+export async function findRecentCheck(finderUserId: string, retailerId: number, categoryId: number, withinHours = 24) {
+  const since = Math.floor(Date.now() / 1000) - withinHours * 3600;
+  return (await db.select().from(callResults).where(and(
+    eq(callResults.finderUserId, finderUserId),
+    eq(callResults.retailerId, retailerId),
+    eq(callResults.categoryId, categoryId),
+    eq(callResults.status, "completed"),
+    gte(callResults.startedAt, since),
+  )).orderBy(desc(callResults.startedAt)).limit(1))[0] ?? null;
+}
+
 /** Place one call and record it. */
 export async function triggerCall(a: TriggerArgs) {
   if (await isCallingPaused()) throw new Error("calling_paused"); // global spend kill-switch
@@ -167,6 +181,13 @@ export async function triggerCall(a: TriggerArgs) {
   }
   const category = (await db.select().from(categories).where(eq(categories.id, a.categoryId)))[0];
   if (!category) throw new Error(`category ${a.categoryId} not found`);
+
+  // One-check-per-store-per-day (flag-gated): reuse a recent confirmed/answered result instead of
+  // re-calling the same store+product within 24h — anti-abuse + cost. Returns the cached call row.
+  if (a.finderUserId && !a.toOverride && (await getPolicy()).flags.oneCheckPerStorePerDay) {
+    const recent = await findRecentCheck(a.finderUserId, retailer.id, category.id);
+    if (recent) return { ...recent, deduped: true };
+  }
 
   // Default the call mode from the store's known status (verified → restock, unverified → carry).
   const mode = a.mode ?? (retailer.stockStatus === "unverified" ? "carry" : "restock");

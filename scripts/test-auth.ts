@@ -6,7 +6,7 @@ import { db } from "../src/db/client";
 import { accounts, callResults, categories, retailers } from "../src/db/schema";
 import { e164, signSession, verifySession } from "../src/auth";
 import { getAccountByPhone, getAccount, chargeOneCredit, isCompAccount } from "../src/billing";
-import { chargeCallOnce } from "../src/calls/service";
+import { chargeCallOnce, findRecentCheck } from "../src/calls/service";
 import { setPolicy } from "../src/policy";
 
 let pass = 0, fail = 0;
@@ -55,6 +55,12 @@ async function main() {
   ok((await getAccount(PU))!.credits === 2, "NO double-charge on re-run");
   const row = (await db.select().from(callResults).where(eq(callResults.id, call.id)))[0];
   ok(row.chargedAt != null, "charged_at stamped");
+
+  console.log("▶ one-check-per-store-per-day dedup helper");
+  const found = await findRecentCheck(PU, r.id, cat.id);
+  ok(!!found && found.id === call.id, "findRecentCheck returns the recent completed check");
+  ok((await findRecentCheck(PU, 999999, cat.id)) === null, "different store → null");
+  ok((await findRecentCheck("phone:+19999999999", r.id, cat.id)) === null, "different finder → null");
 
   console.log("▶ comp by phone (master/owner on phone-first login, no email)");
   process.env.COMP_PHONES = "+13105550099";
