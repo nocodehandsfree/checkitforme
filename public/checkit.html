@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r25" />
+<meta name="x-rev" content="names-r26" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -931,11 +931,10 @@ __BRAND_HEAD__
         <button class="oauthtile" onclick="authOAuth('oauth_google')" aria-label="Continue with Google" title="Google"><svg width="24" height="24" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg></button>
         <button class="oauthtile" onclick="authOAuth('oauth_discord')" aria-label="Continue with Discord" title="Discord"><svg width="26" height="26" viewBox="0 0 24 24" fill="#5865F2"><path d="M19.3 5.4A17 17 0 0 0 15.1 4l-.2.4a13 13 0 0 1 3.7 1.9 14 14 0 0 0-12 0A13 13 0 0 1 10.3 4L10 4a17 17 0 0 0-4.2 1.4C3 9.6 2.3 13.7 2.6 17.7a17 17 0 0 0 5.2 2.6l.6-1a11 11 0 0 1-1.8-.9l.4-.3a12 12 0 0 0 10.2 0l.4.3a11 11 0 0 1-1.8.9l.6 1a17 17 0 0 0 5.2-2.6c.4-4.6-.6-8.7-2.5-12.3zM9 15.3c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg></button>
       </div>
-      <div class="ordiv"><span data-i18n="auth.or">or use email</span></div>
-      <input id="auth_email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" onkeydown="if(event.key==='Enter')authSendCode()" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 13px;font-size:16px;box-sizing:border-box;text-align:center">
-      <div id="clerk-captcha" style="margin-top:8px"></div>
+      <div class="ordiv"><span data-i18n="auth.or">or use your cell</span></div>
+      <input id="auth_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(555) 123-4567" onkeydown="if(event.key==='Enter')phoneStart()" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 13px;font-size:16px;box-sizing:border-box;text-align:center">
       <div id="auth_err" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
-      <button class="cta sm dark" id="auth_send" onclick="authSendCode()" style="margin-top:4px;width:100%;background:linear-gradient(180deg,#A78BFA,#7C5CFC);color:#fff">Continue →</button>
+      <button class="cta sm" id="auth_send" onclick="phoneStart()" style="margin-top:4px;width:100%;background:var(--accent);color:#06210f">Continue →</button>
     </div>
     <!-- Step 2a: magic link sent -->
     <div id="auth_step_link" style="display:none">
@@ -947,12 +946,12 @@ __BRAND_HEAD__
     </div>
     <!-- Step 2b: 6-digit code -->
     <div id="auth_step_code" style="display:none">
-      <h3 style="margin:0 0 4px;font-size:21px">Check your email</h3>
-      <div class="meta" style="margin-bottom:16px">We sent a 6-digit code to <b id="auth_codeto" style="color:#e6e6ee"></b>.</div>
-      <input id="auth_code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" onkeydown="if(event.key==='Enter')authVerify()" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 13px;font-size:26px;font-weight:800;letter-spacing:.5em;box-sizing:border-box;text-align:center">
+      <h3 style="margin:0 0 4px;font-size:21px">Check your phone</h3>
+      <div class="meta" style="margin-bottom:16px">We texted a 6-digit code to <b id="auth_codeto" style="color:#e6e6ee"></b>.</div>
+      <input id="auth_code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" onkeydown="if(event.key==='Enter')phoneVerify()" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 13px;font-size:26px;font-weight:800;letter-spacing:.5em;box-sizing:border-box;text-align:center">
       <div id="auth_codeerr" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
-      <button class="cta sm dark" id="auth_verify" onclick="authVerify()" style="margin-top:4px;width:100%;background:linear-gradient(180deg,#A78BFA,#7C5CFC);color:#fff">Verify →</button>
-      <div style="margin-top:13px;font-size:13px;color:var(--muted)">Didn't get it? <a onclick="authResend()" style="color:var(--purple);font-weight:700;cursor:pointer">Resend</a> · <a onclick="authBack()" style="color:var(--purple);font-weight:700;cursor:pointer">Change email</a></div>
+      <button class="cta sm" id="auth_verify" onclick="phoneVerify()" style="margin-top:4px;width:100%;background:var(--accent);color:#06210f">Verify →</button>
+      <div style="margin-top:13px;font-size:13px;color:var(--muted)">Didn't get it? <a onclick="phoneStart(true)" style="color:var(--purple);font-weight:700;cursor:pointer">Resend</a> · <a onclick="authBack()" style="color:var(--purple);font-weight:700;cursor:pointer">Change number</a></div>
     </div>
   </div>
 </div>
@@ -1277,10 +1276,14 @@ function storeWordmark(name,type){
 }
 
 let ACCOUNT=null;
-function isAuthed(){ return !!(window.Clerk && window.Clerk.user); }
+// Phone-first session token (the new Clerk-free auth). Dual-auth: if present, it's used; otherwise
+// we fall back to the Clerk token so existing logins keep working during the cutover.
+let PHONE_TOKEN = localStorage.getItem('cifm_token')||'';
+function isAuthed(){ return !!PHONE_TOKEN || !!(window.Clerk && window.Clerk.user); }
 function freeUsed(){ return localStorage.getItem('runnr_free_used')==='1'; }
 async function clerkToken(){ try{ return (window.Clerk&&window.Clerk.session)?await window.Clerk.session.getToken():null; }catch(e){ return null; } }
-async function appApi(p,opts={}){ const t=await clerkToken(); const headers=Object.assign({},opts.headers||{},t?{Authorization:'Bearer '+t}:{}); return fetch(p,Object.assign({},opts,{headers})).then(r=>r.json()).catch(()=>({error:'network'})); }
+async function appToken(){ return PHONE_TOKEN || await clerkToken(); }
+async function appApi(p,opts={}){ const t=await appToken(); const headers=Object.assign({},opts.headers||{},t?{Authorization:'Bearer '+t}:{}); return fetch(p,Object.assign({},opts,{headers})).then(r=>r.json()).catch(()=>({error:'network'})); }
 function initGA(){
   const id=POLICY&&POLICY.ga4Id; if(!id||window.__ga) return; window.__ga=1;
   const s=document.createElement('script'); s.async=true; s.src='https://www.googletagmanager.com/gtag/js?id='+id; document.head.appendChild(s);
@@ -1358,8 +1361,8 @@ async function initClerk(){
 }
 async function refreshAuth(){
   if(isAuthed()){
-    const u=window.Clerk.user, email=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||'';
-    ACCOUNT=await appApi('/app/me'+(email?('?email='+encodeURIComponent(email)):''));
+    const u=(window.Clerk&&window.Clerk.user)||null, email=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||'';
+    ACCOUNT=await appApi('/app/me'+(email?('?email='+encodeURIComponent(email)):'')); // phone token works here too (dual-auth)
     try{ localStorage.setItem('runnr_authed','1'); }catch(e){}
   } else { ACCOUNT=null; try{ localStorage.setItem('runnr_authed','0'); }catch(e){} }
   renderAuth();
@@ -1458,7 +1461,7 @@ function renderAuth(){
   if(isAuthed()){
     // Authed: clean pill — name, then a small credit/member badge. Tap → account sheet.
     const cr=(ACCOUNT&&ACCOUNT.comp)?'∞':((ACCOUNT&&ACCOUNT.credits!=null)?(''+ACCOUNT.credits):'');
-    const nm=esc((window.Clerk.user&&window.Clerk.user.firstName)||'You');
+    const nm=esc((window.Clerk&&window.Clerk.user&&window.Clerk.user.firstName)||'You');
     const badge = cr!=='' ? `<span class="credbadge">${(ACCOUNT&&ACCOUNT.subscription==='active')?'★ ':''}${cr}</span>` : '';
     ap.innerHTML=`<span class="dot on"></span><b style="font-weight:800;font-size:13px">${nm}</b>${badge}`;
     ap.onclick=()=>openAccount(); ap.classList.remove('anon');
@@ -1498,15 +1501,16 @@ function authReset(){
   authCancelLink();
   AUTH={flow:null,email:'',busy:false,forceCode:false,signIn:null,signUp:null,codeFactorId:null,linkCancel:null,canceled:false};
   authStep('email');
-  $('auth_email').value=''; $('auth_code').value=''; $('auth_err').textContent=''; $('auth_codeerr').textContent=''; $('auth_linkerr').textContent='';
+  const _ph=$('auth_phone'); if(_ph)_ph.value=''; $('auth_code').value=''; $('auth_err').textContent=''; $('auth_codeerr').textContent=''; const _le=$('auth_linkerr'); if(_le)_le.textContent='';
   const send=$('auth_send'); if(send){send.disabled=false;send.textContent='Continue →';}
   const ver=$('auth_verify'); if(ver){ver.disabled=false;ver.textContent='Verify →';}
 }
 function openAuth(){
-  if(!window.Clerk){ toast('Loading sign-in…'); return; }
-  authReset(); $('authOverlay').classList.add('on');
+  $('authOverlay').classList.add('on');  // phone auth needs no Clerk
   setI('auth_logo', authMark()); track('auth_open');
-  setTimeout(()=>{try{$('auth_email').focus();}catch(e){}},90);
+  $('auth_step_email').style.display=''; const _lk=$('auth_step_link'); if(_lk)_lk.style.display='none'; $('auth_step_code').style.display='none';
+  $('auth_err').textContent=''; $('auth_codeerr').textContent='';
+  setTimeout(()=>{try{$('auth_phone').focus();}catch(e){}},90);
 }
 function closeAuth(){ authCancelLink(); $('authOverlay').classList.remove('on'); }
 function authMark(){ return `<img src="/logos/checkitforme.png?v=2" alt="Check It For Me" style="height:30px;width:auto;display:block">`; }
@@ -1522,6 +1526,50 @@ function authLinkPoll(promise){
     // Instance doesn't actually have email links enabled → silently fall back to a 6-digit code.
     if(AUTH.flow==='signup' && !AUTH.forceCode){ authUseCode(); return; }
     $('auth_linkerr').textContent=clerkErr(e)||'Link sign-in failed — try a code instead.'; });
+}
+// ---- Phone-first sign-up (Clerk-free): SMS code → our session token. Dual-auth: Clerk still works. ----
+let AUTH_PHONE='';
+function normUsPhone(s){ const d=(s||'').replace(/\D/g,''); if(d.length===10) return '+1'+d; if(d.length===11&&d[0]==='1') return '+'+d; return ''; }
+function fmtUsPhone(e){ return (e||'').replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'($1) $2-$3'); }
+// Step 1 — text a 6-digit code to the cell. `resend` keeps us on the code step.
+async function phoneStart(resend){
+  if(AUTH.busy) return;
+  const e=normUsPhone($('auth_phone').value);
+  if(!e){ $('auth_err').textContent='Enter your 10-digit US cell number.'; return; }
+  AUTH_PHONE=e; AUTH.busy=true;
+  const btn=$('auth_send'); if(btn){ btn.disabled=true; btn.textContent=resend?'Resending…':'Sending…'; }
+  $('auth_err').textContent='';
+  const r=await api('/auth/phone/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:e})});
+  AUTH.busy=false; if(btn){ btn.disabled=false; btn.textContent='Continue →'; }
+  if(!r||r.error){
+    const msg = (r&&r.error==='rate_limited') ? ('Too many tries — wait '+(r.retryAfter||60)+'s and try again.')
+              : (r&&r.error==='us_number_required') ? 'US mobile numbers only for now.'
+              : 'Could not send a code — try again.';
+    $('auth_err').textContent=msg; return;
+  }
+  track('auth_code_sent',{flow:'phone'});
+  if(resend){ toast('Code re-sent 📲'); return; }
+  authStep('code'); $('auth_codeto').textContent=fmtUsPhone(e);
+  $('auth_codeerr').textContent=''; const ci=$('auth_code'); if(ci) ci.value='';
+  setTimeout(()=>{try{$('auth_code').focus();}catch(_){}},90);
+}
+// Step 2 — confirm the code → save our session token → we're in.
+async function phoneVerify(){
+  if(AUTH.busy) return;
+  const code=($('auth_code').value||'').replace(/\D/g,'');
+  if(code.length<4){ $('auth_codeerr').textContent='Enter the 6-digit code'; return; }
+  if(!AUTH_PHONE){ authBack(); return; }
+  AUTH.busy=true; const btn=$('auth_verify'); if(btn){ btn.disabled=true; btn.textContent='Verifying…'; } $('auth_codeerr').textContent='';
+  const r=await api('/auth/phone/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:AUTH_PHONE,code})});
+  AUTH.busy=false; if(btn){ btn.disabled=false; btn.textContent='Verify →'; }
+  if(!r||r.error||!r.token){
+    $('auth_codeerr').textContent = (r&&r.error==='bad_code') ? "That code didn't match — try again" : 'Could not verify — try again';
+    return;
+  }
+  PHONE_TOKEN=r.token; try{ localStorage.setItem('cifm_token',r.token); }catch(_){}
+  if(r.account) ACCOUNT=Object.assign({},ACCOUNT||{},r.account);
+  track('auth_success',{flow:'phone'});
+  closeAuth(); toast("✓ You're in"); refreshAuth();
 }
 async function authSendCode(){   // the "Continue" handler — sends a link (preferred) or a code
   if(AUTH.busy) return;
@@ -1610,7 +1658,7 @@ async function authResend(){
     toast(AUTH.forceCode?'Code re-sent 📧':'Link re-sent 📧');
   }catch(e){ toast('Could not resend — try again'); }
 }
-function authBack(){ authCancelLink(); AUTH.forceCode=false; authStep('email'); $('auth_codeerr').textContent=''; $('auth_linkerr').textContent=''; setTimeout(()=>{try{$('auth_email').focus();}catch(e){}},60); }
+function authBack(){ authCancelLink(); AUTH.forceCode=false; authStep('email'); $('auth_codeerr').textContent=''; const _le=$('auth_linkerr'); if(_le)_le.textContent=''; setTimeout(()=>{try{$('auth_phone').focus();}catch(e){}},60); }
 // OAuth (Google / Discord): Clerk redirects out and back; no codes, no passwords — the
 // provider's verified email becomes the account email. Returning users = same one tap.
 async function authOAuth(strategy){
@@ -1667,7 +1715,7 @@ function openAccount(){
   $('acctOverlay').classList.add('on'); track('account_open');
 }
 function closeAccount(){ $('acctOverlay').classList.remove('on'); }
-async function doSignOut(){ try{ await window.Clerk.signOut(); }catch(e){} closeAccount(); toast('Signed out'); refreshAuth(); }
+async function doSignOut(){ PHONE_TOKEN=''; try{ localStorage.removeItem('cifm_token'); }catch(_){} try{ if(window.Clerk&&window.Clerk.user) await window.Clerk.signOut(); }catch(e){} ACCOUNT=null; closeAccount(); toast('Signed out'); refreshAuth(); }
 // Deep-link: open a specific past call by id (and remember it in History).
 async function restoreCall(cid, storeName, catName){
   // Resolve the real store from what we already know — local history first (it has the exact
