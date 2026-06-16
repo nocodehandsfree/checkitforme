@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r28" />
+<meta name="x-rev" content="names-r29" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -11,7 +11,7 @@ __BRAND_HEAD__
      new subdomain) — warm the connection early so DNS+TLS isn't on the critical path. -->
 <link rel="preconnect" href="https://__CLERK_FRONTEND_API__" crossorigin>
 <link rel="dns-prefetch" href="https://__CLERK_FRONTEND_API__">
-<script async crossorigin="anonymous"
+<script async fetchpriority="low" crossorigin="anonymous"
   data-clerk-publishable-key="__CLERK_PUBLISHABLE_KEY__"
   src="https://__CLERK_FRONTEND_API__/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
   type="text/javascript"></script>
@@ -1282,7 +1282,7 @@ function initGA(){
   const id=POLICY&&POLICY.ga4Id; if(!id||window.__ga) return; window.__ga=1;
   const s=document.createElement('script'); s.async=true; s.src='https://www.googletagmanager.com/gtag/js?id='+id; document.head.appendChild(s);
   window.dataLayer=window.dataLayer||[]; window.gtag=function(){dataLayer.push(arguments);}; gtag('js',new Date());
-  gtag('config',id,{page_title:(BRAND&&BRAND.name||'Runnr').replace(/<[^>]+>/g,'')});
+  gtag('config',id,{page_title:(BRAND&&BRAND.name||'Check It For Me').replace(/<[^>]+>/g,'')});
 }
 function track(ev,params){ try{ if(window.gtag) gtag('event',ev,params||{}); }catch(e){} }
 function applyFlags(){

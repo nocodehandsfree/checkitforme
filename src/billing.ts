@@ -110,7 +110,7 @@ export async function createCheckout(userId: string, email: string | undefined, 
     if (!pack) return null;
     p.set("mode", "payment");
     p.set("line_items[0][price_data][unit_amount]", String(pack.cents));
-    p.set("line_items[0][price_data][product_data][name]", `Runnr — ${pack.label}`);
+    p.set("line_items[0][price_data][product_data][name]", `Check It For Me — ${pack.label}`);
     p.set("metadata[kind]", "pack");
     p.set("metadata[credits]", String(pack.credits));
   }

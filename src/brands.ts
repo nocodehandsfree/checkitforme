@@ -37,7 +37,7 @@ const POKEBALL_EMBLEM =
 
 const DEFAULT: Brand = {
   key: "runner", slug: "app",
-  name: "Run<b>nr</b>",
+  name: "<b>Check</b> It For Me",
   category: null,
   accent: "#4ADE80",
   accent2: "#A78BFA",
@@ -45,8 +45,8 @@ const DEFAULT: Brand = {
   short: "All products",
   headline: 'Is it <span class="g">in stock?</span><br>We\'ll check for you.',
   sub: "Pick a store. We call it for real, ask, and show you the answer with proof — in about 2 minutes.",
-  title: "Runnr — Is it in stock? We call the store and find out.",
-  desc: "Stop driving to sold-out shelves. Runnr calls any store for you, asks a real person if it's in stock, and texts you the answer with proof in ~2 minutes.",
+  title: "Check It For Me — Is it in stock?",
+  desc: "Stop driving to sold-out shelves. Check It For Me calls any store for you, asks a real person if it's in stock, and texts you the answer with proof in ~2 minutes.",
 };
 
 const BRANDS: Brand[] = [
