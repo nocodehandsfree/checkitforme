@@ -19,7 +19,7 @@ import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, retailersWithStatus, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
 import { openState } from "./store-hours";
-import { resolveBrand, brandSwitcher } from "./brands";
+import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { getPolicy, setPolicy, publicPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent } from "./agent/admin-agent";
@@ -314,6 +314,19 @@ app.get("/", (c) => {
   return c.html(consumer ? renderRunner(brand, host) : page("app.html"));
 });
 app.get("/r", (c) => { c.header("Cache-Control", "no-store"); return c.html(renderRunner(resolveBrand((c.req.header("host") || "").toLowerCase(), c.req.query("brand")), (c.req.header("host") || "").toLowerCase())); });
+// Single-domain path routing: checkitforme.com/pokemon (and /onepiece, /toppsbasketball, /needoh)
+// render the vertical without a subdomain. Registered as EXPLICIT static routes per slug (not a
+// catch-all /:slug, which would shadow /robots.txt, /sitemap.xml, etc.).
+for (const v of brandSwitcher()) {
+  for (const seg of new Set([v.slug, v.key])) {
+    app.get(`/${seg}`, (c) => {
+      const b = brandForPath(seg);
+      if (!b) return c.notFound();
+      c.header("Cache-Control", "no-store");
+      return c.html(renderRunner(b, (c.req.header("host") || "").toLowerCase()));
+    });
+  }
+}
 // Branded share cards (1200×630 PNGs) — what X/iMessage/Discord unfurl for every link.
 app.get("/og/:file", (c) => {
   const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
