@@ -205,7 +205,7 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string): str
       ...seoGraph(brand, plainName),
     ] })}</script>`,
   ].join("\n");
-  return page("runner.html")
+  return page("checkit.html")
     .replace(/__BRAND_HEAD__/g, head)
     .replace(/__BRAND_JSON__/g, JSON.stringify({ key: brand.key, name: brand.name, category: brand.category, accent: brand.accent, accent2: brand.accent2 || brand.accent, logoUrl: brand.logoUrl || "", emoji: brand.emoji }))
     .replace(/__BRAND_LOGO__/g, brand.logo || `${brand.emoji} ${brand.name}`)
@@ -317,18 +317,15 @@ app.get("/", (c) => {
   return c.html(consumer ? renderRunner(brand, host) : page("app.html"));
 });
 app.get("/r", (c) => { c.header("Cache-Control", "no-store"); return c.html(renderRunner(resolveBrand((c.req.header("host") || "").toLowerCase(), c.req.query("brand")), (c.req.header("host") || "").toLowerCase())); });
-// Single-domain path routing: checkitforme.com/pokemon (and /onepiece, /toppsbasketball, /needoh)
-// render the vertical without a subdomain. Registered as EXPLICIT static routes per slug (not a
-// catch-all /:slug, which would shadow /robots.txt, /sitemap.xml, etc.).
-for (const v of brandSwitcher()) {
-  for (const seg of new Set([v.slug, v.key])) {
-    app.get(`/${seg}`, (c) => {
-      const b = brandForPath(seg);
-      if (!b) return c.notFound();
-      c.header("Cache-Control", "no-store");
-      return c.html(renderRunner(b, (c.req.header("host") || "").toLowerCase()));
-    });
-  }
+// Verticals as PATHS on the apex (checkitforme.com/pokemon, /onepiece, /toppsbasketball, /needoh) —
+// same brand resolution as the subdomains, keyed off the slug. This is what lets the product switcher
+// link to clean same-domain paths instead of subdomain hops.
+for (const slug of ["pokemon", "onepiece", "toppsbasketball", "needoh"]) {
+  app.get(`/${slug}`, (c) => {
+    c.header("Cache-Control", "no-store");
+    const host = (c.req.header("host") || "").toLowerCase();
+    return c.html(renderRunner(resolveBrand(host, slug), host));
+  });
 }
 // Branded share cards (1200×630 PNGs) — what X/iMessage/Discord unfurl for every link.
 app.get("/og/:file", (c) => {
