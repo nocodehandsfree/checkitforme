@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="admin-r40" />
+<meta name="x-rev" content="admin-r41" />
 <title>Check It For Me — Admin</title>
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -670,10 +670,12 @@
     <h2>Tree Trainer</h2>
     <div class="card">
       <div class="meta">Document the <b>fastest path to a human</b> for each chain. Tap <b>Document</b> — our cheap navigator calls a store, listens, and works the menu (pressing or speaking) until a person answers, then records the recipe + time. Watch it live, then <b>Lock</b> it. <b style="color:#FBBF24">Calls are real.</b></div>
-      <div class="row" style="gap:8px;margin-top:10px;align-items:center">
+      <div class="row" style="gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
         <button class="ghost" onclick="loadTrainer()">↻ Refresh</button>
+        <button class="ghost" onclick="testHelicone()" title="One tiny live call through Helicone on the cheap nav model — no phone call placed">⚡ Test Helicone routing</button>
         <span class="meta" id="tr_progress"></span>
       </div>
+      <div class="meta" id="tr_heli" style="margin-top:8px"></div>
     </div>
     <div class="card" id="tr_live" style="display:none;border-color:var(--green)">
       <div class="row" style="justify-content:space-between;align-items:center">
@@ -894,6 +896,14 @@ async function loadReceipts(){
 const secsFmt=s=>s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):(s||0)+'s';
 // ---- Tree Trainer v2: document the fastest path to a human, watch it live, lock it ----
 let TR_POLL=null, TR_SESSION=null, TR_CHAIN=null, TR_STORE='', TR_RESULT=null;
+// One-tap Helicone routing check: pings the cheap nav model live through the gateway (no phone call).
+async function testHelicone(model){
+  const el=$('tr_heli'); if(el) el.innerHTML='<span style="color:#9aa">⚡ Pinging Helicone…</span>';
+  const r=await api('/api/admin/llm-ping'+(model?('?model='+encodeURIComponent(model)):''));
+  if(!el) return;
+  if(r&&r.ok) el.innerHTML='<span style="color:var(--green)">✓ Helicone OK</span> · model <b>'+escH(r.model)+'</b> · '+r.ms+'ms · sample “'+escH(r.sample||'')+'”'+(r.heliconeConfigured?'':' · <span style="color:#FBBF24">⚠ HELICONE_API_KEY not set</span>');
+  else el.innerHTML='<span style="color:#ff6b6b">✗ '+escH((r&&r.error)||'failed')+'</span>'+(r&&r.model?(' · model <b>'+escH(r.model)+'</b>'):'');
+}
 async function loadTrainer(){
   const list=document.getElementById('tr_list'); if(!list) return;
   const d=await api('/api/admin/trainer/list');

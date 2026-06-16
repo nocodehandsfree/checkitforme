@@ -6,7 +6,9 @@
 import { llm } from "../llm";
 
 const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
-const NAV_MODEL = "gemini-2.5-flash-lite"; // cheap brain; swap to Groq once its key lands
+// Cheapest brain that drives the IVR. gemini-2.5-flash-lite today; flip to "groq:llama-3.1-8b-instant"
+// (cheaper + faster, better for live phone latency) once GROQ_API_KEY is set in Railway.
+export const NAV_MODEL = "gemini-2.5-flash-lite";
 
 export type NavAction = "say" | "press" | "wait" | "human" | "fail";
 export interface NavStep { who: "ivr" | "us"; text: string; atSec: number; action?: NavAction; value?: string }

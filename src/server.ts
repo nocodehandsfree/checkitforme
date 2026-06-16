@@ -24,7 +24,8 @@ import { getPolicy, setPolicy, publicPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
-import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession } from "./calls/navigator";
+import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL } from "./calls/navigator";
+import { llm } from "./llm";
 import { harvestHoursTick } from "./hours-harvest";
 import { createSchedule, listSchedulesDetailed, deleteSchedule, customerScheduleTick } from "./customer-schedules";
 import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, retailerMap, invalidateRefCache } from "./refcache";
@@ -1659,6 +1660,18 @@ app.post("/api/admin/tree/verify", async (c) => {
   return c.json({ placed, names });
 });
 // ---- Tree Trainer v2: document the fastest path to a human per chain (the cheap-lane navigator) ----
+// Helicone routing health-check: one tiny live call through the gateway (no phone call). Confirms the
+// LLM "voice switcher" path works and reports which model + latency. Defaults to the cheap nav model.
+app.get("/api/admin/llm-ping", async (c) => {
+  const model = c.req.query("model") || NAV_MODEL;
+  const t0 = Date.now();
+  try {
+    const text = await llm(model, "Reply with the single word OK.", { job: "helicone-ping", maxTokens: 5, temperature: 0 });
+    return c.json({ ok: true, model, via: "helicone", heliconeConfigured: !!process.env.HELICONE_API_KEY, ms: Date.now() - t0, sample: (text || "").trim().slice(0, 40) });
+  } catch (e) {
+    return c.json({ ok: false, model, via: "helicone", heliconeConfigured: !!process.env.HELICONE_API_KEY, ms: Date.now() - t0, error: String((e as Error)?.message || e).slice(0, 200) }, 502);
+  }
+});
 app.get("/api/admin/trainer/list", async (c) => {
   const chs = await db.select().from(chains).orderBy(chains.name);
   const rows = await db.select({ cid: retailers.chainId, n: sql<number>`count(*)` }).from(retailers)

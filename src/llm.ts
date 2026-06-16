@@ -30,11 +30,16 @@ export interface LlmOpts {
 }
 
 function isGemini(model: string): boolean { return model.startsWith("gemini"); }
+// Groq is OpenAI-compatible; flag it with a `groq:` (or `groq/`) prefix so we route to Groq's
+// Helicone endpoint with the Groq key. The prefix is stripped before the real model name is sent.
+function isGroq(model: string): boolean { return model.startsWith("groq:") || model.startsWith("groq/"); }
 
 /** One call, any model, always through Helicone. Returns the text (or JSON string when json:true). */
 export async function llm(model: string, input: string | LlmMsg[], opts: LlmOpts = {}): Promise<string> {
   const messages: LlmMsg[] = typeof input === "string" ? [{ role: "user", content: input }] : input;
-  return isGemini(model) ? geminiCall(model, messages, opts) : openaiCall(model, messages, opts);
+  if (isGemini(model)) return geminiCall(model, messages, opts);
+  if (isGroq(model)) return groqCall(model.replace(/^groq[:/]/, ""), messages, opts);
+  return openaiCall(model, messages, opts);
 }
 
 async function openaiCall(model: string, messages: LlmMsg[], o: LlmOpts): Promise<string> {
@@ -51,6 +56,26 @@ async function openaiCall(model: string, messages: LlmMsg[], o: LlmOpts): Promis
     }),
   });
   if (!r.ok) throw new Error(`llm openai ${r.status}: ${(await r.text()).slice(0, 160)}`);
+  const d = (await r.json()) as { choices?: { message?: { content?: string } }[] };
+  return d.choices?.[0]?.message?.content ?? "";
+}
+
+// Groq via Helicone (OpenAI-compatible). Cheapest/fastest brain for the IVR navigator —
+// e.g. "groq:llama-3.1-8b-instant". Routes through Helicone like every other call.
+async function groqCall(model: string, messages: LlmMsg[], o: LlmOpts): Promise<string> {
+  const key = config.groqKey;
+  if (!key) throw new Error("GROQ_API_KEY not set");
+  const r = await fetch("https://groq.helicone.ai/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...heli(o.job, o.cache) },
+    body: JSON.stringify({
+      model, messages,
+      max_tokens: o.maxTokens ?? 512,
+      temperature: o.temperature ?? 0,
+      ...(o.json ? { response_format: { type: "json_object" } } : {}),
+    }),
+  });
+  if (!r.ok) throw new Error(`llm groq ${r.status}: ${(await r.text()).slice(0, 160)}`);
   const d = (await r.json()) as { choices?: { message?: { content?: string } }[] };
   return d.choices?.[0]?.message?.content ?? "";
 }

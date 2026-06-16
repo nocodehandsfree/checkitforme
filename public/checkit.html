@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r27" />
+<meta name="x-rev" content="names-r28" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -126,12 +126,12 @@ __BRAND_HEAD__
   .upmod{background:var(--sheet);border:1px solid var(--border);border-radius:16px;margin-top:14px;overflow:hidden}
   .upmod-h{padding:14px 15px 11px}
   .upmod-h .t{display:flex;align-items:center;gap:8px;font-weight:900;font-size:15px}
-  .upmod-h .t .pchip{margin-left:auto;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--purple);background:var(--ptint);border:1px solid var(--pline);padding:3px 8px;border-radius:20px}
+  .upmod-h .t .pchip{margin-left:auto;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--green);background:rgba(74,222,128,.14);border:1px solid rgba(74,222,128,.4);padding:3px 8px;border-radius:20px}
   .upmod-h .s{color:var(--muted);font-size:12.5px;line-height:1.45;margin-top:6px}
   .upmod-h .s b{color:#cfcfe0}
   .uprow{display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer;border-top:1px solid var(--border);transition:background .12s}
   .uprow:active{background:rgba(255,255,255,.05)}
-  .uprow .upi{width:38px;height:38px;border-radius:11px;background:var(--ptint);display:grid;place-items:center;flex:0 0 auto}
+  .uprow .upi{width:38px;height:38px;border-radius:11px;background:rgba(74,222,128,.14);display:grid;place-items:center;flex:0 0 auto}
   .uprow .uptxt{flex:1;min-width:0}
   .uprow .uptxt .a{font-weight:800;font-size:14px}
   .uprow .uptxt .b{color:var(--muted);font-size:12px;margin-top:2px;line-height:1.3}
@@ -1683,7 +1683,7 @@ async function handleClerkLinkCallback(){
 // Custom account sheet (no Clerk-branded profile modal)
 function openAccount(){
   if(!isAuthed()) return;
-  const u=window.Clerk.user; $('acct_email').textContent=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||'';
+  const u=(window.Clerk&&window.Clerk.user)||null; $('acct_email').textContent=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||(ACCOUNT&&ACCOUNT.phone)||'';
   setI('acct_logo', authMark());
   // Credits line: ∞ = comp (founder) unlimited · ⭐ = active membership · else plain balance.
   const comp=!!(ACCOUNT&&ACCOUNT.comp), member=!!(ACCOUNT&&ACCOUNT.subscription==='active');
@@ -2552,7 +2552,7 @@ function showResult(o, cid){
     </div>` : '';
 
   const F=POLICY.flags||{};
-  const PURP='#A78BFA';
+  const PURP='#4ADE80'; // brand green (was Runnr purple) — keep the restock module on-brand
   const inStock=cls==='in', canNotify=cls!=='in' && o.status!=='failed';
   const restockDay=shipmentDayShort(SEL_STORE), isMember=(ACCOUNT&&ACCOUNT.subscription==='active');
   const inActions = inStock ? [
@@ -2700,7 +2700,7 @@ function timeAgo(ts){ const s=Math.floor((Date.now()-ts)/1000); const ago=u=>LAN
 let HIST_CACHE=[];
 async function fetchServerHistory(){
   if(!isAuthed()) return [];
-  const u=window.Clerk.user, email=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||'';
+  const u=(window.Clerk&&window.Clerk.user)||null, email=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||'';
   const rows=await appApi('/app/history'+(email?('?email='+encodeURIComponent(email)):''));
   return Array.isArray(rows)?rows:[];
 }
@@ -2841,7 +2841,7 @@ function closeBuy(){ $('buyOverlay').classList.remove('on'); }
 async function buy(kind){
   if(!isAuthed()){ signUp(); return; }
   $('buy_note').textContent=t('buy.opening','Opening secure checkout…');
-  const u=window.Clerk.user, email=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||'';
+  const u=(window.Clerk&&window.Clerk.user)||null, email=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||'';
   const r=await appApi('/app/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,email})});
   if(r&&r.url){ location.href=r.url; } else { $('buy_note').textContent=t('buy.fail','Could not start checkout — please try again.'); }
 }
@@ -3276,7 +3276,7 @@ function openSchedule(){
   SCH_DAYS=new Set();
   $('sch_err').textContent='';
   $('sch_store').textContent=findStoreName(); $('sch_cat').textContent=findProductLabel();
-  const cw=$('sch_contact'); if(cw&&!cw.value){ try{ cw.value=(window.Clerk.user.primaryEmailAddress&&window.Clerk.user.primaryEmailAddress.emailAddress)||''; }catch(e){} }
+  const cw=$('sch_contact'); if(cw&&!cw.value){ try{ cw.value=(window.Clerk&&window.Clerk.user&&window.Clerk.user.primaryEmailAddress&&window.Clerk.user.primaryEmailAddress.emailAddress)||(ACCOUNT&&ACCOUNT.phone)||''; }catch(e){} }
   $('sch_days').innerHTML=DOWLBL.map(([v,l])=>`<div class="chip" data-d="${v}" onclick="toggleSchDay('${v}',this)" style="cursor:pointer;text-align:center;padding:9px 0;font-size:13px">${l}</div>`).join('');
   track('schedule_open',{retailerId:SEL_STORE.id});
   $('scheduleOverlay').classList.add('on');
