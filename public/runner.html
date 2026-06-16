@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r18" />
+<meta name="x-rev" content="names-r19" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/fungibles-64.png">
 <link rel="apple-touch-icon" href="/logos/fungibles.png">
@@ -1297,8 +1297,8 @@ function applyFlags(){
 // Footer: socials from POLICY.links (hidden if unset), brand + year.
 function renderFooter(){
   const L=(POLICY.links)||{}, by=$('footYear'); if(by) by.textContent=new Date().getFullYear();
-  const fb=$('footBrand'); if(fb) fb.textContent=brandName();
-  const fm=$('footMark'); if(fm){ fm.innerHTML=FCHK(34); }
+  const fb=$('footBrand'); if(fb) fb.textContent='';  // the brand name lives inside the logo now
+  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/checkitforme.png?v=1" alt="Check It For Me" style="height:20px;width:auto;object-fit:contain;border-radius:0;display:block">`; }
   // Discord + X always shown; link to policy URLs when set, else a placeholder.
   const SOC=[['discord',ICO.discord,'Discord'],['x',ICO.x,'X']];
   const el=$('footSocials'); if(!el) return;
@@ -1509,7 +1509,7 @@ function openAuth(){
   setTimeout(()=>{try{$('auth_email').focus();}catch(e){}},90);
 }
 function closeAuth(){ authCancelLink(); $('authOverlay').classList.remove('on'); }
-function authMark(){ return `<img src="/logos/fungibles-f.png" alt="Fungibles" style="height:36px;width:auto;display:block">`; }
+function authMark(){ return `<img src="/logos/checkitforme.png?v=1" alt="Check It For Me" style="height:30px;width:auto;display:block">`; }
 function authDone(){ closeAuth(); toast("✓ You're in"); track('auth_success',{flow:AUTH.flow}); refreshAuth(); }
 // Background magic-link poll: resolves the moment the user taps the link (this tab or another).
 function authLinkPoll(promise){
@@ -2085,7 +2085,10 @@ function applyBrand(){
   // Apex (checkitforme.com → the default "runner" brand) LEADS WITH POKÉMON: pre-lock the Pokémon
   // category so the page opens in the Pokémon experience, while the product switcher stays so visitors
   // can hop to the other verticals. Real verticals (pokemon.*, onepiece.*, …) use their own category.
-  const wantCat = (BRAND && BRAND.category) || ((BRAND && BRAND.key === 'runner') ? 'Pokémon' : null);
+  const isApex = BRAND && BRAND.key === 'runner';
+  // Apex shows the pokéball hero art (the default brand injects none) so it leads with Pokémon visually.
+  if(isApex){ const ha=$('heroart'); if(ha) ha.innerHTML=ICO.pokeball; }
+  const wantCat = (BRAND && BRAND.category) || (isApex ? 'Pokémon' : null);
   if(!wantCat) return;
   // Tolerant match: accent-fold + drop "TCG"/"cards" so "One Piece TCG" ↔ "One Piece" still resolves.
   const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]','g'),'').replace(/\b(tcg|cards?|trading card game)\b/g,'').replace(/[^a-z0-9]+/g,'').trim();
