@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r35" />
+<meta name="x-rev" content="names-r36" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
@@ -2259,7 +2259,9 @@ function renderStoreActions(){
   const cantCall=st&&st.callable===false;
   // Callable stores: show alongside the CTA (after a category is picked). Non-callable: show on
   // selection — there's no call to wait for, the buy-online/notify IS the action.
-  if(!st||MODE==='kiosk'||(!cantCall&&!SEL_CATS.length)){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  // Callable stores: the call IS the action — don't surface the sell-methods/notify card beneath the
+  // pick (it was premature clutter). Only non-callable chains (Amazon, Micro Center) get this.
+  if(!st||MODE==='kiosk'||!cantCall){ wrap.style.display='none'; wrap.innerHTML=''; return; }
   const isSite=st.stockCheckMethod==='site';
   const methods=Array.isArray(st.sellMethods)?st.sellMethods:[];
   const nm=esc((st.name||'').split(/[—–]| - /)[0].trim());
