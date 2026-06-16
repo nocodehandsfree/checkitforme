@@ -47,6 +47,19 @@ export async function grantCredits(userId: string, n: number, spentCents = 0) {
     .where(eq(accounts.clerkUserId, userId));
 }
 
+/** Find or create the account for a phone-first user (keyed by `phone:<E.164>`), granting the
+ *  signup free checks on creation. The phone IS the identity in the new (Clerk-free) model. */
+export async function getAccountByPhone(phone: string) {
+  const id = `phone:${phone}`;
+  let row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
+  if (!row) {
+    const free = Math.max(0, (await getPolicy()).pricing.freeChecks || 0);
+    await db.insert(accounts).values({ clerkUserId: id, phone, callerId: phone, credits: free }).onConflictDoNothing();
+    row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
+  }
+  return row;
+}
+
 async function setSubscription(userId: string, active: boolean, customerId?: string) {
   const a = await getAccount(userId);
   if (!a) return;

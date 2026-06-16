@@ -49,7 +49,8 @@ async function isFinderPrivate(acct: { subscription?: string | null } | null | u
   const pol = await getPolicy();
   return !!(acct && acct.subscription === "active" && pol.finds.subscriberPrivateAlways);
 }
-import { getAccount, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, grantCredits, SUB, PACKS } from "./billing";
+import { getAccount, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, grantCredits, getAccountByPhone, SUB, PACKS } from "./billing";
+import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
 import { accounts } from "./db/schema";
 import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf } from "./voice/bridge";
 
@@ -86,10 +87,13 @@ app.use("/api/*", async (c, next) => {
 });
 
 // Verify a Clerk session token from any signed-in user (Runnr customers, not just the owner allowlist).
-async function verifyClerkToken(authHeader: string | undefined): Promise<{ id: string; email?: string } | null> {
-  if (!JWKS || !issuer) return null;
+async function verifyClerkToken(authHeader: string | undefined): Promise<{ id: string; email?: string; phone?: string } | null> {
   const tok = (authHeader || "").startsWith("Bearer ") ? (authHeader as string).slice(7) : "";
   if (!tok) return null;
+  // Our own phone-session first (the new Clerk-free auth). Falls back to Clerk during the cutover.
+  const s = await verifySession(tok);
+  if (s) return { id: s.id, phone: s.phone };
+  if (!JWKS || !issuer) return null;
   try {
     const { payload } = await jwtVerify(tok, JWKS, { issuer });
     return { id: String(payload.sub), email: payload.email as string | undefined };
@@ -370,6 +374,44 @@ app.post("/nav/ended", (c) => { navEnded(c.req.query("session") || ""); return c
 
 // ---- Health ----
 app.get("/api/health", (c) => c.json({ ok: true }));
+
+// ---- Phone-first auth (Clerk-free): SMS code → our session token → caller-ID verify call ----
+// Step 1: send an SMS code to the cell (browser auto-fills it). Rate-limited (SMS costs money).
+app.post("/auth/phone/start", async (c) => {
+  const rl = rlCheck("lead", clientIp(c.req.raw.headers), LIMITS.lead);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  const { phone } = await c.req.json().catch(() => ({}));
+  const e = authE164(String(phone || ""));
+  if (!/^\+1\d{10}$/.test(e)) return c.json({ error: "us_number_required" }, 400); // US only for now
+  const r = await startPhoneVerify(e);
+  return r.ok ? c.json({ ok: true }) : c.json({ error: r.error }, 400);
+});
+// Step 2: confirm the code → find/create the phone account → issue our session token.
+app.post("/auth/phone/check", async (c) => {
+  const { phone, code } = await c.req.json().catch(() => ({}));
+  const e = authE164(String(phone || ""));
+  if (!/^\+1\d{10}$/.test(e) || !code) return c.json({ error: "phone_and_code_required" }, 400);
+  if (!(await checkPhoneVerify(e, String(code)))) return c.json({ error: "bad_code" }, 401);
+  const a = await getAccountByPhone(e);
+  if (!a) return c.json({ error: "account_error" }, 500);
+  const token = await signSession(a.clerkUserId, e);
+  return c.json({ token, account: { phone: e, credits: a.credits, subscription: a.subscription, callerIdReady: !!a.callerId && a.callerId === e } });
+});
+// Step 3 (after login): kick off the caller-ID verification CALL; show the code to enter.
+app.post("/auth/callerid/start", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u || !u.phone) return c.json({ error: "unauthorized" }, 401);
+  const r = await startCallerIdVerify(u.phone);
+  return r.ok ? c.json({ validationCode: r.validationCode }) : c.json({ error: r.error }, 400);
+});
+// Poll whether the caller-ID call finished; on success, mark it on the account.
+app.get("/auth/callerid/status", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u || !u.phone) return c.json({ error: "unauthorized" }, 401);
+  const verified = await isCallerIdVerified(u.phone);
+  if (verified) await db.update(accounts).set({ callerId: u.phone }).where(eq(accounts.clerkUserId, u.id));
+  return c.json({ verified });
+});
 
 // ---- Consumer (Runnr) public API — pay-per-check. Bypasses the /api/* Clerk gate by design. ----
 const charged = new Set<string>(); // idempotent per-call charging (only on a definitive answer)
