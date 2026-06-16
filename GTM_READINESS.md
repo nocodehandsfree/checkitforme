@@ -145,6 +145,11 @@ Keep one vendor account per service, but **isolate the caller app's data**:
   check has a fixed *max* cost: ElevenLabs (per-min) + Twilio voice (per-min) + LLM (Haiku
   nav + Sonnet human, via Helicone) + amortized Stripe fee. SMS verify is one-time per signup
   (not per check). Surfacing this lets you tune the cap/model mix for margin.
+- [ ] **Wire the confirmed per-call rates into the admin cost dashboard — AFTER the calling tech
+  (Haiku-nav → Sonnet-human switch + DTMF reach-a-human) is validated live.** New-tech model lands
+  cost ~$0.11–0.13/check (≈50% margin at $0.25) because EL+Sonnet run only during the human talk.
+  Rates from the owner's call-cost model: Twilio carrier $0.014/min, Twilio STT $0.02/min, Haiku
+  $0.002/call, cheap TTS $0.001/call, EL $0.10/min, Sonnet 4.6 $0.024/min, Railway $0.001, number $0.001.
 
 ## Raw concurrency (must be factored in)
 
