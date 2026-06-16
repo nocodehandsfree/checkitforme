@@ -1227,9 +1227,8 @@ app.get("/app/history", async (c) => {
   if (!email) { const a = await getAccount(u.id); email = (a?.email || "").toLowerCase(); }
   const ids = new Set<string>([u.id]);
   if (email) {
-    for (const a of await db.select().from(accounts)) {
-      if ((a.email || "").toLowerCase() === email) ids.add(a.clerkUserId);
-    }
+    // Match by email with a WHERE clause (was a full accounts-table scan on every load — slow on the file DB).
+    for (const a of await db.select({ clerkUserId: accounts.clerkUserId }).from(accounts).where(eq(accounts.email, email))) ids.add(a.clerkUserId);
   }
   const stores = await retailerMap();
   const cats = await categoryLabelMap();
