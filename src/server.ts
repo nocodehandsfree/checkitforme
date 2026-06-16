@@ -55,7 +55,7 @@ import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPh
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf } from "./voice/bridge";
-import { isCallingPaused, setCallingPaused, spendTodayCents } from "./redis";
+import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
 await bootstrap(); // apply migrations + seed catalog if empty
@@ -2119,9 +2119,12 @@ wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {
 });
 
 // Poll for finished calls every 8s; fire due schedules every 60s; geocode 1 store / 3s.
-setInterval(() => ingestPending().catch((e) => console.error("ingest:", e)), 8_000);
-setInterval(() => schedulerTick().catch((e) => console.error("tick:", e)), 60_000);
-setInterval(() => geocodeMissing(1).catch((e) => console.error("geocode:", e)), 3_000);
-setInterval(() => harvestHoursTick().catch((e) => console.error("harvest:", e)), 120_000); // self-updating hours (policy-gated, off by default)
-setInterval(() => customerScheduleTick().catch((e) => console.error("cust-sched:", e)), 90_000); // subscriber auto-checks (policy-gated)
-setInterval(() => gmailReceiptTick().catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)
+// Background tickers wrapped in single-leader locks (withLock): with >1 app instance only ONE runs
+// each tick, so scheduled calls / charges / receipts never double-fire. No Redis (single instance) =
+// runs normally. The lock TTL is a crash failsafe; withLock releases as soon as the work finishes.
+setInterval(() => withLock("ingest", 30, ingestPending).catch((e) => console.error("ingest:", e)), 8_000);
+setInterval(() => withLock("tick", 55, schedulerTick).catch((e) => console.error("tick:", e)), 60_000);
+setInterval(() => withLock("geocode", 10, () => geocodeMissing(1)).catch((e) => console.error("geocode:", e)), 3_000);
+setInterval(() => withLock("harvest", 110, harvestHoursTick).catch((e) => console.error("harvest:", e)), 120_000); // self-updating hours (policy-gated, off by default)
+setInterval(() => withLock("cust-sched", 85, customerScheduleTick).catch((e) => console.error("cust-sched:", e)), 90_000); // subscriber auto-checks (policy-gated)
+setInterval(() => withLock("gmail-receipts", 25, gmailReceiptTick).catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)
