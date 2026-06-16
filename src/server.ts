@@ -111,6 +111,24 @@ async function clerkPrimaryEmail(id: string): Promise<string | undefined> {
     return e;
   } catch { return undefined; }
 }
+// Phone-first identity: the verified primary phone straight from Clerk (server-side, can't be
+// spoofed by the client). Becomes the account's number + the default caller ID. Cached 5 min.
+const clerkPhoneCache = new Map<string, { t: number; p: string }>();
+async function clerkPrimaryPhone(id: string): Promise<string | undefined> {
+  const hit = clerkPhoneCache.get(id);
+  if (hit && Date.now() - hit.t < 300_000) return hit.p || undefined;
+  const sk = process.env.CLERK_SECRET_KEY;
+  if (!sk || !id) return undefined;
+  try {
+    const r = await fetch(`https://api.clerk.com/v1/users/${id}`, { headers: { Authorization: `Bearer ${sk}` } });
+    if (!r.ok) return undefined;
+    const d = (await r.json()) as { primary_phone_number_id?: string; phone_numbers?: { id: string; phone_number: string }[] };
+    const list = d.phone_numbers || [];
+    const p = (list.find((x) => x.id === d.primary_phone_number_id) || list[0])?.phone_number;
+    if (p) clerkPhoneCache.set(id, { t: Date.now(), p });
+    return p;
+  } catch { return undefined; }
+}
 
 // ---- Pages ----
 // Operator dashboard at caller.* ; consumer "pay-per-check" app at runner.* (or /r preview).
@@ -987,6 +1005,8 @@ app.post("/api/hours/:id/refresh", async (c) => {
 // Anonymous FREE check (1 per device, client-tracked; bounded globally by the demo pool).
 app.post("/pub/check", async (c) => {
   const b = await c.req.json();
+  // Phone-first model: no anonymous calls — every call must come from a verified-phone account.
+  if ((await getPolicy()).flags.requirePhoneSignup) return c.json({ error: "signin_required" }, 401);
   if ((await pubCredits()) <= 0) return c.json({ error: "no_credits" }, 402);
   const { retailerId, categoryId, specificProduct } = b;
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
@@ -998,6 +1018,7 @@ app.post("/pub/check", async (c) => {
 });
 // Free check WITH live audio (bridged through our Twilio). Returns a room to listen on.
 app.post("/pub/check-live", async (c) => {
+  if ((await getPolicy()).flags.requirePhoneSignup) return c.json({ error: "signin_required" }, 401);
   if ((await pubCredits()) <= 0) return c.json({ error: "no_credits" }, 402);
   const b = await c.req.json();
   const catIds = (Array.isArray(b.categoryIds) ? b.categoryIds : [b.categoryId]).map(Number).filter(Boolean);
@@ -1057,9 +1078,15 @@ app.get("/app/me", async (c) => {
   const verifiedEmail = u.email || await clerkPrimaryEmail(u.id);
   const a = await getAccount(u.id, verifiedEmail || c.req.query("email") || undefined);
   const comp = isComp(a?.email) || isComp(verifiedEmail);
+  // Phone-first: capture the verified cell once and default the caller ID to it (Twilio
+  // verification before we actually dial AS it is Phase 2). Server-sourced, can't be spoofed.
+  if (a && !a.phone) {
+    const phone = await clerkPrimaryPhone(u.id);
+    if (phone) { await db.update(accounts).set({ phone, callerId: a.callerId ?? phone }).where(eq(accounts.clerkUserId, u.id)); a.phone = phone; }
+  }
   return c.json({
     credits: comp ? 9999 : (a?.credits ?? 0), subscription: comp ? "active" : (a?.subscription ?? "none"),
-    comp, callsMade: a?.callsMade ?? 0, catalog: { sub: SUB, packs: PACKS },
+    comp, callsMade: a?.callsMade ?? 0, phone: a?.phone ?? null, catalog: { sub: SUB, packs: PACKS },
   });
 });
 // Authenticated check — verifies the user has credits, places the call. Charged only on a real answer.
