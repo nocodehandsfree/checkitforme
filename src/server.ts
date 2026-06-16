@@ -49,7 +49,7 @@ async function isFinderPrivate(acct: { subscription?: string | null } | null | u
   const pol = await getPolicy();
   return !!(acct && acct.subscription === "active" && pol.finds.subscriberPrivateAlways);
 }
-import { getAccount, getAccountByPhone, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, grantCredits, SUB, PACKS } from "./billing";
+import { getAccount, getAccountByPhone, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, SUB, PACKS } from "./billing";
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
@@ -1169,7 +1169,7 @@ app.get("/app/me", async (c) => {
   // Verified email (token → Clerk API), never the client-passed one, decides comp/master.
   const verifiedEmail = u.email || await clerkPrimaryEmail(u.id);
   const a = await getAccount(u.id, verifiedEmail || c.req.query("email") || undefined);
-  const comp = isComp(a?.email) || isComp(verifiedEmail);
+  const comp = isCompAccount(a) || isComp(verifiedEmail);
   // Phone-first: capture the verified cell once and default the caller ID to it (Twilio
   // verification before we actually dial AS it is Phase 2). Server-sourced, can't be spoofed.
   if (a && !a.phone) {
@@ -1189,7 +1189,7 @@ app.post("/app/check", async (c) => {
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
-  if (!isComp(a?.email) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
+  if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
   try {
     const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a) });
     return c.json({ providerCallId: r.providerCallId, status: r.status });
@@ -1204,7 +1204,7 @@ app.post("/app/check-live", async (c) => {
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
-  if (!isComp(a?.email) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
+  if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
   const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) });
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: RAILWAY_HOST });
@@ -1221,7 +1221,7 @@ app.post("/app/schedule", async (c) => {
   const pol = await getPolicy();
   if (!pol.flags.scheduling) return c.json({ error: "scheduling_off" }, 403);
   const a = await getAccount(u.id, u.email);
-  if (!isComp(a?.email) && a?.subscription !== "active") return c.json({ error: "members_only" }, 402);
+  if (!isCompAccount(a) && a?.subscription !== "active") return c.json({ error: "members_only" }, 402);
   const b = await c.req.json();
   if (!b.retailerId || !b.categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
   const row = await createSchedule(u.id, { ...b, contact: b.contact || a?.email || undefined });
@@ -1283,7 +1283,7 @@ app.post("/app/charge", async (c) => {
   // Charging is now SERVER-SIDE on call completion (ingestPending, atomic + idempotent). This
   // endpoint no longer trusts the client to bill itself — it just returns the live balance.
   const a = await getAccount(u.id, u.email);
-  return c.json({ credits: isComp(a?.email) ? 9999 : (a?.credits ?? 0) });
+  return c.json({ credits: isCompAccount(a) ? 9999 : (a?.credits ?? 0) });
 });
 // Create a Stripe Checkout session (kind = "sub" | pack key). Returns a redirect URL.
 app.post("/app/checkout", async (c) => {

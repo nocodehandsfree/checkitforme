@@ -6,7 +6,7 @@ import { openState, fetchStoreHours } from "../store-hours";
 import {
   accounts, callResults, categories, chains, retailers, scheduleTargets, schedules, watches, zoneRetailers, zones,
 } from "../db/schema";
-import { chargeOneCredit, isComp } from "../billing";
+import { chargeOneCredit, isCompAccount } from "../billing";
 import { isCallingPaused } from "../redis";
 
 /** Notify every active restock-watch for this store+category that it's back in stock, once. */
@@ -494,7 +494,7 @@ export async function chargeCallOnce(callId: number, finderUserId: string): Prom
     .where(and(eq(callResults.id, callId), isNull(callResults.chargedAt)));
   if ((won.rowsAffected ?? 0) === 0) return false; // already charged
   const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, finderUserId)))[0];
-  if (acct && !isComp(acct.email)) return chargeOneCredit(finderUserId);
+  if (acct && !isCompAccount(acct)) return chargeOneCredit(finderUserId);
   return false; // comp / no account: marked charged, no credit taken
 }
 

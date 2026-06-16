@@ -28,6 +28,16 @@ export function isComp(email?: string | null): boolean {
   return !!email && list.includes(email.toLowerCase());
 }
 
+/** Comp by PHONE (COMP_PHONES, E.164) — so a phone-first master/owner account is comp even with no email. */
+export function isCompPhone(phone?: string | null): boolean {
+  const list = (process.env.COMP_PHONES || "").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
+  return !!phone && list.includes(phone.toLowerCase());
+}
+/** True if this account is comp by EITHER its email or its verified phone (the phone-first path). */
+export function isCompAccount(a?: { email?: string | null; phone?: string | null } | null): boolean {
+  return !!a && (isComp(a.email) || isCompPhone(a.phone));
+}
+
 export async function getAccount(userId: string, email?: string) {
   let row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, userId)))[0];
   if (!row) {
