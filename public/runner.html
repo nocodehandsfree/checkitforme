@@ -3,10 +3,14 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="names-r2" />
+<meta name="x-rev" content="names-r22" />
 __BRAND_HEAD__
-<link rel="icon" type="image/png" href="/logos/fungibles-64.png">
-<link rel="apple-touch-icon" href="/logos/fungibles.png">
+<link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
+<link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
+<!-- Clerk's bundle is the biggest external fetch on every cold load (every product switch reloads a
+     new subdomain) — warm the connection early so DNS+TLS isn't on the critical path. -->
+<link rel="preconnect" href="https://__CLERK_FRONTEND_API__" crossorigin>
+<link rel="dns-prefetch" href="https://__CLERK_FRONTEND_API__">
 <script async crossorigin="anonymous"
   data-clerk-publishable-key="__CLERK_PUBLISHABLE_KEY__"
   src="https://__CLERK_FRONTEND_API__/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
@@ -82,6 +86,18 @@ __BRAND_HEAD__
   .cta .price{font-weight:700;opacity:.7;font-size:13px}
   /* dark/branded CTA variants drop the green glow (it bleeds weirdly behind black/blue buttons) */
   .cta.dark{box-shadow:0 4px 14px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08)}
+  /* Sell-methods card (docs/SELL_METHODS_PLAN.md): what's possible at THIS store — live online
+     stock, ways to get it, resale warning, notify. Non-callable chains (Micro Center, Amazon) show
+     "Buy online" here instead of a call button; callable stores get a slim notify row under the CTA. */
+  #sellmeta{display:flex;flex-direction:column;gap:9px}
+  .smwarn{background:rgba(232,154,74,.12);border:1px solid rgba(232,154,74,.4);color:#f0c79a;border-radius:12px;padding:10px 12px;font-size:13px;font-weight:700;line-height:1.4}
+  .smline{background:var(--terminal);border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-size:13.5px;color:#e6e2f7;line-height:1.4}
+  .smchips{display:flex;flex-wrap:wrap;gap:7px}
+  .smchip{display:inline-flex;align-items:center;gap:5px;background:var(--ptint);border:1px solid var(--pline);color:#e6e2f7;border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:700}
+  .smrow{display:flex;gap:8px;flex-wrap:wrap}
+  .smbtn{flex:1 1 auto;min-width:130px;background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;border:none;border-radius:12px;padding:13px;font-weight:900;font-size:14.5px;cursor:pointer;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  .smbtn.ghost{background:var(--sheet);border:1px solid var(--pline);color:#e6e2f7}
+  .smnote{color:var(--muted);font-size:12px;line-height:1.45;text-align:center}
   /* live calling */
   .live{text-align:center;padding:30px 18px}
   .ring{width:84px;height:84px;border-radius:50%;margin:0 auto 18px;border:3px solid rgba(74,222,128,.18);border-top-color:var(--green);animation:spin 1s linear infinite;display:flex;align-items:center;justify-content:center;font-size:32px}
@@ -306,7 +322,8 @@ __BRAND_HEAD__
   /* Auth/account brand band: full-bleed banner that IS the F logo's own background —
      sampled from logos/fungibles.png so the mark sits on it seamlessly */
   #authOverlay .modal,#acctOverlay .modal{overflow:hidden}
-  #auth_logo,#acct_logo{margin:-22px -22px 16px !important;background:linear-gradient(180deg,#5B1E99,#A65CED);padding:13px 16px;display:flex;align-items:center;justify-content:flex-start}
+  /* Sign-up / account modal: no purple band — the logo sits upper-left on the modal's own grey bg. */
+  #auth_logo,#acct_logo{margin:-22px -22px 16px !important;background:var(--sheet);padding:16px 18px 4px;display:flex;align-items:center;justify-content:flex-start}
   #authOverlay .x,#acctOverlay .x{color:rgba(255,255,255,.95);z-index:2;top:8px;right:10px;width:28px;height:28px;display:grid;place-items:center;font-size:0}
   #authOverlay .x::before,#acctOverlay .x::before{content:'';width:13px;height:13px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 13 13' fill='none'%3E%3Cpath d='M2 2l9 9M11 2l-9 9' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat}
   /* OAuth: logo-only tiles in OUR chrome — same family as the footer social tiles */
@@ -374,8 +391,9 @@ __BRAND_HEAD__
   @keyframes spin{to{transform:rotate(360deg)}}
   .site-footer{border-top:1px solid var(--border);margin-top:18px;padding:20px 22px 26px;background:#0e0e16}
   /* one tight link row + one meta row — and when the floating back fab is up (.fabbed),
-     the footer steps left/up so nothing hides under the thumb button */
-  body.fabbed .site-footer{padding-right:88px;padding-bottom:44px}
+     the footer reserves the fab's WHOLE corner (58px + 22px gap ≈ 80px each way) so no row —
+     copyright, socials, language — can ever sit under the thumb button. */
+  body.fabbed .site-footer{padding-right:90px;padding-bottom:92px}
   .foot-links{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:14px}
   .foot-links a{color:#8f8fa0;font-size:13px;font-weight:700;text-decoration:none;cursor:pointer}
   .foot-links a:hover{color:#fff}
@@ -395,7 +413,6 @@ __BRAND_HEAD__
   .earnbox .et{font-weight:800;font-size:13.5px}
   .earnbox .es{color:var(--muted);font-size:11.5px;margin-top:4px;line-height:1.35}
   .foot-bottom{display:flex;align-items:center;gap:5px;padding-top:14px;border-top:1px solid var(--border)}
-  .chrome-band{height:10px;width:100%;background:var(--accent,var(--green))}
   .foot-fav{display:flex;align-items:center;flex:0 0 auto}
   .foot-fav svg{width:24px;height:24px;border-radius:7px}
   .foot-copy{color:#7a7a86;font-size:12px;font-weight:600}
@@ -412,11 +429,13 @@ __BRAND_HEAD__
   .iconbtn:active{transform:scale(.95)}
   header .vswitch{margin:0;max-width:46vw;padding:7px 30px 7px 12px;font-size:13px;background-position:right 11px center;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
   .pill.credits{flex:0 0 auto}
-  .ticker{overflow:hidden;padding:8px 0;border-bottom:1px solid var(--border);background:rgba(74,222,128,.06);animation:tickerIn .4s ease}
-  .tickrun{display:flex;gap:26px;width:max-content;animation:marquee 32s linear infinite}
+  .ticker{overflow:hidden;padding:8px 0;border-bottom:1px solid var(--border);background:rgba(74,222,128,.06);animation:tickerIn .4s ease;contain:content}
+  .tickrun{display:flex;gap:26px;width:max-content;animation:marquee 32s linear infinite;will-change:transform}
+  @media (prefers-reduced-motion:reduce){ .tickrun{animation:none} }
   .tickrun:hover{animation-play-state:paused}
   @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   .tfound{color:var(--green)}
+  .trestock{color:var(--accent2,var(--purple))}
   .ticker::-webkit-scrollbar{display:none}
   @keyframes tickerIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1}}
   .tick{flex:0 0 auto;display:flex;align-items:center;gap:7px;font-size:12px;color:#c6c6d2;white-space:nowrap;font-weight:600}
@@ -594,8 +613,6 @@ __BRAND_HEAD__
        so About/Terms/socials + the divider line up flush with the card edges above */
     .foot-links,.foot-meta,.foot-bottom{max-width:632px;margin-left:auto;margin-right:auto}
   }
-  /* when the floating back button is up (scores page), slide the footer socials out from under it */
-  .fabbed .foot-social{padding-right:84px}
 </style>
 </head>
 <body>
@@ -669,6 +686,9 @@ __BRAND_HEAD__
 
     <button class="cta" id="checkBtn" onclick="startCheck()" style="display:none">Check this store</button>
     <div class="foot" id="chargefoot" style="display:none;margin-top:10px" data-i18n="charge"><b>No answer = no charge.</b> You always get the verdict.</div>
+    <!-- Sell-methods card: live online stock / ways to get it / resale warning / notify.
+         Replaces the call button for non-callable chains (Micro Center, Amazon). -->
+    <div id="sellmeta" style="display:none;margin-top:12px"></div>
 
     <!-- Secondary engagement (below the core flow) -->
 
@@ -723,6 +743,7 @@ __BRAND_HEAD__
 
   <!-- LIVE -->
   <div id="live" class="hidden">
+    <div id="muteBanner" style="display:none;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.4);color:#FBBF24;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-weight:700;font-size:13.5px;text-align:center" data-i18n="live.mute">🔇 Flip your phone off silent so you can hear the call</div>
     <div class="card live">
       <div class="ring"><svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M5 4.5h4l1.5 4.5-2.5 1.6a13 13 0 0 0 5.4 5.4l1.6-2.5 4.5 1.5v4a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 3 6.7 2 2 0 0 1 5 4.5z" stroke="var(--green)" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
       <div class="phase" id="phase" data-i18n="live.connecting">Connecting…</div>
@@ -797,9 +818,6 @@ __BRAND_HEAD__
     <span class="foot-copy"><b id="footBrand" class="foot-brandname">Fungibles</b> powered by <b>Fungibles</b> · © <span id="footYear"></span></span>
   </div>
 </footer>
-<!-- Thin per-brand accent strip at the very bottom — what iOS samples to tint the browser bar when
-     you scroll to the bottom (the deliberate "chrome color"). Per vertical via --accent. -->
-<div class="chrome-band" aria-hidden="true"></div>
 
 <!-- Buy / subscribe modal -->
 <div class="overlay" id="buyOverlay" onclick="if(event.target===this)closeBuy()">
@@ -1091,10 +1109,11 @@ const I18N={ es:{
   'empty.search':'Sin resultados — prueba otra búsqueda, o toca el pin para ver tiendas cerca de ti.',
   'empty.radius':'No hay tiendas abiertas en {r} mi — amplía el radio.',
   'empty.far.title':'Aún no estamos en tu zona…','empty.far.sub':'¡Llegaste temprano! Sé el primero en saber cuando {b} llegue cerca de ti.','empty.far.cta':'🔔 Avísame cuando lleguen',
-  'tick.found':'¡Encontrado!','besttag':'Mejor opción','bestwhy':'buenas probabilidades ahora',
+  'tick.found':'¡Encontrado!','tick.restock':'Reabastecimiento en camino','besttag':'Mejor opción','bestwhy':'buenas probabilidades ahora',
   'closednow':'— cerrado ahora mismo',
   // live view
-  'live.calling':'📞 Llamando a la tienda…','live.ringing':'📞 Timbrando…','live.connected':'📞 Conectados — escuchando…','live.talking':'🗣️ Hablando con la tienda…','live.ivr':'🔢 Navegando el menú telefónico…','live.getting':'⏳ Obteniendo el resultado…','live.loading':'Cargando tu llamada…','live.connecting':'Conectando…',
+  'pre.had':'tenían en stock','pre.notin':'no tenían','pre.unclear':'sin respuesta clara','pre.again':'Llamaste a {s} {a} — {o}. ¿Llamar de nuevo?','pre.note':'Llamaste a {s} {a} — {o}',
+  'live.mute':'🔇 Quita el silencio del teléfono para escuchar la llamada','live.calling':'📞 Colocando la llamada…','live.ringing':'📞 Timbrando…','live.connected':'✅ Contestaron — escuchando…','live.talking':'🙋 Hablando con un empleado…','live.ivr':'🔢 Navegando el menú telefónico…','live.getting':'⏳ Obteniendo el resultado…','live.loading':'Cargando tu llamada…','live.connecting':'Conectando…',
   'live.live':'🔊 EN VIVO — estás escuchando la llamada','live.hangup':'■ Detener y colgar','live.proof':'🔴 En vivo — la conversación según sucede','live.foot':'Un momento — las tiendas contestan, te ponen en espera y conversan. Vale los 2 minutos.',
   // result page
   'res.used':'1 verificación usada','res.nocharge':'Sin cargo por esta','res.poweredby':'Con tecnología de',
@@ -1142,6 +1161,11 @@ const I18N={ es:{
   'lead.title':'Tu primera llamada es gratis','lead.sub':'Solo tu correo. Sin tarjeta.','lead.cta':'Hacer mi llamada gratis →','lead.wait':'Un segundo…',
   // share modal
   'share.msg':'¡Mira esto!','share.title':'Comparte el hallazgo','share.sub':'Avísale a tu gente antes de que se agote.','share.post':'𝕏  Publicar','share.sms':'💬  Mándalo','share.copy':'Copiar','share.copied':'Copiado — pégalo donde quieras 📋',
+  // sell-methods card
+  'sm.resale':'Reventa — el precio puede superar el MSRP','sm.livechk':'Consultando stock en línea…','sm.nolive':'Aún no hay señal en línea — activa un aviso de reposición',
+  'sm.in':'En stock en línea ahora','sm.low':'Poco stock en línea','sm.out':'Agotado en línea',
+  'sm.instore':'En estante','sm.pickup':'Recoger en tienda','sm.ship':'Comprar y enviar',
+  'sm.buyonline':'Comprar en línea','sm.notify':'Avísame cuando vuelva','sm.nocall':'No podemos llamar a {x} — revisa su sitio o recibe un aviso cuando se reabastezca.',
   // watch modal
   'watch.title':'Avísame cuando vuelva','watch.sub':'Te avisamos en cuanto una llamada lo confirme en stock aquí.','watch.ph':'correo o teléfono','watch.cta':'Vigilar esta tienda →','sc.photolabel':'Foto',
   'sch.body':'Llamamos a <b id="sch_store">la tienda</b> los días de envío. Te avisamos en cuanto llegue <b id="sch_cat">el producto</b>. 1 verificación por llamada.','watch.setting':'Configurando…','watch.done':"🔔 Listo — te avisamos en cuanto vuelva",
@@ -1156,7 +1180,7 @@ const I18N={ es:{
   // kiosk modal
   'k.tag':'Sabiduría colectiva','k.title':'Reporta un kiosco','k.sub':'¿Viste un kiosco de Pokémon que se recarga con horario? Comparte los tiempos — cada reporte te gana <b id="kiosk_reward">una verificación gratis</b>.','k.which':'¿Qué tienda y ubicación?','k.minutes':'Minutos de recarga <span style="color:var(--muted);font-weight:400">— cuándo cae, pasada cada hora</span>','k.every':'Cada…','k.notsure':'no estoy seguro','k.where':'¿A dónde mandamos tu verificación gratis?','k.cta':'Enviar y reclamar mi verificación →','k.submitting':'Enviando…','k.err.label':'Dinos qué tienda y ubicación','k.err.minutes':'Agrega al menos un minuto de recarga (ej. :03)','k.err.contact':'Agrega un correo o teléfono para tu verificación gratis','k.thanks.credits':'🎁 ¡Gracias! {n} agregadas','k.thanks.free':'🎁 ¡Gracias! Tu verificación gratis está lista — ve a verificar una tienda','k.thanks':'🙌 ¡Gracias por el dato!','k.reward.one':'una verificación gratis','k.reward.n':'{n} verificaciones gratis',
   // success wall
-  'sc.postbtn':'Publicar','sc.posting':'Publicando…','sc.posted.review':'🙌 ¡Publicado! Lo revisamos antes de que salga','sc.posted':'🏆 ¡Estás en el muro!','sc.err.photo':'Agrega una foto de tu logro','sc.empty':'Aún no hay logros — sé el primero en el muro','sc.prod.ph':'ej. ETB de Héroes Ascendidos',
+  'sc.postbtn':'Publicar','sc.posting':'Publicando…','sc.posted.review':'🙌 ¡Publicado! Lo revisamos antes de que salga','sc.posted':'🏆 ¡Estás en el muro!','sc.err.photo':'Agrega una foto de tu logro','sc.empty':'Sé el primero en publicar un logro','sc.empty2':'…y gana una verificación gratis.','sc.prod.ph':'ej. ETB de Héroes Ascendidos',
   'ref.sub2':'Se unen con tu enlace y hacen una verificación — <b>verificaciones gratis para los dos</b>.',
   // driver / runner teaser
   'dd.tag':'Vista previa · próximamente','dd.title':'Que un local lo recoja','dd.sub':'¿Muy lejos para manejar? Manda a un conductor de Uber/Lyft cercano a comprarlo y enviártelo — él paga <b>$0 de su bolsillo</b>, tú solo pones el bono.','dd.instock':'En stock','dd.s1':'Define el <b style="color:var(--green)">bono</b> del conductor (ej. $25) sobre su tarifa','dd.s2':'Pide el viaje en <b>Uber</b> o <b>Lyft</b> — recogida en la tienda','dd.s3':'Envía una tarjeta prepagada (producto + envío) + un mensaje listo','dd.s4':'Él lo compra, lo envía y toca <b>Listo</b> → tu bono se libera al instante','dd.sees':'lo que ve el conductor','dd.pickup':'Tienes una recogida de <span style="color:var(--green)">$25</span> 🏃','dd.applepay':'Agregar tarjeta a Apple Pay (60 seg)','dd.cta':'Quiero acceso anticipado →','dd.noted':'Anotado — te buscamos para el acceso anticipado 🤝','dd.grab':'recoger en {s} → te lo envían',
@@ -1164,7 +1188,7 @@ const I18N={ es:{
   'err.generic':'Algo salió mal — inténtalo de nuevo','err.email':'Ingresa un correo válido','err.contact':'Ingresa un correo o teléfono válido','err.pickstore':'Elige una tienda primero',
   'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó — regístrate para seguir','toast.joinalerts':'Únete gratis para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la llamada','toast.callgone':'Esa llamada ya no está disponible','toast.loadingcall':'Cargando tu llamada…','toast.translate.fail':'No se pudo traducir','toast.payment':'🎉 Pago recibido — agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada — actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó — mostrando la lista','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x} — no se hizo la llamada',
   'find.me':'Encuentra mis tiendas','find.near':'cerca de ti, abiertas ahora',
-  'scores.title':'Logros de la caza','scores.post':'Publica el tuyo →','scores.first':'El primer logro se lleva la gloria — publica el tuyo.',
+  'scores.title':'Logros de la caza','scores.post':'Publica el tuyo →','scores.first':'¡Muéstranos el botín!',
   'ho.title':'Pásalo a un conductor','ho.sub':'Él lo compra — y te lo lleva a tu puerta o te lo envía.','ho.ship':'Envíamelo','ho.home':'Tráelo a mi casa','ho.ship.btn':'📦 Envíamelo','ho.home.btn':'🏠 Tráelo a mi casa',
   'ho.ship.hint':'El empaque y el envío van en la tarjeta del conductor — lo envía de regreso y te llega el rastreo por texto.','ho.home.hint':'El conductor lo lleva directo a tu puerta — sin envío, sin esperar el correo.',
   'ho.s1.label':'Confirmar','ho.s1.title':'¿A dónde debe llegar?','ho.s1.cta':'Se ve bien →','ho.s2.label':'La oferta','ho.s2.title':'Define el bono del conductor','ho.s2.cta':'Fijar el bono →',
@@ -1273,8 +1297,8 @@ function applyFlags(){
 // Footer: socials from POLICY.links (hidden if unset), brand + year.
 function renderFooter(){
   const L=(POLICY.links)||{}, by=$('footYear'); if(by) by.textContent=new Date().getFullYear();
-  const fb=$('footBrand'); if(fb) fb.textContent=brandName();
-  const fm=$('footMark'); if(fm){ fm.innerHTML=FCHK(34); }
+  const fb=$('footBrand'); if(fb) fb.textContent='';  // the brand name lives inside the logo now
+  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/checkitforme.png?v=2" alt="Check It For Me" style="height:20px;width:auto;object-fit:contain;border-radius:0;display:block">`; }
   // Discord + X always shown; link to policy URLs when set, else a placeholder.
   const SOC=[['discord',ICO.discord,'Discord'],['x',ICO.x,'X']];
   const el=$('footSocials'); if(!el) return;
@@ -1292,13 +1316,17 @@ async function submitStoreReq(){
   if(!r||r.error){ $('sr_err').textContent=t('err.generic','Something went wrong — try again'); return; }
   track('storereq_submit'); closeStoreReq(); toast(t('toast.storethanks',"🙌 Thanks! We'll work on adding that store"));
 }
+// Run non-critical work (the top finds-ticker banner, the demo body) when the browser is idle, so it
+// never competes with first paint or the first scroll after a product switch (each switch is a full
+// cross-subdomain reload) — that's the "top banner pauses on switch" jank.
+const idle=(fn)=>('requestIdleCallback' in window)?requestIdleCallback(fn,{timeout:1500}):setTimeout(fn,300);
 async function boot(){
   captureReferral(); // stash any ?ref= before we clean the URL
   STORES=[];
   // PAINT FIRST — header, hero, switcher, logo, language + auth all come from injected brand data, so
   // render them instantly instead of waiting on the network (this is what made the header slow to appear).
   initGA();
-  buildSwitcher(); applyBrand(); renderIcons(); renderDemo(); buildLangSel(); applyLang();
+  buildSwitcher(); applyBrand(); renderIcons(); buildLangSel(); applyLang();
   renderAuth(); renderStores(); renderChips(); renderFooter(); initClerk();
   const sp=new URLSearchParams(location.search);
   if(sp.get('paid')){ history.replaceState({},'','/'); toast('🎉 Payment received — adding your credits…'); setTimeout(refreshAuth,2500); setTimeout(refreshAuth,6000); }
@@ -1310,11 +1338,18 @@ async function boot(){
   CATS=Array.isArray(c)?c:[];
   if(Array.isArray(st)) st.forEach(x=>RSTATUSES[x.key]=x);
   if(pol&&!pol.error){ const flags=Object.assign({},POLICY.flags,pol.flags||{}); POLICY=Object.assign(POLICY,pol); POLICY.flags=flags; }
-  applyBrand(); applyFlags(); renderDemo(); renderChips(); renderStores(); applyLang(); loadFinds();
+  applyBrand(); applyFlags(); renderChips(); renderStores(); applyLang();
+  idle(()=>{ renderDemo(); loadFinds(); }); // ticker + demo off the critical path
 }
 let PENDING_VIEW=null;
 async function initClerk(){
   const t0=Date.now(); while(!window.Clerk){ if(Date.now()-t0>9000){ window.__clerkReady=true; renderAuth(); return; } await new Promise(r=>setTimeout(r,80)); }
+  // Clerk.load() does heavy SYNCHRONOUS work when there's a signed-in session — it hydrates the User,
+  // wires up token auto-refresh, and mounts its widgets. Run inline it froze scroll for ~1s on every
+  // reload (product-switch + pull-to-refresh both reload) while logged in; logged-out has no session
+  // to hydrate, so no freeze. Defer it to idle so first paint + scrolling stay responsive — the
+  // optimistic "You" pill (renderAuth) covers the gap until the real name/credits resolve.
+  await new Promise(r=>('requestIdleCallback' in window)?requestIdleCallback(()=>r(),{timeout:1200}):setTimeout(r,200));
   try{ await window.Clerk.load(); window.Clerk.addListener(()=>refreshAuth()); }catch(e){}
   window.__clerkReady=true; // Clerk resolved — stop showing the optimistic pill
   await handleClerkLinkCallback();
@@ -1474,7 +1509,7 @@ function openAuth(){
   setTimeout(()=>{try{$('auth_email').focus();}catch(e){}},90);
 }
 function closeAuth(){ authCancelLink(); $('authOverlay').classList.remove('on'); }
-function authMark(){ return `<img src="/logos/fungibles-f.png" alt="Fungibles" style="height:36px;width:auto;display:block">`; }
+function authMark(){ return `<img src="/logos/checkitforme.png?v=2" alt="Check It For Me" style="height:30px;width:auto;display:block">`; }
 function authDone(){ closeAuth(); toast("✓ You're in"); track('auth_success',{flow:AUTH.flow}); refreshAuth(); }
 // Background magic-link poll: resolves the moment the user taps the link (this tab or another).
 function authLinkPoll(promise){
@@ -1723,7 +1758,7 @@ function setUserLoc(lat,lng){
   const mt=$('maptoggle'); if(mt){ mt.style.display=''; mt.classList.add('glow'); } // pulse so they notice the map is tappable
   const b=$('findbtn'); if(b){ b.classList.remove('loading'); b.classList.add('on'); }
   if(MAP && $('mapview') && $('mapview').style.display==='block') placeMyPin(lat,lng,false); // keep the map pin in sync (e.g. ZIP relocate)
-  fetchNear(); loadBestBet();
+  fetchNear(); loadBestBet(); loadFinds(); // re-pull the banner localized to the new location
 }
 function findMe(after){
   if(!navigator.geolocation){ toast(t('toast.noloc','Location not supported on this device')); return; }
@@ -1873,7 +1908,8 @@ function renderStores(){
     }
     const dot=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
     const drop=shipmentDayShort(s);
-    const meta=[esc(s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', drop?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
+    // Lead with the STREET so stores sharing a city (e.g. two "Big 5 — Los Angeles") are tellable apart; fall back to city.
+    const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', drop?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
     return `<div class="store ${sel}" onclick="pickStore(${s.id})">
       <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
       <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${dot}${meta}</div></div>
@@ -1923,8 +1959,8 @@ const ICO={
 let FCID=0;
 // The Fungibles check — our logo-grade checkmark (secondary purple flowing into go-green).
 function FCHK(sz){ sz=sz||16;
-  // The owner's Fungibles check — their exact mark (green disc, check cut out, breaking the top-right edge).
-  return `<img src="/logos/fcheck.png?v=2" alt="" width="${sz}" height="${sz}" style="display:inline-block;vertical-align:middle;object-fit:contain">`;
+  // The owner's EXACT checkmark asset (public/logos/fcheck.png). NEVER recreate it as SVG/CSS — use the file.
+  return `<img src="/logos/fcheck.png?v=6" alt="" width="${sz}" height="${sz}" style="display:inline-block;vertical-align:middle;object-fit:contain">`;
 }
 function setI(id,html){ const e=$(id); if(e) e.innerHTML=html; }
 function renderIcons(){
@@ -1970,12 +2006,23 @@ async function openPage(slug){
 }
 function closePage(){ $('pageOverlay').classList.remove('on'); }
 async function loadFinds(){
-  let f=[]; try{ f=await api('/pub/finds'); }catch(e){}
+  // Localized banner: once we know where they are, ask for finds near them (same lat/lng/radius
+  // convention as /pub/stores/near). Before location is shared it's the national feed (social proof).
+  let f=[]; const u=USER_LOC?`/pub/finds?lat=${USER_LOC.lat}&lng=${USER_LOC.lng}&radius=${Math.max(RADIUS,1)}`:'/pub/finds';
+  try{ f=await api(u); }catch(e){}
   const el=$('finds'); if(!el) return;
   if(BRAND_CAT) f=(Array.isArray(f)?f:[]).filter(x=>String(x.category||'').toLowerCase()===BRAND_CAT.label.toLowerCase());
   if(!Array.isArray(f)||!f.length){ el.style.display='none'; return; }
   el.style.display='block';
-  const items=f.slice(0,10).map(x=>`<div class="tick">${FCHK(16)}<b class="tfound">${t('tick.found','Found!')}</b> · ${esc(x.store)} <span class="tago">${agoStr(x.at)}</span></div>`).join('');
+  const items=f.slice(0,10).map(x=>{
+    // Two banner states: in-stock find (✓ Found!) and shipment-incoming (🚚 Restock coming). The
+    // restock state lights up for finds the server tags type:'restock' (e.g. "we get more Tuesday").
+    const restock = x.type==='restock' || x.restock===true || x.status==='restock_coming';
+    const face = restock
+      ? `<span style="display:inline-flex;color:${AC2()}">${ICO.truck(AC2())}</span><b class="trestock">${t('tick.restock','Restock coming')}</b>`
+      : `${FCHK(16)}<b class="tfound">${t('tick.found','Found!')}</b>`;
+    return `<div class="tick">${face} · ${esc(x.store)} <span class="tago">${agoStr(x.at)}</span></div>`;
+  }).join('');
   // Duplicate the row so the marquee loops seamlessly.
   el.innerHTML=`<div class="tickrun">${items}${items}</div>`;
 }
@@ -1998,8 +2045,9 @@ function closeSwitcher(){ const m=$('vsw_menu'); if(m) m.classList.remove('on');
 document.addEventListener('click',e=>{ const v=$('vsw'); if(v && !v.contains(e.target)) closeSwitcher(); const l=$('lsw'); if(l && !l.contains(e.target)) closeLang(); });
 function switchVertical(key){
   const sw=(window.SWITCHER||{}); const it=(sw.list||[]).find(x=>x.key===key); if(!it) return;
-  const m=location.hostname.match(/(?:^|\.)((?:fungibles|runnr)\.[a-z]+)$/i);
-  location.href = m ? `${location.protocol}//${it.slug}.${m[1]}/` : `/r?brand=${key}`;
+  // Verticals are served as PATHS on the same domain now (checkitforme.com/pokemon, /onepiece,
+  // /toppsbasketball, /needoh) — go to the slug path, no more subdomain hops.
+  location.href = '/' + it.slug;
 }
 // Per-product "watch a call" demo. Add a category = add one entry (modular: Magic/Lorcana/Yu-Gi-Oh next).
 const DEMO_SCRIPTS={
@@ -2035,11 +2083,18 @@ function renderDemo(){
 }
 // Vertical micro-site: it's dedicated to ONE product — lock the category and remove the whole picker.
 function applyBrand(){
-  if(!BRAND||!BRAND.category) return;
+  // Apex (checkitforme.com → the default "runner" brand) LEADS WITH POKÉMON: pre-lock the Pokémon
+  // category so the page opens in the Pokémon experience, while the product switcher stays so visitors
+  // can hop to the other verticals. Real verticals (pokemon.*, onepiece.*, …) use their own category.
+  const isApex = BRAND && BRAND.key === 'runner';
+  // Apex shows the pokéball hero art (the default brand injects none) so it leads with Pokémon visually.
+  if(isApex){ const ha=$('heroart'); if(ha) ha.innerHTML=ICO.pokeball; document.title='Check It For Me — Is it in stock?'; }
+  const wantCat = (BRAND && BRAND.category) || (isApex ? 'Pokémon' : null);
+  if(!wantCat) return;
   // Tolerant match: accent-fold + drop "TCG"/"cards" so "One Piece TCG" ↔ "One Piece" still resolves.
   const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]','g'),'').replace(/\b(tcg|cards?|trading card game)\b/g,'').replace(/[^a-z0-9]+/g,'').trim();
-  const want=norm(BRAND.category);
-  BRAND_CAT = CATS.find(c=>c.label.toLowerCase()===BRAND.category.toLowerCase()) || CATS.find(c=>norm(c.label)===want) || null;
+  const want=norm(wantCat);
+  BRAND_CAT = CATS.find(c=>c.label.toLowerCase()===wantCat.toLowerCase()) || CATS.find(c=>norm(c.label)===want) || null;
   if(!BRAND_CAT) return;
   const card=$('catcard'); if(card) card.style.display='none'; // the product is implied by the site
 }
@@ -2123,13 +2178,63 @@ function syncCta(){
   const b=$('checkBtn'), vv=$('ctaValue'), cf=$('chargefoot');
   const ic=`<span style="display:inline-flex;vertical-align:-3px;margin-right:6px">${ICO.call('currentColor')}</span>`;
   const wasHidden=b.style.display==='none';
-  if(SEL_STORE&&SEL_CATS.length&&MODE!=='kiosk'){
+  // Non-callable chains (Micro Center, Amazon) NEVER get a call button — the sell-methods card
+  // below carries "Buy online" + notify instead. (docs/SELL_METHODS_PLAN.md rule 1.)
+  const cantCall=SEL_STORE&&SEL_STORE.callable===false;
+  if(SEL_STORE&&SEL_CATS.length&&MODE!=='kiosk'&&!cantCall){
     b.style.display=''; if(vv)vv.style.display='none'; if(cf)cf.style.display='';
     b.innerHTML=`${ic}${t('cta.check','Check')} ${esc(SEL_STORE.name.split('—')[0].trim())} ${t('cta.for','for')} <b>${esc(catLabels())}</b> &nbsp; <span class="price">· 1 ${t('cta.checkunit','check')}</span>`;
     if(wasHidden){ b.classList.remove('armed'); void b.offsetWidth; b.classList.add('armed');
       if(window.innerWidth<900){ setTimeout(()=>{ try{ b.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){} },150); } }
   }
-  else { b.style.display='none'; b.classList.remove('armed'); if(cf)cf.style.display='none'; if(vv)vv.style.display=MODE==='kiosk'?'none':''; }
+  else { b.style.display='none'; b.classList.remove('armed'); if(cf)cf.style.display='none'; if(vv)vv.style.display=(MODE==='kiosk'||cantCall)?'none':''; }
+  renderStoreActions();
+}
+// Sell-methods card — what's actually possible at THIS store: live online stock, ways to get it,
+// resale warning, notify. Non-callable chains (Micro Center, Amazon) get "Buy online" instead of a
+// call. Contract: docs/SELL_METHODS_PLAN.md; fields come straight off /pub/stores/near (SEL_STORE).
+function renderStoreActions(){
+  const wrap=$('sellmeta'); if(!wrap) return;
+  const st=SEL_STORE;
+  const cantCall=st&&st.callable===false;
+  // Callable stores: show alongside the CTA (after a category is picked). Non-callable: show on
+  // selection — there's no call to wait for, the buy-online/notify IS the action.
+  if(!st||MODE==='kiosk'||(!cantCall&&!SEL_CATS.length)){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  const isSite=st.stockCheckMethod==='site';
+  const methods=Array.isArray(st.sellMethods)?st.sellMethods:[];
+  const nm=esc((st.name||'').split(/[—–]| - /)[0].trim());
+  const parts=[];
+  // 1. Resale warning first — consumer protection (isMSRP===false → third-party reseller).
+  if(st.isMSRP===false) parts.push(`<div class="smwarn">⚠️ ${t('sm.resale','Resale — price may be over MSRP')}</div>`);
+  // 2. Live online-stock readout for "site" chains (their site mirrors the shelf — no call needed).
+  if(isSite) parts.push(`<div class="smline" id="smlive">📡 ${t('sm.livechk','Checking live online stock…')}</div>`);
+  // 3. Ways to get it. A lone "On shelf" is dropped for callable stores (the call already implies it).
+  const chipLbl={in_store:t('sm.instore','On shelf'),pickup:t('sm.pickup','Order for pickup'),ship:t('sm.ship','Buy & ship')};
+  const chipM=methods.filter(m=>chipLbl[m]&&!(m==='in_store'&&methods.length===1&&!cantCall));
+  if(chipM.length) parts.push(`<div class="smchips">`+chipM.map(m=>`<span class="smchip">${chipLbl[m]}</span>`).join('')+`</div>`);
+  // 4. Action row. Notify is ALWAYS offered; non-callable adds a Buy-online link (filled from the
+  //    freshest online signal once it loads).
+  if(cantCall){
+    parts.push(`<div class="smrow"><a class="smbtn" id="smbuy" href="#" target="_blank" rel="noopener" style="display:none">${t('sm.buyonline','Buy online')} ↗</a><button class="smbtn ghost" onclick="openWatch()">🔔 ${t('sm.notify','Notify me when restocked')}</button></div>`);
+    parts.push(`<div class="smnote">${tf('sm.nocall','We can’t call {x} — check their site or get pinged the moment it restocks.',{x:nm})}</div>`);
+  } else {
+    parts.push(`<div class="smrow"><button class="smbtn ghost" onclick="openWatch()">🔔 ${t('sm.notify','Notify me when restocked')}</button></div>`);
+  }
+  wrap.innerHTML=parts.join(''); wrap.style.display='';
+  if(isSite||cantCall) loadLiveStock(st.id);
+}
+// Pull the freshest online stock signal for a "site"/online store and paint the readout + buy link.
+async function loadLiveStock(id){
+  let rows; try{ rows=await api('/pub/stock/store/'+id); }catch(e){ const x=$('smlive'); if(x)x.style.display='none'; return; }
+  const sig=Array.isArray(rows)?rows.find(r=>r&&r.status&&r.status!=='unknown'):null;
+  const el=$('smlive');
+  if(el){
+    if(!sig) el.innerHTML=`📡 ${t('sm.nolive','No live online signal yet — get notified when it restocks')}`;
+    else { const map={in_stock:['🟢',t('sm.in','In stock online now')],low:['🟡',t('sm.low','Low stock online')],out_of_stock:['🔴',t('sm.out','Out of stock online')]};
+      const m=map[sig.status]||['⚪',sig.status];
+      el.innerHTML=`${m[0]} <b>${esc(m[1])}</b>${sig.product?` · ${esc(sig.product)}`:''} <span style="color:var(--muted)">· ${agoStr(sig.seenAt)}</span>`; }
+  }
+  if(sig&&sig.url){ const bt=$('smbuy'); if(bt){ bt.href=sig.url; bt.style.display=''; } }
 }
 function esc(s){return (s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
 // "160 S Westlake Blvd, Thousand Oaks, CA 91362" → street + "Thousand Oaks, CA 91362"
@@ -2176,7 +2281,12 @@ async function startCheck(){
   },2500);
 }
 // --- Live-audio check (bridged through our Twilio so we can stream the call to the browser) ---
-let AUDIO_WS=null, AUDIO_CTX=null, AUDIO_NEXT={}, AUDIO_LIVE=false, LIVE_TIMERS=[], LIVE_ROOM=null, LIVE_CID=null;
+let AUDIO_WS=null, AUDIO_CTX=null, AUDIO_NEXT={}, AUDIO_LIVE=false, LIVE_TIMERS=[], LIVE_ROOM=null, LIVE_CID=null, LIVE_TR=[], AGENT_PITCHED=false;
+// Phone-tree (IVR) language vs. our bot's real ask. The store side ("Clerk") covers BOTH the automated
+// tree AND a human, so a Clerk line alone can't mean "with a clerk". Our bot stays quiet / presses keys
+// through the tree and only delivers its stock question to a HUMAN — so AGENT_ASK is the human signal.
+const IVR_RE=/press \d|press the|press [a-z]\b|para español|for .{2,40}[ ,]+press|main menu|thank you for calling|currently closed|store hours|please hold|hold on|one moment|moment please|your call (is|may be)|automated|enter your|to speak (to|with)|the following (menu|options|prompts)|leave a (message|voicemail)|after the (tone|beep)|if you know your party|dial \d/i;
+const AGENT_ASK=/in stock|do you (have|carry|sell)|have any|y'?all have|carr(y|ying)|wondering if|calling to (see|check)|checking to see|see if (you|y'?all)|get any|got any|come in|new shipment|on the shelf|restock|booster|\bpacks?\b|\bcards?\b|\bsealed\b/i;
 function stopLiveTimers(){ LIVE_TIMERS.forEach(t=>clearInterval(t)); LIVE_TIMERS=[]; if(POLL){clearInterval(POLL);POLL=null;} }
 async function hangUpLive(){
   if(LIVE_ROOM){ api('/pub/bridge-hangup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({room:LIVE_ROOM})}); }
@@ -2195,10 +2305,10 @@ function playMu(b64,track){
   const buf=AUDIO_CTX.createBuffer(1,n,8000), ch=buf.getChannelData(0);
   for(let i=0;i<n;i++) ch[i]=muLawDecode(raw.charCodeAt(i))/32768;
   const src=AUDIO_CTX.createBufferSource(); src.buffer=buf; src.connect(AUDIO_CTX.destination);
-  if(AUDIO_NEXT[track]==null) AUDIO_NEXT[track]=AUDIO_CTX.currentTime+0.25; // per-track jitter buffer
+  if(AUDIO_NEXT[track]==null) AUDIO_NEXT[track]=AUDIO_CTX.currentTime+0.4; // per-track jitter buffer (bigger cushion = fewer underruns = less crackle)
   // If we've fallen behind (network burst / GC), resync with a fresh cushion in ONE step rather than
   // clicking on every late frame — that frame-by-frame catch-up is what makes it sound crackly.
-  if(AUDIO_NEXT[track] < AUDIO_CTX.currentTime+0.02) AUDIO_NEXT[track]=AUDIO_CTX.currentTime+0.18;
+  if(AUDIO_NEXT[track] < AUDIO_CTX.currentTime+0.05) AUDIO_NEXT[track]=AUDIO_CTX.currentTime+0.32;
   const at=AUDIO_NEXT[track];
   src.start(at); AUDIO_NEXT[track]=at+buf.duration;
 }
@@ -2215,27 +2325,35 @@ async function startCheckLive(){
     AUDIO_CTX.resume();
   }catch(e){ AUDIO_CTX=null; }
   AUDIO_NEXT={}; AUDIO_LIVE=false; if($('audio_ind'))$('audio_ind').style.display='none';
+  if(!(await preCallGate())) return; // #17: last-call reminder + 24h "are you sure" (audio already unlocked above)
   $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden');
-  $('livestore').textContent=SEL_STORE.name; $('phase').textContent=t('live.calling','📞 Calling the store…'); $('elapsed').textContent='';
-  $('live_tr').style.display='none'; $('live_tr_body').innerHTML='';
+  // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
+  const _mb=$('muteBanner'); if(_mb){ _mb.style.display=canListen?'':'none'; if(canListen) setTimeout(()=>{ if(_mb&&$('live')&&!$('live').classList.contains('hidden')) _mb.style.display='none'; },7000); }
+  $('livestore').textContent=SEL_STORE.name; $('phase').textContent=t('live.calling','📞 Placing the call…'); $('elapsed').textContent='';
+  $('live_tr').style.display='none'; $('live_tr_body').innerHTML=''; LIVE_TR=[]; AGENT_PITCHED=false;
   let secs=0; const elT=setInterval(()=>{ secs+=1; $('elapsed').textContent='⏱ '+secs+'s'; },1000);
   LIVE_TIMERS=[elT];
   const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT})});
   if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x} — no call placed',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail','Could not start the call')); return; }
   LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
-  if(AUDIO_CTX){ AUDIO_WS=new WebSocket('wss://'+r.wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data); if(d.audio) playMu(d.audio,d.track); }catch(e){} }; }
-  $('phase').textContent=t('live.ringing','📞 Ringing the store…');
+  if(AUDIO_CTX){ AUDIO_WS=new WebSocket('wss://'+r.wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data);
+    if(d.audio) playMu(d.audio,d.track);
+    else if(d.line&&d.line.text){ LIVE_TR.push(d.line.role+': '+d.line.text); $('live_tr').style.display=''; appendLiveTranscript(LIVE_TR.join('\n')); livePhaseFromText(d.line.role,d.line.text); } // real-time bubbles + stage, as the call happens
+  }catch(e){} }; }
+  $('phase').textContent=t('live.ringing','📞 Ringing…');
   let cid=null;
   POLL=setInterval(async()=>{
     if(secs>=210){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); return; }
     if(!cid){ const bs=await api('/pub/bridge/'+r.room); if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){} } return; }
     const o=await api('/pub/live/'+encodeURIComponent(cid));
     if(o&&o.transcript){
-      $('live_tr').style.display=''; appendLiveTranscript(o.transcript);
-      const lastClerk=[...o.transcript.split('\n').filter(Boolean)].reverse().find(l=>l.startsWith('Clerk:'))||'';
-      const ivr=/press \d|press the|automated|thank you for calling|for .{2,30}[, ]+press|main menu|healthcare provider|para español|store hours|pharmacy/i.test(lastClerk);
-      $('phase').textContent = ivr ? t('live.ivr','🔢 Navigating the phone tree…') : t('live.talking','🗣️ Talking to the store…');
-    } else if(secs>3 && $('phase').textContent===t('live.ringing','📞 Ringing the store…')){ $('phase').textContent=t('live.connected','📞 Connected — listening…'); }
+      if(!LIVE_TR.length){ $('live_tr').style.display=''; appendLiveTranscript(o.transcript); } // if real-time bubbles are flowing, they're authoritative
+      const lines=o.transcript.split('\n').filter(Boolean);
+      const lastClerk=[...lines].reverse().find(l=>l.startsWith('Clerk:'))||'';
+      const pitched=AGENT_PITCHED||lines.some(l=>l.startsWith('Agent:')&&AGENT_ASK.test(l));
+      const ivr=IVR_RE.test(lastClerk);
+      $('phase').textContent = (ivr || !pitched) ? t('live.ivr','🔢 Navigating the phone tree…') : t('live.talking','🙋 Talking to a clerk…');
+    } else if(secs>3 && $('phase').textContent===t('live.ringing','📞 Ringing…')){ $('phase').textContent=t('live.connected','✅ Answered — listening…'); }
     if(o && o.live===false){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); }
   },2500);
 }
@@ -2264,6 +2382,19 @@ function chatBubbles(t){ return `<div class="chat">${(t||'').split('\n').filter(
 function renderTranscriptLines(t){ return chatBubbles(t); }
 // Live view: only NEW lines get appended (with a pop-in) instead of re-rendering the whole
 // thread on every poll — bubbles land one by one as the conversation actually happens.
+// Drive the live stage label off each real-time line: menu language => navigating; clerk talking => with a clerk; else answered.
+function livePhaseFromText(role,text){
+  if(!text) return;
+  // Our bot's stock question only goes to a human (it's silent through the tree) — latch that.
+  if(role==='Agent' && AGENT_ASK.test(text)) AGENT_PITCHED=true;
+  if(IVR_RE.test(text)){ $('phase').textContent=t('live.ivr','🔢 Navigating the phone tree…'); return; }
+  if(role==='Clerk'){
+    // A Clerk line before our bot has pitched is still the phone tree / automated greeting, not a person.
+    $('phase').textContent = AGENT_PITCHED ? t('live.talking','🙋 Talking to a clerk…') : t('live.ivr','🔢 Navigating the phone tree…');
+    return;
+  }
+  if($('phase').textContent!==t('live.talking','🙋 Talking to a clerk…')) $('phase').textContent=t('live.connected','✅ Answered — listening…');
+}
 function appendLiveTranscript(t){
   const body=$('live_tr_body'); if(!body) return;
   let chat=body.querySelector('.chat');
@@ -2509,6 +2640,18 @@ async function toggleTranslate(){
 
 // --- History (per-device, localStorage) ---
 function loadHist(){ try{ return JSON.parse(localStorage.getItem('runnr_history')||'[]'); }catch{ return []; } }
+// #17 — before placing, remind me when I last called this store + the outcome; confirm a re-call within 24h.
+function lastCallFor(storeId){ return loadHist().find(e=>e.storeId===storeId&&e.ts)||null; }
+function callOutcomeLabel(e){ return e.confirmed===true?t('pre.had','they had it in stock'):e.confirmed===false?t('pre.notin',"they didn't have it"):t('pre.unclear','no clear answer'); }
+async function preCallGate(){
+  const e=lastCallFor(SEL_STORE&&SEL_STORE.id); if(!e) return true;
+  const base=(SEL_STORE.name||'').split(/[—–]| - /)[0].trim();
+  const ago=agoStr(Math.floor(e.ts/1000));
+  if(Date.now()-e.ts < 24*3600*1000) return confirm(tf('pre.again','You called {s} {a} — {o}. Call again?',{s:base,a:ago,o:callOutcomeLabel(e)}));
+  toast(tf('pre.note','You called {s} {a} — {o}',{s:base,a:ago,o:callOutcomeLabel(e)}));
+  await new Promise(r=>setTimeout(r,2200));
+  return true;
+}
 function saveCheckToHistory(o,cid){
   const cat=(CATS.find(c=>c.id===SEL_CAT)||{}).label||'';
   const cats=(ASKED_CATS&&ASKED_CATS.length)?ASKED_CATS.map(x=>x.label):(cat?[cat]:[]);
@@ -2781,7 +2924,7 @@ function openHandoff(){
       <details class="ho-preview">
         <summary>👁 ${t('ho.s4.preview','Preview what the driver sees')}</summary>
         <div class="ho-dv">
-          <div class="tag">runner.fungibles.com/d/4QK9</div>
+          <div class="tag">checkitforme.com/d/4QK9</div>
           <h4>${tf('ho.dv.title',"You've got a <b>$<span class=\"ho-bk-bonus\">25</span></b> pickup 🏃",{})}</h4>
           <button class="paybtn" onclick="return false"> ${t('ho.dv.pay','Add card to Apple Pay (60 sec)')}</button>
           <ol>
@@ -2819,9 +2962,9 @@ function hoRender(){
   const m=$('ho_msg');
   if(m){
     const dropLine=HO.drop==='home'?t('ho.msg.home','drive it to my place (address in the link)'):t('ho.msg.ship','drop it at the USPS to ship — postage is on the card');
-    const txt=tf('ho.msg',"Hey! Quick paid pickup 🏃 I'll cover the item + a ${b} bonus to you on drop-off.\n\n1) Tap to add a prepaid card to Apple Pay (60 sec):\n   runner.fungibles.com/d/4QK9\n2) Inside {s}, grab 1 {p}\n3) Pay with that card (it only works for this one buy)\n4) Then {d}\n\nTap Done in the link and your ${b} hits instantly. Thank you!! 🙏",{b:HO.bonus,s:findStoreName(),p:findProductLabel(),d:dropLine});
+    const txt=tf('ho.msg',"Hey! Quick paid pickup 🏃 I'll cover the item + a ${b} bonus to you on drop-off.\n\n1) Tap to add a prepaid card to Apple Pay (60 sec):\n   checkitforme.com/d/4QK9\n2) Inside {s}, grab 1 {p}\n3) Pay with that card (it only works for this one buy)\n4) Then {d}\n\nTap Done in the link and your ${b} hits instantly. Thank you!! 🙏",{b:HO.bonus,s:findStoreName(),p:findProductLabel(),d:dropLine});
     m.dataset.raw=txt;
-    m.innerHTML=esc(txt).replace('runner.fungibles.com/d/4QK9','<span class="link">runner.fungibles.com/d/4QK9</span>');
+    m.innerHTML=esc(txt).replace('checkitforme.com/d/4QK9','<span class="link">checkitforme.com/d/4QK9</span>');
   }
 }
 function hoBonus(d){ HO.bonus=Math.max(10,Math.min(60,HO.bonus+d)); hoRender(); }
@@ -2920,7 +3063,7 @@ async function loadCommunity(){
   row.style.display='';
   const body=$('scoresRowBody');
   if(!Array.isArray(posts)||!posts.length){
-    body.innerHTML=`<div class="lo" style="color:var(--muted);padding:2px">${t('scores.first','First score goes up in lights — post yours.')}</div>`;
+    body.innerHTML=`<div class="lo" style="color:var(--muted);padding:2px">${t('scores.first','Show us the goods!')}</div>`;
     return;
   }
   body.innerHTML=posts.slice(0,3).map(p=>`<div class="scoretile" onclick="openSuccess()">
@@ -3043,12 +3186,17 @@ function igAv(p){
   return `<span class="av"><span class="mono">${esc(((base[0]||'?')[0]+(base[1]?base[1][0]:'')).toUpperCase())}</span></span>`;
 }
 // Scores are modular per vertical — a brand site shows only its own category's posts.
-function communityUrl(){ return '/pub/community'+((BRAND_CAT&&BRAND_CAT.id)?('?categoryId='+BRAND_CAT.id):''); }
+function communityUrl(){
+  if(!BRAND_CAT && BRAND && BRAND.category) applyBrand(); // re-resolve if categories loaded after first paint
+  if(BRAND_CAT && BRAND_CAT.id) return '/pub/community?categoryId='+BRAND_CAT.id;
+  if(BRAND && BRAND.category) return '/pub/community?categoryId=0'; // vertical site, unresolved → show NOTHING, never other verticals
+  return '/pub/community';
+}
 async function loadSuccessWall(){
   let posts=[]; try{ posts=await api(communityUrl()); }catch(e){}
   const el=$('succ_wall'); if(!el) return;
   if(!Array.isArray(posts)||!posts.length){
-    el.innerHTML=`<div class="emptybox">${ICO.trophy(AC()).replace('width="14" height="14"','width="26" height="26"')}<div class="eb-t">${t('sc.empty','Nothing posted here yet')}</div><div class="eb-s">${t('sc.empty2','Be the first to put a score on the wall.')}</div><button class="postbtn" onclick="toggleComposer(true)" style="margin:14px auto 0">${t('sc.postbtn','Post')}</button></div>`;
+    el.innerHTML=`<div class="emptybox">${ICO.trophy(AC()).replace('width="14" height="14"','width="26" height="26"')}<div class="eb-t">${t('sc.empty','Be the first to post a score')}</div><div class="eb-s">${t('sc.empty2','…and get a free check.')}</div><button class="postbtn" onclick="toggleComposer(true)" style="margin:14px auto 0">${t('sc.postbtn','Post')}</button></div>`;
     return;
   }
   el.innerHTML=posts.map(p=>{

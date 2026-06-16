@@ -39,6 +39,7 @@ export interface Policy {
     liveListen: boolean;             // stream call audio + hang-up button to customers (testing tool; comp accounts always have it)
     stockSignals: boolean;           // free real-time stock rail (site checkers + Discord drops) in the consumer UI
     requirePhoneSignup: boolean;     // identity = a verified PHONE: no anonymous calls; free checks granted to the account on signup
+    connectOnHuman: boolean;         // cost saver: don't open the (billed) ElevenLabs agent until a human is detected — OFF until bench-tested
   };
   // Bail library: proactive call-cutoff rules (cost control). `enabled` is the master switch —
   // OFF by default so nothing changes on live calls until the enforcement is wired AND tested.
@@ -78,7 +79,7 @@ export const DEFAULT_POLICY: Policy = {
     dogfoodHours: false, driverHandoff: true, scheduling: true, restockAlerts: true,
     kiosks: true, shareCards: true, multiProduct: true, specificSets: true,
     community: false, communityAutoApprove: false, referrals: true, kioskReceipts: true,
-    liveListen: false, stockSignals: true, requirePhoneSignup: false,
+    liveListen: false, stockSignals: true, requirePhoneSignup: false, connectOnHuman: false,
   },
   bail: {
     enabled: false,

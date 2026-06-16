@@ -22,13 +22,16 @@ import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { getPolicy, setPolicy, publicPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
-import { runAdminAgent } from "./agent/admin-agent";
+import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
+import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
+import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession } from "./calls/navigator";
 import { harvestHoursTick } from "./hours-harvest";
 import { createSchedule, listSchedulesDetailed, deleteSchedule, customerScheduleTick } from "./customer-schedules";
 import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, retailerMap, invalidateRefCache } from "./refcache";
 import { haversineMi, bboxAround } from "./geo";
 import { ingestSignals, recentStockNear, latestForRetailer } from "./stock/signals";
 import { seedStockCheckIntel } from "./stock/intel";
+import { seedSellMethods } from "./stock/sellmethods";
 import { r2Config, presignPut, photoKey } from "./r2";
 import { check as rlCheck, clientIp, LIMITS } from "./ratelimit";
 import { isGmailConfigured, gmailReceiptTick } from "./gmail-receipts";
@@ -183,7 +186,7 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string): str
     `<meta name="description" content="${esc(brand.desc)}">`,
     `<link rel="canonical" href="${canonical}">`,
     `<meta name="robots" content="index,follow,max-image-preview:large">`,
-    `<meta name="theme-color" content="${brand.accent}">`,
+    `<meta name="theme-color" content="#0C0C12">`,
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${esc(plainName)}">`,
     `<meta property="og:title" content="${esc(brand.title)}">`,
@@ -230,7 +233,7 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
     `<title>${esc(title)}</title>`,
     `<meta name="description" content="${esc(desc)}">`,
     `<meta name="robots" content="index,follow,max-image-preview:large">`,
-    `<meta name="theme-color" content="${brand.accent}">`,
+    `<meta name="theme-color" content="#0C0C12">`,
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${esc(plainName)}">`,
     `<meta property="og:title" content="${esc(title)}">`,
@@ -381,6 +384,16 @@ app.all("/twiml/bridge", (c) => {
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${play}<Connect><Stream url="wss://${RAILWAY_HOST}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   return c.body(xml, 200, { "Content-Type": "text/xml" });
 });
+
+// ---- Tree Trainer v2: cheap-lane phone-tree navigator (Twilio webhooks; session id gates them) ----
+app.all("/nav/twiml", (c) => c.body(navInitialTwiml(c.req.query("session") || ""), 200, { "Content-Type": "text/xml" }));
+app.post("/nav/step", async (c) => {
+  const id = c.req.query("session") || "";
+  let speech = "";
+  try { const b = await c.req.parseBody(); speech = String(b.SpeechResult || ""); } catch { /* silent turn */ }
+  return c.body(await navStep(id, speech), 200, { "Content-Type": "text/xml" });
+});
+app.post("/nav/ended", (c) => { navEnded(c.req.query("session") || ""); return c.body("ok", 200); });
 
 // ---- Health ----
 app.get("/api/health", (c) => c.json({ ok: true }));
@@ -569,18 +582,18 @@ app.get("/pub/stores", async (c) => {
   const names = new Map(chainRows.map((x) => [x.id, x.name]));
   // Muted chains (owner toggle, incl. repack-only stores like Fairfield) never reach consumers.
   const mutedChains = new Set(chainRows.filter((x) => x.muted === true).map((x) => x.id));
+  // This endpoint is now the ADMIN logo map (app.html loadLogos builds id→logoUrl from it); the
+  // consumer front-end uses /pub/stores/near. So it must return EVERY store — the old 1,000-row
+  // cap silently broke admin logos once the 100k national import landed — and it skips the per-row
+  // openState computation (nothing reads it here) so it stays fast across 100k rows.
   return c.json(rs
     .filter((r) => r.phone && r.active !== false)
     .filter((r) => !(r.chainId && mutedChains.has(r.chainId)))
-    // Hard cap: this legacy ship-everything endpoint must survive the 102k import even if a
-    // client hasn't switched to /pub/stores/near yet. Past the cap the list is partial by design.
-    .slice(0, 1000)
     .map((r) => ({ id: r.id, name: r.name, location: r.location, storeType: (r.chainId && types.get(r.chainId)) || "Other",
       ...((l)=>({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo((r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0])),
       carries: (r.carries ?? "").split(",").map((s) => s.trim()).filter(Boolean),
       lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
-      sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
-      openState: openState(r.hours, r.timezone) })));
+      sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true })));
 });
 
 // ---- Geo-paginated store list — THE consumer path at 100k-store scale ----
@@ -602,6 +615,8 @@ app.get("/pub/stores/near", async (c) => {
   const types = new Map(chainRows.map((x) => [x.id, x.type]));
   const names = new Map(chainRows.map((x) => [x.id, x.name]));
   const stockMethod = new Map(chainRows.map((x) => [x.id, x.stockCheckMethod]));
+  const sellMethodsByChain = new Map(chainRows.map((x) => [x.id, x.sellMethods]));
+  const isMSRPByChain = new Map(chainRows.map((x) => [x.id, x.isMSRP]));
   const mutedChains = new Set(chainRows.filter((x) => x.muted === true).map((x) => x.id));
 
   let rows: (typeof retailers.$inferSelect)[];
@@ -631,13 +646,17 @@ app.get("/pub/stores/near", async (c) => {
     .map((r) => {
       const miles = hasLoc && r.lat != null && r.lng != null ? Math.round(haversineMi(lat, lng, r.lat, r.lng) * 10) / 10 : null;
       const chainName = (r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0];
-      return { id: r.id, name: r.name, location: r.location, storeType: (r.chainId && types.get(r.chainId)) || "Other",
+      return { id: r.id, name: r.name, location: r.location, address: r.address || null, storeType: (r.chainId && types.get(r.chainId)) || "Other",
         ...((l) => ({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo(chainName)),
         carries: (r.carries ?? "").split(",").map((s) => s.trim()).filter(Boolean),
         lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
         sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
         callable: callable(r),
         stockCheckMethod: (r.chainId && stockMethod.get(r.chainId)) || "call", // site = check their site, no call needed
+        // Sell-methods taxonomy: how to get it (chain default), online flag, and price/source.
+        sellMethods: (((r.chainId && sellMethodsByChain.get(r.chainId)) || "in_store").split(",").map((s) => s.trim()).filter(Boolean)),
+        online: r.online === true,
+        isMSRP: r.chainId ? isMSRPByChain.get(r.chainId) !== false : true, // false = third-party, may exceed MSRP
         mapsUri: r.mapsUri || null,
         miles, openState: openState(r.hours, r.timezone) };
     })
@@ -708,6 +727,12 @@ app.post("/api/stock/ingest", async (c) => {
 // chains (the boot seed only fills blanks). Deliberate owner action, hence force.
 app.post("/api/stock/intel/reapply", async (c) => {
   const applied = await seedStockCheckIntel(true);
+  invalidateRefCache();
+  return c.json({ applied });
+});
+// Reapply the sell-methods taxonomy (data/sell_methods_intel.json) over already-seeded chains.
+app.post("/api/sell-methods/reapply", async (c) => {
+  const applied = await seedSellMethods(true);
   invalidateRefCache();
   return c.json({ applied });
 });
@@ -1455,6 +1480,8 @@ app.patch("/api/settings", async (c) => {
   const b = await c.req.json();
   if (typeof b.voicemailHangup === "boolean") await setSetting("voicemail_hangup", String(b.voicemailHangup));
   if (b.creditLimit !== undefined) await setSetting("el_credit_limit", String(Math.max(0, Number(b.creditLimit) || 0)));
+  if (b.openerVariants !== undefined) await setSetting("vt_opener_variants", String(b.openerVariants || ""));
+  if (b.voicePool !== undefined) await setSetting("vt_voice_pool", String(b.voicePool || ""));
   return c.json(await allSettings());
 });
 
@@ -1583,6 +1610,8 @@ app.get("/api/waitlist", async (c) => {
 // ---- Retailers (with green status) ----
 app.get("/api/retailers", async (c) => c.json(await retailersWithStatus({
   q: c.req.query("q") || undefined, state: c.req.query("state") || undefined,
+  type: c.req.query("type") || undefined, region: c.req.query("region") || undefined,
+  carries: c.req.query("carries") || undefined, online: c.req.query("online") === "1" || undefined,
   limit: c.req.query("limit") ? Number(c.req.query("limit")) : undefined,
 })));
 // Store Intel — the headline numbers on the Stores tab (cached 60s). The database, at a glance.
@@ -1630,10 +1659,112 @@ app.get("/api/admin/store-intel", async (c) => {
 // In-admin Claude agent ("Admin dev"): chat to manage the store DB. Client sends the running
 // transcript [{role,text}]; the server runs one turn (with an internal tool loop) and returns
 // the reply + a list of actions taken. Admin-gated like the rest of /api/*.
+// Call-timing breakdown for the God view: total / time-to-human (nav) / talk, aggregate + per store.
+app.get("/api/admin/call-timing", async (c) => {
+  const hasT = sql`${callResults.callSeconds} is not null`;
+  const agg = (await db.select({ n: sql<number>`count(*)`, avgCall: sql<number>`avg(${callResults.callSeconds})`, totalSec: sql<number>`coalesce(sum(${callResults.callSeconds}),0)` }).from(callResults).where(hasT))[0];
+  const reached = (await db.select({ n: sql<number>`count(*)`, avgNav: sql<number>`avg(${callResults.navSeconds})`, avgTalk: sql<number>`avg(${callResults.callSeconds} - ${callResults.navSeconds})` }).from(callResults).where(and(hasT, sql`${callResults.navSeconds} is not null`)))[0];
+  const byStore = await db.select({ rid: callResults.retailerId, n: sql<number>`count(*)`, avgCall: sql<number>`avg(${callResults.callSeconds})`, avgNav: sql<number>`avg(${callResults.navSeconds})`, avgTalk: sql<number>`avg(${callResults.callSeconds} - ${callResults.navSeconds})`, totalSec: sql<number>`coalesce(sum(${callResults.callSeconds}),0)` }).from(callResults).where(hasT).groupBy(callResults.retailerId).orderBy(desc(sql`count(*)`)).limit(12);
+  const ids = byStore.map((r) => r.rid).filter((x): x is number => x != null);
+  const names = ids.length ? new Map((await db.select({ id: retailers.id, name: retailers.name }).from(retailers).where(inArray(retailers.id, ids))).map((r) => [r.id, r.name])) : new Map();
+  const r0 = (n: unknown) => Math.round(Number(n || 0));
+  return c.json({
+    aggregate: { calls: r0(agg?.n), reached: r0(reached?.n), avgCallSec: r0(agg?.avgCall), avgNavSec: r0(reached?.avgNav), avgTalkSec: r0(reached?.avgTalk), totalMinutes: r0(Number(agg?.totalSec || 0) / 60) },
+    byStore: byStore.map((r) => ({ name: (r.rid != null && names.get(r.rid)) || `#${r.rid}`, n: r0(r.n), avgCallSec: r0(r.avgCall), avgNavSec: r0(r.avgNav), avgTalkSec: r0(r.avgTalk), totalMin: r0(Number(r.totalSec || 0) / 60) })),
+  });
+});
+// ---- Phone Tree Lab: discover + document + verify the route-to-a-human per brand ----
+// Place a normal call to one open, callable store of a chain; its transcript feeds the tree learner in ingest.
+async function placeChainTreeCall(chainId: number): Promise<{ ok: boolean; error?: string; retailer?: string }> {
+  const stores = await db.select().from(retailers).where(and(eq(retailers.chainId, chainId), eq(retailers.active, true))).limit(40);
+  const callable = stores.filter((s) => s.phone && !s.phone.startsWith("nophone:"));
+  if (!callable.length) return { ok: false, error: "no callable store" };
+  const cats = await cachedCategories();
+  const catId = cats[0]?.id;
+  if (!catId) return { ok: false, error: "no categories" };
+  for (const s of callable) {
+    try { await triggerCall({ retailerId: s.id, categoryId: catId }); return { ok: true, retailer: s.name }; }
+    catch { /* closed / no line — try the next store */ }
+  }
+  return { ok: false, error: "no open store right now (all closed?)" };
+}
+app.get("/api/admin/tree/list", async (c) => {
+  const chs = await db.select().from(chains).orderBy(chains.name);
+  const rows = await db.select({ cid: retailers.chainId, n: sql<number>`count(*)` }).from(retailers).where(eq(retailers.active, true)).groupBy(retailers.chainId);
+  const cnt = new Map(rows.map((r) => [r.cid, Number(r.n || 0)]));
+  return c.json({ model: TREE_MODEL, chains: chs.map((ch) => ({ id: ch.id, name: ch.name, type: ch.type, stores: cnt.get(ch.id) || 0, treeStatus: ch.treeStatus, ringsDirect: ch.ringsDirect, dtmf: ch.dtmfShortcut, answerPath: ch.answerPath, avgTreeSeconds: ch.avgTreeSeconds, note: ch.treeNote || ch.phoneTreeDefault, learnedAt: ch.treeLearnedAt, verifiedAt: ch.treeVerifiedAt, muted: ch.muted })) });
+});
+app.post("/api/admin/tree/discover", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; count?: number };
+  if (b.chainId) return c.json(await placeChainTreeCall(Number(b.chainId)));
+  const count = Math.min(Math.max(Number(b.count) || 5, 1), 25);
+  const chs = await db.select().from(chains).where(isNull(chains.treeStatus)).limit(300);
+  const names: string[] = []; let placed = 0;
+  for (const ch of chs) { if (placed >= count) break; const r = await placeChainTreeCall(ch.id); if (r.ok) { placed++; names.push(ch.name); } }
+  return c.json({ placed, names });
+});
+app.post("/api/admin/tree/verify", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; count?: number };
+  if (b.chainId) { queueTreeRelearn(Number(b.chainId)); return c.json(await placeChainTreeCall(Number(b.chainId))); }
+  const count = Math.min(Math.max(Number(b.count) || 5, 1), 25);
+  const chs = await db.select().from(chains).where(sql`${chains.treeStatus} is not null`).limit(300);
+  const names: string[] = []; let placed = 0;
+  for (const ch of chs) { if (placed >= count) break; queueTreeRelearn(ch.id); const r = await placeChainTreeCall(ch.id); if (r.ok) { placed++; names.push(ch.name); } }
+  return c.json({ placed, names });
+});
+// ---- Tree Trainer v2: document the fastest path to a human per chain (the cheap-lane navigator) ----
+app.get("/api/admin/trainer/list", async (c) => {
+  const chs = await db.select().from(chains).orderBy(chains.name);
+  const rows = await db.select({ cid: retailers.chainId, n: sql<number>`count(*)` }).from(retailers)
+    .where(and(eq(retailers.active, true), sql`${retailers.phone} not like 'nophone:%'`)).groupBy(retailers.chainId);
+  const cnt = new Map(rows.map((r) => [r.cid, Number(r.n || 0)]));
+  return c.json({ chains: chs.filter((ch) => !ch.name.startsWith("_")).map((ch) => ({
+    id: ch.id, name: ch.name, type: ch.type, callable: cnt.get(ch.id) || 0,
+    navType: ch.navType, navStatus: ch.navStatus || "unmapped", navSeconds: ch.navSeconds,
+    navConfidence: ch.navConfidence, navRecipe: ch.navRecipe ? JSON.parse(ch.navRecipe) : null,
+    navLog: ch.navLog ? JSON.parse(ch.navLog) : [], navUpdatedAt: ch.navUpdatedAt,
+  })) });
+});
+app.post("/api/admin/trainer/document", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number };
+  let r: typeof retailers.$inferSelect | undefined;
+  if (b.retailerId) r = (await db.select().from(retailers).where(eq(retailers.id, Number(b.retailerId))))[0];
+  else if (b.chainId) {
+    r = (await db.select().from(retailers).where(and(
+      eq(retailers.chainId, Number(b.chainId)), eq(retailers.active, true), sql`${retailers.phone} not like 'nophone:%'`,
+    )).limit(1))[0];
+  }
+  if (!r || !r.phone) return c.json({ error: "no callable store for that chain" }, 400);
+  if (b.chainId) await db.update(chains).set({ navStatus: "learning", navUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(chains.id, Number(b.chainId)));
+  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone);
+  return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name });
+});
+app.get("/api/admin/trainer/session/:id", (c) => {
+  const s = getNavSession(c.req.param("id"));
+  if (!s) return c.json({ error: "expired" }, 404);
+  return c.json({ id: s.id, store: s.retailerName, status: s.status, type: s.type, confidence: s.confidence,
+    elapsed: Math.round((Date.now() - s.startMs) / 1000), humanAtSec: s.humanAtSec,
+    steps: s.steps, recipe: s.recipe });
+});
+app.post("/api/admin/trainer/lock", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; recipe?: { type?: string; steps?: unknown[]; seconds?: number }; confidence?: number };
+  if (!b.chainId || !b.recipe) return c.json({ error: "chainId + recipe required" }, 400);
+  const ch = (await db.select().from(chains).where(eq(chains.id, Number(b.chainId))))[0];
+  const log = ch?.navLog ? (JSON.parse(ch.navLog) as number[]) : [];
+  if (typeof b.recipe.seconds === "number") log.push(b.recipe.seconds);
+  await db.update(chains).set({
+    navType: b.recipe.type || null, navRecipe: JSON.stringify(b.recipe),
+    navSeconds: typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null,
+    navStatus: "locked", navConfidence: typeof b.confidence === "number" ? b.confidence : null,
+    navLog: JSON.stringify(log.slice(-10)), navUpdatedAt: Math.floor(Date.now() / 1000),
+  }).where(eq(chains.id, Number(b.chainId)));
+  return c.json({ ok: true });
+});
+app.get("/api/admin/agent/models", (c) => c.json(AGENT_MODELS));
 app.post("/api/admin/agent", async (c) => {
-  const body = (await c.req.json().catch(() => ({}))) as { messages?: Array<{ role: "user" | "assistant"; text: string }> };
+  const body = (await c.req.json().catch(() => ({}))) as { messages?: Array<{ role: "user" | "assistant"; text: string }>; model?: string };
   const history = Array.isArray(body.messages) ? body.messages : [];
-  const res = await runAdminAgent(history);
+  const res = await runAdminAgent(history, body.model);
   return c.json(res);
 });
 app.post("/api/retailers", async (c) => {
@@ -1645,6 +1776,13 @@ app.patch("/api/retailers/:id", async (c) => {
   const b = await c.req.json();
   const [row] = await db.update(retailers).set(b).where(eq(retailers.id, Number(c.req.param("id")))).returning();
   return c.json(row);
+});
+// Hard-delete a store (admin) — for purging test/probe rows and confirmed junk. Soft-remove
+// (active:false) hides from consumers; this removes the row entirely. Returns how many were deleted.
+app.delete("/api/retailers/:id", async (c) => {
+  const r = await db.delete(retailers).where(eq(retailers.id, Number(c.req.param("id"))));
+  invalidateRefCache();
+  return c.json({ deleted: r.rowsAffected ?? 0 });
 });
 
 // ---- Zones ----
@@ -1813,7 +1951,8 @@ async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, str
   const room = crypto.randomUUID();
   // Dial AS the customer's verified number when we have it (phone-first model); else the house line.
   const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
-  setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined });
+  const pol = await getPolicy();
+  setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, connectOnHuman: pol.flags.connectOnHuman, holdMaxSeconds: pol.bail.holdMaxSeconds });
   const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${RAILWAY_HOST}/twiml/bridge?room=${room}` });
   // Hard cost cap: Twilio kills the call at TimeLimit seconds, no exceptions — the profit guarantee.
   if (opts?.timeLimitSec && opts.timeLimitSec > 0) body.set("TimeLimit", String(Math.floor(opts.timeLimitSec)));
@@ -1914,6 +2053,12 @@ const httpServer = serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`Voice Caller on http://localhost:${info.port}`);
 });
 
+// Keep-warm: a tiny periodic query so the DB connection doesn't go cold between visits — kills the
+// "first open is slow" cold start. Cheap (one row), every 4 minutes.
+setInterval(() => {
+  void (async () => { try { await db.select({ n: sql<number>`1` }).from(retailers).limit(1); } catch { /* keep-warm best-effort */ } })();
+}, 4 * 60 * 1000);
+
 // ---- Live audio relay: Twilio media stream -> in-memory rooms -> browser listeners ----
 // Nothing is persisted: μ-law frames are fanned out to listeners and dropped.
 const rooms = new Map<string, Set<WebSocket>>();
@@ -1928,13 +2073,20 @@ const fanout = (room: string, payloadB64: string, track: string) => {
   const msg = JSON.stringify({ audio: payloadB64, track });
   for (const ws of set) if (ws.readyState === 1) ws.send(msg);
 };
+// Real-time transcript lines from the agent bridge → browser listeners, so the chat bubbles populate
+// AS the call happens (ElevenLabs only returns the full transcript post-call).
+const relayLine = (room: string, role: string, text: string) => {
+  const set = rooms.get(room); if (!set) return;
+  const msg = JSON.stringify({ line: { role, text } });
+  for (const ws of set) if (ws.readyState === 1) ws.send(msg);
+};
 const wssTwilio = new WebSocketServer({ noServer: true });
 const wssListen = new WebSocketServer({ noServer: true });
 const wssBridge = new WebSocketServer({ noServer: true });
 
 // Full agent bridge: Twilio call audio <-> ElevenLabs ConvAI WS, forked to browser listeners.
 wssBridge.on("connection", (ws: WebSocket, _req: unknown, room: string) => {
-  handleTwilioBridge(ws, room, fanout); // fanout(room, b64, track) — bridge passes its resolved room
+  handleTwilioBridge(ws, room, fanout, relayLine); // fanout(audio) + relayLine(live transcript) — bridge passes its resolved room
 });
 wssListen.on("connection", (ws: WebSocket, _req: unknown, room: string) => { if (room) addListener(room, ws); else bridgeLog("listen socket connected with NO room — audio cannot be routed"); });
 wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {

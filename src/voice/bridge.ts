@@ -13,11 +13,26 @@ export interface BridgeContext {
   // continuous recorded greeting, so the agent physically cannot press keys then — the bridge
   // does it instead, in code, every time.
   dtmf?: string;
+  // Connect-on-human (cost saver, OFF by default): don't open the ElevenLabs (billed) session until a
+  // human is detected. Twilio handles dial + DTMF + hold for free; ElevenLabs then bills only talk-time.
+  connectOnHuman?: boolean;
+  holdMaxSeconds?: number; // fallback: connect anyway after this many seconds even if no human is detected
 }
 const contexts = new Map<string, BridgeContext>();
 export function setBridgeContext(room: string, ctx: BridgeContext) {
   contexts.set(room, ctx);
   setTimeout(() => contexts.delete(room), 5 * 60 * 1000); // auto-expire
+}
+
+// conversation_id -> seconds spent navigating before the human was reached (connect-on-human mode).
+// Ingest reads + clears this so the call result records true time-to-human even though ElevenLabs
+// (which only joins at human pickup) never saw the nav phase.
+const navByConv = new Map<string, number>();
+export function takeBridgeNav(convId: string): number | null {
+  const v = navByConv.get(convId);
+  if (v == null) return null;
+  navByConv.delete(convId);
+  return v;
 }
 
 /** Consume the room's keypad shortcut for TwiML <Play digits> (real carrier DTMF signaling —
@@ -49,6 +64,23 @@ async function signedUrl(agentId: string): Promise<string | null> {
     const d = (await r.json()) as { signed_url?: string };
     return d.signed_url ?? null;
   } catch (e) { log(`signedUrl threw: ${String(e).slice(0, 80)}`); return null; }
+}
+
+// ---- μ-law energy (voice-activity detection for connect-on-human) ----
+const ULAW_BIAS = 0x84;
+function ulawByteToLinear(u: number): number {
+  u = ~u & 0xff;
+  let t = ((u & 0x0f) << 3) + ULAW_BIAS;
+  t <<= (u & 0x70) >> 4;
+  return (u & 0x80) ? (ULAW_BIAS - t) : (t - ULAW_BIAS);
+}
+/** Mean absolute amplitude of a base64 μ-law frame (~0 silence, higher = louder). */
+function frameEnergy(b64: string): number {
+  let buf: Buffer; try { buf = Buffer.from(b64, "base64"); } catch { return 0; }
+  if (!buf.length) return 0;
+  let sum = 0;
+  for (let i = 0; i < buf.length; i++) sum += Math.abs(ulawByteToLinear(buf[i]));
+  return sum / buf.length;
 }
 
 // ---- DTMF tone synthesis (μ-law 8 kHz, same format as the Twilio stream) ----
@@ -86,17 +118,26 @@ function dtmfTone(digit: string, ms = 280): Buffer {
 }
 
 // Handle one Twilio bridge socket. `fanout` forwards audio frames to browser listeners in a room.
-export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (room: string, b64: string, track: string) => void) {
+export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (room: string, b64: string, track: string) => void, relayLine?: (room: string, role: string, text: string) => void) {
   let streamSid = "";
   let eleven: WebSocket | null = null;
   let ready = false;
   let frames = 0;
   const pending: string[] = []; // store audio buffered until the agent WS is ready
   let ctx = room ? contexts.get(room) : undefined;
+  // connect-on-human state
+  let connecting = false;     // true once we've committed to opening ElevenLabs (buffer from here)
+  let humanAtMs = 0;          // when a human was detected (connect-on-human)
+  let lastDtmfMs = 0;         // ms-after-start of the last scheduled keypress (VAD waits past this)
+  let voiced = 0;             // consecutive voiced frames
+  const startMs = Date.now();
+  const VOICE_THRESH = 350;   // μ-law mean-abs energy that counts as "someone's talking" (tunable)
+  const VOICE_FRAMES = 45;    // ~0.9s of sustained voice → treat as a human (tunable)
   log(`twilio connected room=${room.slice(0, 8)} ctx=${!!ctx}`);
 
   async function connectEleven() {
     if (!ctx) { log("connectEleven: NO CONTEXT"); return; }
+    connecting = true; // from now, buffer inbound audio for the agent
     const c = ctx; // narrowed
     const url = await signedUrl(c.agentId);
     if (!url) { log("connectEleven: no signed url -> abort"); return; }
@@ -107,7 +148,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       eleven!.send(JSON.stringify({ type: "conversation_initiation_client_data", dynamic_variables: c.dynamicVars }));
     });
     eleven.on("message", (data: Buffer) => {
-      let m: { type?: string; audio_event?: { audio_base_64?: string }; ping_event?: { event_id?: number }; conversation_initiation_metadata_event?: { conversation_id?: string } };
+      let m: { type?: string; audio_event?: { audio_base_64?: string }; ping_event?: { event_id?: number }; conversation_initiation_metadata_event?: { conversation_id?: string }; user_transcription_event?: { user_transcript?: string }; agent_response_event?: { agent_response?: string } };
       try { m = JSON.parse(data.toString()); } catch { return; }
       if (m.type === "conversation_initiation_metadata") {
         ready = true;
@@ -121,7 +162,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           return null;
         };
         const convId = find(m);
-        if (convId) { conversations.set(room, convId); setTimeout(() => conversations.delete(room), 10 * 60 * 1000); log(`metadata: convId=${convId}`); try { c.onConversationId?.(convId); } catch (e) { log(`onConversationId threw: ${String(e).slice(0, 80)}`); } }
+        if (convId) { conversations.set(room, convId); setTimeout(() => conversations.delete(room), 10 * 60 * 1000); if (c.connectOnHuman && humanAtMs) navByConv.set(convId, Math.max(0, Math.round((humanAtMs - startMs) / 1000))); log(`metadata: convId=${convId}`); try { c.onConversationId?.(convId); } catch (e) { log(`onConversationId threw: ${String(e).slice(0, 80)}`); } }
         else log(`metadata but NO convId: ${JSON.stringify(m).slice(0, 200)}`);
         for (const p of pending) eleven!.send(JSON.stringify({ user_audio_chunk: p }));
         pending.length = 0;
@@ -131,6 +172,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
           twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
           fanout(room, b64, "agent");
         }
+      } else if (m.type === "user_transcript") {
+        const txt = m.user_transcription_event?.user_transcript; if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
+      } else if (m.type === "agent_response") {
+        const txt = m.agent_response_event?.agent_response; if (txt) try { relayLine?.(room, "Agent", String(txt)); } catch { /* relay best-effort */ }
       } else if (m.type === "ping") {
         eleven!.send(JSON.stringify({ type: "pong", event_id: m.ping_event?.event_id }));
       } else if (m.type === "interruption") {
@@ -154,9 +199,25 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   function scheduleDtmf(spec: string) {
     for (const m of spec.matchAll(/([0-9*#])\s*@\s*(\d+(?:\.\d+)?)/g)) {
       const digit = m[1], delayMs = Number(m[2]) * 1000;
+      lastDtmfMs = Math.max(lastDtmfMs, delayMs);
       dtmfTimers.push(setTimeout(() => sendDigit(digit), delayMs));
       log(`dtmf scheduled: ${digit} @ ${m[2]}s`);
     }
+  }
+  // Connect-on-human: open ElevenLabs once (human detected or hold-timeout fallback).
+  function triggerConnect(reason: string) {
+    if (connecting) return;
+    humanAtMs = Date.now();
+    log(`connect-on-human: connecting (${reason}) after ${Math.round((humanAtMs - startMs) / 1000)}s nav`);
+    connectEleven();
+  }
+  // VAD on inbound (store-side) audio: after the keypad nav has had time to finish, sustained voice
+  // ⇒ a human is on the line ⇒ bring in the (billed) agent. Imperfect vs hold music — bench-test/tune.
+  function maybeDetectHuman(b64: string) {
+    if (connecting) return;
+    if (Date.now() - startMs < lastDtmfMs + 1500) return; // let the keypad nav settle first
+    if (frameEnergy(b64) > VOICE_THRESH) { if (++voiced >= VOICE_FRAMES) triggerConnect("human"); }
+    else voiced = Math.max(0, voiced - 1);
   }
 
   twilio.on("message", (data: Buffer) => {
@@ -166,16 +227,22 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       streamSid = m.start?.streamSid || streamSid;
       if (!room && m.start?.customParameters?.room) room = m.start.customParameters.room; // Twilio puts <Parameter> here
       if (!ctx && room) ctx = contexts.get(room);
-      log(`twilio start room=${room.slice(0, 8)} ctx=${!!ctx} -> connectEleven`);
       if (ctx?.dtmf) scheduleDtmf(ctx.dtmf);
-      connectEleven();
+      if (ctx?.connectOnHuman) {
+        log(`twilio start room=${room.slice(0, 8)} -> connect-on-human (deferring ElevenLabs until a human)`);
+        dtmfTimers.push(setTimeout(() => triggerConnect("hold-timeout"), (ctx.holdMaxSeconds ?? 45) * 1000));
+      } else {
+        log(`twilio start room=${room.slice(0, 8)} ctx=${!!ctx} -> connectEleven`);
+        connectEleven();
+      }
     }
     else if (m.event === "media" && m.media?.payload) {
       frames++;
       const b64 = m.media.payload;
       fanout(room, b64, "clerk"); // store/clerk audio -> browser
       if (eleven && ready) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
-      else pending.push(b64);
+      else if (connecting) pending.push(b64);          // committed to connect → buffer for the agent
+      else if (ctx?.connectOnHuman) maybeDetectHuman(b64); // pre-human: listen for a person, don't bill/buffer
     } else if (m.event === "stop") { log("twilio stop"); if (eleven) eleven.close(); }
   });
   twilio.on("close", () => { log(`twilio close (frames in=${frames})`); dtmfTimers.forEach(clearTimeout); if (eleven) eleven.close(); });

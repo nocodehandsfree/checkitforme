@@ -62,6 +62,10 @@ export interface CallOutcome {
   productName?: string | null;
   summary: string;                // short summary of what the clerk said
   transcript: string;             // text only — we never persist audio
+  /** Total connected call length in seconds (from the provider). */
+  durationSecs?: number;
+  /** Seconds spent navigating the phone tree before a human first spoke (time-to-human). null if never reached. */
+  navSecs?: number | null;
   status: "completed" | "no_answer" | "failed" | "closed";
   /** Why a call ended early, in plain English (e.g. quota exceeded). Only set on failures. */
   failureReason?: string | null;

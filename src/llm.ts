@@ -1,0 +1,84 @@
+// ── Unified LLM gateway ──────────────────────────────────────────────────────────────────────
+// Every model call in the app routes through here so it goes via Helicone — one place for cost
+// tracking, latency, caching, and dead-simple model swapping / fallbacks. Tag each call with a
+// `job` and the Helicone dashboard breaks spend down by purpose (nav, tree-learn, hours, …).
+//
+// Routing patterns below are both VERIFIED live (curl → HTTP 200):
+//   OpenAI-style → POST https://oai.helicone.ai/v1/chat/completions
+//                  Authorization: Bearer <OPENAI_KEY> · Helicone-Auth: Bearer <HELICONE_KEY>
+//   Gemini       → POST https://gateway.helicone.ai/v1beta/models/<model>:generateContent
+//                  x-goog-api-key: <GEMINI_KEY> · Helicone-Auth · Helicone-Target-Url: https://generativelanguage.googleapis.com
+// Adding Groq / DeepSeek (both OpenAI-compatible) later = one branch here once the key lands.
+import { config } from "./config";
+
+const HELICONE = process.env.HELICONE_API_KEY || "";
+function heli(job?: string, cache?: boolean): Record<string, string> {
+  return {
+    ...(HELICONE ? { "Helicone-Auth": `Bearer ${HELICONE}` } : {}),
+    ...(job ? { "Helicone-Property-Job": job } : {}),
+    ...(cache ? { "Helicone-Cache-Enabled": "true" } : {}),
+  };
+}
+
+export type LlmMsg = { role: "system" | "user" | "assistant"; content: string };
+export interface LlmOpts {
+  job?: string;          // Helicone property → cost dashboard breaks down by this
+  maxTokens?: number;
+  temperature?: number;
+  json?: boolean;        // ask the model for strict JSON out
+  cache?: boolean;       // let Helicone cache identical prompts
+}
+
+function isGemini(model: string): boolean { return model.startsWith("gemini"); }
+
+/** One call, any model, always through Helicone. Returns the text (or JSON string when json:true). */
+export async function llm(model: string, input: string | LlmMsg[], opts: LlmOpts = {}): Promise<string> {
+  const messages: LlmMsg[] = typeof input === "string" ? [{ role: "user", content: input }] : input;
+  return isGemini(model) ? geminiCall(model, messages, opts) : openaiCall(model, messages, opts);
+}
+
+async function openaiCall(model: string, messages: LlmMsg[], o: LlmOpts): Promise<string> {
+  const key = config.openaiKey;
+  if (!key) throw new Error("OPENAI_API_KEY not set");
+  const r = await fetch("https://oai.helicone.ai/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...heli(o.job, o.cache) },
+    body: JSON.stringify({
+      model, messages,
+      max_tokens: o.maxTokens ?? 512,
+      temperature: o.temperature ?? 0,
+      ...(o.json ? { response_format: { type: "json_object" } } : {}),
+    }),
+  });
+  if (!r.ok) throw new Error(`llm openai ${r.status}: ${(await r.text()).slice(0, 160)}`);
+  const d = (await r.json()) as { choices?: { message?: { content?: string } }[] };
+  return d.choices?.[0]?.message?.content ?? "";
+}
+
+async function geminiCall(model: string, messages: LlmMsg[], o: LlmOpts): Promise<string> {
+  const key = config.geminiKey;
+  if (!key) throw new Error("GEMINI_API_KEY not set");
+  const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n");
+  const contents = messages
+    .filter((m) => m.role !== "system")
+    .map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
+  const r = await fetch(`https://gateway.helicone.ai/v1beta/models/${model}:generateContent`, {
+    method: "POST",
+    headers: {
+      "x-goog-api-key": key, "Content-Type": "application/json",
+      "Helicone-Target-Url": "https://generativelanguage.googleapis.com", ...heli(o.job, o.cache),
+    },
+    body: JSON.stringify({
+      ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
+      contents,
+      generationConfig: {
+        temperature: o.temperature ?? 0,
+        maxOutputTokens: o.maxTokens ?? 512,
+        ...(o.json ? { responseMimeType: "application/json" } : {}),
+      },
+    }),
+  });
+  if (!r.ok) throw new Error(`llm gemini ${r.status}: ${(await r.text()).slice(0, 160)}`);
+  const d = (await r.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+  return (d.candidates?.[0]?.content?.parts || []).map((p) => p.text || "").join("");
+}

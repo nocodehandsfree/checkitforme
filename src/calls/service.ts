@@ -24,12 +24,22 @@ async function notifyWatches(retailerId: number, categoryId: number, store: stri
 }
 import { config } from "../config";
 import { ElevenLabsProvider } from "../voice/elevenlabs";
+import { takeBridgeNav } from "../voice/bridge";
+import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
 import { getSetting, setSetting } from "../db/settings";
 import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS } from "../voice/prompts";
 
 const DEFAULT_OPENER = "Heyy! I was just checking to see if you guys got any {category} in?";
+
+// Round-robin picker for call rotation (opener variants / voice pool). In-memory; resets on restart.
+const rotCounters = new Map<string, number>();
+function rotatePick<T>(key: string, list: T[]): T | undefined {
+  if (!list.length) return undefined;
+  const n = (rotCounters.get(key) ?? -1) + 1; rotCounters.set(key, n);
+  return list[n % list.length];
+}
 
 const VOICEMAIL_INSTRUCTION =
   "If you reach a voicemail, answering machine, or automated recording (a recorded greeting, an automated menu with no live person, or a beep) — do NOT say anything and end the call immediately. Never leave a message.";
@@ -178,7 +188,10 @@ export async function triggerCall(a: TriggerArgs) {
 
   // Warm, editable opener (Voice tuning control). {category} is interpolated.
   // Test Bench passes its DRAFT opener via openingTemplate; live calls read the vt_opening setting.
-  const openerTemplate = a.openingTemplate ?? ((await getSetting("vt_opening")) || DEFAULT_OPENER);
+  // Rotation (optional): if opener variants are set, round-robin them so the same store doesn't hear
+  // the identical line every time (same voice, slightly different phrasing next call).
+  const openerVariants = ((await getSetting("vt_opener_variants")) || "").split("\n").map((s) => s.trim()).filter(Boolean);
+  const openerTemplate = a.openingTemplate ?? (rotatePick("opener", openerVariants) || (await getSetting("vt_opening")) || DEFAULT_OPENER);
   const openingLine = openerTemplate.replace(/\{category\}/g, category.label);
 
   // Two decision trees off "verified": specific product check vs general restock.
@@ -205,7 +218,7 @@ export async function triggerCall(a: TriggerArgs) {
       productName: category.label,
       question,
       agentId,
-      voiceId: a.voiceId ?? config.voice.defaultVoiceId,
+      voiceId: a.voiceId ?? rotatePick("voice", ((await getSetting("vt_voice_pool")) || "").split(",").map((s) => s.trim()).filter(Boolean)) ?? config.voice.defaultVoiceId,
       clarification,
       openingLine: mode === "restock" ? openingLine : undefined,
       phoneTree,
@@ -514,6 +527,10 @@ export async function ingestPending(): Promise<number> {
       summary: outcome.summary,
       transcript: outcome.transcript,
       completedAt: now(),
+      callSeconds: outcome.durationSecs ?? null,
+      // connect-on-human: the bridge measured true time-to-human (ElevenLabs only joined at pickup);
+      // otherwise fall back to the first-human-turn timestamp from the transcript.
+      navSeconds: takeBridgeNav(row.providerCallId) ?? outcome.navSecs ?? null,
     }).where(eq(callResults.id, row.id));
 
     // Server-side billing: charge the finder ONE credit on a DEFINITIVE answer, exactly once.
@@ -523,6 +540,30 @@ export async function ingestPending(): Promise<number> {
     }
 
     const store = (await db.select().from(retailers).where(eq(retailers.id, row.retailerId)))[0];
+
+    // ---- Phone-tree learning: every call's transcript contains the store's IVR, so we can map the
+    // route to a human for the whole chain. Learn once for unmapped chains (passive), and force a
+    // re-check + compare when a verify was queued for this chain. Cheap model; skipped otherwise.
+    if (store?.chainId && outcome.status === "completed" && (outcome.transcript || "").length > 20) {
+      const ch = (await db.select().from(chains).where(eq(chains.id, store.chainId)))[0];
+      const force = ch ? consumeTreeRelearn(ch.id) : false;
+      if (ch && (force || ch.treeStatus == null)) {
+        const learned = await learnTreeFromTranscript(outcome.transcript);
+        if (learned) {
+          if (force && ch.treeStatus != null) {
+            const matched = (ch.dtmfShortcut || "") === learned.dtmf && (ch.answerPath || "") === learned.answerPath;
+            await db.update(chains).set({ treeStatus: matched ? "verified" : "varies", treeVerifiedAt: now() }).where(eq(chains.id, ch.id));
+          } else {
+            await db.update(chains).set({
+              phoneTreeDefault: ch.phoneTreeDefault || learned.note, dtmfShortcut: ch.dtmfShortcut || learned.dtmf,
+              answerPath: learned.answerPath, avgTreeSeconds: learned.avgTreeSeconds, ringsDirect: learned.ringsDirect,
+              treeNote: learned.note, treeStatus: "learned", treeLearnedAt: now(),
+            }).where(eq(chains.id, ch.id));
+          }
+        }
+      }
+    }
+
     if (primaryConfirmed === true && primaryLabel) {
       await notifyInStock(store?.name ?? "A store", primaryLabel, row.retailerId, outcome.shipmentDay);
       await notifyWatches(row.retailerId, row.categoryId, store?.name ?? "A store", primaryLabel);
@@ -648,19 +689,27 @@ export async function placeAdHocCall(phone: string, mode: "restock" | "carry" | 
 
 /** Retailers annotated with their most recent call outcome (drives the green dot). Filtered + capped
  *  server-side — at 100k stores, returning the whole table (and re-fetching it) melts the admin. */
-export async function retailersWithStatus(opts: { q?: string; state?: string; limit?: number } = {}) {
+export async function retailersWithStatus(opts: { q?: string; state?: string; limit?: number; type?: string; region?: string; carries?: string; online?: boolean } = {}) {
   const limit = Math.min(Math.max(opts.limit ?? 300, 1), 1000);
   const q = (opts.q || "").trim().toLowerCase();
   const state = (opts.state || "").trim().toUpperCase();
-  let rs: (typeof retailers.$inferSelect)[];
-  if (state) {
-    rs = await db.select().from(retailers).where(eq(retailers.state, state)).limit(limit);
-  } else if (q) {
-    const pat = `%${q}%`;
-    rs = await db.select().from(retailers).where(or(like(retailers.name, pat), like(retailers.location, pat), like(retailers.zip, pat))).limit(limit);
-  } else {
-    rs = await db.select().from(retailers).orderBy(desc(retailers.id)).limit(limit);
+  // Filter-first browse: each filter is a DB condition so you can pull "all big-box in CA" with no
+  // text search. All capped at `limit`, so even an unindexed scan stays bounded.
+  const conds = [] as ReturnType<typeof eq>[];
+  if (q) { const pat = `%${q}%`; conds.push(or(like(retailers.name, pat), like(retailers.location, pat), like(retailers.zip, pat)) as ReturnType<typeof eq>); }
+  if (state) conds.push(eq(retailers.state, state));
+  if (opts.region) conds.push(eq(retailers.region, opts.region));
+  if (opts.carries) conds.push(like(retailers.carries, `%${opts.carries}%`) as ReturnType<typeof eq>);
+  if (opts.online) conds.push(eq(retailers.online, true));
+  if (opts.type) {
+    const cs = await db.select({ id: chains.id }).from(chains).where(eq(chains.type, opts.type));
+    const ids = cs.map((c) => c.id);
+    if (!ids.length) return [];
+    conds.push(inArray(retailers.chainId, ids) as ReturnType<typeof eq>);
   }
+  const rs: (typeof retailers.$inferSelect)[] = conds.length
+    ? await db.select().from(retailers).where(and(...conds)).limit(limit)
+    : await db.select().from(retailers).orderBy(desc(retailers.id)).limit(limit);
   const ids = rs.map((r) => r.id);
   const recent = ids.length
     ? await db.select().from(callResults).where(inArray(callResults.retailerId, ids)).orderBy(desc(callResults.startedAt))

@@ -41,6 +41,13 @@ export const chains = sqliteTable("chains", {
   answerPath: text("answer_path"),
   // Average seconds burned in the phone tree before a human, learned from calls.
   avgTreeSeconds: integer("avg_tree_seconds"),
+  // ---- Phone-tree discovery (the "learn the tree" bot) ----
+  // Lifecycle of the documented tree: null/"unknown" → "learned" (mapped) → "verified" (re-confirmed) → "failed".
+  treeStatus: text("tree_status"),
+  treeLearnedAt: integer("tree_learned_at"),  // last successful discovery
+  treeVerifiedAt: integer("tree_verified_at"),// last accuracy re-check that matched
+  ringsDirect: integer("rings_direct", { mode: "boolean" }), // true = a human picks up with no menu
+  treeNote: text("tree_note"),                // plain-English summary of how to reach a human
   // Chain only sells repackaged product (e.g. Fairfield) — checks are a waste of the customer's money.
   repackOnly: integer("repack_only", { mode: "boolean" }).notNull().default(false),
   // Owner kill-switch: muted chains are hidden from the consumer store list (no calls placed).
@@ -53,6 +60,24 @@ export const chains = sqliteTable("chains", {
   stockCheckNote: text("stock_check_note"),
   // Per-store inventory URL template for the site checker ({storeId}/{zip}/{query} placeholders).
   siteStockUrl: text("site_stock_url"),
+  // ---- Sell-methods taxonomy (per-chain defaults; the store resolves through its chain) ----
+  // "Ways to get it" — CSV of: in_store | pickup (BOPIS) | ship (delivered). null → in_store only.
+  sellMethods: text("sell_methods"),
+  // Price/source: true = sold by the retailer at/around MSRP (first-party); false = third-party
+  // marketplace listing where price MAY exceed MSRP. Default true (most chains are first-party).
+  isMSRP: integer("is_msrp", { mode: "boolean" }).notNull().default(true),
+  // ---- Tree Trainer v2: the documented "recipe" to reach a human fast ----
+  // navType: how this chain answers — "direct" (person picks up), "keypad" (press tones),
+  // "voice" (must speak, e.g. CVS). navRecipe: JSON ordered steps [{action:"say"|"press"|"wait",
+  // value, atSec}]. navSeconds: best time-to-human achieved. navStatus: unmapped|learning|review|
+  // locked. navConfidence: 0-100 from the navigator. navLog: JSON attempt history (each call's secs).
+  navType: text("nav_type"),
+  navRecipe: text("nav_recipe"),
+  navSeconds: integer("nav_seconds"),
+  navStatus: text("nav_status"),
+  navConfidence: integer("nav_confidence"),
+  navLog: text("nav_log"),
+  navUpdatedAt: integer("nav_updated_at"),
 });
 
 /** A specific catalog product. Seeded from drops_db.json; the agent asks at the category level, but this powers future product-specific asks and matching. */
@@ -114,6 +139,9 @@ export const retailers = sqliteTable(
     // unmanned vending KIOSK. Many supermarkets are kiosk-only (don't sell packs). A store can be both.
     sellsPacks: integer("sells_packs", { mode: "boolean" }).notNull().default(true), // callable
     hasKiosk: integer("has_kiosk", { mode: "boolean" }).notNull().default(false),    // vending machine on site
+    // Sells the product ONLINE — pickup, third-party listings, or online-only (e.g. Micro Center).
+    // NOT "online only": some are both in-store and online. Default false; populated separately.
+    online: integer("online", { mode: "boolean" }).notNull().default(false),
     // The chain's own store number (collector `store_id`) — keys per-store site stock checks
     // (e.g. Micro Center storeid, Best Buy store #). Required for site-rail chains.
     externalStoreId: text("external_store_id"),
@@ -408,6 +436,10 @@ export const callResults = sqliteTable(
     startedAt: integer("started_at").notNull().default(now),
     completedAt: integer("completed_at"),
     chargedAt: integer("charged_at"), // when the finder was billed for this call (idempotency guard)
+    // Timing breakdown (from the provider): total connected length, and time-to-human (seconds spent
+    // navigating the phone tree / on hold before a person first spoke). talk = call - nav.
+    callSeconds: integer("call_seconds"),
+    navSeconds: integer("nav_seconds"),
   },
   (t) => ({
     byRetailerCategory: index("call_results_retailer_category_idx").on(t.retailerId, t.categoryId),

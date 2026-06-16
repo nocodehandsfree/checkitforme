@@ -263,6 +263,11 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
     statusKey = ({ no_answer: "nobody_answered", failed: "failed", closed: "closed" } as Record<string, string>)[status] ?? "nobody_answered";
   }
 
+  // Timing: total connected length + time-to-human (when the first non-agent voice spoke).
+  const durationSecs = d.metadata?.call_duration_secs;
+  const firstHuman = (d.transcript ?? []).find((t) => t.role !== "agent" && t.message != null);
+  const navSecs = firstHuman?.time_in_call_secs ?? null;
+
   return {
     callId: Number(vars.internal_call_id),
     providerCallId: d.conversation_id,
@@ -275,6 +280,8 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
     productName,
     summary: d.analysis?.transcript_summary ?? "",
     transcript,
+    durationSecs,
+    navSecs,
     status,
     failureReason: explainFailure(d),
   };
@@ -323,7 +330,7 @@ async function verifySignature(payload: string, header: string | null, secret?: 
 interface ElevenLabsConversation {
   conversation_id: string;
   status: string; // initiated | in-progress | processing | done | failed
-  transcript?: { role: string; message: string | null }[];
+  transcript?: { role: string; message: string | null; time_in_call_secs?: number }[];
   metadata?: { call_duration_secs?: number; termination_reason?: string };
   analysis?: {
     transcript_summary?: string;

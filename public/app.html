@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="admin-r22" />
-<title>Caller Admin — Fungibles</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%239333EA'/%3E%3Crect x='3' y='3' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='3' width='19' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='13' width='9' height='7' rx='3' fill='white'/%3E%3Crect x='10' y='13' width='14' height='7' rx='3' fill='white'/%3E%3Crect x='3' y='23' width='9' height='7' rx='3' fill='white'/%3E%3C/svg%3E">
-<link rel="apple-touch-icon" href="https://api-production-100b.up.railway.app/assets/fungibles-logo.jpeg">
+<meta name="x-rev" content="admin-r40" />
+<title>Check It For Me — Admin</title>
+<link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
+<link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
 <style>
   :root{
     --bg:#0C0C12; --sheet:#1A1A24; --terminal:#0A0A0E;
@@ -211,12 +211,13 @@
     background:linear-gradient(135deg,var(--green),#22C55E);box-shadow:0 10px 28px -8px rgba(74,222,128,.6);display:grid;place-items:center;transition:transform .12s}
   .agent-fab:active{transform:scale(.94)}
   .agent-panel{position:fixed;right:20px;bottom:20px;z-index:61;width:min(420px,calc(100vw - 32px));height:min(620px,calc(100dvh - 90px));
-    display:flex;flex-direction:column;background:#0d0d15;border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 24px 60px -12px rgba(0,0,0,.7)}
+    display:flex;flex-direction:column;background:#0d0d15;border:1px solid var(--border);border-radius:18px;overflow:hidden;overscroll-behavior:contain;box-shadow:0 24px 60px -12px rgba(0,0,0,.7)}
   .agent-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);background:rgba(74,222,128,.06)}
   .agent-title{font-weight:800;font-size:14px;color:#fff;display:inline-flex;align-items:center;gap:8px}
+  .agent-model{margin-left:auto;margin-right:8px;max-width:170px;background:#08080c;color:#cdcdd8;border:1px solid var(--border);border-radius:9px;padding:5px 7px;font-size:11.5px;font-weight:600;cursor:pointer}
   .agent-x{background:none;border:none;color:var(--muted);font-size:24px;line-height:1;cursor:pointer;padding:0 4px}
   .agent-x:hover{color:#fff}
-  .agent-log{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .agent-log{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:14px;display:flex;flex-direction:column;gap:10px}
   .agent-msg{max-width:86%;padding:9px 12px;border-radius:13px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
   .agent-msg.user{align-self:flex-end;background:var(--ptint);border:1px solid var(--pline);color:#fff;border-bottom-right-radius:4px}
   .agent-msg.bot{align-self:flex-start;background:rgba(255,255,255,.04);border:1px solid var(--border);color:#e7e7ef;border-bottom-left-radius:4px}
@@ -226,7 +227,8 @@
   .agent-empty{color:var(--muted);font-size:13px;text-align:center;margin:auto;padding:20px;line-height:1.6}
   .agent-typing{align-self:flex-start;color:var(--muted);font-size:13px;padding:4px 2px}
   .agent-input{display:flex;gap:8px;align-items:flex-end;padding:12px;border-top:1px solid var(--border)}
-  .agent-input textarea{flex:1;resize:none;max-height:120px;background:#08080c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 12px;font:inherit;font-size:13.5px;line-height:1.4}
+  .agent-input textarea{flex:1;resize:none;min-height:60px;max-height:160px;background:#08080c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:11px 13px;font:inherit;font-size:14.5px;line-height:1.45}
+  body.agent-open{overflow:hidden}
   .agent-send{flex:0 0 auto;width:40px;height:40px;border-radius:11px;border:none;cursor:pointer;background:var(--green);display:grid;place-items:center}
   .agent-send:disabled{opacity:.4;cursor:default}
   @media(max-width:480px){ .agent-panel{right:8px;left:8px;width:auto;bottom:8px;height:calc(100dvh - 70px)} .agent-fab{right:16px;bottom:16px} }
@@ -240,7 +242,7 @@
 </head>
 <body class="authwait">
 <header>
-  <span class="hmark"><img src="/logos/fcheck.png?v=2" alt="Fungibles" width="24" height="24" style="display:block"></span>
+  <span class="hmark"><img src="/logos/checkitforme.png?v=2" alt="Check It For Me" style="height:20px;width:auto;object-fit:contain;display:block"></span>
   <h1><b>Admin</b></h1><span class="dot" title="live"></span>
   <span class="sub" id="clock"></span>
 </header>
@@ -261,16 +263,20 @@
     <div class="card">
       <div class="name" style="margin-bottom:8px">⚡ Actions</div>
       <div class="row" style="flex-wrap:wrap;gap:8px">
-        <button class="act" onclick="dashIngest()">Ingest results now</button>
-        <button class="ghost" onclick="dashTick()">Run scheduler tick</button>
-        <button class="ghost" onclick="backfillAllHours()">🕐 Look up all hours</button>
         <button class="ghost" onclick="loadDash()">↻ Refresh</button>
       </div>
+      <div class="meta" style="margin-top:6px;color:var(--muted)">Results ingest + scheduled calls fire automatically — nothing to press here.</div>
       <div class="meta" id="d_act_msg" style="margin-top:8px;min-height:14px"></div>
     </div>
     <div class="card" id="d_money_card">
       <div class="name" style="margin-bottom:8px">💰 Money &amp; cost</div>
       <div class="stats" id="d_money" style="margin-bottom:0"></div>
+    </div>
+    <div class="card" id="d_timing_card">
+      <div class="name" style="margin-bottom:4px">Call time &amp; cost</div>
+      <div class="meta" style="margin-bottom:8px">Time-to-human (phone-tree nav) vs. talk — ElevenLabs bills the whole connected call, so nav + hold is real cost.</div>
+      <div class="stats" id="d_timing" style="margin-bottom:6px"></div>
+      <details><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details>
     </div>
     <div class="card" style="border-color:rgba(251,191,36,.3)">
       <div class="row" style="justify-content:space-between;align-items:baseline">
@@ -293,19 +299,22 @@
     <details id="storereports" class="card" style="display:none"><summary><span class="name">Reports</span><span class="meta">by type · top regions · most-checked</span></summary>
       <div id="rep_body" style="margin-top:10px"></div>
     </details>
-    <h2>Find a store</h2>
+    <div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">Find a store</h2>
+      <button class="ghost" onclick="showSection('map')" title="See the current results on the map" style="font-size:12px">🗺 Map these</button></div>
     <div class="filters">
-      <input id="f_search" placeholder="Search name, city, ZIP, or region…" oninput="onAdminSearch()">
-      <select id="f_type" onchange="renderRetailers()"><option value="">All types</option></select>
+      <input id="f_search" placeholder="Search name, city, ZIP — or just pick a filter…" oninput="onAdminSearch()">
+      <select id="f_type" onchange="loadRetailers()"><option value="">All types</option></select>
+      <select id="f_region" onchange="loadRetailers()"><option value="">All regions</option></select>
       <select id="f_zone" onchange="renderRetailers()"><option value="">All zones</option></select>
-      <select id="f_carries" onchange="renderRetailers()"><option value="">Any product</option></select>
-      <select id="f_status" onchange="renderRetailers()">
+      <select id="f_carries" onchange="loadRetailers()"><option value="">Any product</option></select>
+      <select id="f_status" onchange="loadRetailers()">
         <option value="">Any status</option>
         <option value="verified">Verified</option>
         <option value="unverified">Unverified</option>
         <option value="green">In stock now</option>
         <option value="open">Open now</option>
         <option value="closed">Closed now</option>
+        <option value="online">Online</option>
         <option value="muted">Muted (chain)</option>
         <option value="badnum">Bad / missing number</option>
         <option value="kiosk">Has kiosk</option>
@@ -325,6 +334,8 @@
       <span class="grow"></span>
       <button class="ghost" onclick="bulkEdit('verify')">Mark verified</button>
       <button class="ghost" onclick="bulkEdit('unverify')">Mark unverified</button>
+      <button class="ghost" onclick="bulkEdit('online')">Mark online</button>
+      <button class="ghost" onclick="bulkEdit('offline')">Not online</button>
       <button class="ghost" onclick="bulkEdit('deactivate')" style="color:var(--red)">Remove</button>
     </div>
     <div id="retailerList"><div class="empty">Search by name, city, ZIP, or region to pull stores up.</div></div>
@@ -349,7 +360,15 @@
     <div class="meta" style="margin-top:8px">Stores appear once they have a location (geocoded on import).</div>
   </section>
 
-  <section id="results"><h2>Recent calls</h2><div id="resultList"><div class="empty">Loading…</div></div></section>
+  <section id="results"><h2>Recent calls</h2>
+    <div class="filters"><select id="r_sort" onchange="renderResults()">
+      <option value="newest">Sort: newest</option>
+      <option value="oldest">Oldest</option>
+      <option value="store">Store A–Z</option>
+      <option value="outcome">Outcome — in stock first</option>
+      <option value="category">Category A–Z</option>
+    </select></div>
+    <div id="resultList"><div class="empty">Loading…</div></div></section>
 
   <section id="schedules">
     <h2>Schedules</h2>
@@ -382,6 +401,14 @@
 
   <section id="zones"><h2>Zones</h2><div id="zoneList"><div class="empty">Loading…</div></div></section>
   <section id="catalog"><h2>Tracked categories</h2><div id="catList"><div class="empty">Loading…</div></div></section>
+  <section id="receipts">
+    <h2>Receipts</h2>
+    <div class="card" style="margin-bottom:12px">
+      <div class="name" style="margin-bottom:4px">📧 Emailed-in receipts <span class="meta" style="font-weight:400">— shoppers forward a receipt → verified intel + a free check</span></div>
+      <div class="meta" id="rcpt_status">Loading…</div>
+    </div>
+    <div id="rcptList"><div class="empty">Loading…</div></div>
+  </section>
 
   <section id="growth">
     <h2>Growth &amp; Policy</h2>
@@ -521,6 +548,16 @@
         <div class="row" style="margin-top:10px"><button class="ghost" onclick="resetScript()">Reset agent script to default</button></div>
       </details>
 
+      <details class="card" id="tb_rotate_card">
+        <summary><span class="name">🔀 Rotation</span><span class="meta">vary the voice + opener per call so stores don't hear the same thing twice</span></summary>
+        <div class="meta" style="margin:10px 0 8px">Live store calls round-robin through these. Leave empty to use the single live voice/opener.</div>
+        <label>Opener variants <span style="color:var(--muted)">— one per line; <code>{category}</code> fills in. The agent uses the next line each call.</span></label>
+        <textarea id="rot_openers" rows="4" style="width:100%;font-family:inherit;font-size:13px;background:var(--terminal);color:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;box-sizing:border-box" placeholder="Heyy! Got any {category} in today?&#10;Hi! Quick one — any {category} land recently?&#10;Hey there! Checking if {category} is in stock?"></textarea>
+        <label style="margin-top:10px">Voice pool <span style="color:var(--muted)">— tick the voices to rotate through</span></label>
+        <div id="rot_voices" class="meta" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px">Loading voices…</div>
+        <div class="row" style="margin-top:12px;gap:8px"><button class="act" onclick="saveRotation(this)">Save rotation</button><span class="meta" id="rot_msg"></span></div>
+      </details>
+
       <details class="card" id="tb_call_card" open>
         <summary><span class="name">🧪 The test call</span><span class="meta">the agent calls YOU as the store</span></summary>
         <div class="meta" style="margin:10px 0 12px">Pick the store context, then answer your phone like the clerk. Runs the <b>draft</b> voice with that store's real phone-tree rules. The result records against the store (visible in Results).</div>
@@ -611,6 +648,42 @@
       <div id="pt_chainlist" class="meta">Loading…</div>
     </div>
     </div>
+    </section>
+
+    <section id="treelab">
+    <h2>Phone Tree Lab</h2>
+    <div class="card">
+      <div class="meta">How to reach a human at each brand — discovered &amp; documented from call transcripts by <b id="tl_model">the cheapest model</b>. Every call teaches it; you can also trigger calls here. <b style="color:#FBBF24">Calls are real</b> — bench-test before relying on it.</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center">
+        <input id="tl_count" type="number" min="1" max="25" value="5" style="max-width:78px" title="how many brands">
+        <button class="act" onclick="tlBatch('discover')">Discover N unmapped</button>
+        <button class="ghost" onclick="tlBatch('verify')">Re-verify N mapped</button>
+        <button class="ghost" onclick="loadTreeLab()">↻ Refresh</button>
+      </div>
+      <div class="meta" id="tl_msg" style="margin-top:8px;min-height:14px"></div>
+    </div>
+    <div class="stats" id="tl_stats"></div>
+    <div id="tl_list"><div class="empty">Loading…</div></div>
+    </section>
+
+    <section id="trainer">
+    <h2>Tree Trainer</h2>
+    <div class="card">
+      <div class="meta">Document the <b>fastest path to a human</b> for each chain. Tap <b>Document</b> — our cheap navigator calls a store, listens, and works the menu (pressing or speaking) until a person answers, then records the recipe + time. Watch it live, then <b>Lock</b> it. <b style="color:#FBBF24">Calls are real.</b></div>
+      <div class="row" style="gap:8px;margin-top:10px;align-items:center">
+        <button class="ghost" onclick="loadTrainer()">↻ Refresh</button>
+        <span class="meta" id="tr_progress"></span>
+      </div>
+    </div>
+    <div class="card" id="tr_live" style="display:none;border-color:var(--green)">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div class="name" id="tr_live_store">—</div>
+        <div class="meta"><span id="tr_live_status">…</span> · <b id="tr_live_timer">0s</b></div>
+      </div>
+      <div id="tr_live_feed" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto"></div>
+      <div id="tr_live_result" style="margin-top:12px;display:none"></div>
+    </div>
+    <div id="tr_list"><div class="empty">Loading…</div></div>
     </section>
 
     <section id="statuses">
@@ -740,6 +813,7 @@
 <div id="agentPanel" class="agent-panel" style="display:none">
   <div class="agent-head">
     <span class="agent-title"><span class="livedot" style="background:var(--green);box-shadow:0 0 8px var(--green)"></span> Admin dev</span>
+    <select id="agentModel" class="agent-model" onchange="agentSetModel(this.value)" title="Switch the brain (Claude / GPT / Gemini)"></select>
     <button class="agent-x" onclick="agentToggle(false)" aria-label="Close">×</button>
   </div>
   <div id="agentLog" class="agent-log"></div>
@@ -761,14 +835,14 @@ let CATEGORIES = [];
 
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
-  pulse:    {label:'Pulse',    ico:'bolt',  tabs:[['dash','God view','bolt'],['growth','Growth','rise'],['business','Business','money']]},
-  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Stores','store'],['catalog','Catalog','tag'],['map','Map','map'],['zones','Zones','target'],['trees','Phone trees & mute','tree']]},
+  pulse:    {label:'Pulse',    ico:'bolt',  tabs:[['dash','God view','bolt'],['growth','Growth','rise'],['business','Business','money'],['receipts','Receipts','tag']]},
+  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Stores','store'],['map','Map','map'],['zones','Zones','target'],['trees','Phone trees & mute','tree'],['treelab','Tree Lab','tree'],['trainer','Tree Trainer','phone']]},
   calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Labs','flask'],['bench','Test bench','sliders'],['statuses','Statuses','tag']]},
   settings: {label:'Settings', ico:'gear',  tabs:[['settings','Settings','gear']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ map:()=>ensureMap(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>loadDash() };
+const TAB_LOADERS={ map:()=>ensureMap(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>loadDash(), treelab:()=>loadTreeLab(), receipts:()=>loadReceipts(), trainer:()=>loadTrainer() };
 const GROUP_LAST={}; let CUR_GROUP='pulse';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -794,9 +868,149 @@ function showSection(id, fromGroup){
   try{ window.scrollTo({top:0}); }catch(_){}
 }
 
+// ---- Receipts: shoppers email a receipt → parsed into kiosk_receipts → a free check. "Claimed"
+//      means the reward was granted to that device/account. Server: /api/kiosk-receipts, flow in
+//      src/gmail-receipts.ts (Gmail IMAP, policy flag kioskReceipts + GMAIL_USER/APP_PASSWORD). ----
+async function loadReceipts(){
+  const list=document.getElementById('rcptList'), stat=document.getElementById('rcpt_status');
+  if(!list) return;
+  const rows=await api('/api/kiosk-receipts');
+  if(!Array.isArray(rows)){ list.innerHTML='<div class="empty">Could not load receipts.</div>'; if(stat)stat.textContent='—'; return; }
+  const ago=s=>{ if(!s)return '—'; const m=Math.floor(Date.now()/1000)-s; if(m<3600)return Math.max(1,Math.floor(m/60))+'m ago'; if(m<86400)return Math.floor(m/3600)+'h ago'; return Math.floor(m/86400)+'d ago'; };
+  const claimed=rows.filter(r=>r.claimedBy).length;
+  if(stat) stat.innerHTML=`<b>${rows.length}</b> received · <b>${claimed}</b> claimed a free check. Receipts must parse (kiosk "Machine ID" or product+total) to land here; a regular store/online receipt usually won't.`;
+  if(!rows.length){ list.innerHTML='<div class="empty">No receipts yet — they appear here once a shopper emails one in and it parses.</div>'; return; }
+  list.innerHTML=rows.map(r=>{
+    const badge=r.claimedBy?'<span class="tag-verified">✓ free check granted</span>':'<span class="pill">unclaimed</span>';
+    const bits=[r.machineId?`Machine ${esch(r.machineId)}`:'',r.total?`$${esch(r.total)}`:'',r.orderId?`Order ${esch(r.orderId)}`:'',r.txnAt?esch(r.txnAt):''].filter(Boolean).join(' · ');
+    return `<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:10px">
+      <div style="min-width:0"><div class="name">${esch(r.product||'(no product parsed)')}</div>
+      <div class="meta">${bits||'—'}</div></div>
+      <div style="text-align:right;flex:0 0 auto"><div>${badge}</div><div class="meta" style="margin-top:5px">${ago(r.createdAt)}</div></div>
+    </div></div>`;
+  }).join('');
+}
 // ---- God view: live calls + outcomes + money, one screen, auto-refreshing ----
 const secsFmt=s=>s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):(s||0)+'s';
+// ---- Tree Trainer v2: document the fastest path to a human, watch it live, lock it ----
+let TR_POLL=null, TR_SESSION=null, TR_CHAIN=null, TR_STORE='', TR_RESULT=null;
+async function loadTrainer(){
+  const list=document.getElementById('tr_list'); if(!list) return;
+  const d=await api('/api/admin/trainer/list');
+  if(!d||!Array.isArray(d.chains)){ list.innerHTML='<div class="empty">Could not load.</div>'; return; }
+  const locked=d.chains.filter(c=>c.navStatus==='locked').length;
+  const prog=document.getElementById('tr_progress'); if(prog) prog.innerHTML=`🔒 <b>${locked}</b> / ${d.chains.length} locked`;
+  const BADGE={locked:['🔒','var(--green)'],review:['👀','var(--purple)'],learning:['🟡','#FBBF24'],unmapped:['⚪','var(--muted)']};
+  const TYPE={direct:'🟢 direct',keypad:'🔢 keypad',voice:'🗣 voice'};
+  list.innerHTML=d.chains.map(c=>{
+    const m=BADGE[c.navStatus]||BADGE.unmapped;
+    const tc=c.navType?` <span class="chip-type">${TYPE[c.navType]||esch(c.navType)}</span>`:'';
+    const time=c.navSeconds!=null?` · <b>${c.navSeconds}s</b> to human`:'';
+    const imp=(c.navLog&&c.navLog.length>1)?` <span class="meta">(${c.navLog[0]}s→${c.navLog[c.navLog.length-1]}s)</span>`:'';
+    const btn=c.callable>0?`<button class="${c.navStatus==='locked'?'ghost':'act'}" data-doc="${c.id}" data-name="${esch(c.name)}">${c.navStatus==='unmapped'?'Document':'Re-run'}</button>`:'<span class="meta">no phone</span>';
+    return `<div class="card"><div class="row" style="justify-content:space-between;align-items:center;gap:10px">
+      <div style="min-width:0"><div class="name">${esch(c.name)}${tc}</div>
+      <div class="meta"><span style="color:${m[1]};font-weight:700">${m[0]} ${esch(c.navStatus)}</span>${time}${imp}</div></div>
+      <div style="flex:0 0 auto">${btn}</div></div></div>`;
+  }).join('')||'<div class="empty">No chains.</div>';
+  list.querySelectorAll('[data-doc]').forEach(b=>b.onclick=()=>trDocument(+b.dataset.doc,b.dataset.name));
+}
+async function trDocument(chainId,name){
+  TR_CHAIN=chainId; TR_STORE=name; TR_RESULT=null;
+  const live=document.getElementById('tr_live'); live.style.display='';
+  document.getElementById('tr_live_store').textContent=name;
+  document.getElementById('tr_live_status').textContent='dialing…';
+  document.getElementById('tr_live_timer').textContent='0s';
+  document.getElementById('tr_live_feed').innerHTML='';
+  document.getElementById('tr_live_result').style.display='none';
+  try{ live.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}
+  const r=await api('/api/admin/trainer/document',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chainId})});
+  if(!r||r.error){ document.getElementById('tr_live_status').textContent='✖ '+((r&&r.error)||'could not start'); return; }
+  TR_SESSION=r.sessionId;
+  if(TR_POLL) clearInterval(TR_POLL);
+  TR_POLL=setInterval(trPoll,1500); trPoll();
+}
+async function trPoll(){
+  if(!TR_SESSION) return;
+  const s=await api('/api/admin/trainer/session/'+TR_SESSION);
+  if(!s||s.error) return;
+  document.getElementById('tr_live_status').textContent=s.status;
+  document.getElementById('tr_live_timer').textContent=(s.elapsed||0)+'s';
+  const feed=document.getElementById('tr_live_feed');
+  feed.innerHTML=(s.steps||[]).map(st=>{
+    const us=st.who==='us';
+    return `<div style="align-self:${us?'flex-end':'flex-start'};max-width:82%;background:${us?'rgba(74,222,128,.14)':'var(--sheet)'};border:1px solid ${us?'rgba(74,222,128,.4)':'var(--border)'};border-radius:12px;padding:7px 11px;font-size:13px">
+      <span class="meta" style="font-size:10px">${us?'US':'STORE'} · ${st.atSec}s</span><br>${esch(st.text)}</div>`;
+  }).join('');
+  feed.scrollTop=feed.scrollHeight;
+  if(s.status==='human'||s.status==='failed'||s.status==='done'){
+    clearInterval(TR_POLL); TR_POLL=null;
+    const res=document.getElementById('tr_live_result'); res.style.display='';
+    if(s.status==='human'&&s.recipe){
+      TR_RESULT={chainId:TR_CHAIN,recipe:s.recipe,confidence:s.confidence||0};
+      const steps=s.recipe.steps.map(x=>x.action==='press'?('press '+x.value+' @'+x.atSec+'s'):('say "'+x.value+'" @'+x.atSec+'s')).join('  →  ')||'picked up directly';
+      res.innerHTML=`<div style="background:rgba(74,222,128,.1);border:1px solid var(--green);border-radius:12px;padding:12px">
+        <div class="name" style="color:var(--green)">✅ Reached a human in ${s.recipe.seconds}s · ${esch(s.recipe.type)}</div>
+        <div class="meta" style="margin-top:5px">${esch(steps)}</div>
+        <div class="row" style="gap:8px;margin-top:10px">
+          <button class="act" onclick="trLock()">🔒 Lock this recipe</button>
+          <button class="ghost" onclick="trRetry()">↻ Try again (go faster)</button></div></div>`;
+    } else {
+      res.innerHTML=`<div style="background:rgba(239,68,68,.1);border:1px solid var(--red);border-radius:12px;padding:12px">
+        <div class="name" style="color:var(--red)">✖ Didn't reach a human</div>
+        <div class="row" style="gap:8px;margin-top:10px"><button class="ghost" onclick="trRetry()">↻ Try again</button></div></div>`;
+    }
+  }
+}
+function trRetry(){ if(TR_CHAIN) trDocument(TR_CHAIN,TR_STORE); }
+async function trLock(){
+  if(!TR_RESULT) return;
+  const r=await api('/api/admin/trainer/lock',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(TR_RESULT)});
+  if(r&&r.ok){ toast('🔒 Locked'); document.getElementById('tr_live').style.display='none'; loadTrainer(); }
+  else toast('Could not lock');
+}
+// ---- Phone Tree Lab ----
+async function loadTreeLab(){
+  const list=document.getElementById('tl_list'); if(!list) return;
+  const d=await api('/api/admin/tree/list');
+  if(!d||d.error||!Array.isArray(d.chains)){ list.innerHTML='<div class="empty">Could not load.</div>'; return; }
+  const mEl=document.getElementById('tl_model'); if(mEl&&d.model) mEl.textContent=d.model;
+  const chains=d.chains, cnt=k=>chains.filter(c=>c.treeStatus===k).length;
+  const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  const ss=document.getElementById('tl_stats'); if(ss) ss.innerHTML=st(chains.length,'brands')+st(cnt('verified'),'verified','green')+st(cnt('learned'),'learned')+st(cnt('varies'),'varies')+st(chains.filter(c=>!c.treeStatus).length,'unmapped');
+  const badge=s=>s==='verified'?'<span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.12)">verified</span>':s==='learned'?'<span class="chip-sm" style="color:#7DD3FC;background:rgba(125,211,252,.12)">learned</span>':s==='varies'?'<span class="chip-sm" style="color:#FBBF24;background:rgba(251,191,36,.12)">varies</span>':s==='failed'?'<span class="chip-sm" style="color:#fca5a5;background:rgba(239,68,68,.12)">failed</span>':'<span class="chip-sm">unmapped</span>';
+  list.innerHTML=chains.map(c=>`<div class="card" style="padding:11px 13px">
+    <div class="row" style="justify-content:space-between;align-items:baseline;gap:8px">
+      <div class="sname">${esch(c.name)} ${badge(c.treeStatus)}${c.ringsDirect?' <span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.1)">rings direct</span>':''}${c.muted?' <span class="chip-sm">muted</span>':''}</div>
+      <div class="meta">${c.stores} stores</div>
+    </div>
+    ${c.note?`<div class="meta" style="margin-top:5px;color:#cdcdd8">${esch(c.note)}</div>`:''}
+    <div class="smeta" style="margin-top:5px">${c.dtmf?`keys: <code>${esch(c.dtmf)}</code> · `:''}${c.answerPath?esch(c.answerPath)+' · ':''}${c.avgTreeSeconds?secsFmt(c.avgTreeSeconds)+' to human · ':''}${c.verifiedAt?'verified '+agoTs(c.verifiedAt):c.learnedAt?'learned '+agoTs(c.learnedAt):'never mapped'}</div>
+    <div class="ractions" style="margin-top:8px">
+      <button class="ghost" onclick="tlOne('discover',${c.id},this)">Discover</button>
+      <button class="ghost" onclick="tlOne('verify',${c.id},this)">Verify</button>
+    </div>
+  </div>`).join('')||'<div class="empty">No chains.</div>';
+}
+async function tlOne(kind,chainId,btn){ const o=btn.textContent; btn.textContent='…'; btn.disabled=true;
+  const r=await api('/api/admin/tree/'+kind,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chainId})});
+  btn.textContent=o; btn.disabled=false;
+  toast(r&&r.ok?`Calling ${r.retailer||'a store'} — ${kind} running; refresh in a minute`:`Couldn't place: ${(r&&r.error)||'error'}`);
+}
+async function tlBatch(kind){ const n=Number(document.getElementById('tl_count').value)||5; const msg=document.getElementById('tl_msg'); if(msg)msg.textContent='Placing calls…';
+  const r=await api('/api/admin/tree/'+kind,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({count:n})});
+  if(msg)msg.textContent=(r&&r.placed!=null)?`Placed ${r.placed} ${kind} call(s)${r.names&&r.names.length?': '+r.names.join(', '):''}. Results fill in as calls finish — hit Refresh.`:'Error placing calls.';
+}
+async function loadCallTiming(){
+  const d=await api('/api/admin/call-timing'); const el=document.getElementById('d_timing'); if(!el) return;
+  if(!d||d.error||!d.aggregate||!d.aggregate.calls){ el.innerHTML='<div class="meta">No timed calls yet — this fills in as calls come through.</div>'; const se=document.getElementById('d_timing_stores'); if(se) se.innerHTML=''; return; }
+  const a=d.aggregate, tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  el.innerHTML = tile(secsFmt(a.avgTalkSec),'avg talk','green')+tile(secsFmt(a.avgNavSec),'avg to human')+tile(secsFmt(a.avgCallSec),'avg call')+tile(a.totalMinutes+'m','total minutes')+tile(a.calls,'calls timed');
+  const se=document.getElementById('d_timing_stores');
+  if(se) se.innerHTML=(d.byStore||[]).map(s=>`<div class="repline"><span class="rl">${esch(s.name)} <span class="meta">· ${s.n} calls</span></span><b>${secsFmt(s.avgTalkSec)} talk · ${secsFmt(s.avgNavSec)} nav · ${secsFmt(s.avgCallSec)} call</b></div>`).join('')||'<div class="meta">—</div>';
+}
 async function loadDash(){
+  loadCallTiming();
   const [o,m]=await Promise.all([api('/api/admin/overview'),api('/api/admin/metrics')]);
   if(o&&!o.error){
     CHAIN_STATS=o.chainStats||[]; renderChainList();
@@ -868,6 +1082,23 @@ async function loadVoices(){
   const opts='<option value="">Default voice</option>'+(d.voices||[]).map(v=>`<option value="${v.id}">${esch(v.name)}${v.cloned?' (cloned)':''}${v.id===d.active?' — LIVE':''}</option>`).join('');
   const sv=document.getElementById('sim_voice'); if(sv) sv.innerHTML=opts;
   const lv=document.getElementById('lab_voice'); if(lv) lv.innerHTML=opts;
+  loadRotation(d.voices||[]);
+}
+// #5 voice/script rotation — opener variants + a voice pool that live calls round-robin through.
+async function loadRotation(voices){
+  const box=document.getElementById('rot_voices'); if(!box) return;
+  const s=await api('/api/settings')||{};
+  const pool=new Set(((s.vt_voice_pool||'').split(',').map(x=>x.trim()).filter(Boolean)));
+  box.innerHTML=(voices||[]).map(v=>`<label class="day" style="margin:0"><input type="checkbox" class="rotvoice" value="${v.id}" ${pool.has(v.id)?'checked':''}> ${esch(v.name)}${v.cloned?' (cloned)':''}</label>`).join('')||'<span class="meta">No voices.</span>';
+  const ta=document.getElementById('rot_openers'); if(ta) ta.value=s.vt_opener_variants||'';
+}
+async function saveRotation(btn){
+  const o=btn.textContent; btn.textContent='…'; btn.disabled=true;
+  const voicePool=[...document.querySelectorAll('.rotvoice:checked')].map(c=>c.value).join(',');
+  const openerVariants=(document.getElementById('rot_openers')?.value||'').trim();
+  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({voicePool,openerVariants})});
+  btn.textContent=o; btn.disabled=false;
+  const m=document.getElementById('rot_msg'); if(m) m.textContent=(r&&!r.error)?'Saved — live calls will rotate.':'Could not save';
 }
 async function vsSetActive(){
   const id=document.getElementById('vs_select').value; if(!id) return;
@@ -947,9 +1178,20 @@ let ADMIN_SEARCH_T=null;
 function onAdminSearch(){ clearTimeout(ADMIN_SEARCH_T); ADMIN_SEARCH_T=setTimeout(loadRetailers,300); }
 async function loadRetailers(){
   const q=(document.getElementById('f_search')?.value||'').trim();
-  // Search-only: at this scale we NEVER dump the table — type to pull stores up. No query = the prompt.
-  if(q.length<2){ RETAILERS=[]; SEL.clear(); const el=document.getElementById('retailerList'); if(el) el.innerHTML='<div class="empty">Search by name, city, ZIP, or region to pull stores up.</div>'; const bb=document.getElementById('bulkbar'); if(bb) bb.style.display='none'; return; }
-  RETAILERS = await api('/api/retailers?q='+encodeURIComponent(q)+'&limit=500') || [];
+  const type=document.getElementById('f_type')?.value||'', region=document.getElementById('f_region')?.value||'';
+  const carries=document.getElementById('f_carries')?.value||'', status=document.getElementById('f_status')?.value||'';
+  // Filter-first: a text search (2+ chars) OR a Type/Region/Product/Online pick pulls stores from the
+  // full DB server-side (capped). Other statuses + sort + zone refine the result client-side.
+  const wantServer = q.length>=2 || type || region || carries || status==='online';
+  if(!wantServer){ RETAILERS=[]; SEL.clear(); const el=document.getElementById('retailerList'); if(el) el.innerHTML='<div class="empty">Search by name, city, ZIP — or pick a Type, Region, Product, or Online to pull stores up.</div>'; const bb=document.getElementById('bulkbar'); if(bb) bb.style.display='none'; return; }
+  const p=new URLSearchParams();
+  if(q.length>=2) p.set('q',q);
+  if(type) p.set('type',type);
+  if(region) p.set('region',region);
+  if(carries) p.set('carries',carries);
+  if(status==='online') p.set('online','1');
+  p.set('limit','500');
+  RETAILERS = await api('/api/retailers?'+p.toString()) || [];
   if(!Array.isArray(RETAILERS)) RETAILERS=[];
   SEL.clear();
   fillSimSelects();
@@ -973,6 +1215,7 @@ async function loadStoreIntel(){
   // Fill the store-type filter from the full chain-type list, and the product filter from the carry list.
   if(Array.isArray(d.types)&&d.types.length) fillOptions('f_type', d.types, 'All types');
   if(items.length) fillOptions('f_carries', items.map(([p])=>p), 'Any product');
+  fillOptions('f_region', ['West Coast','Northwest','Southwest','Midwest','Southeast','Northeast'], 'All regions');
   // Reports — stores by type, top regions, most-checked stores.
   const rep=document.getElementById('storereports'), rb=document.getElementById('rep_body');
   if(rep&&rb){
@@ -1019,14 +1262,31 @@ function storeTypeIco(t){ const s=(t||'').toLowerCase();
   if(/club|warehouse|wholesale|online|web|ecom/.test(s)) return 'box';
   return 'store'; }
 function badNum(r){ const p=(r.phone||'').replace(/[^\d+]/g,''); return !p || p.replace(/\D/g,'').length<8; }
+function activeStoreFilters(){
+  const g=id=>document.getElementById(id)?.value||'';
+  const out=[];
+  if(g('f_search').trim()) out.push('“'+g('f_search').trim()+'”');
+  if(g('f_type')) out.push('Type: '+g('f_type'));
+  if(g('f_region')) out.push('Region: '+g('f_region'));
+  if(g('f_zone')) out.push('Zone: '+g('f_zone'));
+  if(g('f_carries')) out.push('Product: '+g('f_carries'));
+  if(g('f_status')){ const o=document.querySelector('#f_status option:checked'); out.push('Status: '+((o&&o.textContent)||g('f_status'))); }
+  return out;
+}
+function clearStoreFilters(){
+  ['f_search','f_type','f_region','f_zone','f_carries','f_status'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; localStorage.removeItem('fld_'+id); });
+  const so=document.getElementById('f_sort'); if(so) so.value='rel';
+  loadRetailers();
+}
 function filteredRetailers(){
   const q=(document.getElementById('f_search')?.value||'').toLowerCase().trim();
-  const ft=document.getElementById('f_type')?.value||'', fz=document.getElementById('f_zone')?.value||'';
+  const ft=document.getElementById('f_type')?.value||'', fz=document.getElementById('f_zone')?.value||'', fr=document.getElementById('f_region')?.value||'';
   const fc=(document.getElementById('f_carries')?.value||'').toLowerCase(), fs=document.getElementById('f_status')?.value||'';
   const muted=mutedChainIds();
   let rs=RETAILERS.filter(r=>{
     if(q && !((r.name||'').toLowerCase().includes(q) || (r.location||'').toLowerCase().includes(q) || (r.region||'').toLowerCase().includes(q) || (r.state||'').toLowerCase()===q)) return false;
     if(ft && r.storeType!==ft) return false;
+    if(fr && r.region!==fr) return false;
     if(fz && !(r.zones||[]).includes(fz)) return false;
     if(fc && !((r.carries||'').toLowerCase().includes(fc))) return false;
     if(fs==='verified' && r.stockStatus!=='verified') return false;
@@ -1034,6 +1294,7 @@ function filteredRetailers(){
     if(fs==='green' && !r.green) return false;
     if(fs==='open' && !(r.openState&&r.openState.open)) return false;
     if(fs==='closed' && !(r.openState&&r.openState.known&&!r.openState.open)) return false;
+    if(fs==='online' && !r.online) return false;
     if(fs==='muted' && !muted.has(r.chainId)) return false;
     if(fs==='badnum' && !badNum(r)) return false;
     if(fs==='kiosk' && !r.hasKiosk) return false;
@@ -1059,10 +1320,10 @@ async function bulkEdit(action){
   const rs=filteredRetailers(); const vis=new Set(rs.map(r=>r.id)); const ids=[...SEL].filter(id=>vis.has(id));
   if(!ids.length){ toast('Tick some stores first'); return; }
   if(action==='deactivate' && !confirm(`Remove ${ids.length} store(s) from the consumer list? (soft-remove — reversible)`)) return;
-  const body = action==='verify'?{stockStatus:'verified'} : action==='unverify'?{stockStatus:'unverified'} : {active:false};
+  const body = action==='verify'?{stockStatus:'verified'} : action==='unverify'?{stockStatus:'unverified'} : action==='online'?{online:true} : action==='offline'?{online:false} : {active:false};
   toast(`Updating ${ids.length}…`); let ok=0;
   for(const id of ids){ const r=await api('/api/retailers/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); if(r&&!r.error) ok++; }
-  ids.forEach(id=>{ const t=RETAILERS.find(x=>x.id===id); if(t){ if('stockStatus' in body) t.stockStatus=body.stockStatus; if(body.active===false) t.active=false; } });
+  ids.forEach(id=>{ const t=RETAILERS.find(x=>x.id===id); if(t){ if('stockStatus' in body) t.stockStatus=body.stockStatus; if('online' in body) t.online=body.online; if(body.active===false) t.active=false; } });
   if(body.active===false) RETAILERS=RETAILERS.filter(r=>r.active!==false);
   SEL.clear(); renderRetailers(); toast(`${ok}/${ids.length} updated`);
 }
@@ -1071,7 +1332,14 @@ function renderRetailers(){
   const el=document.getElementById('retailerList'); if(!el) return;
   const hasQuery=((document.getElementById('f_search')?.value||'').trim().length>=2);
   updateBulkBar(rs);
-  if(!rs.length){el.innerHTML=hasQuery?'<div class="empty">No stores match these filters.</div>':'<div class="empty">Search by name, city, ZIP, or region to pull stores up.</div>';return;}
+  if(!rs.length){
+    const af=activeStoreFilters();
+    if(af.length){
+      const hasRegion=!!(document.getElementById('f_region')?.value);
+      el.innerHTML=`<div class="empty">No stores match: ${af.map(esch).join(' · ')}.<div style="margin-top:12px"><button class="ghost" onclick="clearStoreFilters()">Clear filters</button></div>${hasRegion?'<div class="meta" style="margin-top:10px">Tip: online / national stores (e.g. type “Online”) usually have no region — clear <b>Region</b> to include them.</div>':''}</div>`;
+    } else el.innerHTML='<div class="empty">Search by name, city, ZIP — or pick a Type, Region, Product, or Online to pull stores up.</div>';
+    return;
+  }
   const muted=mutedChainIds();
   el.innerHTML = rs.map(r=>{
     const nm=splitName(r.name);
@@ -1083,7 +1351,7 @@ function renderRetailers(){
       <input type="checkbox" class="rowchk" ${sel?'checked':''} onchange="bulkPick(${r.id},this)">
       ${storeTile(r.id,r.name)}
       <div class="grow" style="min-width:0">
-        <div class="sname">${esch(nm.base)} ${r.stockStatus==='verified'?'<span class="tag-verified">verified</span>':'<span class="tag-unverified">unverified</span>'}${r.storeType?` <span class="chip-type">${ICO(storeTypeIco(r.storeType),11)} ${esch(r.storeType)}</span>`:''}${muted.has(r.chainId)?' <span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.12)">muted</span>':''}${badNum(r)?' <span class="chip-sm" style="color:#FBBF24;background:rgba(251,191,36,.12)">no number</span>':''}</div>
+        <div class="sname">${esch(nm.base)} ${r.stockStatus==='verified'?'<span class="tag-verified">verified</span>':'<span class="tag-unverified">unverified</span>'}${r.storeType?` <span class="chip-type">${ICO(storeTypeIco(r.storeType),11)} ${esch(r.storeType)}</span>`:''}${muted.has(r.chainId)?' <span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.12)">muted</span>':''}${badNum(r)?' <span class="chip-sm" style="color:#FBBF24;background:rgba(251,191,36,.12)">no number</span>':''}${r.online?' <span class="chip-sm" style="color:#7DD3FC;background:rgba(125,211,252,.12)">online</span>':''}</div>
         ${nm.branch?`<div class="sbranch">${esch(nm.branch)}</div>`:''}
         <div class="smeta" style="display:flex;align-items:center;flex-wrap:wrap;gap:0 4px">${esch(metaTxt)}${hrs?(metaTxt?' · ':'')+hrs:''}${ships?(metaTxt||hrs?' · ':'')+ships:''}</div>
         ${r.carries?`<div style="margin-top:5px">${r.carries.split(',').map(x=>`<span class="chip-sm">${esch(x.trim())}</span>`).join('')}</div>`:''}
@@ -1094,7 +1362,6 @@ function renderRetailers(){
     <div class="ractions">
       <select id="cn_${r.id}">${CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
       <button class="act" onclick="callNow(${r.id})">${ICO('phone',15)} Call now</button>
-      <button class="ghost" onclick="refreshHours(${r.id},this)">Hours</button>
     </div>
   </div>`;}).join('');
 }
@@ -1484,10 +1751,7 @@ function renderStatuses(list){
   el.innerHTML = rows.length ? rows.map(s=>`
     <div class="card" style="padding:10px 12px;margin-bottom:8px" data-sid="${s.id}">
       <div class="row" style="gap:8px;align-items:center">
-        <span class="stico" title="left = the drawn icon customers see · right = the emoji key you type">
-          <span class="stico-prev">${vmark(s.emoji,s.tone,22)}</span>
-          <input value="${escH(s.emoji)}" data-f="emoji" class="stico-key">
-        </span>
+        <input value="${escH(s.emoji)}" data-f="emoji" style="width:54px;height:42px;text-align:center;font-size:18px;flex:0 0 auto" title="emoji customers see">
         <input value="${escH(s.label)}" data-f="label" style="flex:1" placeholder="Label">
         <input type="color" value="${escH(s.color)}" data-f="color" style="width:46px;height:42px;padding:2px;border-radius:8px;border:1px solid var(--border);background:none">
       </div>
@@ -1545,12 +1809,24 @@ async function addRetailer(){
   toast('Store added'); loadRetailers();
 }
 
-let RESULT_STORE_FILTER=null;
+let RESULT_STORE_FILTER=null, RESULTS=[];
 async function loadResults(){
-  let rows=await api('/api/results');
+  const rows=await api('/api/results');
+  RESULTS=Array.isArray(rows)?rows:[];
+  renderResults();
+}
+function renderResults(){
+  let rows=RESULTS.slice();
   if(RESULT_STORE_FILTER) rows=rows.filter(r=>r.retailerId===RESULT_STORE_FILTER);
-  const el=document.getElementById('resultList');
-  const banner = RESULT_STORE_FILTER ? `<div class="card" style="border-color:rgba(74,222,128,.3)"><div class="row"><div class="grow meta">Filtered to one store (from your alert link).</div><button class="ghost" onclick="RESULT_STORE_FILTER=null;loadResults()">Show all</button></div></div>` : '';
+  const sort=document.getElementById('r_sort')?.value||'newest';
+  const outRank=r=>r.confirmed===true?0:(r.status==='completed'&&r.confirmed!==true&&!r.doesNotSell&&(r.shipmentDayHeard||r.shipmentDay))?1:(r.status==='completed'&&r.confirmed!==false)?2:r.confirmed===false?3:4;
+  if(sort==='newest') rows.sort((a,b)=>(b.startedAt||0)-(a.startedAt||0));
+  else if(sort==='oldest') rows.sort((a,b)=>(a.startedAt||0)-(b.startedAt||0));
+  else if(sort==='store') rows.sort((a,b)=>(a.retailer||'').localeCompare(b.retailer||''));
+  else if(sort==='category') rows.sort((a,b)=>(a.category||'').localeCompare(b.category||''));
+  else if(sort==='outcome') rows.sort((a,b)=>outRank(a)-outRank(b)||(b.startedAt||0)-(a.startedAt||0));
+  const el=document.getElementById('resultList'); if(!el) return;
+  const banner = RESULT_STORE_FILTER ? `<div class="card" style="border-color:rgba(74,222,128,.3)"><div class="row"><div class="grow meta">Filtered to one store (from your alert link).</div><button class="ghost" onclick="RESULT_STORE_FILTER=null;renderResults()">Show all</button></div></div>` : '';
   if(!rows.length){el.innerHTML=banner+'<div class="empty">No calls'+(RESULT_STORE_FILTER?' for this store yet.':' yet.')+'</div>';return;}
   el.innerHTML=banner+rows.map(r=>{
     const vv=customerVerdict(r);
@@ -1638,15 +1914,16 @@ function pinColor(r){
 }
 function ensureMap(){
   if(!MAP){
-    MAP=L.map('leafletmap').setView([34.05,-118.24],10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(MAP);
+    MAP=L.map('leafletmap',{zoomControl:false}).setView([34.05,-118.24],10);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',attribution:''}).addTo(MAP);
     MARKERS=L.layerGroup().addTo(MAP);
   }
   setTimeout(()=>{MAP.invalidateSize(); loadMap();},120);
 }
 async function loadMap(){
   if(!MAP) return;
-  const rs=await api('/api/retailers');
+  // Plot the stores you're currently looking at (your Stores search). Falls back to recent if none.
+  const rs=(Array.isArray(RETAILERS)&&RETAILERS.length)?RETAILERS:(await api('/api/retailers'));
   MARKERS.clearLayers();
   const pts=[];
   rs.filter(r=>r.lat&&r.lng).forEach(r=>{
@@ -1706,7 +1983,7 @@ async function loadCredits(){
     bar.style.width = pctLeft+'%';
     bar.style.background = pctLeft<=10?'#EF4444':pctLeft<=25?'#FBBF24':'var(--green)';
     document.getElementById('credit_stats').innerHTML =
-      `~<b style="color:#fff">${fmtN(c.callsLeft)} calls</b> left <span style="color:var(--muted)">· credits track agent talk-time, not call length</span>`
+      `~<b style="color:#fff">${fmtN(c.callsLeft)} calls</b> left <span style="color:var(--muted)">· ElevenLabs bills the whole connected call (ring · IVR · hold · talk)</span>`
       + (c.source==='estimated' ? ` · ${fmtN(c.used)} used in last 31d` : '')
       + (c.resetUnix ? ` · resets ${new Date(c.resetUnix*1000).toLocaleDateString()}` : '');
   } else {
@@ -1759,7 +2036,7 @@ const v = (id) => document.getElementById(id).value.trim();
 
 // --- Growth & Policy ---
 let POL=null;
-const FLAG_LABELS={dogfoodHours:'Dog-food hours (night-call voicemails)',driverHandoff:'Driver hand-off demo',scheduling:'Scheduled shipment-day calls',restockAlerts:'Restock alerts',kiosks:'Kiosk intel + rewards',shareCards:'Share cards',multiProduct:'Multi-product asks',specificSets:'Specific-set asks'};
+const FLAG_LABELS={connectOnHuman:'Connect-on-human — bill only talk-time (don’t open the agent until a person answers)',dogfoodHours:'Dog-food hours (night-call voicemails)',driverHandoff:'Driver hand-off demo',scheduling:'Scheduled shipment-day calls',restockAlerts:'Restock alerts',kiosks:'Kiosk intel + rewards',shareCards:'Share cards',multiProduct:'Multi-product asks',specificSets:'Specific-set asks'};
 const esch=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // ---- Drawn icon system (matches the consumer front end — zero raw emoji in chrome) ----
 const ICONS={
@@ -1815,7 +2092,7 @@ async function loadGrowth(){
     const on=f[k]!==false&&f[k]!==undefined?f[k]:!!f[k];
     return `<label style="display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;color:var(--text)">
       <input type="checkbox" ${f[k]?'checked':''} onchange="toggleFlag('${k}',this.checked)" style="width:18px;height:18px">
-      <span>${FLAG_LABELS[k]}${k==='dogfoodHours'?' <span class="meta">(leave OFF until you say go)</span>':''}</span></label>`;
+      <span>${FLAG_LABELS[k]}${k==='dogfoodHours'?' <span class="meta">(leave OFF until you say go)</span>':''}${k==='connectOnHuman'?' <span class="meta">(bench-test before going live — untested on real calls)</span>':''}</span></label>`;
   }).join('');
   // pricing
   const p=POL.pricing||{}, sub=p.sub||{};
@@ -2037,9 +2314,9 @@ async function ensureAuth(){
   w.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#0C0C12;background-image:radial-gradient(900px 400px at 50% -80px,rgba(74,222,128,.10),transparent 70%);z-index:50';
   w.innerHTML=`
   <div style="background:#1A1A24;border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:24px;max-width:460px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)">
-    <div style="display:flex;justify-content:center;margin:2px 0 12px"><img src="/logos/fungibles.png" alt="" style="height:44px;width:44px;object-fit:cover;border-radius:12px"></div>
+    <div style="display:flex;justify-content:center;margin:2px 0 12px"><img src="/logos/checkitforme.png?v=2" alt="Check It For Me" style="height:36px;width:auto;object-fit:contain"></div>
     <div id="a_email">
-      <h3 style="margin:0 0 4px;font-size:21px;font-weight:900">Caller Admin</h3>
+      <h3 style="margin:0 0 4px;font-size:21px;font-weight:900">Admin</h3>
       <div style="color:#9a9aac;font-size:14px;margin-bottom:16px">Enter your email to continue.</div>
       <input id="a_in" type="email" placeholder="you@email.com" onkeydown="if(event.key==='Enter')aSend()" style="width:100%;background:#0A0A0E;color:#fff;border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:14px 13px;font-size:16px;box-sizing:border-box;text-align:center;font-family:inherit">
       <div id="clerk-captcha" style="margin-top:8px"></div>
@@ -2067,13 +2344,22 @@ async function ensureAuth(){
 }
 document.addEventListener('change', e=>{ if(e.target.id==='sim_tree') syncTreeUI(); });
 
-// ---- In-admin Claude agent ("Admin dev") ----
-let AGENT_MSGS=[], AGENT_BUSY=false;
+// ---- In-admin agent ("Admin dev") — switchable brain (Claude / GPT / Gemini) ----
+let AGENT_MSGS=[], AGENT_BUSY=false, AGENT_MODEL=localStorage.getItem('agent_model')||'gpt-4o-mini', AGENT_MODELS_LOADED=false;
+async function agentLoadModels(){
+  if(AGENT_MODELS_LOADED) return; const sel=document.getElementById('agentModel'); if(!sel) return;
+  const models=await api('/api/admin/agent/models'); if(!Array.isArray(models)||!models.length) return;
+  if(!models.some(m=>m.id===AGENT_MODEL)) AGENT_MODEL=models[0].id;
+  sel.innerHTML=models.map(m=>`<option value="${m.id}"${m.id===AGENT_MODEL?' selected':''}>${esch(m.label)}</option>`).join('');
+  AGENT_MODELS_LOADED=true;
+}
+function agentSetModel(v){ AGENT_MODEL=v; localStorage.setItem('agent_model',v); }
 function agentToggle(open){
   const p=document.getElementById('agentPanel'), fab=document.getElementById('agentFab');
   const show = open===undefined ? p.style.display==='none' : open;
   p.style.display = show?'flex':'none'; fab.style.display = show?'none':'grid';
-  if(show){ agentRender(); setTimeout(()=>{ const i=document.getElementById('agentInput'); if(i) i.focus(); },50); }
+  document.body.classList.toggle('agent-open', show); // lock page scroll so the chat scrolls, not the page behind it
+  if(show){ agentLoadModels(); agentRender(); setTimeout(()=>{ const i=document.getElementById('agentInput'); if(i) i.focus(); },50); }
 }
 function agentKey(e){
   const ta=e.target; ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,120)+'px';
@@ -2098,7 +2384,7 @@ async function agentSend(){
   AGENT_MSGS.push({role:'user',text});
   AGENT_BUSY=true; const sb=document.getElementById('agentSend'); if(sb) sb.disabled=true; agentRender();
   const payload=AGENT_MSGS.filter(m=>m.role==='user'||m.role==='assistant').map(m=>({role:m.role,text:m.text}));
-  const r=await api('/api/admin/agent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({messages:payload})});
+  const r=await api('/api/admin/agent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({messages:payload,model:AGENT_MODEL})});
   AGENT_BUSY=false; if(sb) sb.disabled=false;
   if(!r || r.error){ AGENT_MSGS.push({role:'error',text:(r&&r.error)||'Something went wrong — check the server has ANTHROPIC_API_KEY.'}); agentRender(); return; }
   AGENT_MSGS.push({role:'assistant',text:r.reply||'(done)',actions:r.actions||[]});
@@ -2120,7 +2406,7 @@ async function agentSend(){
   restorePersist();
   decorateChrome();
   syncTreeUI();
-  renderRetailers();
+  loadRetailers(); // restored filters auto-load the list (instead of sitting empty until you touch a dropdown)
   if(sp.get('store')){ RESULT_STORE_FILTER=Number(sp.get('store')); showSection('results'); loadResults(); }
   setInterval(loadResults, 8000);   // live-refresh results while calls land (small table)
   // NOTE: do NOT poll loadRetailers — at 100k stores that re-pulls a huge query every few seconds.

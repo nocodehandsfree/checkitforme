@@ -33,6 +33,8 @@ export const config = {
   appUrl: process.env.APP_URL ?? "https://caller.fungibles.com",
   adminToken: process.env.ADMIN_TOKEN, // server-to-server admin key (bypasses Clerk for store/zone management)
   anthropicKey: process.env.ANTHROPIC_API_KEY, // powers the in-admin Claude agent (Admin dev assistant)
+  openaiKey: process.env.OPENAI_API_KEY,        // alt brain for the admin agent (model switcher)
+  geminiKey: process.env.GEMINI_API_KEY,        // alt brain for the admin agent (model switcher)
   alerts: {
     channel: process.env.ALERT_CHANNEL ?? "call", // "email" | "call" | "sms" (sms needs A2P 10DLC)
     ownerPhone: process.env.OWNER_PHONE,        // where to call/text, e.g. +13106662331
