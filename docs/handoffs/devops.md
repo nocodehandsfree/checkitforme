@@ -17,8 +17,9 @@ Everything as needed: all of `docs/ops/`, `docs/security/`, `docs/finance/`, `do
 - [x] Final merge → main + deploy (2026-06-16, verified live: `/auth/phone/start`=400, health=200, boot-gate passed).
 - [ ] **Set `COMP_PHONES`** = Fungie's master cell (pending the number) so master login works.
 - [x] best-bet excludes kiosk-only stores from "most likely" (shelf rec). [x] `kioskMode` **defined in
-  API_CONTRACT** (optional bool on the 4 check endpoints, 2026-06-16). [ ] Still TODO: **plumb it** —
-  thread the request flag → call/agent context so the prompt branches (`docs/specs/kiosk-call-flow.md`).
+  API_CONTRACT** + [x] **plumbed** (2026-06-16): request → `triggerCall`/`bridgeStoreCall` →
+  `provider.startCall`, exposed to the agent as the `kiosk_mode` dynamic var (auto-detected for
+  kiosk-only stores). Tests + typecheck green. Remaining kiosk work is Admin (prompt) + Website (UI).
 - [ ] **Split `server.ts` into route modules** (public/admin/auth/webhooks) — unblocks Website +
   Admin building in parallel without colliding. Highest-leverage; do in a quiet session (not mid-dev/pre-deploy).
 - [ ] Note: phone-first is live in the BACKEND but the consumer **signup modal still asks email** —

@@ -22,11 +22,16 @@ parallel without crossing. **They touch different files** (see lane breakdown).
 - **DevOps (backend)** — `src/best-bet.ts` / `/pub/best-bet`, `src/calls/`:
   - ✅ best-bet excludes kiosk-only from "most likely" (shelf rec).
   - [x] **`kioskMode` defined** in `docs/API_CONTRACT.md` (optional bool on the 4 check endpoints).
-  - [ ] **Plumb `kioskMode`** through the call path: thread the request flag → the agent/call context
-    so the prompt asks about the **kiosk** (working/stocked), not a shelf shipment.
+  - [x] **Plumbed** (2026-06-16): the flag flows request → `triggerCall` / `bridgeStoreCall` →
+    `provider.startCall`, and is exposed to the agent as the dynamic variable **`kiosk_mode`**
+    (`"true"` / `""`). Kiosk-only stores (`hasKiosk && sellsPacks === false`) are **auto-detected**
+    even when the request omits the flag; an explicit request flag wins. Covers both the plain and
+    the bridged (listen-live) call paths.
 - **Admin / Voice** — `src/voice/prompts.ts` (agent prompt/script):
-  - [ ] Add the **kiosk call script**: when `kioskMode` is set, the agent asks "is your Pokémon kiosk
-    working and stocked?" instead of the shipment question.
+  - [ ] Add the **kiosk call script**: branch on the **`{{kiosk_mode}}`** dynamic var (now live from
+    DevOps — `"true"` when the store is kiosk-only) so the agent asks "is your Pokémon kiosk working
+    and stocked?" instead of the shipment question. The var is already populated on every call — you
+    only need to consume it in the prompt.
 - **Website (consumer UI)** — `public/checkit.html`:
   - [ ] "Most likely": **star icon** (not the logo) + a "Most likely" label/tab.
   - [ ] **Fix the double-green-highlight**: picking another store clears the most-likely highlight.
