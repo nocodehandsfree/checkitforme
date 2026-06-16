@@ -3,6 +3,12 @@
 Finished items live here so the active docs (HANDOFF) stay lean. Newest first. Agents: move done
 items here from HANDOFF's "Current focus."
 
+## 2026-06-16 — DEPLOYED to production
+- Merged the integrated branch → `main`; Railway deployed. Verified live on checkitforme.com
+  (`/auth/phone/start`=400, health=200, prod security boot-gate passed). Full backend now live.
+- Team model: per-role handoffs (`docs/handoffs/`), reorganized docs into `docs/{business,finance,
+  security,ops}/`, lean Check-branded HANDOFF, consolidated backlog in ROADMAP.
+
 ## 2026-06-16 — phone-first auth + hardening
 - **Phone-first auth** — SMS login (Twilio Verify) + own signed session (Clerk-free path); dual-auth
   so Clerk + phone-session both work during cutover.

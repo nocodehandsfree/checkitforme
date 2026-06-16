@@ -14,9 +14,12 @@ Everything as needed: all of `docs/ops/`, `docs/security/`, `docs/finance/`, `do
 `docs/RUNBOOK.md`, and the per-table notes in `src/db/schema.ts`.
 
 ## Current focus (KEEP UPDATED)
-- [ ] Final merge → main + deploy; set `COMP_PHONES`; verify phone + caller-ID end to end.
+- [x] Final merge → main + deploy (2026-06-16, verified live: `/auth/phone/start`=400, health=200, boot-gate passed).
+- [ ] **Set `COMP_PHONES`** = Fungie's master cell (pending the number) so master login works.
 - [ ] **Split `server.ts` into route modules** (public/admin/auth/webhooks) — unblocks Website +
-  Admin building in parallel without colliding. (Highest-leverage next infra task.)
+  Admin building in parallel without colliding. Highest-leverage; do in a quiet session (not mid-dev/pre-deploy).
+- [ ] Note: phone-first is live in the BACKEND but the consumer **signup modal still asks email** —
+  blocked on Check-Website wiring it. Don't flip `requirePhoneSignup` until that lands.
 - [ ] Backlog in `docs/business/ROADMAP.md` (Redis rate-limiter, analytics→SQL, PostHog, TiDB cutover,
   transcript IDOR, 3-tier support, status page, domain redirects, rebrand sweep, key rotation, repo split).
 

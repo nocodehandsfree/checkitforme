@@ -25,7 +25,14 @@ consumer features.
 DevOps will split `server.ts` into route modules so we can both build without colliding.
 
 ## Current focus (KEEP UPDATED)
-- [ ] Route the consumer "check" through the **bridge** so calls dial from the customer's number.
-- [ ] Sign-up: confirm the phone flow (`/auth/phone/start`→`check`) + the green "Continue" button.
+- [ ] 🔴 **Sign-up modal still asks for EMAIL** ("Just your email") — swap it to **cell phone + SMS
+  code.** Backend is LIVE + ready: `POST /auth/phone/start {phone}` → SMS → `POST /auth/phone/check
+  {phone,code}` → `{token,account}`; save the token, send it as `Authorization: Bearer <token>` on
+  every `/app/*` call (where the old email/Clerk token went). Use `autocomplete="one-time-code"` so
+  the browser auto-fills the SMS. Until this is done, phone-first is unusable (`requirePhoneSignup`
+  stays OFF). Make the "Continue/Place call" button brand-green.
+- [ ] **Stores issue** (Fungie flagged) — investigate the store list/cards on the consumer site.
+- [ ] Route the consumer "check" through the **bridge** (`/app/check-live`) so calls dial from the
+  customer's *verified* number (the plain `/app/check` uses the house line).
 
 When you finish something: move it to `docs/COMPLETED.md`; leave Current focus set for the next chat.
