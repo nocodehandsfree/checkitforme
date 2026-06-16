@@ -37,12 +37,28 @@ Walks: SMS code → session → `/app/me` (credits/comp/phone/callerIdReady) →
 - Turn `requirePhoneSignup` ON (admin → policy). Dual-auth means Clerk still works during transition.
 - This kills the anonymous call path (the unlimited-call hole) and seeds free checks per verified phone.
 
-## Built overnight (2026-06-16, on the branch)
+## Built overnight (2026-06-16, on the branch — auth tests 25/25, full suite green)
 - Comp-by-phone (`COMP_PHONES` / `isCompAccount`) so your master works on phone login.
 - Caller-ID correctness fix: `caller_id` stays null until Twilio-verified (else calls get rejected).
 - `/app/me` returns `callerId` + `callerIdReady` for the agent panel.
 - Stored-SVG XSS closed (community image serving + upload).
-- `scripts/smoke-auth.sh` (live auth/caller-ID smoke test). Auth tests 22/22.
+- **Prod security boot-gate** (`security-checks.ts`): refuses to start in prod if `CLERK_ENFORCE`
+  is off or `SESSION_SECRET` is missing/weak; warns on missing webhook secrets. (Our prod is
+  configured correctly, so this only protects against future misconfig.)
+- Complete `esc()` HTML escaping (now also `'` and `>`).
+- **One-check-per-store-per-day** dedup: policy flag `oneCheckPerStorePerDay` (OFF) +
+  `findRecentCheck()` + `triggerCall` guard. Flip ON when ready to stop repeat calls to the same store.
+- **Single-leader locks** on the background tickers (multi-instance safe: no double-fired calls/charges).
+- Bumped `tsx`. `scripts/smoke-auth.sh` for the live auth/caller-ID smoke test.
+
+## New policy flags to know (admin → Policy)
+- `requirePhoneSignup` (OFF) → flip ON to go phone-only (kills anonymous calls; free checks per phone).
+- `oneCheckPerStorePerDay` (OFF) → flip ON to reuse recent results instead of re-calling a store.
+- `connectOnHuman` (OFF, dev's) → the cheap-nav→premium-human switch; flip after bench-testing.
+
+## Keep these env vars set (the boot-gate enforces the first two in prod)
+- `CLERK_ENFORCE=true`, `SESSION_SECRET` (≥32 chars), `STRIPE_WEBHOOK_SECRET`,
+  `ELEVENLABS_WEBHOOK_SECRET`, `TWILIO_VERIFY_SERVICE_SID`, `COMP_PHONES` (your cells).
 
 ## Open items (need you / coordination tomorrow)
 - **Transcript IDOR** (`/pub/result`, `/pub/live`): deferred — needs the frontend to send the
