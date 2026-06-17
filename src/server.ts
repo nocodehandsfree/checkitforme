@@ -85,9 +85,12 @@ const isAdminPhone = (e: string) => !!e && ADMIN_PHONES.includes(e);
 // it (consumer site + admin). Match it to the request host's root or the browser drops the cookie.
 function cookieRootDomain(host: string | undefined): string | undefined {
   const h = (host || "").split(":")[0].toLowerCase();
-  if (h.endsWith("checkitforme.com")) return ".checkitforme.com";
-  if (h.endsWith("fungibles.com")) return ".fungibles.com";
-  return undefined; // localhost / preview → host-only cookie
+  if (/localhost|127\.0\.0\.1/.test(h)) return undefined;   // dev → host-only cookie
+  if (h.endsWith("fungibles.com")) return ".fungibles.com"; // direct fungibles hit (no worker)
+  // Behind the Cloudflare worker the origin Host is the Railway service domain, so we can't read the
+  // real host. The browser validates the Domain attr against ITS url (the *.checkitforme.com the user
+  // is actually on), so default to the canonical admin root — this is what makes site→admin SSO work.
+  return ".checkitforme.com";
 }
 
 app.use("/api/*", async (c, next) => {
