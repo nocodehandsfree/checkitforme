@@ -32,18 +32,24 @@ for a gnarly conflict ping DevOps — don't redo your work blind.
   Clerk/OAuth fallback). `autocomplete="one-time-code"` on the code input; Continue/Verify are
   brand-green; account sheet shows the phone. The check gate routes to phone sign-up when
   `requirePhoneSignup` is ON (flag still OFF — **DevOps can flip it now** to go phone-first).
-- [x] ✅ **Kiosk / "most likely" UI** (done 2026-06-17, see `docs/COMPLETED.md`). Star marker + "Most
-  likely" label on the best-bet row; double-green-highlight fixed; kiosk-only stores
-  (`hasKiosk && !sellsPacks`) now show in the call list with a "Kiosk only" badge + pre-call note and
-  send `kioskMode: isKioskOnly(store)` on the 4 check bodies (server auto-detects too; Voice consumes
-  the live `kiosk_mode` var).
+- [x] ✅ **"Most likely" + tier grouping + kiosk calling** (2026-06-17, see `docs/COMPLETED.md`).
+  Store results group by tier (green tier-5 "Best near you" → amber tier-4 → all; reads `tier`/`inStock`,
+  inert until Data Dev's tagged list lands). Kiosks were REVERTED out of "find a store" → they live in
+  the **Kiosk tab** and are **callable**: tap → "Check [store] kiosk" CTA (bypasses `callable:false`) →
+  confirmation modal ("we'll call to check the machine" + Yes/No + the free-check receipt carrot) →
+  `kioskMode:true`. Kiosk tab persists across reloads. In-stock uses the real brand check everywhere.
 - [x] ✅ **Verified-number calling (caller-ID)** (done 2026-06-17). Account sheet → "Call stores from
   your number" (phone-authed only) → verify modal: `POST /auth/callerid/start` → Twilio calls + shows
   the code → poll `GET /auth/callerid/status` → done. Backend already dials `/app/check-live`
   `From: account.callerId`, so verified users' calls show their own number. (`/app/me` returns
   `callerIdReady`.)
 
-**No open Website items.** Next ideas when you want them: surface "calls from your cell" near the call
-CTA for verified users; nudge unverified users to verify before their first call. Ask the owner.
+## ⚠️ Waiting on other lanes
+- 🔴 **Kiosk call SCRIPT** (Voice/Admin — `src/voice/prompts.ts`, branch on `{{kiosk_mode}}`): the
+  consumer kiosk-call flow is LIVE, but a kiosk call won't ask *"is the machine working/stocked?"* until
+  the agent script lands. **Owner is adding it.** Don't promote kiosk calling end-to-end until then.
+- 🟡 **Kiosk result statuses** `kiosk_working` (✅) / `kiosk_unavailable` (✕ + reason): admin registry
+  rows + a `kiosk_status` extraction field (DevOps/Voice). Consumer auto-renders registry statuses;
+  Website still owes the *"Working → forward your receipt = free check"* nudge.
 
 When you finish something: move it to `docs/COMPLETED.md`; leave Current focus set for the next chat.

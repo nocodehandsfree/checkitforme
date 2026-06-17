@@ -1131,7 +1131,7 @@ function chainCarriesBrand(st){
   return allow.some(a=>(st.name||'').toLowerCase().includes(a));
 }
 let POLICY={flags:{driverHandoff:true,restockAlerts:true,shareCards:true,kiosks:true,specificSets:true},packs:[],sub:{cents:499},perCallCents:25,headstartMin:10,kioskRefreshChecks:1}; // owner-tunable, loaded at boot
-let LEAD_PENDING=null;
+let LEAD_PENDING=null, AUTH_PENDING=null;
 const $=id=>document.getElementById(id);
 const toast=m=>{const t=$('toast');t.innerHTML=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);};
 // ── i18n (rollout-ready; Spanish live, other languages fall back to English until filled) ──
@@ -1442,6 +1442,8 @@ async function refreshAuth(){
   claimPendingReferral();
   loadRefer();
   if(PENDING_VIEW){ const v=PENDING_VIEW; PENDING_VIEW=null; if(v==='history') openHistory(); }
+  // Resume a pending action (e.g. the check they tapped) the moment sign-up completes.
+  if(AUTH_PENDING && isAuthed()){ const n=AUTH_PENDING; AUTH_PENDING=null; setTimeout(n,40); }
 }
 // --- Launch waitlist: capture out-of-area visitors (also demand-by-region intel) ---
 function openWaitlist(){ $('wl_err').textContent=''; $('wl_contact').value=''; track('waitlist_open'); $('waitlistOverlay').classList.add('on'); setTimeout(()=>{try{$('wl_contact').focus();}catch(e){}},80); }
@@ -2479,11 +2481,11 @@ async function startCheck(){
   ASKED_CATS=SEL_CATS.map(id=>({id,label:(CATS.find(c=>c.id===id)||{}).label||''})).filter(x=>x.label);
   // Kiosk call: flash the "we'll call to check if the machine's working" confirmation first.
   if(SEL_KIOSK && !KIOSK_OK){ openKioskConfirm(); return; }
-  // Email gate: capture an email before the first anonymous free check (re-runs after submit).
-  if(!isAuthed() && !leadCaptured()){ if(!ensureLead(startCheck)) return; }
-  // Gate: signed-in users need credits; anonymous get one free check, then must sign up.
-  if(isAuthed()){ if(!ACCOUNT||ACCOUNT.credits<=0){ openBuy('out'); return; } }
-  else if(freeUsed()){ toast(t('toast.freeused','Your free check is used — sign up to keep going')); signUp(); return; }
+  // Sign-up gate: a check needs an account. Route anon users to PHONE sign-up (the SAME modal as the
+  // "You" pill — never the email box) and resume the check once they're in. Phone accounts are granted
+  // free checks on creation, so the credit gate below then passes.
+  if(!isAuthed()){ AUTH_PENDING=startCheck; openAuth(); return; }
+  if(!ACCOUNT||ACCOUNT.credits<=0){ openBuy('out'); return; }
   return startCheckLive(); // always the live, hear-it-happen bridge path
   $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden');
   $('livestore').textContent=SEL_STORE.name; $('phase').textContent=PHASES[0];
