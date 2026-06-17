@@ -365,7 +365,7 @@
       <button class="ghost" onclick="bulkEdit('offline')">Not online</button>
       <button class="ghost" onclick="bulkEdit('deactivate')" style="color:var(--red)">Remove</button>
     </div>
-    <div id="retailerList"><div class="empty">Search by name, city, ZIP, or region to pull stores up.</div></div>
+    <div id="retailerList"></div>
     <div class="card">
       <div class="name" style="margin-bottom:12px">Add a store</div>
       <div class="grid2">
@@ -1198,7 +1198,7 @@ async function loadRetailers(){
   // Filter-first: a text search (2+ chars) OR a Type/Region/Product/Online pick pulls stores from the
   // full DB server-side (capped). Other statuses + sort + zone refine the result client-side.
   const wantServer = q.length>=2 || type || region || carries || status==='online';
-  if(!wantServer){ RETAILERS=[]; SEL.clear(); const el=document.getElementById('retailerList'); if(el) el.innerHTML='<div class="empty">Search by name, city, ZIP — or pick a Type, Region, Product, or Online to pull stores up.</div>'; const bb=document.getElementById('bulkbar'); if(bb) bb.style.display='none'; return; }
+  if(!wantServer){ RETAILERS=[]; SEL.clear(); const el=document.getElementById('retailerList'); if(el) el.innerHTML=''; const bb=document.getElementById('bulkbar'); if(bb) bb.style.display='none'; return; }
   const p=new URLSearchParams();
   if(q.length>=2) p.set('q',q);
   if(type) p.set('type',type);
@@ -1352,7 +1352,7 @@ function renderRetailers(){
     if(af.length){
       const hasRegion=!!(document.getElementById('f_region')?.value);
       el.innerHTML=`<div class="empty">No stores match: ${af.map(esch).join(' · ')}.<div style="margin-top:12px"><button class="ghost" onclick="clearStoreFilters()">Clear filters</button></div>${hasRegion?'<div class="meta" style="margin-top:10px">Tip: online / national stores (e.g. type “Online”) usually have no region — clear <b>Region</b> to include them.</div>':''}</div>`;
-    } else el.innerHTML='<div class="empty">Search by name, city, ZIP — or pick a Type, Region, Product, or Online to pull stores up.</div>';
+    } else el.innerHTML='';
     return;
   }
   const muted=mutedChainIds();
