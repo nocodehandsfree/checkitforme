@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="x-rev" content="names-r39" />
 __BRAND_HEAD__
-<link rel="icon" type="image/jpeg" href="/logos/check-mark.jpg?v=1">
-<link rel="apple-touch-icon" href="/logos/check-mark.jpg?v=1">
+<link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
+<link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
 <!-- Clerk's bundle is the biggest external fetch on every cold load (every product switch reloads a
      new subdomain) — warm the connection early so DNS+TLS isn't on the critical path. -->
 <link rel="preconnect" href="https://__CLERK_FRONTEND_API__" crossorigin>
@@ -2129,7 +2129,7 @@ let FCID=0;
 // The Fungibles check — our logo-grade checkmark (secondary purple flowing into go-green).
 function FCHK(sz){ sz=sz||16;
   // The owner's EXACT checkmark asset (public/logos/fcheck.png). NEVER recreate it as SVG/CSS — use the file.
-  return `<img src="/logos/fcheck.png?v=6" alt="" width="${sz}" height="${sz}" style="display:inline-block;vertical-align:middle;object-fit:contain">`;
+  return `<img src="/logos/fcheck.png?v=7" alt="" width="${sz}" height="${sz}" style="display:inline-block;vertical-align:middle;object-fit:contain">`;
 }
 function setI(id,html){ const e=$(id); if(e) e.innerHTML=html; }
 function renderIcons(){
