@@ -463,19 +463,19 @@ __LOGO_TILE__
       <div id="gw_pricing" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
       <div style="margin-top:12px"><button class="act" onclick="savePolicyForm()">Save pricing</button></div>
     </div>
-    <div class="card">
-      <div class="name" style="margin-bottom:4px">Advanced policy (raw JSON)</div>
-      <div class="meta" style="margin-bottom:8px">Source of truth. Edits here merge over defaults. Use for packs, finds headstart, privacy, etc.</div>
+    <details class="card">
+      <summary><span class="name">Advanced policy (raw JSON)</span> <span class="meta">— power tool</span></summary>
+      <div class="meta" style="margin:10px 0 8px">Source of truth. Edits here merge over defaults. Use for packs, finds headstart, privacy, etc.</div>
       <textarea id="gw_json" spellcheck="false" style="width:100%;min-height:220px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box"></textarea>
       <div style="margin-top:10px"><button class="act" onclick="savePolicyJson()">Save JSON</button> <button class="ghost" onclick="loadGrowth()">Reload</button></div>
-    </div>
-    <div class="card">
-      <div class="name" style="margin-bottom:4px">Store CMS — import</div>
-      <div class="meta" style="margin-bottom:8px">Paste your research JSON (array of stores, or <code>{ "stores": [...] }</code>). Upserts by phone; region/timezone auto-derived from state. Set <code>"active": false</code> to soft-remove (e.g. Ralphs).</div>
+    </details>
+    <details class="card">
+      <summary><span class="name">Store CMS — import</span> <span class="meta">— power tool</span></summary>
+      <div class="meta" style="margin:10px 0 8px">Paste your research JSON (array of stores, or <code>{ "stores": [...] }</code>). Upserts by phone; region/timezone auto-derived from state. Set <code>"active": false</code> to soft-remove (e.g. Ralphs).</div>
       <textarea id="gw_import" spellcheck="false" placeholder='[{"name":"Target — Sunset","phone":"+13105551212","address":"...","state":"CA","chain":"Target","carries":"Pokémon"}]' style="width:100%;min-height:150px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box"></textarea>
       <div id="gw_import_msg" class="meta" style="margin:8px 0;min-height:16px"></div>
       <div><button class="act" onclick="importStoresJson()">Import stores</button> <button class="ghost" onclick="backfillRegions()">Backfill regions</button></div>
-    </div>
+    </details>
     <div class="card">
       <div class="name" style="margin-bottom:4px">Kiosk intel <span class="meta" style="font-weight:400">— crowd-sourced refresh times</span></div>
       <div id="gw_kiosks" class="meta">Loading…</div>
