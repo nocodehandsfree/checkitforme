@@ -3,6 +3,22 @@
 Finished items live here so the active docs (HANDOFF) stay lean. Newest first. Agents: move done
 items here from HANDOFF's "Current focus."
 
+## 2026-06-17 — website: verified-number calling (caller-ID UI) — consumer half
+- Account sheet → **"Call stores from your number"** row (phone-authed users only — Clerk/OAuth tokens
+  carry no phone, backend 401s them). Reflects `ACCOUNT.callerIdReady` (now on `/app/me`).
+- **Verify modal:** `POST /auth/callerid/start` → Twilio calls the user + we show the validation code →
+  poll `GET /auth/callerid/status` (~3s, ~100s cap) → done. Server already dials `/app/check-live`
+  `From: account.callerId`, so verified users' checks show their own number on store caller-ID.
+- `public/checkit.html` only; ES strings added. Shipped straight to the live deploy branch.
+
+## 2026-06-17 — website: kiosk-only stores in call flow + "most likely" fixes
+- "Most likely" best-bet row: **star marker** (not logo) + **"Most likely"** label (was "Best bet").
+- **Double-green-highlight fixed:** picking another store drops the most-likely row's green highlight
+  (star + label persist) — only one row green at a time.
+- **Kiosk-only stores** (`hasKiosk && sellsPacks===false`) now appear in the call list with a "Kiosk
+  only" badge + pre-call note; shelf shipment-day meta hidden for them. Sends `kioskMode: isKioskOnly`
+  on the 4 check bodies. Hand-applied onto the deploy branch (merged with the `logoTile` refactor).
+
 ## 2026-06-16 — website: phone-first sign-up modal (consumer)
 - Swapped the consumer sign-up modal (`public/checkit.html`) from **email → cell phone + SMS code**,
   wired to the live backend: `POST /auth/phone/start` → SMS, `POST /auth/phone/check` → `{token,account}`.

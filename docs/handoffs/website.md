@@ -32,12 +32,18 @@ for a gnarly conflict ping DevOps — don't redo your work blind.
   Clerk/OAuth fallback). `autocomplete="one-time-code"` on the code input; Continue/Verify are
   brand-green; account sheet shows the phone. The check gate routes to phone sign-up when
   `requirePhoneSignup` is ON (flag still OFF — **DevOps can flip it now** to go phone-first).
-- [ ] 🔴 **Kiosk / "most likely" UI** (next) — full spec: `docs/specs/kiosk-call-flow.md`.
-  Your parts: star icon (not logo) for the "most likely" store + a "Most likely" label; FIX the
-  double-green-highlight (picking another store clears the most-likely highlight); show a "Kiosk only"
-  badge + pre-call note ("We'll ask if their kiosk is working") and send `kioskMode` for those stores.
-  (Backend already excludes kiosk-only from "most likely"; the `kioskMode` flag is DevOps + Voice.)
-- [ ] Route the consumer "check" through the **bridge** (`/app/check-live`) so calls dial from the
-  customer's *verified* number (the plain `/app/check` uses the house line).
+- [x] ✅ **Kiosk / "most likely" UI** (done 2026-06-17, see `docs/COMPLETED.md`). Star marker + "Most
+  likely" label on the best-bet row; double-green-highlight fixed; kiosk-only stores
+  (`hasKiosk && !sellsPacks`) now show in the call list with a "Kiosk only" badge + pre-call note and
+  send `kioskMode: isKioskOnly(store)` on the 4 check bodies (server auto-detects too; Voice consumes
+  the live `kiosk_mode` var).
+- [x] ✅ **Verified-number calling (caller-ID)** (done 2026-06-17). Account sheet → "Call stores from
+  your number" (phone-authed only) → verify modal: `POST /auth/callerid/start` → Twilio calls + shows
+  the code → poll `GET /auth/callerid/status` → done. Backend already dials `/app/check-live`
+  `From: account.callerId`, so verified users' calls show their own number. (`/app/me` returns
+  `callerIdReady`.)
+
+**No open Website items.** Next ideas when you want them: surface "calls from your cell" near the call
+CTA for verified users; nudge unverified users to verify before their first call. Ask the owner.
 
 When you finish something: move it to `docs/COMPLETED.md`; leave Current focus set for the next chat.
