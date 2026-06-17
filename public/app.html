@@ -38,7 +38,7 @@
   nav button{flex:0 0 auto;background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 15px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;transition:.12s}
   nav button:hover{color:#fff;border-color:rgba(255,255,255,.2)}
   nav button.active{background:rgba(74,222,128,.13);border-color:rgba(74,222,128,.4);color:var(--green);box-shadow:0 0 14px rgba(74,222,128,.18)}
-  main{padding:24px 20px;max-width:1000px;margin:0 auto}
+  main{padding:24px 20px 96px;max-width:1000px;margin:0 auto}
   section{display:none} section.active{display:block;animation:secIn .16s ease}
   @keyframes secIn{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
   h2{font-size:19px;letter-spacing:-.2px;color:#fff;margin:2px 0 16px;font-weight:800;line-height:1.2;text-transform:none}
@@ -84,7 +84,7 @@
   @media (hover:none){[data-tip]:hover::after,[data-tip]:hover::before{display:none}}
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
-  .stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:16px}
   .stat{background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:14px 16px;min-width:104px;flex:1 1 auto}
   .stat .n{font-size:24px;font-weight:800;line-height:1.1;letter-spacing:-.5px}
   .stat .l{font-size:12px;color:var(--muted);letter-spacing:0;line-height:1.3;margin-top:4px;font-weight:500;text-transform:none}
@@ -265,14 +265,6 @@
         <div class="meta" id="d_live_n"></div>
       </div>
       <div id="d_live" class="meta" style="margin-top:8px">Loading…</div>
-    </div>
-    <div class="card">
-      <div class="name" style="margin-bottom:8px">⚡ Actions</div>
-      <div class="row" style="flex-wrap:wrap;gap:8px">
-        <button class="ghost" onclick="loadDash()">↻ Refresh</button>
-      </div>
-      <div class="meta" style="margin-top:6px;color:var(--muted)">Results ingest + scheduled calls fire automatically — nothing to press here.</div>
-      <div class="meta" id="d_act_msg" style="margin-top:8px;min-height:14px"></div>
     </div>
     <div class="card" id="d_money_card">
       <div class="name" style="margin-bottom:8px">💰 Money &amp; cost</div>
@@ -836,8 +828,24 @@ async function clerkToken(){ try{ return (window.Clerk&&window.Clerk.session) ? 
 const api = async (p, opts={}) => {
   const t = await clerkToken();
   const headers = Object.assign({}, opts.headers||{}, t?{Authorization:'Bearer '+t}:{});
-  return fetch(p, Object.assign({}, opts, {headers})).then(r => r.json());
+  const r = await fetch(p, Object.assign({}, opts, {headers}));
+  if(r.status===401){ showAuthGate(); }           // safeguard: never leave cards spinning on a dead session
+  try{ return await r.json(); }catch(_){ return {error:'bad_response'}; }
 };
+// Auth safeguard (DevOps owns the actual login wiring). When any /api call 401s, replace the eternal
+// "Loading…" with a clear, actionable gate instead of a silently broken dashboard.
+let AUTH_GATED=false;
+function showAuthGate(){
+  if(AUTH_GATED) return; AUTH_GATED=true;
+  const d=document.createElement('div');
+  d.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(8,8,12,.94);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:24px;animation:secIn .2s ease';
+  d.innerHTML='<div style="text-align:center;max-width:330px">'
+    +'<div style="width:62px;height:62px;border-radius:50%;margin:0 auto 18px;display:grid;place-items:center;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>'
+    +'<div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:7px;letter-spacing:-.2px">Admin login required</div>'
+    +'<div style="font-size:13.5px;color:#9a9aac;line-height:1.5;margin-bottom:22px">Your session isn’t active, so the dashboard can’t load. Log in to continue.</div>'
+    +'<a href="/admin-login" style="display:inline-block;background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;font-weight:800;font-size:15px;padding:13px 30px;border-radius:12px;text-decoration:none;box-shadow:0 8px 20px -6px rgba(52,197,107,.5)">Log in</a></div>';
+  document.body.appendChild(d);
+}
 const toast = (m) => { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); };
 let CATEGORIES = [];
 
