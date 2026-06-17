@@ -893,6 +893,7 @@ function showSection(id, fromGroup){
   document.querySelectorAll('#subnav2 button').forEach(b=>b.classList.toggle('active',b.dataset.sec===id));
   localStorage.setItem('active_tab', id);
   if(TAB_LOADERS[id]) TAB_LOADERS[id]();
+  setTimeout(decorateChrome,150); setTimeout(decorateChrome,600); // strip emoji from freshly-rendered content too
   try{ window.scrollTo({top:0}); }catch(_){}
 }
 
@@ -2098,7 +2099,7 @@ function decorateChrome(){
   // Minimal like the front end: strip the leading emoji from headers/buttons to CLEAN TEXT — no generic
   // icons cluttering titles (section headers are anchored by the green tick-bar instead). The only kept
   // mark is the live-status dot, which is a meaningful indicator rather than decoration.
-  document.querySelectorAll('.name,.subnav button,button.act,button.ghost').forEach(el=>{ if(el.dataset.deco) return; el.dataset.deco='1';
+  document.querySelectorAll('.name,.meta,.hint,.subnav button,button.act,button.ghost').forEach(el=>{ if(el.dataset.deco) return; el.dataset.deco='1';
     const m=el.innerHTML.match(/^\s*(\p{Extended_Pictographic}[️‍\p{Extended_Pictographic}]*)\s*/u); if(!m) return;
     const cp=[...m[1].replace(/[️‍]/g,'')][0];
     const mark = EMOJI_ICO[cp]==='live' ? '<span class="livedot"></span>' : '';
