@@ -2577,7 +2577,15 @@ async function startCheckLive(){
   let cid=null;
   POLL=setInterval(async()=>{
     if(secs>=210){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); return; }
-    if(!cid){ const bs=await api('/pub/bridge/'+r.room); if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){} } return; }
+    if(!cid){
+      // Resolve the live conversation id (set once the bridge engages ElevenLabs). The moment it lands
+      // the call is connected → flip to "Answered" and fall STRAIGHT through to pull the transcript
+      // (no wasted cycle), instead of sitting on "Ringing…".
+      const bs=await api('/pub/bridge/'+r.room);
+      if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){}
+        if($('phase').textContent===t('live.ringing','📞 Ringing…')) $('phase').textContent=t('live.connected','✅ Answered — listening…'); }
+      else return; // still ringing / connecting
+    }
     const o=await api('/pub/live/'+encodeURIComponent(cid));
     if(o&&o.transcript){
       if(!LIVE_TR.length){ $('live_tr').style.display=''; appendLiveTranscript(o.transcript); } // if real-time bubbles are flowing, they're authoritative
@@ -2586,9 +2594,9 @@ async function startCheckLive(){
       const pitched=AGENT_PITCHED||lines.some(l=>l.startsWith('Agent:')&&AGENT_ASK.test(l));
       const ivr=IVR_RE.test(lastClerk);
       $('phase').textContent = (ivr || !pitched) ? t('live.ivr','🔢 Navigating the phone tree…') : t('live.talking','🙋 Talking to a clerk…');
-    } else if(secs>3 && $('phase').textContent===t('live.ringing','📞 Ringing…')){ $('phase').textContent=t('live.connected','✅ Answered — listening…'); }
+    } else if($('phase').textContent===t('live.ringing','📞 Ringing…')){ $('phase').textContent=t('live.connected','✅ Answered — listening…'); }
     if(o && o.live===false){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); }
-  },2500);
+  },1200);
 }
 async function finalizeLive(cid){
   stopAudio(); stopLiveTimers();
