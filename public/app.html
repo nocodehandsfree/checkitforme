@@ -375,7 +375,7 @@
     </div>
     <div id="retailerList"><div class="empty">Search by name, city, ZIP, or region to pull stores up.</div></div>
     <div class="card">
-      <h2>Add a store</h2>
+      <div class="name" style="margin-bottom:12px">Add a store</div>
       <div class="grid2">
         <div><label>Name</label><input id="r_name" placeholder="Barnes & Noble — Brentwood"></div>
         <div><label>Phone (E.164)</label><input id="r_phone" placeholder="+13105551234"></div>
@@ -389,10 +389,10 @@
   </section>
 
   <section id="map">
-    <h2>Store map — green = in stock, red = not in, amber = unclear, gray = uncalled</h2>
-    <div style="margin-bottom:10px"><button class="ghost" onclick="locateMe()">📍 Zoom to my location</button></div>
+    <h2>Store map</h2>
+    <div class="hint" style="margin:-6px 0 12px">Green = in stock · red = not in · amber = unclear · gray = uncalled. Stores appear once they have a location.</div>
+    <div style="margin-bottom:10px"><button class="ghost" onclick="locateMe()">Zoom to my location</button></div>
     <div id="leafletmap"></div>
-    <div class="meta" style="margin-top:8px">Stores appear once they have a location (geocoded on import).</div>
   </section>
 
   <section id="results"><h2>Recent calls</h2>
@@ -416,7 +416,7 @@
     <h2>Schedules</h2>
     <div id="scheduleList"><div class="empty">Loading…</div></div>
     <div class="card">
-      <h2>New schedule</h2>
+      <div class="name" style="margin-bottom:12px">New schedule</div>
       <div class="grid2">
         <div><label>Name</label><input id="s_name" placeholder="Thursday B&N Pokémon"></div>
         <div><label>Category</label><select id="s_cat"></select></div>
