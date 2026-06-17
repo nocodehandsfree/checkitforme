@@ -72,6 +72,20 @@ function clerkIssuer(pk: string): string | null {
 const issuer = clerkIssuer(config.clerk.publishableKey);
 const JWKS = issuer ? createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`)) : null;
 
+// Owner phones that double as admin login: signing into the consumer site with one of these ALSO
+// authenticates the operator dashboard (which runs on a sibling subdomain). Set ADMIN_PHONES on
+// Railway, comma-separated, e.g. "+13106662331,+14243126356".
+const ADMIN_PHONES = (process.env.ADMIN_PHONES || "").split(",").map((s) => authE164(s.trim())).filter(Boolean);
+const isAdminPhone = (e: string) => !!e && ADMIN_PHONES.includes(e);
+// Cross-subdomain admin SSO: a cookie set on the registrable root is shared by every subdomain under
+// it (consumer site + admin). Match it to the request host's root or the browser drops the cookie.
+function cookieRootDomain(host: string | undefined): string | undefined {
+  const h = (host || "").split(":")[0].toLowerCase();
+  if (h.endsWith("checkitforme.com")) return ".checkitforme.com";
+  if (h.endsWith("fungibles.com")) return ".fungibles.com";
+  return undefined; // localhost / preview → host-only cookie
+}
+
 app.use("/api/*", async (c, next) => {
   if (!config.clerk.enforce || !issuer || !JWKS) return next(); // auth disabled
   if (c.req.path === "/api/health") return next();
@@ -98,7 +112,8 @@ app.get("/admin-login", async (c) => {
   const token = c.req.query("token") || "";
   if (!config.adminToken || token !== config.adminToken) return c.text("unauthorized", 401);
   const jwt = await signSession("admin", "");
-  setCookie(c, "admin_session", jwt, { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
+  const domain = cookieRootDomain(c.req.header("host"));
+  setCookie(c, "admin_session", jwt, { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 24 * 30, ...(domain ? { domain } : {}) });
   return c.redirect("/");
 });
 app.get("/admin-logout", (c) => {
@@ -422,6 +437,13 @@ app.post("/auth/phone/check", async (c) => {
   const a = await getAccountByPhone(e);
   if (!a) return c.json({ error: "account_error" }, 500);
   const token = await signSession(a.clerkUserId, e);
+  // Owner phone → also mint the admin session on the shared root domain, so signing into the site
+  // logs the operator into the admin (a sibling subdomain). No effect for non-owner numbers.
+  if (isAdminPhone(e)) {
+    const adminJwt = await signSession("admin", "");
+    const domain = cookieRootDomain(c.req.header("host"));
+    setCookie(c, "admin_session", adminJwt, { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 24 * 30, ...(domain ? { domain } : {}) });
+  }
   return c.json({ token, account: { phone: e, credits: a.credits, subscription: a.subscription, callerIdReady: !!a.callerId && a.callerId === e } });
 });
 // Step 3 (after login): kick off the caller-ID verification CALL; show the code to enter.
