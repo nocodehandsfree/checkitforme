@@ -34,7 +34,7 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
   **Admin** (admin UI) or **Website** (consumer UI); you supply the rows + assets, they render.
 - **Loading data:** dry-run first (`tsx scripts/import-stores.ts <file> … --dry`), then the real run.
   Import is an idempotent upsert keyed on phone — safe to re-run; appending can't create dupes.
-- Work on branch `claude/voice-caller-audit-45u6pn` (per the team setup); commit per task.
+- Work on the deploy branch `claude/retail-stock-voice-calls-OcyMS`; commit + push = live in ~3 min.
 
 ## Current focus (KEEP UPDATED)
 - [ ] **Fix kiosk-only mis-flagging (the Pavilions case).** Supermarket kiosk-only stores were

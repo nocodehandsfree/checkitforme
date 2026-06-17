@@ -21,8 +21,9 @@ consumer features.
    `docs/STOCK_AND_GEO_API.md` (store/stock data shapes)
 
 ## ⚠️ Collision note
-`src/server.ts` routes are currently shared with Admin. Stay in the `/pub` + consumer-page section;
-DevOps will split `server.ts` into route modules so we can both build without colliding.
+You share the deploy branch with every lane. You own `public/checkit.html` + the `/pub` +
+consumer-page section of `src/server.ts`. If a push collides, `git pull --rebase` and push again;
+for a gnarly conflict ping DevOps — don't redo your work blind.
 
 ## Current focus (KEEP UPDATED)
 - [x] ✅ **Sign-up modal → cell phone + SMS code** (done 2026-06-16, see `docs/COMPLETED.md`). The auth

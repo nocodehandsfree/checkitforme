@@ -27,8 +27,9 @@ touch Clerk domains/keys or build admin auth. Don't claim a screen "works" — o
 live after deploy.
 
 ## ⚠️ Collision note
-`src/server.ts` routes are shared with Website. Stay in the `/api` section; DevOps will split
-`server.ts` into modules so we can both build without colliding.
+You share the deploy branch with every lane. You own `public/app.html` + the `/api` section of
+`src/server.ts`. If a push collides, `git pull --rebase` and push again; for a gnarly conflict ping
+DevOps — don't redo your work blind.
 
 ## Current focus — staged plan (do in order; KEEP UPDATED)
 1. [ ] **Fix the admin** so it's up to date (it lagged during the website/admin split).

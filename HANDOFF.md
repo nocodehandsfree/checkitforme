@@ -2,6 +2,24 @@
 
 The entry doc for any new chat. **Open only the docs your role needs** (map below) — saves context.
 
+## ⚡ Current truth (overrides anything stale below)
+- **One branch ships: `claude/retail-stock-voice-calls-OcyMS`.** Every push auto-deploys to live in
+  ~3 min. **`main` is dead — do not use it.**
+- **Flow:** pull OcyMS → commit → `git push` → live. No PRs, no merge gate, no waiting on DevOps.
+  If someone pushed first, `git pull --rebase` then push again.
+- **Live:** consumer **checkitforme.com** · admin **admin.checkitforme.com** (log in once at
+  `/admin-login?token=<ADMIN_TOKEN>`, or with an owner phone).
+- **Secrets are self-serve:** with `RAILWAY_API_TOKEN` you fetch any env var (incl. `ADMIN_TOKEN`) —
+  command under "How to work." Don't ask Fungie.
+
+## New chat? Paste this kickoff (fill [lane] + the Railway token)
+> You are **Check - [Website | Admin | Data Dev | DevOps]**. Deploy branch:
+> `claude/retail-stock-voice-calls-OcyMS` — pull it, commit your work straight to it, `git push` →
+> live in ~3 min (no PRs, no waiting). `RAILWAY_API_TOKEN`=`[paste it]`. Read `/HANDOFF.md`, then
+> `docs/handoffs/[lane].md`, and continue that lane's Current focus. Fetch `ADMIN_TOKEN`/any env var
+> from Railway yourself (command in HANDOFF). Default-and-proceed; only stop for human testing or an
+> irreversible call.
+
 ## What Check is
 AI voice-calling service: it phones retail stores to check if trading-card / collectible product is
 in stock, with proof. 100K+ stores, 4 white-label brand sites (Pokémon / One Piece / Topps NBA /
