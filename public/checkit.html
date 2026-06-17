@@ -698,7 +698,6 @@ __BRAND_HEAD__
     </div>
 
     <button class="cta" id="checkBtn" onclick="startCheck()" style="display:none">Check this store</button>
-    <div class="foot" id="kioskNote" style="display:none;margin-top:10px;color:#cdbcf5"><span id="kioskNoteIco"></span> <span data-i18n="kiosk.precall">Kiosk only — we'll ask if their kiosk is working and stocked, not about a shipment.</span></div>
     <div class="foot" id="chargefoot" style="display:none;margin-top:10px" data-i18n="charge"><b>No answer = no charge.</b> You always get the verdict.</div>
     <!-- Sell-methods card: live online stock / ways to get it / resale warning / notify.
          Replaces the call button for non-callable chains (Micro Center, Amazon). -->
@@ -2002,7 +2001,7 @@ function renderStores(){
   const kiosk=MODE==='kiosk';
   let list=STORES.filter(s=>{
     if(kiosk){ if(!s.hasKiosk) return false; }                    // kiosk mode: vending machines (open OR closed)
-    else { if(s.sellsPacks===false && !s.hasKiosk) return false; if(isClosed(s)) return false; } // call mode: shelf OR kiosk-only, open only
+    else { if(s.sellsPacks===false) return false; if(isClosed(s)) return false; } // call mode: shelf stores only (kiosks live in the Kiosk tab)
     if(q && !(s.name+' '+(s.location||'')).toLowerCase().includes(q)) return false;
     if(!kiosk && !chainCarriesBrand(s)) return false;
     if(USER_LOC){ const mi=storeMi(s); if(mi==null || mi>RADIUS) return false; }
@@ -2061,13 +2060,11 @@ function renderStores(){
     }
     const dot=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
     const drop=shipmentDayShort(s);
-    const kioskOnly=isKioskOnly(s);
-    // Lead with the STREET so stores sharing a city (e.g. two "Big 5 — Los Angeles") are tellable apart; fall back to city.
-    // Kiosk-only stores have no shelf shipment day, so drop that meta for them.
-    const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', (drop&&!kioskOnly)?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
+    // Lead with the STREET so stores sharing a city are tellable apart; fall back to city.
+    const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', drop?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
     return `<div class="store ${sel}" onclick="pickStore(${s.id})">
       <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
-      <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}${kioskOnly?` <span class="kioskbadge">${t('kioskonly','Kiosk only')}</span>`:''}</div><div class="lo">${dot}${meta}</div></div>
+      <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${dot}${meta}</div></div>
       ${right}</div>`;}).join('') : `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
 }
 // --- Live finds ticker (real recent in-stock confirmations) ---
@@ -2344,13 +2341,6 @@ function syncCta(){
       if(window.innerWidth<900){ setTimeout(()=>{ try{ b.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){} },150); } }
   }
   else { b.style.display='none'; b.classList.remove('armed'); if(cf)cf.style.display='none'; if(vv)vv.style.display=(MODE==='kiosk'||cantCall)?'none':''; }
-  // Kiosk-only stores get a different-script pre-call note (we ask about the kiosk, not a shipment).
-  const kn=$('kioskNote');
-  if(kn){
-    const showK = SEL_STORE && isKioskOnly(SEL_STORE) && SEL_CATS.length && MODE!=='kiosk' && !cantCall;
-    if(showK){ const ki=$('kioskNoteIco'); if(ki && !ki.innerHTML) ki.innerHTML=ICO.kioskMini('#cdbcf5'); }
-    kn.style.display = showK ? '' : 'none';
-  }
   renderStoreActions();
 }
 // Sell-methods card — what's actually possible at THIS store: live online stock, ways to get it,
