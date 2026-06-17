@@ -685,28 +685,14 @@
     </section>
 
     <section id="treelab">
-    <h2>Phone Tree Lab</h2>
+    <h2>Phone Trees</h2>
+    <div class="hint" style="margin:-6px 0 14px">How the agent gets past each brand's phone menu to a human — the keypad/voice route to a person. <b style="color:var(--yellow);font-style:normal">Calls here are real.</b></div>
     <div class="card">
-      <div class="meta">How to reach a human at each brand — discovered &amp; documented from call transcripts by <b id="tl_model">the cheapest model</b>. Every call teaches it; you can also trigger calls here. <b style="color:#FBBF24">Calls are real</b> — bench-test before relying on it.</div>
-      <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center">
-        <input id="tl_count" type="number" min="1" max="25" value="5" style="max-width:78px" title="how many brands">
-        <button class="act" onclick="tlBatch('discover')">Discover N unmapped</button>
-        <button class="ghost" onclick="tlBatch('verify')">Re-verify N mapped</button>
-        <button class="ghost" onclick="loadTreeLab()">↻ Refresh</button>
-      </div>
-      <div class="meta" id="tl_msg" style="margin-top:8px;min-height:14px"></div>
-    </div>
-    <div class="stats" id="tl_stats"></div>
-    <div id="tl_list"><div class="empty">Loading…</div></div>
-    </section>
-
-    <section id="trainer">
-    <h2>Tree Trainer</h2>
-    <div class="card">
-      <div class="meta">Document the <b>fastest path to a human</b> for each chain. Tap <b>Document</b> — our cheap navigator calls a store, listens, and works the menu (pressing or speaking) until a person answers, then records the recipe + time. Watch it live, then <b>Lock</b> it. <b style="color:#FBBF24">Calls are real.</b></div>
-      <div class="row" style="gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+      <div class="name" style="margin-bottom:6px">Auto-learn a route <span class="hint">— Trainer</span></div>
+      <div class="hint" style="margin-bottom:10px">Tap Document on a chain — our cheap navigator calls a store, works the menu until a person answers, records the recipe + time. Watch it live, then Lock it.</div>
+      <div class="row" style="gap:8px;margin-top:2px;align-items:center;flex-wrap:wrap">
         <button class="ghost" onclick="loadTrainer()">↻ Refresh</button>
-        <button class="ghost" onclick="testHelicone()" title="One tiny live call through Helicone on the cheap nav model — no phone call placed">⚡ Test Helicone routing</button>
+        <button class="ghost" data-tip="One tiny live call through Helicone on the cheap nav model — no phone call placed" onclick="testHelicone()">Test Helicone routing</button>
         <span class="meta" id="tr_progress"></span>
       </div>
       <div class="meta" id="tr_heli" style="margin-top:8px"></div>
@@ -720,6 +706,19 @@
       <div id="tr_live_result" style="margin-top:12px;display:none"></div>
     </div>
     <div id="tr_list"><div class="empty">Loading…</div></div>
+    <details class="card" style="margin-top:16px">
+      <summary><span class="name">Batch discover / verify <span class="hint">— Lab</span></span></summary>
+      <div class="hint" style="margin:10px 0">Discover routes for unmapped brands or re-verify mapped ones from call transcripts (<b id="tl_model" style="font-style:normal">the cheapest model</b>).</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="tl_count" type="number" min="1" max="25" value="5" style="max-width:78px" data-tip="how many brands">
+        <button class="act" onclick="tlBatch('discover')">Discover N unmapped</button>
+        <button class="ghost" onclick="tlBatch('verify')">Re-verify N mapped</button>
+        <button class="ghost" onclick="loadTreeLab()">↻ Refresh</button>
+      </div>
+      <div class="meta" id="tl_msg" style="margin-top:8px;min-height:14px"></div>
+      <div class="stats" id="tl_stats" style="margin-top:12px"></div>
+      <div id="tl_list"><div class="empty">Loading…</div></div>
+    </details>
     </section>
 
     <section id="statuses">
@@ -857,11 +856,11 @@ let CATEGORIES = [];
 const NAV_GROUPS={
   godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['growth','Policy','rise']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['map','Map','map'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
-  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Mute','tree'],['treelab','Tree Lab','tree'],['trainer','Tree Trainer','phone']]},
+  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Mute','tree'],['treelab','Phone Trees','tree']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Create','flask'],['bench','Test','sliders'],['settings','Settings','gear']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ map:()=>ensureMap(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>loadDash(), treelab:()=>loadTreeLab(), receipts:()=>loadReceipts(), trainer:()=>loadTrainer() };
+const TAB_LOADERS={ map:()=>ensureMap(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>loadDash(), treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>loadReceipts() };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
