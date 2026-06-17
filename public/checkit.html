@@ -925,17 +925,17 @@ __BRAND_HEAD__
   <div class="modal" style="position:relative;max-width:460px;text-align:center">
     <span class="x" onclick="closeAuth()">×</span>
     <div id="auth_logo"></div>
-    <!-- Step 1: email -->
-    <div id="auth_step_email">
+    <!-- Step 1: cell phone -->
+    <div id="auth_step_phone">
       <div class="oauthrow">
         <button class="oauthtile" onclick="authOAuth('oauth_google')" aria-label="Continue with Google" title="Google"><svg width="24" height="24" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg></button>
         <button class="oauthtile" onclick="authOAuth('oauth_discord')" aria-label="Continue with Discord" title="Discord"><svg width="26" height="26" viewBox="0 0 24 24" fill="#5865F2"><path d="M19.3 5.4A17 17 0 0 0 15.1 4l-.2.4a13 13 0 0 1 3.7 1.9 14 14 0 0 0-12 0A13 13 0 0 1 10.3 4L10 4a17 17 0 0 0-4.2 1.4C3 9.6 2.3 13.7 2.6 17.7a17 17 0 0 0 5.2 2.6l.6-1a11 11 0 0 1-1.8-.9l.4-.3a12 12 0 0 0 10.2 0l.4.3a11 11 0 0 1-1.8.9l.6 1a17 17 0 0 0 5.2-2.6c.4-4.6-.6-8.7-2.5-12.3zM9 15.3c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg></button>
       </div>
-      <div class="ordiv"><span data-i18n="auth.or">or use email</span></div>
-      <input id="auth_email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" onkeydown="if(event.key==='Enter')authSendCode()" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 13px;font-size:16px;box-sizing:border-box;text-align:center">
+      <div class="ordiv"><span data-i18n="auth.or">or use your cell</span></div>
+      <input id="auth_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(555) 123-4567" onkeydown="if(event.key==='Enter')authSendCode()" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 13px;font-size:16px;box-sizing:border-box;text-align:center">
       <div id="clerk-captcha" style="margin-top:8px"></div>
       <div id="auth_err" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
-      <button class="cta sm dark" id="auth_send" onclick="authSendCode()" style="margin-top:4px;width:100%;background:linear-gradient(180deg,#A78BFA,#7C5CFC);color:#fff">Continue →</button>
+      <button class="cta sm" id="auth_send" onclick="authSendCode()" style="margin-top:4px;width:100%">Continue →</button>
     </div>
     <!-- Step 2a: magic link sent -->
     <div id="auth_step_link" style="display:none">
@@ -947,12 +947,12 @@ __BRAND_HEAD__
     </div>
     <!-- Step 2b: 6-digit code -->
     <div id="auth_step_code" style="display:none">
-      <h3 style="margin:0 0 4px;font-size:21px">Check your email</h3>
-      <div class="meta" style="margin-bottom:16px">We sent a 6-digit code to <b id="auth_codeto" style="color:#e6e6ee"></b>.</div>
+      <h3 style="margin:0 0 4px;font-size:21px">Check your texts</h3>
+      <div class="meta" style="margin-bottom:16px">We texted a 6-digit code to <b id="auth_codeto" style="color:#e6e6ee"></b>.</div>
       <input id="auth_code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" onkeydown="if(event.key==='Enter')authVerify()" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 13px;font-size:26px;font-weight:800;letter-spacing:.5em;box-sizing:border-box;text-align:center">
       <div id="auth_codeerr" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
-      <button class="cta sm dark" id="auth_verify" onclick="authVerify()" style="margin-top:4px;width:100%;background:linear-gradient(180deg,#A78BFA,#7C5CFC);color:#fff">Verify →</button>
-      <div style="margin-top:13px;font-size:13px;color:var(--muted)">Didn't get it? <a onclick="authResend()" style="color:var(--purple);font-weight:700;cursor:pointer">Resend</a> · <a onclick="authBack()" style="color:var(--purple);font-weight:700;cursor:pointer">Change email</a></div>
+      <button class="cta sm" id="auth_verify" onclick="authVerify()" style="margin-top:4px;width:100%">Verify →</button>
+      <div style="margin-top:13px;font-size:13px;color:var(--muted)">Didn't get it? <a onclick="authResend()" style="color:var(--purple);font-weight:700;cursor:pointer">Resend</a> · <a onclick="authBack()" style="color:var(--purple);font-weight:700;cursor:pointer">Change number</a></div>
     </div>
   </div>
 </div>
@@ -1186,6 +1186,8 @@ const I18N={ es:{
   'dd.tag':'Vista previa · próximamente','dd.title':'Que un local lo recoja','dd.sub':'¿Muy lejos para manejar? Manda a un conductor de Uber/Lyft cercano a comprarlo y enviártelo — él paga <b>$0 de su bolsillo</b>, tú solo pones el bono.','dd.instock':'En stock','dd.s1':'Define el <b style="color:var(--green)">bono</b> del conductor (ej. $25) sobre su tarifa','dd.s2':'Pide el viaje en <b>Uber</b> o <b>Lyft</b> — recogida en la tienda','dd.s3':'Envía una tarjeta prepagada (producto + envío) + un mensaje listo','dd.s4':'Él lo compra, lo envía y toca <b>Listo</b> → tu bono se libera al instante','dd.sees':'lo que ve el conductor','dd.pickup':'Tienes una recogida de <span style="color:var(--green)">$25</span> 🏃','dd.applepay':'Agregar tarjeta a Apple Pay (60 seg)','dd.cta':'Quiero acceso anticipado →','dd.noted':'Anotado — te buscamos para el acceso anticipado 🤝','dd.grab':'recoger en {s} → te lo envían',
   // generic errors / toasts / misc
   'err.generic':'Algo salió mal — inténtalo de nuevo','err.email':'Ingresa un correo válido','err.contact':'Ingresa un correo o teléfono válido','err.pickstore':'Elige una tienda primero',
+  'err.phone':'Ingresa un número de celular válido (EE.UU.)','err.usnum':'Por ahora solo números de EE.UU.','err.ratelimited':'Demasiados intentos — espera un momento','err.smsfail':'No pudimos enviar el SMS — revisa el número','err.code':'Ingresa el código de 6 dígitos','err.badcode':'Ese código no coincide — inténtalo de nuevo',
+  'auth.sending':'Enviando…','auth.verifying':'Verificando…','auth.resent':'Código reenviado 💬','auth.resendfail':'No se pudo reenviar — inténtalo de nuevo','auth.welcome':'✓ Ya estás dentro','acct.signedout':'Sesión cerrada',
   'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó — regístrate para seguir','toast.joinalerts':'Únete gratis para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la llamada','toast.callgone':'Esa llamada ya no está disponible','toast.loadingcall':'Cargando tu llamada…','toast.translate.fail':'No se pudo traducir','toast.payment':'🎉 Pago recibido — agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada — actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó — mostrando la lista','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x} — no se hizo la llamada',
   'find.me':'Encuentra mis tiendas','find.near':'cerca de ti, abiertas ahora',
   'scores.title':'Logros de la caza','scores.post':'Publica el tuyo →','scores.first':'¡Muéstranos el botín!',
@@ -1196,7 +1198,7 @@ const I18N={ es:{
   'ho.s5.label':'Cierre','ho.s5.title':'Libera el bono y califica','ho.s5.cta':'Confirmar entrega y liberar el bono','ho.copied':'Copiado — pégalo en el chat del conductor',
   'ho.done.title':'Bono liberado — listo','ho.done.ship':'Va en camino. Te mandamos el número de rastreo en cuanto escaneen la etiqueta.','ho.done.home':'Va hacia tu puerta. Te llega un texto cuando el conductor lo marque entregado.','ho.done.cta':'Volver a la cacería',
   'rail.all.stores':'Todas las tiendas','rail.all':'Todas las llamadas','rail.other':'Sin respuesta / dudosa',
-  'demo.verdictlbl':'el veredicto','auth.google':'Continuar con Google','auth.discord':'Continuar con Discord','auth.or':'o con tu correo','demo.sys':'Navegando el menú telefónico…','demo.thanks':'¡Perfecto, gracias!','demo.proof':'Persona real · hace 2 min · transcripción completa como prueba.',
+  'demo.verdictlbl':'el veredicto','auth.google':'Continuar con Google','auth.discord':'Continuar con Discord','auth.or':'o con tu celular','demo.sys':'Navegando el menú telefónico…','demo.thanks':'¡Perfecto, gracias!','demo.proof':'Persona real · hace 2 min · transcripción completa como prueba.',
   'acct.checks':'Mis verificaciones','acct.more':'Consigue más verificaciones','acct.manage':'Administrar plan','acct.unlimited':'Ilimitado — cuenta fundadora','acct.memberleft':'Miembro · {n} verificaciones','acct.left':'{n} verificaciones','acct.signout':'Cerrar sesión','pill.join':'Únete','pill.free':'1 gratis · Únete',
 } };
 // {x}/{n}/{r}/{b}/{s}/{p}/{m} placeholder fill for translated strings.
@@ -1277,10 +1279,23 @@ function storeWordmark(name,type){
 }
 
 let ACCOUNT=null;
-function isAuthed(){ return !!(window.Clerk && window.Clerk.user); }
+// ── Auth session: a verified CELL is the identity. POST /auth/phone/check returns a 90-day token +
+//    account; we keep both and send the token as `Authorization: Bearer` on every /app/* call. Clerk
+//    (Google/Discord OAuth) stays as a fallback token during the cutover — the backend accepts both. ──
+let SESSION=null; // { token, account:{ phone, credits, subscription, callerIdReady } }
+function loadSession(){ try{ const s=localStorage.getItem('check_session'); SESSION=s?JSON.parse(s):null; }catch(e){ SESSION=null; } }
+function getToken(){ return (SESSION&&SESSION.token)||null; }
+function setSession(token,account){ SESSION={token,account:account||null}; try{ localStorage.setItem('check_session',JSON.stringify(SESSION)); localStorage.setItem('runnr_authed','1'); }catch(e){} if(account) ACCOUNT=Object.assign({},ACCOUNT,{credits:account.credits,subscription:account.subscription}); }
+function clearSession(){ SESSION=null; try{ localStorage.removeItem('check_session'); localStorage.setItem('runnr_authed','0'); }catch(e){} }
+function authPhone(){ return (SESSION&&SESSION.account&&SESSION.account.phone)||''; }
+function isAuthed(){ return !!getToken() || !!(window.Clerk && window.Clerk.user); }
 function freeUsed(){ return localStorage.getItem('runnr_free_used')==='1'; }
 async function clerkToken(){ try{ return (window.Clerk&&window.Clerk.session)?await window.Clerk.session.getToken():null; }catch(e){ return null; } }
-async function appApi(p,opts={}){ const t=await clerkToken(); const headers=Object.assign({},opts.headers||{},t?{Authorization:'Bearer '+t}:{}); return fetch(p,Object.assign({},opts,{headers})).then(r=>r.json()).catch(()=>({error:'network'})); }
+// Our phone-session token wins; fall back to a Clerk (OAuth) session token during the cutover.
+async function appApi(p,opts={}){ const t=getToken()||await clerkToken(); const headers=Object.assign({},opts.headers||{},t?{Authorization:'Bearer '+t}:{}); return fetch(p,Object.assign({},opts,{headers})).then(r=>r.json()).catch(()=>({error:'network'})); }
+// US phone helpers: normalize free-text → +1XXXXXXXXXX (E.164); format +1XXXXXXXXXX → (XXX) XXX-XXXX.
+function normalizePhone(raw){ let d=String(raw||'').replace(/\D/g,''); if(d.length===11&&d[0]==='1') d=d.slice(1); return d.length===10?('+1'+d):''; }
+function fmtPhone(e){ const d=String(e||'').replace(/\D/g,'').replace(/^1/,''); return d.length===10?`(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`:(e||''); }
 function initGA(){
   const id=POLICY&&POLICY.ga4Id; if(!id||window.__ga) return; window.__ga=1;
   const s=document.createElement('script'); s.async=true; s.src='https://www.googletagmanager.com/gtag/js?id='+id; document.head.appendChild(s);
@@ -1322,12 +1337,14 @@ async function submitStoreReq(){
 const idle=(fn)=>('requestIdleCallback' in window)?requestIdleCallback(fn,{timeout:1500}):setTimeout(fn,300);
 async function boot(){
   captureReferral(); // stash any ?ref= before we clean the URL
+  loadSession();     // restore a saved phone-session token so the authed UI paints immediately
   STORES=[];
   // PAINT FIRST — header, hero, switcher, logo, language + auth all come from injected brand data, so
   // render them instantly instead of waiting on the network (this is what made the header slow to appear).
   initGA();
   buildSwitcher(); applyBrand(); renderIcons(); buildLangSel(); applyLang();
   renderAuth(); renderStores(); renderChips(); renderFooter(); initClerk();
+  if(getToken()) refreshAuth(); // phone session: load the account now, don't wait on Clerk
   const sp=new URLSearchParams(location.search);
   if(sp.get('paid')){ history.replaceState({},'','/'); toast('🎉 Payment received — adding your credits…'); setTimeout(refreshAuth,2500); setTimeout(refreshAuth,6000); }
   if(sp.get('call')) restoreCall(sp.get('call'), sp.get('store'), sp.get('cat'));
@@ -1358,9 +1375,10 @@ async function initClerk(){
 }
 async function refreshAuth(){
   if(isAuthed()){
-    const u=window.Clerk.user, email=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||'';
-    ACCOUNT=await appApi('/app/me'+(email?('?email='+encodeURIComponent(email)):''));
-    try{ localStorage.setItem('runnr_authed','1'); }catch(e){}
+    // The token (phone session or Clerk) identifies the account server-side — no email param needed.
+    ACCOUNT=await appApi('/app/me');
+    if(ACCOUNT&&ACCOUNT.error==='unauthorized'&&getToken()){ clearSession(); ACCOUNT=null; } // stale phone token → drop it
+    else try{ localStorage.setItem('runnr_authed','1'); }catch(e){}
   } else { ACCOUNT=null; try{ localStorage.setItem('runnr_authed','0'); }catch(e){} }
   renderAuth();
   loadSchedules();
@@ -1458,7 +1476,7 @@ function renderAuth(){
   if(isAuthed()){
     // Authed: clean pill — name, then a small credit/member badge. Tap → account sheet.
     const cr=(ACCOUNT&&ACCOUNT.comp)?'∞':((ACCOUNT&&ACCOUNT.credits!=null)?(''+ACCOUNT.credits):'');
-    const nm=esc((window.Clerk.user&&window.Clerk.user.firstName)||'You');
+    const nm=esc((window.Clerk&&window.Clerk.user&&window.Clerk.user.firstName)||'You');
     const badge = cr!=='' ? `<span class="credbadge">${(ACCOUNT&&ACCOUNT.subscription==='active')?'★ ':''}${cr}</span>` : '';
     ap.innerHTML=`<span class="dot on"></span><b style="font-weight:800;font-size:13px">${nm}</b>${badge}`;
     ap.onclick=()=>openAccount(); ap.classList.remove('anon');
@@ -1487,30 +1505,32 @@ function renderAuth(){
 }
 function signIn(){ openAuth(); }
 function signUp(){ openAuth(); }
-// ── Fully custom passwordless auth (headless Clerk). Our UI, our copy, no Clerk chrome.
-//    Prefers a one-tap email LINK; falls back to a 6-digit code (instance keeps both enabled). ──
-let AUTH={flow:null,email:'',busy:false,forceCode:false,signIn:null,signUp:null,codeFactorId:null,linkCancel:null,canceled:false};
+// ── Custom passwordless auth: a verified CELL is the identity. POST /auth/phone/start → SMS code →
+//    POST /auth/phone/check → { token, account }; we store the token + send it as Bearer on /app/*.
+//    Google/Discord OAuth (Clerk) stays as a fallback token during the cutover. ──
+let AUTH={flow:null,phone:'',email:'',busy:false,forceCode:false,signIn:null,signUp:null,codeFactorId:null,linkCancel:null,canceled:false};
+let AUTH_PENDING=null; // action to resume right after a successful sign-up (e.g. the check they tapped)
 function clerkErr(err){ try{ return (err&&err.errors&&err.errors[0]&&(err.errors[0].longMessage||err.errors[0].message))||''; }catch(e){ return ''; } }
 function isUserNotFound(e){ try{ return (e.errors||[]).some(x=>x.code==='form_identifier_not_found'); }catch(_){ return false; } }
-function authStep(which){ ['email','link','code'].forEach(s=>{ const el=$('auth_step_'+s); if(el) el.style.display = (s===which)?'':'none'; }); }
+function authStep(which){ ['phone','link','code'].forEach(s=>{ const el=$('auth_step_'+s); if(el) el.style.display = (s===which)?'':'none'; }); }
 function authCancelLink(){ AUTH.canceled=true; try{ if(AUTH.linkCancel) AUTH.linkCancel(); }catch(e){} AUTH.linkCancel=null; }
 function authReset(){
   authCancelLink();
-  AUTH={flow:null,email:'',busy:false,forceCode:false,signIn:null,signUp:null,codeFactorId:null,linkCancel:null,canceled:false};
-  authStep('email');
-  $('auth_email').value=''; $('auth_code').value=''; $('auth_err').textContent=''; $('auth_codeerr').textContent=''; $('auth_linkerr').textContent='';
+  AUTH={flow:null,phone:'',email:'',busy:false,forceCode:false,signIn:null,signUp:null,codeFactorId:null,linkCancel:null,canceled:false};
+  authStep('phone');
+  $('auth_phone').value=''; $('auth_code').value=''; $('auth_err').textContent=''; $('auth_codeerr').textContent=''; const le=$('auth_linkerr'); if(le)le.textContent='';
   const send=$('auth_send'); if(send){send.disabled=false;send.textContent='Continue →';}
   const ver=$('auth_verify'); if(ver){ver.disabled=false;ver.textContent='Verify →';}
 }
 function openAuth(){
-  if(!window.Clerk){ toast('Loading sign-in…'); return; }
+  // Phone sign-up needs no Clerk; the OAuth tiles guard Clerk themselves (authOAuth).
   authReset(); $('authOverlay').classList.add('on');
   setI('auth_logo', authMark()); track('auth_open');
-  setTimeout(()=>{try{$('auth_email').focus();}catch(e){}},90);
+  setTimeout(()=>{try{$('auth_phone').focus();}catch(e){}},90);
 }
 function closeAuth(){ authCancelLink(); $('authOverlay').classList.remove('on'); }
 function authMark(){ return `<img src="/logos/checkitforme.png?v=2" alt="Check It For Me" style="height:30px;width:auto;display:block">`; }
-function authDone(){ closeAuth(); toast("✓ You're in"); track('auth_success',{flow:AUTH.flow}); refreshAuth(); }
+async function authDone(){ closeAuth(); toast(t('auth.welcome',"✓ You're in")); track('auth_success',{flow:AUTH.flow}); await refreshAuth(); const n=AUTH_PENDING; AUTH_PENDING=null; if(typeof n==='function') setTimeout(n,40); }
 // Background magic-link poll: resolves the moment the user taps the link (this tab or another).
 function authLinkPoll(promise){
   AUTH.canceled=false;
@@ -1523,50 +1543,23 @@ function authLinkPoll(promise){
     if(AUTH.flow==='signup' && !AUTH.forceCode){ authUseCode(); return; }
     $('auth_linkerr').textContent=clerkErr(e)||'Link sign-in failed — try a code instead.'; });
 }
-async function authSendCode(){   // the "Continue" handler — sends a link (preferred) or a code
+async function authSendCode(){   // the "Continue" handler — texts a 6-digit code to the cell
   if(AUTH.busy) return;
-  const email=($('auth_email').value||'').trim().toLowerCase();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $('auth_err').textContent='Enter a valid email address'; return; }
-  AUTH.busy=true; AUTH.email=email; const btn=$('auth_send'); btn.disabled=true; btn.textContent='Sending…'; $('auth_err').textContent='';
+  const phone=normalizePhone($('auth_phone').value);
+  if(!phone){ $('auth_err').textContent=t('err.phone','Enter a valid US mobile number'); return; }
+  AUTH.busy=true; AUTH.phone=phone; AUTH.flow='phone'; const btn=$('auth_send'); btn.disabled=true; btn.textContent=t('auth.sending','Sending…'); $('auth_err').textContent='';
   try{
-    const client=window.Clerk.client;
-    // Existing user?
-    let si=null, isNew=false;
-    try{ si=await client.signIn.create({ identifier: email }); }
-    catch(e){ if(isUserNotFound(e)) isNew=true; else throw e; }
-    if(!isNew && si){
-      AUTH.flow='signin'; AUTH.signIn=si;
-      const factors=si.supportedFirstFactors||[];
-      const linkF=factors.find(f=>f.strategy==='email_link');
-      const codeF=factors.find(f=>f.strategy==='email_code');
-      AUTH.codeFactorId = codeF ? codeF.emailAddressId : null;
-      if(linkF && !AUTH.forceCode){
-        const flow=si.createEmailLinkFlow(); AUTH.linkCancel=flow.cancelEmailLinkFlow;
-        authLinkPoll(flow.startEmailLinkFlow({ emailAddressId: linkF.emailAddressId, redirectUrl: location.origin + '/' }));
-        authStep('link'); $('auth_linkto').textContent=email; track('auth_link_sent',{flow:'signin'});
-      } else if(codeF){
-        await si.prepareFirstFactor({ strategy:'email_code', emailAddressId: codeF.emailAddressId });
-        authStep('code'); $('auth_codeto').textContent=email; track('auth_code_sent',{flow:'signin'}); setTimeout(()=>{try{$('auth_code').focus();}catch(e){}},90);
-      } else { throw new Error('No email sign-in method is enabled for this account.'); }
-    } else {
-      AUTH.flow='signup';
-      const su=await client.signUp.create({ emailAddress: email }); AUTH.signUp=su;
-      if(!AUTH.forceCode){
-        try{
-          const flow=su.createEmailLinkFlow(); AUTH.linkCancel=flow.cancelEmailLinkFlow;
-          authLinkPoll(flow.startEmailLinkFlow({ redirectUrl: location.origin + '/' }));
-          authStep('link'); $('auth_linkto').textContent=email; track('auth_link_sent',{flow:'signup'});
-        }catch(e){
-          await su.prepareEmailAddressVerification({ strategy:'email_code' });
-          authStep('code'); $('auth_codeto').textContent=email; setTimeout(()=>{try{$('auth_code').focus();}catch(_){}},90);
-        }
-      } else {
-        await su.prepareEmailAddressVerification({ strategy:'email_code' });
-        authStep('code'); $('auth_codeto').textContent=email; track('auth_code_sent',{flow:'signup'}); setTimeout(()=>{try{$('auth_code').focus();}catch(e){}},90);
-      }
+    const r=await api('/auth/phone/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone})});
+    if(r&&r.error){
+      $('auth_err').textContent = r.error==='us_number_required' ? t('err.usnum','US mobile numbers only for now')
+        : r.error==='rate_limited' ? t('err.ratelimited','Too many tries — give it a minute')
+        : t('err.smsfail','Could not text that number — check it and try again');
+      return;
     }
+    authStep('code'); $('auth_codeto').textContent=fmtPhone(phone); track('auth_code_sent',{flow:'phone'});
+    setTimeout(()=>{try{$('auth_code').focus();}catch(e){}},90);
   }catch(err){
-    $('auth_err').textContent=clerkErr(err)||'Could not continue — try again';
+    $('auth_err').textContent=t('err.generic','Something went wrong — try again');
   }finally{ AUTH.busy=false; const b=$('auth_send'); if(b){b.disabled=false;b.textContent='Continue →';} }
 }
 // Escape hatch: switch the in-progress flow from link to a 6-digit code.
@@ -1582,35 +1575,25 @@ async function authUseCode(){
 async function authVerify(){
   if(AUTH.busy) return;
   const code=($('auth_code').value||'').replace(/\D/g,'');
-  if(code.length<6){ $('auth_codeerr').textContent='Enter the 6-digit code'; return; }
-  AUTH.busy=true; const btn=$('auth_verify'); btn.disabled=true; btn.textContent='Verifying…'; $('auth_codeerr').textContent='';
+  if(code.length<6){ $('auth_codeerr').textContent=t('err.code','Enter the 6-digit code'); return; }
+  AUTH.busy=true; const btn=$('auth_verify'); btn.disabled=true; btn.textContent=t('auth.verifying','Verifying…'); $('auth_codeerr').textContent='';
   try{
-    let res;
-    if(AUTH.flow==='signin') res=await AUTH.signIn.attemptFirstFactor({ strategy:'email_code', code });
-    else res=await AUTH.signUp.attemptEmailAddressVerification({ code });
-    if(res&&res.status==='complete'&&res.createdSessionId){ await window.Clerk.setActive({ session: res.createdSessionId }); authDone(); }
-    else if(res&&res.status==='missing_requirements'){
-      const mf=(res.missingFields&&res.missingFields.length)?res.missingFields.join(', '):'';
-      $('auth_codeerr').textContent = mf ? ('Account still needs: '+mf+' — that field is set to required in Clerk.') : 'Verification passed but Clerk wants one more step (likely bot protection) — check Clerk → Attack protection.';
-    }
-    else { $('auth_codeerr').textContent='Almost there — please try again'+(res&&res.status?(' ('+res.status+')'):''); }
+    const r=await api('/auth/phone/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:AUTH.phone,code})});
+    if(r&&r.token){ setSession(r.token,r.account); authDone(); }
+    else if(r&&r.error==='bad_code'){ $('auth_codeerr').textContent=t('err.badcode',"That code didn't match — try again"); }
+    else { $('auth_codeerr').textContent=t('err.generic','Something went wrong — try again'); }
   }catch(err){
-    $('auth_codeerr').textContent=clerkErr(err)||"That code didn't match — try again";
+    $('auth_codeerr').textContent=t('err.generic','Something went wrong — try again');
   }finally{ AUTH.busy=false; btn.disabled=false; btn.textContent='Verify →'; }
 }
 async function authResend(){
+  if(!AUTH.phone){ authBack(); return; }
   try{
-    if(AUTH.flow==='signin' && AUTH.signIn){
-      if(!AUTH.forceCode){ const flow=AUTH.signIn.createEmailLinkFlow(); authCancelLink(); AUTH.linkCancel=flow.cancelEmailLinkFlow; const lf=(AUTH.signIn.supportedFirstFactors||[]).find(f=>f.strategy==='email_link'); authLinkPoll(flow.startEmailLinkFlow({ emailAddressId: lf.emailAddressId, redirectUrl: location.origin+'/' })); }
-      else if(AUTH.codeFactorId){ await AUTH.signIn.prepareFirstFactor({ strategy:'email_code', emailAddressId: AUTH.codeFactorId }); }
-    } else if(AUTH.flow==='signup' && AUTH.signUp){
-      if(!AUTH.forceCode){ const flow=AUTH.signUp.createEmailLinkFlow(); authCancelLink(); AUTH.linkCancel=flow.cancelEmailLinkFlow; authLinkPoll(flow.startEmailLinkFlow({ redirectUrl: location.origin+'/' })); }
-      else await AUTH.signUp.prepareEmailAddressVerification({ strategy:'email_code' });
-    }
-    toast(AUTH.forceCode?'Code re-sent 📧':'Link re-sent 📧');
-  }catch(e){ toast('Could not resend — try again'); }
+    const r=await api('/auth/phone/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:AUTH.phone})});
+    toast(r&&r.error ? t('auth.resendfail','Could not resend — try again') : t('auth.resent','Code re-sent 💬'));
+  }catch(e){ toast(t('auth.resendfail','Could not resend — try again')); }
 }
-function authBack(){ authCancelLink(); AUTH.forceCode=false; authStep('email'); $('auth_codeerr').textContent=''; $('auth_linkerr').textContent=''; setTimeout(()=>{try{$('auth_email').focus();}catch(e){}},60); }
+function authBack(){ authCancelLink(); AUTH.forceCode=false; authStep('phone'); $('auth_codeerr').textContent=''; const le=$('auth_linkerr'); if(le)le.textContent=''; setTimeout(()=>{try{$('auth_phone').focus();}catch(e){}},60); }
 // OAuth (Google / Discord): Clerk redirects out and back; no codes, no passwords — the
 // provider's verified email becomes the account email. Returning users = same one tap.
 async function authOAuth(strategy){
@@ -1649,7 +1632,8 @@ async function handleClerkLinkCallback(){
 // Custom account sheet (no Clerk-branded profile modal)
 function openAccount(){
   if(!isAuthed()) return;
-  const u=window.Clerk.user; $('acct_email').textContent=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||'';
+  const ph=authPhone(); const u=(window.Clerk&&window.Clerk.user)||null;
+  $('acct_email').textContent = ph ? fmtPhone(ph) : ((u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||'');
   setI('acct_logo', authMark());
   // Credits line: ∞ = comp (founder) unlimited · ⭐ = active membership · else plain balance.
   const comp=!!(ACCOUNT&&ACCOUNT.comp), member=!!(ACCOUNT&&ACCOUNT.subscription==='active');
@@ -1667,7 +1651,7 @@ function openAccount(){
   $('acctOverlay').classList.add('on'); track('account_open');
 }
 function closeAccount(){ $('acctOverlay').classList.remove('on'); }
-async function doSignOut(){ try{ await window.Clerk.signOut(); }catch(e){} closeAccount(); toast('Signed out'); refreshAuth(); }
+async function doSignOut(){ clearSession(); ACCOUNT=null; try{ if(window.Clerk&&window.Clerk.user) await window.Clerk.signOut(); }catch(e){} closeAccount(); toast(t('acct.signedout','Signed out')); refreshAuth(); }
 // Deep-link: open a specific past call by id (and remember it in History).
 async function restoreCall(cid, storeName, catName){
   // Resolve the real store from what we already know — local history first (it has the exact
@@ -2159,6 +2143,8 @@ function pickProduct(){ SEL_PRODUCT=$('prodsel').value||''; }
 // ---- Email gate: one free check requires an email ----
 function leadCaptured(){ return !!localStorage.getItem('runnr_lead_email'); }
 function ensureLead(next){ LEAD_PENDING=next||null; openLead(); return false; }
+// Phone-first: open the cell sign-up and resume `next` (e.g. the check they tapped) once they're in.
+function ensureSignup(next){ AUTH_PENDING=next||null; openAuth(); }
 function openLead(){ $('lead_err').textContent=''; $('leadOverlay').classList.add('on'); setTimeout(()=>{ const e=$('lead_email'); if(e)e.focus(); },50); }
 function closeLead(){ $('leadOverlay').classList.remove('on'); }
 async function submitLead(){
@@ -2248,8 +2234,13 @@ async function startCheck(){
   if(!SEL_STORE||!SEL_CATS.length) return;
   // Snapshot the lines we're asking about (for the per-category result + history).
   ASKED_CATS=SEL_CATS.map(id=>({id,label:(CATS.find(c=>c.id===id)||{}).label||''})).filter(x=>x.label);
-  // Email gate: capture an email before the first anonymous free check (re-runs after submit).
-  if(!isAuthed() && !leadCaptured()){ if(!ensureLead(startCheck)) return; }
+  // Sign-up gate before the first check. Phone-first (policy.requirePhoneSignup): identity is a
+  // verified cell — no anonymous calls, so send them to phone sign-up and resume the check after.
+  // When the flag is OFF (today) we keep the legacy email gate so the live anon flow is unchanged.
+  if(!isAuthed()){
+    if((POLICY.flags||{}).requirePhoneSignup){ ensureSignup(startCheck); return; }
+    if(!leadCaptured()){ if(!ensureLead(startCheck)) return; }
+  }
   // Gate: signed-in users need credits; anonymous get one free check, then must sign up.
   if(isAuthed()){ if(!ACCOUNT||ACCOUNT.credits<=0){ openBuy('out'); return; } }
   else if(freeUsed()){ toast(t('toast.freeused','Your free check is used — sign up to keep going')); signUp(); return; }
@@ -2263,7 +2254,7 @@ async function startCheck(){
 
   const useApp=isAuthed();
   const r=await (useApp?appApi:api)(useApp?'/app/check':'/pub/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,specificProduct:SEL_PRODUCT})});
-  if(r.error){ clearInterval(phaseT);clearInterval(elT); backToBuilder(); if(r.error==='no_credits'){ openBuy('out'); } else if(r.error==='unauthorized'){ signIn(); } else if(r.error==='store_closed'){ toast('🔒 '+(r.label||'Store is closed')+' — no call placed'); } else toast('Could not start the call'); return; }
+  if(r.error){ clearInterval(phaseT);clearInterval(elT); backToBuilder(); if(r.error==='no_credits'){ openBuy('out'); } else if(r.error==='unauthorized'||r.error==='signin_required'){ signUp(); } else if(r.error==='store_closed'){ toast('🔒 '+(r.label||'Store is closed')+' — no call placed'); } else toast('Could not start the call'); return; }
   const cid=r.providerCallId;
   try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){}
   const stop=()=>{ clearInterval(POLL);clearInterval(phaseT);clearInterval(elT); };
@@ -2334,7 +2325,7 @@ async function startCheckLive(){
   let secs=0; const elT=setInterval(()=>{ secs+=1; $('elapsed').textContent='⏱ '+secs+'s'; },1000);
   LIVE_TIMERS=[elT];
   const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT})});
-  if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x} — no call placed',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail','Could not start the call')); return; }
+  if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized'||r.error==='signin_required')signUp(); else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x} — no call placed',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail','Could not start the call')); return; }
   LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
   if(AUDIO_CTX){ AUDIO_WS=new WebSocket('wss://'+r.wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data);
     if(d.audio) playMu(d.audio,d.track);
@@ -2666,7 +2657,7 @@ function timeAgo(ts){ const s=Math.floor((Date.now()-ts)/1000); const ago=u=>LAN
 let HIST_CACHE=[];
 async function fetchServerHistory(){
   if(!isAuthed()) return [];
-  const u=window.Clerk.user, email=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||'';
+  const u=(window.Clerk&&window.Clerk.user)||null, email=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||'';
   const rows=await appApi('/app/history'+(email?('?email='+encodeURIComponent(email)):''));
   return Array.isArray(rows)?rows:[];
 }
@@ -2807,7 +2798,7 @@ function closeBuy(){ $('buyOverlay').classList.remove('on'); }
 async function buy(kind){
   if(!isAuthed()){ signUp(); return; }
   $('buy_note').textContent=t('buy.opening','Opening secure checkout…');
-  const u=window.Clerk.user, email=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||'';
+  const u=(window.Clerk&&window.Clerk.user)||null, email=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||'';
   const r=await appApi('/app/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,email})});
   if(r&&r.url){ location.href=r.url; } else { $('buy_note').textContent=t('buy.fail','Could not start checkout — please try again.'); }
 }
@@ -3242,7 +3233,7 @@ function openSchedule(){
   SCH_DAYS=new Set();
   $('sch_err').textContent='';
   $('sch_store').textContent=findStoreName(); $('sch_cat').textContent=findProductLabel();
-  const cw=$('sch_contact'); if(cw&&!cw.value){ try{ cw.value=(window.Clerk.user.primaryEmailAddress&&window.Clerk.user.primaryEmailAddress.emailAddress)||''; }catch(e){} }
+  const cw=$('sch_contact'); if(cw&&!cw.value){ const ph=authPhone(); if(ph){ cw.value=fmtPhone(ph); } else { try{ cw.value=(window.Clerk&&window.Clerk.user&&window.Clerk.user.primaryEmailAddress&&window.Clerk.user.primaryEmailAddress.emailAddress)||''; }catch(e){} } }
   $('sch_days').innerHTML=DOWLBL.map(([v,l])=>`<div class="chip" data-d="${v}" onclick="toggleSchDay('${v}',this)" style="cursor:pointer;text-align:center;padding:9px 0;font-size:13px">${l}</div>`).join('');
   track('schedule_open',{retailerId:SEL_STORE.id});
   $('scheduleOverlay').classList.add('on');

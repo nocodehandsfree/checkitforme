@@ -25,13 +25,13 @@ consumer features.
 DevOps will split `server.ts` into route modules so we can both build without colliding.
 
 ## Current focus (KEEP UPDATED)
-- [ ] 🔴 **Sign-up modal still asks for EMAIL** ("Just your email") — swap it to **cell phone + SMS
-  code.** Backend is LIVE + ready: `POST /auth/phone/start {phone}` → SMS → `POST /auth/phone/check
-  {phone,code}` → `{token,account}`; save the token, send it as `Authorization: Bearer <token>` on
-  every `/app/*` call (where the old email/Clerk token went). Use `autocomplete="one-time-code"` so
-  the browser auto-fills the SMS. Until this is done, phone-first is unusable (`requirePhoneSignup`
-  stays OFF). Make the "Continue/Place call" button brand-green.
-- [ ] **Kiosk / "most likely" UI** (next, after signup) — full spec: `docs/specs/kiosk-call-flow.md`.
+- [x] ✅ **Sign-up modal → cell phone + SMS code** (done 2026-06-16, see `docs/COMPLETED.md`). The auth
+  modal now uses `POST /auth/phone/start` → `POST /auth/phone/check` → `{token,account}`; the token is
+  saved (`localStorage check_session`) and sent as `Authorization: Bearer` on `/app/*` (`appApi`, with
+  Clerk/OAuth fallback). `autocomplete="one-time-code"` on the code input; Continue/Verify are
+  brand-green; account sheet shows the phone. The check gate routes to phone sign-up when
+  `requirePhoneSignup` is ON (flag still OFF — **DevOps can flip it now** to go phone-first).
+- [ ] 🔴 **Kiosk / "most likely" UI** (next) — full spec: `docs/specs/kiosk-call-flow.md`.
   Your parts: star icon (not logo) for the "most likely" store + a "Most likely" label; FIX the
   double-green-highlight (picking another store clears the most-likely highlight); show a "Kiosk only"
   badge + pre-call note ("We'll ask if their kiosk is working") and send `kioskMode` for those stores.

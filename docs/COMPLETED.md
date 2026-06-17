@@ -3,6 +3,18 @@
 Finished items live here so the active docs (HANDOFF) stay lean. Newest first. Agents: move done
 items here from HANDOFF's "Current focus."
 
+## 2026-06-16 — website: phone-first sign-up modal (consumer)
+- Swapped the consumer sign-up modal (`public/checkit.html`) from **email → cell phone + SMS code**,
+  wired to the live backend: `POST /auth/phone/start` → SMS, `POST /auth/phone/check` → `{token,account}`.
+- Token stored in `localStorage` (`check_session`) and sent as `Authorization: Bearer` on every `/app/*`
+  call (`appApi` prefers the phone token, falls back to a Clerk/OAuth token during cutover). Stale token
+  (a definitive 401 on `/app/me`) self-clears. Code input uses `autocomplete="one-time-code"`.
+- Continue + Verify buttons now **brand-green** (dropped the purple override). Account sheet shows the
+  phone; sign-out clears the stored session.
+- Check gate is **phone-first aware**: when `policy.requirePhoneSignup` is ON, an anonymous check opens
+  phone sign-up and resumes the check after; `signin_required` (401) also routes to sign-up. Flag is OFF
+  today, so the live anonymous/email flow is unchanged until DevOps flips it. Google/Discord OAuth kept.
+
 ## 2026-06-16 — DEPLOYED to production
 - Merged the integrated branch → `main`; Railway deployed. Verified live on checkitforme.com
   (`/auth/phone/start`=400, health=200, prod security boot-gate passed). Full backend now live.
