@@ -7,8 +7,6 @@
 <title>Check It For Me — Admin</title>
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
-<!-- Shared chain-logo renderer (same component the consumer site + /logo-wall use). -->
-__LOGO_TILE__
 <style>
   :root{
     --bg:#0C0C12; --sheet:#1A1A24; --terminal:#0A0A0E;
@@ -1177,14 +1175,11 @@ function statusBadge(r){
 
 // Store logos + consumer-grade name handling (same conventions as the front end).
 let LOGOS=new Map();
-async function loadLogos(){ try{ const ps=await fetch('/pub/stores').then(r=>r.json()); if(Array.isArray(ps)) LOGOS=new Map(ps.map(x=>[x.id,{url:x.logoUrl||null,wide:!!x.logoWide,dark:!!x.logoDark,wordmark:!!x.logoWordmark,name:x.name}])); }catch(e){} }
+async function loadLogos(){ try{ const ps=await fetch('/pub/stores').then(r=>r.json()); if(Array.isArray(ps)) LOGOS=new Map(ps.map(x=>[x.id,x.logoUrl||null])); }catch(e){} }
 function splitName(n){ const i=(n||'').search(/[—–]| - /); if(i<0) return {base:(n||'').trim(),branch:''}; return {base:n.slice(0,i).trim(),branch:n.slice(i).replace(/^[—–\-\s]+/,'').trim()}; }
-// THE chain-logo tile — the shared LogoTile component (same rules the consumer store list and
-// /logo-wall use; inlined from /logos/logo-tile.js), at the admin's 42px tile size. Falls back to
-// initials only if that block didn't load.
 function storeTile(id,name){
-  const m=LOGOS.get(id)||{};
-  if(window.LogoTile) return LogoTile.tile({url:m.url,wide:m.wide,dark:m.dark,wordmark:m.wordmark,name:name||m.name},42);
+  const u=LOGOS.get(id);
+  if(u) return `<div class="slogo"><img src="${esch(u)}" alt=""></div>`;
   const w=(name||'?').split(/\s+/).filter(Boolean);
   return `<div class="slogo"><span class="mono">${esch(((w[0]||'?')[0]+(w[1]?w[1][0]:'')).toUpperCase())}</span></div>`;
 }

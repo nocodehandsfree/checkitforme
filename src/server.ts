@@ -177,28 +177,11 @@ async function clerkPrimaryPhone(id: string): Promise<string | undefined> {
 }
 
 // ---- Pages ----
-// The ONE shared chain-logo renderer, inlined into every surface (consumer store
-// list, admin, QA wall) so they render identically — "fixed on the wall" == fixed
-// everywhere. Single source: public/logos/logo-tile.{css,js}.
-let logoTileCache: { t: number; v: string } | null = null;
-function logoTileBlock(): string {
-  if (logoTileCache && Date.now() - logoTileCache.t < 60_000) return logoTileCache.v;
-  let v = "";
-  try {
-    const css = readFileSync(join(here, "../public/logos/logo-tile.css"), "utf8");
-    const js = readFileSync(join(here, "../public/logos/logo-tile.js"), "utf8");
-    v = `<style>${css}</style><script>${js}</script>`;
-  } catch { /* assets missing — surfaces fall back to their own markup */ }
-  logoTileCache = { t: Date.now(), v };
-  return v;
-}
-
 // Operator dashboard at caller.* ; consumer "pay-per-check" app at runner.* (or /r preview).
 const page = (file: string) =>
   readFileSync(join(here, `../public/${file}`), "utf8")
     .replace(/__CLERK_PUBLISHABLE_KEY__/g, config.clerk.publishableKey)
-    .replace(/__CLERK_FRONTEND_API__/g, clerkFrontendApi(config.clerk.publishableKey))
-    .replace(/__LOGO_TILE__/g, logoTileBlock);
+    .replace(/__CLERK_FRONTEND_API__/g, clerkFrontendApi(config.clerk.publishableKey));
 
 // The publishable key base64-encodes the frontend-API domain ("<domain>$"), so the Clerk JS
 // script URL always matches whichever application/instance the env key points at.
@@ -553,13 +536,10 @@ function chainLogoFiles(): Set<string> {
   return v;
 }
 const chainSlug = (name: string) => name.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-// _meta per logo: w = wide wordmark (aspect), d = dark ink (needs a light plate),
-// m = render-mode override ("mark" forces the image, "text" forces the wordmark).
-type LogoMeta = { w: number; d: number; m?: string };
-let logoMetaCache: { t: number; v: Record<string, LogoMeta> } | null = null;
-function logoMeta(): Record<string, LogoMeta> {
+let logoMetaCache: { t: number; v: Record<string, { w: number; d: number }> } | null = null;
+function logoMeta(): Record<string, { w: number; d: number }> {
   if (logoMetaCache && Date.now() - logoMetaCache.t < 60_000) return logoMetaCache.v;
-  let v: Record<string, LogoMeta> = {};
+  let v: Record<string, { w: number; d: number }> = {};
   try { v = JSON.parse(readFileSync(join(here, "../public/logos/chains/_meta.json"), "utf8")); } catch { /* none yet */ }
   logoMetaCache = { t: Date.now(), v };
   return v;
@@ -580,87 +560,31 @@ function chainLogoFile(name: string | null | undefined): string | null {
   }
   return null;
 }
-function chainLogoInfo(name: string | null | undefined): { url: string | null; wide: boolean; dark: boolean; wordmark: boolean } {
+function chainLogoInfo(name: string | null | undefined): { url: string | null; wide: boolean; dark: boolean } {
   const f = chainLogoFile(name);
-  // No asset → render the name as a balanced text wordmark (rule 3/4).
-  if (!f) return { url: null, wide: false, dark: false, wordmark: true };
+  if (!f) return { url: null, wide: false, dark: false };
   const m = logoMeta()[f] || { w: 0, d: 0 };
-  // A wide wordmark asset is illegible shrunk into the tile, so render it as
-  // balanced text instead; a square-ish asset is a real brand mark → show the image.
-  const wordmark = m.m === "text" || (m.m !== "mark" && m.w === 1);
-  return { url: `/logos/chains/${f}?v=8`, wide: m.w === 1, dark: m.d === 1, wordmark };
+  return { url: `/logos/chains/${f}?v=8`, wide: m.w === 1, dark: m.d === 1 };
 }
-// Canonical QA mirror: checkitforme.com/logo-wall. Renders every chain through the SAME LogoTile
-// component the consumer store list and admin use (inlined below), client-side — so the wall is a
-// true 1:1 preview of production. Each card = the real store-list tile + a 2x detail + the raw asset
-// for comparison. (No auth; leaks nothing but public logos.)
-app.get("/logo-wall", async (c) => {
-  const chainRows = await cachedChains();
-  const usedFiles = new Set<string>();
-  const rows = chainRows.map((ch) => {
-    const file = chainLogoFile(ch.name);
-    if (file) usedFiles.add(file);
-    const info = chainLogoInfo(ch.name);
-    return { name: ch.name, type: ch.type || "", muted: ch.muted === true,
-      url: info.url, wide: info.wide, dark: info.dark, wordmark: info.wordmark };
-  }).sort((a, b) => a.name.localeCompare(b.name));
-  // Asset files no chain name resolves to → a slug/name mismatch to reconcile with Data Dev.
-  const orphans = [...chainLogoFiles()].filter((f) => !usedFiles.has(f))
-    .map((f) => ({ file: f, url: `/logos/chains/${f}?v=8` })).sort((a, b) => a.file.localeCompare(b.file));
-  const payload = JSON.stringify({
-    live: rows.filter((r) => !r.muted), muted: rows.filter((r) => r.muted), orphans,
-  }).replace(/</g, "\\u003c");
-  return c.html(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Logo wall · Check</title>${logoTileBlock()}
-  <style>
-    body{background:#0C0C12;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#fff;padding:20px;margin:0}
-    h2{font-weight:900;margin:0 0 4px} h3{font-size:13px;margin:22px 0 2px;color:#cdcdd8}
-    .sub{color:#9a9aac;font-size:12.5px;margin-bottom:4px} .url{color:#4ADE80;font-weight:800}
-    .grid{display:flex;flex-wrap:wrap;gap:14px;margin:14px 0 26px}
-    .card{width:104px;display:flex;flex-direction:column;align-items:center;gap:6px}
-    .card .row{display:flex;align-items:center;gap:9px}
-    .card .nm{font-size:10px;color:#cfcfd8;text-align:center;font-weight:700;line-height:1.15;max-height:26px;overflow:hidden}
-    .card .fl{font-size:8.5px;color:#7a7a88;text-align:center;letter-spacing:.03em;text-transform:uppercase}
-    .raw{width:34px;height:24px;object-fit:contain;opacity:.85}
-    .raw.none{display:grid;place-items:center;color:#3a3a44;width:34px;height:24px;font-size:14px}
-  </style></head><body>
-  <h2>Logo wall — live render</h2>
-  <div class="sub">Every tile is the <b>exact</b> production render — the same LogoTile component as the store list &amp; admin. Big = 2× detail · small = store-list size · faint = the raw asset.</div>
-  <div class="sub">Canonical QA URL: <span class="url">checkitforme.com/logo-wall</span></div>
-  <div id="counts" class="sub"></div>
-  <h3 id="liveh"></h3><div id="wall" class="grid"></div>
-  <div id="orphwrap" style="display:none"><h3 id="orphh"></h3>
-    <div class="sub">Asset files no chain name resolves to — request a slug/name fix from Data Dev.</div>
-    <div id="orph" class="grid"></div></div>
-  <div id="mutewrap" style="display:none"><h3 id="muteh"></h3>
-    <div class="sub">Muted chains (hidden from consumers) — shown for completeness.</div>
-    <div id="mute" class="grid"></div></div>
-  <script>
-    var D = ${payload};
-    function esc(s){return String(s==null?'':s).replace(/[&\\u003c>"]/g,function(c){return {'&':'&amp;','\\u003c':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-    function flags(o){var f=[]; if(o.wordmark){f.push('text');} else {f.push('mark'); if(o.wide)f.push('wide'); if(o.dark)f.push('dark');} if(!o.url)f.push('no asset'); return f.join(' · ');}
-    function card(o){
-      var d=document.createElement('div'); d.className='card';
-      var raw=o.url?'\\u003cimg class="raw" src="'+esc(o.url)+'">':'\\u003cspan class="raw none">—\\u003c/span>';
-      d.innerHTML='\\u003cdiv>'+LogoTile.tile(o,72)+'\\u003c/div>'+
-        '\\u003cdiv class="row">'+LogoTile.tile(o,36)+raw+'\\u003c/div>'+
-        '\\u003cdiv class="nm">'+esc(o.name)+'\\u003c/div>'+
-        '\\u003cdiv class="fl">'+flags(o)+'\\u003c/div>';
-      return d;
-    }
-    function ocard(o){
-      var d=document.createElement('div'); d.className='card';
-      d.innerHTML='\\u003cimg class="raw" style="width:64px;height:46px" src="'+esc(o.url)+'">'+
-        '\\u003cdiv class="nm">'+esc(o.file)+'\\u003c/div>';
-      return d;
-    }
-    var wall=document.getElementById('wall'); D.live.forEach(function(o){wall.appendChild(card(o));});
-    document.getElementById('liveh').textContent='Production chains · '+D.live.length;
-    var marks=D.live.filter(function(o){return !o.wordmark;}).length;
-    document.getElementById('counts').textContent=marks+' mark images · '+(D.live.length-marks)+' text wordmarks · '+D.orphans.length+' unmapped assets';
-    if(D.orphans.length){document.getElementById('orphwrap').style.display='';document.getElementById('orphh').textContent='Unmapped assets · '+D.orphans.length;var ow=document.getElementById('orph');D.orphans.forEach(function(o){ow.appendChild(ocard(o));});}
-    if(D.muted.length){document.getElementById('mutewrap').style.display='';document.getElementById('muteh').textContent='Muted chains · '+D.muted.length;var mw=document.getElementById('mute');D.muted.forEach(function(o){mw.appendChild(card(o));});}
-  </script></body></html>`);
+// Owner preview: every chain logo rendered EXACTLY as the store list renders it (same tile,
+// plate + wide handling from _meta.json) at real size and 2x — judge phone clarity without
+// driving anywhere. (No auth needed; it leaks nothing but public logos.)
+app.get("/logo-wall", (c) => {
+  const files = [...chainLogoFiles()].sort();
+  const meta = logoMeta();
+  const tile = (f: string) => {
+    const m = meta[f] || { w: 0, d: 0 };
+    const plate = m.d === 1 ? "background:#f2f2f5;border-color:rgba(255,255,255,.28)" : "";
+    const big = m.w === 1 ? "width:60px;height:auto;max-height:34px" : "max-width:52px;max-height:40px";
+    const real = m.w === 1 ? "width:32px;height:auto;max-height:20px" : "width:24px;height:24px";
+    return `<div style="width:88px"><div style="width:72px;height:72px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);display:grid;place-items:center;margin:0 auto;${plate}"><img src="/logos/chains/${f}?v=8" style="object-fit:contain;${big}"></div>
+    <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,.06);display:grid;place-items:center;margin:7px auto 0;${plate}"><img src="/logos/chains/${f}?v=8" style="object-fit:contain;${real}"></div>
+    <div style="font-size:9px;color:#8a8a98;text-align:center;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.replace(/\.(png|webp|svg)$/i, "")}</div></div>`;
+  };
+  return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="background:#0C0C12;font-family:-apple-system,sans-serif;color:#fff;padding:20px">
+  <h2 style="font-weight:900;margin:0 0 4px">Logo wall · ${files.length} marks</h2>
+  <div style="color:#9a9aac;font-size:12px;margin-bottom:16px">Top = detail (2x) · bottom = exact store-list size. Dark ink lifted to grey; plates only where _meta says dark.</div>
+  <div style="display:flex;flex-wrap:wrap;gap:12px">${files.map(tile).join("")}</div></body>`);
 });
 // Owner preview: "the check" — a SOLID gradient disc with a white check CENTERED inside it, tip
 // reaching the top-right edge (never past it), exactly like the reference. 4 to choose:
@@ -728,7 +652,7 @@ app.get("/pub/stores", async (c) => {
     .filter((r) => r.phone && r.active !== false)
     .filter((r) => !(r.chainId && mutedChains.has(r.chainId)))
     .map((r) => ({ id: r.id, name: r.name, location: r.location, storeType: (r.chainId && types.get(r.chainId)) || "Other",
-      ...((l)=>({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoWordmark: l.wordmark }))(chainLogoInfo((r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0])),
+      ...((l)=>({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo((r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0])),
       carries: (r.carries ?? "").split(",").map((s) => s.trim()).filter(Boolean),
       lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
       sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true })));
@@ -785,7 +709,7 @@ app.get("/pub/stores/near", async (c) => {
       const miles = hasLoc && r.lat != null && r.lng != null ? Math.round(haversineMi(lat, lng, r.lat, r.lng) * 10) / 10 : null;
       const chainName = (r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0];
       return { id: r.id, name: r.name, location: r.location, address: r.address || null, storeType: (r.chainId && types.get(r.chainId)) || "Other",
-        ...((l) => ({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, logoWordmark: l.wordmark }))(chainLogoInfo(chainName)),
+        ...((l) => ({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo(chainName)),
         carries: (r.carries ?? "").split(",").map((s) => s.trim()).filter(Boolean),
         lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
         sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
