@@ -89,6 +89,15 @@
   .stat .n{font-size:24px;font-weight:800;line-height:1.1;letter-spacing:-.5px}
   .stat .l{font-size:12px;color:var(--muted);letter-spacing:0;line-height:1.3;margin-top:4px;font-weight:500;text-transform:none}
   .stat.green .n{color:var(--green)}
+  /* God-view "Today" hero: the day's vitals, above the fold */
+  .hero{background:linear-gradient(180deg,rgba(74,222,128,.06),rgba(74,222,128,0));border:1px solid rgba(74,222,128,.18);border-radius:18px;padding:16px 20px 18px;margin-bottom:16px}
+  .hero-eyebrow{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--green);margin-bottom:14px}
+  .hero .stats{margin-bottom:0}
+  .hero .stat{background:transparent;border:none;padding:0;min-width:88px}
+  .hero .stat .n{font-size:30px;letter-spacing:-.8px}
+  .hero .stat .l{font-size:12px;margin-top:3px}
+  details.card>summary{list-style:none;outline:none}
+  details.card>summary::-webkit-details-marker{display:none}
   .chip-sm{display:inline-block;font-size:10px;color:var(--purple);background:rgba(167,139,250,.12);padding:2px 7px;border-radius:7px;margin:2px 4px 0 0}
   .tag-verified{font-size:10px;color:var(--green);background:rgba(74,222,128,.12);padding:2px 7px;border-radius:7px}
   .tag-unverified{font-size:10px;color:var(--orange);background:rgba(232,154,74,.12);padding:2px 7px;border-radius:7px}
@@ -256,9 +265,12 @@
 <div class="subnav2" id="subnav2"></div>
 <main>
 
-  <!-- GOD VIEW: one screen of everything moving right now -->
+  <!-- GOD VIEW: the day's command center — vitals above the fold, business folded in -->
   <section id="dash" class="active">
-    <div class="stats" id="d_stats"></div>
+    <div class="hero">
+      <div class="hero-eyebrow">Today</div>
+      <div class="stats" id="d_today"></div>
+    </div>
     <div class="card" id="d_live_card" style="border-color:rgba(74,222,128,.3)">
       <div class="row" style="justify-content:space-between;align-items:baseline">
         <div class="name">🔴 Live right now</div>
@@ -267,27 +279,34 @@
       <div id="d_live" class="meta" style="margin-top:8px">Loading…</div>
     </div>
     <div class="card" id="d_money_card">
-      <div class="name" style="margin-bottom:8px">💰 Money &amp; cost</div>
+      <div class="name" style="margin-bottom:12px">Business &amp; money</div>
       <div class="stats" id="d_money" style="margin-bottom:0"></div>
     </div>
-    <div class="card" id="d_timing_card">
-      <div class="name" style="margin-bottom:4px">Call time &amp; cost</div>
-      <div class="meta" style="margin-bottom:8px">Time-to-human (phone-tree nav) vs. talk — ElevenLabs bills the whole connected call, so nav + hold is real cost.</div>
-      <div class="stats" id="d_timing" style="margin-bottom:6px"></div>
-      <details><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details>
-    </div>
-    <div class="card" style="border-color:rgba(251,191,36,.3)">
+    <div class="card" id="credit_card">
       <div class="row" style="justify-content:space-between;align-items:baseline">
-        <div class="name">✂️ Bail library <span class="meta" style="font-weight:400">— proactive call cutoffs (cost control)</span></div>
-        <span id="bail_state" class="status s-gray">…</span>
+        <div class="name">💳 ElevenLabs credits</div>
+        <div class="meta" id="credit_src"></div>
       </div>
-      <div class="meta" style="margin:8px 0 10px">Rules that cut a call once it stops being worth money. Master switch stays OFF until bench-tested — nothing changes live calls yet.</div>
-      <div id="bail_body" class="meta">Loading…</div>
+      <div id="credit_body" class="meta" style="margin-top:8px">Loading…</div>
+      <div style="height:10px;background:var(--terminal);border-radius:6px;overflow:hidden;margin-top:10px">
+        <div id="credit_bar" style="height:100%;width:0%;background:var(--green);transition:width .3s"></div>
+      </div>
+      <div id="credit_stats" class="meta" style="margin-top:10px;line-height:1.7"></div>
+      <div id="credit_limit_wrap" style="display:none;margin-top:12px">
+        <div class="meta" style="color:#FBBF24;margin-bottom:8px">⚠️ This is an <b>estimate</b>: "used" = the last 31 days of usage (it includes calls from before any upgrade), so the % can look off. For a true, auto-updating balance, enable <b>user_read</b> on this API key in ElevenLabs → API Keys, and this widget will read your real balance with no manual entry.</div>
+        <label>Plan size (credits/month) <span style="color:var(--muted)">— enter your plan's monthly credits (Creator ≈ 100,000). Used only until user_read is on.</span></label>
+        <div class="row" style="gap:8px">
+          <input id="credit_limit" type="number" placeholder="100000" style="flex:1">
+          <button class="ghost" onclick="saveCreditLimit()">Save</button>
+        </div>
+      </div>
     </div>
-    <div class="card">
-      <div class="name" style="margin-bottom:4px">📞 Recent calls</div>
-      <div id="d_recent" class="meta">Loading…</div>
-    </div>
+    <details class="card" id="d_timing_card">
+      <summary style="cursor:pointer"><span class="name">Call time &amp; cost</span> <span class="meta">— nav vs. talk seconds</span></summary>
+      <div class="meta" style="margin:10px 0 8px">Time-to-human (phone-tree nav) vs. talk — ElevenLabs bills the whole connected call, so nav + hold is real cost.</div>
+      <div class="stats" id="d_timing" style="margin-bottom:6px"></div>
+      <details style="margin-top:6px"><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details>
+    </details>
   </section>
 
   <section id="retailers">
@@ -366,7 +385,12 @@
       <option value="outcome">Outcome — in stock first</option>
       <option value="category">Category A–Z</option>
     </select></div>
-    <div id="resultList"><div class="empty">Loading…</div></div></section>
+    <div id="resultList"><div class="empty">Loading…</div></div>
+    <details class="card" id="bail_card" style="border-color:rgba(251,191,36,.3);margin-top:16px">
+      <summary style="cursor:pointer"><span class="name">✂️ Bail library <span class="meta" style="font-weight:400">— master call cutoffs (cost control)</span></span> <span id="bail_state" class="status s-gray" style="margin-left:6px">…</span></summary>
+      <div class="meta" style="margin:10px 0 10px">Rules that cut a call once it stops being worth money. Master switch stays OFF until bench-tested — nothing changes live calls yet.</div>
+      <div id="bail_body" class="meta">Loading…</div>
+    </details></section>
 
   <section id="schedules">
     <h2>Schedules</h2>
@@ -713,38 +737,6 @@
     </div>
   </section>
 
-  <section id="business">
-    <h2>Business</h2>
-
-    <div class="card" id="biz_card" style="border-color:rgba(74,222,128,.3)">
-      <div class="row" style="justify-content:space-between;align-items:baseline">
-        <div class="name">💰 Business — live margins</div>
-        <div class="meta" id="biz_sub">loading…</div>
-      </div>
-      <div class="stats" id="biz_stats" style="margin-top:12px"></div>
-    </div>
-
-    <div class="card" id="credit_card">
-      <div class="row" style="justify-content:space-between;align-items:baseline">
-        <div class="name">💳 ElevenLabs credits</div>
-        <div class="meta" id="credit_src"></div>
-      </div>
-      <div id="credit_body" class="meta" style="margin-top:8px">Loading…</div>
-      <div style="height:10px;background:var(--terminal);border-radius:6px;overflow:hidden;margin-top:10px">
-        <div id="credit_bar" style="height:100%;width:0%;background:var(--green);transition:width .3s"></div>
-      </div>
-      <div id="credit_stats" class="meta" style="margin-top:10px;line-height:1.7"></div>
-      <div id="credit_limit_wrap" style="display:none;margin-top:12px">
-        <div class="meta" style="color:#FBBF24;margin-bottom:8px">⚠️ This is an <b>estimate</b>: "used" = the last 31 days of usage (it includes calls from before any upgrade), so the % can look off. For a true, auto-updating balance, enable <b>user_read</b> on this API key in ElevenLabs → API Keys, and this widget will read your real balance with no manual entry.</div>
-        <label>Plan size (credits/month) <span style="color:var(--muted)">— enter your plan's monthly credits (Creator ≈ 100,000). Used only until user_read is on.</span></label>
-        <div class="row" style="gap:8px">
-          <input id="credit_limit" type="number" placeholder="100000" style="flex:1">
-          <button class="ghost" onclick="saveCreditLimit()">Save</button>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <section id="labs">
     <h2>Labs — experimental</h2>
     <div class="meta" style="margin:-6px 0 14px">Store testing &amp; voice tuning moved to <b>Playbook → Test Bench</b>. Labs is the playground.</div>
@@ -851,7 +843,7 @@ let CATEGORIES = [];
 
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
-  pulse:    {label:'Pulse',    ico:'bolt',  tabs:[['dash','God view','bolt'],['growth','Growth','rise'],['business','Business','money'],['receipts','Receipts','tag']]},
+  pulse:    {label:'Pulse',    ico:'bolt',  tabs:[['dash','God view','bolt'],['growth','Growth','rise'],['receipts','Receipts','tag']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Stores','store'],['map','Map','map'],['zones','Zones','target'],['trees','Phone trees & mute','tree'],['treelab','Tree Lab','tree'],['trainer','Tree Trainer','phone']]},
   calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Labs','flask'],['bench','Test bench','sliders'],['statuses','Statuses','tag']]},
@@ -1036,14 +1028,15 @@ async function loadCallTiming(){
 async function loadDash(){
   loadCallTiming();
   const [o,m]=await Promise.all([api('/api/admin/overview'),api('/api/admin/metrics')]);
+  const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   if(o&&!o.error){
     CHAIN_STATS=o.chainStats||[]; renderChainList();
-    const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
-    document.getElementById('d_stats').innerHTML=
+    // Today hero — the day's vital signs (above the fold)
+    document.getElementById('d_today').innerHTML=
+      st(o.today.calls,'checks 24h')+
+      st(o.today.confirms,'confirmed','green')+
       st(o.live.length,'live now',o.live.length?'green':'')+
-      st(o.today.calls,'calls 24h')+st(o.today.confirms,'confirms 24h','green')+
-      st(secsFmt(o.today.avgCallSeconds||o.avgCallSeconds30d),'avg call')+
-      st((o.today.minutes||0)+'m','minutes 24h')+st(o.week.calls,'calls 7d');
+      st(secsFmt(o.today.avgCallSeconds||o.avgCallSeconds30d),'avg call');
     document.getElementById('d_live_n').textContent=o.live.length?o.live.length+' active':'';
     document.getElementById('d_live').innerHTML=o.live.length?o.live.map(c=>
       `<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px solid var(--border)">
@@ -1051,27 +1044,20 @@ async function loadDash(){
         <b style="color:#fff">${esch(c.store)}</b><span class="pill">${esch(c.category)}</span>
         <span style="margin-left:auto;font-family:ui-monospace,monospace">${secsFmt(c.secs)}</span></div>`).join('')
       :'No calls in flight.';
-    // One restrained palette on God view: green = confirmed, red = not-in, neutral = everything else.
-    const tone=r=>r.confirmed===true?'s-green':r.confirmed===false?'s-red':'s-gray';
-    const tmark=r=>r.confirmed===true?vmark('✅','in',18):r.confirmed===false?vmark('❌','out',18):'';
-    const lbl=r=>r.confirmed===true?'in':r.confirmed===false?'not in':(r.status==='completed'?'no answer':esch(r.status));
-    document.getElementById('d_recent').innerHTML=(o.recentCalls||[]).map(r=>
-      `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border)">
-        <div style="flex:1;min-width:0"><b style="color:#ededf2">${esch(r.store)}</b> <span class="meta">· ${esch(r.category)} · ${new Date(r.at*1000).toLocaleTimeString()}${r.secs?(' · '+secsFmt(r.secs)):''}</span></div>
-        <span class="status ${tone(r)}" style="display:inline-flex;align-items:center;gap:5px">${tmark(r)}${lbl(r)}</span></div>`).join('')||'No calls yet.';
   }
   if(m&&!m.error){
     const $$=v=>'$'+((v||0)/100).toFixed(2);
-    const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+    // Business folded into the God view: revenue → margin → MRR/cost → audience
     document.getElementById('d_money').innerHTML=
-      st($$(m.revenueCents),'revenue')+st($$(m.mrrCents)+'/mo','MRR')+st($$(m.cogs.totalCents),'COGS')+
+      st($$(m.revenueCents),'revenue')+
       st($$(m.profitCents),m.profitCents>=0?'profit':'loss',m.profitCents>=0?'green':'')+
+      st(m.marginPct!=null?Math.round(m.marginPct)+'%':'—','margin',(m.marginPct||0)>=0?'green':'')+
+      st($$(m.mrrCents)+'/mo','MRR')+
+      st($$(m.cogs?.totalCents),'COGS')+
+      st(m.callsMade!=null?m.callsMade:'—','paid calls')+
       st(m.users,'users')+st(m.subscribers,'members');
   }
-  loadBail();
 }
-async function dashIngest(){ const el=document.getElementById('d_act_msg'); el.textContent='Ingesting…'; const r=await api('/api/ingest',{method:'POST'}); el.textContent=(r&&!r.error)?('✓ '+(r.finalized||0)+' call(s) finalized'):'Failed'; }
-async function dashTick(){ const el=document.getElementById('d_act_msg'); el.textContent='Running scheduler…'; const r=await api('/api/tick',{method:'POST'}); el.textContent=(r&&!r.error)?('✓ '+(r.fired||0)+' schedule(s) fired'):'Failed'; }
 
 // ---- Bail library: per-rule toggles saved to policy.bail (enforcement stays staged) ----
 let BAIL=null;
@@ -1983,19 +1969,6 @@ function loadStats(rs){
 }
 // --- ElevenLabs credits ---
 const fmtN = (n) => (n==null) ? '—' : Number(n).toLocaleString();
-async function loadBiz(){
-  const m=await api('/api/admin/metrics'); if(!m||m.error) return;
-  const $$=v=>'$'+(v/100).toFixed(2);
-  document.getElementById('biz_sub').textContent=m.users+' users · '+m.subscribers+' subs';
-  const stat=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
-  document.getElementById('biz_stats').innerHTML=
-    stat($$(m.revenueCents),'Revenue')+
-    stat($$(m.mrrCents)+'/mo','MRR')+
-    stat($$(m.cogs.totalCents),'COGS')+
-    stat($$(m.profitCents), m.profitCents>=0?'Profit':'Loss', m.profitCents>=0?'green':'')+
-    stat(m.marginPct+'%','Margin', m.marginPct>=0?'green':'')+
-    stat(m.callsMade,'Paid calls');
-}
 async function loadCredits(){
   const c = await api('/api/credits'); if(!c || c.error) return;
   document.getElementById('credit_src').textContent = c.source==='live' ? 'live balance' : 'estimated · last 31d';
@@ -2425,7 +2398,7 @@ async function agentSend(){
     const sec=SECTION_GROUP[want]?want:'dash';
     showGroup(SECTION_GROUP[sec], sec); })();
   await Promise.all([loadCatalog(),loadLogos()]);
-  await Promise.all([loadStoreIntel(),loadResults(),loadSchedules(),loadZones(),loadSettings(),loadLiveStrip(),loadCredits(),loadPresets(),loadBiz(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen()]);
+  await Promise.all([loadStoreIntel(),loadResults(),loadSchedules(),loadZones(),loadSettings(),loadLiveStrip(),loadCredits(),loadPresets(),loadBail(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen()]);
   const sp=new URLSearchParams(location.search);
   restorePersist();
   decorateChrome();
