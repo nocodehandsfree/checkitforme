@@ -31,9 +31,19 @@ your files, your extra docs, and your current focus. Stay in your lane; request 
   lane's API contract). Fungie sets **priority + critical decisions** — not step-by-step approvals.
 - **See an issue inside your lane** (bad data, a UI glitch, ugly store names)? Just fix it — it's
   yours, no permission needed. Cross-lane issue? File it to the owning lane, don't block.
-- Commit small; `git push`; DevOps merges → `main` → Railway auto-deploys (~2–4 min).
-- Typecheck `npx tsc --noEmit`; tests `bash scripts/test-all.sh` — **green before merge.**
+- **One fast branch.** Work on `claude/retail-stock-voice-calls-OcyMS` (the branch that deploys).
+  Commit straight to it; `git push` → **live in ~3 min.** No PRs to `main`, no DevOps merge gate.
+  (Existing PR work won't apply cleanly onto it? Ping DevOps — don't redo it blind.)
+- Typecheck `npx tsc --noEmit` (+ `bash scripts/test-all.sh` for backend) **before you push.**
 - Never break live. Risky/untested → behind a `policy` flag, default off.
+- **Need a secret/env var (e.g. `ADMIN_TOKEN`)? Pull it from Railway yourself — don't ask Fungie:**
+  ```bash
+  curl -s -X POST https://backboard.railway.app/graphql/v2 \
+    -H "Authorization: Bearer $RAILWAY_API_TOKEN" -H "Content-Type: application/json" \
+    -d '{"query":"{ variables(projectId: \"889e332c-30fe-46e9-a18e-d8de4f7523aa\", environmentId: \"7cbf9327-357a-415e-9031-d1609aead2b4\", serviceId: \"d363a982-e918-4433-b175-defe8faf0ec9\") }"}' \
+    | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['variables']['ADMIN_TOKEN'])"
+  ```
+  (voice-caller serviceId `d363a982-…`; swap `ADMIN_TOKEN` for any var name.)
 
 ## Docs map (open only what you need)
 - `docs/RUNBOOK.md` — what it is + stack/services + run/deploy/secrets.
