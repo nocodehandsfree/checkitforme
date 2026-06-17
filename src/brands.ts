@@ -157,6 +157,15 @@ export function resolveBrand(host: string, override?: string): Brand {
 
 export function allBrandKeys(): string[] { return BRANDS.map((b) => b.key); }
 
+/** Resolve a brand from a URL PATH segment (e.g. "/pokemon" → poke), for single-domain path routing
+ *  (checkitforme.com/pokemon instead of pokemon.checkitforme.com). Returns null for non-brand paths. */
+export function brandForPath(slug: string): Brand | null {
+  const k = (slug || "").toLowerCase();
+  const canonical = ALIASES[k] || k;
+  const b = BRANDS.find((x) => x.key === canonical || x.slug === k);
+  return b && b.key !== "runner" ? b : null;
+}
+
 /** Verticals for the top-of-page product switcher (the default "all" site isn't a vertical). */
 export function brandSwitcher(): Array<{ key: string; slug: string; label: string; emoji: string; logoUrl: string; tag?: string }> {
   // tag: when the logo already spells the brand, show the logo + just the missing qualifier

@@ -1,9 +1,17 @@
 // Runnr billing: per-user accounts, credits, Stripe Checkout (packs + subscription), webhooks.
 // Uses the Stripe REST API directly (no SDK) and Drizzle for the accounts table.
-import { eq } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import { db } from "./db/client";
 import { accounts } from "./db/schema";
 import { getPolicy } from "./policy";
+
+/** Constant-time string compare (length-checked) — avoids timing side-channels on HMAC checks. */
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
 
 // ---- Pricing catalog (one-time credit packs + the $4.99 subscription) ----
 export const SUB = { cents: 499, credits: 20, label: "Fungibles Membership" };
@@ -33,10 +41,24 @@ export function isComp(email?: string | null): boolean {
   return list.includes(e);
 }
 
+/** Comp by PHONE (COMP_PHONES, E.164) — so a phone-first master/owner account is comp even with no email. */
+export function isCompPhone(phone?: string | null): boolean {
+  const list = (process.env.COMP_PHONES || "").toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
+  return !!phone && list.includes(phone.toLowerCase());
+}
+/** True if this account is comp by EITHER its email or its verified phone (the phone-first path). */
+export function isCompAccount(a?: { email?: string | null; phone?: string | null } | null): boolean {
+  return !!a && (isComp(a.email) || isCompPhone(a.phone));
+}
+
 export async function getAccount(userId: string, email?: string) {
   let row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, userId)))[0];
   if (!row) {
-    await db.insert(accounts).values({ clerkUserId: userId, email: email ?? null }).onConflictDoNothing();
+    // Phone-first model: free checks land on the ACCOUNT at signup (replaces the anonymous pool).
+    // Flag-gated so the live anonymous flow is unchanged until we flip the whole model on.
+    const pol = await getPolicy();
+    const free = pol.flags.requirePhoneSignup ? Math.max(0, pol.pricing.freeChecks || 0) : 0;
+    await db.insert(accounts).values({ clerkUserId: userId, email: email ?? null, credits: free }).onConflictDoNothing();
     row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, userId)))[0];
   } else if (email && !row.email) {
     await db.update(accounts).set({ email }).where(eq(accounts.clerkUserId, userId));
@@ -51,21 +73,6 @@ export async function getAccount(userId: string, email?: string) {
   return row;
 }
 
-export async function chargeOneCredit(userId: string): Promise<boolean> {
-  const a = await getAccount(userId);
-  if (!a || a.credits <= 0) return false;
-  await db.update(accounts).set({ credits: a.credits - 1, callsMade: a.callsMade + 1 }).where(eq(accounts.clerkUserId, userId));
-  return true;
-}
-
-export async function grantCredits(userId: string, n: number, spentCents = 0) {
-  const a = await getAccount(userId);
-  if (!a) return;
-  await db.update(accounts)
-    .set({ credits: a.credits + n, totalSpentCents: a.totalSpentCents + spentCents })
-    .where(eq(accounts.clerkUserId, userId));
-}
-
 /** Find or create the account for a phone-first user (keyed by `phone:<E.164>`), granting the
  *  signup free checks on creation. The phone IS the identity in the new (Clerk-free) model. */
 export async function getAccountByPhone(phone: string) {
@@ -75,7 +82,9 @@ export async function getAccountByPhone(phone: string) {
   let row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
   if (!row) {
     const free = Math.max(0, (await getPolicy()).pricing.freeChecks || 0);
-    await db.insert(accounts).values({ clerkUserId: id, phone, callerId: phone, email: ownerEmail, credits: free }).onConflictDoNothing();
+    // NOTE: do NOT set caller_id here — a number is only usable as a From after Twilio's caller-ID
+    // verification call (/auth/callerid). caller_id stays null until then; calls fall back to the house line.
+    await db.insert(accounts).values({ clerkUserId: id, phone, email: ownerEmail, credits: free }).onConflictDoNothing();
     row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
   } else if (ownerEmail && row.email !== ownerEmail) {
     // Backfill the master tie on a phone account that predates this mapping.
@@ -83,6 +92,24 @@ export async function getAccountByPhone(phone: string) {
     row = { ...row, email: ownerEmail };
   }
   return row;
+}
+
+export async function chargeOneCredit(userId: string): Promise<boolean> {
+  // Atomic guarded decrement: the WHERE credits>0 makes concurrent charges race-safe (no
+  // read-then-write window, can never go negative). rowsAffected===1 ⇒ we actually charged.
+  await getAccount(userId); // ensure the account row exists first
+  const res = await db.update(accounts)
+    .set({ credits: sql`${accounts.credits} - 1`, callsMade: sql`${accounts.callsMade} + 1` })
+    .where(and(eq(accounts.clerkUserId, userId), gt(accounts.credits, 0)));
+  return (res.rowsAffected ?? 0) > 0;
+}
+
+export async function grantCredits(userId: string, n: number, spentCents = 0) {
+  const a = await getAccount(userId);
+  if (!a) return;
+  await db.update(accounts)
+    .set({ credits: a.credits + n, totalSpentCents: a.totalSpentCents + spentCents })
+    .where(eq(accounts.clerkUserId, userId));
 }
 
 async function setSubscription(userId: string, active: boolean, customerId?: string) {
@@ -144,7 +171,7 @@ export async function verifyStripeSig(payload: string, header: string | null): P
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${t}.${payload}`));
   const actual = [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  return actual === v1;
+  return safeEqual(actual, v1);
 }
 
 interface StripeEvent { type: string; data?: { object?: Record<string, unknown> } }

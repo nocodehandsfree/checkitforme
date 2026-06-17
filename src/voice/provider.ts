@@ -35,6 +35,9 @@ export interface StartCallParams {
   personalityTone?: string;
   /** Greeting line the agent uses once the other person speaks (wait-then-greet). */
   openingLine?: string;
+  /** Kiosk-only store (vending machine, no staffed counter): the agent asks if the kiosk is
+   *  working/stocked instead of asking about a shelf shipment. Exposed to the prompt as `kiosk_mode`. */
+  kioskMode?: boolean;
 }
 
 export interface StartCallResult {

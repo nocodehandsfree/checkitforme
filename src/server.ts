@@ -15,12 +15,13 @@ import {
   callResults, categories, chains, communityPosts, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, waitlist, watches, zones, zoneRetailers,
 } from "./db/schema";
 import { config } from "./config";
+import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, benchTestCall, buildRestockVars, callZone, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, retailersWithStatus, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, retailersWithStatus, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
 import { openState } from "./store-hours";
-import { resolveBrand, brandSwitcher } from "./brands";
+import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { getPolicy, setPolicy, publicPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
@@ -51,11 +52,14 @@ async function isFinderPrivate(acct: { subscription?: string | null } | null | u
   const pol = await getPolicy();
   return !!(acct && acct.subscription === "active" && pol.finds.subscriberPrivateAlways);
 }
-import { getAccount, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, grantCredits, getAccountByPhone, SUB, PACKS } from "./billing";
+import { getAccount, getAccountByPhone, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, SUB, PACKS } from "./billing";
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
+import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf } from "./voice/bridge";
+import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
+assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
 await bootstrap(); // apply migrations + seed catalog if empty
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -153,6 +157,24 @@ async function clerkPrimaryEmail(id: string): Promise<string | undefined> {
     return e;
   } catch { return undefined; }
 }
+// Phone-first identity: the verified primary phone straight from Clerk (server-side, can't be
+// spoofed by the client). Becomes the account's number + the default caller ID. Cached 5 min.
+const clerkPhoneCache = new Map<string, { t: number; p: string }>();
+async function clerkPrimaryPhone(id: string): Promise<string | undefined> {
+  const hit = clerkPhoneCache.get(id);
+  if (hit && Date.now() - hit.t < 300_000) return hit.p || undefined;
+  const sk = process.env.CLERK_SECRET_KEY;
+  if (!sk || !id) return undefined;
+  try {
+    const r = await fetch(`https://api.clerk.com/v1/users/${id}`, { headers: { Authorization: `Bearer ${sk}` } });
+    if (!r.ok) return undefined;
+    const d = (await r.json()) as { primary_phone_number_id?: string; phone_numbers?: { id: string; phone_number: string }[] };
+    const list = d.phone_numbers || [];
+    const p = (list.find((x) => x.id === d.primary_phone_number_id) || list[0])?.phone_number;
+    if (p) clerkPhoneCache.set(id, { t: Date.now(), p });
+    return p;
+  } catch { return undefined; }
+}
 
 // ---- Pages ----
 // Operator dashboard at caller.* ; consumer "pay-per-check" app at runner.* (or /r preview).
@@ -169,7 +191,7 @@ function clerkFrontendApi(pk: string): string {
     return Buffer.from(b64, "base64").toString("utf8").replace(/\$$/, "");
   } catch { return "summary-hen-61.clerk.accounts.dev"; }
 }
-const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /** FAQ + HowTo structured data per vertical — Google rich-result eligibility for the PPC/SEO push. */
 function seoGraph(brand: ReturnType<typeof resolveBrand>, plainName: string) {
@@ -417,7 +439,7 @@ app.post("/nav/ended", (c) => { navEnded(c.req.query("session") || ""); return c
 // ---- Health ----
 app.get("/api/health", (c) => c.json({ ok: true }));
 
-// ---- Phone-first auth (Clerk-free): SMS code → our session token → caller-ID verify call ----
+// ---- Phone-first auth (Clerk-free): SMS code → our session → caller-ID verify call ----
 // Step 1: send an SMS code to the cell (browser auto-fills it). Rate-limited (SMS costs money).
 app.post("/auth/phone/start", async (c) => {
   const rl = rlCheck("lead", clientIp(c.req.raw.headers), LIMITS.lead);
@@ -460,6 +482,33 @@ app.get("/auth/callerid/status", async (c) => {
   const verified = await isCallerIdVerified(u.phone);
   if (verified) await db.update(accounts).set({ callerId: u.phone }).where(eq(accounts.clerkUserId, u.id));
   return c.json({ verified });
+});
+// Set/clear the optional email for alerts + newsletter (Brevo). Collected in the You section only.
+app.post("/app/email", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const { email } = await c.req.json().catch(() => ({}));
+  const e = String(email || "").trim().toLowerCase();
+  if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return c.json({ error: "invalid_email" }, 400);
+  await getAccount(u.id);
+  await db.update(accounts).set({ email: e || null }).where(eq(accounts.clerkUserId, u.id));
+  // Opt-in email → Brevo (newsletter/alerts). Fire-and-forget so the UI isn't blocked on Brevo.
+  if (e) brevoUpsertContact(e, { PHONE: u.phone || "" }).catch(() => {});
+  return c.json({ ok: true, email: e || null });
+});
+
+// Clerk-free admin login: visit /admin-login?token=ADMIN_TOKEN once → sets a signed httpOnly
+// session cookie the /api/* gate accepts. No Clerk. The existing app.html then loads unchanged.
+app.get("/admin-login", async (c) => {
+  const token = c.req.query("token") || "";
+  if (!config.adminToken || token !== config.adminToken) return c.text("unauthorized", 401);
+  const jwt = await signSession("admin", "");
+  setCookie(c, "admin_session", jwt, { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
+  return c.redirect("/");
+});
+app.get("/admin-logout", (c) => {
+  setCookie(c, "admin_session", "", { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 0 });
+  return c.redirect("/");
 });
 
 // ---- Consumer (Runnr) public API — pay-per-check. Bypasses the /api/* Clerk gate by design. ----
@@ -816,6 +865,7 @@ app.get("/pub/best-bet", async (c) => {
   )).limit(1500);
   const cands = near
     .filter((r) => r.phone && r.active !== false)
+    .filter((r) => r.sellsPacks !== false) // "most likely to have it on the SHELF" — exclude kiosk-only stores (e.g. Pavilions)
     .filter((r) => openState(r.hours, r.timezone).open !== false) // open or unknown, never closed
     .filter((r) => !cat || !(r.carries) || r.carries.toLowerCase().includes(cat.toLowerCase()))
     .map((r) => {
@@ -977,8 +1027,15 @@ app.get("/pub/community/:id/image", async (c) => {
   const m = u.match(/^data:([^;]+);base64,(.*)$/s);
   if (!m) return c.notFound();
   const buf = Buffer.from(m[2], "base64");
+  // XSS guard: never serve user content as a script-capable type (e.g. image/svg+xml can carry
+  // <script>). Whitelist raster types; anything else is forced to a non-renderable download, with
+  // no-sniff + a locked-down CSP so the browser can't execute it.
+  const SAFE_IMG = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+  const ct = SAFE_IMG.has((m[1] || "").toLowerCase()) ? m[1] : "application/octet-stream";
   c.header("Cache-Control", "public, max-age=86400");
-  return c.body(buf, 200, { "Content-Type": m[1] || "image/jpeg" });
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header("Content-Security-Policy", "default-src 'none'; sandbox");
+  return c.body(buf, 200, { "Content-Type": ct });
 });
 // Hand the phone a presigned R2 URL so it uploads the photo directly (bytes never hit our server).
 app.post("/pub/community/upload-url", async (c) => {
@@ -1004,7 +1061,7 @@ app.post("/pub/community/post", async (c) => {
   // Accept: our R2 public base, our own /uploads, or a small inline data-URL image (pre-R2 fallback).
   const allowed = (process.env.R2_PUBLIC_BASE || "").replace(/\/$/, "");
   const okHost = (allowed && b.imageUrl.startsWith(allowed)) || b.imageUrl.startsWith("/uploads/")
-    || (b.imageUrl.startsWith("data:image/") && b.imageUrl.length <= 500_000);
+    || (b.imageUrl.startsWith("data:image/") && !/^data:image\/svg/i.test(b.imageUrl) && b.imageUrl.length <= 500_000);
   if (!okHost) return c.json({ error: "image must be uploaded via our upload URL" }, 400);
   const u = await verifyClerkToken(c.req.header("Authorization"));
   const [row] = await db.insert(communityPosts).values({
@@ -1113,23 +1170,26 @@ app.post("/api/hours/:id/refresh", async (c) => {
 // Anonymous FREE check (1 per device, client-tracked; bounded globally by the demo pool).
 app.post("/pub/check", async (c) => {
   const b = await c.req.json();
+  // Phone-first model: no anonymous calls — every call must come from a verified-phone account.
+  if ((await getPolicy()).flags.requirePhoneSignup) return c.json({ error: "signin_required" }, 401);
   if ((await pubCredits()) <= 0) return c.json({ error: "no_credits" }, 402);
-  const { retailerId, categoryId, specificProduct } = b;
+  const { retailerId, categoryId, specificProduct, kioskMode } = b;
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   try {
-    const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct });
+    const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, kioskMode });
     return c.json({ providerCallId: r.providerCallId, status: r.status });
   } catch (e) { return c.json({ error: String(e) }, 400); }
 });
 // Free check WITH live audio (bridged through our Twilio). Returns a room to listen on.
 app.post("/pub/check-live", async (c) => {
+  if ((await getPolicy()).flags.requirePhoneSignup) return c.json({ error: "signin_required" }, 401);
   if ((await pubCredits()) <= 0) return c.json({ error: "no_credits" }, 402);
   const b = await c.req.json();
   const catIds = (Array.isArray(b.categoryIds) ? b.categoryIds : [b.categoryId]).map(Number).filter(Boolean);
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
-  const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct);
+  const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, undefined, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: RAILWAY_HOST });
 });
@@ -1182,23 +1242,33 @@ app.get("/app/me", async (c) => {
   // Verified email (token → Clerk API), never the client-passed one, decides comp/master.
   const verifiedEmail = u.email || await clerkPrimaryEmail(u.id);
   const a = await getAccount(u.id, verifiedEmail || c.req.query("email") || undefined);
-  const comp = isComp(a?.email) || isComp(verifiedEmail);
+  const comp = isCompAccount(a) || isComp(verifiedEmail);
+  // Phone-first: capture the verified cell once and default the caller ID to it (Twilio
+  // verification before we actually dial AS it is Phase 2). Server-sourced, can't be spoofed.
+  if (a && !a.phone) {
+    const phone = await clerkPrimaryPhone(u.id);
+    if (phone) { await db.update(accounts).set({ phone }).where(eq(accounts.clerkUserId, u.id)); a.phone = phone; }
+  }
   return c.json({
     credits: comp ? 9999 : (a?.credits ?? 0), subscription: comp ? "active" : (a?.subscription ?? "none"),
-    comp, callsMade: a?.callsMade ?? 0, catalog: { sub: SUB, packs: PACKS },
+    comp, callsMade: a?.callsMade ?? 0, phone: a?.phone ?? null,
+    // caller_id is only set after Twilio's caller-ID verify call → the "create your agent" panel uses
+    // callerIdReady to know whether to prompt for it.
+    callerId: a?.callerId ?? null, callerIdReady: !!a?.callerId,
+    catalog: { sub: SUB, packs: PACKS },
   });
 });
 // Authenticated check — verifies the user has credits, places the call. Charged only on a real answer.
 app.post("/app/check", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  const { retailerId, categoryId, specificProduct } = await c.req.json();
+  const { retailerId, categoryId, specificProduct, kioskMode } = await c.req.json();
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
-  if (!isComp(a?.email) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
+  if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
   try {
-    const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a) });
+    const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a), kioskMode });
     return c.json({ providerCallId: r.providerCallId, status: r.status });
   } catch (e) { return c.json({ error: String(e) }, 400); }
 });
@@ -1211,8 +1281,8 @@ app.post("/app/check-live", async (c) => {
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
-  if (!isComp(a?.email) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
-  const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) });
+  if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
+  const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: RAILWAY_HOST });
 });
@@ -1228,7 +1298,7 @@ app.post("/app/schedule", async (c) => {
   const pol = await getPolicy();
   if (!pol.flags.scheduling) return c.json({ error: "scheduling_off" }, 403);
   const a = await getAccount(u.id, u.email);
-  if (!isComp(a?.email) && a?.subscription !== "active") return c.json({ error: "members_only" }, 402);
+  if (!isCompAccount(a) && a?.subscription !== "active") return c.json({ error: "members_only" }, 402);
   const b = await c.req.json();
   if (!b.retailerId || !b.categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
   const row = await createSchedule(u.id, { ...b, contact: b.contact || a?.email || undefined });
@@ -1293,10 +1363,10 @@ app.get("/app/history", async (c) => {
 app.post("/app/charge", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  const { cid } = await c.req.json();
+  // Charging is now SERVER-SIDE on call completion (ingestPending, atomic + idempotent). This
+  // endpoint no longer trusts the client to bill itself — it just returns the live balance.
   const a = await getAccount(u.id, u.email);
-  if (cid && !charged.has(cid) && !isComp(a?.email)) { charged.add(cid); await chargeOneCredit(u.id); }
-  return c.json({ credits: isComp(a?.email) ? 9999 : (a?.credits ?? 0) });
+  return c.json({ credits: isCompAccount(a) ? 9999 : (a?.credits ?? 0) });
 });
 // Create a Stripe Checkout session (kind = "sub" | pack key). Returns a redirect URL.
 app.post("/app/checkout", async (c) => {
@@ -1497,6 +1567,15 @@ app.patch("/api/settings", async (c) => {
 
 // ---- ElevenLabs credit status (live if the key has user_read, else estimated) ----
 app.get("/api/credits", async (c) => c.json(await getCreditStatus()));
+
+// ---- Global calling kill-switch (cost runaway protection) ----
+app.get("/api/admin/calling/status", async (c) => c.json({ paused: await isCallingPaused(), spendTodayCents: await spendTodayCents() }));
+app.post("/api/admin/calling/pause", async (c) => {
+  const { paused } = await c.req.json().catch(() => ({}));
+  await setCallingPaused(paused !== false); // default to pausing
+  return c.json({ paused: await isCallingPaused() });
+});
+app.post("/api/admin/calling/resume", async (c) => { await setCallingPaused(false); return c.json({ paused: false }); });
 
 // ---- Reference data ----
 app.get("/api/categories", async (c) => c.json(await db.select().from(categories)));
@@ -1972,15 +2051,18 @@ app.get("/api/conversation/:cid", async (c) => {
 });
 // Custom telephony bridge (milestone 1): place OUR own Twilio call; its audio streams to our WS.
 // Place a bridged Twilio call (our number -> destination) running the restock agent. Returns the room.
-async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null): Promise<{ room?: string; error?: string }> {
+async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number }): Promise<{ room?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const room = crypto.randomUUID();
-  const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331"; // our verified caller ID
+  // Dial AS the customer's verified number when we have it (phone-first model); else the house line.
+  const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const pol = await getPolicy();
   setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, connectOnHuman: pol.flags.connectOnHuman, holdMaxSeconds: pol.bail.holdMaxSeconds });
   const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${RAILWAY_HOST}/twiml/bridge?room=${room}` });
+  // Hard cost cap: Twilio kills the call at TimeLimit seconds, no exceptions — the profit guarantee.
+  if (opts?.timeLimitSec && opts.timeLimitSec > 0) body.set("TimeLimit", String(Math.floor(opts.timeLimitSec)));
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls.json`, {
     method: "POST",
     headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" },
@@ -2007,19 +2089,28 @@ app.post("/pub/bridge-hangup", async (c) => {
   return c.json({ ok: true });
 });
 // Resolve a store + category, then place a bridge call to it. Used by Runnr "Listen live".
-async function bridgeStoreCall(retailerId: number, categoryIds: number[], specificProduct?: string, finder?: { userId?: string; isPrivate?: boolean }): Promise<{ room?: string; error?: string }> {
+async function bridgeStoreCall(retailerId: number, categoryIds: number[], specificProduct?: string, finder?: { userId?: string; isPrivate?: boolean }, kioskMode?: boolean): Promise<{ room?: string; error?: string }> {
+  if (await isCallingPaused()) return { error: "calling_paused" }; // global spend kill-switch
   const primary = categoryIds[0];
   const extras = categoryIds.slice(1);
   // Resolve the SAME three-tier vars (global + chain + store phone tree, clarification, etc.) the
   // scheduled calls use — Listen-live was previously running on the bare global prompt only.
-  const v = await buildRestockVars(retailerId, primary, specificProduct, extras);
+  const v = await buildRestockVars(retailerId, primary, specificProduct, extras, kioskMode);
   if (!v || !v.retailer.phone) return { error: "store not found" };
+  // Phone-first: dial AS the finder's own VERIFIED number (caller_id) when present. Plus the hard
+  // duration cap from policy (the cost guarantee).
+  const pol = await getPolicy();
+  let from: string | undefined;
+  if (finder?.userId) {
+    const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, finder.userId)))[0];
+    if (acct?.callerId) from = acct.callerId; // only set after Twilio caller-ID verification
+  }
   // Log the call once it connects (we get the ElevenLabs conversation id): insert the PRIMARY result
   // row; ingest fans out each extra line into its own row from the per-category extraction.
   return placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
     db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false })
       .catch((e) => console.error("bridge call log insert:", e));
-  }, v.dtmf);
+  }, v.dtmf, { from, timeLimitSec: pol.bail.maxCallSeconds });
 }
 app.get("/pub/bridge/:room", (c) => c.json({ conversationId: bridgeConversationId(c.req.param("room")), wsHost: RAILWAY_HOST }));
 app.get("/pub/bridge-debug", (c) => c.json({ log: bridgeDebug() }));
@@ -2051,9 +2142,12 @@ app.post("/webhooks/elevenlabs", async (c) => {
         status: o.status, confirmed: o.confirmed, shipmentDayHeard: o.shipmentDay,
         summary: o.summary, transcript: o.transcript, completedAt: Math.floor(Date.now() / 1000),
       }).where(eq(callResults.id, o.callId));
-      if (o.shipmentDay) {
-        const row = (await db.select().from(callResults).where(eq(callResults.id, o.callId)))[0];
-        if (row) await db.update(retailers).set({ shipmentDay: o.shipmentDay }).where(eq(retailers.id, row.retailerId));
+      const row = (await db.select().from(callResults).where(eq(callResults.id, o.callId)))[0];
+      if (o.shipmentDay && row) await db.update(retailers).set({ shipmentDay: o.shipmentDay }).where(eq(retailers.id, row.retailerId));
+      // Server-side billing: charge the finder once on a definitive answer (idempotent — the poller
+      // may also try; charged_at guarantees exactly one charge across both paths).
+      if (row?.finderUserId && o.status === "completed" && (o.confirmed === true || o.confirmed === false)) {
+        await chargeCallOnce(o.callId, row.finderUserId);
       }
     }
     return c.json({ ok: true });
@@ -2122,9 +2216,12 @@ wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {
 });
 
 // Poll for finished calls every 8s; fire due schedules every 60s; geocode 1 store / 3s.
-setInterval(() => ingestPending().catch((e) => console.error("ingest:", e)), 8_000);
-setInterval(() => schedulerTick().catch((e) => console.error("tick:", e)), 60_000);
-setInterval(() => geocodeMissing(1).catch((e) => console.error("geocode:", e)), 3_000);
-setInterval(() => harvestHoursTick().catch((e) => console.error("harvest:", e)), 120_000); // self-updating hours (policy-gated, off by default)
-setInterval(() => customerScheduleTick().catch((e) => console.error("cust-sched:", e)), 90_000); // subscriber auto-checks (policy-gated)
-setInterval(() => gmailReceiptTick().catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)
+// Background tickers wrapped in single-leader locks (withLock): with >1 app instance only ONE runs
+// each tick, so scheduled calls / charges / receipts never double-fire. No Redis (single instance) =
+// runs normally. The lock TTL is a crash failsafe; withLock releases as soon as the work finishes.
+setInterval(() => withLock("ingest", 30, ingestPending).catch((e) => console.error("ingest:", e)), 8_000);
+setInterval(() => withLock("tick", 55, schedulerTick).catch((e) => console.error("tick:", e)), 60_000);
+setInterval(() => withLock("geocode", 10, () => geocodeMissing(1)).catch((e) => console.error("geocode:", e)), 3_000);
+setInterval(() => withLock("harvest", 110, harvestHoursTick).catch((e) => console.error("harvest:", e)), 120_000); // self-updating hours (policy-gated, off by default)
+setInterval(() => withLock("cust-sched", 85, customerScheduleTick).catch((e) => console.error("cust-sched:", e)), 90_000); // subscriber auto-checks (policy-gated)
+setInterval(() => withLock("gmail-receipts", 25, gmailReceiptTick).catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)

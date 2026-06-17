@@ -59,6 +59,9 @@ export class ElevenLabsProvider implements VoiceProvider {
             opening_line: p.openingLine ?? "",
             other_categories: (p.otherCategories ?? []).join(", "),
             ask_shipment_day: p.askShipmentDay ? "If it comes up naturally, also ask what day they usually get their shipments in." : "",
+            // Kiosk-only store: the prompt branches on this to ask about the vending kiosk
+            // (working/stocked) instead of a shelf shipment. "" = normal shelf check.
+            kiosk_mode: p.kioskMode ? "true" : "",
           },
         },
       }),
@@ -321,7 +324,10 @@ async function verifySignature(payload: string, header: string | null, secret?: 
   );
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${t}.${payload}`));
   const actual = [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  if (actual !== expected) throw new Error("Invalid ElevenLabs signature");
+  // Constant-time compare (length-checked) — avoids a timing side-channel on the HMAC check.
+  let diff = actual.length === expected.length ? 0 : 1;
+  for (let i = 0; i < actual.length && i < expected.length; i++) diff |= actual.charCodeAt(i) ^ expected.charCodeAt(i);
+  if (diff !== 0) throw new Error("Invalid ElevenLabs signature");
 }
 
 interface ElevenLabsConversation {

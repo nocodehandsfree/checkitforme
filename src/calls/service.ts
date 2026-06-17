@@ -4,8 +4,11 @@ import { and, desc, eq, gte, inArray, isNull, like, or } from "drizzle-orm";
 import { db } from "../db/client";
 import { openState, fetchStoreHours } from "../store-hours";
 import {
-  callResults, categories, chains, retailers, scheduleTargets, schedules, watches, zoneRetailers, zones,
+  accounts, callResults, categories, chains, retailers, scheduleTargets, schedules, watches, zoneRetailers, zones,
 } from "../db/schema";
+import { chargeOneCredit, isCompAccount } from "../billing";
+import { isCallingPaused } from "../redis";
+import { getPolicy } from "../policy";
 
 /** Notify every active restock-watch for this store+category that it's back in stock, once. */
 async function notifyWatches(retailerId: number, categoryId: number, store: string, label: string) {
@@ -42,6 +45,12 @@ function rotatePick<T>(key: string, list: T[]): T | undefined {
 const VOICEMAIL_INSTRUCTION =
   "If you reach a voicemail, answering machine, or automated recording (a recorded greeting, an automated menu with no live person, or a beep) — do NOT say anything and end the call immediately. Never leave a message.";
 
+/** Kiosk-only store: has a vending kiosk but no staffed counter that sells packs. The agent asks
+ *  whether the kiosk is working/stocked rather than about a shelf shipment. Callers may also pass an
+ *  explicit kioskMode (from the check request) which wins over this inference. */
+const kioskOnly = (r: { hasKiosk?: boolean | null; sellsPacks?: boolean | null }): boolean =>
+  !!r.hasKiosk && r.sellsPacks === false;
+
 /**
  * Resolve the full set of agent dynamic variables for a restock call to a store, applying the
  * three-tier rule system: GLOBAL (the prompt itself) → CHAIN (chains.phoneTreeDefault) → STORE
@@ -53,6 +62,7 @@ export async function buildRestockVars(
   categoryId: number,
   specificProduct?: string,
   extraCategoryIds?: number[],
+  kioskMode?: boolean,
 ): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
@@ -93,6 +103,9 @@ export async function buildRestockVars(
       // any extras they multi-picked. It never auto-cascades from the store's carries field.
       other_categories: extraLabels.join(", "),
       ask_shipment_day: "",
+      // Kiosk-only store → the prompt asks about the vending kiosk, not a shelf shipment.
+      // Explicit request flag wins; otherwise inferred from the store's flags.
+      kiosk_mode: (kioskMode ?? kioskOnly(retailer)) ? "true" : "",
     },
   };
 }
@@ -149,10 +162,25 @@ interface TriggerArgs {
   openingTemplate?: string; // Test Bench: use the DRAFT opener instead of the live vt_opening setting
   finderUserId?: string;    // clerk id of whoever placed it (for finds privacy/headstart attribution)
   isPrivate?: boolean;      // keep this find out of the public feed (subscriber perk / paid privacy)
+  kioskMode?: boolean;      // kiosk-only store → agent asks about the vending kiosk, not a shelf shipment (else inferred from the store)
+}
+
+/** Most recent COMPLETED check by this finder for a store+category within `withinHours` (default 24h).
+ *  Powers one-check-per-store-per-day dedup. */
+export async function findRecentCheck(finderUserId: string, retailerId: number, categoryId: number, withinHours = 24) {
+  const since = Math.floor(Date.now() / 1000) - withinHours * 3600;
+  return (await db.select().from(callResults).where(and(
+    eq(callResults.finderUserId, finderUserId),
+    eq(callResults.retailerId, retailerId),
+    eq(callResults.categoryId, categoryId),
+    eq(callResults.status, "completed"),
+    gte(callResults.startedAt, since),
+  )).orderBy(desc(callResults.startedAt)).limit(1))[0] ?? null;
 }
 
 /** Place one call and record it. */
 export async function triggerCall(a: TriggerArgs) {
+  if (await isCallingPaused()) throw new Error("calling_paused"); // global spend kill-switch
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, a.retailerId)))[0];
   if (!retailer) throw new Error(`retailer ${a.retailerId} not found`);
   // Site-rail stores (e.g. Micro Center) carry a synthetic "nophone:" key — there is no line to dial.
@@ -164,6 +192,13 @@ export async function triggerCall(a: TriggerArgs) {
   }
   const category = (await db.select().from(categories).where(eq(categories.id, a.categoryId)))[0];
   if (!category) throw new Error(`category ${a.categoryId} not found`);
+
+  // One-check-per-store-per-day (flag-gated): reuse a recent confirmed/answered result instead of
+  // re-calling the same store+product within 24h — anti-abuse + cost. Returns the cached call row.
+  if (a.finderUserId && !a.toOverride && (await getPolicy()).flags.oneCheckPerStorePerDay) {
+    const recent = await findRecentCheck(a.finderUserId, retailer.id, category.id);
+    if (recent) return { ...recent, deduped: true };
+  }
 
   // Default the call mode from the store's known status (verified → restock, unverified → carry).
   const mode = a.mode ?? (retailer.stockStatus === "unverified" ? "carry" : "restock");
@@ -223,6 +258,8 @@ export async function triggerCall(a: TriggerArgs) {
       otherCategories: mode === "restock" ? otherCategories : [],
       askShipmentDay: a.askShipmentDay,
       voicemailPolicy,
+      // Kiosk-only store → agent asks about the vending kiosk. Explicit request flag wins; else inferred.
+      kioskMode: a.kioskMode ?? kioskOnly(retailer),
     });
     await db.update(callResults)
       .set({ providerCallId, status: "in_progress" })
@@ -482,6 +519,19 @@ export async function getCreditStatus() {
   return shape(used, Number.isFinite(lim) && lim > 0 ? lim : null, null, "estimated");
 }
 
+/** Charge the finder ONE credit for a call, exactly once. Atomic: the `charged_at` null→now flip is
+ *  the race guard, so concurrent finalizers (poller + webhook + retries, across instances) can't
+ *  double-bill. Returns true only if a credit was actually taken (comp accounts are marked charged
+ *  but pay nothing). */
+export async function chargeCallOnce(callId: number, finderUserId: string): Promise<boolean> {
+  const won = await db.update(callResults).set({ chargedAt: Math.floor(Date.now() / 1000) })
+    .where(and(eq(callResults.id, callId), isNull(callResults.chargedAt)));
+  if ((won.rowsAffected ?? 0) === 0) return false; // already charged
+  const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, finderUserId)))[0];
+  if (acct && !isCompAccount(acct)) return chargeOneCredit(finderUserId);
+  return false; // comp / no account: marked charged, no credit taken
+}
+
 /** Poll the provider for any calls still in flight and save their outcomes. Returns how many finalized. */
 export async function ingestPending(): Promise<number> {
   const pending = await db.select().from(callResults).where(
@@ -516,6 +566,12 @@ export async function ingestPending(): Promise<number> {
       // otherwise fall back to the first-human-turn timestamp from the transcript.
       navSeconds: takeBridgeNav(row.providerCallId) ?? outcome.navSecs ?? null,
     }).where(eq(callResults.id, row.id));
+
+    // Server-side billing: charge the finder ONE credit on a DEFINITIVE answer, exactly once.
+    // (chargeCallOnce is atomic — the poller, the webhook, and any retry can't double-bill.)
+    if (row.finderUserId && outcome.status === "completed" && (primaryConfirmed === true || primaryConfirmed === false)) {
+      await chargeCallOnce(row.id, row.finderUserId);
+    }
 
     const store = (await db.select().from(retailers).where(eq(retailers.id, row.retailerId)))[0];
 
