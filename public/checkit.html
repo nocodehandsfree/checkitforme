@@ -481,6 +481,14 @@ __BRAND_HEAD__
   .opencount .odot{width:6px;height:6px;border-radius:50%;background:#cfcfe0}
   .store.best{border-color:rgba(74,222,128,.55);background:linear-gradient(100deg,rgba(74,222,128,.1),rgba(74,222,128,.02))}
   .store .ic.best{background:var(--green)}
+  /* Tier groups — TIER 5 = green (best MSRP odds), TIER 4 = amber. */
+  .store.t5{border-color:rgba(74,222,128,.5);background:linear-gradient(100deg,rgba(74,222,128,.09),rgba(74,222,128,.02))}
+  .store.t4{border-color:rgba(245,158,11,.45);background:linear-gradient(100deg,rgba(245,158,11,.08),rgba(245,158,11,.015))}
+  .grouphdr{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:14px 2px 1px}
+  .grouphdr:first-child{margin-top:2px}
+  .grouphdr.g5{color:var(--green)}
+  .grouphdr .ghstar{display:inline-flex}
+  .instk{display:inline-flex;vertical-align:-3px;margin-right:3px}
   .besttag{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#06210f;background:var(--green);padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
   .kioskbadge{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--purple);padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
   .bestwhy{color:#a9e6bd !important}
@@ -1152,6 +1160,7 @@ const I18N={ es:{
   'cta.pick':'Elige una tienda para verificar','cta.check':'Verificar','cta.for':'por','cta.checkunit':'verificación','cta.kioskword':'kiosco',
   'kcall.store':'esta tienda','kcall.body1':'Llamaremos y preguntaremos si su kiosco de','kcall.body2':'está funcionando y surtido, y te enviaremos lo que digan.','kcall.yes':'📞 Sí, llamar ahora →','kcall.no':'Ahora no','kcall.atkiosk':'¿Estás en el kiosco ahora?','kcall.receipt':'Usa nuestro correo al pagar o reenvía tu recibo → verificación gratis.',
   'count.open':'abiertas','count.kiosks':'kioscos',
+  'grp.best':'Mejores cerca de ti','grp.good':'Buenas opciones','grp.all':'Todas las tiendas','instock.now':'En stock ahora',
   'cover.types':'Tipos de tienda que cubrimos — toca el pin para ver <b>las tuyas</b>:',
   'st.open':'Abierto','st.closed':'Cerrado','st.till':'hasta',
   'sc.post':'Publica tu logro','sc.where':'¿Dónde lo conseguiste?','sc.store.ph':'Busca tu tienda…','sc.what':'¿Qué conseguiste?','sc.photo':'Agrega una foto de tu logro','sc.postit':'Publícalo →','back':'← Atrás',
@@ -1979,7 +1988,12 @@ function renderMapPins(){
   (LAST_STORES||[]).forEach(s=>{
     if(s.lat==null||s.lng==null) return;
     const mi=storeMi(s);
-    const m=L.circleMarker([s.lat,s.lng],{radius:8,color:'#0C0C12',weight:1.5,fillColor:'#cfcfe0',fillOpacity:.95}).addTo(MAP);
+    const tier=storeTier(s);
+    const col = tier===5?'#4ADE80' : tier===4?'#F59E0B' : '#cfcfe0'; // tier 5 green · tier 4 amber · else neutral
+    // inStock (recent confirmed hit) → a pin carrying the brand check; otherwise a tier-colored dot.
+    const m = s.inStock
+      ? L.marker([s.lat,s.lng],{icon:L.divIcon({className:'instkpin',html:`<span style="display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#0C0C12;border:2px solid ${col};box-shadow:0 2px 6px rgba(0,0,0,.5)">${FCHK(15)}</span>`,iconSize:[26,26],iconAnchor:[13,13]})}).addTo(MAP)
+      : L.circleMarker([s.lat,s.lng],{radius:8,color:'#0C0C12',weight:1.5,fillColor:col,fillOpacity:.95}).addTo(MAP);
     m.bindPopup(`<div class="mappop"><b>${esc(s.name)}</b><div class="mp-lo">${esc(s.location||'')}${mi!=null?' · '+(mi<10?mi.toFixed(1):Math.round(mi))+' mi':''}</div><button onclick="mapPick(${s.id})">Check this store</button></div>`);
     MAP_MARKERS.push(m); pts.push([s.lat,s.lng]);
   });
@@ -2011,6 +2025,40 @@ function setMode(m){
   track('mode_switch',{mode:m});
   renderStores();
 }
+let TIER_VIEW=false; // grouped tier view active this render (suppresses the single "most likely" star)
+function storeTier(s){ return Number(s&&s.tier)||0; } // 5 = best MSRP odds … (backend-provided)
+// One store row — shared by the flat list AND the tiered groups. Tier 5 = green, tier 4 = amber; an
+// inStock store (recent confirmed hit) leads with the brand check.
+function storeRowHtml(s){
+  const kiosk=MODE==='kiosk';
+  const mi=storeMi(s); const o=s&&s.openState;
+  const sel=SEL_STORE&&SEL_STORE.id===s.id?'sel':'';
+  const right=mi!=null?`<div class="smi">${mi<10?mi.toFixed(1):Math.round(mi)}<small>mi</small></div>`:'';
+  const inMark=(!kiosk && s.inStock)?`<span class="instk" title="${t('instock.now','In stock now')}">${FCHK(15)}</span> `:'';
+  if(kiosk){
+    const dot2=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
+    const st=(o&&o.label)?esc(tLbl(o.label)):'';
+    return `<div class="store ${sel}" onclick="pickKiosk(${s.id})">
+      <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
+      <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${dot2}${[esc(s.location||''),st].filter(Boolean).join(' · ')}</div></div>
+      ${right}</div>`;
+  }
+  if(!TIER_VIEW && BEST && s.id===BEST.id){
+    const rowBest=(SEL_STORE && SEL_STORE.id!==s.id)?'':'best';
+    return `<div class="store ${rowBest} ${sel}" onclick="pickStore(${s.id})">
+      <div class="ic best">${ICO.star('#06210f')}</div>
+      <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)} <span class="besttag">${t('besttag','Most likely')}</span></div><div class="lo bestwhy">${esc(LANG==='es'?t('bestwhy','great odds right now'):(BEST.why||'great odds right now'))}</div></div>
+      ${right}</div>`;
+  }
+  const tierCls=storeTier(s)===5?'t5':storeTier(s)===4?'t4':'';
+  const dot=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
+  const drop=shipmentDayShort(s);
+  const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', drop?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
+  return `<div class="store ${tierCls} ${sel}" onclick="pickStore(${s.id})">
+    <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
+    <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)}</div><div class="lo">${dot}${meta}</div></div>
+    ${right}</div>`;
+}
 function renderStores(){
   const q=($('search').value||'').toLowerCase();
   const kiosk=MODE==='kiosk';
@@ -2023,8 +2071,11 @@ function renderStores(){
     return true;
   });
   if(USER_LOC) list.sort((a,b)=>(storeMi(a)??1e9)-(storeMi(b)??1e9));
-  // Float the recommended store to the very top (highlighted) — inject it even if it lacks coords.
-  if(BEST && !kiosk){
+  // Tier view: green TIER-5 group on top, optional TIER-4, then everyone else (each nearest→farthest)
+  // — surfaces best-MSRP-odds above closer low-tier stores. Active only when the backend tags tiers.
+  TIER_VIEW = !kiosk && list.some(s=>storeTier(s)>=4);
+  // Float the single "most likely" to the top — but NOT in tier view (the green group is the headline).
+  if(BEST && !kiosk && !TIER_VIEW){
     let bi=list.findIndex(s=>s.id===BEST.id);
     if(bi<0){ const bs=STORES.find(s=>s.id===BEST.id); if(bs){ list.unshift(bs); bi=0; } }
     if(bi>0){ const [b]=list.splice(bi,1); list.unshift(b); }
@@ -2033,7 +2084,10 @@ function renderStores(){
   // "N open" counts only stores we KNOW are open right now — never unknown-hours ones (which default
   // to open:true server-side and were inflating the count / claiming closed stores were open).
   const openCount = kiosk ? total : list.filter(s=>s&&s.openState&&s.openState.known&&s.openState.open).length;
-  list=list.slice(0,40);
+  // Display set: tier view shows ALL tier 5/4 (the valuable few) + nearest 40 of the rest; else nearest 40.
+  let t5=[],t4=[],rest=[];
+  if(TIER_VIEW){ t5=list.filter(s=>storeTier(s)===5); t4=list.filter(s=>storeTier(s)===4); rest=list.filter(s=>storeTier(s)<4).slice(0,40); list=t5.concat(t4,rest); }
+  else { list=list.slice(0,40); }
   LAST_STORES=list; if($('mapview') && $('mapview').style.display==='block') renderMapPins();
   const cnt=$('store_count');
   if(cnt) cnt.innerHTML = `<span class="odot"></span>${openCount} ${kiosk?t('count.kiosks','kiosks'):t('count.open','open')}${USER_LOC?` · ${RADIUS} mi`:''}`;
@@ -2052,36 +2106,15 @@ function renderStores(){
       <button class="findbtn-primary" onclick="findMe()" style="margin-top:2px">${ICO.pin('currentColor')} ${t('find.me','Find my stores')}</button>`;
     return;
   }
-  $('storelist').innerHTML = list.length ? list.map(s=>{
-    const mi=storeMi(s); const o=s&&s.openState;
-    const sel=SEL_STORE&&SEL_STORE.id===s.id?'sel':'';
-    const right=mi!=null?`<div class="smi">${mi<10?mi.toFixed(1):Math.round(mi)}<small>mi</small></div>`:'';
-    if(kiosk){
-      const dot2=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
-      const st=(o&&o.label)?esc(tLbl(o.label)):'';
-      // Kiosk stores are callable now (we phone to check if the machine's working) — store logo, not the kiosk icon.
-      return `<div class="store ${sel}" onclick="pickKiosk(${s.id})">
-        <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
-        <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${dot2}${[esc(s.location||''),st].filter(Boolean).join(' · ')}</div></div>
-        ${right}</div>`;
-    }
-    if(BEST && s.id===BEST.id){
-      // Green "most likely" highlight only when nothing else is picked (or this row IS the pick) —
-      // selecting another store drops it so we never show two green rows. Star + label always stay.
-      const rowBest = (SEL_STORE && SEL_STORE.id!==s.id) ? '' : 'best';
-      return `<div class="store ${rowBest} ${sel}" onclick="pickStore(${s.id})">
-        <div class="ic best">${ICO.star('#06210f')}</div>
-        <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)} <span class="besttag">${t('besttag','Most likely')}</span></div><div class="lo bestwhy">${esc(LANG==='es'?t('bestwhy','great odds right now'):(BEST.why||'great odds right now'))}</div></div>
-        ${right}</div>`;
-    }
-    const dot=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
-    const drop=shipmentDayShort(s);
-    // Lead with the STREET so stores sharing a city are tellable apart; fall back to city.
-    const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', drop?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
-    return `<div class="store ${sel}" onclick="pickStore(${s.id})">
-      <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
-      <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${dot}${meta}</div></div>
-      ${right}</div>`;}).join('') : `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
+  if(TIER_VIEW){
+    let html='';
+    if(t5.length) html+=`<div class="grouphdr g5"><span class="ghstar">${ICO.star('#4ADE80')}</span>${t('grp.best','Best near you')}</div>`+t5.map(storeRowHtml).join('');
+    if(t4.length) html+=`<div class="grouphdr">${t('grp.good','Good bets')}</div>`+t4.map(storeRowHtml).join('');
+    if(rest.length) html+=`<div class="grouphdr">${t('grp.all','All stores')}</div>`+rest.map(storeRowHtml).join('');
+    $('storelist').innerHTML = html || `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
+  } else {
+    $('storelist').innerHTML = list.length ? list.map(storeRowHtml).join('') : `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
+  }
 }
 // --- Live finds ticker (real recent in-stock confirmations) ---
 function agoStr(sec){ const s=Math.floor(Date.now()/1000)-sec; const ago=u=>LANG==='es'?('hace '+u):(u+' ago'); if(s<90)return LANG==='es'?'ahora mismo':'just now'; const m=Math.floor(s/60); if(m<60)return ago(m+'m'); const h=Math.floor(m/60); if(h<24)return ago(h+'h'); return ago(Math.floor(h/24)+'d'); }
