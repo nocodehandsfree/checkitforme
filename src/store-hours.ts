@@ -93,11 +93,29 @@ export interface OpenState {
   label: string;      // short badge, e.g. "Open · till 9 PM", "Closed · opens 10 AM", "Open 24h"
 }
 
+// A store with NO usable hours still defaults to "open/unknown" by day — we don't hide it or block
+// daytime calls on missing data. BUT defaulting to open around the clock is the "open at 2 AM" bug:
+// in the dead-of-night window below we instead report a confident "closed" so the open/closed badge
+// and the call gates (scheduler + call service both gate on `known && !open`) treat it as closed.
+// A genuinely 24-hour store carries an explicit "24h" stamp and never reaches this path. The window
+// is intentionally narrow (deep overnight only) to preserve daytime coverage — widen here if needed.
+// NOTE: this only covers MISSING/unparseable hours; fake placeholder stamps (e.g. 00:00–24:00 on a
+// store that isn't really 24h) parse as real hours and must be cleaned in the data (Data Dev).
+const UNKNOWN_NIGHT_CLOSED_FROM = 1 * 60; // 01:00 local
+const UNKNOWN_NIGHT_CLOSED_TO = 6 * 60;   // 06:00 local
+function unknownHoursState(tz: string, at: Date): OpenState {
+  const { min } = localNow(tz || "America/Los_Angeles", at);
+  if (min >= UNKNOWN_NIGHT_CLOSED_FROM && min < UNKNOWN_NIGHT_CLOSED_TO) {
+    return { known: true, open: false, label: "Likely closed" };
+  }
+  return { known: false, open: true, label: "" };
+}
+
 /** Is this store open right now? Handles 24h, closed days, and hours that cross midnight. */
 export function openState(hoursJson: string | null | undefined, tz: string, at: Date = new Date()): OpenState {
   let h: Hours | null = null;
   try { if (hoursJson) h = JSON.parse(hoursJson); } catch { /* ignore */ }
-  if (!h || typeof h !== "object") return { known: false, open: true, label: "" };
+  if (!h || typeof h !== "object") return unknownHoursState(tz, at);
   const { dow, min } = localNow(tz || "America/Los_Angeles", at);
   const today = h[DOW_KEYS[dow]];
   const yest = h[DOW_KEYS[(dow + 6) % 7]];
