@@ -289,6 +289,10 @@
       <div class="hero-eyebrow">Today</div>
       <div class="stats" id="d_today"></div>
     </div>
+    <div class="card">
+      <div class="name" style="margin-bottom:8px">Today's pulse <span class="hint">funnel &amp; engagement</span></div>
+      <div id="gw_pulse" class="meta">Loading…</div>
+    </div>
     <div class="card" id="d_money_card">
       <div class="name" style="margin-bottom:12px">Business &amp; money</div>
       <div class="stats" id="d_money" style="margin-bottom:0"></div>
@@ -457,10 +461,6 @@
 
   <section id="growth">
     <h2>Policy</h2>
-    <div class="card">
-      <div class="name" style="margin-bottom:8px">📊 Today's pulse <span class="meta" style="font-weight:400">— funnel &amp; engagement</span></div>
-      <div id="gw_pulse" class="meta">Loading…</div>
-    </div>
     <div class="card">
       <div class="name" style="margin-bottom:4px">Feature flags <span class="hint">flip any Lego on/off, live across every subdomain</span></div>
       <div id="gw_flags" class="meta">Loading…</div>
@@ -863,7 +863,7 @@ const NAV_GROUPS={
   voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Create','flask'],['bench','Test','sliders'],['settings','Settings','gear']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>loadDash(), treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwIntel();loadGwKiosks();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>{loadDash();loadGwPulse();}, treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwIntel();loadGwKiosks();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
