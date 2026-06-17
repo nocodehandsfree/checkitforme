@@ -1217,6 +1217,31 @@ app.post("/api/stores/deactivate", async (c) => {
   return c.json({ deactivated });
 });
 // Flag matching stores as kiosks and/or (non-)callable (e.g. mark Vons/Albertsons/Pavilions kiosk-only).
+// Field-safe BULK patch (Data Dev cleanup): updates ONLY the provided fields on matching stores —
+// filter by id list, chain name, and/or state — without touching anything else. `clearHours` blanks
+// fake/placeholder hours. `dryRun` returns the match count + a sample and writes nothing. Admin-gated.
+app.post("/api/stores/patch", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const where = b.where || {};
+  const conds: ReturnType<typeof eq>[] = [];
+  if (Array.isArray(where.ids) && where.ids.length) conds.push(inArray(retailers.id, where.ids.map(Number)));
+  if (where.chain) {
+    const ch = (await db.select().from(chains).where(eq(chains.name, String(where.chain))))[0];
+    if (!ch) return c.json({ error: "chain not found" }, 404);
+    conds.push(eq(retailers.chainId, ch.id));
+  }
+  if (where.state) conds.push(eq(retailers.state, String(where.state).toUpperCase()));
+  if (!conds.length) return c.json({ error: "a where filter (ids | chain | state) is required" }, 400);
+  const filter = conds.length === 1 ? conds[0] : and(...conds);
+  const set: Record<string, unknown> = { ...(b.set && typeof b.set === "object" ? b.set : {}) };
+  if (b.clearHours) { set.hours = null; set.hoursUpdatedAt = null; }
+  if (!Object.keys(set).length) return c.json({ error: "set{} or clearHours required" }, 400);
+  const matched = await db.select({ id: retailers.id, name: retailers.name }).from(retailers).where(filter);
+  if (b.dryRun) return c.json({ dryRun: true, matched: matched.length, sample: matched.slice(0, 5), willSet: Object.keys(set) });
+  await db.update(retailers).set(set).where(filter);
+  invalidateRefCache();
+  return c.json({ patched: matched.length, set: Object.keys(set) });
+});
 app.post("/api/stores/flag", async (c) => {
   const b = await c.req.json().catch(() => ({}));
   const terms: string[] = (Array.isArray(b.terms) ? b.terms : []).map((t: unknown) => String(t).toLowerCase().trim()).filter(Boolean);

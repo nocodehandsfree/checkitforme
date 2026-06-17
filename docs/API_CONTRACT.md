@@ -147,7 +147,7 @@ adds per-IP limits + one-check-per-store-per-day; response shapes stay the same.
 - **Health:** GET `/api/health` (open).
 - **Policy:** GET/PATCH `/api/policy`.
 - **Stores/data:** POST `/api/stores/import`, `/stores/backfill-regions`, `/stores/deactivate`
-  (`{terms[]}|{phones[]}`), `/stores/flag` (`{terms[],hasKiosk?,sellsPacks?}`); GET/POST/PATCH
+  (`{terms[]}|{phones[]}`), `/stores/flag` (`{terms[],hasKiosk?,sellsPacks?}`), `/stores/patch` (`{where:{ids?|chain?|state?}, set:{...}, clearHours?, dryRun?}` — field-safe bulk update, only the provided fields; `dryRun` returns match count + sample); GET/POST/PATCH
   `/api/retailers`; GET `/api/preview/:retailerId`.
 - **Hours:** POST `/api/hours/backfill`, `/api/hours/:id/refresh`.
 - **Reference:** GET `/api/categories`, `/api/chains`, PATCH `/api/chains/:id`, GET `/api/products`,

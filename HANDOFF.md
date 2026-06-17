@@ -47,6 +47,7 @@ your files, your extra docs, and your current focus. Stay in your lane; request 
   going until either (a) the work is done and needs human testing, or (b) you hit a genuinely
   irreversible / cross-lane / business-policy call (deleting data, paying for data, changing another
   lane's API contract). Fungie sets **priority + critical decisions** — not step-by-step approvals.
+- **Never open a decision-box (AskUserQuestion) to Fungie for a technical or cross-lane choice** ("which API approach", "build now or wait"). Default-and-proceed on your own half with the safe option; if you need another lane (usually a DevOps backend change), leave a one-line `DevOps: need X` note and keep working. Fungie is not the message bus for engineering decisions.
 - **See an issue inside your lane** (bad data, a UI glitch, ugly store names)? Just fix it — it's
   yours, no permission needed. Cross-lane issue? File it to the owning lane, don't block.
 - **One fast branch.** Work on `claude/retail-stock-voice-calls-OcyMS` (the branch that deploys).
