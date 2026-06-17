@@ -30,21 +30,9 @@ const lite = LogoTile.tile({ url: "/logos/chains/x.png?v=8", wordmark: false, da
 ok(!lite.includes("lt-lite"), "light mark → no plate");
 
 console.log("▶ a wide wordmark renders as balanced two-line text, not the image");
-const wm = LogoTile.tile({ url: "/logos/chains/dick_s_sporting_goods.png?v=9", wordmark: true, name: "Dick's Sporting Goods — Mall" });
+const wm = LogoTile.tile({ url: "/logos/chains/dick_s_sporting_goods.png?v=8", wordmark: true, name: "Dick's Sporting Goods — Mall" });
 ok(!wm.includes("<img"), "wordmark → no image");
-ok((wm.match(/font-size:/g) || []).length === 2, "wordmark → two lines, each sized to fit");
-
-console.log("▶ each line is sized on its own (Dunham's 'Sports' reads bigger)");
-const dun = LogoTile.tile({ url: null, wordmark: true, name: "Dunham's Sports" });
-const sizes = (dun.match(/font-size:([\d.]+)px/g) || []).map((s) => parseFloat(s.replace(/[^\d.]/g, "")));
-ok(sizes.length === 2 && sizes[1] > sizes[0], "shorter bottom line gets the larger font");
-
-console.log("▶ hyphenated single tokens split to two lines");
-ok(LogoTile.balance("Bi-Mart").length === 2, "Bi-Mart → two lines");
-
-console.log("▶ a secondary brand after '/' is dropped");
-const od = LogoTile.tile({ url: null, wordmark: true, name: "Office Depot / OfficeMax" });
-ok(!/OfficeMax/.test(od) && /Depot/.test(od), "Office Depot / OfficeMax → just Office Depot");
+ok((wm.match(/<span>/g) || []).length === 2, "wordmark → two balanced lines");
 
 console.log("▶ Barnes & Noble is the custom layout (& to the right)");
 const bn = LogoTile.tile({ url: "/logos/chains/barnes_noble.png?v=8", wordmark: true, name: "Barnes & Noble" });

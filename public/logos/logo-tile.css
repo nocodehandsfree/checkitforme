@@ -54,7 +54,7 @@
   line-height: 1.04;
   letter-spacing: -0.02em;
   text-transform: uppercase;
-  color: #e8e8ee;
+  color: #cdcdd8;
   max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
@@ -78,6 +78,6 @@
   font-weight: 900;
   font-size: var(--lt-fs, calc(var(--lt-size, 36px) * 0.22));
   line-height: 1;
-  color: #e8e8ee;
+  color: #cdcdd8;
   flex: 0 0 auto;
 }

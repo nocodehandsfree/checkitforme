@@ -588,7 +588,7 @@ function chainLogoInfo(name: string | null | undefined): { url: string | null; w
   // A wide wordmark asset is illegible shrunk into the tile, so render it as
   // balanced text instead; a square-ish asset is a real brand mark → show the image.
   const wordmark = m.m === "text" || (m.m !== "mark" && m.w === 1);
-  return { url: `/logos/chains/${f}?v=9`, wide: m.w === 1, dark: m.d === 1, wordmark };
+  return { url: `/logos/chains/${f}?v=8`, wide: m.w === 1, dark: m.d === 1, wordmark };
 }
 // Canonical QA mirror: checkitforme.com/logo-wall. Renders every chain through the SAME LogoTile
 // component the consumer store list and admin use (inlined below), client-side — so the wall is a
@@ -606,7 +606,7 @@ app.get("/logo-wall", async (c) => {
   }).sort((a, b) => a.name.localeCompare(b.name));
   // Asset files no chain name resolves to → a slug/name mismatch to reconcile with Data Dev.
   const orphans = [...chainLogoFiles()].filter((f) => !usedFiles.has(f))
-    .map((f) => ({ file: f, url: `/logos/chains/${f}?v=9` })).sort((a, b) => a.file.localeCompare(b.file));
+    .map((f) => ({ file: f, url: `/logos/chains/${f}?v=8` })).sort((a, b) => a.file.localeCompare(b.file));
   const payload = JSON.stringify({
     live: rows.filter((r) => !r.muted), muted: rows.filter((r) => r.muted), orphans,
   }).replace(/</g, "\\u003c");

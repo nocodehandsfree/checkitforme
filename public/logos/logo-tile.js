@@ -28,16 +28,15 @@
     });
   }
 
-  // Drop the per-store branch ("Target — Tysons Corner" → "Target") and any secondary brand after a
-  // slash ("Office Depot / OfficeMax" → "Office Depot") so the wordmark spells one clean brand.
+  // Drop the per-store branch ("Target — Tysons Corner" → "Target") so the
+  // wordmark spells the BRAND, never the address.
   function baseName(name) {
-    return ((name || "").split(/[—–]| - | \/ /)[0] || "").trim();
+    return ((name || "").split(/[—–]| - /)[0] || "").trim();
   }
 
-  // Split a name into two length-balanced lines (greedy on char count). Hyphens break like spaces so
-  // single hyphenated tokens ("Bi-Mart", "Hy-Vee") wrap to two lines instead of one cramped line.
+  // Split a multi-word name into two length-balanced lines (greedy on char count).
   function balance(base) {
-    var words = base.split(/[\s-]+/).filter(Boolean);
+    var words = base.split(/\s+/).filter(Boolean);
     if (words.length <= 1) return [base];
     var best = 1, bestDiff = 1e9, acc = 0;
     for (var i = 1; i < words.length; i++) {
@@ -48,14 +47,14 @@
     return [words.slice(0, best).join(" "), words.slice(best).join(" ")];
   }
 
-  // Fit ONE line's font (px) so it fills — but never overflows — the tile width. Each line is sized
-  // on its own, so a short line (e.g. Dunham's "Sports") reads as large as it can instead of shrinking
-  // to match a longer sibling. A single line may run larger than two (rule 4 — short names read big).
-  function fitFont(text, size, nLines) {
-    var len = Math.max(1, String(text).length);
+  // Fit a font size (px) so the longest line fills — but never overflows — the tile.
+  // One line may run larger than two (rule 4 — short names read big).
+  function fitFont(lines, size) {
+    var longest = 1;
+    for (var i = 0; i < lines.length; i++) longest = Math.max(longest, lines[i].length);
     var avail = size * 0.92;            // usable width inside the tile
-    var fs = avail / (len * 0.56);      // 0.56em ≈ bold uppercase char width at -0.02em tracking
-    var cap = (nLines || 1) > 1 ? size * 0.40 : size * 0.44;
+    var fs = avail / (longest * 0.56);  // 0.56em ≈ bold uppercase char width at -0.02em tracking
+    var cap = lines.length > 1 ? size * 0.32 : size * 0.44;
     // Floor low enough that even long lines fit rather than clip; the ones that bottom out here are
     // exactly the chains that want a real brand mark — flag them from the wall, don't fake one.
     return Math.max(size * 0.13, Math.min(fs, cap));
@@ -69,18 +68,16 @@
 
     // Custom: Barnes & Noble → "Barnes" / "Noble" stacked, "&" to the right at word size.
     if (/^barnes\s*&\s*noble$/i.test(base)) {
-      var fs = fitFont("Barnes", size, 2);
+      var fs = fitFont(["Barnes", "Noble"], size);
       return '<span class="lt-wm lt-amp" style="--lt-fs:' + fs.toFixed(1) + 'px">' +
         '<span class="lt-lines"><span>Barnes</span><span>Noble</span></span>' +
         '<span class="lt-and">&amp;</span></span>';
     }
 
-    // Each line sized to fill its own width (short bottom lines read bigger, not shrunk to match).
     var lines = balance(base);
-    var inner = lines.map(function (l) {
-      return '<span style="font-size:' + fitFont(l, size, lines.length).toFixed(1) + 'px">' + esc(l) + "</span>";
-    }).join("");
-    return '<span class="lt-wm">' + inner + "</span>";
+    var f = fitFont(lines, size);
+    var inner = lines.map(function (l) { return "<span>" + esc(l) + "</span>"; }).join("");
+    return '<span class="lt-wm" style="--lt-fs:' + f.toFixed(1) + 'px">' + inner + "</span>";
   }
 
   // Inner content of a tile: image when we have a real mark, else the wordmark text.
