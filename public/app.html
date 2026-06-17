@@ -439,12 +439,20 @@
   <section id="zones"><h2>Zones</h2><div id="zoneList"><div class="empty">Loading…</div></div></section>
   <section id="catalog"><h2>Tracked categories</h2><div id="catList"><div class="empty">Loading…</div></div></section>
   <section id="receipts">
-    <h2>Receipts</h2>
-    <div class="card" style="margin-bottom:12px">
-      <div class="name" style="margin-bottom:4px">📧 Emailed-in receipts <span class="meta" style="font-weight:400">— shoppers forward a receipt → verified intel + a free check</span></div>
-      <div class="meta" id="rcpt_status">Loading…</div>
+    <h2>Kiosk</h2>
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">Restock intel <span class="hint">the compounding database</span></div>
+      <div id="gw_intel" class="meta">Loading…</div>
     </div>
-    <div id="rcptList"><div class="empty">Loading…</div></div>
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">Kiosk intel <span class="hint">crowd-sourced refresh times</span></div>
+      <div id="gw_kiosks" class="meta">Loading…</div>
+    </div>
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">Emailed-in receipts <span class="hint">shoppers forward a receipt → verified intel + a free check</span></div>
+      <div class="meta" id="rcpt_status" style="margin-bottom:8px">Loading…</div>
+      <div id="rcptList"><div class="empty">Loading…</div></div>
+    </div>
   </section>
 
   <section id="growth">
@@ -454,11 +462,7 @@
       <div id="gw_pulse" class="meta">Loading…</div>
     </div>
     <div class="card">
-      <div class="name" style="margin-bottom:4px">📈 Restock intel <span class="meta" style="font-weight:400">— the compounding database</span></div>
-      <div id="gw_intel" class="meta">Loading…</div>
-    </div>
-    <div class="card">
-      <div class="name" style="margin-bottom:4px">Feature flags <span class="meta" style="font-weight:400">— flip any Lego on/off, live across every subdomain</span></div>
+      <div class="name" style="margin-bottom:4px">Feature flags <span class="hint">flip any Lego on/off, live across every subdomain</span></div>
       <div id="gw_flags" class="meta">Loading…</div>
     </div>
     <div class="card">
@@ -479,10 +483,6 @@
       <div id="gw_import_msg" class="meta" style="margin:8px 0;min-height:16px"></div>
       <div><button class="act" onclick="importStoresJson()">Import stores</button> <button class="ghost" onclick="backfillRegions()">Backfill regions</button></div>
     </details>
-    <div class="card">
-      <div class="name" style="margin-bottom:4px">Kiosk intel <span class="meta" style="font-weight:400">— crowd-sourced refresh times</span></div>
-      <div id="gw_kiosks" class="meta">Loading…</div>
-    </div>
     <div class="card">
       <div class="name" style="margin-bottom:4px">Restock watches <span class="meta" style="font-weight:400">— customers waiting on a comeback</span></div>
       <div id="gw_watches" class="meta">Loading…</div>
@@ -863,7 +863,7 @@ const NAV_GROUPS={
   voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Create','flask'],['bench','Test','sliders'],['settings','Settings','gear']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>loadDash(), treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>loadReceipts() };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>loadDash(), treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwIntel();loadGwKiosks();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
