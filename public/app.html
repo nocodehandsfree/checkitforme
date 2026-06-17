@@ -521,7 +521,7 @@
       </div>
 
       <details class="card" id="tb_voice_card">
-        <summary><span class="name">🎚️ Voice &amp; script <span class="chip-draft">DRAFT</span></span><span class="meta">tune safely → test → push live</span></summary>
+        <summary><span class="name">Step 2 · Persona &amp; script <span class="chip-draft">DRAFT</span></span><span class="hint">tune safely → test → apply</span></summary>
         <div class="meta" style="margin:10px 0 12px">Edits a <b>draft</b> — real store calls are untouched until you <b>Apply to ALL store calls</b>. Hear it with Call me below.</div>
         <label>Opening line <span style="color:var(--muted)">(use <code>{category}</code> — it fills in Pokémon, One Piece, etc.)</span></label>
         <input id="tb_opening" placeholder="Heyy! I was just checking to see if you guys got any {category} in?" oninput="updateDraftDot()">
@@ -583,7 +583,7 @@
       </details>
 
       <details class="card" id="tb_rotate_card">
-        <summary><span class="name">🔀 Rotation</span><span class="meta">vary the voice + opener per call so stores don't hear the same thing twice</span></summary>
+        <summary><span class="name">Step 3 · Rotation</span><span class="hint">vary voice + opener per call so stores don't hear the same thing twice</span></summary>
         <div class="meta" style="margin:10px 0 8px">Live store calls round-robin through these. Leave empty to use the single live voice/opener.</div>
         <label>Opener variants <span style="color:var(--muted)">— one per line; <code>{category}</code> fills in. The agent uses the next line each call.</span></label>
         <textarea id="rot_openers" rows="4" style="width:100%;font-family:inherit;font-size:13px;background:var(--terminal);color:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;box-sizing:border-box" placeholder="Heyy! Got any {category} in today?&#10;Hi! Quick one — any {category} land recently?&#10;Hey there! Checking if {category} is in stock?"></textarea>
@@ -593,7 +593,7 @@
       </details>
 
       <details class="card" id="tb_call_card" open>
-        <summary><span class="name">🧪 The test call</span><span class="meta">the agent calls YOU as the store</span></summary>
+        <summary><span class="name">Step 4 · Test it</span><span class="hint">the agent calls YOU as the store — answer like the clerk</span></summary>
         <div class="meta" style="margin:10px 0 12px">Pick the store context, then answer your phone like the clerk. Runs the <b>draft</b> voice with that store's real phone-tree rules. The result records against the store (visible in Results).</div>
         <label>Store (records the result against this one)</label>
         <select id="sim_store" onchange="previewMaybe()"></select>
@@ -750,11 +750,11 @@
 
   <section id="labs">
     <h2>Create</h2>
-    <div class="meta" style="margin:-6px 0 14px">Store testing &amp; voice tuning moved to <b>Playbook → Test Bench</b>. Labs is the playground.</div>
+    <div class="hint" style="margin:-6px 0 16px">Build your store agent: <b style="font-style:normal;color:#cfcfd8">1)</b> pick or clone a voice (here) → <b style="font-style:normal;color:#cfcfd8">2)</b> tune its persona &amp; script in <b style="font-style:normal;color:#cfcfd8">Test</b> → <b style="font-style:normal;color:#cfcfd8">3)</b> test it → apply to all store calls.</div>
 
     <div class="card" id="voicestudio">
-      <div class="name" style="margin-bottom:4px">🎚️ Voice studio</div>
-      <div class="meta" style="margin-bottom:12px">Pick the voice every live store call speaks as — or record a new one and clone it.</div>
+      <div class="name" style="margin-bottom:4px">Step 1 · Voice</div>
+      <div class="hint" style="margin-bottom:14px">Pick the voice every live store call speaks as — or record ~30–60s and clone a new one.</div>
       <label>Live store voice</label>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <select id="vs_select" style="flex:1;min-width:180px"></select>
@@ -774,8 +774,8 @@
     </div>
 
     <div class="card">
-      <div class="name" style="margin-bottom:4px">🎙️ Talk to me</div>
-      <div class="meta" style="margin-bottom:12px">Call any number in your voice and pick the flow. Great for testing tone or just messing around.</div>
+      <div class="name" style="margin-bottom:4px">Hear a voice live</div>
+      <div class="hint" style="margin-bottom:14px">Call any number to hear a voice — handy for checking tone before you build the persona.</div>
       <label>Phone number (E.164)</label>
       <input id="lab_phone" placeholder="+13105551234">
       <label>First name (optional — e.g. opens with “hey what's up Matt”)</label>
