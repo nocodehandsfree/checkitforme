@@ -982,8 +982,38 @@ __LOGO_TILE__
     <div class="acctrows">
       <button class="acctrow" onclick="closeAccount();openHistory()"><span id="acctHist" style="display:inline-flex"></span><span data-i18n="acct.checks">My checks</span><span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
       <button class="acctrow" id="acct_plan" onclick="closeAccount();openBuy()"><span id="acctStar" style="display:inline-flex"></span><span id="acct_planlbl" data-i18n="acct.more">Get more checks</span><span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+      <button class="acctrow" id="acct_cid" onclick="openCallerId()" style="display:none"><span id="acctCid" style="display:inline-flex"></span><span id="acct_cidlbl">Call stores from your number</span><span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
     </div>
     <button onclick="doSignOut()" style="width:100%;margin-top:14px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);color:#ff8a8a;padding:12px;border-radius:12px;font-weight:800;font-size:13.5px;cursor:pointer" data-i18n="acct.signout">Sign out</button>
+  </div>
+</div>
+
+<!-- Caller-ID verification: dial stores from the customer's OWN (verified) cell — more pickups.
+     Twilio calls the user's phone; they key in the validation code; once verified the account's
+     callerId is set and /app/check-live dials From: that number (server-side, already live). -->
+<div class="overlay" id="cidOverlay" onclick="if(event.target===this)closeCallerId()">
+  <div class="modal" style="position:relative;max-width:400px;text-align:center">
+    <span class="x" onclick="closeCallerId()">×</span>
+    <div id="cid_logo"></div>
+    <div id="cid_step_intro">
+      <h3 style="margin:8px 0 4px;font-size:20px" data-i18n="cid.title">Call from your own number</h3>
+      <div class="meta" style="margin-bottom:16px" data-i18n="cid.sub">Verify your cell once so stores see <b>your</b> number on caller ID — they answer unknown lines far less often.</div>
+      <button class="cta sm" id="cid_start" onclick="callerIdStart()" style="width:100%">Verify my number →</button>
+      <div id="cid_err" style="color:#ff6b6b;font-size:13px;margin-top:10px;min-height:16px"></div>
+    </div>
+    <div id="cid_step_verify" style="display:none">
+      <h3 style="margin:8px 0 4px;font-size:20px" data-i18n="cid.calling">📞 We're calling you now</h3>
+      <div class="meta" style="margin-bottom:8px" data-i18n="cid.enter">Pick up and, when asked, key in this code:</div>
+      <div id="cid_code" style="font-size:34px;font-weight:900;letter-spacing:.16em;color:var(--green);margin:6px 0 14px"></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px"><span class="rcptspin"></span><span id="cid_status" style="color:#cfcfd8;font-weight:600;font-size:13.5px" data-i18n="cid.waiting">Waiting for the call to finish…</span></div>
+      <div id="cid_verr" style="color:#ff6b6b;font-size:13px;margin-top:10px;min-height:16px"></div>
+    </div>
+    <div id="cid_step_done" style="display:none">
+      <div style="font-size:40px;margin:4px 0">✅</div>
+      <h3 style="margin:0 0 4px;font-size:20px" data-i18n="cid.done">Your number is verified</h3>
+      <div class="meta" style="margin-bottom:16px" data-i18n="cid.donesub">Checks now dial from your cell — stores see your number on caller ID.</div>
+      <button class="cta sm" onclick="closeCallerId()" style="width:100%" data-i18n="cid.donecta">Done</button>
+    </div>
   </div>
 </div>
 
@@ -1214,6 +1244,8 @@ const I18N={ es:{
   'rail.all.stores':'Todas las tiendas','rail.all':'Todas las llamadas','rail.other':'Sin respuesta / dudosa',
   'demo.verdictlbl':'el veredicto','auth.google':'Continuar con Google','auth.discord':'Continuar con Discord','auth.or':'o con tu correo','demo.sys':'Navegando el menú telefónico…','demo.thanks':'¡Perfecto, gracias!','demo.proof':'Persona real · hace 2 min · transcripción completa como prueba.',
   'acct.checks':'Mis verificaciones','acct.more':'Consigue más verificaciones','acct.manage':'Administrar plan','acct.unlimited':'Ilimitado — cuenta fundadora','acct.memberleft':'Miembro · {n} verificaciones','acct.left':'{n} verificaciones','acct.signout':'Cerrar sesión','pill.join':'Únete','pill.free':'1 gratis · Únete',
+  'acct.cid.on':'Las llamadas salen de tu celular ✓','acct.cid.off':'Llama a las tiendas desde tu número',
+  'cid.title':'Llama desde tu propio número','cid.sub':'Verifica tu celular una vez para que las tiendas vean <b>tu</b> número en el identificador — contestan mucho más que a un número desconocido.','cid.cta':'Verificar mi número →','cid.calling2':'Llamándote…','cid.calling':'📞 Te estamos llamando','cid.enter':'Contesta y, cuando te lo pidan, marca este código:','cid.waiting':'Esperando a que termine la llamada…','cid.done':'Tu número está verificado','cid.donesub':'Las verificaciones ahora salen de tu celular — las tiendas ven tu número.','cid.donecta':'Listo','cid.unavail':'La verificación no está disponible ahora — inténtalo más tarde.','cid.startfail':'No se pudo iniciar la verificación — inténtalo de nuevo.','cid.timeout':'No se verificó a tiempo — cierra e inténtalo de nuevo.',
 } };
 // {x}/{n}/{r}/{b}/{s}/{p}/{m} placeholder fill for translated strings.
 function tf(key,en,vars){ let s=t(key,en); if(vars) for(const k in vars) s=s.split('{'+k+'}').join(vars[k]); return s; }
@@ -1733,10 +1765,60 @@ function openAccount(){
   const pr=$('acct_plan'); if(pr) pr.onclick=function(){ closeAccount(); openBuy((member||comp)?'manage':undefined); };
   setI('acctHist', ICO.clock('#A78BFA').replace('width="17" height="17"','width="18" height="18"'));
   setI('acctStar', ICO.spark('#FFCB05').replace('width="13" height="13"','width="16" height="16"'));
+  // Caller-ID row — only phone-verified identities can register a caller ID (Clerk tokens carry no phone).
+  const cidRow=$('acct_cid');
+  if(cidRow){
+    const showCid=!!PHONE_TOKEN;
+    cidRow.style.display=showCid?'':'none';
+    if(showCid){
+      const ready=!!(ACCOUNT&&ACCOUNT.callerIdReady);
+      setI('acctCid', ICO.call(ready?'#4ADE80':'#A78BFA'));
+      const lbl=$('acct_cidlbl'); if(lbl) lbl.textContent = ready ? t('acct.cid.on','Calls come from your cell ✓') : t('acct.cid.off','Call stores from your number');
+    }
+  }
   $('acctOverlay').classList.add('on'); track('account_open');
 }
 function closeAccount(){ $('acctOverlay').classList.remove('on'); }
 async function doSignOut(){ PHONE_TOKEN=''; try{ localStorage.removeItem('cifm_token'); }catch(_){} try{ if(window.Clerk&&window.Clerk.user) await window.Clerk.signOut(); }catch(e){} ACCOUNT=null; closeAccount(); toast('Signed out'); refreshAuth(); }
+// ---- Caller-ID verification: register the customer's verified cell so /app/check-live dials AS it
+//      (stores answer their own number far more than an unknown line). Twilio calls them; they key in
+//      the validation code; /auth/callerid/status flips callerIdReady. Server From=callerId is live. ----
+let CID_POLL=null, CID_TRIES=0;
+function cidStep(which){ ['intro','verify','done'].forEach(s=>{ const el=$('cid_step_'+s); if(el) el.style.display=(s===which)?'':'none'; }); }
+function openCallerId(){
+  if(!isAuthed()) return;
+  closeAccount();
+  setI('cid_logo', authMark());
+  if($('cid_err'))$('cid_err').textContent=''; if($('cid_verr'))$('cid_verr').textContent='';
+  cidStep((ACCOUNT&&ACCOUNT.callerIdReady)?'done':'intro');
+  $('cidOverlay').classList.add('on'); applyLang(); track('callerid_open');
+}
+function closeCallerId(){ if(CID_POLL){ clearInterval(CID_POLL); CID_POLL=null; } $('cidOverlay').classList.remove('on'); }
+async function callerIdStart(){
+  const btn=$('cid_start'); if(btn){ btn.disabled=true; btn.textContent=t('cid.calling2','Calling you…'); }
+  $('cid_err').textContent='';
+  const r=await appApi('/auth/callerid/start',{method:'POST'});
+  if(btn){ btn.disabled=false; btn.textContent=t('cid.cta','Verify my number →'); }
+  if(!r||r.error||!r.validationCode){
+    $('cid_err').textContent = (r&&r.error==='verify_not_configured') ? t('cid.unavail','Verification is temporarily unavailable — try again later.') : t('cid.startfail','Could not start verification — try again.');
+    return;
+  }
+  $('cid_code').textContent=r.validationCode;
+  $('cid_verr').textContent=''; $('cid_status').textContent=t('cid.waiting','Waiting for the call to finish…');
+  cidStep('verify'); track('callerid_start');
+  CID_TRIES=0; if(CID_POLL) clearInterval(CID_POLL);
+  CID_POLL=setInterval(callerIdPoll,3000);
+}
+async function callerIdPoll(){
+  CID_TRIES++;
+  if(CID_TRIES>34){ clearInterval(CID_POLL); CID_POLL=null; $('cid_verr').textContent=t('cid.timeout',"Didn't verify in time — close this and try again."); return; }
+  const r=await appApi('/auth/callerid/status');
+  if(r&&r.verified){
+    clearInterval(CID_POLL); CID_POLL=null;
+    if(ACCOUNT){ ACCOUNT.callerIdReady=true; if(!ACCOUNT.callerId) ACCOUNT.callerId=ACCOUNT.phone||true; }
+    cidStep('done'); track('callerid_verified');
+  }
+}
 // Deep-link: open a specific past call by id (and remember it in History).
 async function restoreCall(cid, storeName, catName){
   // Resolve the real store from what we already know — local history first (it has the exact
