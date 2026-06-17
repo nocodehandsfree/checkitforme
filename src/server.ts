@@ -701,6 +701,13 @@ app.get("/pub/stores/near", async (c) => {
   }
 
   const callable = (r: typeof retailers.$inferSelect) => r.sellsPacks !== false && !!r.phone && !r.phone.startsWith("nophone:");
+  // inStock badge = a confirmed in-stock call in the last 7 days (drives the brand-check pin/row).
+  const inStockSince = Math.floor(Date.now() / 1000) - 7 * 86400;
+  const confirmedSet = new Set(
+    (await db.select({ rid: callResults.retailerId }).from(callResults)
+      .where(and(eq(callResults.confirmed, true), eq(callResults.status, "completed"), gte(callResults.completedAt, inStockSince)))
+    ).map((x) => x.rid),
+  );
   const all = rows
     .filter((r) => !(r.chainId && mutedChains.has(r.chainId)))
     .filter((r) => !mode
@@ -716,6 +723,7 @@ app.get("/pub/stores/near", async (c) => {
         carries: (r.carries ?? "").split(",").map((s) => s.trim()).filter(Boolean),
         lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
         sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
+        tier: r.tier ?? null, inStock: confirmedSet.has(r.id), // tier = "best near you" grouping; inStock = brand-check pin
         callable: callable(r),
         stockCheckMethod: (r.chainId && stockMethod.get(r.chainId)) || "call", // site = check their site, no call needed
         // Sell-methods taxonomy: how to get it (chain default), online flag, and price/source.
@@ -1187,6 +1195,72 @@ app.post("/api/stores/flag", async (c) => {
   }
   invalidateRefCache();
   return c.json({ updated });
+});
+// Kiosk overlay: reconcile the official TPCi vending list against our stores. For each machine, flag
+// the matching store (same chain, within ~0.3 mi) as a tier-5 kiosk (hasKiosk:true, tier:5) — leaving
+// sellsPacks untouched so a store that also sells on the shelf still shows in both tabs. Machines at a
+// location we don't have yet are inserted as new kiosk rows. `dryRun` returns counts only (no writes).
+app.post("/api/kiosks/overlay", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const machines: Record<string, unknown>[] = Array.isArray(b.machines) ? b.machines : [];
+  if (!machines.length) return c.json({ error: "machines[] required" }, 400);
+  const dryRun = !!b.dryRun;
+  const norm = (s: unknown) => String(s || "").toLowerCase().replace(/['’.]/g, "").replace(/\s+/g, " ").trim();
+  const chainRows = await db.select({ id: chains.id, name: chains.name }).from(chains);
+  const chainByNorm = new Map<string, number>();
+  for (const ch of chainRows) chainByNorm.set(norm(ch.name), ch.id);
+  const chainNorms = [...chainByNorm.keys()];
+  const resolveChain = (retailer: unknown): number | null => {
+    const n = norm(retailer);
+    if (!n) return null;
+    if (chainByNorm.has(n)) return chainByNorm.get(n)!;
+    const hit = chainNorms.find((cn) => cn.length >= 4 && (cn.startsWith(n) || n.startsWith(cn)));
+    return hit ? chainByNorm.get(hit)! : null;
+  };
+  const stores = await db.select({ id: retailers.id, chainId: retailers.chainId, lat: retailers.lat, lng: retailers.lng, zip: retailers.zip }).from(retailers);
+  const byChain = new Map<number, typeof stores>();
+  for (const s of stores) { if (s.chainId == null) continue; const arr = byChain.get(s.chainId) || []; arr.push(s); byChain.set(s.chainId, arr); }
+  let matched = 0, inserted = 0;
+  const unresolved: Record<string, number> = {};
+  const toInsert: Parameters<typeof importStores>[0] = [];
+  for (const m of machines) {
+    const retailer = m.retailer ?? m.chain;
+    const lat = Number(m.lat), lng = Number(m.lng);
+    const zip = String(m.zipPostalCode ?? m.zip ?? "") || null;
+    const cid = resolveChain(retailer);
+    let hit: { id: number } | null = null;
+    if (cid != null) {
+      let best: { id: number } | null = null, bestD = Infinity;
+      for (const s of byChain.get(cid) || []) {
+        if (s.lat != null && s.lng != null && Number.isFinite(lat) && Number.isFinite(lng)) {
+          const d = haversineMi(lat, lng, s.lat, s.lng);
+          if (d < bestD) { bestD = d; best = { id: s.id }; }
+        } else if (zip && s.zip && s.zip === zip) { best = { id: s.id }; bestD = 0; break; }
+      }
+      if (best && bestD <= 0.3) hit = best;
+    } else {
+      unresolved[norm(retailer)] = (unresolved[norm(retailer)] || 0) + 1;
+    }
+    if (hit) {
+      matched++;
+      if (!dryRun) await db.update(retailers).set({ hasKiosk: true, tier: 5, ...(m.name ? { externalStoreId: String(m.name) } : {}) }).where(eq(retailers.id, hit.id));
+    } else {
+      inserted++;
+      toInsert.push({
+        chain: String(retailer || "Pokémon Vending"),
+        name: `${retailer || "Pokémon Vending"} ${m.city || m.stateProvince || ""}`.trim(),
+        category: "Grocery",
+        address: (m.street as string) || undefined, city: (m.city as string) || undefined,
+        state: (m.stateProvince as string) || undefined, zip: zip || undefined,
+        lat: Number.isFinite(lat) ? lat : undefined, lng: Number.isFinite(lng) ? lng : undefined,
+        phone: "", carries: "Pokémon", sellsPacks: false, hasKiosk: true, tier: 5,
+        store_id: m.name ? String(m.name) : undefined,
+      });
+    }
+  }
+  if (!dryRun && toInsert.length) await importStores(toInsert);
+  invalidateRefCache();
+  return c.json({ machines: machines.length, matched, inserted, dryRun, unresolved });
 });
 
 // ---- Store hours: backfill all (background) + refresh one ----
