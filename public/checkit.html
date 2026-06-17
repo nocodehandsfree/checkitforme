@@ -2569,10 +2569,12 @@ async function startCheckLive(){
   const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
   if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x} — no call placed',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail','Could not start the call')); return; }
   LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
-  if(AUDIO_CTX){ AUDIO_WS=new WebSocket('wss://'+r.wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data);
-    if(d.audio) playMu(d.audio,d.track);
+  // Transcript + stage stream over the WS for EVERYONE — instant, the moment ElevenLabs emits a line
+  // (no poll lag, no waiting on the conversation-id). Audio only PLAYS for listeners (canListen).
+  AUDIO_WS=new WebSocket('wss://'+r.wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data);
+    if(d.audio){ if(AUDIO_CTX) playMu(d.audio,d.track); }
     else if(d.line&&d.line.text){ LIVE_TR.push(d.line.role+': '+d.line.text); $('live_tr').style.display=''; appendLiveTranscript(LIVE_TR.join('\n')); livePhaseFromText(d.line.role,d.line.text); } // real-time bubbles + stage, as the call happens
-  }catch(e){} }; }
+  }catch(e){} };
   $('phase').textContent=t('live.ringing','📞 Ringing…');
   let cid=null;
   POLL=setInterval(async()=>{
