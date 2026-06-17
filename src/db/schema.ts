@@ -142,6 +142,10 @@ export const retailers = sqliteTable(
     // Sells the product ONLINE — pickup, third-party listings, or online-only (e.g. Micro Center).
     // NOT "online only": some are both in-store and online. Default false; populated separately.
     online: integer("online", { mode: "boolean" }).notNull().default(false),
+    // Curation tier (1–5) for the consumer "best near you" grouping: 5 = pinned to the green group at
+    // top, 4 = secondary group, else ranked purely by distance. Per-store (a voice-confirmed store or an
+    // official kiosk can override its chain default); null = ungraded. Integer only — decimal scoring dropped.
+    tier: integer("tier"),
     // The chain's own store number (collector `store_id`) — keys per-store site stock checks
     // (e.g. Micro Center storeid, Best Buy store #). Required for site-rail chains.
     externalStoreId: text("external_store_id"),
