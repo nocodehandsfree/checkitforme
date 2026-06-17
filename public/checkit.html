@@ -7,6 +7,8 @@
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
+<!-- Shared chain-logo renderer (same component the admin + /logo-wall use). -->
+__LOGO_TILE__
 <!-- Clerk's bundle is the biggest external fetch on every cold load (every product switch reloads a
      new subdomain) — warm the connection early so DNS+TLS isn't on the critical path. -->
 <link rel="preconnect" href="https://__CLERK_FRONTEND_API__" crossorigin>
@@ -1286,6 +1288,14 @@ function storeWordmark(name,type){
   }
   return `<span class="wm"><span>${esc(l1)}</span>${l2?`<span>${esc(l2)}</span>`:''}</span>`;
 }
+// THE chain-logo tile for the store list — the shared LogoTile component (same rules the admin and
+// /logo-wall use; inlined from /logos/logo-tile.js). Falls back to the inline wordmark if that block
+// didn't load, so the list never hard-breaks.
+function logoTile(s){
+  if(window.LogoTile) return LogoTile.tile({url:s.logoUrl,wide:s.logoWide,dark:s.logoDark,wordmark:s.logoWordmark,name:s.name});
+  const img=s.logoUrl&&!s.logoWordmark;
+  return `<div class="ic ${img&&s.logoDark?'lite':''} ${img&&s.logoWide?'widelogo':''}">${img?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>`;
+}
 
 let ACCOUNT=null;
 // Phone-first session token (the new Clerk-free auth). Dual-auth: if present, it's used; otherwise
@@ -1973,7 +1983,7 @@ function renderStores(){
     // Lead with the STREET so stores sharing a city (e.g. two "Big 5 — Los Angeles") are tellable apart; fall back to city.
     const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', drop?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
     return `<div class="store ${sel}" onclick="pickStore(${s.id})">
-      <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
+      ${logoTile(s)}
       <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${dot}${meta}</div></div>
       ${right}</div>`;}).join('') : `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
 }

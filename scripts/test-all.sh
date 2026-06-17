@@ -20,6 +20,7 @@ run "unit: store-hours" "$ENV $TSX scripts/test-store-hours.ts"
 run "unit: schedules"  "env DATABASE_URL=file:./.t-sch.db $ENV $TSX scripts/test-schedules.ts; rm -f .t-sch.db"
 run "unit: referrals"  "env DATABASE_URL=file:./.t-ref.db $ENV $TSX scripts/test-referrals.ts; rm -f .t-ref.db"
 run "unit: receipt"    "$ENV $TSX scripts/test-receipt.ts"
+run "unit: logo-tile"  "$ENV $TSX scripts/test-logotile.ts"
   run "unit: auth/billing" "env DATABASE_URL=file:./.t-auth.db $ENV $TSX scripts/test-auth.ts; rm -f .t-auth.db"
 run "integration: growth/CMS/community" "bash scripts/test-growth.sh"
 

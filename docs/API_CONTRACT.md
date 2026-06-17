@@ -168,7 +168,9 @@ adds per-IP limits + one-check-per-store-per-day; response shapes stay the same.
 ## Pages (HTML, not JSON)
 
 GET `/`, `/r`, `/s`, `/p/:slug` (+`?partial=1` → `{title,body}`), `/og/:file`, `/logos/...`,
-`/robots.txt`, `/sitemap.xml`. **To remove (dev scratch):** `/logo-wall`, `/check-lab`.
+`/robots.txt`, `/sitemap.xml`. **`/logo-wall`** = canonical logo QA mirror
+(checkitforme.com/logo-wall) — renders every chain through the shared LogoTile component, identical
+to the store list + admin; keep it. **To remove (dev scratch):** `/check-lab`.
 
 ---
 
