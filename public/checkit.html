@@ -2701,7 +2701,7 @@ function showResult(o, cid){
   if(o.status==='completed' && askedLabels.length>1){
     const cr=o.categoryResults||{};
     breakdown = '<div style="margin-top:12px">'+askedLabels.map(lb=>{
-      const v=cr[lb]; const e=v===true?'✅':v===false?'❌':'🤔';
+      const v=cr[lb]; const e=v===true?FCHK(15):(v===false?'❌':'🤔');
       const lbl=v===true?t('res.percat.in','in stock'):v===false?t('res.percat.out','not in stock'):t('res.percat.unk','no clear answer');
       const col=v===true?'var(--green)':v===false?'var(--red)':'var(--orange)';
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 2px;border-bottom:1px solid rgba(255,255,255,.07)"><span style="font-weight:700">${esc(lb)}</span><span style="color:${col};font-weight:800;white-space:nowrap">${e} ${lbl}</span></div>`;
@@ -2806,6 +2806,8 @@ function safeReason(r){
 // Custom verdict marks: emoji (from the statuses registry) → our drawn icon, tone-colored.
 function vicon(emoji,cls,size){
   size=size||58;
+  // In-stock = our real brand check FILE (never a drawn approximation), per the owner's logo rule.
+  if(emoji==='✅') return FCHK(size);
   const col=cls==='in'?'#4ADE80':cls==='out'?'#EF4444':cls==='soon'?'#F59E0B':'#FBBF24';
   const sw=size<=20?2.1:1.8;
   const W=(inner)=>`<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px">${inner}</svg>`;
