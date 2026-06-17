@@ -1014,6 +1014,19 @@ __BRAND_HEAD__
   </div>
 </div>
 
+<!-- Kiosk-call confirmation: we phone the store to ask if the MACHINE is working/stocked (not shelf stock). -->
+<div class="overlay" id="kcallOverlay" onclick="if(event.target===this)closeKioskConfirm()">
+  <div class="modal" style="position:relative;max-width:400px;text-align:center">
+    <span class="x" onclick="closeKioskConfirm()">×</span>
+    <div id="kcall_logo" style="display:flex;justify-content:center;margin-bottom:8px"></div>
+    <h3 style="margin:0 0 8px;font-size:20px" id="kcall_store">this store</h3>
+    <div class="meta" style="margin-bottom:18px;line-height:1.55"><span data-i18n="kcall.body1">We'll call and ask if their</span> <b id="kcall_cat">Pokémon</b> <span data-i18n="kcall.body2">kiosk is working and stocked, then text you what they say.</span> <span style="color:var(--muted);white-space:nowrap">· 1 check</span></div>
+    <button class="cta" onclick="confirmKioskCall()" style="width:100%" data-i18n="kcall.yes">📞 Yes, call now →</button>
+    <div><a onclick="closeKioskConfirm()" style="display:inline-block;margin-top:12px;color:var(--muted);font-weight:700;font-size:14px;cursor:pointer" data-i18n="kcall.no">Not now</a></div>
+    <div style="margin-top:16px;background:var(--ptint);border:1px solid var(--pline);border-radius:12px;padding:11px 12px;font-size:12.5px;color:#e6e2f7;line-height:1.5;text-align:left"><b data-i18n="kcall.atkiosk">At the kiosk right now?</b> <a onclick="closeKioskConfirm();openReceipt()" style="color:var(--purple);font-weight:800;cursor:pointer" data-i18n="kcall.receipt">Use our email at checkout or forward your receipt → free check.</a></div>
+  </div>
+</div>
+
 <div class="overlay" id="scoreOverlay" onclick="if(event.target===this)closeScore()">
   <div class="modal" style="position:relative;max-width:420px;text-align:left">
     <span class="x" onclick="closeScore()">×</span>
@@ -1089,7 +1102,7 @@ __BRAND_HEAD__
 const BRAND = __BRAND_JSON__;   // injected per subdomain (vertical micro-site)
 window.SWITCHER = __BRAND_SWITCHER__; // {current, list:[{key,slug,label,emoji}]} for the product switcher
 let BRAND_CAT = null;           // resolved category object for a vertical site, else null
-let STORES=[], CATS=[], SEL_STORE=null, SEL_CAT=null, SEL_CATS=[], ASKED_CATS=[], SEL_PRODUCT='', POLL=null, LASTRES=null, TRANSLATED=false, ORIGHTML='', MODE='call';
+let STORES=[], CATS=[], SEL_STORE=null, SEL_CAT=null, SEL_CATS=[], ASKED_CATS=[], SEL_PRODUCT='', SEL_KIOSK=false, KIOSK_OK=false, POLL=null, LASTRES=null, TRANSLATED=false, ORIGHTML='', MODE='call';
 let RSTATUSES={}; // statuses registry: server-defined verdicts (single source of truth)
 // Until per-product store data lands: chains KNOWN to carry each vertical (owner-confirmed).
 const KNOWN_CARRIES={
@@ -1136,7 +1149,8 @@ const I18N={ es:{
   'kioskhint':'<span style="display:flex;align-items:center;gap:7px;font-weight:800;white-space:nowrap"><span id="khspark"></span> ¿En un kiosco? ¡Verificación gratis!</span><a onclick="openReceipt()" style="display:inline-block;margin-top:5px;color:var(--purple);font-weight:800;cursor:pointer">Usa nuestro correo al pagar o reenvía tu recibo →</a>',
   'v.in':'¡En stock!','v.out':'No está en stock','v.unclear':'Nos dieron un “quizás”','v.soldout':'Agotado','v.noanswer':'Nadie contestó','v.hold':'En espera','v.soon':'¡Reabastecimiento en camino!','note.soon':'No está en el estante ahora — pero dijeron que llega un envío <b>{d}</b>. Sé el primero cuando caiga.',
   'search.ph':'Busca por tienda o ciudad…',
-  'cta.pick':'Elige una tienda para verificar','cta.check':'Verificar','cta.for':'por','cta.checkunit':'verificación',
+  'cta.pick':'Elige una tienda para verificar','cta.check':'Verificar','cta.for':'por','cta.checkunit':'verificación','cta.kioskword':'kiosco',
+  'kcall.store':'esta tienda','kcall.body1':'Llamaremos y preguntaremos si su kiosco de','kcall.body2':'está funcionando y surtido, y te enviaremos lo que digan.','kcall.yes':'📞 Sí, llamar ahora →','kcall.no':'Ahora no','kcall.atkiosk':'¿Estás en el kiosco ahora?','kcall.receipt':'Usa nuestro correo al pagar o reenvía tu recibo → verificación gratis.',
   'count.open':'abiertas','count.kiosks':'kioscos',
   'cover.types':'Tipos de tienda que cubrimos — toca el pin para ver <b>las tuyas</b>:',
   'st.open':'Abierto','st.closed':'Cerrado','st.till':'hasta',
@@ -1985,8 +1999,9 @@ function setRadiusIdx(idx){
 function setRadius(mi){ const i=RADII.indexOf(mi); setRadiusIdx(i<0?2:i); }
 function setMode(m){
   MODE=m;
+  if(m!=='kiosk'){ SEL_KIOSK=false; KIOSK_OK=false; }
   document.querySelectorAll('.modetab').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
-  $('kioskhint').style.display = m==='kiosk'?'':'none';
+  const kh=$('kioskhint'); if(kh) kh.style.display='none'; // the kiosk "free check" carrot now lives in the call-confirm modal
   $('findstep').textContent = m==='kiosk'?t('find.kiosk','① Find a kiosk'):t('find.step','① Find your store');
   // The call-only bits (category, call button, charge note) hide in kiosk mode.
   const cc=$('catcard');
@@ -2044,8 +2059,9 @@ function renderStores(){
     if(kiosk){
       const dot2=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
       const st=(o&&o.label)?esc(tLbl(o.label)):'';
-      return `<div class="store" onclick="openReceipt()">
-        <div class="ic" style="background:var(--ptint)">${ICO.kioskMini(AC2())}</div>
+      // Kiosk stores are callable now (we phone to check if the machine's working) — store logo, not the kiosk icon.
+      return `<div class="store ${sel}" onclick="pickKiosk(${s.id})">
+        <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
         <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${dot2}${[esc(s.location||''),st].filter(Boolean).join(' · ')}</div></div>
         ${right}</div>`;
     }
@@ -2268,7 +2284,7 @@ function renderChips(){
 function pickStore(id){
   const st=STORES.find(s=>s.id===id);
   if(isClosed(st)){ toast(tLbl(st.openState.label||'Closed')+' '+t('closednow','— closed right now')); return; }
-  SEL_STORE=st;
+  SEL_STORE=st; SEL_KIOSK=false; KIOSK_OK=false;
   if(!BRAND_CAT) applyBrand();   // categories may have loaded after first paint — re-resolve the brand's category
   const opts=storeCatOptions();
   // Vertical site → ALWAYS the brand's category (never guess Pokémon from what the store carries).
@@ -2278,6 +2294,26 @@ function pickStore(id){
   if(!BRAND_CAT){ $('catcard').style.display=''; renderChips(); syncProductUI(); } // vertical sites skip the picker
   syncCta();
 }
+// Kiosk-tab call: select the kiosk store (always the brand category), show the call CTA. Pressing it
+// flashes a confirmation that we're calling to check the MACHINE (working/stocked), not shelf stock.
+function pickKiosk(id){
+  const st=STORES.find(s=>s.id===id); if(!st) return;
+  if(isClosed(st)){ toast(tLbl((st.openState&&st.openState.label)||'Closed')+' '+t('closednow','— closed right now')); return; }
+  SEL_STORE=st; SEL_KIOSK=true; KIOSK_OK=false;
+  if(!BRAND_CAT) applyBrand();
+  const pref = BRAND_CAT || CATS.find(c=>/pok/i.test(c.label)) || CATS[0];
+  SEL_CATS = pref?[pref.id]:[]; SEL_CAT=SEL_CATS[0]||null; SEL_PRODUCT='';
+  renderStores(); syncCta();
+  if(window.innerWidth<900){ const b=$('checkBtn'); if(b) setTimeout(()=>{ try{ b.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){} },150); }
+}
+function openKioskConfirm(){
+  setI('kcall_logo', authMark());
+  $('kcall_store').textContent = (SEL_STORE&&SEL_STORE.name) ? SEL_STORE.name : t('kcall.store','this store');
+  $('kcall_cat').textContent = catLabel() || (BRAND_CAT&&BRAND_CAT.label) || 'Pokémon';
+  $('kcallOverlay').classList.add('on'); applyLang(); track('kioskcall_confirm');
+}
+function closeKioskConfirm(){ $('kcallOverlay').classList.remove('on'); }
+function confirmKioskCall(){ KIOSK_OK=true; closeKioskConfirm(); startCheck(); }
 // Toggle a category in/out of the selection (multi-select), keeping at least one.
 function pickCat(id){
   const i=SEL_CATS.indexOf(id);
@@ -2334,9 +2370,11 @@ function syncCta(){
   // Non-callable chains (Micro Center, Amazon) NEVER get a call button — the sell-methods card
   // below carries "Buy online" + notify instead. (docs/SELL_METHODS_PLAN.md rule 1.)
   const cantCall=SEL_STORE&&SEL_STORE.callable===false;
-  if(SEL_STORE&&SEL_CATS.length&&MODE!=='kiosk'&&!cantCall){
+  if(SEL_STORE&&SEL_CATS.length&&(MODE!=='kiosk'||SEL_KIOSK)&&!cantCall){
     b.style.display=''; if(vv)vv.style.display='none'; if(cf)cf.style.display='';
-    b.innerHTML=`${ic}${t('cta.check','Check')} ${esc(SEL_STORE.name.split('—')[0].trim())} ${t('cta.for','for')} <b>${esc(catLabels())}</b> &nbsp; <span class="price">· 1 ${t('cta.checkunit','check')}</span>`;
+    b.innerHTML = SEL_KIOSK
+      ? `${ic}${t('cta.check','Check')} ${esc(SEL_STORE.name)} ${t('cta.kioskword','kiosk')} &nbsp; <span class="price">· 1 ${t('cta.checkunit','check')}</span>`
+      : `${ic}${t('cta.check','Check')} ${esc(SEL_STORE.name.split('—')[0].trim())} ${t('cta.for','for')} <b>${esc(catLabels())}</b> &nbsp; <span class="price">· 1 ${t('cta.checkunit','check')}</span>`;
     if(wasHidden){ b.classList.remove('armed'); void b.offsetWidth; b.classList.add('armed');
       if(window.innerWidth<900){ setTimeout(()=>{ try{ b.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){} },150); } }
   }
@@ -2403,6 +2441,8 @@ async function startCheck(){
   if(!SEL_STORE||!SEL_CATS.length) return;
   // Snapshot the lines we're asking about (for the per-category result + history).
   ASKED_CATS=SEL_CATS.map(id=>({id,label:(CATS.find(c=>c.id===id)||{}).label||''})).filter(x=>x.label);
+  // Kiosk call: flash the "we'll call to check if the machine's working" confirmation first.
+  if(SEL_KIOSK && !KIOSK_OK){ openKioskConfirm(); return; }
   // Email gate: capture an email before the first anonymous free check (re-runs after submit).
   if(!isAuthed() && !leadCaptured()){ if(!ensureLead(startCheck)) return; }
   // Gate: signed-in users need credits; anonymous get one free check, then must sign up.
@@ -2417,7 +2457,7 @@ async function startCheck(){
   LIVE_TIMERS=[phaseT,elT]; LIVE_ROOM=null; $('hangup_btn').style.display='';
 
   const useApp=isAuthed();
-  const r=await (useApp?appApi:api)(useApp?'/app/check':'/pub/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,specificProduct:SEL_PRODUCT,kioskMode:isKioskOnly(SEL_STORE)})});
+  const r=await (useApp?appApi:api)(useApp?'/app/check':'/pub/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
   if(r.error){ clearInterval(phaseT);clearInterval(elT); backToBuilder(); if(r.error==='no_credits'){ openBuy('out'); } else if(r.error==='unauthorized'){ signIn(); } else if(r.error==='store_closed'){ toast('🔒 '+(r.label||'Store is closed')+' — no call placed'); } else toast('Could not start the call'); return; }
   const cid=r.providerCallId;
   try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){}
@@ -2488,7 +2528,7 @@ async function startCheckLive(){
   $('live_tr').style.display='none'; $('live_tr_body').innerHTML=''; LIVE_TR=[]; AGENT_PITCHED=false;
   let secs=0; const elT=setInterval(()=>{ secs+=1; $('elapsed').textContent='⏱ '+secs+'s'; },1000);
   LIVE_TIMERS=[elT];
-  const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:isKioskOnly(SEL_STORE)})});
+  const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
   if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x} — no call placed',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail','Could not start the call')); return; }
   LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
   if(AUDIO_CTX){ AUDIO_WS=new WebSocket('wss://'+r.wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data);
