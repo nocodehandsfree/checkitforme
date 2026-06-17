@@ -3,6 +3,23 @@
 Finished items live here so the active docs (HANDOFF) stay lean. Newest first. Agents: move done
 items here from HANDOFF's "Current focus."
 
+## 2026-06-17 — Data Dev: prod store-data cleanup (kiosk / 2 AM hours / names / dup-chains)
+Applied LIVE to prod via the admin API (`PATCH /api/retailers/:id`, bulk `POST /api/stores/patch`); the
+`openState` code fix shipped on the deploy branch. All changes verified fresh from prod.
+- **"2 AM" bug** — `openState` now reads unknown/blank hours as **closed 01:00–06:00 local** (was: open
+  around the clock); daytime unchanged, no consumer-call-gate changes needed. `scripts/test-store-hours.ts`
+  (12 assns). Plus **150** fake all-day `00:00–23:59/24:00` stamps blanked (Walgreens/CVS/Safeway/Jewel/…;
+  genuine-24h Wawa/Sheetz/Buc-ee's excluded).
+- **Store names — "drop the dash"** (owner call): `Chain — City` → `Chain City`, **57,327** renamed across
+  3 passes (state pull → chain×state sweep), **0 errors**, verified **0 dashed names remaining** in an 86.5k
+  pull. Logos unaffected (every renamed row has a `chainId`, so logo resolves by chain not name-split).
+- **Store-number junk** — **941** trailing `(#1234)` strips (`Burlington Dothan (#582)` → `Burlington Dothan`).
+- **Dup chains** — `Sams`/`Franklin's Ace Hardware`/`Hallmark` confirmed **empty** (0 stores; already merged);
+  3 empty chain rows await a chain-delete (no API endpoint yet).
+- **Kiosk** — Pavilions verified `hasKiosk:true, sellsPacks:false` in prod.
+- **Method note** — the read API caps at 1000 rows, so the name sweep enumerated by chain×state and looped
+  PATCH. A `name`-strip transform on the bulk endpoint would make future name sweeps one server-side call.
+
 ## 2026-06-17 — website: verified-number calling (caller-ID UI) — consumer half
 - Account sheet → **"Call stores from your number"** row (phone-authed users only — Clerk/OAuth tokens
   carry no phone, backend 401s them). Reflects `ACCOUNT.callerIdReady` (now on `/app/me`).

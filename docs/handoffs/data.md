@@ -37,26 +37,23 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
 - Work on the deploy branch `claude/retail-stock-voice-calls-OcyMS`; commit + push = live in ~3 min.
 
 ## Current focus (KEEP UPDATED)
-- [ ] **Fix kiosk-only mis-flagging (the Pavilions case).** Supermarket kiosk-only stores were
-  flagged `sellsPacks:true` and recommended as "most likely" for a shelf shipment. Correct them to
-  `hasKiosk:true, sellsPacks:false` (Pavilions, and audit Albertsons/Vons/Safeway/Ralphs class).
-  See `store-data-schema.md` §5 + §7.1 and `docs/specs/kiosk-call-flow.md`.
-- [ ] **Fix open/close times (the "2 AM" bug).** Stores with missing/placeholder hours show as open
-  around the clock (`openState` defaults unknown→open). Ensure real per-store `hours`, explicit
-  closed days (`null`/`{closed:true}`), no fake `09:00–18:00` on 24-h or closed stores, and correct
-  `state`→`timezone`. Detail + accepted hours shapes: `store-data-schema.md` §3.
+**Session 2026-06-17 — big prod cleanup done (see COMPLETED.md).** Writes went LIVE via the admin API
+(`PATCH /api/retailers/:id` + bulk `POST /api/stores/patch`); the `openState` fix shipped on this branch.
+- [x] **Kiosk-only mis-flagging (Pavilions).** ✅ Verified in prod (`hasKiosk:true, sellsPacks:false`).
+- [x] **"2 AM" bug.** ✅ `openState` now reads unknown/blank hours as **closed 01:00–06:00 local**
+  (daytime unchanged); `scripts/test-store-hours.ts`. Plus **150** fake all-day stamps blanked
+  (Walgreens/CVS/Safeway/…; genuine-24h Wawa/Sheetz/Buc-ee's kept). Unenumerable tail → bulk `clearHours`.
+- [x] **Store-name cleanup.** ✅ Owner chose **drop the dash**: `Chain — City` → `Chain City` —
+  **57,327** renamed (0 errors; verified 0 remaining). Plus **941** `(#1234)` store-number strips.
+- [x] **Dup chains.** ✅ Already empty (0 stores): `Sams`/`Franklin's Ace Hardware`/`Hallmark`. The 3
+  empty chain *rows* still need deleting (chain-level op — no `DELETE chain` endpoint; bulk/DevOps).
 - [ ] **Logos on the map.** A pin's logo = its chain name → `public/logos/chains/<slug>.png`. Audit
-  for chain-name mismatches and missing logo assets; list missing-logo chains so an asset can be
-  added. (Rendering itself is Admin/Website.) `store-data-schema.md` §7.3.
-- [ ] **Store-name normalization.** Some rows still show placeholder/ugly names — "STORE STORE#",
-  plaza names, or other junk instead of a clean label. Normalize `retailers.name` to a consistent
-  "<Chain> — <City>" style and `location` to "City, ST". Sweep for the leftover patterns and fix in
-  bulk via the importer/CMS.
+  for chain-name mismatches and missing logo assets; list missing-logo chains. (Rendering = Admin/Website.)
 - [ ] **General cleanup** — Places-sourced staleness, unconfirmed carriers, muted repack chains
   (see `COVERAGE_REPORT.md`).
 - [ ] **Append the new incoming store file** once the planning chat shapes it to
   `store-data-schema.md`. Dry-run → import → spot-check a few rows in the admin.
-- [ ] (future, needs DevOps) **Wire `productDetails`** (per-product confidence) — currently dropped
-  by the importer. Propose the schema column. `store-data-schema.md` §6.
+- [ ] **Wire `productDetails`** — DONE on `claude/check-data` / PR #373 (importer reads it → `product_details`
+  column) but NOT on this deploy branch yet. Fold into consolidation (schema column + importer) or re-apply here.
 
 When you finish something: move it to `docs/COMPLETED.md`; leave Current focus set for the next chat.
