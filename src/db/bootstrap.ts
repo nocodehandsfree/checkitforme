@@ -99,6 +99,8 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE retailers ADD COLUMN external_store_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN maps_uri TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN geocode_tried_at INTEGER").catch(() => {});
+  // Curation tier (1–5) for the consumer "best near you" grouping (5 = green group, 4 = secondary).
+  await client.execute("ALTER TABLE retailers ADD COLUMN tier INTEGER").catch(() => {});
   // Geo paging at 100k-store scale: the /pub/stores/near bounding box must hit an index.
   await client.execute("CREATE INDEX IF NOT EXISTS retailers_geo_idx ON retailers(lat, lng)").catch(() => {});
   await client.execute("CREATE INDEX IF NOT EXISTS retailers_state_idx ON retailers(state)").catch(() => {});

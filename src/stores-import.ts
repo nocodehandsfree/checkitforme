@@ -88,6 +88,7 @@ export interface StoreIn {
   carries?: string[] | string; hours?: HoursIn; active?: boolean;
   sellsPacks?: boolean;       // staffed counter we can CALL (default true)
   hasKiosk?: boolean;         // unmanned vending kiosk on site (default false)
+  tier?: number;              // curation tier 1–5 for the consumer "best near you" grouping (5 = green group)
   shipmentDay?: string;       // known shipment day(s), e.g. "Friday" — drives best-bet + scheduling
   phoneTree?: string; specialInstructions?: string; stockStatus?: string;
   // Native field names from the nationwide store-collector output — accepted as-is, zero reshaping.
@@ -181,6 +182,8 @@ export async function importStores(items: StoreIn[]): Promise<{ inserted: number
       active: it.active !== false,
       sellsPacks: it.sellsPacks !== false,
       hasKiosk: it.hasKiosk === true,
+      // Curation tier: only accept a valid 1–5 integer; anything else leaves tier untouched.
+      ...(Number.isInteger(it.tier) && (it.tier as number) >= 1 && (it.tier as number) <= 5 ? { tier: it.tier } : {}),
       chainId: await chainId(it.chain, storeType(it.category)),
       ...((it.shipmentDay || it.shipment_days) ? { shipmentDay: it.shipmentDay || it.shipment_days } : {}),
       ...((it.phoneTree || it.phone_tree_tip) ? { phoneTree: it.phoneTree || it.phone_tree_tip } : {}),
