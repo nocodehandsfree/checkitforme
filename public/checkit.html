@@ -484,6 +484,7 @@ __LOGO_TILE__
   .store.best{border-color:rgba(74,222,128,.55);background:linear-gradient(100deg,rgba(74,222,128,.1),rgba(74,222,128,.02))}
   .store .ic.best{background:var(--green)}
   .besttag{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#06210f;background:var(--green);padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
+  .kioskbadge{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--purple);padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
   .bestwhy{color:#a9e6bd !important}
   .kioskmark{width:42px;height:42px;flex:0 0 auto;display:grid;place-items:center}
   /* store map (premium): lazy-loaded Leaflet, dark tiles, circle pins */
@@ -699,6 +700,7 @@ __LOGO_TILE__
     </div>
 
     <button class="cta" id="checkBtn" onclick="startCheck()" style="display:none">Check this store</button>
+    <div class="foot" id="kioskNote" style="display:none;margin-top:10px;color:#cdbcf5"><span id="kioskNoteIco"></span> <span data-i18n="kiosk.precall">Kiosk only — we'll ask if their kiosk is working and stocked, not about a shipment.</span></div>
     <div class="foot" id="chargefoot" style="display:none;margin-top:10px" data-i18n="charge"><b>No answer = no charge.</b> You always get the verdict.</div>
     <!-- Sell-methods card: live online stock / ways to get it / resale warning / notify.
          Replaces the call button for non-callable chains (Micro Center, Amazon). -->
@@ -1122,7 +1124,8 @@ const I18N={ es:{
   'empty.search':'Sin resultados — prueba otra búsqueda, o toca el pin para ver tiendas cerca de ti.',
   'empty.radius':'No hay tiendas abiertas en {r} mi — amplía el radio.',
   'empty.far.title':'Aún no estamos en tu zona…','empty.far.sub':'¡Llegaste temprano! Sé el primero en saber cuando {b} llegue cerca de ti.','empty.far.cta':'🔔 Avísame cuando lleguen',
-  'tick.found':'¡Encontrado!','tick.restock':'Reabastecimiento en camino','besttag':'Mejor opción','bestwhy':'buenas probabilidades ahora',
+  'tick.found':'¡Encontrado!','tick.restock':'Reabastecimiento en camino','besttag':'Más probable','bestwhy':'buenas probabilidades ahora',
+  'kioskonly':'Solo kiosco','kiosk.precall':'Solo kiosco — preguntaremos si su kiosco está funcionando y surtido, no por un envío.',
   'closednow':'— cerrado ahora mismo',
   // live view
   'pre.had':'tenían en stock','pre.notin':'no tenían','pre.unclear':'sin respuesta clara','pre.again':'Llamaste a {s} {a} — {o}. ¿Llamar de nuevo?','pre.note':'Llamaste a {s} {a} — {o}',
@@ -1757,6 +1760,9 @@ async function restoreCall(cid, storeName, catName){
   showResult(o, cid);
 }
 function isClosed(s){ return s && s.openState && s.openState.known && !s.openState.open; }
+// Kiosk-only = has a vending kiosk but no shelf stock (hasKiosk && !sellsPacks). Callable, but with a
+// different script ("is your kiosk working/stocked?") — we send kioskMode:true for them.
+function isKioskOnly(s){ return !!(s && s.hasKiosk && s.sellsPacks===false); }
 function tLbl(l){ if(LANG!=='es'||!l) return l; return String(l).replace(/\bOpen\b/g,'Abierto').replace(/\bClosed\b/g,'Cerrado').replace(/\btill\b/g,'hasta').replace(/\bCloses?\b/g,'Cierra').replace(/\bOpens?\b/g,'Abre'); }
 function hoursLine(s){
   const o=s&&s.openState; if(!o||!o.label) return '';
@@ -1924,7 +1930,7 @@ function renderStores(){
   const kiosk=MODE==='kiosk';
   let list=STORES.filter(s=>{
     if(kiosk){ if(!s.hasKiosk) return false; }                    // kiosk mode: vending machines (open OR closed)
-    else { if(s.sellsPacks===false) return false; if(isClosed(s)) return false; } // call mode: callable + open only
+    else { if(s.sellsPacks===false && !s.hasKiosk) return false; if(isClosed(s)) return false; } // call mode: shelf OR kiosk-only, open only
     if(q && !(s.name+' '+(s.location||'')).toLowerCase().includes(q)) return false;
     if(!kiosk && !chainCarriesBrand(s)) return false;
     if(USER_LOC){ const mi=storeMi(s); if(mi==null || mi>RADIUS) return false; }
@@ -1973,18 +1979,23 @@ function renderStores(){
         ${right}</div>`;
     }
     if(BEST && s.id===BEST.id){
-      return `<div class="store best ${sel}" onclick="pickStore(${s.id})">
-        <div class="ic best">${ICO.spark('#06210f')}</div>
-        <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)} <span class="besttag">${t('besttag','Best bet')}</span></div><div class="lo bestwhy">${esc(LANG==='es'?t('bestwhy','great odds right now'):(BEST.why||'great odds right now'))}</div></div>
+      // Green "most likely" highlight only when nothing else is picked (or this row IS the pick) —
+      // selecting another store drops it so we never show two green rows. Star + label always stay.
+      const rowBest = (SEL_STORE && SEL_STORE.id!==s.id) ? '' : 'best';
+      return `<div class="store ${rowBest} ${sel}" onclick="pickStore(${s.id})">
+        <div class="ic best">${ICO.star('#06210f')}</div>
+        <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)} <span class="besttag">${t('besttag','Most likely')}</span></div><div class="lo bestwhy">${esc(LANG==='es'?t('bestwhy','great odds right now'):(BEST.why||'great odds right now'))}</div></div>
         ${right}</div>`;
     }
     const dot=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
     const drop=shipmentDayShort(s);
+    const kioskOnly=isKioskOnly(s);
     // Lead with the STREET so stores sharing a city (e.g. two "Big 5 — Los Angeles") are tellable apart; fall back to city.
-    const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', drop?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
+    // Kiosk-only stores have no shelf shipment day, so drop that meta for them.
+    const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', (drop&&!kioskOnly)?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
     return `<div class="store ${sel}" onclick="pickStore(${s.id})">
       ${logoTile(s)}
-      <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${dot}${meta}</div></div>
+      <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}${kioskOnly?` <span class="kioskbadge">${t('kioskonly','Kiosk only')}</span>`:''}</div><div class="lo">${dot}${meta}</div></div>
       ${right}</div>`;}).join('') : `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
 }
 // --- Live finds ticker (real recent in-stock confirmations) ---
@@ -2002,6 +2013,7 @@ const ICO={
   call:c=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 4h3l1.5 4-2 1.2a11 11 0 0 0 5.3 5.3L15 16.5 19 18v3a1.5 1.5 0 0 1-1.6 1.5C9.7 21.9 2.1 14.3 1.5 6.6A1.5 1.5 0 0 1 3 5h3z" transform="translate(1 -1)" fill="${c}" opacity=".15"/><path d="M5 3.5h3L9.4 7.4 7.6 8.7a11 11 0 0 0 4.7 4.7l1.3-1.8 3.9 1.4v3A1.6 1.6 0 0 1 15.8 21C8.6 20.3 1.7 13.4 1 6.2A1.6 1.6 0 0 1 2.6 4.5" stroke="${c}" stroke-width="1.7" stroke-linejoin="round" fill="none"/><path d="M16 5a4 4 0 0 1 3 3M15 8.2a1.6 1.6 0 0 1 .9.9" stroke="${c}" stroke-width="1.6" stroke-linecap="round"/></svg>`,
   proof:c=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="${c}" stroke-width="1.8"/><path d="M8 12.3l2.6 2.6L16 9.5" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   spark:c=>`<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 .8l1.5 5.1 5.1 1.6-5.1 1.6L8 14.2 6.5 9.1 1.4 7.5l5.1-1.6z" fill="${c}"/></svg>`,
+  star:c=>`<svg width="15" height="15" viewBox="0 0 24 24" fill="${c}"><path d="M12 2.4l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3.1-5.8 3.1 1.1-6.5L2.6 9.2l6.5-.9z"/></svg>`,
   target:c=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.2" stroke="${c}" stroke-width="2"/><circle cx="12" cy="12" r="3.2" fill="${c}"/></svg>`,
   found:c=>`<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="${c}"/><path d="M7 12.4l3.2 3.2L17 9" stroke="#06210f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   discord:c=>`<svg width="16" height="16" viewBox="0 0 24 24" fill="${c}"><path d="M19.3 5.4A17 17 0 0 0 15.1 4l-.2.4a13 13 0 0 1 3.7 1.9 14 14 0 0 0-12 0A13 13 0 0 1 10.3 4L10 4a17 17 0 0 0-4.2 1.4C3 9.6 2.3 13.7 2.6 17.7a17 17 0 0 0 5.2 2.6l.6-1a11 11 0 0 1-1.8-.9l.4-.3a12 12 0 0 0 10.2 0l.4.3a11 11 0 0 1-1.8.9l.6 1a17 17 0 0 0 5.2-2.6c.4-4.6-.6-8.7-2.5-12.3zM9 15.3c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>`,
@@ -2260,6 +2272,13 @@ function syncCta(){
       if(window.innerWidth<900){ setTimeout(()=>{ try{ b.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){} },150); } }
   }
   else { b.style.display='none'; b.classList.remove('armed'); if(cf)cf.style.display='none'; if(vv)vv.style.display=(MODE==='kiosk'||cantCall)?'none':''; }
+  // Kiosk-only stores get a different-script pre-call note (we ask about the kiosk, not a shipment).
+  const kn=$('kioskNote');
+  if(kn){
+    const showK = SEL_STORE && isKioskOnly(SEL_STORE) && SEL_CATS.length && MODE!=='kiosk' && !cantCall;
+    if(showK){ const ki=$('kioskNoteIco'); if(ki && !ki.innerHTML) ki.innerHTML=ICO.kioskMini('#cdbcf5'); }
+    kn.style.display = showK ? '' : 'none';
+  }
   renderStoreActions();
 }
 // Sell-methods card — what's actually possible at THIS store: live online stock, ways to get it,
@@ -2336,7 +2355,7 @@ async function startCheck(){
   LIVE_TIMERS=[phaseT,elT]; LIVE_ROOM=null; $('hangup_btn').style.display='';
 
   const useApp=isAuthed();
-  const r=await (useApp?appApi:api)(useApp?'/app/check':'/pub/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,specificProduct:SEL_PRODUCT})});
+  const r=await (useApp?appApi:api)(useApp?'/app/check':'/pub/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,specificProduct:SEL_PRODUCT,kioskMode:isKioskOnly(SEL_STORE)})});
   if(r.error){ clearInterval(phaseT);clearInterval(elT); backToBuilder(); if(r.error==='no_credits'){ openBuy('out'); } else if(r.error==='unauthorized'){ signIn(); } else if(r.error==='store_closed'){ toast('🔒 '+(r.label||'Store is closed')+' — no call placed'); } else toast('Could not start the call'); return; }
   const cid=r.providerCallId;
   try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){}
@@ -2407,7 +2426,7 @@ async function startCheckLive(){
   $('live_tr').style.display='none'; $('live_tr_body').innerHTML=''; LIVE_TR=[]; AGENT_PITCHED=false;
   let secs=0; const elT=setInterval(()=>{ secs+=1; $('elapsed').textContent='⏱ '+secs+'s'; },1000);
   LIVE_TIMERS=[elT];
-  const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT})});
+  const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:isKioskOnly(SEL_STORE)})});
   if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x} — no call placed',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail','Could not start the call')); return; }
   LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
   if(AUDIO_CTX){ AUDIO_WS=new WebSocket('wss://'+r.wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data);
