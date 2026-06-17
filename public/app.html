@@ -171,6 +171,13 @@
   .callrow .cs-name{font-weight:700;font-size:14.5px;color:#f3f3f7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .callrow .cs-meta{color:var(--muted);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .callrow .calldetail{padding:2px 4px 14px}
+  /* verdict column: fixed width, aligned like a table column, icon over short label */
+  .callrow>summary .cv{flex:0 0 80px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;font-size:11px;font-weight:700;line-height:1.15}
+  .callrow>summary .cv.in{color:var(--green)} .callrow>summary .cv.out{color:var(--red)}
+  .callrow>summary .cv.unk,.callrow>summary .cv.soon{color:var(--yellow)} .callrow>summary .cv.gray{color:var(--muted)}
+  /* directional / helper copy — visually distinct from data: dimmer, italic, never competes */
+  .hint{color:#6f6f7e;font-size:12px;font-style:italic;line-height:1.5;font-weight:400}
+  .hint code{font-style:normal}
   /* ── consumer design system ports ── */
   .slogo{width:42px;height:42px;flex:0 0 auto;border-radius:12px;background:var(--terminal);border:1px solid var(--border);display:grid;place-items:center;overflow:hidden}
   .slogo img{width:28px;height:28px;object-fit:contain}
@@ -232,9 +239,10 @@
   /* day toggles + schedule grid: tighter, no bloated gaps */
   .daypick{gap:8px}
   /* ---- In-admin Claude agent ("Admin dev") ---- */
-  .agent-fab{position:fixed;right:20px;bottom:20px;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;z-index:60;
-    background:linear-gradient(135deg,var(--green),#22C55E);box-shadow:0 10px 28px -8px rgba(74,222,128,.6);display:grid;place-items:center;transition:transform .12s}
-  .agent-fab:active{transform:scale(.94)}
+  .agent-fab{position:fixed;right:16px;bottom:16px;width:48px;height:48px;border-radius:50%;border:none;cursor:pointer;z-index:60;opacity:.92;
+    background:linear-gradient(135deg,var(--green),#22C55E);box-shadow:0 8px 22px -8px rgba(74,222,128,.55);display:grid;place-items:center;transition:transform .12s,opacity .12s}
+  .agent-fab:hover{opacity:1} .agent-fab:active{transform:scale(.94)}
+  .agent-fab svg{width:21px;height:21px}
   .agent-panel{position:fixed;right:20px;bottom:20px;z-index:61;width:min(420px,calc(100vw - 32px));height:min(620px,calc(100dvh - 90px));
     display:flex;flex-direction:column;background:#0d0d15;border:1px solid var(--border);border-radius:18px;overflow:hidden;overscroll-behavior:contain;box-shadow:0 24px 60px -12px rgba(0,0,0,.7)}
   .agent-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);background:rgba(74,222,128,.06)}
@@ -388,17 +396,19 @@
   </section>
 
   <section id="results"><h2>Recent calls</h2>
-    <div class="filters"><select id="r_sort" onchange="renderResults()">
-      <option value="newest">Sort: newest</option>
-      <option value="oldest">Oldest</option>
-      <option value="store">Store A–Z</option>
-      <option value="outcome">Outcome — in stock first</option>
-      <option value="category">Category A–Z</option>
-    </select></div>
+    <div class="filters">
+      <select id="r_cat" onchange="renderResults()"><option value="">All products</option></select>
+      <select id="r_sort" onchange="renderResults()">
+        <option value="newest">Sort: newest</option>
+        <option value="oldest">Oldest</option>
+        <option value="store">Store A–Z</option>
+        <option value="outcome">Outcome — in stock first</option>
+      </select>
+    </div>
     <div id="resultList"><div class="empty">Loading…</div></div>
-    <details class="card" id="bail_card" style="border-color:rgba(251,191,36,.3);margin-top:16px">
-      <summary style="cursor:pointer"><span class="name">✂️ Bail library <span class="meta" style="font-weight:400">— master call cutoffs (cost control)</span></span> <span id="bail_state" class="status s-gray" style="margin-left:6px">…</span></summary>
-      <div class="meta" style="margin:10px 0 10px">Rules that cut a call once it stops being worth money. Master switch stays OFF until bench-tested — nothing changes live calls yet.</div>
+    <details class="card" id="bail_card" style="margin-top:16px">
+      <summary style="cursor:pointer"><span class="name">Bail library <span class="hint">master call cutoffs · cost control</span></span> <span id="bail_state" class="status s-gray" style="margin-left:6px">…</span></summary>
+      <div class="hint" style="margin:10px 0 10px">Rules that cut a call once it stops being worth money. The master switch stays off until it's bench-tested — nothing changes on live calls yet.</div>
       <div id="bail_body" class="meta">Loading…</div>
     </details></section>
 
@@ -1074,7 +1084,7 @@ let BAIL=null;
 async function loadBail(){
   const p=await api('/api/policy'); if(!p||p.error) return; BAIL=p.bail||{};
   const stateEl=document.getElementById('bail_state');
-  if(stateEl){ stateEl.className='status '+(BAIL.enabled?'s-green':'s-gray'); stateEl.textContent=BAIL.enabled?'● ARMED':'staged · off'; }
+  if(stateEl){ stateEl.className='status '+(BAIL.enabled?'s-green':'s-gray'); stateEl.textContent=BAIL.enabled?'● Enforcing':'Not enforcing'; }
   const tg=(k,lbl,sub)=>`<label style="display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer"><input type="checkbox" ${BAIL[k]?'checked':''} onchange="saveBail('${k}',this.checked)" style="width:18px;height:18px"><span><b style="color:#fff">${lbl}</b> ${sub?`<span class="meta">— ${sub}</span>`:''}</span></label>`;
   const num=(k,lbl)=>`<label class="meta" style="display:block">${lbl}<input type="number" min="0" value="${BAIL[k]??''}" onchange="saveBail('${k}',Number(this.value)||0)" style="width:100%;margin-top:4px"></label>`;
   document.getElementById('bail_body').innerHTML=
@@ -1837,7 +1847,11 @@ async function loadResults(){
 }
 function renderResults(){
   let rows=RESULTS.slice();
+  const catSel=document.getElementById('r_cat');
+  if(catSel && catSel.options.length<=1 && CATEGORIES.length) catSel.innerHTML='<option value="">All products</option>'+CATEGORIES.map(c=>`<option value="${esch(c.label)}">${esch(c.label)}</option>`).join('');
+  const catFilter=catSel?catSel.value:'';
   if(RESULT_STORE_FILTER) rows=rows.filter(r=>r.retailerId===RESULT_STORE_FILTER);
+  if(catFilter) rows=rows.filter(r=>String(r.category||'')===catFilter);
   const sort=document.getElementById('r_sort')?.value||'newest';
   const outRank=r=>r.confirmed===true?0:(r.status==='completed'&&r.confirmed!==true&&!r.doesNotSell&&(r.shipmentDayHeard||r.shipmentDay))?1:(r.status==='completed'&&r.confirmed!==false)?2:r.confirmed===false?3:4;
   if(sort==='newest') rows.sort((a,b)=>(b.startedAt||0)-(a.startedAt||0));
@@ -1857,10 +1871,10 @@ function renderResults(){
     return `<details class="callrow">
       <summary>
         <div class="grow">
-          <div class="cs-name">${esch(nm.base)}${nm.branch?` <span style="color:var(--muted);font-weight:500">${esch(nm.branch)}</span>`:''} <span class="pill">${esch(r.category||'')}</span></div>
-          <div class="cs-meta">${agoTs(r.startedAt)} · ${time}${r.shipmentDayHeard?' · ships '+esch(r.shipmentDayHeard):''}</div>
+          <div class="cs-name">${esch(nm.base)}${nm.branch?` <span style="color:var(--muted);font-weight:500">${esch(nm.branch)}</span>`:''}</div>
+          <div class="cs-meta">${catFilter?'':esch(r.category||'')+' · '}${agoTs(r.startedAt)} · ${time}${r.shipmentDayHeard?' · ships '+esch(r.shipmentDayHeard):''}</div>
         </div>
-        <span class="vpill ${tone}" style="flex:0 0 auto">${vmark(vv.e,tone,20)}${esch(vv.t)}</span>
+        <span class="cv ${tone}">${vmark(vv.e,tone,22)}<span>${esch(vv.t)}</span></span>
       </summary>
       <div class="calldetail">${detail||'<span class="meta">No transcript captured for this call.</span>'}</div>
     </details>`;
