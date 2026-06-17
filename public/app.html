@@ -275,8 +275,8 @@
 </head>
 <body class="authwait">
 <header>
-  <span class="hmark"><img src="/logos/check.png?v=1" alt="Check It For Me" style="height:20px;width:auto;object-fit:contain;display:block"></span>
-  <h1><b>Admin</b></h1><span class="dot" title="live"></span>
+  <a class="hmark" href="https://checkitforme.com" title="Back to Check It For Me" style="display:flex;align-items:center"><img src="/logos/check.png?v=1" alt="Check It For Me" style="height:22px;width:auto;object-fit:contain;display:block"></a>
+  <span class="dot" title="live"></span>
   <span class="sub" id="clock"></span>
 </header>
 <nav id="grpnav"><!-- five groups, no horizontal scroll; sub-nav below switches sections within a group --></nav>
@@ -445,7 +445,7 @@
   </section>
 
   <section id="growth">
-    <h2>Growth &amp; Policy</h2>
+    <h2>Policy</h2>
     <div class="card">
       <div class="name" style="margin-bottom:8px">📊 Today's pulse <span class="meta" style="font-weight:400">— funnel &amp; engagement</span></div>
       <div id="gw_pulse" class="meta">Loading…</div>
@@ -513,7 +513,7 @@
   </section>
 
   <section id="bench">
-    <h2>Test bench</h2>
+    <h2>Test</h2>
     <div id="pb_bench">
       <div class="card" id="live_strip" style="padding:10px 14px;border-color:rgba(74,222,128,.35)">
         <div class="meta" style="line-height:1.6">📡 <b style="color:var(--green)">LIVE on store calls:</b> <span id="ls_vals">loading…</span></div>
@@ -642,7 +642,7 @@
     </section>
 
     <section id="trees">
-    <h2>Phone trees &amp; mute</h2>
+    <h2>Mute chains</h2>
     <div id="pb_trees">
     <div class="card" style="border-color:rgba(167,139,250,.3)">
       <div class="name" style="margin-bottom:4px">Phone trees</div>
@@ -750,7 +750,7 @@
   </section>
 
   <section id="labs">
-    <h2>Labs — experimental</h2>
+    <h2>Create</h2>
     <div class="meta" style="margin:-6px 0 14px">Store testing &amp; voice tuning moved to <b>Playbook → Test Bench</b>. Labs is the playground.</div>
 
     <div class="card" id="voicestudio">
@@ -855,19 +855,18 @@ let CATEGORIES = [];
 
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
-  pulse:    {label:'Pulse',    ico:'bolt',  tabs:[['dash','God view','bolt'],['growth','Growth','rise'],['receipts','Receipts','tag']]},
-  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Stores','store'],['map','Map','map'],['zones','Zones','target'],['trees','Phone trees & mute','tree'],['treelab','Tree Lab','tree'],['trainer','Tree Trainer','phone']]},
-  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal']]},
-  voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Labs','flask'],['bench','Test bench','sliders'],['statuses','Statuses','tag']]},
-  settings: {label:'Settings', ico:'gear',  tabs:[['settings','Settings','gear']]},
+  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['growth','Policy','rise']]},
+  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['map','Map','map'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
+  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Mute','tree'],['treelab','Tree Lab','tree'],['trainer','Tree Trainer','phone']]},
+  voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Create','flask'],['bench','Test','sliders'],['settings','Settings','gear']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
 const TAB_LOADERS={ map:()=>ensureMap(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>loadDash(), treelab:()=>loadTreeLab(), receipts:()=>loadReceipts(), trainer:()=>loadTrainer() };
-const GROUP_LAST={}; let CUR_GROUP='pulse';
+const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
   nav.innerHTML=Object.entries(NAV_GROUPS).map(([g,o])=>
-    `<button data-grp="${g}" onclick="showGroup('${g}')">${ICO(o.ico,16)}<span style="vertical-align:middle">${esch(o.label)}</span></button>`).join('');
+    `<button data-grp="${g}" onclick="showGroup('${g}','${o.tabs[0][0]}')">${ICO(o.ico,16)}<span style="vertical-align:middle">${esch(o.label)}</span></button>`).join('');
 }
 function showGroup(g, sectionId){
   const grp=NAV_GROUPS[g]; if(!grp) return; CUR_GROUP=g;
