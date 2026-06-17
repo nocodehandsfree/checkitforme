@@ -7,8 +7,6 @@
 <title>Check It For Me — Admin</title>
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
-<!-- Shared chain-logo renderer (same component the consumer site + /logo-wall use). -->
-__LOGO_TILE__
 <style>
   :root{
     --bg:#0C0C12; --sheet:#1A1A24; --terminal:#0A0A0E;
@@ -173,6 +171,13 @@ __LOGO_TILE__
   .callrow .cs-name{font-weight:700;font-size:14.5px;color:#f3f3f7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .callrow .cs-meta{color:var(--muted);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .callrow .calldetail{padding:2px 4px 14px}
+  /* verdict column: fixed width, aligned like a table column, icon over short label */
+  .callrow>summary .cv{flex:0 0 80px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;font-size:11px;font-weight:700;line-height:1.15}
+  .callrow>summary .cv.in{color:var(--green)} .callrow>summary .cv.out{color:var(--red)}
+  .callrow>summary .cv.unk,.callrow>summary .cv.soon{color:var(--yellow)} .callrow>summary .cv.gray{color:var(--muted)}
+  /* directional / helper copy — visually distinct from data: dimmer, italic, never competes */
+  .hint{color:#6f6f7e;font-size:12px;font-style:italic;line-height:1.5;font-weight:400}
+  .hint code{font-style:normal}
   /* ── consumer design system ports ── */
   .slogo{width:42px;height:42px;flex:0 0 auto;border-radius:12px;background:var(--terminal);border:1px solid var(--border);display:grid;place-items:center;overflow:hidden}
   .slogo img{width:28px;height:28px;object-fit:contain}
@@ -234,9 +239,10 @@ __LOGO_TILE__
   /* day toggles + schedule grid: tighter, no bloated gaps */
   .daypick{gap:8px}
   /* ---- In-admin Claude agent ("Admin dev") ---- */
-  .agent-fab{position:fixed;right:20px;bottom:20px;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;z-index:60;
-    background:linear-gradient(135deg,var(--green),#22C55E);box-shadow:0 10px 28px -8px rgba(74,222,128,.6);display:grid;place-items:center;transition:transform .12s}
-  .agent-fab:active{transform:scale(.94)}
+  .agent-fab{position:fixed;right:16px;bottom:16px;width:48px;height:48px;border-radius:50%;border:none;cursor:pointer;z-index:60;opacity:.92;
+    background:linear-gradient(135deg,var(--green),#22C55E);box-shadow:0 8px 22px -8px rgba(74,222,128,.55);display:grid;place-items:center;transition:transform .12s,opacity .12s}
+  .agent-fab:hover{opacity:1} .agent-fab:active{transform:scale(.94)}
+  .agent-fab svg{width:21px;height:21px}
   .agent-panel{position:fixed;right:20px;bottom:20px;z-index:61;width:min(420px,calc(100vw - 32px));height:min(620px,calc(100dvh - 90px));
     display:flex;flex-direction:column;background:#0d0d15;border:1px solid var(--border);border-radius:18px;overflow:hidden;overscroll-behavior:contain;box-shadow:0 24px 60px -12px rgba(0,0,0,.7)}
   .agent-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);background:rgba(74,222,128,.06)}
@@ -269,8 +275,8 @@ __LOGO_TILE__
 </head>
 <body class="authwait">
 <header>
-  <span class="hmark"><img src="/logos/check.png?v=1" alt="Check It For Me" style="height:20px;width:auto;object-fit:contain;display:block"></span>
-  <h1><b>Admin</b></h1><span class="dot" title="live"></span>
+  <a class="hmark" href="https://checkitforme.com" title="Back to Check It For Me" style="display:flex;align-items:center"><img src="/logos/check.png?v=1" alt="Check It For Me" style="height:22px;width:auto;object-fit:contain;display:block"></a>
+  <span class="dot" title="live"></span>
   <span class="sub" id="clock"></span>
 </header>
 <nav id="grpnav"><!-- five groups, no horizontal scroll; sub-nav below switches sections within a group --></nav>
@@ -283,12 +289,9 @@ __LOGO_TILE__
       <div class="hero-eyebrow">Today</div>
       <div class="stats" id="d_today"></div>
     </div>
-    <div class="card" id="d_live_card" style="border-color:rgba(74,222,128,.3)">
-      <div class="row" style="justify-content:space-between;align-items:baseline">
-        <div class="name">🔴 Live right now</div>
-        <div class="meta" id="d_live_n"></div>
-      </div>
-      <div id="d_live" class="meta" style="margin-top:8px">Loading…</div>
+    <div class="card">
+      <div class="name" style="margin-bottom:8px">Today's pulse <span class="hint">funnel &amp; engagement</span></div>
+      <div id="gw_pulse" class="meta">Loading…</div>
     </div>
     <div class="card" id="d_money_card">
       <div class="name" style="margin-bottom:12px">Business &amp; money</div>
@@ -296,19 +299,18 @@ __LOGO_TILE__
     </div>
     <div class="card" id="credit_card">
       <div class="row" style="justify-content:space-between;align-items:baseline">
-        <div class="name">💳 ElevenLabs credits</div>
+        <div class="name">ElevenLabs credits</div>
         <div class="meta" id="credit_src"></div>
       </div>
-      <div id="credit_body" class="meta" style="margin-top:8px">Loading…</div>
-      <div style="height:10px;background:var(--terminal);border-radius:6px;overflow:hidden;margin-top:10px">
+      <div style="height:10px;background:var(--terminal);border-radius:6px;overflow:hidden;margin:12px 0 8px">
         <div id="credit_bar" style="height:100%;width:0%;background:var(--green);transition:width .3s"></div>
       </div>
-      <div id="credit_stats" class="meta" style="margin-top:10px;line-height:1.7"></div>
+      <div id="credit_body" class="meta">Loading…</div>
+      <div id="credit_stats" class="meta" style="margin-top:6px"></div>
       <div id="credit_limit_wrap" style="display:none;margin-top:12px">
-        <div class="meta" style="color:#FBBF24;margin-bottom:8px">⚠️ This is an <b>estimate</b>: "used" = the last 31 days of usage (it includes calls from before any upgrade), so the % can look off. For a true, auto-updating balance, enable <b>user_read</b> on this API key in ElevenLabs → API Keys, and this widget will read your real balance with no manual entry.</div>
-        <label>Plan size (credits/month) <span style="color:var(--muted)">— enter your plan's monthly credits (Creator ≈ 100,000). Used only until user_read is on.</span></label>
+        <div class="hint" style="margin-bottom:8px">Estimate from the last 31 days <span data-tip="Enable user_read on this API key in ElevenLabs → API Keys for a true auto-updating balance with no manual entry.">ⓘ</span>. Enter your plan size below until live balance is on.</div>
         <div class="row" style="gap:8px">
-          <input id="credit_limit" type="number" placeholder="100000" style="flex:1">
+          <input id="credit_limit" type="number" placeholder="Plan size — e.g. 100000" style="flex:1">
           <button class="ghost" onclick="saveCreditLimit()">Save</button>
         </div>
       </div>
@@ -325,11 +327,13 @@ __LOGO_TILE__
     <h2>Store intel</h2>
     <div class="stats" id="storeintel"></div>
     <div id="storecarries" class="card" style="display:none"></div>
-    <details id="storereports" class="card" style="display:none"><summary><span class="name">Reports</span><span class="meta">by type · top regions · most-checked</span></summary>
+    <details id="storereports" class="card" style="display:none"><summary><span class="name">Reports</span> <span class="hint">by type · top regions · most-checked</span></summary>
       <div id="rep_body" style="margin-top:10px"></div>
     </details>
-    <div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">Find a store</h2>
-      <button class="ghost" onclick="showSection('map')" title="See the current results on the map" style="font-size:12px">🗺 Map these</button></div>
+  </section>
+
+  <section id="search">
+    <h2>Search stores</h2>
     <div class="filters">
       <input id="f_search" placeholder="Search name, city, ZIP — or just pick a filter…" oninput="onAdminSearch()">
       <select id="f_type" onchange="loadRetailers()"><option value="">All types</option></select>
@@ -367,9 +371,17 @@ __LOGO_TILE__
       <button class="ghost" onclick="bulkEdit('offline')">Not online</button>
       <button class="ghost" onclick="bulkEdit('deactivate')" style="color:var(--red)">Remove</button>
     </div>
-    <div id="retailerList"><div class="empty">Search by name, city, ZIP, or region to pull stores up.</div></div>
+    <div id="retailerList"></div>
+    <details class="card" id="map_card" ontoggle="if(this.open){ensureMap();loadMap();}" style="margin-top:16px">
+      <summary><span class="name">Map these results</span> <span class="hint">green = in · red = not in · amber = unclear · gray = uncalled</span></summary>
+      <div style="margin:12px 0 10px"><button class="ghost" onclick="locateMe()">Zoom to my location</button></div>
+      <div id="leafletmap"></div>
+    </details>
+  </section>
+
+  <section id="add">
+    <h2>Add a store</h2>
     <div class="card">
-      <h2>Add a store</h2>
       <div class="grid2">
         <div><label>Name</label><input id="r_name" placeholder="Barnes & Noble — Brentwood"></div>
         <div><label>Phone (E.164)</label><input id="r_phone" placeholder="+13105551234"></div>
@@ -382,25 +394,20 @@ __LOGO_TILE__
     </div>
   </section>
 
-  <section id="map">
-    <h2>Store map — green = in stock, red = not in, amber = unclear, gray = uncalled</h2>
-    <div style="margin-bottom:10px"><button class="ghost" onclick="locateMe()">📍 Zoom to my location</button></div>
-    <div id="leafletmap"></div>
-    <div class="meta" style="margin-top:8px">Stores appear once they have a location (geocoded on import).</div>
-  </section>
-
   <section id="results"><h2>Recent calls</h2>
-    <div class="filters"><select id="r_sort" onchange="renderResults()">
-      <option value="newest">Sort: newest</option>
-      <option value="oldest">Oldest</option>
-      <option value="store">Store A–Z</option>
-      <option value="outcome">Outcome — in stock first</option>
-      <option value="category">Category A–Z</option>
-    </select></div>
+    <div class="filters">
+      <select id="r_cat" onchange="renderResults()"><option value="">All products</option></select>
+      <select id="r_sort" onchange="renderResults()">
+        <option value="newest">Sort: newest</option>
+        <option value="oldest">Oldest</option>
+        <option value="store">Store A–Z</option>
+        <option value="outcome">Outcome — in stock first</option>
+      </select>
+    </div>
     <div id="resultList"><div class="empty">Loading…</div></div>
-    <details class="card" id="bail_card" style="border-color:rgba(251,191,36,.3);margin-top:16px">
-      <summary style="cursor:pointer"><span class="name">✂️ Bail library <span class="meta" style="font-weight:400">— master call cutoffs (cost control)</span></span> <span id="bail_state" class="status s-gray" style="margin-left:6px">…</span></summary>
-      <div class="meta" style="margin:10px 0 10px">Rules that cut a call once it stops being worth money. Master switch stays OFF until bench-tested — nothing changes live calls yet.</div>
+    <details class="card" id="bail_card" style="margin-top:16px">
+      <summary style="cursor:pointer"><span class="name">Bail library <span class="hint">master call cutoffs · cost control</span></span> <span id="bail_state" class="status s-gray" style="margin-left:6px">…</span></summary>
+      <div class="hint" style="margin:10px 0 10px">Rules that cut a call once it stops being worth money. The master switch stays off until it's bench-tested — nothing changes on live calls yet.</div>
       <div id="bail_body" class="meta">Loading…</div>
     </details></section>
 
@@ -408,7 +415,7 @@ __LOGO_TILE__
     <h2>Schedules</h2>
     <div id="scheduleList"><div class="empty">Loading…</div></div>
     <div class="card">
-      <h2>New schedule</h2>
+      <div class="name" style="margin-bottom:12px">New schedule</div>
       <div class="grid2">
         <div><label>Name</label><input id="s_name" placeholder="Thursday B&N Pokémon"></div>
         <div><label>Category</label><select id="s_cat"></select></div>
@@ -436,26 +443,26 @@ __LOGO_TILE__
   <section id="zones"><h2>Zones</h2><div id="zoneList"><div class="empty">Loading…</div></div></section>
   <section id="catalog"><h2>Tracked categories</h2><div id="catList"><div class="empty">Loading…</div></div></section>
   <section id="receipts">
-    <h2>Receipts</h2>
-    <div class="card" style="margin-bottom:12px">
-      <div class="name" style="margin-bottom:4px">📧 Emailed-in receipts <span class="meta" style="font-weight:400">— shoppers forward a receipt → verified intel + a free check</span></div>
-      <div class="meta" id="rcpt_status">Loading…</div>
-    </div>
-    <div id="rcptList"><div class="empty">Loading…</div></div>
-  </section>
-
-  <section id="growth">
-    <h2>Growth &amp; Policy</h2>
+    <h2>Kiosk</h2>
     <div class="card">
-      <div class="name" style="margin-bottom:8px">📊 Today's pulse <span class="meta" style="font-weight:400">— funnel &amp; engagement</span></div>
-      <div id="gw_pulse" class="meta">Loading…</div>
-    </div>
-    <div class="card">
-      <div class="name" style="margin-bottom:4px">📈 Restock intel <span class="meta" style="font-weight:400">— the compounding database</span></div>
+      <div class="name" style="margin-bottom:4px">Restock intel <span class="hint">the compounding database</span></div>
       <div id="gw_intel" class="meta">Loading…</div>
     </div>
     <div class="card">
-      <div class="name" style="margin-bottom:4px">Feature flags <span class="meta" style="font-weight:400">— flip any Lego on/off, live across every subdomain</span></div>
+      <div class="name" style="margin-bottom:4px">Kiosk intel <span class="hint">crowd-sourced refresh times</span></div>
+      <div id="gw_kiosks" class="meta">Loading…</div>
+    </div>
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">Emailed-in receipts <span class="hint">shoppers forward a receipt → verified intel + a free check</span></div>
+      <div class="meta" id="rcpt_status" style="margin-bottom:8px">Loading…</div>
+      <div id="rcptList"><div class="empty">Loading…</div></div>
+    </div>
+  </section>
+
+  <section id="growth">
+    <h2>Policy</h2>
+    <div class="card">
+      <div class="name" style="margin-bottom:4px">Feature flags <span class="hint">flip any Lego on/off, live across every subdomain</span></div>
       <div id="gw_flags" class="meta">Loading…</div>
     </div>
     <div class="card">
@@ -476,10 +483,6 @@ __LOGO_TILE__
       <div id="gw_import_msg" class="meta" style="margin:8px 0;min-height:16px"></div>
       <div><button class="act" onclick="importStoresJson()">Import stores</button> <button class="ghost" onclick="backfillRegions()">Backfill regions</button></div>
     </details>
-    <div class="card">
-      <div class="name" style="margin-bottom:4px">Kiosk intel <span class="meta" style="font-weight:400">— crowd-sourced refresh times</span></div>
-      <div id="gw_kiosks" class="meta">Loading…</div>
-    </div>
     <div class="card">
       <div class="name" style="margin-bottom:4px">Restock watches <span class="meta" style="font-weight:400">— customers waiting on a comeback</span></div>
       <div id="gw_watches" class="meta">Loading…</div>
@@ -513,7 +516,7 @@ __LOGO_TILE__
   </section>
 
   <section id="bench">
-    <h2>Test bench</h2>
+    <h2>Test</h2>
     <div id="pb_bench">
       <div class="card" id="live_strip" style="padding:10px 14px;border-color:rgba(74,222,128,.35)">
         <div class="meta" style="line-height:1.6">📡 <b style="color:var(--green)">LIVE on store calls:</b> <span id="ls_vals">loading…</span></div>
@@ -521,7 +524,7 @@ __LOGO_TILE__
       </div>
 
       <details class="card" id="tb_voice_card">
-        <summary><span class="name">🎚️ Voice &amp; script <span class="chip-draft">DRAFT</span></span><span class="meta">tune safely → test → push live</span></summary>
+        <summary><span class="name">Step 2 · Persona &amp; script <span class="chip-draft">DRAFT</span></span><span class="hint">tune safely → test → apply</span></summary>
         <div class="meta" style="margin:10px 0 12px">Edits a <b>draft</b> — real store calls are untouched until you <b>Apply to ALL store calls</b>. Hear it with Call me below.</div>
         <label>Opening line <span style="color:var(--muted)">(use <code>{category}</code> — it fills in Pokémon, One Piece, etc.)</span></label>
         <input id="tb_opening" placeholder="Heyy! I was just checking to see if you guys got any {category} in?" oninput="updateDraftDot()">
@@ -583,7 +586,7 @@ __LOGO_TILE__
       </details>
 
       <details class="card" id="tb_rotate_card">
-        <summary><span class="name">🔀 Rotation</span><span class="meta">vary the voice + opener per call so stores don't hear the same thing twice</span></summary>
+        <summary><span class="name">Step 3 · Rotation</span><span class="hint">vary voice + opener per call so stores don't hear the same thing twice</span></summary>
         <div class="meta" style="margin:10px 0 8px">Live store calls round-robin through these. Leave empty to use the single live voice/opener.</div>
         <label>Opener variants <span style="color:var(--muted)">— one per line; <code>{category}</code> fills in. The agent uses the next line each call.</span></label>
         <textarea id="rot_openers" rows="4" style="width:100%;font-family:inherit;font-size:13px;background:var(--terminal);color:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;box-sizing:border-box" placeholder="Heyy! Got any {category} in today?&#10;Hi! Quick one — any {category} land recently?&#10;Hey there! Checking if {category} is in stock?"></textarea>
@@ -593,7 +596,7 @@ __LOGO_TILE__
       </details>
 
       <details class="card" id="tb_call_card" open>
-        <summary><span class="name">🧪 The test call</span><span class="meta">the agent calls YOU as the store</span></summary>
+        <summary><span class="name">Step 4 · Test it</span><span class="hint">the agent calls YOU as the store — answer like the clerk</span></summary>
         <div class="meta" style="margin:10px 0 12px">Pick the store context, then answer your phone like the clerk. Runs the <b>draft</b> voice with that store's real phone-tree rules. The result records against the store (visible in Results).</div>
         <label>Store (records the result against this one)</label>
         <select id="sim_store" onchange="previewMaybe()"></select>
@@ -642,7 +645,7 @@ __LOGO_TILE__
     </section>
 
     <section id="trees">
-    <h2>Phone trees &amp; mute</h2>
+    <h2>Mute chains</h2>
     <div id="pb_trees">
     <div class="card" style="border-color:rgba(167,139,250,.3)">
       <div class="name" style="margin-bottom:4px">Phone trees</div>
@@ -685,28 +688,14 @@ __LOGO_TILE__
     </section>
 
     <section id="treelab">
-    <h2>Phone Tree Lab</h2>
+    <h2>Phone Trees</h2>
+    <div class="hint" style="margin:-6px 0 14px">How the agent gets past each brand's phone menu to a human — the keypad/voice route to a person. <b style="color:var(--yellow);font-style:normal">Calls here are real.</b></div>
     <div class="card">
-      <div class="meta">How to reach a human at each brand — discovered &amp; documented from call transcripts by <b id="tl_model">the cheapest model</b>. Every call teaches it; you can also trigger calls here. <b style="color:#FBBF24">Calls are real</b> — bench-test before relying on it.</div>
-      <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center">
-        <input id="tl_count" type="number" min="1" max="25" value="5" style="max-width:78px" title="how many brands">
-        <button class="act" onclick="tlBatch('discover')">Discover N unmapped</button>
-        <button class="ghost" onclick="tlBatch('verify')">Re-verify N mapped</button>
-        <button class="ghost" onclick="loadTreeLab()">↻ Refresh</button>
-      </div>
-      <div class="meta" id="tl_msg" style="margin-top:8px;min-height:14px"></div>
-    </div>
-    <div class="stats" id="tl_stats"></div>
-    <div id="tl_list"><div class="empty">Loading…</div></div>
-    </section>
-
-    <section id="trainer">
-    <h2>Tree Trainer</h2>
-    <div class="card">
-      <div class="meta">Document the <b>fastest path to a human</b> for each chain. Tap <b>Document</b> — our cheap navigator calls a store, listens, and works the menu (pressing or speaking) until a person answers, then records the recipe + time. Watch it live, then <b>Lock</b> it. <b style="color:#FBBF24">Calls are real.</b></div>
-      <div class="row" style="gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+      <div class="name" style="margin-bottom:6px">Auto-learn a route <span class="hint">— Trainer</span></div>
+      <div class="hint" style="margin-bottom:10px">Tap Document on a chain — our cheap navigator calls a store, works the menu until a person answers, records the recipe + time. Watch it live, then Lock it.</div>
+      <div class="row" style="gap:8px;margin-top:2px;align-items:center;flex-wrap:wrap">
         <button class="ghost" onclick="loadTrainer()">↻ Refresh</button>
-        <button class="ghost" onclick="testHelicone()" title="One tiny live call through Helicone on the cheap nav model — no phone call placed">⚡ Test Helicone routing</button>
+        <button class="ghost" data-tip="One tiny live call through Helicone on the cheap nav model — no phone call placed" onclick="testHelicone()">Test Helicone routing</button>
         <span class="meta" id="tr_progress"></span>
       </div>
       <div class="meta" id="tr_heli" style="margin-top:8px"></div>
@@ -720,6 +709,19 @@ __LOGO_TILE__
       <div id="tr_live_result" style="margin-top:12px;display:none"></div>
     </div>
     <div id="tr_list"><div class="empty">Loading…</div></div>
+    <details class="card" style="margin-top:16px">
+      <summary><span class="name">Batch discover / verify <span class="hint">— Lab</span></span></summary>
+      <div class="hint" style="margin:10px 0">Discover routes for unmapped brands or re-verify mapped ones from call transcripts (<b id="tl_model" style="font-style:normal">the cheapest model</b>).</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="tl_count" type="number" min="1" max="25" value="5" style="max-width:78px" data-tip="how many brands">
+        <button class="act" onclick="tlBatch('discover')">Discover N unmapped</button>
+        <button class="ghost" onclick="tlBatch('verify')">Re-verify N mapped</button>
+        <button class="ghost" onclick="loadTreeLab()">↻ Refresh</button>
+      </div>
+      <div class="meta" id="tl_msg" style="margin-top:8px;min-height:14px"></div>
+      <div class="stats" id="tl_stats" style="margin-top:12px"></div>
+      <div id="tl_list"><div class="empty">Loading…</div></div>
+    </details>
     </section>
 
     <section id="statuses">
@@ -750,12 +752,12 @@ __LOGO_TILE__
   </section>
 
   <section id="labs">
-    <h2>Labs — experimental</h2>
-    <div class="meta" style="margin:-6px 0 14px">Store testing &amp; voice tuning moved to <b>Playbook → Test Bench</b>. Labs is the playground.</div>
+    <h2>Create</h2>
+    <div class="hint" style="margin:-6px 0 16px">Build your store agent: <b style="font-style:normal;color:#cfcfd8">1)</b> pick or clone a voice (here) → <b style="font-style:normal;color:#cfcfd8">2)</b> tune its persona &amp; script in <b style="font-style:normal;color:#cfcfd8">Test</b> → <b style="font-style:normal;color:#cfcfd8">3)</b> test it → apply to all store calls.</div>
 
     <div class="card" id="voicestudio">
-      <div class="name" style="margin-bottom:4px">🎚️ Voice studio</div>
-      <div class="meta" style="margin-bottom:12px">Pick the voice every live store call speaks as — or record a new one and clone it.</div>
+      <div class="name" style="margin-bottom:4px">Step 1 · Voice</div>
+      <div class="hint" style="margin-bottom:14px">Pick the voice every live store call speaks as — or record ~30–60s and clone a new one.</div>
       <label>Live store voice</label>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <select id="vs_select" style="flex:1;min-width:180px"></select>
@@ -775,8 +777,8 @@ __LOGO_TILE__
     </div>
 
     <div class="card">
-      <div class="name" style="margin-bottom:4px">🎙️ Talk to me</div>
-      <div class="meta" style="margin-bottom:12px">Call any number in your voice and pick the flow. Great for testing tone or just messing around.</div>
+      <div class="name" style="margin-bottom:4px">Hear a voice live</div>
+      <div class="hint" style="margin-bottom:14px">Call any number to hear a voice — handy for checking tone before you build the persona.</div>
       <label>Phone number (E.164)</label>
       <input id="lab_phone" placeholder="+13105551234">
       <label>First name (optional — e.g. opens with “hey what's up Matt”)</label>
@@ -855,19 +857,18 @@ let CATEGORIES = [];
 
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
-  pulse:    {label:'Pulse',    ico:'bolt',  tabs:[['dash','God view','bolt'],['growth','Growth','rise'],['receipts','Receipts','tag']]},
-  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Stores','store'],['map','Map','map'],['zones','Zones','target'],['trees','Phone trees & mute','tree'],['treelab','Tree Lab','tree'],['trainer','Tree Trainer','phone']]},
-  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal']]},
-  voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Labs','flask'],['bench','Test bench','sliders'],['statuses','Statuses','tag']]},
-  settings: {label:'Settings', ico:'gear',  tabs:[['settings','Settings','gear']]},
+  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['growth','Policy','rise']]},
+  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
+  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Mute','tree'],['treelab','Phone Trees','tree']]},
+  voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Create','flask'],['bench','Test','sliders'],['settings','Settings','gear']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ map:()=>ensureMap(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>loadDash(), treelab:()=>loadTreeLab(), receipts:()=>loadReceipts(), trainer:()=>loadTrainer() };
-const GROUP_LAST={}; let CUR_GROUP='pulse';
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>{loadDash();loadGwPulse();}, treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwIntel();loadGwKiosks();} };
+const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
   nav.innerHTML=Object.entries(NAV_GROUPS).map(([g,o])=>
-    `<button data-grp="${g}" onclick="showGroup('${g}')">${ICO(o.ico,16)}<span style="vertical-align:middle">${esch(o.label)}</span></button>`).join('');
+    `<button data-grp="${g}" onclick="showGroup('${g}','${o.tabs[0][0]}')">${ICO(o.ico,16)}<span style="vertical-align:middle">${esch(o.label)}</span></button>`).join('');
 }
 function showGroup(g, sectionId){
   const grp=NAV_GROUPS[g]; if(!grp) return; CUR_GROUP=g;
@@ -885,6 +886,7 @@ function showSection(id, fromGroup){
   document.querySelectorAll('#subnav2 button').forEach(b=>b.classList.toggle('active',b.dataset.sec===id));
   localStorage.setItem('active_tab', id);
   if(TAB_LOADERS[id]) TAB_LOADERS[id]();
+  setTimeout(decorateChrome,150); setTimeout(decorateChrome,600); // strip emoji from freshly-rendered content too
   try{ window.scrollTo({top:0}); }catch(_){}
 }
 
@@ -1049,13 +1051,7 @@ async function loadDash(){
       st(o.today.confirms,'confirmed','green')+
       st(o.live.length,'live now',o.live.length?'green':'')+
       st(secsFmt(o.today.avgCallSeconds||o.avgCallSeconds30d),'avg call');
-    document.getElementById('d_live_n').textContent=o.live.length?o.live.length+' active':'';
-    document.getElementById('d_live').innerHTML=o.live.length?o.live.map(c=>
-      `<div style="display:flex;align-items:center;gap:9px;padding:7px 0;border-top:1px solid var(--border)">
-        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)"></span>
-        <b style="color:#fff">${esch(c.store)}</b><span class="pill">${esch(c.category)}</span>
-        <span style="margin-left:auto;font-family:ui-monospace,monospace">${secsFmt(c.secs)}</span></div>`).join('')
-      :'No calls in flight.';
+    // (Live-right-now removed from God view per owner direction.)
   }
   if(m&&!m.error){
     const $$=v=>'$'+((v||0)/100).toFixed(2);
@@ -1076,7 +1072,7 @@ let BAIL=null;
 async function loadBail(){
   const p=await api('/api/policy'); if(!p||p.error) return; BAIL=p.bail||{};
   const stateEl=document.getElementById('bail_state');
-  if(stateEl){ stateEl.className='status '+(BAIL.enabled?'s-green':'s-gray'); stateEl.textContent=BAIL.enabled?'● ARMED':'staged · off'; }
+  if(stateEl){ stateEl.className='status '+(BAIL.enabled?'s-green':'s-gray'); stateEl.textContent=BAIL.enabled?'● Enforcing':'Not enforcing'; }
   const tg=(k,lbl,sub)=>`<label style="display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer"><input type="checkbox" ${BAIL[k]?'checked':''} onchange="saveBail('${k}',this.checked)" style="width:18px;height:18px"><span><b style="color:#fff">${lbl}</b> ${sub?`<span class="meta">— ${sub}</span>`:''}</span></label>`;
   const num=(k,lbl)=>`<label class="meta" style="display:block">${lbl}<input type="number" min="0" value="${BAIL[k]??''}" onchange="saveBail('${k}',Number(this.value)||0)" style="width:100%;margin-top:4px"></label>`;
   document.getElementById('bail_body').innerHTML=
@@ -1177,14 +1173,11 @@ function statusBadge(r){
 
 // Store logos + consumer-grade name handling (same conventions as the front end).
 let LOGOS=new Map();
-async function loadLogos(){ try{ const ps=await fetch('/pub/stores').then(r=>r.json()); if(Array.isArray(ps)) LOGOS=new Map(ps.map(x=>[x.id,{url:x.logoUrl||null,wide:!!x.logoWide,dark:!!x.logoDark,wordmark:!!x.logoWordmark,name:x.name}])); }catch(e){} }
+async function loadLogos(){ try{ const ps=await fetch('/pub/stores').then(r=>r.json()); if(Array.isArray(ps)) LOGOS=new Map(ps.map(x=>[x.id,x.logoUrl||null])); }catch(e){} }
 function splitName(n){ const i=(n||'').search(/[—–]| - /); if(i<0) return {base:(n||'').trim(),branch:''}; return {base:n.slice(0,i).trim(),branch:n.slice(i).replace(/^[—–\-\s]+/,'').trim()}; }
-// THE chain-logo tile — the shared LogoTile component (same rules the consumer store list and
-// /logo-wall use; inlined from /logos/logo-tile.js), at the admin's 42px tile size. Falls back to
-// initials only if that block didn't load.
 function storeTile(id,name){
-  const m=LOGOS.get(id)||{};
-  if(window.LogoTile) return LogoTile.tile({url:m.url,wide:m.wide,dark:m.dark,wordmark:m.wordmark,name:name||m.name},42);
+  const u=LOGOS.get(id);
+  if(u) return `<div class="slogo"><img src="${esch(u)}" alt=""></div>`;
   const w=(name||'?').split(/\s+/).filter(Boolean);
   return `<div class="slogo"><span class="mono">${esch(((w[0]||'?')[0]+(w[1]?w[1][0]:'')).toUpperCase())}</span></div>`;
 }
@@ -1208,7 +1201,7 @@ async function loadRetailers(){
   // Filter-first: a text search (2+ chars) OR a Type/Region/Product/Online pick pulls stores from the
   // full DB server-side (capped). Other statuses + sort + zone refine the result client-side.
   const wantServer = q.length>=2 || type || region || carries || status==='online';
-  if(!wantServer){ RETAILERS=[]; SEL.clear(); const el=document.getElementById('retailerList'); if(el) el.innerHTML='<div class="empty">Search by name, city, ZIP — or pick a Type, Region, Product, or Online to pull stores up.</div>'; const bb=document.getElementById('bulkbar'); if(bb) bb.style.display='none'; return; }
+  if(!wantServer){ RETAILERS=[]; SEL.clear(); const el=document.getElementById('retailerList'); if(el) el.innerHTML=''; const bb=document.getElementById('bulkbar'); if(bb) bb.style.display='none'; return; }
   const p=new URLSearchParams();
   if(q.length>=2) p.set('q',q);
   if(type) p.set('type',type);
@@ -1362,7 +1355,7 @@ function renderRetailers(){
     if(af.length){
       const hasRegion=!!(document.getElementById('f_region')?.value);
       el.innerHTML=`<div class="empty">No stores match: ${af.map(esch).join(' · ')}.<div style="margin-top:12px"><button class="ghost" onclick="clearStoreFilters()">Clear filters</button></div>${hasRegion?'<div class="meta" style="margin-top:10px">Tip: online / national stores (e.g. type “Online”) usually have no region — clear <b>Region</b> to include them.</div>':''}</div>`;
-    } else el.innerHTML='<div class="empty">Search by name, city, ZIP — or pick a Type, Region, Product, or Online to pull stores up.</div>';
+    } else el.innerHTML='';
     return;
   }
   const muted=mutedChainIds();
@@ -1842,7 +1835,11 @@ async function loadResults(){
 }
 function renderResults(){
   let rows=RESULTS.slice();
+  const catSel=document.getElementById('r_cat');
+  if(catSel && catSel.options.length<=1 && CATEGORIES.length) catSel.innerHTML='<option value="">All products</option>'+CATEGORIES.map(c=>`<option value="${esch(c.label)}">${esch(c.label)}</option>`).join('');
+  const catFilter=catSel?catSel.value:'';
   if(RESULT_STORE_FILTER) rows=rows.filter(r=>r.retailerId===RESULT_STORE_FILTER);
+  if(catFilter) rows=rows.filter(r=>String(r.category||'')===catFilter);
   const sort=document.getElementById('r_sort')?.value||'newest';
   const outRank=r=>r.confirmed===true?0:(r.status==='completed'&&r.confirmed!==true&&!r.doesNotSell&&(r.shipmentDayHeard||r.shipmentDay))?1:(r.status==='completed'&&r.confirmed!==false)?2:r.confirmed===false?3:4;
   if(sort==='newest') rows.sort((a,b)=>(b.startedAt||0)-(a.startedAt||0));
@@ -1862,10 +1859,10 @@ function renderResults(){
     return `<details class="callrow">
       <summary>
         <div class="grow">
-          <div class="cs-name">${esch(nm.base)}${nm.branch?` <span style="color:var(--muted);font-weight:500">${esch(nm.branch)}</span>`:''} <span class="pill">${esch(r.category||'')}</span></div>
-          <div class="cs-meta">${agoTs(r.startedAt)} · ${time}${r.shipmentDayHeard?' · ships '+esch(r.shipmentDayHeard):''}</div>
+          <div class="cs-name">${esch(nm.base)}${nm.branch?` <span style="color:var(--muted);font-weight:500">${esch(nm.branch)}</span>`:''}</div>
+          <div class="cs-meta">${catFilter?'':esch(r.category||'')+' · '}${agoTs(r.startedAt)} · ${time}${r.shipmentDayHeard?' · ships '+esch(r.shipmentDayHeard):''}</div>
         </div>
-        <span class="vpill ${tone}" style="flex:0 0 auto">${vmark(vv.e,tone,20)}${esch(vv.t)}</span>
+        <span class="cv ${tone}">${vmark(vv.e,tone,22)}<span>${esch(vv.t)}</span></span>
       </summary>
       <div class="calldetail">${detail||'<span class="meta">No transcript captured for this call.</span>'}</div>
     </details>`;
@@ -2089,7 +2086,7 @@ function decorateChrome(){
   // Minimal like the front end: strip the leading emoji from headers/buttons to CLEAN TEXT — no generic
   // icons cluttering titles (section headers are anchored by the green tick-bar instead). The only kept
   // mark is the live-status dot, which is a meaningful indicator rather than decoration.
-  document.querySelectorAll('.name,.subnav button,button.act,button.ghost').forEach(el=>{ if(el.dataset.deco) return; el.dataset.deco='1';
+  document.querySelectorAll('.name,.meta,.hint,.subnav button,button.act,button.ghost').forEach(el=>{ if(el.dataset.deco) return; el.dataset.deco='1';
     const m=el.innerHTML.match(/^\s*(\p{Extended_Pictographic}[️‍\p{Extended_Pictographic}]*)\s*/u); if(!m) return;
     const cp=[...m[1].replace(/[️‍]/g,'')][0];
     const mark = EMOJI_ICO[cp]==='live' ? '<span class="livedot"></span>' : '';
@@ -2424,7 +2421,7 @@ async function agentSend(){
   // NOTE: do NOT poll loadRetailers — at 100k stores that re-pulls a huge query every few seconds.
   setInterval(()=>{ if(document.getElementById('dash').classList.contains('active')) loadDash(); }, 12000); // god view stays live
   setInterval(loadCredits, 30000);  // refresh credit balance periodically
-  setInterval(()=>{ if(MAP && document.getElementById('map').classList.contains('active')) loadMap(); }, 8000);
+  setInterval(()=>{ if(MAP && document.getElementById('map_card')?.open) loadMap(); }, 8000);
 })();
 </script>
 </body>

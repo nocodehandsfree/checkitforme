@@ -55,8 +55,8 @@ optimize for *less to reason about at once* + *less duplication*.)
 - **Store-row mapping duplicated** in `/pub/stores` and `/pub/stores/near` (+ best-bet) → one
   `toStoreRow()` helper.
 - **Chain maps rebuilt** (types/names/muted/stockMethod) in ~5 endpoints → one cached accessor.
-- **Dev/scratch routes in prod:** `/check-lab` → delete or move behind an admin-only/dev flag.
-  (`/logo-wall` is now the canonical logo QA mirror — keep; it shares the LogoTile component.)
+- **Dev/scratch routes in prod:** `/logo-wall`, `/check-lab`, logo-preview tiles (~120 lines)
+  → delete or move behind an admin-only/dev flag.
 - **Rate-limit boilerplate** → one wrapper.
 
 ## Frontend cuts (Lane A — note for the other dev)

@@ -5,10 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="x-rev" content="names-r39" />
 __BRAND_HEAD__
-<link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
-<link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
-<!-- Shared chain-logo renderer (same component the admin + /logo-wall use). -->
-__LOGO_TILE__
+<link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
+<link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
 <!-- Clerk's bundle is the biggest external fetch on every cold load (every product switch reloads a
      new subdomain) — warm the connection early so DNS+TLS isn't on the critical path. -->
 <link rel="preconnect" href="https://__CLERK_FRONTEND_API__" crossorigin>
@@ -483,6 +481,14 @@ __LOGO_TILE__
   .opencount .odot{width:6px;height:6px;border-radius:50%;background:#cfcfe0}
   .store.best{border-color:rgba(74,222,128,.55);background:linear-gradient(100deg,rgba(74,222,128,.1),rgba(74,222,128,.02))}
   .store .ic.best{background:var(--green)}
+  /* Tier groups — TIER 5 = green (best MSRP odds), TIER 4 = amber. */
+  .store.t5{border-color:rgba(74,222,128,.5);background:linear-gradient(100deg,rgba(74,222,128,.09),rgba(74,222,128,.02))}
+  .store.t4{border-color:rgba(245,158,11,.45);background:linear-gradient(100deg,rgba(245,158,11,.08),rgba(245,158,11,.015))}
+  .grouphdr{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:14px 2px 1px}
+  .grouphdr:first-child{margin-top:2px}
+  .grouphdr.g5{color:var(--green)}
+  .grouphdr .ghstar{display:inline-flex}
+  .instk{display:inline-flex;vertical-align:-3px;margin-right:3px}
   .besttag{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#06210f;background:var(--green);padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
   .kioskbadge{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--purple);padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
   .bestwhy{color:#a9e6bd !important}
@@ -700,7 +706,6 @@ __LOGO_TILE__
     </div>
 
     <button class="cta" id="checkBtn" onclick="startCheck()" style="display:none">Check this store</button>
-    <div class="foot" id="kioskNote" style="display:none;margin-top:10px;color:#cdbcf5"><span id="kioskNoteIco"></span> <span data-i18n="kiosk.precall">Kiosk only — we'll ask if their kiosk is working and stocked, not about a shipment.</span></div>
     <div class="foot" id="chargefoot" style="display:none;margin-top:10px" data-i18n="charge"><b>No answer = no charge.</b> You always get the verdict.</div>
     <!-- Sell-methods card: live online stock / ways to get it / resale warning / notify.
          Replaces the call button for non-callable chains (Micro Center, Amazon). -->
@@ -1017,6 +1022,19 @@ __LOGO_TILE__
   </div>
 </div>
 
+<!-- Kiosk-call confirmation: we phone the store to ask if the MACHINE is working/stocked (not shelf stock). -->
+<div class="overlay" id="kcallOverlay" onclick="if(event.target===this)closeKioskConfirm()">
+  <div class="modal" style="position:relative;max-width:400px;text-align:center">
+    <span class="x" onclick="closeKioskConfirm()">×</span>
+    <div id="kcall_logo" style="display:flex;justify-content:center;margin-bottom:8px"></div>
+    <h3 style="margin:0 0 8px;font-size:20px" id="kcall_store">this store</h3>
+    <div class="meta" style="margin-bottom:18px;line-height:1.55"><span data-i18n="kcall.body1">We'll call and ask if their</span> <b id="kcall_cat">Pokémon</b> <span data-i18n="kcall.body2">kiosk is working and stocked, then text you what they say.</span> <span style="color:var(--muted);white-space:nowrap">· 1 check</span></div>
+    <button class="cta" onclick="confirmKioskCall()" style="width:100%" data-i18n="kcall.yes">📞 Yes, call now →</button>
+    <div><a onclick="closeKioskConfirm()" style="display:inline-block;margin-top:12px;color:var(--muted);font-weight:700;font-size:14px;cursor:pointer" data-i18n="kcall.no">Not now</a></div>
+    <div style="margin-top:16px;background:var(--ptint);border:1px solid var(--pline);border-radius:12px;padding:11px 12px;font-size:12.5px;color:#e6e2f7;line-height:1.5;text-align:left"><b data-i18n="kcall.atkiosk">At the kiosk right now?</b> <a onclick="closeKioskConfirm();openReceipt()" style="color:var(--purple);font-weight:800;cursor:pointer" data-i18n="kcall.receipt">Use our email at checkout or forward your receipt → free check.</a></div>
+  </div>
+</div>
+
 <div class="overlay" id="scoreOverlay" onclick="if(event.target===this)closeScore()">
   <div class="modal" style="position:relative;max-width:420px;text-align:left">
     <span class="x" onclick="closeScore()">×</span>
@@ -1092,7 +1110,7 @@ __LOGO_TILE__
 const BRAND = __BRAND_JSON__;   // injected per subdomain (vertical micro-site)
 window.SWITCHER = __BRAND_SWITCHER__; // {current, list:[{key,slug,label,emoji}]} for the product switcher
 let BRAND_CAT = null;           // resolved category object for a vertical site, else null
-let STORES=[], CATS=[], SEL_STORE=null, SEL_CAT=null, SEL_CATS=[], ASKED_CATS=[], SEL_PRODUCT='', POLL=null, LASTRES=null, TRANSLATED=false, ORIGHTML='', MODE='call';
+let STORES=[], CATS=[], SEL_STORE=null, SEL_CAT=null, SEL_CATS=[], ASKED_CATS=[], SEL_PRODUCT='', SEL_KIOSK=false, KIOSK_OK=false, POLL=null, LASTRES=null, TRANSLATED=false, ORIGHTML='', MODE='call';
 let RSTATUSES={}; // statuses registry: server-defined verdicts (single source of truth)
 // Until per-product store data lands: chains KNOWN to carry each vertical (owner-confirmed).
 const KNOWN_CARRIES={
@@ -1113,7 +1131,7 @@ function chainCarriesBrand(st){
   return allow.some(a=>(st.name||'').toLowerCase().includes(a));
 }
 let POLICY={flags:{driverHandoff:true,restockAlerts:true,shareCards:true,kiosks:true,specificSets:true},packs:[],sub:{cents:499},perCallCents:25,headstartMin:10,kioskRefreshChecks:1}; // owner-tunable, loaded at boot
-let LEAD_PENDING=null;
+let LEAD_PENDING=null, AUTH_PENDING=null;
 const $=id=>document.getElementById(id);
 const toast=m=>{const t=$('toast');t.innerHTML=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);};
 // ── i18n (rollout-ready; Spanish live, other languages fall back to English until filled) ──
@@ -1139,8 +1157,10 @@ const I18N={ es:{
   'kioskhint':'<span style="display:flex;align-items:center;gap:7px;font-weight:800;white-space:nowrap"><span id="khspark"></span> ¿En un kiosco? ¡Verificación gratis!</span><a onclick="openReceipt()" style="display:inline-block;margin-top:5px;color:var(--purple);font-weight:800;cursor:pointer">Usa nuestro correo al pagar o reenvía tu recibo →</a>',
   'v.in':'¡En stock!','v.out':'No está en stock','v.unclear':'Nos dieron un “quizás”','v.soldout':'Agotado','v.noanswer':'Nadie contestó','v.hold':'En espera','v.soon':'¡Reabastecimiento en camino!','note.soon':'No está en el estante ahora — pero dijeron que llega un envío <b>{d}</b>. Sé el primero cuando caiga.',
   'search.ph':'Busca por tienda o ciudad…',
-  'cta.pick':'Elige una tienda para verificar','cta.check':'Verificar','cta.for':'por','cta.checkunit':'verificación',
+  'cta.pick':'Elige una tienda para verificar','cta.check':'Verificar','cta.for':'por','cta.checkunit':'verificación','cta.kioskword':'kiosco',
+  'kcall.store':'esta tienda','kcall.body1':'Llamaremos y preguntaremos si su kiosco de','kcall.body2':'está funcionando y surtido, y te enviaremos lo que digan.','kcall.yes':'📞 Sí, llamar ahora →','kcall.no':'Ahora no','kcall.atkiosk':'¿Estás en el kiosco ahora?','kcall.receipt':'Usa nuestro correo al pagar o reenvía tu recibo → verificación gratis.',
   'count.open':'abiertas','count.kiosks':'kioscos',
+  'grp.best':'Mejores cerca de ti','grp.good':'Buenas opciones','grp.all':'Todas las tiendas','instock.now':'En stock ahora',
   'cover.types':'Tipos de tienda que cubrimos — toca el pin para ver <b>las tuyas</b>:',
   'st.open':'Abierto','st.closed':'Cerrado','st.till':'hasta',
   'sc.post':'Publica tu logro','sc.where':'¿Dónde lo conseguiste?','sc.store.ph':'Busca tu tienda…','sc.what':'¿Qué conseguiste?','sc.photo':'Agrega una foto de tu logro','sc.postit':'Publícalo →','back':'← Atrás',
@@ -1323,14 +1343,6 @@ function storeWordmark(name,type){
   }
   return `<span class="wm"><span>${esc(l1)}</span>${l2?`<span>${esc(l2)}</span>`:''}</span>`;
 }
-// THE chain-logo tile for the store list — the shared LogoTile component (same rules the admin and
-// /logo-wall use; inlined from /logos/logo-tile.js). Falls back to the inline wordmark if that block
-// didn't load, so the list never hard-breaks.
-function logoTile(s){
-  if(window.LogoTile) return LogoTile.tile({url:s.logoUrl,wide:s.logoWide,dark:s.logoDark,wordmark:s.logoWordmark,name:s.name});
-  const img=s.logoUrl&&!s.logoWordmark;
-  return `<div class="ic ${img&&s.logoDark?'lite':''} ${img&&s.logoWide?'widelogo':''}">${img?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>`;
-}
 
 let ACCOUNT=null;
 // Phone-first session token (the new Clerk-free auth). Dual-auth: if present, it's used; otherwise
@@ -1351,6 +1363,8 @@ function track(ev,params){ try{ if(window.gtag) gtag('event',ev,params||{}); }ca
 function applyFlags(){
   const f=POLICY.flags||{};
   const kt=document.querySelector('.modetab[data-mode="kiosk"]'); const kioskOK=(BRAND&&BRAND.category==='Pokémon')&&(f.kiosks!==false||f.kioskReceipts!==false); if(kt) kt.style.display=kioskOK?'':'none'; const mt=$('modetabs'); if(mt) mt.style.display=kioskOK?'':'none';
+  // Stay on the Kiosk tab across reloads (last choice) — only when the tab actually exists.
+  if(kioskOK && MODE!=='kiosk'){ try{ if(localStorage.getItem('cifm_mode')==='kiosk') setMode('kiosk'); }catch(e){} }
   loadCommunity();
   renderFooter();
 }
@@ -1428,6 +1442,8 @@ async function refreshAuth(){
   claimPendingReferral();
   loadRefer();
   if(PENDING_VIEW){ const v=PENDING_VIEW; PENDING_VIEW=null; if(v==='history') openHistory(); }
+  // Resume a pending action (e.g. the check they tapped) the moment sign-up completes.
+  if(AUTH_PENDING && isAuthed()){ const n=AUTH_PENDING; AUTH_PENDING=null; setTimeout(n,40); }
 }
 // --- Launch waitlist: capture out-of-area visitors (also demand-by-region intel) ---
 function openWaitlist(){ $('wl_err').textContent=''; $('wl_contact').value=''; track('waitlist_open'); $('waitlistOverlay').classList.add('on'); setTimeout(()=>{try{$('wl_contact').focus();}catch(e){}},80); }
@@ -1976,7 +1992,12 @@ function renderMapPins(){
   (LAST_STORES||[]).forEach(s=>{
     if(s.lat==null||s.lng==null) return;
     const mi=storeMi(s);
-    const m=L.circleMarker([s.lat,s.lng],{radius:8,color:'#0C0C12',weight:1.5,fillColor:'#cfcfe0',fillOpacity:.95}).addTo(MAP);
+    const tier=storeTier(s);
+    const col = tier===5?'#4ADE80' : tier===4?'#F59E0B' : '#cfcfe0'; // tier 5 green · tier 4 amber · else neutral
+    // inStock (recent confirmed hit) → a pin carrying the brand check; otherwise a tier-colored dot.
+    const m = s.inStock
+      ? L.marker([s.lat,s.lng],{icon:L.divIcon({className:'instkpin',html:`<span style="display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#0C0C12;border:2px solid ${col};box-shadow:0 2px 6px rgba(0,0,0,.5)">${FCHK(15)}</span>`,iconSize:[26,26],iconAnchor:[13,13]})}).addTo(MAP)
+      : L.circleMarker([s.lat,s.lng],{radius:8,color:'#0C0C12',weight:1.5,fillColor:col,fillOpacity:.95}).addTo(MAP);
     m.bindPopup(`<div class="mappop"><b>${esc(s.name)}</b><div class="mp-lo">${esc(s.location||'')}${mi!=null?' · '+(mi<10?mi.toFixed(1):Math.round(mi))+' mi':''}</div><button onclick="mapPick(${s.id})">Check this store</button></div>`);
     MAP_MARKERS.push(m); pts.push([s.lat,s.lng]);
   });
@@ -1996,8 +2017,10 @@ function setRadiusIdx(idx){
 function setRadius(mi){ const i=RADII.indexOf(mi); setRadiusIdx(i<0?2:i); }
 function setMode(m){
   MODE=m;
+  try{ localStorage.setItem('cifm_mode', m); }catch(e){} // remember the tab across reloads
+  if(m!=='kiosk'){ SEL_KIOSK=false; KIOSK_OK=false; }
   document.querySelectorAll('.modetab').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
-  $('kioskhint').style.display = m==='kiosk'?'':'none';
+  const kh=$('kioskhint'); if(kh) kh.style.display='none'; // the kiosk "free check" carrot now lives in the call-confirm modal
   $('findstep').textContent = m==='kiosk'?t('find.kiosk','① Find a kiosk'):t('find.step','① Find your store');
   // The call-only bits (category, call button, charge note) hide in kiosk mode.
   const cc=$('catcard');
@@ -2007,20 +2030,57 @@ function setMode(m){
   track('mode_switch',{mode:m});
   renderStores();
 }
+let TIER_VIEW=false; // grouped tier view active this render (suppresses the single "most likely" star)
+function storeTier(s){ return Number(s&&s.tier)||0; } // 5 = best MSRP odds … (backend-provided)
+// One store row — shared by the flat list AND the tiered groups. Tier 5 = green, tier 4 = amber; an
+// inStock store (recent confirmed hit) leads with the brand check.
+function storeRowHtml(s){
+  const kiosk=MODE==='kiosk';
+  const mi=storeMi(s); const o=s&&s.openState;
+  const sel=SEL_STORE&&SEL_STORE.id===s.id?'sel':'';
+  const right=mi!=null?`<div class="smi">${mi<10?mi.toFixed(1):Math.round(mi)}<small>mi</small></div>`:'';
+  const inMark=(!kiosk && s.inStock)?`<span class="instk" title="${t('instock.now','In stock now')}">${FCHK(15)}</span> `:'';
+  if(kiosk){
+    const dot2=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
+    const st=(o&&o.label)?esc(tLbl(o.label)):'';
+    return `<div class="store ${sel}" onclick="pickKiosk(${s.id})">
+      <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
+      <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${dot2}${[esc(s.location||''),st].filter(Boolean).join(' · ')}</div></div>
+      ${right}</div>`;
+  }
+  if(!TIER_VIEW && BEST && s.id===BEST.id){
+    const rowBest=(SEL_STORE && SEL_STORE.id!==s.id)?'':'best';
+    return `<div class="store ${rowBest} ${sel}" onclick="pickStore(${s.id})">
+      <div class="ic best">${ICO.star('#06210f')}</div>
+      <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)} <span class="besttag">${t('besttag','Most likely')}</span></div><div class="lo bestwhy">${esc(LANG==='es'?t('bestwhy','great odds right now'):(BEST.why||'great odds right now'))}</div></div>
+      ${right}</div>`;
+  }
+  const tierCls=storeTier(s)===5?'t5':storeTier(s)===4?'t4':'';
+  const dot=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
+  const drop=shipmentDayShort(s);
+  const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', drop?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
+  return `<div class="store ${tierCls} ${sel}" onclick="pickStore(${s.id})">
+    <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
+    <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)}</div><div class="lo">${dot}${meta}</div></div>
+    ${right}</div>`;
+}
 function renderStores(){
   const q=($('search').value||'').toLowerCase();
   const kiosk=MODE==='kiosk';
   let list=STORES.filter(s=>{
     if(kiosk){ if(!s.hasKiosk) return false; }                    // kiosk mode: vending machines (open OR closed)
-    else { if(s.sellsPacks===false && !s.hasKiosk) return false; if(isClosed(s)) return false; } // call mode: shelf OR kiosk-only, open only
+    else { if(s.sellsPacks===false) return false; if(isClosed(s)) return false; } // call mode: shelf stores only (kiosks live in the Kiosk tab)
     if(q && !(s.name+' '+(s.location||'')).toLowerCase().includes(q)) return false;
     if(!kiosk && !chainCarriesBrand(s)) return false;
     if(USER_LOC){ const mi=storeMi(s); if(mi==null || mi>RADIUS) return false; }
     return true;
   });
   if(USER_LOC) list.sort((a,b)=>(storeMi(a)??1e9)-(storeMi(b)??1e9));
-  // Float the recommended store to the very top (highlighted) — inject it even if it lacks coords.
-  if(BEST && !kiosk){
+  // Tier view: green TIER-5 group on top, optional TIER-4, then everyone else (each nearest→farthest)
+  // — surfaces best-MSRP-odds above closer low-tier stores. Active only when the backend tags tiers.
+  TIER_VIEW = !kiosk && list.some(s=>storeTier(s)>=4);
+  // Float the single "most likely" to the top — but NOT in tier view (the green group is the headline).
+  if(BEST && !kiosk && !TIER_VIEW){
     let bi=list.findIndex(s=>s.id===BEST.id);
     if(bi<0){ const bs=STORES.find(s=>s.id===BEST.id); if(bs){ list.unshift(bs); bi=0; } }
     if(bi>0){ const [b]=list.splice(bi,1); list.unshift(b); }
@@ -2029,7 +2089,10 @@ function renderStores(){
   // "N open" counts only stores we KNOW are open right now — never unknown-hours ones (which default
   // to open:true server-side and were inflating the count / claiming closed stores were open).
   const openCount = kiosk ? total : list.filter(s=>s&&s.openState&&s.openState.known&&s.openState.open).length;
-  list=list.slice(0,40);
+  // Display set: tier view shows ALL tier 5/4 (the valuable few) + nearest 40 of the rest; else nearest 40.
+  let t5=[],t4=[],rest=[];
+  if(TIER_VIEW){ t5=list.filter(s=>storeTier(s)===5); t4=list.filter(s=>storeTier(s)===4); rest=list.filter(s=>storeTier(s)<4).slice(0,40); list=t5.concat(t4,rest); }
+  else { list=list.slice(0,40); }
   LAST_STORES=list; if($('mapview') && $('mapview').style.display==='block') renderMapPins();
   const cnt=$('store_count');
   if(cnt) cnt.innerHTML = `<span class="odot"></span>${openCount} ${kiosk?t('count.kiosks','kiosks'):t('count.open','open')}${USER_LOC?` · ${RADIUS} mi`:''}`;
@@ -2048,37 +2111,15 @@ function renderStores(){
       <button class="findbtn-primary" onclick="findMe()" style="margin-top:2px">${ICO.pin('currentColor')} ${t('find.me','Find my stores')}</button>`;
     return;
   }
-  $('storelist').innerHTML = list.length ? list.map(s=>{
-    const mi=storeMi(s); const o=s&&s.openState;
-    const sel=SEL_STORE&&SEL_STORE.id===s.id?'sel':'';
-    const right=mi!=null?`<div class="smi">${mi<10?mi.toFixed(1):Math.round(mi)}<small>mi</small></div>`:'';
-    if(kiosk){
-      const dot2=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
-      const st=(o&&o.label)?esc(tLbl(o.label)):'';
-      return `<div class="store" onclick="openReceipt()">
-        <div class="ic" style="background:var(--ptint)">${ICO.kioskMini(AC2())}</div>
-        <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${dot2}${[esc(s.location||''),st].filter(Boolean).join(' · ')}</div></div>
-        ${right}</div>`;
-    }
-    if(BEST && s.id===BEST.id){
-      // Green "most likely" highlight only when nothing else is picked (or this row IS the pick) —
-      // selecting another store drops it so we never show two green rows. Star + label always stay.
-      const rowBest = (SEL_STORE && SEL_STORE.id!==s.id) ? '' : 'best';
-      return `<div class="store ${rowBest} ${sel}" onclick="pickStore(${s.id})">
-        <div class="ic best">${ICO.star('#06210f')}</div>
-        <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)} <span class="besttag">${t('besttag','Most likely')}</span></div><div class="lo bestwhy">${esc(LANG==='es'?t('bestwhy','great odds right now'):(BEST.why||'great odds right now'))}</div></div>
-        ${right}</div>`;
-    }
-    const dot=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
-    const drop=shipmentDayShort(s);
-    const kioskOnly=isKioskOnly(s);
-    // Lead with the STREET so stores sharing a city (e.g. two "Big 5 — Los Angeles") are tellable apart; fall back to city.
-    // Kiosk-only stores have no shelf shipment day, so drop that meta for them.
-    const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', (drop&&!kioskOnly)?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
-    return `<div class="store ${sel}" onclick="pickStore(${s.id})">
-      ${logoTile(s)}
-      <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}${kioskOnly?` <span class="kioskbadge">${t('kioskonly','Kiosk only')}</span>`:''}</div><div class="lo">${dot}${meta}</div></div>
-      ${right}</div>`;}).join('') : `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
+  if(TIER_VIEW){
+    let html='';
+    if(t5.length) html+=`<div class="grouphdr g5"><span class="ghstar">${ICO.star('#4ADE80')}</span>${t('grp.best','Best near you')}</div>`+t5.map(storeRowHtml).join('');
+    if(t4.length) html+=`<div class="grouphdr">${t('grp.good','Good bets')}</div>`+t4.map(storeRowHtml).join('');
+    if(rest.length) html+=`<div class="grouphdr">${t('grp.all','All stores')}</div>`+rest.map(storeRowHtml).join('');
+    $('storelist').innerHTML = html || `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
+  } else {
+    $('storelist').innerHTML = list.length ? list.map(storeRowHtml).join('') : `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
+  }
 }
 // --- Live finds ticker (real recent in-stock confirmations) ---
 function agoStr(sec){ const s=Math.floor(Date.now()/1000)-sec; const ago=u=>LANG==='es'?('hace '+u):(u+' ago'); if(s<90)return LANG==='es'?'ahora mismo':'just now'; const m=Math.floor(s/60); if(m<60)return ago(m+'m'); const h=Math.floor(m/60); if(h<24)return ago(h+'h'); return ago(Math.floor(h/24)+'d'); }
@@ -2126,7 +2167,7 @@ let FCID=0;
 // The Fungibles check — our logo-grade checkmark (secondary purple flowing into go-green).
 function FCHK(sz){ sz=sz||16;
   // The owner's EXACT checkmark asset (public/logos/fcheck.png). NEVER recreate it as SVG/CSS — use the file.
-  return `<img src="/logos/fcheck.png?v=6" alt="" width="${sz}" height="${sz}" style="display:inline-block;vertical-align:middle;object-fit:contain">`;
+  return `<img src="/logos/fcheck.png?v=7" alt="" width="${sz}" height="${sz}" style="display:inline-block;vertical-align:middle;object-fit:contain">`;
 }
 function setI(id,html){ const e=$(id); if(e) e.innerHTML=html; }
 function renderIcons(){
@@ -2281,7 +2322,7 @@ function renderChips(){
 function pickStore(id){
   const st=STORES.find(s=>s.id===id);
   if(isClosed(st)){ toast(tLbl(st.openState.label||'Closed')+' '+t('closednow','— closed right now')); return; }
-  SEL_STORE=st;
+  SEL_STORE=st; SEL_KIOSK=false; KIOSK_OK=false;
   if(!BRAND_CAT) applyBrand();   // categories may have loaded after first paint — re-resolve the brand's category
   const opts=storeCatOptions();
   // Vertical site → ALWAYS the brand's category (never guess Pokémon from what the store carries).
@@ -2291,6 +2332,26 @@ function pickStore(id){
   if(!BRAND_CAT){ $('catcard').style.display=''; renderChips(); syncProductUI(); } // vertical sites skip the picker
   syncCta();
 }
+// Kiosk-tab call: select the kiosk store (always the brand category), show the call CTA. Pressing it
+// flashes a confirmation that we're calling to check the MACHINE (working/stocked), not shelf stock.
+function pickKiosk(id){
+  const st=STORES.find(s=>s.id===id); if(!st) return;
+  if(isClosed(st)){ toast(tLbl((st.openState&&st.openState.label)||'Closed')+' '+t('closednow','— closed right now')); return; }
+  SEL_STORE=st; SEL_KIOSK=true; KIOSK_OK=false;
+  if(!BRAND_CAT) applyBrand();
+  const pref = BRAND_CAT || CATS.find(c=>/pok/i.test(c.label)) || CATS[0];
+  SEL_CATS = pref?[pref.id]:[]; SEL_CAT=SEL_CATS[0]||null; SEL_PRODUCT='';
+  renderStores(); syncCta();
+  if(window.innerWidth<900){ const b=$('checkBtn'); if(b) setTimeout(()=>{ try{ b.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){} },150); }
+}
+function openKioskConfirm(){
+  setI('kcall_logo', authMark());
+  $('kcall_store').textContent = (SEL_STORE&&SEL_STORE.name) ? SEL_STORE.name : t('kcall.store','this store');
+  $('kcall_cat').textContent = catLabel() || (BRAND_CAT&&BRAND_CAT.label) || 'Pokémon';
+  $('kcallOverlay').classList.add('on'); applyLang(); track('kioskcall_confirm');
+}
+function closeKioskConfirm(){ $('kcallOverlay').classList.remove('on'); }
+function confirmKioskCall(){ KIOSK_OK=true; closeKioskConfirm(); startCheck(); }
 // Toggle a category in/out of the selection (multi-select), keeping at least one.
 function pickCat(id){
   const i=SEL_CATS.indexOf(id);
@@ -2347,20 +2408,15 @@ function syncCta(){
   // Non-callable chains (Micro Center, Amazon) NEVER get a call button — the sell-methods card
   // below carries "Buy online" + notify instead. (docs/SELL_METHODS_PLAN.md rule 1.)
   const cantCall=SEL_STORE&&SEL_STORE.callable===false;
-  if(SEL_STORE&&SEL_CATS.length&&MODE!=='kiosk'&&!cantCall){
+  if(SEL_STORE&&SEL_CATS.length&&(MODE!=='kiosk'||SEL_KIOSK)&&(SEL_KIOSK||!cantCall)){ // kiosks are always callable (we call to check the machine), even if the store row is callable:false
     b.style.display=''; if(vv)vv.style.display='none'; if(cf)cf.style.display='';
-    b.innerHTML=`${ic}${t('cta.check','Check')} ${esc(SEL_STORE.name.split('—')[0].trim())} ${t('cta.for','for')} <b>${esc(catLabels())}</b> &nbsp; <span class="price">· 1 ${t('cta.checkunit','check')}</span>`;
+    b.innerHTML = SEL_KIOSK
+      ? `${ic}${t('cta.check','Check')} ${esc(SEL_STORE.name)} ${t('cta.kioskword','kiosk')} &nbsp; <span class="price">· 1 ${t('cta.checkunit','check')}</span>`
+      : `${ic}${t('cta.check','Check')} ${esc(SEL_STORE.name.split('—')[0].trim())} ${t('cta.for','for')} <b>${esc(catLabels())}</b> &nbsp; <span class="price">· 1 ${t('cta.checkunit','check')}</span>`;
     if(wasHidden){ b.classList.remove('armed'); void b.offsetWidth; b.classList.add('armed');
       if(window.innerWidth<900){ setTimeout(()=>{ try{ b.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){} },150); } }
   }
   else { b.style.display='none'; b.classList.remove('armed'); if(cf)cf.style.display='none'; if(vv)vv.style.display=(MODE==='kiosk'||cantCall)?'none':''; }
-  // Kiosk-only stores get a different-script pre-call note (we ask about the kiosk, not a shipment).
-  const kn=$('kioskNote');
-  if(kn){
-    const showK = SEL_STORE && isKioskOnly(SEL_STORE) && SEL_CATS.length && MODE!=='kiosk' && !cantCall;
-    if(showK){ const ki=$('kioskNoteIco'); if(ki && !ki.innerHTML) ki.innerHTML=ICO.kioskMini('#cdbcf5'); }
-    kn.style.display = showK ? '' : 'none';
-  }
   renderStoreActions();
 }
 // Sell-methods card — what's actually possible at THIS store: live online stock, ways to get it,
@@ -2423,11 +2479,13 @@ async function startCheck(){
   if(!SEL_STORE||!SEL_CATS.length) return;
   // Snapshot the lines we're asking about (for the per-category result + history).
   ASKED_CATS=SEL_CATS.map(id=>({id,label:(CATS.find(c=>c.id===id)||{}).label||''})).filter(x=>x.label);
-  // Email gate: capture an email before the first anonymous free check (re-runs after submit).
-  if(!isAuthed() && !leadCaptured()){ if(!ensureLead(startCheck)) return; }
-  // Gate: signed-in users need credits; anonymous get one free check, then must sign up.
-  if(isAuthed()){ if(!ACCOUNT||ACCOUNT.credits<=0){ openBuy('out'); return; } }
-  else if(freeUsed()){ toast(t('toast.freeused','Your free check is used — sign up to keep going')); signUp(); return; }
+  // Kiosk call: flash the "we'll call to check if the machine's working" confirmation first.
+  if(SEL_KIOSK && !KIOSK_OK){ openKioskConfirm(); return; }
+  // Sign-up gate: a check needs an account. Route anon users to PHONE sign-up (the SAME modal as the
+  // "You" pill — never the email box) and resume the check once they're in. Phone accounts are granted
+  // free checks on creation, so the credit gate below then passes.
+  if(!isAuthed()){ AUTH_PENDING=startCheck; openAuth(); return; }
+  if(!ACCOUNT||ACCOUNT.credits<=0){ openBuy('out'); return; }
   return startCheckLive(); // always the live, hear-it-happen bridge path
   $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden');
   $('livestore').textContent=SEL_STORE.name; $('phase').textContent=PHASES[0];
@@ -2437,7 +2495,7 @@ async function startCheck(){
   LIVE_TIMERS=[phaseT,elT]; LIVE_ROOM=null; $('hangup_btn').style.display='';
 
   const useApp=isAuthed();
-  const r=await (useApp?appApi:api)(useApp?'/app/check':'/pub/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,specificProduct:SEL_PRODUCT,kioskMode:isKioskOnly(SEL_STORE)})});
+  const r=await (useApp?appApi:api)(useApp?'/app/check':'/pub/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
   if(r.error){ clearInterval(phaseT);clearInterval(elT); backToBuilder(); if(r.error==='no_credits'){ openBuy('out'); } else if(r.error==='unauthorized'){ signIn(); } else if(r.error==='store_closed'){ toast('🔒 '+(r.label||'Store is closed')+' — no call placed'); } else toast('Could not start the call'); return; }
   const cid=r.providerCallId;
   try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){}
@@ -2508,7 +2566,7 @@ async function startCheckLive(){
   $('live_tr').style.display='none'; $('live_tr_body').innerHTML=''; LIVE_TR=[]; AGENT_PITCHED=false;
   let secs=0; const elT=setInterval(()=>{ secs+=1; $('elapsed').textContent='⏱ '+secs+'s'; },1000);
   LIVE_TIMERS=[elT];
-  const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:isKioskOnly(SEL_STORE)})});
+  const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
   if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x} — no call placed',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail','Could not start the call')); return; }
   LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
   if(AUDIO_CTX){ AUDIO_WS=new WebSocket('wss://'+r.wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data);
@@ -2681,7 +2739,7 @@ function showResult(o, cid){
   if(o.status==='completed' && askedLabels.length>1){
     const cr=o.categoryResults||{};
     breakdown = '<div style="margin-top:12px">'+askedLabels.map(lb=>{
-      const v=cr[lb]; const e=v===true?'✅':v===false?'❌':'🤔';
+      const v=cr[lb]; const e=v===true?FCHK(15):(v===false?'❌':'🤔');
       const lbl=v===true?t('res.percat.in','in stock'):v===false?t('res.percat.out','not in stock'):t('res.percat.unk','no clear answer');
       const col=v===true?'var(--green)':v===false?'var(--red)':'var(--orange)';
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 2px;border-bottom:1px solid rgba(255,255,255,.07)"><span style="font-weight:700">${esc(lb)}</span><span style="color:${col};font-weight:800;white-space:nowrap">${e} ${lbl}</span></div>`;
@@ -2786,6 +2844,8 @@ function safeReason(r){
 // Custom verdict marks: emoji (from the statuses registry) → our drawn icon, tone-colored.
 function vicon(emoji,cls,size){
   size=size||58;
+  // In-stock = our real brand check FILE (never a drawn approximation), per the owner's logo rule.
+  if(emoji==='✅') return FCHK(size);
   const col=cls==='in'?'#4ADE80':cls==='out'?'#EF4444':cls==='soon'?'#F59E0B':'#FBBF24';
   const sw=size<=20?2.1:1.8;
   const W=(inner)=>`<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px">${inner}</svg>`;
