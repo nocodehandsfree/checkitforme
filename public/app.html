@@ -2243,7 +2243,8 @@ async function loadGwKiosks(){
   const ks=await api('/api/kiosks');
   const el=document.getElementById('gw_kiosks');
   if(!Array.isArray(ks)||!ks.length){ el.textContent='No kiosk reports yet.'; return; }
-  el.innerHTML=ks.map(k=>`<div style="padding:8px 0;border-top:1px solid var(--border)"><b style="color:var(--text)">${esch(k.label)}</b> · ${prodMark(k.category,14)}<br><span style="color:var(--green)">${esch(k.refreshSummary||'—')}</span> · ${k.reports||0} report${k.reports===1?'':'s'}</div>`).join('');
+  const dd=s=>esch(String(s||'').replace(/\s+—\s+/g,' · '));
+  el.innerHTML=ks.map(k=>`<div style="padding:8px 0;border-top:1px solid var(--border)"><b style="color:var(--text)">${dd(k.label)}</b> · ${prodMark(k.category,14)}<br><span style="color:var(--green)">${dd(k.refreshSummary||'none yet')}</span> · ${k.reports||0} report${k.reports===1?'':'s'}</div>`).join('');
 }
 async function loadGwWatches(){
   const ws=await api('/api/watches');
