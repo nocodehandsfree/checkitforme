@@ -101,13 +101,15 @@ __BRAND_HEAD__
   .smbtn.ghost{background:var(--sheet);border:1px solid var(--pline);color:#e6e2f7}
   .smnote{color:var(--muted);font-size:12px;line-height:1.45;text-align:center}
   /* live calling */
-  .live{text-align:center;padding:30px 18px}
-  .ring{width:84px;height:84px;border-radius:50%;margin:0 auto 18px;border:3px solid rgba(74,222,128,.18);border-top-color:var(--green);animation:spin 1s linear infinite;display:flex;align-items:center;justify-content:center;font-size:32px}
   @keyframes spin{to{transform:rotate(360deg)}}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
-  .live .phase{font-size:17px;font-weight:800;margin-bottom:6px;min-height:22px}
-  .live .sub{color:var(--muted);font-size:13px}
-  .live .elapsed{color:var(--muted);font-size:12px;margin-top:14px;font-family:ui-monospace,monospace}
+  /* live call uses the SAME card shell as the verdict — only the content inside changes when it ends */
+  .rhead.live{background:rgba(74,222,128,.06);border-color:rgba(74,222,128,.3)}
+  .rhead.live .rhead-stat{color:var(--green)}
+  .rhead.live .rhead-ic{align-items:center}
+  .rhead-stage{margin-top:13px;font-size:15px;font-weight:800;color:var(--green);line-height:1.3;min-height:20px}
+  .live-pulse{width:14px;height:14px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(74,222,128,.55);animation:livepulse 1.4s infinite}
+  @keyframes livepulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,.5)}70%{box-shadow:0 0 0 11px rgba(74,222,128,0)}100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}}
   .live-wait{color:var(--muted);font-size:13px;text-align:center;padding:16px 8px;line-height:1.5}
   /* result */
   .verdict{text-align:center;padding:16px 0 8px}
@@ -786,13 +788,22 @@ __BRAND_HEAD__
   <!-- LIVE -->
   <div id="live" class="hidden">
     <div id="muteBanner" style="display:none;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.4);color:#FBBF24;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-weight:700;font-size:13.5px;text-align:center" data-i18n="live.mute">🔇 Flip your phone off silent so you can hear the call</div>
-    <div class="card live">
-      <div class="ring"><svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M5 4.5h4l1.5 4.5-2.5 1.6a13 13 0 0 0 5.4 5.4l1.6-2.5 4.5 1.5v4a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 3 6.7 2 2 0 0 1 5 4.5z" stroke="var(--green)" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
-      <div class="phase" id="phase" data-i18n="live.connecting">Connecting…</div>
-      <div class="sub" id="livestore"></div>
-      <div id="audio_ind" style="display:none;margin-top:12px;color:var(--green);font-weight:800;font-size:15px;animation:pulse 1.2s infinite" data-i18n="live.live">🔊 LIVE — you're hearing the call now</div>
-      <div class="elapsed" id="elapsed"></div>
-      <button id="hangup_btn" onclick="hangUpLive()" style="display:none;margin:16px auto 0;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:var(--red);padding:10px 20px;border-radius:10px;font-weight:800;cursor:pointer;font-size:14px" data-i18n="live.hangup">■ Stop &amp; hang up</button>
+    <div class="card">
+      <div class="rhead live" id="live_rhead">
+        <div class="rhead-top">
+          <span class="railchip" id="live_chip" style="display:grid"></span>
+          <div class="rhead-id">
+            <div class="rhead-store" id="live_store2"></div>
+            <div class="rhead-addr" id="live_addr"></div>
+          </div>
+          <div class="rhead-badge">
+            <span class="rhead-ic"><span class="live-pulse"></span></span>
+            <span class="rhead-stat" data-i18n="live.livelbl">LIVE</span>
+          </div>
+        </div>
+        <div class="rhead-stage" id="phase" data-i18n="live.connecting">Calling…</div>
+      </div>
+      <button id="hangup_btn" onclick="hangUpLive()" style="display:none;margin:14px auto 0;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:var(--red);padding:9px 18px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13.5px" data-i18n="live.hangup">■ Stop &amp; hang up</button>
     </div>
     <div class="proof" id="live_tr" style="display:none;text-align:left">
       <div class="ph" data-i18n="live.proof">🔴 Live — the conversation as it happens</div>
@@ -1901,7 +1912,7 @@ async function restoreCall(cid, storeName, catName){
   SEL_STORE = known ? {id:known.storeId,name:known.storeName} : (st||{id:null,name:storeName||''});
   SEL_CAT=ct?ct.id:SEL_CAT; SEL_CATS=SEL_CAT?[SEL_CAT]:[]; ASKED_CATS=ct?[{id:ct.id,label:ct.label}]:((known&&known.cats)?known.cats.map(l=>({id:null,label:l})):[]);
   $('builder').classList.add('hidden'); $('live').classList.remove('hidden');
-  $('phase').textContent=t('live.loading','Loading your call…'); $('livestore').textContent=SEL_STORE.name; $('elapsed').textContent='';
+  $('phase').textContent=t('live.loading','Loading your call…'); fillLiveHeader();
   const o=await api('/pub/result/'+encodeURIComponent(cid));
   if(!o||o.error||o.status==='in_progress'){ $('live').classList.add('hidden'); $('builder').classList.remove('hidden'); toast(t('toast.callgone','That call is no longer available')); return; }
   if(!SEL_STORE.name && isAuthed()){ const srv=(await fetchServerHistory()).find(x=>x.cid===cid); if(srv){ SEL_STORE={id:srv.storeId,name:srv.storeName}; } }
@@ -2588,6 +2599,7 @@ const IVR_RE=/press \d|press the|press [a-z]\b|para español|for .{2,40}[ ,]+pre
 const AGENT_ASK=/in stock|do you (have|carry|sell)|have any|y'?all have|carr(y|ying)|wondering if|calling to (see|check)|checking to see|see if (you|y'?all)|get any|got any|come in|new shipment|on the shelf|restock|booster|\bpacks?\b|\bcards?\b|\bsealed\b/i;
 // Routing words our agent speaks to climb OUT of the menu toward a human (CVS: "front", "general"…).
 const ROUTE_RE=/\b(front|general|store|associate|representative|operator|main|a person|someone|pharmacy|sales|customer service)\b/i;
+const HOLD_RE=/please hold|hold on|one moment|moment please|connect(ing)?|transferr?(ing|ed)?|please wait|hold while|bear with|stay on the line|be right with/i;
 // The 8 stages a caller watches, in order. Monotonic — the label only ever moves FORWARD, never back.
 let LIVE_STAGE=0;
 function liveStageLabel(n){
@@ -2596,18 +2608,37 @@ function liveStageLabel(n){
   return ({1:tf('live.s1','Calling {s}…',{s:store}),2:t('live.s2',"It's ringing…"),3:t('live.s3',"We've connected"),4:t('live.s4','Listening to menu options'),5:t('live.s5','Navigating the menu'),6:t('live.s6','Transferring to the front'),7:t('live.s7','An associate answered!'),8:tf('live.s8','Asking about {p}',{p:prod})})[n]||'';
 }
 function liveStage(n){ if(!n||n<=LIVE_STAGE) return; LIVE_STAGE=n; const el=$('phase'); if(el) el.textContent=liveStageLabel(n); }
-// Furthest stage the transcript so far justifies: menu prompts (4), agent nav (5), routing word (6),
-// a human line (7), our stock pitch (8). The pitch only ever goes to a person, so it's the hard signal.
+// Furthest stage the transcript so far justifies. The key rule learned from a live CVS call: a
+// STORE-side line only counts as a HUMAN ("associate answered", 7) AFTER our agent has asked to be
+// routed (said "front"/"general"/"operator") AND it isn't menu/hold language. Otherwise it's still the
+// automated menu (4) — even a chatty prompt like "we do not recognize your phone number…". Our stock
+// pitch (AGENT_ASK) only ever goes to a real person, so it's the hard signal for 8.
 function stageForLines(lines, pitched){
-  if(pitched) return 8;
-  let st=3; // we only parse lines once the call is connected
+  let st=3, routed=false;
   for(const l of (lines||[])){
     const m=String(l).match(/^(Agent|Clerk):\s*(.*)$/); if(!m) continue;
     const txt=m[2]||'';
-    if(m[1]==='Agent'){ if(AGENT_ASK.test(txt)) return 8; st=Math.max(st, ROUTE_RE.test(txt)?6:5); }
-    else { st=Math.max(st, IVR_RE.test(txt)?4:7); } // menu prompt vs a real human line
+    if(m[1]==='Agent'){
+      if(AGENT_ASK.test(txt)) return 8;                          // our stock question — a human is on the line
+      if(ROUTE_RE.test(txt)){ routed=true; st=Math.max(st,6); }  // "front/general/operator" = transferring
+      else st=Math.max(st,5);                                    // any other agent speech = navigating the menu
+    } else {
+      if(routed && !IVR_RE.test(txt) && !HOLD_RE.test(txt)) st=Math.max(st,7); // a real human, post-routing
+      else st=Math.max(st,4);                                    // pre-routing / menu / hold = the automated menu
+    }
   }
-  return st;
+  return pitched ? Math.max(st,8) : st;
+}
+// Paint the live card's store header (logo + name + full address) — the SAME shell as the verdict card,
+// so when the call ends the box stays put and only the content inside it changes.
+function fillLiveHeader(){
+  if(!SEL_STORE) return;
+  const e={storeId:SEL_STORE.id,storeName:SEL_STORE.name,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark};
+  const chip=$('live_chip'); if(chip){ chip.className='railchip'+railClass(e); chip.innerHTML=railFace(e); }
+  const nm=splitStoreName(SEL_STORE.name||'');
+  if($('live_store2')) $('live_store2').textContent=[nm.base,nm.branch].filter(Boolean).join(' ');
+  const st=STORES.find(x=>x.id===SEL_STORE.id)||{}, a=st.address||'', c=st.location||SEL_STORE.location||'';
+  if($('live_addr')) $('live_addr').textContent=(a&&c&&!a.includes(c))?(a+', '+c):(a||c);
 }
 function stopLiveTimers(){ LIVE_TIMERS.forEach(t=>clearInterval(t)); LIVE_TIMERS=[]; if(POLL){clearInterval(POLL);POLL=null;} }
 async function hangUpLive(){
@@ -2651,11 +2682,11 @@ async function startCheckLive(){
   $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden');
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb){ _mb.style.display=canListen?'':'none'; if(canListen) setTimeout(()=>{ if(_mb&&$('live')&&!$('live').classList.contains('hidden')) _mb.style.display='none'; },7000); }
-  $('livestore').textContent=SEL_STORE.name; LIVE_STAGE=0; liveStage(1); $('elapsed').textContent='';
+  fillLiveHeader(); const _lr=$('live_rhead'); if(_lr)_lr.className='rhead live'; LIVE_STAGE=0; liveStage(1);
   // The call lives on ONE page — the transcript area is up from the very start (with a waiting note),
   // and the live bubbles drop straight into it as the conversation happens. No separate "ringing" screen.
   $('live_tr').style.display=''; $('live_tr_body').innerHTML=`<div class="live-wait">${t('live.wait','The conversation will show up here, live, as it happens…')}</div>`; LIVE_TR=[]; AGENT_PITCHED=false;
-  let secs=0; const elT=setInterval(()=>{ secs+=1; $('elapsed').textContent='⏱ '+secs+'s'; },1000);
+  let secs=0; const elT=setInterval(()=>{ secs+=1; },1000); // counts toward the hard cap only — no on-screen timer
   LIVE_TIMERS=[elT];
   const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
   if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x} — no call placed',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail','Could not start the call')); return; }
@@ -2675,7 +2706,12 @@ async function startCheckLive(){
       // the call is connected → flip to "Answered" and fall STRAIGHT through to pull the transcript
       // (no wasted cycle), instead of sitting on "Ringing…".
       const bs=await api('/pub/bridge/'+r.room);
-      if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; liveStage(3); try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){} }
+      if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; liveStage(3);
+        // Voice IVRs (CVS) open with a long monologue that EL won't transcribe until it pauses (~30s).
+        // So once connected, move to "Listening to menu options" on a short timer — accurate, and it
+        // keeps the screen alive during that gap instead of freezing on "We've connected".
+        LIVE_TIMERS.push(setTimeout(()=>liveStage(4),3500));
+        try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){} }
       // (no premature "Answered" here — the bridge engaging isn't a person; we only leave Calling/Answering when a real transcript line lands)
       else return; // still ringing / connecting
     }
