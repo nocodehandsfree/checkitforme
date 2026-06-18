@@ -1404,7 +1404,7 @@ function renderRetailers(){
         <div class="sname"><span class="nm">${esch(nm.base)}</span>${r.stockStatus==='verified'?'<span class="tag-verified">verified</span>':'<span class="tag-unverified">unverified</span>'}${r.storeType?` <span class="chip-type">${ICO(storeTypeIco(r.storeType),11)} ${esch(r.storeType)}</span>`:''}${muted.has(r.chainId)?' <span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.12)">muted</span>':''}${badNum(r)?' <span class="chip-sm" style="color:#FBBF24;background:rgba(251,191,36,.12)">no number</span>':''}${r.online?' <span class="chip-sm" style="color:#7DD3FC;background:rgba(125,211,252,.12)">online</span>':''}</div>
         ${nm.branch?`<div class="sbranch">${esch(nm.branch)}</div>`:''}
         <div class="smeta" style="display:flex;align-items:center;flex-wrap:wrap;gap:0 4px">${esch(metaTxt)}${hrs?(metaTxt?' · ':'')+hrs:''}${ships?(metaTxt||hrs?' · ':'')+ships:''}</div>
-        ${(()=>{const cl=r.carries?r.carries.split(',').map(x=>x.trim()).filter(Boolean):[];return cl.length?`<div class="hint" style="margin-top:5px;font-style:normal" data-tip="Carries: ${esch(cl.join(', '))}${r.lastCall&&r.lastCall.summary?' — last call: '+esch(r.lastCall.summary):''}">Carries ${cl.length} · ${esch(cl.slice(0,2).join(', '))}${cl.length>2?' +'+(cl.length-2):''}</div>`:'';})()}
+        ${(()=>{const cl=r.carries?r.carries.split(',').map(x=>x.trim()).filter(Boolean):[];return cl.length?`<div class="hint" style="margin-top:5px;font-style:normal" data-tip="Carries: ${esch(cl.join(', '))}${r.lastCall&&r.lastCall.summary?' — last call: '+esch(r.lastCall.summary):''}">Carries ${cl.length} · ${cl.slice(0,2).map(x=>prodMark(x,14)).join(' ')}${cl.length>2?' +'+(cl.length-2):''}</div>`:'';})()}
       </div>
       ${statusBadge(r)}
     </div>
@@ -1954,7 +1954,7 @@ async function loadCatalog(){
     const key=KEY[(c.label||'').toLowerCase()] || Object.keys(bp).find(k=>norm(c.label).includes(norm(k)) || norm(k).includes(norm(c.label).split(' ')[0]));
     const n=key?bp[key]:null;
     return `<div class="card"><div class="row" style="justify-content:space-between;align-items:center;gap:12px">
-      <div class="grow"><div class="sname">${esch(c.label)}</div><div class="smeta">${n!=null?('carried in '+fmt(n)+' stores'):'tracked vertical'}</div></div>
+      <div class="grow"><div class="sname">${prodMark(c.label,20)}</div><div class="smeta">${n!=null?('carried in '+fmt(n)+' stores'):'tracked vertical'}</div></div>
       ${n!=null?`<div class="stat green" style="padding:9px 15px"><div class="n">${fmt(n)}</div><div class="l">stores</div></div>`:''}
     </div></div>`;
   }).join('');
@@ -2080,6 +2080,12 @@ const v = (id) => document.getElementById(id).value.trim();
 let POL=null;
 const FLAG_LABELS={connectOnHuman:'Connect-on-human',dogfoodHours:'Dog-food hours',driverHandoff:'Driver hand-off demo',scheduling:'Scheduled shipment-day calls',restockAlerts:'Restock alerts',kiosks:'Kiosk intel + rewards',shareCards:'Share cards',multiProduct:'Multi-product asks',specificSets:'Specific-set asks'};
 const esch=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// Product mark: show a known product's logo instead of its plain name (Pokémon for now).
+function prodMark(name,size){
+  size=size||15; const s=String(name==null?'':name).trim();
+  if(/pok[eé]?mon/i.test(s)) return `<img src="/logos/chains/pokemon_vending.svg" alt="Pokémon" title="Pokémon" style="height:${size}px;width:${size}px;vertical-align:-3px;object-fit:contain;display:inline-block">`;
+  return esch(s);
+}
 // ---- Drawn icon system (matches the consumer front end — zero raw emoji in chrome) ----
 const ICONS={
   bolt:'<path d="M13 2.5L5 13.5h5.5L9.5 21.5 19 9.5h-6z"/>',
@@ -2220,7 +2226,7 @@ async function loadGwKiosks(){
   const ks=await api('/api/kiosks');
   const el=document.getElementById('gw_kiosks');
   if(!Array.isArray(ks)||!ks.length){ el.textContent='No kiosk reports yet.'; return; }
-  el.innerHTML=ks.map(k=>`<div style="padding:8px 0;border-top:1px solid var(--border)"><b style="color:var(--text)">${esch(k.label)}</b> · ${esch(k.category)}<br><span style="color:var(--green)">${esch(k.refreshSummary||'—')}</span> · ${k.reports||0} report${k.reports===1?'':'s'}</div>`).join('');
+  el.innerHTML=ks.map(k=>`<div style="padding:8px 0;border-top:1px solid var(--border)"><b style="color:var(--text)">${esch(k.label)}</b> · ${prodMark(k.category,14)}<br><span style="color:var(--green)">${esch(k.refreshSummary||'—')}</span> · ${k.reports||0} report${k.reports===1?'':'s'}</div>`).join('');
 }
 async function loadGwWatches(){
   const ws=await api('/api/watches');
