@@ -287,16 +287,17 @@ export async function getVoiceTuning() {
 
 /** Save tuning controls; push cadence/warmth/LLM (and optionally the canonical prompt) to the live agent. */
 export async function applyVoiceTuning(p: {
-  opening?: string; speed?: number; stability?: number; llm?: string; pushPrompt?: boolean;
+  opening?: string; speed?: number; stability?: number; llm?: string; pushPrompt?: boolean; turnEagerness?: string;
 }) {
   if (p.opening !== undefined) await setSetting("vt_opening", p.opening);
   if (p.speed !== undefined) await setSetting("vt_speed", String(p.speed));
   if (p.stability !== undefined) await setSetting("vt_stability", String(p.stability));
   if (p.llm !== undefined && p.llm !== "") await setSetting("vt_llm", p.llm);
 
-  const patch: { prompt?: string; llm?: string; speed?: number; stability?: number; maxTokens?: number } = {};
+  const patch: { prompt?: string; llm?: string; speed?: number; stability?: number; maxTokens?: number; turnEagerness?: string } = {};
   if (p.speed !== undefined) patch.speed = p.speed;
   if (p.stability !== undefined) patch.stability = p.stability;
+  if (p.turnEagerness !== undefined) patch.turnEagerness = p.turnEagerness;
   if (p.llm !== undefined && p.llm !== "") patch.llm = p.llm;
   // Re-push always re-asserts the full known-good config (prompt + LLM + tokens) so the agent can't drift.
   if (p.pushPrompt) {
