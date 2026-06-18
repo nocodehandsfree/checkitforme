@@ -2733,7 +2733,7 @@ async function startCheckLive(){
   $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden');
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // hide the finds ticker on the call page — keep it uncrowded
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
-  const _mb=$('muteBanner'); if(_mb){ _mb.style.display=canListen?'':'none'; if(canListen) setTimeout(()=>{ if(_mb&&$('live')&&!$('live').classList.contains('hidden')) _mb.style.display='none'; },7000); }
+  const _mb=$('muteBanner'); if(_mb) _mb.style.display='none'; // owner asked to drop the 'flip off silent' note
   LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_T0=Date.now();
   fillLiveHeader(); const _lr=$('live_rhead'); if(_lr)_lr.className='rhead live';
   liveStage(1); // logs step 1 + renders the call box (steps on top, empty script below)
@@ -2896,7 +2896,7 @@ function showResult(o, cid){
   else if(o.statusKey==='left_on_hold'){ cls='unk'; big='⏳'; title=t('v.hold','Left on hold'); note=t('note.hold',"We reached someone and they went to check — but the hold ran long and the call dropped before they came back. No charge. Try again and we'll try to catch them."); }
   else if(o.status==='completed'&&o.doesNotSell){ cls='out'; big='🚫'; title=t('v.nocarry',"They don't carry it"); note=tf('note.nocarry',"This store doesn't carry "+(catLabel()||'this')+" — try another.",{x:catLabel()||'this'}); }
   else if(o.status==='completed'&&o.soldOut){ cls='out'; big='🕐'; title=t('v.soldout','Sold out'); note=t('note.soldout',"Came in, but it's already gone. Worth catching the next shipment."); }
-  else if(o.status==='completed'&&o.confirmed===true){ cls='in'; big='✅'; title=t('v.in','In stock!'); note=t('note.in','They have it — go get it.'); }
+  else if(o.status==='completed'&&o.confirmed===true){ cls='in'; big='✅'; title=t('v.in','In stock!'); note=tf('note.in','They have {c} — go get it.',{c:'<b style="color:var(--accent);font-weight:800">'+esc(catLabel()||'them')+'</b>'}); }
   else if(o.status==='completed'&&o.confirmed===false){ cls='out'; big='❌'; title=t('v.out','Not in stock'); note=t('note.out',"They don't have it right now."); }
   else if(o.status==='completed'){ // reached the end but no yes/no extracted
     if(asked){ cls='unk'; big='🔄'; title=t('v.unclear','No clear answer — recheck'); note=t('note.unclear','A person picked up but we couldn’t pin down a clear yes or no — worth a quick recheck. See what they said below.'); }
@@ -2911,7 +2911,7 @@ function showResult(o, cid){
   else if(o.status==='closed'){ cls='unk'; big='🔒'; title=t('v.closedt','Store closed'); note=t('note.closed',"They're closed right now — no charge. Try again when they're open."); }
   else if(o.status==='failed'){ cls='unk'; big='⚠️'; title=t('v.failed','Call failed'); note=safeReason(o.failureReason)||t('note.failed','Something went wrong on our end — no charge.'); }
   // If the clerk named the exact product they have in, surface it on the in-stock verdict.
-  if(cls==='in' && o.productName){ note=tf('note.in.named','They have <b>'+esc(o.productName)+'</b> in — go get it.',{x:esc(o.productName)}); }
+  if(cls==='in' && o.productName){ note=tf('note.in.named','They have <b style="color:var(--accent)">'+esc(o.productName)+'</b> in — go get it.',{x:esc(o.productName)}); }
   // Alpha: "not in NOW, but a shipment is coming" → the hopeful be-first verdict. The clerk named a
   // shipment day on a no/sold-out → flip from a flat "not in" to a restock-incoming heads-up.
   if(cls!=='in' && !o.doesNotSell && o.status==='completed' && o.shipmentDay){
@@ -2937,7 +2937,7 @@ function showResult(o, cid){
   // Product-aware copy for the no-answer outcomes (the demo case) — name WHAT we checked for + no charge.
   if(o.statusKey==='nobody_answered' || o.status==='no_answer' || (o.status==='completed' && big==='📵')){
     const _prod=headLabel||catLabel()||t('res.item','it');
-    note=tf('note.noanswer.full','We called to check for {p} but nobody answered. You will not be charged for this check.',{p:esc(_prod)});
+    note=tf('note.noanswer.full','We called to check for {p} but nobody answered. You will not be charged for this check.',{p:'<b style="color:var(--accent);font-weight:700">'+esc(_prod)+'</b>'});
   }
 
   const tr=(o.transcript) ? chatBubbles(o.transcript) : '';
@@ -3158,7 +3158,15 @@ async function ensureHistCache(){
   HIST_CACHE=h.filter(e=>!(e.cid&&HIST_BAD.has(e.cid)));
   return HIST_CACHE;
 }
-function histList(){ return HIST_CACHE.length?HIST_CACHE:loadHist(); }
+function histList(){
+  const local=loadHist();
+  if(!HIST_CACHE.length) return local;
+  // The just-finished call logs to the server async, so a fresh server cache can be MISSING it — merge
+  // in any local calls the cache doesn't have yet (dedup by cid, newest first) so it never disappears.
+  const seen=new Set(HIST_CACHE.map(e=>e.cid));
+  const extra=local.filter(e=>e.cid&&!seen.has(e.cid));
+  return extra.length ? [...extra,...HIST_CACHE].sort((a,b)=>(b.ts||0)-(a.ts||0)) : HIST_CACHE;
+}
 // "My checks" goes STRAIGHT to the newest check — the switcher bar on the result page
 // (store/outcome filters + ‹ ›) IS the history UI. No intermediate list to think about.
 async function openHistory(){
