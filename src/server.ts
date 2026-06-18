@@ -1243,7 +1243,8 @@ app.post("/api/stores/dedupe", async (c) => {
   const streetKey = (addr: string | null) => street(addr).toLowerCase().replace(/[.,]/g, "").split(/\s+/).map((w) => DIR[w] || SUF[w] || w).filter(Boolean).join(" ");
   const houseNum = (addr: string | null) => { if (corruptAddr(addr)) return ""; const m = (addr || "").trim().match(/^(\d+[A-Za-z]?)/); return m ? m[1] : ""; };
   // final tiebreaker for two stores in the same building (same house # + street) — the suite/unit, e.g. "#183".
-  const suite = (addr: string | null) => { if (corruptAddr(addr)) return ""; const m = (addr || "").match(/(?:Ste|Suite|Unit|Apt|#)\s*#?\s*([A-Za-z0-9-]+)/i); return m ? `#${m[1]}` : ""; };
+  // Keywords are word-bounded so a street like "Old Steese Hwy" can't false-match "Ste" -> "#ese".
+  const suite = (addr: string | null) => { if (corruptAddr(addr)) return ""; const m = (addr || "").match(/(?:\b(?:Ste|Suite|Unit|Apt)\b\.?|#)\s*#?\s*([A-Za-z0-9-]+)/i); return m ? `#${m[1]}` : ""; };
 
   // default name = separator-normalized current name (preserves curated mall/neighborhood names on singles)
   const proposed = new Map<number, string>();
