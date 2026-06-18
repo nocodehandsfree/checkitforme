@@ -1237,7 +1237,7 @@ const I18N={ es:{
   'up.out':'Te quedaste sin verificaciones','up.left1':'Solo queda 1 verificación','up.leftN':'Solo quedan {n} verificaciones',
   'up.go':'Planes desde <b>$4.99/mes</b> — o compra un paquete.','up.plans':'Ver planes',
   // buy modal
-  'buy.title':'Elige tu plan','plan.title':'Tu plan','plan.monthly':'Mensual','plan.annual':'Anual · ahorra 17%','plan.mo':'/mes','plan.yr':'/año','plan.p1':'Alertas de reabastecimiento','plan.p2':'+ Auto-verificaciones en días de envío','plan.p3':'+ Productos específicos y multi-preguntas','plan.p4':'+ Barridos de zona — todas tus tiendas, un toque','plan.popular':'el más popular','plan.checksmo':'verificaciones/mes','plan.soon':'Ese plan abre esta semana — Scout mensual ya está disponible','plan.left':'disponibles','plan.made':'realizadas','plan.upsep':'¿Necesitas más poder?','plan.cycle':'Cobro mensual · cancela cuando quieras','plan.active':'ACTIVO','plan.founder':'Fundador — ilimitado','plan.founder.sub':'Todos los planes, todas las funciones, para siempre.','buy.secure2':'Pago seguro con Stripe','acct.zero':'0 verificaciones','acct.left2':'verificaciones','acct.upgrade':'Mejora tu plan — más verificaciones','buy.out.lead':'Elige un plan y sigue cazando — tu próximo hallazgo está a una verificación.',
+  'buy.title':'Elige tu plan','plan.title':'Tu plan','plan.monthly':'Mensual','plan.annual':'Anual · ahorra 17%','plan.mo':'/mes','plan.yr':'/año','plan.p1':'Alertas de reabastecimiento','plan.p2':'+ Auto-verificaciones en días de envío','plan.p3':'+ Productos específicos y multi-preguntas','plan.p4':'+ Barridos de zona — todas tus tiendas, un toque','plan.popular':'el más popular','plan.checksmo':'verificaciones/mes','plan.soon':'Ese plan abre esta semana. El plan Family ya está disponible.','plan.left':'disponibles','plan.made':'realizadas','plan.upsep':'¿Necesitas más poder?','plan.cycle':'Cobro mensual · cancela cuando quieras','plan.active':'ACTIVO','plan.founder':'Fundador — ilimitado','plan.founder.sub':'Todos los planes, todas las funciones, para siempre.','buy.secure2':'Pago seguro con Stripe','acct.zero':'0 verificaciones','acct.left2':'verificaciones','acct.upgrade':'Mejora tu plan — más verificaciones','buy.out.lead':'Elige un plan y sigue cazando — tu próximo hallazgo está a una verificación.',
   'buy.premium.title':'Eso es un beneficio de miembros ⭐','buy.premium.lead':'Las alertas y auto-verificaciones vienen con la membresía — vigilamos los estantes por ti.','chip.member':'Miembros','hist.acheck':'Tu verificación',
   'buy.member':'Membresía','buy.memberdesc':'{n} verificaciones/mes a {p} · alertas · auto-verificaciones · hallazgos privados',
   'buy.payg':'o paga por uso ({p}/verificación · mínimo {m})','buy.best':'mejor precio','buy.percheck':'/verificación',
@@ -3074,10 +3074,10 @@ function money(c){ return '$'+(c/100).toFixed(c%100?2:0); }
 // Four tiers, no per-check math shown — the names + unlocks do the selling.
 let BILLING_ANNUAL=false;
 function tiers(){ return [
-  {key:'t1',name:'Scout',  cents:499, checks:5,  perk:t('plan.p1','Restock alerts')},
-  {key:'t2',name:'Hunter', cents:999, checks:10, perk:t('plan.p2','+ Auto-checks on shipment days')},
-  {key:'t3',name:'Flipper',cents:1999,checks:20, perk:t('plan.p3','+ Specific products & multi-asks (“No Pokémon? What about One Piece?”)')},
-  {key:'t4',name:'Whale',  cents:4999,checks:50, perk:t('plan.p4','+ Zone sweeps — every store near you, one tap')},
+  {key:'t1',name:'Family',    cents:999,  checks:30,   perk:t('plan.p1','Restock alerts')},
+  {key:'t2',name:'Collector', cents:1999, checks:100,  perk:t('plan.p2','+ Auto-checks on shipment days')},
+  {key:'t3',name:'Operator',  cents:4999, checks:350,  perk:t('plan.p3','+ Specific products & multi-asks'), featured:true},
+  {key:'t4',name:'Pro Seller',cents:14900,checks:1500, perk:t('plan.p4','+ Zone sweeps — every store near you, one tap'), plus:true},
 ]; }
 function setCycle(annual,btn){ BILLING_ANNUAL=annual; document.querySelectorAll('#billcycle button').forEach(b=>b.classList.toggle('on',b===btn)); renderBuyPlans(); }
 function tierPrice(c){ return BILLING_ANNUAL?money(Math.round(c*12*0.83/100)*100):money(c); }
@@ -3088,7 +3088,7 @@ function renderBuyPlans(){
   if(member||comp){
     // The plan dashboard: what you're on, what you've used, where to grow.
     html+=`<div class="plan sub" style="cursor:default">
-      <div class="grow"><div class="pn">${ICO.spark('#FFCB05')} ${comp?t('plan.founder','Founder — unlimited'):('Scout · '+money(499)+t('plan.mo','/mo'))}</div>
+      <div class="grow"><div class="pn">${ICO.spark('#FFCB05')} ${comp?t('plan.founder','Founder — unlimited'):('Family · '+money(999)+t('plan.mo','/mo'))}</div>
         <div class="pd">${comp?t('plan.founder.sub','All tiers, all features, forever.'):t('plan.cycle','Billed monthly · cancel anytime')}</div></div>
       <div class="pp" style="font-size:14px;color:var(--green)">${t('plan.active','ACTIVE')}</div></div>
     <div style="display:flex;gap:8px;margin:10px 0 14px">
@@ -3097,16 +3097,16 @@ function renderBuyPlans(){
     </div>
     <div class="psep">${t('plan.upsep','Need more firepower?')}</div>`;
   }
-  html+=tiers().map((p,i)=>`<div class="plan ${i===1?'sub':''}" onclick="pickTier('${p.key}')">
-      <div class="grow"><div class="pn">${esc(p.name)}${i===1?` <span style="color:var(--green);font-size:11px">${t('plan.popular','most popular')}</span>`:''}</div>
-        <div class="pd">${p.checks} ${t('plan.checksmo','checks/mo')} · ${p.perk}</div></div>
-      <div class="pp">${tierPrice(p.cents)}<span>${per}</span></div>
+  html+=tiers().map((p,i)=>`<div class="plan ${p.featured?'sub':''}" onclick="pickTier('${p.key}')">
+      <div class="grow"><div class="pn">${esc(p.name)}${p.featured?` <span style="color:var(--green);font-size:11px">${t('plan.popular','most popular')}</span>`:''}</div>
+        <div class="pd">${p.checks.toLocaleString()}${p.plus?'+':''} ${t('plan.checksmo','checks/mo')} · ${p.perk}</div></div>
+      <div class="pp">${tierPrice(p.cents)}${p.plus?'+':''}<span>${per}</span></div>
     </div>`).join('');
   $('buy_plans').innerHTML=html;
 }
 function pickTier(k){
   if(k==='t1'&&!BILLING_ANNUAL){ buy('sub'); return; }
-  toast(t('plan.soon','That tier opens this week — Scout monthly is live now'));
+  toast(t('plan.soon','That tier opens this week. Family monthly is live now.'));
 }
 function openBuy(reason){
   if(!isAuthed()){ toast(t('toast.signupfirst','Sign up first to add checks')); signUp(); return; }
