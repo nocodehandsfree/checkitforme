@@ -269,10 +269,14 @@ __BRAND_HEAD__
   .credline{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:800;color:#e9e9f0;background:var(--terminal);border:1px solid var(--border);border-radius:10px;padding:7px 11px}
   .credline .plat{font-size:18px;font-weight:900;background:linear-gradient(100deg,#cfd3dc,#f8fafc 45%,#8e98a8);-webkit-background-clip:text;background-clip:text;color:transparent}
   .credline.zero{color:#FBBF24;border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.08)}
-  .acctid{display:flex;align-items:center;gap:11px;justify-content:center;margin-top:12px;text-align:left}
-  .acctav{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:var(--ptint);border:1px solid var(--pline);flex:0 0 auto;font-weight:900;font-size:18px;color:var(--purple)}
-  .acctnm{font-weight:800;font-size:17px;letter-spacing:-.2px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .acctsub{color:var(--muted);font-size:12.5px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .acctid{display:flex;align-items:center;gap:12px;margin-top:6px}
+  .acctid-t{min-width:0;flex:1}
+  .acctav{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--ptint);border:1px solid var(--pline);flex:0 0 auto;font-weight:900;font-size:18px;color:var(--purple)}
+  .acctnm{font-weight:800;font-size:18px;letter-spacing:-.3px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .acctsub{color:var(--muted);font-size:13px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .acctcred{margin:16px 0 14px}
+  .acctout{display:block;margin:18px auto 2px;background:transparent;border:1px solid var(--border);color:#cfcfd8;padding:9px 24px;border-radius:11px;font-weight:800;font-size:13px;cursor:pointer;transition:border-color .12s,color .12s}
+  .acctout:hover{border-color:rgba(239,68,68,.5);color:#ff8a8a}
   .stat{background:var(--terminal);border:1px solid var(--border);border-radius:12px;padding:10px 12px;text-align:center}
   .stat .n{font-size:20px;font-weight:900} .stat .l{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
   /* language switcher reuses the product-switcher dropdown; menu hangs right under the pill */
@@ -985,21 +989,20 @@ __BRAND_HEAD__
 <div class="overlay" id="acctOverlay" onclick="if(event.target===this)closeAccount()">
   <div class="modal" style="position:relative;max-width:360px;text-align:left">
     <span class="x" onclick="closeAccount()">×</span>
-    <div id="acct_logo"></div>
     <div class="acctid">
       <div id="acct_avatar" class="acctav"></div>
-      <div style="min-width:0;max-width:230px">
+      <div class="acctid-t">
         <div id="acct_name" class="acctnm"></div>
         <div id="acct_sub" class="acctsub"></div>
       </div>
     </div>
-    <div id="acct_cred" style="margin:14px 0 16px;text-align:center"></div>
+    <div id="acct_cred" class="acctcred"></div>
     <div class="acctrows">
       <button class="acctrow" onclick="closeAccount();openHistory()"><span id="acctHist" style="display:inline-flex"></span><span data-i18n="acct.checks">My checks</span><span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
       <button class="acctrow" id="acct_plan" onclick="closeAccount();openBuy()"><span id="acctStar" style="display:inline-flex"></span><span id="acct_planlbl" data-i18n="acct.more">Get more checks</span><span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
       <button class="acctrow" id="acct_cid" onclick="openCallerId()" style="display:none"><span id="acctCid" style="display:inline-flex"></span><span id="acct_cidlbl">Call stores from your number</span><span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
     </div>
-    <div style="text-align:center;margin-top:16px"><a onclick="doSignOut()" style="display:inline-block;color:var(--muted);font-weight:700;font-size:13px;cursor:pointer;padding:6px 10px" data-i18n="acct.signout">Sign out</a></div>
+    <button onclick="doSignOut()" class="acctout" data-i18n="acct.signout">Sign out</button>
   </div>
 </div>
 
@@ -1776,24 +1779,26 @@ async function handleClerkLinkCallback(){
 // Custom account sheet (no Clerk-branded profile modal)
 // Account identity that scales as we collect more: name (if any) → formatted phone → email. `primary`
 // is the best single label; `secondary` carries the rest, muted. Avatar = name initial, else a call glyph.
+function tokenPhone(){ try{ if(!PHONE_TOKEN) return ''; const p=JSON.parse(atob(PHONE_TOKEN.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); return (p&&p.phone)||''; }catch(e){ return ''; } }
 function acctIdentity(){
   const u=(window.Clerk&&window.Clerk.user)||null;
   const name=u?[u.firstName,u.lastName].filter(Boolean).join(' ').trim():'';
   const email=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||(ACCOUNT&&ACCOUNT.email)||'';
-  const phone=(ACCOUNT&&ACCOUNT.phone)?fmtUsPhone(ACCOUNT.phone):'';
+  const raw=(ACCOUNT&&ACCOUNT.phone)||tokenPhone(); // always available for a phone account (decoded from the token)
+  const phone=raw?fmtUsPhone(raw):'';
   const primary = name || phone || email || t('acct.youraccount','Your account');
   const subs=[];
   if(name){ if(phone) subs.push(phone); if(email) subs.push(email); }
   else if(phone && email){ subs.push(email); }
-  return { primary, secondary:subs.join('   ·   '), initial: name?name[0].toUpperCase():'' };
+  const initial = name ? name[0].toUpperCase() : (email ? email[0].toUpperCase() : '');
+  return { primary, secondary:subs.join('   ·   '), initial };
 }
 function openAccount(){
   if(!isAuthed()) return;
   const idn=acctIdentity();
   $('acct_name').textContent=idn.primary;
   const sub=$('acct_sub'); if(sub){ sub.textContent=idn.secondary; sub.style.display=idn.secondary?'':'none'; }
-  const av=$('acct_avatar'); if(av){ if(idn.initial){ av.textContent=idn.initial; } else { av.innerHTML=ICO.call(AC2()); } }
-  setI('acct_logo', authMark());
+  const av=$('acct_avatar'); if(av){ av.innerHTML = idn.initial ? esc(idn.initial) : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="'+AC2()+'" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.4"/><path d="M5.5 19.2c0-3.5 2.9-6 6.5-6s6.5 2.5 6.5 6"/></svg>'; }
   // Credits line: ∞ = comp (founder) unlimited · ⭐ = active membership · else plain balance.
   const comp=!!(ACCOUNT&&ACCOUNT.comp), member=!!(ACCOUNT&&ACCOUNT.subscription==='active');
   const n=(ACCOUNT&&ACCOUNT.credits)||0;
