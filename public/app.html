@@ -398,7 +398,7 @@
         <div><label>Location</label><input id="r_loc" placeholder="Brentwood, TN"></div>
         <div><label>Timezone</label><input id="r_tz" value="America/Los_Angeles"></div>
       </div>
-      <label>Phone tree (how to reach the right person)</label>
+      <label data-tip="How to reach the right person">Phone tree</label>
       <textarea id="r_tree" rows="2" placeholder="When asked if you're a healthcare provider, say no. Then ask for the front store."></textarea>
       <div style="margin-top:12px"><button class="act" onclick="addRetailer()">Add store</button></div>
     </div>
@@ -430,7 +430,7 @@
         <div><label>Name</label><input id="s_name" placeholder="Thursday B&N Pokémon"></div>
         <div><label>Category</label><select id="s_cat"></select></div>
         <div><label>Mode</label><select id="s_mode"><option value="restock">Restock — got a shipment in?</option><option value="carry">Carry — do you sell it?</option></select></div>
-        <div><label>Time (24h, store-local)</label><input id="s_time" placeholder="09:00"></div>
+        <div><label data-tip="24h, store-local">Time</label><input id="s_time" placeholder="09:00"></div>
       </div>
       <label>Days</label>
       <div id="s_days" class="daypick">
@@ -529,7 +529,7 @@
     <h2>Test</h2>
     <div id="pb_bench">
       <div class="card" id="live_strip" style="padding:10px 14px;border-color:rgba(74,222,128,.35)">
-        <div class="meta" style="line-height:1.6">📡 <b style="color:var(--green)">LIVE on store calls:</b> <span id="ls_vals">loading…</span></div>
+        <div class="meta" style="line-height:1.6"><b style="color:var(--green)">Live on store calls</b> <span id="ls_vals">loading…</span></div>
         <div class="meta" id="ls_draft" style="display:none;color:#FBBF24;margin-top:4px">● Your draft differs from LIVE — store calls keep using the settings above until you apply.</div>
       </div>
 
@@ -608,7 +608,7 @@
       <details class="card" id="tb_call_card" open>
         <summary><span class="name">Step 4 · Test it</span></summary>
         <div class="hint" style="margin:8px 0 14px">Answer your phone like the clerk. Runs the draft voice with this store's phone-tree rules; the result records against the store.</div>
-        <label>Store (records the result against this one)</label>
+        <label data-tip="Records the result against this store">Store</label>
         <select id="sim_store" onchange="previewMaybe()"></select>
         <label>Category to ask about</label>
         <select id="sim_cat" onchange="previewMaybe()"></select>
@@ -617,16 +617,16 @@
           <option value="restock">Restock check (verified seller)</option>
           <option value="carry">Carry check (do you sell it?)</option>
         </select>
-        <label>Decision tree (branches off verified)</label>
+        <label data-tip="Branches off the verified flow">Decision tree</label>
         <select id="sim_tree" onchange="syncTreeUI();previewMaybe()">
           <option value="general">General restock — any of it counts, won't ask which set</option>
           <option value="specific">Specific product — only greens if THAT is in</option>
         </select>
         <div id="sim_specific_wrap" style="display:none">
-          <label>What specific set / product? (e.g. “151 booster boxes”, “Prismatic Evolutions ETB”)</label>
+          <label data-tip="e.g. 151 booster boxes, Prismatic Evolutions ETB">Specific set / product</label>
           <input id="sim_specific" placeholder="151 booster boxes">
         </div>
-        <label>Your phone (the agent dials this)</label>
+        <label data-tip="The agent dials this number">Your phone</label>
         <input id="sim_phone" placeholder="+13106662331">
         <label data-tip="Ring with any clone — the live store voice is never touched">Voice for this test</label>
         <select id="sim_voice"><option value="">Bench default voice</option></select>
@@ -634,7 +634,7 @@
       </details>
 
       <details class="card" id="tb_preview_card" ontoggle="if(this.open)loadPreview()">
-        <summary><span class="name">🔎 Preview</span><span class="meta">the exact instructions this test will run</span></summary>
+        <summary><span class="name">Preview</span></summary>
         <div class="meta" style="margin:10px 0 8px">Assembled live for the store + category picked above: global rules + the chain's phone tree + any store override.</div>
         <div id="pv_meta" class="meta"></div>
         <pre id="pv_body" style="display:none;white-space:pre-wrap;max-height:380px;overflow:auto;font-size:12px;line-height:1.5;background:var(--terminal);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:10px"></pre>
@@ -689,7 +689,7 @@
     </div>
 
     <div class="card">
-      <div class="name" style="margin-bottom:4px">All chains <span style="color:var(--muted)">— quick mute</span></div>
+      <div class="name" style="margin-bottom:4px">All chains</div>
       <div class="meta" style="margin-bottom:8px">Mute a chain → all its stores vanish from every city for consumers, instantly.</div>
       <input id="pt_chainfilter" placeholder="Filter chains — e.g. Ralph's…" oninput="chainFilter(this.value)" style="margin-bottom:6px">
       <div id="pt_chainlist" class="meta">Loading…</div>
@@ -796,7 +796,7 @@
         <option value="restock">Pokémon restock check</option>
         <option value="carry">Carry check</option>
       </select>
-      <label>Personality (for open conversation)</label>
+      <label data-tip="For open conversation">Personality</label>
       <select id="lab_personality">
         <option value="professional">Professional</option>
         <option value="homie">Homie</option>
