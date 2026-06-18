@@ -1223,12 +1223,16 @@ app.post("/api/stores/dedupe", async (c) => {
     .replace(/\s*[—–]\s*/g, " ").replace(/\s+-\s+/g, " ").replace(/\s{2,}/g, " ").trim();
   // all-caps street from raw data ("NORTH DEMAREE STREET") -> Title Case; mixed-case left untouched.
   const fixCaps = (s: string) => /[a-z]/.test(s) ? s : s.replace(/\b[A-Z]{2,}\b/g, (w) => w[0] + w.slice(1).toLowerCase());
-  // a name is junk if it carries scraped HTML/markup or is absurdly long — rebuilt from chain + city.
-  const corrupt = (s: string) => /[<>]|&#|&lt;|&gt;|Self-Service|Return Policy|\bid=|style=|https?:/i.test(s || "") || (s || "").length > 80;
+  // Scraped-HTML/markup detector. Names are also "junk" when absurdly long; addresses are NOT length-judged
+  // (real street addresses can be long) — only markup makes an address corrupt. This keeps garbage from a
+  // corrupt address field from ever flowing into a display name via the street() disambiguator.
+  const MARKUP = /[<>]|&#|&lt;|&gt;|Self-Service|Return Policy|Help Center|\bid=|style=|https?:/i;
+  const corruptName = (s: string) => MARKUP.test(s || "") || (s || "").length > 80;
+  const corruptAddr = (s: string | null) => MARKUP.test(s || "");
   const cityOf = (r: { location: string | null }) => (r.location || "").split(",")[0].trim();
   const street = (addr: string | null) => {
     let a = (addr || "").trim();
-    if (!a) return "";
+    if (!a || corruptAddr(a)) return "";                    // empty or scraped-HTML address -> no street name
     a = a.split(",")[0].trim();                              // drop city/state/zip
     a = a.replace(/^\d+[A-Za-z]?\s+/, "");                   // drop leading house number
     a = a.replace(/\s+(?:Ste|Suite|Unit|Apt|#|Bldg|Fl|Floor)\b.*$/i, "").trim(); // drop suite/unit
@@ -1237,15 +1241,21 @@ app.post("/api/stores/dedupe", async (c) => {
   const SUF: Record<string, string> = { street: "st", avenue: "ave", av: "ave", boulevard: "blvd", road: "rd", drive: "dr", lane: "ln", court: "ct", place: "pl", parkway: "pkwy", pkway: "pkwy", highway: "hwy", terrace: "ter", circle: "cir", square: "sq", trail: "trl", plaza: "plz" };
   const DIR: Record<string, string> = { north: "n", south: "s", east: "e", west: "w", northeast: "ne", northwest: "nw", southeast: "se", southwest: "sw" };
   const streetKey = (addr: string | null) => street(addr).toLowerCase().replace(/[.,]/g, "").split(/\s+/).map((w) => DIR[w] || SUF[w] || w).filter(Boolean).join(" ");
-  const houseNum = (addr: string | null) => { const m = (addr || "").trim().match(/^(\d+[A-Za-z]?)/); return m ? m[1] : ""; };
+  const houseNum = (addr: string | null) => { if (corruptAddr(addr)) return ""; const m = (addr || "").trim().match(/^(\d+[A-Za-z]?)/); return m ? m[1] : ""; };
 
   // default name = separator-normalized current name (preserves curated mall/neighborhood names on singles)
   const proposed = new Map<number, string>();
   for (const r of rows) proposed.set(r.id, normSep(r.name || ""));
-  // rebuild junk/corrupt names from chain + city (collision pass below may further street-name them)
-  for (const r of rows) if (r.chainId && corrupt(r.name)) {
-    const cn = chainName.get(r.chainId) || "";
-    proposed.set(r.id, cityOf(r) ? `${cn} ${cityOf(r)}` : cn);
+  // rebuild junk/corrupt names from chain + city (collision pass below may further street-name them).
+  // base = the chain name; if a junk row has no chainId, recover the chain from the clean text before the
+  // markup begins ("Dollar General 1. Self-Service…" -> "Dollar General"). A long-but-clean independent
+  // name with no chain is left alone rather than mangled.
+  const namePrefix = (s: string) => (s || "").split(/[<&]|\b\d+\.\s|Self-Service|Return Policy|Help Center|style=|\bid=/i)[0].replace(/\s+/g, " ").trim();
+  for (const r of rows) if (corruptName(r.name)) {
+    let base = (r.chainId && chainName.get(r.chainId)) || "";
+    if (!base && MARKUP.test(r.name || "")) base = namePrefix(r.name);
+    if (!base) continue;
+    proposed.set(r.id, cityOf(r) ? `${base} ${cityOf(r)}` : base);
   }
   const baseOf = (r: { chainId: number | null; id: number }) =>
     (r.chainId && chainName.get(r.chainId)) ? chainName.get(r.chainId)! : (proposed.get(r.id) || "");
@@ -1270,13 +1280,15 @@ app.post("/api/stores/dedupe", async (c) => {
   }
 
   const changes = rows.filter((r) => proposed.get(r.id) && proposed.get(r.id) !== (r.name || ""));
+  const addrBad = rows.filter((r) => corruptAddr(r.address));   // scraped-HTML addresses -> blanked
   if (b.dryRun) {
-    return c.json({ dryRun: true, scope: stateF || "ALL", active: rows.length, changed: changes.length,
+    return c.json({ dryRun: true, scope: stateF || "ALL", active: rows.length, changed: changes.length, addrBlank: addrBad.length,
       sample: changes.slice(0, 24).map((r) => ({ id: r.id, from: r.name, to: proposed.get(r.id), city: r.location })) });
   }
   for (const r of changes) await db.update(retailers).set({ name: proposed.get(r.id)! }).where(eq(retailers.id, r.id));
+  for (const r of addrBad) await db.update(retailers).set({ address: null }).where(eq(retailers.id, r.id));
   invalidateRefCache();
-  return c.json({ scope: stateF || "ALL", active: rows.length, changed: changes.length,
+  return c.json({ scope: stateF || "ALL", active: rows.length, changed: changes.length, addrBlanked: addrBad.length,
     sample: changes.slice(0, 12).map((r) => ({ from: r.name, to: proposed.get(r.id) })) });
 });
 // Kiosk overlay: reconcile the official TPCi vending list against our stores. For each machine, flag
