@@ -108,6 +108,7 @@ __BRAND_HEAD__
   .live .phase{font-size:17px;font-weight:800;margin-bottom:6px;min-height:22px}
   .live .sub{color:var(--muted);font-size:13px}
   .live .elapsed{color:var(--muted);font-size:12px;margin-top:14px;font-family:ui-monospace,monospace}
+  .live-wait{color:var(--muted);font-size:13px;text-align:center;padding:16px 8px;line-height:1.5}
   /* result */
   .verdict{text-align:center;padding:16px 0 8px}
   .vmark{width:78px;height:78px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;position:relative}
@@ -118,17 +119,22 @@ __BRAND_HEAD__
   .verdict.in .title{color:var(--green)} .verdict.out .title{color:var(--red)} .verdict.unk .title{color:#FBBF24} .verdict.soon .title{color:#F59E0B}
   .vstore{text-align:center;color:#d6d6e0;font-size:14.5px;font-weight:600;margin-top:9px}
   /* combined call header: store + verdict status + timing in one box at the top */
-  .rhead{display:flex;gap:13px;align-items:flex-start;border-radius:16px;padding:14px 15px;border:1px solid var(--border);margin-bottom:14px}
+  .rhead{display:block;border-radius:16px;padding:16px 16px 15px;border:1px solid var(--border);margin-bottom:14px}
+  .rhead-top{display:flex;gap:13px;align-items:flex-start}
   .rhead .railchip{flex:0 0 auto}
-  .rhead-store{font-weight:800;font-size:16px;letter-spacing:-.2px;line-height:1.15}
-  .rhead-status{font-weight:900;font-size:16px;letter-spacing:-.3px;margin-top:5px;display:flex;align-items:center;gap:8px}
-  .rhead-glyph{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:900;color:#06210f;flex:0 0 auto}
-  .rhead-meta{color:var(--muted);font-size:12px;font-weight:600;margin-top:6px;line-height:1.45}
-  .rhead-note{color:#c8c8d4;font-size:12.5px;margin-top:6px;line-height:1.4}
-  .rhead.in{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.4)} .rhead.in .rhead-status{color:var(--green)} .rhead.in .rhead-glyph{background:var(--green)}
-  .rhead.out{background:rgba(239,68,68,.09);border-color:rgba(239,68,68,.35)} .rhead.out .rhead-status{color:var(--red)} .rhead.out .rhead-glyph{background:var(--red);color:#fff}
-  .rhead.unk{background:rgba(251,191,36,.09);border-color:rgba(251,191,36,.32)} .rhead.unk .rhead-status{color:#FBBF24} .rhead.unk .rhead-glyph{background:#FBBF24}
-  .rhead.soon{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.35)} .rhead.soon .rhead-status{color:#F59E0B} .rhead.soon .rhead-glyph{background:#F59E0B}
+  .rhead-id{min-width:0;flex:1}
+  .rhead-store{font-weight:900;font-size:21px;letter-spacing:-.4px;line-height:1.12}
+  .rhead-addr{color:var(--muted);font-size:12.5px;font-weight:600;margin-top:5px;line-height:1.4}
+  .rhead-badge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;width:82px}
+  .rhead-ic{display:grid;place-items:center;height:34px}
+  .rhead-ic svg{display:block}
+  .rhead-stat{font-weight:900;font-size:12.5px;line-height:1.13;letter-spacing:-.2px}
+  .rhead-msg{margin-top:13px;font-size:13.5px;line-height:1.5;color:#cfcfd9}
+  .rhead-msg b{color:#fff}
+  .rhead.in{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.4)} .rhead.in .rhead-stat{color:var(--green)}
+  .rhead.out{background:rgba(239,68,68,.09);border-color:rgba(239,68,68,.35)} .rhead.out .rhead-stat{color:var(--red)}
+  .rhead.unk{background:rgba(251,191,36,.07);border-color:rgba(251,191,36,.28)} .rhead.unk .rhead-stat{color:#FBBF24}
+  .rhead.soon{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.35)} .rhead.soon .rhead-stat{color:#F59E0B}
   /* logged-out homepage = the focused view (hero + check card). Retired modules hidden for everyone. */
   #truststrip,#demo{display:none!important}
   #earndemo{display:none} body.authed #earndemo{display:block}
@@ -1052,6 +1058,17 @@ __BRAND_HEAD__
     <button class="cta" onclick="confirmKioskCall()" style="width:100%" data-i18n="kcall.yes">📞 Yes, call now →</button>
     <div><a onclick="closeKioskConfirm()" style="display:inline-block;margin-top:12px;color:var(--muted);font-weight:700;font-size:14px;cursor:pointer" data-i18n="kcall.no">Not now</a></div>
     <div style="margin-top:16px;background:var(--ptint);border:1px solid var(--pline);border-radius:12px;padding:11px 12px;font-size:12.5px;color:#e6e2f7;line-height:1.5;text-align:left"><b data-i18n="kcall.atkiosk">At the kiosk right now?</b> <a onclick="closeKioskConfirm();openReceipt()" style="color:var(--purple);font-weight:800;cursor:pointer" data-i18n="kcall.receipt">Use our email at checkout or forward your receipt → free check.</a></div>
+  </div>
+</div>
+
+<div class="overlay" id="againOverlay" onclick="if(event.target===this)closeAgain()">
+  <div class="modal" style="position:relative;max-width:400px;text-align:center">
+    <span class="x" onclick="closeAgain()">×</span>
+    <div id="again_logo" style="display:flex;justify-content:center;margin-bottom:10px"></div>
+    <h3 id="again_store" style="margin:0 0 8px;font-size:20px">this store</h3>
+    <p id="again_body" style="margin:0 0 18px"></p>
+    <button class="cta" id="again_yes" style="width:100%" data-i18n="pre.again.yes">📞 Yes, call again →</button>
+    <div><a id="again_no" style="display:inline-block;margin-top:12px;color:var(--muted);font-weight:700;font-size:14px;cursor:pointer" data-i18n="pre.again.no">Not now</a></div>
   </div>
 </div>
 
@@ -2569,6 +2586,29 @@ let AUDIO_WS=null, AUDIO_CTX=null, AUDIO_NEXT={}, AUDIO_LIVE=false, LIVE_TIMERS=
 // through the tree and only delivers its stock question to a HUMAN — so AGENT_ASK is the human signal.
 const IVR_RE=/press \d|press the|press [a-z]\b|para español|for .{2,40}[ ,]+press|main menu|thank you for calling|currently closed|store hours|please hold|hold on|one moment|moment please|your call (is|may be)|automated|enter your|to speak (to|with)|the following (menu|options|prompts)|leave a (message|voicemail)|after the (tone|beep)|if you know your party|dial \d/i;
 const AGENT_ASK=/in stock|do you (have|carry|sell)|have any|y'?all have|carr(y|ying)|wondering if|calling to (see|check)|checking to see|see if (you|y'?all)|get any|got any|come in|new shipment|on the shelf|restock|booster|\bpacks?\b|\bcards?\b|\bsealed\b/i;
+// Routing words our agent speaks to climb OUT of the menu toward a human (CVS: "front", "general"…).
+const ROUTE_RE=/\b(front|general|store|associate|representative|operator|main|a person|someone|pharmacy|sales|customer service)\b/i;
+// The 8 stages a caller watches, in order. Monotonic — the label only ever moves FORWARD, never back.
+let LIVE_STAGE=0;
+function liveStageLabel(n){
+  const nm=splitStoreName((SEL_STORE&&SEL_STORE.name)||''); const store=[nm.base,nm.branch].filter(Boolean).join(' ')||t('live.store','the store');
+  const prod=(SEL_PRODUCT||findProductLabel()||catLabel()||t('live.item','your item'));
+  return ({1:tf('live.s1','Calling {s}…',{s:store}),2:t('live.s2',"It's ringing…"),3:t('live.s3',"We've connected"),4:t('live.s4','Listening to menu options'),5:t('live.s5','Navigating the menu'),6:t('live.s6','Transferring to the front'),7:t('live.s7','An associate answered!'),8:tf('live.s8','Asking about {p}',{p:prod})})[n]||'';
+}
+function liveStage(n){ if(!n||n<=LIVE_STAGE) return; LIVE_STAGE=n; const el=$('phase'); if(el) el.textContent=liveStageLabel(n); }
+// Furthest stage the transcript so far justifies: menu prompts (4), agent nav (5), routing word (6),
+// a human line (7), our stock pitch (8). The pitch only ever goes to a person, so it's the hard signal.
+function stageForLines(lines, pitched){
+  if(pitched) return 8;
+  let st=3; // we only parse lines once the call is connected
+  for(const l of (lines||[])){
+    const m=String(l).match(/^(Agent|Clerk):\s*(.*)$/); if(!m) continue;
+    const txt=m[2]||'';
+    if(m[1]==='Agent'){ if(AGENT_ASK.test(txt)) return 8; st=Math.max(st, ROUTE_RE.test(txt)?6:5); }
+    else { st=Math.max(st, IVR_RE.test(txt)?4:7); } // menu prompt vs a real human line
+  }
+  return st;
+}
 function stopLiveTimers(){ LIVE_TIMERS.forEach(t=>clearInterval(t)); LIVE_TIMERS=[]; if(POLL){clearInterval(POLL);POLL=null;} }
 async function hangUpLive(){
   if(LIVE_ROOM){ api('/pub/bridge-hangup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({room:LIVE_ROOM})}); }
@@ -2611,9 +2651,11 @@ async function startCheckLive(){
   $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden');
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb){ _mb.style.display=canListen?'':'none'; if(canListen) setTimeout(()=>{ if(_mb&&$('live')&&!$('live').classList.contains('hidden')) _mb.style.display='none'; },7000); }
-  $('livestore').textContent=SEL_STORE.name; $('phase').textContent=t('live.calling','📞 Placing the call…'); $('elapsed').textContent='';
-  $('live_tr').style.display='none'; $('live_tr_body').innerHTML=''; LIVE_TR=[]; AGENT_PITCHED=false;
-  let secs=0; const elT=setInterval(()=>{ secs+=1; $('elapsed').textContent='⏱ '+secs+'s'; if(secs===30 && !LIVE_TR.length) $('phase').textContent=t('live.answering','📞 Answering…'); },1000);
+  $('livestore').textContent=SEL_STORE.name; LIVE_STAGE=0; liveStage(1); $('elapsed').textContent='';
+  // The call lives on ONE page — the transcript area is up from the very start (with a waiting note),
+  // and the live bubbles drop straight into it as the conversation happens. No separate "ringing" screen.
+  $('live_tr').style.display=''; $('live_tr_body').innerHTML=`<div class="live-wait">${t('live.wait','The conversation will show up here, live, as it happens…')}</div>`; LIVE_TR=[]; AGENT_PITCHED=false;
+  let secs=0; const elT=setInterval(()=>{ secs+=1; $('elapsed').textContent='⏱ '+secs+'s'; },1000);
   LIVE_TIMERS=[elT];
   const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
   if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x} — no call placed',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail','Could not start the call')); return; }
@@ -2624,7 +2666,7 @@ async function startCheckLive(){
     if(d.audio){ if(AUDIO_CTX) playMu(d.audio,d.track); }
     else if(d.line&&d.line.text){ LIVE_TR.push(d.line.role+': '+d.line.text); $('live_tr').style.display=''; appendLiveTranscript(LIVE_TR.join('\n')); livePhaseFromText(d.line.role,d.line.text); } // real-time bubbles + stage, as the call happens
   }catch(e){} };
-  $('phase').textContent=t('live.ringing','📞 Ringing…');
+  liveStage(2); // dialing → it's ringing
   let cid=null;
   POLL=setInterval(async()=>{
     if(secs>=210){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); return; }
@@ -2633,7 +2675,7 @@ async function startCheckLive(){
       // the call is connected → flip to "Answered" and fall STRAIGHT through to pull the transcript
       // (no wasted cycle), instead of sitting on "Ringing…".
       const bs=await api('/pub/bridge/'+r.room);
-      if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){} }
+      if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; liveStage(3); try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){} }
       // (no premature "Answered" here — the bridge engaging isn't a person; we only leave Calling/Answering when a real transcript line lands)
       else return; // still ringing / connecting
     }
@@ -2641,9 +2683,8 @@ async function startCheckLive(){
     if(o&&o.transcript){
       if(!LIVE_TR.length){ $('live_tr').style.display=''; appendLiveTranscript(o.transcript); } // if real-time bubbles are flowing, they're authoritative
       const lines=o.transcript.split('\n').filter(Boolean);
-      const lastClerk=[...lines].reverse().find(l=>l.startsWith('Clerk:'))||'';
-      const pitched=AGENT_PITCHED||lines.some(l=>l.startsWith('Agent:')&&AGENT_ASK.test(l));
-      $('phase').textContent = pitched ? t('live.talking','🙋 Talking to a person') : t('live.menu','📋 Connected — menu');
+      const pitched=AGENT_PITCHED||lines.some(l=>l.startsWith('Agent:')&&AGENT_ASK.test(l)); if(pitched)AGENT_PITCHED=true;
+      liveStage(stageForLines(lines, pitched));
     }
     if(o && o.live===false){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); }
   },1200);
@@ -2691,9 +2732,8 @@ function livePhaseFromText(role,text){
   if(!text) return;
   // Our bot's stock question only goes to a human (it's silent through the tree) — latch that.
   if(role==='Agent' && AGENT_ASK.test(text)) AGENT_PITCHED=true;
-  // The first real line means we're connected: before our bot pitches a human it's the automated MENU;
-  // after, it's a PERSON. No premature "answered" — Calling/Answering only flips off on a real line.
-  $('phase').textContent = AGENT_PITCHED ? t('live.talking','🙋 Talking to a person') : t('live.menu','📋 Connected — menu');
+  // Advance the 8-stage progress off the running transcript (monotonic — never steps backward).
+  liveStage(stageForLines(LIVE_TR, AGENT_PITCHED));
 }
 function appendLiveTranscript(t){
   const body=$('live_tr_body'); if(!body) return;
@@ -2802,6 +2842,11 @@ function showResult(o, cid){
     cls=anyIn?'in':'out'; big=anyIn?'🛒':'❌'; title=anyIn?t('res.have','Here’s what they have'):t('res.nonein','None in stock'); note='';
   }
   const headLabel = askedLabels.length ? askedLabels.join(', ') : catLabel();
+  // Product-aware copy for the no-answer outcomes (the demo case) — name WHAT we checked for + no charge.
+  if(o.statusKey==='nobody_answered' || o.status==='no_answer' || (o.status==='completed' && big==='📵')){
+    const _prod=headLabel||catLabel()||t('res.item','it');
+    note=tf('note.noanswer.full','We called to check for {p} but nobody answered. You will not be charged for this check.',{p:esc(_prod)});
+  }
 
   const tr=(o.transcript) ? chatBubbles(o.transcript) : '';
 
@@ -2842,23 +2887,27 @@ function showResult(o, cid){
     </div>` : '';
 
   const nm=splitStoreName(SEL_STORE.name);
-  const addr=((STORES.find(x=>x.id===SEL_STORE.id)||{}).location)||SEL_STORE.location||'';
-  // check-deck verdict banner + the small status line under the store name
-  const fmtMS=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
-  const statusShort = cls==='in'?'In stock — confirmed':cls==='out'?'Not in stock':cls==='soon'?'Restock incoming':title;
-  const bannerMeta = (_totS?('done in '+fmtMS(_totS)+' · '):'') + 'transcript saved';
-  const rbGlyph = cls==='in'?'✓':cls==='out'?'✕':cls==='soon'?'🚚':'?';
+  const storeHeadline=[nm.base,nm.branch].filter(Boolean).join(' ');
+  const _store=STORES.find(x=>x.id===SEL_STORE.id)||{};
+  // Full address on ONE line: street + city/state (e.g. "23357 Mulholland Drive, Woodland Hills, CA").
+  const _aStreet=_store.address||'', _aCity=_store.location||SEL_STORE.location||'';
+  const fullAddr=(_aStreet&&_aCity&&!_aStreet.includes(_aCity))?(_aStreet+', '+_aCity):(_aStreet||_aCity);
   $('result').innerHTML = `
     <div class="railbar" id="railbar" style="display:none"></div>
     <div class="card">
       <div class="rhead ${cls}">
-        <span class="railchip${railClass({storeId:SEL_STORE.id,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}" style="display:grid">${railFace({storeId:SEL_STORE.id,storeName:SEL_STORE.name,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}</span>
-        <div style="min-width:0;flex:1">
-          <div class="rhead-store">${esc(nm.base)}${nm.branch?` <span style="color:#c8c8d4;font-weight:600;font-size:13px">· ${esc(nm.branch)}</span>`:''}</div>
-          <div class="rhead-status"><span class="rhead-glyph">${rbGlyph}</span> ${esc(statusShort)}</div>
-          <div class="rhead-meta">${[esc(addr),esc(headLabel)].filter(Boolean).join(' · ')}${bannerMeta?` · ${esc(bannerMeta)}`:''}</div>
-          ${note?`<div class="rhead-note">${note}</div>`:''}
+        <div class="rhead-top">
+          <span class="railchip${railClass({storeId:SEL_STORE.id,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}" style="display:grid">${railFace({storeId:SEL_STORE.id,storeName:SEL_STORE.name,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}</span>
+          <div class="rhead-id">
+            <div class="rhead-store">${esc(storeHeadline)}</div>
+            ${fullAddr?`<div class="rhead-addr">${esc(fullAddr)}</div>`:''}
+          </div>
+          <div class="rhead-badge">
+            <span class="rhead-ic">${vicon(big,cls,32)}</span>
+            <span class="rhead-stat">${esc(title)}</span>
+          </div>
         </div>
+        ${note?`<div class="rhead-msg">${note}</div>`:''}
       </div>
       ${breakdown}
       ${proof}
@@ -2908,7 +2957,7 @@ function vicon(emoji,cls,size){
     '❌':`<circle cx="12" cy="12" r="9.5"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/>`,
     '🕐':`<circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.5 2.5"/>`,
     '🚫':`<circle cx="12" cy="12" r="9.5"/><path d="M5.5 5.5l13 13"/>`,
-    '📵':`<rect x="8" y="3.5" width="8" height="17" rx="2"/><path d="M10.8 18h2.4M4 4l16 16"/>`,
+    '📵':`<path d="M5 4.5h4l1.5 4.5-2.5 1.6a13 13 0 0 0 5.4 5.4l1.6-2.5 4.5 1.5v4a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 3 6.7 2 2 0 0 1 5 4.5z"/><path d="M3.2 3.2l17.6 17.6"/>`,
     '📮':`<rect x="4" y="7" width="16" height="11" rx="2"/><path d="M4.5 8l7.5 5.5L19.5 8"/>`,
     '📞':`<path d="M5 4.5h4l1.5 4.5-2.5 1.6a13 13 0 0 0 5.4 5.4l1.6-2.5 4.5 1.5v4a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 3 6.7 2 2 0 0 1 5 4.5z"/>`,
     '🔢':`<rect x="5" y="3.5" width="14" height="17" rx="2.5"/><circle cx="9.5" cy="8.5" r=".9" fill="${col}"/><circle cx="14.5" cy="8.5" r=".9" fill="${col}"/><circle cx="9.5" cy="12.5" r=".9" fill="${col}"/><circle cx="14.5" cy="12.5" r=".9" fill="${col}"/><path d="M9.5 16.5h5"/>`,
@@ -2956,13 +3005,31 @@ function lastCallFor(storeId){ return loadHist().find(e=>e.storeId===storeId&&e.
 function callOutcomeLabel(e){ return e.confirmed===true?t('pre.had','they had it in stock'):e.confirmed===false?t('pre.notin',"they didn't have it"):t('pre.unclear','no clear answer'); }
 async function preCallGate(){
   const e=lastCallFor(SEL_STORE&&SEL_STORE.id); if(!e) return true;
-  const base=(SEL_STORE.name||'').split(/[—–]| - /)[0].trim();
+  const nm=splitStoreName(SEL_STORE.name||''); const headline=[nm.base,nm.branch].filter(Boolean).join(' '); const base=nm.base;
   const ago=agoStr(Math.floor(e.ts/1000));
-  if(Date.now()-e.ts < 24*3600*1000) return confirm(tf('pre.again','You called {s} {a} — {o}. Call again?',{s:base,a:ago,o:callOutcomeLabel(e)}));
+  if(Date.now()-e.ts < 24*3600*1000){
+    const logoHTML=`<span class="railchip${railClass({storeId:SEL_STORE.id,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}" style="display:grid">${railFace({storeId:SEL_STORE.id,storeName:SEL_STORE.name,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}</span>`;
+    return await confirmAgain({store:headline, logoHTML, body:tf('pre.again.body','You checked here {a} — {o}. Want us to call again?',{a:ago,o:callOutcomeLabel(e)})});
+  }
   toast(tf('pre.note','You called {s} {a} — {o}',{s:base,a:ago,o:callOutcomeLabel(e)}));
   await new Promise(r=>setTimeout(r,2200));
   return true;
 }
+// Styled "call again?" confirm (matches the site's modal language — replaces the native confirm()).
+function confirmAgain({store, body, logoHTML}){
+  return new Promise(resolve=>{
+    const ov=$('againOverlay');
+    $('again_logo').innerHTML=logoHTML||''; $('again_store').textContent=store||''; $('again_body').innerHTML=body||'';
+    let done=false;
+    const close=(v)=>{ if(done)return; done=true; ov._close=null; ov.classList.remove('on'); document.removeEventListener('keydown',onKey,true); resolve(v); };
+    const onKey=(ev)=>{ if(ev.key==='Escape'){ ev.preventDefault(); close(false); } };
+    ov._close=close;
+    $('again_yes').onclick=()=>close(true); $('again_no').onclick=()=>close(false);
+    document.addEventListener('keydown',onKey,true);
+    ov.classList.add('on');
+  });
+}
+function closeAgain(){ const ov=$('againOverlay'); if(ov&&ov._close) ov._close(false); }
 function saveCheckToHistory(o,cid){
   const cat=(CATS.find(c=>c.id===SEL_CAT)||{}).label||'';
   const cats=(ASKED_CATS&&ASKED_CATS.length)?ASKED_CATS.map(x=>x.label):(cat?[cat]:[]);
