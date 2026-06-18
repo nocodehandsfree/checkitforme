@@ -1197,6 +1197,9 @@ app.post("/api/stores/flag", async (c) => {
   return c.json({ updated });
 });
 // Bulk display-name cleanup (Data Dev) in ONE DB pass:
+//  (0) hygiene: strip store numbers ("Burlington West Hills (#264)" -> "Burlington West Hills"),
+//      Title-Case all-caps streets ("NORTH DEMAREE STREET" -> "North Demaree Street"), and rebuild
+//      junk/HTML-corrupt names from chain + city.
 //  (1) separator normalization: "CVS — Visalia" -> "CVS Visalia". An em/en-dash or a spaced hyphen
 //      between words collapses to a single space; in-word hyphens ("Jewel-Osco", "H-E-B") are preserved.
 //  (2) same-city disambiguation: stores are grouped by (chain, city). A city with one store keeps its
@@ -1214,7 +1217,15 @@ app.post("/api/stores/dedupe", async (c) => {
   const rows = await db.select({ id: retailers.id, name: retailers.name, location: retailers.location, address: retailers.address, chainId: retailers.chainId })
     .from(retailers).where(and(...conds));
   const chainName = new Map((await db.select().from(chains)).map((x) => [x.id, x.name || ""]));
-  const normSep = (s: string) => (s || "").replace(/\s*[—–]\s*/g, " ").replace(/\s+-\s+/g, " ").replace(/\s{2,}/g, " ").trim();
+  const normSep = (s: string) => (s || "")
+    .replace(/\s*\(#\s*\d+\)/g, " ")                         // drop "(#264)" store numbers
+    .replace(/\s+#\s*\d+\b/g, " ")                           // drop " #264" store numbers
+    .replace(/\s*[—–]\s*/g, " ").replace(/\s+-\s+/g, " ").replace(/\s{2,}/g, " ").trim();
+  // all-caps street from raw data ("NORTH DEMAREE STREET") -> Title Case; mixed-case left untouched.
+  const fixCaps = (s: string) => /[a-z]/.test(s) ? s : s.replace(/\b[A-Z]{2,}\b/g, (w) => w[0] + w.slice(1).toLowerCase());
+  // a name is junk if it carries scraped HTML/markup or is absurdly long — rebuilt from chain + city.
+  const corrupt = (s: string) => /[<>]|&#|&lt;|&gt;|Self-Service|Return Policy|\bid=|style=|https?:/i.test(s || "") || (s || "").length > 80;
+  const cityOf = (r: { location: string | null }) => (r.location || "").split(",")[0].trim();
   const street = (addr: string | null) => {
     let a = (addr || "").trim();
     if (!a) return "";
@@ -1231,6 +1242,11 @@ app.post("/api/stores/dedupe", async (c) => {
   // default name = separator-normalized current name (preserves curated mall/neighborhood names on singles)
   const proposed = new Map<number, string>();
   for (const r of rows) proposed.set(r.id, normSep(r.name || ""));
+  // rebuild junk/corrupt names from chain + city (collision pass below may further street-name them)
+  for (const r of rows) if (r.chainId && corrupt(r.name)) {
+    const cn = chainName.get(r.chainId) || "";
+    proposed.set(r.id, cityOf(r) ? `${cn} ${cityOf(r)}` : cn);
+  }
   const baseOf = (r: { chainId: number | null; id: number }) =>
     (r.chainId && chainName.get(r.chainId)) ? chainName.get(r.chainId)! : (proposed.get(r.id) || "");
 
@@ -1245,7 +1261,7 @@ app.post("/api/stores/dedupe", async (c) => {
     const keyCount = new Map<string, number>();
     for (const r of grp) { const k = streetKey(r.address); if (k) keyCount.set(k, (keyCount.get(k) || 0) + 1); }
     for (const r of grp) {
-      const disp = street(r.address);
+      const disp = fixCaps(street(r.address));
       if (!disp) continue;                                   // no usable address -> can't street-name
       const sameStreet = (keyCount.get(streetKey(r.address)) || 0) > 1;
       const hn = houseNum(r.address);
