@@ -129,21 +129,23 @@ __BRAND_HEAD__
   .vstore{text-align:center;color:#d6d6e0;font-size:14.5px;font-weight:600;margin-top:9px}
   /* combined call header: store + verdict status + timing in one box at the top */
   .rhead{display:block;background:var(--terminal);border-radius:16px;padding:15px;border:1px solid var(--border);margin-bottom:14px}
-  .rhead-top{display:flex;gap:12px;align-items:flex-start}
+  .rhead-top{display:flex;gap:12px;align-items:center}
   .rhead .railchip{flex:0 0 auto}
-  .rhead-id{min-width:0;flex:1;padding-top:1px}
-  .rhead-store{font-weight:800;font-size:17px;letter-spacing:-.3px;line-height:1.2}
-  .rhead-addr{color:var(--muted);font-size:12.5px;font-weight:500;margin-top:5px;line-height:1.4}
-  .rhead-badge{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;text-align:center;gap:7px;width:60px}
-  .rhead-ic{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;border:1px solid var(--border);background:var(--sheet)}
+  .rhead-id{min-width:0;flex:1}
+  /* Store name + address ALWAYS one line each (ellipsis if long) — the status never pushes the name down. */
+  .rhead-store{font-weight:800;font-size:17px;letter-spacing:-.3px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rhead-addr{color:var(--muted);font-size:12.5px;font-weight:500;margin-top:3px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Verdict row UNDER the name: (icon) Status: summary — tinted by outcome so red=not in / green=in reads instantly. */
+  .rhead-verdict{display:flex;gap:11px;align-items:center;margin-top:13px;padding:11px 13px;border-radius:12px;border:1px solid var(--border);background:var(--sheet)}
+  .rhead-ic{width:40px;height:40px;flex:0 0 auto;border-radius:11px;display:grid;place-items:center;border:1px solid var(--border);background:var(--terminal)}
   .rhead-ic svg{display:block}
-  .rhead-stat{font-weight:800;font-size:11px;line-height:1.18;letter-spacing:-.1px;color:#c8c8d4}
-  .rhead-msg{margin-top:13px;padding-top:13px;border-top:1px solid var(--border);font-size:13.5px;line-height:1.5;color:#cfcfd9}
-  .rhead-msg b{color:#fff}
-  .rhead.in .rhead-stat{color:var(--green)} .rhead.in .rhead-ic{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.4)}
-  .rhead.out .rhead-stat{color:var(--red)} .rhead.out .rhead-ic{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.35)}
-  .rhead.unk .rhead-stat{color:#FBBF24} .rhead.unk .rhead-ic{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.32)}
-  .rhead.soon .rhead-stat{color:#F59E0B} .rhead.soon .rhead-ic{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.35)}
+  .rhead-vtext{min-width:0;flex:1;font-size:14px;line-height:1.5;color:#cfcfd9}
+  .rhead-stat{font-weight:800;letter-spacing:-.1px;color:#c8c8d4}
+  .rhead-vtext b{color:#fff}
+  .rhead.in .rhead-stat{color:var(--green)} .rhead.in .rhead-verdict{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.42)} .rhead.in .rhead-ic{background:rgba(74,222,128,.14);border-color:rgba(74,222,128,.45)}
+  .rhead.out .rhead-stat{color:var(--red)} .rhead.out .rhead-verdict{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4)} .rhead.out .rhead-ic{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.4)}
+  .rhead.unk .rhead-stat{color:#FBBF24} .rhead.unk .rhead-verdict{background:rgba(251,191,36,.09);border-color:rgba(251,191,36,.3)} .rhead.unk .rhead-ic{background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.34)}
+  .rhead.soon .rhead-stat{color:#F59E0B} .rhead.soon .rhead-verdict{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.36)} .rhead.soon .rhead-ic{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.38)}
   /* logged-out homepage = the focused view (hero + check card). Retired modules hidden for everyone. */
   #truststrip,#demo{display:none!important}
   #earndemo{display:none} body.authed #earndemo{display:block}
@@ -2319,7 +2321,10 @@ async function loadFinds(){
   try{ f=await api(u); }catch(e){}
   const el=$('finds'); if(!el) return;
   if(BRAND_CAT) f=(Array.isArray(f)?f:[]).filter(x=>String(x.category||'').toLowerCase()===BRAND_CAT.label.toLowerCase());
-  if(!Array.isArray(f)||!f.length){ el.style.display='none'; return; }
+  // The ticker belongs ONLY on the homepage — never on the call/result page (it was removed there on
+  // purpose: too busy + faster). loadFinds also fires on boot-idle and on location changes, so guard the
+  // current view here, not just in showResult, or it leaks back onto a result page after a reload.
+  if(!Array.isArray(f)||!f.length||NAV_VIEW!=='builder'){ el.style.display='none'; return; }
   el.style.display='block';
   const items=f.slice(0,10).map(x=>{
     // Two banner states: in-stock find (✓ Found!) and shipment-incoming (🚚 Restock coming). The
@@ -3019,6 +3024,7 @@ function showResult(o, cid){
   const haveLive=LIVE_STEPS.length>0;
   const resultSteps=haveLive?LIVE_STEPS:deriveSteps(o.transcript||'');
   const finalElapsed=haveLive&&LIVE_T0?((Date.now()-LIVE_T0)/1000):null; // stamp the last step only when we have real live timings
+  const vTitle=String(title).replace(/[\s!?.:：]+$/,''); // "In stock!" → "In stock" so the "Status: summary" line reads clean (colon separator, no dash)
   $('result').innerHTML = `
     <div class="railbar" id="railbar" style="display:none"></div>
     <div class="rhead ${cls}">
@@ -3028,12 +3034,11 @@ function showResult(o, cid){
           <div class="rhead-store">${esc(storeHeadline)}</div>
           ${fullAddr?`<div class="rhead-addr">${esc(fullAddr)}</div>`:''}
         </div>
-        <div class="rhead-badge">
-          <span class="rhead-ic">${vicon(big,cls,26)}</span>
-          <span class="rhead-stat">${esc(title)}</span>
-        </div>
       </div>
-      ${note?`<div class="rhead-msg">${note}</div>`:''}
+      <div class="rhead-verdict">
+        <span class="rhead-ic">${vicon(big,cls,24)}</span>
+        <div class="rhead-vtext"><span class="rhead-stat">${esc(vTitle)}</span>${note?': '+note:''}</div>
+      </div>
     </div>
     ${breakdown}
     ${callMsgBoxHTML(resultSteps, o.transcript||'', {finalElapsed, final:true})}
