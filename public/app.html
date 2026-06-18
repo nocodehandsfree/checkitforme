@@ -9,9 +9,32 @@
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
 <style>
   :root{
+    /* core colors (shared with Fungibles Design System v1.3) */
     --bg:#0C0C12; --sheet:#1A1A24; --terminal:#0A0A0E;
     --green:#4ADE80; --green-dark:#22C55E; --purple:#A78BFA; --yellow:#F4D03F;
-    --orange:#E89A4A; --red:#EF4444; --muted:#6B6B7B; --border:rgba(255,255,255,.08);
+    --orange:#E89A4A; --red:#EF4444; --muted:#6B6B7B;
+    --sheet-bg:#1A1A24; --terminal-bg:#0A0A0E; --teal:#0D9488;
+    /* surfaces (rgba, never solid) */
+    --surface-1:rgba(255,255,255,.03); --surface-2:rgba(255,255,255,.05); --surface-3:rgba(255,255,255,.08);
+    --glass:rgba(45,45,65,.75); --glass-blur:blur(12px) saturate(1.6);
+    /* borders */
+    --border:rgba(255,255,255,.08);
+    --border-subtle:rgba(255,255,255,.04); --border-default:rgba(255,255,255,.06);
+    --border-medium:rgba(255,255,255,.08); --border-strong:rgba(255,255,255,.15); --border-dashed:rgba(255,255,255,.10);
+    /* text opacity scale */
+    --text-primary:rgba(255,255,255,1); --text-strong:rgba(255,255,255,.80); --text-body:rgba(255,255,255,.65);
+    --text-muted:rgba(255,255,255,.45); --text-tertiary:rgba(255,255,255,.35); --text-caption:rgba(255,255,255,.25); --text-ghost:rgba(255,255,255,.15);
+    /* tint formula: bg / border per accent */
+    --tint-green-bg:rgba(74,222,128,.07); --tint-green-border:rgba(74,222,128,.14);
+    --tint-orange-bg:rgba(232,154,74,.08); --tint-orange-border:rgba(232,154,74,.15);
+    --tint-yellow-bg:rgba(244,208,63,.14); --tint-yellow-border:rgba(244,208,63,.25);
+    --tint-purple-bg:rgba(167,139,250,.08); --tint-purple-border:rgba(167,139,250,.25);
+    --tint-red-bg:rgba(239,68,68,.12); --tint-red-border:rgba(239,68,68,.20);
+    --tint-blue-bg:rgba(96,165,250,.12); --tint-blue-border:rgba(96,165,250,.20);
+    /* radii scale */
+    --r-tag:4px; --r-input:8px; --r-tag-lg:10px; --r-btn:12px; --r-card:14px; --r-capture:18px; --r-pill:14px; --r-sheet:20px;
+    /* gradient */
+    --gradient-bar:linear-gradient(90deg,var(--green-dark),var(--green));
   }
   *{box-sizing:border-box}
   button,select,textarea,input{font-family:inherit}
@@ -42,7 +65,7 @@
   section{display:none} section.active{display:block;animation:secIn .16s ease}
   @keyframes secIn{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
   h2{font-size:19px;letter-spacing:-.2px;color:#fff;margin:2px 0 16px;font-weight:800;line-height:1.2;text-transform:none}
-  .card{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:16px}
+  .card{background:var(--surface-1);border:1px solid var(--border-default);border-radius:var(--r-card);padding:20px;margin-bottom:16px}
   .row{display:flex;align-items:center;gap:12px}
   .grow{flex:1;min-width:0}
   .name{font-weight:700;font-size:15.5px;letter-spacing:-.1px;color:#f3f3f7}
@@ -52,25 +75,25 @@
   .s-red{background:rgba(239,68,68,.14);color:var(--red)}
   .s-amber{background:rgba(232,154,74,.14);color:var(--orange)}
   .s-gray{background:rgba(255,255,255,.06);color:var(--muted)}
-  button.act{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;border:none;padding:8px 14px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13px;
+  button.act{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;border:none;padding:10px 18px;border-radius:var(--r-btn);font-weight:700;cursor:pointer;font-size:14px;
     box-shadow:0 6px 16px -6px rgba(52,197,107,.45),inset 0 1px 0 rgba(255,255,255,.4);transition:filter .12s,transform .08s}
   button.act:hover{filter:brightness(1.05)} button.act:active{transform:translateY(1px)}
-  button.ghost{background:transparent;border:1px solid var(--border);color:#fff;padding:8px 14px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:700;transition:border-color .12s}
-  button.ghost:hover{border-color:rgba(255,255,255,.25)}
-  input,textarea{background:var(--terminal);border:1px solid var(--border);color:#fff;padding:12px 14px;border-radius:12px;font-size:16px;font-family:inherit;width:100%;max-width:100%}
-  input:focus,textarea:focus{outline:none;border-color:rgba(74,222,128,.45);box-shadow:0 0 0 2px rgba(74,222,128,.12)}
+  button.ghost{background:var(--surface-1);border:1px solid var(--border-medium);color:var(--text-strong);padding:10px 18px;border-radius:var(--r-btn);cursor:pointer;font-size:14px;font-weight:700;transition:border-color .12s,background .12s}
+  button.ghost:hover{border-color:var(--border-strong);background:var(--surface-2)}
+  input,textarea{background:rgba(255,255,255,.04);border:1px solid var(--border-medium);color:#fff;padding:13px 15px;border-radius:var(--r-btn);font-size:16px;font-weight:500;font-family:inherit;width:100%;max-width:100%}
+  input:focus,textarea:focus{outline:none;border-color:rgba(74,222,128,.30);box-shadow:0 0 0 2px rgba(74,222,128,.10)}
   select{
     -webkit-appearance:none;-moz-appearance:none;appearance:none;
-    background-color:var(--terminal);
+    background-color:rgba(255,255,255,.04);
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234ADE80' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
     background-repeat:no-repeat;background-position:right 14px center;
-    border:1px solid var(--border);color:#dcdce6;padding:11px 36px 11px 13px;border-radius:11px;
+    border:1px solid var(--border-medium);color:var(--text-body);padding:12px 36px 12px 15px;border-radius:var(--r-btn);
     font-size:14px;font-weight:500;font-family:Inter,-apple-system,system-ui,sans-serif;letter-spacing:0;width:100%;max-width:100%;cursor:pointer;transition:border-color .15s,box-shadow .15s;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  select:hover{border-color:rgba(255,255,255,.18)}
-  select:focus{outline:none;border-color:rgba(74,222,128,.45);box-shadow:0 0 0 2px rgba(74,222,128,.12)}
+  select:hover{border-color:var(--border-strong)}
+  select:focus{outline:none;border-color:rgba(74,222,128,.30);box-shadow:0 0 0 2px rgba(74,222,128,.10)}
   select option{background:#15151f;color:#e8e8f0;font-weight:500}
-  label{display:block;font-size:12px;color:#9a9aac;margin:12px 0 5px;font-weight:600;letter-spacing:0;text-transform:none}
+  label{display:block;font-size:10px;color:var(--text-tertiary);margin:14px 0 8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
   /* unified custom checkbox — brand green when checked, everywhere */
   input[type=checkbox]{appearance:none;-webkit-appearance:none;width:15px;height:15px;min-width:15px;padding:0;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.26);border-radius:5px;background:var(--terminal);cursor:pointer;flex:0 0 auto;position:relative;transition:background .12s,border-color .12s;vertical-align:middle;accent-color:var(--green);margin:0}
   input[type=checkbox]:hover{border-color:rgba(255,255,255,.45)}
@@ -95,7 +118,7 @@
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:16px}
-  .stat{background:rgba(255,255,255,.035);border:1px solid var(--border);border-radius:14px;padding:13px 15px;min-width:104px;flex:1 1 auto}
+  .stat{background:var(--surface-1);border:1px solid var(--border-default);border-radius:var(--r-card);padding:13px 15px;min-width:104px;flex:1 1 auto}
   .stat .n{font-size:23px;font-weight:800;line-height:1.1;letter-spacing:-.5px;color:#c7c7d2}
   .stat .l{font-size:12px;color:var(--muted);letter-spacing:0;line-height:1.3;margin-top:4px;font-weight:500;text-transform:none}
   .stat.green .n{color:var(--green)}
