@@ -94,6 +94,8 @@
   select:focus{outline:none;border-color:rgba(74,222,128,.30);box-shadow:0 0 0 2px rgba(74,222,128,.10)}
   select option{background:#15151f;color:#e8e8f0;font-weight:500}
   label{display:block;font-size:10px;color:var(--text-tertiary);margin:14px 0 8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+  /* labels that WRAP a control (checkbox/day pill/toggle) keep normal case + size — the uppercase micro-label is for field labels only */
+  label:has(input),label:has(select){text-transform:none;font-size:13px;font-weight:600;letter-spacing:0;color:inherit}
   /* unified custom checkbox — brand green when checked, everywhere */
   input[type=checkbox]{appearance:none;-webkit-appearance:none;width:15px;height:15px;min-width:15px;padding:0;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.26);border-radius:5px;background:var(--terminal);cursor:pointer;flex:0 0 auto;position:relative;transition:background .12s,border-color .12s;vertical-align:middle;accent-color:var(--green);margin:0}
   input[type=checkbox]:hover{border-color:rgba(255,255,255,.45)}
