@@ -72,7 +72,7 @@
   select option{background:#15151f;color:#e8e8f0;font-weight:500}
   label{display:block;font-size:12px;color:#9a9aac;margin:12px 0 5px;font-weight:600;letter-spacing:0;text-transform:none}
   /* unified custom checkbox — brand green when checked, everywhere */
-  input[type=checkbox]{appearance:none;-webkit-appearance:none;width:15px;height:15px;min-width:15px;border:1.5px solid rgba(255,255,255,.26);border-radius:5px;background:var(--terminal);cursor:pointer;flex:0 0 auto;position:relative;transition:background .12s,border-color .12s;vertical-align:middle;accent-color:var(--green);margin:0}
+  input[type=checkbox]{appearance:none;-webkit-appearance:none;width:15px;height:15px;min-width:15px;padding:0;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.26);border-radius:5px;background:var(--terminal);cursor:pointer;flex:0 0 auto;position:relative;transition:background .12s,border-color .12s;vertical-align:middle;accent-color:var(--green);margin:0}
   input[type=checkbox]:hover{border-color:rgba(255,255,255,.45)}
   input[type=checkbox]:checked{background:var(--green);border-color:var(--green)}
   input[type=checkbox]:checked::after{content:'';position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #06210f;border-width:0 2.2px 2.2px 0;transform:rotate(45deg)}
@@ -81,6 +81,7 @@
   /* report group label (Funnel / Activity / …) */
   .rgrp{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:16px 0 8px} .rgrp:first-child{margin-top:0}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:560px){.grid2{grid-template-columns:1fr}}
   .pill{font-size:11px;color:var(--purple);background:rgba(167,139,250,.12);padding:3px 8px;border-radius:8px}
   .transcript{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12px;color:#cfcfe0;background:var(--terminal);border-radius:10px;padding:12px;margin-top:10px}
   .empty{color:var(--muted);font-size:13px;padding:30px;text-align:center}
@@ -404,13 +405,13 @@
         <div><label>Location</label><input id="r_loc" placeholder="Brentwood, TN"></div>
         <div><label>Timezone</label><select id="r_tz">
           <option value="" disabled selected>Select a timezone…</option>
-          <option value="America/New_York">Eastern — America/New_York</option>
-          <option value="America/Chicago">Central — America/Chicago</option>
-          <option value="America/Denver">Mountain — America/Denver</option>
-          <option value="America/Phoenix">Arizona (no DST) — America/Phoenix</option>
-          <option value="America/Los_Angeles">Pacific — America/Los_Angeles</option>
-          <option value="America/Anchorage">Alaska — America/Anchorage</option>
-          <option value="Pacific/Honolulu">Hawaii — Pacific/Honolulu</option>
+          <option value="America/New_York">Eastern · America/New_York</option>
+          <option value="America/Chicago">Central · America/Chicago</option>
+          <option value="America/Denver">Mountain · America/Denver</option>
+          <option value="America/Phoenix">Arizona (no DST) · America/Phoenix</option>
+          <option value="America/Los_Angeles">Pacific · America/Los_Angeles</option>
+          <option value="America/Anchorage">Alaska · America/Anchorage</option>
+          <option value="Pacific/Honolulu">Hawaii · Pacific/Honolulu</option>
         </select></div>
       </div>
       <label data-tip="How to reach the right person">Phone tree</label>
@@ -426,7 +427,7 @@
         <option value="newest">Sort: newest</option>
         <option value="oldest">Oldest</option>
         <option value="store">Store A–Z</option>
-        <option value="outcome">Outcome — in stock first</option>
+        <option value="outcome">Outcome · in stock first</option>
       </select>
     </div>
     <div id="resultList"><div class="empty">Loading…</div></div>
@@ -444,7 +445,7 @@
       <div class="grid2">
         <div><label>Name</label><input id="s_name" placeholder="Thursday B&N Pokémon"></div>
         <div><label>Category</label><select id="s_cat"></select></div>
-        <div><label>Mode</label><select id="s_mode"><option value="restock">Restock — got a shipment in?</option><option value="carry">Carry — do you sell it?</option></select></div>
+        <div><label>Mode</label><select id="s_mode"><option value="restock">Restock</option><option value="carry">Carry</option></select></div>
         <div><label data-tip="24h, store-local">Time</label><input id="s_time" placeholder="09:00"></div>
       </div>
       <label>Days</label>
@@ -554,37 +555,37 @@
         <input id="sb_latency" type="range" min="0" max="4" step="1" style="width:100%" oninput="sbLabels()">
         <label data-tip="The pause before the agent starts replying">The beat</label>
         <select id="sb_beat" onchange="updateDraftDot()">
-          <option value="normal">Normal — snappy, but waits for you to finish (recommended)</option>
-          <option value="eager">Eager — fastest replies (may cut people off)</option>
-          <option value="patient">Patient — long beat, waits for a clear pause (slowest)</option>
+          <option value="normal">Normal · snappy, but waits for you to finish (recommended)</option>
+          <option value="eager">Eager · fastest replies (may cut people off)</option>
+          <option value="patient">Patient · long beat, waits for a clear pause (slowest)</option>
         </select>
         <label data-tip="English agents support turbo or flash v2 only">Voice model</label>
         <select id="sb_model" onchange="updateDraftDot()">
-          <option value="eleven_turbo_v2">Turbo v2 — natural (recommended)</option>
-          <option value="eleven_flash_v2">Flash v2 — fastest, most robotic (IVR/testing)</option>
+          <option value="eleven_turbo_v2">Turbo v2 · natural (recommended)</option>
+          <option value="eleven_flash_v2">Flash v2 · fastest, most robotic (IVR/testing)</option>
         </select>
         <label data-tip="Sonnet 4.6 = best quality; Haiku / GPT-4o-mini / Gemini Flash = cheaper & faster">Agent brain (LLM)</label>
         <select id="sb_llm" onchange="updateDraftDot()">
           <optgroup label="Claude (Anthropic)">
-            <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — best quality (recommended)</option>
-            <option value="claude-opus-4-7">Claude Opus 4.7 — most capable, priciest</option>
+            <option value="claude-sonnet-4-6">Claude Sonnet 4.6 · best quality (recommended)</option>
+            <option value="claude-opus-4-7">Claude Opus 4.7 · most capable, priciest</option>
             <option value="claude-sonnet-4-5">Claude Sonnet 4.5</option>
-            <option value="claude-haiku-4-5">Claude Haiku 4.5 — cheap &amp; fast</option>
+            <option value="claude-haiku-4-5">Claude Haiku 4.5 · cheap &amp; fast</option>
           </optgroup>
           <optgroup label="OpenAI">
-            <option value="gpt-4o-mini">GPT-4o-mini — cheap &amp; fast</option>
+            <option value="gpt-4o-mini">GPT-4o-mini · cheap &amp; fast</option>
             <option value="gpt-4o">GPT-4o</option>
             <option value="gpt-5-mini">GPT-5-mini</option>
           </optgroup>
           <optgroup label="Google Gemini">
-            <option value="gemini-2.5-flash">Gemini 2.5 Flash — cheap &amp; fast</option>
-            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite — cheapest</option>
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash · cheap &amp; fast</option>
+            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite · cheapest</option>
             <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
           </optgroup>
         </select>
         <label data-tip="Save a profile you like, load it back into the draft anytime">Saved scripts</label>
         <div class="row" style="gap:8px">
-          <select id="vt_preset" style="flex:1"><option value="">— saved scripts —</option></select>
+          <select id="vt_preset" style="flex:1"><option value="">Saved scripts…</option></select>
           <button class="ghost" onclick="loadPreset()">Load</button>
           <button class="ghost" onclick="removePreset()">Delete</button>
         </div>
@@ -629,8 +630,8 @@
         </select>
         <label data-tip="Branches off the verified flow">Decision tree</label>
         <select id="sim_tree" onchange="syncTreeUI();previewMaybe()">
-          <option value="general">General restock — any of it counts, won't ask which set</option>
-          <option value="specific">Specific product — only greens if THAT is in</option>
+          <option value="general">General restock · any of it counts, won't ask which set</option>
+          <option value="specific">Specific product · only greens if THAT is in</option>
         </select>
         <div id="sim_specific_wrap" style="display:none">
           <label data-tip="e.g. 151 booster boxes, Prismatic Evolutions ETB">Specific set / product</label>
@@ -679,9 +680,9 @@
         <div><label>Answer path</label>
           <select id="pt_path">
             <option value="">Unclassified</option>
-            <option value="direct_human">Direct human — picks up</option>
-            <option value="simple_ivr">Simple IVR — 1–2 steps</option>
-            <option value="deep_ivr">Deep IVR — long tree</option>
+            <option value="direct_human">Direct human · picks up</option>
+            <option value="simple_ivr">Simple IVR · 1–2 steps</option>
+            <option value="deep_ivr">Deep IVR · long tree</option>
           </select></div>
         <div><label data-tip="Time burned before a human">Avg tree seconds</label>
           <input id="pt_treesecs" type="number" min="0" placeholder="e.g. 45"></div>
@@ -757,8 +758,8 @@
         <div class="row" style="gap:8px;margin-top:6px">
           <select id="st_new_tone" style="max-width:150px">
             <option value="unk">neutral (gray)</option>
-            <option value="in">green — go</option>
-            <option value="out">red — no-go</option>
+            <option value="in">green · go</option>
+            <option value="out">red · no-go</option>
           </select>
           <button class="act" onclick="addStatus()">Add status</button>
         </div>
@@ -1128,11 +1129,11 @@ let VS_REC=null, VS_CHUNKS=[], VS_BLOB=null, VS_TIMER=null;
 async function loadVoices(){
   const sel=document.getElementById('vs_select'); if(!sel) return;
   const d=await api('/api/voices'); if(!d||d.error){ sel.innerHTML='<option>could not load voices</option>'; return; }
-  sel.innerHTML='<option value="" disabled selected>Choose a voice…</option>'+(d.voices||[]).map(v=>`<option value="${v.id}">${esch(v.name)}${v.cloned?' (cloned)':''}${v.id===d.active?' — LIVE now':''}</option>`).join('');
+  sel.innerHTML='<option value="" disabled selected>Choose a voice…</option>'+(d.voices||[]).map(v=>`<option value="${v.id}">${esch(v.name)}${v.cloned?' (cloned)':''}${v.id===d.active?' · LIVE now':''}</option>`).join('');
   const act=(d.voices||[]).find(v=>v.id===d.active);
   document.getElementById('vs_active').textContent = act?`Live now: ${act.name}`:`Live voice id: ${d.active}`;
   // Mirror the voice list into the "Call me" + "Talk to me" pickers (test a clone without going live).
-  const opts='<option value="">Default voice</option>'+(d.voices||[]).map(v=>`<option value="${v.id}">${esch(v.name)}${v.cloned?' (cloned)':''}${v.id===d.active?' — LIVE':''}</option>`).join('');
+  const opts='<option value="">Default voice</option>'+(d.voices||[]).map(v=>`<option value="${v.id}">${esch(v.name)}${v.cloned?' (cloned)':''}${v.id===d.active?' · LIVE':''}</option>`).join('');
   const sv=document.getElementById('sim_voice'); if(sv) sv.innerHTML=opts;
   const lv=document.getElementById('lab_voice'); if(lv) lv.innerHTML=opts;
   loadRotation(d.voices||[]);
@@ -1429,7 +1430,7 @@ async function labCall(){
 // --- Store simulator: agent calls YOUR phone; result records against the chosen store ---
 function fillSimSelects(){
   const ss=document.getElementById('sim_store'); if(ss){ const cur=ss.value;
-    ss.innerHTML='<option value="" disabled selected>Choose a store…</option>'+RETAILERS.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(r=>`<option value="${r.id}">${r.name}${r.location?' — '+r.location:''}</option>`).join('');
+    ss.innerHTML='<option value="" disabled selected>Choose a store…</option>'+RETAILERS.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(r=>`<option value="${r.id}">${r.name}${r.location?' · '+r.location:''}</option>`).join('');
     if(cur) ss.value=cur; }
   const sc=document.getElementById('sim_cat'); if(sc){ const cur=sc.value;
     sc.innerHTML='<option value="" disabled selected>Choose a category…</option>'+CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
@@ -1619,7 +1620,7 @@ async function pushSandboxToStores(){
 async function loadPresets(){
   const l=await api('/api/voice-presets'); const sel=document.getElementById('vt_preset'); if(!sel||!Array.isArray(l)) return;
   const cur=sel.value;
-  sel.innerHTML='<option value="">— saved scripts —</option>'+l.map(p=>`<option value="${(p.name||'').replace(/"/g,'&quot;')}">${(p.name||'').replace(/</g,'&lt;')}</option>`).join('');
+  sel.innerHTML='<option value="">Saved scripts…</option>'+l.map(p=>`<option value="${(p.name||'').replace(/"/g,'&quot;')}">${(p.name||'').replace(/</g,'&lt;')}</option>`).join('');
   sel.value=cur;
 }
 async function storePreset(){
@@ -1813,13 +1814,13 @@ function renderStatuses(list){
         <input value="${escH(s.label)}" data-f="label" style="flex:1;min-width:0" placeholder="Label">
         <input type="color" value="${escH(s.color)}" data-f="color" title="Verdict color" style="width:38px;height:40px;padding:2px;border-radius:9px;border:1px solid var(--border);background:none;flex:0 0 auto">
       </div>
-      <input value="${escH(s.note)}" data-f="note" placeholder="One-line note the customer sees" style="margin-top:8px">
+      <textarea data-f="note" rows="2" placeholder="One-line note the customer sees" style="margin-top:8px;font-size:14px">${escH(s.note)}</textarea>
       <div class="row" style="gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
         <select data-f="emoji" style="flex:0 0 auto;max-width:150px" title="Icon">${markOptions(s.emoji)}</select>
         <select data-f="tone" style="flex:0 0 auto;max-width:150px">
           <option value="unk"${s.tone==='unk'?' selected':''}>neutral</option>
-          <option value="in"${s.tone==='in'?' selected':''}>green — go</option>
-          <option value="out"${s.tone==='out'?' selected':''}>red — no-go</option>
+          <option value="in"${s.tone==='in'?' selected':''}>green · go</option>
+          <option value="out"${s.tone==='out'?' selected':''}>red · no-go</option>
         </select>
         <span class="meta" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">key: <code>${escH(s.key)}</code></span>
         <button class="ghost" onclick="saveStatus(${s.id},this)" style="flex:0 0 auto">Save</button>
@@ -1923,7 +1924,7 @@ async function loadSchedules(){
       <div class="smeta" style="margin-top:6px">fires ${esch(s.timeLocal)} store-local · cap ${s.maxCallSeconds}s</div>
     </div>
     <button class="ghost" onclick="toggleSchedule(${s.id},${!s.active})">${s.active?'Pause':'Resume'}</button>
-  </div></div>`;}).join('') : '<div class="empty">No schedules yet — build one below.</div>';
+  </div></div>`;}).join('') : '<div class="empty">No schedules yet.</div>';
 }
 async function toggleSchedule(id,active){ await api('/api/schedules/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({active})}); loadSchedules(); }
 async function addSchedule(){
@@ -2189,16 +2190,22 @@ async function loadGwIntel(){
   const d=await api('/api/admin/restock-intel');
   if(!d||d.error){ el.textContent='No intel yet.'; return; }
   const t=d.totals||{};
-  const days=(d.shipmentDays||[]).map(x=>`${esch(x.day)} (${x.n})`).join(' · ')||'—';
-  const ago=s=>{ if(!s)return '—'; const m=Math.floor(Date.now()/1000)-s; if(m<3600)return Math.max(1,Math.floor(m/60))+'m'; if(m<86400)return Math.floor(m/3600)+'h'; return Math.floor(m/86400)+'d'; };
-  const rows=(d.topStores||[]).map(s=>`<tr><td style="padding:4px 8px 4px 0">${esch(s.store)}</td><td style="padding:4px 8px;color:var(--muted)">${esch(s.region||'—')}</td><td style="padding:4px 8px;color:var(--green);text-align:right">${s.confirms}</td><td style="padding:4px 8px;color:var(--muted)">${esch(s.bestDay||'—')}</td><td style="padding:4px 0;color:var(--muted);text-align:right">${ago(s.last)} ago</td></tr>`).join('');
+  const days=(d.shipmentDays||[]).map(x=>`${esch(x.day)} (${x.n})`).join(' · ')||'none yet';
+  const ago=s=>{ if(!s)return ''; const m=Math.floor(Date.now()/1000)-s; if(m<3600)return Math.max(1,Math.floor(m/60))+'m ago'; if(m<86400)return Math.floor(m/3600)+'h ago'; return Math.floor(m/86400)+'d ago'; };
+  const rows=(d.topStores||[]).map(s=>{
+    const sub=[s.bestDay?('best '+esch(s.bestDay)):'', ago(s.last)].filter(Boolean).join(' · ');
+    return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--border)">
+      <div style="flex:1;min-width:0"><div style="font-size:13px"><b style="color:#e8e8f0">${esch(s.store)}</b>${s.region?` <span class="meta">· ${esch(s.region)}</span>`:''}</div>${sub?`<div class="meta" style="font-size:11.5px">${sub}</div>`:''}</div>
+      <div style="flex:0 0 auto;text-align:right"><b style="color:var(--green);font-size:15px">${s.confirms}</b> <span class="meta" style="font-size:11px">hits</span></div>
+    </div>`;
+  }).join('');
   const st=(n,l,g)=>`<div class="stat${g?' green':''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   el.innerHTML=
     `<div class="stats">`+
       st(t.confirms||0,'confirmed restocks')+st((t.confirmRate||0)+'%','hit rate · '+(t.checks||0)+' checks')+st(t.confirms7d||0,'last 7 days',1)+st(t.confirms30d||0,'last 30 days')+
     `</div>`+
-    `<div class="meta" style="margin-bottom:8px"><b style="color:#c7c7d2">Shipment days heard:</b> ${days}</div>`+`
-    ${rows?`<table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="color:var(--muted);text-align:left"><th style="padding:0 8px 6px 0">Store</th><th style="padding:0 8px">Region</th><th style="padding:0 8px;text-align:right">Hits</th><th style="padding:0 8px">Best day</th><th style="text-align:right">Last</th></tr></thead><tbody>${rows}</tbody></table>`:'<div>No confirmed restocks logged yet.</div>'}`;
+    `<div class="meta" style="margin:2px 0 4px"><b style="color:#c7c7d2">Shipment days heard:</b> ${days}</div>`+
+    (rows||'<div class="meta" style="padding:6px 0">No confirmed restocks logged yet.</div>');
 }
 async function toggleFlag(key,on){
   await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{[key]:on}})});
