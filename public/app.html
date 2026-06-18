@@ -102,9 +102,8 @@
   .hero{background:linear-gradient(180deg,rgba(74,222,128,.06),rgba(74,222,128,0));border:1px solid rgba(74,222,128,.18);border-radius:18px;padding:16px 20px 18px;margin-bottom:16px}
   .hero-eyebrow{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--green);margin-bottom:14px}
   .hero .stats{margin-bottom:0}
-  .hero .stat{background:transparent;border:none;padding:0;min-width:88px}
-  .hero .stat .n{font-size:30px;letter-spacing:-.8px;color:#eaeaf2}
-  .hero .stat .l{font-size:12px;margin-top:3px}
+  /* TODAY hero uses the SAME rounded stat boxes as every other report — only the green-tint card + eyebrow mark it as "today" */
+  .hero .stat .n{font-size:25px}
   details.card>summary{list-style:none;outline:none}
   details.card>summary::-webkit-details-marker{display:none}
   .chip-sm{display:inline-block;font-size:10px;color:var(--purple);background:rgba(167,139,250,.12);padding:2px 7px;border-radius:7px;margin:2px 4px 0 0}
@@ -764,11 +763,9 @@
 
   <section id="labs">
     <h2>Create</h2>
-    <div class="hint" style="margin:-6px 0 16px">Build your store agent: <b style="font-style:normal;color:#cfcfd8">1)</b> pick or clone a voice (here) → <b style="font-style:normal;color:#cfcfd8">2)</b> tune its persona &amp; script in <b style="font-style:normal;color:#cfcfd8">Test</b> → <b style="font-style:normal;color:#cfcfd8">3)</b> test it → apply to all store calls.</div>
-
     <div class="card" id="voicestudio">
       <div class="name" style="margin-bottom:4px">Step 1 · Voice</div>
-      <div class="hint" style="margin-bottom:14px">Pick the voice every live store call speaks as — or record ~30–60s and clone a new one.</div>
+      
       <label>Live store voice</label>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <select id="vs_select" style="flex:1;min-width:180px"></select>
@@ -776,7 +773,7 @@
       </div>
       <div id="vs_active" class="meta" style="margin-top:6px"></div>
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <label>Clone a new voice — record ~30–60s of clear speech</label>
+      <label data-tip="Record ~30–60s of clear speech">Clone a new voice</label>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
         <button class="act" id="vs_rec" onclick="vsToggleRec()">● Record</button>
         <span id="vs_rectime" class="meta"></span>
@@ -789,10 +786,10 @@
 
     <div class="card">
       <div class="name" style="margin-bottom:4px">Hear a voice live</div>
-      <div class="hint" style="margin-bottom:14px">Call any number to hear a voice — handy for checking tone before you build the persona.</div>
+      
       <label>Phone number (E.164)</label>
       <input id="lab_phone" placeholder="+13105551234">
-      <label>First name (optional — e.g. opens with “hey what's up Matt”)</label>
+      <label data-tip="Optional — opens with e.g. ‘hey what’s up Matt’">First name</label>
       <input id="lab_name" placeholder="Matt">
       <label>Flow</label>
       <select id="lab_mode">
@@ -806,7 +803,7 @@
         <option value="homie">Homie</option>
         <option value="family">Family</option>
       </select>
-      <label>Voice <span style="color:var(--muted)">— ring in any clone; the live store voice is never touched</span></label>
+      <label data-tip="Ring in any clone — the live store voice is never touched">Voice</label>
       <select id="lab_voice"><option value="">Default voice</option></select>
       <div style="margin-top:14px"><button class="act" onclick="labCall()">Call</button></div>
     </div>
