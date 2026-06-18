@@ -31,7 +31,7 @@ __BRAND_HEAD__
   /* form controls do NOT inherit fonts by default — without this, every button renders the
      system font instead of Inter. One line keeps typography identical across the whole site. */
   button,select,textarea{font-family:inherit}
-  html{-webkit-text-size-adjust:100%}
+  html{-webkit-text-size-adjust:100%;background:#0C0C12;color-scheme:dark}
   html,body{max-width:100%;overflow-x:hidden}
   body{background:var(--bg);color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;margin:0;padding:0;
     display:flex;flex-direction:column;min-height:100dvh;
@@ -507,15 +507,16 @@ __BRAND_HEAD__
   .store.best{border-color:rgba(74,222,128,.55);background:linear-gradient(100deg,rgba(74,222,128,.1),rgba(74,222,128,.02))}
   .store .ic.best{background:var(--green)}
   /* Tier groups — TIER 5 = green (best MSRP odds), TIER 4 = amber. */
-  .grouphdr{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:14px 2px 1px}
-  .grouphdr:first-child{margin-top:2px}
-  .grouphdr.g5{color:var(--green)}
-  .grouphdr.g4{color:#38BDF8}
-  .grouphdr.g3{color:#F59E0B}
+  /* Section tabs — full-width neon bars with white text so each group really pops. */
+  .grouphdr{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);margin:16px 0 4px;padding:9px 13px;border-radius:11px}
+  .grouphdr:first-child{margin-top:4px}
+  .grouphdr.g5{background:linear-gradient(100deg,#0FBF5E,#2BFF88);box-shadow:0 0 14px rgba(43,255,136,.35)}
+  .grouphdr.g4{background:linear-gradient(100deg,#0E96D8,#33D6FF);box-shadow:0 0 14px rgba(41,212,255,.35)}
+  .grouphdr.g3{background:linear-gradient(100deg,#E07E12,#FFB23E);box-shadow:0 0 14px rgba(255,158,44,.35)}
   .grouphdr .ghstar{display:inline-flex}
-  .grouphdr .ghdot{width:7px;height:7px;border-radius:50%;display:inline-block;flex:0 0 auto}
-  .maplegend{flex-wrap:wrap;gap:12px;justify-content:center;align-items:center;font-size:11px;font-weight:800;color:#cfcfd8;margin-top:10px;padding:9px 10px;background:rgba(12,12,18,.55);border:1px solid var(--border);border-radius:12px}
-  .maplegend>span{display:inline-flex;align-items:center;gap:6px}
+  .maplegend{flex-wrap:nowrap;gap:11px;justify-content:center;align-items:center;font-size:10.5px;font-weight:800;color:#cfcfd8;margin-top:10px;padding:8px 10px;background:rgba(12,12,18,.55);border:1px solid var(--border);border-radius:12px;overflow-x:auto;scrollbar-width:none;white-space:nowrap}
+  .maplegend::-webkit-scrollbar{display:none}
+  .maplegend>span{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto}
   .maplegend .lgd{width:10px;height:10px;border-radius:50%;display:inline-block;flex:0 0 auto}
   .instk{display:inline-flex;vertical-align:-3px;margin-right:3px}
   .besttag{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#06210f;background:var(--green);padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
@@ -1207,7 +1208,7 @@ const I18N={ es:{
   'cta.pick':'Elige una tienda para verificar','cta.check':'Verificar','cta.for':'por','cta.checkunit':'verificación','cta.kioskword':'kiosco',
   'kcall.store':'esta tienda','kcall.body1':'Llamaremos y preguntaremos si su kiosco de','kcall.body2':'está funcionando y surtido, y te enviaremos lo que digan.','kcall.yes':'📞 Sí, llamar ahora →','kcall.no':'Ahora no','kcall.atkiosk':'¿Estás en el kiosco ahora?','kcall.receipt':'Usa nuestro correo al pagar o reenvía tu recibo → verificación gratis.',
   'count.open':'abiertas','count.kiosks':'kioscos',
-  'grp.best':'Mejores cerca de ti','grp.mostly':'Mayormente confiable','grp.spotty':'Irregular','instock.now':'En stock ahora',
+  'grp.best':'Mejores cerca de ti','grp.mostly':'Mayormente confiable','grp.spotty':'Irregular','instock.now':'En stock ahora','lg.best':'Mejor','lg.mostly':'Confiable',
   'cover.types':'Tipos de tienda que cubrimos — toca el pin para ver <b>las tuyas</b>:',
   'st.open':'Abierto','st.closed':'Cerrado','st.till':'hasta',
   'sc.post':'Publica tu logro','sc.where':'¿Dónde lo conseguiste?','sc.store.ph':'Busca tu tienda…','sc.what':'¿Qué conseguiste?','sc.photo':'Agrega una foto de tu logro','sc.postit':'Publícalo →','back':'← Atrás',
@@ -2024,8 +2025,8 @@ let MAP=null, MAP_LOADED=false, MAP_MARKERS=[], PINNING=false, MY_PIN=null, MY_R
 // Neon store-color legend shown along the bottom of the map.
 function mapLegendHtml(){
   const dot=(c)=>`<span class="lgd" style="background:${c};box-shadow:0 0 7px ${c},0 0 2px ${c}"></span>`;
-  return `<span>${dot('#2BFF88')}${t('grp.best','Best near you')}</span>`
-       + `<span>${dot('#29D4FF')}${t('grp.mostly','Mostly reliable')}</span>`
+  return `<span>${dot('#2BFF88')}${t('lg.best','Best')}</span>`
+       + `<span>${dot('#29D4FF')}${t('lg.mostly','Mostly')}</span>`
        + `<span>${dot('#FF9E2C')}${t('grp.spotty','Spotty')}</span>`
        + `<span>${FCHK(14)}${t('instock.now','In stock')}</span>`;
 }
@@ -2192,9 +2193,9 @@ function renderStores(){
   }
   if(TIER_VIEW){
     let html='';
-    if(t5.length) html+=`<div class="grouphdr g5"><span class="ghstar">${ICO.star('#4ADE80')}</span>${t('grp.best','Best near you')}</div>`+t5.map(storeRowHtml).join('');
-    if(t4.length) html+=`<div class="grouphdr g4"><span class="ghdot" style="background:#38BDF8"></span>${t('grp.mostly','Mostly reliable')}</div>`+t4.map(storeRowHtml).join('');
-    if(rest.length) html+=`<div class="grouphdr g3"><span class="ghdot" style="background:#F59E0B"></span>${t('grp.spotty','Spotty')}</div>`+rest.map(storeRowHtml).join('');
+    if(t5.length) html+=`<div class="grouphdr g5"><span class="ghstar">${ICO.star('#fff')}</span>${t('grp.best','Best near you')}</div>`+t5.map(storeRowHtml).join('');
+    if(t4.length) html+=`<div class="grouphdr g4">${t('grp.mostly','Mostly reliable')}</div>`+t4.map(storeRowHtml).join('');
+    if(rest.length) html+=`<div class="grouphdr g3">${t('grp.spotty','Spotty')}</div>`+rest.map(storeRowHtml).join('');
     $('storelist').innerHTML = html || `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
   } else {
     $('storelist').innerHTML = list.length ? list.map(storeRowHtml).join('') : `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
