@@ -193,7 +193,7 @@
   .slogo:has(img){background:#14141d;border-color:var(--border)}
   .slogo .mono{font-size:13px;font-weight:900;color:#d6d6e0}
   .sname{font-weight:800;font-size:15px;letter-spacing:-.2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .sname .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .sname .nm{white-space:nowrap;flex:0 0 auto}
   .sbranch{color:#c8c8d4;font-size:12.5px;font-weight:600;margin-top:1px}
   .smeta{color:var(--muted);font-size:12px;margin-top:2px}
   .sdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
@@ -327,7 +327,7 @@
       </div>
     </div>
     <details class="card" id="d_timing_card">
-      <summary style="cursor:pointer"><span class="name">Call time &amp; cost</span> <span class="meta">— nav vs. talk seconds</span></summary>
+      <summary style="cursor:pointer"><span class="name">Call time &amp; cost</span></summary>
       <div class="meta" style="margin:10px 0 8px">Time-to-human (phone-tree nav) vs. talk — ElevenLabs bills the whole connected call, so nav + hold is real cost.</div>
       <div class="stats" id="d_timing" style="margin-bottom:6px"></div>
       <details style="margin-top:6px"><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details>
@@ -482,13 +482,13 @@
       <div style="margin-top:12px"><button class="act" onclick="savePolicyForm()">Save pricing</button></div>
     </div>
     <details class="card">
-      <summary><span class="name">Advanced policy (raw JSON)</span> <span class="meta">— power tool</span></summary>
+      <summary><span class="name">Advanced policy (raw JSON)</span></summary>
       <div class="meta" style="margin:10px 0 8px">Source of truth. Edits here merge over defaults. Use for packs, finds headstart, privacy, etc.</div>
       <textarea id="gw_json" spellcheck="false" style="width:100%;min-height:220px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box"></textarea>
       <div style="margin-top:10px"><button class="act" onclick="savePolicyJson()">Save JSON</button> <button class="ghost" onclick="loadGrowth()">Reload</button></div>
     </details>
     <details class="card">
-      <summary><span class="name">Store CMS — import</span> <span class="meta">— power tool</span></summary>
+      <summary><span class="name">Store CMS — import</span></summary>
       <div class="meta" style="margin:10px 0 8px">Paste your research JSON (array of stores, or <code>{ "stores": [...] }</code>). Upserts by phone; region/timezone auto-derived from state. Set <code>"active": false</code> to soft-remove (e.g. Ralphs).</div>
       <textarea id="gw_import" spellcheck="false" placeholder='[{"name":"Target — Sunset","phone":"+13105551212","address":"...","state":"CA","chain":"Target","carries":"Pokémon"}]' style="width:100%;min-height:150px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box"></textarea>
       <div id="gw_import_msg" class="meta" style="margin:8px 0;min-height:16px"></div>
@@ -535,7 +535,7 @@
       </div>
 
       <details class="card" id="tb_voice_card">
-        <summary><span class="name">Step 2 · Persona &amp; script <span class="chip-draft">DRAFT</span></span><span class="hint">tune safely → test → apply</span></summary>
+        <summary><span class="name">Step 2 · Persona &amp; script <span class="chip-draft">DRAFT</span></span></summary>
         <div class="meta" style="margin:10px 0 12px">Edits a <b>draft</b> — real store calls are untouched until you <b>Apply to ALL store calls</b>. Hear it with Call me below.</div>
         <label data-tip="Use {category} — it fills in Pokémon, One Piece, etc.">Opening line</label>
         <input id="tb_opening" placeholder="Heyy! I was just checking to see if you guys got any {category} in?" oninput="updateDraftDot()">
@@ -597,7 +597,7 @@
       </details>
 
       <details class="card" id="tb_rotate_card">
-        <summary><span class="name">Step 3 · Rotation</span><span class="hint">vary voice + opener per call so stores don't hear the same thing twice</span></summary>
+        <summary><span class="name">Step 3 · Rotation</span></summary>
         <div class="meta" style="margin:10px 0 8px">Live store calls round-robin through these. Leave empty to use the single live voice/opener.</div>
         <label>Opener variants <span style="color:var(--muted)">— one per line; <code>{category}</code> fills in. The agent uses the next line each call.</span></label>
         <textarea id="rot_openers" rows="4" style="width:100%;font-family:inherit;font-size:13px;background:var(--terminal);color:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;box-sizing:border-box" placeholder="Heyy! Got any {category} in today?&#10;Hi! Quick one — any {category} land recently?&#10;Hey there! Checking if {category} is in stock?"></textarea>
@@ -607,7 +607,7 @@
       </details>
 
       <details class="card" id="tb_call_card" open>
-        <summary><span class="name">Step 4 · Test it</span><span class="hint">the agent calls YOU as the store — answer like the clerk</span></summary>
+        <summary><span class="name">Step 4 · Test it</span></summary>
         <div class="meta" style="margin:10px 0 12px">Pick the store context, then answer your phone like the clerk. Runs the <b>draft</b> voice with that store's real phone-tree rules. The result records against the store (visible in Results).</div>
         <label>Store (records the result against this one)</label>
         <select id="sim_store" onchange="previewMaybe()"></select>
