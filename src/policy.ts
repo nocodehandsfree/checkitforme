@@ -72,7 +72,7 @@ export const DEFAULT_POLICY: Policy = {
       { key: "hunter", credits: 100, cents: 2000, label: "100 checks" },
       { key: "pro", credits: 300, cents: 5000, label: "300 checks" },
     ],
-    sub: { cents: 499, credits: 15, label: "Membership", perCallCents: 18 },
+    sub: { cents: 999, credits: 15, label: "Check — Family", perCallCents: 18 },
   },
   finds: { publicFeed: true, headstartMin: 10, subscriberPrivateAlways: true, keepPrivateCostChecks: 0 },
   rewards: { kioskRefreshChecks: 1, referralChecks: 1 }, // referral = 1+1 -> ~$1 CAC at ~$0.50/check
