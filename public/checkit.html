@@ -490,8 +490,6 @@ __BRAND_HEAD__
   .store.best{border-color:rgba(74,222,128,.55);background:linear-gradient(100deg,rgba(74,222,128,.1),rgba(74,222,128,.02))}
   .store .ic.best{background:var(--green)}
   /* Tier groups — TIER 5 = green (best MSRP odds), TIER 4 = amber. */
-  .store.t5{border-color:rgba(74,222,128,.5);background:linear-gradient(100deg,rgba(74,222,128,.09),rgba(74,222,128,.02))}
-  .store.t4{border-color:rgba(245,158,11,.45);background:linear-gradient(100deg,rgba(245,158,11,.08),rgba(245,158,11,.015))}
   .grouphdr{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:14px 2px 1px}
   .grouphdr:first-child{margin-top:2px}
   .grouphdr.g5{color:var(--green)}
@@ -2086,11 +2084,10 @@ function storeRowHtml(s){
       <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)} <span class="besttag">${t('besttag','Most likely')}</span></div><div class="lo bestwhy">${esc(LANG==='es'?t('bestwhy','great odds right now'):(BEST.why||'great odds right now'))}</div></div>
       ${right}</div>`;
   }
-  const tierCls=storeTier(s)===5?'t5':storeTier(s)===4?'t4':'';
   const dot=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
   const drop=shipmentDayShort(s);
   const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', drop?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
-  return `<div class="store ${tierCls} ${sel}" onclick="pickStore(${s.id})">
+  return `<div class="store ${sel}" onclick="pickStore(${s.id})">
     <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
     <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)}</div><div class="lo">${dot}${meta}</div></div>
     ${right}</div>`;
