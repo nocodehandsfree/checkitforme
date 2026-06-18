@@ -493,7 +493,10 @@ __BRAND_HEAD__
   .grouphdr{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:14px 2px 1px}
   .grouphdr:first-child{margin-top:2px}
   .grouphdr.g5{color:var(--green)}
+  .grouphdr.g4{color:#38BDF8}
+  .grouphdr.g3{color:#F59E0B}
   .grouphdr .ghstar{display:inline-flex}
+  .grouphdr .ghdot{width:7px;height:7px;border-radius:50%;display:inline-block;flex:0 0 auto}
   .instk{display:inline-flex;vertical-align:-3px;margin-right:3px}
   .besttag{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#06210f;background:var(--green);padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
   .kioskbadge{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--purple);padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
@@ -1171,7 +1174,7 @@ const I18N={ es:{
   'cta.pick':'Elige una tienda para verificar','cta.check':'Verificar','cta.for':'por','cta.checkunit':'verificación','cta.kioskword':'kiosco',
   'kcall.store':'esta tienda','kcall.body1':'Llamaremos y preguntaremos si su kiosco de','kcall.body2':'está funcionando y surtido, y te enviaremos lo que digan.','kcall.yes':'📞 Sí, llamar ahora →','kcall.no':'Ahora no','kcall.atkiosk':'¿Estás en el kiosco ahora?','kcall.receipt':'Usa nuestro correo al pagar o reenvía tu recibo → verificación gratis.',
   'count.open':'abiertas','count.kiosks':'kioscos',
-  'grp.best':'Mejores cerca de ti','grp.good':'Buenas opciones','grp.all':'Todas las tiendas','instock.now':'En stock ahora',
+  'grp.best':'Mejores cerca de ti','grp.mostly':'Mayormente confiable','grp.spotty':'Irregular','instock.now':'En stock ahora',
   'cover.types':'Tipos de tienda que cubrimos — toca el pin para ver <b>las tuyas</b>:',
   'st.open':'Abierto','st.closed':'Cerrado','st.till':'hasta',
   'sc.post':'Publica tu logro','sc.where':'¿Dónde lo conseguiste?','sc.store.ph':'Busca tu tienda…','sc.what':'¿Qué conseguiste?','sc.photo':'Agrega una foto de tu logro','sc.postit':'Publícalo →','back':'← Atrás',
@@ -1425,6 +1428,7 @@ async function boot(){
   if(Array.isArray(st)) st.forEach(x=>RSTATUSES[x.key]=x);
   if(pol&&!pol.error){ const flags=Object.assign({},POLICY.flags,pol.flags||{}); POLICY=Object.assign(POLICY,pol); POLICY.flags=flags; }
   applyBrand(); applyFlags(); renderChips(); renderStores(); applyLang();
+  if(!USER_LOC){ const sl=savedLoc(); if(sl) setUserLoc(sl.lat,sl.lng); } // restore last location → stores auto-load, no re-prompt
   idle(()=>{ renderDemo(); loadFinds(); }); // ticker + demo off the critical path
 }
 let PENDING_VIEW=null;
@@ -1951,8 +1955,10 @@ async function geocodeSearch(){
   return false;
 }
 // Set a location (from GPS, a master ZIP, or a dropped pin) and load its stores.
+function savedLoc(){ try{ const s=JSON.parse(localStorage.getItem('cifm_loc')||'null'); if(s&&typeof s.lat==='number'&&typeof s.lng==='number'&&(Date.now()-(s.t||0)<7*24*3600*1000)) return s; }catch(e){} return null; }
 function setUserLoc(lat,lng){
   USER_LOC={lat,lng};
+  try{ localStorage.setItem('cifm_loc', JSON.stringify({lat,lng,t:Date.now()})); }catch(e){} // remember across refreshes — no re-prompt
   $('rchips').style.display='block'; setRadius(RADIUS);
   const mt=$('maptoggle'); if(mt){ mt.style.display=''; mt.classList.add('glow'); } // pulse so they notice the map is tappable
   const b=$('findbtn'); if(b){ b.classList.remove('loading'); b.classList.add('on'); }
@@ -2022,7 +2028,7 @@ function renderMapPins(){
     if(s.lat==null||s.lng==null) return;
     const mi=storeMi(s);
     const tier=storeTier(s);
-    const col = tier===5?'#4ADE80' : tier===4?'#F59E0B' : '#cfcfe0'; // tier 5 green · tier 4 amber · else neutral
+    const col = tier===5?'#4ADE80' : tier===4?'#38BDF8' : tier===3?'#F59E0B' : '#cfcfe0'; // 5 green · 4 blue · 3 orange · else neutral
     // inStock (recent confirmed hit) → a pin carrying the brand check; otherwise a tier-colored dot.
     const m = s.inStock
       ? L.marker([s.lat,s.lng],{icon:L.divIcon({className:'instkpin',html:`<span style="display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#0C0C12;border:2px solid ${col};box-shadow:0 2px 6px rgba(0,0,0,.5)">${FCHK(15)}</span>`,iconSize:[26,26],iconAnchor:[13,13]})}).addTo(MAP)
@@ -2142,8 +2148,8 @@ function renderStores(){
   if(TIER_VIEW){
     let html='';
     if(t5.length) html+=`<div class="grouphdr g5"><span class="ghstar">${ICO.star('#4ADE80')}</span>${t('grp.best','Best near you')}</div>`+t5.map(storeRowHtml).join('');
-    if(t4.length) html+=`<div class="grouphdr">${t('grp.good','Good bets')}</div>`+t4.map(storeRowHtml).join('');
-    if(rest.length) html+=`<div class="grouphdr">${t('grp.all','All stores')}</div>`+rest.map(storeRowHtml).join('');
+    if(t4.length) html+=`<div class="grouphdr g4"><span class="ghdot" style="background:#38BDF8"></span>${t('grp.mostly','Mostly reliable')}</div>`+t4.map(storeRowHtml).join('');
+    if(rest.length) html+=`<div class="grouphdr g3"><span class="ghdot" style="background:#F59E0B"></span>${t('grp.spotty','Spotty')}</div>`+rest.map(storeRowHtml).join('');
     $('storelist').innerHTML = html || `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
   } else {
     $('storelist').innerHTML = list.length ? list.map(storeRowHtml).join('') : `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
