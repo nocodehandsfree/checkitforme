@@ -105,7 +105,7 @@ export class ElevenLabsProvider implements VoiceProvider {
 
     // Turn-taking: hold through transfer ring-back (silence timeout) + the "beat" (eagerness).
     const turn: Record<string, unknown> = {};
-    if (patch.prompt !== undefined) turn.silence_end_call_timeout = 45;
+    if (patch.prompt !== undefined) turn.silence_end_call_timeout = 120; // a clerk who went to check can be away 1-2 min — don't end the call on them (was 45)
     if (patch.turnEagerness !== undefined) {
       turn.turn_eagerness = patch.turnEagerness;
       // Speculative turn predicts end-of-turn = snappier replies. Keep it on except for the
