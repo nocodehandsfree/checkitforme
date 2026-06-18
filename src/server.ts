@@ -1196,19 +1196,19 @@ app.post("/api/stores/flag", async (c) => {
   invalidateRefCache();
   return c.json({ updated });
 });
-// Bulk display-name cleanup (Data Dev) in ONE DB pass — two jobs:
+// Bulk display-name cleanup (Data Dev) in ONE DB pass:
 //  (1) separator normalization: "CVS — Visalia" -> "CVS Visalia". An em/en-dash or a spaced hyphen
 //      between words collapses to a single space; in-word hyphens ("Jewel-Osco", "H-E-B") are preserved.
-//  (2) same-city disambiguation: when >1 active store shares an identical (name, location), the owner's
-//      rule is to show the STREET instead of the city — e.g. "Big 5 Victory Blvd". Each duplicate becomes
-//      "<chain> <street>"; if two share a street, the house number is prepended to the street. Non-colliding
-//      stores keep "<chain> <city>". Scope with body.state (run a finished region first to avoid racing a
-//      live relabel). dryRun reports counts + a sample and writes nothing. Admin-gated.
+//  (2) same-city disambiguation: stores are grouped by (chain, city). A city with one store keeps its
+//      "<chain> <city>" name; a city with several gets each renamed to "<chain> <street>" per the owner's
+//      rule ("Big 5 Victory Blvd"). Streets are compared on a NORMALIZED key (N./North, Blvd/Boulevard,
+//      Rd/Road all fold together) so two stores on the same road are detected even when the raw address
+//      punctuation differs — and the house number is added to tell them apart. Grouping by (chain, city)
+//      rather than by exact name makes the pass idempotent (safe to re-run). Scope with body.state (run a
+//      finished region first to avoid racing a live relabel). dryRun reports counts + a sample, no writes.
 app.post("/api/stores/dedupe", async (c) => {
   const b = await c.req.json().catch(() => ({}));
   const stateF = b.state ? String(b.state).toUpperCase() : null;
-  const doSep = b.separator !== false;
-  const doDisambig = b.disambiguate !== false;
   const conds = [eq(retailers.active, true)];
   if (stateF) conds.push(eq(retailers.state, stateF));
   const rows = await db.select({ id: retailers.id, name: retailers.name, location: retailers.location, address: retailers.address, chainId: retailers.chainId })
@@ -1223,49 +1223,44 @@ app.post("/api/stores/dedupe", async (c) => {
     a = a.replace(/\s+(?:Ste|Suite|Unit|Apt|#|Bldg|Fl|Floor)\b.*$/i, "").trim(); // drop suite/unit
     return a.replace(/\s+/g, " ").replace(/\.+$/, "").trim();
   };
+  const SUF: Record<string, string> = { street: "st", avenue: "ave", av: "ave", boulevard: "blvd", road: "rd", drive: "dr", lane: "ln", court: "ct", place: "pl", parkway: "pkwy", pkway: "pkwy", highway: "hwy", terrace: "ter", circle: "cir", square: "sq", trail: "trl", plaza: "plz" };
+  const DIR: Record<string, string> = { north: "n", south: "s", east: "e", west: "w", northeast: "ne", northwest: "nw", southeast: "se", southwest: "sw" };
+  const streetKey = (addr: string | null) => street(addr).toLowerCase().replace(/[.,]/g, "").split(/\s+/).map((w) => DIR[w] || SUF[w] || w).filter(Boolean).join(" ");
   const houseNum = (addr: string | null) => { const m = (addr || "").trim().match(/^(\d+[A-Za-z]?)/); return m ? m[1] : ""; };
-  const baseOf = (r: { chainId: number | null }, fallback: string) =>
-    (r.chainId && chainName.get(r.chainId)) ? chainName.get(r.chainId)! : fallback;
 
+  // default name = separator-normalized current name (preserves curated mall/neighborhood names on singles)
   const proposed = new Map<number, string>();
-  for (const r of rows) proposed.set(r.id, doSep ? normSep(r.name || "") : (r.name || ""));
-  let sepFixed = 0;
-  if (doSep) for (const r of rows) if (proposed.get(r.id) !== (r.name || "")) sepFixed++;
+  for (const r of rows) proposed.set(r.id, normSep(r.name || ""));
+  const baseOf = (r: { chainId: number | null; id: number }) =>
+    (r.chainId && chainName.get(r.chainId)) ? chainName.get(r.chainId)! : (proposed.get(r.id) || "");
 
-  if (doDisambig) {
-    const groups = new Map<string, typeof rows>();
-    for (const r of rows) {
-      const key = `${proposed.get(r.id)}|||${r.location || ""}`;
-      let g = groups.get(key); if (!g) { g = []; groups.set(key, g); } g.push(r);
-    }
-    for (const grp of groups.values()) {
-      if (grp.length < 2) continue;
-      const cand = new Map<number, string>();
-      for (const r of grp) {
-        const st = street(r.address);
-        cand.set(r.id, st ? `${baseOf(r, proposed.get(r.id)!)} ${st}` : proposed.get(r.id)!);
-      }
-      const counts = new Map<string, number>();
-      for (const v of cand.values()) counts.set(v, (counts.get(v) || 0) + 1);
-      for (const r of grp) {
-        let nm = cand.get(r.id)!;
-        if ((counts.get(nm) || 0) > 1) {
-          const hn = houseNum(r.address), st = street(r.address);
-          if (hn && st) nm = `${baseOf(r, proposed.get(r.id)!)} ${hn} ${st}`;
-        }
-        proposed.set(r.id, nm);
-      }
+  // group by (chain | normalized-name, city) so re-runs regroup correctly regardless of prior names
+  const groups = new Map<string, typeof rows>();
+  for (const r of rows) {
+    const gk = (r.chainId ? `c${r.chainId}` : `n:${proposed.get(r.id)}`) + "|||" + (r.location || "");
+    let g = groups.get(gk); if (!g) { g = []; groups.set(gk, g); } g.push(r);
+  }
+  for (const grp of groups.values()) {
+    if (grp.length < 2) continue;                            // one store in this city -> keep its name
+    const keyCount = new Map<string, number>();
+    for (const r of grp) { const k = streetKey(r.address); if (k) keyCount.set(k, (keyCount.get(k) || 0) + 1); }
+    for (const r of grp) {
+      const disp = street(r.address);
+      if (!disp) continue;                                   // no usable address -> can't street-name
+      const sameStreet = (keyCount.get(streetKey(r.address)) || 0) > 1;
+      const hn = houseNum(r.address);
+      proposed.set(r.id, sameStreet && hn ? `${baseOf(r)} ${hn} ${disp}` : `${baseOf(r)} ${disp}`);
     }
   }
 
   const changes = rows.filter((r) => proposed.get(r.id) && proposed.get(r.id) !== (r.name || ""));
   if (b.dryRun) {
-    return c.json({ dryRun: true, scope: stateF || "ALL", active: rows.length, sepFixed, changed: changes.length,
+    return c.json({ dryRun: true, scope: stateF || "ALL", active: rows.length, changed: changes.length,
       sample: changes.slice(0, 24).map((r) => ({ id: r.id, from: r.name, to: proposed.get(r.id), city: r.location })) });
   }
   for (const r of changes) await db.update(retailers).set({ name: proposed.get(r.id)! }).where(eq(retailers.id, r.id));
   invalidateRefCache();
-  return c.json({ scope: stateF || "ALL", active: rows.length, sepFixed, changed: changes.length,
+  return c.json({ scope: stateF || "ALL", active: rows.length, changed: changes.length,
     sample: changes.slice(0, 12).map((r) => ({ from: r.name, to: proposed.get(r.id) })) });
 });
 // Kiosk overlay: reconcile the official TPCi vending list against our stores. For each machine, flag
