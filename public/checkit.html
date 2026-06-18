@@ -103,12 +103,20 @@ __BRAND_HEAD__
   /* live calling */
   @keyframes spin{to{transform:rotate(360deg)}}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
-  /* live call uses the SAME card shell as the verdict — only the content inside changes when it ends */
-  .rhead.live .rhead-stat{color:var(--green)}
-  .rhead.live .rhead-ic{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.4)}
-  .rhead-stage{margin-top:13px;padding-top:13px;border-top:1px solid var(--border);font-size:14.5px;font-weight:700;color:var(--green);line-height:1.35;min-height:20px}
-  .live-pulse{width:13px;height:13px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(74,222,128,.55);animation:livepulse 1.4s infinite}
-  @keyframes livepulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,.5)}70%{box-shadow:0 0 0 9px rgba(74,222,128,0)}100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}}
+  /* LIVE call: the black box sits right on the page and the WHOLE box glows green, pulsing slowly like a ring */
+  .rhead.live{border-color:rgba(74,222,128,.4);animation:ringglow 2.2s ease-in-out infinite}
+  @keyframes ringglow{0%,100%{box-shadow:0 0 0 1px rgba(74,222,128,.22),0 0 14px rgba(74,222,128,.12)}50%{box-shadow:0 0 0 1px rgba(74,222,128,.6),0 0 28px 3px rgba(74,222,128,.4)}}
+  /* two-section call box: live STEPS (system font) on top, the human CONVERSATION below */
+  .callmsg{background:var(--terminal);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px}
+  .callmsg-h{font-size:9.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:800;margin-bottom:10px}
+  .callmsg-steps{padding:14px 15px}
+  .cs-list{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:12.5px;line-height:1.85;color:#56E39B;letter-spacing:.2px}
+  .cs-line{white-space:pre-wrap}
+  .cs-line.cur{color:#A8FFD6}
+  .cs-time{color:#5f8772}
+  .callmsg-div{height:2px;background:linear-gradient(90deg,transparent,rgba(74,222,128,.5),transparent)}
+  .callmsg-script{padding:14px 15px}
+  .cs-wait{color:var(--muted);font-size:12.5px;font-style:italic}
   .live-wait{color:var(--muted);font-size:13px;text-align:center;padding:16px 8px;line-height:1.5}
   /* result */
   .verdict{text-align:center;padding:16px 0 8px}
@@ -787,28 +795,17 @@ __BRAND_HEAD__
   <!-- LIVE -->
   <div id="live" class="hidden">
     <div id="muteBanner" style="display:none;background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.4);color:#FBBF24;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-weight:700;font-size:13.5px;text-align:center" data-i18n="live.mute">🔇 Flip your phone off silent so you can hear the call</div>
-    <div class="card">
-      <div class="rhead live" id="live_rhead">
-        <div class="rhead-top">
-          <span class="railchip" id="live_chip" style="display:grid"></span>
-          <div class="rhead-id">
-            <div class="rhead-store" id="live_store2"></div>
-            <div class="rhead-addr" id="live_addr"></div>
-          </div>
-          <div class="rhead-badge">
-            <span class="rhead-ic"><span class="live-pulse"></span></span>
-            <span class="rhead-stat" data-i18n="live.livelbl">LIVE</span>
-          </div>
+    <div class="rhead live" id="live_rhead">
+      <div class="rhead-top">
+        <span class="railchip" id="live_chip" style="display:grid"></span>
+        <div class="rhead-id">
+          <div class="rhead-store" id="live_store2"></div>
+          <div class="rhead-addr" id="live_addr"></div>
         </div>
-        <div class="rhead-stage" id="phase" data-i18n="live.connecting">Calling…</div>
       </div>
-      <button id="hangup_btn" onclick="hangUpLive()" style="display:none;margin:14px auto 0;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:var(--red);padding:9px 18px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13.5px" data-i18n="live.hangup">■ Stop &amp; hang up</button>
     </div>
-    <div class="proof" id="live_tr" style="display:none;text-align:left">
-      <div class="ph" data-i18n="live.proof">🔴 Live — the conversation as it happens</div>
-      <div id="live_tr_body"></div>
-    </div>
-    <div class="foot" data-i18n="live.foot">Hang tight — stores pick up, get put on hold, and chat. Worth the 2 minutes.</div>
+    <button id="hangup_btn" onclick="hangUpLive()" style="display:none;margin:0 0 14px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:var(--red);padding:9px 18px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13.5px" data-i18n="live.hangup">■ Stop &amp; hang up</button>
+    <div id="live_msgbox"></div>
   </div>
 
   <!-- RESULT -->
@@ -1910,10 +1907,12 @@ async function restoreCall(cid, storeName, catName){
   const ct=CATS.find(c=>catName&&c.label.toLowerCase()===catName.toLowerCase());
   SEL_STORE = known ? {id:known.storeId,name:known.storeName} : (st||{id:null,name:storeName||''});
   SEL_CAT=ct?ct.id:SEL_CAT; SEL_CATS=SEL_CAT?[SEL_CAT]:[]; ASKED_CATS=ct?[{id:ct.id,label:ct.label}]:((known&&known.cats)?known.cats.map(l=>({id:null,label:l})):[]);
-  $('builder').classList.add('hidden'); $('live').classList.remove('hidden');
-  $('phase').textContent=t('live.loading','Loading your call…'); fillLiveHeader();
+  // Returning to a call → go STRAIGHT to the transcript. No "loading the old call" live-card flash:
+  // fetch first (the page stays put), then render the result. Reloaded calls have no live step timings,
+  // so clear them — showResult derives the journey from the saved transcript.
+  LIVE_STEPS=[]; LIVE_T0=0;
   const o=await api('/pub/result/'+encodeURIComponent(cid));
-  if(!o||o.error||o.status==='in_progress'){ $('live').classList.add('hidden'); $('builder').classList.remove('hidden'); toast(t('toast.callgone','That call is no longer available')); return; }
+  if(!o||o.error||o.status==='in_progress'){ toast(t('toast.callgone','That call is no longer available')); return; }
   if(!SEL_STORE.name && isAuthed()){ const srv=(await fetchServerHistory()).find(x=>x.cid===cid); if(srv){ SEL_STORE={id:srv.storeId,name:srv.storeName}; } }
   if(!SEL_STORE.name) SEL_STORE.name=t('hist.acheck','Store check');
   if(!known && SEL_STORE.id!=null){
@@ -2591,6 +2590,7 @@ async function startCheck(){
 }
 // --- Live-audio check (bridged through our Twilio so we can stream the call to the browser) ---
 let AUDIO_WS=null, AUDIO_CTX=null, AUDIO_NEXT={}, AUDIO_LIVE=false, LIVE_TIMERS=[], LIVE_ROOM=null, LIVE_CID=null, LIVE_TR=[], AGENT_PITCHED=false;
+let LIVE_STEPS=[], LIVE_T0=0, LIVE_TRANSCRIPT=''; // step log (with timings), call start ms, latest transcript
 // Phone-tree (IVR) language vs. our bot's real ask. The store side ("Clerk") covers BOTH the automated
 // tree AND a human, so a Clerk line alone can't mean "with a clerk". Our bot stays quiet / presses keys
 // through the tree and only delivers its stock question to a HUMAN — so AGENT_ASK is the human signal.
@@ -2606,9 +2606,55 @@ let LIVE_STAGE=0;
 function liveStageLabel(n){
   const nm=splitStoreName((SEL_STORE&&SEL_STORE.name)||''); const store=[nm.base,nm.branch].filter(Boolean).join(' ')||t('live.store','the store');
   const prod=(SEL_PRODUCT||findProductLabel()||catLabel()||t('live.item','your item'));
-  return ({1:tf('live.s1','Calling {s}…',{s:store}),2:t('live.s2',"It's ringing…"),3:t('live.s3',"We've connected"),4:t('live.s4','Listening to menu options'),5:t('live.s5','Navigating the menu'),6:t('live.s6','Transferring to the front'),7:t('live.s7','An associate answered!'),8:tf('live.s8','Asking about {p}',{p:prod})})[n]||'';
+  return ({1:tf('live.s1','Calling {s}…',{s:store}),2:t('live.s2',"It's ringing…"),3:t('live.s3',"We've connected…"),4:t('live.s4','Listening to menu options…'),5:t('live.s5','Navigating the menu…'),6:t('live.s6','Transferring to the front…'),7:t('live.s7','An associate answered!'),8:tf('live.s8','Asking about {p}…',{p:prod})})[n]||'';
 }
-function liveStage(n){ if(!n||n<=LIVE_STAGE) return; LIVE_STAGE=n; const el=$('phase'); if(el) el.textContent=liveStageLabel(n); }
+function liveStage(n){
+  if(!n||n<=LIVE_STAGE) return;
+  LIVE_STAGE=n;
+  const at=LIVE_T0?((Date.now()-LIVE_T0)/1000):0;
+  LIVE_STEPS.push({n, label:liveStageLabel(n), at});  // log it with the elapsed time it started
+  const el=$('phase'); if(el) el.textContent=liveStageLabel(n); // back-compat if a #phase element exists
+  renderLiveMsg();
+}
+// ---- The two-section call box: live STEPS (system font, timed) on top, the human SCRIPT below ----
+// Steps render as an accumulating log; a completed step shows how many seconds it took, the current
+// step shows just "…". `finalElapsed` (set when the call ends) stamps the last step too.
+function stepsHTML(steps, finalElapsed){
+  if(!steps||!steps.length) return '<div class="cs-line cur">'+esc(liveStageLabel(1))+'</div>';
+  return '<div class="cs-list">'+steps.map((s,i)=>{
+    let secs=null;
+    if(i<steps.length-1) secs=Math.max(1,Math.round(steps[i+1].at - s.at));
+    else if(finalElapsed!=null) secs=Math.max(1,Math.round(finalElapsed - s.at));
+    const cur=(i===steps.length-1 && finalElapsed==null);
+    return `<div class="cs-line${cur?' cur':''}">${s.n}. ${esc(s.label)}${secs!=null?` <span class="cs-time">${secs}s</span>`:''}</div>`;
+  }).join('')+'</div>';
+}
+// The SCRIPT shows ONLY the live human conversation — never the automated phone menu (that's the steps).
+function scriptHTML(transcript, final){
+  const lines=(transcript||'').split('\n').filter(Boolean);
+  const hs=transcriptHumanStart(lines);
+  const human=lines.slice(hs).filter(l=>/^(Agent|Clerk):/.test(l));
+  if(!human.length) return `<div class="cs-wait">${final?t('live.noconvo','No live conversation on this call.'):t('live.waitperson','Waiting to reach a person…')}</div>`;
+  return `<div class="chat">${human.map(l=>bubbleHTML(l,true)).join('')}</div>`;
+}
+function callMsgBoxHTML(steps, transcript, opts){
+  opts=opts||{};
+  return `<div class="callmsg">
+    <div class="callmsg-steps"><div class="callmsg-h">${t('live.steps','Call progress')}</div>${stepsHTML(steps, opts.finalElapsed)}</div>
+    <div class="callmsg-div"></div>
+    <div class="callmsg-script"><div class="callmsg-h">${t('live.convo','Conversation')}</div>${scriptHTML(transcript, opts.final)}</div>
+  </div>`;
+}
+// Reloaded calls (from a link/history) have no live step timings — derive which steps happened from
+// the saved transcript so the box still shows the journey (without per-step seconds).
+function deriveSteps(transcript){
+  const lines=(transcript||'').split('\n').filter(Boolean);
+  const pitched=lines.some(l=>/^Agent:/.test(l)&&AGENT_ASK.test(l));
+  const max=Math.max(1, stageForLines(lines, pitched));
+  const out=[]; for(let n=1;n<=max;n++) out.push({n, label:liveStageLabel(n), at:0});
+  return out;
+}
+function renderLiveMsg(){ const box=$('live_msgbox'); if(box) box.innerHTML=callMsgBoxHTML(LIVE_STEPS, LIVE_TRANSCRIPT); }
 // Furthest stage the transcript so far justifies. Two rules learned from live CVS calls:
 //  - "Transferring to the front" (6) only fires when the agent says the FINAL transfer word ("general") —
 //    NOT on "front" (that's still navigating, 5). After that the call rings through to the front.
@@ -2648,7 +2694,7 @@ async function hangUpLive(){
   LIVE_ROOM=null; stopLiveTimers(); stopAudio();
   const hb=$('hangup_btn'); if(hb)hb.style.display='none';
   // Don't discard the call — capture whatever happened (it gets logged + shown like any check).
-  $('phase').textContent=t('live.getting','⏳ Getting the result…'); $('audio_ind') && ($('audio_ind').style.display='none');
+  const _p=$('phase'); if(_p)_p.textContent=t('live.getting','⏳ Getting the result…'); $('audio_ind') && ($('audio_ind').style.display='none');
   finalizeLive(LIVE_CID);
 }
 function muLawDecode(u){ u=~u&0xFF; const sign=u&0x80,exp=(u>>4)&7,man=u&0x0F; let s=((man<<3)+0x84)<<exp; s-=0x84; return sign?-s:s; }
@@ -2684,10 +2730,9 @@ async function startCheckLive(){
   $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden');
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb){ _mb.style.display=canListen?'':'none'; if(canListen) setTimeout(()=>{ if(_mb&&$('live')&&!$('live').classList.contains('hidden')) _mb.style.display='none'; },7000); }
-  fillLiveHeader(); const _lr=$('live_rhead'); if(_lr)_lr.className='rhead live'; LIVE_STAGE=0; liveStage(1);
-  // The call lives on ONE page — the transcript area is up from the very start (with a waiting note),
-  // and the live bubbles drop straight into it as the conversation happens. No separate "ringing" screen.
-  $('live_tr').style.display=''; $('live_tr_body').innerHTML=`<div class="live-wait">${t('live.wait','The conversation will show up here, live, as it happens…')}</div>`; LIVE_TR=[]; AGENT_PITCHED=false;
+  LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_T0=Date.now();
+  fillLiveHeader(); const _lr=$('live_rhead'); if(_lr)_lr.className='rhead live';
+  liveStage(1); // logs step 1 + renders the call box (steps on top, empty script below)
   let secs=0; const elT=setInterval(()=>{ secs+=1; },1000); // counts toward the hard cap only — no on-screen timer
   LIVE_TIMERS=[elT];
   const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
@@ -2697,7 +2742,7 @@ async function startCheckLive(){
   // (no poll lag, no waiting on the conversation-id). Audio only PLAYS for listeners (canListen).
   AUDIO_WS=new WebSocket('wss://'+r.wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data);
     if(d.audio){ if(AUDIO_CTX) playMu(d.audio,d.track); }
-    else if(d.line&&d.line.text){ LIVE_TR.push(d.line.role+': '+d.line.text); $('live_tr').style.display=''; appendLiveTranscript(LIVE_TR.join('\n')); livePhaseFromText(d.line.role,d.line.text); } // real-time bubbles + stage, as the call happens
+    else if(d.line&&d.line.text){ LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } // real-time steps + human script, as the call happens
   }catch(e){} };
   liveStage(2); // dialing → it's ringing
   let cid=null;
@@ -2719,10 +2764,11 @@ async function startCheckLive(){
     }
     const o=await api('/pub/live/'+encodeURIComponent(cid));
     if(o&&o.transcript){
-      if(!LIVE_TR.length){ $('live_tr').style.display=''; appendLiveTranscript(o.transcript); } // if real-time bubbles are flowing, they're authoritative
       const lines=o.transcript.split('\n').filter(Boolean);
+      if(!LIVE_TR.length) LIVE_TRANSCRIPT=o.transcript; // WS gave nothing yet → render the script from the poll
       const pitched=AGENT_PITCHED||lines.some(l=>l.startsWith('Agent:')&&AGENT_ASK.test(l)); if(pitched)AGENT_PITCHED=true;
       liveStage(stageForLines(lines, pitched));
+      renderLiveMsg();
     }
     if(o && o.live===false){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); }
   },1200);
@@ -2735,6 +2781,9 @@ async function finalizeLive(cid){
   let o=await api('/pub/result/'+encodeURIComponent(cid)), tries=0;
   while((!o||!o.status||o.status==='in_progress')&&tries<6){ await new Promise(r=>setTimeout(r,1800)); o=await api('/pub/result/'+encodeURIComponent(cid)); tries++; }
   const res=(o&&o.status&&o.status!=='in_progress')?o:{status:'no_answer',transcript:'',summary:''};
+  // Bug fix: if EL hasn't finalized the transcript yet, fall back to what we already streamed live, so
+  // the conversation shows immediately on the result — no hard refresh needed.
+  if(!res.transcript && (LIVE_TR.length||LIVE_TRANSCRIPT)) res.transcript = LIVE_TR.length?LIVE_TR.join('\n'):LIVE_TRANSCRIPT;
   if(res.status==='completed'){
     if(isAuthed()){ appApi('/app/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}).then(c=>{ if(c&&c.credits!=null){ if(ACCOUNT)ACCOUNT.credits=c.credits; renderAuth(); } }); }
     else { localStorage.setItem('runnr_free_used','1'); api('/pub/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}); renderAuth(); }
@@ -2930,27 +2979,28 @@ function showResult(o, cid){
   // Full address on ONE line: street + city/state (e.g. "23357 Mulholland Drive, Woodland Hills, CA").
   const _aStreet=_store.address||'', _aCity=_store.location||SEL_STORE.location||'';
   const fullAddr=(_aStreet&&_aCity&&!_aStreet.includes(_aCity))?(_aStreet+', '+_aCity):(_aStreet||_aCity);
+  const haveLive=LIVE_STEPS.length>0;
+  const resultSteps=haveLive?LIVE_STEPS:deriveSteps(o.transcript||'');
+  const finalElapsed=haveLive&&LIVE_T0?((Date.now()-LIVE_T0)/1000):null; // stamp the last step only when we have real live timings
   $('result').innerHTML = `
     <div class="railbar" id="railbar" style="display:none"></div>
-    <div class="card">
-      <div class="rhead ${cls}">
-        <div class="rhead-top">
-          <span class="railchip${railClass({storeId:SEL_STORE.id,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}" style="display:grid">${railFace({storeId:SEL_STORE.id,storeName:SEL_STORE.name,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}</span>
-          <div class="rhead-id">
-            <div class="rhead-store">${esc(storeHeadline)}</div>
-            ${fullAddr?`<div class="rhead-addr">${esc(fullAddr)}</div>`:''}
-          </div>
-          <div class="rhead-badge">
-            <span class="rhead-ic">${vicon(big,cls,26)}</span>
-            <span class="rhead-stat">${esc(title)}</span>
-          </div>
+    <div class="rhead ${cls}">
+      <div class="rhead-top">
+        <span class="railchip${railClass({storeId:SEL_STORE.id,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}" style="display:grid">${railFace({storeId:SEL_STORE.id,storeName:SEL_STORE.name,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}</span>
+        <div class="rhead-id">
+          <div class="rhead-store">${esc(storeHeadline)}</div>
+          ${fullAddr?`<div class="rhead-addr">${esc(fullAddr)}</div>`:''}
         </div>
-        ${note?`<div class="rhead-msg">${note}</div>`:''}
+        <div class="rhead-badge">
+          <span class="rhead-ic">${vicon(big,cls,26)}</span>
+          <span class="rhead-stat">${esc(title)}</span>
+        </div>
       </div>
-      ${breakdown}
-      ${proof}
-      ${inActions}
+      ${note?`<div class="rhead-msg">${note}</div>`:''}
     </div>
+    ${breakdown}
+    ${callMsgBoxHTML(resultSteps, o.transcript||'', {finalElapsed, final:true})}
+    ${inActions}
     ${upsell}
     ${isAuthed()
       ? `<button class="cta" onclick="backToBuilder()" style="margin-top:14px">${t('cta.another','Check another store')}</button>`
