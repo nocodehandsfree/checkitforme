@@ -1474,6 +1474,9 @@ async function boot(){
   if(Array.isArray(st)) st.forEach(x=>RSTATUSES[x.key]=x);
   if(pol&&!pol.error){ const flags=Object.assign({},POLICY.flags,pol.flags||{}); POLICY=Object.assign(POLICY,pol); POLICY.flags=flags; }
   applyBrand(); applyFlags(); renderChips(); renderStores(); applyLang();
+  // A result painted instantly (from cache) or before the registry loaded → repaint it now that the
+  // statuses registry + categories are in, so the verdict copy/emoji upgrade to the owner-edited ones.
+  if(LASTRES && RAIL_CID && $('result') && !$('result').classList.contains('hidden')) showResult(LASTRES, RAIL_CID);
   if(!USER_LOC){ const sl=savedLoc(); if(sl) setUserLoc(sl.lat,sl.lng); } // restore last location → stores auto-load, no re-prompt
   idle(()=>{ renderDemo(); loadFinds(); }); // ticker + demo off the critical path
 }
@@ -1927,8 +1930,13 @@ async function restoreCall(cid, storeName, catName){
   // fetch first (the page stays put), then render the result. Reloaded calls have no live step timings,
   // so clear them — showResult derives the journey from the saved transcript.
   LIVE_STEPS=[]; LIVE_T0=0;
+  // INSTANT: this is the pull-to-refresh case — if we cached this call earlier this session, paint it
+  // NOW (no spinner). We still revalidate below and re-render only if it changed. (Only when `known`,
+  // so the store name/category are already resolved synchronously and the header is correct.)
+  const cached = known ? resultCacheGet(cid) : null;
+  if(cached) showResult(cached, cid);
   const o=await api('/pub/result/'+encodeURIComponent(cid));
-  if(!o||o.error||o.status==='in_progress'){ toast(t('toast.callgone','That call is no longer available')); backToBuilder(); return; }
+  if(!o||o.error||o.status==='in_progress'){ if(cached) return; toast(t('toast.callgone','That call is no longer available')); backToBuilder(); return; }
   if(!SEL_STORE.name && isAuthed()){ const srv=(await fetchServerHistory()).find(x=>x.cid===cid); if(srv){ SEL_STORE={id:srv.storeId,name:srv.storeName}; } }
   if(!SEL_STORE.name) SEL_STORE.name=t('hist.acheck','Store check');
   if(!known && SEL_STORE.id!=null){
@@ -1936,7 +1944,7 @@ async function restoreCall(cid, storeName, catName){
     h.unshift({cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, logoUrl:SEL_STORE.logoUrl||null, logoWide:!!SEL_STORE.logoWide, logoDark:!!SEL_STORE.logoDark, categoryId:SEL_CAT, category:ct?ct.label:(catName||''), ts:Date.now(), status:o.status, confirmed:o.confirmed});
     localStorage.setItem('runnr_history', JSON.stringify(h.slice(0,60)));
   }
-  showResult(o, cid);
+  if(!resultSame(o,cached)) showResult(o, cid);
 }
 function isClosed(s){ return s && s.openState && s.openState.known && !s.openState.open; }
 // Kiosk-only = has a vending kiosk but no shelf stock (hasKiosk && !sellsPacks). Callable, but with a
@@ -2489,7 +2497,9 @@ async function submitLead(){
   $('lead_btn').disabled=false; $('lead_btn').textContent=t('lead.cta','Call the store →'); closeLead();
   const n=LEAD_PENDING; LEAD_PENDING=null; if(typeof n==='function') n();
 }
-function catLabel(){ return (CATS.find(c=>c.id===SEL_CAT)||{}).label||''; }
+// Falls back to the asked label (from local history) before CATS hydrates, so an instant cached
+// result render still names the category instead of flashing a blank "They have  — go get it".
+function catLabel(){ const c=CATS.find(c=>c.id===SEL_CAT); if(c&&c.label) return c.label; return (ASKED_CATS[0]&&ASKED_CATS[0].label)||''; }
 function catLabels(){ return SEL_CATS.map(id=>(CATS.find(c=>c.id===id)||{}).label).filter(Boolean).join(', '); }
 function syncCta(){
   // No store picked = no dead button. The gas value prop holds the spot; the CTA only EXISTS
@@ -2888,7 +2898,16 @@ function navMark(view){
 }
 window.addEventListener('popstate',()=>{ if(NAV_VIEW!=='builder') backToBuilder(); });
 
+// --- Snappy result rendering (stale-while-revalidate) ---------------------------------------------
+// A finished call's transcript never changes, so cache it per browser-session. A pull-to-refresh or a
+// history hop then paints INSTANTLY from cache (no spinner, no network wait) while we revalidate in the
+// background and only re-render if something actually changed. This is what makes reopening a call feel
+// instant everywhere — the round-trip to /pub/result stops gating the paint.
+function resultCacheGet(cid){ try{ const v=cid&&sessionStorage.getItem('res:'+cid); return v?JSON.parse(v):null; }catch(_){ return null; } }
+function resultCacheSet(cid,o){ try{ if(cid&&o&&o.status&&o.status!=='in_progress') sessionStorage.setItem('res:'+cid, JSON.stringify(o)); }catch(_){ } }
+function resultSame(a,b){ return !!a&&!!b && a.status===b.status && a.confirmed===b.confirmed && (a.transcript||'')===(b.transcript||'') && (a.statusKey||'')===(b.statusKey||'') && !!a.soldOut===!!b.soldOut && !!a.doesNotSell===!!b.doesNotSell && (a.shipmentDay||'')===(b.shipmentDay||''); }
 function showResult(o, cid){
+  resultCacheSet(cid,o);
   stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
   $('live').classList.add('hidden'); $('builder').classList.add('hidden'); $('history').classList.add('hidden'); $('success').classList.add('hidden'); const hov=$('handoff'); if(hov)hov.classList.add('hidden'); document.body.classList.remove('fabbed');
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // no rotating finds ticker on the result/call page
@@ -3194,12 +3213,15 @@ async function openHistEntry(e){
   SEL_STORE={id:e.storeId,name:e.storeName,carries:[],logoUrl:e.logoUrl,logoWide:e.logoWide,logoDark:e.logoDark}; SEL_CAT=e.categoryId;
   SEL_CATS=e.categoryId?[e.categoryId]:[]; ASKED_CATS=(e.cats||[]).map(l=>({id:null,label:l}));
   // Replaying a past call — go straight to the transcript. Never flash the live "calling" view.
-  toast(t('toast.loadingcall','Loading your call…'));
+  // INSTANT: paint the cached transcript immediately (no spinner) if we have it, then revalidate.
+  const cached=resultCacheGet(e.cid);
+  if(cached){ cached.cats=e.cats||cached.cats; if(!cached.categoryResults&&e.categoryResults) cached.categoryResults=e.categoryResults; showResult(cached, e.cid); }
+  else toast(t('toast.loadingcall','Loading your call…'));
   const o=await api('/pub/result/'+encodeURIComponent(e.cid));
-  if(!o||o.error||o.status==='in_progress'){ HIST_BAD.add(e.cid); HIST_CACHE=HIST_CACHE.filter(x=>x.cid!==e.cid); toast(t('toast.callgone','That call is no longer available')); openHistory(); return; }
+  if(!o||o.error||o.status==='in_progress'){ if(cached) return; HIST_BAD.add(e.cid); HIST_CACHE=HIST_CACHE.filter(x=>x.cid!==e.cid); toast(t('toast.callgone','That call is no longer available')); openHistory(); return; }
   o.cats=e.cats||ASKED_CATS.map(x=>x.label);
   if(!o.categoryResults && e.categoryResults) o.categoryResults=e.categoryResults;
-  showResult(o, e.cid);
+  if(!resultSame(o,cached)) showResult(o, e.cid);
   // Deep-link the open call so a refresh restores exactly this transcript.
   try{ const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',e.cid); history.replaceState({v:'result'},'',location.pathname+'?'+sp.toString()); }catch(_){}
 }
@@ -3217,12 +3239,15 @@ function railFace(e){
 }
 // Local YYYY-MM-DD for a call's timestamp — used to view a specific day's transcripts.
 function tsDay(ts){ const d=new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-function railFiltered(){
+// Calls under the active store/outcome filters — the pool the date picker chooses among AND what the
+// ‹ › arrows step through. The calendar highlights days from THIS exact pool (see railCalDays), so a
+// highlighted day is GUARANTEED to have a call to open — never "highlighted but empty".
+function railScoped(){
   return histList().filter(e=>e.cid)
     .filter(e=>!RAIL_F.store||railBase(e.storeName)===RAIL_F.store)
-    .filter(e=>!RAIL_F.tone||railTone(e)===RAIL_F.tone)
-    .filter(e=>!RAIL_F.date||tsDay(e.ts)===RAIL_F.date);
+    .filter(e=>!RAIL_F.tone||railTone(e)===RAIL_F.tone);
 }
+function railFiltered(){ return railScoped().filter(e=>!RAIL_F.date||tsDay(e.ts)===RAIL_F.date); }
 function renderCallRail(cid){
   if(cid) RAIL_CID=cid; cid=RAIL_CID;
   const bar=$('railbar'); if(!bar) return;
@@ -3252,7 +3277,9 @@ function railFilter(k,v){ RAIL_F[k]=v; const f=railFiltered(); if(k==='date'&&v&
 function railStep(d){ const f=railFiltered(); const i=f.findIndex(e=>e.cid===RAIL_CID); const n=f[i+d]; if(n) openHistEntry(n); }
 // Custom month-calendar popover (native date pickers can't highlight call-days). Days with calls glow accent.
 let RAIL_CAL_M=null;
-function railCalDays(){ return new Set(histList().filter(e=>e.cid).map(e=>tsDay(e.ts))); }
+// Highlight only days that the date filter can actually open: same scoped pool, valid timestamp only
+// (drops ts=0 server rows so we never light up a bogus 1970 day). Highlighted ⟺ railFiltered non-empty.
+function railCalDays(){ return new Set(railScoped().filter(e=>e.ts).map(e=>tsDay(e.ts))); }
 function openRailCal(){
   const pop=$('railcalpop'); if(!pop) return;
   if(pop.classList.contains('on')){ closeRailCal(); return; } // toggle
