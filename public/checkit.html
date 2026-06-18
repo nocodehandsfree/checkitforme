@@ -193,8 +193,9 @@ __BRAND_HEAD__
   .foot{text-align:center;color:var(--muted);font-size:12px;margin-top:26px}
   .foot b{color:#9a9aac}
   /* modal */
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:4000;padding:20px}
   .overlay.on{display:flex}
+  body:has(.overlay.on){overflow:hidden}  /* lock the background (incl. the Leaflet map) while a modal is open */
   .modal{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;max-width:380px;width:100%;text-align:center}
   .modal h3{margin:0 0 8px;font-size:20px}
   .modal p{color:#c0c0cc;font-size:14px;line-height:1.5;margin:0 0 16px}
@@ -202,6 +203,7 @@ __BRAND_HEAD__
   .plan{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:12px;padding:13px 14px;margin-top:9px;cursor:pointer;transition:border-color .12s,background .12s}
   .plan:hover{border-color:rgba(255,255,255,.2)}
   .plan.sub{border-color:rgba(74,222,128,.5);background:rgba(74,222,128,.07)}
+  .plan .grow{flex:1;min-width:0}  /* push every price to a single right-aligned column */
   .plan .pn{font-weight:800;font-size:15px}
   .plan .pd{color:var(--muted);font-size:12px;margin-top:3px;line-height:1.4}
   .plan .pp{font-weight:900;font-size:17px;white-space:nowrap}
@@ -497,6 +499,9 @@ __BRAND_HEAD__
   .grouphdr.g3{color:#F59E0B}
   .grouphdr .ghstar{display:inline-flex}
   .grouphdr .ghdot{width:7px;height:7px;border-radius:50%;display:inline-block;flex:0 0 auto}
+  .maplegend{flex-wrap:wrap;gap:12px;justify-content:center;align-items:center;font-size:11px;font-weight:800;color:#cfcfd8;margin-top:10px;padding:9px 10px;background:rgba(12,12,18,.55);border:1px solid var(--border);border-radius:12px}
+  .maplegend>span{display:inline-flex;align-items:center;gap:6px}
+  .maplegend .lgd{width:10px;height:10px;border-radius:50%;display:inline-block;flex:0 0 auto}
   .instk{display:inline-flex;vertical-align:-3px;margin-right:3px}
   .besttag{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#06210f;background:var(--green);padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
   .kioskbadge{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--purple);padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
@@ -703,6 +708,7 @@ __BRAND_HEAD__
       <div id="kioskhint" data-i18n="kioskhint" style="display:none;background:var(--ptint);border:1px solid var(--pline);border-radius:12px;padding:12px 13px;margin-top:12px;font-size:13.5px;color:#e6e2f7;line-height:1.55"><span style="display:flex;align-items:center;gap:7px;font-weight:800;white-space:nowrap"><span id="khspark"></span> At a kiosk? Get a free check</span><a onclick="openReceipt()" style="display:inline-block;margin-top:5px;color:var(--purple);font-weight:800;cursor:pointer">Use our email at checkout, or forward your receipt →</a></div>
       <div class="storelist" id="storelist" style="margin-top:12px"></div>
       <div id="mapview" style="display:none"></div>
+      <div id="maplegend" class="maplegend" style="display:none"></div>
     </div>
 
     <div class="card" id="catcard" style="display:none">
@@ -1986,10 +1992,18 @@ async function loadBestBet(){
 // --- Store map (members): Leaflet is lazy-loaded only when the map is opened, so it never affects
 //     the main page load. Dark CartoDB tiles (no API key); stores are circle pins, tap to check. ---
 let MAP=null, MAP_LOADED=false, MAP_MARKERS=[], PINNING=false, MY_PIN=null, MY_RING=null;
+// Neon store-color legend shown along the bottom of the map.
+function mapLegendHtml(){
+  const dot=(c)=>`<span class="lgd" style="background:${c};box-shadow:0 0 7px ${c},0 0 2px ${c}"></span>`;
+  return `<span>${dot('#2BFF88')}${t('grp.best','Best near you')}</span>`
+       + `<span>${dot('#29D4FF')}${t('grp.mostly','Mostly reliable')}</span>`
+       + `<span>${dot('#FF9E2C')}${t('grp.spotty','Spotty')}</span>`
+       + `<span>${FCHK(14)}${t('instock.now','In stock')}</span>`;
+}
 function toggleMap(forceOpen){
-  const mv=$('mapview'), sl=$('storelist'), btn=$('maptoggle');
-  if(mv.style.display==='block' && !forceOpen){ mv.style.display='none'; sl.style.display=''; if(btn){btn.classList.remove('on'); btn.textContent='Map';} return; }
-  sl.style.display='none'; mv.style.display='block'; if(btn){btn.classList.add('on'); btn.textContent='List';} track('map_open'); loadMap();
+  const mv=$('mapview'), sl=$('storelist'), btn=$('maptoggle'), lg=$('maplegend');
+  if(mv.style.display==='block' && !forceOpen){ mv.style.display='none'; sl.style.display=''; if(lg)lg.style.display='none'; if(btn){btn.classList.remove('on'); btn.textContent='Map';} return; }
+  sl.style.display='none'; mv.style.display='block'; if(lg){ lg.innerHTML=mapLegendHtml(); lg.style.display='flex'; } if(btn){btn.classList.add('on'); btn.textContent='List';} track('map_open'); loadMap();
   if(isMaster()) toast('📍 Zoom out, roam anywhere, tap to drop a pin');
 }
 function loadMap(){
@@ -2028,11 +2042,13 @@ function renderMapPins(){
     if(s.lat==null||s.lng==null) return;
     const mi=storeMi(s);
     const tier=storeTier(s);
-    const col = tier===5?'#4ADE80' : tier===4?'#38BDF8' : tier===3?'#F59E0B' : '#cfcfe0'; // 5 green · 4 blue · 3 orange · else neutral
-    // inStock (recent confirmed hit) → a pin carrying the brand check; otherwise a tier-colored dot.
+    const neon = tier===5?'#2BFF88' : tier===4?'#29D4FF' : tier===3?'#FF9E2C' : ''; // neon: best green · mostly blue · spotty orange
+    // inStock (recent confirmed hit) → the brand CHECK as the pin; tiered → a glowing neon dot; else plain.
     const m = s.inStock
-      ? L.marker([s.lat,s.lng],{icon:L.divIcon({className:'instkpin',html:`<span style="display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#0C0C12;border:2px solid ${col};box-shadow:0 2px 6px rgba(0,0,0,.5)">${FCHK(15)}</span>`,iconSize:[26,26],iconAnchor:[13,13]})}).addTo(MAP)
-      : L.circleMarker([s.lat,s.lng],{radius:8,color:'#0C0C12',weight:1.5,fillColor:col,fillOpacity:.95}).addTo(MAP);
+      ? L.marker([s.lat,s.lng],{icon:L.divIcon({className:'instkpin',html:`<span style="display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#0C0C12;border:2px solid ${neon||'#2BFF88'};box-shadow:0 0 11px ${neon||'#2BFF88'},0 0 4px ${neon||'#2BFF88'}">${FCHK(16)}</span>`,iconSize:[28,28],iconAnchor:[14,14]})}).addTo(MAP)
+      : L.marker([s.lat,s.lng],{icon:L.divIcon({className:'tierpin',html: neon
+          ? `<span style="display:block;width:15px;height:15px;border-radius:50%;background:${neon};border:1.5px solid #0C0C12;box-shadow:0 0 9px ${neon},0 0 3px ${neon}"></span>`
+          : `<span style="display:block;width:12px;height:12px;border-radius:50%;background:#9aa0b0;border:1.5px solid #0C0C12"></span>`, iconSize: neon?[15,15]:[12,12], iconAnchor: neon?[8,8]:[6,6]})}).addTo(MAP);
     m.bindPopup(`<div class="mappop"><b>${esc(s.name)}</b><div class="mp-lo">${esc(s.location||'')}${mi!=null?' · '+(mi<10?mi.toFixed(1):Math.round(mi))+' mi':''}</div><button onclick="mapPick(${s.id})">Check this store</button></div>`);
     MAP_MARKERS.push(m); pts.push([s.lat,s.lng]);
   });
@@ -2473,17 +2489,16 @@ function renderStoreActions(){
   if(st.isMSRP===false) parts.push(`<div class="smwarn">⚠️ ${t('sm.resale','Resale — price may be over MSRP')}</div>`);
   // 2. Live online-stock readout for "site" chains (their site mirrors the shelf — no call needed).
   if(isSite) parts.push(`<div class="smline" id="smlive">📡 ${t('sm.livechk','Checking live online stock…')}</div>`);
-  // 3. Ways to get it. A lone "On shelf" is dropped for callable stores (the call already implies it).
-  const chipLbl={in_store:t('sm.instore','On shelf'),pickup:t('sm.pickup','Order for pickup'),ship:t('sm.ship','Buy & ship')};
-  const chipM=methods.filter(m=>chipLbl[m]&&!(m==='in_store'&&methods.length===1&&!cantCall));
+  // 3. Ways to get it (pickup / ship). "On shelf" is dropped — it's a dead, non-actionable chip.
+  const chipLbl={pickup:t('sm.pickup','Order for pickup'),ship:t('sm.ship','Buy & ship')};
+  const chipM=methods.filter(m=>chipLbl[m]);
   if(chipM.length) parts.push(`<div class="smchips">`+chipM.map(m=>`<span class="smchip">${chipLbl[m]}</span>`).join('')+`</div>`);
-  // 4. Action row. Notify is ALWAYS offered; non-callable adds a Buy-online link (filled from the
-  //    freshest online signal once it loads).
+  // 4. Action row — Notify (brand bell). Non-callable adds a Buy-online link (filled once the signal loads).
+  const bell=`<span style="display:inline-flex;vertical-align:-3px;margin-right:4px">${ICO.bell('currentColor')}</span>`;
   if(cantCall){
-    parts.push(`<div class="smrow"><a class="smbtn" id="smbuy" href="#" target="_blank" rel="noopener" style="display:none">${t('sm.buyonline','Buy online')} ↗</a><button class="smbtn ghost" onclick="openWatch()">🔔 ${t('sm.notify','Notify me when restocked')}</button></div>`);
-    parts.push(`<div class="smnote">${tf('sm.nocall','We can’t call {x} — check their site or get pinged the moment it restocks.',{x:nm})}</div>`);
+    parts.push(`<div class="smrow"><a class="smbtn" id="smbuy" href="#" target="_blank" rel="noopener" style="display:none">${t('sm.buyonline','Buy online')} ↗</a><button class="smbtn ghost" onclick="openWatch()">${bell}${t('sm.notify','Notify me when restocked')}</button></div>`);
   } else {
-    parts.push(`<div class="smrow"><button class="smbtn ghost" onclick="openWatch()">🔔 ${t('sm.notify','Notify me when restocked')}</button></div>`);
+    parts.push(`<div class="smrow"><button class="smbtn ghost" onclick="openWatch()">${bell}${t('sm.notify','Notify me when restocked')}</button></div>`);
   }
   wrap.innerHTML=parts.join(''); wrap.style.display='';
   if(isSite||cantCall) loadLiveStock(st.id);
