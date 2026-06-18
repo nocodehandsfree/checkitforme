@@ -19,7 +19,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, retailersWithStatus, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { getPolicy, setPolicy, publicPolicy } from "./policy";
@@ -1370,11 +1370,17 @@ app.post("/api/kiosks/overlay", async (c) => {
   return c.json({ machines: machines.length, matched, inserted, dryRun, unresolved });
 });
 
-// ---- Store hours: backfill all (background) + refresh one ----
+// ---- Store hours: backfill all (background) + refresh one + re-verify unverified stamps ----
 app.post("/api/hours/backfill", async (c) => c.json(await backfillHours()));
 app.post("/api/hours/:id/refresh", async (c) => {
   const r = await refreshHours(Number(c.req.param("id")));
   return r ? c.json(r) : c.json({ error: "no address / lookup failed" }, 400);
+});
+// Re-verify stores carrying an UNVERIFIED hours stamp (hours set, hoursUpdatedAt null) so nothing shows
+// open on a guess. dryRun returns the count + sample; otherwise kicks a fire-and-forget background sweep.
+app.post("/api/hours/reverify-stamps", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  return c.json(await reverifyStampedHours({ dryRun: !!b.dryRun }));
 });
 // Anonymous FREE check (1 per device, client-tracked; bounded globally by the demo pool).
 app.post("/pub/check", async (c) => {

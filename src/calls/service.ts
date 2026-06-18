@@ -825,6 +825,30 @@ export async function refreshHours(retailerId: number) {
   return { hours: h, openState: openState(h, r.timezone) };
 }
 
+let hoursReverifying = false;
+/** Background re-verify of UNVERIFIED hours stamps: stores that carry hours but were never confirmed by a
+ *  lookup (hoursUpdatedAt is null — e.g. a hand-seeded "24h") get a fresh grounded lookup, so nothing shows
+ *  open on a guess. Fire-and-forget and resumable: each processed store gets hoursUpdatedAt, so a re-run
+ *  only picks up what's left. dryRun returns the count + a sample without calling the model. */
+export async function reverifyStampedHours(opts: { dryRun?: boolean } = {}): Promise<{ started?: boolean; dryRun?: boolean; running?: boolean; pending: number; sample?: { id: number; name: string; hours: string | null }[] }> {
+  const stamped = (await db.select().from(retailers))
+    .filter((r) => r.active !== false && !!r.hours && r.hoursUpdatedAt == null && !!r.address);
+  if (opts.dryRun) return { dryRun: true, pending: stamped.length, sample: stamped.slice(0, 12).map((r) => ({ id: r.id, name: r.name, hours: r.hours })) };
+  if (hoursReverifying) return { started: false, running: true, pending: stamped.length };
+  hoursReverifying = true;
+  (async () => {
+    for (const r of stamped) {
+      try {
+        const h = await fetchStoreHours(r.name, r.address!);
+        if (h) await db.update(retailers).set({ hours: h, hoursUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(retailers.id, r.id));
+      } catch (e) { console.error("hours reverify", r.id, e); }
+      await new Promise((res) => setTimeout(res, 1500)); // same pace as backfill — under the lookup rate limit
+    }
+    hoursReverifying = false;
+  })().catch(() => { hoursReverifying = false; });
+  return { started: true, pending: stamped.length };
+}
+
 /** Fire any schedules that are due right now, in each target store's local time. */
 export async function schedulerTick(): Promise<number> {
   const active = await db.select().from(schedules).where(eq(schedules.active, true));
