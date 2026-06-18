@@ -75,11 +75,14 @@
   .s-red{background:rgba(239,68,68,.14);color:var(--red)}
   .s-amber{background:rgba(232,154,74,.14);color:var(--orange)}
   .s-gray{background:rgba(255,255,255,.06);color:var(--muted)}
-  button.act{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;border:none;padding:10px 18px;border-radius:var(--r-btn);font-weight:700;cursor:pointer;font-size:14px;
-    box-shadow:0 6px 16px -6px rgba(52,197,107,.45),inset 0 1px 0 rgba(255,255,255,.4);transition:filter .12s,transform .08s}
+  button.act{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;border:none;padding:8px 15px;border-radius:var(--r-btn);font-weight:700;cursor:pointer;font-size:13px;
+    box-shadow:0 2px 7px -3px rgba(52,197,107,.40);transition:filter .12s,transform .08s}
   button.act:hover{filter:brightness(1.05)} button.act:active{transform:translateY(1px)}
-  button.ghost{background:var(--surface-1);border:1px solid var(--border-medium);color:var(--text-strong);padding:10px 18px;border-radius:var(--r-btn);cursor:pointer;font-size:14px;font-weight:700;transition:border-color .12s,background .12s}
+  button.ghost{background:var(--surface-1);border:1px solid var(--border-medium);color:var(--text-strong);padding:8px 15px;border-radius:var(--r-btn);cursor:pointer;font-size:13px;font-weight:600;transition:border-color .12s,background .12s}
   button.ghost:hover{border-color:var(--border-strong);background:var(--surface-2)}
+  /* action-button rows: align to the RIGHT so the primary tap target sits under your thumb */
+  .btnrow{display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .btnrow.split{justify-content:space-between}
   input,textarea{background:rgba(255,255,255,.04);border:1px solid var(--border-medium);color:#fff;padding:13px 15px;border-radius:var(--r-btn);font-size:16px;font-weight:500;font-family:inherit;width:100%;max-width:100%}
   input:focus,textarea:focus{outline:none;border-color:rgba(74,222,128,.30);box-shadow:0 0 0 2px rgba(74,222,128,.10)}
   select{
@@ -115,7 +118,7 @@
   /* Tooltip: TAP to show (works on mobile — hover doesn't exist on touch). A small ⓘ marks tappable hints. */
   [data-tip]{cursor:help}
   label[data-tip],span[data-tip],.name[data-tip],b[data-tip]{display:inline-flex;align-items:center;gap:4px}
-  [data-tip]::after{content:"ⓘ";font-size:.78em;color:#6b6b7b;font-style:normal;font-weight:600;line-height:1}
+  [data-tip]::after{content:"ⓘ";font-size:14px;color:var(--purple);font-style:normal;font-weight:700;line-height:1;margin-left:3px;vertical-align:middle;opacity:.85}
   #tiptip{position:fixed;z-index:9000;max-width:262px;background:#06060a;color:#e8e8f2;font:500 12.5px/1.45 Inter,-apple-system,sans-serif;font-style:normal;padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 30px rgba(0,0,0,.6)}
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
@@ -699,8 +702,8 @@
       <select id="pt_chain" onchange="loadChainTree()"></select>
       <label style="margin-top:10px">Navigation steps</label>
       <textarea id="pt_tree" rows="6" style="width:100%;font-family:inherit;font-size:13px;background:var(--terminal);color:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;box-sizing:border-box" placeholder="Plain English, what to say at each menu — e.g. 'No' to healthcare provider, then 'Front store', then 'General inquiries'…"></textarea>
-      <label style="margin-top:10px">Auto-press shortcut</label>
-      <input id="pt_dtmf" placeholder="0@3" style="max-width:160px"><span class="meta" style="margin-left:10px"><code>0@3</code> = press 0 at 3s · chain: <code>1@3,0@9</code> · blank = none</span>
+      <label style="margin-top:10px" data-tip="Keys to auto-press through the menu. 0@3 = press 0 at 3 seconds. Chain them with commas: 1@3,0@9. Leave blank for none.">Auto-press shortcut</label>
+      <input id="pt_dtmf" placeholder="e.g. 0@3" style="max-width:200px">
       <div class="grid2" style="margin-top:10px">
         <div><label>Answer path</label>
           <select id="pt_path">
@@ -797,21 +800,19 @@
     <h2>Create</h2>
     <div class="card" id="voicestudio">
       <div class="name" style="margin-bottom:10px">Voice</div>
-      <label>Live store voice</label>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <select id="vs_select" style="flex:1;min-width:180px"></select>
-        <button class="act" onclick="vsSetActive()">Use for live calls</button>
-      </div>
+      <label data-tip="Pick a voice, then Use for live calls makes it the voice on every real store call.">Live store voice</label>
+      <select id="vs_select"></select>
       <div id="vs_active" class="meta" style="margin-top:6px"></div>
+      <div class="btnrow"><button class="act" onclick="vsSetActive()">Use for live calls</button></div>
       <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
-      <label data-tip="Record ~30–60s of clear speech">Clone a new voice</label>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-        <button class="act" id="vs_rec" onclick="vsToggleRec()">● Record</button>
+      <label data-tip="Record ~30–60s of clear speech, name it, then clone.">Clone a new voice</label>
+      <div class="row" style="margin-bottom:8px">
+        <button class="ghost" id="vs_rec" onclick="vsToggleRec()"><span style="color:var(--red)">●</span> Record</button>
         <span id="vs_rectime" class="meta"></span>
         <audio id="vs_play" controls style="display:none;height:34px"></audio>
       </div>
       <input id="vs_name" placeholder="Voice name — e.g. Branson, Jared">
-      <button class="act" id="vs_clone" onclick="vsClone()" style="margin-top:8px" disabled>Clone &amp; save voice</button>
+      <div class="btnrow"><button class="act" id="vs_clone" onclick="vsClone()" disabled>Clone &amp; save voice</button></div>
       <div id="vs_msg" class="meta" style="margin-top:8px;min-height:16px"></div>
     </div>
 
@@ -1191,8 +1192,8 @@ async function vsToggleRec(){
     const stream=await navigator.mediaDevices.getUserMedia({audio:true});
     VS_CHUNKS=[]; VS_REC=new MediaRecorder(stream);
     VS_REC.ondataavailable=e=>{ if(e.data.size) VS_CHUNKS.push(e.data); };
-    VS_REC.onstop=()=>{ VS_BLOB=new Blob(VS_CHUNKS,{type:'audio/webm'}); const u=URL.createObjectURL(VS_BLOB); const a=document.getElementById('vs_play'); a.src=u; a.style.display=''; document.getElementById('vs_clone').disabled=false; stream.getTracks().forEach(t=>t.stop()); clearInterval(VS_TIMER); btn.textContent='● Record'; btn.style.color=''; };
-    VS_REC.start(); btn.textContent='■ Stop'; btn.style.color='#EF4444';
+    VS_REC.onstop=()=>{ VS_BLOB=new Blob(VS_CHUNKS,{type:'audio/webm'}); const u=URL.createObjectURL(VS_BLOB); const a=document.getElementById('vs_play'); a.src=u; a.style.display=''; document.getElementById('vs_clone').disabled=false; stream.getTracks().forEach(t=>t.stop()); clearInterval(VS_TIMER); btn.innerHTML='<span style="color:var(--red)">●</span> Record'; btn.style.color=''; };
+    VS_REC.start(); btn.innerHTML='<span style="color:var(--red)">■</span> Stop'; btn.style.color='#EF4444';
     let s=0; const rt=document.getElementById('vs_rectime'); VS_TIMER=setInterval(()=>{ s++; rt.textContent=s+'s'; },1000);
   }catch(e){ toast('Mic blocked — allow microphone access'); }
 }
@@ -1835,7 +1836,7 @@ function renderStatuses(list){
   el.innerHTML = rows.length ? rows.map(s=>`
     <div class="card" style="padding:12px;margin-bottom:8px" data-sid="${s.id}">
       <div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap">
-        <span style="width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;background:var(--terminal);border:1px solid var(--border);border-radius:10px">${vmark(s.emoji,s.color||s.tone,24)}</span>
+        <span style="width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;background:var(--terminal);border:1px solid var(--border);border-radius:10px">${(s.tone==='in'||s.emoji==='✅'||/in.?stock/i.test(s.key||''))?'<img src="/logos/check-brandmark.svg" alt="in stock" style="width:24px;height:24px;object-fit:contain">':vmark(s.emoji,s.color||s.tone,24)}</span>
         <input value="${escH(s.label)}" data-f="label" style="flex:1;min-width:0" placeholder="Label">
         <input type="color" value="${escH(s.color)}" data-f="color" title="Verdict color" style="width:38px;height:40px;padding:2px;border-radius:9px;border:1px solid var(--border);background:none;flex:0 0 auto">
       </div>
