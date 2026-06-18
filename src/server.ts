@@ -1303,6 +1303,51 @@ app.post("/api/stores/dedupe", async (c) => {
   return c.json({ scope: stateF || "ALL", active: rows.length, changed: changes.length, addrBlanked: addrBad.length,
     sample: changes.slice(0, 12).map((r) => ({ from: r.name, to: proposed.get(r.id) })) });
 });
+// Quarantine CVS-inside-Target: the CVS pharmacy counters that live inside a Target share that Target's
+// exact street address — they don't carry cards and must never be called. Match every CVS against every
+// Target by normalized street address (+ a <250m proximity guard so identical addresses in different towns
+// don't collide), then move the matches into a MUTED "CVS Pharmacy at Target" chain (and set sellsPacks
+// false as a hard non-callable backstop) so they drop out of the consumer list and the call workflow.
+// dryRun returns the count + a sample and writes nothing. Admin-gated.
+app.post("/api/stores/quarantine-cvs-in-target", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const allChains = await db.select().from(chains);
+  const cvsChain = allChains.find((x) => x.name === "CVS");
+  const targetChain = allChains.find((x) => x.name === "Target");
+  if (!cvsChain || !targetChain) return c.json({ error: "CVS or Target chain not found" }, 404);
+  const SUF: Record<string, string> = { street: "st", avenue: "ave", av: "ave", boulevard: "blvd", road: "rd", drive: "dr", lane: "ln", highway: "hwy", parkway: "pkwy", place: "pl", court: "ct", circle: "cir", terrace: "ter", trail: "trl" };
+  const DIR: Record<string, string> = { north: "n", south: "s", east: "e", west: "w", northeast: "ne", northwest: "nw", southeast: "se", southwest: "sw" };
+  const akey = (addr: string | null) =>
+    (addr || "").split(",")[0].toLowerCase().replace(/\b(ste|suite|unit|apt|#|bldg|fl)\b.*$/, "").replace(/[^a-z0-9 ]/g, " ")
+      .split(/\s+/).filter(Boolean).map((t) => DIR[t] || SUF[t] || t).join(" ").trim();
+  const meters = (a: { lat: number | null; lng: number | null }, t: { lat: number | null; lng: number | null }) => {
+    if (a.lat == null || a.lng == null || t.lat == null || t.lng == null) return 9e9;
+    const R = 6371000, p1 = a.lat * Math.PI / 180, p2 = t.lat * Math.PI / 180;
+    const dp = (t.lat - a.lat) * Math.PI / 180, dl = (t.lng - a.lng) * Math.PI / 180;
+    const x = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(x));
+  };
+  const targets = (await db.select().from(retailers).where(and(eq(retailers.chainId, targetChain.id), eq(retailers.active, true))))
+    .filter((t) => t.address && t.lat != null);
+  const byAddr = new Map<string, typeof targets>();
+  for (const t of targets) { const k = akey(t.address); if (!k) continue; const g = byAddr.get(k); if (g) g.push(t); else byAddr.set(k, [t]); }
+  const cvs = await db.select().from(retailers).where(and(eq(retailers.chainId, cvsChain.id), eq(retailers.active, true)));
+  const matched: { id: number; name: string; address: string | null; target: string }[] = [];
+  for (const s of cvs) {
+    const k = akey(s.address);
+    const hit = k ? (byAddr.get(k) || []).find((t) => meters(s, t) < 250) : undefined;
+    const addrSaysTarget = /\btarget\b/i.test(s.address || "");
+    if (hit || addrSaysTarget) matched.push({ id: s.id, name: s.name, address: s.address, target: hit ? hit.name : "addr:Target" });
+  }
+  if (b.dryRun) return c.json({ dryRun: true, cvsTotal: cvs.length, targetTotal: targets.length, matched: matched.length, sample: matched.slice(0, 25) });
+  let q = allChains.find((x) => x.name === "CVS Pharmacy at Target");
+  if (!q) { const [row] = await db.insert(chains).values({ name: "CVS Pharmacy at Target", type: "Pharmacy", muted: true }).returning(); q = row; }
+  else if (!q.muted) await db.update(chains).set({ muted: true }).where(eq(chains.id, q.id));
+  const ids = matched.map((m) => m.id);
+  for (let i = 0; i < ids.length; i += 500) await db.update(retailers).set({ chainId: q.id, sellsPacks: false }).where(inArray(retailers.id, ids.slice(i, i + 500)));
+  invalidateRefCache();
+  return c.json({ moved: ids.length, intoChain: "CVS Pharmacy at Target", muted: true, chainId: q.id, sample: matched.slice(0, 12) });
+});
 // Kiosk overlay: reconcile the official TPCi vending list against our stores. For each machine, flag
 // the matching store (same chain, within ~0.3 mi) as a tier-5 kiosk (hasKiosk:true, tier:5) — leaving
 // sellsPacks untouched so a store that also sells on the shelf still shows in both tabs. Machines at a
