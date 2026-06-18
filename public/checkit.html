@@ -3232,7 +3232,7 @@ async function openHistEntry(e){
 }
 // ---- Call switcher: hop call-to-call; filter by store and outcome (scales to 20+ calls) ----
 let RAIL_F={store:'',tone:''}, RAIL_CID=null;
-function railTone(e){ return e.confirmed===true?'in':(e.confirmed===false||e.soldOut||e.doesNotSell)?'out':'unk'; }
+function railTone(e){ if(e.confirmed===true) return 'in'; if(e.confirmed===false||e.soldOut||e.doesNotSell) return e.shipmentDay?'soon':'out'; return 'unk'; }
 function railBase(n){ return (n||'').split('—')[0].trim(); }
 // Monogram tile (transparent store logos drop in automatically once stores carry a logoUrl).
 function railClass(e){ const st=STORES.find(x=>x.id===e.storeId)||{}; const lu=e.logoUrl||st.logoUrl, lw=e.logoWide??st.logoWide, ld=e.logoDark??st.logoDark; return lu?((ld?' lite':'')+(lw?' widelogo':'')):''; }
@@ -3272,7 +3272,8 @@ function renderCallRail(cid){
       <option value="">${t('rail.calls','Calls')}</option>
       <option value="in" ${RAIL_F.tone==='in'?'selected':''}>${t('hb.in','In stock')}</option>
       <option value="out" ${RAIL_F.tone==='out'?'selected':''}>${t('hb.out','Not in stock')}</option>
-      <option value="unk" ${RAIL_F.tone==='unk'?'selected':''}>${t('rail.other','No answer / unclear')}</option>
+      <option value="soon" ${RAIL_F.tone==='soon'?'selected':''}>${t('rail.soon','Restock coming')}</option>
+      <option value="unk" ${RAIL_F.tone==='unk'?'selected':''}>${t('rail.failed','Check failed')}</option>
     </select>
     <button class="railcal ${RAIL_F.date?'on':''}" onclick="openRailCal()" aria-label="Pick a day"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></button>
     <button class="railnav" onclick="railStep(1)" ${idx<0||idx>=f.length-1?'disabled':''} aria-label="Older call"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9.5 5l6.5 7-6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>

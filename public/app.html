@@ -815,10 +815,11 @@
         </div>
         <input id="st_new_note" placeholder="One-line note the customer sees" style="margin-top:6px">
         <div class="row" style="gap:8px;margin-top:6px">
-          <select id="st_new_tone" style="max-width:150px">
-            <option value="unk">neutral (gray)</option>
-            <option value="in">green · go</option>
-            <option value="out">red · no-go</option>
+          <select id="st_new_tone" style="max-width:170px">
+            <option value="in">In stock</option>
+            <option value="out">Not in stock</option>
+            <option value="unk">Check failed</option>
+            <option value="soon">Restock coming</option>
           </select>
           <button class="act" onclick="addStatus()">Add status</button>
         </div>
@@ -1943,10 +1944,11 @@ function renderStatuses(list){
       </div>
       <textarea data-f="note" rows="3" placeholder="One-line note the customer sees" style="margin-top:10px;font-size:14px;line-height:1.5">${escH(s.note)}</textarea>
       <div class="row" style="gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
-        <select data-f="tone" onchange="statusToneChange(this)" title="What this verdict MEANS — drives the app's go/no-go logic and sets a default color (you can still tweak the color)" style="flex:0 0 auto;max-width:180px">
-          <option value="unk"${s.tone==='unk'?' selected':''}>Neutral</option>
-          <option value="in"${s.tone==='in'?' selected':''}>Go · they have it</option>
-          <option value="out"${s.tone==='out'?' selected':''}>No-go · they don't</option>
+        <select data-f="tone" onchange="statusToneChange(this)" title="The customer's verdict bucket — sets the color + which filter this lands in" style="flex:0 0 auto;max-width:180px">
+          <option value="in"${s.tone==='in'?' selected':''}>In stock</option>
+          <option value="out"${s.tone==='out'?' selected':''}>Not in stock</option>
+          <option value="unk"${s.tone==='unk'?' selected':''}>Check failed</option>
+          <option value="soon"${s.tone==='soon'?' selected':''}>Restock coming</option>
         </select>
         <span class="meta" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">key: <code>${escH(s.key)}</code></span>
         <button class="ghost" onclick="saveStatus(${s.id},this)" style="flex:0 0 auto">Save</button>
@@ -1964,7 +1966,7 @@ function pickNewStatusIcon(){ openIconPicker(n=>{ document.getElementById('st_ne
 // re-color the icon live when the color swatch changes
 function statusRecolor(colEl){ const card=colEl.closest('[data-sid]'); if(!card) return; const btn=card.querySelector('.sticon-btn'), emo=card.querySelector('input[data-f=emoji]'); if(btn&&emo) btn.innerHTML=statusIcon(emo.value,colEl.value,24); }
 // picking the meaning sets a sensible default color (still overridable) and re-colors the icon
-function statusToneChange(sel){ const card=sel.closest('[data-sid]'); if(!card) return; const def={in:'#4ADE80',out:'#EF4444',unk:'#9CA3AF'}[sel.value]; const col=card.querySelector('input[data-f=color]'); if(col&&def){ col.value=def; statusRecolor(col); } }
+function statusToneChange(sel){ const card=sel.closest('[data-sid]'); if(!card) return; const def={in:'#4ADE80',out:'#EF4444',unk:'#9CA3AF',soon:'#F59E0B'}[sel.value]; const col=card.querySelector('input[data-f=color]'); if(col&&def){ col.value=def; statusRecolor(col); } }
 async function addStatus(){
   const label=v('st_new_label'); if(!label){ toast('Give it a label'); return; }
   const body={ key:label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''), label,
