@@ -1895,15 +1895,15 @@ function renderStatuses(list){
       <div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap">
         <button type="button" class="sticon-btn" onclick="statusPickIcon(this)" title="Change icon — pick from the library">${statusIcon(s.emoji,s.color||s.tone,24)}</button>
         <input type="hidden" data-f="emoji" value="${escH(s.emoji)}">
-        <input value="${escH(s.label)}" data-f="label" style="flex:1;min-width:0" placeholder="Label">
-        <input type="color" value="${escH(s.color)}" data-f="color" title="Verdict color" style="width:38px;height:40px;padding:2px;border-radius:9px;border:1px solid var(--border);background:none;flex:0 0 auto">
+        <input value="${escH(s.label)}" data-f="label" style="flex:1;min-width:0;font-size:15px" placeholder="Label">
+        <input type="color" value="${escH(s.color)}" data-f="color" oninput="statusRecolor(this)" title="Icon color" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1px solid var(--border);background:none;flex:0 0 auto">
       </div>
-      <textarea data-f="note" rows="2" placeholder="One-line note the customer sees" style="margin-top:8px;font-size:14px">${escH(s.note)}</textarea>
+      <textarea data-f="note" rows="3" placeholder="One-line note the customer sees" style="margin-top:10px;font-size:14px;line-height:1.5">${escH(s.note)}</textarea>
       <div class="row" style="gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
-        <select data-f="tone" style="flex:0 0 auto;max-width:150px">
-          <option value="unk"${s.tone==='unk'?' selected':''}>neutral</option>
-          <option value="in"${s.tone==='in'?' selected':''}>green · go</option>
-          <option value="out"${s.tone==='out'?' selected':''}>red · no-go</option>
+        <select data-f="tone" onchange="statusToneChange(this)" title="What this verdict MEANS — drives the app's go/no-go logic and sets a default color (you can still tweak the color)" style="flex:0 0 auto;max-width:180px">
+          <option value="unk"${s.tone==='unk'?' selected':''}>Neutral</option>
+          <option value="in"${s.tone==='in'?' selected':''}>Go · they have it</option>
+          <option value="out"${s.tone==='out'?' selected':''}>No-go · they don't</option>
         </select>
         <span class="meta" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">key: <code>${escH(s.key)}</code></span>
         <button class="ghost" onclick="saveStatus(${s.id},this)" style="flex:0 0 auto">Save</button>
@@ -1918,6 +1918,10 @@ async function saveStatus(id,btn){
   else toast('Could not save');
 }
 function pickNewStatusIcon(){ openIconPicker(n=>{ document.getElementById('st_new_emoji').value=n; document.getElementById('st_new_icon_btn').innerHTML=statusIcon(n,'#9CA3AF',22); }, document.getElementById('st_new_emoji').value); }
+// re-color the icon live when the color swatch changes
+function statusRecolor(colEl){ const card=colEl.closest('[data-sid]'); if(!card) return; const btn=card.querySelector('.sticon-btn'), emo=card.querySelector('input[data-f=emoji]'); if(btn&&emo) btn.innerHTML=statusIcon(emo.value,colEl.value,24); }
+// picking the meaning sets a sensible default color (still overridable) and re-colors the icon
+function statusToneChange(sel){ const card=sel.closest('[data-sid]'); if(!card) return; const def={in:'#4ADE80',out:'#EF4444',unk:'#9CA3AF'}[sel.value]; const col=card.querySelector('input[data-f=color]'); if(col&&def){ col.value=def; statusRecolor(col); } }
 async function addStatus(){
   const label=v('st_new_label'); if(!label){ toast('Give it a label'); return; }
   const body={ key:label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''), label,
