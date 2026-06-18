@@ -608,7 +608,7 @@
 
       <details class="card" id="tb_call_card" open>
         <summary><span class="name">Step 4 · Test it</span></summary>
-        <div class="meta" style="margin:10px 0 12px">Pick the store context, then answer your phone like the clerk. Runs the <b>draft</b> voice with that store's real phone-tree rules. The result records against the store (visible in Results).</div>
+        <div class="hint" style="margin:8px 0 14px">Answer your phone like the clerk. Runs the draft voice with this store's phone-tree rules; the result records against the store.</div>
         <label>Store (records the result against this one)</label>
         <select id="sim_store" onchange="previewMaybe()"></select>
         <label>Category to ask about</label>
@@ -629,7 +629,7 @@
         </div>
         <label>Your phone (the agent dials this)</label>
         <input id="sim_phone" placeholder="+13106662331">
-        <label>Voice for this test <span style="color:var(--muted)">— ring with any clone; the live store voice is never touched</span></label>
+        <label data-tip="Ring with any clone — the live store voice is never touched">Voice for this test</label>
         <select id="sim_voice"><option value="">Bench default voice</option></select>
         <div style="margin-top:14px"><button class="act" onclick="benchCall()">📞 Call me</button></div>
       </details>
