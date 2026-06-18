@@ -715,8 +715,10 @@
       <select id="pt_chain" onchange="loadChainTree()"></select>
       <label style="margin-top:10px">Navigation steps</label>
       <textarea id="pt_tree" rows="6" style="width:100%;font-family:inherit;font-size:13px;background:var(--terminal);color:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;box-sizing:border-box" placeholder="Plain English, what to say at each menu — e.g. 'No' to healthcare provider, then 'Front store', then 'General inquiries'…"></textarea>
-      <label style="margin-top:10px" data-tip="Keys to auto-press through the menu. 0@3 = press 0 at 3 seconds. Chain them with commas: 1@3,0@9. Leave blank for none.">Auto-press shortcut</label>
-      <input id="pt_dtmf" placeholder="e.g. 0@3" style="max-width:200px">
+      <label style="margin-top:10px" data-tip="When to auto-press a key to get through the menu toward a human. Add a step per key: pick the digit (0–9) and how many seconds into the call to press it.">Auto-press keys</label>
+      <div id="pt_dtmf_rows"></div>
+      <div style="margin-top:8px"><button class="ghost" type="button" onclick="dtmfAddRow()">+ Add a key-press</button></div>
+      <input type="hidden" id="pt_dtmf">
       <div class="grid2" style="margin-top:10px">
         <div><label>Answer path</label>
           <select id="pt_path">
@@ -1489,11 +1491,26 @@ async function loadChains(){
   if(cur) sel.value=cur;
   loadChainTree();
 }
+// Auto-press builder: each step = press a digit (0-9) at N seconds. Syncs to the hidden pt_dtmf as "d@s,d@s".
+function dtmfRowHtml(digit,secs){
+  const opts=[0,1,2,3,4,5,6,7,8,9].map(d=>`<option value="${d}"${String(d)===String(digit)?' selected':''}>${d}</option>`).join('');
+  return `<div class="dtmf-row" style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+    <span class="meta">Press</span>
+    <select class="dtmf-digit" style="max-width:78px;flex:0 0 auto" onchange="dtmfSync()">${opts}</select>
+    <span class="meta">at</span>
+    <input class="dtmf-secs" type="number" min="0" max="180" step="1" value="${(secs!=null&&secs!=='')?secs:''}" placeholder="sec" style="max-width:92px;flex:0 0 auto" oninput="dtmfSync()">
+    <span class="meta">seconds</span>
+    <button class="ghost" type="button" title="Remove" onclick="this.closest('.dtmf-row').remove();dtmfSync()" style="padding:6px 11px;flex:0 0 auto">✕</button>
+  </div>`;
+}
+function dtmfAddRow(digit,secs){ const c=document.getElementById('pt_dtmf_rows'); if(!c) return; c.insertAdjacentHTML('beforeend',dtmfRowHtml(digit==null?0:digit,secs)); dtmfSync(); }
+function dtmfSync(){ const h=document.getElementById('pt_dtmf'); if(!h) return; const parts=[...document.querySelectorAll('#pt_dtmf_rows .dtmf-row')].map(r=>{ const d=r.querySelector('.dtmf-digit').value; const s=r.querySelector('.dtmf-secs').value; return (s!==''&&s!=null)?(d+'@'+s):''; }).filter(Boolean); h.value=parts.join(','); }
+function dtmfLoad(str){ const c=document.getElementById('pt_dtmf_rows'); if(!c) return; c.innerHTML=''; String(str||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(p=>{ const m=p.match(/^([0-9])\s*@\s*(\d+(?:\.\d+)?)$/); if(m) c.insertAdjacentHTML('beforeend',dtmfRowHtml(m[1],m[2])); }); dtmfSync(); }
 function loadChainTree(){
   const id=Number(document.getElementById('pt_chain').value);
   const ch=CHAINS.find(c=>c.id===id);
   document.getElementById('pt_tree').value = (ch&&ch.phoneTreeDefault) || '';
-  document.getElementById('pt_dtmf').value = (ch&&ch.dtmfShortcut) || '';
+  dtmfLoad(ch&&ch.dtmfShortcut);
   document.getElementById('pt_path').value = (ch&&ch.answerPath) || '';
   document.getElementById('pt_treesecs').value = (ch&&ch.avgTreeSeconds!=null) ? ch.avgTreeSeconds : '';
   document.getElementById('pt_repack').checked = !!(ch&&ch.repackOnly);
