@@ -98,5 +98,8 @@ export interface AgentTuning {
   latency?: number;     // optimize_streaming_latency 0-4 (lower = more natural prosody, higher = faster/robotic)
   modelId?: string;     // TTS model: English agents -> eleven_turbo_v2 | eleven_flash_v2
   turnEagerness?: string; // "patient" | "normal" | "eager" — the "beat": how long it waits before replying
+  turnTimeout?: number;   // seconds of silence before the agent takes its turn (lower = snappier)
+  softTimeoutSecs?: number; // presence-filler delay in seconds; -1 disables the filler
+  softTimeoutMsg?: string;  // what it says on a long pause when the filler is enabled
   maxTokens?: number;
 }

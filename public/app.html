@@ -598,6 +598,14 @@
           <option value="eager">Eager · fastest replies (may cut people off)</option>
           <option value="patient">Patient · long beat, waits for a clear pause (slowest)</option>
         </select>
+        <label data-tip="Silence (seconds) before the agent jumps in when no end-of-turn is detected — lower = snappier">Reply timeout <span id="sb_tt_val" class="hint" style="font-style:normal"></span></label>
+        <input id="sb_turntimeout" type="range" min="3" max="45" step="1" style="width:100%" oninput="document.getElementById('sb_tt_val').textContent=this.value+'s'">
+        <label data-tip="On a long pause the agent says a quick line so the caller knows the line isn't dead. Off = it just asks/listens.">Presence filler on a long pause</label>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <label style="margin:0;white-space:nowrap"><input id="sb_soft_on" type="checkbox"> on after</label>
+          <input id="sb_soft_secs" type="number" min="0.5" max="6" step="0.5" value="1.5" style="width:64px"><span class="hint" style="font-style:normal">s</span>
+          <input id="sb_soft_msg" type="text" placeholder="Yeah—hi, I'm here!" style="flex:1">
+        </div>
         <label data-tip="English agents support turbo or flash v2 only">Voice model</label>
         <select id="sb_model" onchange="updateDraftDot()">
           <option value="eleven_turbo_v2">Turbo v2 · natural (recommended)</option>
@@ -1646,16 +1654,25 @@ async function loadSandbox(){
   if(g('sb_latency')) g('sb_latency').value=t.latency;
   if(g('sb_model')&&t.modelId) g('sb_model').value=t.modelId;
   if(g('sb_beat')&&t.turnEagerness) g('sb_beat').value=t.turnEagerness;
+  if(g('sb_turntimeout')&&t.turnTimeout!=null){ g('sb_turntimeout').value=t.turnTimeout; if(g('sb_tt_val')) g('sb_tt_val').textContent=t.turnTimeout+'s'; }
+  if(g('sb_soft_on')) g('sb_soft_on').checked=(t.softTimeoutSecs!=null&&t.softTimeoutSecs>=0);
+  if(g('sb_soft_secs')&&t.softTimeoutSecs!=null&&t.softTimeoutSecs>=0) g('sb_soft_secs').value=t.softTimeoutSecs;
+  if(g('sb_soft_msg')&&t.softTimeoutMsg) g('sb_soft_msg').value=t.softTimeoutMsg;
   if(g('sb_llm')&&t.llm) g('sb_llm').value=t.llm;
   if(g('tb_opening')) g('tb_opening').value=t.opening||'';
   sbLabels();
   const s=document.getElementById('sb_status'); if(s) s.textContent='Showing the current draft.';
 }
 function sandboxBody(){
+  const g=id=>document.getElementById(id);
+  const softOn=g('sb_soft_on')&&g('sb_soft_on').checked;
   return { speed:Number(v('sb_speed')), stability:Number(v('sb_stability')),
-    latency:Number(v('sb_latency')), modelId:document.getElementById('sb_model').value,
-    turnEagerness:document.getElementById('sb_beat').value,
-    llm:document.getElementById('sb_llm').value, opening:v('tb_opening') };
+    latency:Number(v('sb_latency')), modelId:g('sb_model').value,
+    turnEagerness:g('sb_beat').value,
+    turnTimeout: g('sb_turntimeout')?Number(g('sb_turntimeout').value):undefined,
+    softTimeoutSecs: softOn ? Number(v('sb_soft_secs')||1.5) : -1,
+    softTimeoutMsg: v('sb_soft_msg')||"Yeah—hi, I'm here!",
+    llm:g('sb_llm').value, opening:v('tb_opening') };
 }
 async function applySandbox(){
   document.getElementById('sb_status').textContent='Saving the draft…';

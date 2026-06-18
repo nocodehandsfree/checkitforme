@@ -292,16 +292,20 @@ export async function getVoiceTuning() {
 /** Save tuning controls; push cadence/warmth/LLM (and optionally the canonical prompt) to the live agent. */
 export async function applyVoiceTuning(p: {
   opening?: string; speed?: number; stability?: number; llm?: string; pushPrompt?: boolean; turnEagerness?: string;
+  turnTimeout?: number; softTimeoutSecs?: number; softTimeoutMsg?: string;
 }) {
   if (p.opening !== undefined) await setSetting("vt_opening", p.opening);
   if (p.speed !== undefined) await setSetting("vt_speed", String(p.speed));
   if (p.stability !== undefined) await setSetting("vt_stability", String(p.stability));
   if (p.llm !== undefined && p.llm !== "") await setSetting("vt_llm", p.llm);
 
-  const patch: { prompt?: string; llm?: string; speed?: number; stability?: number; maxTokens?: number; turnEagerness?: string } = {};
+  const patch: AgentTuning = {};
   if (p.speed !== undefined) patch.speed = p.speed;
   if (p.stability !== undefined) patch.stability = p.stability;
   if (p.turnEagerness !== undefined) patch.turnEagerness = p.turnEagerness;
+  if (p.turnTimeout !== undefined) patch.turnTimeout = p.turnTimeout;
+  if (p.softTimeoutSecs !== undefined) patch.softTimeoutSecs = p.softTimeoutSecs;
+  if (p.softTimeoutMsg !== undefined) patch.softTimeoutMsg = p.softTimeoutMsg;
   if (p.llm !== undefined && p.llm !== "") patch.llm = p.llm;
   // Re-push always re-asserts the full known-good config (prompt + LLM + tokens) so the agent can't drift.
   if (p.pushPrompt) {
@@ -353,7 +357,7 @@ export async function cloneVoice(name: string, files: File[]) {
 // The bench agent is a clone of the live restock agent (same prompt/brain/extraction). Draft
 // tuning + Test Bench self-calls run on it, so the owner hears EXACTLY what a store would —
 // but live store calls are untouched until the explicit "Apply to all stores" push.
-const SANDBOX_FIELDS = ["speed", "stability", "style", "speakerBoost", "latency", "modelId", "turnEagerness"] as const;
+const SANDBOX_FIELDS = ["speed", "stability", "style", "speakerBoost", "latency", "modelId", "turnEagerness", "turnTimeout", "softTimeoutSecs", "softTimeoutMsg"] as const;
 
 function benchAgent(): string {
   if (!config.voice.benchAgentId) throw new Error("Test-bench agent not configured (ELEVENLABS_BENCH_AGENT_ID)");
@@ -371,6 +375,9 @@ export async function getSandboxTuning() {
     latency: t.latency ?? 4,
     modelId: t.modelId ?? "eleven_turbo_v2",
     turnEagerness: t.turnEagerness ?? "normal",
+    turnTimeout: t.turnTimeout ?? null,
+    softTimeoutSecs: t.softTimeoutSecs ?? null,
+    softTimeoutMsg: t.softTimeoutMsg ?? "",
     llm: t.llm ?? VOICE_DEFAULTS.llm,
     opening: (await getSetting("vt_opening_draft")) ?? ((await getSetting("vt_opening")) || DEFAULT_OPENER),
   };
@@ -385,6 +392,9 @@ export async function getLiveVoice() {
     latency: t.latency ?? 4,
     modelId: t.modelId ?? "eleven_turbo_v2",
     turnEagerness: t.turnEagerness ?? "normal",
+    turnTimeout: t.turnTimeout ?? null,
+    softTimeoutSecs: t.softTimeoutSecs ?? null,
+    softTimeoutMsg: t.softTimeoutMsg ?? "",
     llm: t.llm ?? VOICE_DEFAULTS.llm,
     opening: (await getSetting("vt_opening")) || DEFAULT_OPENER,
   };
@@ -407,6 +417,8 @@ export async function applySandboxToStores() {
     speed: t.speed, stability: t.stability, style: t.style,
     speakerBoost: t.speakerBoost, latency: t.latency, modelId: t.modelId,
     turnEagerness: t.turnEagerness, llm: t.llm,
+    ...(t.turnTimeout != null ? { turnTimeout: t.turnTimeout } : {}),
+    ...(t.softTimeoutSecs != null ? { softTimeoutSecs: t.softTimeoutSecs, softTimeoutMsg: t.softTimeoutMsg } : {}),
   };
   const targets = [config.voice.agentId, config.voice.carryAgentId].filter(Boolean) as string[];
   for (const id of targets) await provider.updateAgent(id, patch);

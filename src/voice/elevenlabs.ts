@@ -112,6 +112,11 @@ export class ElevenLabsProvider implements VoiceProvider {
       // slowest "patient" setting, which waits for a confirmed pause (good for the opening).
       turn.speculative_turn = patch.turnEagerness !== "patient";
     }
+    if (patch.turnTimeout !== undefined) turn.turn_timeout = patch.turnTimeout; // silence (s) before the agent jumps in
+    if (patch.softTimeoutSecs !== undefined) {
+      // Presence filler on a long pause; -1 disables it. Keeps the line from feeling dead.
+      turn.soft_timeout_config = { timeout_seconds: patch.softTimeoutSecs, message: patch.softTimeoutMsg ?? "Yeah—hi, I'm here!", use_llm_generated_message: false };
+    }
     if (Object.keys(turn).length) conversation_config.turn = turn;
 
     const tts: Record<string, unknown> = {};
@@ -171,6 +176,9 @@ export class ElevenLabsProvider implements VoiceProvider {
       style: n(tts.style), speakerBoost: typeof tts.use_speaker_boost === "boolean" ? tts.use_speaker_boost : undefined,
       latency: n(tts.optimize_streaming_latency), modelId: typeof tts.model_id === "string" ? tts.model_id : undefined,
       turnEagerness: typeof turn.turn_eagerness === "string" ? turn.turn_eagerness : undefined,
+      turnTimeout: n(turn.turn_timeout),
+      softTimeoutSecs: n((turn.soft_timeout_config as { timeout_seconds?: number } | undefined)?.timeout_seconds),
+      softTimeoutMsg: typeof (turn.soft_timeout_config as { message?: string } | undefined)?.message === "string" ? (turn.soft_timeout_config as { message?: string }).message : undefined,
       llm: d.conversation_config?.agent?.prompt?.llm,
     };
   }
