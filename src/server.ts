@@ -723,7 +723,7 @@ app.get("/pub/stores/near", async (c) => {
         carries: (r.carries ?? "").split(",").map((s) => s.trim()).filter(Boolean),
         lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
         sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
-        tier: r.tier ?? null, inStock: confirmedSet.has(r.id), // tier = "best near you" grouping; inStock = brand-check pin
+        tier: r.hasKiosk === true ? 5 : (r.tier ?? null), inStock: confirmedSet.has(r.id), // any kiosk store = tier 5; inStock = brand-check pin
         callable: callable(r),
         stockCheckMethod: (r.chainId && stockMethod.get(r.chainId)) || "call", // site = check their site, no call needed
         // Sell-methods taxonomy: how to get it (chain default), online flag, and price/source.
