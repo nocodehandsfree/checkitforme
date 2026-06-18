@@ -72,10 +72,10 @@
   select option{background:#15151f;color:#e8e8f0;font-weight:500}
   label{display:block;font-size:12px;color:#9a9aac;margin:12px 0 5px;font-weight:600;letter-spacing:0;text-transform:none}
   /* unified custom checkbox — brand green when checked, everywhere */
-  input[type=checkbox]{appearance:none;-webkit-appearance:none;width:16px;height:16px;min-width:16px;border:1.5px solid rgba(255,255,255,.26);border-radius:5px;background:var(--terminal);cursor:pointer;flex:0 0 auto;position:relative;transition:background .12s,border-color .12s;vertical-align:middle;accent-color:var(--green);margin:0}
+  input[type=checkbox]{appearance:none;-webkit-appearance:none;width:15px;height:15px;min-width:15px;border:1.5px solid rgba(255,255,255,.26);border-radius:5px;background:var(--terminal);cursor:pointer;flex:0 0 auto;position:relative;transition:background .12s,border-color .12s;vertical-align:middle;accent-color:var(--green);margin:0}
   input[type=checkbox]:hover{border-color:rgba(255,255,255,.45)}
   input[type=checkbox]:checked{background:var(--green);border-color:var(--green)}
-  input[type=checkbox]:checked::after{content:'';position:absolute;left:4.5px;top:1px;width:4px;height:8px;border:solid #06210f;border-width:0 2.2px 2.2px 0;transform:rotate(45deg)}
+  input[type=checkbox]:checked::after{content:'';position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #06210f;border-width:0 2.2px 2.2px 0;transform:rotate(45deg)}
   /* directional copy inside inputs: small, italic, very light — clearly just a hint */
   input::placeholder,textarea::placeholder{color:#56566a;font-style:italic;font-size:13px;font-weight:400}
   /* report group label (Funnel / Activity / …) */
@@ -86,11 +86,11 @@
   .empty{color:var(--muted);font-size:13px;padding:30px;text-align:center}
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--sheet);border:1px solid var(--border);padding:12px 18px;border-radius:12px;font-size:13px;opacity:0;transition:.2s}
   .toast.show{opacity:1}
-  /* Tooltip system: any element with data-tip shows a hover bubble (no more bare, unexplained controls). */
-  [data-tip]{position:relative}
-  [data-tip]:hover::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 9px);transform:translateX(-50%);background:#06060a;color:#e8e8f2;font-size:12px;font-weight:500;line-height:1.45;text-transform:none;letter-spacing:0;white-space:normal;width:max-content;max-width:240px;padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.14);box-shadow:0 10px 28px rgba(0,0,0,.55);z-index:60;pointer-events:none}
-  [data-tip]:hover::before{content:"";position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%);border:5px solid transparent;border-top-color:#06060a;z-index:60;pointer-events:none}
-  @media (hover:none){[data-tip]:hover::after,[data-tip]:hover::before{display:none}}
+  /* Tooltip: TAP to show (works on mobile — hover doesn't exist on touch). A small ⓘ marks tappable hints. */
+  [data-tip]{cursor:help}
+  label[data-tip],span[data-tip],.name[data-tip],b[data-tip]{display:inline-flex;align-items:center;gap:4px}
+  [data-tip]::after{content:"ⓘ";font-size:.78em;color:#6b6b7b;font-style:normal;font-weight:600;line-height:1}
+  #tiptip{position:fixed;z-index:9000;max-width:262px;background:#06060a;color:#e8e8f2;font:500 12.5px/1.45 Inter,-apple-system,sans-serif;font-style:normal;padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 30px rgba(0,0,0,.6)}
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:16px}
@@ -100,6 +100,8 @@
   .stat.green .n{color:var(--green)}
   /* God-view "Today" hero: the day's vitals, above the fold */
   .hero{background:linear-gradient(180deg,rgba(74,222,128,.06),rgba(74,222,128,0));border:1px solid rgba(74,222,128,.18);border-radius:18px;padding:16px 20px 18px;margin-bottom:16px}
+  /* Every REPORT card uses the same subtle neon-green box as the God-view TODAY box (coherence). */
+  .card.report{background:linear-gradient(180deg,rgba(74,222,128,.055),rgba(74,222,128,0));border-color:rgba(74,222,128,.18)}
   .hero-eyebrow{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--green);margin-bottom:14px}
   .hero .stats{margin-bottom:0}
   /* TODAY hero uses the SAME rounded stat boxes as every other report — only the green-tint card + eyebrow mark it as "today" */
@@ -134,13 +136,13 @@
   .stico-prev{display:grid;place-items:center;width:34px;height:42px;background:rgba(255,255,255,.05)}
   .stico-key{width:48px;height:42px;text-align:center;border:none!important;border-radius:0!important;background:transparent!important;font-size:16px}
   /* stores: row select + bulk-action bar */
-  .rowchk{margin-top:6px;width:17px;height:17px;flex:0 0 auto;accent-color:var(--purple)}
+  .rowchk{margin-top:3px;width:15px;height:15px;flex:0 0 auto}
   .card.selrow{border-color:rgba(167,139,250,.5);box-shadow:inset 0 0 0 1px rgba(167,139,250,.22)}
   .bulkbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:12px;padding:9px 14px;margin-bottom:12px}
   .bulkbar .bchk{display:inline-flex;align-items:center;gap:7px;color:#fff;font-weight:700;font-size:13px;cursor:pointer}
-  .bulkbar .bchk input{width:17px;height:17px;accent-color:var(--purple)}
+  .bulkbar .bchk input{width:15px;height:15px}
   .daypick{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
-  .day{display:flex;align-items:center;gap:6px;font-size:12px;background:var(--terminal);border:1px solid var(--border);padding:8px 12px;border-radius:9px;cursor:pointer;color:#fff;user-select:none}
+  .day{display:flex;align-items:center;gap:7px;font-size:12.5px;background:transparent;border:none;padding:5px 4px;cursor:pointer;color:#cfcfd8;user-select:none}
   .day input{width:auto;accent-color:var(--green)}
   #signinwrap{display:flex;justify-content:center;align-items:flex-start;padding:40px 16px;min-height:60vh}
   @media (max-width:820px){
@@ -211,8 +213,8 @@
   details.tr{margin-top:10px}
   details.tr>summary{list-style:none;cursor:pointer;font-size:12px;color:var(--purple);font-weight:700;display:inline-flex;align-items:center;gap:6px}
   details.tr>summary::-webkit-details-marker{display:none}
-  .daychip{display:inline-block;font-size:10.5px;font-weight:800;color:#cfcfd8;background:var(--terminal);border:1px solid var(--border);border-radius:7px;padding:3px 7px;margin-right:4px}
-  .daychip.on{color:var(--green);border-color:rgba(74,222,128,.4);background:rgba(74,222,128,.08)}
+  .daychip{display:inline-block;font-size:11px;font-weight:700;color:#62626f;background:transparent;border:none;border-radius:0;padding:0;margin-right:9px;letter-spacing:.2px}
+  .daychip.on{color:var(--green);background:transparent;border:none}
   .catchip{display:inline-flex;align-items:center;gap:8px;background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:12px 16px;font-weight:800;font-size:14px}
   .empty{color:var(--muted);font-size:13px;padding:34px 20px;text-align:center;background:var(--sheet);border:1px dashed var(--border);border-radius:16px}
   body.authwait header,body.authwait nav,body.authwait main,body.authwait .agent-fab,body.authwait .agent-panel{display:none}
@@ -299,11 +301,11 @@
       <div class="hero-eyebrow">Today</div>
       <div class="stats" id="d_today"></div>
     </div>
-    <div class="card">
+    <div class="card report">
       <div class="name" style="margin-bottom:8px">Today's pulse</div>
       <div id="gw_pulse" class="meta">Loading…</div>
     </div>
-    <div class="card" id="d_money_card">
+    <div class="card report" id="d_money_card">
       <div class="name" style="margin-bottom:12px">Business &amp; money</div>
       <div class="stats" id="d_money" style="margin-bottom:0"></div>
     </div>
@@ -325,7 +327,7 @@
         </div>
       </div>
     </div>
-    <details class="card" id="d_timing_card">
+    <details class="card report" id="d_timing_card">
       <summary style="cursor:pointer"><span class="name">Call time &amp; cost</span></summary>
       <div class="meta" style="margin:10px 0 8px">Time-to-human (phone-tree nav) vs. talk — ElevenLabs bills the whole connected call, so nav + hold is real cost.</div>
       <div class="stats" id="d_timing" style="margin-bottom:6px"></div>
@@ -383,7 +385,7 @@
     </div>
     <div id="retailerList"></div>
     <details class="card" id="map_card" ontoggle="if(this.open){ensureMap();loadMap();}" style="margin-top:16px">
-      <summary><span class="name">Map these results</span> <span class="hint">green = in · red = not in · amber = unclear · gray = uncalled</span></summary>
+      <summary><span class="name" data-tip="green = in · red = not in · amber = unclear · gray = uncalled">Map these results</span></summary>
       <div style="margin:12px 0 10px"><button class="ghost" onclick="locateMe()">Zoom to my location</button></div>
       <div id="leafletmap"></div>
     </details>
@@ -396,7 +398,16 @@
         <div><label>Name</label><input id="r_name" placeholder="Barnes & Noble — Brentwood"></div>
         <div><label>Phone (E.164)</label><input id="r_phone" placeholder="+13105551234"></div>
         <div><label>Location</label><input id="r_loc" placeholder="Brentwood, TN"></div>
-        <div><label>Timezone</label><input id="r_tz" value="America/Los_Angeles"></div>
+        <div><label>Timezone</label><select id="r_tz">
+          <option value="" disabled selected>Select a timezone…</option>
+          <option value="America/New_York">Eastern — America/New_York</option>
+          <option value="America/Chicago">Central — America/Chicago</option>
+          <option value="America/Denver">Mountain — America/Denver</option>
+          <option value="America/Phoenix">Arizona (no DST) — America/Phoenix</option>
+          <option value="America/Los_Angeles">Pacific — America/Los_Angeles</option>
+          <option value="America/Anchorage">Alaska — America/Anchorage</option>
+          <option value="Pacific/Honolulu">Hawaii — Pacific/Honolulu</option>
+        </select></div>
       </div>
       <label data-tip="How to reach the right person">Phone tree</label>
       <textarea id="r_tree" rows="2" placeholder="When asked if you're a healthcare provider, say no. Then ask for the front store."></textarea>
@@ -443,7 +454,7 @@
         <label class="day"><input type="checkbox" value="6">Sat</label>
       </div>
       <label>Question</label>
-      <input id="s_q" value="Hi! I was just checking to see if you got a {category} shipment in today?">
+      <textarea id="s_q" rows="2" style="font-size:14px">Hi! I was just checking to see if you got a {category} shipment in today?</textarea>
       <label>Clarification / what doesn't count</label>
       <textarea id="s_clar" rows="2" placeholder="Sealed packs/tins/boxes from The Pokémon Company. Repackaged or off-brand does NOT count."></textarea>
       <div style="margin-top:12px"><button class="act" onclick="addSchedule()">Create</button></div>
@@ -454,15 +465,15 @@
   <section id="catalog"><h2>Tracked categories</h2><div id="catList"><div class="empty">Loading…</div></div></section>
   <section id="receipts">
     <h2>Kiosk</h2>
-    <div class="card">
+    <div class="card report">
       <div class="name" style="margin-bottom:4px">Restock intel</div>
       <div id="gw_intel" class="meta">Loading…</div>
     </div>
-    <div class="card">
+    <div class="card report">
       <div class="name" style="margin-bottom:4px">Kiosk intel</div>
       <div id="gw_kiosks" class="meta">Loading…</div>
     </div>
-    <div class="card">
+    <div class="card report">
       <div class="name" style="margin-bottom:4px">Emailed-in receipts</div>
       <div class="meta" id="rcpt_status" style="margin-bottom:8px">Loading…</div>
       <div id="rcptList"><div class="empty">Loading…</div></div>
@@ -528,16 +539,11 @@
   <section id="bench">
     <h2>Test</h2>
     <div id="pb_bench">
-      <div class="card" id="live_strip" style="padding:10px 14px;border-color:rgba(74,222,128,.35)">
-        <div class="meta" style="line-height:1.6"><b style="color:var(--green)">Live on store calls</b> <span id="ls_vals">loading…</span></div>
-        <div class="meta" id="ls_draft" style="display:none;color:#FBBF24;margin-top:4px">● Your draft differs from LIVE — store calls keep using the settings above until you apply.</div>
-      </div>
-
-      <details class="card" id="tb_voice_card">
-        <summary><span class="name">Step 2 · Persona &amp; script <span class="chip-draft">DRAFT</span></span></summary>
+      <details class="card" id="tb_voice_card" open>
+        <summary><span class="name">Step 1 · Persona &amp; script <span class="chip-draft">DRAFT</span></span></summary>
         <div class="meta" style="margin:10px 0 12px">Edits a <b>draft</b> — real store calls are untouched until you <b>Apply to ALL store calls</b>. Hear it with Call me below.</div>
         <label data-tip="Use {category} — it fills in Pokémon, One Piece, etc.">Opening line</label>
-        <input id="tb_opening" placeholder="Heyy! I was just checking to see if you guys got any {category} in?" oninput="updateDraftDot()">
+        <textarea id="tb_opening" rows="2" style="font-size:14px" placeholder="Heyy! I was just checking to see if you guys got any {category} in?" oninput="updateDraftDot()"></textarea>
         <label data-tip="Left = slower &amp; calmer · right = quicker">Speed <span id="sb_speed_val" class="hint" style="font-style:normal"></span></label>
         <input id="sb_speed" type="range" min="0.7" max="1.2" step="0.01" style="width:100%" oninput="sbLabels()">
         <label data-tip="Left = warmer, more inflection · right = steadier, flatter">Warmth <span id="sb_stability_val" class="hint" style="font-style:normal"></span></label>
@@ -550,12 +556,12 @@
           <option value="eager">Eager — fastest replies (may cut people off)</option>
           <option value="patient">Patient — long beat, waits for a clear pause (slowest)</option>
         </select>
-        <label>Voice model <span style="color:var(--muted)">— English agents support turbo or flash v2 only</span></label>
+        <label data-tip="English agents support turbo or flash v2 only">Voice model</label>
         <select id="sb_model" onchange="updateDraftDot()">
           <option value="eleven_turbo_v2">Turbo v2 — natural (recommended)</option>
           <option value="eleven_flash_v2">Flash v2 — fastest, most robotic (IVR/testing)</option>
         </select>
-        <label>Agent brain (LLM) <span style="color:var(--muted)">— Sonnet 4.6 = best quality; Haiku / GPT-4o-mini / Gemini Flash = cheaper &amp; faster</span></label>
+        <label data-tip="Sonnet 4.6 = best quality; Haiku / GPT-4o-mini / Gemini Flash = cheaper & faster">Agent brain (LLM)</label>
         <select id="sb_llm" onchange="updateDraftDot()">
           <optgroup label="Claude (Anthropic)">
             <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — best quality (recommended)</option>
@@ -574,7 +580,7 @@
             <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
           </optgroup>
         </select>
-        <label>📚 Saved scripts <span style="color:var(--muted)">— save a profile you like, load it back into the draft anytime</span></label>
+        <label data-tip="Save a profile you like, load it back into the draft anytime">Saved scripts</label>
         <div class="row" style="gap:8px">
           <select id="vt_preset" style="flex:1"><option value="">— saved scripts —</option></select>
           <button class="ghost" onclick="loadPreset()">Load</button>
@@ -593,20 +599,22 @@
         <button class="act" onclick="pushSandboxToStores()">✅ Apply to ALL store calls</button>
         <div class="meta" style="margin-top:6px;color:var(--muted)">The one global switch — copies this draft (voice + opener + brain) onto the live restock + carry agents. Until you press it, store calls don't change.</div>
         <div class="row" style="margin-top:10px"><button class="ghost" onclick="resetScript()">Reset agent script to default</button></div>
+        <div style="margin-top:16px;text-align:right"><button class="ghost" onclick="wizStep('tb_rotate_card')" style="font-weight:600">Next: Rotation →</button></div>
       </details>
 
       <details class="card" id="tb_rotate_card">
-        <summary><span class="name">Step 3 · Rotation</span></summary>
+        <summary><span class="name">Step 2 · Rotation</span></summary>
         <div class="meta" style="margin:10px 0 8px">Live store calls round-robin through these. Leave empty to use the single live voice/opener.</div>
-        <label>Opener variants <span style="color:var(--muted)">— one per line; <code>{category}</code> fills in. The agent uses the next line each call.</span></label>
+        <label data-tip="One per line; {category} fills in. The agent uses the next line each call.">Opener variants</label>
         <textarea id="rot_openers" rows="4" style="width:100%;font-family:inherit;font-size:13px;background:var(--terminal);color:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;box-sizing:border-box" placeholder="Heyy! Got any {category} in today?&#10;Hi! Quick one — any {category} land recently?&#10;Hey there! Checking if {category} is in stock?"></textarea>
-        <label style="margin-top:10px">Voice pool <span style="color:var(--muted)">— tick the voices to rotate through</span></label>
+        <label style="margin-top:10px" data-tip="Tick the voices to rotate through">Voice pool</label>
         <div id="rot_voices" class="meta" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px">Loading voices…</div>
         <div class="row" style="margin-top:12px;gap:8px"><button class="act" onclick="saveRotation(this)">Save rotation</button><span class="meta" id="rot_msg"></span></div>
+        <div style="margin-top:16px;text-align:right"><button class="ghost" onclick="wizStep('tb_call_card')" style="font-weight:600">Next: Test it →</button></div>
       </details>
 
-      <details class="card" id="tb_call_card" open>
-        <summary><span class="name">Step 4 · Test it</span></summary>
+      <details class="card" id="tb_call_card">
+        <summary><span class="name">Step 3 · Test it</span></summary>
         <div class="hint" style="margin:8px 0 14px">Answer your phone like the clerk. Runs the draft voice with this store's phone-tree rules; the result records against the store.</div>
         <label data-tip="Records the result against this store">Store</label>
         <select id="sim_store" onchange="previewMaybe()"></select>
@@ -658,8 +666,7 @@
     <h2>Mute chains</h2>
     <div id="pb_trees">
     <div class="card" style="border-color:rgba(167,139,250,.3)">
-      <div class="name" style="margin-bottom:4px">Phone trees</div>
-      <div class="meta" style="margin-bottom:14px">How the agent gets through a chain's menu to a person. Set once per chain → applies to every store.</div>
+      <div class="name" style="margin-bottom:14px" data-tip="How the agent gets through a chain's menu to a person. Set once per chain → applies to every store.">Phone trees</div>
       <label>Chain</label>
       <select id="pt_chain" onchange="loadChainTree()"></select>
       <label style="margin-top:10px">Navigation steps</label>
@@ -674,7 +681,7 @@
             <option value="simple_ivr">Simple IVR — 1–2 steps</option>
             <option value="deep_ivr">Deep IVR — long tree</option>
           </select></div>
-        <div><label>Avg tree seconds <span style="color:var(--muted)">— time burned before a human</span></label>
+        <div><label data-tip="Time burned before a human">Avg tree seconds</label>
           <input id="pt_treesecs" type="number" min="0" placeholder="e.g. 45"></div>
       </div>
       <div class="row" style="margin-top:10px;gap:14px;flex-wrap:wrap">
@@ -689,8 +696,7 @@
     </div>
 
     <div class="card">
-      <div class="name" style="margin-bottom:4px">All chains</div>
-      <div class="meta" style="margin-bottom:8px">Mute a chain → all its stores vanish from every city for consumers, instantly.</div>
+      <div class="name" style="margin-bottom:10px" data-tip="Mute a chain → all its stores vanish from every city for consumers, instantly.">All chains</div>
       <input id="pt_chainfilter" placeholder="Filter chains — e.g. Ralph's…" oninput="chainFilter(this.value)" style="margin-bottom:6px">
       <div id="pt_chainlist" class="meta">Loading…</div>
     </div>
@@ -698,11 +704,10 @@
     </section>
 
     <section id="treelab">
-    <h2>Phone Trees</h2>
-    <div class="hint" style="margin:-6px 0 14px">How the agent gets past each brand's phone menu to a human — the keypad/voice route to a person. <b style="color:var(--yellow);font-style:normal">Calls here are real.</b></div>
+    <h2 data-tip="How the agent gets past each brand's phone menu to a human — the keypad/voice route to a person.">Phone Trees</h2>
+    <div style="margin:-2px 0 16px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--yellow);background:rgba(244,208,61,.1);border:1px solid rgba(244,208,61,.32);padding:5px 11px;border-radius:9px">Documenting a route places a real phone call</span></div>
     <div class="card">
-      <div class="name" style="margin-bottom:6px">Auto-learn a route <span class="hint">— Trainer</span></div>
-      <div class="hint" style="margin-bottom:10px">Tap Document on a chain — our cheap navigator calls a store, works the menu until a person answers, records the recipe + time. Watch it live, then Lock it.</div>
+      <div class="name" style="margin-bottom:10px" data-tip="Tap Document on a chain — our cheap navigator calls a store, works the menu until a person answers, then records the recipe + time. Watch it live, then Lock it.">Auto-learn a route</div>
       <div class="row" style="gap:8px;margin-top:2px;align-items:center;flex-wrap:wrap">
         <button class="ghost" onclick="loadTrainer()">↻ Refresh</button>
         <button class="ghost" data-tip="One tiny live call through Helicone on the cheap nav model — no phone call placed" onclick="testHelicone()">Test Helicone routing</button>
@@ -720,7 +725,7 @@
     </div>
     <div id="tr_list"><div class="empty">Loading…</div></div>
     <details class="card" style="margin-top:16px">
-      <summary><span class="name">Batch discover / verify <span class="hint">— Lab</span></span></summary>
+      <summary><span class="name">Batch discover / verify</span></summary>
       <div class="hint" style="margin:10px 0">Discover routes for unmapped brands or re-verify mapped ones from call transcripts (<b id="tl_model" style="font-style:normal">the cheapest model</b>).</div>
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
         <input id="tl_count" type="number" min="1" max="25" value="5" style="max-width:78px" data-tip="how many brands">
@@ -763,8 +768,7 @@
   <section id="labs">
     <h2>Create</h2>
     <div class="card" id="voicestudio">
-      <div class="name" style="margin-bottom:4px">Step 1 · Voice</div>
-      
+      <div class="name" style="margin-bottom:10px">Voice</div>
       <label>Live store voice</label>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <select id="vs_select" style="flex:1;min-width:180px"></select>
@@ -860,6 +864,26 @@ function showAuthGate(){
   document.body.appendChild(d);
 }
 const toast = (m) => { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); };
+// Tap-to-show tooltip — works on mobile (hover doesn't). Tap a hint → bubble; tap again/elsewhere → gone.
+let _tipFor=null;
+document.addEventListener('click',e=>{
+  const ex=document.getElementById('tiptip'); if(ex) ex.remove();
+  const t=e.target.closest('[data-tip]');
+  if(!t || t===_tipFor){ _tipFor=null; return; }
+  _tipFor=t;
+  const tip=document.createElement('div'); tip.id='tiptip'; tip.textContent=t.getAttribute('data-tip');
+  document.body.appendChild(tip);
+  const r=t.getBoundingClientRect(), b=tip.getBoundingClientRect();
+  let top=r.top-b.height-8; if(top<6) top=r.bottom+8;
+  let left=Math.max(8,Math.min(r.left,window.innerWidth-b.width-8));
+  tip.style.top=top+'px'; tip.style.left=left+'px';
+  setTimeout(()=>{ if(_tipFor===t){ const x=document.getElementById('tiptip'); if(x) x.remove(); _tipFor=null; } },5000);
+},false);
+// Voice wizard: open one step, close the rest, scroll to it.
+function wizStep(id){
+  ['tb_voice_card','tb_rotate_card','tb_call_card'].forEach(x=>{ const d=document.getElementById(x); if(d) d.open=(x===id); });
+  const t=document.getElementById(id); if(t){ t.open=true; try{ t.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }
+}
 let CATEGORIES = [];
 
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
@@ -936,23 +960,25 @@ async function loadTrainer(){
   const d=await api('/api/admin/trainer/list');
   if(!d||!Array.isArray(d.chains)){ list.innerHTML='<div class="empty">Could not load.</div>'; return; }
   const locked=d.chains.filter(c=>c.navStatus==='locked').length;
-  const prog=document.getElementById('tr_progress'); if(prog) prog.innerHTML=`🔒 <b>${locked}</b> / ${d.chains.length} locked`;
-  const BADGE={locked:['🔒','var(--green)'],review:['👀','var(--purple)'],learning:['🟡','#FBBF24'],unmapped:['⚪','var(--muted)']};
-  const TYPE={direct:'🟢 direct',keypad:'🔢 keypad',voice:'🗣 voice'};
+  const prog=document.getElementById('tr_progress'); if(prog) prog.innerHTML=`<b style="color:var(--green)">${locked}</b> / ${d.chains.length} locked`;
+  const DOTC={locked:'var(--green)',review:'var(--purple)',learning:'#FBBF24',unmapped:'#7a7a86'};
+  const TYPE={direct:'direct',keypad:'keypad',voice:'voice'};
   list.innerHTML=d.chains.map(c=>{
-    const m=BADGE[c.navStatus]||BADGE.unmapped;
+    const col=DOTC[c.navStatus]||DOTC.unmapped;
+    const dot=`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};vertical-align:middle;margin-right:6px"></span>`;
     const tc=c.navType?` <span class="chip-type">${TYPE[c.navType]||esch(c.navType)}</span>`:'';
     const time=c.navSeconds!=null?` · <b>${c.navSeconds}s</b> to human`:'';
     const imp=(c.navLog&&c.navLog.length>1)?` <span class="meta">(${c.navLog[0]}s→${c.navLog[c.navLog.length-1]}s)</span>`:'';
-    const btn=c.callable>0?`<button class="${c.navStatus==='locked'?'ghost':'act'}" data-doc="${c.id}" data-name="${esch(c.name)}">${c.navStatus==='unmapped'?'Document':'Re-run'}</button>`:'<span class="meta">no phone</span>';
-    return `<div class="card"><div class="row" style="justify-content:space-between;align-items:center;gap:10px">
-      <div style="min-width:0"><div class="name">${esch(c.name)}${tc}</div>
-      <div class="meta"><span style="color:${m[1]};font-weight:700">${m[0]} ${esch(c.navStatus)}</span>${time}${imp}</div></div>
-      <div style="flex:0 0 auto">${btn}</div></div></div>`;
+    const btn=c.callable>0?`<button class="${c.navStatus==='locked'?'ghost':'act'}" data-doc="${c.id}" data-name="${esch(c.name)}" style="flex:0 0 auto">${c.navStatus==='unmapped'?'Document':'Re-run'}</button>`:'<span class="meta" style="flex:0 0 auto">no phone</span>';
+    return `<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:nowrap">
+      <div style="flex:1 1 auto;min-width:0"><div class="name" style="overflow-wrap:anywhere">${esch(c.name)}${tc}</div>
+      <div class="meta" style="margin-top:2px">${dot}<span style="color:${col};font-weight:700">${esch(c.navStatus)}</span>${time}${imp}</div></div>
+      ${btn}</div></div>`;
   }).join('')||'<div class="empty">No chains.</div>';
   list.querySelectorAll('[data-doc]').forEach(b=>b.onclick=()=>trDocument(+b.dataset.doc,b.dataset.name));
 }
 async function trDocument(chainId,name){
+  if(!confirm('Place a REAL call to a '+name+' store now? The nav-learner will dial it to map the phone menu.')) return;
   TR_CHAIN=chainId; TR_STORE=name; TR_RESULT=null;
   const live=document.getElementById('tr_live'); live.style.display='';
   document.getElementById('tr_live_store').textContent=name;
@@ -1100,7 +1126,7 @@ let VS_REC=null, VS_CHUNKS=[], VS_BLOB=null, VS_TIMER=null;
 async function loadVoices(){
   const sel=document.getElementById('vs_select'); if(!sel) return;
   const d=await api('/api/voices'); if(!d||d.error){ sel.innerHTML='<option>could not load voices</option>'; return; }
-  sel.innerHTML=(d.voices||[]).map(v=>`<option value="${v.id}" ${v.id===d.active?'selected':''}>${esch(v.name)}${v.cloned?' (cloned)':''}</option>`).join('');
+  sel.innerHTML='<option value="" disabled selected>Choose a voice…</option>'+(d.voices||[]).map(v=>`<option value="${v.id}">${esch(v.name)}${v.cloned?' (cloned)':''}${v.id===d.active?' — LIVE now':''}</option>`).join('');
   const act=(d.voices||[]).find(v=>v.id===d.active);
   document.getElementById('vs_active').textContent = act?`Live now: ${act.name}`:`Live voice id: ${d.active}`;
   // Mirror the voice list into the "Call me" + "Talk to me" pickers (test a clone without going live).
@@ -1383,7 +1409,7 @@ function renderRetailers(){
       ${statusBadge(r)}
     </div>
     <div class="ractions">
-      <select id="cn_${r.id}">${CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
+      <select id="cn_${r.id}"><option value="" disabled selected>Category…</option>${CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
       <button class="act" onclick="callNow(${r.id})">${ICO('phone',15)} Call now</button>
     </div>
   </div>`;}).join('');
@@ -1401,10 +1427,10 @@ async function labCall(){
 // --- Store simulator: agent calls YOUR phone; result records against the chosen store ---
 function fillSimSelects(){
   const ss=document.getElementById('sim_store'); if(ss){ const cur=ss.value;
-    ss.innerHTML=RETAILERS.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(r=>`<option value="${r.id}">${r.name}${r.location?' — '+r.location:''}</option>`).join('');
+    ss.innerHTML='<option value="" disabled selected>Choose a store…</option>'+RETAILERS.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(r=>`<option value="${r.id}">${r.name}${r.location?' — '+r.location:''}</option>`).join('');
     if(cur) ss.value=cur; }
   const sc=document.getElementById('sim_cat'); if(sc){ const cur=sc.value;
-    sc.innerHTML=CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
+    sc.innerHTML='<option value="" disabled selected>Choose a category…</option>'+CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
     if(cur) sc.value=cur; }
 }
 
@@ -1772,22 +1798,22 @@ function renderStatuses(list){
   const el=document.getElementById('st_list'); if(!el) return;
   const rows=(list||Object.values(STATUSES)).slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
   el.innerHTML = rows.length ? rows.map(s=>`
-    <div class="card" style="padding:10px 12px;margin-bottom:8px" data-sid="${s.id}">
-      <div class="row" style="gap:8px;align-items:center">
-        <span style="width:42px;height:42px;display:grid;place-items:center;flex:0 0 auto;background:var(--terminal);border:1px solid var(--border);border-radius:9px">${vmark(s.emoji,s.color||s.tone,24)}</span>
-        <input value="${escH(s.emoji)}" data-f="emoji" style="width:46px;height:42px;text-align:center;font-size:18px;flex:0 0 auto" data-tip="emoji — we draw it as the icon shown on the left">
-        <input value="${escH(s.label)}" data-f="label" style="flex:1" placeholder="Label">
-        <input type="color" value="${escH(s.color)}" data-f="color" style="width:46px;height:42px;padding:2px;border-radius:8px;border:1px solid var(--border);background:none">
+    <div class="card" style="padding:12px;margin-bottom:8px" data-sid="${s.id}">
+      <div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap">
+        <span style="width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;background:var(--terminal);border:1px solid var(--border);border-radius:10px">${vmark(s.emoji,s.color||s.tone,24)}</span>
+        <input value="${escH(s.label)}" data-f="label" style="flex:1;min-width:0" placeholder="Label">
+        <input type="color" value="${escH(s.color)}" data-f="color" style="width:40px;height:40px;padding:2px;border-radius:9px;border:1px solid var(--border);background:none;flex:0 0 auto" data-tip="Verdict color the customer sees">
       </div>
-      <input value="${escH(s.note)}" data-f="note" placeholder="one-line note the customer sees" style="margin-top:6px">
-      <div class="row" style="gap:8px;margin-top:6px;align-items:center">
-        <select data-f="tone" style="max-width:140px">
+      <input value="${escH(s.note)}" data-f="note" placeholder="One-line note the customer sees" style="margin-top:8px">
+      <div class="row" style="gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
+        <input value="${escH(s.emoji)}" data-f="emoji" style="width:60px;text-align:center;flex:0 0 auto" data-tip="Icon source — type one of our marks (✓ ✕ truck …); we redraw it as the icon on the left, never a raw emoji.">
+        <select data-f="tone" style="flex:0 0 auto;max-width:150px">
           <option value="unk"${s.tone==='unk'?' selected':''}>neutral</option>
           <option value="in"${s.tone==='in'?' selected':''}>green — go</option>
           <option value="out"${s.tone==='out'?' selected':''}>red — no-go</option>
         </select>
-        <span class="meta" style="flex:1;overflow:hidden;text-overflow:ellipsis">key: <code>${escH(s.key)}</code></span>
-        <button class="ghost" onclick="saveStatus(${s.id},this)">Save</button>
+        <span class="meta" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">key: <code>${escH(s.key)}</code></span>
+        <button class="ghost" onclick="saveStatus(${s.id},this)" style="flex:0 0 auto">Save</button>
       </div>
     </div>`).join('') : '<div class="empty">No statuses yet.</div>';
 }
@@ -1813,6 +1839,7 @@ async function addStatus(){
 function pbTab(name){ showSection(name); } // Test Bench / Phone Trees / Statuses are now top-level sections
 async function callNow(id){
   const catId = Number(document.getElementById('cn_'+id).value);
+  if(!catId){ toast('Pick a category first'); return; }
   toast('Dialing…');
   await api('/api/call-now',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:id,categoryId:catId})});
   toast('Call placed — result will appear shortly.');
@@ -1894,7 +1921,7 @@ async function addSchedule(){
   const days=[...document.querySelectorAll('#s_days input:checked')].map(c=>c.value).join(',');
   const body={name:v('s_name'),categoryId:Number(v('s_cat')),mode:v('s_mode'),timeLocal:v('s_time'),daysOfWeek:days,
     questionTemplate:v('s_q'),clarification:v('s_clar')||null,voiceId:'pm9SHWV7dZpfvnpJ6hSK'};
-  if(!body.name||!body.timeLocal||!days){toast('Name, time, and at least one day required');return;}
+  if(!body.name||!body.categoryId||!body.timeLocal||!days){toast('Name, category, time, and at least one day required');return;}
   await api('/api/schedules',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   toast('Schedule created'); loadSchedules();
 }
@@ -1916,7 +1943,7 @@ async function callZoneNow(id,name){
 }
 async function loadCatalog(){
   CATEGORIES = await api('/api/categories');
-  document.getElementById('s_cat').innerHTML = CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
+  document.getElementById('s_cat').innerHTML = '<option value="" disabled selected>Choose a category…</option>'+CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
   fillSimSelects();
   // Each tracked category with how many stores carry it — turns an empty page into real intel.
   const intel=await api('/api/admin/store-intel').catch(()=>null); const bp=(intel&&intel.byProduct)||{};
