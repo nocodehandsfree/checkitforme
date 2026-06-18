@@ -541,7 +541,8 @@ __BRAND_HEAD__
   .railbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:9px;position:relative}
   .railcal{flex:0 0 auto;display:grid;place-items:center;width:40px;height:38px;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;border-radius:11px;cursor:pointer;padding:0}
   .railcal.on{border-color:var(--accent,#4ADE80);color:var(--accent,#4ADE80)}
-  .railcalpop{position:absolute;top:calc(100% + 6px);right:0;z-index:30;width:252px;max-width:88vw;background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:12px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
+  .railcalpop{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:30;width:252px;max-width:88vw;background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:12px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
+  .railcalpop.on{display:block}
   .rcal-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
   .rcal-h b{font-size:13px;font-weight:800;text-transform:capitalize}
   .rcal-h button{width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--terminal);color:#e9e9f0;cursor:pointer;display:grid;place-items:center;padding:0}
@@ -1454,12 +1455,15 @@ async function boot(){
   captureReferral(); // stash any ?ref= before we clean the URL
   if(location.pathname==='/peek') document.body.classList.add('peek'); // minimal first-time-visitor preview
   STORES=[];
+  const sp=new URLSearchParams(location.search);
+  // Restoring a specific call (e.g. pull-to-refresh on a result page) → hide the homepage IMMEDIATELY so
+  // it never flashes, and show a loader while the transcript fetches.
+  if(sp.get('call')){ const b=$('builder'); if(b)b.classList.add('hidden'); const r=$('result'); if(r){ r.classList.remove('hidden'); r.innerHTML='<div style="display:grid;place-items:center;min-height:48vh;gap:14px"><div class="ring"></div><div class="meta">'+esc(t('toast.loadingcall','Loading your call…'))+'</div></div>'; } }
   // PAINT FIRST — header, hero, switcher, logo, language + auth all come from injected brand data, so
   // render them instantly instead of waiting on the network (this is what made the header slow to appear).
   initGA();
   buildSwitcher(); applyBrand(); renderIcons(); buildLangSel(); applyLang();
   renderAuth(); renderStores(); renderChips(); renderFooter(); initClerk();
-  const sp=new URLSearchParams(location.search);
   if(sp.get('paid')){ history.replaceState({},'','/'); toast('🎉 Payment received — adding your credits…'); setTimeout(refreshAuth,2500); setTimeout(refreshAuth,6000); }
   if(sp.get('call')) restoreCall(sp.get('call'), sp.get('store'), sp.get('cat'));
   else if(sp.get('v')==='history') PENDING_VIEW='history'; // wait for Clerk so server history loads
@@ -1924,7 +1928,7 @@ async function restoreCall(cid, storeName, catName){
   // so clear them — showResult derives the journey from the saved transcript.
   LIVE_STEPS=[]; LIVE_T0=0;
   const o=await api('/pub/result/'+encodeURIComponent(cid));
-  if(!o||o.error||o.status==='in_progress'){ toast(t('toast.callgone','That call is no longer available')); return; }
+  if(!o||o.error||o.status==='in_progress'){ toast(t('toast.callgone','That call is no longer available')); backToBuilder(); return; }
   if(!SEL_STORE.name && isAuthed()){ const srv=(await fetchServerHistory()).find(x=>x.cid===cid); if(srv){ SEL_STORE={id:srv.storeId,name:srv.storeName}; } }
   if(!SEL_STORE.name) SEL_STORE.name=t('hist.acheck','Store check');
   if(!known && SEL_STORE.id!=null){
@@ -3242,7 +3246,7 @@ function renderCallRail(cid){
     </select>
     <button class="railcal ${RAIL_F.date?'on':''}" onclick="openRailCal()" aria-label="Pick a day"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></button>
     <button class="railnav" onclick="railStep(1)" ${idx<0||idx>=f.length-1?'disabled':''} aria-label="Older call"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9.5 5l6.5 7-6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    <div id="railcalpop"></div>`;
+    <div id="railcalpop" class="railcalpop"></div>`;
 }
 function railFilter(k,v){ RAIL_F[k]=v; const f=railFiltered(); if(k==='date'&&v&&!f.length){ toast(t('rail.noneday','No checks on that day')); RAIL_F.date=''; renderCallRail(); return; } const cur=f.some(e=>e.cid===RAIL_CID); if(!cur&&f.length){ openHistEntry(f[0]); return; } renderCallRail(); }
 function railStep(d){ const f=railFiltered(); const i=f.findIndex(e=>e.cid===RAIL_CID); const n=f[i+d]; if(n) openHistEntry(n); }
