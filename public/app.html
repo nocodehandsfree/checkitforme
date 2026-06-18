@@ -738,8 +738,7 @@
     <h2>Statuses</h2>
     <div id="pb_statuses">
       <div class="card">
-        <div class="name" style="margin-bottom:4px">What customers see <span style="color:var(--muted)">— for each call outcome</span></div>
-        <div class="meta" style="margin-bottom:12px">Edit the icon, label, color or tone — the consumer + Test Bench verdicts update instantly.</div>
+        <div class="name" style="margin-bottom:12px" data-tip="Edit the icon, label, color or tone — consumer + Test Bench verdicts update instantly">What customers see</div>
         <div id="st_list"><div class="empty">Loading…</div></div>
         <div style="height:1px;background:var(--border);margin:14px 0"></div>
         <div class="name" style="font-size:14px;margin-bottom:8px">Add a status</div>
@@ -2052,7 +2051,7 @@ const v = (id) => document.getElementById(id).value.trim();
 
 // --- Growth & Policy ---
 let POL=null;
-const FLAG_LABELS={connectOnHuman:'Connect-on-human — bill only talk-time (don’t open the agent until a person answers)',dogfoodHours:'Dog-food hours (night-call voicemails)',driverHandoff:'Driver hand-off demo',scheduling:'Scheduled shipment-day calls',restockAlerts:'Restock alerts',kiosks:'Kiosk intel + rewards',shareCards:'Share cards',multiProduct:'Multi-product asks',specificSets:'Specific-set asks'};
+const FLAG_LABELS={connectOnHuman:'Connect-on-human',dogfoodHours:'Dog-food hours',driverHandoff:'Driver hand-off demo',scheduling:'Scheduled shipment-day calls',restockAlerts:'Restock alerts',kiosks:'Kiosk intel + rewards',shareCards:'Share cards',multiProduct:'Multi-product asks',specificSets:'Specific-set asks'};
 const esch=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // ---- Drawn icon system (matches the consumer front end — zero raw emoji in chrome) ----
 const ICONS={
