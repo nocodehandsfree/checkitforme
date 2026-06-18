@@ -187,7 +187,18 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
   const soldOut = /^(yes|true)/i.test(String(collected.sold_out?.value ?? "").trim());
   // "We don't carry that at all" — the store doesn't sell this category (distinct from out of stock).
   const doesNotSell = /^(yes|true)/i.test(String(collected.does_not_carry?.value ?? "").trim());
-  const shipmentDay = String(collected.shipment_day?.value ?? "").trim() || null;
+  let shipmentDay = String(collected.shipment_day?.value ?? "").trim() || null;
+  // "If they mention a restock, it's a restock." Even when the structured field misses it, detect a
+  // future-shipment mention in the clerk's words → surface it as a restock (drives the 🚚 "Restock
+  // incoming" verdict on the consumer) instead of a flat "not in stock" or a useless "maybe".
+  if (!shipmentDay) {
+    const clerkSaid = (d.transcript ?? []).filter((t) => t.role !== "agent" && t.message).map((t) => String(t.message)).join(" ");
+    const RESTOCK = /\b(shipment|restock|gett?ing (?:more|some|another|a shipment|it in|those in)|comes? in|coming in|back in stock|expect(?:ing)?|on order|re-?order|due (?:in|back)|next (?:week|month|shipment)|truck)\b/i;
+    if (RESTOCK.test(clerkSaid)) {
+      const day = clerkSaid.match(/\b(today|tonight|tomorrow|this (?:week|weekend|afternoon|evening)|next (?:week|month)|(?:on |by |this )?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?|in (?:a few|a couple|\d+) days?)\b/i);
+      shipmentDay = day ? day[0] : "soon";
+    }
+  }
   // If the clerk named the specific product they have in (e.g. "Knockout packs"), capture it so
   // we can show it on the In-stock verdict ("In stock — Knockout packs").
   const productName = (() => {

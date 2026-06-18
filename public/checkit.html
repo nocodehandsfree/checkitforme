@@ -2767,7 +2767,7 @@ function showResult(o, cid){
   else if(o.status==='completed'&&o.confirmed===true){ cls='in'; big='✅'; title=t('v.in','In stock!'); note=t('note.in','They have it — go get it.'); }
   else if(o.status==='completed'&&o.confirmed===false){ cls='out'; big='❌'; title=t('v.out','Not in stock'); note=t('note.out',"They don't have it right now."); }
   else if(o.status==='completed'){ // reached the end but no yes/no extracted
-    if(asked){ cls='unk'; big='🤔'; title=t('v.unclear','No clear answer'); note=t('note.unclear','A person picked up but we couldn’t get a clear yes or no — see what they said below.'); }
+    if(asked){ cls='unk'; big='🔄'; title=t('v.unclear','No clear answer — recheck'); note=t('note.unclear','A person picked up but we couldn’t pin down a clear yes or no — worth a quick recheck. See what they said below.'); }
     else { cls='unk'; big='📵'; title=t('v.noanswer','Nobody answered'); note=t('note.noanswer.desk','Got through the menu, but no one picked up at the desk. No charge.'); }
   }
   else if(o.status==='no_answer'){ cls='unk'; big='📵'; title=t('v.noanswer','Nobody answered'); note=t('note.noanswer',"Rang and rang — nobody picked up. No charge."); }
