@@ -72,10 +72,14 @@
   select option{background:#15151f;color:#e8e8f0;font-weight:500}
   label{display:block;font-size:12px;color:#9a9aac;margin:12px 0 5px;font-weight:600;letter-spacing:0;text-transform:none}
   /* unified custom checkbox — brand green when checked, everywhere */
-  input[type=checkbox]{appearance:none;-webkit-appearance:none;width:18px;height:18px;min-width:18px;border:1.5px solid rgba(255,255,255,.26);border-radius:6px;background:var(--terminal);cursor:pointer;flex:0 0 auto;position:relative;transition:background .12s,border-color .12s;vertical-align:middle;accent-color:var(--green);margin:0}
+  input[type=checkbox]{appearance:none;-webkit-appearance:none;width:16px;height:16px;min-width:16px;border:1.5px solid rgba(255,255,255,.26);border-radius:5px;background:var(--terminal);cursor:pointer;flex:0 0 auto;position:relative;transition:background .12s,border-color .12s;vertical-align:middle;accent-color:var(--green);margin:0}
   input[type=checkbox]:hover{border-color:rgba(255,255,255,.45)}
   input[type=checkbox]:checked{background:var(--green);border-color:var(--green)}
-  input[type=checkbox]:checked::after{content:'';position:absolute;left:5px;top:1px;width:5px;height:10px;border:solid #06210f;border-width:0 2.4px 2.4px 0;transform:rotate(45deg)}
+  input[type=checkbox]:checked::after{content:'';position:absolute;left:4.5px;top:1px;width:4px;height:8px;border:solid #06210f;border-width:0 2.2px 2.2px 0;transform:rotate(45deg)}
+  /* directional copy inside inputs: small, italic, very light — clearly just a hint */
+  input::placeholder,textarea::placeholder{color:#56566a;font-style:italic;font-size:13px;font-weight:400}
+  /* report group label (Funnel / Activity / …) */
+  .rgrp{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:16px 0 8px} .rgrp:first-child{margin-top:0}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .pill{font-size:11px;color:var(--purple);background:rgba(167,139,250,.12);padding:3px 8px;border-radius:8px}
   .transcript{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12px;color:#cfcfe0;background:var(--terminal);border-radius:10px;padding:12px;margin-top:10px}
@@ -90,8 +94,8 @@
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:16px}
-  .stat{background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:14px 16px;min-width:104px;flex:1 1 auto}
-  .stat .n{font-size:24px;font-weight:800;line-height:1.1;letter-spacing:-.5px}
+  .stat{background:rgba(255,255,255,.035);border:1px solid var(--border);border-radius:14px;padding:13px 15px;min-width:104px;flex:1 1 auto}
+  .stat .n{font-size:23px;font-weight:800;line-height:1.1;letter-spacing:-.5px;color:#c7c7d2}
   .stat .l{font-size:12px;color:var(--muted);letter-spacing:0;line-height:1.3;margin-top:4px;font-weight:500;text-transform:none}
   .stat.green .n{color:var(--green)}
   /* God-view "Today" hero: the day's vitals, above the fold */
@@ -99,7 +103,7 @@
   .hero-eyebrow{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--green);margin-bottom:14px}
   .hero .stats{margin-bottom:0}
   .hero .stat{background:transparent;border:none;padding:0;min-width:88px}
-  .hero .stat .n{font-size:30px;letter-spacing:-.8px}
+  .hero .stat .n{font-size:30px;letter-spacing:-.8px;color:#eaeaf2}
   .hero .stat .l{font-size:12px;margin-top:3px}
   details.card>summary{list-style:none;outline:none}
   details.card>summary::-webkit-details-marker{display:none}
@@ -118,7 +122,7 @@
   .carrygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
   .carryrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--muted)}
   .carryrow span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .carryrow b{color:#fff;font-size:14px;flex:0 0 auto}
+  .carryrow b{color:#c7c7d2;font-size:14px;flex:0 0 auto}
   /* stores: intel reports (by type / top regions / most-checked) */
   .repgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
   .repcol{min-width:0}
@@ -188,7 +192,8 @@
   .slogo img{width:28px;height:28px;object-fit:contain}
   .slogo:has(img){background:#14141d;border-color:var(--border)}
   .slogo .mono{font-size:13px;font-weight:900;color:#d6d6e0}
-  .sname{font-weight:800;font-size:15.5px;letter-spacing:-.2px}
+  .sname{font-weight:800;font-size:15px;letter-spacing:-.2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .sname .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
   .sbranch{color:#c8c8d4;font-size:12.5px;font-weight:600;margin-top:1px}
   .smeta{color:var(--muted);font-size:12px;margin-top:2px}
   .sdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
@@ -333,7 +338,7 @@
     <h2>Store intel</h2>
     <div class="stats" id="storeintel"></div>
     <div id="storecarries" class="card" style="display:none"></div>
-    <details id="storereports" class="card" style="display:none"><summary><span class="name">Reports</span> <span class="hint">by type · top regions · most-checked</span></summary>
+    <details id="storereports" class="card" style="display:none"><summary><span class="name">Reports</span></summary>
       <div id="rep_body" style="margin-top:10px"></div>
     </details>
   </section>
@@ -532,15 +537,15 @@
       <details class="card" id="tb_voice_card">
         <summary><span class="name">Step 2 · Persona &amp; script <span class="chip-draft">DRAFT</span></span><span class="hint">tune safely → test → apply</span></summary>
         <div class="meta" style="margin:10px 0 12px">Edits a <b>draft</b> — real store calls are untouched until you <b>Apply to ALL store calls</b>. Hear it with Call me below.</div>
-        <label>Opening line <span style="color:var(--muted)">(use <code>{category}</code> — it fills in Pokémon, One Piece, etc.)</span></label>
+        <label data-tip="Use {category} — it fills in Pokémon, One Piece, etc.">Opening line</label>
         <input id="tb_opening" placeholder="Heyy! I was just checking to see if you guys got any {category} in?" oninput="updateDraftDot()">
-        <label>Speed / cadence — <span id="sb_speed_val"></span> <span style="color:var(--muted)">(left = slower &amp; calmer)</span></label>
+        <label data-tip="Left = slower &amp; calmer · right = quicker">Speed <span id="sb_speed_val" class="hint" style="font-style:normal"></span></label>
         <input id="sb_speed" type="range" min="0.7" max="1.2" step="0.01" style="width:100%" oninput="sbLabels()">
-        <label>Warmth / expressiveness — <span id="sb_stability_val"></span> <span style="color:var(--muted)">(left = warmer &amp; more inflection; right = steadier/flatter)</span></label>
+        <label data-tip="Left = warmer, more inflection · right = steadier, flatter">Warmth <span id="sb_stability_val" class="hint" style="font-style:normal"></span></label>
         <input id="sb_stability" type="range" min="0.1" max="0.9" step="0.05" style="width:100%" oninput="sbLabels()">
-        <label>Naturalness ↔ speed — <span id="sb_latency_val"></span> <span style="color:var(--muted)">(left = smoothest/most natural; right = faster but more robotic)</span></label>
+        <label data-tip="Left = smoothest, most natural · right = faster, more robotic">Naturalness <span id="sb_latency_val" class="hint" style="font-style:normal"></span></label>
         <input id="sb_latency" type="range" min="0" max="4" step="1" style="width:100%" oninput="sbLabels()">
-        <label>⏱️ The beat — pause before it replies</label>
+        <label data-tip="The pause before the agent starts replying">The beat</label>
         <select id="sb_beat" onchange="updateDraftDot()">
           <option value="normal">Normal — snappy, but waits for you to finish (recommended)</option>
           <option value="eager">Eager — fastest replies (may cut people off)</option>
@@ -1233,7 +1238,7 @@ async function loadStoreIntel(){
   const items=Object.entries(bp).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]);
   const cw=document.getElementById('storecarries');
   if(cw){ if(items.length){ cw.style.display='';
-      cw.innerHTML=`<div class="name" style="margin-bottom:8px">What they carry <span style="color:var(--muted)">— stores stocking each product</span></div>`
+      cw.innerHTML=`<div class="name" style="margin-bottom:8px">What they carry</div>`
         +`<div class="carrygrid">`+items.map(([p,n])=>`<div class="carryrow"><span>${esch(p)}</span><b>${fmt(n)}</b></div>`).join('')+`</div>`;
     } else cw.style.display='none'; }
   // Fill the store-type filter from the full chain-type list, and the product filter from the carry list.
@@ -1367,15 +1372,14 @@ function renderRetailers(){
   const muted=mutedChainIds();
   el.innerHTML = rs.map(r=>{
     const nm=splitName(r.name);
-    const metaTxt=[r.location||'', (r.zones&&r.zones.length)?r.zones[0]:''].filter(Boolean).join(' · ');
+    const metaTxt=r.location||'';
     const ships=r.shipmentDay?`${vmark('🚚','#8a8a98',12)} ships ${esch(r.shipmentDay)}`:'';
     const hrs=hoursBadge(r); const sel=SEL.has(r.id);
     return `<div class="card${sel?' selrow':''}">
     <div class="row" style="align-items:flex-start;gap:10px">
       <input type="checkbox" class="rowchk" ${sel?'checked':''} onchange="bulkPick(${r.id},this)">
-      ${storeTile(r.id,r.name)}
       <div class="grow" style="min-width:0">
-        <div class="sname">${esch(nm.base)} ${r.stockStatus==='verified'?'<span class="tag-verified">verified</span>':'<span class="tag-unverified">unverified</span>'}${r.storeType?` <span class="chip-type">${ICO(storeTypeIco(r.storeType),11)} ${esch(r.storeType)}</span>`:''}${muted.has(r.chainId)?' <span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.12)">muted</span>':''}${badNum(r)?' <span class="chip-sm" style="color:#FBBF24;background:rgba(251,191,36,.12)">no number</span>':''}${r.online?' <span class="chip-sm" style="color:#7DD3FC;background:rgba(125,211,252,.12)">online</span>':''}</div>
+        <div class="sname"><span class="nm">${esch(nm.base)}</span>${r.stockStatus==='verified'?'<span class="tag-verified">verified</span>':'<span class="tag-unverified">unverified</span>'}${r.storeType?` <span class="chip-type">${ICO(storeTypeIco(r.storeType),11)} ${esch(r.storeType)}</span>`:''}${muted.has(r.chainId)?' <span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.12)">muted</span>':''}${badNum(r)?' <span class="chip-sm" style="color:#FBBF24;background:rgba(251,191,36,.12)">no number</span>':''}${r.online?' <span class="chip-sm" style="color:#7DD3FC;background:rgba(125,211,252,.12)">online</span>':''}</div>
         ${nm.branch?`<div class="sbranch">${esch(nm.branch)}</div>`:''}
         <div class="smeta" style="display:flex;align-items:center;flex-wrap:wrap;gap:0 4px">${esch(metaTxt)}${hrs?(metaTxt?' · ':'')+hrs:''}${ships?(metaTxt||hrs?' · ':'')+ships:''}</div>
         ${(()=>{const cl=r.carries?r.carries.split(',').map(x=>x.trim()).filter(Boolean):[];return cl.length?`<div class="hint" style="margin-top:5px;font-style:normal" data-tip="Carries: ${esch(cl.join(', '))}${r.lastCall&&r.lastCall.summary?' — last call: '+esch(r.lastCall.summary):''}">Carries ${cl.length} · ${esch(cl.slice(0,2).join(', '))}${cl.length>2?' +'+(cl.length-2):''}</div>`:'';})()}
@@ -2130,21 +2134,16 @@ async function loadGwPulse(){
   const d=await api('/api/admin/pulse');
   if(!d||d.error){ el.textContent='No data yet.'; return; }
   const f=d.funnel||{}, a=d.activity||{}, cm=d.community||{};
-  const stat=(n,l,c)=>`<div style="min-width:84px"><div style="font-size:21px;font-weight:800;color:${c||'var(--text)'}">${n}</div><div style="font-size:11px;color:var(--muted)">${l}</div></div>`;
+  const st=(n,l,g)=>`<div class="stat${g?' green':''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   const money=c=>'$'+((c||0)/100).toFixed(2);
-  el.innerHTML=`
-    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:2px 0 6px">Funnel</div>
-    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
-      ${stat(f.leads||0,'leads')}${stat(f.signups||0,'signups')}${stat(f.paying||0,'paying','var(--green)')}${stat(f.members||0,'members','var(--green)')}${stat(money(f.revenueCents),'revenue','var(--green)')}
-    </div>
-    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:2px 0 6px">Activity</div>
-    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px">
-      ${stat(a.checks||0,'checks')}${stat(a.checks24h||0,'last 24h')}${stat(a.checks7d||0,'last 7d')}${stat(a.confirms||0,'confirms','var(--green)')}
-    </div>
-    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:2px 0 6px">Community</div>
-    <div style="display:flex;gap:16px;flex-wrap:wrap">
-      ${stat(cm.watches||0,'watching')}${stat(cm.kioskReports||0,'kiosk intel')}${stat(cm.posts||0,'scores')}${stat(cm.postsPending||0,'pending',cm.postsPending?'var(--yellow,#F4D03F)':'var(--muted)')}${stat(cm.newLeads7d||0,'new leads 7d')}
-    </div>`;
+  el.innerHTML=
+    `<div class="rgrp">Funnel</div><div class="stats">`+
+      st(f.leads||0,'leads')+st(f.signups||0,'signups')+st(f.paying||0,'paying',1)+st(f.members||0,'members',1)+st(money(f.revenueCents),'revenue',1)+
+    `</div><div class="rgrp">Activity</div><div class="stats">`+
+      st(a.checks||0,'checks')+st(a.checks24h||0,'last 24h')+st(a.checks7d||0,'last 7d')+st(a.confirms||0,'confirms',1)+
+    `</div><div class="rgrp">Community</div><div class="stats" style="margin-bottom:0">`+
+      st(cm.watches||0,'watching')+st(cm.kioskReports||0,'kiosk intel')+st(cm.posts||0,'scores')+st(cm.postsPending||0,'pending')+st(cm.newLeads7d||0,'new leads 7d')+
+    `</div>`;
 }
 async function loadGwIntel(){
   const el=document.getElementById('gw_intel'); if(!el) return;
@@ -2154,14 +2153,12 @@ async function loadGwIntel(){
   const days=(d.shipmentDays||[]).map(x=>`${esch(x.day)} (${x.n})`).join(' · ')||'—';
   const ago=s=>{ if(!s)return '—'; const m=Math.floor(Date.now()/1000)-s; if(m<3600)return Math.max(1,Math.floor(m/60))+'m'; if(m<86400)return Math.floor(m/3600)+'h'; return Math.floor(m/86400)+'d'; };
   const rows=(d.topStores||[]).map(s=>`<tr><td style="padding:4px 8px 4px 0">${esch(s.store)}</td><td style="padding:4px 8px;color:var(--muted)">${esch(s.region||'—')}</td><td style="padding:4px 8px;color:var(--green);text-align:right">${s.confirms}</td><td style="padding:4px 8px;color:var(--muted)">${esch(s.bestDay||'—')}</td><td style="padding:4px 0;color:var(--muted);text-align:right">${ago(s.last)} ago</td></tr>`).join('');
-  el.innerHTML=`
-    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px">
-      <div><div style="font-size:22px;font-weight:800;color:var(--text)">${t.confirms||0}</div><div>confirmed restocks</div></div>
-      <div><div style="font-size:22px;font-weight:800;color:var(--text)">${t.confirmRate||0}%</div><div>hit rate (${t.checks||0} checks)</div></div>
-      <div><div style="font-size:22px;font-weight:800;color:var(--green)">${t.confirms7d||0}</div><div>last 7 days</div></div>
-      <div><div style="font-size:22px;font-weight:800;color:var(--text)">${t.confirms30d||0}</div><div>last 30 days</div></div>
-    </div>
-    <div style="margin-bottom:8px"><b style="color:var(--text)">Shipment days heard:</b> ${days}</div>
+  const st=(n,l,g)=>`<div class="stat${g?' green':''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  el.innerHTML=
+    `<div class="stats">`+
+      st(t.confirms||0,'confirmed restocks')+st((t.confirmRate||0)+'%','hit rate · '+(t.checks||0)+' checks')+st(t.confirms7d||0,'last 7 days',1)+st(t.confirms30d||0,'last 30 days')+
+    `</div>`+
+    `<div class="meta" style="margin-bottom:8px"><b style="color:#c7c7d2">Shipment days heard:</b> ${days}</div>`+`
     ${rows?`<table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr style="color:var(--muted);text-align:left"><th style="padding:0 8px 6px 0">Store</th><th style="padding:0 8px">Region</th><th style="padding:0 8px;text-align:right">Hits</th><th style="padding:0 8px">Best day</th><th style="text-align:right">Last</th></tr></thead><tbody>${rows}</tbody></table>`:'<div>No confirmed restocks logged yet.</div>'}`;
 }
 async function toggleFlag(key,on){
