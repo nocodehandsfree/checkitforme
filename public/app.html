@@ -337,9 +337,9 @@
 
   <section id="retailers">
     <h2>Store intel</h2>
-    <div class="stats" id="storeintel"></div>
-    <div id="storecarries" class="card" style="display:none"></div>
-    <details id="storereports" class="card" style="display:none"><summary><span class="name">Reports</span></summary>
+    <div class="card report"><div class="stats" id="storeintel" style="margin-bottom:0"></div></div>
+    <div id="storecarries" class="card report" style="display:none"></div>
+    <details id="storereports" class="card report" style="display:none"><summary><span class="name">Reports</span></summary>
       <div id="rep_body" style="margin-top:10px"></div>
     </details>
   </section>
@@ -525,13 +525,11 @@
   <section id="settings">
     <h2>Settings</h2>
     <div class="card"><div class="row">
-      <div class="grow"><div class="name">Never leave voicemails</div>
-        <div class="meta">Master toggle — if a call hits voicemail or an automated system, the agent hangs up without leaving a message.</div></div>
+      <div class="grow"><div class="name" data-tip="Master toggle — if a call hits voicemail or an automated system, the agent hangs up without leaving a message.">Never leave voicemails</div></div>
       <button id="vmToggle" class="ghost" onclick="toggleVoicemail()">…</button>
     </div></div>
     <div class="card"><div class="row">
-      <div class="grow"><div class="name">Customers hear calls live</div>
-        <div class="meta">Streams call audio + a hang-up button to every customer. OFF = testing tool only (comp accounts like yours always have it).</div></div>
+      <div class="grow"><div class="name" data-tip="Streams call audio + a hang-up button to every customer. OFF = testing tool only (comp accounts like yours always have it).">Customers hear calls live</div></div>
       <button id="llToggle" class="ghost" onclick="toggleLiveListen()">…</button>
     </div></div>
   </section>
@@ -1106,10 +1104,10 @@ async function loadBail(){
   const p=await api('/api/policy'); if(!p||p.error) return; BAIL=p.bail||{};
   const stateEl=document.getElementById('bail_state');
   if(stateEl){ stateEl.className='status '+(BAIL.enabled?'s-green':'s-gray'); stateEl.textContent=BAIL.enabled?'● Enforcing':'Not enforcing'; }
-  const tg=(k,lbl,sub)=>`<label style="display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer"><input type="checkbox" ${BAIL[k]?'checked':''} onchange="saveBail('${k}',this.checked)" style="width:18px;height:18px"><span><b style="color:#fff">${lbl}</b> ${sub?`<span class="meta">— ${sub}</span>`:''}</span></label>`;
+  const tg=(k,lbl,sub)=>`<label style="display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer"><input type="checkbox" ${BAIL[k]?'checked':''} onchange="saveBail('${k}',this.checked)"><span><b style="color:#fff">${lbl}</b>${sub?` <span class="meta" data-tip="${esch(sub)}"></span>`:''}</span></label>`;
   const num=(k,lbl)=>`<label class="meta" style="display:block">${lbl}<input type="number" min="0" value="${BAIL[k]??''}" onchange="saveBail('${k}',Number(this.value)||0)" style="width:100%;margin-top:4px"></label>`;
   document.getElementById('bail_body').innerHTML=
-    `<label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;border-bottom:1px solid var(--border);margin-bottom:6px"><input type="checkbox" ${BAIL.enabled?'checked':''} onchange="saveBail('enabled',this.checked)" style="width:18px;height:18px"><span><b style="color:${BAIL.enabled?'var(--green)':'#FBBF24'}">MASTER — enforce bail rules on live calls</b> <span class="meta">(stays OFF until enforcement is wired + bench-tested)</span></span></label>`
+    `<label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;border-bottom:1px solid var(--border);margin-bottom:6px"><input type="checkbox" ${BAIL.enabled?'checked':''} onchange="saveBail('enabled',this.checked)"><span><b style="color:${BAIL.enabled?'var(--green)':'#FBBF24'}" data-tip="Stays OFF until enforcement is wired + bench-tested">MASTER — enforce bail rules on live calls</b></span></label>`
     +tg('gotAnswerHangup','Got the answer → hang up','a clear yes/no lands, wrap instantly')
     +tg('voicemailBail','Voicemail → instant bail','recording detected, never leave a message')
     +tg('closedBail','Closed recording → instant bail','')
@@ -1261,7 +1259,7 @@ async function loadStoreIntel(){
   const cw=document.getElementById('storecarries');
   if(cw){ if(items.length){ cw.style.display='';
       cw.innerHTML=`<div class="name" style="margin-bottom:8px">What they carry</div>`
-        +`<div class="carrygrid">`+items.map(([p,n])=>`<div class="carryrow"><span>${esch(p)}</span><b>${fmt(n)}</b></div>`).join('')+`</div>`;
+        +`<div class="carrygrid">`+items.map(([p,n])=>`<div class="carryrow"><span>${prodMark(p,16)}</span><b>${fmt(n)}</b></div>`).join('')+`</div>`;
     } else cw.style.display='none'; }
   // Fill the store-type filter from the full chain-type list, and the product filter from the carry list.
   if(Array.isArray(d.types)&&d.types.length) fillOptions('f_type', d.types, 'All types');
@@ -2138,9 +2136,10 @@ async function loadGrowth(){
   const f=POL.flags||{};
   document.getElementById('gw_flags').innerHTML=Object.keys(FLAG_LABELS).map(k=>{
     const on=f[k]!==false&&f[k]!==undefined?f[k]:!!f[k];
+    const tip=k==='dogfoodHours'?'Leave OFF until you say go':(k==='connectOnHuman'?'Bench-test before going live — untested on real calls':'');
     return `<label style="display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;color:var(--text)">
-      <input type="checkbox" ${f[k]?'checked':''} onchange="toggleFlag('${k}',this.checked)" style="width:18px;height:18px">
-      <span>${FLAG_LABELS[k]}${k==='dogfoodHours'?' <span class="meta">(leave OFF until you say go)</span>':''}${k==='connectOnHuman'?' <span class="meta">(bench-test before going live — untested on real calls)</span>':''}</span></label>`;
+      <input type="checkbox" ${f[k]?'checked':''} onchange="toggleFlag('${k}',this.checked)">
+      <span${tip?` data-tip="${tip}"`:''}>${FLAG_LABELS[k]}</span></label>`;
   }).join('');
   // pricing
   const p=POL.pricing||{}, sub=p.sub||{};
