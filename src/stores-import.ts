@@ -123,6 +123,7 @@ function composeInstructions(it: StoreIn): string | undefined {
 function storeType(cat?: string): string | undefined {
   const c = (cat || "").toLowerCase();
   if (!c) return undefined;
+  if (/thrift|resale|second.?hand|consign|donation/.test(c)) return "Thrift"; // treasure-hunt rail (used, "spotty")
   if (/pharmac|drug/.test(c)) return "Pharmacy";
   if (/grocer|superm|food/.test(c)) return "Grocery";
   if (/hobby|toy|game|card|collect/.test(c)) return "Hobby";
