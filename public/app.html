@@ -621,15 +621,17 @@
           <input id="vt_preset_name" placeholder="name this one (e.g. 'warm v2')" style="flex:1">
           <button class="ghost" onclick="storePreset()">Save current</button>
         </div>
-        <div class="row" style="margin-top:14px;gap:8px">
-          <button class="act" onclick="applySandbox()" style="background:var(--yellow,#F4D03F);color:#1a1a24">Save draft</button>
+        <div class="btnrow" style="margin-top:14px">
           <button class="ghost" onclick="loadSandbox()">Reload draft</button>
+          <button class="act" onclick="applySandbox()" style="background:var(--yellow,#F4D03F);color:#1a1a24">Save draft</button>
         </div>
         <div class="meta" id="sb_status" style="margin-top:8px"></div>
         <div style="height:1px;background:var(--border);margin:14px 0"></div>
-        <button class="act" onclick="pushSandboxToStores()">✅ Apply to ALL store calls</button>
-        <div class="meta" style="margin-top:6px;color:var(--muted)">The one global switch — copies this draft (voice + opener + brain) onto the live restock + carry agents. Until you press it, store calls don't change.</div>
-        <div class="row" style="margin-top:10px"><button class="ghost" onclick="resetScript()">Reset agent script to default</button></div>
+        <div class="name" style="font-size:13px" data-tip="The one global switch: copies this draft (voice + opener + brain) onto the live restock + carry agents. Until you press it, store calls don't change.">Apply to ALL store calls</div>
+        <div class="btnrow" style="margin-top:10px">
+          <button class="ghost" onclick="resetScript()">Reset to default</button>
+          <button class="act" onclick="pushSandboxToStores()">Apply to ALL store calls</button>
+        </div>
         <div style="margin-top:16px;text-align:right"><button class="ghost" onclick="wizStep('tb_rotate_card')" style="font-weight:600">Next: Rotation →</button></div>
       </details>
 
@@ -677,7 +679,7 @@
         <div class="meta" style="margin:10px 0 8px">Assembled live for the store + category picked above: global rules + the chain's phone tree + any store override.</div>
         <div id="pv_meta" class="meta"></div>
         <pre id="pv_body" style="display:none;white-space:pre-wrap;max-height:380px;overflow:auto;font-size:12px;line-height:1.5;background:var(--terminal);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:10px"></pre>
-        <div style="margin-top:8px"><button class="ghost" onclick="loadPreview()">Refresh preview</button></div>
+        <div class="btnrow" style="margin-top:8px"><button class="ghost" onclick="loadPreview()">Refresh preview</button></div>
       </details>
 
       <div class="card" id="tb_transcript_card" style="display:none">
@@ -1836,7 +1838,7 @@ function renderStatuses(list){
   el.innerHTML = rows.length ? rows.map(s=>`
     <div class="card" style="padding:12px;margin-bottom:8px" data-sid="${s.id}">
       <div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap">
-        <span style="width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;background:var(--terminal);border:1px solid var(--border);border-radius:10px">${(s.tone==='in'||s.emoji==='✅'||/in.?stock/i.test(s.key||''))?'<img src="/logos/check-brandmark.svg" alt="in stock" style="width:24px;height:24px;object-fit:contain">':vmark(s.emoji,s.color||s.tone,24)}</span>
+        <span style="width:40px;height:40px;display:grid;place-items:center;flex:0 0 auto;background:var(--terminal);border:1px solid var(--border);border-radius:10px">${(s.key==='in_stock'||s.emoji==='✅')?'<img src="/logos/check-brandmark.svg" alt="in stock" style="width:24px;height:24px;object-fit:contain">':vmark(s.emoji,s.color||s.tone,24)}</span>
         <input value="${escH(s.label)}" data-f="label" style="flex:1;min-width:0" placeholder="Label">
         <input type="color" value="${escH(s.color)}" data-f="color" title="Verdict color" style="width:38px;height:40px;padding:2px;border-radius:9px;border:1px solid var(--border);background:none;flex:0 0 auto">
       </div>
