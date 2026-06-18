@@ -1242,6 +1242,8 @@ app.post("/api/stores/dedupe", async (c) => {
   const DIR: Record<string, string> = { north: "n", south: "s", east: "e", west: "w", northeast: "ne", northwest: "nw", southeast: "se", southwest: "sw" };
   const streetKey = (addr: string | null) => street(addr).toLowerCase().replace(/[.,]/g, "").split(/\s+/).map((w) => DIR[w] || SUF[w] || w).filter(Boolean).join(" ");
   const houseNum = (addr: string | null) => { if (corruptAddr(addr)) return ""; const m = (addr || "").trim().match(/^(\d+[A-Za-z]?)/); return m ? m[1] : ""; };
+  // final tiebreaker for two stores in the same building (same house # + street) — the suite/unit, e.g. "#183".
+  const suite = (addr: string | null) => { if (corruptAddr(addr)) return ""; const m = (addr || "").match(/(?:Ste|Suite|Unit|Apt|#)\s*#?\s*([A-Za-z0-9-]+)/i); return m ? `#${m[1]}` : ""; };
 
   // default name = separator-normalized current name (preserves curated mall/neighborhood names on singles)
   const proposed = new Map<number, string>();
@@ -1276,6 +1278,15 @@ app.post("/api/stores/dedupe", async (c) => {
       const sameStreet = (keyCount.get(streetKey(r.address)) || 0) > 1;
       const hn = houseNum(r.address);
       proposed.set(r.id, sameStreet && hn ? `${baseOf(r)} ${hn} ${disp}` : `${baseOf(r)} ${disp}`);
+    }
+    // residual collision (same building, e.g. two mall units) -> append the suite/unit number
+    const nmCount = new Map<string, number>();
+    for (const r of grp) nmCount.set(proposed.get(r.id)!, (nmCount.get(proposed.get(r.id)!) || 0) + 1);
+    for (const r of grp) {
+      if ((nmCount.get(proposed.get(r.id)!) || 0) > 1) {
+        const su = suite(r.address);
+        if (su) proposed.set(r.id, `${proposed.get(r.id)} ${su}`);
+      }
     }
   }
 
