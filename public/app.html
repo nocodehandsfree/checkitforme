@@ -416,7 +416,7 @@
     </div>
     <div id="resultList"><div class="empty">Loading…</div></div>
     <details class="card" id="bail_card" style="margin-top:16px">
-      <summary style="cursor:pointer"><span class="name">Bail library <span class="hint">master call cutoffs · cost control</span></span> <span id="bail_state" class="status s-gray" style="margin-left:6px">…</span></summary>
+      <summary style="cursor:pointer"><span class="name" data-tip="Master call cutoffs · cost control">Bail library</span> <span id="bail_state" class="status s-gray" style="margin-left:6px">…</span></summary>
       <div class="hint" style="margin:10px 0 10px">Rules that cut a call once it stops being worth money. The master switch stays off until it's bench-tested — nothing changes on live calls yet.</div>
       <div id="bail_body" class="meta">Loading…</div>
     </details></section>
@@ -907,7 +907,7 @@ async function loadReceipts(){
   if(!Array.isArray(rows)){ list.innerHTML='<div class="empty">Could not load receipts.</div>'; if(stat)stat.textContent='—'; return; }
   const ago=s=>{ if(!s)return '—'; const m=Math.floor(Date.now()/1000)-s; if(m<3600)return Math.max(1,Math.floor(m/60))+'m ago'; if(m<86400)return Math.floor(m/3600)+'h ago'; return Math.floor(m/86400)+'d ago'; };
   const claimed=rows.filter(r=>r.claimedBy).length;
-  if(stat) stat.innerHTML=`<b>${rows.length}</b> received · <b>${claimed}</b> claimed a free check. Receipts must parse (kiosk "Machine ID" or product+total) to land here; a regular store/online receipt usually won't.`;
+  if(stat) stat.innerHTML=`<b>${rows.length}</b> received · <b>${claimed}</b> claimed a free check. <span class="hint" data-tip="Only kiosk receipts (a Machine ID, or product + total) parse and land here — a regular store/online receipt won't.">why some don’t count</span>`;
   if(!rows.length){ list.innerHTML='<div class="empty">No receipts yet — they appear here once a shopper emails one in and it parses.</div>'; return; }
   list.innerHTML=rows.map(r=>{
     const badge=r.claimedBy?'<span class="tag-verified">✓ free check granted</span>':'<span class="pill">unclaimed</span>';
