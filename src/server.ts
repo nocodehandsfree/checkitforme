@@ -263,11 +263,12 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   const store = (q.store || "a local store").slice(0, 80);
   const cat = (q.cat || brand.category || "cards").slice(0, 60);
   const plainName = brand.name.replace(/<[^>]+>/g, "");
-  const ogImage = `https://${host}/og/${brand.key}.png`;
+  // In-stock share: just the brand mark + two punchy lines (no "is it in stock?" hero, "Found!" pill, or "powered by").
+  const ogImage = inStock ? `https://${host}/logos/check-mark.png` : `https://${host}/og/${brand.key}.png`;
   const site = `https://${host}/`;
-  const title = inStock ? `🔥 ${store}: ${cat} IN STOCK` : `👀 ${store}: watching for ${cat}`;
+  const title = inStock ? `🔥 ${store}` : `👀 ${store}: watching for ${cat}`;
   const desc = inStock
-    ? `Confirmed by a real phone call. Check any store near you yourself with ${plainName} — they call so you don't have to.`
+    ? `${cat} in stock!`
     : `Not in yet — but ${plainName} will catch the restock. Check any store near you with one tap.`;
   const head = [
     `<title>${esc(title)}</title>`,
@@ -280,7 +281,7 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
     `<meta property="og:description" content="${esc(desc)}">`,
     `<meta property="og:url" content="https://${host}/s?store=${encodeURIComponent(store)}&cat=${encodeURIComponent(cat)}&v=${inStock ? "in" : "out"}">`,
     `<meta property="og:image" content="${ogImage}">`,
-    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:card" content="${inStock ? "summary" : "summary_large_image"}">`,
     `<meta name="twitter:title" content="${esc(title)}">`,
     `<meta name="twitter:description" content="${esc(desc)}">`,
     `<meta name="twitter:image" content="${ogImage}">`,

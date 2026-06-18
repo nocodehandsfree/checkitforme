@@ -538,10 +538,18 @@ __BRAND_HEAD__
      Mobile: horizontal scroll above the result. Desktop: vertical tabs in the left margin. */
   /* Call switcher: filter your past calls by store/status, hop with ‹ › or tap a tile.
      Tiles are clean monograms (store logo when one is available) + an outcome dot. */
-  .railbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:9px}
-  .raildaterow{flex-basis:100%;display:flex;align-items:center;gap:9px}
-  .raildatelbl{font-size:12px;color:var(--muted);font-weight:700;white-space:nowrap}
-  .raildate{flex:1;min-width:0;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;font-size:12.5px;font-weight:700;border-radius:11px;padding:8px 11px;cursor:pointer;color-scheme:dark}
+  .railbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:9px;position:relative}
+  .railcal{flex:0 0 auto;display:grid;place-items:center;width:40px;height:38px;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;border-radius:11px;cursor:pointer;padding:0}
+  .railcal.on{border-color:var(--accent,#4ADE80);color:var(--accent,#4ADE80)}
+  .railcalpop{position:absolute;top:calc(100% + 6px);right:0;z-index:30;width:252px;max-width:88vw;background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:12px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
+  .rcal-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+  .rcal-h b{font-size:13px;font-weight:800;text-transform:capitalize}
+  .rcal-h button{width:28px;height:28px;border-radius:8px;border:1px solid var(--border);background:var(--terminal);color:#e9e9f0;cursor:pointer;display:grid;place-items:center;padding:0}
+  .rcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+  .rcal-dow{font-size:9px;color:var(--muted);text-align:center;font-weight:800;padding-bottom:2px}
+  .rcal-d{aspect-ratio:1;display:grid;place-items:center;font-size:12px;font-weight:700;border-radius:8px;color:#5a5a66}
+  .rcal-d.has{color:#06210f;background:var(--accent,#4ADE80);cursor:pointer;font-weight:900}
+  .rcal-d.sel{box-shadow:0 0 0 2px #fff inset}
   .railsel{flex:1;min-width:0;appearance:none;-webkit-appearance:none;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;font-size:12.5px;font-weight:700;border-radius:11px;padding:9px 26px 9px 11px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M0.5 0.5h8L4.5 5.5z' fill='%23ffffff'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
   .railnav{flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:none;background:var(--accent,#4ADE80);color:#06210f;display:grid;place-items:center;cursor:pointer;padding:0;box-shadow:0 6px 16px -6px rgba(0,0,0,.55);transition:transform .1s}
   .railnav:disabled{opacity:.3;cursor:default}
@@ -1309,7 +1317,7 @@ const I18N={ es:{
   'ho.s3.label':'Resérvalo','ho.s3.title':'Pide el viaje tú mismo','ho.s3.cta':'Un conductor aceptó →','ho.s4.label':'Manda el trato','ho.s4.title':'Pega esto en el chat del conductor','ho.s4.copy':'Copiar mensaje y enlace','ho.s4.cta':'El conductor va en camino →','ho.s4.retry':'¿Dijo que no? Cancela y prueba el siguiente','ho.s4.preview':'Mira lo que ve el conductor',
   'ho.s5.label':'Cierre','ho.s5.title':'Libera el bono y califica','ho.s5.cta':'Confirmar entrega y liberar el bono','ho.copied':'Copiado — pégalo en el chat del conductor',
   'ho.done.title':'Bono liberado — listo','ho.done.ship':'Va en camino. Te mandamos el número de rastreo en cuanto escaneen la etiqueta.','ho.done.home':'Va hacia tu puerta. Te llega un texto cuando el conductor lo marque entregado.','ho.done.cta':'Volver a la cacería',
-  'rail.all.stores':'Todas las tiendas','rail.all':'Todas las llamadas','rail.other':'Sin respuesta / dudosa',
+  'rail.all.stores':'Todas las tiendas','rail.all':'Todas las llamadas','rail.other':'Sin respuesta / dudosa','rail.stores':'Tiendas','rail.calls':'Llamadas','rail.allday':'Ver todos los días',
   'demo.verdictlbl':'el veredicto','auth.google':'Continuar con Google','auth.discord':'Continuar con Discord','auth.or':'o con tu correo','demo.sys':'Navegando el menú telefónico…','demo.thanks':'¡Perfecto, gracias!','demo.proof':'Persona real · hace 2 min · transcripción completa como prueba.',
   'acct.checks':'Mis verificaciones','acct.more':'Consigue más verificaciones','acct.manage':'Administrar plan','acct.unlimited':'Ilimitado','acct.youraccount':'Tu cuenta','acct.memberleft':'Miembro · {n} verificaciones','acct.left':'{n} verificaciones','acct.signout':'Cerrar sesión','pill.join':'Únete','pill.free':'1 gratis · Únete',
   'acct.cid.on':'Las llamadas salen de tu celular ✓','acct.cid.off':'Llama a las tiendas desde tu número',
@@ -3223,20 +3231,52 @@ function renderCallRail(cid){
   bar.innerHTML=`
     <button class="railnav" onclick="railStep(-1)" ${idx<=0?'disabled':''} aria-label="Newer call"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <select class="railsel" onchange="railFilter('store',this.value)" aria-label="Filter by store">
-      <option value="">${t('rail.all.stores','All stores')}</option>
+      <option value="">${t('rail.stores','Stores')}</option>
       ${stores.map(n=>`<option value="${esc(n)}" ${RAIL_F.store===n?'selected':''}>${esc(n)}</option>`).join('')}
     </select>
     <select class="railsel" onchange="railFilter('tone',this.value)" aria-label="Filter by outcome">
-      <option value="">${t('rail.all','All calls')}</option>
+      <option value="">${t('rail.calls','Calls')}</option>
       <option value="in" ${RAIL_F.tone==='in'?'selected':''}>${t('hb.in','In stock')}</option>
       <option value="out" ${RAIL_F.tone==='out'?'selected':''}>${t('hb.out','Not in stock')}</option>
       <option value="unk" ${RAIL_F.tone==='unk'?'selected':''}>${t('rail.other','No answer / unclear')}</option>
     </select>
+    <button class="railcal ${RAIL_F.date?'on':''}" onclick="openRailCal()" aria-label="Pick a day"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></button>
     <button class="railnav" onclick="railStep(1)" ${idx<0||idx>=f.length-1?'disabled':''} aria-label="Older call"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9.5 5l6.5 7-6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    <div class="raildaterow"><span class="raildatelbl">${t('rail.viewday','📅 View a specific day')}</span><input type="date" class="raildate" value="${RAIL_F.date||''}" onchange="railFilter('date',this.value)" aria-label="View transcripts from a day"></div>`;
+    <div id="railcalpop"></div>`;
 }
 function railFilter(k,v){ RAIL_F[k]=v; const f=railFiltered(); if(k==='date'&&v&&!f.length){ toast(t('rail.noneday','No checks on that day')); RAIL_F.date=''; renderCallRail(); return; } const cur=f.some(e=>e.cid===RAIL_CID); if(!cur&&f.length){ openHistEntry(f[0]); return; } renderCallRail(); }
 function railStep(d){ const f=railFiltered(); const i=f.findIndex(e=>e.cid===RAIL_CID); const n=f[i+d]; if(n) openHistEntry(n); }
+// Custom month-calendar popover (native date pickers can't highlight call-days). Days with calls glow accent.
+let RAIL_CAL_M=null;
+function railCalDays(){ return new Set(histList().filter(e=>e.cid).map(e=>tsDay(e.ts))); }
+function openRailCal(){
+  const pop=$('railcalpop'); if(!pop) return;
+  if(pop.classList.contains('on')){ closeRailCal(); return; } // toggle
+  const f=histList().filter(e=>e.cid);
+  const base = RAIL_F.date ? new Date(RAIL_F.date+'T12:00:00') : (f.length?new Date(f[0].ts):new Date());
+  RAIL_CAL_M = new Date(base.getFullYear(), base.getMonth(), 1).getTime();
+  renderRailCal(); pop.classList.add('on');
+  setTimeout(()=>document.addEventListener('click',railCalAway),0);
+}
+function closeRailCal(){ const pop=$('railcalpop'); if(pop){ pop.classList.remove('on'); pop.innerHTML=''; } document.removeEventListener('click',railCalAway); }
+function railCalAway(e){ if(!e.target.closest('#railcalpop') && !e.target.closest('.railcal')) closeRailCal(); }
+function railCalMonth(d){ const m=new Date(RAIL_CAL_M); RAIL_CAL_M=new Date(m.getFullYear(), m.getMonth()+d, 1).getTime(); renderRailCal(); }
+function railPickDay(key){ closeRailCal(); railFilter('date', key); }
+function renderRailCal(){
+  const pop=$('railcalpop'); if(!pop) return;
+  const m=new Date(RAIL_CAL_M), y=m.getFullYear(), mo=m.getMonth();
+  const days=railCalDays();
+  const first=new Date(y,mo,1).getDay(), n=new Date(y,mo+1,0).getDate();
+  const title=m.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long',year:'numeric'});
+  const dow=(LANG==='es'?['D','L','M','M','J','V','S']:['S','M','T','W','T','F','S']);
+  const nav=(d,p)=>`<button onclick="railCalMonth(${d})" aria-label="${p}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="${d<0?'M14.5 5L8 12l6.5 7':'M9.5 5l6.5 7-6.5 7'}" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+  let cells='';
+  for(let i=0;i<first;i++) cells+='<div></div>';
+  for(let d=1;d<=n;d++){ const key=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); const has=days.has(key), sel=RAIL_F.date===key; cells+=`<div class="rcal-d ${has?'has':''} ${sel?'sel':''}" ${has?`onclick="railPickDay('${key}')"`:''}>${d}</div>`; }
+  pop.innerHTML=`<div class="rcal-h">${nav(-1,'Previous month')}<b>${esc(title)}</b>${nav(1,'Next month')}</div>
+    <div class="rcal-grid">${dow.map(x=>`<div class="rcal-dow">${x}</div>`).join('')}${cells}</div>
+    ${RAIL_F.date?`<div style="text-align:center;margin-top:9px"><a onclick="railPickDay('')" style="color:var(--muted);font-weight:700;font-size:12px;cursor:pointer">${t('rail.allday','Show all days')}</a></div>`:''}`;
+}
 
 function money(c){ return '$'+(c/100).toFixed(c%100?2:0); }
 // Four tiers, no per-check math shown — the names + unlocks do the selling.
