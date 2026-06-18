@@ -657,8 +657,15 @@
       <details class="card" id="tb_rotate_card">
         <summary><span class="name">Step 2 · Rotation</span></summary>
         <div class="meta" style="margin:10px 0 8px">Live store calls round-robin through these. Leave empty to use the single live voice/opener.</div>
-        <label data-tip="One per line; {category} fills in. The agent uses the next line each call.">Opener variants</label>
-        <textarea id="rot_openers" rows="4" style="width:100%;font-family:inherit;font-size:13px;background:var(--terminal);color:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;box-sizing:border-box" placeholder="Heyy! Got any {category} in today?&#10;Hi! Quick one — any {category} land recently?&#10;Hey there! Checking if {category} is in stock?"></textarea>
+        <label data-tip="The agent rotates through these openers, one per call. Use {category} — it fills in Pokémon, One Piece, etc.">Write a new opener</label>
+        <textarea id="rot_opener_new" rows="3" style="font-size:14px;line-height:1.5" placeholder="e.g. Heyy! Got any {category} in today?"></textarea>
+        <div class="btnrow" style="margin-top:8px"><button class="act" onclick="addOpener()">Save opener</button></div>
+        <label style="margin-top:12px">Saved openers <span id="rot_opener_count" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></label>
+        <div class="row" style="gap:8px">
+          <select id="rot_opener_list" style="flex:1"></select>
+          <button class="ghost" onclick="deleteOpener()">Delete</button>
+        </div>
+        <textarea id="rot_openers" style="display:none"></textarea>
         <label style="margin-top:10px" data-tip="Tick the voices to rotate through">Voice pool</label>
         <div id="rot_voices" class="meta" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px">Loading voices…</div>
         <div class="row" style="margin-top:12px;gap:8px"><button class="act" onclick="saveRotation(this)">Save rotation</button><span class="meta" id="rot_msg"></span></div>
@@ -1195,6 +1202,25 @@ async function loadRotation(voices){
   const pool=new Set(((s.vt_voice_pool||'').split(',').map(x=>x.trim()).filter(Boolean)));
   box.innerHTML=(voices||[]).map(v=>`<label class="day" style="margin:0"><input type="checkbox" class="rotvoice" value="${v.id}" ${pool.has(v.id)?'checked':''}> ${esch(v.name)}${v.cloned?' (cloned)':''}</label>`).join('')||'<span class="meta">No voices.</span>';
   const ta=document.getElementById('rot_openers'); if(ta) ta.value=s.vt_opener_variants||'';
+  OPENERS=(s.vt_opener_variants||'').split('\n').map(x=>x.trim()).filter(Boolean); renderOpeners();
+}
+let OPENERS=[];
+function renderOpeners(){
+  const sel=document.getElementById('rot_opener_list');
+  if(sel) sel.innerHTML = OPENERS.length ? OPENERS.map((o,i)=>`<option value="${i}">${esch(o.length>64?o.slice(0,64)+'…':o)}</option>`).join('') : '<option value="">No saved openers yet</option>';
+  const hid=document.getElementById('rot_openers'); if(hid) hid.value=OPENERS.join('\n');
+  const c=document.getElementById('rot_opener_count'); if(c) c.textContent=OPENERS.length?('· '+OPENERS.length):'';
+}
+async function persistOpeners(){ await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({openerVariants:OPENERS.join('\n')})}); }
+async function addOpener(){
+  const ta=document.getElementById('rot_opener_new'); const v=(ta.value||'').trim();
+  if(!v){ toast('Type an opener first'); return; }
+  OPENERS.push(v); ta.value=''; renderOpeners(); await persistOpeners(); toast('Opener saved');
+}
+async function deleteOpener(){
+  const sel=document.getElementById('rot_opener_list'); const i=Number(sel.value);
+  if(isNaN(i)||OPENERS[i]==null) return;
+  OPENERS.splice(i,1); renderOpeners(); await persistOpeners(); toast('Opener removed');
 }
 async function saveRotation(btn){
   const o=btn.textContent; btn.textContent='…'; btn.disabled=true;
