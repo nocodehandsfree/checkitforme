@@ -28,6 +28,7 @@ import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL } from "./calls/navigator";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
+import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, type Recipe } from "./calls/recipe";
 import { llm } from "./llm";
 import { harvestHoursTick } from "./hours-harvest";
 import { createSchedule, listSchedulesDetailed, deleteSchedule, customerScheduleTick } from "./customer-schedules";
@@ -1823,6 +1824,7 @@ app.patch("/api/settings", async (c) => {
   if (typeof b.voicemailHangup === "boolean") await setSetting("voicemail_hangup", String(b.voicemailHangup));
   if (b.creditLimit !== undefined) await setSetting("el_credit_limit", String(Math.max(0, Number(b.creditLimit) || 0)));
   if (b.openerVariants !== undefined) await setSetting("vt_opener_variants", String(b.openerVariants || ""));
+  if (b.openerLibrary !== undefined) await setSetting("vt_opener_library", String(b.openerLibrary || ""));
   if (b.voicePool !== undefined) await setSetting("vt_voice_pool", String(b.voicePool || ""));
   return c.json(await allSettings());
 });
@@ -1842,6 +1844,26 @@ app.post("/api/admin/calling/resume", async (c) => { await setCallingPaused(fals
 // ---- Reference data ----
 app.get("/api/categories", async (c) => c.json(await db.select().from(categories)));
 app.get("/api/chains", async (c) => c.json(await db.select().from(chains)));
+// Compact store list for the Voice → Test picker: ONE callable store per supported (app-visible) chain
+// — ~80 rows, not the 105k national import. Mirrors the consumer visibility rule (non-muted chain with
+// an active, real-phone store) so the test calls a store that's actually in the product.
+app.get("/api/test-stores", async (c) => {
+  const chainRows = await db.select().from(chains);
+  const muted = new Set(chainRows.filter((x) => x.muted === true).map((x) => x.id));
+  const name = new Map(chainRows.map((x) => [x.id, x.name]));
+  const rows = await db.select({ id: retailers.id, name: retailers.name, location: retailers.location, chainId: retailers.chainId, phone: retailers.phone })
+    .from(retailers).where(eq(retailers.active, true));
+  const seen = new Set<number>();
+  const out: Array<{ id: number; name: string; location: string | null; chainName: string | null }> = [];
+  for (const r of rows) {
+    if (!r.chainId || muted.has(r.chainId) || seen.has(r.chainId)) continue;
+    if (!r.phone || r.phone.startsWith("nophone:") || !/\d{7}/.test(r.phone)) continue;
+    seen.add(r.chainId);
+    out.push({ id: r.id, name: r.name, location: r.location, chainName: name.get(r.chainId) ?? null });
+  }
+  out.sort((a, b) => (a.chainName || a.name).localeCompare(b.chainName || b.name));
+  return c.json(out);
+});
 // Edit a chain's default phone tree (the CHAIN tier of the rule system). Admin-gated via middleware.
 app.patch("/api/chains/:id", async (c) => {
   const b = await c.req.json();
@@ -2112,12 +2134,10 @@ app.post("/api/admin/trainer/lock", async (c) => {
   if (typeof b.recipe.seconds === "number") log.push(b.recipe.seconds);
   // Bridge: write the locked recipe into the LIVE call's phone-tree directions so every real call to
   // this chain navigates via it (the live agent reads chains.phoneTreeDefault as {{phone_tree}}).
-  const steps = Array.isArray(b.recipe.steps) ? (b.recipe.steps as Array<{ action?: string; value?: string }>) : [];
-  const direct = b.recipe.type === "direct" || steps.length === 0;
-  const treeText = direct
-    ? "A live person usually answers directly — no phone menu to work through."
-    : "To reach a live person: " + steps.map((s) => (s.action === "press" ? `press ${s.value}` : `say "${s.value}"`)).join(", then ") + ".";
-  const firstPress = steps.find((s) => s.action === "press");
+  const recipe = b.recipe as Recipe;
+  const direct = isDirect(recipe);
+  const treeText = recipeToTreeText(recipe);
+  const dtmf = recipeToDtmf(recipe); // "digit@seconds" early-press form the bridge consumes
   const now = Math.floor(Date.now() / 1000);
   await db.update(chains).set({
     navType: b.recipe.type || null, navRecipe: JSON.stringify(b.recipe),
@@ -2126,8 +2146,8 @@ app.post("/api/admin/trainer/lock", async (c) => {
     navLog: JSON.stringify(log.slice(-10)), navUpdatedAt: now,
     // ↓ applied to live consumer calls (this is the bridge from documentation → real calls):
     phoneTreeDefault: treeText, treeNote: treeText,
-    dtmfShortcut: firstPress ? String(firstPress.value || "") : null,
-    answerPath: steps.map((s) => `${s.action}:${s.value}`).join(">") || null,
+    dtmfShortcut: dtmf || null,
+    answerPath: recipeAnswerPath(recipe) || null,
     ringsDirect: direct, avgTreeSeconds: typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null,
     treeStatus: "learned", treeLearnedAt: now,
   }).where(eq(chains.id, Number(b.chainId)));
