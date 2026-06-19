@@ -3119,6 +3119,25 @@ function vicon(emoji,cls,size){
     'phone-off':`<path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/><path d="M22 2 2 22"/>`,
     'phone-missed':`<path d="m16 2 6 6"/><path d="m22 2-6 6"/><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>`,
     'user-x':`<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5"/><path d="m22 8-5 5"/>`,
+    // Other likely owner picks for call statuses → render correctly instead of a fallback dot.
+    'phone':`<path d="M5 4.5h4l1.5 4.5-2.5 1.6a13 13 0 0 0 5.4 5.4l1.6-2.5 4.5 1.5v4a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 3 6.7 2 2 0 0 1 5 4.5z"/>`,
+    'phone-call':`<path d="M5 4.5h4l1.5 4.5-2.5 1.6a13 13 0 0 0 5.4 5.4l1.6-2.5 4.5 1.5v4a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 3 6.7 2 2 0 0 1 5 4.5z"/>`,
+    'phone-incoming':`<path d="M16 2v6h6"/><path d="m22 2-6 6"/><path d="M5 4.5h4l1.5 4.5-2.5 1.6a13 13 0 0 0 5.4 5.4l1.6-2.5 4.5 1.5v4a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 3 6.7 2 2 0 0 1 5 4.5z"/>`,
+    'voicemail':`<circle cx="6" cy="12" r="4"/><circle cx="18" cy="12" r="4"/><line x1="6" x2="18" y1="16" y2="16"/>`,
+    'mail':`<rect x="4" y="7" width="16" height="11" rx="2"/><path d="M4.5 8l7.5 5.5L19.5 8"/>`,
+    'clock':`<circle cx="12" cy="12" r="9.5"/><path d="M12 6.5V12l3.5 2.5"/>`,
+    'lock':`<rect x="6" y="10.5" width="12" height="9.5" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>`,
+    'ban':`<circle cx="12" cy="12" r="9.5"/><path d="M5.5 5.5l13 13"/>`,
+    'x':`<path d="M6 6l12 12M18 6 6 18"/>`,
+    'x-circle':`<circle cx="12" cy="12" r="9.5"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/>`,
+    'circle-x':`<circle cx="12" cy="12" r="9.5"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/>`,
+    'alert-triangle':`<path d="M12 4L21 19.5H3z"/><path d="M12 10v4M12 16.7v.1"/>`,
+    'triangle-alert':`<path d="M12 4L21 19.5H3z"/><path d="M12 10v4M12 16.7v.1"/>`,
+    'help-circle':`<circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.5A2.5 2.5 0 1 1 12 12.6v1.4M12 17v.1"/>`,
+    'circle-help':`<circle cx="12" cy="12" r="9.5"/><path d="M9.5 9.5A2.5 2.5 0 1 1 12 12.6v1.4M12 17v.1"/>`,
+    'hourglass':`<path d="M7 4h10M7 20h10M8 4c0 5 8 5 8 8s-8 3-8 8M16 4c0 5-8 5-8 8s8 3 8 8"/>`,
+    'truck':`<rect x="2.5" y="7.5" width="11" height="8" rx="1"/><path d="M13.5 9.5h3.8l3.2 3.2v2.8h-7z"/><circle cx="6.4" cy="17.6" r="1.7"/><circle cx="16.6" cy="17.6" r="1.7"/>`,
+    'user-check':`<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/>`,
   };
   if(L[emoji]) return W(L[emoji]);
   const G={
