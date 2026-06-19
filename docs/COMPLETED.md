@@ -3,6 +3,36 @@
 Finished items live here so the active docs (HANDOFF) stay lean. Newest first. Agents: move done
 items here from HANDOFF's "Current focus."
 
+## 2026-06-19 — website: result-page overhaul, i18n, calendar, "no green", schedule modal
+Large consumer pass on `public/checkit.html` (shipped to the deploy branch). Current UI state:
+- **Verdict card** — store identity is the dominant top (bigger logo + name + one-line address); the verdict
+  is a compact ALL-BLACK strip below (status icon sits under the logo; title + one short summary line). The
+  colored fill tint was removed (it clashed with the conversation box) — color now lives only in the icon +
+  title word.
+- **Call progress** — collapses to a one-line recap ("Call · Ns", real server duration). EXPANDED on the
+  first/live view (watching it run is the point), COLLAPSED when you reopen a past call. Per-step seconds
+  ("…3s") persist on reopen via saved `LIVE_STEPS` (n/label/at) stored in history; derive-from-transcript
+  is the fallback when none were saved.
+- **Instant result rendering (SWR)** — finished transcripts cached per session (`sessionStorage res:<cid>`);
+  pull-to-refresh / history hops paint instantly then revalidate. "Loading…" only flashes if a load is slow.
+- **Calendar** — highlights EVERY call-day (independent of the store/outcome dropdowns); picking a day clears
+  those filters so it always opens. Also fixed stale `LIVE_STEPS` leaking into a reopened call.
+- **i18n** — the call box fully translates now (added es for `live.convo`/`live.steps`/`cs.call`; wrapped the
+  Associate/Menu/Check-AI bubble labels in `t()`); `setLang` already re-renders the open result.
+- **Translate button** — back in the conversation header (Lucide "languages" icon), only on Spanish-clerk
+  calls when viewing in English; rewired `toggleTranslate` to swap the conversation body (`#convo_body`).
+- **Store list** — the in-stock green checkmark was REMOVED (owner call: never show it in the list).
+- **"No green"** — removed the ambient green body glow entirely → solid `var(--bg)` on every path. Verified
+  all 5 live brand paths have dark `theme-color` + dark `--bg` + a non-green `--accent`. Fixes the recurring
+  green on the homepage / call-history / iOS Safari bars.
+- **Schedule (auto-check) modal** — deleted the "Fungie+ member perk" label; phone field is now a grey italic
+  "Enter number" placeholder (defaults to the account contact on submit).
+- **Misc** — removed "Powered by Fungibles" from the result foot (site footer still credits it); centered the
+  rail switcher under the nav; aligned the verdict icon under the store logo.
+- **vicon()** — status marks now also render Lucide icon NAMES (flag / phone-off / phone-missed / user-x +
+  common fallbacks) because the statuses registry switched some emoji → Lucide names; an unknown value draws a
+  neutral dot, never raw text (fixed a "phone-off" string that was rendering as a 46px headline).
+
 ## 2026-06-19 — Data Dev: dedupe engine, hours re-verify, CVS-in-Target quarantine, thrift rail, TJX
 New server-side maintenance endpoints + applied LIVE to prod via the admin API; verified fresh from prod.
 - **Name dedupe at scale** — new `POST /api/stores/dedupe` (normalize em-dash separators / `(#1234)` store

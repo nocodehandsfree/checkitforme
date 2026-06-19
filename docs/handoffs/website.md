@@ -26,6 +26,28 @@ consumer-page section of `src/server.ts`. If a push collides, `git pull --rebase
 for a gnarly conflict ping DevOps — don't redo your work blind.
 
 ## Current focus (KEEP UPDATED)
+- [x] ✅ **Result-page overhaul + i18n + calendar + "no green" + schedule modal** (shipped 2026-06-19 — full
+  details in `docs/COMPLETED.md`). Verdict card (all-black, icon under logo), collapsed call recap with
+  persisted per-step seconds, instant SWR result rendering, calendar shows every call-day, Spanish call
+  labels, Translate button (Lucide) in the conversation box, in-stock checkmark removed from the list,
+  ambient green glow removed (solid dark on every path), schedule modal cleanup.
+
+### ⏳ Open for the next website dev (handoff 2026-06-19)
+- 🔴 **Topps hero logo** (`/toppsbasketball`): the hero renders `<img src="/logos/topps.png">`. The file at
+  `public/logos/topps.png` is an old low-res (225px) cut-from-white PNG with a baked-in white fringe — that's
+  the halo on the live hero. Sizing/wiring is ready; it just needs a **clean transparent, brand-RED** export
+  dropped at that path (RED so it's visible on the dark `#0C0C12` hero — a black logo is invisible there).
+  The owner has a clean transparent BLACK export that is fine as a *file* but the wrong color for the dark
+  hero. **Get a properly-colored export from the owner/logo lane — do not recolor or alter the trademark
+  yourself.** Then size with `--logo-scale` and update `og/topps.png` to match.
+- 🟡 **Address on reopened calls**: now persisted in local history + recovered when the store is in the
+  `/pub/stores/near` slice. Remaining edge — an OLD call whose store isn't in the nearby slice shows no
+  address. Needs a **DevOps store-by-id endpoint** (e.g. `/pub/store/:id` or `near?id=`); none exists today.
+  Request it from DevOps, then look up + fill the address when `SEL_STORE.address` is missing.
+- 🟡 **Perf**: the perceived-speed wins shipped (instant cached SWR renders, paint-before-network, no
+  loading flash, single post-hydration re-render). Next lever is profiling the heavy paths — the up-to-200
+  store-row render and the Leaflet map init.
+
 - [ ] 🟢 **Treasure Hunt + Hobby sections (NEW — Data Dev's thrift rail is staged in prod).** 3,479 thrift
   stores are live (Goodwill / Salvation Army / Savers / Unique), tagged `chains.type = "Thrift"`, **muted**
   (staged) and **off the MSRP scoring** (no tier, never `isMSRP=false`). Design + build how these surface to
