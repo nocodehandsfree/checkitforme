@@ -10,6 +10,7 @@ import { db } from "../db/client";
 import { chains, retailers } from "../db/schema";
 import { placeNavCall, getNavSession } from "./navigator";
 import { isCallingPaused } from "../redis";
+import { openState } from "../store-hours";
 
 type Step = { who?: string; action?: string; value?: string; atSec?: number };
 type Recipe = { type?: string; steps?: Array<{ action?: string; value?: string; atSec?: number }>; seconds?: number };
@@ -67,11 +68,27 @@ async function saveCandidate(chainId: number, recipe: Recipe, confidence: number
   }).where(eq(chains.id, chainId));
 }
 
-/** One callable store for a chain (real dialable phone, active). */
+const hasRealPhone = (p?: string | null) => !!p && !p.startsWith("nophone:") && /\d{7}/.test(p);
+
+/** Pick the BEST store to dial for a chain RIGHT NOW: one that's actually open. With 101k stores a
+ *  national chain almost always has a 24h or west-coast location open at this hour. Score each store
+ *  by openState (24h > real-hours-open > daytime-unknown) and dial the best; return null only if every
+ *  callable store is genuinely closed (so the chain is skipped tonight, not wasted on a dead line). */
 async function storeForChain(chainId: number) {
   const rows = await db.select().from(retailers)
-    .where(and(eq(retailers.chainId, chainId), eq(retailers.active, true))).limit(50);
-  return rows.find((r) => r.phone && !r.phone.startsWith("nophone:") && /\d{7}/.test(r.phone)) || null;
+    .where(and(eq(retailers.chainId, chainId), eq(retailers.active, true))).limit(4000);
+  const now = new Date();
+  const score = (r: typeof rows[number]) => {
+    if (!hasRealPhone(r.phone)) return -1;
+    const st = openState(r.hours, r.timezone || "America/Chicago", now);
+    if (st.label === "Open 24h") return 4;          // best: never a closed-store dead end
+    if (st.open && st.known) return 3;               // real hours say open now (e.g. "till 12 AM")
+    if (st.open && !st.known) return 2;              // unknown hours but daytime in its tz (west coast now)
+    return 0;                                         // known-closed / overnight-unknown
+  };
+  let best: typeof rows[number] | null = null, bestScore = 0;
+  for (const r of rows) { const s = score(r); if (s > bestScore) { best = r; bestScore = s; if (s === 4) break; } }
+  return best; // null when nothing scored > 0 (all closed) → batch skips this chain for a daytime run
 }
 
 interface BatchOpts { onlyMissing?: boolean; perCallMaxSec?: number; gapSec?: number; limit?: number; }
@@ -100,7 +117,7 @@ export async function startBatch(opts: BatchOpts = {}) {
       if (await isCallingPaused()) { state.results.push({ chain: ch.name, outcome: "kill-switch — stopping" }); break; }
       state.current = ch.name;
       const store = await storeForChain(ch.id);
-      if (!store) { state.skipped++; state.done++; state.results.push({ chain: ch.name, outcome: "no callable store" }); continue; }
+      if (!store) { state.skipped++; state.done++; state.results.push({ chain: ch.name, outcome: "all stores closed now — retry daytime" }); continue; }
       const placed = await placeNavCall(ch.id, store.id, store.name, store.phone);
       if (placed.error || !placed.id) { state.failed++; state.done++; state.results.push({ chain: ch.name, outcome: "dial failed: " + (placed.error || "?") }); await sleep(gapSec * 1000); continue; }
       const deadline = Date.now() + perCallMaxSec * 1000;
