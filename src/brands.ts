@@ -104,7 +104,7 @@ const BRANDS: Brand[] = [
     category: "Topps NBA",
     accent: "#E4002B",
     accent2: "#FF5277",
-    logoUrl: "/logos/topps.png",
+    logoUrl: "/logos/topps.png?v=2",
     logoScale: 0.62,
     emoji: "🏀",
     short: "Topps NBA",
