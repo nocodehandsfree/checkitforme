@@ -1999,6 +1999,12 @@ async function fetchNear(){
   if(seq!==NEAR_SEQ) return; // a newer request superseded this one
   STORES=(r&&Array.isArray(r.stores))?r.stores:[];
   renderStores();
+  // If a result is open whose address we didn't have (a reopened/older call, before we persisted it),
+  // the nearby list may now carry it — fill it in and repaint just that result.
+  if(NAV_VIEW==='result' && LASTRES && RAIL_CID && SEL_STORE && !SEL_STORE.address){
+    const hit=STORES.find(s=>s.id===SEL_STORE.id);
+    if(hit && (hit.address||hit.location)){ SEL_STORE.address=hit.address||null; SEL_STORE.location=hit.location||SEL_STORE.location||null; showResult(LASTRES, RAIL_CID); }
+  }
 }
 let SEARCH_T=null;
 // MASTER ONLY (comp accounts: fun@ / jared@). Every other account works exactly as before —
