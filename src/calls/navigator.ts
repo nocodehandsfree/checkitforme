@@ -9,7 +9,7 @@ const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
 // Cheapest + fastest brain that drives the IVR — Groq Llama 3.1 8B via Helicone (~200ms vs ~650ms
 // for Gemini flash-lite, and cheaper per token). Verified routing live. Fall back to
 // "gemini-2.5-flash-lite" by editing this line if Groq ever degrades.
-export const NAV_MODEL = "groq:llama-3.1-8b-instant";
+export const NAV_MODEL = "gemini-2.5-flash-lite";
 
 export type NavAction = "say" | "press" | "wait" | "human" | "fail";
 export interface NavStep { who: "ivr" | "us"; text: string; atSec: number; action?: NavAction; value?: string }
