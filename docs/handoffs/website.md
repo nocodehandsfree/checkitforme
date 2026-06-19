@@ -26,6 +26,23 @@ consumer-page section of `src/server.ts`. If a push collides, `git pull --rebase
 for a gnarly conflict ping DevOps — don't redo your work blind.
 
 ## Current focus (KEEP UPDATED)
+- [ ] 🟢 **Treasure Hunt + Hobby sections (NEW — Data Dev's thrift rail is staged in prod).** 3,479 thrift
+  stores are live (Goodwill / Salvation Army / Savers / Unique), tagged `chains.type = "Thrift"`, **muted**
+  (staged) and **off the MSRP scoring** (no tier, never `isMSRP=false`). Design + build how these surface to
+  end-users. Fungie's model:
+  - **"Treasure Hunt"** = thrift (`type=Thrift`). Used/random product, **not** scored like MSRP retailers —
+    no green tier ranking, just a browsable list. A **user toggle (checkbox)** turns it on/off, **off by
+    default** so it never crowds the MSRP list.
+  - **"Hobby"** = a *future* rail (`type=Hobby`, not imported yet) — card/comic/toy shops selling **sealed,
+    often over-MSRP** product. Its own section, also off the MSRP score (above-MSRP would otherwise score a
+    "1" and get blocked off the list).
+  - **DevOps contract needed:** muted chains are hidden by `/pub/stores/near`, so **do not just un-mute**
+    (that would dump 3.5k thrift into the main MSRP list). Decide a surfacing param — e.g.
+    `/pub/stores/near?section=thrift` (or `?include=thrift,hobby`) that returns the muted, `type`-tagged
+    chains only for the toggled section. Leave a `DevOps: need …` note; don't change the contract yourself.
+  - **Data Dev dependency:** Goodwill / Salvation Army / Savers / Unique have **no logos yet** — needed
+    before this looks shippable. (TJ Maxx/Marshalls/HomeGoods logos already render.)
+  - Context: today's import + tagging is logged in `docs/COMPLETED.md` (2026-06-19).
 - [x] ✅ **Sign-up modal → cell phone + SMS code** (done 2026-06-16, see `docs/COMPLETED.md`). The auth
   modal now uses `POST /auth/phone/start` → `POST /auth/phone/check` → `{token,account}`; the token is
   saved (`localStorage check_session`) and sent as `Authorization: Bearer` on `/app/*` (`appApi`, with

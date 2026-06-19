@@ -3,6 +3,34 @@
 Finished items live here so the active docs (HANDOFF) stay lean. Newest first. Agents: move done
 items here from HANDOFF's "Current focus."
 
+## 2026-06-19 — Data Dev: dedupe engine, hours re-verify, CVS-in-Target quarantine, thrift rail, TJX
+New server-side maintenance endpoints + applied LIVE to prod via the admin API; verified fresh from prod.
+- **Name dedupe at scale** — new `POST /api/stores/dedupe` (normalize em-dash separators / `(#1234)` store
+  numbers / ALL-CAPS streets / scraped-HTML names + same-city disambiguation: `Chain City` for a lone store,
+  `Chain Street` for collisions, with house-# then suite-# tiebreakers; grouped by (chain, city) so it's
+  **idempotent**). ~44k names cleaned across 52 states; re-runs report 0 changes.
+- **Corruption** — ~1,173 rows carried scraped DG.com return-policy HTML in the `address` field, which the
+  collision pass had piped into ~492 names. Fixed: `street()`/`houseNum()` reject markup, corrupt addresses
+  blanked. Every marker (`Self-Service`, `&lt;`, `style=`…) now 0 prod-wide.
+- **Hours** — `POST /api/hours/reverify-stamps` re-looks-up stores carrying an **unverified** hours stamp
+  (`hours` set but `hoursUpdatedAt` null — hand-seeded `24h`). 10 seed stores re-verified (CVS Mulholland Dr
+  confirmed genuinely 24h). Also fixed **8** original seed stores with a null `state` (full address stuffed in
+  `location`) that every per-state sweep had silently skipped.
+- **CVS-inside-Target** — `POST /api/stores/quarantine-cvs-in-target`: matched all 8,898 CVS vs 1,673 Targets
+  by exact street address (+<250 m), moved **1,375** pharmacy-counter CVS into a **muted** `_CVS Pharmacy at
+  Target` chain (`sellsPacks:false` backstop) — they don't carry cards / can't be called. Verified 0
+  standalone CVS touched; fully reversible.
+- **Treasure-hunt rail (thrift)** — imported **3,479** real stores (Goodwill 2,925 / Salvation Army 369 /
+  Savers 177 / Unique 8), all with direct local phones + lat/lng (sourced in warp, pushed on branch
+  `thrift-data`). Tagged **`type=Thrift`** (importer now maps thrift/resale → Thrift), `carries` set,
+  **muted/staged** and **off the MSRP scoring** (no tier, not `isMSRP=false`). Names cleaned to `Chain City` /
+  `Chain Street`. **GAP: these 4 chains have no logo files yet.**
+- **TJX back on** — TJ Maxx (1,014) + Marshalls (950) were muted; un-muted for the Mega-Evolution *Ascended
+  Heroes* MSRP shelf drop (HomeGoods already live). Fixed 7 bare `TJ Maxx`/`Marshalls @ {state}` rows
+  (reverse-geocoded → `Chain City`/`Chain Street`). Logos confirmed rendering (`tj_maxx.png`/`marshalls.png`).
+- **Counts** — prod now **105,623** active stores / **119** chains. (Endpoints above are committed on the
+  deploy branch; data changes are LIVE.)
+
 ## 2026-06-17 — Data Dev: prod store-data cleanup (kiosk / 2 AM hours / names / dup-chains)
 Applied LIVE to prod via the admin API (`PATCH /api/retailers/:id`, bulk `POST /api/stores/patch`); the
 `openState` code fix shipped on the deploy branch. All changes verified fresh from prod.
