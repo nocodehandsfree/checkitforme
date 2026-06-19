@@ -173,6 +173,11 @@
   .bulkbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.25);border-radius:12px;padding:9px 14px;margin-bottom:12px}
   .bulkbar .bchk{display:inline-flex;align-items:center;gap:7px;color:#fff;font-weight:700;font-size:13px;cursor:pointer}
   .bulkbar .bchk input{width:15px;height:15px}
+  /* Scripts & rotation: saved-opener rows with an on/off checkbox */
+  .oprow{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-top:1px solid var(--border)}
+  .oprow input[type=checkbox]{margin-top:2px}
+  .oprow .optext{flex:1;min-width:0;font-size:13.5px;line-height:1.45;color:var(--text-strong);word-break:break-word}
+  .oprow .opdel{flex:0 0 auto;padding:4px 9px;font-size:12px;color:var(--muted)}
   .daypick{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px}
   .day{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;background:transparent;border:none;padding:5px 4px;cursor:pointer;color:#cfcfd8;user-select:none}
   .day input{width:15px;height:15px;accent-color:var(--green)}
@@ -589,10 +594,8 @@
     <h2>Test</h2>
     <div id="pb_bench">
       <details class="card" id="tb_voice_card" open>
-        <summary><span class="name">Step 1 · Persona &amp; script <span class="chip-draft">DRAFT</span></span></summary>
-        <div class="meta" style="margin:10px 0 12px">Edits a <b>draft</b> — real store calls are untouched until you <b>Apply to ALL store calls</b>. Hear it with Call me below.</div>
-        <label data-tip="Use {category} — it fills in Pokémon, One Piece, etc.">Opening line</label>
-        <textarea id="tb_opening" rows="2" style="font-size:14px" placeholder="Heyy! I was just checking to see if you guys got any {category} in?" oninput="updateDraftDot()"></textarea>
+        <summary><span class="name">Call settings <span class="chip-draft">DRAFT</span></span></summary>
+        <div class="meta" style="margin:10px 0 12px">How the call <b>behaves</b> — voice + brain. Edits a <b>draft</b>; real store calls are untouched until you <b>Apply to ALL store calls</b>. What it <b>says</b> lives in <b>Scripts &amp; rotation</b> below.</div>
         <label data-tip="Left = slower &amp; calmer · right = quicker">Speed <span id="sb_speed_val" class="hint" style="font-style:normal"></span></label>
         <input id="sb_speed" type="range" min="0.7" max="1.2" step="0.01" style="width:100%" oninput="sbLabels()">
         <label data-tip="Left = warmer, more inflection · right = steadier, flatter">Warmth <span id="sb_stability_val" class="hint" style="font-style:normal"></span></label>
@@ -637,16 +640,6 @@
             <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
           </optgroup>
         </select>
-        <label data-tip="Save a profile you like, load it back into the draft anytime">Saved scripts</label>
-        <div class="row" style="gap:8px">
-          <select id="vt_preset" style="flex:1"><option value="">Saved scripts…</option></select>
-          <button class="ghost" onclick="loadPreset()">Load</button>
-          <button class="ghost" onclick="removePreset()">Delete</button>
-        </div>
-        <div class="row" style="gap:8px;margin-top:6px">
-          <input id="vt_preset_name" placeholder="name this one (e.g. 'warm v2')" style="flex:1">
-          <button class="ghost" onclick="storePreset()">Save current</button>
-        </div>
         <div class="btnrow" style="margin-top:14px">
           <button class="ghost" onclick="loadSandbox()">Reload draft</button>
           <button class="act" onclick="applySandbox()" style="background:var(--yellow,#F4D03F);color:#1a1a24">Save draft</button>
@@ -658,58 +651,59 @@
           <button class="ghost" onclick="resetScript()">Reset to default</button>
           <button class="act" onclick="pushSandboxToStores()">Apply to ALL store calls</button>
         </div>
-        <div style="margin-top:16px;text-align:right"><button class="ghost" onclick="wizStep('tb_rotate_card')" style="font-weight:600">Next: Rotation →</button></div>
+        <div style="margin-top:16px;text-align:right"><button class="ghost" onclick="wizStep('tb_rotate_card')" style="font-weight:600">Next: Scripts →</button></div>
       </details>
 
       <details class="card" id="tb_rotate_card">
-        <summary><span class="name">Step 2 · Rotation</span></summary>
-        <div class="meta" style="margin:10px 0 8px">Live store calls round-robin through these. Leave empty to use the single live voice/opener.</div>
-        <label data-tip="The agent rotates through these openers, one per call. Use {category} — it fills in Pokémon, One Piece, etc.">Write a new opener</label>
+        <summary><span class="name">Scripts &amp; rotation</span></summary>
+        <div class="meta" style="margin:10px 0 10px">What the agent <b>says</b>. Save several openers and tick which ones rotate — live calls round-robin through the ticked scripts, one per call.</div>
+        <label data-tip="Use {category} — it fills in Pokémon, One Piece, etc.">Write a new opener</label>
         <textarea id="rot_opener_new" rows="3" style="font-size:14px;line-height:1.5" placeholder="e.g. Heyy! Got any {category} in today?"></textarea>
         <div class="btnrow" style="margin-top:8px"><button class="act" onclick="addOpener()">Save opener</button></div>
-        <label style="margin-top:12px">Saved openers <span id="rot_opener_count" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></label>
-        <div class="row" style="gap:8px">
-          <select id="rot_opener_list" style="flex:1"></select>
-          <button class="ghost" onclick="deleteOpener()">Delete</button>
-        </div>
-        <textarea id="rot_openers" style="display:none"></textarea>
-        <label style="margin-top:10px" data-tip="Tick the voices to rotate through">Voice pool</label>
+        <label style="margin-top:14px">Your openers <span id="rot_opener_count" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></label>
+        <div id="rot_opener_list" style="margin-top:4px"></div>
+        <label style="margin-top:16px" data-tip="Tick the voices to rotate through in TEST">Voice pool</label>
         <div id="rot_voices" class="meta" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px">Loading voices…</div>
+        <div class="meta" style="margin-top:8px;color:var(--orange)">Voice rotation is test-only right now — live calls use the single live voice until DevOps enables it.</div>
         <div class="row" style="margin-top:12px;gap:8px"><button class="act" onclick="saveRotation(this)">Save rotation</button><span class="meta" id="rot_msg"></span></div>
-        <div style="margin-top:16px;text-align:right"><button class="ghost" onclick="wizStep('tb_call_card')" style="font-weight:600">Next: Test it →</button></div>
+        <div style="margin-top:16px;text-align:right"><button class="ghost" onclick="wizStep('tb_call_card')" style="font-weight:600">Next: Test →</button></div>
       </details>
 
       <details class="card" id="tb_call_card">
-        <summary><span class="name">Step 3 · Test it</span></summary>
-        <div class="hint" style="margin:8px 0 14px">Answer your phone like the clerk. Runs the draft voice with this store's phone-tree rules; the result records against the store.</div>
-        <label data-tip="Records the result against this store">Store</label>
-        <select id="sim_store" onchange="previewMaybe()"></select>
+        <summary><span class="name">Test</span></summary>
+        <div class="hint" style="margin:8px 0 14px">Answer your phone like the clerk. Each call cycles to the next ticked script (and voice, if you pick Rotate) — test-only, never touches live.</div>
+        <label data-tip="A supported store — one per chain">Store</label>
+        <select id="sim_store" onchange="previewMaybe()"><option value="" disabled selected>Loading stores…</option></select>
         <label>Category to ask about</label>
         <select id="sim_cat" onchange="previewMaybe()"></select>
-        <label>Flow</label>
-        <select id="sim_mode">
-          <option value="restock">Restock check (verified seller)</option>
-          <option value="carry">Carry check (do you sell it?)</option>
-        </select>
-        <label data-tip="Branches off the verified flow">Decision tree</label>
-        <select id="sim_tree" onchange="syncTreeUI();previewMaybe()">
-          <option value="general">General restock · any of it counts, won't ask which set</option>
-          <option value="specific">Specific product · only greens if THAT is in</option>
-        </select>
-        <div id="sim_specific_wrap" style="display:none">
-          <label data-tip="e.g. 151 booster boxes, Prismatic Evolutions ETB">Specific set / product</label>
-          <input id="sim_specific" placeholder="151 booster boxes">
-        </div>
         <label data-tip="The agent dials this number">Your phone</label>
         <input id="sim_phone" placeholder="+13106662331">
-        <label data-tip="Ring with any clone — the live store voice is never touched">Voice for this test</label>
-        <select id="sim_voice"><option value="">Bench default voice</option></select>
-        <div style="margin-top:14px"><button class="act" onclick="benchCall()">📞 Call me</button></div>
+        <label data-tip="Only your Voice-pool picks show here. Rotate = each call uses the next pool voice.">Voice for this test</label>
+        <select id="sim_voice" onchange="refreshTestRotation()"><option value="">Bench default voice</option></select>
+        <details class="card" style="margin:14px 0 0;background:var(--surface-1)">
+          <summary><span class="name" style="font-size:13px">Advanced</span></summary>
+          <label>Flow</label>
+          <select id="sim_mode">
+            <option value="restock">Restock — did your shipment include it?</option>
+            <option value="carry">Carry — do you even sell it?</option>
+          </select>
+          <label data-tip="General = any item counts · Specific = only that exact set counts">Decision tree</label>
+          <select id="sim_tree" onchange="syncTreeUI();previewMaybe()">
+            <option value="general">General — any of it counts</option>
+            <option value="specific">Specific — only that exact set counts</option>
+          </select>
+          <div id="sim_specific_wrap" style="display:none">
+            <label data-tip="e.g. 151 booster boxes, Prismatic Evolutions ETB">Specific set / product</label>
+            <input id="sim_specific" placeholder="151 booster boxes">
+          </div>
+        </details>
+        <div id="tb_rot_line" class="meta" style="color:var(--green);font-weight:600;min-height:16px;margin:12px 0 8px"></div>
+        <div class="btnrow"><button class="act" onclick="benchCall()">Call me</button></div>
       </details>
 
       <details class="card" id="tb_preview_card" ontoggle="if(this.open)loadPreview()">
-        <summary><span class="name">Preview</span></summary>
-        <div class="meta" style="margin:10px 0 8px">Assembled live for the store + category picked above: global rules + the chain's phone tree + any store override.</div>
+        <summary><span class="name">Full call script</span></summary>
+        <div class="meta" style="margin:10px 0 8px">The exact instructions the agent will follow for this store — global rules + the chain's phone tree + the opener that's next in rotation.</div>
         <div id="pv_meta" class="meta"></div>
         <pre id="pv_body" style="display:none;white-space:pre-wrap;max-height:380px;overflow:auto;font-size:12px;line-height:1.5;background:var(--terminal);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:10px"></pre>
         <div class="btnrow" style="margin-top:8px"><button class="ghost" onclick="loadPreview()">Refresh preview</button></div>
@@ -962,7 +956,7 @@ const NAV_GROUPS={
   voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Create','flask'],['bench','Test','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>{loadDash();loadGwPulse();}, treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwIntel();loadGwKiosks();}, bail:()=>loadBail(), statuses:()=>loadStatusReg(), results:()=>loadResults() };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>{loadVoices();loadTestStores();}, dash:()=>{loadDash();loadGwPulse();}, treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwIntel();loadGwKiosks();}, bail:()=>loadBail(), statuses:()=>loadStatusReg(), results:()=>loadResults() };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -1208,35 +1202,76 @@ async function loadRotation(voices){
   const box=document.getElementById('rot_voices'); if(!box) return;
   const s=await api('/api/settings')||{};
   const pool=new Set(((s.vt_voice_pool||'').split(',').map(x=>x.trim()).filter(Boolean)));
-  box.innerHTML=(voices||[]).map(v=>`<label class="day" style="margin:0"><input type="checkbox" class="rotvoice" value="${v.id}" ${pool.has(v.id)?'checked':''}> ${esch(v.name)}${v.cloned?' (cloned)':''}</label>`).join('')||'<span class="meta">No voices.</span>';
-  const ta=document.getElementById('rot_openers'); if(ta) ta.value=s.vt_opener_variants||'';
-  OPENERS=(s.vt_opener_variants||'').split('\n').map(x=>x.trim()).filter(Boolean); renderOpeners();
+  box.innerHTML=(voices||[]).map(v=>`<label class="day" style="margin:0"><input type="checkbox" class="rotvoice" value="${v.id}" data-name="${esch(v.name)}" onchange="syncTestVoices()" ${pool.has(v.id)?'checked':''}> ${esch(v.name)}${v.cloned?' (cloned)':''}</label>`).join('')||'<span class="meta">No voices.</span>';
+  OPENERS=openersFromSettings(s); renderOpeners(); syncTestVoices();
 }
-let OPENERS=[];
+// Openers = a LIBRARY of scripts, each on/off. Ticked ones rotate on live calls (vt_opener_variants);
+// the full list saves to vt_opener_library (DevOps adding) so unticked drafts survive.
+let OPENERS=[]; // [{text, on}]
+function openersFromSettings(s){
+  let lib=null; try{ if(s.vt_opener_library) lib=JSON.parse(s.vt_opener_library); }catch(e){}
+  if(Array.isArray(lib)) return lib.map(o=> typeof o==='string'?{text:o,on:true}:{text:String(o.text||''),on:o.on!==false}).filter(o=>o.text);
+  // No library yet → treat every saved (active) opener as on.
+  return (s.vt_opener_variants||'').split('\n').map(x=>x.trim()).filter(Boolean).map(t=>({text:t,on:true}));
+}
+function firstActiveOpener(){ const a=OPENERS.filter(o=>o.on); return a.length?a[0].text:''; }
 function renderOpeners(){
-  const sel=document.getElementById('rot_opener_list');
-  if(sel) sel.innerHTML = OPENERS.length ? OPENERS.map((o,i)=>`<option value="${i}">${esch(o.length>64?o.slice(0,64)+'…':o)}</option>`).join('') : '<option value="">No saved openers yet</option>';
-  const hid=document.getElementById('rot_openers'); if(hid) hid.value=OPENERS.join('\n');
-  const c=document.getElementById('rot_opener_count'); if(c) c.textContent=OPENERS.length?('· '+OPENERS.length):'';
+  const box=document.getElementById('rot_opener_list');
+  if(box) box.innerHTML = OPENERS.length ? OPENERS.map((o,i)=>`<label class="oprow"><input type="checkbox" ${o.on?'checked':''} onchange="toggleOpener(${i},this.checked)"><span class="optext">${esch(o.text)}</span><button class="ghost opdel" title="Remove" onclick="deleteOpener(${i})">✕</button></label>`).join('') : '<div class="meta" style="padding:8px 0">No openers yet — write one above.</div>';
+  const on=OPENERS.filter(o=>o.on).length;
+  const c=document.getElementById('rot_opener_count'); if(c) c.textContent=OPENERS.length?('· '+on+' of '+OPENERS.length+' rotating'):'';
+  refreshTestRotation();
 }
-async function persistOpeners(){ await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({openerVariants:OPENERS.join('\n')})}); }
+async function persistOpeners(){
+  const active=OPENERS.filter(o=>o.on).map(o=>o.text).join('\n');
+  const library=JSON.stringify(OPENERS.map(o=>({text:o.text,on:o.on})));
+  await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({openerVariants:active, openerLibrary:library})});
+}
 async function addOpener(){
-  const ta=document.getElementById('rot_opener_new'); const v=(ta.value||'').trim();
-  if(!v){ toast('Type an opener first'); return; }
-  OPENERS.push(v); ta.value=''; renderOpeners(); await persistOpeners(); toast('Opener saved');
+  const ta=document.getElementById('rot_opener_new'); const t=(ta.value||'').trim();
+  if(!t){ toast('Write an opener first'); return; }
+  OPENERS.push({text:t,on:true}); ta.value=''; renderOpeners(); await persistOpeners(); toast('Opener saved');
 }
-async function deleteOpener(){
-  const sel=document.getElementById('rot_opener_list'); const i=Number(sel.value);
-  if(isNaN(i)||OPENERS[i]==null) return;
-  OPENERS.splice(i,1); renderOpeners(); await persistOpeners(); toast('Opener removed');
-}
+function toggleOpener(i,on){ if(OPENERS[i]){ OPENERS[i].on=on; renderOpeners(); persistOpeners(); } }
+async function deleteOpener(i){ if(OPENERS[i]==null) return; OPENERS.splice(i,1); renderOpeners(); await persistOpeners(); toast('Opener removed'); }
 async function saveRotation(btn){
   const o=btn.textContent; btn.textContent='…'; btn.disabled=true;
   const voicePool=[...document.querySelectorAll('.rotvoice:checked')].map(c=>c.value).join(',');
-  const openerVariants=(document.getElementById('rot_openers')?.value||'').trim();
-  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({voicePool,openerVariants})});
+  const openerVariants=OPENERS.filter(x=>x.on).map(x=>x.text).join('\n');
+  const library=JSON.stringify(OPENERS.map(x=>({text:x.text,on:x.on})));
+  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({voicePool,openerVariants,openerLibrary:library})});
   btn.textContent=o; btn.disabled=false;
-  const m=document.getElementById('rot_msg'); if(m) m.textContent=(r&&!r.error)?'Saved — live calls will rotate.':'Could not save';
+  const m=document.getElementById('rot_msg'); if(m) m.textContent=(r&&!r.error)?'Saved — live calls rotate these scripts. (Voice rotation is test-only for now.)':'Could not save';
+}
+// ---- Test: store list from /api/test-stores, voice pool + rotate, visible per-call rotation ----
+let TEST_STORES=[], TEST_ROT={call:0};
+async function loadTestStores(){
+  const sel=document.getElementById('sim_store'); if(!sel) return;
+  const d=await api('/api/test-stores');
+  if(!Array.isArray(d)||!d.length){ sel.innerHTML='<option value="" disabled selected>No test stores yet (DevOps deploying)…</option>'; TEST_STORES=[]; return; }
+  TEST_STORES=d; const cur=sel.value;
+  sel.innerHTML='<option value="" disabled selected>Choose a store…</option>'+d.map(s=>`<option value="${s.id}">${esch(s.name)}${s.location?' · '+esch(s.location):''}${s.chainName?' — '+esch(s.chainName):''}</option>`).join('');
+  if(cur) sel.value=cur;
+}
+function poolVoices(){ return [...document.querySelectorAll('.rotvoice:checked')].map(c=>({id:c.value,name:c.dataset.name||c.value})); }
+function syncTestVoices(){
+  const sel=document.getElementById('sim_voice'); if(!sel) return;
+  const pool=poolVoices(); const cur=sel.value;
+  let html='<option value="">Bench default voice</option>';
+  if(pool.length>1) html+=`<option value="__rotate__">Rotate through pool (${pool.length})</option>`;
+  html+=pool.map(v=>`<option value="${v.id}">${esch(v.name)}</option>`).join('');
+  sel.innerHTML=html;
+  if(cur && [...sel.options].some(o=>o.value===cur)) sel.value=cur;
+  refreshTestRotation();
+}
+function refreshTestRotation(){
+  const line=document.getElementById('tb_rot_line'); if(!line) return;
+  const active=OPENERS.filter(o=>o.on); const sv=document.getElementById('sim_voice');
+  const rotateV=sv&&sv.value==='__rotate__'; const pool=poolVoices(); const parts=[];
+  if(active.length) parts.push('Script #'+((TEST_ROT.call%active.length)+1)+' of '+active.length);
+  if(rotateV&&pool.length) parts.push('Voice: '+pool[TEST_ROT.call%pool.length].name);
+  else if(sv&&sv.value&&sv.value!=='__rotate__'){ const opt=sv.selectedOptions[0]; if(opt&&opt.value) parts.push('Voice: '+opt.textContent); }
+  line.textContent = parts.length ? ('This call → '+parts.join(' · ')) : '';
 }
 async function vsSetActive(){
   const id=document.getElementById('vs_select').value; if(!id) return;
@@ -1513,9 +1548,7 @@ async function labCall(){
 }
 // --- Store simulator: agent calls YOUR phone; result records against the chosen store ---
 function fillSimSelects(){
-  const ss=document.getElementById('sim_store'); if(ss){ const cur=ss.value;
-    ss.innerHTML='<option value="" disabled selected>Choose a store…</option>'+RETAILERS.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(r=>`<option value="${r.id}">${r.name}${r.location?' · '+r.location:''}</option>`).join('');
-    if(cur) ss.value=cur; }
+  // sim_store is owned by loadTestStores() (/api/test-stores) — never RETAILERS (empty/105k here).
   const sc=document.getElementById('sim_cat'); if(sc){ const cur=sc.value;
     sc.innerHTML='<option value="" disabled selected>Choose a category…</option>'+CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
     if(cur) sc.value=cur; }
@@ -1632,13 +1665,17 @@ async function benchCall(){
   const toNumber=v('sim_phone');
   const tree=document.getElementById('sim_tree').value;
   const specificProduct = tree==='specific' ? v('sim_specific') : '';
-  const sv=document.getElementById('sim_voice'); const voiceId=sv?sv.value:'';
   if(!retailerId||!categoryId){toast('Pick a store and category');return;}
   if(!toNumber){toast('Enter your phone number');return;}
   if(tree==='specific'&&!specificProduct){toast('Name the specific product, or switch to general');return;}
+  // Rotate voice + opener for THIS call (test-only, visible in the line above the button).
+  const sv=document.getElementById('sim_voice'); let voiceId=sv?sv.value:'';
+  const pool=poolVoices(); if(voiceId==='__rotate__') voiceId = pool.length ? pool[TEST_ROT.call%pool.length].id : '';
+  const active=OPENERS.filter(o=>o.on); const opening = active.length ? active[TEST_ROT.call%active.length].text : undefined;
   toast('Calling you — answer like the clerk!');
-  const r=await api('/api/bench/call',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId,categoryId,mode,toNumber,specificProduct,voiceId})});
+  const r=await api('/api/bench/call',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId,categoryId,mode,toNumber,specificProduct,voiceId,opening})});
   if(r&&r.error){toast('Error: '+r.error);return;}
+  TEST_ROT.call++; refreshTestRotation();
   if(r&&r.providerCallId) pollTranscript(r.providerCallId,'tb');
 }
 // Re-assert the agent's canonical built-in script (safety lever if experiments went sideways).
@@ -1665,8 +1702,7 @@ function updateDraftDot(){
     && Number(v('sb_stability'))===Number(LIVE_VOICE.stability)
     && Number(v('sb_latency'))===Number(LIVE_VOICE.latency)
     && g('sb_beat').value===LIVE_VOICE.turnEagerness
-    && g('sb_llm').value===(LIVE_VOICE.llm||'')
-    && v('tb_opening')===(LIVE_VOICE.opening||'');
+    && g('sb_llm').value===(LIVE_VOICE.llm||'');
   d.style.display = same?'none':'';
 }
 
@@ -1693,7 +1729,6 @@ async function loadSandbox(){
   if(g('sb_soft_secs')&&t.softTimeoutSecs!=null&&t.softTimeoutSecs>=0) g('sb_soft_secs').value=t.softTimeoutSecs;
   if(g('sb_soft_msg')&&t.softTimeoutMsg) g('sb_soft_msg').value=t.softTimeoutMsg;
   if(g('sb_llm')&&t.llm) g('sb_llm').value=t.llm;
-  if(g('tb_opening')) g('tb_opening').value=t.opening||'';
   sbLabels();
   const s=document.getElementById('sb_status'); if(s) s.textContent='Showing the current draft.';
 }
@@ -1706,7 +1741,7 @@ function sandboxBody(){
     turnTimeout: g('sb_turntimeout')?Number(g('sb_turntimeout').value):undefined,
     softTimeoutSecs: softOn ? Number(v('sb_soft_secs')||1.5) : -1,
     softTimeoutMsg: v('sb_soft_msg')||"Yeah—hi, I'm here!",
-    llm:g('sb_llm').value, opening:v('tb_opening') };
+    llm:g('sb_llm').value, opening:firstActiveOpener() };
 }
 async function applySandbox(){
   document.getElementById('sb_status').textContent='Saving the draft…';
@@ -1733,7 +1768,7 @@ async function loadPresets(){
 }
 async function storePreset(){
   const name=document.getElementById('vt_preset_name').value.trim(); if(!name){ toast('Name it first'); return; }
-  const body={ name, opening:v('tb_opening'), speed:Number(v('sb_speed')),
+  const body={ name, opening:firstActiveOpener(), speed:Number(v('sb_speed')),
     stability:Number(v('sb_stability')), llm:document.getElementById('sb_llm').value };
   const r=await api('/api/voice-presets',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   if(r&&r.error){ toast('Error: '+r.error); return; }
@@ -2608,7 +2643,7 @@ async function agentSend(){
     const sec=SECTION_GROUP[want]?want:'dash';
     showGroup(SECTION_GROUP[sec], sec); })();
   await Promise.all([loadCatalog(),loadLogos()]);
-  await Promise.all([loadStoreIntel(),loadResults(),loadSchedules(),loadZones(),loadSettings(),loadLiveStrip(),loadCredits(),loadPresets(),loadBail(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen()]);
+  await Promise.all([loadStoreIntel(),loadResults(),loadSchedules(),loadZones(),loadSettings(),loadLiveStrip(),loadCredits(),loadTestStores(),loadBail(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen()]);
   const sp=new URLSearchParams(location.search);
   restorePersist();
   decorateChrome();
