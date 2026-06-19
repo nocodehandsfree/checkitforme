@@ -128,24 +128,25 @@ __BRAND_HEAD__
   .verdict.in .title{color:var(--green)} .verdict.out .title{color:var(--red)} .verdict.unk .title{color:#FBBF24} .verdict.soon .title{color:#F59E0B}
   .vstore{text-align:center;color:#d6d6e0;font-size:14.5px;font-weight:600;margin-top:9px}
   /* combined call header: store + verdict status + timing in one box at the top */
-  .rhead{display:block;background:var(--terminal);border-radius:16px;padding:15px;border:1px solid var(--border);margin-bottom:14px}
-  .rhead-top{display:flex;gap:12px;align-items:center}
+  .rhead{background:var(--terminal);border-radius:16px;border:1px solid var(--border);margin-bottom:14px;overflow:hidden}
+  .rhead-top{display:flex;gap:12px;align-items:center;padding:15px}
   .rhead .railchip{flex:0 0 auto}
   .rhead-id{min-width:0;flex:1}
   /* Store name + address ALWAYS one line each (ellipsis if long) — the status never pushes the name down. */
   .rhead-store{font-weight:800;font-size:17px;letter-spacing:-.3px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .rhead-addr{color:var(--muted);font-size:12.5px;font-weight:500;margin-top:3px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* Verdict row UNDER the name: (icon) Status: summary — tinted by outcome so red=not in / green=in reads instantly. */
-  .rhead-verdict{display:flex;gap:11px;align-items:center;margin-top:13px;padding:11px 13px;border-radius:12px;border:1px solid var(--border);background:var(--sheet)}
-  .rhead-ic{width:40px;height:40px;flex:0 0 auto;border-radius:11px;display:grid;place-items:center;border:1px solid var(--border);background:var(--terminal)}
-  .rhead-ic svg{display:block}
-  .rhead-vtext{min-width:0;flex:1;font-size:14px;line-height:1.5;color:#cfcfd9}
+  /* Verdict fills the BOTTOM of the SAME card like water in a cup — no nested box. A tinted band
+     (icon + "Status: summary") bleeds edge-to-edge and rounds with the card. Green=in, red=not in. */
+  .rhead-fill{display:flex;gap:10px;align-items:center;padding:13px 15px;background:var(--sheet);border-top:1px solid var(--border)}
+  .rhead-ic{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;line-height:0}
+  .rhead-ic svg,.rhead-ic img{display:block}
+  .rhead-vtext{min-width:0;flex:1;font-size:14px;line-height:1.45;color:#e9e9f0}
   .rhead-stat{font-weight:800;letter-spacing:-.1px;color:#c8c8d4}
   .rhead-vtext b{color:#fff}
-  .rhead.in .rhead-stat{color:var(--green)} .rhead.in .rhead-verdict{background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.42)} .rhead.in .rhead-ic{background:rgba(74,222,128,.14);border-color:rgba(74,222,128,.45)}
-  .rhead.out .rhead-stat{color:var(--red)} .rhead.out .rhead-verdict{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.4)} .rhead.out .rhead-ic{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.4)}
-  .rhead.unk .rhead-stat{color:#FBBF24} .rhead.unk .rhead-verdict{background:rgba(251,191,36,.09);border-color:rgba(251,191,36,.3)} .rhead.unk .rhead-ic{background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.34)}
-  .rhead.soon .rhead-stat{color:#F59E0B} .rhead.soon .rhead-verdict{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.36)} .rhead.soon .rhead-ic{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.38)}
+  .rhead.in .rhead-stat{color:var(--green)} .rhead.in .rhead-fill{background:rgba(74,222,128,.15);border-top-color:rgba(74,222,128,.4)}
+  .rhead.out .rhead-stat{color:var(--red)} .rhead.out .rhead-fill{background:rgba(239,68,68,.15);border-top-color:rgba(239,68,68,.38)}
+  .rhead.unk .rhead-stat{color:#FBBF24} .rhead.unk .rhead-fill{background:rgba(251,191,36,.12);border-top-color:rgba(251,191,36,.3)}
+  .rhead.soon .rhead-stat{color:#F59E0B} .rhead.soon .rhead-fill{background:rgba(245,158,11,.15);border-top-color:rgba(245,158,11,.36)}
   /* logged-out homepage = the focused view (hero + check card). Retired modules hidden for everyone. */
   #truststrip,#demo{display:none!important}
   #earndemo{display:none} body.authed #earndemo{display:block}
@@ -3035,8 +3036,8 @@ function showResult(o, cid){
           ${fullAddr?`<div class="rhead-addr">${esc(fullAddr)}</div>`:''}
         </div>
       </div>
-      <div class="rhead-verdict">
-        <span class="rhead-ic">${vicon(big,cls,24)}</span>
+      <div class="rhead-fill">
+        <span class="rhead-ic">${vicon(big,cls,22)}</span>
         <div class="rhead-vtext"><span class="rhead-stat">${esc(vTitle)}</span>${note?': '+note:''}</div>
       </div>
     </div>
