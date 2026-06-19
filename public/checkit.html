@@ -1959,7 +1959,7 @@ async function restoreCall(cid, storeName, catName){
   // NOW (no spinner). We still revalidate below and re-render only if it changed. (Only when `known`,
   // so the store name/category are already resolved synchronously and the header is correct.)
   const cached = known ? resultCacheGet(cid) : null;
-  if(cached) showResult(cached, cid);
+  if(cached){ if(known&&known.steps) cached.savedSteps=known.steps; showResult(cached, cid); }
   const o=await api('/pub/result/'+encodeURIComponent(cid));
   if(!o||o.error||o.status==='in_progress'){ if(cached) return; toast(t('toast.callgone','That call is no longer available')); backToBuilder(); return; }
   if(!SEL_STORE.name && isAuthed()){ const srv=(await fetchServerHistory()).find(x=>x.cid===cid); if(srv){ SEL_STORE={id:srv.storeId,name:srv.storeName}; } }
@@ -1969,6 +1969,7 @@ async function restoreCall(cid, storeName, catName){
     h.unshift({cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, address:SEL_STORE.address||null, location:SEL_STORE.location||null, logoUrl:SEL_STORE.logoUrl||null, logoWide:!!SEL_STORE.logoWide, logoDark:!!SEL_STORE.logoDark, categoryId:SEL_CAT, category:ct?ct.label:(catName||''), ts:Date.now(), status:o.status, confirmed:o.confirmed});
     localStorage.setItem('runnr_history', JSON.stringify(h.slice(0,60)));
   }
+  if(known&&known.steps) o.savedSteps=known.steps;
   if(!resultSame(o,cached)) showResult(o, cid);
 }
 function isClosed(s){ return s && s.openState && s.openState.known && !s.openState.open; }
@@ -3064,8 +3065,10 @@ function showResult(o, cid){
   const _aStreet=_store.address||SEL_STORE.address||'', _aCity=_store.location||SEL_STORE.location||'';
   const fullAddr=(_aStreet&&_aCity&&!_aStreet.includes(_aCity))?(_aStreet+', '+_aCity):(_aStreet||_aCity);
   const haveLive=LIVE_STEPS.length>0;
-  const resultSteps=haveLive?LIVE_STEPS:deriveSteps(o.transcript||'');
-  const finalElapsed=haveLive&&LIVE_T0?((Date.now()-LIVE_T0)/1000):null; // stamp the last step only when we have real live timings
+  // A reopened call reuses the SAVED live step timings (so "…3s / …2s" persists); else derive (no per-step secs).
+  const savedSteps=(!haveLive && Array.isArray(o.savedSteps) && o.savedSteps.length) ? o.savedSteps : null;
+  const resultSteps=haveLive?LIVE_STEPS:(savedSteps||deriveSteps(o.transcript||''));
+  const finalElapsed=haveLive&&LIVE_T0?((Date.now()-LIVE_T0)/1000):(savedSteps&&typeof o.durationSecs==='number'&&o.durationSecs>0?o.durationSecs:null);
   const vTitle=String(title).replace(/[\s!?.:：]+$/,''); // "In stock!" → "In stock" so the "Status: summary" line reads clean (colon separator, no dash)
   $('result').innerHTML = `
     <div class="railbar" id="railbar" style="display:none"></div>
@@ -3239,7 +3242,8 @@ function saveCheckToHistory(o,cid){
   const cats=(ASKED_CATS&&ASKED_CATS.length)?ASKED_CATS.map(x=>x.label):(cat?[cat]:[]);
   const h=loadHist();
   const entry={ cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, address:SEL_STORE.address||null, location:SEL_STORE.location||null, logoUrl:SEL_STORE.logoUrl||null, logoWide:!!SEL_STORE.logoWide, logoDark:!!SEL_STORE.logoDark, categoryId:SEL_CAT, category:cat,
-              cats, categoryResults:o.categoryResults||null, ts:Date.now(), status:o.status, confirmed:o.confirmed, soldOut:!!o.soldOut, doesNotSell:!!o.doesNotSell, shipmentDay:o.shipmentDay||null, statusKey:o.statusKey||null };
+              cats, categoryResults:o.categoryResults||null, ts:Date.now(), status:o.status, confirmed:o.confirmed, soldOut:!!o.soldOut, doesNotSell:!!o.doesNotSell, shipmentDay:o.shipmentDay||null, statusKey:o.statusKey||null,
+              steps:(LIVE_STEPS&&LIVE_STEPS.length)?LIVE_STEPS.map(s=>({n:s.n,label:s.label,at:s.at})):null }; // keep the live step timings so reopened calls still show "…3s"
   h.unshift(entry);
   localStorage.setItem('runnr_history', JSON.stringify(h.slice(0,60)));
   if(HIST_CACHE.length) HIST_CACHE.unshift(entry); // keep the call rail in sync without a refetch
@@ -3295,12 +3299,15 @@ async function openHistEntry(e){
   // Replaying a past call — go straight to the transcript. Never flash the live "calling" view.
   // INSTANT: paint the cached transcript immediately (no spinner) if we have it, then revalidate.
   const cached=resultCacheGet(e.cid);
-  if(cached){ cached.cats=e.cats||cached.cats; if(!cached.categoryResults&&e.categoryResults) cached.categoryResults=e.categoryResults; showResult(cached, e.cid); }
-  else toast(t('toast.loadingcall','Loading your call…'));
+  if(cached){ cached.cats=e.cats||cached.cats; if(!cached.categoryResults&&e.categoryResults) cached.categoryResults=e.categoryResults; if(e.steps) cached.savedSteps=e.steps; showResult(cached, e.cid); }
+  // Only flash "Loading…" if the fetch is actually slow — instant/cached opens never show it.
+  const _lt = cached ? null : setTimeout(()=>toast(t('toast.loadingcall','Loading your call…')),450);
   const o=await api('/pub/result/'+encodeURIComponent(e.cid));
+  if(_lt) clearTimeout(_lt);
   if(!o||o.error||o.status==='in_progress'){ if(cached) return; HIST_BAD.add(e.cid); HIST_CACHE=HIST_CACHE.filter(x=>x.cid!==e.cid); toast(t('toast.callgone','That call is no longer available')); openHistory(); return; }
   o.cats=e.cats||ASKED_CATS.map(x=>x.label);
   if(!o.categoryResults && e.categoryResults) o.categoryResults=e.categoryResults;
+  if(e.steps) o.savedSteps=e.steps;
   if(!resultSame(o,cached)) showResult(o, e.cid);
   // Deep-link the open call so a refresh restores exactly this transcript.
   try{ const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',e.cid); history.replaceState({v:'result'},'',location.pathname+'?'+sp.toString()); }catch(_){}
