@@ -456,7 +456,7 @@
         <div><label>Phone (E.164)</label><input id="r_phone" placeholder="+13105551234"></div>
         <div><label>Location</label><input id="r_loc" placeholder="Brentwood, TN"></div>
         <div><label>Timezone</label><select id="r_tz">
-          <option value="" disabled selected>Select a timezone…</option>
+          <option value="" disabled selected>Select a timezone</option>
           <option value="America/New_York">Eastern · America/New_York</option>
           <option value="America/Chicago">Central · America/Chicago</option>
           <option value="America/Denver">Mountain · America/Denver</option>
@@ -693,7 +693,7 @@
 
       <div class="card dstep" data-step="6" style="display:none">
         <div class="name" style="margin-bottom:12px">Step 6 · Test</div>
-        <label>Store</label><select id="sim_store" onchange="previewMaybe()"><option value="" disabled selected>Loading stores…</option></select>
+        <label>Store</label><select id="sim_store" onchange="previewMaybe()"><option value="" disabled selected>Loading stores</option></select>
         <label>Category to ask about</label><select id="sim_cat" onchange="previewMaybe()"></select>
         <label data-tip="The agent dials this number">Your phone</label><input id="sim_phone" placeholder="+13106662331">
         <label data-tip="Only your rotation voices show here.">Voice for this test</label><select id="sim_voice" onchange="refreshTestRotation()"><option value="">Bench default voice</option></select>
@@ -1171,7 +1171,7 @@ let VS_REC=null, VS_CHUNKS=[], VS_BLOB=null, VS_TIMER=null;
 async function loadVoices(){
   const sel=document.getElementById('vs_select'); if(!sel) return;
   const d=await api('/api/voices'); if(!d||d.error){ sel.innerHTML='<option>could not load voices</option>'; return; }
-  sel.innerHTML='<option value="" disabled selected>Choose a voice…</option>'+(d.voices||[]).map(v=>`<option value="${v.id}">${esch(v.name)}${v.cloned?' (cloned)':''}${v.id===d.active?' · LIVE now':''}</option>`).join('');
+  sel.innerHTML='<option value="" disabled selected>Choose a voice</option>'+(d.voices||[]).map(v=>`<option value="${v.id}">${esch(v.name)}${v.cloned?' (cloned)':''}${v.id===d.active?' · LIVE now':''}</option>`).join('');
   const act=(d.voices||[]).find(v=>v.id===d.active);
   document.getElementById('vs_active').textContent = act?`Live now: ${act.name}`:`Live voice id: ${d.active}`;
   // Mirror the voice list into the "Call me" + "Talk to me" pickers (test a clone without going live).
@@ -1233,9 +1233,9 @@ let TEST_STORES=[], TEST_ROT={call:0};
 async function loadTestStores(){
   const sel=document.getElementById('sim_store'); if(!sel) return;
   const d=await api('/api/test-stores');
-  if(!Array.isArray(d)||!d.length){ sel.innerHTML='<option value="" disabled selected>No test stores yet (DevOps deploying)…</option>'; TEST_STORES=[]; return; }
+  if(!Array.isArray(d)||!d.length){ sel.innerHTML='<option value="" disabled selected>No test stores yet</option>'; TEST_STORES=[]; return; }
   TEST_STORES=d; const cur=sel.value;
-  sel.innerHTML='<option value="" disabled selected>Choose a store…</option>'+d.map(s=>`<option value="${s.id}">${esch(s.name)}${s.location?' · '+esch(s.location):''}${s.chainName?' — '+esch(s.chainName):''}</option>`).join('');
+  sel.innerHTML='<option value="" disabled selected>Choose a store</option>'+d.map(s=>`<option value="${s.id}">${esch(s.name)}${s.location?' · '+esch(s.location):''}${s.chainName?' — '+esch(s.chainName):''}</option>`).join('');
   if(cur) sel.value=cur;
 }
 function poolVoices(){ return [...document.querySelectorAll('.rotvoice:checked')].map(c=>({id:c.value,name:c.dataset.name||c.value})); }
@@ -1549,7 +1549,7 @@ function renderRetailers(){
       ${statusBadge(r)}
     </div>
     <div class="ractions">
-      <select id="cn_${r.id}"><option value="" disabled selected>Category…</option>${CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
+      <select id="cn_${r.id}"><option value="" disabled selected>Category</option>${CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
       <button class="act" onclick="callNow(${r.id})">${ICO('phone',15)} Call now</button>
     </div>
   </div>`;}).join('');
@@ -1568,7 +1568,7 @@ async function labCall(){
 function fillSimSelects(){
   // sim_store is owned by loadTestStores() (/api/test-stores) — never RETAILERS (empty/105k here).
   const sc=document.getElementById('sim_cat'); if(sc){ const cur=sc.value;
-    sc.innerHTML='<option value="" disabled selected>Choose a category…</option>'+CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
+    sc.innerHTML='<option value="" disabled selected>Choose a category</option>'+CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
     if(cur) sc.value=cur; }
 }
 
@@ -1781,7 +1781,7 @@ async function pushSandboxToStores(){
 async function loadPresets(){
   const l=await api('/api/voice-presets'); const sel=document.getElementById('vt_preset'); if(!sel||!Array.isArray(l)) return;
   const cur=sel.value;
-  sel.innerHTML='<option value="">Saved scripts…</option>'+l.map(p=>`<option value="${(p.name||'').replace(/"/g,'&quot;')}">${(p.name||'').replace(/</g,'&lt;')}</option>`).join('');
+  sel.innerHTML='<option value="">Saved scripts</option>'+l.map(p=>`<option value="${(p.name||'').replace(/"/g,'&quot;')}">${(p.name||'').replace(/</g,'&lt;')}</option>`).join('');
   sel.value=cur;
 }
 async function storePreset(){
@@ -2154,7 +2154,7 @@ async function callZoneNow(id,name){
 }
 async function loadCatalog(){
   CATEGORIES = await api('/api/categories');
-  document.getElementById('s_cat').innerHTML = '<option value="" disabled selected>Choose a category…</option>'+CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
+  document.getElementById('s_cat').innerHTML = '<option value="" disabled selected>Choose a category</option>'+CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
   fillSimSelects();
   // Each tracked category with how many stores carry it — turns an empty page into real intel.
   const intel=await api('/api/admin/store-intel').catch(()=>null); const bp=(intel&&intel.byProduct)||{};
