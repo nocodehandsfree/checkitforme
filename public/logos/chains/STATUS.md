@@ -16,16 +16,16 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 ## Chunk 1 — 7_eleven → bi_mart  🔧 awaiting owner approval
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| 7-Eleven | app-icon mark | 🔧 | tall mark, fills tile (unchanged) |
-| AAFES (Exchange) | **X mark only** | 🔧 | dropped EXCHANGE wordmark + tagline (navy was unreadable on grey) |
-| Academy Sports + Outdoors | A+swoosh mark | 🔧 | white fringe removed, trimmed bigger |
+| 7-Eleven | app-icon mark | 🔧 | tall mark; shrunk ~10% for symmetry |
+| AAFES (Exchange) | **X mark only** | 🔧 | dropped EXCHANGE wordmark + tagline; shrunk ~10% |
+| Academy Sports + Outdoors | A+swoosh mark | 🔧 | white fringe removed; shrunk ~10% |
 | Ace Hardware | "ACE" wordmark | 🔧 | trimmed tight → now fills width (was too small); wide-flag fixed |
 | Acme | "ACME" wordmark | 🔧 | trimmed tight → now fills width (was too small) |
 | Albertsons | "A" flame mark | 🔧 | white fringe removed, trimmed bigger |
-| Aldi | boxed emblem | 🔧 | box = storefront identity (not white) — keep, owner to confirm |
+| Aldi | boxed emblem | 🔧 | box = storefront identity (not white); shrunk ~10% — owner to confirm |
 | Barnes & Noble | gray B/N + gold & | 🔧 | trimmed bigger; no box (matches spec) |
-| Best Buy | yellow tag | 🔧 | trimmed bigger; mark-only (matches spec) |
-| Bi-Mart | "BI/MART" 2 lines | 🔧 | red, two lines |
+| Best Buy | yellow tag | 🔧 | trimmed bigger then shrunk ~10%; mark-only (matches spec) |
+| Bi-Mart | **real BI·MART** split | 🔧 | their actual red wordmark, "BI" over "MART" (from official SVG) |
 
 ## Chunk 2 — big_5 → costco  ⬜
 | Logo | Treatment | Status | Notes |
