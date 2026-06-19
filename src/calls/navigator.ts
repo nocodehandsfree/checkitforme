@@ -44,10 +44,10 @@ ${log || "(call just connected, nothing heard yet)"}
 Newest from the STORE: "${latest || "(silence)"}"
 
 Decide the SINGLE next action toward a human:
-- A real live PERSON is on the line (a human greeting like "thanks for calling, how can I help", NOT a recording/menu) -> "human".
+- HAND OFF to a human ("human"): the INSTANT a live person is talking with you — a casual store greeting said naturally TO you ("[store name], how can I help?", "this is Mike, what can I do for ya?", "GameStop, what do you need?"). A store name + casual tone + a real question = a person. The moment it feels like a person and not a recording, answer "human" — do NOT keep firing menu words at them.
 - Voicemail / "no longer in service" / dead end -> "fail".
 - Advance a menu by VOICE -> "say" with a short value. For a normal menu, the option word (front, general, operator, representative, associate, no, yes).
-- OPEN-ENDED prompt? If the system asks something open-ended like "what can I help you with?", "briefly describe why you're calling", or "how can I help you?", do NOT answer "yes" or "no" — that loops forever. Instead "say" a short ROUTING phrase that gets a human in the store: "talk to a store associate" (or "speak to a representative" / "someone in the store"). Keep it under 5 words.
+- OPEN-ENDED from an AUTOMATED system (a clearly robotic / "virtual assistant" voice, or it keeps repeating "I didn't get that, briefly describe why you're calling")? Do NOT answer "yes"/"no" — that loops forever. "Say" a short ROUTING phrase: "talk to a store associate" (under 5 words). But if that same open question is asked by a real-sounding person, that's "human" above, not routing.
 - Advance by KEYPAD -> "press" with a single digit (0 is usually the operator).
 - Recording still mid-sentence, keep listening -> "wait".
 Pick the FASTEST route to a human and the SHORTEST word that works.
