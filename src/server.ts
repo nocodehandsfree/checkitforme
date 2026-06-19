@@ -1417,6 +1417,27 @@ app.post("/api/kiosks/overlay", async (c) => {
   invalidateRefCache();
   return c.json({ machines: machines.length, matched, inserted, dryRun, unresolved });
 });
+// Kiosk reconcile — ENFORCE the rule "a store is a Pokémon kiosk ONLY if it's on the official TPCi
+// vending list" (the store_ids from vending.pokemon.com). Pass the official store_ids; any active
+// hasKiosk store whose externalStoreId is NOT one of them gets hasKiosk:false + tier cleared. This
+// strips over-flagging from non-official sources (e.g. a store-locator scrape, stale numeric codes).
+// dryRun returns counts + a sample of what would be de-kiosked. Admin-gated.
+app.post("/api/kiosks/reconcile", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const official = new Set((Array.isArray(b.officialIds) ? b.officialIds : []).map((s: unknown) => String(s)));
+  if (!official.size) return c.json({ error: "officialIds[] required (the store_ids from the vending list)" }, 400);
+  const kiosks = await db.select().from(retailers).where(and(eq(retailers.active, true), eq(retailers.hasKiosk, true)));
+  const bad = kiosks.filter((r) => !r.externalStoreId || !official.has(String(r.externalStoreId)));
+  if (b.dryRun) {
+    return c.json({ dryRun: true, totalKiosks: kiosks.length, onOfficialList: kiosks.length - bad.length, willDeKiosk: bad.length,
+      sample: bad.slice(0, 24).map((r) => ({ id: r.id, name: r.name, extId: r.externalStoreId })) });
+  }
+  for (let i = 0; i < bad.length; i += 500) {
+    await db.update(retailers).set({ hasKiosk: false, tier: null }).where(inArray(retailers.id, bad.slice(i, i + 500).map((r) => r.id)));
+  }
+  invalidateRefCache();
+  return c.json({ totalKiosks: kiosks.length, kept: kiosks.length - bad.length, deKiosked: bad.length });
+});
 
 // ---- Store hours: backfill all (background) + refresh one + re-verify unverified stamps ----
 app.post("/api/hours/backfill", async (c) => c.json(await backfillHours()));
