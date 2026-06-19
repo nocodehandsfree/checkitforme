@@ -141,8 +141,8 @@ __BRAND_HEAD__
   .rhead .railchip{flex:0 0 auto}
   .rhead-id{min-width:0;flex:1}
   /* Store name + address ALWAYS one line each (ellipsis if long) — the status never pushes the name down. */
-  .rhead-store{font-weight:800;font-size:17px;letter-spacing:-.3px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .rhead-addr{color:var(--muted);font-size:12.5px;font-weight:500;margin-top:3px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rhead-store{font-weight:800;font-size:19.5px;letter-spacing:-.4px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+  .rhead-addr{color:var(--muted);font-size:13px;font-weight:500;margin-top:4px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* Verdict fills the BOTTOM of the SAME card like water in a cup — no nested box. A tinted band
      (icon + "Status: summary") bleeds edge-to-edge and rounds with the card. Green=in, red=not in. */
   .rhead-fill{display:flex;gap:10px;align-items:center;padding:13px 15px;background:var(--sheet);border-top:1px solid var(--border)}
@@ -151,10 +151,10 @@ __BRAND_HEAD__
   .rhead-vtext{min-width:0;flex:1;font-size:14px;line-height:1.45;color:#e9e9f0}
   .rhead-stat{font-weight:800;letter-spacing:-.1px;color:#c8c8d4}
   .rhead-vtext b{color:#fff}
-  .rhead.in .rhead-stat{color:var(--green)} .rhead.in .rhead-fill{background:rgba(74,222,128,.15);border-top-color:rgba(74,222,128,.4)}
-  .rhead.out .rhead-stat{color:var(--red)} .rhead.out .rhead-fill{background:rgba(239,68,68,.15);border-top-color:rgba(239,68,68,.38)}
-  .rhead.unk .rhead-stat{color:#FBBF24} .rhead.unk .rhead-fill{background:rgba(251,191,36,.12);border-top-color:rgba(251,191,36,.3)}
-  .rhead.soon .rhead-stat{color:#F59E0B} .rhead.soon .rhead-fill{background:rgba(245,158,11,.15);border-top-color:rgba(245,158,11,.36)}
+  .rhead.in .rhead-stat{color:var(--green)} .rhead.in .rhead-fill{background:rgba(74,222,128,.10);border-top-color:rgba(74,222,128,.3)}
+  .rhead.out .rhead-stat{color:var(--red)} .rhead.out .rhead-fill{background:rgba(239,68,68,.08);border-top-color:rgba(239,68,68,.26)}
+  .rhead.unk .rhead-stat{color:#FBBF24} .rhead.unk .rhead-fill{background:rgba(251,191,36,.08);border-top-color:rgba(251,191,36,.24)}
+  .rhead.soon .rhead-stat{color:#F59E0B} .rhead.soon .rhead-fill{background:rgba(245,158,11,.10);border-top-color:rgba(245,158,11,.28)}
   /* logged-out homepage = the focused view (hero + check card). Retired modules hidden for everyone. */
   #truststrip,#demo{display:none!important}
   #earndemo{display:none} body.authed #earndemo{display:block}
@@ -2686,10 +2686,11 @@ function scriptHTML(transcript, final){
 }
 function callMsgBoxHTML(steps, transcript, opts){
   opts=opts||{};
-  // On a FINISHED call the 8-step log is just noise — collapse it to one clean summary line (tap to
-  // expand the full timeline). During a LIVE call we show the steps streaming in (that's the show).
+  // The step log is collapsible. It starts OPEN on first view (a just-finished/live call — watching it
+  // is the cool part), and starts COLLAPSED when you come back to a past call (declutter; tap to expand).
+  // Either way all the steps are kept — only the default open/closed state changes.
   const stepsSection = opts.final
-    ? `<div class="cs-collapse">
+    ? `<div class="cs-collapse${opts.expanded?' open':''}">
         <button type="button" class="cs-sum" onclick="this.closest('.cs-collapse').classList.toggle('open')" aria-label="${esc(t('cs.toggle','Show call steps'))}">
           <span class="cs-sum-dot"></span><span class="cs-sum-t">${esc(opts.summary||t('live.steps','Call progress'))}</span><span class="cs-sum-chev"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </button>
@@ -3070,7 +3071,7 @@ function showResult(o, cid){
       </div>
     </div>
     ${breakdown}
-    ${callMsgBoxHTML(resultSteps, o.transcript||'', {finalElapsed, final:true, summary:callSummary})}
+    ${callMsgBoxHTML(resultSteps, o.transcript||'', {finalElapsed, final:true, summary:callSummary, expanded:haveLive})}
     ${inActions}
     ${isAuthed()
       ? `<button class="cta" onclick="backToBuilder()" style="margin-top:14px">${t('cta.another','Check another store')}</button>`
@@ -3246,6 +3247,7 @@ async function openHistEntry(e){
   if(!e.cid){ toast(t('toast.callgone','That call is no longer available')); return; } // instant hang-up: no transcript exists
   SEL_STORE={id:e.storeId,name:e.storeName,carries:[],address:e.address||null,location:e.location||null,logoUrl:e.logoUrl,logoWide:e.logoWide,logoDark:e.logoDark}; SEL_CAT=e.categoryId;
   SEL_CATS=e.categoryId?[e.categoryId]:[]; ASKED_CATS=(e.cats||[]).map(l=>({id:null,label:l}));
+  LIVE_STEPS=[]; LIVE_T0=0; // reopening a past call → no live timings; derive steps and start collapsed (it isn't happening live now)
   // Replaying a past call — go straight to the transcript. Never flash the live "calling" view.
   // INSTANT: paint the cached transcript immediately (no spinner) if we have it, then revalidate.
   const cached=resultCacheGet(e.cid);
