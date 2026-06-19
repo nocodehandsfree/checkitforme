@@ -564,7 +564,8 @@ __BRAND_HEAD__
      Mobile: horizontal scroll above the result. Desktop: vertical tabs in the left margin. */
   /* Call switcher: filter your past calls by store/status, hop with ‹ › or tap a tile.
      Tiles are clean monograms (store logo when one is available) + an outcome dot. */
-  .railbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:9px;position:relative}
+  /* pull the switcher up so it sits centered between the nav and the store card (result-only; homepage hero keeps its top spacing) */
+  .railbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:-12px;margin-bottom:16px;position:relative}
   .railcal{flex:0 0 auto;display:grid;place-items:center;width:40px;height:38px;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;border-radius:11px;cursor:pointer;padding:0}
   .railcal.on{border-color:var(--accent,#4ADE80);color:var(--accent,#4ADE80)}
   .railcalpop{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:30;width:252px;max-width:88vw;background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:12px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
