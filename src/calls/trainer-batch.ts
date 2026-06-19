@@ -9,7 +9,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "../db/client";
 import { chains, retailers } from "../db/schema";
 import { placeNavCall, getNavSession } from "./navigator";
-import { isCallingPaused } from "../redis";
+import { isCallingPaused, setBatchState, getBatchState } from "../redis";
 import { openState } from "../store-hours";
 
 type Step = { who?: string; action?: string; value?: string; atSec?: number };
@@ -21,7 +21,7 @@ const state = {
   results: [] as Array<{ chain: string; outcome: string; seconds?: number }>,
 };
 export function batchStatus() { return { ...state, results: state.results.slice(-50) }; }
-export function stopBatch() { state.stop = true; return { stopping: true, ...batchStatus() }; }
+export function stopBatch() { state.stop = true; void setBatchState(null); return { stopping: true, ...batchStatus() }; }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -110,6 +110,8 @@ export async function startBatch(opts: BatchOpts = {}) {
   if (onlyMissing) list = list.filter((c) => c.navStatus !== "locked" && !c.phoneTreeDefault);
   if (opts.limit) list = list.slice(0, opts.limit);
   Object.assign(state, { running: true, stop: false, total: list.length, done: 0, learned: 0, review: 0, skipped: 0, failed: 0, current: "", startedAt: Date.now(), results: [] });
+  // Durable flag so a redeploy mid-run auto-resumes the remaining chains on boot (resilience).
+  await setBatchState(JSON.stringify({ active: true, onlyMissing, perCallMaxSec, gapSec, startedAt: state.startedAt }));
 
   (async () => {
     for (const ch of list) {
@@ -142,7 +144,23 @@ export async function startBatch(opts: BatchOpts = {}) {
       await sleep(gapSec * 1000);
     }
     state.running = false; state.current = "";
+    await setBatchState(null); // finished/stopped/kill-switched → don't auto-resume on next boot
   })().catch((e) => { state.running = false; state.results.push({ chain: state.current, outcome: "loop error: " + String(e).slice(0, 90) }); });
 
   return { started: true, total: list.length, onlyMissing, gapSec, perCallMaxSec };
+}
+
+/** Called once at server boot: if a batch was active when the process died (redeploy), resume the
+ *  remaining chains. Already-locked chains are filtered out by onlyMissing, so resume is idempotent. */
+export async function resumeBatchIfFlagged() {
+  try {
+    const raw = await getBatchState();
+    if (!raw) return;
+    const f = JSON.parse(raw) as { active?: boolean; onlyMissing?: boolean; perCallMaxSec?: number; gapSec?: number };
+    if (!f.active || state.running) return;
+    if (await isCallingPaused()) { await setBatchState(null); return; }
+    await sleep(8000); // let DB/redis settle after boot
+    console.log("[trainer-batch] resuming after restart");
+    await startBatch({ onlyMissing: f.onlyMissing, perCallMaxSec: f.perCallMaxSec, gapSec: f.gapSec });
+  } catch (e) { console.error("[trainer-batch] resume failed", e); }
 }

@@ -96,6 +96,19 @@ export async function spendTodayCents(): Promise<number> {
   try { return Number(await r.get(spendKey())) || 0; } catch { return 0; }
 }
 
+/** Durable "overnight trainer batch is active" flag (+ its opts). Lets the batch SURVIVE a redeploy:
+ *  on boot the server reads this and resumes the remaining chains (completed learns/reviews already
+ *  live in the DB, so resume is idempotent). Cleared when the batch finishes or is stopped. */
+export async function setBatchState(json: string | null): Promise<void> {
+  const r = redis(); if (!r) return;
+  try { if (json) await r.set("trainer_batch", json); else await r.del("trainer_batch"); }
+  catch (e) { console.error("[redis] setBatchState", e); }
+}
+export async function getBatchState(): Promise<string | null> {
+  const r = redis(); if (!r) return null;
+  try { return await r.get("trainer_batch"); } catch { return null; }
+}
+
 /** Manual / auto calling pause (the kill-switch flag). */
 export async function isCallingPaused(): Promise<boolean> {
   const r = redis(); if (!r) return false;

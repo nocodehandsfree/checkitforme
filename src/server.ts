@@ -27,7 +27,7 @@ import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL } from "./calls/navigator";
-import { startBatch, batchStatus, stopBatch } from "./calls/trainer-batch";
+import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
 import { llm } from "./llm";
 import { harvestHoursTick } from "./hours-harvest";
 import { createSchedule, listSchedulesDetailed, deleteSchedule, customerScheduleTick } from "./customer-schedules";
@@ -2433,6 +2433,10 @@ app.post("/webhooks/elevenlabs", async (c) => {
 const httpServer = serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`Voice Caller on http://localhost:${info.port}`);
 });
+
+// If an overnight trainer batch was mid-run when this process last died (e.g. a redeploy), resume the
+// remaining chains. No-op when no batch flag is set. Best-effort, fire-and-forget.
+void resumeBatchIfFlagged();
 
 // Keep-warm: a tiny periodic query so the DB connection doesn't go cold between visits — kills the
 // "first open is slow" cold start. Cheap (one row), every 4 minutes.
