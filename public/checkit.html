@@ -34,8 +34,10 @@ __BRAND_HEAD__
   html{-webkit-text-size-adjust:100%;background:#0C0C12;color-scheme:dark}
   html,body{max-width:100%;overflow-x:hidden}
   body{background:var(--bg);color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;margin:0;padding:0;
-    display:flex;flex-direction:column;min-height:100dvh;
-    background-image:radial-gradient(1200px 500px at 50% -100px,rgba(74,222,128,.10),transparent 70%)}
+    display:flex;flex-direction:column;min-height:100dvh;position:relative;isolation:isolate}
+  /* Ambient green glow confined to the TOP only (absolute, behind content) so it can NEVER tint the
+     bottom of the page or the iOS Safari bottom bar — everything below the top is solid var(--bg). */
+  body::before{content:'';position:absolute;top:0;left:0;right:0;height:440px;background:radial-gradient(1200px 500px at 50% -100px,rgba(74,222,128,.10),transparent 70%);pointer-events:none;z-index:-1}
   header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:nowrap;position:sticky;top:0;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:20}
   .logo{font-size:19px;font-weight:900;letter-spacing:-.5px;flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .logo b{color:var(--accent,var(--green))}
@@ -136,20 +138,21 @@ __BRAND_HEAD__
   .vstore{text-align:center;color:#d6d6e0;font-size:14.5px;font-weight:600;margin-top:9px}
   /* combined call header: store + verdict status + timing in one box at the top */
   .rhead{background:var(--terminal);border-radius:16px;border:1px solid var(--border);margin-bottom:14px;overflow:hidden}
-  /* Store identity is the dominant ~75% of the card (roomy); the verdict is a compact ~25% strip below. */
-  .rhead-top{display:flex;gap:13px;align-items:center;padding:20px 16px 22px}
-  .rhead .railchip{flex:0 0 auto}
+  /* Store identity is the dominant ~75% of the card (roomy + big logo); verdict is a compact ~25% strip. */
+  .rhead-top{display:flex;gap:14px;align-items:center;padding:32px 16px 34px}
+  .rhead .railchip{flex:0 0 auto;width:58px;height:58px;border-radius:16px}
+  .rhead .railchip img{width:40px;height:40px}
   .rhead-id{min-width:0;flex:1}
   .rhead-store{font-weight:800;font-size:19.5px;letter-spacing:-.4px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
   .rhead-addr{color:var(--muted);font-size:13px;font-weight:500;margin-top:4px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* Verdict strip: icon + title (line 1) + short summary (line 2). ALL BLACK — the color lives ONLY in
      the icon + title word, so it never clashes with the message box below. A hairline splits the 75/25. */
-  .rhead-fill{display:flex;gap:12px;align-items:center;padding:13px 16px 14px;background:none;border-top:1px solid var(--border)}
+  .rhead-fill{display:flex;gap:11px;align-items:center;padding:10px 16px 11px;background:none;border-top:1px solid var(--border)}
   .rhead-ic{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;line-height:0}
   .rhead-ic svg,.rhead-ic img{display:block}
   .rhead-vtext{min-width:0;flex:1}
-  .rhead-stat{display:block;font-weight:800;font-size:15px;letter-spacing:-.1px;color:#c8c8d4;line-height:1.25}
-  .rhead-vsum{color:var(--muted);font-size:13px;line-height:1.4;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .rhead-stat{display:block;font-weight:800;font-size:14.5px;letter-spacing:-.1px;color:#c8c8d4;line-height:1.2}
+  .rhead-vsum{color:var(--muted);font-size:12.5px;line-height:1.35;margin-top:1px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .rhead-vsum b{color:#cfcfe0}
   .rhead.in .rhead-stat{color:var(--green)}
   .rhead.out .rhead-stat{color:var(--red)}
@@ -433,6 +436,7 @@ __BRAND_HEAD__
   /* page title inside a card (Post your score, etc.) — reads as a headline, not a form label */
   .sctitle{display:flex;align-items:center;gap:9px;font-size:20px;font-weight:900;letter-spacing:-.4px;color:#fff;margin-bottom:14px}
   .kin{width:100%;background:#15151c;color:#fff;border:1px solid var(--border,#2a2a35);border-radius:11px;padding:12px;font-size:15px;box-sizing:border-box}
+  #sch_contact::placeholder{color:#6a6a78;font-style:italic;font-size:13px}
   input[type="time"].kin{text-align:left} input[type="time"].kin::-webkit-date-and-time-value{text-align:left}
   /* custom photo picker — matches the site's inputs instead of the raw OS file control */
   .filepick{display:flex;align-items:center;gap:11px;width:100%;background:#15151c;border:1.5px dashed var(--pline);border-radius:11px;padding:14px 13px;font-size:14px;font-weight:700;color:#b9b9c8;cursor:pointer;transition:border-color .12s,color .12s;box-sizing:border-box}
@@ -955,15 +959,14 @@ __BRAND_HEAD__
 <div class="overlay" id="scheduleOverlay" onclick="if(event.target===this)closeSchedule()">
   <div class="modal" style="position:relative;max-width:420px;text-align:left">
     <span class="x" onclick="closeSchedule()">×</span>
-    <div style="font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--purple)" data-i18n="sch.perk">Fungie+ member perk</div>
-    <h3 style="margin:6px 0 2px"><span class="mico" id="schIco"></span><span data-i18n="sch.title">Auto-check on shipment days</span></h3>
+    <h3 style="margin:2px 0"><span class="mico" id="schIco"></span><span data-i18n="sch.title">Auto-check on shipment days</span></h3>
     <p style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5" data-i18n="sch.body">We call <b id="sch_store">the store</b> on shipment days. You get pinged the second <b id="sch_cat">cards</b> land. 1 check per call.</p>
     <label class="klbl" data-i18n="sch.days">Which days? <span style="color:var(--muted);font-weight:400">— leave all off to use the store's known shipment day</span></label>
     <div id="sch_days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:6px 0 8px"></div>
     <label class="klbl" data-i18n="sch.time">Earliest call time</label>
     <input id="sch_time" type="time" value="10:00" class="kin">
     <label class="klbl" data-i18n="sch.where">Where do we alert you?</label>
-    <input id="sch_contact" type="text" inputmode="email" autocomplete="email" placeholder="email or phone" data-i18n-ph="sch.ph" class="kin">
+    <input id="sch_contact" type="text" inputmode="email" autocomplete="email" placeholder="Enter number" class="kin">
     <div id="sch_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
     <button class="cta" id="sch_btn" onclick="submitSchedule()" style="margin-top:8px;width:100%" data-i18n="sch.cta">Turn on auto-check →</button>
   </div>
@@ -3070,7 +3073,7 @@ function showResult(o, cid){
         </div>
       </div>
       <div class="rhead-fill">
-        <span class="rhead-ic">${vicon(big,cls,26)}</span>
+        <span class="rhead-ic">${vicon(big,cls,22)}</span>
         <div class="rhead-vtext"><span class="rhead-stat">${esc(vTitle)}</span>${note?`<span class="rhead-vsum">${note}</span>`:''}</div>
       </div>
     </div>
@@ -3872,7 +3875,7 @@ function openSchedule(){
   SCH_DAYS=new Set();
   $('sch_err').textContent='';
   $('sch_store').textContent=findStoreName(); $('sch_cat').textContent=findProductLabel();
-  const cw=$('sch_contact'); if(cw&&!cw.value){ try{ cw.value=(window.Clerk&&window.Clerk.user&&window.Clerk.user.primaryEmailAddress&&window.Clerk.user.primaryEmailAddress.emailAddress)||(ACCOUNT&&ACCOUNT.phone)||''; }catch(e){} }
+  const cw=$('sch_contact'); if(cw) cw.value=''; // keep the number OUT of the box (it's a grey placeholder); we default to the account contact on submit
   $('sch_days').innerHTML=DOWLBL.map(([v,l])=>`<div class="chip" data-d="${v}" onclick="toggleSchDay('${v}',this)" style="cursor:pointer;text-align:center;padding:9px 0;font-size:13px">${l}</div>`).join('');
   track('schedule_open',{retailerId:SEL_STORE.id});
   $('scheduleOverlay').classList.add('on');
@@ -3880,7 +3883,8 @@ function openSchedule(){
 function toggleSchDay(v,el){ if(SCH_DAYS.has(v)){ SCH_DAYS.delete(v); el.classList.remove('sel'); } else { SCH_DAYS.add(v); el.classList.add('sel'); } }
 function closeSchedule(){ $('scheduleOverlay').classList.remove('on'); }
 async function submitSchedule(){
-  const contact=($('sch_contact').value||'').trim();
+  let contact=($('sch_contact').value||'').trim();
+  if(!contact){ try{ contact=(window.Clerk&&window.Clerk.user&&window.Clerk.user.primaryEmailAddress&&window.Clerk.user.primaryEmailAddress.emailAddress)||(ACCOUNT&&ACCOUNT.phone)||''; }catch(e){} } // empty box → default to their account contact
   if(contact){ const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(contact); if(!isEmail&&!isPhone){ $('sch_err').textContent=t('err.contact','Enter a valid email or phone'); return; } }
   const btn=$('sch_btn'); btn.disabled=true; btn.textContent=t('sch.setting','Setting it up…');
   const body={ retailerId:SEL_STORE.id, categoryId:SEL_CAT, specificProduct:SEL_PRODUCT||undefined,
