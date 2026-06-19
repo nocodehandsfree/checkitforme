@@ -147,8 +147,9 @@ __BRAND_HEAD__
   .rhead-addr{color:var(--muted);font-size:13px;font-weight:500;margin-top:4px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* Verdict strip: icon + title (line 1) + short summary (line 2). ALL BLACK — the color lives ONLY in
      the icon + title word, so it never clashes with the message box below. A hairline splits the 75/25. */
-  .rhead-fill{display:flex;gap:11px;align-items:center;padding:10px 16px 11px;background:none;border-top:1px solid var(--border)}
-  .rhead-ic{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;line-height:0}
+  .rhead-fill{display:flex;gap:14px;align-items:center;padding:10px 16px 12px;background:none;border-top:1px solid var(--border)}
+  /* icon sits in the same 58px column as the logo above → status icon centers under the logo, text under the name */
+  .rhead-ic{flex:0 0 auto;width:58px;display:inline-flex;align-items:center;justify-content:center;line-height:0}
   .rhead-ic svg,.rhead-ic img{display:block}
   .rhead-vtext{min-width:0;flex:1}
   .rhead-stat{display:block;font-weight:800;font-size:14.5px;letter-spacing:-.1px;color:#c8c8d4;line-height:1.2}
@@ -1229,6 +1230,7 @@ const I18N={ es:{
   'res.free':'Esa fue tu llamada gratis 🎯','res.free.sub':'Regístrate en 30 segundos para verificar <b>cualquier tienda, cuando quieras</b> — es la única forma de seguir.','res.signup':'Regístrate y sigue verificando',
   'res.share':'Comparte este hallazgo','res.driver':'¿Muy lejos? Que un local lo recoja','res.score':'¿Lo conseguiste? Publica tu logro',
   'res.proof':'Prueba — lo que dijo el empleado','res.translate':'Traducir',
+  'live.convo':'Conversación','live.steps':'Progreso de la llamada','cs.call':'Llamada','lbl.assoc':'Asociado','lbl.menu':'Menú','lbl.agent':'Check AI',
   'up.restock':'No te pierdas el reabastecimiento','up.watch':'Avísame cuando vuelva','up.watch.sub':'Una alerta en cuanto una llamada lo confirme.','up.sched':'Auto-verificar en días de envío','up.sched.sub':'Llamamos por ti en días de reabastecimiento.',
   'hist.title':'Tus verificaciones','hist.new':'+ Nueva','hist.empty':'Aún no hay verificaciones — haz una y aparecerá aquí.',
   'foot.cta':'¿No ves tu tienda? Agrégala →','foot.about':'Acerca de','foot.contact':'Contacto','foot.faq':'Preguntas','foot.terms':'Términos','foot.privacy':'Privacidad','foot.success':'Logros',
@@ -2166,7 +2168,7 @@ function storeRowHtml(s){
   const mi=storeMi(s); const o=s&&s.openState;
   const sel=SEL_STORE&&SEL_STORE.id===s.id?'sel':'';
   const right=mi!=null?`<div class="smi">${mi<10?mi.toFixed(1):Math.round(mi)}<small>mi</small></div>`:'';
-  const inMark=(!kiosk && s.inStock)?`<span class="instk" title="${t('instock.now','In stock now')}">${FCHK(15)}</span> `:'';
+  const inMark=''; // in-stock checkmark intentionally never shown in the store list (owner call)
   if(kiosk){
     const dot2=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
     const st=(o&&o.label)?esc(tLbl(o.label)):'';
@@ -2863,7 +2865,7 @@ function bubbleHTML(line, isHuman){
   if(!m) return `<div class="bub-note">${esc(line)}</div>`;
   const isAgent=m[1]==='Agent', who=isAgent?'a':'c';
   // The store side splits into the automated phone "Menu" vs a live "Associate" once our bot reaches a person.
-  const label=isAgent?'Check AI':(isHuman?'Associate':'Menu');
+  const label=isAgent?t('lbl.agent','Check AI'):(isHuman?t('lbl.assoc','Associate'):t('lbl.menu','Menu'));
   return `<div class="bub ${who}${(!isAgent&&!isHuman)?' menu':''}"><span class="nm">${label}</span>${esc(m[2])}</div>`;
 }
 // Where the live-person conversation begins: the clerk greeting just before our bot asks its question
@@ -3088,7 +3090,7 @@ function showResult(o, cid){
           <button class="cta" onclick="signUp()">${t('res.signup','Sign up & keep checking')}</button>
         </div>`}
     ${upsell}
-    <div class="foot" style="margin-top:16px">${t('res.poweredby','Powered by')} <b>Fungibles</b> · ${o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one')}</div>`;
+    <div class="foot" style="margin-top:16px">${o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one')}</div>`;
   $('result').classList.remove('hidden');
   navMark('result');
   // Side tabs to every other call — render from what we have, then refresh with server history.
@@ -3355,7 +3357,9 @@ function railStep(d){ const f=railFiltered(); const i=f.findIndex(e=>e.cid===RAI
 let RAIL_CAL_M=null;
 // Highlight only days that the date filter can actually open: same scoped pool, valid timestamp only
 // (drops ts=0 server rows so we never light up a bogus 1970 day). Highlighted ⟺ railFiltered non-empty.
-function railCalDays(){ return new Set(railScoped().filter(e=>e.ts).map(e=>tsDay(e.ts))); }
+// Highlight EVERY day you have a call on — independent of the store/outcome dropdowns, so a day you
+// called earlier in the week always shows up (picking it clears those filters so it always opens).
+function railCalDays(){ return new Set(histList().filter(e=>e.cid&&e.ts).map(e=>tsDay(e.ts))); }
 function openRailCal(){
   const pop=$('railcalpop'); if(!pop) return;
   if(pop.classList.contains('on')){ closeRailCal(); return; } // toggle
@@ -3368,7 +3372,7 @@ function openRailCal(){
 function closeRailCal(){ const pop=$('railcalpop'); if(pop){ pop.classList.remove('on'); pop.innerHTML=''; } document.removeEventListener('click',railCalAway); }
 function railCalAway(e){ if(!e.target.closest('#railcalpop') && !e.target.closest('.railcal')) closeRailCal(); }
 function railCalMonth(d){ const m=new Date(RAIL_CAL_M); RAIL_CAL_M=new Date(m.getFullYear(), m.getMonth()+d, 1).getTime(); renderRailCal(); }
-function railPickDay(key){ closeRailCal(); railFilter('date', key); }
+function railPickDay(key){ closeRailCal(); RAIL_F.store=''; RAIL_F.tone=''; railFilter('date', key); }
 function renderRailCal(){
   const pop=$('railcalpop'); if(!pop) return;
   const m=new Date(RAIL_CAL_M), y=m.getFullYear(), mo=m.getMonth();
