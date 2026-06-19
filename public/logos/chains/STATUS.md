@@ -27,23 +27,28 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Best Buy | yellow tag | 🔧 | trimmed bigger then shrunk ~10%; mark-only (matches spec) |
 | Bi-Mart | **real BI·MART** split | 🔧 | their actual red wordmark, "BI" over "MART" (from official SVG) |
 
-## Chunk 2a — big_5 → boxlunch  🔧 awaiting owner approval
+## Chunk 2a — big_5 → boxlunch  ✅ LOCKED (owner: "much nicer good job"; Blain's re-cut from vector)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
 | Big 5 Sporting Goods | "BIG 5" real serif | 🔧 | de-boxed real logo; dropped "Sporting Goods"; "BIG" over big "5" |
 | BJ's Wholesale | magenta "BJ's" | 🔧 | de-boxed to brand-color letterforms (#d1335a), no box; sized to icon set |
-| Blain's Farm & Fleet | "Blain's" script | 🔧 | trimmed tight; "Farm & Fleet" already dropped; nothing cut |
+| Blain's Farm & Fleet | "Blain's" script | ✅ | re-cut from official vector — full cursive swashes, nothing cut; "Farm & Fleet" dropped |
 | Books-A-Million | "BAM!" mark | 🔧 | trimmed tight |
 | BoxLunch | orange "BL" box | 🔧 | box = brand icon (like Aldi) — owner to confirm; shrunk to match |
 
-## Chunk 2b — buc_ee_s → costco  ⬜
+## Chunk 2b — buc_ee_s → costco  🔧 awaiting owner approval
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Buc-ee's | beaver mark | ⬜ | |
-| Burlington | heart-B mark | ⬜ | **heart cut off on the right** — tighten crop |
-| City Market | 2 lines, red | ⬜ | two lines, red letters, no white border |
-| Claire's | wordmark | ⬜ | **too small** |
-| Costco | wordmark | ⬜ | |
+| Buc-ee's | beaver on yellow | 🔧 | brand icon (yellow circle = identity); shrunk to match icon set |
+| Burlington | heart-B mark | 🔧 | crisp heart-B from official vector; flat right edge is the B design (not a crop) |
+| City Market | "CITY MARKET" 2 lines | 🔧 | red, two lines, no border (real app icon is a "C" on white box — rejected) |
+| Claire's | "claire's" wordmark | 🔧 | official vector, purple brightened; **renders small — it's one wide word** (see size note) |
+| Costco | "COSTCO WHOLESALE" | 🔧 | official vector lockup, no box; renders short (wide) |
+
+> **Size note (wide wordmarks):** single wide words (Claire's, Costco, Acme, B&N, BAM!,
+> Blain's) fit-to-width in a square-ish tile, so they render short. Per-logo trimming is
+> maxed out. Making them bigger needs a *global* render change (wider tile or taller
+> wide-logo box) — hold for owner decision so it doesn't rebalance the locked chunks.
 
 ## Chunk 3 — cvs → fred_meyer  ⬜
 | Logo | Treatment | Status | Notes |
