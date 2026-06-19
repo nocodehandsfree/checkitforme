@@ -1556,7 +1556,7 @@ function fillSimSelects(){
 
 // ---- Playbook: chain phone trees + store preview ----
 let CHAINS=[];
-const CVS_TEMPLATE="This is a CVS. The phone system is VOICE-driven — navigate by speaking, one prompt at a time, to reach a live person at the FRONT store:\n1. \"Are you a healthcare provider?\" → say \"No.\"\n2. \"Pharmacy or front store services?\" → say \"Front store services.\"\n3. \"beauty and fragrances, OTC health, or general store inquiries\" → say \"General store inquiries.\"\n4. If it stalls or repeats, say \"General store inquiries\" again each time until you hear \"transferring you now\" and a person picks up.\nThe pharmacy can be closed while the front store is open — \"pharmacy closed\" does NOT mean the store is closed; always route to the front.";
+const CVS_TEMPLATE="This is a CVS. The phone system is VOICE-driven — navigate by speaking ONE WORD at a time to reach a live person at the FRONT store:\n1. \"Are you a healthcare provider?\" → say \"No.\"\n2. \"Pharmacy or front store services?\" → say \"Front.\"\n3. \"beauty and fragrances, OTC health, or general store inquiries\" → say \"General.\"\n4. If it stalls or repeats, say \"General\" again each time until you hear \"transferring you now\" and a person picks up.\nThe pharmacy can be closed while the front store is open — \"pharmacy closed\" does NOT mean the store is closed; always route to the front.";
 async function loadChains(){
   CHAINS = await api('/api/chains') || [];
   renderChainList(); // every chain is muteable now, even with zero calls
