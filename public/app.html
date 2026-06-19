@@ -1933,7 +1933,15 @@ function openIconPicker(cb,cur){ _iconPickCb=cb;
 function pickIcon(n){ if(_iconPickCb) _iconPickCb(n); closeIconPicker(); }
 function closeIconPicker(){ const ov=document.getElementById("iconpick"); if(ov) ov.remove(); _iconPickCb=null; }
 function statusPickIcon(btn){ const card=btn.closest("[data-sid]")||btn.parentNode; const hid=card.querySelector("input[data-f=emoji]"); const colEl=card.querySelector("input[data-f=color]"); const col=colEl?colEl.value:"#9CA3AF";
-  openIconPicker(n=>{ if(hid) hid.value=n; btn.innerHTML=statusIcon(n,col,24); }, hid?hid.value:""); }
+  openIconPicker(n=>{ if(hid) hid.value=n; btn.innerHTML=statusIcon(n,col,24); statusAutoSave(btn); }, hid?hid.value:""); }
+// Auto-save a status row whenever you change its icon/color/tone/label/note — no separate Save needed.
+let _stSaveT={};
+function statusAutoSave(el){ const card=el.closest("[data-sid]"); if(!card) return; const id=card.dataset.sid; if(!id) return;
+  const body={}; card.querySelectorAll("[data-f]").forEach(i=>{ body[i.dataset.f]=i.value; });
+  clearTimeout(_stSaveT[id]); _stSaveT[id]=setTimeout(async()=>{
+    const r=await api("/api/statuses/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+    if(r&&r.id){ STATUSES[r.key]=r; toast("Saved ✓"); }
+  }, 450); }
 
 function renderStatuses(list){
   const el=document.getElementById('st_list'); if(!el) return;
@@ -1943,12 +1951,12 @@ function renderStatuses(list){
       <div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap">
         <button type="button" class="sticon-btn" onclick="statusPickIcon(this)" title="Change icon — pick from the library">${statusIcon(s.emoji,s.color||s.tone,24)}</button>
         <input type="hidden" data-f="emoji" value="${escH(s.emoji)}">
-        <input value="${escH(s.label)}" data-f="label" style="flex:1;min-width:0;font-size:15px" placeholder="Label">
-        <input type="color" value="${escH(s.color)}" data-f="color" oninput="statusRecolor(this)" title="Icon color" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1px solid var(--border);background:none;flex:0 0 auto">
+        <input value="${escH(s.label)}" data-f="label" onchange="statusAutoSave(this)" style="flex:1;min-width:0;font-size:15px" placeholder="Label">
+        <input type="color" value="${escH(s.color)}" data-f="color" oninput="statusRecolor(this)" onchange="statusAutoSave(this)" title="Icon color" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1px solid var(--border);background:none;flex:0 0 auto">
       </div>
-      <textarea data-f="note" rows="3" placeholder="One-line note the customer sees" style="margin-top:10px;font-size:14px;line-height:1.5">${escH(s.note)}</textarea>
+      <textarea data-f="note" rows="3" onchange="statusAutoSave(this)" placeholder="One-line note the customer sees" style="margin-top:10px;font-size:14px;line-height:1.5">${escH(s.note)}</textarea>
       <div class="row" style="gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
-        <select data-f="tone" onchange="statusToneChange(this)" title="The customer's verdict bucket — sets the color + which filter this lands in" style="flex:0 0 auto;max-width:180px">
+        <select data-f="tone" onchange="statusToneChange(this);statusAutoSave(this)" title="The customer's verdict bucket — sets the color + which filter this lands in" style="flex:0 0 auto;max-width:180px">
           <option value="in"${s.tone==='in'?' selected':''}>In stock</option>
           <option value="out"${s.tone==='out'?' selected':''}>Not in stock</option>
           <option value="unk"${s.tone==='unk'?' selected':''}>Check failed</option>
