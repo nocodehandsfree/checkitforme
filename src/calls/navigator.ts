@@ -17,6 +17,7 @@ export interface NavRecipe { type: string; steps: { action: string; value: strin
 export interface NavSession {
   id: string; chainId: number | null; retailerId: number; retailerName: string; phone: string;
   startMs: number; steps: NavStep[]; turns: number; model?: string; hint?: string;
+  barge?: { plan: Array<{ action: string; value: string; at: number }> };
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
   humanAtSec: number | null; confidence: number; callSid?: string; recipe: NavRecipe | null;
@@ -72,6 +73,27 @@ Return ONLY JSON: {"action":"say|press|wait|human|fail","value":"<word or digit,
 /** Initial TwiML when Twilio fetches the call's instructions. */
 export function navInitialTwiml(id: string): string {
   const s = sessions.get(id); if (s) s.status = "navigating";
+  // BARGE mode: we already KNOW the path, so fire the words on a timer — speaking OVER the IVR instead
+  // of waiting for each prompt to finish. `at` = seconds from connect to speak each step. Then listen
+  // for the transfer. Each round we shave the times earlier until the store stops accepting it.
+  if (s && s.barge?.plan?.length) {
+    let inner = ""; let prev = 0;
+    for (const st of s.barge.plan) {
+      const wait = Math.max(0, Math.round((st.at ?? 0) - prev));
+      if (wait > 0) inner += `<Pause length="${wait}"/>`;
+      if (st.action === "press" && st.value) {
+        const digits = st.value.replace(/[^0-9*#]/g, "").slice(0, 6);
+        inner += `<Play digits="${digits}"/>`;
+        s.steps.push({ who: "us", text: `pressed ${digits} (barge @${st.at}s)`, atSec: Math.round(st.at), action: "press", value: digits });
+      } else if (st.value) {
+        inner += `<Say voice="Polly.Joanna">${esc(st.value)}</Say>`;
+        s.steps.push({ who: "us", text: `said "${st.value}" (barge @${st.at}s)`, atSec: Math.round(st.at), action: "say", value: st.value });
+      }
+      prev = st.at ?? prev;
+    }
+    s.type = s.barge.plan.every((p) => p.action === "press") ? "keypad" : "voice";
+    return twiml(`${inner}${gather(id)}`);
+  }
   return twiml(`<Pause length="1"/>${gather(id)}`); // let the greeting start, then listen
 }
 
@@ -113,13 +135,13 @@ function finish(s: NavSession, status: "human" | "failed") {
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }): Promise<{ id?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint };
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge };
   sessions.set(id, session);
   const body = new URLSearchParams({
     To: e164(phone), From: from,
