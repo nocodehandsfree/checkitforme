@@ -37,10 +37,9 @@ __BRAND_HEAD__
   html{-webkit-text-size-adjust:100%;background:#0C0C12;color-scheme:dark}
   html,body{max-width:100%;overflow-x:hidden}
   body{background:var(--bg);color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;margin:0;padding:0;
-    display:flex;flex-direction:column;min-height:100dvh;position:relative;isolation:isolate}
-  /* Ambient green glow confined to the TOP only (absolute, behind content) so it can NEVER tint the
-     bottom of the page or the iOS Safari bottom bar — everything below the top is solid var(--bg). */
-  body::before{content:'';position:absolute;top:0;left:0;right:0;height:440px;background:radial-gradient(1200px 500px at 50% -100px,rgba(74,222,128,.10),transparent 70%);pointer-events:none;z-index:-1}
+    display:flex;flex-direction:column;min-height:100dvh}
+  /* No ambient color anywhere on the body — solid dark on every page, top and bottom (kills the green
+     that kept tinting the iOS Safari bars / showing through on the homepage + call history). */
   header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:nowrap;position:sticky;top:0;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:20}
   .logo{font-size:19px;font-weight:900;letter-spacing:-.5px;flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .logo b{color:var(--accent,var(--green))}
