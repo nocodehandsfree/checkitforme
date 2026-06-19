@@ -16,7 +16,7 @@ export interface NavStep { who: "ivr" | "us"; text: string; atSec: number; actio
 export interface NavRecipe { type: string; steps: { action: string; value: string; atSec: number }[]; seconds: number }
 export interface NavSession {
   id: string; chainId: number | null; retailerId: number; retailerName: string; phone: string;
-  startMs: number; steps: NavStep[]; turns: number;
+  startMs: number; steps: NavStep[]; turns: number; model?: string;
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
   humanAtSec: number | null; confidence: number; callSid?: string; recipe: NavRecipe | null;
@@ -47,17 +47,18 @@ Newest from the STORE: "${latest || "(silence)"}"
 
 Decide the SINGLE next action toward a human:
 - HAND OFF to a human ("human"): the INSTANT a live person is talking with you — a casual store greeting said naturally TO you ("[store name], how can I help?", "this is Mike, what can I do for ya?", "GameStop, what do you need?"). A store name + casual tone + a real question = a person. The moment it feels like a person and not a recording, answer "human" — do NOT keep firing menu words at them.
+- TRANSFER REACHED ("human"): if the system says it is connecting/transferring you to a person ("please hold while I connect you", "transferring you now", "let me get someone for you", "connecting you to the store") — the path is CONFIRMED. Answer "human" NOW; we hang up before troubling a real employee.
 - Voicemail / "no longer in service" / dead end -> "fail".
 - Advance a menu by VOICE -> "say" with a short value. For a normal menu, the option word (front, general, operator, representative, associate, no, yes).
 - OPEN-ENDED from an AUTOMATED system (a clearly robotic / "virtual assistant" voice, or it keeps repeating "I didn't get that, briefly describe why you're calling")? Do NOT answer "yes"/"no" — that loops forever. "Say" a short ROUTING phrase: "talk to a store associate" (under 5 words). But if that same open question is asked by a real-sounding person, that's "human" above, not routing.
 - Advance by KEYPAD -> "press" with a single digit (0 is usually the operator).
 - Recording still mid-sentence, keep listening -> "wait".
-Pick the FASTEST route to a human and the SHORTEST word that works.
+Pick the FASTEST route to a human and the SHORTEST word that works (e.g. "front" not "front store services", "general" not "general store inquiries"). Act as EARLY as the menu allows — you do NOT have to wait for a prompt to finish; press/say as soon as you know the option (barge in).
 Classify how this store answers so far: "direct" (a person just answers), "keypad" (responds to key presses), or "voice" (only responds to spoken words).
 
 Return ONLY JSON: {"action":"say|press|wait|human|fail","value":"<word or digit, empty if none>","type":"direct|keypad|voice","confidence":<0-100>,"note":"<8 words max>"}`;
   try {
-    const txt = await llm(NAV_MODEL, prompt, { job: "nav-decide", json: true, temperature: 0, maxTokens: 120 });
+    const txt = await llm(s.model || NAV_MODEL, prompt, { job: "nav-decide", json: true, temperature: 0, maxTokens: 120 });
     const j = JSON.parse(txt) as Partial<Decision>;
     const action = (["say", "press", "wait", "human", "fail"] as const).includes(j.action as NavAction) ? (j.action as NavAction) : "wait";
     const type = (["direct", "keypad", "voice"] as const).includes(j.type as Decision["type"]) ? (j.type as Decision["type"]) : "voice";
@@ -83,7 +84,7 @@ export async function navStep(id: string, speech: string): Promise<string> {
   const d = await decide(s, speech || "");
   if (d.type) s.type = d.type;
   s.confidence = d.confidence;
-  if (d.action === "human") { s.humanAtSec = atSec; finish(s, "human"); return twiml(`<Say voice="Polly.Joanna">Sorry, I think I have the wrong number. Have a great day!</Say><Hangup/>`); }
+  if (d.action === "human") { s.humanAtSec = atSec; finish(s, "human"); return twiml(`<Hangup/>`); } // stop at the transfer/human — hang up WITHOUT engaging a real employee
   if (d.action === "fail") { finish(s, "failed"); return twiml(`<Hangup/>`); }
   if (d.action === "press" && d.value) {
     const digits = d.value.replace(/[^0-9*#]/g, "").slice(0, 6);
@@ -109,13 +110,13 @@ function finish(s: NavSession, status: "human" | "failed") {
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string): Promise<{ id?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null };
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model };
   sessions.set(id, session);
   const body = new URLSearchParams({
     To: e164(phone), From: from,
