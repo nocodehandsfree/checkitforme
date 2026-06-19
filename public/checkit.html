@@ -114,6 +114,8 @@ __BRAND_HEAD__
   /* two-section call box: live STEPS (system font) on top, the human CONVERSATION below */
   .callmsg{background:var(--terminal);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px}
   .callmsg-h{font-size:9.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:800;margin-bottom:10px}
+  .convo-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .convo-h .tbtn{margin:-3px 0}
   .callmsg-steps{padding:14px 15px}
   .cs-list{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:12.5px;line-height:1.85;color:#56E39B;letter-spacing:.2px}
   .cs-line{white-space:pre-wrap}
@@ -2714,7 +2716,7 @@ function callMsgBoxHTML(steps, transcript, opts){
   return `<div class="callmsg">
     <div class="callmsg-steps">${stepsSection}</div>
     <div class="callmsg-div"></div>
-    <div class="callmsg-script"><div class="callmsg-h">${t('live.convo','Conversation')}</div>${scriptHTML(transcript, opts.final)}</div>
+    <div class="callmsg-script"><div class="callmsg-h convo-h"><span>${t('live.convo','Conversation')}</span>${opts.canTranslate?`<button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button>`:''}</div><div id="convo_body">${scriptHTML(transcript, opts.final)}</div></div>
   </div>`;
 }
 // Reloaded calls (from a link/history) have no live step timings — derive which steps happened from
@@ -3086,7 +3088,7 @@ function showResult(o, cid){
       </div>
     </div>
     ${breakdown}
-    ${callMsgBoxHTML(resultSteps, o.transcript||'', {finalElapsed, final:true, summary:callSummary, expanded:haveLive})}
+    ${callMsgBoxHTML(resultSteps, o.transcript||'', {finalElapsed, final:true, summary:callSummary, expanded:haveLive, canTranslate})}
     ${inActions}
     ${isAuthed()
       ? `<button class="cta" onclick="backToBuilder()" style="margin-top:14px">${t('cta.another','Check another store')}</button>`
@@ -3190,19 +3192,19 @@ function fmtTranslated(txt){
 }
 const TRANS_CACHE={}; // cache translations by transcript+lang so we never re-fetch or lose them
 async function toggleTranslate(){
-  const body=$('proofbody'), btn=$('tbtn'); if(!body||!LASTRES) return;
+  const body=$('convo_body'), lbl=$('tbtn_l'), btn=$('tbtn'); if(!body||!lbl||!LASTRES) return;
   if(!ORIGHTML) ORIGHTML=body.innerHTML;
-  if(TRANSLATED){ body.innerHTML=ORIGHTML; btn.textContent='🌐 '+t('res.translate','Translate'); TRANSLATED=false; return; }
+  if(TRANSLATED){ body.innerHTML=ORIGHTML; lbl.textContent=t('res.translate','Translate'); TRANSLATED=false; return; }
   const to=LANG==='es'?'es':'en';
   const key=to+'|'+(LASTRES.transcript||'')+(LASTRES.summary||'');
-  if(TRANS_CACHE[key]){ body.innerHTML=TRANS_CACHE[key]; btn.textContent=t('res.original','Show original'); TRANSLATED=true; return; } // instant, sticky
-  btn.textContent=t('res.translating','Translating…'); btn.disabled=true;
+  if(TRANS_CACHE[key]){ body.innerHTML=TRANS_CACHE[key]; lbl.textContent=t('res.original','Show original'); TRANSLATED=true; return; } // instant, sticky
+  lbl.textContent=t('res.translating','Translating…'); if(btn)btn.disabled=true;
   const src=((LASTRES.summary||'')+'\n'+(LASTRES.transcript||'')).trim();
   const r=await api('/pub/translate',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text:src,to})});
-  btn.disabled=false;
-  if(!r||r.error||!r.translated){ btn.textContent='🌐 '+t('res.translate','Translate'); toast(t('toast.translate.fail','Could not translate')); return; }
+  if(btn)btn.disabled=false;
+  if(!r||r.error||!r.translated){ lbl.textContent=t('res.translate','Translate'); toast(t('toast.translate.fail','Could not translate')); return; }
   TRANS_CACHE[key]=fmtTranslated(r.translated);
-  body.innerHTML=TRANS_CACHE[key]; btn.textContent=t('res.original','Show original'); TRANSLATED=true;
+  body.innerHTML=TRANS_CACHE[key]; lbl.textContent=t('res.original','Show original'); TRANSLATED=true;
 }
 
 // --- History (per-device, localStorage) ---
