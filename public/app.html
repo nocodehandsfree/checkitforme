@@ -470,11 +470,15 @@
       </select>
     </div>
     <div id="resultList"><div class="empty">Loading…</div></div>
-    <details class="card" id="bail_card" style="margin-top:16px">
-      <summary style="cursor:pointer"><span class="name" data-tip="Master call cutoffs · cost control">Bail library</span> <span id="bail_state" class="status s-gray" style="margin-left:6px">…</span></summary>
-      <div class="hint" style="margin:10px 0 10px">Rules that cut a call once it stops being worth money. The master switch stays off until it's bench-tested — nothing changes on live calls yet.</div>
+  </section>
+
+  <section id="bail">
+    <h2 data-tip="Master call cutoffs — rules that end a call once it stops being worth the money. The master switch stays OFF until bench-tested; nothing changes on live calls yet.">Bail</h2>
+    <div class="card" id="bail_card">
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><span class="name">Bail rules</span> <span id="bail_state" class="status s-gray">…</span></div>
       <div id="bail_body" class="meta">Loading…</div>
-    </details></section>
+    </div>
+  </section>
 
   <section id="schedules">
     <h2>Schedules</h2>
@@ -601,10 +605,10 @@
         <label data-tip="Silence (seconds) before the agent jumps in when no end-of-turn is detected — lower = snappier">Reply timeout <span id="sb_tt_val" class="hint" style="font-style:normal"></span></label>
         <input id="sb_turntimeout" type="range" min="3" max="45" step="1" style="width:100%" oninput="document.getElementById('sb_tt_val').textContent=this.value+'s'">
         <label data-tip="On a long pause the agent says a quick line so the caller knows the line isn't dead. Off = it just asks/listens.">Presence filler on a long pause</label>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-          <label style="margin:0;white-space:nowrap"><input id="sb_soft_on" type="checkbox"> on after</label>
-          <input id="sb_soft_secs" type="number" min="0.5" max="6" step="0.5" value="1.5" style="width:64px"><span class="hint" style="font-style:normal">s</span>
-          <input id="sb_soft_msg" type="text" placeholder="Yeah—hi, I'm here!" style="flex:1">
+        <label class="day" style="margin:0 0 10px"><input id="sb_soft_on" type="checkbox"> Say a quick line if the pause runs long</label>
+        <div class="grid2">
+          <div><label>After how long</label><div class="row" style="gap:6px"><input id="sb_soft_secs" type="number" min="0.5" max="6" step="0.5" value="1.5" style="max-width:90px"><span class="meta">seconds</span></div></div>
+          <div><label>Line to say</label><input id="sb_soft_msg" type="text" placeholder="Yeah—hi, I'm here!"></div>
         </div>
         <label data-tip="English agents support turbo or flash v2 only">Voice model</label>
         <select id="sb_model" onchange="updateDraftDot()">
@@ -951,11 +955,11 @@ let CATEGORIES = [];
 const NAV_GROUPS={
   godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['growth','Policy','rise']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
-  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Mute','tree'],['treelab','Phone Trees','tree']]},
-  voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Create','flask'],['bench','Test','sliders'],['settings','Settings','gear']]},
+  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['treelab','Phone Trees','tree'],['trees','Mute','tree'],['bail','Bail','scissors'],['settings','Settings','gear']]},
+  voice:    {label:'Voice',    ico:'mic',   tabs:[['labs','Create','flask'],['bench','Test','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>{loadDash();loadGwPulse();}, treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwIntel();loadGwKiosks();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), labs:()=>loadVoices(), bench:()=>loadVoices(), dash:()=>{loadDash();loadGwPulse();}, treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwIntel();loadGwKiosks();}, bail:()=>loadBail(), statuses:()=>loadStatusReg(), results:()=>loadResults() };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -2038,7 +2042,7 @@ function renderResults(){
           <div class="cs-name">${esch(nm.base)}${nm.branch?` <span style="color:var(--muted);font-weight:500">${esch(nm.branch)}</span>`:''}</div>
           <div class="cs-meta">${catFilter?'':esch(r.category||'')+' · '}${agoTs(r.startedAt)} · ${time}${r.shipmentDayHeard?' · ships '+esch(r.shipmentDayHeard):''}</div>
         </div>
-        <span class="cv ${tone}">${vmark(vv.e,tone,22)}<span>${esch(vv.t)}</span></span>
+        <span class="cv ${tone}">${statusIcon(vv.e,vv.c,22)}<span>${esch(vv.t)}</span></span>
       </summary>
       <div class="calldetail">${detail||'<span class="meta">No transcript captured for this call.</span>'}</div>
     </details>`;
@@ -2600,7 +2604,7 @@ async function agentSend(){
   syncTreeUI();
   loadRetailers(); // restored filters auto-load the list (instead of sitting empty until you touch a dropdown)
   if(sp.get('store')){ RESULT_STORE_FILTER=Number(sp.get('store')); showSection('results'); loadResults(); }
-  setInterval(loadResults, 8000);   // live-refresh results while calls land (small table)
+  setInterval(()=>{ if(!document.querySelector('#resultList details[open]')) loadResults(); }, 8000);   // live-refresh, but never collapse a row you're reading
   // NOTE: do NOT poll loadRetailers — at 100k stores that re-pulls a huge query every few seconds.
   setInterval(()=>{ if(document.getElementById('dash').classList.contains('active')) loadDash(); }, 12000); // god view stays live
   setInterval(loadCredits, 30000);  // refresh credit balance periodically
