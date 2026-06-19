@@ -46,7 +46,8 @@ Newest from the STORE: "${latest || "(silence)"}"
 Decide the SINGLE next action toward a human:
 - A real live PERSON is on the line (a human greeting like "thanks for calling, how can I help", NOT a recording/menu) -> "human".
 - Voicemail / "no longer in service" / dead end -> "fail".
-- Advance a menu by VOICE -> "say" with a short value: representative, associate, front, general, operator, no, yes.
+- Advance a menu by VOICE -> "say" with a short value. For a normal menu, the option word (front, general, operator, representative, associate, no, yes).
+- OPEN-ENDED prompt? If the system asks something open-ended like "what can I help you with?", "briefly describe why you're calling", or "how can I help you?", do NOT answer "yes" or "no" — that loops forever. Instead "say" a short ROUTING phrase that gets a human in the store: "talk to a store associate" (or "speak to a representative" / "someone in the store"). Keep it under 5 words.
 - Advance by KEYPAD -> "press" with a single digit (0 is usually the operator).
 - Recording still mid-sentence, keep listening -> "wait".
 Pick the FASTEST route to a human and the SHORTEST word that works.
