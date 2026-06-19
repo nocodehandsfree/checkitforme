@@ -13,7 +13,7 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 
 ---
 
-## Chunk 1 — 7_eleven → bi_mart  🔧 awaiting owner approval
+## Chunk 1 — 7_eleven → bi_mart  ✅ LOCKED (owner-approved sizing; Albertsons re-done from vector)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
 | 7-Eleven | app-icon mark | 🔧 | tall mark; shrunk ~10% for symmetry |
@@ -21,20 +21,24 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Academy Sports + Outdoors | A+swoosh mark | 🔧 | white fringe removed; shrunk ~10% |
 | Ace Hardware | "ACE" wordmark | 🔧 | trimmed tight → now fills width (was too small); wide-flag fixed |
 | Acme | "ACME" wordmark | 🔧 | trimmed tight → now fills width (was too small) |
-| Albertsons | "A" flame mark | 🔧 | white fringe removed, trimmed bigger |
+| Albertsons | "A" flame mark | ✅ | re-done from official vector — crisp, no pixelation |
 | Aldi | boxed emblem | 🔧 | box = storefront identity (not white); shrunk ~10% — owner to confirm |
 | Barnes & Noble | gray B/N + gold & | 🔧 | trimmed bigger; no box (matches spec) |
 | Best Buy | yellow tag | 🔧 | trimmed bigger then shrunk ~10%; mark-only (matches spec) |
 | Bi-Mart | **real BI·MART** split | 🔧 | their actual red wordmark, "BI" over "MART" (from official SVG) |
 
-## Chunk 2 — big_5 → costco  ⬜
+## Chunk 2a — big_5 → boxlunch  🔧 awaiting owner approval
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Big 5 Sporting Goods | "BIG 5" mark | ⬜ | use the real Big 5, no blue box, bigger |
-| BJ's Wholesale | wordmark | ⬜ | |
-| Blain's Farm & Fleet | "Blain's" | ⬜ | **too small**; drop "Farm & Fleet" tagline; don't cut bottom |
-| Books-A-Million | wordmark | ⬜ | |
-| BoxLunch | wordmark | ⬜ | |
+| Big 5 Sporting Goods | "BIG 5" real serif | 🔧 | de-boxed real logo; dropped "Sporting Goods"; "BIG" over big "5" |
+| BJ's Wholesale | magenta "BJ's" | 🔧 | de-boxed to brand-color letterforms (#d1335a), no box; sized to icon set |
+| Blain's Farm & Fleet | "Blain's" script | 🔧 | trimmed tight; "Farm & Fleet" already dropped; nothing cut |
+| Books-A-Million | "BAM!" mark | 🔧 | trimmed tight |
+| BoxLunch | orange "BL" box | 🔧 | box = brand icon (like Aldi) — owner to confirm; shrunk to match |
+
+## Chunk 2b — buc_ee_s → costco  ⬜
+| Logo | Treatment | Status | Notes |
+|---|---|---|---|
 | Buc-ee's | beaver mark | ⬜ | |
 | Burlington | heart-B mark | ⬜ | **heart cut off on the right** — tighten crop |
 | City Market | 2 lines, red | ⬜ | two lines, red letters, no white border |
