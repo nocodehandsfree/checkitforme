@@ -27,6 +27,7 @@ import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL } from "./calls/navigator";
+import { startBatch, batchStatus, stopBatch } from "./calls/trainer-batch";
 import { llm } from "./llm";
 import { harvestHoursTick } from "./hours-harvest";
 import { createSchedule, listSchedulesDetailed, deleteSchedule, customerScheduleTick } from "./customer-schedules";
@@ -2131,6 +2132,15 @@ app.post("/api/admin/trainer/lock", async (c) => {
   }).where(eq(chains.id, Number(b.chainId)));
   return c.json({ ok: true });
 });
+// Overnight phone-tree batch: dial one store per chain, learn + persist the route. action:
+// "start" (onlyMissing default true; optional limit, gapSec) | "stop" | "status".
+app.post("/api/admin/trainer/batch", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { action?: string; onlyMissing?: boolean; limit?: number; gapSec?: number };
+  if (b.action === "stop") return c.json(stopBatch());
+  if (b.action === "status") return c.json(batchStatus());
+  return c.json(await startBatch({ onlyMissing: b.onlyMissing, limit: b.limit, gapSec: b.gapSec }));
+});
+app.get("/api/admin/trainer/batch", (c) => c.json(batchStatus()));
 app.get("/api/admin/agent/models", (c) => c.json(AGENT_MODELS));
 app.post("/api/admin/agent", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { messages?: Array<{ role: "user" | "assistant"; text: string }>; model?: string };
