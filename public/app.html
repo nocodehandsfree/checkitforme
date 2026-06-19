@@ -174,6 +174,11 @@
   .bulkbar .bchk{display:inline-flex;align-items:center;gap:7px;color:#fff;font-weight:700;font-size:13px;cursor:pointer}
   .bulkbar .bchk input{width:15px;height:15px}
   /* Scripts & rotation: saved-opener rows with an on/off checkbox */
+  /* chat/agent button removed for now */
+  .agent-fab{display:none!important}
+  /* Designer top nav (back / forward) */
+  .dnav{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .dnav button{flex:0 0 auto}
   /* Designer flow rail dots */
   .rdot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;font:800 12px Inter}
   .rdot.done{background:var(--green);color:#06210f}
@@ -597,8 +602,12 @@
 
   <section id="designer">
     <h2>Designer</h2>
-    <div class="meta" style="margin:4px 0 14px;line-height:1.5">One workflow — voice, feel, script, persona, rotation — then test it. Save it and assign per chain in <b style="color:#cdd">Calls → Settings</b>. Nothing here touches live calls.</div>
-    <div class="card" id="d_rail" style="padding:14px 16px;margin-bottom:16px"></div>
+    <div class="card" id="d_rail" style="padding:14px 16px;margin-bottom:12px"></div>
+    <div class="dnav" id="d_nav">
+      <button class="ghost" id="d_back" onclick="dBack()">‹ Back</button>
+      <div class="meta" id="d_nav_label" style="flex:1;text-align:center;font-weight:700;color:var(--text-strong)"></div>
+      <button class="act" id="d_fwd" onclick="dFwd()">Next ›</button>
+    </div>
     <div id="d_steps">
 
       <div class="card dstep" data-step="1">
@@ -606,59 +615,65 @@
         <label>Voice</label>
         <select id="vs_select"></select>
         <div id="vs_active" class="meta" style="margin-top:6px"></div>
-        <div class="btnrow"><button class="act" onclick="vsSetActive()">Use for live calls</button></div>
+        <div class="btnrow"><button class="ghost" onclick="vsSetActive()">Use for live calls</button></div>
         <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
         <label data-tip="Record ~30–60s of clear speech, name it, then clone.">Clone a new voice</label>
         <div class="row" style="margin-bottom:8px"><button class="ghost" id="vs_rec" onclick="vsToggleRec()"><span style="color:var(--red)">●</span> Record</button><span id="vs_rectime" class="meta"></span><audio id="vs_play" controls style="display:none;height:34px"></audio></div>
         <input id="vs_name" placeholder="Voice name — e.g. Branson, Jared">
-        <div class="btnrow"><button class="act" id="vs_clone" onclick="vsClone()" disabled>Clone &amp; save voice</button></div>
+        <div class="btnrow"><button class="ghost" id="vs_clone" onclick="vsClone()" disabled><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Clone &amp; save voice</button></div>
         <div id="vs_msg" class="meta" style="margin-top:8px;min-height:16px"></div>
-        <div class="btnrow"><button class="act" onclick="dNext(2)">Next: Voice feel →</button></div>
       </div>
 
       <div class="card dstep" data-step="2" style="display:none">
         <div class="name" style="margin-bottom:12px">Step 2 · Voice feel</div>
-        <label>Speed (cadence) <span id="sb_speed_val" class="hint" style="font-style:normal"></span></label>
-        <input id="sb_speed" type="range" min="0.7" max="1.2" step="0.01" style="width:100%" oninput="sbLabels()">
-        <label>Warmth <span id="sb_stability_val" class="hint" style="font-style:normal"></span></label>
-        <input id="sb_stability" type="range" min="0.1" max="0.9" step="0.05" style="width:100%" oninput="sbLabels()">
-        <label>Naturalness (smoothness) <span id="sb_latency_val" class="hint" style="font-style:normal"></span></label>
-        <input id="sb_latency" type="range" min="0" max="4" step="1" style="width:100%" oninput="sbLabels()">
-        <label>Reply timeout <span id="sb_tt_val" class="hint" style="font-style:normal"></span></label>
-        <input id="sb_turntimeout" type="range" min="3" max="45" step="1" style="width:100%" oninput="document.getElementById('sb_tt_val').textContent=this.value+'s'">
-        <label>Beat</label>
-        <select id="sb_beat" onchange="updateDraftDot()">
-          <option value="" disabled selected>Select a beat</option>
-          <option value="normal">Normal — snappy, waits for you to finish</option>
-          <option value="eager">Eager — fastest replies</option>
-          <option value="patient">Patient — long beat, waits for a clear pause</option>
-        </select>
-        <label>Voice model</label>
-        <select id="sb_model" onchange="updateDraftDot()">
-          <option value="" disabled selected>Select a voice model</option>
-          <option value="eleven_turbo_v2">Turbo v2 — natural</option>
-          <option value="eleven_flash_v2">Flash v2 — fastest, robotic</option>
-        </select>
-        <input type="hidden" id="sb_llm" value="claude-sonnet-4-6">
-        <label>Presence filler on a long pause</label>
-        <label class="day" style="margin:0 0 10px"><input id="sb_soft_on" type="checkbox"> Say a quick line if the pause runs long</label>
-        <div class="grid2">
-          <div><label>After how long</label><div class="row" style="gap:6px"><input id="sb_soft_secs" type="number" min="0.5" max="6" step="0.5" value="1.5" style="max-width:90px"><span class="meta">seconds</span></div></div>
-          <div><label>Line to say</label><input id="sb_soft_msg" type="text" placeholder="Yeah—hi, I'm here!"></div>
+        <div class="card" style="background:var(--surface-1);margin-bottom:12px">
+          <label style="margin-top:0;display:flex;justify-content:space-between;align-items:baseline">Speed (cadence) <span id="sb_speed_val" class="hint" style="font-style:normal"></span></label>
+          <input id="sb_speed" type="range" min="0.7" max="1.2" step="0.01" style="width:100%" oninput="sbLabels()">
+          <label style="display:flex;justify-content:space-between;align-items:baseline">Warmth <span id="sb_stability_val" class="hint" style="font-style:normal"></span></label>
+          <input id="sb_stability" type="range" min="0.1" max="0.9" step="0.05" style="width:100%" oninput="sbLabels()">
+          <label style="display:flex;justify-content:space-between;align-items:baseline">Naturalness (smoothness) <span id="sb_latency_val" class="hint" style="font-style:normal"></span></label>
+          <input id="sb_latency" type="range" min="0" max="4" step="1" style="width:100%" oninput="sbLabels()">
+          <label style="display:flex;justify-content:space-between;align-items:baseline">Reply timeout <span id="sb_tt_val" class="hint" style="font-style:normal"></span></label>
+          <input id="sb_turntimeout" type="range" min="3" max="45" step="1" style="width:100%" oninput="document.getElementById('sb_tt_val').textContent=this.value+'s'">
         </div>
-        <div class="btnrow"><button class="ghost" onclick="loadSandbox()">Reload</button><button class="act" onclick="applySandbox()" style="background:var(--yellow,#F4D03F);color:#1a1a24">Save draft</button></div>
+        <div class="grid2">
+          <div>
+            <label style="margin-top:0">Beat</label>
+            <select id="sb_beat" onchange="updateDraftDot()">
+              <option value="" disabled selected>Select a beat</option>
+              <option value="normal">Normal — snappy, waits for you to finish</option>
+              <option value="eager">Eager — fastest replies</option>
+              <option value="patient">Patient — long beat, waits for a clear pause</option>
+            </select>
+          </div>
+          <div>
+            <label style="margin-top:0">Voice model</label>
+            <select id="sb_model" onchange="updateDraftDot()">
+              <option value="" disabled selected>Select a voice model</option>
+              <option value="eleven_turbo_v2">Turbo v2 — natural</option>
+              <option value="eleven_flash_v2">Flash v2 — fastest, robotic</option>
+            </select>
+          </div>
+        </div>
+        <input type="hidden" id="sb_llm" value="claude-sonnet-4-6">
+        <div class="card" style="background:var(--surface-1);margin-top:12px">
+          <label class="day" style="margin:0"><input id="sb_soft_on" type="checkbox" onchange="sbSoftToggle()"> Say a quick line if the pause runs long</label>
+          <div id="sb_soft_detail" class="grid2" style="margin-top:10px;display:none">
+            <div><label style="margin-top:0">After how long</label><div class="row" style="gap:6px"><input id="sb_soft_secs" type="number" min="0.5" max="6" step="0.5" value="1.5" style="max-width:90px"><span class="meta">seconds</span></div></div>
+            <div><label style="margin-top:0">Line to say</label><input id="sb_soft_msg" type="text" placeholder="Yeah—hi, I'm here!"></div>
+          </div>
+        </div>
+        <div class="btnrow"><button class="ghost" onclick="loadSandbox()">Reload</button><button class="ghost" onclick="applySandbox()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save draft</button></div>
         <div class="meta" id="sb_status" style="margin-top:8px"></div>
-        <div class="btnrow"><button class="ghost" onclick="dPrev(1)">Back</button><button class="act" onclick="dNext(3)">Next: Script →</button></div>
       </div>
 
       <div class="card dstep" data-step="3" style="display:none">
         <div class="name" style="margin-bottom:12px">Step 3 · Script</div>
         <label data-tip="Use {category} — fills in Pokémon, One Piece, etc.">Write a new opener</label>
         <textarea id="rot_opener_new" rows="3" style="font-size:14px;line-height:1.5" placeholder="e.g. Heyy! Got any {category} in today?"></textarea>
-        <div class="btnrow"><button class="act" onclick="addOpener()">Save opener</button></div>
+        <div class="btnrow"><button class="ghost" onclick="addOpener()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save opener</button></div>
         <label style="margin-top:14px">Your openers <span id="rot_opener_count" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></label>
         <div id="rot_opener_list" style="margin-top:4px"></div>
-        <div class="btnrow"><button class="ghost" onclick="dPrev(2)">Back</button><button class="act" onclick="dNext(4)">Next: Persona →</button></div>
       </div>
 
       <div class="card dstep" data-step="4" style="display:none">
@@ -674,10 +689,10 @@
           <label class="day" style="margin:0"><input id="pn_affection" type="checkbox"> Affectionate (uses your name)</label>
         </div>
         <label>Greeting style</label><input id="pn_greet" placeholder="How they open the call">
-        <div class="btnrow"><button class="act" onclick="savePersona()">Save persona</button></div>
-        <label style="margin-top:14px">Your personas</label>
-        <div id="pn_list" class="row" style="gap:6px"><span class="meta">none yet</span></div>
-        <div class="btnrow"><button class="ghost" onclick="dPrev(3)">Back</button><button class="act" onclick="dNext(5)">Next: Rotation →</button></div>
+        <div class="btnrow"><button class="ghost" onclick="savePersona()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save persona</button></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+        <label style="margin-top:0">Your personas</label>
+        <div id="pn_list" style="margin-top:6px"></div>
       </div>
 
       <div class="card dstep" data-step="5" style="display:none">
@@ -687,8 +702,7 @@
         <label style="margin-top:14px" data-tip="Tick the voices to rotate through in TEST">Voices in rotation</label>
         <div id="rot_voices" class="meta" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px">Loading voices…</div>
         <div class="meta" style="margin-top:8px;color:var(--orange)">Voice rotation is test-only right now — live calls use the single live voice until DevOps enables it.</div>
-        <div class="btnrow"><button class="act" onclick="saveRotation(this)">Save rotation</button><span class="meta" id="rot_msg"></span></div>
-        <div class="btnrow"><button class="ghost" onclick="dPrev(4)">Back</button><button class="act" onclick="dNext(6)">Next: Test →</button></div>
+        <div class="btnrow"><button class="ghost" onclick="saveRotation(this)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save rotation</button><span class="meta" id="rot_msg"></span></div>
       </div>
 
       <div class="card dstep" data-step="6" style="display:none">
@@ -711,15 +725,13 @@
           <div id="tb_t_summary" class="meta" style="color:#ddd;margin-bottom:8px"></div>
           <div id="tb_t_body" class="transcript">…</div>
         </div>
-        <div class="btnrow"><button class="ghost" onclick="dPrev(5)">Back</button><button class="act" onclick="dNext(7)">Next: Save →</button></div>
       </div>
 
       <div class="card dstep" data-step="7" style="display:none">
         <div class="name" style="margin-bottom:12px">Step 7 · Save workflow</div>
         <label>Workflow name</label><input id="wf_name" placeholder="e.g. Warm Pokémon v2">
-        <div class="btnrow"><button class="act" onclick="saveWorkflow()">Save workflow</button></div>
+        <div class="btnrow"><button class="ghost" onclick="saveWorkflow()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save workflow</button></div>
         <div class="meta" id="wf_msg" style="margin-top:8px">Saved workflows appear in Calls → Settings to assign to chains.</div>
-        <div class="btnrow"><button class="ghost" onclick="dPrev(6)">Back</button></div>
       </div>
 
     </div>
@@ -1200,7 +1212,7 @@ function openersFromSettings(s){
 function firstActiveOpener(){ const a=OPENERS.filter(o=>o.on); return a.length?a[0].text:''; }
 function renderOpeners(){
   const box=document.getElementById('rot_opener_list');
-  if(box) box.innerHTML = OPENERS.length ? OPENERS.map((o,i)=>`<label class="oprow"><input type="checkbox" ${o.on?'checked':''} onchange="toggleOpener(${i},this.checked)"><span class="optext">${esch(o.text)}</span><button class="ghost opdel" title="Remove" onclick="deleteOpener(${i})">✕</button></label>`).join('') : '<div class="meta" style="padding:8px 0">No openers yet — write one above.</div>';
+  if(box) box.innerHTML = OPENERS.length ? OPENERS.map((o,i)=>`<label class="oprow"><input type="checkbox" ${o.on?'checked':''} onchange="toggleOpener(${i},this.checked)"><span class="optext">${esch(o.text)}</span><button class="ghost opdel" title="Remove" onclick="deleteOpener(${i})">${lucideSvg('x',14,'currentColor')}</button></label>`).join('') : '<div class="meta" style="padding:8px 0">No openers yet — write one above.</div>';
   const box2=document.getElementById('rot_opener_list2'); // Step 5 (Rotation) mirrors the same list
   if(box2) box2.innerHTML = OPENERS.length ? OPENERS.map((o,i)=>`<label class="oprow"><input type="checkbox" ${o.on?'checked':''} onchange="toggleOpener(${i},this.checked)"><span class="optext">${esch(o.text)}</span></label>`).join('') : '<div class="meta" style="padding:8px 0">Add scripts in Step 3.</div>';
   const on=OPENERS.filter(o=>o.on).length;
@@ -1267,30 +1279,72 @@ function dRender(){
     const n=i+1, done=n<DMAX||(n===DMAX&&n<DSTEP), now=n===DSTEP, lock=n>DMAX;
     const icon = (n<DMAX)?lucideSvg('check',13,'#06210f'):lock?lucideSvg('lock',12,'#6b6b7b'):n;
     const cls = now?'now':(n<DMAX?'done':'lock'); const col=(now)?'var(--green)':(n<DMAX?'var(--green)':'var(--text-tertiary)');
-    return `<div onclick="${n<=DMAX?'dGo('+n+')':''}" style="display:flex;align-items:center;gap:10px;color:${col};${n<=DMAX?'cursor:pointer':''}"><span class="rdot ${cls}">${icon}</span><span style="font-size:13px;font-weight:${now?'800':'600'}">${n} · ${lbl}</span>${now?'<span class="meta">in progress</span>':''}</div>`;
+    return `<div onclick="${n<=DMAX?'dGo('+n+')':''}" style="display:flex;align-items:center;gap:10px;color:${col};${n<=DMAX?'cursor:pointer':''}"><span class="rdot ${cls}">${icon}</span><span style="font-size:13px;font-weight:${now?'800':'600'}">${n} · ${lbl}</span></div>`;
   }).join('')+'</div>';
   document.querySelectorAll('#d_steps .dstep').forEach(el=>{ el.style.display = Number(el.dataset.step)===DSTEP ? '' : 'none'; });
+  const lbl=document.getElementById('d_nav_label'); if(lbl) lbl.textContent='Step '+DSTEP+' · '+DLABELS[DSTEP-1];
+  const bk=document.getElementById('d_back'); if(bk) bk.style.visibility=DSTEP>1?'visible':'hidden';
+  const fw=document.getElementById('d_fwd'); if(fw){ if(DSTEP>=7){ fw.style.visibility='hidden'; } else { fw.style.visibility='visible'; fw.textContent='Next: '+DLABELS[DSTEP]+' ›'; } }
 }
 function dGo(n){ if(n>DMAX) return; DSTEP=n; dRender(); const e=document.querySelector('#designer'); if(e) e.scrollIntoView({behavior:'smooth',block:'start'}); }
 function dNext(n){ DMAX=Math.max(DMAX,n); dGo(n); }
+function dBack(){ if(DSTEP>1) dGo(DSTEP-1); }
+function dFwd(){ if(DSTEP<7){ DMAX=Math.max(DMAX,DSTEP+1); dGo(DSTEP+1); } }
 function dPrev(n){ dGo(n); }
 // Personas (scaffold — saved to settings; backend wiring to live calls is pending DevOps).
 let PERSONAS=[], PN_SEL='Professional';
 const PN_BASE=['Professional','Friendly','Hyped','Warm','Custom'];
 function pnBaseRender(){ const b=document.getElementById('pn_base'); if(!b) return; b.innerHTML=PN_BASE.map(p=>`<span class="chip-sm" onclick="pnPick('${p}')" style="cursor:pointer;${p===PN_SEL?'color:var(--green);background:var(--tint-green-bg);border:1px solid var(--tint-green-border)':'background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border-medium)'}">${p}</span>`).join(''); }
 function pnPick(p){ PN_SEL=p; pnBaseRender(); }
-function renderPersonas(){ const el=document.getElementById('pn_list'); if(el) el.innerHTML=PERSONAS.length?PERSONAS.map(p=>`<span class="tag-verified">${esch(p.name)}</span>`).join(' '):'<span class="meta">none yet</span>'; }
+function renderPersonas(){
+  const el=document.getElementById('pn_list'); if(!el) return;
+  if(!PERSONAS.length){ el.innerHTML='<div class="meta">No personas yet — fill in the fields above and save one.</div>'; return; }
+  el.innerHTML=PERSONAS.map((p,i)=>{
+    const tags=[]; if(p.slang)tags.push('Casual slang'); if(p.swear)tags.push('Profanity OK'); if(p.affection)tags.push('Affectionate');
+    const pills=tags.map(t=>`<span class="chip-sm" style="color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border-medium)">${t}</span>`).join('');
+    return `<div class="card" style="background:var(--surface-1);padding:12px 14px;margin-bottom:8px">
+      <div class="row" style="align-items:flex-start;gap:10px">
+        <div class="grow">
+          <div class="name" style="font-size:14px">${esch(p.name)}</div>
+          ${p.base?`<div class="meta" style="margin-top:2px">${esch(p.base)} personality</div>`:''}
+        </div>
+        <button class="ghost" style="padding:6px 10px" title="Load to edit" onclick="pnLoad(${i})">${lucideSvg('pencil',14,'currentColor')}</button>
+        <button class="ghost" style="padding:6px 10px" title="Delete" onclick="pnDelete(${i})">${lucideSvg('trash-2',14,'currentColor')}</button>
+      </div>
+      ${p.greet?`<div class="meta" style="margin-top:8px;color:var(--text-body)">Greets with: “${esch(p.greet)}”</div>`:''}
+      ${p.tone?`<div class="meta" style="margin-top:6px;color:var(--text-body);line-height:1.45">${esch(p.tone)}</div>`:''}
+      ${pills?`<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">${pills}</div>`:''}
+    </div>`;
+  }).join('');
+}
+function pnLoad(i){ const p=PERSONAS[i]; if(!p) return;
+  document.getElementById('pn_name').value=p.name||'';
+  PN_SEL=p.base||'Professional'; pnBaseRender();
+  document.getElementById('pn_tone').value=p.tone||'';
+  document.getElementById('pn_slang').checked=!!p.slang;
+  document.getElementById('pn_swear').checked=!!p.swear;
+  document.getElementById('pn_affection').checked=!!p.affection;
+  document.getElementById('pn_greet').value=p.greet||'';
+  const d=document.getElementById('designer'); if(d) d.scrollIntoView({behavior:'smooth',block:'start'});
+  toast('Loaded — edit, then Save persona to update it');
+}
+async function pnDelete(i){ const p=PERSONAS[i]; if(!p) return; if(!confirm('Delete persona “'+p.name+'”?')) return;
+  PERSONAS.splice(i,1);
+  await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})});
+  renderPersonas(); toast('Deleted');
+}
 async function loadPersonas(){ pnBaseRender(); const s=await api('/api/settings')||{}; try{ PERSONAS=JSON.parse(s.vt_personas||'[]'); }catch(e){ PERSONAS=[]; } renderPersonas(); }
 async function savePersona(){ const name=v('pn_name'); if(!name){ toast('Name the persona first'); return; }
-  PERSONAS.push({name, base:PN_SEL, tone:v('pn_tone'), slang:document.getElementById('pn_slang').checked, swear:document.getElementById('pn_swear').checked, affection:document.getElementById('pn_affection').checked, greet:v('pn_greet')});
+  const p={name, base:PN_SEL, tone:v('pn_tone'), slang:document.getElementById('pn_slang').checked, swear:document.getElementById('pn_swear').checked, affection:document.getElementById('pn_affection').checked, greet:v('pn_greet')};
+  const idx=PERSONAS.findIndex(x=>x.name===name); if(idx>=0) PERSONAS[idx]=p; else PERSONAS.push(p);
   await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})});
-  document.getElementById('pn_name').value=''; renderPersonas(); toast('Persona saved'); }
+  document.getElementById('pn_name').value=''; renderPersonas(); toast(idx>=0?'Persona updated':'Persona saved'); }
 async function saveWorkflow(){ const name=v('wf_name'); if(!name){ toast('Name the workflow first'); return; }
   const wf={name, voiceId:(document.getElementById('vs_select')||{}).value||'', tuning:sandboxBody(), openers:OPENERS.filter(o=>o.on).map(o=>o.text), persona:PN_SEL, savedAt:Date.now()};
   let WFS=[]; const s=await api('/api/settings')||{}; try{ WFS=JSON.parse(s.vt_workflows||'[]'); }catch(e){}
   const i=WFS.findIndex(w=>w.name===name); if(i>=0) WFS[i]=wf; else WFS.push(wf);
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WFS)})});
-  document.getElementById('wf_msg').textContent = (r&&!r.error)?'Saved ✓ — assign it in Calls → Settings.':'Saved locally (backend wiring pending).'; toast('Workflow saved'); }
+  document.getElementById('wf_msg').textContent = (r&&!r.error)?'Saved — assign it in Calls → Settings.':'Saved locally (backend wiring pending).'; toast('Workflow saved'); }
 async function vsSetActive(){
   const id=document.getElementById('vs_select').value; if(!id) return;
   const r=await api('/api/voices/active',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({voiceId:id})});
@@ -1733,6 +1787,7 @@ function sbLabels(){
   if(g('sb_latency_val')) g('sb_latency_val').textContent=LATENCY_LABELS[Number(g('sb_latency').value)]||g('sb_latency').value;
   updateDraftDot();
 }
+function sbSoftToggle(){ const d=document.getElementById('sb_soft_detail'), on=document.getElementById('sb_soft_on'); if(d&&on) d.style.display=on.checked?'':'none'; }
 async function loadSandbox(){
   const t=await api('/api/sandbox-tuning');
   if(!t||t.error){ const s=document.getElementById('sb_status'); if(s) s.textContent = t&&t.error ? 'Test-bench agent not configured.' : ''; return; }
@@ -1747,7 +1802,7 @@ async function loadSandbox(){
   if(g('sb_soft_secs')&&t.softTimeoutSecs!=null&&t.softTimeoutSecs>=0) g('sb_soft_secs').value=t.softTimeoutSecs;
   if(g('sb_soft_msg')&&t.softTimeoutMsg) g('sb_soft_msg').value=t.softTimeoutMsg;
   if(g('sb_llm')&&t.llm) g('sb_llm').value=t.llm;
-  sbLabels();
+  sbLabels(); sbSoftToggle();
   const s=document.getElementById('sb_status'); if(s) s.textContent='Showing the current draft.';
 }
 function sandboxBody(){
@@ -1765,7 +1820,7 @@ async function applySandbox(){
   document.getElementById('sb_status').textContent='Saving the draft…';
   const r=await api('/api/sandbox-tuning',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(sandboxBody())});
   if(r&&r.error){ document.getElementById('sb_status').textContent='Error: '+r.error; return; }
-  document.getElementById('sb_status').textContent='Draft saved ✓ — store calls unchanged. Hit 📞 Call me below to hear it.';
+  document.getElementById('sb_status').textContent='Draft saved — store calls unchanged. Test it in Step 6.';
   updateDraftDot();
 }
 async function pushSandboxToStores(){
