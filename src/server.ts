@@ -2088,6 +2088,9 @@ app.post("/api/admin/trainer/document", async (c) => {
     )).limit(1))[0];
   }
   if (!r || !r.phone) return c.json({ error: "no callable store for that chain" }, 400);
+  // Respect the global mute list — never trainer-dial a muted chain (no direct store line, etc.).
+  const _ch = r.chainId != null ? (await db.select().from(chains).where(eq(chains.id, r.chainId)))[0] : undefined;
+  if (_ch?.muted) return c.json({ error: `${_ch.name} is muted — skipped (no trainer call placed)` }, 400);
   if (b.chainId) await db.update(chains).set({ navStatus: "learning", navUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(chains.id, Number(b.chainId)));
   const res = await placeNavCall(r.chainId, r.id, r.name, r.phone);
   return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name });
