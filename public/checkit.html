@@ -43,7 +43,7 @@ __BRAND_HEAD__
   .pill.first{margin-left:auto}
   @media(max-width:380px){ header{padding:12px 12px;gap:6px} .logo{font-size:16px} .pill{padding:6px 9px;font-size:12px;gap:5px} }
   .pill .dot{width:8px;height:8px;border-radius:50%;background:var(--accent,var(--green));box-shadow:0 0 8px var(--accent,var(--green))}
-  main{padding:26px 20px 20px;max-width:520px;margin:0 auto;width:100%;box-sizing:border-box;flex:1 0 auto}
+  main{padding:38px 20px 20px;max-width:520px;margin:0 auto;width:100%;box-sizing:border-box;flex:1 0 auto}
   .hero{text-align:center;padding:12px 0 24px}
   .hero h1{font-size:30px;line-height:1.16;margin:0 0 14px;letter-spacing:-1px;font-weight:900;text-wrap:balance}
   .hero h1 .g{color:var(--accent,var(--green));white-space:nowrap}
@@ -137,24 +137,25 @@ __BRAND_HEAD__
   .vstore{text-align:center;color:#d6d6e0;font-size:14.5px;font-weight:600;margin-top:9px}
   /* combined call header: store + verdict status + timing in one box at the top */
   .rhead{background:var(--terminal);border-radius:16px;border:1px solid var(--border);margin-bottom:14px;overflow:hidden}
-  .rhead-top{display:flex;gap:12px;align-items:center;padding:15px}
+  /* Store identity is the dominant ~75% of the card (roomy); the verdict is a compact ~25% strip below. */
+  .rhead-top{display:flex;gap:13px;align-items:center;padding:20px 16px 22px}
   .rhead .railchip{flex:0 0 auto}
   .rhead-id{min-width:0;flex:1}
-  /* Store name + address ALWAYS one line each (ellipsis if long) — the status never pushes the name down. */
   .rhead-store{font-weight:800;font-size:19.5px;letter-spacing:-.4px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
   .rhead-addr{color:var(--muted);font-size:13px;font-weight:500;margin-top:4px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* Verdict fills the BOTTOM of the SAME card like water in a cup — no nested box. A tinted band
-     (icon + "Status: summary") bleeds edge-to-edge and rounds with the card. Green=in, red=not in. */
-  .rhead-fill{display:flex;gap:10px;align-items:center;padding:13px 15px;background:var(--sheet);border-top:1px solid var(--border)}
+  /* Verdict strip: icon + title (line 1) + short summary (line 2). ALL BLACK — the color lives ONLY in
+     the icon + title word, so it never clashes with the message box below. A hairline splits the 75/25. */
+  .rhead-fill{display:flex;gap:12px;align-items:center;padding:13px 16px 14px;background:none;border-top:1px solid var(--border)}
   .rhead-ic{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;line-height:0}
   .rhead-ic svg,.rhead-ic img{display:block}
-  .rhead-vtext{min-width:0;flex:1;font-size:14px;line-height:1.45;color:#e9e9f0}
-  .rhead-stat{font-weight:800;letter-spacing:-.1px;color:#c8c8d4}
-  .rhead-vtext b{color:#fff}
-  .rhead.in .rhead-stat{color:var(--green)} .rhead.in .rhead-fill{background:rgba(74,222,128,.10);border-top-color:rgba(74,222,128,.3)}
-  .rhead.out .rhead-stat{color:var(--red)} .rhead.out .rhead-fill{background:rgba(239,68,68,.08);border-top-color:rgba(239,68,68,.26)}
-  .rhead.unk .rhead-stat{color:#FBBF24} .rhead.unk .rhead-fill{background:rgba(251,191,36,.08);border-top-color:rgba(251,191,36,.24)}
-  .rhead.soon .rhead-stat{color:#F59E0B} .rhead.soon .rhead-fill{background:rgba(245,158,11,.10);border-top-color:rgba(245,158,11,.28)}
+  .rhead-vtext{min-width:0;flex:1}
+  .rhead-stat{display:block;font-weight:800;font-size:15px;letter-spacing:-.1px;color:#c8c8d4;line-height:1.25}
+  .rhead-vsum{color:var(--muted);font-size:13px;line-height:1.4;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .rhead-vsum b{color:#cfcfe0}
+  .rhead.in .rhead-stat{color:var(--green)}
+  .rhead.out .rhead-stat{color:var(--red)}
+  .rhead.unk .rhead-stat{color:#FBBF24}
+  .rhead.soon .rhead-stat{color:#F59E0B}
   /* logged-out homepage = the focused view (hero + check card). Retired modules hidden for everyone. */
   #truststrip,#demo{display:none!important}
   #earndemo{display:none} body.authed #earndemo{display:block}
@@ -167,11 +168,16 @@ __BRAND_HEAD__
   .act2 svg{vertical-align:-2px}
   /* premium "don't miss the restock" upsell module */
   .upmod{background:var(--sheet);border:1px solid var(--border);border-radius:16px;margin-top:14px;overflow:hidden}
-  .upmod-h{padding:14px 15px 11px}
-  .upmod-h .t{display:flex;align-items:center;gap:8px;font-weight:900;font-size:15px}
+  /* Collapsible: header is a toggle; body (blurb + rows) starts hidden so the page is lighter. */
+  .upmod-h{display:flex;align-items:center;gap:10px;width:100%;padding:14px 15px;background:none;border:none;cursor:pointer;text-align:left;color:inherit;font:inherit}
+  .upmod-h .t{flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-weight:900;font-size:15px}
   .upmod-h .t .pchip{margin-left:auto;font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--green);background:rgba(74,222,128,.14);border:1px solid rgba(74,222,128,.4);padding:3px 8px;border-radius:20px}
-  .upmod-h .s{color:var(--muted);font-size:12.5px;line-height:1.45;margin-top:6px}
-  .upmod-h .s b{color:#cfcfe0}
+  .upmod-chev{flex:0 0 auto;color:#56566a;display:inline-flex;transition:transform .18s}
+  .upmod.open .upmod-chev{transform:rotate(90deg)}
+  .upmod-body{display:none}
+  .upmod.open .upmod-body{display:block}
+  .upmod-body .s{color:var(--muted);font-size:12.5px;line-height:1.45;padding:0 15px 11px}
+  .upmod-body .s b{color:#cfcfe0}
   .uprow{display:flex;align-items:center;gap:12px;padding:13px 15px;cursor:pointer;border-top:1px solid var(--border);transition:background .12s}
   .uprow:active{background:rgba(255,255,255,.05)}
   .uprow .upi{width:38px;height:38px;border-radius:11px;background:rgba(74,222,128,.14);display:grid;place-items:center;flex:0 0 auto}
@@ -2998,10 +3004,8 @@ function showResult(o, cid){
   }
   const headLabel = askedLabels.length ? askedLabels.join(', ') : catLabel();
   // Product-aware copy for the no-answer outcomes (the demo case) — name WHAT we checked for + no charge.
-  if(o.statusKey==='nobody_answered' || o.status==='no_answer' || (o.status==='completed' && big==='📵')){
-    const _prod=headLabel||catLabel()||t('res.item','it');
-    note=tf('note.noanswer.full','We called to check for {p} but nobody answered. You will not be charged for this check.',{p:'<b style="color:var(--accent);font-weight:700">'+esc(_prod)+'</b>'});
-  }
+  // (No-answer copy stays the concise registry/default note — the verdict strip is just title + one short
+  //  summary line, and the "no charge" reassurance already shows in the footer below.)
 
   const tr=(o.transcript) ? chatBubbles(o.transcript) : '';
 
@@ -3037,12 +3041,15 @@ function showResult(o, cid){
   ].join('') : '';
   const upsell = (canNotify && (F.restockAlerts!==false || F.scheduling!==false)) ? `
     <div class="upmod">
-      <div class="upmod-h">
+      <button type="button" class="upmod-h" onclick="this.closest('.upmod').classList.toggle('open')" aria-label="${esc(t('up.restock',"Don't miss the restock"))}">
         <div class="t">${ICO.bell(PURP)} ${t('up.restock',"Don't miss the restock")}${isMember?'':('<span class="pchip">'+t('chip.member','Members')+'</span>')}</div>
+        <span class="upmod-chev"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      </button>
+      <div class="upmod-body">
         <div class="s">${restockDay?`This store usually restocks <b>${esc(restockDay)}</b> — we'll watch it and ping you the second it lands.`:`We'll keep an eye on this store and ping you the second it's back in stock.`}</div>
+        ${F.restockAlerts!==false?`<div class="uprow" onclick="openWatch()"><div class="upi">${ICO.msg(PURP)}</div><div class="uptxt"><div class="a">${t('up.watch',"Tell me when it's back")}</div><div class="b">${t('up.watch.sub','One alert the instant a call confirms stock.')}</div></div><div class="upc">${ICO.chev('#56566a')}</div></div>`:''}
+        ${F.scheduling!==false?`<div class="uprow" onclick="openSchedule()"><div class="upi">${ICO.cal(PURP)}</div><div class="uptxt"><div class="a">${t('up.sched','Auto-check on shipment days')}</div><div class="b">${t('up.sched.sub','We call for you on restock days — hands-free.')}</div></div><div class="upc">${ICO.chev('#56566a')}</div></div>`:''}
       </div>
-      ${F.restockAlerts!==false?`<div class="uprow" onclick="openWatch()"><div class="upi">${ICO.msg(PURP)}</div><div class="uptxt"><div class="a">${t('up.watch',"Tell me when it's back")}</div><div class="b">${t('up.watch.sub','One alert the instant a call confirms stock.')}</div></div><div class="upc">${ICO.chev('#56566a')}</div></div>`:''}
-      ${F.scheduling!==false?`<div class="uprow" onclick="openSchedule()"><div class="upi">${ICO.cal(PURP)}</div><div class="uptxt"><div class="a">${t('up.sched','Auto-check on shipment days')}</div><div class="b">${t('up.sched.sub','We call for you on restock days — hands-free.')}</div></div><div class="upc">${ICO.chev('#56566a')}</div></div>`:''}
     </div>` : '';
 
   const nm=splitStoreName(SEL_STORE.name);
@@ -3066,8 +3073,8 @@ function showResult(o, cid){
         </div>
       </div>
       <div class="rhead-fill">
-        <span class="rhead-ic">${vicon(big,cls,22)}</span>
-        <div class="rhead-vtext"><span class="rhead-stat">${esc(vTitle)}</span>${note?': '+note:''}</div>
+        <span class="rhead-ic">${vicon(big,cls,26)}</span>
+        <div class="rhead-vtext"><span class="rhead-stat">${esc(vTitle)}</span>${note?`<span class="rhead-vsum">${note}</span>`:''}</div>
       </div>
     </div>
     ${breakdown}
