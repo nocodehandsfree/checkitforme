@@ -240,10 +240,17 @@
   .hint{color:#6f6f7e;font-size:12px;font-style:italic;line-height:1.5;font-weight:400}
   .hint code{font-style:normal}
   /* ── consumer design system ports ── */
-  .slogo{width:42px;height:42px;flex:0 0 auto;border-radius:12px;background:var(--terminal);border:1px solid var(--border);display:grid;place-items:center;overflow:hidden}
-  .slogo img{width:28px;height:28px;object-fit:contain}
-  .slogo:has(img){background:#14141d;border-color:var(--border)}
+  /* Chain logo tile — pixel-parity with the consumer (.store .ic, checkit.html) per
+     docs/STORE_LOGOS.md §5 DoD: copy these exact values. 46px tile, 42px mark, wide wordmarks
+     44px·auto, dark marks on a #f2f2f5 light plate. No-logo fallback = shared storeWordmark. */
+  .slogo{width:46px;height:46px;flex:0 0 auto;border-radius:12px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .slogo img{width:42px;height:42px;object-fit:contain}
+  .slogo.widelogo img{width:44px;height:auto;max-height:34px}
+  .slogo.lite{background:#f2f2f5}
   .slogo .mono{font-size:13px;font-weight:900;color:#d6d6e0}
+  /* shared two-line text wordmark — ported verbatim from checkit.html (storeWordmark fallback) */
+  .wm{display:flex;flex-direction:column;justify-content:center;align-items:center;width:100%;height:100%;padding:2px;box-sizing:border-box;overflow:hidden;text-align:center}
+  .wm span{display:block;font-weight:900;font-size:8px;line-height:1.05;letter-spacing:-.02em;text-transform:uppercase;color:#cdcdd8;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sname{font-weight:800;font-size:15px;letter-spacing:-.2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .sname .nm{white-space:nowrap;flex:0 0 auto}
   .sbranch{color:#c8c8d4;font-size:12.5px;font-weight:600;margin-top:1px}
@@ -1398,15 +1405,31 @@ function statusBadge(r){
   return `<span class="vpill gray">${vmark('📵','gray',24)}${esch(lc.status||'')}</span>`;
 }
 
-// Store logos + consumer-grade name handling (same conventions as the front end).
-let LOGOS=new Map();
-async function loadLogos(){ try{ const ps=await fetch('/pub/stores').then(r=>r.json()); if(Array.isArray(ps)) LOGOS=new Map(ps.map(x=>[x.id,x.logoUrl||null])); }catch(e){} }
+// Store/chain logos — the admin renders the SAME source of truth as the consumer, per
+// docs/STORE_LOGOS.md. logoUrl/logoWide/logoDark are denormalized onto each row by the server
+// (chainLogoInfo) — so every list (Stores, Chains, Calls feed) reads the row's logoUrl and never
+// bulk-loads /pub/stores or /logo-wall. One tile, pixel-identical to checkit.html's `.ic`:
+//   logoUrl present → <img loading=lazy decoding=async>, honoring logoWide / logoDark
+//   logoUrl absent  → the shared storeWordmark text fallback (NOT a 2-letter monogram)
 function splitName(n){ const i=(n||'').search(/[—–]| - /); if(i<0) return {base:(n||'').trim(),branch:''}; return {base:n.slice(0,i).trim(),branch:n.slice(i).replace(/^[—–\-\s]+/,'').trim()}; }
-function storeTile(id,name){
-  const u=LOGOS.get(id);
-  if(u) return `<div class="slogo"><img src="${esch(u)}" alt=""></div>`;
-  const w=(name||'?').split(/\s+/).filter(Boolean);
-  return `<div class="slogo"><span class="mono">${esch(((w[0]||'?')[0]+(w[1]?w[1][0]:'')).toUpperCase())}</span></div>`;
+function logoTile(o){
+  o=o||{};
+  if(o.logoUrl) return `<div class="slogo${o.logoDark?' lite':''}${o.logoWide?' widelogo':''}"><img loading="lazy" decoding="async" src="${esch(o.logoUrl)}" alt=""></div>`;
+  return `<div class="slogo">${storeWordmark(o.name,o.type)}</div>`;
+}
+// Name-only stores/chains (no logo file) show THEIR real name as a tight two-line wordmark —
+// ported verbatim from checkit.html so the fallback is identical on both surfaces.
+function storeWordmark(name,type){
+  const base=((name||'').split(/[—–]| - /)[0]||'').trim();
+  if(!base) return '';
+  const words=base.split(/\s+/).filter(Boolean);
+  let l1=base,l2='';
+  if(words.length>=2){
+    let best=1,bestDiff=1e9,acc=0;
+    for(let i=1;i<words.length;i++){ acc+=words[i-1].length+1; const d=Math.abs(acc-base.length/2); if(d<bestDiff){bestDiff=d;best=i;} }
+    l1=words.slice(0,best).join(' '); l2=words.slice(best).join(' ');
+  }
+  return `<span class="wm"><span>${esch(l1)}</span>${l2?`<span>${esch(l2)}</span>`:''}</span>`;
 }
 function agoTs(unix){ if(!unix) return ''; const sec=Math.floor(Date.now()/1000-unix); if(sec<90) return 'just now'; const m=Math.floor(sec/60); if(m<60) return m+'m ago'; const h=Math.floor(m/60); if(h<24) return h+'h ago'; return Math.floor(h/24)+'d ago'; }
 function bubbles(t){
@@ -1594,6 +1617,7 @@ function renderRetailers(){
     return `<div class="card${sel?' selrow':''}">
     <div class="row" style="align-items:flex-start;gap:10px">
       <input type="checkbox" class="rowchk" ${sel?'checked':''} onchange="bulkPick(${r.id},this)">
+      ${logoTile(r)}
       <div class="grow" style="min-width:0">
         <div class="sname"><span class="nm">${esch(nm.base)}</span>${r.stockStatus==='verified'?'<span class="tag-verified">verified</span>':'<span class="tag-unverified">unverified</span>'}${r.storeType?` <span class="chip-type">${ICO(storeTypeIco(r.storeType),11)} ${esch(r.storeType)}</span>`:''}${muted.has(r.chainId)?' <span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.12)">muted</span>':''}${badNum(r)?' <span class="chip-sm" style="color:#FBBF24;background:rgba(251,191,36,.12)">no number</span>':''}${r.online?' <span class="chip-sm" style="color:#7DD3FC;background:rgba(125,211,252,.12)">online</span>':''}</div>
         ${nm.branch?`<div class="sbranch">${esch(nm.branch)}</div>`:''}
@@ -1698,6 +1722,7 @@ function renderChainList(){
   if(!list.length){ el.innerHTML='<div class="empty" style="padding:16px">'+(f?'No chains match.':'No chains loaded.')+'</div>'; return; }
   el.innerHTML=list.map(ch=>`
     <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--border);${ch.muted?'opacity:.5':''}">
+      ${logoTile(ch)}
       <div style="flex:1;min-width:0">
         <b style="color:#fff">${esch(ch.name)}</b>
         ${ch.repackOnly?'<span class="chip-sm" style="color:#FBBF24;background:rgba(251,191,36,.12)">repack-only</span>':''}
@@ -2157,6 +2182,7 @@ function renderResults(){
     const detail=(r.summary?`<div class="meta" style="color:#ddd;margin-bottom:8px">${esch(r.summary)}</div>`:'')+(r.transcript?bubbles(r.transcript):'');
     return `<details class="callrow">
       <summary>
+        ${logoTile({...r,name:r.retailer})}
         <div class="grow">
           <div class="cs-name">${esch(nm.base)}${nm.branch?` <span style="color:var(--muted);font-weight:500">${esch(nm.branch)}</span>`:''}</div>
           <div class="cs-meta">${catFilter?'':esch(r.category||'')+' · '}${agoTs(r.startedAt)} · ${time}${r.shipmentDayHeard?' · ships '+esch(r.shipmentDayHeard):''}</div>
@@ -2715,7 +2741,7 @@ async function agentSend(){
     const want=sp.get('store')?'results':(localStorage.getItem('active_tab')||'dash');
     const sec=SECTION_GROUP[want]?want:'dash';
     showGroup(SECTION_GROUP[sec], sec); })();
-  await Promise.all([loadCatalog(),loadLogos()]);
+  await Promise.all([loadCatalog()]);
   await Promise.all([loadStoreIntel(),loadResults(),loadSchedules(),loadZones(),loadSettings(),loadLiveStrip(),loadCredits(),loadTestStores(),loadBail(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen()]);
   const sp=new URLSearchParams(location.search);
   restorePersist();

@@ -1864,7 +1864,10 @@ app.post("/api/admin/calling/resume", async (c) => { await setCallingPaused(fals
 
 // ---- Reference data ----
 app.get("/api/categories", async (c) => c.json(await db.select().from(categories)));
-app.get("/api/chains", async (c) => c.json(await db.select().from(chains)));
+app.get("/api/chains", async (c) => c.json((await db.select().from(chains)).map((ch) => {
+  const l = chainLogoInfo(ch.name);
+  return { ...ch, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+})));
 // Compact store list for the Voice → Test picker: ONE callable store per supported (app-visible) chain
 // — ~80 rows, not the 105k national import. Mirrors the consumer visibility rule (non-muted chain with
 // an active, real-phone store) so the test calls a store that's actually in the product.
@@ -1994,12 +1997,21 @@ app.get("/api/waitlist", async (c) => {
 });
 
 // ---- Retailers (with green status) ----
-app.get("/api/retailers", async (c) => c.json(await retailersWithStatus({
-  q: c.req.query("q") || undefined, state: c.req.query("state") || undefined,
-  type: c.req.query("type") || undefined, region: c.req.query("region") || undefined,
-  carries: c.req.query("carries") || undefined, online: c.req.query("online") === "1" || undefined,
-  limit: c.req.query("limit") ? Number(c.req.query("limit")) : undefined,
-})));
+app.get("/api/retailers", async (c) => {
+  const rows = await retailersWithStatus({
+    q: c.req.query("q") || undefined, state: c.req.query("state") || undefined,
+    type: c.req.query("type") || undefined, region: c.req.query("region") || undefined,
+    carries: c.req.query("carries") || undefined, online: c.req.query("online") === "1" || undefined,
+    limit: c.req.query("limit") ? Number(c.req.query("limit")) : undefined,
+  });
+  // Attach the same chain-logo info the consumer surfaces use, so the admin Stores list renders
+  // the exact /logos/chains files (per public/logos/chains/README.md) — muted chains included.
+  const names = new Map((await db.select().from(chains)).map((x) => [x.id, x.name]));
+  return c.json(rows.map((r) => {
+    const l = chainLogoInfo((r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0]);
+    return { ...r, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+  }));
+});
 // Store Intel — the headline numbers on the Stores tab (cached 60s). The database, at a glance.
 let storeIntelCache: { t: number; v: unknown } | null = null;
 app.get("/api/admin/store-intel", async (c) => {
@@ -2250,9 +2262,15 @@ app.post("/api/schedules/:id/targets", async (c) => {
 // ---- Results ----
 app.get("/api/results", async (c) => {
   const rows = await db.select().from(callResults).orderBy(desc(callResults.startedAt)).limit(50);
-  const rMap = new Map((await db.select().from(retailers)).map((r) => [r.id, r.name]));
+  const rMap = new Map((await db.select().from(retailers)).map((r) => [r.id, r]));
+  const names = new Map((await db.select().from(chains)).map((x) => [x.id, x.name]));
   const cMap = new Map((await db.select().from(categories)).map((x) => [x.id, x.label]));
-  return c.json(rows.map((r) => ({ ...r, retailer: rMap.get(r.retailerId), category: cMap.get(r.categoryId) })));
+  return c.json(rows.map((r) => {
+    const ret = rMap.get(r.retailerId);
+    // Same chain-logo resolution as every other surface, so the Calls feed shows the store's mark.
+    const l = chainLogoInfo(ret ? ((ret.chainId && names.get(ret.chainId)) || ret.name.split(/—|–| - /)[0]) : null);
+    return { ...r, retailer: ret?.name, category: cMap.get(r.categoryId), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+  }));
 });
 
 // ---- Actions ----
