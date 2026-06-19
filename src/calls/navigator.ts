@@ -16,7 +16,7 @@ export interface NavStep { who: "ivr" | "us"; text: string; atSec: number; actio
 export interface NavRecipe { type: string; steps: { action: string; value: string; atSec: number }[]; seconds: number }
 export interface NavSession {
   id: string; chainId: number | null; retailerId: number; retailerName: string; phone: string;
-  startMs: number; steps: NavStep[]; turns: number; model?: string;
+  startMs: number; steps: NavStep[]; turns: number; model?: string; hint?: string;
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
   humanAtSec: number | null; confidence: number; callSid?: string; recipe: NavRecipe | null;
@@ -36,11 +36,14 @@ const gather = (id: string) =>
 interface Decision { action: NavAction; value: string; type: "direct" | "keypad" | "voice"; confidence: number; note: string }
 async function decide(s: NavSession, latest: string): Promise<Decision> {
   const log = s.steps.map((st) => `[${st.atSec}s] ${st.who === "ivr" ? "STORE" : "US"}: ${st.text}`).join("\n");
+  const hintBlock = s.hint
+    ? `KNOWN FAST PATH for THIS exact store (learned on an earlier call): ${s.hint}\nFollow it: use these EXACT short single words at the matching prompt, answer the INSTANT the prompt makes sense (barge in — don't wait for it to finish), and NEVER improvise longer phrases. Only deviate if what you hear clearly doesn't match.\n\n`
+    : "";
   const prompt = `You are calling a retail store and navigating its phone system to reach a real HUMAN employee as fast as possible. You can only: SAY a short word, PRESS a digit, WAIT (listen more), or finish (HUMAN reached, or FAIL dead-end).
 
 WHO YOU ARE: a regular SHOPPER calling to ask if a product is in stock. You are NOT a patient, NOT a healthcare/medical/insurance provider, NOT a vendor. If a menu asks "are you a healthcare provider / calling from a doctor's office?", the answer is always NO (say "no" or press the option for no / "to continue"). At a pharmacy or any store with departments, ALWAYS head to the FRONT STORE / GENERAL store / sales floor — NEVER choose "pharmacy" (it dead-ends in patient/date-of-birth verification). Never give a date of birth, prescription number, or member ID — if a menu demands one, that branch is wrong; back out toward the general store / operator.
 
-Conversation so far (STORE = what their phone system or a person said, US = what we did), seconds since the call started:
+${hintBlock}Conversation so far (STORE = what their phone system or a person said, US = what we did), seconds since the call started:
 ${log || "(call just connected, nothing heard yet)"}
 
 Newest from the STORE: "${latest || "(silence)"}"
@@ -110,13 +113,13 @@ function finish(s: NavSession, status: "human" | "failed") {
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string): Promise<{ id?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model };
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint };
   sessions.set(id, session);
   const body = new URLSearchParams({
     To: e164(phone), From: from,

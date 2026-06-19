@@ -2124,7 +2124,7 @@ app.get("/api/admin/trainer/list", async (c) => {
   })) });
 });
 app.post("/api/admin/trainer/document", async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string };
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string; hint?: string };
   let r: typeof retailers.$inferSelect | undefined;
   if (b.retailerId) r = (await db.select().from(retailers).where(eq(retailers.id, Number(b.retailerId))))[0];
   else if (b.chainId) {
@@ -2137,7 +2137,7 @@ app.post("/api/admin/trainer/document", async (c) => {
   const _ch = r.chainId != null ? (await db.select().from(chains).where(eq(chains.id, r.chainId)))[0] : undefined;
   if (_ch?.muted) return c.json({ error: `${_ch.name} is muted — skipped (no trainer call placed)` }, 400);
   if (b.chainId) await db.update(chains).set({ navStatus: "learning", navUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(chains.id, Number(b.chainId)));
-  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model);
+  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint);
   return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name });
 });
 app.get("/api/admin/trainer/session/:id", (c) => {
