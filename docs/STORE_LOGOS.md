@@ -109,6 +109,35 @@ The admin is the only surface not showing real logos, and it's a near-miss:
 3. Make the no-logo fallback match the consumer's text wordmark, not the 2-letter monogram.
 4. Honor the **performance rules** in §3 (lazy `<img>`, only on-screen rows, no bulk load).
 
+### ✅ Definition of Done (these are the gotchas — miss one and it's inconsistent)
+The admin is "consistent with the website" only if **all** of these are true:
+
+- [ ] **Renders `logoUrl`, not its own icons.** The leading mark = the store's `logoUrl` (from
+      `/pub/stores`). `storeTypeIco()` (`cart/box/store`) may stay only as a tiny secondary chip.
+- [ ] **Honors the flags.** `logoWide` → wide treatment, `logoDark` → light plate behind it —
+      same as the consumer, so a wide/dark logo looks the same in both places.
+- [ ] **Fallback = the shared text wordmark** (`storeWordmark(name, type)`) when `logoUrl` is null
+      — *not* a 2-letter monogram.
+- [ ] **Lazy + on-screen only:** `<img loading="lazy" decoding="async">`; never render all rows'
+      images at once; never pull `/logo-wall` into the app.
+- [ ] **Same tile as the consumer** (for pixel parity — copy these exact values):
+
+```css
+/* tile */            width:46px; height:46px; border-radius:12px; background:rgba(255,255,255,.06);
+                      display:flex; align-items:center; justify-content:center;
+/* square logo img */ width:42px; height:42px; object-fit:contain;
+/* wide logo img  */  width:44px; height:auto; max-height:34px;   /* when logoDark→ */ .lite{background:#f2f2f5}
+```
+```js
+// exact render expression the consumer uses (checkit.html:2182) — mirror it:
+`<div class="ic ${logoDark?'lite':''} ${logoWide?'widelogo':''}">`
++ (logoUrl ? `<img loading="lazy" decoding="async" src="${esc(logoUrl)}" alt="">`
+           : storeWordmark(name, type))
++ `</div>`
+```
+> If the admin's rows are too dense for a 46px tile, you may scale the tile down — but keep the
+> `logoWide`/`logoDark` logic and the `object-fit:contain` so the *logo* is still identical, just smaller.
+
 **Acceptance:** a chain that has a logo file shows that exact logo in the consumer list, the logo
 wall, **and** every admin section that lists it — and the admin still scrolls smoothly.
 
