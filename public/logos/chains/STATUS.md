@@ -36,14 +36,14 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Books-A-Million | "BAM!" mark | 🔧 | trimmed tight |
 | BoxLunch | orange "BL" box | 🔧 | box = brand icon (like Aldi) — owner to confirm; shrunk to match |
 
-## Chunk 2b — buc_ee_s → costco  🔧 awaiting owner approval
+## Chunk 2b — buc_ee_s → costco  ✅ LOCKED (owner-approved; Burlington + City Market re-done)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Buc-ee's | beaver on yellow | 🔧 | brand icon (yellow circle = identity); shrunk to match icon set |
-| Burlington | heart-B mark | 🔧 | crisp heart-B from official vector; flat right edge is the B design (not a crop) |
-| City Market | "CITY MARKET" 2 lines | 🔧 | red, two lines, no border (real app icon is a "C" on white box — rejected) |
-| Claire's | "claire's" wordmark | 🔧 | official vector, purple brightened; **renders small — it's one wide word** (see size note) |
-| Costco | "COSTCO WHOLESALE" | 🔧 | official vector lockup, no box; renders short (wide) |
+| Buc-ee's | beaver on yellow | ✅ | brand icon (yellow circle = identity); shrunk to match icon set |
+| Burlington | heart-B mark | ✅ | complete heart-B from vector — cut at the real B\|u gap so the right lobe rounds |
+| City Market | red "C" mark | ✅ | de-boxed their real "C" app icon — solid red, no white box/border (owner: "much better") |
+| Claire's | "claire's" wordmark | ✅ | official vector, purple brightened (wide → renders compact, see size note) |
+| Costco | "COSTCO WHOLESALE" | ✅ | official vector lockup, no box |
 
 > **Size note (wide wordmarks):** single wide words (Claire's, Costco, Acme, B&N, BAM!,
 > Blain's) fit-to-width in a square-ish tile, so they render short. Per-logo trimming is
