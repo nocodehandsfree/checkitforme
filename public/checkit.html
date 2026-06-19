@@ -115,11 +115,10 @@ __BRAND_HEAD__
   .cs-line.cur{color:#A8FFD6}
   .cs-time{color:#5f8772}
   /* Finished call: collapsed one-line recap — tap to expand the full step log (keeps the result focused). */
-  .cs-collapse .cs-sum{display:flex;align-items:center;gap:9px;width:100%;background:none;border:none;color:#A8FFD6;font:inherit;font-weight:700;font-size:13px;letter-spacing:.2px;cursor:pointer;padding:0;text-align:left}
-  .cs-sum-dot{width:7px;height:7px;flex:0 0 auto;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px rgba(74,222,128,.85)}
-  .cs-sum-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cs-collapse .cs-sum{display:flex;align-items:center;justify-content:flex-end;gap:7px;width:100%;background:none;border:none;color:#A8FFD6;font:inherit;font-weight:700;font-size:13px;letter-spacing:.2px;cursor:pointer;padding:0}
+  .cs-sum-t{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
   .cs-sum-chev{flex:0 0 auto;color:#56E39B;display:inline-flex;transition:transform .18s}
-  .cs-collapse.open .cs-sum-chev{transform:rotate(90deg)}
+  .cs-collapse.open .cs-sum-chev{transform:rotate(180deg)}
   .cs-full{display:none;margin-top:12px}
   .cs-collapse.open .cs-full{display:block}
   .callmsg-div{height:2px;background:linear-gradient(90deg,transparent,rgba(74,222,128,.5),transparent)}
@@ -2698,7 +2697,7 @@ function callMsgBoxHTML(steps, transcript, opts){
   const stepsSection = opts.final
     ? `<div class="cs-collapse${opts.expanded?' open':''}">
         <button type="button" class="cs-sum" onclick="this.closest('.cs-collapse').classList.toggle('open')" aria-label="${esc(t('cs.toggle','Show call steps'))}">
-          <span class="cs-sum-dot"></span><span class="cs-sum-t">${esc(opts.summary||t('live.steps','Call progress'))}</span><span class="cs-sum-chev"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span class="cs-sum-t">${esc(opts.summary||t('live.steps','Call progress'))}</span><span class="cs-sum-chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         </button>
         <div class="cs-full">${stepsHTML(steps, opts.finalElapsed)}</div>
       </div>`
@@ -3017,11 +3016,9 @@ function showResult(o, cid){
   // the transcript right below IS the detail, so we don't repeat it in prose.
   const _fmtS = s => s>=60 ? (Math.floor(s/60)+'m'+(s%60?(' '+(s%60)+'s'):'')) : (s+'s');
   const _navS=(typeof o.navSecs==='number'&&o.navSecs>0)?o.navSecs:null, _totS=(typeof o.durationSecs==='number'&&o.durationSecs>0)?o.durationSecs:null;
-  // One-line recap that headlines the collapsed call-progress (real server timings — never the fake derived ones).
-  const _tlines=(o.transcript||'').split('\n').filter(Boolean);
-  const _reached=transcriptHumanStart(_tlines)<_tlines.length; // did we get through to a live person?
-  const _secs=_navS||_totS||null;
-  const callSummary=(_reached?t('cs.reached','Reached an associate'):t('cs.worked','Worked through their phone menu'))+(_secs?(' · '+_secs+'s'):'');
+  // Collapsed call-progress headline — just "Call · Ns" (real server duration, never the fake derived secs).
+  const _secs=_totS||_navS||null;
+  const callSummary=t('cs.call','Call')+(_secs?(' · '+_secs+'s'):'');
   const proof = (o.transcript) ? `
     <div class="proof">
       <div class="ph"><span>${ICO.lock('#7a7a88')} ${t('res.proof','Proof — what the clerk said')}</span>${canTranslate?`<button class="tbtn" id="tbtn" onclick="toggleTranslate()">${ICO.globe('currentColor')} ${t('res.translate','Translate')}</button>`:''}</div>
