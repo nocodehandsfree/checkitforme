@@ -1,9 +1,7 @@
-# Chain logos
+# Chain logos → see `docs/STORE_LOGOS.md`
 
-Best practices + the new-store process live **next to the logo files** so anyone
-editing logos finds them:
+Everything about retail-store chain logos — the source of truth, how every surface (consumer,
+admin, logo-wall) renders them, performance rules, the asset design rules, and **how logos are
+processed (removing white, sourcing the real logo)** — now lives in one canonical doc:
 
-➡️ **`public/logos/chains/README.md`**
-
-(That's the single source of truth — design rules, the step-by-step for a new store,
-and the tools/size knobs.)
+➡️ **`docs/STORE_LOGOS.md`**

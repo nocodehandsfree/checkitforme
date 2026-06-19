@@ -68,6 +68,7 @@ your files, your extra docs, and your current focus. Stay in your lane; request 
 - `docs/RUNBOOK.md` — what it is + stack/services + run/deploy/secrets.
 - `docs/ARCHITECTURE.md` — repo + folder layout.
 - `docs/API_CONTRACT.md` · `docs/STOCK_AND_GEO_API.md` — the interface + stock/geo rails.
+- `docs/STORE_LOGOS.md` — retail-chain store logos: source of truth, who renders them (consumer/admin/logo-wall), performance rules, and the processing pipeline (removing white, sourcing real logos). **Read before touching logos anywhere.**
 - `docs/business/` — BRAND · CAPABILITIES (the pitch) · ROADMAP (+ open backlog) · SELL_METHODS_PLAN.
 - `docs/finance/COST_MODEL.md` · `docs/security/SECURITY_REVIEW.md`.
 - `docs/ops/` — DEPLOY_CHECKLIST · GTM_READINESS · IMPLEMENTATION_SPECS · TIDB_MIGRATION · DOMAIN_MIGRATION · REFACTOR_PLAN.

@@ -1,5 +1,9 @@
 # Store logo best practices — READ THIS FIRST
 
+> **Hub doc: `docs/STORE_LOGOS.md`** covers the system/architecture, source of truth, how every
+> surface renders logos, performance rules, the admin gap, and the processing pipeline. **This
+> file is the asset design detail** (the rules + new-store steps).
+
 These are the chain logo files for the store list / admin / `/logo-wall`. Each is a
 **transparent PNG** at `<slug>.png`, paired with `_meta.json` (`{w,d}` per file:
 `w:1` = wide wordmark, `d:1` = needs a light plate — rarely used). All three surfaces
