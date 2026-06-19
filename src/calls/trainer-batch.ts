@@ -83,6 +83,13 @@ export async function startBatch(opts: BatchOpts = {}) {
   const perCallMaxSec = Math.max(40, opts.perCallMaxSec ?? 120);
   const gapSec = Math.max(5, opts.gapSec ?? 15);
   let list = (await db.select().from(chains).where(eq(chains.muted, false)));
+  // Match the app's store list EXACTLY: a chain only shows up (and is only callable) when it has at
+  // least one active store with a real phone (mirrors /pub/stores). Drops online-only/phantom chains
+  // like Amazon so they're never dialed and never clutter the report.
+  const callable = await db.select({ chainId: retailers.chainId, phone: retailers.phone })
+    .from(retailers).where(eq(retailers.active, true));
+  const appChains = new Set(callable.filter((r) => r.chainId && r.phone && !r.phone.startsWith("nophone:") && /\d{7}/.test(r.phone)).map((r) => r.chainId as number));
+  list = list.filter((c) => appChains.has(c.id));
   if (onlyMissing) list = list.filter((c) => c.navStatus !== "locked" && !c.phoneTreeDefault);
   if (opts.limit) list = list.slice(0, opts.limit);
   Object.assign(state, { running: true, stop: false, total: list.length, done: 0, learned: 0, review: 0, skipped: 0, failed: 0, current: "", startedAt: Date.now(), results: [] });
