@@ -22,7 +22,6 @@ async function seedStatuses() {
     ["voicemail", "📮", "Got their voicemail", "unk", "#9CA3AF", "We reached a recording, not a person — no charge."],
     ["busy", "📞", "Line was busy", "unk", "#9CA3AF", "Their line was busy — no charge. Try again shortly."],
     ["ivr_stuck", "🔢", "Couldn't reach a person", "unk", "#9CA3AF", "We got stuck in their phone menu — no charge."],
-    ["language_barrier", "🗣️", "Language barrier", "unk", "#9CA3AF", "We reached someone but couldn't communicate — no charge."],
     ["bad_number", "☎️", "Bad number", "unk", "#9CA3AF", "That number didn't connect — no charge."],
     ["closed", "🔒", "Store closed", "unk", "#9CA3AF", "They're closed right now — no charge. Try again when they're open."],
     ["failed", "⚠️", "Call failed", "unk", "#FBBF24", "Something went wrong on our end — no charge."],

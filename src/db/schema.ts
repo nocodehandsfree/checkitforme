@@ -408,7 +408,6 @@ export type CallStatus =
   | "busy"           // line busy
   | "bad_number"     // disconnected / number changed
   | "ivr_stuck"      // couldn't get through the phone menu
-  | "language_barrier" // couldn't communicate (and couldn't switch languages)
   | "closed"         // store closed / voicemail recording — hung up, no charge
   | "failed";        // telephony/system error
 

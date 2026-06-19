@@ -1266,7 +1266,6 @@ const I18N={ es:{
   'st.voicemail':'Buzón de voz','stn.voicemail':'Llegamos a una grabadora, no a una persona — sin cargo.',
   'st.busy':'Línea ocupada','stn.busy':'La línea estaba ocupada — sin cargo. Intenta pronto.',
   'st.ivr_stuck':'No alcanzamos a nadie','stn.ivr_stuck':'Nos atoramos en su menú telefónico — sin cargo.',
-  'st.language_barrier':'Barrera de idioma','stn.language_barrier':'Contestaron pero no pudimos comunicarnos — sin cargo.',
   'st.bad_number':'Número malo','stn.bad_number':'Ese número no conectó — sin cargo.',
   'st.closed':'Tienda cerrada','stn.closed':'Están cerrados ahora — sin cargo. Intenta cuando abran.',
   'st.failed':'Llamada fallida','stn.failed':'Algo falló de nuestro lado — sin cargo.',
@@ -2944,7 +2943,6 @@ function showResult(o, cid){
   else if(o.status==='voicemail'){ cls='unk'; big='📮'; title=t('st.voicemail','Got their voicemail'); note=t('note.voicemail',"We reached a recording, not a person — no charge."); }
   else if(o.status==='busy'){ cls='unk'; big='📞'; title=t('v.busy','Line was busy'); note=t('note.busy',"Their line was busy — no charge. Try again shortly."); }
   else if(o.status==='ivr_stuck'){ cls='unk'; big='🔢'; title=t('v.ivr',"Couldn't reach a person"); note=t('note.ivr',"We got stuck in their phone menu and couldn't reach anyone — no charge."); }
-  else if(o.status==='language_barrier'){ cls='unk'; big='🗣️'; title=t('v.lang','Language barrier'); note=t('note.lang',"We reached someone but couldn't communicate — no charge."); }
   else if(o.status==='bad_number'){ cls='unk'; big='☎️'; title=t('v.badnum','Bad number'); note=t('note.badnum',"That number didn't connect — no charge."); }
   else if(o.status==='closed'){ cls='unk'; big='🔒'; title=t('v.closedt','Store closed'); note=t('note.closed',"They're closed right now — no charge. Try again when they're open."); }
   else if(o.status==='failed'){ cls='unk'; big='⚠️'; title=t('v.failed','Call failed'); note=safeReason(o.failureReason)||t('note.failed','Something went wrong on our end — no charge.'); }
