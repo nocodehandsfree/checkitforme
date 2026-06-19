@@ -50,14 +50,18 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 > maxed out. Making them bigger needs a *global* render change (wider tile or taller
 > wide-logo box) — hold for owner decision so it doesn't rebalance the locked chunks.
 
-## Chunk 3 — cvs → fred_meyer  ⬜
+## Chunk 3a — cvs → dunham_s  🔧 awaiting owner approval
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| CVS | heart mark only | ⬜ | heart only, not "CVS"/"CVS Health" |
-| Dick's Sporting Goods | wordmark | ⬜ | **too small**; use owner-attached Dick's logo |
-| Dollar General | 2 lines + yellow | ⬜ | two lines, keep yellow border, don't cut outside border |
-| Dollar Tree | wordmark | ⬜ | |
-| Dunham's Sports | "Dunham's" | ⬜ | **too small**; drop "Sports" tagline |
+| CVS | red heart mark | 🔧 | heart only (from CVS app icon), shrunk to icon set; not "CVS"/"CVS Health" |
+| Dick's Sporting Goods | green-box logo | 🔧 | owner-attached logo, white bg flooded off, kept full lockup + tagline |
+| Dollar General | yellow-box 2 lines | 🔧 | DOLLAR/GENERAL, kept the yellow border (their brand), nothing clipped |
+| Dollar Tree | green tree mark | 🔧 | their tree-$1 symbol, shrunk to icon set |
+| Dunham's Sports | "Dunham's" script | 🔧 | red italic wordmark filled to width; "Sports" dropped (no better source found) |
+
+## Chunk 3b — family_dollar → fred_meyer  ⬜
+| Logo | Treatment | Status | Notes |
+|---|---|---|---|
 | Family Dollar | family-circle mark | ⬜ | use the brand mark, uniform size |
 | Five Below | wordmark | ⬜ | clean it up (was a mess) |
 | Fleet Farm | wordmark | ⬜ | |
