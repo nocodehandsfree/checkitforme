@@ -114,6 +114,14 @@ __BRAND_HEAD__
   .cs-line{white-space:pre-wrap}
   .cs-line.cur{color:#A8FFD6}
   .cs-time{color:#5f8772}
+  /* Finished call: collapsed one-line recap — tap to expand the full step log (keeps the result focused). */
+  .cs-collapse .cs-sum{display:flex;align-items:center;gap:9px;width:100%;background:none;border:none;color:#A8FFD6;font:inherit;font-weight:700;font-size:13px;letter-spacing:.2px;cursor:pointer;padding:0;text-align:left}
+  .cs-sum-dot{width:7px;height:7px;flex:0 0 auto;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px rgba(74,222,128,.85)}
+  .cs-sum-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cs-sum-chev{flex:0 0 auto;color:#56E39B;display:inline-flex;transition:transform .18s}
+  .cs-collapse.open .cs-sum-chev{transform:rotate(90deg)}
+  .cs-full{display:none;margin-top:12px}
+  .cs-collapse.open .cs-full{display:block}
   .callmsg-div{height:2px;background:linear-gradient(90deg,transparent,rgba(74,222,128,.5),transparent)}
   .callmsg-script{padding:14px 15px}
   .cs-wait{color:var(--muted);font-size:12.5px;font-style:italic}
@@ -555,7 +563,9 @@ __BRAND_HEAD__
   .rcal-d.has{color:#06210f;background:var(--accent,#4ADE80);cursor:pointer;font-weight:900}
   .rcal-d.sel{box-shadow:0 0 0 2px #fff inset}
   .railsel{flex:1;min-width:0;appearance:none;-webkit-appearance:none;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;font-size:12.5px;font-weight:700;border-radius:11px;padding:9px 26px 9px 11px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M0.5 0.5h8L4.5 5.5z' fill='%23ffffff'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
-  .railnav{flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:none;background:var(--accent,#4ADE80);color:#06210f;display:grid;place-items:center;cursor:pointer;padding:0;box-shadow:0 6px 16px -6px rgba(0,0,0,.55);transition:transform .1s}
+  /* Prev/next: subtle outlined circles (not loud filled accent) so they don't fight the verdict for the eye. */
+  .railnav{flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:1px solid var(--border);background:var(--sheet);color:#cfcfd9;display:grid;place-items:center;cursor:pointer;padding:0;transition:transform .1s,border-color .12s,color .12s}
+  .railnav:not(:disabled):hover{border-color:var(--accent,#4ADE80);color:var(--accent,#4ADE80)}
   .railnav:disabled{opacity:.3;cursor:default}
   .railnav:not(:disabled):active{transform:scale(.92)}
   .railchip{flex:0 0 auto;width:46px;height:46px;border-radius:13px;background:var(--terminal);border:1.5px solid var(--border);display:grid;place-items:center;cursor:pointer;padding:0;position:relative;transition:transform .12s,border-color .12s}
@@ -1926,7 +1936,7 @@ async function restoreCall(cid, storeName, catName){
   const known=loadHist().find(h=>h.cid===cid);
   const st=STORES.find(s=>storeName&&s.name.toLowerCase().includes(storeName.toLowerCase()));
   const ct=CATS.find(c=>catName&&c.label.toLowerCase()===catName.toLowerCase());
-  SEL_STORE = known ? {id:known.storeId,name:known.storeName} : (st||{id:null,name:storeName||''});
+  SEL_STORE = known ? {id:known.storeId,name:known.storeName,address:known.address||null,location:known.location||null,logoUrl:known.logoUrl,logoWide:known.logoWide,logoDark:known.logoDark} : (st||{id:null,name:storeName||''});
   SEL_CAT=ct?ct.id:SEL_CAT; SEL_CATS=SEL_CAT?[SEL_CAT]:[]; ASKED_CATS=ct?[{id:ct.id,label:ct.label}]:((known&&known.cats)?known.cats.map(l=>({id:null,label:l})):[]);
   // Returning to a call → go STRAIGHT to the transcript. No "loading the old call" live-card flash:
   // fetch first (the page stays put), then render the result. Reloaded calls have no live step timings,
@@ -1943,7 +1953,7 @@ async function restoreCall(cid, storeName, catName){
   if(!SEL_STORE.name) SEL_STORE.name=t('hist.acheck','Store check');
   if(!known && SEL_STORE.id!=null){
     const h=loadHist();
-    h.unshift({cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, logoUrl:SEL_STORE.logoUrl||null, logoWide:!!SEL_STORE.logoWide, logoDark:!!SEL_STORE.logoDark, categoryId:SEL_CAT, category:ct?ct.label:(catName||''), ts:Date.now(), status:o.status, confirmed:o.confirmed});
+    h.unshift({cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, address:SEL_STORE.address||null, location:SEL_STORE.location||null, logoUrl:SEL_STORE.logoUrl||null, logoWide:!!SEL_STORE.logoWide, logoDark:!!SEL_STORE.logoDark, categoryId:SEL_CAT, category:ct?ct.label:(catName||''), ts:Date.now(), status:o.status, confirmed:o.confirmed});
     localStorage.setItem('runnr_history', JSON.stringify(h.slice(0,60)));
   }
   if(!resultSame(o,cached)) showResult(o, cid);
@@ -2653,9 +2663,9 @@ function liveStage(n){
 function stepsHTML(steps, finalElapsed){
   if(!steps||!steps.length) return '<div class="cs-line cur">'+esc(liveStageLabel(1))+'</div>';
   return '<div class="cs-list">'+steps.map((s,i)=>{
-    let secs=null;
-    if(i<steps.length-1) secs=Math.max(1,Math.round(steps[i+1].at - s.at));
-    else if(finalElapsed!=null) secs=Math.max(1,Math.round(finalElapsed - s.at));
+    let secs=null; // only show a per-step time for a REAL elapsed gap — derived/reopened steps are all at:0, so no fake "1s"
+    if(i<steps.length-1){ if(steps[i+1].at>s.at) secs=Math.round(steps[i+1].at-s.at); }
+    else if(finalElapsed!=null && finalElapsed>s.at) secs=Math.round(finalElapsed-s.at);
     const cur=(i===steps.length-1 && finalElapsed==null);
     return `<div class="cs-line${cur?' cur':''}">${s.n}. ${esc(s.label)}${secs!=null?` <span class="cs-time">${secs}s</span>`:''}</div>`;
   }).join('')+'</div>';
@@ -2670,8 +2680,18 @@ function scriptHTML(transcript, final){
 }
 function callMsgBoxHTML(steps, transcript, opts){
   opts=opts||{};
+  // On a FINISHED call the 8-step log is just noise — collapse it to one clean summary line (tap to
+  // expand the full timeline). During a LIVE call we show the steps streaming in (that's the show).
+  const stepsSection = opts.final
+    ? `<div class="cs-collapse">
+        <button type="button" class="cs-sum" onclick="this.closest('.cs-collapse').classList.toggle('open')" aria-label="${esc(t('cs.toggle','Show call steps'))}">
+          <span class="cs-sum-dot"></span><span class="cs-sum-t">${esc(opts.summary||t('live.steps','Call progress'))}</span><span class="cs-sum-chev"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </button>
+        <div class="cs-full">${stepsHTML(steps, opts.finalElapsed)}</div>
+      </div>`
+    : `<div class="callmsg-h">${t('live.steps','Call progress')}</div>${stepsHTML(steps, opts.finalElapsed)}`;
   return `<div class="callmsg">
-    <div class="callmsg-steps"><div class="callmsg-h">${t('live.steps','Call progress')}</div>${stepsHTML(steps, opts.finalElapsed)}</div>
+    <div class="callmsg-steps">${stepsSection}</div>
     <div class="callmsg-div"></div>
     <div class="callmsg-script"><div class="callmsg-h">${t('live.convo','Conversation')}</div>${scriptHTML(transcript, opts.final)}</div>
   </div>`;
@@ -2986,7 +3006,11 @@ function showResult(o, cid){
   // the transcript right below IS the detail, so we don't repeat it in prose.
   const _fmtS = s => s>=60 ? (Math.floor(s/60)+'m'+(s%60?(' '+(s%60)+'s'):'')) : (s+'s');
   const _navS=(typeof o.navSecs==='number'&&o.navSecs>0)?o.navSecs:null, _totS=(typeof o.durationSecs==='number'&&o.durationSecs>0)?o.durationSecs:null;
-  const recap=[_navS?('navigated their phone menu to a person in '+_navS+'s'):'reached a person', _totS?(_fmtS(_totS)+' call'):''].filter(Boolean).join(' · ');
+  // One-line recap that headlines the collapsed call-progress (real server timings — never the fake derived ones).
+  const _tlines=(o.transcript||'').split('\n').filter(Boolean);
+  const _reached=transcriptHumanStart(_tlines)<_tlines.length; // did we get through to a live person?
+  const _secs=_navS||_totS||null;
+  const callSummary=(_reached?t('cs.reached','Reached an associate'):t('cs.worked','Worked through their phone menu'))+(_secs?(' · '+_secs+'s'):'');
   const proof = (o.transcript) ? `
     <div class="proof">
       <div class="ph"><span>${ICO.lock('#7a7a88')} ${t('res.proof','Proof — what the clerk said')}</span>${canTranslate?`<button class="tbtn" id="tbtn" onclick="toggleTranslate()">${ICO.globe('currentColor')} ${t('res.translate','Translate')}</button>`:''}</div>
@@ -3018,7 +3042,7 @@ function showResult(o, cid){
   const storeHeadline=[nm.base,nm.branch].filter(Boolean).join(' ');
   const _store=STORES.find(x=>x.id===SEL_STORE.id)||{};
   // Full address on ONE line: street + city/state (e.g. "23357 Mulholland Drive, Woodland Hills, CA").
-  const _aStreet=_store.address||'', _aCity=_store.location||SEL_STORE.location||'';
+  const _aStreet=_store.address||SEL_STORE.address||'', _aCity=_store.location||SEL_STORE.location||'';
   const fullAddr=(_aStreet&&_aCity&&!_aStreet.includes(_aCity))?(_aStreet+', '+_aCity):(_aStreet||_aCity);
   const haveLive=LIVE_STEPS.length>0;
   const resultSteps=haveLive?LIVE_STEPS:deriveSteps(o.transcript||'');
@@ -3040,7 +3064,7 @@ function showResult(o, cid){
       </div>
     </div>
     ${breakdown}
-    ${callMsgBoxHTML(resultSteps, o.transcript||'', {finalElapsed, final:true})}
+    ${callMsgBoxHTML(resultSteps, o.transcript||'', {finalElapsed, final:true, summary:callSummary})}
     ${inActions}
     ${isAuthed()
       ? `<button class="cta" onclick="backToBuilder()" style="margin-top:14px">${t('cta.another','Check another store')}</button>`
@@ -3163,7 +3187,7 @@ function saveCheckToHistory(o,cid){
   const cat=(CATS.find(c=>c.id===SEL_CAT)||{}).label||'';
   const cats=(ASKED_CATS&&ASKED_CATS.length)?ASKED_CATS.map(x=>x.label):(cat?[cat]:[]);
   const h=loadHist();
-  const entry={ cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, logoUrl:SEL_STORE.logoUrl||null, logoWide:!!SEL_STORE.logoWide, logoDark:!!SEL_STORE.logoDark, categoryId:SEL_CAT, category:cat,
+  const entry={ cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, address:SEL_STORE.address||null, location:SEL_STORE.location||null, logoUrl:SEL_STORE.logoUrl||null, logoWide:!!SEL_STORE.logoWide, logoDark:!!SEL_STORE.logoDark, categoryId:SEL_CAT, category:cat,
               cats, categoryResults:o.categoryResults||null, ts:Date.now(), status:o.status, confirmed:o.confirmed, soldOut:!!o.soldOut, doesNotSell:!!o.doesNotSell, shipmentDay:o.shipmentDay||null, statusKey:o.statusKey||null };
   h.unshift(entry);
   localStorage.setItem('runnr_history', JSON.stringify(h.slice(0,60)));
@@ -3214,7 +3238,7 @@ async function openHistory(){
 async function openHistEntry(e){
   if(!e) return;
   if(!e.cid){ toast(t('toast.callgone','That call is no longer available')); return; } // instant hang-up: no transcript exists
-  SEL_STORE={id:e.storeId,name:e.storeName,carries:[],logoUrl:e.logoUrl,logoWide:e.logoWide,logoDark:e.logoDark}; SEL_CAT=e.categoryId;
+  SEL_STORE={id:e.storeId,name:e.storeName,carries:[],address:e.address||null,location:e.location||null,logoUrl:e.logoUrl,logoWide:e.logoWide,logoDark:e.logoDark}; SEL_CAT=e.categoryId;
   SEL_CATS=e.categoryId?[e.categoryId]:[]; ASKED_CATS=(e.cats||[]).map(l=>({id:null,label:l}));
   // Replaying a past call — go straight to the transcript. Never flash the live "calling" view.
   // INSTANT: paint the cached transcript immediately (no spinner) if we have it, then revalidate.
