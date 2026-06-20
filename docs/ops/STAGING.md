@@ -55,6 +55,22 @@ when calls are off — no separate guard needed.
 5. Verify: `https://staging.checkitforme.com` prompts for Basic auth; after login the site loads with
    `X-Robots-Tag: noindex`; attempting a check returns "calls disabled on this preview deploy".
 
+## Seeding staging data to match prod
+
+Staging uses its own DB, so its store data must be seeded + curated the same way prod is. After a
+fresh DB (empty volume), reproduce prod's consumer dataset with three steps (all `x-admin-token`):
+
+1. **Import stores** — POST the national master (`data/stores-master/*.json.gz`, merged) to
+   `/api/stores/import` in chunks. ~102k rows.
+2. **Clean names** — `POST /api/stores/dedupe {}` → drops `#numbers`, renames same-street collisions
+   to `<chain> <street>` (prod's exact algorithm).
+3. **Assign tiers** — `POST /api/stores/grade-from-defaults { defaults: <map> }` where the map is
+   `data/source/chain-scoring-2026-06/chain_scores_final.csv` parsed to `{chain_name_exact: tier_1_5}`.
+   Fills `retailers.tier`, which drives the consumer "Best near you / reliable / spotty" grouping.
+
+Note: this reproduces the consumer experience (names, tiers, logos). For a byte-exact mirror of prod
+(store-set de-duplication, learned phone trees, etc.), copy prod's SQLite DB instead.
+
 ## Daily workflow
 
 1. Push UX/design changes to `claude/checkitforme-website-takeover-pagiis` → staging auto-deploys.
