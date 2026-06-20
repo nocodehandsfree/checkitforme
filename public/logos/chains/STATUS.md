@@ -79,14 +79,14 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Giant Eagle | wordmark + leaf | 🔧 | de-boxed the red app icon → white "giant eagle" + sprout |
 | H-E-B | white on red box | 🔧 | their iconic red-box logo rebuilt (no clean vector exists; box = brand) |
 
-## Chunk 4b — h_mart → hobby_lobby  🔧 awaiting owner approval
+## Chunk 4b — h_mart → hobby_lobby  ✅ LOCKED (owner-approved; H Mart/crown/Hobby Lobby reduced, Hibbett = wordmark)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| H Mart | H emblem + MART | 🔧 | their real H-mark over MART, slight shrink |
-| Hallmark Gold Crown | gold crown | 🔧 | de-boxed the app icon → gold crown only (dropped "Cards Now") |
-| Harris Teeter | food-cluster mark | 🔧 | de-boxed their app icon (apple/fish/bread) |
-| Hibbett Sports | "HIBBETT" wordmark | 🔧 | their real wordmark (no monogram) — **wide-spaced so it renders thin**; could use the HS mark if owner wants it bigger |
-| Hobby Lobby | "HOBBY/LOBBY" | 🔧 | their real orange wordmark (official vector) split two lines |
+| H Mart | H emblem + MART | ✅ | their real H-mark over MART, reduced |
+| Hallmark Gold Crown | gold crown | ✅ | de-boxed app icon → gold crown only (dropped "Cards Now"), reduced |
+| Harris Teeter | food-cluster mark | ✅ | de-boxed their app icon (apple/fish/bread) |
+| Hibbett Sports | "HIBBETT" wordmark | ✅ | their real wordmark (owner: keep wordmark over the HS monogram) |
+| Hobby Lobby | "HOBBY/LOBBY" | ✅ | their real orange wordmark (official vector) split two lines, reduced |
 
 ## Chunk 5 — homegoods → macy_s  ⬜
 | Logo | Treatment | Status | Notes |
