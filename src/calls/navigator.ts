@@ -11,6 +11,12 @@ const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
 // "gemini-2.5-flash-lite" by editing this line if Groq ever degrades.
 export const NAV_MODEL = "gemini-2.5-flash-lite";
 
+// A live person is on the line (a short greeting/question said TO us). Used as a backstop in auto-0
+// mode so we hang up the instant someone answers instead of beeping 0 at them.
+const HUMAN_RE = /can i help you|how (can|may) i help|what can i (do|help)|this is \w+|thanks for (holding|waiting)|you'?re (through|connected)|go ahead|^\s*hello[\s.!?]*$/i;
+// The system just routed us to a person (hold/transfer/"find someone") — after this, a greeting = human.
+const ROUTING_RE = /transferr?ing|connect(ing)? you|please hold|hold (on )?(while|and)|find (someone|somebody)|be with you|getting someone|let me get|one moment/i;
+
 export type NavAction = "say" | "press" | "wait" | "human" | "fail";
 export interface NavStep { who: "ivr" | "us"; text: string; atSec: number; action?: NavAction; value?: string }
 export interface NavRecipe { type: string; steps: { action: string; value: string; atSec: number }[]; seconds: number }
@@ -19,7 +25,7 @@ export interface NavSession {
   startMs: number; steps: NavStep[]; turns: number; model?: string; hint?: string;
   barge?: { plan: Array<{ action: string; value: string; at: number }> };
   reactivePress?: { digit: string; max: number; count: number };
-  lastActTurn?: number; escaped?: boolean;
+  lastActTurn?: number; escaped?: boolean; routingSeen?: boolean; autoZeros?: number;
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
   humanAtSec: number | null; confidence: number; callSid?: string; recipe: NavRecipe | null;
@@ -112,6 +118,7 @@ export async function navStep(id: string, speech: string): Promise<string> {
   s.turns++;
   if (s.turns > 22 || atSec > 165) { finish(s, "failed"); return twiml(`<Hangup/>`); } // safety stop (slow IVRs like Walgreens take ~95s to a human)
   if (speech && speech.trim()) s.steps.push({ who: "ivr", text: speech.trim().slice(0, 300), atSec });
+  if (speech && ROUTING_RE.test(speech)) s.routingSeen = true; // routed to a person → next greeting is human
   s.status = "navigating";
   // REACTIVE PRESS: the human way — wait until we HEAR a prompt, then press the digit; repeat for the
   // first `max` prompts (e.g. 0 after Spanish, 0 after the next, 0 after the next), then listen for the
@@ -146,7 +153,12 @@ export async function navStep(id: string, speech: string): Promise<string> {
   if (s.escaped || stalled >= 2) {
     s.escaped = true;
     if (speech && speech.trim()) {
-      s.type = "keypad";
+      // STOP the instant a person answers — once we've been routed (hold/transfer) or pressed 0 a
+      // couple times, a short greeting/question to us is a human, so hang up instead of beeping at them.
+      if ((s.routingSeen || (s.autoZeros ?? 0) >= 2) && HUMAN_RE.test(speech)) {
+        s.humanAtSec = atSec; finish(s, "human"); return twiml(`<Hangup/>`);
+      }
+      s.autoZeros = (s.autoZeros ?? 0) + 1; s.type = "keypad";
       s.steps.push({ who: "us", text: "pressed 0 (auto-operator)", atSec, action: "press", value: "0" });
       s.lastActTurn = s.turns;
       return twiml(`<Play digits="0"/>${gather(id)}`);
