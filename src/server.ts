@@ -405,7 +405,12 @@ app.get("/", (c) => {
   const override = c.req.query("brand");
   const brand = resolveBrand(host, override);
   // Admin (caller.*) keeps app.html; every other host is a consumer micro-site (branded by subdomain).
-  const consumer = host.startsWith("runner.") || brand.key !== "runner" || !!override;
+  // On a STAGING preview the bare root defaults to the CONSUMER site (what we're reviewing) instead of
+  // the admin app — the staging host resolves to the default brand, which would otherwise show admin.
+  // Admin stays reachable on caller.*/admin.* hosts. Prod (STAGING unset) keeps its original logic.
+  const consumer = config.staging.on
+    ? (!(host.startsWith("caller.") || host.startsWith("admin.")) || !!override)
+    : (host.startsWith("runner.") || brand.key !== "runner" || !!override);
   return c.html(consumer ? renderRunner(brand, host) : page("app.html"));
 });
 app.get("/r", (c) => { c.header("Cache-Control", "no-store"); return c.html(renderRunner(resolveBrand((c.req.header("host") || "").toLowerCase(), c.req.query("brand")), (c.req.header("host") || "").toLowerCase())); });
