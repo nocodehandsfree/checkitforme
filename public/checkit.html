@@ -2011,7 +2011,7 @@ async function fetchNear(){
   else if(q.length>=2) url=`/pub/stores/near?q=${encodeURIComponent(q)}&limit=60`;
   if(!url){ STORES=[]; renderStores(); return; }
   const seq=++NEAR_SEQ;
-  const r=await api(url);
+  const r=await appApi(url); // appApi (not api) so a signed-in owner's token reaches the server → owner-only "Fun" surfaces for them
   if(seq!==NEAR_SEQ) return; // a newer request superseded this one
   STORES=(r&&Array.isArray(r.stores))?r.stores:[];
   renderStores();
@@ -2068,7 +2068,7 @@ let BEST=null; // top recommended store — shown as the highlighted first row i
 async function loadBestBet(){
   if(!USER_LOC) return;
   const cid=(BRAND_CAT&&BRAND_CAT.id)||SEL_CAT||'';
-  let top=[]; try{ top=await api(`/pub/best-bet?lat=${USER_LOC.lat}&lng=${USER_LOC.lng}&radius=${RADIUS}${cid?('&categoryId='+cid):''}`); }catch(e){}
+  let top=[]; try{ top=await appApi(`/pub/best-bet?lat=${USER_LOC.lat}&lng=${USER_LOC.lng}&radius=${RADIUS}${cid?('&categoryId='+cid):''}`); }catch(e){} // appApi → owner's token reaches the server so owner-only "Fun" can rank here
   BEST=(Array.isArray(top)&&top.length)?top[0]:null;
   if(BEST) track('bestbet_shown',{store:BEST.id});
   renderStores();
