@@ -97,7 +97,7 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Jewel-Osco | red oval script | 🔧 | official vector — red Jewel·Osco in the oval, no white bg |
 | King Soopers | classic striped logo | 🔧 | their official retro logo (red striped box = brand) |
 
-## Chunk 5b — kohl_s → macy_s  🔧 awaiting owner approval
+## Chunk 5b — kohl_s → macy_s  ✅ LOCKED (owner-approved; Kohl's de-boxed + bigger, Kroger/LE/star sized)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
 | Kohl's | white on red box | 🔧 | lightened the maroon → brighter red box (kept square so it stays readable) |
