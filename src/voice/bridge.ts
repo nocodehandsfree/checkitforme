@@ -230,6 +230,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       streamSid = m.start?.streamSid || streamSid;
       if (!room && m.start?.customParameters?.room) room = m.start.customParameters.room; // Twilio puts <Parameter> here
       if (!ctx && room) ctx = contexts.get(room);
+      log(`start ctx: dtmf=${ctx?.dtmf ?? "none"} coh=${ctx?.connectOnHuman} at=${ctx?.connectAtSec ?? "-"}`);
       if (ctx?.dtmf) scheduleDtmf(ctx.dtmf);
       if (ctx?.connectOnHuman) {
         if (ctx.connectAtSec && ctx.connectAtSec > 0) {
