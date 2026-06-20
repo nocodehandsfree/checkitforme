@@ -1574,7 +1574,24 @@ app.post("/pub/check-live", async (c) => {
   return c.json({ room: r.room, wsHost: RAILWAY_HOST });
 });
 app.get("/pub/result/:cid", async (c) => {
-  const o = await provider.getConversation(c.req.param("cid"));
+  const cid = c.req.param("cid");
+  const o = await provider.getConversation(cid);
+  // Prefer the FINALIZED row once it exists — it carries the consensus verdict (the reconciled
+  // status_key/confirmed) and the captured product detail, which the live outcome does not. While the
+  // call is still in flight, fall back to the live outcome so the consumer sees progress immediately.
+  const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
+  if (row && row.status === "completed") {
+    return c.json({
+      ...(o ?? {}),
+      status: row.status,
+      confirmed: row.confirmed,
+      statusKey: row.statusKey,
+      productDetail: row.productDetail,      // e.g. "3-pack blister · Surging Sparks" — null if not captured
+      shipmentDay: row.shipmentDayHeard ?? (o?.shipmentDay ?? null),
+      summary: row.summary ?? o?.summary ?? "",
+      transcript: row.transcript ?? o?.transcript ?? "",
+    });
+  }
   return c.json(o ?? { status: "in_progress", transcript: "", summary: "" });
 });
 // Live, mid-call transcript: returns whatever the agent + clerk have said SO FAR (no audio needed).
@@ -1738,6 +1755,7 @@ app.get("/app/history", async (c) => {
       cid: r.providerCallId, storeId: r.retailerId, storeName: sName,
       categoryId: r.categoryId, category: cats.get(r.categoryId) || "",
       ts: (r.startedAt || 0) * 1000, status: r.status, confirmed: r.confirmed,
+      statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard,
       logoUrl: l.url, logoWide: l.wide, logoDark: l.dark,
     };
   }));
