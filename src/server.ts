@@ -184,7 +184,7 @@ function seoGraph(brand: ReturnType<typeof resolveBrand>, plainName: string) {
 }
 
 /** Render the consumer page branded for a vertical micro-site (resolved from the subdomain). */
-function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string): string {
+function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html"): string {
   const canonical = `https://${host}/`;
   const plainName = brand.name.replace(/<[^>]+>/g, "");
   const ogImage = `https://${host}/og/${brand.key}.png`;
@@ -212,7 +212,7 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string): str
       ...seoGraph(brand, plainName),
     ] })}</script>`,
   ].join("\n");
-  return page("checkit.html")
+  return page(file)
     .replace(/__BRAND_HEAD__/g, head)
     .replace(/__BRAND_JSON__/g, JSON.stringify({ key: brand.key, name: brand.name, category: brand.category, accent: brand.accent, accent2: brand.accent2 || brand.accent, logoUrl: brand.logoUrl || "", emoji: brand.emoji }))
     .replace(/__BRAND_LOGO__/g, brand.logo || `${brand.emoji} ${brand.name}`)
@@ -324,6 +324,18 @@ app.get("/", (c) => {
   return c.html(consumer ? renderRunner(brand, host) : page("app.html"));
 });
 app.get("/r", (c) => { c.header("Cache-Control", "no-store"); return c.html(renderRunner(resolveBrand((c.req.header("host") || "").toLowerCase(), c.req.query("brand")), (c.req.header("host") || "").toLowerCase())); });
+// Preview-only: the redesigned result/live UI served from checkit-demo.html, so the live
+// site keeps the current design while we evaluate the new one. /demo?brand=<slug> picks a vertical.
+app.get("/demo", (c) => {
+  c.header("Cache-Control", "no-store");
+  const host = (c.req.header("host") || "").toLowerCase();
+  return c.html(renderRunner(resolveBrand(host, c.req.query("brand") || "pokemon"), host, "checkit-demo.html"));
+});
+app.get("/demo/:slug", (c) => {
+  c.header("Cache-Control", "no-store");
+  const host = (c.req.header("host") || "").toLowerCase();
+  return c.html(renderRunner(resolveBrand(host, c.req.param("slug")), host, "checkit-demo.html"));
+});
 // Verticals as PATHS on the apex (checkitforme.com/pokemon, /onepiece, /toppsbasketball, /needoh) —
 // same brand resolution as the subdomains, keyed off the slug. This is what lets the product switcher
 // link to clean same-domain paths instead of subdomain hops.
