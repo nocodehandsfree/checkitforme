@@ -22,6 +22,7 @@ import { importZonesData, geocodeMissing } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
+import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
 import { getPolicy, setPolicy, publicPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
@@ -477,6 +478,7 @@ app.get("/sitemap.xml", (c) => {
 // TwiML Twilio fetches when OUR bridge call connects: stream the call's audio to our WS.
 // Twilio's media stream is pinned to the direct Railway domain (verified WS path; avoids Cloudflare).
 const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
+const STAGING_HOST = "voice-caller-staging-production.up.railway.app"; // wsHost for simulated staging calls
 app.all("/twiml/bridge", (c) => {
   const room = c.req.query("room") || "";
   // Chain keypad shortcut (e.g. B&N "0@3"): send it as REAL carrier DTMF via <Play digits>
@@ -1601,6 +1603,7 @@ app.post("/pub/check", async (c) => {
   if ((await pubCredits()) <= 0) return c.json({ error: "no_credits" }, 402);
   const { retailerId, categoryId, specificProduct, kioskMode } = b;
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
+  if (config.staging.on) return c.json(simStartCall()); // preview: simulated call, no real dial
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   try {
     const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, kioskMode });
@@ -1614,6 +1617,7 @@ app.post("/pub/check-live", async (c) => {
   const b = await c.req.json();
   const catIds = (Array.isArray(b.categoryIds) ? b.categoryIds : [b.categoryId]).map(Number).filter(Boolean);
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
+  if (config.staging.on) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
   const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, undefined, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
@@ -1621,6 +1625,7 @@ app.post("/pub/check-live", async (c) => {
 });
 app.get("/pub/result/:cid", async (c) => {
   const cid = c.req.param("cid");
+  if (config.staging.on && isSimId(cid)) return c.json(simResult(cid)); // preview: simulated verdict
   const o = await provider.getConversation(cid);
   // Prefer the FINALIZED row once it exists — it carries the consensus verdict (the reconciled
   // status_key/confirmed) and the captured product detail, which the live outcome does not. While the
@@ -1642,6 +1647,7 @@ app.get("/pub/result/:cid", async (c) => {
 });
 // Live, mid-call transcript: returns whatever the agent + clerk have said SO FAR (no audio needed).
 app.get("/pub/live/:cid", async (c) => {
+  if (config.staging.on && isSimId(c.req.param("cid"))) return c.json(simLive(c.req.param("cid"))); // preview: simulated live transcript
   try {
     const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${c.req.param("cid")}`, { headers: { "xi-api-key": config.voice.apiKey } });
     if (!r.ok) return c.json({ live: true, status: "in_progress", transcript: "" });
@@ -1707,6 +1713,7 @@ app.post("/app/check", async (c) => {
   if (!u) return c.json({ error: "unauthorized" }, 401);
   const { retailerId, categoryId, specificProduct, kioskMode } = await c.req.json();
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
+  if (config.staging.on) return c.json(simStartCall()); // preview: simulated call, no real dial
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
@@ -1724,6 +1731,7 @@ app.post("/app/check-live", async (c) => {
   const b = await c.req.json();
   const catIds = (Array.isArray(b.categoryIds) ? b.categoryIds : [b.categoryId]).map(Number).filter(Boolean);
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
+  if (config.staging.on) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
@@ -2617,7 +2625,11 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
       .catch((e) => console.error("bridge call log insert:", e));
   }, v.dtmf, { from, timeLimitSec: pol.bail.maxCallSeconds });
 }
-app.get("/pub/bridge/:room", (c) => c.json({ conversationId: bridgeConversationId(c.req.param("room")), wsHost: RAILWAY_HOST }));
+app.get("/pub/bridge/:room", (c) => {
+  const room = c.req.param("room");
+  if (config.staging.on && isSimId(room)) return c.json({ conversationId: room, wsHost: STAGING_HOST }); // sim: room IS the conversation id
+  return c.json({ conversationId: bridgeConversationId(room), wsHost: RAILWAY_HOST });
+});
 app.get("/pub/bridge-debug", (c) => c.json({ log: bridgeDebug() }));
 app.post("/api/bridge/call", async (c) => {
   const b = await c.req.json();
