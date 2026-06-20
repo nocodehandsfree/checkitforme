@@ -590,7 +590,7 @@ function chainLogoInfo(name: string | null | undefined): { url: string | null; w
   const f = chainLogoFile(name);
   if (!f) return { url: null, wide: false, dark: false };
   const m = logoMeta()[f] || { w: 0, d: 0 };
-  return { url: `/logos/chains/${f}?v=49`, wide: m.w === 1, dark: m.d === 1 };
+  return { url: `/logos/chains/${f}?v=50`, wide: m.w === 1, dark: m.d === 1 };
 }
 // Owner preview: every chain logo rendered EXACTLY as the store list renders it (same tile,
 // plate + wide handling from _meta.json) at real size and 2x — judge phone clarity without
