@@ -2529,10 +2529,9 @@ function renderLiveStore(){
   const en=$('livename'); if(en) en.textContent = nm.base+(nm.branch?' '+nm.branch:'');
   const ea=$('liveaddr'); if(ea) ea.textContent = st.location||SEL_STORE.location||'';
 }
-// The connection narrative as the opening rows of ONE continuous timeline — the call log and the
-// conversation share the same line, in order. The final connection step is tone-coloured (✓ when we
-// reached a person, ✗ for every way the call fell short); the conversation turns hang off the SAME
-// line right after it (see showResult — no separate group or "Conversation" divider).
+// The connection narrative as the FIRST greyed group on the timeline; the final step is
+// tone-coloured (✓ when we reached a person, ✗ for every way the call fell short). The
+// conversation turns that follow hang off the SAME line (see showResult).
 function callTimeline(o){
   const base=splitStoreName(SEL_STORE.name).base;
   const all=(o.transcript||'').split('\n').filter(Boolean);
@@ -2548,7 +2547,11 @@ function callTimeline(o){
   else if(o.status==='ivr_stuck') steps.push({t:t('step.ivrstuck','Stuck in the phone menu'),bad:true});
   else if(o.status==='closed') steps.push({t:t('step.closed','Store was closed'),bad:true});
   else steps.push({t:t('step.nocontact',"Couldn't reach anyone"),bad:true});
-  return steps.map(s=>`<div class="tlrow step${s.ok?' ok':s.bad?' bad':''}"><span class="tldot"></span><span>${s.t}${s.ok?' ✓':''}</span></div>`).join('');
+  const items=steps.map(s=>`<div class="tlrow step${s.ok?' ok':s.bad?' bad':''}"><span class="tldot"></span><span>${s.t}${s.ok?' ✓':''}</span></div>`).join('');
+  return `<details class="reach" open>
+    <summary><span class="tldot"></span>${t('step.head','Reaching a person')}<span class="chev">${ICO.chev('#6B6B7B')}</span></summary>
+    ${items}
+  </details>`;
 }
 function showResult(o, cid){
   stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
@@ -2657,6 +2660,7 @@ function showResult(o, cid){
       </div>
       <div class="tl">
         ${callTimeline(o)}
+        ${conv?`<div class="tlrow conv"><span class="tldot"></span><span class="convlbl">${t('res.conversation','Conversation')}</span></div>`:''}
         <div id="proofbody">${conv||''}</div>
         ${confirmable?`<div class="tlrow tl-${cls}"><span class="tldot"></span><span class="confirmtxt ${cls}">${title.replace(/[!.]+$/,'')} — ${t('res.confirmed','confirmed')}</span></div>`:''}
       </div>
