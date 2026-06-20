@@ -88,7 +88,7 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Hibbett Sports | "HIBBETT" wordmark | ✅ | their real wordmark (owner: keep wordmark over the HS monogram) |
 | Hobby Lobby | "HOBBY/LOBBY" | ✅ | their real orange wordmark (official vector) split two lines, reduced |
 
-## Chunk 5a — homegoods → king_soopers  🔧 awaiting owner approval
+## Chunk 5a — homegoods → king_soopers  ✅ LOCKED (owner-approved)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
 | HomeGoods | roof + HOME GOODS | 🔧 | kept the red roof over the words |
@@ -97,14 +97,14 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Jewel-Osco | red oval script | 🔧 | official vector — red Jewel·Osco in the oval, no white bg |
 | King Soopers | classic striped logo | 🔧 | their official retro logo (red striped box = brand) |
 
-## Chunk 5b — kohl_s → macy_s  ⬜
+## Chunk 5b — kohl_s → macy_s  🔧 awaiting owner approval
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Kohl's | wordmark | ⬜ | lighten (dark) |
-| Kroger | wordmark | ⬜ | **too small**; drop the shopping cart; lighten/brighten blue |
-| Learning Express | wordmark | ⬜ | |
-| Lowe's | wordmark | ⬜ | **too small** |
-| Macy's (Toys R Us) | wordmark | ⬜ | |
+| Kohl's | white on red box | 🔧 | lightened the maroon → brighter red box (kept square so it stays readable) |
+| Kroger | blue-oval logo | 🔧 | their official oval (white script), brightened blue, no cart — squarer → bigger |
+| Learning Express | "LE" mark | 🔧 | kept the LE mark (their colorful wordmark is too busy to read at tile size) |
+| Lowe's | blue gable | 🔧 | their real blue gable mark, trimmed bigger |
+| Macy's | red star | 🔧 | their star mark, slight shrink |
 
 ## Chunk 6 — mariano_s → ollie_s  ⬜
 | Logo | Treatment | Status | Notes |
