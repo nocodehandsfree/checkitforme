@@ -51,7 +51,7 @@ fallback (`storeWordmark` on the consumer site), *not* a bespoke icon.
 |---|---|---|
 | Consumer site (list, near-me, results) | ✅ | `checkit.html` → `logoUrl`, else `storeWordmark` |
 | Logo wall (`/logo-wall`) | ✅ | renders the registry (QA only) |
-| **Admin** (`app.html`) | ❌ **not yet** | see §5 |
+| **Admin** (`app.html`) | ✅ | `logoTile()` on store list, chains, and calls feed — see §5 |
 
 ---
 
@@ -91,36 +91,30 @@ Full rules + the step-by-step for a new chain live in `public/logos/chains/READM
 
 ---
 
-## 5. Admin: render the real logos (current gap + the task)
+## 5. Admin: render the real logos  ✅ DONE (commit `3589e36`)
 
-The admin is the only surface not showing real logos, and it's a near-miss:
+The admin now renders the same source of truth as the consumer. Implementation in `app.html`:
 
-- `loadLogos()` already pulls `/pub/stores` into a `LOGOS` map (`app.html:1296`, runs at startup).
-- `storeTile(id,name)` (`app.html:1298`) already renders the real logo — **but nothing calls it**
-  (dead code; `LOGOS` ends up unused).
-- The store rows (`app.html:1491`) render the store **name as text** + a generic **type icon**
-  (`storeTypeIco()` → `cart`/`box`/`store`). Phone Trees / Mute / Statuses / Voice lists
-  (`app.html:1590`) render **names only**.
+- **`logoTile(o)`** (`app.html:1421`) is the leading visual on the **store list** (`:1626`),
+  **chains** (`:1732`), and the **calls feed** (`:2201`). It reads each row's denormalized
+  `logoUrl`/`logoWide`/`logoDark` — no bulk load, no `/logo-wall` fetch.
+- **`storeWordmark(name,type)`** (`app.html:1428`) is the no-logo fallback, ported verbatim from
+  `checkit.html` (the shared text wordmark — *not* a 2-letter monogram).
+- **`.slogo`** CSS (`app.html:246`) is pixel-identical to the consumer's `.ic` (46px tile, 42px
+  square mark, 44×auto·max-34 wide, `#f2f2f5` light plate for dark marks).
+- The generic `storeTypeIco()` (`cart/box/store`) was demoted to a small secondary chip next to
+  the name; the **logo leads**. The old dead `storeTile`/`loadLogos`/`LOGOS` map was removed.
 
-**Task (client-only, contained to `app.html`):**
-1. Render the leading visual via **`storeTile(id, name)`** in every section that lists a store or
-   chain (store list, Phone Trees, Mute, Statuses, Voice pickers) — not the generic type icon.
-2. Keep the `cart/box/store` chip only as a small secondary label if useful; the **logo** leads.
-3. Make the no-logo fallback match the consumer's text wordmark, not the 2-letter monogram.
-4. Honor the **performance rules** in §3 (lazy `<img>`, only on-screen rows, no bulk load).
+### ✅ Definition of Done — all met (verified against `3589e36`)
+Kept here as the spec to hold any future surface (or regression) to:
 
-### ✅ Definition of Done (these are the gotchas — miss one and it's inconsistent)
-The admin is "consistent with the website" only if **all** of these are true:
-
-- [ ] **Renders `logoUrl`, not its own icons.** The leading mark = the store's `logoUrl` (from
-      `/pub/stores`). `storeTypeIco()` (`cart/box/store`) may stay only as a tiny secondary chip.
-- [ ] **Honors the flags.** `logoWide` → wide treatment, `logoDark` → light plate behind it —
-      same as the consumer, so a wide/dark logo looks the same in both places.
-- [ ] **Fallback = the shared text wordmark** (`storeWordmark(name, type)`) when `logoUrl` is null
-      — *not* a 2-letter monogram.
-- [ ] **Lazy + on-screen only:** `<img loading="lazy" decoding="async">`; never render all rows'
-      images at once; never pull `/logo-wall` into the app.
-- [ ] **Same tile as the consumer** (for pixel parity — copy these exact values):
+- [x] **Renders `logoUrl`, not its own icons.** Leading mark = the row's `logoUrl`.
+      `storeTypeIco()` remains only as a tiny secondary chip.
+- [x] **Honors the flags.** `logoWide` → `.widelogo`, `logoDark` → `.lite` plate — same as consumer.
+- [x] **Fallback = the shared text wordmark** (`storeWordmark(name, type)`), not a 2-letter monogram.
+- [x] **Lazy + on-screen only:** `<img loading="lazy" decoding="async">`; per-row `logoUrl`, no bulk
+      load, no `/logo-wall` in the app.
+- [x] **Same tile as the consumer** (pixel parity — these exact values, now in `.slogo`):
 
 ```css
 /* tile */            width:46px; height:46px; border-radius:12px; background:rgba(255,255,255,.06);
