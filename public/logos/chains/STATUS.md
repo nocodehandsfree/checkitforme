@@ -115,14 +115,14 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Meijer | "meijer" wordmark | ✅ | their red wordmark, white stripped from letters |
 | Menards | MENARDS + stripe | ✅ | actual logo with the colorful stripe, fills width |
 
-## Chunk 6b — michaels → ollie_s  ⬜
+## Chunk 6b — michaels → ollie_s  🔧 awaiting owner approval
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Michaels | wordmark | ⬜ | |
-| Micro Center | wordmark | ⬜ | drop "computers & electronics" tagline |
-| NEX (Navy Exchange) | mark | ⬜ | |
-| Office Depot OfficeMax | 2 lines | ⬜ | two lines; drop "OfficeMax" |
-| Ollie's Bargain Outlet | wordmark | ⬜ | |
+| Michaels | red script | 🔧 | their real wordmark (official vector, no box, no tagline) |
+| Micro Center | "MICRO CENTER" | 🔧 | their blocky font, no "computers & electronics" tagline |
+| NEX (Navy Exchange) | anchor + "NEX" | 🔧 | official vector; dropped the "/ MCX" half |
+| Office Depot | "Office / DEPOT" | 🔧 | official vector split two lines (Office red, DEPOT white); no OfficeMax, no tagline |
+| Ollie's Bargain Outlet | mascot | 🔧 | their Ollie mascot, slight shrink |
 
 ## Chunk 7 — pavilions → scheels  ⬜
 | Logo | Treatment | Status | Notes |
