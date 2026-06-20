@@ -50,7 +50,7 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 > maxed out. Making them bigger needs a *global* render change (wider tile or taller
 > wide-logo box) — hold for owner decision so it doesn't rebalance the locked chunks.
 
-## Chunk 3a — cvs → dunham_s  🔧 awaiting owner approval
+## Chunk 3a — cvs → dunham_s  ✅ LOCKED (owner-approved after CVS/Dollar Tree/Dunham's size tweaks)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
 | CVS | red heart mark | 🔧 | heart only (from CVS app icon), shrunk to icon set; not "CVS"/"CVS Health" |
@@ -59,14 +59,16 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Dollar Tree | green tree mark | 🔧 | their tree-$1 symbol, shrunk to icon set |
 | Dunham's Sports | "Dunham's" script | 🔧 | red italic wordmark filled to width; "Sports" dropped (no better source found) |
 
-## Chunk 3b — family_dollar → fred_meyer  ⬜
+## Chunk 3b — family_dollar → fred_meyer  🔧 awaiting owner approval
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Family Dollar | family-circle mark | ⬜ | use the brand mark, uniform size |
-| Five Below | wordmark | ⬜ | clean it up (was a mess) |
-| Fleet Farm | wordmark | ⬜ | |
-| Food 4 Less | FOOD/LESS + 4 | ⬜ | FOOD over LESS, 4 to the right, big & round |
-| Fred Meyer | wordmark | ⬜ | |
+| Family Dollar | family-circle mark | 🔧 | de-boxed the orange app icon → circle emblem; shrunk per owner |
+| Five Below | "five below" wordmark | 🔧 | de-boxed the blue app icon → white wordmark (their real font) |
+| Fleet Farm | FF-circle mark | 🔧 | de-boxed the orange app icon → white FF circle |
+| Food 4 Less | FOOD/LESS + yellow 4 | 🔧 | their REAL bold font (official vector), broken up: FOOD over LESS, 4 to the right, recolored white (black was invisible on dark) |
+| Fred Meyer | red "F" mark | 🔧 | de-boxed their app-icon F; shrunk per owner |
+
+> Burlington (Chunk 2b) shrunk a bit per owner — ready to lock.
 
 ## Chunk 4 — fry_s → hobby_lobby  ⬜
 | Logo | Treatment | Status | Notes |
