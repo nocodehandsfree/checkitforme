@@ -18,6 +18,7 @@ export interface NavSession {
   id: string; chainId: number | null; retailerId: number; retailerName: string; phone: string;
   startMs: number; steps: NavStep[]; turns: number; model?: string; hint?: string;
   barge?: { plan: Array<{ action: string; value: string; at: number }> };
+  reactivePress?: { digit: string; max: number; count: number };
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
   humanAtSec: number | null; confidence: number; callSid?: string; recipe: NavRecipe | null;
@@ -106,6 +107,17 @@ export async function navStep(id: string, speech: string): Promise<string> {
   if (s.turns > 22 || atSec > 165) { finish(s, "failed"); return twiml(`<Hangup/>`); } // safety stop (slow IVRs like Walgreens take ~95s to a human)
   if (speech && speech.trim()) s.steps.push({ who: "ivr", text: speech.trim().slice(0, 300), atSec });
   s.status = "navigating";
+  // REACTIVE PRESS: the human way — wait until we HEAR a prompt, then press the digit; repeat for the
+  // first `max` prompts (e.g. 0 after Spanish, 0 after the next, 0 after the next), then listen for the
+  // person. Synced to the actual prompts, so ring-time/store differences don't throw the timing off.
+  if (s.reactivePress && s.reactivePress.count < s.reactivePress.max) {
+    if (speech && speech.trim()) {
+      const dg = s.reactivePress.digit; s.reactivePress.count++; s.type = "keypad";
+      s.steps.push({ who: "us", text: `pressed ${dg} (after prompt ${s.reactivePress.count})`, atSec, action: "press", value: dg });
+      return twiml(`<Play digits="${dg}"/>${gather(id)}`);
+    }
+    return twiml(gather(id)); // silence so far — keep listening for the prompt
+  }
   const d = await decide(s, speech || "");
   if (d.type) s.type = d.type;
   s.confidence = d.confidence;
@@ -135,13 +147,13 @@ function finish(s: NavSession, status: "human" | "failed") {
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }): Promise<{ id?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge };
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined };
   sessions.set(id, session);
   const body = new URLSearchParams({
     To: e164(phone), From: from,
