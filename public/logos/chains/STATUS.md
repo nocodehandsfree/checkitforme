@@ -106,14 +106,14 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Lowe's | blue gable | 🔧 | their real blue gable mark, trimmed bigger |
 | Macy's | red star | 🔧 | their star mark, slight shrink |
 
-## Chunk 6a — mariano_s → menards  🔧 awaiting owner approval
+## Chunk 6a — mariano_s → menards  ✅ LOCKED (owner-approved; switched to ACTUAL logos)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Mariano's | M + green leaf | 🔧 | filled the white inside the leaf with green |
-| Marshalls | white "M" mark | 🔧 | de-boxed the blue app icon → white M (lighter) |
-| MCX | "MCX" mark | 🔧 | clean white MCX (no real logo source exists) |
-| Meijer | "meijer" wordmark | 🔧 | their red wordmark, white stripped out of the letters |
-| Menards | bold "M" mark | 🔧 | their real "M" from MENARDS, dropped the colorful stripe; compact so it's bigger |
+| Mariano's | M + green leaf | ✅ | actual emblem (app icon), de-boxed, leaf filled green, reduced |
+| Marshalls | blue wordmark | ✅ | actual Marshalls wordmark, clean brighter blue, fills width |
+| MCX | MCCS mark | ✅ | MCCS (MCX's parent — no MCX-specific logo exists); owner accepted |
+| Meijer | "meijer" wordmark | ✅ | their red wordmark, white stripped from letters |
+| Menards | MENARDS + stripe | ✅ | actual logo with the colorful stripe, fills width |
 
 ## Chunk 6b — michaels → ollie_s  ⬜
 | Logo | Treatment | Status | Notes |
