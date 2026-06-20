@@ -103,7 +103,7 @@ export async function navStep(id: string, speech: string): Promise<string> {
   if (!s) return twiml(`<Hangup/>`);
   const atSec = Math.round((Date.now() - s.startMs) / 1000);
   s.turns++;
-  if (s.turns > 14 || atSec > 100) { finish(s, "failed"); return twiml(`<Hangup/>`); } // safety stop
+  if (s.turns > 22 || atSec > 165) { finish(s, "failed"); return twiml(`<Hangup/>`); } // safety stop (slow IVRs like Walgreens take ~95s to a human)
   if (speech && speech.trim()) s.steps.push({ who: "ivr", text: speech.trim().slice(0, 300), atSec });
   s.status = "navigating";
   const d = await decide(s, speech || "");
