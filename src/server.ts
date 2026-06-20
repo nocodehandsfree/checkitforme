@@ -95,7 +95,12 @@ const app = new Hono();
 // must keep working so the deploy stays healthy and the real-call path works once it's enabled.
 // Prod leaves STAGING unset, so this middleware no-ops entirely (live is byte-for-byte unchanged).
 if (config.staging.on) {
-  const UNGATED = ["/api/health", "/webhooks/", "/twiml/", "/nav/", "/bridge"];
+  // Exempt machine endpoints AND the API surfaces that carry their OWN Authorization header:
+  // /app/* (Bearer session) and /api/* (Clerk/admin token) would otherwise collide with this
+  // gate's Basic header (a request can only send one Authorization). They stay protected by their
+  // own auth, and a session token is only obtainable by signing up through the Basic-gated pages.
+  // Browser XHR to ungated-by-Basic /pub/* still rides the browser's cached Basic credentials.
+  const UNGATED = ["/api/", "/app/", "/webhooks/", "/twiml/", "/nav/", "/bridge"];
   // Length-checked constant-time compare — avoids leaking the password via response timing.
   const safeEqual = (a: string, b: string): boolean => {
     if (a.length !== b.length) return false;
