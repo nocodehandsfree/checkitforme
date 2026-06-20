@@ -1392,6 +1392,35 @@ app.post("/api/stores/relink-orphans", async (c) => {
   invalidateRefCache();
   return c.json({ orphans: orphans.length, linked, unmatched: unmatched.length, chains: breakdown.length, breakdown: breakdown.slice(0, 50) });
 });
+// Close the "ungraded tail": fill retailers.tier ONLY where it is NULL, per chain, from a supplied
+// { chainName: tier } map (the chain_scores_final.csv values). It NEVER overwrites an existing tier, so
+// deliberate per-store voice overrides and owner tier calls (e.g. TJ Maxx = 3) are preserved — this only
+// grades stores that have no tier yet. Chains absent from the DB are reported as unmatched (no guess).
+// dryRun reports, per scored chain, how many null-tier stores it WOULD fill.
+app.post("/api/stores/grade-from-defaults", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const defaults = (b.defaults && typeof b.defaults === "object") ? b.defaults as Record<string, unknown> : null;
+  if (!defaults) return c.json({ error: "defaults{ chainName: tier } required" }, 400);
+  const byName = new Map((await db.select({ id: chains.id, name: chains.name }).from(chains)).map((x) => [x.name, x.id]));
+  const out: { chain: string; tier: number; filled: number }[] = [];
+  const unmatched: string[] = [];
+  for (const [name, tierRaw] of Object.entries(defaults)) {
+    const tier = Number(tierRaw);
+    if (!Number.isInteger(tier) || tier < 1 || tier > 5) continue;
+    const cid = byName.get(name);
+    if (!cid) { unmatched.push(name); continue; }
+    const nulls = await db.select({ id: retailers.id }).from(retailers)
+      .where(and(eq(retailers.chainId, cid), eq(retailers.active, true), isNull(retailers.tier)));
+    if (!b.dryRun && nulls.length) {
+      const ids = nulls.map((r) => r.id);
+      for (let i = 0; i < ids.length; i += 500) await db.update(retailers).set({ tier }).where(inArray(retailers.id, ids.slice(i, i + 500)));
+    }
+    out.push({ chain: name, tier, filled: nulls.length });
+  }
+  if (!b.dryRun) invalidateRefCache();
+  const detail = out.filter((o) => o.filled > 0).sort((a, z) => z.filled - a.filled);
+  return c.json({ dryRun: !!b.dryRun, scoredChains: out.length, chainsWithGaps: detail.length, totalFilled: detail.reduce((s, o) => s + o.filled, 0), unmatched, detail });
+});
 // Kiosk overlay: reconcile the official TPCi vending list against our stores. For each machine, flag
 // the matching store (same chain, within ~0.3 mi) as a tier-5 kiosk (hasKiosk:true, tier:5) — leaving
 // sellsPacks untouched so a store that also sells on the shelf still shows in both tabs. Machines at a
