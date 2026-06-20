@@ -116,6 +116,9 @@ export async function bootstrap() {
   // Timing breakdown for the cost/ROI model: total connected seconds + time-to-human (nav).
   await client.execute("ALTER TABLE call_results ADD COLUMN call_seconds INTEGER").catch(() => {});
   await client.execute("ALTER TABLE call_results ADD COLUMN nav_seconds INTEGER").catch(() => {});
+  // Persisted customer-facing verdict key → the calls history renders the exact registry icon/label
+  // the live verdict used (instead of a coarse re-derive from confirmed/status).
+  await client.execute("ALTER TABLE call_results ADD COLUMN status_key TEXT").catch(() => {});
   // Referral growth loop: each account's shareable code + who referred them.
   await client.execute("ALTER TABLE accounts ADD COLUMN referral_code TEXT").catch(() => {});
   await client.execute("ALTER TABLE accounts ADD COLUMN referred_by TEXT").catch(() => {});

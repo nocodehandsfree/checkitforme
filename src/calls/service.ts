@@ -574,6 +574,7 @@ export async function ingestPending(): Promise<number> {
     await db.update(callResults).set({
       status: outcome.status,
       confirmed: primaryConfirmed,
+      statusKey: outcome.statusKey,
       shipmentDayHeard: outcome.shipmentDay,
       summary: outcome.summary,
       transcript: outcome.transcript,
@@ -627,13 +628,15 @@ export async function ingestPending(): Promise<number> {
       if (!cid) continue;
       const existing = await db.select().from(callResults)
         .where(and(eq(callResults.providerCallId, row.providerCallId), eq(callResults.categoryId, cid)));
+      // Per-category verdict for the fan-out line (its own in/out key; else the call-level reason).
+      const fanKey = conf === true ? "in_stock" : conf === false ? "not_in_stock" : outcome.statusKey;
       if (existing.length) {
-        await db.update(callResults).set({ confirmed: conf, status: outcome.status, completedAt: now() })
+        await db.update(callResults).set({ confirmed: conf, statusKey: fanKey, status: outcome.status, completedAt: now() })
           .where(eq(callResults.id, existing[0].id));
       } else {
         await db.insert(callResults).values({
           scheduleId: row.scheduleId, retailerId: row.retailerId, categoryId: cid, mode: row.mode,
-          status: outcome.status, confirmed: conf, summary: outcome.summary, transcript: outcome.transcript,
+          status: outcome.status, confirmed: conf, statusKey: fanKey, summary: outcome.summary, transcript: outcome.transcript,
           providerCallId: row.providerCallId, completedAt: now(),
         });
       }

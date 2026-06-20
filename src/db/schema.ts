@@ -428,6 +428,10 @@ export const callResults = sqliteTable(
     status: text("status").notNull().$type<CallStatus>().default("queued"),
     // restock: true=shipment is in. carry: true=store sells it. null=unclear/no answer.
     confirmed: integer("confirmed", { mode: "boolean" }),
+    // The customer-facing verdict key, resolved at call time (elevenlabs.ts) and rendered from the
+    // statuses registry. Persisted so the calls history shows the exact same icon/label as the live
+    // verdict — does_not_sell / sold_out / left_on_hold / voicemail … which `confirmed` alone loses.
+    statusKey: text("status_key"),
     shipmentDayHeard: text("shipment_day_heard"), // if asked: the day the clerk gave
     summary: text("summary"),       // short human summary of what the clerk said
     transcript: text("transcript"), // text transcript (no audio is ever stored)

@@ -1974,24 +1974,33 @@ function vmark(emoji,tc,size){
   };
   return G[emoji]?W(G[emoji]):`<span style="font-size:${Math.round(size*.85)}px">${emoji}</span>`;
 }
-function customerVerdict(o){
-  if(o.statusKey && STATUSES[o.statusKey]){
-    const s=STATUSES[o.statusKey];
-    let n=(o.statusKey==='failed'&&o.failureReason)?o.failureReason:(s.note||'');
-    if(s.tone==='in' && o.productName) n="They've got "+o.productName+" in — go get it.";
-    return {e:s.emoji, t:s.label, c:s.color, n};
+// Resolve the registry status key for a call row: the persisted verdict when present, else a
+// best-effort re-derive from the stored fields (mirrors elevenlabs.ts) so legacy/history rows that
+// predate persisted statusKey still light up the owner-configured icon, not a default emoji.
+function verdictKey(o){
+  if(o.statusKey && STATUSES[o.statusKey]) return o.statusKey;
+  if(o.status==='completed'){
+    if(o.doesNotSell) return 'does_not_sell';
+    if(o.soldOut) return 'sold_out';
+    if(o.confirmed===true) return 'in_stock';
+    if(o.confirmed===false) return 'not_in_stock';
+    const askedHuman=/(^|\n)\s*Agent:/.test(o.transcript||'') && /pok|piece|topps|needoh|got any|in stock|shipment|carry|sell/i.test((o.transcript||'').split('\n').filter(l=>/^\s*Agent:/.test(l)).join(' '));
+    return askedHuman?'no_clear_answer':'nobody_answered';
   }
-  const askedHuman=/(^|\n)\s*Agent:/.test(o.transcript||'') && /pok|piece|topps|needoh|got any|in stock|shipment|carry/i.test((o.transcript||'').split('\n').filter(l=>/^\s*Agent:/.test(l)).join(' '));
-  if(o.status==='completed'&&o.doesNotSell) return {e:'🚫',t:"They don't carry it",c:'#EF4444',n:"This store doesn’t sell this category at all."};
-  if(o.status==='completed'&&o.soldOut) return {e:'🕐',t:'Sold out',c:'#EF4444',n:'They got some in, but it’s gone — sold out for now.'};
-  if(o.status==='completed'&&o.confirmed===true) return {e:'✅',t:'In stock',c:'#4ADE80',n:'They have it — go get it.'};
-  if(o.status==='completed'&&o.confirmed!==true&&!o.doesNotSell&&(o.shipmentDayHeard||o.shipmentDay)) return {e:'🚚',t:'Restock incoming',c:'#F59E0B',n:'Not in now — but a shipment lands '+(o.shipmentDayHeard||o.shipmentDay)+'. Be first when it drops.'};
-  if(o.status==='completed'&&o.confirmed===false) return {e:'❌',t:'Not in stock',c:'#EF4444',n:'They don’t have it right now.'};
-  if(o.status==='completed') return askedHuman?{e:'🤔',t:'No clear answer',c:'#FBBF24',n:'Got through and asked, but no clear yes/no.'}:{e:'📵',t:'Nobody answered',c:'#9CA3AF',n:'Worked the menu but no one picked up.'};
-  if(o.status==='no_answer') return {e:'📵',t:'Nobody answered',c:'#9CA3AF',n:'Rang out — no one picked up.'};
-  if(o.status==='closed') return {e:'🔒',t:'Store closed',c:'#9CA3AF',n:'They’re closed right now.'};
-  if(o.status==='failed') return {e:'⚠️',t:'Call failed',c:'#FBBF24',n:o.failureReason||'Something went wrong.'};
-  return {e:'📵',t:'Nobody answered',c:'#9CA3AF',n:'Couldn’t reach anyone.'};
+  return ({no_answer:'nobody_answered',failed:'failed',closed:'closed'})[o.status]||'nobody_answered';
+}
+// One verdict, always rendered from the statuses registry (STATUSES) so the calls history, the live
+// call poll, and the consumer all show the SAME owner-configured icon / label / color.
+function customerVerdict(o){
+  const key=verdictKey(o), s=STATUSES[key];
+  if(s){
+    let n=(key==='failed'&&o.failureReason)?o.failureReason:(s.note||'');
+    if(s.tone==='in' && o.productName) n="They've got "+o.productName+" in — go get it.";
+    return {e:s.emoji, t:s.label, c:s.color, n, key};
+  }
+  // Registry not loaded yet (first paint) — minimal built-in fallback keeps the row sane.
+  const F=({in_stock:['✅','In stock','#4ADE80'],sold_out:['🕐','Sold out','#EF4444'],does_not_sell:['🚫',"They don't carry it",'#EF4444'],not_in_stock:['❌','Not in stock','#EF4444'],no_clear_answer:['🤔','Got a “maybe”','#FBBF24'],nobody_answered:['📵','Nobody answered','#9CA3AF'],closed:['🔒','Store closed','#9CA3AF'],failed:['⚠️','Call failed','#FBBF24']})[key]||['📵','Nobody answered','#9CA3AF'];
+  return {e:F[0],t:F[1],c:F[2],n:(key==='failed'&&o.failureReason)?o.failureReason:'',key};
 }
 function pollTranscript(cid, pre){
   pre=pre||'lab';
@@ -2176,7 +2185,6 @@ function renderResults(){
   if(!rows.length){el.innerHTML=banner+'<div class="empty">No calls'+(RESULT_STORE_FILTER?' for this store yet.':' yet.')+'</div>';return;}
   el.innerHTML=banner+'<div class="card calltable">'+rows.map(r=>{
     const vv=customerVerdict(r);
-    const tone=(r.status==='completed'&&r.confirmed!==true&&!r.doesNotSell&&(r.shipmentDayHeard||r.shipmentDay))?'soon':r.confirmed===true?'in':r.confirmed===false?'out':(r.status==='completed'?'unk':'gray');
     const nm=splitName(r.retailer||'?');
     const time=new Date(r.startedAt*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
     const detail=(r.summary?`<div class="meta" style="color:#ddd;margin-bottom:8px">${esch(r.summary)}</div>`:'')+(r.transcript?bubbles(r.transcript):'');
@@ -2187,7 +2195,7 @@ function renderResults(){
           <div class="cs-name">${esch(nm.base)}${nm.branch?` <span style="color:var(--muted);font-weight:500">${esch(nm.branch)}</span>`:''}</div>
           <div class="cs-meta">${catFilter?'':esch(r.category||'')+' · '}${agoTs(r.startedAt)} · ${time}${r.shipmentDayHeard?' · ships '+esch(r.shipmentDayHeard):''}</div>
         </div>
-        <span class="cv ${tone}">${statusIcon(vv.e,vv.c,22)}<span>${esch(vv.t)}</span></span>
+        <span class="cv" style="color:${vv.c}">${statusIcon(vv.e,vv.c,22)}<span>${esch(vv.t)}</span></span>
       </summary>
       <div class="calldetail">${detail||'<span class="meta">No transcript captured for this call.</span>'}</div>
     </details>`;
