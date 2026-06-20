@@ -1965,6 +1965,13 @@ app.patch("/api/settings", async (c) => {
   if (b.openerVariants !== undefined) await setSetting("vt_opener_variants", String(b.openerVariants || ""));
   if (b.openerLibrary !== undefined) await setSetting("vt_opener_library", String(b.openerLibrary || ""));
   if (b.voicePool !== undefined) await setSetting("vt_voice_pool", String(b.voicePool || ""));
+  // Voice → Designer library + cascade assignment. The "Save workflow"/"Save persona" steps write
+  // these; the call bridge resolves a store's workflow as store → chain → default and applies it.
+  if (b.personas !== undefined) await setSetting("vt_personas", String(b.personas || ""));
+  if (b.workflows !== undefined) await setSetting("vt_workflows", String(b.workflows || ""));
+  if (b.defaultWorkflow !== undefined) await setSetting("vt_default_workflow", String(b.defaultWorkflow || ""));
+  if (b.chainWorkflows !== undefined) await setSetting("vt_chain_workflows", String(b.chainWorkflows || ""));
+  if (b.storeWorkflows !== undefined) await setSetting("vt_store_workflows", String(b.storeWorkflows || ""));
   return c.json(await allSettings());
 });
 
