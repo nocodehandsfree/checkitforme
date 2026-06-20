@@ -570,7 +570,7 @@ function chainLogoInfo(name: string | null | undefined): { url: string | null; w
   const f = chainLogoFile(name);
   if (!f) return { url: null, wide: false, dark: false };
   const m = logoMeta()[f] || { w: 0, d: 0 };
-  return { url: `/logos/chains/${f}?v=31`, wide: m.w === 1, dark: m.d === 1 };
+  return { url: `/logos/chains/${f}?v=32`, wide: m.w === 1, dark: m.d === 1 };
 }
 // Owner preview: every chain logo rendered EXACTLY as the store list renders it (same tile,
 // plate + wide handling from _meta.json) at real size and 2x — judge phone clarity without
@@ -583,8 +583,8 @@ app.get("/logo-wall", (c) => {
     const plate = m.d === 1 ? "background:#f2f2f5;border-color:rgba(255,255,255,.28)" : "";
     const big = m.w === 1 ? "width:60px;height:auto;max-height:34px" : "max-width:52px;max-height:40px";
     const real = m.w === 1 ? "width:44px;height:auto;max-height:34px" : "width:42px;height:42px";
-    return `<div style="width:88px"><div style="width:72px;height:72px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);display:grid;place-items:center;margin:0 auto;${plate}"><img src="/logos/chains/${f}?v=31" style="object-fit:contain;${big}"></div>
-    <div style="width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.06);display:grid;place-items:center;margin:7px auto 0;${plate}"><img src="/logos/chains/${f}?v=31" style="object-fit:contain;${real}"></div>
+    return `<div style="width:88px"><div style="width:72px;height:72px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);display:grid;place-items:center;margin:0 auto;${plate}"><img src="/logos/chains/${f}?v=32" style="object-fit:contain;${big}"></div>
+    <div style="width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.06);display:grid;place-items:center;margin:7px auto 0;${plate}"><img src="/logos/chains/${f}?v=32" style="object-fit:contain;${real}"></div>
     <div style="font-size:9px;color:#8a8a98;text-align:center;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.replace(/\.(png|webp|svg)$/i, "")}</div></div>`;
   };
   return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="background:#0C0C12;font-family:-apple-system,sans-serif;color:#fff;padding:20px">
