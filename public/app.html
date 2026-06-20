@@ -605,6 +605,12 @@
       <div class="grow"><div class="name" data-tip="Streams call audio + a hang-up button to every customer. OFF = testing tool only (comp accounts like yours always have it).">Customers hear calls live</div></div>
       <button id="llToggle" class="ghost" onclick="toggleLiveListen()">…</button>
     </div></div>
+    <div class="card">
+      <div class="name" data-tip="On a live store call the agent rotates through the voices you tick here, so the same store doesn't always hear the identical voice. The call bridge reads this list.">Voices on calls</div>
+      <div class="meta" id="set_voices_live" style="margin:2px 0 10px">Loading…</div>
+      <div id="set_voices" style="display:flex;flex-direction:column;gap:8px"><span class="meta">Loading…</span></div>
+      <div class="meta" style="margin-top:10px">Tick every voice the agent may use — calls round-robin through the ticked set.</div>
+    </div>
   </section>
 
   <section id="designer">
@@ -958,7 +964,7 @@ const NAV_GROUPS={
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwIntel();loadGwKiosks();}, bail:()=>loadBail(), statuses:()=>loadStatusReg(), results:()=>loadResults() };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwIntel();loadGwKiosks();}, bail:()=>loadBail(), statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadCallVoices();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -2373,6 +2379,22 @@ async function toggleLiveListen(){
   const on=b&&b.dataset.on==='1';
   await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{liveListen:!on}})});
   await loadLiveListen(); toast(!on?'Customers now hear calls live':'Live audio is testing-only again');
+}
+// Settings → "Voices on calls": the voices the agent rotates through on live store calls. Writes the
+// vt_voice_pool setting (CSV of ElevenLabs voice ids) — the call bridge reads this list to round-robin.
+async function loadCallVoices(){
+  const box=document.getElementById('set_voices'); if(!box) return;
+  const [d,s]=await Promise.all([api('/api/voices'),api('/api/settings')]);
+  if(!d||d.error){ box.innerHTML='<span class="meta">Could not load voices.</span>'; return; }
+  const pool=new Set((((s&&s.vt_voice_pool)||'').split(',').map(x=>x.trim()).filter(Boolean)));
+  const act=(d.voices||[]).find(v=>v.id===d.active);
+  const lv=document.getElementById('set_voices_live'); if(lv) lv.textContent=act?('Default voice: '+act.name):'';
+  box.innerHTML=(d.voices||[]).map(v=>`<label class="day" style="margin:0"><input type="checkbox" class="setvoice" value="${v.id}" onchange="saveCallVoices()" ${pool.has(v.id)?'checked':''}> ${esch(v.name)}${v.cloned?' (cloned)':''}${v.id===d.active?' · live now':''}</label>`).join('')||'<span class="meta">No voices yet — clone or add one on the Voice page.</span>';
+}
+async function saveCallVoices(){
+  const pool=[...document.querySelectorAll('#set_voices .setvoice:checked')].map(c=>c.value).join(',');
+  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({voicePool:pool})});
+  toast((r&&!r.error)?'Saved — call voice rotation updated':'Could not save');
 }
 const v = (id) => document.getElementById(id).value.trim();
 
