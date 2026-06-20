@@ -124,14 +124,14 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Office Depot | "Office / DEPOT" | 🔧 | official vector split two lines (Office red, DEPOT white); no OfficeMax, no tagline |
 | Ollie's Bargain Outlet | mascot | 🔧 | their Ollie mascot, slight shrink |
 
-## Chunk 7a — pavilions → ralphs  🔧 awaiting owner approval
+## Chunk 7a — pavilions → ralphs  🔧 awaiting owner approval (v2: Ralphs oval, Publix wordmark, QFC smaller)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Pavilions | white serif wordmark | 🔧 | their real wordmark (official vector), recolored white + stretched taller (was too small) |
-| Pick 'n Save | "PICK 'N / SAVE" | 🔧 | red, two lines (app icon is just a "P") |
-| Publix | green "p" mark | 🔧 | de-boxed app icon → white circle + green p |
-| QFC | Q-with-crown | 🔧 | their Q-with-crown mark |
-| Ralphs | red "R" mark | 🔧 | de-boxed their red R from the app icon |
+| Pavilions | white serif wordmark | 🔧 | their real wordmark (official vector), recolored white + stretched taller (owner: "pavilions is OK") |
+| Pick 'n Save | red "P" mark | 🔧 | de-boxed app-icon "P" → Pick'n Save red (#DC1E2E); **monogram — no wordmark vector exists**, flagged to owner |
+| Publix | green "Publix" wordmark | 🔧 | official vector — green wordmark, no box (replaced the "p" mark) |
+| QFC | Q-with-crown | 🔧 | their Q-with-crown mark, shrunk per owner ("Q is too big") |
+| Ralphs | red oval + white script | 🔧 | owner-supplied real Ralphs oval logo (replaced the red "R" mark) |
 
 ## Chunk 7b — randalls → scheels  ⬜
 | Logo | Treatment | Status | Notes |
