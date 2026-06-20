@@ -106,14 +106,18 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Lowe's | blue gable | 🔧 | their real blue gable mark, trimmed bigger |
 | Macy's | red star | 🔧 | their star mark, slight shrink |
 
-## Chunk 6 — mariano_s → ollie_s  ⬜
+## Chunk 6a — mariano_s → menards  🔧 awaiting owner approval
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Mariano's | wordmark + leaf | ⬜ | **white space inside the leaf** — remove it |
-| Marshalls | "M" mark | ⬜ | lighten; remove white in letters |
-| MCX (Marine Corps Exchange) | mark | ⬜ | |
-| Meijer | wordmark | ⬜ | remove white inside letters |
-| Menards | "M" mark | ⬜ | **too small**; drop the line underneath |
+| Mariano's | M + green leaf | 🔧 | filled the white inside the leaf with green |
+| Marshalls | white "M" mark | 🔧 | de-boxed the blue app icon → white M (lighter) |
+| MCX | "MCX" mark | 🔧 | clean white MCX (no real logo source exists) |
+| Meijer | "meijer" wordmark | 🔧 | their red wordmark, white stripped out of the letters |
+| Menards | bold "M" mark | 🔧 | their real "M" from MENARDS, dropped the colorful stripe; compact so it's bigger |
+
+## Chunk 6b — michaels → ollie_s  ⬜
+| Logo | Treatment | Status | Notes |
+|---|---|---|---|
 | Michaels | wordmark | ⬜ | |
 | Micro Center | wordmark | ⬜ | drop "computers & electronics" tagline |
 | NEX (Navy Exchange) | mark | ⬜ | |
