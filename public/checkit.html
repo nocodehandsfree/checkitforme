@@ -2549,9 +2549,10 @@ function syncCta(){
   const cantCall=SEL_STORE&&SEL_STORE.callable===false;
   if(SEL_STORE&&SEL_CATS.length&&(MODE!=='kiosk'||SEL_KIOSK)&&(SEL_KIOSK||!cantCall)){ // kiosks are always callable (we call to check the machine), even if the store row is callable:false
     b.style.display=''; if(vv)vv.style.display='none'; if(cf)cf.style.display='';
+    // Two lines: store on top (with the phone icon), product beneath.
     b.innerHTML = SEL_KIOSK
-      ? `${ic}${t('cta.check','Check')} ${esc(SEL_STORE.name)} ${t('cta.kioskword','kiosk')} &nbsp; <span class="price">· 1 ${t('cta.checkunit','check')}</span>`
-      : `${ic}${t('cta.check','Check')} ${esc(SEL_STORE.name.split('—')[0].trim())} ${t('cta.for','for')} <b>${esc(catLabels())}</b> &nbsp; <span class="price">· 1 ${t('cta.checkunit','check')}</span>`;
+      ? `<span style="display:block">${ic}${t('cta.check','Check')} ${esc(SEL_STORE.name)}</span><span style="display:block;font-size:14px;font-weight:800;opacity:.92;margin-top:2px">${t('cta.kioskword','kiosk')} <span class="price">· 1 ${t('cta.checkunit','check')}</span></span>`
+      : `<span style="display:block">${ic}${t('cta.check','Check')} ${esc(SEL_STORE.name.split('—')[0].trim())}</span><span style="display:block;font-size:14px;font-weight:800;opacity:.92;margin-top:2px">${t('cta.for','for')} <b>${esc(catLabels())}</b> <span class="price">· 1 ${t('cta.checkunit','check')}</span></span>`;
     if(wasHidden){ b.classList.remove('armed'); void b.offsetWidth; b.classList.add('armed');
       if(window.innerWidth<900){ setTimeout(()=>{ try{ b.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){} },150); } }
   }
