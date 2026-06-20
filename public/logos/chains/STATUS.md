@@ -88,14 +88,18 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Hibbett Sports | "HIBBETT" wordmark | ✅ | their real wordmark (owner: keep wordmark over the HS monogram) |
 | Hobby Lobby | "HOBBY/LOBBY" | ✅ | their real orange wordmark (official vector) split two lines, reduced |
 
-## Chunk 5 — homegoods → macy_s  ⬜
+## Chunk 5a — homegoods → king_soopers  🔧 awaiting owner approval
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| HomeGoods | keep the roof | ⬜ | keep the roof over the words |
-| Hot Topic | wordmark | ⬜ | |
-| Hy-Vee | wordmark | ⬜ | |
-| Jewel-Osco | wordmark | ⬜ | |
-| King Soopers | wordmark | ⬜ | |
+| HomeGoods | roof + HOME GOODS | 🔧 | kept the red roof over the words |
+| Hot Topic | "HOT/TOPIC" stencil | 🔧 | their real stencil font (official vector), recolored white, split two lines |
+| Hy-Vee | "HyVee" wordmark | 🔧 | official vector, dropped "Employee Owned" tagline |
+| Jewel-Osco | red oval script | 🔧 | official vector — red Jewel·Osco in the oval, no white bg |
+| King Soopers | classic striped logo | 🔧 | their official retro logo (red striped box = brand) |
+
+## Chunk 5b — kohl_s → macy_s  ⬜
+| Logo | Treatment | Status | Notes |
+|---|---|---|---|
 | Kohl's | wordmark | ⬜ | lighten (dark) |
 | Kroger | wordmark | ⬜ | **too small**; drop the shopping cart; lighten/brighten blue |
 | Learning Express | wordmark | ⬜ | |
