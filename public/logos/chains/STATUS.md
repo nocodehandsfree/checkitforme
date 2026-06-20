@@ -124,14 +124,18 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Office Depot | "Office / DEPOT" | 🔧 | official vector split two lines (Office red, DEPOT white); no OfficeMax, no tagline |
 | Ollie's Bargain Outlet | mascot | 🔧 | their Ollie mascot, slight shrink |
 
-## Chunk 7 — pavilions → scheels  ⬜
+## Chunk 7a — pavilions → ralphs  🔧 awaiting owner approval
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Pavilions | wordmark | ⬜ | **too small**; use THEIR logo (don't make one up) |
-| Pick 'n Save | 2 lines | ⬜ | "Pick 'n" on one line, "Save" below |
-| Publix | wordmark | ⬜ | |
-| QFC | Q-with-crown mark | ⬜ | the Q with crown |
-| Ralphs | wordmark | ⬜ | |
+| Pavilions | white serif wordmark | 🔧 | their real wordmark (official vector), recolored white + stretched taller (was too small) |
+| Pick 'n Save | "PICK 'N / SAVE" | 🔧 | red, two lines (app icon is just a "P") |
+| Publix | green "p" mark | 🔧 | de-boxed app icon → white circle + green p |
+| QFC | Q-with-crown | 🔧 | their Q-with-crown mark |
+| Ralphs | red "R" mark | 🔧 | de-boxed their red R from the app icon |
+
+## Chunk 7b — randalls → scheels  ⬜
+| Logo | Treatment | Status | Notes |
+|---|---|---|---|
 | Randalls | wordmark | ⬜ | **too small**; lighten; remove white in letters |
 | Ross Dress for Less | wordmark | ⬜ | white lettering, readable (lightened blue done before) |
 | Safeway | wordmark | ⬜ | |
