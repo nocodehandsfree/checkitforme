@@ -16,6 +16,9 @@ export interface BridgeContext {
   // Connect-on-human (cost saver, OFF by default): don't open the ElevenLabs (billed) session until a
   // human is detected. Twilio handles dial + DTMF + hold for free; ElevenLabs then bills only talk-time.
   connectOnHuman?: boolean;
+  // Deterministic hand-off: open ElevenLabs at this many seconds from connect (the LEARNED time-to-human
+  // from the locked recipe). Far more reliable than VAD, which trips on the IVR's own recorded voice.
+  connectAtSec?: number;
   holdMaxSeconds?: number; // fallback: connect anyway after this many seconds even if no human is detected
 }
 const contexts = new Map<string, BridgeContext>();
@@ -229,8 +232,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (!ctx && room) ctx = contexts.get(room);
       if (ctx?.dtmf) scheduleDtmf(ctx.dtmf);
       if (ctx?.connectOnHuman) {
-        log(`twilio start room=${room.slice(0, 8)} -> connect-on-human (deferring ElevenLabs until a human)`);
-        dtmfTimers.push(setTimeout(() => triggerConnect("hold-timeout"), (ctx.holdMaxSeconds ?? 45) * 1000));
+        if (ctx.connectAtSec && ctx.connectAtSec > 0) {
+          // Deterministic: open the agent at the learned time-to-human. No VAD guesswork.
+          log(`twilio start room=${room.slice(0, 8)} -> connect-on-human TIMER: connect at ${ctx.connectAtSec}s`);
+          dtmfTimers.push(setTimeout(() => triggerConnect("recipe-timer"), ctx.connectAtSec * 1000));
+        } else {
+          log(`twilio start room=${room.slice(0, 8)} -> connect-on-human (VAD; deferring ElevenLabs until a human)`);
+          dtmfTimers.push(setTimeout(() => triggerConnect("hold-timeout"), (ctx.holdMaxSeconds ?? 45) * 1000));
+        }
       } else {
         log(`twilio start room=${room.slice(0, 8)} ctx=${!!ctx} -> connectEleven`);
         connectEleven();
@@ -242,7 +251,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       fanout(room, b64, "clerk"); // store/clerk audio -> browser
       if (eleven && ready) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
       else if (connecting) pending.push(b64);          // committed to connect → buffer for the agent
-      else if (ctx?.connectOnHuman) maybeDetectHuman(b64); // pre-human: listen for a person, don't bill/buffer
+      else if (ctx?.connectOnHuman && !ctx.connectAtSec) maybeDetectHuman(b64); // VAD only when we have no learned timer
     } else if (m.event === "stop") { log("twilio stop"); if (eleven) eleven.close(); }
   });
   twilio.on("close", () => { log(`twilio close (frames in=${frames})`); dtmfTimers.forEach(clearTimeout); if (eleven) eleven.close(); });
