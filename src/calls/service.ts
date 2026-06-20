@@ -30,7 +30,8 @@ import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
 import { getSetting, setSetting } from "../db/settings";
-import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS } from "../voice/prompts";
+import { specificityClause, RESTOCK_PROMPT, VOICE_DEFAULTS, PREMIUM_FOLLOWUP } from "../voice/prompts";
+import { classifyVerdict, reconcile, productDetailLabel } from "../voice/verdict";
 
 const DEFAULT_OPENER = "Heyy! I was just checking to see if you guys got any {category} in?";
 
@@ -110,6 +111,9 @@ export async function buildRestockVars(
       // Kiosk-only store → the prompt asks about the vending kiosk, not a shelf shipment.
       // Explicit request flag wins; otherwise inferred from the store's flags.
       kiosk_mode: (kioskMode ?? kioskOnly(retailer)) ? "true" : "",
+      // Preview / admin / scheduled paths default to the premium follow-up; the consumer trigger
+      // path overrides this to the free (no-follow-up) text for non-subscribers.
+      premium_followup: PREMIUM_FOLLOWUP,
     },
   };
 }
@@ -183,6 +187,14 @@ export async function findRecentCheck(finderUserId: string, retailerId: number, 
 }
 
 /** Place one call and record it. */
+/** Is the finder a paying member (or comp/owner)? Drives the premium product-type follow-up.
+ *  No finder (admin / scheduled / comp paths) defaults to the full premium experience. */
+async function finderIsPremium(finderUserId?: string | null): Promise<boolean> {
+  if (!finderUserId) return true;
+  const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, finderUserId)))[0];
+  return !!acct && (isCompAccount(acct) || acct.subscription === "active");
+}
+
 export async function triggerCall(a: TriggerArgs) {
   if (await isCallingPaused()) throw new Error("calling_paused"); // global spend kill-switch
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, a.retailerId)))[0];
@@ -199,7 +211,8 @@ export async function triggerCall(a: TriggerArgs) {
 
   // One-check-per-store-per-day (flag-gated): reuse a recent confirmed/answered result instead of
   // re-calling the same store+product within 24h — anti-abuse + cost. Returns the cached call row.
-  if (a.finderUserId && !a.toOverride && (await getPolicy()).flags.oneCheckPerStorePerDay) {
+  // Owner-only demo store ("Fun") is exempt — the owner re-tests it repeatedly while rehearsing.
+  if (a.finderUserId && !a.toOverride && !retailer.ownerOnly && (await getPolicy()).flags.oneCheckPerStorePerDay) {
     const recent = await findRecentCheck(a.finderUserId, retailer.id, category.id);
     if (recent) return { ...recent, deduped: true };
   }
@@ -264,6 +277,8 @@ export async function triggerCall(a: TriggerArgs) {
       voicemailPolicy,
       // Kiosk-only store → agent asks about the vending kiosk. Explicit request flag wins; else inferred.
       kioskMode: a.kioskMode ?? kioskOnly(retailer),
+      // Premium gate: subscribers (and comp/owner) get the product-type follow-up; free finders skip it.
+      premiumFollowup: await finderIsPremium(a.finderUserId),
     });
     await db.update(callResults)
       .set({ providerCallId, status: "in_progress" })
@@ -570,12 +585,33 @@ export async function ingestPending(): Promise<number> {
         ? outcome.categoryResults[primaryLabel]
         : outcome.confirmed;
 
+    // ---- Consensus verdict: a cheap second LLM read of the transcript, reconciled with
+    // ElevenLabs' own extraction. Two non-conflicting reads → a hard verdict (and we charge); a
+    // direct conflict or genuine ambiguity → honest "no clear answer" (and we do NOT charge, the
+    // same promise as "nobody answered"). The same pass captures the product form/set the clerk named.
+    let finalConfirmed = primaryConfirmed;
+    let finalStatusKey = outcome.statusKey;
+    let definitive = primaryConfirmed === true || primaryConfirmed === false;
+    let productDetail: string | null = null;
+    if (outcome.status === "completed") {
+      const second = await classifyVerdict(outcome.transcript, primaryLabel || "the product");
+      const consensus = reconcile(
+        { confirmed: primaryConfirmed, soldOut: outcome.soldOut, doesNotSell: outcome.doesNotSell, statusKey: outcome.statusKey },
+        second,
+      );
+      finalConfirmed = consensus.confirmed;
+      finalStatusKey = consensus.statusKey;
+      definitive = consensus.definitive;
+      productDetail = productDetailLabel(second);
+    }
+
     // Update the primary row (the line we called about).
     await db.update(callResults).set({
       status: outcome.status,
-      confirmed: primaryConfirmed,
-      statusKey: outcome.statusKey,
+      confirmed: finalConfirmed,
+      statusKey: finalStatusKey,
       shipmentDayHeard: outcome.shipmentDay,
+      productDetail,
       summary: outcome.summary,
       transcript: outcome.transcript,
       completedAt: now(),
@@ -587,7 +623,8 @@ export async function ingestPending(): Promise<number> {
 
     // Server-side billing: charge the finder ONE credit on a DEFINITIVE answer, exactly once.
     // (chargeCallOnce is atomic — the poller, the webhook, and any retry can't double-bill.)
-    if (row.finderUserId && outcome.status === "completed" && (primaryConfirmed === true || primaryConfirmed === false)) {
+    // A conflict/unsure verdict (the two reads disagreed) is free — we never bill a verdict we doubt.
+    if (row.finderUserId && outcome.status === "completed" && definitive) {
       await chargeCallOnce(row.id, row.finderUserId);
     }
 
@@ -616,7 +653,7 @@ export async function ingestPending(): Promise<number> {
       }
     }
 
-    if (primaryConfirmed === true && primaryLabel) {
+    if (finalConfirmed === true && primaryLabel) {
       await notifyInStock(store?.name ?? "A store", primaryLabel, row.retailerId, outcome.shipmentDay);
       await notifyWatches(row.retailerId, row.categoryId, store?.name ?? "A store", primaryLabel);
     }

@@ -38,6 +38,9 @@ export interface StartCallParams {
   /** Kiosk-only store (vending machine, no staffed counter): the agent asks if the kiosk is
    *  working/stocked instead of asking about a shelf shipment. Exposed to the prompt as `kiosk_mode`. */
   kioskMode?: boolean;
+  /** Premium feature: ask the one product-type follow-up after a YES (and capture it). Default true;
+   *  free (non-subscriber) consumer calls pass false to skip it and end faster. Fills `premium_followup`. */
+  premiumFollowup?: boolean;
 }
 
 export interface StartCallResult {

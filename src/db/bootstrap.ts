@@ -1,8 +1,9 @@
 // On boot: apply migrations and seed the catalog if the DB is empty.
 // Lets the deployed instance self-initialize (Railway/Cloudflare) with no manual steps.
 import { migrate } from "drizzle-orm/libsql/migrator";
+import { and, eq } from "drizzle-orm";
 import { db, client } from "./client";
-import { categories } from "./schema";
+import { categories, chains, retailers } from "./schema";
 import { seed } from "./seed";
 import { backfillChainTypes } from "./import-data";
 import { getSetting, setSetting } from "./settings";
@@ -100,6 +101,8 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE retailers ADD COLUMN geocode_tried_at INTEGER").catch(() => {});
   // Curation tier (1–5) for the consumer "best near you" grouping (5 = green group, 4 = secondary).
   await client.execute("ALTER TABLE retailers ADD COLUMN tier INTEGER").catch(() => {});
+  // Owner-only demo store ("Fun"): hidden from consumers + un-callable except for the master account.
+  await client.execute("ALTER TABLE retailers ADD COLUMN owner_only INTEGER NOT NULL DEFAULT 0").catch(() => {});
   // Geo paging at 100k-store scale: the /pub/stores/near bounding box must hit an index.
   await client.execute("CREATE INDEX IF NOT EXISTS retailers_geo_idx ON retailers(lat, lng)").catch(() => {});
   await client.execute("CREATE INDEX IF NOT EXISTS retailers_state_idx ON retailers(state)").catch(() => {});
@@ -119,6 +122,8 @@ export async function bootstrap() {
   // Persisted customer-facing verdict key → the calls history renders the exact registry icon/label
   // the live verdict used (instead of a coarse re-derive from confirmed/status).
   await client.execute("ALTER TABLE call_results ADD COLUMN status_key TEXT").catch(() => {});
+  // Premium follow-up: the product form/set the clerk named ("3-pack blister", "Surging Sparks ETB").
+  await client.execute("ALTER TABLE call_results ADD COLUMN product_detail TEXT").catch(() => {});
   // Referral growth loop: each account's shareable code + who referred them.
   await client.execute("ALTER TABLE accounts ADD COLUMN referral_code TEXT").catch(() => {});
   await client.execute("ALTER TABLE accounts ADD COLUMN referred_by TEXT").catch(() => {});
@@ -196,4 +201,34 @@ export async function bootstrap() {
   await backfillChainTypes(); // ensure every chain has a store-category for filtering
   await seedStockCheckIntel(); // classify chains site-rail vs call-rail (insert-if-absent)
   await seedSellMethods();      // per-chain ways-to-get-it + MSRP flag (insert-if-absent)
+  await seedFunStore();         // owner-only "Fun" rehearsal store (only if FUN_STORE_PHONE is set)
+}
+
+// Owner-only demo store "Fun": dials the owner's own cell (FUN_STORE_PHONE) so the owner can play the
+// clerk and rehearse the whole consumer flow + verdict pipeline without calling real stores. Hidden
+// from every consumer and un-callable except for the master account. Created only when FUN_STORE_PHONE
+// is set (keeps the personal number out of the repo). Idempotent — safe to run on every boot.
+async function seedFunStore() {
+  const phone = (process.env.FUN_STORE_PHONE || "").trim();
+  if (!phone) return;
+  // A "Fungibles" chain purely so the store renders the Fungibles brand mark (logos/chains/fungibles.png).
+  let chain = (await db.select().from(chains).where(eq(chains.name, "Fungibles")))[0];
+  if (!chain) {
+    await db.insert(chains).values({ name: "Fungibles", type: "Fungibles" });
+    chain = (await db.select().from(chains).where(eq(chains.name, "Fungibles")))[0];
+  }
+  const hours = JSON.stringify({ mon: "24h", tue: "24h", wed: "24h", thu: "24h", fri: "24h", sat: "24h", sun: "24h" });
+  const existing = (await db.select().from(retailers).where(and(eq(retailers.name, "Fun"), eq(retailers.ownerOnly, true))))[0];
+  if (existing) {
+    await db.update(retailers)
+      .set({ chainId: chain?.id ?? null, phone, tier: 5, ownerOnly: true, active: true, lat: 34.1367, lng: -118.6618, hours })
+      .where(eq(retailers.id, existing.id));
+  } else {
+    await db.insert(retailers).values({
+      chainId: chain?.id ?? null, name: "Fun", location: "Calabasas, CA", address: "123 Fun Lane",
+      zip: "91302", lat: 34.1367, lng: -118.6618, phone, timezone: "America/Los_Angeles",
+      state: "CA", region: "West Coast", tier: 5, ownerOnly: true, active: true, sellsPacks: true,
+      carries: "Pokémon", hours,
+    });
+  }
 }

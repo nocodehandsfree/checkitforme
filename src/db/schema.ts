@@ -153,6 +153,9 @@ export const retailers = sqliteTable(
     geocodeTriedAt: integer("geocode_tried_at"), // last geocode attempt — failures cool down instead of retrying every tick
     active: integer("active", { mode: "boolean" }).notNull().default(true), // soft-remove (e.g. Ralphs)
     notes: text("notes"),
+    // Owner-only demo store: hidden from every consumer list and un-callable EXCEPT for the
+    // master/comp account. Powers the "Fun" rehearsal store (dials the owner's cell as the clerk).
+    ownerOnly: integer("owner_only", { mode: "boolean" }).notNull().default(false),
     createdAt: integer("created_at").notNull().default(now),
   },
   (t) => ({ byChain: index("retailers_chain_idx").on(t.chainId) }),
@@ -445,6 +448,9 @@ export const callResults = sqliteTable(
     // navigating the phone tree / on hold before a person first spoke). talk = call - nav.
     callSeconds: integer("call_seconds"),
     navSeconds: integer("nav_seconds"),
+    // Premium follow-up capture: the product form / set the clerk named ("3-pack blister",
+    // "Surging Sparks ETB") — kept even when the exact set is unknown. Surfaced on the verdict.
+    productDetail: text("product_detail"),
   },
   (t) => ({
     byRetailerCategory: index("call_results_retailer_category_idx").on(t.retailerId, t.categoryId),
