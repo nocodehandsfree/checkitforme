@@ -59,7 +59,7 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Dollar Tree | green tree mark | 🔧 | their tree-$1 symbol, shrunk to icon set |
 | Dunham's Sports | "Dunham's" script | 🔧 | red italic wordmark filled to width; "Sports" dropped (no better source found) |
 
-## Chunk 3b — family_dollar → fred_meyer  🔧 awaiting owner approval
+## Chunk 3b — family_dollar → fred_meyer  ✅ LOCKED (owner-approved; Burlington 2b also locked)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
 | Family Dollar | family-circle mark | 🔧 | de-boxed the orange app icon → circle emblem; shrunk per owner |
@@ -70,14 +70,18 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 
 > Burlington (Chunk 2b) shrunk a bit per owner — ready to lock.
 
-## Chunk 4 — fry_s → hobby_lobby  ⬜
+## Chunk 4a — fry_s → h_e_b  🔧 awaiting owner approval
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Fry's | wordmark | ⬜ | **too small**; use full wordmark, don't cut |
-| GameStop | real logo, split | ⬜ | use their REAL logo broken up — not a made-up one |
-| Gelson's | wordmark | ⬜ | **too small**; lighten; remove white in letters |
-| Giant Eagle | wordmark/mark | ⬜ | |
-| H-E-B | wordmark | ⬜ | **too small** |
+| Fry's | "fry's" wordmark | 🔧 | their real red wordmark, full, not cut |
+| GameStop | "Game Stop" serif | 🔧 | their REAL app-icon font, de-boxed, broken up (Game over Stop) |
+| Gelson's | "Gelson's" script | 🔧 | official vector, soft-white so it reads on dark |
+| Giant Eagle | wordmark + leaf | 🔧 | de-boxed the red app icon → white "giant eagle" + sprout |
+| H-E-B | white on red box | 🔧 | their iconic red-box logo rebuilt (no clean vector exists; box = brand) |
+
+## Chunk 4b — h_mart → hobby_lobby  ⬜
+| Logo | Treatment | Status | Notes |
+|---|---|---|---|
 | H Mart | "H" over "MART" | ⬜ | their exact lettering, not made-up |
 | Hallmark Gold Crown | crown mark | ⬜ | |
 | Harris Teeter | wordmark | ⬜ | |
