@@ -67,6 +67,10 @@ your files, your extra docs, and your current focus. Stay in your lane; request 
 ## Docs map (open only what you need)
 - `docs/RUNBOOK.md` — what it is + stack/services + run/deploy/secrets.
 - `docs/ARCHITECTURE.md` — repo + folder layout.
+- `docs/DATA_PROVENANCE.md` — **where ALL store data comes from (one source of truth):** every store
+  name/number/tier/kiosk/hours field, who writes it, who reads it, and the rule that no surface keeps
+  its own store list. Pairs with `docs/specs/scoring.md` (the 1–5 tier rubric) + `docs/specs/store-data-schema.md`
+  (importer field contract). **Read before touching store data anywhere.**
 - `docs/API_CONTRACT.md` · `docs/STOCK_AND_GEO_API.md` — the interface + stock/geo rails.
 - `docs/STORE_LOGOS.md` — retail-chain store logos: source of truth, who renders them (consumer/admin/logo-wall), performance rules, and the processing pipeline (removing white, sourcing real logos). **Read before touching logos anywhere.**
 - `docs/business/` — BRAND · CAPABILITIES (the pitch) · ROADMAP (+ open backlog) · SELL_METHODS_PLAN.

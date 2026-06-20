@@ -33,6 +33,27 @@ Large consumer pass on `public/checkit.html` (shipped to the deploy branch). Cur
   common fallbacks) because the statuses registry switched some emoji → Lucide names; an unknown value draws a
   neutral dot, never raw text (fixed a "phone-off" string that was rendering as a 46px headline).
 
+## 2026-06-19 — Data Dev: data-provenance doc + scoring package recovered into the repo
+Documentation pass so all store data is traceable to one source, and the owner's scoring matrix is
+never lost again.
+- **`docs/DATA_PROVENANCE.md` (NEW)** — the one-source-of-truth map: the DB (`chains`/`retailers` +
+  signal tables) is the only store-data source; every surface (consumer `/pub/stores/near`, admin
+  `/api/admin/*`, the call engine, best-bet) reads the **same** rows. Per-domain provenance table
+  (identity, chain, tier, kiosks, hours, carries, stock signals, call outcomes) + who writes each.
+  **Verified** by grepping every runtime file read: the only request-time reads are static assets +
+  two chain-keyed stock-config JSONs — **zero store names from files.** `stores-master/*.gz` is an
+  importer-only input. Wired into the HANDOFF docs map + the Data-Dev handoff Read list.
+- **Scoring package committed** — the owner's "four-file zip" (delivered as an upload, never in the
+  repo — which is why the rubric "wasn't anywhere") is now at **`data/source/chain-scoring-2026-06/`**:
+  `SCORING_MODEL_spec.md` (the v4 rubric), `DEV_HANDOFF_final.md`, and the 3 CSVs (85 chain scores /
+  22 logistics / 264 product-evidence rows) + a README explaining how it maps to the DB.
+- **`docs/specs/scoring.md` (NEW)** — repo-native 1–5 tier rubric reconciled to the real schema:
+  `tier` is **per-store** (`retailers.tier`, no chain-level column), chain values are stamped onto
+  stores, **any official-kiosk store projects as tier 5**, voice-confirm rate overrides per store.
+  Confirmed tiers are **LIVE in prod** (a `/pub/stores/near` sample near LA returns a 2/3/4/5 spread).
+- **Gaps logged** for the Data queue: orphan stores (`chainId: null` → no logo/tier), the ungraded
+  (`tier: null`) tail, and the 4 thrift chains still missing logos.
+
 ## 2026-06-19 — Data Dev: dedupe engine, hours re-verify, CVS-in-Target quarantine, thrift rail, TJX
 New server-side maintenance endpoints + applied LIVE to prod via the admin API; verified fresh from prod.
 - **Name dedupe at scale** — new `POST /api/stores/dedupe` (normalize em-dash separators / `(#1234)` store

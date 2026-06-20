@@ -1,0 +1,86 @@
+﻿chain_name_exact,tier_1_5,tier_name,channel,ownership_model,distributor,visibility,stores,products_tracked,predictable_restock,has_kiosk,kiosk_status,score_note
+Academy Sports + Outdoors,5,Best Chance,shelf,corporate,,live,331,3,False,False,no,
+Barnes & Noble,5,Best Chance,shelf,corporate,Excell Brands (TPCi-owned),live,746,8,True,False,no,Excell (TPCi-owned) = MSRP; restocks DAILY (not just Tue/Thu); best place to check on a rhythm.
+Best Buy,5,Best Chance,shelf,corporate,,live,1002,8,True,False,no,
+Books-A-Million,5,Best Chance,shelf,corporate,Excell Brands (TPCi-owned),live,185,3,False,False,no,
+CVS,5,Best Chance,shelf,corporate,,live,8898,6,False,False,no,
+Dick's Sporting Goods,5,Best Chance,shelf,corporate,,live,777,3,True,False,no,
+Dollar General,5,Best Chance,shelf,corporate,,live,20167,4,True,False,no,
+Gelson's,5,Best Chance,shelf+kiosk,corporate,,live,24,0,False,True,confirmed,
+H-E-B,5,Best Chance,shelf+kiosk,corporate,,live,0,0,False,True,confirmed,Texas grocer; official TPCi kiosk host = MSRP. In DB w/ logo.
+Hobby Lobby,5,Best Chance,shelf,corporate,,live,888,5,False,False,no,
+Meijer,5,Best Chance,shelf,corporate,Excell Brands (TPCi-owned),live,267,8,True,False,no,
+Micro Center,5,Best Chance,shelf,corporate,,live,3,4,False,False,no,
+Pavilions,5,Best Chance,shelf+kiosk,corporate,,live,31,0,False,True,confirmed,
+Star Market,5,Best Chance,shelf+kiosk,corporate,,live,21,0,False,True,confirmed,Hosts official TPCi kiosk = MSRP (owner-confirmed).
+Target,5,Best Chance,shelf,corporate,Excell Brands (TPCi-owned),live,1673,8,True,False,no,"Excell (TPCi-owned) = MSRP; predictable weekly drops (Westlake Fri AM, gone fast)."
+Walgreens,5,Best Chance,shelf,corporate,,live,7829,8,True,False,no,
+Ace Hardware,4,Mostly Reliable,shelf,franchise,,live,4827,7,False,False,no,
+Acme,4,Mostly Reliable,shelf,corporate,,live,157,0,False,False,no,
+Albertsons,4,Mostly Reliable,shelf+kiosk,corporate,,live,363,6,True,True,verify,
+BJ's Wholesale,4,Mostly Reliable,shelf,corporate,,live,277,7,False,False,no,
+Big 5 Sporting Goods,4,Mostly Reliable,shelf,corporate,,live,384,5,True,False,no,
+City Market,4,Mostly Reliable,shelf,corporate,,live,34,0,False,False,no,
+Food 4 Less,4,Mostly Reliable,shelf+kiosk,corporate,,live,106,0,False,True,verify,
+Fred Meyer,4,Mostly Reliable,shelf+kiosk,corporate,,live,135,0,False,True,verify,
+Fry's,4,Mostly Reliable,shelf+kiosk,corporate,,live,131,0,False,True,verify,
+Hallmark,4,Mostly Reliable,shelf,franchise,,live,1080,1,False,False,no,
+Harris Teeter,4,Mostly Reliable,shelf,corporate,,live,262,0,False,False,no,
+Hot Topic,4,Mostly Reliable,shelf,corporate,,live,586,7,False,False,no,
+Jewel-Osco,4,Mostly Reliable,shelf,corporate,,live,189,0,False,False,no,
+King Soopers,4,Mostly Reliable,shelf+kiosk,corporate,,live,123,0,False,True,verify,
+Kroger,4,Mostly Reliable,shelf+kiosk,corporate,,live,1232,8,False,True,verify,
+Mariano's,4,Mostly Reliable,shelf,corporate,,live,40,0,False,False,no,
+Menards,4,Mostly Reliable,shelf,corporate,,live,344,5,False,False,no,
+Pick 'n Save,4,Mostly Reliable,shelf,corporate,,live,77,0,False,False,no,
+QFC,4,Mostly Reliable,shelf,corporate,,live,58,0,False,False,no,
+Ralphs,4,Mostly Reliable,shelf,corporate,,live,181,0,False,False,no,Kroger banner shelf (NO kiosk per owner); aisle restock weekly.
+Randalls,4,Mostly Reliable,shelf,corporate,,live,25,0,False,False,no,
+Safeway,4,Mostly Reliable,shelf+kiosk,corporate,,live,912,0,False,True,verify,
+Scheels,4,Mostly Reliable,shelf,corporate,,live,33,6,True,False,no,
+Shaw's,4,Mostly Reliable,shelf,corporate,,live,126,0,False,False,no,
+Smith's,4,Mostly Reliable,shelf+kiosk,corporate,,live,133,0,False,True,verify,
+Spencer's,4,Mostly Reliable,shelf,corporate,,live,137,2,False,False,no,
+Tokyo Japanese Lifestyle,4,Mostly Reliable,shelf,corporate,,live,0,3,False,False,no,"Served on app; genuine incl. older/JP sets; franchise-ish, varies."
+Tom Thumb,4,Mostly Reliable,shelf,corporate,,live,70,0,False,False,no,
+Vons,4,Mostly Reliable,shelf+kiosk,corporate,,live,185,0,False,True,verify,
+Walmart,4,Mostly Reliable,shelf,corporate,Excell Brands + MJ Holding,live,4610,8,True,False,no,
+Aldi,3,Spotty,shelf,corporate,,live,1,7,True,False,no,
+Bi-Mart,3,Spotty,shelf,corporate,,live,80,4,False,False,no,
+Blain's Farm & Fleet,3,Spotty,shelf,corporate,,live,43,3,False,False,no,
+BoxLunch,3,Spotty,shelf,corporate,,live,278,1,False,False,no,Genuine bundles but varies by location; spotty.
+Buc-ee's,3,Spotty,shelf,corporate,,live,1,2,False,False,no,No regular schedule; varies store to store.
+Burlington,3,Spotty,shelf,corporate,,live,1040,3,False,False,no,
+Claire's,3,Spotty,shelf,corporate,,live,800,1,False,False,no,
+Costco,3,Spotty,shelf,corporate,,live,640,5,True,False,no,"Genuine bundles via big pallet drops, then gone; intermittent — spotty."
+Dollar Tree,3,Spotty,shelf,corporate,,live,9077,3,False,False,no,
+Dunham's Sports,3,Spotty,shelf,corporate,,live,253,0,False,False,no,
+Family Dollar,3,Spotty,shelf,corporate,,live,7060,6,True,False,no,
+Five Below,3,Spotty,shelf,corporate,,live,1966,5,True,False,no,
+Fleet Farm,3,Spotty,shelf,corporate,,live,48,3,False,False,no,
+Giant Eagle,3,Spotty,shelf,corporate,,live,193,7,False,False,no,
+Hibbett Sports,3,Spotty,shelf,corporate,,live,946,7,False,False,no,
+Hy-Vee,3,Spotty,shelf,corporate,,live,432,4,False,False,no,
+Kohl's,3,Spotty,shelf,corporate,,live,935,6,True,False,no,
+Learning Express,3,Spotty,shelf,franchise,,live,0,0,False,False,no,"Served; franchise, genuine EN+JP sealed; varies by owner."
+Lowe's,3,Spotty,shelf,corporate,,live,1763,4,False,False,no,
+Macy's (Toys R Us),3,Spotty,shelf,corporate,,live,426,8,False,False,no,Strong online but weak in-store presence (Toys R Us shop-in-shops often empty).
+Michaels,3,Spotty,shelf,corporate,,live,1227,2,False,False,no,
+Office Depot / OfficeMax,3,Spotty,shelf,corporate,,live,778,3,False,False,no,
+Ollie's Bargain Outlet,3,Spotty,shelf,corporate,,live,660,2,False,False,no,
+Publix,3,Spotty,shelf,corporate,,live,1240,6,False,False,no,
+Ross Dress for Less,3,Spotty,shelf,corporate,,live,1918,8,False,False,no,
+Sam's Club,3,Spotty,shelf,corporate,,live,578,4,True,False,no,"Bulk pallet drops, intermittent; spotty."
+Sheetz,3,Spotty,shelf,corporate,,live,775,2,False,False,no,
+Staples,3,Spotty,shelf,corporate,,live,904,3,True,False,no,
+Tractor Supply,3,Spotty,shelf,corporate,,live,2449,2,False,False,no,
+Wawa,3,Spotty,shelf,corporate,,live,1134,3,True,False,no,
+Wegmans,3,Spotty,shelf,corporate,,live,113,4,False,False,no,
+WinCo Foods,3,Spotty,shelf,corporate,,live,145,0,False,False,no,
+GameStop,2,Over MSRP,shelf,corporate,,over_msrp,1186,7,True,False,no,Has product constantly but marks up hot sealed above MSRP (not Excell-supplied).
+HomeGoods,2,Over MSRP,shelf,corporate,,over_msrp,964,2,True,False,no,
+Marshalls,2,Over MSRP,shelf,corporate,,over_msrp,948,0,False,False,no,
+TJ Maxx,2,Over MSRP,shelf,corporate,,over_msrp,1014,0,False,False,no,
+AAFES (Army & Air Force Exchange),1,Unknown,shelf,corporate,,hidden,279,4,False,False,no,Military exchange — not shown to public.
+MCX (Marine Corps Exchange),1,Unknown,shelf,corporate,,hidden,0,0,False,False,no,Military exchange — not shown to public.
+NEX (Navy Exchange),1,Unknown,shelf,corporate,,hidden,0,0,False,False,no,Military exchange — not shown to public.

@@ -16,11 +16,15 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
 
 ## Read (in order) — open only what you need
 1. `/HANDOFF.md` · `docs/ARCHITECTURE.md`
-2. **`docs/specs/store-data-schema.md`** — the full store-data reference: every collector field →
+2. **`docs/DATA_PROVENANCE.md`** — where ALL store data comes from + the one-source-of-truth rule
+   (every surface reads the same DB rows). **Read this first** so you never introduce a parallel list.
+3. **`docs/specs/store-data-schema.md`** — the full store-data reference: every collector field →
    DB column, the hours format (incl. the 2 AM bug), dedupe rules, the behavior flags, and how to
-   load a file. **Start here.** (This is also the doc handed to the planning chat for new data.)
-3. `data/stores-master/README.md` + `COVERAGE_REPORT.md` · `docs/STOCK_AND_GEO_API.md` (store shapes)
-4. The `retailers`/`chains` tables in `src/db/schema.ts` · `src/stores-import.ts`
+   load a file. (This is also the doc handed to the planning chat for new data.)
+4. **`docs/specs/scoring.md`** — the 1–5 tier rubric (`retailers.tier`), derived from the owner's
+   scoring package now committed at `data/source/chain-scoring-2026-06/`.
+5. `data/stores-master/README.md` + `COVERAGE_REPORT.md` · `docs/STOCK_AND_GEO_API.md` (store shapes)
+6. The `retailers`/`chains` tables in `src/db/schema.ts` · `src/stores-import.ts`
 
 ## How you access files & keep the lane clean (process)
 - **Edit only your lane:** `src/stores-import.ts`, `data/**`, `scripts/import-stores.ts`, and the
@@ -37,6 +41,18 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
 - Work on the deploy branch `claude/retail-stock-voice-calls-OcyMS`; commit + push = live in ~3 min.
 
 ## Current focus (KEEP UPDATED)
+**Session 2026-06-19 — data documented + scoring package committed (see COMPLETED.md).**
+- [x] **Single-source-of-truth doc** — `docs/DATA_PROVENANCE.md` written: every store-data domain, who
+  writes it, who reads it, verified that **no surface reads a rogue store list** (only the DB).
+- [x] **Scoring package recovered + committed** — the owner's "four-file zip" is now at
+  `data/source/chain-scoring-2026-06/` (rubric + 85 chain scores + logistics + 264 product rows), and
+  the repo-native rubric is `docs/specs/scoring.md`. Tiers confirmed LIVE in prod (2/3/4/5 spread).
+- [ ] **Restamp tiers from `chain_scores_final.csv`** if any chain drifted — map `chain_name_exact` →
+  chain → set `retailers.tier` on its stores (importer `tier` field or bulk admin patch).
+- [ ] **Close the ungraded tail** — stores still on `tier: null` rank by distance only.
+- [ ] **Re-link orphan stores** — rows with `chainId: null` (e.g. "Burlington Jewelry District") lose
+  logo + chain tier; re-link by exact chain name.
+
 **Session 2026-06-17 — big prod cleanup done (see COMPLETED.md).** Writes went LIVE via the admin API
 (`PATCH /api/retailers/:id` + bulk `POST /api/stores/patch`); the `openState` fix shipped on this branch.
 - [x] **Kiosk-only mis-flagging (Pavilions).** ✅ Verified in prod (`hasKiosk:true, sellsPacks:false`).
