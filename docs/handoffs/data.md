@@ -41,17 +41,25 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
 - Work on the deploy branch `claude/retail-stock-voice-calls-OcyMS`; commit + push = live in ~3 min.
 
 ## Current focus (KEEP UPDATED)
-**Session 2026-06-19 — data documented + scoring package committed (see COMPLETED.md).**
+**Session 2026-06-19 — data documented, scoring package committed, ungraded tail closed (see COMPLETED.md).**
 - [x] **Single-source-of-truth doc** — `docs/DATA_PROVENANCE.md` written: every store-data domain, who
   writes it, who reads it, verified that **no surface reads a rogue store list** (only the DB).
 - [x] **Scoring package recovered + committed** — the owner's "four-file zip" is now at
   `data/source/chain-scoring-2026-06/` (rubric + 85 chain scores + logistics + 264 product rows), and
   the repo-native rubric is `docs/specs/scoring.md`. Tiers confirmed LIVE in prod (2/3/4/5 spread).
-- [ ] **Restamp tiers from `chain_scores_final.csv`** if any chain drifted — map `chain_name_exact` →
-  chain → set `retailers.tier` on its stores (importer `tier` field or bulk admin patch).
-- [ ] **Close the ungraded tail** — stores still on `tier: null` rank by distance only.
-- [ ] **Re-link orphan stores** — rows with `chainId: null` (e.g. "Burlington Jewelry District") lose
-  logo + chain tier; re-link by exact chain name.
+- [x] **Closed the ungraded tail** — new `POST /api/stores/grade-from-defaults` filled **6,864**
+  null-tier stores across **31** chains (almost all grocery — Publix t3, Kroger/Safeway/Albertsons/Vons/
+  Ralphs t4, kiosk-host Pavilions/Gelson's/Star Market t5) from `chain_scores_final.csv`. **Fill-only-
+  null** (never overwrites a deliberate tier like TJ Maxx=3); idempotent (re-run fills 0). Verified in prod.
+- [x] **Orphans — non-issue** — `POST /api/stores/relink-orphans` (dryRun) found **0** `chainId`-null
+  active stores. "Burlington Jewelry District" is `chainId 27` w/ logo + tier 3; its `chain:null` is a
+  cosmetic projection field. Relink endpoint kept as an idempotent safety net.
+- [ ] **Grade the ~38 unscored chains** (owner call) — chains NOT in `chain_scores_final.csv` still have
+  `tier: null` (ranked by distance). Need a tier decision per chain before `grade-from-defaults` can fill
+  them. Also 2 CSV chains unmatched by name: **Learning Express**, **Macy's (Toys R Us)** — find the DB
+  alias or add them.
+- [ ] **Thrift logos** — Goodwill / Salvation Army / Savers / Unique still need `public/logos/chains/
+  <slug>.png`. Needs image tooling (sharp/ImageMagick) — follow `docs/STORE_LOGOS.md`.
 
 **Session 2026-06-17 — big prod cleanup done (see COMPLETED.md).** Writes went LIVE via the admin API
 (`PATCH /api/retailers/:id` + bulk `POST /api/stores/patch`); the `openState` fix shipped on this branch.

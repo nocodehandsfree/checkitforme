@@ -3,6 +3,22 @@
 Finished items live here so the active docs (HANDOFF) stay lean. Newest first. Agents: move done
 items here from HANDOFF's "Current focus."
 
+## 2026-06-19 — Data Dev: closed the ungraded tier tail + orphan check (2 new endpoints)
+Two safe maintenance endpoints shipped + applied LIVE to prod; verified fresh.
+- **Ungraded tail closed** — new `POST /api/stores/grade-from-defaults` fills `retailers.tier` **only
+  where NULL**, per chain, from a `{chain: tier}` map (the `chain_scores_final.csv` values). It **never
+  overwrites** an existing tier, so deliberate per-store/owner calls (e.g. TJ Maxx=3) are preserved.
+  Applied: **6,864** stores graded across **31** chains — almost all grocery banners the original stamp
+  missed (Publix t3; Kroger/Safeway/Albertsons/Vons/Ralphs/Jewel-Osco/Fred Meyer… t4; kiosk-host
+  Pavilions/Gelson's/Star Market t5). Idempotent (re-run fills 0); spot-checked in prod.
+- **Orphans — false alarm** — new `POST /api/stores/relink-orphans` (re-attaches a `chainId`-null store
+  to the chain that is the longest whole-word prefix of its name) reported **0** orphans in prod. The
+  "Burlington Jewelry District" I'd flagged is `chainId 27` with a working logo + tier 3 — the
+  `chain:null` in the consumer payload is cosmetic. Endpoint kept as an idempotent safety net.
+- **Still open (owner call):** ~38 DB chains aren't in the scoring CSV → their stores stay `tier:null`
+  (need a tier decision). 2 CSV chains unmatched by name (Learning Express, Macy's (Toys R Us)). Thrift
+  logos (Goodwill/Salvation Army/Savers/Unique) still need assets + image tooling (`docs/STORE_LOGOS.md`).
+
 ## 2026-06-19 — website: result-page overhaul, i18n, calendar, "no green", schedule modal
 Large consumer pass on `public/checkit.html` (shipped to the deploy branch). Current UI state:
 - **Verdict card** — store identity is the dominant top (bigger logo + name + one-line address); the verdict
