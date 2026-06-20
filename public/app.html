@@ -605,6 +605,11 @@
       <div class="grow"><div class="name" data-tip="Streams call audio + a hang-up button to every customer. OFF = testing tool only (comp accounts like yours always have it).">Customers hear calls live</div></div>
       <button id="llToggle" class="ghost" onclick="toggleLiveListen()">…</button>
     </div></div>
+    <div class="card">
+      <div class="name" data-tip="The full Voice → Designer workflow (voice, persona, script & rules) used for every call — unless a chain or a store has its own. Build workflows in Voice → Designer (Step 7).">Default workflow</div>
+      <div class="meta" style="margin:2px 0 10px">Applied to every call unless a chain or store overrides it. Per-chain is set on the Phone Trees list; per-store on the store row.</div>
+      <select id="set_default_wf" onchange="saveDefaultWorkflow()"><option value="">Loading…</option></select>
+    </div>
   </section>
 
   <section id="designer">
@@ -958,7 +963,7 @@ const NAV_GROUPS={
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwIntel();loadGwKiosks();}, bail:()=>loadBail(), statuses:()=>loadStatusReg(), results:()=>loadResults() };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwIntel();loadGwKiosks();}, bail:()=>loadBail(), statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -1351,7 +1356,8 @@ async function saveWorkflow(){ const name=v('wf_name'); if(!name){ toast('Name t
   let WFS=[]; const s=await api('/api/settings')||{}; try{ WFS=JSON.parse(s.vt_workflows||'[]'); }catch(e){}
   const i=WFS.findIndex(w=>w.name===name); if(i>=0) WFS[i]=wf; else WFS.push(wf);
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WFS)})});
-  document.getElementById('wf_msg').textContent = (r&&!r.error)?'Saved — assign it in Calls → Settings.':'Saved locally (backend wiring pending).'; toast('Workflow saved'); }
+  if(window.WF) WF.list=WFS;  // keep the assignment pickers (Settings/Chains/Stores) in sync without a reload
+  document.getElementById('wf_msg').textContent = (r&&!r.error)?'Saved — set it as the default in Calls → Settings, or assign it per chain/store.':'Could not save.'; toast('Workflow saved'); }
 async function vsSetActive(){
   const id=document.getElementById('vs_select').value; if(!id) return;
   const r=await api('/api/voices/active',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({voiceId:id})});
@@ -1627,6 +1633,7 @@ function renderRetailers(){
       ${statusBadge(r)}
     </div>
     <div class="ractions">
+      ${WF.list.length?(()=>{const inh=(r.chainId&&WF.chains[r.chainId])||WF.def||'';return `<select onchange="setStoreWorkflow(${r.id},this.value)" title="Workflow for this store (overrides chain + default)">${wfOptions(WF.stores[r.id]||'', inh?('Inherit · '+inh):'Inherit · no default')}</select>`;})():''}
       <select id="cn_${r.id}"><option value="" disabled selected>Category</option>${CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
       <button class="act" onclick="callNow(${r.id})">${ICO('phone',15)} Call now</button>
     </div>
@@ -1729,6 +1736,7 @@ function renderChainList(){
         ${ch.hasTree?'<span class="chip-sm">tree</span>':''}${ch.muted?'<span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.12)">muted</span>':''}
         <div class="meta" style="font-size:11.5px">${PATH_LBL[ch.answerPath]||'unclassified'}${ch.calls30d?` · ${ch.calls30d} calls/30d · ${ch.confirms30d} confirms`:' · no calls yet'}</div>
       </div>
+      ${WF.list.length?`<select onchange="setChainWorkflow(${ch.id},this.value)" style="font-size:12px;padding:5px 8px;max-width:140px" title="Workflow for every ${esch(ch.name)} store">${wfOptions(WF.chains[ch.id]||'', WF.def?('Default · '+WF.def):'Default')}</select>`:''}
       <button class="ghost" style="font-size:12px;padding:6px 12px;${ch.muted?'color:var(--green);border-color:rgba(74,222,128,.4)':''}" onclick="quickChain(${ch.id},'muted',${!ch.muted})">${ch.muted?'Unmute':'Mute'}</button>
       <button class="ghost" style="font-size:12px;padding:6px 10px" onclick="quickChain(${ch.id},'repackOnly',${!ch.repackOnly})">${ch.repackOnly?'Not repack':'Repack'}</button>
     </div>`).join('');
@@ -2374,6 +2382,44 @@ async function toggleLiveListen(){
   await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{liveListen:!on}})});
   await loadLiveListen(); toast(!on?'Customers now hear calls live':'Live audio is testing-only again');
 }
+// Voice → Designer workflows + the cascade assignment (default → chain → store). The library is the
+// vt_workflows setting; assignments are name maps the call bridge resolves per call (store→chain→default).
+let WF={list:[],def:'',chains:{},stores:{}};
+async function loadWorkflows(){
+  const s=await api('/api/settings')||{};
+  try{ WF.list=JSON.parse(s.vt_workflows||'[]')||[]; }catch(e){ WF.list=[]; }
+  WF.def=s.vt_default_workflow||'';
+  try{ WF.chains=JSON.parse(s.vt_chain_workflows||'{}')||{}; }catch(e){ WF.chains={}; }
+  try{ WF.stores=JSON.parse(s.vt_store_workflows||'{}')||{}; }catch(e){ WF.stores={}; }
+}
+// <option> list for a workflow picker. placeholder = the "fall back to the level above" choice.
+function wfOptions(sel,placeholder){
+  return `<option value="">${esch(placeholder||'—')}</option>`+WF.list.map(w=>`<option value="${esch(w.name)}"${w.name===sel?' selected':''}>${esch(w.name)}</option>`).join('');
+}
+// Settings → the one global default workflow.
+async function loadDefaultWorkflow(){
+  await loadWorkflows();
+  const sel=document.getElementById('set_default_wf'); if(!sel) return;
+  if(!WF.list.length){ sel.innerHTML='<option value="">No workflows yet — build one in Voice → Designer (Step 7)</option>'; sel.disabled=true; return; }
+  sel.disabled=false; sel.innerHTML=wfOptions(WF.def,'No default (use the global voice/opener settings)');
+}
+async function saveDefaultWorkflow(){
+  WF.def=document.getElementById('set_default_wf').value;
+  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:WF.def})});
+  toast((r&&!r.error)?(WF.def?('Default workflow: '+WF.def):'Default workflow cleared'):'Could not save');
+}
+// per-chain assignment (Phone Trees / Mute list) — applies to every store in the chain.
+async function setChainWorkflow(id,name){
+  if(name) WF.chains[id]=name; else delete WF.chains[id];
+  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({chainWorkflows:JSON.stringify(WF.chains)})});
+  toast((r&&!r.error)?'Chain workflow saved':'Could not save');
+}
+// per-store override (store row) — beats the chain + default.
+async function setStoreWorkflow(id,name){
+  if(name) WF.stores[id]=name; else delete WF.stores[id];
+  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({storeWorkflows:JSON.stringify(WF.stores)})});
+  toast((r&&!r.error)?'Store workflow saved':'Could not save');
+}
 const v = (id) => document.getElementById(id).value.trim();
 
 // --- Growth & Policy ---
@@ -2750,7 +2796,7 @@ async function agentSend(){
     const sec=SECTION_GROUP[want]?want:'dash';
     showGroup(SECTION_GROUP[sec], sec); })();
   await Promise.all([loadCatalog()]);
-  await Promise.all([loadStoreIntel(),loadResults(),loadSchedules(),loadZones(),loadSettings(),loadLiveStrip(),loadCredits(),loadTestStores(),loadBail(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen()]);
+  await Promise.all([loadStoreIntel(),loadResults(),loadSchedules(),loadZones(),loadSettings(),loadLiveStrip(),loadCredits(),loadTestStores(),loadBail(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen(),loadWorkflows()]);
   const sp=new URLSearchParams(location.search);
   restorePersist();
   decorateChrome();

@@ -590,7 +590,7 @@ function chainLogoInfo(name: string | null | undefined): { url: string | null; w
   const f = chainLogoFile(name);
   if (!f) return { url: null, wide: false, dark: false };
   const m = logoMeta()[f] || { w: 0, d: 0 };
-  return { url: `/logos/chains/${f}?v=42`, wide: m.w === 1, dark: m.d === 1 };
+  return { url: `/logos/chains/${f}?v=49`, wide: m.w === 1, dark: m.d === 1 };
 }
 // Owner preview: every chain logo rendered EXACTLY as the store list renders it (same tile,
 // plate + wide handling from _meta.json) at real size and 2x — judge phone clarity without
@@ -603,8 +603,8 @@ app.get("/logo-wall", (c) => {
     const plate = m.d === 1 ? "background:#f2f2f5;border-color:rgba(255,255,255,.28)" : "";
     const big = m.w === 1 ? "width:60px;height:auto;max-height:34px" : "max-width:52px;max-height:40px";
     const real = m.w === 1 ? "width:44px;height:auto;max-height:34px" : "width:42px;height:42px";
-    return `<div style="width:88px"><div style="width:72px;height:72px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);display:grid;place-items:center;margin:0 auto;${plate}"><img src="/logos/chains/${f}?v=41" style="object-fit:contain;${big}"></div>
-    <div style="width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.06);display:grid;place-items:center;margin:7px auto 0;${plate}"><img src="/logos/chains/${f}?v=41" style="object-fit:contain;${real}"></div>
+    return `<div style="width:88px"><div style="width:72px;height:72px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);display:grid;place-items:center;margin:0 auto;${plate}"><img src="/logos/chains/${f}?v=49" style="object-fit:contain;${big}"></div>
+    <div style="width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.06);display:grid;place-items:center;margin:7px auto 0;${plate}"><img src="/logos/chains/${f}?v=49" style="object-fit:contain;${real}"></div>
     <div style="font-size:9px;color:#8a8a98;text-align:center;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.replace(/\.(png|webp|svg)$/i, "")}</div></div>`;
   };
   return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="background:#0C0C12;font-family:-apple-system,sans-serif;color:#fff;padding:20px">
@@ -1965,6 +1965,13 @@ app.patch("/api/settings", async (c) => {
   if (b.openerVariants !== undefined) await setSetting("vt_opener_variants", String(b.openerVariants || ""));
   if (b.openerLibrary !== undefined) await setSetting("vt_opener_library", String(b.openerLibrary || ""));
   if (b.voicePool !== undefined) await setSetting("vt_voice_pool", String(b.voicePool || ""));
+  // Voice → Designer library + cascade assignment. The "Save workflow"/"Save persona" steps write
+  // these; the call bridge resolves a store's workflow as store → chain → default and applies it.
+  if (b.personas !== undefined) await setSetting("vt_personas", String(b.personas || ""));
+  if (b.workflows !== undefined) await setSetting("vt_workflows", String(b.workflows || ""));
+  if (b.defaultWorkflow !== undefined) await setSetting("vt_default_workflow", String(b.defaultWorkflow || ""));
+  if (b.chainWorkflows !== undefined) await setSetting("vt_chain_workflows", String(b.chainWorkflows || ""));
+  if (b.storeWorkflows !== undefined) await setSetting("vt_store_workflows", String(b.storeWorkflows || ""));
   return c.json(await allSettings());
 });
 
@@ -2503,7 +2510,7 @@ app.get("/api/conversation/:cid", async (c) => {
 });
 // Custom telephony bridge (milestone 1): place OUR own Twilio call; its audio streams to our WS.
 // Place a bridged Twilio call (our number -> destination) running the restock agent. Returns the room.
-async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number }): Promise<{ room?: string; error?: string }> {
+async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number }): Promise<{ room?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
@@ -2511,7 +2518,7 @@ async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, str
   // Dial AS the customer's verified number when we have it (phone-first model); else the house line.
   const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const pol = await getPolicy();
-  setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, connectOnHuman: pol.flags.connectOnHuman, holdMaxSeconds: pol.bail.holdMaxSeconds });
+  setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, connectOnHuman: opts?.connectOnHuman ?? pol.flags.connectOnHuman, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds });
   const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${RAILWAY_HOST}/twiml/bridge?room=${room}` });
   // Hard cost cap: Twilio kills the call at TimeLimit seconds, no exceptions — the profit guarantee.
   if (opts?.timeLimitSec && opts.timeLimitSec > 0) body.set("TimeLimit", String(Math.floor(opts.timeLimitSec)));
@@ -2578,7 +2585,7 @@ app.post("/api/bridge/call", async (c) => {
     clarification: "", phone_tree: b.phoneTree || "", special_instructions: "",
     voicemail_policy: "If you reach a personal voicemail with no menu, hang up without leaving a message.",
     personality: "", opening_line: opener.replace(/\{category\}/g, category), other_categories: "", ask_shipment_day: "",
-  }, undefined, b.dtmf || null);
+  }, undefined, b.dtmf || null, { connectOnHuman: b.connectOnHuman, connectAtSec: b.connectAtSec, timeLimitSec: b.timeLimitSec });
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: RAILWAY_HOST });
 });

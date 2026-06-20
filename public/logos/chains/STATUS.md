@@ -106,32 +106,36 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Lowe's | blue gable | 🔧 | their real blue gable mark, trimmed bigger |
 | Macy's | red star | 🔧 | their star mark, slight shrink |
 
-## Chunk 6a — mariano_s → menards  🔧 awaiting owner approval
+## Chunk 6a — mariano_s → menards  ✅ LOCKED (owner-approved; switched to ACTUAL logos)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Mariano's | M + green leaf | 🔧 | filled the white inside the leaf with green |
-| Marshalls | white "M" mark | 🔧 | de-boxed the blue app icon → white M (lighter) |
-| MCX | "MCX" mark | 🔧 | clean white MCX (no real logo source exists) |
-| Meijer | "meijer" wordmark | 🔧 | their red wordmark, white stripped out of the letters |
-| Menards | bold "M" mark | 🔧 | their real "M" from MENARDS, dropped the colorful stripe; compact so it's bigger |
+| Mariano's | M + green leaf | ✅ | actual emblem (app icon), de-boxed, leaf filled green, reduced |
+| Marshalls | blue wordmark | ✅ | actual Marshalls wordmark, clean brighter blue, fills width |
+| MCX | MCCS mark | ✅ | MCCS (MCX's parent — no MCX-specific logo exists); owner accepted |
+| Meijer | "meijer" wordmark | ✅ | their red wordmark, white stripped from letters |
+| Menards | MENARDS + stripe | ✅ | actual logo with the colorful stripe, fills width |
 
-## Chunk 6b — michaels → ollie_s  ⬜
+## Chunk 6b — michaels → ollie_s  🔧 awaiting owner approval
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Michaels | wordmark | ⬜ | |
-| Micro Center | wordmark | ⬜ | drop "computers & electronics" tagline |
-| NEX (Navy Exchange) | mark | ⬜ | |
-| Office Depot OfficeMax | 2 lines | ⬜ | two lines; drop "OfficeMax" |
-| Ollie's Bargain Outlet | wordmark | ⬜ | |
+| Michaels | red script | 🔧 | their real wordmark (official vector, no box, no tagline) |
+| Micro Center | "MICRO CENTER" | 🔧 | their blocky font, no "computers & electronics" tagline |
+| NEX (Navy Exchange) | anchor + "NEX" | 🔧 | official vector; dropped the "/ MCX" half |
+| Office Depot | "Office / DEPOT" | 🔧 | official vector split two lines (Office red, DEPOT white); no OfficeMax, no tagline |
+| Ollie's Bargain Outlet | mascot | 🔧 | their Ollie mascot, slight shrink |
 
-## Chunk 7 — pavilions → scheels  ⬜
+## Chunk 7a — pavilions → ralphs  🔧 awaiting owner approval
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Pavilions | wordmark | ⬜ | **too small**; use THEIR logo (don't make one up) |
-| Pick 'n Save | 2 lines | ⬜ | "Pick 'n" on one line, "Save" below |
-| Publix | wordmark | ⬜ | |
-| QFC | Q-with-crown mark | ⬜ | the Q with crown |
-| Ralphs | wordmark | ⬜ | |
+| Pavilions | white serif wordmark | 🔧 | their real wordmark (official vector), recolored white + stretched taller (was too small) |
+| Pick 'n Save | "PICK 'N / SAVE" | 🔧 | red, two lines (app icon is just a "P") |
+| Publix | green "p" mark | 🔧 | de-boxed app icon → white circle + green p |
+| QFC | Q-with-crown | 🔧 | their Q-with-crown mark |
+| Ralphs | red "R" mark | 🔧 | de-boxed their red R from the app icon |
+
+## Chunk 7b — randalls → scheels  ⬜
+| Logo | Treatment | Status | Notes |
+|---|---|---|---|
 | Randalls | wordmark | ⬜ | **too small**; lighten; remove white in letters |
 | Ross Dress for Less | wordmark | ⬜ | white lettering, readable (lightened blue done before) |
 | Safeway | wordmark | ⬜ | |
