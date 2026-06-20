@@ -17,6 +17,7 @@ import type {
   StartCallResult,
   VoiceProvider,
 } from "./provider";
+import { PREMIUM_FOLLOWUP, FREE_NO_FOLLOWUP } from "./prompts";
 
 export interface ElevenLabsConfig {
   apiKey: string;
@@ -62,6 +63,8 @@ export class ElevenLabsProvider implements VoiceProvider {
             // Kiosk-only store: the prompt branches on this to ask about the vending kiosk
             // (working/stocked) instead of a shelf shipment. "" = normal shelf check.
             kiosk_mode: p.kioskMode ? "true" : "",
+            // Premium gate: subscribers' calls ask the product-type follow-up; free calls end fast.
+            premium_followup: p.premiumFollowup === false ? FREE_NO_FOLLOWUP : PREMIUM_FOLLOWUP,
           },
         },
       }),

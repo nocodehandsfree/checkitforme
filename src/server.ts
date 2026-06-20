@@ -35,6 +35,7 @@ import { createSchedule, listSchedulesDetailed, deleteSchedule, customerSchedule
 import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, retailerMap, invalidateRefCache } from "./refcache";
 import { haversineMi, bboxAround } from "./geo";
 import { ingestSignals, recentStockNear, latestForRetailer } from "./stock/signals";
+import { classifyVerdict, reconcile, productDetailLabel } from "./voice/verdict";
 import { seedStockCheckIntel } from "./stock/intel";
 import { seedSellMethods } from "./stock/sellmethods";
 import { r2Config, presignPut, photoKey } from "./r2";
@@ -53,6 +54,25 @@ async function closedGate(retailerId: number): Promise<{ error: string; label: s
 async function isFinderPrivate(acct: { subscription?: string | null } | null | undefined): Promise<boolean> {
   const pol = await getPolicy();
   return !!(acct && acct.subscription === "active" && pol.finds.subscriberPrivateAlways);
+}
+
+/** Optional-auth comp check for public endpoints: anonymous visitors return false with no token
+ *  verification overhead; a signed-in master/comp account is recognized so the owner-only demo store
+ *  ("Fun") surfaces for the owner only. */
+async function requesterIsComp(authHeader?: string): Promise<boolean> {
+  if (!authHeader) return false;
+  try {
+    const u = await verifyClerkToken(authHeader);
+    if (!u) return false;
+    const a = await getAccount(u.id, u.email);
+    return isCompAccount(a) || isComp(u.email || undefined);
+  } catch { return false; }
+}
+
+/** Is this an owner-only demo store ("Fun")? Used to 404 it for everyone but the master account. */
+async function isOwnerOnlyStore(retailerId: number): Promise<boolean> {
+  const r = (await db.select({ ownerOnly: retailers.ownerOnly }).from(retailers).where(eq(retailers.id, retailerId)))[0];
+  return !!r?.ownerOnly;
 }
 import { getAccount, getAccountByPhone, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, SUB, PACKS } from "./billing";
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
@@ -656,6 +676,7 @@ app.get("/pub/stores", async (c) => {
   // openState computation (nothing reads it here) so it stays fast across 100k rows.
   return c.json(rs
     .filter((r) => r.phone && r.active !== false)
+    .filter((r) => !r.ownerOnly) // owner-only demo store ("Fun") never appears in the admin logo map
     .filter((r) => !(r.chainId && mutedChains.has(r.chainId)))
     .map((r) => ({ id: r.id, name: r.name, location: r.location, storeType: (r.chainId && types.get(r.chainId)) || "Other",
       ...((l)=>({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo((r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0])),
@@ -711,7 +732,10 @@ app.get("/pub/stores/near", async (c) => {
       .where(and(eq(callResults.confirmed, true), eq(callResults.status, "completed"), gte(callResults.completedAt, inStockSince)))
     ).map((x) => x.rid),
   );
+  // Owner-only demo store ("Fun") surfaces only for the signed-in master account.
+  const comp = await requesterIsComp(c.req.header("Authorization"));
   const all = rows
+    .filter((r) => comp || !r.ownerOnly)
     .filter((r) => !(r.chainId && mutedChains.has(r.chainId)))
     .filter((r) => !mode
       || (mode === "call" && callable(r))
@@ -877,7 +901,9 @@ app.get("/pub/best-bet", async (c) => {
     gte(retailers.lat, bb.latMin), lte(retailers.lat, bb.latMax),
     gte(retailers.lng, bb.lngMin), lte(retailers.lng, bb.lngMax),
   )).limit(1500);
+  const comp = await requesterIsComp(c.req.header("Authorization"));
   const cands = near
+    .filter((r) => comp || !r.ownerOnly) // owner-only demo store ("Fun") only for the master account
     .filter((r) => r.phone && r.active !== false)
     .filter((r) => r.sellsPacks !== false) // "most likely to have it on the SHELF" — exclude kiosk-only stores (e.g. Pavilions)
     .filter((r) => openState(r.hours, r.timezone).open !== false) // open or unknown, never closed
@@ -1548,7 +1574,24 @@ app.post("/pub/check-live", async (c) => {
   return c.json({ room: r.room, wsHost: RAILWAY_HOST });
 });
 app.get("/pub/result/:cid", async (c) => {
-  const o = await provider.getConversation(c.req.param("cid"));
+  const cid = c.req.param("cid");
+  const o = await provider.getConversation(cid);
+  // Prefer the FINALIZED row once it exists — it carries the consensus verdict (the reconciled
+  // status_key/confirmed) and the captured product detail, which the live outcome does not. While the
+  // call is still in flight, fall back to the live outcome so the consumer sees progress immediately.
+  const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
+  if (row && row.status === "completed") {
+    return c.json({
+      ...(o ?? {}),
+      status: row.status,
+      confirmed: row.confirmed,
+      statusKey: row.statusKey,
+      productDetail: row.productDetail,      // e.g. "3-pack blister · Surging Sparks" — null if not captured
+      shipmentDay: row.shipmentDayHeard ?? (o?.shipmentDay ?? null),
+      summary: row.summary ?? o?.summary ?? "",
+      transcript: row.transcript ?? o?.transcript ?? "",
+    });
+  }
   return c.json(o ?? { status: "in_progress", transcript: "", summary: "" });
 });
 // Live, mid-call transcript: returns whatever the agent + clerk have said SO FAR (no audio needed).
@@ -1620,6 +1663,8 @@ app.post("/app/check", async (c) => {
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
+  // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
+  if (!isCompAccount(a) && !isComp(u.email || undefined) && await isOwnerOnlyStore(Number(retailerId))) return c.json({ error: "not_found" }, 404);
   if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
   try {
     const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a), kioskMode });
@@ -1635,6 +1680,8 @@ app.post("/app/check-live", async (c) => {
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
+  // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
+  if (!isCompAccount(a) && !isComp(u.email || undefined) && await isOwnerOnlyStore(Number(b.retailerId))) return c.json({ error: "not_found" }, 404);
   if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
   const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
@@ -1708,6 +1755,7 @@ app.get("/app/history", async (c) => {
       cid: r.providerCallId, storeId: r.retailerId, storeName: sName,
       categoryId: r.categoryId, category: cats.get(r.categoryId) || "",
       ts: (r.startedAt || 0) * 1000, status: r.status, confirmed: r.confirmed,
+      statusKey: r.statusKey, productDetail: r.productDetail, shipmentDay: r.shipmentDayHeard,
       logoUrl: l.url, logoWide: l.wide, logoDark: l.dark,
     };
   }));
@@ -2543,15 +2591,27 @@ app.post("/webhooks/elevenlabs", async (c) => {
   try {
     const o = await provider.parseWebhook(c.req.raw);
     if (o.callId) {
+      const row = (await db.select().from(callResults).where(eq(callResults.id, o.callId)))[0];
+      // Consensus second read — keep the webhook verdict + billing identical to the poller (ingestPending):
+      // two non-conflicting reads → a hard verdict (charge); conflict/ambiguity → "no clear answer", no charge.
+      let confirmed = o.confirmed, statusKey = o.statusKey;
+      let definitive = o.confirmed === true || o.confirmed === false;
+      let productDetail: string | null = null;
+      if (o.status === "completed") {
+        const label = row ? (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label : undefined;
+        const second = await classifyVerdict(o.transcript, label || "the product");
+        const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, second);
+        confirmed = consensus.confirmed; statusKey = consensus.statusKey; definitive = consensus.definitive;
+        productDetail = productDetailLabel(second);
+      }
       await db.update(callResults).set({
-        status: o.status, confirmed: o.confirmed, shipmentDayHeard: o.shipmentDay,
+        status: o.status, confirmed, statusKey, shipmentDayHeard: o.shipmentDay, productDetail,
         summary: o.summary, transcript: o.transcript, completedAt: Math.floor(Date.now() / 1000),
       }).where(eq(callResults.id, o.callId));
-      const row = (await db.select().from(callResults).where(eq(callResults.id, o.callId)))[0];
       if (o.shipmentDay && row) await db.update(retailers).set({ shipmentDay: o.shipmentDay }).where(eq(retailers.id, row.retailerId));
       // Server-side billing: charge the finder once on a definitive answer (idempotent — the poller
       // may also try; charged_at guarantees exactly one charge across both paths).
-      if (row?.finderUserId && o.status === "completed" && (o.confirmed === true || o.confirmed === false)) {
+      if (row?.finderUserId && o.status === "completed" && definitive) {
         await chargeCallOnce(o.callId, row.finderUserId);
       }
     }
