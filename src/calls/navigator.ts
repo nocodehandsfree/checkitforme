@@ -19,6 +19,7 @@ export interface NavSession {
   startMs: number; steps: NavStep[]; turns: number; model?: string; hint?: string;
   barge?: { plan: Array<{ action: string; value: string; at: number }> };
   reactivePress?: { digit: string; max: number; count: number };
+  lastActTurn?: number; escaped?: boolean;
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
   humanAtSec: number | null; confidence: number; callSid?: string; recipe: NavRecipe | null;
@@ -127,16 +128,32 @@ export async function navStep(id: string, speech: string): Promise<string> {
   if (d.type) s.type = d.type;
   s.confidence = d.confidence;
   if (d.action === "human") { s.humanAtSec = atSec; finish(s, "human"); return twiml(`<Hangup/>`); } // stop at the transfer/human — hang up WITHOUT engaging a real employee
-  if (d.action === "fail") { finish(s, "failed"); return twiml(`<Hangup/>`); }
   if (d.action === "press" && d.value) {
     const digits = d.value.replace(/[^0-9*#]/g, "").slice(0, 6);
     s.steps.push({ who: "us", text: `pressed ${digits}`, atSec, action: "press", value: digits });
+    s.lastActTurn = s.turns;
     return twiml(`<Play digits="${digits}"/>${gather(id)}`);
   }
   if (d.action === "say" && d.value) {
     s.steps.push({ who: "us", text: `said "${d.value}"`, atSec, action: "say", value: d.value });
+    s.lastActTurn = s.turns;
     return twiml(`<Say voice="Polly.Joanna">${esc(d.value)}</Say>${gather(id)}`);
   }
+  // AUTO-ESCAPE (hands-free): the model stalled on a deflecting system. After 2 prompts with no
+  // progress, stop trusting it and HAMMER 0 for the operator on every prompt until a human answers —
+  // passivity is no longer possible, and no per-store hint is needed.
+  const stalled = s.turns - (s.lastActTurn ?? 0);
+  if (s.escaped || stalled >= 2) {
+    s.escaped = true;
+    if (speech && speech.trim()) {
+      s.type = "keypad";
+      s.steps.push({ who: "us", text: "pressed 0 (auto-operator)", atSec, action: "press", value: "0" });
+      s.lastActTurn = s.turns;
+      return twiml(`<Play digits="0"/>${gather(id)}`);
+    }
+    return twiml(gather(id)); // wait for the next prompt, then press 0
+  }
+  if (d.action === "fail") { finish(s, "failed"); return twiml(`<Hangup/>`); }
   return twiml(gather(id)); // wait: keep listening
 }
 
