@@ -40,9 +40,14 @@ const twTok = () => process.env.TWILIO_AUTH_TOKEN;
 const twVerify = () => process.env.TWILIO_VERIFY_SERVICE_SID;
 const basic = () => "Basic " + Buffer.from(`${twSid()}:${twTok()}`).toString("base64");
 
+// Staging sign-up bypass: a fixed code that "verifies" any number WITHOUT sending a real SMS, so the
+// whole consumer flow (sign-up → logged-in UI) can be reviewed on a preview with zero telephony cost.
+// Only ever honored when STAGING=1; prod always uses real Twilio Verify.
+const STAGING_LOGIN_CODE = process.env.STAGING_LOGIN_CODE || "000000";
+
 /** Send an SMS verification code to the number (browser can auto-fill it via WebOTP). */
 export async function startPhoneVerify(phone: string): Promise<{ ok: boolean; error?: string }> {
-  if (!config.callsEnabled) return { ok: false, error: "calls_disabled_preview" }; // no real SMS on a UI-only preview
+  if (config.staging.on) return { ok: true }; // staging preview: no real SMS — verify with STAGING_LOGIN_CODE
   const vsid = twVerify();
   if (!vsid || !twSid()) return { ok: false, error: "verify_not_configured" };
   const r = await fetch(`https://verify.twilio.com/v2/Services/${vsid}/Verifications`, {
@@ -54,6 +59,7 @@ export async function startPhoneVerify(phone: string): Promise<{ ok: boolean; er
 }
 /** Confirm the SMS code. true = the number is verified. */
 export async function checkPhoneVerify(phone: string, code: string): Promise<boolean> {
+  if (config.staging.on) return code === STAGING_LOGIN_CODE; // staging preview: accept the fixed code only
   const vsid = twVerify();
   if (!vsid) return false;
   const r = await fetch(`https://verify.twilio.com/v2/Services/${vsid}/VerificationCheck`, {
