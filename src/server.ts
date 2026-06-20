@@ -1351,6 +1351,47 @@ app.post("/api/stores/quarantine-cvs-in-target", async (c) => {
   invalidateRefCache();
   return c.json({ moved: ids.length, intoChain: "CVS Pharmacy at Target", muted: true, chainId: q.id, sample: matched.slice(0, 12) });
 });
+// Re-link orphan stores (active rows with chainId NULL) to an existing chain by their display name.
+// An orphan has no chain → no logo, no chain tier, no phone-tree default. But the name still leads with
+// the brand ("Burlington Jewelry District" → "Burlington"), so we re-attach by matching the LONGEST
+// chain name that is a whole-word prefix of the store name (so "Barnes & Noble" wins over "Barnes").
+// Apostrophes/periods are normalized away ("Sam's Club" ≡ "Sams Club"). Hidden "_…" buckets (merged /
+// quarantined chains) are never a target. No prefix match → the row is left alone. dryRun reports the
+// counts + a per-chain breakdown + samples so the match set can be eyeballed before applying.
+app.post("/api/stores/relink-orphans", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const norm = (s: string) => (s || "").toLowerCase().replace(/[.'‘’]/g, "").replace(/\s+/g, " ").trim();
+  const cand = (await db.select({ id: chains.id, name: chains.name }).from(chains))
+    .filter((ch) => ch.name && !ch.name.startsWith("_"))
+    .map((ch) => ({ id: ch.id, name: ch.name as string, key: norm(ch.name as string) }))
+    .filter((ch) => ch.key.length >= 2)
+    .sort((a, z) => z.key.length - a.key.length); // longest first → most specific match wins
+  const matchChain = (storeName: string) => {
+    const n = norm(storeName);
+    for (const ch of cand) if (n === ch.key || n.startsWith(ch.key + " ")) return ch;
+    return null;
+  };
+  const orphans = await db.select({ id: retailers.id, name: retailers.name }).from(retailers)
+    .where(and(eq(retailers.active, true), isNull(retailers.chainId)));
+  const byChain = new Map<string, { chainId: number; n: number; sample: string[] }>();
+  const groups = new Map<number, number[]>();
+  const unmatched: string[] = [];
+  for (const o of orphans) {
+    const m = matchChain(o.name);
+    if (!m) { if (unmatched.length < 30) unmatched.push(o.name); continue; }
+    const arr = groups.get(m.id) ?? []; arr.push(o.id); groups.set(m.id, arr);
+    const g = byChain.get(m.name) || { chainId: m.id, n: 0, sample: [] };
+    g.n++; if (g.sample.length < 3) g.sample.push(o.name);
+    byChain.set(m.name, g);
+  }
+  const linked = [...groups.values()].reduce((s, a) => s + a.length, 0);
+  const breakdown = [...byChain.entries()].map(([chain, v]) => ({ chain, n: v.n, sample: v.sample })).sort((a, z) => z.n - a.n);
+  if (b.dryRun) return c.json({ dryRun: true, orphans: orphans.length, willLink: linked, unmatched: unmatched.length, unmatchedSample: unmatched, breakdown: breakdown.slice(0, 50) });
+  for (const [chainId, ids] of groups)
+    for (let i = 0; i < ids.length; i += 500) await db.update(retailers).set({ chainId }).where(inArray(retailers.id, ids.slice(i, i + 500)));
+  invalidateRefCache();
+  return c.json({ orphans: orphans.length, linked, unmatched: unmatched.length, chains: breakdown.length, breakdown: breakdown.slice(0, 50) });
+});
 // Kiosk overlay: reconcile the official TPCi vending list against our stores. For each machine, flag
 // the matching store (same chain, within ~0.3 mi) as a tier-5 kiosk (hasKiosk:true, tier:5) — leaving
 // sellsPacks untouched so a store that also sells on the shelf still shows in both tabs. Machines at a
