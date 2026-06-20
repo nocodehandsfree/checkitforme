@@ -2524,12 +2524,13 @@ app.post("/api/bridge/call", async (c) => {
   const category = b.category || "Pokémon";
   const opener = (await getSetting("vt_opening")) || "Heyy! I was just checking to see if you guys got any {category} in?";
   // Ad-hoc dial to an arbitrary number (no store record) — minimal vars, generic IVR handling.
+  // Optional dtmf ("digit@seconds,…") lets the bridge press a known keypad path while the agent talks.
   const r = await placeBridgeCall(b.toNumber, {
     internal_call_id: "0", category, retailer_name: b.storeName || "the store", location: "",
     clarification: "", phone_tree: b.phoneTree || "", special_instructions: "",
     voicemail_policy: "If you reach a personal voicemail with no menu, hang up without leaving a message.",
     personality: "", opening_line: opener.replace(/\{category\}/g, category), other_categories: "", ask_shipment_day: "",
-  });
+  }, undefined, b.dtmf || null);
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: RAILWAY_HOST });
 });
