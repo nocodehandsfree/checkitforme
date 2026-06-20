@@ -18,6 +18,7 @@ import type {
   VoiceProvider,
 } from "./provider";
 import { PREMIUM_FOLLOWUP, FREE_NO_FOLLOWUP } from "./prompts";
+import { assertCallsEnabled } from "../config";
 
 export interface ElevenLabsConfig {
   apiKey: string;
@@ -36,6 +37,7 @@ export class ElevenLabsProvider implements VoiceProvider {
   }
 
   async startCall(p: StartCallParams): Promise<StartCallResult> {
+    assertCallsEnabled(); // no real store calls on a UI-only preview deploy
     const res = await fetch(`${BASE}/twilio/outbound-call`, {
       method: "POST",
       headers: this.headers(),

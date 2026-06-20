@@ -4,6 +4,7 @@
 // It reaches a human, records the exact path + timing as a "recipe", then politely hangs up
 // (training mode). ElevenLabs/Sonnet is never used here: this IS "everything cheap until human".
 import { llm } from "../llm";
+import { config } from "../config";
 
 const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
 // Cheapest + fastest brain that drives the IVR — Groq Llama 3.1 8B via Helicone (~200ms vs ~650ms
@@ -182,6 +183,7 @@ function finish(s: NavSession, status: "human" | "failed") {
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
 export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }): Promise<{ id?: string; error?: string }> {
+  if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";

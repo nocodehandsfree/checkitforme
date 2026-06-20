@@ -3,6 +3,7 @@
 // our DB, keyed by the phone. Built ALONGSIDE Clerk (the token verifier accepts either) so we can
 // cut over and remove Clerk once this is proven.
 import { SignJWT, jwtVerify } from "jose";
+import { config } from "./config";
 
 const enc = new TextEncoder();
 const secret = () => enc.encode(process.env.SESSION_SECRET || "dev-insecure-secret-change-me");
@@ -41,6 +42,7 @@ const basic = () => "Basic " + Buffer.from(`${twSid()}:${twTok()}`).toString("ba
 
 /** Send an SMS verification code to the number (browser can auto-fill it via WebOTP). */
 export async function startPhoneVerify(phone: string): Promise<{ ok: boolean; error?: string }> {
+  if (!config.callsEnabled) return { ok: false, error: "calls_disabled_preview" }; // no real SMS on a UI-only preview
   const vsid = twVerify();
   if (!vsid || !twSid()) return { ok: false, error: "verify_not_configured" };
   const r = await fetch(`https://verify.twilio.com/v2/Services/${vsid}/Verifications`, {
@@ -67,6 +69,7 @@ export async function checkPhoneVerify(phone: string, code: string): Promise<boo
 /** Kick off Twilio's caller-ID verification call; returns the code to show the user (they key it
  *  in when Twilio calls them). This is the ONLY way to use an unowned number as caller ID. */
 export async function startCallerIdVerify(phone: string): Promise<{ ok: boolean; validationCode?: string; error?: string }> {
+  if (!config.callsEnabled) return { ok: false, error: "calls_disabled_preview" }; // no real verification call on a UI-only preview
   const sid = twSid();
   if (!sid) return { ok: false, error: "twilio_not_configured" };
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/OutgoingCallerIds.json`, {
