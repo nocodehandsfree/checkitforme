@@ -4,7 +4,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { createHash } from "node:crypto";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
@@ -109,25 +108,18 @@ if (config.staging.on) {
     for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
     return diff === 0;
   };
-  // A long-lived cookie keeps the gate from re-prompting on every refresh — iOS Safari drops cached
-  // Basic credentials aggressively, so relying on the browser's Basic cache means a login box on
-  // nearly every navigation. The FIRST successful Basic auth mints this cookie; from then on the
-  // cookie alone clears the gate (no more prompts). Token is derived from the password so it can't
-  // be forged, and rotates automatically whenever the password changes.
-  const gateToken = createHash("sha256").update(`${config.staging.user}:${config.staging.pass}:stg-gate-v1`).digest("hex").slice(0, 40);
+  // The user-facing gate (login form + persistent cookie) lives in the Cloudflare worker in front of
+  // this origin; the worker injects Basic upstream so this check passes. We keep a plain Basic gate
+  // here as defense-in-depth for anyone hitting the Railway URL directly.
   app.use("*", async (c, next) => {
     c.header("X-Robots-Tag", "noindex, nofollow"); // never index the preview, even if a crawler slips in
     const path = c.req.path;
     if (UNGATED.some((p) => path === p || path.startsWith(p))) return next();
-    if (getCookie(c, "stg_gate") === gateToken) return next(); // already let in — don't prompt again
     const hdr = c.req.header("Authorization") ?? "";
     if (hdr.startsWith("Basic ")) {
       const [user, ...rest] = Buffer.from(hdr.slice(6), "base64").toString("utf8").split(":");
       const pass = rest.join(":");
-      if (safeEqual(user ?? "", config.staging.user) && safeEqual(pass, config.staging.pass)) {
-        setCookie(c, "stg_gate", gateToken, { path: "/", maxAge: 60 * 60 * 24 * 30, httpOnly: true, secure: true, sameSite: "Lax" });
-        return next();
-      }
+      if (safeEqual(user ?? "", config.staging.user) && safeEqual(pass, config.staging.pass)) return next();
     }
     return c.body("Authentication required.", 401, { "WWW-Authenticate": 'Basic realm="Check staging", charset="UTF-8"' });
   });
