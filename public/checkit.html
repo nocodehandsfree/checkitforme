@@ -203,6 +203,13 @@ __BRAND_HEAD__
   .ctl-row.bub-row{margin-bottom:10px}
   .ctl-row.bub-row::before{top:9px}
   .ctl-row.bub-row .bub{max-width:100%}
+  /* green "you are here" dot on the current step, carried through the AI turns so the whole call —
+     log → conversation — reads as one linked green thread. The current dot pulses while live. */
+  .ctl-row.ctl-substep.cur::before{background:var(--green);box-shadow:0 0 8px rgba(74,222,128,.55)}
+  .ctl-row.ctl-substep.cur .ctl-step{color:#cfcfe0}
+  .ctl-row.ctl-substep.live::before{animation:csPulse 1.4s ease-in-out infinite}
+  @keyframes csPulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.5)}50%{box-shadow:0 0 0 5px rgba(74,222,128,0)}}
+  .ctl-row.bub-row.ai::before{background:var(--green);box-shadow:0 0 7px rgba(74,222,128,.4)}
   /* "Reaching a person" — collapsible group on the timeline (tap the header to roll the log up/down) */
   .reach{margin:0 0 10px}
   .reach>summary{position:relative;list-style:none;display:flex;align-items:center;gap:8px;cursor:pointer;color:#cfcfe0;font-weight:700;font-size:13.5px;padding:1px 0}
@@ -2817,7 +2824,9 @@ function combinedTimelineHTML(steps, transcript, finalElapsed){
     let secs=null; // only a REAL elapsed gap gets a time (derived/reopened steps are at:0 → no fake "1s")
     if(i<steps.length-1){ if(steps[i+1].at>s.at) secs=Math.round(steps[i+1].at-s.at); }
     else if(finalElapsed!=null && finalElapsed>s.at) secs=Math.round(finalElapsed-s.at);
-    return `<div class="ctl-row ctl-substep"><div class="ctl-step">${esc(s.label)}${secs!=null?` <span class="cs-time">${secs}s</span>`:''}</div></div>`;
+    const cur = i===steps.length-1;          // the step we're AT → gets the green "you are here" dot
+    const live = cur && finalElapsed==null;  // still in progress → pulse the green dot
+    return `<div class="ctl-row ctl-substep${cur?' cur':''}${live?' live':''}"><div class="ctl-step">${esc(s.label)}${secs!=null?` <span class="cs-time">${secs}s</span>`:''}</div></div>`;
   }).join('') : '';
   const n=(steps&&steps.length)||0;
   // The whole call log rolls up under one tappable header (open by default on a fresh result).
@@ -2830,7 +2839,7 @@ function combinedTimelineHTML(steps, transcript, finalElapsed){
   // call with no human turns gets the "no conversation" copy.
   const emptyMsg = finalElapsed==null ? t('live.waitperson','Waiting to reach a person…') : t('live.noconvo','No live conversation on this call.');
   const convo = human.length
-    ? human.map(l=>`<div class="ctl-row bub-row">${bubbleHTML(l,true)}</div>`).join('')
+    ? human.map(l=>`<div class="ctl-row bub-row${/^Agent:/.test(l)?' ai':''}">${bubbleHTML(l,true)}</div>`).join('')
     : `<div class="ctl-row"><div class="cs-wait">${emptyMsg}</div></div>`;
   return `<div class="ctl">${reach}<div id="convo_body">${convo}</div></div>`;
 }
