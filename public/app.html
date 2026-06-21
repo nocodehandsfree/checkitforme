@@ -1537,13 +1537,13 @@ async function loadStoreIntel(){
   const fmt=n=>Number(n||0).toLocaleString('en-US');   // exact, comma-grouped (101,967 — not "102k")
   const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${fmt(n)}</div><div class="l">${l}</div></div>`;
   // Four headline tiles only — the per-product counts move into ONE box below (was a circle per product).
-  el.innerHTML = tile(d.total,'stores','green')+tile(d.callable,'callable')+tile(d.states,'states')+tile(d.chains,'chains');
+  el.innerHTML = tile(d.total,'total stores','green')+tile(d.callable,'callable')+tile(d.states,'states')+tile(d.chains,'chains');
   const bp=d.byProduct||{};
   const items=Object.entries(bp).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]);
   const cw=document.getElementById('storecarries');
   if(cw){ if(items.length){ cw.style.display='';
-      cw.innerHTML=`<div class="name" style="margin-bottom:8px">What they carry</div>`
-        +`<div class="carrygrid">`+items.map(([p,n])=>`<div class="carryrow"><span>${prodMark(p,16)}</span><b>${fmt(n)}</b></div>`).join('')+`</div>`;
+      cw.innerHTML=`<div class="name" style="margin-bottom:8px">Stores that carry each product <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">(of ${fmt(d.total)} total)</span></div>`
+        +`<div class="carrygrid">`+items.map(([p,n])=>`<div class="carryrow"><span>${prodMark(p,16)} ${esch(p)}</span><b>${fmt(n)}</b></div>`).join('')+`</div>`;
     } else cw.style.display='none'; }
   // Fill the store-type filter from the full chain-type list, and the product filter from the carry list.
   if(Array.isArray(d.types)&&d.types.length) fillOptions('f_type', d.types, 'All types');
