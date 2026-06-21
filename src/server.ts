@@ -480,7 +480,7 @@ app.all("/twiml/bridge", (c) => {
     }
     play = `<Play digits="${digits}"/>`;
   }
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${play}<Connect><Stream url="wss://${RAILWAY_HOST}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${play}<Connect><Stream url="wss://${config.staging.on ? STAGING_HOST : RAILWAY_HOST}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   return c.body(xml, 200, { "Content-Type": "text/xml" });
 });
 
@@ -2593,7 +2593,7 @@ async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, str
   const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const pol = await getPolicy();
   setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, connectOnHuman: opts?.connectOnHuman ?? pol.flags.connectOnHuman, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds });
-  const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${RAILWAY_HOST}/twiml/bridge?room=${room}` });
+  const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${config.staging.on ? STAGING_HOST : RAILWAY_HOST}/twiml/bridge?room=${room}` });
   // Hard cost cap: Twilio kills the call at TimeLimit seconds, no exceptions — the profit guarantee.
   if (opts?.timeLimitSec && opts.timeLimitSec > 0) body.set("TimeLimit", String(Math.floor(opts.timeLimitSec)));
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls.json`, {
