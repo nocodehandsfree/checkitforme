@@ -1042,9 +1042,43 @@ async function loadTrainer(){
     return `<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:nowrap">
       <div style="flex:1 1 auto;min-width:0"><div class="name" style="overflow-wrap:anywhere">${esch(c.name)}${tc}</div>
       <div class="meta" style="margin-top:2px">${dot}<span style="color:${col};font-weight:700">${esch(c.navStatus)}</span>${time}${imp}</div></div>
-      ${btn}</div></div>`;
+      ${btn}</div>
+      <details class="trlog" data-chain="${c.id}" style="margin-top:9px"><summary style="cursor:pointer;list-style:none;font-size:12px;color:var(--muted);user-select:none">▾ Call log</summary><div class="trruns" style="margin-top:8px">Loading…</div></details>
+      </div>`;
   }).join('')||'<div class="empty">No chains.</div>';
   list.querySelectorAll('[data-doc]').forEach(b=>b.onclick=()=>trDocument(+b.dataset.doc,b.dataset.name));
+  list.querySelectorAll('.trlog').forEach(d=>d.addEventListener('toggle',()=>{ if(d.open) loadRuns(+d.dataset.chain, d.querySelector('.trruns')); }));
+}
+// Expandable per-chain call log: every learner run with its Alpha/Bravo/Charlie path + the step matrix.
+async function loadRuns(chainId, box){
+  if(!box) return;
+  const d=await api('/api/admin/trainer/runs?chainId='+chainId);
+  const runs=(d&&d.runs)||[];
+  if(!runs.length){ box.innerHTML='<div class="meta" style="padding:4px 0">No runs logged yet — press Document to watch the learner work.</div>'; return; }
+  const MODEC={alpha:'#60a5fa',bravo:'var(--yellow)',charlie:'var(--green)'};
+  const OUT={human:'var(--green)',failed:'var(--red)',done:'var(--yellow)'};
+  box.innerHTML=runs.map((r,i)=>{
+    const col=OUT[r.outcome]||'var(--muted)';
+    const t=r.ts?new Date(r.ts).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';
+    const secs=r.seconds!=null?r.seconds+'s':'—';
+    const mx=(r.steps||[]).map(st=>{
+      const us=st.who==='us';
+      const did=us?((st.action||'')+(st.value?(' '+st.value):'')):'heard';
+      return `<div style="display:grid;grid-template-columns:42px 1fr auto;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px;align-items:start">
+        <span class="meta">${st.atSec}s</span><span style="color:#cfcfe0;overflow-wrap:anywhere">${esch(st.text||'')}</span>
+        <span style="font-weight:700;white-space:nowrap;color:${us?'var(--green)':'var(--muted)'}">${esch(did)}</span></div>`;
+    }).join('');
+    return `<details style="border:1px solid var(--border);border-radius:10px;margin-bottom:7px;background:var(--sheet)">
+      <summary style="cursor:pointer;list-style:none;padding:9px 11px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px">
+        <b style="color:var(--muted);min-width:42px">#${runs.length-i}</b>
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col}"></span>
+        <span style="color:${MODEC[r.mode]||'#aab'};font-weight:800">${esch(r.label||r.mode||'')}</span>
+        <span class="meta">${t}${r.model?(' · '+esch(r.model)):''}</span>
+        <span style="margin-left:auto;font-weight:800;color:${col}">${secs}</span>
+      </summary>
+      <div style="padding:2px 11px 10px">${mx||'<div class="meta" style="padding:6px 0">no steps recorded</div>'}</div>
+    </details>`;
+  }).join('');
 }
 async function trDocument(chainId,name){
   if(!confirm('Place a REAL call to a '+name+' store now? The nav-learner will dial it to map the phone menu.')) return;

@@ -4,6 +4,7 @@
 // It reaches a human, records the exact path + timing as a "recipe", then politely hangs up
 // (training mode). ElevenLabs/Sonnet is never used here: this IS "everything cheap until human".
 import { llm } from "../llm";
+import { getSetting, setSetting } from "../db/settings";
 
 const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
 // Cheapest + fastest brain that drives the IVR — Groq Llama 3.1 8B via Helicone (~200ms vs ~650ms
@@ -25,7 +26,7 @@ export interface NavSession {
   startMs: number; steps: NavStep[]; turns: number; model?: string; hint?: string;
   barge?: { plan: Array<{ action: string; value: string; at: number }> };
   reactivePress?: { digit: string; max: number; count: number };
-  lastActTurn?: number; escaped?: boolean; routingSeen?: boolean; autoZeros?: number;
+  lastActTurn?: number; escaped?: boolean; routingSeen?: boolean; autoZeros?: number; persisted?: boolean;
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
   humanAtSec: number | null; confidence: number; callSid?: string; recipe: NavRecipe | null;
@@ -177,7 +178,35 @@ function finish(s: NavSession, status: "human" | "failed") {
     s.type = type;
     s.recipe = { type, steps: acts, seconds: s.humanAtSec ?? (s.steps[s.steps.length - 1]?.atSec ?? 0) };
   }
+  void persistRun(s); // log this run so the admin can watch the learner's history per chain
   setTimeout(() => sessions.delete(s.id), 5 * 60 * 1000); // let the admin read it, then drop
+}
+
+/** Which "team member" ran this call: Alpha = keypad presses only, Bravo = spoke menu words,
+ *  Charlie = a person answered directly (no nav). Every nav hands off to Charlie at the human. */
+export function classifyMode(steps: NavStep[]): { mode: "alpha" | "bravo" | "charlie"; label: string } {
+  const acts = steps.filter((st) => st.who === "us");
+  if (!acts.length) return { mode: "charlie", label: "Charlie (direct)" };
+  return acts.every((a) => a.action === "press")
+    ? { mode: "alpha", label: "Alpha → Charlie" }
+    : { mode: "bravo", label: "Bravo → Charlie" };
+}
+
+/** Append this run to the chain's call log (settings: nav_runs:{chainId}, last 20). Best-effort. */
+async function persistRun(s: NavSession): Promise<void> {
+  if (s.chainId == null || s.persisted) return;
+  s.persisted = true;
+  try {
+    const key = `nav_runs:${s.chainId}`;
+    const arr = JSON.parse((await getSetting(key)) || "[]") as unknown[];
+    const { mode, label } = classifyMode(s.steps);
+    arr.push({
+      ts: Date.now(), store: s.retailerName, model: s.model || NAV_MODEL, mode, label,
+      outcome: s.status, seconds: s.humanAtSec ?? (s.steps[s.steps.length - 1]?.atSec ?? null),
+      steps: s.steps.map((st) => ({ who: st.who, text: st.text, atSec: st.atSec, action: st.action ?? null, value: st.value ?? null })),
+    });
+    await setSetting(key, JSON.stringify(arr.slice(-20)));
+  } catch (e) { console.error("[navigator] persistRun", e); }
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
@@ -204,4 +233,4 @@ export async function placeNavCall(chainId: number | null, retailerId: number, r
   if (d.sid) session.callSid = d.sid;
   return { id };
 }
-export function navEnded(id: string) { const s = sessions.get(id); if (s && s.status !== "human" && s.status !== "failed") s.status = "done"; }
+export function navEnded(id: string) { const s = sessions.get(id); if (!s) return; if (s.status !== "human" && s.status !== "failed") s.status = "done"; void persistRun(s); }

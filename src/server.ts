@@ -2284,6 +2284,21 @@ app.get("/api/admin/trainer/session/:id", (c) => {
     elapsed: Math.round((Date.now() - s.startMs) / 1000), humanAtSec: s.humanAtSec,
     steps: s.steps, recipe: s.recipe });
 });
+// Call log for a chain: every learner run (Alpha/Bravo/Charlie path + the step matrix). Powers the
+// expandable log under the Discover button.
+app.get("/api/admin/trainer/runs", async (c) => {
+  const chainId = Number(c.req.query("chainId"));
+  if (!chainId) return c.json({ runs: [] });
+  const runs = JSON.parse((await getSetting(`nav_runs:${chainId}`)) || "[]") as unknown[];
+  return c.json({ runs: runs.slice().reverse() }); // newest first
+});
+// Seed/replace a chain's run log (used to backfill today's real runs; also handy for tests).
+app.post("/api/admin/trainer/runs", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; runs?: unknown[] };
+  if (!b.chainId || !Array.isArray(b.runs)) return c.json({ error: "chainId + runs[] required" }, 400);
+  await setSetting(`nav_runs:${b.chainId}`, JSON.stringify(b.runs.slice(-20)));
+  return c.json({ ok: true, saved: b.runs.length });
+});
 app.post("/api/admin/trainer/lock", async (c) => {
   const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; recipe?: { type?: string; steps?: unknown[]; seconds?: number }; confidence?: number };
   if (!b.chainId || !b.recipe) return c.json({ error: "chainId + recipe required" }, 400);
