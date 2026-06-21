@@ -766,6 +766,13 @@ app.get("/pub/stores/near", async (c) => {
   );
   // Owner-only demo store ("Fun") surfaces only for the signed-in master account.
   const comp = await requesterIsComp(c.req.header("Authorization"));
+  // …and for the owner it surfaces from ANYWHERE — owner-only stores (the "Fun" rehearsal store) are
+  // merged in regardless of location, so the owner can test from any location, not just near it.
+  if (comp) {
+    const have = new Set(rows.map((r) => r.id));
+    const ownerStores = await db.select().from(retailers).where(and(eq(retailers.active, true), eq(retailers.ownerOnly, true)));
+    for (const o of ownerStores) if (!have.has(o.id)) rows.push(o);
+  }
   const all = rows
     .filter((r) => comp || !r.ownerOnly)
     .filter((r) => !(r.chainId && mutedChains.has(r.chainId)))
@@ -783,7 +790,7 @@ app.get("/pub/stores/near", async (c) => {
         lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
         sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
         tier: r.hasKiosk === true ? 5 : (r.tier ?? null), inStock: confirmedSet.has(r.id), // any kiosk store = tier 5; inStock = brand-check pin
-        callable: callable(r),
+        callable: callable(r), ownerOnly: r.ownerOnly === true, // ownerOnly → client shows it regardless of radius
         stockCheckMethod: (r.chainId && stockMethod.get(r.chainId)) || "call", // site = check their site, no call needed
         // Sell-methods taxonomy: how to get it (chain default), online flag, and price/source.
         sellMethods: (((r.chainId && sellMethodsByChain.get(r.chainId)) || "in_store").split(",").map((s) => s.trim()).filter(Boolean)),
@@ -792,7 +799,7 @@ app.get("/pub/stores/near", async (c) => {
         mapsUri: r.mapsUri || null,
         miles, openState: openState(r.hours, r.timezone) };
     })
-    .filter((r) => !hasLoc || r.miles == null || r.miles <= radius)
+    .filter((r) => r.ownerOnly || !hasLoc || r.miles == null || r.miles <= radius) // owner-only store is never distance-filtered
     .sort((a, b) => (a.miles ?? 9e9) - (b.miles ?? 9e9) || a.name.localeCompare(b.name));
   return c.json({ total: all.length, offset, limit, stores: all.slice(offset, offset + limit) });
 });

@@ -2295,7 +2295,7 @@ function renderStores(){
     else { if(s.sellsPacks===false) return false; if(isClosed(s)) return false; } // call mode: shelf stores only (kiosks live in the Kiosk tab)
     if(q && !(s.name+' '+(s.location||'')).toLowerCase().includes(q)) return false;
     if(!kiosk && !chainCarriesBrand(s)) return false;
-    if(USER_LOC){ const mi=storeMi(s); if(mi==null || mi>RADIUS) return false; }
+    if(USER_LOC && !s.ownerOnly){ const mi=storeMi(s); if(mi==null || mi>RADIUS) return false; } // owner-only "Fun" store shows from any location
     return true;
   });
   if(USER_LOC) list.sort((a,b)=>(storeMi(a)??1e9)-(storeMi(b)??1e9));
