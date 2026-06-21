@@ -2826,9 +2826,12 @@ function combinedTimelineHTML(steps, transcript, finalElapsed){
   const lines=(transcript||'').split('\n').filter(Boolean);
   const hs=transcriptHumanStart(lines);
   const human=lines.slice(hs).filter(l=>/^(Agent|Clerk):/.test(l));
+  // finalElapsed==null means we're rendering a LIVE, in-progress call → "waiting" copy; a finished
+  // call with no human turns gets the "no conversation" copy.
+  const emptyMsg = finalElapsed==null ? t('live.waitperson','Waiting to reach a person…') : t('live.noconvo','No live conversation on this call.');
   const convo = human.length
     ? human.map(l=>`<div class="ctl-row bub-row">${bubbleHTML(l,true)}</div>`).join('')
-    : `<div class="ctl-row"><div class="cs-wait">${t('live.noconvo','No live conversation on this call.')}</div></div>`;
+    : `<div class="ctl-row"><div class="cs-wait">${emptyMsg}</div></div>`;
   return `<div class="ctl">${reach}<div id="convo_body">${convo}</div></div>`;
 }
 // Reloaded calls (from a link/history) have no live step timings — derive which steps happened from
