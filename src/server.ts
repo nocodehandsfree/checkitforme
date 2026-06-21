@@ -79,6 +79,7 @@ import { getAccount, getAccountByPhone, chargeOneCredit, createCheckout, verifyS
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
+import { settings as settingsTbl } from "./db/schema";
 import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf } from "./voice/bridge";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
@@ -1259,7 +1260,7 @@ app.post("/api/stores/flag", async (c) => {
 // ---- Admin: table dump / load — the staging↔prod DATA MIRROR (docs/ops/STAGING.md). Dump is
 // read-only and works anywhere; load REPLACES a table and is staging-ONLY, so prod can never be
 // wiped by it. Used to make staging an exact data replica of prod (chains/retailers/catalog). ----
-const MIRROR_TABLES: Record<string, typeof retailers> = { categories: categories as never, chains: chains as never, products: products as never, retailers, statuses: statuses as never, kiosks: kiosks as never };
+const MIRROR_TABLES: Record<string, typeof retailers> = { categories: categories as never, chains: chains as never, products: products as never, retailers, statuses: statuses as never, kiosks: kiosks as never, settings: settingsTbl as never };
 app.get("/api/admin/table-dump", async (c) => {
   const name = String(c.req.query("name") || "");
   const tbl = MIRROR_TABLES[name];
