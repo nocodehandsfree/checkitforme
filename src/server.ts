@@ -88,40 +88,15 @@ await bootstrap(); // apply migrations + seed catalog if empty
 const here = dirname(fileURLToPath(import.meta.url));
 const app = new Hono();
 
-// ---- Staging gate (STAGING=1) — password-wall + noindex the whole preview site ----
-// A staging deploy is a clone of live behind HTTP Basic auth so UX can be reviewed before it ships,
-// without ever exposing it publicly or letting search engines index it. Machine endpoints
-// (Railway healthcheck + provider webhooks/TwiML) are exempt — they can't send a browser login and
-// must keep working so the deploy stays healthy and the real-call path works once it's enabled.
-// Prod leaves STAGING unset, so this middleware no-ops entirely (live is byte-for-byte unchanged).
+// ---- Staging (STAGING=1) — a private replica, NOT password-walled ----
+// Staging used to sit behind an HTTP Basic / login-form gate, but it was constant friction (iOS
+// re-prompting) for no real benefit: you log in with your phone exactly like prod. So the gate is
+// gone — staging behaves like production (phone login gates account features). We only keep it out
+// of search results. Prod leaves STAGING unset, so this no-ops entirely.
 if (config.staging.on) {
-  // Exempt machine endpoints AND the API surfaces that carry their OWN Authorization header:
-  // /app/* (Bearer session) and /api/* (Clerk/admin token) would otherwise collide with this
-  // gate's Basic header (a request can only send one Authorization). They stay protected by their
-  // own auth, and a session token is only obtainable by signing up through the Basic-gated pages.
-  // Browser XHR to ungated-by-Basic /pub/* still rides the browser's cached Basic credentials.
-  const UNGATED = ["/api/", "/app/", "/webhooks/", "/twiml/", "/nav/", "/bridge"];
-  // Length-checked constant-time compare — avoids leaking the password via response timing.
-  const safeEqual = (a: string, b: string): boolean => {
-    if (a.length !== b.length) return false;
-    let diff = 0;
-    for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-    return diff === 0;
-  };
-  // The user-facing gate (login form + persistent cookie) lives in the Cloudflare worker in front of
-  // this origin; the worker injects Basic upstream so this check passes. We keep a plain Basic gate
-  // here as defense-in-depth for anyone hitting the Railway URL directly.
   app.use("*", async (c, next) => {
     c.header("X-Robots-Tag", "noindex, nofollow"); // never index the preview, even if a crawler slips in
-    const path = c.req.path;
-    if (UNGATED.some((p) => path === p || path.startsWith(p))) return next();
-    const hdr = c.req.header("Authorization") ?? "";
-    if (hdr.startsWith("Basic ")) {
-      const [user, ...rest] = Buffer.from(hdr.slice(6), "base64").toString("utf8").split(":");
-      const pass = rest.join(":");
-      if (safeEqual(user ?? "", config.staging.user) && safeEqual(pass, config.staging.pass)) return next();
-    }
-    return c.body("Authentication required.", 401, { "WWW-Authenticate": 'Basic realm="Check staging", charset="UTF-8"' });
+    return next();
   });
 }
 

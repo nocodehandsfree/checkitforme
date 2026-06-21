@@ -1,80 +1,87 @@
-# Staging / preview environment
+# Staging ↔ Production — the mirror + workflow (READ FIRST)
 
-A password-walled clone of the live site (`staging.checkitforme.com`) for reviewing UX and
-behavior **before** it reaches production — so live can never be broken by in-progress work.
+`staging.checkitforme.com` is a **full, fully-working replica of production** you use to verify any
+change **before** it touches live. This exists because we kept breaking prod with in-progress work.
+**Every change Fungie can see goes through staging first.**
 
-## How it works (the model)
+## The two environments
 
-- **Two deploys of the same app, two branches.**
-  - **Prod** service → deploys the live branch (untouched by day-to-day work).
-  - **Staging** service → deploys `claude/checkitforme-website-takeover-pagiis` (the working branch).
-- **Promote = merge** the working branch into the live branch → prod auto-deploys. Nothing is ever
-  hand-edited on live.
-- **Staging is gated + safe by env vars** (set only on the staging service):
-  - `STAGING=1` — turns on HTTP **Basic auth** over the whole site + a `noindex` header.
-  - `STAGING_USER` / `STAGING_PASS` — the shared login for the preview.
-  - Outbound **calls/SMS are disabled by default** on staging (`config.callsEnabled` is false unless
-    `STAGING_CALLS=1`). A preview can never place a real store call, send a real SMS, or spend money.
+| | Production | Staging |
+|---|---|---|
+| URL | `checkitforme.com` (admin `admin.checkitforme.com`) | `staging.checkitforme.com` |
+| Branch | `claude/retail-stock-voice-calls-OcyMS` | `claude/checkitforme-website-takeover-pagiis` |
+| Railway service | `voice-caller` (`d363a982-…`) | `voice-caller-staging` (`8165df7a-…`) |
+| Deploy | push → live ~3 min | push → staging ~3 min |
+| Phone calls | real | **real** (`STAGING_CALLS=1`) |
+| DB | prod volume | its own volume (separate by design) |
+| `STAGING` env | unset | `1` |
 
-Prod leaves all of these **unset**, so the staging middleware and the calls kill-switch no-op
-entirely — live runs byte-for-byte as before.
+## The workflow (do this for EVERY change / bugfix)
 
-## What's gated vs exempt
+1. Make the change on the **staging** branch `claude/checkitforme-website-takeover-pagiis` → push.
+2. **Fungie verifies** on `staging.checkitforme.com`.
+3. **Promote = merge** the change into the prod branch `claude/retail-stock-voice-calls-OcyMS`
+   (PR + merge) → prod auto-deploys.
 
-The Basic-auth wall covers every human-facing route. **Exempt** (machine endpoints that can't send a
-browser login and must keep working): `/api/health` (Railway healthcheck), `/webhooks/*`, `/twiml/*`,
-`/nav/*`, `/bridge`.
+Do **not** push UI/behavior straight to prod. (Tiny prod-only infra/data fixes that staging can't
+show are the only exception — use judgment.)
 
-## The "no real calls" guarantee
+## What is allowed to differ between the branches
 
-Every outbound-origination path checks `config.callsEnabled` (hard money-stop):
-- `src/voice/elevenlabs.ts` `startCall` — the store calls (throws when disabled).
-- `src/calls/navigator.ts` `placeNavCall` — Twilio phone-tree calls.
-- `src/auth.ts` `startPhoneVerify` / `startCallerIdVerify` — SMS verify + caller-ID call.
+Keep **`public/checkit.html` byte-identical** between staging and prod — verify anytime with:
+```bash
+git diff origin/claude/retail-stock-voice-calls-OcyMS \
+         origin/claude/checkitforme-website-takeover-pagiis -- voice-caller/public/checkit.html
+# empty = in sync
+```
+The ONLY by-design differences are the **staging-only machinery**, all dormant on prod because
+`STAGING` is unset there:
+- `scripts/checkit-staging-proxy.worker.js` + `scripts/deploy-staging-proxy.sh` — the Cloudflare
+  reverse-proxy (terminates the cert for `staging.checkitforme.com`; **transparent, no auth**).
+- `src/staging-sim.ts` and the `config.staging` / `STAGING_CALLS` guards in `server.ts`, `auth.ts`,
+  `navigator.ts`, `voice/elevenlabs.ts`.
+- `public/checkit-demo.html` — design reference, preview-only.
 
-Owner alerts (`src/calls/notify.ts`) are downstream of completed calls, so they're naturally dormant
-when calls are off — no separate guard needed.
+The **databases are separate** (each service has its own volume). That's intentional — staging test
+calls must never write to live data.
 
-### Enabling real calls on staging later
+## Env vars that make staging staging (set only on the staging service)
 
-1. Add working telephony env to the staging service (ElevenLabs + Twilio creds — ideally a separate
-   test Twilio subaccount / number so staging traffic never mixes with prod).
-2. Set `STAGING_CALLS=1` on the staging service and redeploy.
-   The Basic-auth wall stays on; only the calls kill-switch lifts.
+- `STAGING=1` — flips the consumer-default routing + `noindex` + the `STAGING_CALLS` switch. **There is
+  NO password wall** — you log in with your phone exactly like prod (we removed the Basic/login gate;
+  it was constant iOS re-prompt friction for no benefit).
+- `STAGING_CALLS=1` — real telephony on staging. With it set, `config.callsEnabled` is true, so the
+  call sim is skipped (real dials), SMS verify is real, and the no-real-calls kill-switches lift.
+  (Unset = UI-only preview: sim calls, phone login accepts the fixed `STAGING_LOGIN_CODE`, default
+  `000000`.)
+- `FUN_STORE_PHONE` — seeds the owner-only **"Fun"** rehearsal store (tier 5, Calabasas), which dials
+  this number. So the owner can place a real call to themselves and test the whole flow. Hidden from
+  everyone except the master/comp account (`isComp` email / `isCompPhone` / owner-phone path).
 
-## Provisioning steps (one-time, needs `RAILWAY_API_TOKEN` + `CLOUDFLARE_API_TOKEN`)
+`config.callsEnabled = STAGING ? (STAGING_CALLS==='1') : true`. Prod has `STAGING` unset → calls
+always on; all staging code paths no-op.
 
-1. **Railway** — create a new service in the project from the same repo, root `voice-caller/`,
-   deploying branch `claude/checkitforme-website-takeover-pagiis`.
-2. Copy prod's env vars to the staging service, then set the staging-only ones:
-   `STAGING=1`, `STAGING_USER`, `STAGING_PASS` (leave `STAGING_CALLS` unset = calls off).
-   Keep `CLERK_ENFORCE=true` + a real `SESSION_SECRET` so the boot security checks pass.
-   Point staging at its **own database** (don't share prod's) so preview writes never touch live data.
-3. Add the custom domain `staging.checkitforme.com` to the staging service (Railway issues the target).
-4. **Cloudflare** — add a proxied `CNAME staging → <railway target>` in the `checkitforme.com` zone.
-5. Verify: `https://staging.checkitforme.com` prompts for Basic auth; after login the site loads with
-   `X-Robots-Tag: noindex`; attempting a check returns "calls disabled on this preview deploy".
+## Logging in / being the owner on staging
 
-## Seeding staging data to match prod
+Log in with your phone like prod. To see the Fun store you must be the **master/comp** account —
+sign in with the **owner phone** (`OWNER_PHONE`, currently `+13106662331`); that account is mapped to
+the master email → comp → the owner-only store appears and is callable. `COMP_EMAILS` / `MASTER_EMAIL`
+are identical on both services, so comp status matches prod.
 
-Staging uses its own DB, so its store data must be seeded + curated the same way prod is. After a
-fresh DB (empty volume), reproduce prod's consumer dataset with three steps (all `x-admin-token`):
+## How the domain works (cert workaround)
 
-1. **Import stores** — POST the national master (`data/stores-master/*.json.gz`, merged) to
-   `/api/stores/import` in chunks. ~102k rows.
-2. **Clean names** — `POST /api/stores/dedupe {}` → drops `#numbers`, renames same-street collisions
-   to `<chain> <street>` (prod's exact algorithm).
-3. **Assign tiers** — `POST /api/stores/grade-from-defaults { defaults: <map> }` where the map is
-   `data/source/chain-scoring-2026-06/chain_scores_final.csv` parsed to `{chain_name_exact: tier_1_5}`.
-   Fills `retailers.tier`, which drives the consumer "Best near you / reliable / spotty" grouping.
+Railway can't issue a cert behind Cloudflare, so `staging.checkitforme.com` is served by a Cloudflare
+Worker (`checkit-staging-proxy`) that reverse-proxies to the Railway origin
+`voice-caller-staging-production.up.railway.app`. It's a **transparent** proxy (no gate) and just adds
+`X-Robots-Tag: noindex`. Live audio/transcript WebSockets connect to that origin directly (the
+`wsHost` returned by `/pub/check-live` is the staging origin when `STAGING=1`).
 
-Note: this reproduces the consumer experience (names, tiers, logos). For a byte-exact mirror of prod
-(store-set de-duplication, learned phone trees, etc.), copy prod's SQLite DB instead.
+## Provisioning notes (already done — for reference)
 
-## Daily workflow
-
-1. Push UX/design changes to `claude/checkitforme-website-takeover-pagiis` → staging auto-deploys.
-2. Owner reviews at `staging.checkitforme.com` (login required).
-3. Happy → merge the branch into the live branch → prod deploys. Live was never at risk.
-</content>
-</invoke>
+- Staging Railway service deploys the staging branch, root `voice-caller/`, its own volume.
+- Env: copy prod's app vars, then set `STAGING=1`, `STAGING_CALLS=1`, `FUN_STORE_PHONE`. (The
+  voice-caller does NOT use TiDB/Qdrant; Redis is optional — don't copy those.)
+- Seed store data the same way prod is (import → `/api/stores/dedupe` → `/api/stores/grade-from-defaults`
+  using `data/source/chain-scoring-2026-06/chain_scores_final.csv`), or copy prod's SQLite for an exact
+  data mirror.
+- Deploy the worker: `CLOUDFLARE_API_TOKEN=… bash scripts/deploy-staging-proxy.sh`.

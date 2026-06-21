@@ -47,7 +47,7 @@ const STAGING_LOGIN_CODE = process.env.STAGING_LOGIN_CODE || "000000";
 
 /** Send an SMS verification code to the number (browser can auto-fill it via WebOTP). */
 export async function startPhoneVerify(phone: string): Promise<{ ok: boolean; error?: string }> {
-  if (config.staging.on) return { ok: true }; // staging preview: no real SMS — verify with STAGING_LOGIN_CODE
+  if (config.staging.on && !config.callsEnabled) return { ok: true }; // UI-only preview: skip SMS, verify with STAGING_LOGIN_CODE. With STAGING_CALLS=1, staging sends REAL SMS like prod.
   const vsid = twVerify();
   if (!vsid || !twSid()) return { ok: false, error: "verify_not_configured" };
   const r = await fetch(`https://verify.twilio.com/v2/Services/${vsid}/Verifications`, {
@@ -59,7 +59,7 @@ export async function startPhoneVerify(phone: string): Promise<{ ok: boolean; er
 }
 /** Confirm the SMS code. true = the number is verified. */
 export async function checkPhoneVerify(phone: string, code: string): Promise<boolean> {
-  if (config.staging.on) return code === STAGING_LOGIN_CODE; // staging preview: accept the fixed code only
+  if (config.staging.on && !config.callsEnabled) return code === STAGING_LOGIN_CODE; // UI-only preview: accept the fixed code. With STAGING_CALLS=1, staging verifies the REAL SMS code like prod.
   const vsid = twVerify();
   if (!vsid) return false;
   const r = await fetch(`https://verify.twilio.com/v2/Services/${vsid}/VerificationCheck`, {
