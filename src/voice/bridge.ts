@@ -121,11 +121,13 @@ function dtmfTone(digit: string, ms = 280): Buffer {
 }
 
 // Handle one Twilio bridge socket. `fanout` forwards audio frames to browser listeners in a room.
-export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (room: string, b64: string, track: string) => void, relayLine?: (room: string, role: string, text: string) => void) {
+export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (room: string, b64: string, track: string) => void, relayLine?: (room: string, role: string, text: string) => void, relayEnd?: (room: string) => void) {
   let streamSid = "";
   let eleven: WebSocket | null = null;
   let ready = false;
   let frames = 0;
+  let ended = false;
+  const signalEnd = () => { if (ended) return; ended = true; try { relayEnd?.(room); } catch { /* best-effort */ } };
   const pending: string[] = []; // store audio buffered until the agent WS is ready
   let ctx = room ? contexts.get(room) : undefined;
   // connect-on-human state
@@ -185,7 +187,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         if (twilio.readyState === 1) twilio.send(JSON.stringify({ event: "clear", streamSid }));
       }
     });
-    eleven.on("close", (code: number) => { log(`eleven WS close code=${code} (frames in=${frames})`); if (twilio.readyState === 1) twilio.close(); });
+    eleven.on("close", (code: number) => { log(`eleven WS close code=${code} (frames in=${frames})`); signalEnd(); if (twilio.readyState === 1) twilio.close(); });
     eleven.on("error", (e: Error) => log(`eleven WS error: ${e.message}`));
   }
 
@@ -252,7 +254,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       if (eleven && ready) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
       else if (connecting) pending.push(b64);          // committed to connect → buffer for the agent
       else if (ctx?.connectOnHuman && !ctx.connectAtSec) maybeDetectHuman(b64); // VAD only when we have no learned timer
-    } else if (m.event === "stop") { log("twilio stop"); if (eleven) eleven.close(); }
+    } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
-  twilio.on("close", () => { log(`twilio close (frames in=${frames})`); dtmfTimers.forEach(clearTimeout); if (eleven) eleven.close(); });
+  twilio.on("close", () => { log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); if (eleven) eleven.close(); });
 }

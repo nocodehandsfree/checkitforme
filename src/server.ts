@@ -1629,7 +1629,7 @@ app.post("/pub/check-live", async (c) => {
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
   const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, undefined, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
-  return c.json({ room: r.room, wsHost: RAILWAY_HOST });
+  return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
 });
 app.get("/pub/result/:cid", async (c) => {
   const cid = c.req.param("cid");
@@ -1747,7 +1747,7 @@ app.post("/app/check-live", async (c) => {
   if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
   const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
-  return c.json({ room: r.room, wsHost: RAILWAY_HOST });
+  return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
 });
 // ---- Subscriber auto-checks (scheduled shipment-day calls) ----
 app.get("/app/schedules", async (c) => {
@@ -2636,7 +2636,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
 app.get("/pub/bridge/:room", (c) => {
   const room = c.req.param("room");
   if (config.staging.on && isSimId(room)) return c.json({ conversationId: room, wsHost: STAGING_HOST }); // sim: room IS the conversation id
-  return c.json({ conversationId: bridgeConversationId(room), wsHost: RAILWAY_HOST });
+  return c.json({ conversationId: bridgeConversationId(room), wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
 });
 app.get("/pub/bridge-debug", (c) => c.json({ log: bridgeDebug() }));
 app.post("/api/bridge/call", async (c) => {
@@ -2653,7 +2653,7 @@ app.post("/api/bridge/call", async (c) => {
     personality: "", opening_line: opener.replace(/\{category\}/g, category), other_categories: "", ask_shipment_day: "",
   }, undefined, b.dtmf || null, { connectOnHuman: b.connectOnHuman, connectAtSec: b.connectAtSec, timeLimitSec: b.timeLimitSec });
   if (r.error) return c.json({ error: r.error }, 502);
-  return c.json({ room: r.room, wsHost: RAILWAY_HOST });
+  return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
 });
 
 app.post("/api/ingest", async (c) => c.json({ finalized: await ingestPending() }));
@@ -2729,13 +2729,20 @@ const relayLine = (room: string, role: string, text: string) => {
   const msg = JSON.stringify({ line: { role, text } });
   for (const ws of set) if (ws.readyState === 1) ws.send(msg);
 };
+// Tell browser listeners the moment the bridge tears down (agent/clerk hung up) so the UI flips to
+// the result instantly instead of waiting on the next poll + ElevenLabs status lag.
+const relayEnd = (room: string) => {
+  const set = rooms.get(room); if (!set) return;
+  const msg = JSON.stringify({ ended: true });
+  for (const ws of set) if (ws.readyState === 1) ws.send(msg);
+};
 const wssTwilio = new WebSocketServer({ noServer: true });
 const wssListen = new WebSocketServer({ noServer: true });
 const wssBridge = new WebSocketServer({ noServer: true });
 
 // Full agent bridge: Twilio call audio <-> ElevenLabs ConvAI WS, forked to browser listeners.
 wssBridge.on("connection", (ws: WebSocket, _req: unknown, room: string) => {
-  handleTwilioBridge(ws, room, fanout, relayLine); // fanout(audio) + relayLine(live transcript) — bridge passes its resolved room
+  handleTwilioBridge(ws, room, fanout, relayLine, relayEnd); // fanout(audio) + relayLine(live transcript) + relayEnd(call-over) — bridge passes its resolved room
 });
 wssListen.on("connection", (ws: WebSocket, _req: unknown, room: string) => { if (room) addListener(room, ws); else bridgeLog("listen socket connected with NO room — audio cannot be routed"); });
 wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {

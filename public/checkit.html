@@ -2742,7 +2742,7 @@ async function startCheck(){
   },2500);
 }
 // --- Live-audio check (bridged through our Twilio so we can stream the call to the browser) ---
-let AUDIO_WS=null, AUDIO_CTX=null, AUDIO_NEXT={}, AUDIO_LIVE=false, LIVE_TIMERS=[], LIVE_ROOM=null, LIVE_CID=null, LIVE_TR=[], AGENT_PITCHED=false;
+let AUDIO_WS=null, AUDIO_CTX=null, AUDIO_NEXT={}, AUDIO_LIVE=false, LIVE_TIMERS=[], LIVE_ROOM=null, LIVE_CID=null, LIVE_TR=[], AGENT_PITCHED=false, LIVE_DONE=false;
 let LIVE_STEPS=[], LIVE_T0=0, LIVE_TRANSCRIPT=''; // step log (with timings), call start ms, latest transcript
 // Phone-tree (IVR) language vs. our bot's real ask. The store side ("Clerk") covers BOTH the automated
 // tree AND a human, so a Clerk line alone can't mean "with a clerk". Our bot stays quiet / presses keys
@@ -2932,7 +2932,7 @@ async function startCheckLive(){
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // hide the finds ticker on the call page — keep it uncrowded
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb) _mb.style.display='none'; // owner asked to drop the 'flip off silent' note
-  LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_T0=Date.now();
+  LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; LIVE_T0=Date.now();
   fillLiveHeader(); const _lr=$('live_rhead'); if(_lr)_lr.className='rhead live';
   liveStage(1); // logs step 1 + renders the call box (steps on top, empty script below)
   let secs=0; const elT=setInterval(()=>{ secs+=1; },1000); // counts toward the hard cap only — no on-screen timer
@@ -2945,6 +2945,7 @@ async function startCheckLive(){
   AUDIO_WS=new WebSocket('wss://'+r.wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data);
     if(d.audio){ if(AUDIO_CTX) playMu(d.audio,d.track); }
     else if(d.line&&d.line.text){ LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } // real-time steps + human script, as the call happens
+    else if(d.ended){ try{clearInterval(POLL);}catch(_){} try{clearInterval(elT);}catch(_){} finalizeLive(LIVE_CID||cid); } // bridge says the call's over → flip to the result NOW
   }catch(e){} };
   liveStage(2); // dialing → it's ringing
   let cid=null;
@@ -2976,12 +2977,14 @@ async function startCheckLive(){
   },1200);
 }
 async function finalizeLive(cid){
+  if(LIVE_DONE) return; LIVE_DONE=true; // guard: WS end-signal and the poll can both fire — finalize once
   stopAudio(); stopLiveTimers();
   if(!cid){ const res={status:'no_answer',transcript:'',summary:''}; saveCheckToHistory(res,null); showResult(res); return; }
   // The call just ended — give ElevenLabs a few seconds to finalize the transcript & answer
   // before we decide, so a hung-up call still shows what actually happened.
   let o=await api('/pub/result/'+encodeURIComponent(cid)), tries=0;
-  while((!o||!o.status||o.status==='in_progress')&&tries<6){ await new Promise(r=>setTimeout(r,1800)); o=await api('/pub/result/'+encodeURIComponent(cid)); tries++; }
+  // Poll every 1s (was 1.8s) and exit the instant EL has a verdict — snappier flip to the result.
+  while((!o||!o.status||o.status==='in_progress')&&tries<8){ await new Promise(r=>setTimeout(r,1000)); o=await api('/pub/result/'+encodeURIComponent(cid)); tries++; }
   const res=(o&&o.status&&o.status!=='in_progress')?o:{status:'no_answer',transcript:'',summary:''};
   // Bug fix: if EL hasn't finalized the transcript yet, fall back to what we already streamed live, so
   // the conversation shows immediately on the result — no hard refresh needed.
