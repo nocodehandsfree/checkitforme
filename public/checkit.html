@@ -110,7 +110,7 @@ __BRAND_HEAD__
   .ck-wv{fill:none;stroke:var(--accent,#FFCB05);stroke-width:2;stroke-linecap:round;transform-box:view-box;transform-origin:31px 15px;animation:ckWave 2s ease-out infinite}
   .ck-wv.w2{animation-delay:.45s}
   @keyframes ckHalo{0%,100%{box-shadow:0 0 14px color-mix(in srgb,var(--accent,#FFCB05) 22%,transparent)}50%{box-shadow:0 0 28px color-mix(in srgb,var(--accent,#FFCB05) 50%,transparent)}}
-  @keyframes ckWave{0%{opacity:0;transform:scale(.45)}25%{opacity:.95}100%{opacity:0;transform:scale(1.35)}}
+  @keyframes ckWave{0%{opacity:0;transform:scale(.45)}25%{opacity:.95}100%{opacity:0;transform:scale(1.15)}}
   @media (prefers-reduced-motion:reduce){.callkey{animation:none}.ck-wv{animation:none;opacity:.85}}
   /* Sell-methods card (docs/SELL_METHODS_PLAN.md): what's possible at THIS store — live online
      stock, ways to get it, resale warning, notify. Non-callable chains (Micro Center, Amazon) show
@@ -180,6 +180,19 @@ __BRAND_HEAD__
   .callmsg.boxless .callmsg-steps{padding:0}
   .callmsg.boxless .callmsg-div{height:1px;background:var(--border);margin:16px 0}
   .callmsg.boxless .callmsg-script{padding:0}
+  /* ── single combined call timeline: connection steps + conversation on ONE continuous line.
+     Flat rows only — left hairline + dots. NO background glow/gradient anywhere (solid-dark rule). ── */
+  .ctl{position:relative;margin-top:14px;padding-left:20px}
+  .ctl::before{content:'';position:absolute;left:5px;top:4px;bottom:4px;width:1.5px;background:var(--border)}
+  .ctl-row{position:relative;margin:0 0 10px}
+  .ctl-row:last-child{margin-bottom:0}
+  .ctl-row::before{content:'';position:absolute;left:-18px;top:6px;width:7px;height:7px;border-radius:50%;background:#3a3a46;border:1.5px solid var(--terminal)}
+  .ctl-step{font-size:12.5px;line-height:1.5;color:var(--muted)}
+  .ctl-step .ctl-num{color:#6b6b7a;font-weight:700;margin-right:5px}
+  .ctl-step .cs-time{color:#5f8772;margin-left:5px}
+  .ctl-row.bub-row{margin-bottom:10px}
+  .ctl-row.bub-row::before{top:9px}
+  .ctl-row.bub-row .bub{max-width:100%}
   /* result */
   .verdict{text-align:center;padding:16px 0 8px}
   .vmark{width:78px;height:78px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;position:relative}
@@ -2591,7 +2604,7 @@ function syncCta(){
   // No store picked = no dead button. The gas value prop holds the spot; the CTA only EXISTS
   // once it's tappable — and arrives armed (pulse + glide into the thumb zone).
   const b=$('checkBtn'), vv=$('ctaValue'), cf=$('chargefoot');
-  const CKCHIP=`<span class="ck-chip"><svg viewBox="0 0 46 46" aria-hidden="true"><path class="ck-wv" d="M29.8 8.1A7 7 0 0 1 37.9 16"/><path class="ck-wv w2" d="M29.1 4.2A11 11 0 0 1 41.9 16.5"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="ck-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg></span>`;
+  const CKCHIP=`<span class="ck-chip"><svg viewBox="0 0 46 46" aria-hidden="true"><path class="ck-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="ck-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="ck-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg></span>`;
   const wasHidden=b.style.display==='none';
   // Non-callable chains (Micro Center, Amazon) NEVER get a call button — the sell-methods card
   // below carries "Buy online" + notify instead. (docs/SELL_METHODS_PLAN.md rule 1.)
@@ -2771,6 +2784,28 @@ function callMsgBoxHTML(steps, transcript, opts){
     <div class="callmsg-div"></div>
     <div class="callmsg-script"><div class="callmsg-h convo-h"><span>${t('live.convo','Conversation')}</span>${showConvoTranslate?`<button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button>`:''}</div><div id="convo_body">${scriptHTML(transcript, opts.final)}</div></div>
   </div>`;
+}
+// ── Single combined timeline: the connection steps (muted rows, with per-step seconds) and the
+// human conversation (chat bubbles) flow off ONE continuous vertical line — steps first, then the
+// conversation. Reuses prod's exact data + copy: stepsHTML's per-step second math + labels, and
+// scriptHTML/bubbleHTML for the conversation turns. No box headers, no glow/gradient. The
+// conversation stays wrapped in #convo_body so toggleTranslate() keeps targeting it.
+function combinedTimelineHTML(steps, transcript, finalElapsed){
+  // Connection steps — same number + label + per-step seconds rule as stepsHTML (final view).
+  const stepRows = (steps&&steps.length) ? steps.map((s,i)=>{
+    let secs=null; // only a REAL elapsed gap gets a time (derived/reopened steps are at:0 → no fake "1s")
+    if(i<steps.length-1){ if(steps[i+1].at>s.at) secs=Math.round(steps[i+1].at-s.at); }
+    else if(finalElapsed!=null && finalElapsed>s.at) secs=Math.round(finalElapsed-s.at);
+    return `<div class="ctl-row"><div class="ctl-step"><span class="ctl-num">${s.n}.</span>${esc(s.label)}${secs!=null?` <span class="cs-time">${secs}s</span>`:''}</div></div>`;
+  }).join('') : '';
+  // Conversation turns — prod's human-line filter + bubbleHTML, each as a row hanging off the same line.
+  const lines=(transcript||'').split('\n').filter(Boolean);
+  const hs=transcriptHumanStart(lines);
+  const human=lines.slice(hs).filter(l=>/^(Agent|Clerk):/.test(l));
+  const convo = human.length
+    ? human.map(l=>`<div class="ctl-row bub-row">${bubbleHTML(l,true)}</div>`).join('')
+    : `<div class="ctl-row"><div class="cs-wait">${t('live.noconvo','No live conversation on this call.')}</div></div>`;
+  return `<div class="ctl">${stepRows}<div id="convo_body">${convo}</div></div>`;
 }
 // Reloaded calls (from a link/history) have no live step timings — derive which steps happened from
 // the saved transcript so the box still shows the journey (without per-step seconds).
@@ -3153,7 +3188,7 @@ function showResult(o, cid){
         <div class="ct"><div class="a">${t('res.thecall','The call')}</div>${callSubline?`<div class="b">${esc(callSubline)}</div>`:''}</div>
         ${canTranslate?`<button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button>`:''}
       </div>
-      ${callMsgBoxHTML(resultSteps, o.transcript||'', {finalElapsed, final:true, summary:callSummary, expanded:haveLive, canTranslate, boxless:true})}
+      ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed)}
     </div>
     ${inStock ? inActions : ''}
     ${cls==='in' ? `<div style="margin-top:14px">${primaryCta}</div>` : ''}
