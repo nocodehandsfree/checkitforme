@@ -1256,6 +1256,31 @@ app.post("/api/stores/flag", async (c) => {
   invalidateRefCache();
   return c.json({ updated });
 });
+// ---- Admin: table dump / load — the staging↔prod DATA MIRROR (docs/ops/STAGING.md). Dump is
+// read-only and works anywhere; load REPLACES a table and is staging-ONLY, so prod can never be
+// wiped by it. Used to make staging an exact data replica of prod (chains/retailers/catalog). ----
+const MIRROR_TABLES: Record<string, typeof retailers> = { categories: categories as never, chains: chains as never, products: products as never, retailers, statuses: statuses as never, kiosks: kiosks as never };
+app.get("/api/admin/table-dump", async (c) => {
+  const name = String(c.req.query("name") || "");
+  const tbl = MIRROR_TABLES[name];
+  if (!tbl) return c.json({ error: "unknown table", tables: Object.keys(MIRROR_TABLES) }, 400);
+  const limit = Math.min(Math.max(Number(c.req.query("limit") || 5000), 1), 20000);
+  const offset = Math.max(Number(c.req.query("offset") || 0), 0);
+  const rows = await db.select().from(tbl).limit(limit).offset(offset);
+  return c.json({ table: name, offset, count: rows.length, rows });
+});
+app.post("/api/admin/table-load", async (c) => {
+  if (!config.staging.on) return c.json({ error: "table-load is staging-only (never wipes prod)" }, 403);
+  const b = await c.req.json().catch(() => ({}));
+  const name = String(b.name || "");
+  const tbl = MIRROR_TABLES[name];
+  const rows: Record<string, unknown>[] | null = Array.isArray(b.rows) ? b.rows : null;
+  if (!tbl || !rows) return c.json({ error: "name + rows[] required" }, 400);
+  if (b.mode === "replace") await db.delete(tbl);
+  for (let i = 0; i < rows.length; i += 500) await db.insert(tbl).values(rows.slice(i, i + 500) as never);
+  invalidateRefCache();
+  return c.json({ table: name, mode: b.mode || "append", inserted: rows.length });
+});
 // Bulk display-name cleanup (Data Dev) in ONE DB pass:
 //  (0) hygiene: strip store numbers ("Burlington West Hills (#264)" -> "Burlington West Hills"),
 //      Title-Case all-caps streets ("NORTH DEMAREE STREET" -> "North Demaree Street"), and rebuild
