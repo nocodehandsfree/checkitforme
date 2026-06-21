@@ -62,7 +62,7 @@ __BRAND_HEAD__
   .storelist{margin-top:12px;max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:7px}
   .store{display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid var(--border);border-radius:12px;cursor:pointer;background:var(--terminal);transition:border-color .12s,background .12s}
   .store:hover{border-color:rgba(255,255,255,.18)}
-  .store.sel{border-color:var(--green);background:rgba(74,222,128,.08)}
+  .store.sel{border-color:var(--accent,#FFCB05);background:color-mix(in srgb,var(--accent,#FFCB05) 9%,transparent)}
   .store .ic{width:52px;height:52px;border-radius:15px;background:linear-gradient(145deg,#34343d,#23232b);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
   /* name-only stores: their name as a tight two-line wordmark inside the logo slot (no made-up logo) */
   .wm{display:flex;flex-direction:column;justify-content:center;align-items:center;width:100%;height:100%;padding:2px;box-sizing:border-box;overflow:hidden;text-align:center}
@@ -153,8 +153,18 @@ __BRAND_HEAD__
   .live-wait{color:var(--muted);font-size:13px;text-align:center;padding:16px 8px;line-height:1.5}
   /* ── result v2: boxless verdict + boxless "The call" header (mirrors checkit-demo look) ── */
   .rverdict{position:relative;padding:2px 2px 0;margin-bottom:4px}
-  /* no ambient verdict glow — solid dark everywhere (site-wide no-glow rule); the colored RESULT pill carries the tone */
+  /* Subtle verdict tone wash — carries the in/out/soon/unk feeling behind the headline. Kept low
+     (top:-12px, .14 alpha, fades by 70%) so it reads as a hint and doesn't slab the sticky nav. */
+  .rverdict::before{content:'';position:absolute;left:-20px;right:-20px;top:-12px;height:230px;pointer-events:none}
+  .rverdict.out::before{background:linear-gradient(180deg,rgba(239,68,68,.15),transparent 70%)}
+  .rverdict.in::before{background:linear-gradient(180deg,rgba(74,222,128,.15),transparent 70%)}
+  .rverdict.unk::before{background:linear-gradient(180deg,rgba(251,191,36,.11),transparent 70%)}
+  .rverdict.soon::before{background:linear-gradient(180deg,rgba(245,158,11,.14),transparent 70%)}
   .rverdict>*{position:relative}
+  /* Live call in progress — a subtle green wash so "we're on the line for you" reads warm/active. */
+  #live{position:relative}
+  #live::before{content:'';position:absolute;left:-20px;right:-20px;top:-12px;height:220px;pointer-events:none;background:linear-gradient(180deg,rgba(74,222,128,.13),transparent 70%);z-index:0}
+  #live>*{position:relative;z-index:1}
   .rpill{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;padding:5px 11px;border-radius:999px}
   .rpill .d{width:7px;height:7px;border-radius:50%;background:currentColor}
   .rverdict.out .rpill{color:var(--red);background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.32)}
@@ -193,6 +203,23 @@ __BRAND_HEAD__
   .ctl-row.bub-row{margin-bottom:10px}
   .ctl-row.bub-row::before{top:9px}
   .ctl-row.bub-row .bub{max-width:100%}
+  /* green "you are here" dot on the current step, carried through the AI turns so the whole call —
+     log → conversation — reads as one linked green thread. The current dot pulses while live. */
+  .ctl-row.ctl-substep.cur::before{background:var(--green);box-shadow:0 0 8px rgba(74,222,128,.55)}
+  .ctl-row.ctl-substep.cur .ctl-step{color:#cfcfe0}
+  .ctl-row.ctl-substep.live::before{animation:csPulse 1.4s ease-in-out infinite}
+  @keyframes csPulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.5)}50%{box-shadow:0 0 0 5px rgba(74,222,128,0)}}
+  .ctl-row.bub-row.ai::before{background:var(--green);box-shadow:0 0 7px rgba(74,222,128,.4)}
+  /* "Reaching a person" — collapsible group on the timeline (tap the header to roll the log up/down) */
+  .reach{margin:0 0 10px}
+  .reach>summary{position:relative;list-style:none;display:flex;align-items:center;gap:8px;cursor:pointer;color:#cfcfe0;font-weight:700;font-size:13.5px;padding:1px 0}
+  .reach>summary::-webkit-details-marker{display:none}
+  .reach>summary::before{content:'';position:absolute;left:-18px;top:50%;transform:translateY(-50%);width:9px;height:9px;border-radius:50%;background:#3a3a46;border:1.5px solid var(--terminal);z-index:1}
+  .reach .reach-n{margin-left:auto;color:var(--muted);font-weight:600;font-size:12px}
+  .reach .reach-chev{display:inline-flex;transition:transform .15s}
+  .reach[open] .reach-chev{transform:rotate(180deg)}
+  .reach[open]>summary{margin-bottom:9px}
+  .reach-steps .ctl-row.ctl-substep{margin-bottom:7px}
   /* result */
   .verdict{text-align:center;padding:16px 0 8px}
   .vmark{width:78px;height:78px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;position:relative}
@@ -2785,27 +2812,36 @@ function callMsgBoxHTML(steps, transcript, opts){
     <div class="callmsg-script"><div class="callmsg-h convo-h"><span>${t('live.convo','Conversation')}</span>${showConvoTranslate?`<button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button>`:''}</div><div id="convo_body">${scriptHTML(transcript, opts.final)}</div></div>
   </div>`;
 }
-// ── Single combined timeline: the connection steps (muted rows, with per-step seconds) and the
-// human conversation (chat bubbles) flow off ONE continuous vertical line — steps first, then the
-// conversation. Reuses prod's exact data + copy: stepsHTML's per-step second math + labels, and
-// scriptHTML/bubbleHTML for the conversation turns. No box headers, no glow/gradient. The
-// conversation stays wrapped in #convo_body so toggleTranslate() keeps targeting it.
+// ── Single combined timeline (matches the /demo design): the connection steps live in a
+// COLLAPSIBLE "Reaching a person" group (tap to roll the call log up/down), and the human
+// conversation (chat bubbles) hangs off the SAME vertical line below it. Reuses prod's exact
+// data + copy: stepsHTML's per-step second math + labels, and bubbleHTML for the conversation
+// turns ("Check AI"/"Associate"). No box headers, no glow/gradient. The conversation stays
+// wrapped in #convo_body so toggleTranslate() keeps targeting it.
 function combinedTimelineHTML(steps, transcript, finalElapsed){
-  // Connection steps — same number + label + per-step seconds rule as stepsHTML (final view).
+  // Connection steps — same per-step seconds rule as stepsHTML; narrative labels, no numbers.
   const stepRows = (steps&&steps.length) ? steps.map((s,i)=>{
     let secs=null; // only a REAL elapsed gap gets a time (derived/reopened steps are at:0 → no fake "1s")
     if(i<steps.length-1){ if(steps[i+1].at>s.at) secs=Math.round(steps[i+1].at-s.at); }
     else if(finalElapsed!=null && finalElapsed>s.at) secs=Math.round(finalElapsed-s.at);
-    return `<div class="ctl-row"><div class="ctl-step"><span class="ctl-num">${s.n}.</span>${esc(s.label)}${secs!=null?` <span class="cs-time">${secs}s</span>`:''}</div></div>`;
+    const cur = i===steps.length-1;          // the step we're AT → gets the green "you are here" dot
+    const live = cur && finalElapsed==null;  // still in progress → pulse the green dot
+    return `<div class="ctl-row ctl-substep${cur?' cur':''}${live?' live':''}"><div class="ctl-step">${esc(s.label)}${secs!=null?` <span class="cs-time">${secs}s</span>`:''}</div></div>`;
   }).join('') : '';
+  const n=(steps&&steps.length)||0;
+  // The whole call log rolls up under one tappable header (open by default on a fresh result).
+  const reach = stepRows ? `<details class="reach" open><summary><span class="reach-lbl">${t('step.head','Reaching a person')}</span>${n?`<span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}</span>`:''}<span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#6b6b7a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
   // Conversation turns — prod's human-line filter + bubbleHTML, each as a row hanging off the same line.
   const lines=(transcript||'').split('\n').filter(Boolean);
   const hs=transcriptHumanStart(lines);
   const human=lines.slice(hs).filter(l=>/^(Agent|Clerk):/.test(l));
+  // finalElapsed==null means we're rendering a LIVE, in-progress call → "waiting" copy; a finished
+  // call with no human turns gets the "no conversation" copy.
+  const emptyMsg = finalElapsed==null ? t('live.waitperson','Waiting to reach a person…') : t('live.noconvo','No live conversation on this call.');
   const convo = human.length
-    ? human.map(l=>`<div class="ctl-row bub-row">${bubbleHTML(l,true)}</div>`).join('')
-    : `<div class="ctl-row"><div class="cs-wait">${t('live.noconvo','No live conversation on this call.')}</div></div>`;
-  return `<div class="ctl">${stepRows}<div id="convo_body">${convo}</div></div>`;
+    ? human.map(l=>`<div class="ctl-row bub-row${/^Agent:/.test(l)?' ai':''}">${bubbleHTML(l,true)}</div>`).join('')
+    : `<div class="ctl-row"><div class="cs-wait">${emptyMsg}</div></div>`;
+  return `<div class="ctl">${reach}<div id="convo_body">${convo}</div></div>`;
 }
 // Reloaded calls (from a link/history) have no live step timings — derive which steps happened from
 // the saved transcript so the box still shows the journey (without per-step seconds).
@@ -2816,7 +2852,10 @@ function deriveSteps(transcript){
   const out=[]; for(let n=1;n<=max;n++) out.push({n, label:liveStageLabel(n), at:0});
   return out;
 }
-function renderLiveMsg(){ const box=$('live_msgbox'); if(box) box.innerHTML=callMsgBoxHTML(LIVE_STEPS, LIVE_TRANSCRIPT); }
+// Live call renders the SAME unified timeline the result uses — "Reaching a person" steps + the
+// conversation linked on one line — rebuilt on every new line so it grows in real time as the call
+// happens (finalElapsed=null → the latest step shows as the current one, no closing time yet).
+function renderLiveMsg(){ const box=$('live_msgbox'); if(box) box.innerHTML=combinedTimelineHTML(LIVE_STEPS, LIVE_TRANSCRIPT, null); }
 // Furthest stage the transcript so far justifies. Two rules learned from live CVS calls:
 //  - "Transferring to the front" (6) only fires when the agent says the FINAL transfer word ("general") —
 //    NOT on "front" (that's still navigating, 5). After that the call rings through to the front.
@@ -3160,6 +3199,20 @@ function showResult(o, cid){
   const resultSteps=haveLive?LIVE_STEPS:(savedSteps||deriveSteps(o.transcript||''));
   const finalElapsed=haveLive&&LIVE_T0?((Date.now()-LIVE_T0)/1000):(savedSteps&&typeof o.durationSecs==='number'&&o.durationSecs>0?o.durationSecs:null);
   const vTitle=String(title).replace(/[\s!?.:：]+$/,''); // "In stock!" → "In stock" so the "Status: summary" line reads clean (colon separator, no dash)
+  // Rich verdict sub-line (mirrors the /demo design): "{store} has / doesn't have {category} … right
+  // now". Only for a completed single-category check where we know the store + category; every other
+  // outcome (no-answer, closed, doesn't-carry, restock-soon, multi-category) keeps prod's own note.
+  // Naming the store right here lets us drop the separate store line below it.
+  let richSub=false;
+  if(o.status==='completed' && askedLabels.length<=1 && !o.doesNotSell && storeHeadline && headLabel){
+    const _SN=esc(storeHeadline), _C=esc(headLabel);
+    if(cls==='in'){ note = o.productName
+        ? tf('sub.in.named','{s} has <b style="color:var(--accent)">{p}</b> in stock right now.',{s:_SN,p:esc(o.productName)})
+        : tf('sub.in','{s} has <b>{c}</b> in stock right now.',{s:_SN,c:_C});
+      richSub=true; }
+    else if(o.soldOut){ note=tf('sub.soldout','{s} is sold out of <b>{c}</b> right now.',{s:_SN,c:_C}); richSub=true; }
+    else if(cls==='out'){ note=tf('sub.out',"{s} doesn't have <b>{c}</b> right now.",{s:_SN,c:_C}); richSub=true; }
+  }
   // Boxless "The call" subline: "{ago} · {dur}" — both pieces reuse existing prod helpers/vars
   // (timeAgo for the ago, callSummary already carries the "Call · Ns" duration). No new copy/keys.
   const callSubline=[o.ts?timeAgo(o.ts):'', callSummary].filter(Boolean).join(' · ');
@@ -3178,10 +3231,10 @@ function showResult(o, cid){
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
       <div class="rtitle2">${esc(vTitle)}</div>
       ${note?`<div class="rsub">${note}</div>`:''}
-      ${(storeHeadline||fullAddr)?`<div class="rstore-line"><b>${esc(storeHeadline)}</b>${fullAddr?` <span class="ad">· ${esc(fullAddr)}</span>`:''}</div>`:''}
+      ${(!richSub && (storeHeadline||fullAddr))?`<div class="rstore-line"><b>${esc(storeHeadline)}</b>${fullAddr?` <span class="ad">· ${esc(fullAddr)}</span>`:''}</div>`:''}
       ${breakdown}
     </div>
-    ${cls!=='in' ? `<div class="topcta">${primaryCta}</div>` : ''}
+    <div class="topcta">${primaryCta}</div>
     <div class="callsec">
       <div class="callhead">
         <span class="ci">${ICO.call('#cfcfe0')}</span>
@@ -3191,7 +3244,6 @@ function showResult(o, cid){
       ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed)}
     </div>
     ${inStock ? inActions : ''}
-    ${cls==='in' ? `<div style="margin-top:14px">${primaryCta}</div>` : ''}
     ${upsell}
     <div class="foot" style="margin-top:16px">${o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one')}</div>`;
   $('result').classList.remove('hidden');
