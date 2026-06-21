@@ -40,7 +40,7 @@ import { seedStockCheckIntel } from "./stock/intel";
 import { seedSellMethods } from "./stock/sellmethods";
 import { r2Config, presignPut, photoKey } from "./r2";
 import { check as rlCheck, clientIp, LIMITS } from "./ratelimit";
-import { isGmailConfigured, gmailReceiptTick } from "./gmail-receipts";
+import { isGmailConfigured, gmailReceiptTick, debugRecentInbox } from "./gmail-receipts";
 import { rankBets } from "./best-bet";
 import { referralStatus, claimReferral } from "./referrals";
 
@@ -985,6 +985,13 @@ app.get("/pub/kiosk-receipt/poll", async (c) => {
   return c.json({ found: true, receipt: { product: cand.product, machineId: cand.machineId, at: cand.txnAt }, reward: u ? { credits: reward } : { freeCheck: reward > 0, checks: reward } });
 });
 app.get("/api/kiosk-receipts", async (c) => c.json(await db.select().from(kioskReceipts).orderBy(desc(kioskReceipts.createdAt))));
+// Diagnostic: read the ingest inbox + show the parser's verdict per email (incl. rejects) so we can see
+// why a receipt did/didn't land. Read-only, gated by the /api/* admin auth. hours=1..168 (default 72).
+app.get("/api/admin/receipts/inbox-debug", async (c) => {
+  const hours = Math.min(168, Math.max(1, Number(c.req.query("hours")) || 72));
+  try { return c.json({ ok: true, configured: isGmailConfigured(), rows: await debugRecentInbox(hours * 3600_000) }); }
+  catch (e) { return c.json({ ok: false, error: String((e as Error)?.message || e) }, 500); }
+});
 app.get("/pub/kiosks", async (c) => {
   const lat = Number(c.req.query("lat")), lng = Number(c.req.query("lng")), radius = Number(c.req.query("radius") || 25);
   let rows = await db.select().from(kiosks);

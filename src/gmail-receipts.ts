@@ -68,6 +68,38 @@ export async function fetchRecentReceipts(maxAgeMs = 30 * 60_000): Promise<Fetch
   return out;
 }
 
+/** Admin diagnostic (read-only): recent inbox emails + what the parser does with each, incl. rejects. */
+export interface InboxDebugRow { from: string; subject: string; date: number; stored: boolean; parsed: ParsedReceipt | null; snippet: string }
+export async function debugRecentInbox(maxAgeMs = 3 * 86400_000): Promise<InboxDebugRow[]> {
+  if (!isGmailConfigured()) return [];
+  const client = new ImapFlow({
+    host: "imap.gmail.com", port: 993, secure: true,
+    auth: { user: process.env.GMAIL_USER!, pass: process.env.GMAIL_APP_PASSWORD! },
+    logger: false,
+  });
+  const out: InboxDebugRow[] = [];
+  await client.connect();
+  const lock = await client.getMailboxLock("INBOX");
+  try {
+    const since = new Date(Date.now() - maxAgeMs);
+    for await (const msg of client.fetch({ since }, { envelope: true, source: true, internalDate: true })) {
+      const src = msg.source ? msg.source.toString("utf8") : "";
+      const parsed = parseReceipt(src);
+      out.push({
+        from: (msg.envelope?.from || []).map((a) => a.address || "").join(","),
+        subject: msg.envelope?.subject || "(no subject)",
+        date: msg.internalDate ? new Date(msg.internalDate).getTime() : Date.now(),
+        stored: !!parsed, parsed, snippet: plain(src).slice(0, 400),
+      });
+    }
+  } finally {
+    lock.release();
+    await client.logout().catch(() => {});
+  }
+  out.sort((a, b) => b.date - a.date);
+  return out;
+}
+
 let running = false;
 /** Background ingest: pull new receipts from Gmail into kiosk_receipts. Gated by flag + creds. */
 export async function gmailReceiptTick(): Promise<number> {

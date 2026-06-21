@@ -539,16 +539,16 @@
   <section id="receipts">
     <h2>Kiosk</h2>
     <div class="card report">
-      <div class="name" style="margin-bottom:4px">Restock intel</div>
-      <div id="gw_intel" class="meta">Loading…</div>
-    </div>
-    <div class="card report">
       <div class="name" style="margin-bottom:4px">Kiosk intel</div>
       <div id="gw_kiosks" class="meta">Loading…</div>
     </div>
     <div class="card report">
-      <div class="name" style="margin-bottom:4px">Emailed-in receipts</div>
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div class="name">Emailed-in receipts</div>
+        <button class="ghost" style="font-size:12px;padding:5px 10px" onclick="inspectInbox()" data-tip="Reads the ingest inbox (restocktimer@gmail.com) and shows what the parser does with each email — so we can see whether a receipt arrived and why it did or didn't land.">🔍 Inspect inbox</button>
+      </div>
       <div class="meta" id="rcpt_status" style="margin-bottom:8px">Loading…</div>
+      <div id="rcpt_debug" class="meta" style="margin-bottom:8px"></div>
       <div id="rcptList"><div class="empty">Loading…</div></div>
     </div>
   </section>
@@ -963,7 +963,7 @@ const NAV_GROUPS={
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwIntel();loadGwKiosks();}, bail:()=>loadBail(), statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwKiosks();}, bail:()=>loadBail(), statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -1011,6 +1011,27 @@ async function loadReceipts(){
       <div style="text-align:right;flex:0 0 auto"><div>${badge}</div><div class="meta" style="margin-top:5px">${ago(r.createdAt)}</div></div>
     </div></div>`;
   }).join('');
+}
+// Admin diagnostic: read the ingest inbox and show what the parser does with each email (incl. rejects),
+// so we can see whether a receipt arrived and why it did/didn't land. Read-only; admin-gated server-side.
+async function inspectInbox(){
+  const el=document.getElementById('rcpt_debug'); if(!el) return;
+  el.innerHTML='🔍 Reading restocktimer@gmail.com…';
+  const d=await api('/api/admin/receipts/inbox-debug?hours=72');
+  if(!d||!d.ok){ el.innerHTML='<span style="color:#ff6b6b">Inbox read failed: '+esch((d&&d.error)||'unknown')+'</span>'; return; }
+  if(!d.configured){ el.innerHTML='<span style="color:#FBBF24">Gmail not configured (no creds set).</span>'; return; }
+  const rows=d.rows||[];
+  if(!rows.length){ el.innerHTML='No emails in the inbox over the last 72h.'; return; }
+  const dt=ms=>{ const m=Math.floor((Date.now()-ms)/60000); return m<60?Math.max(1,m)+'m ago':(m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago'); };
+  const stored=rows.filter(r=>r.stored).length;
+  el.innerHTML=`<div style="margin:4px 0 6px"><b>${rows.length}</b> emails · last 72h — <b style="color:var(--green)">${stored}</b> parse as kiosk receipts</div>`+
+    rows.map(r=>{ const p=r.parsed||{};
+      const head=`<b style="color:${r.stored?'var(--green)':'#ff8a8a'}">${r.stored?'✓ parses':'✗ rejected'}</b> · ${esch(r.from||'?')} · ${dt(r.date)}`;
+      const fields=r.stored
+        ?`<div class="meta" style="font-size:11px">machine ${esch(p.machineId||'—')} · ${esch(p.product||'—')} · $${esch(p.total||'—')}</div>`
+        :`<div class="meta" style="font-size:11px;color:#9aa">${esch((r.snippet||'').slice(0,200))}…</div>`;
+      return `<div style="padding:7px 0;border-top:1px solid var(--border)">${head}<div style="font-size:12.5px;color:var(--text)">${esch(r.subject||'(no subject)')}</div>${fields}</div>`;
+    }).join('');
 }
 // ---- God view: live calls + outcomes + money, one screen, auto-refreshing ----
 const secsFmt=s=>s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):(s||0)+'s';
