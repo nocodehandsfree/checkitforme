@@ -128,8 +128,8 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
 | Pavilions | white serif wordmark | 🔧 | their real wordmark (official vector), recolored white + stretched taller (owner: "pavilions is OK") |
-| Pick 'n Save | red "P" mark | 🔧 | de-boxed app-icon "P" → Pick'n Save red (#DC1E2E); **monogram — no wordmark vector exists**, flagged to owner |
-| Publix | green "Publix" wordmark | 🔧 | official vector — green wordmark, no box (replaced the "p" mark) |
+| Pick 'n Save | "Pick 'n / Save" wordmark | 🔧 | owner-supplied real wordmark (navy + green leaf), split two balanced lines, light plate so navy reads |
+| Publix | white "p" mark | 🔧 | owner-supplied logo — white p-mark on the gray tile (owner confirmed this is the Publix mark) |
 | QFC | Q-with-crown | 🔧 | their Q-with-crown mark, shrunk per owner ("Q is too big") |
 | Ralphs | red oval + white script | 🔧 | owner-supplied real Ralphs oval logo (replaced the red "R" mark) |
 
