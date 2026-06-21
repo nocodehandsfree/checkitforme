@@ -801,7 +801,11 @@ app.get("/pub/stores/near", async (c) => {
     })
     .filter((r) => r.ownerOnly || !hasLoc || r.miles == null || r.miles <= radius) // owner-only store is never distance-filtered
     .sort((a, b) => (a.miles ?? 9e9) - (b.miles ?? 9e9) || a.name.localeCompare(b.name));
-  return c.json({ total: all.length, offset, limit, stores: all.slice(offset, offset + limit) });
+  // Owner-only stores are pinned into the response (never lost to the distance sort + page limit),
+  // so the owner always gets the "Fun" store no matter how far away they are.
+  const owned = all.filter((r) => r.ownerOnly);
+  const rest = all.filter((r) => !r.ownerOnly);
+  return c.json({ total: all.length, offset, limit, stores: [...owned, ...rest.slice(offset, offset + limit)] });
 });
 
 // Master/dev location override: resolve a ZIP (or free-text "city, ST") to a lat/lng using OUR OWN
