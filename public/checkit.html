@@ -153,8 +153,18 @@ __BRAND_HEAD__
   .live-wait{color:var(--muted);font-size:13px;text-align:center;padding:16px 8px;line-height:1.5}
   /* ── result v2: boxless verdict + boxless "The call" header (mirrors checkit-demo look) ── */
   .rverdict{position:relative;padding:2px 2px 0;margin-bottom:4px}
-  /* no ambient verdict glow — solid dark everywhere (site-wide no-glow rule); the colored RESULT pill carries the tone */
+  /* Subtle verdict tone wash — carries the in/out/soon/unk feeling behind the headline. Kept low
+     (top:-12px, .14 alpha, fades by 70%) so it reads as a hint and doesn't slab the sticky nav. */
+  .rverdict::before{content:'';position:absolute;left:-20px;right:-20px;top:-12px;height:230px;pointer-events:none}
+  .rverdict.out::before{background:linear-gradient(180deg,rgba(239,68,68,.15),transparent 70%)}
+  .rverdict.in::before{background:linear-gradient(180deg,rgba(74,222,128,.15),transparent 70%)}
+  .rverdict.unk::before{background:linear-gradient(180deg,rgba(251,191,36,.11),transparent 70%)}
+  .rverdict.soon::before{background:linear-gradient(180deg,rgba(245,158,11,.14),transparent 70%)}
   .rverdict>*{position:relative}
+  /* Live call in progress — a subtle green wash so "we're on the line for you" reads warm/active. */
+  #live{position:relative}
+  #live::before{content:'';position:absolute;left:-20px;right:-20px;top:-12px;height:220px;pointer-events:none;background:linear-gradient(180deg,rgba(74,222,128,.13),transparent 70%);z-index:0}
+  #live>*{position:relative;z-index:1}
   .rpill{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;padding:5px 11px;border-radius:999px}
   .rpill .d{width:7px;height:7px;border-radius:50%;background:currentColor}
   .rverdict.out .rpill{color:var(--red);background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.32)}
@@ -2830,7 +2840,10 @@ function deriveSteps(transcript){
   const out=[]; for(let n=1;n<=max;n++) out.push({n, label:liveStageLabel(n), at:0});
   return out;
 }
-function renderLiveMsg(){ const box=$('live_msgbox'); if(box) box.innerHTML=callMsgBoxHTML(LIVE_STEPS, LIVE_TRANSCRIPT); }
+// Live call renders the SAME unified timeline the result uses — "Reaching a person" steps + the
+// conversation linked on one line — rebuilt on every new line so it grows in real time as the call
+// happens (finalElapsed=null → the latest step shows as the current one, no closing time yet).
+function renderLiveMsg(){ const box=$('live_msgbox'); if(box) box.innerHTML=combinedTimelineHTML(LIVE_STEPS, LIVE_TRANSCRIPT, null); }
 // Furthest stage the transcript so far justifies. Two rules learned from live CVS calls:
 //  - "Transferring to the front" (6) only fires when the agent says the FINAL transfer word ("general") —
 //    NOT on "front" (that's still navigating, 5). After that the call rings through to the front.
