@@ -1611,7 +1611,7 @@ app.post("/pub/check", async (c) => {
   if ((await pubCredits()) <= 0) return c.json({ error: "no_credits" }, 402);
   const { retailerId, categoryId, specificProduct, kioskMode } = b;
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
-  if (config.staging.on) return c.json(simStartCall()); // preview: simulated call, no real dial
+  if (config.staging.on && !config.callsEnabled) return c.json(simStartCall()); // preview: simulated call, no real dial
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   try {
     const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, kioskMode });
@@ -1625,7 +1625,7 @@ app.post("/pub/check-live", async (c) => {
   const b = await c.req.json();
   const catIds = (Array.isArray(b.categoryIds) ? b.categoryIds : [b.categoryId]).map(Number).filter(Boolean);
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
-  if (config.staging.on) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
+  if (config.staging.on && !config.callsEnabled) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
   const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, undefined, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
@@ -1721,7 +1721,7 @@ app.post("/app/check", async (c) => {
   if (!u) return c.json({ error: "unauthorized" }, 401);
   const { retailerId, categoryId, specificProduct, kioskMode } = await c.req.json();
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
-  if (config.staging.on) return c.json(simStartCall()); // preview: simulated call, no real dial
+  if (config.staging.on && !config.callsEnabled) return c.json(simStartCall()); // preview: simulated call, no real dial
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
@@ -1739,7 +1739,7 @@ app.post("/app/check-live", async (c) => {
   const b = await c.req.json();
   const catIds = (Array.isArray(b.categoryIds) ? b.categoryIds : [b.categoryId]).map(Number).filter(Boolean);
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
-  if (config.staging.on) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
+  if (config.staging.on && !config.callsEnabled) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
