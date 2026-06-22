@@ -1886,7 +1886,7 @@ app.get("/api/admin/user-history", async (c) => {
   const ownerOnly = await ownerOnlyRetailerIds();
   const rows = (ids.length
     ? (await db.select().from(callResults).where(inArray(callResults.finderUserId, ids)).orderBy(desc(callResults.startedAt)).limit(80))
-    : []).filter((r) => !ownerOnly.has(r.retailerId));
+    : []).filter((r) => !ownerOnly.has(r.retailerId) && r.status !== "admin_hangup");
   const withCid = rows.filter((r) => r.providerCallId);
   return c.json({
     email,
@@ -1974,7 +1974,7 @@ app.get("/api/admin/overview", async (c) => {
   const stores = await retailerMap();
   const cats = await categoryLabelMap();
   const ownerOnly = await ownerOnlyRetailerIds();
-  const recent = (await db.select().from(callResults).where(gte(callResults.startedAt, d30)).orderBy(desc(callResults.startedAt))).filter((r) => !ownerOnly.has(r.retailerId));
+  const recent = (await db.select().from(callResults).where(gte(callResults.startedAt, d30)).orderBy(desc(callResults.startedAt))).filter((r) => !ownerOnly.has(r.retailerId) && r.status !== "admin_hangup");
   // Live: anything started in the last 30 min that hasn't finished.
   const live = recent.filter((r) => ["queued", "dialing", "in_progress"].includes(r.status) && r.startedAt >= now - 1800)
     .map((r) => ({ id: r.id, store: stores.get(r.retailerId)?.name || "?", category: cats.get(r.categoryId) || "", secs: now - r.startedAt, cid: r.providerCallId }));
@@ -2238,7 +2238,7 @@ app.get("/api/admin/store-intel", async (c) => {
   // Most-checked stores (most call results recorded against them).
   const funIds = [...(await ownerOnlyRetailerIds())]; // owner-only "Fun" store: never counted in reports
   const checkRows = await db.select({ rid: callResults.retailerId, n: sql<number>`count(*)` }).from(callResults)
-    .where(and(sql`${callResults.retailerId} is not null`, funIds.length ? notInArray(callResults.retailerId, funIds) : undefined))
+    .where(and(sql`${callResults.retailerId} is not null`, sql`coalesce(${callResults.status},'') != 'admin_hangup'`, funIds.length ? notInArray(callResults.retailerId, funIds) : undefined))
     .groupBy(callResults.retailerId).orderBy(desc(sql`count(*)`)).limit(10);
   const checkIds = checkRows.map((r) => r.rid).filter((x): x is number => x != null);
   const checkNames = checkIds.length
@@ -2307,7 +2307,7 @@ app.get("/api/admin/coverage", async (c) => {
 app.get("/api/admin/call-timing", async (c) => {
   const funIds = [...(await ownerOnlyRetailerIds())]; // owner-only "Fun" store excluded from timings
   const notFun = funIds.length ? notInArray(callResults.retailerId, funIds) : undefined;
-  const hasT = and(sql`${callResults.callSeconds} is not null`, notFun);
+  const hasT = and(sql`${callResults.callSeconds} is not null`, sql`coalesce(${callResults.status},'') != 'admin_hangup'`, notFun);
   const agg = (await db.select({ n: sql<number>`count(*)`, avgCall: sql<number>`avg(${callResults.callSeconds})`, totalSec: sql<number>`coalesce(sum(${callResults.callSeconds}),0)` }).from(callResults).where(hasT))[0];
   const reached = (await db.select({ n: sql<number>`count(*)`, avgNav: sql<number>`avg(${callResults.navSeconds})`, avgTalk: sql<number>`avg(${callResults.callSeconds} - ${callResults.navSeconds})` }).from(callResults).where(and(hasT, sql`${callResults.navSeconds} is not null`)))[0];
   const byStore = await db.select({ rid: callResults.retailerId, n: sql<number>`count(*)`, avgCall: sql<number>`avg(${callResults.callSeconds})`, avgNav: sql<number>`avg(${callResults.navSeconds})`, avgTalk: sql<number>`avg(${callResults.callSeconds} - ${callResults.navSeconds})`, totalSec: sql<number>`coalesce(sum(${callResults.callSeconds}),0)` }).from(callResults).where(hasT).groupBy(callResults.retailerId).orderBy(desc(sql`count(*)`)).limit(12);

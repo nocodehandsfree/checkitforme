@@ -2223,7 +2223,7 @@ function customerVerdict(o){
     return {e:s.emoji, t:s.label, c:s.color, n, key};
   }
   // Registry not loaded yet (first paint) — minimal built-in fallback keeps the row sane.
-  const F=({in_stock:['✅','In stock','#4ADE80'],sold_out:['🕐','Sold out','#EF4444'],does_not_sell:['🚫',"They don't carry it",'#EF4444'],not_in_stock:['❌','Not in stock','#EF4444'],no_clear_answer:['🤔','Got a “maybe”','#FBBF24'],nobody_answered:['📵','Nobody answered','#9CA3AF'],closed:['🔒','Store closed','#9CA3AF'],failed:['⚠️','Call failed','#FBBF24']})[key]||['📵','Nobody answered','#9CA3AF'];
+  const F=({in_stock:['✅','In stock','#4ADE80'],sold_out:['🕐','Sold out','#EF4444'],does_not_sell:['🚫',"They don't carry it",'#EF4444'],not_in_stock:['❌','Not in stock','#EF4444'],no_clear_answer:['🤔','Got a “maybe”','#FBBF24'],nobody_answered:['📵','Nobody answered','#9CA3AF'],closed:['🔒','Store closed','#9CA3AF'],failed:['⚠️','Call failed','#FBBF24'],admin_hangup:['·','Admin hung up','#9CA3AF']})[key]||['📵','Nobody answered','#9CA3AF'];
   return {e:F[0],t:F[1],c:F[2],n:(key==='failed'&&o.failureReason)?o.failureReason:'',key};
 }
 function pollTranscript(cid, pre){
