@@ -2415,6 +2415,8 @@ app.get("/api/admin/trainer/session/:id", (c) => {
   if (!s) return c.json({ error: "expired" }, 404);
   return c.json({ id: s.id, store: s.retailerName, status: s.status, type: s.type, confidence: s.confidence,
     elapsed: Math.round((Date.now() - s.startMs) / 1000), humanAtSec: s.humanAtSec,
+    // Confirm-mode: did we hit the RIGHT desk ("answered") or get sent elsewhere ("redirect" + where)?
+    confirm: s.confirm ? (s.confirmResult ?? "asked") : null, redirectTo: s.redirectTo ?? null,
     steps: s.steps, recipe: s.recipe });
 });
 // Call log for a chain: every learner run (Alpha/Bravo/Charlie path + the step matrix). Powers the

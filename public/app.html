@@ -782,7 +782,10 @@
       <div class="card">
         <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap">
           <div class="name" data-tip="Auto-filled by the navigator from real calls — read-only, never hand-edited.">Mapping</div>
+          <div class="row" style="gap:8px">
+          <button class="ghost" id="set_confirmbtn" onclick="setConfirmChain()" data-tip="Place one real call, reach a human, then ASK 'do you have any Pokémon cards in stock?' — confirms we hit the right desk. Rotates to a fresh store each callback.">🎯 Confirm stock</button>
           <button class="ghost" id="set_mapbtn" onclick="setMapChain()" data-tip="Place one real call: the cheap navigator works the menu to a human and records the recipe + time.">Map</button>
+          </div>
         </div>
         <div id="set_mapping" class="meta">—</div>
         <div class="card" id="tr_live" style="display:none;border-color:var(--green);margin-top:12px">
@@ -1009,7 +1012,7 @@ async function inspectInbox(){
 // ---- God view: live calls + outcomes + money, one screen, auto-refreshing ----
 const secsFmt=s=>s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):(s||0)+'s';
 // ---- Tree Trainer v2: document the fastest path to a human, watch it live, lock it ----
-let TR_POLL=null, TR_SESSION=null, TR_CHAIN=null, TR_STORE='', TR_RESULT=null;
+let TR_POLL=null, TR_SESSION=null, TR_CHAIN=null, TR_STORE='', TR_RESULT=null, TR_CONFIRM=false, TR_OPTS={};
 // One-tap Helicone routing check: pings the cheap nav model live through the gateway (no phone call).
 async function testHelicone(model){
   const el=$('tr_heli'); if(el) el.innerHTML='<span style="color:#9aa">⚡ Pinging Helicone…</span>';
@@ -1061,9 +1064,13 @@ async function loadRuns(chainId, box){
     </details>`;
   }).join('');
 }
-async function trDocument(chainId,name){
-  if(!confirm('Place a REAL call to a '+name+' store now? The nav-learner will dial it to map the phone menu.')) return;
-  TR_CHAIN=chainId; TR_STORE=name; TR_RESULT=null;
+async function trDocument(chainId,name,opts){
+  opts=opts||{};
+  const msg=opts.confirm
+    ? 'Place a REAL call to a '+name+' store now? It reaches a human, then asks "do you have any '+(opts.product||'Pokémon cards')+' in stock?" to confirm the right desk.'
+    : 'Place a REAL call to a '+name+' store now? The nav-learner will dial it to map the phone menu.';
+  if(!confirm(msg)) return;
+  TR_CHAIN=chainId; TR_STORE=name; TR_RESULT=null; TR_CONFIRM=!!opts.confirm; TR_OPTS=opts;
   const live=document.getElementById('tr_live'); live.style.display='';
   document.getElementById('tr_live_store').textContent=name;
   document.getElementById('tr_live_status').textContent='dialing…';
@@ -1071,7 +1078,8 @@ async function trDocument(chainId,name){
   document.getElementById('tr_live_feed').innerHTML='';
   document.getElementById('tr_live_result').style.display='none';
   try{ live.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}
-  const r=await api('/api/admin/trainer/document',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chainId})});
+  const body=opts.confirm?{chainId,confirm:true,product:opts.product||'Pokémon cards'}:{chainId};
+  const r=await api('/api/admin/trainer/document',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   if(!r||r.error){ document.getElementById('tr_live_status').textContent='✖ '+((r&&r.error)||'could not start'); return; }
   TR_SESSION=r.sessionId;
   if(TR_POLL) clearInterval(TR_POLL);
@@ -1093,11 +1101,19 @@ async function trPoll(){
   if(s.status==='human'||s.status==='failed'||s.status==='done'){
     clearInterval(TR_POLL); TR_POLL=null;
     const res=document.getElementById('tr_live_result'); res.style.display='';
-    if(s.status==='human'&&s.recipe){
+    // CONFIRM-mode redirect: we reached a human but they sent us elsewhere (wrong desk) — captured, not lockable.
+    if(s.confirm==='redirect'){
+      res.innerHTML=`<div style="background:rgba(245,158,11,.1);border:1px solid #f59e0b;border-radius:12px;padding:12px">
+        <div class="name" style="color:#f59e0b">↪︎ Reached a human — wrong desk (they redirected us)</div>
+        <div class="meta" style="margin-top:5px">They said: “${esch(s.redirectTo||'(transfer)')}”. Captured — call back rotates to a fresh store.</div>
+        <div class="row" style="gap:8px;margin-top:10px"><button class="ghost" onclick="trRetry()">↻ Try another store</button></div></div>`;
+    } else if(s.status==='human'&&s.recipe){
       TR_RESULT={chainId:TR_CHAIN,recipe:s.recipe,confidence:s.confidence||0};
       const steps=s.recipe.steps.map(x=>x.action==='press'?('press '+x.value+' @'+x.atSec+'s'):('say "'+x.value+'" @'+x.atSec+'s')).join('  →  ')||'picked up directly';
+      const rightDesk=s.confirm==='answered'?`<div class="meta" style="color:var(--green);margin-top:3px">✓ Right desk — they answered the stock question</div>`:'';
       res.innerHTML=`<div style="background:rgba(74,222,128,.1);border:1px solid var(--green);border-radius:12px;padding:12px">
         <div class="name" style="color:var(--green)">✅ Reached a human in ${s.recipe.seconds}s · ${esch(s.recipe.type)}</div>
+        ${rightDesk}
         <div class="meta" style="margin-top:5px">${esch(steps)}</div>
         <div class="row" style="gap:8px;margin-top:10px">
           <button class="act" onclick="trLock()">🔒 Lock this recipe</button>
@@ -1109,7 +1125,7 @@ async function trPoll(){
     }
   }
 }
-function trRetry(){ if(TR_CHAIN) trDocument(TR_CHAIN,TR_STORE); }
+function trRetry(){ if(TR_CHAIN) trDocument(TR_CHAIN,TR_STORE,TR_OPTS); }
 async function trLock(){
   if(!TR_RESULT) return;
   const r=await api('/api/admin/trainer/lock',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(TR_RESULT)});
@@ -1852,6 +1868,8 @@ function renderChainMapping(ch){
 }
 // Map / Re-map the selected chain: places one real navigator call, shown live in the Mapping card.
 function setMapChain(){ const id=Number(document.getElementById('set_chain').value); const ch=CHAINS.find(c=>c.id===id); if(!ch){ toast('Pick a chain first'); return; } trDocument(id, ch.name); }
+// Confirm-stock run: reach a human, ask if they have the product, classify right-desk vs redirect.
+function setConfirmChain(){ const id=Number(document.getElementById('set_chain').value); const ch=CHAINS.find(c=>c.id===id); if(!ch){ toast('Pick a chain first'); return; } trDocument(id, ch.name, {confirm:true, product:'Pokémon cards'}); }
 // Per-store voicemail/closed auto-hangup as an ON/OFF toggle button (matches the App-tab switches).
 function setVmBtn(on){ const b=document.getElementById('set_vmbtn'); if(!b) return; b.dataset.on=on?'1':''; b.textContent=on?'ON':'OFF'; b.style.color=on?'var(--green)':'var(--muted)'; b.style.borderColor=on?'rgba(74,222,128,.35)':'var(--border)'; }
 function setVmToggle(){ const b=document.getElementById('set_vmbtn'); setVmBtn(!(b&&b.dataset.on==='1')); }
