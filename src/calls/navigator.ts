@@ -15,6 +15,19 @@ export const NAV_MODEL = "gemini-2.5-flash-lite";
 // A live person is on the line (a short greeting/question said TO us). Used as a backstop in auto-0
 // mode so we hang up the instant someone answers instead of beeping 0 at them.
 const HUMAN_RE = /can i help you|how (can|may) i help|what can i (do|help)|this is \w+|thanks for (holding|waiting)|you'?re (through|connected)|go ahead|^\s*hello[\s.!?]*$/i;
+// A live PICKUP: after we've already navigated a step, a short utterance that's clearly a person —
+// a greeting ("hello", "hi"), a self-ID ("this is…", "…speaking"), or a bare department answer
+// ("Target electronics", "guest service desk") — with NO "press N" menu. This is the signal we were
+// MISSING: a Target dept employee answers "Hello / Target electronics", which isn't a menu, so we must
+// stop pressing and treat them as the human (confirm mode then asks the stock question).
+const LIVE_HUMAN_RE = /\bhello\b|\bhi\b|\bhowdy\b|this is \w+|\bspeaking\b|how (can|may) i help|can i help|what (can|do) (i|we|you)|^\s*(thanks for calling )?(target )?(electronics|guest services?|service desk|customer service|toys?|sporting goods?)[\s.,!?]*$/i;
+function looksLikeLivePerson(speech: string): boolean {
+  const t = (speech || "").trim();
+  if (!t) return false;
+  if (/press \d|para español|in english|main menu|enter your|spell the|press the/i.test(t)) return false; // still an IVR menu
+  if (t.split(/\s+/).length > 14) return false; // long utterance = recording, not a live greeting
+  return LIVE_HUMAN_RE.test(t);
+}
 // The system just routed us to a person (hold/transfer/"find someone") — after this, a greeting = human.
 const ROUTING_RE = /transferr?ing|connect(ing)? you|please hold|hold (on )?(while|and)|find (someone|somebody)|be with you|getting someone|let me get|one moment/i;
 // CONFIRM mode — the human we reached is sending us somewhere ELSE (wrong desk). We capture where and
@@ -156,6 +169,13 @@ export async function navStep(id: string, speech: string): Promise<string> {
     if (atSec - (s.confirm.askedAtSec ?? atSec) > 9) { s.confirmResult = "answered"; finish(s, "human"); return twiml(`<Hangup/>`); }
     return twiml(gather(id)); // brief silence — give them a moment to answer
   }
+  // LIVE PICKUP: once we've navigated at least one step, a short greeting / self-ID / bare department
+  // answer with no menu = a person just answered. STOP pressing keys at them — reach the human (confirm
+  // mode asks the stock question; plain mode hangs up). This is the Target-electronics fix: "Hello" /
+  // "Target electronics" is a human, not another menu to escape with 0. Guarded so the opening IVR
+  // (which we haven't acted on yet) can't trip it.
+  const acted = !!s.lastActTurn || (s.reactivePress?.count ?? 0) > 0 || (s.autoZeros ?? 0) > 0;
+  if (acted && speech && looksLikeLivePerson(speech)) return reachHuman(s, atSec, id);
   s.status = "navigating";
   // REACTIVE PRESS: the human way — wait until we HEAR a prompt, then press the digit; repeat for the
   // first `max` prompts (e.g. 0 after Spanish, 0 after the next, 0 after the next), then listen for the
@@ -190,9 +210,9 @@ export async function navStep(id: string, speech: string): Promise<string> {
   if (s.escaped || stalled >= 2) {
     s.escaped = true;
     if (speech && speech.trim()) {
-      // STOP the instant a person answers — once we've been routed (hold/transfer) or pressed 0 a
-      // couple times, a short greeting/question to us is a human, so hang up instead of beeping at them.
-      if ((s.routingSeen || (s.autoZeros ?? 0) >= 2) && HUMAN_RE.test(speech)) {
+      // STOP the instant a person answers — a clear live greeting/self-ID means a human picked up, so
+      // reach them (never beep 0 at a person). The weaker HUMAN_RE still needs the routed/2-zeros gate.
+      if (looksLikeLivePerson(speech) || ((s.routingSeen || (s.autoZeros ?? 0) >= 2) && HUMAN_RE.test(speech))) {
         return reachHuman(s, atSec, id);
       }
       s.autoZeros = (s.autoZeros ?? 0) + 1; s.type = "keypad";
