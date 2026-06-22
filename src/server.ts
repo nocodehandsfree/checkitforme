@@ -2683,6 +2683,7 @@ app.get("/pub/bridge/:room", (c) => c.json({ conversationId: bridgeConversationI
 app.get("/pub/bridge-debug", (c) => c.json({ log: bridgeDebug() }));
 app.post("/api/bridge/call", async (c) => {
   const b = await c.req.json();
+  if (b.echo) return c.json({ dtmf: b.dtmf ?? null, hasDtmf: !!b.dtmf, keys: Object.keys(b) });
   if (!b.toNumber) return c.json({ error: "toNumber required" }, 400);
   const category = b.category || "Pokémon";
   const opener = (await getSetting("vt_opening")) || "Heyy! I was just checking to see if you guys got any {category} in?";
