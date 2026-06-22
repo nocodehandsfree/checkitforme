@@ -406,6 +406,7 @@
 
   <section id="retailers">
     <h2>Store intel</h2>
+    <div id="storecoverage" class="card report" style="display:none;margin-bottom:10px"></div>
     <div class="card report"><div class="stats" id="storeintel" style="margin-bottom:0"></div></div>
     <div id="storecarries" class="card report" style="display:none"></div>
     <details id="storereports" class="card report" style="display:none"><summary><span class="name">Reports</span></summary>
@@ -1471,9 +1472,31 @@ async function loadRetailers(){
   fillSimSelects();
   renderRetailers();
 }
+// MSRP coverage headline (Stores tab): the % of the national store footprint of the chains we know
+// carry Pokémon at MSRP (tiers 3-5) whose locations we've loaded. Reads /api/admin/coverage; the
+// under-covered chains are an expandable list. Hidden if the endpoint returns no data.
+async function loadCoverage(){
+  const el=document.getElementById('storecoverage'); if(!el) return;
+  const d=await api('/api/admin/coverage'); if(!d||d.error||d.coveragePct==null){ el.style.display='none'; return; }
+  el.style.display='';
+  const TIP="Coverage — the % of the retail chains we know carry Pokémon at MSRP whose store locations we've loaded. It measures how many of those chains' stores we cover nationally — it does NOT mean every store has Pokémon in stock right now. A \"spotty\" (tier-3) chain carries it, but only at some locations.";
+  const f=n=>Number(n||0).toLocaleString('en-US');
+  const gaps=d.gaps||[];
+  const gapRows=gaps.map(g=>`<div class="carryrow"><span>${esch(g.chain)} <span class="meta" style="text-transform:none;letter-spacing:0">${f(g.ours)}/${f(g.national)}</span></span><b style="color:${g.pct>=90?'var(--green)':g.pct>=70?'#FBBF24':'#ff8a8a'}">${g.pct}%</b></div>`).join('');
+  el.innerHTML=
+    `<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">`
+      +`<div style="font-size:30px;font-weight:800;letter-spacing:-.5px;color:var(--green);line-height:1">${d.coveragePct}%</div>`
+      +`<div class="name" data-tip="${esch(TIP)}" style="margin:0">MSRP coverage</div>`
+    +`</div>`
+    +`<div class="meta" style="margin-top:5px;text-transform:none;letter-spacing:0">${f(d.loaded)} of ${f(d.national)} stores loaded across ${d.msrpChains} chains that carry Pokémon at MSRP (tiers 3–5).</div>`
+    +(gaps.length?`<details style="margin-top:10px"><summary><span class="name">Under-covered chains (${gaps.length})</span></summary>`
+        +`<div class="meta" style="margin:7px 0 9px;text-transform:none;letter-spacing:0">CVS shows a reduced % only because the CVS-inside-Target stores are quarantined — that's expected, not a real gap.</div>`
+        +`<div class="carrygrid">${gapRows}</div></details>`:'');
+}
 // The database at a glance — DB-wide totals (exact), independent of the current search.
 async function loadStoreIntel(){
   const el=document.getElementById('storeintel'); if(!el) return;
+  loadCoverage();
   const d=await api('/api/admin/store-intel'); if(!d||d.error){ el.innerHTML=''; return; }
   const fmt=n=>Number(n||0).toLocaleString('en-US');   // exact, comma-grouped (101,967 — not "102k")
   const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${fmt(n)}</div><div class="l">${l}</div></div>`;
