@@ -2698,6 +2698,18 @@ app.post("/pub/bridge-hangup", async (c) => {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   const { room } = await c.req.json();
   const callSid = roomCallSids.get(room);
+  // Master Stop & hang-up = WE ended it, not the store. Stamp the call as a non-result ('admin_hangup',
+  // confirmed=null) so it's never mislabeled "nobody answered". Because this status is NOT in the
+  // ingest pending set (dialing/in_progress/queued), the verdict + charge path skips it automatically.
+  // statusKey drives the display pill (verdictKey reads statusKey first), so set both.
+  const convId = bridgeConversationId(room);
+  if (convId) {
+    await db.update(callResults)
+      .set({ status: "admin_hangup", statusKey: "admin_hangup", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
+      .where(and(eq(callResults.providerCallId, convId),
+        inArray(callResults.status, ["dialing", "in_progress", "queued"])))
+      .catch((e) => console.error("admin_hangup stamp:", e));
+  }
   if (sid && tok && callSid) {
     await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
       method: "POST",
