@@ -161,16 +161,21 @@ __BRAND_HEAD__
      UNDER the nav + content, so pills/dropdowns lay on the color with their own styling. */
   body.rview::before{content:'';position:fixed;left:0;right:0;top:0;height:420px;z-index:0;pointer-events:none}
   /* a single smooth linear fade top→transparent, so the color is perfectly EVEN all the way down */
-  body.rview.rv-out::before{background:linear-gradient(180deg,rgba(239,68,68,.34) 0%,transparent 100%)}
-  body.rview.rv-in::before{background:linear-gradient(180deg,rgba(74,222,128,.34) 0%,transparent 100%)}
-  body.rview.rv-unk::before{background:linear-gradient(180deg,rgba(251,191,36,.30) 0%,transparent 100%)}
-  body.rview.rv-soon::before{background:linear-gradient(180deg,rgba(245,158,11,.34) 0%,transparent 100%)}
+  body.rview.rv-out::before{background:linear-gradient(180deg,rgba(239,68,68,.42) 0%,rgba(239,68,68,.34) 18%,transparent 100%)}
+  body.rview.rv-in::before{background:linear-gradient(180deg,rgba(74,222,128,.42) 0%,rgba(74,222,128,.34) 18%,transparent 100%)}
+  body.rview.rv-unk::before{background:linear-gradient(180deg,rgba(251,191,36,.40) 0%,rgba(251,191,36,.32) 18%,transparent 100%)}
+  body.rview.rv-soon::before{background:linear-gradient(180deg,rgba(245,158,11,.42) 0%,rgba(245,158,11,.34) 18%,transparent 100%)}
   /* On a result the nav + content LAY ON the color: header goes transparent (no dark slab, no hairline)
      so the wash reaches the top. The nav pills + day-picker take a BARELY-green fill (level 3) so they
      read as sitting on a green page without looking like dark chips. */
   body.rview header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
   body.rview main{padding-top:18px}
-  body.rview .pill,body.rview .vsw-trig,body.rview .railcal{background:rgba(74,222,128,.035);border-color:rgba(74,222,128,.12)}
+  /* Header chips take the VERDICT's tone (not always green) so the whole top — status bar → nav →
+     verdict — reads as one continuous color. Green chips on an amber/red result broke that. */
+  body.rview.rv-in .pill,body.rview.rv-in .vsw-trig,body.rview.rv-in .railcal{background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.16)}
+  body.rview.rv-out .pill,body.rview.rv-out .vsw-trig,body.rview.rv-out .railcal{background:rgba(239,68,68,.05);border-color:rgba(239,68,68,.16)}
+  body.rview.rv-unk .pill,body.rview.rv-unk .vsw-trig,body.rview.rv-unk .railcal{background:rgba(251,191,36,.05);border-color:rgba(251,191,36,.16)}
+  body.rview.rv-soon .pill,body.rview.rv-soon .vsw-trig,body.rview.rv-soon .railcal{background:rgba(245,158,11,.05);border-color:rgba(245,158,11,.16)}
   .hcal{position:relative;flex:0 0 auto;display:flex}
   /* match the "You" pill height exactly (same vertical padding/border, square-ish) */
   #calbtn{width:auto;height:auto;padding:7px 9px;border-radius:20px}
@@ -2875,9 +2880,9 @@ function combinedTimelineHTML(steps, transcript, finalElapsed){
     return `<div class="ctl-row ctl-substep${cur?' cur':''}${live?' live':''}"><div class="ctl-step">${esc(s.label)}${secs!=null?` <span class="cs-time">${secs}s</span>`:''}</div></div>`;
   }).join('') : '';
   const n=(steps&&steps.length)||0;
-  // The whole call log rolls up under one tappable header (open by default on a fresh result).
-  const _rstore = (SEL_STORE && splitStoreName(SEL_STORE.name).base) || t('live.store','the store');
-  const reach = stepRows ? `<details class="reach" open><summary><span class="reach-lbl">${esc(_rstore)}</span>${n?`<span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}</span>`:''}<span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#6b6b7a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
+  // Flat call log (no roll-up header): the steps render directly, starting with "Calling {store}…".
+  // (Owner: drop the store-name summary line — it duplicated the first "Calling {store}" step.)
+  const reach = stepRows ? `<div class="reach-steps flat">${stepRows}</div>` : '';
   // Conversation turns — prod's human-line filter + bubbleHTML, each as a row hanging off the same line.
   const lines=(transcript||'').split('\n').filter(Boolean);
   const hs=transcriptHumanStart(lines);
@@ -3128,7 +3133,7 @@ function navMark(view){
 // over the page bg #0C0C12; off a result it goes back to the page bg.
 function setThemeTone(){
   const m=$('themeColor'); if(!m) return;
-  const map={'rv-in':'#215337','rv-out':'#591f23','rv-unk':'#544217','rv-soon':'#5b3e10'};
+  const map={'rv-in':'#266440','rv-out':'#6b2427','rv-unk':'#6c5419','rv-soon':'#6e490f'};
   let c='#0C0C12';
   if(document.body.classList.contains('rview')){ for(const k in map){ if(document.body.classList.contains(k)){ c=map[k]; break; } } }
   m.setAttribute('content',c);
@@ -3451,6 +3456,9 @@ function saveCheckToHistory(o,cid){
   const cat=(CATS.find(c=>c.id===SEL_CAT)||{}).label||'';
   const cats=(ASKED_CATS&&ASKED_CATS.length)?ASKED_CATS.map(x=>x.label):(cat?[cat]:[]);
   const h=loadHist();
+  // A call that never connected (rang-out / instant hang-up) has no provider conversationId. Still give
+  // it a synthetic local id so it shows up in the calendar/history (it just has no transcript to replay).
+  if(!cid) cid='local:'+Date.now()+'-'+(SEL_STORE.id||0);
   const entry={ cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, address:SEL_STORE.address||null, location:SEL_STORE.location||null, logoUrl:SEL_STORE.logoUrl||null, logoWide:!!SEL_STORE.logoWide, logoDark:!!SEL_STORE.logoDark, categoryId:SEL_CAT, category:cat,
               cats, categoryResults:o.categoryResults||null, ts:Date.now(), status:o.status, confirmed:o.confirmed, soldOut:!!o.soldOut, doesNotSell:!!o.doesNotSell, shipmentDay:o.shipmentDay||null, statusKey:o.statusKey||null,
               steps:(LIVE_STEPS&&LIVE_STEPS.length)?LIVE_STEPS.map(s=>({n:s.n,label:s.label,at:s.at})):null }; // keep the live step timings so reopened calls still show "…3s"
@@ -3515,6 +3523,12 @@ async function openHistEntry(e){
   SEL_STORE={id:e.storeId,name:e.storeName,carries:[],address:e.address||null,location:e.location||null,logoUrl:e.logoUrl,logoWide:e.logoWide,logoDark:e.logoDark}; SEL_CAT=e.categoryId;
   SEL_CATS=e.categoryId?[e.categoryId]:[]; ASKED_CATS=(e.cats||[]).map(l=>({id:null,label:l}));
   LIVE_STEPS=[]; LIVE_T0=0; // reopening a past call → no live timings; derive steps and start collapsed (it isn't happening live now)
+  // A never-connected call (synthetic "local:" id) has no server transcript — rebuild its verdict from
+  // the fields we saved at call time and show it directly (no /pub/result fetch).
+  if(String(e.cid).startsWith('local:')){
+    showResult({ status:e.status, confirmed:e.confirmed, soldOut:!!e.soldOut, doesNotSell:!!e.doesNotSell, shipmentDay:e.shipmentDay||null, statusKey:e.statusKey||null, transcript:'', summary:'', cats:e.cats||[], categoryResults:e.categoryResults||null, savedSteps:e.steps||null }, e.cid);
+    return;
+  }
   // Replaying a past call — go straight to the transcript. Never flash the live "calling" view.
   // INSTANT: paint the cached transcript immediately (no spinner) if we have it, then revalidate.
   const cached=resultCacheGet(e.cid);
