@@ -9,7 +9,7 @@ import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { WebSocketServer, type WebSocket } from "ws";
-import { and, desc, eq, gte, inArray, isNull, like, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql } from "drizzle-orm";
 import { db } from "./db/client";
 import {
   callResults, categories, chains, communityPosts, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, waitlist, watches, zones, zoneRetailers,
@@ -73,6 +73,12 @@ async function requesterIsComp(authHeader?: string): Promise<boolean> {
 async function isOwnerOnlyStore(retailerId: number): Promise<boolean> {
   const r = (await db.select({ ownerOnly: retailers.ownerOnly }).from(retailers).where(eq(retailers.id, retailerId)))[0];
   return !!r?.ownerOnly;
+}
+/** Retailer IDs of owner-only stores (the "Fun" rehearsal store). Excluded from every admin report/
+ *  metric that aggregates call_results — exactly like they're hidden from /pub/finds + the store lists. */
+async function ownerOnlyRetailerIds(): Promise<Set<number>> {
+  const rows = await db.select({ id: retailers.id }).from(retailers).where(eq(retailers.ownerOnly, true));
+  return new Set(rows.map((r) => r.id));
 }
 import { getAccount, getAccountByPhone, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, SUB, PACKS } from "./billing";
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
@@ -1864,9 +1870,10 @@ app.get("/api/admin/user-history", async (c) => {
   const ids = accs.map((a) => a.clerkUserId);
   const stores = await retailerMap();
   const cats = await categoryLabelMap();
-  const rows = ids.length
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const rows = (ids.length
     ? (await db.select().from(callResults).where(inArray(callResults.finderUserId, ids)).orderBy(desc(callResults.startedAt)).limit(80))
-    : [];
+    : []).filter((r) => !ownerOnly.has(r.retailerId));
   const withCid = rows.filter((r) => r.providerCallId);
   return c.json({
     email,
@@ -1882,7 +1889,8 @@ app.get("/api/admin/restock-intel", async (c) => {
   const d7 = now - 7 * 86400, d30 = now - 30 * 86400;
   const stores = await retailerMap();
   const cats = await categoryLabelMap();
-  const rows = await db.select().from(callResults).where(eq(callResults.status, "completed"));
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const rows = (await db.select().from(callResults).where(eq(callResults.status, "completed"))).filter((r) => !ownerOnly.has(r.retailerId));
   const confirmed = rows.filter((r) => r.confirmed === true);
   // Per-store: how often a confirmation lands + the shipment day the clerk gave (the gold).
   const byStore = new Map<number, { store: string; chain: string; region: string | null; confirms: number; last: number; days: Record<string, number> }>();
@@ -1920,7 +1928,8 @@ app.get("/api/admin/pulse", async (c) => {
   ]);
   const since = (ts: number, at: (r: { createdAt?: number | null; startedAt?: number | null }) => number | null | undefined, rows: Array<Record<string, unknown>>) =>
     rows.filter((r) => (at(r as never) ?? 0) >= ts).length;
-  const completed = calls.filter((r) => r.status === "completed");
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const completed = calls.filter((r) => r.status === "completed" && !ownerOnly.has(r.retailerId));
   return c.json({
     funnel: {
       leads: leadRows.length,
@@ -1951,7 +1960,8 @@ app.get("/api/admin/overview", async (c) => {
   const d1 = now - 86400, d7 = now - 7 * 86400, d30 = now - 30 * 86400;
   const stores = await retailerMap();
   const cats = await categoryLabelMap();
-  const recent = await db.select().from(callResults).where(gte(callResults.startedAt, d30)).orderBy(desc(callResults.startedAt));
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const recent = (await db.select().from(callResults).where(gte(callResults.startedAt, d30)).orderBy(desc(callResults.startedAt))).filter((r) => !ownerOnly.has(r.retailerId));
   // Live: anything started in the last 30 min that hasn't finished.
   const live = recent.filter((r) => ["queued", "dialing", "in_progress"].includes(r.status) && r.startedAt >= now - 1800)
     .map((r) => ({ id: r.id, store: stores.get(r.retailerId)?.name || "?", category: cats.get(r.categoryId) || "", secs: now - r.startedAt, cid: r.providerCallId }));
@@ -2210,8 +2220,10 @@ app.get("/api/admin/store-intel", async (c) => {
     .groupBy(retailers.region).orderBy(desc(sql`count(*)`)).limit(10))
     .map((r) => ({ region: r.region as string, n: Number(r.n || 0) }));
   // Most-checked stores (most call results recorded against them).
+  const funIds = [...(await ownerOnlyRetailerIds())]; // owner-only "Fun" store: never counted in reports
   const checkRows = await db.select({ rid: callResults.retailerId, n: sql<number>`count(*)` }).from(callResults)
-    .where(sql`${callResults.retailerId} is not null`).groupBy(callResults.retailerId).orderBy(desc(sql`count(*)`)).limit(10);
+    .where(and(sql`${callResults.retailerId} is not null`, funIds.length ? notInArray(callResults.retailerId, funIds) : undefined))
+    .groupBy(callResults.retailerId).orderBy(desc(sql`count(*)`)).limit(10);
   const checkIds = checkRows.map((r) => r.rid).filter((x): x is number => x != null);
   const checkNames = checkIds.length
     ? new Map((await db.select({ id: retailers.id, name: retailers.name, location: retailers.location }).from(retailers).where(inArray(retailers.id, checkIds))).map((r) => [r.id, r]))
@@ -2277,7 +2289,9 @@ app.get("/api/admin/coverage", async (c) => {
 // the reply + a list of actions taken. Admin-gated like the rest of /api/*.
 // Call-timing breakdown for the God view: total / time-to-human (nav) / talk, aggregate + per store.
 app.get("/api/admin/call-timing", async (c) => {
-  const hasT = sql`${callResults.callSeconds} is not null`;
+  const funIds = [...(await ownerOnlyRetailerIds())]; // owner-only "Fun" store excluded from timings
+  const notFun = funIds.length ? notInArray(callResults.retailerId, funIds) : undefined;
+  const hasT = and(sql`${callResults.callSeconds} is not null`, notFun);
   const agg = (await db.select({ n: sql<number>`count(*)`, avgCall: sql<number>`avg(${callResults.callSeconds})`, totalSec: sql<number>`coalesce(sum(${callResults.callSeconds}),0)` }).from(callResults).where(hasT))[0];
   const reached = (await db.select({ n: sql<number>`count(*)`, avgNav: sql<number>`avg(${callResults.navSeconds})`, avgTalk: sql<number>`avg(${callResults.callSeconds} - ${callResults.navSeconds})` }).from(callResults).where(and(hasT, sql`${callResults.navSeconds} is not null`)))[0];
   const byStore = await db.select({ rid: callResults.retailerId, n: sql<number>`count(*)`, avgCall: sql<number>`avg(${callResults.callSeconds})`, avgNav: sql<number>`avg(${callResults.navSeconds})`, avgTalk: sql<number>`avg(${callResults.callSeconds} - ${callResults.navSeconds})`, totalSec: sql<number>`coalesce(sum(${callResults.callSeconds}),0)` }).from(callResults).where(hasT).groupBy(callResults.retailerId).orderBy(desc(sql`count(*)`)).limit(12);
