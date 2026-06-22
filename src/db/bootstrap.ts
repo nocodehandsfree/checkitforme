@@ -218,17 +218,20 @@ async function seedFunStore() {
     chain = (await db.select().from(chains).where(eq(chains.name, "Fungibles")))[0];
   }
   const hours = JSON.stringify({ mon: "24h", tue: "24h", wed: "24h", thu: "24h", fri: "24h", sat: "24h", sun: "24h" });
+  // Fun carries EVERY product so the owner can rehearse the flow for any vertical (not just Pokémon).
+  const cats = await db.select({ label: categories.label }).from(categories);
+  const carries = cats.map((c) => c.label).filter(Boolean).join(",") || "Pokémon";
   const existing = (await db.select().from(retailers).where(and(eq(retailers.name, "Fun"), eq(retailers.ownerOnly, true))))[0];
   if (existing) {
     await db.update(retailers)
-      .set({ chainId: chain?.id ?? null, phone, tier: 5, ownerOnly: true, active: true, lat: 34.1367, lng: -118.6618, hours })
+      .set({ chainId: chain?.id ?? null, phone, tier: 5, ownerOnly: true, active: true, lat: 34.1367, lng: -118.6618, hours, carries })
       .where(eq(retailers.id, existing.id));
   } else {
     await db.insert(retailers).values({
       chainId: chain?.id ?? null, name: "Fun", location: "Calabasas, CA", address: "123 Fun Lane",
       zip: "91302", lat: 34.1367, lng: -118.6618, phone, timezone: "America/Los_Angeles",
       state: "CA", region: "West Coast", tier: 5, ownerOnly: true, active: true, sellsPacks: true,
-      carries: "Pokémon", hours,
+      carries, hours,
     });
   }
 }

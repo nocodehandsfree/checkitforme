@@ -12,8 +12,7 @@
   if(!sp.has('call')) return;
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(!cls||!window.__TONE[cls]) return;
-  window.__bootTone=cls;
-  document.documentElement.style.backgroundColor=window.__TONE[cls];
+  window.__bootTone=cls;  // post-<body> script adds rview/rv-* → CSS :has() colors the root (overscroll)
   var m=document.getElementById('themeColor'); if(m) m.setAttribute('content',window.__TONE[cls]);
 }catch(e){}})();</script>
 <meta name="x-rev" content="names-r39" />
@@ -174,6 +173,12 @@ __BRAND_HEAD__
   body.rview.rv-in{background:linear-gradient(180deg,#266440 0px,var(--bg) 460px)}
   body.rview.rv-unk{background:linear-gradient(180deg,#6c5419 0px,var(--bg) 460px)}
   body.rview.rv-soon{background:linear-gradient(180deg,#6e490f 0px,var(--bg) 460px)}
+  /* Root element carries the tone too (fills the iOS overscroll rubber-band). Driven purely by CSS via
+     :has() so it ALWAYS reverts to the page bg off a result — a JS-set inline style could get stuck. */
+  html:has(body.rview.rv-out){background:#6b2427}
+  html:has(body.rview.rv-in){background:#266440}
+  html:has(body.rview.rv-unk){background:#6c5419}
+  html:has(body.rview.rv-soon){background:#6e490f}
   /* On a result the nav + content LAY ON the color: header goes transparent (no dark slab, no hairline)
      so the wash reaches the top. The nav pills + day-picker take a BARELY-green fill (level 3) so they
      read as sitting on a green page without looking like dark chips. */
@@ -1673,10 +1678,12 @@ async function initClerk(){
 }
 async function refreshAuth(){
   if(isAuthed()){
+    // Optimistic: paint the cached credits/comp INSTANTLY so the "My ✅ N" count doesn't lag on /app/me.
+    if(!ACCOUNT){ try{ const c=JSON.parse(localStorage.getItem('cifm_acct')||'null'); if(c){ ACCOUNT=c; renderAuth(); } }catch(_){} }
     const u=(window.Clerk&&window.Clerk.user)||null, email=(u&&u.primaryEmailAddress&&u.primaryEmailAddress.emailAddress)||'';
     ACCOUNT=await appApi('/app/me'+(email?('?email='+encodeURIComponent(email)):'')); // phone token works here too (dual-auth)
-    try{ localStorage.setItem('runnr_authed','1'); }catch(e){}
-  } else { ACCOUNT=null; try{ localStorage.setItem('runnr_authed','0'); }catch(e){} }
+    try{ localStorage.setItem('runnr_authed','1'); if(ACCOUNT&&!ACCOUNT.error) localStorage.setItem('cifm_acct',JSON.stringify({credits:ACCOUNT.credits,comp:ACCOUNT.comp,subscription:ACCOUNT.subscription})); }catch(e){}
+  } else { ACCOUNT=null; try{ localStorage.setItem('runnr_authed','0'); localStorage.removeItem('cifm_acct'); }catch(e){} }
   renderAuth();
   loadSchedules();
   claimPendingReferral();
@@ -3146,18 +3153,15 @@ function navMark(view){
   }catch(e){}
   NAV_VIEW=view;
 }
-// Tint the iOS status-bar strip AND the page root to the verdict tone so the green/red wash reaches the
-// VERY top of the phone with no dark cut-off — even during pull-to-refresh / toolbar overscroll, when
-// the rubber-band area above the (position:fixed) wash exposes the <html> background. Values = the
-// gradient's top color blended over the page bg #0C0C12; off a result both go back to the page bg.
+// The iOS status-bar strip follows theme-color. The root BACKGROUND (overscroll) is handled purely in
+// CSS via html:has(body.rview.rv-*) so it can never get stuck. Here we only set theme-color — and we
+// REPLACE the meta node (not just setAttribute) because iOS Safari often ignores in-place edits and
+// keeps painting the old status-bar color.
 function setThemeTone(){
-  const m=$('themeColor');
   const map={'rv-in':'#266440','rv-out':'#6b2427','rv-unk':'#6c5419','rv-soon':'#6e490f'};
   let c='#0C0C12';
   if(document.body.classList.contains('rview')){ for(const k in map){ if(document.body.classList.contains(k)){ c=map[k]; break; } } }
-  if(m) m.setAttribute('content',c);
-  // Paint the root element so the top overscroll/rubber-band shows the tone (not the dark page bg).
-  try{ document.documentElement.style.backgroundColor=c; }catch(e){}
+  try{ const m=$('themeColor'); if(m && m.getAttribute('content')!==c){ const n=document.createElement('meta'); n.name='theme-color'; n.id='themeColor'; n.setAttribute('content',c); m.replaceWith(n); } }catch(e){}
 }
 window.addEventListener('popstate',()=>{ if(NAV_VIEW!=='builder') backToBuilder(); });
 
@@ -3528,19 +3532,27 @@ function histList(){
 // "My checks" goes STRAIGHT to the newest check — the switcher bar on the result page
 // (store/outcome filters + ‹ ›) IS the history UI. No intermediate list to think about.
 async function openHistory(){
-  // Snappy: if we already have local history, open the newest entry INSTANTLY (it paints from the
-  // result cache) and refresh the server-backed cache in the background — no spinner-wait. Only fall
-  // back to awaiting the network when there's nothing local to show (e.g. a fresh device).
-  const localFirst=loadHist().find(e=>e.cid);
+  // Checks are scoped to the CURRENT product — "My checks" opens the newest check for THIS product only
+  // (so switching products then tapping My checks doesn't show another product's calls).
+  const match=e=>e.cid && railInCat(e);
+  // Snappy: if we already have a local check for this product, open it INSTANTLY (paints from the result
+  // cache) and refresh the server cache in the background. Only await the network when nothing's local.
+  const localFirst=loadHist().find(match);
   if(localFirst){
     openHistEntry(localFirst);
     ensureHistCache().then(()=>{ try{ renderCallRail(); }catch(_){} });
     return;
   }
   const h=await ensureHistCache();
-  const first=h.find(e=>e.cid);
-  if(!first){ backToBuilder(); toast(t('hist.empty',"No checks yet — run one and it'll show up here.")); return; }
+  const first=h.find(match);
+  if(!first){ noChecksForProduct(); return; }
   openHistEntry(first);
+}
+// No checks yet for the selected product → bounce to a clean homepage with a clear nudge to make a call.
+function noChecksForProduct(){
+  backToBuilder();
+  const pn=(BRAND_CAT&&BRAND_CAT.label)||t('product','this product');
+  toast(tf('hist.empty.prod','No {p} checks yet — pick a store below and make a call.',{p:pn}));
 }
 async function openHistEntry(e){
   if(!e) return;
@@ -3587,8 +3599,12 @@ function tsDay(ts){ const d=new Date(ts); return d.getFullYear()+'-'+String(d.ge
 // Calls under the active store/outcome filters — the pool the date picker chooses among AND what the
 // ‹ › arrows step through. The calendar highlights days from THIS exact pool (see railCalDays), so a
 // highlighted day is GUARANTEED to have a call to open — never "highlighted but empty".
+// The current product (apex pre-locks one category; switching products reloads with that brand). Checks
+// are scoped to it so "My checks" / the calendar / the ‹ › arrows only ever show THIS product's calls.
+function railCatId(){ return (BRAND_CAT && BRAND_CAT.id) || null; }
+function railInCat(e){ const c=railCatId(); return !c || e.categoryId===c; }
 function railScoped(){
-  return histList().filter(e=>e.cid)
+  return histList().filter(e=>e.cid).filter(railInCat)
     .filter(e=>!RAIL_F.store||railBase(e.storeName)===RAIL_F.store)
     .filter(e=>!RAIL_F.tone||railTone(e)===RAIL_F.tone);
 }
@@ -3601,7 +3617,7 @@ function renderCallRail(cid){
   const wrap=$('hcalwrap');
   // The calendar day-picker belongs to the RESULT view only (it navigates between checks). Never show
   // it on the homepage/builder, even when history exists.
-  if(wrap){ const days=histList().filter(e=>e.cid&&e.ts); const onResult=document.body.classList.contains('rview'); wrap.style.display=(onResult&&days.length)?'':'none'; const btn=$('calbtn'); if(btn) btn.classList.toggle('on',!!RAIL_F.date); }
+  if(wrap){ const days=histList().filter(e=>e.cid&&e.ts&&railInCat(e)); const onResult=document.body.classList.contains('rview'); wrap.style.display=(onResult&&days.length)?'':'none'; const btn=$('calbtn'); if(btn) btn.classList.toggle('on',!!RAIL_F.date); }
   // Prev/next arrows (top-right of the verdict) step through your calls — or the picked day's calls.
   // On the newest call you only see ›; once you step forward a ‹ appears to its left.
   const nav=$('rnav'); if(nav){
@@ -3617,7 +3633,7 @@ let RAIL_CAL_M=null;
 // (drops ts=0 server rows so we never light up a bogus 1970 day). Highlighted ⟺ railFiltered non-empty.
 // Highlight EVERY day you have a call on — independent of the store/outcome dropdowns, so a day you
 // called earlier in the week always shows up (picking it clears those filters so it always opens).
-function railCalDays(){ return new Set(histList().filter(e=>e.cid&&e.ts).map(e=>tsDay(e.ts))); }
+function railCalDays(){ return new Set(histList().filter(e=>e.cid&&e.ts&&railInCat(e)).map(e=>tsDay(e.ts))); }
 function openRailCal(){
   const pop=$('railcalpop'); if(!pop) return;
   if(pop.classList.contains('on')){ closeRailCal(); return; } // toggle
