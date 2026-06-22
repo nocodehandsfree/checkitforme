@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0C0C12" id="themeColor" />
 <meta name="x-rev" content="names-r39" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
@@ -212,7 +213,7 @@ __BRAND_HEAD__
   .ctl-row::before{content:'';position:absolute;left:-18px;top:6px;width:7px;height:7px;border-radius:50%;background:#3a3a46;border:1.5px solid var(--terminal)}
   .ctl-step{font-size:12.5px;line-height:1.5;color:var(--muted)}
   .ctl-step .ctl-num{color:#6b6b7a;font-weight:700;margin-right:5px}
-  .ctl-step .cs-time{color:#5f8772;margin-left:5px}
+  .ctl-step .cs-time{color:#7ad6a6;font-weight:700;margin-left:6px}
   .ctl-row.bub-row{margin-bottom:10px}
   .ctl-row.bub-row::before{top:9px}
   .ctl-row.bub-row .bub{max-width:100%}
@@ -267,8 +268,12 @@ __BRAND_HEAD__
   .rhead.soon .rhead-stat{color:#F59E0B}
   /* logged-out homepage = the focused view (hero + check card). Retired modules hidden for everyone. */
   #truststrip,#demo{display:none!important}
-  /* "Earn free checks" now lives inside the account panel (always available once you open it). */
-  #earndemo.acctearn{display:block;margin-top:14px}
+  /* "Earn free checks" lives in the account panel — styled to match the rows above it (black bar). */
+  #earndemo.acctearn{display:block;margin:8px 0 0;background:var(--terminal);border:1px solid var(--border);border-radius:13px}
+  #earndemo.acctearn>summary{padding:13px 14px;font-size:14px}
+  #earndemo.acctearn .demobody{padding:0 14px 14px}
+  #earndemo.acctearn .earnmod-grid{margin-top:10px}
+  #earndemo.acctearn .earnbox{padding:11px 12px}
   .vstore b{color:#fff;font-weight:800}
   .vnote{text-align:center;color:var(--muted);font-size:13px;line-height:1.5;margin:7px auto 2px;max-width:330px}
   /* clean secondary action button — replaces the heavy gradient buttons */
@@ -300,6 +305,9 @@ __BRAND_HEAD__
   /* the "My ✅" check sits in a softly-glowing green circle */
   .mychk{display:inline-grid;place-items:center;width:21px;height:21px;border-radius:50%;background:rgba(74,222,128,.16);box-shadow:0 0 8px rgba(74,222,128,.5);flex:0 0 auto}
   .mychk img{display:block}
+  /* checks-left count — bright green so it stands out (red when you're nearly out). */
+  .credn{font-size:14px;font-weight:900;color:#4ADE80;line-height:1}
+  .credn.low{color:#ff7a7a}
   .proof{background:var(--terminal);border:1px solid var(--border);border-radius:12px;padding:13px;margin-top:6px}
   .proof .ph{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:6px;justify-content:space-between}
   .tbtn{background:var(--ptint);border:1px solid var(--pline);color:var(--purple);font-weight:800;font-size:11px;text-transform:none;letter-spacing:0;padding:5px 11px;border-radius:16px;cursor:pointer}
@@ -494,7 +502,9 @@ __BRAND_HEAD__
   .sharetile .lbl{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
   /* Auth/account brand band: full-bleed banner that IS the F logo's own background —
      sampled from logos/fungibles.png so the mark sits on it seamlessly */
-  #authOverlay .modal,#acctOverlay .modal{overflow:hidden}
+  #authOverlay .modal{overflow:hidden}
+  /* account sheet can grow (Earn expands) — cap it to the viewport and scroll so Sign out stays reachable */
+  #acctOverlay .modal{max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
   /* Sign-up / account modal: no purple band — the logo sits upper-left on the modal's own grey bg. */
   #auth_logo,#acct_logo{margin:-22px -22px 16px !important;background:var(--sheet);padding:16px 18px 4px;display:flex;align-items:center;justify-content:flex-start}
   #authOverlay .x,#acctOverlay .x{color:rgba(255,255,255,.95);z-index:2;top:8px;right:10px;width:28px;height:28px;display:grid;place-items:center;font-size:0}
@@ -586,8 +596,8 @@ __BRAND_HEAD__
   .earnbox .ei{display:flex;justify-content:center;margin-bottom:8px}
   .earnbox .et{font-weight:800;font-size:13.5px}
   .earnbox .es{color:var(--muted);font-size:11.5px;margin-top:4px;line-height:1.35}
-  /* check logo + "© year" sit together, centered — no divider rule above. */
-  .foot-bottom{display:flex;align-items:center;justify-content:center;gap:9px;padding-top:16px}
+  /* check logo + "© year" sit together, left-aligned — no divider rule above. */
+  .foot-bottom{display:flex;align-items:center;justify-content:flex-start;gap:9px;padding-top:16px}
   .foot-fav{display:flex;align-items:center;flex:0 0 auto}
   .foot-fav svg{width:24px;height:24px;border-radius:7px}
   .foot-copy{color:#7a7a86;font-size:12px;font-weight:600}
@@ -1169,8 +1179,8 @@ __BRAND_HEAD__
           </div>
         </div>
         <div id="refBlock" style="border-top:1px solid var(--border);margin-top:14px">
-          <div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;margin:12px 0 6px"><span id="refIcon" style="display:inline-flex"></span><span data-i18n="ref.row">Invite a friend — you both get a free check</span></div>
-          <div style="color:var(--muted);font-size:12.5px;line-height:1.45;margin-bottom:8px" data-i18n="ref.sub2">They join with your link and run one check — <b>free checks for both of you</b>.</div>
+          <div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;margin:12px 0 6px"><span id="refIcon" style="display:inline-flex"></span><span data-i18n="ref.row">Invite a friend</span></div>
+          <div style="color:var(--muted);font-size:12.5px;line-height:1.45;margin-bottom:8px" data-i18n="ref.sub2">You both get a free check when they sign up.</div>
           <button class="shareticket" onclick="copyRefer()" title="Tap to copy">
             <span id="refer_link" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left"></span>
             <span class="tickcopy" id="refer_copylbl" data-i18n="ref.copy">copy</span>
@@ -1686,8 +1696,8 @@ async function loadRefer(){
   if(!REFER||REFER.error||!REFER.enabled){ blk.style.display='none'; return; }
   const r=REFER.reward||1;
   const sub=document.querySelector('[data-i18n="ref.sub2"]');
-  if(sub) sub.innerHTML = r===1 ? t('ref.sub.one','They join with your link and run one check. A free check lands for <b>both of you</b>.')
-                                : tf('ref.sub.n','They join with your link and run one check. <b>{n} free checks</b> land for both of you.',{n:r});
+  if(sub) sub.innerHTML = r===1 ? t('ref.sub.one','You both get a <b>free check</b> when they sign up.')
+                                : tf('ref.sub.n','You both get <b>{n} free checks</b> when they sign up.',{n:r});
   if(REFER.code) $('refer_link').textContent=referLink(REFER.code).replace(/^https?:\/\//,'');
   $('refer_count').textContent=REFER.referrals>0?tf('ref.joined',`🎉 ${REFER.referrals} friend${REFER.referrals===1?'':'s'} joined so far`,{n:REFER.referrals}):'';
 }
@@ -1746,9 +1756,10 @@ async function cancelSchedule(id){
 function renderAuth(){
   const ap=$('authpill'), cn=$('creditN');
   if(isAuthed()){
-    // Authed: "My ✅ 10" — the check mark in a glowing circle, the number = checks left. Tap → account sheet.
+    // Authed: "My ✅ 10" — the check in a glowing circle, then checks-left in a standout color (no star).
     const cr=(ACCOUNT&&ACCOUNT.comp)?'∞':((ACCOUNT&&ACCOUNT.credits!=null)?(''+ACCOUNT.credits):'');
-    const badge = cr!=='' ? `<span class="credbadge">${(ACCOUNT&&ACCOUNT.subscription==='active')?'★ ':''}${cr}</span>` : '';
+    const low=!(ACCOUNT&&ACCOUNT.comp) && (ACCOUNT&&ACCOUNT.credits!=null) && ACCOUNT.credits<=1;
+    const badge = cr!=='' ? `<span class="credn${low?' low':''}">${cr}</span>` : '';
     ap.innerHTML=`<b style="font-weight:800;font-size:13px">${t('pill.my','My')}</b><span class="mychk">${FCHK(13)}</span>${badge}`;
     ap.onclick=()=>openAccount(); ap.classList.remove('anon');
   } else if(localStorage.getItem('runnr_authed')==='1' && !window.__clerkReady){
@@ -2441,7 +2452,7 @@ function renderIcons(){
   setI('kioskmark', ICO.kiosk('#A78BFA'));
   setI('khspark', ICO.spark('#A78BFA'));
   setI('leadmark', ICO.freecall(c));
-  setI('earnIcon', ICO.freecall('#A78BFA').replace('width="44" height="44"','width="22" height="22"'));
+  setI('earnIcon', ICO.gift('#A78BFA').replace('width="18" height="18"','width="22" height="22"'));
   setI('earnStoreIcon', ICO.store('#A78BFA').replace('width="18" height="18"','width="24" height="24"'));
   setI('succ_fileico', ICO.cam('#A78BFA').replace('width="15" height="15"','width="18" height="18"'));
   setI('scTrophy', ICO.trophy(AC()).replace('width="14" height="14"','width="20" height="20"'));
@@ -2454,7 +2465,7 @@ function renderIcons(){
   setI('scoreIco', ICO.cam(AC2()).replace('width="15" height="15"','width="20" height="20"'));
   setI('wlMark', ICO.pin(AC2()).replace('width="20" height="20"','width="36" height="36"'));
   setI('srMark', ICO.store(AC2()).replace('width="18" height="18"','width="36" height="36"'));
-  setI('refIcon', ICO.gift(AC()).replace('width="18" height="18"','width="20" height="20"')); // brand accent — modular per vertical
+  setI('refIcon', ICO.mega(AC()).replace('width="15" height="15"','width="20" height="20"')); // invite = megaphone (gift is the Earn summary icon now)
   setI('shT1', ICO.msg('#e9e9f0').replace('width="15" height="15"','width="20" height="20"'));
   setI('shT2', ICO.x('#e9e9f0').replace('width="14" height="14"','width="19" height="19"'));
   setI('shT3', '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e9e9f0" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11M8 7l4-4 4 4"/><path d="M5.5 12.5V20h13v-7.5"/></svg>');
@@ -3090,7 +3101,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; } $('catcard').style.display=SEL_STORE&&!BRAND_CAT?'':'none'; renderStores(); renderChips(); syncCta(); loadCommunity(); window.scrollTo({top:0});
+function backToBuilder(){ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; } $('catcard').style.display=SEL_STORE&&!BRAND_CAT?'':'none'; renderStores(); renderChips(); syncCta(); loadCommunity(); window.scrollTo({top:0});
   // Clear any ?call deep-link so back/refresh never replays it — keep ?brand etc. intact.
   NAV_VIEW='builder';
   try{ const sp=new URLSearchParams(location.search); sp.delete('call'); sp.delete('store'); sp.delete('cat'); sp.delete('v'); const q=sp.toString(); history.replaceState({v:'builder'},'',location.pathname+(q?'?'+q:'')); }catch(e){}
@@ -3101,6 +3112,7 @@ function backToBuilder(){ document.body.classList.remove('fabbed'); document.bod
 let NAV_VIEW='builder';
 function navMark(view){
   try{ document.body.classList.toggle('rview', view==='result'); }catch(e){} // result-only top treatment (transparent nav + color wash)
+  try{ setThemeTone(); }catch(e){}
   if(view===NAV_VIEW) return;
   try{
     const sp=new URLSearchParams(location.search);
@@ -3110,6 +3122,16 @@ function navMark(view){
     else history.replaceState({v:view},'',url);
   }catch(e){}
   NAV_VIEW=view;
+}
+// Tint the iOS status-bar strip to the verdict tone so the green/red wash reaches the VERY top of the
+// phone (Safari paints the top strip with the theme-color). Values = the gradient's top color blended
+// over the page bg #0C0C12; off a result it goes back to the page bg.
+function setThemeTone(){
+  const m=$('themeColor'); if(!m) return;
+  const map={'rv-in':'#215337','rv-out':'#591f23','rv-unk':'#544217','rv-soon':'#5b3e10'};
+  let c='#0C0C12';
+  if(document.body.classList.contains('rview')){ for(const k in map){ if(document.body.classList.contains(k)){ c=map[k]; break; } } }
+  m.setAttribute('content',c);
 }
 window.addEventListener('popstate',()=>{ if(NAV_VIEW!=='builder') backToBuilder(); });
 
@@ -3473,6 +3495,15 @@ function histList(){
 // "My checks" goes STRAIGHT to the newest check — the switcher bar on the result page
 // (store/outcome filters + ‹ ›) IS the history UI. No intermediate list to think about.
 async function openHistory(){
+  // Snappy: if we already have local history, open the newest entry INSTANTLY (it paints from the
+  // result cache) and refresh the server-backed cache in the background — no spinner-wait. Only fall
+  // back to awaiting the network when there's nothing local to show (e.g. a fresh device).
+  const localFirst=loadHist().find(e=>e.cid);
+  if(localFirst){
+    openHistEntry(localFirst);
+    ensureHistCache().then(()=>{ try{ renderCallRail(); }catch(_){} });
+    return;
+  }
   const h=await ensureHistCache();
   const first=h.find(e=>e.cid);
   if(!first){ backToBuilder(); toast(t('hist.empty',"No checks yet — run one and it'll show up here.")); return; }
