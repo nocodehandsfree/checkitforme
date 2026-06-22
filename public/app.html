@@ -108,9 +108,9 @@
   input[type=checkbox]:checked{background:var(--green);border-color:var(--green)}
   input[type=checkbox]:checked::after{content:'';position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #06210f;border-width:0 2.2px 2.2px 0;transform:rotate(45deg)}
   /* radios match the panel (dark, green dot when picked — not the native white circle) */
-  input[type=radio]{appearance:none;-webkit-appearance:none;width:16px;height:16px;min-width:16px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.26);border-radius:50%;background:var(--terminal);cursor:pointer;flex:0 0 auto;vertical-align:middle;margin:0;transition:border-color .12s}
+  input[type=radio]{appearance:none;-webkit-appearance:none;width:14px;height:14px;min-width:14px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.26);border-radius:50%;background:var(--terminal);cursor:pointer;flex:0 0 auto;vertical-align:middle;margin:0;transition:.12s}
   input[type=radio]:hover{border-color:rgba(255,255,255,.45)}
-  input[type=radio]:checked{border-color:var(--green);background:radial-gradient(circle at center,var(--green) 0 40%,var(--terminal) 48%)}
+  input[type=radio]:checked{border-color:var(--green);background:var(--green)}
   /* number inputs: no up/down spinner arrows */
   input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   input[type=number]{-moz-appearance:textfield}
@@ -747,13 +747,17 @@
     </section>
 
     <section id="trees">
-    <h2 data-tip="Per-store call settings + the auto-mapped phone route. Pick a store or chain to begin.">Settings</h2>
+    <h2 data-tip="Per-chain call settings + the auto-mapped phone route, learned by the navigator. Pick a chain.">Tree Trainer</h2>
+    <div class="card">
+      <div class="name" style="margin-bottom:12px">Mapped routes</div>
+      <div class="stats" id="tr_stats" style="margin-bottom:0"></div>
+    </div>
     <div class="card">
       <label>Chain</label>
       <select id="set_chain" onchange="setPickChain()"><option value="">— pick a chain —</option></select>
     </div>
     <div id="set_body" style="display:none">
-      <div class="card" style="border-color:rgba(167,139,250,.3)">
+      <div class="card">
         <div class="name" style="margin-bottom:14px">Settings <span id="set_chainname" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></div>
         <label>Status</label>
         <div class="row" style="gap:16px;flex-wrap:wrap;margin:6px 0 16px">
@@ -762,8 +766,8 @@
           <label class="day" style="margin:0"><input type="radio" name="set_status_r" value="repack"> Repack-only</label>
         </div>
         <div class="grid2">
-          <div><label data-tip="Cap on how long the agent talks to a person before wrapping up.">Max talk seconds</label><input id="set_maxtalk" type="number" min="0" placeholder="45"></div>
-          <div style="display:flex;align-items:flex-end;padding-bottom:2px"><label class="day" style="margin:0"><input type="checkbox" id="set_vmhang"> Hang up on voicemail / "we're closed"</label></div>
+          <div><label data-tip="Cap on how long the agent talks to a person before wrapping up.">Max talk seconds</label><input id="set_maxtalk" type="number" min="0" placeholder="45" style="width:72px"></div>
+          <div><label data-tip="If a call hits voicemail or a 'we're closed' recording, hang up instead of waiting.">Hang up on voicemail / closed</label><div><button class="ghost" id="set_vmbtn" onclick="setVmToggle()" style="margin-top:4px;min-width:54px">ON</button></div></div>
         </div>
         <div class="row" style="margin-top:16px;gap:10px;align-items:center">
           <button class="act" onclick="saveChainSettings()">Save</button>
@@ -772,7 +776,7 @@
       </div>
       <div class="card">
         <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap">
-          <div class="name">Mapping <span class="chip-sm" data-tip="Auto-filled by the Trainer from real calls — never hand-edited.">auto · read-only</span></div>
+          <div class="name" data-tip="Auto-filled by the navigator from real calls — read-only, never hand-edited.">Mapping</div>
           <button class="ghost" id="set_mapbtn" onclick="setMapChain()" data-tip="Place one real call: the cheap navigator works the menu to a human and records the recipe + time.">Map</button>
         </div>
         <div id="set_mapping" class="meta">—</div>
@@ -789,24 +793,6 @@
           <div id="set_runs"><div class="meta">Loading…</div></div>
         </div>
       </div>
-    </div>
-    </section>
-
-    <section id="treelab">
-    <h2 data-tip="Our cheap navigator auto-calls a store, works the menu to a real person, and records the fastest recipe + time.">Trainer</h2>
-    <div style="margin:-2px 0 16px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--yellow);background:rgba(244,208,61,.1);border:1px solid rgba(244,208,61,.32);padding:5px 11px;border-radius:9px">Mapping a route places a real phone call</span></div>
-    <div class="card">
-      <div class="name" style="margin-bottom:10px" data-tip="How many chains are mapped, by mode. Map a single chain (and watch it live) under Calls → Settings → pick a chain.">Auto-learn routes</div>
-      <div class="stats" id="tr_stats" style="margin-bottom:12px"></div>
-      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
-        <input id="tl_count" type="number" min="1" max="25" value="5" style="max-width:78px" data-tip="how many unmapped brands to map in this batch">
-        <button class="act" onclick="tlBatch('discover')">Map N unmapped</button>
-        <button class="ghost" onclick="loadTrainer()">↻ Refresh</button>
-        <button class="ghost" data-tip="One tiny live call through Helicone on the cheap nav model — no phone call placed" onclick="testHelicone()">Test Helicone routing</button>
-      </div>
-      <div class="meta" id="tl_msg" style="margin-top:8px;min-height:14px"></div>
-      <div class="meta" id="tr_heli" style="margin-top:6px"></div>
-      <div class="meta" style="margin-top:10px;font-size:11.5px">Per-chain mapping, call logs &amp; settings live under <b>Calls → Settings</b> (pick a chain).</div>
     </div>
     </section>
 
@@ -941,11 +927,11 @@ let CATEGORIES = [];
 const NAV_GROUPS={
   godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['growth','Policy','rise'],['calc','Calc','sliders']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
-  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Settings','gear'],['treelab','Trainer','target'],['settings','App','sliders']]},
+  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Tree Trainer','tree'],['settings','App','sliders']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, calc:()=>calcInit(), treelab:()=>loadTrainer(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>loadChains(), statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -1835,7 +1821,7 @@ function setPickChain(){
   const status=ch.muted?'muted':(ch.repackOnly?'repack':'active');
   document.querySelectorAll('input[name="set_status_r"]').forEach(r=>{ r.checked=(r.value===status); });
   document.getElementById('set_maxtalk').value = ch.maxTalkSeconds!=null?ch.maxTalkSeconds:'';
-  document.getElementById('set_vmhang').checked = ch.hangupOnVoicemail!==false; // default ON
+  setVmBtn(ch.hangupOnVoicemail!==false); // default ON
   document.getElementById('set_msg').textContent='';
   renderChainMapping(ch);
   loadRuns(id, document.getElementById('set_runs'));
@@ -1852,21 +1838,24 @@ function renderChainMapping(ch){
   const mapped=ch.navUpdatedAt?new Date(ch.navUpdatedAt).toLocaleDateString([],{month:'short',day:'numeric'}):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'never');
   el.innerHTML=
     `<div class="stats" style="margin-bottom:12px">`
-    +`<div class="stat"><div class="n" style="font-size:18px;color:${nm?nm.c:'var(--muted)'}">${nm?nm.m:'—'}</div><div class="l">mode${nm?' · '+nm.sub:''}</div></div>`
+    +`<div class="stat"><div class="n" style="font-size:18px${nm?'':';color:var(--muted)'}">${nm?nm.m:'—'}</div><div class="l">mode${nm?' · '+nm.sub:''}</div></div>`
     +`<div class="stat"><div class="n" style="font-size:18px">${t2h}</div><div class="l">time-to-human</div></div>`
     +`<div class="stat"><div class="n" style="font-size:15px">${mapped}</div><div class="l">last mapped · ${esch(statusWord)}</div></div>`
     +`</div>`
-    +`<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5"><b style="color:#fff">Recipe:</b> ${recipe}${ch.navConfidence!=null?` <span style="color:var(--muted)">· ${ch.navConfidence}% confidence</span>`:''}</div>`;
+    +`<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5"><b style="color:#fff">Recipe:</b> ${recipe}</div>`;
   const mb=document.getElementById('set_mapbtn'); if(mb) mb.textContent = ch.navStatus==='locked'?'Re-map':'Map';
 }
 // Map / Re-map the selected chain: places one real navigator call, shown live in the Mapping card.
 function setMapChain(){ const id=Number(document.getElementById('set_chain').value); const ch=CHAINS.find(c=>c.id===id); if(!ch){ toast('Pick a chain first'); return; } trDocument(id, ch.name); }
+// Per-store voicemail/closed auto-hangup as an ON/OFF toggle button (matches the App-tab switches).
+function setVmBtn(on){ const b=document.getElementById('set_vmbtn'); if(!b) return; b.dataset.on=on?'1':''; b.textContent=on?'ON':'OFF'; b.style.color=on?'var(--green)':'var(--muted)'; b.style.borderColor=on?'rgba(74,222,128,.35)':'var(--border)'; }
+function setVmToggle(){ const b=document.getElementById('set_vmbtn'); setVmBtn(!(b&&b.dataset.on==='1')); }
 async function saveChainSettings(){
   const id=Number(document.getElementById('set_chain').value); if(!id) return;
   const status=(document.querySelector('input[name="set_status_r"]:checked')||{}).value||'active';
   const body={ muted:status==='muted', repackOnly:status==='repack',
     maxTalkSeconds:Number(document.getElementById('set_maxtalk').value)||null,
-    hangupOnVoicemail:document.getElementById('set_vmhang').checked };
+    hangupOnVoicemail:document.getElementById('set_vmbtn').dataset.on==='1' };
   const msg=document.getElementById('set_msg'); msg.textContent='Saving…';
   const r=await api('/api/chains/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   if(r&&r.id){ const i=CHAINS.findIndex(c=>c.id===id); if(i>=0) CHAINS[i]=r; msg.textContent='Saved ✓ — applies to every store of this chain.';
