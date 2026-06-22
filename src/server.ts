@@ -1276,6 +1276,16 @@ app.post("/api/stores/dedupe", async (c) => {
   const stateF = b.state ? String(b.state).toUpperCase() : null;
   const conds = [eq(retailers.active, true)];
   if (stateF) conds.push(eq(retailers.state, stateF));
+  // Optional: scope to ONE chain and force-normalize its names to "Chain City"/"Chain Street" even when
+  // the current name isn't "corrupt". Franchise imports (e.g. Hallmark's "Trudy's Hallmark Shop Location")
+  // are <80 chars, so the default pass preserves them — this forces them onto the house naming scheme.
+  let forceChain = false;
+  if (b.chain) {
+    const ch = (await db.select().from(chains).where(eq(chains.name, String(b.chain))))[0];
+    if (!ch) return c.json({ error: "chain not found" }, 404);
+    conds.push(eq(retailers.chainId, ch.id));
+    forceChain = true;
+  }
   const rows = await db.select({ id: retailers.id, name: retailers.name, location: retailers.location, address: retailers.address, chainId: retailers.chainId })
     .from(retailers).where(and(...conds));
   const chainName = new Map((await db.select().from(chains)).map((x) => [x.id, x.name || ""]));
@@ -1316,7 +1326,7 @@ app.post("/api/stores/dedupe", async (c) => {
   // markup begins ("Dollar General 1. Self-Service…" -> "Dollar General"). A long-but-clean independent
   // name with no chain is left alone rather than mangled.
   const namePrefix = (s: string) => (s || "").split(/[<&]|\b\d+\.\s|Self-Service|Return Policy|Help Center|style=|\bid=/i)[0].replace(/\s+/g, " ").trim();
-  for (const r of rows) if (corruptName(r.name)) {
+  for (const r of rows) if (corruptName(r.name) || (forceChain && r.chainId)) {
     let base = (r.chainId && chainName.get(r.chainId)) || "";
     if (!base && MARKUP.test(r.name || "")) base = namePrefix(r.name);
     if (!base) continue;
@@ -2211,6 +2221,56 @@ app.get("/api/admin/store-intel", async (c) => {
   const v = { total, callable, byProduct, states, chains: chainRows.length, types, byType, topRegions, topChecks };
   storeIntelCache = { t: Date.now(), v };
   return c.json(v);
+});
+// Pokémon-MSRP coverage: what fraction of the genuine-MSRP chains' NATIONAL store footprint we've
+// loaded. Denominator = the per-chain US store counts from the scored-chain dataset (tiers 3-5 =
+// genuine MSRP); numerator = our active stores of those chains (capped per chain so a stale count
+// can't push a chain over 100%). This is chain-FOOTPRINT coverage — how many of the chains' locations
+// we hold — NOT a claim every one stocks Pokémon (a tier-3 chain carries, but varies by location).
+// There is no national registry of "stores that stock Pokémon," so the scored-chain footprint is the
+// benchmark. Read from the committed CSV (cached 5 min).
+let coverageRefCache: { t: number; v: Array<{ chain: string; tier: number; national: number }> } | null = null;
+function coverageRef() {
+  if (coverageRefCache && Date.now() - coverageRefCache.t < 300_000) return coverageRefCache.v;
+  const out: Array<{ chain: string; tier: number; national: number }> = [];
+  try {
+    const txt = readFileSync(join(here, "../data/source/chain-scoring-2026-06/chain_scores_final.csv"), "utf8");
+    const lines = txt.split(/\r?\n/).filter((l) => l.trim());
+    const head = lines[0].replace(/^﻿/, "").split(",");
+    const iN = head.indexOf("chain_name_exact"), iT = head.indexOf("tier_1_5"), iS = head.indexOf("stores");
+    // Columns 0-7 (name/tier/…/stores) have no embedded commas — only the trailing score_note does —
+    // so a plain split is safe for the indices we read.
+    for (const ln of lines.slice(1)) {
+      const cols = ln.split(",");
+      const chain = (cols[iN] || "").trim();
+      const tier = parseInt((cols[iT] || "").trim(), 10);
+      const national = parseInt((cols[iS] || "").trim(), 10) || 0;
+      if (chain && tier >= 1 && tier <= 5) out.push({ chain, tier, national });
+    }
+  } catch { /* CSV missing in this build — return empty, coverage reads 0 */ }
+  coverageRefCache = { t: Date.now(), v: out };
+  return out;
+}
+app.get("/api/admin/coverage", async (c) => {
+  const ref = coverageRef();
+  const byChain = await db.select({ cid: retailers.chainId, n: sql<number>`count(*)` }).from(retailers)
+    .where(eq(retailers.active, true)).groupBy(retailers.chainId);
+  const idByName = new Map((await db.select({ id: chains.id, name: chains.name }).from(chains)).map((x) => [x.name, x.id]));
+  const ourByCid = new Map(byChain.map((r) => [r.cid, Number(r.n || 0)]));
+  const msrp = ref.filter((r) => r.tier >= 3 && r.tier <= 5 && r.national > 0);
+  let loaded = 0, national = 0;
+  const rows = msrp.map((r) => {
+    const cid = idByName.get(r.chain);
+    const ours = cid != null ? (ourByCid.get(cid) || 0) : 0;
+    loaded += Math.min(ours, r.national); national += r.national;
+    return { chain: r.chain, tier: r.tier, national: r.national, ours, pct: Math.round(100 * ours / r.national) };
+  });
+  return c.json({
+    coveragePct: national ? Math.round(1000 * loaded / national) / 10 : 0,
+    loaded, national, msrpChains: msrp.length,
+    gaps: rows.filter((g) => g.pct < 100).sort((a, b) => a.pct - b.pct).slice(0, 25),
+    note: "Coverage = the % of the national store footprint of the retail chains we know carry Pokémon at MSRP (tiers 3-5) that we've loaded. It measures chains/locations that CAN carry it — not that every store has it in stock right now (a 'spotty' tier-3 chain carries, but varies by location).",
+  });
 });
 // In-admin Claude agent ("Admin dev"): chat to manage the store DB. Client sends the running
 // transcript [{role,text}]; the server runs one turn (with an internal tool loop) and returns
