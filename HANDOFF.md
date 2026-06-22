@@ -48,8 +48,11 @@ Railway). Consumer UI: `public/checkit.html` (brand-injected by subdomain or `/p
 - **Check - Data Dev** — store data: `data/`, the importer, store rows/structure.
 - **Check - DevOps** — backend core, infra, security, deploys, the API contract.
 
-**Find your role's handoff and read it:** `docs/handoffs/{website,admin,data,devops}.md`. It lists
+**Find your role's handoff and read it:** `docs/handoffs/{website,admin,data,devops,design}.md`. It lists
 your files, your extra docs, and your current focus. Stay in your lane; request cross-lane changes.
+
+**Design / brand work:** start at `docs/handoffs/design.md` — it maps every logo, image, icon, and the
+brand pack (`docs/brand/`, canonical = `docs/brand/CHECK_BRAND_STYLE_GUIDE.md`).
 
 ## Everyone reads
 `HANDOFF.md` (this) + `docs/ARCHITECTURE.md` (repo/folder layout). Website + Admin + DevOps also read
