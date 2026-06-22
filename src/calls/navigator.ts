@@ -7,10 +7,12 @@ import { llm } from "../llm";
 import { getSetting, setSetting } from "../db/settings";
 
 const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
-// Cheapest + fastest brain that drives the IVR — Groq Llama 3.1 8B via Helicone (~200ms vs ~650ms
-// for Gemini flash-lite, and cheaper per token). Verified routing live. Fall back to
-// "gemini-2.5-flash-lite" by editing this line if Groq ever degrades.
-export const NAV_MODEL = "gemini-2.5-flash-lite";
+// MAPPING model — this only drives tree DISCOVERY (the learner). Cost here is irrelevant: we map a
+// chain once. At SCALE, live calls replay the LOCKED keypad recipe (deterministic DTMF, no model at
+// all), so the per-call cost is unaffected by how smart this is. So we use a genuinely capable model
+// for accuracy — flash-lite was pressing "1" for hours/electronics; flash reliably reads the menu and
+// heads to the right desk. Bump to "gemini-2.5-pro" if a tree ever needs even more reasoning.
+export const NAV_MODEL = "gemini-2.5-flash";
 
 // A live person is on the line (a short greeting/question said TO us). Used as a backstop in auto-0
 // mode so we hang up the instant someone answers instead of beeping 0 at them.
@@ -310,4 +312,4 @@ export async function placeNavCall(chainId: number | null, retailerId: number, r
   if (d.sid) session.callSid = d.sid;
   return { id };
 }
-export function navEnded(id: string) { const s = sessions.get(id); if (!s) return; if (s.status !== "human" && s.status !== "failed") s.status = "done"; void persistRun(s); }
+export function navEnded(id: string) { const s = sessions.get(id); if (!s) return; if (s.status !== "human" && s.status !== "failed") s.status = "done"; if (s.confirm && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId); void persistRun(s); }
