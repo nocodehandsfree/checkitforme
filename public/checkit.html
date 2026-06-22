@@ -158,15 +158,20 @@ __BRAND_HEAD__
      (viewport-fit=cover) — fading into the page. A body-level fixed layer (not injected per-render) so
      it always paints full-width on the first frame (no "stuck until refresh"). z-index:0 = it sits
      UNDER the nav + content, so pills/dropdowns lay on the color with their own styling. */
-  body.rview::before{content:'';position:fixed;left:0;right:0;top:0;height:360px;z-index:0;pointer-events:none}
-  body.rview.rv-out::before{background:linear-gradient(180deg,rgba(239,68,68,.36),rgba(239,68,68,.12) 32%,transparent 72%)}
-  body.rview.rv-in::before{background:linear-gradient(180deg,rgba(74,222,128,.36),rgba(74,222,128,.12) 32%,transparent 72%)}
-  body.rview.rv-unk::before{background:linear-gradient(180deg,rgba(251,191,36,.30),rgba(251,191,36,.10) 32%,transparent 72%)}
-  body.rview.rv-soon::before{background:linear-gradient(180deg,rgba(245,158,11,.36),rgba(245,158,11,.12) 32%,transparent 72%)}
+  body.rview::before{content:'';position:fixed;left:0;right:0;top:0;height:420px;z-index:0;pointer-events:none}
+  /* a single smooth linear fade top→transparent, so the color is perfectly EVEN all the way down */
+  body.rview.rv-out::before{background:linear-gradient(180deg,rgba(239,68,68,.34) 0%,transparent 100%)}
+  body.rview.rv-in::before{background:linear-gradient(180deg,rgba(74,222,128,.34) 0%,transparent 100%)}
+  body.rview.rv-unk::before{background:linear-gradient(180deg,rgba(251,191,36,.30) 0%,transparent 100%)}
+  body.rview.rv-soon::before{background:linear-gradient(180deg,rgba(245,158,11,.34) 0%,transparent 100%)}
   /* On a result the nav + content LAY ON the color: header goes transparent (no dark slab, no hairline)
-     so the wash reaches the top, and the page nudges up. Pills/dropdowns keep their own colors on top. */
+     so the wash reaches the top. The nav pills + day-picker take a BARELY-green fill (level 3) so they
+     read as sitting on a green page without looking like dark chips. */
   body.rview header{background:transparent;border-bottom-color:transparent}
-  body.rview main{padding-top:4px}
+  body.rview main{padding-top:18px}
+  body.rview .pill,body.rview .vsw-trig,body.rview .railcal{background:rgba(74,222,128,.035);border-color:rgba(74,222,128,.12)}
+  .hcal{position:relative;flex:0 0 auto}
+  #calbtn{width:38px;height:34px}
   /* Live call in progress — a subtle green wash so "we're on the line for you" reads warm/active. */
   #live{position:relative}
   #live::before{content:'';position:absolute;left:-20px;right:-20px;top:-12px;height:220px;pointer-events:none;background:linear-gradient(180deg,rgba(74,222,128,.13),transparent 70%);z-index:0}
@@ -816,6 +821,7 @@ __BRAND_HEAD__
       <div class="vsw-menu" id="vsw_menu" role="listbox"></div>
     </div>
   </div>
+  <div class="hcal" id="hcalwrap" style="display:none"><button class="railcal" id="calbtn" onclick="openRailCal()" aria-label="Pick a day of calls"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></button><div id="railcalpop" class="railcalpop"></div></div>
   <div class="pill account" id="authpill" onclick="signUp()"><span class="dot"></span><span id="creditN">1 free</span></div>
 </header>
 
@@ -1466,7 +1472,7 @@ function applyLang(){
 }
 function setLang(l){ LANG=l; localStorage.setItem('runnr_lang',l); applyLang();
   // Re-render everything built in JS so a language flip is instant and complete.
-  try{ renderDemo(); renderStores(); renderChips(); syncCta(); renderAuth(); loadFinds(); loadSchedules(); loadRefer(); }catch(e){}
+  try{ renderDemo(); renderStores(); renderChips(); syncCta(); renderAuth(); loadFinds(); loadSchedules(); loadRefer(); renderCallRail(); }catch(e){}
   // …including whatever view/sheet is open right now — no hard refresh needed.
   try{
     if(NAV_VIEW==='result'&&LASTRES) showResult(LASTRES,RAIL_CID);
@@ -3241,7 +3247,6 @@ function showResult(o, cid){
   ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c));
   document.body.classList.add('rv-'+cls);
   $('result').innerHTML = `
-    <div class="railbar" id="railbar" style="display:none"></div>
     <div class="rverdict ${cls}">
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
       <div class="rtitle2">${esc(vTitle)}</div>
@@ -3495,31 +3500,15 @@ function railScoped(){
     .filter(e=>!RAIL_F.tone||railTone(e)===RAIL_F.tone);
 }
 function railFiltered(){ return railScoped().filter(e=>!RAIL_F.date||tsDay(e.ts)===RAIL_F.date); }
+// The only call navigation now: a calendar day-picker next to "You" (header). It shows whenever
+// there are dated calls; tapping opens the month calendar (openRailCal) where days with calls glow —
+// pick one to jump to that day's call. The Stores/Calls dropdowns + ‹›arrows were removed.
 function renderCallRail(cid){
   if(cid) RAIL_CID=cid; cid=RAIL_CID;
-  const bar=$('railbar'); if(!bar) return;
-  const all=histList().filter(e=>e.cid);
-  if(all.length<2){ bar.style.display='none'; return; }
-  const stores=[...new Set(all.map(e=>railBase(e.storeName)))].sort();
-  const f=railFiltered();
-  const idx=f.findIndex(e=>e.cid===cid);
-  bar.style.display='';
-  bar.innerHTML=`
-    <button class="railnav" onclick="railStep(-1)" ${idx<=0?'disabled':''} aria-label="Newer call"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    <select class="railsel" onchange="railFilter('store',this.value)" aria-label="Filter by store">
-      <option value="">${t('rail.stores','Stores')}</option>
-      ${stores.map(n=>`<option value="${esc(n)}" ${RAIL_F.store===n?'selected':''}>${esc(n)}</option>`).join('')}
-    </select>
-    <select class="railsel" onchange="railFilter('tone',this.value)" aria-label="Filter by outcome">
-      <option value="">${t('rail.calls','Calls')}</option>
-      <option value="in" ${RAIL_F.tone==='in'?'selected':''}>${t('hb.in','In stock')}</option>
-      <option value="out" ${RAIL_F.tone==='out'?'selected':''}>${t('hb.out','Not in stock')}</option>
-      <option value="soon" ${RAIL_F.tone==='soon'?'selected':''}>${t('rail.soon','Restock coming')}</option>
-      <option value="unk" ${RAIL_F.tone==='unk'?'selected':''}>${t('rail.failed','Check failed')}</option>
-    </select>
-    <button class="railcal ${RAIL_F.date?'on':''}" onclick="openRailCal()" aria-label="Pick a day"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></button>
-    <button class="railnav" onclick="railStep(1)" ${idx<0||idx>=f.length-1?'disabled':''} aria-label="Older call"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9.5 5l6.5 7-6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-    <div id="railcalpop" class="railcalpop"></div>`;
+  const wrap=$('hcalwrap'); if(!wrap) return;
+  const days=histList().filter(e=>e.cid&&e.ts);
+  wrap.style.display = days.length ? '' : 'none';
+  const btn=$('calbtn'); if(btn) btn.classList.toggle('on', !!RAIL_F.date);
 }
 function railFilter(k,v){ RAIL_F[k]=v; const f=railFiltered(); if(k==='date'&&v&&!f.length){ toast(t('rail.noneday','No checks on that day')); RAIL_F.date=''; renderCallRail(); return; } const cur=f.some(e=>e.cid===RAIL_CID); if(!cur&&f.length){ openHistEntry(f[0]); return; } renderCallRail(); }
 function railStep(d){ const f=railFiltered(); const i=f.findIndex(e=>e.cid===RAIL_CID); const n=f[i+d]; if(n) openHistEntry(n); }
