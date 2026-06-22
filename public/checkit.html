@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="theme-color" content="#0C0C12" id="themeColor" />
-<!-- Auth is 100% phone/SMS (Twilio). Clerk fully removed. theme-color tints the iOS status-bar strip
-     to the verdict tone on a result (the page can't paint under the status bar in a Safari tab), and
-     back to the page bg everywhere else. Hard-refresh of a result deep-link recalls the tone class. -->
+<!-- NO theme-color meta on purpose: one theme-color tints BOTH the top status bar AND the bottom Safari
+     toolbar, so any green there bleeds onto the footer. Without it, iOS SAMPLES the page per-edge — the
+     green page-top shows under the status bar while the dark page-bottom keeps the bottom bar dark. The
+     server must NOT inject one either (it doesn't). Hard-refresh of a result deep-link: recall the verdict
+     tone so the post-<body> step adds rview/rv-* and the body-gradient wash paints from frame one. -->
 <script>(function(){try{
   var sp=new URLSearchParams(location.search);
   if(!sp.has('call')) return;
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
-  var T={in:'#266440',out:'#6b2427',unk:'#6c5419',soon:'#6e490f'};
-  if(cls && T[cls]){ window.__bootTone=cls; var m=document.getElementById('themeColor'); if(m) m.setAttribute('content',T[cls]); }
+  if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls;
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r39" />
+<meta name="x-rev" content="names-r40" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -3040,19 +3040,10 @@ function navMark(view){
   }catch(e){}
   NAV_VIEW=view;
 }
-// Tint the iOS Safari bars to the verdict tone. CRITICAL: there must be exactly ONE theme-color meta in
-// the document (this id'd one). The server's brand-head injection used to add a SECOND, hardcoded-dark
-// theme-color — WebKit then honored THAT one and silently ignored every change we made here, which is what
-// kept the status bar black on every result no matter what JS we ran. The duplicate is now gone (server.ts).
-// We mutate this node in place (setAttribute), never replace it. One theme-color tints BOTH the top status
-// bar and the bottom toolbar (no per-edge control in a Safari tab) — a result frames top+bottom in the
-// verdict colour; every other view is the dark page bg.
-function setThemeTone(){
-  const map={'rv-in':'#266440','rv-out':'#6b2427','rv-unk':'#6c5419','rv-soon':'#6e490f'};
-  let c='#0C0C12';
-  if(document.body.classList.contains('rview')){ for(const k in map){ if(document.body.classList.contains(k)){ c=map[k]; break; } } }
-  try{ const m=$('themeColor'); if(m) m.setAttribute('content',c); }catch(e){}
-}
+// Status-bar / toolbar tone is handled by iOS PAGE SAMPLING (no theme-color meta) — green page-top shows
+// under the status bar, dark page-bottom keeps the bottom bar dark. Nothing to set in JS; kept as a no-op
+// so existing call-sites stay safe. Do NOT reintroduce a theme-color meta (it tints both edges = green footer).
+function setThemeTone(){}
 window.addEventListener('popstate',()=>{ if(NAV_VIEW!=='builder') backToBuilder(); });
 
 // --- Snappy result rendering (stale-while-revalidate) ---------------------------------------------
@@ -3419,28 +3410,45 @@ function histList(){
   const extra=local.filter(e=>e.cid&&!seen.has(e.cid));
   return extra.length ? [...extra,...HIST_CACHE].sort((a,b)=>(b.ts||0)-(a.ts||0)) : HIST_CACHE;
 }
-// "My checks" goes STRAIGHT to the newest check — the switcher bar on the result page
-// (store/outcome filters + ‹ ›) IS the history UI. No intermediate list to think about.
+// "My checks" lands on TODAY for the CURRENT product. A check made today → open it. None today → the
+// today-landing (NOT some old in-stock result from days ago); the calendar there still reaches past days.
 async function openHistory(){
-  // Checks are scoped to the CURRENT product — "My checks" opens the newest check for THIS product only
-  // (so switching products then tapping My checks doesn't show another product's calls).
-  const match=e=>e.cid && railInCat(e);
-  // Snappy: if we already have a local check for this product, open it INSTANTLY (paints from the result
-  // cache) and refresh the server cache in the background. Only await the network when nothing's local.
-  const localFirst=loadHist().find(match);
-  if(localFirst){
-    openHistEntry(localFirst);
+  const today=tsDay(Date.now());
+  const todayMatch=e=>e.cid && railInCat(e) && tsDay(e.ts)===today;
+  // Snappy: open instantly from local history if there's a check from today, refresh cache in background.
+  const localToday=loadHist().find(todayMatch);
+  if(localToday){
+    RAIL_F.date=today; openHistEntry(localToday);
     ensureHistCache().then(()=>{ try{ renderCallRail(); }catch(_){} });
     return;
   }
   const h=await ensureHistCache();
-  const first=h.find(match);
-  if(!first){ noChecksForProduct(); return; }
-  openHistEntry(first);
+  const firstToday=h.find(todayMatch);
+  if(firstToday){ RAIL_F.date=today; openHistEntry(firstToday); return; }
+  // Nothing today for this product → the today-landing. Never drop the user onto an old result.
+  showTodayLanding();
 }
-// Safety net only — the "My checks" row is hidden when there are no checks for the product, so this is
-// rarely hit. Just return to a clean homepage (no full-width banner).
-function noChecksForProduct(){ backToBuilder(); }
+// The empty-today screen: clean header (product switcher + calendar to browse past days) and an empty
+// state with a CTA to check a store. Reuses the result-view chrome so the calendar/switcher are present.
+function showTodayLanding(){
+  stopLiveTimers(); if($('hangup_btn'))$('hangup_btn').style.display='none';
+  ['live','builder','history','success','handoff'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
+  document.body.classList.remove('fabbed');
+  ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); // neutral (dark) — no verdict tone
+  RAIL_F.date=''; RAIL_F.store=''; RAIL_F.tone=''; RAIL_CID=null; LASTRES=null;
+  const cat=catLabel()||'';
+  $('result').innerHTML=`
+    <div class="emptybox" style="margin-top:26px">
+      ${ICO.clock('#A78BFA').replace('width="17" height="17"','width="28" height="28"')}
+      <div class="eb-t">${t('hist.today.none','No checks today')}</div>
+      <div class="eb-s">${cat?tf('hist.today.sub','You haven’t checked any stores for {x} today.',{x:esc(cat)}):t('hist.today.sub0','You haven’t checked any stores today.')}</div>
+      <button class="cta" style="margin-top:16px" onclick="backToBuilder()">${t('hist.today.cta','Check a store')} →</button>
+      <div class="eb-s" style="margin-top:12px">${t('hist.today.past','Past checks? Use the calendar above.')}</div>
+    </div>`;
+  $('result').classList.remove('hidden');
+  navMark('result');
+  renderCallRail(); // shows the calendar button iff there ARE past-day checks for this product
+}
 async function openHistEntry(e){
   if(!e) return;
   if(!e.cid){ toast(t('toast.callgone','That call is no longer available')); return; } // instant hang-up: no transcript exists
@@ -3554,7 +3562,7 @@ function railOpen(cid){ const e=histList().find(x=>x.cid===cid); closeRailCal();
 // The day-list view inside the popover: every call on the chosen day, newest first, tap to open.
 function renderRailDayList(pop){
   const day=RAIL_F.date;
-  const calls=histList().filter(e=>e.cid&&e.ts&&tsDay(e.ts)===day).sort((a,b)=>b.ts-a.ts);
+  const calls=histList().filter(e=>e.cid&&e.ts&&railInCat(e)&&tsDay(e.ts)===day).sort((a,b)=>b.ts-a.ts);
   const lbl=new Date(day+'T12:00:00').toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'short',month:'short',day:'numeric'});
   const back=`<button onclick="railPickDay('')" aria-label="${esc(t('rail.backcal','Back to calendar'))}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
   pop.innerHTML=`<div class="rcal-h">${back}<b>${esc(lbl)}</b><span style="width:13px"></span></div>
