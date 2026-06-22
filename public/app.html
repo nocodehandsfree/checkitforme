@@ -499,14 +499,6 @@
     <div id="resultList"><div class="empty">Loading…</div></div>
   </section>
 
-  <section id="bail">
-    <h2 data-tip="Master call cutoffs — rules that end a call once it stops being worth the money. The master switch stays OFF until bench-tested; nothing changes on live calls yet.">Bail</h2>
-    <div class="card" id="bail_card">
-      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><span class="name">Bail rules</span> <span id="bail_state" class="status s-gray">…</span></div>
-      <div id="bail_body" class="meta">Loading…</div>
-    </div>
-  </section>
-
   <section id="schedules">
     <h2>Schedules</h2>
     <div id="scheduleList"><div class="empty">Loading…</div></div>
@@ -598,7 +590,7 @@
   </section>
 
   <section id="settings">
-    <h2>Settings</h2>
+    <h2 data-tip="App-wide defaults. Per-store settings live under Calls → Settings.">App</h2>
     <div class="card"><div class="row">
       <div class="grow"><div class="name" data-tip="Master toggle — if a call hits voicemail or an automated system, the agent hangs up without leaving a message.">Never leave voicemails</div></div>
       <button id="vmToggle" class="ghost" onclick="toggleVoicemail()">…</button>
@@ -752,45 +744,40 @@
     </section>
 
     <section id="trees">
-    <h2 data-tip="How the agent gets past each brand's phone menu to a human — set the spoken steps and the keypad presses (Auto-press keys), or mute a chain.">Phone trees</h2>
-    <div id="pb_trees">
-    <div class="card" style="border-color:rgba(167,139,250,.3)">
-      <div class="name" style="margin-bottom:14px" data-tip="How the agent gets through a chain's menu to a person. Set once per chain → applies to every store.">Phone trees</div>
-      <label>Chain</label>
-      <select id="pt_chain" onchange="loadChainTree()"></select>
-      <label style="margin-top:10px">Navigation steps</label>
-      <textarea id="pt_tree" rows="6" style="width:100%;font-family:inherit;font-size:13px;background:var(--terminal);color:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;box-sizing:border-box" placeholder="Plain English, what to say at each menu — e.g. 'No' to healthcare provider, then 'Front store', then 'General inquiries'…"></textarea>
-      <label style="margin-top:10px" data-tip="When to auto-press a key to get through the menu toward a human. Add a step per key: pick the digit (0–9) and how many seconds into the call to press it.">Auto-press keys</label>
-      <div id="pt_dtmf_rows"></div>
-      <div style="margin-top:8px"><button class="ghost" type="button" onclick="dtmfAddRow()">+ Add a key-press</button></div>
-      <input type="hidden" id="pt_dtmf">
-      <div class="grid2" style="margin-top:10px">
-        <div><label>Answer path</label>
-          <select id="pt_path">
-            <option value="">Unclassified</option>
-            <option value="direct_human">Direct human · picks up</option>
-            <option value="simple_ivr">Simple IVR · 1–2 steps</option>
-            <option value="deep_ivr">Deep IVR · long tree</option>
-          </select></div>
-        <div><label data-tip="Time burned before a human">Avg tree seconds</label>
-          <input id="pt_treesecs" type="number" min="0" placeholder="e.g. 45"></div>
-      </div>
-      <div class="row" style="margin-top:10px;gap:14px;flex-wrap:wrap">
-        <label class="day" style="margin:0"><input type="checkbox" id="pt_repack"> Repack-only chain (e.g. Fairfield) — checks waste the customer's money</label>
-        <label class="day" style="margin:0"><input type="checkbox" id="pt_muted"> Muted — hidden from the consumer store list</label>
-      </div>
-      <div class="row" style="margin-top:12px;gap:8px">
-        <button class="act" onclick="saveChainTree()">Save chain</button>
-        <button class="ghost" onclick="insertCvsTemplate()">Insert CVS template</button>
-      </div>
-      <div class="meta" id="pt_status" style="margin-top:8px"></div>
-    </div>
-
+    <h2 data-tip="Per-store call settings + the auto-mapped phone route. Pick a store or chain to begin.">Settings</h2>
     <div class="card">
-      <div class="name" style="margin-bottom:10px" data-tip="Mute a chain → all its stores vanish from every city for consumers, instantly.">All chains</div>
-      <input id="pt_chainfilter" placeholder="Filter chains — e.g. Ralph's…" oninput="chainFilter(this.value)" style="margin-bottom:6px">
-      <div id="pt_chainlist" class="meta">Loading…</div>
+      <label>Store / chain</label>
+      <select id="set_chain" onchange="setPickChain()"><option value="">— pick a store / chain —</option></select>
     </div>
+    <div id="set_body" style="display:none">
+      <div class="card" style="border-color:rgba(167,139,250,.3)">
+        <div class="name" style="margin-bottom:14px">Settings <span id="set_chainname" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></div>
+        <label>Status</label>
+        <div class="row" style="gap:16px;flex-wrap:wrap;margin:6px 0 16px">
+          <label class="day" style="margin:0"><input type="radio" name="set_status_r" value="active"> Active</label>
+          <label class="day" style="margin:0"><input type="radio" name="set_status_r" value="muted"> Muted — hidden from consumers</label>
+          <label class="day" style="margin:0"><input type="radio" name="set_status_r" value="repack"> Repack-only</label>
+        </div>
+        <div class="grid2">
+          <div><label data-tip="Cap on how long the agent talks to a person before wrapping up.">Max talk seconds</label><input id="set_maxtalk" type="number" min="0" placeholder="45"></div>
+          <div style="display:flex;align-items:flex-end;padding-bottom:2px"><label class="day" style="margin:0"><input type="checkbox" id="set_vmhang"> Hang up on voicemail / "we're closed"</label></div>
+        </div>
+        <div class="row" style="margin-top:16px;gap:10px;align-items:center">
+          <button class="act" onclick="saveChainSettings()">Save</button>
+          <span class="meta" id="set_msg"></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div class="name">Mapping</div>
+          <span class="chip-sm" data-tip="Auto-filled by the Trainer from real calls — never hand-edited. Map or re-map a route in Calls → Trainer.">auto · read-only</span>
+        </div>
+        <div id="set_mapping" class="meta">—</div>
+        <div style="margin-top:14px">
+          <div class="name" style="font-size:13px;margin-bottom:8px">Call log <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· runs + step matrix</span></div>
+          <div id="set_runs"><div class="meta">Loading…</div></div>
+        </div>
+      </div>
     </div>
     </section>
 
@@ -961,11 +948,11 @@ let CATEGORIES = [];
 const NAV_GROUPS={
   godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['growth','Policy','rise'],['calc','Calc','sliders']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
-  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Phone Trees','tree'],['treelab','Trainer','target'],['bail','Bail','scissors'],['settings','Settings','gear']]},
+  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Settings','gear'],['treelab','Trainer','target'],['settings','App','sliders']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, calc:()=>calcInit(), treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwKiosks();}, bail:()=>loadBail(), statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, calc:()=>calcInit(), treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>loadChains(), statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -1312,7 +1299,7 @@ async function loadDash(){
   const [o,m]=await Promise.all([api('/api/admin/overview'),api('/api/admin/metrics')]);
   const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   if(o&&!o.error){
-    CHAIN_STATS=o.chainStats||[]; renderChainList();
+    CHAIN_STATS=o.chainStats||[];
     // Today hero — the day's vital signs (above the fold)
     document.getElementById('d_today').innerHTML=
       st(o.today.calls,'checks 24h')+
@@ -1848,14 +1835,59 @@ function fillSimSelects(){
 // ---- Playbook: chain phone trees + store preview ----
 let CHAINS=[];
 const CVS_TEMPLATE="This is a CVS. The phone system is VOICE-driven — navigate by speaking ONE WORD at a time to reach a live person at the FRONT store:\n1. \"Are you a healthcare provider?\" → say \"No.\"\n2. \"Pharmacy or front store services?\" → say \"Front.\"\n3. \"beauty and fragrances, OTC health, or general store inquiries\" → say \"General.\"\n4. If it stalls or repeats, say \"General\" again each time until you hear \"transferring you now\" and a person picks up.\nThe pharmacy can be closed while the front store is open — \"pharmacy closed\" does NOT mean the store is closed; always route to the front.";
+// ---- Settings page: pick a store/chain → editable Settings (writes the chain record) + read-only
+//      Mapping (auto-filled by the Trainer/learner). navType keypad→Alpha, voice→Bravo, direct→Charlie. ----
+const NAV_MODE={ keypad:{m:'Alpha',sub:'keypad tones',c:'#60a5fa'}, voice:{m:'Bravo',sub:'spoke menu',c:'var(--yellow)'}, direct:{m:'Charlie',sub:'direct human',c:'var(--green)'} };
+function chainOpts(){ return CHAINS.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(ch=>`<option value="${ch.id}">${esch(ch.name)}${ch.muted?' · muted':(ch.repackOnly?' · repack':'')}</option>`).join(''); }
 async function loadChains(){
   CHAINS = await api('/api/chains') || [];
-  renderChainList(); // every chain is muteable now, even with zero calls
-  const sel=document.getElementById('pt_chain'); if(!sel) return;
+  const sel=document.getElementById('set_chain'); if(!sel) return;
   const cur=sel.value;
-  sel.innerHTML=CHAINS.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(ch=>`<option value="${ch.id}">${ch.name}${ch.phoneTreeDefault?' ✓':''}</option>`).join('');
-  if(cur) sel.value=cur;
-  loadChainTree();
+  sel.innerHTML='<option value="">— pick a store / chain —</option>'+chainOpts();
+  if(cur){ sel.value=cur; setPickChain(); }
+}
+function setPickChain(){
+  const id=Number(document.getElementById('set_chain').value);
+  const body=document.getElementById('set_body'); const ch=CHAINS.find(c=>c.id===id);
+  if(!ch){ if(body) body.style.display='none'; return; }
+  body.style.display='';
+  document.getElementById('set_chainname').textContent='· '+ch.name;
+  const status=ch.muted?'muted':(ch.repackOnly?'repack':'active');
+  document.querySelectorAll('input[name="set_status_r"]').forEach(r=>{ r.checked=(r.value===status); });
+  document.getElementById('set_maxtalk').value = ch.maxTalkSeconds!=null?ch.maxTalkSeconds:'';
+  document.getElementById('set_vmhang').checked = ch.hangupOnVoicemail!==false; // default ON
+  document.getElementById('set_msg').textContent='';
+  renderChainMapping(ch);
+  loadRuns(id, document.getElementById('set_runs'));
+}
+function renderChainMapping(ch){
+  const el=document.getElementById('set_mapping'); if(!el) return;
+  const nm=NAV_MODE[ch.navType];
+  let recipe='— not mapped yet';
+  try{ const r=ch.navRecipe?JSON.parse(ch.navRecipe):null; const steps=(r&&(Array.isArray(r)?r:r.steps))||[];
+    if(steps.length) recipe=steps.map(s=>s.action==='press'?('press '+s.value+'@'+s.atSec+'s'):(s.action==='wait'?('wait@'+s.atSec+'s'):('say "'+esch(s.value)+'"@'+s.atSec+'s'))).join('  →  ');
+  }catch(e){}
+  const t2h=ch.navSeconds!=null?ch.navSeconds+'s':(ch.avgTreeSeconds!=null?ch.avgTreeSeconds+'s':'—');
+  const mapped=ch.navUpdatedAt?new Date(ch.navUpdatedAt).toLocaleDateString([],{month:'short',day:'numeric'}):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'never');
+  el.innerHTML=
+    `<div class="stats" style="margin-bottom:12px">`
+    +`<div class="stat"><div class="n" style="font-size:18px;color:${nm?nm.c:'var(--muted)'}">${nm?nm.m:'—'}</div><div class="l">mode${nm?' · '+nm.sub:''}</div></div>`
+    +`<div class="stat"><div class="n" style="font-size:18px">${t2h}</div><div class="l">time-to-human</div></div>`
+    +`<div class="stat"><div class="n" style="font-size:15px">${mapped}</div><div class="l">last mapped${ch.navStatus?' · '+esch(ch.navStatus):''}</div></div>`
+    +`</div>`
+    +`<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5"><b style="color:#fff">Recipe:</b> ${recipe}${ch.navConfidence!=null?` <span style="color:var(--muted)">· ${ch.navConfidence}% confidence</span>`:''}</div>`;
+}
+async function saveChainSettings(){
+  const id=Number(document.getElementById('set_chain').value); if(!id) return;
+  const status=(document.querySelector('input[name="set_status_r"]:checked')||{}).value||'active';
+  const body={ muted:status==='muted', repackOnly:status==='repack',
+    maxTalkSeconds:Number(document.getElementById('set_maxtalk').value)||null,
+    hangupOnVoicemail:document.getElementById('set_vmhang').checked };
+  const msg=document.getElementById('set_msg'); msg.textContent='Saving…';
+  const r=await api('/api/chains/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  if(r&&r.id){ const i=CHAINS.findIndex(c=>c.id===id); if(i>=0) CHAINS[i]=r; msg.textContent='Saved ✓ — applies to every store of this chain.';
+    const sel=document.getElementById('set_chain'), cur=sel.value; sel.innerHTML='<option value="">— pick a store / chain —</option>'+chainOpts(); sel.value=cur; }
+  else msg.textContent='Could not save.';
 }
 // Auto-press builder: each step = press a digit (0-9) at N seconds. Syncs to the hidden pt_dtmf as "d@s,d@s".
 function dtmfRowHtml(digit,secs){
@@ -2984,7 +3016,7 @@ async function agentSend(){
     const sec=SECTION_GROUP[want]?want:'dash';
     showGroup(SECTION_GROUP[sec], sec); })();
   await Promise.all([loadCatalog()]);
-  await Promise.all([loadStoreIntel(),loadResults(),loadSchedules(),loadZones(),loadSettings(),loadLiveStrip(),loadCredits(),loadTestStores(),loadBail(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen(),loadWorkflows()]);
+  await Promise.all([loadStoreIntel(),loadResults(),loadSchedules(),loadZones(),loadSettings(),loadLiveStrip(),loadCredits(),loadTestStores(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen(),loadWorkflows()]);
   const sp=new URLSearchParams(location.search);
   restorePersist();
   decorateChrome();

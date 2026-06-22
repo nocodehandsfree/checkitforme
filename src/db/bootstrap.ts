@@ -96,6 +96,9 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE chains ADD COLUMN nav_confidence INTEGER").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN nav_log TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN nav_updated_at INTEGER").catch(() => {});
+  // Per-store call settings (Settings page): talk cap + voicemail/closed auto-hangup.
+  await client.execute("ALTER TABLE chains ADD COLUMN max_talk_seconds INTEGER").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN hangup_on_voicemail INTEGER").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN external_store_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN maps_uri TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN geocode_tried_at INTEGER").catch(() => {});

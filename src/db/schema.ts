@@ -78,6 +78,11 @@ export const chains = sqliteTable("chains", {
   navConfidence: integer("nav_confidence"),
   navLog: text("nav_log"),
   navUpdatedAt: integer("nav_updated_at"),
+  // ---- Per-store call settings (editable on the Settings page; mapping above is learner-written) ----
+  // maxTalkSeconds: cap on agent↔human talk before wrapping (UI default 45). hangupOnVoicemail: hang up
+  // on a voicemail / "we're closed" recording instead of waiting (default on when null).
+  maxTalkSeconds: integer("max_talk_seconds"),
+  hangupOnVoicemail: integer("hangup_on_voicemail", { mode: "boolean" }),
 });
 
 /** A specific catalog product. Seeded from drops_db.json; the agent asks at the category level, but this powers future product-specific asks and matching. */
