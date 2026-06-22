@@ -417,7 +417,8 @@ export type CallStatus =
   | "bad_number"     // disconnected / number changed
   | "ivr_stuck"      // couldn't get through the phone menu
   | "closed"         // store closed / voicemail recording — hung up, no charge
-  | "failed";        // telephony/system error
+  | "failed"         // telephony/system error
+  | "admin_hangup";  // admin ended the call from the dashboard — a NON-RESULT (no report, no charge)
 
 /** One call attempt and its outcome. `confirmed` null = unclear/no answer. We store TEXT transcript + summary only — never audio. */
 export const callResults = sqliteTable(
