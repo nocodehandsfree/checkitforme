@@ -366,6 +366,11 @@
 
   <!-- GOD VIEW: the day's command center — vitals above the fold, business folded in -->
   <section id="dash" class="active">
+    <div class="subnav" id="dash_subnav">
+      <button class="active" onclick="showDashView('overview')">Overview</button>
+      <button onclick="showDashView('calc')">Calc</button>
+    </div>
+    <div id="dash_overview">
     <div class="hero">
       <div class="hero-eyebrow">Today</div>
       <div class="stats" id="d_today"></div>
@@ -402,6 +407,8 @@
       <div class="stats" id="d_timing" style="margin-bottom:6px"></div>
       <details style="margin-top:6px"><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details>
     </details>
+    </div>
+    <div id="dash_calc" style="display:none"></div>
   </section>
 
   <section id="retailers">
@@ -1200,6 +1207,119 @@ async function loadCallTiming(){
   el.innerHTML = tile(secsFmt(a.avgTalkSec),'avg talk','green')+tile(secsFmt(a.avgNavSec),'avg to human')+tile(secsFmt(a.avgCallSec),'avg call')+tile(a.totalMinutes+'m','total minutes')+tile(a.calls,'calls timed');
   const se=document.getElementById('d_timing_stores');
   if(se) se.innerHTML=(d.byStore||[]).map(s=>`<div class="repline"><span class="rl">${esch(s.name)} <span class="meta">· ${s.n} calls</span></span><b>${secsFmt(s.avgTalkSec)} talk · ${secsFmt(s.avgNavSec)} nav · ${secsFmt(s.avgCallSec)} call</b></div>`).join('')||'<div class="meta">—</div>';
+}
+// ---- God view · Calc sub-nav: per-call unit economics (Alpha keypad / Bravo voice-menu / Charlie agent) ----
+// Vanilla-JS port of the CallCOGS calculator so the owner can play with the cost model live. Pure client-side:
+// pick a store type, drag nav/talk seconds, edit the rate card → live all-in cost, breakdown, matrix + margin.
+const CALC_STORE={ Direct:{label:'Direct',sub:'human picks up',nav:0,nc:'var(--text-muted)'}, Alpha:{label:'Alpha',sub:'keypad tones',nav:30,nc:'#F4B740'}, Bravo:{label:'Bravo',sub:'voice menu',nav:50,nc:'#38BDF8'} };
+const CALC_TALK=[10,15,20,25,30,60];
+const calcMoney=n=>'$'+(n<0?'-':'')+Math.abs(n).toFixed(3);
+const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.5, rates:{ twilioPerMin:0.014, elevenPerSec:0.0012, claudePerSec:0.0002, bravoNavPerSec:0.001, overhead:0.001 }, ready:false };
+const calcDot=c=>`<span style="display:inline-block;width:8px;height:8px;border-radius:9px;background:${c};flex-shrink:0"></span>`;
+
+// core cost model — one source of truth (Twilio runs the whole call; Bravo nav = STT+LLM+TTS; Charlie = agent talk)
+function calcCompute(storeType,nav,talk,r){
+  const twilioPerSec=r.twilioPerMin/60, dur=nav+talk, items=[];
+  items.push({label:'Twilio line',detail:`${dur}s · $${r.twilioPerMin}/min`,accent:'var(--text-muted)',amount:twilioPerSec*dur});
+  if(storeType==='Bravo') items.push({label:'Bravo nav · STT + LLM + TTS',detail:`${nav}s · $${r.bravoNavPerSec}/s`,accent:'#38BDF8',amount:r.bravoNavPerSec*nav});
+  else if(storeType==='Alpha') items.push({label:'Alpha nav · keypad tones',detail:`${nav}s · $0/s`,accent:'#F4B740',amount:0});
+  else items.push({label:'Navigation',detail:'direct line · none',accent:'var(--text-tertiary)',amount:0});
+  items.push({label:'Charlie · ElevenLabs ConvAI',detail:`${talk}s · $${r.elevenPerSec}/s`,accent:'var(--purple)',amount:r.elevenPerSec*talk});
+  items.push({label:'Charlie · Claude Sonnet',detail:`${talk}s · $${r.claudePerSec}/s`,accent:'var(--purple)',amount:r.claudePerSec*talk});
+  items.push({label:'Fixed overhead / call',detail:'flat',accent:'var(--text-muted)',amount:r.overhead});
+  return { items, total: items.reduce((s,i)=>s+i.amount,0) };
+}
+// Toggle the God-view sub-nav between the live Overview and the Calc.
+function showDashView(which){
+  const ov=document.getElementById('dash_overview'), ca=document.getElementById('dash_calc'); if(!ov||!ca) return;
+  const calc=which==='calc';
+  ov.style.display=calc?'none':''; ca.style.display=calc?'':'none';
+  document.querySelectorAll('#dash_subnav button').forEach((b,i)=>b.classList.toggle('active', i===(calc?1:0)));
+  if(calc) calcInit();
+}
+function calcInit(){ const el=document.getElementById('dash_calc'); if(!el) return; if(!CALC.ready){ el.innerHTML=calcShell(); CALC.ready=true; } calcSync(); calcUpdate(); }
+function calcShell(){
+  const seg=Object.keys(CALC_STORE).map(t=>`<button type="button" id="calc_seg_${t}" onclick="calcPick('${t}')" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(CALC_STORE[t].nc)}${t}</span><span style="font-size:10.5px;color:var(--text-tertiary)">${CALC_STORE[t].sub}</span></button>`).join('');
+  const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11.5px;color:var(--text-muted)">${label}</span><span style="display:flex;align-items:center;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px 4px;width:100%"><span style="color:var(--text-tertiary);font-size:11px">${suf}</span></span></label>`;
+  return `
+  <div class="hero" style="margin-bottom:14px">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
+      <div><div class="hero-eyebrow">ALL-IN COST / CALL</div>
+        <div id="calc_total" style="font-size:46px;font-weight:800;color:var(--green);letter-spacing:-.02em;line-height:1.05;margin-top:6px;font-variant-numeric:tabular-nums">$0.000</div></div>
+      <div id="calc_chip" style="display:inline-flex;flex-direction:column;align-items:flex-end;gap:2px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:8px 12px"></div>
+    </div>
+    <div id="calc_strip" style="display:flex;height:30px;border-radius:9px;overflow:hidden;margin-top:16px;background:var(--surface-1);border:1px solid var(--border)"></div>
+    <div id="calc_legend" class="row" style="gap:14px;margin-top:10px;align-items:center;font-size:12px"></div>
+  </div>
+  <div class="card report">
+    <div class="name" style="margin-bottom:12px">Scenario</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Store type</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px">${seg}</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px"><span style="font-size:13px;color:var(--text-muted)">Navigation time</span><span style="font-family:ui-monospace,monospace;font-size:18px;font-weight:700"><span id="calc_navval">0</span><span style="font-size:12px;color:var(--text-tertiary)">s</span></span></div>
+    <input id="calc_nav" type="range" min="0" max="120" value="${CALC.nav}" oninput="calcSetNav(this.value)">
+    <div id="calc_navnote" style="font-size:11px;color:var(--text-tertiary);margin-top:2px;display:none">direct line — no menu</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin:14px 0 2px"><span style="font-size:13px;color:var(--text-muted)">Talk time with human</span><span style="font-family:ui-monospace,monospace;font-size:18px;font-weight:700"><span id="calc_talkval">0</span><span style="font-size:12px;color:var(--text-tertiary)">s</span></span></div>
+    <input id="calc_talk" type="range" min="0" max="120" value="${CALC.talk}" oninput="calcSetTalk(this.value)">
+  </div>
+  <div class="card report">
+    <div class="name" style="margin-bottom:12px">Breakdown</div>
+    <div id="calc_breakdown"></div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border-dashed)"><span style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700">FLAT MONTHLY · ≈ $0.000 / CALL</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${['Railway compute','Twilio number rental','Helicone gateway','TiDB'].map(f=>`<span style="font-size:11px;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:7px;padding:3px 8px">${f}</span>`).join('')}</div></div>
+  </div>
+  <div class="card report">
+    <div class="name" style="margin-bottom:12px">Rate card · editable</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${rate('Twilio line','twilioPerMin','/min')}${rate('ElevenLabs ConvAI','elevenPerSec','/sec')}${rate('Claude Sonnet','claudePerSec','/sec')}${rate('Bravo nav (all-in)','bravoNavPerSec','/sec')}${rate('Fixed overhead','overhead','/call')}</div>
+  </div>
+  <div class="card report">
+    <div class="name" style="margin-bottom:4px">Total / call by talk time</div>
+    <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:12px">nav held at each type's default · Alpha 30s · Bravo 50s · Direct 0s</div>
+    <div style="overflow-x:auto"><table id="calc_matrix" style="border-collapse:separate;border-spacing:0;width:100%;min-width:360px"></table></div>
+  </div>
+  <div class="card report">
+    <div class="name" style="margin-bottom:12px">Margin</div>
+    <div class="row" style="gap:12px">
+      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Revenue / call</span><span style="display:flex;align-items:center;background:var(--terminal);border:1px solid var(--border-strong);border-radius:10px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:20px;font-weight:700;padding:10px 4px;width:100%"></span></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Margin</span><div id="calc_margin" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0%</div></div>
+    </div>
+    <div id="calc_sentence" style="margin-top:14px;font-size:13.5px;color:var(--text-muted);line-height:1.5"></div>
+  </div>`;
+}
+function calcPick(t){ CALC.storeType=t; CALC.nav=CALC_STORE[t].nav; calcSync(); calcUpdate(); }
+function calcSetNav(v){ CALC.nav=parseInt(v,10)||0; calcUpdate(); }
+function calcSetTalk(v){ CALC.talk=parseInt(v,10)||0; calcUpdate(); }
+function calcSetRate(k,v){ const n=v===''?0:parseFloat(v); CALC.rates[k]=isNaN(n)?0:n; calcUpdate(); }
+function calcSetRev(v){ CALC.revenue=v===''?0:(parseFloat(v)||0); calcUpdate(); }
+// sync control ELEMENTS to state (segment highlight, nav slider value/disabled) — not run during a slider drag
+function calcSync(){
+  Object.keys(CALC_STORE).forEach(t=>{ const b=document.getElementById('calc_seg_'+t); if(!b) return; const on=t===CALC.storeType, c=CALC_STORE[t].nc;
+    b.style.borderColor=on?c:'var(--border)'; b.style.background=on?(c[0]==='#'?c+'22':'var(--surface-2)'):'var(--surface-1)'; b.style.color=on?'var(--text-primary)':'var(--text-muted)'; });
+  const ns=document.getElementById('calc_nav'); if(ns){ ns.value=CALC.nav; ns.disabled=CALC.storeType==='Direct'; ns.style.opacity=CALC.storeType==='Direct'?.4:1; }
+  const nn=document.getElementById('calc_navnote'); if(nn) nn.style.display=CALC.storeType==='Direct'?'block':'none';
+}
+function calcUpdate(){
+  const { items, total }=calcCompute(CALC.storeType,CALC.nav,CALC.talk,CALC.rates);
+  const dur=CALC.nav+CALC.talk, st=CALC_STORE[CALC.storeType], isDirect=CALC.storeType==='Direct';
+  const set=(id,html)=>{ const e=document.getElementById(id); if(e) e.innerHTML=html; };
+  const txt=(id,t)=>{ const e=document.getElementById(id); if(e) e.textContent=t; };
+  txt('calc_total',calcMoney(total)); txt('calc_navval',CALC.nav); txt('calc_talkval',CALC.talk);
+  set('calc_chip',`<span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(st.nc)}${st.label}</span><span style="font-size:11px;color:var(--text-muted)">${dur}s call</span>`);
+  const tot=Math.max(dur,1), navPct=CALC.nav/tot*100, talkPct=CALC.talk/tot*100;
+  let strip='';
+  if(CALC.nav>0) strip+=`<div style="width:${navPct}%;background:linear-gradient(180deg,${st.nc},${st.nc}99);display:flex;align-items:center;justify-content:center">${navPct>14?'<span style="font-size:9.5px;font-weight:800;letter-spacing:.1em;color:#0B0E14">NAV</span>':''}</div>`;
+  if(CALC.talk>0) strip+=`<div style="width:${talkPct}%;background:linear-gradient(180deg,var(--purple),#A78BFA);display:flex;align-items:center;justify-content:center;border-left:${CALC.nav>0?'1px solid rgba(11,14,20,.6)':'none'}">${talkPct>14?'<span style="font-size:9.5px;font-weight:800;letter-spacing:.1em;color:#0B0E14">TALK · CHARLIE</span>':''}</div>`;
+  if(dur===0) strip='<div style="width:100%;opacity:.3"></div>';
+  set('calc_strip',strip);
+  set('calc_legend',`<span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);opacity:${isDirect?.4:1}">${calcDot(st.nc)}nav ${CALC.nav}s</span><span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted)">${calcDot('var(--purple)')}talk ${CALC.talk}s</span><span style="flex:1"></span><span style="font-size:11px;color:var(--text-tertiary)">${calcMoney(total/Math.max(dur,1))}/s effective</span>`);
+  set('calc_breakdown',items.map(it=>`<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)"><span style="width:3px;height:30px;border-radius:3px;flex-shrink:0;background:${it.accent}"></span><div style="flex:1;min-width:0"><div style="font-size:13.5px;color:var(--text-strong)">${it.label}</div><div style="font-size:11px;color:var(--text-tertiary);margin-top:2px">${it.detail}</div></div><div style="font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:${it.amount===0?'var(--text-tertiary)':'var(--text-primary)'}">${calcMoney(it.amount)}</div></div>`).join('')+`<div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px"><div style="font-size:14px;font-weight:700">All-in / call</div><div style="font-size:22px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums">${calcMoney(total)}</div></div>`);
+  const rows=['Alpha','Bravo','Direct'].map(t=>({type:t,row:CALC_TALK.map(tk=>calcCompute(t,CALC_STORE[t].nav,tk,CALC.rates).total)}));
+  const flat=[]; rows.forEach(r=>flat.push(...r.row)); const mn=Math.min(...flat), mx=Math.max(...flat), heat=v=>mx===mn?0:(v-mn)/(mx-mn);
+  let mt=`<thead><tr><th style="font-size:11px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border-strong)">Store</th>${CALC_TALK.map(c=>`<th style="font-size:11px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:right;border-bottom:1px solid var(--border-strong)">${c}s</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach(({type,row})=>{ const sel=type===CALC.storeType, c=CALC_STORE[type].nc;
+    mt+=`<tr><th style="font-size:12.5px;color:${sel?'var(--text-primary)':'var(--text-muted)'};font-weight:600;text-align:left;padding:8px;white-space:nowrap">${calcDot(c)} ${type}</th>`+row.map(v=>`<td style="font-size:12.5px;font-weight:600;text-align:right;padding:10px 8px;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--border);background:rgba(74,222,128,${(0.04+heat(v)*0.22).toFixed(3)});outline:${sel?'1px solid '+(c[0]==='#'?c+'55':'var(--purple)'):'none'}">${calcMoney(v)}</td>`).join('')+`</tr>`; });
+  set('calc_matrix',mt+'</tbody>');
+  const margin=CALC.revenue>0?((CALC.revenue-total)/CALC.revenue)*100:0, mc=margin>=0?'var(--green)':'#FF6B6B';
+  const mEl=document.getElementById('calc_margin'); if(mEl){ mEl.textContent=margin.toFixed(1)+'%'; mEl.style.color=mc; }
+  set('calc_sentence',`At ${calcMoney(CALC.revenue)} revenue/call, cost is <b style="color:var(--text-primary)">${calcMoney(total)}</b> → margin = <b style="color:${mc}">${margin.toFixed(1)}%</b>.`);
 }
 async function loadDash(){
   loadCallTiming();
