@@ -154,19 +154,19 @@ __BRAND_HEAD__
   /* ── result v2: boxless verdict + boxless "The call" header (mirrors checkit-demo look) ── */
   .rverdict{position:relative;padding:2px 2px 0;margin-bottom:4px}
   .rverdict>*{position:relative}
-  /* Verdict tone bleeds from the very TOP of the screen — over the nav and into the status-bar safe
-     area (viewport-fit=cover) — then fades into the page. Fixed + pointer-events:none: it sits above
-     the sticky header so the color reaches the top edge, but never blocks taps. Lives inside #result
-     so it only shows on a result. */
-  .rtop{position:fixed;left:0;right:0;top:0;height:360px;z-index:0;pointer-events:none}
+  /* Verdict tone bleeds from the very TOP of the screen — over the nav, into the status-bar safe area
+     (viewport-fit=cover) — fading into the page. A body-level fixed layer (not injected per-render) so
+     it always paints full-width on the first frame (no "stuck until refresh"). z-index:0 = it sits
+     UNDER the nav + content, so pills/dropdowns lay on the color with their own styling. */
+  body.rview::before{content:'';position:fixed;left:0;right:0;top:0;height:360px;z-index:0;pointer-events:none}
+  body.rview.rv-out::before{background:linear-gradient(180deg,rgba(239,68,68,.36),rgba(239,68,68,.12) 32%,transparent 72%)}
+  body.rview.rv-in::before{background:linear-gradient(180deg,rgba(74,222,128,.36),rgba(74,222,128,.12) 32%,transparent 72%)}
+  body.rview.rv-unk::before{background:linear-gradient(180deg,rgba(251,191,36,.30),rgba(251,191,36,.10) 32%,transparent 72%)}
+  body.rview.rv-soon::before{background:linear-gradient(180deg,rgba(245,158,11,.36),rgba(245,158,11,.12) 32%,transparent 72%)}
   /* On a result the nav + content LAY ON the color: header goes transparent (no dark slab, no hairline)
      so the wash reaches the top, and the page nudges up. Pills/dropdowns keep their own colors on top. */
   body.rview header{background:transparent;border-bottom-color:transparent}
-  body.rview main{padding-top:14px}
-  .rtop.out{background:linear-gradient(180deg,rgba(239,68,68,.36),rgba(239,68,68,.12) 32%,transparent 72%)}
-  .rtop.in{background:linear-gradient(180deg,rgba(74,222,128,.36),rgba(74,222,128,.12) 32%,transparent 72%)}
-  .rtop.unk{background:linear-gradient(180deg,rgba(251,191,36,.30),rgba(251,191,36,.10) 32%,transparent 72%)}
-  .rtop.soon{background:linear-gradient(180deg,rgba(245,158,11,.36),rgba(245,158,11,.12) 32%,transparent 72%)}
+  body.rview main{padding-top:4px}
   /* Live call in progress — a subtle green wash so "we're on the line for you" reads warm/active. */
   #live{position:relative}
   #live::before{content:'';position:absolute;left:-20px;right:-20px;top:-12px;height:220px;pointer-events:none;background:linear-gradient(180deg,rgba(74,222,128,.13),transparent 70%);z-index:0}
@@ -660,7 +660,7 @@ __BRAND_HEAD__
   /* Call switcher: filter your past calls by store/status, hop with ‹ › or tap a tile.
      Tiles are clean monograms (store logo when one is available) + an outcome dot. */
   /* pull the switcher up so it sits centered between the nav and the store card (result-only; homepage hero keeps its top spacing) */
-  .railbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin-top:0;margin-bottom:14px;position:relative;z-index:2}
+  .railbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin:0 0 18px;position:relative;z-index:2}
   .railcal{flex:0 0 auto;display:grid;place-items:center;width:40px;height:38px;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;border-radius:11px;cursor:pointer;padding:0}
   .railcal.on{border-color:var(--accent,#4ADE80);color:var(--accent,#4ADE80)}
   .railcalpop{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:30;width:252px;max-width:88vw;background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:12px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
@@ -2837,7 +2837,8 @@ function combinedTimelineHTML(steps, transcript, finalElapsed){
   }).join('') : '';
   const n=(steps&&steps.length)||0;
   // The whole call log rolls up under one tappable header (open by default on a fresh result).
-  const reach = stepRows ? `<details class="reach" open><summary><span class="reach-lbl">${t('step.head','Reaching a person')}</span>${n?`<span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}</span>`:''}<span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#6b6b7a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
+  const _rstore = (SEL_STORE && splitStoreName(SEL_STORE.name).base) || t('live.store','the store');
+  const reach = stepRows ? `<details class="reach" open><summary><span class="reach-lbl">${tf('step.calling2','Calling {s}',{s:esc(_rstore)})}</span>${n?`<span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}</span>`:''}<span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#6b6b7a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
   // Conversation turns — prod's human-line filter + bubbleHTML, each as a row hanging off the same line.
   const lines=(transcript||'').split('\n').filter(Boolean);
   const hs=transcriptHumanStart(lines);
@@ -3236,8 +3237,10 @@ function showResult(o, cid){
         <div class="meta" style="margin-bottom:14px">${t('res.free.sub',"Sign up in 30 seconds to check <b>any store, anytime</b> — it's the only way to keep going.")}</div>
         <button class="cta" onclick="signUp()">${t('res.signup','Sign up & keep checking')}</button>
       </div>`;
+  // Tone the body-level top wash for this verdict (the wash itself is CSS on body.rview::before).
+  ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c));
+  document.body.classList.add('rv-'+cls);
   $('result').innerHTML = `
-    <div class="rtop ${cls}"></div>
     <div class="railbar" id="railbar" style="display:none"></div>
     <div class="rverdict ${cls}">
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
@@ -3248,11 +3251,7 @@ function showResult(o, cid){
     </div>
     <div class="topcta">${primaryCta}</div>
     <div class="callsec">
-      <div class="callhead">
-        <span class="ci">${ICO.call('var(--accent,#FFCB05)')}</span>
-        <div class="ct"><div class="a">${t('res.callword','Call')}</div>${callSubline?`<div class="b">${esc(callSubline)}</div>`:''}</div>
-        ${canTranslate?`<button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button>`:''}
-      </div>
+      ${canTranslate?`<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button></div>`:''}
       ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed)}
     </div>
     ${inStock ? inActions : ''}
