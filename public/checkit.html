@@ -3,17 +3,16 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="theme-color" content="#0C0C12" id="themeColor" />
-<!-- Hard-refresh top-color: if this load is a result deep-link (?call=…), recall the last verdict tone
-     and paint the root + status bar IMMEDIATELY (before the async result fetch / any paint), then stash
-     it so the post-<body> step can add rview/rv-* and the whole wash applies with no dark flash. -->
-<script>window.__TONE={in:'#266440',out:'#6b2427',unk:'#6c5419',soon:'#6e490f'};(function(){try{
+<!-- NO theme-color meta on purpose: it tints BOTH the top status bar AND the bottom Safari toolbar with
+     one value, which made the verdict colour bleed onto the bottom. Without it, iOS samples the PAGE —
+     so the green page-top shows under the status bar and the dark page-bottom keeps the bottom bar dark.
+     Hard-refresh of a result deep-link: recall the verdict tone class so the post-<body> step can add
+     rview/rv-* and the body-gradient wash paints from frame one (no dark flash at the top). -->
+<script>(function(){try{
   var sp=new URLSearchParams(location.search);
   if(!sp.has('call')) return;
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
-  if(!cls||!window.__TONE[cls]) return;
-  window.__bootTone=cls;  // post-<body> script adds rview/rv-* → CSS :has() colors the root (overscroll)
-  var m=document.getElementById('themeColor'); if(m) m.setAttribute('content',window.__TONE[cls]);
+  if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls;
 }catch(e){}})();</script>
 <meta name="x-rev" content="names-r39" />
 __BRAND_HEAD__
@@ -225,16 +224,17 @@ __BRAND_HEAD__
      the roll-up "Calling {store}" header, the "Conversation" label, and the bottom call-status. The
      steps + chat bubbles hang off the line with NO dots of their own. Line runs green → verdict tone. ── */
   .ctl{position:relative;margin-top:14px}
-  .ctl::before{content:'';position:absolute;left:5px;top:6px;bottom:6px;width:1.5px;background:var(--green)}
+  /* the line ends at the LAST (status) dot — bottom:12px lands it on that dot, never past it */
+  .ctl::before{content:'';position:absolute;left:5px;top:7px;bottom:12px;width:1.5px;background:var(--green)}
   .ctl.ctl-out::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 62%,var(--red) 100%)}
   .ctl.ctl-unk::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 62%,#FBBF24 100%)}
   .ctl.ctl-soon::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 62%,#F59E0B 100%)}
   .ctl-dot{position:absolute;left:1px;width:9px;height:9px;border-radius:50%;background:#2c2c38;z-index:1}
-  /* roll-up header: "Calling {store}…" — tap to fold the step log up/down */
+  /* roll-up header: "Calling {store}…" — tap to fold the step log up/down. FIRST dot is green. */
   .reach{margin:0 0 12px}
   .reach>summary{position:relative;padding-left:24px;list-style:none;display:flex;align-items:center;gap:8px;cursor:pointer;color:#cfcfe0;font-weight:700;font-size:13.5px}
   .reach>summary::-webkit-details-marker{display:none}
-  .reach>summary .ctl-dot{top:50%;transform:translateY(-50%)}
+  .reach>summary .ctl-dot{top:50%;transform:translateY(-50%);background:var(--green);box-shadow:0 0 8px rgba(74,222,128,.5)}
   .reach .reach-lbl{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .reach .reach-n{margin-left:auto;flex:0 0 auto;color:var(--muted);font-weight:600;font-size:12px}
   .reach .reach-chev{display:inline-flex;flex:0 0 auto;color:#6b6b7a;transition:transform .15s}
@@ -673,12 +673,13 @@ __BRAND_HEAD__
   .store .ic.best{background:var(--green)}
   /* Tier groups — TIER 5 = green (best MSRP odds), TIER 4 = amber. */
   /* Section labels — a small neon-outlined PILL (dark inside, black shows through), like the Map toggle. */
-  .grouphdr{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px;border:1.5px solid currentColor;background:rgba(10,10,14,.6);margin:16px 0 7px}
+  /* tier pills: GREY letters, a very FAINT tier-coloured outline (no glow, no star) */
+  .grouphdr{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px;color:#9a9aa8;border:1px solid var(--gh-bd,rgba(255,255,255,.12));background:rgba(10,10,14,.6);margin:16px 0 7px}
   .grouphdr:first-child{margin-top:4px}
-  .grouphdr.g5{color:#2BFF88;box-shadow:0 0 9px rgba(43,255,136,.35)}
-  .grouphdr.g4{color:#29D4FF;box-shadow:0 0 9px rgba(41,212,255,.35)}
-  .grouphdr.g3{color:#FF9E2C;box-shadow:0 0 9px rgba(255,158,44,.35)}
-  .grouphdr .ghstar{display:inline-flex}
+  .grouphdr.g5{--gh-bd:rgba(43,255,136,.30)}
+  .grouphdr.g4{--gh-bd:rgba(41,212,255,.30)}
+  .grouphdr.g3{--gh-bd:rgba(255,158,44,.30)}
+  .grouphdr .ghstar{display:none}
   .maplegend{flex-wrap:nowrap;gap:11px;justify-content:center;align-items:center;font-size:10.5px;font-weight:800;color:#cfcfd8;margin-top:10px;padding:8px 10px;background:rgba(12,12,18,.55);border:1px solid var(--border);border-radius:12px;overflow-x:auto;scrollbar-width:none;white-space:nowrap}
   .maplegend::-webkit-scrollbar{display:none}
   .maplegend>span{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto}
@@ -717,6 +718,7 @@ __BRAND_HEAD__
   .rcal-d{aspect-ratio:1;display:grid;place-items:center;font-size:12px;font-weight:700;border-radius:8px;color:#5a5a66}
   .rcal-d.has{color:#06210f;background:var(--accent,#4ADE80);cursor:pointer;font-weight:900}
   .rcal-d.sel{box-shadow:0 0 0 2px #fff inset}
+  .rcal-d.today{color:#cfcfe0} .rcal-d.today:not(.has){box-shadow:0 0 0 1.5px rgba(255,255,255,.35) inset}
   /* Day-list view inside the popover: every call on the chosen day, tap to open. */
   .rday-list{display:flex;flex-direction:column;gap:4px;max-height:230px;overflow-y:auto;-webkit-overflow-scrolling:touch}
   .rday-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:8px 9px;border-radius:10px;border:1px solid transparent;background:var(--terminal);color:#e9e9f0;cursor:pointer}
@@ -1189,7 +1191,7 @@ __BRAND_HEAD__
     </div>
     <div id="acct_cred" class="acctcred"></div>
     <div class="acctrows">
-      <button class="acctrow" onclick="closeAccount();openHistory()"><span id="acctHist" style="display:inline-flex"></span><span data-i18n="acct.checks">My checks</span><span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
+      <button class="acctrow" id="acct_checks_row" onclick="closeAccount();openHistory()"><span id="acctHist" style="display:inline-flex"></span><span data-i18n="acct.checks">My checks</span><span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
       <button class="acctrow" id="acct_plan" onclick="closeAccount();openBuy()"><span id="acctStar" style="display:inline-flex"></span><span id="acct_planlbl" data-i18n="acct.more">Get more checks</span><span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
       <button class="acctrow" id="acct_cid" onclick="openCallerId()" style="display:none"><span id="acctCid" style="display:inline-flex"></span><span id="acct_cidlbl">Call stores from your number</span><span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
     </div>
@@ -2049,6 +2051,9 @@ function openAccount(){
   const pl=$('acct_planlbl'); if(pl) pl.textContent = member||comp ? t('acct.manage','Manage plan') : t('acct.upgrade','Upgrade — get more checks');
   const pr=$('acct_plan'); if(pr) pr.onclick=function(){ closeAccount(); openBuy((member||comp)?'manage':undefined); };
   setI('acctHist', ICO.clock('#A78BFA').replace('width="17" height="17"','width="18" height="18"'));
+  // "My checks" only appears if there ARE checks for the current product — no checks → no row (and no
+  // need for an empty-state banner). Uses local history (instant); ensureHistCache refreshes it after.
+  const _cr=$('acct_checks_row'); if(_cr){ const has=loadHist().some(e=>e.cid&&railInCat(e)); _cr.style.display=has?'':'none'; if(!HIST_CACHE.length) ensureHistCache().then(()=>{ try{ _cr.style.display=histList().some(e=>e.cid&&railInCat(e))?'':'none'; }catch(_){} }); }
   setI('acctStar', ICO.spark('#FFCB05').replace('width="13" height="13"','width="16" height="16"'));
   // Caller-ID row — only phone-verified identities can register a caller ID (Clerk tokens carry no phone).
   const cidRow=$('acct_cid');
@@ -2409,7 +2414,7 @@ function renderStores(){
   }
   if(TIER_VIEW){
     let html='';
-    if(t5.length) html+=`<div class="grouphdr g5"><span class="ghstar">${ICO.star('#2BFF88')}</span>${t('grp.best','Best near you')}</div>`+t5.map(storeRowHtml).join('');
+    if(t5.length) html+=`<div class="grouphdr g5">${t('grp.best','Best near you')}</div>`+t5.map(storeRowHtml).join('');
     if(t4.length) html+=`<div class="grouphdr g4">${t('grp.mostly','Mostly reliable')}</div>`+t4.map(storeRowHtml).join('');
     if(rest.length) html+=`<div class="grouphdr g3">${t('grp.spotty','Spotty')}</div>`+rest.map(storeRowHtml).join('');
     $('storelist').innerHTML = html || `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
@@ -3159,16 +3164,9 @@ function navMark(view){
   }catch(e){}
   NAV_VIEW=view;
 }
-// The iOS status-bar strip follows theme-color. The root BACKGROUND (overscroll) is handled purely in
-// CSS via html:has(body.rview.rv-*) so it can never get stuck. Here we only set theme-color — and we
-// REPLACE the meta node (not just setAttribute) because iOS Safari often ignores in-place edits and
-// keeps painting the old status-bar color.
-function setThemeTone(){
-  const map={'rv-in':'#266440','rv-out':'#6b2427','rv-unk':'#6c5419','rv-soon':'#6e490f'};
-  let c='#0C0C12';
-  if(document.body.classList.contains('rview')){ for(const k in map){ if(document.body.classList.contains(k)){ c=map[k]; break; } } }
-  try{ const m=$('themeColor'); if(m && m.getAttribute('content')!==c){ const n=document.createElement('meta'); n.name='theme-color'; n.id='themeColor'; n.setAttribute('content',c); m.replaceWith(n); } }catch(e){}
-}
+// The verdict wash is now 100% CSS (body.rview.rv-* gradient + html:has() propagation) and the iOS bars
+// sample the page — so there's no theme-color to juggle. Kept as a no-op so existing call-sites are safe.
+function setThemeTone(){}
 window.addEventListener('popstate',()=>{ if(NAV_VIEW!=='builder') backToBuilder(); });
 
 // --- Snappy result rendering (stale-while-revalidate) ---------------------------------------------
@@ -3555,12 +3553,9 @@ async function openHistory(){
   if(!first){ noChecksForProduct(); return; }
   openHistEntry(first);
 }
-// No checks yet for the selected product → bounce to a clean homepage with a clear nudge to make a call.
-function noChecksForProduct(){
-  backToBuilder();
-  const pn=(BRAND_CAT&&BRAND_CAT.label)||t('product','this product');
-  toast(tf('hist.empty.prod','No {p} checks yet — pick a store below and make a call.',{p:pn}));
-}
+// Safety net only — the "My checks" row is hidden when there are no checks for the product, so this is
+// rarely hit. Just return to a clean homepage (no full-width banner).
+function noChecksForProduct(){ backToBuilder(); }
 async function openHistEntry(e){
   if(!e) return;
   if(!e.cid){ toast(t('toast.callgone','That call is no longer available')); return; } // instant hang-up: no transcript exists
@@ -3677,7 +3672,8 @@ function renderRailCal(){
   const nav=(d,p)=>`<button onclick="railCalMonth(${d})" aria-label="${p}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="${d<0?'M14.5 5L8 12l6.5 7':'M9.5 5l6.5 7-6.5 7'}" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
   let cells='';
   for(let i=0;i<first;i++) cells+='<div></div>';
-  for(let d=1;d<=n;d++){ const key=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); const has=days.has(key), sel=RAIL_F.date===key; cells+=`<div class="rcal-d ${has?'has':''} ${sel?'sel':''}" ${has?`onclick="railPickDay('${key}')"`:''}>${d}</div>`; }
+  const today=tsDay(Date.now());
+  for(let d=1;d<=n;d++){ const key=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); const has=days.has(key), sel=RAIL_F.date===key, isToday=key===today; cells+=`<div class="rcal-d ${has?'has':''} ${sel?'sel':''} ${isToday?'today':''}" ${has?`onclick="railPickDay('${key}')"`:''}>${d}</div>`; }
   pop.innerHTML=`<div class="rcal-h">${nav(-1,'Previous month')}<b>${esc(title)}</b>${nav(1,'Next month')}</div>
     <div class="rcal-grid">${dow.map(x=>`<div class="rcal-dow">${x}</div>`).join('')}${cells}</div>
     ${RAIL_F.date?`<div style="text-align:center;margin-top:9px"><a onclick="railPickDay('')" style="color:var(--muted);font-weight:700;font-size:12px;cursor:pointer">${t('rail.allday','Show all days')}</a></div>`:''}`;
