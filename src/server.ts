@@ -1278,6 +1278,10 @@ app.post("/api/stores/flag", async (c) => {
 // read-only and works anywhere; load REPLACES a table and is staging-ONLY, so prod can never be
 // wiped by it. Used to make staging an exact data replica of prod (chains/retailers/catalog). ----
 const MIRROR_TABLES: Record<string, typeof retailers> = { categories: categories as never, chains: chains as never, products: products as never, retailers, statuses: statuses as never, kiosks: kiosks as never, settings: settingsTbl as never };
+// table-load is staging-only (403 on prod), so it may write a FEW extra tables that we deliberately
+// keep OUT of the public, unauthenticated table-dump above — e.g. call_results, used to seed the
+// staging finds ticker / in-stock badges from prod's already-public /pub/finds (no transcripts/PII).
+const LOAD_TABLES: Record<string, typeof retailers> = { ...MIRROR_TABLES, callResults: callResults as never };
 app.get("/api/admin/table-dump", async (c) => {
   const name = String(c.req.query("name") || "");
   const tbl = MIRROR_TABLES[name];
@@ -1291,7 +1295,7 @@ app.post("/api/admin/table-load", async (c) => {
   if (!config.staging.on) return c.json({ error: "table-load is staging-only (never wipes prod)" }, 403);
   const b = await c.req.json().catch(() => ({}));
   const name = String(b.name || "");
-  const tbl = MIRROR_TABLES[name];
+  const tbl = LOAD_TABLES[name];
   const rows: Record<string, unknown>[] | null = Array.isArray(b.rows) ? b.rows : null;
   if (!tbl || !rows) return c.json({ error: "name + rows[] required" }, 400);
   if (b.mode === "replace") await db.delete(tbl);
