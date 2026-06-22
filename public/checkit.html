@@ -614,7 +614,7 @@ __BRAND_HEAD__
   .foot-bottom{display:flex;align-items:center;justify-content:flex-start;gap:9px;padding-top:16px}
   .foot-fav{display:flex;align-items:center;flex:0 0 auto}
   .foot-fav svg{width:24px;height:24px;border-radius:7px}
-  .foot-copy{color:#7a7a86;font-size:12px;font-weight:600}
+  .foot-copy{color:#6a6a76;font-size:9px;font-weight:600}
   .foot-brandname{color:var(--accent,var(--green))}
   .langtop{appearance:none;-webkit-appearance:none;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;font-size:12px;font-weight:800;border-radius:20px;padding:7px 28px 7px 12px;cursor:pointer;flex:0 0 auto;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M0.5 0.5h8L4.5 5.5z' fill='%23ffffff'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
   .pill.account.anon{background:rgba(255,203,5,.12);border-color:rgba(255,203,5,.4);color:#fff}
@@ -1005,7 +1005,7 @@ __BRAND_HEAD__
     </div>
     <div id="succ_wall" class="igfeed"></div>
     <!-- thumb-zone back: bottom-right floating, right-hand reach — not a full-width bar -->
-    <button class="fab-back" onclick="backToBuilder()" aria-label="Back" title="Back"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="#06210f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="fab-back" onclick="fabBack()" aria-label="Back" title="Back"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="#06210f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   </div>
 </main>
 
@@ -1605,7 +1605,7 @@ function applyFlags(){
 function renderFooter(){
   const L=(POLICY.links)||{}, by=$('footYear'); if(by) by.textContent=new Date().getFullYear();
   const fb=$('footBrand'); if(fb) fb.textContent='';  // the brand name lives inside the logo now
-  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:17px;width:auto;object-fit:contain;border-radius:0;display:block">`; }
+  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:21px;width:auto;object-fit:contain;border-radius:0;display:block">`; }
   // Discord + X always shown; link to policy URLs when set, else a placeholder.
   const SOC=[['discord',ICO.discord,'Discord'],['x',ICO.x,'X']];
   const el=$('footSocials'); if(!el) return;
@@ -3119,10 +3119,12 @@ async function finalize(cid){
   showResult(res, cid);
 }
 function backToBuilder(){ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
-  // Returning to the builder = a FRESH check. Drop any store/category left over from a reopened call so
-  // it doesn't show up pre-selected in the call CTA below (it was a history view, not a new pick).
-  if(!BRAND_CAT){ SEL_STORE=null; SEL_KIOSK=null; SEL_CATS=[]; SEL_CAT=null; ASKED_CATS=[]; }
-  $('catcard').style.display=SEL_STORE&&!BRAND_CAT?'':'none'; renderStores(); renderChips(); syncCta(); renderCallRail(); loadCommunity(); window.scrollTo({top:0});
+  // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
+  // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
+  // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
+  // — the category re-locks the moment a store is picked again (pickStore→applyBrand).
+  SEL_STORE=null; SEL_KIOSK=false; KIOSK_OK=false; SEL_CATS=[]; SEL_CAT=null; ASKED_CATS=[]; SEL_PRODUCT='';
+  $('catcard').style.display='none'; renderStores(); renderChips(); syncCta(); renderCallRail(); loadCommunity(); window.scrollTo({top:0});
   // Clear any ?call deep-link so back/refresh never replays it — keep ?brand etc. intact.
   NAV_VIEW='builder';
   try{ const sp=new URLSearchParams(location.search); sp.delete('call'); sp.delete('store'); sp.delete('cat'); sp.delete('v'); const q=sp.toString(); history.replaceState({v:'builder'},'',location.pathname+(q?'?'+q:'')); }catch(e){}
@@ -4019,7 +4021,10 @@ function toggleComposer(force){
   const c=$('composer'); if(c) c.style.display=COMPOSER?'':'none';
   if(COMPOSER){ try{ c.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }
 }
+// If Scores was opened FROM a check, remember it so the back button returns to that check (not home).
+let SUCC_RETURN_CID=null;
 function openSuccess(){
+  SUCC_RETURN_CID = (NAV_VIEW==='result') ? (RAIL_CID||null) : null;
   ['builder','live','result','history','handoff'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
   $('success').classList.remove('hidden');
   document.body.classList.add('fabbed');
@@ -4028,6 +4033,11 @@ function openSuccess(){
   succFilter(); loadSuccessWall();
   track('success_open'); window.scrollTo({top:0});
   navMark('success');
+}
+// The yellow FAB back button: if we came from a check, reopen THAT check; otherwise reset to home.
+function fabBack(){
+  if(SUCC_RETURN_CID){ const cid=SUCC_RETURN_CID; SUCC_RETURN_CID=null; const e=histList().find(x=>x.cid===cid); if(e){ openHistEntry(e); return; } if(cid && !String(cid).startsWith('local:')){ restoreCall(cid); return; } }
+  backToBuilder();
 }
 // Signed-in users post under their email's local part (jared@… → @jared); anon = @hunter.
 function myHandle(){
