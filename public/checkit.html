@@ -38,7 +38,7 @@ __BRAND_HEAD__
   /* form controls do NOT inherit fonts by default — without this, every button renders the
      system font instead of Inter. One line keeps typography identical across the whole site. */
   button,select,textarea{font-family:inherit}
-  html{-webkit-text-size-adjust:100%;background:#0C0C12;color-scheme:dark}
+  html{-webkit-text-size-adjust:100%;background:#0C0C12;color-scheme:dark;touch-action:manipulation}/* manipulation = scroll/pan OK, but no double-tap-to-zoom (was zooming the page on taps near the call arrows) */
   html,body{max-width:100%;overflow-x:hidden}
   body{background:var(--bg);color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;margin:0;padding:0;
     display:flex;flex-direction:column;min-height:100dvh}
@@ -749,7 +749,7 @@ __BRAND_HEAD__
   /* Verdict prev/next: two arrows top-right of the result (where the IN STOCK pill row sits), sitting
      right next to each other. Newest call shows only ›; step forward and a ‹ appears to its left. */
   .rnav{position:absolute;top:2px;right:2px;display:flex;gap:6px;z-index:2}
-  .rnav-b{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#dcdce6;display:grid;place-items:center;cursor:pointer;padding:0;transition:transform .1s,border-color .12s,color .12s}
+  .rnav-b{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#dcdce6;display:grid;place-items:center;cursor:pointer;padding:0;touch-action:manipulation;transition:transform .1s,border-color .12s,color .12s}
   .rnav-b:active{transform:scale(.92)}
   body.rview .rnav-b{background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.16)}
   .railsel{flex:1;min-width:0;appearance:none;-webkit-appearance:none;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;font-size:12.5px;font-weight:700;border-radius:11px;padding:9px 26px 9px 11px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M0.5 0.5h8L4.5 5.5z' fill='%23ffffff'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
@@ -3040,11 +3040,13 @@ function navMark(view){
   }catch(e){}
   NAV_VIEW=view;
 }
-// Tint the iOS Safari bars to the verdict tone. iOS honors the theme-color it parsed AT LOAD, so we
-// must mutate that SAME meta node in place (setAttribute) — replacing the node makes iOS drop the colour
-// and fall back to the dark default (the bug that kept the status bar black on a hard-refresh). One
-// theme-color tints BOTH the top status bar and the bottom toolbar — there's no per-edge control in a
-// Safari tab — so a result frames top+bottom in the verdict colour; every other view is the dark page bg.
+// Tint the iOS Safari bars to the verdict tone. CRITICAL: there must be exactly ONE theme-color meta in
+// the document (this id'd one). The server's __BRAND_HEAD__ injection used to add a SECOND, hardcoded-dark
+// theme-color — WebKit then honored THAT one and silently ignored every change we made here, which is what
+// kept the status bar black on every result no matter what JS we ran. The duplicate is now gone (server.ts).
+// We mutate this node in place (setAttribute), never replace it. One theme-color tints BOTH the top status
+// bar and the bottom toolbar (no per-edge control in a Safari tab) — a result frames top+bottom in the
+// verdict colour; every other view is the dark page bg.
 function setThemeTone(){
   const map={'rv-in':'#266440','rv-out':'#6b2427','rv-unk':'#6c5419','rv-soon':'#6e490f'};
   let c='#0C0C12';

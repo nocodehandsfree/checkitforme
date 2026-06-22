@@ -206,7 +206,10 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
     `<meta name="description" content="${esc(brand.desc)}">`,
     `<link rel="canonical" href="${canonical}">`,
     `<meta name="robots" content="index,follow,max-image-preview:large">`,
-    `<meta name="theme-color" content="#0C0C12">`,
+    // NB: NO theme-color here. The runner files own their own <meta name="theme-color" id="themeColor">
+    // and mutate it live to tint the iOS status bar to the verdict tone. Injecting a second theme-color
+    // makes WebKit honor THIS hardcoded-dark one and ignore the live one — that's the bug that kept the
+    // status bar black on every result. One theme-color in the document, JS-controlled, full stop.
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${esc(plainName)}">`,
     `<meta property="og:title" content="${esc(brand.title)}">`,
