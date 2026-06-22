@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<!-- NO theme-color meta on purpose: it tints BOTH the top status bar AND the bottom Safari toolbar with
-     one value, which made the verdict colour bleed onto the bottom. Without it, iOS samples the PAGE —
-     so the green page-top shows under the status bar and the dark page-bottom keeps the bottom bar dark.
-     Hard-refresh of a result deep-link: recall the verdict tone class so the post-<body> step can add
-     rview/rv-* and the body-gradient wash paints from frame one (no dark flash at the top). -->
+<meta name="theme-color" content="#0C0C12" id="themeColor" />
+<!-- Auth is 100% phone/SMS (Twilio). Clerk fully removed. theme-color tints the iOS status-bar strip
+     to the verdict tone on a result (the page can't paint under the status bar in a Safari tab), and
+     back to the page bg everywhere else. Hard-refresh of a result deep-link recalls the tone class. -->
 <script>(function(){try{
   var sp=new URLSearchParams(location.search);
   if(!sp.has('call')) return;
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
-  if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls;
+  var T={in:'#266440',out:'#6b2427',unk:'#6c5419',soon:'#6e490f'};
+  if(cls && T[cls]){ window.__bootTone=cls; var m=document.getElementById('themeColor'); if(m) m.setAttribute('content',T[cls]); }
 }catch(e){}})();</script>
 <meta name="x-rev" content="names-r39" />
 __BRAND_HEAD__
@@ -243,7 +243,7 @@ __BRAND_HEAD__
      steps + chat bubbles hang off the line with NO dots of their own. Line runs green → verdict tone. ── */
   .ctl{position:relative;margin-top:14px}
   /* the line ends at the LAST (status) dot — bottom:12px lands it on that dot, never past it */
-  .ctl::before{content:'';position:absolute;left:5px;top:7px;bottom:12px;width:1.5px;background:var(--green)}
+  .ctl::before{content:'';position:absolute;left:5px;top:7px;bottom:10px;width:1.5px;background:var(--green)}
   .ctl.ctl-out::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 62%,var(--red) 100%)}
   .ctl.ctl-unk::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 62%,#FBBF24 100%)}
   .ctl.ctl-soon::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 62%,#F59E0B 100%)}
@@ -270,8 +270,8 @@ __BRAND_HEAD__
   .ctl-bub{margin:0 0 10px} .ctl-bub:last-child{margin-bottom:0} .ctl-bub .bub{max-width:100%}
   .cs-wait{color:var(--muted);font-size:12.5px;font-style:italic;padding-left:24px}
   /* bottom call-status: the last dot + a coloured verdict line (no "confirmed") */
-  .ctl-status{position:relative;padding-left:24px;margin-top:12px}
-  .ctl-status .ctl-dot{top:3px}
+  .ctl-status{position:relative;padding-left:24px;margin-top:12px;display:flex;align-items:center}
+  .ctl-status .ctl-dot{top:50%;transform:translateY(-50%)}
   .ctl-status.tl-out .ctl-dot{background:var(--red)} .ctl-status.tl-in .ctl-dot{background:var(--green);box-shadow:0 0 8px rgba(74,222,128,.5)} .ctl-status.tl-unk .ctl-dot{background:#FBBF24} .ctl-status.tl-soon .ctl-dot{background:#F59E0B}
   .ctl-status .status-txt{font-weight:800;font-size:13.5px}
   .ctl-status.tl-out .status-txt{color:var(--red)} .ctl-status.tl-in .status-txt{color:var(--green)} .ctl-status.tl-unk .status-txt{color:#FBBF24} .ctl-status.tl-soon .status-txt{color:#F59E0B}
@@ -641,7 +641,7 @@ __BRAND_HEAD__
   .foot-bottom{display:flex;align-items:center;justify-content:flex-start;gap:9px;padding-top:16px}
   .foot-fav{display:flex;align-items:center;flex:0 0 auto}
   .foot-fav svg{width:24px;height:24px;border-radius:7px}
-  .foot-copy{color:#6a6a76;font-size:9px;font-weight:600}
+  .foot-copy{color:#6a6a76;font-size:9px;font-weight:600;line-height:1;display:flex;align-items:center}
   .foot-brandname{color:var(--accent,var(--green))}
   .langtop{appearance:none;-webkit-appearance:none;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;font-size:12px;font-weight:800;border-radius:20px;padding:7px 28px 7px 12px;cursor:pointer;flex:0 0 auto;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M0.5 0.5h8L4.5 5.5z' fill='%23ffffff'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
   .pill.account.anon{background:rgba(255,203,5,.12);border-color:rgba(255,203,5,.4);color:#fff}
@@ -711,7 +711,7 @@ __BRAND_HEAD__
   .maptgl{background:var(--terminal);border:1px solid var(--border);color:#cfcfd8;font-weight:800;font-size:12px;padding:6px 12px;border-radius:18px;cursor:pointer}
   .findhead .step{white-space:nowrap}
   .maptgl.on{background:var(--ptint);border-color:var(--pline);color:#fff}
-  .maptgl.glow{border-color:var(--accent,var(--green));color:#fff;box-shadow:0 0 6px -1px var(--accent,var(--green))}
+  .maptgl.glow{border-color:color-mix(in srgb,var(--accent,var(--green)) 38%,transparent);color:#e6e6ee;box-shadow:none}
   #mapview{height:320px;border-radius:14px;overflow:hidden;margin-top:12px;border:1px solid var(--border);background:#0e0e16}
   .leaflet-container{background:#0e0e16!important;font-family:inherit}
   .leaflet-popup-content-wrapper{background:#1a1a24;color:#fff;border:1px solid var(--border);border-radius:12px}
@@ -736,7 +736,7 @@ __BRAND_HEAD__
   .rcal-d{aspect-ratio:1;display:grid;place-items:center;font-size:12px;font-weight:700;border-radius:8px;color:#5a5a66}
   .rcal-d.has{color:#06210f;background:var(--accent,#4ADE80);cursor:pointer;font-weight:900}
   .rcal-d.sel{box-shadow:0 0 0 2px #fff inset}
-  .rcal-d.today{color:#cfcfe0} .rcal-d.today:not(.has){box-shadow:0 0 0 1.5px rgba(255,255,255,.35) inset}
+  .rcal-d.today{color:#cfcfe0;cursor:pointer} .rcal-d.today:not(.has){box-shadow:0 0 0 1.5px rgba(255,255,255,.35) inset}
   /* Day-list view inside the popover: every call on the chosen day, tap to open. */
   .rday-list{display:flex;flex-direction:column;gap:4px;max-height:230px;overflow-y:auto;-webkit-overflow-scrolling:touch}
   .rday-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:8px 9px;border-radius:10px;border:1px solid transparent;background:var(--terminal);color:#e9e9f0;cursor:pointer}
@@ -3040,9 +3040,14 @@ function navMark(view){
   }catch(e){}
   NAV_VIEW=view;
 }
-// The verdict wash is now 100% CSS (body.rview.rv-* gradient + html:has() propagation) and the iOS bars
-// sample the page — so there's no theme-color to juggle. Kept as a no-op so existing call-sites are safe.
-function setThemeTone(){}
+// Tint the iOS status-bar strip to the verdict tone (the page can't paint under it in a Safari tab).
+// Replace the meta NODE (not setAttribute) so iOS Safari actually repaints the bar.
+function setThemeTone(){
+  const map={'rv-in':'#266440','rv-out':'#6b2427','rv-unk':'#6c5419','rv-soon':'#6e490f'};
+  let c='#0C0C12';
+  if(document.body.classList.contains('rview')){ for(const k in map){ if(document.body.classList.contains(k)){ c=map[k]; break; } } }
+  try{ const m=$('themeColor'); if(m && m.getAttribute('content')!==c){ const n=document.createElement('meta'); n.name='theme-color'; n.id='themeColor'; n.setAttribute('content',c); m.replaceWith(n); } }catch(e){}
+}
 window.addEventListener('popstate',()=>{ if(NAV_VIEW!=='builder') backToBuilder(); });
 
 // --- Snappy result rendering (stale-while-revalidate) ---------------------------------------------
@@ -3478,8 +3483,19 @@ function tsDay(ts){ const d=new Date(ts); return d.getFullYear()+'-'+String(d.ge
 // highlighted day is GUARANTEED to have a call to open — never "highlighted but empty".
 // The current product (apex pre-locks one category; switching products reloads with that brand). Checks
 // are scoped to it so "My checks" / the calendar / the ‹ › arrows only ever show THIS product's calls.
-function railCatId(){ return (BRAND_CAT && BRAND_CAT.id) || null; }
-function railInCat(e){ const c=railCatId(); return !c || e.categoryId===c; }
+function railCatId(){
+  if(BRAND_CAT && BRAND_CAT.id) return BRAND_CAT.id;
+  const want=(BRAND&&BRAND.category||'').toLowerCase(); // resolve on-demand (CATS may have just loaded)
+  const c=CATS.find(x=>(x.label||'').toLowerCase()===want); return c?c.id:null;
+}
+// Race-proof: if the category id isn't resolved yet (CATS still loading), match by the brand's category
+// LABEL so we never fall open and show another product's checks.
+function railInCat(e){
+  const id=railCatId(); if(id!=null) return e.categoryId===id;
+  const lbl=(BRAND&&BRAND.category||'').toLowerCase();
+  if(lbl) return (e.category||'').toLowerCase()===lbl;
+  return true;
+}
 function railScoped(){
   return histList().filter(e=>e.cid).filter(railInCat)
     .filter(e=>!RAIL_F.store||railBase(e.storeName)===RAIL_F.store)
@@ -3548,7 +3564,9 @@ function renderRailCal(){
   let cells='';
   for(let i=0;i<first;i++) cells+='<div></div>';
   const today=tsDay(Date.now());
-  for(let d=1;d<=n;d++){ const key=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); const has=days.has(key), sel=RAIL_F.date===key, isToday=key===today; cells+=`<div class="rcal-d ${has?'has':''} ${sel?'sel':''} ${isToday?'today':''}" ${has?`onclick="railPickDay('${key}')"`:''}>${d}</div>`; }
+  // Days WITH checks are tappable; TODAY is always tappable too (even with no checks) so you can land on
+  // the "no checks this day" state and pick another from the calendar.
+  for(let d=1;d<=n;d++){ const key=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); const has=days.has(key), sel=RAIL_F.date===key, isToday=key===today; cells+=`<div class="rcal-d ${has?'has':''} ${sel?'sel':''} ${isToday?'today':''}" ${(has||isToday)?`onclick="railPickDay('${key}')"`:''}>${d}</div>`; }
   pop.innerHTML=`<div class="rcal-h">${nav(-1,'Previous month')}<b>${esc(title)}</b>${nav(1,'Next month')}</div>
     <div class="rcal-grid">${dow.map(x=>`<div class="rcal-dow">${x}</div>`).join('')}${cells}</div>
     ${RAIL_F.date?`<div style="text-align:center;margin-top:9px"><a onclick="railPickDay('')" style="color:var(--muted);font-weight:700;font-size:12px;cursor:pointer">${t('rail.allday','Show all days')}</a></div>`:''}`;
