@@ -47,7 +47,7 @@ __BRAND_HEAD__
   .pill.first{margin-left:auto}
   @media(max-width:380px){ header{padding:12px 12px;gap:6px} .logo{font-size:16px} .pill{padding:6px 9px;font-size:12px;gap:5px} }
   .pill .dot{width:8px;height:8px;border-radius:50%;background:var(--accent,var(--green));box-shadow:0 0 8px var(--accent,var(--green))}
-  main{padding:38px 20px 20px;max-width:520px;margin:0 auto;width:100%;box-sizing:border-box;flex:1 0 auto}
+  main{padding:38px 20px 20px;max-width:520px;margin:0 auto;width:100%;box-sizing:border-box;flex:1 0 auto;position:relative;z-index:1}
   .hero{text-align:center;padding:12px 0 24px}
   .hero h1{font-size:30px;line-height:1.16;margin:0 0 14px;letter-spacing:-1px;font-weight:900;text-wrap:balance}
   .hero h1 .g{color:var(--accent,var(--green));white-space:nowrap}
@@ -158,7 +158,11 @@ __BRAND_HEAD__
      area (viewport-fit=cover) — then fades into the page. Fixed + pointer-events:none: it sits above
      the sticky header so the color reaches the top edge, but never blocks taps. Lives inside #result
      so it only shows on a result. */
-  .rtop{position:fixed;left:0;right:0;top:0;height:360px;z-index:30;pointer-events:none}
+  .rtop{position:fixed;left:0;right:0;top:0;height:360px;z-index:0;pointer-events:none}
+  /* On a result the nav + content LAY ON the color: header goes transparent (no dark slab, no hairline)
+     so the wash reaches the top, and the page nudges up. Pills/dropdowns keep their own colors on top. */
+  body.rview header{background:transparent;border-bottom-color:transparent}
+  body.rview main{padding-top:14px}
   .rtop.out{background:linear-gradient(180deg,rgba(239,68,68,.36),rgba(239,68,68,.12) 32%,transparent 72%)}
   .rtop.in{background:linear-gradient(180deg,rgba(74,222,128,.36),rgba(74,222,128,.12) 32%,transparent 72%)}
   .rtop.unk{background:linear-gradient(180deg,rgba(251,191,36,.30),rgba(251,191,36,.10) 32%,transparent 72%)}
@@ -182,11 +186,12 @@ __BRAND_HEAD__
   .topcta{margin-top:18px}
   /* boxless "The call" header */
   .callsec{margin-top:24px}
-  .callhead{display:flex;align-items:center;gap:11px}
-  .callhead .ci{width:38px;height:38px;border-radius:11px;background:var(--terminal);border:1px solid var(--border);display:grid;place-items:center;flex:0 0 auto}
-  .callhead .ct{flex:1;min-width:0}
-  .callhead .ct .a{font-weight:800;font-size:15px}
+  .callhead{display:flex;align-items:center;justify-content:center;gap:10px;position:relative;text-align:center}
+  .callhead .ci{width:34px;height:34px;border-radius:10px;background:color-mix(in srgb,var(--accent,#FFCB05) 13%,transparent);border:1px solid color-mix(in srgb,var(--accent,#FFCB05) 32%,transparent);display:grid;place-items:center;flex:0 0 auto}
+  .callhead .ct{flex:0 1 auto;min-width:0}
+  .callhead .ct .a{font-weight:800;font-size:16px}
   .callhead .ct .b{color:var(--muted);font-size:12px;margin-top:1px}
+  .callhead .tbtn{position:absolute;right:0;top:50%;transform:translateY(-50%)} /* translate sits right, keeps Call centered */
   /* boxless variant of the call message box (no card border/bg; sits flat under the header) */
   .callmsg.boxless{background:none;border:none;border-radius:0;overflow:visible;margin-bottom:0;margin-top:14px}
   .callmsg.boxless .callmsg-steps{padding:0}
@@ -655,7 +660,7 @@ __BRAND_HEAD__
   /* Call switcher: filter your past calls by store/status, hop with ‹ › or tap a tile.
      Tiles are clean monograms (store logo when one is available) + an outcome dot. */
   /* pull the switcher up so it sits centered between the nav and the store card (result-only; homepage hero keeps its top spacing) */
-  .railbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin-top:6px;margin-bottom:20px;position:relative}
+  .railbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin-top:0;margin-bottom:14px;position:relative;z-index:2}
   .railcal{flex:0 0 auto;display:grid;place-items:center;width:40px;height:38px;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;border-radius:11px;cursor:pointer;padding:0}
   .railcal.on{border-color:var(--accent,#4ADE80);color:var(--accent,#4ADE80)}
   .railcalpop{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:30;width:252px;max-width:88vw;background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:12px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
@@ -2717,7 +2722,7 @@ async function startCheck(){
   if(!isAuthed()){ AUTH_PENDING=startCheck; openAuth(); return; }
   if(!ACCOUNT||ACCOUNT.credits<=0){ openBuy('out'); return; }
   return startCheckLive(); // always the live, hear-it-happen bridge path
-  $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden');
+  $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden'); document.body.classList.remove('rview');
   $('livestore').textContent=SEL_STORE.name; $('phase').textContent=PHASES[0];
   $('live_tr').style.display='none'; $('live_tr_body').innerHTML='';
   let pi=0; const phaseT=setInterval(()=>{ pi=Math.min(pi+1,PHASES.length-1); $('phase').textContent=PHASES[pi]; },4500);
@@ -2930,7 +2935,7 @@ async function startCheckLive(){
   }catch(e){ AUDIO_CTX=null; }
   AUDIO_NEXT={}; AUDIO_LIVE=false; if($('audio_ind'))$('audio_ind').style.display='none';
   if(!(await preCallGate())) return; // #17: last-call reminder + 24h "are you sure" (audio already unlocked above)
-  $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden');
+  $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden'); document.body.classList.remove('rview');
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // hide the finds ticker on the call page — keep it uncrowded
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb) _mb.style.display='none'; // owner asked to drop the 'flip off silent' note
@@ -3056,7 +3061,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ document.body.classList.remove('fabbed'); if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; } $('catcard').style.display=SEL_STORE&&!BRAND_CAT?'':'none'; renderStores(); renderChips(); syncCta(); loadCommunity(); window.scrollTo({top:0});
+function backToBuilder(){ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; } $('catcard').style.display=SEL_STORE&&!BRAND_CAT?'':'none'; renderStores(); renderChips(); syncCta(); loadCommunity(); window.scrollTo({top:0});
   // Clear any ?call deep-link so back/refresh never replays it — keep ?brand etc. intact.
   NAV_VIEW='builder';
   try{ const sp=new URLSearchParams(location.search); sp.delete('call'); sp.delete('store'); sp.delete('cat'); sp.delete('v'); const q=sp.toString(); history.replaceState({v:'builder'},'',location.pathname+(q?'?'+q:'')); }catch(e){}
@@ -3066,6 +3071,7 @@ function backToBuilder(){ document.body.classList.remove('fabbed'); if(typeof st
 // before (the old bug: back from a transcript landed on a different product's page).
 let NAV_VIEW='builder';
 function navMark(view){
+  try{ document.body.classList.toggle('rview', view==='result'); }catch(e){} // result-only top treatment (transparent nav + color wash)
   if(view===NAV_VIEW) return;
   try{
     const sp=new URLSearchParams(location.search);
@@ -3220,7 +3226,7 @@ function showResult(o, cid){
   }
   // Boxless "The call" subline: "{ago} · {dur}" — both pieces reuse existing prod helpers/vars
   // (timeAgo for the ago, callSummary already carries the "Call · Ns" duration). No new copy/keys.
-  const callSubline=[o.ts?timeAgo(o.ts):'', callSummary].filter(Boolean).join(' · ');
+  const callSubline=[o.ts?timeAgo(o.ts):'', _secs?(_secs+'s'):''].filter(Boolean).join(' · '); // header now says "Call" — keep the subline just ago · duration (no redundant "Call")
   // Primary "what next" CTA — prod's existing button HTML, unchanged. Pulled to the TOP for
   // anything not-in-stock; kept after inActions for in-stock (same placement rule as before).
   const primaryCta = isAuthed()
@@ -3243,8 +3249,8 @@ function showResult(o, cid){
     <div class="topcta">${primaryCta}</div>
     <div class="callsec">
       <div class="callhead">
-        <span class="ci">${ICO.call('#cfcfe0')}</span>
-        <div class="ct"><div class="a">${t('res.thecall','The call')}</div>${callSubline?`<div class="b">${esc(callSubline)}</div>`:''}</div>
+        <span class="ci">${ICO.call('var(--accent,#FFCB05)')}</span>
+        <div class="ct"><div class="a">${t('res.callword','Call')}</div>${callSubline?`<div class="b">${esc(callSubline)}</div>`:''}</div>
         ${canTranslate?`<button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button>`:''}
       </div>
       ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed)}
