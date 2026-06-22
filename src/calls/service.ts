@@ -64,7 +64,7 @@ export async function buildRestockVars(
   specificProduct?: string,
   extraCategoryIds?: number[],
   kioskMode?: boolean,
-): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; dynamicVars: Record<string, string> } | null> {
+): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
   const category = (await db.select().from(categories).where(eq(categories.id, categoryId)))[0];
@@ -89,10 +89,22 @@ export async function buildRestockVars(
   const openingLine = openerTemplate.replace(/\{category\}/g, category.label);
   const clarification = specificityClause((specificProduct ?? "").trim());
 
+  // Bravo voice nav: build the spoken plan ("no@26,front@38,…") from the locked recipe so the bridge
+  // speaks it with cheap TTS before opening the agent — keeps voice-IVR stores (CVS) cheap.
+  let say: string | null = null;
+  if (chain?.navType === "voice" && chain.navRecipe) {
+    try {
+      const r = JSON.parse(chain.navRecipe) as { steps?: Array<{ action?: string; value?: string; atSec?: number }> };
+      const ss = (r.steps ?? []).filter((s) => s.action === "say" && s.value);
+      if (ss.length) say = ss.map((s) => `${String(s.value).replace(/[,@]/g, " ").trim()}@${Math.round(s.atSec ?? 0)}`).join(",");
+    } catch { /* ignore bad recipe */ }
+  }
+
   return {
     retailer, category, chainName: chain?.name ?? null,
     // Bridge-level keypad shortcut (chain-wide): pressed by OUR code at a fixed time, not the LLM.
     dtmf: chain?.dtmfShortcut ?? null,
+    say,
     dynamicVars: {
       internal_call_id: "0",
       category: category.label,

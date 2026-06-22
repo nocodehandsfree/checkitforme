@@ -2704,7 +2704,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   return placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
     db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false })
       .catch((e) => console.error("bridge call log insert:", e));
-  }, v.dtmf, { from, timeLimitSec: pol.bail.maxCallSeconds });
+  }, v.dtmf, { from, timeLimitSec: pol.bail.maxCallSeconds, say: v.say });
 }
 app.get("/pub/bridge/:room", (c) => c.json({ conversationId: bridgeConversationId(c.req.param("room")), wsHost: RAILWAY_HOST }));
 app.get("/pub/bridge-debug", (c) => c.json({ log: bridgeDebug() }));
