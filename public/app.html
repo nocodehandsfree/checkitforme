@@ -1068,7 +1068,7 @@ async function loadRuns(chainId, box){
   if(!box) return;
   const d=await api('/api/admin/trainer/runs?chainId='+chainId);
   const runs=(d&&d.runs)||[];
-  if(!runs.length){ box.innerHTML='<div class="meta" style="padding:4px 0">No runs logged yet — press Document to watch the learner work.</div>'; return; }
+  if(!runs.length){ box.innerHTML='<div class="meta" style="padding:4px 0">No runs yet.</div>'; return; }
   const MODEC={alpha:'#60a5fa',bravo:'var(--yellow)',charlie:'var(--green)'};
   const OUT={human:'var(--green)',failed:'var(--red)',done:'var(--yellow)'};
   box.innerHTML=runs.map((r,i)=>{
