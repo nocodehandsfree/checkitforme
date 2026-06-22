@@ -458,7 +458,6 @@ app.all("/twiml/bridge", (c) => {
   // VOICE injection (Bravo, e.g. CVS): speak the learned menu words on a timer via cheap Polly TTS,
   // BEFORE the stream — so the expensive agent never navigates. The spoken twin of <Play digits>.
   const say = takeBridgeSay(room);
-  bridgeLog(`twiml/bridge say=${say ?? "null"} room=${room.slice(0, 8)}`);
   if (say) {
     let prev = 0;
     for (const m of say.matchAll(/([^,@]+?)\s*@\s*(\d+(?:\.\d+)?)/g)) {
