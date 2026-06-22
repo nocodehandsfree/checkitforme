@@ -4,14 +4,17 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#0C0C12" id="themeColor" />
-<!-- Hard-refresh top-color: if this load is a result deep-link (?call=… or ?v=history), paint the root
-     + status bar with the last verdict tone IMMEDIATELY (before the async result fetch / any paint), so
-     pull-to-refresh never reveals the dark default at the top. setThemeTone() corrects it post-fetch. -->
-<script>(function(){try{
+<!-- Hard-refresh top-color: if this load is a result deep-link (?call=…), recall the last verdict tone
+     and paint the root + status bar IMMEDIATELY (before the async result fetch / any paint), then stash
+     it so the post-<body> step can add rview/rv-* and the whole wash applies with no dark flash. -->
+<script>window.__TONE={in:'#266440',out:'#6b2427',unk:'#6c5419',soon:'#6e490f'};(function(){try{
   var sp=new URLSearchParams(location.search);
-  if(!(sp.has('call')||sp.get('v')==='history')) return;
-  var hex=(sp.get('call')&&localStorage.getItem('cifm_tone:'+sp.get('call')))||localStorage.getItem('cifm_tone_last');
-  if(hex){ document.documentElement.style.backgroundColor=hex; var m=document.getElementById('themeColor'); if(m) m.setAttribute('content',hex); }
+  if(!sp.has('call')) return;
+  var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
+  if(!cls||!window.__TONE[cls]) return;
+  window.__bootTone=cls;
+  document.documentElement.style.backgroundColor=window.__TONE[cls];
+  var m=document.getElementById('themeColor'); if(m) m.setAttribute('content',window.__TONE[cls]);
 }catch(e){}})();</script>
 <meta name="x-rev" content="names-r39" />
 __BRAND_HEAD__
@@ -164,16 +167,13 @@ __BRAND_HEAD__
   /* ── result v2: boxless verdict + boxless "The call" header (mirrors checkit-demo look) ── */
   .rverdict{position:relative;padding:2px 2px 0;margin-bottom:4px}
   .rverdict>*{position:relative}
-  /* Verdict tone bleeds from the very TOP of the screen — over the nav, into the status-bar safe area
-     (viewport-fit=cover) — fading into the page. A body-level fixed layer (not injected per-render) so
-     it always paints full-width on the first frame (no "stuck until refresh"). z-index:0 = it sits
-     UNDER the nav + content, so pills/dropdowns lay on the color with their own styling. */
-  body.rview::before{content:'';position:fixed;left:0;right:0;top:0;height:420px;z-index:0;pointer-events:none}
-  /* a single smooth linear fade top→transparent, so the color is perfectly EVEN all the way down */
-  body.rview.rv-out::before{background:linear-gradient(180deg,rgba(239,68,68,.42) 0%,rgba(239,68,68,.34) 18%,transparent 100%)}
-  body.rview.rv-in::before{background:linear-gradient(180deg,rgba(74,222,128,.42) 0%,rgba(74,222,128,.34) 18%,transparent 100%)}
-  body.rview.rv-unk::before{background:linear-gradient(180deg,rgba(251,191,36,.40) 0%,rgba(251,191,36,.32) 18%,transparent 100%)}
-  body.rview.rv-soon::before{background:linear-gradient(180deg,rgba(245,158,11,.42) 0%,rgba(245,158,11,.34) 18%,transparent 100%)}
+  /* Verdict tone fills from the very TOP of the screen down into the page. It's the BODY's own
+     background (not a fixed ::before) so its top edge also fills the iOS pull-to-refresh / overscroll
+     rubber-band — no dark cut-off at the top. The blended hex == the old rgba wash over the page bg. */
+  body.rview.rv-out{background:linear-gradient(180deg,#6b2427 0px,var(--bg) 460px)}
+  body.rview.rv-in{background:linear-gradient(180deg,#266440 0px,var(--bg) 460px)}
+  body.rview.rv-unk{background:linear-gradient(180deg,#6c5419 0px,var(--bg) 460px)}
+  body.rview.rv-soon{background:linear-gradient(180deg,#6e490f 0px,var(--bg) 460px)}
   /* On a result the nav + content LAY ON the color: header goes transparent (no dark slab, no hairline)
      so the wash reaches the top. The nav pills + day-picker take a BARELY-green fill (level 3) so they
      read as sitting on a green page without looking like dark chips. */
@@ -859,6 +859,9 @@ __BRAND_HEAD__
 </style>
 </head>
 <body>
+<!-- Hard-refresh of a result deep-link: apply the verdict treatment (wash + transparent nav) NOW, so
+     the page paints fully toned from the first frame (boot() shows #result; restoreCall confirms it). -->
+<script>(function(){try{ if(window.__bootTone){ document.body.classList.add('rview','rv-'+window.__bootTone); } }catch(e){}})();</script>
 <header>
   <div class="brandbar">
     <div class="vsw" id="vsw">
@@ -1602,7 +1605,7 @@ function applyFlags(){
 function renderFooter(){
   const L=(POLICY.links)||{}, by=$('footYear'); if(by) by.textContent=new Date().getFullYear();
   const fb=$('footBrand'); if(fb) fb.textContent='';  // the brand name lives inside the logo now
-  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:34px;width:auto;object-fit:contain;border-radius:0;display:block">`; }
+  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:17px;width:auto;object-fit:contain;border-radius:0;display:block">`; }
   // Discord + X always shown; link to policy URLs when set, else a placeholder.
   const SOC=[['discord',ICO.discord,'Discord'],['x',ICO.x,'X']];
   const el=$('footSocials'); if(!el) return;
@@ -3115,7 +3118,11 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; } $('catcard').style.display=SEL_STORE&&!BRAND_CAT?'':'none'; renderStores(); renderChips(); syncCta(); loadCommunity(); window.scrollTo({top:0});
+function backToBuilder(){ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+  // Returning to the builder = a FRESH check. Drop any store/category left over from a reopened call so
+  // it doesn't show up pre-selected in the call CTA below (it was a history view, not a new pick).
+  if(!BRAND_CAT){ SEL_STORE=null; SEL_KIOSK=null; SEL_CATS=[]; SEL_CAT=null; ASKED_CATS=[]; }
+  $('catcard').style.display=SEL_STORE&&!BRAND_CAT?'':'none'; renderStores(); renderChips(); syncCta(); renderCallRail(); loadCommunity(); window.scrollTo({top:0});
   // Clear any ?call deep-link so back/refresh never replays it — keep ?brand etc. intact.
   NAV_VIEW='builder';
   try{ const sp=new URLSearchParams(location.search); sp.delete('call'); sp.delete('store'); sp.delete('cat'); sp.delete('v'); const q=sp.toString(); history.replaceState({v:'builder'},'',location.pathname+(q?'?'+q:'')); }catch(e){}
@@ -3125,8 +3132,8 @@ function backToBuilder(){ document.body.classList.remove('fabbed'); document.bod
 // before (the old bug: back from a transcript landed on a different product's page).
 let NAV_VIEW='builder';
 function navMark(view){
-  try{ document.body.classList.toggle('rview', view==='result'); }catch(e){} // result-only top treatment (transparent nav + color wash)
-  try{ setThemeTone(); }catch(e){}
+  try{ document.body.classList.toggle('rview', view==='result'); if(view!=='result'){ ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); } }catch(e){} // result-only top treatment (transparent nav + color wash)
+  try{ setThemeTone(); renderCallRail(); }catch(e){}
   if(view===NAV_VIEW) return;
   try{
     const sp=new URLSearchParams(location.search);
@@ -3307,9 +3314,10 @@ function showResult(o, cid){
   // Tone the body-level top wash for this verdict (the wash itself is CSS on body.rview::before).
   ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c));
   document.body.classList.add('rv-'+cls);
-  // Persist the tone so a HARD refresh (URL ?call=…) can paint the top synchronously at load — before
-  // restoreCall's async fetch runs — so pull-to-refresh never flashes the dark default at the top.
-  try{ const _tmap={in:'#266440',out:'#6b2427',unk:'#6c5419',soon:'#6e490f'}; const _hex=_tmap[cls]||'#0C0C12'; localStorage.setItem('cifm_tone_last',_hex); if(cid) localStorage.setItem('cifm_tone:'+cid,_hex); }catch(e){}
+  // Persist the tone CLASS so a HARD refresh (URL ?call=…) can pre-apply the whole result treatment
+  // (body wash + status bar) synchronously at load — before restoreCall's async fetch — so
+  // pull-to-refresh never flashes the dark default at the top.
+  try{ localStorage.setItem('cifm_cls_last',cls); if(cid) localStorage.setItem('cifm_cls:'+cid,cls); }catch(e){}
   $('result').innerHTML = `
     <div class="rverdict ${cls}">
       <div class="rnav" id="rnav"></div>
@@ -3589,7 +3597,9 @@ function railFiltered(){ return railScoped().filter(e=>!RAIL_F.date||tsDay(e.ts)
 function renderCallRail(cid){
   if(cid) RAIL_CID=cid; cid=RAIL_CID;
   const wrap=$('hcalwrap');
-  if(wrap){ const days=histList().filter(e=>e.cid&&e.ts); wrap.style.display=days.length?'':'none'; const btn=$('calbtn'); if(btn) btn.classList.toggle('on',!!RAIL_F.date); }
+  // The calendar day-picker belongs to the RESULT view only (it navigates between checks). Never show
+  // it on the homepage/builder, even when history exists.
+  if(wrap){ const days=histList().filter(e=>e.cid&&e.ts); const onResult=document.body.classList.contains('rview'); wrap.style.display=(onResult&&days.length)?'':'none'; const btn=$('calbtn'); if(btn) btn.classList.toggle('on',!!RAIL_F.date); }
   // Prev/next arrows (top-right of the verdict) step through your calls — or the picked day's calls.
   // On the newest call you only see ›; once you step forward a ‹ appears to its left.
   const nav=$('rnav'); if(nav){
