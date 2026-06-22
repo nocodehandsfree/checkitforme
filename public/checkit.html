@@ -40,15 +40,15 @@ __BRAND_HEAD__
     display:flex;flex-direction:column;min-height:100dvh}
   /* No ambient color anywhere on the body — solid dark on every page, top and bottom (kills the green
      that kept tinting the iOS Safari bars / showing through on the homepage + call history). */
-  header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:nowrap;position:sticky;top:0;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:20}
+  header{padding:14px 16px;border-bottom:1px solid transparent;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;position:sticky;top:0;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:20}
   .logo{font-size:19px;font-weight:900;letter-spacing:-.5px;flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .logo b{color:var(--accent,var(--green))}
   .pill{display:inline-flex;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer;flex:0 0 auto;white-space:nowrap}
   .pill.first{margin-left:auto}
   @media(max-width:380px){ header{padding:12px 12px;gap:6px} .logo{font-size:16px} .pill{padding:6px 9px;font-size:12px;gap:5px} }
   .pill .dot{width:8px;height:8px;border-radius:50%;background:var(--accent,var(--green));box-shadow:0 0 8px var(--accent,var(--green))}
-  main{padding:38px 20px 20px;max-width:520px;margin:0 auto;width:100%;box-sizing:border-box;flex:1 0 auto;position:relative;z-index:1}
-  .hero{text-align:center;padding:12px 0 24px}
+  main{padding:14px 20px 20px;max-width:520px;margin:0 auto;width:100%;box-sizing:border-box;flex:1 0 auto;position:relative;z-index:1}
+  .hero{text-align:center;padding:2px 0 18px}
   .hero h1{font-size:30px;line-height:1.16;margin:0 0 14px;letter-spacing:-1px;font-weight:900;text-wrap:balance}
   .hero h1 .g{color:var(--accent,var(--green));white-space:nowrap}
   /* /peek preview: strip the homepage to just the hero + the check card (first-time-visitor view) */
@@ -59,7 +59,7 @@ __BRAND_HEAD__
   .step{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:800;margin-bottom:14px}
   input{background:var(--terminal);border:1px solid var(--border);color:#fff;padding:13px 14px;border-radius:12px;font-size:16px;font-family:inherit;width:100%}
   input:focus{outline:none;border-color:rgba(74,222,128,.45);box-shadow:0 0 0 2px rgba(74,222,128,.12)}
-  .storelist{margin-top:12px;max-height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:7px}
+  .storelist{margin-top:12px;max-height:480px;overflow-y:auto;display:flex;flex-direction:column;gap:7px}
   .store{display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid var(--border);border-radius:12px;cursor:pointer;background:var(--terminal);transition:border-color .12s,background .12s}
   .store:hover{border-color:rgba(255,255,255,.18)}
   .store.sel{border-color:var(--accent,#FFCB05);background:color-mix(in srgb,var(--accent,#FFCB05) 9%,transparent)}
@@ -167,11 +167,12 @@ __BRAND_HEAD__
   /* On a result the nav + content LAY ON the color: header goes transparent (no dark slab, no hairline)
      so the wash reaches the top. The nav pills + day-picker take a BARELY-green fill (level 3) so they
      read as sitting on a green page without looking like dark chips. */
-  body.rview header{background:transparent;border-bottom-color:transparent}
+  body.rview header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
   body.rview main{padding-top:18px}
   body.rview .pill,body.rview .vsw-trig,body.rview .railcal{background:rgba(74,222,128,.035);border-color:rgba(74,222,128,.12)}
-  .hcal{position:relative;flex:0 0 auto}
-  #calbtn{width:38px;height:34px}
+  .hcal{position:relative;flex:0 0 auto;display:flex}
+  /* match the "You" pill height exactly (same vertical padding/border, square-ish) */
+  #calbtn{width:auto;height:auto;padding:7px 9px;border-radius:20px}
   /* Live call in progress — a subtle green wash so "we're on the line for you" reads warm/active. */
   #live{position:relative}
   #live::before{content:'';position:absolute;left:-20px;right:-20px;top:-12px;height:220px;pointer-events:none;background:linear-gradient(180deg,rgba(74,222,128,.13),transparent 70%);z-index:0}
@@ -266,7 +267,8 @@ __BRAND_HEAD__
   .rhead.soon .rhead-stat{color:#F59E0B}
   /* logged-out homepage = the focused view (hero + check card). Retired modules hidden for everyone. */
   #truststrip,#demo{display:none!important}
-  #earndemo{display:none} body.authed #earndemo{display:block}
+  /* "Earn free checks" now lives inside the account panel (always available once you open it). */
+  #earndemo.acctearn{display:block;margin-top:14px}
   .vstore b{color:#fff;font-weight:800}
   .vnote{text-align:center;color:var(--muted);font-size:13px;line-height:1.5;margin:7px auto 2px;max-width:330px}
   /* clean secondary action button — replaces the heavy gradient buttons */
@@ -295,6 +297,9 @@ __BRAND_HEAD__
   .uprow .upc{flex:0 0 auto;color:#56566a;display:flex}
   /* logged-in account pill */
   .credbadge{font-size:11px;font-weight:800;color:#e6e6ee;background:rgba(255,255,255,.09);border-radius:9px;padding:2px 7px}
+  /* the "My ✅" check sits in a softly-glowing green circle */
+  .mychk{display:inline-grid;place-items:center;width:21px;height:21px;border-radius:50%;background:rgba(74,222,128,.16);box-shadow:0 0 8px rgba(74,222,128,.5);flex:0 0 auto}
+  .mychk img{display:block}
   .proof{background:var(--terminal);border:1px solid var(--border);border-radius:12px;padding:13px;margin-top:6px}
   .proof .ph{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:6px;justify-content:space-between}
   .tbtn{background:var(--ptint);border:1px solid var(--pline);color:var(--purple);font-weight:800;font-size:11px;text-transform:none;letter-spacing:0;padding:5px 11px;border-radius:16px;cursor:pointer}
@@ -581,7 +586,8 @@ __BRAND_HEAD__
   .earnbox .ei{display:flex;justify-content:center;margin-bottom:8px}
   .earnbox .et{font-weight:800;font-size:13.5px}
   .earnbox .es{color:var(--muted);font-size:11.5px;margin-top:4px;line-height:1.35}
-  .foot-bottom{display:flex;align-items:center;gap:5px;padding-top:14px;border-top:1px solid var(--border)}
+  /* check logo + "© year" sit together, centered — no divider rule above. */
+  .foot-bottom{display:flex;align-items:center;justify-content:center;gap:9px;padding-top:16px}
   .foot-fav{display:flex;align-items:center;flex:0 0 auto}
   .foot-fav svg{width:24px;height:24px;border-radius:7px}
   .foot-copy{color:#7a7a86;font-size:12px;font-weight:600}
@@ -678,6 +684,21 @@ __BRAND_HEAD__
   .rcal-d{aspect-ratio:1;display:grid;place-items:center;font-size:12px;font-weight:700;border-radius:8px;color:#5a5a66}
   .rcal-d.has{color:#06210f;background:var(--accent,#4ADE80);cursor:pointer;font-weight:900}
   .rcal-d.sel{box-shadow:0 0 0 2px #fff inset}
+  /* Day-list view inside the popover: every call on the chosen day, tap to open. */
+  .rday-list{display:flex;flex-direction:column;gap:4px;max-height:230px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .rday-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:8px 9px;border-radius:10px;border:1px solid transparent;background:var(--terminal);color:#e9e9f0;cursor:pointer}
+  .rday-item.on{border-color:var(--accent,#4ADE80)}
+  .rday-item:active{transform:scale(.985)}
+  .rday-dot{flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:#5a5a66}
+  .rday-dot.in{background:var(--green)} .rday-dot.out{background:var(--red)} .rday-dot.soon{background:#F59E0B} .rday-dot.unk{background:#FBBF24}
+  .rday-nm{flex:1;min-width:0;font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rday-tm{flex:0 0 auto;font-size:11px;font-weight:700;color:var(--muted)}
+  /* Verdict prev/next: two arrows top-right of the result (where the IN STOCK pill row sits), sitting
+     right next to each other. Newest call shows only ›; step forward and a ‹ appears to its left. */
+  .rnav{position:absolute;top:2px;right:2px;display:flex;gap:6px;z-index:2}
+  .rnav-b{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#dcdce6;display:grid;place-items:center;cursor:pointer;padding:0;transition:transform .1s,border-color .12s,color .12s}
+  .rnav-b:active{transform:scale(.92)}
+  body.rview .rnav-b{background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.16)}
   .railsel{flex:1;min-width:0;appearance:none;-webkit-appearance:none;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;font-size:12.5px;font-weight:700;border-radius:11px;padding:9px 26px 9px 11px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M0.5 0.5h8L4.5 5.5z' fill='%23ffffff'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
   /* Prev/next: subtle outlined circles (not loud filled accent) so they don't fight the verdict for the eye. */
   .railnav{flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:1px solid var(--border);background:var(--sheet);color:#cfcfd9;display:grid;place-items:center;cursor:pointer;padding:0;transition:transform .1s,border-color .12s,color .12s}
@@ -796,7 +817,7 @@ __BRAND_HEAD__
     .store{padding:13px 14px}
     .store .nm{font-size:15.5px}
     .store .lo{font-size:12.5px}
-    .storelist{max-height:440px}
+    .storelist{max-height:600px}
     #mapview{height:480px}
     .cta{padding:18px;font-size:17px;border-radius:16px}
     .act2{padding:15px;font-size:15px}
@@ -900,34 +921,6 @@ __BRAND_HEAD__
       <div class="demobody" id="demobody"></div>
     </details>
 
-    <details class="demo" id="earndemo" style="margin-top:14px">
-      <summary><span id="earnIcon"></span> <span data-i18n="earn.summary">Earn free checks</span> <span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
-      <div class="demobody">
-        <div style="color:var(--muted);font-size:12.5px;line-height:1.45;margin:12px 0 2px" data-i18n="earn.sub">Help the hunt and we load you up with free minutes — random winner picked each week.</div>
-        <div class="earnmod-grid" id="earnGrid" style="grid-template-columns:1fr">
-          <div class="earnbox" onclick="openStoreReq()">
-            <div class="ei" id="earnStoreIcon"></div>
-            <div class="et" data-i18n="earn.store">Add your store</div>
-            <div class="es" data-i18n="earn.store.sub">Put a store on the map, earn a free call.</div>
-          </div>
-        </div>
-        <div id="refBlock" style="border-top:1px solid var(--border);margin-top:14px">
-          <div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;margin:12px 0 6px"><span id="refIcon" style="display:inline-flex"></span><span data-i18n="ref.row">Invite a friend — you both get a free check</span></div>
-          <div style="color:var(--muted);font-size:12.5px;line-height:1.45;margin-bottom:8px" data-i18n="ref.sub2">They join with your link and run one check — <b>free checks for both of you</b>.</div>
-          <button class="shareticket" onclick="copyRefer()" title="Tap to copy">
-            <span id="refer_link" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left"></span>
-            <span class="tickcopy" id="refer_copylbl" data-i18n="ref.copy">copy</span>
-          </button>
-          <div class="meta" id="refer_count"></div>
-          <div class="sharetiles">
-            <button class="sharetile" onclick="referShareTo('sms')"><span id="shT1"></span><span class="lbl" data-i18n="ref.t.text">Text</span></button>
-            <button class="sharetile" onclick="referShareTo('x')"><span id="shT2"></span><span class="lbl" data-i18n="ref.t.post">Post</span></button>
-            <button class="sharetile" onclick="referShareTo('native')"><span id="shT3"></span><span class="lbl" data-i18n="ref.t.more">More</span></button>
-          </div>
-        </div>
-      </div>
-    </details>
-
     <!-- Scores: unboxed community strip — social proof breathing on the homepage itself -->
     <div id="scoresRow" style="display:none;margin-top:28px">
       <div class="scoreshead"><span id="scoresIco" style="display:inline-flex"></span><span data-i18n="scores.title">Scores from the hunt</span><a onclick="openSuccess()" data-i18n="scores.post">Post yours →</a></div>
@@ -1007,7 +1000,7 @@ __BRAND_HEAD__
   </div>
   <div class="foot-bottom">
     <span class="foot-fav" id="footMark"></span>
-    <span class="foot-copy"><b id="footBrand" class="foot-brandname">Fungibles</b> powered by <b>Fungibles</b> · © <span id="footYear"></span></span>
+    <span class="foot-copy">© <span id="footYear"></span></span>
   </div>
 </footer>
 
@@ -1164,6 +1157,33 @@ __BRAND_HEAD__
       <button class="acctrow" id="acct_plan" onclick="closeAccount();openBuy()"><span id="acctStar" style="display:inline-flex"></span><span id="acct_planlbl" data-i18n="acct.more">Get more checks</span><span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
       <button class="acctrow" id="acct_cid" onclick="openCallerId()" style="display:none"><span id="acctCid" style="display:inline-flex"></span><span id="acct_cidlbl">Call stores from your number</span><span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button>
     </div>
+    <details class="demo acctearn" id="earndemo">
+      <summary><span id="earnIcon"></span> <span data-i18n="earn.summary">Earn free checks</span> <span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
+      <div class="demobody">
+        <div style="color:var(--muted);font-size:12.5px;line-height:1.45;margin:12px 0 2px" data-i18n="earn.sub">Help the hunt and we load you up with free minutes — random winner picked each week.</div>
+        <div class="earnmod-grid" id="earnGrid" style="grid-template-columns:1fr">
+          <div class="earnbox" onclick="openStoreReq()">
+            <div class="ei" id="earnStoreIcon"></div>
+            <div class="et" data-i18n="earn.store">Add your store</div>
+            <div class="es" data-i18n="earn.store.sub">Put a store on the map, earn a free call.</div>
+          </div>
+        </div>
+        <div id="refBlock" style="border-top:1px solid var(--border);margin-top:14px">
+          <div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;margin:12px 0 6px"><span id="refIcon" style="display:inline-flex"></span><span data-i18n="ref.row">Invite a friend — you both get a free check</span></div>
+          <div style="color:var(--muted);font-size:12.5px;line-height:1.45;margin-bottom:8px" data-i18n="ref.sub2">They join with your link and run one check — <b>free checks for both of you</b>.</div>
+          <button class="shareticket" onclick="copyRefer()" title="Tap to copy">
+            <span id="refer_link" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left"></span>
+            <span class="tickcopy" id="refer_copylbl" data-i18n="ref.copy">copy</span>
+          </button>
+          <div class="meta" id="refer_count"></div>
+          <div class="sharetiles">
+            <button class="sharetile" onclick="referShareTo('sms')"><span id="shT1"></span><span class="lbl" data-i18n="ref.t.text">Text</span></button>
+            <button class="sharetile" onclick="referShareTo('x')"><span id="shT2"></span><span class="lbl" data-i18n="ref.t.post">Post</span></button>
+            <button class="sharetile" onclick="referShareTo('native')"><span id="shT3"></span><span class="lbl" data-i18n="ref.t.more">More</span></button>
+          </div>
+        </div>
+      </div>
+    </details>
     <button onclick="doSignOut()" class="acctout" data-i18n="acct.signout">Sign out</button>
   </div>
 </div>
@@ -1449,7 +1469,7 @@ const I18N={ es:{
   'ho.done.title':'Bono liberado — listo','ho.done.ship':'Va en camino. Te mandamos el número de rastreo en cuanto escaneen la etiqueta.','ho.done.home':'Va hacia tu puerta. Te llega un texto cuando el conductor lo marque entregado.','ho.done.cta':'Volver a la cacería',
   'rail.all.stores':'Todas las tiendas','rail.all':'Todas las llamadas','rail.other':'Sin respuesta / dudosa','rail.stores':'Tiendas','rail.calls':'Llamadas','rail.allday':'Ver todos los días',
   'demo.verdictlbl':'el veredicto','auth.google':'Continuar con Google','auth.discord':'Continuar con Discord','auth.or':'o con tu correo','demo.sys':'Navegando el menú telefónico…','demo.thanks':'¡Perfecto, gracias!','demo.proof':'Persona real · hace 2 min · transcripción completa como prueba.',
-  'acct.checks':'Mis verificaciones','acct.more':'Consigue más verificaciones','acct.manage':'Administrar plan','acct.unlimited':'Ilimitado','acct.youraccount':'Tu cuenta','acct.memberleft':'Miembro · {n} verificaciones','acct.left':'{n} verificaciones','acct.signout':'Cerrar sesión','pill.join':'Únete','pill.free':'1 gratis · Únete',
+  'acct.checks':'Mis verificaciones','acct.more':'Consigue más verificaciones','acct.manage':'Administrar plan','acct.unlimited':'Ilimitado','acct.youraccount':'Tu cuenta','acct.memberleft':'Miembro · {n} verificaciones','acct.left':'{n} verificaciones','acct.signout':'Cerrar sesión','pill.join':'Únete','pill.free':'1 gratis · Únete','pill.my':'Mis',
   'acct.cid.on':'Las llamadas salen de tu celular ✓','acct.cid.off':'Llama a las tiendas desde tu número',
   'cid.title':'Llama desde tu propio número','cid.sub':'Verifica tu celular una vez para que las tiendas vean <b>tu</b> número en el identificador — contestan mucho más que a un número desconocido.','cid.cta':'Verificar mi número →','cid.calling2':'Llamándote…','cid.calling':'📞 Te estamos llamando','cid.enter':'Contesta y, cuando te lo pidan, marca este código:','cid.waiting':'Esperando a que termine la llamada…','cid.done':'Tu número está verificado','cid.donesub':'Las verificaciones ahora salen de tu celular — las tiendas ven tu número.','cid.donecta':'Listo','cid.unavail':'La verificación no está disponible ahora — inténtalo más tarde.','cid.startfail':'No se pudo iniciar la verificación — inténtalo de nuevo.','cid.timeout':'No se verificó a tiempo — cierra e inténtalo de nuevo.',
 } };
@@ -1558,7 +1578,7 @@ function applyFlags(){
 function renderFooter(){
   const L=(POLICY.links)||{}, by=$('footYear'); if(by) by.textContent=new Date().getFullYear();
   const fb=$('footBrand'); if(fb) fb.textContent='';  // the brand name lives inside the logo now
-  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:20px;width:auto;object-fit:contain;border-radius:0;display:block">`; }
+  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:34px;width:auto;object-fit:contain;border-radius:0;display:block">`; }
   // Discord + X always shown; link to policy URLs when set, else a placeholder.
   const SOC=[['discord',ICO.discord,'Discord'],['x',ICO.x,'X']];
   const el=$('footSocials'); if(!el) return;
@@ -1726,16 +1746,15 @@ async function cancelSchedule(id){
 function renderAuth(){
   const ap=$('authpill'), cn=$('creditN');
   if(isAuthed()){
-    // Authed: clean pill — name, then a small credit/member badge. Tap → account sheet.
+    // Authed: "My ✅ 10" — the check mark in a glowing circle, the number = checks left. Tap → account sheet.
     const cr=(ACCOUNT&&ACCOUNT.comp)?'∞':((ACCOUNT&&ACCOUNT.credits!=null)?(''+ACCOUNT.credits):'');
-    const nm=esc((window.Clerk&&window.Clerk.user&&window.Clerk.user.firstName)||'You');
     const badge = cr!=='' ? `<span class="credbadge">${(ACCOUNT&&ACCOUNT.subscription==='active')?'★ ':''}${cr}</span>` : '';
-    ap.innerHTML=`<span class="dot on"></span><b style="font-weight:800;font-size:13px">${nm}</b>${badge}`;
+    ap.innerHTML=`<b style="font-weight:800;font-size:13px">${t('pill.my','My')}</b><span class="mychk">${FCHK(13)}</span>${badge}`;
     ap.onclick=()=>openAccount(); ap.classList.remove('anon');
   } else if(localStorage.getItem('runnr_authed')==='1' && !window.__clerkReady){
     // Returning member, Clerk still loading — show "You" optimistically so the pill doesn't flash the
     // guest state then swap. refreshAuth() corrects it (to real name, or to anon) once Clerk resolves.
-    ap.innerHTML=`<span class="dot on"></span><b style="font-weight:800;font-size:13px">You</b>`;
+    ap.innerHTML=`<b style="font-weight:800;font-size:13px">${t('pill.my','My')}</b><span class="mychk">${FCHK(13)}</span>`;
     ap.onclick=()=>{ if(isAuthed()) openAccount(); }; ap.classList.remove('anon');
   } else {
     // Anon: one pill combining the free check + sign-in, tap → email sign-up.
@@ -2003,6 +2022,8 @@ function openAccount(){
       const lbl=$('acct_cidlbl'); if(lbl) lbl.textContent = ready ? t('acct.cid.on','Calls come from your cell ✓') : t('acct.cid.off','Call stores from your number');
     }
   }
+  // The "Earn free checks" block now lives in this panel — refresh its referral link/count on open.
+  try{ loadRefer(); }catch(_){}
   $('acctOverlay').classList.add('on'); track('account_open');
 }
 function closeAccount(){ $('acctOverlay').classList.remove('on'); }
@@ -2834,17 +2855,18 @@ function callMsgBoxHTML(steps, transcript, opts){
 function combinedTimelineHTML(steps, transcript, finalElapsed){
   // Connection steps — same per-step seconds rule as stepsHTML; narrative labels, no numbers.
   const stepRows = (steps&&steps.length) ? steps.map((s,i)=>{
-    let secs=null; // only a REAL elapsed gap gets a time (derived/reopened steps are at:0 → no fake "1s")
+    let secs=null; // duration of THIS step (gap to the next), printed once the step is complete
     if(i<steps.length-1){ if(steps[i+1].at>s.at) secs=Math.round(steps[i+1].at-s.at); }
     else if(finalElapsed!=null && finalElapsed>s.at) secs=Math.round(finalElapsed-s.at);
-    const cur = i===steps.length-1;          // the step we're AT → gets the green "you are here" dot
+    if(s.n===1) secs=null;                    // "Calling {store}…" never shows seconds (per spec)
+    const cur = i===steps.length-1;          // ONLY the step we're AT gets the green "you are here" dot
     const live = cur && finalElapsed==null;  // still in progress → pulse the green dot
     return `<div class="ctl-row ctl-substep${cur?' cur':''}${live?' live':''}"><div class="ctl-step">${esc(s.label)}${secs!=null?` <span class="cs-time">${secs}s</span>`:''}</div></div>`;
   }).join('') : '';
   const n=(steps&&steps.length)||0;
   // The whole call log rolls up under one tappable header (open by default on a fresh result).
   const _rstore = (SEL_STORE && splitStoreName(SEL_STORE.name).base) || t('live.store','the store');
-  const reach = stepRows ? `<details class="reach" open><summary><span class="reach-lbl">${tf('step.calling2','Calling {s}',{s:esc(_rstore)})}</span>${n?`<span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}</span>`:''}<span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#6b6b7a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
+  const reach = stepRows ? `<details class="reach" open><summary><span class="reach-lbl">${esc(_rstore)}</span>${n?`<span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}</span>`:''}<span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="#6b6b7a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
   // Conversation turns — prod's human-line filter + bubbleHTML, each as a row hanging off the same line.
   const lines=(transcript||'').split('\n').filter(Boolean);
   const hs=transcriptHumanStart(lines);
@@ -3248,6 +3270,7 @@ function showResult(o, cid){
   document.body.classList.add('rv-'+cls);
   $('result').innerHTML = `
     <div class="rverdict ${cls}">
+      <div class="rnav" id="rnav"></div>
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
       <div class="rtitle2">${esc(vTitle)}</div>
       ${note?`<div class="rsub">${note}</div>`:''}
@@ -3505,10 +3528,14 @@ function railFiltered(){ return railScoped().filter(e=>!RAIL_F.date||tsDay(e.ts)
 // pick one to jump to that day's call. The Stores/Calls dropdowns + ‹›arrows were removed.
 function renderCallRail(cid){
   if(cid) RAIL_CID=cid; cid=RAIL_CID;
-  const wrap=$('hcalwrap'); if(!wrap) return;
-  const days=histList().filter(e=>e.cid&&e.ts);
-  wrap.style.display = days.length ? '' : 'none';
-  const btn=$('calbtn'); if(btn) btn.classList.toggle('on', !!RAIL_F.date);
+  const wrap=$('hcalwrap');
+  if(wrap){ const days=histList().filter(e=>e.cid&&e.ts); wrap.style.display=days.length?'':'none'; const btn=$('calbtn'); if(btn) btn.classList.toggle('on',!!RAIL_F.date); }
+  // Prev/next arrows (top-right of the verdict) step through your calls — or the picked day's calls.
+  // On the newest call you only see ›; once you step forward a ‹ appears to its left.
+  const nav=$('rnav'); if(nav){
+    const f=railFiltered(), i=f.findIndex(e=>e.cid===cid);
+    nav.innerHTML = (i>=0 && f.length>1) ? `${i>0?`<button class="rnav-b" onclick="railStep(-1)" aria-label="Newer call"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:''}${i<f.length-1?`<button class="rnav-b" onclick="railStep(1)" aria-label="Older call"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9.5 5l6.5 7-6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:''}` : '';
+  }
 }
 function railFilter(k,v){ RAIL_F[k]=v; const f=railFiltered(); if(k==='date'&&v&&!f.length){ toast(t('rail.noneday','No checks on that day')); RAIL_F.date=''; renderCallRail(); return; } const cur=f.some(e=>e.cid===RAIL_CID); if(!cur&&f.length){ openHistEntry(f[0]); return; } renderCallRail(); }
 function railStep(d){ const f=railFiltered(); const i=f.findIndex(e=>e.cid===RAIL_CID); const n=f[i+d]; if(n) openHistEntry(n); }
@@ -3531,9 +3558,22 @@ function openRailCal(){
 function closeRailCal(){ const pop=$('railcalpop'); if(pop){ pop.classList.remove('on'); pop.innerHTML=''; } document.removeEventListener('click',railCalAway); }
 function railCalAway(e){ if(!e.target.closest('#railcalpop') && !e.target.closest('.railcal')) closeRailCal(); }
 function railCalMonth(d){ const m=new Date(RAIL_CAL_M); RAIL_CAL_M=new Date(m.getFullYear(), m.getMonth()+d, 1).getTime(); renderRailCal(); }
-function railPickDay(key){ closeRailCal(); RAIL_F.store=''; RAIL_F.tone=''; railFilter('date', key); }
+// Pick a day → the popover switches to a LIST of that day's calls (don't auto-open; let them choose).
+// key='' goes back to the month grid.
+function railPickDay(key){ RAIL_F.store=''; RAIL_F.tone=''; RAIL_F.date=key||''; renderRailCal(); renderCallRail(); }
+function railOpen(cid){ const e=histList().find(x=>x.cid===cid); closeRailCal(); if(e) openHistEntry(e); }
+// The day-list view inside the popover: every call on the chosen day, newest first, tap to open.
+function renderRailDayList(pop){
+  const day=RAIL_F.date;
+  const calls=histList().filter(e=>e.cid&&e.ts&&tsDay(e.ts)===day).sort((a,b)=>b.ts-a.ts);
+  const lbl=new Date(day+'T12:00:00').toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'short',month:'short',day:'numeric'});
+  const back=`<button onclick="railPickDay('')" aria-label="${esc(t('rail.backcal','Back to calendar'))}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+  pop.innerHTML=`<div class="rcal-h">${back}<b>${esc(lbl)}</b><span style="width:13px"></span></div>
+    <div class="rday-list">${calls.length?calls.map(e=>`<button class="rday-item ${e.cid===RAIL_CID?'on':''}" onclick="railOpen('${esc(e.cid)}')"><span class="rday-dot ${railTone(e)}"></span><span class="rday-nm">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span class="rday-tm">${new Date(e.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}</span></button>`).join(''):`<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:10px">${t('rail.noneday','No checks on that day')}</div>`}</div>`;
+}
 function renderRailCal(){
   const pop=$('railcalpop'); if(!pop) return;
+  if(RAIL_F.date){ renderRailDayList(pop); return; } // a day is picked → show that day's calls list
   const m=new Date(RAIL_CAL_M), y=m.getFullYear(), mo=m.getMonth();
   const days=railCalDays();
   const first=new Date(y,mo,1).getDay(), n=new Date(y,mo+1,0).getDate();
