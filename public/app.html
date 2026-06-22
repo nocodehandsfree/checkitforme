@@ -759,25 +759,17 @@
     </div>
     <div class="card">
       <label>Chain</label>
+      <input id="set_search" oninput="setFilterChains(this.value)" placeholder="Search chains…" style="margin-bottom:8px">
       <select id="set_chain" onchange="setPickChain()"><option value="">— pick a chain —</option></select>
     </div>
     <div id="set_body" style="display:none">
-      <div class="card">
-        <div class="name" style="margin-bottom:14px">Settings <span id="set_chainname" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></div>
-        <label>Status</label>
-        <div class="row" style="gap:16px;flex-wrap:wrap;margin:6px 0 16px">
-          <label class="statusopt"><input type="radio" name="set_status_r" value="active"> Active</label>
-          <label class="statusopt"><input type="radio" name="set_status_r" value="muted"> Muted</label>
-          <label class="statusopt"><input type="radio" name="set_status_r" value="repack"> Repack-only</label>
-        </div>
-        <div class="grid2">
-          <div><label data-tip="Cap on how long the agent talks to a person before wrapping up.">Max talk seconds</label><input id="set_maxtalk" type="number" min="0" placeholder="45" style="width:84px;padding:10px 12px;font-size:15px"></div>
-          <div><label data-tip="If a call hits voicemail or a 'we're closed' recording, hang up instead of waiting.">Hang up on voicemail / closed</label><div><button class="ghost" id="set_vmbtn" onclick="setVmToggle()" style="margin-top:4px;min-width:54px">ON</button></div></div>
-        </div>
-        <div class="row" style="margin-top:16px;gap:10px;align-items:center">
-          <button class="act" onclick="saveChainSettings()">Save</button>
-          <span class="meta" id="set_msg"></span>
-        </div>
+      <div class="card" id="set_store"></div>
+      <div class="card" id="set_call"></div>
+      <div class="card" id="set_hangup"></div>
+      <details class="card report" id="set_advwrap"><summary style="cursor:pointer"><span class="name">Advanced</span><span class="meta" style="margin-left:8px">every other field</span></summary><div id="set_adv" style="margin-top:14px"></div></details>
+      <div class="row" style="gap:12px;align-items:center;margin:2px 0 14px">
+        <button class="act" onclick="saveChainSettings()">Save</button>
+        <span class="meta" id="set_msg"></span>
       </div>
       <div class="card">
         <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap">
@@ -1825,7 +1817,8 @@ const NAV_MODE={ keypad:{m:'Alpha',sub:'keypad tones',c:'#60a5fa'}, voice:{m:'Br
 // Distinct CHAINS only (one row per chain), from /api/chains — NOT the store list. Drop "_"-prefixed
 // deprecated/merged placeholders (e.g. the old per-city "_H Mart …" rows). Muted chains stay (flagged)
 // so they remain unmute-able from Settings.
-function chainOpts(){ return CHAINS.filter(ch=>!(ch.name||'').startsWith('_')).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(ch=>`<option value="${ch.id}">${esch(ch.name)}${ch.muted?' · muted':(ch.repackOnly?' · repack':'')}</option>`).join(''); }
+function chainOpts(q){ const f=(q||'').trim().toLowerCase(); return CHAINS.filter(ch=>!(ch.name||'').startsWith('_')&&(!f||(ch.name||'').toLowerCase().includes(f))).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(ch=>`<option value="${ch.id}">${esch(ch.name)}${ch.muted?' · muted':(ch.repackOnly?' · repack':'')}</option>`).join(''); }
+function setFilterChains(q){ const sel=document.getElementById('set_chain'); if(!sel) return; const cur=sel.value; sel.innerHTML='<option value="">— pick a chain —</option>'+chainOpts(q); if([...sel.options].some(o=>o.value===cur)) sel.value=cur; }
 async function loadChains(){
   CHAINS = await api('/api/chains') || [];
   const sel=document.getElementById('set_chain'); if(!sel) return;
@@ -1833,19 +1826,69 @@ async function loadChains(){
   sel.innerHTML='<option value="">— pick a chain —</option>'+chainOpts();
   if(cur){ sel.value=cur; setPickChain(); }
 }
+// ---- Chain Settings panel: Store · Call · Hang up · Advanced + ONE Save. The RATING is per-store
+//      (retailers.tier — no chains.tier), so saving a rating stamps every store of the chain; the rest
+//      are chain fields via PATCH /api/chains. (docs/specs/scoring.md + DATA_PROVENANCE.md) ----
+const SS_TYPES=[['Big Box','Big Box'],['Pharmacy','Pharmacy'],['Grocery','Grocery'],['Off-Price','Off-Price'],['Discount','Discount'],['Sporting Goods','Sporting Goods'],['Bookstore','Bookstore'],['Craft','Craft'],['Department','Department'],['Gift','Gift'],['Hardware','Hardware'],['Office','Office'],['Warehouse','Warehouse'],['Mall/Specialty','Mall/Specialty'],['Online','Online'],['Thrift','Treasure Hunt (Thrift)'],['Hobby','Hobby'],['Other','Other']];
+const SS_RATING={5:['Best near you','#2BFF88','Genuine MSRP · carries broadly · frequent, predictable restock you can time (also any official-kiosk store).'],4:['Mostly reliable','#29D4FF','Genuine MSRP · carries broadly · no dependable rhythm.'],3:['Spotty','#FF9E2C','Genuine MSRP · varies by location / sporadic.'],2:['Over MSRP','','Has product but above MSRP — no consumer pill.'],1:['Unknown','','Held internally, never shown — we can\'t confirm they carry.']};
+let SS=null;
+const ssDot=c=>`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0"></span>`;
+function ssPill(t){ const p=SS_RATING[t]; if(!p) return '<span class="meta">unrated</span>'; if(!p[1]) return `<span style="display:inline-flex;align-items:center;font-size:12px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:3px 11px">${esch(p[0])}</span>`; return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:${p[1]};background:${p[1]}1a;border:1px solid ${p[1]}66;border-radius:20px;padding:3px 11px">${ssDot(p[1])}${esch(p[0])}</span>`; }
 function setPickChain(){
   const id=Number(document.getElementById('set_chain').value);
   const body=document.getElementById('set_body'); const ch=CHAINS.find(c=>c.id===id);
-  if(!ch){ if(body) body.style.display='none'; return; }
+  if(!ch){ if(body) body.style.display='none'; SS=null; return; }
   body.style.display='';
-  document.getElementById('set_chainname').textContent='· '+ch.name;
-  const status=ch.muted?'muted':(ch.repackOnly?'repack':'active');
-  document.querySelectorAll('input[name="set_status_r"]').forEach(r=>{ r.checked=(r.value===status); });
-  document.getElementById('set_maxtalk').value = ch.maxTalkSeconds!=null?ch.maxTalkSeconds:'';
-  setVmBtn(ch.hangupOnVoicemail!==false); // default ON
+  SS={ id:ch.id, name:ch.name, logoUrl:ch.logoUrl||'', muted:!!ch.muted, repack:!!ch.repackOnly, type:ch.type||'Other',
+    tier:ch.tier??null, ratingPick:ch.tier??null, maxTalk:ch.maxTalkSeconds!=null?ch.maxTalkSeconds:'', vm:ch.hangupOnVoicemail!==false,
+    scc:ch.stockCheckConfidence||'', sellMethods:ch.sellMethods||'', isMSRP:ch.isMSRP!==false, dtmf:ch.dtmfShortcut||'', tree:ch.phoneTreeDefault||'',
+    wf:(WF.chains&&WF.chains[ch.id])||'' };
+  ssRenderStore(); ssRenderCall(); ssRenderHangup(); ssRenderAdvanced();
   document.getElementById('set_msg').textContent='';
-  renderChainMapping(ch);
-  loadRuns(id, document.getElementById('set_runs'));
+  renderChainMapping(ch); loadRuns(id, document.getElementById('set_runs'));
+}
+function ssRenderStore(){
+  const el=document.getElementById('set_store'); if(!el||!SS) return;
+  const seg=(on,lbl,c,fn)=>`<button type="button" onclick="${fn}" style="flex:1;padding:9px;border-radius:9px;border:1px solid ${on?c:'var(--border)'};background:${on?c+'1f':'var(--surface-1)'};color:${on?c:'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:13px">${lbl}</button>`;
+  const rate=[5,4,3,2,1].map(n=>`<button type="button" onclick="ssRate(${n})" title="${esch(SS_RATING[n][0])}" style="width:34px;height:34px;border-radius:9px;border:1px solid ${SS.ratingPick===n?'var(--green)':'var(--border)'};background:${SS.ratingPick===n?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${SS.ratingPick===n?'var(--green)':'var(--text-body)'};font-weight:800;cursor:pointer">${n}</button>`).join('');
+  el.innerHTML=
+    `<div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px"><div class="name">Store settings <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· ${esch(SS.name)}</span></div>`
+    +(SS.logoUrl?`<img src="${esch(SS.logoUrl)}" alt="" style="height:30px;max-width:120px;object-fit:contain;flex:0 0 auto">`:'')+`</div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Status</div>`
+    +(SS.repack?`<div class="row" style="gap:8px;align-items:center;margin-bottom:8px"><span data-tip="Only sells repackaged product; checks waste money. Remove only." style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);border-radius:20px;padding:3px 11px">${ssDot('#FBBF24')}Repack-only</span><button class="ghost" onclick="ssClearRepack()" style="font-size:12px;padding:5px 10px">Clear</button></div>`:'')
+    +`<div class="row" style="gap:8px;margin-bottom:18px">${seg(!SS.muted,'Active','var(--green)','ssMute(false)')}${seg(SS.muted,'Muted','var(--text-muted)','ssMute(true)')}</div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Type <span data-tip="What kind of retailer this chain is. Most are 'Other' today — setting it lets us group + score better."></span></div>`
+    +`<select onchange="SS.type=this.value" style="margin-bottom:18px">${SS_TYPES.map(([v,l])=>`<option value="${esch(v)}"${SS.type===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Rating <span data-tip="Consumer reliability tier. 5 Best near you · 4 Mostly reliable · 3 Spotty · 2 Over MSRP (no pill) · 1 Unknown (hidden). Saving stamps the tier onto every store of the chain."></span></div>`
+    +`<div class="row" style="gap:10px;align-items:center;flex-wrap:wrap"><div class="row" style="gap:6px">${rate}</div>${ssPill(SS.ratingPick)}<span class="meta" style="text-transform:none;letter-spacing:0">score ${SS.tier??'—'}${(SS.ratingPick!=null&&SS.ratingPick!==SS.tier)?(' → '+SS.ratingPick):''}</span></div>`
+    +(SS_RATING[SS.ratingPick]?`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5">${esch(SS_RATING[SS.ratingPick][2])}</div>`:'');
+}
+function ssMute(m){ if(!SS) return; SS.muted=m; ssRenderStore(); }
+function ssClearRepack(){ if(!SS) return; SS.repack=false; ssRenderStore(); }
+function ssRate(n){ if(!SS) return; SS.ratingPick=n; ssRenderStore(); }
+function ssRenderCall(){
+  const el=document.getElementById('set_call'); if(!el||!SS) return;
+  el.innerHTML=
+    `<div class="name" style="margin-bottom:12px">Call settings</div>`
+    +`<div class="row" style="gap:11px;align-items:center;margin-bottom:16px"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" oninput="SS.maxTalk=this.value" style="width:74px;padding:10px 12px;font-size:15px;text-align:center"><div style="line-height:1.2"><div style="font-weight:700;font-size:13.5px">Max <span data-tip="Hard cap on how long the agent talks to a person before wrapping up."></span></div><div style="font-weight:700;font-size:13.5px">Talk</div></div></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Default workflow <span data-tip="Voice / persona / script workflow used for every store of this chain (overrides the global default). Build them in Voice → Designer."></span></div>`
+    +(WF.list.length?`<select id="set_wf">${wfOptions(SS.wf, WF.def?('Default · '+WF.def):'Default')}</select>`:`<div class="meta">No workflows yet — build one in Voice → Designer (Step 7).</div>`);
+}
+function ssRenderHangup(){
+  const el=document.getElementById('set_hangup'); if(!el||!SS) return;
+  el.innerHTML=
+    `<div class="name" style="margin-bottom:10px">Hang up</div>`
+    +`<label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:14px;color:var(--text-body)"><input type="checkbox" id="set_vm" ${SS.vm?'checked':''} onchange="SS.vm=this.checked"> Hang up on voicemail / closed <span data-tip="If the call hits voicemail or a closed/recorded line, hang up immediately — no message, no charge."></span></label>`;
+}
+function ssRenderAdvanced(){
+  const el=document.getElementById('set_adv'); if(!el||!SS) return;
+  const fld=(lbl,prop,tip,ph)=>`<div style="margin-bottom:13px"><div style="font-size:12.5px;color:var(--text-muted);margin-bottom:4px">${lbl} <span data-tip="${esch(tip)}"></span></div><input value="${esch(SS[prop])}" oninput="SS.${prop}=this.value" placeholder="${esch(ph||'')}" style="width:100%"></div>`;
+  el.innerHTML=
+    `<label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text-body);margin-bottom:14px"><input type="checkbox" ${SS.isMSRP?'checked':''} onchange="SS.isMSRP=this.checked"> Sold at / around MSRP (first-party) <span data-tip="ON = retailer sells at MSRP. OFF = third-party / marketplace where price may exceed MSRP."></span></label>`
+    +fld('Stock-check confidence','scc','e.g. spotty = inconsistent stock (off-price/thrift), not a reliable MSRP source.','confirmed | probable | spotty')
+    +fld('Sell methods (CSV)','sellMethods','Ways to get it: in_store | pickup | ship (comma-separated).','in_store,pickup,ship')
+    +fld('Keypad shortcut (DTMF)','dtmf','Deterministic key presses to reach a human, e.g. 0@3 or 1@3,0@9 — normally learned by the Trainer.','0@3')
+    +`<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:4px">Phone-tree default <span data-tip="Plain-English fallback for reaching a human. Normally learned by the Trainer; edit only if needed."></span></div><textarea oninput="SS.tree=this.value" rows="3" style="width:100%;font-size:13px">${esch(SS.tree)}</textarea>`;
 }
 function renderChainMapping(ch){
   const el=document.getElementById('set_mapping'); if(!el) return;
@@ -1873,17 +1916,27 @@ function setConfirmChain(){ const id=Number(document.getElementById('set_chain')
 // Per-store voicemail/closed auto-hangup as an ON/OFF toggle button (matches the App-tab switches).
 function setVmBtn(on){ const b=document.getElementById('set_vmbtn'); if(!b) return; b.dataset.on=on?'1':''; b.textContent=on?'ON':'OFF'; b.style.color=on?'var(--green)':'var(--muted)'; b.style.borderColor=on?'rgba(74,222,128,.35)':'var(--border)'; }
 function setVmToggle(){ const b=document.getElementById('set_vmbtn'); setVmBtn(!(b&&b.dataset.on==='1')); }
+// ONE Save commits the whole panel: chain fields (PATCH /api/chains) + the rating (stamped onto every
+// store via /api/stores/patch) + the default workflow — nothing saves out-of-band.
 async function saveChainSettings(){
-  const id=Number(document.getElementById('set_chain').value); if(!id) return;
-  const status=(document.querySelector('input[name="set_status_r"]:checked')||{}).value||'active';
-  const body={ muted:status==='muted', repackOnly:status==='repack',
-    maxTalkSeconds:Number(document.getElementById('set_maxtalk').value)||null,
-    hangupOnVoicemail:document.getElementById('set_vmbtn').dataset.on==='1' };
+  if(!SS) return; const id=SS.id;
   const msg=document.getElementById('set_msg'); msg.textContent='Saving…';
+  const body={ muted:!!SS.muted, repackOnly:!!SS.repack, type:SS.type||null,
+    maxTalkSeconds:Number(SS.maxTalk)||null, hangupOnVoicemail:!!SS.vm,
+    stockCheckConfidence:SS.scc||null, sellMethods:SS.sellMethods||null, isMSRP:!!SS.isMSRP,
+    dtmfShortcut:SS.dtmf||null, phoneTreeDefault:SS.tree||null };
   const r=await api('/api/chains/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  if(r&&r.id){ const i=CHAINS.findIndex(c=>c.id===id); if(i>=0) CHAINS[i]=r; msg.textContent='Saved ✓ — applies to every store of this chain.';
-    const sel=document.getElementById('set_chain'), cur=sel.value; sel.innerHTML='<option value="">— pick a chain —</option>'+chainOpts(); sel.value=cur; }
-  else msg.textContent='Could not save.';
+  if(!r||!r.id){ msg.textContent='Could not save the chain.'; return; }
+  let extra='';
+  if(SS.ratingPick!=null && SS.ratingPick!==SS.tier){
+    const sr=await api('/api/stores/patch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({where:{chain:SS.name},set:{tier:SS.ratingPick}})});
+    extra=(sr&&!sr.error)?(' · rated '+SS.ratingPick+(sr.patched!=null?(' on '+sr.patched+' stores'):'')):' · rating did NOT save';
+  }
+  const wf=document.getElementById('set_wf'); if(wf){ const v=wf.value; if(v) WF.chains[id]=v; else delete WF.chains[id]; await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({chainWorkflows:JSON.stringify(WF.chains)})}); }
+  CHAINS=await api('/api/chains')||CHAINS;
+  const sel=document.getElementById('set_chain'), cur=sel.value, sq=document.getElementById('set_search'); sel.innerHTML='<option value="">— pick a chain —</option>'+chainOpts(sq?sq.value:''); sel.value=cur;
+  const ch=CHAINS.find(c=>c.id===id); if(ch){ SS.tier=ch.tier??SS.ratingPick; SS.ratingPick=SS.tier; ssRenderStore(); }
+  msg.textContent='Saved ✓ — applies to every store of this chain'+extra+'.';
 }
 // Auto-press builder: each step = press a digit (0-9) at N seconds. Syncs to the hidden pt_dtmf as "d@s,d@s".
 function dtmfRowHtml(digit,secs){

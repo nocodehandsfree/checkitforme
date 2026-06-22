@@ -2055,10 +2055,19 @@ app.post("/api/admin/calling/resume", async (c) => { await setCallingPaused(fals
 
 // ---- Reference data ----
 app.get("/api/categories", async (c) => c.json(await db.select().from(categories)));
-app.get("/api/chains", async (c) => c.json((await db.select().from(chains)).map((ch) => {
-  const l = chainLogoInfo(ch.name);
-  return { ...ch, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
-})));
+app.get("/api/chains", async (c) => {
+  const rows = await db.select().from(chains);
+  // Representative tier per chain = the most common retailers.tier among its active, graded stores
+  // (the rating is stored PER STORE; there is no chains.tier column — see docs/specs/scoring.md).
+  const tr = await db.select({ cid: retailers.chainId, tier: retailers.tier, n: sql<number>`count(*)` })
+    .from(retailers).where(and(eq(retailers.active, true), sql`${retailers.tier} is not null`)).groupBy(retailers.chainId, retailers.tier);
+  const tierByChain = new Map<number, number>(), bestN = new Map<number, number>();
+  for (const r of tr) { const n = Number(r.n || 0); if (r.cid != null && r.tier != null && n > (bestN.get(r.cid) || 0)) { bestN.set(r.cid, n); tierByChain.set(r.cid, r.tier); } }
+  return c.json(rows.map((ch) => {
+    const l = chainLogoInfo(ch.name);
+    return { ...ch, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, tier: tierByChain.get(ch.id) ?? null };
+  }));
+});
 // Compact store list for the Voice → Test picker: ONE callable store per supported (app-visible) chain
 // — ~80 rows, not the 105k national import. Mirrors the consumer visibility rule (non-muted chain with
 // an active, real-phone store) so the test calls a store that's actually in the product.
@@ -2096,6 +2105,8 @@ app.patch("/api/chains/:id", async (c) => {
   if (b.maxTalkSeconds !== undefined) patch.maxTalkSeconds = Number.isFinite(Number(b.maxTalkSeconds)) && Number(b.maxTalkSeconds) > 0 ? Number(b.maxTalkSeconds) : null;
   if (typeof b.hangupOnVoicemail === "boolean") patch.hangupOnVoicemail = b.hangupOnVoicemail;
   if (b.stockCheckConfidence !== undefined) patch.stockCheckConfidence = b.stockCheckConfidence || null; // e.g. "spotty" = inconsistent stock (off-price/thrift), not a reliable MSRP source
+  if (b.sellMethods !== undefined) patch.sellMethods = b.sellMethods || null; // CSV: in_store|pickup|ship
+  if (typeof b.isMSRP === "boolean") patch.isMSRP = b.isMSRP;
   const [row] = await db.update(chains).set(patch).where(eq(chains.id, Number(c.req.param("id")))).returning();
   invalidateRefCache();
   return c.json(row);
