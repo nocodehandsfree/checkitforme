@@ -1195,14 +1195,15 @@ async function loadCallTiming(){
 const CALC_STORE={ Direct:{label:'Direct',sub:'human picks up',nav:0,nc:'var(--text-muted)'}, Alpha:{label:'Alpha',sub:'keypad tones',nav:30,nc:'#F4B740'}, Bravo:{label:'Bravo',sub:'voice menu',nav:50,nc:'#38BDF8'} };
 const CALC_TALK=[10,15,20,25,30,60];
 const calcMoney=n=>'$'+(n<0?'-':'')+Math.abs(n).toFixed(3);
-const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.5, rates:{ twilioPerMin:0.014, elevenPerSec:0.0012, claudePerSec:0.0002, bravoNavPerSec:0.001, overhead:0.001 }, ready:false };
+const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.2, rates:{ twilioPerMin:0.014, elevenPerSec:0.0012, claudePerSec:0.0002, bravoNavPerSec:0, overhead:0.001 }, ready:false };
 const calcDot=c=>`<span style="display:inline-block;width:8px;height:8px;border-radius:9px;background:${c};flex-shrink:0"></span>`;
 
-// core cost model — one source of truth (Twilio runs the whole call; Bravo nav = STT+LLM+TTS; Charlie = agent talk)
+// core cost model — one source of truth (Twilio runs the whole call; Bravo nav is now CHEAP voice-injection
+// — Polly speaks the menu words, no STT/agent — so it's ~$0 like Alpha; Charlie = agent talk only)
 function calcCompute(storeType,nav,talk,r){
   const twilioPerSec=r.twilioPerMin/60, dur=nav+talk, items=[];
   items.push({label:'Twilio line',detail:`${dur}s · $${r.twilioPerMin}/min`,accent:'var(--text-muted)',amount:twilioPerSec*dur});
-  if(storeType==='Bravo') items.push({label:'Bravo nav · STT + LLM + TTS',detail:`${nav}s · $${r.bravoNavPerSec}/s`,accent:'#38BDF8',amount:r.bravoNavPerSec*nav});
+  if(storeType==='Bravo') items.push({label:'Bravo nav · voice-injection (cheap TTS)',detail:`${nav}s · ~$0/s`,accent:'#38BDF8',amount:r.bravoNavPerSec*nav});
   else if(storeType==='Alpha') items.push({label:'Alpha nav · keypad tones',detail:`${nav}s · $0/s`,accent:'#F4B740',amount:0});
   else items.push({label:'Navigation',detail:'direct line · none',accent:'var(--text-tertiary)',amount:0});
   items.push({label:'Charlie · ElevenLabs ConvAI',detail:`${talk}s · $${r.elevenPerSec}/s`,accent:'var(--purple)',amount:r.elevenPerSec*talk});
