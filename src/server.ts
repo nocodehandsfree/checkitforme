@@ -2625,7 +2625,7 @@ app.post("/api/bench/call", async (c) => {
 
 // ---- Statuses registry: the single source of truth for customer-facing verdicts ----
 app.get("/pub/statuses", async (c) => c.json(await db.select().from(statuses).orderBy(statuses.sort)));
-app.get("/api/statuses", async (c) => c.json(await db.select().from(statuses).orderBy(statuses.sort)));
+app.get("/api/statuses", async (c) => c.json((await db.select().from(statuses).orderBy(statuses.sort)).map((s) => (s.key === "in_stock" ? { ...s, color: "#4ADE80" } : s)))); // In-stock is locked to the brand green (the logo)
 app.post("/api/statuses", async (c) => {
   const b = await c.req.json();
   if (!b.key || !b.label) return c.json({ error: "key and label required" }, 400);
@@ -2640,6 +2640,9 @@ app.patch("/api/statuses/:id", async (c) => {
   const b = await c.req.json();
   const patch: Record<string, unknown> = {};
   for (const k of ["emoji", "label", "tone", "color", "note", "sort"]) if (b[k] !== undefined) patch[k] = b[k];
+  // "In stock" is locked to the brand green — it must always equal the logo exactly (#4ADE80).
+  const cur = (await db.select({ key: statuses.key }).from(statuses).where(eq(statuses.id, Number(c.req.param("id")))))[0];
+  if (cur?.key === "in_stock") patch.color = "#4ADE80";
   const [row] = await db.update(statuses).set(patch).where(eq(statuses.id, Number(c.req.param("id")))).returning();
   return c.json(row);
 });
