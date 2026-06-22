@@ -3041,7 +3041,7 @@ function navMark(view){
   NAV_VIEW=view;
 }
 // Tint the iOS Safari bars to the verdict tone. CRITICAL: there must be exactly ONE theme-color meta in
-// the document (this id'd one). The server's __BRAND_HEAD__ injection used to add a SECOND, hardcoded-dark
+// the document (this id'd one). The server's brand-head injection used to add a SECOND, hardcoded-dark
 // theme-color — WebKit then honored THAT one and silently ignored every change we made here, which is what
 // kept the status bar black on every result no matter what JS we ran. The duplicate is now gone (server.ts).
 // We mutate this node in place (setAttribute), never replace it. One theme-color tints BOTH the top status
