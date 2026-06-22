@@ -550,7 +550,8 @@
     <div class="card report">
       <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px">
         <div class="name">Emailed-in receipts</div>
-        <button class="ghost" style="font-size:12px;padding:5px 10px" onclick="inspectInbox()" data-tip="Reads the ingest inbox (restocktimer@gmail.com) and shows what the parser does with each email — so we can see whether a receipt arrived and why it did or didn't land.">🔍 Inspect inbox</button>
+        <button class="ghost" style="font-size:12px;padding:5px 10px" onclick="inspectInbox()">🔍 Inspect inbox</button>
+        <span data-tip="Reads the ingest inbox (restocktimer@gmail.com) and shows what the parser does with each email — so we can see whether a receipt arrived and why it did or didn't land." style="margin-left:7px;cursor:help"></span>
       </div>
       <div class="meta" id="rcpt_status" style="margin-bottom:8px">Loading…</div>
       <div id="rcpt_debug" class="meta" style="margin-bottom:8px"></div>
@@ -1180,7 +1181,7 @@ function calcCompute(storeType,nav,talk,r){
 function calcInit(){ const el=document.getElementById('calc_root'); if(!el) return; if(!CALC.ready){ el.innerHTML=calcShell(); CALC.ready=true; } calcSync(); calcUpdate(); }
 function calcShell(){
   const seg=Object.keys(CALC_STORE).map(t=>`<button type="button" id="calc_seg_${t}" onclick="calcPick('${t}')" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(CALC_STORE[t].nc)}${t}</span><span style="font-size:10.5px;color:var(--text-tertiary)">${CALC_STORE[t].sub}</span></button>`).join('');
-  const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11.5px;color:var(--text-muted)">${label}</span><span style="display:flex;align-items:center;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px 4px;width:100%"><span style="color:var(--text-tertiary);font-size:11px">${suf}</span></span></label>`;
+  const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11.5px;color:var(--text-muted)">${label}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px 2px;width:62px"><span style="color:var(--text-tertiary);font-size:11px">${suf}</span></span></label>`;
   return `
   <div class="hero" style="margin-bottom:14px">
     <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
@@ -1218,7 +1219,7 @@ function calcShell(){
   <div class="card report">
     <div class="name" style="margin-bottom:12px">Margin</div>
     <div class="row" style="gap:12px">
-      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Revenue / call</span><span style="display:flex;align-items:center;background:var(--terminal);border:1px solid var(--border-strong);border-radius:10px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:20px;font-weight:700;padding:10px 4px;width:100%"></span></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Revenue / call</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:10px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:20px;font-weight:700;padding:10px 2px;width:84px"></span></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Margin</span><div id="calc_margin" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0%</div></div>
     </div>
     <div id="calc_sentence" style="margin-top:14px;font-size:13.5px;color:var(--text-muted);line-height:1.5"></div>
@@ -1418,7 +1419,7 @@ function dRender(){
   const bk=document.getElementById('d_back'); if(bk) bk.style.visibility=DSTEP>1?'visible':'hidden';
   const fw=document.getElementById('d_fwd'); if(fw){ if(DSTEP>=7){ fw.style.visibility='hidden'; } else { fw.style.visibility='visible'; fw.textContent='Next: '+DLABELS[DSTEP]+' ›'; } }
 }
-function dGo(n){ if(n>DMAX) return; DSTEP=n; dRender(); const e=document.querySelector('#designer'); if(e) e.scrollIntoView({behavior:'smooth',block:'start'}); }
+function dGo(n){ if(n>DMAX) return; if(n<DSTEP) DMAX=n; DSTEP=n; dRender(); const e=document.querySelector('#designer'); if(e) e.scrollIntoView({behavior:'smooth',block:'start'}); }
 function dNext(n){ DMAX=Math.max(DMAX,n); dGo(n); }
 function dBack(){ if(DSTEP>1) dGo(DSTEP-1); }
 function dFwd(){ if(DSTEP<7){ DMAX=Math.max(DMAX,DSTEP+1); dGo(DSTEP+1); } }
@@ -2437,12 +2438,16 @@ async function loadZones(){
   document.getElementById('zoneList').innerHTML = rows.length? rows.map(z=>`<div class="card"><div class="row" style="gap:12px">
     <div class="slogo"><span class="mono">${z.retailerIds.length}</span></div>
     <div class="grow"><div class="sname">${esch(z.name)}</div><div class="smeta">${esch(z.centerZip||'')} · ${z.radiusMiles||'?'} mi radius · ${z.retailerIds.length} stores</div></div>
-    <button class="act" onclick="callZoneNow(${z.id},'${(z.name||'').replace(/'/g,'')}')">${ICO('phone',15)} Call zone</button>
+    <button class="act" onclick="callZoneNow(${z.id},'${(z.name||'').replace(/'/g,'')}',${z.retailerIds.length})">${ICO('phone',15)} Call zone</button>
   </div></div>`).join('') : '<div class="empty">No zones yet — tell Claude an area and it can build one.</div>';
 }
-async function callZoneNow(id,name){
-  if(!confirm('Call every store in '+name+'? This places real calls to real stores.')) return;
-  toast('Placing calls…');
+async function callZoneNow(id,name,count){
+  const stores=await api('/api/zones/'+id+'/stores').catch(()=>[]);
+  const names=Array.isArray(stores)?stores.map(s=>s.name).filter(Boolean):[];
+  const n=names.length||count||0;
+  const list=names.length?('\n\nIt will call:\n'+names.slice(0,25).map(x=>'• '+x).join('\n')+(names.length>25?('\n…and '+(names.length-25)+' more'):'')):'';
+  if(!confirm('⚠️ Call ALL '+n+' stores in "'+name+'" right now?\n\nThis places '+n+' REAL phone calls to real stores at once. There is no bulk hang-up yet — each runs to completion.'+list)) return;
+  toast('Placing '+n+' calls…');
   const r=await api('/api/zones/'+id+'/call-now',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
   toast((r.placed||0)+' calls placed'); setTimeout(loadResults,2000);
 }
@@ -2688,7 +2693,7 @@ async function loadGrowth(){
   }).join('');
   // pricing
   const p=POL.pricing||{}, sub=p.sub||{};
-  const fld=(id,lbl,val)=>`<label class="meta" style="display:block">${lbl}<input id="${id}" value="${esch(val)}" style="width:100%;margin-top:4px;background:#0e0e14;color:#fff;border:1px solid var(--border);border-radius:8px;padding:9px"></label>`;
+  const fld=(id,lbl,val)=>`<label class="meta" style="display:block">${lbl}<input id="${id}" value="${esch(val)}" inputmode="numeric" style="display:block;width:90px;margin-top:4px;background:#0e0e14;color:#fff;border:1px solid var(--border);border-radius:8px;padding:9px 10px"></label>`;
   document.getElementById('gw_pricing').innerHTML=
     fld('gw_percall','Per-check price (¢)',p.perCallCents)+
     fld('gw_minpur','Minimum top-up (¢)',p.minPurchaseCents)+

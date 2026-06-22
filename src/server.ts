@@ -2505,6 +2505,13 @@ app.post("/api/zones/:id/call-now", async (c) => c.json(await callZone(Number(c.
 // Credit feasibility for a zone (one credit/store) — the user-facing zone caller must check this
 // up front so nobody starts a zone they can't finish. (Wired + ready; user firing stays gated off.)
 app.get("/api/zones/:id/quote", async (c) => c.json(await zoneQuote(Number(c.req.param("id")))));
+// The stores a zone will dial — names for the pre-call warning so the operator sees exactly who gets called.
+app.get("/api/zones/:id/stores", async (c) => {
+  const links = await db.select().from(zoneRetailers).where(eq(zoneRetailers.zoneId, Number(c.req.param("id"))));
+  const ids = links.map((l) => l.retailerId);
+  if (!ids.length) return c.json([]);
+  return c.json(await db.select({ id: retailers.id, name: retailers.name }).from(retailers).where(inArray(retailers.id, ids)));
+});
 
 // ---- Schedules ----
 app.get("/api/schedules", async (c) => c.json(await db.select().from(schedules)));
