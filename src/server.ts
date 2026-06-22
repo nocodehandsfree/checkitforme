@@ -26,7 +26,7 @@ import { getPolicy, setPolicy, publicPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
-import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL } from "./calls/navigator";
+import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores } from "./calls/navigator";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, type Recipe } from "./calls/recipe";
 import { llm } from "./llm";
@@ -2384,21 +2384,31 @@ app.get("/api/admin/trainer/list", async (c) => {
   })) });
 });
 app.post("/api/admin/trainer/document", async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string; hint?: string; barge?: { plan: Array<{ action: string; value: string; at: number }> }; reactivePress?: { digit: string; max: number } };
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string; hint?: string; barge?: { plan: Array<{ action: string; value: string; at: number }> }; reactivePress?: { digit: string; max: number }; confirm?: boolean; product?: string };
+  // CONFIRM mode: don't just reach a human — ask "do you have any {product} in stock?" to verify we
+  // hit the RIGHT desk. On a chain-level run we ROTATE to a store we haven't asked yet (no script change,
+  // just a fresh store) so we never re-ask the same store on a callback.
+  const confirm = b.confirm ? { product: (b.product || "Pokémon cards").trim() } : undefined;
   let r: typeof retailers.$inferSelect | undefined;
   if (b.retailerId) r = (await db.select().from(retailers).where(eq(retailers.id, Number(b.retailerId))))[0];
   else if (b.chainId) {
-    r = (await db.select().from(retailers).where(and(
+    const cands = await db.select().from(retailers).where(and(
       eq(retailers.chainId, Number(b.chainId)), eq(retailers.active, true), sql`${retailers.phone} not like 'nophone:%'`,
-    )).limit(1))[0];
+    )).limit(50);
+    if (confirm) {
+      const asked = new Set(await confirmAskedStores(Number(b.chainId)));
+      r = cands.find((x) => x.phone && !asked.has(x.id)) ?? cands[0]; // fresh store first; if all asked, start over
+    } else {
+      r = cands.find((x) => x.phone) ?? cands[0];
+    }
   }
   if (!r || !r.phone) return c.json({ error: "no callable store for that chain" }, 400);
   // Respect the global mute list — never trainer-dial a muted chain (no direct store line, etc.).
   const _ch = r.chainId != null ? (await db.select().from(chains).where(eq(chains.id, r.chainId)))[0] : undefined;
   if (_ch?.muted) return c.json({ error: `${_ch.name} is muted — skipped (no trainer call placed)` }, 400);
   if (b.chainId) await db.update(chains).set({ navStatus: "learning", navUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(chains.id, Number(b.chainId)));
-  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, b.barge, b.reactivePress);
-  return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name });
+  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, b.barge, b.reactivePress, confirm);
+  return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name, confirm: !!confirm });
 });
 app.get("/api/admin/trainer/session/:id", (c) => {
   const s = getNavSession(c.req.param("id"));
@@ -2714,7 +2724,9 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   return placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
     db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false })
       .catch((e) => console.error("bridge call log insert:", e));
-  }, v.dtmf, { from, timeLimitSec: pol.bail.maxCallSeconds, say: v.say });
+    // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
+    // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say });
 }
 app.get("/pub/bridge/:room", (c) => c.json({ conversationId: bridgeConversationId(c.req.param("room")), wsHost: RAILWAY_HOST }));
 app.get("/pub/bridge-debug", (c) => c.json({ log: bridgeDebug() }));

@@ -64,7 +64,7 @@ export async function buildRestockVars(
   specificProduct?: string,
   extraCategoryIds?: number[],
   kioskMode?: boolean,
-): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; dynamicVars: Record<string, string> } | null> {
+): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; maxTalk: number | null; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
   const category = (await db.select().from(categories).where(eq(categories.id, categoryId)))[0];
@@ -80,7 +80,12 @@ export async function buildRestockVars(
 
   // CHAIN → STORE precedence: a store override wins, else the chain default, else nothing.
   const phoneTree = retailer.phoneTree ?? chain?.phoneTreeDefault ?? "";
-  const voicemailPolicy = (await getSetting("voicemail_hangup")) !== "false" ? VOICEMAIL_INSTRUCTION : "";
+  // Voicemail hang-up: per-store flag (chains.hangupOnVoicemail) wins when set; null = fall back to
+  // the GLOBAL voicemail_hangup setting (on unless explicitly "false"). This is what the Settings-page
+  // per-store toggle controls.
+  const globalVoicemailHangup = (await getSetting("voicemail_hangup")) !== "false";
+  const voicemailHangup = chain?.hangupOnVoicemail ?? globalVoicemailHangup;
+  const voicemailPolicy = voicemailHangup ? VOICEMAIL_INSTRUCTION : "";
   // Rotation: round-robin opener variants if set, so calling the SAME store gives the SAME voice but
   // slightly different phrasing each time (matches the EL-dial path in triggerCall). Falls back to the
   // single vt_opening opener. Voice itself is NOT rotated here — same store, same voice, varied script.
@@ -105,6 +110,8 @@ export async function buildRestockVars(
     // Bridge-level keypad shortcut (chain-wide): pressed by OUR code at a fixed time, not the LLM.
     dtmf: chain?.dtmfShortcut ?? null,
     say,
+    // Per-store talk cap (chains.maxTalkSeconds). Null = caller falls back to the global bail cap.
+    maxTalk: chain?.maxTalkSeconds ?? null,
     dynamicVars: {
       internal_call_id: "0",
       category: category.label,

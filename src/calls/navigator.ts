@@ -17,6 +17,10 @@ export const NAV_MODEL = "gemini-2.5-flash-lite";
 const HUMAN_RE = /can i help you|how (can|may) i help|what can i (do|help)|this is \w+|thanks for (holding|waiting)|you'?re (through|connected)|go ahead|^\s*hello[\s.!?]*$/i;
 // The system just routed us to a person (hold/transfer/"find someone") — after this, a greeting = human.
 const ROUTING_RE = /transferr?ing|connect(ing)? you|please hold|hold (on )?(while|and)|find (someone|somebody)|be with you|getting someone|let me get|one moment/i;
+// CONFIRM mode — the human we reached is sending us somewhere ELSE (wrong desk). We capture where and
+// hang up: "that's the electronics department", "let me transfer you", "you'd have to ask the front",
+// "I'll connect you", "that would be guest services". Anything else = they answered us = right place.
+const REDIRECT_RE = /transfer|connect(ing)? you|that('?s| is| would be) the |you('?d| would| will)? ?(have to|need to|want to|gotta)? ?(ask|call|talk to|check with|go to)|over to|let me get you|i'?ll get you|hold on|the .{0,18}(department|desk|counter|section)|guest services|customer service desk|electronics|toy|that'?s (handled|done) by/i;
 
 export type NavAction = "say" | "press" | "wait" | "human" | "fail";
 export interface NavStep { who: "ivr" | "us"; text: string; atSec: number; action?: NavAction; value?: string }
@@ -26,6 +30,12 @@ export interface NavSession {
   startMs: number; steps: NavStep[]; turns: number; model?: string; hint?: string;
   barge?: { plan: Array<{ action: string; value: string; at: number }> };
   reactivePress?: { digit: string; max: number; count: number };
+  // CONFIRM mode: instead of hanging up at the human, ASK "do you have any {product} in stock?" to
+  // verify we reached the RIGHT desk (where the cards live). Their reply classifies the run:
+  //  • answered (yes/no/"we're out") → right place, lock this path.
+  //  • redirect ("that's the X dept, let me transfer you") → wrong desk; capture where + hang up.
+  confirm?: { product: string; asked?: boolean; askedAtSec?: number };
+  confirmResult?: "answered" | "redirect"; redirectTo?: string;
   lastActTurn?: number; escaped?: boolean; routingSeen?: boolean; autoZeros?: number; persisted?: boolean;
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
@@ -111,6 +121,19 @@ export function navInitialTwiml(id: string): string {
   return twiml(`<Pause length="1"/>${gather(id)}`); // let the greeting start, then listen
 }
 
+/** We've reached a live person. Plain training mode → hang up before troubling them. CONFIRM mode →
+ *  ask the one stock question ONCE, then listen for their reply (classified next turn). */
+function reachHuman(s: NavSession, atSec: number, id: string): string {
+  s.humanAtSec = atSec;
+  if (s.confirm && !s.confirm.asked) {
+    s.confirm.asked = true; s.confirm.askedAtSec = atSec;
+    const q = `Hi! Real quick — do you have any ${s.confirm.product} in stock right now?`;
+    s.steps.push({ who: "us", text: `asked: "${q}"`, atSec, action: "say", value: q });
+    return twiml(`<Say voice="Polly.Joanna">${esc(q)}</Say>${gather(id)}`); // wait for their answer
+  }
+  finish(s, "human"); return twiml(`<Hangup/>`);
+}
+
 /** One navigation turn — Twilio posts what the store said; we decide and return the next TwiML. */
 export async function navStep(id: string, speech: string): Promise<string> {
   const s = sessions.get(id);
@@ -120,6 +143,19 @@ export async function navStep(id: string, speech: string): Promise<string> {
   if (s.turns > 22 || atSec > 165) { finish(s, "failed"); return twiml(`<Hangup/>`); } // safety stop (slow IVRs like Walgreens take ~95s to a human)
   if (speech && speech.trim()) s.steps.push({ who: "ivr", text: speech.trim().slice(0, 300), atSec });
   if (speech && ROUTING_RE.test(speech)) s.routingSeen = true; // routed to a person → next greeting is human
+  // CONFIRM mode: we already asked "do you have {product}?" — this turn is their answer. Classify it.
+  // A redirect ("that's the X dept / let me transfer you") = wrong desk → capture where + hang up.
+  // Anything else (a real reply, yes/no/"we're out") = right desk → lock this path. Silence after a
+  // beat = we still reached a human, so count it as a confirmed reach rather than loop forever.
+  if (s.confirm?.asked && !s.confirmResult) {
+    if (speech && speech.trim()) {
+      if (REDIRECT_RE.test(speech)) { s.confirmResult = "redirect"; s.redirectTo = speech.trim().slice(0, 200); }
+      else s.confirmResult = "answered";
+      finish(s, "human"); return twiml(`<Hangup/>`);
+    }
+    if (atSec - (s.confirm.askedAtSec ?? atSec) > 9) { s.confirmResult = "answered"; finish(s, "human"); return twiml(`<Hangup/>`); }
+    return twiml(gather(id)); // brief silence — give them a moment to answer
+  }
   s.status = "navigating";
   // REACTIVE PRESS: the human way — wait until we HEAR a prompt, then press the digit; repeat for the
   // first `max` prompts (e.g. 0 after Spanish, 0 after the next, 0 after the next), then listen for the
@@ -135,7 +171,7 @@ export async function navStep(id: string, speech: string): Promise<string> {
   const d = await decide(s, speech || "");
   if (d.type) s.type = d.type;
   s.confidence = d.confidence;
-  if (d.action === "human") { s.humanAtSec = atSec; finish(s, "human"); return twiml(`<Hangup/>`); } // stop at the transfer/human — hang up WITHOUT engaging a real employee
+  if (d.action === "human") return reachHuman(s, atSec, id); // reached a person → confirm (or hang up)
   if (d.action === "press" && d.value) {
     const digits = d.value.replace(/[^0-9*#]/g, "").slice(0, 6);
     s.steps.push({ who: "us", text: `pressed ${digits}`, atSec, action: "press", value: digits });
@@ -157,7 +193,7 @@ export async function navStep(id: string, speech: string): Promise<string> {
       // STOP the instant a person answers — once we've been routed (hold/transfer) or pressed 0 a
       // couple times, a short greeting/question to us is a human, so hang up instead of beeping at them.
       if ((s.routingSeen || (s.autoZeros ?? 0) >= 2) && HUMAN_RE.test(speech)) {
-        s.humanAtSec = atSec; finish(s, "human"); return twiml(`<Hangup/>`);
+        return reachHuman(s, atSec, id);
       }
       s.autoZeros = (s.autoZeros ?? 0) + 1; s.type = "keypad";
       s.steps.push({ who: "us", text: "pressed 0 (auto-operator)", atSec, action: "press", value: "0" });
@@ -172,12 +208,19 @@ export async function navStep(id: string, speech: string): Promise<string> {
 
 function finish(s: NavSession, status: "human" | "failed") {
   s.status = status;
-  if (status === "human") {
-    const acts = s.steps.filter((st) => st.who === "us").map((st) => ({ action: st.action || "say", value: st.value || "", atSec: st.atSec }));
+  // In confirm mode, only a path that ENDED at the right desk (answered, not redirected) is lockable —
+  // a redirect means we navigated to the wrong human, so we capture it but don't present it as the recipe.
+  const lockable = status === "human" && (!s.confirm || s.confirmResult !== "redirect");
+  if (lockable) {
+    // The confirm question itself is training scaffolding, not part of the navigation recipe — drop it.
+    const acts = s.steps
+      .filter((st) => st.who === "us" && !String(st.text).startsWith("asked:"))
+      .map((st) => ({ action: st.action || "say", value: st.value || "", atSec: st.atSec }));
     const type = acts.length === 0 ? "direct" : (acts.every((a) => a.action === "press") ? "keypad" : "voice");
     s.type = type;
     s.recipe = { type, steps: acts, seconds: s.humanAtSec ?? (s.steps[s.steps.length - 1]?.atSec ?? 0) };
   }
+  if (s.confirm?.asked && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId); // rotate off this store next time
   void persistRun(s); // log this run so the admin can watch the learner's history per chain
   setTimeout(() => sessions.delete(s.id), 5 * 60 * 1000); // let the admin read it, then drop
 }
@@ -201,22 +244,36 @@ async function persistRun(s: NavSession): Promise<void> {
     const arr = JSON.parse((await getSetting(key)) || "[]") as unknown[];
     const { mode, label } = classifyMode(s.steps);
     arr.push({
-      ts: Date.now(), store: s.retailerName, model: s.model || NAV_MODEL, mode, label,
+      ts: Date.now(), store: s.retailerName, retailerId: s.retailerId, model: s.model || NAV_MODEL, mode, label,
       outcome: s.status, seconds: s.humanAtSec ?? (s.steps[s.steps.length - 1]?.atSec ?? null),
+      // Confirm-mode result: did we reach the RIGHT desk (answered) or get sent elsewhere (redirect → where)?
+      confirm: s.confirm ? (s.confirmResult ?? "asked") : null, redirectTo: s.redirectTo ?? null,
       steps: s.steps.map((st) => ({ who: st.who, text: st.text, atSec: st.atSec, action: st.action ?? null, value: st.value ?? null })),
     });
     await setSetting(key, JSON.stringify(arr.slice(-20)));
   } catch (e) { console.error("[navigator] persistRun", e); }
 }
 
+/** Stores we've ALREADY asked the confirm question (settings: nav_confirm_asked:{chainId}). The caller
+ *  uses this to ROTATE to a fresh store on a callback — never ask the same store twice (looks bad). */
+export async function confirmAskedStores(chainId: number): Promise<number[]> {
+  try { return JSON.parse((await getSetting(`nav_confirm_asked:${chainId}`)) || "[]") as number[]; } catch { return []; }
+}
+async function recordConfirmAsked(chainId: number, retailerId: number): Promise<void> {
+  try {
+    const arr = await confirmAskedStores(chainId);
+    if (!arr.includes(retailerId)) await setSetting(`nav_confirm_asked:${chainId}`, JSON.stringify([...arr, retailerId].slice(-200)));
+  } catch (e) { console.error("[navigator] recordConfirmAsked", e); }
+}
+
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }): Promise<{ id?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined };
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined };
   sessions.set(id, session);
   const body = new URLSearchParams({
     To: e164(phone), From: from,

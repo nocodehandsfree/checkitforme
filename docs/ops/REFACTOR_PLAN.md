@@ -6,6 +6,24 @@ Scope: `voice-caller/` only.
 
 ---
 
+## Repo split & branch cleanup (eventual — not now)
+
+The monorepo is the single biggest source of "where does the code live?" confusion. Plan, for when
+we're ready (NOT mid-flight):
+
+- **Split `voice-caller/` into its own repo.** Today it's a folder inside the card-app monorepo;
+  `main` carries a hundreds-of-commits-stale copy that nobody should touch. A dedicated repo kills
+  the stale-`main` trap, lets CI run on every push without the card app, and gives Check its own
+  release cadence. Do a `git subtree split` (or filter-repo) to preserve history.
+- **Collapse the branch sprawl.** ~24 abandoned `claude/*` branches + a 300+commit gap between
+  `main` and the real work (`claude/retail-stock-voice-calls-OcyMS`). After the split: one `main`
+  = prod, one `staging`, delete the dead `claude/*` branches.
+- **Until then:** the branch model lives in `HANDOFF.md` (work/deploy from the `…OcyMS` prod branch
+  or the `…pagiis` staging branch; ignore monorepo `main`). Keep that note current — it's the only
+  thing stopping new agents from editing dead code.
+
+---
+
 ## The seam: how we run two agents in parallel
 
 The frontend talks to the backend **only** over HTTP JSON. That's the clean split:
