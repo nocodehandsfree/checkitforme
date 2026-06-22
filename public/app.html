@@ -107,6 +107,13 @@
   input[type=checkbox]:hover{border-color:rgba(255,255,255,.45)}
   input[type=checkbox]:checked{background:var(--green);border-color:var(--green)}
   input[type=checkbox]:checked::after{content:'';position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #06210f;border-width:0 2.2px 2.2px 0;transform:rotate(45deg)}
+  /* radios match the panel (dark, green dot when picked — not the native white circle) */
+  input[type=radio]{appearance:none;-webkit-appearance:none;width:16px;height:16px;min-width:16px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.26);border-radius:50%;background:var(--terminal);cursor:pointer;flex:0 0 auto;vertical-align:middle;margin:0;transition:border-color .12s}
+  input[type=radio]:hover{border-color:rgba(255,255,255,.45)}
+  input[type=radio]:checked{border-color:var(--green);background:radial-gradient(circle at center,var(--green) 0 40%,var(--terminal) 48%)}
+  /* number inputs: no up/down spinner arrows */
+  input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input[type=number]{-moz-appearance:textfield}
   /* directional copy inside inputs: small, italic, very light — clearly just a hint */
   input::placeholder,textarea::placeholder{color:#56566a;font-style:italic;font-size:13px;font-weight:400}
   /* report group label (Funnel / Activity / …) */
@@ -592,10 +599,6 @@
   <section id="settings">
     <h2 data-tip="App-wide defaults. Per-store settings live under Calls → Settings.">App</h2>
     <div class="card"><div class="row">
-      <div class="grow"><div class="name" data-tip="Master toggle — if a call hits voicemail or an automated system, the agent hangs up without leaving a message.">Never leave voicemails</div></div>
-      <button id="vmToggle" class="ghost" onclick="toggleVoicemail()">…</button>
-    </div></div>
-    <div class="card"><div class="row">
       <div class="grow"><div class="name" data-tip="Streams call audio + a hang-up button to every customer. OFF = testing tool only (comp accounts like yours always have it).">Customers hear calls live</div></div>
       <button id="llToggle" class="ghost" onclick="toggleLiveListen()">…</button>
     </div></div>
@@ -746,8 +749,8 @@
     <section id="trees">
     <h2 data-tip="Per-store call settings + the auto-mapped phone route. Pick a store or chain to begin.">Settings</h2>
     <div class="card">
-      <label>Store / chain</label>
-      <select id="set_chain" onchange="setPickChain()"><option value="">— pick a store / chain —</option></select>
+      <label>Chain</label>
+      <select id="set_chain" onchange="setPickChain()"><option value="">— pick a chain —</option></select>
     </div>
     <div id="set_body" style="display:none">
       <div class="card" style="border-color:rgba(167,139,250,.3)">
@@ -755,7 +758,7 @@
         <label>Status</label>
         <div class="row" style="gap:16px;flex-wrap:wrap;margin:6px 0 16px">
           <label class="day" style="margin:0"><input type="radio" name="set_status_r" value="active"> Active</label>
-          <label class="day" style="margin:0"><input type="radio" name="set_status_r" value="muted"> Muted — hidden from consumers</label>
+          <label class="day" style="margin:0"><input type="radio" name="set_status_r" value="muted"> Muted</label>
           <label class="day" style="margin:0"><input type="radio" name="set_status_r" value="repack"> Repack-only</label>
         </div>
         <div class="grid2">
@@ -768,11 +771,19 @@
         </div>
       </div>
       <div class="card">
-        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div class="name">Mapping</div>
-          <span class="chip-sm" data-tip="Auto-filled by the Trainer from real calls — never hand-edited. Map or re-map a route in Calls → Trainer.">auto · read-only</span>
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap">
+          <div class="name">Mapping <span class="chip-sm" data-tip="Auto-filled by the Trainer from real calls — never hand-edited.">auto · read-only</span></div>
+          <button class="ghost" id="set_mapbtn" onclick="setMapChain()" data-tip="Place one real call: the cheap navigator works the menu to a human and records the recipe + time.">Map</button>
         </div>
         <div id="set_mapping" class="meta">—</div>
+        <div class="card" id="tr_live" style="display:none;border-color:var(--green);margin-top:12px">
+          <div class="row" style="justify-content:space-between;align-items:center">
+            <div class="name" id="tr_live_store">—</div>
+            <div class="meta"><span id="tr_live_status">…</span> · <b id="tr_live_timer">0s</b></div>
+          </div>
+          <div id="tr_live_feed" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto"></div>
+          <div id="tr_live_result" style="margin-top:12px;display:none"></div>
+        </div>
         <div style="margin-top:14px">
           <div class="name" style="font-size:13px;margin-bottom:8px">Call log <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· runs + step matrix</span></div>
           <div id="set_runs"><div class="meta">Loading…</div></div>
@@ -785,36 +796,18 @@
     <h2 data-tip="Our cheap navigator auto-calls a store, works the menu to a real person, and records the fastest recipe + time.">Trainer</h2>
     <div style="margin:-2px 0 16px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--yellow);background:rgba(244,208,61,.1);border:1px solid rgba(244,208,61,.32);padding:5px 11px;border-radius:9px">Mapping a route places a real phone call</span></div>
     <div class="card">
-      <div class="name" style="margin-bottom:10px" data-tip="Tap Map on a chain — our cheap navigator calls a store, works the menu until a person answers, then records the recipe + time. Watch it live, then Lock it.">Auto-learn a route</div>
-      <div class="row" style="gap:8px;margin-top:2px;align-items:center;flex-wrap:wrap">
+      <div class="name" style="margin-bottom:10px" data-tip="How many chains are mapped, by mode. Map a single chain (and watch it live) under Calls → Settings → pick a chain.">Auto-learn routes</div>
+      <div class="stats" id="tr_stats" style="margin-bottom:12px"></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
+        <input id="tl_count" type="number" min="1" max="25" value="5" style="max-width:78px" data-tip="how many unmapped brands to map in this batch">
+        <button class="act" onclick="tlBatch('discover')">Map N unmapped</button>
         <button class="ghost" onclick="loadTrainer()">↻ Refresh</button>
         <button class="ghost" data-tip="One tiny live call through Helicone on the cheap nav model — no phone call placed" onclick="testHelicone()">Test Helicone routing</button>
-        <span class="meta" id="tr_progress"></span>
-      </div>
-      <div class="meta" id="tr_heli" style="margin-top:8px"></div>
-    </div>
-    <div class="card" id="tr_live" style="display:none;border-color:var(--green)">
-      <div class="row" style="justify-content:space-between;align-items:center">
-        <div class="name" id="tr_live_store">—</div>
-        <div class="meta"><span id="tr_live_status">…</span> · <b id="tr_live_timer">0s</b></div>
-      </div>
-      <div id="tr_live_feed" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto"></div>
-      <div id="tr_live_result" style="margin-top:12px;display:none"></div>
-    </div>
-    <div id="tr_list"><div class="empty">Loading…</div></div>
-    <details class="card" style="margin-top:16px">
-      <summary><span class="name">Batch discover / verify</span></summary>
-      <div class="hint" style="margin:10px 0">Discover routes for unmapped brands or re-verify mapped ones from call transcripts (<b id="tl_model" style="font-style:normal">the cheapest model</b>).</div>
-      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
-        <input id="tl_count" type="number" min="1" max="25" value="5" style="max-width:78px" data-tip="how many brands">
-        <button class="act" onclick="tlBatch('discover')">Discover N unmapped</button>
-        <button class="ghost" onclick="tlBatch('verify')">Re-verify N mapped</button>
-        <button class="ghost" onclick="loadTreeLab()">↻ Refresh</button>
       </div>
       <div class="meta" id="tl_msg" style="margin-top:8px;min-height:14px"></div>
-      <div class="stats" id="tl_stats" style="margin-top:12px"></div>
-      <div id="tl_list"><div class="empty">Loading…</div></div>
-    </details>
+      <div class="meta" id="tr_heli" style="margin-top:6px"></div>
+      <div class="meta" style="margin-top:10px;font-size:11.5px">Per-chain mapping, call logs &amp; settings live under <b>Calls → Settings</b> (pick a chain).</div>
+    </div>
     </section>
 
     <section id="statuses">
@@ -952,7 +945,7 @@ const NAV_GROUPS={
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, calc:()=>calcInit(), treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>loadChains(), statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, calc:()=>calcInit(), treelab:()=>loadTrainer(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>loadChains(), statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -1034,34 +1027,17 @@ async function testHelicone(model){
   if(r&&r.ok) el.innerHTML='<span style="color:var(--green)">✓ Helicone OK</span> · model <b>'+escH(r.model)+'</b> · '+r.ms+'ms · sample “'+escH(r.sample||'')+'”'+(r.heliconeConfigured?'':' · <span style="color:#FBBF24">⚠ HELICONE_API_KEY not set</span>');
   else el.innerHTML='<span style="color:#ff6b6b">✗ '+escH((r&&r.error)||'failed')+'</span>'+(r&&r.model?(' · model <b>'+escH(r.model)+'</b>'):'');
 }
+// Trainer = overview only. Per-chain Map/Re-map + call log live under Calls → Settings (a chain).
+// Stats align with Alpha/Bravo/Charlie (locked navType) + mapped/unmapped.
 async function loadTrainer(){
-  const list=document.getElementById('tr_list'); if(!list) return;
+  const ss=document.getElementById('tr_stats'); if(!ss) return;
   const d=await api('/api/admin/trainer/list');
-  if(!d||!Array.isArray(d.chains)){ list.innerHTML='<div class="empty">Could not load.</div>'; return; }
-  const locked=d.chains.filter(c=>c.navStatus==='locked').length;
-  const prog=document.getElementById('tr_progress'); if(prog) prog.innerHTML=`<b style="color:var(--green)">${locked}</b> / ${d.chains.length} locked`;
-  const DOTC={locked:'var(--green)',review:'var(--purple)',learning:'#FBBF24',unmapped:'#7a7a86'};
-  const TYPE={direct:'direct',keypad:'keypad',voice:'voice'};
-  list.innerHTML=d.chains.map(c=>{
-    const col=DOTC[c.navStatus]||DOTC.unmapped;
-    const dot=`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};vertical-align:middle;margin-right:6px"></span>`;
-    const tc=c.navType?` <span class="chip-type">${TYPE[c.navType]||esch(c.navType)}</span>`:'';
-    const time=c.navSeconds!=null?` · <b>${c.navSeconds}s</b> to human`:'';
-    const imp=(c.navLog&&c.navLog.length>1)?` <span class="meta">(${c.navLog[0]}s→${c.navLog[c.navLog.length-1]}s)</span>`:'';
-    const mapped=c.navStatus==='locked';
-    const bstyle=mapped
-      ? 'background:var(--green);color:#06210f;border:none;font-weight:800'
-      : 'background:rgba(239,68,68,.13);color:#fca5a5;border:1px solid rgba(239,68,68,.4);font-weight:700';
-    const btn=c.callable>0?`<button data-doc="${c.id}" data-name="${esch(c.name)}" style="flex:0 0 auto;padding:8px 15px;border-radius:10px;cursor:pointer;font-size:13px;${bstyle}">${mapped?'Re-map':'Map'}</button>`:'<span class="meta" style="flex:0 0 auto">no phone</span>';
-    return `<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:nowrap">
-      <div style="flex:1 1 auto;min-width:0"><div class="name" style="overflow-wrap:anywhere">${esch(c.name)}${tc}</div>
-      <div class="meta" style="margin-top:2px">${dot}<span style="color:${col};font-weight:700">${esch(c.navStatus)}</span>${time}${imp}</div></div>
-      ${btn}</div>
-      <details class="trlog" data-chain="${c.id}" style="margin-top:9px"><summary style="cursor:pointer;list-style:none;font-size:12px;color:var(--muted);user-select:none">▾ Call log</summary><div class="trruns" style="margin-top:8px">Loading…</div></details>
-      </div>`;
-  }).join('')||'<div class="empty">No chains.</div>';
-  list.querySelectorAll('[data-doc]').forEach(b=>b.onclick=()=>trDocument(+b.dataset.doc,b.dataset.name));
-  list.querySelectorAll('.trlog').forEach(d=>d.addEventListener('toggle',()=>{ if(d.open) loadRuns(+d.dataset.chain, d.querySelector('.trruns')); }));
+  if(!d||!Array.isArray(d.chains)){ ss.innerHTML='<div class="meta">Could not load.</div>'; return; }
+  const ch=d.chains, lock=t=>ch.filter(c=>c.navStatus==='locked'&&(t?c.navType===t:true)).length;
+  const unmapped=ch.filter(c=>!c.navStatus||c.navStatus==='unmapped').length;
+  const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  ss.innerHTML=st(ch.length,'chains')+st(lock(),'mapped','green')+st(unmapped,'unmapped')
+    +st(lock('keypad'),'Alpha')+st(lock('voice'),'Bravo')+st(lock('direct'),'Charlie');
 }
 // Expandable per-chain call log: every learner run with its Alpha/Bravo/Charlie path + the step matrix.
 async function loadRuns(chainId, box){
@@ -1146,7 +1122,7 @@ function trRetry(){ if(TR_CHAIN) trDocument(TR_CHAIN,TR_STORE); }
 async function trLock(){
   if(!TR_RESULT) return;
   const r=await api('/api/admin/trainer/lock',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(TR_RESULT)});
-  if(r&&r.ok){ toast('🔒 Locked'); document.getElementById('tr_live').style.display='none'; loadTrainer(); }
+  if(r&&r.ok){ toast('🔒 Locked'); document.getElementById('tr_live').style.display='none'; loadTrainer(); loadChains(); }
   else toast('Could not lock');
 }
 // ---- Phone Tree Lab ----
@@ -1839,12 +1815,15 @@ const CVS_TEMPLATE="This is a CVS. The phone system is VOICE-driven — navigate
 // ---- Settings page: pick a store/chain → editable Settings (writes the chain record) + read-only
 //      Mapping (auto-filled by the Trainer/learner). navType keypad→Alpha, voice→Bravo, direct→Charlie. ----
 const NAV_MODE={ keypad:{m:'Alpha',sub:'keypad tones',c:'#60a5fa'}, voice:{m:'Bravo',sub:'spoke menu',c:'var(--yellow)'}, direct:{m:'Charlie',sub:'direct human',c:'var(--green)'} };
-function chainOpts(){ return CHAINS.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(ch=>`<option value="${ch.id}">${esch(ch.name)}${ch.muted?' · muted':(ch.repackOnly?' · repack':'')}</option>`).join(''); }
+// Distinct CHAINS only (one row per chain), from /api/chains — NOT the store list. Drop "_"-prefixed
+// deprecated/merged placeholders (e.g. the old per-city "_H Mart …" rows). Muted chains stay (flagged)
+// so they remain unmute-able from Settings.
+function chainOpts(){ return CHAINS.filter(ch=>!(ch.name||'').startsWith('_')).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(ch=>`<option value="${ch.id}">${esch(ch.name)}${ch.muted?' · muted':(ch.repackOnly?' · repack':'')}</option>`).join(''); }
 async function loadChains(){
   CHAINS = await api('/api/chains') || [];
   const sel=document.getElementById('set_chain'); if(!sel) return;
   const cur=sel.value;
-  sel.innerHTML='<option value="">— pick a store / chain —</option>'+chainOpts();
+  sel.innerHTML='<option value="">— pick a chain —</option>'+chainOpts();
   if(cur){ sel.value=cur; setPickChain(); }
 }
 function setPickChain(){
@@ -1869,15 +1848,19 @@ function renderChainMapping(ch){
     if(steps.length) recipe=steps.map(s=>s.action==='press'?('press '+s.value+'@'+s.atSec+'s'):(s.action==='wait'?('wait@'+s.atSec+'s'):('say "'+esch(s.value)+'"@'+s.atSec+'s'))).join('  →  ');
   }catch(e){}
   const t2h=ch.navSeconds!=null?ch.navSeconds+'s':(ch.avgTreeSeconds!=null?ch.avgTreeSeconds+'s':'—');
+  const statusWord=ch.navStatus==='locked'?'mapped':(ch.navStatus||'unmapped'); // align with mapped/unmapped
   const mapped=ch.navUpdatedAt?new Date(ch.navUpdatedAt).toLocaleDateString([],{month:'short',day:'numeric'}):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'never');
   el.innerHTML=
     `<div class="stats" style="margin-bottom:12px">`
     +`<div class="stat"><div class="n" style="font-size:18px;color:${nm?nm.c:'var(--muted)'}">${nm?nm.m:'—'}</div><div class="l">mode${nm?' · '+nm.sub:''}</div></div>`
     +`<div class="stat"><div class="n" style="font-size:18px">${t2h}</div><div class="l">time-to-human</div></div>`
-    +`<div class="stat"><div class="n" style="font-size:15px">${mapped}</div><div class="l">last mapped${ch.navStatus?' · '+esch(ch.navStatus):''}</div></div>`
+    +`<div class="stat"><div class="n" style="font-size:15px">${mapped}</div><div class="l">last mapped · ${esch(statusWord)}</div></div>`
     +`</div>`
     +`<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5"><b style="color:#fff">Recipe:</b> ${recipe}${ch.navConfidence!=null?` <span style="color:var(--muted)">· ${ch.navConfidence}% confidence</span>`:''}</div>`;
+  const mb=document.getElementById('set_mapbtn'); if(mb) mb.textContent = ch.navStatus==='locked'?'Re-map':'Map';
 }
+// Map / Re-map the selected chain: places one real navigator call, shown live in the Mapping card.
+function setMapChain(){ const id=Number(document.getElementById('set_chain').value); const ch=CHAINS.find(c=>c.id===id); if(!ch){ toast('Pick a chain first'); return; } trDocument(id, ch.name); }
 async function saveChainSettings(){
   const id=Number(document.getElementById('set_chain').value); if(!id) return;
   const status=(document.querySelector('input[name="set_status_r"]:checked')||{}).value||'active';
@@ -1887,7 +1870,7 @@ async function saveChainSettings(){
   const msg=document.getElementById('set_msg'); msg.textContent='Saving…';
   const r=await api('/api/chains/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   if(r&&r.id){ const i=CHAINS.findIndex(c=>c.id===id); if(i>=0) CHAINS[i]=r; msg.textContent='Saved ✓ — applies to every store of this chain.';
-    const sel=document.getElementById('set_chain'), cur=sel.value; sel.innerHTML='<option value="">— pick a store / chain —</option>'+chainOpts(); sel.value=cur; }
+    const sel=document.getElementById('set_chain'), cur=sel.value; sel.innerHTML='<option value="">— pick a chain —</option>'+chainOpts(); sel.value=cur; }
   else msg.textContent='Could not save.';
 }
 // Auto-press builder: each step = press a digit (0-9) at N seconds. Syncs to the hidden pt_dtmf as "d@s,d@s".
