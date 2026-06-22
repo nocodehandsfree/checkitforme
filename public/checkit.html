@@ -4,6 +4,15 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#0C0C12" id="themeColor" />
+<!-- Hard-refresh top-color: if this load is a result deep-link (?call=… or ?v=history), paint the root
+     + status bar with the last verdict tone IMMEDIATELY (before the async result fetch / any paint), so
+     pull-to-refresh never reveals the dark default at the top. setThemeTone() corrects it post-fetch. -->
+<script>(function(){try{
+  var sp=new URLSearchParams(location.search);
+  if(!(sp.has('call')||sp.get('v')==='history')) return;
+  var hex=(sp.get('call')&&localStorage.getItem('cifm_tone:'+sp.get('call')))||localStorage.getItem('cifm_tone_last');
+  if(hex){ document.documentElement.style.backgroundColor=hex; var m=document.getElementById('themeColor'); if(m) m.setAttribute('content',hex); }
+}catch(e){}})();</script>
 <meta name="x-rev" content="names-r39" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
@@ -3298,6 +3307,9 @@ function showResult(o, cid){
   // Tone the body-level top wash for this verdict (the wash itself is CSS on body.rview::before).
   ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c));
   document.body.classList.add('rv-'+cls);
+  // Persist the tone so a HARD refresh (URL ?call=…) can paint the top synchronously at load — before
+  // restoreCall's async fetch runs — so pull-to-refresh never flashes the dark default at the top.
+  try{ const _tmap={in:'#266440',out:'#6b2427',unk:'#6c5419',soon:'#6e490f'}; const _hex=_tmap[cls]||'#0C0C12'; localStorage.setItem('cifm_tone_last',_hex); if(cid) localStorage.setItem('cifm_tone:'+cid,_hex); }catch(e){}
   $('result').innerHTML = `
     <div class="rverdict ${cls}">
       <div class="rnav" id="rnav"></div>
