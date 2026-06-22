@@ -759,27 +759,30 @@
     </div>
     <div class="card">
       <label>Chain</label>
-      <input id="set_search" oninput="setFilterChains(this.value)" placeholder="Search chains…" style="margin-bottom:8px">
+      <div class="row" style="gap:8px;align-items:center">
+        <input id="set_search" placeholder="Search a chain…" onkeydown="if(event.key==='Enter')ssSearch()" style="flex:1;min-width:0">
+        <button class="ghost" onclick="ssSearch()" style="flex:0 0 auto">Search</button>
+      </div>
+      <div class="meta" style="text-align:center;margin:7px 0">or</div>
       <select id="set_chain" onchange="setPickChain()"><option value="">— pick a chain —</option></select>
     </div>
     <div id="set_body" style="display:none">
       <div class="card" id="set_store"></div>
       <div class="card" id="set_call"></div>
       <div class="card" id="set_hangup"></div>
-      <details class="card report" id="set_advwrap"><summary style="cursor:pointer"><span class="name">Advanced</span><span class="meta" style="margin-left:8px">every other field</span></summary><div id="set_adv" style="margin-top:14px"></div></details>
+      <details class="card" id="set_advwrap"><summary style="cursor:pointer"><span class="name">Advanced</span></summary><div id="set_adv" style="margin-top:14px"></div></details>
       <div class="row" style="gap:12px;align-items:center;margin:2px 0 14px">
         <button class="act" onclick="saveChainSettings()">Save</button>
         <span class="meta" id="set_msg"></span>
       </div>
       <div class="card">
-        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap">
-          <div class="name" data-tip="Auto-filled by the navigator from real calls — read-only, never hand-edited.">Mapping</div>
-          <div class="row" style="gap:8px">
-          <button class="ghost" id="set_confirmbtn" onclick="setConfirmChain()" data-tip="Place one real call, reach a human, then ASK 'do you have any Pokémon cards in stock?' — confirms we hit the right desk. Rotates to a fresh store each callback.">🎯 Confirm stock</button>
-          <button class="ghost" id="set_mapbtn" onclick="setMapChain()" data-tip="Place one real call: the cheap navigator works the menu to a human and records the recipe + time.">Map</button>
-          </div>
+        <div class="name" data-tip="Auto-filled by the navigator from real calls — read-only, never hand-edited.">Mapping</div>
+        <div id="set_mapping" class="meta" style="margin-top:10px">—</div>
+        <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
+          <button class="act" id="set_mapbtn" onclick="setMapChain()">Map</button>
+          <button class="ghost" id="set_confirmbtn" onclick="setConfirmChain()">🎯 Confirm stock</button>
+          <span class="meta" data-tip="Map = place one real call; the navigator works the phone menu to a human and records the recipe + time. Confirm stock = reach a human and ASK if they have the product, to confirm we hit the right desk." style="align-self:center"></span>
         </div>
-        <div id="set_mapping" class="meta">—</div>
         <div class="card" id="tr_live" style="display:none;border-color:var(--green);margin-top:12px">
           <div class="row" style="justify-content:space-between;align-items:center">
             <div class="name" id="tr_live_store">—</div>
@@ -1839,10 +1842,16 @@ function setPickChain(){
   const body=document.getElementById('set_body'); const ch=CHAINS.find(c=>c.id===id);
   if(!ch){ if(body) body.style.display='none'; SS=null; return; }
   body.style.display='';
-  SS={ id:ch.id, name:ch.name, logoUrl:ch.logoUrl||'', muted:!!ch.muted, repack:!!ch.repackOnly, type:ch.type||'Other',
-    tier:ch.tier??null, ratingPick:ch.tier??null, maxTalk:ch.maxTalkSeconds!=null?ch.maxTalkSeconds:'', vm:ch.hangupOnVoicemail!==false,
+  const st=ch.stores||{n:0,callable:0,kiosk:0,online:0,verified:0}, maj=(k)=>st.n?st[k]>st.n/2:(k==='callable');
+  SS={ id:ch.id, name:ch.name, logoUrl:ch.logoUrl||'', logoDark:!!ch.logoDark, logoWide:!!ch.logoWide, type:ch.type||'Other',
+    muted:!!ch.muted, repack:!!ch.repackOnly, tier:ch.tier??null, ratingPick:ch.tier??null,
+    maxTalk:ch.maxTalkSeconds!=null?ch.maxTalkSeconds:'', vm:ch.hangupOnVoicemail!==false,
     scc:ch.stockCheckConfidence||'', sellMethods:ch.sellMethods||'', isMSRP:ch.isMSRP!==false, dtmf:ch.dtmfShortcut||'', tree:ch.phoneTreeDefault||'',
-    wf:(WF.chains&&WF.chains[ch.id])||'' };
+    callTarget:ch.callTarget!==false, ringsDirect:!!ch.ringsDirect, stockCheckMethod:ch.stockCheckMethod||'', answerPath:ch.answerPath||'',
+    wf:(WF.chains&&WF.chains[ch.id])||'',
+    storesN:st.n, callable:maj('callable'), kiosk:maj('kiosk'), online:maj('online'), verified:maj('verified'),
+    cCallable:st.callable, cKiosk:st.kiosk, cOnline:st.online, cVerified:st.verified,
+    callableDirty:false, kioskDirty:false, onlineDirty:false, verifiedDirty:false };
   ssRenderStore(); ssRenderCall(); ssRenderHangup(); ssRenderAdvanced();
   document.getElementById('set_msg').textContent='';
   renderChainMapping(ch); loadRuns(id, document.getElementById('set_runs'));
@@ -1851,28 +1860,42 @@ function ssRenderStore(){
   const el=document.getElementById('set_store'); if(!el||!SS) return;
   const seg=(on,lbl,c,fn)=>`<button type="button" onclick="${fn}" style="flex:1;padding:9px;border-radius:9px;border:1px solid ${on?c:'var(--border)'};background:${on?c+'1f':'var(--surface-1)'};color:${on?c:'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:13px">${lbl}</button>`;
   const rate=[5,4,3,2,1].map(n=>`<button type="button" onclick="ssRate(${n})" title="${esch(SS_RATING[n][0])}" style="width:34px;height:34px;border-radius:9px;border:1px solid ${SS.ratingPick===n?'var(--green)':'var(--border)'};background:${SS.ratingPick===n?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${SS.ratingPick===n?'var(--green)':'var(--text-body)'};font-weight:800;cursor:pointer">${n}</button>`).join('');
+  const stog=(f,cf,lbl,tip)=>{ const on=SS[f]; return `<div class="row" style="justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border)"><div style="font-size:13px">${lbl} <span data-tip="${esch(tip)}"></span></div><div class="row" style="gap:9px;align-items:center"><span class="meta" style="font-size:11px">${SS[cf]}/${SS.storesN}</span><button type="button" onclick="ssToggleStore('${f}')" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12px">${on?'ON':'OFF'}</button></div></div>`; };
   el.innerHTML=
-    `<div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px"><div class="name">Store settings <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· ${esch(SS.name)}</span></div>`
-    +(SS.logoUrl?`<img src="${esch(SS.logoUrl)}" alt="" style="height:30px;max-width:120px;object-fit:contain;flex:0 0 auto">`:'')+`</div>`
+    `<div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px"><div class="name">Store settings <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· ${esch(SS.name)}</span></div><div style="flex:0 0 auto">${logoTile({logoUrl:SS.logoUrl,logoDark:SS.logoDark,logoWide:SS.logoWide,name:SS.name,type:SS.type})}</div></div>`
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Status</div>`
     +(SS.repack?`<div class="row" style="gap:8px;align-items:center;margin-bottom:8px"><span data-tip="Only sells repackaged product; checks waste money. Remove only." style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);border-radius:20px;padding:3px 11px">${ssDot('#FBBF24')}Repack-only</span><button class="ghost" onclick="ssClearRepack()" style="font-size:12px;padding:5px 10px">Clear</button></div>`:'')
     +`<div class="row" style="gap:8px;margin-bottom:18px">${seg(!SS.muted,'Active','var(--green)','ssMute(false)')}${seg(SS.muted,'Muted','var(--text-muted)','ssMute(true)')}</div>`
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Type <span data-tip="What kind of retailer this chain is. Most are 'Other' today — setting it lets us group + score better."></span></div>`
     +`<select onchange="SS.type=this.value" style="margin-bottom:18px">${SS_TYPES.map(([v,l])=>`<option value="${esch(v)}"${SS.type===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Rating <span data-tip="Consumer reliability tier. 5 Best near you · 4 Mostly reliable · 3 Spotty · 2 Over MSRP (no pill) · 1 Unknown (hidden). Saving stamps the tier onto every store of the chain."></span></div>`
-    +`<div class="row" style="gap:10px;align-items:center;flex-wrap:wrap"><div class="row" style="gap:6px">${rate}</div>${ssPill(SS.ratingPick)}<span class="meta" style="text-transform:none;letter-spacing:0">score ${SS.tier??'—'}${(SS.ratingPick!=null&&SS.ratingPick!==SS.tier)?(' → '+SS.ratingPick):''}</span></div>`
-    +(SS_RATING[SS.ratingPick]?`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5">${esch(SS_RATING[SS.ratingPick][2])}</div>`:'');
+    +`<div class="row" style="gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><div class="row" style="gap:6px">${rate}</div>${ssPill(SS.ratingPick)}</div>`
+    +(SS_RATING[SS.ratingPick]?`<div class="meta" style="margin-bottom:6px;text-transform:none;letter-spacing:0;line-height:1.5">${esch(SS_RATING[SS.ratingPick][2])}</div>`:'')
+    +`<div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin:12px 0 2px">Per-store · Save applies to all ${SS.storesN} stores</div>`
+    +stog('callable','cCallable','Callable','Staffed counter we phone; off = kiosk-only / not called.')
+    +stog('kiosk','cKiosk','Kiosk','Vending machine on site (kiosk store → tier 5).')
+    +stog('online','cOnline','Online','Sells online (pickup / ship).')
+    +stog('verified','cVerified','Stock verified','Confirmed carrier vs suspected.');
 }
 function ssMute(m){ if(!SS) return; SS.muted=m; ssRenderStore(); }
 function ssClearRepack(){ if(!SS) return; SS.repack=false; ssRenderStore(); }
 function ssRate(n){ if(!SS) return; SS.ratingPick=n; ssRenderStore(); }
+function ssToggleStore(f){ if(!SS) return; SS[f]=!SS[f]; SS[f+'Dirty']=true; ssRenderStore(); }
+function ssChainBool(f){ if(!SS) return; SS[f]=!SS[f]; ssRenderCall(); }
+function ssSearch(){ const q=((document.getElementById('set_search')||{}).value||'').trim().toLowerCase(); if(!q) return; const live=CHAINS.filter(c=>!(c.name||'').startsWith('_')); const m=live.find(c=>(c.name||'').toLowerCase()===q)||live.find(c=>(c.name||'').toLowerCase().includes(q)); if(!m){ toast('No chain matches “'+q+'”'); return; } const sel=document.getElementById('set_chain'); if(![...sel.options].some(o=>o.value===String(m.id))) sel.innerHTML='<option value="">— pick a chain —</option>'+chainOpts(''); sel.value=String(m.id); setPickChain(); }
 function ssRenderCall(){
   const el=document.getElementById('set_call'); if(!el||!SS) return;
+  const ctog=(f,lbl,tip)=>`<div class="row" style="justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border)"><div style="font-size:13px">${lbl} <span data-tip="${esch(tip)}"></span></div><button type="button" onclick="ssChainBool('${f}')" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${SS[f]?'var(--green)':'var(--border)'};background:${SS[f]?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${SS[f]?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12px">${SS[f]?'ON':'OFF'}</button></div>`;
+  const sel=(prop,lbl,tip,opts)=>`<div style="padding:10px 0 4px"><div style="font-size:13px;color:var(--text-muted);margin-bottom:5px">${lbl} <span data-tip="${esch(tip)}"></span></div><select onchange="SS.${prop}=this.value">${opts.map(([v,l])=>`<option value="${esch(v)}"${(SS[prop]||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select></div>`;
   el.innerHTML=
     `<div class="name" style="margin-bottom:12px">Call settings</div>`
-    +`<div class="row" style="gap:11px;align-items:center;margin-bottom:16px"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" oninput="SS.maxTalk=this.value" style="width:74px;padding:10px 12px;font-size:15px;text-align:center"><div style="line-height:1.2"><div style="font-weight:700;font-size:13.5px">Max <span data-tip="Hard cap on how long the agent talks to a person before wrapping up."></span></div><div style="font-weight:700;font-size:13.5px">Talk</div></div></div>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Default workflow <span data-tip="Voice / persona / script workflow used for every store of this chain (overrides the global default). Build them in Voice → Designer."></span></div>`
-    +(WF.list.length?`<select id="set_wf">${wfOptions(SS.wf, WF.def?('Default · '+WF.def):'Default')}</select>`:`<div class="meta">No workflows yet — build one in Voice → Designer (Step 7).</div>`);
+    +`<div class="row" style="gap:11px;align-items:center;margin-bottom:14px"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" oninput="SS.maxTalk=this.value" style="width:74px;padding:10px 12px;font-size:15px;text-align:center"><div style="line-height:1.2"><div style="font-weight:700;font-size:13.5px">Max <span data-tip="Hard cap on how long the agent talks to a person before wrapping up."></span></div><div style="font-weight:700;font-size:13.5px">Talk</div></div></div>`
+    +ctog('callTarget','Call this chain','Off = never dialed.')
+    +ctog('ringsDirect','Rings direct','A human answers directly, no phone menu.')
+    +sel('stockCheckMethod','Stock-check method','Read the website for stock, or phone it.',[['','—'],['site','Site · read the website'],['call','Call · phone it']])
+    +sel('answerPath','Answer path','How the phone is answered when we dial.',[['','— unclassified'],['direct_human','Direct human · picks up'],['simple_ivr','Simple IVR · 1–2 steps'],['deep_ivr','Deep IVR · long tree']])
+    +`<div style="font-size:13px;color:var(--text-muted);margin:14px 0 6px">Default workflow <span data-tip="Voice / persona / script workflow used for every store of this chain (overrides the global default). Build them in Voice → Designer."></span></div>`
+    +`<select id="set_wf">${wfOptions(SS.wf, WF.def?('Default · '+WF.def):'Default')}</select>`;
 }
 function ssRenderHangup(){
   const el=document.getElementById('set_hangup'); if(!el||!SS) return;
@@ -1884,7 +1907,7 @@ function ssRenderAdvanced(){
   const el=document.getElementById('set_adv'); if(!el||!SS) return;
   const fld=(lbl,prop,tip,ph)=>`<div style="margin-bottom:13px"><div style="font-size:12.5px;color:var(--text-muted);margin-bottom:4px">${lbl} <span data-tip="${esch(tip)}"></span></div><input value="${esch(SS[prop])}" oninput="SS.${prop}=this.value" placeholder="${esch(ph||'')}" style="width:100%"></div>`;
   el.innerHTML=
-    `<label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text-body);margin-bottom:14px"><input type="checkbox" ${SS.isMSRP?'checked':''} onchange="SS.isMSRP=this.checked"> Sold at / around MSRP (first-party) <span data-tip="ON = retailer sells at MSRP. OFF = third-party / marketplace where price may exceed MSRP."></span></label>`
+    `<label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text-body);margin-bottom:14px"><input type="checkbox" ${SS.isMSRP?'checked':''} onchange="SS.isMSRP=this.checked"> First-party — sells at MSRP <span data-tip="We check the store's own shelf at normal retail price, not a third-party reseller that may mark it up."></span></label>`
     +fld('Stock-check confidence','scc','e.g. spotty = inconsistent stock (off-price/thrift), not a reliable MSRP source.','confirmed | probable | spotty')
     +fld('Sell methods (CSV)','sellMethods','Ways to get it: in_store | pickup | ship (comma-separated).','in_store,pickup,ship')
     +fld('Keypad shortcut (DTMF)','dtmf','Deterministic key presses to reach a human, e.g. 0@3 or 1@3,0@9 — normally learned by the Trainer.','0@3')
@@ -1924,18 +1947,26 @@ async function saveChainSettings(){
   const body={ muted:!!SS.muted, repackOnly:!!SS.repack, type:SS.type||null,
     maxTalkSeconds:Number(SS.maxTalk)||null, hangupOnVoicemail:!!SS.vm,
     stockCheckConfidence:SS.scc||null, sellMethods:SS.sellMethods||null, isMSRP:!!SS.isMSRP,
-    dtmfShortcut:SS.dtmf||null, phoneTreeDefault:SS.tree||null };
+    dtmfShortcut:SS.dtmf||null, phoneTreeDefault:SS.tree||null,
+    callTarget:!!SS.callTarget, ringsDirect:!!SS.ringsDirect, stockCheckMethod:SS.stockCheckMethod||null, answerPath:SS.answerPath||null };
   const r=await api('/api/chains/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   if(!r||!r.id){ msg.textContent='Could not save the chain.'; return; }
+  // Per-store fields (retailers): rating + any toggled store states → ONE bulk stamp across the chain.
+  const sset={};
+  if(SS.ratingPick!=null && SS.ratingPick!==SS.tier) sset.tier=SS.ratingPick;
+  if(SS.callableDirty) sset.sellsPacks=!!SS.callable;
+  if(SS.kioskDirty) sset.hasKiosk=!!SS.kiosk;
+  if(SS.onlineDirty) sset.online=!!SS.online;
+  if(SS.verifiedDirty) sset.stockStatus=SS.verified?'verified':'unverified';
   let extra='';
-  if(SS.ratingPick!=null && SS.ratingPick!==SS.tier){
-    const sr=await api('/api/stores/patch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({where:{chain:SS.name},set:{tier:SS.ratingPick}})});
-    extra=(sr&&!sr.error)?(' · rated '+SS.ratingPick+(sr.patched!=null?(' on '+sr.patched+' stores'):'')):' · rating did NOT save';
+  if(Object.keys(sset).length){
+    const sr=await api('/api/stores/patch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({where:{chain:SS.name},set:sset})});
+    extra=(sr&&!sr.error)?(' · '+(sr.patched!=null?sr.patched:'')+' stores updated ('+Object.keys(sset).join(', ')+')'):' · store fields did NOT save';
   }
   const wf=document.getElementById('set_wf'); if(wf){ const v=wf.value; if(v) WF.chains[id]=v; else delete WF.chains[id]; await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({chainWorkflows:JSON.stringify(WF.chains)})}); }
   CHAINS=await api('/api/chains')||CHAINS;
-  const sel=document.getElementById('set_chain'), cur=sel.value, sq=document.getElementById('set_search'); sel.innerHTML='<option value="">— pick a chain —</option>'+chainOpts(sq?sq.value:''); sel.value=cur;
-  const ch=CHAINS.find(c=>c.id===id); if(ch){ SS.tier=ch.tier??SS.ratingPick; SS.ratingPick=SS.tier; ssRenderStore(); }
+  const sel=document.getElementById('set_chain'), cur=sel.value; sel.innerHTML='<option value="">— pick a chain —</option>'+chainOpts(''); sel.value=cur;
+  if(CHAINS.find(c=>c.id===id)) setPickChain(); // reload fresh state (tier, store counts, dirty reset)
   msg.textContent='Saved ✓ — applies to every store of this chain'+extra+'.';
 }
 // Auto-press builder: each step = press a digit (0-9) at N seconds. Syncs to the hidden pt_dtmf as "d@s,d@s".

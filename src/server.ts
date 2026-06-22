@@ -2063,9 +2063,18 @@ app.get("/api/chains", async (c) => {
     .from(retailers).where(and(eq(retailers.active, true), sql`${retailers.tier} is not null`)).groupBy(retailers.chainId, retailers.tier);
   const tierByChain = new Map<number, number>(), bestN = new Map<number, number>();
   for (const r of tr) { const n = Number(r.n || 0); if (r.cid != null && r.tier != null && n > (bestN.get(r.cid) || 0)) { bestN.set(r.cid, n); tierByChain.set(r.cid, r.tier); } }
+  // Per-store fields (callable/kiosk/online/stock) vary by location — surface counts so the panel can
+  // show the majority state + bulk-set them across the chain.
+  const ag = await db.select({ cid: retailers.chainId, n: sql<number>`count(*)`,
+    callable: sql<number>`sum(case when ${retailers.sellsPacks} then 1 else 0 end)`,
+    kiosk: sql<number>`sum(case when ${retailers.hasKiosk} then 1 else 0 end)`,
+    onl: sql<number>`sum(case when ${retailers.online} then 1 else 0 end)`,
+    verified: sql<number>`sum(case when ${retailers.stockStatus}='verified' then 1 else 0 end)` })
+    .from(retailers).where(eq(retailers.active, true)).groupBy(retailers.chainId);
+  const aggByChain = new Map(ag.map((r) => [r.cid, { n: Number(r.n || 0), callable: Number(r.callable || 0), kiosk: Number(r.kiosk || 0), online: Number(r.onl || 0), verified: Number(r.verified || 0) }]));
   return c.json(rows.map((ch) => {
     const l = chainLogoInfo(ch.name);
-    return { ...ch, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, tier: tierByChain.get(ch.id) ?? null };
+    return { ...ch, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, tier: tierByChain.get(ch.id) ?? null, stores: aggByChain.get(ch.id) ?? { n: 0, callable: 0, kiosk: 0, online: 0, verified: 0 } };
   }));
 });
 // Compact store list for the Voice → Test picker: ONE callable store per supported (app-visible) chain
@@ -2098,6 +2107,9 @@ app.patch("/api/chains/:id", async (c) => {
   if (b.type !== undefined) patch.type = b.type;
   // Answer-path classification + consumer mute (god-view + per-chain cost control).
   if (b.answerPath !== undefined) patch.answerPath = b.answerPath || null;
+  if (typeof b.callTarget === "boolean") patch.callTarget = b.callTarget;
+  if (typeof b.ringsDirect === "boolean") patch.ringsDirect = b.ringsDirect;
+  if (b.stockCheckMethod !== undefined) patch.stockCheckMethod = b.stockCheckMethod || null;
   if (b.avgTreeSeconds !== undefined) patch.avgTreeSeconds = Number.isFinite(Number(b.avgTreeSeconds)) && Number(b.avgTreeSeconds) > 0 ? Number(b.avgTreeSeconds) : null;
   if (typeof b.repackOnly === "boolean") patch.repackOnly = b.repackOnly;
   if (typeof b.muted === "boolean") patch.muted = b.muted;
