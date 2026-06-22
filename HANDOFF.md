@@ -2,6 +2,13 @@
 
 The entry doc for any new chat. **Open only the docs your role needs** (map below) — saves context.
 
+## 🌳 Branch model — READ THIS so you don't get lost
+This is a **monorepo with two products.** **voice-caller** = the `voice-caller/` folder *only*.
+- **Work on + deploy voice-caller from `claude/retail-stock-voice-calls-OcyMS` (prod)** — or `claude/checkitforme-website-takeover-pagiis` (staging). That's where ALL current voice-caller code lives.
+- **`main` is the OTHER product (the card app), used by other projects.** Its `voice-caller/` copy is **hundreds of commits stale — ignore it.**
+- GitHub **defaults to `main`** — switch the branch dropdown to the **prod branch** to see real voice-caller code/docs/assets.
+- A full split of `voice-caller/` into its own repo is the eventual fix (not now).
+
 ## ⚡ Current truth (overrides anything stale below)
 - **🚦 STAGING-FIRST. Two environments — never push UI/behavior straight to prod.** This is the rule
   Fungie set after repeated prod regressions. Read `docs/ops/STAGING.md` before any change.
