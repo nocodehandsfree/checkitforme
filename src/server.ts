@@ -7,7 +7,6 @@ import { dirname, join } from "node:path";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
-import { createRemoteJWKSet, jwtVerify } from "jose";
 import { WebSocketServer, type WebSocket } from "ws";
 import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql } from "drizzle-orm";
 import { db } from "./db/client";
@@ -107,17 +106,7 @@ if (config.staging.on) {
   });
 }
 
-// ---- Auth (Clerk) — gate the API on a valid Clerk session when enforced ----
-// The Clerk session JWT's issuer is the frontend API, derived from the publishable key.
-function clerkIssuer(pk: string): string | null {
-  try {
-    const host = Buffer.from(pk.split("_")[2], "base64").toString("utf8").replace(/\$+$/, "");
-    return host ? `https://${host}` : null;
-  } catch { return null; }
-}
-const issuer = clerkIssuer(config.clerk.publishableKey);
-const JWKS = issuer ? createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`)) : null;
-
+// ---- Auth — phone/SMS sessions only (Clerk fully removed). ----
 // Owner phones that double as admin login: signing into the consumer site with one of these ALSO
 // authenticates the operator dashboard (which runs on a sibling subdomain). Set ADMIN_PHONES on
 // Railway, comma-separated, e.g. "+13106662331,+14243126356".
@@ -135,24 +124,15 @@ function cookieRootDomain(host: string | undefined): string | undefined {
   return ".checkitforme.com";
 }
 
+// /api/* = the operator dashboard. Admin auth only: the x-admin-token header (server-to-server) or the
+// signed `admin_session` cookie minted by /admin-login. (Consumer endpoints live under /pub + /app.)
 app.use("/api/*", async (c, next) => {
-  if (!config.clerk.enforce || !issuer || !JWKS) return next(); // auth disabled
   if (c.req.path === "/api/health") return next();
-  // Admin key bypass for server-to-server store/zone management.
   if (config.adminToken && c.req.header("x-admin-token") === config.adminToken) return next();
-  // Clerk-free admin login: a signed `admin_session` cookie minted by /admin-login (token-gated).
-  // This is how the operator dashboard authenticates as Clerk is removed.
   const adminCookie = getCookie(c, "admin_session");
   if (adminCookie) { const s = await verifySession(adminCookie); if (s && s.id === "admin") return next(); }
-  const authz = c.req.header("authorization") ?? "";
-  const tok = authz.startsWith("Bearer ") ? authz.slice(7) : "";
-  if (!tok) return c.json({ error: "unauthorized" }, 401);
-  try {
-    const { payload } = await jwtVerify(tok, JWKS, { issuer });
-    const allow = config.clerk.allowedUserIds;
-    if (allow.length && !allow.includes(String(payload.sub))) return c.json({ error: "forbidden" }, 403);
-    return next();
-  } catch { return c.json({ error: "unauthorized" }, 401); }
+  if (!config.adminToken) return next(); // no admin token configured → open (dev only)
+  return c.json({ error: "unauthorized" }, 401);
 });
 
 // Clerk-free admin login: visit /admin-login?token=ADMIN_TOKEN once → sets a signed httpOnly
@@ -170,55 +150,13 @@ app.get("/admin-logout", (c) => {
   return c.redirect("/");
 });
 
-// Verify a Clerk session token from any signed-in user (Runnr customers, not just the owner allowlist).
+// Verify a signed-in customer from their phone-session token (our own JWT). `id` is the account key
+// (sub = "phone:+E164"); `phone` is carried in the token. Name kept for the many call-sites.
 async function verifyClerkToken(authHeader: string | undefined): Promise<{ id: string; email?: string; phone?: string } | null> {
   const tok = (authHeader || "").startsWith("Bearer ") ? (authHeader as string).slice(7) : "";
   if (!tok) return null;
-  // Our own phone-session first (the new Clerk-free auth). Falls back to Clerk during the cutover.
   const s = await verifySession(tok);
-  if (s) return { id: s.id, phone: s.phone };
-  if (!JWKS || !issuer) return null;
-  try {
-    const { payload } = await jwtVerify(tok, JWKS, { issuer });
-    return { id: String(payload.sub), email: payload.email as string | undefined };
-  } catch { return null; }
-}
-// The Clerk session token usually omits email, so comp/owner detection can't rely on it. This fetches
-// the user's VERIFIED primary email straight from Clerk by id (server-side, can't be spoofed by the
-// client) and caches it — the authoritative source for "is this a comp account".
-const clerkEmailCache = new Map<string, { t: number; e: string }>();
-async function clerkPrimaryEmail(id: string): Promise<string | undefined> {
-  const hit = clerkEmailCache.get(id);
-  if (hit && Date.now() - hit.t < 300_000) return hit.e || undefined;
-  const sk = process.env.CLERK_SECRET_KEY;
-  if (!sk || !id) return undefined;
-  try {
-    const r = await fetch(`https://api.clerk.com/v1/users/${id}`, { headers: { Authorization: `Bearer ${sk}` } });
-    if (!r.ok) return undefined;
-    const d = (await r.json()) as { primary_email_address_id?: string; email_addresses?: { id: string; email_address: string }[] };
-    const list = d.email_addresses || [];
-    const e = (list.find((x) => x.id === d.primary_email_address_id) || list[0])?.email_address;
-    if (e) clerkEmailCache.set(id, { t: Date.now(), e });
-    return e;
-  } catch { return undefined; }
-}
-// Phone-first identity: the verified primary phone straight from Clerk (server-side, can't be
-// spoofed by the client). Becomes the account's number + the default caller ID. Cached 5 min.
-const clerkPhoneCache = new Map<string, { t: number; p: string }>();
-async function clerkPrimaryPhone(id: string): Promise<string | undefined> {
-  const hit = clerkPhoneCache.get(id);
-  if (hit && Date.now() - hit.t < 300_000) return hit.p || undefined;
-  const sk = process.env.CLERK_SECRET_KEY;
-  if (!sk || !id) return undefined;
-  try {
-    const r = await fetch(`https://api.clerk.com/v1/users/${id}`, { headers: { Authorization: `Bearer ${sk}` } });
-    if (!r.ok) return undefined;
-    const d = (await r.json()) as { primary_phone_number_id?: string; phone_numbers?: { id: string; phone_number: string }[] };
-    const list = d.phone_numbers || [];
-    const p = (list.find((x) => x.id === d.primary_phone_number_id) || list[0])?.phone_number;
-    if (p) clerkPhoneCache.set(id, { t: Date.now(), p });
-    return p;
-  } catch { return undefined; }
+  return s ? { id: s.id, phone: s.phone } : null;
 }
 
 // ---- Pages ----
@@ -1718,15 +1656,13 @@ app.post("/pub/translate", async (c) => {
 app.get("/app/me", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  // Verified email (token → Clerk API), never the client-passed one, decides comp/master.
-  const verifiedEmail = u.email || await clerkPrimaryEmail(u.id);
-  const a = await getAccount(u.id, verifiedEmail || c.req.query("email") || undefined);
-  const comp = isCompAccount(a) || isComp(verifiedEmail);
-  // Phone-first: capture the verified cell once and default the caller ID to it (Twilio
-  // verification before we actually dial AS it is Phase 2). Server-sourced, can't be spoofed.
-  if (a && !a.phone) {
-    const phone = await clerkPrimaryPhone(u.id);
-    if (phone) { await db.update(accounts).set({ phone }).where(eq(accounts.clerkUserId, u.id)); a.phone = phone; }
+  // getAccount maps the owner phone → master email, so comp/master resolves from the account itself.
+  const a = await getAccount(u.id, u.email || undefined);
+  const comp = isCompAccount(a) || isComp(u.email || undefined);
+  // Phone-first: store the verified cell straight from the session token (can't be spoofed) and default
+  // the caller ID to it.
+  if (a && !a.phone && u.phone) {
+    await db.update(accounts).set({ phone: u.phone }).where(eq(accounts.clerkUserId, u.id)); a.phone = u.phone;
   }
   return c.json({
     credits: comp ? 9999 : (a?.credits ?? 0), subscription: comp ? "active" : (a?.subscription ?? "none"),
