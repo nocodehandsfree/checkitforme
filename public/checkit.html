@@ -103,6 +103,31 @@ __BRAND_HEAD__
     color:#fff;text-align:left;cursor:pointer;animation:ckHalo 3s ease-in-out infinite;transition:transform .08s}
   .callkey:active{transform:translateY(1px)}
   .callkey:disabled{opacity:.45;cursor:not-allowed;animation:none}
+  /* ── Call slider (bottom sheet on store select) ── */
+  .csheet-bd{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:79;opacity:0;pointer-events:none;transition:opacity .25s}
+  .csheet-bd.on{opacity:1;pointer-events:auto}
+  .csheet{position:fixed;left:0;right:0;bottom:0;z-index:80;max-width:520px;margin:0 auto;
+    background:#0e0e12;border:1px solid color-mix(in srgb,var(--accent,#FFCB05) 30%,transparent);border-bottom:none;
+    border-radius:22px 22px 0 0;padding:8px 18px calc(20px + env(safe-area-inset-bottom));
+    box-shadow:0 -12px 44px rgba(0,0,0,.65), 0 0 30px color-mix(in srgb,var(--accent,#FFCB05) 9%,transparent);
+    transform:translateY(112%);transition:transform .28s cubic-bezier(.32,.72,0,1);touch-action:none}
+  .csheet.on{transform:translateY(0)}
+  .csheet-handle{width:46px;height:5px;border-radius:3px;background:#3a3a44;margin:6px auto 16px}
+  .csheet-head{display:flex;align-items:center;gap:14px}
+  .csheet-ic{width:56px;height:56px;border-radius:15px;background:var(--sheet);border:1px solid var(--border);display:grid;place-items:center;font-size:26px;flex:0 0 auto;overflow:hidden}
+  .csheet-ic img{max-width:34px;max-height:34px;object-fit:contain}
+  .csheet-ic.lite img{filter:none} .csheet-ic.widelogo img{max-width:48px}
+  .csheet-nm{font-size:21px;font-weight:900;letter-spacing:-.4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .csheet-addr{color:var(--text-3,#9a9aa8);font-size:14px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .csheet-prod{margin:16px 2px 0;font-weight:900;font-size:15.5px;color:var(--accent,#FFCB05)}
+  .csheet-prod span{color:#cfcfe0;font-weight:700}
+  .csheet-call{width:100%;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:10px;
+    background:var(--accent,#FFCB05);color:#3a2c00;border:none;border-radius:16px;padding:17px 22px;font:900 18px Inter;cursor:pointer;
+    box-shadow:0 0 26px color-mix(in srgb,var(--accent,#FFCB05) 28%,transparent);transition:transform .08s}
+  .csheet-call:active{transform:translateY(1px)}
+  .csheet-call:disabled{opacity:.55;cursor:not-allowed}
+  .csheet-charge{margin-top:14px;text-align:center;font-size:13px;color:var(--text-3,#9a9aa8)}
+  .csheet-charge b{color:#cfcfe0}
   .ck-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
   .ck-store{font-size:15px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ck-prod{font-size:14px;font-weight:700;color:var(--accent,#FFCB05);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1012,6 +1037,20 @@ __BRAND_HEAD__
     <button class="fab-back" onclick="fabBack()" aria-label="Back" title="Back"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="#06210f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   </div>
 </main>
+
+<!-- Call slider — slides up from the bottom when a store is picked. Swipe down (or tap the backdrop)
+     to dismiss. Replaces the inline "Check this store" button. -->
+<div class="csheet-bd" id="csheetBd" onclick="hideCallSheet()"></div>
+<div class="csheet" id="csheet" aria-hidden="true">
+  <div class="csheet-handle" id="csheetHandle"></div>
+  <div class="csheet-head">
+    <div class="csheet-ic" id="cs_ic"></div>
+    <div style="min-width:0;flex:1"><div class="csheet-nm" id="cs_nm"></div><div class="csheet-addr" id="cs_addr"></div></div>
+  </div>
+  <div class="csheet-prod" id="cs_prod"></div>
+  <button class="csheet-call" id="cs_call" onclick="startCheck()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52A2 2 0 0 0 9.16 3H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z" fill="currentColor"/></svg> <span data-i18n="cs.callstore">Call this store</span></button>
+  <div class="csheet-charge" data-i18n="charge"><b>No answer = no charge.</b> You always get the verdict.</div>
+</div>
 
 <footer class="site-footer">
   <nav class="foot-links">
@@ -2533,18 +2572,34 @@ function syncCta(){
   // Non-callable chains (Micro Center, Amazon) NEVER get a call button — the sell-methods card
   // below carries "Buy online" + notify instead. (docs/SELL_METHODS_PLAN.md rule 1.)
   const cantCall=SEL_STORE&&SEL_STORE.callable===false;
-  if(SEL_STORE&&SEL_CATS.length&&(MODE!=='kiosk'||SEL_KIOSK)&&(SEL_KIOSK||!cantCall)){ // kiosks are always callable (we call to check the machine), even if the store row is callable:false
-    b.style.display=''; if(vv)vv.style.display='none'; if(cf)cf.style.display='';
-    // Call key: store name on top, product (accent) beneath; ringing phone chip on the right.
-    b.innerHTML = SEL_KIOSK
-      ? `<span class="ck-txt"><span class="ck-store">${esc(SEL_STORE.name)}</span><span class="ck-prod">${t('cta.kioskword','kiosk')}<span class="ck-unit"> · 1 ${t('cta.checkunit','check')}</span></span></span>${CKCHIP}`
-      : `<span class="ck-txt"><span class="ck-store">${esc(SEL_STORE.name.split('—')[0].trim())}</span><span class="ck-prod">${esc(catLabels())}<span class="ck-unit"> · 1 ${t('cta.checkunit','check')}</span></span></span>${CKCHIP}`;
-    if(wasHidden){ b.classList.remove('armed'); void b.offsetWidth; b.classList.add('armed');
-      if(window.innerWidth<900){ setTimeout(()=>{ try{ b.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){} },150); } }
+  // The inline button is retired — a store with a category slides the call sheet up from the bottom.
+  b.style.display='none'; b.classList.remove('armed'); if(cf)cf.style.display='none';
+  if(SEL_STORE&&SEL_CATS.length&&(MODE!=='kiosk'||SEL_KIOSK)&&(SEL_KIOSK||!cantCall)){ // kiosks are always callable
+    if(vv)vv.style.display='none';
+    showCallSheet();
   }
-  else { b.style.display='none'; b.classList.remove('armed'); if(cf)cf.style.display='none'; if(vv)vv.style.display=(MODE==='kiosk'||cantCall)?'none':''; }
+  else { if(vv)vv.style.display=(MODE==='kiosk'||cantCall)?'none':''; hideCallSheet(); }
   renderStoreActions();
 }
+// ── Call slider: populate from the picked store, slide up, swipe down to dismiss ──
+function renderCallSheet(){
+  const s=SEL_STORE; if(!s) return;
+  const ic=$('cs_ic'); if(ic){ ic.className='csheet-ic'+(s.logoDark?' lite':'')+(s.logoWide?' widelogo':''); ic.innerHTML = s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType); }
+  const nm=$('cs_nm'); if(nm) nm.textContent = splitStoreName(s.name).base || (s.name||'').split('—')[0].trim();
+  const mi=(s.miles!=null)?(s.miles+' mi'):''; const addr=s.address||s.location||'';
+  const ad=$('cs_addr'); if(ad) ad.textContent=[addr,mi].filter(Boolean).join(' · ');  // address · miles (no open/closed)
+  const prod = SEL_KIOSK ? t('cta.kioskword','kiosk') : catLabels();
+  const pe=$('cs_prod'); if(pe) pe.innerHTML = `${esc(prod)} <span>· ${t('cs.costs','costs 1 check')}</span>`;
+}
+function showCallSheet(){ const el=$('csheet'); if(!el) return; renderCallSheet(); el.style.transform=''; el.style.transition=''; el.classList.add('on'); el.setAttribute('aria-hidden','false'); const bd=$('csheetBd'); if(bd) bd.classList.add('on'); }
+function hideCallSheet(){ const el=$('csheet'); if(el){ el.classList.remove('on'); el.setAttribute('aria-hidden','true'); el.style.transform=''; } const bd=$('csheetBd'); if(bd) bd.classList.remove('on'); }
+(function csheetSwipe(){
+  let y0=0, dy=0, drag=false;
+  const sh=()=>$('csheet');
+  document.addEventListener('touchstart',e=>{ const el=sh(); if(!el||!el.classList.contains('on'))return; if(!e.target.closest('#csheet')||e.target.closest('.csheet-call'))return; y0=e.touches[0].clientY; dy=0; drag=true; el.style.transition='none'; },{passive:true});
+  document.addEventListener('touchmove',e=>{ if(!drag)return; dy=Math.max(0,e.touches[0].clientY-y0); sh().style.transform='translateY('+dy+'px)'; },{passive:true});
+  document.addEventListener('touchend',()=>{ if(!drag)return; drag=false; const el=sh(); el.style.transition=''; el.style.transform=''; if(dy>80) hideCallSheet(); });
+})();
 // Sell-methods card — what's actually possible at THIS store: live online stock, ways to get it,
 // resale warning, notify. Non-callable chains (Micro Center, Amazon) get "Buy online" instead of a
 // call. Contract: docs/SELL_METHODS_PLAN.md; fields come straight off /pub/stores/near (SEL_STORE).
@@ -2606,6 +2661,7 @@ async function startCheck(){
   ASKED_CATS=SEL_CATS.map(id=>({id,label:(CATS.find(c=>c.id===id)||{}).label||''})).filter(x=>x.label);
   // Kiosk call: flash the "we'll call to check if the machine's working" confirmation first.
   if(SEL_KIOSK && !KIOSK_OK){ openKioskConfirm(); return; }
+  hideCallSheet();
   // Sign-up gate: a check needs an account. Route anon users to PHONE sign-up (the SAME modal as the
   // "You" pill — never the email box) and resume the check once they're in. Phone accounts are granted
   // free checks on creation, so the credit gate below then passes.
@@ -2972,6 +3028,7 @@ function backToBuilder(){ document.body.classList.remove('fabbed'); document.bod
 let NAV_VIEW='builder';
 function navMark(view){
   try{ document.body.classList.toggle('rview', view==='result'); if(view!=='result'){ ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); } }catch(e){} // result-only top treatment (transparent nav + color wash)
+  try{ if(view!=='builder') hideCallSheet(); }catch(e){} // the call sheet belongs to the builder only
   try{ setThemeTone(); renderCallRail(); }catch(e){}
   if(view===NAV_VIEW) return;
   try{
