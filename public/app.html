@@ -111,6 +111,10 @@
   input[type=radio]{appearance:none;-webkit-appearance:none;width:14px;height:14px;min-width:14px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.26);border-radius:50%;background:var(--terminal);cursor:pointer;flex:0 0 auto;vertical-align:middle;margin:0;transition:.12s}
   input[type=radio]:hover{border-color:rgba(255,255,255,.45)}
   input[type=radio]:checked{border-color:var(--green);background:var(--green)}
+  /* status radios: small, perfectly round (own class so .day's 15px + flex can't oval them) */
+  .statusopt{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--text-body);cursor:pointer;user-select:none}
+  .statusopt input[type=radio]{appearance:none;-webkit-appearance:none;width:14px;height:14px;min-width:14px;flex:0 0 14px;aspect-ratio:1;padding:0;margin:0;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.3);border-radius:50%;background:var(--terminal);cursor:pointer;transition:.12s}
+  .statusopt input[type=radio]:checked{border-color:var(--green);background:var(--green)}
   /* number inputs: no up/down spinner arrows */
   input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
   input[type=number]{-moz-appearance:textfield}
@@ -761,12 +765,12 @@
         <div class="name" style="margin-bottom:14px">Settings <span id="set_chainname" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></div>
         <label>Status</label>
         <div class="row" style="gap:16px;flex-wrap:wrap;margin:6px 0 16px">
-          <label class="day" style="margin:0"><input type="radio" name="set_status_r" value="active"> Active</label>
-          <label class="day" style="margin:0"><input type="radio" name="set_status_r" value="muted"> Muted</label>
-          <label class="day" style="margin:0"><input type="radio" name="set_status_r" value="repack"> Repack-only</label>
+          <label class="statusopt"><input type="radio" name="set_status_r" value="active"> Active</label>
+          <label class="statusopt"><input type="radio" name="set_status_r" value="muted"> Muted</label>
+          <label class="statusopt"><input type="radio" name="set_status_r" value="repack"> Repack-only</label>
         </div>
         <div class="grid2">
-          <div><label data-tip="Cap on how long the agent talks to a person before wrapping up.">Max talk seconds</label><input id="set_maxtalk" type="number" min="0" placeholder="45" style="width:72px"></div>
+          <div><label data-tip="Cap on how long the agent talks to a person before wrapping up.">Max talk seconds</label><input id="set_maxtalk" type="number" min="0" placeholder="45" style="width:84px;padding:10px 12px;font-size:15px"></div>
           <div><label data-tip="If a call hits voicemail or a 'we're closed' recording, hang up instead of waiting.">Hang up on voicemail / closed</label><div><button class="ghost" id="set_vmbtn" onclick="setVmToggle()" style="margin-top:4px;min-width:54px">ON</button></div></div>
         </div>
         <div class="row" style="margin-top:16px;gap:10px;align-items:center">
@@ -1042,15 +1046,15 @@ async function loadRuns(chainId, box){
       const did=us?((st.action||'')+(st.value?(' '+st.value):'')):'heard';
       return `<div style="display:grid;grid-template-columns:42px 1fr auto;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px;align-items:start">
         <span class="meta">${st.atSec}s</span><span style="color:#cfcfe0;overflow-wrap:anywhere">${esch(st.text||'')}</span>
-        <span style="font-weight:700;white-space:nowrap;color:${us?'var(--green)':'var(--muted)'}">${esch(did)}</span></div>`;
+        <span style="font-weight:600;white-space:nowrap;color:${us?'var(--text-body)':'var(--muted)'}">${esch(did)}</span></div>`;
     }).join('');
     return `<details style="border:1px solid var(--border);border-radius:10px;margin-bottom:7px;background:var(--sheet)">
       <summary style="cursor:pointer;list-style:none;padding:9px 11px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px">
         <b style="color:var(--muted);min-width:42px">#${runs.length-i}</b>
         <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col}"></span>
-        <span style="color:${MODEC[r.mode]||'#aab'};font-weight:800">${esch(r.label||r.mode||'')}</span>
+        <span style="color:var(--text-strong);font-weight:700">${esch(r.label||r.mode||'')}</span>
         <span class="meta">${t}${r.model?(' · '+esch(r.model)):''}</span>
-        <span style="margin-left:auto;font-weight:800;color:${col}">${secs}</span>
+        <span style="margin-left:auto;font-weight:700;color:var(--text-strong)">${secs}</span>
       </summary>
       <div style="padding:2px 11px 10px">${mx||'<div class="meta" style="padding:6px 0">no steps recorded</div>'}</div>
     </details>`;
