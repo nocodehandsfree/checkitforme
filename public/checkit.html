@@ -3040,13 +3040,16 @@ function navMark(view){
   }catch(e){}
   NAV_VIEW=view;
 }
-// Tint the iOS status-bar strip to the verdict tone (the page can't paint under it in a Safari tab).
-// Replace the meta NODE (not setAttribute) so iOS Safari actually repaints the bar.
+// Tint the iOS Safari bars to the verdict tone. iOS honors the theme-color it parsed AT LOAD, so we
+// must mutate that SAME meta node in place (setAttribute) — replacing the node makes iOS drop the colour
+// and fall back to the dark default (the bug that kept the status bar black on a hard-refresh). One
+// theme-color tints BOTH the top status bar and the bottom toolbar — there's no per-edge control in a
+// Safari tab — so a result frames top+bottom in the verdict colour; every other view is the dark page bg.
 function setThemeTone(){
   const map={'rv-in':'#266440','rv-out':'#6b2427','rv-unk':'#6c5419','rv-soon':'#6e490f'};
   let c='#0C0C12';
   if(document.body.classList.contains('rview')){ for(const k in map){ if(document.body.classList.contains(k)){ c=map[k]; break; } } }
-  try{ const m=$('themeColor'); if(m && m.getAttribute('content')!==c){ const n=document.createElement('meta'); n.name='theme-color'; n.id='themeColor'; n.setAttribute('content',c); m.replaceWith(n); } }catch(e){}
+  try{ const m=$('themeColor'); if(m) m.setAttribute('content',c); }catch(e){}
 }
 window.addEventListener('popstate',()=>{ if(NAV_VIEW!=='builder') backToBuilder(); });
 
@@ -3511,15 +3514,18 @@ function renderCallRail(cid){
   // The calendar day-picker belongs to the RESULT view only (it navigates between checks). Never show
   // it on the homepage/builder, even when history exists.
   if(wrap){ const days=histList().filter(e=>e.cid&&e.ts&&railInCat(e)); const onResult=document.body.classList.contains('rview'); wrap.style.display=(onResult&&days.length)?'':'none'; const btn=$('calbtn'); if(btn) btn.classList.toggle('on',!!RAIL_F.date); }
-  // Prev/next arrows (top-right of the verdict) step through your calls — or the picked day's calls.
+  // Prev/next arrows (top-right of the verdict) step through ALL your calls (store/outcome scope, NOT
+  // the picked-day sub-filter) so you can flip call-to-call without reopening the calendar each time.
   // On the newest call you only see ›; once you step forward a ‹ appears to its left.
   const nav=$('rnav'); if(nav){
-    const f=railFiltered(), i=f.findIndex(e=>e.cid===cid);
+    const f=railScoped(), i=f.findIndex(e=>e.cid===cid);
     nav.innerHTML = (i>=0 && f.length>1) ? `${i>0?`<button class="rnav-b" onclick="railStep(-1)" aria-label="Newer call"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:''}${i<f.length-1?`<button class="rnav-b" onclick="railStep(1)" aria-label="Older call"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9.5 5l6.5 7-6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:''}` : '';
   }
 }
 function railFilter(k,v){ RAIL_F[k]=v; const f=railFiltered(); if(k==='date'&&v&&!f.length){ toast(t('rail.noneday','No checks on that day')); RAIL_F.date=''; renderCallRail(); return; } const cur=f.some(e=>e.cid===RAIL_CID); if(!cur&&f.length){ openHistEntry(f[0]); return; } renderCallRail(); }
-function railStep(d){ const f=railFiltered(); const i=f.findIndex(e=>e.cid===RAIL_CID); const n=f[i+d]; if(n) openHistEntry(n); }
+// Step through ALL calls in scope (ignore the day sub-filter). If a day was picked, keep the calendar in
+// sync by moving the picked day to whatever call we land on (so the day-list reflects where you are).
+function railStep(d){ const f=railScoped(); const i=f.findIndex(e=>e.cid===RAIL_CID); const n=f[i+d]; if(n){ if(RAIL_F.date) RAIL_F.date=tsDay(n.ts); openHistEntry(n); } }
 // Custom month-calendar popover (native date pickers can't highlight call-days). Days with calls glow accent.
 let RAIL_CAL_M=null;
 // Highlight only days that the date filter can actually open: same scoped pool, valid timestamp only
