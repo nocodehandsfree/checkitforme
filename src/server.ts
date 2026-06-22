@@ -439,7 +439,6 @@ app.all("/twiml/bridge", (c) => {
   // not in-band audio tones mixed into the stream — a synthesized tone gets ignored.
   // 'w' = 0.5s pause. The stream (agent + live listener) joins right after the press.
   const dtmf = takeBridgeDtmf(room);
-  bridgeLog(`twiml/bridge: room=${room.slice(0,8)} dtmf=${dtmf ?? "null"}`);
   let play = "";
   if (dtmf) {
     let digits = "", prev = 0;
@@ -448,7 +447,6 @@ app.all("/twiml/bridge", (c) => {
       digits += "w".repeat(Math.max(0, Math.round((at - prev) / 0.5))) + m[1];
       prev = at;
     }
-    bridgeLog(`twiml/bridge: digits len=${digits.length}`);
     play = `<Play digits="${digits}"/>`;
   }
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${play}<Connect><Stream url="wss://${RAILWAY_HOST}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
@@ -2685,7 +2683,6 @@ app.get("/pub/bridge/:room", (c) => c.json({ conversationId: bridgeConversationI
 app.get("/pub/bridge-debug", (c) => c.json({ log: bridgeDebug() }));
 app.post("/api/bridge/call", async (c) => {
   const b = await c.req.json();
-  if (b.echo) return c.json({ dtmf: b.dtmf ?? null, hasDtmf: !!b.dtmf, keys: Object.keys(b) });
   if (!b.toNumber) return c.json({ error: "toNumber required" }, 400);
   const category = b.category || "Pokémon";
   const opener = (await getSetting("vt_opening")) || "Heyy! I was just checking to see if you guys got any {category} in?";
