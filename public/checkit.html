@@ -3128,15 +3128,18 @@ function navMark(view){
   }catch(e){}
   NAV_VIEW=view;
 }
-// Tint the iOS status-bar strip to the verdict tone so the green/red wash reaches the VERY top of the
-// phone (Safari paints the top strip with the theme-color). Values = the gradient's top color blended
-// over the page bg #0C0C12; off a result it goes back to the page bg.
+// Tint the iOS status-bar strip AND the page root to the verdict tone so the green/red wash reaches the
+// VERY top of the phone with no dark cut-off — even during pull-to-refresh / toolbar overscroll, when
+// the rubber-band area above the (position:fixed) wash exposes the <html> background. Values = the
+// gradient's top color blended over the page bg #0C0C12; off a result both go back to the page bg.
 function setThemeTone(){
-  const m=$('themeColor'); if(!m) return;
+  const m=$('themeColor');
   const map={'rv-in':'#266440','rv-out':'#6b2427','rv-unk':'#6c5419','rv-soon':'#6e490f'};
   let c='#0C0C12';
   if(document.body.classList.contains('rview')){ for(const k in map){ if(document.body.classList.contains(k)){ c=map[k]; break; } } }
-  m.setAttribute('content',c);
+  if(m) m.setAttribute('content',c);
+  // Paint the root element so the top overscroll/rubber-band shows the tone (not the dark page bg).
+  try{ document.documentElement.style.backgroundColor=c; }catch(e){}
 }
 window.addEventListener('popstate',()=>{ if(NAV_VIEW!=='builder') backToBuilder(); });
 
