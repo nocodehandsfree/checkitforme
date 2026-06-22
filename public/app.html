@@ -366,11 +366,6 @@
 
   <!-- GOD VIEW: the day's command center — vitals above the fold, business folded in -->
   <section id="dash" class="active">
-    <div class="subnav" id="dash_subnav">
-      <button class="active" onclick="showDashView('overview')">Overview</button>
-      <button onclick="showDashView('calc')">Calc</button>
-    </div>
-    <div id="dash_overview">
     <div class="hero">
       <div class="hero-eyebrow">Today</div>
       <div class="stats" id="d_today"></div>
@@ -407,9 +402,8 @@
       <div class="stats" id="d_timing" style="margin-bottom:6px"></div>
       <details style="margin-top:6px"><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details>
     </details>
-    </div>
-    <div id="dash_calc" style="display:none"></div>
   </section>
+  <section id="calc"><div id="calc_root"></div></section>
 
   <section id="retailers">
     <h2>Store intel</h2>
@@ -965,13 +959,13 @@ let CATEGORIES = [];
 
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
-  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['growth','Policy','rise']]},
+  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['growth','Policy','rise'],['calc','Calc','sliders']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
   calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Phone Trees','tree'],['treelab','Trainer','target'],['bail','Bail','scissors'],['settings','Settings','gear']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwKiosks();}, bail:()=>loadBail(), statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, calc:()=>calcInit(), treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwKiosks();}, bail:()=>loadBail(), statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -1229,15 +1223,7 @@ function calcCompute(storeType,nav,talk,r){
   items.push({label:'Fixed overhead / call',detail:'flat',accent:'var(--text-muted)',amount:r.overhead});
   return { items, total: items.reduce((s,i)=>s+i.amount,0) };
 }
-// Toggle the God-view sub-nav between the live Overview and the Calc.
-function showDashView(which){
-  const ov=document.getElementById('dash_overview'), ca=document.getElementById('dash_calc'); if(!ov||!ca) return;
-  const calc=which==='calc';
-  ov.style.display=calc?'none':''; ca.style.display=calc?'':'none';
-  document.querySelectorAll('#dash_subnav button').forEach((b,i)=>b.classList.toggle('active', i===(calc?1:0)));
-  if(calc) calcInit();
-}
-function calcInit(){ const el=document.getElementById('dash_calc'); if(!el) return; if(!CALC.ready){ el.innerHTML=calcShell(); CALC.ready=true; } calcSync(); calcUpdate(); }
+function calcInit(){ const el=document.getElementById('calc_root'); if(!el) return; if(!CALC.ready){ el.innerHTML=calcShell(); CALC.ready=true; } calcSync(); calcUpdate(); }
 function calcShell(){
   const seg=Object.keys(CALC_STORE).map(t=>`<button type="button" id="calc_seg_${t}" onclick="calcPick('${t}')" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(CALC_STORE[t].nc)}${t}</span><span style="font-size:10.5px;color:var(--text-tertiary)">${CALC_STORE[t].sub}</span></button>`).join('');
   const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11.5px;color:var(--text-muted)">${label}</span><span style="display:flex;align-items:center;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px 4px;width:100%"><span style="color:var(--text-tertiary);font-size:11px">${suf}</span></span></label>`;
