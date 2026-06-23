@@ -150,11 +150,11 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Smith's | magenta wordmark | 🔧 | real Smith's logo (Wikimedia) — replaced the generic red "S" |
 | Spencer's | white graffiti | 🔧 | real Spencer's graffiti logo (Wikimedia), recolored white — replaced "Spencer's Nation" |
 | Staples | red "STAPLES" wordmark | 🔧 | official Staples wordmark (Wikimedia); confirm vs the specific file owner mentioned |
-| Star Market | blue wordmark | 🔧 | real STAR★MARKET wordmark (Commons), white keyed out — replaced lone green star |
-| Target | red bullseye | 🔧 | official 2004 bullseye (Wikimedia) |
-| TJ Maxx | red wordmark | 🔧 | official TJ Maxx wordmark (Wikimedia), enlarged |
-| Tokyo Japanese Lifestyle | TOKYO + fan | 🔧 | kept existing — already correct |
-| Tom Thumb | 2-line blue | 🔧 | kept existing — already two-line bright blue, no red line |
+| Star Market | stacked + star right | 🔧 | STAR/MARKET stacked, green star to the right (Food 4 Less style) |
+| Target | red bullseye | 🔧 | official 2004 bullseye, sized down per owner |
+| TJ Maxx | red wordmark | 🔧 | re-pulled official SVG at true aspect (no stretch) |
+| Tokyo Japanese Lifestyle | TOKYO + fan | 🔧 | re-centered vertically per owner |
+| Tom Thumb | blue box, stacked | 🔧 | owner logo: big blue plate, Tom over Thumb, red line kept |
 
 ## Chunk 9 — tractor_supply → winco_foods  ⬜
 | Logo | Treatment | Status | Notes |
