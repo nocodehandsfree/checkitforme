@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r52" />
+<meta name="x-rev" content="names-r53" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -2897,6 +2897,8 @@ function playMu(b64,track){
 }
 function stopAudio(){ if(AUDIO_WS){AUDIO_WS.close();AUDIO_WS=null;} if(AUDIO_CTX){AUDIO_CTX.close().catch(()=>{});AUDIO_CTX=null;} AUDIO_NEXT={}; }
 async function startCheckLive(){
+  CALL_GEN++; // FIRST thing: cancel any still-running background verdict poll from the previous call NOW —
+              // before the confirm modal — so it can never repaint the old result over this new call.
   const useApp=isAuthed();
   // Live listening + hang-up are testing tools (owner/comp accounts, or policy.flags.liveListen).
   // Regular customers get the live transcript only — no audio, no hang-up.
@@ -2913,7 +2915,6 @@ async function startCheckLive(){
   { const _fd=$('finds'); if(_fd)_fd.style.display='none'; } // hide the finds ticker on the call page — keep it uncrowded
   // Listeners hear the call through the browser — iOS silent switch mutes web audio, so remind them.
   const _mb=$('muteBanner'); if(_mb) _mb.style.display='none'; // owner asked to drop the 'flip off silent' note
-  CALL_GEN++; // new call → cancels any still-running background verdict poll from the PREVIOUS call (it must not repaint the old result over this new call)
   LIVE_STEPS=[]; LIVE_TR=[]; LIVE_TRANSCRIPT=''; AGENT_PITCHED=false; LIVE_STAGE=0; LIVE_DONE=false; LIVE_T0=Date.now();
   fillLiveHeader(); const _lr=$('live_rhead'); if(_lr)_lr.className='rhead live';
   liveStage(1); // logs step 1 + renders the call box (steps on top, empty script below)
@@ -2927,9 +2928,11 @@ async function startCheckLive(){
   AUDIO_WS=new WebSocket('wss://'+r.wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data);
     if(d.audio){ if(AUDIO_CTX) playMu(d.audio,d.track); }
     else if(d.line&&d.line.text){ LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } // real-time steps + human script, as the call happens
-    // Deliberately NO d.ended handler: it used to clearInterval(POLL) on the end signal, removing the only
-    // reliable finalizer — if that single finalize didn't land, the call froze. The POLL below is the sole
-    // "call over → show result" path, exactly like production.
+    // Instant flip: the bridge tells us the moment the call ends → finalize NOW (snappy, like the live
+    // transcript). Crucially we do NOT clearInterval(POLL) here — the POLL keeps running as the safety net,
+    // so even if this finalize hiccups the POLL still resolves it (that POLL-clearing was the old freeze).
+    // finalizeLive is idempotent (history dedupes, showResult re-renders), so POLL re-firing it is harmless.
+    else if(d.ended){ finalizeLive(LIVE_CID||cid); }
   }catch(e){} };
   liveStage(2); // dialing → it's ringing
   let cid=null;
@@ -2961,18 +2964,25 @@ async function startCheckLive(){
   },1200);
 }
 async function finalizeLive(cid){
-  // No LIVE_DONE guard and no POLL-clearing: the POLL (o.live===false) is the single finalizer and clears
-  // itself — matching production, which never freezes. Re-entry is harmless (showResult just re-renders).
+  // Idempotent: d.ended (instant) AND the POLL can both call this. No hard guard + no POLL-clearing here
+  // (that combo is what froze calls) — history dedupes and showResult just re-renders, so a re-fire is safe.
   stopAudio(); stopLiveTimers();
   if(!cid){ const res={status:'no_answer',transcript:'',summary:''}; saveCheckToHistory(res,null); showResult(res); return; }
-  // The call just ended — give ElevenLabs a few seconds to finalize the transcript & verdict, exiting the
-  // instant it's ready (snappy flip to the result).
-  let o=await api('/pub/result/'+encodeURIComponent(cid)), tries=0;
-  while((!o||!o.status||o.status==='in_progress')&&tries<8){ await new Promise(r=>setTimeout(r,1000)); o=await api('/pub/result/'+encodeURIComponent(cid)); tries++; }
-  const res=(o&&o.status&&o.status!=='in_progress')?o:{status:'no_answer',transcript:'',summary:''};
+  const live=(LIVE_TR.length?LIVE_TR.join('\n'):LIVE_TRANSCRIPT)||'';
+  // ONE quick fetch. If EL already has the verdict, we flip straight to it. If not, flip RIGHT NOW to the
+  // result page showing the streamed conversation under a brief "getting the answer" header — instead of
+  // lingering on the call view — then keep pulling the verdict and repaint when it lands. This is the snappy
+  // hangup→status flip.
+  let o=null; try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){}
+  if(!o||!o.status||o.status==='in_progress'){
+    showResult({status:'pending', transcript:live, summary:''}, cid);
+    let tries=0;
+    while((!o||!o.status||o.status==='in_progress')&&tries<10){ await new Promise(r=>setTimeout(r,1000)); try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){} tries++; }
+  }
+  const res=(o&&o.status&&o.status!=='in_progress')?o:{status:'no_answer',transcript:live,summary:''};
   // If EL hasn't attached the transcript yet, fall back to what we streamed live, then to /pub/live, so the
   // conversation always prints on the result without a hard refresh.
-  if(!res.transcript && (LIVE_TR.length||LIVE_TRANSCRIPT)) res.transcript = LIVE_TR.length?LIVE_TR.join('\n'):LIVE_TRANSCRIPT;
+  if(!res.transcript && live) res.transcript=live;
   if(!res.transcript){ try{ const lv=await api('/pub/live/'+encodeURIComponent(cid)); if(lv&&lv.transcript) res.transcript=lv.transcript; }catch(_){} }
   if(res.status==='completed'){
     if(isAuthed()){ appApi('/app/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}).then(c=>{ if(c&&c.credits!=null){ if(ACCOUNT)ACCOUNT.credits=c.credits; renderAuth(); } }); }
@@ -3000,6 +3010,7 @@ async function reconcileVerdict(cid, prevKey){
     // Update the saved history entry IN PLACE (don't re-add — that would duplicate the call), then repaint.
     try{ const h=loadHist(); const e=h.find(x=>x.cid===cid); if(e){ e.status=o.status; e.confirmed=o.confirmed; e.soldOut=!!o.soldOut; e.doesNotSell=!!o.doesNotSell; e.shipmentDay=o.shipmentDay||null; e.statusKey=o.statusKey||null; localStorage.setItem('runnr_history',JSON.stringify(h.slice(0,60))); } }catch(_){}
     try{ const hc=HIST_CACHE.find(x=>x.cid===cid); if(hc){ hc.confirmed=o.confirmed; hc.statusKey=o.statusKey||null; hc.soldOut=!!o.soldOut; hc.doesNotSell=!!o.doesNotSell; } }catch(_){}
+    if(CALL_GEN!==gen || RAIL_CID!==cid || NAV_VIEW!=='result') return; // RE-CHECK after the network await — a new call may have started mid-fetch; never repaint over it
     showResult(o, cid);
     return;
   }
@@ -3131,8 +3142,11 @@ function showResult(o, cid){
   const agentLines=(o.transcript||'').split('\n').filter(l=>/^\s*Agent:/.test(l)).join(' ').toLowerCase();
   const asked = !!cat && (agentLines.includes(cat) || /checking to see|got any|in stock|do you (have|carry|sell)|shipment|looking for/.test(agentLines));
   let cls='unk', big='📵', title=t('v.noanswer','Nobody answered'), note=t('note.unreached',"We couldn't reach anyone at the store — no charge. Try again in a bit.");
+  // Instant-flip placeholder: the call just ended and we flipped here immediately with the streamed
+  // conversation; the real verdict is still being pulled and will repaint over this in a moment.
+  if(o.status==='pending'){ cls='unk'; big='⏳'; title=t('v.getting','Getting the answer…'); note=t('note.getting','The call just finished — pulling the result.'); }
   // Statuses registry first — the owner-edited single source of truth (with ES variants by key).
-  if(o.statusKey && RSTATUSES[o.statusKey]){
+  else if(o.statusKey && RSTATUSES[o.statusKey]){
     const s=RSTATUSES[o.statusKey];
     cls=s.tone||'unk'; big=s.emoji||'•'; title=t('st.'+o.statusKey, s.label);
     note=(o.statusKey==='failed'&&o.failureReason)?safeReason(o.failureReason):t('stn.'+o.statusKey, s.note||'');
@@ -3204,7 +3218,7 @@ function showResult(o, cid){
 
   const F=POLICY.flags||{};
   const PURP='#4ADE80'; // brand green (was Runnr purple) — keep the restock module on-brand
-  const inStock=cls==='in', canNotify=cls!=='in' && o.status!=='failed';
+  const inStock=cls==='in', canNotify=cls!=='in' && o.status!=='failed' && o.status!=='pending';
   const restockDay=shipmentDayShort(SEL_STORE), isMember=(ACCOUNT&&ACCOUNT.subscription==='active');
   const inActions = inStock ? [
     F.shareCards!==false?`<button class="act2 gr" onclick="shareFind()">${ICO.mega('currentColor')} ${t('res.share','Share this find')}</button>`:'',
@@ -3441,9 +3455,13 @@ function saveCheckToHistory(o,cid){
   const entry={ cid, storeId:SEL_STORE.id, storeName:SEL_STORE.name, address:SEL_STORE.address||null, location:SEL_STORE.location||null, logoUrl:SEL_STORE.logoUrl||null, logoWide:!!SEL_STORE.logoWide, logoDark:!!SEL_STORE.logoDark, categoryId:SEL_CAT, category:cat,
               cats, categoryResults:o.categoryResults||null, ts:Date.now(), status:o.status, confirmed:o.confirmed, soldOut:!!o.soldOut, doesNotSell:!!o.doesNotSell, shipmentDay:o.shipmentDay||null, statusKey:o.statusKey||null,
               steps:(LIVE_STEPS&&LIVE_STEPS.length)?LIVE_STEPS.map(s=>({n:s.n,label:s.label,at:s.at})):null }; // keep the live step timings so reopened calls still show "…3s"
-  h.unshift(entry);
+  // Dedupe by cid: if this call is already in history (e.g. an instant-flip "pending" entry, or a
+  // re-finalize), UPDATE it in place instead of unshifting a duplicate.
+  const ix=h.findIndex(x=>x.cid===cid);
+  if(ix>=0) h[ix]=Object.assign({},h[ix],entry); else h.unshift(entry);
   localStorage.setItem('runnr_history', JSON.stringify(h.slice(0,60)));
-  if(HIST_CACHE.length) HIST_CACHE.unshift(entry); // keep the call rail in sync without a refetch
+  const ci=HIST_CACHE.findIndex(x=>x.cid===cid);
+  if(ci>=0) HIST_CACHE[ci]=Object.assign({},HIST_CACHE[ci],entry); else if(HIST_CACHE.length) HIST_CACHE.unshift(entry); // keep the call rail in sync without a refetch
 }
 function timeAgo(ts){ const s=Math.floor((Date.now()-ts)/1000); const ago=u=>LANG==='es'?('hace '+u):(u+' ago'); if(s<60)return ago(s+'s'); const m=Math.floor(s/60); if(m<60)return ago(m+'m'); const hr=Math.floor(m/60); if(hr<24)return ago(hr+'h'); return ago(Math.floor(hr/24)+'d'); }
 let HIST_CACHE=[];

@@ -27,8 +27,26 @@ for a gnarly conflict ping DevOps — don't redo your work blind.
 
 ## Current focus (KEEP UPDATED)
 
-### 🟡 On staging, awaiting prod promotion (2026-06-23, checkit.html rev **names-r52**)
+### 🔴 ElevenLabs agent DECOUPLED staging↔prod (2026-06-23) — READ before promoting
+- Staging + prod used to share ONE EL agent (`agent_7501ktap…`), so agent tuning hit prod too.
+- **Staging now uses a CLONE** `agent_7301kvvbpy3afssvaqrte3bd6cj3` (Railway staging var `ELEVENLABS_AGENT_ID`),
+  tuned to stop background noise interrupting the agent: `speculative_turn=false`, `turn_eagerness=patient`,
+  `disable_first_message_interruptions=true`, filler `interruption_ignore_terms`; **tts.stability kept 0.40**.
+- **Prod still uses `agent_7501ktap…` (untuned).** This is an **ENV-VAR** difference, NOT code — promoting
+  `checkit.html` does NOT change which agent prod uses. When you like the staging voice behavior, either
+  apply the same PATCH to prod's agent, or point prod's `ELEVENLABS_AGENT_ID` at the clone. **Do not blindly
+  copy the staging agent id into prod via a code/merge step.**
+
+### 🟡 On staging, awaiting prod promotion (2026-06-23, checkit.html rev **names-r53**)
 All on the staging branch; **not yet merged to prod.** Verify on `staging.checkitforme.com`, then promote.
+- **Instant hangup→result flip (r53):** re-added the `d.ended` WS end-signal so the page flips the moment the
+  call ends — but it does NOT `clearInterval(POLL)` (that POLL-clear was the old freeze); the POLL stays as a
+  safety net. `finalizeLive` now flips immediately and, if the verdict isn't ready, shows the streamed
+  conversation under a brief "Getting the answer…" card, then repaints with the verdict. `finalizeLive` is
+  idempotent — `saveCheckToHistory` dedupes by cid so a re-fire can't duplicate a call.
+- **Round-robin multi-call fully fixed (r53):** `CALL_GEN` is bumped at the TOP of `startCheckLive` (before the
+  confirm modal) and `reconcileVerdict` re-checks `CALL_GEN`/`RAIL_CID`/`NAV_VIEW` AFTER its network await — so
+  a previous call's background verdict poll can never repaint over a newly-started call.
 - **Live call rewrite → matched prod.** A staging-only `d.ended` WS handler that did `clearInterval(POLL)`
   + a `LIVE_DONE` guard were freezing the call view until "Stop" was pressed. Reverted to prod's POLL-only
   finalizer (the POLL clears itself; no second finalizer to fail). `finalizeLive` keeps a snappy 1s re-poll
