@@ -157,12 +157,12 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Tom Thumb | white script, dark tile | ✅ | white Tom/Thumb on dark tile, 3 rules stripped, stray tick removed, red line raised |
 
 ## Chunk 9 — tractor_supply → winco_foods  🔧 (9a done + uniform-sized per owner; awaiting approval)
-<!-- Uniform sizing: logos normalized to a common envelope (~72% W / 60% H of tile) so they render the same size. Tractor shield shrunk vs wordmark. Tom Thumb (ch8) resized to match. -->
+<!-- Uniform sizing: logos normalized to a common envelope (~86% W / 74% H of tile) so they render the same size. Tractor = wordmark only (no shield). Walgreens = W. Tom Thumb left as-is per owner. -->
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Tractor Supply | TSC shield + wordmark | 🔧 | real logo (Wikimedia); black wordmark recolored white, red shield kept |
+| Tractor Supply | blocky wordmark (no mark) | 🔧 | dropped TSC shield per owner; white "TRACTOR SUPPLY CO" wordmark, enlarged |
 | Vons | red wordmark | 🔧 | real Vons wordmark (Wikimedia), enlarged |
-| Walgreens | red script | 🔧 | real Walgreens script wordmark (Wikimedia) — de-boxed |
+| Walgreens | white cursive W | 🔧 | restored the de-boxed Walgreens "W" per owner (replaced the script wordmark) |
 | Walmart | yellow spark | 🔧 | official spark mark (Wikimedia) |
 | Wawa | red wordmark + goose | 🔧 | real Wawa wordmark (Wikimedia) — de-boxed |
 | Wegmans | wordmark | ⬜ | |
