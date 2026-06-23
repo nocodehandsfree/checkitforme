@@ -53,7 +53,10 @@ It maps every visual asset in the repo so you never hunt for a logo, image, or i
 | Live style guide page | `public/style.html` → style.fungibles.com |
 | Status / system pages | `public/status.html`, `public/system.html` |
 
-## 3. Existing style/visual docs
+## 3. Style/visual docs — READ THE STYLE GUIDE FIRST
+- **`docs/design/STYLE_GUIDE.md` — the single visual source of truth (brand mark, color, type,
+  components, verdict tones, logo treatment, icons). READ THIS BEFORE DESIGNING.**
+  PDF version for sharing: **`docs/design/Check_Style_Guide.pdf`**.
 - `docs/design/ADMIN_STYLE_GUIDE.md` — admin UI patterns.
 - `docs/design/FONT_STYLE_GUIDE.md` — typography.
 - `docs/design/LOGO_RENDERING.md` → points to `docs/STORE_LOGOS.md`.
@@ -61,12 +64,15 @@ It maps every visual asset in the repo so you never hunt for a logo, image, or i
 
 ---
 
-## 4. Your task (style-guide build)
-1. Use `docs/brand/CHECK_BRAND_STYLE_GUIDE.md` as the brand foundation; pull live colors/components from `public/style.html`, `checkit.html`, `app.html`.
-2. Produce the **full style guide** (brand mark, color system, typography, components/buttons/cards, status pills, store-logo treatment, icon usage).
-3. Put the deliverable in **`docs/design/`** (e.g. `STYLE_GUIDE.md` + any assets).
-4. **Update this handoff doc** with a link to the finished guide + anything you reorganized.
-5. **The owner must approve the guide before it's final** — do not mark it done until approved.
+## 4. Style-guide status
+**Built ✅ → `docs/design/STYLE_GUIDE.md`** (+ shareable `Check_Style_Guide.pdf`). Covers brand mark,
+color system, typography, components/buttons/cards, verdict tones, store-logo treatment, icon usage.
+
+- **⚠️ Pending owner (Fungie) approval — not final yet.**
+- **⚠️ Verify-against-live caveat:** the first draft was built from `docs/brand/CHECK_BRAND_STYLE_GUIDE.md`
+  + the in-repo `public/checkit.html`/`app.html`, **not** a live fetch of `staging.checkitforme.com`.
+  Do one pass against the live staging site before approval in case staging has drifted.
+- When you change live styles, update `STYLE_GUIDE.md` to match and **commit** (don't let it drift).
 
 ---
 
