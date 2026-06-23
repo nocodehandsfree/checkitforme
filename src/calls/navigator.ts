@@ -23,7 +23,7 @@ const HUMAN_RE = /can i help you|how (can|may) i help|what can i (do|help)|this 
 // ("Target electronics", "guest service desk") — with NO "press N" menu. This is the signal we were
 // MISSING: a Target dept employee answers "Hello / Target electronics", which isn't a menu, so we must
 // stop pressing and treat them as the human (confirm mode then asks the stock question).
-const LIVE_HUMAN_RE = /\bhello\b|\bhi\b|\bhowdy\b|this is \w+|\bspeaking\b|how (can|may) i help|can i help|what (can|do) (i|we|you)|^\s*(thanks for calling )?(target )?(electronics|guest services?|service desk|customer service|toys?|sporting goods?)[\s.,!?]*$/i;
+const LIVE_HUMAN_RE = /\bhello\b|\bhi\b|\bhowdy\b|this is \w+|\bspeaking\b|how (can|may) i help|can i help|i can help|go ahead|what (can|do) (i|we|you)|^\s*(thanks for calling )?(target )?(electronics|guest services?|service desk|customer service|toys?|sporting goods?)[\s.,!?]*$/i;
 function looksLikeLivePerson(speech: string): boolean {
   const t = (speech || "").trim();
   if (!t) return false;
@@ -178,7 +178,11 @@ export async function navStep(id: string, speech: string): Promise<string> {
   // "Target electronics" is a human, not another menu to escape with 0. Guarded so the opening IVR
   // (which we haven't acted on yet) can't trip it.
   const acted = !!s.lastActTurn || (s.reactivePress?.count ?? 0) > 0 || (s.autoZeros ?? 0) > 0;
-  if (acted && speech && looksLikeLivePerson(speech)) return reachHuman(s, atSec, id);
+  // DIRECT-ANSWER stores answer "Hello" / "I can help you" on the FIRST utterance (no IVR). In confirm
+  // mode we must engage that human instantly — otherwise we sit silent and they hang up on dead air
+  // (Dollar Tree, Claire's). So don't require a prior action in confirm mode; looksLikeLivePerson still
+  // filters out "press N" IVR menus. Plain mapping mode keeps the guard so an opening IVR can't trip it.
+  if (speech && looksLikeLivePerson(speech) && (acted || !!s.confirm)) return reachHuman(s, atSec, id);
   s.status = "navigating";
   // REACTIVE PRESS: the human way — wait until we HEAR a prompt, then press the digit; repeat for the
   // first `max` prompts (e.g. 0 after Spanish, 0 after the next, 0 after the next), then listen for the
