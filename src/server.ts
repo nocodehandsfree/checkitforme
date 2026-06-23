@@ -161,19 +161,9 @@ async function verifyClerkToken(authHeader: string | undefined): Promise<{ id: s
 
 // ---- Pages ----
 // Operator dashboard at caller.* ; consumer "pay-per-check" app at runner.* (or /r preview).
-const page = (file: string) =>
-  readFileSync(join(here, `../public/${file}`), "utf8")
-    .replace(/__CLERK_PUBLISHABLE_KEY__/g, config.clerk.publishableKey)
-    .replace(/__CLERK_FRONTEND_API__/g, clerkFrontendApi(config.clerk.publishableKey));
-
-// The publishable key base64-encodes the frontend-API domain ("<domain>$"), so the Clerk JS
-// script URL always matches whichever application/instance the env key points at.
-function clerkFrontendApi(pk: string): string {
-  try {
-    const b64 = pk.replace(/^pk_(test|live)_/, "");
-    return Buffer.from(b64, "base64").toString("utf8").replace(/\$$/, "");
-  } catch { return "summary-hen-61.clerk.accounts.dev"; }
-}
+// Clerk fully removed — no __CLERK_* placeholders to inject; auth is phone-session (consumer) and the
+// admin_session cookie (operator dashboard).
+const page = (file: string) => readFileSync(join(here, `../public/${file}`), "utf8");
 const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /** FAQ + HowTo structured data per vertical — Google rich-result eligibility for the PPC/SEO push. */

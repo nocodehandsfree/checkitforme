@@ -349,10 +349,8 @@
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script async crossorigin="anonymous"
-  data-clerk-publishable-key="__CLERK_PUBLISHABLE_KEY__"
-  src="https://__CLERK_FRONTEND_API__/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
-  type="text/javascript"></script>
+<!-- Clerk fully removed: admin is gated server-side by the signed admin_session cookie (/admin-login?token=ADMIN_TOKEN).
+     No Clerk bundle loads — zero Clerk network fetches on cold load. -->
 </head>
 <body class="authwait">
 <header>
@@ -918,7 +916,7 @@
 </div>
 
 <script>
-async function clerkToken(){ try{ return (window.Clerk&&window.Clerk.session) ? await window.Clerk.session.getToken() : null; }catch(e){ return null; } }
+async function clerkToken(){ return null; } // Clerk removed — /api/* auth is the admin_session cookie (sent automatically)
 const api = async (p, opts={}) => {
   const t = await clerkToken();
   const headers = Object.assign({}, opts.headers||{}, t?{Authorization:'Bearer '+t}:{});
@@ -2773,113 +2771,11 @@ async function delCommunity(id){ await api('/api/community/'+id,{method:'DELETE'
 function clock(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString(); }
 setInterval(clock,1000); clock();
 
-async function waitForClerk(ms=7000){ const t0=Date.now(); while(!window.Clerk){ if(Date.now()-t0>ms) return false; await new Promise(r=>setTimeout(r,80)); } return true; }
-// Custom passwordless sign-in — identical look/flow to the consumer sites (no Clerk chrome,
-// no social buttons): email -> magic link (code fallback). Centered on the page.
-let AAUTH={flow:null,email:'',signIn:null,signUp:null,codeFactorId:null,forceCode:false,linkCancel:null};
-function aErr(e){ try{ return (e&&e.errors&&e.errors[0]&&(e.errors[0].longMessage||e.errors[0].message))||''; }catch(_){ return ''; } }
-function aStep(w){ ['a_email','a_link','a_code'].forEach(s=>{ const el=document.getElementById(s); if(el) el.style.display=(s===w)?'':'none'; }); }
-function aMsg(id,t){ const el=document.getElementById(id); if(el) el.textContent=t||''; }
-function aDone(res){ window.Clerk.setActive({session:res.createdSessionId}).then(()=>location.reload()); }
-function aPoll(promise){
-  promise.then(res=>{ if(res&&res.status==='complete'&&res.createdSessionId) aDone(res);
-    else aMsg('a_lerr','Link not verified yet — resend, or use a code.'); })
-  .catch(e=>{ if(AAUTH.flow==='signup'&&!AAUTH.forceCode){ aUseCode(); return; } aMsg('a_lerr',aErr(e)||'Link failed — try a code.'); });
-}
-async function aSend(){
-  const email=(document.getElementById('a_in').value||'').trim().toLowerCase();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ aMsg('a_err','Enter a valid email'); return; }
-  AAUTH.email=email; aMsg('a_err','');
-  const btn=document.getElementById('a_btn'); btn.disabled=true; btn.textContent='Sending…';
-  try{
-    const client=window.Clerk.client; let si=null,isNew=false;
-    try{ si=await client.signIn.create({identifier:email}); }
-    catch(e){ if((e.errors||[]).some(x=>x.code==='form_identifier_not_found')) isNew=true; else throw e; }
-    if(!isNew&&si){
-      AAUTH.flow='signin'; AAUTH.signIn=si;
-      const fs=si.supportedFirstFactors||[];
-      const lf=fs.find(f=>f.strategy==='email_link'), cf=fs.find(f=>f.strategy==='email_code');
-      AAUTH.codeFactorId=cf?cf.emailAddressId:null;
-      if(lf&&!AAUTH.forceCode){ const fl=si.createEmailLinkFlow(); AAUTH.linkCancel=fl.cancelEmailLinkFlow;
-        aPoll(fl.startEmailLinkFlow({emailAddressId:lf.emailAddressId,redirectUrl:location.origin+'/'}));
-        aStep('a_link'); document.getElementById('a_to').textContent=email; }
-      else if(cf){ await si.prepareFirstFactor({strategy:'email_code',emailAddressId:cf.emailAddressId});
-        aStep('a_code'); document.getElementById('a_cto').textContent=email; }
-    } else {
-      AAUTH.flow='signup';
-      const su=await client.signUp.create({emailAddress:email}); AAUTH.signUp=su;
-      try{ const fl=su.createEmailLinkFlow(); AAUTH.linkCancel=fl.cancelEmailLinkFlow;
-        aPoll(fl.startEmailLinkFlow({redirectUrl:location.origin+'/'}));
-        aStep('a_link'); document.getElementById('a_to').textContent=email;
-      }catch(e){ await su.prepareEmailAddressVerification({strategy:'email_code'});
-        aStep('a_code'); document.getElementById('a_cto').textContent=email; }
-    }
-  }catch(e){ aMsg('a_err',aErr(e)||'Could not continue — try again'); }
-  finally{ btn.disabled=false; btn.textContent='Continue →'; }
-}
-async function aUseCode(){
-  try{ if(AAUTH.linkCancel) AAUTH.linkCancel(); }catch(_){}
-  AAUTH.forceCode=true; aMsg('a_lerr','');
-  try{
-    if(AAUTH.flow==='signin'&&AAUTH.signIn&&AAUTH.codeFactorId) await AAUTH.signIn.prepareFirstFactor({strategy:'email_code',emailAddressId:AAUTH.codeFactorId});
-    else if(AAUTH.flow==='signup'&&AAUTH.signUp) await AAUTH.signUp.prepareEmailAddressVerification({strategy:'email_code'});
-    else { aStep('a_email'); return; }
-    aStep('a_code'); document.getElementById('a_cto').textContent=AAUTH.email;
-  }catch(e){ aMsg('a_lerr',aErr(e)||'Could not switch to a code'); }
-}
-async function aVerify(){
-  const code=(document.getElementById('a_cin').value||'').replace(/\D/g,'');
-  if(code.length<6){ aMsg('a_cerr','Enter the 6-digit code'); return; }
-  try{
-    let res;
-    if(AAUTH.flow==='signin') res=await AAUTH.signIn.attemptFirstFactor({strategy:'email_code',code});
-    else res=await AAUTH.signUp.attemptEmailAddressVerification({code});
-    if(res&&res.status==='complete'&&res.createdSessionId) aDone(res);
-    else aMsg('a_cerr','Almost — try again');
-  }catch(e){ aMsg('a_cerr',aErr(e)||'Code did not match'); }
-}
-async function ensureAuth(){
-  const ok = await waitForClerk();
-  const pass=()=>{ document.body.classList.remove('authwait'); return true; };
-  if(!ok || !window.Clerk) return pass();          // Clerk not present -> proceed (enforcement off)
-  try{ await window.Clerk.load(); }catch(e){ return pass(); }
-  if(window.Clerk.user) return pass();             // already signed in
-  document.querySelector('header').style.display='none';
-  document.querySelector('nav').style.display='none';
-  document.querySelector('main').style.display='none';
-  let w=document.getElementById('signinwrap');
-  if(!w){ w=document.createElement('div'); w.id='signinwrap'; document.body.appendChild(w); }
-  w.style.cssText='position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:#0C0C12;background-image:radial-gradient(900px 400px at 50% -80px,rgba(74,222,128,.10),transparent 70%);z-index:50';
-  w.innerHTML=`
-  <div style="background:#1A1A24;border:1px solid rgba(255,255,255,.10);border-radius:18px;padding:24px;max-width:460px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)">
-    <div style="display:flex;justify-content:center;margin:2px 0 12px"><img src="/logos/check.png?v=1" alt="Check It For Me" style="height:36px;width:auto;object-fit:contain"></div>
-    <div id="a_email">
-      <h3 style="margin:0 0 4px;font-size:21px;font-weight:900">Admin</h3>
-      <div style="color:#9a9aac;font-size:14px;margin-bottom:16px">Enter your email to continue.</div>
-      <input id="a_in" type="email" placeholder="you@email.com" onkeydown="if(event.key==='Enter')aSend()" style="width:100%;background:#0A0A0E;color:#fff;border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:14px 13px;font-size:16px;box-sizing:border-box;text-align:center;font-family:inherit">
-      <div id="clerk-captcha" style="margin-top:8px"></div>
-      <div id="a_err" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
-      <button id="a_btn" onclick="aSend()" style="width:100%;background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;border:none;padding:15px;border-radius:14px;font-weight:900;font-size:16px;cursor:pointer;font-family:inherit">Continue →</button>
-    </div>
-    <div id="a_link" style="display:none">
-      <h3 style="margin:0 0 4px;font-size:21px;font-weight:900">Check your email</h3>
-      <div style="color:#9a9aac;font-size:14px;margin-bottom:14px">Tap the link we sent to <b style="color:#e6e6ee" id="a_to"></b>.</div><div style="color:#6b6b7b;font-size:12px;margin:-8px 0 14px">Keep this tab open — sign-in is automatic.</div>
-      <div id="a_lerr" style="color:#ff6b6b;font-size:13px;min-height:16px"></div>
-      <div style="margin-top:10px;font-size:12.5px;color:#9a9aac;white-space:nowrap"><a onclick="aUseCode()" style="color:#A78BFA;font-weight:700;cursor:pointer">Use a code</a> · <a onclick="aStep('a_email')" style="color:#A78BFA;font-weight:700;cursor:pointer">Change email</a></div>
-    </div>
-    <div id="a_code" style="display:none">
-      <h3 style="margin:0 0 4px;font-size:21px;font-weight:900">Check your email</h3>
-      <div style="color:#9a9aac;font-size:14px;margin-bottom:14px">We sent a 6-digit code to <b style="color:#e6e6ee" id="a_cto"></b>.</div>
-      <input id="a_cin" type="text" inputmode="numeric" maxlength="6" placeholder="••••••" onkeydown="if(event.key==='Enter')aVerify()" style="width:100%;background:#0A0A0E;color:#fff;border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:14px 13px;font-size:26px;font-weight:800;letter-spacing:.5em;box-sizing:border-box;text-align:center;font-family:inherit">
-      <div id="a_cerr" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
-      <button onclick="aVerify()" style="width:100%;background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;border:none;padding:15px;border-radius:14px;font-weight:900;font-size:16px;cursor:pointer;font-family:inherit;margin-top:4px">Verify →</button>
-      <div style="margin-top:10px;font-size:13px;color:#9a9aac"><a onclick="aStep('a_email')" style="color:#A78BFA;font-weight:700;cursor:pointer">Change email</a></div>
-    </div>
-  </div>`;
-  setTimeout(()=>{try{document.getElementById('a_in').focus();}catch(e){}},80);
-  window.Clerk.addListener((e)=>{ if(e.user) location.reload(); });
-  return false;
-}
+// Clerk fully removed. The admin is gated SERVER-SIDE by the signed `admin_session` cookie (minted by
+// /admin-login?token=ADMIN_TOKEN). There is no Clerk bundle, no window.Clerk, and no client sign-in flow:
+// we simply reveal the dashboard, and any /api call made without a valid session 401s → showAuthGate(),
+// which links to /admin-login. Zero Clerk network fetches on cold load.
+async function ensureAuth(){ document.body.classList.remove('authwait'); return true; }
 document.addEventListener('change', e=>{ if(e.target.id==='sim_tree') syncTreeUI(); });
 
 // ---- In-admin agent ("Admin dev") — switchable brain (Claude / GPT / Gemini) ----

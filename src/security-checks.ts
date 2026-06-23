@@ -9,9 +9,10 @@ export function assertProdSecurity(): void {
   const fatal: string[] = [];
   const warn: string[] = [];
 
-  // CLERK_ENFORCE off ⇒ the whole /api/* admin surface (store import/delete, pricing, voice clone,
-  // the AI agent that spends money) is reachable UNAUTHENTICATED.
-  if (!config.clerk.enforce) fatal.push("CLERK_ENFORCE is not 'true' — the admin API would be UNAUTHENTICATED.");
+  // Clerk is gone — the /api/* admin surface is now gated by the signed `admin_session` cookie, minted
+  // ONLY by /admin-login?token=ADMIN_TOKEN. If ADMIN_TOKEN is unset that gate falls open (see server.ts),
+  // exposing store import/delete, pricing, voice clone, and the money-spending agent UNAUTHENTICATED.
+  if (!config.adminToken) fatal.push("ADMIN_TOKEN is not set — the admin API (/api/*) would be UNAUTHENTICATED. Set ADMIN_TOKEN, then log in via /admin-login?token=…");
 
   // Missing/weak SESSION_SECRET ⇒ anyone can forge a phone session token = total auth bypass.
   const sec = process.env.SESSION_SECRET || "";
