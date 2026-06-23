@@ -165,5 +165,12 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Walgreens | red cursive W | 🔧 | de-boxed Walgreens "W" in brand red, sized down per owner |
 | Walmart | yellow spark | 🔧 | official spark mark (Wikimedia) |
 | Wawa | red wordmark + goose | 🔧 | real Wawa wordmark (Wikimedia) — de-boxed |
-| Wegmans | wordmark | ⬜ | |
-| WinCo Foods | wordmark | ⬜ | |
+| Wegmans | white script | 🔧 | real Wegmans script (Wikimedia), de-boxed → white |
+| WinCo Foods | red 2-line | 🔧 | real WinCo Foods wordmark (Wikimedia), red |
+
+## New stores (owner's 13-list) — 🔧 sourcing as we go
+| Logo | Treatment | Status | Notes |
+|---|---|---|---|
+| Amazon | wordmark + smile | 🔧 | white "amazon" + orange smile (Wikimedia) |
+| Goodwill | blue-square "g" | 🔧 | blue square + white g mark (Wikimedia) |
+| Salvation Army | red shield | 🔧 | red shield emblem (Wikimedia) |
