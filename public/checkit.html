@@ -3,21 +3,22 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="theme-color" content="#0C0C12" id="themeColor" />
-<!-- theme-color is the ONLY thing that tints the iOS status bar in a Safari tab (page sampling does NOT
-     reach it — proven). One value tints BOTH the top status bar AND the bottom toolbar; there is no
-     per-edge control, so a green result greens the top AND the footer. That's the accepted trade-off:
-     green to the top is the priority. setThemeTone() drives it per verdict; on a hard-refresh of a result
-     deep-link the boot script below sets it green AT LOAD so the bar is green from frame one. MUST stay a
-     single meta — a second one (e.g. injected server-side) makes WebKit ignore this one. -->
+<!-- Status bar: PROVEN that this device's Safari TAB won't tint from theme-color (we served green in the
+     HTML, no JS touched it, the bar stayed black). So we don't rely on theme-color at all. Instead, in
+     STANDALONE (Add to Home Screen) the apple-mobile metas below + viewport-fit=cover make the web content
+     paint UNDER the status bar — so the green result wash shows at the top per-edge and the homepage's dark
+     bg keeps it dark, with no Safari toolbar = no green footer. That's the original "green top, no footer"
+     experience. In a plain Safari tab the top stays the system default (an iOS limitation, not the page). -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Check it for me" />
 <script>(function(){try{
   var sp=new URLSearchParams(location.search);
   if(!sp.has('call')) return;
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
-  var T={in:'#266440',out:'#6b2427',unk:'#6c5419',soon:'#6e490f'};
-  if(cls && T[cls]){ window.__bootTone=cls; var m=document.getElementById('themeColor'); if(m) m.setAttribute('content',T[cls]); }
+  if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r44" />
+<meta name="x-rev" content="names-r45" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -43,7 +44,11 @@ __BRAND_HEAD__
   button,select,textarea{font-family:inherit}
   html{-webkit-text-size-adjust:100%;background:#0C0C12;color-scheme:dark;touch-action:manipulation}/* manipulation = scroll/pan OK, but no double-tap-to-zoom (was zooming the page on taps near the call arrows) */
   html,body{max-width:100%;overflow-x:hidden}
-  body{background:var(--bg);color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;margin:0;padding:0;
+  body{background:var(--bg);color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;margin:0;
+    /* Standalone (Home Screen) paints under the status bar — pad content past it; the body bg (green wash
+       on a result, dark on the homepage) fills this inset so the status-bar area takes the per-edge colour.
+       In a Safari tab the inset is 0, so this is a no-op there. */
+    padding:env(safe-area-inset-top) 0 0 0;
     display:flex;flex-direction:column;min-height:100dvh}
   /* No ambient color anywhere on the body — solid dark on every page, top and bottom (kills the green
      that kept tinting the iOS Safari bars / showing through on the homepage + call history). */
@@ -3048,22 +3053,10 @@ function navMark(view){
   }catch(e){}
   NAV_VIEW=view;
 }
-// Tint the iOS status bar (and, unavoidably, the bottom toolbar) to the verdict tone. iOS Safari often
-// will NOT repaint the status bar from a plain content-attribute change during in-app navigation — it
-// only re-reads theme-color when the meta NODE itself changes. So SWAP IN A FRESH NODE (insert the new
-// one before removing the old, so there's never zero theme-color metas for WebKit to fall back on). The
-// gradient-top colours keep the bar continuous with the result wash.
-function setThemeTone(){
-  const map={'rv-in':'#266440','rv-out':'#6b2427','rv-unk':'#6c5419','rv-soon':'#6e490f'};
-  let c='#0C0C12';
-  if(document.body.classList.contains('rview')){ for(const k in map){ if(document.body.classList.contains(k)){ c=map[k]; break; } } }
-  try{
-    const old=document.getElementById('themeColor');
-    const m=document.createElement('meta'); m.setAttribute('name','theme-color'); m.id='themeColor'; m.setAttribute('content',c);
-    if(old&&old.parentNode){ old.parentNode.insertBefore(m, old); old.parentNode.removeChild(old); }
-    else (document.head||document.documentElement).appendChild(m);
-  }catch(e){ try{ const m=document.getElementById('themeColor'); if(m) m.setAttribute('content',c); }catch(_){} }
-}
+// Status-bar tone is NOT done via theme-color (this device's Safari tab ignores it — proven). In
+// STANDALONE the page paints under the status bar (apple-mobile metas + safe-area inset), so the body
+// wash IS the status-bar colour. Nothing to set in JS — kept as a no-op so existing call-sites are safe.
+function setThemeTone(){}
 window.addEventListener('popstate',()=>{ if(NAV_VIEW!=='builder') backToBuilder(); });
 
 // --- Snappy result rendering (stale-while-revalidate) ---------------------------------------------
