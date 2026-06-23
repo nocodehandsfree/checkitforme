@@ -439,7 +439,7 @@
     <div id="storecoverage" class="card report" style="display:none;margin-bottom:10px"></div>
     <div class="card report"><div class="stats" id="storeintel" style="margin-bottom:0"></div></div>
     <div id="storecarries" class="card report" style="display:none"></div>
-    <details id="storereports" class="card report" style="display:none"><summary><span class="name">Reports</span></summary>
+    <details id="storereports" class="card report" open style="display:none"><summary><span class="name">Reports</span></summary>
       <div id="rep_body" style="margin-top:10px"></div>
     </details>
   </section>
@@ -1678,7 +1678,7 @@ async function loadStoreIntel(){
     const byType=(d.byType||[]).slice(0,12).map(x=>line(x.type,x.n)).join('');
     const regions=(d.topRegions||[]).map(x=>line(x.region,x.n)).join('');
     const checks=(d.topChecks||[]).map(x=>line(x.location?`${x.name} · ${x.location}`:x.name,x.n)).join('');
-    if(byType||regions||checks){ rep.style.display='';
+    if(byType||regions||checks){ rep.style.display=''; rep.open=true; // Intel reports stay expanded (owner ask)
       rb.innerHTML=`<div class="repgrid">${col('By store type',byType)}${col('Top regions',regions)}${col('Most-checked stores',checks)}</div>`;
     } else rep.style.display='none';
   }
