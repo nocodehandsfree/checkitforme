@@ -2658,7 +2658,7 @@ async function callZoneNow(id,name,count){
 async function cancelZone(id,name){
   const b=document.getElementById('zonebtn_'+id); if(b){ b.disabled=true; b.textContent='Cancelling…'; }
   const r=await api('/api/zones/'+id+'/hangup',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
-  toast((r&&!r.error)?('Cancelled '+(r.hungUp!=null?r.hungUp+' ':'')+'calls in '+name):'Could not cancel the zone');
+  toast((r&&!r.error)?('Cancelled '+(r.cancelled!=null?r.cancelled+' ':'')+'calls in '+name):'Could not cancel the zone');
   loadZones();
 }
 async function loadCatalog(){
