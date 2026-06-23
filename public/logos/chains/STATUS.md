@@ -133,14 +133,14 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | QFC | Q-with-crown | 🔧 | their Q-with-crown mark, shrunk per owner ("Q is too big") |
 | Ralphs | red oval + white script | 🔧 | owner-supplied real Ralphs oval logo (replaced the red "R" mark) |
 
-## Chunk 7b — randalls → scheels  ⬜
+## Chunk 7b — randalls → scheels  🔧
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Randalls | wordmark | ⬜ | **too small**; lighten; remove white in letters |
-| Ross Dress for Less | wordmark | ⬜ | white lettering, readable (lightened blue done before) |
-| Safeway | wordmark | ⬜ | |
-| Sam's Club | split actual | ⬜ | split their ACTUAL wordmark, don't cut letters |
-| Scheels | wordmark | ⬜ | |
+| Randalls | bright-blue script | 🔧 | lightened navy→bright blue, kept red underline, enlarged (w:1) |
+| Ross Dress for Less | white wordmark | 🔧 | recolored lettering to white |
+| Safeway | red app-icon "S" | 🔧 | kept the app icon per owner ("Safeway is fine") |
+| Sam's Club | "sam's / club" wordmark | 🔧 | actual two-line wordmark, sized down per owner |
+| Scheels | red "SCHEELS" wordmark | 🔧 | owner-supplied logo, de-boxed to brand red #ee2e24 (the 2025 revert to the '98 red), w:1 |
 
 ## Chunk 8 — shaw_s → tom_thumb  ⬜
 | Logo | Treatment | Status | Notes |
