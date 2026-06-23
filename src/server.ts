@@ -2674,16 +2674,22 @@ app.post("/api/schedules/:id/targets", async (c) => {
 
 // ---- Results ----
 app.get("/api/results", async (c) => {
-  const rows = await db.select().from(callResults).orderBy(desc(callResults.startedAt)).limit(50);
-  const rMap = new Map((await db.select().from(retailers)).map((r) => [r.id, r]));
+  // Paginated + lean: return only the page's rows, and look up only the retailers/chains those rows
+  // reference. (The old version pulled ALL ~100k retailers on every call — that was the slow part.)
+  const limit = Math.min(Math.max(Number(c.req.query("limit") || 10), 1), 200);
+  const offset = Math.max(Number(c.req.query("offset") || 0), 0);
+  const rows = await db.select().from(callResults).orderBy(desc(callResults.startedAt)).limit(limit).offset(offset);
+  const total = Number((await db.select({ n: sql<number>`count(*)` }).from(callResults))[0]?.n || 0);
+  const rids = [...new Set(rows.map((r) => r.retailerId).filter((x): x is number => !!x))];
+  const rMap = new Map((rids.length ? await db.select().from(retailers).where(inArray(retailers.id, rids)) : []).map((r) => [r.id, r]));
   const names = new Map((await db.select().from(chains)).map((x) => [x.id, x.name]));
   const cMap = new Map((await db.select().from(categories)).map((x) => [x.id, x.label]));
-  return c.json(rows.map((r) => {
+  return c.json({ total, offset, limit, rows: rows.map((r) => {
     const ret = rMap.get(r.retailerId);
     // Same chain-logo resolution as every other surface, so the Calls feed shows the store's mark.
     const l = chainLogoInfo(ret ? ((ret.chainId && names.get(ret.chainId)) || ret.name.split(/—|–| - /)[0]) : null);
     return { ...r, retailer: ret?.name, category: cMap.get(r.categoryId), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
-  }));
+  }) });
 });
 
 // ---- Actions ----
