@@ -2333,6 +2333,12 @@ app.get("/api/admin/data-health", async (c) => {
   if (!c.req.query("fresh") && dataHealthCache && Date.now() - dataHealthCache.t < 300_000) return c.json(dataHealthCache.v);
   const chainName = new Map((await db.select({ id: chains.id, name: chains.name }).from(chains)).map((x) => [x.id, x.name || ""]));
   const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  // Mis-chain = store name and chain name share NO significant word. Shared-token (not prefix) so a
+  // store correctly chained but named with a franchise prefix / short brand / variant ("Franklin's Ace
+  // Hardware" ∈ "Ace Hardware", "Big 5 Reseda" ∈ "Big 5 Sporting Goods", "CVS West Hills" ∈ "_CVS
+  // Pharmacy at Target") is NOT flagged — only a genuinely foreign brand (a Savers row under Dick's) is.
+  const STOP = new Set(["the", "and", "of", "at", "for", "store", "shop", "inc", "llc"]);
+  const sig = (s: string) => new Set(norm(s).split(" ").filter((t) => t.length > 2 && !STOP.has(t)));
   const junkRx = /&lt;|&gt;|style=|<[a-z/]|\(#\d|—| - | Shop Location|Holiday (Décor|Greeting)/i;
   const allCaps = /\b[A-Z]{4,}\s+[A-Z]{4,}\b/;
   const rows = await db.select({ id: retailers.id, name: retailers.name, chainId: retailers.chainId, phone: retailers.phone, hours: retailers.hours })
@@ -2348,8 +2354,8 @@ app.get("/api/admin/data-health", async (c) => {
     if (!r.chainId) { noChain++; continue; }
     const cn = chainName.get(r.chainId);
     if (cn) {
-      const cnN = norm(cn);
-      if (cnN && !norm(nm).startsWith(cnN)) {
+      const ct = sig(cn), st = sig(nm);
+      if (ct.size && st.size && ![...st].some((t) => ct.has(t))) {
         misChain++; byMis.set(r.chainId, (byMis.get(r.chainId) || 0) + 1);
         if (misSample.length < 15) misSample.push(`${nm.slice(0, 40)}  → chain: ${cn}`);
       }
