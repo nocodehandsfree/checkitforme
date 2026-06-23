@@ -132,7 +132,8 @@
   /* Tooltip: TAP to show (works on mobile — hover doesn't exist on touch). A small ⓘ marks tappable hints. */
   [data-tip]{cursor:help}
   label[data-tip],span[data-tip],.name[data-tip],b[data-tip]{display:inline-flex;align-items:center;gap:4px}
-  [data-tip]::after{content:"ⓘ";font-size:14px;color:var(--purple);font-style:normal;font-weight:700;line-height:1;margin-left:3px;vertical-align:middle;opacity:.85}
+  [data-tip]::after{content:"ⓘ";font-size:14px;color:var(--purple);font-style:normal;font-weight:700;line-height:1;margin:-4px 0 -4px 1px;padding:4px;vertical-align:middle;opacity:.85;cursor:pointer}
+  [data-tip]:active::after{opacity:1;color:#c4b5fd}
   #tiptip{position:fixed;z-index:9000;max-width:262px;background:#06060a;color:#e8e8f2;font:500 12.5px/1.45 Inter,-apple-system,sans-serif;font-style:normal;padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 30px rgba(0,0,0,.6)}
   /* Settings page: sections reuse the global details.card chevron (green circle, top-right). */
   details.card.setsec>summary{align-items:center}
@@ -417,14 +418,14 @@
       <div id="credit_body" class="meta">Loading…</div>
       <div id="credit_stats" class="meta" style="margin-top:6px"></div>
       <div id="credit_limit_wrap" style="display:none;margin-top:12px">
-        <div class="hint" style="margin-bottom:8px">Estimate from the last 31 days <span data-tip="Enable user_read on this API key in ElevenLabs → API Keys for a true auto-updating balance with no manual entry.">ⓘ</span>. Enter your plan size below until live balance is on.</div>
+        <div class="hint" style="margin-bottom:8px">Estimate from the last 31 days <span data-tip="Enable user_read on the ElevenLabs API key for a live, auto-updating balance.">ⓘ</span>. Enter your plan size below until live balance is on.</div>
         <div class="row" style="gap:8px">
           <input id="credit_limit" type="number" placeholder="Plan size — e.g. 100000" style="flex:1">
           <button class="ghost" onclick="saveCreditLimit()">Save</button>
         </div>
       </div>
     </div>
-    <details class="card report" id="d_timing_card">
+    <details class="card report" id="d_timing_card" open>
       <summary style="cursor:pointer"><span class="name">Call time &amp; cost</span></summary>
       <div class="meta" style="margin:10px 0 8px">Time-to-human (phone-tree nav) vs. talk — ElevenLabs bills the whole connected call, so nav + hold is real cost.</div>
       <div class="stats" id="d_timing" style="margin-bottom:6px"></div>
@@ -568,7 +569,7 @@
       <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px">
         <div class="name">Emailed-in receipts</div>
         <button class="ghost" style="font-size:12px;padding:5px 10px" onclick="inspectInbox()">🔍 Inspect inbox</button>
-        <span data-tip="Reads the ingest inbox (restocktimer@gmail.com) and shows what the parser does with each email — so we can see whether a receipt arrived and why it did or didn't land." style="margin-left:7px;cursor:help"></span>
+        <span data-tip="Reads the ingest inbox and shows how each email parsed — whether a receipt landed, and why." style="margin-left:7px;cursor:help"></span>
       </div>
       <div class="meta" id="rcpt_status" style="margin-bottom:8px">Loading…</div>
       <div id="rcpt_debug" class="meta" style="margin-bottom:8px"></div>
@@ -621,11 +622,11 @@
   <section id="settings">
     <h2 data-tip="App-wide defaults. Per-store settings live under Calls → Settings.">App</h2>
     <div class="card"><div class="row">
-      <div class="grow"><div class="name" data-tip="Streams call audio + a hang-up button to every customer. OFF = testing tool only (comp accounts like yours always have it).">Customers hear calls live</div></div>
+      <div class="grow"><div class="name" data-tip="Streams call audio + a hang-up button to customers. OFF = testing only (comp accounts always have it).">Customers hear calls live</div></div>
       <button id="llToggle" class="ghost" onclick="toggleLiveListen()">…</button>
     </div></div>
     <div class="card">
-      <div class="name" data-tip="The full Voice → Designer workflow (voice, persona, script & rules) used for every call — unless a chain or a store has its own. Build workflows in Voice → Designer (Step 7).">Default workflow</div>
+      <div class="name" data-tip="Default voice / persona / script for every call, unless a chain or store overrides it. Build them in Voice → Designer.">Default workflow</div>
       <div class="meta" style="margin:2px 0 10px">Applied to every call unless a chain or store overrides it. Per-chain is set on the Phone Trees list; per-store on the store row.</div>
       <select id="set_default_wf" onchange="saveDefaultWorkflow()"><option value="">Loading…</option></select>
     </div>
@@ -804,7 +805,7 @@
           <div id="set_mapping" class="meta" style="margin-top:2px">—</div>
           <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
             <button class="act" id="set_mapbtn" onclick="setMapChain()">Map</button>
-            <span class="meta" data-tip="Map = place one real call; the navigator works the phone menu to a human and records the recipe + time, then you Lock it." style="align-self:center"></span>
+            <span class="meta" data-tip="One real call — the navigator works the menu to a human, records the recipe + time, then you Lock it." style="align-self:center"></span>
           </div>
           <div class="card" id="tr_live" style="display:none;border-color:var(--green);margin-top:12px">
             <div class="row" style="justify-content:space-between;align-items:center">
@@ -832,7 +833,7 @@
         <div style="height:1px;background:var(--border);margin:14px 0"></div>
         <div class="name" style="font-size:14px;margin-bottom:8px">Add a status</div>
         <div class="row" style="gap:8px">
-          <button type="button" class="sticon-btn" id="st_new_icon_btn" onclick="pickNewStatusIcon()" title="Pick an icon from the library"><span class="meta" style="font-size:9px">icon</span></button>
+          <button type="button" class="sticon-btn" id="st_new_icon_btn" onclick="pickNewStatusIcon()" title="Pick an icon"><span class="meta" style="font-size:9px">icon</span></button>
           <input type="hidden" id="st_new_emoji" value="">
           <input id="st_new_label" placeholder="Label (e.g. Holding one for you)" style="flex:1">
         </div>
@@ -890,11 +891,11 @@
 <div class="toast" id="toast"></div>
 
 <!-- In-admin Claude agent ("Admin dev") — chat to manage the store DB by conversation -->
-<button id="agentFab" class="agent-fab" onclick="agentToggle()" title="Admin dev — ask me to add a store, look one up, fix details" aria-label="Admin dev agent"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9.5l-4 3.4V15.5H4z"/><path d="M8.5 10.2h7M8.5 13h4.5"/></svg></button>
+<button id="agentFab" class="agent-fab" onclick="agentToggle()" title="Admin dev — add, look up, or fix a store" aria-label="Admin dev agent"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9.5l-4 3.4V15.5H4z"/><path d="M8.5 10.2h7M8.5 13h4.5"/></svg></button>
 <div id="agentPanel" class="agent-panel" style="display:none">
   <div class="agent-head">
     <span class="agent-title"><span class="livedot" style="background:var(--green);box-shadow:0 0 8px var(--green)"></span> Admin dev</span>
-    <select id="agentModel" class="agent-model" onchange="agentSetModel(this.value)" title="Switch the brain (Claude / GPT / Gemini)"></select>
+    <select id="agentModel" class="agent-model" onchange="agentSetModel(this.value)" title="Switch the model — Claude / GPT / Gemini"></select>
     <button class="agent-x" onclick="agentToggle(false)" aria-label="Close">×</button>
   </div>
   <div id="agentLog" class="agent-log"></div>
@@ -939,6 +940,7 @@ document.addEventListener('click',e=>{
   document.body.appendChild(tip);
   const r=t.getBoundingClientRect(), b=tip.getBoundingClientRect();
   let top=r.top-b.height-8; if(top<6) top=r.bottom+8;
+  if(top+b.height>window.innerHeight-6) top=Math.max(6,window.innerHeight-b.height-6); // keep it on-screen vertically
   let left=Math.max(8,Math.min(r.left,window.innerWidth-b.width-8));
   tip.style.top=top+'px'; tip.style.left=left+'px';
   setTimeout(()=>{ if(_tipFor===t){ const x=document.getElementById('tiptip'); if(x) x.remove(); _tipFor=null; } },5000);
@@ -995,7 +997,7 @@ async function loadReceipts(){
   if(!Array.isArray(rows)){ list.innerHTML='<div class="empty">Could not load receipts.</div>'; if(stat)stat.textContent='—'; return; }
   const ago=s=>{ if(!s)return '—'; const m=Math.floor(Date.now()/1000)-s; if(m<3600)return Math.max(1,Math.floor(m/60))+'m ago'; if(m<86400)return Math.floor(m/3600)+'h ago'; return Math.floor(m/86400)+'d ago'; };
   const claimed=rows.filter(r=>r.claimedBy).length;
-  if(stat) stat.innerHTML=`<b>${rows.length}</b> received · <b>${claimed}</b> claimed a free check. <span class="hint" data-tip="Only kiosk receipts (a Machine ID, or product + total) parse and land here — a regular store/online receipt won't.">why some don’t count</span>`;
+  if(stat) stat.innerHTML=`<b>${rows.length}</b> received · <b>${claimed}</b> claimed a free check. <span class="hint" data-tip="Only kiosk receipts (Machine ID, or product + total) land here — a normal store / online receipt won't.">why some don’t count</span>`;
   if(!rows.length){ list.innerHTML='<div class="empty">No receipts yet — they appear here once a shopper emails one in and it parses.</div>'; return; }
   list.innerHTML=rows.map(r=>{
     const badge=r.claimedBy?'<span class="tag-verified">✓ free check granted</span>':'<span class="pill">unclaimed</span>';
@@ -1813,7 +1815,7 @@ function renderRetailers(){
       ${statusBadge(r)}
     </div>
     <div class="ractions">
-      ${WF.list.length?(()=>{const inh=(r.chainId&&WF.chains[r.chainId])||WF.def||'';return `<select onchange="setStoreWorkflow(${r.id},this.value)" title="Workflow for this store (overrides chain + default)">${wfOptions(WF.stores[r.id]||'', inh?('Inherit · '+inh):'Inherit · no default')}</select>`;})():''}
+      ${WF.list.length?(()=>{const inh=(r.chainId&&WF.chains[r.chainId])||WF.def||'';return `<select onchange="setStoreWorkflow(${r.id},this.value)" title="Per-store workflow — overrides chain + default">${wfOptions(WF.stores[r.id]||'', inh?('Inherit · '+inh):'Inherit · no default')}</select>`;})():''}
       <select id="cn_${r.id}"><option value="" disabled selected>Category</option>${CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
       <button class="act" onclick="callNow(${r.id})">${ICO('phone',15)} Call now</button>
     </div>
@@ -1985,7 +1987,7 @@ function ssRenderData(){
   const sccOpts=[['','—'],['confirmed','confirmed'],['probable','probable']];
   const scmOpts=[['','—'],['site','site · read the website'],['call','call · phone the store']];
   el.innerHTML=
-    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> First-party — sells at MSRP</label><span data-tip="We check the store's own shelf at normal retail price, not a third-party reseller that may mark it up."></span></div>`
+    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> First-party — sells at MSRP</label><span data-tip="We price the store's own shelf at retail — not a reseller that may mark it up."></span></div>`
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check method <span data-tip="How we check this chain's stock — read their website (site) or phone the store (call)."></span></div>`
     +`<select id="set_scm" style="margin-bottom:16px">${scmOpts.map(([v,l])=>`<option value="${v}"${(SS.scm||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check confidence <span data-tip="How sure we are it carries: confirmed (seen/called) vs probable (expected, unverified)."></span></div>`
@@ -2011,10 +2013,10 @@ function ssRenderCall(){
   el.innerHTML=
     `<div class="row" style="gap:26px;align-items:center;flex-wrap:wrap;margin:2px 0 4px">`
     +`<div class="row" style="gap:9px;align-items:center"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" onchange="ssSetMaxTalk(this.value)" style="width:68px;padding:9px 10px;font-size:15px;text-align:center"><div style="font-weight:700;font-size:13px;line-height:1.15">Max talk <span data-tip="Hard cap on how long the agent talks to a person before wrapping up."></span><div class="meta" style="font-size:11px;font-weight:500">seconds</div></div></div>`
-    +`<div class="row" style="gap:9px;align-items:flex-start"><input type="checkbox" id="set_vm" ${SS.vm?'checked':''} onchange="ssSetHangup(this.checked)" style="margin-top:2px"><div style="line-height:1.25"><div style="display:flex;align-items:center;gap:5px"><label for="set_vm" style="font-weight:700;font-size:13px;color:var(--text-body);cursor:pointer;text-transform:none;letter-spacing:0;display:inline;margin:0">Hang up</label><span data-tip="If the call hits voicemail or a closed / recorded line, hang up immediately — no message, no charge."></span></div><div class="meta" style="font-size:11px;margin-top:1px">voicemail / closed</div></div></div>`
+    +`<div class="row" style="gap:9px;align-items:flex-start"><input type="checkbox" id="set_vm" ${SS.vm?'checked':''} onchange="ssSetHangup(this.checked)" style="margin-top:2px"><div style="line-height:1.25"><div style="display:flex;align-items:center;gap:5px"><label for="set_vm" style="font-weight:700;font-size:13px;color:var(--text-body);cursor:pointer;text-transform:none;letter-spacing:0;display:inline;margin:0">Hang up</label><span data-tip="Voicemail or a closed / recorded line → hang up at once. No message, no charge."></span></div><div class="meta" style="font-size:11px;margin-top:1px">voicemail / closed</div></div></div>`
     +`</div>`
-    +`<div class="setrow" style="justify-content:flex-end;gap:11px"><div class="setlbl">Phone this chain <span data-tip="ON = we actually dial this chain's stores to check stock. OFF = we keep it in the directory but never call it."></span></div>${tog(SS.callTarget,'ssToggleCallTarget()')}</div>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin:16px 0 6px">Default workflow <span data-tip="Voice / script workflow for every store of this chain (overrides the global default). Build them in Voice → Designer."></span></div>`
+    +`<div class="setrow" style="justify-content:flex-end;gap:11px"><div class="setlbl">Phone this chain <span data-tip="ON = we call this chain's stores to check stock. OFF = listed, but never dialed."></span></div>${tog(SS.callTarget,'ssToggleCallTarget()')}</div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin:16px 0 6px">Default workflow <span data-tip="Voice / script for every store of this chain — overrides the global default."></span></div>`
     +`<select id="set_wf" onchange="setChainWorkflow(SS.id,this.value)">${wfOptions(SS.wf, WF.def?('Default · '+WF.def):'Default')}</select>`;
 }
 async function ssToggleCallTarget(){ if(!SS) return; const v=!SS.callTarget; if(await ssPatch('callTarget',v)){ SS.callTarget=v; ssRenderCall(); toast(v?'Phoning this chain':'Will not dial this chain'); } }
@@ -2498,16 +2500,16 @@ function renderStatuses(list){
   el.innerHTML = rows.length ? rows.map(s=>`
     <div class="card" style="padding:12px;margin-bottom:8px" data-sid="${s.id}">
       <div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap">
-        <button type="button" class="sticon-btn" onclick="statusPickIcon(this)" title="Change icon — pick from the library">${statusIcon(s.emoji,s.color||s.tone,24)}</button>
+        <button type="button" class="sticon-btn" onclick="statusPickIcon(this)" title="Change the icon">${statusIcon(s.emoji,s.color||s.tone,24)}</button>
         <input type="hidden" data-f="emoji" value="${escH(s.emoji)}">
         <input value="${escH(s.label)}" data-f="label" onchange="statusAutoSave(this)" style="flex:1;min-width:0;font-size:15px" placeholder="Label">
         ${s.key==='in_stock'
-          ? `<input type="color" value="#4ADE80" data-f="color" disabled title="Locked to the brand green (#4ADE80) — always matches the logo" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1.5px solid var(--green);background:none;flex:0 0 auto;cursor:not-allowed">`
+          ? `<input type="color" value="#4ADE80" data-f="color" disabled title="Locked to brand green — matches the logo" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1.5px solid var(--green);background:none;flex:0 0 auto;cursor:not-allowed">`
           : `<input type="color" value="${escH(s.color)}" data-f="color" oninput="statusRecolor(this)" onchange="statusAutoSave(this)" title="Icon color" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1px solid var(--border);background:none;flex:0 0 auto">`}
       </div>
       <textarea data-f="note" rows="3" onchange="statusAutoSave(this)" placeholder="One-line note the customer sees" style="margin-top:10px;font-size:14px;line-height:1.5">${escH(s.note)}</textarea>
       <div class="row" style="gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
-        <select data-f="tone" onchange="statusToneChange(this);statusAutoSave(this)" title="The customer's verdict bucket — sets the color + which filter this lands in" style="flex:0 0 auto;max-width:180px">
+        <select data-f="tone" onchange="statusToneChange(this);statusAutoSave(this)" title="Verdict bucket — sets the color + filter" style="flex:0 0 auto;max-width:180px">
           <option value="in"${s.tone==='in'?' selected':''}>In stock</option>
           <option value="out"${s.tone==='out'?' selected':''}>Not in stock</option>
           <option value="unk"${s.tone==='unk'?' selected':''}>Check failed</option>
