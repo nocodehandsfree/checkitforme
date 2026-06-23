@@ -81,6 +81,11 @@ brand pack (`docs/brand/`, canonical = `docs/brand/CHECK_BRAND_STYLE_GUIDE.md`).
   fixes can still go straight to prod — use judgment; anything Fungie can SEE goes through staging.)
 - Typecheck `npx tsc --noEmit` (+ `bash scripts/test-all.sh` for backend) **before you push.**
 - Never break live. Risky/untested → behind a `policy` flag, default off.
+- **🔑 Where secrets live: ALL secrets are Railway env vars — including `ADMIN_TOKEN`** (the admin-API
+  key, used as the `x-admin-token` header and for `/admin-login?token=…`). You do NOT hold a separate
+  admin token; there's ONE Railway token, and it reads every secret. Find `ADMIN_TOKEN` in the Railway
+  dashboard: **`voice-caller` (prod) service → Variables → `ADMIN_TOKEN`** (after a rotation, the new
+  value lands in that same variable).
 - **Need a secret/env var (e.g. `ADMIN_TOKEN`)? Pull it from Railway yourself — don't ask Fungie:**
   ```bash
   curl -s -X POST https://backboard.railway.app/graphql/v2 \
@@ -89,6 +94,10 @@ brand pack (`docs/brand/`, canonical = `docs/brand/CHECK_BRAND_STYLE_GUIDE.md`).
     | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['variables']['ADMIN_TOKEN'])"
   ```
   (voice-caller serviceId `d363a982-…`; swap `ADMIN_TOKEN` for any var name.)
+- **⚠️ If that curl fails / hangs (`unauthorized`, a network/proxy block):** your environment's network
+  policy is blocking outbound calls to Railway — the token is fine, your sandbox just can't reach
+  Railway. Fix = allow **`backboard.railway.app`** in this environment's network policy (Claude Code on
+  the web → environment settings). Until then, ask Fungie to paste the `ADMIN_TOKEN` value directly.
 
 ## Docs map (open only what you need)
 - `docs/RUNBOOK.md` — what it is + stack/services + run/deploy/secrets.
