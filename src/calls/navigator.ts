@@ -7,12 +7,13 @@ import { llm } from "../llm";
 import { getSetting, setSetting } from "../db/settings";
 
 const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
-// MAPPING model — this only drives tree DISCOVERY (the learner). Cost here is irrelevant: we map a
-// chain once. At SCALE, live calls replay the LOCKED keypad recipe (deterministic DTMF, no model at
-// all), so the per-call cost is unaffected by how smart this is. So we use a genuinely capable model
-// for accuracy — flash-lite was pressing "1" for hours/electronics; flash reliably reads the menu and
-// heads to the right desk. Bump to "gemini-2.5-pro" if a tree ever needs even more reasoning.
-export const NAV_MODEL = "gemini-2.5-flash";
+// MAPPING model — drives tree DISCOVERY only (the learner). Cost is irrelevant here (map once); at
+// SCALE live calls replay the LOCKED keypad recipe (deterministic DTMF, no model). We WANT a smarter
+// model for mapping accuracy, but gemini-2.5-flash was returning 503s (overloaded) and stalling the
+// nav, and gemini-2.5-pro/2.0-flash were rate-limited — only flash-lite is reliably up. So default to
+// the reliable flash-lite and pass a smarter model per-run when one is healthy. TODO: wire a reliable
+// smart mapper (Groq llama-3.3-70b or gpt-4o-mini via the gateway) as the default once verified.
+export const NAV_MODEL = "gemini-2.5-flash-lite";
 
 // A live person is on the line (a short greeting/question said TO us). Used as a backstop in auto-0
 // mode so we hang up the instant someone answers instead of beeping 0 at them.
