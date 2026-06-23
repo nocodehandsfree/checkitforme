@@ -156,7 +156,8 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Tokyo Japanese Lifestyle | TOKYO + fan | 🔧 | raised higher on the tile per owner |
 | Tom Thumb | white script, dark tile | ✅ | white Tom/Thumb on dark tile, 3 rules stripped, stray tick removed, red line raised |
 
-## Chunk 9 — tractor_supply → winco_foods  🔧 (9a: tractor→wawa done, awaiting approval)
+## Chunk 9 — tractor_supply → winco_foods  🔧 (9a done + uniform-sized per owner; awaiting approval)
+<!-- Uniform sizing: logos normalized to a common envelope (~72% W / 60% H of tile) so they render the same size. Tractor shield shrunk vs wordmark. Tom Thumb (ch8) resized to match. -->
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
 | Tractor Supply | TSC shield + wordmark | 🔧 | real logo (Wikimedia); black wordmark recolored white, red shield kept |
