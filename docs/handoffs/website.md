@@ -26,6 +26,33 @@ consumer-page section of `src/server.ts`. If a push collides, `git pull --rebase
 for a gnarly conflict ping DevOps — don't redo your work blind.
 
 ## Current focus (KEEP UPDATED)
+
+### 🟡 On staging, awaiting prod promotion (2026-06-23, checkit.html rev **names-r52**)
+All on the staging branch; **not yet merged to prod.** Verify on `staging.checkitforme.com`, then promote.
+- **Live call rewrite → matched prod.** A staging-only `d.ended` WS handler that did `clearInterval(POLL)`
+  + a `LIVE_DONE` guard were freezing the call view until "Stop" was pressed. Reverted to prod's POLL-only
+  finalizer (the POLL clears itself; no second finalizer to fail). `finalizeLive` keeps a snappy 1s re-poll
+  + transcript fallbacks. **Same-device note:** iOS suspends the page's JS while you're on the call, so the
+  transcript can't animate *during* a same-phone call — physics, identical to prod; the after-call result
+  loads fast.
+- **Self-correcting verdict** (`reconcileVerdict`): finalize shows the provisional read, then upgrades the
+  on-screen verdict + saved history entry IN PLACE when the server consensus lands (e.g. "maybe" → IN STOCK).
+  Guarded by `CALL_GEN` so a NEW call cancels the previous call's poll (fixed a bug where the old result
+  repainted over a new call).
+- **Homepage speed:** finds banner cached in localStorage, painted instantly on return, refreshed in the
+  background (`/pub/finds` is ~3-5s **cold** on BOTH staging and prod — TiDB cold-start, not a staging
+  regression; homepage HTML itself is ~0.6s on both).
+- **Calendar yellow on login:** history primed right after auth so "call-made" days color immediately and
+  My-checks opens warm.
+- **Forward nav:** `popstate` now restores the call page going forward (was back-only).
+- **Clerk fully removed from the front-end** (admin `app.html` + server): zero Clerk network fetches; admin
+  gated by the `admin_session` cookie (`/admin-login?token=ADMIN_TOKEN`); boot fatals on missing
+  `ADMIN_TOKEN` instead of `CLERK_ENFORCE` (verified set on staging + prod).
+- **Consensus second-read prompt** (`src/voice/verdict.ts`) tuned to judge meaning/tone, so an unusually
+  phrased but clearly positive answer reads as YES instead of "unclear".
+- **OPEN (not code):** ElevenLabs agent **interruption/VAD sensitivity** — light background noise cut the
+  agent off mid-sentence (the "chipmunk"/restart). Needs EL-dashboard/API tuning, pending owner OK.
+
 - [x] ✅ **Result-page overhaul + i18n + calendar + "no green" + schedule modal** (shipped 2026-06-19 — full
   details in `docs/COMPLETED.md`). Verdict card (all-black, icon under logo), collapsed call recap with
   persisted per-step seconds, instant SWR result rendering, calendar shows every call-day, Spanish call

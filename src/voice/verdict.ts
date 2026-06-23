@@ -45,8 +45,13 @@ export async function classifyVerdict(
     `- "we don't carry that / we don't sell those" → no.\n` +
     `- "let me check / hold on / I'll go look" and the call ends with NO answer → unclear.\n` +
     `- a FUTURE shipment ("getting more Thursday") with nothing buyable now → no, but put the day in restockDay.\n` +
+    `Judge MEANING and TONE, not exact keywords. Casual, indirect, or oddly-phrased affirmatives still mean ` +
+    `YES when the surrounding words signal the item is here and buyable — e.g. "yeah come on down", "we're loaded", ` +
+    `"got a ton", "plenty left", "just put a bunch out", "oh for sure", "yep got those", "come grab one". ` +
+    `Weigh the WHOLE reply: an invitation to come in, a mention of quantity, or a shipment that's already on the ` +
+    `floor are positive availability cues → yes (high confidence), even if the clerk never says the literal words "in stock".\n` +
     `Capture productForm (booster packs, tin, 3-pack blister, ETB, booster box, bundle, etc.) and set ONLY if the clerk named them, else null. ` +
-    `Be conservative: if you are not certain it is buyable right now, answer "unclear".\n` +
+    `Reserve "unclear" for GENUINE uncertainty only — no real answer, or hedging with no commitment. A clearly positive answer phrased unusually is YES, not unclear.\n` +
     `Reply with STRICT JSON only: {"inStock":"yes|no|unclear","restockDay":string|null,"productForm":string|null,"set":string|null,"confidence":0..1,"reason":"short"}`;
   try {
     const raw = await llm(
