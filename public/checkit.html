@@ -17,7 +17,7 @@
   var T={in:'#266440',out:'#6b2427',unk:'#6c5419',soon:'#6e490f'};
   if(cls && T[cls]){ window.__bootTone=cls; var m=document.getElementById('themeColor'); if(m) m.setAttribute('content',T[cls]); }
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r41" />
+<meta name="x-rev" content="names-r42" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -2788,7 +2788,11 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     const realI=idx+1; let secs=null; // gap to the next step (printed once this step is complete)
     if(realI<n-1){ if(steps[realI+1].at>s.at) secs=Math.round(steps[realI+1].at-s.at); }
     else if(finalElapsed!=null && finalElapsed>s.at) secs=Math.round(finalElapsed-s.at);
-    const ok = realI===n-1 && finalElapsed!=null && reached; // final step, call finished, person reached
+    // final step turns green ✓ when the call is FINISHED and a person was reached — a finished call is
+    // either one with a real finalElapsed (live) OR any reopened call that has a verdict status (so the
+    // "Asking about {cat}" line stays green when you reopen it, not just live).
+    const done = finalElapsed!=null || !!(status&&status.title);
+    const ok = realI===n-1 && done && reached;
     return `<div class="ctl-step-row${ok?' ok':''}">${esc(s.label)}${ok?' ✓':''}${secs!=null?`<span class="cs-time">${secs}s</span>`:''}</div>`;
   }).join('');
   const storeNm=(SEL_STORE && splitStoreName(SEL_STORE.name).base) || t('live.store','the store');
@@ -3044,14 +3048,21 @@ function navMark(view){
   }catch(e){}
   NAV_VIEW=view;
 }
-// Tint the iOS status bar (and, unavoidably, the bottom toolbar) to the verdict tone via the single
-// theme-color meta — the gradient-top colours so the bar is continuous with the result wash.
+// Tint the iOS status bar (and, unavoidably, the bottom toolbar) to the verdict tone. iOS Safari often
+// will NOT repaint the status bar from a plain content-attribute change during in-app navigation — it
+// only re-reads theme-color when the meta NODE itself changes. So SWAP IN A FRESH NODE (insert the new
+// one before removing the old, so there's never zero theme-color metas for WebKit to fall back on). The
+// gradient-top colours keep the bar continuous with the result wash.
 function setThemeTone(){
-  const m=$('themeColor'); if(!m) return;
   const map={'rv-in':'#266440','rv-out':'#6b2427','rv-unk':'#6c5419','rv-soon':'#6e490f'};
   let c='#0C0C12';
   if(document.body.classList.contains('rview')){ for(const k in map){ if(document.body.classList.contains(k)){ c=map[k]; break; } } }
-  m.setAttribute('content',c);
+  try{
+    const old=document.getElementById('themeColor');
+    const m=document.createElement('meta'); m.setAttribute('name','theme-color'); m.id='themeColor'; m.setAttribute('content',c);
+    if(old&&old.parentNode){ old.parentNode.insertBefore(m, old); old.parentNode.removeChild(old); }
+    else (document.head||document.documentElement).appendChild(m);
+  }catch(e){ try{ const m=document.getElementById('themeColor'); if(m) m.setAttribute('content',c); }catch(_){} }
 }
 window.addEventListener('popstate',()=>{ if(NAV_VIEW!=='builder') backToBuilder(); });
 
@@ -3468,14 +3479,15 @@ async function openHistEntry(e){
     return;
   }
   // Replaying a past call — go straight to the transcript. Never flash the live "calling" view.
-  // INSTANT: paint the cached transcript immediately (no spinner) if we have it, then revalidate.
+  // INSTANT: paint immediately — from the cached transcript if we have it, otherwise from the verdict
+  // fields we already saved in history (status/confirmed/sold-out/steps). Either way the result is on
+  // screen with ZERO network wait; the /pub/result fetch below only fills in the full transcript.
   const cached=resultCacheGet(e.cid);
   if(cached){ cached.cats=e.cats||cached.cats; if(!cached.categoryResults&&e.categoryResults) cached.categoryResults=e.categoryResults; if(e.steps) cached.savedSteps=e.steps; showResult(cached, e.cid); }
-  // Only flash "Loading…" if the fetch is actually slow — instant/cached opens never show it.
-  const _lt = cached ? null : setTimeout(()=>toast(t('toast.loadingcall','Loading your call…')),450);
+  else { showResult({ status:e.status, confirmed:e.confirmed, soldOut:!!e.soldOut, doesNotSell:!!e.doesNotSell, shipmentDay:e.shipmentDay||null, statusKey:e.statusKey||null, transcript:'', summary:'', cats:e.cats||[], categoryResults:e.categoryResults||null, savedSteps:e.steps||null }, e.cid); }
+  // No spinner — we already painted. Fetch the full transcript in the background and re-render if richer.
   const o=await api('/pub/result/'+encodeURIComponent(e.cid));
-  if(_lt) clearTimeout(_lt);
-  if(!o||o.error||o.status==='in_progress'){ if(cached) return; HIST_BAD.add(e.cid); HIST_CACHE=HIST_CACHE.filter(x=>x.cid!==e.cid); toast(t('toast.callgone','That call is no longer available')); openHistory(); return; }
+  if(!o||o.error||o.status==='in_progress'){ if(cached||e.status) return; HIST_BAD.add(e.cid); HIST_CACHE=HIST_CACHE.filter(x=>x.cid!==e.cid); toast(t('toast.callgone','That call is no longer available')); openHistory(); return; }
   o.cats=e.cats||ASKED_CATS.map(x=>x.label);
   if(!o.categoryResults && e.categoryResults) o.categoryResults=e.categoryResults;
   if(e.steps) o.savedSteps=e.steps;
