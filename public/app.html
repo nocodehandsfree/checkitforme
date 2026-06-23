@@ -447,8 +447,7 @@
   <section id="search">
     <h2>Search stores</h2>
     <div class="filters">
-      <input id="f_search" list="ac_stores" autocomplete="off" placeholder="Search name, city, ZIP — or just pick a filter…" oninput="onAdminSearch()">
-      <datalist id="ac_stores"></datalist>
+      <input id="f_search" placeholder="Search name, city, ZIP — or just pick a filter…" oninput="onAdminSearch()">
       <select id="f_type" onchange="loadRetailers()"><option value="">All types</option></select>
       <select id="f_region" onchange="loadRetailers()"><option value="">All regions</option></select>
       <select id="f_zone" onchange="renderRetailers()"><option value="">All zones</option></select>
@@ -776,7 +775,7 @@
     <div class="card">
       <label>Select a Chain</label>
       <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
-        <input id="set_search" list="ac_chains" autocomplete="off" placeholder="Search chains…" oninput="filterChainPicker()" style="flex:1 1 150px;min-width:0"><datalist id="ac_chains"></datalist>
+        <input id="set_search" placeholder="Search chains…" oninput="filterChainPicker()" style="flex:1 1 150px;min-width:0">
         <select id="set_fmap" onchange="filterChainPicker()" style="flex:0 0 auto;width:auto;font-size:13px"><option value="">All</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option></select>
         <select id="set_frate" onchange="filterChainPicker()" style="flex:0 0 auto;width:auto;font-size:13px"><option value="">All ratings</option><option value="5">5 — Best Chance</option><option value="4">4 — Mostly Reliable</option><option value="3">3 — Spotty</option><option value="2">2 — Over MSRP</option><option value="1">1 — Unknown</option></select>
       </div>
@@ -1609,11 +1608,7 @@ function bubbles(t){
 let RETAILERS=[];
 let ADMIN_SEARCH_T=null;
 function onAdminSearch(){ clearTimeout(ADMIN_SEARCH_T); ADMIN_SEARCH_T=setTimeout(loadRetailers,250); }
-// In-box typeahead: fill a <datalist> with deduped values so the browser suggests as you type.
-function fillDatalist(id,vals){ const dl=document.getElementById(id); if(!dl) return; const seen=new Set(),opts=[]; for(const v of (vals||[])){ const s=(v||'').trim(); if(!s||seen.has(s))continue; seen.add(s); opts.push('<option value="'+esch(s)+'">'); if(opts.length>=600)break; } dl.innerHTML=opts.join(''); }
-const liveChainNames=()=>(CHAINS||[]).filter(c=>!(c.name||'').startsWith('_')).map(c=>c.name);
 async function loadRetailers(){
-  fillDatalist('ac_stores', liveChainNames()); // chain typeahead available before the first search
   const q=(document.getElementById('f_search')?.value||'').trim();
   const type=document.getElementById('f_type')?.value||'', region=document.getElementById('f_region')?.value||'';
   const carries=document.getElementById('f_carries')?.value||'', status=document.getElementById('f_status')?.value||'';
@@ -1632,7 +1627,6 @@ async function loadRetailers(){
   if(!Array.isArray(RETAILERS)) RETAILERS=[];
   SEL.clear();
   fillSimSelects();
-  fillDatalist('ac_stores',[...liveChainNames(), ...RETAILERS.map(r=>r.name)]); // + the store names that came back
   renderRetailers();
 }
 // MSRP coverage headline (Stores tab): the % of the national store footprint of the chains we know
@@ -1953,7 +1947,6 @@ function buildChainPicker(){
   // machines keep showing on the consumer Kiosk tab. Keyed on callable-store count (the chain PATCH
   // doesn't take callTarget), so any future all-kiosk chain is excluded automatically.
   const live=(CHAINS||[]).filter(c=>!(c.name||'').startsWith('_')&&Number((c.stores&&c.stores.callable)||0)>0).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
-  fillDatalist('ac_chains', live.map(c=>c.name)); // in-box chain typeahead on the mapping picker
   el.innerHTML=live.map(ch=>{
     const locked=ch.navStatus==='locked';
     return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-mapped="${locked?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.55"':''}>
