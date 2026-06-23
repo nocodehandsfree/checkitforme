@@ -1767,14 +1767,7 @@ app.post("/app/check-live", async (c) => {
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
   if (!isCompAccount(a) && !isComp(u.email || undefined) && await isOwnerOnlyStore(Number(b.retailerId))) return c.json({ error: "not_found" }, 404);
   if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
-  // DEMO override (admin-driven, front-end stays pristine): when the owner/comp account calls the
-  // owner-only Fun store AND a demo number is set in Admin (fun_dial_to), dial THAT number as if it's
-  // the store — the real consumer flow, with a stand-in playing the store. Blank = dial the Fun store's
-  // real number. Never applies to real stores or non-owner accounts.
-  const isOwner = isCompAccount(a) || isComp(u.email || undefined);
-  const demoTo = (isOwner && await isOwnerOnlyStore(Number(b.retailerId)))
-    ? ((await getSetting("fun_dial_to")) || undefined) : undefined;
-  const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode, demoTo);
+  const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: RAILWAY_HOST });
 });
@@ -2056,9 +2049,6 @@ app.get("/api/settings", async (c) => c.json(await allSettings()));
 app.patch("/api/settings", async (c) => {
   const b = await c.req.json();
   if (typeof b.voicemailHangup === "boolean") await setSetting("voicemail_hangup", String(b.voicemailHangup));
-  // Fun-store demo number: when set, calling the owner-only Fun store dials THIS number instead (so a
-  // stand-in can play the store while the owner screen-shares the real consumer flow). Blank = off.
-  if (b.funDialTo !== undefined) await setSetting("fun_dial_to", String(b.funDialTo || "").trim());
   if (b.creditLimit !== undefined) await setSetting("el_credit_limit", String(Math.max(0, Number(b.creditLimit) || 0)));
   if (b.openerVariants !== undefined) await setSetting("vt_opener_variants", String(b.openerVariants || ""));
   if (b.openerLibrary !== undefined) await setSetting("vt_opener_library", String(b.openerLibrary || ""));
@@ -2852,20 +2842,14 @@ app.post("/pub/bridge-hangup", async (c) => {
   return c.json({ ok: true });
 });
 // Resolve a store + category, then place a bridge call to it. Used by Runnr "Listen live".
-async function bridgeStoreCall(retailerId: number, categoryIds: number[], specificProduct?: string, finder?: { userId?: string; isPrivate?: boolean }, kioskMode?: boolean, demoTo?: string): Promise<{ room?: string; error?: string }> {
+async function bridgeStoreCall(retailerId: number, categoryIds: number[], specificProduct?: string, finder?: { userId?: string; isPrivate?: boolean }, kioskMode?: boolean): Promise<{ room?: string; error?: string }> {
   if (await isCallingPaused()) return { error: "calling_paused" }; // global spend kill-switch
   const primary = categoryIds[0];
   const extras = categoryIds.slice(1);
   // Resolve the SAME three-tier vars (global + chain + store phone tree, clarification, etc.) the
   // scheduled calls use — Listen-live was previously running on the bare global prompt only.
   const v = await buildRestockVars(retailerId, primary, specificProduct, extras, kioskMode);
-  if (!v) return { error: "store not found" };
-  // DEMO override (owner-only, gated at the route): dial a number we're given AS IF it's this store —
-  // same store identity, restock script, live transcript + verdict. Lets the owner screen-share the
-  // real consumer experience while a stand-in (e.g. a prospect) plays the store. Falls back to the
-  // store's real phone for a normal check.
-  const dialNumber = demoTo || v.retailer.phone;
-  if (!dialNumber) return { error: "store not found" };
+  if (!v || !v.retailer.phone) return { error: "store not found" };
   // Phone-first: dial AS the finder's own VERIFIED number (caller_id) when present. Plus the hard
   // duration cap from policy (the cost guarantee).
   const pol = await getPolicy();
@@ -2876,7 +2860,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   }
   // Log the call once it connects (we get the ElevenLabs conversation id): insert the PRIMARY result
   // row; ingest fans out each extra line into its own row from the per-category extraction.
-  return placeBridgeCall(dialNumber, v.dynamicVars, (convId) => {
+  return placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
     db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false })
       .catch((e) => console.error("bridge call log insert:", e));
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
