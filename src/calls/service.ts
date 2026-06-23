@@ -278,7 +278,7 @@ export async function triggerCall(a: TriggerArgs) {
   }).returning();
 
   try {
-    const { providerCallId } = await provider.startCall({
+    const { providerCallId, callSid } = await provider.startCall({
       callId: row.id,
       toNumber: a.toOverride ? toE164(a.toOverride) : retailer.phone,
       retailerName: retailer.name,
@@ -302,7 +302,7 @@ export async function triggerCall(a: TriggerArgs) {
     await db.update(callResults)
       .set({ providerCallId, status: "in_progress" })
       .where(eq(callResults.id, row.id));
-    return { ...row, providerCallId, status: "in_progress" as const };
+    return { ...row, providerCallId, callSid, status: "in_progress" as const };
   } catch (e) {
     await db.update(callResults).set({ status: "failed", summary: String(e) }).where(eq(callResults.id, row.id));
     throw e;
@@ -735,11 +735,14 @@ export async function callZone(zoneId: number, categoryKey = "pokemon") {
   if (!ids.length) return { placed: 0 };
   const stores = await db.select().from(retailers).where(inArray(retailers.id, ids));
   let placed = 0;
+  const callSids: string[] = []; // Twilio SIDs of the calls we placed → lets the caller cancel the whole zone.
   for (const s of stores) {
-    try { await triggerCall({ retailerId: s.id, categoryId: cat.id }); placed++; }
-    catch (e) { console.error("callZone trigger failed", s.id, e); }
+    try {
+      const r = await triggerCall({ retailerId: s.id, categoryId: cat.id }); placed++;
+      const sid = (r as { callSid?: string }).callSid; if (sid) callSids.push(sid);
+    } catch (e) { console.error("callZone trigger failed", s.id, e); }
   }
-  return { placed };
+  return { placed, callSids };
 }
 
 // Open-conversation personalities — same cloned voice, different tone + opener.

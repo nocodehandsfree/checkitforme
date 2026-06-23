@@ -2608,8 +2608,23 @@ app.post("/api/zones/:id/retailers", async (c) => {
 });
 // Bulk import zones + stores from a JSON file (de-dupes; coordinates fill in via background geocoding).
 app.post("/api/import-zones", async (c) => c.json(await importZonesData(await c.req.json())));
-// Call every store in a zone (explicit, on-demand — never automatic).
-app.post("/api/zones/:id/call-now", async (c) => c.json(await callZone(Number(c.req.param("id")))));
+// Call every store in a zone (explicit, on-demand — never automatic). Remember the placed callSids so
+// the operator can cancel the whole batch (like Stop & hang-up does for a single call).
+app.post("/api/zones/:id/call-now", async (c) => {
+  const zoneId = Number(c.req.param("id"));
+  const res = await callZone(zoneId);
+  zoneCallSids.set(zoneId, res.callSids ?? []);
+  setTimeout(() => zoneCallSids.delete(zoneId), 15 * 60 * 1000); // calls are long done by then
+  return c.json({ placed: res.placed });
+});
+// Cancel an in-progress zone call: hang up every Twilio call we placed for it.
+app.post("/api/zones/:id/hangup", async (c) => {
+  const zoneId = Number(c.req.param("id"));
+  const sids = zoneCallSids.get(zoneId) ?? [];
+  await Promise.all(sids.map((s) => hangupTwilioCall(s)));
+  zoneCallSids.delete(zoneId);
+  return c.json({ ok: true, cancelled: sids.length });
+});
 // Credit feasibility for a zone (one credit/store) — the user-facing zone caller must check this
 // up front so nobody starts a zone they can't finish. (Wired + ready; user firing stays gated off.)
 app.get("/api/zones/:id/quote", async (c) => c.json(await zoneQuote(Number(c.req.param("id")))));
@@ -2789,6 +2804,17 @@ async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, str
   return { room };
 }
 const roomCallSids = new Map<string, string>(); // room -> Twilio callSid (for hang-up)
+const zoneCallSids = new Map<number, string[]>(); // zoneId -> Twilio callSids placed, for "Cancel zone"
+/** Hang up a live Twilio call (POST Status=completed). Shared by the single + zone cancel paths. */
+async function hangupTwilioCall(callSid: string): Promise<void> {
+  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !tok || !callSid) return;
+  await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
+    method: "POST",
+    headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" },
+    body: "Status=completed",
+  }).catch(() => {});
+}
 // End the live bridged call (user pressed "Stop & hang up").
 app.post("/pub/bridge-hangup", async (c) => {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
