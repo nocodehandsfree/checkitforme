@@ -142,14 +142,14 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Sam's Club | "sam's / club" wordmark | ✅ | actual two-line wordmark, sized down per owner |
 | Scheels | red "SCHEELS" wordmark | ✅ | owner-supplied logo, de-boxed to brand red #ee2e24 (the 2025 revert to the '98 red), enlarged, w:1 |
 
-## Chunk 8 — shaw_s → tom_thumb  ⬜
+## Chunk 8 — shaw_s → tom_thumb  🔧 (8a: shaw's→staples done, awaiting approval)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Shaw's | wordmark | ⬜ | remove white inside letters |
-| Sheetz | wordmark | ⬜ | |
-| Smith's | wordmark | ⬜ | |
-| Spencer's | wordmark | ⬜ | |
-| Staples | exact owner logo | ⬜ | use the EXACT logo owner gave — not the folded-corner "staple" mark |
+| Shaw's | orange wordmark | 🔧 | cleaned near-white from inside the letters |
+| Sheetz | red lozenge | 🔧 | real 2024 Sheetz logo (Wikimedia) — replaced the app-icon box |
+| Smith's | magenta wordmark | 🔧 | real Smith's logo (Wikimedia) — replaced the generic red "S" |
+| Spencer's | white graffiti | 🔧 | real Spencer's graffiti logo (Wikimedia), recolored white — replaced "Spencer's Nation" |
+| Staples | red "STAPLES" wordmark | 🔧 | official Staples wordmark (Wikimedia); confirm vs the specific file owner mentioned |
 | Star Market | wordmark | ⬜ | |
 | Target | bullseye mark | ⬜ | |
 | TJ Maxx | wordmark | ⬜ | **too small**; remove white inside letters |
