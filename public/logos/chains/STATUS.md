@@ -162,7 +162,7 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 |---|---|---|---|
 | Tractor Supply | blocky wordmark (no mark) | 🔧 | dropped TSC shield per owner; white "TRACTOR SUPPLY CO" wordmark, enlarged |
 | Vons | red wordmark | 🔧 | real Vons wordmark (Wikimedia), enlarged |
-| Walgreens | white cursive W | 🔧 | restored the de-boxed Walgreens "W" per owner (replaced the script wordmark) |
+| Walgreens | red cursive W | 🔧 | de-boxed Walgreens "W" in brand red, sized down per owner |
 | Walmart | yellow spark | 🔧 | official spark mark (Wikimedia) |
 | Wawa | red wordmark + goose | 🔧 | real Wawa wordmark (Wikimedia) — de-boxed |
 | Wegmans | wordmark | ⬜ | |
