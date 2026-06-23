@@ -154,7 +154,7 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Target | red bullseye | 🔧 | official 2004 bullseye, sized down per owner |
 | TJ Maxx | red wordmark | 🔧 | re-pulled official SVG at true aspect (no stretch) |
 | Tokyo Japanese Lifestyle | TOKYO + fan | 🔧 | raised higher on the tile per owner |
-| Tom Thumb | contained blue plate | 🔧 | blue plate (not full tile), bigger Tom/Thumb, thin red line |
+| Tom Thumb | grey plate, no box | 🔧 | blue Tom/Thumb script + thin red line on the light/grey plate (d:1), no box, enlarged |
 
 ## Chunk 9 — tractor_supply → winco_foods  ⬜
 | Logo | Treatment | Status | Notes |
