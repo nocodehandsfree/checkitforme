@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r49" />
+<meta name="x-rev" content="names-r50" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -2917,7 +2917,9 @@ async function startCheckLive(){
   AUDIO_WS=new WebSocket('wss://'+r.wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data);
     if(d.audio){ if(AUDIO_CTX) playMu(d.audio,d.track); }
     else if(d.line&&d.line.text){ LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } // real-time steps + human script, as the call happens
-    else if(d.ended){ try{clearInterval(POLL);}catch(_){} try{clearInterval(elT);}catch(_){} finalizeLive(LIVE_CID||cid); } // bridge says the call's over → flip to the result NOW
+    // Deliberately NO d.ended handler: it used to clearInterval(POLL) on the end signal, removing the only
+    // reliable finalizer — if that single finalize didn't land, the call froze. The POLL below is the sole
+    // "call over → show result" path, exactly like production.
   }catch(e){} };
   liveStage(2); // dialing → it's ringing
   let cid=null;
@@ -2949,57 +2951,25 @@ async function startCheckLive(){
   },1200);
 }
 async function finalizeLive(cid){
-  if(LIVE_DONE) return; LIVE_DONE=true; // guard: WS end-signal and the poll can both fire — finalize once
+  // No LIVE_DONE guard and no POLL-clearing: the POLL (o.live===false) is the single finalizer and clears
+  // itself — matching production, which never freezes. Re-entry is harmless (showResult just re-renders).
   stopAudio(); stopLiveTimers();
-  // Recover the conversation id from the room if the live poll never captured it. This happens when the
-  // app is BACKGROUNDED during the call (e.g. testing from the same phone you're calling — iOS suspends
-  // the web app's timers + WebSocket, so cid never resolved). The bridge keeps the room→convId map for
-  // ~10 min, so we can still pull the REAL verdict instead of falsely showing "nobody answered".
-  if(!cid && LIVE_ROOM){
-    for(let i=0;i<4 && !cid;i++){
-      try{ const bs=await api('/pub/bridge/'+encodeURIComponent(LIVE_ROOM)); if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; } }catch(_){}
-      if(!cid) await new Promise(r=>setTimeout(r,1000));
-    }
-  }
   if(!cid){ const res={status:'no_answer',transcript:'',summary:''}; saveCheckToHistory(res,null); showResult(res); return; }
-  // The call just ended — give ElevenLabs a few seconds to finalize the transcript & answer
-  // before we decide, so a hung-up call still shows what actually happened.
+  // The call just ended — give ElevenLabs a few seconds to finalize the transcript & verdict, exiting the
+  // instant it's ready (snappy flip to the result).
   let o=await api('/pub/result/'+encodeURIComponent(cid)), tries=0;
-  // Poll every 1s (was 1.8s) and exit the instant EL has a verdict — snappier flip to the result.
   while((!o||!o.status||o.status==='in_progress')&&tries<8){ await new Promise(r=>setTimeout(r,1000)); o=await api('/pub/result/'+encodeURIComponent(cid)); tries++; }
   const res=(o&&o.status&&o.status!=='in_progress')?o:{status:'no_answer',transcript:'',summary:''};
-  // Bug fix: if EL hasn't finalized the transcript yet, fall back to what we already streamed live, so
-  // the conversation shows immediately on the result — no hard refresh needed.
+  // If EL hasn't attached the transcript yet, fall back to what we streamed live, then to /pub/live, so the
+  // conversation always prints on the result without a hard refresh.
   if(!res.transcript && (LIVE_TR.length||LIVE_TRANSCRIPT)) res.transcript = LIVE_TR.length?LIVE_TR.join('\n'):LIVE_TRANSCRIPT;
-  // And if we streamed nothing live (e.g. app was backgrounded on the call), pull the transcript from the
-  // live endpoint — it holds the full conversation even when the result's copy hasn't attached yet. This
-  // guarantees the conversation prints on the result of a same-device / backgrounded call.
-  if(!res.transcript && cid){ try{ const lv=await api('/pub/live/'+encodeURIComponent(cid)); if(lv&&lv.transcript){ res.transcript=lv.transcript; if((!res.status||res.status==='no_answer')&&lv.status&&lv.status!=='in_progress') res.status='completed'; } }catch(_){} }
+  if(!res.transcript){ try{ const lv=await api('/pub/live/'+encodeURIComponent(cid)); if(lv&&lv.transcript) res.transcript=lv.transcript; }catch(_){} }
   if(res.status==='completed'){
     if(isAuthed()){ appApi('/app/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}).then(c=>{ if(c&&c.credits!=null){ if(ACCOUNT)ACCOUNT.credits=c.credits; renderAuth(); } }); }
     else { localStorage.setItem('runnr_free_used','1'); api('/pub/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}); renderAuth(); }
   }
   saveCheckToHistory(res, cid); showResult(res, cid);
 }
-// Recover a live call after the app was BACKGROUNDED mid-call (iOS suspends a standalone app's JS +
-// WebSocket the moment you take the phone call). When we return to the foreground during an active call,
-// re-resolve the conversation id and check whether the call ended while we were away — so we flip to the
-// REAL result fast instead of lingering on "on the call…" and then mis-reporting "nobody answered".
-document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState!=='visible' || !LIVE_ROOM || LIVE_DONE) return;
-  // App came back to the foreground during a live call (you were on the phone, so iOS had suspended us).
-  // Poll for a few seconds: render the conversation that happened while we were away AND auto-finalize the
-  // moment the call is over — so you never have to press "Stop & hang up" and the result loads fast.
-  (async()=>{ for(let i=0;i<8 && LIVE_ROOM && !LIVE_DONE;i++){ try{
-    let c=LIVE_CID;
-    if(!c){ const bs=await api('/pub/bridge/'+encodeURIComponent(LIVE_ROOM)); if(bs&&bs.conversationId){ c=LIVE_CID=bs.conversationId; liveStage(3); } }
-    if(c){
-      const o=await api('/pub/live/'+encodeURIComponent(c));
-      if(o&&o.transcript){ LIVE_TRANSCRIPT=o.transcript; const lines=o.transcript.split('\n').filter(Boolean); const pitched=AGENT_PITCHED||lines.some(l=>l.startsWith('Agent:')&&AGENT_ASK.test(l)); liveStage(stageForLines(lines,pitched)); renderLiveMsg(); }
-      if(o && o.live===false){ finalizeLive(c); return; }
-    }
-  }catch(_){} await new Promise(r=>setTimeout(r,900)); }})();
-});
 // Render a Agent/Clerk transcript as a text-message style thread (Fungie right/green, Clerk left).
 function bubbleHTML(line, isHuman){
   const m=line.match(/^(Agent|Clerk):\s*(.*)$/);
