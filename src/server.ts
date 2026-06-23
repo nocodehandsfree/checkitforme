@@ -2338,7 +2338,7 @@ app.get("/api/admin/data-health", async (c) => {
   // Hardware" ∈ "Ace Hardware", "Big 5 Reseda" ∈ "Big 5 Sporting Goods", "CVS West Hills" ∈ "_CVS
   // Pharmacy at Target") is NOT flagged — only a genuinely foreign brand (a Savers row under Dick's) is.
   const STOP = new Set(["the", "and", "of", "at", "for", "store", "shop", "inc", "llc"]);
-  const sig = (s: string) => new Set(norm(s).split(" ").filter((t) => t.length > 2 && !STOP.has(t)));
+  const sig = (s: string) => new Set(norm(s).split(" ").filter((t) => t.length > 1 && !STOP.has(t))); // keep 2-char brands (BJ's, etc.)
   const junkRx = /&lt;|&gt;|style=|<[a-z/]|\(#\d|—| - | Shop Location|Holiday (Décor|Greeting)/i;
   const allCaps = /\b[A-Z]{4,}\s+[A-Z]{4,}\b/;
   const rows = await db.select({ id: retailers.id, name: retailers.name, chainId: retailers.chainId, phone: retailers.phone, hours: retailers.hours })
