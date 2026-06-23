@@ -23,7 +23,7 @@ const HUMAN_RE = /can i help you|how (can|may) i help|what can i (do|help)|this 
 // ("Target electronics", "guest service desk") — with NO "press N" menu. This is the signal we were
 // MISSING: a Target dept employee answers "Hello / Target electronics", which isn't a menu, so we must
 // stop pressing and treat them as the human (confirm mode then asks the stock question).
-const LIVE_HUMAN_RE = /\bhello\b|\bhi\b|\bhowdy\b|this is \w+|\bspeaking\b|how (can|may) i help|can i help|i can help|go ahead|what (can|do) (i|we|you)|^\s*(thanks for calling )?(target )?(electronics|guest services?|service desk|customer service|toys?|sporting goods?)[\s.,!?]*$/i;
+const LIVE_HUMAN_RE = /\bhello\b|\bhi\b|\bhowdy\b|\byello\b|this is \w+|\bspeak(s|ing)?\b|how (can|may) i help|can i help|i can help|go ahead|what (can|do) (i|we|you)|^\s*(thanks for calling )?(target )?(electronics|guest services?|service desk|customer service|toys?|sporting goods?)[\s.,!?]*$/i;
 function looksLikeLivePerson(speech: string): boolean {
   const t = (speech || "").trim();
   if (!t) return false;
@@ -172,17 +172,12 @@ export async function navStep(id: string, speech: string): Promise<string> {
     if (atSec - (s.confirm.askedAtSec ?? atSec) > 9) { s.confirmResult = "answered"; finish(s, "human"); return twiml(`<Hangup/>`); }
     return twiml(gather(id)); // brief silence — give them a moment to answer
   }
-  // LIVE PICKUP: once we've navigated at least one step, a short greeting / self-ID / bare department
-  // answer with no menu = a person just answered. STOP pressing keys at them — reach the human (confirm
-  // mode asks the stock question; plain mode hangs up). This is the Target-electronics fix: "Hello" /
-  // "Target electronics" is a human, not another menu to escape with 0. Guarded so the opening IVR
-  // (which we haven't acted on yet) can't trip it.
-  const acted = !!s.lastActTurn || (s.reactivePress?.count ?? 0) > 0 || (s.autoZeros ?? 0) > 0;
-  // DIRECT-ANSWER stores answer "Hello" / "I can help you" on the FIRST utterance (no IVR). In confirm
-  // mode we must engage that human instantly — otherwise we sit silent and they hang up on dead air
-  // (Dollar Tree, Claire's). So don't require a prior action in confirm mode; looksLikeLivePerson still
-  // filters out "press N" IVR menus. Plain mapping mode keeps the guard so an opening IVR can't trip it.
-  if (speech && looksLikeLivePerson(speech) && (acted || !!s.confirm)) return reachHuman(s, atSec, id);
+  // LIVE PICKUP — fire on the FIRST human utterance, in EVERY mode. A direct store answers "Hello" /
+  // "Store, Bob speak" with no IVR, so we must reach the human on turn 1 — waiting for a 2nd line (or
+  // an LLM round-trip) leaves dead air while they keep saying "hello" until we hang up. looksLikeLivePerson
+  // already excludes "press N" menus + long recordings, so it won't trip on an opening IVR. Map mode →
+  // hang up instantly; confirm mode → ask the one stock question.
+  if (speech && looksLikeLivePerson(speech)) return reachHuman(s, atSec, id);
   s.status = "navigating";
   // REACTIVE PRESS: the human way — wait until we HEAR a prompt, then press the digit; repeat for the
   // first `max` prompts (e.g. 0 after Spanish, 0 after the next, 0 after the next), then listen for the
