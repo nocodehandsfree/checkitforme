@@ -3,18 +3,21 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<!-- NO theme-color meta on purpose: one theme-color tints BOTH the top status bar AND the bottom Safari
-     toolbar, so any green there bleeds onto the footer. Without it, iOS SAMPLES the page per-edge — the
-     green page-top shows under the status bar while the dark page-bottom keeps the bottom bar dark. The
-     server must NOT inject one either (it doesn't). Hard-refresh of a result deep-link: recall the verdict
-     tone so the post-<body> step adds rview/rv-* and the body-gradient wash paints from frame one. -->
+<meta name="theme-color" content="#0C0C12" id="themeColor" />
+<!-- theme-color is the ONLY thing that tints the iOS status bar in a Safari tab (page sampling does NOT
+     reach it — proven). One value tints BOTH the top status bar AND the bottom toolbar; there is no
+     per-edge control, so a green result greens the top AND the footer. That's the accepted trade-off:
+     green to the top is the priority. setThemeTone() drives it per verdict; on a hard-refresh of a result
+     deep-link the boot script below sets it green AT LOAD so the bar is green from frame one. MUST stay a
+     single meta — a second one (e.g. injected server-side) makes WebKit ignore this one. -->
 <script>(function(){try{
   var sp=new URLSearchParams(location.search);
   if(!sp.has('call')) return;
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
-  if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls;
+  var T={in:'#266440',out:'#6b2427',unk:'#6c5419',soon:'#6e490f'};
+  if(cls && T[cls]){ window.__bootTone=cls; var m=document.getElementById('themeColor'); if(m) m.setAttribute('content',T[cls]); }
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r40" />
+<meta name="x-rev" content="names-r41" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -737,6 +740,7 @@ __BRAND_HEAD__
   .rcal-d.has{color:#06210f;background:var(--accent,#4ADE80);cursor:pointer;font-weight:900}
   .rcal-d.sel{box-shadow:0 0 0 2px #fff inset}
   .rcal-d.today{color:#cfcfe0;cursor:pointer} .rcal-d.today:not(.has){box-shadow:0 0 0 1.5px rgba(255,255,255,.35) inset}
+  .rcal-d.today.has{color:#06210f} /* today WITH checks sits on the accent fill — keep text dark so it's legible (was white-on-yellow) */
   /* Day-list view inside the popover: every call on the chosen day, tap to open. */
   .rday-list{display:flex;flex-direction:column;gap:4px;max-height:230px;overflow-y:auto;-webkit-overflow-scrolling:touch}
   .rday-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:8px 9px;border-radius:10px;border:1px solid transparent;background:var(--terminal);color:#e9e9f0;cursor:pointer}
@@ -1908,7 +1912,7 @@ function openAccount(){
       : `<span class="credline">${member?ICO.spark('#FFCB05').replace('width="13" height="13"','width="15" height="15"')+' ':''}<b style="font-size:16px">${n}</b>&nbsp;${t('acct.left2','checks left')}</span>`;
   const pl=$('acct_planlbl'); if(pl) pl.textContent = member||comp ? t('acct.manage','Manage plan') : t('acct.upgrade','Upgrade — get more checks');
   const pr=$('acct_plan'); if(pr) pr.onclick=function(){ closeAccount(); openBuy((member||comp)?'manage':undefined); };
-  setI('acctHist', ICO.clock('#A78BFA').replace('width="17" height="17"','width="18" height="18"'));
+  setI('acctHist', FCHK(18)); // the brand check mark, not a clock
   // "My checks" only appears if there ARE checks for the current product — no checks → no row (and no
   // need for an empty-state banner). Uses local history (instant); ensureHistCache refreshes it after.
   const _cr=$('acct_checks_row'); if(_cr){ const has=loadHist().some(e=>e.cid&&railInCat(e)); _cr.style.display=has?'':'none'; if(!HIST_CACHE.length) ensureHistCache().then(()=>{ try{ _cr.style.display=histList().some(e=>e.cid&&railInCat(e))?'':'none'; }catch(_){} }); }
@@ -3040,10 +3044,15 @@ function navMark(view){
   }catch(e){}
   NAV_VIEW=view;
 }
-// Status-bar / toolbar tone is handled by iOS PAGE SAMPLING (no theme-color meta) — green page-top shows
-// under the status bar, dark page-bottom keeps the bottom bar dark. Nothing to set in JS; kept as a no-op
-// so existing call-sites stay safe. Do NOT reintroduce a theme-color meta (it tints both edges = green footer).
-function setThemeTone(){}
+// Tint the iOS status bar (and, unavoidably, the bottom toolbar) to the verdict tone via the single
+// theme-color meta — the gradient-top colours so the bar is continuous with the result wash.
+function setThemeTone(){
+  const m=$('themeColor'); if(!m) return;
+  const map={'rv-in':'#266440','rv-out':'#6b2427','rv-unk':'#6c5419','rv-soon':'#6e490f'};
+  let c='#0C0C12';
+  if(document.body.classList.contains('rview')){ for(const k in map){ if(document.body.classList.contains(k)){ c=map[k]; break; } } }
+  m.setAttribute('content',c);
+}
 window.addEventListener('popstate',()=>{ if(NAV_VIEW!=='builder') backToBuilder(); });
 
 // --- Snappy result rendering (stale-while-revalidate) ---------------------------------------------
@@ -3212,7 +3221,6 @@ function showResult(o, cid){
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
       <div class="rtitle2">${esc(vTitle)}</div>
       ${note?`<div class="rsub">${note}</div>`:''}
-      ${(!richSub && storeHeadline)?`<div class="rstore-line"><b>${esc(storeHeadline)}</b></div>`:''}
       ${breakdown}
     </div>
     <div class="topcta">${primaryCta}</div>
@@ -3412,21 +3420,20 @@ function histList(){
 }
 // "My checks" lands on TODAY for the CURRENT product. A check made today → open it. None today → the
 // today-landing (NOT some old in-stock result from days ago); the calendar there still reaches past days.
-async function openHistory(){
+function openHistory(){
   const today=tsDay(Date.now());
   const todayMatch=e=>e.cid && railInCat(e) && tsDay(e.ts)===today;
-  // Snappy: open instantly from local history if there's a check from today, refresh cache in background.
+  // Snappy: open instantly from local history if there's a check from today.
   const localToday=loadHist().find(todayMatch);
   if(localToday){
     RAIL_F.date=today; openHistEntry(localToday);
     ensureHistCache().then(()=>{ try{ renderCallRail(); }catch(_){} });
     return;
   }
-  const h=await ensureHistCache();
-  const firstToday=h.find(todayMatch);
-  if(firstToday){ RAIL_F.date=today; openHistEntry(firstToday); return; }
-  // Nothing today for this product → the today-landing. Never drop the user onto an old result.
+  // No local today check → paint the landing INSTANTLY (no network wait — that was the slow part). Then
+  // revalidate in the background in case a today check exists server-side that isn't local yet.
   showTodayLanding();
+  ensureHistCache().then(()=>{ try{ const f=histList().find(todayMatch); if(f && NAV_VIEW==='result' && !RAIL_CID){ RAIL_F.date=today; openHistEntry(f); } else { renderCallRail(); } }catch(_){} });
 }
 // The empty-today screen: clean header (product switcher + calendar to browse past days) and an empty
 // state with a CTA to check a store. Reuses the result-view chrome so the calendar/switcher are present.
@@ -3439,11 +3446,10 @@ function showTodayLanding(){
   const cat=catLabel()||'';
   $('result').innerHTML=`
     <div class="emptybox" style="margin-top:26px">
-      ${ICO.clock('#A78BFA').replace('width="17" height="17"','width="28" height="28"')}
-      <div class="eb-t">${t('hist.today.none','No checks today')}</div>
+      <span style="opacity:.45;filter:grayscale(.7)">${FCHK(46)}</span>
+      <div class="eb-t" style="margin-top:14px">${t('hist.today.none','No checks today')}</div>
       <div class="eb-s">${cat?tf('hist.today.sub','You haven’t checked any stores for {x} today.',{x:esc(cat)}):t('hist.today.sub0','You haven’t checked any stores today.')}</div>
       <button class="cta" style="margin-top:16px" onclick="backToBuilder()">${t('hist.today.cta','Check a store')} →</button>
-      <div class="eb-s" style="margin-top:12px">${t('hist.today.past','Past checks? Use the calendar above.')}</div>
     </div>`;
   $('result').classList.remove('hidden');
   navMark('result');
@@ -3557,16 +3563,19 @@ function railCalAway(e){ if(!e.target.closest('#railcalpop') && !e.target.closes
 function railCalMonth(d){ const m=new Date(RAIL_CAL_M); RAIL_CAL_M=new Date(m.getFullYear(), m.getMonth()+d, 1).getTime(); renderRailCal(); }
 // Pick a day → the popover switches to a LIST of that day's calls (don't auto-open; let them choose).
 // key='' goes back to the month grid.
-function railPickDay(key){ RAIL_F.store=''; RAIL_F.tone=''; RAIL_F.date=key||''; renderRailCal(); renderCallRail(); }
+// stopPropagation is ESSENTIAL: tapping a day re-renders the popover innerHTML, which detaches the tapped
+// node — so when the click bubbles to document, railCalAway sees target as "outside" and closes the cal
+// (the bug where you had to pick a day twice). Halting the bubble keeps the popover open on first tap.
+function railPickDay(key,ev){ if(ev&&ev.stopPropagation)ev.stopPropagation(); RAIL_F.store=''; RAIL_F.tone=''; RAIL_F.date=key||''; renderRailCal(); renderCallRail(); }
 function railOpen(cid){ const e=histList().find(x=>x.cid===cid); closeRailCal(); if(e) openHistEntry(e); }
 // The day-list view inside the popover: every call on the chosen day, newest first, tap to open.
 function renderRailDayList(pop){
   const day=RAIL_F.date;
   const calls=histList().filter(e=>e.cid&&e.ts&&railInCat(e)&&tsDay(e.ts)===day).sort((a,b)=>b.ts-a.ts);
   const lbl=new Date(day+'T12:00:00').toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'short',month:'short',day:'numeric'});
-  const back=`<button onclick="railPickDay('')" aria-label="${esc(t('rail.backcal','Back to calendar'))}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+  const back=`<button onclick="railPickDay('',event)" aria-label="${esc(t('rail.backcal','Back to calendar'))}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
   pop.innerHTML=`<div class="rcal-h">${back}<b>${esc(lbl)}</b><span style="width:13px"></span></div>
-    <div class="rday-list">${calls.length?calls.map(e=>`<button class="rday-item ${e.cid===RAIL_CID?'on':''}" onclick="railOpen('${esc(e.cid)}')"><span class="rday-dot ${railTone(e)}"></span><span class="rday-nm">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span class="rday-tm">${new Date(e.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}</span></button>`).join(''):`<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:12px 10px;line-height:1.5">${t('rail.noneday2','No checks this day.')}<br><a onclick="railPickDay('')" style="color:var(--green);font-weight:700;cursor:pointer">${t('rail.pickanother','← Pick another day')}</a></div>`}</div>`;
+    <div class="rday-list">${calls.length?calls.map(e=>`<button class="rday-item ${e.cid===RAIL_CID?'on':''}" onclick="railOpen('${esc(e.cid)}')"><span class="rday-dot ${railTone(e)}"></span><span class="rday-nm">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span class="rday-tm">${new Date(e.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}</span></button>`).join(''):`<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:12px 10px;line-height:1.5">${t('rail.noneday2','No checks this day.')}<br><a onclick="railPickDay('',event)" style="color:var(--green);font-weight:700;cursor:pointer">${t('rail.pickanother','← Pick another day')}</a></div>`}</div>`;
 }
 function renderRailCal(){
   const pop=$('railcalpop'); if(!pop) return;
@@ -3582,10 +3591,10 @@ function renderRailCal(){
   const today=tsDay(Date.now());
   // Days WITH checks are tappable; TODAY is always tappable too (even with no checks) so you can land on
   // the "no checks this day" state and pick another from the calendar.
-  for(let d=1;d<=n;d++){ const key=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); const has=days.has(key), sel=RAIL_F.date===key, isToday=key===today; cells+=`<div class="rcal-d ${has?'has':''} ${sel?'sel':''} ${isToday?'today':''}" ${(has||isToday)?`onclick="railPickDay('${key}')"`:''}>${d}</div>`; }
+  for(let d=1;d<=n;d++){ const key=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); const has=days.has(key), sel=RAIL_F.date===key, isToday=key===today; cells+=`<div class="rcal-d ${has?'has':''} ${sel?'sel':''} ${isToday?'today':''}" ${(has||isToday)?`onclick="railPickDay('${key}',event)"`:''}>${d}</div>`; }
   pop.innerHTML=`<div class="rcal-h">${nav(-1,'Previous month')}<b>${esc(title)}</b>${nav(1,'Next month')}</div>
     <div class="rcal-grid">${dow.map(x=>`<div class="rcal-dow">${x}</div>`).join('')}${cells}</div>
-    ${RAIL_F.date?`<div style="text-align:center;margin-top:9px"><a onclick="railPickDay('')" style="color:var(--muted);font-weight:700;font-size:12px;cursor:pointer">${t('rail.allday','Show all days')}</a></div>`:''}`;
+    ${RAIL_F.date?`<div style="text-align:center;margin-top:9px"><a onclick="railPickDay('',event)" style="color:var(--muted);font-weight:700;font-size:12px;cursor:pointer">${t('rail.allday','Show all days')}</a></div>`:''}`;
 }
 
 function money(c){ return '$'+(c/100).toFixed(c%100?2:0); }
