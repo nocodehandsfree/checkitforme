@@ -156,13 +156,13 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Tokyo Japanese Lifestyle | TOKYO + fan | 🔧 | raised higher on the tile per owner |
 | Tom Thumb | white script, dark tile | ✅ | white Tom/Thumb on dark tile, 3 rules stripped, stray tick removed, red line raised |
 
-## Chunk 9 — tractor_supply → winco_foods  ⬜
+## Chunk 9 — tractor_supply → winco_foods  🔧 (9a: tractor→wawa done, awaiting approval)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Tractor Supply | wordmark/mark | ⬜ | |
-| Vons | wordmark | ⬜ | remove white inside letters; bigger |
-| Walgreens | wordmark | ⬜ | |
-| Walmart | spark mark | ⬜ | |
-| Wawa | wordmark | ⬜ | |
+| Tractor Supply | TSC shield + wordmark | 🔧 | real logo (Wikimedia); black wordmark recolored white, red shield kept |
+| Vons | red wordmark | 🔧 | real Vons wordmark (Wikimedia), enlarged |
+| Walgreens | red script | 🔧 | real Walgreens script wordmark (Wikimedia) — de-boxed |
+| Walmart | yellow spark | 🔧 | official spark mark (Wikimedia) |
+| Wawa | red wordmark + goose | 🔧 | real Wawa wordmark (Wikimedia) — de-boxed |
 | Wegmans | wordmark | ⬜ | |
 | WinCo Foods | wordmark | ⬜ | |
