@@ -75,13 +75,11 @@ Pulled from the live CSS in `public/app.html` + the consumer site (`checkit.html
 
 ---
 
-## ⚠️ Decisions for the owner (voice-level, flagged once)
+## ✅ Owner decisions — resolved (2026-06-23)
 
-These show up live and break the voice or the brand. I'd fix all three — but they're your call:
-
-1. **"Runnr" is leaking into copy.** The Statuses save toast says *"Saved — live in Runnr + Test Bench now"* and a code comment calls the customer *"a Runnr customer."* The consumer brand is **Check It For Me**. → Replace "Runnr" with **"the app"** (or "customers"). I've written the fix into the Statuses section.
-2. **The caller is named "Fungie" in transcripts.** Bubbles label the agent *"Fungie."* If that's the agent's on-brand name, keep it. If it's a leftover, it should match whatever we call the caller on the consumer side. → **Confirm the caller's name** and I'll lock it everywhere.
-3. **"Tracked categories" screen is orphaned** — it loads (`loadCatalog`) and has copy, but it's not in the nav. → Either wire it into a nav group or retire it. Copy is included below either way.
+1. **"Runnr" stays.** It's the product's old name (Runner → Runnr) and the owner's fine seeing it in admin copy. No change — the Statuses toast keeps it.
+2. **The caller is "Fungie" — intentional.** Quick glossary so nobody trips on it: **"the caller" / "the agent" = Fungie**, the AI that phones the store. In a call transcript its lines show as **"Fungie:"** (the clerk's lines show as "Clerk:"). Keep it everywhere it appears.
+3. **"Tracked categories" → Admin Dev decides.** This screen loads (`loadCatalog`) but isn't wired into the nav. **Instruction for Admin:** either add it to a nav group (it fits under Stores or Voice) or retire it. Approved copy is in the *Orphaned screen* section near the end either way.
 
 ---
 
@@ -241,7 +239,7 @@ Header block:
 ### Card: Bail library
 | Element | Now | New | Tooltip |
 |---|---|---|---|
-| Title | `✂️ Bail library — proactive call cutoffs (cost control)` | ✏️ Title: `✂️ Auto-hang-up rules` · Sub: `— cut a call the moment it stops being worth money` | — |
+| Title | `✂️ Bail library — proactive call cutoffs (cost control)` | ✏️ Title: `✂️ Bail rules` · Sub: `— cut a call the moment it stops being worth money` | — |
 | State chip | `ARMED` / `staged · off` | ✏️ `ON` / `off (not live yet)` | — |
 | Body | `Rules that cut a call once it stops being worth money. Master switch stays OFF until bench-tested — nothing changes live calls yet.` | ✏️ `These rules end a call early to save money. The master switch stays OFF until you test it — real calls aren't touched yet.` | — |
 | Master toggle | `MASTER — enforce bail rules on live calls (stays OFF until enforcement is wired + bench-tested)` | ✏️ `Master switch — use these rules on real calls` · sub: `Leave OFF until you've tested it` | `Turns every rule below on for real calls. Off by default for safety.` |
@@ -253,7 +251,7 @@ Header block:
 | Field: ringMaxSeconds | `Ring max seconds` | ✏️ `Max seconds ringing` | `Hang up if no one answers in this many seconds` |
 | Field: maxCallSeconds | `Absolute cap (seconds)` | ✏️ `Hard cap (seconds)` | `No call ever runs longer than this, no matter what` |
 
-> "Bail" is fun but reads as slang an operator might not parse first time. "Auto-hang-up rules" is instantly clear and keeps the scissors icon doing the personality.
+> Keep the name **"Bail rules"** (owner's call — short and punchy). Just give it a one-line sub so a new operator gets it on first read: *cut a call the moment it stops being worth money.*
 
 ### Card: Recent calls
 | Element | Now | New | Tooltip |
@@ -851,7 +849,7 @@ Flag labels (`FLAG_LABELS`) — these are dense. Rewrite each as a short name + 
 | Note field | `one-line note the customer sees` | ✅ | `The one-liner under the headline` |
 | Tone | `neutral / green — go / red — no-go` | ✅ | `Sets the vibe: go, no-go, or neutral` |
 | Save | `Save` | ✅ | — |
-| Save toast | `Saved — live in Runnr + Test Bench now` | ✏️ **`Saved — customers see this now`** | (kill "Runnr") |
+| Save toast | `Saved — live in Runnr + Test Bench now` | ✅ keep | "Runnr" stays per owner — it's the old product name |
 
 ### Add a status
 | Element | Now | New | Tooltip |
@@ -904,7 +902,7 @@ These are the lines a customer reads after a call. They live in `customerVerdict
 
 ---
 
-# ORPHANED SCREEN (not in nav — see Decision #3)
+# ORPHANED SCREEN — Admin to wire up or retire
 
 ## Tracked categories  *(section "catalog")*
 
@@ -921,9 +919,8 @@ These are the lines a customer reads after a call. They live in `customerVerdict
 
 ## Loose ends / consistency fixes (for Admin to sweep)
 
-- **"agent" → "caller"** in customer-adjacent copy. Inside admin, "agent" is fine for the AI; but where it's about the phone call, "the caller" reads warmer. (Test bench keeps "Admin dev agent" — that one's a chat agent, leave it.)
+- **The AI that phones stores = "Fungie" (a.k.a. "the caller" / "the agent").** Keep "Fungie" in transcripts. "The agent"/"the caller" is fine as plain English in tooltips — it just means Fungie. (The chat helper stays **"Admin dev agent"** — different thing, leave it.)
 - **"Claude" in two empty states** (Zones, Add a status) → the in-app name is **"Admin dev agent."** Use that so the operator knows which button to press.
-- **"Runnr"** → "the app" / "customers" everywhere it appears (toast + comment).
 - **"consumer"** (e.g. "hidden from the consumer store list") → **"customers."** "Consumer" is a marketing word; "customers" is a human one.
 - **Acronyms to gloss or cut in visible labels:** E.164 (cut), IVR (→ "menu"), COGS (→ "costs"), DTMF (already hidden behind "auto-press"). Keep MRR but tail it with "(per month)".
 - **Every screen gets one `h2` header + a one-line sub.** Several screens (Live/God view, Growth, Business, Receipts, Schedules, Statuses) currently jump straight into cards. Adding the sub gives each screen the Header → Sub → Body rhythm and the breathing room called for.
