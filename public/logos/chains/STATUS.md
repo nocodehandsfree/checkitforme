@@ -142,7 +142,7 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Sam's Club | "sam's / club" wordmark | ✅ | actual two-line wordmark, sized down per owner |
 | Scheels | red "SCHEELS" wordmark | ✅ | owner-supplied logo, de-boxed to brand red #ee2e24 (the 2025 revert to the '98 red), enlarged, w:1 |
 
-## Chunk 8 — shaw_s → tom_thumb  🔧 (all sourced from Wikimedia; awaiting approval. Staples/Shaw's/Sheetz enlarged per owner)
+## Chunk 8 — shaw_s → tom_thumb  ✅ LOCKED (owner-approved)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
 | Shaw's | orange wordmark | 🔧 | cleaned near-white from inside the letters |
@@ -154,7 +154,7 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Target | red bullseye | 🔧 | official 2004 bullseye, sized down per owner |
 | TJ Maxx | red wordmark | 🔧 | re-pulled official SVG at true aspect (no stretch) |
 | Tokyo Japanese Lifestyle | TOKYO + fan | 🔧 | raised higher on the tile per owner |
-| Tom Thumb | grey plate, no box | 🔧 | blue Tom/Thumb script + thin red line on the light/grey plate (d:1), no box, enlarged |
+| Tom Thumb | white script, dark tile | ✅ | white Tom/Thumb on dark tile, 3 rules stripped, stray tick removed, red line raised |
 
 ## Chunk 9 — tractor_supply → winco_foods  ⬜
 | Logo | Treatment | Status | Notes |
