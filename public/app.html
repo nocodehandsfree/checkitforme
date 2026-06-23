@@ -142,6 +142,13 @@
   .setrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--border)}
   .setrow:first-child{border-top:none}
   .setlbl{font-size:13.5px;color:var(--text-body)}
+  /* Chain picker (Settings): filterable list of chain rows. */
+  .pickrow{display:flex;align-items:center;gap:10px;padding:9px 8px;border-top:1px solid var(--border);cursor:pointer;border-radius:8px}
+  #set_picker .pickrow:first-child{border-top:none}
+  .pickrow:hover{background:rgba(255,255,255,.03)}
+  .pickrow.on{background:rgba(74,222,128,.1)}
+  .navspin{width:9px;height:9px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:navspin .7s linear infinite}
+  @keyframes navspin{to{transform:rotate(360deg)}}
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:16px}
@@ -767,12 +774,14 @@
     </div>
     <div class="card">
       <label>Select a Chain</label>
-      <div class="row" style="gap:8px;align-items:center">
-        <input id="set_search" placeholder="Search a chain…" onkeydown="if(event.key==='Enter')ssSearch()" style="flex:1;min-width:0">
-        <button class="ghost" onclick="ssSearch()" style="flex:0 0 auto">Search</button>
+      <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+        <input id="set_search" placeholder="Search chains…" oninput="filterChainPicker()" style="flex:1 1 150px;min-width:0">
+        <select id="set_fmap" onchange="filterChainPicker()" style="flex:0 0 auto;width:auto;font-size:13px"><option value="">All</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option></select>
+        <select id="set_frate" onchange="filterChainPicker()" style="flex:0 0 auto;width:auto;font-size:13px"><option value="">All ratings</option><option value="5">5 — Best Chance</option><option value="4">4 — Mostly Reliable</option><option value="3">3 — Spotty</option><option value="2">2 — Over MSRP</option><option value="1">1 — Unknown</option></select>
       </div>
-      <div class="meta" style="text-align:center;margin:7px 0">or</div>
-      <select id="set_chain" onchange="setPickChain()"><option value="">Select a chain</option></select>
+      <select id="set_chain" onchange="setPickChain()" style="display:none"><option value="">Select a chain</option></select>
+      <div id="set_pickcount" class="meta" style="margin-bottom:4px"></div>
+      <div id="set_picker" style="max-height:330px;overflow:auto"><div class="meta" style="padding:8px 0">Loading…</div></div>
     </div>
     <div id="set_body" style="display:none">
       <details class="card setsec" open id="set_storewrap">
@@ -1044,7 +1053,8 @@ async function loadTrainer(){
 }
 // Expandable per-chain call log: every learner run with its Alpha/Bravo/Charlie path + the step matrix.
 async function loadRuns(chainId, box){
-  if(!box) return;
+  if(!box||!chainId) return;
+  box.innerHTML='<div class="meta" style="padding:4px 0">Loading…</div>'; // clear the previous chain's log while we fetch
   const d=await api('/api/admin/trainer/runs?chainId='+chainId);
   const runs=(d&&d.runs)||[];
   if(!runs.length){ box.innerHTML='<div class="meta" style="padding:4px 0">No runs yet.</div>'; return; }
@@ -1109,6 +1119,7 @@ async function trPoll(){
   feed.scrollTop=feed.scrollHeight;
   if(s.status==='human'||s.status==='failed'||s.status==='done'){
     clearInterval(TR_POLL); TR_POLL=null;
+    loadRuns(TR_CHAIN, document.getElementById('set_runs')); // the run just landed — refresh the call log
     const res=document.getElementById('tr_live_result'); res.style.display='';
     // CONFIRM-mode redirect: we reached a human but they sent us elsewhere (wrong desk) — captured, not lockable.
     if(s.confirm==='redirect'){
@@ -1841,6 +1852,7 @@ async function loadChains(){
   const sel=document.getElementById('set_chain'); if(!sel) return;
   const cur=sel.value;
   sel.innerHTML='<option value="">Select a chain</option>'+chainOpts();
+  buildChainPicker();
   if(cur){ sel.value=cur; setPickChain(); }
 }
 // ---- Settings page: 4 collapsible sections. Store Settings + Call Settings commit INLINE (each control
@@ -1861,7 +1873,7 @@ function setPickChain(){
   SS={ id:ch.id, name:ch.name, logoUrl:ch.logoUrl||'', logoDark:!!ch.logoDark, logoWide:!!ch.logoWide, type:ch.type||'Other',
     muted:!!ch.muted, repack:!!ch.repackOnly, tier:ch.tier??null,
     maxTalk:ch.maxTalkSeconds!=null?ch.maxTalkSeconds:'', vm:ch.hangupOnVoicemail!==false,
-    scc:ch.stockCheckConfidence||'', sellMethods:ch.sellMethods||'', isMSRP:ch.isMSRP!==false,
+    scm:ch.stockCheckMethod||'', scc:ch.stockCheckConfidence||'', sellMethods:ch.sellMethods||'', isMSRP:ch.isMSRP!==false,
     dtmf:ch.dtmfShortcut||'', tree:ch.phoneTreeDefault||'',
     callTarget:ch.callTarget!==false, answerPath:ch.answerPath||'',
     wf:(WF.chains&&WF.chains[ch.id])||'',
@@ -1870,7 +1882,7 @@ function setPickChain(){
   renderChainMapping(ch); loadRuns(id, document.getElementById('set_runs'));
 }
 // Inline-commit helpers — every Store/Call control saves on its own (no grouped Save).
-async function ssReload(){ const id=SS&&SS.id; CHAINS=await api('/api/chains')||CHAINS; const sel=document.getElementById('set_chain'); if(sel){ const cur=sel.value; sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(''); sel.value=cur; } if(id&&CHAINS.find(c=>c.id===id)) setPickChain(); }
+async function ssReload(){ const id=SS&&SS.id; CHAINS=await api('/api/chains')||CHAINS; const sel=document.getElementById('set_chain'); if(sel){ const cur=sel.value; sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(''); sel.value=cur; } buildChainPicker(); if(id&&CHAINS.find(c=>c.id===id)) setPickChain(); }
 async function ssPatch(field,value){ if(!SS) return null; const r=await api('/api/chains/'+SS.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({[field]:value})}); if(!r||!r.id){ toast('Could not save'); return null; } const c=CHAINS.find(x=>x.id===SS.id); if(c) c[field]=value; return r; }
 async function ssStoreBulk(set,label){ if(!SS) return; const sr=await api('/api/stores/patch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({where:{chain:SS.name},set})}); if(!sr||sr.error){ toast('Could not save'); return; } toast(label+' · '+(sr.patched!=null?sr.patched:'')+' stores'); await ssReload(); }
 function ssRenderStore(){
@@ -1917,24 +1929,60 @@ function ssToggleCallable(){ const on=SS.cCallable>SS.storesN/2; ssStoreBulk({se
 function ssToggleOnline(){ const on=SS.cOnline>SS.storesN/2; ssStoreBulk({online:!on}, on?'Online OFF':'Online ON'); }
 function ssToggleVerified(){ const on=SS.cVerified>SS.storesN/2; ssStoreBulk({stockStatus:on?'unverified':'verified'}, on?'Stock verified OFF':'Stock verified ON'); }
 function ssClearKiosk(){ if(!SS||!SS.cKiosk) return; ssStoreBulk({hasKiosk:false}, 'Kiosks cleared'); }
-// Forgiving chain search: exact > prefix > substring > subsequence (so a typo like "Barns" still
-// finds "Barnes & Noble"). Punctuation/spaces ignored on both sides.
-function ssSearch(){
-  const raw=((document.getElementById('set_search')||{}).value||'').trim(); if(!raw) return;
-  const norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]+/g,''); const q=norm(raw); if(!q) return;
+// ---- Chain picker: a filterable LIST (replaces the dropdown). Built once per CHAINS load; the search +
+// the two filters (mapping status / rating) just toggle row visibility, so logos never reload. Tier
+// names in the rating filter are canonical from docs/specs/scoring.md. ----
+const RATING_CANON={5:'Best Chance',4:'Mostly Reliable',3:'Spotty',2:'Over MSRP',1:'Unknown'};
+// Compact tier pill for a picker row — CANONICAL names from scoring.md (matches the rating filter),
+// in the tier's color.
+function ratePillMini(t){ const nm=RATING_CANON[t]; if(!nm) return '<span style="font-size:10.5px;font-weight:700;color:var(--text-tertiary)">unrated</span>'; const c=(SS_RATING[t]||[])[1], lbl=t+' '+nm; return c?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:${c};background:${c}1a;border:1px solid ${c}55;border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${esch(lbl)}</span>`:`<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:2px 9px;white-space:nowrap">${esch(lbl)}</span>`; }
+// mapped/unmapped chip — Mapped = navStatus==='locked' (matches the Mapping section + the filter).
+function mapChipMini(ch){ const locked=ch.navStatus==='locked'; const c=locked?'var(--green)':'var(--text-muted)'; return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:${c};background:${locked?'rgba(74,222,128,.12)':'var(--surface-2)'};border:1px solid ${locked?'rgba(74,222,128,.4)':'var(--border)'};border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${locked?'Mapped':'Unmapped'}</span>`; }
+function buildChainPicker(){
+  const el=document.getElementById('set_picker'); if(!el) return;
+  const cur=(document.getElementById('set_chain')||{}).value||'';
+  const live=(CHAINS||[]).filter(c=>!(c.name||'').startsWith('_')).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  el.innerHTML=live.map(ch=>{
+    const locked=ch.navStatus==='locked';
+    return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-mapped="${locked?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.55"':''}>
+      <span class="setlogo">${logoTile(ch)}</span>
+      <b style="flex:1;min-width:0;color:#fff;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}${ch.muted?' <span class="meta" style="font-size:10.5px">· muted</span>':''}</b>
+      ${ratePillMini(ch.tier)}${mapChipMini(ch)}</div>`;
+  }).join('')||'<div class="empty" style="padding:16px">No chains loaded.</div>';
+  filterChainPicker();
+}
+function filterChainPicker(){
+  const el=document.getElementById('set_picker'); if(!el) return;
+  const raw=(document.getElementById('set_search')||{}).value||''; const norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]+/g,''); const q=norm(raw);
   const subseq=(hay)=>{ let i=0; for(let k=0;k<hay.length&&i<q.length;k++) if(hay[k]===q[i]) i++; return i===q.length; };
-  const score=c=>{ const n=norm(c.name); if(!n) return 9; if(n===q) return 0; if(n.startsWith(q)) return 1; if(n.includes(q)) return 2; if(subseq(n)) return 3; return 9; };
-  const m=CHAINS.filter(c=>!(c.name||'').startsWith('_')).map(c=>[score(c),c]).filter(x=>x[0]<9)
-    .sort((a,b)=>a[0]-b[0]||(a[1].name||'').length-(b[1].name||'').length).map(x=>x[1])[0];
-  if(!m){ toast('No chain matches “'+raw+'”'); return; }
-  const sel=document.getElementById('set_chain'); if(![...sel.options].some(o=>o.value===String(m.id))) sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(''); sel.value=String(m.id); setPickChain();
+  const fmap=(document.getElementById('set_fmap')||{}).value||''; const frate=(document.getElementById('set_frate')||{}).value||'';
+  let shown=0;
+  el.querySelectorAll('.pickrow').forEach(r=>{
+    const name=norm(r.getAttribute('data-name')), tier=r.getAttribute('data-tier'), mapped=r.getAttribute('data-mapped')==='1';
+    let ok=true;
+    if(q && !(name.includes(q)||subseq(name))) ok=false;
+    if(fmap==='mapped'&&!mapped) ok=false; if(fmap==='unmapped'&&mapped) ok=false;
+    if(frate&&String(tier)!==String(frate)) ok=false;
+    r.style.display=ok?'':'none'; if(ok) shown++;
+  });
+  const cnt=document.getElementById('set_pickcount'); if(cnt) cnt.textContent=shown+' chain'+(shown===1?'':'s');
+}
+// Pick a row → load it into the editor below (via the hidden set_chain the editor already reads).
+function pickChainRow(id){
+  const sel=document.getElementById('set_chain');
+  if(sel){ if(![...sel.options].some(o=>o.value===String(id))) sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(''); sel.value=String(id); }
+  document.querySelectorAll('#set_picker .pickrow').forEach(r=>r.classList.toggle('on', r.getAttribute('data-id')===String(id)));
+  setPickChain();
 }
 // Store Data: store FACTS (chain fields) — its OWN Save (isMSRP / stock-check confidence / sell methods).
 function ssRenderData(){
   const el=document.getElementById('set_data'); if(!el||!SS) return;
   const sccOpts=[['','—'],['confirmed','confirmed'],['probable','probable']];
+  const scmOpts=[['','—'],['site','site · read the website'],['call','call · phone the store']];
   el.innerHTML=
     `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> First-party — sells at MSRP</label><span data-tip="We check the store's own shelf at normal retail price, not a third-party reseller that may mark it up."></span></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check method <span data-tip="How we check this chain's stock — read their website (site) or phone the store (call)."></span></div>`
+    +`<select id="set_scm" style="margin-bottom:16px">${scmOpts.map(([v,l])=>`<option value="${v}"${(SS.scm||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check confidence <span data-tip="How sure we are it carries: confirmed (seen/called) vs probable (expected, unverified)."></span></div>`
     +`<select id="set_scc" style="margin-bottom:16px">${sccOpts.map(([v,l])=>`<option value="${v}"${(SS.scc||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Sell methods <span data-tip="Ways to get it (comma-separated): in_store, pickup, ship."></span></div>`
@@ -1943,47 +1991,51 @@ function ssRenderData(){
 }
 async function ssSaveData(){
   if(!SS) return; const msg=document.getElementById('set_datamsg'); if(msg) msg.textContent='Saving…';
-  const isMSRP=document.getElementById('set_msrp').checked, scc=document.getElementById('set_scc').value, sell=(document.getElementById('set_sell').value||'').trim();
-  const r=await api('/api/chains/'+SS.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({isMSRP,stockCheckConfidence:scc||null,sellMethods:sell||null})});
+  const isMSRP=document.getElementById('set_msrp').checked, scm=document.getElementById('set_scm').value, scc=document.getElementById('set_scc').value, sell=(document.getElementById('set_sell').value||'').trim();
+  const r=await api('/api/chains/'+SS.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({isMSRP,stockCheckMethod:scm||null,stockCheckConfidence:scc||null,sellMethods:sell||null})});
   if(!r||!r.id){ if(msg) msg.textContent='Could not save.'; return; }
-  SS.isMSRP=isMSRP; SS.scc=scc; SS.sellMethods=sell;
-  const c=CHAINS.find(x=>x.id===SS.id); if(c){ c.isMSRP=isMSRP; c.stockCheckConfidence=scc||null; c.sellMethods=sell||null; }
+  SS.isMSRP=isMSRP; SS.scm=scm; SS.scc=scc; SS.sellMethods=sell;
+  const c=CHAINS.find(x=>x.id===SS.id); if(c){ c.isMSRP=isMSRP; c.stockCheckMethod=scm||null; c.stockCheckConfidence=scc||null; c.sellMethods=sell||null; }
   if(msg) msg.textContent='Saved ✓';
 }
-// Call Settings: every control commits INLINE, one clean row each (Answer path lives in Mapping — it's
-// a learned signal, not something to hand-set here).
+// Call Settings: every control commits INLINE. Max talk + Hang up share the top row; Hang up's ⓘ is
+// OUTSIDE its label so tapping the hint never toggles. (Answer path lives in Mapping — it's learned.)
 function ssRenderCall(){
   const el=document.getElementById('set_call'); if(!el||!SS) return;
   const tog=(on,onclick)=>`<button type="button" onclick="${onclick}" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12px">${on?'ON':'OFF'}</button>`;
   el.innerHTML=
-    `<div class="setrow"><div class="setlbl">Max talk <span data-tip="Hard cap on how long the agent talks to a person before wrapping up."></span></div><div class="row" style="gap:6px;align-items:center"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" onchange="ssSetMaxTalk(this.value)" style="width:72px;padding:9px 12px;font-size:15px;text-align:center"><span class="meta" style="font-size:11px">sec</span></div></div>`
+    `<div class="row" style="gap:26px;align-items:center;flex-wrap:wrap;margin:2px 0 4px">`
+    +`<div class="row" style="gap:9px;align-items:center"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" onchange="ssSetMaxTalk(this.value)" style="width:68px;padding:9px 10px;font-size:15px;text-align:center"><div style="font-weight:700;font-size:13px;line-height:1.15">Max talk <span data-tip="Hard cap on how long the agent talks to a person before wrapping up."></span><div class="meta" style="font-size:11px;font-weight:500">seconds</div></div></div>`
+    +`<div class="row" style="gap:9px;align-items:flex-start"><input type="checkbox" id="set_vm" ${SS.vm?'checked':''} onchange="ssSetHangup(this.checked)" style="margin-top:3px"><div style="line-height:1.2"><div style="display:flex;align-items:center;gap:5px"><label for="set_vm" style="font-weight:700;font-size:13px;color:var(--text-body);cursor:pointer">Hang Up</label><span data-tip="If the call hits voicemail or a closed / recorded line, hang up immediately — no message, no charge."></span></div><div class="meta" style="font-size:11px">voicemail / closed</div></div></div>`
+    +`</div>`
     +`<div class="setrow"><div class="setlbl">Phone this chain <span data-tip="Off = we track it but never dial it."></span></div>${tog(SS.callTarget,'ssToggleCallTarget()')}</div>`
-    +`<div class="setrow"><div class="setlbl">Hang up <span data-tip="If the call hits voicemail or a closed / recorded line, hang up immediately — no message, no charge."></span></div>${tog(SS.vm,'ssToggleHangup()')}</div>`
     +`<div style="font-size:13px;color:var(--text-muted);margin:16px 0 6px">Default workflow <span data-tip="Voice / script workflow for every store of this chain (overrides the global default). Build them in Voice → Designer."></span></div>`
     +`<select id="set_wf" onchange="setChainWorkflow(SS.id,this.value)">${wfOptions(SS.wf, WF.def?('Default · '+WF.def):'Default')}</select>`;
 }
 async function ssToggleCallTarget(){ if(!SS) return; const v=!SS.callTarget; if(await ssPatch('callTarget',v)){ SS.callTarget=v; ssRenderCall(); toast(v?'Phoning this chain':'Will not dial this chain'); } }
-async function ssToggleHangup(){ if(!SS) return; const v=!SS.vm; if(await ssPatch('hangupOnVoicemail',v)){ SS.vm=v; ssRenderCall(); toast(v?'Hang up: on':'Hang up: off'); } }
+async function ssSetHangup(b){ if(!SS) return; SS.vm=b; if(await ssPatch('hangupOnVoicemail',b)) toast(b?'Hang up: on':'Hang up: off'); }
 async function ssSetMaxTalk(v){ if(!SS) return; SS.maxTalk=v; if(await ssPatch('maxTalkSeconds',Number(v)||null)) toast('Max talk saved'); }
 // Mapping is READ-ONLY: stats + recipe + the two learned fields (dtmf, phone-tree) the navigator/lock
 // writes. Status is a pill in the section header (separated from the Map / Confirm action buttons).
+// Lifecycle drives off navStatus: unmapped → grey / blank · learning → spinner · locked → green
+// "Mapped" with the recipe + learned fields populated. (DevOps advances navStatus server-side once a
+// confirmed run reaches a human, so a one-shot map doesn't get stuck on "learning".)
 function renderChainMapping(ch){
   const el=document.getElementById('set_mapping'); if(!el) return;
-  // MAPPED if either system has a route: the new nav-lock OR the legacy tree learner (dtmf / phone-tree).
-  // B&N was learned via the tree path, so checking navStatus alone wrongly showed it unmapped.
-  const isMapped = ch.navStatus==='locked' || ch.treeStatus==='learned' || !!ch.phoneTreeDefault || !!ch.dtmfShortcut;
-  const navTypeEff = ch.navType || (ch.dtmfShortcut?'keypad':((ch.ringsDirect||ch.answerPath==='direct_human')?'direct':(ch.phoneTreeDefault?'voice':null)));
-  const nm=NAV_MODE[navTypeEff];
-  let recipe = isMapped ? '' : '— not mapped yet';
-  try{ const r=ch.navRecipe?JSON.parse(ch.navRecipe):null; const steps=(r&&(Array.isArray(r)?r:r.steps))||[];
-    if(steps.length) recipe=steps.map(s=>s.action==='press'?('press '+s.value+'@'+s.atSec+'s'):(s.action==='wait'?('wait@'+s.atSec+'s'):('say "'+esch(s.value)+'"@'+s.atSec+'s'))).join('  →  ');
-    else if(ch.dtmfShortcut) recipe=ch.dtmfShortcut.split(',').map(p=>{const m=p.trim().match(/^([0-9])@(\d+)/);return m?('press '+m[1]+' @ '+m[2]+'s'):p.trim();}).join('  →  ');
-  }catch(e){}
-  if(!recipe) recipe='—';
-  const t2h=ch.navSeconds!=null?ch.navSeconds+'s':(ch.avgTreeSeconds?ch.avgTreeSeconds+'s':'—');
-  const statusWord=isMapped?'mapped':(ch.navStatus||ch.treeStatus||'unmapped');
-  const mapped=ch.navUpdatedAt?new Date(ch.navUpdatedAt).toLocaleDateString([],{month:'short',day:'numeric'}):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'never');
-  const ro=(lbl,val)=>`<div style="margin-top:13px"><div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">${lbl} <span class="meta" style="text-transform:none;letter-spacing:0;font-size:10.5px">· learned · read-only</span></div><div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${val?esch(val):'—'}</div></div>`;
+  const status = (ch.navStatus==='locked'||ch.navStatus==='learning') ? ch.navStatus : 'unmapped';
+  const isLocked = status==='locked';
+  const nm = isLocked ? NAV_MODE[ch.navType || (ch.dtmfShortcut?'keypad':((ch.ringsDirect||ch.answerPath==='direct_human')?'direct':(ch.phoneTreeDefault?'voice':null)))] : null;
+  let recipe = isLocked ? '' : (status==='learning' ? '… mapping in progress' : '— not mapped yet');
+  if(isLocked){
+    try{ const r=ch.navRecipe?JSON.parse(ch.navRecipe):null; const steps=(r&&(Array.isArray(r)?r:r.steps))||[];
+      if(steps.length) recipe=steps.map(s=>s.action==='press'?('press '+s.value+'@'+s.atSec+'s'):(s.action==='wait'?('wait@'+s.atSec+'s'):('say "'+esch(s.value)+'"@'+s.atSec+'s'))).join('  →  ');
+      else if(ch.dtmfShortcut) recipe=ch.dtmfShortcut.split(',').map(p=>{const m=p.trim().match(/^([0-9])@(\d+)/);return m?('press '+m[1]+' @ '+m[2]+'s'):p.trim();}).join('  →  ');
+    }catch(e){}
+    if(!recipe) recipe='picked up directly';
+  }
+  const t2h = isLocked ? (ch.navSeconds!=null?ch.navSeconds+'s':(ch.avgTreeSeconds?ch.avgTreeSeconds+'s':'—')) : '—';
+  const mapped = isLocked ? (ch.navUpdatedAt?new Date(ch.navUpdatedAt).toLocaleDateString([],{month:'short',day:'numeric'}):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'—')) : '—';
+  const ro=(lbl,val)=>`<div style="margin-top:13px"><div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">${lbl} <span class="meta" style="text-transform:none;letter-spacing:0;font-size:10.5px">· learned · read-only</span></div><div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${(isLocked&&val)?esch(val):'—'}</div></div>`;
   el.innerHTML=
     `<div class="stats" style="margin-bottom:14px">`
     +`<div class="stat"><div class="n" style="font-size:18px${nm?'':';color:var(--muted)'}">${nm?nm.m:'—'}</div><div class="l">mode${nm?' · '+nm.sub:''}</div></div>`
@@ -1994,8 +2046,13 @@ function renderChainMapping(ch){
     +ro('Keypad shortcut (DTMF)',ch.dtmfShortcut)
     +ro('Phone-tree default',ch.phoneTreeDefault);
   const sp=document.getElementById('set_mapstatus');
-  if(sp){ const c=isMapped?'var(--green)':'var(--text-muted)'; sp.innerHTML=`<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:${c};background:${isMapped?'rgba(74,222,128,.12)':'var(--surface-2)'};border:1px solid ${isMapped?'rgba(74,222,128,.4)':'var(--border)'};border-radius:20px;padding:3px 10px">${ssDot(c)}${esch(statusWord)}</span>`; }
-  const mb=document.getElementById('set_mapbtn'); if(mb) mb.textContent = isMapped?'Re-map':'Map';
+  if(sp){
+    const cfg = isLocked?['var(--green)','rgba(74,222,128,.12)','rgba(74,222,128,.4)','Mapped']
+      : status==='learning'?['var(--yellow)','rgba(244,208,63,.12)','rgba(244,208,63,.4)','learning…']
+      : ['var(--text-muted)','var(--surface-2)','var(--border)','unmapped'];
+    sp.innerHTML=`<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:${cfg[0]};background:${cfg[1]};border:1px solid ${cfg[2]};border-radius:20px;padding:3px 10px">${status==='learning'?'<span class="navspin"></span>':ssDot(cfg[0])}${cfg[3]}</span>`;
+  }
+  const mb=document.getElementById('set_mapbtn'); if(mb) mb.textContent = isLocked?'Re-map':'Map';
 }
 // Map / Re-map the selected chain: places one real navigator call, shown live in the Mapping card.
 function setMapChain(){ const id=Number(document.getElementById('set_chain').value); const ch=CHAINS.find(c=>c.id===id); if(!ch){ toast('Pick a chain first'); return; } trDocument(id, ch.name); }
