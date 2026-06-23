@@ -173,4 +173,13 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 |---|---|---|---|
 | Amazon | wordmark + smile | ✅ | white "amazon" + orange smile (Wikimedia) |
 | Goodwill | full logo | ✅ | owner-supplied official Goodwill logo (g face + "goodwill") |
-| Salvation Army | red shield | ✅ | red shield emblem (Wikimedia) |
+| Salvation Army | red shield | ✅ | red shield emblem (Wikimedia), enlarged |
+| FoodMaxx | blue/yellow wordmark | 🔧 | real FoodMaxx logo (Wikimedia) |
+| Lucky Supermarkets | red "Lucky" script | 🔧 | real Lucky script (Wikimedia) |
+| Savers | tags mark + wordmark | 🔧 | real Savers logo (Wikimedia); low-res source |
+| Uwajimaya | wordmark + scallop | 🔧 | real Uwajimaya logo, recolored white |
+| Woodman's | wordmark + red apple | 🔧 | real Woodman's logo, navy→white (red apple kept) |
+| Metro Market | — | ⬜ | **needs owner image** — only parent Roundy's on Wikimedia |
+| Pak 'n Save | — | ⬜ | **needs owner image** — no Wikipedia page |
+| Payless Foods | — | ⬜ | **needs owner image** — no Wikipedia page |
+| Unique | — | ⬜ | **needs owner image** — no Wikipedia page |
