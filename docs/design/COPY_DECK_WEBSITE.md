@@ -247,7 +247,7 @@ Same tokens as the rest of the family: green `#4ADE80` = in stock / go · red `#
 ### Proof + actions
 | Element | key | Now | New | Note |
 |---|---|---|---|---|
-| Proof header | `res.proof` | `Proof — what the clerk said` | ✅ | — |
+| Proof header | `res.proof` | `Proof — what the clerk said` | ✏️ `Proof — what they said` | drops "clerk" — see sweep |
 | Translate | `res.translate` | `Translate` | ✅ | — |
 | Share | `res.share` | `Share this find` | ✅ | — |
 | Driver hand-off | `res.driver` | `Too far? Have a local grab it` | ✅ | great |
@@ -437,11 +437,16 @@ Same tokens as the rest of the family: green `#4ADE80` = in stock / go · red `#
 
 ## Site-wide consistency fixes (for Website to sweep)
 
-1. **"check" is the unit — standardize it.** Replace customer-facing **"free call" / "free minutes" / "1 call"** with **"check."** Affected keys: `lead.title`, `lead.cta`, `earn.sub`, `earn.store.sub`, `sr.sub`, `rcpt.title`. (Internally it's a phone call — leave server/admin wording alone.)
-2. **Footer brand** — fix "Fungibles powered by Fungibles" → "{Brand} powered by Fungibles" (Flag #1).
-3. **"Navigating phone tree…"** → **"Working through the phone menu…"** (`demo.sys`) — "phone tree" is our internal word.
-4. **Every reworded key needs its Spanish twin updated too** (the `es` map). E.g. if `lead.title` changes EN, change `'lead.title'` in the Spanish block to match ("Tu primera verificación es gratis").
-5. **Leave the spine untouched:** the hero promise, `charge` ("No answer = no charge"), the trust strip, the verdicts, and the Live screen are the voice at its best. Don't let a refactor soften them.
+1. **Scrub "Clerk" and "Runnr" from anything a human reads** (owner: both are dead — Clerk the sign-in service is gone; Runnr is the old name).
+   - `res.proof` `Proof — what the clerk said` → `Proof — what they said`.
+   - Transcript speaker label **"Clerk" → "Store"** (the CSS comment ~line 153 and the message-thread render). Fungie's bubble stays "Fungie".
+   - GA fallback `BRAND.name || 'Runnr'` (~line 1303) → `'Check It For Me'`.
+   - **Not copy (DevOps):** the dead Clerk auth SDK (`initClerk`, `handleClerkLinkCallback`, `clerk-captcha`, the Clerk bundle) and the internal `runnr_*` localStorage keys — leave those to DevOps; renaming storage keys needs a migration, and the Clerk SDK is being removed per `CLAUDE.md`.
+2. **"check" is the unit — standardize it.** Replace customer-facing **"free call" / "free minutes" / "1 call"** with **"check."** Affected keys: `lead.title`, `lead.cta`, `earn.sub`, `earn.store.sub`, `sr.sub`, `rcpt.title`. (Internally it's a phone call — leave server/admin wording alone.)
+3. **Footer brand** — fix "Fungibles powered by Fungibles" → "{Brand} powered by Fungibles" (Flag #1).
+4. **"Navigating phone tree…"** → **"Working through the phone menu…"** (`demo.sys`) — "phone tree" is our internal word.
+5. **Every reworded key needs its Spanish twin updated too** (the `es` map). E.g. if `lead.title` changes EN, change `'lead.title'` in the Spanish block to match ("Tu primera verificación es gratis").
+6. **Leave the spine untouched:** the hero promise, `charge` ("No answer = no charge"), the trust strip, the verdicts, and the Live screen are the voice at its best. Don't let a refactor soften them.
 
 ---
 

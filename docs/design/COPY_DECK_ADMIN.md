@@ -33,6 +33,45 @@ Each screen gets:
 
 ---
 
+## For the implementer — you do NOT read the whole deck
+
+This deck is a **library, not a to-do list.** You implement **one screen at a time**, and for each screen you only touch that screen's section. Here's the loop:
+
+1. **Pick one screen** (or take the work order you were handed — e.g. `WORK_ORDER_ADMIN_TESTBENCH.md`).
+2. **Jump to its section** using the map below. Each screen = one `<section id="…">` in `public/app.html`.
+3. In that section, change **only the rows marked ✏️ (reword) or 🆕 (add)**, and add the **tooltips**. Skip every ✅ — it's already right.
+4. **Check spacing** against the *Design spec* (header → sub → body; don't cram).
+5. Apply the global **[Word removals](#word-removals--scrub-runnr--clerk)** if your screen is on that list.
+
+You never need to read a section for a screen you're not touching.
+
+### Screen → code map (table of contents)
+
+| Group | Screen (this deck) | `section id` in `app.html` |
+|---|---|---|
+| Global | [Chrome: header, sign-in, nav, toasts, agent](#global-chrome) | `header` / `#signinwrap` / `#grpnav` / `#agentPanel` |
+| Pulse | [Live](#screen-live-was-god-view) | `dash` |
+| Pulse | [Growth](#screen-growth-section-title-growth--policy) | `growth` |
+| Pulse | [Business](#screen-business) | `business` |
+| Pulse | [Receipts](#screen-receipts) | `receipts` |
+| Stores | [Stores](#screen-stores-section-retailers) | `retailers` |
+| Stores | [Map](#screen-map) | `map` |
+| Stores | [Zones](#screen-zones) | `zones` |
+| Stores | [Phone trees](#screen-phone-trees-section-trees) | `trees` |
+| Stores | [Tree Lab](#screen-tree-lab-section-treelab) | `treelab` |
+| Stores | [Tree Trainer](#screen-tree-trainer-section-trainer) | `trainer` |
+| Calls | [Calls](#screen-calls-section-results) | `results` |
+| Calls | [Schedules](#screen-schedules) | `schedules` |
+| Voice | [Labs](#screen-labs) | `labs` |
+| Voice | [Test bench](#screen-test-bench-section-bench) | `bench` |
+| Voice | [Statuses](#screen-statuses) | `statuses` |
+| Settings | [Settings](#screen-settings) | `settings` |
+| — | [Verdict copy (shared)](#the-verdict-copy-customer-facing--edited-here-shown-in-calls--test-result) | `customerVerdict()` |
+| — | [Orphaned: Tracked categories](#orphaned-screen--admin-to-wire-up-or-retire) | `catalog` |
+| — | [Word removals (global sweep)](#word-removals--scrub-runnr--clerk) | all |
+
+---
+
 ## Design spec — the box every line has to fit in
 
 Pulled from the live CSS in `public/app.html` + the consumer site (`checkit.html`). Copy is written to *this* type scale and spacing. Don't cram — if a line won't fit one row at these sizes, it's too long; cut it.
@@ -75,10 +114,10 @@ Pulled from the live CSS in `public/app.html` + the consumer site (`checkit.html
 
 ---
 
-## ✅ Owner decisions — resolved (2026-06-23)
+## ✅ Owner decisions — resolved (updated 2026-06-23)
 
-1. **"Runnr" stays.** It's the product's old name (Runner → Runnr) and the owner's fine seeing it in admin copy. No change — the Statuses toast keeps it.
-2. **The caller is "Fungie" — intentional.** Quick glossary so nobody trips on it: **"the caller" / "the agent" = Fungie**, the AI that phones the store. In a call transcript its lines show as **"Fungie:"** (the clerk's lines show as "Clerk:"). Keep it everywhere it appears.
+1. **Remove "Runnr" and "Clerk" everywhere a human can read them.** Both are dead: "Runnr" is the product's old name (now **Check It For Me**), and **Clerk** (the old sign-in service) has been dropped from our stack. Scrub both from all visible copy — see the **[Word removals](#word-removals--scrub-runnr--clerk)** sweep at the end for the exact list + replacements.
+2. **The caller is "Fungie" — keep it.** Glossary: **"the caller" / "the agent" = Fungie**, the AI that phones the store. In a call transcript, Fungie's lines show as **"Fungie:"** and the store employee's lines now show as **"Store:"** (was "Clerk:" — changed; see Word removals).
 3. **"Tracked categories" → Admin Dev decides.** This screen loads (`loadCatalog`) but isn't wired into the nav. **Instruction for Admin:** either add it to a nav group (it fits under Stores or Voice) or retire it. Approved copy is in the *Orphaned screen* section near the end either way.
 
 ---
@@ -145,13 +184,13 @@ Keep them short and human. Current set is mostly good; tighten these:
 
 | Now | New |
 |---|---|
-| `Saved — live in Runnr + Test Bench now` | ✏️ `Saved — customers see this now` |
+| `Saved — live in Runnr + Test Bench now` | ✏️ `Saved — customers see this now` (drops "Runnr") |
 | `Customers now hear calls live` | ✅ |
 | `Live audio is testing-only again` | ✅ |
 | `Tick some stores first` | ✅ |
 | `Name + phone required` | ✏️ `Add a name and a phone number first` |
 | `Pick a store and category` | ✅ |
-| `Calling you — answer like the clerk!` | ✅ (great) |
+| `Calling you — answer like the clerk!` | ✏️ `Calling you — answer like you work there!` (drops "clerk") |
 | `Call placed — result will appear shortly.` | ✅ |
 | `Mic blocked — allow microphone access` | ✅ |
 
@@ -297,7 +336,7 @@ Header block:
 | `confirmed restocks` | ✅ | `Times we caught a store with stock in` |
 | `hit rate (N checks)` | ✅ | `How often a check finds stock` |
 | `last 7 days` / `last 30 days` | ✅ | — |
-| `Shipment days heard:` | ✅ | `Days clerks told us new stock lands` |
+| `Shipment days heard:` | ✅ | `Days stores told us new stock lands` |
 | Table headers | `Store / Region / Hits / Best day / Last` | ✏️ `Store / Region / Found / Best day / Last` | — |
 | Empty | `No confirmed restocks logged yet.` / `No intel yet.` | ✏️ `No restocks caught yet — this fills in as calls find stock.` | — |
 
@@ -798,8 +837,8 @@ Flag labels (`FLAG_LABELS`) — these are dense. Rewrite each as a short name + 
 | Element | Now | New | Tooltip |
 |---|---|---|---|
 | Title | `🧪 The test call` | ✅ | — |
-| Sub | `the agent calls YOU as the store` | ✏️ `the caller phones YOU — you play the clerk` | — |
-| Body | `Pick the store context, then answer your phone like the clerk. Runs the draft voice with that store's real phone-tree rules. The result records against the store (visible in Results).` | ✏️ `Pick a store, then answer your phone like the clerk. It runs your draft voice with that store's real menu rules, and saves the result against the store (you'll see it in Calls).` | — |
+| Sub | `the agent calls YOU as the store` | ✏️ `the caller phones YOU — you play the store` | — |
+| Body | `Pick the store context, then answer your phone like the clerk. Runs the draft voice with that store's real phone-tree rules. The result records against the store (visible in Results).` | ✏️ `Pick a store, then answer your phone like you work there. It runs your draft voice with that store's real menu rules, and saves the result against the store (you'll see it in Calls).` | — |
 | `Store (records the result against this one)` | dropdown | — | `The result saves against this store` |
 | `Category to ask about` | dropdown | — | `What to ask for` |
 | `Flow` | `Restock check (verified seller)` / `Carry check (do you sell it?)` | ✅ | — |
@@ -807,7 +846,7 @@ Flag labels (`FLAG_LABELS`) — these are dense. Rewrite each as a short name + 
 | — `General restock — any of it counts, won't ask which set` | ✅ | — |
 | — `Specific product — only greens if THAT is in` | ✏️ `Specific product — only a yes if THAT exact thing is in` | — |
 | `What specific set / product?` | placeholder `151 booster boxes` | ✅ | `The exact thing that has to be in stock` |
-| `Your phone (the agent dials this)` | `+13106662331` | ✏️ label `Your phone` | `The caller dials this number — answer as the clerk` |
+| `Your phone (the agent dials this)` | `+13106662331` | ✏️ label `Your phone` | `The caller dials this number — answer as if you work at the store` |
 | `Voice for this test — ring with any clone; the live store voice is never touched` | ✅ | `Try any voice — your live store voice stays put` |
 | `📞 Call me` | ✅ | `Call my phone now and run the test` |
 | Validation | `Pick a store and category` / `Enter your phone number` / `Name the specific product, or switch to general` | ✅ | — |
@@ -849,7 +888,7 @@ Flag labels (`FLAG_LABELS`) — these are dense. Rewrite each as a short name + 
 | Note field | `one-line note the customer sees` | ✅ | `The one-liner under the headline` |
 | Tone | `neutral / green — go / red — no-go` | ✅ | `Sets the vibe: go, no-go, or neutral` |
 | Save | `Save` | ✅ | — |
-| Save toast | `Saved — live in Runnr + Test Bench now` | ✅ keep | "Runnr" stays per owner — it's the old product name |
+| Save toast | `Saved — live in Runnr + Test Bench now` | ✏️ **`Saved — customers see this now`** | drops "Runnr" (dead name) — see Word removals |
 
 ### Add a status
 | Element | Now | New | Tooltip |
@@ -860,7 +899,7 @@ Flag labels (`FLAG_LABELS`) — these are dense. Rewrite each as a short name + 
 | Note | `One-line note the customer sees` | ✅ | — |
 | Tone | `neutral (gray) / green — go / red — no-go` | ✅ | — |
 | Add | `Add status` | ✅ | — |
-| Added msg | `Added ✓ — note: DISPLAY is live, but detecting this situation on calls needs Claude to wire the extraction (tell it what the clerk says).` | ✏️ `Added ✓ — it shows up now, but the caller won't pick this situation out of a call until the Admin dev agent wires it up. Tell it what the clerk says that means this.` | — |
+| Added msg | `Added ✓ — note: DISPLAY is live, but detecting this situation on calls needs Claude to wire the extraction (tell it what the clerk says).` | ✏️ `Added ✓ — it shows up now, but the caller won't pick this situation out of a call until the Admin dev agent wires it up. Tell it what the store says that means this.` | — |
 | Validation | `Give it a label` | ✅ | — |
 
 ---
@@ -924,6 +963,26 @@ These are the lines a customer reads after a call. They live in `customerVerdict
 - **"consumer"** (e.g. "hidden from the consumer store list") → **"customers."** "Consumer" is a marketing word; "customers" is a human one.
 - **Acronyms to gloss or cut in visible labels:** E.164 (cut), IVR (→ "menu"), COGS (→ "costs"), DTMF (already hidden behind "auto-press"). Keep MRR but tail it with "(per month)".
 - **Every screen gets one `h2` header + a one-line sub.** Several screens (Live/God view, Growth, Business, Receipts, Schedules, Statuses) currently jump straight into cards. Adding the sub gives each screen the Header → Sub → Body rhythm and the breathing room called for.
+
+---
+
+## Word removals — scrub "Runnr" + "Clerk"
+
+Both words are dead and must not appear in anything a human reads. Exact spots in `public/app.html`:
+
+| Word | Where (`app.html`) | Now | Change to |
+|---|---|---|---|
+| **Clerk** | `bubbles()` speaker label (~line 1173) | `'Clerk'` | `'Store'` |
+| **Clerk** | `renderTranscriptBody()` speaker label (~line 1657) | `Clerk:` shown | `Store:` (display label only) |
+| **clerk** | benchCall toast (~1488) | `Calling you — answer like the clerk!` | `Calling you — answer like you work there!` |
+| **clerk** | Test-call card sub + body (`#tb_call_card`, ~563) | `…answer your phone like the clerk` | `…answer your phone like you work there` |
+| **clerk** | Add-a-status added msg (`addStatus`, ~1782) | `…tell it what the clerk says` | `…tell it what the store says` |
+| **Runnr** | Statuses save toast (~1774) | `Saved — live in Runnr + Test Bench now` | `Saved — customers see this now` |
+| **Runnr** | code comment (~1661) `What a Runnr customer would see` | comment, not visible | `What a customer would see` (tidy while you're there) |
+
+**Note on the transcript prefix:** the server emits transcript lines as `Agent:` / `Clerk:`. The regex that parses them can keep matching `Clerk:` — only the **displayed label** changes to `Store`. Changing what the *server* writes is DevOps's call (`src/**`), not this deck.
+
+**Not copy (flag to DevOps, don't sweep here):** the dead Clerk sign-in SDK (`clerkToken`, `Clerk.*`, `clerk-captcha`, the `clerk.browser.js` script) is auth plumbing being removed per `CLAUDE.md` ("KILL CLERK"). Leave it to DevOps — touching it from a copy pass would break sign-in.
 
 ---
 
