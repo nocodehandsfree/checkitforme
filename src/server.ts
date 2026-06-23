@@ -197,7 +197,7 @@ function seoGraph(brand: ReturnType<typeof resolveBrand>, plainName: string) {
 }
 
 /** Render the consumer page branded for a vertical micro-site (resolved from the subdomain). */
-function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html"): string {
+function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html", tone = ""): string {
   const canonical = `https://${host}/`;
   const plainName = brand.name.replace(/<[^>]+>/g, "");
   const ogImage = `https://${host}/og/${brand.key}.png`;
@@ -228,7 +228,14 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
       ...seoGraph(brand, plainName),
     ] })}</script>`,
   ].join("\n");
+  // Status-bar tone baked into the LITERAL served HTML. iOS Safari tints the status bar from the
+  // theme-color value present at page load — a later JS change to it is unreliable (often ignored). So a
+  // result deep-link (?call=…&tone=in|out|unk|soon) gets the verdict colour written straight into the
+  // meta here, guaranteeing the bar is the right colour on a hard-refresh with no JS dependency.
+  const TONE: Record<string, string> = { in: "#266440", out: "#6b2427", unk: "#6c5419", soon: "#6e490f" };
+  const themeColor = (tone && TONE[tone]) || "#0C0C12";
   return page(file)
+    .replace('content="#0C0C12" id="themeColor"', `content="${themeColor}" id="themeColor"`)
     .replace(/__BRAND_HEAD__/g, head)
     .replace(/__BRAND_JSON__/g, JSON.stringify({ key: brand.key, name: brand.name, category: brand.category, accent: brand.accent, accent2: brand.accent2 || brand.accent, logoUrl: brand.logoUrl || "", emoji: brand.emoji }))
     .replace(/__BRAND_LOGO__/g, brand.logo || `${brand.emoji} ${brand.name}`)
@@ -343,9 +350,9 @@ app.get("/", (c) => {
   const consumer = config.staging.on
     ? (!(host.startsWith("caller.") || host.startsWith("admin.")) || !!override)
     : (host.startsWith("runner.") || brand.key !== "runner" || !!override);
-  return c.html(consumer ? renderRunner(brand, host) : page("app.html"));
+  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "") : page("app.html"));
 });
-app.get("/r", (c) => { c.header("Cache-Control", "no-store"); return c.html(renderRunner(resolveBrand((c.req.header("host") || "").toLowerCase(), c.req.query("brand")), (c.req.header("host") || "").toLowerCase())); });
+app.get("/r", (c) => { c.header("Cache-Control", "no-store"); const h=(c.req.header("host") || "").toLowerCase(); return c.html(renderRunner(resolveBrand(h, c.req.query("brand")), h, "checkit.html", c.req.query("tone") || "")); });
 // Preview-only: the redesigned result/live UI served from checkit-demo.html, so the live
 // site keeps the current design while we evaluate the new one. /demo?brand=<slug> picks a vertical.
 app.get("/demo", (c) => {
@@ -365,7 +372,7 @@ for (const slug of ["pokemon", "onepiece", "toppsbasketball", "needoh"]) {
   app.get(`/${slug}`, (c) => {
     c.header("Cache-Control", "no-store");
     const host = (c.req.header("host") || "").toLowerCase();
-    return c.html(renderRunner(resolveBrand(host, slug), host));
+    return c.html(renderRunner(resolveBrand(host, slug), host, "checkit.html", c.req.query("tone") || ""));
   });
 }
 // Minimal "first-time visitor" preview of the apex homepage — same page; the client (body.peek)
