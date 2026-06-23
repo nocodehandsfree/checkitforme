@@ -142,7 +142,7 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Sam's Club | "sam's / club" wordmark | ✅ | actual two-line wordmark, sized down per owner |
 | Scheels | red "SCHEELS" wordmark | ✅ | owner-supplied logo, de-boxed to brand red #ee2e24 (the 2025 revert to the '98 red), enlarged, w:1 |
 
-## Chunk 8 — shaw_s → tom_thumb  🔧 (8a: shaw's→staples done, awaiting approval)
+## Chunk 8 — shaw_s → tom_thumb  🔧 (all sourced from Wikimedia; awaiting approval. Staples/Shaw's/Sheetz enlarged per owner)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
 | Shaw's | orange wordmark | 🔧 | cleaned near-white from inside the letters |
@@ -150,11 +150,11 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Smith's | magenta wordmark | 🔧 | real Smith's logo (Wikimedia) — replaced the generic red "S" |
 | Spencer's | white graffiti | 🔧 | real Spencer's graffiti logo (Wikimedia), recolored white — replaced "Spencer's Nation" |
 | Staples | red "STAPLES" wordmark | 🔧 | official Staples wordmark (Wikimedia); confirm vs the specific file owner mentioned |
-| Star Market | wordmark | ⬜ | |
-| Target | bullseye mark | ⬜ | |
-| TJ Maxx | wordmark | ⬜ | **too small**; remove white inside letters |
-| Tokyo Japanese Lifestyle | wordmark | ⬜ | |
-| Tom Thumb | 2 lines | ⬜ | drop red line; two lines; brighter blue |
+| Star Market | blue wordmark | 🔧 | real STAR★MARKET wordmark (Commons), white keyed out — replaced lone green star |
+| Target | red bullseye | 🔧 | official 2004 bullseye (Wikimedia) |
+| TJ Maxx | red wordmark | 🔧 | official TJ Maxx wordmark (Wikimedia), enlarged |
+| Tokyo Japanese Lifestyle | TOKYO + fan | 🔧 | kept existing — already correct |
+| Tom Thumb | 2-line blue | 🔧 | kept existing — already two-line bright blue, no red line |
 
 ## Chunk 9 — tractor_supply → winco_foods  ⬜
 | Logo | Treatment | Status | Notes |
