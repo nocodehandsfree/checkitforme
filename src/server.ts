@@ -924,11 +924,14 @@ app.get("/pub/finds", async (c) => {
   if (!pol.finds.publicFeed) return c.json([]);
   const cats = await categoryLabelMap();
   const stores = await retailerMap();
+  const ownerOnly = await ownerOnlyRetailerIds(); // Fun / MVP's etc. are rehearsal stores — never real finds
   // Headstart: a paid finder's result stays off the public feed for headstartMin minutes.
   const cutoff = Date.now() - pol.finds.headstartMin * 60_000;
   const rows = (await db.select().from(callResults)
     .where(and(eq(callResults.confirmed, true), eq(callResults.status, "completed")))
     .orderBy(desc(callResults.completedAt)).limit(60))
+    // Owner-only rehearsal stores (Fun, MVP's, …) are never genuine finds → keep them out of the banner.
+    .filter((r) => !ownerOnly.has(r.retailerId))
     // Privacy: never surface a find marked private (subscriber perk / paid privacy).
     .filter((r) => r.isPrivate !== true)
     // Headstart: only after the finder's lead time has elapsed.
