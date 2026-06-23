@@ -2324,6 +2324,46 @@ app.get("/api/admin/coverage", async (c) => {
     note: "Coverage = the % of the national store footprint of the retail chains we know carry Pokémon at MSRP (tiers 3-5) that we've loaded. It measures chains/locations that CAN carry it — not that every store has it in stock right now (a 'spotty' tier-3 chain carries, but varies by location).",
   });
 });
+// Data-health monitor: ONE pass over active stores flags the gaps that silently break things —
+// missing phone, missing hours, junk/markup names, no chain link, and **mis-chained** stores (name
+// doesn't start with its chain's name — the exact failure the broken chainId filter used to hide).
+// Returns overall counts + the worst chains per issue + samples to eyeball. Cached 5 min (full scan).
+let dataHealthCache: { t: number; v: unknown } | null = null;
+app.get("/api/admin/data-health", async (c) => {
+  if (!c.req.query("fresh") && dataHealthCache && Date.now() - dataHealthCache.t < 300_000) return c.json(dataHealthCache.v);
+  const chainName = new Map((await db.select({ id: chains.id, name: chains.name }).from(chains)).map((x) => [x.id, x.name || ""]));
+  const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const junkRx = /&lt;|&gt;|style=|<[a-z/]|\(#\d|—| - | Shop Location|Holiday (Décor|Greeting)/i;
+  const allCaps = /\b[A-Z]{4,}\s+[A-Z]{4,}\b/;
+  const rows = await db.select({ id: retailers.id, name: retailers.name, chainId: retailers.chainId, phone: retailers.phone, hours: retailers.hours })
+    .from(retailers).where(eq(retailers.active, true)).limit(200000);
+  let missingPhone = 0, missingHours = 0, junk = 0, noChain = 0, misChain = 0;
+  const byHours = new Map<number, number>(), byMis = new Map<number, number>();
+  const junkSample: string[] = [], misSample: string[] = [];
+  for (const r of rows) {
+    const nm = r.name || "";
+    if (!r.phone || r.phone.startsWith("nophone:")) missingPhone++;
+    if (!r.hours) { missingHours++; if (r.chainId) byHours.set(r.chainId, (byHours.get(r.chainId) || 0) + 1); }
+    if (junkRx.test(nm) || allCaps.test(nm) || nm.length > 80) { junk++; if (junkSample.length < 15) junkSample.push(nm.slice(0, 70)); }
+    if (!r.chainId) { noChain++; continue; }
+    const cn = chainName.get(r.chainId);
+    if (cn) {
+      const cnN = norm(cn);
+      if (cnN && !norm(nm).startsWith(cnN)) {
+        misChain++; byMis.set(r.chainId, (byMis.get(r.chainId) || 0) + 1);
+        if (misSample.length < 15) misSample.push(`${nm.slice(0, 40)}  → chain: ${cn}`);
+      }
+    }
+  }
+  const top = (m: Map<number, number>) => [...m.entries()].map(([cid, n]) => ({ chain: chainName.get(cid) || `#${cid}`, n })).sort((a, b) => b.n - a.n).slice(0, 20);
+  const v = {
+    total: rows.length, missingPhone, missingHours, junkNames: junk, noChain, misChained: misChain,
+    worstHours: top(byHours), worstMisChain: top(byMis), junkSample, misSample,
+    note: "One pass over active stores. misChained = a store name that doesn't start with its chain's name — a real wrong-chain assignment OR a legit local store name; eyeball misSample. missingHours is concentrated in thrift (openState treats blank hours as closed-overnight only). Pass ?fresh=1 to bypass the 5-min cache.",
+  };
+  dataHealthCache = { t: Date.now(), v };
+  return c.json(v);
+});
 // In-admin Claude agent ("Admin dev"): chat to manage the store DB. Client sends the running
 // transcript [{role,text}]; the server runs one turn (with an internal tool loop) and returns
 // the reply + a list of actions taken. Admin-gated like the rest of /api/*.
