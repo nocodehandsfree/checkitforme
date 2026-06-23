@@ -208,6 +208,7 @@ export async function bootstrap() {
   await seedStockCheckIntel(); // classify chains site-rail vs call-rail (insert-if-absent)
   await seedSellMethods();      // per-chain ways-to-get-it + MSRP flag (insert-if-absent)
   await seedFunStore();         // owner-only "Fun" rehearsal store (only if FUN_STORE_PHONE is set)
+  await seedMvpsStore();        // owner-only "MVPs" pitch-demo store (phone set per-demo from Admin)
 }
 
 // Owner-only demo store "Fun": dials the owner's own cell (FUN_STORE_PHONE) so the owner can play the
@@ -234,6 +235,35 @@ async function seedFunStore() {
       chainId: chain?.id ?? null, name: "Fun", location: "Calabasas, CA", address: "123 Fun Lane",
       zip: "91302", lat: 34.1367, lng: -118.6618, phone, timezone: "America/Los_Angeles",
       state: "CA", region: "West Coast", tier: 5, ownerOnly: true, active: true, sellsPacks: true,
+      carries: "Pokémon", hours,
+    });
+  }
+}
+
+// Owner-only demo store "MVPs": same rig as the Fun store, but the demo phone is set per-pitch from the
+// Admin (not an env var). The phone number IS the on/off switch — saving a number makes it appear, clearing
+// it hides it entirely (derived server-side in PATCH /api/retailers/:id). Geo-pinned to the same spot as Fun
+// so it surfaces wherever the owner searches from, and hidden from every consumer + every report (ownerOnly,
+// like Fun). Create-only: re-asserts the fixed invariants on each boot but NEVER the owner's phone/active.
+async function seedMvpsStore() {
+  // A "MVPs" chain purely so the store renders the MVPs brand mark (public/logos/chains/mvps.png).
+  let chain = (await db.select().from(chains).where(eq(chains.name, "MVPs")))[0];
+  if (!chain) {
+    await db.insert(chains).values({ name: "MVPs", type: "MVPs" });
+    chain = (await db.select().from(chains).where(eq(chains.name, "MVPs")))[0];
+  }
+  const hours = JSON.stringify({ mon: "24h", tue: "24h", wed: "24h", thu: "24h", fri: "24h", sat: "24h", sun: "24h" });
+  const existing = (await db.select().from(retailers).where(and(eq(retailers.name, "MVPs"), eq(retailers.ownerOnly, true))))[0];
+  if (existing) {
+    // Re-assert only invariants that must never drift — NOT phone/active (owner sets those per demo).
+    await db.update(retailers)
+      .set({ chainId: chain?.id ?? null, tier: 5, ownerOnly: true, sellsPacks: true, lat: 34.1367, lng: -118.6618, hours })
+      .where(eq(retailers.id, existing.id));
+  } else {
+    await db.insert(retailers).values({
+      chainId: chain?.id ?? null, name: "MVPs", location: "Calabasas, CA", address: "1 MVP Way",
+      zip: "91302", lat: 34.1367, lng: -118.6618, phone: "", timezone: "America/Los_Angeles",
+      state: "CA", region: "West Coast", tier: 5, ownerOnly: true, active: false, sellsPacks: true,
       carries: "Pokémon", hours,
     });
   }

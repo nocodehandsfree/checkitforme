@@ -2367,13 +2367,14 @@ app.get("/api/admin/data-health", async (c) => {
   const sig = (s: string) => new Set(norm(s).split(" ").filter((t) => t.length > 1 && !STOP.has(t)).map(stem)); // keep 2-char brands (BJ's, etc.)
   const junkRx = /&lt;|&gt;|style=|<[a-z/]|\(#\d|—| - | Shop Location|Holiday (Décor|Greeting)/i;
   const allCaps = /\b[A-Z]{4,}\s+[A-Z]{4,}\b/;
-  const rows = await db.select({ id: retailers.id, name: retailers.name, chainId: retailers.chainId, phone: retailers.phone, hours: retailers.hours })
+  const rows = await db.select({ id: retailers.id, name: retailers.name, chainId: retailers.chainId, phone: retailers.phone, hours: retailers.hours, ownerOnly: retailers.ownerOnly })
     .from(retailers).where(eq(retailers.active, true)).limit(200000);
   let missingPhone = 0, missingHours = 0, junk = 0, noChain = 0, misChain = 0;
   const byHours = new Map<number, number>(), byMis = new Map<number, number>();
   const junkSample: string[] = [], misSample: string[] = [];
   for (const r of rows) {
     const nm = r.name || "";
+    if (r.ownerOnly) continue; // owner-only demo stores (Fun/MVPs) are intentional fixtures — never "problems"
     if (!r.phone || r.phone.startsWith("nophone:")) missingPhone++;
     if (!r.hours) { missingHours++; if (r.chainId) byHours.set(r.chainId, (byHours.get(r.chainId) || 0) + 1); }
     if (junkRx.test(nm) || allCaps.test(nm) || nm.length > 80) { junk++; if (junkSample.length < 15) junkSample.push(nm.slice(0, 70)); }
@@ -2579,8 +2580,16 @@ app.post("/api/retailers", async (c) => {
   return c.json(row, 201);
 });
 app.patch("/api/retailers/:id", async (c) => {
+  const id = Number(c.req.param("id"));
   const b = await c.req.json();
-  const [row] = await db.update(retailers).set(b).where(eq(retailers.id, Number(c.req.param("id")))).returning();
+  // Owner-only demo stores ("Fun"/"MVPs"): the phone number IS the on/off switch — saving a number makes
+  // the store appear, clearing it hides it entirely. Derived server-side so it works regardless of which
+  // fields the Admin sends. Real stores are untouched (active is managed independently for them).
+  if (Object.prototype.hasOwnProperty.call(b, "phone")) {
+    const cur = (await db.select({ ownerOnly: retailers.ownerOnly }).from(retailers).where(eq(retailers.id, id)))[0];
+    if (cur?.ownerOnly) b.active = !!(b.phone && String(b.phone).trim());
+  }
+  const [row] = await db.update(retailers).set(b).where(eq(retailers.id, id)).returning();
   return c.json(row);
 });
 // Hard-delete a store (admin) — for purging test/probe rows and confirmed junk. Soft-remove
