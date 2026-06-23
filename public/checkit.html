@@ -17,7 +17,7 @@
   var T={in:'#266440',out:'#6b2427',unk:'#6c5419',soon:'#6e490f'};
   if(cls && T[cls]){ window.__bootTone=cls; var m=document.getElementById('themeColor'); if(m) m.setAttribute('content',T[cls]); }
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r42" />
+<meta name="x-rev" content="names-r43" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -3244,6 +3244,11 @@ function showResult(o, cid){
     <div class="foot" style="margin-top:16px">${o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one')}</div>`;
   $('result').classList.remove('hidden');
   navMark('result');
+  // Put ?call=<cid> in the URL for EVERY result (not just reopened ones). A pull-to-refresh then reloads
+  // WITH ?call=, which is the trigger the head boot-script needs to set theme-color green AT LOAD — the
+  // only reliable way to green the iOS status bar (a fresh call's result had no ?call, so refreshing it
+  // came back black). cls is already in localStorage above, so the boot-script finds the tone.
+  try{ if(cid){ const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',cid); history.replaceState({v:'result'},'',location.pathname+'?'+sp.toString()); } }catch(e){}
   // Side tabs to every other call — render from what we have, then refresh with server history.
   renderCallRail(cid);
   if(isAuthed() && !HIST_CACHE.length) ensureHistCache().then(()=>renderCallRail(cid));
