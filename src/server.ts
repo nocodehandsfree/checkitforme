@@ -1767,10 +1767,13 @@ app.post("/app/check-live", async (c) => {
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
   if (!isCompAccount(a) && !isComp(u.email || undefined) && await isOwnerOnlyStore(Number(b.retailerId))) return c.json({ error: "not_found" }, 404);
   if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
-  // DEMO override: ONLY the owner/comp account may redirect a store call to an arbitrary number
-  // (otherwise this would be a way to robo-dial anyone). Lets us screen-share the real consumer flow
-  // while a stand-in plays the store. Ignored for everyone else.
-  const demoTo = (isCompAccount(a) || isComp(u.email || undefined)) && b.demoTo ? String(b.demoTo) : undefined;
+  // DEMO override (admin-driven, front-end stays pristine): when the owner/comp account calls the
+  // owner-only Fun store AND a demo number is set in Admin (fun_dial_to), dial THAT number as if it's
+  // the store — the real consumer flow, with a stand-in playing the store. Blank = dial the Fun store's
+  // real number. Never applies to real stores or non-owner accounts.
+  const isOwner = isCompAccount(a) || isComp(u.email || undefined);
+  const demoTo = (isOwner && await isOwnerOnlyStore(Number(b.retailerId)))
+    ? ((await getSetting("fun_dial_to")) || undefined) : undefined;
   const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode, demoTo);
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: RAILWAY_HOST });
@@ -2053,6 +2056,9 @@ app.get("/api/settings", async (c) => c.json(await allSettings()));
 app.patch("/api/settings", async (c) => {
   const b = await c.req.json();
   if (typeof b.voicemailHangup === "boolean") await setSetting("voicemail_hangup", String(b.voicemailHangup));
+  // Fun-store demo number: when set, calling the owner-only Fun store dials THIS number instead (so a
+  // stand-in can play the store while the owner screen-shares the real consumer flow). Blank = off.
+  if (b.funDialTo !== undefined) await setSetting("fun_dial_to", String(b.funDialTo || "").trim());
   if (b.creditLimit !== undefined) await setSetting("el_credit_limit", String(Math.max(0, Number(b.creditLimit) || 0)));
   if (b.openerVariants !== undefined) await setSetting("vt_opener_variants", String(b.openerVariants || ""));
   if (b.openerLibrary !== undefined) await setSetting("vt_opener_library", String(b.openerLibrary || ""));
