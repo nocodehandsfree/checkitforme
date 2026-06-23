@@ -112,6 +112,10 @@ source of truth. Manage both from here so there's one place to look.
 - **Resolver:** a logo is matched to a chain **by chain name** — `chainLogoInfo()` (`src/server.ts`)
   slugs the name and tries exact / `-`↔`_` variants / a fuzzy stem match. Every surface (consumer,
   admin, logo wall) reads the same resolved `logoUrl`; none embeds its own copy.
+- **Render contract (how to "pull" a logo):** every store row from `/pub/stores*` + `/app/history`
+  already carries `logoUrl` / `logoWide` / `logoDark`. A surface reads `logoUrl` → `<img>` it (respect
+  `logoWide`/`logoDark` for sizing/plate); if absent → the shared **text wordmark** fallback. Lazy-load
+  (`loading="lazy"`), per-store only, never bulk-load the wall.
 - **Coverage (audited 2026-06):** of **109** visible chains, **87 resolve a logo**; **13 real chains
   still need a file** — Amazon, FoodMaxx, Goodwill, Hallmark, Lucky Supermarkets, Metro Market, Pak N
   Save, Payless Foods, Salvation Army, Savers, Unique, Uwajimaya, Woodman's Market. Re-run the audit by
