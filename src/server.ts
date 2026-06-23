@@ -2360,7 +2360,11 @@ app.get("/api/admin/data-health", async (c) => {
   // Hardware" ∈ "Ace Hardware", "Big 5 Reseda" ∈ "Big 5 Sporting Goods", "CVS West Hills" ∈ "_CVS
   // Pharmacy at Target") is NOT flagged — only a genuinely foreign brand (a Savers row under Dick's) is.
   const STOP = new Set(["the", "and", "of", "at", "for", "store", "shop", "inc", "llc"]);
-  const sig = (s: string) => new Set(norm(s).split(" ").filter((t) => t.length > 1 && !STOP.has(t))); // keep 2-char brands (BJ's, etc.)
+  // Stem a trailing possessive/plural -s so the chain "Mariano's"/"Lowe's"/"Smith's" (tokens mariano/lowe/smith)
+  // matches its real stores spelled "Marianos …"/"… Lowes"/"Smiths …". Without this the apostrophe makes
+  // mariano ≠ marianos and ~30 correctly-chained grocery stores get false-flagged as mis-chained.
+  const stem = (t: string) => (t.length > 3 && t.endsWith("s") ? t.slice(0, -1) : t);
+  const sig = (s: string) => new Set(norm(s).split(" ").filter((t) => t.length > 1 && !STOP.has(t)).map(stem)); // keep 2-char brands (BJ's, etc.)
   const junkRx = /&lt;|&gt;|style=|<[a-z/]|\(#\d|—| - | Shop Location|Holiday (Décor|Greeting)/i;
   const allCaps = /\b[A-Z]{4,}\s+[A-Z]{4,}\b/;
   const rows = await db.select({ id: retailers.id, name: retailers.name, chainId: retailers.chainId, phone: retailers.phone, hours: retailers.hours })
@@ -2387,7 +2391,7 @@ app.get("/api/admin/data-health", async (c) => {
   const v = {
     total: rows.length, missingPhone, missingHours, junkNames: junk, noChain, misChained: misChain,
     worstHours: top(byHours), worstMisChain: top(byMis), junkSample, misSample,
-    note: "One pass over active stores. misChained = a store name that doesn't start with its chain's name — a real wrong-chain assignment OR a legit local store name; eyeball misSample. missingHours is concentrated in thrift (openState treats blank hours as closed-overnight only). Pass ?fresh=1 to bypass the 5-min cache.",
+    note: "One pass over active stores. misChained = store name shares NO significant word with its chain (possessive -s stemmed, so real Mariano's/Lowe's/Smith's stores no longer false-flag). Remaining hits are independents auto-filed under a big chain by name prefix (e.g. 'Lee Harrison' under Harris Teeter) — real stores wearing the wrong logo, re-home not delete; eyeball misSample. missingHours concentrated in thrift (openState treats blank hours as closed-overnight only). Pass ?fresh=1 to bypass the 5-min cache.",
   };
   dataHealthCache = { t: Date.now(), v };
   return c.json(v);
