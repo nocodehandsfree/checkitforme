@@ -134,6 +134,16 @@
   label[data-tip],span[data-tip],.name[data-tip],b[data-tip]{display:inline-flex;align-items:center;gap:4px}
   [data-tip]::after{content:"ⓘ";font-size:14px;color:var(--purple);font-style:normal;font-weight:700;line-height:1;margin-left:3px;vertical-align:middle;opacity:.85}
   #tiptip{position:fixed;z-index:9000;max-width:262px;background:#06060a;color:#e8e8f2;font:500 12.5px/1.45 Inter,-apple-system,sans-serif;font-style:normal;padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 30px rgba(0,0,0,.6)}
+  /* Settings page: collapsible sections (chevron like the old Advanced) + inline rows */
+  details.setsec{padding:0;overflow:hidden}
+  details.setsec>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:11px;padding:18px 20px}
+  details.setsec>summary::-webkit-details-marker{display:none}
+  details.setsec>summary .chev{flex:0 0 auto;color:var(--text-muted);font-size:11px;transition:transform .15s}
+  details.setsec[open]>summary .chev{transform:rotate(90deg)}
+  details.setsec>.secbody{padding:0 20px 20px}
+  .setlogo{flex:0 0 auto}
+  .setrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--border)}
+  .setlbl{font-size:13.5px;color:var(--text-body)}
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:16px}
@@ -752,50 +762,56 @@
     </section>
 
     <section id="trees">
-    <h2 data-tip="Per-chain call settings + the auto-mapped phone route, learned by the navigator. Pick a chain.">Tree Trainer</h2>
+    <h2 data-tip="Per-chain settings + the auto-mapped phone route. Pick a chain to edit its stores, calls and mapping.">Settings</h2>
     <div class="card">
-      <div class="name" style="margin-bottom:12px">Mapped routes</div>
+      <div class="name" style="margin-bottom:12px">Mapped Stats</div>
       <div class="stats" id="tr_stats" style="margin-bottom:0"></div>
     </div>
     <div class="card">
-      <label>Chain</label>
+      <label>Select a Chain</label>
       <div class="row" style="gap:8px;align-items:center">
         <input id="set_search" placeholder="Search a chain…" onkeydown="if(event.key==='Enter')ssSearch()" style="flex:1;min-width:0">
         <button class="ghost" onclick="ssSearch()" style="flex:0 0 auto">Search</button>
       </div>
       <div class="meta" style="text-align:center;margin:7px 0">or</div>
-      <select id="set_chain" onchange="setPickChain()"><option value="">— pick a chain —</option></select>
+      <select id="set_chain" onchange="setPickChain()"><option value="">Select a chain</option></select>
     </div>
     <div id="set_body" style="display:none">
-      <div class="card" id="set_store"></div>
-      <div class="card" id="set_call"></div>
-      <div class="card" id="set_hangup"></div>
-      <details class="card" id="set_advwrap"><summary style="cursor:pointer"><span class="name">Advanced</span></summary><div id="set_adv" style="margin-top:14px"></div></details>
-      <div class="row" style="gap:12px;align-items:center;margin:2px 0 14px">
-        <button class="act" onclick="saveChainSettings()">Save</button>
-        <span class="meta" id="set_msg"></span>
-      </div>
-      <div class="card">
-        <div class="name" data-tip="Auto-filled by the navigator from real calls — read-only, never hand-edited.">Mapping</div>
-        <div id="set_mapping" class="meta" style="margin-top:10px">—</div>
-        <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
-          <button class="act" id="set_mapbtn" onclick="setMapChain()">Map</button>
-          <button class="ghost" id="set_confirmbtn" onclick="setConfirmChain()">🎯 Confirm stock</button>
-          <span class="meta" data-tip="Map = place one real call; the navigator works the phone menu to a human and records the recipe + time. Confirm stock = reach a human and ASK if they have the product, to confirm we hit the right desk." style="align-self:center"></span>
-        </div>
-        <div class="card" id="tr_live" style="display:none;border-color:var(--green);margin-top:12px">
-          <div class="row" style="justify-content:space-between;align-items:center">
-            <div class="name" id="tr_live_store">—</div>
-            <div class="meta"><span id="tr_live_status">…</span> · <b id="tr_live_timer">0s</b></div>
+      <details class="card setsec" open id="set_storewrap">
+        <summary><span class="chev">▸</span><span class="name">Store Settings</span><span style="flex:1"></span><span id="set_storelogo" class="setlogo"></span></summary>
+        <div class="secbody" id="set_store"></div>
+      </details>
+      <details class="card setsec" open id="set_datawrap">
+        <summary><span class="chev">▸</span><span class="name">Store Data</span></summary>
+        <div class="secbody" id="set_data"></div>
+      </details>
+      <details class="card setsec" open id="set_callwrap">
+        <summary><span class="chev">▸</span><span class="name">Call Settings</span></summary>
+        <div class="secbody" id="set_call"></div>
+      </details>
+      <details class="card setsec" open id="set_mapwrap">
+        <summary><span class="chev">▸</span><span class="name">Mapping</span><span style="flex:1"></span><span id="set_mapstatus"></span></summary>
+        <div class="secbody">
+          <div id="set_mapping" class="meta" style="margin-top:2px">—</div>
+          <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
+            <button class="act" id="set_mapbtn" onclick="setMapChain()">Map</button>
+            <button class="ghost" id="set_confirmbtn" onclick="setConfirmChain()">🎯 Confirm stock</button>
+            <span class="meta" data-tip="Map = place one real call; the navigator works the phone menu to a human and records the recipe + time. Confirm stock = reach a human and ASK if they have the product, to confirm we hit the right desk." style="align-self:center"></span>
           </div>
-          <div id="tr_live_feed" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto"></div>
-          <div id="tr_live_result" style="margin-top:12px;display:none"></div>
+          <div class="card" id="tr_live" style="display:none;border-color:var(--green);margin-top:12px">
+            <div class="row" style="justify-content:space-between;align-items:center">
+              <div class="name" id="tr_live_store">—</div>
+              <div class="meta"><span id="tr_live_status">…</span> · <b id="tr_live_timer">0s</b></div>
+            </div>
+            <div id="tr_live_feed" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto"></div>
+            <div id="tr_live_result" style="margin-top:12px;display:none"></div>
+          </div>
+          <div style="margin-top:14px">
+            <div class="name" style="font-size:13px;margin-bottom:8px">Call log <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· runs + step matrix</span></div>
+            <div id="set_runs"><div class="meta">Loading…</div></div>
+          </div>
         </div>
-        <div style="margin-top:14px">
-          <div class="name" style="font-size:13px;margin-bottom:8px">Call log <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· runs + step matrix</span></div>
-          <div id="set_runs"><div class="meta">Loading…</div></div>
-        </div>
-      </div>
+      </details>
     </div>
     </section>
 
@@ -930,7 +946,7 @@ let CATEGORIES = [];
 const NAV_GROUPS={
   godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['growth','Policy','rise'],['calc','Calc','sliders']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
-  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Tree Trainer','tree'],['settings','App','sliders']]},
+  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Settings','tree'],['settings','App','sliders']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
@@ -1821,19 +1837,20 @@ const NAV_MODE={ keypad:{m:'Alpha',sub:'keypad tones',c:'#60a5fa'}, voice:{m:'Br
 // deprecated/merged placeholders (e.g. the old per-city "_H Mart …" rows). Muted chains stay (flagged)
 // so they remain unmute-able from Settings.
 function chainOpts(q){ const f=(q||'').trim().toLowerCase(); return CHAINS.filter(ch=>!(ch.name||'').startsWith('_')&&(!f||(ch.name||'').toLowerCase().includes(f))).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(ch=>`<option value="${ch.id}">${esch(ch.name)}${ch.muted?' · muted':(ch.repackOnly?' · repack':'')}</option>`).join(''); }
-function setFilterChains(q){ const sel=document.getElementById('set_chain'); if(!sel) return; const cur=sel.value; sel.innerHTML='<option value="">— pick a chain —</option>'+chainOpts(q); if([...sel.options].some(o=>o.value===cur)) sel.value=cur; }
+function setFilterChains(q){ const sel=document.getElementById('set_chain'); if(!sel) return; const cur=sel.value; sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(q); if([...sel.options].some(o=>o.value===cur)) sel.value=cur; }
 async function loadChains(){
   CHAINS = await api('/api/chains') || [];
   const sel=document.getElementById('set_chain'); if(!sel) return;
   const cur=sel.value;
-  sel.innerHTML='<option value="">— pick a chain —</option>'+chainOpts();
+  sel.innerHTML='<option value="">Select a chain</option>'+chainOpts();
   if(cur){ sel.value=cur; setPickChain(); }
 }
-// ---- Chain Settings panel: Store · Call · Hang up · Advanced + ONE Save. The RATING is per-store
-//      (retailers.tier — no chains.tier), so saving a rating stamps every store of the chain; the rest
-//      are chain fields via PATCH /api/chains. (docs/specs/scoring.md + DATA_PROVENANCE.md) ----
+// ---- Settings page: 4 collapsible sections. Store Settings + Call Settings commit INLINE (each control
+//      saves on its own); Store Data has its own Save; Mapping is READ-ONLY (the navigator/lock writes
+//      dtmf + phone-tree — the chain PATCH never sends those). RATING is per-store (retailers.tier — no
+//      chains.tier), so picking a tier stamps every store. (docs/specs/scoring.md + DATA_PROVENANCE.md) ----
 const SS_TYPES=[['Big Box','Big Box'],['Pharmacy','Pharmacy'],['Grocery','Grocery'],['Off-Price','Off-Price'],['Discount','Discount'],['Sporting Goods','Sporting Goods'],['Bookstore','Bookstore'],['Craft','Craft'],['Department','Department'],['Gift','Gift'],['Hardware','Hardware'],['Office','Office'],['Warehouse','Warehouse'],['Mall/Specialty','Mall/Specialty'],['Online','Online'],['Thrift','Treasure Hunt (Thrift)'],['Hobby','Hobby'],['Other','Other']];
-const SS_RATING={5:['Best near you','#2BFF88','Genuine MSRP · carries broadly · frequent, predictable restock you can time (also any official-kiosk store).'],4:['Mostly reliable','#29D4FF','Genuine MSRP · carries broadly · no dependable rhythm.'],3:['Spotty','#FF9E2C','Genuine MSRP · varies by location / sporadic.'],2:['Over MSRP','','Has product but above MSRP — no consumer pill.'],1:['Unknown','','Held internally, never shown — we can\'t confirm they carry.']};
+const SS_RATING={5:['Best near you','#2BFF88','Reliable, predictable restock — worth checking on a rhythm.'],4:['Mostly reliable','#29D4FF','Carries broadly, no dependable rhythm.'],3:['Spotty','#FF9E2C','Carries, but varies by location.'],2:['Over MSRP','','Has it, but above MSRP.'],1:['Unknown','','Unconfirmed — hidden from customers.']};
 let SS=null;
 const ssDot=c=>`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0"></span>`;
 function ssPill(t){ const p=SS_RATING[t]; if(!p) return '<span class="meta">unrated</span>'; if(!p[1]) return `<span style="display:inline-flex;align-items:center;font-size:12px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:3px 11px">${esch(p[0])}</span>`; return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:${p[1]};background:${p[1]}1a;border:1px solid ${p[1]}66;border-radius:20px;padding:3px 11px">${ssDot(p[1])}${esch(p[0])}</span>`; }
@@ -1842,77 +1859,112 @@ function setPickChain(){
   const body=document.getElementById('set_body'); const ch=CHAINS.find(c=>c.id===id);
   if(!ch){ if(body) body.style.display='none'; SS=null; return; }
   body.style.display='';
-  const st=ch.stores||{n:0,callable:0,kiosk:0,online:0,verified:0}, maj=(k)=>st.n?st[k]>st.n/2:(k==='callable');
+  const st=ch.stores||{n:0,callable:0,kiosk:0,online:0,verified:0};
   SS={ id:ch.id, name:ch.name, logoUrl:ch.logoUrl||'', logoDark:!!ch.logoDark, logoWide:!!ch.logoWide, type:ch.type||'Other',
-    muted:!!ch.muted, repack:!!ch.repackOnly, tier:ch.tier??null, ratingPick:ch.tier??null,
+    muted:!!ch.muted, repack:!!ch.repackOnly, tier:ch.tier??null,
     maxTalk:ch.maxTalkSeconds!=null?ch.maxTalkSeconds:'', vm:ch.hangupOnVoicemail!==false,
-    scc:ch.stockCheckConfidence||'', sellMethods:ch.sellMethods||'', isMSRP:ch.isMSRP!==false, dtmf:ch.dtmfShortcut||'', tree:ch.phoneTreeDefault||'',
-    callTarget:ch.callTarget!==false, ringsDirect:!!ch.ringsDirect, stockCheckMethod:ch.stockCheckMethod||'', answerPath:ch.answerPath||'',
+    scc:ch.stockCheckConfidence||'', sellMethods:ch.sellMethods||'', isMSRP:ch.isMSRP!==false,
+    dtmf:ch.dtmfShortcut||'', tree:ch.phoneTreeDefault||'',
+    callTarget:ch.callTarget!==false, answerPath:ch.answerPath||'',
     wf:(WF.chains&&WF.chains[ch.id])||'',
-    storesN:st.n, callable:maj('callable'), kiosk:maj('kiosk'), online:maj('online'), verified:maj('verified'),
-    cCallable:st.callable, cKiosk:st.kiosk, cOnline:st.online, cVerified:st.verified,
-    callableDirty:false, kioskDirty:false, onlineDirty:false, verifiedDirty:false };
-  ssRenderStore(); ssRenderCall(); ssRenderHangup(); ssRenderAdvanced();
-  document.getElementById('set_msg').textContent='';
+    storesN:st.n, cCallable:st.callable, cKiosk:st.kiosk, cOnline:st.online, cVerified:st.verified };
+  ssRenderStore(); ssRenderData(); ssRenderCall();
   renderChainMapping(ch); loadRuns(id, document.getElementById('set_runs'));
 }
+// Inline-commit helpers — every Store/Call control saves on its own (no grouped Save).
+async function ssReload(){ const id=SS&&SS.id; CHAINS=await api('/api/chains')||CHAINS; const sel=document.getElementById('set_chain'); if(sel){ const cur=sel.value; sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(''); sel.value=cur; } if(id&&CHAINS.find(c=>c.id===id)) setPickChain(); }
+async function ssPatch(field,value){ if(!SS) return null; const r=await api('/api/chains/'+SS.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({[field]:value})}); if(!r||!r.id){ toast('Could not save'); return null; } const c=CHAINS.find(x=>x.id===SS.id); if(c) c[field]=value; return r; }
+async function ssStoreBulk(set,label){ if(!SS) return; const sr=await api('/api/stores/patch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({where:{chain:SS.name},set})}); if(!sr||sr.error){ toast('Could not save'); return; } toast(label+' · '+(sr.patched!=null?sr.patched:'')+' stores'); await ssReload(); }
 function ssRenderStore(){
   const el=document.getElementById('set_store'); if(!el||!SS) return;
-  const seg=(on,lbl,c,fn)=>`<button type="button" onclick="${fn}" style="flex:1;padding:9px;border-radius:9px;border:1px solid ${on?c:'var(--border)'};background:${on?c+'1f':'var(--surface-1)'};color:${on?c:'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:13px">${lbl}</button>`;
-  const rate=[5,4,3,2,1].map(n=>`<button type="button" onclick="ssRate(${n})" title="${esch(SS_RATING[n][0])}" style="width:34px;height:34px;border-radius:9px;border:1px solid ${SS.ratingPick===n?'var(--green)':'var(--border)'};background:${SS.ratingPick===n?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${SS.ratingPick===n?'var(--green)':'var(--text-body)'};font-weight:800;cursor:pointer">${n}</button>`).join('');
-  const stog=(f,cf,lbl,tip)=>{ const on=SS[f]; return `<div class="row" style="justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border)"><div style="font-size:13px">${lbl} <span data-tip="${esch(tip)}"></span></div><div class="row" style="gap:9px;align-items:center"><span class="meta" style="font-size:11px">${SS[cf]}/${SS.storesN}</span><button type="button" onclick="ssToggleStore('${f}')" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12px">${on?'ON':'OFF'}</button></div></div>`; };
+  const lg=document.getElementById('set_storelogo'); if(lg) lg.innerHTML=logoTile({logoUrl:SS.logoUrl,logoDark:SS.logoDark,logoWide:SS.logoWide,name:SS.name,type:SS.type});
+  // Status: live state is shown selected (icon); the OTHER button is the action. Mute asks first.
+  const chk='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  const muteIco='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/></svg>';
+  const stateBtn=(c,icon,lbl)=>`<div style="flex:1;padding:10px;border-radius:9px;border:1px solid ${c};background:${c}1f;color:${c};font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;gap:7px">${icon}${lbl}</div>`;
+  const actBtn=(onclick,icon,lbl)=>`<button type="button" onclick="${onclick}" style="flex:1;padding:10px;border-radius:9px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-body);font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px">${icon}${lbl}</button>`;
+  const status=SS.muted
+    ? stateBtn('var(--text-muted)',muteIco,'Muted')+actBtn('ssActivate()',chk,'Activate')
+    : stateBtn('var(--green)',chk,'Active')+actBtn('ssMute()',muteIco,'Mute');
+  // Rating: five clickable pills (selected = its color, rest greyed) + one line for the selected tier.
+  const pill=(n)=>{ const p=SS_RATING[n]; const seld=SS.tier===n;
+    if(seld) return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:${p[1]||'#fff'};background:${p[1]?p[1]+'1f':'var(--surface-2)'};border:1px solid ${p[1]?p[1]+'80':'var(--border-strong)'};border-radius:20px;padding:5px 12px;cursor:pointer">${p[1]?ssDot(p[1]):''}${esch(p[0])}</button>`;
+    return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;font-size:12px;font-weight:700;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer">${esch(p[0])}</button>`; };
+  const pills=[5,4,3,2,1].map(pill).join('');
+  const desc=SS_RATING[SS.tier]?`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5">${esch(SS_RATING[SS.tier][2])}</div>`:'';
+  // Per-store rows: bulk toggle commits immediately. KIOSK is per-store ON only — chain level is
+  // CLEAR-ONLY (a blanket "kiosk ON" would falsely mark every store a kiosk → all tier-5 + Kiosk tab).
+  const maj=k=>SS['c'+k]>SS.storesN/2;
+  const tog=(on,onclick)=>`<button type="button" onclick="${onclick}" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12px">${on?'ON':'OFF'}</button>`;
+  const row=(lbl,tip,cnt,ctrl)=>`<div class="setrow"><div class="setlbl">${lbl} <span data-tip="${esch(tip)}"></span></div><div class="row" style="gap:10px;align-items:center"><span class="meta" style="font-size:11px">${cnt}/${SS.storesN}</span>${ctrl}</div></div>`;
   el.innerHTML=
-    `<div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px"><div class="name">Store settings <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· ${esch(SS.name)}</span></div><div style="flex:0 0 auto">${logoTile({logoUrl:SS.logoUrl,logoDark:SS.logoDark,logoWide:SS.logoWide,name:SS.name,type:SS.type})}</div></div>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Status</div>`
-    +(SS.repack?`<div class="row" style="gap:8px;align-items:center;margin-bottom:8px"><span data-tip="Only sells repackaged product; checks waste money. Remove only." style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);border-radius:20px;padding:3px 11px">${ssDot('#FBBF24')}Repack-only</span><button class="ghost" onclick="ssClearRepack()" style="font-size:12px;padding:5px 10px">Clear</button></div>`:'')
-    +`<div class="row" style="gap:8px;margin-bottom:18px">${seg(!SS.muted,'Active','var(--green)','ssMute(false)')}${seg(SS.muted,'Muted','var(--text-muted)','ssMute(true)')}</div>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Type <span data-tip="What kind of retailer this chain is. Most are 'Other' today — setting it lets us group + score better."></span></div>`
-    +`<select onchange="SS.type=this.value" style="margin-bottom:18px">${SS_TYPES.map(([v,l])=>`<option value="${esch(v)}"${SS.type===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Rating <span data-tip="Consumer reliability tier. 5 Best near you · 4 Mostly reliable · 3 Spotty · 2 Over MSRP (no pill) · 1 Unknown (hidden). Saving stamps the tier onto every store of the chain."></span></div>`
-    +`<div class="row" style="gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px"><div class="row" style="gap:6px">${rate}</div>${ssPill(SS.ratingPick)}</div>`
-    +(SS_RATING[SS.ratingPick]?`<div class="meta" style="margin-bottom:6px;text-transform:none;letter-spacing:0;line-height:1.5">${esch(SS_RATING[SS.ratingPick][2])}</div>`:'')
-    +`<div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.08em;margin:12px 0 2px">Per-store · Save applies to all ${SS.storesN} stores</div>`
-    +stog('callable','cCallable','Callable','Staffed counter we phone; off = kiosk-only / not called.')
-    +stog('kiosk','cKiosk','Kiosk','Vending machine on site (kiosk store → tier 5).')
-    +stog('online','cOnline','Online','Sells online (pickup / ship).')
-    +stog('verified','cVerified','Stock verified','Confirmed carrier vs suspected.');
+    `<div style="font-size:13px;color:var(--text-muted);margin:2px 0 7px">Status</div>`
+    +(SS.repack?`<div class="row" style="gap:8px;align-items:center;margin-bottom:9px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);border-radius:20px;padding:3px 11px">${ssDot('#FBBF24')}Repack-only</span><button class="ghost" onclick="ssClearRepack()" style="font-size:12px;padding:5px 10px">Clear</button></div>`:'')
+    +`<div class="row" style="gap:8px;margin-bottom:18px">${status}</div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Type <span data-tip="What kind of retailer this chain is — sets grouping + scoring."></span></div>`
+    +`<select onchange="ssSetType(this.value)" style="margin-bottom:18px">${SS_TYPES.map(([v,l])=>`<option value="${esch(v)}"${SS.type===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
+    +`<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:9px"><div style="font-size:13px;color:var(--text-muted)">Rating</div><span class="meta" id="set_ratemsg" style="font-size:11px"></span></div>`
+    +`<div class="row" style="gap:7px;flex-wrap:wrap">${pills}</div>${desc}`
+    +`<div style="height:1px;background:var(--border);margin:16px 0 2px"></div>`
+    +row('Callable','We can phone this store to check stock. Off = kiosk-only / not called.',SS.cCallable,tog(maj('Callable'),'ssToggleCallable()'))
+    +row('Kiosk',"Has a Pokémon vending machine. (Kiosk store shows 'Best near you' + in the Kiosk tab.)",SS.cKiosk,(SS.cKiosk?`<button type="button" class="ghost" onclick="ssClearKiosk()" style="font-size:12px;padding:5px 11px">Clear</button>`:`<span class="meta" style="font-size:11px">per-store</span>`))
+    +row('Online','Sells online — pickup or shipped.',SS.cOnline,tog(maj('Online'),'ssToggleOnline()'))
+    +row('Stock verified','Confirmed it carries (vs just suspected).',SS.cVerified,tog(maj('Verified'),'ssToggleVerified()'));
 }
-function ssMute(m){ if(!SS) return; SS.muted=m; ssRenderStore(); }
-function ssClearRepack(){ if(!SS) return; SS.repack=false; ssRenderStore(); }
-function ssRate(n){ if(!SS) return; SS.ratingPick=n; ssRenderStore(); }
-function ssToggleStore(f){ if(!SS) return; SS[f]=!SS[f]; SS[f+'Dirty']=true; ssRenderStore(); }
-function ssChainBool(f){ if(!SS) return; SS[f]=!SS[f]; ssRenderCall(); }
-function ssSearch(){ const q=((document.getElementById('set_search')||{}).value||'').trim().toLowerCase(); if(!q) return; const live=CHAINS.filter(c=>!(c.name||'').startsWith('_')); const m=live.find(c=>(c.name||'').toLowerCase()===q)||live.find(c=>(c.name||'').toLowerCase().includes(q)); if(!m){ toast('No chain matches “'+q+'”'); return; } const sel=document.getElementById('set_chain'); if(![...sel.options].some(o=>o.value===String(m.id))) sel.innerHTML='<option value="">— pick a chain —</option>'+chainOpts(''); sel.value=String(m.id); setPickChain(); }
+async function ssMute(){ if(!SS) return; if(!confirm('Are you sure you want to mute this store?')) return; if(await ssPatch('muted',true)){ SS.muted=true; ssRenderStore(); toast('Muted — dropped from customers'); } }
+async function ssActivate(){ if(!SS) return; if(await ssPatch('muted',false)){ SS.muted=false; ssRenderStore(); toast('Active'); } }
+async function ssClearRepack(){ if(!SS) return; if(await ssPatch('repackOnly',false)){ SS.repack=false; ssRenderStore(); toast('Repack-only cleared'); } }
+async function ssSetType(v){ if(!SS) return; SS.type=v; if(await ssPatch('type',v)) toast('Type: '+v); }
+async function ssRate(n){ if(!SS) return; const el=document.getElementById('set_ratemsg'); if(el) el.textContent='Saving…'; const sr=await api('/api/stores/patch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({where:{chain:SS.name},set:{tier:n}})}); if(!sr||sr.error){ if(el) el.textContent='Could not save'; return; } toast('Rated '+SS_RATING[n][0]+' · '+(sr.patched!=null?sr.patched:'')+' stores'); await ssReload(); }
+function ssToggleCallable(){ const on=SS.cCallable>SS.storesN/2; ssStoreBulk({sellsPacks:!on}, on?'Callable OFF':'Callable ON'); }
+function ssToggleOnline(){ const on=SS.cOnline>SS.storesN/2; ssStoreBulk({online:!on}, on?'Online OFF':'Online ON'); }
+function ssToggleVerified(){ const on=SS.cVerified>SS.storesN/2; ssStoreBulk({stockStatus:on?'unverified':'verified'}, on?'Stock verified OFF':'Stock verified ON'); }
+function ssClearKiosk(){ if(!SS||!SS.cKiosk) return; ssStoreBulk({hasKiosk:false}, 'Kiosks cleared'); }
+function ssSearch(){ const q=((document.getElementById('set_search')||{}).value||'').trim().toLowerCase(); if(!q) return; const live=CHAINS.filter(c=>!(c.name||'').startsWith('_')); const m=live.find(c=>(c.name||'').toLowerCase()===q)||live.find(c=>(c.name||'').toLowerCase().includes(q)); if(!m){ toast('No chain matches “'+q+'”'); return; } const sel=document.getElementById('set_chain'); if(![...sel.options].some(o=>o.value===String(m.id))) sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(''); sel.value=String(m.id); setPickChain(); }
+// Store Data: store FACTS (chain fields) — its OWN Save (isMSRP / stock-check confidence / sell methods).
+function ssRenderData(){
+  const el=document.getElementById('set_data'); if(!el||!SS) return;
+  const sccOpts=[['','—'],['confirmed','confirmed'],['probable','probable']];
+  el.innerHTML=
+    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> First-party — sells at MSRP</label><span data-tip="We check the store's own shelf at normal retail price, not a third-party reseller that may mark it up."></span></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check confidence <span data-tip="How sure we are it carries: confirmed (seen/called) vs probable (expected, unverified)."></span></div>`
+    +`<select id="set_scc" style="margin-bottom:16px">${sccOpts.map(([v,l])=>`<option value="${v}"${(SS.scc||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Sell methods <span data-tip="Ways to get it (comma-separated): in_store, pickup, ship."></span></div>`
+    +`<input id="set_sell" value="${esch(SS.sellMethods)}" placeholder="in_store,pickup,ship" style="margin-bottom:16px">`
+    +`<div class="row" style="gap:12px;align-items:center"><button class="act" onclick="ssSaveData()">Save</button><span class="meta" id="set_datamsg"></span></div>`;
+}
+async function ssSaveData(){
+  if(!SS) return; const msg=document.getElementById('set_datamsg'); if(msg) msg.textContent='Saving…';
+  const isMSRP=document.getElementById('set_msrp').checked, scc=document.getElementById('set_scc').value, sell=(document.getElementById('set_sell').value||'').trim();
+  const r=await api('/api/chains/'+SS.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({isMSRP,stockCheckConfidence:scc||null,sellMethods:sell||null})});
+  if(!r||!r.id){ if(msg) msg.textContent='Could not save.'; return; }
+  SS.isMSRP=isMSRP; SS.scc=scc; SS.sellMethods=sell;
+  const c=CHAINS.find(x=>x.id===SS.id); if(c){ c.isMSRP=isMSRP; c.stockCheckConfidence=scc||null; c.sellMethods=sell||null; }
+  if(msg) msg.textContent='Saved ✓';
+}
+// Call Settings: every control commits INLINE. Hang Up sits to the RIGHT of Max Talk; its ⓘ is OUTSIDE
+// the checkbox label so tapping the hint never toggles. (No "Rings direct" — that's Answer path = direct.)
 function ssRenderCall(){
   const el=document.getElementById('set_call'); if(!el||!SS) return;
-  const ctog=(f,lbl,tip)=>`<div class="row" style="justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border)"><div style="font-size:13px">${lbl} <span data-tip="${esch(tip)}"></span></div><button type="button" onclick="ssChainBool('${f}')" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${SS[f]?'var(--green)':'var(--border)'};background:${SS[f]?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${SS[f]?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12px">${SS[f]?'ON':'OFF'}</button></div>`;
-  const sel=(prop,lbl,tip,opts)=>`<div style="padding:10px 0 4px"><div style="font-size:13px;color:var(--text-muted);margin-bottom:5px">${lbl} <span data-tip="${esch(tip)}"></span></div><select onchange="SS.${prop}=this.value">${opts.map(([v,l])=>`<option value="${esch(v)}"${(SS[prop]||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select></div>`;
+  const tog=(on,onclick)=>`<button type="button" onclick="${onclick}" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12px">${on?'ON':'OFF'}</button>`;
+  const ap=[['','— unclassified'],['direct_human','Direct human · picks up'],['simple_ivr','Simple IVR · 1–2 steps'],['deep_ivr','Deep IVR · long tree']];
   el.innerHTML=
-    `<div class="name" style="margin-bottom:12px">Call settings</div>`
-    +`<div class="row" style="gap:11px;align-items:center;margin-bottom:14px"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" oninput="SS.maxTalk=this.value" style="width:74px;padding:10px 12px;font-size:15px;text-align:center"><div style="line-height:1.2"><div style="font-weight:700;font-size:13.5px">Max <span data-tip="Hard cap on how long the agent talks to a person before wrapping up."></span></div><div style="font-weight:700;font-size:13.5px">Talk</div></div></div>`
-    +ctog('callTarget','Call this chain','Off = never dialed.')
-    +ctog('ringsDirect','Rings direct','A human answers directly, no phone menu.')
-    +sel('stockCheckMethod','Stock-check method','Read the website for stock, or phone it.',[['','—'],['site','Site · read the website'],['call','Call · phone it']])
-    +sel('answerPath','Answer path','How the phone is answered when we dial.',[['','— unclassified'],['direct_human','Direct human · picks up'],['simple_ivr','Simple IVR · 1–2 steps'],['deep_ivr','Deep IVR · long tree']])
-    +`<div style="font-size:13px;color:var(--text-muted);margin:14px 0 6px">Default workflow <span data-tip="Voice / persona / script workflow used for every store of this chain (overrides the global default). Build them in Voice → Designer."></span></div>`
-    +`<select id="set_wf">${wfOptions(SS.wf, WF.def?('Default · '+WF.def):'Default')}</select>`;
+    `<div class="row" style="gap:20px;align-items:center;flex-wrap:wrap;margin:2px 0 16px">`
+    +`<div class="row" style="gap:10px;align-items:center"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" onchange="ssSetMaxTalk(this.value)" style="width:72px;padding:10px 12px;font-size:15px;text-align:center"><div style="font-weight:700;font-size:13px;line-height:1.15">Max Talk <span data-tip="Hard cap on how long the agent talks to a person before wrapping up."></span></div></div>`
+    +`<div class="row" style="gap:7px;align-items:center"><label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-body)"><input type="checkbox" id="set_vm" ${SS.vm?'checked':''} onchange="ssSetHangup(this.checked)"> Hang Up / voicemail / closed</label><span data-tip="If the call hits voicemail or a closed/recorded line, hang up immediately — no message, no charge."></span></div>`
+    +`</div>`
+    +`<div class="setrow" style="border-top:none;padding-top:0"><div class="setlbl">Phone this chain <span data-tip="Off = we track it but never dial it."></span></div>${tog(SS.callTarget,'ssToggleCallTarget()')}</div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin:14px 0 6px">Answer path <span data-tip="How the phone is answered when we dial."></span></div>`
+    +`<select id="set_ap" onchange="ssSetAnswer(this.value)">${ap.map(([v,l])=>`<option value="${v}"${(SS.answerPath||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin:16px 0 6px">Default workflow <span data-tip="Voice / script workflow for every store of this chain (overrides the global default). Build them in Voice → Designer."></span></div>`
+    +`<select id="set_wf" onchange="setChainWorkflow(SS.id,this.value)">${wfOptions(SS.wf, WF.def?('Default · '+WF.def):'Default')}</select>`;
 }
-function ssRenderHangup(){
-  const el=document.getElementById('set_hangup'); if(!el||!SS) return;
-  el.innerHTML=
-    `<div class="name" style="margin-bottom:10px">Hang up</div>`
-    +`<label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:14px;color:var(--text-body)"><input type="checkbox" id="set_vm" ${SS.vm?'checked':''} onchange="SS.vm=this.checked"> Hang up on voicemail / closed <span data-tip="If the call hits voicemail or a closed/recorded line, hang up immediately — no message, no charge."></span></label>`;
-}
-function ssRenderAdvanced(){
-  const el=document.getElementById('set_adv'); if(!el||!SS) return;
-  const fld=(lbl,prop,tip,ph)=>`<div style="margin-bottom:13px"><div style="font-size:12.5px;color:var(--text-muted);margin-bottom:4px">${lbl} <span data-tip="${esch(tip)}"></span></div><input value="${esch(SS[prop])}" oninput="SS.${prop}=this.value" placeholder="${esch(ph||'')}" style="width:100%"></div>`;
-  el.innerHTML=
-    `<label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text-body);margin-bottom:14px"><input type="checkbox" ${SS.isMSRP?'checked':''} onchange="SS.isMSRP=this.checked"> First-party — sells at MSRP <span data-tip="We check the store's own shelf at normal retail price, not a third-party reseller that may mark it up."></span></label>`
-    +fld('Stock-check confidence','scc','e.g. spotty = inconsistent stock (off-price/thrift), not a reliable MSRP source.','confirmed | probable | spotty')
-    +fld('Sell methods (CSV)','sellMethods','Ways to get it: in_store | pickup | ship (comma-separated).','in_store,pickup,ship')
-    +fld('Keypad shortcut (DTMF)','dtmf','Deterministic key presses to reach a human, e.g. 0@3 or 1@3,0@9 — normally learned by the Trainer.','0@3')
-    +`<div style="font-size:12.5px;color:var(--text-muted);margin-bottom:4px">Phone-tree default <span data-tip="Plain-English fallback for reaching a human. Normally learned by the Trainer; edit only if needed."></span></div><textarea oninput="SS.tree=this.value" rows="3" style="width:100%;font-size:13px">${esch(SS.tree)}</textarea>`;
-}
+async function ssToggleCallTarget(){ if(!SS) return; const v=!SS.callTarget; if(await ssPatch('callTarget',v)){ SS.callTarget=v; ssRenderCall(); toast(v?'Phoning this chain':'Will not dial this chain'); } }
+async function ssSetAnswer(v){ if(!SS) return; SS.answerPath=v; if(await ssPatch('answerPath',v||null)) toast('Answer path saved'); }
+async function ssSetMaxTalk(v){ if(!SS) return; SS.maxTalk=v; if(await ssPatch('maxTalkSeconds',Number(v)||null)) toast('Max talk saved'); }
+async function ssSetHangup(b){ if(!SS) return; SS.vm=b; if(await ssPatch('hangupOnVoicemail',b)) toast(b?'Hang up: on':'Hang up: off'); }
+// Mapping is READ-ONLY: stats + recipe + the two learned fields (dtmf, phone-tree) the navigator/lock
+// writes. Status is a pill in the section header (separated from the Map / Confirm action buttons).
 function renderChainMapping(ch){
   const el=document.getElementById('set_mapping'); if(!el) return;
   const nm=NAV_MODE[ch.navType];
@@ -1921,54 +1973,28 @@ function renderChainMapping(ch){
     if(steps.length) recipe=steps.map(s=>s.action==='press'?('press '+s.value+'@'+s.atSec+'s'):(s.action==='wait'?('wait@'+s.atSec+'s'):('say "'+esch(s.value)+'"@'+s.atSec+'s'))).join('  →  ');
   }catch(e){}
   const t2h=ch.navSeconds!=null?ch.navSeconds+'s':(ch.avgTreeSeconds!=null?ch.avgTreeSeconds+'s':'—');
-  const statusWord=ch.navStatus==='locked'?'mapped':(ch.navStatus||'unmapped'); // align with mapped/unmapped
+  const statusWord=ch.navStatus==='locked'?'mapped':(ch.navStatus||'unmapped');
   const mapped=ch.navUpdatedAt?new Date(ch.navUpdatedAt).toLocaleDateString([],{month:'short',day:'numeric'}):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'never');
+  const ro=(lbl,val)=>`<div style="margin-top:13px"><div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">${lbl} <span class="meta" style="text-transform:none;letter-spacing:0;font-size:10.5px">· learned · read-only</span></div><div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${val?esch(val):'—'}</div></div>`;
   el.innerHTML=
     `<div class="stats" style="margin-bottom:12px">`
     +`<div class="stat"><div class="n" style="font-size:18px${nm?'':';color:var(--muted)'}">${nm?nm.m:'—'}</div><div class="l">mode${nm?' · '+nm.sub:''}</div></div>`
     +`<div class="stat"><div class="n" style="font-size:18px">${t2h}</div><div class="l">time-to-human</div></div>`
-    +`<div class="stat"><div class="n" style="font-size:15px">${mapped}</div><div class="l">last mapped · ${esch(statusWord)}</div></div>`
+    +`<div class="stat"><div class="n" style="font-size:15px">${mapped}</div><div class="l">last mapped</div></div>`
     +`</div>`
-    +`<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5"><b style="color:#fff">Recipe:</b> ${recipe}</div>`;
+    +`<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5"><b style="color:#fff">Recipe:</b> ${recipe}</div>`
+    +ro('Keypad shortcut (DTMF)',ch.dtmfShortcut)
+    +ro('Phone-tree default',ch.phoneTreeDefault);
+  const sp=document.getElementById('set_mapstatus');
+  if(sp){ const locked=ch.navStatus==='locked'; const c=locked?'var(--green)':'var(--text-muted)'; sp.innerHTML=`<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:${c};background:${locked?'rgba(74,222,128,.12)':'var(--surface-2)'};border:1px solid ${locked?'rgba(74,222,128,.4)':'var(--border)'};border-radius:20px;padding:3px 10px">${ssDot(c)}${esch(statusWord)}</span>`; }
   const mb=document.getElementById('set_mapbtn'); if(mb) mb.textContent = ch.navStatus==='locked'?'Re-map':'Map';
 }
 // Map / Re-map the selected chain: places one real navigator call, shown live in the Mapping card.
 function setMapChain(){ const id=Number(document.getElementById('set_chain').value); const ch=CHAINS.find(c=>c.id===id); if(!ch){ toast('Pick a chain first'); return; } trDocument(id, ch.name); }
 // Confirm-stock run: reach a human, ask if they have the product, classify right-desk vs redirect.
 function setConfirmChain(){ const id=Number(document.getElementById('set_chain').value); const ch=CHAINS.find(c=>c.id===id); if(!ch){ toast('Pick a chain first'); return; } trDocument(id, ch.name, {confirm:true, product:'Pokémon cards'}); }
-// Per-store voicemail/closed auto-hangup as an ON/OFF toggle button (matches the App-tab switches).
-function setVmBtn(on){ const b=document.getElementById('set_vmbtn'); if(!b) return; b.dataset.on=on?'1':''; b.textContent=on?'ON':'OFF'; b.style.color=on?'var(--green)':'var(--muted)'; b.style.borderColor=on?'rgba(74,222,128,.35)':'var(--border)'; }
-function setVmToggle(){ const b=document.getElementById('set_vmbtn'); setVmBtn(!(b&&b.dataset.on==='1')); }
-// ONE Save commits the whole panel: chain fields (PATCH /api/chains) + the rating (stamped onto every
-// store via /api/stores/patch) + the default workflow — nothing saves out-of-band.
-async function saveChainSettings(){
-  if(!SS) return; const id=SS.id;
-  const msg=document.getElementById('set_msg'); msg.textContent='Saving…';
-  const body={ muted:!!SS.muted, repackOnly:!!SS.repack, type:SS.type||null,
-    maxTalkSeconds:Number(SS.maxTalk)||null, hangupOnVoicemail:!!SS.vm,
-    stockCheckConfidence:SS.scc||null, sellMethods:SS.sellMethods||null, isMSRP:!!SS.isMSRP,
-    dtmfShortcut:SS.dtmf||null, phoneTreeDefault:SS.tree||null,
-    callTarget:!!SS.callTarget, ringsDirect:!!SS.ringsDirect, stockCheckMethod:SS.stockCheckMethod||null, answerPath:SS.answerPath||null };
-  const r=await api('/api/chains/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  if(!r||!r.id){ msg.textContent='Could not save the chain.'; return; }
-  // Per-store fields (retailers): rating + any toggled store states → ONE bulk stamp across the chain.
-  const sset={};
-  if(SS.ratingPick!=null && SS.ratingPick!==SS.tier) sset.tier=SS.ratingPick;
-  if(SS.callableDirty) sset.sellsPacks=!!SS.callable;
-  if(SS.kioskDirty) sset.hasKiosk=!!SS.kiosk;
-  if(SS.onlineDirty) sset.online=!!SS.online;
-  if(SS.verifiedDirty) sset.stockStatus=SS.verified?'verified':'unverified';
-  let extra='';
-  if(Object.keys(sset).length){
-    const sr=await api('/api/stores/patch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({where:{chain:SS.name},set:sset})});
-    extra=(sr&&!sr.error)?(' · '+(sr.patched!=null?sr.patched:'')+' stores updated ('+Object.keys(sset).join(', ')+')'):' · store fields did NOT save';
-  }
-  const wf=document.getElementById('set_wf'); if(wf){ const v=wf.value; if(v) WF.chains[id]=v; else delete WF.chains[id]; await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({chainWorkflows:JSON.stringify(WF.chains)})}); }
-  CHAINS=await api('/api/chains')||CHAINS;
-  const sel=document.getElementById('set_chain'), cur=sel.value; sel.innerHTML='<option value="">— pick a chain —</option>'+chainOpts(''); sel.value=cur;
-  if(CHAINS.find(c=>c.id===id)) setPickChain(); // reload fresh state (tier, store counts, dirty reset)
-  msg.textContent='Saved ✓ — applies to every store of this chain'+extra+'.';
-}
+// (Removed: the old grouped Save + voicemail toggle. Every Settings control now commits inline,
+//  Store Data has its own Save, and dtmf/phone-tree are learner-written read-only fields in Mapping.)
 // Auto-press builder: each step = press a digit (0-9) at N seconds. Syncs to the hidden pt_dtmf as "d@s,d@s".
 function dtmfRowHtml(digit,secs){
   const opts=[0,1,2,3,4,5,6,7,8,9].map(d=>`<option value="${d}"${String(d)===String(digit)?' selected':''}>${d}</option>`).join('');
