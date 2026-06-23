@@ -1756,7 +1756,10 @@ function filteredRetailers(){
   });
   const sort=document.getElementById('f_sort')?.value||'rel';
   const lastTs=r=>(r.lastCall&&r.lastCall.startedAt)||0;
-  if(sort==='name') rs.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  // Relevance (default): exact name → name prefix → word prefix → substring, so the store you typed
+  // surfaces at the TOP instead of being buried under incidental "%q%" matches (e.g. "Fun" vs "Defuniak").
+  if(sort==='rel' && q){ const score=r=>{ const n=(r.name||'').toLowerCase(); if(n===q) return 0; if(n.startsWith(q)) return 1; if(n.split(/[^a-z0-9]+/).some(w=>w&&w.startsWith(q))) return 2; return 3; }; rs.sort((a,b)=>score(a)-score(b)||(a.name||'').length-(b.name||'').length); }
+  else if(sort==='name') rs.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   else if(sort==='verified') rs.sort((a,b)=>((b.stockStatus==='verified')?1:0)-((a.stockStatus==='verified')?1:0));
   else if(sort==='instock') rs.sort((a,b)=>(b.green?1:0)-(a.green?1:0));
   else if(sort==='recent') rs.sort((a,b)=>lastTs(b)-lastTs(a));

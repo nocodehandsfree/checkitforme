@@ -1,6 +1,6 @@
 // Call orchestration: trigger calls, ingest results (poll), compute green status,
 // and fire due schedules.
-import { and, desc, eq, gte, inArray, isNull, like, or } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, like, or, sql } from "drizzle-orm";
 import { db } from "../db/client";
 import { openState, fetchStoreHours } from "../store-hours";
 import {
@@ -809,7 +809,8 @@ export async function retailersWithStatus(opts: { q?: string; state?: string; li
   // Filter-first browse: each filter is a DB condition so you can pull "all big-box in CA" with no
   // text search. All capped at `limit`, so even an unindexed scan stays bounded.
   const conds = [] as ReturnType<typeof eq>[];
-  if (q) { const pat = `%${q}%`; conds.push(or(like(retailers.name, pat), like(retailers.location, pat), like(retailers.zip, pat)) as ReturnType<typeof eq>); }
+  // Name match is also apostrophe-insensitive so "MVP's" finds a store stored as "MVPs" (and vice-versa).
+  if (q) { const pat = `%${q}%`, napat = `%${q.replace(/'/g, "")}%`; conds.push(or(like(retailers.name, pat), sql`replace(lower(${retailers.name}), '''', '') like ${napat}`, like(retailers.location, pat), like(retailers.zip, pat)) as ReturnType<typeof eq>); }
   if (state) conds.push(eq(retailers.state, state));
   if (opts.region) conds.push(eq(retailers.region, opts.region));
   if (opts.carries) conds.push(like(retailers.carries, `%${opts.carries}%`) as ReturnType<typeof eq>);
