@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r50" />
+<meta name="x-rev" content="names-r51" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -1703,6 +1703,9 @@ async function refreshAuth(){
     if(!ACCOUNT){ try{ const c=JSON.parse(localStorage.getItem('cifm_acct')||'null'); if(c){ ACCOUNT=c; renderAuth(); } }catch(_){} }
     ACCOUNT=await appApi('/app/me'); // the phone-session token identifies the account
     try{ localStorage.setItem('runnr_authed','1'); if(ACCOUNT&&!ACCOUNT.error) localStorage.setItem('cifm_acct',JSON.stringify({credits:ACCOUNT.credits,comp:ACCOUNT.comp,subscription:ACCOUNT.subscription})); }catch(e){}
+    // Prime call history right after login so the calendar shows its yellow "call-made" days immediately
+    // (it used to stay blank until the first My-checks open, because HIST_CACHE hadn't loaded yet).
+    ensureHistCache().then(()=>{ try{ renderCallRail(); }catch(_){} });
   } else { ACCOUNT=null; try{ localStorage.setItem('runnr_authed','0'); localStorage.removeItem('cifm_acct'); }catch(e){} }
   renderAuth();
   loadSchedules();
@@ -2382,11 +2385,7 @@ async function openPage(slug){
   $('pg_title').textContent=r.title||''; $('pg_body').innerHTML=r.body;
 }
 function closePage(){ $('pageOverlay').classList.remove('on'); }
-async function loadFinds(){
-  // Localized banner: once we know where they are, ask for finds near them (same lat/lng/radius
-  // convention as /pub/stores/near). Before location is shared it's the national feed (social proof).
-  let f=[]; const u=USER_LOC?`/pub/finds?lat=${USER_LOC.lat}&lng=${USER_LOC.lng}&radius=${Math.max(RADIUS,1)}`:'/pub/finds';
-  try{ f=await api(u); }catch(e){}
+function renderFindsBanner(f){
   const el=$('finds'); if(!el) return;
   if(BRAND_CAT) f=(Array.isArray(f)?f:[]).filter(x=>String(x.category||'').toLowerCase()===BRAND_CAT.label.toLowerCase());
   // The ticker belongs ONLY on the homepage — never on the call/result page (it was removed there on
@@ -2405,6 +2404,16 @@ async function loadFinds(){
   }).join('');
   // Duplicate the row so the marquee loops seamlessly.
   el.innerHTML=`<div class="tickrun">${items}${items}</div>`;
+}
+async function loadFinds(){
+  // Localized banner: once we know where they are, ask for finds near them (same lat/lng/radius
+  // convention as /pub/stores/near). Before location is shared it's the national feed (social proof).
+  // SNAPPY: paint the last cached feed INSTANTLY so returning to the homepage never blocks on the (cold)
+  // /pub/finds query — then refresh in the background and re-cache. This was the multi-second banner lag.
+  try{ const c=JSON.parse(localStorage.getItem('runnr_finds_cache')||'null'); if(c&&Array.isArray(c.f)) renderFindsBanner(c.f); }catch(_){}
+  const u=USER_LOC?`/pub/finds?lat=${USER_LOC.lat}&lng=${USER_LOC.lng}&radius=${Math.max(RADIUS,1)}`:'/pub/finds';
+  let f=null; try{ f=await api(u); }catch(e){}
+  if(Array.isArray(f)){ try{ localStorage.setItem('runnr_finds_cache',JSON.stringify({f,at:Date.now()})); }catch(_){} renderFindsBanner(f); }
 }
 // Product switcher (top): jump to another vertical. On a fungibles/runnr domain we hop to the real
 // subdomain; on preview hosts we use ?brand= so it works before DNS.
@@ -2969,6 +2978,29 @@ async function finalizeLive(cid){
     else { localStorage.setItem('runnr_free_used','1'); api('/pub/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}); renderAuth(); }
   }
   saveCheckToHistory(res, cid); showResult(res, cid);
+  // If we only have a PROVISIONAL read (no hard yes/no yet), upgrade it in place once the server's
+  // consensus lands — so "yes we have tins" stops showing as a "maybe" the user has to revisit.
+  if(res.confirmed!==true && res.confirmed!==false) reconcileVerdict(cid, res.statusKey||'');
+}
+// Self-correcting verdict. The consensus row (ElevenLabs' read + the independent second read) is written
+// by the server poller a few seconds AFTER the call ends — finalizeLive often shows the provisional read
+// first. Poll briefly and upgrade the on-screen verdict (and the saved history entry) in place when the
+// real answer settles. Stops the moment the user navigates away, so it never yanks the screen.
+async function reconcileVerdict(cid, prevKey){
+  if(!cid || String(cid).startsWith('local:')) return;
+  for(let i=0;i<10;i++){
+    await new Promise(r=>setTimeout(r,3000));
+    if(RAIL_CID!==cid || NAV_VIEW!=='result') return; // user moved on
+    let o=null; try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){}
+    if(!o||o.error||o.status==='in_progress') continue;
+    const settled = (o.confirmed===true||o.confirmed===false) || (o.statusKey && o.statusKey!==prevKey);
+    if(!settled) continue;
+    // Update the saved history entry IN PLACE (don't re-add — that would duplicate the call), then repaint.
+    try{ const h=loadHist(); const e=h.find(x=>x.cid===cid); if(e){ e.status=o.status; e.confirmed=o.confirmed; e.soldOut=!!o.soldOut; e.doesNotSell=!!o.doesNotSell; e.shipmentDay=o.shipmentDay||null; e.statusKey=o.statusKey||null; localStorage.setItem('runnr_history',JSON.stringify(h.slice(0,60))); } }catch(_){}
+    try{ const hc=HIST_CACHE.find(x=>x.cid===cid); if(hc){ hc.confirmed=o.confirmed; hc.statusKey=o.statusKey||null; hc.soldOut=!!o.soldOut; hc.doesNotSell=!!o.doesNotSell; } }catch(_){}
+    showResult(o, cid);
+    return;
+  }
 }
 // Render a Agent/Clerk transcript as a text-message style thread (Fungie right/green, Clerk left).
 function bubbleHTML(line, isHuman){
@@ -3062,7 +3094,19 @@ function navMark(view){
 // STANDALONE the page paints under the status bar (apple-mobile metas + safe-area inset), so the body
 // wash IS the status-bar colour. Nothing to set in JS — kept as a no-op so existing call-sites are safe.
 function setThemeTone(){}
-window.addEventListener('popstate',()=>{ if(NAV_VIEW!=='builder') backToBuilder(); });
+window.addEventListener('popstate',()=>{
+  // Handle BOTH directions. Going forward to a ?call= entry used to do nothing (only "back" was handled),
+  // so the URL changed but the call page never re-opened. Now we read the target URL and restore it.
+  try{
+    const sp=new URLSearchParams(location.search);
+    const call=sp.get('call');
+    if(call){ restoreCall(call, sp.get('store'), sp.get('cat')); return; } // forward/back INTO a result
+    const v=sp.get('v');
+    if(v==='history'){ openHistory(); return; }
+    if(v==='success'){ openSuccess(); return; }
+  }catch(_){}
+  if(NAV_VIEW!=='builder') backToBuilder();
+});
 
 // --- Snappy result rendering (stale-while-revalidate) ---------------------------------------------
 // A finished call's transcript never changes, so cache it per browser-session. A pull-to-refresh or a
