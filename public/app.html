@@ -513,6 +513,12 @@
       <textarea id="r_tree" rows="2" placeholder="When asked if you're a healthcare provider, say no. Then ask for the front store."></textarea>
       <div style="margin-top:12px"><button class="act" onclick="addRetailer()">Add store</button></div>
     </div>
+    <details class="card">
+      <summary><span class="name">Bulk import</span> <span class="meta" data-tip="Paste store JSON — upserts by phone; region + timezone come from state. active:false soft-removes.">ⓘ</span></summary>
+      <textarea id="gw_import" spellcheck="false" placeholder='[{"name":"Target — Sunset","phone":"+13105551212","address":"...","state":"CA","chain":"Target","carries":"Pokémon"}]' style="width:100%;min-height:150px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box;margin-top:10px"></textarea>
+      <div id="gw_import_msg" class="meta" style="margin:8px 0;min-height:16px"></div>
+      <div><button class="act" onclick="importStoresJson()">Import stores</button> <button class="ghost" onclick="backfillRegions()">Backfill regions</button></div>
+    </details>
   </section>
 
   <section id="results"><h2>Recent calls</h2>
@@ -588,19 +594,6 @@
       <div id="gw_pricing" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
       <div style="margin-top:12px"><button class="act" onclick="savePolicyForm()">Save pricing</button></div>
     </div>
-    <details class="card">
-      <summary><span class="name">Advanced policy (raw JSON)</span></summary>
-      <div class="meta" style="margin:10px 0 8px">Source of truth — edits here merge over the defaults.</div>
-      <textarea id="gw_json" spellcheck="false" style="width:100%;min-height:220px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box"></textarea>
-      <div style="margin-top:10px"><button class="act" onclick="savePolicyJson()">Save JSON</button> <button class="ghost" onclick="loadGrowth()">Reload</button></div>
-    </details>
-    <details class="card">
-      <summary><span class="name">Store CMS — import</span></summary>
-      <div class="meta" style="margin:10px 0 8px">Paste store JSON — upserts by phone; region + timezone come from state. <code>active:false</code> soft-removes.</div>
-      <textarea id="gw_import" spellcheck="false" placeholder='[{"name":"Target — Sunset","phone":"+13105551212","address":"...","state":"CA","chain":"Target","carries":"Pokémon"}]' style="width:100%;min-height:150px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box"></textarea>
-      <div id="gw_import_msg" class="meta" style="margin:8px 0;min-height:16px"></div>
-      <div><button class="act" onclick="importStoresJson()">Import stores</button> <button class="ghost" onclick="backfillRegions()">Backfill regions</button></div>
-    </details>
     <div class="card">
       <div class="name" style="margin-bottom:4px">Restock watches</div>
       <div id="gw_watches" class="meta">Loading…</div>
@@ -629,6 +622,11 @@
       <div class="name" data-tip="Default voice / persona / script for every call, unless a chain or store overrides it. Build them in Voice → Designer.">Default workflow</div>
       <select id="set_default_wf" style="margin-top:10px" onchange="saveDefaultWorkflow()"><option value="">Loading…</option></select>
     </div>
+    <details class="card">
+      <summary><span class="name">Advanced policy (raw JSON)</span> <span class="meta" data-tip="Dev escape-hatch for policy fields with no UI yet. Edits here merge over the defaults.">ⓘ</span></summary>
+      <textarea id="gw_json" spellcheck="false" style="width:100%;min-height:220px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box;margin-top:10px"></textarea>
+      <div style="margin-top:10px"><button class="act" onclick="savePolicyJson()">Save JSON</button> <button class="ghost" onclick="loadAdvancedPolicy()">Reload</button></div>
+    </details>
   </section>
 
   <section id="designer">
@@ -958,7 +956,7 @@ const NAV_GROUPS={
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -1258,6 +1256,7 @@ function calcShell(){
     <div class="row" style="gap:12px">
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Revenue / call</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:10px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:20px;font-weight:700;padding:10px 2px;width:84px"></span></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Margin</span><div id="calc_margin" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0%</div></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">× return <span data-tip="Revenue ÷ cost — how many times the call pays for itself.">ⓘ</span></span><div id="calc_return" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0×</div></div>
     </div>
     <div id="calc_sentence" style="margin-top:14px;font-size:13.5px;color:var(--text-muted);line-height:1.5"></div>
   </div>`;
@@ -1297,6 +1296,7 @@ function calcUpdate(){
   set('calc_matrix',mt+'</tbody>');
   const margin=CALC.revenue>0?((CALC.revenue-total)/CALC.revenue)*100:0, mc=margin>=0?'var(--green)':'#FF6B6B';
   const mEl=document.getElementById('calc_margin'); if(mEl){ mEl.textContent=margin.toFixed(1)+'%'; mEl.style.color=mc; }
+  const ret=total>0?CALC.revenue/total:0, rEl=document.getElementById('calc_return'); if(rEl){ rEl.textContent=ret.toFixed(1)+'×'; rEl.style.color=ret>=1?'var(--green)':'#FF6B6B'; }
   set('calc_sentence',`At ${calcMoney(CALC.revenue)} revenue/call, cost is <b style="color:var(--text-primary)">${calcMoney(total)}</b> → margin = <b style="color:${mc}">${margin.toFixed(1)}%</b>.`);
 }
 async function loadDash(){
@@ -2638,7 +2638,7 @@ async function loadZones(){
   document.getElementById('zoneList').innerHTML = rows.length? rows.map(z=>`<div class="card"><div class="row" style="gap:12px">
     <div class="slogo"><span class="mono">${z.retailerIds.length}</span></div>
     <div class="grow"><div class="sname">${esch(z.name)}</div><div class="smeta">${esch(z.centerZip||'')} · ${z.radiusMiles||'?'} mi radius · ${z.retailerIds.length} stores</div></div>
-    <button class="act" onclick="callZoneNow(${z.id},'${(z.name||'').replace(/'/g,'')}',${z.retailerIds.length})">${ICO('phone',15)} Call zone</button>
+    <button class="act" id="zonebtn_${z.id}" onclick="callZoneNow(${z.id},'${(z.name||'').replace(/'/g,'')}',${z.retailerIds.length})">${ICO('phone',15)} Call zone</button>
   </div></div>`).join('') : '<div class="empty">No zones yet — tell Claude an area and it can build one.</div>';
 }
 async function callZoneNow(id,name,count){
@@ -2646,10 +2646,20 @@ async function callZoneNow(id,name,count){
   const names=Array.isArray(stores)?stores.map(s=>s.name).filter(Boolean):[];
   const n=names.length||count||0;
   const list=names.length?('\n\nIt will call:\n'+names.slice(0,25).map(x=>'• '+x).join('\n')+(names.length>25?('\n…and '+(names.length-25)+' more'):'')):'';
-  if(!confirm('⚠️ Call ALL '+n+' stores in "'+name+'" right now?\n\nThis places '+n+' REAL phone calls to real stores at once. There is no bulk hang-up yet — each runs to completion.'+list)) return;
+  if(!confirm('⚠️ Call ALL '+n+' stores in "'+name+'" right now?\n\nThis places '+n+' REAL phone calls to real stores at once. Use “Cancel zone” to hang up the whole batch.'+list)) return;
   toast('Placing '+n+' calls…');
   const r=await api('/api/zones/'+id+'/call-now',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
   toast((r.placed||0)+' calls placed'); setTimeout(loadResults,2000);
+  const b=document.getElementById('zonebtn_'+id);
+  if(b) b.outerHTML=`<button class="ghost" id="zonebtn_${id}" onclick="cancelZone(${id},'${String(name).replace(/'/g,'')}')" style="color:#EF4444;border-color:rgba(239,68,68,.4)"><span style="color:#EF4444">■</span> Cancel zone</button>`;
+}
+// Cancel an in-progress zone — bulk hang-up of the batch (mirrors the single-call Stop button). POSTs
+// /api/zones/:id/hangup, then reverts the card.
+async function cancelZone(id,name){
+  const b=document.getElementById('zonebtn_'+id); if(b){ b.disabled=true; b.textContent='Cancelling…'; }
+  const r=await api('/api/zones/'+id+'/hangup',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+  toast((r&&!r.error)?('Cancelled '+(r.hungUp!=null?r.hungUp+' ':'')+'calls in '+name):'Could not cancel the zone');
+  loadZones();
 }
 async function loadCatalog(){
   CATEGORIES = await api('/api/categories');
@@ -2899,12 +2909,15 @@ async function loadGrowth(){
     fld('gw_minpur','Minimum top-up (¢)',p.minPurchaseCents)+
     fld('gw_free','Free checks (new visitor)',p.freeChecks)+
     fld('gw_kreward','Kiosk reward (checks)',(POL.rewards||{}).kioskRefreshChecks)+
+    fld('gw_referral','Referral reward (checks · both)',(POL.rewards||{}).referralChecks)+
     fld('gw_subcents','Membership price (¢/mo)',sub.cents)+
     fld('gw_subcredits','Membership checks/mo',sub.credits)+
     fld('gw_subper','Member per-check (¢)',sub.perCallCents)+
     fld('gw_headstart','Finds headstart (min)',(POL.finds||{}).headstartMin)+
     fld('gw_ga4','GA4 measurement id',POL.ga4Id||'');
-  document.getElementById('gw_json').value=JSON.stringify(POL,null,2);
+  // Volume top-up tiers — set in the checkout build (Stripe), surfaced read-only so they're not edited via raw JSON.
+  const packs=(POL.catalog||{}).packs||{};
+  if(Object.keys(packs).length) document.getElementById('gw_pricing').innerHTML += `<div class="meta" style="grid-column:1/-1;margin-top:2px"><b style="color:#c7c7d2">Volume tiers</b> <span data-tip="Top-up packs — set in the checkout build (Stripe), read-only here.">ⓘ</span><div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${Object.values(packs).map(pk=>`<span style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:#dcdce6">${pk.credits} checks · $${(pk.cents/100).toFixed(0)}</span>`).join('')}</div></div>`;
   loadGwPulse(); loadGwIntel(); loadGwKiosks(); loadGwWatches(); loadGwCommunity(); loadGwWaitlist(); loadGwStoreReqs();
 }
 async function loadGwPulse(){
@@ -2953,7 +2966,7 @@ async function savePolicyForm(){
   const n=id=>{const x=Number(document.getElementById(id).value);return isFinite(x)?x:undefined;};
   const patch={pricing:{perCallCents:n('gw_percall'),minPurchaseCents:n('gw_minpur'),freeChecks:n('gw_free'),
       sub:Object.assign({},(POL.pricing||{}).sub,{cents:n('gw_subcents'),credits:n('gw_subcredits'),perCallCents:n('gw_subper')})},
-    rewards:{kioskRefreshChecks:n('gw_kreward')},
+    rewards:{kioskRefreshChecks:n('gw_kreward'),referralChecks:n('gw_referral')},
     finds:Object.assign({},POL.finds,{headstartMin:n('gw_headstart')}),
     ga4Id:document.getElementById('gw_ga4').value.trim()};
   await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(patch)});
@@ -2962,8 +2975,10 @@ async function savePolicyForm(){
 async function savePolicyJson(){
   let body; try{ body=JSON.parse(document.getElementById('gw_json').value); }catch(e){ toast('Invalid JSON'); return; }
   await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  toast('Policy saved'); loadGrowth();
+  toast('Policy saved'); loadAdvancedPolicy();
 }
+// Advanced JSON card now lives under Calls → App (dev escape-hatch); load POL + fill the editor on its own.
+async function loadAdvancedPolicy(){ const el=document.getElementById('gw_json'); if(!el) return; POL=await api('/api/policy')||POL; el.value=JSON.stringify(POL,null,2); }
 async function importStoresJson(){
   const msg=document.getElementById('gw_import_msg');
   let body; try{ body=JSON.parse(document.getElementById('gw_import').value); }catch(e){ msg.style.color='#ff6b6b'; msg.textContent='Invalid JSON'; return; }

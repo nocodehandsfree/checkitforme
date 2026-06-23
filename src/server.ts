@@ -1166,7 +1166,7 @@ app.delete("/api/community/:id", async (c) => {
 
 // ---- Policy: owner-tunable pricing / headstart / privacy / feature flags ----
 app.get("/pub/policy", async (c) => c.json(await publicPolicy()));
-app.get("/api/policy", async (c) => c.json(await getPolicy()));
+app.get("/api/policy", async (c) => c.json({ ...(await getPolicy()), catalog: { sub: SUB, packs: PACKS } }));
 app.patch("/api/policy", async (c) => {
   try { return c.json(await setPolicy(await c.req.json())); } catch (e) { return c.json({ error: String(e) }, 400); }
 });
