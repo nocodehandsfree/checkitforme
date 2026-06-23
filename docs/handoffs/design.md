@@ -5,6 +5,22 @@ It maps every visual asset in the repo so you never hunt for a logo, image, or i
 
 ---
 
+## ▶ START HERE (fresh or resumed CD session)
+1. **Branch check — you MUST be on `claude/checkitforme-website-takeover-pagiis` (staging).**
+   You're on the right branch if `docs/brand/` has files **and** `public/logos/` has 100+ files.
+   If `docs/brand/` is empty or you see old logos, you're on `main`/prod — STOP and
+   `git checkout claude/checkitforme-website-takeover-pagiis`. (main is stale; never design from it.)
+2. **Live render to pull from:** `https://staging.checkitforme.com` — NOT `checkitforme.com` (prod).
+3. **The finished style guide lives at → `voice-caller/docs/design/STYLE_GUIDE.md`** (put any image
+   assets next to it in `docs/design/`). This is its single home.
+   - **Resuming?** If `docs/design/STYLE_GUIDE.md` exists, that's the prior session's work — read it
+     and continue from there. If it doesn't exist yet, build it per **§4** below.
+4. **Commit + push to the staging branch as you go** — never keep the guide only in chat memory, or
+   it's lost when the session ends. Then update §4's link.
+5. Owner approves before it's final.
+
+---
+
 ## 0. Brand source of truth
 - **`docs/brand/`** — the brand pack:
   - `CHECK_BRAND_STYLE_GUIDE.md` — the approved brand mark spec (mark geometry, colors, glow, clear space, do/don't). **This is canonical.**
