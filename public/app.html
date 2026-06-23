@@ -1820,7 +1820,18 @@ function renderRetailers(){
       <select id="cn_${r.id}"><option value="" disabled selected>Category</option>${CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
       <button class="act" onclick="callNow(${r.id})">${ICO('phone',15)} Call now</button>
     </div>
+    ${r.ownerOnly?`<div class="row" style="gap:8px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)"><input id="ph_${r.id}" value="${esch(r.phone||'')}" placeholder="+13105551234" inputmode="tel" onkeydown="if(event.key==='Enter')saveStorePhone(${r.id})" style="flex:1;min-width:0"><button class="act" onclick="saveStorePhone(${r.id})">Save phone</button></div><div class="hint" style="margin-top:6px;font-style:normal">Demo store — the phone number is its on/off switch: save a number to go live, clear it to hide. ${r.active?'<b style="color:var(--green)">● live</b>':'<span style="color:var(--muted)">○ off — add a number</span>'}</div>`:''}
   </div>`;}).join('');
+}
+// Demo stores (Fun/MVPs): editing the phone IS the on/off switch — the server derives active from it.
+async function saveStorePhone(id){
+  const inp=document.getElementById('ph_'+id); if(!inp) return;
+  const phone=inp.value.trim();
+  const r=await api('/api/retailers/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({phone})});
+  if(!r||r.error){ toast('Could not save the number'); return; }
+  toast(phone?'Saved — store is live ✓':'Phone cleared — store hidden');
+  const t=RETAILERS.find(x=>x.id===id); if(t){ t.phone=phone; t.active=!!phone; }
+  renderRetailers();
 }
 async function labCall(){
   const phone=v('lab_phone'); const mode=document.getElementById('lab_mode').value; const personality=document.getElementById('lab_personality').value; const name=v('lab_name');
