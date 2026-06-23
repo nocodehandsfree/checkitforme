@@ -151,6 +151,36 @@ source of truth. Manage both from here so there's one place to look.
 
 ---
 
+## Where store data + logos are served (every touch-point)
+
+The rule: **no surface keeps its own store list or fetches logos.** The server denormalizes
+`{logoUrl, logoWide, logoDark}` onto each row via `chainLogoInfo(name)` (`src/server.ts` — resolves a
+chain name → `public/logos/chains/<slug>` + the wide/dark flags), and every surface just reads the row
+(logo present → `<img>`; absent → the shared text wordmark, never a 2-letter monogram). Changing
+logo/serving behavior? Fix it at the source (`chainLogoInfo`), not per surface. Here's everywhere it flows:
+
+**Server endpoints that serve store data + attach logos** (`src/server.ts`):
+| Endpoint | Serves | Logo |
+|---|---|---|
+| `/pub/stores/near` | consumer store list (by coords) | ✓ |
+| `/pub/best-bet` | consumer "best near you" pick | ✓ |
+| `/api/retailers` | admin Stores list | ✓ |
+| `/api/chains` | admin Chains list (+ store aggregates, tier) | ✓ per chain |
+| admin recent-calls feed | Calls history rows | ✓ retailer |
+| `/logo-wall` | dev/admin logo audit page | ✓ |
+| consumer page render | brand (vertical) mark into `checkit.html` (`__BRAND_ART__`) | brand logoUrl |
+
+**Render spots — read `row.logoUrl`, else the wordmark fallback:**
+- **Consumer** (`public/checkit.html`): store rows (`.store .ic`), the result header (`.rhead`, 58px),
+  the brand mark (`__BRAND_ART__`).
+- **Admin** (`public/app.html`): `logoTile()` / `.slogo` — Stores list, Chains list, Calls feed, and the
+  per-chain Settings logo (`set_storelogo`).
+- **Fallback:** `storeWordmark` (consumer) / shared text fallback (admin) when `logoUrl` is null.
+
+> Code touch-points maintained by DevOps; the asset + resolver rules live above and in `STORE_LOGOS.md`.
+
+---
+
 ## Related docs
 - `docs/specs/store-data-schema.md` — the importer's full field contract + hours format + dedupe key.
 - `docs/specs/scoring.md` — the 1–5 tier rubric (how `retailers.tier` is set).
