@@ -799,7 +799,7 @@ export async function placeAdHocCall(phone: string, mode: "restock" | "carry" | 
 
 /** Retailers annotated with their most recent call outcome (drives the green dot). Filtered + capped
  *  server-side — at 100k stores, returning the whole table (and re-fetching it) melts the admin. */
-export async function retailersWithStatus(opts: { q?: string; state?: string; limit?: number; type?: string; region?: string; carries?: string; online?: boolean } = {}) {
+export async function retailersWithStatus(opts: { q?: string; state?: string; limit?: number; type?: string; region?: string; carries?: string; online?: boolean; chainId?: number } = {}) {
   const limit = Math.min(Math.max(opts.limit ?? 300, 1), 1000);
   const q = (opts.q || "").trim().toLowerCase();
   const state = (opts.state || "").trim().toUpperCase();
@@ -811,6 +811,7 @@ export async function retailersWithStatus(opts: { q?: string; state?: string; li
   if (opts.region) conds.push(eq(retailers.region, opts.region));
   if (opts.carries) conds.push(like(retailers.carries, `%${opts.carries}%`) as ReturnType<typeof eq>);
   if (opts.online) conds.push(eq(retailers.online, true));
+  if (opts.chainId) conds.push(eq(retailers.chainId, opts.chainId));
   if (opts.type) {
     const cs = await db.select({ id: chains.id }).from(chains).where(eq(chains.type, opts.type));
     const ids = cs.map((c) => c.id);

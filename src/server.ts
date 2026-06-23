@@ -2219,6 +2219,7 @@ app.get("/api/retailers", async (c) => {
     q: c.req.query("q") || undefined, state: c.req.query("state") || undefined,
     type: c.req.query("type") || undefined, region: c.req.query("region") || undefined,
     carries: c.req.query("carries") || undefined, online: c.req.query("online") === "1" || undefined,
+    chainId: c.req.query("chainId") ? Number(c.req.query("chainId")) : undefined,
     limit: c.req.query("limit") ? Number(c.req.query("limit")) : undefined,
   });
   // Attach the same chain-logo info the consumer surfaces use, so the admin Stores list renders

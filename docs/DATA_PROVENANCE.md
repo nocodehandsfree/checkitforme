@@ -101,6 +101,27 @@ admin, and the call script simultaneously.
 
 ---
 
+## Logos — the one source that lives in files, not the DB
+
+Store **data** is the DB; store **logos** are the one exception — they're files with their own single
+source of truth. Manage both from here so there's one place to look.
+
+- **Source:** `public/logos/chains/<slug>.png` — one transparent PNG per chain (+ `_meta.json` for the
+  wide/plate flags). Nothing hardcodes or duplicates a logo. Full detail + the asset pipeline:
+  **`docs/STORE_LOGOS.md`**.
+- **Resolver:** a logo is matched to a chain **by chain name** — `chainLogoInfo()` (`src/server.ts`)
+  slugs the name and tries exact / `-`↔`_` variants / a fuzzy stem match. Every surface (consumer,
+  admin, logo wall) reads the same resolved `logoUrl`; none embeds its own copy.
+- **Coverage (audited 2026-06):** of **109** visible chains, **87 resolve a logo**; **13 real chains
+  still need a file** — Amazon, FoodMaxx, Goodwill, Hallmark, Lucky Supermarkets, Metro Market, Pak N
+  Save, Payless Foods, Salvation Army, Savers, Unique, Uwajimaya, Woodman's Market. Re-run the audit by
+  enumerating `/api/chains` and applying the resolver against `public/logos/chains/`.
+- **The one resolver failure mode:** a file named *too specifically* (more than the chain's slug) won't
+  match — if a logo looks missing despite the file existing, rename the file to the chain's slug (or a
+  `-`/`_` variant of it).
+
+---
+
 ## Known provenance gaps (fix queue)
 
 - **Orphan stores — RESOLVED / non-issue.** Checked via `POST /api/stores/relink-orphans` (dryRun):
@@ -109,9 +130,13 @@ admin, and the call script simultaneously.
   logo (`burlington.png`), and carries tier 3. The projection's `chain` field is unpopulated, but the
   logo and tier resolve independently, so nothing is broken. The relink endpoint stays as an idempotent
   safety net (re-attaches by longest whole-word chain-name prefix if an orphan ever appears).
-- **Missing logos.** The thrift chains (Goodwill / Salvation Army / Savers / Unique) have no
-  `public/logos/chains/<slug>.png` yet — needed before Treasure Hunt ships. Requires image tooling
-  (sharp / ImageMagick) that isn't in every session; follow the pipeline in `docs/STORE_LOGOS.md`.
+- **Missing logos — 13 chains** (see the **Logos** section above for the full list + audit). Includes the
+  thrift chains (Goodwill / Salvation Army / Savers / Unique, needed before Treasure Hunt ships) and
+  Hallmark. Needs image tooling (sharp / ImageMagick) not in every session; pipeline in `docs/STORE_LOGOS.md`.
+- **Mall + vending pseudo-chains — cleaned.** 9 empty "mall" chains (Tacoma Mall, Capitola Mall, …) had
+  0 stores and were hidden (`_`-prefixed + muted). "Pokemon Vending" (kiosk machines) was set
+  non-callable (`sellsPacks:false`) but kept active so its kiosks stay on the consumer Kiosk tab. The
+  Select-a-Chain picker should exclude chains with 0 callable stores so these never reappear there.
 - **Ungraded long tail.** Stores carry `tier: null` when their chain isn't in the scoring CSV (81 of
   119 chains are scored). `POST /api/stores/grade-from-defaults` fills tier **only where null** from a
   `{chain: tier}` map (never overwrites a deliberate per-store/owner tier). The genuinely unscored
