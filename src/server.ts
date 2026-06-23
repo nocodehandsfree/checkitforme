@@ -1509,6 +1509,28 @@ app.post("/api/stores/grade-from-defaults", async (c) => {
   const detail = out.filter((o) => o.filled > 0).sort((a, z) => z.filled - a.filled);
   return c.json({ dryRun: !!b.dryRun, scoredChains: out.length, chainsWithGaps: detail.length, totalFilled: detail.reduce((s, o) => s + o.filled, 0), unmatched, detail });
 });
+// Name normalizer: fixes the junk the dedupe doesn't (ALL-CAPS words, `&amp;` entities, " - "
+// separators) across ALL active stores server-side — reaching names past the read API's 1000-row cap.
+// Title-cases all-caps WORDS of length ≥4 (so true brand/dir acronyms — CVS, AFB, NE, plus a keep-set
+// AAFES/IKEA — stay upper, not "Cvs"/"Aafes"). Scoped to names that actually look junk so it never
+// touches a clean name. dryRun previews the rename set.
+app.post("/api/stores/fix-caps", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const KEEP = new Set(["AAFES", "IKEA", "NEX", "MCX", "AMC", "BBQ"]);
+  const fix = (n: string): string => {
+    let s = n.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#?[a-z0-9]+;/gi, "");
+    s = s.replace(/\s+-\s+/g, " ");
+    s = s.split(/\s+/).map((w) => (!KEEP.has(w) && w.length >= 4 && w === w.toUpperCase() && /[A-Z]/.test(w) ? w.charAt(0) + w.slice(1).toLowerCase() : w)).join(" ");
+    return s.replace(/\s+/g, " ").trim();
+  };
+  const junky = (n: string) => /&\w+;|<[a-z/]|style=|\(#\d| - | Shop Location/i.test(n) || /\b[A-Z]{4,}\s+[A-Z]{4,}\b/.test(n) || n.length > 80;
+  const rows = await db.select({ id: retailers.id, name: retailers.name }).from(retailers).where(eq(retailers.active, true)).limit(200000);
+  const changes = rows.map((r) => ({ id: r.id, from: r.name || "", to: fix(r.name || "") })).filter((x) => junky(x.from) && x.to && x.to !== x.from);
+  if (b.dryRun) return c.json({ dryRun: true, willFix: changes.length, sample: changes.slice(0, 25) });
+  for (const ch of changes) await db.update(retailers).set({ name: ch.to }).where(eq(retailers.id, ch.id));
+  invalidateRefCache();
+  return c.json({ fixed: changes.length, sample: changes.slice(0, 25) });
+});
 // Kiosk overlay: reconcile the official TPCi vending list against our stores. For each machine, flag
 // the matching store (same chain, within ~0.3 mi) as a tier-5 kiosk (hasKiosk:true, tier:5) — leaving
 // sellsPacks untouched so a store that also sells on the shelf still shows in both tabs. Machines at a
