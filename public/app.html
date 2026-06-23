@@ -134,15 +134,13 @@
   label[data-tip],span[data-tip],.name[data-tip],b[data-tip]{display:inline-flex;align-items:center;gap:4px}
   [data-tip]::after{content:"ⓘ";font-size:14px;color:var(--purple);font-style:normal;font-weight:700;line-height:1;margin-left:3px;vertical-align:middle;opacity:.85}
   #tiptip{position:fixed;z-index:9000;max-width:262px;background:#06060a;color:#e8e8f2;font:500 12.5px/1.45 Inter,-apple-system,sans-serif;font-style:normal;padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 30px rgba(0,0,0,.6)}
-  /* Settings page: collapsible sections (chevron like the old Advanced) + inline rows */
-  details.setsec{padding:0;overflow:hidden}
-  details.setsec>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:11px;padding:18px 20px}
-  details.setsec>summary::-webkit-details-marker{display:none}
-  details.setsec>summary .chev{flex:0 0 auto;color:var(--text-muted);font-size:11px;transition:transform .15s}
-  details.setsec[open]>summary .chev{transform:rotate(90deg)}
-  details.setsec>.secbody{padding:0 20px 20px}
-  .setlogo{flex:0 0 auto}
-  .setrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--border)}
+  /* Settings page: sections reuse the global details.card chevron (green circle, top-right). */
+  details.card.setsec>summary{align-items:center}
+  .setlogo{flex:0 0 auto;display:inline-flex}
+  .setlogo .slogo{width:36px;height:36px;border-radius:9px}
+  .setlogo .slogo img{width:32px;height:32px}
+  .setrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--border)}
+  .setrow:first-child{border-top:none}
   .setlbl{font-size:13.5px;color:var(--text-body)}
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
@@ -778,20 +776,20 @@
     </div>
     <div id="set_body" style="display:none">
       <details class="card setsec" open id="set_storewrap">
-        <summary><span class="chev">▸</span><span class="name">Store Settings</span><span style="flex:1"></span><span id="set_storelogo" class="setlogo"></span></summary>
-        <div class="secbody" id="set_store"></div>
+        <summary><span id="set_storelogo" class="setlogo"></span><span class="name">Store Settings</span></summary>
+        <div id="set_store" style="margin-top:18px"></div>
       </details>
       <details class="card setsec" open id="set_datawrap">
-        <summary><span class="chev">▸</span><span class="name">Store Data</span></summary>
-        <div class="secbody" id="set_data"></div>
+        <summary><span class="name">Store Data</span></summary>
+        <div id="set_data" style="margin-top:18px"></div>
       </details>
       <details class="card setsec" open id="set_callwrap">
-        <summary><span class="chev">▸</span><span class="name">Call Settings</span></summary>
-        <div class="secbody" id="set_call"></div>
+        <summary><span class="name">Call Settings</span></summary>
+        <div id="set_call" style="margin-top:18px"></div>
       </details>
       <details class="card setsec" open id="set_mapwrap">
-        <summary><span class="chev">▸</span><span class="name">Mapping</span><span style="flex:1"></span><span id="set_mapstatus"></span></summary>
-        <div class="secbody">
+        <summary><span class="name">Mapping</span><span id="set_mapstatus" style="margin-left:auto"></span></summary>
+        <div style="margin-top:18px">
           <div id="set_mapping" class="meta" style="margin-top:2px">—</div>
           <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
             <button class="act" id="set_mapbtn" onclick="setMapChain()">Map</button>
@@ -1886,12 +1884,11 @@ function ssRenderStore(){
   const status=SS.muted
     ? stateBtn('var(--text-muted)',muteIco,'Muted')+actBtn('ssActivate()',chk,'Activate')
     : stateBtn('var(--green)',chk,'Active')+actBtn('ssMute()',muteIco,'Mute');
-  // Rating: five clickable pills (selected = its color, rest greyed) + one line for the selected tier.
+  // Rating: five clickable pills (selected = its color, rest greyed). Clicking stamps the tier on every store.
   const pill=(n)=>{ const p=SS_RATING[n]; const seld=SS.tier===n;
     if(seld) return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:${p[1]||'#fff'};background:${p[1]?p[1]+'1f':'var(--surface-2)'};border:1px solid ${p[1]?p[1]+'80':'var(--border-strong)'};border-radius:20px;padding:5px 12px;cursor:pointer">${p[1]?ssDot(p[1]):''}${esch(p[0])}</button>`;
     return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;font-size:12px;font-weight:700;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer">${esch(p[0])}</button>`; };
   const pills=[5,4,3,2,1].map(pill).join('');
-  const desc=SS_RATING[SS.tier]?`<div class="meta" style="margin-top:8px;text-transform:none;letter-spacing:0;line-height:1.5">${esch(SS_RATING[SS.tier][2])}</div>`:'';
   // Per-store rows: bulk toggle commits immediately. KIOSK is per-store ON only — chain level is
   // CLEAR-ONLY (a blanket "kiosk ON" would falsely mark every store a kiosk → all tier-5 + Kiosk tab).
   const maj=k=>SS['c'+k]>SS.storesN/2;
@@ -1904,8 +1901,8 @@ function ssRenderStore(){
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Type <span data-tip="What kind of retailer this chain is — sets grouping + scoring."></span></div>`
     +`<select onchange="ssSetType(this.value)" style="margin-bottom:18px">${SS_TYPES.map(([v,l])=>`<option value="${esch(v)}"${SS.type===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
     +`<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:9px"><div style="font-size:13px;color:var(--text-muted)">Rating</div><span class="meta" id="set_ratemsg" style="font-size:11px"></span></div>`
-    +`<div class="row" style="gap:7px;flex-wrap:wrap">${pills}</div>${desc}`
-    +`<div style="height:1px;background:var(--border);margin:16px 0 2px"></div>`
+    +`<div class="row" style="gap:7px;flex-wrap:wrap">${pills}</div>`
+    +`<div style="height:14px"></div>`
     +row('Callable','We can phone this store to check stock. Off = kiosk-only / not called.',SS.cCallable,tog(maj('Callable'),'ssToggleCallable()'))
     +row('Kiosk',"Has a Pokémon vending machine. (Kiosk store shows 'Best near you' + in the Kiosk tab.)",SS.cKiosk,(SS.cKiosk?`<button type="button" class="ghost" onclick="ssClearKiosk()" style="font-size:12px;padding:5px 11px">Clear</button>`:`<span class="meta" style="font-size:11px">per-store</span>`))
     +row('Online','Sells online — pickup or shipped.',SS.cOnline,tog(maj('Online'),'ssToggleOnline()'))
@@ -1920,7 +1917,18 @@ function ssToggleCallable(){ const on=SS.cCallable>SS.storesN/2; ssStoreBulk({se
 function ssToggleOnline(){ const on=SS.cOnline>SS.storesN/2; ssStoreBulk({online:!on}, on?'Online OFF':'Online ON'); }
 function ssToggleVerified(){ const on=SS.cVerified>SS.storesN/2; ssStoreBulk({stockStatus:on?'unverified':'verified'}, on?'Stock verified OFF':'Stock verified ON'); }
 function ssClearKiosk(){ if(!SS||!SS.cKiosk) return; ssStoreBulk({hasKiosk:false}, 'Kiosks cleared'); }
-function ssSearch(){ const q=((document.getElementById('set_search')||{}).value||'').trim().toLowerCase(); if(!q) return; const live=CHAINS.filter(c=>!(c.name||'').startsWith('_')); const m=live.find(c=>(c.name||'').toLowerCase()===q)||live.find(c=>(c.name||'').toLowerCase().includes(q)); if(!m){ toast('No chain matches “'+q+'”'); return; } const sel=document.getElementById('set_chain'); if(![...sel.options].some(o=>o.value===String(m.id))) sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(''); sel.value=String(m.id); setPickChain(); }
+// Forgiving chain search: exact > prefix > substring > subsequence (so a typo like "Barns" still
+// finds "Barnes & Noble"). Punctuation/spaces ignored on both sides.
+function ssSearch(){
+  const raw=((document.getElementById('set_search')||{}).value||'').trim(); if(!raw) return;
+  const norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]+/g,''); const q=norm(raw); if(!q) return;
+  const subseq=(hay)=>{ let i=0; for(let k=0;k<hay.length&&i<q.length;k++) if(hay[k]===q[i]) i++; return i===q.length; };
+  const score=c=>{ const n=norm(c.name); if(!n) return 9; if(n===q) return 0; if(n.startsWith(q)) return 1; if(n.includes(q)) return 2; if(subseq(n)) return 3; return 9; };
+  const m=CHAINS.filter(c=>!(c.name||'').startsWith('_')).map(c=>[score(c),c]).filter(x=>x[0]<9)
+    .sort((a,b)=>a[0]-b[0]||(a[1].name||'').length-(b[1].name||'').length).map(x=>x[1])[0];
+  if(!m){ toast('No chain matches “'+raw+'”'); return; }
+  const sel=document.getElementById('set_chain'); if(![...sel.options].some(o=>o.value===String(m.id))) sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(''); sel.value=String(m.id); setPickChain();
+}
 // Store Data: store FACTS (chain fields) — its OWN Save (isMSRP / stock-check confidence / sell methods).
 function ssRenderData(){
   const el=document.getElementById('set_data'); if(!el||!SS) return;
@@ -1942,42 +1950,42 @@ async function ssSaveData(){
   const c=CHAINS.find(x=>x.id===SS.id); if(c){ c.isMSRP=isMSRP; c.stockCheckConfidence=scc||null; c.sellMethods=sell||null; }
   if(msg) msg.textContent='Saved ✓';
 }
-// Call Settings: every control commits INLINE. Hang Up sits to the RIGHT of Max Talk; its ⓘ is OUTSIDE
-// the checkbox label so tapping the hint never toggles. (No "Rings direct" — that's Answer path = direct.)
+// Call Settings: every control commits INLINE, one clean row each (Answer path lives in Mapping — it's
+// a learned signal, not something to hand-set here).
 function ssRenderCall(){
   const el=document.getElementById('set_call'); if(!el||!SS) return;
   const tog=(on,onclick)=>`<button type="button" onclick="${onclick}" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12px">${on?'ON':'OFF'}</button>`;
-  const ap=[['','— unclassified'],['direct_human','Direct human · picks up'],['simple_ivr','Simple IVR · 1–2 steps'],['deep_ivr','Deep IVR · long tree']];
   el.innerHTML=
-    `<div class="row" style="gap:20px;align-items:center;flex-wrap:wrap;margin:2px 0 16px">`
-    +`<div class="row" style="gap:10px;align-items:center"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" onchange="ssSetMaxTalk(this.value)" style="width:72px;padding:10px 12px;font-size:15px;text-align:center"><div style="font-weight:700;font-size:13px;line-height:1.15">Max Talk <span data-tip="Hard cap on how long the agent talks to a person before wrapping up."></span></div></div>`
-    +`<div class="row" style="gap:7px;align-items:center"><label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-body)"><input type="checkbox" id="set_vm" ${SS.vm?'checked':''} onchange="ssSetHangup(this.checked)"> Hang Up / voicemail / closed</label><span data-tip="If the call hits voicemail or a closed/recorded line, hang up immediately — no message, no charge."></span></div>`
-    +`</div>`
-    +`<div class="setrow" style="border-top:none;padding-top:0"><div class="setlbl">Phone this chain <span data-tip="Off = we track it but never dial it."></span></div>${tog(SS.callTarget,'ssToggleCallTarget()')}</div>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin:14px 0 6px">Answer path <span data-tip="How the phone is answered when we dial."></span></div>`
-    +`<select id="set_ap" onchange="ssSetAnswer(this.value)">${ap.map(([v,l])=>`<option value="${v}"${(SS.answerPath||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
+    `<div class="setrow"><div class="setlbl">Max talk <span data-tip="Hard cap on how long the agent talks to a person before wrapping up."></span></div><div class="row" style="gap:6px;align-items:center"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" onchange="ssSetMaxTalk(this.value)" style="width:72px;padding:9px 12px;font-size:15px;text-align:center"><span class="meta" style="font-size:11px">sec</span></div></div>`
+    +`<div class="setrow"><div class="setlbl">Phone this chain <span data-tip="Off = we track it but never dial it."></span></div>${tog(SS.callTarget,'ssToggleCallTarget()')}</div>`
+    +`<div class="setrow"><div class="setlbl">Hang up <span data-tip="If the call hits voicemail or a closed / recorded line, hang up immediately — no message, no charge."></span></div>${tog(SS.vm,'ssToggleHangup()')}</div>`
     +`<div style="font-size:13px;color:var(--text-muted);margin:16px 0 6px">Default workflow <span data-tip="Voice / script workflow for every store of this chain (overrides the global default). Build them in Voice → Designer."></span></div>`
     +`<select id="set_wf" onchange="setChainWorkflow(SS.id,this.value)">${wfOptions(SS.wf, WF.def?('Default · '+WF.def):'Default')}</select>`;
 }
 async function ssToggleCallTarget(){ if(!SS) return; const v=!SS.callTarget; if(await ssPatch('callTarget',v)){ SS.callTarget=v; ssRenderCall(); toast(v?'Phoning this chain':'Will not dial this chain'); } }
-async function ssSetAnswer(v){ if(!SS) return; SS.answerPath=v; if(await ssPatch('answerPath',v||null)) toast('Answer path saved'); }
+async function ssToggleHangup(){ if(!SS) return; const v=!SS.vm; if(await ssPatch('hangupOnVoicemail',v)){ SS.vm=v; ssRenderCall(); toast(v?'Hang up: on':'Hang up: off'); } }
 async function ssSetMaxTalk(v){ if(!SS) return; SS.maxTalk=v; if(await ssPatch('maxTalkSeconds',Number(v)||null)) toast('Max talk saved'); }
-async function ssSetHangup(b){ if(!SS) return; SS.vm=b; if(await ssPatch('hangupOnVoicemail',b)) toast(b?'Hang up: on':'Hang up: off'); }
 // Mapping is READ-ONLY: stats + recipe + the two learned fields (dtmf, phone-tree) the navigator/lock
 // writes. Status is a pill in the section header (separated from the Map / Confirm action buttons).
 function renderChainMapping(ch){
   const el=document.getElementById('set_mapping'); if(!el) return;
-  const nm=NAV_MODE[ch.navType];
-  let recipe='— not mapped yet';
+  // MAPPED if either system has a route: the new nav-lock OR the legacy tree learner (dtmf / phone-tree).
+  // B&N was learned via the tree path, so checking navStatus alone wrongly showed it unmapped.
+  const isMapped = ch.navStatus==='locked' || ch.treeStatus==='learned' || !!ch.phoneTreeDefault || !!ch.dtmfShortcut;
+  const navTypeEff = ch.navType || (ch.dtmfShortcut?'keypad':((ch.ringsDirect||ch.answerPath==='direct_human')?'direct':(ch.phoneTreeDefault?'voice':null)));
+  const nm=NAV_MODE[navTypeEff];
+  let recipe = isMapped ? '' : '— not mapped yet';
   try{ const r=ch.navRecipe?JSON.parse(ch.navRecipe):null; const steps=(r&&(Array.isArray(r)?r:r.steps))||[];
     if(steps.length) recipe=steps.map(s=>s.action==='press'?('press '+s.value+'@'+s.atSec+'s'):(s.action==='wait'?('wait@'+s.atSec+'s'):('say "'+esch(s.value)+'"@'+s.atSec+'s'))).join('  →  ');
+    else if(ch.dtmfShortcut) recipe=ch.dtmfShortcut.split(',').map(p=>{const m=p.trim().match(/^([0-9])@(\d+)/);return m?('press '+m[1]+' @ '+m[2]+'s'):p.trim();}).join('  →  ');
   }catch(e){}
-  const t2h=ch.navSeconds!=null?ch.navSeconds+'s':(ch.avgTreeSeconds!=null?ch.avgTreeSeconds+'s':'—');
-  const statusWord=ch.navStatus==='locked'?'mapped':(ch.navStatus||'unmapped');
+  if(!recipe) recipe='—';
+  const t2h=ch.navSeconds!=null?ch.navSeconds+'s':(ch.avgTreeSeconds?ch.avgTreeSeconds+'s':'—');
+  const statusWord=isMapped?'mapped':(ch.navStatus||ch.treeStatus||'unmapped');
   const mapped=ch.navUpdatedAt?new Date(ch.navUpdatedAt).toLocaleDateString([],{month:'short',day:'numeric'}):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'never');
   const ro=(lbl,val)=>`<div style="margin-top:13px"><div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">${lbl} <span class="meta" style="text-transform:none;letter-spacing:0;font-size:10.5px">· learned · read-only</span></div><div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${val?esch(val):'—'}</div></div>`;
   el.innerHTML=
-    `<div class="stats" style="margin-bottom:12px">`
+    `<div class="stats" style="margin-bottom:14px">`
     +`<div class="stat"><div class="n" style="font-size:18px${nm?'':';color:var(--muted)'}">${nm?nm.m:'—'}</div><div class="l">mode${nm?' · '+nm.sub:''}</div></div>`
     +`<div class="stat"><div class="n" style="font-size:18px">${t2h}</div><div class="l">time-to-human</div></div>`
     +`<div class="stat"><div class="n" style="font-size:15px">${mapped}</div><div class="l">last mapped</div></div>`
@@ -1986,8 +1994,8 @@ function renderChainMapping(ch){
     +ro('Keypad shortcut (DTMF)',ch.dtmfShortcut)
     +ro('Phone-tree default',ch.phoneTreeDefault);
   const sp=document.getElementById('set_mapstatus');
-  if(sp){ const locked=ch.navStatus==='locked'; const c=locked?'var(--green)':'var(--text-muted)'; sp.innerHTML=`<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:${c};background:${locked?'rgba(74,222,128,.12)':'var(--surface-2)'};border:1px solid ${locked?'rgba(74,222,128,.4)':'var(--border)'};border-radius:20px;padding:3px 10px">${ssDot(c)}${esch(statusWord)}</span>`; }
-  const mb=document.getElementById('set_mapbtn'); if(mb) mb.textContent = ch.navStatus==='locked'?'Re-map':'Map';
+  if(sp){ const c=isMapped?'var(--green)':'var(--text-muted)'; sp.innerHTML=`<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:${c};background:${isMapped?'rgba(74,222,128,.12)':'var(--surface-2)'};border:1px solid ${isMapped?'rgba(74,222,128,.4)':'var(--border)'};border-radius:20px;padding:3px 10px">${ssDot(c)}${esch(statusWord)}</span>`; }
+  const mb=document.getElementById('set_mapbtn'); if(mb) mb.textContent = isMapped?'Re-map':'Map';
 }
 // Map / Re-map the selected chain: places one real navigator call, shown live in the Mapping card.
 function setMapChain(){ const id=Number(document.getElementById('set_chain').value); const ch=CHAINS.find(c=>c.id===id); if(!ch){ toast('Pick a chain first'); return; } trDocument(id, ch.name); }
