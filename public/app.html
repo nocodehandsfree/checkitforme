@@ -860,8 +860,8 @@
       <input id="lab_name" placeholder="Matt">
       <label>Flow</label>
       <select id="lab_mode">
-        <option value="open">Open conversation</option>
         <option value="restock">Pokémon restock check</option>
+        <option value="open">Open conversation</option>
         <option value="carry">Carry check</option>
       </select>
       <label data-tip="For open conversation">Personality</label>
@@ -1546,7 +1546,7 @@ async function vsClone(){
 }
 
 // --- Field persistence (remember what you typed across refresh) ---
-const PERSIST=['lab_phone','lab_name','lab_mode','lab_personality','sim_store','sim_cat','sim_mode','sim_tree','sim_specific','sim_phone','s_name','s_cat','s_mode','s_time','s_q','s_clar','r_name','r_phone','r_loc','r_tz','r_tree','f_search','f_type','f_zone','f_carries','f_status','f_sort'];
+const PERSIST=['lab_phone','lab_name','lab_personality','sim_store','sim_cat','sim_mode','sim_tree','sim_specific','sim_phone','s_name','s_cat','s_mode','s_time','s_q','s_clar','r_name','r_phone','r_loc','r_tz','r_tree','f_search','f_type','f_zone','f_carries','f_status','f_sort'];
 function saveDays(){ localStorage.setItem('fld_s_days', [...document.querySelectorAll('#s_days input:checked')].map(c=>c.value).join(',')); }
 function restorePersist(){
   PERSIST.forEach(id=>{ const el=document.getElementById(id); const val=localStorage.getItem('fld_'+id); if(el && val!==null) el.value=val; });
