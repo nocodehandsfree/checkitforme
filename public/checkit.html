@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r66" />
+<meta name="x-rev" content="names-r67" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -641,6 +641,7 @@ __BRAND_HEAD__
   .sctitle{display:flex;align-items:center;gap:9px;font-size:20px;font-weight:900;letter-spacing:-.4px;color:#fff;margin-bottom:14px}
   .kin{width:100%;background:#15151c;color:#fff;border:1px solid var(--border,#2a2a35);border-radius:11px;padding:12px;font-size:15px;box-sizing:border-box}
   #sch_contact::placeholder{color:#6a6a78;font-style:italic;font-size:13px}
+  #auth_phone::placeholder{color:#5e5e6c;font-style:italic;font-weight:400}
   input[type="time"].kin{text-align:left} input[type="time"].kin::-webkit-date-and-time-value{text-align:left}
   /* custom photo picker — matches the site's inputs instead of the raw OS file control */
   .filepick{display:flex;align-items:center;gap:11px;width:100%;background:#15151c;border:1.5px dashed var(--pline);border-radius:11px;padding:14px 13px;font-size:14px;font-weight:700;color:#b9b9c8;cursor:pointer;transition:border-color .12s,color .12s;box-sizing:border-box}
@@ -1232,9 +1233,9 @@ __BRAND_HEAD__
     <!-- Step 1: phone number -->
     <div id="auth_step_email">
       <div class="meta" style="margin:2px 0 14px;font-size:16px;font-weight:800;color:#fff" data-i18n="auth.phone.lead">First check's on us!</div>
-      <div style="display:flex;align-items:center;gap:9px;background:#15151c;border:1px solid var(--border);border-radius:12px;padding:0 13px">
-        <span style="flex:0 0 auto;font-size:16px;font-weight:700;color:#9a9aac;white-space:nowrap">🇺🇸 +1</span>
-        <input id="auth_phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(310) 666-2331" oninput="fmtPhoneInput(this)" onkeydown="if(event.key==='Enter')phoneStart()" style="flex:1;min-width:0;background:transparent;color:#fff;border:none;padding:14px 0;font-size:16px;box-sizing:border-box">
+      <div style="display:flex;align-items:center;gap:10px;background:#15151c;border:1px solid var(--border);border-radius:12px;padding:0 14px;min-height:54px">
+        <span style="flex:0 0 auto;display:inline-flex;align-items:center;gap:4px;font-size:16px;font-weight:700;line-height:1;color:#9a9aac;white-space:nowrap">🇺🇸 +1</span>
+        <input id="auth_phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Your phone number" data-i18n-ph="auth.phone.ph" oninput="fmtPhoneInput(this)" onkeydown="if(event.key==='Enter')phoneStart()" style="flex:1;min-width:0;background:transparent;color:#fff;border:none;padding:0;line-height:54px;height:54px;font-size:16px;box-sizing:border-box">
       </div>
       <div id="auth_err" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
       <button class="cta sm" id="auth_send" onclick="phoneStart()" style="margin-top:4px;width:100%;background:var(--green);color:#06210f">Continue →</button>
@@ -1586,7 +1587,7 @@ const I18N={ es:{
   'acct.cid.on':'Las llamadas salen de tu celular ✓','acct.cid.off':'Llama a las tiendas desde tu número',
   'cid.title':'Llama desde tu propio número','cid.sub':'Verifica tu celular una vez para que las tiendas vean <b>tu</b> número en el identificador — contestan mucho más que a un número desconocido.','cid.cta':'Verificar mi número →','cid.calling2':'Llamándote…','cid.calling':'📞 Te estamos llamando','cid.enter':'Contesta y, cuando te lo pidan, marca este código:','cid.waiting':'Esperando a que termine la llamada…','cid.done':'Tu número está verificado','cid.donesub':'Las verificaciones ahora salen de tu celular — las tiendas ven tu número.','cid.donecta':'Listo','cid.unavail':'La verificación no está disponible ahora — inténtalo más tarde.','cid.startfail':'No se pudo iniciar la verificación — inténtalo de nuevo.','cid.timeout':'No se verificó a tiempo — cierra e inténtalo de nuevo.',
   // login + call sheet + feedback + live steps + result terms (added 2026-06-24)
-  'auth.phone.lead':'¡Tu primera verificación es gratis!',
+  'auth.phone.lead':'¡Tu primera verificación es gratis!','auth.phone.ph':'Tu número de teléfono',
   'cs.costs':'cuesta 1 verificación','cs.toggle':'Ver pasos de la llamada',
   'err.storename':'Agrega el nombre de la tienda',
   'fbk.in':'En stock','fbk.out':'No está','fbk.soon':'Reabasteciendo','fbk.unsure':'Sin claridad',
@@ -1925,7 +1926,7 @@ function authMark(){ return `<img src="/logos/check.png?v=1" alt="Check It For M
 let AUTH_PHONE='';
 function normUsPhone(s){ const d=(s||'').replace(/\D/g,''); if(d.length===10) return '+1'+d; if(d.length===11&&d[0]==='1') return '+'+d; return ''; }
 function fmtUsPhone(e){ return (e||'').replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'($1) $2-$3'); }
-// Live-format the phone field as they type: 3106662331 → (310) 666-2331.
+// Live-format the phone field as they type: 5551234567 → (555) 123-4567.
 function fmtPhoneInput(el){ const d=(el.value||'').replace(/\D/g,'').slice(0,10); let o=''; if(d.length>6)o='('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6); else if(d.length>3)o='('+d.slice(0,3)+') '+d.slice(3); else if(d.length)o='('+d; el.value=o; }
 // Step 1 — text a 6-digit code to the cell. `resend` keeps us on the code step.
 async function phoneStart(resend){
@@ -1945,7 +1946,7 @@ async function phoneStart(resend){
   }
   track('auth_code_sent',{flow:'phone'});
   if(resend){ toast('Code re-sent 📲'); return; }
-  authStep('code'); $('auth_codeto').textContent=(e||'').replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'$1-$2-$3'); // dashes: 310-666-2331
+  authStep('code'); $('auth_codeto').textContent=(e||'').replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'$1-$2-$3'); // dashes: 555-123-4567
   $('auth_codeerr').textContent=''; const ci=$('auth_code'); if(ci) ci.value='';
   setTimeout(()=>{try{$('auth_code').focus();}catch(_){}},90);
 }
