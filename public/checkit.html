@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r71" />
+<meta name="x-rev" content="names-r72" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -691,7 +691,7 @@ __BRAND_HEAD__
   .foot-bottom{display:flex;align-items:center;justify-content:flex-start;gap:9px;padding-top:16px}
   .foot-fav{display:flex;align-items:center;flex:0 0 auto}
   .foot-fav svg{width:24px;height:24px;border-radius:7px}
-  .foot-copy{color:#6a6a76;font-size:9px;font-weight:600;line-height:1;display:flex;align-items:center}
+  .foot-copy{color:#6a6a76;font-size:9px;font-weight:600;line-height:1;display:flex;align-items:center;position:relative;top:2px}
   .foot-brandname{color:var(--accent,var(--green))}
   .langtop{appearance:none;-webkit-appearance:none;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;font-size:12px;font-weight:800;border-radius:20px;padding:7px 28px 7px 12px;cursor:pointer;flex:0 0 auto;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M0.5 0.5h8L4.5 5.5z' fill='%23ffffff'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
   .pill.account.anon{background:rgba(255,203,5,.12);border-color:rgba(255,203,5,.4);color:#fff}
@@ -742,11 +742,11 @@ __BRAND_HEAD__
   /* Tier groups — TIER 5 = green (best MSRP odds), TIER 4 = amber. */
   /* Section labels — a small neon-outlined PILL (dark inside, black shows through), like the Map toggle. */
   /* tier pills: GREY letters, a very FAINT tier-coloured outline (no glow, no star) */
-  .grouphdr{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px;color:#9a9aa8;border:1px solid var(--gh-bd,rgba(255,255,255,.12));background:rgba(10,10,14,.6);margin:16px 0 7px}
+  .grouphdr{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px;color:var(--gh-tx,#c6c6d2);border:1px solid var(--gh-bd,rgba(255,255,255,.12));background:rgba(10,10,14,.6);margin:16px 0 7px}
   .grouphdr:first-child{margin-top:4px}
-  .grouphdr.g5{--gh-bd:rgba(43,255,136,.30)}
-  .grouphdr.g4{--gh-bd:rgba(41,212,255,.30)}
-  .grouphdr.g3{--gh-bd:rgba(255,158,44,.30)}
+  .grouphdr.g5{--gh-bd:rgba(43,255,136,.5);--gh-tx:#6df2a6}
+  .grouphdr.g4{--gh-bd:rgba(41,212,255,.5);--gh-tx:#7fdcff}
+  .grouphdr.g3{--gh-bd:rgba(255,158,44,.5);--gh-tx:#ffb866}
   .grouphdr .ghstar{display:none}
   .maplegend{flex-wrap:nowrap;gap:11px;justify-content:center;align-items:center;font-size:10.5px;font-weight:800;color:#cfcfd8;margin-top:10px;padding:8px 10px;background:rgba(12,12,18,.55);border:1px solid var(--border);border-radius:12px;overflow-x:auto;scrollbar-width:none;white-space:nowrap}
   .maplegend::-webkit-scrollbar{display:none}
@@ -1489,7 +1489,7 @@ const I18N={ es:{
   'cta.pick':'Elige una tienda para verificar','cta.check':'Verificar','cta.for':'por','cta.checkunit':'verificación','cta.kioskword':'kiosco',
   'kcall.store':'esta tienda','kcall.body1':'Llamaremos y preguntaremos si su kiosco de','kcall.body2':'está funcionando y surtido, y te enviaremos lo que digan.','kcall.yes':'📞 Sí, llamar ahora →','kcall.no':'Ahora no','kcall.atkiosk':'¿Estás en el kiosco ahora?','kcall.receipt':'Usa nuestro correo al pagar o reenvía tu recibo → verificación gratis.',
   'count.open':'abiertas','count.kiosks':'kioscos',
-  'grp.best':'Mejores cerca de ti','grp.mostly':'Mayormente confiable','grp.spotty':'Irregular','instock.now':'En stock ahora','lg.best':'Mejor','lg.mostly':'Confiable',
+  'grp.best':'Mejores opciones','grp.mostly':'Mayormente confiable','grp.spotty':'Irregular','instock.now':'En stock ahora','lg.best':'Mejor','lg.mostly':'Confiable',
   'cover.types':'Tipos de tienda que cubrimos — toca el pin para ver <b>las tuyas</b>:',
   'st.open':'Abierto','st.closed':'Cerrado','st.till':'hasta',
   'sc.post':'Publica tu logro','sc.where':'¿Dónde lo conseguiste?','sc.store.ph':'Busca tu tienda…','sc.what':'¿Qué conseguiste?','sc.photo':'Agrega una foto de tu logro','sc.postit':'Publícalo →','back':'← Atrás',
@@ -1606,9 +1606,10 @@ const I18N={ es:{
   'live.s1':'Llamando a la tienda…','live.s2':'Está timbrando…','live.s3':'Conectamos','live.s4':'Escuchando el menú…','live.s5':'Navegando el menú…','live.s6':'Transferido al mostrador','live.s7':'Contestó una persona','live.s8':'Preguntando por {p}',
   'live.item':'tu producto','live.store':'la tienda','live.waitperson':'Esperando llegar a una persona…','live.noconvo':'No hay conversación en vivo en esta llamada.',
   'step.one':'paso','step.many':'pasos','step.ringing':'Llamando a la tienda…',
-  'note.fbk':'No pudimos determinar si <b style="color:#fff">{p}</b> estaba en los estantes — dinos qué opinas.',
+  'note.fbk':'No quedó claro si <b style="color:#fff">{p}</b> estaba en stock. Lee la conversación y dinos qué opinas.',
   'note.getting':'La llamada acaba de terminar — obteniendo el resultado.',
-  'v.getting':'Obteniendo la respuesta…','v.unclear2':'Sin claridad',
+  'v.getting':'Obteniendo la respuesta…','v.unclear2':'Sin claridad','v.toobusy':'La tienda está muy ocupada',
+  'note.toobusy':'No dijeron que no, pero estaban demasiado ocupados para revisar si había <b style="color:#fff">{p}</b> en stock. Intenta más tarde.',
   'sub.in':'{s} tiene <b>{c}</b> en stock ahora mismo.','sub.in.named':'{s} tiene <b style="color:var(--accent)">{p}</b> en stock ahora mismo.',
   'sub.out':'{s} no tiene <b>{c}</b> ahora mismo.','sub.soldout':'{s} está agotado de <b>{c}</b> ahora mismo.',
   'term.in':'En stock — confirmado','term.out':'No está en stock','term.soon':'Reabastecimiento confirmado · {d}','term.unk':'Sin respuesta clara',
@@ -2399,7 +2400,7 @@ function renderStores(){
   }
   if(TIER_VIEW){
     let html='';
-    if(t5.length) html+=`<div class="grouphdr g5">${t('grp.best','Best near you')}</div>`+t5.map(storeRowHtml).join('');
+    if(t5.length) html+=`<div class="grouphdr g5">${t('grp.best','Best bets')}</div>`+t5.map(storeRowHtml).join('');
     if(t4.length) html+=`<div class="grouphdr g4">${t('grp.mostly','Mostly reliable')}</div>`+t4.map(storeRowHtml).join('');
     if(rest.length) html+=`<div class="grouphdr g3">${t('grp.spotty','Spotty')}</div>`+rest.map(storeRowHtml).join('');
     $('storelist').innerHTML = html || `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
@@ -3096,19 +3097,22 @@ async function finalizeLive(cid){
   // Idempotent: d.ended (instant) AND the POLL can both call this. No hard guard + no POLL-clearing here
   // (that combo is what froze calls) — history dedupes and showResult just re-renders, so a re-fire is safe.
   stopAudio(); stopLiveTimers();
+  cid = cid || LIVE_CID || null;
+  const live=(LIVE_TR.length?LIVE_TR.join('\n'):LIVE_TRANSCRIPT)||'';
+  // INSTANT FLIP: the moment the call ends, leave the active-call screen NOW — don't sit on it while we
+  // recover the id / fetch the verdict. Show the streamed conversation under "Getting the answer…" right
+  // away; the real verdict repaints over it below. Only flip from the live view (so a late re-fire of
+  // finalizeLive can't flash "Getting the answer" over an already-settled result).
+  if($('live') && !$('live').classList.contains('hidden')) showResult({status:'pending', transcript:live, summary:''}, cid);
   // Recover the conversation id from the room if we don't have it yet (e.g. d.ended fired before the poll
   // resolved it, or a flaky connection). The bridge keeps room→convId for ~10 min — so a call that really
   // happened shows its REAL verdict instead of a false "nobody answered".
   if(!cid && LIVE_ROOM){ for(let i=0;i<4 && !cid;i++){ try{ const bs=await api('/pub/bridge/'+encodeURIComponent(LIVE_ROOM)); if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; } }catch(_){} if(!cid) await new Promise(r=>setTimeout(r,800)); } }
-  if(!cid){ const res={status:'no_answer',transcript:'',summary:''}; saveCheckToHistory(res,null); showResult(res); return; }
-  const live=(LIVE_TR.length?LIVE_TR.join('\n'):LIVE_TRANSCRIPT)||'';
-  // ONE quick fetch. If EL already has the verdict, we flip straight to it. If not, flip RIGHT NOW to the
-  // result page showing the streamed conversation under a brief "getting the answer" header — instead of
-  // lingering on the call view — then keep pulling the verdict and repaint when it lands. This is the snappy
-  // hangup→status flip.
+  if(!cid){ const res={status:'no_answer',transcript:live,summary:''}; saveCheckToHistory(res,null); showResult(res); return; }
+  // ONE quick fetch. If EL already has the verdict, we flip straight to it. If not, keep pulling and repaint
+  // when it lands (we already flipped off the call screen above).
   let o=null; try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){}
   if(!o||!o.status||o.status==='in_progress'){
-    showResult({status:'pending', transcript:live, summary:''}, cid);
     let tries=0;
     while((!o||!o.status||o.status==='in_progress')&&tries<10){ await new Promise(r=>setTimeout(r,1000)); try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){} tries++; }
   }
@@ -3270,6 +3274,9 @@ async function sendFeedback(v){
   try{ api('/pub/feedback',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid:RAIL_CID, verdict:v, shown:(LASTRES&&LASTRES.statusKey)||''})}); }catch(_){}
   const el=$('fbk'); if(el) el.innerHTML='<div class="fbk-thanks">'+FCHK(15)+' '+t('fbk.thanks','Thanks — this trains our checks to get sharper.')+'</div>';
 }
+// Status-detail formatting rule: a new sentence starts a new line — but a single sentence never
+// wraps across two lines on its own (each sentence is its own non-wrapping line).
+function nl2(s){ return String(s==null?'':s).replace(/([.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡])/g,'$1<br>'); }
 function showResult(o, cid){
   resultCacheSet(cid,o);
   stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
@@ -3286,6 +3293,9 @@ function showResult(o, cid){
   // Instant-flip placeholder: the call just ended and we flipped here immediately with the streamed
   // conversation; the real verdict is still being pulled and will repaint over this in a moment.
   if(o.status==='pending'){ cls='unk'; big='⏳'; title=t('v.getting','Getting the answer…'); note=t('note.getting','The call just finished — pulling the result.'); }
+  // "Store's too busy" — they didn't refuse, they just couldn't check (slammed / lone clerk). Product-aware
+  // copy lives here (the registry can't template the product name). Dormant until the verdict emits it.
+  else if(o.statusKey==='too_busy' || o.status==='too_busy'){ cls='unk'; big='🕗'; title=t('v.toobusy','Store’s too busy'); note=tf('note.toobusy','They didn’t say no, but they were too busy to check if <b style="color:#fff">{p}</b> was in stock. Try back later.',{p:esc(o.productName||catLabel()||'it')}); }
   // Statuses registry first — the owner-edited single source of truth (with ES variants by key).
   else if(o.statusKey && RSTATUSES[o.statusKey]){
     const s=RSTATUSES[o.statusKey];
@@ -3434,11 +3444,11 @@ function showResult(o, cid){
     : cls==='unk' ? t('term.unk','No clear answer') : '';
   const showFeedback = o.status==='completed' && cls==='unk' && !!o.transcript && cid && !String(cid).startsWith('local:');
   // New unclear copy: name the product, hand the call to the human (the transcript is right below).
-  if(showFeedback){ const pn=esc(o.productName||catLabel()||'it'); note = tf('note.fbk','We couldn’t figure out if <b style="color:#fff">{p}</b> was on the shelves — tell us what you think.',{p:pn}); }
+  if(showFeedback){ const pn=esc(o.productName||catLabel()||'it'); note = tf('note.fbk','It’s unclear if <b style="color:#fff">{p}</b> was in stock. Read the convo and tell us what you think.',{p:pn}); }
   // Feedback = an end-of-call survey (the four statuses), shown ABOVE the CTA on an unclear verdict.
+  // No copy inside the poll box itself — the detailed status message above already says what to do.
   const feedbackBlock = showFeedback ? `
     <div class="fbk" id="fbk">
-      <div class="fbk-q">${t('fbk.q','Can you tell from the conversation below? What do you think?')}</div>
       <div class="fbk-row">
         <button class="fbk-b in" onclick="sendFeedback('in')"><span class="fbk-ic in">${FCHK(17)}</span><span class="fbk-l">${t('fbk.in','In stock')}</span></button>
         <button class="fbk-b out" onclick="sendFeedback('out')"><span class="fbk-ic out">✕</span><span class="fbk-l">${t('fbk.out','Not in')}</span></button>
@@ -3451,7 +3461,7 @@ function showResult(o, cid){
       <div class="rnav" id="rnav"></div>
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
       <div class="rtitle2">${esc(showFeedback ? t('v.unclear2','Unclear') : vTitle)}</div>
-      ${note?`<div class="rsub">${note}</div>`:''}
+      ${note?`<div class="rsub">${nl2(note)}</div>`:''}
       ${breakdown}
     </div>
     ${feedbackBlock}
