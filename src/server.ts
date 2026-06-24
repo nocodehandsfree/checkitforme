@@ -606,8 +606,26 @@ function chainLogoFile(name: string | null | undefined): string | null {
   }
   return null;
 }
+// DB-first logo (docs/specs/logo-r2-keystone.md): chains.logo_url (shared R2) wins over the per-branch
+// filesystem, so a chain's logo travels to every environment and can't drift. Cached name→logo map,
+// refreshed on a timer + immediately after an upload/migration. Empty cache (cold start, or a chain
+// with no logo_url yet) simply falls through to the filesystem resolver — fully backward-compatible.
+let chainLogoDbCache = new Map<string, { url: string; wide: boolean; dark: boolean }>();
+async function refreshChainLogoDb(): Promise<void> {
+  try {
+    const rows = await db.select({ name: chains.name, logoUrl: chains.logoUrl, logoWide: chains.logoWide, logoDark: chains.logoDark })
+      .from(chains).where(sql`${chains.logoUrl} is not null and ${chains.logoUrl} != ''`);
+    const m = new Map<string, { url: string; wide: boolean; dark: boolean }>();
+    for (const r of rows) if (r.logoUrl) m.set((r.name || "").toLowerCase(), { url: r.logoUrl, wide: r.logoWide === true, dark: r.logoDark === true });
+    chainLogoDbCache = m;
+  } catch (e) { console.error("refreshChainLogoDb", e); }
+}
 function chainLogoInfo(name: string | null | undefined): { url: string | null; wide: boolean; dark: boolean } {
-  const f = chainLogoFile(name);
+  if (name) {
+    const hit = chainLogoDbCache.get(name.toLowerCase()); // DB-first: shared-R2 URL travels across envs
+    if (hit) return hit;
+  }
+  const f = chainLogoFile(name); // filesystem fallback (pre-migration, and unchained store names)
   if (!f) return { url: null, wide: false, dark: false };
   const m = logoMeta()[f] || { w: 0, d: 0 };
   return { url: `/logos/chains/${f}?v=73`, wide: m.w === 1, dark: m.d === 1 };
@@ -681,6 +699,70 @@ app.get("/logos/chains/:file", (c) => {
     c.header("Cache-Control", "public, max-age=86400");
     return c.body(buf, 200, { "Content-Type": ext === "svg" ? "image/svg+xml" : ext === "webp" ? "image/webp" : "image/png" });
   } catch { return c.notFound(); }
+});
+
+// ---- Chain logo upload + migration (docs/specs/logo-r2-keystone.md) ----
+// Upload a chain's logo straight to shared R2 and point the chain row at it (logo_url). Server-side PUT
+// via a presigned URL — one request from the Admin. ?wide=1 / ?dark=1 set the render flags. After this
+// the logo travels to every environment through the DB row and can't drift.
+app.post("/api/chains/:id/logo", async (c) => {
+  const cfg = r2Config();
+  if (!cfg) return c.json({ error: "R2 not configured (R2_* env)" }, 503);
+  const id = Number(c.req.param("id"));
+  const ch = (await db.select().from(chains).where(eq(chains.id, id)))[0];
+  if (!ch) return c.json({ error: "chain not found" }, 404);
+  const bytes = new Uint8Array(await c.req.arrayBuffer());
+  if (bytes.byteLength < 64) return c.json({ error: "empty or tiny image body" }, 400);
+  const ct = c.req.header("content-type") || "image/png";
+  const ext = /webp/i.test(ct) ? "webp" : /svg/i.test(ct) ? "svg" : "png";
+  const key = `chain-logos/${chainSlug(ch.name)}.${ext}`;
+  const { uploadUrl, publicUrl } = await presignPut(key, cfg, ct);
+  const put = await fetch(uploadUrl, { method: "PUT", body: bytes, headers: { "content-type": ct } });
+  if (!put.ok) return c.json({ error: `R2 PUT failed: ${put.status}` }, 502);
+  const wide = c.req.query("wide") === "1", dark = c.req.query("dark") === "1";
+  await db.update(chains).set({ logoUrl: publicUrl, logoWide: wide, logoDark: dark }).where(eq(chains.id, id));
+  await refreshChainLogoDb();
+  return c.json({ id, name: ch.name, logoUrl: publicUrl, wide, dark });
+});
+
+// One-time migration: push every chain's existing file logo to R2 (chain-logos/<file>) and set logo_url
+// on the row. Resolves each chain through the SAME fuzzy matcher the app uses, so franchise/variant
+// chains that borrow a shared file ("Franklin's Ace Hardware" → ace_hardware.png) all get pointed at it.
+// Dedupes uploads by filename. ?dryRun=1 returns the plan. Fire-and-forget + resumable (re-run is safe).
+let logoMigrating = false;
+app.post("/api/admin/migrate-logos-to-r2", async (c) => {
+  const cfg = r2Config();
+  if (!cfg) return c.json({ error: "R2 not configured (R2_* env)" }, 503);
+  const allChains = await db.select({ id: chains.id, name: chains.name }).from(chains);
+  const plan = allChains
+    .map((ch) => ({ id: ch.id, name: ch.name, file: chainLogoFile(ch.name) }))
+    .filter((p): p is { id: number; name: string; file: string } => !!p.file);
+  if (c.req.query("dryRun") === "1") {
+    return c.json({ dryRun: true, chains: plan.length, uniqueFiles: new Set(plan.map((p) => p.file)).size, sample: plan.slice(0, 8) });
+  }
+  if (logoMigrating) return c.json({ started: false, running: true, chains: plan.length });
+  logoMigrating = true;
+  (async () => {
+    const uploaded = new Set<string>();
+    for (const p of plan) {
+      try {
+        const key = `chain-logos/${p.file}`;
+        if (!uploaded.has(p.file)) {
+          const buf = readFileSync(join(here, `../public/logos/chains/${p.file}`));
+          const ct = p.file.endsWith(".webp") ? "image/webp" : p.file.endsWith(".svg") ? "image/svg+xml" : "image/png";
+          const { uploadUrl } = await presignPut(key, cfg, ct);
+          const put = await fetch(uploadUrl, { method: "PUT", body: new Uint8Array(buf), headers: { "content-type": ct } });
+          if (!put.ok) { console.error("logo migrate PUT", p.file, put.status); continue; }
+          uploaded.add(p.file);
+        }
+        const meta = logoMeta()[p.file] || { w: 0, d: 0 };
+        await db.update(chains).set({ logoUrl: `${cfg.publicBase}/${key}`, logoWide: meta.w === 1, logoDark: meta.d === 1 }).where(eq(chains.id, p.id));
+      } catch (e) { console.error("logo migrate", p.name, e); }
+    }
+    await refreshChainLogoDb();
+    logoMigrating = false;
+  })().catch(() => { logoMigrating = false; });
+  return c.json({ started: true, chains: plan.length, uniqueFiles: new Set(plan.map((p) => p.file)).size });
 });
 
 app.get("/pub/stores", async (c) => {
@@ -3027,3 +3109,5 @@ setInterval(() => withLock("geocode", 10, () => geocodeMissing(1)).catch((e) => 
 setInterval(() => withLock("harvest", 110, harvestHoursTick).catch((e) => console.error("harvest:", e)), 120_000); // self-updating hours (policy-gated, off by default)
 setInterval(() => withLock("cust-sched", 85, customerScheduleTick).catch((e) => console.error("cust-sched:", e)), 90_000); // subscriber auto-checks (policy-gated)
 setInterval(() => withLock("gmail-receipts", 25, gmailReceiptTick).catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)
+refreshChainLogoDb().catch(() => {}); // DB-first chain-logo cache: initial load + refresh (no lock — read-only, idempotent)
+setInterval(() => refreshChainLogoDb().catch(() => {}), 60_000);
