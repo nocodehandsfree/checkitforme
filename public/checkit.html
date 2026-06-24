@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r69" />
+<meta name="x-rev" content="names-r70" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -646,6 +646,9 @@ __BRAND_HEAD__
   #auth_phone::placeholder{color:#5e5e6c;font-style:italic;font-weight:400}
   #auth_phone:focus{outline:none;box-shadow:none;border:none}
   #auth_phonerow:focus-within{border-color:rgba(74,222,128,.45);box-shadow:0 0 0 2px rgba(74,222,128,.12)}
+  /* kill the browser autofill yellow — keep our dark field + white text */
+  #auth_phone:-webkit-autofill,#auth_phone:-webkit-autofill:hover,#auth_phone:-webkit-autofill:focus,#auth_phone:-webkit-autofill:active{
+    -webkit-text-fill-color:#fff;caret-color:#fff;-webkit-box-shadow:0 0 0 1000px #15151c inset;box-shadow:0 0 0 1000px #15151c inset;transition:background-color 99999s ease-out 0s}
   input[type="time"].kin{text-align:left} input[type="time"].kin::-webkit-date-and-time-value{text-align:left}
   /* custom photo picker — matches the site's inputs instead of the raw OS file control */
   .filepick{display:flex;align-items:center;gap:11px;width:100%;background:#15151c;border:1.5px dashed var(--pline);border-radius:11px;padding:14px 13px;font-size:14px;font-weight:700;color:#b9b9c8;cursor:pointer;transition:border-color .12s,color .12s;box-sizing:border-box}
@@ -1236,9 +1239,9 @@ __BRAND_HEAD__
     <div id="auth_logo"></div>
     <!-- Step 1: phone number -->
     <div id="auth_step_email">
-      <div class="meta" style="margin:2px 0 14px;font-size:16px;font-weight:800;color:#fff" data-i18n="auth.phone.lead">First check's on us!</div>
+      <div class="meta" id="auth_lead" style="margin:2px 0 14px;font-size:16px;font-weight:800;color:#fff" data-i18n="auth.phone.lead">First check's on us!</div>
       <div id="auth_phonerow" style="display:flex;align-items:center;background:#15151c;border:1px solid var(--border);border-radius:12px;padding:0 16px;min-height:54px">
-        <span style="flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;font-size:16px;font-weight:700;line-height:1;color:#9a9aac;white-space:nowrap;padding-right:14px;margin-right:14px;border-right:1px solid rgba(255,255,255,.13)">🇺🇸 +1</span>
+        <span style="flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;font-size:16px;font-weight:700;line-height:1;color:#9a9aac;white-space:nowrap;margin-right:16px">🇺🇸 +1</span>
         <input id="auth_phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Your phone number" data-i18n-ph="auth.phone.ph" oninput="fmtPhoneInput(this)" onkeydown="if(event.key==='Enter')phoneStart()" style="flex:1;min-width:0;background:transparent;color:#fff;border:none;outline:none;box-shadow:none;padding:0;line-height:54px;height:54px;font-size:16px;box-sizing:border-box">
       </div>
       <div id="auth_err" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
@@ -1591,7 +1594,7 @@ const I18N={ es:{
   'acct.cid.on':'Las llamadas salen de tu celular ✓','acct.cid.off':'Llama a las tiendas desde tu número',
   'cid.title':'Llama desde tu propio número','cid.sub':'Verifica tu celular una vez para que las tiendas vean <b>tu</b> número en el identificador — contestan mucho más que a un número desconocido.','cid.cta':'Verificar mi número →','cid.calling2':'Llamándote…','cid.calling':'📞 Te estamos llamando','cid.enter':'Contesta y, cuando te lo pidan, marca este código:','cid.waiting':'Esperando a que termine la llamada…','cid.done':'Tu número está verificado','cid.donesub':'Las verificaciones ahora salen de tu celular — las tiendas ven tu número.','cid.donecta':'Listo','cid.unavail':'La verificación no está disponible ahora — inténtalo más tarde.','cid.startfail':'No se pudo iniciar la verificación — inténtalo de nuevo.','cid.timeout':'No se verificó a tiempo — cierra e inténtalo de nuevo.',
   // login + call sheet + feedback + live steps + result terms (added 2026-06-24)
-  'auth.phone.lead':'¡Tu primera verificación es gratis!','auth.phone.ph':'Tu número de teléfono',
+  'auth.phone.lead':'¡Tu primera verificación es gratis!','auth.phone.ph':'Tu número de teléfono','auth.welcome.back':'¡Bienvenido de nuevo! 👋',
   'cs.costs':'cuesta 1 verificación','cs.toggle':'Ver pasos de la llamada',
   'err.storename':'Agrega el nombre de la tienda',
   'fbk.in':'En stock','fbk.out':'No está','fbk.soon':'Reabasteciendo','fbk.unsure':'Sin claridad',
@@ -1927,16 +1930,31 @@ function openAuth(){
   setI('auth_logo', authMark()); track('auth_open');
   $('auth_step_email').style.display=''; $('auth_step_code').style.display='none';
   $('auth_err').textContent=''; $('auth_codeerr').textContent='';
+  clearTimeout(AUTH_KNOWN_T); AUTH_KNOWN_SEQ++; AUTH_RETURNING=false; setAuthLead(); // fresh start each open
   setTimeout(()=>{try{$('auth_phone').focus();}catch(e){}},90);
 }
 function closeAuth(){ $('authOverlay').classList.remove('on'); }
 function authMark(){ return `<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:30px;width:auto;display:block">`; }
 // ---- Phone sign-in (Twilio SMS → our session token). The ONLY auth flow. ----
 let AUTH_PHONE='';
+// "Welcome back" vs "First check's on us" — detected live as they finish typing their number.
+let AUTH_KNOWN_T=null, AUTH_KNOWN_SEQ=0, AUTH_RETURNING=false;
+function setAuthLead(){ const el=$('auth_lead'); if(el) el.textContent = AUTH_RETURNING ? t('auth.welcome.back','Welcome back 👋') : t('auth.phone.lead',"First check's on us!"); }
+function authPhoneKnownCheck(d){
+  clearTimeout(AUTH_KNOWN_T);
+  if((d||'').length<10){ if(AUTH_RETURNING){ AUTH_RETURNING=false; setAuthLead(); } return; }
+  const phone='+1'+d, seq=++AUTH_KNOWN_SEQ;
+  AUTH_KNOWN_T=setTimeout(async()=>{
+    try{ const r=await api('/auth/phone/known',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone})});
+      if(seq!==AUTH_KNOWN_SEQ) return; // a newer keystroke superseded this
+      AUTH_RETURNING=!!(r&&r.known); setAuthLead();
+    }catch(_){}
+  },380);
+}
 function normUsPhone(s){ const d=(s||'').replace(/\D/g,''); if(d.length===10) return '+1'+d; if(d.length===11&&d[0]==='1') return '+'+d; return ''; }
 function fmtUsPhone(e){ return (e||'').replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'($1) $2-$3'); }
 // Live-format the phone field as they type: 5551234567 → (555) 123-4567.
-function fmtPhoneInput(el){ const d=(el.value||'').replace(/\D/g,'').slice(0,10); let o=''; if(d.length>6)o='('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6); else if(d.length>3)o='('+d.slice(0,3)+') '+d.slice(3); else if(d.length)o='('+d; el.value=o; }
+function fmtPhoneInput(el){ const d=(el.value||'').replace(/\D/g,'').slice(0,10); let o=''; if(d.length>6)o='('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6); else if(d.length>3)o='('+d.slice(0,3)+') '+d.slice(3); else if(d.length)o='('+d; el.value=o; authPhoneKnownCheck(d); }
 // Step 1 — text a 6-digit code to the cell. `resend` keeps us on the code step.
 async function phoneStart(resend){
   if(AUTH.busy) return;

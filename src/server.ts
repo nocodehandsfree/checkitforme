@@ -80,7 +80,7 @@ async function ownerOnlyRetailerIds(): Promise<Set<number>> {
   const rows = await db.select({ id: retailers.id }).from(retailers).where(eq(retailers.ownerOnly, true));
   return new Set(rows.map((r) => r.id));
 }
-import { getAccount, getAccountByPhone, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, SUB, PACKS } from "./billing";
+import { getAccount, getAccountByPhone, phoneAccountExists, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, SUB, PACKS } from "./billing";
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
@@ -451,6 +451,16 @@ app.post("/auth/phone/start", async (c) => {
   if (!/^\+1\d{10}$/.test(e)) return c.json({ error: "us_number_required" }, 400); // US only for now
   const r = await startPhoneVerify(e);
   return r.ok ? c.json({ ok: true }) : c.json({ error: r.error }, 400);
+});
+// Read-only: is this number a returning account? Lets the login screen show "Welcome back" vs
+// "First check's on us" before they submit. Rate-limited (anti-enumeration); never creates an account.
+app.post("/auth/phone/known", async (c) => {
+  const rl = rlCheck("lead", clientIp(c.req.raw.headers), LIMITS.lead);
+  if (!rl.ok) return c.json({ error: "rate_limited" }, 429);
+  const { phone } = await c.req.json().catch(() => ({}));
+  const e = authE164(String(phone || ""));
+  if (!/^\+1\d{10}$/.test(e)) return c.json({ known: false });
+  return c.json({ known: await phoneAccountExists(e) });
 });
 // Step 2: confirm the code → find/create the phone account → issue our session token.
 app.post("/auth/phone/check", async (c) => {
