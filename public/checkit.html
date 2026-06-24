@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r54" />
+<meta name="x-rev" content="names-r55" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -231,10 +231,13 @@ __BRAND_HEAD__
   .rtitle2{font-size:30px;font-weight:900;letter-spacing:-1px;line-height:1.05;margin-top:14px}
   .rverdict.out .rtitle2{color:var(--red)} .rverdict.in .rtitle2{color:var(--green)} .rverdict.unk .rtitle2{color:#FBBF24} .rverdict.soon .rtitle2{color:#F59E0B}
   .rsub{color:#a6a6b4;font-size:14.5px;line-height:1.55;margin-top:12px}
-  .rsub b{color:#fff;font-weight:800} .rsub .y{color:var(--yellow);font-weight:800}
+  .rsub b{color:#fff;font-weight:800} .rsub .y{color:#fff;font-weight:800} /* product name neutral white — no per-vertical accent on a result */
   .rstore-line{color:#cfcfe0;font-size:13px;font-weight:600;margin-top:8px;line-height:1.4}
   .rstore-line b{color:#fff;font-weight:800} .rstore-line .ad{color:var(--muted);font-weight:500}
   .topcta{margin-top:18px}
+  /* One verdict hue per result: the CTA stays green, but only IN-STOCK gets the celebratory green glow.
+     Every other status drops to a flat shadow so green light doesn't bleed into the red/amber wash. */
+  body.rview.rv-out .cta,body.rview.rv-soon .cta,body.rview.rv-unk .cta{box-shadow:0 4px 14px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.18)}
   /* boxless "The call" header */
   .callsec{margin-top:24px}
   .callhead{display:flex;align-items:center;justify-content:center;gap:10px;position:relative;text-align:center}
@@ -254,9 +257,9 @@ __BRAND_HEAD__
   .ctl{position:relative;margin-top:14px}
   /* the line ends at the LAST (status) dot — bottom:12px lands it on that dot, never past it */
   .ctl::before{content:'';position:absolute;left:5px;top:7px;bottom:10px;width:1.5px;background:var(--green)}
-  .ctl.ctl-out::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 62%,var(--red) 100%)}
-  .ctl.ctl-unk::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 62%,#FBBF24 100%)}
-  .ctl.ctl-soon::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 62%,#F59E0B 100%)}
+  .ctl.ctl-out::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 56%,var(--red) 100%)}
+  .ctl.ctl-unk::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 56%,#FBBF24 100%)}
+  .ctl.ctl-soon::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 56%,#F59E0B 100%)}
   .ctl-dot{position:absolute;left:1px;width:9px;height:9px;border-radius:50%;background:#2c2c38;z-index:1}
   /* roll-up header: "Calling {store}…" — tap to fold the step log up/down. FIRST dot is green. */
   .reach{margin:0 0 12px}
@@ -270,7 +273,7 @@ __BRAND_HEAD__
   /* steps: greyed text, NO dots; the final connection step turns green ✓ once a person is reached */
   .reach-steps{padding-left:24px;display:flex;flex-direction:column;gap:6px;margin-top:10px}
   .ctl-step-row{font-size:13px;line-height:1.45;color:#56566a}
-  .ctl-step-row.ok{color:var(--green);font-weight:700}
+  .ctl-step-row.ok{color:#74C68C;font-weight:700} /* the key step ("Asking about …") — soft green, no checkmark */
   .ctl-step-row .cs-time{color:#56566a;font-weight:600;margin-left:6px}
   /* conversation label (green dot) + bubbles (NO per-bubble dots) */
   .ctl-conv{position:relative;padding-left:24px;margin:0 0 12px}
@@ -382,8 +385,8 @@ __BRAND_HEAD__
   .chat{display:flex;flex-direction:column;gap:8px;margin-top:2px}
   .bub{max-width:84%;padding:9px 13px;border-radius:16px;font-size:13.5px;line-height:1.42;word-wrap:break-word;overflow-wrap:anywhere}
   .bub .nm{display:block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;opacity:.75;margin-bottom:3px}
-  .bub.a{align-self:flex-end;background:linear-gradient(180deg,rgba(74,222,128,.2),rgba(74,222,128,.13));border:1px solid rgba(74,222,128,.32);color:#eafff2;border-bottom-right-radius:5px}
-  .bub.a .nm{color:var(--green)}
+  .bub.a{align-self:flex-end;background:#181820;border:1px solid var(--border);color:#e9e9f2;border-bottom-right-radius:5px} /* neutral bubble — only the LABEL is colored */
+  .bub.a .nm{color:#74C68C} /* Check AI = soft green (our agent) */
   .bub.c{align-self:flex-start;background:#20202b;border:1px solid var(--border);color:#e9e9f2;border-bottom-left-radius:5px}
   .bub.c .nm{color:#8a8a98}
   .bub.c.menu{background:#16161d;border-style:dashed;opacity:.9} .bub.c.menu .nm{color:#7a7a88}
@@ -639,7 +642,7 @@ __BRAND_HEAD__
   .foot-links{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:14px}
   .foot-links a{color:#8f8fa0;font-size:13px;font-weight:700;text-decoration:none;cursor:pointer}
   .foot-links a:hover{color:#fff}
-  .foot-meta{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .foot-meta{display:flex;align-items:center;gap:12px;margin-bottom:16px;justify-content:space-between} /* Option B: Discord/X left, language switcher pushed far right */
   .foot-social{display:flex;flex-direction:row;gap:10px;align-items:center}
   .foot-social a{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;border:1px solid var(--border);background:var(--sheet);color:#cfcfd8}
   .foot-social a svg{width:19px;height:19px}
@@ -770,6 +773,10 @@ __BRAND_HEAD__
   .rnav-b{width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#dcdce6;display:grid;place-items:center;cursor:pointer;padding:0;touch-action:manipulation;transition:transform .1s,border-color .12s,color .12s}
   .rnav-b:active{transform:scale(.92)}
   body.rview .rnav-b{background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.16)}
+  /* Calendar moves into the result nav cluster (left of the ‹ › arrows) and leaves the global header. */
+  body.rview #calbtn{display:none}
+  body.rview #rnav .railcal{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.22);color:#e9e9f0;flex:0 0 auto} /* neutral icon, brighter hairline than the arrows */
+  body.rview .pill .dot{background:#dcdce6;box-shadow:none} /* no product-accent dot on a result */
   .railsel{flex:1;min-width:0;appearance:none;-webkit-appearance:none;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;font-size:12.5px;font-weight:700;border-radius:11px;padding:9px 26px 9px 11px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M0.5 0.5h8L4.5 5.5z' fill='%23ffffff'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
   /* Prev/next: subtle outlined circles (not loud filled accent) so they don't fight the verdict for the eye. */
   .railnav{flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:1px solid var(--border);background:var(--sheet);color:#cfcfd9;display:grid;place-items:center;cursor:pointer;padding:0;transition:transform .1s,border-color .12s,color .12s}
@@ -2739,7 +2746,8 @@ let LIVE_STAGE=0;
 function liveStageLabel(n){
   const nm=splitStoreName((SEL_STORE&&SEL_STORE.name)||''); const store=[nm.base,nm.branch].filter(Boolean).join(' ')||t('live.store','the store');
   const prod=(SEL_PRODUCT||findProductLabel()||catLabel()||t('live.item','your item'));
-  return ({1:tf('live.s1','Calling {s}…',{s:store}),2:t('live.s2',"It's ringing…"),3:t('live.s3',"We've connected…"),4:t('live.s4','Listening to menu options…'),5:t('live.s5','Navigating the menu…'),6:t('live.s6','Transferring to the front…'),7:t('live.s7','An associate answered!'),8:tf('live.s8','Asking about {p}…',{p:prod})})[n]||'';
+  // Active-voice steps (the result design). Stage 1 is the roll-up handle ("Ringing the store…").
+  return ({1:t('live.s1','Ringing the store…'),2:t('live.s2',"It's ringing…"),3:t('live.s3',"We've connected"),4:t('live.s4','Listening to the menu…'),5:t('live.s5','Working through the menu…'),6:t('live.s6','Transferred to the front'),7:t('live.s7','A person picked up'),8:tf('live.s8','Asking about {p}',{p:prod})})[n]||'';
 }
 function liveStage(n){
   if(!n||n<=LIVE_STAGE) return;
@@ -2816,10 +2824,11 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     // "Asking about {cat}" line stays green when you reopen it, not just live).
     const done = finalElapsed!=null || !!(status&&status.title);
     const ok = realI===n-1 && done && reached;
-    return `<div class="ctl-step-row${ok?' ok':''}">${esc(s.label)}${ok?' ✓':''}${secs!=null?`<span class="cs-time">${secs}s</span>`:''}</div>`;
+    return `<div class="ctl-step-row${ok?' ok':''}">${esc(s.label)}${secs!=null?`<span class="cs-time">${secs}s</span>`:''}</div>`;
   }).join('');
-  const storeNm=(SEL_STORE && splitStoreName(SEL_STORE.name).base) || t('live.store','the store');
-  const reach = n ? `<details class="reach" open><summary><span class="ctl-dot"></span><span class="reach-lbl">${tf('step.calling','Calling {x}…',{x:esc(storeNm)})}</span><span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}</span><span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
+  // Roll-up handle: lead with "Ringing the store…" (drop the "Calling {store}" header) + total steps · secs.
+  const totalS = finalElapsed!=null ? Math.round(finalElapsed) : (n>0 ? Math.round(steps[n-1].at) : 0);
+  const reach = n ? `<details class="reach" open><summary><span class="ctl-dot"></span><span class="reach-lbl">${t('step.ringing','Ringing the store…')}</span><span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''}</span><span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
   // Conversation: a "Conversation" label (green dot) then the bubbles — NO per-bubble dots.
   const convLabel = human.length ? `<div class="ctl-conv"><span class="ctl-dot"></span><span class="conv-lbl">${t('res.conversation','Conversation')}</span></div>` : '';
   const emptyMsg = finalElapsed==null ? t('live.waitperson','Waiting to reach a person…') : '';
@@ -2827,7 +2836,7 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     ? human.map(l=>`<div class="ctl-bub${/^Agent:/.test(l)?' ai':''}">${bubbleHTML(l,true)}</div>`).join('')
     : (emptyMsg?`<div class="cs-wait">${emptyMsg}</div>`:'');
   // Bottom: the call status — last dot + the verdict line (no "confirmed").
-  const statusRow = (status&&status.title) ? `<div class="ctl-status tl-${status.cls||'unk'}"><span class="ctl-dot"></span><span class="status-txt">${esc(status.title)}</span></div>` : '';
+  const statusRow = (status&&(status.term||status.title)) ? `<div class="ctl-status tl-${status.cls||'unk'}"><span class="ctl-dot"></span><span class="status-txt">${esc(status.term||status.title)}</span></div>` : '';
   const lineCls = status ? ('ctl-'+(status.cls||'unk')) : 'ctl-live';
   return `<div class="ctl ${lineCls}">${reach}${convLabel}<div id="convo_body">${convo}</div>${statusRow}</div>`;
 }
@@ -3028,7 +3037,7 @@ function bubbleHTML(line, isHuman){
   if(!m) return `<div class="bub-note">${esc(line)}</div>`;
   const isAgent=m[1]==='Agent', who=isAgent?'a':'c';
   // The store side splits into the automated phone "Menu" vs a live "Associate" once our bot reaches a person.
-  const label=isAgent?t('lbl.agent','Check AI'):(isHuman?t('lbl.assoc','Associate'):t('lbl.menu','Menu'));
+  const label=isAgent?t('lbl.agent','Check AI'):(isHuman?t('lbl.assoc','Staff'):t('lbl.menu','Menu'));
   return `<div class="bub ${who}${(!isAgent&&!isHuman)?' menu':''}"><span class="nm">${label}</span>${esc(m[2])}</div>`;
 }
 // Where the live-person conversation begins: the clerk greeting just before our bot asks its question
@@ -3169,8 +3178,8 @@ function showResult(o, cid){
   else if(o.statusKey==='left_on_hold'){ cls='unk'; big='⏳'; title=t('v.hold','Left on hold'); note=t('note.hold',"We reached someone and they went to check — but the hold ran long and the call dropped before they came back. No charge. Try again and we'll try to catch them."); }
   else if(o.status==='completed'&&o.doesNotSell){ cls='out'; big='🚫'; title=t('v.nocarry',"They don't carry it"); note=tf('note.nocarry',"This store doesn't carry "+(catLabel()||'this')+" — try another.",{x:catLabel()||'this'}); }
   else if(o.status==='completed'&&o.soldOut){ cls='out'; big='🕐'; title=t('v.soldout','Sold out'); note=t('note.soldout',"Came in, but it's already gone. Worth catching the next shipment."); }
-  else if(o.status==='completed'&&o.confirmed===true){ cls='in'; big='✅'; title=t('v.in','In stock!'); note=tf('note.in','They have {c} — go get it.',{c:'<b style="color:var(--accent);font-weight:800">'+esc(catLabel()||'them')+'</b>'}); }
-  else if(o.status==='completed'&&o.confirmed===false){ cls='out'; big='❌'; title=t('v.out','Not in stock'); note=t('note.out',"They don't have it right now."); }
+  else if(o.status==='completed'&&o.confirmed===true){ cls='in'; big='✅'; title=t('v.in','In stock!'); note=tf('note.in','They have {c} — go get it.',{c:'<b style="color:#fff;font-weight:800">'+esc(catLabel()||'them')+'</b>'}); }
+  else if(o.status==='completed'&&o.confirmed===false){ cls='out'; big='❌'; title=t('v.out','Not in stock'); note=t('note.out',"They don't have it."); }
   else if(o.status==='completed'){ // reached the end but no yes/no extracted
     if(asked){ cls='unk'; big='🔄'; title=t('v.unclear','No clear answer — recheck'); note=t('note.unclear','A person picked up but we couldn’t pin down a clear yes or no — worth a quick recheck. See what they said below.'); }
     else { cls='unk'; big='📵'; title=t('v.noanswer','Nobody answered'); note=t('note.noanswer.desk','Got through the menu, but no one picked up at the desk. No charge.'); }
@@ -3183,7 +3192,7 @@ function showResult(o, cid){
   else if(o.status==='closed'){ cls='unk'; big='🔒'; title=t('v.closedt','Store closed'); note=t('note.closed',"They're closed right now — no charge. Try again when they're open."); }
   else if(o.status==='failed'){ cls='unk'; big='⚠️'; title=t('v.failed','Call failed'); note=safeReason(o.failureReason)||t('note.failed','Something went wrong on our end — no charge.'); }
   // If the clerk named the exact product they have in, surface it on the in-stock verdict.
-  if(cls==='in' && o.productName){ note=tf('note.in.named','They have <b style="color:var(--accent)">'+esc(o.productName)+'</b> in — go get it.',{x:esc(o.productName)}); }
+  if(cls==='in' && o.productName){ note=tf('note.in.named','They have <b style="color:#fff">'+esc(o.productName)+'</b> in — go get it.',{x:esc(o.productName)}); }
   // Alpha: "not in NOW, but a shipment is coming" → the hopeful be-first verdict. The clerk named a
   // shipment day on a no/sold-out → flip from a flat "not in" to a restock-incoming heads-up.
   if(cls!=='in' && !o.doesNotSell && o.status==='completed' && o.shipmentDay){
@@ -3301,6 +3310,11 @@ function showResult(o, cid){
   try{ localStorage.setItem('cifm_cls_last',cls); if(cid) localStorage.setItem('cifm_cls:'+cid,cls); }catch(e){}
   // Unclear verdict → point them at the transcript AND ask for a quick one-tap label. That label is the
   // training signal: it tells us what the answer REALLY was on the calls our consensus couldn't call.
+  // Verdict-specific terminus line at the bottom of the timeline (distinct from the big verdict title).
+  const termLabel = cls==='in' ? t('term.in','In stock — confirmed')
+    : cls==='out' ? t('term.out','Not in stock')
+    : cls==='soon' ? tf('term.soon','Restock confirmed · {d}',{d:esc(fmtShipDay(o.shipmentDay)||'soon')})
+    : cls==='unk' ? t('term.unk','No clear answer') : '';
   const showFeedback = o.status==='completed' && cls==='unk' && !!o.transcript && cid && !String(cid).startsWith('local:');
   if(showFeedback) note = (note?note+' ':'') + t('note.readbelow','Read the conversation below — then tell us what they actually said.');
   const feedbackBlock = showFeedback ? `
@@ -3323,7 +3337,7 @@ function showResult(o, cid){
     <div class="topcta">${primaryCta}</div>
     <div class="callsec">
       ${canTranslate?`<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button></div>`:''}
-      ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed, {cls, title:vTitle})}
+      ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed, {cls, title:vTitle, term:termLabel})}
     </div>
     ${feedbackBlock}
     ${inStock ? inActions : ''}
@@ -3643,7 +3657,13 @@ function renderCallRail(cid){
   // On the newest call you only see ›; once you step forward a ‹ appears to its left.
   const nav=$('rnav'); if(nav){
     const f=railScoped(), i=f.findIndex(e=>e.cid===cid);
-    nav.innerHTML = (i>=0 && f.length>1) ? `${i>0?`<button class="rnav-b" onclick="railStep(-1)" aria-label="Newer call"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:''}${i<f.length-1?`<button class="rnav-b" onclick="railStep(1)" aria-label="Older call"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9.5 5l6.5 7-6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:''}` : '';
+    // Calendar lives in the nav cluster on results (left of the ‹ › arrows). The popover itself stays in
+    // the header #hcalwrap (kept in the DOM, button hidden via CSS) so it survives showResult re-renders.
+    const onResult=document.body.classList.contains('rview');
+    const hasDays=histList().filter(e=>e.cid&&e.ts&&railInCat(e)).length>0;
+    const calBtn = (onResult && hasDays) ? `<button class="railcal" onclick="openRailCal()" aria-label="Pick a day of calls"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg></button>` : '';
+    const arrows = (i>=0 && f.length>1) ? `${i>0?`<button class="rnav-b" onclick="railStep(-1)" aria-label="Newer call"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:''}${i<f.length-1?`<button class="rnav-b" onclick="railStep(1)" aria-label="Older call"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M9.5 5l6.5 7-6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`:''}` : '';
+    nav.innerHTML = calBtn + arrows;
   }
 }
 function railFilter(k,v){ RAIL_F[k]=v; const f=railFiltered(); if(k==='date'&&v&&!f.length){ toast(t('rail.noneday','No checks on that day')); RAIL_F.date=''; renderCallRail(); return; } const cur=f.some(e=>e.cid===RAIL_CID); if(!cur&&f.length){ openHistEntry(f[0]); return; } renderCallRail(); }
