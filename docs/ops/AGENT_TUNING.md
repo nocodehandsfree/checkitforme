@@ -51,6 +51,13 @@ curl -s -X PATCH "https://api.elevenlabs.io/v1/convai/agents/$AGENT" -H "xi-api-
 ```
 Then update the table above + the date.
 
+## Call script v2 tweaks — staging clone, 2026-06-24 (later)
+- **Opening unhurried:** the in-stock opening question is delivered at a calm pace, asked ONCE, then waits
+  (no repeat/rephrase on a brief pause) — fixes the agent racing + repeating the first question.
+- **"set" said clearly** + **always ask the form:** on a YES it asks the SET, then — whether or not they
+  know the set — asks "tin or booster packs?", then wraps. (Previously it wrapped if the set was unknown.)
+- **tts.speed 0.9 → 0.85** (slower, clearer delivery).
+
 ## Call script (the agent's prompt) — staging clone, 2026-06-24
 The conversation prompt lives on the agent (not in repo code). Changed on the **staging clone only**:
 - **Name-aware in-stock opening:** if the clerk greets with a first name ("…Bob speaking") → "Hi Bob — do you
