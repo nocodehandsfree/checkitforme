@@ -37,6 +37,23 @@ for a gnarly conflict ping DevOps — don't redo your work blind.
   apply the same PATCH to prod's agent, or point prod's `ELEVENLABS_AGENT_ID` at the clone. **Do not blindly
   copy the staging agent id into prod via a code/merge step.**
 
+### 🟡 On staging, awaiting prod promotion (2026-06-24, checkit.html rev **names-r66**)
+Demo-polish batch on the staging branch; **not yet merged to prod.** Verify on `staging.checkitforme.com`.
+- **Login no longer auto-calls (r66):** logged-out `startCheck()` used to set `AUTH_PENDING=startCheck`, so
+  finishing sign-up auto-placed the call. Now it re-opens the call sheet (`AUTH_PENDING` → `showCallSheet()`),
+  so the user taps to call.
+- **Sign out → homepage (r66):** `doSignOut()` clears the session then `location.href='/'` (fresh load resets
+  all in-memory state) instead of staying on the current view.
+- **NeeDoh hero logo shrunk (r66):** landing hero sets `--logo-scale:.62` when `BRAND.category` is NeeDoh
+  (its wordmark rendered oversized at full `.heroart img` size).
+- **Spanish gaps filled (r66):** added 65 missing ES strings (login lead, call-sheet `cs.*`, feedback poll
+  `fbk.*`, live steps `live.s1–s8`, result terms `term.*`/`sub.*`, driver/handoff `ho.dv.*`/`ho.msg`). Site
+  i18n diff now clean except the dynamic `st.`/`stn.` prefixes (covered per-key).
+- **Location is already a manual step for new users:** boot only restores a *saved* location; with none,
+  the store list shows just a "Find my stores" button — no auto-prompt. (No change needed.)
+- **Agent voice tuning** (pacing/"drunk"/"haha"/restock-incoming) lives on the EL clone, not in this file —
+  see `docs/ops/AGENT_TUNING.md`; needs the Railway/EL key + a live listen to re-verify.
+
 ### 🟡 On staging, awaiting prod promotion (2026-06-23, checkit.html rev **names-r53**)
 All on the staging branch; **not yet merged to prod.** Verify on `staging.checkitforme.com`, then promote.
 - **Instant hangup→result flip (r53):** re-added the `d.ended` WS end-signal so the page flips the moment the
