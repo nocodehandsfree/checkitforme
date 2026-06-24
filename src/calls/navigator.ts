@@ -5,6 +5,9 @@
 // (training mode). ElevenLabs/Sonnet is never used here: this IS "everything cheap until human".
 import { llm } from "../llm";
 import { getSetting, setSetting } from "../db/settings";
+import { db } from "../db/client";
+import { chains } from "../db/schema";
+import { eq } from "drizzle-orm";
 
 const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
 // MAPPING model — drives tree DISCOVERY only (the learner). Cost is irrelevant here (map once); at
@@ -312,4 +315,17 @@ export async function placeNavCall(chainId: number | null, retailerId: number, r
   if (d.sid) session.callSid = d.sid;
   return { id };
 }
-export function navEnded(id: string) { const s = sessions.get(id); if (!s) return; if (s.status !== "human" && s.status !== "failed") s.status = "done"; if (s.confirm && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId); void persistRun(s); }
+export function navEnded(id: string) { const s = sessions.get(id); if (!s) return; if (s.status !== "human" && s.status !== "failed") s.status = "done"; if (s.confirm && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId); if (s.chainId != null) void markNavOutcome(s.chainId, s.humanAtSec != null); void persistRun(s); }
+
+/** Reflect a run's outcome on the chain so the admin shows where mapping stands (not just stuck on
+ *  "learning"): reached a human → "review" (a recipe to lock); never reached one → "attempted"
+ *  (tried, incomplete — ring-out or IVR dead-end, worth a retry). Never clobbers a "locked" chain. */
+async function markNavOutcome(chainId: number, reachedHuman: boolean): Promise<void> {
+  try {
+    const ch = (await db.select({ navStatus: chains.navStatus }).from(chains).where(eq(chains.id, chainId)))[0];
+    if (ch?.navStatus === "locked") return;
+    await db.update(chains)
+      .set({ navStatus: reachedHuman ? "review" : "attempted", navUpdatedAt: Math.floor(Date.now() / 1000) })
+      .where(eq(chains.id, chainId));
+  } catch (e) { console.error("[navigator] markNavOutcome", e); }
+}
