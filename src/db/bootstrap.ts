@@ -184,6 +184,11 @@ export async function bootstrap() {
     seen_at INTEGER NOT NULL, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
   await client.execute("CREATE INDEX IF NOT EXISTS stock_signals_retailer_idx ON stock_signals(retailer_id, seen_at)").catch(() => {});
   await client.execute("CREATE INDEX IF NOT EXISTS stock_signals_chain_idx ON stock_signals(chain_id, seen_at)").catch(() => {});
+  // Human feedback on a call's verdict (esp. "no clear answer" ones) — labels we use to measure where the
+  // consensus is wrong and tune the second-read prompt/rules. Joins to call_results by cid.
+  await client.execute(`CREATE TABLE IF NOT EXISTS call_feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, cid TEXT NOT NULL, user_verdict TEXT NOT NULL,
+    shown_status TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
   await client.execute(`CREATE TABLE IF NOT EXISTS discord_channels (
     id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id TEXT NOT NULL UNIQUE, label TEXT, chain TEXT,
     category TEXT NOT NULL DEFAULT 'Pokémon', note TEXT, active INTEGER NOT NULL DEFAULT 1,

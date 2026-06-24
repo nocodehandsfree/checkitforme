@@ -9,7 +9,7 @@ import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { WebSocketServer, type WebSocket } from "ws";
 import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql } from "drizzle-orm";
-import { db } from "./db/client";
+import { db, client } from "./db/client";
 import {
   callResults, categories, chains, communityPosts, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, waitlist, watches, zones, zoneRetailers,
 } from "./db/schema";
@@ -1633,6 +1633,34 @@ app.post("/pub/charge", async (c) => {
   let bal = await pubCredits();
   if (cid && !charged.has(cid) && bal > 0) { charged.add(cid); bal -= 1; await setSetting("pub_credits", String(bal)); }
   return c.json({ balance: bal, charged: true });
+});
+// Human feedback on a call's verdict — what the answer ACTUALLY was, per the person who read the transcript.
+// Most valuable on the "no clear answer" verdicts; it's the labeled data we use to tune the consensus.
+app.post("/pub/feedback", async (c) => {
+  const rl = rlCheck("watch", clientIp(c.req.raw.headers), LIMITS.watch);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  const b = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  const cid = String(b.cid ?? "").slice(0, 128);
+  const verdict = String(b.verdict ?? "");
+  if (!cid || !["in", "out", "unsure"].includes(verdict)) return c.json({ error: "bad_request" }, 400);
+  const shown = String(b.shown ?? "").slice(0, 40);
+  try { await client.execute({ sql: "INSERT INTO call_feedback (cid, user_verdict, shown_status) VALUES (?, ?, ?)", args: [cid, verdict, shown] }); }
+  catch (e) { return c.json({ error: "store_failed" }, 500); }
+  return c.json({ ok: true });
+});
+// Admin: recent feedback joined with what we showed + the transcript — the review/training surface.
+app.get("/api/feedback", async (c) => {
+  const r = await client.execute(
+    `SELECT f.cid, f.user_verdict, f.shown_status, f.created_at, r.confirmed, r.status_key, r.transcript, r.summary
+     FROM call_feedback f LEFT JOIN call_results r ON r.provider_call_id = f.cid
+     ORDER BY f.created_at DESC LIMIT 200`);
+  // Flag the disagreements (where the human verdict contradicts what we showed) — the cases to learn from.
+  const rows = r.rows.map((x: Record<string, unknown>) => {
+    const uv = x.user_verdict, conf = x.confirmed == null ? null : Number(x.confirmed), shownIn = conf === 1, shownOut = conf === 0;
+    const disagree = (uv === "in" && !shownIn) || (uv === "out" && !shownOut);
+    return { ...x, disagree };
+  });
+  return c.json(rows);
 });
 app.post("/pub/translate", async (c) => {
   const { text, to } = await c.req.json();
