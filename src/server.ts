@@ -1642,7 +1642,7 @@ app.post("/pub/feedback", async (c) => {
   const b = await c.req.json().catch(() => ({} as Record<string, unknown>));
   const cid = String(b.cid ?? "").slice(0, 128);
   const verdict = String(b.verdict ?? "");
-  if (!cid || !["in", "out", "unsure"].includes(verdict)) return c.json({ error: "bad_request" }, 400);
+  if (!cid || !["in", "out", "soon", "unsure"].includes(verdict)) return c.json({ error: "bad_request" }, 400);
   const shown = String(b.shown ?? "").slice(0, 40);
   try { await client.execute({ sql: "INSERT INTO call_feedback (cid, user_verdict, shown_status) VALUES (?, ?, ?)", args: [cid, verdict, shown] }); }
   catch (e) { return c.json({ error: "store_failed" }, 500); }

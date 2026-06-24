@@ -51,6 +51,24 @@ curl -s -X PATCH "https://api.elevenlabs.io/v1/convai/agents/$AGENT" -H "xi-api-
 ```
 Then update the table above + the date.
 
+## Call script (the agent's prompt) — staging clone, 2026-06-24
+The conversation prompt lives on the agent (not in repo code). Changed on the **staging clone only**:
+- **Name-aware in-stock opening:** if the clerk greets with a first name ("…Bob speaking") → "Hi Bob — do you
+  have {{category}} in stock?"; otherwise "Hi — do you have {{category}} in stock?" (replaces the old
+  "got any … in on your shipment?" opener).
+- **In-stock follow-up = set first:** "do you know which set it is?" → if they name a set → "do you know if
+  it comes in a tin or booster packs?" → wrap. If they don't know / won't commit → "ok, thanks anyways —
+  have a good one!" and end.
+- **Backup for rollback:** the PRE-change prompt is saved at
+  `docs/ops/agent-backups/staging-prompt-backup.json`. To roll back: PATCH the clone's
+  `conversation_config.agent.prompt.prompt` with the `prompt` field from that file (and `first_message`).
+  (ElevenLabs also keeps its own agent version history.)
+- **Prod's agent prompt is UNCHANGED** (still the shipment-style opener). Apply the same prompt edits to
+  prod's agent only when you've approved the new script on staging.
+
+> Possible lever for the "agent sounds rushed": `conversation_config.tts.optimize_streaming_latency`
+> (currently 3 — higher = lower latency but can sound choppy/rushed). Try 1–2 for smoother speech.
+
 ## Promoting tuning to production
 Code promotion (merging `checkit.html`/server to the prod branch) does **NOT** change the agent — the agent is
 an env var. To make prod behave like staging, do ONE of:

@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r55" />
+<meta name="x-rev" content="names-r56" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -169,6 +169,10 @@ __BRAND_HEAD__
   /* LIVE call: the black box sits right on the page and the WHOLE box glows green, pulsing slowly like a ring */
   .rhead.live{border-color:rgba(74,222,128,.4);animation:ringglow 2.2s ease-in-out infinite}
   @keyframes ringglow{0%,100%{box-shadow:0 0 0 1px rgba(74,222,128,.22),0 0 14px rgba(74,222,128,.12)}50%{box-shadow:0 0 0 1px rgba(74,222,128,.6),0 0 28px 3px rgba(74,222,128,.4)}}
+  /* the Check button's phone "rings" — a periodic shake (the animated phone we had before the slide-up sheet) */
+  @keyframes phring{0%,58%,100%{transform:rotate(0)}62%,72%,82%{transform:rotate(-12deg)}67%,77%{transform:rotate(12deg)}}
+  .phring{display:inline-block;transform-origin:50% 60%;animation:phring 2.4s ease-in-out infinite}
+  @media (prefers-reduced-motion: reduce){ .phring{animation:none} }
   /* two-section call box: live STEPS (system font) on top, the human CONVERSATION below */
   .callmsg{background:var(--terminal);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px}
   .callmsg-h{font-size:9.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:800;margin-bottom:10px}
@@ -363,13 +367,18 @@ __BRAND_HEAD__
   .credn{font-size:14px;font-weight:900;color:#4ADE80;line-height:1}
   .credn.low{color:#ff7a7a}
   .proof{background:var(--terminal);border:1px solid var(--border);border-radius:12px;padding:13px;margin-top:6px}
-  .fbk{background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-top:14px}
-  .fbk-q{font-size:13.5px;font-weight:800;color:#cfcfe0;margin-bottom:10px}
-  .fbk-row{display:flex;gap:8px}
-  .fbk-b{flex:1;padding:10px 6px;border-radius:11px;border:1px solid var(--border);background:var(--terminal);color:#e6e6ee;font:inherit;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px}
-  .fbk-b.yes{border-color:rgba(74,222,128,.4)} .fbk-b.no{border-color:rgba(255,107,107,.35)}
-  .fbk-b:active{transform:scale(.97)}
-  .fbk-thanks{font-size:13.5px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:6px}
+  .fbk{background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:14px}
+  .fbk-q{font-size:12.5px;font-weight:700;color:#9a9aac;margin-bottom:12px;text-align:center}
+  /* survey row — like an end-of-call survey, but the four status icons instead of happy/sad faces */
+  .fbk-row{display:flex;gap:8px;justify-content:space-between}
+  .fbk-b{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 4px;border-radius:13px;border:1px solid var(--border);background:var(--terminal);color:#c9c9d4;font:inherit;cursor:pointer;transition:transform .08s,border-color .12s}
+  .fbk-ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:17px;font-weight:900;line-height:1}
+  .fbk-ic.in{color:#4ADE80;background:rgba(74,222,128,.13)} .fbk-ic.out{color:#EF4444;background:rgba(239,68,68,.13)}
+  .fbk-ic.soon{color:#F59E0B;background:rgba(245,158,11,.13)} .fbk-ic.unk{color:#FBBF24;background:rgba(251,191,36,.13)}
+  .fbk-l{font-size:11px;font-weight:700;letter-spacing:-.1px}
+  .fbk-b:active{transform:scale(.95)}
+  .fbk-b.in:active{border-color:rgba(74,222,128,.45)} .fbk-b.out:active{border-color:rgba(239,68,68,.45)}
+  .fbk-thanks{font-size:13.5px;font-weight:700;color:var(--green);display:flex;align-items:center;justify-content:center;gap:6px;text-align:center}
   .proof .ph{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:6px;justify-content:space-between}
   .tbtn{background:var(--ptint);border:1px solid var(--pline);color:var(--purple);font-weight:800;font-size:11px;text-transform:none;letter-spacing:0;padding:5px 11px;border-radius:16px;cursor:pointer}
   .tbtn:disabled{opacity:.6}
@@ -1073,7 +1082,7 @@ __BRAND_HEAD__
     <div style="min-width:0;flex:1"><div class="csheet-nm" id="cs_nm"></div><div class="csheet-addr" id="cs_addr"></div></div>
   </div>
   <div class="csheet-prod" id="cs_prod"></div>
-  <button class="csheet-call" id="cs_call" onclick="startCheck()"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52A2 2 0 0 0 9.16 3H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z" fill="currentColor"/></svg> <span data-i18n="cs.callstore">Call this store</span></button>
+  <button class="csheet-call" id="cs_call" onclick="startCheck()"><svg class="phring" width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52A2 2 0 0 0 9.16 3H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z" fill="currentColor"/></svg> <span data-i18n="cs.callstore">Call this store</span></button>
   <div class="csheet-charge" data-i18n="charge"><b>No answer = no charge.</b> You always get the verdict.</div>
 </div>
 
@@ -1319,7 +1328,7 @@ __BRAND_HEAD__
     <div id="again_logo" style="display:flex;justify-content:center;margin-bottom:10px"></div>
     <h3 id="again_store" style="margin:0 0 8px;font-size:20px">this store</h3>
     <p id="again_body" style="margin:0 0 18px"></p>
-    <button class="cta" id="again_yes" style="width:100%" data-i18n="pre.again.yes">📞 Yes, call again →</button>
+    <button class="cta" id="again_yes" style="width:auto;display:inline-flex;align-items:center;gap:8px;padding:13px 30px"><svg class="phring" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52A2 2 0 0 0 9.16 3H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z" fill="currentColor"/></svg> ${''}<span data-i18n="pre.again.yes">Check</span></button>
     <div><a id="again_no" style="display:inline-block;margin-top:12px;color:var(--muted);font-weight:700;font-size:14px;cursor:pointer" data-i18n="pre.again.no">Not now</a></div>
   </div>
 </div>
@@ -2818,7 +2827,8 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
   const stepRows = steps.slice(1).map((s,idx)=>{
     const realI=idx+1; let secs=null; // gap to the next step (printed once this step is complete)
     if(realI<n-1){ if(steps[realI+1].at>s.at) secs=Math.round(steps[realI+1].at-s.at); }
-    else if(finalElapsed!=null && finalElapsed>s.at) secs=Math.round(finalElapsed-s.at);
+    // NOTE: no seconds on the LAST step ("Asking about …") — the total time already shows in the handle's
+    // "N steps · Ns" up in the top-right, so repeating it here is redundant.
     // final step turns green ✓ when the call is FINISHED and a person was reached — a finished call is
     // either one with a real finalElapsed (live) OR any reopened call that has a verdict status (so the
     // "Asking about {cat}" line stays green when you reopen it, not just live).
@@ -2846,8 +2856,16 @@ function deriveSteps(transcript){
   const lines=(transcript||'').split('\n').filter(Boolean);
   const pitched=lines.some(l=>/^Agent:/.test(l)&&AGENT_ASK.test(l));
   const max=Math.max(1, stageForLines(lines, pitched));
-  const out=[]; for(let n=1;n<=max;n++) out.push({n, label:liveStageLabel(n), at:0});
-  return out;
+  // Only show steps that ACTUALLY happened. Did the call go through an automated MENU, or straight to a
+  // person? If any store-side line appears BEFORE the human conversation starts, that was the menu;
+  // otherwise we reached someone directly and must NOT show menu/navigate/transfer steps that never ran.
+  const hs=transcriptHumanStart(lines);
+  const wentThroughMenu = lines.slice(0, Math.max(0,hs)).some(l=>/^Clerk:/.test(l));
+  const want=[1,3]; // ringing handle + "we've connected" always
+  if(wentThroughMenu){ if(max>=4)want.push(4); if(max>=5)want.push(5); if(max>=6)want.push(6); }
+  if(max>=7) want.push(7);
+  if(max>=8) want.push(8);
+  return want.filter(n=>n<=max).map(n=>({n, label:liveStageLabel(n), at:0}));
 }
 // Live call renders the SAME unified timeline the result uses — "Reaching a person" steps + the
 // conversation linked on one line — rebuilt on every new line so it grows in real time as the call
@@ -2960,10 +2978,11 @@ async function startCheckLive(){
       // (no wasted cycle), instead of sitting on "Ringing…".
       const bs=await api('/pub/bridge/'+r.room);
       if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; liveStage(3);
-        // Voice IVRs (CVS) open with a long monologue that EL won't transcribe until it pauses (~30s).
-        // So once connected, move to "Listening to menu options" on a short timer — accurate, and it
-        // keeps the screen alive during that gap instead of freezing on "We've connected".
-        LIVE_TIMERS.push(setTimeout(()=>liveStage(4),3500));
+        // Only show steps that ACTUALLY happen. We used to auto-advance to "Listening to the menu" on a 3.5s
+        // timer to fill the gap — but on a store that answers directly (no IVR) that step never occurred and
+        // it was misleading. Stages now advance ONLY from real transcript signals (stageForLines), so a
+        // direct-answer call shows: connected → a person picked up → asking. (We sit on "We've connected"
+        // during an IVR's untranscribed opening monologue — honest, if briefly quiet.)
         try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){} }
       // (no premature "Answered" here — the bridge engaging isn't a person; we only leave Calling/Answering when a real transcript line lands)
       else return; // still ringing / connecting
@@ -3316,14 +3335,17 @@ function showResult(o, cid){
     : cls==='soon' ? tf('term.soon','Restock confirmed · {d}',{d:esc(fmtShipDay(o.shipmentDay)||'soon')})
     : cls==='unk' ? t('term.unk','No clear answer') : '';
   const showFeedback = o.status==='completed' && cls==='unk' && !!o.transcript && cid && !String(cid).startsWith('local:');
-  if(showFeedback) note = (note?note+' ':'') + t('note.readbelow','Read the conversation below — then tell us what they actually said.');
+  // New unclear copy: name the product, hand the call to the human (the transcript is right below).
+  if(showFeedback){ const pn=esc(o.productName||catLabel()||'it'); note = tf('note.fbk','Check AI couldn’t figure out if <b style="color:#fff">{p}</b> was on the shelves — we’ll let you decide.',{p:pn}); }
+  // Feedback = an end-of-call survey: the four status icons + labels (not happy/sad faces).
   const feedbackBlock = showFeedback ? `
     <div class="fbk" id="fbk">
-      <div class="fbk-q">${t('fbk.q','Based on the call, was it in stock?')}</div>
+      <div class="fbk-q">${t('fbk.q','Read the conversation below — then tell us what they said:')}</div>
       <div class="fbk-row">
-        <button class="fbk-b yes" onclick="sendFeedback('in')">${FCHK(15)} ${t('fbk.in','In stock')}</button>
-        <button class="fbk-b no" onclick="sendFeedback('out')">${t('fbk.out','Not in stock')}</button>
-        <button class="fbk-b unk" onclick="sendFeedback('unsure')">${t('fbk.unsure','Couldn’t tell')}</button>
+        <button class="fbk-b in" onclick="sendFeedback('in')"><span class="fbk-ic in">${FCHK(17)}</span><span class="fbk-l">${t('fbk.in','In stock')}</span></button>
+        <button class="fbk-b out" onclick="sendFeedback('out')"><span class="fbk-ic out">✕</span><span class="fbk-l">${t('fbk.out','Not in')}</span></button>
+        <button class="fbk-b soon" onclick="sendFeedback('soon')"><span class="fbk-ic soon">${ICO.truck('currentColor')}</span><span class="fbk-l">${t('fbk.soon','Restocking')}</span></button>
+        <button class="fbk-b unk" onclick="sendFeedback('unsure')"><span class="fbk-ic unk">?</span><span class="fbk-l">${t('fbk.unsure','Unclear')}</span></button>
       </div>
     </div>` : '';
   $('result').innerHTML = `
@@ -3467,7 +3489,7 @@ async function preCallGate(){
   const ago=agoStr(Math.floor(e.ts/1000));
   if(Date.now()-e.ts < 24*3600*1000){
     const logoHTML=`<span class="railchip${railClass({storeId:SEL_STORE.id,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}" style="display:grid">${railFace({storeId:SEL_STORE.id,storeName:SEL_STORE.name,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}</span>`;
-    return await confirmAgain({store:headline, logoHTML, body:tf('pre.again.body','You checked here {a} — {o}. Want us to call again?',{a:ago,o:callOutcomeLabel(e)})});
+    return await confirmAgain({store:headline, logoHTML, body:tf('pre.again.body','{o} {a}. Check again?',{o:String(callOutcomeLabel(e)||'').toLowerCase(),a:timeAgo(e.ts)})});
   }
   toast(tf('pre.note','You called {s} {a} — {o}',{s:base,a:ago,o:callOutcomeLabel(e)}));
   await new Promise(r=>setTimeout(r,2200));
