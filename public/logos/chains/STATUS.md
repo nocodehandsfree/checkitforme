@@ -174,7 +174,7 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Amazon | wordmark + smile | ✅ | white "amazon" + orange smile (Wikimedia) |
 | Goodwill | full logo | ✅ | owner-supplied official Goodwill logo (g face + "goodwill") |
 | Salvation Army | red shield | ✅ | red shield emblem (Wikimedia), enlarged |
-| FoodMaxx | "food"/"maxx" 2 lines | 🔧 | split onto two lines per owner |
+| FoodMaxx | one-line logo | 🔧 | cant cleanly split (cart bridges the words) — clean one-line logo |
 | Lucky Supermarkets | red "Lucky" script | 🔧 | real Lucky script (Wikimedia) |
 | Savers | tags mark only | 🔧 | brand mark only per owner |
 | Uwajimaya | scallop mark only | 🔧 | brand mark only, white, per owner |
