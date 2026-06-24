@@ -3,6 +3,7 @@
 import { and, desc, eq, gte, inArray, isNull, like, or, sql } from "drizzle-orm";
 import { db } from "../db/client";
 import { openState, fetchStoreHours } from "../store-hours";
+import { fetchStorePhone } from "../store-phone";
 import {
   accounts, callResults, categories, chains, retailers, scheduleTargets, schedules, watches, zoneRetailers, zones,
 } from "../db/schema";
@@ -909,6 +910,32 @@ export async function backfillHours(): Promise<{ started: boolean; pending: numb
     hoursBackfilling = false;
   })().catch(() => { hoursBackfilling = false; });
   return { started: true, pending: missing.length };
+}
+
+let phonesBackfilling = false;
+/** Background backfill: look up a real phone for CALL-RAIL stores carrying the "nophone:" sentinel
+ *  (imported with only an address), via the same web-search lookup as hours. ALWAYS scope to a chain
+ *  (chainId) — site-rail chains like Micro Center legitimately have no line and must never be touched.
+ *  Fire-and-forget + resumable (re-running picks up whatever's still nophone:). dryRun returns the
+ *  count + a sample without calling the model. */
+export async function backfillPhones(opts: { chainId?: number; dryRun?: boolean } = {}): Promise<{ started?: boolean; running?: boolean; dryRun?: boolean; pending: number; sample?: { id: number; name: string; address: string | null }[] }> {
+  const targets = (await db.select().from(retailers)).filter((r) =>
+    r.active !== false && !!r.phone && r.phone.startsWith("nophone:") && !!r.address
+    && (opts.chainId ? r.chainId === opts.chainId : true));
+  if (opts.dryRun) return { dryRun: true, pending: targets.length, sample: targets.slice(0, 12).map((r) => ({ id: r.id, name: r.name, address: r.address })) };
+  if (phonesBackfilling) return { started: false, running: true, pending: targets.length };
+  phonesBackfilling = true;
+  (async () => {
+    for (const r of targets) {
+      try {
+        const p = await fetchStorePhone(r.name, r.address!);
+        if (p) await db.update(retailers).set({ phone: p }).where(eq(retailers.id, r.id));
+      } catch (e) { console.error("phone backfill", r.id, e); }
+      await new Promise((res) => setTimeout(res, 1500)); // same pace as hours — under the lookup rate limit
+    }
+    phonesBackfilling = false;
+  })().catch(() => { phonesBackfilling = false; });
+  return { started: true, pending: targets.length };
 }
 
 /** Re-fetch hours for a single store (manual refresh). Returns the new open-state or null. */
