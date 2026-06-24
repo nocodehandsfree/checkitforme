@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r72" />
+<meta name="x-rev" content="names-r73" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -1608,8 +1608,9 @@ const I18N={ es:{
   'step.one':'paso','step.many':'pasos','step.ringing':'Llamando a la tienda…',
   'note.fbk':'No quedó claro si <b style="color:#fff">{p}</b> estaba en stock. Lee la conversación y dinos qué opinas.',
   'note.getting':'La llamada acaba de terminar — obteniendo el resultado.',
-  'v.getting':'Obteniendo la respuesta…','v.unclear2':'Sin claridad','v.toobusy':'La tienda está muy ocupada',
-  'note.toobusy':'No dijeron que no, pero estaban demasiado ocupados para revisar si había <b style="color:#fff">{p}</b> en stock. Intenta más tarde.',
+  'v.getting':'Obteniendo la respuesta…','v.unclear2':'Sin claridad',
+  'st.too_busy':'La tienda está muy ocupada',
+  'stn.too_busy':'No dijeron que no, pero estaban demasiado ocupados para revisar si había {product} en stock. Intenta más tarde.',
   'sub.in':'{s} tiene <b>{c}</b> en stock ahora mismo.','sub.in.named':'{s} tiene <b style="color:var(--accent)">{p}</b> en stock ahora mismo.',
   'sub.out':'{s} no tiene <b>{c}</b> ahora mismo.','sub.soldout':'{s} está agotado de <b>{c}</b> ahora mismo.',
   'term.in':'En stock — confirmado','term.out':'No está en stock','term.soon':'Reabastecimiento confirmado · {d}','term.unk':'Sin respuesta clara',
@@ -3277,6 +3278,9 @@ async function sendFeedback(v){
 // Status-detail formatting rule: a new sentence starts a new line — but a single sentence never
 // wraps across two lines on its own (each sentence is its own non-wrapping line).
 function nl2(s){ return String(s==null?'':s).replace(/([.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡])/g,'$1<br>'); }
+// Registry/owner-written notes can use a {product} token — we fill it with the live product name (bolded),
+// so the owner writes the message in Admin and it still reads "…check if Pokémon was in stock…".
+function fillP(s,o){ try{ const pn=esc((o&&o.productName)||catLabel()||'it'); return String(s==null?'':s).replace(/\{product\}/g,'<b style="color:#fff">'+pn+'</b>'); }catch(e){ return String(s==null?'':s); } }
 function showResult(o, cid){
   resultCacheSet(cid,o);
   stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
@@ -3293,9 +3297,6 @@ function showResult(o, cid){
   // Instant-flip placeholder: the call just ended and we flipped here immediately with the streamed
   // conversation; the real verdict is still being pulled and will repaint over this in a moment.
   if(o.status==='pending'){ cls='unk'; big='⏳'; title=t('v.getting','Getting the answer…'); note=t('note.getting','The call just finished — pulling the result.'); }
-  // "Store's too busy" — they didn't refuse, they just couldn't check (slammed / lone clerk). Product-aware
-  // copy lives here (the registry can't template the product name). Dormant until the verdict emits it.
-  else if(o.statusKey==='too_busy' || o.status==='too_busy'){ cls='unk'; big='🕗'; title=t('v.toobusy','Store’s too busy'); note=tf('note.toobusy','They didn’t say no, but they were too busy to check if <b style="color:#fff">{p}</b> was in stock. Try back later.',{p:esc(o.productName||catLabel()||'it')}); }
   // Statuses registry first — the owner-edited single source of truth (with ES variants by key).
   else if(o.statusKey && RSTATUSES[o.statusKey]){
     const s=RSTATUSES[o.statusKey];
@@ -3461,7 +3462,7 @@ function showResult(o, cid){
       <div class="rnav" id="rnav"></div>
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
       <div class="rtitle2">${esc(showFeedback ? t('v.unclear2','Unclear') : vTitle)}</div>
-      ${note?`<div class="rsub">${nl2(note)}</div>`:''}
+      ${note?`<div class="rsub">${nl2(fillP(note,o))}</div>`:''}
       ${breakdown}
     </div>
     ${feedbackBlock}

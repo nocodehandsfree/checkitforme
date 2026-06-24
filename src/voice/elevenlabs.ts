@@ -200,6 +200,10 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
   const soldOut = /^(yes|true)/i.test(String(collected.sold_out?.value ?? "").trim());
   // "We don't carry that at all" — the store doesn't sell this category (distinct from out of stock).
   const doesNotSell = /^(yes|true)/i.test(String(collected.does_not_carry?.value ?? "").trim());
+  // "Too slammed to check" — they didn't refuse, they just couldn't look (busy / short-staffed / lone clerk).
+  // Primary signal is the structured field if the agent extracts one; the transcript heuristic below is the
+  // workhorse so this works across every agent without a per-agent schema change.
+  const tooBusyFlag = /^(yes|true)/i.test(String(collected.too_busy?.value ?? "").trim());
   let shipmentDay = String(collected.shipment_day?.value ?? "").trim() || null;
   // "If they mention a restock, it's a restock." Even when the structured field misses it, detect a
   // future-shipment mention in the clerk's words → surface it as a restock (drives the 🚚 "Restock
@@ -292,7 +296,13 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
       // before they came back with an answer. Distinct from "no clear answer" — it's a near-miss.
       const lastClerk = (d.transcript ?? []).filter((t) => t.role !== "agent" && t.message).map((t) => String(t.message).toLowerCase()).slice(-1)[0] || "";
       const onHold = /(hold on|hang on|one (sec|second|moment|minute)|let me (check|see|look|go (check|look|grab)|run (up|to|and check)|find out|ask)|bear with|give me a (sec|second|minute|moment)|i'?ll (check|go check|be right back)|checking (on|for) (that|you)|let me go)/.test(lastClerk);
-      statusKey = onHold ? "left_on_hold" : (asked ? "no_clear_answer" : "nobody_answered");
+      // "Too busy to check" — a human engaged but begged off because they're slammed / short-staffed /
+      // the only one there, and asked us to try later. Distinct from on-hold (they never went to look) and
+      // from no-clear-answer (they didn't waffle — they declined to check). Heuristic gated on `asked`.
+      const clerkAll = (d.transcript ?? []).filter((t) => t.role !== "agent" && t.message).map((t) => String(t.message)).join(" ");
+      const TOOBUSY = /\b(too busy|really busy|so busy|very busy|crazy busy|pretty busy|kind of busy|kinda busy|a (?:bit|little) busy|swamped|slammed|short[- ]?staffed|in the middle of|can'?t (?:check|look|help|get to|do that|right now)|don'?t have time|no time (?:right now|to)|only (?:one|person|me) (?:here|working)|by myself|on my own|i'?m (?:alone|the only one)|too much going on|call back (?:later|in a|in an)|try (?:back|again|us) (?:later|in a|in an|tomorrow))\b/i;
+      const tooBusy = tooBusyFlag || (asked && TOOBUSY.test(clerkAll));
+      statusKey = onHold ? "left_on_hold" : (tooBusy ? "too_busy" : (asked ? "no_clear_answer" : "nobody_answered"));
     }
   } else {
     statusKey = ({ no_answer: "nobody_answered", failed: "failed", closed: "closed" } as Record<string, string>)[status] ?? "nobody_answered";

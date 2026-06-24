@@ -19,7 +19,7 @@ async function seedStatuses() {
     ["does_not_sell", "🚫", "They don't carry it", "out", "#EF4444", "This store doesn't sell it at all — try a different store."],
     ["not_in_stock", "❌", "Not in stock", "out", "#EF4444", "They told us they don't have it right now."],
     ["no_clear_answer", "🤔", "Got a “maybe”", "unk", "#FBBF24", "A human answered but wouldn't commit. Their exact words are below — you make the call."],
-    ["too_busy", "🕗", "Store’s too busy", "unk", "#FBBF24", "They didn't say no, but they were too busy to check. Try back later."],
+    ["too_busy", "🕗", "Store’s too busy", "unk", "#FBBF24", "They didn't say no, but they were too busy to check if {product} was in stock. Try back later."],
     ["nobody_answered", "📵", "Nobody answered", "unk", "#9CA3AF", "No one picked up — no charge. Try again in a bit."],
     ["voicemail", "📮", "Got their voicemail", "unk", "#9CA3AF", "We reached a recording, not a person — no charge."],
     ["busy", "📞", "Line was busy", "unk", "#9CA3AF", "Their line was busy — no charge. Try again shortly."],

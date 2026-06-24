@@ -125,6 +125,6 @@ export function reconcile(el: ElRead, second: ClerkVerdict | null): Consensus {
   const decisive = elState !== "unclear" ? elState : (second.confidence >= 0.75 ? sec : "unclear");
   if (decisive === "yes") return { confirmed: true, definitive: true, statusKey: "in_stock", agreed: true };
   if (decisive === "no") return { confirmed: false, definitive: true, statusKey: "not_in_stock", agreed: true };
-  // Both unclear → honest unsure (keep a "left on hold" near-miss distinct).
-  return { confirmed: null, definitive: false, statusKey: el.statusKey === "left_on_hold" ? "left_on_hold" : "no_clear_answer", agreed: true };
+  // Both unclear → honest unsure (keep "left on hold" / "too busy" near-misses distinct).
+  return { confirmed: null, definitive: false, statusKey: (el.statusKey === "left_on_hold" || el.statusKey === "too_busy") ? el.statusKey : "no_clear_answer", agreed: true };
 }
