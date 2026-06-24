@@ -51,6 +51,15 @@ curl -s -X PATCH "https://api.elevenlabs.io/v1/convai/agents/$AGENT" -H "xi-api-
 ```
 Then update the table above + the date.
 
+## Call script v3 tweaks — staging clone, 2026-06-24 (latest)
+- **Opening wording:** "do you have any {{category}} cards in stock?" (was "do you have {{category}} in stock?").
+- **Ask ONCE, never twice:** strengthened — never re-ask the stock question in one call (fixes the agent
+  "tripping out" / asking the same question twice quickly).
+- **Restock-coming gate:** if they say a shipment/restock is COMING (not buyable now), do NOT ask set/form —
+  capture the day and wrap as RESTOCK-INCOMING (never "not in stock today"). Fixes the bug where a "restock
+  coming" answer still triggered the set/tin questions and a wrong "not in stock" verdict.
+- **tts.speed 0.85 → 0.80** (slower opening) and **turn_eagerness normal → patient** (fewer phantom/duplicate turns).
+
 ## Call script v2 tweaks — staging clone, 2026-06-24 (later)
 - **Opening unhurried:** the in-stock opening question is delivered at a calm pace, asked ONCE, then waits
   (no repeat/rephrase on a brief pause) — fixes the agent racing + repeating the first question.
