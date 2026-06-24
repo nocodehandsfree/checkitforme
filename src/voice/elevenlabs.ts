@@ -257,11 +257,19 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
     .map((t) => `${t.role === "agent" ? "Agent" : "Clerk"}: ${t.message}`)
     .join("\n");
 
-  // Sold out always means "not buyable now" — even if the extraction said yes to "arrived".
-  // Conservative on purpose: flip any yes to no rather than risk a false green that sends
-  // someone driving to a store with empty shelves. (The per-category descriptions also tell
-  // the agent "yes ONLY if buyable right now", so this is belt-and-suspenders.)
-  if (soldOut || doesNotSell) {
+  // Sold out / doesn't-carry normally means "not buyable now" — flip any yes to no (conservative: never a
+  // false green that sends someone to an empty shelf).
+  // EXCEPTION — self-contradiction: the clerk said BOTH "we have it" AND "sold out / don't carry it" in the
+  // same call (a confused or messing-around answer; EL extracts both flags at once). Forcing sold-out there
+  // is a CONFIDENT WRONG verdict, so instead drop to "no clear answer" and let the independent second read
+  // break the tie — that's exactly what the consensus is for.
+  let soldOutEff = soldOut, doesNotSellEff = doesNotSell;
+  const saidHas = confirmed === true || Object.values(categoryResults).some((v) => v === true);
+  if ((soldOut || doesNotSell) && saidHas) {
+    confirmed = null;
+    soldOutEff = false; doesNotSellEff = false;
+    for (const k of Object.keys(categoryResults)) if (categoryResults[k] === true) categoryResults[k] = null;
+  } else if (soldOut || doesNotSell) {
     confirmed = false;
     for (const k of Object.keys(categoryResults)) if (categoryResults[k] === true) categoryResults[k] = false;
   }
@@ -270,8 +278,8 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
   // The single customer-facing verdict key (rendered from the statuses registry).
   let statusKey: string;
   if (status === "completed") {
-    if (doesNotSell) statusKey = "does_not_sell";
-    else if (soldOut) statusKey = "sold_out";
+    if (doesNotSellEff) statusKey = "does_not_sell";
+    else if (soldOutEff) statusKey = "sold_out";
     else if (confirmed === true) statusKey = "in_stock";
     else if (confirmed === false) statusKey = "not_in_stock";
     else {
@@ -299,8 +307,8 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
     callId: Number(vars.internal_call_id),
     providerCallId: d.conversation_id,
     confirmed,
-    soldOut,
-    doesNotSell,
+    soldOut: soldOutEff,
+    doesNotSell: doesNotSellEff,
     statusKey,
     categoryResults,
     shipmentDay,
