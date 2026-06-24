@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r65" />
+<meta name="x-rev" content="names-r66" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -1585,6 +1585,39 @@ const I18N={ es:{
   'acct.checks':'Mis verificaciones','acct.more':'Consigue más verificaciones','acct.manage':'Administrar plan','acct.unlimited':'Ilimitado','acct.youraccount':'Tu cuenta','acct.memberleft':'Miembro · {n} verificaciones','acct.left':'{n} verificaciones','acct.signout':'Cerrar sesión','pill.join':'Únete','pill.free':'1 gratis · Únete','pill.my':'Mis',
   'acct.cid.on':'Las llamadas salen de tu celular ✓','acct.cid.off':'Llama a las tiendas desde tu número',
   'cid.title':'Llama desde tu propio número','cid.sub':'Verifica tu celular una vez para que las tiendas vean <b>tu</b> número en el identificador — contestan mucho más que a un número desconocido.','cid.cta':'Verificar mi número →','cid.calling2':'Llamándote…','cid.calling':'📞 Te estamos llamando','cid.enter':'Contesta y, cuando te lo pidan, marca este código:','cid.waiting':'Esperando a que termine la llamada…','cid.done':'Tu número está verificado','cid.donesub':'Las verificaciones ahora salen de tu celular — las tiendas ven tu número.','cid.donecta':'Listo','cid.unavail':'La verificación no está disponible ahora — inténtalo más tarde.','cid.startfail':'No se pudo iniciar la verificación — inténtalo de nuevo.','cid.timeout':'No se verificó a tiempo — cierra e inténtalo de nuevo.',
+  // login + call sheet + feedback + live steps + result terms (added 2026-06-24)
+  'auth.phone.lead':'¡Tu primera verificación es gratis!',
+  'cs.costs':'cuesta 1 verificación','cs.toggle':'Ver pasos de la llamada',
+  'err.storename':'Agrega el nombre de la tienda',
+  'fbk.in':'En stock','fbk.out':'No está','fbk.soon':'Reabasteciendo','fbk.unsure':'Sin claridad',
+  'fbk.q':'¿Puedes deducirlo de la conversación de abajo? ¿Qué opinas?',
+  'fbk.thanks':'Gracias — esto entrena nuestras verificaciones para afinar más.',
+  'hist.today.cta':'Verificar una tienda','hist.today.none':'Sin verificaciones hoy',
+  'hist.today.sub':'No has verificado ninguna tienda para {x} hoy.','hist.today.sub0':'No has verificado ninguna tienda hoy.',
+  'live.s1':'Llamando a la tienda…','live.s2':'Está timbrando…','live.s3':'Conectamos','live.s4':'Escuchando el menú…','live.s5':'Navegando el menú…','live.s6':'Transferido al mostrador','live.s7':'Contestó una persona','live.s8':'Preguntando por {p}',
+  'live.item':'tu producto','live.store':'la tienda','live.waitperson':'Esperando llegar a una persona…','live.noconvo':'No hay conversación en vivo en esta llamada.',
+  'step.one':'paso','step.many':'pasos','step.ringing':'Llamando a la tienda…',
+  'note.fbk':'No pudimos determinar si <b style="color:#fff">{p}</b> estaba en los estantes — dinos qué opinas.',
+  'note.getting':'La llamada acaba de terminar — obteniendo el resultado.',
+  'v.getting':'Obteniendo la respuesta…','v.unclear2':'Sin claridad',
+  'sub.in':'{s} tiene <b>{c}</b> en stock ahora mismo.','sub.in.named':'{s} tiene <b style="color:var(--accent)">{p}</b> en stock ahora mismo.',
+  'sub.out':'{s} no tiene <b>{c}</b> ahora mismo.','sub.soldout':'{s} está agotado de <b>{c}</b> ahora mismo.',
+  'term.in':'En stock — confirmado','term.out':'No está en stock','term.soon':'Reabastecimiento confirmado · {d}','term.unk':'Sin respuesta clara',
+  'res.conversation':'Conversación','res.result':'Resultado',
+  'pre.again.body':'{o} {a}. ¿Verificar de nuevo?','pre.again.no':'Ahora no',
+  'rail.backcal':'Volver al calendario','rail.noneday':'Sin verificaciones ese día','rail.noneday2':'Sin verificaciones este día.','rail.pickanother':'← Elegir otro día',
+  // driver / handoff execution flow
+  'ho.dv.title':'Tienes una recogida de <b>$<span class="ho-bk-bonus">25</span></b> 🏃','ho.dv.pay':'Agregar tarjeta a Apple Pay (60 seg)',
+  'ho.dv.1':'En <b>{s}</b>, toma el <b>{p}</b>','ho.dv.2':'Paga con la tarjeta que acabas de agregar',
+  'ho.dv.3.home':'Llévalo a la dirección de entrega del enlace','ho.dv.3.ship':'Déjalo en <b>USPS</b> — el franqueo va en la tarjeta',
+  'ho.dv.4':'Toca <b>Listo</b> → tu bono llega al instante',
+  'ho.s2.bk':'El conductor usa una tarjeta de un solo uso precargada con <b>producto + impuesto + envío</b>. Tu <b>bono de $<span class="ho-bk-bonus">25</span></b> se libera en cuanto confirman la entrega — además de su tarifa normal.',
+  'ho.s3.hint':'Abre <b id="ho_appname">Uber</b> con recogida en <b>{s}</b>. Pide el viaje, espera a que un conductor acepte — luego le escribes.',
+  'ho.s3.open':'Abrir Uber y pedir ↗','ho.s3.open2':'Abrir {a} y pedir ↗',
+  'ho.s5.hint':'Cuando el conductor toca <b>Listo</b>, la tarjeta se bloquea y la foto del recibo aparece aquí. Confirma para liberar el bono.',
+  'ho.retry':'El conductor anterior canceló. Vuelve a pedirlo y reemitimos el enlace.',
+  'ho.msg.home':'llévalo a mi casa (dirección en el enlace)','ho.msg.ship':'déjalo en USPS para enviarlo — el franqueo va en la tarjeta',
+  'ho.msg':'¡Hola! Recogida pagada rápida 🏃 Yo cubro el producto + un bono de ${b} para ti al entregarlo.\n\n1) Toca para agregar una tarjeta prepagada a Apple Pay (60 seg):\n   checkitforme.com/d/4QK9\n2) En {s}, toma 1 {p}\n3) Paga con esa tarjeta (solo sirve para esta compra)\n4) Luego {d}\n\nToca Listo en el enlace y tus ${b} llegan al instante. ¡¡Gracias!! 🙏',
 } };
 // {x}/{n}/{r}/{b}/{s}/{p}/{m} placeholder fill for translated strings.
 function tf(key,en,vars){ let s=t(key,en); if(vars) for(const k in vars) s=s.split('{'+k+'}').join(vars[k]); return s; }
@@ -1989,7 +2022,7 @@ function openAccount(){
   $('acctOverlay').classList.add('on'); track('account_open');
 }
 function closeAccount(){ $('acctOverlay').classList.remove('on'); }
-async function doSignOut(){ PHONE_TOKEN=''; try{ localStorage.removeItem('cifm_token'); localStorage.removeItem('cifm_acct'); localStorage.setItem('runnr_authed','0'); }catch(_){} ACCOUNT=null; closeAccount(); toast('Signed out'); refreshAuth(); }
+async function doSignOut(){ PHONE_TOKEN=''; try{ localStorage.removeItem('cifm_token'); localStorage.removeItem('cifm_acct'); localStorage.setItem('runnr_authed','0'); }catch(_){} ACCOUNT=null; closeAccount(); try{ location.href='/'; }catch(_){ refreshAuth(); } } // fully sign out → back to homepage (fresh load resets all in-memory state)
 // ---- Caller-ID verification: register the customer's verified cell so /app/check-live dials AS it
 //      (stores answer their own number far more than an unknown line). Twilio calls them; they key in
 //      the validation code; /auth/callerid/status flips callerIdReady. Server From=callerId is live. ----
@@ -2395,7 +2428,7 @@ function renderIcons(){
   const CATMARK={'Pokémon':ICO.pokeball,'One Piece TCG':ICO.strawhat,'Topps NBA':ICO.bball,'NeeDoh':ICO.squish};
   const drawn=CATMARK[(BRAND&&BRAND.category)||'']||ICO.logomark(c);
   setI('logomark', LU?`<img src="${LU}" alt="${(BRAND&&BRAND.short)||''}">`:drawn);
-  const ha=$('heroart'); if(ha && LU) ha.innerHTML=`<img src="${LU}" alt="${(BRAND&&BRAND.short)||''}">`;
+  const ha=$('heroart'); if(ha && LU){ ha.innerHTML=`<img src="${LU}" alt="${(BRAND&&BRAND.short)||''}">`; ha.style.setProperty('--logo-scale', /needoh/i.test((BRAND&&BRAND.category)||'') ? '.62' : '1'); } // NeeDoh's wordmark is oversized — shrink it on the landing hero
   setI('tsi1', ICO.store(c)); setI('tsi2', ICO.call(c)); setI('tsi3', ICO.proof(c));
   document.querySelectorAll('.tsd').forEach(d=>d.innerHTML=ICO.chev('#56566a'));
   setI('mti_call', ICO.call('currentColor')); setI('mti_kiosk', ICO.kioskMini('currentColor'));
@@ -2731,7 +2764,7 @@ async function startCheck(){
   // Sign-up gate: a check needs an account. Route anon users to PHONE sign-up (the SAME modal as the
   // "You" pill — never the email box) and resume the check once they're in. Phone accounts are granted
   // free checks on creation, so the credit gate below then passes.
-  if(!isAuthed()){ AUTH_PENDING=startCheck; openAuth(); return; }
+  if(!isAuthed()){ AUTH_PENDING=()=>{ try{ if(SEL_STORE&&SEL_CATS.length) showCallSheet(); }catch(_){} }; openAuth(); return; } // after login, RE-OPEN the call sheet (don't auto-place the call — that was the weird login→auto-call)
   if(!ACCOUNT||ACCOUNT.credits<=0){ openBuy('out'); return; }
   return startCheckLive(); // always the live, hear-it-happen bridge path
   $('builder').classList.add('hidden'); $('result').classList.add('hidden'); $('live').classList.remove('hidden'); document.body.classList.remove('rview');
