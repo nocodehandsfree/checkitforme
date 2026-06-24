@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r64" />
+<meta name="x-rev" content="names-r65" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -1231,16 +1231,19 @@ __BRAND_HEAD__
     <div id="auth_logo"></div>
     <!-- Step 1: phone number -->
     <div id="auth_step_email">
-      <div class="meta" style="margin:2px 0 12px" data-i18n="auth.phone.lead">Sign in with your cell — we'll text you a code.</div>
-      <input id="auth_phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(555) 123-4567" onkeydown="if(event.key==='Enter')phoneStart()" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 13px;font-size:16px;box-sizing:border-box;text-align:center">
+      <div class="meta" style="margin:2px 0 14px;font-size:16px;font-weight:800;color:#fff" data-i18n="auth.phone.lead">First check's on us!</div>
+      <div style="display:flex;align-items:center;gap:9px;background:#15151c;border:1px solid var(--border);border-radius:12px;padding:0 13px">
+        <span style="flex:0 0 auto;font-size:16px;font-weight:700;color:#9a9aac;white-space:nowrap">🇺🇸 +1</span>
+        <input id="auth_phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(310) 666-2331" oninput="fmtPhoneInput(this)" onkeydown="if(event.key==='Enter')phoneStart()" style="flex:1;min-width:0;background:transparent;color:#fff;border:none;padding:14px 0;font-size:16px;box-sizing:border-box">
+      </div>
       <div id="auth_err" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
       <button class="cta sm" id="auth_send" onclick="phoneStart()" style="margin-top:4px;width:100%;background:var(--green);color:#06210f">Continue →</button>
     </div>
     <!-- Step 2: 6-digit code -->
     <div id="auth_step_code" style="display:none">
       <h3 style="margin:0 0 4px;font-size:21px">Check your phone</h3>
-      <div class="meta" style="margin-bottom:16px">We texted a 6-digit code to <b id="auth_codeto" style="color:#e6e6ee"></b>.</div>
-      <input id="auth_code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" onkeydown="if(event.key==='Enter')phoneVerify()" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 13px;font-size:26px;font-weight:800;letter-spacing:.5em;box-sizing:border-box;text-align:center">
+      <div class="meta" style="margin-bottom:16px">We've texted <b id="auth_codeto" style="color:#e6e6ee"></b><br>enter the code below</div>
+      <input id="auth_code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" oninput="if((this.value||'').replace(/\D/g,'').length>=6) phoneVerify()" onkeydown="if(event.key==='Enter')phoneVerify()" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 13px;font-size:26px;font-weight:800;letter-spacing:.5em;box-sizing:border-box;text-align:center">
       <div id="auth_codeerr" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
       <button class="cta sm" id="auth_verify" onclick="phoneVerify()" style="margin-top:4px;width:100%;background:var(--green);color:#06210f">Verify →</button>
       <div style="margin-top:13px;font-size:13px;color:var(--muted)">Didn't get it? <a onclick="phoneStart(true)" style="color:var(--purple);font-weight:700;cursor:pointer">Resend</a> · <a onclick="authBack()" style="color:var(--purple);font-weight:700;cursor:pointer">Change number</a></div>
@@ -1889,6 +1892,8 @@ function authMark(){ return `<img src="/logos/check.png?v=1" alt="Check It For M
 let AUTH_PHONE='';
 function normUsPhone(s){ const d=(s||'').replace(/\D/g,''); if(d.length===10) return '+1'+d; if(d.length===11&&d[0]==='1') return '+'+d; return ''; }
 function fmtUsPhone(e){ return (e||'').replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'($1) $2-$3'); }
+// Live-format the phone field as they type: 3106662331 → (310) 666-2331.
+function fmtPhoneInput(el){ const d=(el.value||'').replace(/\D/g,'').slice(0,10); let o=''; if(d.length>6)o='('+d.slice(0,3)+') '+d.slice(3,6)+'-'+d.slice(6); else if(d.length>3)o='('+d.slice(0,3)+') '+d.slice(3); else if(d.length)o='('+d; el.value=o; }
 // Step 1 — text a 6-digit code to the cell. `resend` keeps us on the code step.
 async function phoneStart(resend){
   if(AUTH.busy) return;
@@ -1907,7 +1912,7 @@ async function phoneStart(resend){
   }
   track('auth_code_sent',{flow:'phone'});
   if(resend){ toast('Code re-sent 📲'); return; }
-  authStep('code'); $('auth_codeto').textContent=fmtUsPhone(e);
+  authStep('code'); $('auth_codeto').textContent=(e||'').replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'$1-$2-$3'); // dashes: 310-666-2331
   $('auth_codeerr').textContent=''; const ci=$('auth_code'); if(ci) ci.value='';
   setTimeout(()=>{try{$('auth_code').focus();}catch(_){}},90);
 }
