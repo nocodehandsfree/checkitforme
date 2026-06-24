@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r67" />
+<meta name="x-rev" content="names-r68" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -1775,6 +1775,7 @@ async function boot(){
   idle(()=>{ renderDemo(); loadFinds(); }); // ticker + demo off the critical path
 }
 let PENDING_VIEW=null;
+let STORES_AUTH_TOKEN=null; // which token the visible store list was fetched under — re-fetch on login so owner-only surfaces (FUN store / VIPs) appear without a hard refresh
 async function refreshAuth(){
   if(isAuthed()){
     // Optimistic: paint the cached credits/comp INSTANTLY so the "My ✅ N" count doesn't lag on /app/me.
@@ -1784,7 +1785,11 @@ async function refreshAuth(){
     // Prime call history right after login so the calendar shows its yellow "call-made" days immediately
     // (it used to stay blank until the first My-checks open, because HIST_CACHE hadn't loaded yet).
     ensureHistCache().then(()=>{ try{ renderCallRail(); }catch(_){} });
-  } else { ACCOUNT=null; try{ localStorage.setItem('runnr_authed','0'); localStorage.removeItem('cifm_acct'); }catch(e){} }
+    // The store list is fetched WITH the auth token (owner-only "Fun"/VIP surfaces ride on it). If we just
+    // signed in and stores are already on screen (loaded anon), re-pull them so those surfaces show — no
+    // hard refresh needed. Keyed on the token so this fires once per login, not on every refreshAuth.
+    if(USER_LOC && STORES_AUTH_TOKEN!==PHONE_TOKEN){ STORES_AUTH_TOKEN=PHONE_TOKEN; try{ fetchNear(); loadBestBet(); }catch(_){} }
+  } else { ACCOUNT=null; STORES_AUTH_TOKEN=null; try{ localStorage.setItem('runnr_authed','0'); localStorage.removeItem('cifm_acct'); }catch(e){} }
   renderAuth();
   loadSchedules();
   claimPendingReferral();
@@ -2023,7 +2028,7 @@ function openAccount(){
   $('acctOverlay').classList.add('on'); track('account_open');
 }
 function closeAccount(){ $('acctOverlay').classList.remove('on'); }
-async function doSignOut(){ PHONE_TOKEN=''; try{ localStorage.removeItem('cifm_token'); localStorage.removeItem('cifm_acct'); localStorage.setItem('runnr_authed','0'); }catch(_){} ACCOUNT=null; closeAccount(); try{ location.href='/'; }catch(_){ refreshAuth(); } } // fully sign out → back to homepage (fresh load resets all in-memory state)
+async function doSignOut(){ PHONE_TOKEN=''; try{ localStorage.removeItem('cifm_token'); localStorage.removeItem('cifm_acct'); localStorage.removeItem('cifm_loc'); localStorage.setItem('runnr_authed','0'); }catch(_){} ACCOUNT=null; USER_LOC=null; closeAccount(); try{ location.href='/'; }catch(_){ refreshAuth(); } } // fully sign out → back to homepage; ALSO drop the saved location so they re-allow location (true reset, no stores until they tap Find)
 // ---- Caller-ID verification: register the customer's verified cell so /app/check-live dials AS it
 //      (stores answer their own number far more than an unknown line). Twilio calls them; they key in
 //      the validation code; /auth/callerid/status flips callerIdReady. Server From=callerId is live. ----
@@ -2130,6 +2135,7 @@ async function fetchNear(){
   else if(q.length>=2) url=`/pub/stores/near?q=${encodeURIComponent(q)}&limit=60`;
   if(!url){ STORES=[]; renderStores(); return; }
   const seq=++NEAR_SEQ;
+  STORES_AUTH_TOKEN=PHONE_TOKEN; // record which token this list was fetched under (so login can detect a stale anon list)
   const r=await appApi(url); // appApi (not api) so a signed-in owner's token reaches the server → owner-only "Fun" surfaces for them
   if(seq!==NEAR_SEQ) return; // a newer request superseded this one
   STORES=(r&&Array.isArray(r.stores))?r.stores:[];
