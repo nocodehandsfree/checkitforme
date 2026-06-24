@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r57" />
+<meta name="x-rev" content="names-r58" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -136,6 +136,11 @@ __BRAND_HEAD__
     box-shadow:0 0 26px color-mix(in srgb,var(--accent,#FFCB05) 28%,transparent);transition:transform .08s}
   .csheet-call:active{transform:translateY(1px)}
   .csheet-call:disabled{opacity:.55;cursor:not-allowed}
+  /* animated sound-wave phone INSIDE the gold slide-up button (dark, currentColor — reuses ckWave) */
+  .cs-ph{fill:currentColor}
+  .cs-wv{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;transform-box:view-box;transform-origin:31px 15px;animation:ckWave 2s ease-out infinite}
+  .cs-wv.w2{animation-delay:.45s}
+  @media (prefers-reduced-motion:reduce){.cs-wv{animation:none;opacity:.85}}
   .csheet-charge{margin-top:14px;text-align:center;font-size:13px;color:var(--text-3,#9a9aa8)}
   .csheet-charge b{color:#cfcfe0}
   .ck-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
@@ -1082,7 +1087,7 @@ __BRAND_HEAD__
     <div style="min-width:0;flex:1"><div class="csheet-nm" id="cs_nm"></div><div class="csheet-addr" id="cs_addr"></div></div>
   </div>
   <div class="csheet-prod" id="cs_prod"></div>
-  <button class="csheet-call" id="cs_call" onclick="startCheck()"><svg class="phring" width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52A2 2 0 0 0 9.16 3H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z" fill="currentColor"/></svg> <span data-i18n="cs.callstore">Call this store</span></button>
+  <button class="csheet-call" id="cs_call" onclick="startCheck()"><svg width="26" height="26" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span data-i18n="cs.callstore">Call this store</span></button>
   <div class="csheet-charge" data-i18n="charge"><b>No answer = no charge.</b> You always get the verdict.</div>
 </div>
 
@@ -1328,7 +1333,7 @@ __BRAND_HEAD__
     <div id="again_logo" style="display:flex;justify-content:center;margin-bottom:10px"></div>
     <h3 id="again_store" style="margin:0 0 8px;font-size:20px">this store</h3>
     <p id="again_body" style="margin:0 0 18px"></p>
-    <button class="cta" id="again_yes" style="width:auto;display:inline-flex;align-items:center;gap:8px;padding:13px 30px"><svg class="phring" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52A2 2 0 0 0 9.16 3H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z" fill="currentColor"/></svg> ${''}<span data-i18n="pre.again.yes">Check</span></button>
+    <button class="cta" id="again_yes" style="width:auto;display:inline-flex;align-items:center;gap:8px;padding:13px 30px"><svg class="phring" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52A2 2 0 0 0 9.16 3H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z" fill="currentColor"/></svg> <span data-i18n="pre.again.yes">Check</span></button>
     <div><a id="again_no" style="display:inline-block;margin-top:12px;color:var(--muted);font-weight:700;font-size:14px;cursor:pointer" data-i18n="pre.again.no">Not now</a></div>
   </div>
 </div>
@@ -2615,19 +2620,13 @@ function syncCta(){
   // Non-callable chains (Micro Center, Amazon) NEVER get a call button — the sell-methods card
   // below carries "Buy online" + notify instead. (docs/SELL_METHODS_PLAN.md rule 1.)
   const cantCall=SEL_STORE&&SEL_STORE.callable===false;
-  // RESTORED (per owner): the docked call key we used before the slide-up — store name on top, product
-  // (accent) beneath, and the circular ringing-phone chip with animated sound waves on the right. The
-  // bottom slide-up sheet is retired (kept in the DOM but never shown).
+  // A store with a category slides the call sheet up from the bottom (the inline button stays hidden).
+  b.style.display='none'; b.classList.remove('armed'); if(cf)cf.style.display='none';
   if(SEL_STORE&&SEL_CATS.length&&(MODE!=='kiosk'||SEL_KIOSK)&&(SEL_KIOSK||!cantCall)){ // kiosks are always callable
-    b.style.display=''; if(vv)vv.style.display='none'; if(cf)cf.style.display='';
-    b.innerHTML = SEL_KIOSK
-      ? `<span class="ck-txt"><span class="ck-store">${esc(SEL_STORE.name)}</span><span class="ck-prod">${t('cta.kioskword','kiosk')}<span class="ck-unit"> · 1 ${t('cta.checkunit','check')}</span></span></span>${CKCHIP}`
-      : `<span class="ck-txt"><span class="ck-store">${esc(SEL_STORE.name.split('—')[0].trim())}</span><span class="ck-prod">${esc(catLabels())}<span class="ck-unit"> · 1 ${t('cta.checkunit','check')}</span></span></span>${CKCHIP}`;
-    if(wasHidden){ b.classList.remove('armed'); void b.offsetWidth; b.classList.add('armed');
-      if(window.innerWidth<900){ setTimeout(()=>{ try{ b.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){} },150); } }
+    if(vv)vv.style.display='none';
+    showCallSheet();
   }
-  else { b.style.display='none'; b.classList.remove('armed'); if(cf)cf.style.display='none'; if(vv)vv.style.display=(MODE==='kiosk'||cantCall)?'none':''; }
-  hideCallSheet();
+  else { if(vv)vv.style.display=(MODE==='kiosk'||cantCall)?'none':''; hideCallSheet(); }
   renderStoreActions();
 }
 // ── Call slider: populate from the picked store, slide up, swipe down to dismiss ──
@@ -3008,6 +3007,10 @@ async function finalizeLive(cid){
   // Idempotent: d.ended (instant) AND the POLL can both call this. No hard guard + no POLL-clearing here
   // (that combo is what froze calls) — history dedupes and showResult just re-renders, so a re-fire is safe.
   stopAudio(); stopLiveTimers();
+  // Recover the conversation id from the room if we don't have it yet (e.g. d.ended fired before the poll
+  // resolved it, or a flaky connection). The bridge keeps room→convId for ~10 min — so a call that really
+  // happened shows its REAL verdict instead of a false "nobody answered".
+  if(!cid && LIVE_ROOM){ for(let i=0;i<4 && !cid;i++){ try{ const bs=await api('/pub/bridge/'+encodeURIComponent(LIVE_ROOM)); if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; } }catch(_){} if(!cid) await new Promise(r=>setTimeout(r,800)); } }
   if(!cid){ const res={status:'no_answer',transcript:'',summary:''}; saveCheckToHistory(res,null); showResult(res); return; }
   const live=(LIVE_TR.length?LIVE_TR.join('\n'):LIVE_TRANSCRIPT)||'';
   // ONE quick fetch. If EL already has the verdict, we flip straight to it. If not, flip RIGHT NOW to the
