@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r58" />
+<meta name="x-rev" content="names-r59" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -131,9 +131,10 @@ __BRAND_HEAD__
   .csheet-addr{color:var(--text-3,#9a9aa8);font-size:14px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .csheet-prod{margin:16px 2px 0;font-weight:900;font-size:15.5px;color:var(--accent,#FFCB05)}
   .csheet-prod span{color:#cfcfe0;font-weight:700}
-  .csheet-call{width:100%;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:10px;
-    background:var(--accent,#FFCB05);color:#3a2c00;border:none;border-radius:16px;padding:17px 22px;font:900 18px Inter;cursor:pointer;
-    box-shadow:0 0 26px color-mix(in srgb,var(--accent,#FFCB05) 28%,transparent);transition:transform .08s}
+  /* The call button is the GOLD CIRCULAR ringing-phone chip (the one the owner asked for), not a pill. */
+  .csheet-call{width:66px;height:66px;margin:20px auto 2px;display:grid;place-items:center;
+    background:color-mix(in srgb,var(--accent,#FFCB05) 14%,transparent);color:var(--accent,#FFCB05);border:1.5px solid color-mix(in srgb,var(--accent,#FFCB05) 45%,transparent);border-radius:50%;cursor:pointer;
+    box-shadow:0 0 26px color-mix(in srgb,var(--accent,#FFCB05) 28%,transparent);animation:ckHalo 3s ease-in-out infinite;transition:transform .08s}
   .csheet-call:active{transform:translateY(1px)}
   .csheet-call:disabled{opacity:.55;cursor:not-allowed}
   /* animated sound-wave phone INSIDE the gold slide-up button (dark, currentColor — reuses ckWave) */
@@ -1087,7 +1088,7 @@ __BRAND_HEAD__
     <div style="min-width:0;flex:1"><div class="csheet-nm" id="cs_nm"></div><div class="csheet-addr" id="cs_addr"></div></div>
   </div>
   <div class="csheet-prod" id="cs_prod"></div>
-  <button class="csheet-call" id="cs_call" onclick="startCheck()"><svg width="26" height="26" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span data-i18n="cs.callstore">Call this store</span></button>
+  <button class="csheet-call" id="cs_call" onclick="startCheck()" aria-label="Call this store"><svg width="32" height="32" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg></button>
   <div class="csheet-charge" data-i18n="charge"><b>No answer = no charge.</b> You always get the verdict.</div>
 </div>
 
@@ -1330,8 +1331,10 @@ __BRAND_HEAD__
 <div class="overlay" id="againOverlay" onclick="if(event.target===this)closeAgain()">
   <div class="modal" style="position:relative;max-width:400px;text-align:center">
     <span class="x" onclick="closeAgain()">×</span>
-    <div id="again_logo" style="display:flex;justify-content:center;margin-bottom:10px"></div>
-    <h3 id="again_store" style="margin:0 0 8px;font-size:20px">this store</h3>
+    <div style="display:flex;align-items:center;justify-content:center;gap:11px;margin-bottom:12px">
+      <div id="again_logo" style="display:flex;flex:0 0 auto"></div>
+      <h3 id="again_store" style="margin:0;font-size:20px;text-align:left">this store</h3>
+    </div>
     <p id="again_body" style="margin:0 0 18px"></p>
     <button class="cta" id="again_yes" style="width:auto;display:inline-flex;align-items:center;gap:8px;padding:13px 30px"><svg class="phring" width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52A2 2 0 0 0 9.16 3H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z" fill="currentColor"/></svg> <span data-i18n="pre.again.yes">Check</span></button>
     <div><a id="again_no" style="display:inline-block;margin-top:12px;color:var(--muted);font-weight:700;font-size:14px;cursor:pointer" data-i18n="pre.again.no">Not now</a></div>
