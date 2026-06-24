@@ -152,6 +152,30 @@
   .pickrow.on{background:rgba(74,222,128,.1)}
   .navspin{width:9px;height:9px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:navspin .7s linear infinite}
   @keyframes navspin{to{transform:rotate(360deg)}}
+  /* Store Search card — per-store track-record, tap to expand */
+  .srow{background:var(--surface-1);border:1px solid var(--border-default);border-radius:var(--r-card);margin-bottom:9px;overflow:hidden}
+  .srow.open{border-color:rgba(74,222,128,.3);background:linear-gradient(180deg,rgba(74,222,128,.045),rgba(74,222,128,0))}
+  .srhead{display:flex;align-items:center;gap:11px;padding:13px;cursor:pointer}
+  .srhead .nm{font-size:15px;font-weight:700;color:#f3f3f7;line-height:1.25;letter-spacing:-.1px}
+  .srhead .sbranch{font-size:12.5px;color:var(--text-body);margin-top:1px}
+  .ssub{font-size:12.5px;color:var(--text-muted);margin-top:4px;line-height:1.45}
+  .srchev{color:var(--text-tertiary);font-size:17px;flex:0 0 auto;transition:transform .2s;line-height:1}
+  .srow.open .srchev{transform:rotate(180deg)}
+  .recp{flex:0 0 auto;font:800 12px Inter;border-radius:20px;padding:4px 10px;white-space:nowrap}
+  .recp.good{color:var(--green);background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.32)}
+  .recp.mid{color:#F4D03F;background:rgba(244,208,63,.1);border:1px solid rgba(244,208,63,.3)}
+  .recp.low{color:#ff8a8a;background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.28)}
+  .recp.none{color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);font-weight:700}
+  .srdetail{padding:0 13px 13px}
+  .srline{display:flex;gap:10px;font-size:13px;line-height:1.5;padding-top:11px}
+  .srlab{color:var(--text-muted);font-weight:600;flex:0 0 58px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding-top:1px}
+  .stally{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
+  .stally .tp{display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:6px 10px;font:800 13px Inter;border:1px solid}
+  .stally .tp i{font:600 10.5px Inter;font-style:normal;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em}
+  .stally .tp.in{color:var(--green);background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3)}
+  .stally .tp.out{color:#ff8a8a;background:rgba(239,68,68,.09);border-color:rgba(239,68,68,.28)}
+  .stally .tp.soon{color:#F4D03F;background:rgba(244,208,63,.1);border-color:rgba(244,208,63,.28)}
+  .sracts{display:flex;gap:9px;align-items:center;margin-top:13px}
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:16px}
@@ -450,7 +474,7 @@
       <input id="f_search" placeholder="Search name, city, ZIP — or just pick a filter…" oninput="onAdminSearch()">
       <select id="f_type" onchange="loadRetailers()"><option value="">All types</option></select>
       <select id="f_region" onchange="loadRetailers()"><option value="">All regions</option></select>
-      <select id="f_zone" onchange="renderRetailers()"><option value="">All zones</option></select>
+      <select id="f_zone" onchange="onStoreFilter()"><option value="">All zones</option></select>
       <select id="f_carries" onchange="loadRetailers()"><option value="">Any product</option></select>
       <select id="f_status" onchange="loadRetailers()">
         <option value="">Any status</option>
@@ -464,7 +488,7 @@
         <option value="badnum">Bad / missing number</option>
         <option value="kiosk">Has kiosk</option>
       </select>
-      <select id="f_sort" onchange="renderRetailers()">
+      <select id="f_sort" onchange="onStoreFilter()">
         <option value="rel">Sort: best match</option>
         <option value="name">Name A–Z</option>
         <option value="verified">Verified first</option>
@@ -473,17 +497,13 @@
         <option value="open">Open now first</option>
       </select>
     </div>
-    <div id="bulkbar" class="bulkbar" style="display:none">
-      <label class="bchk"><input type="checkbox" id="b_all" onchange="bulkToggleAll(this.checked)"> Select all</label>
-      <span id="b_count" class="meta"></span>
-      <span class="grow"></span>
-      <button class="ghost" onclick="bulkEdit('verify')">Mark verified</button>
-      <button class="ghost" onclick="bulkEdit('unverify')">Mark unverified</button>
-      <button class="ghost" onclick="bulkEdit('online')">Mark online</button>
-      <button class="ghost" onclick="bulkEdit('offline')">Not online</button>
-      <button class="ghost" onclick="bulkEdit('deactivate')" style="color:var(--red)">Remove</button>
-    </div>
     <div id="retailerList"></div>
+    <div id="store_pager" style="position:fixed;right:14px;bottom:16px;z-index:50;display:none;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border-strong);border-radius:14px;padding:7px 9px;box-shadow:0 10px 28px rgba(0,0,0,.55)">
+      <select id="store_size" onchange="setStoreSize(this.value)" title="Stores per page" style="width:auto;font-size:12.5px;padding:7px 26px 7px 9px;margin:0"><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select>
+      <button class="ghost" id="store_prev" onclick="storePage(-1)" aria-label="Previous page" style="padding:8px 13px;font-size:16px;line-height:1">←</button>
+      <span id="store_pageind" class="meta" style="min-width:46px;text-align:center;font-size:12.5px">1 / 1</span>
+      <button class="ghost" id="store_next" onclick="storePage(1)" aria-label="Next page" style="padding:8px 13px;font-size:16px;line-height:1">→</button>
+    </div>
     <details class="card" id="map_card" ontoggle="if(this.open){ensureMap();loadMap();}" style="margin-top:16px">
       <summary><span class="name" data-tip="green = in · red = not in · amber = unclear · gray = uncalled">Map these results</span></summary>
       <div style="margin:12px 0 10px"><button class="ghost" onclick="locateMe()">Zoom to my location</button></div>
@@ -1615,6 +1635,7 @@ let RETAILERS=[];
 let ADMIN_SEARCH_T=null;
 function onAdminSearch(){ clearTimeout(ADMIN_SEARCH_T); ADMIN_SEARCH_T=setTimeout(loadRetailers,250); }
 async function loadRetailers(){
+  STORE_PAGE=0;
   const q=(document.getElementById('f_search')?.value||'').trim();
   const type=document.getElementById('f_type')?.value||'', region=document.getElementById('f_region')?.value||'';
   const carries=document.getElementById('f_carries')?.value||'', status=document.getElementById('f_status')?.value||'';
@@ -1790,45 +1811,71 @@ async function bulkEdit(action){
   if(body.active===false) RETAILERS=RETAILERS.filter(r=>r.active!==false);
   SEL.clear(); renderRetailers(); toast(`${ok}/${ids.length} updated`);
 }
+let STORE_PAGE=0, STORE_SIZE=10;
+// Store Search row: per-store only — logo · name · location · hours · call track-record. Tap to expand
+// (what they carry, the in-stock/not-in/restock tally, Call store + a per-store workflow). Chain-level
+// stuff (verify, online, soft-delete, category, shipping) lives on the chain Settings page, not here.
 function renderRetailers(){
-  const rs=filteredRetailers();
+  const all=filteredRetailers();
   const el=document.getElementById('retailerList'); if(!el) return;
-  const hasQuery=((document.getElementById('f_search')?.value||'').trim().length>=2);
-  updateBulkBar(rs);
-  if(!rs.length){
+  const total=all.length;
+  const pages=Math.max(1,Math.ceil(total/STORE_SIZE)); if(STORE_PAGE>pages-1) STORE_PAGE=Math.max(0,pages-1);
+  const rs=all.slice(STORE_PAGE*STORE_SIZE,(STORE_PAGE+1)*STORE_SIZE);
+  if(!total){
     const af=activeStoreFilters();
     if(af.length){
       const hasRegion=!!(document.getElementById('f_region')?.value);
       el.innerHTML=`<div class="empty">No stores match: ${af.map(esch).join(' · ')}.<div style="margin-top:12px"><button class="ghost" onclick="clearStoreFilters()">Clear filters</button></div>${hasRegion?'<div class="meta" style="margin-top:10px">Tip: online / national stores (e.g. type “Online”) usually have no region — clear <b>Region</b> to include them.</div>':''}</div>`;
     } else el.innerHTML='';
-    return;
+    renderStorePager(0); return;
   }
-  const muted=mutedChainIds();
   el.innerHTML = rs.map(r=>{
     const nm=splitName(r.name);
-    const metaTxt=r.location||'';
-    const ships=r.shipmentDay?`${vmark('🚚','#8a8a98',12)} ships ${esch(r.shipmentDay)}`:'';
-    const hrs=hoursBadge(r); const sel=SEL.has(r.id);
-    return `<div class="card${sel?' selrow':''}">
-    <div class="row" style="align-items:flex-start;gap:10px">
-      <input type="checkbox" class="rowchk" ${sel?'checked':''} onchange="bulkPick(${r.id},this)">
-      ${logoTile(r)}
-      <div class="grow" style="min-width:0">
-        <div class="sname"><span class="nm">${esch(nm.base)}</span>${r.stockStatus==='verified'?'<span class="tag-verified">verified</span>':'<span class="tag-unverified">unverified</span>'}${r.storeType?` <span class="chip-type">${ICO(storeTypeIco(r.storeType),11)} ${esch(r.storeType)}</span>`:''}${muted.has(r.chainId)?' <span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.12)">muted</span>':''}${badNum(r)?' <span class="chip-sm" style="color:#FBBF24;background:rgba(251,191,36,.12)">no number</span>':''}${r.online?' <span class="chip-sm" style="color:#7DD3FC;background:rgba(125,211,252,.12)">online</span>':''}</div>
-        ${nm.branch?`<div class="sbranch">${esch(nm.branch)}</div>`:''}
-        <div class="smeta" style="display:flex;align-items:center;flex-wrap:wrap;gap:0 4px">${esch(metaTxt)}${hrs?(metaTxt?' · ':'')+hrs:''}${ships?(metaTxt||hrs?' · ':'')+ships:''}</div>
-        ${(()=>{const cl=r.carries?r.carries.split(',').map(x=>x.trim()).filter(Boolean):[];return cl.length?`<div class="hint" style="margin-top:5px;font-style:normal" data-tip="Carries: ${esch(cl.join(', '))}${r.lastCall&&r.lastCall.summary?' — last call: '+esch(r.lastCall.summary):''}">Carries ${cl.length} · ${cl.slice(0,2).map(x=>prodMark(x,14)).join(' ')}${cl.length>2?' +'+(cl.length-2):''}</div>`:'';})()}
+    const loc=r.location||'';
+    const o=r.openState; const hrs=(o&&o.label)?`<span style="color:${o.open?'var(--green)':'#ff8a8a'};font-weight:600">${esch(o.label)}</span>`:'';
+    const cl=r.carries?r.carries.split(',').map(x=>x.trim()).filter(Boolean):[];
+    const wf=WF.list.length?(()=>{const inh=(r.chainId&&WF.chains[r.chainId])||WF.def||'';return `<select onchange="setStoreWorkflow(${r.id},this.value)" style="flex:1;min-width:0">${wfOptions(WF.stores[r.id]||'', inh?('Inherit · '+inh):'Inherit · no default')}</select>`;})():'';
+    const cs=r.callStats||{total:0,inStock:0,notIn:0,restock:0};
+    return `<div class="srow" id="sr_${r.id}">
+      <div class="srhead" onclick="toggleStore(${r.id})">
+        ${logoTile(r)}
+        <div class="grow" style="min-width:0">
+          <div class="nm">${esch(nm.base)}</div>
+          ${nm.branch?`<div class="sbranch">${esch(nm.branch)}</div>`:''}
+          <div class="ssub">${esch(loc)}${hrs?(loc?' · ':'')+hrs:''}${badNum(r)?' · <span style="color:#FBBF24">no number</span>':''}</div>
+        </div>
+        ${recPill(cs)}
+        <span class="srchev">⌄</span>
       </div>
-      ${statusBadge(r)}
-    </div>
-    <div class="ractions">
-      ${WF.list.length?(()=>{const inh=(r.chainId&&WF.chains[r.chainId])||WF.def||'';return `<select onchange="setStoreWorkflow(${r.id},this.value)" title="Per-store workflow — overrides chain + default">${wfOptions(WF.stores[r.id]||'', inh?('Inherit · '+inh):'Inherit · no default')}</select>`;})():''}
-      <select id="cn_${r.id}"><option value="" disabled selected>Category</option>${CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
-      <button class="act" onclick="callNow(${r.id})">${ICO('phone',15)} Call now</button>
-    </div>
-    ${r.ownerOnly?`<div class="row" style="gap:8px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)"><input id="ph_${r.id}" value="${esch(r.phone||'')}" placeholder="+13105551234" inputmode="tel" onkeydown="if(event.key==='Enter')saveStorePhone(${r.id})" style="flex:1;min-width:0"><button class="act" onclick="saveStorePhone(${r.id})">Save phone</button></div><div class="hint" style="margin-top:6px;font-style:normal">Demo store — the phone number is its on/off switch: save a number to go live, clear it to hide. ${r.active?'<b style="color:var(--green)">● live</b>':'<span style="color:var(--muted)">○ off — add a number</span>'}</div>`:''}
-  </div>`;}).join('');
+      <div class="srdetail" id="srd_${r.id}" style="display:none">
+        ${cl.length?`<div class="srline"><span class="srlab">Carries</span><span>${cl.slice(0,3).map(x=>prodMark(x,14)+' '+esch(x)).join(' · ')}${cl.length>3?` <span style="color:var(--muted)">+${cl.length-3}</span>`:''}</span></div>`:''}
+        <div class="srline"><span class="srlab">Called</span><span>${cs.total} time${cs.total===1?'':'s'}</span></div>
+        ${cs.total?`<div class="stally"><span class="tp in">${cs.inStock} <i>in stock</i></span><span class="tp out">${cs.notIn} <i>not in</i></span><span class="tp soon">${cs.restock} <i>restock</i></span></div>`:'<div class="meta" style="margin-top:6px">No calls yet — tap Call store to check stock.</div>'}
+        <div class="sracts">${wf}<button class="act" onclick="event.stopPropagation();callNow(${r.id})" style="white-space:nowrap">${ICO('phone',15)} Call store</button></div>
+        ${r.ownerOnly?`<div class="row" style="gap:8px;align-items:center;margin-top:11px;padding-top:11px;border-top:1px solid var(--border)"><input id="ph_${r.id}" value="${esch(r.phone||'')}" placeholder="+13105551234" inputmode="tel" onkeydown="if(event.key==='Enter')saveStorePhone(${r.id})" style="flex:1;min-width:0"><button class="act" onclick="saveStorePhone(${r.id})">Save phone</button></div><div class="hint" style="margin-top:6px;font-style:normal">Demo store — the phone number is its on/off switch. ${r.active?'<b style="color:var(--green)">● live</b>':'<span style="color:var(--muted)">○ off — add a number</span>'}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  renderStorePager(total);
 }
+function recPill(cs){
+  if(!cs||!cs.total) return '<span class="recp none">never called</span>';
+  const ratio=cs.inStock/cs.total, cls=ratio>=0.5?'good':ratio>0?'mid':'low';
+  return `<span class="recp ${cls}">${cs.inStock}/${cs.total} in</span>`;
+}
+function toggleStore(id){ const d=document.getElementById('srd_'+id); if(!d) return; const open=d.style.display==='none'; d.style.display=open?'block':'none'; const row=document.getElementById('sr_'+id); if(row) row.classList.toggle('open',open); }
+function onStoreFilter(){ STORE_PAGE=0; renderRetailers(); }
+function setStoreSize(n){ STORE_SIZE=Number(n)||10; STORE_PAGE=0; renderRetailers(); }
+function storePage(delta){ STORE_PAGE=Math.max(0,STORE_PAGE+delta); renderRetailers(); try{document.getElementById('search').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){} }
+function renderStorePager(total){
+  const pages=Math.max(1,Math.ceil(total/STORE_SIZE));
+  const ind=document.getElementById('store_pageind'); if(ind) ind.textContent=(STORE_PAGE+1)+' / '+pages;
+  const pv=document.getElementById('store_prev'); if(pv){ pv.disabled=STORE_PAGE<=0; pv.style.opacity=pv.disabled?.4:1; }
+  const nx=document.getElementById('store_next'); if(nx){ nx.disabled=STORE_PAGE>=pages-1; nx.style.opacity=nx.disabled?.4:1; }
+  const bar=document.getElementById('store_pager'); if(bar) bar.style.display=total>0?'flex':'none';
+}
+// Which product to ask about on a call — the store's primary carried product, else the default category.
+function defaultCatFor(r){ const carries=(r&&r.carries)?r.carries.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean):[]; for(const c of (CATEGORIES||[])){ const lbl=(c.label||'').toLowerCase(); if(lbl&&carries.some(cn=>cn.includes(lbl)||lbl.includes(cn))) return c.id; } return (CATEGORIES&&CATEGORIES[0])?CATEGORIES[0].id:null; }
 // Demo stores (Fun/MVPs): editing the phone IS the on/off switch — the server derives active from it.
 async function saveStorePhone(id){
   const inp=document.getElementById('ph_'+id); if(!inp) return;
@@ -2564,12 +2611,11 @@ async function addStatus(){
 // ---- Playbook sub-nav ----
 function pbTab(name){ showSection(name); } // Test Bench / Phone Trees / Statuses are now top-level sections
 async function callNow(id){
-  const catId = Number(document.getElementById('cn_'+id).value);
-  if(!catId){ toast('Pick a category first'); return; }
+  const r=RETAILERS.find(x=>x.id===id); const catId=defaultCatFor(r);
+  if(!catId){ toast('No product category configured'); return; }
   toast('Dialing…');
   await api('/api/call-now',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:id,categoryId:catId})});
-  toast('Call placed — result will appear shortly.');
-  setTimeout(loadResults, 1500);
+  toast('Call placed — the result lands in this store’s record shortly.');
 }
 async function mapCall(id){
   const cat=(CATEGORIES.find(c=>/pok/i.test(c.label))||CATEGORIES[0]);

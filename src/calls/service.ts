@@ -842,6 +842,19 @@ export async function retailersWithStatus(opts: { q?: string; state?: string; li
     zonesByRetailer.set(l.retailerId, arr);
   }
 
+  // Per-store call track-record (count + in-stock / not-in / restock tally) from the `recent` set we
+  // already loaded for lastCall — no extra query.
+  const statsByStore = new Map<number, { total: number; inStock: number; notIn: number; restock: number }>();
+  for (const cr of recent) {
+    if (cr.retailerId == null) continue;
+    const s = statsByStore.get(cr.retailerId) ?? { total: 0, inStock: 0, notIn: 0, restock: 0 };
+    s.total++;
+    if (cr.confirmed === true) s.inStock++;
+    else if (cr.shipmentDayHeard) s.restock++;
+    else if (cr.confirmed === false) s.notIn++;
+    statsByStore.set(cr.retailerId, s);
+  }
+
   return rs.map((r) => {
     const last = recent.find((c) => c.retailerId === r.id);
     return {
@@ -849,6 +862,7 @@ export async function retailersWithStatus(opts: { q?: string; state?: string; li
       storeType: (r.chainId && chainTypes.get(r.chainId)) || "Other",
       zones: zonesByRetailer.get(r.id) ?? [],
       openState: openState(r.hours, r.timezone),
+      callStats: statsByStore.get(r.id) ?? { total: 0, inStock: 0, notIn: 0, restock: 0 },
       lastCall: last
         ? {
             status: last.status,
