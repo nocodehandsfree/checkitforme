@@ -96,6 +96,10 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE chains ADD COLUMN nav_confidence INTEGER").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN nav_log TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN nav_updated_at INTEGER").catch(() => {});
+  // Logo linkage: chain logo lives in shared R2, referenced by logo_url so it travels across environments.
+  await client.execute("ALTER TABLE chains ADD COLUMN logo_url TEXT").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN logo_wide INTEGER").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN logo_dark INTEGER").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN external_store_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN maps_uri TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN geocode_tried_at INTEGER").catch(() => {});
