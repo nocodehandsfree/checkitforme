@@ -44,6 +44,10 @@ export const config = {
   // Outbound calling/SMS is live everywhere EXCEPT a staging deploy that hasn't opted in. This is
   // the single switch every outbound-dial path checks (assertCallsEnabled / config.callsEnabled).
   callsEnabled: process.env.STAGING === "1" ? process.env.STAGING_CALLS === "1" : true,
+  // SMS login codes cost money per text. Decoupled from callsEnabled so staging can run REAL calls
+  // (STAGING_CALLS=1) while STILL skipping real login texts (log in with STAGING_LOGIN_CODE instead).
+  // Prod always sends real SMS; staging only if you explicitly opt in with STAGING_SMS=1.
+  smsVerifyEnabled: process.env.STAGING === "1" ? process.env.STAGING_SMS === "1" : true,
   adminToken: process.env.ADMIN_TOKEN, // server-to-server admin key (bypasses Clerk for store/zone management)
   anthropicKey: process.env.ANTHROPIC_API_KEY, // powers the in-admin Claude agent (Admin dev assistant)
   openaiKey: process.env.OPENAI_API_KEY,        // alt brain for the admin agent (model switcher)

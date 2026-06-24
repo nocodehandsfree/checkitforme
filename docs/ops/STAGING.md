@@ -13,6 +13,7 @@ change **before** it touches live. This exists because we kept breaking prod wit
 | Railway service | `voice-caller` (`d363a982-…`) | `voice-caller-staging` (`8165df7a-…`) |
 | Deploy | push → live ~3 min | push → staging ~3 min |
 | Phone calls | real | **real** (`STAGING_CALLS=1`) |
+| Login SMS | real | **skipped** — log in with `STAGING_LOGIN_CODE` (`000000`); real only if `STAGING_SMS=1` |
 | DB | prod volume | its own volume (separate by design) |
 | `STAGING` env | unset | `1` |
 
@@ -50,10 +51,14 @@ calls must never write to live data.
 - `STAGING=1` — flips the consumer-default routing + `noindex` + the `STAGING_CALLS` switch. **There is
   NO password wall** — you log in with your phone exactly like prod (we removed the Basic/login gate;
   it was constant iOS re-prompt friction for no benefit).
-- `STAGING_CALLS=1` — real telephony on staging. With it set, `config.callsEnabled` is true, so the
-  call sim is skipped (real dials), SMS verify is real, and the no-real-calls kill-switches lift.
-  (Unset = UI-only preview: sim calls, phone login accepts the fixed `STAGING_LOGIN_CODE`, default
-  `000000`.)
+- `STAGING_CALLS=1` — real telephony (DIALS) on staging. With it set, `config.callsEnabled` is true, so the
+  call sim is skipped (real dials) and the no-real-calls kill-switches lift. (Unset = UI-only preview:
+  sim calls.)
+- `STAGING_SMS=1` — real login **SMS** on staging (decoupled from calls so staging can run real calls
+  WITHOUT paying per login text). **Default: unset → no real text is sent; log in with the fixed
+  `STAGING_LOGIN_CODE` (default `000000`).** The login code screen auto-prefills it and shows a
+  "Staging — no real text sent" hint. Prod always sends real SMS (`STAGING` unset → `smsVerifyEnabled` true).
+  Flip `STAGING_SMS=1` only when you specifically want to test the real texted-code path.
 - `FUN_STORE_PHONE` — seeds the owner-only **"Fun"** rehearsal store (tier 5, Calabasas), which dials
   this number. So the owner can place a real call to themselves and test the whole flow. Hidden from
   everyone except the master/comp account (`isComp` email / `isCompPhone` / owner-phone path).

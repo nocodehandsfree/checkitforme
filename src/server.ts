@@ -450,7 +450,7 @@ app.post("/auth/phone/start", async (c) => {
   const e = authE164(String(phone || ""));
   if (!/^\+1\d{10}$/.test(e)) return c.json({ error: "us_number_required" }, 400); // US only for now
   const r = await startPhoneVerify(e);
-  return r.ok ? c.json({ ok: true }) : c.json({ error: r.error }, 400);
+  return r.ok ? c.json({ ok: true, dev: !!r.dev, devCode: r.devCode }) : c.json({ error: r.error }, 400);
 });
 // Read-only: is this number a returning account? Lets the login screen show "Welcome back" vs
 // "First check's on us" before they submit. Rate-limited (anti-enumeration); never creates an account.
