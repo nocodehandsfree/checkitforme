@@ -191,6 +191,7 @@ interface TriggerArgs {
   finderUserId?: string;    // clerk id of whoever placed it (for finds privacy/headstart attribution)
   isPrivate?: boolean;      // keep this find out of the public feed (subscriber perk / paid privacy)
   kioskMode?: boolean;      // kiosk-only store → agent asks about the vending kiosk, not a shelf shipment (else inferred from the store)
+  force?: boolean;          // skip the 24h one-check-per-store dedup (admin "check again" places a real call every time)
 }
 
 /** Most recent COMPLETED check by this finder for a store+category within `withinHours` (default 24h).
@@ -232,7 +233,7 @@ export async function triggerCall(a: TriggerArgs) {
   // One-check-per-store-per-day (flag-gated): reuse a recent confirmed/answered result instead of
   // re-calling the same store+product within 24h — anti-abuse + cost. Returns the cached call row.
   // Owner-only demo store ("Fun") is exempt — the owner re-tests it repeatedly while rehearsing.
-  if (a.finderUserId && !a.toOverride && !retailer.ownerOnly && (await getPolicy()).flags.oneCheckPerStorePerDay) {
+  if (a.finderUserId && !a.force && !a.toOverride && !retailer.ownerOnly && (await getPolicy()).flags.oneCheckPerStorePerDay) {
     const recent = await findRecentCheck(a.finderUserId, retailer.id, category.id);
     if (recent) return { ...recent, deduped: true };
   }

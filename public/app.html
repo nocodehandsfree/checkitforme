@@ -175,6 +175,45 @@
   .stally .tp.in{color:var(--green);background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3)}
   .stally .tp.out{color:#ff8a8a;background:rgba(239,68,68,.09);border-color:rgba(239,68,68,.28)}
   .stally .tp.soon{color:#F4D03F;background:rgba(244,208,63,.1);border-color:rgba(244,208,63,.28)}
+  /* ---- v3 Store Search card: collapsed → tap-to-arm → tap-to-call → live transcript ---- */
+  .stc{background:var(--surface-1);border:1px solid var(--border-default);border-radius:var(--r-card);padding:13px;margin-bottom:9px;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;user-select:none;transition:border-color .15s,background .15s}
+  .stc.armed{border-color:rgba(74,222,128,.34);background:linear-gradient(180deg,rgba(74,222,128,.05),rgba(74,222,128,0))}
+  .stc.closed{opacity:.6}
+  .stchead{display:flex;align-items:flex-start;gap:11px}
+  .stcbody{flex:1;min-width:0}
+  .stcnm{font-size:15px;font-weight:700;color:#f3f3f7;letter-spacing:-.1px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:6px}
+  .stcaddr{font-size:12px;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stcpills{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .stcpills .cp{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:3px 8px;font:800 12px Inter;border:1px solid;line-height:1}
+  .stcpills .cp.in{color:var(--green);background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3)}
+  .stcpills .cp.out{color:#ff8a8a;background:rgba(239,68,68,.09);border-color:rgba(239,68,68,.28)}
+  .stcpills .cp.soon{color:#F4D03F;background:rgba(244,208,63,.1);border-color:rgba(244,208,63,.28)}
+  .stcprod{display:flex;gap:8px;margin-top:9px;align-items:center;flex-wrap:wrap}
+  .stcprod img{height:19px;width:19px;object-fit:contain;border-radius:4px;flex:0 0 auto}
+  .stcdot{width:11px;height:11px;border-radius:50%;flex:0 0 auto;margin-top:3px}
+  .stcdot.good{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .stcdot.mid{background:#F4D03F;box-shadow:0 0 8px rgba(244,208,63,.6)}
+  .stcdot.low{background:var(--red);box-shadow:0 0 8px rgba(239,68,68,.55)}
+  .stcclosed{flex:0 0 auto;font:700 10px Inter;letter-spacing:.04em;text-transform:uppercase;color:#ff8a8a;background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.28);border-radius:7px;padding:3px 7px;white-space:nowrap;margin-top:1px}
+  .stcown{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+  .stc.armed .stcown{display:block}
+  /* recall confirm — store checked < 24h ago */
+  .stcdlg{margin-top:13px;border-top:1px solid var(--border);padding-top:14px}
+  .stcdlg .q{font:500 13px Inter;color:var(--text-body);line-height:1.55;text-align:center}
+  .stcdlg .q b{color:#f3f3f7}
+  .stcdlg .yes{display:block;width:100%;text-align:center;border:none;border-radius:11px;padding:12px;margin-top:14px;font:800 13.5px Inter;background:linear-gradient(180deg,#5BEA93,#34C268);color:#06210f;cursor:pointer}
+  .stcdlg .no{display:block;text-align:center;margin-top:12px;color:var(--muted);font-weight:700;font-size:13.5px;cursor:pointer}
+  /* live transcript view — identical to the website */
+  .lvhead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .lvname{flex:1;min-width:0}
+  .lvname b{font-size:15px;color:#fff;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lvname .st{font:600 12px Inter;color:var(--green);margin-top:2px;display:flex;align-items:center;gap:6px}
+  .pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex:0 0 auto;animation:scpulse 1.4s ease-in-out infinite}
+  @keyframes scpulse{0%,100%{opacity:1}50%{opacity:.32}}
+  .lvstop{width:100%;margin-bottom:12px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);color:#ff8a8a;border-radius:10px;padding:10px 15px;font:800 13px Inter;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}
+  .lvx{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--surface-2);color:#9a9aac;font-size:15px;display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
+  .lvbody{max-height:46vh;overflow:auto}
+  .lvbody .chat{margin-top:0}
   .sracts{display:flex;gap:9px;align-items:center;margin-top:13px}
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
@@ -1829,41 +1868,127 @@ function renderRetailers(){
     } else el.innerHTML='';
     renderStorePager(0); return;
   }
-  el.innerHTML = rs.map(r=>{
-    const nm=splitName(r.name);
-    const loc=r.location||'';
-    const o=r.openState; const hrs=(o&&o.label)?`<span style="color:${o.open?'var(--green)':'#ff8a8a'};font-weight:600">${esch(o.label)}</span>`:'';
-    const cl=r.carries?r.carries.split(',').map(x=>x.trim()).filter(Boolean):[];
-    const wf=WF.list.length?(()=>{const inh=(r.chainId&&WF.chains[r.chainId])||WF.def||'';return `<select onchange="setStoreWorkflow(${r.id},this.value)" style="flex:1;min-width:0">${wfOptions(WF.stores[r.id]||'', inh?('Inherit · '+inh):'Inherit · no default')}</select>`;})():'';
-    const cs=r.callStats||{total:0,inStock:0,notIn:0,restock:0};
-    return `<div class="srow" id="sr_${r.id}">
-      <div class="srhead" onclick="toggleStore(${r.id})">
-        ${logoTile(r)}
-        <div class="grow" style="min-width:0">
-          <div class="nm">${esch(nm.base)}</div>
-          ${nm.branch?`<div class="sbranch">${esch(nm.branch)}</div>`:''}
-          <div class="ssub">${esch(loc)}${hrs?(loc?' · ':'')+hrs:''}${badNum(r)?' · <span style="color:#FBBF24">no number</span>':''}</div>
-        </div>
-        ${recPill(cs)}
-        <span class="srchev">⌄</span>
-      </div>
-      <div class="srdetail" id="srd_${r.id}" style="display:none">
-        ${cl.length?`<div class="srline"><span class="srlab">Carries</span><span>${cl.slice(0,3).map(x=>prodMark(x,14)+' '+esch(x)).join(' · ')}${cl.length>3?` <span style="color:var(--muted)">+${cl.length-3}</span>`:''}</span></div>`:''}
-        <div class="srline"><span class="srlab">Called</span><span>${cs.total} time${cs.total===1?'':'s'}</span></div>
-        ${cs.total?`<div class="stally"><span class="tp in">${cs.inStock} <i>in stock</i></span><span class="tp out">${cs.notIn} <i>not in</i></span><span class="tp soon">${cs.restock} <i>restock</i></span></div>`:'<div class="meta" style="margin-top:6px">No calls yet — tap Call store to check stock.</div>'}
-        <div class="sracts">${wf}<button class="act" onclick="event.stopPropagation();callNow(${r.id})" style="white-space:nowrap">${ICO('phone',15)} Call store</button></div>
-        ${r.ownerOnly?`<div class="row" style="gap:8px;align-items:center;margin-top:11px;padding-top:11px;border-top:1px solid var(--border)"><input id="ph_${r.id}" value="${esch(r.phone||'')}" placeholder="+13105551234" inputmode="tel" onkeydown="if(event.key==='Enter')saveStorePhone(${r.id})" style="flex:1;min-width:0"><button class="act" onclick="saveStorePhone(${r.id})">Save phone</button></div><div class="hint" style="margin-top:6px;font-style:normal">Demo store — the phone number is its on/off switch. ${r.active?'<b style="color:var(--green)">● live</b>':'<span style="color:var(--muted)">○ off — add a number</span>'}</div>`:''}
-      </div>
-    </div>`;
-  }).join('');
+  el.innerHTML = rs.map(r=>storeCardHTML(r)).join('');
   renderStorePager(total);
 }
-function recPill(cs){
-  if(!cs||!cs.total) return '<span class="recp none">never called</span>';
-  const ratio=cs.inStock/cs.total, cls=ratio>=0.5?'good':ratio>0?'mid':'low';
-  return `<span class="recp ${cls}">${cs.inStock}/${cs.total} in</span>`;
+// One Store Search card. Collapsed: logo · full name (one line, top-aligned with the logo) · full
+// address below · call-status count pills (in / not-in / restock) · the product logos we support · a
+// threshold dot top-right (green ≥50% in-stock, yellow 1–49%, red 0%). Never-called = no dot, no pills.
+function storeCardHTML(r){
+  const cs=r.callStats||{total:0,inStock:0,notIn:0,restock:0};
+  const os=r.openState||{}; const closed=!!(os.known && !os.open);
+  const armed=!!(STORE_TAP[r.id]&&STORE_TAP[r.id].armed);
+  const addr=(r.location||'').trim();
+  const pills=cs.total?`<div class="stcpills"><span class="cp in">${vmark('✅','in',13)} ${cs.inStock}</span><span class="cp out">${vmark('❌','out',13)} ${cs.notIn}</span><span class="cp soon">${vmark('🚚','soon',13)} ${cs.restock}</span></div>`:'';
+  const dot=cs.total?`<div class="stcdot ${cs.inStock/cs.total>=0.5?'good':cs.inStock/cs.total>0?'mid':'low'}"></div>`:'';
+  const own=r.ownerOnly?`<div class="stcown"><div class="row" style="gap:8px;align-items:center"><input id="ph_${r.id}" value="${esch(r.phone||'')}" placeholder="+13105551234" inputmode="tel" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')saveStorePhone(${r.id})" style="flex:1;min-width:0"><button class="act" onclick="event.stopPropagation();saveStorePhone(${r.id})">Save phone</button></div><div class="hint" style="margin-top:6px;font-style:normal">Demo store — the phone number is its on/off switch. ${r.active?'<b style="color:var(--green)">● live</b>':'<span style="color:var(--muted)">○ off — add a number</span>'}</div></div>`:'';
+  return `<div class="stc${armed?' armed':''}${closed?' closed':''}" id="stc_${r.id}" onclick="storeTap(${r.id},event)">
+    <div class="stchead">
+      ${logoTile(r)}
+      <div class="stcbody">
+        <div class="stcnm">${esch(r.name||'Unnamed store')}</div>
+        <div class="stcaddr">${addr?esch(addr):'<span style="color:var(--text-tertiary)">No address on file</span>'}${badNum(r)?' · <span style="color:#FBBF24">no number</span>':''}</div>
+        ${pills}
+        ${prodLogos(r.carries)}
+      </div>
+      ${closed?'<div class="stcclosed">Closed</div>':dot}
+    </div>
+    ${own}
+    <div class="stclive" id="stclive_${r.id}"></div>
+  </div>`;
 }
-function toggleStore(id){ const d=document.getElementById('srd_'+id); if(!d) return; const open=d.style.display==='none'; d.style.display=open?'block':'none'; const row=document.getElementById('sr_'+id); if(row) row.classList.toggle('open',open); }
+// Product logos for the verticals we actually support (Pokémon / One Piece / Topps / NeeDoh), one line.
+const PROD_LOGOS=[[/pok[eé]?mon/i,'/logos/chains/pokemon_vending.svg','Pokémon'],[/one[\s-]?piece/i,'/logos/onepiece.png','One Piece'],[/topps/i,'/logos/topps.png','Topps'],[/nee[\s-]?doh/i,'/logos/needoh.png','NeeDoh']];
+function prodLogos(carries){
+  const s=String(carries||''); let out=''; const seen={};
+  for(const t of PROD_LOGOS){ if(t[0].test(s)&&!seen[t[1]]){ seen[t[1]]=1; out+=`<img src="${t[1]}" alt="${esch(t[2])}" title="${esch(t[2])}" loading="lazy">`; } }
+  return out?`<div class="stcprod">${out}</div>`:'';
+}
+// ---- Tap gesture: tap = arm (green) · tap again = call · fast double-tap = collapse (no copy — intuitive) ----
+let STORE_TAP={};                 // id -> {armed, t, recall, calling, cid, callSid}
+let SC_POLL=null, SC_CLOCK=null;  // one live store-call view at a time
+function storeTap(id, ev){
+  const st=STORE_TAP[id]||{armed:false,t:0};
+  if(st.recall||st.calling) return;                 // recall / live views own their own buttons
+  const now=Date.now();
+  if(!st.armed){ st.armed=true; st.t=now; STORE_TAP[id]=st; setArmed(id,true); return; }
+  if(now-st.t<300){ st.armed=false; STORE_TAP[id]=st; setArmed(id,false); return; }  // fast double-tap → collapse
+  st.t=now; STORE_TAP[id]=st;                        // deliberate second tap → call
+  const r=RETAILERS.find(x=>x.id===id); if(!r) return;
+  const os=r.openState||{}; if(os.known && !os.open){ toast('🔒 Closed — no call placed'); return; }
+  const lc=r.lastCall, recent=lc&&lc.startedAt&&(Date.now()/1000-lc.startedAt)<86400;
+  if(recent) openRecall(id,r); else placeStoreCall(id);
+}
+function setArmed(id,on){ const c=document.getElementById('stc_'+id); if(c) c.classList.toggle('armed',on); }
+function lastOutcome(lc){ if(!lc) return ''; if(lc.confirmed===true) return 'in stock'; if(lc.shipmentDayHeard) return 'restocking soon'; if(lc.confirmed===false) return 'not in stock'; if(lc.status==='completed') return 'no clear answer'; if(lc.status==='closed') return 'closed'; return 'no answer'; }
+// Front-end recall confirm (store checked < 24h ago): a single green "check again", then "Not now" in gray.
+function openRecall(id, r){
+  const st=STORE_TAP[id]||{}; st.recall=true; STORE_TAP[id]=st;
+  const box=document.getElementById('stclive_'+id); if(!box) return;
+  const lc=r.lastCall, ago=agoTs(lc&&lc.startedAt)||'recently', out=lastOutcome(lc);
+  box.innerHTML=`<div class="stcdlg">
+    <div class="q">You checked <b>${esch(r.name||'this store')}</b> ${esch(ago)}${out?' — '+esch(out):''}. Want us to check again?</div>
+    <button class="yes" onclick="recallYes(${id},event)">Yes, check again →</button>
+    <div class="no" onclick="recallNo(${id},event)">Not now</div>
+  </div>`;
+}
+function recallYes(id, ev){ if(ev)ev.stopPropagation(); placeStoreCall(id); }
+function recallNo(id, ev){ if(ev)ev.stopPropagation(); const st=STORE_TAP[id]||{}; st.recall=false; STORE_TAP[id]=st; const box=document.getElementById('stclive_'+id); if(box) box.innerHTML=''; }
+// Place a REAL call (databased like a website check — Call log, the owner's website account, the in-stock
+// banner) and swap the card to the live transcript view.
+async function placeStoreCall(id){
+  const r=RETAILERS.find(x=>x.id===id); if(!r) return;
+  const catId=defaultCatFor(r); if(!catId){ toast('No product category configured'); return; }
+  const st=STORE_TAP[id]||{}; st.recall=false; st.calling=true; st.armed=true; STORE_TAP[id]=st;
+  renderCallView(id, r);
+  const resp=await api('/api/call-now',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:id,categoryId:catId})});
+  if(!resp||resp.error){ toast(/closed/i.test((resp&&resp.error)||'')?'🔒 Closed — no call placed':'Could not place the call'); closeStoreCall(id); return; }
+  st.cid=resp.providerCallId; st.callSid=resp.callSid; STORE_TAP[id]=st;
+  scPoll(id, resp.providerCallId);
+}
+function renderCallView(id, r){
+  const c=document.getElementById('stc_'+id); if(!c) return;
+  c.classList.add('armed');
+  c.innerHTML=`<div class="lvhead">
+      ${logoTile(r)}
+      <div class="lvname"><b>${esch(r.name||'Store')}</b><div class="st" id="sc_status_${id}"><span class="pulse"></span> connecting…</div></div>
+      <div class="lvx" onclick="closeStoreCall(${id},event)" title="Close">✕</div>
+    </div>
+    <button class="lvstop" id="sc_stop_${id}" onclick="stopStoreCall(${id},event)">■ Stop &amp; hang up</button>
+    <div class="lvbody"><div id="sc_body_${id}"><div class="bub-note">Ringing…</div></div><div id="sc_verdict_${id}"></div></div>`;
+}
+function fmtClock(s){ const m=Math.floor(s/60), ss=s%60; return m+':'+(ss<10?'0':'')+ss; }
+function scPoll(id, cid){
+  if(SC_POLL){ clearInterval(SC_POLL); } if(SC_CLOCK){ clearInterval(SC_CLOCK); }
+  const t0=Date.now();
+  SC_CLOCK=setInterval(()=>{ const stt=document.getElementById('sc_status_'+id); if(!stt){ clearInterval(SC_CLOCK); SC_CLOCK=null; return; } if(stt.dataset.done==='1') return; stt.innerHTML='<span class="pulse"></span> on the line · '+fmtClock(Math.floor((Date.now()-t0)/1000)); },1000);
+  const tick=async()=>{
+    const o=await api('/api/conversation/'+encodeURIComponent(cid));
+    const body=document.getElementById('sc_body_'+id); if(!body){ clearInterval(SC_POLL); SC_POLL=null; return; }
+    if(o&&o.transcript) body.innerHTML=bubbles(o.transcript);
+    if(o&&o.status&&o.status!=='in_progress'){
+      clearInterval(SC_POLL); SC_POLL=null; if(SC_CLOCK){ clearInterval(SC_CLOCK); SC_CLOCK=null; }
+      const vv=customerVerdict(o), stt=document.getElementById('sc_status_'+id);
+      if(stt){ stt.dataset.done='1'; stt.style.color=vv.c; stt.innerHTML='Call '+esch(o.status); }
+      const stop=document.getElementById('sc_stop_'+id); if(stop) stop.style.display='none';
+      const vd=document.getElementById('sc_verdict_'+id);
+      if(vd) vd.innerHTML=`<div style="margin-top:12px;border:1px solid ${vv.c};border-radius:12px;padding:13px;text-align:center"><div style="margin-bottom:3px">${vmark(vv.e,vv.c,30)}</div><div style="font-size:18px;font-weight:800;color:${vv.c}">${esch(vv.t)}</div>${vv.n?`<div style="font-size:12.5px;color:var(--text-body);margin-top:5px">${esch(vv.n)}</div>`:''}</div>`;
+      loadResults();   // refresh the Calls page; the Search list refreshes when the card is closed
+    }
+  };
+  tick(); SC_POLL=setInterval(tick,3000);
+}
+async function stopStoreCall(id, ev){ if(ev)ev.stopPropagation();
+  const st=STORE_TAP[id]||{}; const stop=document.getElementById('sc_stop_'+id);
+  if(stop){ stop.textContent='Hanging up…'; stop.style.opacity=.6; stop.style.pointerEvents='none'; }
+  await api('/api/hangup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid:st.cid,callSid:st.callSid})});
+  // the poll picks up the terminal status and renders the verdict
+}
+function closeStoreCall(id, ev){ if(ev)ev.stopPropagation();
+  if(SC_POLL){ clearInterval(SC_POLL); SC_POLL=null; } if(SC_CLOCK){ clearInterval(SC_CLOCK); SC_CLOCK=null; }
+  const st=STORE_TAP[id]||{}; st.calling=false; st.recall=false; st.armed=true; STORE_TAP[id]=st;
+  loadRetailers();   // pull fresh stats; the card re-renders armed (STORE_TAP)
+}
 function onStoreFilter(){ STORE_PAGE=0; renderRetailers(); }
 function setStoreSize(n){ STORE_SIZE=Number(n)||10; STORE_PAGE=0; renderRetailers(); }
 function storePage(delta){ STORE_PAGE=Math.max(0,STORE_PAGE+delta); renderRetailers(); try{document.getElementById('search').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){} }
@@ -2921,7 +3046,11 @@ const esch=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;'
 // Product mark: show a known product's logo instead of its plain name (Pokémon for now).
 function prodMark(name,size){
   size=size||15; const s=String(name==null?'':name).trim();
-  if(/pok[eé]?mon/i.test(s)) return `<img src="/logos/chains/pokemon_vending.svg" alt="Pokémon" title="Pokémon" style="height:${size}px;width:${size}px;vertical-align:-3px;object-fit:contain;display:inline-block">`;
+  const img=(src,alt)=>`<img src="${src}" alt="${alt}" title="${alt}" style="height:${size}px;width:${size}px;vertical-align:-3px;object-fit:contain;display:inline-block">`;
+  if(/pok[eé]?mon/i.test(s)) return img('/logos/chains/pokemon_vending.svg','Pokémon');
+  if(/one[\s-]?piece/i.test(s)) return img('/logos/onepiece.png','One Piece');
+  if(/topps/i.test(s)) return img('/logos/topps.png','Topps');
+  if(/nee[\s-]?doh/i.test(s)) return img('/logos/needoh.png','NeeDoh');
   return esch(s);
 }
 // ---- Drawn icon system (matches the consumer front end — zero raw emoji in chrome) ----

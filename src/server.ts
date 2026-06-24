@@ -2781,7 +2781,31 @@ app.get("/api/results", async (c) => {
 // ---- Actions ----
 app.post("/api/call-now", async (c) => {
   const b = await c.req.json();
-  return c.json(await triggerCall(b));
+  try {
+    // An admin-placed check IS the owner placing it. Attribute it to the master website account so it
+    // lands in their checks history (and the in-stock banner) exactly like a website call, kept private
+    // so it doesn't post to the public finds feed. force = skip the 24h dedup — the owner taps "check
+    // again" deliberately and expects a real call every time. (triggerCall throws store_closed for a
+    // closed store, which the handler surfaces as {error} below.)
+    const finderUserId = b.finderUserId ?? ("phone:" + (process.env.OWNER_PHONE || "+13106662331"));
+    return c.json(await triggerCall({ isPrivate: true, ...b, finderUserId, force: true }));
+  } catch (e) {
+    return c.json({ error: String((e as Error)?.message || e) }, 400);
+  }
+});
+// Admin "Stop & hang up" for a direct (non-bridge) call placed from Store Search. End the Twilio leg
+// and stamp the row admin_hangup (confirmed=null) so it's never mislabeled "nobody answered" — mirrors
+// /pub/bridge-hangup for the call-now path.
+app.post("/api/hangup", async (c) => {
+  const { cid, callSid } = await c.req.json().catch(() => ({}));
+  if (callSid) await hangupTwilioCall(callSid);
+  if (cid) {
+    await db.update(callResults)
+      .set({ status: "admin_hangup", statusKey: "admin_hangup", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
+      .where(and(eq(callResults.providerCallId, cid), inArray(callResults.status, ["dialing", "in_progress", "queued"])))
+      .catch((e) => console.error("admin_hangup stamp:", e));
+  }
+  return c.json({ ok: true });
 });
 // Labs: call any number with a chosen agent (restock | carry | open).
 app.post("/api/talk", async (c) => {
