@@ -659,25 +659,64 @@ function storeCarriesList(chainName: string | null | undefined, stored: string |
   return carriesForChain(chainName) ?? (stored ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-// Owner preview: every chain logo rendered EXACTLY as the store list renders it (same tile,
-// plate + wide handling from _meta.json) at real size and 2x — judge phone clarity without
-// driving anywhere. (No auth needed; it leaks nothing but public logos.)
-app.get("/logo-wall", (c) => {
+// Owner preview: every chain logo rendered EXACTLY as the consumer store list renders it — the
+// same .ic tile (52px, plate + wide handling from _meta.json), ONE mark each (no 2x detail), so
+// the page mirrors the real website. Filter by the chain's admin "type" (Big Box, Pharmacy,
+// Grocer…), pulled live from the chains table. No auth — leaks nothing but public logos.
+app.get("/logo-wall", async (c) => {
   const files = [...chainLogoFiles()].sort();
   const meta = logoMeta();
+  // Pair each logo file to its chain's admin store-type (chains = the Admin source of truth).
+  const fileInfo = new Map<string, { type: string; name: string }>();
+  for (const ch of await cachedChains()) {
+    const f = chainLogoFile(ch.name);
+    if (f && !fileInfo.has(f)) fileInfo.set(f, { type: (ch.type || "").trim() || "Other", name: ch.name });
+  }
+  const pretty = (f: string) => f.replace(/\.(png|webp|svg)$/i, "").replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+  const types = [...new Set(files.map((f) => fileInfo.get(f)?.type || "Other"))]
+    .sort((a, b) => (a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b)));
   const tile = (f: string) => {
     const m = meta[f] || { w: 0, d: 0 };
-    const plate = m.d === 1 ? "background:#f2f2f5;border-color:rgba(255,255,255,.28)" : "";
-    const big = m.w === 1 ? "width:60px;height:auto;max-height:34px" : "max-width:52px;max-height:40px";
-    const real = m.w === 1 ? "width:44px;height:auto;max-height:34px" : "width:42px;height:42px";
-    return `<div style="width:88px"><div style="width:72px;height:72px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);display:grid;place-items:center;margin:0 auto;${plate}"><img src="/logos/chains/${f}?v=73" style="object-fit:contain;${big}"></div>
-    <div style="width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.06);display:grid;place-items:center;margin:7px auto 0;${plate}"><img src="/logos/chains/${f}?v=73" style="object-fit:contain;${real}"></div>
-    <div style="font-size:9px;color:#8a8a98;text-align:center;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.replace(/\.(png|webp|svg)$/i, "")}</div></div>`;
+    const info = fileInfo.get(f);
+    const cls = (m.d === 1 ? " lite" : "") + (m.w === 1 ? " widelogo" : "");
+    return `<div class="cell" data-type="${esc(info?.type || "Other")}"><div class="ic${cls}"><img src="/logos/chains/${f}?v=73" alt=""></div><div class="nm">${esc(info?.name || pretty(f))}</div></div>`;
   };
-  return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="background:#0C0C12;font-family:-apple-system,sans-serif;color:#fff;padding:20px">
-  <h2 style="font-weight:900;margin:0 0 4px">Logo wall · ${files.length} marks</h2>
-  <div style="color:#9a9aac;font-size:12px;margin-bottom:16px">Top = detail (2x) · bottom = exact store-list size. Dark ink lifted to grey; plates only where _meta says dark.</div>
-  <div style="display:flex;flex-wrap:wrap;gap:12px">${files.map(tile).join("")}</div></body>`);
+  return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    *{box-sizing:border-box}
+    body{background:#0C0C12;font-family:-apple-system,system-ui,sans-serif;color:#fff;padding:20px;margin:0}
+    h2{font-weight:900;margin:0 0 4px}
+    .sub{color:#9a9aac;font-size:12px;margin-bottom:6px}
+    .bar{position:sticky;top:0;background:#0C0C12;padding:12px 0 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;z-index:5;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:18px}
+    .bar label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8a8a98;display:flex;align-items:center;gap:8px;font-weight:700}
+    select{appearance:none;-webkit-appearance:none;background:#1a1a22;color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:9px 32px 9px 12px;font-size:14px;font-weight:600;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23aaa' stroke-width='2'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
+    #count{font-size:12px;color:#8a8a98;margin-left:auto}
+    .grid{display:flex;flex-wrap:wrap;gap:18px}
+    .cell{width:72px;display:flex;flex-direction:column;align-items:center;gap:7px}
+    .cell.hide{display:none}
+    .nm{font-size:10px;color:#9a9aac;text-align:center;line-height:1.25;overflow-wrap:anywhere}
+    /* —— EXACT copy of the consumer store-list tile (.ic) from checkit.html —— */
+    .ic{width:52px;height:52px;border-radius:15px;background:linear-gradient(145deg,#34343d,#23232b);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .ic img{width:40px;height:40px;object-fit:contain}
+    .ic.widelogo img{width:44px;height:auto;max-height:34px}
+    .ic.lite{background:#f2f2f5;border-color:rgba(255,255,255,.28)}
+  </style>
+  <body>
+  <h2>Logo wall · ${files.length} marks</h2>
+  <div class="sub">Each mark exactly as the store list renders it — same 52px tile, plate &amp; wide handling from _meta.json.</div>
+  <div class="bar">
+    <label>Store type
+      <select id="type"><option value="">All stores</option>${types.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
+    </label>
+    <span id="count"></span>
+  </div>
+  <div class="grid" id="grid">${files.map(tile).join("")}</div>
+  <script>
+    var sel=document.getElementById('type'),grid=document.getElementById('grid'),count=document.getElementById('count');
+    function apply(){var v=sel.value,n=0,k=grid.children;for(var i=0;i<k.length;i++){var show=!v||k[i].getAttribute('data-type')===v;k[i].classList.toggle('hide',!show);if(show)n++;}count.textContent=n+(n===1?' logo':' logos');}
+    sel.addEventListener('change',apply);apply();
+  </script>
+  </body>`);
 });
 // Owner preview: "the check" — a SOLID gradient disc with a white check CENTERED inside it, tip
 // reaching the top-right edge (never past it), exactly like the reference. 4 to choose:
