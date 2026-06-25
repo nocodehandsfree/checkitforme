@@ -557,7 +557,7 @@ function chainLogoFiles(): Set<string> {
   if (chainLogoCache && Date.now() - chainLogoCache.t < 60_000) return chainLogoCache.v;
   let v = new Set<string>();
   try { v = new Set(readdirSync(join(here, "../public/logos/chains")).filter((f) => /\.(png|webp|svg)$/i.test(f))); } catch { /* dir not there yet */ }
-  chainLogoCache = { t: Date.now(), v };
+  if (v.size) chainLogoCache = { t: Date.now(), v }; // never cache an empty read — self-heal on the next call
   return v;
 }
 const chainSlug = (name: string) => name.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -617,11 +617,12 @@ function chainLogoInfo(name: string | null | undefined): { url: string | null; w
 // shared-source idea as the R2 logo: derive from one source, never store a per-DB copy that can drift.
 let distCache: { products: Record<string, string[]>; chains: Record<string, string[]> } | null = null;
 function distConfig(): { products: Record<string, string[]>; chains: Record<string, string[]> } {
-  if (!distCache) {
-    try { distCache = JSON.parse(readFileSync(join(here, "../data/distributors.json"), "utf8")); }
-    catch { distCache = { products: {}, chains: {} }; }
-  }
-  return distCache!;
+  if (distCache) return distCache;
+  try {
+    const c = JSON.parse(readFileSync(join(here, "../data/distributors.json"), "utf8"));
+    if (c && c.chains && Object.keys(c.chains).length) { distCache = c; return c; }
+  } catch { /* fall through — never cache the empty fallback so a transient miss self-heals next call */ }
+  return { products: {}, chains: {} };
 }
 /** Products a chain carries, derived from its distributor(s). null = chain not mapped (fall back to the stored column). */
 function carriesForChain(name: string | null | undefined): string[] | null {
