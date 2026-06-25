@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r74" />
+<meta name="x-rev" content="names-r75" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -823,6 +823,55 @@ __BRAND_HEAD__
   .railchip.widelogo img{width:38px;height:auto;max-height:22px}
   .railchip.on{transform:scale(1.08);border-color:var(--accent,var(--green));box-shadow:0 0 12px rgba(74,222,128,.22)}
   #result{position:relative}
+  /* ───────── Result entrance motion — plays once on mount (~2.5s), then settles. ─────────
+     Resting state IS the final state, so under reduced-motion (no rules below apply) the
+     finished result simply shows with zero animation. */
+  @media (prefers-reduced-motion:no-preference){
+    @keyframes rTitleIn{0%{opacity:0;transform:translateY(18px);filter:blur(8px)}72%{opacity:1;transform:translateY(-2px);filter:blur(0)}100%{opacity:1;transform:translateY(0);filter:blur(0)}}
+    @keyframes rRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+    @keyframes rRiseSm{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    @keyframes rBarDraw{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+    @keyframes rDotPop{0%{opacity:0;transform:scale(.4)}60%{opacity:1;transform:scale(1.22)}100%{opacity:1;transform:scale(1)}}
+    @keyframes rDotPopY{0%{opacity:0;transform:translateY(-50%) scale(.4)}60%{opacity:1;transform:translateY(-50%) scale(1.22)}100%{opacity:1;transform:translateY(-50%) scale(1)}}
+    @keyframes rBubIn{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+    @keyframes rGlowIn{0%{opacity:0;filter:brightness(1.9)}100%{opacity:1;filter:none}}
+    @keyframes rFadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes rPillDot{0%,100%{box-shadow:0 0 0 0 currentColor;opacity:1}50%{box-shadow:0 0 7px 1px currentColor;opacity:.6}}
+    @keyframes rCtaGlow{0%,100%{box-shadow:0 10px 26px -6px rgba(52,197,107,.5),inset 0 1px 0 rgba(255,255,255,.45)}50%{box-shadow:0 12px 32px -4px rgba(52,197,107,.78),inset 0 1px 0 rgba(255,255,255,.45)}}
+    /* RESULT-pill dot keeps a gentle live pulse on any result (ambient loop). */
+    #result .rpill .d{animation:rPillDot 1.9s ease-in-out infinite}
+    /* One-shot entrance — only while .r-play is set (added per fresh final result). */
+    #result.r-play .rtitle2{animation:rTitleIn 1s cubic-bezier(.2,.7,.2,1) .2s both}
+    #result.r-play .rpill{animation:rRise .5s ease-out .15s both}
+    #result.r-play .rsub{animation:rRiseSm .6s ease-out .35s both}
+    #result.r-play .topcta{animation:rRise .6s ease-out .4s both}
+    body.rview.rv-in #result.r-play .topcta .cta{animation:rCtaGlow 2.8s ease-in-out 1s infinite}
+    #result.r-play .ctl::before{transform-origin:top;animation:rBarDraw 1.15s cubic-bezier(.4,0,.1,1) .55s both}
+    #result.r-play .reach>summary .ctl-dot{animation:rDotPopY .4s cubic-bezier(.2,.8,.3,1.2) .55s both}
+    #result.r-play .ctl-conv .ctl-dot{animation:rDotPop .4s cubic-bezier(.2,.8,.3,1.2) 1.18s both}
+    #result.r-play .ctl-status .ctl-dot{animation:rDotPopY .4s cubic-bezier(.2,.8,.3,1.2) 2.1s both}
+    #result.r-play .ctl-conv{animation:rRiseSm .5s ease-out 1.1s both}
+    #result.r-play .reach-steps .ctl-step-row{animation:rRiseSm .5s ease-out both}
+    #result.r-play .reach-steps .ctl-step-row:nth-child(1){animation-delay:.72s}
+    #result.r-play .reach-steps .ctl-step-row:nth-child(2){animation-delay:.805s}
+    #result.r-play .reach-steps .ctl-step-row:nth-child(3){animation-delay:.89s}
+    #result.r-play .reach-steps .ctl-step-row:nth-child(4){animation-delay:.975s}
+    #result.r-play .reach-steps .ctl-step-row:nth-child(5){animation-delay:1.06s}
+    #result.r-play .reach-steps .ctl-step-row:nth-child(6){animation-delay:1.145s}
+    #result.r-play .reach-steps .ctl-step-row:nth-child(7){animation-delay:1.23s}
+    #result.r-play .reach-steps .ctl-step-row:nth-child(n+8){animation-delay:1.315s}
+    #result.r-play #convo_body .ctl-bub{animation:rBubIn .5s cubic-bezier(.2,.8,.3,1.1) both}
+    #result.r-play #convo_body .ctl-bub:nth-child(1){animation-delay:1.3s}
+    #result.r-play #convo_body .ctl-bub:nth-child(2){animation-delay:1.46s}
+    #result.r-play #convo_body .ctl-bub:nth-child(3){animation-delay:1.62s}
+    #result.r-play #convo_body .ctl-bub:nth-child(4){animation-delay:1.78s}
+    #result.r-play #convo_body .ctl-bub:nth-child(5){animation-delay:1.94s}
+    #result.r-play #convo_body .ctl-bub:nth-child(6){animation-delay:2.1s}
+    #result.r-play #convo_body .ctl-bub:nth-child(7){animation-delay:2.26s}
+    #result.r-play #convo_body .ctl-bub:nth-child(n+8){animation-delay:2.42s}
+    #result.r-play .ctl-status{animation:rGlowIn .6s ease-out 2.15s both}
+    #result.r-play .foot{animation:rFadeIn .5s ease-out 2.4s both}
+  }
   .vsrow{display:flex;gap:11px;align-items:center;background:var(--terminal);border:1px solid var(--border);border-radius:14px;padding:11px 12px;margin-top:14px}
   .vsrow .railchip{cursor:default;width:42px;height:42px;border-width:1px;transform:none !important;box-shadow:none !important}
   /* compact phones: keep the 4 header controls on one comfortable line */
@@ -2834,7 +2883,7 @@ async function startCheck(){
   },2500);
 }
 // --- Live-audio check (bridged through our Twilio so we can stream the call to the browser) ---
-let AUDIO_WS=null, AUDIO_CTX=null, AUDIO_NEXT={}, AUDIO_LIVE=false, LIVE_TIMERS=[], LIVE_ROOM=null, LIVE_CID=null, LIVE_TR=[], AGENT_PITCHED=false, LIVE_DONE=false, CALL_GEN=0;
+let AUDIO_WS=null, AUDIO_CTX=null, AUDIO_NEXT={}, AUDIO_LIVE=false, LIVE_TIMERS=[], LIVE_ROOM=null, LIVE_CID=null, LIVE_TR=[], AGENT_PITCHED=false, LIVE_DONE=false, CALL_GEN=0, ANIM_CID=null;
 let LIVE_STEPS=[], LIVE_T0=0, LIVE_TRANSCRIPT=''; // step log (with timings), call start ms, latest transcript
 // Phone-tree (IVR) language vs. our bot's real ask. The store side ("Clerk") covers BOTH the automated
 // tree AND a human, so a Clerk line alone can't mean "with a clerk". Our bot stays quiet / presses keys
@@ -2934,7 +2983,7 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
   }).join('');
   // Roll-up handle: lead with "Ringing the store…" (drop the "Calling {store}" header) + total steps · secs.
   const totalS = finalElapsed!=null ? Math.round(finalElapsed) : (n>0 ? Math.round(steps[n-1].at) : 0);
-  const reach = n ? `<details class="reach" open><summary><span class="ctl-dot"></span><span class="reach-lbl">${t('step.ringing','Ringing the store…')}</span><span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''}</span><span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
+  const reach = n ? `<details class="reach" open><summary><span class="ctl-dot"></span><span class="reach-lbl">${t('step.ringing','Ringing the store…')}</span><span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · <span class="cs-count">${totalS}</span>s`:''}</span><span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
   // Conversation: a "Conversation" label (green dot) then the bubbles — NO per-bubble dots.
   const convLabel = human.length ? `<div class="ctl-conv"><span class="ctl-dot"></span><span class="conv-lbl">${t('res.conversation','Conversation')}</span></div>` : '';
   const emptyMsg = finalElapsed==null ? t('live.waitperson','Waiting to reach a person…') : '';
@@ -3480,6 +3529,20 @@ function showResult(o, cid){
     <div class="foot" style="margin-top:16px">${o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one')}</div>`;
   $('result').classList.remove('hidden');
   navMark('result');
+  // Entrance motion: play ONCE per fresh final result — never on the brief "pending" flash or on an
+  // in-place verdict upgrade (reconcileVerdict re-renders the same cid). Off entirely under reduced-motion.
+  try{
+    const rEl=$('result'), cidKey=(cid||'')+'', isFinal=!!(o.status&&o.status!=='pending');
+    const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+    if(isFinal&&!reduce&&ANIM_CID!==cidKey){
+      ANIM_CID=cidKey;
+      rEl.classList.remove('r-play'); void rEl.offsetWidth; rEl.classList.add('r-play'); // restart the one-shot
+      const cc=rEl.querySelector('.cs-count'); // total seconds counts 0 → N, in sync with the timeline drawing
+      if(cc){ const to=parseInt(cc.textContent,10)||0; if(to>0){ const t0=performance.now(), dur=1150, delay=600;
+        const tick=now=>{ if(!document.body.contains(cc))return; const e=now-t0-delay; if(e<=0){cc.textContent='0';requestAnimationFrame(tick);return;} const p=Math.min(1,e/dur), eased=1-(1-p)*(1-p); cc.textContent=String(Math.round(eased*to)); if(p<1)requestAnimationFrame(tick); else cc.textContent=String(to); };
+        requestAnimationFrame(tick); } }
+    } else { rEl.classList.remove('r-play'); }
+  }catch(e){}
   // Put ?call=<cid>&tone=<cls> in the URL for EVERY result. On a pull-to-refresh the server reads ?tone
   // and bakes the verdict colour straight into the served <meta theme-color> — so iOS tints the status
   // bar to it AT LOAD with zero JS dependency (a JS-only change to theme-color is unreliable on iOS). The
