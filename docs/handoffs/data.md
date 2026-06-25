@@ -41,6 +41,70 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
 - Work on the deploy branch `claude/retail-stock-voice-calls-OcyMS`; commit + push = live in ~3 min.
 
 ## Current focus (KEEP UPDATED)
+
+**Session 2026-06-25 — the "derivation era": logos→R2, carries→distributors, MVPs demo, phone harvest.**
+
+> **RESUMING? Read this box first.** Two architecture shifts this session: (1) chain **logos** are now
+> DB-first from **shared R2** (`logos.fungibles.com`); (2) store **`carries`** is **derived** from
+> `data/distributors.json`, not the per-store column. Both are a written contract in
+> `docs/DATA_PROVENANCE.md` ("Carries — derived from distributors") + guarded by
+> `scripts/check-store-contract.mjs` (`pnpm check`). **prod and staging are SEPARATE DBs + separate
+> deploys** — code goes to BOTH branches; admin-API DB writes hit only the env you call.
+
+Shipped (live + verified on prod, and staging where noted):
+- [x] **Distributor-driven carries.** `data/distributors.json` = distributor→products + chain→distributors
+  (a chain's carries = union of its distributors' products), derived at serve-time by
+  `storeCarriesList()`/`carriesForChain()` (`src/server.ts`); wired into `/pub/stores`, `/pub/stores/near`,
+  `/api/retailers`. Seeded **Excell** (Pokémon/Lorcana/MTG/One Piece/Yu-Gi-Oh/Sports Cards) + **Schylling**
+  (NeeDoh) + **Jazwares** (Squishmallows) → **CVS/Walgreens/Target/Walmart/Barnes & Noble**. Unmapped chains
+  fall back to the stored column. Auto-applies to new stores of mapped chains (no stamping). **Verified
+  identical prod+staging.** Why derive (not stamp): config lives in code → consistent across separate DBs.
+- [x] **Logo R2 keystone (Data Dev half).** DevOps shipped the bucket/worker (PR #417, `logos.fungibles.com`,
+  `presignPut` in `src/r2.ts`). Added `chains.logo_url/logo_wide/logo_dark` (schema+bootstrap),
+  `chainLogoInfo()` is **DB-first** (R2 wins, filesystem fallback; cache `refreshChainLogoDb`, 60s),
+  `POST /api/chains/:id/logo` (server-side presigned PUT), `POST /api/admin/migrate-logos-to-r2`.
+  **Migration ran: 106 chains on prod, 96 on staging now serve R2.** Key = `chain-logos/<slug>.png`.
+- [x] **MVPs demo store** (owner-only pitch store, like Fun). Chain 121 "MVPs", store **106362**: `ownerOnly`,
+  Calabasas geo-pin, 24/7, `sellsPacks`, carries Pokémon, logo `chain-logos/mvps.png`, armed `+18185770433`.
+  **Number = on/off** (PATCH phone on an ownerOnly store derives `active`). `seedMvpsStore()` in bootstrap
+  (create-only — never overwrites phone/active). Staging DB lags prod, so MVPs chain may differ there.
+- [x] **Geo-bypass → prod.** Owner-only stores surface regardless of distance for the comp account (was
+  staging-only — the "Venice" gap). In `/pub/stores/near`.
+- [x] **Phone harvest.** H-E-B (84) + H Mart (6) were all `nophone:` (0 callable). `fetchStorePhone()`
+  (`src/store-phone.ts`, OpenAI web-search→Gemini, E.164) + `backfillPhones({chainId})` +
+  `POST /api/phones/backfill?chainId=&dryRun=1`. Harvested all 90 (area-code verified) + `sellsPacks=true`
+  → **both chains fully callable.** Reusable for any address-only chain.
+- [x] **Data-health fix.** `/api/admin/data-health` mis-chain matcher stems possessive `-s` (real
+  Mariano's/Lowe's/Smith's no longer false-flag); excludes ownerOnly demo stores. Mis-chained 44→0.
+- [x] **6 homeless stores hidden** (`active=false`, recoverable) per owner's "don't include if no chain home":
+  Olsens Market Place 2768, Mansfield Market Place 3768, Ray's Food Place 3086/3841, Lee Harrison 62635,
+  Hyvee Equipment LLC 66429. All non-kiosk.
+
+Pending / next session:
+- [ ] **Deep research → expand `data/distributors.json`** (owner returning with the data). Brief: per
+  distributor capture product lines + retailer network + channel + recent shifts; deliver
+  `distributor→{products,chains}` + `our-chain→distributor` for our ~120 chains, plus emerging lines
+  (Pop Mart/Labubu blind-box, Star Wars Unlimited/Riftbound, etc.) worth adding. **When it arrives:** add
+  entries (chain keys MUST match `chains.name` EXACTLY — verify via `/api/chains`); only high-confidence
+  (flag low-confidence for call-verify); `pnpm check`; commit; deploy to **both** OcyMS + pagiis; verify
+  carries derives identically on both envs (curl `/api/retailers?q=<chain>` on both hosts).
+- [ ] **DevOps prompt sent** (owner relaying): add `node scripts/check-store-contract.mjs` to
+  `voice-caller-ci.yml`; fix the pre-existing `config.staging` tsc error (`src/server.ts:1430`) that reds the
+  typecheck gate; make CI a required merge check.
+- [ ] **Handoff pointers** — `docs/handoffs/admin.md` + `website.md` need a 2-line "carries+logos are
+  derived, don't edit the column / drop a file" note. Offered; awaiting owner go.
+
+Architecture facts the next session MUST know:
+- **Separate DBs + deploys.** prod = `claude/retail-stock-voice-calls-OcyMS` (pokemon.fungibles.com /
+  checkitforme.com); staging = `claude/checkitforme-website-takeover-pagiis` (staging.checkitforme.com).
+  Code → both branches. Carries derives from code config (auto-consistent); logo_url + store rows are
+  per-DB (logo migration was run on both; staging's DB lags prod).
+- **Branch flow.** Dev on `claude/awesome-knuth-613jn0` (reset to origin/OcyMS before each build),
+  cherry-pick → OcyMS (prod) + pagiis (staging). OcyMS moves often (logo lane) — rebase before push.
+  Railway auto-deploys on push (~60-90s); CI does not gate Railway.
+- **Access.** Admin API needs a browser User-Agent (Cloudflare blocks python-urllib → 1010); admin token
+  at `/tmp/.atok` (don't print). `config.staging` tsc error is DevOps's, not ours.
+
 **Session 2026-06-19 — data documented, scoring package committed, ungraded tail closed (see COMPLETED.md).**
 - [x] **Single-source-of-truth doc** — `docs/DATA_PROVENANCE.md` written: every store-data domain, who
   writes it, who reads it, verified that **no surface reads a rogue store list** (only the DB).
