@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r76" />
+<meta name="x-rev" content="names-r77" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -857,6 +857,10 @@ __BRAND_HEAD__
     #result.r-play .rsub{animation:rRiseSm .6s ease-out .35s both}
     #result.r-play .topcta{animation:rRise .6s ease-out .4s both}
     body.rview.rv-in #result.r-play .topcta .cta{animation:rCtaGlow 2.8s ease-in-out 1s infinite}
+    /* In-stock CTA light-sweep (MD spec, 3.6s loop) — a real moving sheen, not the static gloss. */
+    @keyframes rCtaSweep{0%{transform:translateX(-160%) skewX(-20deg)}100%{transform:translateX(330%) skewX(-20deg)}}
+    body.rview.rv-in #result .topcta .cta{position:relative;overflow:hidden}
+    body.rview.rv-in #result .topcta .cta::after{content:'';position:absolute;top:0;bottom:0;left:0;width:32%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:translateX(-160%) skewX(-20deg);animation:rCtaSweep 3.6s ease-in-out 1.2s infinite;pointer-events:none}
     #result.r-play .ctl::before{transform-origin:top;animation:rBarDraw 1.15s cubic-bezier(.4,0,.1,1) .55s both}
     #result.r-play .reach>summary .ctl-dot{animation:rDotPopY .4s cubic-bezier(.2,.8,.3,1.2) .55s both}
     #result.r-play .ctl-conv .ctl-dot{animation:rDotPop .4s cubic-bezier(.2,.8,.3,1.2) 1.18s both}
@@ -3344,7 +3348,7 @@ async function sendFeedback(v){
 function nl2(s){ return String(s==null?'':s).replace(/([.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡])/g,'$1<br>'); }
 // Registry/owner-written notes can use a {product} token — we fill it with the live product name (bolded),
 // so the owner writes the message in Admin and it still reads "…check if Pokémon was in stock…".
-function fillP(s,o){ try{ const pn=esc((o&&o.productName)||catLabel()||'it'); return String(s==null?'':s).replace(/\{product\}/g,'<b style="color:#fff">'+pn+'</b>'); }catch(e){ return String(s==null?'':s); } }
+function fillP(s,o){ try{ const pn=esc((o&&o.productName)||catLabel()||'it'); const sn=esc((o&&o.storeName)||(SEL_STORE&&SEL_STORE.name)||'the store'); return String(s==null?'':s).replace(/\{product\}/g,'<b style="color:#fff">'+pn+'</b>').replace(/\{store\}/g,'<b style="color:#fff">'+sn+'</b>'); }catch(e){ return String(s==null?'':s); } }
 function showResult(o, cid){
   resultCacheSet(cid,o);
   stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
@@ -3383,8 +3387,13 @@ function showResult(o, cid){
   else if(o.status==='bad_number'){ cls='unk'; big='☎️'; title=t('v.badnum','Bad number'); note=t('note.badnum',"That number didn't connect — no charge."); }
   else if(o.status==='closed'){ cls='unk'; big='🔒'; title=t('v.closedt','Store closed'); note=t('note.closed',"They're closed right now — no charge. Try again when they're open."); }
   else if(o.status==='failed'){ cls='unk'; big='⚠️'; title=t('v.failed','Call failed'); note=safeReason(o.failureReason)||t('note.failed','Something went wrong on our end — no charge.'); }
+  // Owner-authored registry note wins. If a status has a NON-EMPTY note in the dashboard registry, that
+  // exact message (with {product}/{store} tokens) is the source of truth — the smart auto sub-lines below
+  // are only the fallback when the registry note is left blank (which is why in_stock still reads nicely
+  // today even with an empty note).
+  const REG_NOTE = (o.statusKey && RSTATUSES[o.statusKey] && !(o.statusKey==='failed'&&o.failureReason) && String(t('stn.'+o.statusKey, RSTATUSES[o.statusKey].note||'')).trim()) ? t('stn.'+o.statusKey, RSTATUSES[o.statusKey].note||'') : '';
   // If the clerk named the exact product they have in, surface it on the in-stock verdict.
-  if(cls==='in' && o.productName){ note=tf('note.in.named','They have <b style="color:#fff">'+esc(o.productName)+'</b> in — go get it.',{x:esc(o.productName)}); }
+  if(!REG_NOTE && cls==='in' && o.productName){ note=tf('note.in.named','They have <b style="color:#fff">'+esc(o.productName)+'</b> in — go get it.',{x:esc(o.productName)}); }
   // Alpha: "not in NOW, but a shipment is coming" → the hopeful be-first verdict. The clerk named a
   // shipment day on a no/sold-out → flip from a flat "not in" to a restock-incoming heads-up.
   if(cls!=='in' && !o.doesNotSell && o.status==='completed' && o.shipmentDay){
@@ -3471,7 +3480,7 @@ function showResult(o, cid){
   // outcome (no-answer, closed, doesn't-carry, restock-soon, multi-category) keeps prod's own note.
   // Naming the store right here lets us drop the separate store line below it.
   let richSub=false;
-  if(o.status==='completed' && askedLabels.length<=1 && !o.doesNotSell && storeHeadline && headLabel){
+  if(!REG_NOTE && o.status==='completed' && askedLabels.length<=1 && !o.doesNotSell && storeHeadline && headLabel){
     const _SN=esc(storeHeadline), _C=esc(headLabel);
     if(cls==='in'){ note = o.productName
         ? tf('sub.in.named','{s} has <b style="color:var(--accent)">{p}</b> in stock right now.',{s:_SN,p:esc(o.productName)})
