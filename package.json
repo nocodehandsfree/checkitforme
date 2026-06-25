@@ -8,6 +8,8 @@
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "build": "echo 'no build step \u2014 runs via tsx'",
+    "check:store-contract": "node scripts/check-store-contract.mjs",
+    "check": "tsc --noEmit && node scripts/check-store-contract.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
