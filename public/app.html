@@ -899,7 +899,8 @@
           <input type="hidden" id="st_new_emoji" value="">
           <input id="st_new_label" placeholder="Label (e.g. Holding one for you)" style="flex:1">
         </div>
-        <input id="st_new_note" placeholder="One-line note the customer sees" style="margin-top:6px">
+        <input id="st_new_note" placeholder="Message the customer sees" style="margin-top:6px">
+        <div class="meta" style="margin-top:5px;font-size:11px;line-height:1.45">Use <code>{product}</code> for the live product name · <code>&lt;b&gt;…&lt;/b&gt;</code> to bold.</div>
         <div class="row" style="gap:8px;margin-top:6px">
           <select id="st_new_tone" style="max-width:170px">
             <option value="in">In stock</option>
@@ -1972,7 +1973,7 @@ function scPoll(id, cid){
       if(stt){ stt.dataset.done='1'; stt.style.color=vv.c; stt.innerHTML='Call '+esch(o.status); }
       const stop=document.getElementById('sc_stop_'+id); if(stop) stop.style.display='none';
       const vd=document.getElementById('sc_verdict_'+id);
-      if(vd) vd.innerHTML=`<div style="margin-top:12px;border:1px solid ${vv.c};border-radius:12px;padding:13px;text-align:center"><div style="margin-bottom:3px">${vmark(vv.e,vv.c,30)}</div><div style="font-size:18px;font-weight:800;color:${vv.c}">${esch(vv.t)}</div>${vv.n?`<div style="font-size:12.5px;color:var(--text-body);margin-top:5px">${esch(vv.n)}</div>`:''}</div>`;
+      if(vd) vd.innerHTML=`<div style="margin-top:12px;border:1px solid ${vv.c};border-radius:12px;padding:13px;text-align:center"><div style="margin-bottom:3px">${vmark(vv.e,vv.c,30)}</div><div style="font-size:18px;font-weight:800;color:${vv.c}">${esch(vv.t)}</div>${vv.n?`<div style="font-size:12.5px;color:var(--text-body);margin-top:5px">${noteHtml(vv.n)}</div>`:''}</div>`;
       loadResults();   // refresh the Calls page; the Search list refreshes when the card is closed
     }
   };
@@ -2591,7 +2592,8 @@ function customerVerdict(o){
   const key=verdictKey(o), s=STATUSES[key];
   if(s){
     let n=(key==='failed'&&o.failureReason)?o.failureReason:(s.note||'');
-    if(s.tone==='in' && o.productName) n="They've got "+o.productName+" in — go get it.";
+    n=n.replace(/\{product\}/g, o.productName||'it');   // {product} token → the live product name (registry-driven)
+    if(!n && s.tone==='in' && o.productName) n="They've got "+o.productName+" in — go get it.";
     return {e:s.emoji, t:s.label, c:s.color, n, key};
   }
   // Registry not loaded yet (first paint) — minimal built-in fallback keeps the row sane.
@@ -2618,7 +2620,7 @@ function pollTranscript(cid, pre){
       vd.style.display=''; vd.style.borderColor=vv.c;
       vd.innerHTML='<div style="font-size:12px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">What the customer sees</div>'
         +'<div style="margin-bottom:2px">'+vmark(vv.e,vv.c,34)+'</div><div style="font-size:20px;font-weight:800;color:'+vv.c+'">'+vv.t+'</div>'
-        +'<div style="font-size:13px;color:#bbb;margin-top:4px">'+(vv.n||'').replace(/</g,'&lt;')+'</div>';
+        +'<div style="font-size:13px;color:#bbb;margin-top:4px">'+noteHtml(vv.n)+'</div>';
       el('_t_summary').textContent=o.summary||'';
       if(o.status==='failed'&&o.failureReason){
         el('_t_body').innerHTML='<div style="color:#FBBF24;font-weight:600;margin-bottom:8px">⚠️ '+o.failureReason.replace(/</g,'&lt;')+'</div>'+renderTranscriptBody(o.transcript);
@@ -2643,6 +2645,9 @@ async function loadStatusReg(){
   renderStatuses(l);
 }
 function escH(s){return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+// Status note: owner-authored, may contain the {product} token (substituted in customerVerdict) and
+// <b>…</b>. Escape everything for safety, then re-allow <b>/</b> so the owner's bold actually renders.
+function noteHtml(s){ return escH(s).replace(/&lt;(\/?b)&gt;/gi,'<$1>'); }
 // Icon picker = NAMES of our drawn marks (no raw emoji shown anywhere). Value stays the mark key.
 const STATUS_MARKS=[['✅','In stock'],['❌','Not in'],['🚫',"Doesn't carry"],['🕐','Sold out'],['🤔','Unclear'],['🚚','Restock'],['📵','No answer'],['🔒','Closed'],['⚠️','Failed'],['·','Neutral dot']];
 function markOptions(cur){
@@ -2697,7 +2702,8 @@ function renderStatuses(list){
           ? `<input type="color" value="#4ADE80" data-f="color" disabled title="Locked to brand green — matches the logo" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1.5px solid var(--green);background:none;flex:0 0 auto;cursor:not-allowed">`
           : `<input type="color" value="${escH(s.color)}" data-f="color" oninput="statusRecolor(this)" onchange="statusAutoSave(this)" title="Icon color" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1px solid var(--border);background:none;flex:0 0 auto">`}
       </div>
-      <textarea data-f="note" rows="3" onchange="statusAutoSave(this)" placeholder="One-line note the customer sees" style="margin-top:10px;font-size:14px;line-height:1.5">${escH(s.note)}</textarea>
+      <textarea data-f="note" rows="3" onchange="statusAutoSave(this)" placeholder="Message the customer sees" style="margin-top:10px;font-size:14px;line-height:1.5">${escH(s.note)}</textarea>
+      <div class="meta" style="margin-top:5px;font-size:11px;line-height:1.45">Use <code>{product}</code> for the live product name · <code>&lt;b&gt;…&lt;/b&gt;</code> to bold.</div>
       <div class="row" style="gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
         <select data-f="tone" onchange="statusToneChange(this);statusAutoSave(this)" title="Verdict bucket — sets the color + filter" style="flex:0 0 auto;max-width:180px">
           <option value="in"${s.tone==='in'?' selected':''}>In stock</option>
