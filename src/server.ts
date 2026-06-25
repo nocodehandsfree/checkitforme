@@ -675,11 +675,19 @@ app.get("/logo-wall", async (c) => {
   const pretty = (f: string) => f.replace(/\.(png|webp|svg)$/i, "").replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
   const types = [...new Set(files.map((f) => fileInfo.get(f)?.type || "Other"))]
     .sort((a, b) => (a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b)));
+  // Render treatments: every logo resolves to exactly one, from its _meta w/d flags (no entry → standard).
+  const treatKey = (m: { w: number; d: number }) => (m.w === 1 && m.d === 1 ? "both" : m.w === 1 ? "wide" : m.d === 1 ? "plate" : "std");
+  const TREAT: Array<{ k: string; label: string }> = [
+    { k: "std", label: "Standard" }, { k: "wide", label: "Wide" },
+    { k: "plate", label: "Plated" }, { k: "both", label: "Wide + Plated" },
+  ];
+  const tCount: Record<string, number> = { std: 0, wide: 0, plate: 0, both: 0 };
+  for (const f of files) tCount[treatKey(meta[f] || { w: 0, d: 0 })]++;
   const tile = (f: string) => {
     const m = meta[f] || { w: 0, d: 0 };
     const info = fileInfo.get(f);
     const cls = (m.d === 1 ? " lite" : "") + (m.w === 1 ? " widelogo" : "");
-    return `<div class="cell" data-type="${esc(info?.type || "Other")}"><div class="ic${cls}"><img src="/logos/chains/${f}?v=73" alt=""></div><div class="nm">${esc(info?.name || pretty(f))}</div></div>`;
+    return `<div class="cell" data-type="${esc(info?.type || "Other")}" data-treat="${treatKey(m)}"><div class="ic${cls}"><img src="/logos/chains/${f}?v=73" alt=""></div><div class="nm">${esc(info?.name || pretty(f))}</div></div>`;
   };
   return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
@@ -688,8 +696,18 @@ app.get("/logo-wall", async (c) => {
     h2{font-weight:900;margin:0 0 4px}
     .sub{color:#9a9aac;font-size:12px;margin-bottom:6px}
     .bar{position:sticky;top:0;background:#0C0C12;padding:12px 0 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;z-index:5;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:18px}
-    .bar label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8a8a98;display:flex;align-items:center;gap:8px;font-weight:700}
-    select{appearance:none;-webkit-appearance:none;background:#1a1a22;color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:9px 32px 9px 12px;font-size:14px;font-weight:600;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23aaa' stroke-width='2'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
+    .fld{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8a8a98;display:flex;align-items:center;gap:8px;font-weight:700}
+    select,.ms-btn{appearance:none;-webkit-appearance:none;background:#1a1a22;color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:9px 32px 9px 12px;font-size:14px;font-weight:600;cursor:pointer;text-transform:none;letter-spacing:normal}
+    select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23aaa' stroke-width='2'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
+    .ms{position:relative}
+    .ms-btn{display:flex;align-items:center;gap:8px;padding-right:12px}
+    .ms-btn .chev{opacity:.7}
+    .ms-pop{position:absolute;top:calc(100% + 6px);left:0;background:#16161e;border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:6px;min-width:230px;box-shadow:0 14px 34px rgba(0,0,0,.55);z-index:30}
+    .ms-pop[hidden]{display:none}
+    .ms-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;text-transform:none;letter-spacing:normal;color:#e6e6ee}
+    .ms-row:hover{background:rgba(255,255,255,.06)}
+    .ms-row input{width:17px;height:17px;accent-color:#22c55e;cursor:pointer;margin:0;flex-shrink:0}
+    .ms-ct{margin-left:auto;font-size:12px;color:#8a8a98;font-weight:600}
     #count{font-size:12px;color:#8a8a98;margin-left:auto}
     .grid{display:flex;flex-wrap:wrap;gap:18px}
     .cell{width:72px;display:flex;flex-direction:column;align-items:center;gap:7px}
@@ -705,15 +723,34 @@ app.get("/logo-wall", async (c) => {
   <h2>Logo wall · ${files.length} marks</h2>
   <div class="sub">Each mark exactly as the store list renders it — same 52px tile, plate &amp; wide handling from _meta.json.</div>
   <div class="bar">
-    <label>Store type
+    <label class="fld">Store type
       <select id="type"><option value="">All stores</option>${types.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
     </label>
+    <span class="fld">Treatment
+      <span class="ms">
+        <button type="button" class="ms-btn" id="treatBtn" aria-expanded="false"><span id="treatSum">All treatments</span><svg class="chev" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#aaa" stroke-width="2"><path d="M2 4l4 4 4-4"/></svg></button>
+        <div class="ms-pop" id="treatPop" hidden>${TREAT.map((t) => `<label class="ms-row"><input type="checkbox" value="${t.k}" checked>${t.label}<span class="ms-ct">${tCount[t.k]}</span></label>`).join("")}</div>
+      </span>
+    </span>
     <span id="count"></span>
   </div>
   <div class="grid" id="grid">${files.map(tile).join("")}</div>
   <script>
     var sel=document.getElementById('type'),grid=document.getElementById('grid'),count=document.getElementById('count');
-    function apply(){var v=sel.value,n=0,k=grid.children;for(var i=0;i<k.length;i++){var show=!v||k[i].getAttribute('data-type')===v;k[i].classList.toggle('hide',!show);if(show)n++;}count.textContent=n+(n===1?' logo':' logos');}
+    var treatBtn=document.getElementById('treatBtn'),treatPop=document.getElementById('treatPop'),treatSum=document.getElementById('treatSum');
+    var boxes=[].slice.call(treatPop.querySelectorAll('input[type=checkbox]'));
+    function apply(){
+      var v=sel.value,sel2={},nc=0;
+      boxes.forEach(function(b){if(b.checked){sel2[b.value]=1;nc++;}});
+      var n=0,k=grid.children;
+      for(var i=0;i<k.length;i++){var el=k[i];var show=(!v||el.getAttribute('data-type')===v)&&sel2[el.getAttribute('data-treat')]===1;el.classList.toggle('hide',!show);if(show)n++;}
+      count.textContent=n+(n===1?' logo':' logos');
+      treatSum.textContent=nc===boxes.length?'All treatments':(nc===0?'None':nc+' of '+boxes.length);
+    }
+    treatBtn.addEventListener('click',function(e){e.stopPropagation();var h=treatPop.hasAttribute('hidden');if(h){treatPop.removeAttribute('hidden');}else{treatPop.setAttribute('hidden','');}treatBtn.setAttribute('aria-expanded',h?'true':'false');});
+    treatPop.addEventListener('click',function(e){e.stopPropagation();});
+    boxes.forEach(function(b){b.addEventListener('change',apply);});
+    document.addEventListener('click',function(){treatPop.setAttribute('hidden','');treatBtn.setAttribute('aria-expanded','false');});
     sel.addEventListener('change',apply);apply();
   </script>
   </body>`);
