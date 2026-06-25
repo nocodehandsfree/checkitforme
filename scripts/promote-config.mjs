@@ -61,30 +61,21 @@ for (const name of TABLES) {
   let rows;
   try { rows = await dumpAll(STG, name); }
   catch (e) { console.error(`  ${name}:`, e.message); failed = true; continue; }
-
-  // settings is a key/value store where PROD legitimately holds EXTRA keys (runtime nav state). A
-  // wholesale replace would wipe those, so MERGE: prod's rows as the base, staging overrides by key.
-  if (name === "settings") {
-    try {
-      const prod = await dumpAll(PROD, "settings");
-      const byKey = new Map(prod.map((r) => [r.key, r]));
-      for (const r of rows) byKey.set(r.key, r);
-      rows = [...byKey.values()];
-    } catch (e) { console.error(`  settings merge:`, e.message); failed = true; continue; }
-  }
   if (DRY) { console.log(`  ${name}: ${rows.length} rows (dry-run, not applied)`); continue; }
 
-  // chunk 0 = replace (carries `total` for the floor); the rest = append.
-  let ok = true;
-  for (let i = 0; i < rows.length || i === 0; i += CHUNK) {
+  // Each chunk UPSERTS (insert-or-update by primary key, never delete) — order-independent, idempotent,
+  // and safe for FK parents (chains/retailers). settings merges naturally (prod's extra keys survive).
+  let ok = true, done = 0;
+  for (let i = 0; i < rows.length; i += CHUNK) {
     const chunk = rows.slice(i, i + CHUNK);
     const r = await j(`${PROD.url}/api/admin/promote-apply`, {
       method: "POST", headers: { "x-admin-token": PROD.admin, "Content-Type": "application/json" },
-      body: JSON.stringify({ name, rows: chunk, mode: i === 0 ? "replace" : "append", total: rows.length }),
+      body: JSON.stringify({ name, rows: chunk }),
     });
     if (!r.ok) { console.error(`  ${name}: PROD apply ${r.status}`, JSON.stringify(r.body).slice(0, 200)); ok = false; failed = true; break; }
+    done += chunk.length;
   }
-  if (ok) console.log(`  ${name}: promoted ${rows.length}`);
+  if (ok) console.log(`  ${name}: upserted ${done}`);
 }
 
 // ElevenLabs restock-agent persona: staging agent → prod agent (config lives in EL cloud, not the DB).
