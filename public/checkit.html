@@ -13,6 +13,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Check it for me" />
 <link rel="manifest" href="/manifest.webmanifest" />
+<meta name="theme-color" content="#0C0C12" id="themeColor" />
+
 <script>/* PWA: register the service worker (instant cold-start: cached shell + stale-while-revalidate checks). Fail-open — registration errors never affect the page. */
   if('serviceWorker' in navigator){ window.addEventListener('load',function(){ try{ navigator.serviceWorker.register('/sw.js').catch(function(){}); }catch(e){} }); }</script>
 <script>(function(){try{
@@ -21,7 +23,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r81" />
+<meta name="x-rev" content="names-r82" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -3332,7 +3334,17 @@ function navMark(view){
 // Status-bar tone is NOT done via theme-color (this device's Safari tab ignores it — proven). In
 // STANDALONE the page paints under the status bar (apple-mobile metas + safe-area inset), so the body
 // wash IS the status-bar colour. Nothing to set in JS — kept as a no-op so existing call-sites are safe.
-function setThemeTone(){}
+// Tint the iOS/Chrome status-bar strip (regular web browser) to the current verdict tone. Server bakes
+// the right value at load via ?tone; this updates it on client-side navigation between results. (Safari
+// only honors theme-color when "Allow Website Tinting" is ON — Settings ▸ Safari.)
+function setThemeTone(){
+  try{
+    const m=document.getElementById('themeColor'); if(!m) return;
+    const b=document.body.classList;
+    const tone = b.contains('rv-in')?'#266440':b.contains('rv-out')?'#6b2427':b.contains('rv-unk')?'#6c5419':b.contains('rv-soon')?'#6e490f':'#0C0C12';
+    m.setAttribute('content', tone);
+  }catch(e){}
+}
 window.addEventListener('popstate',()=>{
   // Handle BOTH directions. Going forward to a ?call= entry used to do nothing (only "back" was handled),
   // so the URL changed but the call page never re-opened. Now we read the target URL and restore it.
@@ -3526,6 +3538,7 @@ function showResult(o, cid){
   // Tone the body-level top wash for this verdict (the wash itself is CSS on body.rview::before).
   ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c));
   document.body.classList.add('rv-'+cls);
+  try{ setThemeTone(); }catch(e){} // tint the browser status-bar strip to this verdict's tone
   // Persist the tone CLASS so a HARD refresh (URL ?call=…) can pre-apply the whole result treatment
   // (body wash + status bar) synchronously at load — before restoreCall's async fetch — so
   // pull-to-refresh never flashes the dark default at the top.
