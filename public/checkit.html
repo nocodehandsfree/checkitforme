@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r75" />
+<meta name="x-rev" content="names-r76" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -788,6 +788,17 @@ __BRAND_HEAD__
   .rcal-d.sel{box-shadow:0 0 0 2px #fff inset}
   .rcal-d.today{color:#cfcfe0;cursor:pointer} .rcal-d.today:not(.has){box-shadow:0 0 0 1.5px rgba(255,255,255,.35) inset}
   .rcal-d.today.has{color:#06210f} /* today WITH checks sits on the accent fill — keep text dark so it's legible (was white-on-yellow) */
+  /* "No checks today" landing: an expanded on-page month calendar + a full-width CTA below it.
+     The calendar and the button share one max-width column so they're exactly the same width. */
+  .todaywrap{max-width:360px;margin:20px auto 0;padding:0 6px}
+  .rcal-big{width:100%;background:var(--sheet);border:1px solid var(--border);border-radius:16px;padding:16px 14px 18px;margin:14px 0 16px;box-sizing:border-box}
+  .rcal-big .rcal-h{margin-bottom:14px}
+  .rcal-big .rcal-h b{font-size:16px}
+  .rcal-big .rcal-h button{width:34px;height:34px;border-radius:10px}
+  .rcal-big .rcal-grid{gap:5px}
+  .rcal-big .rcal-dow{font-size:11px;padding-bottom:6px}
+  .rcal-big .rcal-d{font-size:15px;border-radius:11px}
+  .todaywrap .cta{width:100%;box-sizing:border-box}
   /* Day-list view inside the popover: every call on the chosen day, tap to open. */
   .rday-list{display:flex;flex-direction:column;gap:4px;max-height:230px;overflow-y:auto;-webkit-overflow-scrolling:touch}
   .rday-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:8px 9px;border-radius:10px;border:1px solid transparent;background:var(--terminal);color:#e9e9f0;cursor:pointer}
@@ -1651,7 +1662,7 @@ const I18N={ es:{
   'fbk.q':'¿Puedes deducirlo de la conversación de abajo? ¿Qué opinas?',
   'fbk.thanks':'Gracias — esto entrena nuestras verificaciones para afinar más.',
   'hist.today.cta':'Verificar una tienda','hist.today.none':'Sin verificaciones hoy',
-  'hist.today.sub':'No has verificado ninguna tienda para {x} hoy.','hist.today.sub0':'No has verificado ninguna tienda hoy.',
+  'hist.today.sub':'Selecciona un día abajo para ver tus verificaciones anteriores.','hist.today.sub0':'Selecciona un día abajo para ver tus verificaciones anteriores.',
   'live.s1':'Llamando a la tienda…','live.s2':'Está timbrando…','live.s3':'Conectamos','live.s4':'Escuchando el menú…','live.s5':'Navegando el menú…','live.s6':'Transferido al mostrador','live.s7':'Contestó una persona','live.s8':'Preguntando por {p}',
   'live.item':'tu producto','live.store':'la tienda','live.waitperson':'Esperando llegar a una persona…','live.noconvo':'No hay conversación en vivo en esta llamada.',
   'step.one':'paso','step.many':'pasos','step.ringing':'Llamando a la tienda…',
@@ -3761,18 +3772,22 @@ function showTodayLanding(){
   ['live','builder','history','success','handoff'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
   document.body.classList.remove('fabbed');
   ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); // neutral (dark) — no verdict tone
-  RAIL_F.date=''; RAIL_F.store=''; RAIL_F.tone=''; RAIL_CID=null; LASTRES=null;
-  const cat=catLabel()||'';
+  RAIL_F.date=''; RAIL_F.store=''; RAIL_F.tone=''; RAIL_CID=null; LASTRES=null; RAIL_CAL_M=null;
   $('result').innerHTML=`
-    <div class="emptybox" style="margin-top:26px">
-      <span style="opacity:.45;filter:grayscale(.7)">${FCHK(46)}</span>
-      <div class="eb-t" style="margin-top:14px">${t('hist.today.none','No checks today')}</div>
-      <div class="eb-s">${cat?tf('hist.today.sub','You haven’t checked any stores for {x} today.',{x:esc(cat)}):t('hist.today.sub0','You haven’t checked any stores today.')}</div>
-      <button class="cta" style="margin-top:16px" onclick="backToBuilder()">${t('hist.today.cta','Check a store')} →</button>
+    <div class="todaywrap">
+      <div class="emptybox" style="margin-top:6px;padding-bottom:2px">
+        <span style="opacity:.45;filter:grayscale(.7)">${FCHK(42)}</span>
+        <div class="eb-t" style="margin-top:12px">${t('hist.today.none','No checks today')}</div>
+        <div class="eb-s">${t('hist.today.sub0','Select a day below to see your past checks.')}</div>
+      </div>
+      <div id="todaycal" class="rcal-big"></div>
+      <button class="cta" onclick="backToBuilder()">${t('hist.today.cta','Check a store')} →</button>
     </div>`;
   $('result').classList.remove('hidden');
   navMark('result');
-  renderCallRail(); // shows the calendar button iff there ARE past-day checks for this product
+  renderCallRail();   // keep result-view chrome consistent (header calendar stays hidden under rview)
+  renderTodayCal();   // the expanded, on-page month calendar
+  ensureHistCache().then(()=>{ try{ renderTodayCal(); }catch(_){} }); // repaint once server history lands
 }
 async function openHistEntry(e){
   if(!e) return;
@@ -3922,6 +3937,27 @@ function renderRailCal(){
     <div class="rcal-grid">${dow.map(x=>`<div class="rcal-dow">${x}</div>`).join('')}${cells}</div>
     ${RAIL_F.date?`<div style="text-align:center;margin-top:9px"><a onclick="railPickDay('',event)" style="color:var(--muted);font-weight:700;font-size:12px;cursor:pointer">${t('rail.allday','Show all days')}</a></div>`:''}`;
 }
+// Expanded, on-page month calendar for the "No checks today" landing — same grid as the popover, larger.
+// Tapping a day with checks opens that day's most-recent check (the result-view rail then steps through the rest).
+function renderTodayCal(){
+  const el=$('todaycal'); if(!el) return;
+  const f=histList().filter(e=>e.cid&&e.ts&&railInCat(e));
+  const base = f.length ? new Date(f[0].ts) : new Date();
+  if(RAIL_CAL_M==null) RAIL_CAL_M=new Date(base.getFullYear(), base.getMonth(), 1).getTime();
+  const m=new Date(RAIL_CAL_M), y=m.getFullYear(), mo=m.getMonth();
+  const days=railCalDays();
+  const title=m.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long',year:'numeric'});
+  const dow=(LANG==='es'?['D','L','M','M','J','V','S']:['S','M','T','W','T','F','S']);
+  const nav=(d,p)=>`<button onclick="todayCalMonth(${d})" aria-label="${p}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="${d<0?'M14.5 5L8 12l6.5 7':'M9.5 5l6.5 7-6.5 7'}" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+  const first=new Date(y,mo,1).getDay(), n=new Date(y,mo+1,0).getDate();
+  const today=tsDay(Date.now());
+  let cells=''; for(let i=0;i<first;i++) cells+='<div></div>';
+  for(let d=1;d<=n;d++){ const key=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); const has=days.has(key), isToday=key===today; cells+=`<div class="rcal-d ${has?'has':''} ${isToday?'today':''}" ${has?`onclick="todayPickDay('${key}')"`:''}>${d}</div>`; }
+  el.innerHTML=`<div class="rcal-h">${nav(-1,'Previous month')}<b>${esc(title)}</b>${nav(1,'Next month')}</div>
+    <div class="rcal-grid">${dow.map(x=>`<div class="rcal-dow">${x}</div>`).join('')}${cells}</div>`;
+}
+function todayCalMonth(d){ const m=new Date(RAIL_CAL_M); RAIL_CAL_M=new Date(m.getFullYear(), m.getMonth()+d, 1).getTime(); renderTodayCal(); }
+function todayPickDay(key){ const calls=histList().filter(e=>e.cid&&e.ts&&railInCat(e)&&tsDay(e.ts)===key).sort((a,b)=>b.ts-a.ts); if(!calls.length){ toast(t('rail.noneday','No checks on that day')); return; } RAIL_F.date=key; RAIL_F.store=''; RAIL_F.tone=''; openHistEntry(calls[0]); }
 
 function money(c){ return '$'+(c/100).toFixed(c%100?2:0); }
 // Four tiers, no per-check math shown — the names + unlocks do the selling.
