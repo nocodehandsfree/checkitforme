@@ -749,7 +749,8 @@ app.get("/logo-wall", async (c) => {
     }
     treatBtn.addEventListener('click',function(e){e.stopPropagation();var h=treatPop.hasAttribute('hidden');if(h){treatPop.removeAttribute('hidden');}else{treatPop.setAttribute('hidden','');}treatBtn.setAttribute('aria-expanded',h?'true':'false');});
     treatPop.addEventListener('click',function(e){e.stopPropagation();});
-    boxes.forEach(function(b){b.addEventListener('change',apply);});
+    // Never allow zero treatments — unchecking the last one snaps back (an empty wall is a dead end).
+    boxes.forEach(function(b){b.addEventListener('change',function(){if(!boxes.some(function(x){return x.checked;})){b.checked=true;return;}apply();});});
     document.addEventListener('click',function(){treatPop.setAttribute('hidden','');treatBtn.setAttribute('aria-expanded','false');});
     sel.addEventListener('change',apply);apply();
   </script>
