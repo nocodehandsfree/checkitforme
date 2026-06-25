@@ -609,6 +609,35 @@ function chainLogoInfo(name: string | null | undefined): { url: string | null; w
   const m = logoMeta()[f] || { w: 0, d: 0 };
   return { url: `/logos/chains/${f}?v=73`, wide: m.w === 1, dark: m.d === 1 };
 }
+
+// ---- Distributor-driven carries (data/distributors.json) ----
+// A store's product list is DERIVED at serve-time from its chain's distributor(s) — the union of each
+// distributor's products. The config lives in code, so it's identical on every environment (Admin/
+// staging/prod) and a newly-imported store gets the right carries with zero per-store stamping. Same
+// shared-source idea as the R2 logo: derive from one source, never store a per-DB copy that can drift.
+let distCache: { products: Record<string, string[]>; chains: Record<string, string[]> } | null = null;
+function distConfig(): { products: Record<string, string[]>; chains: Record<string, string[]> } {
+  if (!distCache) {
+    try { distCache = JSON.parse(readFileSync(join(here, "../data/distributors.json"), "utf8")); }
+    catch { distCache = { products: {}, chains: {} }; }
+  }
+  return distCache!;
+}
+/** Products a chain carries, derived from its distributor(s). null = chain not mapped (fall back to the stored column). */
+function carriesForChain(name: string | null | undefined): string[] | null {
+  if (!name) return null;
+  const cfg = distConfig();
+  const dists = cfg.chains[name];
+  if (!dists || !dists.length) return null;
+  const set = new Set<string>();
+  for (const d of dists) for (const p of (cfg.products[d] || [])) set.add(p);
+  return set.size ? [...set] : null;
+}
+/** The carries a store actually shows: distributor-derived for mapped chains, else its stored per-store list. */
+function storeCarriesList(chainName: string | null | undefined, stored: string | null | undefined): string[] {
+  return carriesForChain(chainName) ?? (stored ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+}
+
 // Owner preview: every chain logo rendered EXACTLY as the store list renders it (same tile,
 // plate + wide handling from _meta.json) at real size and 2x — judge phone clarity without
 // driving anywhere. (No auth needed; it leaks nothing but public logos.)
@@ -761,7 +790,7 @@ app.get("/pub/stores", async (c) => {
     .filter((r) => !(r.chainId && mutedChains.has(r.chainId)))
     .map((r) => ({ id: r.id, name: r.name, location: r.location, storeType: (r.chainId && types.get(r.chainId)) || "Other",
       ...((l)=>({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo((r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0])),
-      carries: (r.carries ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+      carries: storeCarriesList((r.chainId && names.get(r.chainId)) || null, r.carries),
       lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
       sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true })));
 });
@@ -835,7 +864,7 @@ app.get("/pub/stores/near", async (c) => {
       const chainName = (r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0];
       return { id: r.id, name: r.name, location: r.location, address: r.address || null, storeType: (r.chainId && types.get(r.chainId)) || "Other",
         ...((l) => ({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo(chainName)),
-        carries: (r.carries ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+        carries: storeCarriesList(chainName, r.carries),
         lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
         sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
         tier: r.hasKiosk === true ? 5 : (r.tier ?? null), inStock: confirmedSet.has(r.id), // any kiosk store = tier 5; inStock = brand-check pin
@@ -2386,7 +2415,7 @@ app.get("/api/retailers", async (c) => {
   const names = new Map((await db.select().from(chains)).map((x) => [x.id, x.name]));
   return c.json(rows.map((r) => {
     const l = chainLogoInfo((r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0]);
-    return { ...r, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+    return { ...r, carries: storeCarriesList((r.chainId && names.get(r.chainId)) || null, r.carries).join(","), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
   }));
 });
 // Store Intel — the headline numbers on the Stores tab (cached 60s). The database, at a glance.

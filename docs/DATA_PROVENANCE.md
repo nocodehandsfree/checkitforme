@@ -178,6 +178,32 @@ logo/serving behavior? Fix it at the source (`chainLogoInfo`), not per surface. 
 - **Fallback:** `storeWordmark` (consumer) / shared text fallback (admin) when `logoUrl` is null.
 
 > Code touch-points maintained by DevOps; the asset + resolver rules live above and in `STORE_LOGOS.md`.
+> **Logos are now DB-first** (`docs/specs/logo-r2-keystone.md`): `chainLogoInfo()` returns a chain's
+> `chains.logo_url` (shared R2 at `logos.fungibles.com`, set via `POST /api/chains/:id/logo` or the
+> migration) when present, falling back to the filesystem `public/logos/chains/<slug>`. R2 is shared, so
+> the image is identical on every environment.
+
+### Carries — derived from distributors (same serve-time pattern as logos)
+
+A store's **`carries`** is **derived at serve-time**, NOT read from the per-store column, for any chain
+mapped in **`data/distributors.json`** (distributor → products, chain → distributor(s); a chain's list =
+the union of its distributors' products). The config lives in **code**, so the list is **identical on
+every environment** (Admin/staging/prod — prod & staging run *separate DBs*, so a stored column would
+drift; a derived one can't) and **auto-applies to any newly-imported store** of a mapped chain with zero
+stamping. Resolver: `storeCarriesList(chainName, storedCarries)` / `carriesForChain(name)` (`src/server.ts`).
+
+**The dev rule — READ THIS before touching carries:**
+- **Never** edit `retailers.carries` to change a *mapped* chain's products — it's ignored at serve-time.
+  Change the chain's products in **`data/distributors.json`** (one edit → every store of every chain that
+  distributor serves, on every environment).
+- **Any new endpoint that lists stores MUST** run carries through `storeCarriesList(chainName, r.carries)`
+  and logos through `chainLogoInfo()` — never serve raw `r.carries` or a hardcoded logo path. Unmapped
+  chains fall back to the stored column automatically.
+
+**Serving audit (who derives carries):** `/pub/stores` ✓ · `/pub/stores/near` ✓ · `/api/retailers` ✓.
+`/pub/best-bet` reads the raw column in its *ranking filter only* (never displays carries; behaviorally
+equal for mapped chains). A contract check (`scripts/check-store-contract.mjs`) fails the build if a new
+store-listing response serves raw `r.carries` instead of `storeCarriesList()` — so coverage can't silently regress.
 
 ---
 
