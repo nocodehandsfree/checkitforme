@@ -31,26 +31,51 @@ const adminToken = async (svc) => {
   return r.body?.data?.variables?.ADMIN_TOKEN;
 };
 
-const PROD_ADMIN = await adminToken(PROD.svc), STG_ADMIN = await adminToken(STG.svc);
-if (!PROD_ADMIN || !STG_ADMIN) { console.error("could not fetch admin tokens"); process.exit(1); }
-
-let failed = false;
-for (const name of TABLES) {
-  // pull ALL rows from staging (paginated)
+// Pull a whole table from one service (paginated).
+const dumpAll = async (svc, name) => {
   let rows = [], offset = 0;
   for (;;) {
-    const d = await j(`${STG.url}/api/admin/table-dump?name=${name}&limit=20000&offset=${offset}`, { headers: { "x-admin-token": STG_ADMIN } });
-    if (!d.ok) { console.error(`  ${name}: staging dump failed ${d.status}`, d.body); failed = true; break; }
+    const d = await j(`${svc.url}/api/admin/table-dump?name=${name}&limit=20000&offset=${offset}`, { headers: { "x-admin-token": svc.admin } });
+    if (!d.ok) throw new Error(`dump ${name} from ${svc.url} -> ${d.status} ${JSON.stringify(d.body)}`);
     rows.push(...d.body.rows); offset += d.body.count;
     if (d.body.count < 20000) break;
   }
-  if (DRY) { console.log(`  ${name}: ${rows.length} rows (dry-run, not applied)`); continue; }
-  const r = await j(`${PROD.url}/api/admin/promote-apply`, {
-    method: "POST", headers: { "x-admin-token": PROD_ADMIN, "Content-Type": "application/json" },
-    body: JSON.stringify({ name, rows }),
+  return rows;
+};
+
+const tok = await Promise.all([adminToken(PROD.svc), adminToken(STG.svc)]);
+PROD.admin = tok[0]; STG.admin = tok[1];
+if (!PROD.admin || !STG.admin) {
+  // surface WHY (the GitHub-secret RAILWAY_API_TOKEN must be a Railway token with project access)
+  const probe = await j("https://backboard.railway.app/graphql/v2", {
+    method: "POST", headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ query: `{ variables(projectId: "${PROJECT}", environmentId: "${ENV}", serviceId: "${PROD.svc}") }` }),
   });
-  if (r.ok) console.log(`  ${name}: promoted ${rows.length} (prod prior ${r.body.prior})`);
-  else { console.error(`  ${name}: PROD apply ${r.status}`, r.body); failed = true; }
+  console.error("could not fetch admin tokens — Railway responded:", probe.status, JSON.stringify(probe.body).slice(0, 300));
+  process.exit(1);
+}
+
+const CHUNK = 3000; // Cloudflare caps the POST body — chunk big tables (retailers) under the limit.
+let failed = false;
+for (const name of TABLES) {
+  let rows;
+  try { rows = await dumpAll(STG, name); }
+  catch (e) { console.error(`  ${name}:`, e.message); failed = true; continue; }
+  if (DRY) { console.log(`  ${name}: ${rows.length} rows (dry-run, not applied)`); continue; }
+
+  // Each chunk UPSERTS (insert-or-update by primary key, never delete) — order-independent, idempotent,
+  // and safe for FK parents (chains/retailers). settings merges naturally (prod's extra keys survive).
+  let ok = true, done = 0;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const chunk = rows.slice(i, i + CHUNK);
+    const r = await j(`${PROD.url}/api/admin/promote-apply`, {
+      method: "POST", headers: { "x-admin-token": PROD.admin, "Content-Type": "application/json" },
+      body: JSON.stringify({ name, rows: chunk }),
+    });
+    if (!r.ok) { console.error(`  ${name}: PROD apply ${r.status}`, JSON.stringify(r.body).slice(0, 200)); ok = false; failed = true; break; }
+    done += chunk.length;
+  }
+  if (ok) console.log(`  ${name}: upserted ${done}`);
 }
 
 // ElevenLabs restock-agent persona: staging agent → prod agent (config lives in EL cloud, not the DB).

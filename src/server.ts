@@ -8,7 +8,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { WebSocketServer, type WebSocket } from "ws";
-import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql, getTableColumns } from "drizzle-orm";
 import { db, client } from "./db/client";
 import {
   callResults, categories, chains, communityPosts, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, waitlist, watches, zones, zoneRetailers,
@@ -1492,24 +1492,34 @@ app.post("/api/admin/table-load", async (c) => {
 // PROMOTE apply — the staging→prod direction (the reverse of table-load). Fired automatically by the
 // promote-config CI job when staging is merged to the prod branch, so config edited on staging
 // (mappings, personas, per-store settings, demo numbers, statuses) carries to prod with the deploy —
-// NO button. Admin-gated. CONFIG tables only (never call_results/accounts). Applied atomically inside
-// a transaction (no empty window). SAFETY FLOOR: refuses if the incoming set is <50% of what prod
-// already has, so a broken/empty staging can never wipe prod. Upsert-by-replace within the txn.
+// NO button. Admin-gated. CONFIG tables only (never call_results/accounts).
+//
+// UPSERT, NEVER DELETE. We learned the hard way: chains/retailers are FK PARENTS — deleting a chain
+// SET-NULLs every store's chain_id (orphans logos + mappings), and deleting a retailer CASCADE-DELETES
+// its call_results (the customer's call history). So a delete+replace promote is catastrophic. Instead
+// each row is inserted-or-updated by primary key (no delete) → children are never touched, and re-runs
+// are idempotent & self-healing (a re-promote restores any link that drifted). Rows that exist on prod
+// but not staging are LEFT in place (deletions don't propagate — rare for config; do them by hand).
+// Comes chunked (Cloudflare caps the POST body); each chunk upserts independently, order-independent.
 app.post("/api/admin/promote-apply", async (c) => {
   const b = await c.req.json().catch(() => ({}));
   const name = String(b.name || "");
   const tbl = MIRROR_TABLES[name]; // config tables ONLY — state (calls/accounts) never promoted
   const rows: Record<string, unknown>[] | null = Array.isArray(b.rows) ? b.rows : null;
   if (!tbl || !rows) return c.json({ error: "name + rows[] required (config tables only)", tables: Object.keys(MIRROR_TABLES) }, 400);
-  const existing = Number((await db.select({ n: sql<number>`count(*)` }).from(tbl))[0]?.n ?? 0);
-  if (existing > 0 && rows.length < existing * 0.5)
-    return c.json({ error: `refused: incoming ${rows.length} < 50% of existing ${existing} (safety floor)`, skipped: true }, 409);
-  await db.transaction(async (tx) => {
-    await tx.delete(tbl);
-    for (let i = 0; i < rows.length; i += 500) await tx.insert(tbl).values(rows.slice(i, i + 500) as never);
-  });
+  const pkName = name === "statuses" || name === "settings" ? "key" : "id"; // statuses/settings keyed by `key`
+  const cols = getTableColumns(tbl as never) as Record<string, { name: string }>;
+  const pkCol = (tbl as never as Record<string, unknown>)[pkName];
+  const setOnConflict: Record<string, unknown> = {};
+  for (const k of Object.keys(cols)) if (k !== pkName) setOnConflict[k] = sql`excluded.${sql.identifier(cols[k].name)}`;
+  let n = 0;
+  for (let i = 0; i < rows.length; i += 500) {
+    const chunk = rows.slice(i, i + 500) as never[];
+    await db.insert(tbl).values(chunk).onConflictDoUpdate({ target: pkCol as never, set: setOnConflict as never });
+    n += chunk.length;
+  }
   invalidateRefCache();
-  return c.json({ table: name, promoted: rows.length, prior: existing });
+  return c.json({ table: name, upserted: n });
 });
 // Bulk display-name cleanup (Data Dev) in ONE DB pass:
 //  (0) hygiene: strip store numbers ("Burlington West Hills (#264)" -> "Burlington West Hills"),
