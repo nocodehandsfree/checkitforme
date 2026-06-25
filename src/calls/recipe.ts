@@ -20,20 +20,42 @@ export function isDirect(r: Recipe): boolean {
   return r.type === "direct" || !(r.steps && r.steps.length);
 }
 
-/** Keypad route in the bridge's form, pressed EARLY: e.g. [{press 0},{press 1}] -> "0@2,1@5".
+/** When to fire a learned step: at the time we ACTUALLY pressed/spoke it during mapping (s.atSec,
+ *  seconds from connect) — NOT a flat early 2s. IVRs that don't buffer type-ahead drop a digit
+ *  pressed during the greeting (the Big 5 bug: "press 2" learned at 6s fired at 2s, got lost, and
+ *  the live agent voiced "two" instead). Fall back to the early-barge cadence only when a step has
+ *  no learned timing. Always strictly increasing so multi-step paths don't collide. */
+function stepAt(s: RecipeStep, i: number, prev: number): number {
+  let at = typeof s.atSec === "number" && s.atSec >= FIRST_AT ? Math.round(s.atSec) : FIRST_AT + i * GAP;
+  if (at <= prev) at = prev + GAP;
+  return at;
+}
+
+/** Keypad route in the bridge's form, pressed at the LEARNED time: e.g. press 2 @6s -> "2@6".
  *  Empty string when this chain isn't a keypad route (direct or voice). */
 export function recipeToDtmf(r: Recipe): string {
   const ps = pressSteps(r);
   if (!ps.length) return "";
-  return ps.map((s, i) => `${String(s.value).replace(/[^0-9*#]/g, "")}@${FIRST_AT + i * GAP}`).filter((x) => x[0]).join(",");
+  let prev = -1;
+  return ps.map((s, i) => {
+    const digit = String(s.value).replace(/[^0-9*#]/g, "");
+    if (!digit) return "";
+    const at = stepAt(s, i, prev); prev = at;
+    return `${digit}@${at}`;
+  }).filter(Boolean).join(",");
 }
 
-/** Voice route for the cheap-TTS barge-in injector: e.g. [{say "general"}] -> "general@2".
- *  Empty string when this chain isn't a voice route. */
+/** Voice route for the cheap-TTS barge-in injector, spoken at the LEARNED time: e.g. say "general" @4s
+ *  -> "general@4". Empty string when this chain isn't a voice route. */
 export function recipeToVoice(r: Recipe): string {
   const ss = saySteps(r);
   if (!ss.length) return "";
-  return ss.map((s, i) => `${String(s.value).replace(/[,@]/g, " ").trim()}@${FIRST_AT + i * GAP}`).join(",");
+  let prev = -1;
+  return ss.map((s, i) => {
+    const word = String(s.value).replace(/[,@]/g, " ").trim();
+    const at = stepAt(s, i, prev); prev = at;
+    return `${word}@${at}`;
+  }).join(",");
 }
 
 /** Human-readable directions stored in phoneTreeDefault / read by the live agent as {{phone_tree}}. */
