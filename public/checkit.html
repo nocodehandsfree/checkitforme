@@ -18,7 +18,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r77" />
+<meta name="x-rev" content="names-r78" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -248,6 +248,11 @@ __BRAND_HEAD__
   .rverdict.soon .rpill{color:#F59E0B;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.32)}
   .rtitle2{font-size:30px;font-weight:900;letter-spacing:-1px;line-height:1.05;margin-top:14px}
   .rverdict.out .rtitle2{color:var(--red)} .rverdict.in .rtitle2{color:var(--green)} .rverdict.unk .rtitle2{color:#FBBF24} .rverdict.soon .rtitle2{color:#F59E0B}
+  /* In-stock verdict title: gradient fill + glow (per the motion spec). @supports so any browser without
+     background-clip:text keeps the solid-green title above instead of going invisible. */
+  @supports ((-webkit-background-clip:text) or (background-clip:text)){
+    .rverdict.in .rtitle2{background:linear-gradient(180deg,#A8FFCB,#34D873);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 2px 22px rgba(74,222,128,.5))}
+  }
   .rsub{color:#a6a6b4;font-size:14.5px;line-height:1.55;margin-top:12px}
   .rsub b{color:#fff;font-weight:800} .rsub .y{color:#fff;font-weight:800} /* product name neutral white — no per-vertical accent on a result */
   .rstore-line{color:#cfcfe0;font-size:13px;font-weight:600;margin-top:8px;line-height:1.4}
@@ -839,6 +844,8 @@ __BRAND_HEAD__
      finished result simply shows with zero animation. */
   @media (prefers-reduced-motion:no-preference){
     @keyframes rTitleIn{0%{opacity:0;transform:translateY(18px);filter:blur(8px)}72%{opacity:1;transform:translateY(-2px);filter:blur(0)}100%{opacity:1;transform:translateY(0);filter:blur(0)}}
+    /* In-stock variant bakes the green glow into the filter so it survives the blur-in (fill-mode:both). */
+    @keyframes rTitleInGlow{0%{opacity:0;transform:translateY(18px);filter:blur(8px) drop-shadow(0 2px 22px rgba(74,222,128,0))}72%{opacity:1;transform:translateY(-2px);filter:blur(0) drop-shadow(0 2px 22px rgba(74,222,128,.5))}100%{opacity:1;transform:translateY(0);filter:blur(0) drop-shadow(0 2px 22px rgba(74,222,128,.5))}}
     @keyframes rRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
     @keyframes rRiseSm{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
     @keyframes rBarDraw{from{transform:scaleY(0)}to{transform:scaleY(1)}}
@@ -853,6 +860,7 @@ __BRAND_HEAD__
     #result .rpill .d{animation:rPillDot 1.9s ease-in-out infinite}
     /* One-shot entrance — only while .r-play is set (added per fresh final result). */
     #result.r-play .rtitle2{animation:rTitleIn 1s cubic-bezier(.2,.7,.2,1) .2s both}
+    #result.r-play .rverdict.in .rtitle2{animation:rTitleInGlow 1s cubic-bezier(.2,.7,.2,1) .2s both}
     #result.r-play .rpill{animation:rRise .5s ease-out .15s both}
     #result.r-play .rsub{animation:rRiseSm .6s ease-out .35s both}
     #result.r-play .topcta{animation:rRise .6s ease-out .4s both}
