@@ -1,8 +1,9 @@
 // Call orchestration: trigger calls, ingest results (poll), compute green status,
 // and fire due schedules.
-import { and, desc, eq, gte, inArray, isNull, like, or } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, like, or, sql } from "drizzle-orm";
 import { db } from "../db/client";
 import { openState, fetchStoreHours } from "../store-hours";
+import { fetchStorePhone } from "../store-phone";
 import {
   accounts, callResults, categories, chains, retailers, scheduleTargets, schedules, watches, zoneRetailers, zones,
 } from "../db/schema";
@@ -64,7 +65,7 @@ export async function buildRestockVars(
   specificProduct?: string,
   extraCategoryIds?: number[],
   kioskMode?: boolean,
-): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; dynamicVars: Record<string, string> } | null> {
+): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; maxTalk: number | null; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
   const category = (await db.select().from(categories).where(eq(categories.id, categoryId)))[0];
@@ -80,7 +81,12 @@ export async function buildRestockVars(
 
   // CHAIN → STORE precedence: a store override wins, else the chain default, else nothing.
   const phoneTree = retailer.phoneTree ?? chain?.phoneTreeDefault ?? "";
-  const voicemailPolicy = (await getSetting("voicemail_hangup")) !== "false" ? VOICEMAIL_INSTRUCTION : "";
+  // Voicemail hang-up: per-store flag (chains.hangupOnVoicemail) wins when set; null = fall back to
+  // the GLOBAL voicemail_hangup setting (on unless explicitly "false"). This is what the Settings-page
+  // per-store toggle controls.
+  const globalVoicemailHangup = (await getSetting("voicemail_hangup")) !== "false";
+  const voicemailHangup = chain?.hangupOnVoicemail ?? globalVoicemailHangup;
+  const voicemailPolicy = voicemailHangup ? VOICEMAIL_INSTRUCTION : "";
   // Rotation: round-robin opener variants if set, so calling the SAME store gives the SAME voice but
   // slightly different phrasing each time (matches the EL-dial path in triggerCall). Falls back to the
   // single vt_opening opener. Voice itself is NOT rotated here — same store, same voice, varied script.
@@ -89,10 +95,24 @@ export async function buildRestockVars(
   const openingLine = openerTemplate.replace(/\{category\}/g, category.label);
   const clarification = specificityClause((specificProduct ?? "").trim());
 
+  // Bravo voice nav: build the spoken plan ("no@26,front@38,…") from the locked recipe so the bridge
+  // speaks it with cheap TTS before opening the agent — keeps voice-IVR stores (CVS) cheap.
+  let say: string | null = null;
+  if (chain?.navType === "voice" && chain.navRecipe) {
+    try {
+      const r = JSON.parse(chain.navRecipe) as { steps?: Array<{ action?: string; value?: string; atSec?: number }> };
+      const ss = (r.steps ?? []).filter((s) => s.action === "say" && s.value);
+      if (ss.length) say = ss.map((s) => `${String(s.value).replace(/[,@]/g, " ").trim()}@${Math.round(s.atSec ?? 0)}`).join(",");
+    } catch { /* ignore bad recipe */ }
+  }
+
   return {
     retailer, category, chainName: chain?.name ?? null,
     // Bridge-level keypad shortcut (chain-wide): pressed by OUR code at a fixed time, not the LLM.
     dtmf: chain?.dtmfShortcut ?? null,
+    say,
+    // Per-store talk cap (chains.maxTalkSeconds). Null = caller falls back to the global bail cap.
+    maxTalk: chain?.maxTalkSeconds ?? null,
     dynamicVars: {
       internal_call_id: "0",
       category: category.label,
@@ -171,6 +191,7 @@ interface TriggerArgs {
   finderUserId?: string;    // clerk id of whoever placed it (for finds privacy/headstart attribution)
   isPrivate?: boolean;      // keep this find out of the public feed (subscriber perk / paid privacy)
   kioskMode?: boolean;      // kiosk-only store → agent asks about the vending kiosk, not a shelf shipment (else inferred from the store)
+  force?: boolean;          // skip the 24h one-check-per-store dedup (admin "check again" places a real call every time)
 }
 
 /** Most recent COMPLETED check by this finder for a store+category within `withinHours` (default 24h).
@@ -212,7 +233,7 @@ export async function triggerCall(a: TriggerArgs) {
   // One-check-per-store-per-day (flag-gated): reuse a recent confirmed/answered result instead of
   // re-calling the same store+product within 24h — anti-abuse + cost. Returns the cached call row.
   // Owner-only demo store ("Fun") is exempt — the owner re-tests it repeatedly while rehearsing.
-  if (a.finderUserId && !a.toOverride && !retailer.ownerOnly && (await getPolicy()).flags.oneCheckPerStorePerDay) {
+  if (a.finderUserId && !a.force && !a.toOverride && !retailer.ownerOnly && (await getPolicy()).flags.oneCheckPerStorePerDay) {
     const recent = await findRecentCheck(a.finderUserId, retailer.id, category.id);
     if (recent) return { ...recent, deduped: true };
   }
@@ -259,7 +280,7 @@ export async function triggerCall(a: TriggerArgs) {
   }).returning();
 
   try {
-    const { providerCallId } = await provider.startCall({
+    const { providerCallId, callSid } = await provider.startCall({
       callId: row.id,
       toNumber: a.toOverride ? toE164(a.toOverride) : retailer.phone,
       retailerName: retailer.name,
@@ -283,7 +304,7 @@ export async function triggerCall(a: TriggerArgs) {
     await db.update(callResults)
       .set({ providerCallId, status: "in_progress" })
       .where(eq(callResults.id, row.id));
-    return { ...row, providerCallId, status: "in_progress" as const };
+    return { ...row, providerCallId, callSid, status: "in_progress" as const };
   } catch (e) {
     await db.update(callResults).set({ status: "failed", summary: String(e) }).where(eq(callResults.id, row.id));
     throw e;
@@ -716,11 +737,14 @@ export async function callZone(zoneId: number, categoryKey = "pokemon") {
   if (!ids.length) return { placed: 0 };
   const stores = await db.select().from(retailers).where(inArray(retailers.id, ids));
   let placed = 0;
+  const callSids: string[] = []; // Twilio SIDs of the calls we placed → lets the caller cancel the whole zone.
   for (const s of stores) {
-    try { await triggerCall({ retailerId: s.id, categoryId: cat.id }); placed++; }
-    catch (e) { console.error("callZone trigger failed", s.id, e); }
+    try {
+      const r = await triggerCall({ retailerId: s.id, categoryId: cat.id }); placed++;
+      const sid = (r as { callSid?: string }).callSid; if (sid) callSids.push(sid);
+    } catch (e) { console.error("callZone trigger failed", s.id, e); }
   }
-  return { placed };
+  return { placed, callSids };
 }
 
 // Open-conversation personalities — same cloned voice, different tone + opener.
@@ -780,18 +804,20 @@ export async function placeAdHocCall(phone: string, mode: "restock" | "carry" | 
 
 /** Retailers annotated with their most recent call outcome (drives the green dot). Filtered + capped
  *  server-side — at 100k stores, returning the whole table (and re-fetching it) melts the admin. */
-export async function retailersWithStatus(opts: { q?: string; state?: string; limit?: number; type?: string; region?: string; carries?: string; online?: boolean } = {}) {
+export async function retailersWithStatus(opts: { q?: string; state?: string; limit?: number; type?: string; region?: string; carries?: string; online?: boolean; chainId?: number } = {}) {
   const limit = Math.min(Math.max(opts.limit ?? 300, 1), 1000);
   const q = (opts.q || "").trim().toLowerCase();
   const state = (opts.state || "").trim().toUpperCase();
   // Filter-first browse: each filter is a DB condition so you can pull "all big-box in CA" with no
   // text search. All capped at `limit`, so even an unindexed scan stays bounded.
   const conds = [] as ReturnType<typeof eq>[];
-  if (q) { const pat = `%${q}%`; conds.push(or(like(retailers.name, pat), like(retailers.location, pat), like(retailers.zip, pat)) as ReturnType<typeof eq>); }
+  // Name match is also apostrophe-insensitive so "MVP's" finds a store stored as "MVPs" (and vice-versa).
+  if (q) { const pat = `%${q}%`, napat = `%${q.replace(/'/g, "")}%`; conds.push(or(like(retailers.name, pat), sql`replace(lower(${retailers.name}), '''', '') like ${napat}`, like(retailers.location, pat), like(retailers.zip, pat)) as ReturnType<typeof eq>); }
   if (state) conds.push(eq(retailers.state, state));
   if (opts.region) conds.push(eq(retailers.region, opts.region));
   if (opts.carries) conds.push(like(retailers.carries, `%${opts.carries}%`) as ReturnType<typeof eq>);
   if (opts.online) conds.push(eq(retailers.online, true));
+  if (opts.chainId) conds.push(eq(retailers.chainId, opts.chainId));
   if (opts.type) {
     const cs = await db.select({ id: chains.id }).from(chains).where(eq(chains.type, opts.type));
     const ids = cs.map((c) => c.id);
@@ -818,6 +844,19 @@ export async function retailersWithStatus(opts: { q?: string; state?: string; li
     zonesByRetailer.set(l.retailerId, arr);
   }
 
+  // Per-store call track-record (count + in-stock / not-in / restock tally) from the `recent` set we
+  // already loaded for lastCall — no extra query.
+  const statsByStore = new Map<number, { total: number; inStock: number; notIn: number; restock: number }>();
+  for (const cr of recent) {
+    if (cr.retailerId == null) continue;
+    const s = statsByStore.get(cr.retailerId) ?? { total: 0, inStock: 0, notIn: 0, restock: 0 };
+    s.total++;
+    if (cr.confirmed === true) s.inStock++;
+    else if (cr.shipmentDayHeard) s.restock++;
+    else if (cr.confirmed === false) s.notIn++;
+    statsByStore.set(cr.retailerId, s);
+  }
+
   return rs.map((r) => {
     const last = recent.find((c) => c.retailerId === r.id);
     return {
@@ -825,6 +864,7 @@ export async function retailersWithStatus(opts: { q?: string; state?: string; li
       storeType: (r.chainId && chainTypes.get(r.chainId)) || "Other",
       zones: zonesByRetailer.get(r.id) ?? [],
       openState: openState(r.hours, r.timezone),
+      callStats: statsByStore.get(r.id) ?? { total: 0, inStock: 0, notIn: 0, restock: 0 },
       lastCall: last
         ? {
             status: last.status,
@@ -871,6 +911,32 @@ export async function backfillHours(): Promise<{ started: boolean; pending: numb
     hoursBackfilling = false;
   })().catch(() => { hoursBackfilling = false; });
   return { started: true, pending: missing.length };
+}
+
+let phonesBackfilling = false;
+/** Background backfill: look up a real phone for CALL-RAIL stores carrying the "nophone:" sentinel
+ *  (imported with only an address), via the same web-search lookup as hours. ALWAYS scope to a chain
+ *  (chainId) — site-rail chains like Micro Center legitimately have no line and must never be touched.
+ *  Fire-and-forget + resumable (re-running picks up whatever's still nophone:). dryRun returns the
+ *  count + a sample without calling the model. */
+export async function backfillPhones(opts: { chainId?: number; dryRun?: boolean } = {}): Promise<{ started?: boolean; running?: boolean; dryRun?: boolean; pending: number; sample?: { id: number; name: string; address: string | null }[] }> {
+  const targets = (await db.select().from(retailers)).filter((r) =>
+    r.active !== false && !!r.phone && r.phone.startsWith("nophone:") && !!r.address
+    && (opts.chainId ? r.chainId === opts.chainId : true));
+  if (opts.dryRun) return { dryRun: true, pending: targets.length, sample: targets.slice(0, 12).map((r) => ({ id: r.id, name: r.name, address: r.address })) };
+  if (phonesBackfilling) return { started: false, running: true, pending: targets.length };
+  phonesBackfilling = true;
+  (async () => {
+    for (const r of targets) {
+      try {
+        const p = await fetchStorePhone(r.name, r.address!);
+        if (p) await db.update(retailers).set({ phone: p }).where(eq(retailers.id, r.id));
+      } catch (e) { console.error("phone backfill", r.id, e); }
+      await new Promise((res) => setTimeout(res, 1500)); // same pace as hours — under the lookup rate limit
+    }
+    phonesBackfilling = false;
+  })().catch(() => { phonesBackfilling = false; });
+  return { started: true, pending: targets.length };
 }
 
 /** Re-fetch hours for a single store (manual refresh). Returns the new open-state or null. */

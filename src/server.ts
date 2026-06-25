@@ -18,7 +18,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -26,7 +26,7 @@ import { getPolicy, setPolicy, publicPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
-import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL } from "./calls/navigator";
+import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores } from "./calls/navigator";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, type Recipe } from "./calls/recipe";
 import { llm } from "./llm";
@@ -40,7 +40,7 @@ import { seedStockCheckIntel } from "./stock/intel";
 import { seedSellMethods } from "./stock/sellmethods";
 import { r2Config, presignPut, photoKey } from "./r2";
 import { check as rlCheck, clientIp, LIMITS } from "./ratelimit";
-import { isGmailConfigured, gmailReceiptTick } from "./gmail-receipts";
+import { isGmailConfigured, gmailReceiptTick, debugRecentInbox } from "./gmail-receipts";
 import { rankBets } from "./best-bet";
 import { referralStatus, claimReferral } from "./referrals";
 
@@ -85,7 +85,7 @@ import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPh
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
-import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf } from "./voice/bridge";
+import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay } from "./voice/bridge";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
@@ -424,6 +424,19 @@ app.all("/twiml/bridge", (c) => {
     }
     play = `<Play digits="${digits}"/>`;
   }
+  // VOICE injection (Bravo, e.g. CVS): speak the learned menu words on a timer via cheap Polly TTS,
+  // BEFORE the stream — so the expensive agent never navigates. The spoken twin of <Play digits>.
+  const say = takeBridgeSay(room);
+  if (say) {
+    let prev = 0;
+    for (const m of say.matchAll(/([^,@]+?)\s*@\s*(\d+(?:\.\d+)?)/g)) {
+      const word = m[1].trim().replace(/[<>&'"]/g, ""); const at = Number(m[2]);
+      const wait = Math.max(0, Math.round(at - prev));
+      if (wait > 0) play += `<Pause length="${wait}"/>`;
+      play += `<Say voice="Polly.Joanna">${word}</Say>`;
+      prev = at;
+    }
+  }
   const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${play}<Connect><Stream url="wss://${config.staging.on ? STAGING_HOST : RAILWAY_HOST}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   return c.body(xml, 200, { "Content-Type": "text/xml" });
 });
@@ -594,7 +607,7 @@ function chainLogoInfo(name: string | null | undefined): { url: string | null; w
   const f = chainLogoFile(name); // filesystem fallback (pre-migration, and unchained store names)
   if (!f) return { url: null, wide: false, dark: false };
   const m = logoMeta()[f] || { w: 0, d: 0 };
-  return { url: `/logos/chains/${f}?v=50`, wide: m.w === 1, dark: m.d === 1 };
+  return { url: `/logos/chains/${f}?v=73`, wide: m.w === 1, dark: m.d === 1 };
 }
 // Owner preview: every chain logo rendered EXACTLY as the store list renders it (same tile,
 // plate + wide handling from _meta.json) at real size and 2x — judge phone clarity without
@@ -607,8 +620,8 @@ app.get("/logo-wall", (c) => {
     const plate = m.d === 1 ? "background:#f2f2f5;border-color:rgba(255,255,255,.28)" : "";
     const big = m.w === 1 ? "width:60px;height:auto;max-height:34px" : "max-width:52px;max-height:40px";
     const real = m.w === 1 ? "width:44px;height:auto;max-height:34px" : "width:42px;height:42px";
-    return `<div style="width:88px"><div style="width:72px;height:72px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);display:grid;place-items:center;margin:0 auto;${plate}"><img src="/logos/chains/${f}?v=50" style="object-fit:contain;${big}"></div>
-    <div style="width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.06);display:grid;place-items:center;margin:7px auto 0;${plate}"><img src="/logos/chains/${f}?v=50" style="object-fit:contain;${real}"></div>
+    return `<div style="width:88px"><div style="width:72px;height:72px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);display:grid;place-items:center;margin:0 auto;${plate}"><img src="/logos/chains/${f}?v=73" style="object-fit:contain;${big}"></div>
+    <div style="width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.06);display:grid;place-items:center;margin:7px auto 0;${plate}"><img src="/logos/chains/${f}?v=73" style="object-fit:contain;${real}"></div>
     <div style="font-size:9px;color:#8a8a98;text-align:center;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.replace(/\.(png|webp|svg)$/i, "")}</div></div>`;
   };
   return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="background:#0C0C12;font-family:-apple-system,sans-serif;color:#fff;padding:20px">
@@ -1066,6 +1079,13 @@ app.get("/pub/kiosk-receipt/poll", async (c) => {
   return c.json({ found: true, receipt: { product: cand.product, machineId: cand.machineId, at: cand.txnAt }, reward: u ? { credits: reward } : { freeCheck: reward > 0, checks: reward } });
 });
 app.get("/api/kiosk-receipts", async (c) => c.json(await db.select().from(kioskReceipts).orderBy(desc(kioskReceipts.createdAt))));
+// Diagnostic: read the ingest inbox + show the parser's verdict per email (incl. rejects) so we can see
+// why a receipt did/didn't land. Read-only, gated by the /api/* admin auth. hours=1..168 (default 72).
+app.get("/api/admin/receipts/inbox-debug", async (c) => {
+  const hours = Math.min(168, Math.max(1, Number(c.req.query("hours")) || 72));
+  try { return c.json({ ok: true, configured: isGmailConfigured(), rows: await debugRecentInbox(hours * 3600_000) }); }
+  catch (e) { return c.json({ ok: false, error: String((e as Error)?.message || e) }, 500); }
+});
 app.get("/pub/kiosks", async (c) => {
   const lat = Number(c.req.query("lat")), lng = Number(c.req.query("lng")), radius = Number(c.req.query("radius") || 25);
   let rows = await db.select().from(kiosks);
@@ -1221,7 +1241,7 @@ app.delete("/api/community/:id", async (c) => {
 
 // ---- Policy: owner-tunable pricing / headstart / privacy / feature flags ----
 app.get("/pub/policy", async (c) => c.json(await publicPolicy()));
-app.get("/api/policy", async (c) => c.json(await getPolicy()));
+app.get("/api/policy", async (c) => c.json({ ...(await getPolicy()), catalog: { sub: SUB, packs: PACKS } }));
 app.patch("/api/policy", async (c) => {
   try { return c.json(await setPolicy(await c.req.json())); } catch (e) { return c.json({ error: String(e) }, 400); }
 });
@@ -1354,6 +1374,16 @@ app.post("/api/stores/dedupe", async (c) => {
   const stateF = b.state ? String(b.state).toUpperCase() : null;
   const conds = [eq(retailers.active, true)];
   if (stateF) conds.push(eq(retailers.state, stateF));
+  // Optional: scope to ONE chain and force-normalize its names to "Chain City"/"Chain Street" even when
+  // the current name isn't "corrupt". Franchise imports (e.g. Hallmark's "Trudy's Hallmark Shop Location")
+  // are <80 chars, so the default pass preserves them — this forces them onto the house naming scheme.
+  let forceChain = false;
+  if (b.chain) {
+    const ch = (await db.select().from(chains).where(eq(chains.name, String(b.chain))))[0];
+    if (!ch) return c.json({ error: "chain not found" }, 404);
+    conds.push(eq(retailers.chainId, ch.id));
+    forceChain = true;
+  }
   const rows = await db.select({ id: retailers.id, name: retailers.name, location: retailers.location, address: retailers.address, chainId: retailers.chainId })
     .from(retailers).where(and(...conds));
   const chainName = new Map((await db.select().from(chains)).map((x) => [x.id, x.name || ""]));
@@ -1394,7 +1424,7 @@ app.post("/api/stores/dedupe", async (c) => {
   // markup begins ("Dollar General 1. Self-Service…" -> "Dollar General"). A long-but-clean independent
   // name with no chain is left alone rather than mangled.
   const namePrefix = (s: string) => (s || "").split(/[<&]|\b\d+\.\s|Self-Service|Return Policy|Help Center|style=|\bid=/i)[0].replace(/\s+/g, " ").trim();
-  for (const r of rows) if (corruptName(r.name)) {
+  for (const r of rows) if (corruptName(r.name) || (forceChain && r.chainId)) {
     let base = (r.chainId && chainName.get(r.chainId)) || "";
     if (!base && MARKUP.test(r.name || "")) base = namePrefix(r.name);
     if (!base) continue;
@@ -1558,6 +1588,28 @@ app.post("/api/stores/grade-from-defaults", async (c) => {
   const detail = out.filter((o) => o.filled > 0).sort((a, z) => z.filled - a.filled);
   return c.json({ dryRun: !!b.dryRun, scoredChains: out.length, chainsWithGaps: detail.length, totalFilled: detail.reduce((s, o) => s + o.filled, 0), unmatched, detail });
 });
+// Name normalizer: fixes the junk the dedupe doesn't (ALL-CAPS words, `&amp;` entities, " - "
+// separators) across ALL active stores server-side — reaching names past the read API's 1000-row cap.
+// Title-cases all-caps WORDS of length ≥4 (so true brand/dir acronyms — CVS, AFB, NE, plus a keep-set
+// AAFES/IKEA — stay upper, not "Cvs"/"Aafes"). Scoped to names that actually look junk so it never
+// touches a clean name. dryRun previews the rename set.
+app.post("/api/stores/fix-caps", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const KEEP = new Set(["AAFES", "IKEA", "NEX", "MCX", "AMC", "BBQ"]);
+  const fix = (n: string): string => {
+    let s = n.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#?[a-z0-9]+;/gi, "");
+    s = s.replace(/\s+-\s+/g, " ");
+    s = s.split(/\s+/).map((w) => (!KEEP.has(w) && w.length >= 4 && w === w.toUpperCase() && /[A-Z]/.test(w) ? w.charAt(0) + w.slice(1).toLowerCase() : w)).join(" ");
+    return s.replace(/\s+/g, " ").trim();
+  };
+  const junky = (n: string) => /&\w+;|<[a-z/]|style=|\(#\d| - | Shop Location/i.test(n) || /\b[A-Z]{4,}\s+[A-Z]{4,}\b/.test(n) || n.length > 80;
+  const rows = await db.select({ id: retailers.id, name: retailers.name }).from(retailers).where(eq(retailers.active, true)).limit(200000);
+  const changes = rows.map((r) => ({ id: r.id, from: r.name || "", to: fix(r.name || "") })).filter((x) => junky(x.from) && x.to && x.to !== x.from);
+  if (b.dryRun) return c.json({ dryRun: true, willFix: changes.length, sample: changes.slice(0, 25) });
+  for (const ch of changes) await db.update(retailers).set({ name: ch.to }).where(eq(retailers.id, ch.id));
+  invalidateRefCache();
+  return c.json({ fixed: changes.length, sample: changes.slice(0, 25) });
+});
 // Kiosk overlay: reconcile the official TPCi vending list against our stores. For each machine, flag
 // the matching store (same chain, within ~0.3 mi) as a tier-5 kiosk (hasKiosk:true, tier:5) — leaving
 // sellsPacks untouched so a store that also sells on the shelf still shows in both tabs. Machines at a
@@ -1648,6 +1700,10 @@ app.post("/api/kiosks/reconcile", async (c) => {
 
 // ---- Store hours: backfill all (background) + refresh one + re-verify unverified stamps ----
 app.post("/api/hours/backfill", async (c) => c.json(await backfillHours()));
+// Phone backfill for call-rail stores imported address-only (nophone: sentinel). Scope to a chain
+// via ?chainId= (required in practice — never run unscoped over site-rail chains). ?dryRun=1 previews.
+app.post("/api/phones/backfill", async (c) =>
+  c.json(await backfillPhones({ chainId: c.req.query("chainId") ? Number(c.req.query("chainId")) : undefined, dryRun: c.req.query("dryRun") === "1" })));
 app.post("/api/hours/:id/refresh", async (c) => {
   const r = await refreshHours(Number(c.req.param("id")));
   return r ? c.json(r) : c.json({ error: "no address / lookup failed" }, 400);
@@ -1967,7 +2023,7 @@ app.get("/api/admin/user-history", async (c) => {
   const ownerOnly = await ownerOnlyRetailerIds();
   const rows = (ids.length
     ? (await db.select().from(callResults).where(inArray(callResults.finderUserId, ids)).orderBy(desc(callResults.startedAt)).limit(80))
-    : []).filter((r) => !ownerOnly.has(r.retailerId));
+    : []).filter((r) => !ownerOnly.has(r.retailerId) && r.status !== "admin_hangup");
   const withCid = rows.filter((r) => r.providerCallId);
   return c.json({
     email,
@@ -2055,7 +2111,7 @@ app.get("/api/admin/overview", async (c) => {
   const stores = await retailerMap();
   const cats = await categoryLabelMap();
   const ownerOnly = await ownerOnlyRetailerIds();
-  const recent = (await db.select().from(callResults).where(gte(callResults.startedAt, d30)).orderBy(desc(callResults.startedAt))).filter((r) => !ownerOnly.has(r.retailerId));
+  const recent = (await db.select().from(callResults).where(gte(callResults.startedAt, d30)).orderBy(desc(callResults.startedAt))).filter((r) => !ownerOnly.has(r.retailerId) && r.status !== "admin_hangup");
   // Live: anything started in the last 30 min that hasn't finished.
   const live = recent.filter((r) => ["queued", "dialing", "in_progress"].includes(r.status) && r.startedAt >= now - 1800)
     .map((r) => ({ id: r.id, store: stores.get(r.retailerId)?.name || "?", category: cats.get(r.categoryId) || "", secs: now - r.startedAt, cid: r.providerCallId }));
@@ -2136,10 +2192,28 @@ app.post("/api/admin/calling/resume", async (c) => { await setCallingPaused(fals
 
 // ---- Reference data ----
 app.get("/api/categories", async (c) => c.json(await db.select().from(categories)));
-app.get("/api/chains", async (c) => c.json((await db.select().from(chains)).map((ch) => {
-  const l = chainLogoInfo(ch.name);
-  return { ...ch, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
-})));
+app.get("/api/chains", async (c) => {
+  const rows = await db.select().from(chains);
+  // Representative tier per chain = the most common retailers.tier among its active, graded stores
+  // (the rating is stored PER STORE; there is no chains.tier column — see docs/specs/scoring.md).
+  const tr = await db.select({ cid: retailers.chainId, tier: retailers.tier, n: sql<number>`count(*)` })
+    .from(retailers).where(and(eq(retailers.active, true), sql`${retailers.tier} is not null`)).groupBy(retailers.chainId, retailers.tier);
+  const tierByChain = new Map<number, number>(), bestN = new Map<number, number>();
+  for (const r of tr) { const n = Number(r.n || 0); if (r.cid != null && r.tier != null && n > (bestN.get(r.cid) || 0)) { bestN.set(r.cid, n); tierByChain.set(r.cid, r.tier); } }
+  // Per-store fields (callable/kiosk/online/stock) vary by location — surface counts so the panel can
+  // show the majority state + bulk-set them across the chain.
+  const ag = await db.select({ cid: retailers.chainId, n: sql<number>`count(*)`,
+    callable: sql<number>`sum(case when ${retailers.sellsPacks} then 1 else 0 end)`,
+    kiosk: sql<number>`sum(case when ${retailers.hasKiosk} then 1 else 0 end)`,
+    onl: sql<number>`sum(case when ${retailers.online} then 1 else 0 end)`,
+    verified: sql<number>`sum(case when ${retailers.stockStatus}='verified' then 1 else 0 end)` })
+    .from(retailers).where(eq(retailers.active, true)).groupBy(retailers.chainId);
+  const aggByChain = new Map(ag.map((r) => [r.cid, { n: Number(r.n || 0), callable: Number(r.callable || 0), kiosk: Number(r.kiosk || 0), online: Number(r.onl || 0), verified: Number(r.verified || 0) }]));
+  return c.json(rows.map((ch) => {
+    const l = chainLogoInfo(ch.name);
+    return { ...ch, logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, tier: tierByChain.get(ch.id) ?? null, stores: aggByChain.get(ch.id) ?? { n: 0, callable: 0, kiosk: 0, online: 0, verified: 0 } };
+  }));
+});
 // Compact store list for the Voice → Test picker: ONE callable store per supported (app-visible) chain
 // — ~80 rows, not the 105k national import. Mirrors the consumer visibility rule (non-muted chain with
 // an active, real-phone store) so the test calls a store that's actually in the product.
@@ -2170,10 +2244,18 @@ app.patch("/api/chains/:id", async (c) => {
   if (b.type !== undefined) patch.type = b.type;
   // Answer-path classification + consumer mute (god-view + per-chain cost control).
   if (b.answerPath !== undefined) patch.answerPath = b.answerPath || null;
+  if (typeof b.callTarget === "boolean") patch.callTarget = b.callTarget;
+  if (typeof b.ringsDirect === "boolean") patch.ringsDirect = b.ringsDirect;
+  if (b.stockCheckMethod !== undefined) patch.stockCheckMethod = b.stockCheckMethod || null;
   if (b.avgTreeSeconds !== undefined) patch.avgTreeSeconds = Number.isFinite(Number(b.avgTreeSeconds)) && Number(b.avgTreeSeconds) > 0 ? Number(b.avgTreeSeconds) : null;
   if (typeof b.repackOnly === "boolean") patch.repackOnly = b.repackOnly;
   if (typeof b.muted === "boolean") patch.muted = b.muted;
+  // Per-store call settings (Settings page): talk-time cap + voicemail/closed auto-hangup.
+  if (b.maxTalkSeconds !== undefined) patch.maxTalkSeconds = Number.isFinite(Number(b.maxTalkSeconds)) && Number(b.maxTalkSeconds) > 0 ? Number(b.maxTalkSeconds) : null;
+  if (typeof b.hangupOnVoicemail === "boolean") patch.hangupOnVoicemail = b.hangupOnVoicemail;
   if (b.stockCheckConfidence !== undefined) patch.stockCheckConfidence = b.stockCheckConfidence || null; // e.g. "spotty" = inconsistent stock (off-price/thrift), not a reliable MSRP source
+  if (b.sellMethods !== undefined) patch.sellMethods = b.sellMethods || null; // CSV: in_store|pickup|ship
+  if (typeof b.isMSRP === "boolean") patch.isMSRP = b.isMSRP;
   const [row] = await db.update(chains).set(patch).where(eq(chains.id, Number(c.req.param("id")))).returning();
   invalidateRefCache();
   return c.json(row);
@@ -2274,6 +2356,7 @@ app.get("/api/retailers", async (c) => {
     q: c.req.query("q") || undefined, state: c.req.query("state") || undefined,
     type: c.req.query("type") || undefined, region: c.req.query("region") || undefined,
     carries: c.req.query("carries") || undefined, online: c.req.query("online") === "1" || undefined,
+    chainId: c.req.query("chainId") ? Number(c.req.query("chainId")) : undefined,
     limit: c.req.query("limit") ? Number(c.req.query("limit")) : undefined,
   });
   // Attach the same chain-logo info the consumer surfaces use, so the admin Stores list renders
@@ -2316,7 +2399,7 @@ app.get("/api/admin/store-intel", async (c) => {
   // Most-checked stores (most call results recorded against them).
   const funIds = [...(await ownerOnlyRetailerIds())]; // owner-only "Fun" store: never counted in reports
   const checkRows = await db.select({ rid: callResults.retailerId, n: sql<number>`count(*)` }).from(callResults)
-    .where(and(sql`${callResults.retailerId} is not null`, funIds.length ? notInArray(callResults.retailerId, funIds) : undefined))
+    .where(and(sql`${callResults.retailerId} is not null`, sql`coalesce(${callResults.status},'') != 'admin_hangup'`, funIds.length ? notInArray(callResults.retailerId, funIds) : undefined))
     .groupBy(callResults.retailerId).orderBy(desc(sql`count(*)`)).limit(10);
   const checkIds = checkRows.map((r) => r.rid).filter((x): x is number => x != null);
   const checkNames = checkIds.length
@@ -2333,6 +2416,8 @@ app.get("/api/admin/store-intel", async (c) => {
 // genuine MSRP); numerator = our active stores of those chains (capped per chain so a stale count
 // can't push a chain over 100%). This is chain-FOOTPRINT coverage — how many of the chains' locations
 // we hold — NOT a claim every one stocks Pokémon (a tier-3 chain carries, but varies by location).
+// There is no national registry of "stores that stock Pokémon," so the scored-chain footprint is the
+// benchmark. Read from the committed CSV (cached 5 min).
 let coverageRefCache: { t: number; v: Array<{ chain: string; tier: number; national: number }> } | null = null;
 function coverageRef() {
   if (coverageRefCache && Date.now() - coverageRefCache.t < 300_000) return coverageRefCache.v;
@@ -2342,6 +2427,8 @@ function coverageRef() {
     const lines = txt.split(/\r?\n/).filter((l) => l.trim());
     const head = lines[0].replace(/^﻿/, "").split(",");
     const iN = head.indexOf("chain_name_exact"), iT = head.indexOf("tier_1_5"), iS = head.indexOf("stores");
+    // Columns 0-7 (name/tier/…/stores) have no embedded commas — only the trailing score_note does —
+    // so a plain split is safe for the indices we read.
     for (const ln of lines.slice(1)) {
       const cols = ln.split(",");
       const chain = (cols[iN] || "").trim();
@@ -2374,6 +2461,57 @@ app.get("/api/admin/coverage", async (c) => {
     note: "Coverage = the % of the national store footprint of the retail chains we know carry Pokémon at MSRP (tiers 3-5) that we've loaded. It measures chains/locations that CAN carry it — not that every store has it in stock right now (a 'spotty' tier-3 chain carries, but varies by location).",
   });
 });
+// Data-health monitor: ONE pass over active stores flags the gaps that silently break things —
+// missing phone, missing hours, junk/markup names, no chain link, and **mis-chained** stores (name
+// doesn't start with its chain's name — the exact failure the broken chainId filter used to hide).
+// Returns overall counts + the worst chains per issue + samples to eyeball. Cached 5 min (full scan).
+let dataHealthCache: { t: number; v: unknown } | null = null;
+app.get("/api/admin/data-health", async (c) => {
+  if (!c.req.query("fresh") && dataHealthCache && Date.now() - dataHealthCache.t < 300_000) return c.json(dataHealthCache.v);
+  const chainName = new Map((await db.select({ id: chains.id, name: chains.name }).from(chains)).map((x) => [x.id, x.name || ""]));
+  const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  // Mis-chain = store name and chain name share NO significant word. Shared-token (not prefix) so a
+  // store correctly chained but named with a franchise prefix / short brand / variant ("Franklin's Ace
+  // Hardware" ∈ "Ace Hardware", "Big 5 Reseda" ∈ "Big 5 Sporting Goods", "CVS West Hills" ∈ "_CVS
+  // Pharmacy at Target") is NOT flagged — only a genuinely foreign brand (a Savers row under Dick's) is.
+  const STOP = new Set(["the", "and", "of", "at", "for", "store", "shop", "inc", "llc"]);
+  // Stem a trailing possessive/plural -s so the chain "Mariano's"/"Lowe's"/"Smith's" (tokens mariano/lowe/smith)
+  // matches its real stores spelled "Marianos …"/"… Lowes"/"Smiths …". Without this the apostrophe makes
+  // mariano ≠ marianos and ~30 correctly-chained grocery stores get false-flagged as mis-chained.
+  const stem = (t: string) => (t.length > 3 && t.endsWith("s") ? t.slice(0, -1) : t);
+  const sig = (s: string) => new Set(norm(s).split(" ").filter((t) => t.length > 1 && !STOP.has(t)).map(stem)); // keep 2-char brands (BJ's, etc.)
+  const junkRx = /&lt;|&gt;|style=|<[a-z/]|\(#\d|—| - | Shop Location|Holiday (Décor|Greeting)/i;
+  const allCaps = /\b[A-Z]{4,}\s+[A-Z]{4,}\b/;
+  const rows = await db.select({ id: retailers.id, name: retailers.name, chainId: retailers.chainId, phone: retailers.phone, hours: retailers.hours, ownerOnly: retailers.ownerOnly })
+    .from(retailers).where(eq(retailers.active, true)).limit(200000);
+  let missingPhone = 0, missingHours = 0, junk = 0, noChain = 0, misChain = 0;
+  const byHours = new Map<number, number>(), byMis = new Map<number, number>();
+  const junkSample: string[] = [], misSample: string[] = [];
+  for (const r of rows) {
+    const nm = r.name || "";
+    if (r.ownerOnly) continue; // owner-only demo stores (Fun/MVPs) are intentional fixtures — never "problems"
+    if (!r.phone || r.phone.startsWith("nophone:")) missingPhone++;
+    if (!r.hours) { missingHours++; if (r.chainId) byHours.set(r.chainId, (byHours.get(r.chainId) || 0) + 1); }
+    if (junkRx.test(nm) || allCaps.test(nm) || nm.length > 80) { junk++; if (junkSample.length < 15) junkSample.push(nm.slice(0, 70)); }
+    if (!r.chainId) { noChain++; continue; }
+    const cn = chainName.get(r.chainId);
+    if (cn) {
+      const ct = sig(cn), st = sig(nm);
+      if (ct.size && st.size && ![...st].some((t) => ct.has(t))) {
+        misChain++; byMis.set(r.chainId, (byMis.get(r.chainId) || 0) + 1);
+        if (misSample.length < 15) misSample.push(`${nm.slice(0, 40)}  → chain: ${cn}`);
+      }
+    }
+  }
+  const top = (m: Map<number, number>) => [...m.entries()].map(([cid, n]) => ({ chain: chainName.get(cid) || `#${cid}`, n })).sort((a, b) => b.n - a.n).slice(0, 20);
+  const v = {
+    total: rows.length, missingPhone, missingHours, junkNames: junk, noChain, misChained: misChain,
+    worstHours: top(byHours), worstMisChain: top(byMis), junkSample, misSample,
+    note: "One pass over active stores. misChained = store name shares NO significant word with its chain (possessive -s stemmed, so real Mariano's/Lowe's/Smith's stores no longer false-flag). Remaining hits are independents auto-filed under a big chain by name prefix (e.g. 'Lee Harrison' under Harris Teeter) — real stores wearing the wrong logo, re-home not delete; eyeball misSample. missingHours concentrated in thrift (openState treats blank hours as closed-overnight only). Pass ?fresh=1 to bypass the 5-min cache.",
+  };
+  dataHealthCache = { t: Date.now(), v };
+  return c.json(v);
+});
 // In-admin Claude agent ("Admin dev"): chat to manage the store DB. Client sends the running
 // transcript [{role,text}]; the server runs one turn (with an internal tool loop) and returns
 // the reply + a list of actions taken. Admin-gated like the rest of /api/*.
@@ -2381,7 +2519,7 @@ app.get("/api/admin/coverage", async (c) => {
 app.get("/api/admin/call-timing", async (c) => {
   const funIds = [...(await ownerOnlyRetailerIds())]; // owner-only "Fun" store excluded from timings
   const notFun = funIds.length ? notInArray(callResults.retailerId, funIds) : undefined;
-  const hasT = and(sql`${callResults.callSeconds} is not null`, notFun);
+  const hasT = and(sql`${callResults.callSeconds} is not null`, sql`coalesce(${callResults.status},'') != 'admin_hangup'`, notFun);
   const agg = (await db.select({ n: sql<number>`count(*)`, avgCall: sql<number>`avg(${callResults.callSeconds})`, totalSec: sql<number>`coalesce(sum(${callResults.callSeconds}),0)` }).from(callResults).where(hasT))[0];
   const reached = (await db.select({ n: sql<number>`count(*)`, avgNav: sql<number>`avg(${callResults.navSeconds})`, avgTalk: sql<number>`avg(${callResults.callSeconds} - ${callResults.navSeconds})` }).from(callResults).where(and(hasT, sql`${callResults.navSeconds} is not null`)))[0];
   const byStore = await db.select({ rid: callResults.retailerId, n: sql<number>`count(*)`, avgCall: sql<number>`avg(${callResults.callSeconds})`, avgNav: sql<number>`avg(${callResults.navSeconds})`, avgTalk: sql<number>`avg(${callResults.callSeconds} - ${callResults.navSeconds})`, totalSec: sql<number>`coalesce(sum(${callResults.callSeconds}),0)` }).from(callResults).where(hasT).groupBy(callResults.retailerId).orderBy(desc(sql`count(*)`)).limit(12);
@@ -2458,28 +2596,55 @@ app.get("/api/admin/trainer/list", async (c) => {
   })) });
 });
 app.post("/api/admin/trainer/document", async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string; hint?: string; barge?: { plan: Array<{ action: string; value: string; at: number }> }; reactivePress?: { digit: string; max: number } };
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; retailerId?: number; model?: string; hint?: string; barge?: { plan: Array<{ action: string; value: string; at: number }> }; reactivePress?: { digit: string; max: number }; confirm?: boolean; product?: string };
+  // CONFIRM mode: don't just reach a human — ask "do you have any {product} in stock?" to verify we
+  // hit the RIGHT desk. On a chain-level run we ROTATE to a store we haven't asked yet (no script change,
+  // just a fresh store) so we never re-ask the same store on a callback.
+  const confirm = b.confirm ? { product: (b.product || "Pokémon cards").trim() } : undefined;
   let r: typeof retailers.$inferSelect | undefined;
   if (b.retailerId) r = (await db.select().from(retailers).where(eq(retailers.id, Number(b.retailerId))))[0];
   else if (b.chainId) {
-    r = (await db.select().from(retailers).where(and(
+    const cands = await db.select().from(retailers).where(and(
       eq(retailers.chainId, Number(b.chainId)), eq(retailers.active, true), sql`${retailers.phone} not like 'nophone:%'`,
-    )).limit(1))[0];
+    )).limit(50);
+    if (confirm) {
+      const asked = new Set(await confirmAskedStores(Number(b.chainId)));
+      r = cands.find((x) => x.phone && !asked.has(x.id)) ?? cands[0]; // fresh store first; if all asked, start over
+    } else {
+      r = cands.find((x) => x.phone) ?? cands[0];
+    }
   }
   if (!r || !r.phone) return c.json({ error: "no callable store for that chain" }, 400);
   // Respect the global mute list — never trainer-dial a muted chain (no direct store line, etc.).
   const _ch = r.chainId != null ? (await db.select().from(chains).where(eq(chains.id, r.chainId)))[0] : undefined;
   if (_ch?.muted) return c.json({ error: `${_ch.name} is muted — skipped (no trainer call placed)` }, 400);
   if (b.chainId) await db.update(chains).set({ navStatus: "learning", navUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(chains.id, Number(b.chainId)));
-  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, b.barge, b.reactivePress);
-  return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name });
+  const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, b.barge, b.reactivePress, confirm);
+  return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name, confirm: !!confirm });
 });
 app.get("/api/admin/trainer/session/:id", (c) => {
   const s = getNavSession(c.req.param("id"));
   if (!s) return c.json({ error: "expired" }, 404);
   return c.json({ id: s.id, store: s.retailerName, status: s.status, type: s.type, confidence: s.confidence,
     elapsed: Math.round((Date.now() - s.startMs) / 1000), humanAtSec: s.humanAtSec,
+    // Confirm-mode: did we hit the RIGHT desk ("answered") or get sent elsewhere ("redirect" + where)?
+    confirm: s.confirm ? (s.confirmResult ?? "asked") : null, redirectTo: s.redirectTo ?? null,
     steps: s.steps, recipe: s.recipe });
+});
+// Call log for a chain: every learner run (Alpha/Bravo/Charlie path + the step matrix). Powers the
+// expandable log under the Discover button.
+app.get("/api/admin/trainer/runs", async (c) => {
+  const chainId = Number(c.req.query("chainId"));
+  if (!chainId) return c.json({ runs: [] });
+  const runs = JSON.parse((await getSetting(`nav_runs:${chainId}`)) || "[]") as unknown[];
+  return c.json({ runs: runs.slice().reverse() }); // newest first
+});
+// Seed/replace a chain's run log (used to backfill today's real runs; also handy for tests).
+app.post("/api/admin/trainer/runs", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; runs?: unknown[] };
+  if (!b.chainId || !Array.isArray(b.runs)) return c.json({ error: "chainId + runs[] required" }, 400);
+  await setSetting(`nav_runs:${b.chainId}`, JSON.stringify(b.runs.slice(-20)));
+  return c.json({ ok: true, saved: b.runs.length });
 });
 app.post("/api/admin/trainer/lock", async (c) => {
   const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; recipe?: { type?: string; steps?: unknown[]; seconds?: number }; confidence?: number };
@@ -2530,8 +2695,16 @@ app.post("/api/retailers", async (c) => {
   return c.json(row, 201);
 });
 app.patch("/api/retailers/:id", async (c) => {
+  const id = Number(c.req.param("id"));
   const b = await c.req.json();
-  const [row] = await db.update(retailers).set(b).where(eq(retailers.id, Number(c.req.param("id")))).returning();
+  // Owner-only demo stores ("Fun"/"MVPs"): the phone number IS the on/off switch — saving a number makes
+  // the store appear, clearing it hides it entirely. Derived server-side so it works regardless of which
+  // fields the Admin sends. Real stores are untouched (active is managed independently for them).
+  if (Object.prototype.hasOwnProperty.call(b, "phone")) {
+    const cur = (await db.select({ ownerOnly: retailers.ownerOnly }).from(retailers).where(eq(retailers.id, id)))[0];
+    if (cur?.ownerOnly) b.active = !!(b.phone && String(b.phone).trim());
+  }
+  const [row] = await db.update(retailers).set(b).where(eq(retailers.id, id)).returning();
   return c.json(row);
 });
 // Hard-delete a store (admin) — for purging test/probe rows and confirmed junk. Soft-remove
@@ -2559,11 +2732,33 @@ app.post("/api/zones/:id/retailers", async (c) => {
 });
 // Bulk import zones + stores from a JSON file (de-dupes; coordinates fill in via background geocoding).
 app.post("/api/import-zones", async (c) => c.json(await importZonesData(await c.req.json())));
-// Call every store in a zone (explicit, on-demand — never automatic).
-app.post("/api/zones/:id/call-now", async (c) => c.json(await callZone(Number(c.req.param("id")))));
+// Call every store in a zone (explicit, on-demand — never automatic). Remember the placed callSids so
+// the operator can cancel the whole batch (like Stop & hang-up does for a single call).
+app.post("/api/zones/:id/call-now", async (c) => {
+  const zoneId = Number(c.req.param("id"));
+  const res = await callZone(zoneId);
+  zoneCallSids.set(zoneId, res.callSids ?? []);
+  setTimeout(() => zoneCallSids.delete(zoneId), 15 * 60 * 1000); // calls are long done by then
+  return c.json({ placed: res.placed });
+});
+// Cancel an in-progress zone call: hang up every Twilio call we placed for it.
+app.post("/api/zones/:id/hangup", async (c) => {
+  const zoneId = Number(c.req.param("id"));
+  const sids = zoneCallSids.get(zoneId) ?? [];
+  await Promise.all(sids.map((s) => hangupTwilioCall(s)));
+  zoneCallSids.delete(zoneId);
+  return c.json({ ok: true, cancelled: sids.length });
+});
 // Credit feasibility for a zone (one credit/store) — the user-facing zone caller must check this
 // up front so nobody starts a zone they can't finish. (Wired + ready; user firing stays gated off.)
 app.get("/api/zones/:id/quote", async (c) => c.json(await zoneQuote(Number(c.req.param("id")))));
+// The stores a zone will dial — names for the pre-call warning so the operator sees exactly who gets called.
+app.get("/api/zones/:id/stores", async (c) => {
+  const links = await db.select().from(zoneRetailers).where(eq(zoneRetailers.zoneId, Number(c.req.param("id"))));
+  const ids = links.map((l) => l.retailerId);
+  if (!ids.length) return c.json([]);
+  return c.json(await db.select({ id: retailers.id, name: retailers.name }).from(retailers).where(inArray(retailers.id, ids)));
+});
 
 // ---- Schedules ----
 app.get("/api/schedules", async (c) => c.json(await db.select().from(schedules)));
@@ -2583,22 +2778,52 @@ app.post("/api/schedules/:id/targets", async (c) => {
 
 // ---- Results ----
 app.get("/api/results", async (c) => {
-  const rows = await db.select().from(callResults).orderBy(desc(callResults.startedAt)).limit(50);
-  const rMap = new Map((await db.select().from(retailers)).map((r) => [r.id, r]));
+  // Paginated + lean: return only the page's rows, and look up only the retailers/chains those rows
+  // reference. (The old version pulled ALL ~100k retailers on every call — that was the slow part.)
+  const limit = Math.min(Math.max(Number(c.req.query("limit") || 10), 1), 200);
+  const offset = Math.max(Number(c.req.query("offset") || 0), 0);
+  const rows = await db.select().from(callResults).orderBy(desc(callResults.startedAt)).limit(limit).offset(offset);
+  const total = Number((await db.select({ n: sql<number>`count(*)` }).from(callResults))[0]?.n || 0);
+  const rids = [...new Set(rows.map((r) => r.retailerId).filter((x): x is number => !!x))];
+  const rMap = new Map((rids.length ? await db.select().from(retailers).where(inArray(retailers.id, rids)) : []).map((r) => [r.id, r]));
   const names = new Map((await db.select().from(chains)).map((x) => [x.id, x.name]));
   const cMap = new Map((await db.select().from(categories)).map((x) => [x.id, x.label]));
-  return c.json(rows.map((r) => {
+  return c.json({ total, offset, limit, rows: rows.map((r) => {
     const ret = rMap.get(r.retailerId);
     // Same chain-logo resolution as every other surface, so the Calls feed shows the store's mark.
     const l = chainLogoInfo(ret ? ((ret.chainId && names.get(ret.chainId)) || ret.name.split(/—|–| - /)[0]) : null);
     return { ...r, retailer: ret?.name, category: cMap.get(r.categoryId), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
-  }));
+  }) });
 });
 
 // ---- Actions ----
 app.post("/api/call-now", async (c) => {
   const b = await c.req.json();
-  return c.json(await triggerCall(b));
+  try {
+    // An admin-placed check IS the owner placing it. Attribute it to the master website account so it
+    // lands in their checks history (and the in-stock banner) exactly like a website call, kept private
+    // so it doesn't post to the public finds feed. force = skip the 24h dedup — the owner taps "check
+    // again" deliberately and expects a real call every time. (triggerCall throws store_closed for a
+    // closed store, which the handler surfaces as {error} below.)
+    const finderUserId = b.finderUserId ?? ("phone:" + (process.env.OWNER_PHONE || "+13106662331"));
+    return c.json(await triggerCall({ isPrivate: true, ...b, finderUserId, force: true }));
+  } catch (e) {
+    return c.json({ error: String((e as Error)?.message || e) }, 400);
+  }
+});
+// Admin "Stop & hang up" for a direct (non-bridge) call placed from Store Search. End the Twilio leg
+// and stamp the row admin_hangup (confirmed=null) so it's never mislabeled "nobody answered" — mirrors
+// /pub/bridge-hangup for the call-now path.
+app.post("/api/hangup", async (c) => {
+  const { cid, callSid } = await c.req.json().catch(() => ({}));
+  if (callSid) await hangupTwilioCall(callSid);
+  if (cid) {
+    await db.update(callResults)
+      .set({ status: "admin_hangup", statusKey: "admin_hangup", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
+      .where(and(eq(callResults.providerCallId, cid), inArray(callResults.status, ["dialing", "in_progress", "queued"])))
+      .catch((e) => console.error("admin_hangup stamp:", e));
+  }
+  return c.json({ ok: true });
 });
 // Labs: call any number with a chosen agent (restock | carry | open).
 app.post("/api/talk", async (c) => {
@@ -2665,7 +2890,7 @@ app.post("/api/bench/call", async (c) => {
 
 // ---- Statuses registry: the single source of truth for customer-facing verdicts ----
 app.get("/pub/statuses", async (c) => c.json(await db.select().from(statuses).orderBy(statuses.sort)));
-app.get("/api/statuses", async (c) => c.json(await db.select().from(statuses).orderBy(statuses.sort)));
+app.get("/api/statuses", async (c) => c.json((await db.select().from(statuses).orderBy(statuses.sort)).map((s) => (s.key === "in_stock" ? { ...s, color: "#4ADE80" } : s)))); // In-stock is locked to the brand green (the logo)
 app.post("/api/statuses", async (c) => {
   const b = await c.req.json();
   if (!b.key || !b.label) return c.json({ error: "key and label required" }, 400);
@@ -2680,6 +2905,9 @@ app.patch("/api/statuses/:id", async (c) => {
   const b = await c.req.json();
   const patch: Record<string, unknown> = {};
   for (const k of ["emoji", "label", "tone", "color", "note", "sort"]) if (b[k] !== undefined) patch[k] = b[k];
+  // "In stock" is locked to the brand green — it must always equal the logo exactly (#4ADE80).
+  const cur = (await db.select({ key: statuses.key }).from(statuses).where(eq(statuses.id, Number(c.req.param("id")))))[0];
+  if (cur?.key === "in_stock") patch.color = "#4ADE80";
   const [row] = await db.update(statuses).set(patch).where(eq(statuses.id, Number(c.req.param("id")))).returning();
   return c.json(row);
 });
@@ -2707,7 +2935,7 @@ app.get("/api/conversation/:cid", async (c) => {
 });
 // Custom telephony bridge (milestone 1): place OUR own Twilio call; its audio streams to our WS.
 // Place a bridged Twilio call (our number -> destination) running the restock agent. Returns the room.
-async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number }): Promise<{ room?: string; error?: string }> {
+async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null }): Promise<{ room?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
@@ -2715,7 +2943,7 @@ async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, str
   // Dial AS the customer's verified number when we have it (phone-first model); else the house line.
   const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const pol = await getPolicy();
-  setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, connectOnHuman: opts?.connectOnHuman ?? pol.flags.connectOnHuman, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds });
+  setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? pol.flags.connectOnHuman, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds });
   const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${config.staging.on ? STAGING_HOST : RAILWAY_HOST}/twiml/bridge?room=${room}` });
   // Hard cost cap: Twilio kills the call at TimeLimit seconds, no exceptions — the profit guarantee.
   if (opts?.timeLimitSec && opts.timeLimitSec > 0) body.set("TimeLimit", String(Math.floor(opts.timeLimitSec)));
@@ -2730,11 +2958,34 @@ async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, str
   return { room };
 }
 const roomCallSids = new Map<string, string>(); // room -> Twilio callSid (for hang-up)
+const zoneCallSids = new Map<number, string[]>(); // zoneId -> Twilio callSids placed, for "Cancel zone"
+/** Hang up a live Twilio call (POST Status=completed). Shared by the single + zone cancel paths. */
+async function hangupTwilioCall(callSid: string): Promise<void> {
+  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !tok || !callSid) return;
+  await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
+    method: "POST",
+    headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" },
+    body: "Status=completed",
+  }).catch(() => {});
+}
 // End the live bridged call (user pressed "Stop & hang up").
 app.post("/pub/bridge-hangup", async (c) => {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   const { room } = await c.req.json();
   const callSid = roomCallSids.get(room);
+  // Master Stop & hang-up = WE ended it, not the store. Stamp the call as a non-result ('admin_hangup',
+  // confirmed=null) so it's never mislabeled "nobody answered". Because this status is NOT in the
+  // ingest pending set (dialing/in_progress/queued), the verdict + charge path skips it automatically.
+  // statusKey drives the display pill (verdictKey reads statusKey first), so set both.
+  const convId = bridgeConversationId(room);
+  if (convId) {
+    await db.update(callResults)
+      .set({ status: "admin_hangup", statusKey: "admin_hangup", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
+      .where(and(eq(callResults.providerCallId, convId),
+        inArray(callResults.status, ["dialing", "in_progress", "queued"])))
+      .catch((e) => console.error("admin_hangup stamp:", e));
+  }
   if (sid && tok && callSid) {
     await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
       method: "POST",
@@ -2766,7 +3017,9 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   return placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
     db.insert(callResults).values({ retailerId, categoryId: primary, mode: "restock", status: "in_progress", providerCallId: convId, finderUserId: finder?.userId ?? null, isPrivate: finder?.isPrivate ?? false })
       .catch((e) => console.error("bridge call log insert:", e));
-  }, v.dtmf, { from, timeLimitSec: pol.bail.maxCallSeconds });
+    // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
+    // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say });
 }
 app.get("/pub/bridge/:room", (c) => {
   const room = c.req.param("room");
@@ -2786,7 +3039,7 @@ app.post("/api/bridge/call", async (c) => {
     clarification: "", phone_tree: b.phoneTree || "", special_instructions: "",
     voicemail_policy: "If you reach a personal voicemail with no menu, hang up without leaving a message.",
     personality: "", opening_line: opener.replace(/\{category\}/g, category), other_categories: "", ask_shipment_day: "",
-  }, undefined, b.dtmf || null, { connectOnHuman: b.connectOnHuman, connectAtSec: b.connectAtSec, timeLimitSec: b.timeLimitSec });
+  }, undefined, b.dtmf || null, { connectOnHuman: b.connectOnHuman, connectAtSec: b.connectAtSec, timeLimitSec: b.timeLimitSec, say: b.say || null });
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
 });

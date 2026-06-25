@@ -46,6 +46,8 @@ export interface StartCallParams {
 export interface StartCallResult {
   /** Engine-side id (e.g. ElevenLabs conversation id) for correlation/debugging. */
   providerCallId: string;
+  /** Twilio call SID when the engine reports it — lets us hang up the live call (zone/single cancel). */
+  callSid?: string;
 }
 
 /** Normalized post-call payload, after the adapter parses the engine's webhook. */

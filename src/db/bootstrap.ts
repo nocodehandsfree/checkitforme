@@ -27,6 +27,9 @@ async function seedStatuses() {
     ["bad_number", "☎️", "Bad number", "unk", "#9CA3AF", "That number didn't connect — no charge."],
     ["closed", "🔒", "Store closed", "unk", "#9CA3AF", "They're closed right now — no charge. Try again when they're open."],
     ["failed", "⚠️", "Call failed", "unk", "#FBBF24", "Something went wrong on our end — no charge."],
+    // Admin ended the call from the dashboard. A NON-RESULT — excluded from every report/aggregate +
+    // never billed; reads as "no data" (like a canceled call). Written by the master Stop & hang-up.
+    ["admin_hangup", "·", "Admin hung up", "unk", "#9CA3AF", "We ended this call from the dashboard — it doesn't count as a check. No charge."],
   ];
   let sort = 0;
   for (const [key, emoji, label, tone, color, note] of rows) {
@@ -97,6 +100,9 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE chains ADD COLUMN nav_confidence INTEGER").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN nav_log TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN nav_updated_at INTEGER").catch(() => {});
+  // Per-store call settings (Settings page): talk cap + voicemail/closed auto-hangup.
+  await client.execute("ALTER TABLE chains ADD COLUMN max_talk_seconds INTEGER").catch(() => {});
+  await client.execute("ALTER TABLE chains ADD COLUMN hangup_on_voicemail INTEGER").catch(() => {});
   // Logo linkage: chain logo lives in shared R2, referenced by logo_url so it travels across environments.
   await client.execute("ALTER TABLE chains ADD COLUMN logo_url TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN logo_wide INTEGER").catch(() => {});
@@ -212,6 +218,7 @@ export async function bootstrap() {
   await seedStockCheckIntel(); // classify chains site-rail vs call-rail (insert-if-absent)
   await seedSellMethods();      // per-chain ways-to-get-it + MSRP flag (insert-if-absent)
   await seedFunStore();         // owner-only "Fun" rehearsal store (only if FUN_STORE_PHONE is set)
+  await seedMvpsStore();        // owner-only "MVPs" pitch-demo store (phone set per-demo from Admin)
 }
 
 // Owner-only demo store "Fun": dials the owner's own cell (FUN_STORE_PHONE) so the owner can play the
@@ -242,6 +249,35 @@ async function seedFunStore() {
       zip: "91302", lat: 34.1367, lng: -118.6618, phone, timezone: "America/Los_Angeles",
       state: "CA", region: "West Coast", tier: 5, ownerOnly: true, active: true, sellsPacks: true,
       carries, hours,
+    });
+  }
+}
+
+// Owner-only demo store "MVPs": same rig as the Fun store, but the demo phone is set per-pitch from the
+// Admin (not an env var). The phone number IS the on/off switch — saving a number makes it appear, clearing
+// it hides it entirely (derived server-side in PATCH /api/retailers/:id). Geo-pinned to the same spot as Fun
+// so it surfaces wherever the owner searches from, and hidden from every consumer + every report (ownerOnly,
+// like Fun). Create-only: re-asserts the fixed invariants on each boot but NEVER the owner's phone/active.
+async function seedMvpsStore() {
+  // A "MVPs" chain purely so the store renders the MVPs brand mark (public/logos/chains/mvps.png).
+  let chain = (await db.select().from(chains).where(eq(chains.name, "MVPs")))[0];
+  if (!chain) {
+    await db.insert(chains).values({ name: "MVPs", type: "MVPs" });
+    chain = (await db.select().from(chains).where(eq(chains.name, "MVPs")))[0];
+  }
+  const hours = JSON.stringify({ mon: "24h", tue: "24h", wed: "24h", thu: "24h", fri: "24h", sat: "24h", sun: "24h" });
+  const existing = (await db.select().from(retailers).where(and(eq(retailers.name, "MVPs"), eq(retailers.ownerOnly, true))))[0];
+  if (existing) {
+    // Re-assert only invariants that must never drift — NOT phone/active (owner sets those per demo).
+    await db.update(retailers)
+      .set({ chainId: chain?.id ?? null, tier: 5, ownerOnly: true, sellsPacks: true, lat: 34.1367, lng: -118.6618, hours })
+      .where(eq(retailers.id, existing.id));
+  } else {
+    await db.insert(retailers).values({
+      chainId: chain?.id ?? null, name: "MVPs", location: "Calabasas, CA", address: "1 MVP Way",
+      zip: "91302", lat: 34.1367, lng: -118.6618, phone: "", timezone: "America/Los_Angeles",
+      state: "CA", region: "West Coast", tier: 5, ownerOnly: true, active: false, sellsPacks: true,
+      carries: "Pokémon", hours,
     });
   }
 }

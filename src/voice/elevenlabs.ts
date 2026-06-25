@@ -75,7 +75,7 @@ export class ElevenLabsProvider implements VoiceProvider {
       throw new Error(`ElevenLabs outbound-call failed: ${res.status} ${await res.text()}`);
     }
     const data = (await res.json()) as { conversation_id?: string; callSid?: string };
-    return { providerCallId: data.conversation_id ?? data.callSid ?? "" };
+    return { providerCallId: data.conversation_id ?? data.callSid ?? "", callSid: data.callSid };
   }
 
   async getConversation(providerCallId: string): Promise<CallOutcome | null> {

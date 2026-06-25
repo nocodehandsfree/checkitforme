@@ -74,6 +74,13 @@ color system, typography, components/buttons/cards, verdict tones, store-logo tr
   Do one pass against the live staging site before approval in case staging has drifted.
 - When you change live styles, update `STYLE_GUIDE.md` to match and **commit** (don't let it drift).
 
+## 5. Style-guide build steps (reference)
+1. Use `docs/brand/CHECK_BRAND_STYLE_GUIDE.md` as the brand foundation; pull live colors/components from `public/style.html`, `checkit.html`, `app.html`.
+2. Produce the **full style guide** (brand mark, color system, typography, components/buttons/cards, status pills, store-logo treatment, icon usage).
+3. Put the deliverable in **`docs/design/`** (e.g. `STYLE_GUIDE.md` + any assets).
+4. **Update this handoff doc** with a link to the finished guide + anything you reorganized.
+5. **The owner must approve the guide before it's final** — do not mark it done until approved.
+
 ---
 
 _Last updated: brand pack added to `docs/brand/`; design docs consolidated under `docs/design/`._

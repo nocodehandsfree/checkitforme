@@ -78,6 +78,11 @@ export const chains = sqliteTable("chains", {
   navConfidence: integer("nav_confidence"),
   navLog: text("nav_log"),
   navUpdatedAt: integer("nav_updated_at"),
+  // ---- Per-store call settings (editable on the Settings page; mapping above is learner-written) ----
+  // maxTalkSeconds: cap on agent↔human talk before wrapping (UI default 45). hangupOnVoicemail: hang up
+  // on a voicemail / "we're closed" recording instead of waiting (default on when null).
+  maxTalkSeconds: integer("max_talk_seconds"),
+  hangupOnVoicemail: integer("hangup_on_voicemail", { mode: "boolean" }),
   // Logo linkage (docs/specs/logo-r2-keystone.md): the chain's logo lives in shared R2, referenced here
   // so it travels with the row to every environment and can't drift. logo_url =
   // https://logos.fungibles.com/chain-logos/<slug>.png; null = fall back to the filesystem resolver.
@@ -418,7 +423,8 @@ export type CallStatus =
   | "bad_number"     // disconnected / number changed
   | "ivr_stuck"      // couldn't get through the phone menu
   | "closed"         // store closed / voicemail recording — hung up, no charge
-  | "failed";        // telephony/system error
+  | "failed"         // telephony/system error
+  | "admin_hangup";  // admin ended the call from the dashboard — a NON-RESULT (no report, no charge)
 
 /** One call attempt and its outcome. `confirmed` null = unclear/no answer. We store TEXT transcript + summary only — never audio. */
 export const callResults = sqliteTable(

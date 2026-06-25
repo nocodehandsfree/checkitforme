@@ -6,6 +6,24 @@ Scope: `voice-caller/` only.
 
 ---
 
+## Repo split & branch cleanup (eventual — not now)
+
+The monorepo is the single biggest source of "where does the code live?" confusion. Plan, for when
+we're ready (NOT mid-flight):
+
+- **Split `voice-caller/` into its own repo.** Today it's a folder inside the card-app monorepo;
+  `main` carries a hundreds-of-commits-stale copy that nobody should touch. A dedicated repo kills
+  the stale-`main` trap, lets CI run on every push without the card app, and gives Check its own
+  release cadence. Do a `git subtree split` (or filter-repo) to preserve history.
+- **Collapse the branch sprawl.** ~24 abandoned `claude/*` branches + a 300+commit gap between
+  `main` and the real work (`claude/retail-stock-voice-calls-OcyMS`). After the split: one `main`
+  = prod, one `staging`, delete the dead `claude/*` branches.
+- **Until then:** the branch model lives in `HANDOFF.md` (work/deploy from the `…OcyMS` prod branch
+  or the `…pagiis` staging branch; ignore monorepo `main`). Keep that note current — it's the only
+  thing stopping new agents from editing dead code.
+
+---
+
 ## The seam: how we run two agents in parallel
 
 The frontend talks to the backend **only** over HTTP JSON. That's the clean split:
@@ -149,73 +167,23 @@ Redis namespace + Sentry/PostHog project + Railway vars + CI/CD setup. (Needs `R
 
 ---
 
-## Findings from Railway (confirmed 2026-06-14)
+## Infra decisions (locked) + what's still pending
 
-- **`DATABASE_URL = file:/data/local.db`** — SQLite on a Railway **Volume**. So data *persists*
-  (good — explains the 100k stores surviving deploys), BUT a volume attaches to **one instance
-  only**. This is the hard blocker on horizontal scale: you literally cannot run a 2nd app
-  instance against it. **TiDB migration is the unlock** (relational + scale + the indexes).
-- **No `REDIS_URL` on the voice-caller service** — Redis exists in the project but isn't wired
-  to this app yet. Needs adding.
-- No `SENTRY_DSN` / `HELICONE_*` / `POSTHOG_*` on the service yet.
-- ✅ `TIDB_PUBLIC_KEY` + `TIDB_PRIVATE_KEY` added to Railway (placeholder — overwrite later).
+**DB / scale (the core blocker):** `DATABASE_URL = file:/data/local.db` — SQLite on a single Railway
+volume, so the app can't run >1 instance. Fix = polyglot by access pattern:
+- **Transactional** (call_results, accounts/billing, watches, schedules) -> **TiDB** (networked, multi-writer).
+- **Catalog** (~100k stores/chains, read-heavy) -> **libSQL embedded read-replica** per instance.
+- **Ephemeral** (rate limits, idempotency, locks, queue, live rooms) -> **Redis** (`/1`, `caller:` prefix).
+- **FAQ vectors** -> **Qdrant** (already deployed). Code already joins in app-memory, so splitting
+  stores<->call_results across SQLite/TiDB is low-risk. Phase: transactional tables to TiDB first.
 
-## Tool decisions (resolved — updated after seeing the live Railway project)
+**Tools (resolved):** Qdrant = RAG · PostHog-only observability (free tier = analytics + replay +
+error tracking) · Helicone = single LLM gateway (caching, per-feature cost, budget caps, fallbacks;
+does NOT auto-pick the model).
 
-Live Railway services found: `api`, `voice-caller`, `redis`, `qdrant`, `browser-proxy`.
-So Redis **and** Qdrant are already deployed (already being paid for).
-
-- **Qdrant: use it for RAG** — it's already running and is purpose-built for vectors. (Earlier I
-  said drop it for TiDB vector; reversed now that I can see it's deployed.) Only drop it later if
-  cost-cutting and the FAQ vector set stays tiny → then fold into TiDB vector.
-- **Observability: PostHog-only to start.** PostHog's free tier covers product analytics +
-  session replay + feature flags + **error tracking** — enough for now, one bill avoided. Add
-  Sentry later only if we need deep backend stack-traces. (Reversed my "Sentry=backend" once you
-  flagged double-paying — PostHog free does both at our scale.)
-- **Helicone = single LLM gateway** for all agents. Money-savers beyond routing:
-  - **Response caching** — identical FAQ/agent prompts don't re-pay the LLM (huge for support).
-  - **Per-feature / per-user cost analytics** — see exactly what each agent + each check costs
-    (feeds cost-per-check) and kill expensive prompts.
-  - **Per-user budget caps + rate limits** on LLM spend — stops a runaway agent (ties to the
-    global kill-switch).
-  - **Provider fallbacks** — fewer failed calls = fewer paid retries.
-  - ⚠️ It centralizes + measures + routes/fallbacks; it does NOT auto-pick the best model — we
-    still set cheap-vs-premium per use case.
-
-## Data architecture — polyglot by use-case (your instinct, formalized)
-
-The problem today isn't SQLite's capability — it's that the **one SQLite file lives on a Railway
-volume that attaches to a single instance**, so the app can't scale horizontally, and all
-concurrent writes serialize. Split by access pattern:
-
-| Data | Store | Why |
-|---|---|---|
-| **Stores / chains / categories** (≈100k rows, read-heavy, rarely written) | **SQLite / libSQL embedded read-replica** (per instance) | Blazing local reads, no network hop, cheap; syncs from one primary. Perfect for a big static catalog. |
-| **call_results, accounts/billing, watches, schedules** (concurrent writes at scale) | **TiDB** | This is the part that MUST be networked + multi-writer to run >1 instance. |
-| **Rate limits, idempotency, locks, queue, live rooms** | **Redis** (`/1`, `caller:` prefix) | Ephemeral shared state. |
-| **FAQ vectors** | **Qdrant** | Already deployed; purpose-built. |
-
-Key insight that makes this cheap to do: the code **already joins in app-memory** (e.g.
-`retailerMap()`), not via SQL joins across stores↔call_results — so splitting those two tables
-across SQLite and TiDB is far less disruptive than a normal DB split. Phase it:
-1. Move the **transactional tables** to TiDB → unlocks multi-instance now.
-2. Keep stores in libSQL as a synced **embedded read-replica** → fast cheap reads everywhere.
-This also saves money: TiDB only holds high-value transactional rows, not 100k static stores.
-
-## Service wiring status (what I've done / what I need from you)
-
-Done by me (Railway vars, no console access needed):
-- [x] `TIDB_PUBLIC_KEY`, `TIDB_PRIVATE_KEY` added.
-- [x] `REDIS_URL` wired → `redis://redis.railway.internal:6379/1` (own logical DB = isolated
-  from the Fungibles app; code adds a `caller:` key prefix too).
-
-Needs YOU (console login I don't have — the "like Clerk" steps):
-- [ ] **TiDB:** create the caller cluster/branch + `voice_caller` database, copy the **SQL
-  connection string** (password shows once) → paste it to me, I'll set `DATABASE_URL`.
-- [ ] **PostHog:** create a project → give me the **Project API key + host** → I wire it.
-- [ ] **Helicone:** create/copy a **`HELICONE_API_KEY`** → I wire it.
-- [ ] **Qdrant:** confirm whether it needs an API key (if you set one) → give me, I wire it;
-  otherwise I use the internal URL.
+**Wiring done:** `TIDB_PUBLIC_KEY`/`TIDB_PRIVATE_KEY` added; `REDIS_URL` -> `redis://redis.railway.internal:6379/1`.
+**Pending (owner console):** TiDB SQL connection string -> set `DATABASE_URL` · PostHog project key+host ·
+`HELICONE_API_KEY` · Qdrant API key (or internal URL).
 
 ## Markdown / context-bloat cleanup
 

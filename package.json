@@ -3,16 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Schedule natural-sounding calls to local retailers asking whether a product (e.g. Pokémon) arrived.",
+  "description": "Schedule natural-sounding calls to local retailers asking whether a product (e.g. Pok\u00e9mon) arrived.",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
-    "build": "echo 'no build step — runs via tsx'",
+    "build": "echo 'no build step \u2014 runs via tsx'",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:import-zones": "tsx src/db/import-zones.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
@@ -29,6 +31,7 @@
     "@types/node": "^22.10.6",
     "@types/ws": "^8.5.13",
     "drizzle-kit": "^0.30.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "@playwright/test": "^1.48.0"
   }
 }

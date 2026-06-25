@@ -13,6 +13,10 @@ export interface BridgeContext {
   // continuous recorded greeting, so the agent physically cannot press keys then — the bridge
   // does it instead, in code, every time.
   dtmf?: string;
+  // Deterministic SPOKEN navigation (Bravo voice IVRs like CVS), e.g. "no@17,front@28,general@48" =
+  // speak each word (cheap Polly TTS) at that many seconds from connect, BEFORE opening ElevenLabs.
+  // The voice twin of `dtmf` — lets us navigate a voice menu with $0 of the expensive agent.
+  say?: string;
   // Connect-on-human (cost saver, OFF by default): don't open the ElevenLabs (billed) session until a
   // human is detected. Twilio handles dial + DTMF + hold for free; ElevenLabs then bills only talk-time.
   connectOnHuman?: boolean;
@@ -47,6 +51,16 @@ export function takeBridgeDtmf(room: string): string | null {
   const d = ctx.dtmf;
   ctx.dtmf = undefined;
   return d;
+}
+
+/** Consume the room's SPOKEN nav plan ("word@seconds,…") for TwiML <Say> before the stream — the
+ *  voice twin of takeBridgeDtmf. Navigates a voice IVR with cheap Polly TTS, no expensive agent. */
+export function takeBridgeSay(room: string): string | null {
+  const ctx = contexts.get(room);
+  if (!ctx?.say) return null;
+  const s = ctx.say;
+  ctx.say = undefined;
+  return s;
 }
 
 // room -> ElevenLabs conversation id (so Runnr can poll transcript/result for a bridged call)

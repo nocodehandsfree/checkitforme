@@ -128,41 +128,58 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
 | Pavilions | white serif wordmark | 🔧 | their real wordmark (official vector), recolored white + stretched taller (owner: "pavilions is OK") |
-| Pick 'n Save | red "P" mark | 🔧 | de-boxed app-icon "P" → Pick'n Save red (#DC1E2E); **monogram — no wordmark vector exists**, flagged to owner |
-| Publix | green "Publix" wordmark | 🔧 | official vector — green wordmark, no box (replaced the "p" mark) |
+| Pick 'n Save | "Pick 'n / Save" wordmark | 🔧 | owner-supplied wordmark, recolored to white text + green leaf on the dark tile (no plate) |
+| Publix | white "p" mark | 🔧 | owner-supplied logo — white p-mark on the gray tile, sized to match QFC/Ralphs breathing room |
 | QFC | Q-with-crown | 🔧 | their Q-with-crown mark, shrunk per owner ("Q is too big") |
 | Ralphs | red oval + white script | 🔧 | owner-supplied real Ralphs oval logo (replaced the red "R" mark) |
 
-## Chunk 7b — randalls → scheels  ⬜
+## Chunk 7b — randalls → scheels  ✅
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Randalls | wordmark | ⬜ | **too small**; lighten; remove white in letters |
-| Ross Dress for Less | wordmark | ⬜ | white lettering, readable (lightened blue done before) |
-| Safeway | wordmark | ⬜ | |
-| Sam's Club | split actual | ⬜ | split their ACTUAL wordmark, don't cut letters |
-| Scheels | wordmark | ⬜ | |
+| Randalls | bright-blue script | ✅ | lightened navy→bright blue, kept red underline, enlarged per owner (w:1) |
+| Ross Dress for Less | white wordmark | ✅ | recolored lettering to white |
+| Safeway | red app-icon "S" | ✅ | kept the app icon per owner, sized down |
+| Sam's Club | "sam's / club" wordmark | ✅ | actual two-line wordmark, sized down per owner |
+| Scheels | red "SCHEELS" wordmark | ✅ | owner-supplied logo, de-boxed to brand red #ee2e24 (the 2025 revert to the '98 red), enlarged, w:1 |
 
-## Chunk 8 — shaw_s → tom_thumb  ⬜
+## Chunk 8 — shaw_s → tom_thumb  ✅ LOCKED (owner-approved)
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Shaw's | wordmark | ⬜ | remove white inside letters |
-| Sheetz | wordmark | ⬜ | |
-| Smith's | wordmark | ⬜ | |
-| Spencer's | wordmark | ⬜ | |
-| Staples | exact owner logo | ⬜ | use the EXACT logo owner gave — not the folded-corner "staple" mark |
-| Star Market | wordmark | ⬜ | |
-| Target | bullseye mark | ⬜ | |
-| TJ Maxx | wordmark | ⬜ | **too small**; remove white inside letters |
-| Tokyo Japanese Lifestyle | wordmark | ⬜ | |
-| Tom Thumb | 2 lines | ⬜ | drop red line; two lines; brighter blue |
+| Shaw's | orange wordmark | 🔧 | cleaned near-white from inside the letters |
+| Sheetz | red lozenge | 🔧 | real 2024 Sheetz logo (Wikimedia) — replaced the app-icon box |
+| Smith's | magenta wordmark | 🔧 | real Smith's logo (Wikimedia) — replaced the generic red "S" |
+| Spencer's | white graffiti | 🔧 | real Spencer's graffiti logo (Wikimedia), recolored white — replaced "Spencer's Nation" |
+| Staples | red "STAPLES" wordmark | 🔧 | official Staples wordmark (Wikimedia); confirm vs the specific file owner mentioned |
+| Star Market | hi-res lockup | 🔧 | high-res lockup (blue "star" + green star + "market") from combined vector |
+| Target | red bullseye | 🔧 | official 2004 bullseye, sized down per owner |
+| TJ Maxx | red wordmark | 🔧 | re-pulled official SVG at true aspect (no stretch) |
+| Tokyo Japanese Lifestyle | TOKYO + fan | 🔧 | raised higher on the tile per owner |
+| Tom Thumb | white script, dark tile | ✅ | white Tom/Thumb on dark tile, 3 rules stripped, stray tick removed, red line raised |
 
-## Chunk 9 — tractor_supply → winco_foods  ⬜
+## Chunk 9 — tractor_supply → winco_foods  🔧 (9a done + uniform-sized per owner; awaiting approval)
+<!-- Uniform sizing: logos normalized to a common envelope (~86% W / 74% H of tile) so they render the same size. Tractor = wordmark only (no shield). Walgreens = W. Tom Thumb left as-is per owner. -->
 | Logo | Treatment | Status | Notes |
 |---|---|---|---|
-| Tractor Supply | wordmark/mark | ⬜ | |
-| Vons | wordmark | ⬜ | remove white inside letters; bigger |
-| Walgreens | wordmark | ⬜ | |
-| Walmart | spark mark | ⬜ | |
-| Wawa | wordmark | ⬜ | |
-| Wegmans | wordmark | ⬜ | |
-| WinCo Foods | wordmark | ⬜ | |
+| Tractor Supply | blocky wordmark (no mark) | 🔧 | dropped TSC shield per owner; white "TRACTOR SUPPLY CO" wordmark, enlarged |
+| Vons | red wordmark | 🔧 | real Vons wordmark (Wikimedia), enlarged |
+| Walgreens | red cursive W | 🔧 | de-boxed Walgreens "W" in brand red, sized down per owner |
+| Walmart | yellow spark | 🔧 | official spark mark (Wikimedia) |
+| Wawa | red wordmark + goose | 🔧 | real Wawa wordmark (Wikimedia) — de-boxed |
+| Wegmans | white script | ✅ | real Wegmans script, de-boxed → white, enlarged per owner |
+| WinCo Foods | red 2-line | ✅ | real WinCo Foods wordmark (Wikimedia), red |
+
+## New stores (owner's 13-list) — 🔧 sourcing as we go
+| Logo | Treatment | Status | Notes |
+|---|---|---|---|
+| Amazon | wordmark + smile | ✅ | white "amazon" + orange smile (Wikimedia) |
+| Goodwill | full logo | ✅ | owner-supplied official Goodwill logo (g face + "goodwill") |
+| Salvation Army | red shield | ✅ | red shield emblem (Wikimedia), enlarged |
+| FoodMaxx | "food"/"maxx" 2 lines | 🔧 | redrawn blue+yellow outline per word (split white letters + exact dilation) — clean, bigger |
+| Lucky Supermarkets | red "Lucky" script | 🔧 | real Lucky script (Wikimedia) |
+| Savers | tags mark only | 🔧 | brand mark only per owner |
+| Uwajimaya | scallop mark only | 🔧 | brand mark only, white, per owner |
+| Woodman's | "WOODMAN'S" + apple | 🔧 | name + apple only, enlarged per owner |
+| Metro Market | — | ⬜ | **needs owner image** — only parent Roundy's on Wikimedia |
+| Pak 'n Save | — | ⬜ | **needs owner image** — no Wikipedia page |
+| Payless Foods | — | ⬜ | **needs owner image** — no Wikipedia page |
+| Unique | — | ⬜ | **needs owner image** — no Wikipedia page |

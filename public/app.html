@@ -107,6 +107,17 @@
   input[type=checkbox]:hover{border-color:rgba(255,255,255,.45)}
   input[type=checkbox]:checked{background:var(--green);border-color:var(--green)}
   input[type=checkbox]:checked::after{content:'';position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #06210f;border-width:0 2.2px 2.2px 0;transform:rotate(45deg)}
+  /* radios match the panel (dark, green dot when picked — not the native white circle) */
+  input[type=radio]{appearance:none;-webkit-appearance:none;width:14px;height:14px;min-width:14px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.26);border-radius:50%;background:var(--terminal);cursor:pointer;flex:0 0 auto;vertical-align:middle;margin:0;transition:.12s}
+  input[type=radio]:hover{border-color:rgba(255,255,255,.45)}
+  input[type=radio]:checked{border-color:var(--green);background:var(--green)}
+  /* status radios: small, perfectly round (own class so .day's 15px + flex can't oval them) */
+  .statusopt{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--text-body);cursor:pointer;user-select:none}
+  .statusopt input[type=radio]{appearance:none;-webkit-appearance:none;width:14px;height:14px;min-width:14px;flex:0 0 14px;aspect-ratio:1;padding:0;margin:0;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.3);border-radius:50%;background:var(--terminal);cursor:pointer;transition:.12s}
+  .statusopt input[type=radio]:checked{border-color:var(--green);background:var(--green)}
+  /* number inputs: no up/down spinner arrows */
+  input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input[type=number]{-moz-appearance:textfield}
   /* directional copy inside inputs: small, italic, very light — clearly just a hint */
   input::placeholder,textarea::placeholder{color:#56566a;font-style:italic;font-size:13px;font-weight:400}
   /* report group label (Funnel / Activity / …) */
@@ -121,8 +132,89 @@
   /* Tooltip: TAP to show (works on mobile — hover doesn't exist on touch). A small ⓘ marks tappable hints. */
   [data-tip]{cursor:help}
   label[data-tip],span[data-tip],.name[data-tip],b[data-tip]{display:inline-flex;align-items:center;gap:4px}
-  [data-tip]::after{content:"ⓘ";font-size:14px;color:var(--purple);font-style:normal;font-weight:700;line-height:1;margin-left:3px;vertical-align:middle;opacity:.85}
+  [data-tip]::after{content:"ⓘ";font-size:14px;color:var(--purple);font-style:normal;font-weight:700;line-height:1;margin:-4px 0 -4px 1px;padding:4px;vertical-align:middle;opacity:.85;cursor:pointer}
+  [data-tip]:active::after{opacity:1;color:#c4b5fd}
   #tiptip{position:fixed;z-index:9000;max-width:262px;background:#06060a;color:#e8e8f2;font:500 12.5px/1.45 Inter,-apple-system,sans-serif;font-style:normal;padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 30px rgba(0,0,0,.6)}
+  /* Settings page: sections reuse the global details.card chevron (green circle, top-right). */
+  details.card.setsec>summary{align-items:center}
+  /* Mapping header only: let the status pill (margin-left:auto) sit flush-right next to the chevron. */
+  #set_mapwrap>summary::after{margin-left:0}
+  .setlogo{flex:0 0 auto;display:inline-flex}
+  .setlogo .slogo{width:36px;height:36px;border-radius:9px}
+  .setlogo .slogo img{width:32px;height:32px}
+  .setrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--border)}
+  .setrow:first-child{border-top:none}
+  .setlbl{font-size:13.5px;color:var(--text-body)}
+  /* Chain picker (Settings): filterable list of chain rows. */
+  .pickrow{display:flex;align-items:center;gap:10px;padding:9px 8px;border-top:1px solid var(--border);cursor:pointer;border-radius:8px}
+  #set_picker .pickrow:first-child{border-top:none}
+  .pickrow:hover{background:rgba(255,255,255,.03)}
+  .pickrow.on{background:rgba(74,222,128,.1)}
+  .navspin{width:9px;height:9px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:navspin .7s linear infinite}
+  @keyframes navspin{to{transform:rotate(360deg)}}
+  /* Store Search card — per-store track-record, tap to expand */
+  .srow{background:var(--surface-1);border:1px solid var(--border-default);border-radius:var(--r-card);margin-bottom:9px;overflow:hidden}
+  .srow.open{border-color:rgba(74,222,128,.3);background:linear-gradient(180deg,rgba(74,222,128,.045),rgba(74,222,128,0))}
+  .srhead{display:flex;align-items:center;gap:11px;padding:13px;cursor:pointer}
+  .srhead .nm{font-size:15px;font-weight:700;color:#f3f3f7;line-height:1.25;letter-spacing:-.1px}
+  .srhead .sbranch{font-size:12.5px;color:var(--text-body);margin-top:1px}
+  .ssub{font-size:12.5px;color:var(--text-muted);margin-top:4px;line-height:1.45}
+  .srchev{color:var(--text-tertiary);font-size:17px;flex:0 0 auto;transition:transform .2s;line-height:1}
+  .srow.open .srchev{transform:rotate(180deg)}
+  .recp{flex:0 0 auto;font:800 12px Inter;border-radius:20px;padding:4px 10px;white-space:nowrap}
+  .recp.good{color:var(--green);background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.32)}
+  .recp.mid{color:#F4D03F;background:rgba(244,208,63,.1);border:1px solid rgba(244,208,63,.3)}
+  .recp.low{color:#ff8a8a;background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.28)}
+  .recp.none{color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);font-weight:700}
+  .srdetail{padding:0 13px 13px}
+  .srline{display:flex;gap:10px;font-size:13px;line-height:1.5;padding-top:11px}
+  .srlab{color:var(--text-muted);font-weight:600;flex:0 0 58px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding-top:1px}
+  .stally{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
+  .stally .tp{display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:6px 10px;font:800 13px Inter;border:1px solid}
+  .stally .tp i{font:600 10.5px Inter;font-style:normal;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em}
+  .stally .tp.in{color:var(--green);background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3)}
+  .stally .tp.out{color:#ff8a8a;background:rgba(239,68,68,.09);border-color:rgba(239,68,68,.28)}
+  .stally .tp.soon{color:#F4D03F;background:rgba(244,208,63,.1);border-color:rgba(244,208,63,.28)}
+  /* ---- v3 Store Search card: collapsed → tap-to-arm → tap-to-call → live transcript ---- */
+  .stc{background:var(--surface-1);border:1px solid var(--border-default);border-radius:var(--r-card);padding:13px;margin-bottom:9px;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent;user-select:none;transition:border-color .15s,background .15s}
+  .stc.armed{border-color:rgba(74,222,128,.34);background:linear-gradient(180deg,rgba(74,222,128,.05),rgba(74,222,128,0))}
+  .stc.closed{opacity:.6}
+  .stchead{display:flex;align-items:flex-start;gap:11px}
+  .stcbody{flex:1;min-width:0}
+  .stcnm{font-size:15px;font-weight:700;color:#f3f3f7;letter-spacing:-.1px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:6px}
+  .stcaddr{font-size:12px;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stcpills{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .stcpills .cp{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:3px 8px;font:800 12px Inter;border:1px solid;line-height:1}
+  .stcpills .cp.in{color:var(--green);background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3)}
+  .stcpills .cp.out{color:#ff8a8a;background:rgba(239,68,68,.09);border-color:rgba(239,68,68,.28)}
+  .stcpills .cp.soon{color:#F4D03F;background:rgba(244,208,63,.1);border-color:rgba(244,208,63,.28)}
+  .stcprod{display:flex;gap:8px;margin-top:9px;align-items:center;flex-wrap:wrap}
+  .stcprod img{height:19px;width:19px;object-fit:contain;border-radius:4px;flex:0 0 auto}
+  .stcdot{width:11px;height:11px;border-radius:50%;flex:0 0 auto;margin-top:3px}
+  .stcdot.good{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .stcdot.mid{background:#F4D03F;box-shadow:0 0 8px rgba(244,208,63,.6)}
+  .stcdot.low{background:var(--red);box-shadow:0 0 8px rgba(239,68,68,.55)}
+  .stcclosed{flex:0 0 auto;font:700 10px Inter;letter-spacing:.04em;text-transform:uppercase;color:#ff8a8a;background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.28);border-radius:7px;padding:3px 7px;white-space:nowrap;margin-top:1px}
+  .stcown{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+  .stc.armed .stcown{display:block}
+  /* recall confirm — store checked < 24h ago */
+  .stcdlg{margin-top:13px;border-top:1px solid var(--border);padding-top:14px}
+  .stcdlg .q{font:500 13px Inter;color:var(--text-body);line-height:1.55;text-align:center}
+  .stcdlg .q b{color:#f3f3f7}
+  .stcdlg .yes{display:block;width:100%;text-align:center;border:none;border-radius:11px;padding:12px;margin-top:14px;font:800 13.5px Inter;background:linear-gradient(180deg,#5BEA93,#34C268);color:#06210f;cursor:pointer}
+  .stcdlg .no{display:block;text-align:center;margin-top:12px;color:var(--muted);font-weight:700;font-size:13.5px;cursor:pointer}
+  /* live transcript view — identical to the website */
+  .lvhead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .lvname{flex:1;min-width:0}
+  .lvname b{font-size:15px;color:#fff;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lvname .st{font:600 12px Inter;color:var(--green);margin-top:2px;display:flex;align-items:center;gap:6px}
+  .pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex:0 0 auto;animation:scpulse 1.4s ease-in-out infinite}
+  @keyframes scpulse{0%,100%{opacity:1}50%{opacity:.32}}
+  .lvstop{width:100%;margin-bottom:12px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);color:#ff8a8a;border-radius:10px;padding:10px 15px;font:800 13px Inter;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}
+  .lvx{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--surface-2);color:#9a9aac;font-size:15px;display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
+  .lvbody{max-height:46vh;overflow:auto}
+  .lvbody .chat{margin-top:0}
+  .sracts{display:flex;gap:9px;align-items:center;margin-top:13px}
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:16px}
@@ -392,14 +484,14 @@
       <div id="credit_body" class="meta">Loading…</div>
       <div id="credit_stats" class="meta" style="margin-top:6px"></div>
       <div id="credit_limit_wrap" style="display:none;margin-top:12px">
-        <div class="hint" style="margin-bottom:8px">Estimate from the last 31 days <span data-tip="Enable user_read on this API key in ElevenLabs → API Keys for a true auto-updating balance with no manual entry.">ⓘ</span>. Enter your plan size below until live balance is on.</div>
+        <div class="hint" style="margin-bottom:8px">Estimate from the last 31 days <span data-tip="Enable user_read on the ElevenLabs API key for a live, auto-updating balance.">ⓘ</span>. Enter your plan size below until live balance is on.</div>
         <div class="row" style="gap:8px">
           <input id="credit_limit" type="number" placeholder="Plan size — e.g. 100000" style="flex:1">
           <button class="ghost" onclick="saveCreditLimit()">Save</button>
         </div>
       </div>
     </div>
-    <details class="card report" id="d_timing_card">
+    <details class="card report" id="d_timing_card" open>
       <summary style="cursor:pointer"><span class="name">Call time &amp; cost</span></summary>
       <div class="meta" style="margin:10px 0 8px">Time-to-human (phone-tree nav) vs. talk — ElevenLabs bills the whole connected call, so nav + hold is real cost.</div>
       <div class="stats" id="d_timing" style="margin-bottom:6px"></div>
@@ -408,13 +500,14 @@
     </div>
     <div id="dash_calc" style="display:none"></div>
   </section>
+  <section id="calc"><div id="calc_root"></div></section>
 
   <section id="retailers">
     <h2>Store intel</h2>
     <div id="storecoverage" class="card report" style="display:none;margin-bottom:10px"></div>
     <div class="card report"><div class="stats" id="storeintel" style="margin-bottom:0"></div></div>
     <div id="storecarries" class="card report" style="display:none"></div>
-    <details id="storereports" class="card report" style="display:none"><summary><span class="name">Reports</span></summary>
+    <details id="storereports" class="card report" open style="display:none"><summary><span class="name">Reports</span></summary>
       <div id="rep_body" style="margin-top:10px"></div>
     </details>
   </section>
@@ -425,7 +518,7 @@
       <input id="f_search" placeholder="Search name, city, ZIP — or just pick a filter…" oninput="onAdminSearch()">
       <select id="f_type" onchange="loadRetailers()"><option value="">All types</option></select>
       <select id="f_region" onchange="loadRetailers()"><option value="">All regions</option></select>
-      <select id="f_zone" onchange="renderRetailers()"><option value="">All zones</option></select>
+      <select id="f_zone" onchange="onStoreFilter()"><option value="">All zones</option></select>
       <select id="f_carries" onchange="loadRetailers()"><option value="">Any product</option></select>
       <select id="f_status" onchange="loadRetailers()">
         <option value="">Any status</option>
@@ -439,7 +532,7 @@
         <option value="badnum">Bad / missing number</option>
         <option value="kiosk">Has kiosk</option>
       </select>
-      <select id="f_sort" onchange="renderRetailers()">
+      <select id="f_sort" onchange="onStoreFilter()">
         <option value="rel">Sort: best match</option>
         <option value="name">Name A–Z</option>
         <option value="verified">Verified first</option>
@@ -448,17 +541,13 @@
         <option value="open">Open now first</option>
       </select>
     </div>
-    <div id="bulkbar" class="bulkbar" style="display:none">
-      <label class="bchk"><input type="checkbox" id="b_all" onchange="bulkToggleAll(this.checked)"> Select all</label>
-      <span id="b_count" class="meta"></span>
-      <span class="grow"></span>
-      <button class="ghost" onclick="bulkEdit('verify')">Mark verified</button>
-      <button class="ghost" onclick="bulkEdit('unverify')">Mark unverified</button>
-      <button class="ghost" onclick="bulkEdit('online')">Mark online</button>
-      <button class="ghost" onclick="bulkEdit('offline')">Not online</button>
-      <button class="ghost" onclick="bulkEdit('deactivate')" style="color:var(--red)">Remove</button>
-    </div>
     <div id="retailerList"></div>
+    <div id="store_pager" style="position:fixed;right:14px;bottom:16px;z-index:50;display:none;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border-strong);border-radius:14px;padding:7px 9px;box-shadow:0 10px 28px rgba(0,0,0,.55)">
+      <select id="store_size" onchange="setStoreSize(this.value)" title="Stores per page" style="width:auto;font-size:12.5px;padding:7px 26px 7px 9px;margin:0"><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select>
+      <button class="ghost" id="store_prev" onclick="storePage(-1)" aria-label="Previous page" style="padding:8px 13px;font-size:16px;line-height:1">←</button>
+      <span id="store_pageind" class="meta" style="min-width:46px;text-align:center;font-size:12.5px">1 / 1</span>
+      <button class="ghost" id="store_next" onclick="storePage(1)" aria-label="Next page" style="padding:8px 13px;font-size:16px;line-height:1">→</button>
+    </div>
     <details class="card" id="map_card" ontoggle="if(this.open){ensureMap();loadMap();}" style="margin-top:16px">
       <summary><span class="name" data-tip="green = in · red = not in · amber = unclear · gray = uncalled">Map these results</span></summary>
       <div style="margin:12px 0 10px"><button class="ghost" onclick="locateMe()">Zoom to my location</button></div>
@@ -488,6 +577,12 @@
       <textarea id="r_tree" rows="2" placeholder="When asked if you're a healthcare provider, say no. Then ask for the front store."></textarea>
       <div style="margin-top:12px"><button class="act" onclick="addRetailer()">Add store</button></div>
     </div>
+    <details class="card">
+      <summary><span class="name">Bulk import</span> <span class="meta" data-tip="Paste store JSON — upserts by phone; region + timezone come from state. active:false soft-removes.">ⓘ</span></summary>
+      <textarea id="gw_import" spellcheck="false" placeholder='[{"name":"Target — Sunset","phone":"+13105551212","address":"...","state":"CA","chain":"Target","carries":"Pokémon"}]' style="width:100%;min-height:150px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box;margin-top:10px"></textarea>
+      <div id="gw_import_msg" class="meta" style="margin:8px 0;min-height:16px"></div>
+      <div><button class="act" onclick="importStoresJson()">Import stores</button> <button class="ghost" onclick="backfillRegions()">Backfill regions</button></div>
+    </details>
   </section>
 
   <section id="results"><h2>Recent calls</h2>
@@ -501,13 +596,11 @@
       </select>
     </div>
     <div id="resultList"><div class="empty">Loading…</div></div>
-  </section>
-
-  <section id="bail">
-    <h2 data-tip="Master call cutoffs — rules that end a call once it stops being worth the money. The master switch stays OFF until bench-tested; nothing changes on live calls yet.">Bail</h2>
-    <div class="card" id="bail_card">
-      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><span class="name">Bail rules</span> <span id="bail_state" class="status s-gray">…</span></div>
-      <div id="bail_body" class="meta">Loading…</div>
+    <div id="res_pager" style="position:fixed;right:14px;bottom:16px;z-index:50;display:none;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border-strong);border-radius:14px;padding:7px 9px;box-shadow:0 10px 28px rgba(0,0,0,.55)">
+      <select id="res_size" onchange="setResSize(this.value)" title="Calls per page" style="width:auto;font-size:12.5px;padding:7px 26px 7px 9px;margin:0"><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select>
+      <button class="ghost" id="res_prev" onclick="resPage(-1)" aria-label="Previous page" style="padding:8px 13px;font-size:16px;line-height:1">←</button>
+      <span id="res_pageind" class="meta" style="min-width:46px;text-align:center;font-size:12.5px">1 / 1</span>
+      <button class="ghost" id="res_next" onclick="resPage(1)" aria-label="Next page" style="padding:8px 13px;font-size:16px;line-height:1">→</button>
     </div>
   </section>
 
@@ -545,16 +638,17 @@
   <section id="receipts">
     <h2>Kiosk</h2>
     <div class="card report">
-      <div class="name" style="margin-bottom:4px">Restock intel</div>
-      <div id="gw_intel" class="meta">Loading…</div>
-    </div>
-    <div class="card report">
       <div class="name" style="margin-bottom:4px">Kiosk intel</div>
       <div id="gw_kiosks" class="meta">Loading…</div>
     </div>
     <div class="card report">
-      <div class="name" style="margin-bottom:4px">Emailed-in receipts</div>
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div class="name">Emailed-in receipts</div>
+        <button class="ghost" style="font-size:12px;padding:5px 10px" onclick="inspectInbox()">Inspect inbox</button>
+        <span data-tip="Reads the ingest inbox and shows how each email parsed — whether a receipt landed, and why." style="margin-left:7px;cursor:help"></span>
+      </div>
       <div class="meta" id="rcpt_status" style="margin-bottom:8px">Loading…</div>
+      <div id="rcpt_debug" class="meta" style="margin-bottom:8px"></div>
       <div id="rcptList"><div class="empty">Loading…</div></div>
     </div>
   </section>
@@ -570,52 +664,39 @@
       <div id="gw_pricing" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
       <div style="margin-top:12px"><button class="act" onclick="savePolicyForm()">Save pricing</button></div>
     </div>
-    <details class="card">
-      <summary><span class="name">Advanced policy (raw JSON)</span></summary>
-      <div class="meta" style="margin:10px 0 8px">Source of truth. Edits here merge over defaults. Use for packs, finds headstart, privacy, etc.</div>
-      <textarea id="gw_json" spellcheck="false" style="width:100%;min-height:220px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box"></textarea>
-      <div style="margin-top:10px"><button class="act" onclick="savePolicyJson()">Save JSON</button> <button class="ghost" onclick="loadGrowth()">Reload</button></div>
-    </details>
-    <details class="card">
-      <summary><span class="name">Store CMS — import</span></summary>
-      <div class="meta" style="margin:10px 0 8px">Paste your research JSON (array of stores, or <code>{ "stores": [...] }</code>). Upserts by phone; region/timezone auto-derived from state. Set <code>"active": false</code> to soft-remove (e.g. Ralphs).</div>
-      <textarea id="gw_import" spellcheck="false" placeholder='[{"name":"Target — Sunset","phone":"+13105551212","address":"...","state":"CA","chain":"Target","carries":"Pokémon"}]' style="width:100%;min-height:150px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box"></textarea>
-      <div id="gw_import_msg" class="meta" style="margin:8px 0;min-height:16px"></div>
-      <div><button class="act" onclick="importStoresJson()">Import stores</button> <button class="ghost" onclick="backfillRegions()">Backfill regions</button></div>
-    </details>
     <div class="card">
       <div class="name" style="margin-bottom:4px">Restock watches</div>
       <div id="gw_watches" class="meta">Loading…</div>
     </div>
     <div class="card">
-      <div class="name" style="margin-bottom:4px">🏆 Community moderation</div>
+      <div class="name" style="margin-bottom:4px">Community moderation</div>
       <div id="gw_community" class="meta">Loading…</div>
     </div>
     <div class="card">
-      <div class="name" style="margin-bottom:4px">🏪 Store requests</div>
+      <div class="name" style="margin-bottom:4px">Store requests</div>
       <div id="gw_storereqs" class="meta">Loading…</div>
     </div>
     <div class="card">
-      <div class="name" style="margin-bottom:4px">📍 Launch waitlist</div>
+      <div class="name" style="margin-bottom:4px">Launch waitlist</div>
       <div id="gw_waitlist" class="meta">Loading…</div>
     </div>
   </section>
 
   <section id="settings">
-    <h2>Settings</h2>
+    <h2 data-tip="App-wide defaults. Per-store settings live under Calls → Settings.">App</h2>
     <div class="card"><div class="row">
-      <div class="grow"><div class="name" data-tip="Master toggle — if a call hits voicemail or an automated system, the agent hangs up without leaving a message.">Never leave voicemails</div></div>
-      <button id="vmToggle" class="ghost" onclick="toggleVoicemail()">…</button>
-    </div></div>
-    <div class="card"><div class="row">
-      <div class="grow"><div class="name" data-tip="Streams call audio + a hang-up button to every customer. OFF = testing tool only (comp accounts like yours always have it).">Customers hear calls live</div></div>
+      <div class="grow"><div class="name" data-tip="Streams call audio + a hang-up button to customers. OFF = testing only (comp accounts always have it).">Customers hear calls live</div></div>
       <button id="llToggle" class="ghost" onclick="toggleLiveListen()">…</button>
     </div></div>
     <div class="card">
-      <div class="name" data-tip="The full Voice → Designer workflow (voice, persona, script & rules) used for every call — unless a chain or a store has its own. Build workflows in Voice → Designer (Step 7).">Default workflow</div>
-      <div class="meta" style="margin:2px 0 10px">Applied to every call unless a chain or store overrides it. Per-chain is set on the Phone Trees list; per-store on the store row.</div>
-      <select id="set_default_wf" onchange="saveDefaultWorkflow()"><option value="">Loading…</option></select>
+      <div class="name" data-tip="Default voice / persona / script for every call, unless a chain or store overrides it. Build them in Voice → Designer.">Default workflow</div>
+      <select id="set_default_wf" style="margin-top:10px" onchange="saveDefaultWorkflow()"><option value="">Loading…</option></select>
     </div>
+    <details class="card">
+      <summary><span class="name">Advanced policy (raw JSON)</span> <span class="meta" data-tip="Dev escape-hatch for policy fields with no UI yet. Edits here merge over the defaults.">ⓘ</span></summary>
+      <textarea id="gw_json" spellcheck="false" style="width:100%;min-height:220px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box;margin-top:10px"></textarea>
+      <div style="margin-top:10px"><button class="act" onclick="savePolicyJson()">Save JSON</button> <button class="ghost" onclick="loadAdvancedPolicy()">Reload</button></div>
+    </details>
   </section>
 
   <section id="designer">
@@ -756,82 +837,58 @@
     </section>
 
     <section id="trees">
-    <h2 data-tip="How the agent gets past each brand's phone menu to a human — set the spoken steps and the keypad presses (Auto-press keys), or mute a chain.">Phone trees</h2>
-    <div id="pb_trees">
-    <div class="card" style="border-color:rgba(167,139,250,.3)">
-      <div class="name" style="margin-bottom:14px" data-tip="How the agent gets through a chain's menu to a person. Set once per chain → applies to every store.">Phone trees</div>
-      <label>Chain</label>
-      <select id="pt_chain" onchange="loadChainTree()"></select>
-      <label style="margin-top:10px">Navigation steps</label>
-      <textarea id="pt_tree" rows="6" style="width:100%;font-family:inherit;font-size:13px;background:var(--terminal);color:#fff;border:1px solid var(--border);border-radius:10px;padding:10px;box-sizing:border-box" placeholder="Plain English, what to say at each menu — e.g. 'No' to healthcare provider, then 'Front store', then 'General inquiries'…"></textarea>
-      <label style="margin-top:10px" data-tip="When to auto-press a key to get through the menu toward a human. Add a step per key: pick the digit (0–9) and how many seconds into the call to press it.">Auto-press keys</label>
-      <div id="pt_dtmf_rows"></div>
-      <div style="margin-top:8px"><button class="ghost" type="button" onclick="dtmfAddRow()">+ Add a key-press</button></div>
-      <input type="hidden" id="pt_dtmf">
-      <div class="grid2" style="margin-top:10px">
-        <div><label>Answer path</label>
-          <select id="pt_path">
-            <option value="">Unclassified</option>
-            <option value="direct_human">Direct human · picks up</option>
-            <option value="simple_ivr">Simple IVR · 1–2 steps</option>
-            <option value="deep_ivr">Deep IVR · long tree</option>
-          </select></div>
-        <div><label data-tip="Time burned before a human">Avg tree seconds</label>
-          <input id="pt_treesecs" type="number" min="0" placeholder="e.g. 45"></div>
-      </div>
-      <div class="row" style="margin-top:10px;gap:14px;flex-wrap:wrap">
-        <label class="day" style="margin:0"><input type="checkbox" id="pt_repack"> Repack-only chain (e.g. Fairfield) — checks waste the customer's money</label>
-        <label class="day" style="margin:0"><input type="checkbox" id="pt_muted"> Muted — hidden from the consumer store list</label>
-      </div>
-      <div class="row" style="margin-top:12px;gap:8px">
-        <button class="act" onclick="saveChainTree()">Save chain</button>
-        <button class="ghost" onclick="insertCvsTemplate()">Insert CVS template</button>
-      </div>
-      <div class="meta" id="pt_status" style="margin-top:8px"></div>
+    <h2 data-tip="Per-chain settings + the auto-mapped phone route. Pick a chain to edit its stores, calls and mapping.">Settings</h2>
+    <div class="card report">
+      <div class="name" style="margin-bottom:12px">Mapped Stats</div>
+      <div class="stats" id="tr_stats" style="margin-bottom:0"></div>
     </div>
-
     <div class="card">
-      <div class="name" style="margin-bottom:10px" data-tip="Mute a chain → all its stores vanish from every city for consumers, instantly.">All chains</div>
-      <input id="pt_chainfilter" placeholder="Filter chains — e.g. Ralph's…" oninput="chainFilter(this.value)" style="margin-bottom:6px">
-      <div id="pt_chainlist" class="meta">Loading…</div>
-    </div>
-    </div>
-    </section>
-
-    <section id="treelab">
-    <h2 data-tip="Our cheap navigator auto-calls a store, works the menu to a real person, and records the fastest recipe + time.">Trainer</h2>
-    <div style="margin:-2px 0 16px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--yellow);background:rgba(244,208,61,.1);border:1px solid rgba(244,208,61,.32);padding:5px 11px;border-radius:9px">Documenting a route places a real phone call</span></div>
-    <div class="card">
-      <div class="name" style="margin-bottom:10px" data-tip="Tap Document on a chain — our cheap navigator calls a store, works the menu until a person answers, then records the recipe + time. Watch it live, then Lock it.">Auto-learn a route</div>
-      <div class="row" style="gap:8px;margin-top:2px;align-items:center;flex-wrap:wrap">
-        <button class="ghost" onclick="loadTrainer()">↻ Refresh</button>
-        <button class="ghost" data-tip="One tiny live call through Helicone on the cheap nav model — no phone call placed" onclick="testHelicone()">Test Helicone routing</button>
-        <span class="meta" id="tr_progress"></span>
+      <label>Select a Chain</label>
+      <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+        <input id="set_search" placeholder="Search chains…" oninput="filterChainPicker()" style="flex:1 1 150px;min-width:0">
+        <select id="set_fmap" onchange="filterChainPicker()" style="flex:0 0 auto;width:auto;font-size:13px"><option value="">All</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option></select>
+        <select id="set_frate" onchange="filterChainPicker()" style="flex:0 0 auto;width:auto;font-size:13px"><option value="">All ratings</option><option value="5">5 — Best Chance</option><option value="4">4 — Mostly Reliable</option><option value="3">3 — Spotty</option><option value="2">2 — Over MSRP</option><option value="1">1 — Unknown</option></select>
       </div>
-      <div class="meta" id="tr_heli" style="margin-top:8px"></div>
+      <select id="set_chain" onchange="setPickChain()" style="display:none"><option value="">Select a chain</option></select>
+      <div id="set_pickcount" class="meta" style="margin-bottom:4px"></div>
+      <div id="set_picker" style="max-height:330px;overflow:auto"><div class="meta" style="padding:8px 0">Loading…</div></div>
     </div>
-    <div class="card" id="tr_live" style="display:none;border-color:var(--green)">
-      <div class="row" style="justify-content:space-between;align-items:center">
-        <div class="name" id="tr_live_store">—</div>
-        <div class="meta"><span id="tr_live_status">…</span> · <b id="tr_live_timer">0s</b></div>
-      </div>
-      <div id="tr_live_feed" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto"></div>
-      <div id="tr_live_result" style="margin-top:12px;display:none"></div>
+    <div id="set_body" style="display:none">
+      <details class="card setsec" open id="set_storewrap">
+        <summary><span id="set_storelogo" class="setlogo"></span><span class="name">Store Settings</span></summary>
+        <div id="set_store" style="margin-top:18px"></div>
+      </details>
+      <details class="card setsec" open id="set_datawrap">
+        <summary><span class="name">Store Data</span></summary>
+        <div id="set_data" style="margin-top:18px"></div>
+      </details>
+      <details class="card setsec" open id="set_callwrap">
+        <summary><span class="name">Call Settings</span></summary>
+        <div id="set_call" style="margin-top:18px"></div>
+      </details>
+      <details class="card setsec" open id="set_mapwrap">
+        <summary><span class="name">Mapping</span><span id="set_mapstatus" style="margin-left:auto"></span></summary>
+        <div style="margin-top:18px">
+          <div id="set_mapping" class="meta" style="margin-top:2px">—</div>
+          <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
+            <button class="act" id="set_mapbtn" onclick="setMapChain()">Map</button>
+            <span class="meta" data-tip="One real call — the navigator works the menu to a human, records the recipe + time, then you Lock it." style="align-self:center"></span>
+          </div>
+          <div class="card" id="tr_live" style="display:none;border-color:var(--green);margin-top:12px">
+            <div class="row" style="justify-content:space-between;align-items:center">
+              <div class="name" id="tr_live_store">—</div>
+              <div class="meta"><span id="tr_live_status">…</span> · <b id="tr_live_timer">0s</b></div>
+            </div>
+            <div id="tr_live_feed" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto"></div>
+            <div id="tr_live_result" style="margin-top:12px;display:none"></div>
+          </div>
+          <div style="margin-top:14px">
+            <div class="name" style="font-size:13px;margin-bottom:8px">Call log</div>
+            <div id="set_runs"><div class="meta">Loading…</div></div>
+          </div>
+        </div>
+      </details>
     </div>
-    <div id="tr_list"><div class="empty">Loading…</div></div>
-    <details class="card" style="margin-top:16px">
-      <summary><span class="name">Batch discover / verify</span></summary>
-      <div class="hint" style="margin:10px 0">Discover routes for unmapped brands or re-verify mapped ones from call transcripts (<b id="tl_model" style="font-style:normal">the cheapest model</b>).</div>
-      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
-        <input id="tl_count" type="number" min="1" max="25" value="5" style="max-width:78px" data-tip="how many brands">
-        <button class="act" onclick="tlBatch('discover')">Discover N unmapped</button>
-        <button class="ghost" onclick="tlBatch('verify')">Re-verify N mapped</button>
-        <button class="ghost" onclick="loadTreeLab()">↻ Refresh</button>
-      </div>
-      <div class="meta" id="tl_msg" style="margin-top:8px;min-height:14px"></div>
-      <div class="stats" id="tl_stats" style="margin-top:12px"></div>
-      <div id="tl_list"><div class="empty">Loading…</div></div>
-    </details>
     </section>
 
     <section id="statuses">
@@ -843,7 +900,7 @@
         <div style="height:1px;background:var(--border);margin:14px 0"></div>
         <div class="name" style="font-size:14px;margin-bottom:8px">Add a status</div>
         <div class="row" style="gap:8px">
-          <button type="button" class="sticon-btn" id="st_new_icon_btn" onclick="pickNewStatusIcon()" title="Pick an icon from the library"><span class="meta" style="font-size:9px">icon</span></button>
+          <button type="button" class="sticon-btn" id="st_new_icon_btn" onclick="pickNewStatusIcon()" title="Pick an icon"><span class="meta" style="font-size:9px">icon</span></button>
           <input type="hidden" id="st_new_emoji" value="">
           <input id="st_new_label" placeholder="Label (e.g. Holding one for you)" style="flex:1">
         </div>
@@ -863,8 +920,7 @@
   </section>
 
   <section id="fun">
-    <h2>Fun</h2>
-    <div class="meta" style="margin:4px 0 14px;line-height:1.5">Ring your own phone (or a friend's) in any cloned voice + persona — just to mess around. Never touches store calls.</div>
+    <h2 data-tip="Ring your own phone (or a friend's) in any cloned voice + persona — just to mess around. Never touches store calls.">Fun</h2>
     <div class="card">
       <label>Phone number (E.164)</label>
       <input id="lab_phone" placeholder="+13105551234">
@@ -872,8 +928,8 @@
       <input id="lab_name" placeholder="Matt">
       <label>Flow</label>
       <select id="lab_mode">
-        <option value="open">Open conversation</option>
         <option value="restock">Pokémon restock check</option>
+        <option value="open">Open conversation</option>
         <option value="carry">Carry check</option>
       </select>
       <label data-tip="For open conversation">Personality</label>
@@ -901,11 +957,11 @@
 <div class="toast" id="toast"></div>
 
 <!-- In-admin Claude agent ("Admin dev") — chat to manage the store DB by conversation -->
-<button id="agentFab" class="agent-fab" onclick="agentToggle()" title="Admin dev — ask me to add a store, look one up, fix details" aria-label="Admin dev agent"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9.5l-4 3.4V15.5H4z"/><path d="M8.5 10.2h7M8.5 13h4.5"/></svg></button>
+<button id="agentFab" class="agent-fab" onclick="agentToggle()" title="Admin dev — add, look up, or fix a store" aria-label="Admin dev agent"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9.5l-4 3.4V15.5H4z"/><path d="M8.5 10.2h7M8.5 13h4.5"/></svg></button>
 <div id="agentPanel" class="agent-panel" style="display:none">
   <div class="agent-head">
     <span class="agent-title"><span class="livedot" style="background:var(--green);box-shadow:0 0 8px var(--green)"></span> Admin dev</span>
-    <select id="agentModel" class="agent-model" onchange="agentSetModel(this.value)" title="Switch the brain (Claude / GPT / Gemini)"></select>
+    <select id="agentModel" class="agent-model" onchange="agentSetModel(this.value)" title="Switch the model — Claude / GPT / Gemini"></select>
     <button class="agent-x" onclick="agentToggle(false)" aria-label="Close">×</button>
   </div>
   <div id="agentLog" class="agent-log"></div>
@@ -950,6 +1006,7 @@ document.addEventListener('click',e=>{
   document.body.appendChild(tip);
   const r=t.getBoundingClientRect(), b=tip.getBoundingClientRect();
   let top=r.top-b.height-8; if(top<6) top=r.bottom+8;
+  if(top+b.height>window.innerHeight-6) top=Math.max(6,window.innerHeight-b.height-6); // keep it on-screen vertically
   let left=Math.max(8,Math.min(r.left,window.innerWidth-b.width-8));
   tip.style.top=top+'px'; tip.style.left=left+'px';
   setTimeout(()=>{ if(_tipFor===t){ const x=document.getElementById('tiptip'); if(x) x.remove(); _tipFor=null; } },5000);
@@ -963,13 +1020,13 @@ let CATEGORIES = [];
 
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
-  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['growth','Policy','rise']]},
+  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['growth','Policy','rise'],['calc','Calc','sliders']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
-  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Phone Trees','tree'],['treelab','Trainer','target'],['bail','Bail','scissors'],['settings','Settings','gear']]},
+  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Settings','tree'],['settings','App','sliders']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, treelab:()=>{loadTreeLab();loadTrainer();}, receipts:()=>{loadReceipts();loadGwIntel();loadGwKiosks();}, bail:()=>loadBail(), statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -1006,7 +1063,7 @@ async function loadReceipts(){
   if(!Array.isArray(rows)){ list.innerHTML='<div class="empty">Could not load receipts.</div>'; if(stat)stat.textContent='—'; return; }
   const ago=s=>{ if(!s)return '—'; const m=Math.floor(Date.now()/1000)-s; if(m<3600)return Math.max(1,Math.floor(m/60))+'m ago'; if(m<86400)return Math.floor(m/3600)+'h ago'; return Math.floor(m/86400)+'d ago'; };
   const claimed=rows.filter(r=>r.claimedBy).length;
-  if(stat) stat.innerHTML=`<b>${rows.length}</b> received · <b>${claimed}</b> claimed a free check. <span class="hint" data-tip="Only kiosk receipts (a Machine ID, or product + total) parse and land here — a regular store/online receipt won't.">why some don’t count</span>`;
+  if(stat) stat.innerHTML=`<b>${rows.length}</b> received · <b>${claimed}</b> claimed a free check. <span class="hint" data-tip="Only kiosk receipts (Machine ID, or product + total) land here — a normal store / online receipt won't.">why some don’t count</span>`;
   if(!rows.length){ list.innerHTML='<div class="empty">No receipts yet — they appear here once a shopper emails one in and it parses.</div>'; return; }
   list.innerHTML=rows.map(r=>{
     const badge=r.claimedBy?'<span class="tag-verified">✓ free check granted</span>':'<span class="pill">unclaimed</span>';
@@ -1018,10 +1075,31 @@ async function loadReceipts(){
     </div></div>`;
   }).join('');
 }
+// Admin diagnostic: read the ingest inbox and show what the parser does with each email (incl. rejects),
+// so we can see whether a receipt arrived and why it did/didn't land. Read-only; admin-gated server-side.
+async function inspectInbox(){
+  const el=document.getElementById('rcpt_debug'); if(!el) return;
+  el.innerHTML='🔍 Reading restocktimer@gmail.com…';
+  const d=await api('/api/admin/receipts/inbox-debug?hours=72');
+  if(!d||!d.ok){ el.innerHTML='<span style="color:#ff6b6b">Inbox read failed: '+esch((d&&d.error)||'unknown')+'</span>'; return; }
+  if(!d.configured){ el.innerHTML='<span style="color:#FBBF24">Gmail not configured (no creds set).</span>'; return; }
+  const rows=d.rows||[];
+  if(!rows.length){ el.innerHTML='No emails in the inbox over the last 72h.'; return; }
+  const dt=ms=>{ const m=Math.floor((Date.now()-ms)/60000); return m<60?Math.max(1,m)+'m ago':(m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago'); };
+  const stored=rows.filter(r=>r.stored).length;
+  el.innerHTML=`<div style="margin:4px 0 6px"><b>${rows.length}</b> emails · last 72h — <b style="color:var(--green)">${stored}</b> parse as kiosk receipts</div>`+
+    rows.map(r=>{ const p=r.parsed||{};
+      const head=`<b style="color:${r.stored?'var(--green)':'#ff8a8a'}">${r.stored?'✓ parses':'✗ rejected'}</b> · ${esch(r.from||'?')} · ${dt(r.date)}`;
+      const fields=r.stored
+        ?`<div class="meta" style="font-size:11px">machine ${esch(p.machineId||'—')} · ${esch(p.product||'—')} · $${esch(p.total||'—')}</div>`
+        :`<div class="meta" style="font-size:11px;color:#9aa">${esch((r.snippet||'').slice(0,200))}…</div>`;
+      return `<div style="padding:7px 0;border-top:1px solid var(--border)">${head}<div style="font-size:12.5px;color:var(--text)">${esch(r.subject||'(no subject)')}</div>${fields}</div>`;
+    }).join('');
+}
 // ---- God view: live calls + outcomes + money, one screen, auto-refreshing ----
 const secsFmt=s=>s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):(s||0)+'s';
 // ---- Tree Trainer v2: document the fastest path to a human, watch it live, lock it ----
-let TR_POLL=null, TR_SESSION=null, TR_CHAIN=null, TR_STORE='', TR_RESULT=null;
+let TR_POLL=null, TR_SESSION=null, TR_CHAIN=null, TR_STORE='', TR_RESULT=null, TR_CONFIRM=false, TR_OPTS={};
 // One-tap Helicone routing check: pings the cheap nav model live through the gateway (no phone call).
 async function testHelicone(model){
   const el=$('tr_heli'); if(el) el.innerHTML='<span style="color:#9aa">⚡ Pinging Helicone…</span>';
@@ -1030,31 +1108,57 @@ async function testHelicone(model){
   if(r&&r.ok) el.innerHTML='<span style="color:var(--green)">✓ Helicone OK</span> · model <b>'+escH(r.model)+'</b> · '+r.ms+'ms · sample “'+escH(r.sample||'')+'”'+(r.heliconeConfigured?'':' · <span style="color:#FBBF24">⚠ HELICONE_API_KEY not set</span>');
   else el.innerHTML='<span style="color:#ff6b6b">✗ '+escH((r&&r.error)||'failed')+'</span>'+(r&&r.model?(' · model <b>'+escH(r.model)+'</b>'):'');
 }
+// Trainer = overview only. Per-chain Map/Re-map + call log live under Calls → Settings (a chain).
+// Stats align with Alpha/Bravo/Charlie (locked navType) + mapped/unmapped.
 async function loadTrainer(){
-  const list=document.getElementById('tr_list'); if(!list) return;
+  const ss=document.getElementById('tr_stats'); if(!ss) return;
   const d=await api('/api/admin/trainer/list');
-  if(!d||!Array.isArray(d.chains)){ list.innerHTML='<div class="empty">Could not load.</div>'; return; }
-  const locked=d.chains.filter(c=>c.navStatus==='locked').length;
-  const prog=document.getElementById('tr_progress'); if(prog) prog.innerHTML=`<b style="color:var(--green)">${locked}</b> / ${d.chains.length} locked`;
-  const DOTC={locked:'var(--green)',review:'var(--purple)',learning:'#FBBF24',unmapped:'#7a7a86'};
-  const TYPE={direct:'direct',keypad:'keypad',voice:'voice'};
-  list.innerHTML=d.chains.map(c=>{
-    const col=DOTC[c.navStatus]||DOTC.unmapped;
-    const dot=`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};vertical-align:middle;margin-right:6px"></span>`;
-    const tc=c.navType?` <span class="chip-type">${TYPE[c.navType]||esch(c.navType)}</span>`:'';
-    const time=c.navSeconds!=null?` · <b>${c.navSeconds}s</b> to human`:'';
-    const imp=(c.navLog&&c.navLog.length>1)?` <span class="meta">(${c.navLog[0]}s→${c.navLog[c.navLog.length-1]}s)</span>`:'';
-    const btn=c.callable>0?`<button class="${c.navStatus==='locked'?'ghost':'act'}" data-doc="${c.id}" data-name="${esch(c.name)}" style="flex:0 0 auto">${c.navStatus==='unmapped'?'Document':'Re-run'}</button>`:'<span class="meta" style="flex:0 0 auto">no phone</span>';
-    return `<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:nowrap">
-      <div style="flex:1 1 auto;min-width:0"><div class="name" style="overflow-wrap:anywhere">${esch(c.name)}${tc}</div>
-      <div class="meta" style="margin-top:2px">${dot}<span style="color:${col};font-weight:700">${esch(c.navStatus)}</span>${time}${imp}</div></div>
-      ${btn}</div></div>`;
-  }).join('')||'<div class="empty">No chains.</div>';
-  list.querySelectorAll('[data-doc]').forEach(b=>b.onclick=()=>trDocument(+b.dataset.doc,b.dataset.name));
+  if(!d||!Array.isArray(d.chains)){ ss.innerHTML='<div class="meta">Could not load.</div>'; return; }
+  const ch=d.chains, lock=t=>ch.filter(c=>c.navStatus==='locked'&&(t?c.navType===t:true)).length;
+  const unmapped=ch.filter(c=>!c.navStatus||c.navStatus==='unmapped').length;
+  const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  ss.innerHTML=st(ch.length,'chains')+st(lock(),'mapped','green')+st(unmapped,'unmapped')
+    +st(lock('keypad'),'Alpha')+st(lock('voice'),'Bravo')+st(lock('direct'),'Charlie');
 }
-async function trDocument(chainId,name){
-  if(!confirm('Place a REAL call to a '+name+' store now? The nav-learner will dial it to map the phone menu.')) return;
-  TR_CHAIN=chainId; TR_STORE=name; TR_RESULT=null;
+// Expandable per-chain call log: every learner run with its Alpha/Bravo/Charlie path + the step matrix.
+async function loadRuns(chainId, box){
+  if(!box||!chainId) return;
+  box.innerHTML='<div class="meta" style="padding:4px 0">Loading…</div>'; // clear the previous chain's log while we fetch
+  const d=await api('/api/admin/trainer/runs?chainId='+chainId);
+  const runs=(d&&d.runs)||[];
+  if(!runs.length){ box.innerHTML='<div class="meta" style="padding:4px 0">No runs yet.</div>'; return; }
+  const MODEC={alpha:'#60a5fa',bravo:'var(--yellow)',charlie:'var(--green)'};
+  const OUT={human:'var(--green)',failed:'var(--red)',done:'var(--yellow)'};
+  box.innerHTML=runs.map((r,i)=>{
+    const col=OUT[r.outcome]||'var(--muted)';
+    const t=r.ts?new Date(r.ts).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'';
+    const secs=r.seconds!=null?r.seconds+'s':'—';
+    const mx=(r.steps||[]).map(st=>{
+      const us=st.who==='us';
+      const did=us?((st.action||'')+(st.value?(' '+st.value):'')):'heard';
+      return `<div style="display:grid;grid-template-columns:42px 1fr auto;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px;align-items:start">
+        <span class="meta">${st.atSec}s</span><span style="color:#cfcfe0;overflow-wrap:anywhere">${esch(st.text||'')}</span>
+        <span style="font-weight:600;white-space:nowrap;color:${us?'var(--text-body)':'var(--muted)'}">${esch(did)}</span></div>`;
+    }).join('');
+    return `<details style="border:1px solid var(--border);border-radius:10px;margin-bottom:7px;background:var(--sheet)">
+      <summary style="cursor:pointer;list-style:none;padding:9px 11px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px">
+        <b style="color:var(--muted);min-width:42px">#${runs.length-i}</b>
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col}"></span>
+        <span style="color:var(--text-strong);font-weight:700">${esch(r.label||r.mode||'')}</span>
+        <span class="meta">${t}${r.model?(' · '+esch(r.model)):''}</span>
+        <span style="margin-left:auto;font-weight:700;color:var(--text-strong)">${secs}</span>
+      </summary>
+      <div style="padding:2px 11px 10px">${mx||'<div class="meta" style="padding:6px 0">no steps recorded</div>'}</div>
+    </details>`;
+  }).join('');
+}
+async function trDocument(chainId,name,opts){
+  opts=opts||{};
+  const msg=opts.confirm
+    ? 'Place a REAL call to a '+name+' store now? It reaches a human, then asks "do you have any '+(opts.product||'Pokémon cards')+' in stock?" to confirm the right desk.'
+    : 'Place a REAL call to a '+name+' store now? The nav-learner will dial it to map the phone menu.';
+  if(!confirm(msg)) return;
+  TR_CHAIN=chainId; TR_STORE=name; TR_RESULT=null; TR_CONFIRM=!!opts.confirm; TR_OPTS=opts;
   const live=document.getElementById('tr_live'); live.style.display='';
   document.getElementById('tr_live_store').textContent=name;
   document.getElementById('tr_live_status').textContent='dialing…';
@@ -1062,7 +1166,8 @@ async function trDocument(chainId,name){
   document.getElementById('tr_live_feed').innerHTML='';
   document.getElementById('tr_live_result').style.display='none';
   try{ live.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}
-  const r=await api('/api/admin/trainer/document',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chainId})});
+  const body=opts.confirm?{chainId,confirm:true,product:opts.product||'Pokémon cards'}:{chainId};
+  const r=await api('/api/admin/trainer/document',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   if(!r||r.error){ document.getElementById('tr_live_status').textContent='✖ '+((r&&r.error)||'could not start'); return; }
   TR_SESSION=r.sessionId;
   if(TR_POLL) clearInterval(TR_POLL);
@@ -1083,12 +1188,21 @@ async function trPoll(){
   feed.scrollTop=feed.scrollHeight;
   if(s.status==='human'||s.status==='failed'||s.status==='done'){
     clearInterval(TR_POLL); TR_POLL=null;
+    loadRuns(TR_CHAIN, document.getElementById('set_runs')); // the run just landed — refresh the call log
     const res=document.getElementById('tr_live_result'); res.style.display='';
-    if(s.status==='human'&&s.recipe){
+    // CONFIRM-mode redirect: we reached a human but they sent us elsewhere (wrong desk) — captured, not lockable.
+    if(s.confirm==='redirect'){
+      res.innerHTML=`<div style="background:rgba(245,158,11,.1);border:1px solid #f59e0b;border-radius:12px;padding:12px">
+        <div class="name" style="color:#f59e0b">↪︎ Reached a human — wrong desk (they redirected us)</div>
+        <div class="meta" style="margin-top:5px">They said: “${esch(s.redirectTo||'(transfer)')}”. Captured — call back rotates to a fresh store.</div>
+        <div class="row" style="gap:8px;margin-top:10px"><button class="ghost" onclick="trRetry()">↻ Try another store</button></div></div>`;
+    } else if(s.status==='human'&&s.recipe){
       TR_RESULT={chainId:TR_CHAIN,recipe:s.recipe,confidence:s.confidence||0};
       const steps=s.recipe.steps.map(x=>x.action==='press'?('press '+x.value+' @'+x.atSec+'s'):('say "'+x.value+'" @'+x.atSec+'s')).join('  →  ')||'picked up directly';
+      const rightDesk=s.confirm==='answered'?`<div class="meta" style="color:var(--green);margin-top:3px">✓ Right desk — they answered the stock question</div>`:'';
       res.innerHTML=`<div style="background:rgba(74,222,128,.1);border:1px solid var(--green);border-radius:12px;padding:12px">
         <div class="name" style="color:var(--green)">✅ Reached a human in ${s.recipe.seconds}s · ${esch(s.recipe.type)}</div>
+        ${rightDesk}
         <div class="meta" style="margin-top:5px">${esch(steps)}</div>
         <div class="row" style="gap:8px;margin-top:10px">
           <button class="act" onclick="trLock()">🔒 Lock this recipe</button>
@@ -1100,11 +1214,11 @@ async function trPoll(){
     }
   }
 }
-function trRetry(){ if(TR_CHAIN) trDocument(TR_CHAIN,TR_STORE); }
+function trRetry(){ if(TR_CHAIN) trDocument(TR_CHAIN,TR_STORE,TR_OPTS); }
 async function trLock(){
   if(!TR_RESULT) return;
   const r=await api('/api/admin/trainer/lock',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(TR_RESULT)});
-  if(r&&r.ok){ toast('🔒 Locked'); document.getElementById('tr_live').style.display='none'; loadTrainer(); }
+  if(r&&r.ok){ toast('🔒 Locked'); document.getElementById('tr_live').style.display='none'; loadTrainer(); loadChains(); }
   else toast('Could not lock');
 }
 // ---- Phone Tree Lab ----
@@ -1153,14 +1267,15 @@ async function loadCallTiming(){
 const CALC_STORE={ Direct:{label:'Direct',sub:'human picks up',nav:0,nc:'var(--text-muted)'}, Alpha:{label:'Alpha',sub:'keypad tones',nav:30,nc:'#F4B740'}, Bravo:{label:'Bravo',sub:'voice menu',nav:50,nc:'#38BDF8'} };
 const CALC_TALK=[10,15,20,25,30,60];
 const calcMoney=n=>'$'+(n<0?'-':'')+Math.abs(n).toFixed(3);
-const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.5, rates:{ twilioPerMin:0.014, elevenPerSec:0.0012, claudePerSec:0.0002, bravoNavPerSec:0.001, overhead:0.001 }, ready:false };
+const CALC={ storeType:'Alpha', nav:30, talk:20, revenue:0.2, rates:{ twilioPerMin:0.014, elevenPerSec:0.0012, claudePerSec:0.0002, bravoNavPerSec:0, overhead:0.001 }, ready:false };
 const calcDot=c=>`<span style="display:inline-block;width:8px;height:8px;border-radius:9px;background:${c};flex-shrink:0"></span>`;
 
-// core cost model — one source of truth (Twilio runs the whole call; Bravo nav = STT+LLM+TTS; Charlie = agent talk)
+// core cost model — one source of truth (Twilio runs the whole call; Bravo nav is now CHEAP voice-injection
+// — Polly speaks the menu words, no STT/agent — so it's ~$0 like Alpha; Charlie = agent talk only)
 function calcCompute(storeType,nav,talk,r){
   const twilioPerSec=r.twilioPerMin/60, dur=nav+talk, items=[];
   items.push({label:'Twilio line',detail:`${dur}s · $${r.twilioPerMin}/min`,accent:'var(--text-muted)',amount:twilioPerSec*dur});
-  if(storeType==='Bravo') items.push({label:'Bravo nav · STT + LLM + TTS',detail:`${nav}s · $${r.bravoNavPerSec}/s`,accent:'#38BDF8',amount:r.bravoNavPerSec*nav});
+  if(storeType==='Bravo') items.push({label:'Bravo nav · voice-injection (cheap TTS)',detail:`${nav}s · ~$0/s`,accent:'#38BDF8',amount:r.bravoNavPerSec*nav});
   else if(storeType==='Alpha') items.push({label:'Alpha nav · keypad tones',detail:`${nav}s · $0/s`,accent:'#F4B740',amount:0});
   else items.push({label:'Navigation',detail:'direct line · none',accent:'var(--text-tertiary)',amount:0});
   items.push({label:'Charlie · ElevenLabs ConvAI',detail:`${talk}s · $${r.elevenPerSec}/s`,accent:'var(--purple)',amount:r.elevenPerSec*talk});
@@ -1176,10 +1291,12 @@ function showDashView(which){
   document.querySelectorAll('#dash_subnav button').forEach((b,i)=>b.classList.toggle('active', i===(calc?1:0)));
   if(calc) calcInit();
 }
-function calcInit(){ const el=document.getElementById('dash_calc'); if(!el) return; if(!CALC.ready){ el.innerHTML=calcShell(); CALC.ready=true; } calcSync(); calcUpdate(); }
+// Mount the calc shell into whichever container is present — the God-view sub-nav slot (#dash_calc)
+// or the standalone Calc tab (#calc_root).
+function calcInit(){ const el=document.getElementById('dash_calc')||document.getElementById('calc_root'); if(!el) return; if(!CALC.ready){ el.innerHTML=calcShell(); CALC.ready=true; } calcSync(); calcUpdate(); }
 function calcShell(){
   const seg=Object.keys(CALC_STORE).map(t=>`<button type="button" id="calc_seg_${t}" onclick="calcPick('${t}')" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(CALC_STORE[t].nc)}${t}</span><span style="font-size:10.5px;color:var(--text-tertiary)">${CALC_STORE[t].sub}</span></button>`).join('');
-  const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11.5px;color:var(--text-muted)">${label}</span><span style="display:flex;align-items:center;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px 4px;width:100%"><span style="color:var(--text-tertiary);font-size:11px">${suf}</span></span></label>`;
+  const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11.5px;color:var(--text-muted)">${label}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px 2px;width:62px"><span style="color:var(--text-tertiary);font-size:11px">${suf}</span></span></label>`;
   return `
   <div class="hero" style="margin-bottom:14px">
     <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
@@ -1217,8 +1334,9 @@ function calcShell(){
   <div class="card report">
     <div class="name" style="margin-bottom:12px">Margin</div>
     <div class="row" style="gap:12px">
-      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Revenue / call</span><span style="display:flex;align-items:center;background:var(--terminal);border:1px solid var(--border-strong);border-radius:10px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:20px;font-weight:700;padding:10px 4px;width:100%"></span></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Revenue / call</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:10px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:20px;font-weight:700;padding:10px 2px;width:84px"></span></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Margin</span><div id="calc_margin" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0%</div></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">× return <span data-tip="Revenue ÷ cost — how many times the call pays for itself.">ⓘ</span></span><div id="calc_return" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0×</div></div>
     </div>
     <div id="calc_sentence" style="margin-top:14px;font-size:13.5px;color:var(--text-muted);line-height:1.5"></div>
   </div>`;
@@ -1258,6 +1376,7 @@ function calcUpdate(){
   set('calc_matrix',mt+'</tbody>');
   const margin=CALC.revenue>0?((CALC.revenue-total)/CALC.revenue)*100:0, mc=margin>=0?'var(--green)':'#FF6B6B';
   const mEl=document.getElementById('calc_margin'); if(mEl){ mEl.textContent=margin.toFixed(1)+'%'; mEl.style.color=mc; }
+  const ret=total>0?CALC.revenue/total:0, rEl=document.getElementById('calc_return'); if(rEl){ rEl.textContent=ret.toFixed(1)+'×'; rEl.style.color=ret>=1?'var(--green)':'#FF6B6B'; }
   set('calc_sentence',`At ${calcMoney(CALC.revenue)} revenue/call, cost is <b style="color:var(--text-primary)">${calcMoney(total)}</b> → margin = <b style="color:${mc}">${margin.toFixed(1)}%</b>.`);
 }
 async function loadDash(){
@@ -1265,7 +1384,7 @@ async function loadDash(){
   const [o,m]=await Promise.all([api('/api/admin/overview'),api('/api/admin/metrics')]);
   const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   if(o&&!o.error){
-    CHAIN_STATS=o.chainStats||[]; renderChainList();
+    CHAIN_STATS=o.chainStats||[];
     // Today hero — the day's vital signs (above the fold)
     document.getElementById('d_today').innerHTML=
       st(o.today.calls,'checks 24h')+
@@ -1417,7 +1536,7 @@ function dRender(){
   const bk=document.getElementById('d_back'); if(bk) bk.style.visibility=DSTEP>1?'visible':'hidden';
   const fw=document.getElementById('d_fwd'); if(fw){ if(DSTEP>=7){ fw.style.visibility='hidden'; } else { fw.style.visibility='visible'; fw.textContent='Next: '+DLABELS[DSTEP]+' ›'; } }
 }
-function dGo(n){ if(n>DMAX) return; DSTEP=n; dRender(); const e=document.querySelector('#designer'); if(e) e.scrollIntoView({behavior:'smooth',block:'start'}); }
+function dGo(n){ if(n>DMAX) return; if(n<DSTEP) DMAX=n; DSTEP=n; dRender(); const e=document.querySelector('#designer'); if(e) e.scrollIntoView({behavior:'smooth',block:'start'}); }
 function dNext(n){ DMAX=Math.max(DMAX,n); dGo(n); }
 function dBack(){ if(DSTEP>1) dGo(DSTEP-1); }
 function dFwd(){ if(DSTEP<7){ DMAX=Math.max(DMAX,DSTEP+1); dGo(DSTEP+1); } }
@@ -1508,7 +1627,7 @@ async function vsClone(){
 }
 
 // --- Field persistence (remember what you typed across refresh) ---
-const PERSIST=['lab_phone','lab_name','lab_mode','lab_personality','sim_store','sim_cat','sim_mode','sim_tree','sim_specific','sim_phone','s_name','s_cat','s_mode','s_time','s_q','s_clar','r_name','r_phone','r_loc','r_tz','r_tree','f_search','f_type','f_zone','f_carries','f_status','f_sort'];
+const PERSIST=['lab_phone','lab_name','lab_personality','sim_store','sim_cat','sim_mode','sim_tree','sim_specific','sim_phone','s_name','s_cat','s_mode','s_time','s_q','s_clar','r_name','r_phone','r_loc','r_tz','r_tree','f_search','f_type','f_zone','f_carries','f_status','f_sort'];
 function saveDays(){ localStorage.setItem('fld_s_days', [...document.querySelectorAll('#s_days input:checked')].map(c=>c.value).join(',')); }
 function restorePersist(){
   PERSIST.forEach(id=>{ const el=document.getElementById(id); const val=localStorage.getItem('fld_'+id); if(el && val!==null) el.value=val; });
@@ -1568,8 +1687,9 @@ function bubbles(t){
 }
 let RETAILERS=[];
 let ADMIN_SEARCH_T=null;
-function onAdminSearch(){ clearTimeout(ADMIN_SEARCH_T); ADMIN_SEARCH_T=setTimeout(loadRetailers,300); }
+function onAdminSearch(){ clearTimeout(ADMIN_SEARCH_T); ADMIN_SEARCH_T=setTimeout(loadRetailers,250); }
 async function loadRetailers(){
+  STORE_PAGE=0;
   const q=(document.getElementById('f_search')?.value||'').trim();
   const type=document.getElementById('f_type')?.value||'', region=document.getElementById('f_region')?.value||'';
   const carries=document.getElementById('f_carries')?.value||'', status=document.getElementById('f_status')?.value||'';
@@ -1619,13 +1739,13 @@ async function loadStoreIntel(){
   const fmt=n=>Number(n||0).toLocaleString('en-US');   // exact, comma-grouped (101,967 — not "102k")
   const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${fmt(n)}</div><div class="l">${l}</div></div>`;
   // Four headline tiles only — the per-product counts move into ONE box below (was a circle per product).
-  el.innerHTML = tile(d.total,'stores','green')+tile(d.callable,'callable')+tile(d.states,'states')+tile(d.chains,'chains');
+  el.innerHTML = tile(d.total,'total stores','green')+tile(d.callable,'callable')+tile(d.states,'states')+tile(d.chains,'chains');
   const bp=d.byProduct||{};
   const items=Object.entries(bp).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]);
   const cw=document.getElementById('storecarries');
   if(cw){ if(items.length){ cw.style.display='';
-      cw.innerHTML=`<div class="name" style="margin-bottom:8px">What they carry</div>`
-        +`<div class="carrygrid">`+items.map(([p,n])=>`<div class="carryrow"><span>${prodMark(p,16)}</span><b>${fmt(n)}</b></div>`).join('')+`</div>`;
+      cw.innerHTML=`<div class="name" style="margin-bottom:8px">Stores that carry each product <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">(of ${fmt(d.total)} total)</span></div>`
+        +`<div class="carrygrid">`+items.map(([p,n])=>`<div class="carryrow"><span>${prodMark(p,16)} ${esch(p)}</span><b>${fmt(n)}</b></div>`).join('')+`</div>`;
     } else cw.style.display='none'; }
   // Fill the store-type filter from the full chain-type list, and the product filter from the carry list.
   if(Array.isArray(d.types)&&d.types.length) fillOptions('f_type', d.types, 'All types');
@@ -1639,7 +1759,7 @@ async function loadStoreIntel(){
     const byType=(d.byType||[]).slice(0,12).map(x=>line(x.type,x.n)).join('');
     const regions=(d.topRegions||[]).map(x=>line(x.region,x.n)).join('');
     const checks=(d.topChecks||[]).map(x=>line(x.location?`${x.name} · ${x.location}`:x.name,x.n)).join('');
-    if(byType||regions||checks){ rep.style.display='';
+    if(byType||regions||checks){ rep.style.display=''; rep.open=true; // Intel reports stay expanded (owner ask)
       rb.innerHTML=`<div class="repgrid">${col('By store type',byType)}${col('Top regions',regions)}${col('Most-checked stores',checks)}</div>`;
     } else rep.style.display='none';
   }
@@ -1717,7 +1837,10 @@ function filteredRetailers(){
   });
   const sort=document.getElementById('f_sort')?.value||'rel';
   const lastTs=r=>(r.lastCall&&r.lastCall.startedAt)||0;
-  if(sort==='name') rs.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  // Relevance (default): exact name → name prefix → word prefix → substring, so the store you typed
+  // surfaces at the TOP instead of being buried under incidental "%q%" matches (e.g. "Fun" vs "Defuniak").
+  if(sort==='rel' && q){ const score=r=>{ const n=(r.name||'').toLowerCase(); if(n===q) return 0; if(n.startsWith(q)) return 1; if(n.split(/[^a-z0-9]+/).some(w=>w&&w.startsWith(q))) return 2; return 3; }; rs.sort((a,b)=>score(a)-score(b)||(a.name||'').length-(b.name||'').length); }
+  else if(sort==='name') rs.sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   else if(sort==='verified') rs.sort((a,b)=>((b.stockStatus==='verified')?1:0)-((a.stockStatus==='verified')?1:0));
   else if(sort==='instock') rs.sort((a,b)=>(b.green?1:0)-(a.green?1:0));
   else if(sort==='recent') rs.sort((a,b)=>lastTs(b)-lastTs(a));
@@ -1742,43 +1865,166 @@ async function bulkEdit(action){
   if(body.active===false) RETAILERS=RETAILERS.filter(r=>r.active!==false);
   SEL.clear(); renderRetailers(); toast(`${ok}/${ids.length} updated`);
 }
+let STORE_PAGE=0, STORE_SIZE=10;
+// Store Search row: per-store only — logo · name · location · hours · call track-record. Tap to expand
+// (what they carry, the in-stock/not-in/restock tally, Call store + a per-store workflow). Chain-level
+// stuff (verify, online, soft-delete, category, shipping) lives on the chain Settings page, not here.
 function renderRetailers(){
-  const rs=filteredRetailers();
+  const all=filteredRetailers();
   const el=document.getElementById('retailerList'); if(!el) return;
-  const hasQuery=((document.getElementById('f_search')?.value||'').trim().length>=2);
-  updateBulkBar(rs);
-  if(!rs.length){
+  const total=all.length;
+  const pages=Math.max(1,Math.ceil(total/STORE_SIZE)); if(STORE_PAGE>pages-1) STORE_PAGE=Math.max(0,pages-1);
+  const rs=all.slice(STORE_PAGE*STORE_SIZE,(STORE_PAGE+1)*STORE_SIZE);
+  if(!total){
     const af=activeStoreFilters();
     if(af.length){
       const hasRegion=!!(document.getElementById('f_region')?.value);
       el.innerHTML=`<div class="empty">No stores match: ${af.map(esch).join(' · ')}.<div style="margin-top:12px"><button class="ghost" onclick="clearStoreFilters()">Clear filters</button></div>${hasRegion?'<div class="meta" style="margin-top:10px">Tip: online / national stores (e.g. type “Online”) usually have no region — clear <b>Region</b> to include them.</div>':''}</div>`;
     } else el.innerHTML='';
-    return;
+    renderStorePager(0); return;
   }
-  const muted=mutedChainIds();
-  el.innerHTML = rs.map(r=>{
-    const nm=splitName(r.name);
-    const metaTxt=r.location||'';
-    const ships=r.shipmentDay?`${vmark('🚚','#8a8a98',12)} ships ${esch(r.shipmentDay)}`:'';
-    const hrs=hoursBadge(r); const sel=SEL.has(r.id);
-    return `<div class="card${sel?' selrow':''}">
-    <div class="row" style="align-items:flex-start;gap:10px">
-      <input type="checkbox" class="rowchk" ${sel?'checked':''} onchange="bulkPick(${r.id},this)">
+  el.innerHTML = rs.map(r=>storeCardHTML(r)).join('');
+  renderStorePager(total);
+}
+// One Store Search card. Collapsed: logo · full name (one line, top-aligned with the logo) · full
+// address below · call-status count pills (in / not-in / restock) · the product logos we support · a
+// threshold dot top-right (green ≥50% in-stock, yellow 1–49%, red 0%). Never-called = no dot, no pills.
+function storeCardHTML(r){
+  const cs=r.callStats||{total:0,inStock:0,notIn:0,restock:0};
+  const os=r.openState||{}; const closed=!!(os.known && !os.open);
+  const armed=!!(STORE_TAP[r.id]&&STORE_TAP[r.id].armed);
+  const addr=(r.location||'').trim();
+  const pills=cs.total?`<div class="stcpills"><span class="cp in">${vmark('✅','in',13)} ${cs.inStock}</span><span class="cp out">${vmark('❌','out',13)} ${cs.notIn}</span><span class="cp soon">${vmark('🚚','soon',13)} ${cs.restock}</span></div>`:'';
+  const dot=cs.total?`<div class="stcdot ${cs.inStock/cs.total>=0.5?'good':cs.inStock/cs.total>0?'mid':'low'}"></div>`:'';
+  const own=r.ownerOnly?`<div class="stcown"><div class="row" style="gap:8px;align-items:center"><input id="ph_${r.id}" value="${esch(r.phone||'')}" placeholder="+13105551234" inputmode="tel" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')saveStorePhone(${r.id})" style="flex:1;min-width:0"><button class="act" onclick="event.stopPropagation();saveStorePhone(${r.id})">Save phone</button></div><div class="hint" style="margin-top:6px;font-style:normal">Demo store — the phone number is its on/off switch. ${r.active?'<b style="color:var(--green)">● live</b>':'<span style="color:var(--muted)">○ off — add a number</span>'}</div></div>`:'';
+  return `<div class="stc${armed?' armed':''}${closed?' closed':''}" id="stc_${r.id}" onclick="storeTap(${r.id},event)">
+    <div class="stchead">
       ${logoTile(r)}
-      <div class="grow" style="min-width:0">
-        <div class="sname"><span class="nm">${esch(nm.base)}</span>${r.stockStatus==='verified'?'<span class="tag-verified">verified</span>':'<span class="tag-unverified">unverified</span>'}${r.storeType?` <span class="chip-type">${ICO(storeTypeIco(r.storeType),11)} ${esch(r.storeType)}</span>`:''}${muted.has(r.chainId)?' <span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.12)">muted</span>':''}${badNum(r)?' <span class="chip-sm" style="color:#FBBF24;background:rgba(251,191,36,.12)">no number</span>':''}${r.online?' <span class="chip-sm" style="color:#7DD3FC;background:rgba(125,211,252,.12)">online</span>':''}</div>
-        ${nm.branch?`<div class="sbranch">${esch(nm.branch)}</div>`:''}
-        <div class="smeta" style="display:flex;align-items:center;flex-wrap:wrap;gap:0 4px">${esch(metaTxt)}${hrs?(metaTxt?' · ':'')+hrs:''}${ships?(metaTxt||hrs?' · ':'')+ships:''}</div>
-        ${(()=>{const cl=r.carries?r.carries.split(',').map(x=>x.trim()).filter(Boolean):[];return cl.length?`<div class="hint" style="margin-top:5px;font-style:normal" data-tip="Carries: ${esch(cl.join(', '))}${r.lastCall&&r.lastCall.summary?' — last call: '+esch(r.lastCall.summary):''}">Carries ${cl.length} · ${cl.slice(0,2).map(x=>prodMark(x,14)).join(' ')}${cl.length>2?' +'+(cl.length-2):''}</div>`:'';})()}
+      <div class="stcbody">
+        <div class="stcnm">${esch(r.name||'Unnamed store')}</div>
+        <div class="stcaddr">${addr?esch(addr):'<span style="color:var(--text-tertiary)">No address on file</span>'}${badNum(r)?' · <span style="color:#FBBF24">no number</span>':''}</div>
+        ${pills}
+        ${prodLogos(r.carries)}
       </div>
-      ${statusBadge(r)}
+      ${closed?'<div class="stcclosed">Closed</div>':dot}
     </div>
-    <div class="ractions">
-      ${WF.list.length?(()=>{const inh=(r.chainId&&WF.chains[r.chainId])||WF.def||'';return `<select onchange="setStoreWorkflow(${r.id},this.value)" title="Workflow for this store (overrides chain + default)">${wfOptions(WF.stores[r.id]||'', inh?('Inherit · '+inh):'Inherit · no default')}</select>`;})():''}
-      <select id="cn_${r.id}"><option value="" disabled selected>Category</option>${CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
-      <button class="act" onclick="callNow(${r.id})">${ICO('phone',15)} Call now</button>
+    ${own}
+    <div class="stclive" id="stclive_${r.id}"></div>
+  </div>`;
+}
+// Product logos for the verticals we actually support (Pokémon / One Piece / Topps / NeeDoh), one line.
+const PROD_LOGOS=[[/pok[eé]?mon/i,'/logos/chains/pokemon_vending.svg','Pokémon'],[/one[\s-]?piece/i,'/logos/onepiece.png','One Piece'],[/topps/i,'/logos/topps.png','Topps'],[/nee[\s-]?doh/i,'/logos/needoh.png','NeeDoh']];
+function prodLogos(carries){
+  const s=String(carries||''); let out=''; const seen={};
+  for(const t of PROD_LOGOS){ if(t[0].test(s)&&!seen[t[1]]){ seen[t[1]]=1; out+=`<img src="${t[1]}" alt="${esch(t[2])}" title="${esch(t[2])}" loading="lazy">`; } }
+  return out?`<div class="stcprod">${out}</div>`:'';
+}
+// ---- Tap gesture: tap = arm (green) · tap again = call · fast double-tap = collapse (no copy — intuitive) ----
+let STORE_TAP={};                 // id -> {armed, t, recall, calling, cid, callSid}
+let SC_POLL=null, SC_CLOCK=null;  // one live store-call view at a time
+function storeTap(id, ev){
+  const st=STORE_TAP[id]||{armed:false,t:0};
+  if(st.recall||st.calling) return;                 // recall / live views own their own buttons
+  const now=Date.now();
+  if(!st.armed){ st.armed=true; st.t=now; STORE_TAP[id]=st; setArmed(id,true); return; }
+  if(now-st.t<300){ st.armed=false; STORE_TAP[id]=st; setArmed(id,false); return; }  // fast double-tap → collapse
+  st.t=now; STORE_TAP[id]=st;                        // deliberate second tap → call
+  const r=RETAILERS.find(x=>x.id===id); if(!r) return;
+  const os=r.openState||{}; if(os.known && !os.open){ toast('🔒 Closed — no call placed'); return; }
+  const lc=r.lastCall, recent=lc&&lc.startedAt&&(Date.now()/1000-lc.startedAt)<86400;
+  if(recent) openRecall(id,r); else placeStoreCall(id);
+}
+function setArmed(id,on){ const c=document.getElementById('stc_'+id); if(c) c.classList.toggle('armed',on); }
+function lastOutcome(lc){ if(!lc) return ''; if(lc.confirmed===true) return 'in stock'; if(lc.shipmentDayHeard) return 'restocking soon'; if(lc.confirmed===false) return 'not in stock'; if(lc.status==='completed') return 'no clear answer'; if(lc.status==='closed') return 'closed'; return 'no answer'; }
+// Front-end recall confirm (store checked < 24h ago): a single green "check again", then "Not now" in gray.
+function openRecall(id, r){
+  const st=STORE_TAP[id]||{}; st.recall=true; STORE_TAP[id]=st;
+  const box=document.getElementById('stclive_'+id); if(!box) return;
+  const lc=r.lastCall, ago=agoTs(lc&&lc.startedAt)||'recently', out=lastOutcome(lc);
+  box.innerHTML=`<div class="stcdlg">
+    <div class="q">You checked <b>${esch(r.name||'this store')}</b> ${esch(ago)}${out?' — '+esch(out):''}. Want us to check again?</div>
+    <button class="yes" onclick="recallYes(${id},event)">Yes, check again →</button>
+    <div class="no" onclick="recallNo(${id},event)">Not now</div>
+  </div>`;
+}
+function recallYes(id, ev){ if(ev)ev.stopPropagation(); placeStoreCall(id); }
+function recallNo(id, ev){ if(ev)ev.stopPropagation(); const st=STORE_TAP[id]||{}; st.recall=false; STORE_TAP[id]=st; const box=document.getElementById('stclive_'+id); if(box) box.innerHTML=''; }
+// Place a REAL call (databased like a website check — Call log, the owner's website account, the in-stock
+// banner) and swap the card to the live transcript view.
+async function placeStoreCall(id){
+  const r=RETAILERS.find(x=>x.id===id); if(!r) return;
+  const catId=defaultCatFor(r); if(!catId){ toast('No product category configured'); return; }
+  const st=STORE_TAP[id]||{}; st.recall=false; st.calling=true; st.armed=true; STORE_TAP[id]=st;
+  renderCallView(id, r);
+  const resp=await api('/api/call-now',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:id,categoryId:catId})});
+  if(!resp||resp.error){ toast(/closed/i.test((resp&&resp.error)||'')?'🔒 Closed — no call placed':'Could not place the call'); closeStoreCall(id); return; }
+  st.cid=resp.providerCallId; st.callSid=resp.callSid; STORE_TAP[id]=st;
+  scPoll(id, resp.providerCallId);
+}
+function renderCallView(id, r){
+  const c=document.getElementById('stc_'+id); if(!c) return;
+  c.classList.add('armed');
+  c.innerHTML=`<div class="lvhead">
+      ${logoTile(r)}
+      <div class="lvname"><b>${esch(r.name||'Store')}</b><div class="st" id="sc_status_${id}"><span class="pulse"></span> connecting…</div></div>
+      <div class="lvx" onclick="closeStoreCall(${id},event)" title="Close">✕</div>
     </div>
-  </div>`;}).join('');
+    <button class="lvstop" id="sc_stop_${id}" onclick="stopStoreCall(${id},event)">■ Stop &amp; hang up</button>
+    <div class="lvbody"><div id="sc_body_${id}"><div class="bub-note">Ringing…</div></div><div id="sc_verdict_${id}"></div></div>`;
+}
+function fmtClock(s){ const m=Math.floor(s/60), ss=s%60; return m+':'+(ss<10?'0':'')+ss; }
+function scPoll(id, cid){
+  if(SC_POLL){ clearInterval(SC_POLL); } if(SC_CLOCK){ clearInterval(SC_CLOCK); }
+  const t0=Date.now();
+  SC_CLOCK=setInterval(()=>{ const stt=document.getElementById('sc_status_'+id); if(!stt){ clearInterval(SC_CLOCK); SC_CLOCK=null; return; } if(stt.dataset.done==='1') return; stt.innerHTML='<span class="pulse"></span> on the line · '+fmtClock(Math.floor((Date.now()-t0)/1000)); },1000);
+  const tick=async()=>{
+    const o=await api('/api/conversation/'+encodeURIComponent(cid));
+    const body=document.getElementById('sc_body_'+id); if(!body){ clearInterval(SC_POLL); SC_POLL=null; return; }
+    if(o&&o.transcript) body.innerHTML=bubbles(o.transcript);
+    if(o&&o.status&&o.status!=='in_progress'){
+      clearInterval(SC_POLL); SC_POLL=null; if(SC_CLOCK){ clearInterval(SC_CLOCK); SC_CLOCK=null; }
+      const vv=customerVerdict(o), stt=document.getElementById('sc_status_'+id);
+      if(stt){ stt.dataset.done='1'; stt.style.color=vv.c; stt.innerHTML='Call '+esch(o.status); }
+      const stop=document.getElementById('sc_stop_'+id); if(stop) stop.style.display='none';
+      const vd=document.getElementById('sc_verdict_'+id);
+      if(vd) vd.innerHTML=`<div style="margin-top:12px;border:1px solid ${vv.c};border-radius:12px;padding:13px;text-align:center"><div style="margin-bottom:3px">${vmark(vv.e,vv.c,30)}</div><div style="font-size:18px;font-weight:800;color:${vv.c}">${esch(vv.t)}</div>${vv.n?`<div style="font-size:12.5px;color:var(--text-body);margin-top:5px">${esch(vv.n)}</div>`:''}</div>`;
+      loadResults();   // refresh the Calls page; the Search list refreshes when the card is closed
+    }
+  };
+  tick(); SC_POLL=setInterval(tick,3000);
+}
+async function stopStoreCall(id, ev){ if(ev)ev.stopPropagation();
+  const st=STORE_TAP[id]||{}; const stop=document.getElementById('sc_stop_'+id);
+  if(stop){ stop.textContent='Hanging up…'; stop.style.opacity=.6; stop.style.pointerEvents='none'; }
+  await api('/api/hangup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid:st.cid,callSid:st.callSid})});
+  // the poll picks up the terminal status and renders the verdict
+}
+function closeStoreCall(id, ev){ if(ev)ev.stopPropagation();
+  if(SC_POLL){ clearInterval(SC_POLL); SC_POLL=null; } if(SC_CLOCK){ clearInterval(SC_CLOCK); SC_CLOCK=null; }
+  const st=STORE_TAP[id]||{}; st.calling=false; st.recall=false; st.armed=true; STORE_TAP[id]=st;
+  loadRetailers();   // pull fresh stats; the card re-renders armed (STORE_TAP)
+}
+function onStoreFilter(){ STORE_PAGE=0; renderRetailers(); }
+function setStoreSize(n){ STORE_SIZE=Number(n)||10; STORE_PAGE=0; renderRetailers(); }
+function storePage(delta){ STORE_PAGE=Math.max(0,STORE_PAGE+delta); renderRetailers(); try{document.getElementById('search').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){} }
+function renderStorePager(total){
+  const pages=Math.max(1,Math.ceil(total/STORE_SIZE));
+  const ind=document.getElementById('store_pageind'); if(ind) ind.textContent=(STORE_PAGE+1)+' / '+pages;
+  const pv=document.getElementById('store_prev'); if(pv){ pv.disabled=STORE_PAGE<=0; pv.style.opacity=pv.disabled?.4:1; }
+  const nx=document.getElementById('store_next'); if(nx){ nx.disabled=STORE_PAGE>=pages-1; nx.style.opacity=nx.disabled?.4:1; }
+  const bar=document.getElementById('store_pager'); if(bar) bar.style.display=total>0?'flex':'none';
+}
+// Which product to ask about on a call — the store's primary carried product, else the default category.
+function defaultCatFor(r){ const carries=(r&&r.carries)?r.carries.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean):[]; for(const c of (CATEGORIES||[])){ const lbl=(c.label||'').toLowerCase(); if(lbl&&carries.some(cn=>cn.includes(lbl)||lbl.includes(cn))) return c.id; } return (CATEGORIES&&CATEGORIES[0])?CATEGORIES[0].id:null; }
+// Demo stores (Fun/MVPs): editing the phone IS the on/off switch — the server derives active from it.
+async function saveStorePhone(id){
+  const inp=document.getElementById('ph_'+id); if(!inp) return;
+  const phone=inp.value.trim();
+  const r=await api('/api/retailers/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({phone})});
+  if(!r||r.error){ toast('Could not save the number'); return; }
+  toast(phone?'Saved — store is live ✓':'Phone cleared — store hidden');
+  const t=RETAILERS.find(x=>x.id===id); if(t){ t.phone=phone; t.active=!!phone; }
+  renderRetailers();
 }
 async function labCall(){
   const phone=v('lab_phone'); const mode=document.getElementById('lab_mode').value; const personality=document.getElementById('lab_personality').value; const name=v('lab_name');
@@ -1801,15 +2047,231 @@ function fillSimSelects(){
 // ---- Playbook: chain phone trees + store preview ----
 let CHAINS=[];
 const CVS_TEMPLATE="This is a CVS. The phone system is VOICE-driven — navigate by speaking ONE WORD at a time to reach a live person at the FRONT store:\n1. \"Are you a healthcare provider?\" → say \"No.\"\n2. \"Pharmacy or front store services?\" → say \"Front.\"\n3. \"beauty and fragrances, OTC health, or general store inquiries\" → say \"General.\"\n4. If it stalls or repeats, say \"General\" again each time until you hear \"transferring you now\" and a person picks up.\nThe pharmacy can be closed while the front store is open — \"pharmacy closed\" does NOT mean the store is closed; always route to the front.";
+// ---- Settings page: pick a store/chain → editable Settings (writes the chain record) + read-only
+//      Mapping (auto-filled by the Trainer/learner). navType keypad→Alpha, voice→Bravo, direct→Charlie. ----
+const NAV_MODE={ keypad:{m:'Alpha',sub:'keypad tones',c:'#60a5fa'}, voice:{m:'Bravo',sub:'spoke menu',c:'var(--yellow)'}, direct:{m:'Charlie',sub:'direct human',c:'var(--green)'} };
+// Distinct CHAINS only (one row per chain), from /api/chains — NOT the store list. Drop "_"-prefixed
+// deprecated/merged placeholders (e.g. the old per-city "_H Mart …" rows). Muted chains stay (flagged)
+// so they remain unmute-able from Settings.
+function chainOpts(q){ const f=(q||'').trim().toLowerCase(); return CHAINS.filter(ch=>!(ch.name||'').startsWith('_')&&(!f||(ch.name||'').toLowerCase().includes(f))).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(ch=>`<option value="${ch.id}">${esch(ch.name)}${ch.muted?' · muted':(ch.repackOnly?' · repack':'')}</option>`).join(''); }
+function setFilterChains(q){ const sel=document.getElementById('set_chain'); if(!sel) return; const cur=sel.value; sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(q); if([...sel.options].some(o=>o.value===cur)) sel.value=cur; }
 async function loadChains(){
   CHAINS = await api('/api/chains') || [];
-  renderChainList(); // every chain is muteable now, even with zero calls
-  const sel=document.getElementById('pt_chain'); if(!sel) return;
+  const sel=document.getElementById('set_chain'); if(!sel) return;
   const cur=sel.value;
-  sel.innerHTML=CHAINS.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(ch=>`<option value="${ch.id}">${ch.name}${ch.phoneTreeDefault?' ✓':''}</option>`).join('');
-  if(cur) sel.value=cur;
-  loadChainTree();
+  sel.innerHTML='<option value="">Select a chain</option>'+chainOpts();
+  buildChainPicker();
+  if(cur){ sel.value=cur; setPickChain(); }
 }
+// ---- Settings page: 4 collapsible sections. Store Settings + Call Settings commit INLINE (each control
+//      saves on its own); Store Data has its own Save; Mapping is READ-ONLY (the navigator/lock writes
+//      dtmf + phone-tree — the chain PATCH never sends those). RATING is per-store (retailers.tier — no
+//      chains.tier), so picking a tier stamps every store. (docs/specs/scoring.md + DATA_PROVENANCE.md) ----
+const SS_TYPES=[['Big Box','Big Box'],['Pharmacy','Pharmacy'],['Grocery','Grocery'],['Off-Price','Off-Price'],['Discount','Discount'],['Sporting Goods','Sporting Goods'],['Bookstore','Bookstore'],['Craft','Craft'],['Department','Department'],['Gift','Gift'],['Hardware','Hardware'],['Office','Office'],['Warehouse','Warehouse'],['Mall/Specialty','Mall/Specialty'],['Online','Online'],['Thrift','Treasure Hunt (Thrift)'],['Hobby','Hobby'],['Other','Other']];
+const SS_RATING={5:['Best near you','#2BFF88','Reliable, predictable restock — worth checking on a rhythm.'],4:['Mostly reliable','#29D4FF','Carries broadly, no dependable rhythm.'],3:['Spotty','#FF9E2C','Carries, but varies by location.'],2:['Over MSRP','','Has it, but above MSRP.'],1:['Unknown','','Unconfirmed — hidden from customers.']};
+let SS=null;
+const ssDot=c=>`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0"></span>`;
+function ssPill(t){ const p=SS_RATING[t]; if(!p) return '<span class="meta">unrated</span>'; if(!p[1]) return `<span style="display:inline-flex;align-items:center;font-size:12px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:3px 11px">${esch(p[0])}</span>`; return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:${p[1]};background:${p[1]}1a;border:1px solid ${p[1]}66;border-radius:20px;padding:3px 11px">${ssDot(p[1])}${esch(p[0])}</span>`; }
+function setPickChain(){
+  const id=Number(document.getElementById('set_chain').value);
+  const body=document.getElementById('set_body'); const ch=CHAINS.find(c=>c.id===id);
+  if(!ch){ if(body) body.style.display='none'; SS=null; return; }
+  body.style.display='';
+  const st=ch.stores||{n:0,callable:0,kiosk:0,online:0,verified:0};
+  SS={ id:ch.id, name:ch.name, logoUrl:ch.logoUrl||'', logoDark:!!ch.logoDark, logoWide:!!ch.logoWide, type:ch.type||'Other',
+    muted:!!ch.muted, repack:!!ch.repackOnly, tier:ch.tier??null,
+    maxTalk:ch.maxTalkSeconds!=null?ch.maxTalkSeconds:'', vm:ch.hangupOnVoicemail!==false,
+    scm:ch.stockCheckMethod||'', scc:ch.stockCheckConfidence||'', sellMethods:ch.sellMethods||'', isMSRP:ch.isMSRP!==false,
+    dtmf:ch.dtmfShortcut||'', tree:ch.phoneTreeDefault||'',
+    callTarget:ch.callTarget!==false, answerPath:ch.answerPath||'',
+    wf:(WF.chains&&WF.chains[ch.id])||'',
+    storesN:st.n, cCallable:st.callable, cKiosk:st.kiosk, cOnline:st.online, cVerified:st.verified };
+  ssRenderStore(); ssRenderData(); ssRenderCall();
+  renderChainMapping(ch); loadRuns(id, document.getElementById('set_runs'));
+}
+// Inline-commit helpers — every Store/Call control saves on its own (no grouped Save).
+async function ssReload(){ const id=SS&&SS.id; CHAINS=await api('/api/chains')||CHAINS; const sel=document.getElementById('set_chain'); if(sel){ const cur=sel.value; sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(''); sel.value=cur; } buildChainPicker(); if(id&&CHAINS.find(c=>c.id===id)) setPickChain(); }
+async function ssPatch(field,value){ if(!SS) return null; const r=await api('/api/chains/'+SS.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({[field]:value})}); if(!r||!r.id){ toast('Could not save'); return null; } const c=CHAINS.find(x=>x.id===SS.id); if(c) c[field]=value; return r; }
+async function ssStoreBulk(set,label){ if(!SS) return; const sr=await api('/api/stores/patch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({where:{chain:SS.name},set})}); if(!sr||sr.error){ toast('Could not save'); return; } toast(label+' · '+(sr.patched!=null?sr.patched:'')+' stores'); await ssReload(); }
+function ssRenderStore(){
+  const el=document.getElementById('set_store'); if(!el||!SS) return;
+  const lg=document.getElementById('set_storelogo'); if(lg) lg.innerHTML=logoTile({logoUrl:SS.logoUrl,logoDark:SS.logoDark,logoWide:SS.logoWide,name:SS.name,type:SS.type});
+  // Status: live state is shown selected (icon); the OTHER button is the action. Mute asks first.
+  const chk='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  const muteIco='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/></svg>';
+  const stateBtn=(c,icon,lbl)=>`<div style="flex:1;padding:10px;border-radius:9px;border:1px solid ${c};background:${c}1f;color:${c};font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;gap:7px">${icon}${lbl}</div>`;
+  const actBtn=(onclick,icon,lbl)=>`<button type="button" onclick="${onclick}" style="flex:1;padding:10px;border-radius:9px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-body);font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px">${icon}${lbl}</button>`;
+  const status=SS.muted
+    ? stateBtn('var(--text-muted)',muteIco,'Muted')+actBtn('ssActivate()',chk,'Activate')
+    : stateBtn('var(--green)',chk,'Active')+actBtn('ssMute()',muteIco,'Mute');
+  // Rating: five clickable pills (selected = its color, rest greyed). Clicking stamps the tier on every store.
+  const pill=(n)=>{ const p=SS_RATING[n]; const seld=SS.tier===n;
+    if(seld) return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:${p[1]||'#fff'};background:${p[1]?p[1]+'1f':'var(--surface-2)'};border:1px solid ${p[1]?p[1]+'80':'var(--border-strong)'};border-radius:20px;padding:5px 12px;cursor:pointer">${p[1]?ssDot(p[1]):''}${esch(p[0])}</button>`;
+    return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;font-size:12px;font-weight:700;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer">${esch(p[0])}</button>`; };
+  const pills=[5,4,3,2,1].map(pill).join('');
+  // Per-store rows: bulk toggle commits immediately. KIOSK is per-store ON only — chain level is
+  // CLEAR-ONLY (a blanket "kiosk ON" would falsely mark every store a kiosk → all tier-5 + Kiosk tab).
+  const maj=k=>SS['c'+k]>SS.storesN/2;
+  const tog=(on,onclick)=>`<button type="button" onclick="${onclick}" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12px">${on?'ON':'OFF'}</button>`;
+  const row=(lbl,tip,cnt,ctrl)=>`<div class="setrow"><div class="setlbl">${lbl} <span data-tip="${esch(tip)}"></span></div><div class="row" style="gap:10px;align-items:center"><span class="meta" style="font-size:11px">${cnt}/${SS.storesN}</span>${ctrl}</div></div>`;
+  el.innerHTML=
+    `<div style="font-size:13px;color:var(--text-muted);margin:2px 0 7px">Status</div>`
+    +(SS.repack?`<div class="row" style="gap:8px;align-items:center;margin-bottom:9px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);border-radius:20px;padding:3px 11px">${ssDot('#FBBF24')}Repack-only</span><button class="ghost" onclick="ssClearRepack()" style="font-size:12px;padding:5px 10px">Clear</button></div>`:'')
+    +`<div class="row" style="gap:8px;margin-bottom:18px">${status}</div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Type <span data-tip="What kind of retailer this chain is — sets grouping + scoring."></span></div>`
+    +`<select onchange="ssSetType(this.value)" style="margin-bottom:18px">${SS_TYPES.map(([v,l])=>`<option value="${esch(v)}"${SS.type===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
+    +`<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:9px"><div style="font-size:13px;color:var(--text-muted)">Rating</div><span class="meta" id="set_ratemsg" style="font-size:11px"></span></div>`
+    +`<div class="row" style="gap:7px;flex-wrap:wrap">${pills}</div>`
+    +`<div style="height:14px"></div>`
+    +row('Callable','We can phone this store to check stock. Off = kiosk-only / not called.',SS.cCallable,tog(maj('Callable'),'ssToggleCallable()'))
+    +row('Kiosk',"Has a Pokémon vending machine. (Kiosk store shows 'Best near you' + in the Kiosk tab.)",SS.cKiosk,(SS.cKiosk?`<button type="button" class="ghost" onclick="ssClearKiosk()" style="font-size:12px;padding:5px 11px">Clear</button>`:`<span class="meta" style="font-size:11px">per-store</span>`))
+    +row('Online','Sells online — pickup or shipped.',SS.cOnline,tog(maj('Online'),'ssToggleOnline()'))
+    +row('Stock verified','Confirmed it carries (vs just suspected).',SS.cVerified,tog(maj('Verified'),'ssToggleVerified()'));
+}
+async function ssMute(){ if(!SS) return; if(!confirm('Are you sure you want to mute this store?')) return; if(await ssPatch('muted',true)){ SS.muted=true; ssRenderStore(); toast('Muted — dropped from customers'); } }
+async function ssActivate(){ if(!SS) return; if(await ssPatch('muted',false)){ SS.muted=false; ssRenderStore(); toast('Active'); } }
+async function ssClearRepack(){ if(!SS) return; if(await ssPatch('repackOnly',false)){ SS.repack=false; ssRenderStore(); toast('Repack-only cleared'); } }
+async function ssSetType(v){ if(!SS) return; SS.type=v; if(await ssPatch('type',v)) toast('Type: '+v); }
+async function ssRate(n){ if(!SS) return; const el=document.getElementById('set_ratemsg'); if(el) el.textContent='Saving…'; const sr=await api('/api/stores/patch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({where:{chain:SS.name},set:{tier:n}})}); if(!sr||sr.error){ if(el) el.textContent='Could not save'; return; } toast('Rated '+SS_RATING[n][0]+' · '+(sr.patched!=null?sr.patched:'')+' stores'); await ssReload(); }
+function ssToggleCallable(){ const on=SS.cCallable>SS.storesN/2; ssStoreBulk({sellsPacks:!on}, on?'Callable OFF':'Callable ON'); }
+function ssToggleOnline(){ const on=SS.cOnline>SS.storesN/2; ssStoreBulk({online:!on}, on?'Online OFF':'Online ON'); }
+function ssToggleVerified(){ const on=SS.cVerified>SS.storesN/2; ssStoreBulk({stockStatus:on?'unverified':'verified'}, on?'Stock verified OFF':'Stock verified ON'); }
+function ssClearKiosk(){ if(!SS||!SS.cKiosk) return; ssStoreBulk({hasKiosk:false}, 'Kiosks cleared'); }
+// ---- Chain picker: a filterable LIST (replaces the dropdown). Built once per CHAINS load; the search +
+// the two filters (mapping status / rating) just toggle row visibility, so logos never reload. Tier
+// names in the rating filter are canonical from docs/specs/scoring.md. ----
+const RATING_CANON={5:'Best Chance',4:'Mostly Reliable',3:'Spotty',2:'Over MSRP',1:'Unknown'};
+// Compact tier pill for a picker row — CANONICAL names from scoring.md (matches the rating filter),
+// in the tier's color.
+function ratePillMini(t){ const nm=RATING_CANON[t]; if(!nm) return '<span style="font-size:10.5px;font-weight:700;color:var(--text-tertiary)">unrated</span>'; const c=(SS_RATING[t]||[])[1], lbl=t+' '+nm; return c?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:${c};background:${c}1a;border:1px solid ${c}55;border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${esch(lbl)}</span>`:`<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:2px 9px;white-space:nowrap">${esch(lbl)}</span>`; }
+// mapped/unmapped chip — Mapped = navStatus==='locked' (matches the Mapping section + the filter).
+function mapChipMini(ch){ const locked=ch.navStatus==='locked'; const c=locked?'var(--green)':'var(--text-muted)'; return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:${c};background:${locked?'rgba(74,222,128,.12)':'var(--surface-2)'};border:1px solid ${locked?'rgba(74,222,128,.4)':'var(--border)'};border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${locked?'Mapped':'Unmapped'}</span>`; }
+function buildChainPicker(){
+  const el=document.getElementById('set_picker'); if(!el) return;
+  const cur=(document.getElementById('set_chain')||{}).value||'';
+  // Only chains with ≥1 callable store (sellsPacks≠false). Drops all-kiosk pseudo-chains like
+  // "Pokémon Vending" (0 callable) from the picker WITHOUT muting them — they stay active so their
+  // machines keep showing on the consumer Kiosk tab. Keyed on callable-store count (the chain PATCH
+  // doesn't take callTarget), so any future all-kiosk chain is excluded automatically.
+  const live=(CHAINS||[]).filter(c=>!(c.name||'').startsWith('_')&&Number((c.stores&&c.stores.callable)||0)>0).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  el.innerHTML=live.map(ch=>{
+    const locked=ch.navStatus==='locked';
+    return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-mapped="${locked?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.55"':''}>
+      <span class="setlogo">${logoTile(ch)}</span>
+      <b style="flex:1;min-width:0;color:#fff;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}${ch.muted?' <span class="meta" style="font-size:10.5px">· muted</span>':''}</b>
+      ${ratePillMini(ch.tier)}${mapChipMini(ch)}</div>`;
+  }).join('')||'<div class="empty" style="padding:16px">No chains loaded.</div>';
+  filterChainPicker();
+}
+function filterChainPicker(){
+  const el=document.getElementById('set_picker'); if(!el) return;
+  const raw=(document.getElementById('set_search')||{}).value||''; const norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]+/g,''); const q=norm(raw);
+  const subseq=(hay)=>{ let i=0; for(let k=0;k<hay.length&&i<q.length;k++) if(hay[k]===q[i]) i++; return i===q.length; };
+  const fmap=(document.getElementById('set_fmap')||{}).value||''; const frate=(document.getElementById('set_frate')||{}).value||'';
+  let shown=0;
+  el.querySelectorAll('.pickrow').forEach(r=>{
+    const name=norm(r.getAttribute('data-name')), tier=r.getAttribute('data-tier'), mapped=r.getAttribute('data-mapped')==='1';
+    let ok=true;
+    if(q && !(name.includes(q)||subseq(name))) ok=false;
+    if(fmap==='mapped'&&!mapped) ok=false; if(fmap==='unmapped'&&mapped) ok=false;
+    if(frate&&String(tier)!==String(frate)) ok=false;
+    r.style.display=ok?'':'none'; if(ok) shown++;
+  });
+  const cnt=document.getElementById('set_pickcount'); if(cnt) cnt.textContent=shown+' chain'+(shown===1?'':'s');
+}
+// Pick a row → load it into the editor below (via the hidden set_chain the editor already reads).
+function pickChainRow(id){
+  const sel=document.getElementById('set_chain');
+  if(sel){ if(![...sel.options].some(o=>o.value===String(id))) sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(''); sel.value=String(id); }
+  document.querySelectorAll('#set_picker .pickrow').forEach(r=>r.classList.toggle('on', r.getAttribute('data-id')===String(id)));
+  setPickChain();
+}
+// Store Data: store FACTS (chain fields) — its OWN Save (isMSRP / stock-check confidence / sell methods).
+function ssRenderData(){
+  const el=document.getElementById('set_data'); if(!el||!SS) return;
+  const sccOpts=[['','—'],['confirmed','confirmed'],['probable','probable']];
+  const scmOpts=[['','—'],['site','site · read the website'],['call','call · phone the store']];
+  el.innerHTML=
+    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> First-party — sells at MSRP</label><span data-tip="We price the store's own shelf at retail — not a reseller that may mark it up."></span></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check method <span data-tip="How we check this chain's stock — read their website (site) or phone the store (call)."></span></div>`
+    +`<select id="set_scm" style="margin-bottom:16px">${scmOpts.map(([v,l])=>`<option value="${v}"${(SS.scm||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check confidence <span data-tip="How sure we are it carries: confirmed (seen/called) vs probable (expected, unverified)."></span></div>`
+    +`<select id="set_scc" style="margin-bottom:16px">${sccOpts.map(([v,l])=>`<option value="${v}"${(SS.scc||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Sell methods <span data-tip="Ways to get it (comma-separated): in_store, pickup, ship."></span></div>`
+    +`<input id="set_sell" value="${esch(SS.sellMethods)}" placeholder="in_store,pickup,ship" style="margin-bottom:16px">`
+    +`<div class="row" style="gap:12px;align-items:center"><button class="act" onclick="ssSaveData()">Save</button><span class="meta" id="set_datamsg"></span></div>`;
+}
+async function ssSaveData(){
+  if(!SS) return; const msg=document.getElementById('set_datamsg'); if(msg) msg.textContent='Saving…';
+  const isMSRP=document.getElementById('set_msrp').checked, scm=document.getElementById('set_scm').value, scc=document.getElementById('set_scc').value, sell=(document.getElementById('set_sell').value||'').trim();
+  const r=await api('/api/chains/'+SS.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({isMSRP,stockCheckMethod:scm||null,stockCheckConfidence:scc||null,sellMethods:sell||null})});
+  if(!r||!r.id){ if(msg) msg.textContent='Could not save.'; return; }
+  SS.isMSRP=isMSRP; SS.scm=scm; SS.scc=scc; SS.sellMethods=sell;
+  const c=CHAINS.find(x=>x.id===SS.id); if(c){ c.isMSRP=isMSRP; c.stockCheckMethod=scm||null; c.stockCheckConfidence=scc||null; c.sellMethods=sell||null; }
+  if(msg) msg.textContent='Saved ✓';
+}
+// Call Settings: every control commits INLINE. Max talk + Hang up share the top row; Hang up's ⓘ is
+// OUTSIDE its label so tapping the hint never toggles. (Answer path lives in Mapping — it's learned.)
+function ssRenderCall(){
+  const el=document.getElementById('set_call'); if(!el||!SS) return;
+  const tog=(on,onclick)=>`<button type="button" onclick="${onclick}" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12px">${on?'ON':'OFF'}</button>`;
+  el.innerHTML=
+    `<div class="row" style="gap:26px;align-items:center;flex-wrap:wrap;margin:2px 0 4px">`
+    +`<div class="row" style="gap:9px;align-items:center"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" onchange="ssSetMaxTalk(this.value)" style="width:68px;padding:9px 10px;font-size:15px;text-align:center"><div style="font-weight:700;font-size:13px;line-height:1.15">Max talk <span data-tip="Hard cap on how long the agent talks to a person before wrapping up."></span><div class="meta" style="font-size:11px;font-weight:500">seconds</div></div></div>`
+    +`<div class="row" style="gap:9px;align-items:flex-start"><input type="checkbox" id="set_vm" ${SS.vm?'checked':''} onchange="ssSetHangup(this.checked)" style="margin-top:2px"><div style="line-height:1.25"><div style="display:flex;align-items:center;gap:5px"><label for="set_vm" style="font-weight:700;font-size:13px;color:var(--text-body);cursor:pointer;text-transform:none;letter-spacing:0;display:inline;margin:0">Hang up</label><span data-tip="Voicemail or a closed / recorded line → hang up at once. No message, no charge."></span></div><div class="meta" style="font-size:11px;margin-top:1px">voicemail / closed</div></div></div>`
+    +`</div>`
+    +`<div class="setrow" style="justify-content:flex-end;gap:11px"><div class="setlbl">Phone this chain <span data-tip="ON = we call this chain's stores to check stock. OFF = listed, but never dialed."></span></div>${tog(SS.callTarget,'ssToggleCallTarget()')}</div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin:16px 0 6px">Default workflow <span data-tip="Voice / script for every store of this chain — overrides the global default."></span></div>`
+    +`<select id="set_wf" onchange="setChainWorkflow(SS.id,this.value)">${wfOptions(SS.wf, WF.def?('Default · '+WF.def):'Default')}</select>`;
+}
+async function ssToggleCallTarget(){ if(!SS) return; const v=!SS.callTarget; if(await ssPatch('callTarget',v)){ SS.callTarget=v; ssRenderCall(); toast(v?'Phoning this chain':'Will not dial this chain'); } }
+async function ssSetHangup(b){ if(!SS) return; SS.vm=b; if(await ssPatch('hangupOnVoicemail',b)) toast(b?'Hang up: on':'Hang up: off'); }
+async function ssSetMaxTalk(v){ if(!SS) return; SS.maxTalk=v; if(await ssPatch('maxTalkSeconds',Number(v)||null)) toast('Max talk saved'); }
+// Mapping is READ-ONLY: stats + recipe + the two learned fields (dtmf, phone-tree) the navigator/lock
+// writes. Status is a pill in the section header (separated from the Map / Confirm action buttons).
+// Lifecycle drives off navStatus: unmapped → grey / blank · learning → spinner · locked → green
+// "Mapped" with the recipe + learned fields populated. (DevOps advances navStatus server-side once a
+// confirmed run reaches a human, so a one-shot map doesn't get stuck on "learning".)
+function renderChainMapping(ch){
+  const el=document.getElementById('set_mapping'); if(!el) return;
+  const status = (ch.navStatus==='locked'||ch.navStatus==='learning') ? ch.navStatus : 'unmapped';
+  const isLocked = status==='locked';
+  const nm = isLocked ? NAV_MODE[ch.navType || (ch.dtmfShortcut?'keypad':((ch.ringsDirect||ch.answerPath==='direct_human')?'direct':(ch.phoneTreeDefault?'voice':null)))] : null;
+  let recipe = isLocked ? '' : (status==='learning' ? '… mapping in progress' : '— not mapped yet');
+  if(isLocked){
+    try{ const r=ch.navRecipe?JSON.parse(ch.navRecipe):null; const steps=(r&&(Array.isArray(r)?r:r.steps))||[];
+      if(steps.length) recipe=steps.map(s=>s.action==='press'?('press '+s.value+'@'+s.atSec+'s'):(s.action==='wait'?('wait@'+s.atSec+'s'):('say "'+esch(s.value)+'"@'+s.atSec+'s'))).join('  →  ');
+      else if(ch.dtmfShortcut) recipe=ch.dtmfShortcut.split(',').map(p=>{const m=p.trim().match(/^([0-9])@(\d+)/);return m?('press '+m[1]+' @ '+m[2]+'s'):p.trim();}).join('  →  ');
+    }catch(e){}
+    if(!recipe) recipe='picked up directly';
+  }
+  const t2h = isLocked ? (ch.navSeconds!=null?ch.navSeconds+'s':(ch.avgTreeSeconds?ch.avgTreeSeconds+'s':'—')) : '—';
+  const mapped = isLocked ? (ch.navUpdatedAt?new Date(ch.navUpdatedAt).toLocaleDateString([],{month:'short',day:'numeric'}):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'—')) : '—';
+  const ro=(lbl,val)=>`<div style="margin-top:13px"><div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">${lbl} <span class="meta" style="text-transform:none;letter-spacing:0;font-size:10.5px">· learned · read-only</span></div><div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${(isLocked&&val)?esch(val):'—'}</div></div>`;
+  el.innerHTML=
+    `<div class="stats" style="margin-bottom:14px">`
+    +`<div class="stat"><div class="n" style="font-size:18px${nm?'':';color:var(--muted)'}">${nm?nm.m:'—'}</div><div class="l">mode${nm?' · '+nm.sub:''}</div></div>`
+    +`<div class="stat"><div class="n" style="font-size:18px">${t2h}</div><div class="l">time-to-human</div></div>`
+    +`<div class="stat"><div class="n" style="font-size:15px">${mapped}</div><div class="l">last mapped</div></div>`
+    +`</div>`
+    +`<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5"><b style="color:#fff">Recipe:</b> ${recipe}</div>`
+    +ro('Keypad shortcut (DTMF)',ch.dtmfShortcut)
+    +ro('Phone-tree default',ch.phoneTreeDefault);
+  const sp=document.getElementById('set_mapstatus');
+  if(sp){
+    const cfg = isLocked?['var(--green)','rgba(74,222,128,.12)','rgba(74,222,128,.4)','Mapped']
+      : status==='learning'?['var(--yellow)','rgba(244,208,63,.12)','rgba(244,208,63,.4)','learning…']
+      : ['var(--text-muted)','var(--surface-2)','var(--border)','unmapped'];
+    sp.innerHTML=`<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:${cfg[0]};background:${cfg[1]};border:1px solid ${cfg[2]};border-radius:20px;padding:3px 10px">${status==='learning'?'<span class="navspin"></span>':ssDot(cfg[0])}${cfg[3]}</span>`;
+  }
+  const mb=document.getElementById('set_mapbtn'); if(mb) mb.textContent = isLocked?'Re-map':'Map';
+}
+// Map / Re-map the selected chain: places one real navigator call, shown live in the Mapping card.
+function setMapChain(){ const id=Number(document.getElementById('set_chain').value); const ch=CHAINS.find(c=>c.id===id); if(!ch){ toast('Pick a chain first'); return; } trDocument(id, ch.name); }
+// Confirm-stock run: reach a human, ask if they have the product, classify right-desk vs redirect.
+function setConfirmChain(){ const id=Number(document.getElementById('set_chain').value); const ch=CHAINS.find(c=>c.id===id); if(!ch){ toast('Pick a chain first'); return; } trDocument(id, ch.name, {confirm:true, product:'Pokémon cards'}); }
+// (Removed: the old grouped Save + voicemail toggle. Every Settings control now commits inline,
+//  Store Data has its own Save, and dtmf/phone-tree are learner-written read-only fields in Mapping.)
 // Auto-press builder: each step = press a digit (0-9) at N seconds. Syncs to the hidden pt_dtmf as "d@s,d@s".
 function dtmfRowHtml(digit,secs){
   const opts=[0,1,2,3,4,5,6,7,8,9].map(d=>`<option value="${d}"${String(d)===String(digit)?' selected':''}>${d}</option>`).join('');
@@ -2148,7 +2610,7 @@ function customerVerdict(o){
     return {e:s.emoji, t:s.label, c:s.color, n, key};
   }
   // Registry not loaded yet (first paint) — minimal built-in fallback keeps the row sane.
-  const F=({in_stock:['✅','In stock','#4ADE80'],sold_out:['🕐','Sold out','#EF4444'],does_not_sell:['🚫',"They don't carry it",'#EF4444'],not_in_stock:['❌','Not in stock','#EF4444'],no_clear_answer:['🤔','Got a “maybe”','#FBBF24'],nobody_answered:['📵','Nobody answered','#9CA3AF'],closed:['🔒','Store closed','#9CA3AF'],failed:['⚠️','Call failed','#FBBF24']})[key]||['📵','Nobody answered','#9CA3AF'];
+  const F=({in_stock:['✅','In stock','#4ADE80'],sold_out:['🕐','Sold out','#EF4444'],does_not_sell:['🚫',"They don't carry it",'#EF4444'],not_in_stock:['❌','Not in stock','#EF4444'],no_clear_answer:['🤔','Got a “maybe”','#FBBF24'],nobody_answered:['📵','Nobody answered','#9CA3AF'],closed:['🔒','Store closed','#9CA3AF'],failed:['⚠️','Call failed','#FBBF24'],admin_hangup:['·','Admin hung up','#9CA3AF']})[key]||['📵','Nobody answered','#9CA3AF'];
   return {e:F[0],t:F[1],c:F[2],n:(key==='failed'&&o.failureReason)?o.failureReason:'',key};
 }
 function pollTranscript(cid, pre){
@@ -2243,14 +2705,16 @@ function renderStatuses(list){
   el.innerHTML = rows.length ? rows.map(s=>`
     <div class="card" style="padding:12px;margin-bottom:8px" data-sid="${s.id}">
       <div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap">
-        <button type="button" class="sticon-btn" onclick="statusPickIcon(this)" title="Change icon — pick from the library">${statusIcon(s.emoji,s.color||s.tone,24)}</button>
+        <button type="button" class="sticon-btn" onclick="statusPickIcon(this)" title="Change the icon">${statusIcon(s.emoji,s.color||s.tone,24)}</button>
         <input type="hidden" data-f="emoji" value="${escH(s.emoji)}">
         <input value="${escH(s.label)}" data-f="label" onchange="statusAutoSave(this)" style="flex:1;min-width:0;font-size:15px" placeholder="Label">
-        <input type="color" value="${escH(s.color)}" data-f="color" oninput="statusRecolor(this)" onchange="statusAutoSave(this)" title="Icon color" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1px solid var(--border);background:none;flex:0 0 auto">
+        ${s.key==='in_stock'
+          ? `<input type="color" value="#4ADE80" data-f="color" disabled title="Locked to brand green — matches the logo" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1.5px solid var(--green);background:none;flex:0 0 auto;cursor:not-allowed">`
+          : `<input type="color" value="${escH(s.color)}" data-f="color" oninput="statusRecolor(this)" onchange="statusAutoSave(this)" title="Icon color" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1px solid var(--border);background:none;flex:0 0 auto">`}
       </div>
       <textarea data-f="note" rows="3" onchange="statusAutoSave(this)" placeholder="One-line note the customer sees" style="margin-top:10px;font-size:14px;line-height:1.5">${escH(s.note)}</textarea>
       <div class="row" style="gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
-        <select data-f="tone" onchange="statusToneChange(this);statusAutoSave(this)" title="The customer's verdict bucket — sets the color + which filter this lands in" style="flex:0 0 auto;max-width:180px">
+        <select data-f="tone" onchange="statusToneChange(this);statusAutoSave(this)" title="Verdict bucket — sets the color + filter" style="flex:0 0 auto;max-width:180px">
           <option value="in"${s.tone==='in'?' selected':''}>In stock</option>
           <option value="out"${s.tone==='out'?' selected':''}>Not in stock</option>
           <option value="unk"${s.tone==='unk'?' selected':''}>Check failed</option>
@@ -2287,12 +2751,11 @@ async function addStatus(){
 // ---- Playbook sub-nav ----
 function pbTab(name){ showSection(name); } // Test Bench / Phone Trees / Statuses are now top-level sections
 async function callNow(id){
-  const catId = Number(document.getElementById('cn_'+id).value);
-  if(!catId){ toast('Pick a category first'); return; }
+  const r=RETAILERS.find(x=>x.id===id); const catId=defaultCatFor(r);
+  if(!catId){ toast('No product category configured'); return; }
   toast('Dialing…');
   await api('/api/call-now',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:id,categoryId:catId})});
-  toast('Call placed — result will appear shortly.');
-  setTimeout(loadResults, 1500);
+  toast('Call placed — the result lands in this store’s record shortly.');
 }
 async function mapCall(id){
   const cat=(CATEGORIES.find(c=>/pok/i.test(c.label))||CATEGORIES[0]);
@@ -2309,11 +2772,25 @@ async function addRetailer(){
   toast('Store added'); loadRetailers();
 }
 
-let RESULT_STORE_FILTER=null, RESULTS=[];
-async function loadResults(){
-  const rows=await api('/api/results');
-  RESULTS=Array.isArray(rows)?rows:[];
-  renderResults();
+let RESULT_STORE_FILTER=null, RESULTS=[], RES_PAGE=0, RES_SIZE=10, RES_TOTAL=0;
+// Paginated calls: fetch ONE page (server limit/offset) so the page loads fast. Page-size + arrows live
+// in a floating bar (bottom-right) for one-handed mobile paging.
+async function loadResults(page){
+  if(typeof page==='number') RES_PAGE=Math.max(0,page);
+  const box=document.getElementById('resultList'); if(box&&!RESULTS.length) box.innerHTML='<div class="empty">Loading…</div>';
+  const d=await api('/api/results?limit='+RES_SIZE+'&offset='+(RES_PAGE*RES_SIZE));
+  RESULTS=(d&&Array.isArray(d.rows))?d.rows:(Array.isArray(d)?d:[]);
+  RES_TOTAL=(d&&typeof d.total==='number')?d.total:RESULTS.length;
+  renderResults(); renderResPager();
+}
+function setResSize(n){ RES_SIZE=Number(n)||10; RES_PAGE=0; loadResults(); }
+function resPage(delta){ const pages=Math.max(1,Math.ceil(RES_TOTAL/RES_SIZE)); RES_PAGE=Math.min(pages-1,Math.max(0,RES_PAGE+delta)); loadResults(); try{document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){} }
+function renderResPager(){
+  const pages=Math.max(1,Math.ceil(RES_TOTAL/RES_SIZE)); if(RES_PAGE>pages-1) RES_PAGE=Math.max(0,pages-1);
+  const ind=document.getElementById('res_pageind'); if(ind) ind.textContent=(RES_PAGE+1)+' / '+pages;
+  const pv=document.getElementById('res_prev'); if(pv){ pv.disabled=RES_PAGE<=0; pv.style.opacity=pv.disabled?.4:1; }
+  const nx=document.getElementById('res_next'); if(nx){ nx.disabled=RES_PAGE>=pages-1; nx.style.opacity=nx.disabled?.4:1; }
+  const bar=document.getElementById('res_pager'); if(bar) bar.style.display=RES_TOTAL>0?'flex':'none';
 }
 function renderResults(){
   let rows=RESULTS.slice();
@@ -2381,14 +2858,28 @@ async function loadZones(){
   document.getElementById('zoneList').innerHTML = rows.length? rows.map(z=>`<div class="card"><div class="row" style="gap:12px">
     <div class="slogo"><span class="mono">${z.retailerIds.length}</span></div>
     <div class="grow"><div class="sname">${esch(z.name)}</div><div class="smeta">${esch(z.centerZip||'')} · ${z.radiusMiles||'?'} mi radius · ${z.retailerIds.length} stores</div></div>
-    <button class="act" onclick="callZoneNow(${z.id},'${(z.name||'').replace(/'/g,'')}')">${ICO('phone',15)} Call zone</button>
+    <button class="act" id="zonebtn_${z.id}" onclick="callZoneNow(${z.id},'${(z.name||'').replace(/'/g,'')}',${z.retailerIds.length})">${ICO('phone',15)} Call zone</button>
   </div></div>`).join('') : '<div class="empty">No zones yet — tell Claude an area and it can build one.</div>';
 }
-async function callZoneNow(id,name){
-  if(!confirm('Call every store in '+name+'? This places real calls to real stores.')) return;
-  toast('Placing calls…');
+async function callZoneNow(id,name,count){
+  const stores=await api('/api/zones/'+id+'/stores').catch(()=>[]);
+  const names=Array.isArray(stores)?stores.map(s=>s.name).filter(Boolean):[];
+  const n=names.length||count||0;
+  const list=names.length?('\n\nIt will call:\n'+names.slice(0,25).map(x=>'• '+x).join('\n')+(names.length>25?('\n…and '+(names.length-25)+' more'):'')):'';
+  if(!confirm('⚠️ Call ALL '+n+' stores in "'+name+'" right now?\n\nThis places '+n+' REAL phone calls to real stores at once. Use “Cancel zone” to hang up the whole batch.'+list)) return;
+  toast('Placing '+n+' calls…');
   const r=await api('/api/zones/'+id+'/call-now',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
   toast((r.placed||0)+' calls placed'); setTimeout(loadResults,2000);
+  const b=document.getElementById('zonebtn_'+id);
+  if(b) b.outerHTML=`<button class="ghost" id="zonebtn_${id}" onclick="cancelZone(${id},'${String(name).replace(/'/g,'')}')" style="color:#EF4444;border-color:rgba(239,68,68,.4)"><span style="color:#EF4444">■</span> Cancel zone</button>`;
+}
+// Cancel an in-progress zone — bulk hang-up of the batch (mirrors the single-call Stop button). POSTs
+// /api/zones/:id/hangup, then reverts the card.
+async function cancelZone(id,name){
+  const b=document.getElementById('zonebtn_'+id); if(b){ b.disabled=true; b.textContent='Cancelling…'; }
+  const r=await api('/api/zones/'+id+'/hangup',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+  toast((r&&!r.error)?('Cancelled '+(r.cancelled!=null?r.cancelled+' ':'')+'calls in '+name):'Could not cancel the zone');
+  loadZones();
 }
 async function loadCatalog(){
   CATEGORIES = await api('/api/categories');
@@ -2570,7 +3061,11 @@ const esch=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;'
 // Product mark: show a known product's logo instead of its plain name (Pokémon for now).
 function prodMark(name,size){
   size=size||15; const s=String(name==null?'':name).trim();
-  if(/pok[eé]?mon/i.test(s)) return `<img src="/logos/chains/pokemon_vending.svg" alt="Pokémon" title="Pokémon" style="height:${size}px;width:${size}px;vertical-align:-3px;object-fit:contain;display:inline-block">`;
+  const img=(src,alt)=>`<img src="${src}" alt="${alt}" title="${alt}" style="height:${size}px;width:${size}px;vertical-align:-3px;object-fit:contain;display:inline-block">`;
+  if(/pok[eé]?mon/i.test(s)) return img('/logos/chains/pokemon_vending.svg','Pokémon');
+  if(/one[\s-]?piece/i.test(s)) return img('/logos/onepiece.png','One Piece');
+  if(/topps/i.test(s)) return img('/logos/topps.png','Topps');
+  if(/nee[\s-]?doh/i.test(s)) return img('/logos/needoh.png','NeeDoh');
   return esch(s);
 }
 // ---- Drawn icon system (matches the consumer front end — zero raw emoji in chrome) ----
@@ -2632,18 +3127,21 @@ async function loadGrowth(){
   }).join('');
   // pricing
   const p=POL.pricing||{}, sub=p.sub||{};
-  const fld=(id,lbl,val)=>`<label class="meta" style="display:block">${lbl}<input id="${id}" value="${esch(val)}" style="width:100%;margin-top:4px;background:#0e0e14;color:#fff;border:1px solid var(--border);border-radius:8px;padding:9px"></label>`;
+  const fld=(id,lbl,val)=>`<label class="meta" style="display:block">${lbl}<input id="${id}" value="${esch(val)}" inputmode="numeric" style="display:block;width:90px;margin-top:4px;background:#0e0e14;color:#fff;border:1px solid var(--border);border-radius:8px;padding:9px 10px"></label>`;
   document.getElementById('gw_pricing').innerHTML=
     fld('gw_percall','Per-check price (¢)',p.perCallCents)+
     fld('gw_minpur','Minimum top-up (¢)',p.minPurchaseCents)+
     fld('gw_free','Free checks (new visitor)',p.freeChecks)+
     fld('gw_kreward','Kiosk reward (checks)',(POL.rewards||{}).kioskRefreshChecks)+
+    fld('gw_referral','Referral reward (checks · both)',(POL.rewards||{}).referralChecks)+
     fld('gw_subcents','Membership price (¢/mo)',sub.cents)+
     fld('gw_subcredits','Membership checks/mo',sub.credits)+
     fld('gw_subper','Member per-check (¢)',sub.perCallCents)+
     fld('gw_headstart','Finds headstart (min)',(POL.finds||{}).headstartMin)+
     fld('gw_ga4','GA4 measurement id',POL.ga4Id||'');
-  document.getElementById('gw_json').value=JSON.stringify(POL,null,2);
+  // Volume top-up tiers — set in the checkout build (Stripe), surfaced read-only so they're not edited via raw JSON.
+  const packs=(POL.catalog||{}).packs||{};
+  if(Object.keys(packs).length) document.getElementById('gw_pricing').innerHTML += `<div class="meta" style="grid-column:1/-1;margin-top:2px"><b style="color:#c7c7d2">Volume tiers</b> <span data-tip="Top-up packs — set in the checkout build (Stripe), read-only here.">ⓘ</span><div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${Object.values(packs).map(pk=>`<span style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:#dcdce6">${pk.credits} checks · $${(pk.cents/100).toFixed(0)}</span>`).join('')}</div></div>`;
   loadGwPulse(); loadGwIntel(); loadGwKiosks(); loadGwWatches(); loadGwCommunity(); loadGwWaitlist(); loadGwStoreReqs();
 }
 async function loadGwPulse(){
@@ -2692,7 +3190,7 @@ async function savePolicyForm(){
   const n=id=>{const x=Number(document.getElementById(id).value);return isFinite(x)?x:undefined;};
   const patch={pricing:{perCallCents:n('gw_percall'),minPurchaseCents:n('gw_minpur'),freeChecks:n('gw_free'),
       sub:Object.assign({},(POL.pricing||{}).sub,{cents:n('gw_subcents'),credits:n('gw_subcredits'),perCallCents:n('gw_subper')})},
-    rewards:{kioskRefreshChecks:n('gw_kreward')},
+    rewards:{kioskRefreshChecks:n('gw_kreward'),referralChecks:n('gw_referral')},
     finds:Object.assign({},POL.finds,{headstartMin:n('gw_headstart')}),
     ga4Id:document.getElementById('gw_ga4').value.trim()};
   await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(patch)});
@@ -2701,8 +3199,10 @@ async function savePolicyForm(){
 async function savePolicyJson(){
   let body; try{ body=JSON.parse(document.getElementById('gw_json').value); }catch(e){ toast('Invalid JSON'); return; }
   await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  toast('Policy saved'); loadGrowth();
+  toast('Policy saved'); loadAdvancedPolicy();
 }
+// Advanced JSON card now lives under Calls → App (dev escape-hatch); load POL + fill the editor on its own.
+async function loadAdvancedPolicy(){ const el=document.getElementById('gw_json'); if(!el) return; POL=await api('/api/policy')||POL; el.value=JSON.stringify(POL,null,2); }
 async function importStoresJson(){
   const msg=document.getElementById('gw_import_msg');
   let body; try{ body=JSON.parse(document.getElementById('gw_import').value); }catch(e){ msg.style.color='#ff6b6b'; msg.textContent='Invalid JSON'; return; }
@@ -2835,7 +3335,7 @@ async function agentSend(){
     const sec=SECTION_GROUP[want]?want:'dash';
     showGroup(SECTION_GROUP[sec], sec); })();
   await Promise.all([loadCatalog()]);
-  await Promise.all([loadStoreIntel(),loadResults(),loadSchedules(),loadZones(),loadSettings(),loadLiveStrip(),loadCredits(),loadTestStores(),loadBail(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen(),loadWorkflows()]);
+  await Promise.all([loadStoreIntel(),loadResults(),loadSchedules(),loadZones(),loadSettings(),loadLiveStrip(),loadCredits(),loadTestStores(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen(),loadWorkflows()]);
   const sp=new URLSearchParams(location.search);
   restorePersist();
   decorateChrome();
