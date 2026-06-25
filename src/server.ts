@@ -1388,18 +1388,29 @@ app.post("/api/admin/table-load", async (c) => {
 // PROMOTE apply — the staging→prod direction (the reverse of table-load). Fired automatically by the
 // promote-config CI job when staging is merged to the prod branch, so config edited on staging
 // (mappings, personas, per-store settings, demo numbers, statuses) carries to prod with the deploy —
-// NO button. Admin-gated. CONFIG tables only (never call_results/accounts). Applied atomically inside
-// a transaction (no empty window). SAFETY FLOOR: refuses if the incoming set is <50% of what prod
-// already has, so a broken/empty staging can never wipe prod. Upsert-by-replace within the txn.
+// NO button. Admin-gated. CONFIG tables only (never call_results/accounts).
+//   mode "replace" (default): atomically wipe+insert the table. SAFETY FLOOR — refuses if the
+//     incoming `total` (whole set, across chunks) is <50% of what prod has, so a broken/empty staging
+//     can't wipe prod. Big tables (retailers) come chunked: chunk 0 = replace (carries `total`),
+//     then mode "append" adds the rest — Cloudflare caps a single POST body, so we can't send 100k
+//     rows at once.
+//   mode "append": insert without delete (no floor) — the continuation chunks of a replace.
 app.post("/api/admin/promote-apply", async (c) => {
   const b = await c.req.json().catch(() => ({}));
   const name = String(b.name || "");
+  const mode = b.mode === "append" ? "append" : "replace";
   const tbl = MIRROR_TABLES[name]; // config tables ONLY — state (calls/accounts) never promoted
   const rows: Record<string, unknown>[] | null = Array.isArray(b.rows) ? b.rows : null;
   if (!tbl || !rows) return c.json({ error: "name + rows[] required (config tables only)", tables: Object.keys(MIRROR_TABLES) }, 400);
+  if (mode === "append") {
+    for (let i = 0; i < rows.length; i += 500) await db.insert(tbl).values(rows.slice(i, i + 500) as never);
+    invalidateRefCache();
+    return c.json({ table: name, appended: rows.length });
+  }
   const existing = Number((await db.select({ n: sql<number>`count(*)` }).from(tbl))[0]?.n ?? 0);
-  if (existing > 0 && rows.length < existing * 0.5)
-    return c.json({ error: `refused: incoming ${rows.length} < 50% of existing ${existing} (safety floor)`, skipped: true }, 409);
+  const total = Number.isFinite(Number(b.total)) ? Number(b.total) : rows.length; // whole-set size (chunked)
+  if (existing > 0 && total < existing * 0.5)
+    return c.json({ error: `refused: incoming ${total} < 50% of existing ${existing} (safety floor)`, skipped: true }, 409);
   await db.transaction(async (tx) => {
     await tx.delete(tbl);
     for (let i = 0; i < rows.length; i += 500) await tx.insert(tbl).values(rows.slice(i, i + 500) as never);
