@@ -382,6 +382,22 @@ app.get("/og/:file", (c) => {
   } catch { return c.notFound(); }
 });
 // Brand logo images (transparent PNGs served to the per-vertical micro-sites).
+// PWA: service worker (scope "/" — must be served from root) + web app manifest.
+app.get("/sw.js", (c) => {
+  try {
+    const buf = readFileSync(join(here, "../public/sw.js"));
+    c.header("Cache-Control", "no-cache"); // always revalidate the SW so updates roll out
+    c.header("Service-Worker-Allowed", "/");
+    return c.body(buf, 200, { "Content-Type": "text/javascript; charset=utf-8" });
+  } catch { return c.notFound(); }
+});
+app.get("/manifest.webmanifest", (c) => {
+  try {
+    const buf = readFileSync(join(here, "../public/manifest.webmanifest"));
+    c.header("Cache-Control", "public, max-age=3600");
+    return c.body(buf, 200, { "Content-Type": "application/manifest+json; charset=utf-8" });
+  } catch { return c.notFound(); }
+});
 app.get("/logos/:file", (c) => {
   const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
   try {

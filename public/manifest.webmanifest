@@ -1,0 +1,13 @@
+{
+  "name": "Check It For Me",
+  "short_name": "Check",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0C0C12",
+  "theme_color": "#0C0C12",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/logos/check.png?v=1", "sizes": "any", "type": "image/png", "purpose": "any" }
+  ]
+}
