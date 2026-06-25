@@ -599,8 +599,17 @@ async function refreshChainLogoDb(): Promise<void> {
     chainLogoDbCache = m;
   } catch (e) { console.error("refreshChainLogoDb", e); }
 }
+let chainLogoDbLoading = false;
+// Lazy-load the DB-backed logo cache on first use (pure DB query, no file read) so logos resolve even if
+// the startup load didn't run in this container — prod resilience for the file-read anomaly.
+function ensureChainLogoDb(): void {
+  if (chainLogoDbCache.size || chainLogoDbLoading) return;
+  chainLogoDbLoading = true;
+  refreshChainLogoDb().finally(() => { chainLogoDbLoading = false; });
+}
 function chainLogoInfo(name: string | null | undefined): { url: string | null; wide: boolean; dark: boolean } {
   if (name) {
+    ensureChainLogoDb();
     const hit = chainLogoDbCache.get(name.toLowerCase()); // DB-first: shared-R2 URL travels across envs
     if (hit) return hit;
   }
@@ -615,14 +624,31 @@ function chainLogoInfo(name: string | null | undefined): { url: string | null; w
 // distributor's products. The config lives in code, so it's identical on every environment (Admin/
 // staging/prod) and a newly-imported store gets the right carries with zero per-store stamping. Same
 // shared-source idea as the R2 logo: derive from one source, never store a per-DB copy that can drift.
+// Inlined fallback = source of truth in code, so carries derive even when the deployed container can't
+// read data/distributors.json (a prod-image file-read anomaly seen after a staging→prod merge). The file
+// is still preferred when readable (keeps it the editable source); the inline keeps prod resilient.
+const DISTRIBUTORS_FALLBACK: { products: Record<string, string[]>; chains: Record<string, string[]> } = {
+  products: {
+    Excell: ["Pokemon TCG", "Disney Lorcana", "Magic: The Gathering", "One Piece TCG", "Yu-Gi-Oh", "Sports Cards (Topps/Panini)"],
+    Schylling: ["NeeDoh (Schylling)"],
+    Jazwares: ["Squishmallows"],
+  },
+  chains: {
+    "CVS": ["Excell", "Schylling", "Jazwares"],
+    "Walgreens": ["Excell", "Schylling", "Jazwares"],
+    "Target": ["Excell", "Schylling", "Jazwares"],
+    "Walmart": ["Excell", "Schylling", "Jazwares"],
+    "Barnes & Noble": ["Excell", "Schylling", "Jazwares"],
+  },
+};
 let distCache: { products: Record<string, string[]>; chains: Record<string, string[]> } | null = null;
 function distConfig(): { products: Record<string, string[]>; chains: Record<string, string[]> } {
   if (distCache) return distCache;
   try {
     const c = JSON.parse(readFileSync(join(here, "../data/distributors.json"), "utf8"));
     if (c && c.chains && Object.keys(c.chains).length) { distCache = c; return c; }
-  } catch { /* fall through — never cache the empty fallback so a transient miss self-heals next call */ }
-  return { products: {}, chains: {} };
+  } catch { /* file unreadable in this container — use the inlined fallback below */ }
+  return DISTRIBUTORS_FALLBACK; // never cache the fallback, so the file self-heals if it becomes readable
 }
 /** Products a chain carries, derived from its distributor(s). null = chain not mapped (fall back to the stored column). */
 function carriesForChain(name: string | null | undefined): string[] | null {
