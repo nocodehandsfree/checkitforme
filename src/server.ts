@@ -7,10 +7,9 @@ import { dirname, join } from "node:path";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
-import { createRemoteJWKSet, jwtVerify } from "jose";
 import { WebSocketServer, type WebSocket } from "ws";
 import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql } from "drizzle-orm";
-import { db } from "./db/client";
+import { db, client } from "./db/client";
 import {
   callResults, categories, chains, communityPosts, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, waitlist, watches, zones, zoneRetailers,
 } from "./db/schema";
@@ -22,6 +21,7 @@ import { importZonesData, geocodeMissing } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
+import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
 import { getPolicy, setPolicy, publicPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
@@ -80,7 +80,7 @@ async function ownerOnlyRetailerIds(): Promise<Set<number>> {
   const rows = await db.select({ id: retailers.id }).from(retailers).where(eq(retailers.ownerOnly, true));
   return new Set(rows.map((r) => r.id));
 }
-import { getAccount, getAccountByPhone, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, SUB, PACKS } from "./billing";
+import { getAccount, getAccountByPhone, phoneAccountExists, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, SUB, PACKS } from "./billing";
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
@@ -94,17 +94,19 @@ await bootstrap(); // apply migrations + seed catalog if empty
 const here = dirname(fileURLToPath(import.meta.url));
 const app = new Hono();
 
-// ---- Auth (Clerk) — gate the API on a valid Clerk session when enforced ----
-// The Clerk session JWT's issuer is the frontend API, derived from the publishable key.
-function clerkIssuer(pk: string): string | null {
-  try {
-    const host = Buffer.from(pk.split("_")[2], "base64").toString("utf8").replace(/\$+$/, "");
-    return host ? `https://${host}` : null;
-  } catch { return null; }
+// ---- Staging (STAGING=1) — a private replica, NOT password-walled ----
+// Staging used to sit behind an HTTP Basic / login-form gate, but it was constant friction (iOS
+// re-prompting) for no real benefit: you log in with your phone exactly like prod. So the gate is
+// gone — staging behaves like production (phone login gates account features). We only keep it out
+// of search results. Prod leaves STAGING unset, so this no-ops entirely.
+if (config.staging.on) {
+  app.use("*", async (c, next) => {
+    c.header("X-Robots-Tag", "noindex, nofollow"); // never index the preview, even if a crawler slips in
+    return next();
+  });
 }
-const issuer = clerkIssuer(config.clerk.publishableKey);
-const JWKS = issuer ? createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`)) : null;
 
+// ---- Auth — phone/SMS sessions only (Clerk fully removed). ----
 // Owner phones that double as admin login: signing into the consumer site with one of these ALSO
 // authenticates the operator dashboard (which runs on a sibling subdomain). Set ADMIN_PHONES on
 // Railway, comma-separated, e.g. "+13106662331,+14243126356".
@@ -122,24 +124,15 @@ function cookieRootDomain(host: string | undefined): string | undefined {
   return ".checkitforme.com";
 }
 
+// /api/* = the operator dashboard. Admin auth only: the x-admin-token header (server-to-server) or the
+// signed `admin_session` cookie minted by /admin-login. (Consumer endpoints live under /pub + /app.)
 app.use("/api/*", async (c, next) => {
-  if (!config.clerk.enforce || !issuer || !JWKS) return next(); // auth disabled
   if (c.req.path === "/api/health") return next();
-  // Admin key bypass for server-to-server store/zone management.
   if (config.adminToken && c.req.header("x-admin-token") === config.adminToken) return next();
-  // Clerk-free admin login: a signed `admin_session` cookie minted by /admin-login (token-gated).
-  // This is how the operator dashboard authenticates as Clerk is removed.
   const adminCookie = getCookie(c, "admin_session");
   if (adminCookie) { const s = await verifySession(adminCookie); if (s && s.id === "admin") return next(); }
-  const authz = c.req.header("authorization") ?? "";
-  const tok = authz.startsWith("Bearer ") ? authz.slice(7) : "";
-  if (!tok) return c.json({ error: "unauthorized" }, 401);
-  try {
-    const { payload } = await jwtVerify(tok, JWKS, { issuer });
-    const allow = config.clerk.allowedUserIds;
-    if (allow.length && !allow.includes(String(payload.sub))) return c.json({ error: "forbidden" }, 403);
-    return next();
-  } catch { return c.json({ error: "unauthorized" }, 401); }
+  if (!config.adminToken) return next(); // no admin token configured → open (dev only)
+  return c.json({ error: "unauthorized" }, 401);
 });
 
 // Clerk-free admin login: visit /admin-login?token=ADMIN_TOKEN once → sets a signed httpOnly
@@ -157,72 +150,20 @@ app.get("/admin-logout", (c) => {
   return c.redirect("/");
 });
 
-// Verify a Clerk session token from any signed-in user (Runnr customers, not just the owner allowlist).
+// Verify a signed-in customer from their phone-session token (our own JWT). `id` is the account key
+// (sub = "phone:+E164"); `phone` is carried in the token. Name kept for the many call-sites.
 async function verifyClerkToken(authHeader: string | undefined): Promise<{ id: string; email?: string; phone?: string } | null> {
   const tok = (authHeader || "").startsWith("Bearer ") ? (authHeader as string).slice(7) : "";
   if (!tok) return null;
-  // Our own phone-session first (the new Clerk-free auth). Falls back to Clerk during the cutover.
   const s = await verifySession(tok);
-  if (s) return { id: s.id, phone: s.phone };
-  if (!JWKS || !issuer) return null;
-  try {
-    const { payload } = await jwtVerify(tok, JWKS, { issuer });
-    return { id: String(payload.sub), email: payload.email as string | undefined };
-  } catch { return null; }
-}
-// The Clerk session token usually omits email, so comp/owner detection can't rely on it. This fetches
-// the user's VERIFIED primary email straight from Clerk by id (server-side, can't be spoofed by the
-// client) and caches it — the authoritative source for "is this a comp account".
-const clerkEmailCache = new Map<string, { t: number; e: string }>();
-async function clerkPrimaryEmail(id: string): Promise<string | undefined> {
-  const hit = clerkEmailCache.get(id);
-  if (hit && Date.now() - hit.t < 300_000) return hit.e || undefined;
-  const sk = process.env.CLERK_SECRET_KEY;
-  if (!sk || !id) return undefined;
-  try {
-    const r = await fetch(`https://api.clerk.com/v1/users/${id}`, { headers: { Authorization: `Bearer ${sk}` } });
-    if (!r.ok) return undefined;
-    const d = (await r.json()) as { primary_email_address_id?: string; email_addresses?: { id: string; email_address: string }[] };
-    const list = d.email_addresses || [];
-    const e = (list.find((x) => x.id === d.primary_email_address_id) || list[0])?.email_address;
-    if (e) clerkEmailCache.set(id, { t: Date.now(), e });
-    return e;
-  } catch { return undefined; }
-}
-// Phone-first identity: the verified primary phone straight from Clerk (server-side, can't be
-// spoofed by the client). Becomes the account's number + the default caller ID. Cached 5 min.
-const clerkPhoneCache = new Map<string, { t: number; p: string }>();
-async function clerkPrimaryPhone(id: string): Promise<string | undefined> {
-  const hit = clerkPhoneCache.get(id);
-  if (hit && Date.now() - hit.t < 300_000) return hit.p || undefined;
-  const sk = process.env.CLERK_SECRET_KEY;
-  if (!sk || !id) return undefined;
-  try {
-    const r = await fetch(`https://api.clerk.com/v1/users/${id}`, { headers: { Authorization: `Bearer ${sk}` } });
-    if (!r.ok) return undefined;
-    const d = (await r.json()) as { primary_phone_number_id?: string; phone_numbers?: { id: string; phone_number: string }[] };
-    const list = d.phone_numbers || [];
-    const p = (list.find((x) => x.id === d.primary_phone_number_id) || list[0])?.phone_number;
-    if (p) clerkPhoneCache.set(id, { t: Date.now(), p });
-    return p;
-  } catch { return undefined; }
+  return s ? { id: s.id, phone: s.phone } : null;
 }
 
 // ---- Pages ----
 // Operator dashboard at caller.* ; consumer "pay-per-check" app at runner.* (or /r preview).
-const page = (file: string) =>
-  readFileSync(join(here, `../public/${file}`), "utf8")
-    .replace(/__CLERK_PUBLISHABLE_KEY__/g, config.clerk.publishableKey)
-    .replace(/__CLERK_FRONTEND_API__/g, clerkFrontendApi(config.clerk.publishableKey));
-
-// The publishable key base64-encodes the frontend-API domain ("<domain>$"), so the Clerk JS
-// script URL always matches whichever application/instance the env key points at.
-function clerkFrontendApi(pk: string): string {
-  try {
-    const b64 = pk.replace(/^pk_(test|live)_/, "");
-    return Buffer.from(b64, "base64").toString("utf8").replace(/\$$/, "");
-  } catch { return "summary-hen-61.clerk.accounts.dev"; }
-}
+// Clerk fully removed — no __CLERK_* placeholders to inject; auth is phone-session (consumer) and the
+// admin_session cookie (operator dashboard).
+const page = (file: string) => readFileSync(join(here, `../public/${file}`), "utf8");
 const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 /** FAQ + HowTo structured data per vertical — Google rich-result eligibility for the PPC/SEO push. */
@@ -246,7 +187,7 @@ function seoGraph(brand: ReturnType<typeof resolveBrand>, plainName: string) {
 }
 
 /** Render the consumer page branded for a vertical micro-site (resolved from the subdomain). */
-function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string): string {
+function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html", tone = ""): string {
   const canonical = `https://${host}/`;
   const plainName = brand.name.replace(/<[^>]+>/g, "");
   const ogImage = `https://${host}/og/${brand.key}.png`;
@@ -255,7 +196,10 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string): str
     `<meta name="description" content="${esc(brand.desc)}">`,
     `<link rel="canonical" href="${canonical}">`,
     `<meta name="robots" content="index,follow,max-image-preview:large">`,
-    `<meta name="theme-color" content="#0C0C12">`,
+    // NB: NO theme-color here. The runner files own their own <meta name="theme-color" id="themeColor">
+    // and mutate it live to tint the iOS status bar to the verdict tone. Injecting a second theme-color
+    // makes WebKit honor THIS hardcoded-dark one and ignore the live one — that's the bug that kept the
+    // status bar black on every result. One theme-color in the document, JS-controlled, full stop.
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${esc(plainName)}">`,
     `<meta property="og:title" content="${esc(brand.title)}">`,
@@ -274,7 +218,14 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string): str
       ...seoGraph(brand, plainName),
     ] })}</script>`,
   ].join("\n");
-  return page("checkit.html")
+  // Status-bar tone baked into the LITERAL served HTML. iOS Safari tints the status bar from the
+  // theme-color value present at page load — a later JS change to it is unreliable (often ignored). So a
+  // result deep-link (?call=…&tone=in|out|unk|soon) gets the verdict colour written straight into the
+  // meta here, guaranteeing the bar is the right colour on a hard-refresh with no JS dependency.
+  const TONE: Record<string, string> = { in: "#266440", out: "#6b2427", unk: "#6c5419", soon: "#6e490f" };
+  const themeColor = (tone && TONE[tone]) || "#0C0C12";
+  return page(file)
+    .replace('content="#0C0C12" id="themeColor"', `content="${themeColor}" id="themeColor"`)
     .replace(/__BRAND_HEAD__/g, head)
     .replace(/__BRAND_JSON__/g, JSON.stringify({ key: brand.key, name: brand.name, category: brand.category, accent: brand.accent, accent2: brand.accent2 || brand.accent, logoUrl: brand.logoUrl || "", emoji: brand.emoji }))
     .replace(/__BRAND_LOGO__/g, brand.logo || `${brand.emoji} ${brand.name}`)
@@ -383,10 +334,27 @@ app.get("/", (c) => {
   const override = c.req.query("brand");
   const brand = resolveBrand(host, override);
   // Admin (caller.*) keeps app.html; every other host is a consumer micro-site (branded by subdomain).
-  const consumer = host.startsWith("runner.") || brand.key !== "runner" || !!override;
-  return c.html(consumer ? renderRunner(brand, host) : page("app.html"));
+  // On a STAGING preview the bare root defaults to the CONSUMER site (what we're reviewing) instead of
+  // the admin app — the staging host resolves to the default brand, which would otherwise show admin.
+  // Admin stays reachable on caller.*/admin.* hosts. Prod (STAGING unset) keeps its original logic.
+  const consumer = config.staging.on
+    ? (!(host.startsWith("caller.") || host.startsWith("admin.")) || !!override)
+    : (host.startsWith("runner.") || brand.key !== "runner" || !!override);
+  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "") : page("app.html"));
 });
-app.get("/r", (c) => { c.header("Cache-Control", "no-store"); return c.html(renderRunner(resolveBrand((c.req.header("host") || "").toLowerCase(), c.req.query("brand")), (c.req.header("host") || "").toLowerCase())); });
+app.get("/r", (c) => { c.header("Cache-Control", "no-store"); const h=(c.req.header("host") || "").toLowerCase(); return c.html(renderRunner(resolveBrand(h, c.req.query("brand")), h, "checkit.html", c.req.query("tone") || "")); });
+// Preview-only: the redesigned result/live UI served from checkit-demo.html, so the live
+// site keeps the current design while we evaluate the new one. /demo?brand=<slug> picks a vertical.
+app.get("/demo", (c) => {
+  c.header("Cache-Control", "no-store");
+  const host = (c.req.header("host") || "").toLowerCase();
+  return c.html(renderRunner(resolveBrand(host, c.req.query("brand") || "pokemon"), host, "checkit-demo.html"));
+});
+app.get("/demo/:slug", (c) => {
+  c.header("Cache-Control", "no-store");
+  const host = (c.req.header("host") || "").toLowerCase();
+  return c.html(renderRunner(resolveBrand(host, c.req.param("slug")), host, "checkit-demo.html"));
+});
 // Verticals as PATHS on the apex (checkitforme.com/pokemon, /onepiece, /toppsbasketball, /needoh) —
 // same brand resolution as the subdomains, keyed off the slug. This is what lets the product switcher
 // link to clean same-domain paths instead of subdomain hops.
@@ -394,7 +362,7 @@ for (const slug of ["pokemon", "onepiece", "toppsbasketball", "needoh"]) {
   app.get(`/${slug}`, (c) => {
     c.header("Cache-Control", "no-store");
     const host = (c.req.header("host") || "").toLowerCase();
-    return c.html(renderRunner(resolveBrand(host, slug), host));
+    return c.html(renderRunner(resolveBrand(host, slug), host, "checkit.html", c.req.query("tone") || ""));
   });
 }
 // Minimal "first-time visitor" preview of the apex homepage — same page; the client (body.peek)
@@ -438,6 +406,7 @@ app.get("/sitemap.xml", (c) => {
 // TwiML Twilio fetches when OUR bridge call connects: stream the call's audio to our WS.
 // Twilio's media stream is pinned to the direct Railway domain (verified WS path; avoids Cloudflare).
 const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
+const STAGING_HOST = "voice-caller-staging-production.up.railway.app"; // wsHost for simulated staging calls
 app.all("/twiml/bridge", (c) => {
   const room = c.req.query("room") || "";
   // Chain keypad shortcut (e.g. B&N "0@3"): send it as REAL carrier DTMF via <Play digits>
@@ -468,7 +437,7 @@ app.all("/twiml/bridge", (c) => {
       prev = at;
     }
   }
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${play}<Connect><Stream url="wss://${RAILWAY_HOST}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><Response>${play}<Connect><Stream url="wss://${config.staging.on ? STAGING_HOST : RAILWAY_HOST}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   return c.body(xml, 200, { "Content-Type": "text/xml" });
 });
 
@@ -494,7 +463,17 @@ app.post("/auth/phone/start", async (c) => {
   const e = authE164(String(phone || ""));
   if (!/^\+1\d{10}$/.test(e)) return c.json({ error: "us_number_required" }, 400); // US only for now
   const r = await startPhoneVerify(e);
-  return r.ok ? c.json({ ok: true }) : c.json({ error: r.error }, 400);
+  return r.ok ? c.json({ ok: true, dev: !!r.dev, devCode: r.devCode }) : c.json({ error: r.error }, 400);
+});
+// Read-only: is this number a returning account? Lets the login screen show "Welcome back" vs
+// "First check's on us" before they submit. Rate-limited (anti-enumeration); never creates an account.
+app.post("/auth/phone/known", async (c) => {
+  const rl = rlCheck("lead", clientIp(c.req.raw.headers), LIMITS.lead);
+  if (!rl.ok) return c.json({ error: "rate_limited" }, 429);
+  const { phone } = await c.req.json().catch(() => ({}));
+  const e = authE164(String(phone || ""));
+  if (!/^\+1\d{10}$/.test(e)) return c.json({ known: false });
+  return c.json({ known: await phoneAccountExists(e) });
 });
 // Step 2: confirm the code → find/create the phone account → issue our session token.
 app.post("/auth/phone/check", async (c) => {
@@ -1146,11 +1125,14 @@ app.get("/pub/finds", async (c) => {
   if (!pol.finds.publicFeed) return c.json([]);
   const cats = await categoryLabelMap();
   const stores = await retailerMap();
+  const ownerOnly = await ownerOnlyRetailerIds(); // Fun / MVP's etc. are rehearsal stores — never real finds
   // Headstart: a paid finder's result stays off the public feed for headstartMin minutes.
   const cutoff = Date.now() - pol.finds.headstartMin * 60_000;
   const rows = (await db.select().from(callResults)
     .where(and(eq(callResults.confirmed, true), eq(callResults.status, "completed")))
     .orderBy(desc(callResults.completedAt)).limit(60))
+    // Owner-only rehearsal stores (Fun, MVP's, …) are never genuine finds → keep them out of the banner.
+    .filter((r) => !ownerOnly.has(r.retailerId))
     // Privacy: never surface a find marked private (subscriber perk / paid privacy).
     .filter((r) => r.isPrivate !== true)
     // Headstart: only after the finder's lead time has elapsed.
@@ -1455,6 +1437,10 @@ app.post("/api/stores/flag", async (c) => {
 // read-only and works anywhere; load REPLACES a table and is staging-ONLY, so prod can never be
 // wiped by it. Used to make staging an exact data replica of prod (chains/retailers/catalog). ----
 const MIRROR_TABLES: Record<string, typeof retailers> = { categories: categories as never, chains: chains as never, products: products as never, retailers, statuses: statuses as never, kiosks: kiosks as never, settings: settingsTbl as never };
+// table-load is staging-only (403 on prod), so it may write a FEW extra tables that we deliberately
+// keep OUT of the public, unauthenticated table-dump above — e.g. call_results, used to seed the
+// staging finds ticker / in-stock badges from prod's already-public /pub/finds (no transcripts/PII).
+const LOAD_TABLES: Record<string, typeof retailers> = { ...MIRROR_TABLES, callResults: callResults as never };
 app.get("/api/admin/table-dump", async (c) => {
   const name = String(c.req.query("name") || "");
   const tbl = MIRROR_TABLES[name];
@@ -1468,13 +1454,35 @@ app.post("/api/admin/table-load", async (c) => {
   if (!config.staging.on) return c.json({ error: "table-load is staging-only (never wipes prod)" }, 403);
   const b = await c.req.json().catch(() => ({}));
   const name = String(b.name || "");
-  const tbl = MIRROR_TABLES[name];
+  const tbl = LOAD_TABLES[name];
   const rows: Record<string, unknown>[] | null = Array.isArray(b.rows) ? b.rows : null;
   if (!tbl || !rows) return c.json({ error: "name + rows[] required" }, 400);
   if (b.mode === "replace") await db.delete(tbl);
   for (let i = 0; i < rows.length; i += 500) await db.insert(tbl).values(rows.slice(i, i + 500) as never);
   invalidateRefCache();
   return c.json({ table: name, mode: b.mode || "append", inserted: rows.length });
+});
+// PROMOTE apply — the staging→prod direction (the reverse of table-load). Fired automatically by the
+// promote-config CI job when staging is merged to the prod branch, so config edited on staging
+// (mappings, personas, per-store settings, demo numbers, statuses) carries to prod with the deploy —
+// NO button. Admin-gated. CONFIG tables only (never call_results/accounts). Applied atomically inside
+// a transaction (no empty window). SAFETY FLOOR: refuses if the incoming set is <50% of what prod
+// already has, so a broken/empty staging can never wipe prod. Upsert-by-replace within the txn.
+app.post("/api/admin/promote-apply", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const name = String(b.name || "");
+  const tbl = MIRROR_TABLES[name]; // config tables ONLY — state (calls/accounts) never promoted
+  const rows: Record<string, unknown>[] | null = Array.isArray(b.rows) ? b.rows : null;
+  if (!tbl || !rows) return c.json({ error: "name + rows[] required (config tables only)", tables: Object.keys(MIRROR_TABLES) }, 400);
+  const existing = Number((await db.select({ n: sql<number>`count(*)` }).from(tbl))[0]?.n ?? 0);
+  if (existing > 0 && rows.length < existing * 0.5)
+    return c.json({ error: `refused: incoming ${rows.length} < 50% of existing ${existing} (safety floor)`, skipped: true }, 409);
+  await db.transaction(async (tx) => {
+    await tx.delete(tbl);
+    for (let i = 0; i < rows.length; i += 500) await tx.insert(tbl).values(rows.slice(i, i + 500) as never);
+  });
+  invalidateRefCache();
+  return c.json({ table: name, promoted: rows.length, prior: existing });
 });
 // Bulk display-name cleanup (Data Dev) in ONE DB pass:
 //  (0) hygiene: strip store numbers ("Burlington West Hills (#264)" -> "Burlington West Hills"),
@@ -1842,6 +1850,7 @@ app.post("/pub/check", async (c) => {
   if ((await pubCredits()) <= 0) return c.json({ error: "no_credits" }, 402);
   const { retailerId, categoryId, specificProduct, kioskMode } = b;
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
+  if (config.staging.on && !config.callsEnabled) return c.json(simStartCall()); // preview: simulated call, no real dial
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   try {
     const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, kioskMode });
@@ -1855,13 +1864,15 @@ app.post("/pub/check-live", async (c) => {
   const b = await c.req.json();
   const catIds = (Array.isArray(b.categoryIds) ? b.categoryIds : [b.categoryId]).map(Number).filter(Boolean);
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
+  if (config.staging.on && !config.callsEnabled) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
   const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, undefined, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
-  return c.json({ room: r.room, wsHost: RAILWAY_HOST });
+  return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
 });
 app.get("/pub/result/:cid", async (c) => {
   const cid = c.req.param("cid");
+  if (config.staging.on && isSimId(cid)) return c.json(simResult(cid)); // preview: simulated verdict
   const o = await provider.getConversation(cid);
   // Prefer the FINALIZED row once it exists — it carries the consensus verdict (the reconciled
   // status_key/confirmed) and the captured product detail, which the live outcome does not. While the
@@ -1883,6 +1894,7 @@ app.get("/pub/result/:cid", async (c) => {
 });
 // Live, mid-call transcript: returns whatever the agent + clerk have said SO FAR (no audio needed).
 app.get("/pub/live/:cid", async (c) => {
+  if (config.staging.on && isSimId(c.req.param("cid"))) return c.json(simLive(c.req.param("cid"))); // preview: simulated live transcript
   try {
     const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${c.req.param("cid")}`, { headers: { "xi-api-key": config.voice.apiKey } });
     if (!r.ok) return c.json({ live: true, status: "in_progress", transcript: "" });
@@ -1897,6 +1909,34 @@ app.post("/pub/charge", async (c) => {
   let bal = await pubCredits();
   if (cid && !charged.has(cid) && bal > 0) { charged.add(cid); bal -= 1; await setSetting("pub_credits", String(bal)); }
   return c.json({ balance: bal, charged: true });
+});
+// Human feedback on a call's verdict — what the answer ACTUALLY was, per the person who read the transcript.
+// Most valuable on the "no clear answer" verdicts; it's the labeled data we use to tune the consensus.
+app.post("/pub/feedback", async (c) => {
+  const rl = rlCheck("watch", clientIp(c.req.raw.headers), LIMITS.watch);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  const b = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  const cid = String(b.cid ?? "").slice(0, 128);
+  const verdict = String(b.verdict ?? "");
+  if (!cid || !["in", "out", "soon", "unsure"].includes(verdict)) return c.json({ error: "bad_request" }, 400);
+  const shown = String(b.shown ?? "").slice(0, 40);
+  try { await client.execute({ sql: "INSERT INTO call_feedback (cid, user_verdict, shown_status) VALUES (?, ?, ?)", args: [cid, verdict, shown] }); }
+  catch (e) { return c.json({ error: "store_failed" }, 500); }
+  return c.json({ ok: true });
+});
+// Admin: recent feedback joined with what we showed + the transcript — the review/training surface.
+app.get("/api/feedback", async (c) => {
+  const r = await client.execute(
+    `SELECT f.cid, f.user_verdict, f.shown_status, f.created_at, r.confirmed, r.status_key, r.transcript, r.summary
+     FROM call_feedback f LEFT JOIN call_results r ON r.provider_call_id = f.cid
+     ORDER BY f.created_at DESC LIMIT 200`);
+  // Flag the disagreements (where the human verdict contradicts what we showed) — the cases to learn from.
+  const rows = r.rows.map((x: Record<string, unknown>) => {
+    const uv = x.user_verdict, conf = x.confirmed == null ? null : Number(x.confirmed), shownIn = conf === 1, shownOut = conf === 0;
+    const disagree = (uv === "in" && !shownIn) || (uv === "out" && !shownOut);
+    return { ...x, disagree };
+  });
+  return c.json(rows);
 });
 app.post("/pub/translate", async (c) => {
   const { text, to } = await c.req.json();
@@ -1923,15 +1963,13 @@ app.post("/pub/translate", async (c) => {
 app.get("/app/me", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  // Verified email (token → Clerk API), never the client-passed one, decides comp/master.
-  const verifiedEmail = u.email || await clerkPrimaryEmail(u.id);
-  const a = await getAccount(u.id, verifiedEmail || c.req.query("email") || undefined);
-  const comp = isCompAccount(a) || isComp(verifiedEmail);
-  // Phone-first: capture the verified cell once and default the caller ID to it (Twilio
-  // verification before we actually dial AS it is Phase 2). Server-sourced, can't be spoofed.
-  if (a && !a.phone) {
-    const phone = await clerkPrimaryPhone(u.id);
-    if (phone) { await db.update(accounts).set({ phone }).where(eq(accounts.clerkUserId, u.id)); a.phone = phone; }
+  // getAccount maps the owner phone → master email, so comp/master resolves from the account itself.
+  const a = await getAccount(u.id, u.email || undefined);
+  const comp = isCompAccount(a) || isComp(u.email || undefined);
+  // Phone-first: store the verified cell straight from the session token (can't be spoofed) and default
+  // the caller ID to it.
+  if (a && !a.phone && u.phone) {
+    await db.update(accounts).set({ phone: u.phone }).where(eq(accounts.clerkUserId, u.id)); a.phone = u.phone;
   }
   return c.json({
     credits: comp ? 9999 : (a?.credits ?? 0), subscription: comp ? "active" : (a?.subscription ?? "none"),
@@ -1948,6 +1986,7 @@ app.post("/app/check", async (c) => {
   if (!u) return c.json({ error: "unauthorized" }, 401);
   const { retailerId, categoryId, specificProduct, kioskMode } = await c.req.json();
   if (!retailerId || !categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
+  if (config.staging.on && !config.callsEnabled) return c.json(simStartCall()); // preview: simulated call, no real dial
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
@@ -1965,6 +2004,7 @@ app.post("/app/check-live", async (c) => {
   const b = await c.req.json();
   const catIds = (Array.isArray(b.categoryIds) ? b.categoryIds : [b.categoryId]).map(Number).filter(Boolean);
   if (!b.retailerId || !catIds.length) return c.json({ error: "retailerId and categoryId(s) required" }, 400);
+  if (config.staging.on && !config.callsEnabled) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
@@ -1972,7 +2012,7 @@ app.post("/app/check-live", async (c) => {
   if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
   const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
-  return c.json({ room: r.room, wsHost: RAILWAY_HOST });
+  return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
 });
 // ---- Subscriber auto-checks (scheduled shipment-day calls) ----
 app.get("/app/schedules", async (c) => {
@@ -3032,7 +3072,7 @@ async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, str
   const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const pol = await getPolicy();
   setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? pol.flags.connectOnHuman, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds });
-  const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${RAILWAY_HOST}/twiml/bridge?room=${room}` });
+  const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${config.staging.on ? STAGING_HOST : RAILWAY_HOST}/twiml/bridge?room=${room}` });
   // Hard cost cap: Twilio kills the call at TimeLimit seconds, no exceptions — the profit guarantee.
   if (opts?.timeLimitSec && opts.timeLimitSec > 0) body.set("TimeLimit", String(Math.floor(opts.timeLimitSec)));
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls.json`, {
@@ -3109,7 +3149,11 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
   }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say });
 }
-app.get("/pub/bridge/:room", (c) => c.json({ conversationId: bridgeConversationId(c.req.param("room")), wsHost: RAILWAY_HOST }));
+app.get("/pub/bridge/:room", (c) => {
+  const room = c.req.param("room");
+  if (config.staging.on && isSimId(room)) return c.json({ conversationId: room, wsHost: STAGING_HOST }); // sim: room IS the conversation id
+  return c.json({ conversationId: bridgeConversationId(room), wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
+});
 app.get("/pub/bridge-debug", (c) => c.json({ log: bridgeDebug() }));
 app.post("/api/bridge/call", async (c) => {
   const b = await c.req.json();
@@ -3125,7 +3169,7 @@ app.post("/api/bridge/call", async (c) => {
     personality: "", opening_line: opener.replace(/\{category\}/g, category), other_categories: "", ask_shipment_day: "",
   }, undefined, b.dtmf || null, { connectOnHuman: b.connectOnHuman, connectAtSec: b.connectAtSec, timeLimitSec: b.timeLimitSec, say: b.say || null });
   if (r.error) return c.json({ error: r.error }, 502);
-  return c.json({ room: r.room, wsHost: RAILWAY_HOST });
+  return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
 });
 
 app.post("/api/ingest", async (c) => c.json({ finalized: await ingestPending() }));
@@ -3201,13 +3245,20 @@ const relayLine = (room: string, role: string, text: string) => {
   const msg = JSON.stringify({ line: { role, text } });
   for (const ws of set) if (ws.readyState === 1) ws.send(msg);
 };
+// Tell browser listeners the moment the bridge tears down (agent/clerk hung up) so the UI flips to
+// the result instantly instead of waiting on the next poll + ElevenLabs status lag.
+const relayEnd = (room: string) => {
+  const set = rooms.get(room); if (!set) return;
+  const msg = JSON.stringify({ ended: true });
+  for (const ws of set) if (ws.readyState === 1) ws.send(msg);
+};
 const wssTwilio = new WebSocketServer({ noServer: true });
 const wssListen = new WebSocketServer({ noServer: true });
 const wssBridge = new WebSocketServer({ noServer: true });
 
 // Full agent bridge: Twilio call audio <-> ElevenLabs ConvAI WS, forked to browser listeners.
 wssBridge.on("connection", (ws: WebSocket, _req: unknown, room: string) => {
-  handleTwilioBridge(ws, room, fanout, relayLine); // fanout(audio) + relayLine(live transcript) — bridge passes its resolved room
+  handleTwilioBridge(ws, room, fanout, relayLine, relayEnd); // fanout(audio) + relayLine(live transcript) + relayEnd(call-over) — bridge passes its resolved room
 });
 wssListen.on("connection", (ws: WebSocket, _req: unknown, room: string) => { if (room) addListener(room, ws); else bridgeLog("listen socket connected with NO room — audio cannot be routed"); });
 wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {

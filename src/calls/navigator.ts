@@ -4,6 +4,7 @@
 // It reaches a human, records the exact path + timing as a "recipe", then politely hangs up
 // (training mode). ElevenLabs/Sonnet is never used here: this IS "everything cheap until human".
 import { llm } from "../llm";
+import { config } from "../config";
 import { getSetting, setSetting } from "../db/settings";
 import { db } from "../db/client";
 import { chains } from "../db/schema";
@@ -293,6 +294,7 @@ async function recordConfirmAsked(chainId: number, retailerId: number): Promise<
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
 export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }): Promise<{ id?: string; error?: string }> {
+  if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";

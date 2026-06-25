@@ -19,6 +19,7 @@ async function seedStatuses() {
     ["does_not_sell", "🚫", "They don't carry it", "out", "#EF4444", "This store doesn't sell it at all — try a different store."],
     ["not_in_stock", "❌", "Not in stock", "out", "#EF4444", "They told us they don't have it right now."],
     ["no_clear_answer", "🤔", "Got a “maybe”", "unk", "#FBBF24", "A human answered but wouldn't commit. Their exact words are below — you make the call."],
+    ["too_busy", "🕗", "Store’s too busy", "unk", "#FBBF24", "They didn't say no, but they were too busy to check if {product} was in stock. Try back later."],
     ["nobody_answered", "📵", "Nobody answered", "unk", "#9CA3AF", "No one picked up — no charge. Try again in a bit."],
     ["voicemail", "📮", "Got their voicemail", "unk", "#9CA3AF", "We reached a recording, not a person — no charge."],
     ["busy", "📞", "Line was busy", "unk", "#9CA3AF", "Their line was busy — no charge. Try again shortly."],
@@ -194,6 +195,11 @@ export async function bootstrap() {
     seen_at INTEGER NOT NULL, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
   await client.execute("CREATE INDEX IF NOT EXISTS stock_signals_retailer_idx ON stock_signals(retailer_id, seen_at)").catch(() => {});
   await client.execute("CREATE INDEX IF NOT EXISTS stock_signals_chain_idx ON stock_signals(chain_id, seen_at)").catch(() => {});
+  // Human feedback on a call's verdict (esp. "no clear answer" ones) — labels we use to measure where the
+  // consensus is wrong and tune the second-read prompt/rules. Joins to call_results by cid.
+  await client.execute(`CREATE TABLE IF NOT EXISTS call_feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, cid TEXT NOT NULL, user_verdict TEXT NOT NULL,
+    shown_status TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
   await client.execute(`CREATE TABLE IF NOT EXISTS discord_channels (
     id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id TEXT NOT NULL UNIQUE, label TEXT, chain TEXT,
     category TEXT NOT NULL DEFAULT 'Pokémon', note TEXT, active INTEGER NOT NULL DEFAULT 1,
@@ -229,17 +235,20 @@ async function seedFunStore() {
     chain = (await db.select().from(chains).where(eq(chains.name, "Fungibles")))[0];
   }
   const hours = JSON.stringify({ mon: "24h", tue: "24h", wed: "24h", thu: "24h", fri: "24h", sat: "24h", sun: "24h" });
+  // Fun carries EVERY product so the owner can rehearse the flow for any vertical (not just Pokémon).
+  const cats = await db.select({ label: categories.label }).from(categories);
+  const carries = cats.map((c) => c.label).filter(Boolean).join(",") || "Pokémon";
   const existing = (await db.select().from(retailers).where(and(eq(retailers.name, "Fun"), eq(retailers.ownerOnly, true))))[0];
   if (existing) {
     await db.update(retailers)
-      .set({ chainId: chain?.id ?? null, phone, tier: 5, ownerOnly: true, active: true, lat: 34.1367, lng: -118.6618, hours })
+      .set({ chainId: chain?.id ?? null, phone, tier: 5, ownerOnly: true, active: true, lat: 34.1367, lng: -118.6618, hours, carries })
       .where(eq(retailers.id, existing.id));
   } else {
     await db.insert(retailers).values({
       chainId: chain?.id ?? null, name: "Fun", location: "Calabasas, CA", address: "123 Fun Lane",
       zip: "91302", lat: 34.1367, lng: -118.6618, phone, timezone: "America/Los_Angeles",
       state: "CA", region: "West Coast", tier: 5, ownerOnly: true, active: true, sellsPacks: true,
-      carries: "Pokémon", hours,
+      carries, hours,
     });
   }
 }

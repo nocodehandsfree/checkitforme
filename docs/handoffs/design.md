@@ -5,6 +5,22 @@ It maps every visual asset in the repo so you never hunt for a logo, image, or i
 
 ---
 
+## ▶ START HERE (fresh or resumed CD session)
+1. **Branch check — you MUST be on `claude/checkitforme-website-takeover-pagiis` (staging).**
+   You're on the right branch if `docs/brand/` has files **and** `public/logos/` has 100+ files.
+   If `docs/brand/` is empty or you see old logos, you're on `main`/prod — STOP and
+   `git checkout claude/checkitforme-website-takeover-pagiis`. (main is stale; never design from it.)
+2. **Live render to pull from:** `https://staging.checkitforme.com` — NOT `checkitforme.com` (prod).
+3. **The finished style guide lives at → `voice-caller/docs/design/STYLE_GUIDE.md`** (put any image
+   assets next to it in `docs/design/`). This is its single home.
+   - **Resuming?** If `docs/design/STYLE_GUIDE.md` exists, that's the prior session's work — read it
+     and continue from there. If it doesn't exist yet, build it per **§4** below.
+4. **Commit + push to the staging branch as you go** — never keep the guide only in chat memory, or
+   it's lost when the session ends. Then update §4's link.
+5. Owner approves before it's final.
+
+---
+
 ## 0. Brand source of truth
 - **`docs/brand/`** — the brand pack:
   - `CHECK_BRAND_STYLE_GUIDE.md` — the approved brand mark spec (mark geometry, colors, glow, clear space, do/don't). **This is canonical.**
@@ -37,7 +53,10 @@ It maps every visual asset in the repo so you never hunt for a logo, image, or i
 | Live style guide page | `public/style.html` → style.fungibles.com |
 | Status / system pages | `public/status.html`, `public/system.html` |
 
-## 3. Existing style/visual docs
+## 3. Style/visual docs — READ THE STYLE GUIDE FIRST
+- **`docs/design/STYLE_GUIDE.md` — the single visual source of truth (brand mark, color, type,
+  components, verdict tones, logo treatment, icons). READ THIS BEFORE DESIGNING.**
+  PDF version for sharing: **`docs/design/Check_Style_Guide.pdf`**.
 - `docs/design/ADMIN_STYLE_GUIDE.md` — admin UI patterns.
 - `docs/design/FONT_STYLE_GUIDE.md` — typography.
 - `docs/design/LOGO_RENDERING.md` → points to `docs/STORE_LOGOS.md`.
@@ -45,7 +64,17 @@ It maps every visual asset in the repo so you never hunt for a logo, image, or i
 
 ---
 
-## 4. Your task (style-guide build)
+## 4. Style-guide status
+**Built ✅ → `docs/design/STYLE_GUIDE.md`** (+ shareable `Check_Style_Guide.pdf`). Covers brand mark,
+color system, typography, components/buttons/cards, verdict tones, store-logo treatment, icon usage.
+
+- **⚠️ Pending owner (Fungie) approval — not final yet.**
+- **⚠️ Verify-against-live caveat:** the first draft was built from `docs/brand/CHECK_BRAND_STYLE_GUIDE.md`
+  + the in-repo `public/checkit.html`/`app.html`, **not** a live fetch of `staging.checkitforme.com`.
+  Do one pass against the live staging site before approval in case staging has drifted.
+- When you change live styles, update `STYLE_GUIDE.md` to match and **commit** (don't let it drift).
+
+## 5. Style-guide build steps (reference)
 1. Use `docs/brand/CHECK_BRAND_STYLE_GUIDE.md` as the brand foundation; pull live colors/components from `public/style.html`, `checkit.html`, `app.html`.
 2. Produce the **full style guide** (brand mark, color system, typography, components/buttons/cards, status pills, store-logo treatment, icon usage).
 3. Put the deliverable in **`docs/design/`** (e.g. `STYLE_GUIDE.md` + any assets).

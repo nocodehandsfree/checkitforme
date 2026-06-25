@@ -18,6 +18,7 @@ import type {
   VoiceProvider,
 } from "./provider";
 import { PREMIUM_FOLLOWUP, FREE_NO_FOLLOWUP } from "./prompts";
+import { assertCallsEnabled } from "../config";
 
 export interface ElevenLabsConfig {
   apiKey: string;
@@ -36,6 +37,7 @@ export class ElevenLabsProvider implements VoiceProvider {
   }
 
   async startCall(p: StartCallParams): Promise<StartCallResult> {
+    assertCallsEnabled(); // no real store calls on a UI-only preview deploy
     const res = await fetch(`${BASE}/twilio/outbound-call`, {
       method: "POST",
       headers: this.headers(),
@@ -198,6 +200,10 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
   const soldOut = /^(yes|true)/i.test(String(collected.sold_out?.value ?? "").trim());
   // "We don't carry that at all" — the store doesn't sell this category (distinct from out of stock).
   const doesNotSell = /^(yes|true)/i.test(String(collected.does_not_carry?.value ?? "").trim());
+  // "Too slammed to check" — they didn't refuse, they just couldn't look (busy / short-staffed / lone clerk).
+  // Primary signal is the structured field if the agent extracts one; the transcript heuristic below is the
+  // workhorse so this works across every agent without a per-agent schema change.
+  const tooBusyFlag = /^(yes|true)/i.test(String(collected.too_busy?.value ?? "").trim());
   let shipmentDay = String(collected.shipment_day?.value ?? "").trim() || null;
   // "If they mention a restock, it's a restock." Even when the structured field misses it, detect a
   // future-shipment mention in the clerk's words → surface it as a restock (drives the 🚚 "Restock
@@ -255,11 +261,19 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
     .map((t) => `${t.role === "agent" ? "Agent" : "Clerk"}: ${t.message}`)
     .join("\n");
 
-  // Sold out always means "not buyable now" — even if the extraction said yes to "arrived".
-  // Conservative on purpose: flip any yes to no rather than risk a false green that sends
-  // someone driving to a store with empty shelves. (The per-category descriptions also tell
-  // the agent "yes ONLY if buyable right now", so this is belt-and-suspenders.)
-  if (soldOut || doesNotSell) {
+  // Sold out / doesn't-carry normally means "not buyable now" — flip any yes to no (conservative: never a
+  // false green that sends someone to an empty shelf).
+  // EXCEPTION — self-contradiction: the clerk said BOTH "we have it" AND "sold out / don't carry it" in the
+  // same call (a confused or messing-around answer; EL extracts both flags at once). Forcing sold-out there
+  // is a CONFIDENT WRONG verdict, so instead drop to "no clear answer" and let the independent second read
+  // break the tie — that's exactly what the consensus is for.
+  let soldOutEff = soldOut, doesNotSellEff = doesNotSell;
+  const saidHas = confirmed === true || Object.values(categoryResults).some((v) => v === true);
+  if ((soldOut || doesNotSell) && saidHas) {
+    confirmed = null;
+    soldOutEff = false; doesNotSellEff = false;
+    for (const k of Object.keys(categoryResults)) if (categoryResults[k] === true) categoryResults[k] = null;
+  } else if (soldOut || doesNotSell) {
     confirmed = false;
     for (const k of Object.keys(categoryResults)) if (categoryResults[k] === true) categoryResults[k] = false;
   }
@@ -268,8 +282,8 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
   // The single customer-facing verdict key (rendered from the statuses registry).
   let statusKey: string;
   if (status === "completed") {
-    if (doesNotSell) statusKey = "does_not_sell";
-    else if (soldOut) statusKey = "sold_out";
+    if (doesNotSellEff) statusKey = "does_not_sell";
+    else if (soldOutEff) statusKey = "sold_out";
     else if (confirmed === true) statusKey = "in_stock";
     else if (confirmed === false) statusKey = "not_in_stock";
     else {
@@ -282,7 +296,13 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
       // before they came back with an answer. Distinct from "no clear answer" — it's a near-miss.
       const lastClerk = (d.transcript ?? []).filter((t) => t.role !== "agent" && t.message).map((t) => String(t.message).toLowerCase()).slice(-1)[0] || "";
       const onHold = /(hold on|hang on|one (sec|second|moment|minute)|let me (check|see|look|go (check|look|grab)|run (up|to|and check)|find out|ask)|bear with|give me a (sec|second|minute|moment)|i'?ll (check|go check|be right back)|checking (on|for) (that|you)|let me go)/.test(lastClerk);
-      statusKey = onHold ? "left_on_hold" : (asked ? "no_clear_answer" : "nobody_answered");
+      // "Too busy to check" — a human engaged but begged off because they're slammed / short-staffed /
+      // the only one there, and asked us to try later. Distinct from on-hold (they never went to look) and
+      // from no-clear-answer (they didn't waffle — they declined to check). Heuristic gated on `asked`.
+      const clerkAll = (d.transcript ?? []).filter((t) => t.role !== "agent" && t.message).map((t) => String(t.message)).join(" ");
+      const TOOBUSY = /\b(too busy|really busy|so busy|very busy|crazy busy|pretty busy|kind of busy|kinda busy|a (?:bit|little) busy|swamped|slammed|short[- ]?staffed|in the middle of|can'?t (?:check|look|help|get to|do that|right now)|don'?t have time|no time (?:right now|to)|only (?:one|person|me) (?:here|working)|by myself|on my own|i'?m (?:alone|the only one)|too much going on|call back (?:later|in a|in an)|try (?:back|again|us) (?:later|in a|in an|tomorrow))\b/i;
+      const tooBusy = tooBusyFlag || (asked && TOOBUSY.test(clerkAll));
+      statusKey = onHold ? "left_on_hold" : (tooBusy ? "too_busy" : (asked ? "no_clear_answer" : "nobody_answered"));
     }
   } else {
     statusKey = ({ no_answer: "nobody_answered", failed: "failed", closed: "closed" } as Record<string, string>)[status] ?? "nobody_answered";
@@ -297,8 +317,8 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
     callId: Number(vars.internal_call_id),
     providerCallId: d.conversation_id,
     confirmed,
-    soldOut,
-    doesNotSell,
+    soldOut: soldOutEff,
+    doesNotSell: doesNotSellEff,
     statusKey,
     categoryResults,
     shipmentDay,

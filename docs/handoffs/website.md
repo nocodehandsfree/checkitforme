@@ -26,6 +26,68 @@ consumer-page section of `src/server.ts`. If a push collides, `git pull --rebase
 for a gnarly conflict ping DevOps — don't redo your work blind.
 
 ## Current focus (KEEP UPDATED)
+
+### 🔴 ElevenLabs agent DECOUPLED staging↔prod (2026-06-23) — READ before promoting
+- Staging + prod used to share ONE EL agent (`agent_7501ktap…`), so agent tuning hit prod too.
+- **Staging now uses a CLONE** `agent_7301kvvbpy3afssvaqrte3bd6cj3` (Railway staging var `ELEVENLABS_AGENT_ID`),
+  tuned to stop background noise interrupting the agent: `speculative_turn=false`, `turn_eagerness=patient`,
+  `disable_first_message_interruptions=true`, filler `interruption_ignore_terms`; **tts.stability kept 0.40**.
+- **Prod still uses `agent_7501ktap…` (untuned).** This is an **ENV-VAR** difference, NOT code — promoting
+  `checkit.html` does NOT change which agent prod uses. When you like the staging voice behavior, either
+  apply the same PATCH to prod's agent, or point prod's `ELEVENLABS_AGENT_ID` at the clone. **Do not blindly
+  copy the staging agent id into prod via a code/merge step.**
+
+### 🟡 On staging, awaiting prod promotion (2026-06-24, checkit.html rev **names-r66**)
+Demo-polish batch on the staging branch; **not yet merged to prod.** Verify on `staging.checkitforme.com`.
+- **Login no longer auto-calls (r66):** logged-out `startCheck()` used to set `AUTH_PENDING=startCheck`, so
+  finishing sign-up auto-placed the call. Now it re-opens the call sheet (`AUTH_PENDING` → `showCallSheet()`),
+  so the user taps to call.
+- **Sign out → homepage (r66):** `doSignOut()` clears the session then `location.href='/'` (fresh load resets
+  all in-memory state) instead of staying on the current view.
+- **NeeDoh hero logo shrunk (r66):** landing hero sets `--logo-scale:.62` when `BRAND.category` is NeeDoh
+  (its wordmark rendered oversized at full `.heroart img` size).
+- **Spanish gaps filled (r66):** added 65 missing ES strings (login lead, call-sheet `cs.*`, feedback poll
+  `fbk.*`, live steps `live.s1–s8`, result terms `term.*`/`sub.*`, driver/handoff `ho.dv.*`/`ho.msg`). Site
+  i18n diff now clean except the dynamic `st.`/`stn.` prefixes (covered per-key).
+- **Location is already a manual step for new users:** boot only restores a *saved* location; with none,
+  the store list shows just a "Find my stores" button — no auto-prompt. (No change needed.)
+- **Agent voice tuning** (pacing/"drunk"/"haha"/restock-incoming) lives on the EL clone, not in this file —
+  see `docs/ops/AGENT_TUNING.md`; needs the Railway/EL key + a live listen to re-verify.
+
+### 🟡 On staging, awaiting prod promotion (2026-06-23, checkit.html rev **names-r53**)
+All on the staging branch; **not yet merged to prod.** Verify on `staging.checkitforme.com`, then promote.
+- **Instant hangup→result flip (r53):** re-added the `d.ended` WS end-signal so the page flips the moment the
+  call ends — but it does NOT `clearInterval(POLL)` (that POLL-clear was the old freeze); the POLL stays as a
+  safety net. `finalizeLive` now flips immediately and, if the verdict isn't ready, shows the streamed
+  conversation under a brief "Getting the answer…" card, then repaints with the verdict. `finalizeLive` is
+  idempotent — `saveCheckToHistory` dedupes by cid so a re-fire can't duplicate a call.
+- **Round-robin multi-call fully fixed (r53):** `CALL_GEN` is bumped at the TOP of `startCheckLive` (before the
+  confirm modal) and `reconcileVerdict` re-checks `CALL_GEN`/`RAIL_CID`/`NAV_VIEW` AFTER its network await — so
+  a previous call's background verdict poll can never repaint over a newly-started call.
+- **Live call rewrite → matched prod.** A staging-only `d.ended` WS handler that did `clearInterval(POLL)`
+  + a `LIVE_DONE` guard were freezing the call view until "Stop" was pressed. Reverted to prod's POLL-only
+  finalizer (the POLL clears itself; no second finalizer to fail). `finalizeLive` keeps a snappy 1s re-poll
+  + transcript fallbacks. **Same-device note:** iOS suspends the page's JS while you're on the call, so the
+  transcript can't animate *during* a same-phone call — physics, identical to prod; the after-call result
+  loads fast.
+- **Self-correcting verdict** (`reconcileVerdict`): finalize shows the provisional read, then upgrades the
+  on-screen verdict + saved history entry IN PLACE when the server consensus lands (e.g. "maybe" → IN STOCK).
+  Guarded by `CALL_GEN` so a NEW call cancels the previous call's poll (fixed a bug where the old result
+  repainted over a new call).
+- **Homepage speed:** finds banner cached in localStorage, painted instantly on return, refreshed in the
+  background (`/pub/finds` is ~3-5s **cold** on BOTH staging and prod — TiDB cold-start, not a staging
+  regression; homepage HTML itself is ~0.6s on both).
+- **Calendar yellow on login:** history primed right after auth so "call-made" days color immediately and
+  My-checks opens warm.
+- **Forward nav:** `popstate` now restores the call page going forward (was back-only).
+- **Clerk fully removed from the front-end** (admin `app.html` + server): zero Clerk network fetches; admin
+  gated by the `admin_session` cookie (`/admin-login?token=ADMIN_TOKEN`); boot fatals on missing
+  `ADMIN_TOKEN` instead of `CLERK_ENFORCE` (verified set on staging + prod).
+- **Consensus second-read prompt** (`src/voice/verdict.ts`) tuned to judge meaning/tone, so an unusually
+  phrased but clearly positive answer reads as YES instead of "unclear".
+- **OPEN (not code):** ElevenLabs agent **interruption/VAD sensitivity** — light background noise cut the
+  agent off mid-sentence (the "chipmunk"/restart). Needs EL-dashboard/API tuning, pending owner OK.
+
 - [x] ✅ **Result-page overhaul + i18n + calendar + "no green" + schedule modal** (shipped 2026-06-19 — full
   details in `docs/COMPLETED.md`). Verdict card (all-black, icon under logo), collapsed call recap with
   persisted per-step seconds, instant SWR result rendering, calendar shows every call-day, Spanish call

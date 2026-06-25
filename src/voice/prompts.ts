@@ -108,7 +108,7 @@ The instant you know yes or no, wrap in ONE line and end the call immediately �
  * ask one quick product-type question (and we capture the answer); free calls skip it and end fast.
  * Default for preview / admin / scheduled paths is the premium version.
  */
-export const PREMIUM_FOLLOWUP = `ask ONE short, easy follow-up to capture the detail, then END the call right away no matter what they say: "oh nice! is that booster packs or a tin — and any idea which set?" If they know, great; if they say "not sure," instantly "no worries — thank you so much, have a good one!" and END. Do NOT ask anything after that one follow-up; do NOT wait in silence.`;
+export const PREMIUM_FOLLOWUP = `If they ALREADY named the product type AND the set in their answer (e.g. "yeah, the Ascended Heroes tin", "just the 151 booster boxes"), you ALREADY have the detail — do NOT ask about it again. Just warmly acknowledge ("oh perfect — thank you so much!") and END the call. ONLY if a detail is genuinely still missing, ask ONE short follow-up for JUST the missing piece — if they only said "yeah we've got some," ask "oh nice! is that booster packs or a tin — and any idea which set?"; if they named the type but not the set, ask only the set (or the other way round). NEVER re-ask something they already told you. If they say "not sure," instantly "no worries — thank you so much, have a good one!" and END. Ask at most this one follow-up, then end_call — do NOT wait in silence.`;
 export const FREE_NO_FOLLOWUP = `warmly close right away — "perfect, thank you so much — have a good one!" — and END the call immediately. Do NOT ask any follow-up question, do NOT wait in silence.`;
 
 /** Tone descriptors injected as {{clarification}} for the two decision trees. */
@@ -122,7 +122,7 @@ export function specificityClause(specificProduct?: string): string {
 
 /** TTS / cadence defaults for the cloned voice. Editable via the dashboard sliders. */
 export const VOICE_DEFAULTS = {
-  speed: 0.90,      // <1 = slower, warmer; >1 = faster — calmer/less rushed for the demo (was 0.97)
+  speed: 0.98,      // ~natural cadence — crisp, not drawn-out. 0.90 stretched the words and sounded slow. <1 slower, >1 faster
   stability: 0.40,  // lower = more expressive/varied inflection; higher = flatter/steadier
   similarityBoost: 0.85,
   modelId: "eleven_turbo_v2",

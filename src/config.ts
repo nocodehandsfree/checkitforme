@@ -31,6 +31,23 @@ export const config = {
     allowedUserIds: (process.env.CLERK_ALLOWED_USER_IDS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
   },
   appUrl: process.env.APP_URL ?? "https://caller.fungibles.com",
+  // Staging/preview deploy: a password-walled clone of the live site for reviewing UX before it
+  // ships. `STAGING=1` turns on HTTP Basic auth + a noindex header so the preview is never public
+  // or search-indexed. Outbound calls/SMS are disabled by default on staging (see callsEnabled),
+  // so a preview can never place a real call or spend money — flip `STAGING_CALLS=1` later to
+  // exercise the real telephony path. Prod leaves STAGING unset → none of this engages.
+  staging: {
+    on: process.env.STAGING === "1",
+    user: process.env.STAGING_USER ?? "",
+    pass: process.env.STAGING_PASS ?? "",
+  },
+  // Outbound calling/SMS is live everywhere EXCEPT a staging deploy that hasn't opted in. This is
+  // the single switch every outbound-dial path checks (assertCallsEnabled / config.callsEnabled).
+  callsEnabled: process.env.STAGING === "1" ? process.env.STAGING_CALLS === "1" : true,
+  // SMS login codes cost money per text. Decoupled from callsEnabled so staging can run REAL calls
+  // (STAGING_CALLS=1) while STILL skipping real login texts (log in with STAGING_LOGIN_CODE instead).
+  // Prod always sends real SMS; staging only if you explicitly opt in with STAGING_SMS=1.
+  smsVerifyEnabled: process.env.STAGING === "1" ? process.env.STAGING_SMS === "1" : true,
   adminToken: process.env.ADMIN_TOKEN, // server-to-server admin key (bypasses Clerk for store/zone management)
   anthropicKey: process.env.ANTHROPIC_API_KEY, // powers the in-admin Claude agent (Admin dev assistant)
   openaiKey: process.env.OPENAI_API_KEY,        // alt brain for the admin agent (model switcher)
@@ -52,4 +69,12 @@ function req(name: string): string {
   const v = process.env[name];
   if (!v) throw new Error(`Missing required env var: ${name}`);
   return v;
+}
+
+/** Hard money-stop for every outbound-dial path. Throws when calls are disabled (e.g. a UI-only
+ *  staging preview) so a real call/SMS can never be placed by accident. Flip STAGING_CALLS=1 to lift. */
+export function assertCallsEnabled(): void {
+  if (!config.callsEnabled) {
+    throw new Error("calls_disabled: outbound calling is off on this (preview) deploy");
+  }
 }

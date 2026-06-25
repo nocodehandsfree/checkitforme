@@ -94,6 +94,13 @@ export async function getAccountByPhone(phone: string) {
   return row;
 }
 
+/** Read-only: does a phone-first account already exist? (Never creates one — used by the login screen
+ *  to show "Welcome back" vs "First check's on us" without registering the number.) */
+export async function phoneAccountExists(phone: string): Promise<boolean> {
+  const row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, `phone:${phone}`)))[0];
+  return !!row;
+}
+
 export async function chargeOneCredit(userId: string): Promise<boolean> {
   // Atomic guarded decrement: the WHERE credits>0 makes concurrent charges race-safe (no
   // read-then-write window, can never go negative). rowsAffected===1 ⇒ we actually charged.

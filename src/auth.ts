@@ -3,6 +3,7 @@
 // our DB, keyed by the phone. Built ALONGSIDE Clerk (the token verifier accepts either) so we can
 // cut over and remove Clerk once this is proven.
 import { SignJWT, jwtVerify } from "jose";
+import { config } from "./config";
 
 const enc = new TextEncoder();
 const secret = () => enc.encode(process.env.SESSION_SECRET || "dev-insecure-secret-change-me");
@@ -39,8 +40,14 @@ const twTok = () => process.env.TWILIO_AUTH_TOKEN;
 const twVerify = () => process.env.TWILIO_VERIFY_SERVICE_SID;
 const basic = () => "Basic " + Buffer.from(`${twSid()}:${twTok()}`).toString("base64");
 
+// Staging sign-up bypass: a fixed code that "verifies" any number WITHOUT sending a real SMS, so the
+// whole consumer flow (sign-up → logged-in UI) can be reviewed on a preview with zero telephony cost.
+// Only ever honored when STAGING=1; prod always uses real Twilio Verify.
+const STAGING_LOGIN_CODE = process.env.STAGING_LOGIN_CODE || "000000";
+
 /** Send an SMS verification code to the number (browser can auto-fill it via WebOTP). */
-export async function startPhoneVerify(phone: string): Promise<{ ok: boolean; error?: string }> {
+export async function startPhoneVerify(phone: string): Promise<{ ok: boolean; error?: string; dev?: boolean; devCode?: string }> {
+  if (config.staging.on && !config.smsVerifyEnabled) return { ok: true, dev: true, devCode: STAGING_LOGIN_CODE }; // staging: skip the real (paid) SMS; log in with STAGING_LOGIN_CODE. Flip STAGING_SMS=1 to send real texts like prod.
   const vsid = twVerify();
   if (!vsid || !twSid()) return { ok: false, error: "verify_not_configured" };
   const r = await fetch(`https://verify.twilio.com/v2/Services/${vsid}/Verifications`, {
@@ -52,6 +59,7 @@ export async function startPhoneVerify(phone: string): Promise<{ ok: boolean; er
 }
 /** Confirm the SMS code. true = the number is verified. */
 export async function checkPhoneVerify(phone: string, code: string): Promise<boolean> {
+  if (config.staging.on && !config.smsVerifyEnabled) return code === STAGING_LOGIN_CODE; // staging: accept the fixed code (no real SMS was sent). Flip STAGING_SMS=1 to verify a real texted code like prod.
   const vsid = twVerify();
   if (!vsid) return false;
   const r = await fetch(`https://verify.twilio.com/v2/Services/${vsid}/VerificationCheck`, {
@@ -67,6 +75,7 @@ export async function checkPhoneVerify(phone: string, code: string): Promise<boo
 /** Kick off Twilio's caller-ID verification call; returns the code to show the user (they key it
  *  in when Twilio calls them). This is the ONLY way to use an unowned number as caller ID. */
 export async function startCallerIdVerify(phone: string): Promise<{ ok: boolean; validationCode?: string; error?: string }> {
+  if (!config.callsEnabled) return { ok: false, error: "calls_disabled_preview" }; // no real verification call on a UI-only preview
   const sid = twSid();
   if (!sid) return { ok: false, error: "twilio_not_configured" };
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/OutgoingCallerIds.json`, {
