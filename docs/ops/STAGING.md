@@ -27,6 +27,21 @@ change **before** it touches live. This exists because we kept breaking prod wit
 Do **not** push UI/behavior straight to prod. (Tiny prod-only infra/data fixes that staging can't
 show are the only exception — use judgment.)
 
+### Data carries with the deploy — automatically, NO button (`promote.yml`)
+Code ships via the branch merge above. **Config DATA ships with it too, on its own.** When the prod
+branch is pushed (step 3), the `Promote config staging → prod` Action (`.github/workflows/promote.yml`)
+fires and copies the **config tables** (chains/mappings/personas/per-store settings/demo numbers,
+retailers, categories, products, statuses, kiosks) **+ the ElevenLabs restock persona** from staging
+into prod. So whatever you set up + verified on staging is what prod gets — no separate step.
+
+- **What carries:** everything the Admin edits (config). **What never carries:** prod's live state
+  (call results, accounts) — those stay per-environment.
+- **Safety:** prod-side apply (`/api/admin/promote-apply`) is atomic and **refuses any table that would
+  shrink prod by >50%**, so a broken/empty staging can never wipe prod.
+- **THE ONE RULE that makes this work — config has ONE source: staging.** Do all authoring (mappings,
+  personas, statuses, store settings, demo numbers) on the **staging** Admin. The **prod Admin is
+  read-only** for config — edit it there and the next promote will overwrite your edit from staging.
+
 ## What is allowed to differ between the branches
 
 Keep **`public/checkit.html` byte-identical** between staging and prod — verify anytime with:

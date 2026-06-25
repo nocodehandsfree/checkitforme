@@ -1356,6 +1356,28 @@ app.post("/api/admin/table-load", async (c) => {
   invalidateRefCache();
   return c.json({ table: name, mode: b.mode || "append", inserted: rows.length });
 });
+// PROMOTE apply — the staging→prod direction (the reverse of table-load). Fired automatically by the
+// promote-config CI job when staging is merged to the prod branch, so config edited on staging
+// (mappings, personas, per-store settings, demo numbers, statuses) carries to prod with the deploy —
+// NO button. Admin-gated. CONFIG tables only (never call_results/accounts). Applied atomically inside
+// a transaction (no empty window). SAFETY FLOOR: refuses if the incoming set is <50% of what prod
+// already has, so a broken/empty staging can never wipe prod. Upsert-by-replace within the txn.
+app.post("/api/admin/promote-apply", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const name = String(b.name || "");
+  const tbl = MIRROR_TABLES[name]; // config tables ONLY — state (calls/accounts) never promoted
+  const rows: Record<string, unknown>[] | null = Array.isArray(b.rows) ? b.rows : null;
+  if (!tbl || !rows) return c.json({ error: "name + rows[] required (config tables only)", tables: Object.keys(MIRROR_TABLES) }, 400);
+  const existing = Number((await db.select({ n: sql<number>`count(*)` }).from(tbl))[0]?.n ?? 0);
+  if (existing > 0 && rows.length < existing * 0.5)
+    return c.json({ error: `refused: incoming ${rows.length} < 50% of existing ${existing} (safety floor)`, skipped: true }, 409);
+  await db.transaction(async (tx) => {
+    await tx.delete(tbl);
+    for (let i = 0; i < rows.length; i += 500) await tx.insert(tbl).values(rows.slice(i, i + 500) as never);
+  });
+  invalidateRefCache();
+  return c.json({ table: name, promoted: rows.length, prior: existing });
+});
 // Bulk display-name cleanup (Data Dev) in ONE DB pass:
 //  (0) hygiene: strip store numbers ("Burlington West Hills (#264)" -> "Burlington West Hills"),
 //      Title-Case all-caps streets ("NORTH DEMAREE STREET" -> "North Demaree Street"), and rebuild
