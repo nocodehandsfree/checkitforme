@@ -878,7 +878,7 @@ app.get("/pub/stores/near", async (c) => {
     .map((r) => {
       const miles = hasLoc && r.lat != null && r.lng != null ? Math.round(haversineMi(lat, lng, r.lat, r.lng) * 10) / 10 : null;
       const chainName = (r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0];
-      return { id: r.id, name: r.name, location: r.location, address: r.address || null, storeType: (r.chainId && types.get(r.chainId)) || "Other",
+      return { id: r.id, chainId: r.chainId, name: r.name, location: r.location, address: r.address || null, storeType: (r.chainId && types.get(r.chainId)) || "Other",
         ...((l) => ({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo(chainName)),
         carries: storeCarriesList(chainName, r.carries),
         lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
@@ -898,8 +898,22 @@ app.get("/pub/stores/near", async (c) => {
   // Owner-only stores are pinned into the response (never lost to the distance sort + page limit),
   // so the owner always gets the "Fun" store no matter how far away they are.
   const owned = all.filter((r) => r.ownerOnly);
-  const rest = all.filter((r) => !r.ownerOnly);
-  return c.json({ total: all.length, offset, limit, stores: [...owned, ...rest.slice(offset, offset + limit)] });
+  // Pin the NEAREST store of each tier-5 ("green group") chain so a far green-group store always
+  // surfaces. In a dense metro a 20-mile radius can hold 400+ stores (200+ of them tier-5); the page
+  // limit then drops a sparse, far chain like Dollar General (its nearest store sat ~19mi out, past
+  // the cut) even though it's in range. `all` is distance-sorted + radius-filtered, so the first store
+  // seen per chainId is its nearest. Pinned once, on the first page only (offset 0), to avoid dupes.
+  const nearestT5: typeof all = [];
+  if (offset === 0) {
+    const seen = new Set<number>();
+    for (const r of all) {
+      if (r.ownerOnly || r.tier !== 5 || r.chainId == null || seen.has(r.chainId)) continue;
+      seen.add(r.chainId); nearestT5.push(r);
+    }
+  }
+  const pinIds = new Set([...owned, ...nearestT5].map((r) => r.id));
+  const rest = all.filter((r) => !r.ownerOnly && !pinIds.has(r.id));
+  return c.json({ total: all.length, offset, limit, stores: [...owned, ...nearestT5, ...rest.slice(offset, offset + limit)] });
 });
 
 // Master/dev location override: resolve a ZIP (or free-text "city, ST") to a lat/lng using OUR OWN
