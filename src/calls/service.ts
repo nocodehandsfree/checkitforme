@@ -871,7 +871,9 @@ export async function retailersWithStatus(opts: { q?: string; state?: string; li
   if (opts.online) conds.push(eq(retailers.online, true));
   if (opts.chainId) conds.push(eq(retailers.chainId, opts.chainId));
   if (opts.type) {
-    const cs = await db.select({ id: chains.id }).from(chains).where(eq(chains.type, opts.type));
+    // Multi-select: `type` may be a comma-separated list (e.g. "Discount,Pharmacy") — match any of them.
+    const types = opts.type.split(",").map((t) => t.trim()).filter(Boolean);
+    const cs = await db.select({ id: chains.id }).from(chains).where(types.length === 1 ? eq(chains.type, types[0]) : inArray(chains.type, types));
     const ids = cs.map((c) => c.id);
     if (!ids.length) return [];
     conds.push(inArray(retailers.chainId, ids) as ReturnType<typeof eq>);

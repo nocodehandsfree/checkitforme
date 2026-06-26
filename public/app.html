@@ -222,6 +222,17 @@
   .lvx{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--surface-2);color:#9a9aac;font-size:15px;display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
   .lvbody{max-height:46vh;overflow:auto}
   .lvbody .chat{margin-top:0}
+  /* multi-select store-type filter (check several at once) */
+  .msel{position:relative;flex:1;min-width:158px}
+  .msel-btn{display:flex;width:100%;align-items:center;justify-content:space-between;gap:7px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:#dcdce6;padding:8px 11px;font:600 13px Inter;cursor:pointer;white-space:nowrap}
+  .msel-btn #ftype_lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .msel-car{color:#56566a;font-size:10px;flex:0 0 auto}
+  .msel-menu{display:none;position:absolute;z-index:60;top:calc(100% + 5px);left:0;width:230px;max-height:300px;overflow:auto;background:var(--sheet);border:1px solid var(--border);border-radius:11px;padding:6px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
+  .msel-menu.open{display:block}
+  .msel-opt{display:block;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13.5px;color:#e9e9f2;white-space:nowrap;line-height:1.3}
+  .msel-opt:hover{background:var(--surface-2)}
+  .msel-opt input{width:15px;height:15px;vertical-align:-2px;margin:0 9px 0 0;accent-color:var(--green)}
+  .msel-clear{display:block;width:100%;text-align:left;padding:8px 9px;margin-top:5px;border:none;border-top:1px solid var(--border);color:var(--muted);font:600 12px Inter;background:none;cursor:pointer}
   .sracts{display:flex;gap:9px;align-items:center;margin-top:13px}
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
@@ -524,7 +535,7 @@
     <h2>Search stores</h2>
     <div class="filters">
       <input id="f_search" placeholder="Search name, city, ZIP — or just pick a filter…" oninput="onAdminSearch()">
-      <select id="f_type" onchange="loadRetailers()"><option value="">All types</option></select>
+      <div class="msel" id="ftype_wrap"><button type="button" class="msel-btn" id="ftype_btn" onclick="ftypeToggle(event)"><span id="ftype_lbl">All types</span><span class="msel-car">▾</span></button><div class="msel-menu" id="ftype_menu"></div></div>
       <select id="f_region" onchange="loadRetailers()"><option value="">All regions</option></select>
       <select id="f_zone" onchange="onStoreFilter()"><option value="">All zones</option></select>
       <select id="f_carries" onchange="loadRetailers()"><option value="">Any product</option></select>
@@ -1636,7 +1647,7 @@ async function vsClone(){
 }
 
 // --- Field persistence (remember what you typed across refresh) ---
-const PERSIST=['lab_phone','lab_name','lab_personality','sim_store','sim_cat','sim_mode','sim_tree','sim_specific','sim_phone','s_name','s_cat','s_mode','s_time','s_q','s_clar','r_name','r_phone','r_loc','r_tz','r_tree','f_search','f_type','f_zone','f_carries','f_status','f_sort'];
+const PERSIST=['lab_phone','lab_name','lab_personality','sim_store','sim_cat','sim_mode','sim_tree','sim_specific','sim_phone','s_name','s_cat','s_mode','s_time','s_q','s_clar','r_name','r_phone','r_loc','r_tz','r_tree','f_search','f_zone','f_carries','f_status','f_sort'];
 function saveDays(){ localStorage.setItem('fld_s_days', [...document.querySelectorAll('#s_days input:checked')].map(c=>c.value).join(',')); }
 function restorePersist(){
   PERSIST.forEach(id=>{ const el=document.getElementById(id); const val=localStorage.getItem('fld_'+id); if(el && val!==null) el.value=val; });
@@ -1697,18 +1708,33 @@ function bubbles(t){
 let RETAILERS=[];
 let ADMIN_SEARCH_T=null;
 function onAdminSearch(){ clearTimeout(ADMIN_SEARCH_T); ADMIN_SEARCH_T=setTimeout(loadRetailers,250); }
+// Store-type filter is MULTI-select — check several at once (e.g. Discount + Pharmacy together).
+let TYPE_SEL=new Set();
+function fillTypeFilter(types){
+  const menu=document.getElementById('ftype_menu'); if(!menu) return;
+  [...TYPE_SEL].forEach(t=>{ if(!types.includes(t)) TYPE_SEL.delete(t); });   // drop picks no longer offered
+  menu.innerHTML=types.length
+    ? types.map(t=>`<label class="msel-opt"><input type="checkbox" value="${esch(t)}"${TYPE_SEL.has(t)?' checked':''} onchange="ftypePick(this)">${esch(t)}</label>`).join('')+`<button type="button" class="msel-clear" onclick="ftypeClear(event)">Clear types</button>`
+    : '<div class="meta" style="padding:8px">No types</div>';
+  ftypeLabel();
+}
+function ftypeToggle(e){ if(e)e.stopPropagation(); const m=document.getElementById('ftype_menu'); if(m) m.classList.toggle('open'); }
+function ftypePick(cb){ if(cb.checked) TYPE_SEL.add(cb.value); else TYPE_SEL.delete(cb.value); ftypeLabel(); loadRetailers(); }
+function ftypeClear(e){ if(e)e.stopPropagation(); TYPE_SEL.clear(); document.querySelectorAll('#ftype_menu input').forEach(i=>i.checked=false); ftypeLabel(); loadRetailers(); }
+function ftypeLabel(){ const l=document.getElementById('ftype_lbl'); if(!l) return; const n=TYPE_SEL.size; l.textContent=n===0?'All types':n===1?[...TYPE_SEL][0]:n+' types'; }
+document.addEventListener('click',e=>{ const w=document.getElementById('ftype_wrap'), m=document.getElementById('ftype_menu'); if(m&&m.classList.contains('open')&&w&&!w.contains(e.target)) m.classList.remove('open'); });
 async function loadRetailers(){
   STORE_PAGE=0;
   const q=(document.getElementById('f_search')?.value||'').trim();
-  const type=document.getElementById('f_type')?.value||'', region=document.getElementById('f_region')?.value||'';
+  const types=[...TYPE_SEL];
+  const region=document.getElementById('f_region')?.value||'';
   const carries=document.getElementById('f_carries')?.value||'', status=document.getElementById('f_status')?.value||'';
-  // Filter-first: a text search (2+ chars) OR a Type/Region/Product/Online pick pulls stores from the
-  // full DB server-side (capped). Other statuses + sort + zone refine the result client-side.
-  const wantServer = q.length>=2 || type || region || carries || status==='online';
-  if(!wantServer){ RETAILERS=[]; SEL.clear(); const el=document.getElementById('retailerList'); if(el) el.innerHTML=''; const bb=document.getElementById('bulkbar'); if(bb) bb.style.display='none'; return; }
+  // Always load: landing on the page with no filter shows the first page of stores (server returns them
+  // newest-first, capped). Any filter — text, one or more Types, Region, Product, Online — narrows it
+  // server-side; the rest (status, sort, zone) refine client-side.
   const p=new URLSearchParams();
   if(q.length>=2) p.set('q',q);
-  if(type) p.set('type',type);
+  if(types.length) p.set('type',types.join(','));   // multi-select: comma-separated store types
   if(region) p.set('region',region);
   if(carries) p.set('carries',carries);
   if(status==='online') p.set('online','1');
@@ -1757,7 +1783,7 @@ async function loadStoreIntel(){
         +`<div class="carrygrid">`+items.map(([p,n])=>`<div class="carryrow"><span>${prodMark(p,16)} ${esch(p)}</span><b>${fmt(n)}</b></div>`).join('')+`</div>`;
     } else cw.style.display='none'; }
   // Fill the store-type filter from the full chain-type list, and the product filter from the carry list.
-  if(Array.isArray(d.types)&&d.types.length) fillOptions('f_type', d.types, 'All types');
+  if(Array.isArray(d.types)&&d.types.length) fillTypeFilter(d.types);
   if(items.length) fillOptions('f_carries', items.map(([p])=>p), 'Any product');
   fillOptions('f_region', ['West Coast','Northwest','Southwest','Midwest','Southeast','Northeast'], 'All regions');
   // Reports — stores by type, top regions, most-checked stores.
@@ -1810,7 +1836,7 @@ function activeStoreFilters(){
   const g=id=>document.getElementById(id)?.value||'';
   const out=[];
   if(g('f_search').trim()) out.push('“'+g('f_search').trim()+'”');
-  if(g('f_type')) out.push('Type: '+g('f_type'));
+  if(TYPE_SEL.size) out.push('Type: '+[...TYPE_SEL].join(', '));
   if(g('f_region')) out.push('Region: '+g('f_region'));
   if(g('f_zone')) out.push('Zone: '+g('f_zone'));
   if(g('f_carries')) out.push('Product: '+g('f_carries'));
@@ -1818,18 +1844,19 @@ function activeStoreFilters(){
   return out;
 }
 function clearStoreFilters(){
-  ['f_search','f_type','f_region','f_zone','f_carries','f_status'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; localStorage.removeItem('fld_'+id); });
+  ['f_search','f_region','f_zone','f_carries','f_status'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; localStorage.removeItem('fld_'+id); });
+  TYPE_SEL.clear(); const tm=document.getElementById('ftype_menu'); if(tm) tm.querySelectorAll('input').forEach(i=>i.checked=false); ftypeLabel();
   const so=document.getElementById('f_sort'); if(so) so.value='rel';
   loadRetailers();
 }
 function filteredRetailers(){
   const q=(document.getElementById('f_search')?.value||'').toLowerCase().trim();
-  const ft=document.getElementById('f_type')?.value||'', fz=document.getElementById('f_zone')?.value||'', fr=document.getElementById('f_region')?.value||'';
+  const fz=document.getElementById('f_zone')?.value||'', fr=document.getElementById('f_region')?.value||'';
   const fc=(document.getElementById('f_carries')?.value||'').toLowerCase(), fs=document.getElementById('f_status')?.value||'';
   const muted=mutedChainIds();
   let rs=RETAILERS.filter(r=>{
     if(q && !((r.name||'').toLowerCase().includes(q) || (r.location||'').toLowerCase().includes(q) || (r.region||'').toLowerCase().includes(q) || (r.state||'').toLowerCase()===q)) return false;
-    if(ft && r.storeType!==ft) return false;
+    if(TYPE_SEL.size && !TYPE_SEL.has(r.storeType)) return false;
     if(fr && r.region!==fr) return false;
     if(fz && !(r.zones||[]).includes(fz)) return false;
     if(fc && !((r.carries||'').toLowerCase().includes(fc))) return false;
@@ -1948,21 +1975,22 @@ let SC_POLL=null, SC_CLOCK=null;  // one live store-call view at a time
 function storeTap(id, ev){
   const st=STORE_TAP[id]||{};
   if(st.recall||st.calling) return;                 // recall / live views own their own buttons
-  if(!st.armed){ st.armed=true; STORE_TAP[id]=st; setArmed(id,true); return; }   // collapsed → expand (show details)
-  // Expanded: a single tap calls, a double-tap closes. Wait one tap-window to tell them apart.
-  if(st.tapTimer){                                  // 2nd tap inside the window → double-tap → close the box
-    clearTimeout(st.tapTimer); st.tapTimer=null; st.armed=false; STORE_TAP[id]=st;
+  if(!st.armed){ st.armed=true; STORE_TAP[id]=st; setArmed(id,true); return; }   // 1st tap → expand (show details)
+  // Expanded: two quick taps CLOSE the box; one deliberate tap CALLS. Wait the double-tap window to tell
+  // them apart — the window is generous (450ms) so a slightly-slow double-tap still closes, not calls.
+  if(st.tapTimer){                                  // 2nd tap arrived in time → double-tap → CLOSE
+    clearTimeout(st.tapTimer); st.tapTimer=0; st.armed=false; st.recall=false; STORE_TAP[id]=st;
     setArmed(id,false); const box=document.getElementById('stclive_'+id); if(box) box.innerHTML='';
     return;
   }
-  st.tapTimer=setTimeout(()=>{                       // no 2nd tap → single tap → call the store
-    const s=STORE_TAP[id]||{}; s.tapTimer=null; STORE_TAP[id]=s;
+  st.tapTimer=setTimeout(()=>{                       // no 2nd tap within the window → single tap → CALL
+    const s=STORE_TAP[id]||{}; s.tapTimer=0; STORE_TAP[id]=s;
     if(s.recall||s.calling||!s.armed) return;
     const r=RETAILERS.find(x=>x.id===id); if(!r) return;
     const os=r.openState||{}; if(os.known && !os.open){ toast('🔒 Closed — no call placed'); return; }
     const lc=r.lastCall, recent=lc&&lc.startedAt&&(Date.now()/1000-lc.startedAt)<86400;
     if(recent) openRecall(id,r); else placeStoreCall(id);
-  }, 280);
+  }, 450);
   STORE_TAP[id]=st;
 }
 function setArmed(id,on){ const c=document.getElementById('stc_'+id); if(c) c.classList.toggle('armed',on); }
