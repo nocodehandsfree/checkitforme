@@ -23,7 +23,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r83" />
+<meta name="x-rev" content="names-r84" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -1688,6 +1688,7 @@ const I18N={ es:{
   'fbk.q':'¿Puedes deducirlo de la conversación de abajo? ¿Qué opinas?',
   'fbk.thanks':'Gracias — esto entrena nuestras verificaciones para afinar más.',
   'hist.today.cta':'Verificar una tienda','hist.today.none':'Sin verificaciones hoy',
+  'hist.signin.title':'Inicia sesión para ver tus verificaciones','hist.signin.sub':'Tus verificaciones anteriores están guardadas en tu cuenta.','hist.signin.cta':'Iniciar sesión',
   'hist.today.sub':'Selecciona un día abajo para ver tus verificaciones anteriores.','hist.today.sub0':'Selecciona un día abajo para ver tus verificaciones anteriores.',
   'live.s1':'Llamando a la tienda…','live.s2':'Está timbrando…','live.s3':'Conectamos','live.s4':'Escuchando el menú…','live.s5':'Navegando el menú…','live.s6':'Transferido al mostrador','live.s7':'Contestó una persona','live.s8':'Preguntando por {p}',
   'live.item':'tu producto','live.store':'la tienda','live.waitperson':'Esperando llegar a una persona…','live.noconvo':'No hay conversación en vivo en esta llamada.',
@@ -3573,13 +3574,15 @@ function showResult(o, cid){
       ${breakdown}
     </div>
     ${feedbackBlock}
-    <div class="topcta">${primaryCta}</div>
+    ${o.status==='pending'
+      ? `<div class="topcta" style="display:flex;justify-content:center"><div class="ring"></div></div>` /* still pulling the verdict — show progress, NOT the "Check another store" CTA (reads as calling again) */
+      : `<div class="topcta">${primaryCta}</div>`}
     <div class="callsec">
       ${canTranslate?`<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button></div>`:''}
       ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed, {cls, title:vTitle, term:termLabel})}
     </div>
-    ${inStock ? inActions : ''}
-    ${upsell}
+    ${o.status==='pending' ? '' : (inStock ? inActions : '')}
+    ${o.status==='pending' ? '' : upsell}
     <div class="foot" style="margin-top:16px">${o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one')}</div>`;
   $('result').classList.remove('hidden');
   navMark('result');
@@ -3822,6 +3825,22 @@ function showTodayLanding(){
   document.body.classList.remove('fabbed');
   ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); // neutral (dark) — no verdict tone
   RAIL_F.date=''; RAIL_F.store=''; RAIL_F.tone=''; RAIL_CID=null; LASTRES=null; RAIL_CAL_M=null;
+  // Logged out (e.g. a freshly-installed Home-Screen app has its OWN empty storage) → your checks live in
+  // your account, so show a clear Sign-in CTA instead of an empty "No checks today" that looks broken.
+  if(!isAuthed()){
+    $('result').innerHTML=`
+      <div class="todaywrap">
+        <div class="emptybox" style="margin-top:24px">
+          <span style="opacity:.45;filter:grayscale(.7)">${FCHK(42)}</span>
+          <div class="eb-t" style="margin-top:12px">${t('hist.signin.title','Sign in to see your checks')}</div>
+          <div class="eb-s">${t('hist.signin.sub','Your past checks are saved to your account.')}</div>
+          <button class="cta" style="margin-top:16px" onclick="signIn()">${t('hist.signin.cta','Sign in')}</button>
+        </div>
+      </div>`;
+    $('result').classList.remove('hidden');
+    navMark('result');
+    return;
+  }
   $('result').innerHTML=`
     <div class="todaywrap">
       <div class="emptybox" style="margin-top:6px;padding-bottom:2px">
