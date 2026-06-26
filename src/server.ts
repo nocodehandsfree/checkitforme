@@ -3064,7 +3064,13 @@ async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, str
   const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const pol = await getPolicy();
   setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? pol.flags.connectOnHuman, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
-  const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${config.staging.on ? STAGING_HOST : RAILWAY_HOST}/twiml/bridge?room=${room}` });
+  const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
+  const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${host}/twiml/bridge?room=${room}` });
+  // REAL call-progress feed: Twilio POSTs each transition so the live timeline shows what's actually
+  // happening (dialing → ringing → answered → done) instead of guessing from timers.
+  body.set("StatusCallback", `https://${host}/twiml/bridge-status?room=${room}`);
+  body.set("StatusCallbackMethod", "POST");
+  for (const ev of ["initiated", "ringing", "answered", "completed"]) body.append("StatusCallbackEvent", ev);
   // Hard cost cap: Twilio kills the call at TimeLimit seconds, no exceptions — the profit guarantee.
   if (opts?.timeLimitSec && opts.timeLimitSec > 0) body.set("TimeLimit", String(Math.floor(opts.timeLimitSec)));
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls.json`, {
@@ -3078,6 +3084,20 @@ async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, str
   return { room };
 }
 const roomCallSids = new Map<string, string>(); // room -> Twilio callSid (for hang-up)
+// REAL Twilio call progress per room: { status: queued|initiated|ringing|in-progress|completed|… , at }.
+// Fed by /twiml/bridge-status (Twilio's StatusCallback), read by /pub/bridge/:room so the live UI is truthful.
+const roomCallProgress = new Map<string, { status: string; at: number }>();
+app.post("/twiml/bridge-status", async (c) => {
+  const room = c.req.query("room") || "";
+  const form = await c.req.parseBody().catch(() => ({} as Record<string, unknown>));
+  const status = String((form as Record<string, unknown>).CallStatus || "");
+  if (room && status) {
+    roomCallProgress.set(room, { status, at: Date.now() });
+    if (["completed", "busy", "failed", "no-answer", "canceled"].includes(status))
+      setTimeout(() => roomCallProgress.delete(room), 60_000);
+  }
+  return c.body(null, 204);
+});
 const zoneCallSids = new Map<number, string[]>(); // zoneId -> Twilio callSids placed, for "Cancel zone"
 /** Hang up a live Twilio call (POST Status=completed). Shared by the single + zone cancel paths. */
 async function hangupTwilioCall(callSid: string): Promise<void> {
@@ -3144,7 +3164,9 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
 app.get("/pub/bridge/:room", (c) => {
   const room = c.req.param("room");
   if (config.staging.on && isSimId(room)) return c.json({ conversationId: room, wsHost: STAGING_HOST }); // sim: room IS the conversation id
-  return c.json({ conversationId: bridgeConversationId(room), wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
+  // callProgress = the REAL Twilio state (ringing/answered/…) so the live timeline shows what's actually
+  // happening, not an inferred guess. null until the first status callback lands.
+  return c.json({ conversationId: bridgeConversationId(room), wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST, callProgress: roomCallProgress.get(room) ?? null });
 });
 app.get("/pub/bridge-debug", (c) => c.json({ log: bridgeDebug() }));
 app.post("/api/bridge/call", async (c) => {
