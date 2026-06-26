@@ -23,7 +23,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r82" />
+<meta name="x-rev" content="names-r83" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -1570,7 +1570,7 @@ const I18N={ es:{
   'hist.title':'Tus verificaciones','hist.new':'+ Nueva','hist.empty':'Aún no hay verificaciones — haz una y aparecerá aquí.',
   'foot.cta':'¿No ves tu tienda? Agrégala →','foot.about':'Acerca de','foot.contact':'Contacto','foot.faq':'Preguntas','foot.terms':'Términos','foot.privacy':'Privacidad','foot.success':'Logros',
   'kioskhint':'<span style="display:flex;align-items:center;gap:7px;font-weight:800;white-space:nowrap"><span id="khspark"></span> ¿En un kiosco? ¡Verificación gratis!</span><a onclick="openReceipt()" style="display:inline-block;margin-top:5px;color:var(--purple);font-weight:800;cursor:pointer">Usa nuestro correo al pagar o reenvía tu recibo →</a>',
-  'v.in':'¡En stock!','v.out':'No está en stock','v.unclear':'Nos dieron un “quizás”','v.soldout':'Agotado','v.noanswer':'Nadie contestó','v.hold':'En espera','v.soon':'¡Reabastecimiento en camino!','note.soon':'No está en el estante ahora — pero dijeron que llega un envío <b>{d}</b>. Sé el primero cuando caiga.',
+  'v.in':'¡En stock!','v.out':'No está en stock','v.unclear':'Nos dieron un “quizás”','v.soldout':'Agotado','v.noanswer':'Nadie contestó','v.hold':'En espera','v.soon':'¡Reabastecimiento en camino!','note.soon':'Llega un envío <b>{d}</b>. Sé el primero cuando caiga.',
   'search.ph':'Busca por tienda o ciudad…',
   'cta.pick':'Elige una tienda para verificar','cta.check':'Verificar','cta.for':'por','cta.checkunit':'verificación','cta.kioskword':'kiosco',
   'kcall.store':'esta tienda','kcall.body1':'Llamaremos y preguntaremos si su kiosco de','kcall.body2':'está funcionando y surtido, y te enviaremos lo que digan.','kcall.yes':'📞 Sí, llamar ahora →','kcall.no':'Ahora no','kcall.atkiosk':'¿Estás en el kiosco ahora?','kcall.receipt':'Usa nuestro correo al pagar o reenvía tu recibo → verificación gratis.',
@@ -1604,11 +1604,11 @@ const I18N={ es:{
   'note.in':'Lo tienen — ve por él.','note.in.named':'Tienen <b>{x}</b> — ve por él.','note.out':'No lo tienen ahora mismo.',
   'note.soldout':'Llegó, pero ya se acabó. Vale la pena esperar el próximo envío.','note.nocarry':'Esta tienda no vende {x} — prueba otra.',
   'note.noanswer':'Sonó y sonó — nadie contestó. Sin cargo.','note.noanswer.desk':'Pasamos el menú, pero nadie contestó en el mostrador. Sin cargo.',
-  'note.unclear':'Contestaron pero no se comprometieron. Abajo están sus palabras exactas — tú decides.',
+  'note.unclear':'Alguien contestó pero no dio un sí o no claro. Mira lo que dijeron abajo.',
   'note.voicemail':'Llegamos a una grabadora, no a una persona — sin cargo.','note.busy':'La línea estaba ocupada — sin cargo. Intenta en un momento.',
   'note.ivr':'Nos quedamos atorados en su menú telefónico — sin cargo.','note.lang':'Contestaron pero no pudimos comunicarnos — sin cargo.',
   'note.badnum':'Ese número no conectó — sin cargo.','note.closed':'Están cerrados ahora — sin cargo. Intenta cuando abran.',
-  'note.failed':'Algo falló de nuestro lado — sin cargo.','note.hold':'Alguien contestó y fue a revisar — pero la espera se alargó y la llamada se cortó. Sin cargo. Intenta de nuevo.',
+  'note.failed':'Algo falló de nuestro lado — sin cargo.','note.hold':'Fueron a revisar, pero la llamada se cortó en espera. Sin cargo — intenta de nuevo.',
   'note.unreached':'No pudimos contactar a nadie en la tienda — sin cargo. Intenta en un rato.',
   'v.nocarry':'No lo venden','v.noperson':'No contestó nadie','v.busy':'Línea ocupada','v.ivr':'No alcanzamos a nadie','v.lang':'Barrera de idioma','v.badnum':'Número malo','v.closedt':'Tienda cerrada','v.failed':'Llamada fallida',
   // statuses registry (key-addressed: st.<key> = label, stn.<key> = note)
@@ -3404,13 +3404,13 @@ function showResult(o, cid){
     cls=s.tone||'unk'; big=s.emoji||'•'; title=t('st.'+o.statusKey, s.label);
     note=(o.statusKey==='failed'&&o.failureReason)?safeReason(o.failureReason):t('stn.'+o.statusKey, s.note||'');
   }
-  else if(o.statusKey==='left_on_hold'){ cls='unk'; big='⏳'; title=t('v.hold','Left on hold'); note=t('note.hold',"We reached someone and they went to check — but the hold ran long and the call dropped before they came back. No charge. Try again and we'll try to catch them."); }
+  else if(o.statusKey==='left_on_hold'){ cls='unk'; big='⏳'; title=t('v.hold','Left on hold'); note=t('note.hold',"They went to check, but the call dropped on hold. No charge — try again."); }
   else if(o.status==='completed'&&o.doesNotSell){ cls='out'; big='🚫'; title=t('v.nocarry',"They don't carry it"); note=tf('note.nocarry',"This store doesn't carry "+(catLabel()||'this')+" — try another.",{x:catLabel()||'this'}); }
   else if(o.status==='completed'&&o.soldOut){ cls='out'; big='🕐'; title=t('v.soldout','Sold out'); note=t('note.soldout',"Came in, but it's already gone. Worth catching the next shipment."); }
   else if(o.status==='completed'&&o.confirmed===true){ cls='in'; big='✅'; title=t('v.in','In stock!'); note=tf('note.in','They have {c} — go get it.',{c:'<b style="color:#fff;font-weight:800">'+esc(catLabel()||'them')+'</b>'}); }
   else if(o.status==='completed'&&o.confirmed===false){ cls='out'; big='❌'; title=t('v.out','Not in stock'); note=t('note.out',"They don't have it."); }
   else if(o.status==='completed'){ // reached the end but no yes/no extracted
-    if(asked){ cls='unk'; big='🔄'; title=t('v.unclear','No clear answer — recheck'); note=t('note.unclear','A person picked up but we couldn’t pin down a clear yes or no — worth a quick recheck. See what they said below.'); }
+    if(asked){ cls='unk'; big='🔄'; title=t('v.unclear','No clear answer — recheck'); note=t('note.unclear','Someone answered but didn’t give a clear yes or no. See what they said below.'); }
     else { cls='unk'; big='📵'; title=t('v.noanswer','Nobody answered'); note=t('note.noanswer.desk','Got through the menu, but no one picked up at the desk. No charge.'); }
   }
   else if(o.status==='no_answer'){ cls='unk'; big='📵'; title=t('v.noanswer','Nobody answered'); note=t('note.noanswer',"Rang and rang — nobody picked up. No charge."); }
@@ -3431,7 +3431,7 @@ function showResult(o, cid){
   // shipment day on a no/sold-out → flip from a flat "not in" to a restock-incoming heads-up.
   if(cls!=='in' && !o.doesNotSell && o.status==='completed' && o.shipmentDay){
     cls='soon'; big='🚚'; title=t('v.soon','Restock incoming!');
-    note=tf('note.soon','Not on the shelf right now — but they said a shipment lands <b>{d}</b>. Be first when it drops.',{d:esc(fmtShipDay(o.shipmentDay))});
+    note=tf('note.soon','A shipment lands <b>{d}</b>. Be first when it drops.',{d:esc(fmtShipDay(o.shipmentDay))});
   }
 
   // Multi-line check → show a per-category breakdown (Pokémon in stock, One Piece not, etc.)

@@ -216,6 +216,14 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
       shipmentDay = day ? day[0] : "soon";
     }
   }
+  // Honor the clerk's LITERAL relative word. If they said "tomorrow/today/tonight/this weekend", show
+  // exactly that — never a specific weekday the extractor may have (mis)converted it to. ("He said
+  // tomorrow, not Saturday.")
+  if (shipmentDay) {
+    const rel = (d.transcript ?? []).filter((t) => t.role !== "agent" && t.message).map((t) => String(t.message)).join(" ")
+      .match(/\b(today|tonight|tomorrow|this (?:weekend|week|afternoon|evening|morning))\b/i);
+    if (rel) shipmentDay = rel[1].toLowerCase();
+  }
   // If the clerk named the specific product they have in (e.g. "Knockout packs"), capture it so
   // we can show it on the In-stock verdict ("In stock — Knockout packs").
   const productName = (() => {
