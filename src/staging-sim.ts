@@ -37,9 +37,8 @@ function script(v: Verdict): { at: number; line: string }[] {
     { at: 17, line: "Clerk: We've got the 3-pack blisters on the shelf by the registers." },
     { at: 20, line: "Agent: Perfect — thank you so much!" }];
   if (v === "out") return [...open,
-    { at: 12, line: "Clerk: Let me check… we sold through the latest batch, so not at the moment." },
-    { at: 16, line: "Agent: No worries — do you know what day the next shipment usually lands?" },
-    { at: 19, line: "Clerk: Usually Tuesdays, but I can't promise anything." }];
+    { at: 12, line: "Clerk: Let me check… no, we don't have any in stock right now." },
+    { at: 16, line: "Agent: No worries at all — thanks so much for checking!" }];
   return [...open,
     { at: 13, line: "Clerk: Hmm, I'm not totally sure — we might have some in the back, hard to say." },
     { at: 18, line: "Agent: Got it — really appreciate you checking!" }];
@@ -64,7 +63,7 @@ export function simResult(id: string): Record<string, unknown> {
   }
   const byVerdict: Record<Verdict, Record<string, unknown>> = {
     in:    { confirmed: true,  statusKey: "in_stock",       productName: "3-pack blister", productDetail: "3-pack blister", summary: "Clerk confirmed Pokémon 3-pack blisters are on the shelf by the registers.", shipmentDay: null },
-    out:   { confirmed: false, statusKey: "not_in_stock",   productName: null,             productDetail: null,             summary: "Sold through the latest batch; clerk said the next shipment is usually Tuesdays.", shipmentDay: "Tuesday" },
+    out:   { confirmed: false, statusKey: "not_in_stock",   productName: null,             productDetail: null,             summary: "Clerk checked — no Pokémon in stock right now.", shipmentDay: null },
     maybe: { confirmed: null,  statusKey: "no_clear_answer", productName: null,            productDetail: null,             summary: "Clerk wasn't sure — possibly some in the back, but wouldn't commit.", shipmentDay: null },
   };
   return { status: "completed", durationSec: DONE_AT, ...byVerdict[v], transcript };

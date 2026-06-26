@@ -19,7 +19,7 @@ export const config = {
   // Default opening lines; {category} is interpolated.
   defaultQuestion:
     process.env.DEFAULT_QUESTION ??
-    "Hi! I was just checking to see if you got a {category} shipment in today?",
+    "Hi! I was just checking to see if you have any {category} in stock right now?",
   carryQuestion:
     process.env.CARRY_QUESTION ??
     "Hi! Quick question — do you guys carry {category} cards at all?",
