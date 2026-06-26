@@ -1140,7 +1140,7 @@ const $=id=>document.getElementById(id);
 const toast=m=>{const t=$('toast');t.innerHTML=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);};
 // ── i18n (rollout-ready; Spanish live, other languages fall back to English until filled) ──
 const LANGS=[['en','EN'],['es','ES']];
-const I18N={ es:{
+const I18N={ en:{ "st.no_clear_answer":"Couldn't tell", "stn.no_clear_answer":"Someone answered but wouldn't give a straight yes or no. Read the convo and tell us what you think." }, es:{
   'trust.pick':'Elige una tienda','trust.call':'Verificamos en vivo','trust.answer':'Respuesta + prueba',
   'value':'Evita el viaje de <b>$10 en gasolina</b> a un estante agotado',
   'mode.call':'Verificar una tienda','mode.kiosk':'Kioscos','find.step':'① Encuentra tu tienda','find.kiosk':'① Encuentra un kiosco',
@@ -2539,8 +2539,8 @@ function callTimeline(o){
   const reached=convLinesOf(o).some(l=>/^Clerk:/.test(l)) || o.status==='completed';
   const steps=[{t:tf('step.calling','Calling {x}…',{x:esc(base)})},{t:t('step.ringing',"It's ringing…")}];
   if(reached||o.status!=='no_answer') steps.push({t:t('step.connected','Connected')});
-  if(hadMenu) steps.push({t:t('step.menu','Navigated the phone menu')});
-  if(reached) steps.push({t:t('step.reached','Reached an associate'),ok:true});
+  if(hadMenu) steps.push({t:t('step.menu','Got through the phone menu')});
+  if(reached) steps.push({t:t('step.reached','Got a person'),ok:true});
   else if(o.status==='no_answer') steps.push({t:t('step.noanswer','Nobody picked up'),bad:true});
   else if(o.status==='voicemail') steps.push({t:t('step.vm','Reached voicemail'),bad:true});
   else if(o.status==='busy') steps.push({t:t('step.busy','Line was busy'),bad:true});
