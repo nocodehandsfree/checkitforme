@@ -80,8 +80,8 @@ const BRANDS: Brand[] = [
       + `<circle cx="60" cy="60" r="7" fill="#fff" stroke="#0C0C12" stroke-width="3"/></svg>`,
     headline: 'Pokémon <span class="g">in stock?</span><br>We\'ll check for you.',
     sub: "Pick your store. We call it for real, ask if the Pokémon is in, and show you the answer with proof — before you drive out.",
-    title: "PokéFinder — Find Pokémon cards in stock near you, today",
-    desc: "Find Pokémon cards in stock near you. PokéFinder calls local stores for real, asks if the latest sets are on the shelf, and texts you the answer with proof in ~2 minutes. Never chase a sold-out drop again.",
+    title: "Pokémon cards in stock near you — Check It For Me",
+    desc: "Find Pokémon cards in stock near you. Check It For Me calls local stores for real, asks if the latest sets are on the shelf, and texts you the answer with proof in ~2 minutes. Never chase a sold-out drop again.",
   },
   {
     key: "onepiece", slug: "onepiece",
@@ -95,7 +95,7 @@ const BRANDS: Brand[] = [
     art: `<svg viewBox="0 0 120 120" width="96" height="96" aria-hidden="true"><ellipse cx="60" cy="74" rx="50" ry="16" fill="#fff"/><path d="M27 71c0-21 13-37 33-37s33 16 33 37" fill="#fff"/><path d="M28.5 62h63" stroke="#E23636" stroke-width="12"/><ellipse cx="60" cy="74" rx="50" ry="16" fill="none" stroke="#E23636" stroke-width="3"/></svg>`,
     headline: 'One Piece cards <span class="g">in stock?</span><br>We\'ll check for you.',
     sub: "Pick your store. We call it for real, ask if the One Piece TCG is in, and show you the answer with proof — before you make the trip.",
-    title: "OnePieceFinder — Find One Piece TCG in stock near you, today",
+    title: "One Piece TCG in stock near you — Check It For Me",
     desc: "Find One Piece TCG in stock near you. We call local stores for real, ask if the latest sets are on the shelf, and show you the answer with proof in ~2 minutes.",
   },
   {
@@ -111,7 +111,7 @@ const BRANDS: Brand[] = [
     art: `<svg viewBox="0 0 120 120" width="96" height="96" aria-hidden="true"><path d="M60 14l11 22 24 3.5-17.5 17 4 24L60 67.5 38.5 80.5l4-24L25 39.5l24-3.5z" fill="#E4002B"/><path d="M60 14l11 22 24 3.5-17.5 17 4 24L60 67.5 38.5 80.5l4-24L25 39.5l24-3.5z" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>`,
     headline: 'Topps NBA cards <span class="g">in stock?</span><br>We\'ll check for you.',
     sub: "Pick your store. We call it for real, ask if the Topps basketball is in, and show you the answer with proof — before you head out.",
-    title: "HoopsFinder — Find Topps NBA cards in stock near you, today",
+    title: "Topps NBA cards in stock near you — Check It For Me",
     desc: "Find Topps NBA basketball cards in stock near you. We call local stores for real, ask if the latest sets are on the shelf, and show you the answer with proof in ~2 minutes.",
   },
   {
@@ -127,7 +127,7 @@ const BRANDS: Brand[] = [
     art: `<svg viewBox="0 0 120 122" width="100" height="102" aria-hidden="true"><path d="M60 16c24 0 40 16 42 38 2 21-11 40-31 47-20 7-44-1-52-21C11 60 17 35 39 24c7-4 14-8 21-8z" fill="#EC4899"/><path d="M42 70c8 7 28 7 36 0" stroke="#F97316" stroke-width="6" fill="none" stroke-linecap="round"/><circle cx="46" cy="52" r="5" fill="#F97316"/><circle cx="74" cy="52" r="5" fill="#F97316"/></svg>`,
     headline: 'NeeDoh <span class="g">in stock?</span><br>We\'ll check for you.',
     sub: "Pick your store. We call it for real, ask if the NeeDoh is in, and show you the answer with proof — before you make the trip.",
-    title: "NeeDohFinder — Find NeeDoh in stock near you, today",
+    title: "NeeDoh in stock near you — Check It For Me",
     desc: "Find NeeDoh stress balls in stock near you. We call local stores for real, ask what's on the shelf, and show you the answer with proof in ~2 minutes.",
   },
 ];
