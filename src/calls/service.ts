@@ -44,6 +44,51 @@ function rotatePick<T>(key: string, list: T[]): T | undefined {
   return list[n % list.length];
 }
 
+// ---- Workflows: the Voice→Designer "voice + script + persona + voice tuning" bundle, assignable
+// per store / per chain / as the global default. resolveWorkflow picks one for a store and composes
+// its persona; buildRestockVars applies it to the call (opener rotation, {{personality}}, voice). ----
+export interface AppliedWorkflow { name: string; voiceId?: string; tuning?: Record<string, unknown>; openers: string[]; personality: string }
+type AnyObj = Record<string, unknown>;
+const jparse = (s: string | null, fb: unknown) => { try { return s ? JSON.parse(s) : fb; } catch { return fb; } };
+
+/** Compose a saved persona object → one paragraph for the {{personality}} prompt variable. */
+function composePersona(p: AnyObj | undefined): string {
+  if (!p) return "";
+  const bits: string[] = [];
+  if (p.base) bits.push(`Your overall vibe is ${String(p.base).toLowerCase()}.`);
+  if (p.tone) bits.push(String(p.tone).trim());
+  if (p.slang) bits.push("Use casual, natural slang the way a real local would.");
+  if (p.affection) bits.push("Be warm and a little affectionate — like chatting with a friendly regular.");
+  if (p.swear) bits.push("A light, casual swear word is fine if it fits naturally — keep it friendly, never aggressive.");
+  if (p.greet) bits.push(`A natural way you might open: "${String(p.greet).trim()}".`);
+  return bits.join(" ").trim();
+}
+
+/** Resolve a store's assigned workflow: store override → chain default → global default. */
+export async function resolveWorkflow(retailerId: number, chainId: number | null): Promise<AppliedWorkflow | null> {
+  const [libS, defS, chainS, storeS, personaS] = await Promise.all([
+    getSetting("vt_workflows"), getSetting("vt_default_workflow"),
+    getSetting("vt_chain_workflows"), getSetting("vt_store_workflows"), getSetting("vt_personas"),
+  ]);
+  const library = jparse(libS, []) as AnyObj[];
+  if (!Array.isArray(library) || !library.length) return null;
+  const byStore = jparse(storeS, {}) as Record<string, string>;
+  const byChain = jparse(chainS, {}) as Record<string, string>;
+  const name = byStore[String(retailerId)] || (chainId != null ? byChain[String(chainId)] : "") || (defS || "");
+  if (!name) return null;
+  const wf = library.find((w) => w && w.name === name);
+  if (!wf) return null;
+  const personas = jparse(personaS, []) as AnyObj[];
+  const persona = Array.isArray(personas) ? personas.find((p) => p && p.name === wf.persona) : undefined;
+  return {
+    name: String(wf.name),
+    voiceId: wf.voiceId ? String(wf.voiceId) : undefined,
+    tuning: wf.tuning && typeof wf.tuning === "object" ? (wf.tuning as Record<string, unknown>) : undefined,
+    openers: Array.isArray(wf.openers) ? (wf.openers as unknown[]).map(String).filter(Boolean) : [],
+    personality: composePersona(persona),
+  };
+}
+
 const VOICEMAIL_INSTRUCTION =
   "If you reach a voicemail, answering machine, or automated recording (a recorded greeting, an automated menu with no live person, or a beep) — do NOT say anything and end the call immediately. Never leave a message.";
 
@@ -65,7 +110,7 @@ export async function buildRestockVars(
   specificProduct?: string,
   extraCategoryIds?: number[],
   kioskMode?: boolean,
-): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; maxTalk: number | null; dynamicVars: Record<string, string> } | null> {
+): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
   const category = (await db.select().from(categories).where(eq(categories.id, categoryId)))[0];
@@ -90,7 +135,11 @@ export async function buildRestockVars(
   // Rotation: round-robin opener variants if set, so calling the SAME store gives the SAME voice but
   // slightly different phrasing each time (matches the EL-dial path in triggerCall). Falls back to the
   // single vt_opening opener. Voice itself is NOT rotated here — same store, same voice, varied script.
-  const openerVariants = ((await getSetting("vt_opener_variants")) || "").split("\n").map((s) => s.trim()).filter(Boolean);
+  // Resolve the store's assigned workflow (store → chain → default). When set, its opener rotation,
+  // persona and voice override this call; otherwise we fall back to the global opener settings.
+  const workflow = await resolveWorkflow(retailerId, retailer.chainId);
+  const openerVariants = (workflow?.openers.length ? workflow.openers
+    : ((await getSetting("vt_opener_variants")) || "").split("\n").map((s) => s.trim()).filter(Boolean));
   const openerTemplate = rotatePick("opener", openerVariants) || (await getSetting("vt_opening")) || DEFAULT_OPENER;
   const openingLine = openerTemplate.replace(/\{category\}/g, category.label);
   const clarification = specificityClause((specificProduct ?? "").trim());
@@ -113,6 +162,9 @@ export async function buildRestockVars(
     say,
     // Per-store talk cap (chains.maxTalkSeconds). Null = caller falls back to the global bail cap.
     maxTalk: chain?.maxTalkSeconds ?? null,
+    // Workflow voice (Voice→Designer): per-call voice + TTS tuning override when a workflow is assigned.
+    voiceId: workflow?.voiceId ?? null,
+    voiceTuning: workflow?.tuning ?? null,
     dynamicVars: {
       internal_call_id: "0",
       category: category.label,
@@ -122,7 +174,7 @@ export async function buildRestockVars(
       phone_tree: phoneTree,
       special_instructions: retailer.specialInstructions ?? "",
       voicemail_policy: voicemailPolicy,
-      personality: "",
+      personality: workflow?.personality || "",
       opening_line: openingLine,
       // Listen-live (Runnr) asks about exactly the lines the user selected — the primary plus
       // any extras they multi-picked. It never auto-cascades from the store's carries field.

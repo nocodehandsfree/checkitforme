@@ -8,7 +8,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { WebSocketServer, type WebSocket } from "ws";
-import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql, getTableColumns } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql } from "drizzle-orm";
 import { db, client } from "./db/client";
 import {
   callResults, categories, chains, communityPosts, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, waitlist, watches, zones, zoneRetailers,
@@ -382,6 +382,22 @@ app.get("/og/:file", (c) => {
   } catch { return c.notFound(); }
 });
 // Brand logo images (transparent PNGs served to the per-vertical micro-sites).
+// PWA: service worker (scope "/" — must be served from root) + web app manifest.
+app.get("/sw.js", (c) => {
+  try {
+    const buf = readFileSync(join(here, "../public/sw.js"));
+    c.header("Cache-Control", "no-cache"); // always revalidate the SW so updates roll out
+    c.header("Service-Worker-Allowed", "/");
+    return c.body(buf, 200, { "Content-Type": "text/javascript; charset=utf-8" });
+  } catch { return c.notFound(); }
+});
+app.get("/manifest.webmanifest", (c) => {
+  try {
+    const buf = readFileSync(join(here, "../public/manifest.webmanifest"));
+    c.header("Cache-Control", "public, max-age=3600");
+    return c.body(buf, 200, { "Content-Type": "application/manifest+json; charset=utf-8" });
+  } catch { return c.notFound(); }
+});
 app.get("/logos/:file", (c) => {
   const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
   try {
@@ -1489,37 +1505,61 @@ app.post("/api/admin/table-load", async (c) => {
   invalidateRefCache();
   return c.json({ table: name, mode: b.mode || "append", inserted: rows.length });
 });
-// PROMOTE apply — the staging→prod direction (the reverse of table-load). Fired automatically by the
-// promote-config CI job when staging is merged to the prod branch, so config edited on staging
-// (mappings, personas, per-store settings, demo numbers, statuses) carries to prod with the deploy —
-// NO button. Admin-gated. CONFIG tables only (never call_results/accounts).
-//
-// UPSERT, NEVER DELETE. We learned the hard way: chains/retailers are FK PARENTS — deleting a chain
-// SET-NULLs every store's chain_id (orphans logos + mappings), and deleting a retailer CASCADE-DELETES
-// its call_results (the customer's call history). So a delete+replace promote is catastrophic. Instead
-// each row is inserted-or-updated by primary key (no delete) → children are never touched, and re-runs
-// are idempotent & self-healing (a re-promote restores any link that drifted). Rows that exist on prod
-// but not staging are LEFT in place (deletions don't propagate — rare for config; do them by hand).
-// Comes chunked (Cloudflare caps the POST body); each chunk upserts independently, order-independent.
-app.post("/api/admin/promote-apply", async (c) => {
-  const b = await c.req.json().catch(() => ({}));
-  const name = String(b.name || "");
-  const tbl = MIRROR_TABLES[name]; // config tables ONLY — state (calls/accounts) never promoted
-  const rows: Record<string, unknown>[] | null = Array.isArray(b.rows) ? b.rows : null;
-  if (!tbl || !rows) return c.json({ error: "name + rows[] required (config tables only)", tables: Object.keys(MIRROR_TABLES) }, 400);
-  const pkName = name === "statuses" || name === "settings" ? "key" : "id"; // statuses/settings keyed by `key`
-  const cols = getTableColumns(tbl as never) as Record<string, { name: string }>;
-  const pkCol = (tbl as never as Record<string, unknown>)[pkName];
-  const setOnConflict: Record<string, unknown> = {};
-  for (const k of Object.keys(cols)) if (k !== pkName) setOnConflict[k] = sql`excluded.${sql.identifier(cols[k].name)}`;
-  let n = 0;
-  for (let i = 0; i < rows.length; i += 500) {
-    const chunk = rows.slice(i, i + 500) as never[];
-    await db.insert(tbl).values(chunk).onConflictDoUpdate({ target: pkCol as never, set: setOnConflict as never });
-    n += chunk.length;
+// NOTE: there is deliberately NO staging→prod data promote. PROD is the source of truth for live
+// business data (calls, customers, reports); the Admin manages it directly. CONFIG/feature work flows
+// staging→prod via CODE branches, and staging is refreshed FROM prod (table-dump→table-load, above) —
+// one-way, prod→staging only. We never write staging's data over prod (that once cascade-wiped call
+// history). See docs/ops/STAGING.md "Data direction".
+
+// RECOVERY: rebuild call_results from ElevenLabs conversation history (the source of truth for what was
+// actually said on each call). Insert-only + idempotent by providerCallId, so it's safe to re-run and
+// can never delete. Maps each call's store/category from the dynamic vars it was placed with, and
+// classifies the verdict from the transcript via the same path live ingest uses. ?dry=1 to preview.
+app.post("/api/admin/restore-calls-from-el", async (c) => {
+  const key = config.voice.apiKey, agentId = config.voice.agentId;
+  if (!key || !agentId) return c.json({ error: "elevenlabs not configured" }, 503);
+  const dry = c.req.query("dry") === "1";
+  const retByName = new Map<string, number>();
+  for (const r of await db.select({ id: retailers.id, name: retailers.name }).from(retailers))
+    if (r.name) retByName.set(r.name.trim().toLowerCase(), r.id);
+  const catByLabel = new Map<string, number>();
+  for (const cat of await db.select({ id: categories.id, label: categories.label }).from(categories))
+    catByLabel.set((cat.label || "").trim().toLowerCase(), cat.id);
+  const existing = new Set((await db.select({ p: callResults.providerCallId }).from(callResults)).map((r) => r.p).filter(Boolean));
+  let cursor = "", restored = 0, scanned = 0, skipped = 0, unmatched = 0;
+  for (let page = 0; page < 60; page++) {
+    const lr = await fetch(`https://api.elevenlabs.io/v1/convai/conversations?agent_id=${agentId}&page_size=100${cursor ? `&cursor=${cursor}` : ""}`, { headers: { "xi-api-key": key } });
+    if (!lr.ok) break;
+    const lj = await lr.json() as { conversations?: Array<Record<string, unknown>>; has_more?: boolean; next_cursor?: string };
+    for (const conv of (lj.conversations || [])) {
+      scanned++;
+      const cid = String(conv.conversation_id || "");
+      const status = String(conv.status || "");
+      if (!cid || existing.has(cid) || (status !== "done" && status !== "completed")) { skipped++; continue; }
+      const dr = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${cid}`, { headers: { "xi-api-key": key } });
+      if (!dr.ok) { skipped++; continue; }
+      const d = await dr.json() as { conversation_initiation_client_data?: { dynamic_variables?: Record<string, string> }; metadata?: { start_time_unix_secs?: number; call_duration_secs?: number } };
+      const dv = d.conversation_initiation_client_data?.dynamic_variables || {};
+      const retailerId = retByName.get(String(dv.retailer_name || "").trim().toLowerCase()) ?? null;
+      const categoryId = catByLabel.get(String(dv.category || "").trim().toLowerCase()) ?? null;
+      if (retailerId == null) unmatched++; // still restored (un-attributed), so the call isn't lost
+      const startedAt = Number(conv.start_time_unix_secs) || d.metadata?.start_time_unix_secs || null;
+      const callSeconds = (conv.call_duration_secs as number) ?? d.metadata?.call_duration_secs ?? null;
+      const o = await provider.getConversation(cid); // CallOutcome: verdict + transcript + summary
+      if (dry) { restored++; existing.add(cid); continue; }
+      await db.insert(callResults).values({
+        retailerId, categoryId: categoryId ?? undefined, mode: "restock",
+        status: o?.status ?? "completed", confirmed: o?.confirmed ?? null, statusKey: o?.statusKey ?? null,
+        summary: o?.summary ?? null, transcript: o?.transcript ?? null, providerCallId: cid,
+        startedAt: startedAt ?? undefined, completedAt: startedAt && callSeconds ? startedAt + callSeconds : startedAt ?? undefined,
+        callSeconds: callSeconds ?? null, navSeconds: o?.navSecs ?? null, isPrivate: false,
+      } as never).catch((e) => console.error("restore insert", cid, e));
+      existing.add(cid); restored++;
+    }
+    if (!lj.has_more || !lj.next_cursor) break;
+    cursor = lj.next_cursor;
   }
-  invalidateRefCache();
-  return c.json({ table: name, upserted: n });
+  return c.json({ restored, scanned, skipped, unmatchedStore: unmatched, dry });
 });
 // Bulk display-name cleanup (Data Dev) in ONE DB pass:
 //  (0) hygiene: strip store numbers ("Burlington West Hills (#264)" -> "Burlington West Hills"),
@@ -3100,7 +3140,7 @@ app.get("/api/conversation/:cid", async (c) => {
 });
 // Custom telephony bridge (milestone 1): place OUR own Twilio call; its audio streams to our WS.
 // Place a bridged Twilio call (our number -> destination) running the restock agent. Returns the room.
-async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null }): Promise<{ room?: string; error?: string }> {
+async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null; voiceId?: string | null; voiceTuning?: Record<string, unknown> | null }): Promise<{ room?: string; error?: string }> {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
@@ -3108,7 +3148,7 @@ async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, str
   // Dial AS the customer's verified number when we have it (phone-first model); else the house line.
   const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const pol = await getPolicy();
-  setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? pol.flags.connectOnHuman, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds });
+  setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? pol.flags.connectOnHuman, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
   const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${config.staging.on ? STAGING_HOST : RAILWAY_HOST}/twiml/bridge?room=${room}` });
   // Hard cost cap: Twilio kills the call at TimeLimit seconds, no exceptions — the profit guarantee.
   if (opts?.timeLimitSec && opts.timeLimitSec > 0) body.set("TimeLimit", String(Math.floor(opts.timeLimitSec)));
@@ -3184,7 +3224,7 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
       .catch((e) => console.error("bridge call log insert:", e));
     // Per-store talk cap (chains.maxTalkSeconds) wins over the global bail ceiling when set, so a
     // store the owner marked "wrap fast" gets a tighter Twilio TimeLimit — the cost guarantee.
-  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say });
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
 }
 app.get("/pub/bridge/:room", (c) => {
   const room = c.req.param("room");

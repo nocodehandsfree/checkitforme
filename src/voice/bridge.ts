@@ -24,6 +24,11 @@ export interface BridgeContext {
   // from the locked recipe). Far more reliable than VAD, which trips on the IVR's own recorded voice.
   connectAtSec?: number;
   holdMaxSeconds?: number; // fallback: connect anyway after this many seconds even if no human is detected
+  // Per-call VOICE + TTS tuning from the assigned workflow (Voice→Designer). Applied as a minimal
+  // conversation_config_override.tts ONLY when set — default calls send no override (the override path
+  // is otherwise left untouched, since overriding prompt/first-message there once hung calls up).
+  voiceId?: string;
+  voiceTuning?: Record<string, unknown>;
 }
 const contexts = new Map<string, BridgeContext>();
 export function setBridgeContext(room: string, ctx: BridgeContext) {
@@ -164,7 +169,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     eleven = new WebSocket(url);
     eleven.on("open", () => {
       log("eleven WS open -> sending init");
-      eleven!.send(JSON.stringify({ type: "conversation_initiation_client_data", dynamic_variables: c.dynamicVars }));
+      const init: Record<string, unknown> = { type: "conversation_initiation_client_data", dynamic_variables: c.dynamicVars };
+      // Workflow voice: minimal per-call TTS override (voice + any tuning). Only when a workflow set
+      // one — default calls send nothing extra, so the historically-flaky override path stays dormant.
+      if (c.voiceId) {
+        const tts: Record<string, unknown> = { voice_id: c.voiceId, ...(c.voiceTuning || {}) };
+        init.conversation_config_override = { tts };
+        log(`eleven init: voice override ${c.voiceId}`);
+      }
+      eleven!.send(JSON.stringify(init));
     });
     eleven.on("message", (data: Buffer) => {
       let m: { type?: string; audio_event?: { audio_base_64?: string }; ping_event?: { event_id?: number }; conversation_initiation_metadata_event?: { conversation_id?: string }; user_transcription_event?: { user_transcript?: string }; agent_response_event?: { agent_response?: string } };
