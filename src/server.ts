@@ -1415,9 +1415,12 @@ app.post("/api/admin/restore-calls-from-el", async (c) => {
   const key = config.voice.apiKey, agentId = config.voice.agentId;
   if (!key || !agentId) return c.json({ error: "elevenlabs not configured" }, 503);
   const dry = c.req.query("dry") === "1";
+  const fallbackRetailer = Number(c.req.query("fallback")) || null; // unmatched (e.g. Fun test calls) → this store
+  const normName = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ""); // punctuation/space-insensitive
   const retByName = new Map<string, number>();
+  const retByNorm = new Map<string, number>();
   for (const r of await db.select({ id: retailers.id, name: retailers.name }).from(retailers))
-    if (r.name) retByName.set(r.name.trim().toLowerCase(), r.id);
+    if (r.name) { retByName.set(r.name.trim().toLowerCase(), r.id); retByNorm.set(normName(r.name), r.id); }
   const catByLabel = new Map<string, number>();
   for (const cat of await db.select({ id: categories.id, label: categories.label }).from(categories))
     catByLabel.set((cat.label || "").trim().toLowerCase(), cat.id);
@@ -1436,9 +1439,11 @@ app.post("/api/admin/restore-calls-from-el", async (c) => {
       if (!dr.ok) { skipped++; continue; }
       const d = await dr.json() as { conversation_initiation_client_data?: { dynamic_variables?: Record<string, string> }; metadata?: { start_time_unix_secs?: number; call_duration_secs?: number } };
       const dv = d.conversation_initiation_client_data?.dynamic_variables || {};
-      const retailerId = retByName.get(String(dv.retailer_name || "").trim().toLowerCase()) ?? null;
+      const rn = String(dv.retailer_name || "").trim();
+      let retailerId = retByName.get(rn.toLowerCase()) ?? retByNorm.get(normName(rn)) ?? null; // exact → normalized
+      if (retailerId == null) { unmatched++; retailerId = fallbackRetailer; } // leftover (Fun tests) → fallback store
+      if (retailerId == null) { skipped++; continue; } // no store + no fallback → can't insert (retailer_id required)
       const categoryId = catByLabel.get(String(dv.category || "").trim().toLowerCase()) ?? null;
-      if (retailerId == null) unmatched++; // still restored (un-attributed), so the call isn't lost
       const startedAt = Number(conv.start_time_unix_secs) || d.metadata?.start_time_unix_secs || null;
       const callSeconds = (conv.call_duration_secs as number) ?? d.metadata?.call_duration_secs ?? null;
       const o = await provider.getConversation(cid); // CallOutcome: verdict + transcript + summary
