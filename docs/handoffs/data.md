@@ -42,6 +42,59 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
 
 ## Current focus (KEEP UPDATED)
 
+**Session 2026-06-26 — tier-5 coverage sweep (store-by-store) + consumer store-feed fix + promote-pipeline outage.**
+
+### Shipped (LIVE on prod + staging unless noted)
+- **Tier-5 backfills — reconciled STORE-BY-STORE (not by count).** Method: pull the chain's official store
+  directory per gap-state, dedupe vs our rows by `address-norm + phone`, geocode (US Census → Nominatim
+  fallback; set hyphenated Coachella-style addresses by hand), `POST /api/stores/import`.
+  - **Hobby Lobby:** CA 10→70 (all open CA) + the West/Mountain hole (AZ/WA/NM/UT/CO/OR/NV/ID ≈71).
+    National **889→1,020 (94%)**. **Texas (+58) still pending.**
+  - **Target:** CA 251→**324** (+73). Real CA = 324 (storelocators, Jun-2026). **Other states (~260) pending.**
+  - **Dollar General:** CA 260→**264** (+Greenfield, Indio, Pearblossom, San Bernardino) — CA complete vs 263 official.
+  - **Books-A-Million:** the audit's "missing 75" was a STALE reference — BAM has **closed down to 175 open**
+    (official locator). We had all but 2 (Salina KS, Rapid City SD), now added; ~14 of our BAM rows are closed
+    stores → being deactivated.
+- **Coverage audit (22 major Pokémon chains, our count vs real US totals):** 17 at 95–100%. Real growing-chain
+  gaps = Target + Hobby Lobby. CVS/Walgreens/GameStop look low only from documented closures (we track current
+  operating reality, not a stale peak).
+- **LESSON — count ≠ completeness.** A near-matching national count hides (a) specific metro gaps (HL's late
+  West-Coast expansion), (b) stale reference numbers (BAM), (c) closed stores still listed. **Reconcile
+  store-by-store for tier-5**, especially dense/recently-expanded metros.
+- **Big 5 Santa Barbara (id 7900):** owner intel → tier 4→**5**, restock **Mon & Wed**, specialInstructions
+  (busiest Big 5, most Pokémon; recently Chaos Rising booster sleeves, Mega Clefable tins, Mega Zygarde posters).
+- **Consumer store-feed fix (`/pub/stores/near`):** in a dense metro a 20-mi radius holds 400+ stores (200+
+  tier-5); the page limit dropped a sparse FAR green-group chain (a Dollar General ~19mi out, in-radius but
+  past the cut → "Dollar General never shows up near me"). Fix **pins the nearest store of each tier-5 chain**
+  (first page) so every green-group chain always surfaces. **Live on staging; awaiting owner OK for prod**
+  (code change → staging-first rule).
+
+### ⚠️ Promote pipeline DOWN — flag for DevOps/Website
+- Staging→prod data promote (`scripts/promote-config.mjs` → `POST /api/admin/promote-apply`) now **404s on
+  BOTH envs** after the website team's 2026-06-26 deploys removed/renamed that endpoint (it worked earlier
+  today). **Until restored, staging DB edits do NOT auto-sync to prod.**
+- **Workaround in use:** push new/updated tier-5 rows **directly to BOTH** staging and prod via
+  `POST /api/stores/import` (dedup-by-phone, idempotent) and `PATCH /api/retailers/:id`.
+
+### Store API — what it serves (incl. logos) + apps it powers
+One DB, read three ways; **carries + logos DERIVE at serve-time** (no per-row copies that drift):
+- **`GET /pub/stores/near?lat&lng&radius&limit&mode`** — THE consumer path (website + iOS app). bbox→
+  distance→page. Per store: id, chainId, name, location, address, storeType (=chain.type), **logoUrl/
+  logoWide/logoDark**, **carries** (distributor-derived), lat/lng, tier, callable, inStock, stockCheckMethod,
+  sellMethods, openState. Owner-only + (pending-prod) nearest-per-tier-5-chain pinned past the page limit.
+- **`GET /pub/stores`** — every active+phone store (Admin logo map); same shape, no paging.
+- **`GET /api/retailers?chainId&state&q&limit`** (admin) — full retailer rows + logoUrl + carries.
+  **Capped at 1000** — use `/pub/stores` (or `table-dump`) for full scans.
+- **Logos:** `chainLogoInfo(chainName)` is **DB-first** — `chains.logo_url` (shared Cloudflare R2 at
+  logos.fungibles.com) wins over per-branch `public/logos/chains/<slug>.png`, so a logo travels to every env
+  and can't drift. ~99.97% of stores carry an R2 logo.
+- **Carries:** `storeCarriesList(chainName, stored)` = distributor-derived (`data/distributors.json`, inlined
+  fallback in `server.ts`) for mapped chains, else the stored `carries` column.
+- **Apps powered:** consumer website (checkitforme.com / staging.checkitforme.com), the iOS app, and the Admin
+  store list — all read these SAME rows, so a store/logo/tier/intel added here shows up everywhere.
+
+---
+
 **Session 2026-06-25 — the "derivation era": logos→R2, carries→distributors, MVPs demo, phone harvest.**
 
 > **RESUMING? Read this box first.** Two architecture shifts this session: (1) chain **logos** are now
