@@ -21,14 +21,25 @@
 
 ## ▶ CODE auto-lines — Website dev wires these (4)
 
+**Home decision:** `in_stock` + `not_in_stock` live in **CODE**, not Admin. Reason: `in_stock` needs the `{product}` → `{category}` fallback (a note in Admin can't do "product if named, else category"), and keeping `not_in_stock` beside it keeps the two headline verdicts consistent + version-controlled. **Don't set notes for these two in Admin** (that would override the code line).
+
+### English
 | `key` | Title | Line 1 (short) | Line 2 |
 |---|---|---|---|
-| `in_stock` | **In stock!** | `{store} has {product} in.` | `Go grab it before it's gone.` |
-| `not_in_stock` | **Not in stock** | `{store} doesn't have {product} in.` | `Want us to watch for the restock?` |
-| `restock` (soon / 🚚) | **Restock incoming** | `Not in yet — but a shipment's coming.` | `We'll ping you the second it lands.` |
-| `no_clear_answer` (unclear) | **Couldn't tell** | `Someone answered but wouldn't say yes or no.` | `Read the convo and tell us what you think.` |
+| `in_stock` | **In stock!** | `{store} has {product} in.`  *(no product → `{store} has {category} in.`)* | `Go grab it before it's gone.` |
+| `not_in_stock` | **Not in stock** | `{store} doesn't have {category} in.` | `Want us to watch for the restock?` |
+| `restock` | **Restock incoming** | `A shipment lands {day}.` | `Be first when it drops.` |
+| `no_clear_answer` | **Couldn't tell** | `Someone answered but wouldn't say yes or no.` | `Read the convo and tell us what you think.` |
 
-> **The headline change:** `no_clear_answer` title **"Unclear" → "Couldn't tell."** "Unclear" reads like an error code; "Couldn't tell" is what a friend says — and it keeps the *"tell us what you think"* hook. This is the one in the owner's screenshot.
+### Spanish
+| `key` | Title | Line 1 | Line 2 |
+|---|---|---|---|
+| `in_stock` | **¡En stock!** | `{store} tiene {product}.`  *(no product → `{store} tiene {category}.`)* | `Ve por ello antes de que se agote.` |
+| `not_in_stock` | **No está en stock** | `{store} no tiene {category} ahora.` | `¿Te avisamos cuando vuelva?` |
+| `restock` | **¡Reabastecimiento en camino!** | `Llega un envío {day}.` | `Sé el primero cuando caiga.` |
+| `no_clear_answer` | **No supimos decir** | `Alguien contestó pero no dijo ni sí ni no.` | `Lee la conversación y dinos qué opinas.` |
+
+> **The headline change:** `no_clear_answer` title **"Unclear" → "Couldn't tell."** "Unclear" reads like an error code; "Couldn't tell" is what a friend says — and it keeps the *"tell us what you think"* poll hook. This is the one in the owner's screenshot.
 
 ---
 
