@@ -26,13 +26,12 @@ This is a **monorepo with two products.** **voice-caller** = the `voice-caller/`
   the two branches — the ONLY by-design differences are the staging-only gate/sim/replica machinery
   (`scripts/checkit-staging-proxy.worker.js`, `staging-sim.ts`, the `config.staging`/`STAGING_CALLS`
   guards in `server.ts`/`auth.ts`/`navigator.ts`/`elevenlabs.ts`). The DBs are separate by design.
-- **🔁 CONFIG DATA is staging-first too, and carries to prod AUTOMATICALLY with the deploy (no button).**
-  The DBs are separate, but on every prod-branch push the `promote.yml` Action copies the **config
-  tables** (chains/mappings/personas/per-store settings/demo numbers, retailers, categories, products,
-  statuses, kiosks) + the ElevenLabs persona staging→prod. **THE ONE RULE: author ALL config on the
-  staging Admin — the prod Admin is read-only for config** (any direct prod edit gets overwritten by the
-  next promote). Prod's live STATE (calls/accounts) never carries. Full detail: `docs/ops/STAGING.md` →
-  "Data carries with the deploy".
+- **🔁 DATA direction: PROD is the source of truth — manage the business from the PROD Admin.** CODE
+  flows staging→prod (branches); **DATA does NOT** (prod holds the real calls/customers/reports). Staging
+  is refreshed ONE-WAY **from** prod (`table-dump`→`table-load`, staging-only) for realistic testing.
+  There is **no staging→prod data promote** (an earlier one cascade-wiped call history — never again;
+  prod volume now has daily/weekly backups). Two views by design: staging Admin = your test calls, prod
+  Admin = real customer data. Full detail: `docs/ops/STAGING.md` → "Data direction".
 - **`main` is dead — do not use it.**
 - **Secrets are self-serve:** with `RAILWAY_API_TOKEN` you fetch any env var (incl. `ADMIN_TOKEN`) —
   command under "How to work." Don't ask Fungie. (Prod service `d363a982-…`, staging service

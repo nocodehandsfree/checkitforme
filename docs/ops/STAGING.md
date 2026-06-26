@@ -27,20 +27,20 @@ change **before** it touches live. This exists because we kept breaking prod wit
 Do **not** push UI/behavior straight to prod. (Tiny prod-only infra/data fixes that staging can't
 show are the only exception — use judgment.)
 
-### Data carries with the deploy — automatically, NO button (`promote.yml`)
-Code ships via the branch merge above. **Config DATA ships with it too, on its own.** When the prod
-branch is pushed (step 3), the `Promote config staging → prod` Action (`.github/workflows/promote.yml`)
-fires and copies the **config tables** (chains/mappings/personas/per-store settings/demo numbers,
-retailers, categories, products, statuses, kiosks) **+ the ElevenLabs restock persona** from staging
-into prod. So whatever you set up + verified on staging is what prod gets — no separate step.
+### Data direction — PROD is the source of truth (ONE way: prod → staging)
+**CODE** flows staging → prod (the branch merge above). **DATA does NOT.** Production is the live
+business — it holds the real, irreplaceable data (call results, customers, reports, the store config the
+owner manages). You **manage the business from the PROD Admin** (`admin.checkitforme.com`), like always.
 
-- **What carries:** everything the Admin edits (config). **What never carries:** prod's live state
-  (call results, accounts) — those stay per-environment.
-- **Safety:** prod-side apply (`/api/admin/promote-apply`) is atomic and **refuses any table that would
-  shrink prod by >50%**, so a broken/empty staging can never wipe prod.
-- **THE ONE RULE that makes this work — config has ONE source: staging.** Do all authoring (mappings,
-  personas, statuses, store settings, demo numbers) on the **staging** Admin. The **prod Admin is
-  read-only** for config — edit it there and the next promote will overwrite your edit from staging.
+- **Never write staging's data over prod.** There is deliberately no staging→prod data promote. (An
+  earlier version had one; replacing a table delete-cascaded `call_results` and wiped call history.
+  Never again — prod's volume now has daily+weekly backups too.)
+- **Staging is refreshed FROM prod** for realistic testing — one-way, `table-dump` (read prod) →
+  `table-load` (staging-only write, 403 on prod). Run it to make staging mirror prod's config/stores.
+- **So:** features/voice-tech you build on staging ship to prod as **code**; the **data** they run
+  against on staging is a **copy of prod**. The two never cross in the dangerous direction.
+- **Two views, by design:** the **staging** Admin shows the test calls *you* place; the **prod** Admin
+  shows real customer calls/reports. Same Admin code, two URLs, separate DBs.
 
 ## What is allowed to differ between the branches
 
