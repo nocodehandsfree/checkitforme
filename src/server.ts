@@ -2295,7 +2295,16 @@ app.get("/api/admin/pulse", async (c) => {
   const since = (ts: number, at: (r: { createdAt?: number | null; startedAt?: number | null }) => number | null | undefined, rows: Array<Record<string, unknown>>) =>
     rows.filter((r) => (at(r as never) ?? 0) >= ts).length;
   const ownerOnly = await ownerOnlyRetailerIds();
-  const completed = calls.filter((r) => r.status === "completed" && !ownerOnly.has(r.retailerId));
+  // Real calls only: drop the Fun/MVPs demo stores, the owner's own admin test calls (attributed to the
+  // master account), and admin-canceled calls — so the Pulse reflects genuine consumer activity.
+  const masterUid = "phone:" + (process.env.OWNER_PHONE || "+13106662331").trim();
+  const real = calls.filter((r) => !ownerOnly.has(r.retailerId) && r.finderUserId !== masterUid && r.status !== "admin_hangup");
+  const completed = real.filter((r) => r.status === "completed");
+  // Avg talk time = seconds with a human on the line (callSeconds − navSeconds) over reached real calls.
+  const timed = real.filter((r) => r.callSeconds != null);
+  const reachedT = timed.filter((r) => r.navSeconds != null);
+  const avgTalkSec = reachedT.length ? Math.round(reachedT.reduce((s, r) => s + ((r.callSeconds || 0) - (r.navSeconds || 0)), 0) / reachedT.length) : 0;
+  const avgCallSec = timed.length ? Math.round(timed.reduce((s, r) => s + (r.callSeconds || 0), 0) / timed.length) : 0;
   return c.json({
     funnel: {
       leads: leadRows.length,
@@ -2310,6 +2319,7 @@ app.get("/api/admin/pulse", async (c) => {
       checks7d: since(d7, (r) => r.startedAt, completed),
       confirms: completed.filter((r) => r.confirmed === true).length,
       callsBilled: accts.reduce((s, a) => s + (a.callsMade || 0), 0),
+      avgTalkSec, avgCallSec, callsTimed: timed.length,
     },
     community: {
       watches: watchRows.filter((w) => w.active !== false).length,
@@ -3037,7 +3047,9 @@ app.post("/api/hangup", async (c) => {
   if (cid) {
     await db.update(callResults)
       .set({ status: "admin_hangup", statusKey: "admin_hangup", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
-      .where(and(eq(callResults.providerCallId, cid), inArray(callResults.status, ["dialing", "in_progress", "queued"])))
+      // Mark the cancel UNLESS a real verdict already landed ('completed') — so an admin cancel during
+      // ringing isn't left as "Nobody answered" if it rang out before the stamp.
+      .where(and(eq(callResults.providerCallId, cid), sql`coalesce(${callResults.status},'') != 'completed'`))
       .catch((e) => console.error("admin_hangup stamp:", e));
   }
   return c.json({ ok: true });

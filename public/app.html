@@ -200,10 +200,10 @@
   .stc.armed .stcexpand{display:block}
   .stcexpand:empty{display:none}
   .stcdrow{display:flex;gap:10px;font-size:12.5px;line-height:1.5;margin-bottom:7px}
-  .stcdlab{flex:0 0 62px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding-top:2px}
+  .stcdlab{flex:0 0 66px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .stcdval{flex:1;min-width:0;color:var(--text-body)}
   .stcdval b{font-weight:700}
-  .stcdsum{font-size:12px;color:var(--text-muted);font-style:italic;line-height:1.5;margin:-3px 0 9px 72px}
+  .stcdsum{font-size:12px;color:var(--text-muted);font-style:italic;line-height:1.5;margin:-3px 0 9px 76px}
   .stcown{margin-top:11px;padding-top:11px;border-top:1px solid var(--border)}
   /* recall confirm — store checked < 24h ago */
   .stcdlg{margin-top:13px;border-top:1px solid var(--border);padding-top:14px}
@@ -1940,8 +1940,11 @@ function storeCardHTML(r){
   const os=r.openState||{}; const closed=!!(os.known && !os.open);
   const armed=!!(STORE_TAP[r.id]&&STORE_TAP[r.id].armed);
   const addr=(r.location||'').trim();
-  const pills=cs.total?`<div class="stcpills"><span class="cp in">${vmark('✅','in',13)} ${cs.inStock}</span><span class="cp out">${vmark('❌','out',13)} ${cs.notIn}</span><span class="cp soon">${vmark('🚚','soon',13)} ${cs.restock}</span></div>`:'';
-  const dot=cs.total?`<div class="stcdot ${cs.inStock/cs.total>=0.5?'good':cs.inStock/cs.total>0?'mid':'low'}"></div>`:'';
+  // Dot + pills reflect calls that actually got a stock answer (in / not-in / restock). No-answer,
+  // voicemail, closed, etc. carry no stock signal — they must never paint a red 0%-in-stock dot.
+  const results=cs.inStock+cs.notIn+cs.restock;
+  const pills=results?`<div class="stcpills"><span class="cp in">${vmark('✅','in',13)} ${cs.inStock}</span><span class="cp out">${vmark('❌','out',13)} ${cs.notIn}</span><span class="cp soon">${vmark('🚚','soon',13)} ${cs.restock}</span></div>`:'';
+  const dot=results?`<div class="stcdot ${cs.inStock/results>=0.5?'good':cs.inStock/results>0?'mid':'low'}"></div>`:'';
   const own=r.ownerOnly?`<div class="stcown"><div class="row" style="gap:8px;align-items:center"><input id="ph_${r.id}" value="${esch(r.phone||'')}" placeholder="+13105551234" inputmode="tel" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')saveStorePhone(${r.id})" style="flex:1;min-width:0"><button class="act" onclick="event.stopPropagation();saveStorePhone(${r.id})">Save phone</button></div><div class="hint" style="margin-top:6px;font-style:normal">Demo store — the phone number is its on/off switch. ${r.active?'<b style="color:var(--green)">● live</b>':'<span style="color:var(--muted)">○ off — add a number</span>'}</div></div>`:'';
   return `<div class="stc${armed?' armed':''}${closed?' closed':''}" id="stc_${r.id}" onclick="storeTap(${r.id},event)">
     <div class="stchead">
@@ -1969,7 +1972,7 @@ function storeDetailsHTML(r){
     h+=`<div class="stcdrow"><span class="stcdlab">Last check</span><span class="stcdval"><b style="color:${vv.c}">${vmark(vv.e,vv.c,14)} ${esch(vv.t)}</b>${lc.category?' · '+esch(lc.category):''} · ${esch(agoTs(lc.startedAt)||'')}</span></div>`;
     if(lc.summary) h+=`<div class="stcdsum">“${esch(lc.summary)}”</div>`;
   }
-  if(r.distributor) h+=`<div class="stcdrow"><span class="stcdlab">Distributor</span><span class="stcdval">${esch(r.distributor)}</span></div>`;
+  if(r.distributor) h+=`<div class="stcdrow"><span class="stcdlab">Distro</span><span class="stcdval">${esch(r.distributor)}</span></div>`;
   if(carries.length) h+=`<div class="stcdrow"><span class="stcdlab">Carries</span><span class="stcdval">${carries.map(esch).join(' · ')}</span></div>`;
   return h;
 }
@@ -2998,7 +3001,7 @@ function pinColor(r){
 }
 function ensureMap(){
   if(!MAP){
-    MAP=L.map('leafletmap',{zoomControl:false}).setView([34.05,-118.24],10);
+    MAP=L.map('leafletmap',{zoomControl:false,attributionControl:false}).setView([34.05,-118.24],10);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',attribution:''}).addTo(MAP);
     MARKERS=L.layerGroup().addTo(MAP);
   }
@@ -3006,8 +3009,8 @@ function ensureMap(){
 }
 async function loadMap(){
   if(!MAP) return;
-  // Plot the stores you're currently looking at (your Stores search). Falls back to recent if none.
-  const rs=(Array.isArray(RETAILERS)&&RETAILERS.length)?RETAILERS:(await api('/api/retailers'));
+  // Plot exactly the results you're looking at — the current search/filters (not the whole loaded set).
+  const rs=(Array.isArray(RETAILERS)&&RETAILERS.length)?filteredRetailers():((await api('/api/retailers'))||[]);
   MARKERS.clearLayers();
   const pts=[];
   rs.filter(r=>r.lat&&r.lng).forEach(r=>{
@@ -3243,8 +3246,8 @@ async function loadGwPulse(){
   el.innerHTML=
     `<div class="rgrp">Funnel</div><div class="stats">`+
       st(f.leads||0,'leads')+st(f.signups||0,'signups')+st(f.paying||0,'paying',1)+st(f.members||0,'members',1)+st(money(f.revenueCents),'revenue',1)+
-    `</div><div class="rgrp">Activity</div><div class="stats">`+
-      st(a.checks||0,'checks')+st(a.checks24h||0,'last 24h')+st(a.checks7d||0,'last 7d')+st(a.confirms||0,'confirms',1)+
+    `</div><div class="rgrp">Activity <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· real consumer calls — excludes Fun/MVPs + admin tests</span></div><div class="stats">`+
+      st(a.checks||0,'checks')+st(a.checks24h||0,'last 24h')+st(a.confirms||0,'confirms',1)+st(secsFmt(a.avgTalkSec||0),'avg talk',1)+st(secsFmt(a.avgCallSec||0),'avg call')+
     `</div><div class="rgrp">Community</div><div class="stats" style="margin-bottom:0">`+
       st(cm.watches||0,'watching')+st(cm.kioskReports||0,'kiosk intel')+st(cm.posts||0,'scores')+st(cm.postsPending||0,'pending')+st(cm.newLeads7d||0,'new leads 7d')+
     `</div>`;

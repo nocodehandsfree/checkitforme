@@ -880,7 +880,7 @@ export async function retailersWithStatus(opts: { q?: string; state?: string; li
   }
   const rs: (typeof retailers.$inferSelect)[] = conds.length
     ? await db.select().from(retailers).where(and(...conds)).limit(limit)
-    : await db.select().from(retailers).orderBy(desc(retailers.id)).limit(limit);
+    : await db.select().from(retailers).orderBy(retailers.name).limit(limit); // no filter → browse A→Z
   const ids = rs.map((r) => r.id);
   const recent = ids.length
     ? await db.select().from(callResults).where(inArray(callResults.retailerId, ids)).orderBy(desc(callResults.startedAt))
@@ -899,9 +899,13 @@ export async function retailersWithStatus(opts: { q?: string; state?: string; li
   }
 
   // Per-store call track-record (count + in-stock / not-in / restock tally) from the `recent` set we
-  // already loaded for lastCall — no extra query.
+  // already loaded for lastCall — no extra query. EXCLUDE the owner's own test calls (admin-placed checks
+  // are attributed to the master account) and admin-canceled calls, so a store the owner test-dialed
+  // never shows a dot/pill or a "last check" as if a real customer had called it.
+  const masterUid = "phone:" + (process.env.OWNER_PHONE || "+13106662331").trim();
+  const recentReal = recent.filter((cr) => cr.finderUserId !== masterUid && cr.status !== "admin_hangup");
   const statsByStore = new Map<number, { total: number; inStock: number; notIn: number; restock: number }>();
-  for (const cr of recent) {
+  for (const cr of recentReal) {
     if (cr.retailerId == null) continue;
     const s = statsByStore.get(cr.retailerId) ?? { total: 0, inStock: 0, notIn: 0, restock: 0 };
     s.total++;
@@ -912,7 +916,7 @@ export async function retailersWithStatus(opts: { q?: string; state?: string; li
   }
 
   return rs.map((r) => {
-    const last = recent.find((c) => c.retailerId === r.id);
+    const last = recentReal.find((c) => c.retailerId === r.id);
     return {
       ...r,
       storeType: (r.chainId && chainTypes.get(r.chainId)) || "Other",
