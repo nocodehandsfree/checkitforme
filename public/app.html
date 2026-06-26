@@ -195,8 +195,16 @@
   .stcdot.mid{background:#F4D03F;box-shadow:0 0 8px rgba(244,208,63,.6)}
   .stcdot.low{background:var(--red);box-shadow:0 0 8px rgba(239,68,68,.55)}
   .stcclosed{flex:0 0 auto;font:700 10px Inter;letter-spacing:.04em;text-transform:uppercase;color:#ff8a8a;background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.28);border-radius:7px;padding:3px 7px;white-space:nowrap;margin-top:1px}
-  .stcown{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
-  .stc.armed .stcown{display:block}
+  /* expand-to-see-details region — revealed on the first tap */
+  .stcexpand{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+  .stc.armed .stcexpand{display:block}
+  .stcexpand:empty{display:none}
+  .stcdrow{display:flex;gap:10px;font-size:12.5px;line-height:1.5;margin-bottom:7px}
+  .stcdlab{flex:0 0 62px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding-top:2px}
+  .stcdval{flex:1;min-width:0;color:var(--text-body)}
+  .stcdval b{font-weight:700}
+  .stcdsum{font-size:12px;color:var(--text-muted);font-style:italic;line-height:1.5;margin:-3px 0 9px 72px}
+  .stcown{margin-top:11px;padding-top:11px;border-top:1px solid var(--border)}
   /* recall confirm — store checked < 24h ago */
   .stcdlg{margin-top:13px;border-top:1px solid var(--border);padding-top:14px}
   .stcdlg .q{font:500 13px Inter;color:var(--text-body);line-height:1.55;text-align:center}
@@ -1909,9 +1917,23 @@ function storeCardHTML(r){
       </div>
       ${closed?'<div class="stcclosed">Closed</div>':dot}
     </div>
-    ${own}
+    <div class="stcexpand">${storeDetailsHTML(r)}${own}</div>
     <div class="stclive" id="stclive_${r.id}"></div>
   </div>`;
+}
+// Details revealed when the card is expanded (first tap): the store's track record beyond the at-a-glance
+// pills — the last check (verdict + when + what the clerk said) and the full carries list.
+function storeDetailsHTML(r){
+  const lc=r.lastCall;
+  const carries=(r.carries||'').split(',').map(x=>x.trim()).filter(Boolean);
+  let h='';
+  if(lc){
+    const vv=customerVerdict({status:lc.status,confirmed:lc.confirmed,shipmentDayHeard:lc.shipmentDayHeard,productName:lc.category,summary:lc.summary});
+    h+=`<div class="stcdrow"><span class="stcdlab">Last check</span><span class="stcdval"><b style="color:${vv.c}">${vmark(vv.e,vv.c,14)} ${esch(vv.t)}</b>${lc.category?' · '+esch(lc.category):''} · ${esch(agoTs(lc.startedAt)||'')}</span></div>`;
+    if(lc.summary) h+=`<div class="stcdsum">“${esch(lc.summary)}”</div>`;
+  }
+  if(carries.length) h+=`<div class="stcdrow"><span class="stcdlab">Carries</span><span class="stcdval">${carries.map(esch).join(' · ')}</span></div>`;
+  return h;
 }
 // Product logos for the verticals we actually support (Pokémon / One Piece / Topps / NeeDoh), one line.
 const PROD_LOGOS=[[/pok[eé]?mon/i,'/logos/chains/pokemon_vending.svg','Pokémon'],[/one[\s-]?piece/i,'/logos/onepiece.png','One Piece'],[/topps/i,'/logos/topps.png','Topps'],[/nee[\s-]?doh/i,'/logos/needoh.png','NeeDoh']];
@@ -1924,16 +1946,24 @@ function prodLogos(carries){
 let STORE_TAP={};                 // id -> {armed, t, recall, calling, cid, callSid}
 let SC_POLL=null, SC_CLOCK=null;  // one live store-call view at a time
 function storeTap(id, ev){
-  const st=STORE_TAP[id]||{armed:false,t:0};
+  const st=STORE_TAP[id]||{};
   if(st.recall||st.calling) return;                 // recall / live views own their own buttons
-  const now=Date.now();
-  if(!st.armed){ st.armed=true; st.t=now; STORE_TAP[id]=st; setArmed(id,true); return; }
-  if(now-st.t<300){ st.armed=false; STORE_TAP[id]=st; setArmed(id,false); return; }  // fast double-tap → collapse
-  st.t=now; STORE_TAP[id]=st;                        // deliberate second tap → call
-  const r=RETAILERS.find(x=>x.id===id); if(!r) return;
-  const os=r.openState||{}; if(os.known && !os.open){ toast('🔒 Closed — no call placed'); return; }
-  const lc=r.lastCall, recent=lc&&lc.startedAt&&(Date.now()/1000-lc.startedAt)<86400;
-  if(recent) openRecall(id,r); else placeStoreCall(id);
+  if(!st.armed){ st.armed=true; STORE_TAP[id]=st; setArmed(id,true); return; }   // collapsed → expand (show details)
+  // Expanded: a single tap calls, a double-tap closes. Wait one tap-window to tell them apart.
+  if(st.tapTimer){                                  // 2nd tap inside the window → double-tap → close the box
+    clearTimeout(st.tapTimer); st.tapTimer=null; st.armed=false; STORE_TAP[id]=st;
+    setArmed(id,false); const box=document.getElementById('stclive_'+id); if(box) box.innerHTML='';
+    return;
+  }
+  st.tapTimer=setTimeout(()=>{                       // no 2nd tap → single tap → call the store
+    const s=STORE_TAP[id]||{}; s.tapTimer=null; STORE_TAP[id]=s;
+    if(s.recall||s.calling||!s.armed) return;
+    const r=RETAILERS.find(x=>x.id===id); if(!r) return;
+    const os=r.openState||{}; if(os.known && !os.open){ toast('🔒 Closed — no call placed'); return; }
+    const lc=r.lastCall, recent=lc&&lc.startedAt&&(Date.now()/1000-lc.startedAt)<86400;
+    if(recent) openRecall(id,r); else placeStoreCall(id);
+  }, 280);
+  STORE_TAP[id]=st;
 }
 function setArmed(id,on){ const c=document.getElementById('stc_'+id); if(c) c.classList.toggle('armed',on); }
 function lastOutcome(lc){ if(!lc) return ''; if(lc.confirmed===true) return 'in stock'; if(lc.shipmentDayHeard) return 'restocking soon'; if(lc.confirmed===false) return 'not in stock'; if(lc.status==='completed') return 'no clear answer'; if(lc.status==='closed') return 'closed'; return 'no answer'; }
