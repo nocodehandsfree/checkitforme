@@ -27,17 +27,22 @@
 | `key` | Title | Line 1 (short) | Line 2 |
 |---|---|---|---|
 | `in_stock` | **In stock!** | `{store} has {product} in.`  *(no product → `{store} has {category} in.`)* | `Go grab it before it's gone.` |
-| `not_in_stock` | **Not in stock** | `{store} doesn't have {category} in.` | `Want us to watch for the restock?` |
+| `not_in_stock` | **Not in stock** | `{store} doesn't have {category} in.` | `Worth a check back in a day or two.` |
 | `restock` | **Restock incoming** | `A shipment lands {day}.` | `Be first when it drops.` |
-| `no_clear_answer` | **Couldn't tell** | `Someone answered but wouldn't say yes or no.` | `Read the convo and tell us what you think.` |
+| `no_clear_answer` | **Couldn't tell** | `We couldn't quite make out the answer.` | `Read the convo and tell us what you think.` |
+
+**Notes for these code lines:**
+- **`in_stock` fallback:** `{product}` = the specific item if they searched one; if they only picked a category, there's no product → use `{category}`. (Stops the line rendering "has  in.")
+- **`not_in_stock`:** the line no longer pushes restock alerts. The **restock-alert signup section below is premium-only**; for non-premium, show a simple check-back nudge there instead (copy at the bottom of this doc). The verdict line stays membership-neutral.
+- **`no_clear_answer`:** this fires when *we* couldn't make out the answer from the call (speech/audio), **not** because the clerk dodged. The line owns that, and the poll asks the human to read the transcript and call it.
 
 ### Spanish
 | `key` | Title | Line 1 | Line 2 |
 |---|---|---|---|
 | `in_stock` | **¡En stock!** | `{store} tiene {product}.`  *(no product → `{store} tiene {category}.`)* | `Ve por ello antes de que se agote.` |
-| `not_in_stock` | **No está en stock** | `{store} no tiene {category} ahora.` | `¿Te avisamos cuando vuelva?` |
+| `not_in_stock` | **No está en stock** | `{store} no tiene {category} ahora.` | `Vuelve a checar en un día o dos.` |
 | `restock` | **¡Reabastecimiento en camino!** | `Llega un envío {day}.` | `Sé el primero cuando caiga.` |
-| `no_clear_answer` | **No supimos decir** | `Alguien contestó pero no dijo ni sí ni no.` | `Lee la conversación y dinos qué opinas.` |
+| `no_clear_answer` | **No supimos decir** | `No pudimos entender bien la respuesta.` | `Lee la conversación y dinos qué opinas.` |
 
 > **The headline change:** `no_clear_answer` title **"Unclear" → "Couldn't tell."** "Unclear" reads like an error code; "Couldn't tell" is what a friend says — and it keeps the *"tell us what you think"* poll hook. This is the one in the owner's screenshot.
 
@@ -49,7 +54,8 @@
 |---|---|---|---|
 | `sold_out` | Sold out | `{store} is sold out of {product}.` | `Worth catching the next drop.` |
 | `does_not_sell` | They don't carry it | `{store} doesn't sell {product}.` | `Try another store.` |
-| `nobody_answered` | Nobody answered | `No one picked up — no charge.` | `Try again in a bit.` |
+| `nobody_answered` | Nobody answered | `No one picked up — no charge.` | `Try back a little later.` |
+| `too_busy` 🆕 | Too busy to check | `They were slammed — no charge.` | `Try back in a bit.` |
 | `voicemail` | Got their voicemail | `We hit a recording, not a person.` | `No charge — try again later.` |
 | `busy` | Line was busy | `Their line was busy — no charge.` | `Try again in a few.` |
 | `ivr_stuck` | Couldn't get past the menu | `We got stuck in their phone menu.` | `No charge — try again.` |
@@ -59,6 +65,19 @@
 | `failed` | Something broke | `Something went wrong on our end.` | `No charge — try again.` |
 
 ---
+
+## 🆕 `too_busy` needs detection wiring
+
+`too_busy` = the store **answered but was too slammed to check stock** (distinct from `busy` = the phone *line* was busy and never connected). The display copy above is ready to add in Admin, but the **caller has to recognize "we're too busy, call back" and stamp the call with `statusKey = "too_busy"`** — that's a voice/`src` change (DevOps), not Admin. Flag DevOps to add the detection; until then the row just won't fire.
+
+## The restock section under `not_in_stock` (premium vs non-premium)
+
+The verdict line stays neutral. The **section below** handles "what next," and it differs by membership:
+
+| Audience | What shows | Copy |
+|---|---|---|
+| **Premium** | Restock-alert signup (current) | **Don't miss the restock** — `We'll text you the second it's back in stock.` |
+| **Non-premium** | A simple check-back nudge (no signup) | **Check back soon** — `They restock often — pop back in a day or two.` *(optional soft upsell: `Members get an auto-alert the moment it lands.`)* |
 
 ## What changed vs. live, and why
 
