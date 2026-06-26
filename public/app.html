@@ -1311,9 +1311,19 @@ function showDashView(which){
   document.querySelectorAll('#dash_subnav button').forEach((b,i)=>b.classList.toggle('active', i===(calc?1:0)));
   if(calc) calcInit();
 }
-// Mount the calc shell into whichever container is present — the God-view sub-nav slot (#dash_calc)
-// or the standalone Calc tab (#calc_root).
-function calcInit(){ const el=document.getElementById('dash_calc')||document.getElementById('calc_root'); if(!el) return; if(!CALC.ready){ el.innerHTML=calcShell(); CALC.ready=true; } calcSync(); calcUpdate(); }
+// The calc has two homes — the God-view Calc TAB (#calc_root) and the dash sub-view (#dash_calc). Mount
+// into the one actually being shown and clear the other, so the calc's element IDs stay unique. (The old
+// "#dash_calc || #calc_root" always resolved to #dash_calc — which always exists but is hidden unless the
+// dash sub-view is open — so the Calc TAB rendered EMPTY. That's the calculator that looked "wiped".)
+function calcInit(){
+  const onTab=document.getElementById('calc')?.classList.contains('active');
+  const target=onTab?document.getElementById('calc_root'):document.getElementById('dash_calc');
+  const other=onTab?document.getElementById('dash_calc'):document.getElementById('calc_root');
+  if(!target) return;
+  if(other) other.innerHTML='';                            // never leave the calc in both → duplicate IDs
+  if(!target.querySelector('#calc_total')) target.innerHTML=calcShell();
+  CALC.ready=true; calcSync(); calcUpdate();
+}
 function calcShell(){
   const seg=Object.keys(CALC_STORE).map(t=>`<button type="button" id="calc_seg_${t}" onclick="calcPick('${t}')" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(CALC_STORE[t].nc)}${t}</span><span style="font-size:10.5px;color:var(--text-tertiary)">${CALC_STORE[t].sub}</span></button>`).join('');
   const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11.5px;color:var(--text-muted)">${label}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px 2px;width:62px"><span style="color:var(--text-tertiary);font-size:11px">${suf}</span></span></label>`;
@@ -1959,14 +1969,16 @@ function storeDetailsHTML(r){
     h+=`<div class="stcdrow"><span class="stcdlab">Last check</span><span class="stcdval"><b style="color:${vv.c}">${vmark(vv.e,vv.c,14)} ${esch(vv.t)}</b>${lc.category?' · '+esch(lc.category):''} · ${esch(agoTs(lc.startedAt)||'')}</span></div>`;
     if(lc.summary) h+=`<div class="stcdsum">“${esch(lc.summary)}”</div>`;
   }
+  if(r.distributor) h+=`<div class="stcdrow"><span class="stcdlab">Distributor</span><span class="stcdval">${esch(r.distributor)}</span></div>`;
   if(carries.length) h+=`<div class="stcdrow"><span class="stcdlab">Carries</span><span class="stcdval">${carries.map(esch).join(' · ')}</span></div>`;
   return h;
 }
-// Product logos for the verticals we actually support (Pokémon / One Piece / Topps / NeeDoh), one line.
-const PROD_LOGOS=[[/pok[eé]?mon/i,'/logos/chains/pokemon_vending.svg','Pokémon'],[/one[\s-]?piece/i,'/logos/onepiece.png','One Piece'],[/topps/i,'/logos/topps.png','Topps'],[/nee[\s-]?doh/i,'/logos/needoh.png','NeeDoh']];
+// Product logos for the verticals we actually support, one line. Per-logo [h,w] because the source art
+// has different padding — Topps (wordmark) reads bigger, NeeDoh is sized to match Pokémon / One Piece.
+const PROD_LOGOS=[[/pok[eé]?mon/i,'/logos/chains/pokemon_vending.svg','Pokémon',20,20],[/one[\s-]?piece/i,'/logos/onepiece.png','One Piece',20,20],[/topps/i,'/logos/topps.png','Topps',23,31],[/nee[\s-]?doh/i,'/logos/needoh.png','NeeDoh',21,21]];
 function prodLogos(carries){
   const s=String(carries||''); let out=''; const seen={};
-  for(const t of PROD_LOGOS){ if(t[0].test(s)&&!seen[t[1]]){ seen[t[1]]=1; out+=`<img src="${t[1]}" alt="${esch(t[2])}" title="${esch(t[2])}" loading="lazy">`; } }
+  for(const t of PROD_LOGOS){ if(t[0].test(s)&&!seen[t[1]]){ seen[t[1]]=1; out+=`<img src="${t[1]}" alt="${esch(t[2])}" title="${esch(t[2])}" loading="lazy" style="height:${t[3]}px;width:${t[4]}px">`; } }
   return out?`<div class="stcprod">${out}</div>`:'';
 }
 // ---- Tap gesture: tap = arm (green) · tap again = call · fast double-tap = collapse (no copy — intuitive) ----
@@ -1989,10 +2001,23 @@ function storeTap(id, ev){
     const r=RETAILERS.find(x=>x.id===id); if(!r) return;
     const os=r.openState||{}; if(os.known && !os.open){ toast('🔒 Closed — no call placed'); return; }
     const lc=r.lastCall, recent=lc&&lc.startedAt&&(Date.now()/1000-lc.startedAt)<86400;
-    if(recent) openRecall(id,r); else placeStoreCall(id);
+    if(recent) openRecall(id,r); else openCallConfirm(id,r);
   }, 450);
   STORE_TAP[id]=st;
 }
+// The product a call will ask about — the store's primary carried line, defaulting to Pokémon.
+function callProduct(r){ const c=(CATEGORIES||[]).find(x=>x.id===defaultCatFor(r)); return (c&&c.label)||'Pokémon'; }
+// Confirm before placing a call (store + product), so a stray tap never dials a real store by accident.
+function openCallConfirm(id, r){
+  const st=STORE_TAP[id]||{}; st.recall=true; STORE_TAP[id]=st;   // gate card taps while the confirm is up
+  const box=document.getElementById('stclive_'+id); if(!box) return;
+  box.innerHTML=`<div class="stcdlg">
+    <div class="q">Call <b>${esch(r.name||'this store')}</b> about <b>${esch(callProduct(r))}</b>?</div>
+    <button class="yes" onclick="callConfirmYes(${id},event)">Yes, call →</button>
+    <div class="no" onclick="recallNo(${id},event)">Not now</div>
+  </div>`;
+}
+function callConfirmYes(id, ev){ if(ev)ev.stopPropagation(); placeStoreCall(id); }
 function setArmed(id,on){ const c=document.getElementById('stc_'+id); if(c) c.classList.toggle('armed',on); }
 function lastOutcome(lc){ if(!lc) return ''; if(lc.confirmed===true) return 'in stock'; if(lc.shipmentDayHeard) return 'restocking soon'; if(lc.confirmed===false) return 'not in stock'; if(lc.status==='completed') return 'no clear answer'; if(lc.status==='closed') return 'closed'; return 'no answer'; }
 // Front-end recall confirm (store checked < 24h ago): a single green "check again", then "Not now" in gray.
@@ -2670,7 +2695,7 @@ function customerVerdict(o){
     return {e:s.emoji, t:s.label, c:s.color, n, key};
   }
   // Registry not loaded yet (first paint) — minimal built-in fallback keeps the row sane.
-  const F=({in_stock:['✅','In stock','#4ADE80'],sold_out:['🕐','Sold out','#EF4444'],does_not_sell:['🚫',"They don't carry it",'#EF4444'],not_in_stock:['❌','Not in stock','#EF4444'],no_clear_answer:['🤔','Got a “maybe”','#FBBF24'],nobody_answered:['📵','Nobody answered','#9CA3AF'],closed:['🔒','Store closed','#9CA3AF'],failed:['⚠️','Call failed','#FBBF24'],admin_hangup:['·','Admin hung up','#9CA3AF']})[key]||['📵','Nobody answered','#9CA3AF'];
+  const F=({in_stock:['✅','In stock','#4ADE80'],sold_out:['🕐','Sold out','#EF4444'],does_not_sell:['🚫',"They don't carry it",'#EF4444'],not_in_stock:['❌','Not in stock','#EF4444'],no_clear_answer:['🤔','Got a “maybe”','#FBBF24'],nobody_answered:['📵','Nobody answered','#9CA3AF'],closed:['🔒','Store closed','#9CA3AF'],failed:['⚠️','Call failed','#FBBF24'],admin_hangup:['·','Admin canceled','#9CA3AF']})[key]||['📵','Nobody answered','#9CA3AF'];
   return {e:F[0],t:F[1],c:F[2],n:(key==='failed'&&o.failureReason)?o.failureReason:'',key};
 }
 function pollTranscript(cid, pre){

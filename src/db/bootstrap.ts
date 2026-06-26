@@ -29,7 +29,7 @@ async function seedStatuses() {
     ["failed", "⚠️", "Call failed", "unk", "#FBBF24", "Something went wrong on our end — no charge."],
     // Admin ended the call from the dashboard. A NON-RESULT — excluded from every report/aggregate +
     // never billed; reads as "no data" (like a canceled call). Written by the master Stop & hang-up.
-    ["admin_hangup", "·", "Admin hung up", "unk", "#9CA3AF", "We ended this call from the dashboard — it doesn't count as a check. No charge."],
+    ["admin_hangup", "·", "Admin canceled", "unk", "#9CA3AF", "We ended this call from the dashboard — it doesn't count as a check. No charge."],
   ];
   let sort = 0;
   for (const [key, emoji, label, tone, color, note] of rows) {

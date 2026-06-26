@@ -680,6 +680,12 @@ function carriesForChain(name: string | null | undefined): string[] | null {
 function storeCarriesList(chainName: string | null | undefined, stored: string | null | undefined): string[] {
   return carriesForChain(chainName) ?? (stored ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 }
+/** Distributor name(s) serving a chain, for display in the Admin (e.g. "Excell · Schylling"). null = unmapped. */
+function distributorsForChain(name: string | null | undefined): string | null {
+  if (!name) return null;
+  const dists = distConfig().chains[name];
+  return (dists && dists.length) ? dists.join(" · ") : null;
+}
 
 // Owner preview: every chain logo rendered EXACTLY as the consumer store list renders it — the
 // same .ic tile (52px, plate + wide handling from _meta.json), ONE mark each (no 2x detail), so
@@ -2573,8 +2579,9 @@ app.get("/api/retailers", async (c) => {
   // the exact /logos/chains files (per public/logos/chains/README.md) — muted chains included.
   const names = new Map((await db.select().from(chains)).map((x) => [x.id, x.name]));
   return c.json(rows.map((r) => {
-    const l = chainLogoInfo((r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0]);
-    return { ...r, carries: storeCarriesList((r.chainId && names.get(r.chainId)) || null, r.carries).join(","), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+    const chainName = (r.chainId && names.get(r.chainId)) || null;
+    const l = chainLogoInfo(chainName || r.name.split(/—|–| - /)[0]);
+    return { ...r, carries: storeCarriesList(chainName, r.carries).join(","), distributor: distributorsForChain(chainName), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
   }));
 });
 // Store Intel — the headline numbers on the Stores tab (cached 60s). The database, at a glance.
