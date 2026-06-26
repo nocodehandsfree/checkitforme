@@ -1078,6 +1078,11 @@ app.get("/pub/finds", async (c) => {
   if (!pol.finds.publicFeed) return c.json([]);
   const cats = await categoryLabelMap();
   const stores = await retailerMap();
+  // Location: once the visitor has shared where they are, only show finds NEAR them — never finds from
+  // hundreds of miles away. Before location is shared, the national feed stands in as social proof.
+  const flat = Number(c.req.query("lat")), flng = Number(c.req.query("lng"));
+  const fradius = Number(c.req.query("radius")) || 25;
+  const fHasLoc = Number.isFinite(flat) && Number.isFinite(flng);
   const ownerOnly = await ownerOnlyRetailerIds(); // Fun / MVP's etc. are rehearsal stores — never real finds
   // Headstart: a paid finder's result stays off the public feed for headstartMin minutes.
   const cutoff = Date.now() - pol.finds.headstartMin * 60_000;
@@ -1090,6 +1095,9 @@ app.get("/pub/finds", async (c) => {
     .filter((r) => r.isPrivate !== true)
     // Headstart: only after the finder's lead time has elapsed.
     .filter((r) => (r.completedAt ?? r.startedAt) <= cutoff)
+    // Near the visitor only (when they've shared location). No location on the store → can't confirm it's
+    // local → leave it out of a localized feed.
+    .filter((r) => { if (!fHasLoc) return true; const st = stores.get(r.retailerId); return !!st && st.lat != null && st.lng != null && haversineMi(flat, flng, st.lat, st.lng) <= fradius; })
     .slice(0, 10);
   return c.json(rows.map((r) => ({
     store: (stores.get(r.retailerId)?.name || "A store").split("—")[0].trim(),

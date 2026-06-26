@@ -23,7 +23,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r84" />
+<meta name="x-rev" content="names-r85" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -106,6 +106,12 @@ __BRAND_HEAD__
   .cta:hover{filter:brightness(1.04)}
   .cta:active{transform:translateY(1px);box-shadow:0 5px 14px -4px rgba(52,197,107,.45),inset 0 1px 0 rgba(255,255,255,.35)}
   .cta:disabled{background:#1f2a23;color:#5c6f63;box-shadow:none;cursor:not-allowed;filter:none}
+  /* "Getting the answer" three-dots — they pulse one at a time, on a loop, until the verdict lands. */
+  .loaddots{display:inline-flex;gap:9px;align-items:center;padding:16px 0}
+  .loaddots span{width:10px;height:10px;border-radius:50%;background:var(--green,#4ADE80);animation:loaddot 1.25s ease-in-out infinite}
+  .loaddots span:nth-child(2){animation-delay:.18s} .loaddots span:nth-child(3){animation-delay:.36s}
+  @keyframes loaddot{0%,65%,100%{opacity:.22;transform:translateY(0)}32%{opacity:1;transform:translateY(-5px)}}
+  @media (prefers-reduced-motion:reduce){ .loaddots span{animation:none;opacity:.7} }
   @keyframes armPulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,.5)}100%{box-shadow:0 0 0 24px rgba(74,222,128,0)}}
   .cta.armed{animation:armPulse .8s ease-out 2}
   .cta .price{font-weight:700;opacity:.7;font-size:13px}
@@ -2124,9 +2130,10 @@ function openAccount(){
   const pl=$('acct_planlbl'); if(pl) pl.textContent = member||comp ? t('acct.manage','Manage plan') : t('acct.upgrade','Upgrade — get more checks');
   const pr=$('acct_plan'); if(pr) pr.onclick=function(){ closeAccount(); openBuy((member||comp)?'manage':undefined); };
   setI('acctHist', FCHK(18)); // the brand check mark, not a clock
-  // "My checks" only appears if there ARE checks for the current product — no checks → no row (and no
-  // need for an empty-state banner). Uses local history (instant); ensureHistCache refreshes it after.
-  const _cr=$('acct_checks_row'); if(_cr){ const has=loadHist().some(e=>e.cid&&railInCat(e)); _cr.style.display=has?'':'none'; if(!HIST_CACHE.length) ensureHistCache().then(()=>{ try{ _cr.style.display=histList().some(e=>e.cid&&railInCat(e))?'':'none'; }catch(_){} }); }
+  // "My checks" ALWAYS shows when signed in (the account menu only opens when authed) — a fresh
+  // Home-Screen install has empty LOCAL history, so gating on it hid the row and made the page
+  // unreachable. The page itself handles the empty/sign-in states.
+  const _cr=$('acct_checks_row'); if(_cr){ _cr.style.display=''; }
   setI('acctStar', ICO.spark('#FFCB05').replace('width="13" height="13"','width="16" height="16"'));
   // Caller-ID row — only phone-verified identities can register a caller ID (Clerk tokens carry no phone).
   const cidRow=$('acct_cid');
@@ -3204,10 +3211,12 @@ async function finalizeLive(cid){
   // ONE quick fetch. If EL already has the verdict, we flip straight to it. If not, keep pulling and repaint
   // when it lands (we already flipped off the call screen above).
   let o=null; try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){}
-  if(!o||!o.status||o.status==='in_progress'){
-    let tries=0;
-    while((!o||!o.status||o.status==='in_progress')&&tries<10){ await new Promise(r=>setTimeout(r,1000)); try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){} tries++; }
-  }
+  // Wait for a CONFIDENT verdict before leaving the dots — not just "not in_progress". An early read can
+  // come back "no clear answer" and then the consensus upgrades it to in-stock; showing that flip looked
+  // broken. Hold on "Getting the answer…" until it's settled (yes / no / sold-out / a terminal status) or
+  // the ~9s window closes (then we show whatever we have, including a genuine "unclear").
+  const _confident=(r)=>!!(r&&r.status&&r.status!=='in_progress'&&(r.confirmed===true||r.confirmed===false||r.soldOut||r.doesNotSell||r.status!=='completed'));
+  { let tries=0; while(!_confident(o)&&tries<9){ await new Promise(r=>setTimeout(r,1000)); try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){} tries++; } }
   const res=(o&&o.status&&o.status!=='in_progress')?o:{status:'no_answer',transcript:live,summary:''};
   // If EL hasn't attached the transcript yet, fall back to what we streamed live, then to /pub/live, so the
   // conversation always prints on the result without a hard refresh.
@@ -3575,7 +3584,7 @@ function showResult(o, cid){
     </div>
     ${feedbackBlock}
     ${o.status==='pending'
-      ? `<div class="topcta" style="display:flex;justify-content:center"><div class="ring"></div></div>` /* still pulling the verdict — show progress, NOT the "Check another store" CTA (reads as calling again) */
+      ? `<div class="topcta" style="display:flex;justify-content:center"><div class="loaddots"><span></span><span></span><span></span></div></div>` /* still pulling the verdict — animated dots, NOT the "Check another store" CTA (reads as calling again) */
       : `<div class="topcta">${primaryCta}</div>`}
     <div class="callsec">
       ${canTranslate?`<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button></div>`:''}
