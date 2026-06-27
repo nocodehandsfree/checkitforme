@@ -2019,6 +2019,7 @@ function storeDetailsHTML(r){
   }
   if(r.distributor) h+=`<div class="stcdrow"><span class="stcdlab">Distro</span><span class="stcdval">${esch(r.distributor)}</span></div>`;
   if(carries.length) h+=`<div class="stcdrow"><span class="stcdlab">Carries</span><span class="stcdval">${carries.map(esch).join(' · ')}</span></div>`;
+  if(window.WF&&WF.list&&WF.list.length){ const inh=(r.chainId&&WF.chains&&WF.chains[r.chainId])||WF.def||''; h+=`<div class="stcdrow"><span class="stcdlab">Workflow</span><span class="stcdval"><select onclick="event.stopPropagation()" onchange="event.stopPropagation();setStoreWorkflow(${r.id},this.value)" style="max-width:100%">${wfOptions(WF.stores[r.id]||'', inh?('Default · '+esch(inh)):'Default')}</select></span></div>`; }
   return h;
 }
 // Product logos for the verticals we actually support, one line. Per-logo [h,w] because the source art
@@ -3214,6 +3215,7 @@ function renderWorkflowMgr(){
       <div class="wfmhead">
         <div style="flex:1;min-width:0"><span class="wfmname">${esch(w.name)}</span>${isDef?'<span class="wfmdef">★ default · all stores</span>':''}
           <div class="meta" style="margin-top:3px">${ops.length} opener${ops.length===1?'':'s'} · ${w.voiceId?'custom voice':'default voice'} · ${esch(w.persona||'no persona')}${asg?' · '+asg+' assigned':''}</div></div>
+        <button class="ghost" onclick="wfmClone(${wi})">Clone</button>
         ${isDef?'':`<button class="ghost" onclick="wfmSetDefault(${wi})">Set default</button>`}
         <button class="ghost opdel" onclick="wfmDelete(${wi})" title="Delete workflow">${lucideSvg('x',15,'currentColor')}</button>
       </div>
@@ -3235,6 +3237,7 @@ async function wfmAddOpener(wi){ const inp=document.getElementById('wfmadd_'+wi)
 async function wfmDelOpener(wi,oi){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; w.openers.splice(oi,1); renderWorkflowMgr(); await wfmSaveList(); toast('Opener removed'); }
 async function wfmEditOpener(wi,oi,text){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; const t=(text||'').trim(); if(!t){ w.openers.splice(oi,1); renderWorkflowMgr(); } else { w.openers[oi]=t; } await wfmSaveList(); }
 async function wfmSetField(wi,field,val){ const w=WF.list[wi]; if(!w) return; w[field]=val; await wfmSaveList(); renderWorkflowMgr(); toast('Saved'); }
+async function wfmClone(wi){ const w=WF.list[wi]; if(!w) return; const name=(prompt('Name for the cloned workflow:', w.name+' copy')||'').trim(); if(!name) return; if(WF.list.some(x=>x.name===name)){ toast('A workflow named “'+name+'” already exists'); return; } const copy=JSON.parse(JSON.stringify(w)); copy.name=name; copy.savedAt=Date.now(); WF.list.push(copy); renderWorkflowMgr(); await wfmSaveList(); toast('Cloned as “'+name+'” — edit it below, then assign it to a store'); }
 async function wfmSetDefault(wi){ const w=WF.list[wi]; if(!w) return; WF.def=w.name; const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:w.name})}); renderWorkflowMgr(); toast((r&&!r.error)?(w.name+' powers all stores now'):'Could not set default'); }
 async function wfmDelete(wi){ const w=WF.list[wi]; if(!w) return; if(!confirm('Delete workflow “'+w.name+'”?\nStores assigned to it fall back to the default.')) return; const wasDef=WF.def===w.name; WF.list=WF.list.filter((x,i)=>i!==wi); if(wasDef){ WF.def=''; await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:''})}); } renderWorkflowMgr(); await wfmSaveList(); toast('Workflow deleted'); }
 // Settings → the one global default workflow.
@@ -3375,22 +3378,24 @@ async function loadUsers(){
   const d=await api('/api/admin/users');
   if(!Array.isArray(d)){ el.textContent='Could not load users.'; return; }
   if(!d.length){ el.innerHTML='<div class="empty">No signups yet.</div>'; return; }
-  const real=d.filter(u=>!u.comp);
+  const real=d.filter(u=>!u.staff);
   const money=c=>'$'+((c||0)/100).toFixed(2);
   const when=s=>{ if(!s) return '—'; const dt=new Date(s*1000); return dt.toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})+' · '+dt.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}); };
-  const planCls=p=>p==='Subscriber'?'in':p==='Pay-as-you-go'?'soon':p==='Comp / owner'?'gray':'out';
-  el.innerHTML=`<div class="meta" style="margin-bottom:12px">${d.length} account${d.length===1?'':'s'} · <b style="color:var(--green)">${real.length} real signup${real.length===1?'':'s'}</b> <span style="color:var(--text-tertiary)">(excludes comp / owner)</span></div>`
+  const planCls=p=>p==='Subscriber'?'in':p==='Pay-as-you-go'?'soon':(p==='Comp / owner'||p==='Admin / test')?'gray':'out';
+  el.innerHTML=`<div class="meta" style="margin-bottom:12px">${d.length} account${d.length===1?'':'s'} · <b style="color:var(--green)">${real.length} real signup${real.length===1?'':'s'}</b> <span style="color:var(--text-tertiary)">(excludes comp/owner + admin/test)</span></div>`
     + d.map(u=>`<div class="urow">
         <div class="ugrow">
-          <div class="uname">${esch(u.phone||u.email||u.id)}${u.comp?'<span class="ucomp">comp</span>':''}</div>
+          <div class="uname">${esch(u.phone||u.email||u.id)}${u.comp?'<span class="ucomp">comp</span>':(u.manualStaff?'<span class="ucomp">admin/test</span>':'')}</div>
           <div class="umeta">${(u.email&&u.phone)?esch(u.email)+' · ':''}signed up ${esch(when(u.createdAt))}${u.callerIdVerified?' · <span style="color:var(--green)">caller-ID ✓</span>':''}</div>
         </div>
         <div class="uright">
           <span class="upill ${planCls(u.plan)}">${esch(u.plan)}</span>
           <div class="umeta" style="margin-top:5px">${u.credits} credits · ${u.callsMade} call${u.callsMade===1?'':'s'} · ${money(u.spentCents)}</div>
+          ${u.comp?'':`<button class="ghost" style="font-size:11px;padding:5px 9px;margin-top:7px" onclick="toggleStaff('${esch(u.id)}',${u.manualStaff?'false':'true'})">${u.manualStaff?'Unmark':'Mark admin/test'}</button>`}
         </div>
       </div>`).join('');
 }
+async function toggleStaff(id,on){ const r=await api('/api/admin/users/staff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,on})}); if(r&&!r.error){ toast(on?'Flagged as admin/test — won’t count as a customer':'Unflagged'); loadUsers(); } else toast('Could not update'); }
 async function loadGwIntel(){
   const el=document.getElementById('gw_intel'); if(!el) return;
   const d=await api('/api/admin/restock-intel');

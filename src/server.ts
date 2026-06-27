@@ -2286,22 +2286,40 @@ app.get("/api/admin/restock-intel", async (c) => {
 });
 
 // ---- Growth pulse: the funnel + engagement snapshot the owner reads each morning ----
+// Manually-flagged admin/test accounts (Clerk-free, so we can't rely on email domains). These are
+// non-customers — excluded from signups/activity like the comp/owner accounts.
+async function staffAccountIds(): Promise<Set<string>> {
+  try { const raw = await getSetting("staff_accounts"); const arr = raw ? JSON.parse(raw) : []; return new Set(Array.isArray(arr) ? arr.map(String) : []); } catch { return new Set<string>(); }
+}
+// Is this account a non-customer (owner/comp by email, or manually flagged admin/test)?
+const isStaffAcct = (a: typeof accounts.$inferSelect, flagged: Set<string>) => isComp(a.email) || isCompAccount(a) || flagged.has(a.clerkUserId);
 // User dashboard — everyone who's signed up (phone-first accounts, Clerk-free). Newest first.
 app.get("/api/admin/users", async (c) => {
   const accs = await db.select().from(accounts).orderBy(desc(accounts.createdAt));
+  const flagged = await staffAccountIds();
   return c.json(accs.map((a) => {
     const comp = isComp(a.email) || isCompAccount(a);
-    const plan = a.subscription === "active" ? "Subscriber" : (a.totalSpentCents > 0 ? "Pay-as-you-go" : (comp ? "Comp / owner" : "Free"));
+    const staff = comp || flagged.has(a.clerkUserId);
+    const plan = a.subscription === "active" ? "Subscriber" : (a.totalSpentCents > 0 ? "Pay-as-you-go" : (staff ? (comp ? "Comp / owner" : "Admin / test") : "Free"));
     return {
       id: a.clerkUserId,
       phone: a.phone || (a.clerkUserId?.startsWith("phone:") ? a.clerkUserId.slice(6) : null),
       email: a.email || null,
-      plan, subscription: a.subscription, comp,
+      plan, subscription: a.subscription, comp, staff, manualStaff: flagged.has(a.clerkUserId),
       credits: a.credits, callsMade: a.callsMade, spentCents: a.totalSpentCents,
       callerIdVerified: !!a.callerId, referredBy: a.referredBy || null,
       createdAt: a.createdAt, renewsAt: a.subRenewsAt || null,
     };
   }));
+});
+// Flag / unflag an account as admin/test (won't count as a customer).
+app.post("/api/admin/users/staff", async (c) => {
+  const { id, on } = await c.req.json().catch(() => ({}));
+  if (!id) return c.json({ error: "id required" }, 400);
+  const set = await staffAccountIds();
+  if (on) set.add(String(id)); else set.delete(String(id));
+  await setSetting("staff_accounts", JSON.stringify([...set]));
+  return c.json({ ok: true });
 });
 app.get("/api/admin/pulse", async (c) => {
   const now = Math.floor(Date.now() / 1000), d1 = now - 86400, d7 = now - 7 * 86400;
@@ -2315,7 +2333,8 @@ app.get("/api/admin/pulse", async (c) => {
   // Real calls only: drop the Fun/MVPs demo stores, the owner's own admin test calls (attributed to the
   // master account), and admin-canceled calls — so the Pulse reflects genuine consumer activity.
   const masterUid = "phone:" + (process.env.OWNER_PHONE || "+13106662331").trim();
-  const real = calls.filter((r) => !ownerOnly.has(r.retailerId) && r.finderUserId !== masterUid && r.status !== "admin_hangup");
+  const flagged = await staffAccountIds();
+  const real = calls.filter((r) => !ownerOnly.has(r.retailerId) && r.finderUserId !== masterUid && !(r.finderUserId && flagged.has(r.finderUserId)) && r.status !== "admin_hangup");
   const completed = real.filter((r) => r.status === "completed");
   // Avg talk time = seconds with a human on the line (callSeconds − navSeconds) over reached real calls.
   const timed = real.filter((r) => r.callSeconds != null);
@@ -2325,7 +2344,7 @@ app.get("/api/admin/pulse", async (c) => {
   return c.json({
     funnel: {
       leads: leadRows.length,
-      signups: accts.filter((a) => !isComp(a.email) && !isCompAccount(a)).length, // real signups, not owner/comp
+      signups: accts.filter((a) => !isStaffAcct(a, flagged)).length, // real signups — not owner/comp or flagged admin/test
       paying: accts.filter((a) => a.totalSpentCents > 0).length,
       members: accts.filter((a) => a.subscription === "active").length,
       revenueCents: accts.reduce((s, a) => s + (a.totalSpentCents || 0), 0),
