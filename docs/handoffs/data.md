@@ -42,6 +42,29 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
 
 ## Current focus (KEEP UPDATED)
 
+**Session 2026-06-27 — learned restock "best day" from call data (serve-time, no schema change).**
+
+### Shipped to STAGING (code — awaits owner "ship it" to promote to prod)
+- **best-bet now learns the restock day.** `/pub/best-bet` ranked on the last-write-wins
+  `retailers.shipmentDay` column (one wrong clerk answer flipped it). New `learnedShipDow()` uses the
+  **mode of `call_results.shipmentDayHeard`** across a store's confirmed calls, falling back to the
+  stored column when there's no history. So the recommendation compounds with every call.
+- **NEW `GET /api/admin/store-restock/:id`** — per-store weekday picture for the Admin store panel:
+  `clerkSaid` (heard-day tally + mode), `empirical` (confirmed-by-weekday histogram + peak, store-local
+  via new `dowAt()`), derived `bestDay` (clerk-mode → empirical fallback), `confidence` (# confirms),
+  `byCategory`. Mirrors `/api/admin/restock-intel` (network/top-25, already live) for ONE store.
+- All serve-time derivation from `call_results` — **no new columns.** Helpers `dowAt`/`learnedShipDow`
+  unit-checked (mode wins, tz rollover correct); tsc + store-contract clean. Branch: `…-pagiis`.
+- **Admin-dev prompt written** (display placement: store-detail "Restock Intel" card + clickable
+  top-store rows in the God-view restock report). Given to owner this session.
+
+### Spec'd, NOT built (call-backend lane — needs that dev or owner "ship it")
+- **Restock-day user notification.** Data layer is ready (`learnedShipDow`). Trigger: daily tick like
+  `customerScheduleTick()`; for each active `watches` row, if `tzDow(store.tz) === learnedDow` and not
+  yet notified today → send "today's usually restock day at {store}" via the watch alert path
+  (brevo.ts), gated by `policy.flags.restockAlerts`. **Needs a `lastRestockNotifyDay` dedupe field →
+  DevOps schema add.** Lives in `customer-schedules.ts`/`notify.ts` (NOT data-dev lane).
+
 **Session 2026-06-26 — tier-5 coverage sweep (store-by-store) + consumer store-feed fix + promote-pipeline outage.**
 
 ### Shipped (LIVE on prod + staging unless noted)
