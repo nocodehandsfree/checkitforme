@@ -49,14 +49,29 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
   `retailers.shipmentDay` column (one wrong clerk answer flipped it). New `learnedShipDow()` uses the
   **mode of `call_results.shipmentDayHeard`** across a store's confirmed calls, falling back to the
   stored column when there's no history. So the recommendation compounds with every call.
-- **NEW `GET /api/admin/store-restock/:id`** — per-store weekday picture for the Admin store panel:
-  `clerkSaid` (heard-day tally + mode), `empirical` (confirmed-by-weekday histogram + peak, store-local
-  via new `dowAt()`), derived `bestDay` (clerk-mode → empirical fallback), `confidence` (# confirms),
-  `byCategory`. Mirrors `/api/admin/restock-intel` (network/top-25, already live) for ONE store.
-- All serve-time derivation from `call_results` — **no new columns.** Helpers `dowAt`/`learnedShipDow`
-  unit-checked (mode wins, tz rollover correct); tsc + store-contract clean. Branch: `…-pagiis`.
-- **Admin-dev prompt written** (display placement: store-detail "Restock Intel" card + clickable
-  top-store rows in the God-view restock report). Given to owner this session.
+- **NEW `GET /api/admin/store-restock/:id`** — per-store weekday + product picture for the Admin store
+  panel: `staffSaid` (heard-day tally + mode), `empirical` (confirmed-by-weekday histogram + peak,
+  store-local via new `dowAt()`), derived `bestDay` (staff-mode → empirical fallback), `confidence`
+  (# confirms), `byCategory`, and `products: { forms, sets, details }`. Mirrors `/api/admin/restock-intel`
+  (network/top-25, already live) for ONE store.
+- **Product mix surfaced (forms + sets).** We already capture the free-text `call_results.productDetail`
+  ("ETB · Surging Sparks", "3-pack blister"); the verdict extractor (`voice/verdict.ts`) pulls
+  `productForm` + `set` separately but persists only the combined label. New serve-time classifier
+  (`productForm()`/`productSet()`) buckets it into FORMS (booster/hobby box, tin, ETB, pack, sleeve,
+  hanger, mega/retail box, bundle) + best-effort SETS. Added to BOTH endpoints (`restock-intel` now
+  also returns `productForms`, `productSets`, `byCategory`). Classifier unit-checked vs owner's examples.
+- **Terminology: clerk → staff** in these endpoints/comments (owner's current term for store humans).
+  Lots of `clerk` remains in the call-backend/schema (not data-dev lane) — flagged for a later sweep.
+- All serve-time derivation from `call_results` — **no new columns.** Helpers unit-checked; tsc +
+  store-contract clean. Branch: `…-pagiis` (commits 1887fe1, 11bf36d).
+- **Admin placement recommendation (given to owner):** split by altitude —
+  - **God-view → its own "Restock" tab (NETWORK):** confirm rate, dominant days, `productForms`/
+    `productSets` mix, `byCategory`, top-25 restock stores (clickable). Feeds from `restock-intel`
+    (already half-rendered in `loadGwIntel()` → `#gw_intel`; now rich enough for its own tab next to
+    length-of-calls).
+  - **Store section → per-store "Restock" card (DETAIL):** that store's `bestDay`, staff-said vs
+    confirmed weekday histogram, `products.forms`/`sets`, `byCategory`, `confidence`, `lastConfirm`.
+    Feeds from `store-restock/:id`; opened by clicking a God-view top-store row.
 
 ### Spec'd, NOT built (call-backend lane — needs that dev or owner "ship it")
 - **Restock-day user notification.** Data layer is ready (`learnedShipDow`). Trigger: daily tick like
@@ -64,6 +79,13 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
   yet notified today → send "today's usually restock day at {store}" via the watch alert path
   (brevo.ts), gated by `policy.flags.restockAlerts`. **Needs a `lastRestockNotifyDay` dedupe field →
   DevOps schema add.** Lives in `customer-schedules.ts`/`notify.ts` (NOT data-dev lane).
+- **Persist `productForm` + `set` as their own columns (clean product reporting).** The extractor
+  ALREADY pulls both (`voice/verdict.ts` `ClerkVerdict.productForm`/`.set`) but `productDetailLabel()`
+  collapses them into the single free-text `productDetail`. Add `product_form` + `set_name` columns
+  (**DevOps schema**) and persist them in `calls/service.ts` (~line 678) + `server.ts` trainer-batch
+  (~3271) — the extraction is free, just stop discarding it. Then forms/sets reporting is EXACT (no
+  regex), and joins to the structured `products` catalog (set/series/`type`/MSRP, seeded from
+  `drops_db.json`) for value/SKU-level intel. My serve-time classifier is the interim until then.
 
 **Session 2026-06-26 — tier-5 coverage sweep (store-by-store) + consumer store-feed fix + promote-pipeline outage.**
 
