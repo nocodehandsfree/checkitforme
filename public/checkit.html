@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<!-- Status bar: PROVEN that this device's Safari TAB won't tint from theme-color (we served green in the
-     HTML, no JS touched it, the bar stayed black). So we don't rely on theme-color at all. Instead, in
-     STANDALONE (Add to Home Screen) the apple-mobile metas below + viewport-fit=cover make the web content
-     paint UNDER the status bar — so the green result wash shows at the top per-edge and the homepage's dark
-     bg keeps it dark, with no Safari toolbar = no green footer. That's the original "green top, no footer"
-     experience. In a plain Safari tab the top stays the system default (an iOS limitation, not the page). -->
+<!-- Status bar tint: iOS applies <meta name="theme-color"> ONLY at page LOAD — a later JS change to it is
+     ignored. So the verdict colour has to be present in the served HTML when the page loads. The server bakes
+     it from ?tone=in|out|unk|soon (renderRunner), and the client does a REAL navigation to that ?tone URL
+     when opening a result whose tone differs from what loaded (see ensureToneLoaded). setThemeTone() is only
+     the in-app fallback for result→result switches. In STANDALONE (Add to Home Screen) the apple-mobile metas
+     below + viewport-fit=cover also let the content paint UNDER the status bar, so the wash shows at the top. -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Check it for me" />
@@ -19,11 +19,15 @@
   if('serviceWorker' in navigator){ window.addEventListener('load',function(){ try{ navigator.serviceWorker.register('/sw.js').catch(function(){}); }catch(e){} }); }</script>
 <script>(function(){try{
   var sp=new URLSearchParams(location.search);
+  // The tone the SERVER baked into <meta theme-color> at load (?tone=in|out|unk|soon). iOS only tints the
+  // status bar from the value present at LOAD, so we compare against this to decide whether a result needs a
+  // real navigation to re-bake the colour (vs. a JS-only theme-color change that iOS ignores).
+  window.__loadTone = sp.get('tone') || '';
   if(!sp.has('call')) return;
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r89" />
+<meta name="x-rev" content="names-r90" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -3347,22 +3351,36 @@ function navMark(view){
   }catch(e){}
   NAV_VIEW=view;
 }
-// Status-bar tone is NOT done via theme-color (this device's Safari tab ignores it — proven). In
-// STANDALONE the page paints under the status bar (apple-mobile metas + safe-area inset), so the body
-// wash IS the status-bar colour. Nothing to set in JS — kept as a no-op so existing call-sites are safe.
-// Tint the iOS/Chrome status-bar strip (regular web browser) to the current verdict tone. Server bakes
-// the right value at load via ?tone; this updates it on client-side navigation between results. (Safari
-// only honors theme-color when "Allow Website Tinting" is ON — Settings ▸ Safari.)
+// Tint the status-bar strip to the current verdict tone. This is the IN-APP FALLBACK only: iOS reads
+// theme-color at page LOAD and ignores later JS changes, so the reliable path is ensureToneLoaded() (a real
+// navigation to ?tone so the SERVER bakes the colour at load). We still update the meta here for the desktop
+// Chrome title bar and standalone result→result switches where no reload happens. (Safari honors theme-color
+// only when "Allow Website Tinting" is ON — Settings ▸ Safari.)
 function setThemeTone(){
   try{
     const b=document.body.classList;
     const tone = b.contains('rv-in')?'#266440':b.contains('rv-out')?'#6b2427':b.contains('rv-unk')?'#6c5419':b.contains('rv-soon')?'#6e490f':'#0C0C12';
-    // iOS Safari only re-reads theme-color when the META ELEMENT itself changes — just setting .content is
-    // ignored on client-side navigation (why the top stayed black when you tapped through to a result).
-    // So REMOVE the old tag and append a fresh one to force a re-read; the bottom is the page bg (dark).
     document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.remove());
     const m=document.createElement('meta'); m.name='theme-color'; m.id='themeColor'; m.content=tone; document.head.appendChild(m);
   }catch(e){}
+}
+// Make the verdict colour show in the iOS status bar by RELOADING into the server-baked ?tone URL. iOS only
+// tints from the theme-color present at LOAD, so when a final result's tone differs from what the page loaded
+// with, we navigate for real — the server writes the colour straight into <meta theme-color> (renderRunner).
+// One-shot per page load (after the nav __loadTone matches → no loop/thrash); result→result switches within
+// the same load fall back to setThemeTone(). Only fires for a settled verdict with a real cid.
+let TONE_NAV_DONE=false;
+function ensureToneLoaded(cls,cid){
+  try{
+    if(!cls||!cid||TONE_NAV_DONE) return false;
+    if(!({in:1,out:1,unk:1,soon:1}[cls])) return false;
+    if(String(cid).startsWith('local:')) return false;     // not a server-restorable result
+    if(cls===(window.__loadTone||'')) return false;        // server already baked the right colour at load
+    TONE_NAV_DONE=true;
+    const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',cid); sp.set('tone',cls);
+    location.replace(location.pathname+'?'+sp.toString());  // real navigation → server bakes theme-color at load
+    return true;
+  }catch(e){ return false; }
 }
 window.addEventListener('popstate',()=>{
   // Handle BOTH directions. Going forward to a ?call= entry used to do nothing (only "back" was handled),
@@ -3562,14 +3580,17 @@ function showResult(o, cid){
         <div class="meta" style="margin-bottom:14px">${t('res.free.sub',"Sign up in 30 seconds to check <b>any store, anytime</b> — it's the only way to keep going.")}</div>
         <button class="cta" onclick="signUp()">${t('res.signup','Sign up & keep checking')}</button>
       </div>`;
+  // Persist the tone CLASS first so a reload (the tone-nav below, or a pull-to-refresh) can pre-apply the
+  // body wash synchronously at load (boot reads cifm_cls:<cid> into __bootTone) before restoreCall's async fetch.
+  try{ localStorage.setItem('cifm_cls_last',cls); if(cid) localStorage.setItem('cifm_cls:'+cid,cls); }catch(e){}
+  // iOS status-bar tint: if this settled verdict's tone differs from what the server baked at load, RELOAD
+  // into the ?tone URL so the colour is present at load (the only thing iOS honors). Returns true when it's
+  // navigating away — stop here, the fresh load re-renders this result with the right bar. Pending never qualifies.
+  if(o.status && o.status!=='pending' && ensureToneLoaded(cls,cid)) return;
   // Tone the body-level top wash for this verdict (the wash itself is CSS on body.rview::before).
   ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c));
   document.body.classList.add('rv-'+cls);
-  try{ setThemeTone(); }catch(e){} // tint the browser status-bar strip to this verdict's tone
-  // Persist the tone CLASS so a HARD refresh (URL ?call=…) can pre-apply the whole result treatment
-  // (body wash + status bar) synchronously at load — before restoreCall's async fetch — so
-  // pull-to-refresh never flashes the dark default at the top.
-  try{ localStorage.setItem('cifm_cls_last',cls); if(cid) localStorage.setItem('cifm_cls:'+cid,cls); }catch(e){}
+  try{ setThemeTone(); }catch(e){} // tint the browser status-bar strip to this verdict's tone (in-app fallback)
   // Unclear verdict → point them at the transcript AND ask for a quick one-tap label. That label is the
   // training signal: it tells us what the answer REALLY was on the calls our consensus couldn't call.
   // Verdict-specific terminus line at the bottom of the timeline (distinct from the big verdict title).

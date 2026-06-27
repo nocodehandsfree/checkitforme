@@ -20,6 +20,7 @@ async function seedStatuses() {
     ["not_in_stock", "❌", "Not in stock", "out", "#EF4444", "They told us they don't have it right now."],
     ["no_clear_answer", "🤔", "Got a “maybe”", "unk", "#FBBF24", "Someone answered but wouldn't commit. See what they said below."],
     ["too_busy", "🕗", "Store’s too busy", "unk", "#FBBF24", "Too slammed to check {product} right now. Try back in a bit."],
+    ["language_barrier", "🗣️", "Language barrier", "unk", "#FBBF24", "We couldn't get past a language barrier on this call. No charge."],
     ["nobody_answered", "📵", "Nobody answered", "unk", "#9CA3AF", "No one picked up — no charge. Try again in a bit."],
     ["voicemail", "📮", "Got their voicemail", "unk", "#9CA3AF", "We reached a recording, not a person — no charge."],
     ["busy", "📞", "Line was busy", "unk", "#9CA3AF", "Their line was busy — no charge. Try again shortly."],

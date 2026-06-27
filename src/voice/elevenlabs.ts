@@ -310,7 +310,14 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
       const clerkAll = (d.transcript ?? []).filter((t) => t.role !== "agent" && t.message).map((t) => String(t.message)).join(" ");
       const TOOBUSY = /\b(too busy|really busy|so busy|very busy|crazy busy|pretty busy|kind of busy|kinda busy|a (?:bit|little) busy|swamped|slammed|short[- ]?staffed|in the middle of|can'?t (?:check|look|help|get to|do that|right now)|don'?t have time|no time (?:right now|to)|only (?:one|person|me) (?:here|working)|by myself|on my own|i'?m (?:alone|the only one)|too much going on|call back (?:later|in a|in an)|try (?:back|again|us) (?:later|in a|in an|tomorrow))\b/i;
       const tooBusy = tooBusyFlag || (asked && TOOBUSY.test(clerkAll));
-      statusKey = onHold ? "left_on_hold" : (tooBusy ? "too_busy" : (asked ? "no_clear_answer" : "nobody_answered"));
+      // Language barrier — the human who answered couldn't understand us (no shared language), so we
+      // never got a real answer. Distinct from busy/on-hold/no-clear: communication itself failed.
+      // Structured field first, then a transcript heuristic (English phrasings of "I don't understand"
+      // plus the most common non-English deflections we hear) so it works without a per-agent schema.
+      const langBarrierFlag = /^(yes|true)/i.test(String(collected.language_barrier?.value ?? "").trim());
+      const LANGBARRIER = /\b(no (?:speak |hablo |habla )?english|don'?t (?:speak|understand) (?:english|you)|no entiendo|no hablo ingl[eé]s|no ingl[eé]s|sólo espa[ñn]ol|solo espa[ñn]ol|hablas espa[ñn]ol|no understand|me no understand|no comprende|wo bu dong|t[ií] khong hi[eể]u)\b/i;
+      const langBarrier = langBarrierFlag || LANGBARRIER.test(clerkAll);
+      statusKey = onHold ? "left_on_hold" : (langBarrier ? "language_barrier" : (tooBusy ? "too_busy" : (asked ? "no_clear_answer" : "nobody_answered")));
     }
   } else {
     statusKey = ({ no_answer: "nobody_answered", failed: "failed", closed: "closed" } as Record<string, string>)[status] ?? "nobody_answered";
