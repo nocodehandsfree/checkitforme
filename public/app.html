@@ -3168,20 +3168,47 @@ function wfOptions(sel,placeholder){
 // ---- Workflows manager (Voice → Workflows): per-workflow opener editing + the global default ----
 // Each workflow owns its opener list (string[]) — the call path rotates them round-robin. Edits here
 // write straight back into the vt_workflows setting; "Set default" writes vt_default_workflow.
-let WFM_VOICES=[];
+let WFM_VOICES=[], WFM_GLOBAL=[];
 async function loadWorkflowMgr(){
   await loadWorkflows();
   if(!WFM_VOICES.length){ const d=await api('/api/voices'); WFM_VOICES=(d&&d.voices)||[]; }
+  const s=await api('/api/settings')||{}; WFM_GLOBAL=wfgFrom(s);
   renderWorkflowMgr();
 }
+// Global openers (vt_opener_variants / vt_opener_library) — the fallback that fires when no workflow
+// is set. Same shape the Designer uses, so editing here keeps Step 3 in sync.
+function wfgFrom(s){
+  let lib=null; try{ if(s.vt_opener_library) lib=JSON.parse(s.vt_opener_library); }catch(e){}
+  if(Array.isArray(lib)) return lib.map(o=> typeof o==='string'?{text:o,on:true}:{text:String(o.text||''),on:o.on!==false}).filter(o=>o.text);
+  return (s.vt_opener_variants||'').split('\n').map(x=>x.trim()).filter(Boolean).map(t=>({text:t,on:true}));
+}
+async function wfgSave(){
+  const active=WFM_GLOBAL.filter(o=>o.on).map(o=>o.text).join('\n');
+  const library=JSON.stringify(WFM_GLOBAL.map(o=>({text:o.text,on:o.on})));
+  await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({openerVariants:active,openerLibrary:library})});
+  try{ if(Array.isArray(OPENERS)){ OPENERS=WFM_GLOBAL.map(o=>({text:o.text,on:o.on})); if(typeof renderOpeners==='function')renderOpeners(); } }catch(e){}
+}
+async function wfgAdd(){ const inp=document.getElementById('wfg_add'); const t=((inp&&inp.value)||'').trim(); if(!t) return; WFM_GLOBAL.push({text:t,on:true}); renderWorkflowMgr(); await wfgSave(); toast('Opener added'); }
+async function wfgDel(i){ if(WFM_GLOBAL[i]==null) return; WFM_GLOBAL.splice(i,1); renderWorkflowMgr(); await wfgSave(); toast('Opener removed'); }
+async function wfgEdit(i,text){ if(WFM_GLOBAL[i]==null) return; const t=(text||'').trim(); if(!t){ WFM_GLOBAL.splice(i,1); renderWorkflowMgr(); } else { WFM_GLOBAL[i].text=t; } await wfgSave(); }
+async function wfgToggle(i,on){ if(WFM_GLOBAL[i]){ WFM_GLOBAL[i].on=on; await wfgSave(); } }
 function wfmVoiceOpts(sel){ return '<option value="">Default voice</option>'+WFM_VOICES.map(v=>`<option value="${esch(v.id)}"${v.id===sel?' selected':''}>${esch(v.name)}${v.cloned?' (cloned)':''}</option>`).join(''); }
 function wfmPersonaOpts(sel){ return '<option value="">No persona</option>'+(PERSONAS||[]).map(p=>`<option value="${esch(p.name)}"${p.name===sel?' selected':''}>${esch(p.name)}</option>`).join(''); }
 function wfmAssignCount(name){ let n=0; const ch=WF.chains||{}, st=WF.stores||{}; for(const k in ch) if(ch[k]===name)n++; for(const k in st) if(st[k]===name)n++; return n; }
 function renderWorkflowMgr(){
   const el=document.getElementById('wfm_list'); if(!el) return;
   const list=WF.list||[];
-  if(!list.length){ el.innerHTML='<div class="empty">No workflows yet. Build one in <b>Voice → Designer</b> (Step 7 · Save), then edit its openers here.</div>'; return; }
-  el.innerHTML=list.map((w,wi)=>{
+  const g=WFM_GLOBAL||[];
+  const globalCard=`<div class="wfm">
+    <div class="wfmhead"><div style="flex:1;min-width:0"><span class="wfmname">Global openers</span><span class="wfmdef" style="color:var(--text-muted);background:var(--surface-2);border-color:var(--border)">every store · unless a workflow overrides</span>
+      <div class="meta" style="margin-top:3px">${g.filter(o=>o.on).length} of ${g.length} rotating</div></div></div>
+    <div class="wfmsub">Openers <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· tick = in rotation</span></div>
+    <div class="wfmops">
+      ${g.map((o,i)=>`<div class="wfmop"><input type="checkbox" ${o.on?'checked':''} onchange="wfgToggle(${i},this.checked)" style="flex:0 0 auto" title="In rotation"><input value="${esch(o.text)}" onchange="wfgEdit(${i},this.value)"><button class="ghost opdel" onclick="wfgDel(${i})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('')||'<div class="meta" style="padding:4px 0 8px">No global openers.</div>'}
+      <div class="wfmadd"><input id="wfg_add" placeholder="Add a global opener — e.g. Hey! Got any {category} in?" onkeydown="if(event.key==='Enter')wfgAdd()"><button class="act" onclick="wfgAdd()">Add</button></div>
+    </div>
+  </div>`;
+  const wfCards=list.length?list.map((w,wi)=>{
     const isDef=WF.def===w.name; const ops=Array.isArray(w.openers)?w.openers:[]; const asg=wfmAssignCount(w.name);
     return `<div class="wfm${isDef?' def':''}">
       <div class="wfmhead">
@@ -3200,7 +3227,8 @@ function renderWorkflowMgr(){
         <div><label>Persona</label><select onchange="wfmSetField(${wi},'persona',this.value)">${wfmPersonaOpts(w.persona)}</select></div>
       </div>
     </div>`;
-  }).join('');
+  }).join(''):'<div class="meta" style="margin:4px 2px 0">No saved workflows yet — build one in <b>Voice → Designer</b> to override these per store.</div>';
+  el.innerHTML = globalCard + wfCards;
 }
 async function wfmSaveList(){ const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WF.list)})}); return !!(r&&!r.error); }
 async function wfmAddOpener(wi){ const inp=document.getElementById('wfmadd_'+wi); const t=((inp&&inp.value)||'').trim(); if(!t) return; const w=WF.list[wi]; if(!w) return; if(!Array.isArray(w.openers)) w.openers=[]; w.openers.push(t); renderWorkflowMgr(); await wfmSaveList(); toast('Opener added'); }
