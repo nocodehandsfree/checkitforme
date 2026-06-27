@@ -2753,8 +2753,40 @@ app.get("/api/admin/call-timing", async (c) => {
   const ids = byStore.map((r) => r.rid).filter((x): x is number => x != null);
   const names = ids.length ? new Map((await db.select({ id: retailers.id, name: retailers.name }).from(retailers).where(inArray(retailers.id, ids))).map((r) => [r.id, r.name])) : new Map();
   const r0 = (n: unknown) => Math.round(Number(n || 0));
+  const reachedW = and(hasT, sql`${callResults.navSeconds} is not null`);
+  // By MODEL — Charlie (direct), Alpha (tone/keypad tree), Bravo (voice tree) — grouped by the chain's nav
+  // type. Sums (not avgs) so several nav-type buckets can merge into one model before averaging.
+  const byModelRaw = await db.select({
+    navType: chains.navType, n: sql<number>`count(*)`,
+    sumCall: sql<number>`coalesce(sum(${callResults.callSeconds}),0)`,
+    sumNav: sql<number>`coalesce(sum(${callResults.navSeconds}),0)`,
+    sumTalk: sql<number>`coalesce(sum(${callResults.callSeconds} - ${callResults.navSeconds}),0)`,
+  }).from(callResults)
+    .innerJoin(retailers, eq(callResults.retailerId, retailers.id))
+    .leftJoin(chains, eq(retailers.chainId, chains.id))
+    .where(reachedW).groupBy(chains.navType);
+  const modelOf = (nt: string | null) => nt === "direct" ? "Charlie" : nt === "keypad" ? "Alpha" : nt === "voice" ? "Bravo" : "Unknown";
+  const typeOf = (m: string) => m === "Charlie" ? "direct" : m === "Alpha" ? "tone tree" : m === "Bravo" ? "voice tree" : "unmapped";
+  const mAgg = new Map<string, { n: number; sumCall: number; sumNav: number; sumTalk: number }>();
+  for (const r of byModelRaw) {
+    const m = modelOf(r.navType);
+    const cur = mAgg.get(m) ?? { n: 0, sumCall: 0, sumNav: 0, sumTalk: 0 };
+    cur.n += Number(r.n); cur.sumCall += Number(r.sumCall); cur.sumNav += Number(r.sumNav); cur.sumTalk += Number(r.sumTalk);
+    mAgg.set(m, cur);
+  }
+  const byModel = ["Charlie", "Alpha", "Bravo", "Unknown"].filter((m) => mAgg.has(m)).map((m) => {
+    const v = mAgg.get(m)!; return { model: m, type: typeOf(m), n: v.n, avgCallSec: r0(v.sumCall / v.n), avgNavSec: r0(v.sumNav / v.n), avgTalkSec: r0(v.sumTalk / v.n) };
+  });
+  // Talk time per verdict (statusKey → falls back to status), so e.g. confirms can be compared to no-answers.
+  const byStatus = (await db.select({
+    key: sql<string>`coalesce(${callResults.statusKey}, ${callResults.status})`, n: sql<number>`count(*)`,
+    sumTalk: sql<number>`coalesce(sum(${callResults.callSeconds} - ${callResults.navSeconds}),0)`,
+    sumCall: sql<number>`coalesce(sum(${callResults.callSeconds}),0)`,
+  }).from(callResults).where(reachedW).groupBy(sql`coalesce(${callResults.statusKey}, ${callResults.status})`).orderBy(desc(sql`count(*)`)))
+    .map((r) => ({ key: String(r.key || "unknown"), n: Number(r.n), avgTalkSec: r0(Number(r.sumTalk) / Number(r.n)), avgCallSec: r0(Number(r.sumCall) / Number(r.n)) }));
   return c.json({
     aggregate: { calls: r0(agg?.n), reached: r0(reached?.n), avgCallSec: r0(agg?.avgCall), avgNavSec: r0(reached?.avgNav), avgTalkSec: r0(reached?.avgTalk), totalMinutes: r0(Number(agg?.totalSec || 0) / 60) },
+    byModel, byStatus,
     byStore: byStore.map((r) => ({ name: (r.rid != null && names.get(r.rid)) || `#${r.rid}`, n: r0(r.n), avgCallSec: r0(r.avgCall), avgNavSec: r0(r.avgNav), avgTalkSec: r0(r.avgTalk), totalMin: r0(Number(r.totalSec || 0) / 60) })),
   });
 });

@@ -514,6 +514,8 @@
       <summary style="cursor:pointer"><span class="name">Call time &amp; cost</span></summary>
       <div class="meta" style="margin:10px 0 8px">Time-to-human (phone-tree nav) vs. talk — ElevenLabs bills the whole connected call, so nav + hold is real cost.</div>
       <div class="stats" id="d_timing" style="margin-bottom:6px"></div>
+      <div id="d_timing_model"></div>
+      <div id="d_timing_status"></div>
       <details style="margin-top:6px"><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details>
     </details>
     </div>
@@ -1275,10 +1277,17 @@ async function tlBatch(kind){ const n=Number(document.getElementById('tl_count')
 }
 async function loadCallTiming(){
   const d=await api('/api/admin/call-timing'); const el=document.getElementById('d_timing'); if(!el) return;
-  if(!d||d.error||!d.aggregate||!d.aggregate.calls){ el.innerHTML='<div class="meta">No timed calls yet — this fills in as calls come through.</div>'; const se=document.getElementById('d_timing_stores'); if(se) se.innerHTML=''; return; }
+  const md=document.getElementById('d_timing_model'), stt=document.getElementById('d_timing_status'), se=document.getElementById('d_timing_stores');
+  if(!d||d.error||!d.aggregate||!d.aggregate.calls){ el.innerHTML='<div class="meta">No timed calls yet — this fills in as calls come through.</div>'; if(md)md.innerHTML=''; if(stt)stt.innerHTML=''; if(se)se.innerHTML=''; return; }
   const a=d.aggregate, tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   el.innerHTML = tile(secsFmt(a.avgTalkSec),'avg talk','green')+tile(secsFmt(a.avgNavSec),'avg to human')+tile(secsFmt(a.avgCallSec),'avg call')+tile(a.totalMinutes+'m','total minutes')+tile(a.calls,'calls timed');
-  const se=document.getElementById('d_timing_stores');
+  // By model (Charlie direct · Alpha tone tree · Bravo voice tree) — the split that matters: time-to-human + talk per call type.
+  if(md) md.innerHTML=(d.byModel&&d.byModel.length)?('<div class="rgrp" style="margin-top:12px">By model · all-time</div>'
+    +d.byModel.map(m=>`<div class="repline"><span class="rl"><b style="color:#e8e8f0">${esch(m.model)}</b> <span class="meta">· ${esch(m.type)} · ${m.n} call${m.n===1?'':'s'}</span></span><b>${secsFmt(m.avgNavSec)} to human · <span style="color:var(--green)">${secsFmt(m.avgTalkSec)} talk</span> · ${secsFmt(m.avgCallSec)} call</b></div>`).join('')
+    +'<div class="meta" style="margin-top:6px;font-size:11px">Alpha/Bravo “talk” still counts phone-tree time until we tag the live-human handoff per call — Charlie (direct) is exact.</div>'):'';
+  // Talk time per verdict.
+  if(stt) stt.innerHTML=(d.byStatus&&d.byStatus.length)?('<div class="rgrp" style="margin-top:12px">Talk time by status</div>'
+    +d.byStatus.map(s=>{const lbl=(STATUSES[s.key]&&STATUSES[s.key].label)||s.key;return `<div class="repline"><span class="rl">${esch(lbl)} <span class="meta">· ${s.n} call${s.n===1?'':'s'}</span></span><b><span style="color:var(--green)">${secsFmt(s.avgTalkSec)} talk</span> · ${secsFmt(s.avgCallSec)} call</b></div>`;}).join('')):'';
   if(se) se.innerHTML=(d.byStore||[]).map(s=>`<div class="repline"><span class="rl">${esch(s.name)} <span class="meta">· ${s.n} calls</span></span><b>${secsFmt(s.avgTalkSec)} talk · ${secsFmt(s.avgNavSec)} nav · ${secsFmt(s.avgCallSec)} call</b></div>`).join('')||'<div class="meta">—</div>';
 }
 // ---- God view · Calc sub-nav: per-call unit economics (Alpha keypad / Bravo voice-menu / Charlie agent) ----
