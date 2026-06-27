@@ -2747,13 +2747,16 @@ app.get("/api/admin/call-timing", async (c) => {
   const funIds = [...(await ownerOnlyRetailerIds())]; // owner-only "Fun" store excluded from timings
   const notFun = funIds.length ? notInArray(callResults.retailerId, funIds) : undefined;
   const hasT = and(sql`${callResults.callSeconds} is not null`, sql`coalesce(${callResults.status},'') != 'admin_hangup'`, notFun);
+  // "Talk with a human" only counts calls where a person actually engaged — a verdict where someone
+  // spoke — so ring / voicemail / IVR-only calls don't get charged a fake "talk" time.
+  const engaged = sql`coalesce(${callResults.statusKey}, ${callResults.status}) in ('in_stock','not_in_stock','no_clear_answer','sold_out','does_not_sell','too_busy')`;
+  const reachedW = and(hasT, sql`${callResults.navSeconds} is not null`, engaged);
   const agg = (await db.select({ n: sql<number>`count(*)`, avgCall: sql<number>`avg(${callResults.callSeconds})`, totalSec: sql<number>`coalesce(sum(${callResults.callSeconds}),0)` }).from(callResults).where(hasT))[0];
-  const reached = (await db.select({ n: sql<number>`count(*)`, avgNav: sql<number>`avg(${callResults.navSeconds})`, avgTalk: sql<number>`avg(${callResults.callSeconds} - ${callResults.navSeconds})` }).from(callResults).where(and(hasT, sql`${callResults.navSeconds} is not null`)))[0];
+  const reached = (await db.select({ n: sql<number>`count(*)`, avgNav: sql<number>`avg(${callResults.navSeconds})`, avgTalk: sql<number>`avg(${callResults.callSeconds} - ${callResults.navSeconds})` }).from(callResults).where(reachedW))[0];
   const byStore = await db.select({ rid: callResults.retailerId, n: sql<number>`count(*)`, avgCall: sql<number>`avg(${callResults.callSeconds})`, avgNav: sql<number>`avg(${callResults.navSeconds})`, avgTalk: sql<number>`avg(${callResults.callSeconds} - ${callResults.navSeconds})`, totalSec: sql<number>`coalesce(sum(${callResults.callSeconds}),0)` }).from(callResults).where(hasT).groupBy(callResults.retailerId).orderBy(desc(sql`count(*)`)).limit(12);
   const ids = byStore.map((r) => r.rid).filter((x): x is number => x != null);
   const names = ids.length ? new Map((await db.select({ id: retailers.id, name: retailers.name }).from(retailers).where(inArray(retailers.id, ids))).map((r) => [r.id, r.name])) : new Map();
   const r0 = (n: unknown) => Math.round(Number(n || 0));
-  const reachedW = and(hasT, sql`${callResults.navSeconds} is not null`);
   // By MODEL — Charlie (direct), Alpha (tone/keypad tree), Bravo (voice tree) — grouped by the chain's nav
   // type. Sums (not avgs) so several nav-type buckets can merge into one model before averaging.
   const byModelRaw = await db.select({
