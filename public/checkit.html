@@ -23,7 +23,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r88" />
+<meta name="x-rev" content="names-r89" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -1690,6 +1690,7 @@ const I18N={ es:{
   'auth.phone.lead':'¡Tu primera verificación es gratis!','auth.phone.ph':'Tu número de teléfono','auth.welcome.back':'¡Bienvenido de nuevo! 👋',
   'auth.continue':'Continuar →','auth.verify':'Verificar →',
   'auth.checkphone':'Revisa tu teléfono','auth.checkemail':'Revisa tu correo','auth.checktexts':'Revisa tus mensajes',
+  'err.phone':'Escribe tu número de celular de 10 dígitos.','err.code':'Escribe el código de 6 dígitos','auth.resent':'Código reenviado 📲',
   'sc.crew':'Presume con la banda','sc.scored':'¡La conseguiste!','sc.snap':'Tómale una foto a tu hallazgo y publícalo en el muro.','sc.photo':'Tu foto','sc.caption':'Descripción','sc.name':'Tu nombre / usuario','sc.optional':'— opcional','sc.ph.caption':'¡Saqué un Charizard en el Target de Sunset!','sc.ph.handle':'@tuusuario','sc.post':'Publicar en el muro →','sc.uploading':'Subiendo…','sc.err.big':'La foto pesa demasiado (máx. 12 MB)','sc.err.nophoto':'Agrega una foto primero',
   'ph.schednum':'Escribe tu número','ph.storereq':'ej. Target — Thousand Oaks','ph.storecity':'ej. Thousand Oaks, CA','ph.storedetails':'dirección, qué productos, etc.','ph.kiosk':'ej. Albertsons — Sunset Blvd, LA','ph.kioskhint':'ej. a veces se salta la reposición de los :03',
   'toast.searchmi':'📍 {q} — tiendas a {n} mi','toast.zoomout':'📍 Aleja el mapa, explora a donde quieras, toca para fijar un punto','toast.community':'La comunidad llega pronto',
@@ -2060,7 +2061,7 @@ function fmtPhoneInput(el){ const d=(el.value||'').replace(/\D/g,'').slice(0,10)
 async function phoneStart(resend){
   if(AUTH.busy) return;
   const e=normUsPhone($('auth_phone').value);
-  if(!e){ $('auth_err').textContent='Enter your 10-digit US cell number.'; return; }
+  if(!e){ $('auth_err').textContent=t('err.phone','Enter your 10-digit US cell number.'); return; }
   AUTH_PHONE=e; AUTH.busy=true;
   const btn=$('auth_send'); if(btn){ btn.disabled=true; btn.textContent=resend?'Resending…':'Sending…'; }
   $('auth_err').textContent='';
@@ -2073,7 +2074,7 @@ async function phoneStart(resend){
     $('auth_err').textContent=msg; return;
   }
   track('auth_code_sent',{flow:'phone'});
-  if(resend){ toast('Code re-sent 📲'); return; }
+  if(resend){ toast(t('auth.resent','Code re-sent 📲')); return; }
   authStep('code'); $('auth_codeto').textContent=(e||'').replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'$1-$2-$3'); // dashes: 555-123-4567
   $('auth_codeerr').textContent=''; const ci=$('auth_code'); if(ci) ci.value='';
   // Staging skips the real (paid) SMS: prefill the dev code + show a hint instead of "we've texted you".
@@ -2086,7 +2087,7 @@ async function phoneStart(resend){
 async function phoneVerify(){
   if(AUTH.busy) return;
   const code=($('auth_code').value||'').replace(/\D/g,'');
-  if(code.length<4){ $('auth_codeerr').textContent='Enter the 6-digit code'; return; }
+  if(code.length<4){ $('auth_codeerr').textContent=t('err.code','Enter the 6-digit code'); return; }
   if(!AUTH_PHONE){ authBack(); return; }
   AUTH.busy=true; const btn=$('auth_verify'); if(btn){ btn.disabled=true; btn.textContent='Verifying…'; } $('auth_codeerr').textContent='';
   const r=await api('/auth/phone/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:AUTH_PHONE,code})});
