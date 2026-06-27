@@ -1025,6 +1025,24 @@ function shipDow(s: string | null | undefined): number | null {
   const k = s.trim().toLowerCase().replace(/s$/, "").slice(0, 3);
   return SHIP_DOW[k] ?? null;
 }
+// Weekday (0=Sun … 6=Sat) of a PAST timestamp in a store's local time — for the empirical "which day
+// did product actually land" histogram (vs tzDow, which is only today).
+function dowAt(epochSec: number, tz: string): number {
+  const wd = new Intl.DateTimeFormat("en-US", { timeZone: tz || "America/Chicago", weekday: "short" }).format(new Date(epochSec * 1000));
+  return ({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 } as Record<string, number>)[wd] ?? 0;
+}
+// The LEARNED restock weekday: the MODE of every shipment day clerks have given across this store's
+// confirmed calls — robust to one wrong answer, unlike the last-write-wins shipmentDay column —
+// falling back to the stored shipmentDay when there's no call history yet. How best-bet "learns" the
+// day from all the calls instead of just the most recent one.
+function learnedShipDow(days: Record<string, number> | undefined, fallback: string | null | undefined): number | null {
+  if (days) {
+    const top = Object.entries(days).sort((a, b) => b[1] - a[1])[0]?.[0];
+    const d = shipDow(top);
+    if (d != null) return d;
+  }
+  return shipDow(fallback);
+}
 app.get("/pub/best-bet", async (c) => {
   const lat = Number(c.req.query("lat")), lng = Number(c.req.query("lng"));
   const hasLoc = Number.isFinite(lat) && Number.isFinite(lng);
@@ -1033,13 +1051,15 @@ app.get("/pub/best-bet", async (c) => {
   const cat = categoryId ? (await categoryLabelMap()).get(categoryId) : null;
   // Confirm history per store — filter in SQL (confirmed+completed) and pull only the columns we need,
   // so this public path never loads the whole call_results table (transcripts included) into memory.
-  const confirmed = (await db.select({ retailerId: callResults.retailerId, categoryId: callResults.categoryId, completedAt: callResults.completedAt, startedAt: callResults.startedAt })
+  const confirmed = (await db.select({ retailerId: callResults.retailerId, categoryId: callResults.categoryId, completedAt: callResults.completedAt, startedAt: callResults.startedAt, shipmentDayHeard: callResults.shipmentDayHeard })
     .from(callResults).where(and(eq(callResults.confirmed, true), eq(callResults.status, "completed"))))
     .filter((r) => !categoryId || r.categoryId === categoryId);
-  const byStore = new Map<number, { confirms: number; last: number }>();
+  const byStore = new Map<number, { confirms: number; last: number; days: Record<string, number> }>();
   for (const r of confirmed) {
-    const e = byStore.get(r.retailerId) || { confirms: 0, last: 0 };
+    const e = byStore.get(r.retailerId) || { confirms: 0, last: 0, days: {} };
     e.confirms++; const at = r.completedAt ?? r.startedAt; if (at > e.last) e.last = at;
+    // Tally the restock day the clerk gave on each confirmed call → the mode is the LEARNED day.
+    if (r.shipmentDayHeard) e.days[r.shipmentDayHeard] = (e.days[r.shipmentDayHeard] || 0) + 1;
     byStore.set(r.retailerId, e);
   }
   const now = Math.floor(Date.now() / 1000);
@@ -1063,7 +1083,7 @@ app.get("/pub/best-bet", async (c) => {
       const miles = (hasLoc && r.lat != null && r.lng != null) ? haversineMi(lat, lng, r.lat, r.lng) : null;
       const hist = byStore.get(r.id);
       return { id: r.id, name: r.name.split("—")[0].trim(), miles, signals: {
-        miles, todayDow: tzDow(r.timezone), shipmentDow: shipDow(r.shipmentDay),
+        miles, todayDow: tzDow(r.timezone), shipmentDow: learnedShipDow(hist?.days, r.shipmentDay),
         confirms: hist?.confirms ?? 0, lastConfirmAgoHrs: hist ? Math.round((now - hist.last) / 3600) : null,
       } };
     })
@@ -2194,6 +2214,47 @@ app.get("/api/admin/restock-intel", async (c) => {
     },
     shipmentDays: Object.entries(dayTally).sort((a, b) => b[1] - a[1]).map(([day, n]) => ({ day, n })),
     topStores: topStores.map((e) => ({ store: e.store, region: e.region, confirms: e.confirms, last: e.last, bestDay: e.bestDay })),
+  });
+});
+
+// ---- Per-store restock intel: the full weekday picture for ONE store (Admin store panel) ----
+// Two independent signals: (1) what clerks SAID — the mode of shipmentDayHeard across this store's
+// calls; (2) what actually CONFIRMED — the weekday (store-local) of every confirmed hit. bestDay
+// prefers the clerk-said mode and falls back to the empirical peak. This is the same learned day
+// best-bet ranks on, exposed for display.
+app.get("/api/admin/store-restock/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const store = (await db.select().from(retailers).where(eq(retailers.id, id)))[0];
+  if (!store) return c.json({ error: "not found" }, 404);
+  const cats = await categoryLabelMap();
+  const rows = await db.select({ categoryId: callResults.categoryId, confirmed: callResults.confirmed, completedAt: callResults.completedAt, startedAt: callResults.startedAt, shipmentDayHeard: callResults.shipmentDayHeard })
+    .from(callResults).where(and(eq(callResults.retailerId, id), eq(callResults.status, "completed")));
+  const confirmed = rows.filter((r) => r.confirmed === true);
+  const tz = store.timezone || "America/Chicago";
+  const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  // (1) What clerks said — across ALL completed calls (they report the schedule even when out of stock).
+  const saidTally: Record<string, number> = {};
+  for (const r of rows) if (r.shipmentDayHeard) saidTally[r.shipmentDayHeard] = (saidTally[r.shipmentDayHeard] || 0) + 1;
+  const saidMode = Object.entries(saidTally).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  // (2) What actually confirmed, by weekday in store-local time — the empirical "best day to call".
+  const empByDow = [0, 0, 0, 0, 0, 0, 0];
+  for (const r of confirmed) { const at = r.completedAt ?? r.startedAt; if (at) empByDow[dowAt(at, tz)]++; }
+  const empBestIdx = empByDow.reduce((best, n, i) => (n > empByDow[best] ? i : best), 0);
+  const empBestDay = empByDow[empBestIdx] > 0 ? DAYS[empBestIdx] : null;
+  // Per-category confirm counts (which product line actually lands here).
+  const byCat: Record<string, number> = {};
+  for (const r of confirmed) { const label = cats.get(r.categoryId) || String(r.categoryId); byCat[label] = (byCat[label] || 0) + 1; }
+  const last = confirmed.reduce((m, r) => Math.max(m, r.completedAt ?? r.startedAt ?? 0), 0);
+  const bestDay = shipDow(saidMode) != null ? saidMode : empBestDay; // the day to surface
+  return c.json({
+    id, store: store.name.split("—")[0].trim(), region: store.region ?? null, timezone: tz,
+    storedShipmentDay: store.shipmentDay || null,     // the auto-learned column (last-write-wins)
+    clerkSaid: { mode: saidMode, tally: Object.entries(saidTally).sort((a, b) => b[1] - a[1]).map(([day, n]) => ({ day, n })) },
+    empirical: { bestDay: empBestDay, byWeekday: DAYS.map((day, i) => ({ day, confirms: empByDow[i] })) },
+    bestDay,                                            // the recommendation Admin should display
+    confidence: confirmed.length,                      // # confirmed calls backing it
+    confirms: confirmed.length, lastConfirm: last || null,
+    byCategory: Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([category, n]) => ({ category, n })),
   });
 });
 
