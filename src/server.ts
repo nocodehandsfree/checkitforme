@@ -2325,7 +2325,7 @@ app.get("/api/admin/pulse", async (c) => {
   return c.json({
     funnel: {
       leads: leadRows.length,
-      signups: accts.length,
+      signups: accts.filter((a) => !isComp(a.email) && !isCompAccount(a)).length, // real signups, not owner/comp
       paying: accts.filter((a) => a.totalSpentCents > 0).length,
       members: accts.filter((a) => a.subscription === "active").length,
       revenueCents: accts.reduce((s, a) => s + (a.totalSpentCents || 0), 0),
