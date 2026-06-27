@@ -23,7 +23,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r85" />
+<meta name="x-rev" content="names-r86" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -1699,13 +1699,13 @@ const I18N={ es:{
   'live.s1':'Llamando a la tienda…','live.s2':'Está timbrando…','live.s3':'Conectamos','live.s4':'Escuchando el menú…','live.s5':'Navegando el menú…','live.s6':'Transferido al mostrador','live.s7':'Contestó una persona','live.s8':'Preguntando por {p}',
   'live.item':'tu producto','live.store':'la tienda','live.waitperson':'Esperando llegar a una persona…','live.noconvo':'No hay conversación en vivo en esta llamada.',
   'step.one':'paso','step.many':'pasos','step.ringing':'Llamando a la tienda…',
-  'note.fbk':'No quedó claro si <b style="color:#fff">{p}</b> estaba en stock. Lee la conversación y dinos qué opinas.',
+  'note.fbk':'No pudimos entender bien la respuesta. Lee la conversación y dinos qué opinas.',
   'note.getting':'La llamada acaba de terminar — obteniendo el resultado.',
-  'v.getting':'Obteniendo la respuesta…','v.unclear2':'Sin claridad',
+  'v.getting':'Obteniendo la respuesta…','v.unclear2':'No supimos decir',
   'st.too_busy':'La tienda está muy ocupada',
   'stn.too_busy':'No dijeron que no, pero estaban demasiado ocupados para revisar si había {product} en stock. Intenta más tarde.',
-  'sub.in':'{s} tiene <b>{c}</b> en stock ahora mismo.','sub.in.named':'{s} tiene <b style="color:var(--accent)">{p}</b> en stock ahora mismo.',
-  'sub.out':'{s} no tiene <b>{c}</b> ahora mismo.','sub.soldout':'{s} está agotado de <b>{c}</b> ahora mismo.',
+  'sub.in':'<b>{s}</b> tiene <b>{c}</b>. Ve por ello antes de que se agote.','sub.in.named':'<b>{s}</b> tiene <b>{p}</b>. Ve por ello antes de que se agote.',
+  'sub.out':'<b>{s}</b> no tiene <b>{c}</b> ahora. Vuelve a checar en un día o dos.','sub.soldout':'{s} está agotado de <b>{c}</b> ahora mismo.',
   'term.in':'En stock — confirmado','term.out':'No está en stock','term.soon':'Reabastecimiento confirmado · {d}','term.unk':'Sin respuesta clara',
   'res.conversation':'Conversación','res.result':'Resultado',
   'pre.again.body':'{o} {a}. ¿Verificar de nuevo?','pre.again.no':'Ahora no',
@@ -3349,10 +3349,13 @@ function navMark(view){
 // only honors theme-color when "Allow Website Tinting" is ON — Settings ▸ Safari.)
 function setThemeTone(){
   try{
-    const m=document.getElementById('themeColor'); if(!m) return;
     const b=document.body.classList;
     const tone = b.contains('rv-in')?'#266440':b.contains('rv-out')?'#6b2427':b.contains('rv-unk')?'#6c5419':b.contains('rv-soon')?'#6e490f':'#0C0C12';
-    m.setAttribute('content', tone);
+    // iOS Safari only re-reads theme-color when the META ELEMENT itself changes — just setting .content is
+    // ignored on client-side navigation (why the top stayed black when you tapped through to a result).
+    // So REMOVE the old tag and append a fresh one to force a re-read; the bottom is the page bg (dark).
+    document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.remove());
+    const m=document.createElement('meta'); m.name='theme-color'; m.id='themeColor'; m.content=tone; document.head.appendChild(m);
   }catch(e){}
 }
 window.addEventListener('popstate',()=>{
@@ -3526,11 +3529,11 @@ function showResult(o, cid){
   if(!REG_NOTE && o.status==='completed' && askedLabels.length<=1 && !o.doesNotSell && storeHeadline && headLabel){
     const _SN=esc(storeHeadline), _C=esc(headLabel);
     if(cls==='in'){ note = o.productName
-        ? tf('sub.in.named','{s} has <b style="color:var(--accent)">{p}</b> in stock right now.',{s:_SN,p:esc(o.productName)})
-        : tf('sub.in','{s} has <b>{c}</b> in stock right now.',{s:_SN,c:_C});
+        ? tf('sub.in.named','<b>{s}</b> has <b>{p}</b> in. Go grab it before it’s gone.',{s:_SN,p:esc(o.productName)})
+        : tf('sub.in','<b>{s}</b> has <b>{c}</b> in. Go grab it before it’s gone.',{s:_SN,c:_C});
       richSub=true; }
     else if(o.soldOut){ note=tf('sub.soldout','{s} is sold out of <b>{c}</b> right now.',{s:_SN,c:_C}); richSub=true; }
-    else if(cls==='out'){ note=tf('sub.out',"{s} doesn't have <b>{c}</b> right now.",{s:_SN,c:_C}); richSub=true; }
+    else if(cls==='out'){ note=tf('sub.out',"<b>{s}</b> doesn't have <b>{c}</b> in. Worth a check back in a day or two.",{s:_SN,c:_C}); richSub=true; }
   }
   // Boxless "The call" subline: "{ago} · {dur}" — both pieces reuse existing prod helpers/vars
   // (timeAgo for the ago, callSummary already carries the "Call · Ns" duration). No new copy/keys.
@@ -3562,7 +3565,7 @@ function showResult(o, cid){
     : cls==='unk' ? t('term.unk','No clear answer') : '';
   const showFeedback = o.status==='completed' && cls==='unk' && !!o.transcript && cid && !String(cid).startsWith('local:');
   // New unclear copy: name the product, hand the call to the human (the transcript is right below).
-  if(showFeedback){ const pn=esc(o.productName||catLabel()||'it'); note = tf('note.fbk','It’s unclear if <b style="color:#fff">{p}</b> was in stock. Read the convo and tell us what you think.',{p:pn}); }
+  if(showFeedback){ note = t('note.fbk','We couldn’t quite make out the answer. Read the convo and tell us what you think.'); }
   // Feedback = an end-of-call survey (the four statuses), shown ABOVE the CTA on an unclear verdict.
   // No copy inside the poll box itself — the detailed status message above already says what to do.
   const feedbackBlock = showFeedback ? `
@@ -3578,7 +3581,7 @@ function showResult(o, cid){
     <div class="rverdict ${cls}">
       <div class="rnav" id="rnav"></div>
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
-      <div class="rtitle2">${esc(showFeedback ? t('v.unclear2','Unclear') : vTitle)}</div>
+      <div class="rtitle2">${esc(showFeedback ? t('v.unclear2','Couldn’t tell') : vTitle)}</div>
       ${note?`<div class="rsub">${nl2(fillP(note,o))}</div>`:''}
       ${breakdown}
     </div>
