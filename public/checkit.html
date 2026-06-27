@@ -23,7 +23,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r87" />
+<meta name="x-rev" content="names-r88" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -1198,7 +1198,7 @@ __BRAND_HEAD__
   </div>
   <div class="csheet-prod" id="cs_prod"></div>
   <button class="csheet-call" id="cs_call" onclick="startCheck()"><svg width="30" height="30" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span>Check this store</span></button>
-  <div class="csheet-charge" data-i18n="charge"><b>No check = no charge.</b> You always get the verdict.</div>
+  <div class="csheet-charge" data-i18n="charge"><b>No answer = no charge.</b> You always get the verdict.</div>
 </div>
 
 
@@ -1287,7 +1287,7 @@ __BRAND_HEAD__
     <label class="klbl" data-i18n="sch.time">Earliest call time</label>
     <input id="sch_time" type="time" value="10:00" class="kin">
     <label class="klbl" data-i18n="sch.where">Where do we alert you?</label>
-    <input id="sch_contact" type="text" inputmode="email" autocomplete="email" placeholder="Enter number" class="kin">
+    <input id="sch_contact" type="text" inputmode="email" autocomplete="email" data-i18n-ph="ph.schednum" placeholder="Enter number" class="kin">
     <div id="sch_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
     <button class="cta" id="sch_btn" onclick="submitSchedule()" style="margin-top:8px;width:100%" data-i18n="sch.cta">Turn on auto-check →</button>
   </div>
@@ -1300,11 +1300,11 @@ __BRAND_HEAD__
     <h3 style="margin:6px 0 2px;text-align:center" data-i18n="sr.title">Don't see your store?</h3>
     <div class="meta" style="margin-bottom:14px;text-align:center" data-i18n="sr.sub">Tell us which store to add — when it goes live, <b>your next call is free</b>.</div>
     <label class="klbl" data-i18n="sr.name">Store name <span style="color:var(--muted);font-weight:400">— required</span></label>
-    <input id="sr_name" class="kin" placeholder="e.g. Target — Thousand Oaks">
+    <input id="sr_name" class="kin" data-i18n-ph="ph.storereq" placeholder="e.g. Target — Thousand Oaks">
     <label class="klbl" data-i18n="sr.city">City &amp; state</label>
-    <input id="sr_city" class="kin" placeholder="Thousand Oaks, CA">
+    <input id="sr_city" class="kin" data-i18n-ph="ph.storecity" placeholder="Thousand Oaks, CA">
     <label class="klbl" data-i18n="sr.note">Anything else <span style="color:var(--muted);font-weight:400">— optional</span></label>
-    <input id="sr_note" class="kin" placeholder="address, which products, etc.">
+    <input id="sr_note" class="kin" data-i18n-ph="ph.storedetails" placeholder="address, which products, etc.">
     <label class="klbl" data-i18n="sr.email">Your email <span style="color:var(--muted);font-weight:400">— optional, so we can tell you when it's live</span></label>
     <input id="sr_contact" class="kin" type="text" inputmode="email" placeholder="you@email.com">
     <div id="sr_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
@@ -1341,7 +1341,7 @@ __BRAND_HEAD__
     </div>
     <!-- Step 2: 6-digit code -->
     <div id="auth_step_code" style="display:none">
-      <h3 style="margin:0 0 4px;font-size:21px">Check your phone</h3>
+      <h3 style="margin:0 0 4px;font-size:21px" data-i18n="auth.checkphone">Check your phone</h3>
       <div class="meta" id="auth_codesent" style="margin-bottom:16px">We've texted <b id="auth_codeto" style="color:#e6e6ee"></b><br>enter the code below</div>
       <div id="auth_devhint" style="display:none;margin-bottom:16px;font-size:13px;color:#FFCB05;background:rgba(255,203,5,.1);border:1px solid rgba(255,203,5,.3);border-radius:10px;padding:9px 12px;line-height:1.5">⚙️ Staging — no real text sent. Code prefilled, just tap Verify.</div>
       <input id="auth_code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" oninput="if((this.value||'').replace(/\D/g,'').length>=6) phoneVerify()" onkeydown="if(event.key==='Enter')phoneVerify()" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 13px;font-size:26px;font-weight:800;letter-spacing:.5em;box-sizing:border-box;text-align:center">
@@ -1458,18 +1458,18 @@ __BRAND_HEAD__
 <div class="overlay" id="scoreOverlay" onclick="if(event.target===this)closeScore()">
   <div class="modal" style="position:relative;max-width:420px;text-align:left">
     <span class="x" onclick="closeScore()">×</span>
-    <div style="font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--green)">Show the crew</div>
-    <h3 style="margin:6px 0 2px"><span class="mico" id="scoreIco"></span>You scored!</h3>
-    <p style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5">Snap your score and post it to the community wall.</p>
-    <label class="klbl">Your photo</label>
+    <div data-i18n="sc.crew" style="font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--green)">Show the crew</div>
+    <h3 style="margin:6px 0 2px"><span class="mico" id="scoreIco"></span><span data-i18n="sc.scored">You scored!</span></h3>
+    <p data-i18n="sc.snap" style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5">Snap your score and post it to the community wall.</p>
+    <label class="klbl" data-i18n="sc.photo">Your photo</label>
     <input id="score_file" type="file" accept="image/*" onchange="scorePreview()" class="kin" style="padding:9px">
     <div id="score_prev" style="display:none;margin:10px 0;text-align:center"><img id="score_img" style="max-width:100%;max-height:220px;border-radius:12px;border:1px solid var(--border)"></div>
-    <label class="klbl">Caption</label>
-    <input id="score_caption" maxlength="240" placeholder="Pulled a Charizard at the Target on Sunset!" class="kin">
-    <label class="klbl">Your name / handle <span style="color:var(--muted);font-weight:400">— optional</span></label>
-    <input id="score_handle" maxlength="40" placeholder="@yourhandle" class="kin">
+    <label class="klbl" data-i18n="sc.caption">Caption</label>
+    <input id="score_caption" maxlength="240" data-i18n-ph="sc.ph.caption" placeholder="Pulled a Charizard at the Target on Sunset!" class="kin">
+    <label class="klbl"><span data-i18n="sc.name">Your name / handle</span> <span style="color:var(--muted);font-weight:400" data-i18n="sc.optional">— optional</span></label>
+    <input id="score_handle" maxlength="40" data-i18n-ph="sc.ph.handle" placeholder="@yourhandle" class="kin">
     <div id="score_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
-    <button class="cta" id="score_btn" onclick="submitScore()" style="margin-top:8px;width:100%">Post to the wall →</button>
+    <button class="cta" id="score_btn" onclick="submitScore()" data-i18n="sc.post" style="margin-top:8px;width:100%">Post to the wall →</button>
   </div>
 </div>
 
@@ -1495,7 +1495,7 @@ __BRAND_HEAD__
     <h3 style="margin:6px 0 2px"><span class="mico" id="kIco"></span><span data-i18n="k.title">Report a kiosk refresh</span></h3>
     <p style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5" data-i18n="k.sub">Spotted a Pokémon kiosk that restocks on a schedule? Drop its timing — every report earns you <b id="kiosk_reward">a free check</b>.</p>
     <label class="klbl" data-i18n="k.which">Which store &amp; location</label>
-    <input id="k_label" placeholder="e.g. Albertsons — Sunset Blvd, LA" class="kin">
+    <input id="k_label" data-i18n-ph="ph.kiosk" placeholder="e.g. Albertsons — Sunset Blvd, LA" class="kin">
     <label class="klbl" data-i18n="k.minutes">Refresh minutes <span style="color:var(--muted);font-weight:400">— when it drops, past each hour</span></label>
     <input id="k_minutes" placeholder="e.g. :03, :33" class="kin">
     <label class="klbl" data-i18n="k.every">Every…</label>
@@ -1507,7 +1507,7 @@ __BRAND_HEAD__
       <option value="" data-i18n="k.notsure">not sure</option>
     </select>
     <label class="klbl" data-i18n="sr.note">Anything else <span style="color:var(--muted);font-weight:400">— optional</span></label>
-    <input id="k_note" placeholder="e.g. sometimes skips the :03 drop" class="kin">
+    <input id="k_note" data-i18n-ph="ph.kioskhint" placeholder="e.g. sometimes skips the :03 drop" class="kin">
     <label class="klbl" data-i18n="k.where">Where do we send your free check?</label>
     <input id="k_contact" type="text" inputmode="email" autocomplete="email" placeholder="email or phone" data-i18n-ph="sch.ph" class="kin">
     <div id="k_err" style="color:#ff6b6b;font-size:13px;margin-top:4px;min-height:16px"></div>
@@ -1689,6 +1689,10 @@ const I18N={ es:{
   // login + call sheet + feedback + live steps + result terms (added 2026-06-24)
   'auth.phone.lead':'¡Tu primera verificación es gratis!','auth.phone.ph':'Tu número de teléfono','auth.welcome.back':'¡Bienvenido de nuevo! 👋',
   'auth.continue':'Continuar →','auth.verify':'Verificar →',
+  'auth.checkphone':'Revisa tu teléfono','auth.checkemail':'Revisa tu correo','auth.checktexts':'Revisa tus mensajes',
+  'sc.crew':'Presume con la banda','sc.scored':'¡La conseguiste!','sc.snap':'Tómale una foto a tu hallazgo y publícalo en el muro.','sc.photo':'Tu foto','sc.caption':'Descripción','sc.name':'Tu nombre / usuario','sc.optional':'— opcional','sc.ph.caption':'¡Saqué un Charizard en el Target de Sunset!','sc.ph.handle':'@tuusuario','sc.post':'Publicar en el muro →','sc.uploading':'Subiendo…','sc.err.big':'La foto pesa demasiado (máx. 12 MB)','sc.err.nophoto':'Agrega una foto primero',
+  'ph.schednum':'Escribe tu número','ph.storereq':'ej. Target — Thousand Oaks','ph.storecity':'ej. Thousand Oaks, CA','ph.storedetails':'dirección, qué productos, etc.','ph.kiosk':'ej. Albertsons — Sunset Blvd, LA','ph.kioskhint':'ej. a veces se salta la reposición de los :03',
+  'toast.searchmi':'📍 {q} — tiendas a {n} mi','toast.zoomout':'📍 Aleja el mapa, explora a donde quieras, toca para fijar un punto','toast.community':'La comunidad llega pronto',
   'cs.costs':'cuesta 1 verificación','cs.toggle':'Ver pasos de la llamada',
   'err.storename':'Agrega el nombre de la tienda',
   'fbk.in':'En stock','fbk.out':'No está','fbk.soon':'Reabasteciendo','fbk.unsure':'Sin claridad',
@@ -2288,7 +2292,7 @@ async function geocodeSearch(){
   const r=await api('/pub/geocode?'+(isZip?'zip=':'q=')+encodeURIComponent(q));
   if(r&&!r.error&&r.lat!=null){
     // Clear the box so the store list isn't ALSO text-filtered by the ZIP (that filter hid every store).
-    $('search').value=''; setUserLoc(r.lat,r.lng); toast('📍 '+q+' — stores within '+RADIUS+' mi'); return true;
+    $('search').value=''; setUserLoc(r.lat,r.lng); toast(tf('toast.searchmi','📍 {q} — stores within {n} mi',{q:q,n:RADIUS})); return true;
   }
   if(!isZip){ fetchNear(); } // not a known place — try it as a store/location search
   return false;
@@ -2337,7 +2341,7 @@ function toggleMap(forceOpen){
   const mv=$('mapview'), sl=$('storelist'), btn=$('maptoggle'), lg=$('maplegend');
   if(mv.style.display==='block' && !forceOpen){ mv.style.display='none'; sl.style.display=''; if(lg)lg.style.display='none'; if(btn){btn.classList.remove('on'); btn.textContent='Map';} return; }
   sl.style.display='none'; mv.style.display='block'; if(lg){ lg.innerHTML=mapLegendHtml(); lg.style.display='flex'; } if(btn){btn.classList.add('on'); btn.textContent='List';} track('map_open'); loadMap();
-  if(isMaster()) toast('📍 Zoom out, roam anywhere, tap to drop a pin');
+  if(isMaster()) toast(t('toast.zoomout','📍 Zoom out, roam anywhere, tap to drop a pin'));
 }
 function loadMap(){
   if(window.L){ if(!MAP){ MAP_LOADED=true; initMap(); } else { setTimeout(()=>{ MAP.invalidateSize(); if(USER_LOC) placeMyPin(USER_LOC.lat,USER_LOC.lng,true); renderMapPins(); },60); } return; }
@@ -4371,7 +4375,7 @@ async function loadCommunity(){
 async function likeScore(id,el){ const r=await api('/pub/community/'+id+'/like',{method:'POST'}); if(r&&r.likes!=null&&el) el.textContent='♥ '+r.likes; track('community_like',{id}); }
 let SCORE_FILE=null;
 function openScore(){
-  if(!((POLICY.flags||{}).community)){ toast('Community is coming soon'); return; }
+  if(!((POLICY.flags||{}).community)){ toast(t('toast.community','Community is coming soon')); return; }
   SCORE_FILE=null; ['score_err','score_caption','score_handle'].forEach(id=>{const e=$(id);if(e)e.value&&(e.value='');}); $('score_err').textContent=''; $('score_prev').style.display='none'; $('score_file').value='';
   track('community_open');
   $('scoreOverlay').classList.add('on');
@@ -4379,12 +4383,12 @@ function openScore(){
 function closeScore(){ $('scoreOverlay').classList.remove('on'); }
 function scorePreview(){
   const f=$('score_file').files&&$('score_file').files[0]; if(!f) return;
-  if(f.size>12*1024*1024){ $('score_err').textContent='Photo is too big (max 12MB)'; return; }
+  if(f.size>12*1024*1024){ $('score_err').textContent=t('sc.err.big','Photo is too big (max 12MB)'); return; }
   SCORE_FILE=f; const r=new FileReader(); r.onload=e=>{ $('score_img').src=e.target.result; $('score_prev').style.display=''; }; r.readAsDataURL(f);
 }
 async function submitScore(){
-  if(!SCORE_FILE){ $('score_err').textContent='Add a photo first'; return; }
-  const btn=$('score_btn'); btn.disabled=true; btn.textContent='Uploading…';
+  if(!SCORE_FILE){ $('score_err').textContent=t('sc.err.nophoto','Add a photo first'); return; }
+  const btn=$('score_btn'); btn.disabled=true; btn.textContent=t('sc.uploading','Uploading…');
   try{
     const ext=(SCORE_FILE.name.split('.').pop()||'jpg').toLowerCase();
     const su=await (isAuthed()?appApi:api)('/pub/community/upload-url',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ext,contentType:SCORE_FILE.type||'image/jpeg'})});
@@ -4399,7 +4403,7 @@ async function submitScore(){
     closeScore(); loadCommunity();
     toast(r.pending?'🙌 Posted! We review photos before they go live':'🏆 Posted to the wall!');
   }catch(e){ $('score_err').textContent=(e&&e.message)||'Something went wrong'; }
-  finally{ btn.disabled=false; btn.textContent='Post to the wall →'; }
+  finally{ btn.disabled=false; btn.textContent=t('sc.post','Post to the wall →'); }
 }
 
 // --- Scores: collapsed composer + IG-style feed ---
