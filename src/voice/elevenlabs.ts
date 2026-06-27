@@ -308,10 +308,22 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
     statusKey = ({ no_answer: "nobody_answered", failed: "failed", closed: "closed" } as Record<string, string>)[status] ?? "nobody_answered";
   }
 
-  // Timing: total connected length + time-to-human (when the first non-agent voice spoke).
+  // Timing: total connected length + time-to-LIVE-human. The handoff is when our agent first ASKS a
+  // person its opener/stock question — NOT the IVR's first words. On a phone tree the agent only asks
+  // after it finishes navigating, so this is the true time-to-human; everything before it is nav, and
+  // "talk" (call − nav) becomes the real conversation instead of nav + hold + talk.
   const durationSecs = d.metadata?.call_duration_secs;
-  const firstHuman = (d.transcript ?? []).find((t) => t.role !== "agent" && t.message != null);
-  const navSecs = firstHuman?.time_in_call_secs ?? null;
+  const tr = d.transcript ?? [];
+  const firstHuman = tr.find((t) => t.role !== "agent" && t.message != null);
+  const ASK = /pok[eé]?mon|one ?piece|topps|nee ?doh|got any|in stock|on (your|the) shelf|shipment|do you (have|carry|sell|guys)|you got|any .* (in|left)\b/i;
+  const askIdx = tr.findIndex((t) => t.role === "agent" && t.message && ASK.test(t.message));
+  let navSecs: number | null = null;
+  if (askIdx >= 0) {
+    // The human greeted just before our agent's ask — use that turn (else the ask itself).
+    const greet = [...tr.slice(0, askIdx)].reverse().find((t) => t.role !== "agent" && t.message != null);
+    navSecs = greet?.time_in_call_secs ?? tr[askIdx]?.time_in_call_secs ?? null;
+  }
+  if (navSecs == null) navSecs = firstHuman?.time_in_call_secs ?? null; // fallback: legacy first-non-agent
 
   return {
     callId: Number(vars.internal_call_id),

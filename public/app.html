@@ -233,6 +233,19 @@
   .msel-opt:hover{background:var(--surface-2)}
   .msel-opt input{width:15px;height:15px;vertical-align:-2px;margin:0 9px 0 0;accent-color:var(--green)}
   .msel-clear{display:block;width:100%;text-align:left;padding:8px 9px;margin-top:5px;border:none;border-top:1px solid var(--border);color:var(--muted);font:600 12px Inter;background:none;cursor:pointer}
+  /* user dashboard */
+  .urow{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--border)}
+  .urow:first-of-type{border-top:none}
+  .ugrow{flex:1;min-width:0}
+  .uname{font-size:14px;font-weight:700;color:#eaeaf2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ucomp{font-size:10px;font-weight:700;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:1px 5px;margin-left:7px;vertical-align:1px}
+  .umeta{font-size:11.5px;color:var(--text-muted);margin-top:2px}
+  .uright{flex:0 0 auto;text-align:right}
+  .upill{display:inline-block;font:800 11px Inter;border-radius:7px;padding:3px 9px;border:1px solid}
+  .upill.in{color:var(--green);background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3)}
+  .upill.soon{color:#F4D03F;background:rgba(244,208,63,.1);border-color:rgba(244,208,63,.28)}
+  .upill.out{color:var(--text-muted);background:var(--surface-2);border-color:var(--border)}
+  .upill.gray{color:var(--purple);background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3)}
   .sracts{display:flex;gap:9px;align-items:center;margin-top:13px}
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
@@ -522,6 +535,10 @@
     <div id="dash_calc" style="display:none"></div>
   </section>
   <section id="calc"><div id="calc_root"></div></section>
+  <section id="users">
+    <h2>Users</h2>
+    <div class="card report"><div id="users_list" class="meta">Loading…</div></div>
+  </section>
 
   <section id="retailers">
     <h2>Store intel</h2>
@@ -1042,13 +1059,13 @@ let CATEGORIES = [];
 
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
-  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['growth','Policy','rise'],['calc','Calc','sliders']]},
+  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['users','Users','card'],['growth','Policy','rise'],['calc','Calc','sliders']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
   calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Settings','tree'],['settings','App','sliders']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, dash:()=>{loadDash();loadGwPulse();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -3260,6 +3277,28 @@ async function loadGwPulse(){
     `</div><div class="rgrp">Community</div><div class="stats" style="margin-bottom:0">`+
       st(cm.watches||0,'watching')+st(cm.kioskReports||0,'kiosk intel')+st(cm.posts||0,'scores')+st(cm.postsPending||0,'pending')+st(cm.newLeads7d||0,'new leads 7d')+
     `</div>`;
+}
+// User dashboard: everyone who signed up (phone-first, Clerk-free) — newest first.
+async function loadUsers(){
+  const el=document.getElementById('users_list'); if(!el) return;
+  const d=await api('/api/admin/users');
+  if(!Array.isArray(d)){ el.textContent='Could not load users.'; return; }
+  if(!d.length){ el.innerHTML='<div class="empty">No signups yet.</div>'; return; }
+  const real=d.filter(u=>!u.comp);
+  const money=c=>'$'+((c||0)/100).toFixed(2);
+  const when=s=>{ if(!s) return '—'; const dt=new Date(s*1000); return dt.toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})+' · '+dt.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}); };
+  const planCls=p=>p==='Subscriber'?'in':p==='Pay-as-you-go'?'soon':p==='Comp / owner'?'gray':'out';
+  el.innerHTML=`<div class="meta" style="margin-bottom:12px">${d.length} account${d.length===1?'':'s'} · <b style="color:var(--green)">${real.length} real signup${real.length===1?'':'s'}</b> <span style="color:var(--text-tertiary)">(excludes comp / owner)</span></div>`
+    + d.map(u=>`<div class="urow">
+        <div class="ugrow">
+          <div class="uname">${esch(u.phone||u.email||u.id)}${u.comp?'<span class="ucomp">comp</span>':''}</div>
+          <div class="umeta">${(u.email&&u.phone)?esch(u.email)+' · ':''}signed up ${esch(when(u.createdAt))}${u.callerIdVerified?' · <span style="color:var(--green)">caller-ID ✓</span>':''}</div>
+        </div>
+        <div class="uright">
+          <span class="upill ${planCls(u.plan)}">${esch(u.plan)}</span>
+          <div class="umeta" style="margin-top:5px">${u.credits} credits · ${u.callsMade} call${u.callsMade===1?'':'s'} · ${money(u.spentCents)}</div>
+        </div>
+      </div>`).join('');
 }
 async function loadGwIntel(){
   const el=document.getElementById('gw_intel'); if(!el) return;

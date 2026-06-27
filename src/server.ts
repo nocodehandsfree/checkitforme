@@ -2286,6 +2286,23 @@ app.get("/api/admin/restock-intel", async (c) => {
 });
 
 // ---- Growth pulse: the funnel + engagement snapshot the owner reads each morning ----
+// User dashboard — everyone who's signed up (phone-first accounts, Clerk-free). Newest first.
+app.get("/api/admin/users", async (c) => {
+  const accs = await db.select().from(accounts).orderBy(desc(accounts.createdAt));
+  return c.json(accs.map((a) => {
+    const comp = isComp(a.email) || isCompAccount(a);
+    const plan = a.subscription === "active" ? "Subscriber" : (a.totalSpentCents > 0 ? "Pay-as-you-go" : (comp ? "Comp / owner" : "Free"));
+    return {
+      id: a.clerkUserId,
+      phone: a.phone || (a.clerkUserId?.startsWith("phone:") ? a.clerkUserId.slice(6) : null),
+      email: a.email || null,
+      plan, subscription: a.subscription, comp,
+      credits: a.credits, callsMade: a.callsMade, spentCents: a.totalSpentCents,
+      callerIdVerified: !!a.callerId, referredBy: a.referredBy || null,
+      createdAt: a.createdAt, renewsAt: a.subRenewsAt || null,
+    };
+  }));
+});
 app.get("/api/admin/pulse", async (c) => {
   const now = Math.floor(Date.now() / 1000), d1 = now - 86400, d7 = now - 7 * 86400;
   const [accts, leadRows, watchRows, kReports, posts, calls] = await Promise.all([
