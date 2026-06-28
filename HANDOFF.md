@@ -13,9 +13,9 @@ AI service that phones retail stores to check trading-card/collectible stock, wi
 - **`main` is the card app — dead for us, ignore it** (GitHub defaults to it; switch the dropdown).
 
 ## Rules of the road
-- **Staging-first for CODE.** Build on the staging branch → push → **Check-QA verifies the sprint on
-  `staging.checkitforme.com`** → owner does the final listen → promote = merge into the prod branch. **Nothing
-  ships to prod unverified — QA is the gate.** Never push UI/behavior straight to prod. Keep `public/checkit.html`
+- **Staging-first for CODE.** Build on the staging branch → push → owner verifies on `staging.checkitforme.com`
+  → promote = merge into the prod branch. For **larger/riskier builds**, the owner may run **Check-QA** on staging
+  first (optional pre-prod check — see lanes). Never push UI/behavior straight to prod. Keep `public/checkit.html`
   byte-identical between branches (only diff = the env-gated staging machinery: `config.staging`/`STAGING_CALLS`
   guards + `staging-sim.ts` + the proxy worker). Details: `docs/ops/STAGING.md`.
 - **DATA direction = PROD is source of truth.** Manage the business from the prod Admin. Code flows
@@ -30,7 +30,8 @@ AI service that phones retail stores to check trading-card/collectible stock, wi
 ## Lanes (stay in yours; request cross-lane)
 - **Fungie** — owner (the human). **Website** — `checkit.html` + `/pub`. **Admin** — `app.html` + `/api`.
   **Data Dev** — `data/` + importer + store rows. **DevOps** — backend core/infra/security/deploys/API contract.
-- **QA** — verifies the sprint on staging **before any prod promote**; read-only, reports pass/fail, never edits code.
+- **QA** — *optional, owner-invoked* for larger/risky builds: self-scopes from the staging↔prod diff, thoroughly
+  tests on staging, reports pass/fail. Read-only, never edits code.
 - Read your role doc: `docs/handoffs/{website,admin,data,devops,design,qa}.md`.
 
 ## Secrets — self-serve from Railway (don't ask Fungie)
