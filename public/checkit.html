@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<!-- Status bar: PROVEN that this device's Safari TAB won't tint from theme-color (we served green in the
-     HTML, no JS touched it, the bar stayed black). So we don't rely on theme-color at all. Instead, in
-     STANDALONE (Add to Home Screen) the apple-mobile metas below + viewport-fit=cover make the web content
-     paint UNDER the status bar — so the green result wash shows at the top per-edge and the homepage's dark
-     bg keeps it dark, with no Safari toolbar = no green footer. That's the original "green top, no footer"
-     experience. In a plain Safari tab the top stays the system default (an iOS limitation, not the page). -->
+<!-- Status bar tint: iOS applies <meta name="theme-color"> ONLY at page LOAD — a later JS change to it is
+     ignored. So the verdict colour has to be present in the served HTML when the page loads. The server bakes
+     it from ?tone=in|out|unk|soon (renderRunner), and the client does a REAL navigation to that ?tone URL
+     when opening a result whose tone differs from what loaded (see ensureToneLoaded). setThemeTone() is only
+     the in-app fallback for result→result switches. In STANDALONE (Add to Home Screen) the apple-mobile metas
+     below + viewport-fit=cover also let the content paint UNDER the status bar, so the wash shows at the top. -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Check it for me" />
@@ -19,11 +19,15 @@
   if('serviceWorker' in navigator){ window.addEventListener('load',function(){ try{ navigator.serviceWorker.register('/sw.js').catch(function(){}); }catch(e){} }); }</script>
 <script>(function(){try{
   var sp=new URLSearchParams(location.search);
+  // The tone the SERVER baked into <meta theme-color> at load (?tone=in|out|unk|soon). iOS only tints the
+  // status bar from the value present at LOAD, so we compare against this to decide whether a result needs a
+  // real navigation to re-bake the colour (vs. a JS-only theme-color change that iOS ignores).
+  window.__loadTone = sp.get('tone') || '';
   if(!sp.has('call')) return;
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r84" />
+<meta name="x-rev" content="names-r90" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -106,6 +110,12 @@ __BRAND_HEAD__
   .cta:hover{filter:brightness(1.04)}
   .cta:active{transform:translateY(1px);box-shadow:0 5px 14px -4px rgba(52,197,107,.45),inset 0 1px 0 rgba(255,255,255,.35)}
   .cta:disabled{background:#1f2a23;color:#5c6f63;box-shadow:none;cursor:not-allowed;filter:none}
+  /* "Getting the answer" three-dots — they pulse one at a time, on a loop, until the verdict lands. */
+  .loaddots{display:inline-flex;gap:9px;align-items:center;padding:16px 0}
+  .loaddots span{width:10px;height:10px;border-radius:50%;background:var(--green,#4ADE80);animation:loaddot 1.25s ease-in-out infinite}
+  .loaddots span:nth-child(2){animation-delay:.18s} .loaddots span:nth-child(3){animation-delay:.36s}
+  @keyframes loaddot{0%,65%,100%{opacity:.22;transform:translateY(0)}32%{opacity:1;transform:translateY(-5px)}}
+  @media (prefers-reduced-motion:reduce){ .loaddots span{animation:none;opacity:.7} }
   @keyframes armPulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,.5)}100%{box-shadow:0 0 0 24px rgba(74,222,128,0)}}
   .cta.armed{animation:armPulse .8s ease-out 2}
   .cta .price{font-weight:700;opacity:.7;font-size:13px}
@@ -1192,7 +1202,7 @@ __BRAND_HEAD__
   </div>
   <div class="csheet-prod" id="cs_prod"></div>
   <button class="csheet-call" id="cs_call" onclick="startCheck()"><svg width="30" height="30" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span>Check this store</span></button>
-  <div class="csheet-charge" data-i18n="charge"><b>No check = no charge.</b> You always get the verdict.</div>
+  <div class="csheet-charge" data-i18n="charge"><b>No answer = no charge.</b> You always get the verdict.</div>
 </div>
 
 
@@ -1281,7 +1291,7 @@ __BRAND_HEAD__
     <label class="klbl" data-i18n="sch.time">Earliest call time</label>
     <input id="sch_time" type="time" value="10:00" class="kin">
     <label class="klbl" data-i18n="sch.where">Where do we alert you?</label>
-    <input id="sch_contact" type="text" inputmode="email" autocomplete="email" placeholder="Enter number" class="kin">
+    <input id="sch_contact" type="text" inputmode="email" autocomplete="email" data-i18n-ph="ph.schednum" placeholder="Enter number" class="kin">
     <div id="sch_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
     <button class="cta" id="sch_btn" onclick="submitSchedule()" style="margin-top:8px;width:100%" data-i18n="sch.cta">Turn on auto-check →</button>
   </div>
@@ -1294,11 +1304,11 @@ __BRAND_HEAD__
     <h3 style="margin:6px 0 2px;text-align:center" data-i18n="sr.title">Don't see your store?</h3>
     <div class="meta" style="margin-bottom:14px;text-align:center" data-i18n="sr.sub">Tell us which store to add — when it goes live, <b>your next call is free</b>.</div>
     <label class="klbl" data-i18n="sr.name">Store name <span style="color:var(--muted);font-weight:400">— required</span></label>
-    <input id="sr_name" class="kin" placeholder="e.g. Target — Thousand Oaks">
+    <input id="sr_name" class="kin" data-i18n-ph="ph.storereq" placeholder="e.g. Target — Thousand Oaks">
     <label class="klbl" data-i18n="sr.city">City &amp; state</label>
-    <input id="sr_city" class="kin" placeholder="Thousand Oaks, CA">
+    <input id="sr_city" class="kin" data-i18n-ph="ph.storecity" placeholder="Thousand Oaks, CA">
     <label class="klbl" data-i18n="sr.note">Anything else <span style="color:var(--muted);font-weight:400">— optional</span></label>
-    <input id="sr_note" class="kin" placeholder="address, which products, etc.">
+    <input id="sr_note" class="kin" data-i18n-ph="ph.storedetails" placeholder="address, which products, etc.">
     <label class="klbl" data-i18n="sr.email">Your email <span style="color:var(--muted);font-weight:400">— optional, so we can tell you when it's live</span></label>
     <input id="sr_contact" class="kin" type="text" inputmode="email" placeholder="you@email.com">
     <div id="sr_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
@@ -1331,16 +1341,16 @@ __BRAND_HEAD__
         <input id="auth_phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="Your phone number" data-i18n-ph="auth.phone.ph" oninput="fmtPhoneInput(this)" onkeydown="if(event.key==='Enter')phoneStart()" style="flex:1;min-width:0;background:transparent;color:#fff;border:none;outline:none;box-shadow:none;padding:0;line-height:54px;height:54px;font-size:16px;box-sizing:border-box">
       </div>
       <div id="auth_err" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
-      <button class="cta sm" id="auth_send" onclick="phoneStart()" style="margin-top:4px;width:100%;background:var(--green);color:#06210f">Continue →</button>
+      <button class="cta sm" id="auth_send" onclick="phoneStart()" data-i18n="auth.continue" style="margin-top:4px;width:100%;background:var(--green);color:#06210f">Continue →</button>
     </div>
     <!-- Step 2: 6-digit code -->
     <div id="auth_step_code" style="display:none">
-      <h3 style="margin:0 0 4px;font-size:21px">Check your phone</h3>
+      <h3 style="margin:0 0 4px;font-size:21px" data-i18n="auth.checkphone">Check your phone</h3>
       <div class="meta" id="auth_codesent" style="margin-bottom:16px">We've texted <b id="auth_codeto" style="color:#e6e6ee"></b><br>enter the code below</div>
       <div id="auth_devhint" style="display:none;margin-bottom:16px;font-size:13px;color:#FFCB05;background:rgba(255,203,5,.1);border:1px solid rgba(255,203,5,.3);border-radius:10px;padding:9px 12px;line-height:1.5">⚙️ Staging — no real text sent. Code prefilled, just tap Verify.</div>
       <input id="auth_code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" oninput="if((this.value||'').replace(/\D/g,'').length>=6) phoneVerify()" onkeydown="if(event.key==='Enter')phoneVerify()" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 13px;font-size:26px;font-weight:800;letter-spacing:.5em;box-sizing:border-box;text-align:center">
       <div id="auth_codeerr" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
-      <button class="cta sm" id="auth_verify" onclick="phoneVerify()" style="margin-top:4px;width:100%;background:var(--green);color:#06210f">Verify →</button>
+      <button class="cta sm" id="auth_verify" onclick="phoneVerify()" data-i18n="auth.verify" style="margin-top:4px;width:100%;background:var(--green);color:#06210f">Verify →</button>
       <div style="margin-top:13px;font-size:13px;color:var(--muted)">Didn't get it? <a onclick="phoneStart(true)" style="color:var(--purple);font-weight:700;cursor:pointer">Resend</a> · <a onclick="authBack()" style="color:var(--purple);font-weight:700;cursor:pointer">Change number</a></div>
     </div>
   </div>
@@ -1452,18 +1462,18 @@ __BRAND_HEAD__
 <div class="overlay" id="scoreOverlay" onclick="if(event.target===this)closeScore()">
   <div class="modal" style="position:relative;max-width:420px;text-align:left">
     <span class="x" onclick="closeScore()">×</span>
-    <div style="font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--green)">Show the crew</div>
-    <h3 style="margin:6px 0 2px"><span class="mico" id="scoreIco"></span>You scored!</h3>
-    <p style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5">Snap your score and post it to the community wall.</p>
-    <label class="klbl">Your photo</label>
+    <div data-i18n="sc.crew" style="font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--green)">Show the crew</div>
+    <h3 style="margin:6px 0 2px"><span class="mico" id="scoreIco"></span><span data-i18n="sc.scored">You scored!</span></h3>
+    <p data-i18n="sc.snap" style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5">Snap your score and post it to the community wall.</p>
+    <label class="klbl" data-i18n="sc.photo">Your photo</label>
     <input id="score_file" type="file" accept="image/*" onchange="scorePreview()" class="kin" style="padding:9px">
     <div id="score_prev" style="display:none;margin:10px 0;text-align:center"><img id="score_img" style="max-width:100%;max-height:220px;border-radius:12px;border:1px solid var(--border)"></div>
-    <label class="klbl">Caption</label>
-    <input id="score_caption" maxlength="240" placeholder="Pulled a Charizard at the Target on Sunset!" class="kin">
-    <label class="klbl">Your name / handle <span style="color:var(--muted);font-weight:400">— optional</span></label>
-    <input id="score_handle" maxlength="40" placeholder="@yourhandle" class="kin">
+    <label class="klbl" data-i18n="sc.caption">Caption</label>
+    <input id="score_caption" maxlength="240" data-i18n-ph="sc.ph.caption" placeholder="Pulled a Charizard at the Target on Sunset!" class="kin">
+    <label class="klbl"><span data-i18n="sc.name">Your name / handle</span> <span style="color:var(--muted);font-weight:400" data-i18n="sc.optional">— optional</span></label>
+    <input id="score_handle" maxlength="40" data-i18n-ph="sc.ph.handle" placeholder="@yourhandle" class="kin">
     <div id="score_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
-    <button class="cta" id="score_btn" onclick="submitScore()" style="margin-top:8px;width:100%">Post to the wall →</button>
+    <button class="cta" id="score_btn" onclick="submitScore()" data-i18n="sc.post" style="margin-top:8px;width:100%">Post to the wall →</button>
   </div>
 </div>
 
@@ -1489,7 +1499,7 @@ __BRAND_HEAD__
     <h3 style="margin:6px 0 2px"><span class="mico" id="kIco"></span><span data-i18n="k.title">Report a kiosk refresh</span></h3>
     <p style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5" data-i18n="k.sub">Spotted a Pokémon kiosk that restocks on a schedule? Drop its timing — every report earns you <b id="kiosk_reward">a free check</b>.</p>
     <label class="klbl" data-i18n="k.which">Which store &amp; location</label>
-    <input id="k_label" placeholder="e.g. Albertsons — Sunset Blvd, LA" class="kin">
+    <input id="k_label" data-i18n-ph="ph.kiosk" placeholder="e.g. Albertsons — Sunset Blvd, LA" class="kin">
     <label class="klbl" data-i18n="k.minutes">Refresh minutes <span style="color:var(--muted);font-weight:400">— when it drops, past each hour</span></label>
     <input id="k_minutes" placeholder="e.g. :03, :33" class="kin">
     <label class="klbl" data-i18n="k.every">Every…</label>
@@ -1501,7 +1511,7 @@ __BRAND_HEAD__
       <option value="" data-i18n="k.notsure">not sure</option>
     </select>
     <label class="klbl" data-i18n="sr.note">Anything else <span style="color:var(--muted);font-weight:400">— optional</span></label>
-    <input id="k_note" placeholder="e.g. sometimes skips the :03 drop" class="kin">
+    <input id="k_note" data-i18n-ph="ph.kioskhint" placeholder="e.g. sometimes skips the :03 drop" class="kin">
     <label class="klbl" data-i18n="k.where">Where do we send your free check?</label>
     <input id="k_contact" type="text" inputmode="email" autocomplete="email" placeholder="email or phone" data-i18n-ph="sch.ph" class="kin">
     <div id="k_err" style="color:#ff6b6b;font-size:13px;margin-top:4px;min-height:16px"></div>
@@ -1566,7 +1576,7 @@ const I18N={ es:{
   'res.share':'Comparte este hallazgo','res.driver':'¿Muy lejos? Que un local lo recoja','res.score':'¿Lo conseguiste? Publica tu logro',
   'res.proof':'Prueba — lo que dijo el empleado','res.translate':'Traducir',
   'live.convo':'Conversación','live.steps':'Progreso de la llamada','cs.call':'Llamada','lbl.assoc':'Asociado','lbl.menu':'Menú','lbl.agent':'Check AI',
-  'up.restock':'No te pierdas el reabastecimiento','up.watch':'Avísame cuando vuelva','up.watch.sub':'Una alerta en cuanto una llamada lo confirme.','up.sched':'Auto-verificar en días de envío','up.sched.sub':'Llamamos por ti en días de reabastecimiento.',
+  'up.restock':'No te pierdas el reabastecimiento','up.restock.sub':'Te avisamos por mensaje en cuanto vuelva.','up.checkback':'Vuelve pronto','up.checkback.sub':'Reabastecen seguido — vuelve en un día o dos.','up.watch':'Avísame cuando vuelva','up.watch.sub':'Una alerta en cuanto una llamada lo confirme.','up.sched':'Auto-verificar en días de envío','up.sched.sub':'Llamamos por ti en días de reabastecimiento.',
   'hist.title':'Tus verificaciones','hist.new':'+ Nueva','hist.empty':'Aún no hay verificaciones — haz una y aparecerá aquí.',
   'foot.cta':'¿No ves tu tienda? Agrégala →','foot.about':'Acerca de','foot.contact':'Contacto','foot.faq':'Preguntas','foot.terms':'Términos','foot.privacy':'Privacidad','foot.success':'Logros',
   'kioskhint':'<span style="display:flex;align-items:center;gap:7px;font-weight:800;white-space:nowrap"><span id="khspark"></span> ¿En un kiosco? ¡Verificación gratis!</span><a onclick="openReceipt()" style="display:inline-block;margin-top:5px;color:var(--purple);font-weight:800;cursor:pointer">Usa nuestro correo al pagar o reenvía tu recibo →</a>',
@@ -1682,6 +1692,12 @@ const I18N={ es:{
   'cid.title':'Llama desde tu propio número','cid.sub':'Verifica tu celular una vez para que las tiendas vean <b>tu</b> número en el identificador — contestan mucho más que a un número desconocido.','cid.cta':'Verificar mi número →','cid.calling2':'Llamándote…','cid.calling':'📞 Te estamos llamando','cid.enter':'Contesta y, cuando te lo pidan, marca este código:','cid.waiting':'Esperando a que termine la llamada…','cid.done':'Tu número está verificado','cid.donesub':'Las verificaciones ahora salen de tu celular — las tiendas ven tu número.','cid.donecta':'Listo','cid.unavail':'La verificación no está disponible ahora — inténtalo más tarde.','cid.startfail':'No se pudo iniciar la verificación — inténtalo de nuevo.','cid.timeout':'No se verificó a tiempo — cierra e inténtalo de nuevo.',
   // login + call sheet + feedback + live steps + result terms (added 2026-06-24)
   'auth.phone.lead':'¡Tu primera verificación es gratis!','auth.phone.ph':'Tu número de teléfono','auth.welcome.back':'¡Bienvenido de nuevo! 👋',
+  'auth.continue':'Continuar →','auth.verify':'Verificar →',
+  'auth.checkphone':'Revisa tu teléfono','auth.checkemail':'Revisa tu correo','auth.checktexts':'Revisa tus mensajes',
+  'err.phone':'Escribe tu número de celular de 10 dígitos.','err.code':'Escribe el código de 6 dígitos','auth.resent':'Código reenviado 📲',
+  'sc.crew':'Presume con la banda','sc.scored':'¡La conseguiste!','sc.snap':'Tómale una foto a tu hallazgo y publícalo en el muro.','sc.photo':'Tu foto','sc.caption':'Descripción','sc.name':'Tu nombre / usuario','sc.optional':'— opcional','sc.ph.caption':'¡Saqué un Charizard en el Target de Sunset!','sc.ph.handle':'@tuusuario','sc.post':'Publicar en el muro →','sc.uploading':'Subiendo…','sc.err.big':'La foto pesa demasiado (máx. 12 MB)','sc.err.nophoto':'Agrega una foto primero',
+  'ph.schednum':'Escribe tu número','ph.storereq':'ej. Target — Thousand Oaks','ph.storecity':'ej. Thousand Oaks, CA','ph.storedetails':'dirección, qué productos, etc.','ph.kiosk':'ej. Albertsons — Sunset Blvd, LA','ph.kioskhint':'ej. a veces se salta la reposición de los :03',
+  'toast.searchmi':'📍 {q} — tiendas a {n} mi','toast.zoomout':'📍 Aleja el mapa, explora a donde quieras, toca para fijar un punto','toast.community':'La comunidad llega pronto',
   'cs.costs':'cuesta 1 verificación','cs.toggle':'Ver pasos de la llamada',
   'err.storename':'Agrega el nombre de la tienda',
   'fbk.in':'En stock','fbk.out':'No está','fbk.soon':'Reabasteciendo','fbk.unsure':'Sin claridad',
@@ -1693,13 +1709,13 @@ const I18N={ es:{
   'live.s1':'Llamando a la tienda…','live.s2':'Está timbrando…','live.s3':'Conectamos','live.s4':'Escuchando el menú…','live.s5':'Navegando el menú…','live.s6':'Transferido al mostrador','live.s7':'Contestó una persona','live.s8':'Preguntando por {p}',
   'live.item':'tu producto','live.store':'la tienda','live.waitperson':'Esperando llegar a una persona…','live.noconvo':'No hay conversación en vivo en esta llamada.',
   'step.one':'paso','step.many':'pasos','step.ringing':'Llamando a la tienda…',
-  'note.fbk':'No quedó claro si <b style="color:#fff">{p}</b> estaba en stock. Lee la conversación y dinos qué opinas.',
+  'note.fbk':'No pudimos entender bien la respuesta. Lee la conversación y dinos qué opinas.',
   'note.getting':'La llamada acaba de terminar — obteniendo el resultado.',
-  'v.getting':'Obteniendo la respuesta…','v.unclear2':'Sin claridad',
+  'v.getting':'Obteniendo la respuesta…','v.unclear2':'No supimos decir',
   'st.too_busy':'La tienda está muy ocupada',
   'stn.too_busy':'No dijeron que no, pero estaban demasiado ocupados para revisar si había {product} en stock. Intenta más tarde.',
-  'sub.in':'{s} tiene <b>{c}</b> en stock ahora mismo.','sub.in.named':'{s} tiene <b style="color:var(--accent)">{p}</b> en stock ahora mismo.',
-  'sub.out':'{s} no tiene <b>{c}</b> ahora mismo.','sub.soldout':'{s} está agotado de <b>{c}</b> ahora mismo.',
+  'sub.in':'<b>{s}</b> tiene <b>{c}</b>. Ve por ello antes de que se agote.','sub.in.named':'<b>{s}</b> tiene <b>{p}</b>. Ve por ello antes de que se agote.',
+  'sub.out':'<b>{s}</b> no tiene <b>{c}</b> ahora. Vuelve a checar en un día o dos.','sub.soldout':'{s} está agotado de <b>{c}</b> ahora mismo.',
   'term.in':'En stock — confirmado','term.out':'No está en stock','term.soon':'Reabastecimiento confirmado · {d}','term.unk':'Sin respuesta clara',
   'res.conversation':'Conversación','res.result':'Resultado',
   'pre.again.body':'{o} {a}. ¿Verificar de nuevo?','pre.again.no':'Ahora no',
@@ -2012,8 +2028,8 @@ function authReset(){
   AUTH={busy:false};
   authStep('email');
   const _ph=$('auth_phone'); if(_ph)_ph.value=''; const _c=$('auth_code'); if(_c)_c.value=''; $('auth_err').textContent=''; $('auth_codeerr').textContent='';
-  const send=$('auth_send'); if(send){send.disabled=false;send.textContent='Continue →';}
-  const ver=$('auth_verify'); if(ver){ver.disabled=false;ver.textContent='Verify →';}
+  const send=$('auth_send'); if(send){send.disabled=false;send.textContent=t('auth.continue','Continue →');}
+  const ver=$('auth_verify'); if(ver){ver.disabled=false;ver.textContent=t('auth.verify','Verify →');}
 }
 function openAuth(){
   $('authOverlay').classList.add('on');
@@ -2049,12 +2065,12 @@ function fmtPhoneInput(el){ const d=(el.value||'').replace(/\D/g,'').slice(0,10)
 async function phoneStart(resend){
   if(AUTH.busy) return;
   const e=normUsPhone($('auth_phone').value);
-  if(!e){ $('auth_err').textContent='Enter your 10-digit US cell number.'; return; }
+  if(!e){ $('auth_err').textContent=t('err.phone','Enter your 10-digit US cell number.'); return; }
   AUTH_PHONE=e; AUTH.busy=true;
   const btn=$('auth_send'); if(btn){ btn.disabled=true; btn.textContent=resend?'Resending…':'Sending…'; }
   $('auth_err').textContent='';
   const r=await api('/auth/phone/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:e})});
-  AUTH.busy=false; if(btn){ btn.disabled=false; btn.textContent='Continue →'; }
+  AUTH.busy=false; if(btn){ btn.disabled=false; btn.textContent=t('auth.continue','Continue →'); }
   if(!r||r.error){
     const msg = (r&&r.error==='rate_limited') ? ('Too many tries — wait '+(r.retryAfter||60)+'s and try again.')
               : (r&&r.error==='us_number_required') ? 'US mobile numbers only for now.'
@@ -2062,7 +2078,7 @@ async function phoneStart(resend){
     $('auth_err').textContent=msg; return;
   }
   track('auth_code_sent',{flow:'phone'});
-  if(resend){ toast('Code re-sent 📲'); return; }
+  if(resend){ toast(t('auth.resent','Code re-sent 📲')); return; }
   authStep('code'); $('auth_codeto').textContent=(e||'').replace(/^\+1(\d{3})(\d{3})(\d{4})$/,'$1-$2-$3'); // dashes: 555-123-4567
   $('auth_codeerr').textContent=''; const ci=$('auth_code'); if(ci) ci.value='';
   // Staging skips the real (paid) SMS: prefill the dev code + show a hint instead of "we've texted you".
@@ -2075,7 +2091,7 @@ async function phoneStart(resend){
 async function phoneVerify(){
   if(AUTH.busy) return;
   const code=($('auth_code').value||'').replace(/\D/g,'');
-  if(code.length<4){ $('auth_codeerr').textContent='Enter the 6-digit code'; return; }
+  if(code.length<4){ $('auth_codeerr').textContent=t('err.code','Enter the 6-digit code'); return; }
   if(!AUTH_PHONE){ authBack(); return; }
   AUTH.busy=true; const btn=$('auth_verify'); if(btn){ btn.disabled=true; btn.textContent='Verifying…'; } $('auth_codeerr').textContent='';
   const r=await api('/auth/phone/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:AUTH_PHONE,code})});
@@ -2124,9 +2140,10 @@ function openAccount(){
   const pl=$('acct_planlbl'); if(pl) pl.textContent = member||comp ? t('acct.manage','Manage plan') : t('acct.upgrade','Upgrade — get more checks');
   const pr=$('acct_plan'); if(pr) pr.onclick=function(){ closeAccount(); openBuy((member||comp)?'manage':undefined); };
   setI('acctHist', FCHK(18)); // the brand check mark, not a clock
-  // "My checks" only appears if there ARE checks for the current product — no checks → no row (and no
-  // need for an empty-state banner). Uses local history (instant); ensureHistCache refreshes it after.
-  const _cr=$('acct_checks_row'); if(_cr){ const has=loadHist().some(e=>e.cid&&railInCat(e)); _cr.style.display=has?'':'none'; if(!HIST_CACHE.length) ensureHistCache().then(()=>{ try{ _cr.style.display=histList().some(e=>e.cid&&railInCat(e))?'':'none'; }catch(_){} }); }
+  // "My checks" ALWAYS shows when signed in (the account menu only opens when authed) — a fresh
+  // Home-Screen install has empty LOCAL history, so gating on it hid the row and made the page
+  // unreachable. The page itself handles the empty/sign-in states.
+  const _cr=$('acct_checks_row'); if(_cr){ _cr.style.display=''; }
   setI('acctStar', ICO.spark('#FFCB05').replace('width="13" height="13"','width="16" height="16"'));
   // Caller-ID row — only phone-verified identities can register a caller ID (Clerk tokens carry no phone).
   const cidRow=$('acct_cid');
@@ -2280,7 +2297,7 @@ async function geocodeSearch(){
   const r=await api('/pub/geocode?'+(isZip?'zip=':'q=')+encodeURIComponent(q));
   if(r&&!r.error&&r.lat!=null){
     // Clear the box so the store list isn't ALSO text-filtered by the ZIP (that filter hid every store).
-    $('search').value=''; setUserLoc(r.lat,r.lng); toast('📍 '+q+' — stores within '+RADIUS+' mi'); return true;
+    $('search').value=''; setUserLoc(r.lat,r.lng); toast(tf('toast.searchmi','📍 {q} — stores within {n} mi',{q:q,n:RADIUS})); return true;
   }
   if(!isZip){ fetchNear(); } // not a known place — try it as a store/location search
   return false;
@@ -2329,7 +2346,7 @@ function toggleMap(forceOpen){
   const mv=$('mapview'), sl=$('storelist'), btn=$('maptoggle'), lg=$('maplegend');
   if(mv.style.display==='block' && !forceOpen){ mv.style.display='none'; sl.style.display=''; if(lg)lg.style.display='none'; if(btn){btn.classList.remove('on'); btn.textContent='Map';} return; }
   sl.style.display='none'; mv.style.display='block'; if(lg){ lg.innerHTML=mapLegendHtml(); lg.style.display='flex'; } if(btn){btn.classList.add('on'); btn.textContent='List';} track('map_open'); loadMap();
-  if(isMaster()) toast('📍 Zoom out, roam anywhere, tap to drop a pin');
+  if(isMaster()) toast(t('toast.zoomout','📍 Zoom out, roam anywhere, tap to drop a pin'));
 }
 function loadMap(){
   if(window.L){ if(!MAP){ MAP_LOADED=true; initMap(); } else { setTimeout(()=>{ MAP.invalidateSize(); if(USER_LOC) placeMyPin(USER_LOC.lat,USER_LOC.lng,true); renderMapPins(); },60); } return; }
@@ -3204,10 +3221,12 @@ async function finalizeLive(cid){
   // ONE quick fetch. If EL already has the verdict, we flip straight to it. If not, keep pulling and repaint
   // when it lands (we already flipped off the call screen above).
   let o=null; try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){}
-  if(!o||!o.status||o.status==='in_progress'){
-    let tries=0;
-    while((!o||!o.status||o.status==='in_progress')&&tries<10){ await new Promise(r=>setTimeout(r,1000)); try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){} tries++; }
-  }
+  // Wait for a CONFIDENT verdict before leaving the dots — not just "not in_progress". An early read can
+  // come back "no clear answer" and then the consensus upgrades it to in-stock; showing that flip looked
+  // broken. Hold on "Getting the answer…" until it's settled (yes / no / sold-out / a terminal status) or
+  // the ~9s window closes (then we show whatever we have, including a genuine "unclear").
+  const _confident=(r)=>!!(r&&r.status&&r.status!=='in_progress'&&(r.confirmed===true||r.confirmed===false||r.soldOut||r.doesNotSell||r.status!=='completed'));
+  { let tries=0; while(!_confident(o)&&tries<9){ await new Promise(r=>setTimeout(r,1000)); try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){} tries++; } }
   const res=(o&&o.status&&o.status!=='in_progress')?o:{status:'no_answer',transcript:live,summary:''};
   // If EL hasn't attached the transcript yet, fall back to what we streamed live, then to /pub/live, so the
   // conversation always prints on the result without a hard refresh.
@@ -3332,19 +3351,36 @@ function navMark(view){
   }catch(e){}
   NAV_VIEW=view;
 }
-// Status-bar tone is NOT done via theme-color (this device's Safari tab ignores it — proven). In
-// STANDALONE the page paints under the status bar (apple-mobile metas + safe-area inset), so the body
-// wash IS the status-bar colour. Nothing to set in JS — kept as a no-op so existing call-sites are safe.
-// Tint the iOS/Chrome status-bar strip (regular web browser) to the current verdict tone. Server bakes
-// the right value at load via ?tone; this updates it on client-side navigation between results. (Safari
-// only honors theme-color when "Allow Website Tinting" is ON — Settings ▸ Safari.)
+// Tint the status-bar strip to the current verdict tone. This is the IN-APP FALLBACK only: iOS reads
+// theme-color at page LOAD and ignores later JS changes, so the reliable path is ensureToneLoaded() (a real
+// navigation to ?tone so the SERVER bakes the colour at load). We still update the meta here for the desktop
+// Chrome title bar and standalone result→result switches where no reload happens. (Safari honors theme-color
+// only when "Allow Website Tinting" is ON — Settings ▸ Safari.)
 function setThemeTone(){
   try{
-    const m=document.getElementById('themeColor'); if(!m) return;
     const b=document.body.classList;
     const tone = b.contains('rv-in')?'#266440':b.contains('rv-out')?'#6b2427':b.contains('rv-unk')?'#6c5419':b.contains('rv-soon')?'#6e490f':'#0C0C12';
-    m.setAttribute('content', tone);
+    document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.remove());
+    const m=document.createElement('meta'); m.name='theme-color'; m.id='themeColor'; m.content=tone; document.head.appendChild(m);
   }catch(e){}
+}
+// Make the verdict colour show in the iOS status bar by RELOADING into the server-baked ?tone URL. iOS only
+// tints from the theme-color present at LOAD, so when a final result's tone differs from what the page loaded
+// with, we navigate for real — the server writes the colour straight into <meta theme-color> (renderRunner).
+// One-shot per page load (after the nav __loadTone matches → no loop/thrash); result→result switches within
+// the same load fall back to setThemeTone(). Only fires for a settled verdict with a real cid.
+let TONE_NAV_DONE=false;
+function ensureToneLoaded(cls,cid){
+  try{
+    if(!cls||!cid||TONE_NAV_DONE) return false;
+    if(!({in:1,out:1,unk:1,soon:1}[cls])) return false;
+    if(String(cid).startsWith('local:')) return false;     // not a server-restorable result
+    if(cls===(window.__loadTone||'')) return false;        // server already baked the right colour at load
+    TONE_NAV_DONE=true;
+    const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',cid); sp.set('tone',cls);
+    location.replace(location.pathname+'?'+sp.toString());  // real navigation → server bakes theme-color at load
+    return true;
+  }catch(e){ return false; }
 }
 window.addEventListener('popstate',()=>{
   // Handle BOTH directions. Going forward to a ?call= entry used to do nothing (only "back" was handled),
@@ -3484,18 +3520,26 @@ function showResult(o, cid){
     F.driverHandoff!==false?`<button class="act2" onclick="openDriverDemo()">${ICO.truck('#fff')} ${t('res.driver','Too far? Have a local grab it')}</button>`:'',
     F.community?`<button class="act2" onclick="openSuccess()">${ICO.cam('#fff')} ${t('res.score','Grabbed it? Post your score')}</button>`:'',
   ].join('') : '';
-  const upsell = (canNotify && (F.restockAlerts!==false || F.scheduling!==false)) ? `
+  // Restock section: PREMIUM gets the real "we'll text you" signup; non-premium gets a simple "check
+  // back soon" nudge (restock alerts are a paid perk).
+  const upsell = !(canNotify && (F.restockAlerts!==false || F.scheduling!==false)) ? '' : (isMember ? `
     <div class="upmod">
       <button type="button" class="upmod-h" onclick="this.closest('.upmod').classList.toggle('open')" aria-label="${esc(t('up.restock',"Don't miss the restock"))}">
-        <div class="t">${ICO.bell(PURP)} ${t('up.restock',"Don't miss the restock")}${isMember?'':('<span class="pchip">'+t('chip.member','Members')+'</span>')}</div>
+        <div class="t">${ICO.bell(PURP)} ${t('up.restock',"Don't miss the restock")}</div>
         <span class="upmod-chev"><svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
       </button>
       <div class="upmod-body">
-        <div class="s">${restockDay?`This store usually restocks <b>${esc(restockDay)}</b> — we'll watch it and ping you the second it lands.`:`We'll keep an eye on this store and ping you the second it's back in stock.`}</div>
+        <div class="s">${t('up.restock.sub',"We'll text you the second it's back in stock.")}</div>
         ${F.restockAlerts!==false?`<div class="uprow" onclick="openWatch()"><div class="upi">${ICO.msg(PURP)}</div><div class="uptxt"><div class="a">${t('up.watch',"Tell me when it's back")}</div><div class="b">${t('up.watch.sub','One alert the instant a call confirms stock.')}</div></div><div class="upc">${ICO.chev('#56566a')}</div></div>`:''}
         ${F.scheduling!==false?`<div class="uprow" onclick="openSchedule()"><div class="upi">${ICO.cal(PURP)}</div><div class="uptxt"><div class="a">${t('up.sched','Auto-check on shipment days')}</div><div class="b">${t('up.sched.sub','We call for you on restock days — hands-free.')}</div></div><div class="upc">${ICO.chev('#56566a')}</div></div>`:''}
       </div>
-    </div>` : '';
+    </div>` : `
+    <div class="upmod open">
+      <div class="upmod-h" style="cursor:default">
+        <div class="t">${ICO.bell(PURP)} ${t('up.checkback','Check back soon')}</div>
+      </div>
+      <div class="upmod-body"><div class="s">${t('up.checkback.sub','They restock often — pop back in a day or two.')}</div></div>
+    </div>`);
 
   const nm=splitStoreName(SEL_STORE.name);
   const storeHeadline=[nm.base,nm.branch].filter(Boolean).join(' ');
@@ -3517,11 +3561,11 @@ function showResult(o, cid){
   if(!REG_NOTE && o.status==='completed' && askedLabels.length<=1 && !o.doesNotSell && storeHeadline && headLabel){
     const _SN=esc(storeHeadline), _C=esc(headLabel);
     if(cls==='in'){ note = o.productName
-        ? tf('sub.in.named','{s} has <b style="color:var(--accent)">{p}</b> in stock right now.',{s:_SN,p:esc(o.productName)})
-        : tf('sub.in','{s} has <b>{c}</b> in stock right now.',{s:_SN,c:_C});
+        ? tf('sub.in.named','<b>{s}</b> has <b>{p}</b> in. Go grab it before it’s gone.',{s:_SN,p:esc(o.productName)})
+        : tf('sub.in','<b>{s}</b> has <b>{c}</b> in. Go grab it before it’s gone.',{s:_SN,c:_C});
       richSub=true; }
     else if(o.soldOut){ note=tf('sub.soldout','{s} is sold out of <b>{c}</b> right now.',{s:_SN,c:_C}); richSub=true; }
-    else if(cls==='out'){ note=tf('sub.out',"{s} doesn't have <b>{c}</b> right now.",{s:_SN,c:_C}); richSub=true; }
+    else if(cls==='out'){ note=tf('sub.out',"<b>{s}</b> doesn't have <b>{c}</b> in. Worth a check back in a day or two.",{s:_SN,c:_C}); richSub=true; }
   }
   // Boxless "The call" subline: "{ago} · {dur}" — both pieces reuse existing prod helpers/vars
   // (timeAgo for the ago, callSummary already carries the "Call · Ns" duration). No new copy/keys.
@@ -3536,14 +3580,17 @@ function showResult(o, cid){
         <div class="meta" style="margin-bottom:14px">${t('res.free.sub',"Sign up in 30 seconds to check <b>any store, anytime</b> — it's the only way to keep going.")}</div>
         <button class="cta" onclick="signUp()">${t('res.signup','Sign up & keep checking')}</button>
       </div>`;
+  // Persist the tone CLASS first so a reload (the tone-nav below, or a pull-to-refresh) can pre-apply the
+  // body wash synchronously at load (boot reads cifm_cls:<cid> into __bootTone) before restoreCall's async fetch.
+  try{ localStorage.setItem('cifm_cls_last',cls); if(cid) localStorage.setItem('cifm_cls:'+cid,cls); }catch(e){}
+  // iOS status-bar tint: if this settled verdict's tone differs from what the server baked at load, RELOAD
+  // into the ?tone URL so the colour is present at load (the only thing iOS honors). Returns true when it's
+  // navigating away — stop here, the fresh load re-renders this result with the right bar. Pending never qualifies.
+  if(o.status && o.status!=='pending' && ensureToneLoaded(cls,cid)) return;
   // Tone the body-level top wash for this verdict (the wash itself is CSS on body.rview::before).
   ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c));
   document.body.classList.add('rv-'+cls);
-  try{ setThemeTone(); }catch(e){} // tint the browser status-bar strip to this verdict's tone
-  // Persist the tone CLASS so a HARD refresh (URL ?call=…) can pre-apply the whole result treatment
-  // (body wash + status bar) synchronously at load — before restoreCall's async fetch — so
-  // pull-to-refresh never flashes the dark default at the top.
-  try{ localStorage.setItem('cifm_cls_last',cls); if(cid) localStorage.setItem('cifm_cls:'+cid,cls); }catch(e){}
+  try{ setThemeTone(); }catch(e){} // tint the browser status-bar strip to this verdict's tone (in-app fallback)
   // Unclear verdict → point them at the transcript AND ask for a quick one-tap label. That label is the
   // training signal: it tells us what the answer REALLY was on the calls our consensus couldn't call.
   // Verdict-specific terminus line at the bottom of the timeline (distinct from the big verdict title).
@@ -3553,7 +3600,7 @@ function showResult(o, cid){
     : cls==='unk' ? t('term.unk','No clear answer') : '';
   const showFeedback = o.status==='completed' && cls==='unk' && !!o.transcript && cid && !String(cid).startsWith('local:');
   // New unclear copy: name the product, hand the call to the human (the transcript is right below).
-  if(showFeedback){ const pn=esc(o.productName||catLabel()||'it'); note = tf('note.fbk','It’s unclear if <b style="color:#fff">{p}</b> was in stock. Read the convo and tell us what you think.',{p:pn}); }
+  if(showFeedback){ note = t('note.fbk','We couldn’t quite make out the answer. Read the convo and tell us what you think.'); }
   // Feedback = an end-of-call survey (the four statuses), shown ABOVE the CTA on an unclear verdict.
   // No copy inside the poll box itself — the detailed status message above already says what to do.
   const feedbackBlock = showFeedback ? `
@@ -3569,13 +3616,13 @@ function showResult(o, cid){
     <div class="rverdict ${cls}">
       <div class="rnav" id="rnav"></div>
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
-      <div class="rtitle2">${esc(showFeedback ? t('v.unclear2','Unclear') : vTitle)}</div>
+      <div class="rtitle2">${esc(showFeedback ? t('v.unclear2','Couldn’t tell') : vTitle)}</div>
       ${note?`<div class="rsub">${nl2(fillP(note,o))}</div>`:''}
       ${breakdown}
     </div>
     ${feedbackBlock}
     ${o.status==='pending'
-      ? `<div class="topcta" style="display:flex;justify-content:center"><div class="ring"></div></div>` /* still pulling the verdict — show progress, NOT the "Check another store" CTA (reads as calling again) */
+      ? `<div class="topcta" style="display:flex;justify-content:center"><div class="loaddots"><span></span><span></span><span></span></div></div>` /* still pulling the verdict — animated dots, NOT the "Check another store" CTA (reads as calling again) */
       : `<div class="topcta">${primaryCta}</div>`}
     <div class="callsec">
       ${canTranslate?`<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button></div>`:''}
@@ -4350,7 +4397,7 @@ async function loadCommunity(){
 async function likeScore(id,el){ const r=await api('/pub/community/'+id+'/like',{method:'POST'}); if(r&&r.likes!=null&&el) el.textContent='♥ '+r.likes; track('community_like',{id}); }
 let SCORE_FILE=null;
 function openScore(){
-  if(!((POLICY.flags||{}).community)){ toast('Community is coming soon'); return; }
+  if(!((POLICY.flags||{}).community)){ toast(t('toast.community','Community is coming soon')); return; }
   SCORE_FILE=null; ['score_err','score_caption','score_handle'].forEach(id=>{const e=$(id);if(e)e.value&&(e.value='');}); $('score_err').textContent=''; $('score_prev').style.display='none'; $('score_file').value='';
   track('community_open');
   $('scoreOverlay').classList.add('on');
@@ -4358,12 +4405,12 @@ function openScore(){
 function closeScore(){ $('scoreOverlay').classList.remove('on'); }
 function scorePreview(){
   const f=$('score_file').files&&$('score_file').files[0]; if(!f) return;
-  if(f.size>12*1024*1024){ $('score_err').textContent='Photo is too big (max 12MB)'; return; }
+  if(f.size>12*1024*1024){ $('score_err').textContent=t('sc.err.big','Photo is too big (max 12MB)'); return; }
   SCORE_FILE=f; const r=new FileReader(); r.onload=e=>{ $('score_img').src=e.target.result; $('score_prev').style.display=''; }; r.readAsDataURL(f);
 }
 async function submitScore(){
-  if(!SCORE_FILE){ $('score_err').textContent='Add a photo first'; return; }
-  const btn=$('score_btn'); btn.disabled=true; btn.textContent='Uploading…';
+  if(!SCORE_FILE){ $('score_err').textContent=t('sc.err.nophoto','Add a photo first'); return; }
+  const btn=$('score_btn'); btn.disabled=true; btn.textContent=t('sc.uploading','Uploading…');
   try{
     const ext=(SCORE_FILE.name.split('.').pop()||'jpg').toLowerCase();
     const su=await (isAuthed()?appApi:api)('/pub/community/upload-url',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ext,contentType:SCORE_FILE.type||'image/jpeg'})});
@@ -4378,7 +4425,7 @@ async function submitScore(){
     closeScore(); loadCommunity();
     toast(r.pending?'🙌 Posted! We review photos before they go live':'🏆 Posted to the wall!');
   }catch(e){ $('score_err').textContent=(e&&e.message)||'Something went wrong'; }
-  finally{ btn.disabled=false; btn.textContent='Post to the wall →'; }
+  finally{ btn.disabled=false; btn.textContent=t('sc.post','Post to the wall →'); }
 }
 
 // --- Scores: collapsed composer + IG-style feed ---
