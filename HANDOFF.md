@@ -46,6 +46,7 @@ If it hangs/`unauthorized`: the sandbox can't reach Railway — allow `backboard
 
 ## Docs map (open only what you need)
 - `docs/AGENT_RULES.md` — how to write code here (read first).
+- `docs/GOTCHAS.md` — non-obvious traps that cost real time; read before debugging something weird, **add to it the moment you learn one.**
 - `docs/ops/STAGING.md` — the staging↔prod model + workflow (read before any change).
 - `docs/ARCHITECTURE.md` · `docs/RUNBOOK.md` — layout + stack/run/deploy.
 - `docs/API_CONTRACT.md` · `docs/STOCK_AND_GEO_API.md` — front⇄back interface.
@@ -56,3 +57,5 @@ If it hangs/`unauthorized`: the sandbox can't reach Railway — allow `backboard
 
 ## Every session
 Read this + your role doc → keep your role's **Current focus** updated → on finish, move it to `docs/COMPLETED.md`.
+**Before a big push, doc-lint:** skim the docs you touched against the code — a comment/claim that lies is worse
+than none. Fix or delete it, and log any new trap in `docs/GOTCHAS.md`.

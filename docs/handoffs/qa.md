@@ -27,6 +27,8 @@ The owner will just say "go check the build before we ship." Figure out what's s
 - **Admin:** the changed sections load and save; data persists.
 - **Data:** spot-check rows/links (stores → chains → logos) via the admin API (read).
 - **Deploy health:** staging is up, no errors, no staging leakage.
+- **Doc-lint:** do the docs/comments in the diff still match what the code does? Flag stale/contradictory claims
+  (they've sent devs down rabbit holes); note any new trap in `docs/GOTCHAS.md`.
 
 ## What you CANNOT do (hand back to the owner)
 - **Hear a call.** Audio quality, "did Branson sound right / respond fast enough" = the **owner's final listen.**
