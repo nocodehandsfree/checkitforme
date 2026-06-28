@@ -260,6 +260,17 @@
   .wfmmeta{display:flex;gap:14px;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--border)}
   .wfmmeta>div{flex:1;min-width:150px}
   .wfmmeta label{display:block;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+  /* restock intel */
+  .rsbar{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:12.5px}
+  .rsbl{flex:0 0 100px;color:var(--text-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rsbt{flex:1;height:8px;background:var(--surface-2);border-radius:5px;overflow:hidden}
+  .rsbf{display:block;height:100%;background:var(--green);border-radius:5px}
+  .rsbf.soon{background:#F4D03F}
+  .rsbar b{flex:0 0 auto;min-width:18px;text-align:right;color:#e8e8f0}
+  .rschip{display:inline-block;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:3px 8px;margin:0 5px 5px 0;font-size:12px;color:var(--text-body)}
+  .rschip b{color:var(--green)}
+  .rsrow{cursor:pointer;padding-left:6px;padding-right:6px;border-radius:8px}
+  .rsrow:hover{background:var(--surface-2)}
   .sracts{display:flex;gap:9px;align-items:center;margin-top:13px}
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
@@ -552,6 +563,12 @@
   <section id="users">
     <h2>Users</h2>
     <div class="card report"><div id="users_list" class="meta">Loading…</div></div>
+  </section>
+  <section id="restock">
+    <h2>Restock intel</h2>
+    <div class="meta" style="margin:0 0 13px">When stores restock + what's landing — learned from real call data. Tap a store for its own breakdown.</div>
+    <div id="restock_detail"></div>
+    <div id="restock_net" class="meta">Loading…</div>
   </section>
   <section id="workflows">
     <h2>Workflows</h2>
@@ -1078,13 +1095,13 @@ let CATEGORIES = [];
 
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
-  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['users','Users','card'],['growth','Policy','rise'],['calc','Calc','sliders']]},
+  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['users','Users','card'],['restock','Restock','cal'],['growth','Policy','rise'],['calc','Calc','sliders']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
   calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Settings','tree'],['settings','App','sliders']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['workflows','Workflows','note'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, workflows:()=>loadWorkflowMgr(), dash:()=>{loadDash();loadGwPulse();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, workflows:()=>loadWorkflowMgr(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -3396,6 +3413,49 @@ async function loadUsers(){
       </div>`).join('');
 }
 async function toggleStaff(id,on){ const r=await api('/api/admin/users/staff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,on})}); if(r&&!r.error){ toast(on?'Flagged as admin/test — won’t count as a customer':'Unflagged'); loadUsers(); } else toast('Could not update'); }
+// ---- Restock intel (God View → Restock): network view + per-store breakdown on tap ----
+function rsBar(label,n,max,cls){ return `<div class="rsbar"><span class="rsbl">${esch(label)}</span><span class="rsbt"><span class="rsbf ${cls||''}" style="width:${max?Math.round(n/max*100):0}%"></span></span><b>${n}</b></div>`; }
+async function loadRestock(){
+  const net=document.getElementById('restock_net'); if(!net) return;
+  const det=document.getElementById('restock_detail'); if(det) det.innerHTML='';
+  const d=await api('/api/admin/restock-intel');
+  if(!d||d.error){ net.textContent='No restock data yet — fills in as confirmed calls land.'; return; }
+  const t=d.totals||{};
+  const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  const dMax=Math.max(1,...(d.shipmentDays||[]).map(x=>x.n));
+  const fMax=Math.max(1,...(d.productForms||[]).map(x=>x.n));
+  const cMax=Math.max(1,...(d.byCategory||[]).map(x=>x.n));
+  net.innerHTML=
+    `<div class="card report"><div class="stats" style="margin-bottom:0">`+tile((t.confirmRate||0)+'%','confirm rate','green')+tile(t.confirms||0,'confirms')+tile(t.confirms7d||0,'last 7d')+tile(t.checks||0,'checks')+`</div></div>`
+    +`<div class="card report"><div class="rgrp">Dominant restock days <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· what staff told us</span></div>`+((d.shipmentDays||[]).slice(0,7).map(x=>rsBar(x.day,x.n,dMax)).join('')||'<div class="meta">No days learned yet.</div>')+`</div>`
+    +`<div class="card report"><div class="rgrp">Product forms landing</div>`+((d.productForms||[]).slice(0,8).map(x=>rsBar(x.form,x.n,fMax)).join('')||'<div class="meta">none captured yet</div>')
+      +`<div class="rgrp" style="margin-top:13px">Top sets</div>`+((d.productSets||[]).slice(0,12).map(x=>`<span class="rschip">${esch(x.set)} <b>${x.n}</b></span>`).join('')||'<div class="meta">none named yet</div>')
+      +`<div class="rgrp" style="margin-top:13px">By category</div>`+((d.byCategory||[]).map(x=>rsBar(x.category,x.n,cMax)).join('')||'<div class="meta">—</div>')+`</div>`
+    +`<div class="card report"><div class="rgrp">Top restock stores <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· tap for its own breakdown</span></div>`+((d.topStores||[]).map(s=>`<div class="repline rsrow" onclick="openStoreRestock(${s.id})"><span class="rl">${esch(s.store)}${s.region?' <span class="meta">· '+esch(s.region)+'</span>':''}</span><b>${s.bestDay?esch(s.bestDay)+' · ':''}<span style="color:var(--green)">${s.confirms} hit${s.confirms===1?'':'s'}</span></b></div>`).join('')||'<div class="meta">No confirmed restocks yet.</div>')+`</div>`;
+}
+async function openStoreRestock(id){
+  const det=document.getElementById('restock_detail'); if(!det) return;
+  det.innerHTML='<div class="card report"><div class="meta">Loading store…</div></div>'; det.scrollIntoView({behavior:'smooth',block:'start'});
+  const d=await api('/api/admin/store-restock/'+id);
+  if(!d||d.error){ det.innerHTML=''; toast('No restock data for this store'); return; }
+  const low=d.confidence<3;
+  const sMax=Math.max(1,...(d.staffSaid.tally||[]).map(x=>x.n));
+  const eMax=Math.max(1,...(d.empirical.byWeekday||[]).map(x=>x.confirms));
+  const pfMax=Math.max(1,...(d.products.forms||[]).map(x=>x.n));
+  const bcMax=Math.max(1,...(d.byCategory||[]).map(x=>x.n));
+  const ago=s=>{ if(!s)return 'never'; const m=Math.floor(Date.now()/1000)-s; if(m<86400)return Math.max(1,Math.floor(m/3600))+'h ago'; return Math.floor(m/86400)+'d ago'; };
+  det.innerHTML=`<div class="card report" style="border-color:rgba(74,222,128,.28)">
+    <button class="ghost" style="float:right;font-size:11px;padding:5px 9px" onclick="document.getElementById('restock_detail').innerHTML=''">✕</button>
+    <div class="name" style="margin-bottom:2px">${esch(d.store)}</div>
+    <div style="font-size:34px;font-weight:800;color:${low?'var(--text-muted)':'var(--green)'};line-height:1.1;letter-spacing:-.02em">${d.bestDay||'Learning…'}</div>
+    <div class="meta" style="margin-bottom:13px">${d.bestDay?('best restock day · based on '+d.confidence+' hit'+(d.confidence===1?'':'s')+(low?' (low confidence)':'')):'not enough data yet'}${d.storedShipmentDay?' · stored: '+esch(d.storedShipmentDay):''} · last confirm '+ago(d.lastConfirm)}</div>
+    <div class="rgrp">Staff said</div>${(d.staffSaid.tally||[]).map(x=>rsBar(x.day,x.n,sMax)).join('')||'<div class="meta">nothing yet</div>'}
+    <div class="rgrp" style="margin-top:13px">Confirmed in stock · by weekday</div>${(d.empirical.byWeekday||[]).map(x=>rsBar(x.day,x.confirms,eMax,'soon')).join('')}
+    <div class="rgrp" style="margin-top:13px">Product forms</div>${(d.products.forms||[]).map(x=>rsBar(x.form,x.n,pfMax)).join('')||'<div class="meta">none captured</div>'}
+    ${(d.products.sets||[]).length?'<div class="rgrp" style="margin-top:13px">Sets</div>'+(d.products.sets||[]).map(x=>`<span class="rschip">${esch(x.set)} <b>${x.n}</b></span>`).join(''):''}
+    <div class="rgrp" style="margin-top:13px">By category</div>${(d.byCategory||[]).map(x=>rsBar(x.category,x.n,bcMax)).join('')||'<div class="meta">—</div>'}
+  </div>`;
+}
 async function loadGwIntel(){
   const el=document.getElementById('gw_intel'); if(!el) return;
   const d=await api('/api/admin/restock-intel');

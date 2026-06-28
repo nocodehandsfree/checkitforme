@@ -2250,6 +2250,24 @@ app.get("/api/admin/user-history", async (c) => {
 });
 
 // ---- Restock intel: the compounding payoff — where/when product actually lands ----
+// Restock product intel, derived at serve time from callResults.productDetail ("form · set", built by
+// productDetailLabel). Splits it back into forms / sets / raw details. Exact columns are a DevOps follow-up.
+function topTally(m: Map<string, number>, key: string, lim?: number) {
+  const a = [...m.entries()].sort((x, y) => y[1] - x[1]).map(([v, n]) => ({ [key]: v, n }));
+  return lim ? a.slice(0, lim) : a;
+}
+function parseProducts(rows: { productDetail: string | null }[]) {
+  const forms = new Map<string, number>(), sets = new Map<string, number>(), details = new Map<string, number>();
+  const bump = (mp: Map<string, number>, k: string) => mp.set(k, (mp.get(k) || 0) + 1);
+  for (const r of rows) {
+    const d = (r.productDetail || "").trim(); if (!d) continue;
+    bump(details, d);
+    const parts = d.split("·").map((x) => x.trim()).filter(Boolean);
+    if (parts[0]) bump(forms, /etb/i.test(parts[0]) ? "ETB" : parts[0].charAt(0).toUpperCase() + parts[0].slice(1));
+    if (parts[1]) bump(sets, parts[1]);
+  }
+  return { forms: topTally(forms, "form"), sets: topTally(sets, "set", 25), details: topTally(details, "detail") };
+}
 app.get("/api/admin/restock-intel", async (c) => {
   const now = Math.floor(Date.now() / 1000);
   const d7 = now - 7 * 86400, d30 = now - 30 * 86400;
@@ -2259,11 +2277,11 @@ app.get("/api/admin/restock-intel", async (c) => {
   const rows = (await db.select().from(callResults).where(eq(callResults.status, "completed"))).filter((r) => !ownerOnly.has(r.retailerId));
   const confirmed = rows.filter((r) => r.confirmed === true);
   // Per-store: how often a confirmation lands + the shipment day the clerk gave (the gold).
-  const byStore = new Map<number, { store: string; chain: string; region: string | null; confirms: number; last: number; days: Record<string, number> }>();
+  const byStore = new Map<number, { id: number; store: string; chain: string; region: string | null; confirms: number; last: number; days: Record<string, number> }>();
   for (const r of confirmed) {
     const s = stores.get(r.retailerId); if (!s) continue;
     let e = byStore.get(r.retailerId);
-    if (!e) { e = { store: s.name.split("—")[0].trim(), chain: "", region: s.region ?? null, confirms: 0, last: 0, days: {} }; byStore.set(r.retailerId, e); }
+    if (!e) { e = { id: r.retailerId, store: s.name.split("—")[0].trim(), chain: "", region: s.region ?? null, confirms: 0, last: 0, days: {} }; byStore.set(r.retailerId, e); }
     e.confirms++;
     const at = r.completedAt ?? r.startedAt; if (at > e.last) e.last = at;
     if (r.shipmentDayHeard) e.days[r.shipmentDayHeard] = (e.days[r.shipmentDayHeard] || 0) + 1;
@@ -2273,6 +2291,9 @@ app.get("/api/admin/restock-intel", async (c) => {
   for (const r of confirmed) if (r.shipmentDayHeard) dayTally[r.shipmentDayHeard] = (dayTally[r.shipmentDayHeard] || 0) + 1;
   const topStores = [...byStore.values()].sort((a, b) => b.confirms - a.confirms || b.last - a.last).slice(0, 25)
     .map((e) => ({ ...e, bestDay: Object.entries(e.days).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null }));
+  const prodNet = parseProducts(confirmed);
+  const catNet: Record<string, number> = {};
+  for (const r of confirmed) { const cl = cats.get(r.categoryId) || "?"; catNet[cl] = (catNet[cl] || 0) + 1; }
   return c.json({
     totals: {
       checks: rows.length, confirms: confirmed.length,
@@ -2281,7 +2302,52 @@ app.get("/api/admin/restock-intel", async (c) => {
       confirms30d: confirmed.filter((r) => (r.completedAt ?? r.startedAt) >= d30).length,
     },
     shipmentDays: Object.entries(dayTally).sort((a, b) => b[1] - a[1]).map(([day, n]) => ({ day, n })),
-    topStores: topStores.map((e) => ({ store: e.store, region: e.region, confirms: e.confirms, last: e.last, bestDay: e.bestDay })),
+    productForms: prodNet.forms,
+    productSets: prodNet.sets,
+    byCategory: Object.entries(catNet).sort((a, b) => b[1] - a[1]).map(([category, n]) => ({ category, n })),
+    topStores: topStores.map((e) => ({ id: e.id, store: e.store, region: e.region, confirms: e.confirms, last: e.last, bestDay: e.bestDay })),
+  });
+});
+
+// Per-store restock intel (one store's own page) — same serve-time derivation, scoped to this store.
+app.get("/api/admin/store-restock/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const store = (await db.select().from(retailers).where(eq(retailers.id, id)))[0];
+  if (!store) return c.json({ error: "not found" }, 404);
+  const cats = await categoryLabelMap();
+  const rows = await db.select().from(callResults).where(and(eq(callResults.retailerId, id), eq(callResults.status, "completed")));
+  const confirmed = rows.filter((r) => r.confirmed === true);
+  const tz = store.timezone || "America/Los_Angeles";
+  const WD = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  // staff said (the gold) — the shipment day a clerk gave, across all completed calls
+  const staffT: Record<string, number> = {};
+  for (const r of rows) if (r.shipmentDayHeard) staffT[r.shipmentDayHeard] = (staffT[r.shipmentDayHeard] || 0) + 1;
+  const staffTally = Object.entries(staffT).sort((a, b) => b[1] - a[1]).map(([day, n]) => ({ day, n }));
+  const staffMode = staffTally[0]?.day ?? null;
+  // empirical — confirmed-in-stock by weekday, in the store's local time
+  const wd: Record<string, number> = Object.fromEntries(WD.map((d) => [d, 0]));
+  for (const r of confirmed) {
+    const at = r.completedAt ?? r.startedAt;
+    const day = new Date(at * 1000).toLocaleDateString("en-US", { timeZone: tz, weekday: "long" });
+    if (day in wd) wd[day]++;
+  }
+  const byWeekday = WD.map((day) => ({ day, confirms: wd[day] }));
+  const empBest = [...byWeekday].sort((a, b) => b.confirms - a.confirms)[0];
+  const empiricalBestDay = empBest && empBest.confirms > 0 ? empBest.day : null;
+  const catT: Record<string, number> = {};
+  for (const r of confirmed) { const cl = cats.get(r.categoryId) || "?"; catT[cl] = (catT[cl] || 0) + 1; }
+  return c.json({
+    store: store.name,
+    timezone: tz,
+    storedShipmentDay: store.shipmentDay || null,
+    staffSaid: { mode: staffMode, tally: staffTally },
+    empirical: { bestDay: empiricalBestDay, byWeekday },
+    bestDay: staffMode || empiricalBestDay,           // prefer what staff said; else the empirical peak
+    confidence: confirmed.length,                     // # confirmed calls behind it
+    confirms: confirmed.length,
+    lastConfirm: confirmed.reduce((m, r) => Math.max(m, r.completedAt ?? r.startedAt), 0) || null,
+    byCategory: Object.entries(catT).sort((a, b) => b[1] - a[1]).map(([category, n]) => ({ category, n })),
+    products: parseProducts(confirmed),
   });
 });
 
