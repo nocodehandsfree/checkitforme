@@ -27,6 +27,9 @@ The owner will just say "go check the build before we ship." Figure out what's s
 - **Admin:** the changed sections load and save; data persists.
 - **Data:** spot-check rows/links (stores → chains → logos) via the admin API (read).
 - **Deploy health:** staging is up, no errors, no staging leakage.
+- **Env-var diff (pre-flight):** compare prod vs staging env vars; confirm no *functional* var the build depends
+  on is missing on staging (so a staging pass behaves the same on prod). Known-OK diffs: TiDB/Qdrant/Redis
+  (staging skips those services), `STAGING_*` flags, `COMP_PHONES` (staging) vs `COMP_EMAILS` (prod). Flag the rest.
 - **Doc-lint:** do the docs/comments in the diff still match what the code does? Flag stale/contradictory claims
   (they've sent devs down rabbit holes); note any new trap in `docs/GOTCHAS.md`.
 
