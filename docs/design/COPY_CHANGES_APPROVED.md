@@ -101,6 +101,16 @@ Lead each tier's perk with an icon, not a sentence: 🔔 alerts · 📅 auto-che
 
 ---
 
+## ✅ LOCKED — round 5 (Driver hand-off)
+
+| key | From | To |
+|---|---|---|
+| `ho.s5.cta` | `Confirm drop-off & release the bonus` | **`Release the bonus →`** |
+| `ho.dv.4` | `Tap Done → your bonus lands instantly` | **`Tap Done. Your bonus lands instantly.`** |
+| `ho.s2.bk` | `…— on top of their normal fare.` | **`…on top of their normal fare.`** (dash) |
+
+---
+
 ## 🧹 SWEEP — em-dashes (ban `—`)
 
 **A) Status "— no charge" tails (9)** — handled by the green shield: drop the tail entirely.
