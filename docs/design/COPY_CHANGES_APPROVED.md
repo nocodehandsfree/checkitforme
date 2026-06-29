@@ -156,6 +156,8 @@ Lead each tier's perk with an icon, not a sentence: 🔔 alerts · 📅 auto-che
 
 *(Already locked above, also de-dashed: `buy.out.lead`, `buy.premium.lead`, `err.generic`, `res.free.sub`, `k.thanks.free`, `rcpt.still`.)*
 
+**C) Spanish — bigger job: the `es` map has 104 em-dashes (2.6× the EN).** Don't hand-list. **Blanket rule on the `es` map: replace every ` — ` with `. ` (period).** The `— sin cargo` tails are removed by the shield (same as EN). Spot-check the few where the dash was an aside (use a comma or parens there, e.g. `(opcional)`).
+
 ---
 
 ## 🧹 SWEEP — "call" → "check" (the unit)
