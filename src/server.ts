@@ -2336,6 +2336,9 @@ app.get("/api/admin/calls-audit", async (c) => {
     return Object.entries(t).sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ k, n }));
   };
   const withTs = rows.filter((r) => r.startedAt).sort((a, b) => (a.startedAt || 0) - (b.startedAt || 0));
+  // A call "into a store" actually dialed → has a providerCallId. Seed/manual rows don't, and the
+  // owner-only "Fun" store is rehearsal — so the first DIALED non-Fun call is the true first real call.
+  const dialed = withTs.filter((r) => r.providerCallId && !ownerOnly.has(r.retailerId));
   const desc = (r?: (typeof rows)[number]) => (r ? {
     id: r.id, store: stores.get(r.retailerId)?.name?.split("—")[0].trim() || `#${r.retailerId}`,
     at: r.startedAt, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, hasProviderCall: !!r.providerCallId,
@@ -2351,7 +2354,8 @@ app.get("/api/admin/calls-audit", async (c) => {
     duplicateProviderCalls: Object.values(cidCounts).filter((n) => n > 1).length, // double-ingested = integrity red flag
     byStatus: tally((r) => r.status),
     byStatusKey: tally((r) => r.statusKey),
-    firstCall: desc(withTs[0]),
+    firstCall: desc(withTs[0]),                 // earliest row of any kind (may be a seed/manual row)
+    firstDialedCall: desc(dialed[0]),           // the true first REAL call into a store
     lastCall: desc(withTs[withTs.length - 1]),
   });
 });
