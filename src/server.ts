@@ -2277,11 +2277,11 @@ app.get("/api/admin/restock-intel", async (c) => {
   const rows = (await db.select().from(callResults).where(eq(callResults.status, "completed"))).filter((r) => !ownerOnly.has(r.retailerId));
   const confirmed = rows.filter((r) => r.confirmed === true);
   // Per-store: how often a confirmation lands + the shipment day the clerk gave (the gold).
-  const byStore = new Map<number, { id: number; store: string; chain: string; region: string | null; confirms: number; last: number; days: Record<string, number> }>();
+  const byStore = new Map<number, { id: number; store: string; location: string | null; chain: string; region: string | null; confirms: number; last: number; days: Record<string, number> }>();
   for (const r of confirmed) {
     const s = stores.get(r.retailerId); if (!s) continue;
     let e = byStore.get(r.retailerId);
-    if (!e) { e = { id: r.retailerId, store: s.name.split("—")[0].trim(), chain: "", region: s.region ?? null, confirms: 0, last: 0, days: {} }; byStore.set(r.retailerId, e); }
+    if (!e) { e = { id: r.retailerId, store: s.name.split("—")[0].trim(), location: s.location ?? null, chain: "", region: s.region ?? null, confirms: 0, last: 0, days: {} }; byStore.set(r.retailerId, e); }
     e.confirms++;
     const at = r.completedAt ?? r.startedAt; if (at > e.last) e.last = at;
     if (r.shipmentDayHeard) e.days[r.shipmentDayHeard] = (e.days[r.shipmentDayHeard] || 0) + 1;
@@ -2305,7 +2305,7 @@ app.get("/api/admin/restock-intel", async (c) => {
     productForms: prodNet.forms,
     productSets: prodNet.sets,
     byCategory: Object.entries(catNet).sort((a, b) => b[1] - a[1]).map(([category, n]) => ({ category, n })),
-    topStores: topStores.map((e) => ({ id: e.id, store: e.store, region: e.region, confirms: e.confirms, last: e.last, bestDay: e.bestDay })),
+    topStores: topStores.map((e) => ({ id: e.id, store: e.store, location: e.location, region: e.region, confirms: e.confirms, last: e.last, bestDay: e.bestDay })),
   });
 });
 
@@ -2338,6 +2338,7 @@ app.get("/api/admin/store-restock/:id", async (c) => {
   for (const r of confirmed) { const cl = cats.get(r.categoryId) || "?"; catT[cl] = (catT[cl] || 0) + 1; }
   return c.json({
     store: store.name,
+    location: store.location || null,
     timezone: tz,
     storedShipmentDay: store.shipmentDay || null,
     staffSaid: { mode: staffMode, tally: staffTally },
@@ -2349,6 +2350,37 @@ app.get("/api/admin/store-restock/:id", async (c) => {
     byCategory: Object.entries(catT).sort((a, b) => b[1] - a[1]).map(([category, n]) => ({ category, n })),
     products: parseProducts(confirmed),
   });
+});
+
+// Re-scan stored transcripts with the CURRENT consensus verdict — retroactively applies the fix for
+// mis-classified statuses AND recovers the staff-volunteered restock day + product form the old ingest
+// dropped. Reports true before/after counts + the first real call. Real stores only (skips Fun/MVPs).
+app.post("/api/admin/restock-backfill", async (c) => {
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const cats = await categoryLabelMap();
+  const all = await db.select().from(callResults).where(eq(callResults.status, "completed"));
+  const rows = all.filter((r) => r.transcript && r.transcript.length > 12 && !ownerOnly.has(r.retailerId));
+  const cat = (confirmed: boolean | null, day: string | null) =>
+    confirmed === true ? "in_stock" : day ? "restock_coming" : confirmed === false ? "not_in" : "unclear";
+  const blank = () => ({ in_stock: 0, restock_coming: 0, not_in: 0, unclear: 0 });
+  const before = blank(), after = blank();
+  let scanned = 0, flipped = 0, dayAdded = 0, prodAdded = 0;
+  for (const r of rows) {
+    before[cat(r.confirmed, r.shipmentDayHeard) as keyof ReturnType<typeof blank>]++;
+    const second = await classifyVerdict(r.transcript ?? "", cats.get(r.categoryId) || "the product");
+    if (!second) { after[cat(r.confirmed, r.shipmentDayHeard) as keyof ReturnType<typeof blank>]++; continue; }
+    const consensus = reconcile({ confirmed: r.confirmed, soldOut: r.statusKey === "sold_out", doesNotSell: r.statusKey === "does_not_sell", statusKey: r.statusKey }, second);
+    const day = second.restockDay ?? r.shipmentDayHeard;
+    const detail = productDetailLabel(second) ?? r.productDetail;
+    if (consensus.confirmed !== r.confirmed) flipped++;
+    if (day && !r.shipmentDayHeard) dayAdded++;
+    if (detail && !r.productDetail) prodAdded++;
+    await db.update(callResults).set({ confirmed: consensus.confirmed, statusKey: consensus.statusKey, shipmentDayHeard: day, productDetail: detail }).where(eq(callResults.id, r.id));
+    scanned++;
+    after[cat(consensus.confirmed, day) as keyof ReturnType<typeof blank>]++;
+  }
+  const firstReal = all.filter((r) => !ownerOnly.has(r.retailerId)).reduce((m, r) => Math.min(m, r.startedAt || Infinity), Infinity);
+  return c.json({ scanned, flipped, dayAdded, prodAdded, before, after, firstRealCall: isFinite(firstReal) ? firstReal : null });
 });
 
 // ---- Growth pulse: the funnel + engagement snapshot the owner reads each morning ----

@@ -3431,7 +3431,7 @@ async function loadRestock(){
     +`<div class="card report"><div class="rgrp">Product forms landing</div>`+((d.productForms||[]).slice(0,8).map(x=>rsBar(x.form,x.n,fMax)).join('')||'<div class="meta">none captured yet</div>')
       +`<div class="rgrp" style="margin-top:13px">Top sets</div>`+((d.productSets||[]).slice(0,12).map(x=>`<span class="rschip">${esch(x.set)} <b>${x.n}</b></span>`).join('')||'<div class="meta">none named yet</div>')
       +`<div class="rgrp" style="margin-top:13px">By category</div>`+((d.byCategory||[]).map(x=>rsBar(x.category,x.n,cMax)).join('')||'<div class="meta">—</div>')+`</div>`
-    +`<div class="card report"><div class="rgrp">Top restock stores <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· tap for its own breakdown</span></div>`+((d.topStores||[]).map(s=>`<div class="repline rsrow" onclick="openStoreRestock(${s.id})"><span class="rl">${esch(s.store)}${s.region?' <span class="meta">· '+esch(s.region)+'</span>':''}</span><b>${s.bestDay?esch(s.bestDay)+' · ':''}<span style="color:var(--green)">${s.confirms} hit${s.confirms===1?'':'s'}</span></b></div>`).join('')||'<div class="meta">No confirmed restocks yet.</div>')+`</div>`;
+    +`<div class="card report"><div class="rgrp">Top restock stores <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· tap for its own breakdown</span></div>`+((d.topStores||[]).map(s=>`<div class="repline rsrow" onclick="openStoreRestock(${s.id})"><span class="rl">${esch(s.store)}${s.location?' <span class="meta">· '+esch(s.location)+'</span>':(s.region?' <span class="meta">· '+esch(s.region)+'</span>':'')}</span><b>${s.bestDay?esch(s.bestDay)+' · ':''}<span style="color:var(--green)">${s.confirms} hit${s.confirms===1?'':'s'}</span></b></div>`).join('')||'<div class="meta">No confirmed restocks yet.</div>')+`</div>`;
 }
 async function openStoreRestock(id){
   const det=document.getElementById('restock_detail'); if(!det) return;
@@ -3446,9 +3446,9 @@ async function openStoreRestock(id){
   const ago=s=>{ if(!s)return 'never'; const m=Math.floor(Date.now()/1000)-s; if(m<86400)return Math.max(1,Math.floor(m/3600))+'h ago'; return Math.floor(m/86400)+'d ago'; };
   det.innerHTML=`<div class="card report" style="border-color:rgba(74,222,128,.28)">
     <button class="ghost" style="float:right;font-size:11px;padding:5px 9px" onclick="document.getElementById('restock_detail').innerHTML=''">✕</button>
-    <div class="name" style="margin-bottom:2px">${esch(d.store)}</div>
+    <div class="name" style="margin-bottom:2px">${esch(d.store)}${d.location?' <span class="meta" style="font-weight:500">· '+esch(d.location)+'</span>':''}</div>
     <div style="font-size:34px;font-weight:800;color:${low?'var(--text-muted)':'var(--green)'};line-height:1.1;letter-spacing:-.02em">${d.bestDay||'Learning…'}</div>
-    <div class="meta" style="margin-bottom:13px">${d.bestDay?('best restock day · based on '+d.confidence+' hit'+(d.confidence===1?'':'s')+(low?' (low confidence)':'')):'not enough data yet'}${d.storedShipmentDay?' · stored: '+esch(d.storedShipmentDay):''} · last confirm '+ago(d.lastConfirm)}</div>
+    <div class="meta" style="margin-bottom:13px">${d.bestDay?('best restock day · based on '+d.confidence+' hit'+(d.confidence===1?'':'s')+(low?' (low confidence)':'')):'not enough data yet'}${d.storedShipmentDay?' · stored: '+esch(d.storedShipmentDay):''} · last confirm ${esch(ago(d.lastConfirm))}</div>
     <div class="rgrp">Staff said</div>${(d.staffSaid.tally||[]).map(x=>rsBar(x.day,x.n,sMax)).join('')||'<div class="meta">nothing yet</div>'}
     <div class="rgrp" style="margin-top:13px">Confirmed in stock · by weekday</div>${(d.empirical.byWeekday||[]).map(x=>rsBar(x.day,x.confirms,eMax,'soon')).join('')}
     <div class="rgrp" style="margin-top:13px">Product forms</div>${(d.products.forms||[]).map(x=>rsBar(x.form,x.n,pfMax)).join('')||'<div class="meta">none captured</div>'}
