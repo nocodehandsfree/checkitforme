@@ -269,6 +269,7 @@
   .rsbf.bad{background:var(--red)}
   .rsbar b{flex:0 0 auto;min-width:18px;text-align:right;color:#e8e8f0}
   .stat.purple .n{color:var(--purple)}
+  .stat.bad .n{color:var(--red)}
   .rschip{display:inline-block;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:3px 8px;margin:0 5px 5px 0;font-size:12px;color:var(--text-body)}
   .rschip b{color:var(--green)}
   .rsrow{cursor:pointer;padding-left:6px;padding-right:6px;border-radius:8px}
@@ -557,6 +558,11 @@
       <div id="d_timing_model"></div>
       <div id="d_timing_status"></div>
       <details style="margin-top:6px"><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details>
+    </details>
+    <details class="card report" id="d_health_card" open>
+      <summary style="cursor:pointer"><span class="name">Call data health</span></summary>
+      <div class="meta" style="margin:10px 0 8px">The unfiltered truth about every call row — real dialed calls vs. seed / rehearsal / never-placed. The true first call ignores seed rows and the "Fun" rehearsal store.</div>
+      <div id="d_health" class="meta">Loading…</div>
     </details>
     </div>
     <div id="dash_calc" style="display:none"></div>
@@ -1103,7 +1109,7 @@ const NAV_GROUPS={
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['workflows','Workflows','note'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, workflows:()=>loadWorkflowMgr(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, workflows:()=>loadWorkflowMgr(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -3390,6 +3396,35 @@ async function loadGwPulse(){
     `</div><div class="rgrp">Community</div><div class="stats" style="margin-bottom:0">`+
       st(cm.watches||0,'watching')+st(cm.kioskReports||0,'kiosk intel')+st(cm.posts||0,'scores')+st(cm.postsPending||0,'pending')+st(cm.newLeads7d||0,'new leads 7d')+
     `</div>`;
+}
+// Call data health — the unfiltered truth about call_results (real dialed calls vs seed/rehearsal/
+// never-placed), + a dry-run cleanup preview. Read-only: no delete button (purge is run deliberately).
+async function loadCallHealth(){
+  const el=document.getElementById('d_health'); if(!el) return;
+  const [a,p]=await Promise.all([api('/api/admin/calls-audit'), api('/api/admin/purge-undefined-calls?dry=1')]);
+  if(!a||a.error){ el.textContent='No call data yet.'; return; }
+  const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  const fdt=o=>(o&&o.at)?new Date(o.at*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):'—';
+  const fd=o=>o?`${esch(o.store)} <span class="meta" style="font-weight:500">· ${fdt(o)}</span>`:'—';
+  const irow=(l,v)=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--border);font-size:13px"><span style="color:var(--text-muted)">${l}</span><span style="color:#e8e8f0;font-weight:600">${v}</span></div>`;
+  const sMax=Math.max(1,...(a.byStatus||[]).map(x=>x.n));
+  const dup=a.duplicateProviderCalls||0;
+  const purge=(p&&!p.error)?p:null;
+  const reasons=(purge&&purge.flagged)?Object.entries(purge.byReason||{}).map(([k,n])=>n+' '+k.replace(/_/g,' ')).join(' · '):'';
+  el.innerHTML=
+    `<div class="stats" style="margin-bottom:4px">`
+      +tile(a.total||0,'total rows')
+      +tile(a.neverDialed||0,'never dialed')
+      +tile(a.ownerOnlyTest||0,'rehearsal')
+      +tile(dup,'dup ingests',dup?'bad':'')
+    +`</div>`
+    +irow('First real call',fd(a.firstDialedCall))
+    +irow('Latest call',fd(a.lastCall))
+    +irow('Confirmed in stock',a.confirmedInStock||0)
+    +`<div class="rgrp" style="margin-top:13px">By status</div>`
+      +((a.byStatus||[]).map(x=>rsBar(x.k,x.n,sMax)).join('')||'<div class="meta">—</div>')
+    +(purge?`<div class="rgrp" style="margin-top:13px">Cleanup preview <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· dry run · billed calls protected · restorable from ElevenLabs</span></div>`
+       +`<div class="meta" style="line-height:1.55"><b style="color:${purge.flagged?'var(--orange)':'var(--green)'}">${purge.flagged}</b> of ${purge.total} rows are unprovable${reasons?' ('+esch(reasons)+')':''}; <b style="color:#e8e8f0">${purge.keptDefinitive}</b> are definitive. Nothing is deleted from here — run the purge deliberately when ready.</div>`:'');
 }
 // User dashboard: everyone who signed up (phone-first, Clerk-free) — newest first.
 async function loadUsers(){

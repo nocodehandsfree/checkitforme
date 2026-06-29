@@ -2457,6 +2457,81 @@ app.get("/api/admin/restock-audit", async (c) => {
   return c.json({ total: rows.length, rows });
 });
 
+// ---- Call-data integrity: the unfiltered truth about call_results, for the Call-data-health panel ----
+// Full, unfiltered view of every row so the owner can see what's real vs. seed/rehearsal/never-dialed.
+// A call that actually dialed a store has a providerCallId (an ElevenLabs conversation); seed/manual
+// rows don't, and the owner-only "Fun" store is rehearsal — so firstDialedCall is the true first call.
+app.get("/api/admin/calls-audit", async (c) => {
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const stores = await retailerMap();
+  const rows = await db.select({
+    id: callResults.id, retailerId: callResults.retailerId, status: callResults.status,
+    statusKey: callResults.statusKey, confirmed: callResults.confirmed, providerCallId: callResults.providerCallId,
+    startedAt: callResults.startedAt, completedAt: callResults.completedAt,
+  }).from(callResults);
+  const tally = (f: (r: (typeof rows)[number]) => string | null | undefined) => {
+    const t: Record<string, number> = {};
+    for (const r of rows) { const k = String(f(r) ?? "—"); t[k] = (t[k] || 0) + 1; }
+    return Object.entries(t).sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ k, n }));
+  };
+  const withTs = rows.filter((r) => r.startedAt).sort((a, b) => (a.startedAt || 0) - (b.startedAt || 0));
+  const dialed = withTs.filter((r) => r.providerCallId && !ownerOnly.has(r.retailerId));
+  const desc = (r?: (typeof rows)[number]) => (r ? {
+    id: r.id, store: stores.get(r.retailerId)?.name?.split("—")[0].trim() || `#${r.retailerId}`,
+    at: r.startedAt, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, hasProviderCall: !!r.providerCallId,
+  } : null);
+  const cidCounts: Record<string, number> = {};
+  for (const r of rows) if (r.providerCallId) cidCounts[r.providerCallId] = (cidCounts[r.providerCallId] || 0) + 1;
+  return c.json({
+    total: rows.length,
+    ownerOnlyTest: rows.filter((r) => ownerOnly.has(r.retailerId)).length, // "Fun"/rehearsal store calls
+    neverDialed: rows.filter((r) => !r.providerCallId).length,             // no EL conversation → never reached a store
+    adminHangup: rows.filter((r) => r.status === "admin_hangup").length,   // aborted from the dashboard
+    confirmedInStock: rows.filter((r) => r.confirmed === true).length,
+    duplicateProviderCalls: Object.values(cidCounts).filter((n) => n > 1).length, // double-ingested = integrity red flag
+    byStatus: tally((r) => r.status),
+    byStatusKey: tally((r) => r.statusKey),
+    firstCall: desc(withTs[0]),                 // earliest row of any kind (may be a seed/manual row)
+    firstDialedCall: desc(dialed[0]),           // the true first REAL call into a store
+    lastCall: desc(withTs[withTs.length - 1]),
+  });
+});
+
+// Remove un-provable call rows (no ElevenLabs conversation, or never reached a true outcome). Dry-run by
+// default (?dry=0 to actually delete); billed calls are protected and everything is restorable from
+// ElevenLabs. Admin-token gated. The Call-data-health panel calls this dry-run only (preview, no delete).
+app.post("/api/admin/purge-undefined-calls", async (c) => {
+  const dry = c.req.query("dry") !== "0";
+  const includeOwner = c.req.query("includeOwner") === "1"; // also drop "Fun" rehearsal calls if asked
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const rows = await db.select({
+    id: callResults.id, status: callResults.status, providerCallId: callResults.providerCallId,
+    chargedAt: callResults.chargedAt, retailerId: callResults.retailerId,
+  }).from(callResults);
+  const TRUE_STATUS = new Set(["completed", "no_answer"]); // a placed call that reached a real outcome
+  const reasonFor = (r: (typeof rows)[number]): string | null => {
+    if (r.chargedAt) return null;                                  // billed → never delete (protected)
+    if (!r.providerCallId) return "never_placed";                  // no EL conversation → can't prove we called
+    if (!TRUE_STATUS.has(r.status)) return "no_true_status";       // admin_hangup / failed / queued / dialing…
+    if (includeOwner && ownerOnly.has(r.retailerId)) return "owner_test"; // optional: drop Fun rehearsal calls
+    return null;                                                   // keep
+  };
+  const doomed = rows.map((r) => ({ r, reason: reasonFor(r) })).filter((x) => x.reason) as Array<{ r: (typeof rows)[number]; reason: string }>;
+  const byReason: Record<string, number> = {};
+  for (const x of doomed) byReason[x.reason] = (byReason[x.reason] || 0) + 1;
+  let deleted = 0;
+  if (!dry && doomed.length) {
+    const ids = doomed.map((x) => x.r.id);
+    for (let i = 0; i < ids.length; i += 200) await db.delete(callResults).where(inArray(callResults.id, ids.slice(i, i + 200)));
+    deleted = ids.length;
+  }
+  return c.json({
+    dry, total: rows.length, flagged: doomed.length, keptDefinitive: rows.length - doomed.length,
+    byReason, deleted,
+    rule: "keep only providerCallId + status in {completed,no_answer}; billed calls protected; restorable from ElevenLabs",
+  });
+});
+
 // ---- Growth pulse: the funnel + engagement snapshot the owner reads each morning ----
 // Manually-flagged admin/test accounts (Clerk-free, so we can't rely on email domains). These are
 // non-customers — excluded from signups/activity like the comp/owner accounts.
