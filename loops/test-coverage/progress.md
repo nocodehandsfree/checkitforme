@@ -31,11 +31,20 @@ One module per iteration: read this log → pick next untested module → write 
 - Wired into `scripts/test-all.sh` as `unit: store-hours`.
 - `bash scripts/test-all.sh` → ALL SUITES PASSED.
 
+### 3 — `src/brands.ts`  ✅
+- Added `scripts/test-brands.ts` (25 assertions) for the white-label registry: `resolveBrand`
+  (subdomain → brand, www-strip, case-insensitive, port-strip, marketing/typo aliases, `?brand=`
+  override, default fallback), `allBrandKeys` (uniqueness), `brandForPath` (path routing, aliases,
+  default-brand → null, unknown → null), and `brandSwitcher` (excludes default, topps "NBA" tag,
+  logoUrl always a string).
+- Wired into `scripts/test-all.sh` as `unit: brands`.
+- `bash scripts/test-all.sh` → ALL SUITES PASSED.
+
 ## Already covered (pre-existing suites)
 ratelimit, r2 presign, best-bet, schedules, referrals, receipt, auth/billing, growth/CMS/community (integration).
 
 ## Candidate targets remaining (untested src/ modules)
-security-checks · brands · policy · config · llm · brevo · refcache ·
+security-checks · policy · config · llm · brevo · refcache ·
 stock/signals · stock/sellmethods · stock/intel · voice/prompts · voice/provider ·
 calls/service · calls/notify · calls/navigator · calls/tree-learn · hours-harvest ·
 stores-import · redis · db/* · agent/admin-agent

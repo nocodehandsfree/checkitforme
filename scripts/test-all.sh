@@ -17,6 +17,7 @@ run "unit: ratelimit"  "env DATABASE_URL=file:./.t-rl.db $ENV $TSX scripts/test-
 run "unit: r2 presign" "$ENV $TSX scripts/test-r2.ts"
 run "unit: geo"        "$ENV $TSX scripts/test-geo.ts"
 run "unit: store-hours" "$ENV $TSX scripts/test-storehours.ts"
+run "unit: brands"     "$ENV $TSX scripts/test-brands.ts"
 run "unit: best-bet"   "$ENV $TSX scripts/test-bestbet.ts"
 run "unit: schedules"  "env DATABASE_URL=file:./.t-sch.db $ENV $TSX scripts/test-schedules.ts; rm -f .t-sch.db"
 run "unit: referrals"  "env DATABASE_URL=file:./.t-ref.db $ENV $TSX scripts/test-referrals.ts; rm -f .t-ref.db"
