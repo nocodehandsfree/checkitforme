@@ -40,11 +40,19 @@ One module per iteration: read this log → pick next untested module → write 
 - Wired into `scripts/test-all.sh` as `unit: brands`.
 - `bash scripts/test-all.sh` → ALL SUITES PASSED.
 
+### 4 — `src/voice/prompts.ts`  ✅
+- Added `scripts/test-prompts.ts` (28 assertions): `specificityClause` (empty/undefined/whitespace →
+  "", specific product trimmed + interpolated + keeps `{{category}}`), the `RESTOCK_PROMPT`
+  dynamic-variable contract (10 `{{...}}` placeholders + end_call/skip_turn/one-sentence rules), and
+  `VOICE_DEFAULTS` range sanity (speed/stability/similarity/maxTokens/modelId/llm).
+- Wired into `scripts/test-all.sh` as `unit: prompts`.
+- `bash scripts/test-all.sh` → ALL SUITES PASSED.
+
 ## Already covered (pre-existing suites)
 ratelimit, r2 presign, best-bet, schedules, referrals, receipt, auth/billing, growth/CMS/community (integration).
 
 ## Candidate targets remaining (untested src/ modules)
 security-checks · policy · config · llm · brevo · refcache ·
-stock/signals · stock/sellmethods · stock/intel · voice/prompts · voice/provider ·
+stock/signals · stock/sellmethods · stock/intel · voice/provider ·
 calls/service · calls/notify · calls/navigator · calls/tree-learn · hours-harvest ·
 stores-import · redis · db/* · agent/admin-agent
