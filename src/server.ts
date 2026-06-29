@@ -2369,7 +2369,7 @@ app.post("/api/admin/restock-backfill", async (c) => {
     before[cat(r.confirmed, r.shipmentDayHeard) as keyof ReturnType<typeof blank>]++;
     const second = await classifyVerdict(r.transcript ?? "", cats.get(r.categoryId) || "the product");
     if (!second) { after[cat(r.confirmed, r.shipmentDayHeard) as keyof ReturnType<typeof blank>]++; continue; }
-    const consensus = reconcile({ confirmed: r.confirmed, soldOut: r.statusKey === "sold_out", doesNotSell: r.statusKey === "does_not_sell", statusKey: r.statusKey }, second);
+    const consensus = reconcile({ confirmed: r.confirmed, soldOut: r.statusKey === "sold_out", doesNotSell: r.statusKey === "does_not_sell", statusKey: r.statusKey ?? undefined }, second);
     const day = second.restockDay ?? r.shipmentDayHeard;
     const detail = productDetailLabel(second) ?? r.productDetail;
     if (consensus.confirmed !== r.confirmed) flipped++;
