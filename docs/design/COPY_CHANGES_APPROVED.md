@@ -38,6 +38,26 @@
 
 ---
 
+## ✅ LOCKED — round 2
+
+### Buy / Plans
+| What | From | To |
+|---|---|---|
+| Member lead (`buy.premium.lead`) | `Restock alerts & auto-checks come with membership — we watch the shelves so you don't have to.` | **`We watch the shelves so you don't have to.`** · ES **`Vigilamos los estantes por ti.`** |
+| Out-of-checks lead (`buy.out.lead`) | `Pick a plan and keep hunting — your next find is one check away.` | **`Your next find is one check away.`** · ES **`Tu próximo hallazgo está a una verificación.`** |
+| Plan perk (`plan.p3`) | `+ Specific products & multi-asks` | **`+ Exact products. More than one per call.`** · ES **`+ Productos exactos. Más de uno por llamada.`** |
+
+### Sign-in
+| What | From | To |
+|---|---|---|
+| `err.phone` | `Enter your 10-digit US cell number.` | **`Enter your US mobile number.`** · ES **`Ingresa tu número de celular de EE.UU.`** |
+| `err.contact` (2 versions → 1) | `…phone number` / `…phone` | **`Enter a valid email or phone number.`** |
+| `err.generic` (2 versions → 1) | `Something went wrong` / `…— try again` | **`Something went wrong. Try again.`** |
+
+> Plan perks also get the **icon-per-tier** treatment (🔔 / 📅 / 🎯 / 🗺) — see Design below.
+
+---
+
 ## 🎨 DESIGN — image/color over copy (website dev, design pass)
 
 ### The green "no-charge" shield  *(biggest win)*
@@ -47,6 +67,9 @@ Every miss status repeats the words **"— no charge."** Replace the **words** w
 
 ### Color the call cost (no reading)
 Result foot: **`1 check used`** = gray · **`No charge for this one`** = green. You know if you paid before you read it.
+
+### Plan tiers — perk as icon
+Lead each tier's perk with an icon, not a sentence: 🔔 alerts · 📅 auto-checks · 🎯 exact product · 🗺 zone sweep. The ladder reads at a glance.
 
 ### Alignment / symmetry (pixel pass)
 - Result **poll row**: 4 pills equal-width, icons on one baseline, labels centered under each.
