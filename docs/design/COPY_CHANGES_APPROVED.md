@@ -151,7 +151,7 @@ The currency is a **check**. The phone thing is a **call**. Fix where the *unit*
 | `rcpt.claim` | `Claim your free call →` | **`Claim your free check →`** |
 | `earn.store.sub` | `…earn a free call.` | **`…earn a free check.`** |
 
-**Borderline (lean "check" — confirm):** `kcall.yes` "Yes, call now →" → "Yes, check it now →" · `toast.callgone` → "That check is no longer available" · `toast.callstart.fail` → "Couldn't start the check" · `toast.loadingcall` → "Loading your check…" · `up.watch.sub` "a call confirms stock" → "a check confirms stock"
+**Also locked (unit → check):** `kcall.yes` "Yes, call now →" → **"Yes, check it now →"** · `toast.callgone` → **"That check is no longer available"** · `toast.callstart.fail` → **"Couldn't start the check"** · `toast.loadingcall` → **"Loading your check…"** · `up.watch.sub` "a call confirms stock" → **"a check confirms stock"**
 
 **Keep "call" (it's the actual phone call):** `demo.call`, `cid.*`, `cs.*`, `live.*`, `sch.body`, `sch.time`, `kcall.body1`, `note.getting`, `up.sched.sub`.
 
