@@ -23,11 +23,19 @@ One module per iteration: read this log → pick next untested module → write 
 - Wired into `scripts/test-all.sh` as `unit: geo`.
 - `bash scripts/test-all.sh` → ALL SUITES PASSED.
 
+### 2 — `src/store-hours.ts`  ✅
+- Added `scripts/test-storehours.ts` (15 assertions) for `openState()`, pinned to `tz="UTC"` with an
+  explicit `at` instant so "now" never depends on the wall clock: unknown/malformed JSON fail-open,
+  standard 9–21 day (open/before/after), 24h, midnight-crossing hours (incl. yesterday spillover),
+  and "closed today → opens … tomorrow".
+- Wired into `scripts/test-all.sh` as `unit: store-hours`.
+- `bash scripts/test-all.sh` → ALL SUITES PASSED.
+
 ## Already covered (pre-existing suites)
 ratelimit, r2 presign, best-bet, schedules, referrals, receipt, auth/billing, growth/CMS/community (integration).
 
 ## Candidate targets remaining (untested src/ modules)
-store-hours · security-checks · brands · policy · config · llm · brevo · refcache ·
+security-checks · brands · policy · config · llm · brevo · refcache ·
 stock/signals · stock/sellmethods · stock/intel · voice/prompts · voice/provider ·
 calls/service · calls/notify · calls/navigator · calls/tree-learn · hours-harvest ·
 stores-import · redis · db/* · agent/admin-agent
