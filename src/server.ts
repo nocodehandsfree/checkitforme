@@ -2426,6 +2426,43 @@ app.get("/api/admin/el-agent-sample", async (c) => {
   return c.json({ agentId, scanned, inOurDb: inDb, sampleWithStore: withStore, sample });
 });
 
+// ---- Purge un-provable calls: the owner's rule — if we can't say we PLACED it and got a TRUE status,
+// it doesn't belong in the data. KEEP only rows with a providerCallId (a real ElevenLabs conversation
+// = we definitely called) AND a real outcome status (completed | no_answer). REMOVE everything else
+// (admin_hangup, failed, queued/dialing/in_progress, or no providerCallId). BILLED calls (chargedAt)
+// are never deleted — safety. Dry by default (?dry=0 to execute). Everything stays restorable from EL.
+app.post("/api/admin/purge-undefined-calls", async (c) => {
+  const dry = c.req.query("dry") !== "0";
+  const includeOwner = c.req.query("includeOwner") === "1"; // also drop "Fun" rehearsal calls if asked
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const rows = await db.select({
+    id: callResults.id, status: callResults.status, providerCallId: callResults.providerCallId,
+    chargedAt: callResults.chargedAt, retailerId: callResults.retailerId,
+  }).from(callResults);
+  const TRUE_STATUS = new Set(["completed", "no_answer"]); // a placed call that reached a real outcome
+  const reasonFor = (r: (typeof rows)[number]): string | null => {
+    if (r.chargedAt) return null;                                  // billed → never delete (protected)
+    if (!r.providerCallId) return "never_placed";                  // no EL conversation → can't prove we called
+    if (!TRUE_STATUS.has(r.status)) return "no_true_status";       // admin_hangup / failed / queued / dialing…
+    if (includeOwner && ownerOnly.has(r.retailerId)) return "owner_test"; // optional: drop Fun rehearsal calls
+    return null;                                                   // keep
+  };
+  const doomed = rows.map((r) => ({ r, reason: reasonFor(r) })).filter((x) => x.reason) as Array<{ r: (typeof rows)[number]; reason: string }>;
+  const byReason: Record<string, number> = {};
+  for (const x of doomed) byReason[x.reason] = (byReason[x.reason] || 0) + 1;
+  let deleted = 0;
+  if (!dry && doomed.length) {
+    const ids = doomed.map((x) => x.r.id);
+    for (let i = 0; i < ids.length; i += 200) await db.delete(callResults).where(inArray(callResults.id, ids.slice(i, i + 200)));
+    deleted = ids.length;
+  }
+  return c.json({
+    dry, total: rows.length, flagged: doomed.length, keptDefinitive: rows.length - doomed.length,
+    byReason, deleted,
+    rule: "keep only providerCallId + status in {completed,no_answer}; billed calls protected; restorable from ElevenLabs",
+  });
+});
+
 // ---- Growth pulse: the funnel + engagement snapshot the owner reads each morning ----
 app.get("/api/admin/pulse", async (c) => {
   const now = Math.floor(Date.now() / 1000), d1 = now - 86400, d7 = now - 7 * 86400;
