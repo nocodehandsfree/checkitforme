@@ -2383,6 +2383,30 @@ app.post("/api/admin/restock-backfill", async (c) => {
   return c.json({ scanned, flipped, dayAdded, prodAdded, before, after, firstRealCall: isFinite(firstReal) ? firstReal : null });
 });
 
+// Read-only ground-truth audit: every real-store completed call with a transcript head/tail, so we can
+// hand-classify "reached a human" vs "stuck in the phone tree" and tally the true in-stock / not-in /
+// restock-coming numbers (the persisted statusKey was sometimes wrong — this reads the actual words).
+app.get("/api/admin/restock-audit", async (c) => {
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const cats = await categoryLabelMap();
+  const rmap = new Map((await db.select({ id: retailers.id, name: retailers.name, location: retailers.location, region: retailers.region, state: retailers.state }).from(retailers)).map((r) => [r.id, r]));
+  const all = (await db.select().from(callResults).where(eq(callResults.status, "completed")))
+    .filter((r) => !ownerOnly.has(r.retailerId))
+    .sort((a, b) => (a.startedAt || 0) - (b.startedAt || 0));
+  const rows = all.map((r) => {
+    const t = (r.transcript || "").replace(/\s+/g, " ").trim();
+    const ret = rmap.get(r.retailerId);
+    return {
+      id: r.id, started: r.startedAt, store: ret?.name || `#${r.retailerId}`, location: ret?.location || null,
+      region: ret?.region || null, state: ret?.state || null, category: cats.get(r.categoryId) || null,
+      statusKey: r.statusKey, confirmed: r.confirmed, day: r.shipmentDayHeard, product: r.productDetail,
+      navSec: r.navSeconds, callSec: r.callSeconds, len: t.length,
+      head: t.slice(0, 900), tail: t.length > 1400 ? t.slice(-500) : "",
+    };
+  });
+  return c.json({ total: rows.length, rows });
+});
+
 // ---- Growth pulse: the funnel + engagement snapshot the owner reads each morning ----
 // Manually-flagged admin/test accounts (Clerk-free, so we can't rely on email domains). These are
 // non-customers — excluded from signups/activity like the comp/owner accounts.
