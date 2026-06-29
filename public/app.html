@@ -266,7 +266,9 @@
   .rsbt{flex:1;height:8px;background:var(--surface-2);border-radius:5px;overflow:hidden}
   .rsbf{display:block;height:100%;background:var(--green);border-radius:5px}
   .rsbf.soon{background:#F4D03F}
+  .rsbf.bad{background:var(--red)}
   .rsbar b{flex:0 0 auto;min-width:18px;text-align:right;color:#e8e8f0}
+  .stat.purple .n{color:var(--purple)}
   .rschip{display:inline-block;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:3px 8px;margin:0 5px 5px 0;font-size:12px;color:var(--text-body)}
   .rschip b{color:var(--green)}
   .rsrow{cursor:pointer;padding-left:6px;padding-right:6px;border-radius:8px}
@@ -3425,8 +3427,30 @@ async function loadRestock(){
   const dMax=Math.max(1,...(d.shipmentDays||[]).map(x=>x.n));
   const fMax=Math.max(1,...(d.productForms||[]).map(x=>x.n));
   const cMax=Math.max(1,...(d.byCategory||[]).map(x=>x.n));
+  // Call reality funnel — the honest read of what calls achieved (most never reach a human).
+  const af=d.answerFunnel; let funnelCard='';
+  if(af&&af.dialed){
+    const fc=s=>{ if(!s)return ''; const dt=new Date(s*1000); return dt.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); };
+    const b=af.buckets||{}, dial=af.dialed||1;
+    const brow=(ic,label,n,cls)=>`<div class="rsbar"><span class="rsbl" style="flex-basis:188px">${ic} ${esch(label)}</span><span class="rsbt"><span class="rsbf ${cls||''}" style="width:${Math.round((n||0)/dial*100)}%"></span></span><b>${n||0}</b></div>`;
+    const chrow=x=>{ const pct=x.dialed?Math.round(x.reached/x.dialed*100):0, cls=pct>=80?'':(pct>=40?'soon':'bad'); return `<div class="rsbar"><span class="rsbl">${esch(x.chain)}</span><span class="rsbt"><span class="rsbf ${cls}" style="width:${pct}%"></span></span><b>${x.reached}/${x.dialed}</b></div>`; };
+    const reachPct=Math.round(af.reachedHuman/dial*100);
+    funnelCard=`<div class="card report" style="border-color:rgba(167,139,250,.3)">
+      <div class="rgrp">Call reality <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· read from the transcripts, not the saved status${af.firstCall?' · first store call '+fc(af.firstCall):''}</span></div>
+      <div class="stats" style="margin-bottom:12px">${tile(af.dialed,'dialed')}${tile(af.reachedHuman,'reached a human','purple')}${tile(af.gotAnswer,'got an answer','green')}</div>
+      ${brow('✅','In stock',b.in_stock,'')}
+      ${brow('📦','Just landed · not shelved',b.got_some,'soon')}
+      ${brow('❌','Not in stock',b.not_in,'bad')}
+      ${brow('☎️','Picked up · no answer',b.reached_no_answer,'soon')}
+      ${brow('🤖','Never reached a human',b.never_reached,'bad')}
+      <div class="rgrp" style="margin-top:14px">Reach rate by chain <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· where a human actually picks up</span></div>
+      ${(af.byChain||[]).map(chrow).join('')}
+      <div class="meta" style="margin-top:10px;line-height:1.55">Only <b style="color:var(--purple)">${reachPct}%</b> of calls reach a person. Direct-dial stores (Barnes &amp; Noble) answer every time; pharmacy phone bots (CVS, Walgreens) and press-for-department trees (Target) swallow most calls before anyone picks up — that's the gap to close, not stock.</div>
+    </div>`;
+  }
   net.innerHTML=
-    `<div class="card report"><div class="stats" style="margin-bottom:0">`+tile((t.confirmRate||0)+'%','confirm rate','green')+tile(t.confirms||0,'confirms')+tile(t.confirms7d||0,'last 7d')+tile(t.checks||0,'checks')+`</div></div>`
+    funnelCard
+    +`<div class="card report"><div class="stats" style="margin-bottom:0">`+tile((t.confirmRate||0)+'%','confirm rate','green')+tile(t.confirms||0,'confirms')+tile(t.confirms7d||0,'last 7d')+tile(t.checks||0,'checks')+`</div></div>`
     +`<div class="card report"><div class="rgrp">Dominant restock days <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· what staff told us</span></div>`+((d.shipmentDays||[]).slice(0,7).map(x=>rsBar(x.day,x.n,dMax)).join('')||'<div class="meta">No days learned yet.</div>')+`</div>`
     +`<div class="card report"><div class="rgrp">Product forms landing</div>`+((d.productForms||[]).slice(0,8).map(x=>rsBar(x.form,x.n,fMax)).join('')||'<div class="meta">none captured yet</div>')
       +`<div class="rgrp" style="margin-top:13px">Top sets</div>`+((d.productSets||[]).slice(0,12).map(x=>`<span class="rschip">${esch(x.set)} <b>${x.n}</b></span>`).join('')||'<div class="meta">none named yet</div>')

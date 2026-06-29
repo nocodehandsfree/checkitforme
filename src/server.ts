@@ -2268,6 +2268,32 @@ function parseProducts(rows: { productDetail: string | null }[]) {
   }
   return { forms: topTally(forms, "form"), sets: topTally(sets, "set", 25), details: topTally(details, "detail") };
 }
+// What ACTUALLY happened on a call, read from the transcript words — the persisted status conflated
+// "stuck in the phone tree" with "nobody answered", which hid the real story: most calls never reach a
+// human. Buckets: in_stock | got_some (shipment landed, not shelved) | not_in | reached_no_answer
+// (a person picked up but the call dropped before an answer) | never_reached (died in an IVR / pharmacy
+// virtual assistant / on hold). Validated against a hand audit of every real-store call.
+type CallReality = "in_stock" | "got_some" | "not_in" | "reached_no_answer" | "never_reached";
+function classifyCallReality(transcript: string | null): CallReality {
+  const s = (transcript || "").toLowerCase().replace(/\s+/g, " ");
+  if (/\bwe do\b(?!\s*not)|got some in stock|you'?ve got some in stock|we have some|we have a few|yeah[.,]? (we|so you)/.test(s)) return "in_stock";
+  if (/we did get some|we did,? but it'?s not out|got some.* not out|not out yet,? but we did/.test(s)) return "got_some";
+  if (/we did not\b|we don'?t have|we haven'?t\b|haven'?t seen any|i did not see any|no,? i'?m sorry|no,? we don'?t|not (in|for) this shipment|did not receive any|didn'?t get any|clerk: no[.,]/.test(s)) return "not_in";
+  if (/how can i help|can i help you|may i help you|welcome to cvs|this is (cvs|staples|cbs|cds)|hello,? seabass|thanks for calling barnes|hello\? hello\?|can'?t hear you|gonna have to call again/.test(s)) return "reached_no_answer";
+  return "never_reached";
+}
+// The chain a store belongs to, for the per-chain reach breakdown (B&N answers direct; CVS/Walgreens
+// hide behind a phone bot). Falls back to the store's own name when it isn't one of the known chains.
+function chainLabel(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes("cvs")) return "CVS";
+  if (n.includes("walgreens")) return "Walgreens";
+  if (n.includes("target")) return "Target";
+  if (n.includes("barnes")) return "Barnes & Noble";
+  if (n.includes("franklin") || n.includes("ace hardware")) return "Ace Hardware";
+  if (n.includes("staples")) return "Staples";
+  return name.split("—")[0].trim();
+}
 app.get("/api/admin/restock-intel", async (c) => {
   const now = Math.floor(Date.now() / 1000);
   const d7 = now - 7 * 86400, d30 = now - 30 * 86400;
@@ -2294,6 +2320,29 @@ app.get("/api/admin/restock-intel", async (c) => {
   const prodNet = parseProducts(confirmed);
   const catNet: Record<string, number> = {};
   for (const r of confirmed) { const cl = cats.get(r.categoryId) || "?"; catNet[cl] = (catNet[cl] || 0) + 1; }
+  // Answer funnel — the honest "what did these calls actually achieve" read. Most real-store calls die
+  // in a phone tree before a human ever picks up; this surfaces that (and the per-chain reach gap).
+  const buckets = { in_stock: 0, got_some: 0, not_in: 0, reached_no_answer: 0, never_reached: 0 };
+  const chainFn = new Map<string, { chain: string; dialed: number; reached: number; answered: number }>();
+  for (const r of rows) {
+    const b = classifyCallReality(r.transcript);
+    buckets[b]++;
+    const s = stores.get(r.retailerId);
+    const ch = s ? chainLabel(s.name) : "?";
+    let cf = chainFn.get(ch); if (!cf) { cf = { chain: ch, dialed: 0, reached: 0, answered: 0 }; chainFn.set(ch, cf); }
+    cf.dialed++;
+    if (b !== "never_reached") cf.reached++;
+    if (b === "in_stock" || b === "got_some" || b === "not_in") cf.answered++;
+  }
+  const firstReal = rows.reduce((m, r) => Math.min(m, r.startedAt || Infinity), Infinity);
+  const answerFunnel = {
+    dialed: rows.length,
+    reachedHuman: rows.length - buckets.never_reached,
+    gotAnswer: buckets.in_stock + buckets.got_some + buckets.not_in,
+    firstCall: isFinite(firstReal) ? firstReal : null,
+    buckets,
+    byChain: [...chainFn.values()].sort((a, b) => b.dialed - a.dialed),
+  };
   return c.json({
     totals: {
       checks: rows.length, confirms: confirmed.length,
@@ -2306,6 +2355,7 @@ app.get("/api/admin/restock-intel", async (c) => {
     productSets: prodNet.sets,
     byCategory: Object.entries(catNet).sort((a, b) => b[1] - a[1]).map(([category, n]) => ({ category, n })),
     topStores: topStores.map((e) => ({ id: e.id, store: e.store, location: e.location, region: e.region, confirms: e.confirms, last: e.last, bestDay: e.bestDay })),
+    answerFunnel,
   });
 });
 
