@@ -3529,14 +3529,18 @@ const fanout = (room: string, payloadB64: string, track: string) => {
 // Real-time transcript lines from the agent bridge → browser listeners, so the chat bubbles populate
 // AS the call happens (ElevenLabs only returns the full transcript post-call).
 const relayLine = (room: string, role: string, text: string) => {
-  const set = rooms.get(room); if (!set) return;
+  const set = rooms.get(room);
+  bridgeLog(`relayLine ${role}: ${String(text).slice(0, 32)} listeners=${set ? set.size : 0}`); // diagnose live-transcript delivery
+  if (!set) return;
   const msg = JSON.stringify({ line: { role, text } });
   for (const ws of set) if (ws.readyState === 1) ws.send(msg);
 };
 // Tell browser listeners the moment the bridge tears down (agent/clerk hung up) so the UI flips to
 // the result instantly instead of waiting on the next poll + ElevenLabs status lag.
 const relayEnd = (room: string) => {
-  const set = rooms.get(room); if (!set) return;
+  const set = rooms.get(room);
+  bridgeLog(`relayEnd room=${room.slice(0, 8)} listeners=${set ? set.size : 0}`); // diagnose hang-up→flip
+  if (!set) return;
   const msg = JSON.stringify({ ended: true });
   for (const ws of set) if (ws.readyState === 1) ws.send(msg);
 };
