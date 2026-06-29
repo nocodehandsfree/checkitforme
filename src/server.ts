@@ -2360,6 +2360,38 @@ app.get("/api/admin/calls-audit", async (c) => {
   });
 });
 
+// ---- ElevenLabs reality check: every agent in the account + how far back each one's calls go ----
+// Answers "where is our older call history?". Calls are partitioned per agent_id; if an earlier agent
+// was used, its conversations won't appear under the current one. Account-level (uses the shared key),
+// so it sees ALL agents regardless of which env's agent is configured. Read-only.
+app.get("/api/admin/el-range", async (c) => {
+  const key = config.voice.apiKey;
+  if (!key) return c.json({ error: "elevenlabs not configured" }, 503);
+  const ar = await fetch("https://api.elevenlabs.io/v1/convai/agents?page_size=100", { headers: { "xi-api-key": key } });
+  const aj = ar.ok ? ((await ar.json()) as { agents?: Array<{ agent_id?: string; name?: string }> }) : { agents: [] };
+  const agents = aj.agents || [];
+  const out: Array<{ agentId: string; name: string | null; conversations: number; earliest: number | null; latest: number | null; isCurrent: boolean }> = [];
+  for (const a of agents) {
+    const agentId = String(a.agent_id || "");
+    if (!agentId) continue;
+    let cursor = "", count = 0, min = 0, max = 0;
+    for (let p = 0; p < 30; p++) {
+      const lr = await fetch(`https://api.elevenlabs.io/v1/convai/conversations?agent_id=${agentId}&page_size=100${cursor ? `&cursor=${cursor}` : ""}`, { headers: { "xi-api-key": key } });
+      if (!lr.ok) break;
+      const lj = (await lr.json()) as { conversations?: Array<{ start_time_unix_secs?: number }>; has_more?: boolean; next_cursor?: string };
+      for (const conv of lj.conversations || []) {
+        count++; const t = Number(conv.start_time_unix_secs) || 0;
+        if (t) { if (!min || t < min) min = t; if (t > max) max = t; }
+      }
+      if (!lj.has_more || !lj.next_cursor) break;
+      cursor = lj.next_cursor;
+    }
+    out.push({ agentId, name: a.name || null, conversations: count, earliest: min || null, latest: max || null, isCurrent: agentId === config.voice.agentId });
+  }
+  out.sort((a, b) => (a.earliest || 9e18) - (b.earliest || 9e18));
+  return c.json({ configuredAgentId: config.voice.agentId, agentCount: out.length, agents: out });
+});
+
 // ---- Growth pulse: the funnel + engagement snapshot the owner reads each morning ----
 app.get("/api/admin/pulse", async (c) => {
   const now = Math.floor(Date.now() / 1000), d1 = now - 86400, d7 = now - 7 * 86400;
