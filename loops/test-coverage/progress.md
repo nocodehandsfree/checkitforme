@@ -65,12 +65,20 @@ One module per iteration: read this log → pick next untested module → write 
 - Wired into `scripts/test-all.sh` as `unit: security-checks`.
 - `bash scripts/test-all.sh` → ALL SUITES PASSED.
 
+### 7 — `src/voice/bridge.ts` (in-memory state)  ✅
+- Added `scripts/test-bridge.ts` (13 assertions) for the bridge's in-memory state: `takeBridgeDtmf`
+  consume-once (no double-press) + per-room isolation + overwrite, `setBridgeContext` room isolation,
+  `takeBridgeNav`/`bridgeConversationId` unknown-key → null, and the `bridgeDebug`/`bridgeLog` ring
+  buffer (timestamp prefix, capped at last 60, newest-kept/oldest-dropped).
+- Wired into `scripts/test-all.sh` as `unit: bridge`.
+- `bash scripts/test-all.sh` → ALL SUITES PASSED.
+
 ## Already covered (pre-existing suites)
 ratelimit, r2 presign, best-bet, schedules, referrals, receipt, auth/billing, growth/CMS/community (integration).
 
 ## Candidate targets remaining (untested src/ modules)
 policy · config · llm · brevo · refcache ·
 stock/signals · stock/sellmethods · stock/intel · voice/provider ·
-calls/service · calls/notify · calls/navigator · calls/tree-learn · hours-harvest ·
+calls/service · calls/notify · calls/navigator · calls/tree-learn · hours-harvest · voice/bridge (rest) ·
 redis · db/* · agent/admin-agent
   (note: `stores-import` import/DB paths still uncovered — only its pure normalizers are tested)
