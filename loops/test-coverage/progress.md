@@ -73,12 +73,20 @@ One module per iteration: read this log → pick next untested module → write 
 - Wired into `scripts/test-all.sh` as `unit: bridge`.
 - `bash scripts/test-all.sh` → ALL SUITES PASSED.
 
+### 8 — `src/calls/tree-learn.ts` (relearn queue)  ✅
+- Added `scripts/test-treelearn.ts` (8 assertions): `queueTreeRelearn`/`consumeTreeRelearn` take-once
+  semantics (never-queued → false, queued → true once then drained), Set idempotency on double-queue,
+  per-chain isolation in any order, and `learnTreeFromTranscript` graceful null when GEMINI_API_KEY
+  is absent (no network; auto-skips if the key is present).
+- Wired into `scripts/test-all.sh` as `unit: tree-learn`.
+- `bash scripts/test-all.sh` → ALL SUITES PASSED.
+
 ## Already covered (pre-existing suites)
 ratelimit, r2 presign, best-bet, schedules, referrals, receipt, auth/billing, growth/CMS/community (integration).
 
 ## Candidate targets remaining (untested src/ modules)
 policy · config · llm · brevo · refcache ·
 stock/signals · stock/sellmethods · stock/intel · voice/provider ·
-calls/service · calls/notify · calls/navigator · calls/tree-learn · hours-harvest · voice/bridge (rest) ·
+calls/service · calls/notify · calls/navigator · calls/tree-learn (rest) · hours-harvest · voice/bridge (rest) ·
 redis · db/* · agent/admin-agent
   (note: `stores-import` import/DB paths still uncovered — only its pure normalizers are tested)
