@@ -91,6 +91,16 @@ Lead each tier's perk with an icon, not a sentence: 🔔 alerts · 📅 auto-che
 
 ---
 
+## ✅ LOCKED — round 4 (Live)
+
+| key | From | To |
+|---|---|---|
+| `live.waitperson` | `Waiting to reach a person…` | **`Reaching a person…`** |
+
+*(Live screen + empty states otherwise reviewed and on-voice; the one dash, `empty.search`, is in the sweep below.)*
+
+---
+
 ## 🧹 SWEEP — em-dashes (ban `—`)
 
 **A) Status "— no charge" tails (9)** — handled by the green shield: drop the tail entirely.
