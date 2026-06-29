@@ -2392,6 +2392,40 @@ app.get("/api/admin/el-range", async (c) => {
   return c.json({ configuredAgentId: config.voice.agentId, agentCount: out.length, agents: out });
 });
 
+// ---- Peek at a specific EL agent's calls (read-only) — decide if old-agent calls are worth restoring ----
+// Shows a sample: store name + category (from the call's dynamic vars), date, status, and whether it's
+// already in our DB. Lets us judge whether an old agent's conversations were real store checks or just
+// experiments BEFORE deciding to restore them. Never writes.
+app.get("/api/admin/el-agent-sample", async (c) => {
+  const key = config.voice.apiKey;
+  if (!key) return c.json({ error: "elevenlabs not configured" }, 503);
+  const agentId = String(c.req.query("agentId") || "");
+  if (!agentId) return c.json({ error: "agentId required" }, 400);
+  const limit = Math.min(Math.max(Number(c.req.query("limit") || 12), 1), 40);
+  const existing = new Set((await db.select({ p: callResults.providerCallId }).from(callResults)).map((r) => r.p).filter(Boolean));
+  const sample: Array<Record<string, unknown>> = [];
+  let cursor = "", scanned = 0, inDb = 0, withStore = 0;
+  for (let p = 0; p < 30; p++) {
+    const lr = await fetch(`https://api.elevenlabs.io/v1/convai/conversations?agent_id=${agentId}&page_size=100${cursor ? `&cursor=${cursor}` : ""}`, { headers: { "xi-api-key": key } });
+    if (!lr.ok) break;
+    const lj = (await lr.json()) as { conversations?: Array<Record<string, unknown>>; has_more?: boolean; next_cursor?: string };
+    for (const conv of lj.conversations || []) {
+      scanned++;
+      const cid = String(conv.conversation_id || "");
+      if (existing.has(cid)) inDb++;
+      if (sample.length < limit) {
+        const dr = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${cid}`, { headers: { "xi-api-key": key } });
+        const dv = dr.ok ? ((await dr.json()) as { conversation_initiation_client_data?: { dynamic_variables?: Record<string, string> } }).conversation_initiation_client_data?.dynamic_variables || {} : {};
+        if (dv.retailer_name) withStore++;
+        sample.push({ at: Number(conv.start_time_unix_secs) || null, secs: (conv.call_duration_secs as number) ?? null, status: String(conv.status || ""), store: dv.retailer_name || null, category: dv.category || null, inOurDb: existing.has(cid) });
+      }
+    }
+    if (!lj.has_more || !lj.next_cursor) break;
+    cursor = lj.next_cursor;
+  }
+  return c.json({ agentId, scanned, inOurDb: inDb, sampleWithStore: withStore, sample });
+});
+
 // ---- Growth pulse: the funnel + engagement snapshot the owner reads each morning ----
 app.get("/api/admin/pulse", async (c) => {
   const now = Math.floor(Date.now() / 1000), d1 = now - 86400, d7 = now - 7 * 86400;
