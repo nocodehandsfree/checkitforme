@@ -78,6 +78,85 @@ Lead each tier's perk with an icon, not a sentence: 🔔 alerts · 📅 auto-che
 
 ---
 
+## ✅ LOCKED — round 3 (Scores / kiosk / receipt)
+
+| key | From | To |
+|---|---|---|
+| `sc.snap` | `Snap your score and post it to the community wall.` | **`Snap your win. Post it.`** |
+| `sc.err.big` | `Photo is too big (max 12MB)` | **`Photo's too big (max 12MB).`** |
+| `k.cta` | `Submit & claim my free check →` | **`Claim my free check →`** |
+| `k.thanks.free` | `…free check is unlocked — go check a store` | **`…free check is unlocked. Go check a store.`** |
+| `rcpt.claim` | `Claim your free call →` | **`Claim your free check →`** (unit) |
+| `rcpt.still` | `Still here — email it and keep this open.` | **`Still here. Email it and keep this open.`** |
+
+---
+
+## 🧹 SWEEP — em-dashes (ban `—`)
+
+**A) Status "— no charge" tails (9)** — handled by the green shield: drop the tail entirely.
+`note.badnum` · `note.busy` · `note.closed` · `note.failed` · `note.hold` · `note.ivr` · `note.noanswer` · `note.unreached` · `note.voicemail`
+
+**B) Everything else → period (or restructure). EN (ES mirrors the same way):**
+
+| key | To |
+|---|---|
+| `acct.upgrade` | `Get more checks.` |
+| `buy.fail` | `Couldn't start checkout. Try again.` |
+| `cid.startfail` | `Couldn't start verification. Try again.` |
+| `cid.timeout` | `Didn't verify in time. Close this and try again.` |
+| `cid.unavail` | `Verification is down for now. Try again later.` |
+| `cid.donesub` | `Checks now dial from your cell. Stores see your number on caller ID.` |
+| `closednow` | use `· closed now` (middot, not a dash) |
+| `empty.search` | `No matches. Try a different search, or tap the pin for stores nearby.` |
+| `fbk.thanks` | `Thanks. This trains our checks to get sharper.` |
+| `ho.copied` | `Copied. Paste it in the driver chat.` |
+| `ho.done.title` | `Bonus released. You're done.` |
+| `ho.dv.3.ship` | `Drop at USPS. Postage is on the card.` |
+| `ho.home.hint` | `Driver brings it to your door. No shipping, no waiting.` |
+| `ho.msg.ship` | `drop it at USPS to ship. Postage is on the card.` |
+| `ho.ship.hint` | `Packaging and postage go on the driver's card. They ship it on the way back, tracking texted to you.` |
+| `plan.founder` | `Founder. Unlimited.` |
+| `plan.p4` | `+ Zone sweeps. Every store near you, one tap.` |
+| `res.proof` | `Proof. What they said.` *(also kills "clerk")* |
+| `sch.cancelfail` | `Couldn't cancel. Try again.` |
+| `sch.on.days` | `📅 Auto-check on. We'll call on those days.` |
+| `sch.on.ship` | `📅 Auto-check on. We'll call on this store's shipment day.` |
+| `share.copied` | `Copied. Paste it anywhere 📋` |
+| `sm.nolive` | `No online signal yet. Get notified when it restocks.` |
+| `sm.resale` | `Resale. May be over MSRP.` |
+| `term.in` | `In stock. Confirmed.` |
+| `toast.locblocked` | `Location blocked. Enable it in your browser settings.` |
+| `toast.maploading` | `Map couldn't load. Showing the list.` |
+| `up.checkback.sub` | `They restock often. Pop back in a day or two.` |
+| `up.sched.sub` | `We call for you on restock days. Hands-free.` |
+| `v.unclear` | `No clear answer. Recheck.` |
+| `watch.done` | `🔔 You're on the list. We'll reach out the moment it's back.` |
+| `wl.done` | `🙌 You're on the list. We'll reach out the moment we launch near you.` |
+| field hints `— optional` / `— required` (×5+) | `(optional)` / `(required)` |
+
+*(Already locked above, also de-dashed: `buy.out.lead`, `buy.premium.lead`, `err.generic`, `res.free.sub`, `k.thanks.free`, `rcpt.still`.)*
+
+---
+
+## 🧹 SWEEP — "call" → "check" (the unit)
+
+The currency is a **check**. The phone thing is a **call**. Fix where the *unit* says "call":
+
+| key | From | To |
+|---|---|---|
+| `lead.title` | `Your first call is free` | **`Your first check is free`** |
+| `lead.cta` | `Place my free call →` | **`Run my free check →`** |
+| `lead.cta` (alt) | `Call the store →` | **`Check this store →`** |
+| `rcpt.title` | `Kiosk receipt = free call` | **`Kiosk receipt = free check`** |
+| `rcpt.claim` | `Claim your free call →` | **`Claim your free check →`** |
+| `earn.store.sub` | `…earn a free call.` | **`…earn a free check.`** |
+
+**Borderline (lean "check" — confirm):** `kcall.yes` "Yes, call now →" → "Yes, check it now →" · `toast.callgone` → "That check is no longer available" · `toast.callstart.fail` → "Couldn't start the check" · `toast.loadingcall` → "Loading your check…" · `up.watch.sub` "a call confirms stock" → "a check confirms stock"
+
+**Keep "call" (it's the actual phone call):** `demo.call`, `cid.*`, `cs.*`, `live.*`, `sch.body`, `sch.time`, `kcall.body1`, `note.getting`, `up.sched.sub`.
+
+---
+
 ## Notes
 - Every reworded EN line ships with its ES twin (above).
 - "No answer = no charge" is the spine — 4 beats, parallel. Everything else tunes to that cadence.
