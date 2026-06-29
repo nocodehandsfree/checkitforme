@@ -56,11 +56,20 @@ One module per iteration: read this log → pick next untested module → write 
 - Wired into `scripts/test-all.sh` as `unit: stores-import`.
 - `bash scripts/test-all.sh` → ALL SUITES PASSED.
 
+### 6 — `src/security-checks.ts`  ✅
+- Added `scripts/test-securitychecks.ts` (7 assertions) for `assertProdSecurity()`. Because the gate
+  calls `process.exit(1)`, the test re-spawns itself as a child (`SEC_CHILD=1`) under controlled env
+  and asserts exit codes: in prod, refuses to start (exit 1) on CLERK_ENFORCE-off / weak / missing /
+  placeholder SESSION_SECRET; a fully secure prod config boots (exit 0) even with webhook secrets
+  unset (warn-only); non-prod never fatal (exit 0).
+- Wired into `scripts/test-all.sh` as `unit: security-checks`.
+- `bash scripts/test-all.sh` → ALL SUITES PASSED.
+
 ## Already covered (pre-existing suites)
 ratelimit, r2 presign, best-bet, schedules, referrals, receipt, auth/billing, growth/CMS/community (integration).
 
 ## Candidate targets remaining (untested src/ modules)
-security-checks · policy · config · llm · brevo · refcache ·
+policy · config · llm · brevo · refcache ·
 stock/signals · stock/sellmethods · stock/intel · voice/provider ·
 calls/service · calls/notify · calls/navigator · calls/tree-learn · hours-harvest ·
 redis · db/* · agent/admin-agent
