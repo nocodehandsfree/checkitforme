@@ -48,6 +48,14 @@ One module per iteration: read this log → pick next untested module → write 
 - Wired into `scripts/test-all.sh` as `unit: prompts`.
 - `bash scripts/test-all.sh` → ALL SUITES PASSED.
 
+### 5 — `src/stores-import.ts` (normalizers)  ✅
+- Added `scripts/test-storesimport.ts` (31 assertions) for the pure import normalizers:
+  `regionForState` (state→region, case-fold, unknown/empty → null), `tzForState` (incl. Phoenix
+  no-DST + Chicago default fallback), `normCarries` (array/comma-string/single, trim, blank-filter,
+  coercion, non-array → null), and `e164` (10-digit→+1, 11-digit, already-+, intl, junk → "").
+- Wired into `scripts/test-all.sh` as `unit: stores-import`.
+- `bash scripts/test-all.sh` → ALL SUITES PASSED.
+
 ## Already covered (pre-existing suites)
 ratelimit, r2 presign, best-bet, schedules, referrals, receipt, auth/billing, growth/CMS/community (integration).
 
@@ -55,4 +63,5 @@ ratelimit, r2 presign, best-bet, schedules, referrals, receipt, auth/billing, gr
 security-checks · policy · config · llm · brevo · refcache ·
 stock/signals · stock/sellmethods · stock/intel · voice/provider ·
 calls/service · calls/notify · calls/navigator · calls/tree-learn · hours-harvest ·
-stores-import · redis · db/* · agent/admin-agent
+redis · db/* · agent/admin-agent
+  (note: `stores-import` import/DB paths still uncovered — only its pure normalizers are tested)
