@@ -2316,6 +2316,46 @@ app.get("/api/admin/store-restock/:id", async (c) => {
   });
 });
 
+// ---- Calls audit: the COMPLETE, unfiltered call_results picture for data-integrity checks ----
+// overview/pulse deliberately exclude owner-only + admin_hangup (the noise); this counts EVERYTHING
+// so we can see test calls, aborted calls, wrong statuses, never-dialed calls, the first/last call,
+// and double-ingested duplicates. Read-only — the answer to "are we capturing every call, and is the
+// status data clean?". Cross-check `total` against /api/admin/restore-calls-from-el?dry=1 (ElevenLabs
+// is the source of truth for calls actually placed).
+app.get("/api/admin/calls-audit", async (c) => {
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const stores = await retailerMap();
+  const rows = await db.select({
+    id: callResults.id, retailerId: callResults.retailerId, status: callResults.status,
+    statusKey: callResults.statusKey, confirmed: callResults.confirmed, providerCallId: callResults.providerCallId,
+    startedAt: callResults.startedAt, completedAt: callResults.completedAt,
+  }).from(callResults);
+  const tally = (f: (r: (typeof rows)[number]) => string | null | undefined) => {
+    const t: Record<string, number> = {};
+    for (const r of rows) { const k = String(f(r) ?? "—"); t[k] = (t[k] || 0) + 1; }
+    return Object.entries(t).sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ k, n }));
+  };
+  const withTs = rows.filter((r) => r.startedAt).sort((a, b) => (a.startedAt || 0) - (b.startedAt || 0));
+  const desc = (r?: (typeof rows)[number]) => (r ? {
+    id: r.id, store: stores.get(r.retailerId)?.name?.split("—")[0].trim() || `#${r.retailerId}`,
+    at: r.startedAt, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, hasProviderCall: !!r.providerCallId,
+  } : null);
+  const cidCounts: Record<string, number> = {};
+  for (const r of rows) if (r.providerCallId) cidCounts[r.providerCallId] = (cidCounts[r.providerCallId] || 0) + 1;
+  return c.json({
+    total: rows.length,
+    ownerOnlyTest: rows.filter((r) => ownerOnly.has(r.retailerId)).length, // "Fun"/rehearsal store calls
+    neverDialed: rows.filter((r) => !r.providerCallId).length,             // no EL conversation → never reached a store
+    adminHangup: rows.filter((r) => r.status === "admin_hangup").length,   // aborted from the dashboard
+    confirmedInStock: rows.filter((r) => r.confirmed === true).length,
+    duplicateProviderCalls: Object.values(cidCounts).filter((n) => n > 1).length, // double-ingested = integrity red flag
+    byStatus: tally((r) => r.status),
+    byStatusKey: tally((r) => r.statusKey),
+    firstCall: desc(withTs[0]),
+    lastCall: desc(withTs[withTs.length - 1]),
+  });
+});
+
 // ---- Growth pulse: the funnel + engagement snapshot the owner reads each morning ----
 app.get("/api/admin/pulse", async (c) => {
   const now = Math.floor(Date.now() / 1000), d1 = now - 86400, d7 = now - 7 * 86400;
