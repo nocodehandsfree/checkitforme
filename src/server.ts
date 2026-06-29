@@ -3424,18 +3424,21 @@ app.post("/webhooks/elevenlabs", async (c) => {
       let confirmed = o.confirmed, statusKey = o.statusKey;
       let definitive = o.confirmed === true || o.confirmed === false;
       let productDetail: string | null = null;
+      let restockDayHeard: string | null = null;
       if (o.status === "completed") {
         const label = row ? (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label : undefined;
         const second = await classifyVerdict(o.transcript, label || "the product");
         const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, second);
         confirmed = consensus.confirmed; statusKey = consensus.statusKey; definitive = consensus.definitive;
         productDetail = productDetailLabel(second);
+        restockDayHeard = second?.restockDay ?? null; // staff-volunteered restock day, captured even unprompted
       }
+      const dayHeard = restockDayHeard ?? o.shipmentDay;
       await db.update(callResults).set({
-        status: o.status, confirmed, statusKey, shipmentDayHeard: o.shipmentDay, productDetail,
+        status: o.status, confirmed, statusKey, shipmentDayHeard: dayHeard, productDetail,
         summary: o.summary, transcript: o.transcript, completedAt: Math.floor(Date.now() / 1000),
       }).where(eq(callResults.id, o.callId));
-      if (o.shipmentDay && row) await db.update(retailers).set({ shipmentDay: o.shipmentDay }).where(eq(retailers.id, row.retailerId));
+      if (dayHeard && row) await db.update(retailers).set({ shipmentDay: dayHeard }).where(eq(retailers.id, row.retailerId));
       // Server-side billing: charge the finder once on a definitive answer (idempotent — the poller
       // may also try; charged_at guarantees exactly one charge across both paths).
       if (row?.finderUserId && o.status === "completed" && definitive) {

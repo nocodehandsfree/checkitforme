@@ -666,6 +666,7 @@ export async function ingestPending(): Promise<number> {
     let finalStatusKey = outcome.statusKey;
     let definitive = primaryConfirmed === true || primaryConfirmed === false;
     let productDetail: string | null = null;
+    let restockDayHeard: string | null = null;
     if (outcome.status === "completed") {
       const second = await classifyVerdict(outcome.transcript, primaryLabel || "the product");
       const consensus = reconcile(
@@ -676,6 +677,7 @@ export async function ingestPending(): Promise<number> {
       finalStatusKey = consensus.statusKey;
       definitive = consensus.definitive;
       productDetail = productDetailLabel(second);
+      restockDayHeard = second?.restockDay ?? null; // restock day staff VOLUNTEERED — captured even unprompted
     }
 
     // Update the primary row (the line we called about).
@@ -683,7 +685,7 @@ export async function ingestPending(): Promise<number> {
       status: outcome.status,
       confirmed: finalConfirmed,
       statusKey: finalStatusKey,
-      shipmentDayHeard: outcome.shipmentDay,
+      shipmentDayHeard: restockDayHeard ?? outcome.shipmentDay, // prefer the LLM's read of the transcript
       productDetail,
       summary: outcome.summary,
       transcript: outcome.transcript,
