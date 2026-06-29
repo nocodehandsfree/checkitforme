@@ -7,6 +7,16 @@
 
 ---
 
+## Style rules (apply to every line)
+
+- **No em-dashes (`—`).** Use a period. Let each thought stand. (It's an AI tell and it fights the cadence.)
+- **Fewest words** that still carry the meaning.
+- **One thought per line.** Short first beat.
+- **Friend voice**, culture-aware slang in ES.
+- **Color / image before words** where it can carry meaning (see the shield).
+
+---
+
 ## ✅ LOCKED — round 1
 
 ### Cross-cutting
@@ -24,7 +34,7 @@
 ### Result
 | What | From | To |
 |---|---|---|
-| Free-check CTA | `Sign up in 30 seconds to check any store, anytime — it's the only way to keep going.` | **`One check left. Sign up — keep hunting.`** · ES **`Te queda una verificación. Regístrate y sigue cazando.`** |
+| Free-check CTA (under "That was your free check 🎯") | `Sign up in 30 seconds to check any store, anytime — it's the only way to keep going.` | **`Sign up free. Keep hunting.`** · ES **`Regístrate gratis. Sigue cazando.`** |
 
 ---
 
