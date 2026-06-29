@@ -80,6 +80,23 @@ async function ownerOnlyRetailerIds(): Promise<Set<number>> {
   const rows = await db.select({ id: retailers.id }).from(retailers).where(eq(retailers.ownerOnly, true));
   return new Set(rows.map((r) => r.id));
 }
+// retailerId -> learned time-to-human (the chain's LOCKED nav recipe seconds): how long we spend in the
+// phone tree / on hold before a person picks up. Subtracting this from a call's connected time yields
+// the REAL human-talk time (the old code subtracted the IVR's first-words timestamp ~2s, so "talk" was
+// the whole call). null when the chain has no locked recipe → caller falls back to the per-call nav.
+async function retailerTimeToHuman(): Promise<Map<number, number>> {
+  const [rets, chRows] = await Promise.all([
+    db.select({ id: retailers.id, chainId: retailers.chainId }).from(retailers),
+    db.select({ id: chains.id, navSeconds: chains.navSeconds, navStatus: chains.navStatus }).from(chains),
+  ]);
+  const ch = new Map(chRows.map((c) => [c.id, c]));
+  const m = new Map<number, number>();
+  for (const r of rets) {
+    const c = r.chainId != null ? ch.get(r.chainId) : null;
+    if (c && c.navStatus === "locked" && c.navSeconds != null) m.set(r.id, c.navSeconds);
+  }
+  return m;
+}
 import { getAccount, getAccountByPhone, phoneAccountExists, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, SUB, PACKS } from "./billing";
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
 import { brevoUpsertContact } from "./brevo";
@@ -2583,10 +2600,14 @@ app.get("/api/admin/pulse", async (c) => {
   const flagged = await staffAccountIds();
   const real = calls.filter((r) => !ownerOnly.has(r.retailerId) && r.finderUserId !== masterUid && !(r.finderUserId && flagged.has(r.finderUserId)) && r.status !== "admin_hangup");
   const completed = real.filter((r) => r.status === "completed");
-  // Avg talk time = seconds with a human on the line (callSeconds − navSeconds) over reached real calls.
+  // Real human-talk = connected seconds MINUS the learned time-to-human (chain recipe), counted ONLY for
+  // calls that actually reached a person. Never-reached IVR calls have zero human-talk. (The old code
+  // subtracted ~2s — the IVR's first words — over every call, so "talk" was really the whole call.)
+  const tthMap = await retailerTimeToHuman();
   const timed = real.filter((r) => r.callSeconds != null);
-  const reachedT = timed.filter((r) => r.navSeconds != null);
-  const avgTalkSec = reachedT.length ? Math.round(reachedT.reduce((s, r) => s + ((r.callSeconds || 0) - (r.navSeconds || 0)), 0) / reachedT.length) : 0;
+  const reachedT = timed.filter((r) => classifyCallReality(r.transcript) !== "never_reached");
+  const talkOf = (r: (typeof reachedT)[number]) => Math.max(0, (r.callSeconds || 0) - (tthMap.get(r.retailerId) ?? r.navSeconds ?? 0));
+  const avgTalkSec = reachedT.length ? Math.round(reachedT.reduce((s, r) => s + talkOf(r), 0) / reachedT.length) : 0;
   const avgCallSec = timed.length ? Math.round(timed.reduce((s, r) => s + (r.callSeconds || 0), 0) / timed.length) : 0;
   return c.json({
     funnel: {
@@ -2602,7 +2623,7 @@ app.get("/api/admin/pulse", async (c) => {
       checks7d: since(d7, (r) => r.startedAt, completed),
       confirms: completed.filter((r) => r.confirmed === true).length,
       callsBilled: accts.reduce((s, a) => s + (a.callsMade || 0), 0),
-      avgTalkSec, avgCallSec, callsTimed: timed.length,
+      avgTalkSec, avgCallSec, callsTimed: timed.length, callsReached: reachedT.length,
     },
     community: {
       watches: watchRows.filter((w) => w.active !== false).length,
@@ -3027,54 +3048,66 @@ app.get("/api/admin/data-health", async (c) => {
 // the reply + a list of actions taken. Admin-gated like the rest of /api/*.
 // Call-timing breakdown for the God view: total / time-to-human (nav) / talk, aggregate + per store.
 app.get("/api/admin/call-timing", async (c) => {
-  const funIds = [...(await ownerOnlyRetailerIds())]; // owner-only "Fun" store excluded from timings
-  const notFun = funIds.length ? notInArray(callResults.retailerId, funIds) : undefined;
-  const hasT = and(sql`${callResults.callSeconds} is not null`, sql`coalesce(${callResults.status},'') != 'admin_hangup'`, notFun);
-  // "Talk with a human" only counts calls where a person actually engaged — a verdict where someone
-  // spoke — so ring / voicemail / IVR-only calls don't get charged a fake "talk" time.
-  const engaged = sql`coalesce(${callResults.statusKey}, ${callResults.status}) in ('in_stock','not_in_stock','no_clear_answer','sold_out','does_not_sell','too_busy')`;
-  const reachedW = and(hasT, sql`${callResults.navSeconds} is not null`, engaged);
-  const agg = (await db.select({ n: sql<number>`count(*)`, avgCall: sql<number>`avg(${callResults.callSeconds})`, totalSec: sql<number>`coalesce(sum(${callResults.callSeconds}),0)` }).from(callResults).where(hasT))[0];
-  const reached = (await db.select({ n: sql<number>`count(*)`, avgNav: sql<number>`avg(${callResults.navSeconds})`, avgTalk: sql<number>`avg(${callResults.callSeconds} - ${callResults.navSeconds})` }).from(callResults).where(reachedW))[0];
-  const byStore = await db.select({ rid: callResults.retailerId, n: sql<number>`count(*)`, avgCall: sql<number>`avg(${callResults.callSeconds})`, avgNav: sql<number>`avg(${callResults.navSeconds})`, avgTalk: sql<number>`avg(${callResults.callSeconds} - ${callResults.navSeconds})`, totalSec: sql<number>`coalesce(sum(${callResults.callSeconds}),0)` }).from(callResults).where(hasT).groupBy(callResults.retailerId).orderBy(desc(sql`count(*)`)).limit(12);
-  const ids = byStore.map((r) => r.rid).filter((x): x is number => x != null);
-  const names = ids.length ? new Map((await db.select({ id: retailers.id, name: retailers.name }).from(retailers).where(inArray(retailers.id, ids))).map((r) => [r.id, r.name])) : new Map();
+  const ownerOnly = await ownerOnlyRetailerIds(); // owner-only "Fun"/MVP store excluded from timings
+  const stores = await retailerMap();
+  const chRows = await db.select({ id: chains.id, navType: chains.navType, navSeconds: chains.navSeconds, navStatus: chains.navStatus }).from(chains);
+  const chainById = new Map(chRows.map((c) => [c.id, c]));
+  const chainOf = (rid: number) => { const r = stores.get(rid); return r && r.chainId != null ? chainById.get(r.chainId) : null; };
+  // time-to-human = the chain's LOCKED nav recipe (phone-tree + hold before a person). REAL talk =
+  // callSeconds − this, counted only for calls that reached a person. Falls back to per-call nav.
+  const tthOf = (rid: number) => { const ch = chainOf(rid); return (ch && ch.navStatus === "locked" && ch.navSeconds != null) ? ch.navSeconds : null; };
+  const all = await db.select().from(callResults);
+  const rows = all.filter((r) => r.callSeconds != null && r.status !== "admin_hangup" && !ownerOnly.has(r.retailerId));
+  // Reached a human (transcript-classified) — ring / voicemail / IVR-only calls have NO human-talk.
+  const reachedIds = new Set(rows.filter((r) => classifyCallReality(r.transcript) !== "never_reached").map((r) => r.id));
+  const reached = rows.filter((r) => reachedIds.has(r.id));
   const r0 = (n: unknown) => Math.round(Number(n || 0));
-  // By MODEL — Charlie (direct), Alpha (tone/keypad tree), Bravo (voice tree) — grouped by the chain's nav
-  // type. Sums (not avgs) so several nav-type buckets can merge into one model before averaging.
-  const byModelRaw = await db.select({
-    navType: chains.navType, n: sql<number>`count(*)`,
-    sumCall: sql<number>`coalesce(sum(${callResults.callSeconds}),0)`,
-    sumNav: sql<number>`coalesce(sum(${callResults.navSeconds}),0)`,
-    sumTalk: sql<number>`coalesce(sum(${callResults.callSeconds} - ${callResults.navSeconds}),0)`,
-  }).from(callResults)
-    .innerJoin(retailers, eq(callResults.retailerId, retailers.id))
-    .leftJoin(chains, eq(retailers.chainId, chains.id))
-    .where(reachedW).groupBy(chains.navType);
-  const modelOf = (nt: string | null) => nt === "direct" ? "Charlie" : nt === "keypad" ? "Alpha" : nt === "voice" ? "Bravo" : "Unknown";
-  const typeOf = (m: string) => m === "Charlie" ? "direct" : m === "Alpha" ? "tone tree" : m === "Bravo" ? "voice tree" : "unmapped";
-  const mAgg = new Map<string, { n: number; sumCall: number; sumNav: number; sumTalk: number }>();
-  for (const r of byModelRaw) {
-    const m = modelOf(r.navType);
-    const cur = mAgg.get(m) ?? { n: 0, sumCall: 0, sumNav: 0, sumTalk: 0 };
-    cur.n += Number(r.n); cur.sumCall += Number(r.sumCall); cur.sumNav += Number(r.sumNav); cur.sumTalk += Number(r.sumTalk);
+  const avg = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0);
+  const navOf = (r: (typeof rows)[number]) => tthOf(r.retailerId) ?? r.navSeconds ?? 0;
+  const talkOf = (r: (typeof rows)[number]) => Math.max(0, (r.callSeconds || 0) - navOf(r));
+  const aggregate = {
+    calls: rows.length, reached: reached.length,
+    avgCallSec: r0(avg(rows.map((r) => r.callSeconds || 0))),
+    avgNavSec: r0(avg(reached.map((r) => navOf(r)))),
+    avgTalkSec: r0(avg(reached.map((r) => talkOf(r)))),
+    totalMinutes: r0(rows.reduce((s, r) => s + (r.callSeconds || 0), 0) / 60),
+  };
+  // By MODEL — Charlie (direct), Alpha (keypad tree), Bravo (voice tree) — by the chain's nav type, over reached calls.
+  const modelOf = (nt: string | null | undefined) => (nt === "direct" ? "Charlie" : nt === "keypad" ? "Alpha" : nt === "voice" ? "Bravo" : "Unknown");
+  const typeOf = (m: string) => (m === "Charlie" ? "direct" : m === "Alpha" ? "tone tree" : m === "Bravo" ? "voice tree" : "unmapped");
+  const mAgg = new Map<string, { call: number[]; nav: number[]; talk: number[] }>();
+  for (const r of reached) {
+    const m = modelOf(chainOf(r.retailerId)?.navType);
+    const cur = mAgg.get(m) ?? { call: [], nav: [], talk: [] };
+    cur.call.push(r.callSeconds || 0); cur.nav.push(navOf(r)); cur.talk.push(talkOf(r));
     mAgg.set(m, cur);
   }
   const byModel = ["Charlie", "Alpha", "Bravo", "Unknown"].filter((m) => mAgg.has(m)).map((m) => {
-    const v = mAgg.get(m)!; return { model: m, type: typeOf(m), n: v.n, avgCallSec: r0(v.sumCall / v.n), avgNavSec: r0(v.sumNav / v.n), avgTalkSec: r0(v.sumTalk / v.n) };
+    const v = mAgg.get(m)!; return { model: m, type: typeOf(m), n: v.call.length, avgCallSec: r0(avg(v.call)), avgNavSec: r0(avg(v.nav)), avgTalkSec: r0(avg(v.talk)) };
   });
-  // Talk time per verdict (statusKey → falls back to status), so e.g. confirms can be compared to no-answers.
-  const byStatus = (await db.select({
-    key: sql<string>`coalesce(${callResults.statusKey}, ${callResults.status})`, n: sql<number>`count(*)`,
-    sumTalk: sql<number>`coalesce(sum(${callResults.callSeconds} - ${callResults.navSeconds}),0)`,
-    sumCall: sql<number>`coalesce(sum(${callResults.callSeconds}),0)`,
-  }).from(callResults).where(reachedW).groupBy(sql`coalesce(${callResults.statusKey}, ${callResults.status})`).orderBy(desc(sql`count(*)`)))
-    .map((r) => ({ key: String(r.key || "unknown"), n: Number(r.n), avgTalkSec: r0(Number(r.sumTalk) / Number(r.n)), avgCallSec: r0(Number(r.sumCall) / Number(r.n)) }));
-  return c.json({
-    aggregate: { calls: r0(agg?.n), reached: r0(reached?.n), avgCallSec: r0(agg?.avgCall), avgNavSec: r0(reached?.avgNav), avgTalkSec: r0(reached?.avgTalk), totalMinutes: r0(Number(agg?.totalSec || 0) / 60) },
-    byModel, byStatus,
-    byStore: byStore.map((r) => ({ name: (r.rid != null && names.get(r.rid)) || `#${r.rid}`, n: r0(r.n), avgCallSec: r0(r.avgCall), avgNavSec: r0(r.avgNav), avgTalkSec: r0(r.avgTalk), totalMin: r0(Number(r.totalSec || 0) / 60) })),
-  });
+  // Talk per verdict (statusKey → status), over reached calls.
+  const sAgg = new Map<string, { call: number[]; talk: number[] }>();
+  for (const r of reached) {
+    const k = String(r.statusKey ?? r.status ?? "unknown");
+    const cur = sAgg.get(k) ?? { call: [], talk: [] };
+    cur.call.push(r.callSeconds || 0); cur.talk.push(talkOf(r));
+    sAgg.set(k, cur);
+  }
+  const byStatus = [...sAgg.entries()].map(([key, v]) => ({ key, n: v.call.length, avgTalkSec: r0(avg(v.talk)), avgCallSec: r0(avg(v.call)) })).sort((a, b) => b.n - a.n);
+  // Per store: connected time over ALL its timed calls (cost), but talk/nav only over the ones that reached a human.
+  const stAgg = new Map<number, { call: number[]; navR: number[]; talkR: number[] }>();
+  for (const r of rows) {
+    const cur = stAgg.get(r.retailerId) ?? { call: [], navR: [], talkR: [] };
+    cur.call.push(r.callSeconds || 0);
+    if (reachedIds.has(r.id)) { cur.navR.push(navOf(r)); cur.talkR.push(talkOf(r)); }
+    stAgg.set(r.retailerId, cur);
+  }
+  const byStore = [...stAgg.entries()].map(([rid, v]) => ({
+    name: stores.get(rid)?.name?.split("—")[0].trim() || `#${rid}`, n: v.call.length,
+    avgCallSec: r0(avg(v.call)), avgNavSec: r0(avg(v.navR)), avgTalkSec: r0(avg(v.talkR)),
+    totalMin: r0(v.call.reduce((s, x) => s + x, 0) / 60),
+  })).sort((a, b) => b.n - a.n).slice(0, 12);
+  return c.json({ aggregate, byModel, byStatus, byStore });
 });
 // ---- Phone Tree Lab: discover + document + verify the route-to-a-human per brand ----
 // Place a normal call to one open, callable store of a chain; its transcript feeds the tree learner in ingest.
