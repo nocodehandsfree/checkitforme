@@ -25,6 +25,17 @@ worse than no comment. Several entries below started as wrong comments.)
   until `in-progress`.
 - **Dead air makes clerks hang up.** Use eager turn-taking + a soft-timeout filler so a slow turn says "I'm here!"
   instead of going silent.
+- **ABC / connect-on-human is a DB setting, not code — and a DB wipe silently turns it OFF.** `policy.flags.
+  connectOnHuman` (the cost lever — keep ElevenLabs/Charlie asleep through the tree+hold, wake only on the human)
+  defaults to `false` in code (`policy.ts`); the live value lives in the `policy_json` DB setting. The 2026-06 prod
+  wipe reset it to the code default → Charlie silently billed the **whole** call again (real data: avg 64s = 46s nav
+  **billed** + 28s talk). Same for `bail.enabled`. **Check `GET /api/policy` after ANY DB restore**; expected prod =
+  `connectOnHuman:true, bail.enabled:true`. The calculator's "Hybrid $0.07/min · running today" line is the benchmark
+  this must match.
+- **Mapping's learned time-to-human (`chains.avgTreeSeconds`) is NOT yet wired into live calls.** `buildRestockVars`
+  returns `dtmf/say/maxTalk` but not the timer, so ABC opens via a VAD **guess**, not the exact mapped second. Wiring
+  `connectAtSec = avgTreeSeconds` through `buildRestockVars`→`placeBridgeCall` makes voice-tree chains (CVS) open
+  deterministically. Until then, mapping the time-to-human doesn't pay off on the call itself.
 
 ## Frontend (checkit.html)
 - **iOS Safari only applies `<meta theme-color>` at PAGE LOAD** — a later JS change is ignored. The status-bar
