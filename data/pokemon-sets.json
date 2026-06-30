@@ -1,0 +1,43 @@
+{
+  "_note": "Pokémon TCG set reference for Check's series→set picker. era = top picker level, set = second level. Standalone catalog (NOT synced with DropsDB). Sourced 2026-06-30 from pokemon.com, CardCodex, Bulbapedia + the owner's drops_db.json. inDropsDb = already present in data/drops_db.json.",
+  "v": 1,
+  "category": "Pokémon TCG",
+  "eras": [
+    {
+      "era": "Scarlet & Violet",
+      "code": "SV",
+      "years": "2023–2025",
+      "sets": [
+        { "code": "SV01",   "name": "Scarlet & Violet",        "release": "2023-03-31", "kind": "main",    "inDropsDb": false },
+        { "code": "SV02",   "name": "Paldea Evolved",          "release": "2023-06-09", "kind": "main",    "inDropsDb": false },
+        { "code": "SV03",   "name": "Obsidian Flames",         "release": "2023-08-11", "kind": "main",    "inDropsDb": false },
+        { "code": "SV03.5", "name": "151",                     "release": "2023-09-22", "kind": "special", "inDropsDb": false },
+        { "code": "SV04",   "name": "Paradox Rift",            "release": "2023-11-03", "kind": "main",    "inDropsDb": false },
+        { "code": "SV04.5", "name": "Paldean Fates",           "release": "2024-01-26", "kind": "special", "inDropsDb": false },
+        { "code": "SV05",   "name": "Temporal Forces",         "release": "2024-03-22", "kind": "main",    "inDropsDb": false },
+        { "code": "SV06",   "name": "Twilight Masquerade",     "release": "2024-05-24", "kind": "main",    "inDropsDb": false },
+        { "code": "SV06.5", "name": "Shrouded Fable",          "release": "2024-08-02", "kind": "special", "inDropsDb": false },
+        { "code": "SV07",   "name": "Stellar Crown",           "release": "2024-09-13", "kind": "main",    "inDropsDb": true },
+        { "code": "SV08",   "name": "Surging Sparks",          "release": "2024-11-08", "kind": "main",    "inDropsDb": true },
+        { "code": "SV08.5", "name": "Prismatic Evolutions",    "release": "2025-01-17", "kind": "special", "inDropsDb": true },
+        { "code": "SV09",   "name": "Journey Together",        "release": "2025-03-28", "kind": "main",    "inDropsDb": true },
+        { "code": "SV10",   "name": "Destined Rivals",         "release": "2025-05-30", "kind": "main",    "inDropsDb": false },
+        { "code": "SV-BWF", "name": "Black Bolt & White Flare","release": "2025-06-06", "kind": "special", "inDropsDb": true }
+      ]
+    },
+    {
+      "era": "Mega Evolution",
+      "code": "ME",
+      "years": "2025–2026",
+      "sets": [
+        { "code": "ME01", "name": "Mega Evolution",            "release": "2025-09-26", "kind": "main",    "inDropsDb": true },
+        { "code": "ME02", "name": "Phantasmal Flames",         "release": "2025-11-14", "kind": "main",    "inDropsDb": true },
+        { "code": "ME03", "name": "Perfect Order",             "release": "2026-03-13", "kind": "main",    "inDropsDb": true },
+        { "code": "ME04", "name": "Chaos Rising",              "release": "2026-05-22", "kind": "main",    "inDropsDb": true },
+        { "code": "ME05", "name": "Pitch Black",               "release": "2026-07-17", "kind": "main",    "inDropsDb": true },
+        { "code": "ME06", "name": "Delta Reign",               "release": "2026-11-06", "kind": "main",    "inDropsDb": false },
+        { "code": "ME-FP", "name": "First Partner Collection 2026", "release": "2026", "kind": "special",  "inDropsDb": false }
+      ]
+    }
+  ]
+}
