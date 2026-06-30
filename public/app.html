@@ -1655,7 +1655,9 @@ function statusBadge(r){
 // bulk-loads /pub/stores or /logo-wall. One tile, pixel-identical to checkit.html's `.ic`:
 //   logoUrl present → <img loading=lazy decoding=async>, honoring logoWide / logoDark
 //   logoUrl absent  → the shared storeWordmark text fallback (NOT a 2-letter monogram)
-function splitName(n){ const i=(n||'').search(/[—–]| - /); if(i<0) return {base:(n||'').trim(),branch:''}; return {base:n.slice(0,i).trim(),branch:n.slice(i).replace(/^[—–\-\s]+/,'').trim()}; }
+// Store names follow the no-dash naming scheme, so there's no "Name — Branch" to split — show the
+// name whole. (Removes the last em-dash in the file; the old dash-split was dead logic.)
+function splitName(n){ return {base:(n||'').trim(),branch:''}; }
 function logoTile(o){
   o=o||{};
   if(o.logoUrl) return `<div class="slogo${o.logoDark?' lite':''}${o.logoWide?' widelogo':''}"><img loading="lazy" decoding="async" src="${esch(o.logoUrl)}" alt=""></div>`;
