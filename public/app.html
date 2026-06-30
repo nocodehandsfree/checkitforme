@@ -554,7 +554,7 @@
       <div id="credit_body" class="meta">Loading…</div>
       <div id="credit_stats" class="meta" style="margin-top:6px"></div>
       <div id="credit_limit_wrap" style="display:none;margin-top:12px">
-        <div class="hint" style="margin-bottom:8px">Estimate from the last 31 days <span data-tip="Enable user_read on the ElevenLabs API key for a live, auto-updating balance.">ⓘ</span>. Enter your plan size below until live balance is on.</div>
+        <div class="hint" style="margin-bottom:8px">Estimate from the last 31 days <span data-tip="Enable user_read on the ElevenLabs API key for a live, auto-updating balance."></span>. Enter your plan size below until live balance is on.</div>
         <div class="row" style="gap:8px">
           <input id="credit_limit" type="number" placeholder="Plan size — e.g. 100000" style="flex:1">
           <button class="ghost" onclick="saveCreditLimit()">Save</button>
@@ -670,7 +670,7 @@
       <div style="margin-top:12px"><button class="act" onclick="addRetailer()">Add store</button></div>
     </div>
     <details class="card">
-      <summary><span class="name">Bulk import</span> <span class="meta" data-tip="Paste store JSON — upserts by phone; region + timezone come from state. active:false soft-removes.">ⓘ</span></summary>
+      <summary><span class="name">Bulk import</span> <span class="meta" data-tip="Paste store JSON — upserts by phone; region + timezone come from state. active:false soft-removes."></span></summary>
       <textarea id="gw_import" spellcheck="false" placeholder='[{"name":"Target — Sunset","phone":"+13105551212","address":"...","state":"CA","chain":"Target","carries":"Pokémon"}]' style="width:100%;min-height:150px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box;margin-top:10px"></textarea>
       <div id="gw_import_msg" class="meta" style="margin:8px 0;min-height:16px"></div>
       <div><button class="act" onclick="importStoresJson()">Import stores</button> <button class="ghost" onclick="backfillRegions()">Backfill regions</button></div>
@@ -785,7 +785,7 @@
       <select id="set_default_wf" style="margin-top:10px" onchange="saveDefaultWorkflow()"><option value="">Loading…</option></select>
     </div>
     <details class="card">
-      <summary><span class="name">Advanced policy (raw JSON)</span> <span class="meta" data-tip="Dev escape-hatch for policy fields with no UI yet. Edits here merge over the defaults.">ⓘ</span></summary>
+      <summary><span class="name">Advanced policy (raw JSON)</span> <span class="meta" data-tip="Dev escape-hatch for policy fields with no UI yet. Edits here merge over the defaults."></span></summary>
       <textarea id="gw_json" spellcheck="false" style="width:100%;min-height:220px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box;margin-top:10px"></textarea>
       <div style="margin-top:10px"><button class="act" onclick="savePolicyJson()">Save JSON</button> <button class="ghost" onclick="loadAdvancedPolicy()">Reload</button></div>
     </details>
@@ -1094,6 +1094,7 @@ document.addEventListener('click',e=>{
   const ex=document.getElementById('tiptip'); if(ex) ex.remove();
   const t=e.target.closest('[data-tip]');
   if(!t || t===_tipFor){ _tipFor=null; return; }
+  if(t.closest('label')) e.preventDefault(); // tapping a hint inside a label must NOT toggle its checkbox
   _tipFor=t;
   const tip=document.createElement('div'); tip.id='tiptip'; tip.textContent=t.getAttribute('data-tip');
   document.body.appendChild(tip);
@@ -1121,6 +1122,7 @@ const NAV_GROUPS={
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
 const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
+let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
   nav.innerHTML=Object.entries(NAV_GROUPS).map(([g,o])=>
@@ -1141,10 +1143,20 @@ function showSection(id, fromGroup){
   document.querySelectorAll('section').forEach(s=>s.classList.toggle('active',s.id===id));
   document.querySelectorAll('#subnav2 button').forEach(b=>b.classList.toggle('active',b.dataset.sec===id));
   localStorage.setItem('active_tab', id);
+  // Record this view in browser history so Back/Forward walks the admin's tabs instead of escaping to
+  // wherever you came from (Google). First view replaces the entry; later views push.
+  if(!NAV_RESTORING){ try{ const st={tab:id};
+    if(!NAV_BOOTED){ history.replaceState(st,'','#'+id); NAV_BOOTED=true; }
+    else if((history.state&&history.state.tab)!==id){ history.pushState(st,'','#'+id); }
+  }catch(_){} }
   if(TAB_LOADERS[id]) TAB_LOADERS[id]();
   setTimeout(decorateChrome,150); setTimeout(decorateChrome,600); // strip emoji from freshly-rendered content too
   try{ window.scrollTo({top:0}); }catch(_){}
 }
+window.addEventListener('popstate', (e)=>{
+  const id=e.state&&e.state.tab; if(!id||!SECTION_GROUP[id]) return;
+  NAV_RESTORING=true; try{ showSection(id); } finally { NAV_RESTORING=false; }
+});
 
 // ---- Receipts: shoppers email a receipt → parsed into kiosk_receipts → a free check. "Claimed"
 //      means the reward was granted to that device/account. Server: /api/kiosk-receipts, flow in
@@ -1446,7 +1458,7 @@ function calcShell(){
     <div class="row" style="gap:12px">
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Revenue / call</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:10px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:20px;font-weight:700;padding:10px 2px;width:84px"></span></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Margin</span><div id="calc_margin" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0%</div></div>
-      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">× return <span data-tip="Revenue ÷ cost — how many times the call pays for itself.">ⓘ</span></span><div id="calc_return" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0×</div></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">× return <span data-tip="Revenue ÷ cost — how many times the call pays for itself."></span></span><div id="calc_return" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0×</div></div>
     </div>
     <div id="calc_sentence" style="margin-top:14px;font-size:13.5px;color:var(--text-muted);line-height:1.5"></div>
   </div>`;
@@ -3408,7 +3420,7 @@ async function loadGrowth(){
   const f=POL.flags||{};
   document.getElementById('gw_flags').innerHTML=Object.keys(FLAG_LABELS).map(k=>{
     const on=f[k]!==false&&f[k]!==undefined?f[k]:!!f[k];
-    const tip=k==='dogfoodHours'?'Leave OFF until you say go':(k==='connectOnHuman'?'Bench-test before going live — untested on real calls':'');
+    const tip=k==='dogfoodHours'?'Leave OFF until you say go':(k==='connectOnHuman'?'Cost saver: Twilio handles the phone tree + hold for free, and the paid voice agent only opens once a human actually picks up.':'');
     return `<label style="display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;color:var(--text)">
       <input type="checkbox" ${f[k]?'checked':''} onchange="toggleFlag('${k}',this.checked)">
       <span${tip?` data-tip="${tip}"`:''}>${FLAG_LABELS[k]}</span></label>`;
@@ -3429,7 +3441,7 @@ async function loadGrowth(){
     fld('gw_ga4','GA4 measurement id',POL.ga4Id||'');
   // Volume top-up tiers — set in the checkout build (Stripe), surfaced read-only so they're not edited via raw JSON.
   const packs=(POL.catalog||{}).packs||{};
-  if(Object.keys(packs).length) document.getElementById('gw_pricing').innerHTML += `<div class="meta" style="grid-column:1/-1;margin-top:2px"><b style="color:#c7c7d2">Volume tiers</b> <span data-tip="Top-up packs — set in the checkout build (Stripe), read-only here.">ⓘ</span><div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${Object.values(packs).map(pk=>`<span style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:#dcdce6">${pk.credits} checks · $${(pk.cents/100).toFixed(0)}</span>`).join('')}</div></div>`;
+  if(Object.keys(packs).length) document.getElementById('gw_pricing').innerHTML += `<div class="meta" style="grid-column:1/-1;margin-top:2px"><b style="color:#c7c7d2">Volume tiers</b> <span data-tip="Top-up packs — set in the checkout build (Stripe), read-only here."></span><div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${Object.values(packs).map(pk=>`<span style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:#dcdce6">${pk.credits} checks · $${(pk.cents/100).toFixed(0)}</span>`).join('')}</div></div>`;
   loadGwPulse(); loadGwIntel(); loadGwKiosks(); loadGwWatches(); loadGwCommunity(); loadGwWaitlist(); loadGwStoreReqs();
 }
 async function loadGwPulse(){
