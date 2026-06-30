@@ -25,7 +25,7 @@
 ### C. Naming
 | Now | Use | Why |
 |---|---|---|
-| `Clerk` (visible label, ~line 1687) | **`Store`** | "Clerk" is retired |
+| `Clerk` (visible label, ~line 1687) | **`Staff`** | "Clerk" is retired; we display "Staff" in the convo flow |
 | `the clerk` (test-call toast) | **`you work there`** | see toast below |
 | `the agent` (the AI caller) | **`the caller`** | plainer; "agent" is overloaded |
 | `Claude` (empty states, e.g. Zones) | **`the Admin dev agent`** | that's the in-app name |

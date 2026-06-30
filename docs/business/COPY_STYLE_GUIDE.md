@@ -40,7 +40,7 @@ Jargon with no plain gloss: IVR · DTMF · E.164 · COGS · MRR.
 | The product | **Check It For Me** | Fungibles · Runnr · Runner |
 | The customer's currency | a **check** | a "call" (see below) |
 | The AI that phones stores | **Fungie** | — |
-| The person who answers at the store | **Store** | Clerk |
+| The person who answers at the store | **Staff** | Clerk · Store |
 | Footer / credit | (nothing) | "Powered by Fungibles" |
 
 ## check vs call — the unit rule
