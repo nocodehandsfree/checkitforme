@@ -179,6 +179,51 @@ The currency is a **check**. The phone thing is a **call**. Fix where the *unit*
 
 ---
 
+## 📞 Call verdicts (status messages)
+
+**A) 4 code lines — wire in `checkit.html`** (`in_stock` + `not_in_stock` live in code, not Admin):
+
+| key | Title | Line 1 (short) | Line 2 |
+|---|---|---|---|
+| `in_stock` | In stock! | `{store} has {product} in.` *(no product → `{store} has {category} in.`)* | `Go grab it before it's gone.` |
+| `not_in_stock` | Not in stock | `{store} doesn't have {category} in.` | `Worth a check back in a day or two.` |
+| `restock` | Restock incoming | `A shipment lands {day}.` | `Be first when it drops.` |
+| `no_clear_answer` | Couldn't tell | `We couldn't quite make out the answer.` | `Read the convo and tell us what you think.` |
+
+ES: `¡En stock!` `{store} tiene {product}.` / `Ve por ello antes de que se agote.` · `No está en stock` `{store} no tiene {category} ahora.` / `Vuelve a checar en un día o dos.` · `¡Reabastecimiento en camino!` `Llega un envío {day}.` / `Sé el primero cuando caiga.` · `No supimos decir` `No pudimos entender bien la respuesta.` / `Lee la conversación y dinos qué opinas.`
+
+**B) 11 statuses — paste into Admin → Statuses** (Title / L1 / L2):
+- `sold_out` — Sold out / `{store} is sold out of {product}.` / `Worth catching the next drop.`
+- `does_not_sell` — They don't carry it / `{store} doesn't sell {product}.` / `Try another store.`
+- `nobody_answered` — Nobody answered / `No one picked up.` / `Try back a little later.`
+- `too_busy` 🆕 — Too busy to check / `They were slammed.` / `Try back in a bit.` *(needs caller detection — DevOps)*
+- `voicemail` — Got their voicemail / `We hit a recording, not a person.` / `Try again later.`
+- `busy` — Line was busy / `Their line was busy.` / `Try again in a few.`
+- `ivr_stuck` — Couldn't get past the menu / `We got stuck in their phone menu.` / `Try again.`
+- `language_barrier` — Couldn't understand each other / `We got someone on the line.` / `We couldn't understand each other.`
+- `bad_number` — Wrong number / `That number didn't connect.` / `We'll get it fixed.`
+- `closed` — Store's closed / `{store} is closed right now.` / `Try when they're open.`
+- `failed` — Something broke / `Something went wrong on our end.` / `Try again.`
+
+*(The "no charge" reassurance is the green shield, not words — see Design.)*
+
+**Restock section under `not_in_stock`:** Premium → `We'll text you the second it's back in stock.` · Non-premium → `They restock often. Pop back in a day or two.`
+
+**Timing:** token statuses (`{store}`/`{product}`) only render on the new code. Push status-DB changes **with** the code promotion, not before.
+
+---
+
+## 🌐 Spanish gaps (wrap in `t()` + add `es`)
+
+The `es` map is thorough; these strings just bypass it. Score modal already fixed by dev — verify the rest:
+- **Auth modal:** `Continue →` / `Verify →` / `Check your phone` (also reset in JS — must use `t()` there too). Errors: `err.phone`, `err.code`, `auth.resent` already have keys — just call them.
+- **Placeholders:** store-request (`e.g. Target — Thousand Oaks` etc.), schedule `Enter number`, kiosk (`e.g. Albertsons…` / `e.g. sometimes skips the :03 drop`).
+- **Toasts (keys already exist — just use them):** `toast.payment`, `toast.maploading`, `toast.callstart.fail`.
+- **Raw:** `Store is closed — no call placed`, `Community is coming soon`, search `stores within {n} mi`.
+- ES strings for the new ones: ask Copy (short list).
+
+---
+
 ## Notes
 - Every reworded EN line ships with its ES twin (above).
 - "No answer = no charge" is the spine — 4 beats, parallel. Everything else tunes to that cadence.

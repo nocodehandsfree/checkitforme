@@ -78,7 +78,6 @@ Hand-write the fixed UI lines (keeps the voice + the tokens). Machine-translate 
 ---
 
 ## Go deeper
-- Per-screen copy: `docs/design/COPY_DECK_WEBSITE.md` · `COPY_DECK_ADMIN.md`
-- Live approved changes: `docs/design/COPY_CHANGES_APPROVED.md`
-- Call verdicts: `docs/design/COPY_STATUS_MESSAGES.md`
+- Everything to ship (consumer site): `docs/design/COPY_CHANGES_APPROVED.md`
+- Admin app copy: `docs/design/COPY_DECK_ADMIN.md`
 - Brand mark: `docs/business/BRAND.md`
