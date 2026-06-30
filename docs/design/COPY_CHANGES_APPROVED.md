@@ -181,35 +181,49 @@ The currency is a **check**. The phone thing is a **call**. Fix where the *unit*
 
 ## 📞 Call verdicts (status messages)
 
-**A) 4 code lines — wire in `checkit.html`** (`in_stock` + `not_in_stock` live in code, not Admin):
+**THE FINAL SET — single source of truth.** DevOps keeps the registry matched to this. Tokens `{store}` `{product}` `{category}` `{day}` render live and bold. No em-dashes. One short note line each.
 
-| key | Title | Line 1 (short) | Line 2 |
-|---|---|---|---|
-| `in_stock` | In stock! | `{store} has {product} in.` *(no product → `{store} has {category} in.`)* | `Go grab it before it's gone.` |
-| `not_in_stock` | Not in stock | `{store} doesn't have {category} in.` | `Worth a check back in a day or two.` |
-| `restock` | Restock incoming | `A shipment lands {day}.` | `Be first when it drops.` |
-| `no_clear_answer` | Couldn't tell | `We couldn't quite make out the answer.` | `Read the convo and tell us what you think.` |
+| `key` | Label | Note (EN) |
+|---|---|---|
+| `in_stock` | In stock! | {store} has {product} in. Go grab it. |
+| `not_in_stock` | Not in stock | {store} doesn't have {category} right now. |
+| `sold_out` | Sold out | {store} had it, but it's gone for now. |
+| `does_not_sell` | They don't carry it | {store} doesn't sell {category}. |
+| `no_clear_answer` | Couldn't tell | We couldn't make out a clear answer. |
+| `left_on_hold` | Left on hold | Hold ran long and the call dropped. No charge. |
+| `too_busy` | Too busy to check | {store} was slammed. No charge. |
+| `language_barrier` | Couldn't understand each other | We couldn't communicate. No charge. |
+| `nobody_answered` | Nobody answered | No one picked up. No charge. |
+| `voicemail` | Got their voicemail | Reached a recording, not a person. No charge. |
+| `busy` | Line was busy | Their line was busy. No charge. |
+| `bad_number` | Wrong number | That number didn't connect. No charge. |
+| `closed` | Store's closed | {store} is closed right now. No charge. |
 
-ES: `¡En stock!` `{store} tiene {product}.` / `Ve por ello antes de que se agote.` · `No está en stock` `{store} no tiene {category} ahora.` / `Vuelve a checar en un día o dos.` · `¡Reabastecimiento en camino!` `Llega un envío {day}.` / `Sé el primero cuando caiga.` · `No supimos decir` `No pudimos entender bien la respuesta.` / `Lee la conversación y dinos qué opinas.`
+**Spanish:**
 
-**B) 11 statuses — paste into Admin → Statuses** (Title / L1 / L2):
-- `sold_out` — Sold out / `{store} is sold out of {product}.` / `Worth catching the next drop.`
-- `does_not_sell` — They don't carry it / `{store} doesn't sell {product}.` / `Try another store.`
-- `nobody_answered` — Nobody answered / `No one picked up.` / `Try back a little later.`
-- `too_busy` 🆕 — Too busy to check / `They were slammed.` / `Try back in a bit.` *(needs caller detection — DevOps)*
-- `voicemail` — Got their voicemail / `We hit a recording, not a person.` / `Try again later.`
-- `busy` — Line was busy / `Their line was busy.` / `Try again in a few.`
-- `ivr_stuck` — Couldn't get past the menu / `We got stuck in their phone menu.` / `Try again.`
-- `language_barrier` — Couldn't understand each other / `We got someone on the line.` / `We couldn't understand each other.`
-- `bad_number` — Wrong number / `That number didn't connect.` / `We'll get it fixed.`
-- `closed` — Store's closed / `{store} is closed right now.` / `Try when they're open.`
-- `failed` — Something broke / `Something went wrong on our end.` / `Try again.`
+| `key` | Label (ES) | Note (ES) |
+|---|---|---|
+| `in_stock` | ¡En stock! | {store} tiene {product}. Ve por ello. |
+| `not_in_stock` | No está en stock | {store} no tiene {category} ahora. |
+| `sold_out` | Agotado | {store} lo tuvo, pero ya se acabó. |
+| `does_not_sell` | No lo venden | {store} no vende {category}. |
+| `no_clear_answer` | No supimos decir | No pudimos entender bien la respuesta. |
+| `left_on_hold` | Nos dejaron en espera | La espera se alargó y la llamada se cortó. Sin cargo. |
+| `too_busy` | Muy ocupados para revisar | {store} estaba saturado. Sin cargo. |
+| `language_barrier` | No nos entendimos | No pudimos comunicarnos. Sin cargo. |
+| `nobody_answered` | Nadie contestó | Nadie respondió. Sin cargo. |
+| `voicemail` | Buzón de voz | Salió una grabación, no una persona. Sin cargo. |
+| `busy` | Línea ocupada | La línea estaba ocupada. Sin cargo. |
+| `bad_number` | Número equivocado | Ese número no conectó. Sin cargo. |
+| `closed` | Está cerrado | {store} está cerrado ahora. Sin cargo. |
 
-*(The "no charge" reassurance is the green shield, not words — see Design.)*
+**Rules baked in:**
+- **No charge** is on every status where we didn't get an answer. The 4 real verdicts (in stock / not in / sold out / doesn't carry) don't carry it.
+- `no_clear_answer` stays **factual** — the poll UI carries the "read the convo / weigh in" ask.
+- **`Call failed` is removed** — there's always a verdict/reason.
+- **Restock incoming** (🚚 "soon") is **page-computed**, not a registry row — it fires when a not-in / sold-out call also hears a shipment day. Lives in code, not Admin.
 
 **Restock section under `not_in_stock`:** Premium → `We'll text you the second it's back in stock.` · Non-premium → `They restock often. Pop back in a day or two.`
-
-**Timing:** token statuses (`{store}`/`{product}`) only render on the new code. Push status-DB changes **with** the code promotion, not before.
 
 ---
 
