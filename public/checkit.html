@@ -1306,7 +1306,7 @@ __BRAND_HEAD__
     <h3 style="margin:6px 0 2px;text-align:center" data-i18n="sr.title">Don't see your store?</h3>
     <div class="meta" style="margin-bottom:14px;text-align:center" data-i18n="sr.sub">Tell us which store to add. When it goes live, <b>your next check is free</b>.</div>
     <label class="klbl" data-i18n="sr.name">Store name <span style="color:var(--muted);font-weight:400">(required)</span></label>
-    <input id="sr_name" class="kin" data-i18n-ph="ph.storereq" placeholder="e.g. Target — Thousand Oaks">
+    <input id="sr_name" class="kin" data-i18n-ph="ph.storereq" placeholder="e.g. Target, Thousand Oaks">
     <label class="klbl" data-i18n="sr.city">City &amp; state</label>
     <input id="sr_city" class="kin" data-i18n-ph="ph.storecity" placeholder="Thousand Oaks, CA">
     <label class="klbl" data-i18n="sr.note">Anything else <span style="color:var(--muted);font-weight:400">(optional)</span></label>
@@ -1501,7 +1501,7 @@ __BRAND_HEAD__
     <h3 style="margin:6px 0 2px"><span class="mico" id="kIco"></span><span data-i18n="k.title">Report a kiosk refresh</span></h3>
     <p style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5" data-i18n="k.sub">Spotted a Pokémon kiosk that restocks on a schedule? Drop its timing. Every report earns you <b id="kiosk_reward">a free check</b>.</p>
     <label class="klbl" data-i18n="k.which">Which store &amp; location</label>
-    <input id="k_label" data-i18n-ph="ph.kiosk" placeholder="e.g. Albertsons — Sunset Blvd, LA" class="kin">
+    <input id="k_label" data-i18n-ph="ph.kiosk" placeholder="e.g. Albertsons, Sunset Blvd, LA" class="kin">
     <label class="klbl" data-i18n="k.minutes">Refresh minutes <span style="color:var(--muted);font-weight:400">· when it drops, past each hour</span></label>
     <input id="k_minutes" placeholder="e.g. :03, :33" class="kin">
     <label class="klbl" data-i18n="k.every">Every…</label>
@@ -1677,8 +1677,8 @@ const I18N={ es:{
   // driver / runner teaser
   'dd.tag':'Vista previa · próximamente','dd.title':'Que un local lo recoja','dd.sub':'¿Muy lejos para manejar? Manda a un conductor de Uber/Lyft cercano a comprarlo y enviártelo. Él paga <b>$0 de su bolsillo</b>, tú solo pones el bono.','dd.instock':'En stock','dd.s1':'Define el <b style="color:var(--green)">bono</b> del conductor (ej. $25) sobre su tarifa','dd.s2':'Pide el viaje en <b>Uber</b> o <b>Lyft</b>. Recogida en la tienda','dd.s3':'Envía una tarjeta prepagada (producto + envío) + un mensaje listo','dd.s4':'Él lo compra, lo envía y toca <b>Listo</b> → tu bono se libera al instante','dd.sees':'lo que ve el conductor','dd.pickup':'Tienes una recogida de <span style="color:var(--green)">$25</span> 🏃','dd.applepay':'Agregar tarjeta a Apple Pay (60 seg)','dd.cta':'Quiero acceso anticipado →','dd.noted':'Anotado. Te buscamos para el acceso anticipado 🤝','dd.grab':'recoger en {s} → te lo envían',
   // generic errors / toasts / misc
-  'err.generic':'Algo salió mal. Inténtalo de nuevo.','err.email':'Ingresa un correo válido','err.contact':'Ingresa un correo o teléfono válido.','err.pickstore':'Elige una tienda primero',
-  'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete gratis para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la llamada','toast.callgone':'Esa llamada ya no está disponible','toast.loadingcall':'Cargando tu llamada…','toast.translate.fail':'No se pudo traducir','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Mostrando la lista','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
+  'err.generic':'Algo salió mal. Inténtalo de nuevo.','err.sendcode':'No pudimos enviar un código. Inténtalo de nuevo.','err.verify':'No se pudo verificar. Inténtalo de nuevo.','err.post':'No se pudo publicar. Inténtalo de nuevo.','err.upload':'Falló la subida.','err.photobig':'La foto pesa demasiado. Prueba con una más pequeña.','auth.verifying':'Verificando…','map.list':'Lista','store.closed':'Cerrado','toast.nocall':'. No se hizo la llamada.','auth.welcome':"✓ Ya entraste",'err.email':'Ingresa un correo válido','err.contact':'Ingresa un correo o teléfono válido.','err.pickstore':'Elige una tienda primero',
+  'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete gratis para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la verificación','toast.callgone':'Esa llamada ya no está disponible','toast.loadingcall':'Cargando tu llamada…','toast.translate.fail':'No se pudo traducir','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Mostrando la lista','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
   'find.me':'Encuentra mis tiendas','find.near':'cerca de ti, abiertas ahora',
   'scores.title':'Logros de la caza','scores.post':'Publica el tuyo →','scores.first':'¡Muéstranos el botín!',
   'ho.title':'Pásalo a un conductor','ho.sub':'Él lo compra. Y te lo lleva a tu puerta o te lo envía.','ho.ship':'Envíamelo','ho.home':'Tráelo a mi casa','ho.ship.btn':'📦 Envíamelo','ho.home.btn':'🏠 Tráelo a mi casa',
@@ -1698,7 +1698,7 @@ const I18N={ es:{
   'auth.checkphone':'Revisa tu teléfono','auth.checkemail':'Revisa tu correo','auth.checktexts':'Revisa tus mensajes',
   'err.phone':'Ingresa tu número de celular de EE.UU.','err.code':'Escribe el código de 6 dígitos','auth.resent':'Código reenviado 📲',
   'sc.crew':'Presume con la banda','sc.scored':'¡La conseguiste!','sc.snap':'Toma tu foto. Publícala.','sc.photo':'Tu foto','sc.caption':'Descripción','sc.name':'Tu nombre / usuario','sc.optional':'(opcional)','sc.ph.caption':'¡Saqué un Charizard en el Target de Sunset!','sc.ph.handle':'@tuusuario','sc.post':'Publicar en el muro →','sc.uploading':'Subiendo…','sc.err.big':'La foto pesa demasiado (máx. 12 MB).','sc.err.nophoto':'Agrega una foto primero',
-  'ph.schednum':'Escribe tu número','ph.storereq':'ej. Target. Thousand Oaks','ph.storecity':'ej. Thousand Oaks, CA','ph.storedetails':'dirección, qué productos, etc.','ph.kiosk':'ej. Albertsons. Sunset Blvd, LA','ph.kioskhint':'ej. A veces se salta la reposición de los :03',
+  'ph.schednum':'Escribe tu número','ph.storereq':'ej. Target, Thousand Oaks','ph.storecity':'ej. Thousand Oaks, CA','ph.storedetails':'dirección, qué productos, etc.','ph.kiosk':'ej. Albertsons, Sunset Blvd, LA','ph.kioskhint':'ej. A veces se salta la reposición de los :03',
   'toast.searchmi':'📍 {q}. Tiendas a {n} mi','toast.zoomout':'📍 Aleja el mapa, explora a donde quieras, toca para fijar un punto','toast.community':'La comunidad llega pronto','toast.locupdated':'Actualizado a tu ubicación actual',
   'cs.costs':'cuesta 1 verificación','cs.toggle':'Ver pasos de la llamada',
   'err.storename':'Agrega el nombre de la tienda',
@@ -1873,7 +1873,7 @@ async function boot(){
   initGA();
   buildSwitcher(); applyBrand(); renderIcons(); buildLangSel(); applyLang();
   renderAuth(); renderStores(); renderChips(); renderFooter(); refreshAuth();
-  if(sp.get('paid')){ history.replaceState({},'','/'); toast('🎉 Payment received. Adding your credits…'); setTimeout(refreshAuth,2500); setTimeout(refreshAuth,6000); }
+  if(sp.get('paid')){ history.replaceState({},'','/'); toast(t('toast.payment','🎉 Payment received. Adding your credits…')); setTimeout(refreshAuth,2500); setTimeout(refreshAuth,6000); }
   if(sp.get('call')) restoreCall(sp.get('call'), sp.get('store'), sp.get('cat'));
   else if(sp.get('v')==='history') openHistory();
   else if(sp.get('v')==='success') openSuccess();
@@ -2094,7 +2094,7 @@ async function phoneStart(resend){
   if(!r||r.error){
     const msg = (r&&r.error==='rate_limited') ? ('Too many tries — wait '+(r.retryAfter||60)+'s and try again.')
               : (r&&r.error==='us_number_required') ? 'US mobile numbers only for now.'
-              : 'Could not send a code — try again.';
+              : t('err.sendcode',"Couldn't send a code. Try again.");
     $('auth_err').textContent=msg; return;
   }
   track('auth_code_sent',{flow:'phone'});
@@ -2113,17 +2113,17 @@ async function phoneVerify(){
   const code=($('auth_code').value||'').replace(/\D/g,'');
   if(code.length<4){ $('auth_codeerr').textContent=t('err.code','Enter the 6-digit code'); return; }
   if(!AUTH_PHONE){ authBack(); return; }
-  AUTH.busy=true; const btn=$('auth_verify'); if(btn){ btn.disabled=true; btn.textContent='Verifying…'; } $('auth_codeerr').textContent='';
+  AUTH.busy=true; const btn=$('auth_verify'); if(btn){ btn.disabled=true; btn.textContent=t('auth.verifying','Verifying…'); } $('auth_codeerr').textContent='';
   const r=await api('/auth/phone/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:AUTH_PHONE,code})});
-  AUTH.busy=false; if(btn){ btn.disabled=false; btn.textContent='Verify →'; }
+  AUTH.busy=false; if(btn){ btn.disabled=false; btn.textContent=t('auth.verify','Verify →'); }
   if(!r||r.error||!r.token){
-    $('auth_codeerr').textContent = (r&&r.error==='bad_code') ? "That code didn't match — try again" : 'Could not verify — try again';
+    $('auth_codeerr').textContent = (r&&r.error==='bad_code') ? t('err.badcode',"That code didn't match. Try again.") : t('err.verify',"Couldn't verify. Try again.");
     return;
   }
   PHONE_TOKEN=r.token; try{ localStorage.setItem('cifm_token',r.token); }catch(_){}
   if(r.account) ACCOUNT=Object.assign({},ACCOUNT||{},r.account);
   track('auth_success',{flow:'phone'});
-  closeAuth(); toast("✓ You're in"); refreshAuth();
+  closeAuth(); toast(t('auth.welcome',"✓ You're in")); refreshAuth();
 }
 function authBack(){ authStep('email'); $('auth_codeerr').textContent=''; setTimeout(()=>{try{$('auth_phone').focus();}catch(e){}},60); }
 // Custom account sheet
@@ -2365,7 +2365,7 @@ function mapLegendHtml(){
 function toggleMap(forceOpen){
   const mv=$('mapview'), sl=$('storelist'), btn=$('maptoggle'), lg=$('maplegend');
   if(mv.style.display==='block' && !forceOpen){ mv.style.display='none'; sl.style.display=''; if(lg)lg.style.display='none'; if(btn){btn.classList.remove('on'); btn.textContent='Map';} return; }
-  sl.style.display='none'; mv.style.display='block'; if(lg){ lg.innerHTML=mapLegendHtml(); lg.style.display='flex'; } if(btn){btn.classList.add('on'); btn.textContent='List';} track('map_open'); loadMap();
+  sl.style.display='none'; mv.style.display='block'; if(lg){ lg.innerHTML=mapLegendHtml(); lg.style.display='flex'; } if(btn){btn.classList.add('on'); btn.textContent=t('map.list','List');} track('map_open'); loadMap();
   if(isMaster()) toast(t('toast.zoomout','📍 Zoom out, roam anywhere, tap to drop a pin'));
 }
 function loadMap(){
@@ -2386,7 +2386,7 @@ function initMap(){
     // Master drops a pin → load that area's stores, then close the map to the LIST so they're callable.
     MAP.on('click',(e)=>{ if(!isMaster()) return; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng); toast(t('toast.locating','Locating stores near you')); setTimeout(()=>{ toggleMap(false); }, 500); });
     setTimeout(()=>MAP.invalidateSize(),60); renderMapPins();
-  }catch(e){ toast('Map error — showing the list'); toggleMap(); }
+  }catch(e){ toast(t('toast.maploading','Map could not load. Showing the list.')); toggleMap(); }
 }
 // The "you are here" pin + a ring showing the search radius. Moves on each master drop; no forced zoom.
 function placeMyPin(lat,lng,fromTap){
@@ -2945,7 +2945,7 @@ async function startCheck(){
 
   const useApp=isAuthed();
   const r=await (useApp?appApi:api)(useApp?'/app/check':'/pub/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
-  if(r.error){ clearInterval(phaseT);clearInterval(elT); backToBuilder(); if(r.error==='no_credits'){ openBuy('out'); } else if(r.error==='unauthorized'){ signIn(); } else if(r.error==='store_closed'){ toast('🔒 '+(r.label||'Store is closed')+' — no call placed'); } else toast('Could not start the call'); return; }
+  if(r.error){ clearInterval(phaseT);clearInterval(elT); backToBuilder(); if(r.error==='no_credits'){ openBuy('out'); } else if(r.error==='unauthorized'){ signIn(); } else if(r.error==='store_closed'){ toast('🔒 '+(r.label||t('store.closed','Store is closed'))+t('toast.nocall','. No call placed.')); } else toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
   const cid=r.providerCallId;
   try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){}
   const stop=()=>{ clearInterval(POLL);clearInterval(phaseT);clearInterval(elT); };
@@ -4435,11 +4435,11 @@ async function submitScore(){
     const su=await (isAuthed()?appApi:api)('/pub/community/upload-url',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ext,contentType:SCORE_FILE.type||'image/jpeg'})});
     if(!su||su.error||!su.uploadUrl){ throw new Error(su&&su.error==='uploads_not_configured'?'Uploads not set up yet':'Could not start upload'); }
     const put=await fetch(su.uploadUrl,{method:'PUT',headers:{'content-type':SCORE_FILE.type||'image/jpeg'},body:SCORE_FILE});
-    if(!put.ok) throw new Error('Upload failed');
+    if(!put.ok) throw new Error(t('err.upload','Upload failed.'));
     const body={ imageUrl:su.publicUrl, imageKey:su.key, caption:($('score_caption').value||'').trim(), handle:($('score_handle').value||'').trim(),
       retailerId:(SEL_STORE&&SEL_STORE.id)||undefined, categoryId:SEL_CAT||undefined };
     const r=await (isAuthed()?appApi:api)('/pub/community/post',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-    if(!r||r.error) throw new Error('Could not post');
+    if(!r||r.error) throw new Error(t('err.post',"Couldn't post. Try again."));
     track('community_post',{pending:!!r.pending});
     closeScore(); loadCommunity();
     toast(r.pending?'🙌 Posted! We review photos before they go live':'🏆 Posted to the wall!');
@@ -4512,10 +4512,10 @@ async function submitSuccess(){
     let imageUrl=null, imageKey=null;
     const su=await (isAuthed()?appApi:api)('/pub/community/upload-url',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ext:(fl.name.split('.').pop()||'jpg'),contentType:fl.type||'image/jpeg'})});
     if(su&&su.uploadUrl){ const put=await fetch(su.uploadUrl,{method:'PUT',headers:{'content-type':fl.type||'image/jpeg'},body:fl}); if(put.ok){ imageUrl=su.publicUrl; imageKey=su.key; } }
-    if(!imageUrl){ imageUrl=await new Promise(res=>compressImg(fl,res)); if(imageUrl.length>490000) throw new Error('Photo too large — try a smaller one'); }
+    if(!imageUrl){ imageUrl=await new Promise(res=>compressImg(fl,res)); if(imageUrl.length>490000) throw new Error(t('err.photobig',"Photo's too big. Try a smaller one.")); }
     const body={ imageUrl, imageKey, caption:($('succ_prod').value||'').trim(), handle:myHandle()||undefined, retailerId:(SUCC_STORE&&SUCC_STORE.id)||undefined, categoryId:(BRAND_CAT&&BRAND_CAT.id)||SEL_CAT||undefined };
     const rr=await (isAuthed()?appApi:api)('/pub/community/post',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-    if(!rr||rr.error) throw new Error('Could not post — try again');
+    if(!rr||rr.error) throw new Error(t('err.post',"Couldn't post. Try again."));
     track('success_post');
     // Full composer reset — next post starts clean (photo picker label included).
     $('succ_prod').value=''; $('succ_file').value=''; $('succ_prev').style.display='none'; $('succ_err').textContent='';
