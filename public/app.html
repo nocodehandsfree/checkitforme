@@ -3281,7 +3281,7 @@ function renderWorkflowMgr(){
           <button class="ghost wfmtrash" onclick="wfmDelete(${wi})" title="Delete workflow">${lucideSvg('trash-2',15,'currentColor')}</button>
         </div>
       </div>
-      <div class="wfmsub">Openers <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· rotated round-robin every call</span></div>
+      <div class="wfmsub" style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>Openers <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· rotated round-robin every call</span></span><button class="ghost" style="font-size:10.5px;padding:4px 9px;text-transform:none;letter-spacing:0;display:inline-flex;align-items:center;gap:4px" onclick="wfmResetRotation(${wi})" title="Next call to this workflow starts at opener #1">${lucideSvg('rotate-ccw',12,'currentColor')}Reset rotation</button></div>
       <div class="wfmops">
         ${ops.map((o,oi)=>`<div class="wfmop"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfmEditOpener(${wi},${oi},this.value)">${esch(o)}</textarea><button class="ghost opdel" onclick="wfmDelOpener(${wi},${oi})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('')||'<div class="meta" style="padding:4px 0 8px">No openers — calls fall back to the global opener.</div>'}
         <div class="wfmadd"><input id="wfmadd_${wi}" placeholder="Add an opener — e.g. Hey! You guys get any {category} in?" onkeydown="if(event.key==='Enter')wfmAddOpener(${wi})"><button class="act" onclick="wfmAddOpener(${wi})">Add</button></div>
@@ -3340,6 +3340,8 @@ function applyWorkflowToDesigner(w){
 }
 async function wfmSetDefault(wi){ const w=WF.list[wi]; if(!w) return; WF.def=w.name; const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:w.name})}); renderWorkflowMgr(); toast((r&&!r.error)?(w.name+' powers all stores now'):'Could not set default'); }
 async function wfmDelete(wi){ const w=WF.list[wi]; if(!w) return; if(!confirm('Delete workflow “'+w.name+'”?\nStores assigned to it fall back to the default.')) return; const wasDef=WF.def===w.name; WF.list=WF.list.filter((x,i)=>i!==wi); if(wasDef){ WF.def=''; await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:''})}); } renderWorkflowMgr(); await wfmSaveList(); toast('Workflow deleted'); }
+// Reset this workflow's opener rotation so the next call to it starts at opener #1 (predictable testing).
+async function wfmResetRotation(wi){ const w=WF.list[wi]; if(!w) return; const r=await api('/api/admin/reset-rotation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workflow:w.name})}); toast((r&&r.ok)?'Rotation reset — next call uses opener #1':'Could not reset rotation'); }
 // Settings → the one global default workflow.
 async function loadDefaultWorkflow(){
   await loadWorkflows();

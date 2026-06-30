@@ -18,7 +18,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -2583,6 +2583,16 @@ app.get("/api/admin/workflow-assignments", async (c) => {
   for (const [id, wf] of Object.entries(byStore)) { const r = sName.get(Number(id)); if (r) slot(wf).stores.push({ id: r.id, name: r.name.split("—")[0].trim(), location: r.location ?? null }); }
   for (const [id, wf] of Object.entries(byChain)) { const r = cName.get(Number(id)); if (r) slot(wf).chains.push({ id: r.id, name: r.name }); }
   return c.json(out);
+});
+
+// Reset a workflow's opener rotation so the NEXT call to it starts at opener #1 (predictable A→B→C
+// testing). No workflow name → resets the shared global opener rotation.
+app.post("/api/admin/reset-rotation", async (c) => {
+  const b = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  const wf = typeof b.workflow === "string" && b.workflow.trim() ? b.workflow.trim() : "";
+  const key = wf ? "opener:" + wf : "opener";
+  resetRotation(key);
+  return c.json({ ok: true, key, workflow: wf || null });
 });
 
 // ---- Growth pulse: the funnel + engagement snapshot the owner reads each morning ----

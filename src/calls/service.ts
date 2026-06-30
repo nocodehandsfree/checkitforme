@@ -43,6 +43,9 @@ function rotatePick<T>(key: string, list: T[]): T | undefined {
   const n = (rotCounters.get(key) ?? -1) + 1; rotCounters.set(key, n);
   return list[n % list.length];
 }
+/** Reset a rotation so the NEXT pick lands on the first item (opener #1) — powers the Workflows
+ *  "Reset rotation" button, so a test run is predictable A → B → C instead of mid-cycle. */
+export function resetRotation(key: string): void { rotCounters.set(key, -1); }
 
 // ---- Workflows: the Voice→Designer "voice + script + persona + voice tuning" bundle, assignable
 // per store / per chain / as the global default. resolveWorkflow picks one for a store and composes
@@ -140,7 +143,9 @@ export async function buildRestockVars(
   const workflow = await resolveWorkflow(retailerId, retailer.chainId);
   const openerVariants = (workflow?.openers.length ? workflow.openers
     : ((await getSetting("vt_opener_variants")) || "").split("\n").map((s) => s.trim()).filter(Boolean));
-  const openerTemplate = rotatePick("opener", openerVariants) || (await getSetting("vt_opening")) || DEFAULT_OPENER;
+  // Per-workflow rotation key so each workflow round-robins its OWN openers independently (and the
+  // "Reset rotation" button can reset just this one). No workflow → the shared global opener rotation.
+  const openerTemplate = rotatePick(workflow ? "opener:" + workflow.name : "opener", openerVariants) || (await getSetting("vt_opening")) || DEFAULT_OPENER;
   const openingLine = openerTemplate.replace(/\{category\}/g, category.label);
   const clarification = specificityClause((specificProduct ?? "").trim());
 
