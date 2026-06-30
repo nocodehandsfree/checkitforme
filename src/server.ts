@@ -1953,7 +1953,9 @@ app.get("/pub/result/:cid", async (c) => {
   // first verdict the UI ever shows is already the final one.
   if (row && o && o.status === "completed") {
     const label = (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label;
-    const second = await classifyVerdict(o.transcript, label || "the product");
+    // Speed: only spend the second-read LLM when ElevenLabs was UNCLEAR (the case it actually rescues).
+    // A decisive EL yes/no/sold-out/doesn't-carry confirms instantly — no extra round-trip.
+    const second = (o.confirmed === null && !o.soldOut && !o.doesNotSell) ? await classifyVerdict(o.transcript, label || "the product") : null;
     const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, second);
     const productDetail = productDetailLabel(second);
     await db.update(callResults).set({
@@ -3496,7 +3498,7 @@ app.post("/webhooks/elevenlabs", async (c) => {
       let productDetail: string | null = null;
       if (o.status === "completed") {
         const label = row ? (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label : undefined;
-        const second = await classifyVerdict(o.transcript, label || "the product");
+        const second = (o.confirmed === null && !o.soldOut && !o.doesNotSell) ? await classifyVerdict(o.transcript, label || "the product") : null;
         const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, second);
         confirmed = consensus.confirmed; statusKey = consensus.statusKey; definitive = consensus.definitive;
         productDetail = productDetailLabel(second);

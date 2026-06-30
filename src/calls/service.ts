@@ -667,7 +667,8 @@ export async function ingestPending(): Promise<number> {
     let definitive = primaryConfirmed === true || primaryConfirmed === false;
     let productDetail: string | null = null;
     if (outcome.status === "completed") {
-      const second = await classifyVerdict(outcome.transcript, primaryLabel || "the product");
+      // Speed: second-read LLM only when EL was unclear (the case it rescues); decisive EL answers stand.
+      const second = (primaryConfirmed === null && !outcome.soldOut && !outcome.doesNotSell) ? await classifyVerdict(outcome.transcript, primaryLabel || "the product") : null;
       const consensus = reconcile(
         { confirmed: primaryConfirmed, soldOut: outcome.soldOut, doesNotSell: outcome.doesNotSell, statusKey: outcome.statusKey },
         second,

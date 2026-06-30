@@ -3112,8 +3112,11 @@ function stageForLines(lines, pitched){
       if(TRANSFER_RE.test(txt)){ routed=true; st=Math.max(st,6); } // "general" = transferring + ringing the front
       else st=Math.max(st,5);                                      // "no", "front", any other nav = navigating
     } else {
-      if(routed && !IVR_RE.test(txt) && !HOLD_RE.test(txt)) st=Math.max(st,7); // a real human, post-transfer
-      else st=Math.max(st,4);                                      // pre-transfer / menu / hold = automated menu
+      // A non-agent voice that ISN'T an automated menu or hold recording is a real PERSON — direct answer
+      // OR post-transfer. (Under connect-on-human the agent only ever hears the human, so a DIRECT store
+      // skips the menu steps entirely — it was wrongly showing "Listening to the menu" on direct calls.)
+      if(IVR_RE.test(txt) || HOLD_RE.test(txt)) st=Math.max(st,4); // automated menu / hold recording
+      else st=Math.max(st,7);                                      // a real person picked up
     }
   }
   return pitched ? Math.max(st,8) : st;
