@@ -14,19 +14,19 @@ import { seedSellMethods } from "../stock/sellmethods";
 async function seedStatuses() {
   const rows: Array<[string, string, string, string, string, string]> = [
     // key, emoji, label, tone, color, note
-    ["in_stock", "✅", "In stock!", "in", "#4ADE80", "They've got it. Go grab it."],
-    ["sold_out", "🕐", "Sold out", "out", "#EF4444", "They had it, but it's gone for now."],
-    ["does_not_sell", "🚫", "They don't carry it", "out", "#EF4444", "This store doesn't sell it."],
-    ["not_in_stock", "❌", "Not in stock", "out", "#EF4444", "Not on the shelf right now."],
+    ["in_stock", "✅", "In stock!", "in", "#4ADE80", "{store} has {product} in. Go grab it."],
+    ["sold_out", "🕐", "Sold out", "out", "#EF4444", "{store} had it, but it's gone for now."],
+    ["does_not_sell", "🚫", "They don't carry it", "out", "#EF4444", "{store} doesn't sell {category}."],
+    ["not_in_stock", "❌", "Not in stock", "out", "#EF4444", "{store} doesn't have {category} right now."],
     ["no_clear_answer", "🤔", "Couldn't tell", "unk", "#FBBF24", "We couldn't make out a clear answer."],
     ["left_on_hold", "⏸️", "Left on hold", "unk", "#FBBF24", "Hold ran long and the call dropped. No charge."],
-    ["too_busy", "🕗", "Too busy to check", "unk", "#FBBF24", "They were slammed. No charge."],
+    ["too_busy", "🕗", "Too busy to check", "unk", "#FBBF24", "{store} was slammed. No charge."],
     ["language_barrier", "🗣️", "Couldn't understand each other", "unk", "#FBBF24", "We couldn't communicate. No charge."],
     ["nobody_answered", "📵", "Nobody answered", "unk", "#9CA3AF", "No one picked up. No charge."],
     ["voicemail", "📮", "Got their voicemail", "unk", "#9CA3AF", "Reached a recording, not a person. No charge."],
     ["busy", "📞", "Line was busy", "unk", "#9CA3AF", "Their line was busy. No charge."],
     ["bad_number", "☎️", "Wrong number", "unk", "#9CA3AF", "That number didn't connect. No charge."],
-    ["closed", "🔒", "Store's closed", "unk", "#9CA3AF", "They're closed right now. No charge."],
+    ["closed", "🔒", "Store's closed", "unk", "#9CA3AF", "{store} is closed right now. No charge."],
     // "failed" stays only until carrier failures are mapped to real reasons (voicemail/busy/bad_number/
     // nobody_answered); then it's removed so every call shows a real reason, never a bare "Call failed".
     ["failed", "⚠️", "Call failed", "unk", "#FBBF24", "Something went wrong on our end. No charge."],
