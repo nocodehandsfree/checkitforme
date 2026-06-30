@@ -7,17 +7,25 @@ AI service that phones retail stores to check trading-card/collectible stock, wi
 4 white-label brand sites (Pokémon/One Piece/Topps NBA/NeeDoh) + admin. One-person business. Stack: Hono
 + Drizzle on Railway, in `voice-caller/`. Consumer UI `public/checkit.html`; admin `public/app.html`.
 
-## Branches (monorepo, 2 products — voice-caller = the `voice-caller/` folder only)
-- **Staging** `claude/checkitforme-website-takeover-pagiis` → `staging.checkitforme.com`
-- **Prod** `claude/retail-stock-voice-calls-OcyMS` → `checkitforme.com` (admin `admin.checkitforme.com`), auto-deploys ~3 min on push
-- **`main` is the card app — dead for us, ignore it** (GitHub defaults to it; switch the dropdown).
+## ⚠️ THE ONE BRANCH (this changed — read it)
+**Everyone works on `claude/retail-stock-voice-calls-OcyMS`.** It auto-deploys (~3 min) to `checkitforme.com`
+and the admin at `admin.checkitforme.com`. ONE admin, ONE branch — no staging split anymore.
+
+**First thing every session, no exceptions:**
+```
+git checkout claude/retail-stock-voice-calls-OcyMS && git pull
+```
+- The old **staging** branch (`…pagiis`) and the **copy** branch are **retired** — fully merged in. Don't
+  branch off them, don't push to them.
+- **`main` is the dead card app — ignore it** (GitHub defaults to it; switch the dropdown).
+- A pile of stale `claude/*` branches still sit on GitHub (couldn't be auto-pruned). **Ignore them — only
+  `…OcyMS` is live.** If a file seems "missing," you're on the wrong branch: checkout + pull the one above.
 
 ## Rules of the road
-- **Staging-first for CODE.** Build on the staging branch → push → owner verifies on `staging.checkitforme.com`
-  → promote = merge into the prod branch. For **larger/riskier builds**, the owner may run **Check-QA** on staging
-  first (optional pre-prod check — see lanes). Never push UI/behavior straight to prod. Keep `public/checkit.html`
-  byte-identical between branches (only diff = the env-gated staging machinery: `config.staging`/`STAGING_CALLS`
-  guards + `staging-sim.ts` + the proxy worker). Details: `docs/ops/STAGING.md`.
+- **One branch, build live, test on Fun.** No staging-first split — there are **no live customers yet**, so we
+  build on the one prod branch and verify by calling the **Fun** store from **Admin → Testing** (owner-only;
+  never touches real-store stats). Once a change works on Fun it's already live for real calls. When real-store
+  calling begins, press **Start fresh** (Pulse → Stats baseline) so only post-launch calls count.
 - **DATA direction = PROD is source of truth.** Manage the business from the prod Admin. Code flows
   staging→prod; **data flows prod→staging only** (`table-dump`→`table-load`, staging-only). No staging→prod
   data promote — one once cascade-wiped call history. Prod volume has daily/weekly backups.
