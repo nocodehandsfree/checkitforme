@@ -2704,9 +2704,9 @@ function renderDemo(){
   body.innerHTML=`
     <div class="chat" style="margin-top:14px">
       <div class="bub-note">${t('demo.sys','Navigating phone tree…')}</div>
-      <div class="bub a"><span class="nm">Check AI</span>${esc(d.q)}</div>
-      <div class="bub c"><span class="nm">Clerk</span>${esc(d.a)}</div>
-      <div class="bub a"><span class="nm">Check AI</span>${t('demo.thanks','Perfect, thanks!')}</div>
+      <div class="bub a"><span class="nm">${t('lbl.agent','Check AI')}</span>${esc(d.q)}</div>
+      <div class="bub c"><span class="nm">${t('lbl.assoc','Staff')}</span>${esc(d.a)}</div>
+      <div class="bub a"><span class="nm">${t('lbl.agent','Check AI')}</span>${t('demo.thanks','Perfect, thanks!')}</div>
     </div>
     <div class="vdivide"><span data-i18n="demo.verdictlbl">the verdict</span></div>
     <div class="demoverdict">
