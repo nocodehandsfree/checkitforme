@@ -11,6 +11,14 @@ admin features (God-view, store CMS UI, voice studio, Tree Trainer, analytics, p
 - `public/checkit.html` (that's **Check - Website**), the store *data* itself (that's **Check - Data
   Dev** — you build the admin UI; they manage the rows), `src/**` core logic (request from **DevOps**).
 
+## ⛔ OFF-LIMITS — the live-call pipe (FROZEN; do NOT touch without DevOps sign-off)
+The real-time transcript + clean hang-up broke a working build once. Treat these as frozen:
+- `src/voice/bridge.ts` and the `/listen` + `/bridge` WebSocket handlers in `src/server.ts`.
+- The Cloudflare worker **`checkit-staging-proxy`** — it carries the WebSocket upgrade. **Never redeploy it.**
+- The live-transcript / socket + step-log code in `checkit.html` (`stageForLines` / `liveStage`).
+- **After ANY change, place one Fun-store test call and confirm the transcript streams AND the call hangs
+  up cleanly before calling it done.** "Deploy ≠ commit" — a Worker only goes live when its deploy script runs.
+
 ## Read (in order) — open only what you need
 1. `/HANDOFF.md` · `docs/ARCHITECTURE.md`
 2. `docs/API_CONTRACT.md` — the `/api/*` admin endpoints you call.

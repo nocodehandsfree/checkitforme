@@ -13,6 +13,19 @@ consumer features.
 - `public/app.html` (that's **Check - Admin**), `src/**` core logic (auth/billing/calls/db/voice —
   request changes from **Check - DevOps**).
 
+## ⛔ OFF-LIMITS — the live-call pipe (FROZEN; do NOT touch without DevOps sign-off)
+These make the live call work — real-time transcript + clean hang-up. They broke a working build once;
+treat them as frozen even though some live in your file:
+- The **live-transcript / audio socket + step log** in `checkit.html` — the WebSocket targets
+  `location.host`, and the steps come from `stageForLines` / `liveStage`. Leave the socket host and the
+  stage logic alone.
+- The Cloudflare worker **`checkit-staging-proxy`** — it carries the WebSocket upgrade. **Never redeploy it.**
+- `src/voice/bridge.ts` and the `/listen` + `/bridge` WebSocket handlers in `src/server.ts`.
+- **After ANY change, place one Fun-store test call and confirm the transcript streams AND the call hangs
+  up cleanly before calling it done.**
+- **"Deploy ≠ commit":** a Cloudflare Worker only goes live when its deploy script runs — a `git push`
+  deploys nothing. Saying "fixed" without re-testing the live thing is how the build broke.
+
 ## Read (in order) — open only what you need
 1. `/HANDOFF.md` (team + how-to-work) · `docs/ARCHITECTURE.md` (repo layout)
 2. `docs/API_CONTRACT.md` — the endpoints you call (`/pub/*`, `/auth/*`, `/app/*`); **build to these
