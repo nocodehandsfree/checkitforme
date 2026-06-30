@@ -15,6 +15,13 @@ async function handle(request) {
   url.hostname = ORIGIN;
   url.protocol = "https:";
   url.port = "";
+  // WebSocket upgrades (the live-call transcript + audio socket on /listen, /bridge) MUST be passed through
+  // untouched. Reconstructing the Response below drops the 101/webSocket handshake, which silently killed the
+  // live call when the socket was routed through this domain. So for an Upgrade request, return the proxied
+  // socket response exactly as fetch() produced it.
+  if ((request.headers.get("Upgrade") || "").toLowerCase() === "websocket") {
+    return fetch(new Request(url.toString(), request));
+  }
   const resp = await fetch(new Request(url.toString(), request));
   const out = new Headers(resp.headers);
   out.set("X-Robots-Tag", "noindex, nofollow");

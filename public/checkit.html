@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<!-- Status bar tint: iOS applies <meta name="theme-color"> ONLY at page LOAD — a later JS change is ignored,
-     and REMOVING the meta makes Safari revert the bar to black (the bug that kept killing the top). In Compact
-     Safari ONE theme-color tints BOTH the top status bar AND the bottom toolbar — that's the accepted tradeoff
-     for getting colour at the top. So the verdict colour must be in the served HTML at load: the server bakes
-     it from ?tone=in|out|unk|soon (renderRunner) and the client does a REAL navigation to that ?tone URL when a
-     result's tone differs from what loaded (ensureToneLoaded). setThemeTone() only mutates the meta IN PLACE
-     (never removes it) for desktop Chrome. In STANDALONE the apple-mobile metas + viewport-fit=cover also paint
-     content UNDER the status bar, so the wash shows at the very top there regardless. -->
+<!-- Status bar tint (regular Safari): NO theme-color meta ON PURPOSE. In Compact Safari one theme-color
+     tints BOTH the top status bar AND the bottom toolbar (= green footer), AND it OVERRIDES iOS page-sampling
+     so the top can never match the page. Without it, iOS SAMPLES the page background per-edge — the verdict
+     wash at the page TOP shows under the status bar, while the dark page bottom keeps the bottom bar dark
+     (green top, dark bottom — exactly what we want). The sampling source is the html/body verdict gradient
+     (see `html:has(body.rview.rv-*)` + `body.rview.rv-*` in CSS), applied from frame one by the post-<body>
+     boot script. Do NOT reintroduce a theme-color meta — it re-breaks the top. In STANDALONE (home screen)
+     the apple-mobile metas + viewport-fit=cover paint content UNDER the status bar, so the wash shows at the
+     top there regardless (that path has always worked). -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Check it for me" />
 <link rel="manifest" href="/manifest.webmanifest" />
-<meta name="theme-color" content="#0C0C12" id="themeColor" />
 
 <script>/* PWA: register the service worker (instant cold-start: cached shell + stale-while-revalidate checks). Fail-open — registration errors never affect the page. */
   if('serviceWorker' in navigator){ window.addEventListener('load',function(){ try{ navigator.serviceWorker.register('/sw.js').catch(function(){}); }catch(e){} }); }</script>
@@ -29,7 +29,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r92" />
+<meta name="x-rev" content="names-r98" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -1699,7 +1699,7 @@ const I18N={ es:{
   'err.phone':'Escribe tu número de celular de 10 dígitos.','err.code':'Escribe el código de 6 dígitos','auth.resent':'Código reenviado 📲',
   'sc.crew':'Presume con la banda','sc.scored':'¡La conseguiste!','sc.snap':'Tómale una foto a tu hallazgo y publícalo en el muro.','sc.photo':'Tu foto','sc.caption':'Descripción','sc.name':'Tu nombre / usuario','sc.optional':'— opcional','sc.ph.caption':'¡Saqué un Charizard en el Target de Sunset!','sc.ph.handle':'@tuusuario','sc.post':'Publicar en el muro →','sc.uploading':'Subiendo…','sc.err.big':'La foto pesa demasiado (máx. 12 MB)','sc.err.nophoto':'Agrega una foto primero',
   'ph.schednum':'Escribe tu número','ph.storereq':'ej. Target — Thousand Oaks','ph.storecity':'ej. Thousand Oaks, CA','ph.storedetails':'dirección, qué productos, etc.','ph.kiosk':'ej. Albertsons — Sunset Blvd, LA','ph.kioskhint':'ej. a veces se salta la reposición de los :03',
-  'toast.searchmi':'📍 {q} — tiendas a {n} mi','toast.zoomout':'📍 Aleja el mapa, explora a donde quieras, toca para fijar un punto','toast.community':'La comunidad llega pronto',
+  'toast.searchmi':'📍 {q} — tiendas a {n} mi','toast.zoomout':'📍 Aleja el mapa, explora a donde quieras, toca para fijar un punto','toast.community':'La comunidad llega pronto','toast.locupdated':'Actualizado a tu ubicación actual',
   'cs.costs':'cuesta 1 verificación','cs.toggle':'Ver pasos de la llamada',
   'err.storename':'Agrega el nombre de la tienda',
   'fbk.in':'En stock','fbk.out':'No está','fbk.soon':'Reabasteciendo','fbk.unsure':'Sin claridad',
@@ -1887,7 +1887,25 @@ async function boot(){
   // statuses registry + categories are in, so the verdict copy/emoji upgrade to the owner-edited ones.
   if(LASTRES && RAIL_CID && $('result') && !$('result').classList.contains('hidden')) showResult(LASTRES, RAIL_CID);
   if(!USER_LOC){ const sl=savedLoc(); if(sl) setUserLoc(sl.lat,sl.lng); } // restore last location → stores auto-load, no re-prompt
-  idle(()=>{ renderDemo(); loadFinds(); }); // ticker + demo off the critical path
+  idle(()=>{ renderDemo(); loadFinds(); silentLocRecheck(); }); // ticker + demo + (if you've moved) location refresh — off the critical path
+}
+// Silent location follow: the cached location is great when you're home, but if you've travelled to another
+// city it's stale (stores + finds would still be your old town). So — ONLY if you've ALREADY granted location
+// (never a prompt) — quietly re-check your current position in the background. If you've moved more than
+// ~12 miles from the cached spot, switch to where you are now and refresh stores/finds. No move (or no
+// permission) → nothing happens, the cached location stands.
+function silentLocRecheck(){
+  try{
+    if(!navigator.geolocation || !navigator.permissions || !navigator.permissions.query) return;
+    navigator.permissions.query({name:'geolocation'}).then(p=>{
+      if(!p || p.state!=='granted') return; // only when already allowed — never trigger the OS prompt here
+      navigator.geolocation.getCurrentPosition(pos=>{
+        const la=pos.coords.latitude, ln=pos.coords.longitude;
+        const moved = !USER_LOC || miBetween(USER_LOC.lat,USER_LOC.lng,la,ln) > 12; // ~12 mi = a real move, not GPS jitter
+        if(moved){ setUserLoc(la,ln); toast(ICO.pin(AC2())+t('toast.locupdated','Updated to your current location')); }
+      }, ()=>{}, {enableHighAccuracy:false, timeout:8000, maximumAge:300000}); // cheap/low-power; a 5-min cached fix is fine
+    }).catch(()=>{});
+  }catch(e){}
 }
 let PENDING_VIEW=null;
 let STORES_AUTH_TOKEN=null; // which token the visible store list was fetched under — re-fetch on login so owner-only surfaces (FUN store / VIPs) appear without a hard refresh
@@ -3169,7 +3187,11 @@ async function startCheckLive(){
   LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
   // Transcript + stage stream over the WS for EVERYONE — instant, the moment ElevenLabs emits a line
   // (no poll lag, no waiting on the conversation-id). Audio only PLAYS for listeners (canListen).
-  const myGen=CALL_GEN; const ws=new WebSocket('wss://'+r.wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS=ws;
+  // Connect the live socket to the page's OWN origin (e.g. staging.checkitforme.com) — the address the
+  // browser is guaranteed to reach, since the whole page loads from it. The Cloudflare Worker that fronts
+  // this domain now passes WebSocket upgrades through (it used to rebuild the Response and drop the 101,
+  // which silently killed the live transcript). Falls back to the raw host the server hands us.
+  const myGen=CALL_GEN; const wsHost=(location.host||r.wsHost); const ws=new WebSocket('wss://'+wsHost+'/listen?room='+encodeURIComponent(r.room)); AUDIO_WS=ws;
   ws.onmessage=ev=>{ if(myGen!==CALL_GEN){ try{ws.close();}catch(e){} return; } try{ const d=JSON.parse(ev.data); // a socket from an earlier call must never play/inject into a newer one
     if(d.audio){ if(AUDIO_CTX) playMu(d.audio,d.track); }
     else if(d.line&&d.line.text){ LIVE_TR.push(d.line.role+': '+d.line.text); LIVE_TRANSCRIPT=LIVE_TR.join('\n'); if(d.line.role==='Agent'&&AGENT_ASK.test(d.line.text))AGENT_PITCHED=true; liveStage(stageForLines(LIVE_TR,AGENT_PITCHED)); renderLiveMsg(); } // real-time steps + human script, as the call happens
@@ -3178,6 +3200,16 @@ async function startCheckLive(){
     // so even if this finalize hiccups the POLL still resolves it (that POLL-clearing was the old freeze).
     // finalizeLive is idempotent (history dedupes, showResult re-renders), so POLL re-firing it is harmless.
     else if(d.ended){ finalizeLive(LIVE_CID||cid); }
+  }catch(e){} };
+  // Safety net for the hang-up: the bridge drops this socket when the call ends. If the explicit d.ended
+  // message is missed AND the /pub/live poll is slow to report live:false, a socket close still flips us off
+  // the active-call screen NOW (instead of sitting there until the 210s cap). Guarded so a socket that fails
+  // to CONNECT at dial time can't finalize prematurely — only treat a close as end-of-call once the call is
+  // clearly underway (we have a conversation id, streamed lines, or it's been connected >15s). The POLL
+  // still covers startup, and finalizeLive is idempotent, so this can only help, never double-fire harmfully.
+  ws.onclose=()=>{ try{ if(myGen!==CALL_GEN) return;
+    const underway = LIVE_CID||cid||LIVE_TR.length || (LIVE_T0 && (Date.now()-LIVE_T0)>15000);
+    if(underway && $('live') && !$('live').classList.contains('hidden')) finalizeLive(LIVE_CID||cid);
   }catch(e){} };
   liveStage(2); // dialing → it's ringing
   let cid=null;
@@ -3358,43 +3390,16 @@ function navMark(view){
   }catch(e){}
   NAV_VIEW=view;
 }
-// Tint the status-bar strip to the current verdict tone. In Compact Safari ONE theme-color tints BOTH the
-// top status bar AND the bottom toolbar — that's the approach that actually puts colour at the top (page
-// sampling does not reach the status bar). CRITICAL: update the EXISTING meta in place — NEVER remove and
-// re-append it. iOS applies theme-color from the node present at LOAD (the server bakes the verdict colour
-// there via ?tone), and REMOVING that node makes Safari revert the status bar to BLACK — that was the bug
-// that kept killing the top. So this only mutates .content (honored by desktop Chrome, harmless on iOS
-// which keeps the load-time value). The reliable top tint comes from loading with the right ?tone
-// (ensureToneLoaded + server bake). (Safari honors theme-color only when "Allow Website Tinting" is ON.)
-function setThemeTone(){
-  try{
-    const b=document.body.classList;
-    const tone = b.contains('rv-in')?'#266440':b.contains('rv-out')?'#6b2427':b.contains('rv-unk')?'#6c5419':b.contains('rv-soon')?'#6e490f':'#0C0C12';
-    let m=document.getElementById('themeColor');
-    if(!m){ m=document.createElement('meta'); m.name='theme-color'; m.id='themeColor'; document.head.appendChild(m); }
-    m.setAttribute('content',tone);
-  }catch(e){}
-}
-// Make the verdict colour show in the iOS status bar by RELOADING into the server-baked ?tone URL. iOS only
-// tints from the theme-color present at LOAD, so when a final result's tone differs from what the page loaded
-// with, we navigate for real — the server writes the colour straight into <meta theme-color> (renderRunner),
-// which tints BOTH the top status bar and the bottom bar in Compact Safari. Loop-safe: after the nav the URL
-// carries ?tone so __loadTone matches → no re-nav. TONE_NAV_DONE only blocks a duplicate replace() on this
-// dying page; it is RESET when a new flow starts (new call / opening another result) so the next verdict
-// re-tints. Only fires for a settled verdict with a real cid.
+// Status-bar tone is handled by iOS PAGE SAMPLING (no theme-color meta) — the verdict wash at the page top
+// shows under the status bar; the dark page bottom keeps the bottom bar dark. The body/html verdict gradient
+// (applied via the rview/rv-* classes) IS the source — nothing to set in JS. Kept as a no-op so existing
+// call-sites stay safe. Do NOT recreate a theme-color meta here: one theme-color tints both edges (green
+// footer) AND overrides sampling, which is exactly what kept the top black.
+function setThemeTone(){}
+// No-op: we no longer navigate to a ?tone URL to bake theme-color (that approach tinted the bottom bar and
+// blacked out the top in Compact Safari). The top now tints via page-sampling of the body/html gradient.
 let TONE_NAV_DONE=false;
-function ensureToneLoaded(cls,cid){
-  try{
-    if(!cls||!cid||TONE_NAV_DONE) return false;
-    if(!({in:1,out:1,unk:1,soon:1}[cls])) return false;
-    if(String(cid).startsWith('local:')) return false;     // not a server-restorable result
-    if(cls===(window.__loadTone||'')) return false;        // server already baked the right colour at load
-    TONE_NAV_DONE=true;
-    const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',cid); sp.set('tone',cls);
-    location.replace(location.pathname+'?'+sp.toString());  // real navigation → server bakes theme-color at load
-    return true;
-  }catch(e){ return false; }
-}
+function ensureToneLoaded(){ return false; }
 window.addEventListener('popstate',()=>{
   // Handle BOTH directions. Going forward to a ?call= entry used to do nothing (only "back" was handled),
   // so the URL changed but the call page never re-opened. Now we read the target URL and restore it.

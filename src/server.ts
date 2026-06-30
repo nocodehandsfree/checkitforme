@@ -2316,6 +2316,153 @@ app.get("/api/admin/store-restock/:id", async (c) => {
   });
 });
 
+// ---- Calls audit: the COMPLETE, unfiltered call_results picture for data-integrity checks ----
+// overview/pulse deliberately exclude owner-only + admin_hangup (the noise); this counts EVERYTHING
+// so we can see test calls, aborted calls, wrong statuses, never-dialed calls, the first/last call,
+// and double-ingested duplicates. Read-only — the answer to "are we capturing every call, and is the
+// status data clean?". Cross-check `total` against /api/admin/restore-calls-from-el?dry=1 (ElevenLabs
+// is the source of truth for calls actually placed).
+app.get("/api/admin/calls-audit", async (c) => {
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const stores = await retailerMap();
+  const rows = await db.select({
+    id: callResults.id, retailerId: callResults.retailerId, status: callResults.status,
+    statusKey: callResults.statusKey, confirmed: callResults.confirmed, providerCallId: callResults.providerCallId,
+    startedAt: callResults.startedAt, completedAt: callResults.completedAt,
+  }).from(callResults);
+  const tally = (f: (r: (typeof rows)[number]) => string | null | undefined) => {
+    const t: Record<string, number> = {};
+    for (const r of rows) { const k = String(f(r) ?? "—"); t[k] = (t[k] || 0) + 1; }
+    return Object.entries(t).sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ k, n }));
+  };
+  const withTs = rows.filter((r) => r.startedAt).sort((a, b) => (a.startedAt || 0) - (b.startedAt || 0));
+  // A call "into a store" actually dialed → has a providerCallId. Seed/manual rows don't, and the
+  // owner-only "Fun" store is rehearsal — so the first DIALED non-Fun call is the true first real call.
+  const dialed = withTs.filter((r) => r.providerCallId && !ownerOnly.has(r.retailerId));
+  const desc = (r?: (typeof rows)[number]) => (r ? {
+    id: r.id, store: stores.get(r.retailerId)?.name?.split("—")[0].trim() || `#${r.retailerId}`,
+    at: r.startedAt, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, hasProviderCall: !!r.providerCallId,
+  } : null);
+  const cidCounts: Record<string, number> = {};
+  for (const r of rows) if (r.providerCallId) cidCounts[r.providerCallId] = (cidCounts[r.providerCallId] || 0) + 1;
+  return c.json({
+    total: rows.length,
+    ownerOnlyTest: rows.filter((r) => ownerOnly.has(r.retailerId)).length, // "Fun"/rehearsal store calls
+    neverDialed: rows.filter((r) => !r.providerCallId).length,             // no EL conversation → never reached a store
+    adminHangup: rows.filter((r) => r.status === "admin_hangup").length,   // aborted from the dashboard
+    confirmedInStock: rows.filter((r) => r.confirmed === true).length,
+    duplicateProviderCalls: Object.values(cidCounts).filter((n) => n > 1).length, // double-ingested = integrity red flag
+    byStatus: tally((r) => r.status),
+    byStatusKey: tally((r) => r.statusKey),
+    firstCall: desc(withTs[0]),                 // earliest row of any kind (may be a seed/manual row)
+    firstDialedCall: desc(dialed[0]),           // the true first REAL call into a store
+    lastCall: desc(withTs[withTs.length - 1]),
+  });
+});
+
+// ---- ElevenLabs reality check: every agent in the account + how far back each one's calls go ----
+// Answers "where is our older call history?". Calls are partitioned per agent_id; if an earlier agent
+// was used, its conversations won't appear under the current one. Account-level (uses the shared key),
+// so it sees ALL agents regardless of which env's agent is configured. Read-only.
+app.get("/api/admin/el-range", async (c) => {
+  const key = config.voice.apiKey;
+  if (!key) return c.json({ error: "elevenlabs not configured" }, 503);
+  const ar = await fetch("https://api.elevenlabs.io/v1/convai/agents?page_size=100", { headers: { "xi-api-key": key } });
+  const aj = ar.ok ? ((await ar.json()) as { agents?: Array<{ agent_id?: string; name?: string }> }) : { agents: [] };
+  const agents = aj.agents || [];
+  const out: Array<{ agentId: string; name: string | null; conversations: number; earliest: number | null; latest: number | null; isCurrent: boolean }> = [];
+  for (const a of agents) {
+    const agentId = String(a.agent_id || "");
+    if (!agentId) continue;
+    let cursor = "", count = 0, min = 0, max = 0;
+    for (let p = 0; p < 30; p++) {
+      const lr = await fetch(`https://api.elevenlabs.io/v1/convai/conversations?agent_id=${agentId}&page_size=100${cursor ? `&cursor=${cursor}` : ""}`, { headers: { "xi-api-key": key } });
+      if (!lr.ok) break;
+      const lj = (await lr.json()) as { conversations?: Array<{ start_time_unix_secs?: number }>; has_more?: boolean; next_cursor?: string };
+      for (const conv of lj.conversations || []) {
+        count++; const t = Number(conv.start_time_unix_secs) || 0;
+        if (t) { if (!min || t < min) min = t; if (t > max) max = t; }
+      }
+      if (!lj.has_more || !lj.next_cursor) break;
+      cursor = lj.next_cursor;
+    }
+    out.push({ agentId, name: a.name || null, conversations: count, earliest: min || null, latest: max || null, isCurrent: agentId === config.voice.agentId });
+  }
+  out.sort((a, b) => (a.earliest || 9e18) - (b.earliest || 9e18));
+  return c.json({ configuredAgentId: config.voice.agentId, agentCount: out.length, agents: out });
+});
+
+// ---- Peek at a specific EL agent's calls (read-only) — decide if old-agent calls are worth restoring ----
+// Shows a sample: store name + category (from the call's dynamic vars), date, status, and whether it's
+// already in our DB. Lets us judge whether an old agent's conversations were real store checks or just
+// experiments BEFORE deciding to restore them. Never writes.
+app.get("/api/admin/el-agent-sample", async (c) => {
+  const key = config.voice.apiKey;
+  if (!key) return c.json({ error: "elevenlabs not configured" }, 503);
+  const agentId = String(c.req.query("agentId") || "");
+  if (!agentId) return c.json({ error: "agentId required" }, 400);
+  const limit = Math.min(Math.max(Number(c.req.query("limit") || 12), 1), 40);
+  const existing = new Set((await db.select({ p: callResults.providerCallId }).from(callResults)).map((r) => r.p).filter(Boolean));
+  const sample: Array<Record<string, unknown>> = [];
+  let cursor = "", scanned = 0, inDb = 0, withStore = 0;
+  for (let p = 0; p < 30; p++) {
+    const lr = await fetch(`https://api.elevenlabs.io/v1/convai/conversations?agent_id=${agentId}&page_size=100${cursor ? `&cursor=${cursor}` : ""}`, { headers: { "xi-api-key": key } });
+    if (!lr.ok) break;
+    const lj = (await lr.json()) as { conversations?: Array<Record<string, unknown>>; has_more?: boolean; next_cursor?: string };
+    for (const conv of lj.conversations || []) {
+      scanned++;
+      const cid = String(conv.conversation_id || "");
+      if (existing.has(cid)) inDb++;
+      if (sample.length < limit) {
+        const dr = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${cid}`, { headers: { "xi-api-key": key } });
+        const dv = dr.ok ? ((await dr.json()) as { conversation_initiation_client_data?: { dynamic_variables?: Record<string, string> } }).conversation_initiation_client_data?.dynamic_variables || {} : {};
+        if (dv.retailer_name) withStore++;
+        sample.push({ at: Number(conv.start_time_unix_secs) || null, secs: (conv.call_duration_secs as number) ?? null, status: String(conv.status || ""), store: dv.retailer_name || null, category: dv.category || null, inOurDb: existing.has(cid) });
+      }
+    }
+    if (!lj.has_more || !lj.next_cursor) break;
+    cursor = lj.next_cursor;
+  }
+  return c.json({ agentId, scanned, inOurDb: inDb, sampleWithStore: withStore, sample });
+});
+
+// ---- Purge un-provable calls: the owner's rule — if we can't say we PLACED it and got a TRUE status,
+// it doesn't belong in the data. KEEP only rows with a providerCallId (a real ElevenLabs conversation
+// = we definitely called) AND a real outcome status (completed | no_answer). REMOVE everything else
+// (admin_hangup, failed, queued/dialing/in_progress, or no providerCallId). BILLED calls (chargedAt)
+// are never deleted — safety. Dry by default (?dry=0 to execute). Everything stays restorable from EL.
+app.post("/api/admin/purge-undefined-calls", async (c) => {
+  const dry = c.req.query("dry") !== "0";
+  const includeOwner = c.req.query("includeOwner") === "1"; // also drop "Fun" rehearsal calls if asked
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const rows = await db.select({
+    id: callResults.id, status: callResults.status, providerCallId: callResults.providerCallId,
+    chargedAt: callResults.chargedAt, retailerId: callResults.retailerId,
+  }).from(callResults);
+  const TRUE_STATUS = new Set(["completed", "no_answer"]); // a placed call that reached a real outcome
+  const reasonFor = (r: (typeof rows)[number]): string | null => {
+    if (r.chargedAt) return null;                                  // billed → never delete (protected)
+    if (!r.providerCallId) return "never_placed";                  // no EL conversation → can't prove we called
+    if (!TRUE_STATUS.has(r.status)) return "no_true_status";       // admin_hangup / failed / queued / dialing…
+    if (includeOwner && ownerOnly.has(r.retailerId)) return "owner_test"; // optional: drop Fun rehearsal calls
+    return null;                                                   // keep
+  };
+  const doomed = rows.map((r) => ({ r, reason: reasonFor(r) })).filter((x) => x.reason) as Array<{ r: (typeof rows)[number]; reason: string }>;
+  const byReason: Record<string, number> = {};
+  for (const x of doomed) byReason[x.reason] = (byReason[x.reason] || 0) + 1;
+  let deleted = 0;
+  if (!dry && doomed.length) {
+    const ids = doomed.map((x) => x.r.id);
+    for (let i = 0; i < ids.length; i += 200) await db.delete(callResults).where(inArray(callResults.id, ids.slice(i, i + 200)));
+    deleted = ids.length;
+  }
+  return c.json({
+    dry, total: rows.length, flagged: doomed.length, keptDefinitive: rows.length - doomed.length,
+    byReason, deleted,
+    rule: "keep only providerCallId + status in {completed,no_answer}; billed calls protected; restorable from ElevenLabs",
+  });
+});
+
 // ---- Growth pulse: the funnel + engagement snapshot the owner reads each morning ----
 app.get("/api/admin/pulse", async (c) => {
   const now = Math.floor(Date.now() / 1000), d1 = now - 86400, d7 = now - 7 * 86400;
@@ -3371,6 +3518,7 @@ const rooms = new Map<string, Set<WebSocket>>();
 const addListener = (room: string, ws: WebSocket) => {
   let set = rooms.get(room); if (!set) { set = new Set(); rooms.set(room, set); }
   set.add(ws);
+  try { ws.send(JSON.stringify({ hello: true })); } catch { /* diag: prove server->client frames reach the listener through the proxy */ }
   bridgeLog(`listener JOINED room=${room.slice(0, 8)} listeners=${set.size}`);
   ws.on("close", () => { set!.delete(ws); bridgeLog(`listener LEFT room=${room.slice(0, 8)} listeners=${set!.size}`); if (set!.size === 0) rooms.delete(room); });
 };
@@ -3382,14 +3530,18 @@ const fanout = (room: string, payloadB64: string, track: string) => {
 // Real-time transcript lines from the agent bridge → browser listeners, so the chat bubbles populate
 // AS the call happens (ElevenLabs only returns the full transcript post-call).
 const relayLine = (room: string, role: string, text: string) => {
-  const set = rooms.get(room); if (!set) return;
+  const set = rooms.get(room);
+  bridgeLog(`relayLine ${role}: ${String(text).slice(0, 32)} listeners=${set ? set.size : 0}`); // diagnose live-transcript delivery
+  if (!set) return;
   const msg = JSON.stringify({ line: { role, text } });
   for (const ws of set) if (ws.readyState === 1) ws.send(msg);
 };
 // Tell browser listeners the moment the bridge tears down (agent/clerk hung up) so the UI flips to
 // the result instantly instead of waiting on the next poll + ElevenLabs status lag.
 const relayEnd = (room: string) => {
-  const set = rooms.get(room); if (!set) return;
+  const set = rooms.get(room);
+  bridgeLog(`relayEnd room=${room.slice(0, 8)} listeners=${set ? set.size : 0}`); // diagnose hang-up→flip
+  if (!set) return;
   const msg = JSON.stringify({ ended: true });
   for (const ws of set) if (ws.readyState === 1) ws.send(msg);
 };
