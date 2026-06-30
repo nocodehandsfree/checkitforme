@@ -317,7 +317,11 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
       const langBarrierFlag = /^(yes|true)/i.test(String(collected.language_barrier?.value ?? "").trim());
       const LANGBARRIER = /\b(no (?:speak |hablo |habla )?english|don'?t (?:speak|understand) (?:english|you)|no entiendo|no hablo ingl[eé]s|no ingl[eé]s|sólo espa[ñn]ol|solo espa[ñn]ol|hablas espa[ñn]ol|no understand|me no understand|no comprende|wo bu dong|t[ií] khong hi[eể]u)\b/i;
       const langBarrier = langBarrierFlag || LANGBARRIER.test(clerkAll);
-      statusKey = onHold ? "left_on_hold" : (langBarrier ? "language_barrier" : (tooBusy ? "too_busy" : (asked ? "no_clear_answer" : "nobody_answered")));
+      // A completed call means a human was on the line (under connect-on-human, ElevenLabs only joins
+      // once a human is reached). So the honest worst case here is "no clear answer" — NEVER
+      // "nobody_answered" (that lie comes only from the non-completed branch below). `asked` still
+      // gates the too-busy heuristic above; it must not downgrade a real conversation to no-answer.
+      statusKey = onHold ? "left_on_hold" : (langBarrier ? "language_barrier" : (tooBusy ? "too_busy" : "no_clear_answer"));
     }
   } else {
     statusKey = ({ no_answer: "nobody_answered", failed: "failed", closed: "closed" } as Record<string, string>)[status] ?? "nobody_answered";
