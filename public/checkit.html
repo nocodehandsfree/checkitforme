@@ -1100,16 +1100,16 @@ __BRAND_HEAD__
     </div>
 
     <div class="card" id="catcard" style="display:none">
-      <div class="step"><span data-i18n="cat.step">② What are you hunting?</span> <span style="color:var(--muted);font-weight:400;font-size:13px" data-i18n="cat.note">— tap one or more</span></div>
+      <div class="step"><span data-i18n="cat.step">② What are you hunting?</span> </div>
       <div class="chips" id="chips"></div>
       <div id="prodwrap" style="display:none;margin-top:16px">
-        <div class="step" style="margin-bottom:8px"><span data-i18n="cat.specific">Anything specific?</span> <span style="color:var(--muted);font-weight:400;font-size:13px" data-i18n="cat.specific.note">— optional, pins the exact product</span></div>
+        <div class="step" style="margin-bottom:8px"><span data-i18n="cat.specific">Anything specific?</span> <span style="color:var(--muted);font-weight:400;font-size:13px" data-i18n="cat.specific.note">(optional) pins the exact product</span></div>
         <select id="prodsel" onchange="pickProduct()" style="width:100%;background:var(--card,#15151c);color:#fff;border:1px solid var(--border,#2a2a35);border-radius:12px;padding:13px 12px;font-size:15px"></select>
       </div>
     </div>
 
     <button class="callkey" id="checkBtn" onclick="startCheck()" style="display:none">Check this store</button>
-    <div class="foot" id="chargefoot" style="display:none;margin-top:10px" data-i18n="charge"><b>No answer = no charge.</b> You always get the verdict.</div>
+    <div class="foot" id="chargefoot" style="display:none;margin-top:10px" data-i18n="charge"><b>No answer = no charge.</b></div>
     <!-- Sell-methods card: live online stock / ways to get it / resale warning / notify.
          Replaces the call button for non-callable chains (Micro Center, Amazon). -->
     <div id="sellmeta" style="display:none;margin-top:12px"></div>
@@ -1117,7 +1117,7 @@ __BRAND_HEAD__
     <!-- Secondary engagement (below the core flow) -->
 
     <div class="card" id="schedCard" style="display:none;border-color:var(--pline)">
-      <div class="step" style="margin-bottom:8px"><span data-i18n="sched.step">📅 Your auto-checks</span> <span style="color:var(--muted);font-weight:400;font-size:13px" data-i18n="sched.step.note">— we call on shipment days</span></div>
+      <div class="step" style="margin-bottom:8px"><span data-i18n="sched.step">📅 Your auto-checks</span> <span style="color:var(--muted);font-weight:400;font-size:13px" data-i18n="sched.step.note">· we call on shipment days</span></div>
       <div id="schedList"></div>
     </div>
 
@@ -1204,7 +1204,7 @@ __BRAND_HEAD__
   </div>
   <div class="csheet-prod" id="cs_prod"></div>
   <button class="csheet-call" id="cs_call" onclick="startCheck()"><svg width="30" height="30" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span>Check this store</span></button>
-  <div class="csheet-charge" data-i18n="charge"><b>No answer = no charge.</b> You always get the verdict.</div>
+  <div class="csheet-charge" data-i18n="charge"><b>No answer = no charge.</b></div>
 </div>
 
 
@@ -1250,10 +1250,10 @@ __BRAND_HEAD__
   <div class="modal" style="position:relative;max-width:400px;text-align:center">
     <span class="x" onclick="closeLead()">×</span>
     <div style="display:flex;justify-content:center;margin-bottom:10px" id="leadmark"></div>
-    <h3 style="margin-bottom:8px" data-i18n="lead.title">Your first call is free</h3>
+    <h3 style="margin-bottom:8px" data-i18n="lead.title">Your first check is free</h3>
     <div class="meta" style="margin-bottom:18px;line-height:1.6" data-i18n="lead.sub">Just your email. No card.</div>
     <input id="lead_email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border,#2a2a35);border-radius:12px;padding:14px 12px;font-size:16px;box-sizing:border-box">
-    <button class="cta" id="lead_btn" onclick="submitLead()" style="margin-top:12px;width:100%" data-i18n="lead.cta">Place my free call →</button>
+    <button class="cta" id="lead_btn" onclick="submitLead()" style="margin-top:12px;width:100%" data-i18n="lead.cta">Run my free check →</button>
     <div id="lead_err" style="color:#ff6b6b;font-size:13px;margin-top:10px;min-height:16px"></div>
   </div>
 </div>
@@ -1304,7 +1304,7 @@ __BRAND_HEAD__
     <span class="x" onclick="closeStoreReq()">×</span>
     <div id="srMark" style="display:flex;justify-content:center;margin-bottom:6px"></div>
     <h3 style="margin:6px 0 2px;text-align:center" data-i18n="sr.title">Don't see your store?</h3>
-    <div class="meta" style="margin-bottom:14px;text-align:center" data-i18n="sr.sub">Tell us which store to add — when it goes live, <b>your next call is free</b>.</div>
+    <div class="meta" style="margin-bottom:14px;text-align:center" data-i18n="sr.sub">Tell us which store to add. When it goes live, <b>your next check is free</b>.</div>
     <label class="klbl" data-i18n="sr.name">Store name <span style="color:var(--muted);font-weight:400">— required</span></label>
     <input id="sr_name" class="kin" data-i18n-ph="ph.storereq" placeholder="e.g. Target — Thousand Oaks">
     <label class="klbl" data-i18n="sr.city">City &amp; state</label>
@@ -1323,7 +1323,7 @@ __BRAND_HEAD__
     <span class="x" onclick="closeWaitlist()">×</span>
     <div id="wlMark" style="display:flex;justify-content:center;margin-bottom:6px"></div>
     <h3 style="margin:6px 0 2px" data-i18n="wl.title">Get notified when we launch here</h3>
-    <div class="meta" style="margin-bottom:16px" data-i18n="wl.sub">Drop your email or number — the second we go live in your area, you'll be first to know.</div>
+    <div class="meta" style="margin-bottom:16px" data-i18n="wl.sub">Drop your email or number. The second we go live in your area, you'll be first to know.</div>
     <input id="wl_contact" type="text" inputmode="email" autocomplete="email" placeholder="email or phone number" data-i18n-ph="wl.ph" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 12px;font-size:16px;box-sizing:border-box">
     <div id="wl_err" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
     <button class="cta" id="wl_btn" onclick="submitWaitlist()" style="margin-top:6px;width:100%" data-i18n="wl.cta">Join the list →</button>
@@ -1378,12 +1378,12 @@ __BRAND_HEAD__
     <details class="demo acctearn" id="earndemo">
       <summary><span id="earnIcon"></span> <span data-i18n="earn.summary">Earn free checks</span> <span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary>
       <div class="demobody">
-        <div style="color:var(--muted);font-size:12.5px;line-height:1.45;margin:12px 0 2px" data-i18n="earn.sub">Help the hunt and we load you up with free minutes — random winner picked each week.</div>
+        <div style="color:var(--muted);font-size:12.5px;line-height:1.45;margin:12px 0 2px" data-i18n="earn.sub">Help the hunt and we load you up with free checks. Random winner picked each week.</div>
         <div class="earnmod-grid" id="earnGrid" style="grid-template-columns:1fr">
           <div class="earnbox" onclick="openStoreReq()">
             <div class="ei" id="earnStoreIcon"></div>
             <div class="et" data-i18n="earn.store">Add your store</div>
-            <div class="es" data-i18n="earn.store.sub">Put a store on the map, earn a free call.</div>
+            <div class="es" data-i18n="earn.store.sub">Put a store on the map, earn a free check.</div>
           </div>
         </div>
         <div id="refBlock" style="border-top:1px solid var(--border);margin-top:14px">
@@ -1429,7 +1429,7 @@ __BRAND_HEAD__
     <div id="cid_step_done" style="display:none">
       <div style="font-size:40px;margin:4px 0">✅</div>
       <h3 style="margin:0 0 4px;font-size:20px" data-i18n="cid.done">Your number is verified</h3>
-      <div class="meta" style="margin-bottom:16px" data-i18n="cid.donesub">Checks now dial from your cell — stores see your number on caller ID.</div>
+      <div class="meta" style="margin-bottom:16px" data-i18n="cid.donesub">Checks now dial from your cell. Stores see your number on caller ID.</div>
       <button class="cta sm" onclick="closeCallerId()" style="width:100%" data-i18n="cid.donecta">Done</button>
     </div>
   </div>
@@ -1442,7 +1442,7 @@ __BRAND_HEAD__
     <div id="kcall_logo" style="display:flex;justify-content:center;margin-bottom:8px"></div>
     <h3 style="margin:0 0 8px;font-size:20px" id="kcall_store">this store</h3>
     <div class="meta" style="margin-bottom:18px;line-height:1.55"><span data-i18n="kcall.body1">We'll call and ask if their</span> <b id="kcall_cat">Pokémon</b> <span data-i18n="kcall.body2">kiosk is working and stocked, then text you what they say.</span> <span style="color:var(--muted);white-space:nowrap">· 1 check</span></div>
-    <button class="cta" onclick="confirmKioskCall()" style="width:100%" data-i18n="kcall.yes">📞 Yes, call now →</button>
+    <button class="cta" onclick="confirmKioskCall()" style="width:100%" data-i18n="kcall.yes">📞 Yes, check it now →</button>
     <div><a onclick="closeKioskConfirm()" style="display:inline-block;margin-top:12px;color:var(--muted);font-weight:700;font-size:14px;cursor:pointer" data-i18n="kcall.no">Not now</a></div>
     <div style="margin-top:16px;background:var(--ptint);border:1px solid var(--pline);border-radius:12px;padding:11px 12px;font-size:12.5px;color:#e6e2f7;line-height:1.5;text-align:left"><b data-i18n="kcall.atkiosk">At the kiosk right now?</b> <a onclick="closeKioskConfirm();openReceipt()" style="color:var(--purple);font-weight:800;cursor:pointer" data-i18n="kcall.receipt">Use our email at checkout or forward your receipt → free check.</a></div>
   </div>
@@ -1466,13 +1466,13 @@ __BRAND_HEAD__
     <span class="x" onclick="closeScore()">×</span>
     <div data-i18n="sc.crew" style="font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--green)">Show the crew</div>
     <h3 style="margin:6px 0 2px"><span class="mico" id="scoreIco"></span><span data-i18n="sc.scored">You scored!</span></h3>
-    <p data-i18n="sc.snap" style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5">Snap your score and post it to the community wall.</p>
+    <p data-i18n="sc.snap" style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5">Snap your win. Post it.</p>
     <label class="klbl" data-i18n="sc.photo">Your photo</label>
     <input id="score_file" type="file" accept="image/*" onchange="scorePreview()" class="kin" style="padding:9px">
     <div id="score_prev" style="display:none;margin:10px 0;text-align:center"><img id="score_img" style="max-width:100%;max-height:220px;border-radius:12px;border:1px solid var(--border)"></div>
     <label class="klbl" data-i18n="sc.caption">Caption</label>
     <input id="score_caption" maxlength="240" data-i18n-ph="sc.ph.caption" placeholder="Pulled a Charizard at the Target on Sunset!" class="kin">
-    <label class="klbl"><span data-i18n="sc.name">Your name / handle</span> <span style="color:var(--muted);font-weight:400" data-i18n="sc.optional">— optional</span></label>
+    <label class="klbl"><span data-i18n="sc.name">Your name / handle</span> <span style="color:var(--muted);font-weight:400" data-i18n="sc.optional">(optional)</span></label>
     <input id="score_handle" maxlength="40" data-i18n-ph="sc.ph.handle" placeholder="@yourhandle" class="kin">
     <div id="score_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
     <button class="cta" id="score_btn" onclick="submitScore()" data-i18n="sc.post" style="margin-top:8px;width:100%">Post to the wall →</button>
@@ -1483,7 +1483,7 @@ __BRAND_HEAD__
   <div class="modal" style="position:relative;max-width:420px;text-align:center">
     <span class="x" onclick="closeReceipt()">×</span>
     <div style="font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--purple);margin-bottom:8px" data-i18n="rcpt.tag">Verified intel</div>
-    <h3 style="margin:0 0 16px" data-i18n="rcpt.title">Kiosk receipt = free call</h3>
+    <h3 style="margin:0 0 16px" data-i18n="rcpt.title">Kiosk receipt = free check</h3>
     <div class="rstep"><span class="rnum">1</span><div data-i18n="rcpt.s1">At the kiosk? Enter <b>our email</b> at checkout — the receipt comes straight to us.</div></div>
     <div class="rstep"><span class="rnum">2</span><div data-i18n="rcpt.s2">Got the receipt in <b>your</b> inbox? Forward it to us.</div></div>
     <div class="rcptmail" onclick="copyReceiptEmail()" title="Tap to copy"><span id="rcpt_email">restocktimer@gmail.com</span><span class="rcptcopy" data-i18n="rcpt.copy">copy</span></div>
@@ -1499,7 +1499,7 @@ __BRAND_HEAD__
     <span class="x" onclick="closeKiosk()">×</span>
     <div style="font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--purple)" data-i18n="k.tag">Wisdom of the crowd</div>
     <h3 style="margin:6px 0 2px"><span class="mico" id="kIco"></span><span data-i18n="k.title">Report a kiosk refresh</span></h3>
-    <p style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5" data-i18n="k.sub">Spotted a Pokémon kiosk that restocks on a schedule? Drop its timing — every report earns you <b id="kiosk_reward">a free check</b>.</p>
+    <p style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5" data-i18n="k.sub">Spotted a Pokémon kiosk that restocks on a schedule? Drop its timing. Every report earns you <b id="kiosk_reward">a free check</b>.</p>
     <label class="klbl" data-i18n="k.which">Which store &amp; location</label>
     <input id="k_label" data-i18n-ph="ph.kiosk" placeholder="e.g. Albertsons — Sunset Blvd, LA" class="kin">
     <label class="klbl" data-i18n="k.minutes">Refresh minutes <span style="color:var(--muted);font-weight:400">— when it drops, past each hour</span></label>
@@ -1517,7 +1517,7 @@ __BRAND_HEAD__
     <label class="klbl" data-i18n="k.where">Where do we send your free check?</label>
     <input id="k_contact" type="text" inputmode="email" autocomplete="email" placeholder="email or phone" data-i18n-ph="sch.ph" class="kin">
     <div id="k_err" style="color:#ff6b6b;font-size:13px;margin-top:4px;min-height:16px"></div>
-    <button class="cta" id="k_btn" onclick="submitKiosk()" style="margin-top:6px;width:100%" data-i18n="k.cta">Submit &amp; claim my free check →</button>
+    <button class="cta" id="k_btn" onclick="submitKiosk()" style="margin-top:6px;width:100%" data-i18n="k.cta">Claim my free check →</button>
   </div>
 </div>
 
@@ -1853,7 +1853,7 @@ async function submitStoreReq(){
   const btn=$('sr_btn'); btn.disabled=true; btn.textContent=t('toast.submitting','Submitting…');
   const r=await api('/pub/store-request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({storeName:name,city:($('sr_city').value||'').trim(),note:($('sr_note').value||'').trim(),contact:($('sr_contact').value||'').trim()})});
   btn.disabled=false; btn.textContent=t('sr.submit','Submit store →');
-  if(!r||r.error){ $('sr_err').textContent=t('err.generic','Something went wrong — try again'); return; }
+  if(!r||r.error){ $('sr_err').textContent=t('err.generic',"Something went wrong. Try again."); return; }
   track('storereq_submit'); closeStoreReq(); toast(t('toast.storethanks',"🙌 Thanks! We'll work on adding that store"));
 }
 // Run non-critical work (the top finds-ticker banner, the demo body) when the browser is idle, so it
@@ -1867,7 +1867,7 @@ async function boot(){
   const sp=new URLSearchParams(location.search);
   // Restoring a specific call (e.g. pull-to-refresh on a result page) → hide the homepage IMMEDIATELY so
   // it never flashes, and show a loader while the transcript fetches.
-  if(sp.get('call')){ const b=$('builder'); if(b)b.classList.add('hidden'); const r=$('result'); if(r){ r.classList.remove('hidden'); r.innerHTML='<div style="display:grid;place-items:center;min-height:48vh;gap:14px"><div class="ring"></div><div class="meta">'+esc(t('toast.loadingcall','Loading your call…'))+'</div></div>'; } }
+  if(sp.get('call')){ const b=$('builder'); if(b)b.classList.add('hidden'); const r=$('result'); if(r){ r.classList.remove('hidden'); r.innerHTML='<div style="display:grid;place-items:center;min-height:48vh;gap:14px"><div class="ring"></div><div class="meta">'+esc(t('toast.loadingcall',"Loading your check…"))+'</div></div>'; } }
   // PAINT FIRST — header, hero, switcher, logo, language + auth all come from injected brand data, so
   // render them instantly instead of waiting on the network (this is what made the header slow to appear).
   initGA();
@@ -1937,14 +1937,14 @@ function closeWaitlist(){ $('waitlistOverlay').classList.remove('on'); }
 async function submitWaitlist(){
   const c=($('wl_contact').value||'').trim();
   const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(c);
-  if(!isEmail&&!isPhone){ $('wl_err').textContent=t('err.contact','Enter a valid email or phone number'); return; }
+  if(!isEmail&&!isPhone){ $('wl_err').textContent=t('err.contact',"Enter a valid email or phone number."); return; }
   const btn=$('wl_btn'); btn.disabled=true; btn.textContent=t('wl.adding','Adding you…');
   const body={ contact:c, lat:USER_LOC&&USER_LOC.lat, lng:USER_LOC&&USER_LOC.lng };
   const r=await api('/pub/waitlist',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   btn.disabled=false; btn.textContent=t('wl.cta','Join the list →');
-  if(!r||r.error){ $('wl_err').textContent=t('err.generic','Something went wrong — try again'); return; }
+  if(!r||r.error){ $('wl_err').textContent=t('err.generic',"Something went wrong. Try again."); return; }
   track('waitlist_join');
-  closeWaitlist(); toast(t('wl.done',"🙌 You're on the list — we'll reach out the moment we launch near you"));
+  closeWaitlist(); toast(t('wl.done',"🙌 You're on the list. We'll reach out the moment we launch near you."));
 }
 
 // --- Referrals: give free checks, get free checks ---
@@ -2014,7 +2014,7 @@ async function loadSchedules(){
 async function cancelSchedule(id){
   const r=await appApi('/app/schedules/'+id,{method:'DELETE'});
   if(r&&r.ok){ track('schedule_cancel',{id}); toast(t('sch.canceled','Auto-check canceled')); loadSchedules(); }
-  else toast(t('sch.cancelfail','Could not cancel — try again'));
+  else toast(t('sch.cancelfail',"Couldn't cancel. Try again."));
 }
 function renderAuth(){
   const ap=$('authpill'), cn=$('creditN');
@@ -2085,7 +2085,7 @@ function fmtPhoneInput(el){ const d=(el.value||'').replace(/\D/g,'').slice(0,10)
 async function phoneStart(resend){
   if(AUTH.busy) return;
   const e=normUsPhone($('auth_phone').value);
-  if(!e){ $('auth_err').textContent=t('err.phone','Enter your 10-digit US cell number.'); return; }
+  if(!e){ $('auth_err').textContent=t('err.phone',"Enter your US mobile number."); return; }
   AUTH_PHONE=e; AUTH.busy=true;
   const btn=$('auth_send'); if(btn){ btn.disabled=true; btn.textContent=resend?'Resending…':'Sending…'; }
   $('auth_err').textContent='';
@@ -2157,7 +2157,7 @@ function openAccount(){
     : n<=0
       ? `<span class="credline zero">${t('acct.zero','0 checks left')}</span>`
       : `<span class="credline">${member?ICO.spark('#FFCB05').replace('width="13" height="13"','width="15" height="15"')+' ':''}<b style="font-size:16px">${n}</b>&nbsp;${t('acct.left2','checks left')}</span>`;
-  const pl=$('acct_planlbl'); if(pl) pl.textContent = member||comp ? t('acct.manage','Manage plan') : t('acct.upgrade','Upgrade — get more checks');
+  const pl=$('acct_planlbl'); if(pl) pl.textContent = member||comp ? t('acct.manage','Manage plan') : t('acct.upgrade',"Get more checks.");
   const pr=$('acct_plan'); if(pr) pr.onclick=function(){ closeAccount(); openBuy((member||comp)?'manage':undefined); };
   setI('acctHist', FCHK(18)); // the brand check mark, not a clock
   // "My checks" ALWAYS shows when signed in (the account menu only opens when authed) — a fresh
@@ -2202,7 +2202,7 @@ async function callerIdStart(){
   const r=await appApi('/auth/callerid/start',{method:'POST'});
   if(btn){ btn.disabled=false; btn.textContent=t('cid.cta','Verify my number →'); }
   if(!r||r.error||!r.validationCode){
-    $('cid_err').textContent = (r&&r.error==='verify_not_configured') ? t('cid.unavail','Verification is temporarily unavailable — try again later.') : t('cid.startfail','Could not start verification — try again.');
+    $('cid_err').textContent = (r&&r.error==='verify_not_configured') ? t('cid.unavail',"Verification is down for now. Try again later.") : t('cid.startfail',"Couldn't start verification. Try again.");
     return;
   }
   $('cid_code').textContent=r.validationCode;
@@ -2213,7 +2213,7 @@ async function callerIdStart(){
 }
 async function callerIdPoll(){
   CID_TRIES++;
-  if(CID_TRIES>34){ clearInterval(CID_POLL); CID_POLL=null; $('cid_verr').textContent=t('cid.timeout',"Didn't verify in time — close this and try again."); return; }
+  if(CID_TRIES>34){ clearInterval(CID_POLL); CID_POLL=null; $('cid_verr').textContent=t('cid.timeout',"Didn't verify in time. Close this and try again."); return; }
   const r=await appApi('/auth/callerid/status');
   if(r&&r.verified){
     clearInterval(CID_POLL); CID_POLL=null;
@@ -2240,7 +2240,7 @@ async function restoreCall(cid, storeName, catName){
   const cached = known ? resultCacheGet(cid) : null;
   if(cached){ if(known&&known.steps) cached.savedSteps=known.steps; showResult(cached, cid); }
   const o=await api('/pub/result/'+encodeURIComponent(cid));
-  if(!o||o.error||o.status==='in_progress'){ if(cached) return; toast(t('toast.callgone','That call is no longer available')); backToBuilder(); return; }
+  if(!o||o.error||o.status==='in_progress'){ if(cached) return; toast(t('toast.callgone',"That check is no longer available")); backToBuilder(); return; }
   if(!SEL_STORE.name && isAuthed()){ const srv=(await fetchServerHistory()).find(x=>x.cid===cid); if(srv){ SEL_STORE={id:srv.storeId,name:srv.storeName}; } }
   if(!SEL_STORE.name) SEL_STORE.name=t('hist.acheck','Store check');
   if(!known && SEL_STORE.id!=null){
@@ -2339,7 +2339,7 @@ function findMe(after){
   navigator.geolocation.getCurrentPosition(p=>{
     setUserLoc(p.coords.latitude,p.coords.longitude);
     if(typeof after==='function') after();
-  }, err=>{ if(b)b.classList.remove('loading'); toast(err.code===1?t('toast.locblocked','Location blocked — enable it in your browser settings'):t('toast.locfail','Couldn’t get your location')); }, {enableHighAccuracy:true,timeout:8000});
+  }, err=>{ if(b)b.classList.remove('loading'); toast(err.code===1?t('toast.locblocked',"Location blocked. Enable it in your browser settings."):t('toast.locfail','Couldn’t get your location')); }, {enableHighAccuracy:true,timeout:8000});
 }
 // Recommend the smartest store to check, from the restock database (shipment day + history + distance).
 let BEST=null; // top recommended store — shown as the highlighted first row in the store list
@@ -2372,7 +2372,7 @@ function loadMap(){
   if(window.L){ if(!MAP){ MAP_LOADED=true; initMap(); } else { setTimeout(()=>{ MAP.invalidateSize(); if(USER_LOC) placeMyPin(USER_LOC.lat,USER_LOC.lng,true); renderMapPins(); },60); } return; }
   const css=document.createElement('link'); css.rel='stylesheet'; css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(css);
   const js=document.createElement('script'); js.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-  js.onload=()=>{ initMap(); }; js.onerror=()=>{ toast(t('toast.maploading','Map could not load — showing the list')); toggleMap(); };
+  js.onload=()=>{ initMap(); }; js.onerror=()=>{ toast(t('toast.maploading',"Map couldn't load. Showing the list.")); toggleMap(); };
   document.body.appendChild(js);
 }
 function initMap(){
@@ -2510,7 +2510,7 @@ function renderStores(){
   if(cnt) cnt.innerHTML = `<span class="odot"></span>${openCount} ${kiosk?t('count.kiosks','kiosks'):t('count.open','open')}${USER_LOC?` · ${RADIUS} mi`:''}`;
   const emptyMsg=()=>{
     if(kiosk) return USER_LOC?tf('empty.kiosk',`No kiosks mapped within ${RADIUS} mi yet — they're crowd-built. Bought from one? <a onclick="openReceipt()" style="color:var(--purple);font-weight:700;cursor:pointer">Email a receipt</a> to put it on the map.`,{r:RADIUS}):t('empty.kiosk.tap','Tap the pin to find vending machines near you.');
-    if(!USER_LOC) return t('empty.search','No matches — try a different search, or tap the pin for stores near you.');
+    if(!USER_LOC) return t('empty.search',"No matches. Try a different search, or tap the pin for stores nearby.");
     const nearest=STORES.reduce((m,s)=>{ const d=storeMi(s); return (d!=null&&d<m)?d:m; },1e9);
     // Only show the "not in your area" waitlist if we've searched WIDE (max radius) and still found
     // nothing. At a small radius an empty result just means "widen" — not that we don't serve here.
@@ -2620,7 +2620,7 @@ async function openPage(slug){
   $('pg_title').textContent=''; $('pg_body').innerHTML='…';
   $('pageOverlay').classList.add('on'); track('page_open',{slug});
   const r=await api('/p/'+slug+'?partial=1');
-  if(!r||r.error||!r.body){ $('pg_body').innerHTML=t('err.generic','Something went wrong — try again'); return; }
+  if(!r||r.error||!r.body){ $('pg_body').innerHTML=t('err.generic',"Something went wrong. Try again."); return; }
   $('pg_title').textContent=r.title||''; $('pg_body').innerHTML=r.body;
 }
 function closePage(){ $('pageOverlay').classList.remove('on'); }
@@ -2747,7 +2747,7 @@ function renderChips(){
 }
 function pickStore(id){
   const st=STORES.find(s=>s.id===id);
-  if(isClosed(st)){ toast(tLbl(st.openState.label||'Closed')+' '+t('closednow','— closed right now')); return; }
+  if(isClosed(st)){ toast(tLbl(st.openState.label||'Closed')+' '+t('closednow',"· closed now")); return; }
   SEL_STORE=st; SEL_KIOSK=false; KIOSK_OK=false;
   if(!BRAND_CAT) applyBrand();   // categories may have loaded after first paint — re-resolve the brand's category
   const opts=storeCatOptions();
@@ -2762,7 +2762,7 @@ function pickStore(id){
 // flashes a confirmation that we're calling to check the MACHINE (working/stocked), not shelf stock.
 function pickKiosk(id){
   const st=STORES.find(s=>s.id===id); if(!st) return;
-  if(isClosed(st)){ toast(tLbl((st.openState&&st.openState.label)||'Closed')+' '+t('closednow','— closed right now')); return; }
+  if(isClosed(st)){ toast(tLbl((st.openState&&st.openState.label)||'Closed')+' '+t('closednow',"· closed now")); return; }
   SEL_STORE=st; SEL_KIOSK=true; KIOSK_OK=false;
   if(!BRAND_CAT) applyBrand();
   const pref = BRAND_CAT || CATS.find(c=>/pok/i.test(c.label)) || CATS[0];
@@ -2820,7 +2820,7 @@ async function submitLead(){
   $('lead_btn').disabled=true; $('lead_btn').textContent=t('lead.wait','One sec…');
   try{ await api('/pub/lead',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:e,source:'runner_free'})}); }catch(err){}
   localStorage.setItem('runnr_lead_email',e);
-  $('lead_btn').disabled=false; $('lead_btn').textContent=t('lead.cta','Call the store →'); closeLead();
+  $('lead_btn').disabled=false; $('lead_btn').textContent=t('lead.cta','Check this store →'); closeLead();
   const n=LEAD_PENDING; LEAD_PENDING=null; if(typeof n==='function') n();
 }
 // Falls back to the asked label (from local history) before CATS hydrates, so an instant cached
@@ -2885,7 +2885,7 @@ function renderStoreActions(){
   const nm=esc((st.name||'').split(/[—–]| - /)[0].trim());
   const parts=[];
   // 1. Resale warning first — consumer protection (isMSRP===false → third-party reseller).
-  if(st.isMSRP===false) parts.push(`<div class="smwarn">⚠️ ${t('sm.resale','Resale — price may be over MSRP')}</div>`);
+  if(st.isMSRP===false) parts.push(`<div class="smwarn">⚠️ ${t('sm.resale',"Resale. May be over MSRP.")}</div>`);
   // 2. Live online-stock readout for "site" chains (their site mirrors the shelf — no call needed).
   if(isSite) parts.push(`<div class="smline" id="smlive">📡 ${t('sm.livechk','Checking live online stock…')}</div>`);
   // 3. Ways to get it (pickup / ship). "On shelf" is dropped — it's a dead, non-actionable chip.
@@ -2908,7 +2908,7 @@ async function loadLiveStock(id){
   const sig=Array.isArray(rows)?rows.find(r=>r&&r.status&&r.status!=='unknown'):null;
   const el=$('smlive');
   if(el){
-    if(!sig) el.innerHTML=`📡 ${t('sm.nolive','No live online signal yet — get notified when it restocks')}`;
+    if(!sig) el.innerHTML=`📡 ${t('sm.nolive',"No online signal yet. Get notified when it restocks.")}`;
     else { const map={in_stock:['🟢',t('sm.in','In stock online now')],low:['🟡',t('sm.low','Low stock online')],out_of_stock:['🔴',t('sm.out','Out of stock online')]};
       const m=map[sig.status]||['⚪',sig.status];
       el.innerHTML=`${m[0]} <b>${esc(m[1])}</b>${sig.product?` · ${esc(sig.product)}`:''} <span style="color:var(--muted)">· ${agoStr(sig.seenAt)}</span>`; }
@@ -3009,7 +3009,7 @@ function scriptHTML(transcript, final){
   const lines=(transcript||'').split('\n').filter(Boolean);
   const hs=transcriptHumanStart(lines);
   const human=lines.slice(hs).filter(l=>/^(Agent|Clerk):/.test(l));
-  if(!human.length) return `<div class="cs-wait">${final?t('live.noconvo','No live conversation on this call.'):t('live.waitperson','Waiting to reach a person…')}</div>`;
+  if(!human.length) return `<div class="cs-wait">${final?t('live.noconvo','No live conversation on this call.'):t('live.waitperson',"Reaching a person…")}</div>`;
   return `<div class="chat">${human.map(l=>bubbleHTML(l,true)).join('')}</div>`;
 }
 function callMsgBoxHTML(steps, transcript, opts){
@@ -3066,7 +3066,7 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
   const reach = n ? `<details class="reach" open><summary><span class="ctl-dot"></span><span class="reach-lbl">${t('step.ringing','Ringing the store…')}</span><span class="reach-n">${n} ${n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · <span class="cs-count">${totalS}</span>s`:''}</span><span class="reach-chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span></summary><div class="reach-steps">${stepRows}</div></details>` : '';
   // Conversation: a "Conversation" label (green dot) then the bubbles — NO per-bubble dots.
   const convLabel = human.length ? `<div class="ctl-conv"><span class="ctl-dot"></span><span class="conv-lbl">${t('res.conversation','Conversation')}</span></div>` : '';
-  const emptyMsg = finalElapsed==null ? t('live.waitperson','Waiting to reach a person…') : '';
+  const emptyMsg = finalElapsed==null ? t('live.waitperson',"Reaching a person…") : '';
   const convo = human.length
     ? human.map(l=>`<div class="ctl-bub${/^Agent:/.test(l)?' ai':''}">${bubbleHTML(l,true)}</div>`).join('')
     : (emptyMsg?`<div class="cs-wait">${emptyMsg}</div>`:'');
@@ -3183,7 +3183,7 @@ async function startCheckLive(){
   let secs=0; const elT=setInterval(()=>{ secs+=1; },1000); // counts toward the hard cap only — no on-screen timer
   LIVE_TIMERS=[elT];
   const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
-  if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x} — no call placed',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail','Could not start the call')); return; }
+  if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x} — no call placed',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
   LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
   // Transcript + stage stream over the WS for EVERYONE — instant, the moment ElevenLabs emits a line
   // (no poll lag, no waiting on the conversation-id). Audio only PLAYS for listeners (canListen).
@@ -3428,7 +3428,7 @@ let FBK_SENT=false;
 async function sendFeedback(v){
   if(FBK_SENT) return; FBK_SENT=true;
   try{ api('/pub/feedback',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid:RAIL_CID, verdict:v, shown:(LASTRES&&LASTRES.statusKey)||''})}); }catch(_){}
-  const el=$('fbk'); if(el) el.innerHTML='<div class="fbk-thanks">'+FCHK(15)+' '+t('fbk.thanks','Thanks — this trains our checks to get sharper.')+'</div>';
+  const el=$('fbk'); if(el) el.innerHTML='<div class="fbk-thanks">'+FCHK(15)+' '+t('fbk.thanks',"Thanks. This trains our checks to get sharper.")+'</div>';
 }
 // Status-detail formatting rule: a new sentence starts a new line — but a single sentence never
 // wraps across two lines on its own (each sentence is its own non-wrapping line).
@@ -3449,32 +3449,32 @@ function showResult(o, cid){
   const cat=(catLabel()||'').toLowerCase();
   const agentLines=(o.transcript||'').split('\n').filter(l=>/^\s*Agent:/.test(l)).join(' ').toLowerCase();
   const asked = !!cat && (agentLines.includes(cat) || /checking to see|got any|in stock|do you (have|carry|sell)|shipment|looking for/.test(agentLines));
-  let cls='unk', big='📵', title=t('v.noanswer','Nobody answered'), note=t('note.unreached',"We couldn't reach anyone at the store — no charge. Try again in a bit.");
+  let cls='unk', big='📵', title=t('v.noanswer','Nobody answered'), note=t('note.unreached',"We couldn't reach anyone at the store. No charge. Try again in a bit.");
   // Instant-flip placeholder: the call just ended and we flipped here immediately with the streamed
   // conversation; the real verdict is still being pulled and will repaint over this in a moment.
-  if(o.status==='pending'){ cls='unk'; big='⏳'; title=t('v.getting','Getting the answer…'); note=t('note.getting','The call just finished — pulling the result.'); }
+  if(o.status==='pending'){ cls='unk'; big='⏳'; title=t('v.getting','Getting the answer…'); note=t('note.getting',"The call just finished. Pulling the result."); }
   // Statuses registry first — the owner-edited single source of truth (with ES variants by key).
   else if(o.statusKey && RSTATUSES[o.statusKey]){
     const s=RSTATUSES[o.statusKey];
     cls=s.tone||'unk'; big=s.emoji||'•'; title=t('st.'+o.statusKey, s.label);
     note=(o.statusKey==='failed'&&o.failureReason)?safeReason(o.failureReason):t('stn.'+o.statusKey, s.note||'');
   }
-  else if(o.statusKey==='left_on_hold'){ cls='unk'; big='⏳'; title=t('v.hold','Left on hold'); note=t('note.hold',"They went to check, but the call dropped on hold. No charge — try again."); }
+  else if(o.statusKey==='left_on_hold'){ cls='unk'; big='⏳'; title=t('v.hold','Left on hold'); note=t('note.hold',"They went to check, but the call dropped on hold. No charge. Try again."); }
   else if(o.status==='completed'&&o.doesNotSell){ cls='out'; big='🚫'; title=t('v.nocarry',"They don't carry it"); note=tf('note.nocarry',"This store doesn't carry "+(catLabel()||'this')+" — try another.",{x:catLabel()||'this'}); }
   else if(o.status==='completed'&&o.soldOut){ cls='out'; big='🕐'; title=t('v.soldout','Sold out'); note=t('note.soldout',"Came in, but it's already gone. Worth catching the next shipment."); }
   else if(o.status==='completed'&&o.confirmed===true){ cls='in'; big='✅'; title=t('v.in','In stock!'); note=tf('note.in','They have {c} — go get it.',{c:'<b style="color:#fff;font-weight:800">'+esc(catLabel()||'them')+'</b>'}); }
   else if(o.status==='completed'&&o.confirmed===false){ cls='out'; big='❌'; title=t('v.out','Not in stock'); note=t('note.out',"They don't have it."); }
   else if(o.status==='completed'){ // reached the end but no yes/no extracted
-    if(asked){ cls='unk'; big='🔄'; title=t('v.unclear','No clear answer — recheck'); note=t('note.unclear','Someone answered but didn’t give a clear yes or no. See what they said below.'); }
+    if(asked){ cls='unk'; big='🔄'; title=t('v.unclear',"No clear answer. Recheck."); note=t('note.unclear','Someone answered but didn’t give a clear yes or no. See what they said below.'); }
     else { cls='unk'; big='📵'; title=t('v.noanswer','Nobody answered'); note=t('note.noanswer.desk','Got through the menu, but no one picked up at the desk. No charge.'); }
   }
-  else if(o.status==='no_answer'){ cls='unk'; big='📵'; title=t('v.noanswer','Nobody answered'); note=t('note.noanswer',"Rang and rang — nobody picked up. No charge."); }
-  else if(o.status==='voicemail'){ cls='unk'; big='📮'; title=t('st.voicemail','Got their voicemail'); note=t('note.voicemail',"We reached a recording, not a person — no charge."); }
-  else if(o.status==='busy'){ cls='unk'; big='📞'; title=t('v.busy','Line was busy'); note=t('note.busy',"Their line was busy — no charge. Try again shortly."); }
-  else if(o.status==='ivr_stuck'){ cls='unk'; big='🔢'; title=t('v.ivr',"Couldn't reach a person"); note=t('note.ivr',"We got stuck in their phone menu and couldn't reach anyone — no charge."); }
-  else if(o.status==='bad_number'){ cls='unk'; big='☎️'; title=t('v.badnum','Bad number'); note=t('note.badnum',"That number didn't connect — no charge."); }
-  else if(o.status==='closed'){ cls='unk'; big='🔒'; title=t('v.closedt','Store closed'); note=t('note.closed',"They're closed right now — no charge. Try again when they're open."); }
-  else if(o.status==='failed'){ cls='unk'; big='⚠️'; title=t('v.failed','Call failed'); note=safeReason(o.failureReason)||t('note.failed','Something went wrong on our end — no charge.'); }
+  else if(o.status==='no_answer'){ cls='unk'; big='📵'; title=t('v.noanswer','Nobody answered'); note=t('note.noanswer',"Rang and rang. Nobody picked up. No charge."); }
+  else if(o.status==='voicemail'){ cls='unk'; big='📮'; title=t('st.voicemail','Got their voicemail'); note=t('note.voicemail',"We reached a recording, not a person. No charge."); }
+  else if(o.status==='busy'){ cls='unk'; big='📞'; title=t('v.busy','Line was busy'); note=t('note.busy',"Their line was busy. No charge. Try again shortly."); }
+  else if(o.status==='ivr_stuck'){ cls='unk'; big='🔢'; title=t('v.ivr',"Couldn't reach a person"); note=t('note.ivr',"We got stuck in their phone menu and couldn't reach anyone. No charge."); }
+  else if(o.status==='bad_number'){ cls='unk'; big='☎️'; title=t('v.badnum','Bad number'); note=t('note.badnum',"That number didn't connect. No charge."); }
+  else if(o.status==='closed'){ cls='unk'; big='🔒'; title=t('v.closedt','Store closed'); note=t('note.closed',"They're closed right now. No charge. Try again when they're open."); }
+  else if(o.status==='failed'){ cls='unk'; big='⚠️'; title=t('v.failed','Call failed'); note=safeReason(o.failureReason)||t('note.failed',"Something went wrong on our end. No charge."); }
   // Owner-authored registry note wins. If a status has a NON-EMPTY note in the dashboard registry, that
   // exact message (with {product}/{store} tokens) is the source of truth — the smart auto sub-lines below
   // are only the fallback when the registry note is left blank (which is why in_stock still reads nicely
@@ -3523,7 +3523,7 @@ function showResult(o, cid){
   const callSummary=t('cs.call','Call')+(_secs?(' · '+_secs+'s'):'');
   const proof = (o.transcript) ? `
     <div class="proof">
-      <div class="ph"><span>${ICO.lock('#7a7a88')} ${t('res.proof','Proof — what the clerk said')}</span>${canTranslate?`<button class="tbtn" id="tbtn" onclick="toggleTranslate()">${ICO.globe('currentColor')} ${t('res.translate','Translate')}</button>`:''}</div>
+      <div class="ph"><span>${ICO.lock('#7a7a88')} ${t('res.proof',"Proof. What they said.")}</span>${canTranslate?`<button class="tbtn" id="tbtn" onclick="toggleTranslate()">${ICO.globe('currentColor')} ${t('res.translate','Translate')}</button>`:''}</div>
       <div id="proofbody">
         ${tr||''}
       </div>
@@ -3548,15 +3548,15 @@ function showResult(o, cid){
       </button>
       <div class="upmod-body">
         <div class="s">${t('up.restock.sub',"We'll text you the second it's back in stock.")}</div>
-        ${F.restockAlerts!==false?`<div class="uprow" onclick="openWatch()"><div class="upi">${ICO.msg(PURP)}</div><div class="uptxt"><div class="a">${t('up.watch',"Tell me when it's back")}</div><div class="b">${t('up.watch.sub','One alert the instant a call confirms stock.')}</div></div><div class="upc">${ICO.chev('#56566a')}</div></div>`:''}
-        ${F.scheduling!==false?`<div class="uprow" onclick="openSchedule()"><div class="upi">${ICO.cal(PURP)}</div><div class="uptxt"><div class="a">${t('up.sched','Auto-check on shipment days')}</div><div class="b">${t('up.sched.sub','We call for you on restock days — hands-free.')}</div></div><div class="upc">${ICO.chev('#56566a')}</div></div>`:''}
+        ${F.restockAlerts!==false?`<div class="uprow" onclick="openWatch()"><div class="upi">${ICO.msg(PURP)}</div><div class="uptxt"><div class="a">${t('up.watch',"Tell me when it's back")}</div><div class="b">${t('up.watch.sub',"One alert the instant a check confirms stock.")}</div></div><div class="upc">${ICO.chev('#56566a')}</div></div>`:''}
+        ${F.scheduling!==false?`<div class="uprow" onclick="openSchedule()"><div class="upi">${ICO.cal(PURP)}</div><div class="uptxt"><div class="a">${t('up.sched','Auto-check on shipment days')}</div><div class="b">${t('up.sched.sub',"We call for you on restock days. Hands-free.")}</div></div><div class="upc">${ICO.chev('#56566a')}</div></div>`:''}
       </div>
     </div>` : `
     <div class="upmod open">
       <div class="upmod-h" style="cursor:default">
         <div class="t">${ICO.bell(PURP)} ${t('up.checkback','Check back soon')}</div>
       </div>
-      <div class="upmod-body"><div class="s">${t('up.checkback.sub','They restock often — pop back in a day or two.')}</div></div>
+      <div class="upmod-body"><div class="s">${t('up.checkback.sub',"They restock often. Pop back in a day or two.")}</div></div>
     </div>`);
 
   const nm=splitStoreName(SEL_STORE.name);
@@ -3595,7 +3595,7 @@ function showResult(o, cid){
     ? `<button class="cta" onclick="backToBuilder()">${t('cta.another','Check another store')}${arrow}</button>`
     : `<div class="card" style="border-color:rgba(74,222,128,.4);text-align:center">
         <div style="font-weight:800;font-size:16px;margin-bottom:6px">${t('res.free','That was your free check 🎯')}</div>
-        <div class="meta" style="margin-bottom:14px">${t('res.free.sub',"Sign up in 30 seconds to check <b>any store, anytime</b> — it's the only way to keep going.")}</div>
+        <div class="meta" style="margin-bottom:14px">${t('res.free.sub',"Sign up free. Keep hunting.")}</div>
         <button class="cta" onclick="signUp()">${t('res.signup','Sign up & keep checking')}</button>
       </div>`;
   // Persist the tone CLASS first so a reload (the tone-nav below, or a pull-to-refresh) can pre-apply the
@@ -3612,7 +3612,7 @@ function showResult(o, cid){
   // Unclear verdict → point them at the transcript AND ask for a quick one-tap label. That label is the
   // training signal: it tells us what the answer REALLY was on the calls our consensus couldn't call.
   // Verdict-specific terminus line at the bottom of the timeline (distinct from the big verdict title).
-  const termLabel = cls==='in' ? t('term.in','In stock — confirmed')
+  const termLabel = cls==='in' ? t('term.in',"In stock. Confirmed.")
     : cls==='out' ? t('term.out','Not in stock')
     : cls==='soon' ? tf('term.soon','Restock confirmed · {d}',{d:esc(fmtShipDay(o.shipmentDay)||'soon')})
     : cls==='unk' ? t('term.unk','No clear answer') : '';
@@ -3694,7 +3694,7 @@ function looksForeign(t){
 function safeReason(r){
   if(!r) return '';
   return /twilio|trunk|sip|carrier|webhook|elevenlabs|provider|api|status code|error code|exception|sid\b|http/i.test(r)
-    ? t('note.failed','Something went wrong on our end — no charge.') : r;
+    ? t('note.failed',"Something went wrong on our end. No charge.") : r;
 }
 // Custom verdict marks: emoji (from the statuses registry) → our drawn icon, tone-colored.
 function vicon(emoji,cls,size){
@@ -3924,7 +3924,7 @@ function showTodayLanding(){
 }
 async function openHistEntry(e){
   if(!e) return;
-  if(!e.cid){ toast(t('toast.callgone','That call is no longer available')); return; } // instant hang-up: no transcript exists
+  if(!e.cid){ toast(t('toast.callgone',"That check is no longer available")); return; } // instant hang-up: no transcript exists
   ANIM_CID=null; // explicit user reopen → re-arm the entrance so opening any call replays the animation
   TONE_NAV_DONE=false; // opening another result → let it re-tint the status bar at load (real nav to its ?tone)
   SEL_STORE={id:e.storeId,name:e.storeName,carries:[],address:e.address||null,location:e.location||null,logoUrl:e.logoUrl,logoWide:e.logoWide,logoDark:e.logoDark}; SEL_CAT=e.categoryId;
@@ -3945,7 +3945,7 @@ async function openHistEntry(e){
   else { showResult({ status:e.status, confirmed:e.confirmed, soldOut:!!e.soldOut, doesNotSell:!!e.doesNotSell, shipmentDay:e.shipmentDay||null, statusKey:e.statusKey||null, transcript:'', summary:'', cats:e.cats||[], categoryResults:e.categoryResults||null, savedSteps:e.steps||null }, e.cid); }
   // No spinner — we already painted. Fetch the full transcript in the background and re-render if richer.
   const o=await api('/pub/result/'+encodeURIComponent(e.cid));
-  if(!o||o.error||o.status==='in_progress'){ if(cached||e.status) return; HIST_BAD.add(e.cid); HIST_CACHE=HIST_CACHE.filter(x=>x.cid!==e.cid); toast(t('toast.callgone','That call is no longer available')); openHistory(); return; }
+  if(!o||o.error||o.status==='in_progress'){ if(cached||e.status) return; HIST_BAD.add(e.cid); HIST_CACHE=HIST_CACHE.filter(x=>x.cid!==e.cid); toast(t('toast.callgone',"That check is no longer available")); openHistory(); return; }
   o.cats=e.cats||ASKED_CATS.map(x=>x.label);
   if(!o.categoryResults && e.categoryResults) o.categoryResults=e.categoryResults;
   if(e.steps) o.savedSteps=e.steps;
@@ -4100,8 +4100,8 @@ let BILLING_ANNUAL=false;
 function tiers(){ return [
   {key:'t1',name:'Family',    cents:999,  checks:30,   perk:t('plan.p1','Restock alerts')},
   {key:'t2',name:'Collector', cents:1999, checks:100,  perk:t('plan.p2','+ Auto-checks on shipment days')},
-  {key:'t3',name:'Operator',  cents:4999, checks:350,  perk:t('plan.p3','+ Specific products & multi-asks'), featured:true},
-  {key:'t4',name:'Pro Seller',cents:14900,checks:1500, perk:t('plan.p4','+ Zone sweeps — every store near you, one tap'), plus:true},
+  {key:'t3',name:'Operator',  cents:4999, checks:350,  perk:t('plan.p3',"+ Exact products. More than one per call."), featured:true},
+  {key:'t4',name:'Pro Seller',cents:14900,checks:1500, perk:t('plan.p4',"+ Zone sweeps. Every store near you, one tap."), plus:true},
 ]; }
 function setCycle(annual,btn){ BILLING_ANNUAL=annual; document.querySelectorAll('#billcycle button').forEach(b=>b.classList.toggle('on',b===btn)); renderBuyPlans(); }
 function tierPrice(c){ return BILLING_ANNUAL?money(Math.round(c*12*0.83/100)*100):money(c); }
@@ -4112,7 +4112,7 @@ function renderBuyPlans(){
   if(member||comp){
     // The plan dashboard: what you're on, what you've used, where to grow.
     html+=`<div class="plan sub" style="cursor:default">
-      <div class="grow"><div class="pn">${ICO.spark('#FFCB05')} ${comp?t('plan.founder','Founder — unlimited'):('Family · '+money(999)+t('plan.mo','/mo'))}</div>
+      <div class="grow"><div class="pn">${ICO.spark('#FFCB05')} ${comp?t('plan.founder',"Founder. Unlimited."):('Family · '+money(999)+t('plan.mo','/mo'))}</div>
         <div class="pd">${comp?t('plan.founder.sub','All tiers, all features, forever.'):t('plan.cycle','Billed monthly · cancel anytime')}</div></div>
       <div class="pp" style="font-size:14px;color:var(--green)">${t('plan.active','ACTIVE')}</div></div>
     <div style="display:flex;gap:8px;margin:10px 0 14px">
@@ -4136,8 +4136,8 @@ function openBuy(reason){
   if(!isAuthed()){ toast(t('toast.signupfirst','Sign up first to add checks')); signUp(); return; }
   const lead=$('buy_lead');
   if(reason==='manage'){ $('buy_title').textContent=t('plan.title','Your plan'); lead.style.display='none'; }
-  else if(reason==='out'){ $('buy_title').textContent=t('up.out',"You're out of checks"); lead.style.display=''; lead.textContent=t('buy.out.lead','Pick a plan and keep hunting — your next find is one check away.'); }
-  else if(reason==='premium'){ $('buy_title').textContent=t('buy.premium.title','That\'s a member perk ⭐'); lead.style.display=''; lead.textContent=t('buy.premium.lead','Restock alerts & auto-checks come with membership — we watch the shelves so you don\'t have to.'); }
+  else if(reason==='out'){ $('buy_title').textContent=t('up.out',"You're out of checks"); lead.style.display=''; lead.textContent=t('buy.out.lead',"Your next find is one check away."); }
+  else if(reason==='premium'){ $('buy_title').textContent=t('buy.premium.title','That\'s a member perk ⭐'); lead.style.display=''; lead.textContent=t('buy.premium.lead',"We watch the shelves so you don't have to."); }
   else { $('buy_title').textContent=t('buy.title','Pick your plan'); lead.style.display='none'; }
   renderBuyPlans();
   setI('buy_note', `${ICO.lock('#7a7a88')} ${t('buy.secure2','Secure checkout via Stripe')}`);
@@ -4149,14 +4149,14 @@ async function buy(kind){
   if(!isAuthed()){ signUp(); return; }
   $('buy_note').textContent=t('buy.opening','Opening secure checkout…');
   const r=await appApi('/app/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind})});
-  if(r&&r.url){ location.href=r.url; } else { $('buy_note').textContent=t('buy.fail','Could not start checkout — please try again.'); }
+  if(r&&r.url){ location.href=r.url; } else { $('buy_note').textContent=t('buy.fail',"Couldn't start checkout. Try again."); }
 }
 
 
 // --- Share / Watch / Driver-handoff (consumer actions on a result) ---
 function findProductLabel(){ return ((ASKED_CATS&&ASKED_CATS.length)?ASKED_CATS.map(x=>x.label).filter(Boolean).join(', '):catLabels())||'cards'; }
 function findStoreName(){ return (SEL_STORE&&SEL_STORE.name)?SEL_STORE.name.split('—')[0].trim():'a local store'; }
-function brandName(){ return ((BRAND&&BRAND.name)||'Fungibles').replace(/<[^>]+>/g,'').trim(); }
+function brandName(){ return ((BRAND&&BRAND.name)||'Check It For Me').replace(/<[^>]+>/g,'').trim(); }
 function shareMessage(){ return t('share.msg','Yo check this out!'); } // the link unfurl carries the whole story
 // A find-specific landing URL that unfurls richly on socials (dynamic OG title/description).
 function shareUrl(){ return location.origin+'/s?store='+encodeURIComponent(findStoreName())+'&cat='+encodeURIComponent(findProductLabel())+'&v=in'; }
@@ -4176,7 +4176,7 @@ function shareTo(target){
   if(target==='x') window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text)+'&url='+encodeURIComponent(url),'_blank');
   else if(target==='fb') window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(url)+'&quote='+encodeURIComponent(text),'_blank');
   else if(target==='sms') location.href='sms:?&body='+encodeURIComponent(text+' '+url);
-  else if(target==='copy'){ try{ navigator.clipboard.writeText(text+' '+url); }catch(e){} toast(t('share.copied','Copied — paste it anywhere 📋')); }
+  else if(target==='copy'){ try{ navigator.clipboard.writeText(text+' '+url); }catch(e){} toast(t('share.copied',"Copied. Paste it anywhere 📋")); }
   closeShare();
 }
 function closeShare(){ $('shareOverlay').classList.remove('on'); }
@@ -4196,13 +4196,13 @@ function closeWatch(){ $('watchOverlay').classList.remove('on'); }
 async function submitWatch(){
   const c=($('watch_contact').value||'').trim();
   const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(c);
-  if(!isEmail&&!isPhone){ $('watch_err').textContent=t('err.contact','Enter a valid email or phone number'); return; }
+  if(!isEmail&&!isPhone){ $('watch_err').textContent=t('err.contact',"Enter a valid email or phone number."); return; }
   const btn=$('watch_btn'); btn.disabled=true; btn.textContent=t('watch.setting','Setting it up…');
   const r=await api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,contact:c})});
   btn.disabled=false; btn.textContent=t('watch.cta','Watch this store →');
-  if(!r||r.error){ $('watch_err').textContent=t('err.generic','Something went wrong — try again'); return; }
+  if(!r||r.error){ $('watch_err').textContent=t('err.generic',"Something went wrong. Try again."); return; }
   track('watch_set',{retailerId:SEL_STORE.id,channel:isEmail?'email':'sms'});
-  closeWatch(); toast(t('watch.done',"🔔 You're on the list — we'll reach out the moment it's back"));
+  closeWatch(); toast(t('watch.done',"🔔 You're on the list. We'll reach out the moment it's back."));
 }
 
 function openDriverDemo(){ track('driver_demo_open'); openHandoff(); }
@@ -4224,7 +4224,7 @@ function openHandoff(){
       <div class="ho-back" onclick="backToBuilder()">‹</div>
       <div>
         <h1 data-i18n="ho.title">Hand off to a driver</h1>
-        <div class="sub" data-i18n="ho.sub">They grab it — then drive it to your door or ship it to you.</div>
+        <div class="sub" data-i18n="ho.sub">They grab it, then drive it to your door or ship it to you.</div>
       </div>
     </div>
     <div class="ho-job">
@@ -4241,14 +4241,14 @@ function openHandoff(){
         <button class="on" onclick="hoDrop('ship',this)">${t('ho.ship.btn','📦 Ship it to me')}</button>
         <button onclick="hoDrop('home',this)">${t('ho.home.btn','🏠 Drive it to my place')}</button>
       </div>
-      <p class="hint" id="ho_drophint">${t('ho.ship.hint',"Packaging + postage go on the driver's card — they ship it on the way back, tracking texted to you.")}</p>
+      <p class="hint" id="ho_drophint">${t('ho.ship.hint',"Packaging and postage go on the driver's card. They ship it on the way back, tracking texted to you.")}</p>
       <button class="ho-btn primary" onclick="hoAdvance(1)">${t('ho.s1.cta','Looks right →')}</button>`)}
     ${stepShell(2,t('ho.s2.label','The offer'),t('ho.s2.title',"Set the driver's bonus"),`
       <div class="ho-stepper">
         <div class="amt">$<span id="ho_bonus">25</span></div>
         <div class="ho-pm"><button onclick="hoBonus(-5)">–</button><button onclick="hoBonus(5)">+</button></div>
       </div>
-      <div class="ho-bk">${t('ho.s2.bk',"Driver taps a one-time card pre-loaded with <b>item + tax + shipping</b>. Your <b>$<span class=\"ho-bk-bonus\">25</span> bonus</b> releases the moment they confirm drop-off — on top of their normal fare.")}</div>
+      <div class="ho-bk">${t('ho.s2.bk',"Driver taps a one-time card pre-loaded with <b>item + tax + shipping</b>. Your <b>$<span class=\"ho-bk-bonus\">25</span> bonus</b> releases the moment they confirm drop-off, on top of their normal fare.")}</div>
       <button class="ho-btn primary" onclick="hoAdvance(2)">${t('ho.s2.cta','Set the bonus →')}</button>`)}
     ${stepShell(3,t('ho.s3.label','Book it'),t('ho.s3.title','Request the ride yourself'),`
       <div class="ho-seg" id="ho_app">
@@ -4270,8 +4270,8 @@ function openHandoff(){
           <ol>
             <li>${tf('ho.dv.1','Inside <b>{s}</b>, grab the <b>{p}</b>',{s:esc(store),p:esc(prod)})}</li>
             <li>${t('ho.dv.2','Pay with the card you just added')}</li>
-            <li id="ho_dv3">${t('ho.dv.3.ship','Drop at <b>USPS</b> — postage is on the card')}</li>
-            <li>${t('ho.dv.4','Tap <b>Done</b> → your bonus lands instantly')}</li>
+            <li id="ho_dv3">${t('ho.dv.3.ship',"Drop at <b>USPS</b>. Postage is on the card.")}</li>
+            <li>${t('ho.dv.4',"Tap Done. Your bonus lands instantly")}</li>
           </ol>
         </div>
       </details>
@@ -4280,11 +4280,11 @@ function openHandoff(){
     ${stepShell(5,t('ho.s5.label','Wrap up'),t('ho.s5.title','Release the bonus & rate'),`
       <p class="hint">${t('ho.s5.hint','When the driver taps <b>Done</b>, the card locks itself and the receipt photo shows here. Confirm to release the bonus.')}</p>
       <div class="ho-stars" id="ho_stars">${[1,2,3,4,5].map(i=>`<span onclick="hoStar(${i})">★</span>`).join('')}</div>
-      <button class="ho-btn primary" onclick="hoFinish()">${t('ho.s5.cta','Confirm drop-off & release the bonus')}</button>`)}
+      <button class="ho-btn primary" onclick="hoFinish()">${t('ho.s5.cta',"Release the bonus →")}</button>`)}
     </div>
     <div id="ho_done" style="display:none" class="ho-done">
       <div class="big">🏃💨</div>
-      <h2>${t('ho.done.title',"Bonus released — you're done")}</h2>
+      <h2>${t('ho.done.title',"Bonus released. You're done.")}</h2>
       <p id="ho_donep">${t('ho.done.ship',"It's on its way. We'll text you the tracking number the moment the label scans.")}</p>
       <button class="ho-btn primary" style="margin-top:22px" onclick="backToBuilder()">${t('ho.done.cta','Back to the hunt')}</button>
     </div>`;
@@ -4294,14 +4294,14 @@ function hoRender(){
   const b=$('ho_bonus'); if(b) b.textContent=HO.bonus;
   document.querySelectorAll('.ho-bk-bonus').forEach(e=>e.textContent=HO.bonus);
   const chip=$('ho_dropchip'); if(chip) chip.textContent=HO.drop==='home'?t('ho.home','Drive it to my place'):t('ho.ship','Ship it to me');
-  const hint=$('ho_drophint'); if(hint) hint.innerHTML=HO.drop==='home'?t('ho.home.hint','Driver brings it straight to your door — no shipping, no waiting on the mail.'):t('ho.ship.hint',"Packaging + postage go on the driver's card — they ship it on the way back, tracking texted to you.");
-  const dv3=$('ho_dv3'); if(dv3) dv3.innerHTML=HO.drop==='home'?t('ho.dv.3.home','Drive it to the drop-off address in the link'):t('ho.dv.3.ship','Drop at <b>USPS</b> — postage is on the card');
+  const hint=$('ho_drophint'); if(hint) hint.innerHTML=HO.drop==='home'?t('ho.home.hint',"Driver brings it to your door. No shipping, no waiting."):t('ho.ship.hint',"Packaging and postage go on the driver's card. They ship it on the way back, tracking texted to you.");
+  const dv3=$('ho_dv3'); if(dv3) dv3.innerHTML=HO.drop==='home'?t('ho.dv.3.home','Drive it to the drop-off address in the link'):t('ho.dv.3.ship',"Drop at <b>USPS</b>. Postage is on the card.");
   const dp=$('ho_donep'); if(dp) dp.innerHTML=HO.drop==='home'?t('ho.done.home',"It's headed to your door. You'll get a text when the driver marks it dropped."):t('ho.done.ship',"It's on its way. We'll text you the tracking number the moment the label scans.");
   const an=$('ho_appname'); if(an) an.textContent=HO.app;
   const oa=$('ho_open'); if(oa){ oa.textContent=tf('ho.s3.open2','Open {a} & request ↗',{a:HO.app}); oa.href=HO.app==='Uber'?'https://m.uber.com/':'https://www.lyft.com/'; }
   const m=$('ho_msg');
   if(m){
-    const dropLine=HO.drop==='home'?t('ho.msg.home','drive it to my place (address in the link)'):t('ho.msg.ship','drop it at the USPS to ship — postage is on the card');
+    const dropLine=HO.drop==='home'?t('ho.msg.home','drive it to my place (address in the link)'):t('ho.msg.ship',"drop it at USPS to ship. Postage is on the card.");
     const txt=tf('ho.msg',"Hey! Quick paid pickup 🏃 I'll cover the item + a ${b} bonus to you on drop-off.\n\n1) Tap to add a prepaid card to Apple Pay (60 sec):\n   checkitforme.com/d/4QK9\n2) Inside {s}, grab 1 {p}\n3) Pay with that card (it only works for this one buy)\n4) Then {d}\n\nTap Done in the link and your ${b} hits instantly. Thank you!! 🙏",{b:HO.bonus,s:findStoreName(),p:findProductLabel(),d:dropLine});
     m.dataset.raw=txt;
     m.innerHTML=esc(txt).replace('checkitforme.com/d/4QK9','<span class="link">checkitforme.com/d/4QK9</span>');
@@ -4320,7 +4320,7 @@ function hoAdvance(n){
 function hoCopy(){
   const raw=($('ho_msg')&&$('ho_msg').dataset.raw)||'';
   try{ navigator.clipboard.writeText(raw); }catch(e){}
-  toast(t('ho.copied','Copied — paste it in the driver chat'));
+  toast(t('ho.copied',"Copied. Paste it in the driver chat."));
 }
 function hoStar(v){ HO.rating=v; document.querySelectorAll('#ho_stars span').forEach((x,i)=>x.classList.toggle('lit',i<v)); }
 function hoFinish(){ $('ho_steps').style.display='none'; document.querySelector('#handoff .ho-job').style.display='none'; $('ho_done').style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); track('handoff_done',{bonus:HO.bonus,drop:HO.drop,rating:HO.rating}); }
@@ -4358,7 +4358,7 @@ function startReceiptPoll(){
   if(RCPT_TIMER) clearInterval(RCPT_TIMER);
   const t0=Date.now();
   RCPT_TIMER=setInterval(async ()=>{
-    if(Date.now()-t0>6*60000){ clearInterval(RCPT_TIMER); RCPT_TIMER=null; const e=$('rcpt_msg'); if(e)e.textContent=t('rcpt.still','Still here — email it and keep this open.'); return; }
+    if(Date.now()-t0>6*60000){ clearInterval(RCPT_TIMER); RCPT_TIMER=null; const e=$('rcpt_msg'); if(e)e.textContent=t('rcpt.still',"Still here. Email it and keep this open."); return; }
     let r; try{ r=await (isAuthed()?appApi:api)(`/pub/kiosk-receipt/poll?since=${RCPT_SINCE}&device=${encodeURIComponent(deviceId())}`); }catch(e){ return; }
     if(r&&r.found){
       clearInterval(RCPT_TIMER); RCPT_TIMER=null; $('rcpt_state').style.display='none';
@@ -4366,7 +4366,7 @@ function startReceiptPoll(){
       if(r.reward&&r.reward.credits){ if(ACCOUNT)ACCOUNT.credits=(ACCOUNT.credits||0)+r.reward.credits; renderAuth(); }
       else if(r.reward&&r.reward.freeCheck){ localStorage.removeItem('runnr_free_used'); }
       const d=$('rcpt_done'); d.style.display='block';
-      d.innerHTML=`<div style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.35);border-radius:12px;padding:14px;margin-bottom:10px;text-align:left"><div style="font-weight:800;color:var(--green);margin-bottom:3px">${t('rcpt.verified','✅ Receipt verified')}</div><div class="meta" style="font-size:12.5px">${prod}</div></div><button class="cta" onclick="closeReceipt();if(typeof backToBuilder==='function')backToBuilder();">${t('rcpt.claim','Claim your free call →')}</button>`;
+      d.innerHTML=`<div style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.35);border-radius:12px;padding:14px;margin-bottom:10px;text-align:left"><div style="font-weight:800;color:var(--green);margin-bottom:3px">${t('rcpt.verified','✅ Receipt verified')}</div><div class="meta" style="font-size:12.5px">${prod}</div></div><button class="cta" onclick="closeReceipt();if(typeof backToBuilder==='function')backToBuilder();">${t('rcpt.claim',"Claim your free check →")}</button>`;
       track('receipt_claimed');
     }
   }, 4000);
@@ -4386,12 +4386,12 @@ async function submitKiosk(){
   const body={ label, minutes:mins, intervalMin, note:($('k_note').value||'').trim()||null, contact:contact||null, category:(BRAND_CAT&&BRAND_CAT.label)||'Pokémon' };
   const btn=$('k_btn'); btn.disabled=true; btn.textContent=t('k.submitting','Submitting…');
   const r=await (isAuthed()?appApi:api)('/pub/kiosks/report',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  btn.disabled=false; btn.textContent=t('k.cta','Submit & claim my free check →');
-  if(!r||r.error){ $('k_err').textContent=t('err.generic','Something went wrong — try again'); return; }
+  btn.disabled=false; btn.textContent=t('k.cta',"Claim my free check →");
+  if(!r||r.error){ $('k_err').textContent=t('err.generic',"Something went wrong. Try again."); return; }
   track('kiosk_report',{authed:isAuthed()});
   closeKiosk();
   if(r.reward&&r.reward.credits){ if(ACCOUNT)ACCOUNT.credits=(ACCOUNT.credits||0)+r.reward.credits; renderAuth(); toast(tf('k.thanks.credits','🎁 Thanks! '+r.reward.credits+' free check'+(r.reward.credits>1?'s':'')+' added',{n:r.reward.credits})); }
-  else if(r.reward&&r.reward.freeCheck){ localStorage.removeItem('runnr_free_used'); toast(t('k.thanks.free',"🎁 Thanks! Your free check is unlocked — go check a store")); }
+  else if(r.reward&&r.reward.freeCheck){ localStorage.removeItem('runnr_free_used'); toast(t('k.thanks.free',"🎁 Thanks! Your free check is unlocked. Go check a store")); }
   else toast(t('k.thanks','🙌 Thanks for the intel!'));
 }
 
@@ -4424,7 +4424,7 @@ function openScore(){
 function closeScore(){ $('scoreOverlay').classList.remove('on'); }
 function scorePreview(){
   const f=$('score_file').files&&$('score_file').files[0]; if(!f) return;
-  if(f.size>12*1024*1024){ $('score_err').textContent=t('sc.err.big','Photo is too big (max 12MB)'); return; }
+  if(f.size>12*1024*1024){ $('score_err').textContent=t('sc.err.big',"Photo's too big (max 12MB)."); return; }
   SCORE_FILE=f; const r=new FileReader(); r.onload=e=>{ $('score_img').src=e.target.result; $('score_prev').style.display=''; }; r.readAsDataURL(f);
 }
 async function submitScore(){
@@ -4524,7 +4524,7 @@ async function submitSuccess(){
     succClear();
     toast(rr.pending?t('sc.posted.review','🙌 Posted! We review before it goes live'):t('sc.posted','🏆 You\'re on the wall!'));
     toggleComposer(false); loadSuccessWall(); loadCommunity();
-  }catch(e){ $('succ_err').textContent=(e&&e.message)||t('err.generic','Something went wrong'); }
+  }catch(e){ $('succ_err').textContent=(e&&e.message)||t('err.generic',"Something went wrong. Try again."); }
   finally{ btn.disabled=false; btn.textContent=t('sc.postit','Post it →'); }
 }
 function igHandle(p){ return '@'+esc((p.handle||'hunter').replace(/^@/,'')); }
@@ -4601,17 +4601,17 @@ function closeSchedule(){ $('scheduleOverlay').classList.remove('on'); }
 async function submitSchedule(){
   let contact=($('sch_contact').value||'').trim();
   if(!contact){ try{ contact=(ACCOUNT&&ACCOUNT.email)||(ACCOUNT&&ACCOUNT.phone)||''; }catch(e){} } // empty box → default to their account contact
-  if(contact){ const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(contact); if(!isEmail&&!isPhone){ $('sch_err').textContent=t('err.contact','Enter a valid email or phone'); return; } }
+  if(contact){ const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(contact); if(!isEmail&&!isPhone){ $('sch_err').textContent=t('err.contact',"Enter a valid email or phone number."); return; } }
   const btn=$('sch_btn'); btn.disabled=true; btn.textContent=t('sch.setting','Setting it up…');
   const body={ retailerId:SEL_STORE.id, categoryId:SEL_CAT, specificProduct:SEL_PRODUCT||undefined,
     daysOfWeek:[...SCH_DAYS].join(','), timeLocal:$('sch_time').value||'10:00', contact:contact||undefined };
   const r=await appApi('/app/schedule',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   btn.disabled=false; btn.textContent=t('sch.cta','Turn on auto-check →');
   if(r&&r.error==='members_only'){ closeSchedule(); openBuy('out'); return; }
-  if(!r||r.error){ $('sch_err').textContent=t('err.generic','Something went wrong — try again'); return; }
+  if(!r||r.error){ $('sch_err').textContent=t('err.generic',"Something went wrong. Try again."); return; }
   track('schedule_set',{retailerId:SEL_STORE.id,days:[...SCH_DAYS].join(',')||'auto'});
   closeSchedule(); loadSchedules();
-  toast(SCH_DAYS.size?t('sch.on.days',"📅 Auto-check on — we'll call on those days"):t('sch.on.ship',"📅 Auto-check on — we'll call on this store's shipment day"));
+  toast(SCH_DAYS.size?t('sch.on.days',"📅 Auto-check on. We'll call on those days."):t('sch.on.ship',"📅 Auto-check on. We'll call on this store's shipment day."));
 }
 boot();
 </script>
