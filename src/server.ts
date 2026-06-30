@@ -18,7 +18,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -79,6 +79,29 @@ async function isOwnerOnlyStore(retailerId: number): Promise<boolean> {
 async function ownerOnlyRetailerIds(): Promise<Set<number>> {
   const rows = await db.select({ id: retailers.id }).from(retailers).where(eq(retailers.ownerOnly, true));
   return new Set(rows.map((r) => r.id));
+}
+// retailerId -> learned time-to-human (the chain's LOCKED nav recipe seconds): how long we spend in the
+// phone tree / on hold before a person picks up. Subtracting this from a call's connected time yields
+// the REAL human-talk time (the old code subtracted the IVR's first-words timestamp ~2s, so "talk" was
+// the whole call). null when the chain has no locked recipe → caller falls back to the per-call nav.
+async function retailerTimeToHuman(): Promise<Map<number, number>> {
+  const [rets, chRows] = await Promise.all([
+    db.select({ id: retailers.id, chainId: retailers.chainId }).from(retailers),
+    db.select({ id: chains.id, navSeconds: chains.navSeconds, navStatus: chains.navStatus }).from(chains),
+  ]);
+  const ch = new Map(chRows.map((c) => [c.id, c]));
+  const m = new Map<number, number>();
+  for (const r of rets) {
+    const c = r.chainId != null ? ch.get(r.chainId) : null;
+    if (c && c.navStatus === "locked" && c.navSeconds != null) m.set(r.id, c.navSeconds);
+  }
+  return m;
+}
+// "Start fresh" cutoff (unix secs): real-call stats only count calls placed at/after it. 0 = count all.
+async function getStatsSince(): Promise<number> {
+  const v = await getSetting("stats_since");
+  const n = v ? Number(v) : 0;
+  return Number.isFinite(n) ? n : 0;
 }
 import { getAccount, getAccountByPhone, phoneAccountExists, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, SUB, PACKS } from "./billing";
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
@@ -573,7 +596,7 @@ function chainLogoFiles(): Set<string> {
   if (chainLogoCache && Date.now() - chainLogoCache.t < 60_000) return chainLogoCache.v;
   let v = new Set<string>();
   try { v = new Set(readdirSync(join(here, "../public/logos/chains")).filter((f) => /\.(png|webp|svg)$/i.test(f))); } catch { /* dir not there yet */ }
-  chainLogoCache = { t: Date.now(), v };
+  if (v.size) chainLogoCache = { t: Date.now(), v }; // never cache an empty read — self-heal on the next call
   return v;
 }
 const chainSlug = (name: string) => name.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -615,8 +638,17 @@ async function refreshChainLogoDb(): Promise<void> {
     chainLogoDbCache = m;
   } catch (e) { console.error("refreshChainLogoDb", e); }
 }
+let chainLogoDbLoading = false;
+// Lazy-load the DB-backed logo cache on first use (pure DB query, no file read) so logos resolve even if
+// the startup load didn't run in this container — prod resilience for the file-read anomaly.
+function ensureChainLogoDb(): void {
+  if (chainLogoDbCache.size || chainLogoDbLoading) return;
+  chainLogoDbLoading = true;
+  refreshChainLogoDb().finally(() => { chainLogoDbLoading = false; });
+}
 function chainLogoInfo(name: string | null | undefined): { url: string | null; wide: boolean; dark: boolean } {
   if (name) {
+    ensureChainLogoDb();
     const hit = chainLogoDbCache.get(name.toLowerCase()); // DB-first: shared-R2 URL travels across envs
     if (hit) return hit;
   }
@@ -631,13 +663,31 @@ function chainLogoInfo(name: string | null | undefined): { url: string | null; w
 // distributor's products. The config lives in code, so it's identical on every environment (Admin/
 // staging/prod) and a newly-imported store gets the right carries with zero per-store stamping. Same
 // shared-source idea as the R2 logo: derive from one source, never store a per-DB copy that can drift.
+// Inlined fallback = source of truth in code, so carries derive even when the deployed container can't
+// read data/distributors.json (a prod-image file-read anomaly seen after a staging→prod merge). The file
+// is still preferred when readable (keeps it the editable source); the inline keeps prod resilient.
+const DISTRIBUTORS_FALLBACK: { products: Record<string, string[]>; chains: Record<string, string[]> } = {
+  products: {
+    Excell: ["Pokemon TCG", "Disney Lorcana", "Magic: The Gathering", "One Piece TCG", "Yu-Gi-Oh", "Sports Cards (Topps/Panini)"],
+    Schylling: ["NeeDoh (Schylling)"],
+    Jazwares: ["Squishmallows"],
+  },
+  chains: {
+    "CVS": ["Excell", "Schylling", "Jazwares"],
+    "Walgreens": ["Excell", "Schylling", "Jazwares"],
+    "Target": ["Excell", "Schylling", "Jazwares"],
+    "Walmart": ["Excell", "Schylling", "Jazwares"],
+    "Barnes & Noble": ["Excell", "Schylling", "Jazwares"],
+  },
+};
 let distCache: { products: Record<string, string[]>; chains: Record<string, string[]> } | null = null;
 function distConfig(): { products: Record<string, string[]>; chains: Record<string, string[]> } {
-  if (!distCache) {
-    try { distCache = JSON.parse(readFileSync(join(here, "../data/distributors.json"), "utf8")); }
-    catch { distCache = { products: {}, chains: {} }; }
-  }
-  return distCache!;
+  if (distCache) return distCache;
+  try {
+    const c = JSON.parse(readFileSync(join(here, "../data/distributors.json"), "utf8"));
+    if (c && c.chains && Object.keys(c.chains).length) { distCache = c; return c; }
+  } catch { /* file unreadable in this container — use the inlined fallback below */ }
+  return DISTRIBUTORS_FALLBACK; // never cache the fallback, so the file self-heals if it becomes readable
 }
 /** Products a chain carries, derived from its distributor(s). null = chain not mapped (fall back to the stored column). */
 function carriesForChain(name: string | null | undefined): string[] | null {
@@ -653,26 +703,109 @@ function carriesForChain(name: string | null | undefined): string[] | null {
 function storeCarriesList(chainName: string | null | undefined, stored: string | null | undefined): string[] {
   return carriesForChain(chainName) ?? (stored ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 }
+/** Distributor name(s) serving a chain, for display in the Admin (e.g. "Excell · Schylling"). null = unmapped. */
+function distributorsForChain(name: string | null | undefined): string | null {
+  if (!name) return null;
+  const dists = distConfig().chains[name];
+  return (dists && dists.length) ? dists.join(" · ") : null;
+}
 
-// Owner preview: every chain logo rendered EXACTLY as the store list renders it (same tile,
-// plate + wide handling from _meta.json) at real size and 2x — judge phone clarity without
-// driving anywhere. (No auth needed; it leaks nothing but public logos.)
-app.get("/logo-wall", (c) => {
+// Owner preview: every chain logo rendered EXACTLY as the consumer store list renders it — the
+// same .ic tile (52px, plate + wide handling from _meta.json), ONE mark each (no 2x detail), so
+// the page mirrors the real website. Filter by the chain's admin "type" (Big Box, Pharmacy,
+// Grocer…), pulled live from the chains table. No auth — leaks nothing but public logos.
+app.get("/logo-wall", async (c) => {
   const files = [...chainLogoFiles()].sort();
   const meta = logoMeta();
+  // Pair each logo file to its chain's admin store-type (chains = the Admin source of truth).
+  const fileInfo = new Map<string, { type: string; name: string }>();
+  for (const ch of await cachedChains()) {
+    const f = chainLogoFile(ch.name);
+    if (f && !fileInfo.has(f)) fileInfo.set(f, { type: (ch.type || "").trim() || "Other", name: ch.name });
+  }
+  const pretty = (f: string) => f.replace(/\.(png|webp|svg)$/i, "").replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+  const types = [...new Set(files.map((f) => fileInfo.get(f)?.type || "Other"))]
+    .sort((a, b) => (a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b)));
+  // Render treatments: every logo resolves to exactly one, from its _meta w/d flags (no entry → standard).
+  const treatKey = (m: { w: number; d: number }) => (m.w === 1 && m.d === 1 ? "both" : m.w === 1 ? "wide" : m.d === 1 ? "plate" : "std");
+  const TREAT: Array<{ k: string; label: string }> = [
+    { k: "std", label: "Standard" }, { k: "wide", label: "Wide" },
+    { k: "plate", label: "Plated" }, { k: "both", label: "Wide + Plated" },
+  ];
+  const tCount: Record<string, number> = { std: 0, wide: 0, plate: 0, both: 0 };
+  for (const f of files) tCount[treatKey(meta[f] || { w: 0, d: 0 })]++;
   const tile = (f: string) => {
     const m = meta[f] || { w: 0, d: 0 };
-    const plate = m.d === 1 ? "background:#f2f2f5;border-color:rgba(255,255,255,.28)" : "";
-    const big = m.w === 1 ? "width:60px;height:auto;max-height:34px" : "max-width:52px;max-height:40px";
-    const real = m.w === 1 ? "width:44px;height:auto;max-height:34px" : "width:42px;height:42px";
-    return `<div style="width:88px"><div style="width:72px;height:72px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);display:grid;place-items:center;margin:0 auto;${plate}"><img src="/logos/chains/${f}?v=73" style="object-fit:contain;${big}"></div>
-    <div style="width:46px;height:46px;border-radius:12px;background:rgba(255,255,255,.06);display:grid;place-items:center;margin:7px auto 0;${plate}"><img src="/logos/chains/${f}?v=73" style="object-fit:contain;${real}"></div>
-    <div style="font-size:9px;color:#8a8a98;text-align:center;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.replace(/\.(png|webp|svg)$/i, "")}</div></div>`;
+    const info = fileInfo.get(f);
+    const cls = (m.d === 1 ? " lite" : "") + (m.w === 1 ? " widelogo" : "");
+    return `<div class="cell" data-type="${esc(info?.type || "Other")}" data-treat="${treatKey(m)}"><div class="ic${cls}"><img src="/logos/chains/${f}?v=73" alt=""></div><div class="nm">${esc(info?.name || pretty(f))}</div></div>`;
   };
-  return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><body style="background:#0C0C12;font-family:-apple-system,sans-serif;color:#fff;padding:20px">
-  <h2 style="font-weight:900;margin:0 0 4px">Logo wall · ${files.length} marks</h2>
-  <div style="color:#9a9aac;font-size:12px;margin-bottom:16px">Top = detail (2x) · bottom = exact store-list size. Dark ink lifted to grey; plates only where _meta says dark.</div>
-  <div style="display:flex;flex-wrap:wrap;gap:12px">${files.map(tile).join("")}</div></body>`);
+  return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    *{box-sizing:border-box}
+    body{background:#0C0C12;font-family:-apple-system,system-ui,sans-serif;color:#fff;padding:20px;margin:0}
+    h2{font-weight:900;margin:0 0 4px}
+    .sub{color:#9a9aac;font-size:12px;margin-bottom:6px}
+    .bar{position:sticky;top:0;background:#0C0C12;padding:12px 0 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;z-index:5;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:18px}
+    .fld{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#8a8a98;display:flex;align-items:center;gap:8px;font-weight:700}
+    select,.ms-btn{appearance:none;-webkit-appearance:none;background:#1a1a22;color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:9px 32px 9px 12px;font-size:14px;font-weight:600;cursor:pointer;text-transform:none;letter-spacing:normal}
+    select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23aaa' stroke-width='2'%3E%3Cpath d='M2 4l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
+    .ms{position:relative}
+    .ms-btn{display:flex;align-items:center;gap:8px;padding-right:12px}
+    .ms-btn .chev{opacity:.7}
+    .ms-pop{position:absolute;top:calc(100% + 6px);left:0;background:#16161e;border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:6px;min-width:230px;box-shadow:0 14px 34px rgba(0,0,0,.55);z-index:30}
+    .ms-pop[hidden]{display:none}
+    .ms-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;text-transform:none;letter-spacing:normal;color:#e6e6ee}
+    .ms-row:hover{background:rgba(255,255,255,.06)}
+    .ms-row input{width:17px;height:17px;accent-color:#22c55e;cursor:pointer;margin:0;flex-shrink:0}
+    .ms-ct{margin-left:auto;font-size:12px;color:#8a8a98;font-weight:600}
+    #count{font-size:12px;color:#8a8a98;margin-left:auto}
+    .grid{display:flex;flex-wrap:wrap;gap:18px}
+    .cell{width:72px;display:flex;flex-direction:column;align-items:center;gap:7px}
+    .cell.hide{display:none}
+    .nm{font-size:10px;color:#9a9aac;text-align:center;line-height:1.25;overflow-wrap:anywhere}
+    /* —— EXACT copy of the consumer store-list tile (.ic) from checkit.html —— */
+    .ic{width:52px;height:52px;border-radius:15px;background:linear-gradient(145deg,#34343d,#23232b);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .ic img{width:40px;height:40px;object-fit:contain}
+    .ic.widelogo img{width:44px;height:auto;max-height:34px}
+    .ic.lite{background:#f2f2f5;border-color:rgba(255,255,255,.28)}
+  </style>
+  <body>
+  <h2>Logo wall · ${files.length} marks</h2>
+  <div class="sub">Each mark exactly as the store list renders it — same 52px tile, plate &amp; wide handling from _meta.json.</div>
+  <div class="bar">
+    <label class="fld">Store type
+      <select id="type"><option value="">All stores</option>${types.map((t) => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
+    </label>
+    <span class="fld">Treatment
+      <span class="ms">
+        <button type="button" class="ms-btn" id="treatBtn" aria-expanded="false"><span id="treatSum">All treatments</span><svg class="chev" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#aaa" stroke-width="2"><path d="M2 4l4 4 4-4"/></svg></button>
+        <div class="ms-pop" id="treatPop" hidden>${TREAT.map((t) => `<label class="ms-row"><input type="checkbox" value="${t.k}" checked>${t.label}<span class="ms-ct">${tCount[t.k]}</span></label>`).join("")}</div>
+      </span>
+    </span>
+    <span id="count"></span>
+  </div>
+  <div class="grid" id="grid">${files.map(tile).join("")}</div>
+  <script>
+    var sel=document.getElementById('type'),grid=document.getElementById('grid'),count=document.getElementById('count');
+    var treatBtn=document.getElementById('treatBtn'),treatPop=document.getElementById('treatPop'),treatSum=document.getElementById('treatSum');
+    var boxes=[].slice.call(treatPop.querySelectorAll('input[type=checkbox]'));
+    function apply(){
+      var v=sel.value,sel2={},nc=0;
+      boxes.forEach(function(b){if(b.checked){sel2[b.value]=1;nc++;}});
+      var n=0,k=grid.children;
+      for(var i=0;i<k.length;i++){var el=k[i];var show=(!v||el.getAttribute('data-type')===v)&&sel2[el.getAttribute('data-treat')]===1;el.classList.toggle('hide',!show);if(show)n++;}
+      count.textContent=n+(n===1?' logo':' logos');
+      treatSum.textContent=nc===boxes.length?'All treatments':(nc===0?'None':nc+' of '+boxes.length);
+    }
+    treatBtn.addEventListener('click',function(e){e.stopPropagation();var h=treatPop.hasAttribute('hidden');if(h){treatPop.removeAttribute('hidden');}else{treatPop.setAttribute('hidden','');}treatBtn.setAttribute('aria-expanded',h?'true':'false');});
+    treatPop.addEventListener('click',function(e){e.stopPropagation();});
+    // Never allow zero treatments — unchecking the last one snaps back (an empty wall is a dead end).
+    boxes.forEach(function(b){b.addEventListener('change',function(){if(!boxes.some(function(x){return x.checked;})){b.checked=true;return;}apply();});});
+    document.addEventListener('click',function(){treatPop.setAttribute('hidden','');treatBtn.setAttribute('aria-expanded','false');});
+    sel.addEventListener('change',apply);apply();
+  </script>
+  </body>`);
 });
 // Owner preview: "the check" — a SOLID gradient disc with a white check CENTERED inside it, tip
 // reaching the top-right edge (never past it), exactly like the reference. 4 to choose:
@@ -2239,20 +2372,65 @@ app.get("/api/admin/user-history", async (c) => {
 });
 
 // ---- Restock intel: the compounding payoff — where/when product actually lands ----
+// Restock product intel, derived at serve time from callResults.productDetail ("form · set", built by
+// productDetailLabel). Splits it back into forms / sets / raw details. Exact columns are a DevOps follow-up.
+function topTally(m: Map<string, number>, key: string, lim?: number) {
+  const a = [...m.entries()].sort((x, y) => y[1] - x[1]).map(([v, n]) => ({ [key]: v, n }));
+  return lim ? a.slice(0, lim) : a;
+}
+function parseProducts(rows: { productDetail: string | null }[]) {
+  const forms = new Map<string, number>(), sets = new Map<string, number>(), details = new Map<string, number>();
+  const bump = (mp: Map<string, number>, k: string) => mp.set(k, (mp.get(k) || 0) + 1);
+  for (const r of rows) {
+    const d = (r.productDetail || "").trim(); if (!d) continue;
+    bump(details, d);
+    const parts = d.split("·").map((x) => x.trim()).filter(Boolean);
+    if (parts[0]) bump(forms, /etb/i.test(parts[0]) ? "ETB" : parts[0].charAt(0).toUpperCase() + parts[0].slice(1));
+    if (parts[1]) bump(sets, parts[1]);
+  }
+  return { forms: topTally(forms, "form"), sets: topTally(sets, "set", 25), details: topTally(details, "detail") };
+}
+// What ACTUALLY happened on a call, read from the transcript words — the persisted status conflated
+// "stuck in the phone tree" with "nobody answered", which hid the real story: most calls never reach a
+// human. Buckets: in_stock | got_some (shipment landed, not shelved) | not_in | reached_no_answer
+// (a person picked up but the call dropped before an answer) | never_reached (died in an IVR / pharmacy
+// virtual assistant / on hold). Validated against a hand audit of every real-store call.
+type CallReality = "in_stock" | "got_some" | "not_in" | "reached_no_answer" | "never_reached";
+function classifyCallReality(transcript: string | null): CallReality {
+  const s = (transcript || "").toLowerCase().replace(/\s+/g, " ");
+  if (/\bwe do\b(?!\s*not)|got some in stock|you'?ve got some in stock|we have some|we have a few|yeah[.,]? (we|so you)/.test(s)) return "in_stock";
+  if (/we did get some|we did,? but it'?s not out|got some.* not out|not out yet,? but we did/.test(s)) return "got_some";
+  if (/we did not\b|we don'?t have|we haven'?t\b|haven'?t seen any|i did not see any|no,? i'?m sorry|no,? we don'?t|not (in|for) this shipment|did not receive any|didn'?t get any|clerk: no[.,]/.test(s)) return "not_in";
+  if (/how can i help|can i help you|may i help you|welcome to cvs|this is (cvs|staples|cbs|cds)|hello,? seabass|thanks for calling barnes|hello\? hello\?|can'?t hear you|gonna have to call again/.test(s)) return "reached_no_answer";
+  return "never_reached";
+}
+// The chain a store belongs to, for the per-chain reach breakdown (B&N answers direct; CVS/Walgreens
+// hide behind a phone bot). Falls back to the store's own name when it isn't one of the known chains.
+function chainLabel(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes("cvs")) return "CVS";
+  if (n.includes("walgreens")) return "Walgreens";
+  if (n.includes("target")) return "Target";
+  if (n.includes("barnes")) return "Barnes & Noble";
+  if (n.includes("franklin") || n.includes("ace hardware")) return "Ace Hardware";
+  if (n.includes("staples")) return "Staples";
+  return name.split("—")[0].trim();
+}
 app.get("/api/admin/restock-intel", async (c) => {
   const now = Math.floor(Date.now() / 1000);
   const d7 = now - 7 * 86400, d30 = now - 30 * 86400;
   const stores = await retailerMap();
   const cats = await categoryLabelMap();
   const ownerOnly = await ownerOnlyRetailerIds();
-  const rows = (await db.select().from(callResults).where(eq(callResults.status, "completed"))).filter((r) => !ownerOnly.has(r.retailerId));
+  const statsSince = await getStatsSince();
+  const rows = (await db.select().from(callResults).where(eq(callResults.status, "completed"))).filter((r) => !ownerOnly.has(r.retailerId) && (r.startedAt || 0) >= statsSince);
   const confirmed = rows.filter((r) => r.confirmed === true);
-  // Per-store: how often a confirmation lands + the shipment day staff gave (the gold).
-  const byStore = new Map<number, { store: string; chain: string; region: string | null; confirms: number; last: number; days: Record<string, number> }>();
+  // Per-store: how often a confirmation lands + the shipment day the clerk gave (the gold).
+  const byStore = new Map<number, { id: number; store: string; location: string | null; chain: string; region: string | null; confirms: number; last: number; days: Record<string, number> }>();
   for (const r of confirmed) {
     const s = stores.get(r.retailerId); if (!s) continue;
     let e = byStore.get(r.retailerId);
-    if (!e) { e = { store: s.name.split("—")[0].trim(), chain: "", region: s.region ?? null, confirms: 0, last: 0, days: {} }; byStore.set(r.retailerId, e); }
+    if (!e) { e = { id: r.retailerId, store: s.name.split("—")[0].trim(), location: s.location ?? null, chain: "", region: s.region ?? null, confirms: 0, last: 0, days: {} }; byStore.set(r.retailerId, e); }
     e.confirms++;
     const at = r.completedAt ?? r.startedAt; if (at > e.last) e.last = at;
     if (r.shipmentDayHeard) e.days[r.shipmentDayHeard] = (e.days[r.shipmentDayHeard] || 0) + 1;
@@ -2272,6 +2450,32 @@ app.get("/api/admin/restock-intel", async (c) => {
   for (const r of confirmed) { const label = cats.get(r.categoryId) || String(r.categoryId); catTally[label] = (catTally[label] || 0) + 1; }
   const topStores = [...byStore.values()].sort((a, b) => b.confirms - a.confirms || b.last - a.last).slice(0, 25)
     .map((e) => ({ ...e, bestDay: Object.entries(e.days).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null }));
+  const prodNet = parseProducts(confirmed);
+  const catNet: Record<string, number> = {};
+  for (const r of confirmed) { const cl = cats.get(r.categoryId) || "?"; catNet[cl] = (catNet[cl] || 0) + 1; }
+  // Answer funnel — the honest "what did these calls actually achieve" read. Most real-store calls die
+  // in a phone tree before a human ever picks up; this surfaces that (and the per-chain reach gap).
+  const buckets = { in_stock: 0, got_some: 0, not_in: 0, reached_no_answer: 0, never_reached: 0 };
+  const chainFn = new Map<string, { chain: string; dialed: number; reached: number; answered: number }>();
+  for (const r of rows) {
+    const b = classifyCallReality(r.transcript);
+    buckets[b]++;
+    const s = stores.get(r.retailerId);
+    const ch = s ? chainLabel(s.name) : "?";
+    let cf = chainFn.get(ch); if (!cf) { cf = { chain: ch, dialed: 0, reached: 0, answered: 0 }; chainFn.set(ch, cf); }
+    cf.dialed++;
+    if (b !== "never_reached") cf.reached++;
+    if (b === "in_stock" || b === "got_some" || b === "not_in") cf.answered++;
+  }
+  const firstReal = rows.reduce((m, r) => Math.min(m, r.startedAt || Infinity), Infinity);
+  const answerFunnel = {
+    dialed: rows.length,
+    reachedHuman: rows.length - buckets.never_reached,
+    gotAnswer: buckets.in_stock + buckets.got_some + buckets.not_in,
+    firstCall: isFinite(firstReal) ? firstReal : null,
+    buckets,
+    byChain: [...chainFn.values()].sort((a, b) => b.dialed - a.dialed),
+  };
   return c.json({
     totals: {
       checks: rows.length, confirms: confirmed.length,
@@ -2280,70 +2484,117 @@ app.get("/api/admin/restock-intel", async (c) => {
       confirms30d: confirmed.filter((r) => (r.completedAt ?? r.startedAt) >= d30).length,
     },
     shipmentDays: Object.entries(dayTally).sort((a, b) => b[1] - a[1]).map(([day, n]) => ({ day, n })),
-    productForms: tallyArr(formTally, "form"),    // network "how it's sold" mix
-    productSets: tallyArr(setTally, "set").slice(0, 25), // top named sets (best-effort from free text)
-    byCategory: tallyArr(catTally, "category"),
-    topStores: topStores.map((e) => ({ store: e.store, region: e.region, confirms: e.confirms, last: e.last, bestDay: e.bestDay })),
+    productForms: prodNet.forms,
+    productSets: prodNet.sets,
+    byCategory: Object.entries(catNet).sort((a, b) => b[1] - a[1]).map(([category, n]) => ({ category, n })),
+    topStores: topStores.map((e) => ({ id: e.id, store: e.store, location: e.location, region: e.region, confirms: e.confirms, last: e.last, bestDay: e.bestDay })),
+    answerFunnel,
+    statsSince,
   });
 });
 
-// ---- Per-store restock intel: the full weekday + product picture for ONE store (Admin store panel) ----
-// Restock day, two independent signals: (1) what STAFF SAID — the mode of shipmentDayHeard across this
-// store's calls; (2) what actually CONFIRMED — the weekday (store-local) of every confirmed hit.
-// bestDay prefers the staff-said mode and falls back to the empirical peak — the same learned day
-// best-bet ranks on. Plus the product mix: which FORMS (booster/hobby box, tin, ETB, pack…) and SETS
-// staff named, derived from the free-text productDetail we capture per call.
+// Per-store restock intel (one store's own page) — same serve-time derivation, scoped to this store.
 app.get("/api/admin/store-restock/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const store = (await db.select().from(retailers).where(eq(retailers.id, id)))[0];
   if (!store) return c.json({ error: "not found" }, 404);
   const cats = await categoryLabelMap();
-  const rows = await db.select({ categoryId: callResults.categoryId, confirmed: callResults.confirmed, completedAt: callResults.completedAt, startedAt: callResults.startedAt, shipmentDayHeard: callResults.shipmentDayHeard, productDetail: callResults.productDetail })
-    .from(callResults).where(and(eq(callResults.retailerId, id), eq(callResults.status, "completed")));
+  const rows = await db.select().from(callResults).where(and(eq(callResults.retailerId, id), eq(callResults.status, "completed")));
   const confirmed = rows.filter((r) => r.confirmed === true);
-  const tz = store.timezone || "America/Chicago";
-  const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  // (1) What staff said — across ALL completed calls (they report the schedule even when out of stock).
-  const saidTally: Record<string, number> = {};
-  for (const r of rows) if (r.shipmentDayHeard) saidTally[r.shipmentDayHeard] = (saidTally[r.shipmentDayHeard] || 0) + 1;
-  const saidMode = Object.entries(saidTally).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-  // (2) What actually confirmed, by weekday in store-local time — the empirical "best day to call".
-  const empByDow = [0, 0, 0, 0, 0, 0, 0];
-  for (const r of confirmed) { const at = r.completedAt ?? r.startedAt; if (at) empByDow[dowAt(at, tz)]++; }
-  const empBestIdx = empByDow.reduce((best, n, i) => (n > empByDow[best] ? i : best), 0);
-  const empBestDay = empByDow[empBestIdx] > 0 ? DAYS[empBestIdx] : null;
-  // Per-category confirm counts (which product line actually lands here).
-  const byCat: Record<string, number> = {};
-  for (const r of confirmed) { const label = cats.get(r.categoryId) || String(r.categoryId); byCat[label] = (byCat[label] || 0) + 1; }
-  // Product mix — the FORMS and SETS staff named on confirmed calls (+ raw details as ground truth).
-  const formTally: Record<string, number> = {}, setTally: Record<string, number> = {}, detailTally: Record<string, number> = {};
+  const tz = store.timezone || "America/Los_Angeles";
+  const WD = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  // staff said (the gold) — the shipment day a clerk gave, across all completed calls
+  const staffT: Record<string, number> = {};
+  for (const r of rows) if (r.shipmentDayHeard) staffT[r.shipmentDayHeard] = (staffT[r.shipmentDayHeard] || 0) + 1;
+  const staffTally = Object.entries(staffT).sort((a, b) => b[1] - a[1]).map(([day, n]) => ({ day, n }));
+  const staffMode = staffTally[0]?.day ?? null;
+  // empirical — confirmed-in-stock by weekday, in the store's local time
+  const wd: Record<string, number> = Object.fromEntries(WD.map((d) => [d, 0]));
   for (const r of confirmed) {
-    if (!r.productDetail) continue;
-    detailTally[r.productDetail] = (detailTally[r.productDetail] || 0) + 1;
-    const f = productForm(r.productDetail); if (f) formTally[f] = (formTally[f] || 0) + 1;
-    const s = productSet(r.productDetail); if (s) setTally[s] = (setTally[s] || 0) + 1;
+    const at = r.completedAt ?? r.startedAt;
+    const day = new Date(at * 1000).toLocaleDateString("en-US", { timeZone: tz, weekday: "long" });
+    if (day in wd) wd[day]++;
   }
-  const last = confirmed.reduce((m, r) => Math.max(m, r.completedAt ?? r.startedAt ?? 0), 0);
-  const bestDay = shipDow(saidMode) != null ? saidMode : empBestDay; // the day to surface
+  const byWeekday = WD.map((day) => ({ day, confirms: wd[day] }));
+  const empBest = [...byWeekday].sort((a, b) => b.confirms - a.confirms)[0];
+  const empiricalBestDay = empBest && empBest.confirms > 0 ? empBest.day : null;
+  const catT: Record<string, number> = {};
+  for (const r of confirmed) { const cl = cats.get(r.categoryId) || "?"; catT[cl] = (catT[cl] || 0) + 1; }
   return c.json({
-    id, store: store.name.split("—")[0].trim(), region: store.region ?? null, timezone: tz,
-    storedShipmentDay: store.shipmentDay || null,     // the auto-learned column (last-write-wins)
-    staffSaid: { mode: saidMode, tally: tallyArr(saidTally, "day") },
-    empirical: { bestDay: empBestDay, byWeekday: DAYS.map((day, i) => ({ day, confirms: empByDow[i] })) },
-    bestDay,                                            // the recommendation Admin should display
-    confidence: confirmed.length,                      // # confirmed calls backing it
-    confirms: confirmed.length, lastConfirm: last || null,
-    byCategory: tallyArr(byCat, "category"),
-    products: { forms: tallyArr(formTally, "form"), sets: tallyArr(setTally, "set"), details: tallyArr(detailTally, "detail") },
+    store: store.name,
+    location: store.location || null,
+    timezone: tz,
+    storedShipmentDay: store.shipmentDay || null,
+    staffSaid: { mode: staffMode, tally: staffTally },
+    empirical: { bestDay: empiricalBestDay, byWeekday },
+    bestDay: staffMode || empiricalBestDay,           // prefer what staff said; else the empirical peak
+    confidence: confirmed.length,                     // # confirmed calls behind it
+    confirms: confirmed.length,
+    lastConfirm: confirmed.reduce((m, r) => Math.max(m, r.completedAt ?? r.startedAt), 0) || null,
+    byCategory: Object.entries(catT).sort((a, b) => b[1] - a[1]).map(([category, n]) => ({ category, n })),
+    products: parseProducts(confirmed),
   });
 });
 
-// ---- Calls audit: the COMPLETE, unfiltered call_results picture for data-integrity checks ----
-// overview/pulse deliberately exclude owner-only + admin_hangup (the noise); this counts EVERYTHING
-// so we can see test calls, aborted calls, wrong statuses, never-dialed calls, the first/last call,
-// and double-ingested duplicates. Read-only — the answer to "are we capturing every call, and is the
-// status data clean?". Cross-check `total` against /api/admin/restore-calls-from-el?dry=1 (ElevenLabs
-// is the source of truth for calls actually placed).
+// Re-scan stored transcripts with the CURRENT consensus verdict — retroactively applies the fix for
+// mis-classified statuses AND recovers the staff-volunteered restock day + product form the old ingest
+// dropped. Reports true before/after counts + the first real call. Real stores only (skips Fun/MVPs).
+app.post("/api/admin/restock-backfill", async (c) => {
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const cats = await categoryLabelMap();
+  const all = await db.select().from(callResults).where(eq(callResults.status, "completed"));
+  const rows = all.filter((r) => r.transcript && r.transcript.length > 12 && !ownerOnly.has(r.retailerId));
+  const cat = (confirmed: boolean | null, day: string | null) =>
+    confirmed === true ? "in_stock" : day ? "restock_coming" : confirmed === false ? "not_in" : "unclear";
+  const blank = () => ({ in_stock: 0, restock_coming: 0, not_in: 0, unclear: 0 });
+  const before = blank(), after = blank();
+  let scanned = 0, flipped = 0, dayAdded = 0, prodAdded = 0;
+  for (const r of rows) {
+    before[cat(r.confirmed, r.shipmentDayHeard) as keyof ReturnType<typeof blank>]++;
+    const second = await classifyVerdict(r.transcript ?? "", cats.get(r.categoryId) || "the product");
+    if (!second) { after[cat(r.confirmed, r.shipmentDayHeard) as keyof ReturnType<typeof blank>]++; continue; }
+    const consensus = reconcile({ confirmed: r.confirmed, soldOut: r.statusKey === "sold_out", doesNotSell: r.statusKey === "does_not_sell", statusKey: r.statusKey ?? undefined }, second);
+    const day = second.restockDay ?? r.shipmentDayHeard;
+    const detail = productDetailLabel(second) ?? r.productDetail;
+    if (consensus.confirmed !== r.confirmed) flipped++;
+    if (day && !r.shipmentDayHeard) dayAdded++;
+    if (detail && !r.productDetail) prodAdded++;
+    await db.update(callResults).set({ confirmed: consensus.confirmed, statusKey: consensus.statusKey, shipmentDayHeard: day, productDetail: detail }).where(eq(callResults.id, r.id));
+    scanned++;
+    after[cat(consensus.confirmed, day) as keyof ReturnType<typeof blank>]++;
+  }
+  const firstReal = all.filter((r) => !ownerOnly.has(r.retailerId)).reduce((m, r) => Math.min(m, r.startedAt || Infinity), Infinity);
+  return c.json({ scanned, flipped, dayAdded, prodAdded, before, after, firstRealCall: isFinite(firstReal) ? firstReal : null });
+});
+
+// Read-only ground-truth audit: every real-store completed call with a transcript head/tail, so we can
+// hand-classify "reached a human" vs "stuck in the phone tree" and tally the true in-stock / not-in /
+// restock-coming numbers (the persisted statusKey was sometimes wrong — this reads the actual words).
+app.get("/api/admin/restock-audit", async (c) => {
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const cats = await categoryLabelMap();
+  const rmap = new Map((await db.select({ id: retailers.id, name: retailers.name, location: retailers.location, region: retailers.region, state: retailers.state }).from(retailers)).map((r) => [r.id, r]));
+  const all = (await db.select().from(callResults).where(eq(callResults.status, "completed")))
+    .filter((r) => !ownerOnly.has(r.retailerId))
+    .sort((a, b) => (a.startedAt || 0) - (b.startedAt || 0));
+  const rows = all.map((r) => {
+    const t = (r.transcript || "").replace(/\s+/g, " ").trim();
+    const ret = rmap.get(r.retailerId);
+    return {
+      id: r.id, started: r.startedAt, store: ret?.name || `#${r.retailerId}`, location: ret?.location || null,
+      region: ret?.region || null, state: ret?.state || null, category: cats.get(r.categoryId) || null,
+      statusKey: r.statusKey, confirmed: r.confirmed, day: r.shipmentDayHeard, product: r.productDetail,
+      navSec: r.navSeconds, callSec: r.callSeconds, len: t.length,
+      head: t.slice(0, 900), tail: t.length > 1400 ? t.slice(-500) : "",
+    };
+  });
+  return c.json({ total: rows.length, rows });
+});
+
+// ---- Call-data integrity: the unfiltered truth about call_results, for the Call-data-health panel ----
+// Full, unfiltered view of every row so the owner can see what's real vs. seed/rehearsal/never-dialed.
+// A call that actually dialed a store has a providerCallId (an ElevenLabs conversation); seed/manual
+// rows don't, and the owner-only "Fun" store is rehearsal — so firstDialedCall is the true first call.
 app.get("/api/admin/calls-audit", async (c) => {
   const ownerOnly = await ownerOnlyRetailerIds();
   const stores = await retailerMap();
@@ -2358,8 +2609,6 @@ app.get("/api/admin/calls-audit", async (c) => {
     return Object.entries(t).sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ k, n }));
   };
   const withTs = rows.filter((r) => r.startedAt).sort((a, b) => (a.startedAt || 0) - (b.startedAt || 0));
-  // A call "into a store" actually dialed → has a providerCallId. Seed/manual rows don't, and the
-  // owner-only "Fun" store is rehearsal — so the first DIALED non-Fun call is the true first real call.
   const dialed = withTs.filter((r) => r.providerCallId && !ownerOnly.has(r.retailerId));
   const desc = (r?: (typeof rows)[number]) => (r ? {
     id: r.id, store: stores.get(r.retailerId)?.name?.split("—")[0].trim() || `#${r.retailerId}`,
@@ -2382,77 +2631,9 @@ app.get("/api/admin/calls-audit", async (c) => {
   });
 });
 
-// ---- ElevenLabs reality check: every agent in the account + how far back each one's calls go ----
-// Answers "where is our older call history?". Calls are partitioned per agent_id; if an earlier agent
-// was used, its conversations won't appear under the current one. Account-level (uses the shared key),
-// so it sees ALL agents regardless of which env's agent is configured. Read-only.
-app.get("/api/admin/el-range", async (c) => {
-  const key = config.voice.apiKey;
-  if (!key) return c.json({ error: "elevenlabs not configured" }, 503);
-  const ar = await fetch("https://api.elevenlabs.io/v1/convai/agents?page_size=100", { headers: { "xi-api-key": key } });
-  const aj = ar.ok ? ((await ar.json()) as { agents?: Array<{ agent_id?: string; name?: string }> }) : { agents: [] };
-  const agents = aj.agents || [];
-  const out: Array<{ agentId: string; name: string | null; conversations: number; earliest: number | null; latest: number | null; isCurrent: boolean }> = [];
-  for (const a of agents) {
-    const agentId = String(a.agent_id || "");
-    if (!agentId) continue;
-    let cursor = "", count = 0, min = 0, max = 0;
-    for (let p = 0; p < 30; p++) {
-      const lr = await fetch(`https://api.elevenlabs.io/v1/convai/conversations?agent_id=${agentId}&page_size=100${cursor ? `&cursor=${cursor}` : ""}`, { headers: { "xi-api-key": key } });
-      if (!lr.ok) break;
-      const lj = (await lr.json()) as { conversations?: Array<{ start_time_unix_secs?: number }>; has_more?: boolean; next_cursor?: string };
-      for (const conv of lj.conversations || []) {
-        count++; const t = Number(conv.start_time_unix_secs) || 0;
-        if (t) { if (!min || t < min) min = t; if (t > max) max = t; }
-      }
-      if (!lj.has_more || !lj.next_cursor) break;
-      cursor = lj.next_cursor;
-    }
-    out.push({ agentId, name: a.name || null, conversations: count, earliest: min || null, latest: max || null, isCurrent: agentId === config.voice.agentId });
-  }
-  out.sort((a, b) => (a.earliest || 9e18) - (b.earliest || 9e18));
-  return c.json({ configuredAgentId: config.voice.agentId, agentCount: out.length, agents: out });
-});
-
-// ---- Peek at a specific EL agent's calls (read-only) — decide if old-agent calls are worth restoring ----
-// Shows a sample: store name + category (from the call's dynamic vars), date, status, and whether it's
-// already in our DB. Lets us judge whether an old agent's conversations were real store checks or just
-// experiments BEFORE deciding to restore them. Never writes.
-app.get("/api/admin/el-agent-sample", async (c) => {
-  const key = config.voice.apiKey;
-  if (!key) return c.json({ error: "elevenlabs not configured" }, 503);
-  const agentId = String(c.req.query("agentId") || "");
-  if (!agentId) return c.json({ error: "agentId required" }, 400);
-  const limit = Math.min(Math.max(Number(c.req.query("limit") || 12), 1), 40);
-  const existing = new Set((await db.select({ p: callResults.providerCallId }).from(callResults)).map((r) => r.p).filter(Boolean));
-  const sample: Array<Record<string, unknown>> = [];
-  let cursor = "", scanned = 0, inDb = 0, withStore = 0;
-  for (let p = 0; p < 30; p++) {
-    const lr = await fetch(`https://api.elevenlabs.io/v1/convai/conversations?agent_id=${agentId}&page_size=100${cursor ? `&cursor=${cursor}` : ""}`, { headers: { "xi-api-key": key } });
-    if (!lr.ok) break;
-    const lj = (await lr.json()) as { conversations?: Array<Record<string, unknown>>; has_more?: boolean; next_cursor?: string };
-    for (const conv of lj.conversations || []) {
-      scanned++;
-      const cid = String(conv.conversation_id || "");
-      if (existing.has(cid)) inDb++;
-      if (sample.length < limit) {
-        const dr = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${cid}`, { headers: { "xi-api-key": key } });
-        const dv = dr.ok ? ((await dr.json()) as { conversation_initiation_client_data?: { dynamic_variables?: Record<string, string> } }).conversation_initiation_client_data?.dynamic_variables || {} : {};
-        if (dv.retailer_name) withStore++;
-        sample.push({ at: Number(conv.start_time_unix_secs) || null, secs: (conv.call_duration_secs as number) ?? null, status: String(conv.status || ""), store: dv.retailer_name || null, category: dv.category || null, inOurDb: existing.has(cid) });
-      }
-    }
-    if (!lj.has_more || !lj.next_cursor) break;
-    cursor = lj.next_cursor;
-  }
-  return c.json({ agentId, scanned, inOurDb: inDb, sampleWithStore: withStore, sample });
-});
-
-// ---- Purge un-provable calls: the owner's rule — if we can't say we PLACED it and got a TRUE status,
-// it doesn't belong in the data. KEEP only rows with a providerCallId (a real ElevenLabs conversation
-// = we definitely called) AND a real outcome status (completed | no_answer). REMOVE everything else
-// (admin_hangup, failed, queued/dialing/in_progress, or no providerCallId). BILLED calls (chargedAt)
-// are never deleted — safety. Dry by default (?dry=0 to execute). Everything stays restorable from EL.
+// Remove un-provable call rows (no ElevenLabs conversation, or never reached a true outcome). Dry-run by
+// default (?dry=0 to actually delete); billed calls are protected and everything is restorable from
+// ElevenLabs. Admin-token gated. The Call-data-health panel calls this dry-run only (preview, no delete).
 app.post("/api/admin/purge-undefined-calls", async (c) => {
   const dry = c.req.query("dry") !== "0";
   const includeOwner = c.req.query("includeOwner") === "1"; // also drop "Fun" rehearsal calls if asked
@@ -2485,7 +2666,172 @@ app.post("/api/admin/purge-undefined-calls", async (c) => {
   });
 });
 
+// Read-only: does the LIVE ElevenLabs agent prompt still carry the dynamic-variable slots? Confirms a
+// workflow's persona / opener actually reach the agent (a stale prompt would silently drop {{personality}}).
+app.get("/api/admin/agent-prompt", async (c) => {
+  const key = config.voice.apiKey, agentId = config.voice.agentId;
+  if (!key || !agentId) return c.json({ error: "elevenlabs not configured" }, 503);
+  const r = await fetch(`https://api.elevenlabs.io/v1/convai/agents/${agentId}`, { headers: { "xi-api-key": key } });
+  if (!r.ok) return c.json({ error: `agent GET ${r.status}` }, 502);
+  const d = await r.json() as { conversation_config?: { agent?: { prompt?: { prompt?: string } } } };
+  const prompt = d?.conversation_config?.agent?.prompt?.prompt || "";
+  const has = (v: string) => prompt.includes(v);
+  return c.json({
+    agentId, promptLen: prompt.length,
+    hasPersonality: has("{{personality}}"), hasOpeningLine: has("{{opening_line}}"),
+    hasCategory: has("{{category}}"), hasClarification: has("{{clarification}}"),
+    prompt: c.req.query("full") === "1" ? prompt : undefined,
+  });
+});
+
+// Which stores / chains each workflow is assigned to — by NAME, so the Workflows cards can show
+// "Branson Test → Fun" instead of just a count.
+app.get("/api/admin/workflow-assignments", async (c) => {
+  const [storeS, chainS] = await Promise.all([getSetting("vt_store_workflows"), getSetting("vt_chain_workflows")]);
+  const parse = (s: string | null): Record<string, string> => { try { return s ? JSON.parse(s) : {}; } catch { return {}; } };
+  const byStore = parse(storeS), byChain = parse(chainS);
+  const storeIds = Object.keys(byStore).map(Number).filter((n) => !isNaN(n));
+  const chainIds = Object.keys(byChain).map(Number).filter((n) => !isNaN(n));
+  const storeRows = storeIds.length ? await db.select({ id: retailers.id, name: retailers.name, location: retailers.location }).from(retailers).where(inArray(retailers.id, storeIds)) : [];
+  const chainRows = chainIds.length ? await db.select({ id: chains.id, name: chains.name }).from(chains).where(inArray(chains.id, chainIds)) : [];
+  const sName = new Map(storeRows.map((r) => [r.id, r])), cName = new Map(chainRows.map((r) => [r.id, r]));
+  const out: Record<string, { stores: Array<{ id: number; name: string; location: string | null }>; chains: Array<{ id: number; name: string }> }> = {};
+  const slot = (wf: string) => (out[wf] ??= { stores: [], chains: [] });
+  for (const [id, wf] of Object.entries(byStore)) { const r = sName.get(Number(id)); if (r) slot(wf).stores.push({ id: r.id, name: r.name.split("—")[0].trim(), location: r.location ?? null }); }
+  for (const [id, wf] of Object.entries(byChain)) { const r = cName.get(Number(id)); if (r) slot(wf).chains.push({ id: r.id, name: r.name }); }
+  return c.json(out);
+});
+
+// Reset a workflow's opener rotation so the NEXT call to it starts at opener #1 (predictable A→B→C
+// testing). No workflow name → resets the shared global opener rotation.
+app.post("/api/admin/reset-rotation", async (c) => {
+  const b = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  const wf = typeof b.workflow === "string" && b.workflow.trim() ? b.workflow.trim() : "";
+  // Reset the workflow's own counter (bridge / listen-live path) AND the global one (scheduled path),
+  // so the next call starts at opener #1 no matter which path places it.
+  const keys = wf ? ["opener:" + wf, "opener"] : ["opener"];
+  keys.forEach(resetRotation);
+  return c.json({ ok: true, keys, workflow: wf || null });
+});
+
+// Testing log — owner-only / "Fun" rehearsal stores ONLY (never the real-store stats). Per-call: the
+// workflow applied, the opener actually used (pulled from the transcript + matched to its rotation slot),
+// the call status, and the nav / talk / total timing. The owner's working log while messing with the agent.
+app.get("/api/admin/test-calls", async (c) => {
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const stores = await retailerMap();
+  const cats = await categoryLabelMap();
+  const [storeS, chainS, defS, libS] = await Promise.all([
+    getSetting("vt_store_workflows"), getSetting("vt_chain_workflows"), getSetting("vt_default_workflow"), getSetting("vt_workflows"),
+  ]);
+  const parseObj = (s: string | null): Record<string, string> => { try { return s ? JSON.parse(s) : {}; } catch { return {}; } };
+  const byStore = parseObj(storeS), byChain = parseObj(chainS);
+  let lib: Array<{ name: string; openers?: string[] }> = []; try { lib = libS ? JSON.parse(libS) : []; } catch { lib = []; }
+  const wfFor = (rid: number) => {
+    const s = stores.get(rid);
+    const name = byStore[String(rid)] || (s && s.chainId != null ? byChain[String(s.chainId)] : "") || (defS || "");
+    return name ? (lib.find((w) => w && w.name === name) || null) : null;
+  };
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+  const firstAgentLine = (t: string) => {
+    const segs = String(t || "").split(/(?=(?:Clerk|Agent):\s)/);
+    const a = segs.find((s) => /^Agent:/.test(s.trim()));
+    return a ? a.replace(/^Agent:\s*/, "").trim() : "";
+  };
+  // Match the spoken opener back to a workflow rotation slot (A/B/C…) by word overlap.
+  const matchOpener = (transcript: string | null, wf: ReturnType<typeof wfFor>, cat: string) => {
+    const line = firstAgentLine(transcript || "");
+    const openers = wf?.openers || [];
+    if (!line || !openers.length) return { label: null as string | null, said: line || null, template: null as string | null };
+    const nl = norm(line);
+    let best = -1, bestScore = 0;
+    openers.forEach((o, i) => {
+      const ow = norm(String(o).replace(/\{category\}/g, cat)).split(" ").filter((w) => w.length > 2);
+      const hit = ow.filter((w) => nl.includes(w)).length;
+      const score = ow.length ? hit / ow.length : 0;
+      if (score > bestScore) { bestScore = score; best = i; }
+    });
+    const label = best >= 0 && bestScore >= 0.5 ? String.fromCharCode(65 + best) : null;
+    return { label, said: line, template: best >= 0 ? openers[best] : null };
+  };
+  const all = (await db.select().from(callResults))
+    .filter((r) => ownerOnly.has(r.retailerId))
+    .sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
+  const rows = all.map((r) => {
+    const wf = wfFor(r.retailerId);
+    const cat = cats.get(r.categoryId) || "";
+    const nav = r.navSeconds, call = r.callSeconds;
+    return {
+      id: r.id, started: r.startedAt,
+      store: stores.get(r.retailerId)?.name?.split("—")[0].trim() || `#${r.retailerId}`,
+      category: cat, status: r.statusKey || r.status, confirmed: r.confirmed,
+      workflow: wf?.name || null, opener: matchOpener(r.transcript, wf, cat),
+      navSec: nav ?? null, callSec: call ?? null,
+      talkSec: call != null && nav != null ? Math.max(0, call - nav) : null,
+      summary: r.summary || null,
+    };
+  });
+  const timed = rows.filter((r) => r.callSec != null);
+  const avg = (xs: number[]) => (xs.length ? Math.round(xs.reduce((s, x) => s + x, 0) / xs.length) : 0);
+  return c.json({
+    count: rows.length,
+    summary: {
+      calls: timed.length,
+      avgNavSec: avg(timed.map((r) => r.navSec || 0)),
+      avgTalkSec: avg(timed.filter((r) => r.talkSec != null).map((r) => r.talkSec as number)),
+      avgCallSec: avg(timed.map((r) => r.callSec as number)),
+    },
+    rows,
+  });
+});
+
+// "Start fresh": stamp a cutoff so real-call stats only count calls from now on (e.g. after going live
+// on real stores). GET reads it; POST sets it to now (or {clear:true} to count everything again).
+app.get("/api/admin/stats-since", async (c) => c.json({ statsSince: await getStatsSince() }));
+app.post("/api/admin/stats-since", async (c) => {
+  const b = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  const now = Math.floor(Date.now() / 1000);
+  const ts = b.clear === true ? 0 : (typeof b.at === "number" && b.at > 0 ? Math.floor(b.at) : now);
+  await setSetting("stats_since", String(ts));
+  return c.json({ ok: true, statsSince: ts });
+});
+
 // ---- Growth pulse: the funnel + engagement snapshot the owner reads each morning ----
+// Manually-flagged admin/test accounts (Clerk-free, so we can't rely on email domains). These are
+// non-customers — excluded from signups/activity like the comp/owner accounts.
+async function staffAccountIds(): Promise<Set<string>> {
+  try { const raw = await getSetting("staff_accounts"); const arr = raw ? JSON.parse(raw) : []; return new Set(Array.isArray(arr) ? arr.map(String) : []); } catch { return new Set<string>(); }
+}
+// Is this account a non-customer (owner/comp by email, or manually flagged admin/test)?
+const isStaffAcct = (a: typeof accounts.$inferSelect, flagged: Set<string>) => isComp(a.email) || isCompAccount(a) || flagged.has(a.clerkUserId);
+// User dashboard — everyone who's signed up (phone-first accounts, Clerk-free). Newest first.
+app.get("/api/admin/users", async (c) => {
+  const accs = await db.select().from(accounts).orderBy(desc(accounts.createdAt));
+  const flagged = await staffAccountIds();
+  return c.json(accs.map((a) => {
+    const comp = isComp(a.email) || isCompAccount(a);
+    const staff = comp || flagged.has(a.clerkUserId);
+    const plan = a.subscription === "active" ? "Subscriber" : (a.totalSpentCents > 0 ? "Pay-as-you-go" : (staff ? (comp ? "Comp / owner" : "Admin / test") : "Free"));
+    return {
+      id: a.clerkUserId,
+      phone: a.phone || (a.clerkUserId?.startsWith("phone:") ? a.clerkUserId.slice(6) : null),
+      email: a.email || null,
+      plan, subscription: a.subscription, comp, staff, manualStaff: flagged.has(a.clerkUserId),
+      credits: a.credits, callsMade: a.callsMade, spentCents: a.totalSpentCents,
+      callerIdVerified: !!a.callerId, referredBy: a.referredBy || null,
+      createdAt: a.createdAt, renewsAt: a.subRenewsAt || null,
+    };
+  }));
+});
+// Flag / unflag an account as admin/test (won't count as a customer).
+app.post("/api/admin/users/staff", async (c) => {
+  const { id, on } = await c.req.json().catch(() => ({}));
+  if (!id) return c.json({ error: "id required" }, 400);
+  const set = await staffAccountIds();
+  if (on) set.add(String(id)); else set.delete(String(id));
+  await setSetting("staff_accounts", JSON.stringify([...set]));
+  return c.json({ ok: true });
+});
 app.get("/api/admin/pulse", async (c) => {
   const now = Math.floor(Date.now() / 1000), d1 = now - 86400, d7 = now - 7 * 86400;
   const [accts, leadRows, watchRows, kReports, posts, calls] = await Promise.all([
@@ -2495,11 +2841,26 @@ app.get("/api/admin/pulse", async (c) => {
   const since = (ts: number, at: (r: { createdAt?: number | null; startedAt?: number | null }) => number | null | undefined, rows: Array<Record<string, unknown>>) =>
     rows.filter((r) => (at(r as never) ?? 0) >= ts).length;
   const ownerOnly = await ownerOnlyRetailerIds();
-  const completed = calls.filter((r) => r.status === "completed" && !ownerOnly.has(r.retailerId));
+  // Real calls only: drop the Fun/MVPs demo stores, the owner's own admin test calls (attributed to the
+  // master account), and admin-canceled calls — so the Pulse reflects genuine consumer activity.
+  const masterUid = "phone:" + (process.env.OWNER_PHONE || "+13106662331").trim();
+  const flagged = await staffAccountIds();
+  const statsSince = await getStatsSince();
+  const real = calls.filter((r) => !ownerOnly.has(r.retailerId) && r.finderUserId !== masterUid && !(r.finderUserId && flagged.has(r.finderUserId)) && r.status !== "admin_hangup" && (r.startedAt || 0) >= statsSince);
+  const completed = real.filter((r) => r.status === "completed");
+  // Real human-talk = connected seconds MINUS the learned time-to-human (chain recipe), counted ONLY for
+  // calls that actually reached a person. Never-reached IVR calls have zero human-talk. (The old code
+  // subtracted ~2s — the IVR's first words — over every call, so "talk" was really the whole call.)
+  const tthMap = await retailerTimeToHuman();
+  const timed = real.filter((r) => r.callSeconds != null);
+  const reachedT = timed.filter((r) => classifyCallReality(r.transcript) !== "never_reached");
+  const talkOf = (r: (typeof reachedT)[number]) => Math.max(0, (r.callSeconds || 0) - (tthMap.get(r.retailerId) ?? r.navSeconds ?? 0));
+  const avgTalkSec = reachedT.length ? Math.round(reachedT.reduce((s, r) => s + talkOf(r), 0) / reachedT.length) : 0;
+  const avgCallSec = timed.length ? Math.round(timed.reduce((s, r) => s + (r.callSeconds || 0), 0) / timed.length) : 0;
   return c.json({
     funnel: {
       leads: leadRows.length,
-      signups: accts.length,
+      signups: accts.filter((a) => !isStaffAcct(a, flagged)).length, // real signups — not owner/comp or flagged admin/test
       paying: accts.filter((a) => a.totalSpentCents > 0).length,
       members: accts.filter((a) => a.subscription === "active").length,
       revenueCents: accts.reduce((s, a) => s + (a.totalSpentCents || 0), 0),
@@ -2510,6 +2871,7 @@ app.get("/api/admin/pulse", async (c) => {
       checks7d: since(d7, (r) => r.startedAt, completed),
       confirms: completed.filter((r) => r.confirmed === true).length,
       callsBilled: accts.reduce((s, a) => s + (a.callsMade || 0), 0),
+      avgTalkSec, avgCallSec, callsTimed: timed.length, callsReached: reachedT.length,
     },
     community: {
       watches: watchRows.filter((w) => w.active !== false).length,
@@ -2517,6 +2879,7 @@ app.get("/api/admin/pulse", async (c) => {
       posts: posts.length, postsPending: posts.filter((p) => !p.approved).length,
       newLeads7d: since(d7, (r) => r.createdAt, leadRows),
     },
+    statsSince,
   });
 });
 
@@ -2779,8 +3142,9 @@ app.get("/api/retailers", async (c) => {
   // the exact /logos/chains files (per public/logos/chains/README.md) — muted chains included.
   const names = new Map((await db.select().from(chains)).map((x) => [x.id, x.name]));
   return c.json(rows.map((r) => {
-    const l = chainLogoInfo((r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0]);
-    return { ...r, carries: storeCarriesList((r.chainId && names.get(r.chainId)) || null, r.carries).join(","), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
+    const chainName = (r.chainId && names.get(r.chainId)) || null;
+    const l = chainLogoInfo(chainName || r.name.split(/—|–| - /)[0]);
+    return { ...r, carries: storeCarriesList(chainName, r.carries).join(","), distributor: distributorsForChain(chainName), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
   }));
 });
 // Store Intel — the headline numbers on the Stores tab (cached 60s). The database, at a glance.
@@ -2933,19 +3297,67 @@ app.get("/api/admin/data-health", async (c) => {
 // the reply + a list of actions taken. Admin-gated like the rest of /api/*.
 // Call-timing breakdown for the God view: total / time-to-human (nav) / talk, aggregate + per store.
 app.get("/api/admin/call-timing", async (c) => {
-  const funIds = [...(await ownerOnlyRetailerIds())]; // owner-only "Fun" store excluded from timings
-  const notFun = funIds.length ? notInArray(callResults.retailerId, funIds) : undefined;
-  const hasT = and(sql`${callResults.callSeconds} is not null`, sql`coalesce(${callResults.status},'') != 'admin_hangup'`, notFun);
-  const agg = (await db.select({ n: sql<number>`count(*)`, avgCall: sql<number>`avg(${callResults.callSeconds})`, totalSec: sql<number>`coalesce(sum(${callResults.callSeconds}),0)` }).from(callResults).where(hasT))[0];
-  const reached = (await db.select({ n: sql<number>`count(*)`, avgNav: sql<number>`avg(${callResults.navSeconds})`, avgTalk: sql<number>`avg(${callResults.callSeconds} - ${callResults.navSeconds})` }).from(callResults).where(and(hasT, sql`${callResults.navSeconds} is not null`)))[0];
-  const byStore = await db.select({ rid: callResults.retailerId, n: sql<number>`count(*)`, avgCall: sql<number>`avg(${callResults.callSeconds})`, avgNav: sql<number>`avg(${callResults.navSeconds})`, avgTalk: sql<number>`avg(${callResults.callSeconds} - ${callResults.navSeconds})`, totalSec: sql<number>`coalesce(sum(${callResults.callSeconds}),0)` }).from(callResults).where(hasT).groupBy(callResults.retailerId).orderBy(desc(sql`count(*)`)).limit(12);
-  const ids = byStore.map((r) => r.rid).filter((x): x is number => x != null);
-  const names = ids.length ? new Map((await db.select({ id: retailers.id, name: retailers.name }).from(retailers).where(inArray(retailers.id, ids))).map((r) => [r.id, r.name])) : new Map();
+  const ownerOnly = await ownerOnlyRetailerIds(); // owner-only "Fun"/MVP store excluded from timings
+  const stores = await retailerMap();
+  const chRows = await db.select({ id: chains.id, navType: chains.navType, navSeconds: chains.navSeconds, navStatus: chains.navStatus }).from(chains);
+  const chainById = new Map(chRows.map((c) => [c.id, c]));
+  const chainOf = (rid: number) => { const r = stores.get(rid); return r && r.chainId != null ? chainById.get(r.chainId) : null; };
+  // time-to-human = the chain's LOCKED nav recipe (phone-tree + hold before a person). REAL talk =
+  // callSeconds − this, counted only for calls that reached a person. Falls back to per-call nav.
+  const tthOf = (rid: number) => { const ch = chainOf(rid); return (ch && ch.navStatus === "locked" && ch.navSeconds != null) ? ch.navSeconds : null; };
+  const all = await db.select().from(callResults);
+  const statsSince = await getStatsSince();
+  const rows = all.filter((r) => r.callSeconds != null && r.status !== "admin_hangup" && !ownerOnly.has(r.retailerId) && (r.startedAt || 0) >= statsSince);
+  // Reached a human (transcript-classified) — ring / voicemail / IVR-only calls have NO human-talk.
+  const reachedIds = new Set(rows.filter((r) => classifyCallReality(r.transcript) !== "never_reached").map((r) => r.id));
+  const reached = rows.filter((r) => reachedIds.has(r.id));
   const r0 = (n: unknown) => Math.round(Number(n || 0));
-  return c.json({
-    aggregate: { calls: r0(agg?.n), reached: r0(reached?.n), avgCallSec: r0(agg?.avgCall), avgNavSec: r0(reached?.avgNav), avgTalkSec: r0(reached?.avgTalk), totalMinutes: r0(Number(agg?.totalSec || 0) / 60) },
-    byStore: byStore.map((r) => ({ name: (r.rid != null && names.get(r.rid)) || `#${r.rid}`, n: r0(r.n), avgCallSec: r0(r.avgCall), avgNavSec: r0(r.avgNav), avgTalkSec: r0(r.avgTalk), totalMin: r0(Number(r.totalSec || 0) / 60) })),
+  const avg = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : 0);
+  const navOf = (r: (typeof rows)[number]) => tthOf(r.retailerId) ?? r.navSeconds ?? 0;
+  const talkOf = (r: (typeof rows)[number]) => Math.max(0, (r.callSeconds || 0) - navOf(r));
+  const aggregate = {
+    calls: rows.length, reached: reached.length,
+    avgCallSec: r0(avg(rows.map((r) => r.callSeconds || 0))),
+    avgNavSec: r0(avg(reached.map((r) => navOf(r)))),
+    avgTalkSec: r0(avg(reached.map((r) => talkOf(r)))),
+    totalMinutes: r0(rows.reduce((s, r) => s + (r.callSeconds || 0), 0) / 60),
+  };
+  // By MODEL — Charlie (direct), Alpha (keypad tree), Bravo (voice tree) — by the chain's nav type, over reached calls.
+  const modelOf = (nt: string | null | undefined) => (nt === "direct" ? "Charlie" : nt === "keypad" ? "Alpha" : nt === "voice" ? "Bravo" : "Unknown");
+  const typeOf = (m: string) => (m === "Charlie" ? "direct" : m === "Alpha" ? "tone tree" : m === "Bravo" ? "voice tree" : "unmapped");
+  const mAgg = new Map<string, { call: number[]; nav: number[]; talk: number[] }>();
+  for (const r of reached) {
+    const m = modelOf(chainOf(r.retailerId)?.navType);
+    const cur = mAgg.get(m) ?? { call: [], nav: [], talk: [] };
+    cur.call.push(r.callSeconds || 0); cur.nav.push(navOf(r)); cur.talk.push(talkOf(r));
+    mAgg.set(m, cur);
+  }
+  const byModel = ["Charlie", "Alpha", "Bravo", "Unknown"].filter((m) => mAgg.has(m)).map((m) => {
+    const v = mAgg.get(m)!; return { model: m, type: typeOf(m), n: v.call.length, avgCallSec: r0(avg(v.call)), avgNavSec: r0(avg(v.nav)), avgTalkSec: r0(avg(v.talk)) };
   });
+  // Talk per verdict (statusKey → status), over reached calls.
+  const sAgg = new Map<string, { call: number[]; talk: number[] }>();
+  for (const r of reached) {
+    const k = String(r.statusKey ?? r.status ?? "unknown");
+    const cur = sAgg.get(k) ?? { call: [], talk: [] };
+    cur.call.push(r.callSeconds || 0); cur.talk.push(talkOf(r));
+    sAgg.set(k, cur);
+  }
+  const byStatus = [...sAgg.entries()].map(([key, v]) => ({ key, n: v.call.length, avgTalkSec: r0(avg(v.talk)), avgCallSec: r0(avg(v.call)) })).sort((a, b) => b.n - a.n);
+  // Per store: connected time over ALL its timed calls (cost), but talk/nav only over the ones that reached a human.
+  const stAgg = new Map<number, { call: number[]; navR: number[]; talkR: number[] }>();
+  for (const r of rows) {
+    const cur = stAgg.get(r.retailerId) ?? { call: [], navR: [], talkR: [] };
+    cur.call.push(r.callSeconds || 0);
+    if (reachedIds.has(r.id)) { cur.navR.push(navOf(r)); cur.talkR.push(talkOf(r)); }
+    stAgg.set(r.retailerId, cur);
+  }
+  const byStore = [...stAgg.entries()].map(([rid, v]) => ({
+    name: stores.get(rid)?.name?.split("—")[0].trim() || `#${rid}`, n: v.call.length,
+    avgCallSec: r0(avg(v.call)), avgNavSec: r0(avg(v.navR)), avgTalkSec: r0(avg(v.talkR)),
+    totalMin: r0(v.call.reduce((s, x) => s + x, 0) / 60),
+  })).sort((a, b) => b.n - a.n).slice(0, 12);
+  return c.json({ aggregate, byModel, byStatus, byStore, statsSince });
 });
 // ---- Phone Tree Lab: discover + document + verify the route-to-a-human per brand ----
 // Place a normal call to one open, callable store of a chain; its transcript feeds the tree learner in ingest.
@@ -3236,7 +3648,9 @@ app.post("/api/hangup", async (c) => {
   if (cid) {
     await db.update(callResults)
       .set({ status: "admin_hangup", statusKey: "admin_hangup", confirmed: null, completedAt: Math.floor(Date.now() / 1000) })
-      .where(and(eq(callResults.providerCallId, cid), inArray(callResults.status, ["dialing", "in_progress", "queued"])))
+      // Mark the cancel UNLESS a real verdict already landed ('completed') — so an admin cancel during
+      // ringing isn't left as "Nobody answered" if it rang out before the stamp.
+      .where(and(eq(callResults.providerCallId, cid), sql`coalesce(${callResults.status},'') != 'completed'`))
       .catch((e) => console.error("admin_hangup stamp:", e));
   }
   return c.json({ ok: true });
@@ -3496,18 +3910,21 @@ app.post("/webhooks/elevenlabs", async (c) => {
       let confirmed = o.confirmed, statusKey = o.statusKey;
       let definitive = o.confirmed === true || o.confirmed === false;
       let productDetail: string | null = null;
+      let restockDayHeard: string | null = null;
       if (o.status === "completed") {
         const label = row ? (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label : undefined;
         const second = (o.confirmed === null && !o.soldOut && !o.doesNotSell) ? await classifyVerdict(o.transcript, label || "the product") : null;
         const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, second);
         confirmed = consensus.confirmed; statusKey = consensus.statusKey; definitive = consensus.definitive;
         productDetail = productDetailLabel(second);
+        restockDayHeard = second?.restockDay ?? null; // staff-volunteered restock day, captured even unprompted
       }
+      const dayHeard = restockDayHeard ?? o.shipmentDay;
       await db.update(callResults).set({
-        status: o.status, confirmed, statusKey, shipmentDayHeard: o.shipmentDay, productDetail,
+        status: o.status, confirmed, statusKey, shipmentDayHeard: dayHeard, productDetail,
         summary: o.summary, transcript: o.transcript, completedAt: Math.floor(Date.now() / 1000),
       }).where(eq(callResults.id, o.callId));
-      if (o.shipmentDay && row) await db.update(retailers).set({ shipmentDay: o.shipmentDay }).where(eq(retailers.id, row.retailerId));
+      if (dayHeard && row) await db.update(retailers).set({ shipmentDay: dayHeard }).where(eq(retailers.id, row.retailerId));
       // Server-side billing: charge the finder once on a definitive answer (idempotent — the poller
       // may also try; charged_at guarantees exactly one charge across both paths).
       if (row?.finderUserId && o.status === "completed" && definitive) {

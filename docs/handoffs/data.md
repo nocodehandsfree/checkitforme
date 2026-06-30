@@ -41,6 +41,168 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
 - Work on the deploy branch `claude/retail-stock-voice-calls-OcyMS`; commit + push = live in ~3 min.
 
 ## Current focus (KEEP UPDATED)
+
+**Session 2026-06-27 — learned restock "best day" from call data (serve-time, no schema change).**
+
+### Shipped to STAGING (code — awaits owner "ship it" to promote to prod)
+- **best-bet now learns the restock day.** `/pub/best-bet` ranked on the last-write-wins
+  `retailers.shipmentDay` column (one wrong clerk answer flipped it). New `learnedShipDow()` uses the
+  **mode of `call_results.shipmentDayHeard`** across a store's confirmed calls, falling back to the
+  stored column when there's no history. So the recommendation compounds with every call.
+- **NEW `GET /api/admin/store-restock/:id`** — per-store weekday + product picture for the Admin store
+  panel: `staffSaid` (heard-day tally + mode), `empirical` (confirmed-by-weekday histogram + peak,
+  store-local via new `dowAt()`), derived `bestDay` (staff-mode → empirical fallback), `confidence`
+  (# confirms), `byCategory`, and `products: { forms, sets, details }`. Mirrors `/api/admin/restock-intel`
+  (network/top-25, already live) for ONE store.
+- **Product mix surfaced (forms + sets).** We already capture the free-text `call_results.productDetail`
+  ("ETB · Surging Sparks", "3-pack blister"); the verdict extractor (`voice/verdict.ts`) pulls
+  `productForm` + `set` separately but persists only the combined label. New serve-time classifier
+  (`productForm()`/`productSet()`) buckets it into FORMS (booster/hobby box, tin, ETB, pack, sleeve,
+  hanger, mega/retail box, bundle) + best-effort SETS. Added to BOTH endpoints (`restock-intel` now
+  also returns `productForms`, `productSets`, `byCategory`). Classifier unit-checked vs owner's examples.
+- **Terminology: clerk → staff** in these endpoints/comments (owner's current term for store humans).
+  Lots of `clerk` remains in the call-backend/schema (not data-dev lane) — flagged for a later sweep.
+- All serve-time derivation from `call_results` — **no new columns.** Helpers unit-checked; tsc +
+  store-contract clean. Branch: `…-pagiis` (commits 1887fe1, 11bf36d).
+- **Admin placement recommendation (given to owner):** split by altitude —
+  - **God-view → its own "Restock" tab (NETWORK):** confirm rate, dominant days, `productForms`/
+    `productSets` mix, `byCategory`, top-25 restock stores (clickable). Feeds from `restock-intel`
+    (already half-rendered in `loadGwIntel()` → `#gw_intel`; now rich enough for its own tab next to
+    length-of-calls).
+  - **Store section → per-store "Restock" card (DETAIL):** that store's `bestDay`, staff-said vs
+    confirmed weekday histogram, `products.forms`/`sets`, `byCategory`, `confidence`, `lastConfirm`.
+    Feeds from `store-restock/:id`; opened by clicking a God-view top-store row.
+
+### Spec'd, NOT built (call-backend lane — needs that dev or owner "ship it")
+- **Restock-day user notification.** Data layer is ready (`learnedShipDow`). Trigger: daily tick like
+  `customerScheduleTick()`; for each active `watches` row, if `tzDow(store.tz) === learnedDow` and not
+  yet notified today → send "today's usually restock day at {store}" via the watch alert path
+  (brevo.ts), gated by `policy.flags.restockAlerts`. **Needs a `lastRestockNotifyDay` dedupe field →
+  DevOps schema add.** Lives in `customer-schedules.ts`/`notify.ts` (NOT data-dev lane).
+- **Persist `productForm` + `set` as their own columns (clean product reporting).** The extractor
+  ALREADY pulls both (`voice/verdict.ts` `ClerkVerdict.productForm`/`.set`) but `productDetailLabel()`
+  collapses them into the single free-text `productDetail`. Add `product_form` + `set_name` columns
+  (**DevOps schema**) and persist them in `calls/service.ts` (~line 678) + `server.ts` trainer-batch
+  (~3271) — the extraction is free, just stop discarding it. Then forms/sets reporting is EXACT (no
+  regex), and joins to the structured `products` catalog (set/series/`type`/MSRP, seeded from
+  `drops_db.json`) for value/SKU-level intel. My serve-time classifier is the interim until then.
+
+**Session 2026-06-26 — tier-5 coverage sweep (store-by-store) + consumer store-feed fix + promote-pipeline outage.**
+
+### Shipped (LIVE on prod + staging unless noted)
+- **Tier-5 backfills — reconciled STORE-BY-STORE (not by count).** Method: pull the chain's official store
+  directory per gap-state, dedupe vs our rows by `address-norm + phone`, geocode (US Census → Nominatim
+  fallback; set hyphenated Coachella-style addresses by hand), `POST /api/stores/import`.
+  - **Hobby Lobby:** CA 10→70 (all open CA) + the West/Mountain hole (AZ/WA/NM/UT/CO/OR/NV/ID ≈71).
+    National **889→1,020 (94%)**. **Texas (+58) still pending.**
+  - **Target:** CA 251→**324** (+73). Real CA = 324 (storelocators, Jun-2026). **Other states (~260) pending.**
+  - **Dollar General:** CA 260→**264** (+Greenfield, Indio, Pearblossom, San Bernardino) — CA complete vs 263 official.
+  - **Books-A-Million:** the audit's "missing 75" was a STALE reference — BAM has **closed down to 175 open**
+    (official locator). We had all but 2 (Salina KS, Rapid City SD), now added; ~14 of our BAM rows are closed
+    stores → being deactivated.
+- **Coverage audit (22 major Pokémon chains, our count vs real US totals):** 17 at 95–100%. Real growing-chain
+  gaps = Target + Hobby Lobby. CVS/Walgreens/GameStop look low only from documented closures (we track current
+  operating reality, not a stale peak).
+- **LESSON — count ≠ completeness.** A near-matching national count hides (a) specific metro gaps (HL's late
+  West-Coast expansion), (b) stale reference numbers (BAM), (c) closed stores still listed. **Reconcile
+  store-by-store for tier-5**, especially dense/recently-expanded metros.
+- **Big 5 Santa Barbara (id 7900):** owner intel → tier 4→**5**, restock **Mon & Wed**, specialInstructions
+  (busiest Big 5, most Pokémon; recently Chaos Rising booster sleeves, Mega Clefable tins, Mega Zygarde posters).
+- **Consumer store-feed fix (`/pub/stores/near`):** in a dense metro a 20-mi radius holds 400+ stores (200+
+  tier-5); the page limit dropped a sparse FAR green-group chain (a Dollar General ~19mi out, in-radius but
+  past the cut → "Dollar General never shows up near me"). Fix **pins the nearest store of each tier-5 chain**
+  (first page) so every green-group chain always surfaces. **Live on staging; awaiting owner OK for prod**
+  (code change → staging-first rule).
+
+### ⚠️ Promote pipeline DOWN — flag for DevOps/Website
+- Staging→prod data promote (`scripts/promote-config.mjs` → `POST /api/admin/promote-apply`) now **404s on
+  BOTH envs** after the website team's 2026-06-26 deploys removed/renamed that endpoint (it worked earlier
+  today). **Until restored, staging DB edits do NOT auto-sync to prod.**
+- **Workaround in use:** push new/updated tier-5 rows **directly to BOTH** staging and prod via
+  `POST /api/stores/import` (dedup-by-phone, idempotent) and `PATCH /api/retailers/:id`.
+
+### Store API — what it serves (incl. logos) + apps it powers
+One DB, read three ways; **carries + logos DERIVE at serve-time** (no per-row copies that drift):
+- **`GET /pub/stores/near?lat&lng&radius&limit&mode`** — THE consumer path (website + iOS app). bbox→
+  distance→page. Per store: id, chainId, name, location, address, storeType (=chain.type), **logoUrl/
+  logoWide/logoDark**, **carries** (distributor-derived), lat/lng, tier, callable, inStock, stockCheckMethod,
+  sellMethods, openState. Owner-only + (pending-prod) nearest-per-tier-5-chain pinned past the page limit.
+- **`GET /pub/stores`** — every active+phone store (Admin logo map); same shape, no paging.
+- **`GET /api/retailers?chainId&state&q&limit`** (admin) — full retailer rows + logoUrl + carries.
+  **Capped at 1000** — use `/pub/stores` (or `table-dump`) for full scans.
+- **Logos:** `chainLogoInfo(chainName)` is **DB-first** — `chains.logo_url` (shared Cloudflare R2 at
+  logos.fungibles.com) wins over per-branch `public/logos/chains/<slug>.png`, so a logo travels to every env
+  and can't drift. ~99.97% of stores carry an R2 logo.
+- **Carries:** `storeCarriesList(chainName, stored)` = distributor-derived (`data/distributors.json`, inlined
+  fallback in `server.ts`) for mapped chains, else the stored `carries` column.
+- **Apps powered:** consumer website (checkitforme.com / staging.checkitforme.com), the iOS app, and the Admin
+  store list — all read these SAME rows, so a store/logo/tier/intel added here shows up everywhere.
+
+---
+
+**Session 2026-06-25 — the "derivation era": logos→R2, carries→distributors, MVPs demo, phone harvest.**
+
+> **RESUMING? Read this box first.** Two architecture shifts this session: (1) chain **logos** are now
+> DB-first from **shared R2** (`logos.fungibles.com`); (2) store **`carries`** is **derived** from
+> `data/distributors.json`, not the per-store column. Both are a written contract in
+> `docs/DATA_PROVENANCE.md` ("Carries — derived from distributors") + guarded by
+> `scripts/check-store-contract.mjs` (`pnpm check`). **prod and staging are SEPARATE DBs + separate
+> deploys** — code goes to BOTH branches; admin-API DB writes hit only the env you call.
+
+Shipped (live + verified on prod, and staging where noted):
+- [x] **Distributor-driven carries.** `data/distributors.json` = distributor→products + chain→distributors
+  (a chain's carries = union of its distributors' products), derived at serve-time by
+  `storeCarriesList()`/`carriesForChain()` (`src/server.ts`); wired into `/pub/stores`, `/pub/stores/near`,
+  `/api/retailers`. Seeded **Excell** (Pokémon/Lorcana/MTG/One Piece/Yu-Gi-Oh/Sports Cards) + **Schylling**
+  (NeeDoh) + **Jazwares** (Squishmallows) → **CVS/Walgreens/Target/Walmart/Barnes & Noble**. Unmapped chains
+  fall back to the stored column. Auto-applies to new stores of mapped chains (no stamping). **Verified
+  identical prod+staging.** Why derive (not stamp): config lives in code → consistent across separate DBs.
+- [x] **Logo R2 keystone (Data Dev half).** DevOps shipped the bucket/worker (PR #417, `logos.fungibles.com`,
+  `presignPut` in `src/r2.ts`). Added `chains.logo_url/logo_wide/logo_dark` (schema+bootstrap),
+  `chainLogoInfo()` is **DB-first** (R2 wins, filesystem fallback; cache `refreshChainLogoDb`, 60s),
+  `POST /api/chains/:id/logo` (server-side presigned PUT), `POST /api/admin/migrate-logos-to-r2`.
+  **Migration ran: 106 chains on prod, 96 on staging now serve R2.** Key = `chain-logos/<slug>.png`.
+- [x] **MVPs demo store** (owner-only pitch store, like Fun). Chain 121 "MVPs", store **106362**: `ownerOnly`,
+  Calabasas geo-pin, 24/7, `sellsPacks`, carries Pokémon, logo `chain-logos/mvps.png`, armed `+18185770433`.
+  **Number = on/off** (PATCH phone on an ownerOnly store derives `active`). `seedMvpsStore()` in bootstrap
+  (create-only — never overwrites phone/active). Staging DB lags prod, so MVPs chain may differ there.
+- [x] **Geo-bypass → prod.** Owner-only stores surface regardless of distance for the comp account (was
+  staging-only — the "Venice" gap). In `/pub/stores/near`.
+- [x] **Phone harvest.** H-E-B (84) + H Mart (6) were all `nophone:` (0 callable). `fetchStorePhone()`
+  (`src/store-phone.ts`, OpenAI web-search→Gemini, E.164) + `backfillPhones({chainId})` +
+  `POST /api/phones/backfill?chainId=&dryRun=1`. Harvested all 90 (area-code verified) + `sellsPacks=true`
+  → **both chains fully callable.** Reusable for any address-only chain.
+- [x] **Data-health fix.** `/api/admin/data-health` mis-chain matcher stems possessive `-s` (real
+  Mariano's/Lowe's/Smith's no longer false-flag); excludes ownerOnly demo stores. Mis-chained 44→0.
+- [x] **6 homeless stores hidden** (`active=false`, recoverable) per owner's "don't include if no chain home":
+  Olsens Market Place 2768, Mansfield Market Place 3768, Ray's Food Place 3086/3841, Lee Harrison 62635,
+  Hyvee Equipment LLC 66429. All non-kiosk.
+
+Pending / next session:
+- [ ] **Deep research → expand `data/distributors.json`** (owner returning with the data). Brief: per
+  distributor capture product lines + retailer network + channel + recent shifts; deliver
+  `distributor→{products,chains}` + `our-chain→distributor` for our ~120 chains, plus emerging lines
+  (Pop Mart/Labubu blind-box, Star Wars Unlimited/Riftbound, etc.) worth adding. **When it arrives:** add
+  entries (chain keys MUST match `chains.name` EXACTLY — verify via `/api/chains`); only high-confidence
+  (flag low-confidence for call-verify); `pnpm check`; commit; deploy to **both** OcyMS + pagiis; verify
+  carries derives identically on both envs (curl `/api/retailers?q=<chain>` on both hosts).
+- [ ] **DevOps prompt sent** (owner relaying): add `node scripts/check-store-contract.mjs` to
+  `voice-caller-ci.yml`; fix the pre-existing `config.staging` tsc error (`src/server.ts:1430`) that reds the
+  typecheck gate; make CI a required merge check.
+- [ ] **Handoff pointers** — `docs/handoffs/admin.md` + `website.md` need a 2-line "carries+logos are
+  derived, don't edit the column / drop a file" note. Offered; awaiting owner go.
+
+Architecture facts the next session MUST know:
+- **Separate DBs + deploys.** prod = `claude/retail-stock-voice-calls-OcyMS` (pokemon.fungibles.com /
+  checkitforme.com); staging = `claude/checkitforme-website-takeover-pagiis` (staging.checkitforme.com).
+  Code → both branches. Carries derives from code config (auto-consistent); logo_url + store rows are
+  per-DB (logo migration was run on both; staging's DB lags prod).
+- **Branch flow.** Dev on `claude/awesome-knuth-613jn0` (reset to origin/OcyMS before each build),
+  cherry-pick → OcyMS (prod) + pagiis (staging). OcyMS moves often (logo lane) — rebase before push.
+  Railway auto-deploys on push (~60-90s); CI does not gate Railway.
+- **Access.** Admin API needs a browser User-Agent (Cloudflare blocks python-urllib → 1010); admin token
+  at `/tmp/.atok` (don't print). `config.staging` tsc error is DevOps's, not ours.
+
 **Session 2026-06-19 — data documented, scoring package committed, ungraded tail closed (see COMPLETED.md).**
 - [x] **Single-source-of-truth doc** — `docs/DATA_PROVENANCE.md` written: every store-data domain, who
   writes it, who reads it, verified that **no surface reads a rogue store list** (only the DB).
