@@ -1945,6 +1945,26 @@ app.get("/pub/result/:cid", async (c) => {
       transcript: row.transcript ?? o?.transcript ?? "",
     });
   }
+  // EL flips its status to "done" BEFORE its own analysis is ready, so the raw outcome here can carry a
+  // premature verdict (confirmed=null → a wrong key) that then flips once the consensus row lands — the
+  // "nobody answered → restock incoming" flicker. When the call has actually ended, finalize on-demand
+  // with the SAME second-read consensus the webhook/poller use (it reads the transcript directly, so it
+  // doesn't wait on EL's lagging data_collection), persist it, and return the reconciled verdict — so the
+  // first verdict the UI ever shows is already the final one.
+  if (row && o && o.status === "completed") {
+    const label = (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label;
+    const second = await classifyVerdict(o.transcript, label || "the product");
+    const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, second);
+    const productDetail = productDetailLabel(second);
+    await db.update(callResults).set({
+      status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey,
+      shipmentDayHeard: o.shipmentDay, productDetail, summary: o.summary, transcript: o.transcript,
+      completedAt: Math.floor(Date.now() / 1000),
+    }).where(eq(callResults.id, row.id));
+    if (row.finderUserId && consensus.definitive) await chargeCallOnce(row.id, row.finderUserId);
+    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, productDetail, shipmentDay: o.shipmentDay, summary: o.summary, transcript: o.transcript });
+  }
+  // Truly mid-call → progress only, never a verdict (so a wrong key can't flash before the real one).
   return c.json(o ?? { status: "in_progress", transcript: "", summary: "" });
 });
 // Live, mid-call transcript: returns whatever the agent + clerk have said SO FAR (no audio needed).
