@@ -259,6 +259,15 @@
   .wfmasg{margin-top:7px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
   .wfmasglab{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
   .wfmpin{font-size:11.5px;color:var(--text-body);background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:2px 8px;white-space:nowrap}
+  /* testing log */
+  .tcrow{padding:11px 0;border-top:1px solid var(--border)}
+  .tcrow:first-of-type{border-top:none}
+  .tchead{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .tcwf{font-size:13.5px;font-weight:700;color:#eaeaf2}
+  .tcpill{font-size:11px;font-weight:700;border:1px solid;border-radius:7px;padding:2px 8px;white-space:nowrap}
+  .tcop{font-size:13px;color:var(--text-strong);line-height:1.4;margin:5px 0 6px;word-break:break-word}
+  .tctime{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-muted)}
+  .tctime b{color:#e8e8f0;font-variant-numeric:tabular-nums}
   .wfmsub{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin:13px 0 7px}
   .wfmop{display:flex;gap:6px;align-items:flex-start;margin-bottom:3px}
   /* openers read as soft, WRAPPING script text (matches the Designer's .optext), with a quiet hover/focus affordance for inline edit — not abrasive single-line form boxes */
@@ -595,6 +604,12 @@
     <h2>Workflows</h2>
     <div class="meta" style="margin:0 0 13px">Each workflow is a saved <b>opener set + voice + persona</b>. The <b style="color:var(--green)">★ default</b> powers every store; assign others per chain/store in Stores. Build new ones in Voice → Designer, then edit their openers here.</div>
     <div id="wfm_list" class="meta">Loading…</div>
+  </section>
+  <section id="testing">
+    <h2>Testing</h2>
+    <div class="meta" style="margin:0 0 13px">Your test-call log — <b>owner-only / Fun stores only</b>. These never touch the real-store numbers. Call yourself, mess with the agent, and read back the workflow, the exact opener used in rotation, the status, and the timing.</div>
+    <div id="testing_summary"></div>
+    <div id="testing_log" class="meta">Loading…</div>
   </section>
 
   <section id="retailers">
@@ -1120,10 +1135,10 @@ const NAV_GROUPS={
   godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['users','Users','card'],['restock','Restock','cal'],['growth','Policy','rise'],['calc','Calc','sliders']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
   calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Settings','tree'],['settings','App','sliders']]},
-  voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['workflows','Workflows','note'],['fun','Fun','sliders']]},
+  voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['workflows','Workflows','note'],['testing','Testing','phone-call'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
 function renderGroupNav(){
@@ -3342,6 +3357,31 @@ async function wfmSetDefault(wi){ const w=WF.list[wi]; if(!w) return; WF.def=w.n
 async function wfmDelete(wi){ const w=WF.list[wi]; if(!w) return; if(!confirm('Delete workflow “'+w.name+'”?\nStores assigned to it fall back to the default.')) return; const wasDef=WF.def===w.name; WF.list=WF.list.filter((x,i)=>i!==wi); if(wasDef){ WF.def=''; await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:''})}); } renderWorkflowMgr(); await wfmSaveList(); toast('Workflow deleted'); }
 // Reset this workflow's opener rotation so the next call to it starts at opener #1 (predictable testing).
 async function wfmResetRotation(wi){ const w=WF.list[wi]; if(!w) return; const r=await api('/api/admin/reset-rotation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workflow:w.name})}); toast((r&&r.ok)?'Rotation reset — next call uses opener #1':'Could not reset rotation'); }
+// Testing tab — the Fun-store test-call log (workflow · opener used · status · timing). Owner-only data.
+function tcStatusPill(key){ const F=({in_stock:['In stock','#4ADE80'],not_in_stock:['Not in','#EF4444'],sold_out:['Sold out','#EF4444'],does_not_sell:["Doesn't carry",'#EF4444'],no_clear_answer:['Maybe','#FBBF24'],too_busy:['Too busy','#FBBF24'],left_on_hold:['On hold','#FBBF24'],nobody_answered:['No answer','#9CA3AF'],closed:['Closed','#9CA3AF'],failed:['Failed','#FBBF24'],completed:['Done','#9CA3AF'],admin_hangup:['Canceled','#9CA3AF']})[key]||[key||'—','#9CA3AF']; return `<span class="tcpill" style="color:${F[1]};border-color:${F[1]}44;background:${F[1]}14">${esch(F[0])}</span>`; }
+async function loadTesting(){
+  const sum=document.getElementById('testing_summary'), log=document.getElementById('testing_log');
+  if(!sum||!log) return;
+  const d=await api('/api/admin/test-calls');
+  if(!d||d.error){ sum.innerHTML=''; log.textContent='No test calls yet — call the Fun store to start logging.'; return; }
+  const s=d.summary||{};
+  const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+  sum.innerHTML=`<div class="card report"><div class="rgrp">Test-call timing <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· Fun store · kept separate from real stats</span></div>
+    <div class="stats" style="margin-bottom:0">${tile(d.count||0,'test calls')}${tile(secsFmt(s.avgNavSec||0),'avg to-human')}${tile(secsFmt(s.avgTalkSec||0),'avg talk','green')}${tile(secsFmt(s.avgCallSec||0),'avg total')}</div></div>`;
+  const when=u=>{ if(!u)return '—'; const dt=new Date(u*1000); return dt.toLocaleDateString([],{month:'short',day:'numeric'})+' '+dt.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}); };
+  const t=v=>v!=null?secsFmt(v):'—';
+  log.innerHTML=`<div class="card report"><div class="rgrp">Call log <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· newest first · workflow · opener used · status · timing</span></div>`
+    + ((d.rows||[]).map(r=>{
+        const op=r.opener||{};
+        const opLine = op.said ? `${op.label?'<b style="color:var(--purple)">'+esch(op.label)+'</b> · ':''}${esch(op.said)}` : '<span class="meta">opener not captured</span>';
+        return `<div class="tcrow">
+          <div class="tchead"><span class="tcwf">${r.workflow?esch(r.workflow):'<span class="meta" style="font-weight:500">no workflow</span>'}</span>${tcStatusPill(r.status)}<span class="meta" style="margin-left:auto">${esch(when(r.started))}</span></div>
+          <div class="tcop">${opLine}</div>
+          <div class="tctime"><span>to-human <b>${t(r.navSec)}</b></span><span>talk <b style="color:var(--green)">${t(r.talkSec)}</b></span><span>total <b>${t(r.callSec)}</b></span></div>
+        </div>`;
+      }).join('') || '<div class="meta" style="padding:6px 2px">No test calls yet — call the Fun store.</div>')
+    + `</div>`;
+}
 // Settings → the one global default workflow.
 async function loadDefaultWorkflow(){
   await loadWorkflows();
@@ -3472,7 +3512,15 @@ async function loadGwPulse(){
       st(a.checks||0,'checks')+st(a.checks24h||0,'last 24h')+st(a.confirms||0,'confirms',1)+st(secsFmt(a.avgTalkSec||0),'avg talk',1)+st(secsFmt(a.avgCallSec||0),'avg call')+
     `</div><div class="rgrp">Community</div><div class="stats" style="margin-bottom:0">`+
       st(cm.watches||0,'watching')+st(cm.kioskReports||0,'kiosk intel')+st(cm.posts||0,'scores')+st(cm.postsPending||0,'pending')+st(cm.newLeads7d||0,'new leads 7d')+
-    `</div>`;
+    `</div>`
+    +`<div class="rgrp" style="margin-top:14px">Stats baseline</div>`
+    +`<div class="meta" style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;line-height:1.6">Real-call stats (Pulse · Restock · Call timing) ${d.statsSince?('count from <b style="color:#cfcfd8">'+new Date(d.statsSince*1000).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})+'</b>'):'count <b style="color:#cfcfd8">everything</b>'}.<button class="ghost" style="font-size:11px;padding:5px 10px" onclick="startFresh(false)">Start fresh</button>${d.statsSince?'<button class="ghost" style="font-size:11px;padding:5px 10px" onclick="startFresh(true)">Count all again</button>':''}</div>`;
+}
+// Stamp a "count from now" cutoff so real-call stats reset for the live launch. Test calls are unaffected.
+async function startFresh(clear){
+  if(!clear && !confirm('Start fresh?\n\nReal-call stats (Pulse, Restock, Call timing) will only count calls placed from NOW on — so launch-day dialing starts clean. Test/Fun calls are unaffected, and this is reversible (“Count all again”).')) return;
+  const r=await api('/api/admin/stats-since',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(clear?{clear:true}:{})});
+  if(r&&r.ok){ toast(clear?'Counting all calls again':'Fresh start — real-call stats now count from today'); loadGwPulse(); if(typeof loadCallHealth==='function')loadCallHealth(); } else toast('Could not update');
 }
 // Call data health — the unfiltered truth about call_results (real dialed calls vs seed/rehearsal/
 // never-placed), + a dry-run cleanup preview. Read-only: no delete button (purge is run deliberately).

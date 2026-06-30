@@ -97,6 +97,12 @@ async function retailerTimeToHuman(): Promise<Map<number, number>> {
   }
   return m;
 }
+// "Start fresh" cutoff (unix secs): real-call stats only count calls placed at/after it. 0 = count all.
+async function getStatsSince(): Promise<number> {
+  const v = await getSetting("stats_since");
+  const n = v ? Number(v) : 0;
+  return Number.isFinite(n) ? n : 0;
+}
 import { getAccount, getAccountByPhone, phoneAccountExists, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, SUB, PACKS } from "./billing";
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
 import { brevoUpsertContact } from "./brevo";
@@ -2317,7 +2323,8 @@ app.get("/api/admin/restock-intel", async (c) => {
   const stores = await retailerMap();
   const cats = await categoryLabelMap();
   const ownerOnly = await ownerOnlyRetailerIds();
-  const rows = (await db.select().from(callResults).where(eq(callResults.status, "completed"))).filter((r) => !ownerOnly.has(r.retailerId));
+  const statsSince = await getStatsSince();
+  const rows = (await db.select().from(callResults).where(eq(callResults.status, "completed"))).filter((r) => !ownerOnly.has(r.retailerId) && (r.startedAt || 0) >= statsSince);
   const confirmed = rows.filter((r) => r.confirmed === true);
   // Per-store: how often a confirmation lands + the shipment day the clerk gave (the gold).
   const byStore = new Map<number, { id: number; store: string; location: string | null; chain: string; region: string | null; confirms: number; last: number; days: Record<string, number> }>();
@@ -2373,6 +2380,7 @@ app.get("/api/admin/restock-intel", async (c) => {
     byCategory: Object.entries(catNet).sort((a, b) => b[1] - a[1]).map(([category, n]) => ({ category, n })),
     topStores: topStores.map((e) => ({ id: e.id, store: e.store, location: e.location, region: e.region, confirms: e.confirms, last: e.last, bestDay: e.bestDay })),
     answerFunnel,
+    statsSince,
   });
 });
 
@@ -2597,6 +2605,88 @@ app.post("/api/admin/reset-rotation", async (c) => {
   return c.json({ ok: true, keys, workflow: wf || null });
 });
 
+// Testing log — owner-only / "Fun" rehearsal stores ONLY (never the real-store stats). Per-call: the
+// workflow applied, the opener actually used (pulled from the transcript + matched to its rotation slot),
+// the call status, and the nav / talk / total timing. The owner's working log while messing with the agent.
+app.get("/api/admin/test-calls", async (c) => {
+  const ownerOnly = await ownerOnlyRetailerIds();
+  const stores = await retailerMap();
+  const cats = await categoryLabelMap();
+  const [storeS, chainS, defS, libS] = await Promise.all([
+    getSetting("vt_store_workflows"), getSetting("vt_chain_workflows"), getSetting("vt_default_workflow"), getSetting("vt_workflows"),
+  ]);
+  const parseObj = (s: string | null): Record<string, string> => { try { return s ? JSON.parse(s) : {}; } catch { return {}; } };
+  const byStore = parseObj(storeS), byChain = parseObj(chainS);
+  let lib: Array<{ name: string; openers?: string[] }> = []; try { lib = libS ? JSON.parse(libS) : []; } catch { lib = []; }
+  const wfFor = (rid: number) => {
+    const s = stores.get(rid);
+    const name = byStore[String(rid)] || (s && s.chainId != null ? byChain[String(s.chainId)] : "") || (defS || "");
+    return name ? (lib.find((w) => w && w.name === name) || null) : null;
+  };
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+  const firstAgentLine = (t: string) => {
+    const segs = String(t || "").split(/(?=(?:Clerk|Agent):\s)/);
+    const a = segs.find((s) => /^Agent:/.test(s.trim()));
+    return a ? a.replace(/^Agent:\s*/, "").trim() : "";
+  };
+  // Match the spoken opener back to a workflow rotation slot (A/B/C…) by word overlap.
+  const matchOpener = (transcript: string | null, wf: ReturnType<typeof wfFor>, cat: string) => {
+    const line = firstAgentLine(transcript || "");
+    const openers = wf?.openers || [];
+    if (!line || !openers.length) return { label: null as string | null, said: line || null, template: null as string | null };
+    const nl = norm(line);
+    let best = -1, bestScore = 0;
+    openers.forEach((o, i) => {
+      const ow = norm(String(o).replace(/\{category\}/g, cat)).split(" ").filter((w) => w.length > 2);
+      const hit = ow.filter((w) => nl.includes(w)).length;
+      const score = ow.length ? hit / ow.length : 0;
+      if (score > bestScore) { bestScore = score; best = i; }
+    });
+    const label = best >= 0 && bestScore >= 0.5 ? String.fromCharCode(65 + best) : null;
+    return { label, said: line, template: best >= 0 ? openers[best] : null };
+  };
+  const all = (await db.select().from(callResults))
+    .filter((r) => ownerOnly.has(r.retailerId))
+    .sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0));
+  const rows = all.map((r) => {
+    const wf = wfFor(r.retailerId);
+    const cat = cats.get(r.categoryId) || "";
+    const nav = r.navSeconds, call = r.callSeconds;
+    return {
+      id: r.id, started: r.startedAt,
+      store: stores.get(r.retailerId)?.name?.split("—")[0].trim() || `#${r.retailerId}`,
+      category: cat, status: r.statusKey || r.status, confirmed: r.confirmed,
+      workflow: wf?.name || null, opener: matchOpener(r.transcript, wf, cat),
+      navSec: nav ?? null, callSec: call ?? null,
+      talkSec: call != null && nav != null ? Math.max(0, call - nav) : null,
+      summary: r.summary || null,
+    };
+  });
+  const timed = rows.filter((r) => r.callSec != null);
+  const avg = (xs: number[]) => (xs.length ? Math.round(xs.reduce((s, x) => s + x, 0) / xs.length) : 0);
+  return c.json({
+    count: rows.length,
+    summary: {
+      calls: timed.length,
+      avgNavSec: avg(timed.map((r) => r.navSec || 0)),
+      avgTalkSec: avg(timed.filter((r) => r.talkSec != null).map((r) => r.talkSec as number)),
+      avgCallSec: avg(timed.map((r) => r.callSec as number)),
+    },
+    rows,
+  });
+});
+
+// "Start fresh": stamp a cutoff so real-call stats only count calls from now on (e.g. after going live
+// on real stores). GET reads it; POST sets it to now (or {clear:true} to count everything again).
+app.get("/api/admin/stats-since", async (c) => c.json({ statsSince: await getStatsSince() }));
+app.post("/api/admin/stats-since", async (c) => {
+  const b = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  const now = Math.floor(Date.now() / 1000);
+  const ts = b.clear === true ? 0 : (typeof b.at === "number" && b.at > 0 ? Math.floor(b.at) : now);
+  await setSetting("stats_since", String(ts));
+  return c.json({ ok: true, statsSince: ts });
+});
+
 // ---- Growth pulse: the funnel + engagement snapshot the owner reads each morning ----
 // Manually-flagged admin/test accounts (Clerk-free, so we can't rely on email domains). These are
 // non-customers — excluded from signups/activity like the comp/owner accounts.
@@ -2646,7 +2736,8 @@ app.get("/api/admin/pulse", async (c) => {
   // master account), and admin-canceled calls — so the Pulse reflects genuine consumer activity.
   const masterUid = "phone:" + (process.env.OWNER_PHONE || "+13106662331").trim();
   const flagged = await staffAccountIds();
-  const real = calls.filter((r) => !ownerOnly.has(r.retailerId) && r.finderUserId !== masterUid && !(r.finderUserId && flagged.has(r.finderUserId)) && r.status !== "admin_hangup");
+  const statsSince = await getStatsSince();
+  const real = calls.filter((r) => !ownerOnly.has(r.retailerId) && r.finderUserId !== masterUid && !(r.finderUserId && flagged.has(r.finderUserId)) && r.status !== "admin_hangup" && (r.startedAt || 0) >= statsSince);
   const completed = real.filter((r) => r.status === "completed");
   // Real human-talk = connected seconds MINUS the learned time-to-human (chain recipe), counted ONLY for
   // calls that actually reached a person. Never-reached IVR calls have zero human-talk. (The old code
@@ -2679,6 +2770,7 @@ app.get("/api/admin/pulse", async (c) => {
       posts: posts.length, postsPending: posts.filter((p) => !p.approved).length,
       newLeads7d: since(d7, (r) => r.createdAt, leadRows),
     },
+    statsSince,
   });
 });
 
@@ -3105,7 +3197,8 @@ app.get("/api/admin/call-timing", async (c) => {
   // callSeconds − this, counted only for calls that reached a person. Falls back to per-call nav.
   const tthOf = (rid: number) => { const ch = chainOf(rid); return (ch && ch.navStatus === "locked" && ch.navSeconds != null) ? ch.navSeconds : null; };
   const all = await db.select().from(callResults);
-  const rows = all.filter((r) => r.callSeconds != null && r.status !== "admin_hangup" && !ownerOnly.has(r.retailerId));
+  const statsSince = await getStatsSince();
+  const rows = all.filter((r) => r.callSeconds != null && r.status !== "admin_hangup" && !ownerOnly.has(r.retailerId) && (r.startedAt || 0) >= statsSince);
   // Reached a human (transcript-classified) — ring / voicemail / IVR-only calls have NO human-talk.
   const reachedIds = new Set(rows.filter((r) => classifyCallReality(r.transcript) !== "never_reached").map((r) => r.id));
   const reached = rows.filter((r) => reachedIds.has(r.id));
@@ -3155,7 +3248,7 @@ app.get("/api/admin/call-timing", async (c) => {
     avgCallSec: r0(avg(v.call)), avgNavSec: r0(avg(v.navR)), avgTalkSec: r0(avg(v.talkR)),
     totalMin: r0(v.call.reduce((s, x) => s + x, 0) / 60),
   })).sort((a, b) => b.n - a.n).slice(0, 12);
-  return c.json({ aggregate, byModel, byStatus, byStore });
+  return c.json({ aggregate, byModel, byStatus, byStore, statsSince });
 });
 // ---- Phone Tree Lab: discover + document + verify the route-to-a-human per brand ----
 // Place a normal call to one open, callable store of a chain; its transcript feeds the tree learner in ingest.
