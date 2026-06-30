@@ -1164,7 +1164,7 @@ function dowAt(epochSec: number, tz: string): number {
   const wd = new Intl.DateTimeFormat("en-US", { timeZone: tz || "America/Chicago", weekday: "short" }).format(new Date(epochSec * 1000));
   return ({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 } as Record<string, number>)[wd] ?? 0;
 }
-// The LEARNED restock weekday: the MODE of every shipment day a store has given across its
+// The LEARNED restock weekday: the MODE of every shipment day staff have given across this store's
 // confirmed calls — robust to one wrong answer, unlike the last-write-wins shipmentDay column —
 // falling back to the stored shipmentDay when there's no call history yet. How best-bet "learns" the
 // day from all the calls instead of just the most recent one.
@@ -1226,7 +1226,7 @@ app.get("/pub/best-bet", async (c) => {
   for (const r of confirmed) {
     const e = byStore.get(r.retailerId) || { confirms: 0, last: 0, days: {} };
     e.confirms++; const at = r.completedAt ?? r.startedAt; if (at > e.last) e.last = at;
-    // Tally the restock day the store gave on each confirmed call. The mode is the LEARNED day.
+    // Tally the restock day staff gave on each confirmed call. The mode is the LEARNED day.
     if (r.shipmentDayHeard) e.days[r.shipmentDayHeard] = (e.days[r.shipmentDayHeard] || 0) + 1;
     byStore.set(r.retailerId, e);
   }
@@ -2425,7 +2425,7 @@ app.get("/api/admin/restock-intel", async (c) => {
   const statsSince = await getStatsSince();
   const rows = (await db.select().from(callResults).where(eq(callResults.status, "completed"))).filter((r) => !ownerOnly.has(r.retailerId) && (r.startedAt || 0) >= statsSince);
   const confirmed = rows.filter((r) => r.confirmed === true);
-  // Per-store: how often a confirmation lands + the shipment day the store gave (the gold).
+  // Per-store: how often a confirmation lands + the shipment day staff gave (the gold).
   const byStore = new Map<number, { id: number; store: string; location: string | null; chain: string; region: string | null; confirms: number; last: number; days: Record<string, number> }>();
   for (const r of confirmed) {
     const s = stores.get(r.retailerId); if (!s) continue;
@@ -2439,7 +2439,7 @@ app.get("/api/admin/restock-intel", async (c) => {
   const dayTally: Record<string, number> = {};
   for (const r of confirmed) if (r.shipmentDayHeard) dayTally[r.shipmentDayHeard] = (dayTally[r.shipmentDayHeard] || 0) + 1;
   // Network product mix — which FORMS (booster/hobby box, tin, ETB, pack…) and SETS land most, from
-  // the free-text productDetail the store named. Same derivation as the per-store endpoint.
+  // the free-text productDetail staff named. Same derivation as the per-store endpoint.
   const formTally: Record<string, number> = {}, setTally: Record<string, number> = {};
   for (const r of confirmed) {
     const f = productForm(r.productDetail); if (f) formTally[f] = (formTally[f] || 0) + 1;
@@ -2503,11 +2503,11 @@ app.get("/api/admin/store-restock/:id", async (c) => {
   const confirmed = rows.filter((r) => r.confirmed === true);
   const tz = store.timezone || "America/Los_Angeles";
   const WD = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  // what the store said (the gold): the shipment day a store gave, across all completed calls
-  const storeT: Record<string, number> = {};
-  for (const r of rows) if (r.shipmentDayHeard) storeT[r.shipmentDayHeard] = (storeT[r.shipmentDayHeard] || 0) + 1;
-  const storeTally = Object.entries(storeT).sort((a, b) => b[1] - a[1]).map(([day, n]) => ({ day, n }));
-  const storeMode = storeTally[0]?.day ?? null;
+  // what staff said (the gold): the shipment day staff gave, across all completed calls
+  const staffT: Record<string, number> = {};
+  for (const r of rows) if (r.shipmentDayHeard) staffT[r.shipmentDayHeard] = (staffT[r.shipmentDayHeard] || 0) + 1;
+  const staffTally = Object.entries(staffT).sort((a, b) => b[1] - a[1]).map(([day, n]) => ({ day, n }));
+  const staffMode = staffTally[0]?.day ?? null;
   // empirical — confirmed-in-stock by weekday, in the store's local time
   const wd: Record<string, number> = Object.fromEntries(WD.map((d) => [d, 0]));
   for (const r of confirmed) {
@@ -2525,9 +2525,9 @@ app.get("/api/admin/store-restock/:id", async (c) => {
     location: store.location || null,
     timezone: tz,
     storedShipmentDay: store.shipmentDay || null,
-    storeSaid: { mode: storeMode, tally: storeTally },
+    staffSaid: { mode: staffMode, tally: staffTally },
     empirical: { bestDay: empiricalBestDay, byWeekday },
-    bestDay: storeMode || empiricalBestDay,           // prefer what the store said; else the empirical peak
+    bestDay: staffMode || empiricalBestDay,           // prefer what staff said; else the empirical peak
     confidence: confirmed.length,                     // # confirmed calls behind it
     confirms: confirmed.length,
     lastConfirm: confirmed.reduce((m, r) => Math.max(m, r.completedAt ?? r.startedAt), 0) || null,
