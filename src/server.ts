@@ -3518,6 +3518,7 @@ const rooms = new Map<string, Set<WebSocket>>();
 const addListener = (room: string, ws: WebSocket) => {
   let set = rooms.get(room); if (!set) { set = new Set(); rooms.set(room, set); }
   set.add(ws);
+  try { ws.send(JSON.stringify({ hello: true })); } catch { /* diag: prove server->client frames reach the listener through the proxy */ }
   bridgeLog(`listener JOINED room=${room.slice(0, 8)} listeners=${set.size}`);
   ws.on("close", () => { set!.delete(ws); bridgeLog(`listener LEFT room=${room.slice(0, 8)} listeners=${set!.size}`); if (set!.size === 0) rooms.delete(room); });
 };
