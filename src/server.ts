@@ -2549,6 +2549,41 @@ app.post("/api/admin/purge-undefined-calls", async (c) => {
   });
 });
 
+// Read-only: does the LIVE ElevenLabs agent prompt still carry the dynamic-variable slots? Confirms a
+// workflow's persona / opener actually reach the agent (a stale prompt would silently drop {{personality}}).
+app.get("/api/admin/agent-prompt", async (c) => {
+  const key = config.voice.apiKey, agentId = config.voice.agentId;
+  if (!key || !agentId) return c.json({ error: "elevenlabs not configured" }, 503);
+  const r = await fetch(`https://api.elevenlabs.io/v1/convai/agents/${agentId}`, { headers: { "xi-api-key": key } });
+  if (!r.ok) return c.json({ error: `agent GET ${r.status}` }, 502);
+  const d = await r.json() as { conversation_config?: { agent?: { prompt?: { prompt?: string } } } };
+  const prompt = d?.conversation_config?.agent?.prompt?.prompt || "";
+  const has = (v: string) => prompt.includes(v);
+  return c.json({
+    agentId, promptLen: prompt.length,
+    hasPersonality: has("{{personality}}"), hasOpeningLine: has("{{opening_line}}"),
+    hasCategory: has("{{category}}"), hasClarification: has("{{clarification}}"),
+  });
+});
+
+// Which stores / chains each workflow is assigned to — by NAME, so the Workflows cards can show
+// "Branson Test → Fun" instead of just a count.
+app.get("/api/admin/workflow-assignments", async (c) => {
+  const [storeS, chainS] = await Promise.all([getSetting("vt_store_workflows"), getSetting("vt_chain_workflows")]);
+  const parse = (s: string | null): Record<string, string> => { try { return s ? JSON.parse(s) : {}; } catch { return {}; } };
+  const byStore = parse(storeS), byChain = parse(chainS);
+  const storeIds = Object.keys(byStore).map(Number).filter((n) => !isNaN(n));
+  const chainIds = Object.keys(byChain).map(Number).filter((n) => !isNaN(n));
+  const storeRows = storeIds.length ? await db.select({ id: retailers.id, name: retailers.name, location: retailers.location }).from(retailers).where(inArray(retailers.id, storeIds)) : [];
+  const chainRows = chainIds.length ? await db.select({ id: chains.id, name: chains.name }).from(chains).where(inArray(chains.id, chainIds)) : [];
+  const sName = new Map(storeRows.map((r) => [r.id, r])), cName = new Map(chainRows.map((r) => [r.id, r]));
+  const out: Record<string, { stores: Array<{ id: number; name: string; location: string | null }>; chains: Array<{ id: number; name: string }> }> = {};
+  const slot = (wf: string) => (out[wf] ??= { stores: [], chains: [] });
+  for (const [id, wf] of Object.entries(byStore)) { const r = sName.get(Number(id)); if (r) slot(wf).stores.push({ id: r.id, name: r.name.split("—")[0].trim(), location: r.location ?? null }); }
+  for (const [id, wf] of Object.entries(byChain)) { const r = cName.get(Number(id)); if (r) slot(wf).chains.push({ id: r.id, name: r.name }); }
+  return c.json(out);
+});
+
 // ---- Growth pulse: the funnel + engagement snapshot the owner reads each morning ----
 // Manually-flagged admin/test accounts (Clerk-free, so we can't rely on email domains). These are
 // non-customers — excluded from signups/activity like the comp/owner accounts.

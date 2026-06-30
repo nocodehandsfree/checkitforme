@@ -256,6 +256,9 @@
   .wfmacts .ghost{display:inline-flex;align-items:center;gap:5px}
   .wfmtrash{color:var(--muted);padding:7px 9px}
   .wfmtrash:hover{color:var(--red)}
+  .wfmasg{margin-top:7px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+  .wfmasglab{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+  .wfmpin{font-size:11.5px;color:var(--text-body);background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:2px 8px;white-space:nowrap}
   .wfmsub{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin:13px 0 7px}
   .wfmop{display:flex;gap:6px;align-items:flex-start;margin-bottom:3px}
   /* openers read as soft, WRAPPING script text (matches the Designer's .optext), with a quiet hover/focus affordance for inline edit — not abrasive single-line form boxes */
@@ -3216,11 +3219,12 @@ function wfOptions(sel,placeholder){
 // ---- Workflows manager (Voice → Workflows): per-workflow opener editing + the global default ----
 // Each workflow owns its opener list (string[]) — the call path rotates them round-robin. Edits here
 // write straight back into the vt_workflows setting; "Set default" writes vt_default_workflow.
-let WFM_VOICES=[], WFM_GLOBAL=[];
+let WFM_VOICES=[], WFM_GLOBAL=[], WFM_ASSIGN={}; // WFM_ASSIGN: workflow name -> {stores:[], chains:[]}
 async function loadWorkflowMgr(){
   await loadWorkflows();
   if(!WFM_VOICES.length){ const d=await api('/api/voices'); WFM_VOICES=(d&&d.voices)||[]; }
   const s=await api('/api/settings')||{}; WFM_GLOBAL=wfgFrom(s);
+  WFM_ASSIGN=await api('/api/admin/workflow-assignments')||{};
   renderWorkflowMgr();
 }
 // Global openers (vt_opener_variants / vt_opener_library) — the fallback that fires when no workflow
@@ -3257,11 +3261,19 @@ function renderWorkflowMgr(){
     </div>
   </div>`;
   const wfCards=list.length?list.map((w,wi)=>{
-    const isDef=WF.def===w.name; const ops=Array.isArray(w.openers)?w.openers:[]; const asg=wfmAssignCount(w.name);
+    const isDef=WF.def===w.name; const ops=Array.isArray(w.openers)?w.openers:[];
+    const a=(WFM_ASSIGN&&WFM_ASSIGN[w.name])||{stores:[],chains:[]};
+    const pins=[...(a.chains||[]).map(c=>`<span class="wfmpin">${esch(c.name)} · chain</span>`), ...(a.stores||[]).map(s=>`<span class="wfmpin">${esch(s.name)}${s.location?' · '+esch(s.location):''}</span>`)];
+    const asgLine = isDef
+      ? `<div class="wfmasg"><span class="meta">Powers every store — unless a workflow below is assigned to it.</span>${pins.length?'<span class="wfmasglab" style="margin-left:4px">also pinned:</span>'+pins.join(''):''}</div>`
+      : (pins.length
+          ? `<div class="wfmasg"><span class="wfmasglab">On</span>${pins.join('')}</div>`
+          : `<div class="wfmasg"><span class="meta">Not assigned yet — assign it from a store or chain row, or Set default.</span></div>`);
     return `<div class="wfm${isDef?' def':''}">
       <div class="wfmhead">
         <div style="flex:1 1 100%;min-width:0"><span class="wfmname">${esch(w.name)}</span>${isDef?'<span class="wfmdef">★ default · all stores</span>':''}
-          <div class="meta" style="margin-top:3px">${ops.length} opener${ops.length===1?'':'s'} · ${w.voiceId?'custom voice':'default voice'} · ${esch(w.persona||'no persona')}${asg?' · '+asg+' assigned':''}</div></div>
+          <div class="meta" style="margin-top:3px">${ops.length} opener${ops.length===1?'':'s'} · ${w.voiceId?'custom voice':'default voice'} · ${esch(w.persona||'no persona')}</div>
+          ${asgLine}</div>
         <div class="wfmacts">
           <button class="ghost" onclick="editWorkflowInDesigner(${wi})" title="Open in the Designer to tweak voice, tuning &amp; openers">${lucideSvg('sliders-horizontal',14,'currentColor')}Edit in Designer</button>
           <button class="ghost" onclick="wfmClone(${wi})">Clone</button>
