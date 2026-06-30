@@ -79,5 +79,5 @@ Hand-write the fixed UI lines (keeps the voice + the tokens). Machine-translate 
 
 ## Go deeper
 - Everything to ship (consumer site): `docs/design/COPY_CHANGES_APPROVED.md`
-- Admin app copy: `docs/design/COPY_DECK_ADMIN.md`
+- Admin app copy: `docs/design/COPY_ADMIN_MASTER.md`
 - Brand mark: `docs/business/BRAND.md`
