@@ -249,13 +249,23 @@
   /* workflows manager */
   .wfm{background:var(--surface-1);border:1px solid var(--border-default);border-radius:var(--r-card);padding:14px;margin-bottom:11px}
   .wfm.def{border-color:rgba(74,222,128,.34)}
-  .wfmhead{display:flex;align-items:flex-start;gap:10px}
+  .wfmhead{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
   .wfmname{font-size:15px;font-weight:800;color:#f3f3f7}
   .wfmdef{font-size:10.5px;font-weight:800;color:var(--green);background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);border-radius:7px;padding:2px 7px;margin-left:8px;white-space:nowrap}
+  .wfmacts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex:0 0 auto}
+  .wfmacts .ghost{display:inline-flex;align-items:center;gap:5px}
+  .wfmtrash{color:var(--muted);padding:7px 9px}
+  .wfmtrash:hover{color:var(--red)}
   .wfmsub{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin:13px 0 7px}
-  .wfmop{display:flex;gap:7px;align-items:center;margin-bottom:6px}
-  .wfmop input{flex:1;min-width:0}
-  .wfmadd{display:flex;gap:7px;align-items:center;margin-top:8px}
+  .wfmop{display:flex;gap:6px;align-items:flex-start;margin-bottom:3px}
+  /* openers read as soft, WRAPPING script text (matches the Designer's .optext), with a quiet hover/focus affordance for inline edit — not abrasive single-line form boxes */
+  .wfmop textarea{flex:1;min-width:0;background:transparent;border:1px solid transparent;border-radius:7px;color:var(--text-strong);font:400 13.5px/1.45 Inter;padding:6px 8px;resize:none;overflow:hidden;white-space:pre-wrap;word-break:break-word}
+  .wfmop textarea:hover{background:var(--surface-1)}
+  .wfmop textarea:focus{background:var(--surface-2);border-color:var(--border);outline:none}
+  .wfmop input[type=checkbox]{flex:0 0 auto;margin-top:7px}
+  .wfmop .opdel{flex:0 0 auto;padding:5px 8px;color:var(--muted);margin-top:2px}
+  .wfmop .opdel:hover{color:var(--red)}
+  .wfmadd{display:flex;gap:7px;align-items:center;margin-top:9px}
   .wfmadd input{flex:1;min-width:0}
   .wfmmeta{display:flex;gap:14px;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--border)}
   .wfmmeta>div{flex:1;min-width:150px}
@@ -1109,7 +1119,7 @@ const NAV_GROUPS={
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['workflows','Workflows','note'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>{loadVoices();loadTestStores();loadPersonas();dRender();}, workflows:()=>loadWorkflowMgr(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
@@ -3230,7 +3240,7 @@ function renderWorkflowMgr(){
       <div class="meta" style="margin-top:3px">${g.filter(o=>o.on).length} of ${g.length} rotating</div></div></div>
     <div class="wfmsub">Openers <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· tick = in rotation</span></div>
     <div class="wfmops">
-      ${g.map((o,i)=>`<div class="wfmop"><input type="checkbox" ${o.on?'checked':''} onchange="wfgToggle(${i},this.checked)" style="flex:0 0 auto" title="In rotation"><input value="${esch(o.text)}" onchange="wfgEdit(${i},this.value)"><button class="ghost opdel" onclick="wfgDel(${i})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('')||'<div class="meta" style="padding:4px 0 8px">No global openers.</div>'}
+      ${g.map((o,i)=>`<div class="wfmop"><input type="checkbox" ${o.on?'checked':''} onchange="wfgToggle(${i},this.checked)" title="In rotation"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfgEdit(${i},this.value)">${esch(o.text)}</textarea><button class="ghost opdel" onclick="wfgDel(${i})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('')||'<div class="meta" style="padding:4px 0 8px">No global openers.</div>'}
       <div class="wfmadd"><input id="wfg_add" placeholder="Add a global opener — e.g. Hey! Got any {category} in?" onkeydown="if(event.key==='Enter')wfgAdd()"><button class="act" onclick="wfgAdd()">Add</button></div>
     </div>
   </div>`;
@@ -3238,15 +3248,18 @@ function renderWorkflowMgr(){
     const isDef=WF.def===w.name; const ops=Array.isArray(w.openers)?w.openers:[]; const asg=wfmAssignCount(w.name);
     return `<div class="wfm${isDef?' def':''}">
       <div class="wfmhead">
-        <div style="flex:1;min-width:0"><span class="wfmname">${esch(w.name)}</span>${isDef?'<span class="wfmdef">★ default · all stores</span>':''}
+        <div style="flex:1 1 100%;min-width:0"><span class="wfmname">${esch(w.name)}</span>${isDef?'<span class="wfmdef">★ default · all stores</span>':''}
           <div class="meta" style="margin-top:3px">${ops.length} opener${ops.length===1?'':'s'} · ${w.voiceId?'custom voice':'default voice'} · ${esch(w.persona||'no persona')}${asg?' · '+asg+' assigned':''}</div></div>
-        <button class="ghost" onclick="wfmClone(${wi})">Clone</button>
-        ${isDef?'':`<button class="ghost" onclick="wfmSetDefault(${wi})">Set default</button>`}
-        <button class="ghost opdel" onclick="wfmDelete(${wi})" title="Delete workflow">${lucideSvg('x',15,'currentColor')}</button>
+        <div class="wfmacts">
+          <button class="ghost" onclick="editWorkflowInDesigner(${wi})" title="Open in the Designer to tweak voice, tuning &amp; openers">${lucideSvg('sliders-horizontal',14,'currentColor')}Edit in Designer</button>
+          <button class="ghost" onclick="wfmClone(${wi})">Clone</button>
+          ${isDef?'':`<button class="ghost" onclick="wfmSetDefault(${wi})">Set default</button>`}
+          <button class="ghost wfmtrash" onclick="wfmDelete(${wi})" title="Delete workflow">${lucideSvg('trash-2',15,'currentColor')}</button>
+        </div>
       </div>
       <div class="wfmsub">Openers <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· rotated round-robin every call</span></div>
       <div class="wfmops">
-        ${ops.map((o,oi)=>`<div class="wfmop"><input value="${esch(o)}" onchange="wfmEditOpener(${wi},${oi},this.value)"><button class="ghost opdel" onclick="wfmDelOpener(${wi},${oi})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('')||'<div class="meta" style="padding:4px 0 8px">No openers — calls fall back to the global opener.</div>'}
+        ${ops.map((o,oi)=>`<div class="wfmop"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfmEditOpener(${wi},${oi},this.value)">${esch(o)}</textarea><button class="ghost opdel" onclick="wfmDelOpener(${wi},${oi})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('')||'<div class="meta" style="padding:4px 0 8px">No openers — calls fall back to the global opener.</div>'}
         <div class="wfmadd"><input id="wfmadd_${wi}" placeholder="Add an opener — e.g. Hey! You guys get any {category} in?" onkeydown="if(event.key==='Enter')wfmAddOpener(${wi})"><button class="act" onclick="wfmAddOpener(${wi})">Add</button></div>
       </div>
       <div class="wfmmeta">
@@ -3256,13 +3269,51 @@ function renderWorkflowMgr(){
     </div>`;
   }).join(''):'<div class="meta" style="margin:4px 2px 0">No saved workflows yet — build one in <b>Voice → Designer</b> to override these per store.</div>';
   el.innerHTML = globalCard + wfCards;
+  el.querySelectorAll('.wfmop textarea').forEach(wfmGrow); // size opener boxes to their wrapped text
 }
+function wfmGrow(t){ if(!t) return; t.style.height='auto'; t.style.height=(t.scrollHeight)+'px'; }
 async function wfmSaveList(){ const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WF.list)})}); return !!(r&&!r.error); }
 async function wfmAddOpener(wi){ const inp=document.getElementById('wfmadd_'+wi); const t=((inp&&inp.value)||'').trim(); if(!t) return; const w=WF.list[wi]; if(!w) return; if(!Array.isArray(w.openers)) w.openers=[]; w.openers.push(t); renderWorkflowMgr(); await wfmSaveList(); toast('Opener added'); }
 async function wfmDelOpener(wi,oi){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; w.openers.splice(oi,1); renderWorkflowMgr(); await wfmSaveList(); toast('Opener removed'); }
 async function wfmEditOpener(wi,oi,text){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; const t=(text||'').trim(); if(!t){ w.openers.splice(oi,1); renderWorkflowMgr(); } else { w.openers[oi]=t; } await wfmSaveList(); }
 async function wfmSetField(wi,field,val){ const w=WF.list[wi]; if(!w) return; w[field]=val; await wfmSaveList(); renderWorkflowMgr(); toast('Saved'); }
 async function wfmClone(wi){ const w=WF.list[wi]; if(!w) return; const name=(prompt('Name for the cloned workflow:', w.name+' copy')||'').trim(); if(!name) return; if(WF.list.some(x=>x.name===name)){ toast('A workflow named “'+name+'” already exists'); return; } const copy=JSON.parse(JSON.stringify(w)); copy.name=name; copy.savedAt=Date.now(); WF.list.push(copy); renderWorkflowMgr(); await wfmSaveList(); toast('Cloned as “'+name+'” — edit it below, then assign it to a store'); }
+// ---- Round-trip: open an existing workflow back in the Designer (the only place to tweak tuning) ----
+let EDIT_TARGET=null; // a workflow staged to load into the Designer once its async loaders settle
+// Designer tab loader: await the voice/persona/store loaders FIRST, then (if we arrived via "Edit in
+// Designer") hydrate the controls from the chosen workflow — otherwise the async loads would clobber it.
+async function initDesigner(){
+  try{ await Promise.all([
+    Promise.resolve(typeof loadVoices==='function'&&loadVoices()),
+    Promise.resolve(typeof loadTestStores==='function'&&loadTestStores()),
+    Promise.resolve(typeof loadPersonas==='function'&&loadPersonas()),
+  ]); }catch(e){}
+  if(typeof dRender==='function') dRender();
+  if(EDIT_TARGET){ const w=EDIT_TARGET; EDIT_TARGET=null; applyWorkflowToDesigner(w); }
+}
+function editWorkflowInDesigner(wi){ const w=WF.list&&WF.list[wi]; if(!w){ toast('Workflow not found'); return; } EDIT_TARGET=w; showSection('designer'); }
+// Push a saved workflow's name + voice + tuning + openers + persona into the Designer controls.
+function applyWorkflowToDesigner(w){
+  if(!w) return; const g=id=>document.getElementById(id);
+  const set=(id,val)=>{ const e=g(id); if(e&&val!=null&&val!=='') e.value=val; };
+  set('wf_name', w.name);
+  const sel=g('vs_select'); if(sel) sel.value=w.voiceId||'';
+  const t=w.tuning||{};
+  set('sb_speed',t.speed); set('sb_stability',t.stability); set('sb_latency',t.latency);
+  set('sb_model',t.modelId); set('sb_beat',t.turnEagerness); set('sb_llm',t.llm);
+  if(t.turnTimeout!=null) set('sb_turntimeout',t.turnTimeout);
+  const softOn=g('sb_soft_on'), hasSoft=(t.softTimeoutSecs!=null&&t.softTimeoutSecs>=0);
+  if(softOn){ softOn.checked=hasSoft; if(typeof sbSoftToggle==='function') sbSoftToggle(); }
+  if(hasSoft) set('sb_soft_secs',t.softTimeoutSecs);
+  set('sb_soft_msg',t.softTimeoutMsg);
+  if(typeof sbLabels==='function') sbLabels();
+  if(typeof updateDraftDot==='function') updateDraftDot();
+  OPENERS=(Array.isArray(w.openers)?w.openers:[]).map(text=>({text,on:true}));
+  if(typeof renderOpeners==='function') renderOpeners();
+  if(w.persona){ PN_SEL=w.persona; if(typeof pnBaseRender==='function') pnBaseRender(); if(typeof renderPersonas==='function') renderPersonas(); }
+  const msg=g('wf_msg'); if(msg) msg.textContent='Editing “'+w.name+'” — change anything (including tuning), then Save workflow to overwrite it.';
+  toast('Loaded “'+w.name+'” into the Designer');
+}
 async function wfmSetDefault(wi){ const w=WF.list[wi]; if(!w) return; WF.def=w.name; const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:w.name})}); renderWorkflowMgr(); toast((r&&!r.error)?(w.name+' powers all stores now'):'Could not set default'); }
 async function wfmDelete(wi){ const w=WF.list[wi]; if(!w) return; if(!confirm('Delete workflow “'+w.name+'”?\nStores assigned to it fall back to the default.')) return; const wasDef=WF.def===w.name; WF.list=WF.list.filter((x,i)=>i!==wi); if(wasDef){ WF.def=''; await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:''})}); } renderWorkflowMgr(); await wfmSaveList(); toast('Workflow deleted'); }
 // Settings → the one global default workflow.
