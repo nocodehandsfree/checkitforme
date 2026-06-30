@@ -2563,6 +2563,7 @@ app.get("/api/admin/agent-prompt", async (c) => {
     agentId, promptLen: prompt.length,
     hasPersonality: has("{{personality}}"), hasOpeningLine: has("{{opening_line}}"),
     hasCategory: has("{{category}}"), hasClarification: has("{{clarification}}"),
+    prompt: c.req.query("full") === "1" ? prompt : undefined,
   });
 });
 
