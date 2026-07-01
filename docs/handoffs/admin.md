@@ -14,6 +14,9 @@ admin features (God-view, store CMS UI, voice studio, Tree Trainer, analytics, p
 ## ⛔ OFF-LIMITS — the live-call pipe (FROZEN; do NOT touch without DevOps sign-off)
 The real-time transcript + clean hang-up broke a working build once. Treat these as frozen:
 - `src/voice/bridge.ts` and the `/listen` + `/bridge` WebSocket handlers in `src/server.ts`.
+- The Cloudflare worker **`checkit-staging-proxy`** — it carries the WebSocket upgrade for `staging.checkitforme.com`.
+  **Do NOT delete or casually redeploy it** (source: `scripts/checkit-staging-proxy.worker.js`). Deleting it (or the
+  staging DNS record / branch) takes staging offline — that has happened; the whole staging site went dead.
 - The live-transcript / socket + step-log code in `checkit.html` (`stageForLines` / `liveStage`).
 - **After ANY change, place one Fun-store test call and confirm the transcript streams AND the call hangs
   up cleanly before calling it done.** "Deploy ≠ commit" — a Worker only goes live when its deploy script runs.
