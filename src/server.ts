@@ -929,10 +929,11 @@ app.get("/pub/stores", async (c) => {
   const names = new Map(chainRows.map((x) => [x.id, x.name]));
   // Muted chains (owner toggle, incl. repack-only stores like Fairfield) never reach consumers.
   const mutedChains = new Set(chainRows.filter((x) => x.muted === true).map((x) => x.id));
-  // This endpoint is now the ADMIN logo map (app.html loadLogos builds id→logoUrl from it); the
-  // consumer front-end uses /pub/stores/near. So it must return EVERY store — the old 1,000-row
-  // cap silently broke admin logos once the 100k national import landed — and it skips the per-row
-  // openState computation (nothing reads it here) so it stays fast across 100k rows.
+  // ⚠ SECURITY / STATUS (verified): this endpoint has NO remaining consumers. The admin's old
+  // loadLogos bulk-fetch was removed (logos are denormalized per-row via chainLogoInfo — see
+  // app.html "Store/chain logos"), and the consumer front-end uses /pub/stores/near exclusively.
+  // It currently hands the ENTIRE store list to anyone with the URL — safe to gate behind the
+  // admin token (or remove) with zero client impact. Skips per-row openState so it stays fast.
   return c.json(rs
     .filter((r) => r.phone && r.active !== false)
     .filter((r) => !r.ownerOnly) // owner-only demo store ("Fun") never appears in the admin logo map
