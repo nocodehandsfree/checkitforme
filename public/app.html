@@ -1372,7 +1372,7 @@ async function tlOne(kind,chainId,btn){ const o=btn.textContent; btn.textContent
 }
 async function tlBatch(kind){ const n=Number(document.getElementById('tl_count').value)||5; const msg=document.getElementById('tl_msg'); if(msg)msg.textContent='Placing calls…';
   const r=await api('/api/admin/tree/'+kind,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({count:n})});
-  if(msg)msg.textContent=(r&&r.placed!=null)?`Placed ${r.placed} ${kind} call(s)${r.names&&r.names.length?': '+r.names.join(', '):''}. Results fill in as calls finish. hit Refresh.`:'Error placing calls.';
+  if(msg)msg.textContent=(r&&r.placed!=null)?`Placed ${r.placed} ${kind} call(s)${r.names&&r.names.length?': '+r.names.join(', '):''}. Results fill in as calls finish. Hit Refresh.`:"Couldn't place the calls. Hit Refresh and retry.";
 }
 async function loadCallTiming(){
   const d=await api('/api/admin/call-timing'); const el=document.getElementById('d_timing'); if(!el) return;
@@ -1550,7 +1550,7 @@ async function loadBail(){
 async function saveBail(k,v){
   const r=await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({bail:{[k]:v}})});
   if(r&&!r.error){ BAIL=r.bail||BAIL; toast('Bail rule saved'); if(k==='enabled') loadBail(); }
-  else toast('Could not save');
+  else toast("Couldn't save the bail rule");
 }
 
 // --- Voice studio: list / select / record-to-clone (ElevenLabs) ---
@@ -1613,7 +1613,7 @@ async function saveRotation(btn){
   const library=JSON.stringify(OPENERS.map(x=>({text:x.text,on:x.on})));
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({voicePool,openerVariants,openerLibrary:library})});
   btn.textContent=o; btn.disabled=false;
-  const m=document.getElementById('rot_msg'); if(m) m.textContent=(r&&!r.error)?'Saved. Live calls rotate these scripts. (Voice rotation is test-only for now.)':'Could not save';
+  const m=document.getElementById('rot_msg'); if(m) m.textContent=(r&&!r.error)?'Saved. Live calls rotate these scripts. (Voice rotation is test-only for now.)':"Couldn't save the scripts";
 }
 // ---- Test: store list from /api/test-stores, voice pool + rotate, visible per-call rotation ----
 let TEST_STORES=[], TEST_ROT={call:0};
@@ -2206,7 +2206,7 @@ async function saveStorePhone(id){
   const inp=document.getElementById('ph_'+id); if(!inp) return;
   const phone=inp.value.trim();
   const r=await api('/api/retailers/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({phone})});
-  if(!r||r.error){ toast('Could not save the number'); return; }
+  if(!r||r.error){ toast("Couldn't save the phone number"); return; }
   toast(phone?'Saved, store is live ✓':'Phone cleared. store hidden');
   const t=RETAILERS.find(x=>x.id===id); if(t){ t.phone=phone; t.active=!!phone; }
   renderRetailers();
@@ -2217,7 +2217,7 @@ async function labCall(){
   if(!phone){toast('Enter a phone number');return;}
   toast('Calling…');
   const r=await api('/api/talk',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone,mode,personality,name,voiceId})});
-  if(r&&r.error){toast('Error: '+r.error);return;}
+  if(r&&r.error){toast("Couldn't place the call: "+r.error);return;}
   toast('Call placed. Answer it!');
   if(r&&r.providerCallId) pollTranscript(r.providerCallId);
 }
@@ -2276,8 +2276,8 @@ function setPickChain(){
 }
 // Inline-commit helpers — every Store/Call control saves on its own (no grouped Save).
 async function ssReload(){ const id=SS&&SS.id; CHAINS=await api('/api/chains')||CHAINS; const sel=document.getElementById('set_chain'); if(sel){ const cur=sel.value; sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(''); sel.value=cur; } buildChainPicker(); if(id&&CHAINS.find(c=>c.id===id)) setPickChain(); }
-async function ssPatch(field,value){ if(!SS) return null; const r=await api('/api/chains/'+SS.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({[field]:value})}); if(!r||!r.id){ toast('Could not save'); return null; } const c=CHAINS.find(x=>x.id===SS.id); if(c) c[field]=value; return r; }
-async function ssStoreBulk(set,label){ if(!SS) return; const sr=await api('/api/stores/patch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({where:{chain:SS.name},set})}); if(!sr||sr.error){ toast('Could not save'); return; } toast(label+' · '+(sr.patched!=null?sr.patched:'')+' stores'); await ssReload(); }
+async function ssPatch(field,value){ if(!SS) return null; const r=await api('/api/chains/'+SS.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({[field]:value})}); if(!r||!r.id){ toast("Couldn't save the chain change"); return null; } const c=CHAINS.find(x=>x.id===SS.id); if(c) c[field]=value; return r; }
+async function ssStoreBulk(set,label){ if(!SS) return; const sr=await api('/api/stores/patch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({where:{chain:SS.name},set})}); if(!sr||sr.error){ toast("Couldn't update the stores"); return; } toast(label+' · '+(sr.patched!=null?sr.patched:'')+' stores'); await ssReload(); }
 function ssRenderStore(){
   const el=document.getElementById('set_store'); if(!el||!SS) return;
   const lg=document.getElementById('set_storelogo'); if(lg) lg.innerHTML=logoTile({logoUrl:SS.logoUrl,logoDark:SS.logoDark,logoWide:SS.logoWide,name:SS.name,type:SS.type});
@@ -2317,7 +2317,7 @@ async function ssMute(){ if(!SS) return; if(!confirm('Are you sure you want to m
 async function ssActivate(){ if(!SS) return; if(await ssPatch('muted',false)){ SS.muted=false; ssRenderStore(); toast('Active'); } }
 async function ssClearRepack(){ if(!SS) return; if(await ssPatch('repackOnly',false)){ SS.repack=false; ssRenderStore(); toast('Repack-only cleared'); } }
 async function ssSetType(v){ if(!SS) return; SS.type=v; if(await ssPatch('type',v)) toast('Type: '+v); }
-async function ssRate(n){ if(!SS) return; const el=document.getElementById('set_ratemsg'); if(el) el.textContent='Saving…'; const sr=await api('/api/stores/patch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({where:{chain:SS.name},set:{tier:n}})}); if(!sr||sr.error){ if(el) el.textContent='Could not save'; return; } toast('Rated '+SS_RATING[n][0]+' · '+(sr.patched!=null?sr.patched:'')+' stores'); await ssReload(); }
+async function ssRate(n){ if(!SS) return; const el=document.getElementById('set_ratemsg'); if(el) el.textContent='Saving…'; const sr=await api('/api/stores/patch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({where:{chain:SS.name},set:{tier:n}})}); if(!sr||sr.error){ if(el) el.textContent="Couldn't save the rating"; return; } toast('Rated '+SS_RATING[n][0]+' · '+(sr.patched!=null?sr.patched:'')+' stores'); await ssReload(); }
 function ssToggleCallable(){ const on=SS.cCallable>SS.storesN/2; ssStoreBulk({sellsPacks:!on}, on?'Callable OFF':'Callable ON'); }
 function ssToggleOnline(){ const on=SS.cOnline>SS.storesN/2; ssStoreBulk({online:!on}, on?'Online OFF':'Online ON'); }
 function ssToggleVerified(){ const on=SS.cVerified>SS.storesN/2; ssStoreBulk({stockStatus:on?'unverified':'verified'}, on?'Stock verified OFF':'Stock verified ON'); }
@@ -2390,7 +2390,7 @@ async function ssSaveData(){
   if(!SS) return; const msg=document.getElementById('set_datamsg'); if(msg) msg.textContent='Saving…';
   const isMSRP=document.getElementById('set_msrp').checked, scm=document.getElementById('set_scm').value, scc=document.getElementById('set_scc').value, sell=(document.getElementById('set_sell').value||'').trim();
   const r=await api('/api/chains/'+SS.id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({isMSRP,stockCheckMethod:scm||null,stockCheckConfidence:scc||null,sellMethods:sell||null})});
-  if(!r||!r.id){ if(msg) msg.textContent='Could not save.'; return; }
+  if(!r||!r.id){ if(msg) msg.textContent="Couldn't save the store data."; return; }
   SS.isMSRP=isMSRP; SS.scm=scm; SS.scc=scc; SS.sellMethods=sell;
   const c=CHAINS.find(x=>x.id===SS.id); if(c){ c.isMSRP=isMSRP; c.stockCheckMethod=scm||null; c.stockCheckConfidence=scc||null; c.sellMethods=sell||null; }
   if(msg) msg.textContent='Saved ✓';
@@ -2501,7 +2501,7 @@ async function saveChainTree(){
   if(r&&r.id){ const i=CHAINS.findIndex(c=>c.id===id); if(i>=0) CHAINS[i]=r;
     document.getElementById('pt_status').textContent='Saved ✓. applies to every store of this chain on the next call.';
     loadChains(); renderChainList(); }
-  else document.getElementById('pt_status').textContent='Could not save.';
+  else document.getElementById('pt_status').textContent="Couldn't save the phone tree.";
 }
 // All-chains table: 30-day stats from the god view + one-tap mute/repack flips.
 const PATH_LBL={direct_human:'🙋 direct',simple_ivr:'🔢 simple menu',deep_ivr:'🌀 deep menu'};
@@ -2532,7 +2532,7 @@ function renderChainList(){
 async function quickChain(id,field,val){
   const r=await api('/api/chains/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({[field]:val})});
   if(r&&r.id){ toast(field==='muted'?(val?'Muted, hidden from consumers in every city':'Unmuted'):'Saved'); const s=CHAIN_STATS.find(c=>c.id===id); if(s) s[field]=val; const ch=CHAINS.find(c=>c.id===id); if(ch) ch[field]=val; renderChainList(); }
-  else toast('Could not save');
+  else toast("Couldn't save the chain");
 }
 function previewMaybe(){ const d=document.getElementById('tb_preview_card'); if(d&&d.open) loadPreview(); }
 async function loadPreview(){
@@ -2567,7 +2567,7 @@ async function benchCall(){
   const active=OPENERS.filter(o=>o.on); const opening = active.length ? active[TEST_ROT.call%active.length].text : undefined;
   toast('Calling you. Answer like you work there!');
   const r=await api('/api/bench/call',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId,categoryId,mode,toNumber,specificProduct,voiceId,opening})});
-  if(r&&r.error){toast('Error: '+r.error);return;}
+  if(r&&r.error){toast("Couldn't call you: "+r.error);return;}
   TEST_ROT.call++; refreshTestRotation();
   if(r&&r.providerCallId) pollTranscript(r.providerCallId,'tb');
 }
@@ -2575,7 +2575,7 @@ async function benchCall(){
 async function resetScript(){
   document.getElementById('sb_status').textContent='Resetting the live agent script to default…';
   const r=await api('/api/voice-tuning',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({pushPrompt:true})});
-  document.getElementById('sb_status').textContent = (r&&r.error) ? 'Error: '+r.error : 'Script reset ✓. the live agent runs the known-good built-in script again.';
+  document.getElementById('sb_status').textContent = (r&&r.error) ? "Couldn't reset the script: "+r.error : 'Script reset ✓. the live agent runs the known-good built-in script again.';
 }
 
 // --- The LIVE strip: always shows what real store calls use right now ---
@@ -2640,7 +2640,7 @@ function sandboxBody(){
 async function applySandbox(){
   document.getElementById('sb_status').textContent='Saving the draft…';
   const r=await api('/api/sandbox-tuning',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(sandboxBody())});
-  if(r&&r.error){ document.getElementById('sb_status').textContent='Error: '+r.error; return; }
+  if(r&&r.error){ document.getElementById('sb_status').textContent="Couldn't save the draft: "+r.error; return; }
   document.getElementById('sb_status').textContent='Draft saved. store calls unchanged. Test it in Step 6.';
   updateDraftDot();
 }
@@ -2649,7 +2649,7 @@ async function pushSandboxToStores(){
   document.getElementById('sb_status').textContent='Saving draft, then applying to all stores…';
   await api('/api/sandbox-tuning',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(sandboxBody())});
   const r=await api('/api/sandbox-tuning/apply-to-stores',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
-  if(r&&r.error){ document.getElementById('sb_status').textContent='Error: '+r.error; toast('Error: '+r.error); return; }
+  if(r&&r.error){ document.getElementById('sb_status').textContent="Couldn't apply to stores: "+r.error; toast("Couldn't apply to stores: "+r.error); return; }
   document.getElementById('sb_status').textContent='✅ LIVE on '+(r.applied||0)+' store agent(s). every store call now uses this.';
   toast('Applied to all store calls'); loadLiveStrip();
 }
@@ -2665,19 +2665,19 @@ async function storePreset(){
   const body={ name, opening:firstActiveOpener(), speed:Number(v('sb_speed')),
     stability:Number(v('sb_stability')), llm:document.getElementById('sb_llm').value };
   const r=await api('/api/voice-presets',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  if(r&&r.error){ toast('Error: '+r.error); return; }
+  if(r&&r.error){ toast("Couldn't save the preset: "+r.error); return; }
   document.getElementById('vt_preset_name').value=''; toast('Saved “'+name+'”'); await loadPresets(); document.getElementById('vt_preset').value=name;
 }
 async function loadPreset(){
   const name=document.getElementById('vt_preset').value; if(!name){ toast('Pick a saved script'); return; }
   const t=await api('/api/voice-presets/apply',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name})});
-  if(t&&t.error){ toast('Error: '+t.error); return; }
+  if(t&&t.error){ toast("Couldn't load the preset: "+t.error); return; }
   await loadSandbox(); toast('Loaded “'+name+'” into the draft. Test it, then apply to stores');
 }
 async function removePreset(){
   const name=document.getElementById('vt_preset').value; if(!name){ toast('Pick a saved script'); return; }
   const r=await api('/api/voice-presets',{method:'DELETE',headers:{'content-type':'application/json'},body:JSON.stringify({name})});
-  if(r&&r.error){ toast('Error: '+r.error); return; }
+  if(r&&r.error){ toast("Couldn't delete the preset: "+r.error); return; }
   toast('Deleted “'+name+'”'); await loadPresets();
 }
 // --- Live Listen (real-time call audio via Twilio media stream -> WebSocket) ---
@@ -2920,7 +2920,7 @@ async function saveStatus(id,btn){
   card.querySelectorAll('[data-f]').forEach(i=>{ body[i.dataset.f]=i.value; });
   const r=await api('/api/statuses/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   if(r&&r.id){ STATUSES[r.key]=r; toast('Saved. Live in Check It For Me and Test Bench now'); }
-  else toast('Could not save');
+  else toast("Couldn't save the status");
 }
 function pickNewStatusIcon(){ openIconPicker(n=>{ document.getElementById('st_new_emoji').value=n; document.getElementById('st_new_icon_btn').innerHTML=statusIcon(n,'#9CA3AF',22); }, document.getElementById('st_new_emoji').value); }
 // re-color the icon live when the color swatch changes
@@ -3379,19 +3379,19 @@ async function loadDefaultWorkflow(){
 async function saveDefaultWorkflow(){
   WF.def=document.getElementById('set_default_wf').value;
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:WF.def})});
-  toast((r&&!r.error)?(WF.def?('Default workflow: '+WF.def):'Default workflow cleared'):'Could not save');
+  toast((r&&!r.error)?(WF.def?('Default workflow: '+WF.def):'Default workflow cleared'):"Couldn't save the default workflow");
 }
 // per-chain assignment (Phone Trees / Mute list) — applies to every store in the chain.
 async function setChainWorkflow(id,name){
   if(name) WF.chains[id]=name; else delete WF.chains[id];
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({chainWorkflows:JSON.stringify(WF.chains)})});
-  toast((r&&!r.error)?'Chain workflow saved':'Could not save');
+  toast((r&&!r.error)?'Chain workflow saved':"Couldn't save the chain workflow");
 }
 // per-store override (store row) — beats the chain + default.
 async function setStoreWorkflow(id,name){
   if(name) WF.stores[id]=name; else delete WF.stores[id];
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({storeWorkflows:JSON.stringify(WF.stores)})});
-  toast((r&&!r.error)?'Store workflow saved':'Could not save');
+  toast((r&&!r.error)?'Store workflow saved':"Couldn't save the store workflow");
 }
 const v = (id) => document.getElementById(id).value.trim();
 
@@ -3675,13 +3675,13 @@ async function importStoresJson(){
   let body; try{ body=JSON.parse(document.getElementById('gw_import').value); }catch(e){ msg.style.color='#ff6b6b'; msg.textContent='Invalid JSON'; return; }
   msg.style.color='var(--muted)'; msg.textContent='Importing…';
   const r=await api('/api/stores/import',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  if(!r||r.error){ msg.style.color='#ff6b6b'; msg.textContent='Error: '+((r&&r.error)||'failed'); return; }
+  if(!r||r.error){ msg.style.color='#ff6b6b'; msg.textContent="Couldn't backfill the regions: "+((r&&r.error)||'unknown'); return; }
   msg.style.color='var(--green)'; msg.textContent=`✓ ${r.inserted||0} added · ${r.updated||0} updated · ${r.deactivated||0} removed${r.skipped?(' · '+r.skipped+' skipped'):''}`;
   loadRetailers&&loadRetailers();
 }
 async function backfillRegions(){
   const r=await api('/api/stores/backfill-regions',{method:'POST'});
-  toast(r&&!r.error?('Regions backfilled'+(r.updated!=null?(': '+r.updated):'')):'Failed');
+  toast(r&&!r.error?('Regions backfilled'+(r.updated!=null?(': '+r.updated):'')):"Couldn't backfill the regions");
 }
 async function loadGwKiosks(){
   const ks=await api('/api/kiosks');
