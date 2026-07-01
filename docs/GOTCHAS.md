@@ -9,11 +9,13 @@ worse than no comment. Several entries below started as wrong comments.)
   `ON DELETE CASCADE`; `retailers.chainId` is `ON DELETE SET NULL`. Deleting `categories`/`retailers` **wipes
   call history**; deleting `chains` **orphans every store from its logo + mapping.** Use **upsert, never delete**,
   and snapshot the volume first. (This wiped prod call history once.)
-- **ONE environment now — there is no staging.** One prod DB: a single SQLite file on the Railway volume
-  (`file:/data/local.db`). Everything (code + data) lives in prod; the old staging branch/URL/env was retired.
-  If a doc still says "prod→staging" data flow or "staging→prod" code flow, it's stale — delete it on sight.
+- **STAGING and PROD are SEPARATE environments — do not "consolidate" them.** Staging (branch `…pagiis` →
+  `staging.checkitforme.com`) is where ALL code is developed; prod (branch `…OcyMS` → `checkitforme.com`) is
+  what you promote to. Each has its OWN SQLite DB on its own Railway volume (`file:/data/local.db`). **CODE flows
+  staging → prod (merge). DATA: the ADMIN reads live PROD data; prod is the data source of truth.** Deleting the
+  staging branch/service freezes staging on stale code and makes the whole site look broken — it happened once.
 - **Prod volume has daily+weekly backups** (it had none). Volume `voice-caller-volume`, instance `ca3bbe06-…`.
-  Snapshot before any destructive DB op — that's the only safety net now.
+  Snapshot before any destructive DB op.
 
 ## Calls / ElevenLabs
 - **ElevenLabs keeps every conversation** (`GET /v1/convai/conversations`). Call history is reconstructable from

@@ -7,35 +7,33 @@ AI service that phones retail stores to check trading-card/collectible stock, wi
 4 white-label brand sites (Pokémon/One Piece/Topps NBA/NeeDoh) + admin. One-person business. Stack: Hono
 + Drizzle on Railway, in `voice-caller/`. Consumer UI `public/checkit.html`; admin `public/app.html`.
 
-## ⚠️ THE ONE BRANCH (this changed — read it)
-**Everyone works on `claude/retail-stock-voice-calls-OcyMS`.** It auto-deploys (~3 min) to `checkitforme.com`
-and the admin at `admin.checkitforme.com`. ONE admin, ONE branch — no staging split anymore.
+## ⚠️ THE ARCHITECTURE — STAGING-FIRST (read this; do not "simplify" it away)
+Three things, and they are NOT the same thing. Deleting or merging them is how we broke everything once —
+never again:
+- **STAGING** — branch `claude/checkitforme-website-takeover-pagiis` → **`staging.checkitforme.com`**.
+  This is where **ALL code development happens. Staging is the source of truth for CODE.** You build and test
+  every change here first.
+- **PRODUCTION** — branch `claude/retail-stock-voice-calls-OcyMS` → **`checkitforme.com`**. You **promote**
+  by merging staging → prod. **Never push UI/behavior straight to prod** — it goes through staging first.
+- **ADMIN** — **`admin.checkitforme.com`**. There is **ONE admin**, and it reads **LIVE PRODUCTION data**.
+  "One admin" means one admin dashboard (not a staging admin + a prod admin) — it does NOT mean "no staging."
 
-> 🛑 **IGNORE the branch name in your session's "Git Development Branch Requirements."** Every new Cloud chat
-> auto-stamps itself a throwaway branch (e.g. `…-pk3ujx`, `…-z8dokp`, `…-45u6pn`). That is NOT a real branch —
-> it does not exist on origin and it is NOT where the work lives. **The one true branch is `…OcyMS`.** Check
-> out and push there, full stop. Do **not** create or push the session's auto-name — that is exactly how the
-> repo bloated to 41 branches before. If a push to OcyMS gets flagged for "not matching the session branch,"
-> OcyMS is correct and the session requirement is the stale one — push OcyMS.
-
-**First thing every session, no exceptions:**
+**First thing every session:** work on **staging** unless you're deliberately promoting to prod.
 ```
-git checkout claude/retail-stock-voice-calls-OcyMS && git pull
+git checkout claude/checkitforme-website-takeover-pagiis && git pull   # STAGING — build here
 ```
-- The old **staging** branch (`…pagiis`) and the **copy** branch are **retired** — fully merged in. Don't
-  branch off them, don't push to them.
 - **`main` is the dead card app — ignore it** (GitHub defaults to it; switch the dropdown).
-- A pile of stale `claude/*` branches still sit on GitHub (couldn't be auto-pruned). **Ignore them — only
-  `…OcyMS` is live.** If a file seems "missing," you're on the wrong branch: checkout + pull the one above.
+- If your session's "Git Development Branch Requirements" name some other branch (`…-pk3ujx`, `…-z8dokp`),
+  ignore it — the two real branches are **staging (`…pagiis`)** and **prod (`…OcyMS`)** above.
+- Never delete the staging branch, the staging Railway service, or `staging.checkitforme.com`. That branch
+  IS the dev environment; deleting it freezes staging on stale code (it happened — the whole site looked broken).
 
 ## Rules of the road
-- **One branch, build live, test on Fun.** No staging-first split — there are **no live customers yet**, so we
-  build on the one prod branch and verify by calling the **Fun** store from **Admin → Testing** (owner-only;
-  never touches real-store stats). Once a change works on Fun it's already live for real calls. When real-store
-  calling begins, press **Start fresh** (Pulse → Stats baseline) so only post-launch calls count.
-- **One environment — PROD is the only source of truth.** Manage the business from the one Admin
-  (`admin.checkitforme.com`). There's no staging to mirror to/from anymore. The prod volume has daily/weekly
-  backups; snapshot before any destructive DB op (a bad delete once cascade-wiped call history).
+- **STAGING-FIRST.** Build every visible change on **staging** (`…pagiis` → `staging.checkitforme.com`), verify
+  it there, then **promote = merge staging → prod** (`…OcyMS` → `checkitforme.com`). Never push UI/behavior
+  straight to prod. Test calls hit the owner-only **Fun** store (Admin → Testing; never touches real-store stats).
+- **Admin reads live PRODUCTION data.** The one admin (`admin.checkitforme.com`) is how you run the business,
+  off prod's data. Snapshot the volume before any destructive DB op (a bad delete once cascade-wiped call history).
 - **Run your lane autonomously.** Default-and-proceed on in-lane calls; stop only for human testing or a
   genuinely irreversible/cross-lane/business call. Don't open a decision-box for technical choices — pick the
   safe option, leave a `DevOps: need X` note for cross-lane, keep going. Fix issues in your lane on sight.
@@ -45,12 +43,12 @@ git checkout claude/retail-stock-voice-calls-OcyMS && git pull
 ## Lanes (stay in yours; request cross-lane)
 - **Fungie** — owner (the human). **Website** — `checkit.html` + `/pub`. **Admin** — `app.html` + `/api`.
   **Data Dev** — `data/` + importer + store rows. **DevOps** — backend core/infra/security/deploys/API contract.
-- **QA** — *optional, owner-invoked* for larger/risky builds: verifies the change on the **one admin
-  (`admin.checkitforme.com`)** or the live site, reports pass/fail. Read-only, never edits code.
+- **QA** — *optional, owner-invoked* for larger/risky builds: verifies the change on **`staging.checkitforme.com`**
+  (where changes land first) before it's promoted to prod, reports pass/fail. Read-only, never edits code.
 - Read your role doc: `docs/handoffs/{website,admin,data,devops}.md`.
 
 ## Secrets — self-serve from Railway (don't ask Fungie)
-ONE `RAILWAY_API_TOKEN` reads every var (incl. `ADMIN_TOKEN`). Prod svc `d363a982-…` (the only live service).
+ONE `RAILWAY_API_TOKEN` reads every var (incl. `ADMIN_TOKEN`). Prod svc `d363a982-…`, **staging svc `8165df7a-…`** (both live).
 ```bash
 curl -s -X POST https://backboard.railway.app/graphql/v2 \
   -H "Authorization: Bearer $RAILWAY_API_TOKEN" -H "Content-Type: application/json" \
