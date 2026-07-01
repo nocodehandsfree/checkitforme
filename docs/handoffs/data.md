@@ -242,4 +242,4 @@ Architecture facts the next session MUST know:
 - [ ] **Wire `productDetails`** — DONE on `claude/check-data` / PR #373 (importer reads it → `product_details`
   column) but NOT on this deploy branch yet. Fold into consolidation (schema column + importer) or re-apply here.
 
-When you finish something: move it to `docs/COMPLETED.md`; leave Current focus set for the next chat.
+When you finish something: move it to git history; leave Current focus set for the next chat.

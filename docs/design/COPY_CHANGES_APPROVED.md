@@ -1,7 +1,7 @@
 # Approved copy + design changes — consumer site
 
 > **Lane:** website dev (`public/checkit.html` @ r85). Copy + the design notes here.
-> **Not here:** code identifiers / file names / storage keys → `docs/ops/NAMING_CLEANUP.md` (DevOps lane).
+> **Not here:** code identifiers / file names / storage keys → git history (DevOps lane).
 > **Lenses:** fewest words · friend voice · color/image over copy · pixel alignment · Jobs-clean · a little poetry.
 > **Status:** owner-approved. Grows as we go, page by page. Final sweep → staging review → prod.
 

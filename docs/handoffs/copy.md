@@ -44,18 +44,18 @@ control, and **tooltip.** You can't write good words for a tool you don't unders
    in `public/app.html`. Click **every** tab and tool: Calls, Stores, Chains/Mapping, Statuses,
    Designer/Voice, Policy/God-view, Zones, Kiosks.
 2. **Map it:** for each screen, note what it does, who uses it, and what's confusing.
-3. **Write it:** produce a **copy deck** — `docs/design/COPY_DECK_ADMIN.md` — with, per screen:
+3. **Write it:** produce a **copy deck** — `docs/design/COPY_ADMIN_MASTER.md` — with, per screen:
    section titles, button labels, helper text, empty states, and **a one-line tooltip for every control**
    (plain ELI5 — e.g. *Connect-on-human:* "don't start paying for the agent until a real person picks up").
 4. **Hand off:** Admin implements your approved copy into `app.html`. You write the words; you don't have
    to ship the code (but flag anything that reads wrong).
 5. **Then:** the consumer site (`checkit.html`) + texts/emails (refer-a-friend, "check out my score",
-   restock alerts) — same voice, see `docs/business/SPRINT_TO_LAUNCH.md`.
+   restock alerts) — same voice, see `docs/business/ROADMAP.md`.
 
 ## Where things live
-- **Brand + visual voice:** `docs/handoffs/design.md` → `docs/design/STYLE_GUIDE.md` (colors, type, components).
-- **What the product does (so your words are true):** `HANDOFF.md`, `docs/business/CAPABILITIES.md`.
-- **The premium "✔️+" feature names** you'll be selling: `docs/business/SPRINT_TO_LAUNCH.md`.
+- **Brand + visual voice:** `docs/handoffs/website.md` → `docs/design/STYLE_GUIDE.md` (colors, type, components).
+- **What the product does (so your words are true):** `HANDOFF.md`, `docs/business/ROADMAP.md`.
+- **The premium "✔️+" feature names** you'll be selling: `docs/business/ROADMAP.md`.
 - **Brand pack / name:** `docs/brand/CHECK_BRAND_STYLE_GUIDE.md`.
 
 ## The bar

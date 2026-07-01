@@ -48,7 +48,7 @@ yet," not "doesn't sell."
 tier = hasKiosk === true ? 5 : (retailers.tier ?? null)
 ```
 - **Kiosk overlay wins:** any store with an official TPCi vending kiosk projects as **tier 5**,
-  regardless of its chain tier (exact-MSRP machine). See `docs/specs/kiosk-call-flow.md`.
+  regardless of its chain tier (exact-MSRP machine). See the kiosk spec in git history.
 - `null` tier = ungraded → ranked purely by distance, below the tier groups.
 - `checkit.html` groups results: **tier 5 = "Best near you" (green)**, **tier 4 = "Mostly reliable"
   (blue)**, **tier ≤ 3 = "Spotty" (orange)**.

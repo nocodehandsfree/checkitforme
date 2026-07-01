@@ -6,8 +6,8 @@ and the **live** styles in `public/checkit.html` / `public/app.html` / `public/s
 redrawing. When the live site and this doc disagree, fix whichever is wrong and note it here.
 
 - **Brand foundation:** `docs/brand/CHECK_BRAND_STYLE_GUIDE.md` (mark geometry — canonical)
-- **Type detail:** `docs/design/FONT_STYLE_GUIDE.md`
-- **Admin patterns:** `docs/design/ADMIN_STYLE_GUIDE.md`
+- **Type detail:** `docs/design/STYLE_GUIDE.md`
+- **Admin patterns:** `docs/design/STYLE_GUIDE.md`
 - **Logo production:** `docs/STORE_LOGOS.md` (data-dev owns the chain assets)
 - **Verify against:** `https://staging.checkitforme.com` (NOT prod)
 
@@ -268,7 +268,7 @@ weight 800 / 13px. Same four tones as §2.5.
 
 ### Store / chain logos (~94)
 One file per chain in `public/logos/chains/` (png/webp/svg); `_meta.json` maps slugs. Production &
-rendering rules are owned by data-dev — see `docs/STORE_LOGOS.md` / `docs/design/LOGO_RENDERING.md`.
+rendering rules are owned by data-dev — see `docs/STORE_LOGOS.md` / `docs/STORE_LOGOS.md`.
 
 **The slot.** Every chain logo renders into one fixed **embossed dark tile** so mismatched source art
 reads as a consistent set:

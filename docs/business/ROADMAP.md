@@ -17,23 +17,23 @@ Status of each is detailed in the linked ops/security docs; this is the single c
 
 **Scale / infra**
 - [ ] Redis-backed rate limiter (multi-instance) · single-leader schedulers ✅(done).
-- [ ] TiDB cutover (connection staged; needs SQL string + backfill — `docs/ops/TIDB_MIGRATION.md`).
+- [ ] TiDB cutover (connection staged; needs SQL string + backfill — git history).
 - [ ] Analytics → SQL (dashboards load whole tables today).
 - [ ] PostHog SDK wiring (errors + product events; key wired).
 - [ ] Telephony at scale: concurrency planning + pickup-rate monitoring.
 
-**Security** (`docs/security/SECURITY_REVIEW.md`)
+**Security** (git history)
 - [ ] Transcript IDOR (needs frontend to send the session token on `/pub/result`,`/pub/live`).
 - [x] XFF rate-limit, SVG XSS, constant-time webhook sig, prod security boot-gate, esc() — done.
 - [ ] End-of-session key rotation (Railway token, TiDB password — leaked in chat).
 
-**Revenue / GTM** (`docs/ops/GTM_READINESS.md`)
+**Revenue / GTM** (git history)
 - [ ] Finalize Stripe (products/prices) before paid tiers.
 - [ ] Wire confirmed call-cost rates into the admin cost dashboard (after the voice switcher is validated).
 - [ ] 3-tier customer support (FAQ → Claude → ticket) + Discord; on-site + Discord support agents (RAG via Qdrant).
 - [ ] Legal/compliance review of AI voice calling (gates public marketing).
 
-**Domain / brand** (`docs/ops/DOMAIN_MIGRATION.md`)
+**Domain / brand** (git history)
 - [ ] 301 redirects fungibles verticals → checkitforme; deprecate fungibles after cutover.
 - [ ] Finish the "Check" rebrand text sweep across all docs (HANDOFF done; others have stray "Fungibles/Runnr").
 

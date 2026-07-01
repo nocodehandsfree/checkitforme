@@ -22,6 +22,16 @@ Railway GraphQL (`backboard.railway.app/graphql/v2`) reads/writes env vars — p
 **voice-caller** `d363a982…` (holds `ADMIN_TOKEN` + EL keys). Admin API is gated by header
 `x-admin-token: <ADMIN_TOKEN>`. Policy: `GET/PATCH /api/policy`. Statuses: `/api/statuses`.
 
+## 🎯 Directive — the owner's priority order (do NOT jump straight to mapping)
+1. **First: help the owner nail testing.** Workflows + persona on the **Fun** store (Admin → Testing), and
+   make sure **ABC is firing right** and we're squeezing max ROI (that's the "wire avgTreeSeconds" item below).
+   The owner tests call-by-call; you optimize with them.
+2. **Then: resume store mapping** — cover as many chains as possible for the nationwide launch, using the
+   latest working tech (recipe / avgTreeSeconds / connect-on-human). We were mid-mapping; hard IVR chains + the
+   intentionally-muted ones (Best Buy = central call center, can't dial the store) are the remaining buckets.
+3. Roadmap / bigger backlog: `docs/business/ROADMAP.md`.
+The gate between 1 and 2 is the owner confirming the Fun-store experience + ROI are where they want them.
+
 ## Current state (2026-07-01 — KEEP UPDATED)
 - [x] **Consolidated to ONE branch.** staging + copy branches merged into prod & retired; HANDOFF.md rewritten.
 - [x] **ABC (connect-on-human) restored** — `policy.flags.connectOnHuman` + `bail.enabled` re-enabled in prod

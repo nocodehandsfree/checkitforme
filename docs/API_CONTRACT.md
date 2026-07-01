@@ -57,7 +57,7 @@ Auth:
 - **Voice** branches the agent script on it: when set, the agent asks *"is your Pokémon kiosk
   working and stocked?"* instead of *"did you get a shipment today?"* (`src/voice/prompts.ts`).
 
-Full feature spec (all three lanes' parts): `docs/specs/kiosk-call-flow.md`. Store-flag data model:
+Full feature spec (all three lanes' parts): the kiosk spec in git history. Store-flag data model:
 `docs/specs/store-data-schema.md` §5.
 
 ---
@@ -178,4 +178,4 @@ GET `/`, `/r`, `/s`, `/p/:slug` (+`?partial=1` → `{title,body}`), `/og/:file`,
   categories, statuses, store-types, stores/near, best-bet, finds, stock/near) — all match.
 - 2026-06-16 — added optional `kioskMode` to the four check endpoints (Website sends it for
   kiosk-only stores; DevOps plumbs it to the call; Voice branches the script). Spec:
-  `docs/specs/kiosk-call-flow.md`. Additive — existing callers unaffected.
+  the kiosk spec in git history. Additive — existing callers unaffected.

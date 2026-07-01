@@ -102,4 +102,4 @@ One font (**Inter**). Five roles. Nothing off this list. If a size isn't here, i
 ## Go deeper
 - Everything to ship (consumer site): `docs/design/COPY_CHANGES_APPROVED.md`
 - Admin app copy: `docs/design/COPY_ADMIN_MASTER.md`
-- Brand mark: `docs/business/BRAND.md`
+- Brand mark: `docs/brand/CHECK_BRAND_STYLE_GUIDE.md`

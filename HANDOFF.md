@@ -55,15 +55,14 @@ If it hangs/`unauthorized`: the sandbox can't reach Railway — allow `backboard
 ## Docs map (open only what you need)
 - `docs/AGENT_RULES.md` — how to write code here (read first).
 - `docs/GOTCHAS.md` — non-obvious traps that cost real time; read before debugging something weird, **add to it the moment you learn one.**
-- `docs/ops/STAGING.md` — the staging↔prod model + workflow (read before any change).
 - `docs/ARCHITECTURE.md` · `docs/RUNBOOK.md` — layout + stack/run/deploy.
 - `docs/API_CONTRACT.md` · `docs/STOCK_AND_GEO_API.md` — front⇄back interface.
 - `docs/DATA_PROVENANCE.md` — store-data source of truth (read before touching store data).
 - `docs/STORE_LOGOS.md` — logos (read before touching logos).
-- `docs/business/` · `docs/finance/COST_MODEL.md` · `docs/security/SECURITY_REVIEW.md`.
-- `docs/COMPLETED.md` — done · `docs/archive/` — historical, skip.
+- `docs/business/ROADMAP.md` · `docs/finance/COST_MODEL.md` + `CHEAP_NAV_ARCHITECTURE.md` (the ROI/ABC model).
+- Finished/older work isn't kept as a doc — it's in **git history** (nothing is lost; `git log`/`git show` it).
 
 ## Every session
-Read this + your role doc → keep your role's **Current focus** updated → on finish, move it to `docs/COMPLETED.md`.
+Read this + your role doc → keep your role's **Current focus** updated as you go.
 **Before a big push, doc-lint:** skim the docs you touched against the code — a comment/claim that lies is worse
 than none. Fix or delete it, and log any new trap in `docs/GOTCHAS.md`.
