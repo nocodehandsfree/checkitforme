@@ -268,6 +268,22 @@
   .tcop{font-size:13px;color:var(--text-strong);line-height:1.4;margin:5px 0 6px;word-break:break-word}
   .tctime{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-muted)}
   .tctime b{color:#e8e8f0;font-variant-numeric:tabular-nums}
+  /* Live dashboard: 5-vital hero + collapsed rows (color = state; Design card radius 16) */
+  .herog{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px}
+  .herog .v:first-child{grid-column:1/-1}
+  .v{background:var(--surface-1);border:1px solid var(--border);border-radius:16px;padding:16px}
+  .v .n{font-size:22px;font-weight:800;line-height:1;letter-spacing:-.5px}
+  .v.big .n{font-size:34px}
+  .v .l{color:var(--text-muted);font-size:10.5px;margin-top:8px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+  .v .n.g{color:var(--green)} .v .n.a{color:#FBBF24} .v .n.r{color:var(--red)} .v .n.m{color:var(--text-strong)}
+  .drow{background:var(--surface-1);border:1px solid var(--border);border-radius:16px;margin-bottom:12px;overflow:hidden}
+  .drow>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px}
+  .drow>summary::-webkit-details-marker{display:none}
+  .drow .rl{font-size:15px;font-weight:700;color:#eaeaf2}
+  .drow .rr{color:var(--text-muted);font-size:13px;display:flex;align-items:center;gap:8px;white-space:nowrap}
+  .drow .chev{transition:.2s;opacity:.7} .drow[open] .chev{transform:rotate(180deg)}
+  .drow .rbody{padding:0 16px 16px}
+  .drow .goto{color:var(--purple);font-size:13px;font-weight:700;text-decoration:none;display:block;padding:2px 16px 16px}
   .wfmsub{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin:13px 0 7px}
   .wfmop{display:flex;gap:6px;align-items:flex-start;margin-bottom:3px}
   /* openers read as soft, WRAPPING script text (matches the Designer's .optext), with a quiet hover/focus affordance for inline edit — not abrasive single-line form boxes */
@@ -540,51 +556,20 @@
 
   <!-- GOD VIEW: the day's command center — vitals above the fold, business folded in -->
   <section id="dash" class="active">
-    <div id="dash_overview">
-    <div class="hero">
-      <div class="hero-eyebrow">Today</div>
-      <div class="stats" id="d_today"></div>
-    </div>
-    <div class="card report">
-      <div class="name">Today's pulse</div>
-      <div id="gw_pulse" class="meta">Loading…</div>
-    </div>
-    <div class="card report" id="d_money_card">
-      <div class="name">Business &amp; money</div>
-      <div class="stats" id="d_money" style="margin-bottom:0"></div>
-    </div>
-    <div class="card" id="credit_card">
-      <div class="row" style="justify-content:space-between;align-items:baseline">
-        <div class="name">ElevenLabs credits</div>
-        <div class="meta" id="credit_src"></div>
-      </div>
-      <div style="height:10px;background:var(--terminal);border-radius:6px;overflow:hidden;margin:12px 0 8px">
-        <div id="credit_bar" style="height:100%;width:0%;background:var(--green);transition:width .3s"></div>
-      </div>
+    <h2 style="margin-bottom:2px">Today</h2>
+    <div class="meta" id="d_date" style="margin:0 0 20px">Loading…</div>
+    <div class="herog" id="d_hero"></div>
+    <details class="drow"><summary><span class="rl">Today's pulse</span><span class="rr" id="drs_pulse"><span class="chev">▾</span></span></summary><div class="rbody" id="gw_pulse" style="padding-top:2px">Loading…</div></details>
+    <details class="drow"><summary><span class="rl">Money</span><span class="rr" id="drs_money"><span class="chev">▾</span></span></summary><div class="rbody"><div class="stats" id="d_money"></div></div><a class="goto" href="#calc" onclick="showSection('calc');return false">Open the full money view in Calc →</a></details>
+    <details class="drow"><summary><span class="rl">Call time &amp; cost</span><span class="rr" id="drs_timing"><span class="chev">▾</span></span></summary><div class="rbody"><div class="meta" data-tip="We're billed for the whole call (ring, menu, hold, talk), so reaching someone is real cost." style="margin:2px 0 10px">Time to reach a person vs. talk time.</div><div class="stats" id="d_timing"></div><div id="d_timing_model"></div><div id="d_timing_status"></div><details style="margin-top:8px"><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details></div></details>
+    <details class="drow"><summary><span class="rl">Call data health</span><span class="rr" id="drs_dhealth"><span class="chev">▾</span></span></summary><div class="rbody"><div class="meta" data-tip="Real dialed calls vs. seed and rehearsal. The true first call ignores seed rows and the Fun store." style="margin:2px 0 10px">Real dialed calls vs. seed and rehearsal.</div><div id="d_health" class="meta">Loading…</div></div><a class="goto" href="#results" onclick="showSection('results');return false">Open the call log in Calls →</a></details>
+    <details class="drow"><summary><span class="rl">ElevenLabs credits</span><span class="rr" id="drs_credits"><span class="chev">▾</span></span></summary><div class="rbody">
+      <div style="height:10px;background:var(--terminal);border-radius:6px;overflow:hidden;margin:4px 0 8px"><div id="credit_bar" style="height:100%;width:0%;background:var(--green);transition:width .3s"></div></div>
       <div id="credit_body" class="meta">Loading…</div>
       <div id="credit_stats" class="meta" style="margin-top:6px"></div>
-      <div id="credit_limit_wrap" style="display:none;margin-top:12px">
-        <div class="hint" style="margin-bottom:8px">Estimate from the last 31 days <span data-tip="Enable user_read on the ElevenLabs API key for a live, auto-updating balance."></span>. Enter your plan size below until live balance is on.</div>
-        <div class="row" style="gap:8px">
-          <input id="credit_limit" type="number" placeholder="Plan size, e.g. 100000" style="flex:1">
-          <button class="ghost" onclick="saveCreditLimit()">Save</button>
-        </div>
-      </div>
-    </div>
-    <details class="card report" id="d_timing_card" open>
-      <summary style="cursor:pointer"><span class="name">Call time &amp; cost</span></summary>
-      <div class="meta" style="margin:10px 0 8px">Time to reach a person vs. talk time. We're billed for the whole call (ring, menu, hold, talk), so reaching someone is real cost.</div>
-      <div class="stats" id="d_timing"></div>
-      <div id="d_timing_model"></div>
-      <div id="d_timing_status"></div>
-      <details style="margin-top:6px"><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details>
-    </details>
-    <details class="card report" id="d_health_card" open>
-      <summary style="cursor:pointer"><span class="name">Call data health</span></summary>
-      <div class="meta" style="margin:10px 0 8px">The unfiltered truth about every call row. real dialed calls vs. seed / rehearsal / never-placed. The true first call ignores seed rows and the "Fun" rehearsal store.</div>
-      <div id="d_health" class="meta">Loading…</div>
-    </details>
-    </div>
+      <div class="meta" id="credit_src" style="margin-top:6px"></div>
+      <div id="credit_limit_wrap" style="display:none;margin-top:12px"><div class="hint" style="margin-bottom:8px">Estimate from the last 31 days.</div><div class="row" style="gap:8px"><input id="credit_limit" type="number" placeholder="Plan size, e.g. 100000" style="flex:1"><button class="ghost" onclick="saveCreditLimit()">Save</button></div></div>
+    </div></details>
   </section>
   <section id="calc"><div id="calc_root"></div></section>
   <section id="users">
@@ -593,18 +578,18 @@
   </section>
   <section id="restock">
     <h2>Restock intel</h2>
-    <div class="meta" style="margin:0 0 13px">When stores restock + what's landing. learned from real call data. Tap a store for its own breakdown.</div>
+    <div class="meta" style="margin:0 0 13px">When stores restock, and what's landing. <span data-tip="Learned from real call data. Tap a store for its own breakdown."></span></div>
     <div id="restock_detail"></div>
     <div id="restock_net" class="meta">Loading…</div>
   </section>
   <section id="workflows">
     <h2>Workflows</h2>
-    <div class="meta" style="margin:0 0 13px">Each workflow is a saved <b>opener set + voice + persona</b>. The <b style="color:var(--green)">★ default</b> powers every store; assign others per chain/store in Stores. Build new ones in Voice → Designer, then edit their openers here.</div>
+    <div class="meta" style="margin:0 0 13px">Each workflow is a saved <b>opener set + voice + persona</b>. <span data-tip="The ★ default powers every store; assign others per chain/store in Stores. Build new ones in Voice → Designer, then edit openers here."></span></div>
     <div id="wfm_list" class="meta">Loading…</div>
   </section>
   <section id="testing">
     <h2>Testing</h2>
-    <div class="meta" style="margin:0 0 13px">Your test-call log. <b>owner-only / Fun stores only</b>. These never touch the real-store numbers. Call yourself, mess with the caller, and read back the workflow, the exact opener used in rotation, the status, and the timing.</div>
+    <div class="meta" style="margin:0 0 13px">Your test-call log. <b>Owner-only, Fun stores only.</b> <span data-tip="These never touch the real-store numbers. Call yourself, mess with the caller, and read back the workflow, the opener used in rotation, the status, and the timing."></span></div>
     <div id="testing_summary"></div>
     <div id="testing_log" class="meta">Loading…</div>
   </section>
@@ -1135,7 +1120,7 @@ const NAV_GROUPS={
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['workflows','Workflows','note'],['testing','Testing','phone-call'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
 function renderGroupNav(){
@@ -1381,6 +1366,7 @@ async function loadCallTiming(){
   if(!d||d.error||!d.aggregate||!d.aggregate.calls){ el.innerHTML='<div class="meta">No timed calls yet. this fills in as calls come through.</div>'; if(md)md.innerHTML=''; if(stt)stt.innerHTML=''; if(se)se.innerHTML=''; return; }
   const a=d.aggregate, tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   el.innerHTML = tile(secsFmt(a.avgTalkSec),'avg talk','green')+tile(secsFmt(a.avgNavSec),'avg to human')+tile(secsFmt(a.avgCallSec),'avg call')+tile(a.totalMinutes+'m','total minutes')+tile(a.calls,'calls timed');
+  const _st=document.getElementById('drs_timing'); if(_st) _st.innerHTML=`${secsFmt(a.avgTalkSec)} talk · ${a.calls} call${a.calls===1?'':'s'} <span class="chev">▾</span>`;
   // By model (Charlie direct · Alpha tone tree · Bravo voice tree) — the split that matters: time-to-human + talk per call type.
   if(md) md.innerHTML=(d.byModel&&d.byModel.length)?('<div class="rgrp" style="margin-top:12px">By model · all-time</div>'
     +d.byModel.map(m=>`<div class="repline"><span class="rl"><b style="color:#e8e8f0">${esch(m.model)}</b> <span class="meta">· ${esch(m.type)} · ${m.n} call${m.n===1?'':'s'}</span></span><b>${secsFmt(m.avgNavSec)} to human · <span style="color:var(--green)">${secsFmt(m.avgTalkSec)} talk</span> · ${secsFmt(m.avgCallSec)} call</b></div>`).join('')
@@ -1507,30 +1493,33 @@ function calcUpdate(){
 }
 async function loadDash(){
   loadCallTiming();
-  const [o,m]=await Promise.all([api('/api/admin/overview'),api('/api/admin/metrics')]);
+  const $$=v=>'$'+((v||0)/100).toFixed(2);
+  const [o,m,ri,c]=await Promise.all([api('/api/admin/overview'),api('/api/admin/metrics'),api('/api/admin/restock-intel'),api('/api/credits')]);
+  const de=document.getElementById('d_date'); if(de) de.textContent=new Date().toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
   const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
-  if(o&&!o.error){
-    CHAIN_STATS=o.chainStats||[];
-    // Today hero — the day's vital signs (above the fold)
-    document.getElementById('d_today').innerHTML=
-      st(o.today.calls,'checks 24h')+
-      st(o.today.confirms,'confirmed','green')+
-      st(o.live.length,'live now',o.live.length?'green':'')+
-      st(secsFmt(o.today.avgCallSeconds||o.avgCallSeconds30d),'avg call');
-    // (Live-right-now removed from God view per owner direction.)
-  }
+  // ---- Hero: the 5 vitals you check first. Color = state, before you read the number. ----
+  const checks=(o&&o.today)?(o.today.calls||0):0, confirms=(o&&o.today)?(o.today.confirms||0):0;
+  const af=(ri&&ri.answerFunnel)||{}; const reach=af.dialed?Math.round((af.reachedHuman/af.dialed)*100):null;
+  const pctLeft=(c&&c.limit)?Math.max(0,Math.min(100,Math.round((c.remaining/c.limit)*100))):null;
+  const margin=(m&&m.marginPct!=null)?Math.round(m.marginPct):null;
+  const v=(n,l,cls,big)=>`<div class="v${big?' big':''}"><div class="n ${cls}">${n}</div><div class="l">${esch(l)}</div></div>`;
+  const hero=document.getElementById('d_hero');
+  if(hero) hero.innerHTML=
+    v(checks,'Checks today',checks>0?'g':'m',true)+
+    v(confirms,'Confirms',confirms>0?'g':'m')+
+    v(reach==null?'—':reach+'%','Reach rate',reach==null?'m':(reach>=60?'g':reach>=30?'a':'r'))+
+    v(pctLeft==null?'—':pctLeft+'%','Credits left',pctLeft==null?'m':(pctLeft>40?'g':pctLeft>15?'a':'r'))+
+    v(margin==null?'—':margin+'%','Margin',margin==null?'m':(margin>0?'g':margin<0?'r':'m'));
+  // ---- Money row + summary ----
+  if(o&&!o.error) CHAIN_STATS=o.chainStats||[];
   if(m&&!m.error){
-    const $$=v=>'$'+((v||0)/100).toFixed(2);
-    // Business folded into the God view: revenue → margin → MRR/cost → audience
-    document.getElementById('d_money').innerHTML=
-      st($$(m.revenueCents),'revenue')+
-      st($$(m.profitCents),m.profitCents>=0?'profit':'loss',m.profitCents>=0?'green':'')+
-      st(m.marginPct!=null?Math.round(m.marginPct)+'%':'—','margin',(m.marginPct||0)>=0?'green':'')+
-      st($$(m.mrrCents)+'/mo','MRR (monthly)')+
-      st($$(m.cogs?.totalCents),'Costs')+
-      st(m.callsMade!=null?m.callsMade:'—','paid calls')+
-      st(m.users,'users')+st(m.subscribers,'members');
+    const dm=document.getElementById('d_money'); if(dm) dm.innerHTML=
+      st($$(m.revenueCents),'revenue')+st($$(m.profitCents),m.profitCents>=0?'profit':'loss',m.profitCents>=0?'green':'')+
+      st(margin!=null?margin+'%':'—','margin',(margin||0)>0?'green':'')+st($$(m.mrrCents)+'/mo','MRR (monthly)')+
+      st($$(m.cogs?.totalCents),'Costs')+st(m.callsMade!=null?m.callsMade:'—','paid calls')+st(m.users,'users')+st(m.subscribers,'members');
+    const s=document.getElementById('drs_money'); if(s) s.innerHTML=`${esch($$(m.profitCents))} · ${margin!=null?margin+'%':'—'} <span class="chev">▾</span>`;
   }
+  const dh=document.getElementById('drs_dhealth'); if(dh&&af.dialed) dh.innerHTML=`${af.dialed} dialed · ${reach}% reached <span class="chev">▾</span>`;
 }
 
 // ---- Bail library: per-rule toggles saved to policy.bail (enforcement stays staged) ----
@@ -3150,6 +3139,7 @@ async function loadCredits(){
   document.getElementById('credit_src').textContent = c.source==='live' ? 'live balance' : 'estimated · last 31d';
   if(c.limit){
     const pctLeft = Math.max(0, Math.min(100, Math.round((c.remaining/c.limit)*100)));
+    const _sc=document.getElementById('drs_credits'); if(_sc) _sc.innerHTML=`${pctLeft}% left <span class="chev">▾</span>`;
     document.getElementById('credit_body').innerHTML =
       `<b style="color:#fff;font-size:16px">${fmtN(c.remaining)}</b> credits left of ${fmtN(c.limit)} <span style="color:var(--muted)">(${pctLeft}% left)</span>`;
     const bar=document.getElementById('credit_bar');           // bar shows what's LEFT (full = plenty)
@@ -3493,16 +3483,17 @@ async function loadGwPulse(){
   const f=d.funnel||{}, a=d.activity||{}, cm=d.community||{};
   const st=(n,l,g)=>`<div class="stat${g?' green':''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   const money=c=>'$'+((c||0)/100).toFixed(2);
+  const sub=t=>`<div style="font-size:12.5px;font-weight:700;color:var(--text-strong);margin:14px 0 7px">${t}</div>`;
   el.innerHTML=
-    `<div class="rgrp">Funnel</div><div class="stats">`+
-      st(f.leads||0,'leads')+st(f.signups||0,'signups')+st(f.paying||0,'paying',1)+st(f.members||0,'members',1)+st(money(f.revenueCents),'revenue',1)+
-    `</div><div class="rgrp">Activity <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· real consumer calls. excludes Fun/MVPs + admin tests</span></div><div class="stats">`+
+    sub('Activity <span class="meta" style="font-weight:500" data-tip="Real consumer calls. Excludes Fun/MVPs and admin tests."></span>')+`<div class="stats">`+
       st(a.checks||0,'checks')+st(a.checks24h||0,'last 24h')+st(a.confirms||0,'confirms',1)+st(secsFmt(a.avgTalkSec||0),'avg talk',1)+st(secsFmt(a.avgCallSec||0),'avg call')+
-    `</div><div class="rgrp">Community</div><div class="stats" style="margin-bottom:0">`+
+    `</div>`+sub('Funnel')+`<div class="stats">`+
+      st(f.leads||0,'leads')+st(f.signups||0,'signups')+st(f.paying||0,'paying',1)+st(f.members||0,'members',1)+st(money(f.revenueCents),'revenue',1)+
+    `</div>`+sub('Community')+`<div class="stats">`+
       st(cm.watches||0,'watching')+st(cm.kioskReports||0,'kiosk intel')+st(cm.posts||0,'scores')+st(cm.postsPending||0,'pending')+st(cm.newLeads7d||0,'new leads 7d')+
-    `</div>`
-    +`<div class="rgrp" style="margin-top:14px">Stats baseline</div>`
-    +`<div class="meta" style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;line-height:1.6">Real-call stats (Pulse · Restock · Call timing) ${d.statsSince?('count from <b style="color:#cfcfd8">'+new Date(d.statsSince*1000).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})+'</b>'):'count <b style="color:#cfcfd8">everything</b>'}.<button class="ghost" style="font-size:11px;padding:5px 10px" onclick="startFresh(false)">Start fresh</button>${d.statsSince?'<button class="ghost" style="font-size:11px;padding:5px 10px" onclick="startFresh(true)">Count all again</button>':''}</div>`;
+    `</div>`+sub('Stats baseline')+
+    `<div class="meta" style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;line-height:1.6">Real-call stats (Pulse · Restock · Call timing) ${d.statsSince?('count from <b style="color:#cfcfd8">'+new Date(d.statsSince*1000).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})+'</b>'):'count <b style="color:#cfcfd8">everything</b>'}.<button class="ghost" style="font-size:11px;padding:5px 10px" onclick="startFresh(false)">Start fresh</button>${d.statsSince?'<button class="ghost" style="font-size:11px;padding:5px 10px" onclick="startFresh(true)">Count all again</button>':''}</div>`;
+  const s=document.getElementById('drs_pulse'); if(s) s.innerHTML=`${a.checks||0} checks · ${secsFmt(a.avgTalkSec||0)} avg <span class="chev">▾</span>`;
 }
 // Stamp a "count from now" cutoff so real-call stats reset for the live launch. Test calls are unaffected.
 async function startFresh(clear){
