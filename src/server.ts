@@ -26,7 +26,8 @@ import { getPolicy, setPolicy, publicPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
-import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores } from "./calls/navigator";
+import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
+import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, type Recipe } from "./calls/recipe";
 import { llm } from "./llm";
@@ -156,6 +157,14 @@ app.use("/api/*", async (c, next) => {
   if (adminCookie) { const s = await verifySession(adminCookie); if (s && s.id === "admin") return next(); }
   if (!config.adminToken) return next(); // no admin token configured → open (dev only)
   return c.json({ error: "unauthorized" }, 401);
+});
+// /pub/* per-IP ceiling (data-exposure lockdown): generous enough that a real session — live-call
+// polling every ~1s plus browsing — never feels it, but a scraper rapidly walking the public read
+// surface hits the wall fast. Tighter, surface-specific limits live on the endpoints themselves.
+app.use("/pub/*", async (c, next) => {
+  const rl = rlCheck("pubRead", clientIp(c.req.raw.headers), LIMITS.pubRead);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  return next();
 });
 
 // Clerk-free admin login: visit /admin-login?token=ADMIN_TOKEN once → sets a signed httpOnly
@@ -489,6 +498,12 @@ app.post("/nav/step", async (c) => {
   return c.body(await navStep(id, speech), 200, { "Content-Type": "text/xml" });
 });
 app.post("/nav/ended", (c) => { navEnded(c.req.query("session") || ""); return c.body("ok", 200); });
+// The confirm-ask mp3 in the workflow's voice (Branson) — Twilio <Play> fetches this mid-call.
+app.get("/nav/ask-audio", (c) => {
+  const b = navAskAudio(c.req.query("session") || "");
+  if (!b) return c.body("not found", 404);
+  return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
+});
 
 // ---- Health ----
 app.get("/api/health", (c) => c.json({ ok: true }));
@@ -923,17 +938,20 @@ app.post("/api/admin/migrate-logos-to-r2", async (c) => {
 });
 
 app.get("/pub/stores", async (c) => {
+  // 🔒 ADMIN-ONLY (data-exposure lockdown): this hands back the ENTIRE store table in one response.
+  // The consumer site never calls it (it uses /pub/stores/near exclusively); the only legit caller is
+  // admin tooling, which authenticates exactly like /api/* — x-admin-token header OR admin_session
+  // cookie — so the Admin page keeps working with zero changes on its side.
+  const okTok = !!config.adminToken && c.req.header("x-admin-token") === config.adminToken;
+  let okCookie = false;
+  if (!okTok) { const ck = getCookie(c, "admin_session"); if (ck) { const s = await verifySession(ck); okCookie = !!(s && s.id === "admin"); } }
+  if (config.adminToken && !okTok && !okCookie) return c.json({ error: "unauthorized" }, 401);
   const rs = await cachedRetailers();
   const chainRows = await db.select().from(chains);
   const types = new Map(chainRows.map((x) => [x.id, x.type]));
   const names = new Map(chainRows.map((x) => [x.id, x.name]));
   // Muted chains (owner toggle, incl. repack-only stores like Fairfield) never reach consumers.
   const mutedChains = new Set(chainRows.filter((x) => x.muted === true).map((x) => x.id));
-  // ⚠ SECURITY / STATUS (verified): this endpoint has NO remaining consumers. The admin's old
-  // loadLogos bulk-fetch was removed (logos are denormalized per-row via chainLogoInfo — see
-  // app.html "Store/chain logos"), and the consumer front-end uses /pub/stores/near exclusively.
-  // It currently hands the ENTIRE store list to anyone with the URL — safe to gate behind the
-  // admin token (or remove) with zero client impact. Skips per-row openState so it stays fast.
   return c.json(rs
     .filter((r) => r.phone && r.active !== false)
     .filter((r) => !r.ownerOnly) // owner-only demo store ("Fun") never appears in the admin logo map
@@ -958,6 +976,15 @@ app.get("/pub/stores/near", async (c) => {
   const radius = Math.min(Math.max(Number(c.req.query("radius") || 25), 1), 150);
   const limit = Math.min(Math.max(Number(c.req.query("limit") || 60), 1), 200);
   const offset = Math.max(Number(c.req.query("offset") || 0), 0);
+  // 🔒 Text-search hardening (data-exposure lockdown): the q-only path is the one way to page the store
+  // table without a location, so it gets its own tight per-IP limit, a 2-char minimum (single letters
+  // enumerate everything), and a paging-depth cap. Location/state search behavior is unchanged.
+  if (!hasLoc && !state) {
+    if (q.length < 2) return c.json({ error: "q must be at least 2 characters" }, 400);
+    if (offset > 600) return c.json({ error: "paging too deep for text search" }, 400);
+    const rl = rlCheck("storeSearch", clientIp(c.req.raw.headers), LIMITS.storeSearch);
+    if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  }
   const mode = c.req.query("mode") || ""; // call | kiosk | site | "" = all
 
   const chainRows = await cachedChains();
@@ -1048,6 +1075,33 @@ app.get("/pub/stores/near", async (c) => {
   const pinIds = new Set([...owned, ...nearestT5].map((r) => r.id));
   const rest = all.filter((r) => !r.ownerOnly && !pinIds.has(r.id));
   return c.json({ total: all.length, offset, limit, stores: [...owned, ...nearestT5, ...rest.slice(offset, offset + limit)] });
+});
+
+// Single-store fetch (consumer): backfills address/logo/hours for a REOPENED call whose store sits
+// outside the current nearby slice (only near-slice stores carry address on the client). Same
+// per-store shape /pub/stores/near emits; owner-only stores need the comp check; muted stay hidden.
+app.get("/pub/store/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isFinite(id)) return c.json({ error: "bad id" }, 400);
+  const r = (await db.select().from(retailers).where(eq(retailers.id, id)))[0];
+  if (!r || r.active === false) return c.json({ error: "not_found" }, 404);
+  const chain = r.chainId ? (await cachedChains()).find((x) => x.id === r.chainId) : undefined;
+  if (chain?.muted === true) return c.json({ error: "not_found" }, 404);
+  if (r.ownerOnly && !(await requesterIsComp(c.req.header("Authorization")))) return c.json({ error: "not_found" }, 404);
+  const chainName = chain?.name || r.name.split(/—|–| - /)[0];
+  return c.json({ id: r.id, chainId: r.chainId, name: r.name, location: r.location, address: r.address || null,
+    storeType: chain?.type || "Other",
+    ...((l) => ({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo(chainName)),
+    carries: storeCarriesList(chainName, r.carries),
+    lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
+    sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
+    tier: r.hasKiosk === true ? 5 : (r.tier ?? null),
+    callable: r.sellsPacks !== false && !!r.phone && !r.phone.startsWith("nophone:"),
+    ownerOnly: r.ownerOnly === true,
+    stockCheckMethod: chain?.stockCheckMethod || "call",
+    sellMethods: (chain?.sellMethods || "in_store").split(",").map((s) => s.trim()).filter(Boolean),
+    online: r.online === true, isMSRP: chain ? chain.isMSRP !== false : true,
+    mapsUri: r.mapsUri || null, miles: null, openState: openState(r.hours, r.timezone) });
 });
 
 // Master/dev location override: resolve a ZIP (or free-text "city, ST") to a lat/lng using OUR OWN
@@ -3529,6 +3583,16 @@ app.post("/api/admin/trainer/batch", async (c) => {
   return c.json(await startBatch({ onlyMissing: b.onlyMissing, limit: b.limit, gapSec: b.gapSec }));
 });
 app.get("/api/admin/trainer/batch", (c) => c.json(batchStatus()));
+// ---- Mapper: "map until locked" — the auto-continue loop (listen → baseline → optimize → lock) ----
+app.post("/api/admin/mapper/start", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number };
+  return c.json(await startMapper(Number(b.chainId || 0)));
+});
+app.post("/api/admin/mapper/stop", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number };
+  return c.json(stopMapper(Number(b.chainId || 0)));
+});
+app.get("/api/admin/mapper/state", (c) => c.json(mapperState()));
 app.get("/api/admin/agent/models", (c) => c.json(AGENT_MODELS));
 app.post("/api/admin/agent", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { messages?: Array<{ role: "user" | "assistant"; text: string }>; model?: string };

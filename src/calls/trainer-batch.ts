@@ -8,7 +8,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/client";
 import { chains, retailers } from "../db/schema";
-import { placeNavCall, getNavSession } from "./navigator";
+import { placeNavCall, getNavSession, defaultWorkflowAsk } from "./navigator";
 import { isCallingPaused, setBatchState, getBatchState } from "../redis";
 import { openState } from "../store-hours";
 
@@ -26,14 +26,14 @@ export function stopBatch() { state.stop = true; void setBatchState(null); retur
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Build a recipe from the steps the navigator actually took (mirrors navigator's human-path build). */
-function recipeFromSteps(steps: Step[], humanAtSec: number | null): Recipe {
+export function recipeFromSteps(steps: Step[], humanAtSec: number | null): Recipe {
   const acts = (steps || []).filter((st) => st.who === "us").map((st) => ({ action: st.action || "say", value: st.value || "", atSec: st.atSec }));
   const type = acts.length === 0 ? "direct" : (acts.every((a) => a.action === "press") ? "keypad" : "voice");
   return { type, steps: acts, seconds: humanAtSec ?? (steps[steps.length - 1]?.atSec ?? 0) };
 }
 
 /** Persist a HUMAN-CONFIRMED recipe to the chain — applies to live calls (mirrors trainer/lock). */
-async function lockRecipeToChain(chainId: number, recipe: Recipe, confidence: number | null) {
+export async function lockRecipeToChain(chainId: number, recipe: Recipe, confidence: number | null) {
   const ch = (await db.select().from(chains).where(eq(chains.id, chainId)))[0];
   const log = ch?.navLog ? (JSON.parse(ch.navLog) as number[]) : [];
   if (typeof recipe.seconds === "number") log.push(recipe.seconds);
@@ -74,9 +74,15 @@ const hasRealPhone = (p?: string | null) => !!p && !p.startsWith("nophone:") && 
  *  national chain almost always has a 24h or west-coast location open at this hour. Score each store
  *  by openState (24h > real-hours-open > daytime-unknown) and dial the best; return null only if every
  *  callable store is genuinely closed (so the chain is skipped tonight, not wasted on a dead line). */
-async function storeForChain(chainId: number) {
-  const rows = await db.select().from(retailers)
+export async function storeForChain(chainId: number, excludeIds?: number[]) {
+  let rows = await db.select().from(retailers)
     .where(and(eq(retailers.chainId, chainId), eq(retailers.active, true))).limit(4000);
+  // Rotation (mapper): skip stores we already dialed this run — unless that would leave nothing.
+  if (excludeIds?.length) {
+    const ex = new Set(excludeIds);
+    const rest = rows.filter((r) => !ex.has(r.id));
+    if (rest.length) rows = rest;
+  }
   const now = new Date();
   const score = (r: typeof rows[number]) => {
     if (!hasRealPhone(r.phone)) return -1;
@@ -114,13 +120,16 @@ export async function startBatch(opts: BatchOpts = {}) {
   await setBatchState(JSON.stringify({ active: true, onlyMissing, perCallMaxSec, gapSec, startedAt: state.startedAt }));
 
   (async () => {
+    const ask = await defaultWorkflowAsk(); // Branson global's opener + voice, once per batch
     for (const ch of list) {
       if (state.stop) { state.results.push({ chain: ch.name, outcome: "stopped" }); break; }
       if (await isCallingPaused()) { state.results.push({ chain: ch.name, outcome: "kill-switch — stopping" }); break; }
       state.current = ch.name;
       const store = await storeForChain(ch.id);
       if (!store) { state.skipped++; state.done++; state.results.push({ chain: ch.name, outcome: "all stores closed now — retry daytime" }); continue; }
-      const placed = await placeNavCall(ch.id, store.id, store.name, store.phone);
+      // Every human contact ends with the real ask ("any Pokémon cards in?") in the workflow voice —
+      // a mapping call that reaches a person is never wasted on a silent hangup.
+      const placed = await placeNavCall(ch.id, store.id, store.name, store.phone, undefined, undefined, undefined, undefined, { product: "Pokémon cards" }, { askVoiceId: ask.voiceId, askText: ask.text });
       if (placed.error || !placed.id) { state.failed++; state.done++; state.results.push({ chain: ch.name, outcome: "dial failed: " + (placed.error || "?") }); await sleep(gapSec * 1000); continue; }
       const deadline = Date.now() + perCallMaxSec * 1000;
       let s = getNavSession(placed.id);

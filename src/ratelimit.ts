@@ -36,6 +36,11 @@ export const LIMITS: Record<string, Limit> = {
   watch: { windowMs: 10 * 60_000, max: 15 },     // restock watches: 15/10min/IP
   lead: { windowMs: 60 * 60_000, max: 8 },       // email lead gate: 8/hr/IP
   write: { windowMs: 60_000, max: 30 },          // generic public write fallback: 30/min/IP
+  // Data-exposure lockdown: a real session (live-call polling every ~1s + browsing) stays far under
+  // pubRead; a scraper walking the directory hits it fast. storeSearch throttles the TEXT-search path
+  // of /pub/stores/near specifically — the only way to page the store table without a location.
+  pubRead: { windowMs: 60_000, max: 300 },       // all /pub traffic: 300/min/IP
+  storeSearch: { windowMs: 60_000, max: 30 },    // q-text store searches: 30/min/IP
 };
 
 /** Client IP from trusted proxy headers. Prefer `cf-connecting-ip` — Cloudflare OVERWRITES it with
