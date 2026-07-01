@@ -1757,6 +1757,7 @@ function setLang(l){ LANG=l; localStorage.setItem('runnr_lang',l); applyLang();
   try{ renderDemo(); renderStores(); renderChips(); syncCta(); renderAuth(); loadFinds(); loadSchedules(); loadRefer(); renderCallRail(); }catch(e){}
   // …including whatever view/sheet is open right now — no hard refresh needed.
   try{
+    if($('live') && !$('live').classList.contains('hidden')) renderLiveMsg(); // flip mid-call → re-localize the live step log too
     if(NAV_VIEW==='result'&&LASTRES) showResult(LASTRES,RAIL_CID);
     if($('buyOverlay')&&$('buyOverlay').classList.contains('on')){ renderBuyPlans(); setI('buy_note', `${ICO.lock('#7a7a88')} ${t('buy.secure2','Secure checkout via Stripe')}`); }
     if($('acctOverlay')&&$('acctOverlay').classList.contains('on')) openAccount();
@@ -3013,7 +3014,7 @@ function stepsHTML(steps, finalElapsed){
     if(i<steps.length-1){ if(steps[i+1].at>s.at) secs=Math.round(steps[i+1].at-s.at); }
     else if(finalElapsed!=null && finalElapsed>s.at) secs=Math.round(finalElapsed-s.at);
     const cur=(i===steps.length-1 && finalElapsed==null);
-    return `<div class="cs-line${cur?' cur':''}">${s.n}. ${esc(s.label)}${secs!=null?` <span class="cs-time">${secs}s</span>`:''}</div>`;
+    return `<div class="cs-line${cur?' cur':''}">${s.n}. ${esc(liveStageLabel(s.n)||s.label)}${secs!=null?` <span class="cs-time">${secs}s</span>`:''}</div>`;
   }).join('')+'</div>';
 }
 // The SCRIPT shows ONLY the live human conversation — never the automated phone menu (that's the steps).
@@ -3071,7 +3072,9 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     // "Asking about {cat}" line stays green when you reopen it, not just live).
     const done = finalElapsed!=null || !!(status&&status.title);
     const ok = realI===n-1 && done && reached;
-    return `<div class="ctl-step-row${ok?' ok':''}">${esc(s.label)}${secs!=null?`<span class="cs-time">${secs}s</span>`:''}</div>`;
+    // Resolve the label from the step NUMBER at render time (not the string snapshotted at call time) so a
+    // language flip re-localizes the whole step log — the stored English s.label was why ES calls stayed EN.
+    return `<div class="ctl-step-row${ok?' ok':''}">${esc(liveStageLabel(s.n)||s.label)}${secs!=null?`<span class="cs-time">${secs}s</span>`:''}</div>`;
   }).join('');
   // Roll-up handle: lead with "Ringing the store…" (drop the "Calling {store}" header) + total steps · secs.
   const totalS = finalElapsed!=null ? Math.round(finalElapsed) : (n>0 ? Math.round(steps[n-1].at) : 0);
@@ -3281,7 +3284,13 @@ async function finalizeLive(cid){
   // the ~9s window closes (then we show whatever we have, including a genuine "unclear").
   const _confident=(r)=>!!(r&&r.status&&r.status!=='in_progress'&&(r.confirmed===true||r.confirmed===false||r.soldOut||r.doesNotSell||r.status!=='completed'));
   { let tries=0; while(!_confident(o)&&tries<9){ await new Promise(r=>setTimeout(r,1000)); try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){} tries++; } }
-  const res=(o&&o.status&&o.status!=='in_progress')?o:{status:'no_answer',transcript:live,summary:''};
+  // If we actually reached someone (we have a streamed transcript) but the server verdict hasn't settled
+  // inside the window, DO NOT fall back to "nobody answered" — that's the bug where a real "not in stock"
+  // call flashed as no-answer until it was reopened. Show the neutral "getting the answer…" placeholder
+  // (animated dots) and let reconcileVerdict() below upgrade it in place the moment the verdict lands.
+  // Only claim no-answer when we truly captured no conversation at all.
+  const connected=!!(live&&live.trim());
+  const res=(o&&o.status&&o.status!=='in_progress')?o:(connected?{status:'pending',transcript:live,summary:''}:{status:'no_answer',transcript:live,summary:''});
   // If EL hasn't attached the transcript yet, fall back to what we streamed live, then to /pub/live, so the
   // conversation always prints on the result without a hard refresh.
   if(!res.transcript && live) res.transcript=live;
@@ -3302,7 +3311,10 @@ async function finalizeLive(cid){
 async function reconcileVerdict(cid, prevKey){
   if(!cid || String(cid).startsWith('local:')) return;
   const gen=CALL_GEN; // snapshot — if another call starts, bail so we never repaint a stale result
-  for(let i=0;i<10;i++){
+  // ~60s of patience (was ~30s): when finalizeLive shows the neutral "getting the answer…" placeholder
+  // because the verdict was slow, keep polling long enough that a slow server consensus still upgrades it
+  // in place — so the user never has to reopen the call to see the real answer.
+  for(let i=0;i<20;i++){
     await new Promise(r=>setTimeout(r,3000));
     if(CALL_GEN!==gen || RAIL_CID!==cid || NAV_VIEW!=='result') return; // a new call started, or user moved on
     let o=null; try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){}
