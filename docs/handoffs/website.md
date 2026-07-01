@@ -10,7 +10,17 @@ needs them (don't pre-read).
 > **Update rule:** the moment you finish, get blocked, or discover a task — edit this block. And do a quick
 > pass before you end a session. This is the only thing the next chat re-reads, so it must be current.
 
-**▶ Doing now:** — (nothing claimed; pick from below)
+**▶ Doing now:** **Owner call-testing loop on staging** — Website owns the voice-on-website lane now (Admin
+stays on the admin panel). Owner places Fun-store calls testing the **Branson test workflow** (openers/persona/
+voice) + status printing; we fix what the calls surface. Goal: staging call experience as good as possible →
+promote to prod → owner starts real-store calls for real ABC/ROI data.
+- Status pipeline (learned): `/pub/result` finalizes ON-DEMAND at call end (EL hydration-gap guarded in
+  `elevenlabs.ts`; consensus second-read only when EL unclear) and stamps `statusKey` on every settled verdict.
+  Client flips on any keyed response (incl. settled unclear → poll). Expected flip: ~2–5s after hangup.
+- Workflow on website calls: `/pub/check-live` → `bridgeStoreCall` → `buildRestockVars` → resolveWorkflow
+  (store → chain → global default; settings `vt_store_workflows`/`vt_chain_workflows`/`vt_default_workflow`).
+  Openers rotate per-workflow; persona → `{{personality}}`; voice = the workflow's ONE voice (no pool rotation
+  on the bridge path — unlike admin's `triggerCall`, where the global pool outranks the workflow voice).
 
 **⚠️ Test — coded but NEVER verified on a real call** (call the Fun store from Admin → Testing):
 - Silent location re-check — never tested with an actual city-to-city move.

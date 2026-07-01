@@ -3286,7 +3286,10 @@ async function finalizeLive(cid){
   // come back "no clear answer" and then the consensus upgrades it to in-stock; showing that flip looked
   // broken. Hold on "Getting the answer…" until it's settled (yes / no / sold-out / a terminal status) or
   // the ~9s window closes (then we show whatever we have, including a genuine "unclear").
-  const _confident=(r)=>!!(r&&r.status&&r.status!=='in_progress'&&(r.confirmed===true||r.confirmed===false||r.soldOut||r.doesNotSell||r.status!=='completed'));
+  // "Confident" = the server's SETTLED verdict. /pub/result now finalizes on-demand at call end (consensus
+  // second-read included) and always stamps a statusKey — so any keyed response is final, INCLUDING a genuine
+  // "no clear answer" (which must flip to the unclear screen + poll right away, not sit on dots for 15s).
+  const _confident=(r)=>!!(r&&r.status&&r.status!=='in_progress'&&(r.statusKey||r.confirmed===true||r.confirmed===false||r.soldOut||r.doesNotSell||r.status!=='completed'));
   { let tries=0; while(!_confident(o)&&tries<15){ await new Promise(r=>setTimeout(r,1000)); try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){} tries++; } }
   // If we actually reached someone (we have a streamed transcript) but the server verdict hasn't settled
   // inside the window, DO NOT fall back to "nobody answered" — that's the bug where a real "not in stock"
