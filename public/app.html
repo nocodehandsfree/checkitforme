@@ -47,7 +47,7 @@
   body{background:var(--bg);color:#e6e6ef;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;margin:0;padding:0;
     background-image:radial-gradient(1200px 500px at 50% -100px,rgba(74,222,128,.08),transparent 70%)}
   header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;position:sticky;top:0;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:30}
-  header h1{font-size:17px;margin:0;letter-spacing:-.3px;font-weight:900}
+  header h1{font-size:19px;margin:0;letter-spacing:-.3px;font-weight:900}
   header h1 b{color:var(--green)}
   header .hmark{display:flex;align-items:center;flex:0 0 auto}
   header .dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:livepulse 2s ease-in-out infinite}
@@ -58,7 +58,7 @@
   /* section headings get the brand's green tick bar — ties admin to the front end */
   h2{position:relative;padding-left:12px}
   h2::before{content:"";position:absolute;left:0;top:0;bottom:2px;width:3px;border-radius:2px;background:linear-gradient(180deg,var(--purple),var(--green))}
-  header .sub{color:var(--muted);font-size:12px;margin-left:auto;font-family:ui-monospace,monospace}
+  header .sub{color:var(--muted);font-size:12.5px;margin-left:auto;font-family:ui-monospace,monospace}
   nav{display:flex;gap:6px;padding:10px 20px;border-bottom:1px solid var(--border);flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;position:sticky;top:57px;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:29}
   nav::-webkit-scrollbar{display:none}
   nav button{flex:0 0 auto;background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 15px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;transition:.12s}
@@ -71,9 +71,9 @@
   .card{background:var(--surface-1);border:1px solid var(--border-default);border-radius:var(--r-card);padding:20px;margin-bottom:16px}
   .row{display:flex;align-items:center;gap:12px}
   .grow{flex:1;min-width:0}
-  .name{font-weight:700;font-size:15.5px;letter-spacing:-.1px;color:#f3f3f7}
+  .name{font-weight:700;font-size:15px;letter-spacing:-.1px;color:#f3f3f7}
   .meta{color:var(--muted);font-size:12.5px;margin-top:2px;line-height:1.45}
-  .status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px}
+  .status{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:4px 10px;border-radius:20px}
   .s-green{background:rgba(74,222,128,.14);color:var(--green)}
   .s-red{background:rgba(239,68,68,.14);color:var(--red)}
   .s-amber{background:rgba(232,154,74,.14);color:var(--orange)}
@@ -94,7 +94,7 @@
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234ADE80' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
     background-repeat:no-repeat;background-position:right 14px center;
     border:1px solid var(--border-medium);color:var(--text-body);padding:12px 36px 12px 15px;border-radius:var(--r-btn);
-    font-size:14px;font-weight:500;font-family:Inter,-apple-system,system-ui,sans-serif;letter-spacing:0;width:100%;max-width:100%;cursor:pointer;transition:border-color .15s,box-shadow .15s;
+    font-size:13px;font-weight:500;font-family:Inter,-apple-system,system-ui,sans-serif;letter-spacing:0;width:100%;max-width:100%;cursor:pointer;transition:border-color .15s,box-shadow .15s;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   select:hover{border-color:var(--border-strong)}
   select:focus{outline:none;border-color:rgba(74,222,128,.30);box-shadow:0 0 0 2px rgba(74,222,128,.10)}
@@ -124,15 +124,15 @@
   .rgrp{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:16px 0 8px} .rgrp:first-child{margin-top:0}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   @media(max-width:560px){.grid2{grid-template-columns:1fr}}
-  .pill{display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:var(--purple);background:var(--tint-purple-bg);border:1px solid var(--tint-purple-border);padding:4px 11px;border-radius:var(--r-pill)}
-  .transcript{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12px;color:#cfcfe0;background:var(--terminal);border-radius:10px;padding:12px;margin-top:10px}
+  .pill{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;color:var(--purple);background:var(--tint-purple-bg);border:1px solid var(--tint-purple-border);padding:4px 11px;border-radius:var(--r-pill)}
+  .transcript{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12.5px;color:#cfcfe0;background:var(--terminal);border-radius:10px;padding:12px;margin-top:10px}
   .empty{color:var(--muted);font-size:13px;padding:30px;text-align:center}
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--sheet);border:1px solid var(--border);padding:12px 18px;border-radius:12px;font-size:13px;opacity:0;transition:.2s}
   .toast.show{opacity:1}
   /* Tooltip: TAP to show (works on mobile — hover doesn't exist on touch). A small ⓘ marks tappable hints. */
   [data-tip]{cursor:help}
   label[data-tip],span[data-tip],.name[data-tip],b[data-tip]{display:inline-flex;align-items:center;gap:4px}
-  [data-tip]::after{content:"ⓘ";font-size:14px;color:var(--purple);font-style:normal;font-weight:700;line-height:1;margin:-4px 0 -4px 1px;padding:4px;vertical-align:middle;opacity:.85;cursor:pointer}
+  [data-tip]::after{content:"ⓘ";font-size:13px;color:var(--purple);font-style:normal;font-weight:700;line-height:1;margin:-4px 0 -4px 1px;padding:4px;vertical-align:middle;opacity:.85;cursor:pointer}
   [data-tip]:active::after{opacity:1;color:#c4b5fd}
   #tiptip{position:fixed;z-index:9000;max-width:262px;background:#06060a;color:#e8e8f2;font:500 12.5px/1.45 Inter,-apple-system,sans-serif;font-style:normal;padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 30px rgba(0,0,0,.6)}
   /* Settings page: sections reuse the global details.card chevron (green circle, top-right). */
@@ -144,7 +144,7 @@
   .setlogo .slogo img{width:32px;height:32px}
   .setrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--border)}
   .setrow:first-child{border-top:none}
-  .setlbl{font-size:13.5px;color:var(--text-body)}
+  .setlbl{font-size:13px;color:var(--text-body)}
   /* Chain picker (Settings): filterable list of chain rows. */
   .pickrow{display:flex;align-items:center;gap:10px;padding:9px 8px;border-top:1px solid var(--border);cursor:pointer;border-radius:8px}
   #set_picker .pickrow:first-child{border-top:none}
@@ -159,16 +159,16 @@
   .srhead .nm{font-size:15px;font-weight:700;color:#f3f3f7;line-height:1.25;letter-spacing:-.1px}
   .srhead .sbranch{font-size:12.5px;color:var(--text-body);margin-top:1px}
   .ssub{font-size:12.5px;color:var(--text-muted);margin-top:4px;line-height:1.45}
-  .srchev{color:var(--text-tertiary);font-size:17px;flex:0 0 auto;transition:transform .2s;line-height:1}
+  .srchev{color:var(--text-tertiary);font-size:19px;flex:0 0 auto;transition:transform .2s;line-height:1}
   .srow.open .srchev{transform:rotate(180deg)}
-  .recp{flex:0 0 auto;font:800 12px Inter;border-radius:20px;padding:4px 10px;white-space:nowrap}
+  .recp{flex:0 0 auto;font:800 12.5px Inter;border-radius:20px;padding:4px 10px;white-space:nowrap}
   .recp.good{color:var(--green);background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.32)}
   .recp.mid{color:#F4D03F;background:rgba(244,208,63,.1);border:1px solid rgba(244,208,63,.3)}
   .recp.low{color:#ff8a8a;background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.28)}
   .recp.none{color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);font-weight:700}
   .srdetail{padding:0 13px 13px}
   .srline{display:flex;gap:10px;font-size:13px;line-height:1.5;padding-top:11px}
-  .srlab{color:var(--text-muted);font-weight:600;flex:0 0 58px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding-top:1px}
+  .srlab{color:var(--text-muted);font-weight:600;flex:0 0 58px;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;padding-top:1px}
   .stally{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
   .stally .tp{display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:6px 10px;font:800 13px Inter;border:1px solid}
   .stally .tp i{font:600 10.5px Inter;font-style:normal;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em}
@@ -182,9 +182,9 @@
   .stchead{display:flex;align-items:flex-start;gap:11px}
   .stcbody{flex:1;min-width:0}
   .stcnm{font-size:15px;font-weight:700;color:#f3f3f7;letter-spacing:-.1px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:6px}
-  .stcaddr{font-size:12px;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stcaddr{font-size:12.5px;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .stcpills{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
-  .stcpills .cp{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:3px 8px;font:800 12px Inter;border:1px solid;line-height:1}
+  .stcpills .cp{display:inline-flex;align-items:center;gap:5px;border-radius:8px;padding:3px 8px;font:800 12.5px Inter;border:1px solid;line-height:1}
   .stcpills .cp.in{color:var(--green);background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3)}
   .stcpills .cp.out{color:#ff8a8a;background:rgba(239,68,68,.09);border-color:rgba(239,68,68,.28)}
   .stcpills .cp.soon{color:#F4D03F;background:rgba(244,208,63,.1);border-color:rgba(244,208,63,.28)}
@@ -203,19 +203,19 @@
   .stcdlab{flex:0 0 66px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:.04em;padding-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .stcdval{flex:1;min-width:0;color:var(--text-body)}
   .stcdval b{font-weight:700}
-  .stcdsum{font-size:12px;color:var(--text-muted);font-style:italic;line-height:1.5;margin:-3px 0 9px 76px}
+  .stcdsum{font-size:12.5px;color:var(--text-muted);font-style:italic;line-height:1.5;margin:-3px 0 9px 76px}
   .stcown{margin-top:11px;padding-top:11px;border-top:1px solid var(--border)}
   /* recall confirm — store checked < 24h ago */
   .stcdlg{margin-top:13px;border-top:1px solid var(--border);padding-top:14px}
   .stcdlg .q{font:500 13px Inter;color:var(--text-body);line-height:1.55;text-align:center}
   .stcdlg .q b{color:#f3f3f7}
   .stcdlg .yes{display:block;width:100%;text-align:center;border:none;border-radius:11px;padding:12px;margin-top:14px;font:800 13.5px Inter;background:linear-gradient(180deg,#5BEA93,#34C268);color:#06210f;cursor:pointer}
-  .stcdlg .no{display:block;text-align:center;margin-top:12px;color:var(--muted);font-weight:700;font-size:13.5px;cursor:pointer}
+  .stcdlg .no{display:block;text-align:center;margin-top:12px;color:var(--muted);font-weight:700;font-size:13px;cursor:pointer}
   /* live transcript view — identical to the website */
   .lvhead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
   .lvname{flex:1;min-width:0}
   .lvname b{font-size:15px;color:#fff;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .lvname .st{font:600 12px Inter;color:var(--green);margin-top:2px;display:flex;align-items:center;gap:6px}
+  .lvname .st{font:600 12.5px Inter;color:var(--green);margin-top:2px;display:flex;align-items:center;gap:6px}
   .pulse{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex:0 0 auto;animation:scpulse 1.4s ease-in-out infinite}
   @keyframes scpulse{0%,100%{opacity:1}50%{opacity:.32}}
   .lvstop{width:100%;margin-bottom:12px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);color:#ff8a8a;border-radius:10px;padding:10px 15px;font:800 13px Inter;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}
@@ -229,17 +229,17 @@
   .msel-car{color:#56566a;font-size:10px;flex:0 0 auto}
   .msel-menu{display:none;position:absolute;z-index:60;top:calc(100% + 5px);left:0;width:230px;max-height:300px;overflow:auto;background:var(--sheet);border:1px solid var(--border);border-radius:11px;padding:6px;box-shadow:0 14px 34px rgba(0,0,0,.55)}
   .msel-menu.open{display:block}
-  .msel-opt{display:block;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13.5px;color:#e9e9f2;white-space:nowrap;line-height:1.3}
+  .msel-opt{display:block;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:#e9e9f2;white-space:nowrap;line-height:1.3}
   .msel-opt:hover{background:var(--surface-2)}
   .msel-opt input{width:15px;height:15px;vertical-align:-2px;margin:0 9px 0 0;accent-color:var(--green)}
-  .msel-clear{display:block;width:100%;text-align:left;padding:8px 9px;margin-top:5px;border:none;border-top:1px solid var(--border);color:var(--muted);font:600 12px Inter;background:none;cursor:pointer}
+  .msel-clear{display:block;width:100%;text-align:left;padding:8px 9px;margin-top:5px;border:none;border-top:1px solid var(--border);color:var(--muted);font:600 12.5px Inter;background:none;cursor:pointer}
   /* user dashboard */
   .urow{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--border)}
   .urow:first-of-type{border-top:none}
   .ugrow{flex:1;min-width:0}
-  .uname{font-size:14px;font-weight:700;color:#eaeaf2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .uname{font-size:13px;font-weight:700;color:#eaeaf2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ucomp{font-size:10px;font-weight:700;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:1px 5px;margin-left:7px;vertical-align:1px}
-  .umeta{font-size:11.5px;color:var(--text-muted);margin-top:2px}
+  .umeta{font-size:12.5px;color:var(--text-muted);margin-top:2px}
   .uright{flex:0 0 auto;text-align:right}
   .upill{display:inline-block;font:800 11px Inter;border-radius:7px;padding:3px 9px;border:1px solid}
   .upill.in{color:var(--green);background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3)}
@@ -258,17 +258,33 @@
   .wfmtrash:hover{color:var(--red)}
   .wfmasg{margin-top:7px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
   .wfmasglab{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
-  .wfmpin{font-size:11.5px;color:var(--text-body);background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:2px 8px;white-space:nowrap}
+  .wfmpin{font-size:12.5px;color:var(--text-body);background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:2px 8px;white-space:nowrap}
   /* testing log */
   .tcrow{padding:11px 0;border-top:1px solid var(--border)}
   .tcrow:first-of-type{border-top:none}
   .tchead{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
-  .tcwf{font-size:13.5px;font-weight:700;color:#eaeaf2}
-  .tcpill{font-size:11px;font-weight:700;border:1px solid;border-radius:7px;padding:2px 8px;white-space:nowrap}
+  .tcwf{font-size:13px;font-weight:700;color:#eaeaf2}
+  .tcpill{font-size:10.5px;font-weight:700;border:1px solid;border-radius:7px;padding:2px 8px;white-space:nowrap}
   .tcop{font-size:13px;color:var(--text-strong);line-height:1.4;margin:5px 0 6px;word-break:break-word}
-  .tctime{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-muted)}
+  .tctime{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--text-muted)}
   .tctime b{color:#e8e8f0;font-variant-numeric:tabular-nums}
-  .wfmsub{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin:13px 0 7px}
+  /* Live dashboard: 5-vital hero + collapsed rows (color = state; Design card radius 16) */
+  .herog{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px}
+  .herog .v:first-child{grid-column:1/-1}
+  .v{background:var(--surface-1);border:1px solid var(--border);border-radius:16px;padding:16px}
+  .v .n{font-size:22px;font-weight:800;line-height:1;letter-spacing:-.5px}
+  .v.big .n{font-size:34px}
+  .v .l{color:var(--text-muted);font-size:10.5px;margin-top:8px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+  .v .n.g{color:var(--green)} .v .n.a{color:#FBBF24} .v .n.r{color:var(--red)} .v .n.m{color:var(--text-strong)}
+  .drow{background:var(--surface-1);border:1px solid var(--border);border-radius:16px;margin-bottom:12px;overflow:hidden}
+  .drow>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px}
+  .drow>summary::-webkit-details-marker{display:none}
+  .drow .rl{font-size:15px;font-weight:700;color:#eaeaf2}
+  .drow .rr{color:var(--text-muted);font-size:13px;display:flex;align-items:center;gap:8px;white-space:nowrap}
+  .drow .chev{transition:.2s;opacity:.7} .drow[open] .chev{transform:rotate(180deg)}
+  .drow .rbody{padding:0 16px 16px}
+  .drow .goto{color:var(--purple);font-size:13px;font-weight:700;text-decoration:none;display:block;padding:2px 16px 16px}
+  .wfmsub{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin:13px 0 7px}
   .wfmop{display:flex;gap:6px;align-items:flex-start;margin-bottom:3px}
   /* openers read as soft, WRAPPING script text (matches the Designer's .optext), with a quiet hover/focus affordance for inline edit — not abrasive single-line form boxes */
   .wfmop textarea{flex:1;min-width:0;background:transparent;border:1px solid transparent;border-radius:7px;color:var(--text-strong);font:400 13.5px/1.45 Inter;padding:6px 8px;resize:none;overflow:hidden;white-space:pre-wrap;word-break:break-word}
@@ -281,7 +297,7 @@
   .wfmadd input{flex:1;min-width:0}
   .wfmmeta{display:flex;gap:14px;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--border)}
   .wfmmeta>div{flex:1;min-width:150px}
-  .wfmmeta label{display:block;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+  .wfmmeta label{display:block;font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
   /* restock intel */
   .rsbar{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:12.5px}
   .rsbl{flex:0 0 100px;color:var(--text-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -292,7 +308,7 @@
   .rsbar b{flex:0 0 auto;min-width:18px;text-align:right;color:#e8e8f0}
   .stat.purple .n{color:var(--purple)}
   .stat.bad .n{color:var(--red)}
-  .rschip{display:inline-block;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:3px 8px;margin:0 5px 5px 0;font-size:12px;color:var(--text-body)}
+  .rschip{display:inline-block;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:3px 8px;margin:0 5px 5px 0;font-size:12.5px;color:var(--text-body)}
   .rschip b{color:var(--green)}
   .rsrow{cursor:pointer;padding-left:6px;padding-right:6px;border-radius:8px}
   .rsrow:hover{background:var(--surface-2)}
@@ -302,17 +318,17 @@
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:16px}
   .card .stats:last-child{margin-bottom:0}   /* no trailing gap when stats is the card's last row */
   .stat{background:var(--surface-1);border:1px solid var(--border-default);border-radius:var(--r-card);padding:13px 15px;min-width:104px;flex:1 1 auto}
-  .stat .n{font-size:23px;font-weight:800;line-height:1.1;letter-spacing:-.5px;color:#c7c7d2}
-  .stat .l{font-size:12px;color:var(--muted);letter-spacing:0;line-height:1.3;margin-top:4px;font-weight:500;text-transform:none}
+  .stat .n{font-size:22px;font-weight:800;line-height:1.1;letter-spacing:-.5px;color:#c7c7d2}
+  .stat .l{font-size:12.5px;color:var(--muted);letter-spacing:0;line-height:1.3;margin-top:4px;font-weight:500;text-transform:none}
   .stat.green .n{color:var(--green)}
   /* God-view "Today" hero: the day's vitals, above the fold */
   .hero{background:linear-gradient(180deg,rgba(74,222,128,.06),rgba(74,222,128,0));border:1px solid rgba(74,222,128,.18);border-radius:18px;padding:16px 20px 18px;margin-bottom:16px}
   /* Every REPORT card uses the same subtle neon-green box as the God-view TODAY box (coherence). */
   .card.report{background:linear-gradient(180deg,rgba(74,222,128,.055),rgba(74,222,128,0));border-color:rgba(74,222,128,.18)}
-  .hero-eyebrow{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--green);margin-bottom:14px}
+  .hero-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--green);margin-bottom:14px}
   .hero .stats{margin-bottom:0}
   /* TODAY hero uses the SAME rounded stat boxes as every other report — only the green-tint card + eyebrow mark it as "today" */
-  .hero .stat .n{font-size:25px}
+  .hero .stat .n{font-size:22px}
   details.card>summary{list-style:none;outline:none}
   details.card>summary::-webkit-details-marker{display:none}
   .chip-sm{display:inline-flex;align-items:center;font-size:10px;font-weight:700;color:var(--purple);background:var(--tint-purple-bg);border:1px solid var(--tint-purple-border);padding:3px 8px;border-radius:var(--r-tag-lg);margin:2px 4px 0 0}
@@ -330,7 +346,7 @@
   .carrygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
   .carryrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--muted)}
   .carryrow span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .carryrow b{color:#c7c7d2;font-size:14px;flex:0 0 auto}
+  .carryrow b{color:#c7c7d2;font-size:13px;flex:0 0 auto}
   /* stores: intel reports (by type / top regions / most-checked) */
   .repgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
   .repcol{min-width:0}
@@ -355,14 +371,14 @@
   .dnav{display:flex;align-items:center;gap:10px;margin-bottom:16px}
   .dnav button{flex:0 0 auto}
   /* Designer flow rail dots */
-  .rdot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;font:800 12px Inter}
+  .rdot{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;font:800 12.5px Inter}
   .rdot.done{background:var(--green);color:#06210f}
   .rdot.now{background:rgba(74,222,128,.16);border:2px solid var(--green);color:var(--green)}
   .rdot.lock{background:var(--surface-2);border:1px solid var(--border-medium);color:var(--text-tertiary)}
   .oprow{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-top:1px solid var(--border)}
   .oprow input[type=checkbox]{margin-top:2px}
-  .oprow .optext{flex:1;min-width:0;font-size:13.5px;line-height:1.45;color:var(--text-strong);word-break:break-word}
-  .oprow .opdel{flex:0 0 auto;padding:4px 9px;font-size:12px;color:var(--muted)}
+  .oprow .optext{flex:1;min-width:0;font-size:13px;line-height:1.45;color:var(--text-strong);word-break:break-word}
+  .oprow .opdel{flex:0 0 auto;padding:4px 9px;font-size:12.5px;color:var(--muted)}
   .daypick{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px}
   .day{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;background:transparent;border:none;padding:5px 4px;cursor:pointer;color:#cfcfd8;user-select:none}
   .day input{width:15px;height:15px;accent-color:var(--green)}
@@ -384,7 +400,7 @@
     .filters input,.filters select{width:100%;min-width:0;flex:none}
     .stats{gap:8px}
     .stat{flex:1 1 28%;min-width:0;padding:10px 8px}  /* wrap to ~3 per row so 6-stat cards don't truncate */
-    .stat .n{font-size:18px;white-space:nowrap}
+    .stat .n{font-size:19px;white-space:nowrap}
     .ractions{flex-wrap:wrap}
   }
   /* Playbook sub-nav (mobile segmented control) */
@@ -404,15 +420,15 @@
   .callrow>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 2px}
   .callrow>summary::-webkit-details-marker{display:none}
   .callrow>summary:hover,.callrow[open]>summary{background:rgba(255,255,255,.02)}
-  .callrow .cs-name{font-weight:700;font-size:14.5px;color:#f3f3f7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .callrow .cs-meta{color:var(--muted);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .callrow .cs-name{font-weight:700;font-size:15px;color:#f3f3f7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .callrow .cs-meta{color:var(--muted);font-size:12.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .callrow .calldetail{padding:2px 4px 14px}
   /* verdict column: fixed width, aligned like a table column, icon over short label */
-  .callrow>summary .cv{flex:0 0 80px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;font-size:11px;font-weight:700;line-height:1.15}
+  .callrow>summary .cv{flex:0 0 80px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;font-size:10.5px;font-weight:700;line-height:1.15}
   .callrow>summary .cv.in{color:var(--green)} .callrow>summary .cv.out{color:var(--red)}
   .callrow>summary .cv.unk,.callrow>summary .cv.soon{color:var(--yellow)} .callrow>summary .cv.gray{color:var(--muted)}
   /* directional / helper copy — visually distinct from data: dimmer, italic, never competes */
-  .hint{color:#6f6f7e;font-size:12px;font-style:italic;line-height:1.5;font-weight:400}
+  .hint{color:#6f6f7e;font-size:12.5px;font-style:italic;line-height:1.5;font-weight:400}
   .hint code{font-style:normal}
   /* ── consumer design system ports ── */
   /* Chain logo tile — pixel-parity with the consumer (.store .ic, checkit.html) per
@@ -425,30 +441,30 @@
   .slogo .mono{font-size:13px;font-weight:900;color:#d6d6e0}
   /* shared two-line text wordmark — ported verbatim from checkit.html (storeWordmark fallback) */
   .wm{display:flex;flex-direction:column;justify-content:center;align-items:center;width:100%;height:100%;padding:2px;box-sizing:border-box;overflow:hidden;text-align:center}
-  .wm span{display:block;font-weight:900;font-size:8px;line-height:1.05;letter-spacing:-.02em;text-transform:uppercase;color:#cdcdd8;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wm span{display:block;font-weight:900;font-size:10px;line-height:1.05;letter-spacing:-.02em;text-transform:uppercase;color:#cdcdd8;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sname{font-weight:800;font-size:15px;letter-spacing:-.2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .sname .nm{white-space:nowrap;flex:0 0 auto}
   .sbranch{color:#c8c8d4;font-size:12.5px;font-weight:600;margin-top:1px}
-  .smeta{color:var(--muted);font-size:12px;margin-top:2px}
+  .smeta{color:var(--muted);font-size:12.5px;margin-top:2px}
   .sdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
   .sdot.on{background:var(--green);box-shadow:0 0 6px rgba(74,222,128,.6)} .sdot.off{background:#7a7a86}
-  .vpill{display:inline-flex;flex-direction:column;align-items:center;gap:3px;text-align:center;flex:0 0 86px;max-width:86px;font-weight:800;font-size:12px;line-height:1.2}
+  .vpill{display:inline-flex;flex-direction:column;align-items:center;gap:3px;text-align:center;flex:0 0 86px;max-width:86px;font-weight:800;font-size:12.5px;line-height:1.2}
   .vpill .ve{font-size:22px;line-height:1}
   .vpill.in{color:var(--green)} .vpill.out{color:var(--red)} .vpill.unk{color:var(--yellow)} .vpill.gray{color:var(--muted)} .vpill.soon{color:#F59E0B}
   .chat{display:flex;flex-direction:column;gap:8px;margin-top:10px}
   .bub{max-width:84%;padding:9px 13px;border-radius:16px;font-size:13px;line-height:1.42;word-wrap:break-word;overflow-wrap:anywhere}
-  .bub .nm{display:block;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;opacity:.75;margin-bottom:3px}
+  .bub .nm{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;opacity:.75;margin-bottom:3px}
   .bub.a{align-self:flex-end;background:linear-gradient(180deg,rgba(74,222,128,.2),rgba(74,222,128,.13));border:1px solid rgba(74,222,128,.32);color:#eafff2;border-bottom-right-radius:5px}
   .bub.a .nm{color:var(--green)}
   .bub.c{align-self:flex-start;background:#20202b;border:1px solid var(--border);color:#e9e9f2;border-bottom-left-radius:5px}
   .bub.c .nm{color:var(--purple)}
-  .bub-note{align-self:center;font-size:12px;color:var(--muted);font-style:italic;text-align:center;padding:2px 0}
+  .bub-note{align-self:center;font-size:12.5px;color:var(--muted);font-style:italic;text-align:center;padding:2px 0}
   details.tr{margin-top:10px}
-  details.tr>summary{list-style:none;cursor:pointer;font-size:12px;color:var(--purple);font-weight:700;display:inline-flex;align-items:center;gap:6px}
+  details.tr>summary{list-style:none;cursor:pointer;font-size:12.5px;color:var(--purple);font-weight:700;display:inline-flex;align-items:center;gap:6px}
   details.tr>summary::-webkit-details-marker{display:none}
-  .daychip{display:inline-block;font-size:11px;font-weight:700;color:#62626f;background:transparent;border:none;border-radius:0;padding:0;margin-right:9px;letter-spacing:.2px}
+  .daychip{display:inline-block;font-size:10.5px;font-weight:700;color:#62626f;background:transparent;border:none;border-radius:0;padding:0;margin-right:9px;letter-spacing:.2px}
   .daychip.on{color:var(--green);background:transparent;border:none}
-  .catchip{display:inline-flex;align-items:center;gap:8px;background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:12px 16px;font-weight:800;font-size:14px}
+  .catchip{display:inline-flex;align-items:center;gap:8px;background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:12px 16px;font-weight:800;font-size:13px}
   .empty{color:var(--muted);font-size:13px;padding:34px 20px;text-align:center;background:var(--sheet);border:1px dashed var(--border);border-radius:16px}
   body.authwait header,body.authwait nav,body.authwait main,body.authwait .agent-fab,body.authwait .agent-panel{display:none}
   /* drawn-icon chrome (replaces emoji) */
@@ -492,21 +508,21 @@
   .agent-panel{position:fixed;right:20px;bottom:20px;z-index:61;width:min(420px,calc(100vw - 32px));height:min(620px,calc(100dvh - 90px));
     display:flex;flex-direction:column;background:#0d0d15;border:1px solid var(--border);border-radius:18px;overflow:hidden;overscroll-behavior:contain;box-shadow:0 24px 60px -12px rgba(0,0,0,.7)}
   .agent-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border);background:rgba(74,222,128,.06)}
-  .agent-title{font-weight:800;font-size:14px;color:#fff;display:inline-flex;align-items:center;gap:8px}
-  .agent-model{margin-left:auto;margin-right:8px;max-width:170px;background:#08080c;color:#cdcdd8;border:1px solid var(--border);border-radius:9px;padding:5px 7px;font-size:11.5px;font-weight:600;cursor:pointer}
-  .agent-x{background:none;border:none;color:var(--muted);font-size:24px;line-height:1;cursor:pointer;padding:0 4px}
+  .agent-title{font-weight:800;font-size:13px;color:#fff;display:inline-flex;align-items:center;gap:8px}
+  .agent-model{margin-left:auto;margin-right:8px;max-width:170px;background:#08080c;color:#cdcdd8;border:1px solid var(--border);border-radius:9px;padding:5px 7px;font-size:12.5px;font-weight:600;cursor:pointer}
+  .agent-x{background:none;border:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:0 4px}
   .agent-x:hover{color:#fff}
   .agent-log{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:14px;display:flex;flex-direction:column;gap:10px}
-  .agent-msg{max-width:86%;padding:9px 12px;border-radius:13px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+  .agent-msg{max-width:86%;padding:9px 12px;border-radius:13px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
   .agent-msg.user{align-self:flex-end;background:var(--ptint);border:1px solid var(--pline);color:#fff;border-bottom-right-radius:4px}
   .agent-msg.bot{align-self:flex-start;background:rgba(255,255,255,.04);border:1px solid var(--border);color:#e7e7ef;border-bottom-left-radius:4px}
   .agent-msg.err{align-self:flex-start;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#fca5a5}
   .agent-acts{align-self:flex-start;max-width:86%;display:flex;flex-direction:column;gap:4px;margin-top:-4px}
-  .agent-act{font-size:11.5px;color:var(--green);background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);border-radius:8px;padding:4px 9px;display:inline-flex;align-items:center;gap:6px}
+  .agent-act{font-size:12.5px;color:var(--green);background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.25);border-radius:8px;padding:4px 9px;display:inline-flex;align-items:center;gap:6px}
   .agent-empty{color:var(--muted);font-size:13px;text-align:center;margin:auto;padding:20px;line-height:1.6}
   .agent-typing{align-self:flex-start;color:var(--muted);font-size:13px;padding:4px 2px}
   .agent-input{display:flex;gap:8px;align-items:flex-end;padding:12px;border-top:1px solid var(--border)}
-  .agent-input textarea{flex:1;resize:none;min-height:60px;max-height:160px;background:#08080c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:11px 13px;font:inherit;font-size:14.5px;line-height:1.45}
+  .agent-input textarea{flex:1;resize:none;min-height:60px;max-height:160px;background:#08080c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:11px 13px;font:inherit;font-size:15px;line-height:1.45}
   body.agent-open{overflow:hidden}
   .agent-send{flex:0 0 auto;width:40px;height:40px;border-radius:11px;border:none;cursor:pointer;background:var(--green);display:grid;place-items:center}
   .agent-send:disabled{opacity:.4;cursor:default}
@@ -540,51 +556,20 @@
 
   <!-- GOD VIEW: the day's command center — vitals above the fold, business folded in -->
   <section id="dash" class="active">
-    <div id="dash_overview">
-    <div class="hero">
-      <div class="hero-eyebrow">Today</div>
-      <div class="stats" id="d_today"></div>
-    </div>
-    <div class="card report">
-      <div class="name">Today's pulse</div>
-      <div id="gw_pulse" class="meta">Loading…</div>
-    </div>
-    <div class="card report" id="d_money_card">
-      <div class="name">Business &amp; money</div>
-      <div class="stats" id="d_money" style="margin-bottom:0"></div>
-    </div>
-    <div class="card" id="credit_card">
-      <div class="row" style="justify-content:space-between;align-items:baseline">
-        <div class="name">ElevenLabs credits</div>
-        <div class="meta" id="credit_src"></div>
-      </div>
-      <div style="height:10px;background:var(--terminal);border-radius:6px;overflow:hidden;margin:12px 0 8px">
-        <div id="credit_bar" style="height:100%;width:0%;background:var(--green);transition:width .3s"></div>
-      </div>
+    <h2 style="margin-bottom:2px">Today</h2>
+    <div class="meta" id="d_date" style="margin:0 0 20px">Loading…</div>
+    <div class="herog" id="d_hero"></div>
+    <details class="drow"><summary><span class="rl">Today's pulse</span><span class="rr" id="drs_pulse"><span class="chev">▾</span></span></summary><div class="rbody" id="gw_pulse" style="padding-top:2px">Loading…</div></details>
+    <details class="drow"><summary><span class="rl">Money</span><span class="rr" id="drs_money"><span class="chev">▾</span></span></summary><div class="rbody"><div class="stats" id="d_money"></div></div><a class="goto" href="#calc" onclick="showSection('calc');return false">Open the full money view in Calc →</a></details>
+    <details class="drow"><summary><span class="rl">Call time &amp; cost</span><span class="rr" id="drs_timing"><span class="chev">▾</span></span></summary><div class="rbody"><div class="meta" data-tip="We're billed for the whole call (ring, menu, hold, talk), so reaching someone is real cost." style="margin:2px 0 10px">Time to reach a person vs. talk time.</div><div class="stats" id="d_timing"></div><div id="d_timing_model"></div><div id="d_timing_status"></div><details style="margin-top:8px"><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details></div></details>
+    <details class="drow"><summary><span class="rl">Call data health</span><span class="rr" id="drs_dhealth"><span class="chev">▾</span></span></summary><div class="rbody"><div class="meta" data-tip="Real dialed calls vs. seed and rehearsal. The true first call ignores seed rows and the Fun store." style="margin:2px 0 10px">Real dialed calls vs. seed and rehearsal.</div><div id="d_health" class="meta">Loading…</div></div><a class="goto" href="#results" onclick="showSection('results');return false">Open the call log in Calls →</a></details>
+    <details class="drow"><summary><span class="rl">ElevenLabs credits</span><span class="rr" id="drs_credits"><span class="chev">▾</span></span></summary><div class="rbody">
+      <div style="height:10px;background:var(--terminal);border-radius:6px;overflow:hidden;margin:4px 0 8px"><div id="credit_bar" style="height:100%;width:0%;background:var(--green);transition:width .3s"></div></div>
       <div id="credit_body" class="meta">Loading…</div>
       <div id="credit_stats" class="meta" style="margin-top:6px"></div>
-      <div id="credit_limit_wrap" style="display:none;margin-top:12px">
-        <div class="hint" style="margin-bottom:8px">Estimate from the last 31 days <span data-tip="Enable user_read on the ElevenLabs API key for a live, auto-updating balance."></span>. Enter your plan size below until live balance is on.</div>
-        <div class="row" style="gap:8px">
-          <input id="credit_limit" type="number" placeholder="Plan size, e.g. 100000" style="flex:1">
-          <button class="ghost" onclick="saveCreditLimit()">Save</button>
-        </div>
-      </div>
-    </div>
-    <details class="card report" id="d_timing_card" open>
-      <summary style="cursor:pointer"><span class="name">Call time &amp; cost</span></summary>
-      <div class="meta" style="margin:10px 0 8px">Time to reach a person vs. talk time. We're billed for the whole call (ring, menu, hold, talk), so reaching someone is real cost.</div>
-      <div class="stats" id="d_timing"></div>
-      <div id="d_timing_model"></div>
-      <div id="d_timing_status"></div>
-      <details style="margin-top:6px"><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details>
-    </details>
-    <details class="card report" id="d_health_card" open>
-      <summary style="cursor:pointer"><span class="name">Call data health</span></summary>
-      <div class="meta" style="margin:10px 0 8px">The unfiltered truth about every call row. real dialed calls vs. seed / rehearsal / never-placed. The true first call ignores seed rows and the "Fun" rehearsal store.</div>
-      <div id="d_health" class="meta">Loading…</div>
-    </details>
-    </div>
+      <div class="meta" id="credit_src" style="margin-top:6px"></div>
+      <div id="credit_limit_wrap" style="display:none;margin-top:12px"><div class="hint" style="margin-bottom:8px">Estimate from the last 31 days.</div><div class="row" style="gap:8px"><input id="credit_limit" type="number" placeholder="Plan size, e.g. 100000" style="flex:1"><button class="ghost" onclick="saveCreditLimit()">Save</button></div></div>
+    </div></details>
   </section>
   <section id="calc"><div id="calc_root"></div></section>
   <section id="users">
@@ -593,18 +578,18 @@
   </section>
   <section id="restock">
     <h2>Restock intel</h2>
-    <div class="meta" style="margin:0 0 13px">When stores restock + what's landing. learned from real call data. Tap a store for its own breakdown.</div>
+    <div class="meta" style="margin:0 0 13px">When stores restock, and what's landing. <span data-tip="Learned from real call data. Tap a store for its own breakdown."></span></div>
     <div id="restock_detail"></div>
     <div id="restock_net" class="meta">Loading…</div>
   </section>
   <section id="workflows">
     <h2>Workflows</h2>
-    <div class="meta" style="margin:0 0 13px">Each workflow is a saved <b>opener set + voice + persona</b>. The <b style="color:var(--green)">★ default</b> powers every store; assign others per chain/store in Stores. Build new ones in Voice → Designer, then edit their openers here.</div>
+    <div class="meta" style="margin:0 0 13px">Each workflow is a saved <b>opener set + voice + persona</b>. <span data-tip="The ★ default powers every store; assign others per chain/store in Stores. Build new ones in Voice → Designer, then edit openers here."></span></div>
     <div id="wfm_list" class="meta">Loading…</div>
   </section>
   <section id="testing">
     <h2>Testing</h2>
-    <div class="meta" style="margin:0 0 13px">Your test-call log. <b>owner-only / Fun stores only</b>. These never touch the real-store numbers. Call yourself, mess with the caller, and read back the workflow, the exact opener used in rotation, the status, and the timing.</div>
+    <div class="meta" style="margin:0 0 13px">Your test-call log. <b>Owner-only, Fun stores only.</b> <span data-tip="These never touch the real-store numbers. Call yourself, mess with the caller, and read back the workflow, the opener used in rotation, the status, and the timing."></span></div>
     <div id="testing_summary"></div>
     <div id="testing_log" class="meta">Loading…</div>
   </section>
@@ -680,7 +665,7 @@
           <option value="Pacific/Honolulu">Hawaii · Pacific/Honolulu</option>
         </select></div>
       </div>
-      <label data-tip="How to reach the right person">Phone tree</label>
+      <label data-tip="How to reach the right person">Phone menu</label>
       <textarea id="r_tree" rows="2" placeholder="When asked if you're a healthcare provider, say no. Then ask for the front store."></textarea>
       <div style="margin-top:12px"><button class="act" onclick="addRetailer()">Add store</button></div>
     </div>
@@ -733,7 +718,7 @@
         <label class="day"><input type="checkbox" value="6">Sat</label>
       </div>
       <label>Question</label>
-      <textarea id="s_q" rows="2" style="font-size:14px">Hi! I was just checking to see if you have any {category} in stock right now?</textarea>
+      <textarea id="s_q" rows="2" style="font-size:13px">Hi! I was just checking to see if you have any {category} in stock right now?</textarea>
       <label>Clarification / what doesn't count</label>
       <textarea id="s_clar" rows="2" placeholder="Sealed packs/tins/boxes from The Pokémon Company. Repackaged or off-brand does NOT count."></textarea>
       <div style="margin-top:12px"><button class="act" onclick="addSchedule()">Create</button></div>
@@ -751,7 +736,7 @@
     <div class="card report">
       <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px">
         <div class="name">Emailed-in receipts</div>
-        <button class="ghost" style="font-size:12px;padding:5px 10px" onclick="inspectInbox()">Inspect inbox</button>
+        <button class="ghost" style="font-size:12.5px;padding:5px 10px" onclick="inspectInbox()">Inspect inbox</button>
         <span data-tip="Reads the ingest inbox and shows how each email parsed, whether a receipt landed, and why." style="margin-left:7px;cursor:help"></span>
       </div>
       <div class="meta" id="rcpt_status" style="margin-bottom:8px">Loading…</div>
@@ -876,7 +861,7 @@
       <div class="card dstep" data-step="3" style="display:none">
         <div class="name">Step 3 · Script</div>
         <label data-tip="Use {category}, fills in Pokémon, One Piece, etc.">Write a new opener</label>
-        <textarea id="rot_opener_new" rows="3" style="font-size:14px;line-height:1.5" placeholder="e.g. Heyy! Got any {category} in today?"></textarea>
+        <textarea id="rot_opener_new" rows="3" style="font-size:13px;line-height:1.5" placeholder="e.g. Heyy! Got any {category} in today?"></textarea>
         <div class="btnrow"><button class="ghost" onclick="addOpener()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save opener</button></div>
         <label style="margin-top:14px">Your openers <span id="rot_opener_count" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></label>
         <div id="rot_opener_list" style="margin-top:4px"></div>
@@ -887,7 +872,7 @@
         <label>Persona name</label><input id="pn_name" placeholder="e.g. Friendly Jared">
         <label>Base personality</label>
         <div id="pn_base" class="row" style="gap:6px"></div>
-        <label>Tone &amp; style</label><textarea id="pn_tone" rows="3" style="font-size:14px"></textarea>
+        <label>Tone &amp; style</label><textarea id="pn_tone" rows="3" style="font-size:13px"></textarea>
         <label>Style toggles</label>
         <div style="display:flex;flex-direction:column;gap:8px">
           <label class="day" style="margin:0"><input id="pn_slang" type="checkbox"> Casual slang</label>
@@ -1005,14 +990,14 @@
         <div class="name" data-tip="Edit the icon, label, color or tone. Consumer + Test Bench verdicts update instantly">What customers see</div>
         <div id="st_list"><div class="empty">Loading…</div></div>
         <div style="height:1px;background:var(--border);margin:14px 0"></div>
-        <div class="name" style="font-size:14px">Add a status</div>
+        <div class="name" style="font-size:13px">Add a status</div>
         <div class="row" style="gap:8px">
-          <button type="button" class="sticon-btn" id="st_new_icon_btn" onclick="pickNewStatusIcon()" title="Pick an icon"><span class="meta" style="font-size:9px">icon</span></button>
+          <button type="button" class="sticon-btn" id="st_new_icon_btn" onclick="pickNewStatusIcon()" title="Pick an icon"><span class="meta" style="font-size:10px">icon</span></button>
           <input type="hidden" id="st_new_emoji" value="">
           <input id="st_new_label" placeholder="Label (e.g. Holding one for you)" style="flex:1">
         </div>
         <input id="st_new_note" placeholder="Message the customer sees" style="margin-top:6px">
-        <div class="meta" style="margin-top:5px;font-size:11px;line-height:1.45">Use <code>{product}</code> for the live product name · <code>&lt;b&gt;…&lt;/b&gt;</code> to bold.</div>
+        <div class="meta" style="margin-top:5px;font-size:10.5px;line-height:1.45">Use <code>{product}</code> for the live product name · <code>&lt;b&gt;…&lt;/b&gt;</code> to bold.</div>
         <div class="row" style="gap:8px;margin-top:6px">
           <select id="st_new_tone" style="max-width:170px">
             <option value="in">In stock</option>
@@ -1097,8 +1082,8 @@ function showAuthGate(){
   d.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(8,8,12,.94);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:24px;animation:secIn .2s ease';
   d.innerHTML='<div style="text-align:center;max-width:330px">'
     +'<div style="width:62px;height:62px;border-radius:50%;margin:0 auto 18px;display:grid;place-items:center;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>'
-    +'<div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:7px;letter-spacing:-.2px">Admin login required</div>'
-    +'<div style="font-size:13.5px;color:#9a9aac;line-height:1.5;margin-bottom:22px">Your session isn’t active, so the dashboard can’t load. Log in to continue.</div>'
+    +'<div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:7px;letter-spacing:-.2px">Admin login required</div>'
+    +'<div style="font-size:13px;color:#9a9aac;line-height:1.5;margin-bottom:22px">Your session isn’t active, so the dashboard can’t load. Log in to continue.</div>'
     +'<a href="/admin-login" style="display:inline-block;background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;font-weight:800;font-size:15px;padding:13px 30px;border-radius:12px;text-decoration:none;box-shadow:0 8px 20px -6px rgba(52,197,107,.5)">Log in</a></div>';
   document.body.appendChild(d);
 }
@@ -1135,7 +1120,7 @@ const NAV_GROUPS={
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['workflows','Workflows','note'],['testing','Testing','phone-call'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
 function renderGroupNav(){
@@ -1213,8 +1198,8 @@ async function inspectInbox(){
     rows.map(r=>{ const p=r.parsed||{};
       const head=`<b style="color:${r.stored?'var(--green)':'#ff8a8a'}">${r.stored?'✓ parses':'✗ rejected'}</b> · ${esch(r.from||'?')} · ${dt(r.date)}`;
       const fields=r.stored
-        ?`<div class="meta" style="font-size:11px">machine ${esch(p.machineId||'—')} · ${esch(p.product||'—')} · $${esch(p.total||'—')}</div>`
-        :`<div class="meta" style="font-size:11px;color:#9aa">${esch((r.snippet||'').slice(0,200))}…</div>`;
+        ?`<div class="meta" style="font-size:10.5px">machine ${esch(p.machineId||'—')} · ${esch(p.product||'—')} · $${esch(p.total||'—')}</div>`
+        :`<div class="meta" style="font-size:10.5px;color:#9aa">${esch((r.snippet||'').slice(0,200))}…</div>`;
       return `<div style="padding:7px 0;border-top:1px solid var(--border)">${head}<div style="font-size:12.5px;color:var(--text)">${esch(r.subject||'(no subject)')}</div>${fields}</div>`;
     }).join('');
 }
@@ -1258,7 +1243,7 @@ async function loadRuns(chainId, box){
     const mx=(r.steps||[]).map(st=>{
       const us=st.who==='us';
       const did=us?((st.action||'')+(st.value?(' '+st.value):'')):'heard';
-      return `<div style="display:grid;grid-template-columns:42px 1fr auto;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12px;align-items:start">
+      return `<div style="display:grid;grid-template-columns:42px 1fr auto;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:12.5px;align-items:start">
         <span class="meta">${st.atSec}s</span><span style="color:#cfcfe0;overflow-wrap:anywhere">${esch(st.text||'')}</span>
         <span style="font-weight:600;white-space:nowrap;color:${us?'var(--text-body)':'var(--muted)'}">${esch(did)}</span></div>`;
     }).join('');
@@ -1381,10 +1366,11 @@ async function loadCallTiming(){
   if(!d||d.error||!d.aggregate||!d.aggregate.calls){ el.innerHTML='<div class="meta">No timed calls yet. this fills in as calls come through.</div>'; if(md)md.innerHTML=''; if(stt)stt.innerHTML=''; if(se)se.innerHTML=''; return; }
   const a=d.aggregate, tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   el.innerHTML = tile(secsFmt(a.avgTalkSec),'avg talk','green')+tile(secsFmt(a.avgNavSec),'avg to human')+tile(secsFmt(a.avgCallSec),'avg call')+tile(a.totalMinutes+'m','total minutes')+tile(a.calls,'calls timed');
+  const _st=document.getElementById('drs_timing'); if(_st) _st.innerHTML=`${secsFmt(a.avgTalkSec)} talk · ${a.calls} call${a.calls===1?'':'s'} <span class="chev">▾</span>`;
   // By model (Charlie direct · Alpha tone tree · Bravo voice tree) — the split that matters: time-to-human + talk per call type.
   if(md) md.innerHTML=(d.byModel&&d.byModel.length)?('<div class="rgrp" style="margin-top:12px">By model · all-time</div>'
     +d.byModel.map(m=>`<div class="repline"><span class="rl"><b style="color:#e8e8f0">${esch(m.model)}</b> <span class="meta">· ${esch(m.type)} · ${m.n} call${m.n===1?'':'s'}</span></span><b>${secsFmt(m.avgNavSec)} to human · <span style="color:var(--green)">${secsFmt(m.avgTalkSec)} talk</span> · ${secsFmt(m.avgCallSec)} call</b></div>`).join('')
-    +'<div class="meta" style="margin-top:6px;font-size:11px">Alpha/Bravo “talk” still counts phone-tree time until we tag the live-human handoff per call. Charlie (direct) is exact.</div>'):'';
+    +'<div class="meta" style="margin-top:6px;font-size:10.5px">Alpha/Bravo “talk” still counts phone menu time until we tag the live-human handoff per call. Charlie (direct) is exact.</div>'):'';
   // Talk time per verdict.
   if(stt) stt.innerHTML=(d.byStatus&&d.byStatus.length)?('<div class="rgrp" style="margin-top:12px">Talk time by status</div>'
     +d.byStatus.map(s=>{const lbl=(STATUSES[s.key]&&STATUSES[s.key].label)||s.key;return `<div class="repline"><span class="rl">${esch(lbl)} <span class="meta">· ${s.n} call${s.n===1?'':'s'}</span></span><b><span style="color:var(--green)">${secsFmt(s.avgTalkSec)} talk</span> · ${secsFmt(s.avgCallSec)} call</b></div>`;}).join('')):'';
@@ -1422,31 +1408,31 @@ function calcInit(){
 }
 function calcShell(){
   const seg=Object.keys(CALC_STORE).map(t=>`<button type="button" id="calc_seg_${t}" onclick="calcPick('${t}')" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(CALC_STORE[t].nc)}${t}</span><span style="font-size:10.5px;color:var(--text-tertiary)">${CALC_STORE[t].sub}</span></button>`).join('');
-  const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:11.5px;color:var(--text-muted)">${label}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px 2px;width:62px"><span style="color:var(--text-tertiary);font-size:11px">${suf}</span></span></label>`;
+  const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--text-muted)">${label}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:8px 2px;width:62px"><span style="color:var(--text-tertiary);font-size:10.5px">${suf}</span></span></label>`;
   return `
   <div class="hero" style="margin-bottom:14px">
     <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
       <div><div class="hero-eyebrow">ALL-IN COST / CALL</div>
-        <div id="calc_total" style="font-size:46px;font-weight:800;color:var(--green);letter-spacing:-.02em;line-height:1.05;margin-top:6px;font-variant-numeric:tabular-nums">$0.000</div></div>
+        <div id="calc_total" style="font-size:34px;font-weight:800;color:var(--green);letter-spacing:-.02em;line-height:1.05;margin-top:6px;font-variant-numeric:tabular-nums">$0.000</div></div>
       <div id="calc_chip" style="display:inline-flex;flex-direction:column;align-items:flex-end;gap:2px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:8px 12px"></div>
     </div>
     <div id="calc_strip" style="display:flex;height:30px;border-radius:9px;overflow:hidden;margin-top:16px;background:var(--surface-1);border:1px solid var(--border)"></div>
-    <div id="calc_legend" class="row" style="gap:14px;margin-top:10px;align-items:center;font-size:12px"></div>
+    <div id="calc_legend" class="row" style="gap:14px;margin-top:10px;align-items:center;font-size:12.5px"></div>
   </div>
   <div class="card report">
     <div class="name">Scenario</div>
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Store type</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px">${seg}</div>
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px"><span style="font-size:13px;color:var(--text-muted)">Navigation time</span><span style="font-family:ui-monospace,monospace;font-size:18px;font-weight:700"><span id="calc_navval">0</span><span style="font-size:12px;color:var(--text-tertiary)">s</span></span></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px"><span style="font-size:13px;color:var(--text-muted)">Navigation time</span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700"><span id="calc_navval">0</span><span style="font-size:12.5px;color:var(--text-tertiary)">s</span></span></div>
     <input id="calc_nav" type="range" min="0" max="120" value="${CALC.nav}" oninput="calcSetNav(this.value)">
-    <div id="calc_navnote" style="font-size:11px;color:var(--text-tertiary);margin-top:2px;display:none">direct line. no menu</div>
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin:14px 0 2px"><span style="font-size:13px;color:var(--text-muted)">Talk time with human</span><span style="font-family:ui-monospace,monospace;font-size:18px;font-weight:700"><span id="calc_talkval">0</span><span style="font-size:12px;color:var(--text-tertiary)">s</span></span></div>
+    <div id="calc_navnote" style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px;display:none">direct line. no menu</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin:14px 0 2px"><span style="font-size:13px;color:var(--text-muted)">Talk time with human</span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700"><span id="calc_talkval">0</span><span style="font-size:12.5px;color:var(--text-tertiary)">s</span></span></div>
     <input id="calc_talk" type="range" min="0" max="120" value="${CALC.talk}" oninput="calcSetTalk(this.value)">
   </div>
   <div class="card report">
     <div class="name">Breakdown</div>
     <div id="calc_breakdown"></div>
-    <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border-dashed)"><span style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700">FLAT MONTHLY · ≈ $0.000 / CALL</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${['Railway compute','Twilio number rental','Helicone gateway','TiDB'].map(f=>`<span style="font-size:11px;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:7px;padding:3px 8px">${f}</span>`).join('')}</div></div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border-dashed)"><span style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700">FLAT MONTHLY · ≈ $0.000 / CALL</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${['Railway compute','Twilio number rental','Helicone gateway','TiDB'].map(f=>`<span style="font-size:10.5px;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:7px;padding:3px 8px">${f}</span>`).join('')}</div></div>
   </div>
   <div class="card report">
     <div class="name">Rate card · editable</div>
@@ -1454,17 +1440,17 @@ function calcShell(){
   </div>
   <div class="card report">
     <div class="name">Total / call by talk time</div>
-    <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:12px">nav held at each type's default · Alpha 30s · Bravo 50s · Direct 0s</div>
+    <div style="font-size:10.5px;color:var(--text-tertiary);margin-bottom:12px">nav held at each type's default · Alpha 30s · Bravo 50s · Direct 0s</div>
     <div style="overflow-x:auto"><table id="calc_matrix" style="border-collapse:separate;border-spacing:0;width:100%;min-width:360px"></table></div>
   </div>
   <div class="card report">
     <div class="name">Margin</div>
     <div class="row" style="gap:12px">
-      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Revenue / call</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:10px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:20px;font-weight:700;padding:10px 2px;width:84px"></span></div>
-      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Margin</span><div id="calc_margin" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0%</div></div>
-      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">× return <span data-tip="Revenue ÷ cost. How many times the call pays for itself."></span></span><div id="calc_return" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0×</div></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">Revenue / call</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:10px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:22px;font-weight:700;padding:10px 2px;width:84px"></span></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">Margin</span><div id="calc_margin" style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0%</div></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">× return <span data-tip="Revenue ÷ cost. How many times the call pays for itself."></span></span><div id="calc_return" style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0×</div></div>
     </div>
-    <div id="calc_sentence" style="margin-top:14px;font-size:13.5px;color:var(--text-muted);line-height:1.5"></div>
+    <div id="calc_sentence" style="margin-top:14px;font-size:13px;color:var(--text-muted);line-height:1.5"></div>
   </div>`;
 }
 function calcPick(t){ CALC.storeType=t; CALC.nav=CALC_STORE[t].nav; calcSync(); calcUpdate(); }
@@ -1485,18 +1471,18 @@ function calcUpdate(){
   const set=(id,html)=>{ const e=document.getElementById(id); if(e) e.innerHTML=html; };
   const txt=(id,t)=>{ const e=document.getElementById(id); if(e) e.textContent=t; };
   txt('calc_total',calcMoney(total)); txt('calc_navval',CALC.nav); txt('calc_talkval',CALC.talk);
-  set('calc_chip',`<span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(st.nc)}${st.label}</span><span style="font-size:11px;color:var(--text-muted)">${dur}s call</span>`);
+  set('calc_chip',`<span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(st.nc)}${st.label}</span><span style="font-size:10.5px;color:var(--text-muted)">${dur}s call</span>`);
   const tot=Math.max(dur,1), navPct=CALC.nav/tot*100, talkPct=CALC.talk/tot*100;
   let strip='';
-  if(CALC.nav>0) strip+=`<div style="width:${navPct}%;background:linear-gradient(180deg,${st.nc},${st.nc}99);display:flex;align-items:center;justify-content:center">${navPct>14?'<span style="font-size:9.5px;font-weight:800;letter-spacing:.1em;color:#0B0E14">NAV</span>':''}</div>`;
-  if(CALC.talk>0) strip+=`<div style="width:${talkPct}%;background:linear-gradient(180deg,var(--purple),#A78BFA);display:flex;align-items:center;justify-content:center;border-left:${CALC.nav>0?'1px solid rgba(11,14,20,.6)':'none'}">${talkPct>14?'<span style="font-size:9.5px;font-weight:800;letter-spacing:.1em;color:#0B0E14">TALK · CHARLIE</span>':''}</div>`;
+  if(CALC.nav>0) strip+=`<div style="width:${navPct}%;background:linear-gradient(180deg,${st.nc},${st.nc}99);display:flex;align-items:center;justify-content:center">${navPct>14?'<span style="font-size:10px;font-weight:800;letter-spacing:.1em;color:#0B0E14">NAV</span>':''}</div>`;
+  if(CALC.talk>0) strip+=`<div style="width:${talkPct}%;background:linear-gradient(180deg,var(--purple),#A78BFA);display:flex;align-items:center;justify-content:center;border-left:${CALC.nav>0?'1px solid rgba(11,14,20,.6)':'none'}">${talkPct>14?'<span style="font-size:10px;font-weight:800;letter-spacing:.1em;color:#0B0E14">TALK · CHARLIE</span>':''}</div>`;
   if(dur===0) strip='<div style="width:100%;opacity:.3"></div>';
   set('calc_strip',strip);
-  set('calc_legend',`<span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);opacity:${isDirect?.4:1}">${calcDot(st.nc)}nav ${CALC.nav}s</span><span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted)">${calcDot('var(--purple)')}talk ${CALC.talk}s</span><span style="flex:1"></span><span style="font-size:11px;color:var(--text-tertiary)">${calcMoney(total/Math.max(dur,1))}/s effective</span>`);
-  set('calc_breakdown',items.map(it=>`<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)"><span style="width:3px;height:30px;border-radius:3px;flex-shrink:0;background:${it.accent}"></span><div style="flex:1;min-width:0"><div style="font-size:13.5px;color:var(--text-strong)">${it.label}</div><div style="font-size:11px;color:var(--text-tertiary);margin-top:2px">${it.detail}</div></div><div style="font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:${it.amount===0?'var(--text-tertiary)':'var(--text-primary)'}">${calcMoney(it.amount)}</div></div>`).join('')+`<div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px"><div style="font-size:14px;font-weight:700">All-in / call</div><div style="font-size:22px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums">${calcMoney(total)}</div></div>`);
+  set('calc_legend',`<span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);opacity:${isDirect?.4:1}">${calcDot(st.nc)}nav ${CALC.nav}s</span><span style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted)">${calcDot('var(--purple)')}talk ${CALC.talk}s</span><span style="flex:1"></span><span style="font-size:10.5px;color:var(--text-tertiary)">${calcMoney(total/Math.max(dur,1))}/s effective</span>`);
+  set('calc_breakdown',items.map(it=>`<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border)"><span style="width:3px;height:30px;border-radius:3px;flex-shrink:0;background:${it.accent}"></span><div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--text-strong)">${it.label}</div><div style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px">${it.detail}</div></div><div style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:${it.amount===0?'var(--text-tertiary)':'var(--text-primary)'}">${calcMoney(it.amount)}</div></div>`).join('')+`<div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px"><div style="font-size:13px;font-weight:700">All-in / call</div><div style="font-size:22px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums">${calcMoney(total)}</div></div>`);
   const rows=['Alpha','Bravo','Direct'].map(t=>({type:t,row:CALC_TALK.map(tk=>calcCompute(t,CALC_STORE[t].nav,tk,CALC.rates).total)}));
   const flat=[]; rows.forEach(r=>flat.push(...r.row)); const mn=Math.min(...flat), mx=Math.max(...flat), heat=v=>mx===mn?0:(v-mn)/(mx-mn);
-  let mt=`<thead><tr><th style="font-size:11px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border-strong)">Store</th>${CALC_TALK.map(c=>`<th style="font-size:11px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:right;border-bottom:1px solid var(--border-strong)">${c}s</th>`).join('')}</tr></thead><tbody>`;
+  let mt=`<thead><tr><th style="font-size:10.5px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border-strong)">Store</th>${CALC_TALK.map(c=>`<th style="font-size:10.5px;color:var(--text-muted);font-weight:600;padding:6px 8px;text-align:right;border-bottom:1px solid var(--border-strong)">${c}s</th>`).join('')}</tr></thead><tbody>`;
   rows.forEach(({type,row})=>{ const sel=type===CALC.storeType, c=CALC_STORE[type].nc;
     mt+=`<tr><th style="font-size:12.5px;color:${sel?'var(--text-primary)':'var(--text-muted)'};font-weight:600;text-align:left;padding:8px;white-space:nowrap">${calcDot(c)} ${type}</th>`+row.map(v=>`<td style="font-size:12.5px;font-weight:600;text-align:right;padding:10px 8px;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--border);background:rgba(74,222,128,${(0.04+heat(v)*0.22).toFixed(3)});outline:${sel?'1px solid '+(c[0]==='#'?c+'55':'var(--purple)'):'none'}">${calcMoney(v)}</td>`).join('')+`</tr>`; });
   set('calc_matrix',mt+'</tbody>');
@@ -1507,30 +1493,33 @@ function calcUpdate(){
 }
 async function loadDash(){
   loadCallTiming();
-  const [o,m]=await Promise.all([api('/api/admin/overview'),api('/api/admin/metrics')]);
+  const $$=v=>'$'+((v||0)/100).toFixed(2);
+  const [o,m,ri,c]=await Promise.all([api('/api/admin/overview'),api('/api/admin/metrics'),api('/api/admin/restock-intel'),api('/api/credits')]);
+  const de=document.getElementById('d_date'); if(de) de.textContent=new Date().toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
   const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
-  if(o&&!o.error){
-    CHAIN_STATS=o.chainStats||[];
-    // Today hero — the day's vital signs (above the fold)
-    document.getElementById('d_today').innerHTML=
-      st(o.today.calls,'checks 24h')+
-      st(o.today.confirms,'confirmed','green')+
-      st(o.live.length,'live now',o.live.length?'green':'')+
-      st(secsFmt(o.today.avgCallSeconds||o.avgCallSeconds30d),'avg call');
-    // (Live-right-now removed from God view per owner direction.)
-  }
+  // ---- Hero: the 5 vitals you check first. Color = state, before you read the number. ----
+  const checks=(o&&o.today)?(o.today.calls||0):0, confirms=(o&&o.today)?(o.today.confirms||0):0;
+  const af=(ri&&ri.answerFunnel)||{}; const reach=af.dialed?Math.round((af.reachedHuman/af.dialed)*100):null;
+  const pctLeft=(c&&c.limit)?Math.max(0,Math.min(100,Math.round((c.remaining/c.limit)*100))):null;
+  const margin=(m&&m.marginPct!=null)?Math.round(m.marginPct):null;
+  const v=(n,l,cls,big)=>`<div class="v${big?' big':''}"><div class="n ${cls}">${n}</div><div class="l">${esch(l)}</div></div>`;
+  const hero=document.getElementById('d_hero');
+  if(hero) hero.innerHTML=
+    v(checks,'Checks today',checks>0?'g':'m',true)+
+    v(confirms,'Confirms',confirms>0?'g':'m')+
+    v(reach==null?'—':reach+'%','Reach rate',reach==null?'m':(reach>=60?'g':reach>=30?'a':'r'))+
+    v(pctLeft==null?'—':pctLeft+'%','Credits left',pctLeft==null?'m':(pctLeft>40?'g':pctLeft>15?'a':'r'))+
+    v(margin==null?'—':margin+'%','Margin',margin==null?'m':(margin>0?'g':margin<0?'r':'m'));
+  // ---- Money row + summary ----
+  if(o&&!o.error) CHAIN_STATS=o.chainStats||[];
   if(m&&!m.error){
-    const $$=v=>'$'+((v||0)/100).toFixed(2);
-    // Business folded into the God view: revenue → margin → MRR/cost → audience
-    document.getElementById('d_money').innerHTML=
-      st($$(m.revenueCents),'revenue')+
-      st($$(m.profitCents),m.profitCents>=0?'profit':'loss',m.profitCents>=0?'green':'')+
-      st(m.marginPct!=null?Math.round(m.marginPct)+'%':'—','margin',(m.marginPct||0)>=0?'green':'')+
-      st($$(m.mrrCents)+'/mo','MRR (monthly)')+
-      st($$(m.cogs?.totalCents),'Costs')+
-      st(m.callsMade!=null?m.callsMade:'—','paid calls')+
-      st(m.users,'users')+st(m.subscribers,'members');
+    const dm=document.getElementById('d_money'); if(dm) dm.innerHTML=
+      st($$(m.revenueCents),'revenue')+st($$(m.profitCents),m.profitCents>=0?'profit':'loss',m.profitCents>=0?'green':'')+
+      st(margin!=null?margin+'%':'—','margin',(margin||0)>0?'green':'')+st($$(m.mrrCents)+'/mo','MRR (monthly)')+
+      st($$(m.cogs?.totalCents),'Costs')+st(m.callsMade!=null?m.callsMade:'—','paid calls')+st(m.users,'users')+st(m.subscribers,'members');
+    const s=document.getElementById('drs_money'); if(s) s.innerHTML=`${esch($$(m.profitCents))} · ${margin!=null?margin+'%':'—'} <span class="chev">▾</span>`;
   }
+  const dh=document.getElementById('drs_dhealth'); if(dh&&af.dialed) dh.innerHTML=`${af.dialed} dialed · ${reach}% reached <span class="chev">▾</span>`;
 }
 
 // ---- Bail library: per-rule toggles saved to policy.bail (enforcement stays staged) ----
@@ -1681,7 +1670,7 @@ function renderPersonas(){
     return `<div class="card" style="background:var(--surface-1);padding:12px 14px;margin-bottom:8px">
       <div class="row" style="align-items:flex-start;gap:10px">
         <div class="grow">
-          <div class="name" style="font-size:14px">${esch(p.name)}</div>
+          <div class="name" style="font-size:13px">${esch(p.name)}</div>
           ${p.base?`<div class="meta" style="margin-top:2px">${esch(p.base)} personality</div>`:''}
         </div>
         <button class="ghost" style="padding:6px 10px" title="Load to edit" onclick="pnLoad(${i})">${lucideSvg('pencil',14,'currentColor')}</button>
@@ -2173,7 +2162,7 @@ function scPoll(id, cid){
       if(stt){ stt.dataset.done='1'; stt.style.color=vv.c; stt.innerHTML='Call '+esch(o.status); }
       const stop=document.getElementById('sc_stop_'+id); if(stop) stop.style.display='none';
       const vd=document.getElementById('sc_verdict_'+id);
-      if(vd) vd.innerHTML=`<div style="margin-top:12px;border:1px solid ${vv.c};border-radius:12px;padding:13px;text-align:center"><div style="margin-bottom:3px">${vmark(vv.e,vv.c,30)}</div><div style="font-size:18px;font-weight:800;color:${vv.c}">${esch(vv.t)}</div>${vv.n?`<div style="font-size:12.5px;color:var(--text-body);margin-top:5px">${noteHtml(vv.n)}</div>`:''}</div>`;
+      if(vd) vd.innerHTML=`<div style="margin-top:12px;border:1px solid ${vv.c};border-radius:12px;padding:13px;text-align:center"><div style="margin-bottom:3px">${vmark(vv.e,vv.c,30)}</div><div style="font-size:19px;font-weight:800;color:${vv.c}">${esch(vv.t)}</div>${vv.n?`<div style="font-size:12.5px;color:var(--text-body);margin-top:5px">${noteHtml(vv.n)}</div>`:''}</div>`;
       loadResults();   // refresh the Calls page; the Search list refreshes when the card is closed
     }
   };
@@ -2257,7 +2246,7 @@ const SS_TYPES=[['Big Box','Big Box'],['Pharmacy','Pharmacy'],['Grocery','Grocer
 const SS_RATING={5:['Best near you','#2BFF88','Reliable, predictable restock. worth checking on a rhythm.'],4:['Mostly reliable','#29D4FF','Carries broadly, no dependable rhythm.'],3:['Spotty','#FF9E2C','Carries, but varies by location.'],2:['Over MSRP','','Has it, but above MSRP.'],1:['Unknown','','Unconfirmed. hidden from customers.']};
 let SS=null;
 const ssDot=c=>`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0"></span>`;
-function ssPill(t){ const p=SS_RATING[t]; if(!p) return '<span class="meta">unrated</span>'; if(!p[1]) return `<span style="display:inline-flex;align-items:center;font-size:12px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:3px 11px">${esch(p[0])}</span>`; return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:${p[1]};background:${p[1]}1a;border:1px solid ${p[1]}66;border-radius:20px;padding:3px 11px">${ssDot(p[1])}${esch(p[0])}</span>`; }
+function ssPill(t){ const p=SS_RATING[t]; if(!p) return '<span class="meta">unrated</span>'; if(!p[1]) return `<span style="display:inline-flex;align-items:center;font-size:12.5px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:3px 11px">${esch(p[0])}</span>`; return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:${p[1]};background:${p[1]}1a;border:1px solid ${p[1]}66;border-radius:20px;padding:3px 11px">${ssDot(p[1])}${esch(p[0])}</span>`; }
 function setPickChain(){
   const id=Number(document.getElementById('set_chain').value);
   const body=document.getElementById('set_body'); const ch=CHAINS.find(c=>c.id===id);
@@ -2292,25 +2281,25 @@ function ssRenderStore(){
     : stateBtn('var(--green)',chk,'Active')+actBtn('ssMute()',muteIco,'Mute');
   // Rating: five clickable pills (selected = its color, rest greyed). Clicking stamps the tier on every store.
   const pill=(n)=>{ const p=SS_RATING[n]; const seld=SS.tier===n;
-    if(seld) return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:${p[1]||'#fff'};background:${p[1]?p[1]+'1f':'var(--surface-2)'};border:1px solid ${p[1]?p[1]+'80':'var(--border-strong)'};border-radius:20px;padding:5px 12px;cursor:pointer">${p[1]?ssDot(p[1]):''}${esch(p[0])}</button>`;
-    return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;font-size:12px;font-weight:700;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer">${esch(p[0])}</button>`; };
+    if(seld) return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:${p[1]||'#fff'};background:${p[1]?p[1]+'1f':'var(--surface-2)'};border:1px solid ${p[1]?p[1]+'80':'var(--border-strong)'};border-radius:20px;padding:5px 12px;cursor:pointer">${p[1]?ssDot(p[1]):''}${esch(p[0])}</button>`;
+    return `<button type="button" onclick="ssRate(${n})" style="display:inline-flex;align-items:center;font-size:12.5px;font-weight:700;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:20px;padding:5px 12px;cursor:pointer">${esch(p[0])}</button>`; };
   const pills=[5,4,3,2,1].map(pill).join('');
   // Per-store rows: bulk toggle commits immediately. KIOSK is per-store ON only — chain level is
   // CLEAR-ONLY (a blanket "kiosk ON" would falsely mark every store a kiosk → all tier-5 + Kiosk tab).
   const maj=k=>SS['c'+k]>SS.storesN/2;
-  const tog=(on,onclick)=>`<button type="button" onclick="${onclick}" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12px">${on?'ON':'OFF'}</button>`;
-  const row=(lbl,tip,cnt,ctrl)=>`<div class="setrow"><div class="setlbl">${lbl} <span data-tip="${esch(tip)}"></span></div><div class="row" style="gap:10px;align-items:center"><span class="meta" style="font-size:11px">${cnt}/${SS.storesN}</span>${ctrl}</div></div>`;
+  const tog=(on,onclick)=>`<button type="button" onclick="${onclick}" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12.5px">${on?'ON':'OFF'}</button>`;
+  const row=(lbl,tip,cnt,ctrl)=>`<div class="setrow"><div class="setlbl">${lbl} <span data-tip="${esch(tip)}"></span></div><div class="row" style="gap:10px;align-items:center"><span class="meta" style="font-size:10.5px">${cnt}/${SS.storesN}</span>${ctrl}</div></div>`;
   el.innerHTML=
     `<div style="font-size:13px;color:var(--text-muted);margin:2px 0 7px">Status</div>`
-    +(SS.repack?`<div class="row" style="gap:8px;align-items:center;margin-bottom:9px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);border-radius:20px;padding:3px 11px">${ssDot('#FBBF24')}Repack-only</span><button class="ghost" onclick="ssClearRepack()" style="font-size:12px;padding:5px 10px">Clear</button></div>`:'')
+    +(SS.repack?`<div class="row" style="gap:8px;align-items:center;margin-bottom:9px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);border-radius:20px;padding:3px 11px">${ssDot('#FBBF24')}Repack-only</span><button class="ghost" onclick="ssClearRepack()" style="font-size:12.5px;padding:5px 10px">Clear</button></div>`:'')
     +`<div class="row" style="gap:8px;margin-bottom:18px">${status}</div>`
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Type <span data-tip="What kind of retailer this chain is. Sets grouping + scoring."></span></div>`
     +`<select onchange="ssSetType(this.value)" style="margin-bottom:18px">${SS_TYPES.map(([v,l])=>`<option value="${esch(v)}"${SS.type===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
-    +`<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:9px"><div style="font-size:13px;color:var(--text-muted)">Rating</div><span class="meta" id="set_ratemsg" style="font-size:11px"></span></div>`
+    +`<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:9px"><div style="font-size:13px;color:var(--text-muted)">Rating</div><span class="meta" id="set_ratemsg" style="font-size:10.5px"></span></div>`
     +`<div class="row" style="gap:7px;flex-wrap:wrap">${pills}</div>`
     +`<div style="height:14px"></div>`
     +row('Callable','We can phone this store to check stock. Off = kiosk-only / not called.',SS.cCallable,tog(maj('Callable'),'ssToggleCallable()'))
-    +row('Kiosk',"Has a Pokémon vending machine. (Kiosk store shows 'Best near you' + in the Kiosk tab.)",SS.cKiosk,(SS.cKiosk?`<button type="button" class="ghost" onclick="ssClearKiosk()" style="font-size:12px;padding:5px 11px">Clear</button>`:`<span class="meta" style="font-size:11px">per-store</span>`))
+    +row('Kiosk',"Has a Pokémon vending machine. (Kiosk store shows 'Best near you' + in the Kiosk tab.)",SS.cKiosk,(SS.cKiosk?`<button type="button" class="ghost" onclick="ssClearKiosk()" style="font-size:12.5px;padding:5px 11px">Clear</button>`:`<span class="meta" style="font-size:10.5px">per-store</span>`))
     +row('Online','Sells online. pickup or shipped.',SS.cOnline,tog(maj('Online'),'ssToggleOnline()'))
     +row('Stock verified','Confirmed it carries (vs just suspected).',SS.cVerified,tog(maj('Verified'),'ssToggleVerified()'));
 }
@@ -2329,9 +2318,9 @@ function ssClearKiosk(){ if(!SS||!SS.cKiosk) return; ssStoreBulk({hasKiosk:false
 const RATING_CANON={5:'Best Chance',4:'Mostly Reliable',3:'Spotty',2:'Over MSRP',1:'Unknown'};
 // Compact tier pill for a picker row — CANONICAL names from scoring.md (matches the rating filter),
 // in the tier's color.
-function ratePillMini(t){ const nm=RATING_CANON[t]; if(!nm) return '<span style="font-size:10.5px;font-weight:700;color:var(--text-tertiary)">unrated</span>'; const c=(SS_RATING[t]||[])[1], lbl=t+' '+nm; return c?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:${c};background:${c}1a;border:1px solid ${c}55;border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${esch(lbl)}</span>`:`<span style="display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:2px 9px;white-space:nowrap">${esch(lbl)}</span>`; }
+function ratePillMini(t){ const nm=RATING_CANON[t]; if(!nm) return '<span style="font-size:10.5px;font-weight:700;color:var(--text-tertiary)">unrated</span>'; const c=(SS_RATING[t]||[])[1], lbl=t+' '+nm; return c?`<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:${c};background:${c}1a;border:1px solid ${c}55;border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${esch(lbl)}</span>`:`<span style="display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:2px 9px;white-space:nowrap">${esch(lbl)}</span>`; }
 // mapped/unmapped chip — Mapped = navStatus==='locked' (matches the Mapping section + the filter).
-function mapChipMini(ch){ const locked=ch.navStatus==='locked'; const c=locked?'var(--green)':'var(--text-muted)'; return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:${c};background:${locked?'rgba(74,222,128,.12)':'var(--surface-2)'};border:1px solid ${locked?'rgba(74,222,128,.4)':'var(--border)'};border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${locked?'Mapped':'Unmapped'}</span>`; }
+function mapChipMini(ch){ const locked=ch.navStatus==='locked'; const c=locked?'var(--green)':'var(--text-muted)'; return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:${c};background:${locked?'rgba(74,222,128,.12)':'var(--surface-2)'};border:1px solid ${locked?'rgba(74,222,128,.4)':'var(--border)'};border-radius:20px;padding:2px 9px;white-space:nowrap">${ssDot(c)}${locked?'Mapped':'Unmapped'}</span>`; }
 function buildChainPicker(){
   const el=document.getElementById('set_picker'); if(!el) return;
   const cur=(document.getElementById('set_chain')||{}).value||'';
@@ -2344,7 +2333,7 @@ function buildChainPicker(){
     const locked=ch.navStatus==='locked';
     return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-mapped="${locked?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.55"':''}>
       <span class="setlogo">${logoTile(ch)}</span>
-      <b style="flex:1;min-width:0;color:#fff;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}${ch.muted?' <span class="meta" style="font-size:10.5px">· muted</span>':''}</b>
+      <b style="flex:1;min-width:0;color:#fff;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}${ch.muted?' <span class="meta" style="font-size:10.5px">· muted</span>':''}</b>
       ${ratePillMini(ch.tier)}${mapChipMini(ch)}</div>`;
   }).join('')||'<div class="empty" style="padding:16px">No chains loaded.</div>';
   filterChainPicker();
@@ -2378,7 +2367,7 @@ function ssRenderData(){
   const sccOpts=[['','—'],['confirmed','confirmed'],['probable','probable']];
   const scmOpts=[['','—'],['site','site · read the website'],['call','call · phone the store']];
   el.innerHTML=
-    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> First-party. sells at MSRP</label><span data-tip="We price the store's own shelf at retail. Not a reseller that may mark it up."></span></div>`
+    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> First-party. sells at MSRP</label><span data-tip="We price the store's own shelf at retail. Not a reseller that may mark it up."></span></div>`
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check method <span data-tip="How we check this chain's stock. Read their website (site) or phone the store (call)."></span></div>`
     +`<select id="set_scm" style="margin-bottom:16px">${scmOpts.map(([v,l])=>`<option value="${v}"${(SS.scm||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check confidence <span data-tip="How sure we are it carries: confirmed (seen/called) vs probable (expected, unverified)."></span></div>`
@@ -2400,11 +2389,11 @@ async function ssSaveData(){
 // OUTSIDE its label so tapping the hint never toggles. (Answer path lives in Mapping — it's learned.)
 function ssRenderCall(){
   const el=document.getElementById('set_call'); if(!el||!SS) return;
-  const tog=(on,onclick)=>`<button type="button" onclick="${onclick}" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12px">${on?'ON':'OFF'}</button>`;
+  const tog=(on,onclick)=>`<button type="button" onclick="${onclick}" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12.5px">${on?'ON':'OFF'}</button>`;
   el.innerHTML=
     `<div class="row" style="gap:26px;align-items:center;flex-wrap:wrap;margin:2px 0 4px">`
-    +`<div class="row" style="gap:9px;align-items:center"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" onchange="ssSetMaxTalk(this.value)" style="width:68px;padding:9px 10px;font-size:15px;text-align:center"><div style="font-weight:700;font-size:13px;line-height:1.15">Max talk <span data-tip="Hard cap on how long the caller talks to a person before wrapping up.ping up."></span><div class="meta" style="font-size:11px;font-weight:500">seconds</div></div></div>`
-    +`<div class="row" style="gap:9px;align-items:flex-start"><input type="checkbox" id="set_vm" ${SS.vm?'checked':''} onchange="ssSetHangup(this.checked)" style="margin-top:2px"><div style="line-height:1.25"><div style="display:flex;align-items:center;gap:5px"><label for="set_vm" style="font-weight:700;font-size:13px;color:var(--text-body);cursor:pointer;text-transform:none;letter-spacing:0;display:inline;margin:0">Hang up</label><span data-tip="Voicemail or a closed / recorded line → hang up at once. No message, no charge."></span></div><div class="meta" style="font-size:11px;margin-top:1px">voicemail / closed</div></div></div>`
+    +`<div class="row" style="gap:9px;align-items:center"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" onchange="ssSetMaxTalk(this.value)" style="width:68px;padding:9px 10px;font-size:15px;text-align:center"><div style="font-weight:700;font-size:13px;line-height:1.15">Max talk <span data-tip="Hard cap on how long the caller talks to a person before wrapping up.ping up."></span><div class="meta" style="font-size:10.5px;font-weight:500">seconds</div></div></div>`
+    +`<div class="row" style="gap:9px;align-items:flex-start"><input type="checkbox" id="set_vm" ${SS.vm?'checked':''} onchange="ssSetHangup(this.checked)" style="margin-top:2px"><div style="line-height:1.25"><div style="display:flex;align-items:center;gap:5px"><label for="set_vm" style="font-weight:700;font-size:13px;color:var(--text-body);cursor:pointer;text-transform:none;letter-spacing:0;display:inline;margin:0">Hang up</label><span data-tip="Voicemail or a closed / recorded line → hang up at once. No message, no charge."></span></div><div class="meta" style="font-size:10.5px;margin-top:1px">voicemail / closed</div></div></div>`
     +`</div>`
     +`<div class="setrow" style="justify-content:flex-end;gap:11px"><div class="setlbl">Phone this chain <span data-tip="ON = we call this chain's stores to check stock. OFF = listed, but never dialed."></span></div>${tog(SS.callTarget,'ssToggleCallTarget()')}</div>`
     +`<div style="font-size:13px;color:var(--text-muted);margin:16px 0 6px">Default workflow <span data-tip="Voice / script for every store of this chain. Overrides the global default."></span></div>`
@@ -2433,22 +2422,22 @@ function renderChainMapping(ch){
   }
   const t2h = isLocked ? (ch.navSeconds!=null?ch.navSeconds+'s':(ch.avgTreeSeconds?ch.avgTreeSeconds+'s':'—')) : '—';
   const mapped = isLocked ? (ch.navUpdatedAt?new Date(ch.navUpdatedAt).toLocaleDateString([],{month:'short',day:'numeric'}):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'—')) : '—';
-  const ro=(lbl,val)=>`<div style="margin-top:13px"><div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">${lbl} <span class="meta" style="text-transform:none;letter-spacing:0;font-size:10.5px">· learned · read-only</span></div><div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${(isLocked&&val)?esch(val):'—'}</div></div>`;
+  const ro=(lbl,val)=>`<div style="margin-top:13px"><div style="font-size:10.5px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">${lbl} <span class="meta" style="text-transform:none;letter-spacing:0;font-size:10.5px">· learned · read-only</span></div><div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${(isLocked&&val)?esch(val):'—'}</div></div>`;
   el.innerHTML=
     `<div class="stats">`
-    +`<div class="stat"><div class="n" style="font-size:18px${nm?'':';color:var(--muted)'}">${nm?nm.m:'—'}</div><div class="l">mode${nm?' · '+nm.sub:''}</div></div>`
-    +`<div class="stat"><div class="n" style="font-size:18px">${t2h}</div><div class="l">time-to-human</div></div>`
+    +`<div class="stat"><div class="n" style="font-size:19px${nm?'':';color:var(--muted)'}">${nm?nm.m:'—'}</div><div class="l">mode${nm?' · '+nm.sub:''}</div></div>`
+    +`<div class="stat"><div class="n" style="font-size:19px">${t2h}</div><div class="l">time-to-human</div></div>`
     +`<div class="stat"><div class="n" style="font-size:15px">${mapped}</div><div class="l">last mapped</div></div>`
     +`</div>`
     +`<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5"><b style="color:#fff">Recipe:</b> ${recipe}</div>`
     +ro('Keypad shortcut',ch.dtmfShortcut)
-    +ro('Phone-tree default',ch.phoneTreeDefault);
+    +ro('Phone menu default',ch.phoneTreeDefault);
   const sp=document.getElementById('set_mapstatus');
   if(sp){
     const cfg = isLocked?['var(--green)','rgba(74,222,128,.12)','rgba(74,222,128,.4)','Mapped']
       : status==='learning'?['var(--yellow)','rgba(244,208,63,.12)','rgba(244,208,63,.4)','learning…']
       : ['var(--text-muted)','var(--surface-2)','var(--border)','unmapped'];
-    sp.innerHTML=`<span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:${cfg[0]};background:${cfg[1]};border:1px solid ${cfg[2]};border-radius:20px;padding:3px 10px">${status==='learning'?'<span class="navspin"></span>':ssDot(cfg[0])}${cfg[3]}</span>`;
+    sp.innerHTML=`<span style="display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:${cfg[0]};background:${cfg[1]};border:1px solid ${cfg[2]};border-radius:20px;padding:3px 10px">${status==='learning'?'<span class="navspin"></span>':ssDot(cfg[0])}${cfg[3]}</span>`;
   }
   const mb=document.getElementById('set_mapbtn'); if(mb) mb.textContent = isLocked?'Re-map':'Map';
 }
@@ -2482,7 +2471,7 @@ function loadChainTree(){
   document.getElementById('pt_treesecs').value = (ch&&ch.avgTreeSeconds!=null) ? ch.avgTreeSeconds : '';
   document.getElementById('pt_repack').checked = !!(ch&&ch.repackOnly);
   document.getElementById('pt_muted').checked = !!(ch&&ch.muted);
-  document.getElementById('pt_status').textContent = ch&&ch.phoneTreeDefault ? 'This chain has a phone tree set.' : 'No tree yet. stores of this chain use only the global rules.';
+  document.getElementById('pt_status').textContent = ch&&ch.phoneTreeDefault ? 'This chain has a phone menu set.' : 'No tree yet. stores of this chain use only the global rules.';
 }
 function insertCvsTemplate(){ document.getElementById('pt_tree').value=CVS_TEMPLATE; }
 async function saveChainTree(){
@@ -2502,7 +2491,7 @@ async function saveChainTree(){
   if(r&&r.id){ const i=CHAINS.findIndex(c=>c.id===id); if(i>=0) CHAINS[i]=r;
     document.getElementById('pt_status').textContent='Saved ✓. applies to every store of this chain on the next call.';
     loadChains(); renderChainList(); }
-  else document.getElementById('pt_status').textContent="Couldn't save the phone tree.";
+  else document.getElementById('pt_status').textContent="Couldn't save the phone menu.";
 }
 // All-chains table: 30-day stats from the god view + one-tap mute/repack flips.
 const PATH_LBL={direct_human:'🙋 direct',simple_ivr:'🔢 simple menu',deep_ivr:'🌀 deep menu'};
@@ -2523,11 +2512,11 @@ function renderChainList(){
         <b style="color:#fff">${esch(ch.name)}</b>
         ${ch.repackOnly?'<span class="chip-sm" style="color:#FBBF24;background:rgba(251,191,36,.12)">repack-only</span>':''}
         ${ch.hasTree?'<span class="chip-sm">tree</span>':''}${ch.muted?'<span class="chip-sm" style="color:var(--green);background:rgba(74,222,128,.12)">muted</span>':''}
-        <div class="meta" style="font-size:11.5px">${PATH_LBL[ch.answerPath]||'unclassified'}${ch.calls30d?` · ${ch.calls30d} calls/30d · ${ch.confirms30d} confirms`:' · no calls yet'}</div>
+        <div class="meta" style="font-size:12.5px">${PATH_LBL[ch.answerPath]||'unclassified'}${ch.calls30d?` · ${ch.calls30d} calls/30d · ${ch.confirms30d} confirms`:' · no calls yet'}</div>
       </div>
-      ${WF.list.length?`<select onchange="setChainWorkflow(${ch.id},this.value)" style="font-size:12px;padding:5px 8px;max-width:140px" title="Workflow for every ${esch(ch.name)} store">${wfOptions(WF.chains[ch.id]||'', WF.def?('Default · '+WF.def):'Default')}</select>`:''}
-      <button class="ghost" style="font-size:12px;padding:6px 12px;${ch.muted?'color:var(--green);border-color:rgba(74,222,128,.4)':''}" onclick="quickChain(${ch.id},'muted',${!ch.muted})">${ch.muted?'Unmute':'Mute'}</button>
-      <button class="ghost" style="font-size:12px;padding:6px 10px" onclick="quickChain(${ch.id},'repackOnly',${!ch.repackOnly})">${ch.repackOnly?'Not repack':'Repack'}</button>
+      ${WF.list.length?`<select onchange="setChainWorkflow(${ch.id},this.value)" style="font-size:12.5px;padding:5px 8px;max-width:140px" title="Workflow for every ${esch(ch.name)} store">${wfOptions(WF.chains[ch.id]||'', WF.def?('Default · '+WF.def):'Default')}</select>`:''}
+      <button class="ghost" style="font-size:12.5px;padding:6px 12px;${ch.muted?'color:var(--green);border-color:rgba(74,222,128,.4)':''}" onclick="quickChain(${ch.id},'muted',${!ch.muted})">${ch.muted?'Unmute':'Mute'}</button>
+      <button class="ghost" style="font-size:12.5px;padding:6px 10px" onclick="quickChain(${ch.id},'repackOnly',${!ch.repackOnly})">${ch.repackOnly?'Not repack':'Repack'}</button>
     </div>`).join('');
 }
 async function quickChain(id,field,val){
@@ -2544,9 +2533,9 @@ async function loadPreview(){
   const p=await api(`/api/preview/${rid}?categoryId=${cid}`);
   const body=document.getElementById('pv_body');
   if(!p||p.error){ document.getElementById('pv_meta').textContent='Could not load preview.'; body.style.display='none'; return; }
-  const src = p.usedStoreOverride ? 'store override' : (p.phoneTree ? 'chain tree ('+(p.chainName||'chain')+')' : 'global rules only. no phone tree');
+  const src = p.usedStoreOverride ? 'store override' : (p.phoneTree ? 'chain menu ('+(p.chainName||'chain')+')' : 'global rules only. no phone tree');
   const dtmf = p.dtmf ? ` · <span style="color:var(--yellow,#F4D03F)">⌨️ auto-press ${p.dtmf}</span>` : '';
-  document.getElementById('pv_meta').innerHTML = `<b>${p.retailerName}</b> · phone-tree source: <span style="color:var(--green)">${src}</span>${dtmf}`;
+  document.getElementById('pv_meta').innerHTML = `<b>${p.retailerName}</b> · phone menu source: <span style="color:var(--green)">${src}</span>${dtmf}`;
   body.textContent=p.prompt; body.style.display='';
 }
 function syncTreeUI(){ const t=document.getElementById('sim_tree'); const w=document.getElementById('sim_specific_wrap'); if(t&&w) w.style.display = t.value==='specific' ? 'block' : 'none'; }
@@ -2818,8 +2807,8 @@ function pollTranscript(cid, pre){
       el('_t_status').innerHTML='Call '+o.status;
       const vv=customerVerdict(o), vd=el('_verdict');
       vd.style.display=''; vd.style.borderColor=vv.c;
-      vd.innerHTML='<div style="font-size:12px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">What the customer sees</div>'
-        +'<div style="margin-bottom:2px">'+vmark(vv.e,vv.c,34)+'</div><div style="font-size:20px;font-weight:800;color:'+vv.c+'">'+vv.t+'</div>'
+      vd.innerHTML='<div style="font-size:12.5px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px">What the customer sees</div>'
+        +'<div style="margin-bottom:2px">'+vmark(vv.e,vv.c,34)+'</div><div style="font-size:22px;font-weight:800;color:'+vv.c+'">'+vv.t+'</div>'
         +'<div style="font-size:13px;color:#bbb;margin-top:4px">'+noteHtml(vv.n)+'</div>';
       el('_t_summary').textContent=o.summary||'';
       if(o.status==='failed'&&o.failureReason){
@@ -2902,8 +2891,8 @@ function renderStatuses(list){
           ? `<input type="color" value="#4ADE80" data-f="color" disabled title="Locked to brand green. matches the logo" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1.5px solid var(--green);background:none;flex:0 0 auto;cursor:not-allowed">`
           : `<input type="color" value="${escH(s.color)}" data-f="color" oninput="statusRecolor(this)" onchange="statusAutoSave(this)" title="Icon color" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1px solid var(--border);background:none;flex:0 0 auto">`}
       </div>
-      <textarea data-f="note" rows="3" onchange="statusAutoSave(this)" placeholder="Message the customer sees" style="margin-top:10px;font-size:14px;line-height:1.5">${escH(s.note)}</textarea>
-      <div class="meta" style="margin-top:5px;font-size:11px;line-height:1.45">Use <code>{product}</code> for the live product name · <code>&lt;b&gt;…&lt;/b&gt;</code> to bold.</div>
+      <textarea data-f="note" rows="3" onchange="statusAutoSave(this)" placeholder="Message the customer sees" style="margin-top:10px;font-size:13px;line-height:1.5">${escH(s.note)}</textarea>
+      <div class="meta" style="margin-top:5px;font-size:10.5px;line-height:1.45">Use <code>{product}</code> for the live product name · <code>&lt;b&gt;…&lt;/b&gt;</code> to bold.</div>
       <div class="row" style="gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
         <select data-f="tone" onchange="statusToneChange(this);statusAutoSave(this)" title="Verdict bucket. sets the color + filter" style="flex:0 0 auto;max-width:180px">
           <option value="in"${s.tone==='in'?' selected':''}>In stock</option>
@@ -3150,6 +3139,7 @@ async function loadCredits(){
   document.getElementById('credit_src').textContent = c.source==='live' ? 'live balance' : 'estimated · last 31d';
   if(c.limit){
     const pctLeft = Math.max(0, Math.min(100, Math.round((c.remaining/c.limit)*100)));
+    const _sc=document.getElementById('drs_credits'); if(_sc) _sc.innerHTML=`${pctLeft}% left <span class="chev">▾</span>`;
     document.getElementById('credit_body').innerHTML =
       `<b style="color:#fff;font-size:16px">${fmtN(c.remaining)}</b> credits left of ${fmtN(c.limit)} <span style="color:var(--muted)">(${pctLeft}% left)</span>`;
     const bar=document.getElementById('credit_bar');           // bar shows what's LEFT (full = plenty)
@@ -3462,7 +3452,7 @@ async function loadGrowth(){
   const f=POL.flags||{};
   document.getElementById('gw_flags').innerHTML=Object.keys(FLAG_LABELS).map(k=>{
     const on=f[k]!==false&&f[k]!==undefined?f[k]:!!f[k];
-    const tip=k==='dogfoodHours'?'Leave OFF until you say go':(k==='connectOnHuman'?'Cost saver: Twilio handles the phone tree + hold for free, and the paid voice agent only opens once a human actually picks up.':'');
+    const tip=k==='dogfoodHours'?'Leave OFF until you say go':(k==='connectOnHuman'?'Cost saver: Twilio handles the phone menu + hold for free, and the paid voice agent only opens once a human actually picks up.':'');
     return `<label style="display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;color:var(--text)">
       <input type="checkbox" ${f[k]?'checked':''} onchange="toggleFlag('${k}',this.checked)">
       <span${tip?` data-tip="${tip}"`:''}>${FLAG_LABELS[k]}</span></label>`;
@@ -3483,7 +3473,7 @@ async function loadGrowth(){
     fld('gw_ga4','GA4 measurement id',POL.ga4Id||'');
   // Volume top-up tiers — set in the checkout build (Stripe), surfaced read-only so they're not edited via raw JSON.
   const packs=(POL.catalog||{}).packs||{};
-  if(Object.keys(packs).length) document.getElementById('gw_pricing').innerHTML += `<div class="meta" style="grid-column:1/-1;margin-top:2px"><b style="color:#c7c7d2">Volume tiers</b> <span data-tip="Top-up packs. Set in the checkout build (Stripe), read-only here."></span><div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${Object.values(packs).map(pk=>`<span style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:#dcdce6">${pk.credits} checks · $${(pk.cents/100).toFixed(0)}</span>`).join('')}</div></div>`;
+  if(Object.keys(packs).length) document.getElementById('gw_pricing').innerHTML += `<div class="meta" style="grid-column:1/-1;margin-top:2px"><b style="color:#c7c7d2">Volume tiers</b> <span data-tip="Top-up packs. Set in the checkout build (Stripe), read-only here."></span><div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${Object.values(packs).map(pk=>`<span style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12.5px;color:#dcdce6">${pk.credits} checks · $${(pk.cents/100).toFixed(0)}</span>`).join('')}</div></div>`;
   loadGwPulse(); loadGwIntel(); loadGwKiosks(); loadGwWatches(); loadGwCommunity(); loadGwWaitlist(); loadGwStoreReqs();
 }
 async function loadGwPulse(){
@@ -3493,16 +3483,17 @@ async function loadGwPulse(){
   const f=d.funnel||{}, a=d.activity||{}, cm=d.community||{};
   const st=(n,l,g)=>`<div class="stat${g?' green':''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   const money=c=>'$'+((c||0)/100).toFixed(2);
+  const sub=t=>`<div style="font-size:12.5px;font-weight:700;color:var(--text-strong);margin:14px 0 7px">${t}</div>`;
   el.innerHTML=
-    `<div class="rgrp">Funnel</div><div class="stats">`+
-      st(f.leads||0,'leads')+st(f.signups||0,'signups')+st(f.paying||0,'paying',1)+st(f.members||0,'members',1)+st(money(f.revenueCents),'revenue',1)+
-    `</div><div class="rgrp">Activity <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· real consumer calls. excludes Fun/MVPs + admin tests</span></div><div class="stats">`+
+    sub('Activity <span class="meta" style="font-weight:500" data-tip="Real consumer calls. Excludes Fun/MVPs and admin tests."></span>')+`<div class="stats">`+
       st(a.checks||0,'checks')+st(a.checks24h||0,'last 24h')+st(a.confirms||0,'confirms',1)+st(secsFmt(a.avgTalkSec||0),'avg talk',1)+st(secsFmt(a.avgCallSec||0),'avg call')+
-    `</div><div class="rgrp">Community</div><div class="stats" style="margin-bottom:0">`+
+    `</div>`+sub('Funnel')+`<div class="stats">`+
+      st(f.leads||0,'leads')+st(f.signups||0,'signups')+st(f.paying||0,'paying',1)+st(f.members||0,'members',1)+st(money(f.revenueCents),'revenue',1)+
+    `</div>`+sub('Community')+`<div class="stats">`+
       st(cm.watches||0,'watching')+st(cm.kioskReports||0,'kiosk intel')+st(cm.posts||0,'scores')+st(cm.postsPending||0,'pending')+st(cm.newLeads7d||0,'new leads 7d')+
-    `</div>`
-    +`<div class="rgrp" style="margin-top:14px">Stats baseline</div>`
-    +`<div class="meta" style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;line-height:1.6">Real-call stats (Pulse · Restock · Call timing) ${d.statsSince?('count from <b style="color:#cfcfd8">'+new Date(d.statsSince*1000).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})+'</b>'):'count <b style="color:#cfcfd8">everything</b>'}.<button class="ghost" style="font-size:11px;padding:5px 10px" onclick="startFresh(false)">Start fresh</button>${d.statsSince?'<button class="ghost" style="font-size:11px;padding:5px 10px" onclick="startFresh(true)">Count all again</button>':''}</div>`;
+    `</div>`+sub('Stats baseline')+
+    `<div class="meta" style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;line-height:1.6">Real-call stats (Pulse · Restock · Call timing) ${d.statsSince?('count from <b style="color:#cfcfd8">'+new Date(d.statsSince*1000).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})+'</b>'):'count <b style="color:#cfcfd8">everything</b>'}.<button class="ghost" style="font-size:10.5px;padding:5px 10px" onclick="startFresh(false)">Start fresh</button>${d.statsSince?'<button class="ghost" style="font-size:10.5px;padding:5px 10px" onclick="startFresh(true)">Count all again</button>':''}</div>`;
+  const s=document.getElementById('drs_pulse'); if(s) s.innerHTML=`${a.checks||0} checks · ${secsFmt(a.avgTalkSec||0)} avg <span class="chev">▾</span>`;
 }
 // Stamp a "count from now" cutoff so real-call stats reset for the live launch. Test calls are unaffected.
 async function startFresh(clear){
@@ -3558,7 +3549,7 @@ async function loadUsers(){
         <div class="uright">
           <span class="upill ${planCls(u.plan)}">${esch(u.plan)}</span>
           <div class="umeta" style="margin-top:5px">${u.credits} credits · ${u.callsMade} call${u.callsMade===1?'':'s'} · ${money(u.spentCents)}</div>
-          ${u.comp?'':`<button class="ghost" style="font-size:11px;padding:5px 9px;margin-top:7px" onclick="toggleStaff('${esch(u.id)}',${u.manualStaff?'false':'true'})">${u.manualStaff?'Unmark':'Mark admin/test'}</button>`}
+          ${u.comp?'':`<button class="ghost" style="font-size:10.5px;padding:5px 9px;margin-top:7px" onclick="toggleStaff('${esch(u.id)}',${u.manualStaff?'false':'true'})">${u.manualStaff?'Unmark':'Mark admin/test'}</button>`}
         </div>
       </div>`).join('');
 }
@@ -3617,7 +3608,7 @@ async function openStoreRestock(id){
   const bcMax=Math.max(1,...(d.byCategory||[]).map(x=>x.n));
   const ago=s=>{ if(!s)return 'never'; const m=Math.floor(Date.now()/1000)-s; if(m<86400)return Math.max(1,Math.floor(m/3600))+'h ago'; return Math.floor(m/86400)+'d ago'; };
   det.innerHTML=`<div class="card report" style="border-color:rgba(74,222,128,.28)">
-    <button class="ghost" style="float:right;font-size:11px;padding:5px 9px" onclick="document.getElementById('restock_detail').innerHTML=''">✕</button>
+    <button class="ghost" style="float:right;font-size:10.5px;padding:5px 9px" onclick="document.getElementById('restock_detail').innerHTML=''">✕</button>
     <div class="name">${esch(d.store)}${d.location?' <span class="meta" style="font-weight:500">· '+esch(d.location)+'</span>':''}</div>
     <div style="font-size:34px;font-weight:800;color:${low?'var(--text-muted)':'var(--green)'};line-height:1.1;letter-spacing:-.02em">${d.bestDay||'Learning…'}</div>
     <div class="meta" style="margin-bottom:13px">${d.bestDay?('best restock day · based on '+d.confidence+' hit'+(d.confidence===1?'':'s')+(low?' (low confidence)':'')):'not enough data yet'}${d.storedShipmentDay?' · stored: '+esch(d.storedShipmentDay):''} · last confirm ${esch(ago(d.lastConfirm))}</div>
@@ -3638,8 +3629,8 @@ async function loadGwIntel(){
   const rows=(d.topStores||[]).map(s=>{
     const sub=[s.bestDay?('best '+esch(s.bestDay)):'', ago(s.last)].filter(Boolean).join(' · ');
     return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--border)">
-      <div style="flex:1;min-width:0"><div style="font-size:13px"><b style="color:#e8e8f0">${esch(s.store)}</b>${s.region?` <span class="meta">· ${esch(s.region)}</span>`:''}</div>${sub?`<div class="meta" style="font-size:11.5px">${sub}</div>`:''}</div>
-      <div style="flex:0 0 auto;text-align:right"><b style="color:var(--green);font-size:15px">${s.confirms}</b> <span class="meta" style="font-size:11px">hits</span></div>
+      <div style="flex:1;min-width:0"><div style="font-size:13px"><b style="color:#e8e8f0">${esch(s.store)}</b>${s.region?` <span class="meta">· ${esch(s.region)}</span>`:''}</div>${sub?`<div class="meta" style="font-size:12.5px">${sub}</div>`:''}</div>
+      <div style="flex:0 0 auto;text-align:right"><b style="color:var(--green);font-size:15px">${s.confirms}</b> <span class="meta" style="font-size:10.5px">hits</span></div>
     </div>`;
   }).join('');
   const st=(n,l,g)=>`<div class="stat${g?' green':''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
@@ -3706,9 +3697,9 @@ async function loadGwCommunity(){
     ps.slice(0,30).map(p=>`<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border)">
       <img src="${esch(p.imageUrl)}" style="width:46px;height:46px;border-radius:8px;object-fit:cover;background:#0e0e14">
       <div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--text)">${esch(p.caption||'(no caption)')}</div>
-        <div class="meta" style="font-size:11px">${esch(p.handle||'anon')} · ♥${p.likes||0} ${p.approved?'<span style="color:var(--green)">✓ live</span>':'<span style="color:var(--yellow,#F4D03F)">pending</span>'}</div></div>
-      ${p.approved?`<button class="ghost" style="font-size:12px" onclick="modCommunity(${p.id},false)">Hide</button>`:`<button class="act" style="font-size:12px;padding:6px 10px" onclick="modCommunity(${p.id},true)">Approve</button>`}
-      <button class="ghost" style="font-size:12px;color:#ff8a8a" onclick="delCommunity(${p.id})">Delete</button>
+        <div class="meta" style="font-size:10.5px">${esch(p.handle||'anon')} · ♥${p.likes||0} ${p.approved?'<span style="color:var(--green)">✓ live</span>':'<span style="color:var(--yellow,#F4D03F)">pending</span>'}</div></div>
+      ${p.approved?`<button class="ghost" style="font-size:12.5px" onclick="modCommunity(${p.id},false)">Hide</button>`:`<button class="act" style="font-size:12.5px;padding:6px 10px" onclick="modCommunity(${p.id},true)">Approve</button>`}
+      <button class="ghost" style="font-size:12.5px;color:#ff8a8a" onclick="delCommunity(${p.id})">Delete</button>
     </div>`).join('');
 }
 async function loadGwWaitlist(){
@@ -3717,7 +3708,7 @@ async function loadGwWaitlist(){
   if(!d||d.error||!d.total){ el.textContent='No waitlist signups yet.'; return; }
   const regions=(d.byRegion||[]).map(r=>`${esch(r.region)} <b style="color:var(--green)">${r.n}</b>`).join(' · ');
   const recent=(d.recent||[]).slice(0,12).map(w=>`<div style="padding:5px 0;border-top:1px solid var(--border);font-size:12.5px">${esch(w.contact)}${w.area?(' · '+esch(w.area)):''}${w.region?(' · '+esch(w.region)):''}</div>`).join('');
-  el.innerHTML=`<div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:6px">${d.total} waiting</div><div style="margin-bottom:10px">${regions||'—'}</div>${recent}`;
+  el.innerHTML=`<div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px">${d.total} waiting</div><div style="margin-bottom:10px">${regions||'—'}</div>${recent}`;
 }
 async function loadGwStoreReqs(){
   const el=document.getElementById('gw_storereqs'); if(!el) return;
@@ -3727,9 +3718,9 @@ async function loadGwStoreReqs(){
   el.innerHTML=`<div style="margin-bottom:8px;color:${nw?'var(--yellow,#F4D03F)':'var(--muted)'}">${nw?('⏳ '+nw+' new'):'All handled'}</div>`+
     rs.slice(0,40).map(r=>`<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border)">
       <div style="flex:1;min-width:0"><div style="font-size:13px;color:var(--text)"><b>${esch(r.storeName)}</b>${r.city?(' · '+esch(r.city)):''}</div>
-        <div class="meta" style="font-size:11px">${esch(r.note||'')}${r.contact?(' · '+esch(r.contact)):''} · ${r.status}</div></div>
-      ${r.status!=='added'?`<button class="act" style="font-size:12px;padding:6px 10px" onclick="srStatus(${r.id},'added')">Mark added</button>`:''}
-      <button class="ghost" style="font-size:12px;color:#ff8a8a" onclick="srStatus(${r.id},'rejected')">Reject</button>
+        <div class="meta" style="font-size:10.5px">${esch(r.note||'')}${r.contact?(' · '+esch(r.contact)):''} · ${r.status}</div></div>
+      ${r.status!=='added'?`<button class="act" style="font-size:12.5px;padding:6px 10px" onclick="srStatus(${r.id},'added')">Mark added</button>`:''}
+      <button class="ghost" style="font-size:12.5px;color:#ff8a8a" onclick="srStatus(${r.id},'rejected')">Reject</button>
     </div>`).join('');
 }
 async function srStatus(id,status){ const r=await api('/api/store-requests/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({status})}); toast((r&&!r.error)?'Updated':"Couldn't update the request"); loadGwStoreReqs(); }
