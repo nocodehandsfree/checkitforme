@@ -10,6 +10,14 @@ Status of each is detailed in the linked ops/security docs; this is the single c
 
 **Launch-path / now**
 - [ ] Merge staging → prod and deploy; set `COMP_PHONES` in prod policy; verify phone + second-cell caller-ID.
+- [ ] **Promote checklist (owner, 2026-07-01):** after the staging→prod merge, verify prod calls are
+  REAL store calls and the Admin God view reflects them accurately (cost/call, mapping performance);
+  staging keeps feeding the owner's test-call reports separately. Press "Start fresh" (`stats_since`)
+  at launch so only post-launch calls count.
+- [ ] **Commerce build-out — owner + DevOps together** (owner-requested 2026-07-01): Stripe
+  products/prices, packs/membership, the money path end-to-end.
+- [ ] **Premium sign-up area redesign** on the website using Claude design (Website + Design lanes;
+  owner-requested 2026-07-01).
 - [ ] Route the consumer "check" through the **bridge** so caller-ID applies (plain `/app/check` uses the house number).
 - [ ] "Create your agent" caller-ID panel (Admin/Website) using `/auth/callerid/*`.
 - [ ] Flip `requirePhoneSignup` ON + remove Clerk once the phone UI is solid.
@@ -23,9 +31,13 @@ Status of each is detailed in the linked ops/security docs; this is the single c
 - [ ] Telephony at scale: concurrency planning + pickup-rate monitoring.
 
 **Security** (git history)
-- [ ] Transcript IDOR (needs frontend to send the session token on `/pub/result`,`/pub/live`).
+- [~] Transcript IDOR — **backend shipped 2026-07-01** (`flags.transcriptAuth`, off). Remaining:
+  Website sends the Bearer token on `/pub/result`+`/pub/live` (filed in website.md) → DevOps flips the flag.
 - [x] XFF rate-limit, SVG XSS, constant-time webhook sig, prod security boot-gate, esc() — done.
-- [ ] End-of-session key rotation (Railway token, TiDB password — leaked in chat).
+- [ ] **Pre-public hardening (owner decision 2026-07-01: rotate at launch, not now — key flexibility
+  needed while devs move fast):** rotate ALL leaked keys (Railway token — pasted in chats, GITHUB_PAT,
+  TiDB password), set STRIPE_WEBHOOK_SECRET on staging, verify PostHog actually captures events,
+  define the key-handling process (who gets keys, how, rotation cadence).
 
 **Revenue / GTM** (git history)
 - [ ] Finalize Stripe (products/prices) before paid tiers.

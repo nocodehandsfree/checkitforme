@@ -48,6 +48,11 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
   `address`). ✅ **Filed with DevOps** (`GET /pub/store/:id`, see devops.md) — waiting on the endpoint; then fill
   when `SEL_STORE.address` is missing.
 - **Workflow openers**: delete the "shipment" opener default (owner + Admin lane).
+- **DevOps → Website (security, small): send the session token on transcripts.** Add
+  `Authorization: Bearer <check_session>` to `GET /pub/result/:cid` + `GET /pub/live/:cid` whenever the
+  user is signed in (same token you already send on `/app/*`). Backend accepts it today; once you ship,
+  DevOps flips `policy.flags.transcriptAuth` on and strangers can no longer read a customer's transcript
+  by call id. Details: API_CONTRACT change log 2026-07-01.
 
 **⏳ Blocked / waiting on others:** kiosk call script (Voice/Admin) before kiosk calling can promote; then the
 consumer "Working → forward your receipt = free check" nudge is yours.

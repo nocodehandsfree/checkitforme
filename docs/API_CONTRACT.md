@@ -94,8 +94,8 @@ Full feature spec (all three lanes' parts): the kiosk spec in git history. Store
 | POST `/pub/community/:id/like` ·rl | — | `{ ok, likes }` |
 | **POST `/pub/check`** **[$][CHANGING]** | `{ retailerId, categoryId, specificProduct, kioskMode? }` | `{ providerCallId, status }` \| `{ error }` · 402 no_credits · 409 store_closed |
 | **POST `/pub/check-live`** **[$][CHANGING]** | `{ retailerId, categoryId(s), specificProduct, kioskMode? }` | `{ room, wsHost }` \| `{ error }` |
-| GET `/pub/result/:cid` | — | `{ status, transcript, summary, confirmed, … }` |
-| GET `/pub/live/:cid` | — | `{ live, status, transcript }` |
+| GET `/pub/result/:cid` **[CHANGING: send Bearer]** | header `Authorization: Bearer <check_session>` when signed in | `{ status, transcript, summary, confirmed, … }` · 401 once `transcriptAuth` flips on |
+| GET `/pub/live/:cid` **[CHANGING: send Bearer]** | header `Authorization: Bearer <check_session>` when signed in | `{ live, status, transcript }` · 401 once `transcriptAuth` flips on |
 | POST `/pub/charge` **[$][CHANGING→removed]** | `{ cid }` | `{ balance, charged }` |
 | POST `/pub/translate` | `{ text, to }` | `{ translated }` \| `{ error }` |
 | POST `/pub/lead` ·rl | `{ email, source }` | `{ ok }` \| `{ error }` |
@@ -173,6 +173,11 @@ GET `/`, `/r`, `/s`, `/p/:slug` (+`?partial=1` → `{title,body}`), `/og/:file`,
 ---
 
 ## Change log
+- 2026-07-01 — **transcript privacy (IDOR fix).** `/pub/result/:cid` + `/pub/live/:cid` now accept
+  `Authorization: Bearer <check_session>`. Website: send it on both whenever the user is signed in
+  (same token as `/app/*`). Enforcement is behind `policy.flags.transcriptAuth` (currently OFF), so
+  nothing breaks today — DevOps flips it on once Website ships the header. After the flip, a call
+  placed by a signed-in finder returns 401 without that finder's token; anonymous calls stay open.
 - 2026-06-14 — initial freeze snapshot of the live API.
 - 2026-06-15 — verified the documented shapes against production read endpoints (policy,
   categories, statuses, store-types, stores/near, best-bet, finds, stock/near) — all match.

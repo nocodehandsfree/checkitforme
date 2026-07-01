@@ -2059,8 +2059,23 @@ app.post("/pub/check-live", async (c) => {
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
 });
+// Transcript privacy (flags.transcriptAuth): a call placed by a signed-in finder is readable only by
+// that finder (phone-session Bearer token) or the admin. Anonymous calls stay readable by cid — the
+// cid was only ever handed to the caller's own browser. Flag OFF = today's open behavior, so the
+// consumer UI can start sending the token before enforcement flips on.
+async function canReadTranscript(c: { req: { header: (n: string) => string | undefined; raw: Request } }, cid: string): Promise<boolean> {
+  if (!(await getPolicy()).flags.transcriptAuth) return true;
+  const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
+  if (!row?.finderUserId) return true;
+  if (config.adminToken && c.req.header("x-admin-token") === config.adminToken) return true;
+  const cookie = (c.req.header("cookie") || "").match(/(?:^|;\s*)admin_session=([^;]+)/)?.[1];
+  if (cookie) { const s = await verifySession(decodeURIComponent(cookie)); if (s?.id === "admin") return true; }
+  const u = await verifyClerkToken(c.req.header("authorization"));
+  return !!u && u.id === row.finderUserId;
+}
 app.get("/pub/result/:cid", async (c) => {
   const cid = c.req.param("cid");
+  if (!(await canReadTranscript(c, cid))) return c.json({ error: "unauthorized" }, 401);
   if (config.staging.on && isSimId(cid)) return c.json(simResult(cid)); // preview: simulated verdict
   const o = await provider.getConversation(cid);
   // Prefer the FINALIZED row once it exists — it carries the consensus verdict (the reconciled
@@ -2105,6 +2120,7 @@ app.get("/pub/result/:cid", async (c) => {
 });
 // Live, mid-call transcript: returns whatever the agent + clerk have said SO FAR (no audio needed).
 app.get("/pub/live/:cid", async (c) => {
+  if (!(await canReadTranscript(c, c.req.param("cid")))) return c.json({ error: "unauthorized" }, 401);
   if (config.staging.on && isSimId(c.req.param("cid"))) return c.json(simLive(c.req.param("cid"))); // preview: simulated live transcript
   try {
     const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${c.req.param("cid")}`, { headers: { "xi-api-key": config.voice.apiKey } });

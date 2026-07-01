@@ -41,6 +41,7 @@ export interface Policy {
     requirePhoneSignup: boolean;     // identity = a verified PHONE: no anonymous calls; free checks granted to the account on signup
     connectOnHuman: boolean;         // cost saver: don't open the (billed) ElevenLabs agent until a human is detected — OFF until bench-tested
     oneCheckPerStorePerDay: boolean; // anti-abuse + cost: reuse a recent result instead of re-calling the same store+product within 24h
+    transcriptAuth: boolean;         // privacy: a finder-attributed call's result/transcript is readable only by that finder or admin — OFF until the consumer UI sends the session token on /pub/result + /pub/live
   };
   // Bail library: proactive call-cutoff rules (cost control). `enabled` is the master switch —
   // OFF by default so nothing changes on live calls until the enforcement is wired AND tested.
@@ -81,7 +82,7 @@ export const DEFAULT_POLICY: Policy = {
     kiosks: true, shareCards: true, multiProduct: true, specificSets: true,
     community: false, communityAutoApprove: false, referrals: true, kioskReceipts: true,
     liveListen: false, stockSignals: true, requirePhoneSignup: false, connectOnHuman: false,
-    oneCheckPerStorePerDay: false,
+    oneCheckPerStorePerDay: false, transcriptAuth: false,
   },
   bail: {
     enabled: false,
