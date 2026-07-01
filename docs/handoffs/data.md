@@ -38,7 +38,8 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
   **Admin** (admin UI) or **Website** (consumer UI); you supply the rows + assets, they render.
 - **Loading data:** dry-run first (`tsx scripts/import-stores.ts <file> … --dry`), then the real run.
   Import is an idempotent upsert keyed on phone — safe to re-run; appending can't create dupes.
-- Work on the deploy branch `claude/retail-stock-voice-calls-OcyMS`; commit + push = live in ~3 min.
+- Work on the **staging** branch `claude/checkitforme-website-takeover-pagiis`; push = live at
+  staging.checkitforme.com in ~3 min. Promote to prod by merging staging → prod.
 
 ## Roadmap (later)
 - **Hobby: one best-price report (after zones).** Today Hobby is manual. The user picks the exact
@@ -207,15 +208,12 @@ Pending / next session:
   derived, don't edit the column / drop a file" note. Offered; awaiting owner go.
 
 Architecture facts the next session MUST know:
-- **Separate DBs + deploys.** prod = `claude/retail-stock-voice-calls-OcyMS` (pokemon.fungibles.com /
-  checkitforme.com); staging = `claude/checkitforme-website-takeover-pagiis` (staging.checkitforme.com).
-  Code → both branches. Carries derives from code config (auto-consistent); logo_url + store rows are
-  per-DB (logo migration was run on both; staging's DB lags prod).
-- **Branch flow.** Dev on `claude/awesome-knuth-613jn0` (reset to origin/OcyMS before each build),
-  cherry-pick → OcyMS (prod) + pagiis (staging). OcyMS moves often (logo lane) — rebase before push.
+- **Separate DBs.** staging = `…pagiis` → staging.checkitforme.com; prod = `…OcyMS` → checkitforme.com.
+  Each has its own DB. Carries derives from code config (auto-consistent); logo_url + store rows are per-DB.
+- **Branch flow.** Develop on staging (`…pagiis`), push; promote to prod by merging staging → prod.
   Railway auto-deploys on push (~60-90s); CI does not gate Railway.
-- **Access.** Admin API needs a browser User-Agent (Cloudflare blocks python-urllib → 1010); admin token
-  at `/tmp/.atok` (don't print). `config.staging` tsc error is DevOps's, not ours.
+- **Access.** Admin API needs a browser User-Agent (Cloudflare blocks python-urllib → 1010). Get the admin
+  token from Railway (HANDOFF.md secrets); keep it in memory — don't print it or write it to a file.
 
 **Session 2026-06-19 — data documented, scoring package committed, ungraded tail closed (see COMPLETED.md).**
 - [x] **Single-source-of-truth doc** — `docs/DATA_PROVENANCE.md` written: every store-data domain, who
