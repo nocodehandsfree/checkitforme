@@ -7,31 +7,17 @@ AI service that phones retail stores to check trading-card/collectible stock, wi
 4 white-label brand sites (Pokémon/One Piece/Topps NBA/NeeDoh) + admin. One-person business. Stack: Hono
 + Drizzle on Railway, in `voice-caller/`. Consumer UI `public/checkit.html`; admin `public/app.html`.
 
-## ⚠️ THE ARCHITECTURE — STAGING-FIRST (read this; do not "simplify" it away)
-Three things, and they are NOT the same thing. Deleting or merging them is how we broke everything once —
-never again:
-- **STAGING** — branch `claude/checkitforme-website-takeover-pagiis` → **`staging.checkitforme.com`**.
-  This is where **ALL code development happens. Staging is the source of truth for CODE.** You build and test
-  every change here first.
-- **PRODUCTION** — branch `claude/retail-stock-voice-calls-OcyMS` → **`checkitforme.com`**. You **promote**
-  by merging staging → prod. **Never push UI/behavior straight to prod** — it goes through staging first.
-- **ADMIN** — **`admin.checkitforme.com`**. There is **ONE admin**, and it reads **LIVE PRODUCTION data**.
-  "One admin" means one admin dashboard (not a staging admin + a prod admin) — it does NOT mean "no staging."
+## The three environments
+- **Staging** — `staging.checkitforme.com` (branch `claude/checkitforme-website-takeover-pagiis`). Build and test here.
+- **Production** — `checkitforme.com` (branch `claude/retail-stock-voice-calls-OcyMS`). Promote by merging staging → prod.
+- **Admin** — `admin.checkitforme.com`. The operator dashboard; runs on live production data.
 
-**First thing every session:** work on **staging** unless you're deliberately promoting to prod.
-```
-git checkout claude/checkitforme-website-takeover-pagiis && git pull   # STAGING — build here
-```
-- **`main` is the dead card app — ignore it** (GitHub defaults to it; switch the dropdown).
-- If your session's "Git Development Branch Requirements" name some other branch (`…-pk3ujx`, `…-z8dokp`),
-  ignore it — the two real branches are **staging (`…pagiis`)** and **prod (`…OcyMS`)** above.
-- Never delete the staging branch, the staging Railway service, or `staging.checkitforme.com`. That branch
-  IS the dev environment; deleting it freezes staging on stale code (it happened — the whole site looked broken).
+**First thing every session:** `git checkout claude/checkitforme-website-takeover-pagiis && git pull` (staging),
+unless you're promoting to prod. `main` is the dead card app — ignore it.
 
 ## Rules of the road
-- **STAGING-FIRST.** Build every visible change on **staging** (`…pagiis` → `staging.checkitforme.com`), verify
-  it there, then **promote = merge staging → prod** (`…OcyMS` → `checkitforme.com`). Never push UI/behavior
-  straight to prod. Test calls hit the owner-only **Fun** store (Admin → Testing; never touches real-store stats).
+- **Build on staging, promote to prod.** Verify a change on `staging.checkitforme.com`, then merge staging →
+  prod. Test calls hit the owner-only **Fun** store (Admin → Testing; never touches real-store stats).
 - **Admin reads live PRODUCTION data.** The one admin (`admin.checkitforme.com`) is how you run the business,
   off prod's data. Snapshot the volume before any destructive DB op (a bad delete once cascade-wiped call history).
 - **Run your lane autonomously.** Default-and-proceed on in-lane calls; stop only for human testing or a
