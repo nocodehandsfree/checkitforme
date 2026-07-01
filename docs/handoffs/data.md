@@ -40,6 +40,20 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
   Import is an idempotent upsert keyed on phone — safe to re-run; appending can't create dupes.
 - Work on the deploy branch `claude/retail-stock-voice-calls-OcyMS`; commit + push = live in ~3 min.
 
+## Roadmap (later)
+- **Hobby: one best-price report (after zones).** Today Hobby is manual. The user picks the exact
+  product (series, set, type), calls each nearby hobby shop one at a time, hears the price, and decides
+  for themselves. When **zones** ship, turn this into one report: fan out to the nearest 3 or 4 hobby
+  shops, ask each "do you have {product}, and what's your price," and return a single answer ranked by
+  price, cheapest on top.
+  - **Data dependency:** the call has to capture a **price** per hobby call. New field on `call_results`
+    (DevOps schema add) so prices can be compared and stored. The picker data is already ready:
+    `data/pokemon-sets.json` (era to set) plus the products catalog for types and the retail anchor
+    (`pmsrp` = what Pokémon charges).
+  - **Also needs (call backend):** firing several calls for one request and grouping them into one
+    result, plus a "has it but wouldn't quote a price" state. Call scripts/workflows are added per store
+    (`vt_store_workflows`), so a rotation of scripts that try to get the price can be dropped in now.
+
 ## Current focus (KEEP UPDATED)
 
 **Session 2026-06-27 — learned restock "best day" from call data (serve-time, no schema change).**
