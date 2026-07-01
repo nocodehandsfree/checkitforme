@@ -300,6 +300,7 @@
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:16px}
+  .card .stats:last-child{margin-bottom:0}   /* no trailing gap when stats is the card's last row */
   .stat{background:var(--surface-1);border:1px solid var(--border-default);border-radius:var(--r-card);padding:13px 15px;min-width:104px;flex:1 1 auto}
   .stat .n{font-size:23px;font-weight:800;line-height:1.1;letter-spacing:-.5px;color:#c7c7d2}
   .stat .l{font-size:12px;color:var(--muted);letter-spacing:0;line-height:1.3;margin-top:4px;font-weight:500;text-transform:none}
@@ -474,7 +475,7 @@
   h2{color:var(--muted)} /* section eyebrows stay muted+caps */
   .card .meta,.smeta{color:#9a9aac}
   /* tighter header→copy rhythm inside cards */
-  .card>.name{margin-bottom:6px}
+  .card>.name{margin-bottom:12px}
   .card>.meta{margin-top:4px}
   .empty{padding:22px 18px}
   /* unified range sliders — match the consumer radius slider */
@@ -545,11 +546,11 @@
       <div class="stats" id="d_today"></div>
     </div>
     <div class="card report">
-      <div class="name" style="margin-bottom:8px">Today's pulse</div>
+      <div class="name">Today's pulse</div>
       <div id="gw_pulse" class="meta">Loading…</div>
     </div>
     <div class="card report" id="d_money_card">
-      <div class="name" style="margin-bottom:12px">Business &amp; money</div>
+      <div class="name">Business &amp; money</div>
       <div class="stats" id="d_money" style="margin-bottom:0"></div>
     </div>
     <div class="card" id="credit_card">
@@ -573,7 +574,7 @@
     <details class="card report" id="d_timing_card" open>
       <summary style="cursor:pointer"><span class="name">Call time &amp; cost</span></summary>
       <div class="meta" style="margin:10px 0 8px">Time to reach a person vs. talk time. We're billed for the whole call (ring, menu, hold, talk), so reaching someone is real cost.</div>
-      <div class="stats" id="d_timing" style="margin-bottom:6px"></div>
+      <div class="stats" id="d_timing"></div>
       <div id="d_timing_model"></div>
       <div id="d_timing_status"></div>
       <details style="margin-top:6px"><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details>
@@ -714,7 +715,7 @@
     <h2>Schedules</h2>
     <div id="scheduleList"><div class="empty">Loading…</div></div>
     <div class="card">
-      <div class="name" style="margin-bottom:12px">New schedule</div>
+      <div class="name">New schedule</div>
       <div class="grid2">
         <div><label>Name</label><input id="s_name" placeholder="Thursday B&N Pokémon"></div>
         <div><label>Category</label><select id="s_cat"></select></div>
@@ -744,7 +745,7 @@
   <section id="receipts">
     <h2>Kiosk</h2>
     <div class="card report">
-      <div class="name" style="margin-bottom:4px">Kiosk intel</div>
+      <div class="name">Kiosk intel</div>
       <div id="gw_kiosks" class="meta">Loading…</div>
     </div>
     <div class="card report">
@@ -762,28 +763,28 @@
   <section id="growth">
     <h2>Policy</h2>
     <div class="card">
-      <div class="name" style="margin-bottom:4px">Feature flags</div>
+      <div class="name">Feature flags</div>
       <div id="gw_flags" class="meta">Loading…</div>
     </div>
     <div class="card">
-      <div class="name" style="margin-bottom:8px">Pricing &amp; rewards</div>
+      <div class="name">Pricing &amp; rewards</div>
       <div id="gw_pricing" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
       <div style="margin-top:12px"><button class="act" onclick="savePolicyForm()">Save pricing</button></div>
     </div>
     <div class="card">
-      <div class="name" style="margin-bottom:4px">Restock watches</div>
+      <div class="name">Restock watches</div>
       <div id="gw_watches" class="meta">Loading…</div>
     </div>
     <div class="card">
-      <div class="name" style="margin-bottom:4px">Community moderation</div>
+      <div class="name">Community moderation</div>
       <div id="gw_community" class="meta">Loading…</div>
     </div>
     <div class="card">
-      <div class="name" style="margin-bottom:4px">Store requests</div>
+      <div class="name">Store requests</div>
       <div id="gw_storereqs" class="meta">Loading…</div>
     </div>
     <div class="card">
-      <div class="name" style="margin-bottom:4px">Launch waitlist</div>
+      <div class="name">Launch waitlist</div>
       <div id="gw_waitlist" class="meta">Loading…</div>
     </div>
   </section>
@@ -816,7 +817,7 @@
     <div id="d_steps">
 
       <div class="card dstep" data-step="1">
-        <div class="name" style="margin-bottom:12px">Step 1 · Voice</div>
+        <div class="name">Step 1 · Voice</div>
         <label>Voice</label>
         <select id="vs_select"></select>
         <div id="vs_active" class="meta" style="margin-top:6px"></div>
@@ -830,7 +831,7 @@
       </div>
 
       <div class="card dstep" data-step="2" style="display:none">
-        <div class="name" style="margin-bottom:12px">Step 2 · Voice feel</div>
+        <div class="name">Step 2 · Voice feel</div>
         <div class="card" style="background:var(--surface-1);margin-bottom:12px">
           <label style="margin-top:0;display:flex;justify-content:space-between;align-items:baseline">Speed (cadence) <span id="sb_speed_val" class="hint" style="font-style:normal"></span></label>
           <input id="sb_speed" type="range" min="0.7" max="1.2" step="0.01" style="width:100%" oninput="sbLabels()">
@@ -873,7 +874,7 @@
       </div>
 
       <div class="card dstep" data-step="3" style="display:none">
-        <div class="name" style="margin-bottom:12px">Step 3 · Script</div>
+        <div class="name">Step 3 · Script</div>
         <label data-tip="Use {category}, fills in Pokémon, One Piece, etc.">Write a new opener</label>
         <textarea id="rot_opener_new" rows="3" style="font-size:14px;line-height:1.5" placeholder="e.g. Heyy! Got any {category} in today?"></textarea>
         <div class="btnrow"><button class="ghost" onclick="addOpener()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save opener</button></div>
@@ -882,7 +883,7 @@
       </div>
 
       <div class="card dstep" data-step="4" style="display:none">
-        <div class="name" style="margin-bottom:12px">Step 4 · Persona</div>
+        <div class="name">Step 4 · Persona</div>
         <label>Persona name</label><input id="pn_name" placeholder="e.g. Friendly Jared">
         <label>Base personality</label>
         <div id="pn_base" class="row" style="gap:6px"></div>
@@ -901,7 +902,7 @@
       </div>
 
       <div class="card dstep" data-step="5" style="display:none">
-        <div class="name" style="margin-bottom:12px">Step 5 · Rotation</div>
+        <div class="name">Step 5 · Rotation</div>
         <label>Scripts in rotation</label>
         <div id="rot_opener_list2" style="margin-top:4px" class="meta">Add scripts in Step 3.</div>
         <label style="margin-top:14px" data-tip="Tick the voices to rotate through in TEST">Voices in rotation</label>
@@ -911,7 +912,7 @@
       </div>
 
       <div class="card dstep" data-step="6" style="display:none">
-        <div class="name" style="margin-bottom:12px">Step 6 · Test</div>
+        <div class="name">Step 6 · Test</div>
         <label>Store</label><select id="sim_store" onchange="previewMaybe()"><option value="" disabled selected>Loading stores</option></select>
         <label>Category to ask about</label><select id="sim_cat" onchange="previewMaybe()"></select>
         <label data-tip="The agent dials this number">Your phone</label><input id="sim_phone" placeholder="+13106662331">
@@ -933,7 +934,7 @@
       </div>
 
       <div class="card dstep" data-step="7" style="display:none">
-        <div class="name" style="margin-bottom:12px">Step 7 · Save workflow</div>
+        <div class="name">Step 7 · Save workflow</div>
         <label>Workflow name</label><input id="wf_name" placeholder="e.g. Warm Pokémon v2">
         <div class="btnrow"><button class="ghost" onclick="saveWorkflow()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save workflow</button></div>
         <div class="meta" id="wf_msg" style="margin-top:8px">Saved workflows appear in Calls → Settings to assign to chains.</div>
@@ -945,7 +946,7 @@
     <section id="trees">
     <h2 data-tip="Per-chain settings + the auto-mapped phone route. Pick a chain to edit its stores, calls and mapping.">Settings</h2>
     <div class="card report">
-      <div class="name" style="margin-bottom:12px">Mapped stats</div>
+      <div class="name">Mapped stats</div>
       <div class="stats" id="tr_stats" style="margin-bottom:0"></div>
     </div>
     <div class="card">
@@ -989,7 +990,7 @@
             <div id="tr_live_result" style="margin-top:12px;display:none"></div>
           </div>
           <div style="margin-top:14px">
-            <div class="name" style="font-size:13px;margin-bottom:8px">Call log</div>
+            <div class="name" style="font-size:13px">Call log</div>
             <div id="set_runs"><div class="meta">Loading…</div></div>
           </div>
         </div>
@@ -1001,10 +1002,10 @@
     <h2>Statuses</h2>
     <div id="pb_statuses">
       <div class="card">
-        <div class="name" style="margin-bottom:12px" data-tip="Edit the icon, label, color or tone. Consumer + Test Bench verdicts update instantly">What customers see</div>
+        <div class="name" data-tip="Edit the icon, label, color or tone. Consumer + Test Bench verdicts update instantly">What customers see</div>
         <div id="st_list"><div class="empty">Loading…</div></div>
         <div style="height:1px;background:var(--border);margin:14px 0"></div>
-        <div class="name" style="font-size:14px;margin-bottom:8px">Add a status</div>
+        <div class="name" style="font-size:14px">Add a status</div>
         <div class="row" style="gap:8px">
           <button type="button" class="sticon-btn" id="st_new_icon_btn" onclick="pickNewStatusIcon()" title="Pick an icon"><span class="meta" style="font-size:9px">icon</span></button>
           <input type="hidden" id="st_new_emoji" value="">
@@ -1433,7 +1434,7 @@ function calcShell(){
     <div id="calc_legend" class="row" style="gap:14px;margin-top:10px;align-items:center;font-size:12px"></div>
   </div>
   <div class="card report">
-    <div class="name" style="margin-bottom:12px">Scenario</div>
+    <div class="name">Scenario</div>
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Store type</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px">${seg}</div>
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px"><span style="font-size:13px;color:var(--text-muted)">Navigation time</span><span style="font-family:ui-monospace,monospace;font-size:18px;font-weight:700"><span id="calc_navval">0</span><span style="font-size:12px;color:var(--text-tertiary)">s</span></span></div>
@@ -1443,21 +1444,21 @@ function calcShell(){
     <input id="calc_talk" type="range" min="0" max="120" value="${CALC.talk}" oninput="calcSetTalk(this.value)">
   </div>
   <div class="card report">
-    <div class="name" style="margin-bottom:12px">Breakdown</div>
+    <div class="name">Breakdown</div>
     <div id="calc_breakdown"></div>
     <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border-dashed)"><span style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700">FLAT MONTHLY · ≈ $0.000 / CALL</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${['Railway compute','Twilio number rental','Helicone gateway','TiDB'].map(f=>`<span style="font-size:11px;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:7px;padding:3px 8px">${f}</span>`).join('')}</div></div>
   </div>
   <div class="card report">
-    <div class="name" style="margin-bottom:12px">Rate card · editable</div>
+    <div class="name">Rate card · editable</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${rate('Twilio line','twilioPerMin','/min')}${rate('ElevenLabs ConvAI','elevenPerSec','/sec')}${rate('Claude Sonnet','claudePerSec','/sec')}${rate('Bravo nav (all-in)','bravoNavPerSec','/sec')}${rate('Fixed overhead','overhead','/call')}</div>
   </div>
   <div class="card report">
-    <div class="name" style="margin-bottom:4px">Total / call by talk time</div>
+    <div class="name">Total / call by talk time</div>
     <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:12px">nav held at each type's default · Alpha 30s · Bravo 50s · Direct 0s</div>
     <div style="overflow-x:auto"><table id="calc_matrix" style="border-collapse:separate;border-spacing:0;width:100%;min-width:360px"></table></div>
   </div>
   <div class="card report">
-    <div class="name" style="margin-bottom:12px">Margin</div>
+    <div class="name">Margin</div>
     <div class="row" style="gap:12px">
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Revenue / call</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:10px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:20px;font-weight:700;padding:10px 2px;width:84px"></span></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Margin</span><div id="calc_margin" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0%</div></div>
@@ -1886,7 +1887,7 @@ async function loadStoreIntel(){
   const items=Object.entries(bp).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]);
   const cw=document.getElementById('storecarries');
   if(cw){ if(items.length){ cw.style.display='';
-      cw.innerHTML=`<div class="name" style="margin-bottom:8px">Stores that carry each product <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">(of ${fmt(d.total)} total)</span></div>`
+      cw.innerHTML=`<div class="name">Stores that carry each product <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">(of ${fmt(d.total)} total)</span></div>`
         +`<div class="carrygrid">`+items.map(([p,n])=>`<div class="carryrow"><span>${prodMark(p,16)} ${esch(p)}</span><b>${fmt(n)}</b></div>`).join('')+`</div>`;
     } else cw.style.display='none'; }
   // Fill the store-type filter from the full chain-type list, and the product filter from the carry list.
@@ -2434,7 +2435,7 @@ function renderChainMapping(ch){
   const mapped = isLocked ? (ch.navUpdatedAt?new Date(ch.navUpdatedAt).toLocaleDateString([],{month:'short',day:'numeric'}):(ch.treeLearnedAt?new Date(ch.treeLearnedAt*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'—')) : '—';
   const ro=(lbl,val)=>`<div style="margin-top:13px"><div style="font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">${lbl} <span class="meta" style="text-transform:none;letter-spacing:0;font-size:10.5px">· learned · read-only</span></div><div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5;color:var(--text-body)">${(isLocked&&val)?esch(val):'—'}</div></div>`;
   el.innerHTML=
-    `<div class="stats" style="margin-bottom:14px">`
+    `<div class="stats">`
     +`<div class="stat"><div class="n" style="font-size:18px${nm?'':';color:var(--muted)'}">${nm?nm.m:'—'}</div><div class="l">mode${nm?' · '+nm.sub:''}</div></div>`
     +`<div class="stat"><div class="n" style="font-size:18px">${t2h}</div><div class="l">time-to-human</div></div>`
     +`<div class="stat"><div class="n" style="font-size:15px">${mapped}</div><div class="l">last mapped</div></div>`
@@ -3524,7 +3525,7 @@ async function loadCallHealth(){
   const purge=(p&&!p.error)?p:null;
   const reasons=(purge&&purge.flagged)?Object.entries(purge.byReason||{}).map(([k,n])=>n+' '+k.replace(/_/g,' ')).join(' · '):'';
   el.innerHTML=
-    `<div class="stats" style="margin-bottom:4px">`
+    `<div class="stats">`
       +tile(a.total||0,'total rows')
       +tile(a.neverDialed||0,'never dialed')
       +tile(a.ownerOnlyTest||0,'rehearsal')
@@ -3584,7 +3585,7 @@ async function loadRestock(){
     const reachPct=Math.round(af.reachedHuman/dial*100);
     funnelCard=`<div class="card report" style="border-color:rgba(167,139,250,.3)">
       <div class="rgrp">Call reality <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· read from the transcripts, not the saved status${af.firstCall?' · first store call '+fc(af.firstCall):''}</span></div>
-      <div class="stats" style="margin-bottom:12px">${tile(af.dialed,'dialed')}${tile(af.reachedHuman,'reached a human','purple')}${tile(af.gotAnswer,'got an answer','green')}</div>
+      <div class="stats">${tile(af.dialed,'dialed')}${tile(af.reachedHuman,'reached a human','purple')}${tile(af.gotAnswer,'got an answer','green')}</div>
       ${brow('✅','In stock',b.in_stock,'')}
       ${brow('📦','Just landed · not shelved',b.got_some,'soon')}
       ${brow('❌','Not in stock',b.not_in,'bad')}
@@ -3617,7 +3618,7 @@ async function openStoreRestock(id){
   const ago=s=>{ if(!s)return 'never'; const m=Math.floor(Date.now()/1000)-s; if(m<86400)return Math.max(1,Math.floor(m/3600))+'h ago'; return Math.floor(m/86400)+'d ago'; };
   det.innerHTML=`<div class="card report" style="border-color:rgba(74,222,128,.28)">
     <button class="ghost" style="float:right;font-size:11px;padding:5px 9px" onclick="document.getElementById('restock_detail').innerHTML=''">✕</button>
-    <div class="name" style="margin-bottom:2px">${esch(d.store)}${d.location?' <span class="meta" style="font-weight:500">· '+esch(d.location)+'</span>':''}</div>
+    <div class="name">${esch(d.store)}${d.location?' <span class="meta" style="font-weight:500">· '+esch(d.location)+'</span>':''}</div>
     <div style="font-size:34px;font-weight:800;color:${low?'var(--text-muted)':'var(--green)'};line-height:1.1;letter-spacing:-.02em">${d.bestDay||'Learning…'}</div>
     <div class="meta" style="margin-bottom:13px">${d.bestDay?('best restock day · based on '+d.confidence+' hit'+(d.confidence===1?'':'s')+(low?' (low confidence)':'')):'not enough data yet'}${d.storedShipmentDay?' · stored: '+esch(d.storedShipmentDay):''} · last confirm ${esch(ago(d.lastConfirm))}</div>
     <div class="rgrp">Staff said</div>${(d.staffSaid.tally||[]).map(x=>rsBar(x.day,x.n,sMax)).join('')||'<div class="meta">nothing yet</div>'}
