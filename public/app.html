@@ -340,9 +340,19 @@
   .ractions{display:flex;gap:10px;margin-top:12px}
   .ractions select{flex:1;min-width:0}
   .ractions button.act{white-space:nowrap}
-  .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-  .filters input{flex:2;min-width:200px}
-  .filters select{flex:1;min-width:158px}
+  .filters{display:flex;gap:8px;margin-bottom:12px;align-items:stretch}
+  .filters input{flex:1;min-width:0}
+  .fbtn{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.04);border:1px solid var(--border-medium);color:var(--text-strong);padding:0 15px;border-radius:var(--r-btn);cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;transition:border-color .12s,background .12s}
+  .fbtn:hover{border-color:var(--border-strong)}
+  .fbtn.on{border-color:var(--tint-purple-border);background:var(--tint-purple-bg);color:#c4b5fd}
+  .fbtn .msel-car{transition:transform .2s}
+  .fbtn[aria-expanded="true"] .msel-car{transform:rotate(180deg)}
+  .fcount{display:none;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--purple);color:#160e2e;font-size:10.5px;font-weight:800;align-items:center;justify-content:center;line-height:1}
+  .fcount.show{display:inline-flex}
+  .filterpanel{display:none;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:14px;padding:12px;background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-card)}
+  .filterpanel.open{display:grid}
+  .filterpanel select,.filterpanel .msel{width:100%;min-width:0}
+  .filterpanel .fclear{grid-column:1 / -1;justify-self:start;margin-top:2px}
   .chip-type{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border-medium);padding:3px 8px;border-radius:var(--r-tag-lg)}
   .chip-type svg{opacity:.75}
   /* per-product counts as one box (replaces a circle per product) */
@@ -399,8 +409,7 @@
     .row{flex-wrap:wrap}
     .name{font-size:15px;overflow-wrap:anywhere}
     .meta{overflow-wrap:anywhere}
-    .filters{flex-direction:column}
-    .filters input,.filters select{width:100%;min-width:0;flex:none}
+    .filterpanel{grid-template-columns:1fr 1fr}
     .stats{gap:8px}
     .stat{flex:1 1 28%;min-width:0;padding:10px 8px}  /* wrap to ~3 per row so 6-stat cards don't truncate */
     .stat .n{font-size:19px;white-space:nowrap}
@@ -610,7 +619,10 @@
   <section id="search">
     <h2>Search stores</h2>
     <div class="filters">
-      <input id="f_search" placeholder="Search name, city, ZIP, or pick a filter…" oninput="onAdminSearch()">
+      <input id="f_search" placeholder="Search name, city, ZIP…" oninput="onAdminSearch()">
+      <button type="button" class="fbtn" id="filters_btn" onclick="toggleFilters()" aria-expanded="false">Filters<span id="filters_count" class="fcount"></span><span class="msel-car">▾</span></button>
+    </div>
+    <div class="filterpanel" id="filterpanel">
       <div class="msel" id="ftype_wrap"><button type="button" class="msel-btn" id="ftype_btn" onclick="ftypeToggle(event)"><span id="ftype_lbl">All types</span><span class="msel-car">▾</span></button><div class="msel-menu" id="ftype_menu"></div></div>
       <select id="f_region" onchange="loadRetailers()"><option value="">All regions</option></select>
       <select id="f_zone" onchange="onStoreFilter()"><option value="">All zones</option></select>
@@ -635,6 +647,7 @@
         <option value="recent">Recently called</option>
         <option value="open">Open now first</option>
       </select>
+      <button type="button" class="ghost fclear" onclick="clearStoreFilters()">Clear filters</button>
     </div>
     <div id="retailerList"></div>
     <div id="store_pager" style="position:fixed;right:14px;bottom:16px;z-index:50;display:none;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border-strong);border-radius:14px;padding:7px 9px;box-shadow:0 10px 28px rgba(0,0,0,.55)">
@@ -1820,10 +1833,20 @@ function fillTypeFilter(types){
 function ftypeToggle(e){ if(e)e.stopPropagation(); const m=document.getElementById('ftype_menu'); if(m) m.classList.toggle('open'); }
 function ftypePick(cb){ if(cb.checked) TYPE_SEL.add(cb.value); else TYPE_SEL.delete(cb.value); ftypeLabel(); loadRetailers(); }
 function ftypeClear(e){ if(e)e.stopPropagation(); TYPE_SEL.clear(); document.querySelectorAll('#ftype_menu input').forEach(i=>i.checked=false); ftypeLabel(); loadRetailers(); }
-function ftypeLabel(){ const l=document.getElementById('ftype_lbl'); if(!l) return; const n=TYPE_SEL.size; l.textContent=n===0?'All types':n===1?[...TYPE_SEL][0]:n+' types'; }
+function ftypeLabel(){ const l=document.getElementById('ftype_lbl'); if(l){ const n=TYPE_SEL.size; l.textContent=n===0?'All types':n===1?[...TYPE_SEL][0]:n+' types'; } syncFilterCount(); }
+// Compact Search filters: search box + a "Filters" button that reveals the panel; badge shows how many are active.
+function toggleFilters(){ const p=document.getElementById('filterpanel'), b=document.getElementById('filters_btn'); if(!p||!b) return; const open=!p.classList.contains('open'); p.classList.toggle('open',open); b.setAttribute('aria-expanded',open?'true':'false'); }
+function syncFilterCount(){
+  const b=document.getElementById('filters_btn'), c=document.getElementById('filters_count'); if(!b||!c) return;
+  let n=0;
+  if(typeof TYPE_SEL!=='undefined' && TYPE_SEL.size) n++;
+  ['f_region','f_zone','f_carries','f_status'].forEach(id=>{ const el=document.getElementById(id); if(el&&el.value) n++; });
+  const so=document.getElementById('f_sort'); if(so&&so.value&&so.value!=='rel') n++;
+  c.textContent=n; c.classList.toggle('show',n>0); b.classList.toggle('on',n>0);
+}
 document.addEventListener('click',e=>{ const w=document.getElementById('ftype_wrap'), m=document.getElementById('ftype_menu'); if(m&&m.classList.contains('open')&&w&&!w.contains(e.target)) m.classList.remove('open'); });
 async function loadRetailers(){
-  STORE_PAGE=0;
+  STORE_PAGE=0; syncFilterCount();
   const q=(document.getElementById('f_search')?.value||'').trim();
   const types=[...TYPE_SEL];
   const region=document.getElementById('f_region')?.value||'';
@@ -2181,7 +2204,7 @@ function closeStoreCall(id, ev){ if(ev)ev.stopPropagation();
   const st=STORE_TAP[id]||{}; st.calling=false; st.recall=false; st.armed=true; STORE_TAP[id]=st;
   loadRetailers();   // pull fresh stats; the card re-renders armed (STORE_TAP)
 }
-function onStoreFilter(){ STORE_PAGE=0; renderRetailers(); }
+function onStoreFilter(){ STORE_PAGE=0; syncFilterCount(); renderRetailers(); }
 function setStoreSize(n){ STORE_SIZE=Number(n)||10; STORE_PAGE=0; renderRetailers(); }
 function storePage(delta){ STORE_PAGE=Math.max(0,STORE_PAGE+delta); renderRetailers(); try{document.getElementById('search').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){} }
 function renderStorePager(total){
