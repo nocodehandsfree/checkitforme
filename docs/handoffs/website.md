@@ -22,11 +22,13 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
   Openers rotate per-workflow; persona → `{{personality}}`; voice = the workflow's ONE voice (no pool rotation
   on the bridge path — unlike admin's `triggerCall`, where the global pool outranks the workflow voice).
 
-**⚠️ Test — coded but NEVER verified on a real call** (call the Fun store from Admin → Testing):
-- Silent location re-check — never tested with an actual city-to-city move.
-- `language_barrier` status — heuristic never seen firing on a live call.
-- Restock premium vs non-premium section — visual pass.
-- Result entrance animation / CTA sweep — re-look after the above.
+**⚠️ Test — coded but NEVER verified on a real call**:
+- Silent location re-check — logic verified sound (fires on load, permission-granted only, >12mi move →
+  silent switch + toast). Owner will eyeball from the road.
+- `language_barrier` status — to trigger: answer the Fun call with "sorry, no English / no hablo inglés"
+  and give no answer. Gibberish will NOT fire it (phrase-list heuristic + EL flag; only wins when EL unclear).
+- Restock premium vs non-premium — logic verified: `isMember` (active sub) → alert-me module; free →
+  "check back soon". Owner is comp/premium so only sees member view; behavior is a clean on/off in code.
 
 **🔨 Build / fix:**
 - **Green at the bottom bar (iOS Compact Safari)** — owner saw a green bottom toolbar on the live-call screen.
@@ -35,24 +37,24 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
   toolbar tint headlessly. **Need owner input:** does the green show only during a live call, everywhere, or
   only after an in-stock (green) result? Then pin that edge dark. Don't blind-edit the tint CSS — it's fragile
   ("re-breaks the top"). Mechanism spec lives in the big comment at top of `checkit.html` (~L6-14).
-- **Topps hero logo** (`/toppsbasketball`): `logos/topps.png` is low-res white-fringe → halo on the dark hero.
-  Needs a clean **transparent brand-RED** export (black is invisible on `#0C0C12`) — get it from owner/Logo,
-  **don't recolor the trademark**. Then size `--logo-scale`, match `og/topps.png`. (Verified: the hero `<img>`
-  src is `BRAND.logoUrl`, injected server-side via `__BRAND_JSON__` — `renderIcons()` in checkit.html ~L2591.
-  So the real fix = swap the file the brand config points at; no in-lane CSS trick fixes baked-in white fringe.)
-- **Treasure Hunt + Hobby sections**: 3,479 thrift stores live (`chains.type="Thrift"`, muted, off MSRP).
-  Surface behind a **user toggle, OFF by default**. Do **NOT** un-mute (dumps 3.5k into the main list).
-  ✅ **Filed with DevOps** (`section=thrift` param on `/pub/stores/near`, see devops.md) — waiting on the endpoint;
-  build the OFF-by-default toggle once it lands. "Hobby" = a future rail, not imported yet.
-- **Address on reopened calls**: old calls outside the nearby slice show no address (only the near-slice carries
-  `address`). ✅ **Filed with DevOps** (`GET /pub/store/:id`, see devops.md) — waiting on the endpoint; then fill
-  when `SEL_STORE.address` is missing.
-- **Workflow openers**: delete the "shipment" opener default (owner + Admin lane).
+- **Treasure Hunt / thrift toggle** — ON HOLD per owner (front-end being designed with Design + Data).
 
-**⏳ Blocked / waiting on others:** kiosk call script (Voice/Admin) before kiosk calling can promote; then the
-consumer "Working → forward your receipt = free check" nudge is yours.
+**⏳ Blocked / waiting on others:** — (kiosk nudge, shipment opener, Topps logo, entrance animation all closed by owner 2026-07-01)
 
 **✅ Recently done** (newest first; trim when long):
+- **Security lockdown (owner-priority)**: `/pub/stores` (full-table dump) now admin-auth only (header or
+  admin cookie — Admin keeps working); `/pub/*` 300/min/IP ceiling; text-search path q≥2 chars, offset≤600,
+  30/min/IP. Phones were never exposed; muted + owner-only stay hidden. tsc+tests green.
+- **Staging call quality synced to prod baseline**: staging ran a DIFFERENT EL agent with speed .85 (prod .98),
+  turn_timeout 10s (prod 5s), soft-timeout off (prod 3s), eagerness normal (prod eager), speculative off, edited
+  prompt → the slow/repeating call. PATCHed the staging agent's conversation_config to prod's values (kept
+  staging's TTS-override permissions — the voice strip needs them). Also re-enabled `connectOnHuman` +
+  `bail.enabled` on staging policy (were false; prod runs true).
+- **Branson openers de-dashed** (dashes → commas, per owner) on both Branson workflows via settings API.
+- **Verified**: Fun store = id 106361, has **Branson Test** assigned (store-level, wins); default = Branson Global.
+- **`GET /pub/store/:id` + reopened-call address backfill shipped** (the DevOps ask — built it myself,
+  owner-authorized): same shape as /pub/stores/near, comp-gated for owner-only; client fetches the one store
+  and repaints in place when an old call has no address.
 - **Voice strip rotation shipped** (owner-authorized cross-lane): workflows carry `voices[]`, rotated per call
   on the workflow's counter (bridge path rotates the strip; admin dial: override → global pool → strip →
   default). Admin → Workflows: chip strip + "+ Add a voice…"; Reset rotation now also resets voice #1.

@@ -1070,6 +1070,33 @@ app.get("/pub/stores/near", async (c) => {
   return c.json({ total: all.length, offset, limit, stores: [...owned, ...nearestT5, ...rest.slice(offset, offset + limit)] });
 });
 
+// Single-store fetch (consumer): backfills address/logo/hours for a REOPENED call whose store sits
+// outside the current nearby slice (only near-slice stores carry address on the client). Same
+// per-store shape /pub/stores/near emits; owner-only stores need the comp check; muted stay hidden.
+app.get("/pub/store/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isFinite(id)) return c.json({ error: "bad id" }, 400);
+  const r = (await db.select().from(retailers).where(eq(retailers.id, id)))[0];
+  if (!r || r.active === false) return c.json({ error: "not_found" }, 404);
+  const chain = r.chainId ? (await cachedChains()).find((x) => x.id === r.chainId) : undefined;
+  if (chain?.muted === true) return c.json({ error: "not_found" }, 404);
+  if (r.ownerOnly && !(await requesterIsComp(c.req.header("Authorization")))) return c.json({ error: "not_found" }, 404);
+  const chainName = chain?.name || r.name.split(/—|–| - /)[0];
+  return c.json({ id: r.id, chainId: r.chainId, name: r.name, location: r.location, address: r.address || null,
+    storeType: chain?.type || "Other",
+    ...((l) => ({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo(chainName)),
+    carries: storeCarriesList(chainName, r.carries),
+    lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
+    sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
+    tier: r.hasKiosk === true ? 5 : (r.tier ?? null),
+    callable: r.sellsPacks !== false && !!r.phone && !r.phone.startsWith("nophone:"),
+    ownerOnly: r.ownerOnly === true,
+    stockCheckMethod: chain?.stockCheckMethod || "call",
+    sellMethods: (chain?.sellMethods || "in_store").split(",").map((s) => s.trim()).filter(Boolean),
+    online: r.online === true, isMSRP: chain ? chain.isMSRP !== false : true,
+    mapsUri: r.mapsUri || null, miles: null, openState: openState(r.hours, r.timezone) });
+});
+
 // Master/dev location override: resolve a ZIP (or free-text "city, ST") to a lat/lng using OUR OWN
 // store coordinates — zero external dependency. Averages the coords of matching stores = a usable
 // center to "stand" in. (Drop-a-pin on the map is the always-available alternative.)
