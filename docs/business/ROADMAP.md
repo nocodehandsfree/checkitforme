@@ -24,6 +24,12 @@ Status of each is detailed in the linked ops/security docs; this is the single c
 - [ ] **Split `src/server.ts` into route modules** (public/admin/auth/webhooks) — unblocks Website + Admin parallel work.
 
 **Scale / infra**
+- [ ] **Mid-call hold suspend (measure first — owner asked 2026-07-01):** today Charlie (EL) keeps
+  billing through a mid-call "let me check the back" hold; only the 25s hold-bail caps it (~4-5¢ worst
+  case, and the bail loses the answer). ABC covers pre-human only. Fix = un-patch EL during hold, cheap
+  listener waits for a returning voice, re-patch a fresh EL session with re-briefed context — real work
+  (one EL session = one brain, per CHEAP_NAV_ARCHITECTURE). Decide AFTER staging test calls show how
+  often/long mid-call holds actually happen.
 - [ ] Redis-backed rate limiter (multi-instance) · single-leader schedulers ✅(done).
 - [ ] TiDB cutover (connection staged; needs SQL string + backfill — git history).
 - [ ] Analytics → SQL (dashboards load whole tables today).
