@@ -118,7 +118,7 @@ export async function buildRestockVars(
   specificProduct?: string,
   extraCategoryIds?: number[],
   kioskMode?: boolean,
-): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; dynamicVars: Record<string, string> } | null> {
+): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
   const category = (await db.select().from(categories).where(eq(categories.id, categoryId)))[0];
@@ -170,6 +170,10 @@ export async function buildRestockVars(
     // Bridge-level keypad shortcut (chain-wide): pressed by OUR code at a fixed time, not the LLM.
     dtmf: chain?.dtmfShortcut ?? null,
     say,
+    // ABC deterministic hand-off: open the billed agent at the chain's LEARNED time-to-human
+    // (chains.avgTreeSeconds, set from the locked recipe) instead of guessing from VAD. 0/null =
+    // no learned timer, so the bridge falls back to VAD + hold-timeout.
+    connectAtSec: chain?.avgTreeSeconds ?? null,
     // Per-store talk cap (chains.maxTalkSeconds). Null = caller falls back to the global bail cap.
     maxTalk: chain?.maxTalkSeconds ?? null,
     // Workflow voice (Voice→Designer): per-call voice + TTS tuning override when a workflow is assigned.
