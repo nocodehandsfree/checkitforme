@@ -3155,7 +3155,9 @@ app.get("/api/admin/store-intel", async (c) => {
     Number((await db.select({ n: sql<number>`count(*)` }).from(retailers).where(w))[0]?.n || 0);
   const active = eq(retailers.active, true);
   const total = await countWhere(active);
-  const callable = await countWhere(and(active, sql`${retailers.phone} is not null and ${retailers.phone} != ''`));
+  // "Callable" = a REAL dialable line. Exclude the "nophone:" sentinel (address-only / site-check
+  // imports) — those have a non-empty phone field but nothing to dial, so they were inflating the count.
+  const callable = await countWhere(and(active, sql`${retailers.phone} is not null and ${retailers.phone} != '' and ${retailers.phone} not like 'nophone:%'`));
   const PRODUCTS = ["Pokemon", "One Piece", "Topps", "NeeDoh", "Magic", "Yu-Gi-Oh", "Lorcana", "Sports Cards", "Squishmallows"];
   const byProduct: Record<string, number> = {};
   for (const p of PRODUCTS) byProduct[p] = await countWhere(and(active, like(retailers.carries, `%${p}%`)));
