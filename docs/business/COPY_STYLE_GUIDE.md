@@ -39,7 +39,7 @@ Jargon with no plain gloss: IVR · DTMF · E.164 · COGS · MRR.
 |---|---|---|
 | The product | **Check It For Me** | Fungibles · Runnr · Runner |
 | The customer's currency | a **check** | a "call" (see below) |
-| The AI that phones stores | **Fungie** | — |
+| The AI that phones stores | **Check AI** | Fungie · Fungibles |
 | The person who answers at the store | **Staff** | Clerk · Store |
 | Footer / credit | (nothing) | "Powered by Fungibles" |
 
@@ -77,25 +77,10 @@ Hand-write the fixed UI lines (keeps the voice + the tokens). Machine-translate 
 
 ---
 
-## Type scale — the ONLY sizes allowed
-One font (**Inter**). Five roles. Nothing off this list. If a size isn't here, it's a bug. This is the fix for "42 different sizes."
+## Type, size, color, spacing — not this doc
+Sizes/weights/color/radii are **Design's lane**, and there's already one authority: **`docs/design/STYLE_GUIDE.md` §3** (the type scale, the 10.5px eyebrow, the **16px focusable inputs** anti-zoom rule, the color-opacity scale). Conform admin **and** site to that table — don't invent a second scale here. This doc owns the **words**; that one owns the **look**.
 
-| Role | Size | Weight | Style | Used for |
-|---|---|---|---|---|
-| **Header** | 26px | 800 | — | Page title (one per screen) |
-| **Data** | 22px | 800 | — | The big glance numbers (stat tiles) |
-| **Subhead** | 15px | 700 | — | Card titles, section headers |
-| **Body** | 13px | 500 | — | Normal text, values, buttons |
-| **Caption** | 11px | 600 | UPPERCASE, muted | Labels under stats, helper, eyebrows |
-
-**Weight & emphasis rules**
-- **Weights: only 500 (body), 700 (subhead/label), 800 (header/data).** No 400, no 900, no in-betweens.
-- **Emphasis = color or weight, never a bigger size.** Go green/amber/red or bump to 700 — don't grow the text.
-- **Italic = one job only:** directional hint text inside an input (the little "(optional)" / example line). Nowhere else.
-- **Never bold + italic together.**
-- Spacing rides a scale too: **4 / 8 / 12 / 16 / 24px.** No 3px, 6px, 13px one-offs.
-
-**Applies to admin *and* site.** The admin drifted worst (42 sizes), but the site has strays too — both conform to this table.
+*(The "42 different sizes" cleanup means making the admin match Design's scale — not a new set of numbers.)*
 
 ---
 

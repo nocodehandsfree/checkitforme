@@ -466,6 +466,7 @@
   .subnav2 button.active{background:rgba(167,139,250,.14);border-color:rgba(167,139,250,.42);color:#c4b5fd}
   .subnav2 button svg{opacity:.8} .subnav2 button.active svg{opacity:1}
   @media(max-width:560px){ .subnav2{padding:9px 14px} }
+  .subnav2.ovf{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent)}
   button.act .hdico,button.ghost .hdico{color:inherit;margin-right:6px}
   details.card>summary .name,details.tr>summary{display:inline-flex}
   /* headers stay bright; body copy is soft (set on body) */
@@ -538,10 +539,6 @@
 
   <!-- GOD VIEW: the day's command center — vitals above the fold, business folded in -->
   <section id="dash" class="active">
-    <div class="subnav" id="dash_subnav">
-      <button class="active" onclick="showDashView('overview')">Overview</button>
-      <button onclick="showDashView('calc')">Calc</button>
-    </div>
     <div id="dash_overview">
     <div class="hero">
       <div class="hero-eyebrow">Today</div>
@@ -587,7 +584,6 @@
       <div id="d_health" class="meta">Loading…</div>
     </details>
     </div>
-    <div id="dash_calc" style="display:none"></div>
   </section>
   <section id="calc"><div id="calc_root"></div></section>
   <section id="users">
@@ -755,7 +751,7 @@
       <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px">
         <div class="name">Emailed-in receipts</div>
         <button class="ghost" style="font-size:12px;padding:5px 10px" onclick="inspectInbox()">Inspect inbox</button>
-        <span data-tip="Reads the ingest inbox and shows how each email parsed. whether a receipt landed, and why." style="margin-left:7px;cursor:help"></span>
+        <span data-tip="Reads the ingest inbox and shows how each email parsed, whether a receipt landed, and why." style="margin-left:7px;cursor:help"></span>
       </div>
       <div class="meta" id="rcpt_status" style="margin-bottom:8px">Loading…</div>
       <div id="rcpt_debug" class="meta" style="margin-bottom:8px"></div>
@@ -878,7 +874,7 @@
 
       <div class="card dstep" data-step="3" style="display:none">
         <div class="name" style="margin-bottom:12px">Step 3 · Script</div>
-        <label data-tip="Use {category}. fills in Pokémon, One Piece, etc.">Write a new opener</label>
+        <label data-tip="Use {category}, fills in Pokémon, One Piece, etc.">Write a new opener</label>
         <textarea id="rot_opener_new" rows="3" style="font-size:14px;line-height:1.5" placeholder="e.g. Heyy! Got any {category} in today?"></textarea>
         <div class="btnrow"><button class="ghost" onclick="addOpener()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save opener</button></div>
         <label style="margin-top:14px">Your openers <span id="rot_opener_count" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></label>
@@ -949,11 +945,11 @@
     <section id="trees">
     <h2 data-tip="Per-chain settings + the auto-mapped phone route. Pick a chain to edit its stores, calls and mapping.">Settings</h2>
     <div class="card report">
-      <div class="name" style="margin-bottom:12px">Mapped Stats</div>
+      <div class="name" style="margin-bottom:12px">Mapped stats</div>
       <div class="stats" id="tr_stats" style="margin-bottom:0"></div>
     </div>
     <div class="card">
-      <label>Select a Chain</label>
+      <label>Select a chain</label>
       <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
         <input id="set_search" placeholder="Search chains…" oninput="filterChainPicker()" style="flex:1 1 150px;min-width:0">
         <select id="set_fmap" onchange="filterChainPicker()" style="flex:0 0 auto;width:auto;font-size:13px"><option value="">All</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option></select>
@@ -965,15 +961,15 @@
     </div>
     <div id="set_body" style="display:none">
       <details class="card setsec" open id="set_storewrap">
-        <summary><span id="set_storelogo" class="setlogo"></span><span class="name">Store Settings</span></summary>
+        <summary><span id="set_storelogo" class="setlogo"></span><span class="name">Store settings</span></summary>
         <div id="set_store" style="margin-top:18px"></div>
       </details>
       <details class="card setsec" open id="set_datawrap">
-        <summary><span class="name">Store Data</span></summary>
+        <summary><span class="name">Store data</span></summary>
         <div id="set_data" style="margin-top:18px"></div>
       </details>
       <details class="card setsec" open id="set_callwrap">
-        <summary><span class="name">Call Settings</span></summary>
+        <summary><span class="name">Call settings</span></summary>
         <div id="set_call" style="margin-top:18px"></div>
       </details>
       <details class="card setsec" open id="set_mapwrap">
@@ -982,7 +978,7 @@
           <div id="set_mapping" class="meta" style="margin-top:2px">—</div>
           <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
             <button class="act" id="set_mapbtn" onclick="setMapChain()">Map</button>
-            <span class="meta" data-tip="One real call. the navigator works the menu to a human, records the recipe + time, then you Lock it." style="align-self:center"></span>
+            <span class="meta" data-tip="One real call. The navigator works the menu to a human, records the recipe + time, then you Lock it." style="align-self:center"></span>
           </div>
           <div class="card" id="tr_live" style="display:none;border-color:var(--green);margin-top:12px">
             <div class="row" style="justify-content:space-between;align-items:center">
@@ -1005,7 +1001,7 @@
     <h2>Statuses</h2>
     <div id="pb_statuses">
       <div class="card">
-        <div class="name" style="margin-bottom:12px" data-tip="Edit the icon, label, color or tone. consumer + Test Bench verdicts update instantly">What customers see</div>
+        <div class="name" style="margin-bottom:12px" data-tip="Edit the icon, label, color or tone. Consumer + Test Bench verdicts update instantly">What customers see</div>
         <div id="st_list"><div class="empty">Loading…</div></div>
         <div style="height:1px;background:var(--border);margin:14px 0"></div>
         <div class="name" style="font-size:14px;margin-bottom:8px">Add a status</div>
@@ -1031,11 +1027,11 @@
   </section>
 
   <section id="fun">
-    <h2 data-tip="Ring your own phone (or a friend's) in any cloned voice + persona. just to mess around. Never touches store calls.">Fun</h2>
+    <h2 data-tip="Ring your own phone (or a friend's) in any cloned voice + persona. Never touches store calls.">Fun</h2>
     <div class="card">
       <label>Phone</label>
       <input id="lab_phone" placeholder="+13105551234">
-      <label data-tip="Optional. opens with e.g. 'hey what's up Matt'">First name</label>
+      <label data-tip="Optional. Opens with e.g. 'hey what's up Matt'">First name</label>
       <input id="lab_name" placeholder="Matt">
       <label>Flow</label>
       <select id="lab_mode">
@@ -1049,7 +1045,7 @@
         <option value="homie">Homie</option>
         <option value="family">Family</option>
       </select>
-      <label data-tip="Ring in any clone. the live store voice is never touched">Voice</label>
+      <label data-tip="Ring in any clone. The live store voice is never touched">Voice</label>
       <select id="lab_voice"><option value="">Default voice</option></select>
       <div class="btnrow"><button class="act" onclick="labCall()">Call</button></div>
     </div>
@@ -1132,9 +1128,9 @@ let CATEGORIES = [];
 
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
-  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Pulse','bolt'],['users','Users','card'],['restock','Restock','cal'],['growth','Policy','rise'],['calc','Calc','sliders']]},
+  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Live','bolt'],['users','Users','card'],['restock','Restock','cal'],['growth','Policy','rise'],['calc','Calc','sliders']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
-  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Settings','tree'],['settings','App','sliders']]},
+  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Chains','tree'],['settings','App','sliders']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['workflows','Workflows','note'],['testing','Testing','phone-call'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
@@ -1151,7 +1147,9 @@ function showGroup(g, sectionId){
   document.querySelectorAll('#grpnav button').forEach(b=>b.classList.toggle('active',b.dataset.grp===g));
   const sn=document.getElementById('subnav2');
   if(sn){ sn.style.display = grp.tabs.length>1?'flex':'none';
-    sn.innerHTML=grp.tabs.map(t=>`<button data-sec="${t[0]}" onclick="showSection('${t[0]}')">${ICO(t[2],15)}<span style="vertical-align:middle">${esch(t[1])}</span></button>`).join(''); }
+    sn.innerHTML=grp.tabs.map(t=>`<button data-sec="${t[0]}" onclick="showSection('${t[0]}')">${ICO(t[2],15)}<span style="vertical-align:middle">${esch(t[1])}</span></button>`).join('');
+    const setFade=()=>sn.classList.toggle('ovf', sn.scrollWidth - sn.scrollLeft > sn.clientWidth + 2); // fade the right edge while tabs are off-screen
+    sn.onscroll=setFade; requestAnimationFrame(setFade); }
   showSection(sectionId || GROUP_LAST[g] || grp.tabs[0][0], true);
 }
 function showSection(id, fromGroup){
@@ -1414,23 +1412,10 @@ function calcCompute(storeType,nav,talk,r){
   return { items, total: items.reduce((s,i)=>s+i.amount,0) };
 }
 // Toggle the God-view sub-nav between the live Overview and the Calc.
-function showDashView(which){
-  const ov=document.getElementById('dash_overview'), ca=document.getElementById('dash_calc'); if(!ov||!ca) return;
-  const calc=which==='calc';
-  ov.style.display=calc?'none':''; ca.style.display=calc?'':'none';
-  document.querySelectorAll('#dash_subnav button').forEach((b,i)=>b.classList.toggle('active', i===(calc?1:0)));
-  if(calc) calcInit();
-}
-// The calc has two homes — the God-view Calc TAB (#calc_root) and the dash sub-view (#dash_calc). Mount
-// into the one actually being shown and clear the other, so the calc's element IDs stay unique. (The old
-// "#dash_calc || #calc_root" always resolved to #dash_calc — which always exists but is hidden unless the
-// dash sub-view is open — so the Calc TAB rendered EMPTY. That's the calculator that looked "wiped".)
+// Calc lives only in its own God-view tab now (the duplicate in-Pulse toggle was removed).
 function calcInit(){
-  const onTab=document.getElementById('calc')?.classList.contains('active');
-  const target=onTab?document.getElementById('calc_root'):document.getElementById('dash_calc');
-  const other=onTab?document.getElementById('dash_calc'):document.getElementById('calc_root');
+  const target=document.getElementById('calc_root');
   if(!target) return;
-  if(other) other.innerHTML='';                            // never leave the calc in both → duplicate IDs
   if(!target.querySelector('#calc_total')) target.innerHTML=calcShell();
   CALC.ready=true; calcSync(); calcUpdate();
 }
@@ -1476,7 +1461,7 @@ function calcShell(){
     <div class="row" style="gap:12px">
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Revenue / call</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:10px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:20px;font-weight:700;padding:10px 2px;width:84px"></span></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Margin</span><div id="calc_margin" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0%</div></div>
-      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">× return <span data-tip="Revenue ÷ cost. how many times the call pays for itself."></span></span><div id="calc_return" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0×</div></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">× return <span data-tip="Revenue ÷ cost. How many times the call pays for itself."></span></span><div id="calc_return" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0×</div></div>
     </div>
     <div id="calc_sentence" style="margin-top:14px;font-size:13.5px;color:var(--text-muted);line-height:1.5"></div>
   </div>`;
@@ -1628,7 +1613,7 @@ async function saveRotation(btn){
   const library=JSON.stringify(OPENERS.map(x=>({text:x.text,on:x.on})));
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({voicePool,openerVariants,openerLibrary:library})});
   btn.textContent=o; btn.disabled=false;
-  const m=document.getElementById('rot_msg'); if(m) m.textContent=(r&&!r.error)?'Saved. live calls rotate these scripts. (Voice rotation is test-only for now.)':'Could not save';
+  const m=document.getElementById('rot_msg'); if(m) m.textContent=(r&&!r.error)?'Saved. Live calls rotate these scripts. (Voice rotation is test-only for now.)':'Could not save';
 }
 // ---- Test: store list from /api/test-stores, voice pool + rotate, visible per-call rotation ----
 let TEST_STORES=[], TEST_ROT={call:0};
@@ -1751,7 +1736,7 @@ async function vsToggleRec(){
     VS_REC.onstop=()=>{ VS_BLOB=new Blob(VS_CHUNKS,{type:'audio/webm'}); const u=URL.createObjectURL(VS_BLOB); const a=document.getElementById('vs_play'); a.src=u; a.style.display=''; document.getElementById('vs_clone').disabled=false; stream.getTracks().forEach(t=>t.stop()); clearInterval(VS_TIMER); btn.innerHTML='<span style="color:var(--red)">●</span> Record'; btn.style.color=''; };
     VS_REC.start(); btn.innerHTML='<span style="color:var(--red)">■</span> Stop'; btn.style.color='#EF4444';
     let s=0; const rt=document.getElementById('vs_rectime'); VS_TIMER=setInterval(()=>{ s++; rt.textContent=s+'s'; },1000);
-  }catch(e){ toast('Mic blocked. allow microphone access'); }
+  }catch(e){ toast('Mic blocked. Allow microphone access.'); }
 }
 async function vsClone(){
   const name=(document.getElementById('vs_name').value||'').trim();
@@ -2115,7 +2100,7 @@ function storeTap(id, ev){
     const s=STORE_TAP[id]||{}; s.tapTimer=0; STORE_TAP[id]=s;
     if(s.recall||s.calling||!s.armed) return;
     const r=RETAILERS.find(x=>x.id===id); if(!r) return;
-    const os=r.openState||{}; if(os.known && !os.open){ toast('🔒 Closed. no call placed'); return; }
+    const os=r.openState||{}; if(os.known && !os.open){ toast('🔒 Closed, no call placed'); return; }
     const lc=r.lastCall, recent=lc&&lc.startedAt&&(Date.now()/1000-lc.startedAt)<86400;
     if(recent) openRecall(id,r); else openCallConfirm(id,r);
   }, 450);
@@ -2157,7 +2142,7 @@ async function placeStoreCall(id){
   const st=STORE_TAP[id]||{}; st.recall=false; st.calling=true; st.armed=true; STORE_TAP[id]=st;
   renderCallView(id, r);
   const resp=await api('/api/call-now',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:id,categoryId:catId})});
-  if(!resp||resp.error){ toast(/closed/i.test((resp&&resp.error)||'')?'🔒 Closed. no call placed':'Could not place the call'); closeStoreCall(id); return; }
+  if(!resp||resp.error){ toast(/closed/i.test((resp&&resp.error)||'')?'🔒 Closed, no call placed':'Could not place the call'); closeStoreCall(id); return; }
   st.cid=resp.providerCallId; st.callSid=resp.callSid; STORE_TAP[id]=st;
   scPoll(id, resp.providerCallId);
 }
@@ -2222,7 +2207,7 @@ async function saveStorePhone(id){
   const phone=inp.value.trim();
   const r=await api('/api/retailers/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({phone})});
   if(!r||r.error){ toast('Could not save the number'); return; }
-  toast(phone?'Saved. store is live ✓':'Phone cleared. store hidden');
+  toast(phone?'Saved, store is live ✓':'Phone cleared. store hidden');
   const t=RETAILERS.find(x=>x.id===id); if(t){ t.phone=phone; t.active=!!phone; }
   renderRetailers();
 }
@@ -2318,7 +2303,7 @@ function ssRenderStore(){
     `<div style="font-size:13px;color:var(--text-muted);margin:2px 0 7px">Status</div>`
     +(SS.repack?`<div class="row" style="gap:8px;align-items:center;margin-bottom:9px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);border-radius:20px;padding:3px 11px">${ssDot('#FBBF24')}Repack-only</span><button class="ghost" onclick="ssClearRepack()" style="font-size:12px;padding:5px 10px">Clear</button></div>`:'')
     +`<div class="row" style="gap:8px;margin-bottom:18px">${status}</div>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Type <span data-tip="What kind of retailer this chain is. sets grouping + scoring."></span></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Type <span data-tip="What kind of retailer this chain is. Sets grouping + scoring."></span></div>`
     +`<select onchange="ssSetType(this.value)" style="margin-bottom:18px">${SS_TYPES.map(([v,l])=>`<option value="${esch(v)}"${SS.type===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
     +`<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:9px"><div style="font-size:13px;color:var(--text-muted)">Rating</div><span class="meta" id="set_ratemsg" style="font-size:11px"></span></div>`
     +`<div class="row" style="gap:7px;flex-wrap:wrap">${pills}</div>`
@@ -2328,7 +2313,7 @@ function ssRenderStore(){
     +row('Online','Sells online. pickup or shipped.',SS.cOnline,tog(maj('Online'),'ssToggleOnline()'))
     +row('Stock verified','Confirmed it carries (vs just suspected).',SS.cVerified,tog(maj('Verified'),'ssToggleVerified()'));
 }
-async function ssMute(){ if(!SS) return; if(!confirm('Are you sure you want to mute this store?')) return; if(await ssPatch('muted',true)){ SS.muted=true; ssRenderStore(); toast('Muted. dropped from customers'); } }
+async function ssMute(){ if(!SS) return; if(!confirm('Are you sure you want to mute this store?')) return; if(await ssPatch('muted',true)){ SS.muted=true; ssRenderStore(); toast('Muted, dropped from customers'); } }
 async function ssActivate(){ if(!SS) return; if(await ssPatch('muted',false)){ SS.muted=false; ssRenderStore(); toast('Active'); } }
 async function ssClearRepack(){ if(!SS) return; if(await ssPatch('repackOnly',false)){ SS.repack=false; ssRenderStore(); toast('Repack-only cleared'); } }
 async function ssSetType(v){ if(!SS) return; SS.type=v; if(await ssPatch('type',v)) toast('Type: '+v); }
@@ -2392,8 +2377,8 @@ function ssRenderData(){
   const sccOpts=[['','—'],['confirmed','confirmed'],['probable','probable']];
   const scmOpts=[['','—'],['site','site · read the website'],['call','call · phone the store']];
   el.innerHTML=
-    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> First-party. sells at MSRP</label><span data-tip="We price the store's own shelf at retail. not a reseller that may mark it up."></span></div>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check method <span data-tip="How we check this chain's stock. read their website (site) or phone the store (call)."></span></div>`
+    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> First-party. sells at MSRP</label><span data-tip="We price the store's own shelf at retail. Not a reseller that may mark it up."></span></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check method <span data-tip="How we check this chain's stock. Read their website (site) or phone the store (call)."></span></div>`
     +`<select id="set_scm" style="margin-bottom:16px">${scmOpts.map(([v,l])=>`<option value="${v}"${(SS.scm||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check confidence <span data-tip="How sure we are it carries: confirmed (seen/called) vs probable (expected, unverified)."></span></div>`
     +`<select id="set_scc" style="margin-bottom:16px">${sccOpts.map(([v,l])=>`<option value="${v}"${(SS.scc||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
@@ -2421,7 +2406,7 @@ function ssRenderCall(){
     +`<div class="row" style="gap:9px;align-items:flex-start"><input type="checkbox" id="set_vm" ${SS.vm?'checked':''} onchange="ssSetHangup(this.checked)" style="margin-top:2px"><div style="line-height:1.25"><div style="display:flex;align-items:center;gap:5px"><label for="set_vm" style="font-weight:700;font-size:13px;color:var(--text-body);cursor:pointer;text-transform:none;letter-spacing:0;display:inline;margin:0">Hang up</label><span data-tip="Voicemail or a closed / recorded line → hang up at once. No message, no charge."></span></div><div class="meta" style="font-size:11px;margin-top:1px">voicemail / closed</div></div></div>`
     +`</div>`
     +`<div class="setrow" style="justify-content:flex-end;gap:11px"><div class="setlbl">Phone this chain <span data-tip="ON = we call this chain's stores to check stock. OFF = listed, but never dialed."></span></div>${tog(SS.callTarget,'ssToggleCallTarget()')}</div>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin:16px 0 6px">Default workflow <span data-tip="Voice / script for every store of this chain. overrides the global default."></span></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin:16px 0 6px">Default workflow <span data-tip="Voice / script for every store of this chain. Overrides the global default."></span></div>`
     +`<select id="set_wf" onchange="setChainWorkflow(SS.id,this.value)">${wfOptions(SS.wf, WF.def?('Default · '+WF.def):'Default')}</select>`;
 }
 async function ssToggleCallTarget(){ if(!SS) return; const v=!SS.callTarget; if(await ssPatch('callTarget',v)){ SS.callTarget=v; ssRenderCall(); toast(v?'Phoning this chain':'Will not dial this chain'); } }
@@ -2546,7 +2531,7 @@ function renderChainList(){
 }
 async function quickChain(id,field,val){
   const r=await api('/api/chains/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({[field]:val})});
-  if(r&&r.id){ toast(field==='muted'?(val?'Muted. hidden from consumers in every city':'Unmuted'):'Saved'); const s=CHAIN_STATS.find(c=>c.id===id); if(s) s[field]=val; const ch=CHAINS.find(c=>c.id===id); if(ch) ch[field]=val; renderChainList(); }
+  if(r&&r.id){ toast(field==='muted'?(val?'Muted, hidden from consumers in every city':'Unmuted'):'Saved'); const s=CHAIN_STATS.find(c=>c.id===id); if(s) s[field]=val; const ch=CHAINS.find(c=>c.id===id); if(ch) ch[field]=val; renderChainList(); }
   else toast('Could not save');
 }
 function previewMaybe(){ const d=document.getElementById('tb_preview_card'); if(d&&d.open) loadPreview(); }
@@ -2687,7 +2672,7 @@ async function loadPreset(){
   const name=document.getElementById('vt_preset').value; if(!name){ toast('Pick a saved script'); return; }
   const t=await api('/api/voice-presets/apply',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name})});
   if(t&&t.error){ toast('Error: '+t.error); return; }
-  await loadSandbox(); toast('Loaded “'+name+'” into the draft. test it, then apply to stores');
+  await loadSandbox(); toast('Loaded “'+name+'” into the draft. Test it, then apply to stores');
 }
 async function removePreset(){
   const name=document.getElementById('vt_preset').value; if(!name){ toast('Pick a saved script'); return; }
@@ -2934,7 +2919,7 @@ async function saveStatus(id,btn){
   const card=btn.closest('[data-sid]'); const body={};
   card.querySelectorAll('[data-f]').forEach(i=>{ body[i.dataset.f]=i.value; });
   const r=await api('/api/statuses/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  if(r&&r.id){ STATUSES[r.key]=r; toast('Saved. live in Check It For Me + Test Bench now'); }
+  if(r&&r.id){ STATUSES[r.key]=r; toast('Saved. Live in Check It For Me and Test Bench now'); }
   else toast('Could not save');
 }
 function pickNewStatusIcon(){ openIconPicker(n=>{ document.getElementById('st_new_emoji').value=n; document.getElementById('st_new_icon_btn').innerHTML=statusIcon(n,'#9CA3AF',22); }, document.getElementById('st_new_emoji').value); }
@@ -2960,7 +2945,7 @@ async function callNow(id){
   if(!catId){ toast('No product category configured'); return; }
   toast('Dialing…');
   await api('/api/call-now',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:id,categoryId:catId})});
-  toast('Call placed. the result lands in this store’s record shortly.');
+  toast('Call placed. The result lands in this store’s record shortly.');
 }
 async function mapCall(id){
   const cat=(CATEGORIES.find(c=>/pok/i.test(c.label))||CATEGORIES[0]);
@@ -3318,7 +3303,7 @@ async function wfmAddOpener(wi){ const inp=document.getElementById('wfmadd_'+wi)
 async function wfmDelOpener(wi,oi){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; w.openers.splice(oi,1); renderWorkflowMgr(); await wfmSaveList(); toast('Opener removed'); }
 async function wfmEditOpener(wi,oi,text){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; const t=(text||'').trim(); if(!t){ w.openers.splice(oi,1); renderWorkflowMgr(); } else { w.openers[oi]=t; } await wfmSaveList(); }
 async function wfmSetField(wi,field,val){ const w=WF.list[wi]; if(!w) return; w[field]=val; await wfmSaveList(); renderWorkflowMgr(); toast('Saved'); }
-async function wfmClone(wi){ const w=WF.list[wi]; if(!w) return; const name=(prompt('Name for the cloned workflow:', w.name+' copy')||'').trim(); if(!name) return; if(WF.list.some(x=>x.name===name)){ toast('A workflow named “'+name+'” already exists'); return; } const copy=JSON.parse(JSON.stringify(w)); copy.name=name; copy.savedAt=Date.now(); WF.list.push(copy); renderWorkflowMgr(); await wfmSaveList(); toast('Cloned as “'+name+'”. edit it below, then assign it to a store'); }
+async function wfmClone(wi){ const w=WF.list[wi]; if(!w) return; const name=(prompt('Name for the cloned workflow:', w.name+' copy')||'').trim(); if(!name) return; if(WF.list.some(x=>x.name===name)){ toast('A workflow named “'+name+'” already exists'); return; } const copy=JSON.parse(JSON.stringify(w)); copy.name=name; copy.savedAt=Date.now(); WF.list.push(copy); renderWorkflowMgr(); await wfmSaveList(); toast('Cloned as “'+name+'”. Edit it below, then assign it to a store'); }
 // ---- Round-trip: open an existing workflow back in the Designer (the only place to tweak tuning) ----
 let EDIT_TARGET=null; // a workflow staged to load into the Designer once its async loaders settle
 // Designer tab loader: await the voice/persona/store loaders FIRST, then (if we arrived via "Edit in
@@ -3358,7 +3343,7 @@ function applyWorkflowToDesigner(w){
 async function wfmSetDefault(wi){ const w=WF.list[wi]; if(!w) return; WF.def=w.name; const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:w.name})}); renderWorkflowMgr(); toast((r&&!r.error)?(w.name+' powers all stores now'):'Could not set default'); }
 async function wfmDelete(wi){ const w=WF.list[wi]; if(!w) return; if(!confirm('Delete workflow “'+w.name+'”?\nStores assigned to it fall back to the default.')) return; const wasDef=WF.def===w.name; WF.list=WF.list.filter((x,i)=>i!==wi); if(wasDef){ WF.def=''; await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:''})}); } renderWorkflowMgr(); await wfmSaveList(); toast('Workflow deleted'); }
 // Reset this workflow's opener rotation so the next call to it starts at opener #1 (predictable testing).
-async function wfmResetRotation(wi){ const w=WF.list[wi]; if(!w) return; const r=await api('/api/admin/reset-rotation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workflow:w.name})}); toast((r&&r.ok)?'Rotation reset. next call uses opener #1':'Could not reset rotation'); }
+async function wfmResetRotation(wi){ const w=WF.list[wi]; if(!w) return; const r=await api('/api/admin/reset-rotation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workflow:w.name})}); toast((r&&r.ok)?'Rotation reset. Next call uses opener #1.':'Could not reset rotation'); }
 // Testing tab — the Fun-store test-call log (workflow · opener used · status · timing). Owner-only data.
 function tcStatusPill(key){ const F=({in_stock:['In stock','#4ADE80'],not_in_stock:['Not in','#EF4444'],sold_out:['Sold out','#EF4444'],does_not_sell:["Doesn't carry",'#EF4444'],no_clear_answer:['Maybe','#FBBF24'],too_busy:['Too busy','#FBBF24'],left_on_hold:['On hold','#FBBF24'],nobody_answered:['No answer','#9CA3AF'],closed:['Closed','#9CA3AF'],failed:['Failed','#FBBF24'],completed:['Done','#9CA3AF'],admin_hangup:['Canceled','#9CA3AF']})[key]||[key||'—','#9CA3AF']; return `<span class="tcpill" style="color:${F[1]};border-color:${F[1]}44;background:${F[1]}14">${esch(F[0])}</span>`; }
 async function loadTesting(){
@@ -3497,7 +3482,7 @@ async function loadGrowth(){
     fld('gw_ga4','GA4 measurement id',POL.ga4Id||'');
   // Volume top-up tiers — set in the checkout build (Stripe), surfaced read-only so they're not edited via raw JSON.
   const packs=(POL.catalog||{}).packs||{};
-  if(Object.keys(packs).length) document.getElementById('gw_pricing').innerHTML += `<div class="meta" style="grid-column:1/-1;margin-top:2px"><b style="color:#c7c7d2">Volume tiers</b> <span data-tip="Top-up packs. set in the checkout build (Stripe), read-only here."></span><div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${Object.values(packs).map(pk=>`<span style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:#dcdce6">${pk.credits} checks · $${(pk.cents/100).toFixed(0)}</span>`).join('')}</div></div>`;
+  if(Object.keys(packs).length) document.getElementById('gw_pricing').innerHTML += `<div class="meta" style="grid-column:1/-1;margin-top:2px"><b style="color:#c7c7d2">Volume tiers</b> <span data-tip="Top-up packs. Set in the checkout build (Stripe), read-only here."></span><div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${Object.values(packs).map(pk=>`<span style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:#dcdce6">${pk.credits} checks · $${(pk.cents/100).toFixed(0)}</span>`).join('')}</div></div>`;
   loadGwPulse(); loadGwIntel(); loadGwKiosks(); loadGwWatches(); loadGwCommunity(); loadGwWaitlist(); loadGwStoreReqs();
 }
 async function loadGwPulse(){
@@ -3522,7 +3507,7 @@ async function loadGwPulse(){
 async function startFresh(clear){
   if(!clear && !confirm('Start fresh?\n\nReal-call stats (Pulse, Restock, Call timing) will only count calls placed from NOW on. so launch-day dialing starts clean. Test/Fun calls are unaffected, and this is reversible (“Count all again”).')) return;
   const r=await api('/api/admin/stats-since',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(clear?{clear:true}:{})});
-  if(r&&r.ok){ toast(clear?'Counting all calls again':'Fresh start. real-call stats now count from today'); loadGwPulse(); if(typeof loadCallHealth==='function')loadCallHealth(); } else toast('Could not update');
+  if(r&&r.ok){ toast(clear?'Counting all calls again':'Fresh start. Real-call stats now count from today.'); loadGwPulse(); if(typeof loadCallHealth==='function')loadCallHealth(); } else toast('Could not update');
 }
 // Call data health — the unfiltered truth about call_results (real dialed calls vs seed/rehearsal/
 // never-placed), + a dry-run cleanup preview. Read-only: no delete button (purge is run deliberately).
@@ -3576,7 +3561,7 @@ async function loadUsers(){
         </div>
       </div>`).join('');
 }
-async function toggleStaff(id,on){ const r=await api('/api/admin/users/staff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,on})}); if(r&&!r.error){ toast(on?'Flagged as admin/test. won’t count as a customer':'Unflagged'); loadUsers(); } else toast('Could not update'); }
+async function toggleStaff(id,on){ const r=await api('/api/admin/users/staff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,on})}); if(r&&!r.error){ toast(on?'Flagged as admin/test. Won’t count as a customer':'Unflagged'); loadUsers(); } else toast('Could not update'); }
 // ---- Restock intel (God View → Restock): network view + per-store breakdown on tap ----
 function rsBar(label,n,max,cls){ return `<div class="rsbar"><span class="rsbl">${esch(label)}</span><span class="rsbt"><span class="rsbf ${cls||''}" style="width:${max?Math.round(n/max*100):0}%"></span></span><b>${n}</b></div>`; }
 async function loadRestock(){
@@ -3802,7 +3787,7 @@ async function agentSend(){
   const payload=AGENT_MSGS.filter(m=>m.role==='user'||m.role==='assistant').map(m=>({role:m.role,text:m.text}));
   const r=await api('/api/admin/agent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({messages:payload,model:AGENT_MODEL})});
   AGENT_BUSY=false; if(sb) sb.disabled=false;
-  if(!r || r.error){ AGENT_MSGS.push({role:'error',text:(r&&r.error)||'Something went wrong. check the server has ANTHROPIC_API_KEY.'}); agentRender(); return; }
+  if(!r || r.error){ AGENT_MSGS.push({role:'error',text:(r&&r.error)||'Something went wrong. Check the server has ANTHROPIC_API_KEY.'}); agentRender(); return; }
   AGENT_MSGS.push({role:'assistant',text:r.reply||'(done)',actions:r.actions||[]});
   agentRender();
   if(r.actions&&r.actions.length){ try{ loadStoreIntel(); const rt=document.getElementById('retailers'); if(rt&&rt.classList.contains('active')) loadRetailers(); }catch(e){} }
