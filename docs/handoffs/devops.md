@@ -22,15 +22,31 @@ Railway GraphQL (`backboard.railway.app/graphql/v2`) reads/writes env vars — p
 **voice-caller** `d363a982…` (holds `ADMIN_TOKEN` + EL keys). Admin API is gated by header
 `x-admin-token: <ADMIN_TOKEN>`. Policy: `GET/PATCH /api/policy`. Statuses: `/api/statuses`.
 
-## 🎯 Directive — the owner's priority order (do NOT jump straight to mapping)
-1. **First: help the owner nail testing.** Workflows + persona on the **Fun** store (Admin → Testing), and
-   make sure **ABC is firing right** and we're squeezing max ROI (that's the "wire avgTreeSeconds" item below).
-   The owner tests call-by-call; you optimize with them.
+## 🎯 THE NUMBER — the cost target every optimization serves
+A check must land in ONE of these two boxes, and your job is to find anywhere we can shave toward them:
+- **≤ 20 seconds of billed time with a human**, OR
+- **≤ 5¢ per call at ~30s.**
+ABC/connect-on-human is the main lever (keep Charlie/EL asleep through the tree+hold, wake only on the human).
+Every call-path change gets measured against this — if it doesn't move us toward one of those boxes, it's not
+the priority. The calculator's running "Hybrid" line is the live benchmark.
+
+## Directive — the owner's priority order (do NOT jump straight to mapping)
+1. **First: help the owner nail testing + hit THE NUMBER.** Workflows + persona on the **Fun** store
+   (Admin → Testing); make sure **ABC fires right** and squeeze the cost toward the target (that's the "wire
+   avgTreeSeconds" item below — the biggest remaining shave). The owner tests call-by-call; you optimize with them.
 2. **Then: resume store mapping** — cover as many chains as possible for the nationwide launch, using the
    latest working tech (recipe / avgTreeSeconds / connect-on-human). We were mid-mapping; hard IVR chains + the
    intentionally-muted ones (Best Buy = central call center, can't dial the store) are the remaining buckets.
 3. Roadmap / bigger backlog: `docs/business/ROADMAP.md`.
-The gate between 1 and 2 is the owner confirming the Fun-store experience + ROI are where they want them.
+The gate between 1 and 2 is the owner confirming the Fun-store experience + cost are where they want them.
+
+## 🧹 Standing duty — keep the system pruned (this is how the bloat happened)
+You are the janitor of the repo/infra. We once had **41 branches + a whole duplicate staging site** — exact
+copies of everything, everywhere. Never again. On every session, before you end:
+- **One branch only** (`…OcyMS`). If you spot a stray `claude/*` branch or a duplicate deploy/URL/worker, prune
+  it (branch-delete trick below). Never create a second long-lived branch or a second copy of the site to "test."
+- **No doc bloat.** Finished work → git history, not a new doc. Don't add a doc when a line in an existing one does.
+- **No dead code/config accumulating** — flag or remove it (see the `config.staging` vestige note in GOTCHAS).
 
 ## Current state (2026-07-01 — KEEP UPDATED)
 - [x] **Consolidated to ONE branch.** staging + copy branches merged into prod & retired; HANDOFF.md rewritten.
