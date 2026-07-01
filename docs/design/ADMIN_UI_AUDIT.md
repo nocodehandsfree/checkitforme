@@ -46,6 +46,24 @@ Even clean content reads as noise at **28 different font sizes** and a dozen ad-
 
 ---
 
+## ROUND 2 — why it STILL looks crowded (the real work)  **[P1]**
+
+Round 1 rebuilt the **Live landing only**. Every other page is untouched and the type/spacing never fully conformed — so it reads unchanged. Do these:
+
+1. **Kill the all-caps eyebrows GLOBALLY** (~26 of them: `.rgrp` / `.repttl` / eyebrow spans — "CALL REALITY · …", "REACH RATE BY CHAIN · …", "DOMINANT RESTOCK DAYS · …", "PRODUCT FORMS LANDING", "TOP SETS", "BY CATEGORY", "TOP RESTOCK STORES · …"). Replace each "EYEBROW · description" with **one plain Subhead line or nothing.** This is the single biggest noise cut.
+2. **Paragraphs → ⓘ tooltip everywhere**, not just Live. Delete the Restock "Only 40%… that's the gap to close, not stock." paragraph (and it still has the `that's` artifact at line ~3587).
+3. **Search filters — compact them.** Today: six full-width stacked bars (All types / All regions / All zones / Any product / Any status / Sort) fill the whole screen before a single store shows. Make them a **wrapping row of small pills, or one "Filters" button that opens a sheet.**
+4. **Extend hero + collapse to Restock and the Call pages** — same pattern as the Live landing.
+5. **Spacing on a 4/8/12/16 rhythm everywhere** (QA: margins not on rhythm).
+6. **Type scale: conform to Design §3 EXACTLY** — 30 / 19 / 15 / 14–16 / 12.5 / 10.5 / 10, weights 900/800/700/600/500. Drop the strays (**34→30, 12→12.5, 11→10.5, weight 400→500**). One scale, no exceptions.
+7. **Double-tap zoom bug** (your screenshot): viewport already sets `maximum-scale=1` but iOS ignores it. Add **`touch-action: manipulation`** to tappable elements (body/buttons/rows/inputs). That's what kills double-tap-to-zoom.
+8. **3 copy artifacts still live:** line 1366 "yet. this" → "yet. This"; line 3500 "on. so" → "on. So"; line 3587 "picks up. that's" (delete with the paragraph in #2).
+
+### Note to QA on §3 (avoid the false-fail)
+Verify type against **Design's §3** (30/19/15/14–16/12.5/10.5/10; weights **900/800/700/600/500**) — NOT the retired 26/22/15/13/11 or a "500/700/800-only" rule. Under Design's scale, 12.5 / 10.5 / 10 / 19 / 16 / 30 and weights 600/900 are **PASS**. The genuine off-scale left is **34, 12, 11, weight 400, and non-rhythm margins.** Also: `COPY_STYLE_GUIDE.md` **does exist** — it's at `docs/business/COPY_STYLE_GUIDE.md`, not `docs/design/`.
+
+---
+
 ## A. The rename you asked about — "God View" → "Live"  **[P1]**
 
 You're right, it never happened. The nav group is still labelled **God View**.
