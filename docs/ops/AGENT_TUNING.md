@@ -7,21 +7,20 @@ change/promote deliberately.
 > ⚠️ These values are LIVE on ElevenLabs. Editing this file does NOT change the agent — run the PATCH below.
 > Keep this file in sync whenever you change an agent (update the table + date).
 
-## The two agents (one environment now — no staging)
-There's **one live environment** (prod, `checkitforme.com`, Railway svc `d363a982-…`). The server reads
-`ELEVENLABS_AGENT_ID` at boot. Two ElevenLabs agents still exist from the old split:
+## Which agent each environment uses (STAGING vs PROD)
+Each Railway service reads `ELEVENLABS_AGENT_ID` at boot, and **staging and prod use DIFFERENT agents on
+purpose** so you can tune on staging without touching prod calls.
 
-| Agent | `ELEVENLABS_AGENT_ID` | State |
-|---|---|---|
-| **Tuned** (formerly the "staging clone") | `agent_7301kvvbpy3afssvaqrte3bd6cj3` | Has ALL the good v3 script + turn-taking fixes below. |
-| **Original** | `agent_7501ktapdef5f7e9k9qat8pnz4e7` | Untuned — still the old shipment-style opener. |
+| Env | Railway service | `ELEVENLABS_AGENT_ID` | State |
+|---|---|---|---|
+| **staging** (`staging.checkitforme.com`) | `8165df7a-…` | `agent_7301kvvbpy3afssvaqrte3bd6cj3` (clone) | Has ALL the good v3 script + turn-taking fixes below — tune here. |
+| **production** (`checkitforme.com`) | `d363a982-…` | `agent_7501ktapdef5f7e9k9qat8pnz4e7` (original) | Promote tuning here once approved on staging. |
 
-The tuned agent was duplicated from the original on 2026-06-23, then tuned (below).
+The staging clone was duplicated from the prod agent on 2026-06-23, then tuned (below).
 
-> ⚠️ **DevOps open question — verify which agent prod points at.** All the good tuning lives on the *tuned*
-> agent. If prod's `ELEVENLABS_AGENT_ID` (svc `d363a982-…`) still points at the *original*, none of it is live.
-> Read the env var, and either point prod at the tuned agent or PATCH the fixes onto whatever agent prod uses.
-> The old references to "staging" below are historical — treat "staging clone" = the **tuned** agent.
+> ⚠️ **Before promoting: confirm prod's agent got the approved tuning.** The good tuning lives on the staging
+> clone. To make prod behave like staging, either point prod's `ELEVENLABS_AGENT_ID` at the tuned clone, or
+> PATCH the same settings/prompt onto prod's agent — only after you've approved the new script on staging.
 
 ## Current tuning (last updated 2026-06-23)
 Knobs that affect responsiveness + interruptions. `conversation_config.turn.*`, `.agent.*`, `.tts.*`.

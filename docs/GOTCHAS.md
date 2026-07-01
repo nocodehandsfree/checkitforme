@@ -47,8 +47,8 @@ worse than no comment. Several entries below started as wrong comments.)
   `viewport-fit=cover` (the body paints *under* the bar). That's why "Add to Home Screen" tints when web doesn't.
 
 ## Infra / branches
-- **GitHub defaults to `main` = the card app (dead for us).** voice-caller lives on the ONE branch
-  `claude/retail-stock-voice-calls-OcyMS`. Watch for committing to the wrong branch (it happened repeatedly).
+- **GitHub defaults to `main` = the card app (dead for us).** voice-caller lives on TWO branches: **staging
+  `…pagiis`** (dev) and **prod `…OcyMS`** (promote target). Watch for committing to the wrong one (it happened).
 - **`config.staging` is vestigial but still load-bearing — do NOT delete it.** Staging as an *environment* is
   gone (no branch/URL/env), but the CODE still branches on `config.staging.on` in ~20 spots (`server.ts`,
   `auth.ts`, `staging-sim.ts`). In prod `.on` is always `false`, so those paths are dead — but if you remove

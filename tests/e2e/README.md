@@ -11,12 +11,12 @@ any path breaks.
 ```bash
 pnpm install
 pnpm exec playwright install chromium      # one-time: fetch the browser
-pnpm e2e                                    # runs against checkitforme.com (the one live site)
+pnpm e2e                                    # runs against staging.checkitforme.com
 pnpm e2e:ui                                 # interactive runner (watch it click)
 ```
-- **Target a different site:** `E2E_BASE_URL=https://checkitforme.com pnpm e2e`. One environment now (no
-  staging), so these specs are **read-path only** — for anything that places a call or writes data, drive the
-  owner-only **Fun** store from Admin → Testing; **never run write paths against real-store data.**
+- **Target a different site:** `E2E_BASE_URL=https://staging.checkitforme.com pnpm e2e` (default is staging —
+  **never point at prod for write paths**). For anything that places a call, drive the owner-only **Fun**
+  store from Admin → Testing.
 - **Admin specs:** need `ADMIN_TOKEN` (pull from Railway — see `docs/handoffs/devops.md`). Without it, admin tests skip.
 
 ## Add a path test (the rule: one assertion per user path before launch)

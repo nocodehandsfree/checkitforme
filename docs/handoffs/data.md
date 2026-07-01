@@ -58,7 +58,7 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
 
 **Session 2026-06-27 — learned restock "best day" from call data (serve-time, no schema change).**
 
-### Shipped (one branch → live on prod once merged; no staging step)
+### Shipped to STAGING (`…pagiis`) — promote to prod by merging staging → prod
 - **best-bet now learns the restock day.** `/pub/best-bet` ranked on the last-write-wins
   `retailers.shipmentDay` column (one wrong clerk answer flipped it). New `learnedShipDow()` uses the
   **mode of `call_results.shipmentDayHeard`** across a store's confirmed calls, falling back to the
@@ -125,13 +125,15 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
 - **Consumer store-feed fix (`/pub/stores/near`):** in a dense metro a 20-mi radius holds 400+ stores (200+
   tier-5); the page limit dropped a sparse FAR green-group chain (a Dollar General ~19mi out, in-radius but
   past the cut → "Dollar General never shows up near me"). Fix **pins the nearest store of each tier-5 chain**
-  (first page) so every green-group chain always surfaces. Live on the one branch (deploys to prod on merge).
+  (first page) so every green-group chain always surfaces. Live on **staging** (`…pagiis`); promote to prod by merging.
 
-### Store writes go straight to the one prod DB
-- There's one environment now — no staging, no promote pipeline (the old `scripts/promote-config.mjs` →
-  `POST /api/admin/promote-apply` mirror is retired along with staging).
-- Push new/updated tier-5 rows to prod via `POST /api/stores/import` (dedup-by-phone, idempotent) and
-  `PATCH /api/retailers/:id`. Snapshot the volume before any bulk/destructive write — that's the safety net.
+### Store writes — staging DB vs prod DB
+- Two environments: **staging** (`…pagiis` → staging.checkitforme.com) and **prod** (`…OcyMS` →
+  checkitforme.com), each with its OWN SQLite DB. Develop/verify on staging, then promote CODE by merging
+  staging → prod. The **Admin reads live PROD data** (prod is the data source of truth).
+- Push new/updated tier-5 rows via `POST /api/stores/import` (dedup-by-phone, idempotent) and
+  `PATCH /api/retailers/:id` — an admin-API DB write hits only the env you call. Snapshot the volume before
+  any bulk/destructive write — that's the safety net.
 
 ### Store API — what it serves (incl. logos) + apps it powers
 One DB, read three ways; **carries + logos DERIVE at serve-time** (no per-row copies that drift):
@@ -158,8 +160,8 @@ One DB, read three ways; **carries + logos DERIVE at serve-time** (no per-row co
 > DB-first from **shared R2** (`logos.fungibles.com`); (2) store **`carries`** is **derived** from
 > `data/distributors.json`, not the per-store column. Both are a written contract in
 > `docs/DATA_PROVENANCE.md` ("Carries — derived from distributors") + guarded by
-> `scripts/check-store-contract.mjs` (`pnpm check`). **One environment now** — one prod DB, one branch;
-> admin-API DB writes hit the one prod DB directly.
+> `scripts/check-store-contract.mjs` (`pnpm check`). **Two environments** — staging + prod, each its own DB;
+> an admin-API DB write hits only the env you call. Code goes to both branches (staging → promote → prod).
 
 Shipped (live + verified on prod, and staging where noted):
 - [x] **Distributor-driven carries.** `data/distributors.json` = distributor→products + chain→distributors

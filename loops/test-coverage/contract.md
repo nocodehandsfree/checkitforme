@@ -1,9 +1,9 @@
 # Loop contract — test-coverage (overnight, unattended)
 
-The agent runs this ONE iteration at a time, on the **one branch** (`claude/retail-stock-voice-calls-OcyMS`),
-unattended. State lives on disk (`progress.md`). Goal: harden the code that has actually broken by adding
-**unit tests for untested pure logic**. Tests-only + throwaway DBs, so running on the live branch is safe
-(see hard rules below) — there is no staging branch anymore.
+The agent runs this ONE iteration at a time, on the **staging branch**
+(`claude/checkitforme-website-takeover-pagiis`), unattended. State lives on disk (`progress.md`). Goal:
+harden the code that has actually broken by adding **unit tests for untested pure logic**. Tests-only +
+throwaway DBs, so it's safe (see hard rules below).
 
 ## Each iteration (do exactly one module, then stop the iteration)
 1. Read `progress.md` — don't repeat a module already done/skipped.

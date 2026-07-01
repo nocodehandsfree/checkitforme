@@ -6,15 +6,17 @@ API contract. You unblock the other lanes.
 ## Your lane
 - `src/**` core: `auth.ts`, `billing.ts`, `calls/`, `voice/` (infra side), `db/`, `redis.ts`,
   `policy.ts`, `security-checks.ts`, `server.ts` (the routing/bootstrap), `brevo.ts`, `stock/`.
-- Railway env/services, Cloudflare (DNS/worker/WAF), CI, the deploy (**push to the one branch → Railway
-  auto-deploys ~3 min**).
+- Railway env/services, Cloudflare (DNS/worker/WAF), CI, the deploys (**push staging `…pagiis` → the
+  voice-caller-staging service; promote = merge to prod `…OcyMS` → the voice-caller service; each auto-deploys ~3 min**).
 - `docs/API_CONTRACT.md` is yours to evolve (announce shape changes to Website/Admin).
 
-## ⚠️ ONE BRANCH (see HANDOFF.md)
-`claude/retail-stock-voice-calls-OcyMS` → checkitforme.com + admin.checkitforme.com. `git checkout` it +
-`git pull` first thing. No staging split; no live customers yet — build live, test by calling the **Fun**
-store from Admin → Testing. Data lives in the prod SQLite volume (Railway); it's been wiped before, so
-**check `GET /api/policy` after any DB event** (`connectOnHuman:true, bail.enabled:true` expected).
+## ⚠️ STAGING-FIRST — TWO branches (see HANDOFF.md)
+**STAGING** `claude/checkitforme-website-takeover-pagiis` → `staging.checkitforme.com` (the
+voice-caller-staging Railway service) = where you develop. **PROD** `claude/retail-stock-voice-calls-OcyMS`
+→ `checkitforme.com` (the voice-caller service) = promote by merging staging → prod. **ADMIN**
+`admin.checkitforme.com` reads live PROD data. `git checkout` the staging branch + `git pull` first thing.
+Test calls hit the owner-only **Fun** store (Admin → Testing). Each env has its OWN SQLite volume; prod has
+been wiped before, so **check `GET /api/policy` after any DB event** (`connectOnHuman:true, bail.enabled:true`).
 
 ## Access (ask owner for `RAILWAY_API_TOKEN` first)
 Railway GraphQL (`backboard.railway.app/graphql/v2`) reads/writes env vars — project `889e332c…`, env
@@ -43,13 +45,15 @@ The gate between 1 and 2 is the owner confirming the Fun-store experience + cost
 ## 🧹 Standing duty — keep the system pruned (this is how the bloat happened)
 You are the janitor of the repo/infra. We once had **41 branches + a whole duplicate staging site** — exact
 copies of everything, everywhere. Never again. On every session, before you end:
-- **One branch only** (`…OcyMS`). If you spot a stray `claude/*` branch or a duplicate deploy/URL/worker, prune
-  it (branch-delete trick below). Never create a second long-lived branch or a second copy of the site to "test."
+- **Two branches by design: staging (`…pagiis`) + prod (`…OcyMS`).** Those are load-bearing — NEVER delete
+  either, or the staging service/URL. If you spot a *throwaway* session branch (`…-pk3ujx`, `…-z8dokp`) or a
+  genuine duplicate, prune it (branch-delete trick below) — but never touch the staging or prod branch.
 - **No doc bloat.** Finished work → git history, not a new doc. Don't add a doc when a line in an existing one does.
 - **No dead code/config accumulating** — flag or remove it (see the `config.staging` vestige note in GOTCHAS).
 
 ## Current state (2026-07-01 — KEEP UPDATED)
-- [x] **Consolidated to ONE branch.** staging + copy branches merged into prod & retired; HANDOFF.md rewritten.
+- [x] **Staging-first restored.** staging (`…pagiis` → staging.checkitforme.com) is the dev environment;
+  promote = merge to prod (`…OcyMS`). (An earlier session wrongly deleted staging; branch + worker + docs restored.)
 - [x] **ABC (connect-on-human) restored** — `policy.flags.connectOnHuman` + `bail.enabled` re-enabled in prod
   (a DB wipe had reset them to code defaults; that's the whole cost lever — Charlie only bills the human).
 - [x] **Status system live** — 13 statuses, final copy EN+ES, `{store}/{product}/{category}` tokens wired
