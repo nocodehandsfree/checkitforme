@@ -16,7 +16,7 @@ Discipline comes from these, not from hoping.
 
 ## Earned in this repo
 11. **Destructive DB ops: check FK cascades + snapshot first.** A `delete` on a parent table can `SET NULL` / `CASCADE` its children (deleting `categories` once wiped prod `call_results`). Read the schema, back up the volume, prefer upsert over delete-replace.
-12. **Staging-first, and prod data is never overwritten by a deploy.** Develop on **staging** (`…pagiis` → `staging.checkitforme.com`), then promote **code** staging → prod (`…OcyMS` → `checkitforme.com`). The **Admin reads live PROD data** (prod is the data source of truth). A deploy ships code; it never rewrites a DB. Snapshot the volume before any destructive data op.
+12. **Staging-first, and prod data is never overwritten by a deploy.** Develop on **staging** (`…pagiis` → `staging.checkitforme.com`), then promote to prod by **merging** the staging branch into prod (`…OcyMS` → `checkitforme.com`) — it's a git merge, there's no promote endpoint. The **Admin reads live PROD data**. A deploy ships code; it never rewrites a DB. Snapshot the volume before any destructive data op.
 13. **Checkpoint as you go.** Update your handoff doc the moment there's something worth keeping — not just at the end. Context windows close; only what's written survives.
 
 — after Karpathy, *Field Notes on Getting a Language Model to Write Code You Will Not Rewrite*.
