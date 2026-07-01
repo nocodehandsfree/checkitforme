@@ -157,6 +157,14 @@ app.use("/api/*", async (c, next) => {
   if (!config.adminToken) return next(); // no admin token configured → open (dev only)
   return c.json({ error: "unauthorized" }, 401);
 });
+// /pub/* per-IP ceiling (data-exposure lockdown): generous enough that a real session — live-call
+// polling every ~1s plus browsing — never feels it, but a scraper rapidly walking the public read
+// surface hits the wall fast. Tighter, surface-specific limits live on the endpoints themselves.
+app.use("/pub/*", async (c, next) => {
+  const rl = rlCheck("pubRead", clientIp(c.req.raw.headers), LIMITS.pubRead);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  return next();
+});
 
 // Clerk-free admin login: visit /admin-login?token=ADMIN_TOKEN once → sets a signed httpOnly
 // session cookie the /api/* gate accepts. No Clerk. The existing app.html then loads unchanged.
@@ -923,17 +931,20 @@ app.post("/api/admin/migrate-logos-to-r2", async (c) => {
 });
 
 app.get("/pub/stores", async (c) => {
+  // 🔒 ADMIN-ONLY (data-exposure lockdown): this hands back the ENTIRE store table in one response.
+  // The consumer site never calls it (it uses /pub/stores/near exclusively); the only legit caller is
+  // admin tooling, which authenticates exactly like /api/* — x-admin-token header OR admin_session
+  // cookie — so the Admin page keeps working with zero changes on its side.
+  const okTok = !!config.adminToken && c.req.header("x-admin-token") === config.adminToken;
+  let okCookie = false;
+  if (!okTok) { const ck = getCookie(c, "admin_session"); if (ck) { const s = await verifySession(ck); okCookie = !!(s && s.id === "admin"); } }
+  if (config.adminToken && !okTok && !okCookie) return c.json({ error: "unauthorized" }, 401);
   const rs = await cachedRetailers();
   const chainRows = await db.select().from(chains);
   const types = new Map(chainRows.map((x) => [x.id, x.type]));
   const names = new Map(chainRows.map((x) => [x.id, x.name]));
   // Muted chains (owner toggle, incl. repack-only stores like Fairfield) never reach consumers.
   const mutedChains = new Set(chainRows.filter((x) => x.muted === true).map((x) => x.id));
-  // ⚠ SECURITY / STATUS (verified): this endpoint has NO remaining consumers. The admin's old
-  // loadLogos bulk-fetch was removed (logos are denormalized per-row via chainLogoInfo — see
-  // app.html "Store/chain logos"), and the consumer front-end uses /pub/stores/near exclusively.
-  // It currently hands the ENTIRE store list to anyone with the URL — safe to gate behind the
-  // admin token (or remove) with zero client impact. Skips per-row openState so it stays fast.
   return c.json(rs
     .filter((r) => r.phone && r.active !== false)
     .filter((r) => !r.ownerOnly) // owner-only demo store ("Fun") never appears in the admin logo map
@@ -958,6 +969,15 @@ app.get("/pub/stores/near", async (c) => {
   const radius = Math.min(Math.max(Number(c.req.query("radius") || 25), 1), 150);
   const limit = Math.min(Math.max(Number(c.req.query("limit") || 60), 1), 200);
   const offset = Math.max(Number(c.req.query("offset") || 0), 0);
+  // 🔒 Text-search hardening (data-exposure lockdown): the q-only path is the one way to page the store
+  // table without a location, so it gets its own tight per-IP limit, a 2-char minimum (single letters
+  // enumerate everything), and a paging-depth cap. Location/state search behavior is unchanged.
+  if (!hasLoc && !state) {
+    if (q.length < 2) return c.json({ error: "q must be at least 2 characters" }, 400);
+    if (offset > 600) return c.json({ error: "paging too deep for text search" }, 400);
+    const rl = rlCheck("storeSearch", clientIp(c.req.raw.headers), LIMITS.storeSearch);
+    if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  }
   const mode = c.req.query("mode") || ""; // call | kiosk | site | "" = all
 
   const chainRows = await cachedChains();
