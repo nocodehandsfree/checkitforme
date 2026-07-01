@@ -49,7 +49,22 @@ The gate between 1 and 2 is the owner confirming the Fun-store experience + cost
 - **No doc bloat.** Finished work → git history, not a new doc.
 - **No dead code/config accumulating** — flag or remove it.
 
+## Role (owner-set, 2026-07-01): SYSTEM STEWARD — not feature dev
+DevOps is the owner's central point of contact: docs/token health, `docs/business/ROADMAP.md` keeper,
+security + go-live readiness, cross-lane coordination. Voice tuning = Website lane; store mapping =
+Admin lane. DevOps takes dev work only when the owner assigns it. Kickoff prompts: `docs/KICKOFFS.md`.
+
 ## Current state (2026-07-01 — KEEP UPDATED)
+- [x] Salvaged the 8 unit suites from `test-coverage-loop` into staging (bridge, tree-learn, security
+  gate, geo, brands, prompts, store-hours, stores-import); security suite updated to the ADMIN_TOKEN
+  gate. 19/19 green. `test-coverage*` + `pk3ujx` branches are now safe to delete (owner to authorize).
+- [ ] Doc-prune queue (do NOT cut active working sets — yesterday's lesson): archive
+  `design/ADMIN_UI_AUDIT.md` + `design/COPY_CHANGES_APPROVED.md` to git history **when their rounds
+  finish**; slim `handoffs/data.md` (2.8k words → ~700, spec content → DATA_PROVENANCE/store-data-schema,
+  coordinate with Data); propose merging the 5 design/copy style docs → 2 (coordinate with Design/Copy).
+- [ ] Security pre-launch: rotate leaked keys (RAILWAY_API_TOKEN pasted in chats, GITHUB_PAT, TiDB pw);
+  fix transcript IDOR (`/pub/result/:cid` + `/pub/live/:cid` are unauthenticated); set
+  STRIPE_WEBHOOK_SECRET on staging (missing; prod has it). Boot gate + rate limiting verified solid.
 - [x] **Envs live.** staging `…pagiis` → staging.checkitforme.com (dev); prod `…OcyMS` → checkitforme.com (promote by merge).
 - [x] **ABC (connect-on-human) restored** — `policy.flags.connectOnHuman` + `bail.enabled` re-enabled in prod
   (a DB wipe had reset them to code defaults; that's the whole cost lever — Charlie only bills the human).
