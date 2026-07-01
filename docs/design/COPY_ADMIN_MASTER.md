@@ -3,6 +3,8 @@
 > **File:** `public/app.html` (admin, `admin-r44`). **Audience:** the operator (you), not customers.
 > **Voice:** follows `docs/business/COPY_STYLE_GUIDE.md` — fewest words, no em-dashes, plain over jargon, friend tone. Admin can read a little more shorthand than the consumer site, but the rules still hold.
 > **How to use:** apply the **global sweeps** first (they cover most of the file), then the **by-area** rewrites.
+>
+> **STATUS (verified 2026-07-01):** §1 + §2 applied to `app.html` (DevOps commit `8e7a511`). Jargon, naming (Clerk→Staff, agent→caller, Claude→Admin dev agent), store-name de-dash, E.164/COGS/IVR/DTMF, and all 43 by-area rewrites — **landed and confirmed.** The prose em-dash sweep is **done** (0 dashes left in tooltips/placeholders/options/helper text). Remaining: **§2b** (13 sweep artifacts + 1 dup bug — must fix, they read as broken sentences) and **§2c** (the `'—'` data placeholders — optional).
 
 ---
 
@@ -91,6 +93,35 @@ Admin is the **operator's** view, so **"call" is correct here** (you place calls
 - `Saved — set it as the default in Calls → Settings…` → **`Saved. Set it as the default in Calls → Settings.`** (the `→` arrow is fine, not an em-dash)
 
 ---
+
+## 2b. SWEEP CLEANUP — fix these (introduced by the de-dash pass)
+
+> The em-dash sweep replaced every ` — ` with `. ` — even where the second clause was a lowercase **continuation**, not a new sentence. Result: 13 tooltips read as "Full sentence. lowercase fragment." Plus one duplication bug. Fix pattern: **comma** if it's a continuation, **capitalize** if it's a real second sentence. (This is the "period, comma, or parens — whichever fits" call from §1.A, applied.)
+
+**Bug (duplicated text) — fix first:**
+- `Hard cap on how long the caller talks to a person before wrapping up.ping up.` → **`Hard cap on how long the caller talks to a person before wrapping up.`**
+
+**Capitalize (real second sentence):**
+- `One real call. the navigator…` → `One real call. **The** navigator…`
+- `Edit the icon, label, color or tone. consumer + Test Bench…` → `…tone. **Consumer** + Test Bench…`
+- `Optional. opens with e.g.…` → `Optional. **Opens** with e.g.…`
+- `Ring in any clone. the live store voice…` → `Ring in any clone. **The** live store voice…`
+- `Revenue ÷ cost. how many times…` → `Revenue ÷ cost. **How** many times…`
+- `What kind of retailer this chain is. sets grouping…` → `…is. **Sets** grouping…`
+- `We price the store's own shelf at retail. not a reseller…` → `…at retail. **Not** a reseller…`
+- `How we check this chain's stock. read their website…` → `…stock. **Read** their website…`
+- `Voice / script for every store of this chain. overrides…` → `…this chain. **Overrides** the global default.`
+- `Top-up packs. set in the checkout build…` → `Top-up packs. **Set** in the checkout build…`
+
+**Comma (continuation, not a new sentence):**
+- `Reads the ingest inbox and shows how each email parsed. whether a receipt landed, and why.` → `…how each email parsed**,** whether a receipt landed, and why.`
+- `Use {category}. fills in Pokémon, One Piece, etc.` → `Use {category}**,** fills in Pokémon, One Piece, etc.`
+
+**Cut the filler while you're in there:**
+- `Ring your own phone (or a friend's) in any cloned voice + persona. just to mess around. Never touches store calls.` → drop "just to mess around" → **`Ring your own phone (or a friend's) in any cloned voice + persona. Never touches store calls.`**
+
+## 2c. Empty-value placeholder `'—'` (§2 God View note, still open)
+26 spots render a lone em-dash `'—'` for missing data (`bits||'—'`, `secs||'—'`, etc.). Per §2 these read as a glitch — swap to `'·'` (middot) or `'0'`. **DevOps call, low priority** (it's a data placeholder, not prose), but it's the last em-dash class left in the file.
 
 ## 3. Already good — leave alone
 Buttons (`Call zone`, `Mark added`, `Import stores`, `Use for live calls`, `Pause/Resume`, etc.), section headers (`Store intel`, `Schedules`, `Statuses`, `Zones`…), and most toasts are short and on-voice. No change.
