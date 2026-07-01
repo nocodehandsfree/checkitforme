@@ -46,10 +46,9 @@ worse than no comment. Several entries below started as wrong comments.)
 ## Infra / branches
 - **GitHub defaults to `main` = the card app (dead for us).** voice-caller lives on two branches: staging
   `…pagiis` (dev) and prod `…OcyMS` (promote target).
-- **`config.staging` is vestigial but still load-bearing — do NOT delete it.** Staging as an *environment* is
-  gone (no branch/URL/env), but the CODE still branches on `config.staging.on` in ~20 spots (`server.ts`,
-  `auth.ts`, `staging-sim.ts`). In prod `.on` is always `false`, so those paths are dead — but if you remove
-  `config.staging` from `config.ts` the prod typecheck breaks. Stripping the staging code is a separate,
-  deliberate refactor, not a doc-cleanup drive-by. Until then: leave the `config.staging` scaffold alone.
+- **`config.staging.on` is what makes the staging service behave as staging** — `true` on the
+  voice-caller-staging service, `false` on prod. The code branches on it in ~20 spots (`server.ts`, `auth.ts`,
+  `staging-sim.ts`): simulated calls, the staging login code, staging websocket host. Don't remove
+  `config.staging` from `config.ts` (typecheck breaks, and staging loses its behavior).
 - **Logos:** the Cloudflare token lacks R2-admin and the S3 keys are object-scoped to `fungibles-cards`, so logos
   serve via the `fungibles-logos` Worker on `logos.fungibles.com` (chain-logos/ prefix), not a public R2 bucket.
