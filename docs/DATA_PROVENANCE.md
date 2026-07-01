@@ -14,9 +14,9 @@ number / score come from?", the answer is here.
 > tables (+ the signal tables). **Every** surface reads store data from the DB through the API. **No
 > surface keeps its own store list, hardcoded names, or a parallel CSV it reads at request time.**
 
-The DB is one file (`file:/data/local.db`) on a Railway volume. It is **not directly connectable** —
-all writes go through the **admin HTTP API** (`/api/...`) and the **importer**
-(`POST /api/stores/import`). There is no second copy.
+Each environment (staging + prod) has its own DB — one file (`file:/data/local.db`) on its own Railway
+volume. It is **not directly connectable** — all writes go through the **admin HTTP API** (`/api/...`) and
+the **importer** (`POST /api/stores/import`). An admin-API write hits only the environment you call.
 
 ```
                          ┌─────────────────────────────────────────────┐

@@ -26,13 +26,10 @@ admin features (God-view, store CMS UI, voice studio, Tree Trainer, analytics, p
    dashboard) · the caller-tech spec in git history (the admin caller tech: LLM switcher + phone-tree
    learner). Voice code to understand: `src/calls/tree-learn.ts`, `src/voice/bridge.ts`, `src/llm.ts`.
 
-## ⚠️ Admin auth — DECIDED, do not re-open
-The admin authenticates with an **admin token**, **not Clerk** (Clerk is being removed — KILL CLERK,
-see `EBAY_AUTH_PIPELINE.md`). The live "Loading… / zero status" was a **401 wall**: the old admin still
-called Clerk, so every `/api/*` fetch was rejected — not a UI bug. **DevOps owns this fix** (a signed
-`admin_session` cookie minted at `/admin-login?token=…`; the gate accepts it, no Clerk). Do **not**
-touch Clerk domains/keys or build admin auth. Don't claim a screen "works" — only DevOps can verify
-live after deploy.
+## Admin auth (settled)
+The admin authenticates with an **admin token**, not Clerk. Login mints a signed `admin_session` cookie at
+`/admin-login?token=…`; the gate accepts it. DevOps owns the auth routes — build the admin UI/features
+against them, don't rebuild auth.
 
 ## ⚠️ Collision note
 You share the deploy branch with every lane. You own `public/app.html` + the `/api` section of

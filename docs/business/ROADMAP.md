@@ -9,7 +9,7 @@ verified by real phone calls — that data IS the moat.** Everything below compo
 Status of each is detailed in the linked ops/security docs; this is the single checklist.
 
 **Launch-path / now**
-- [ ] Deploy integrated branch → main; set `COMP_PHONES`; verify phone + second-cell caller-ID.
+- [ ] Merge staging → prod and deploy; set `COMP_PHONES` in prod policy; verify phone + second-cell caller-ID.
 - [ ] Route the consumer "check" through the **bridge** so caller-ID applies (plain `/app/check` uses the house number).
 - [ ] "Create your agent" caller-ID panel (Admin/Website) using `/auth/callerid/*`.
 - [ ] Flip `requirePhoneSignup` ON + remove Clerk once the phone UI is solid.

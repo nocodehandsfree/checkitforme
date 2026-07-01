@@ -3287,7 +3287,7 @@ async function finalizeLive(cid){
   // broken. Hold on "Getting the answer…" until it's settled (yes / no / sold-out / a terminal status) or
   // the ~9s window closes (then we show whatever we have, including a genuine "unclear").
   const _confident=(r)=>!!(r&&r.status&&r.status!=='in_progress'&&(r.confirmed===true||r.confirmed===false||r.soldOut||r.doesNotSell||r.status!=='completed'));
-  { let tries=0; while(!_confident(o)&&tries<9){ await new Promise(r=>setTimeout(r,1000)); try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){} tries++; } }
+  { let tries=0; while(!_confident(o)&&tries<15){ await new Promise(r=>setTimeout(r,1000)); try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){} tries++; } }
   // If we actually reached someone (we have a streamed transcript) but the server verdict hasn't settled
   // inside the window, DO NOT fall back to "nobody answered" — that's the bug where a real "not in stock"
   // call flashed as no-answer until it was reopened. Show the neutral "getting the answer…" placeholder
