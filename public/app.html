@@ -892,8 +892,9 @@
         <div class="name" style="font-size:13px">Build a persona</div>
         <div id="pn_edit_hint" class="meta" style="margin-top:4px"></div>
         <label style="margin-top:8px">Persona name</label><input id="pn_name" placeholder="e.g. Friendly Jared">
-        <label>Base personality <span data-tip="A quick starting vibe. Pick Custom to skip the canned vibe line and let your Tone &amp; style text carry it."></span></label>
+        <label>Starting vibe <span class="meta" style="font-weight:500">· optional</span></label>
         <div id="pn_base" class="row" style="gap:6px"></div>
+        <div class="meta" style="margin-top:4px">Your Tone &amp; style below always comes through. a vibe just adds a quick descriptor on top — pick Custom for none.</div>
         <label>Tone &amp; style <span data-tip="Free text — whatever you write drops straight into the persona (e.g. 'Calm, a little dry humor, never pushy')."></span></label><textarea id="pn_tone" rows="3" style="font-size:13px"></textarea>
         <label>Style toggles</label>
         <div style="display:flex;flex-direction:column;gap:8px">
@@ -1680,7 +1681,7 @@ function dFwd(){ if(DSTEP<7){ DMAX=Math.max(DMAX,DSTEP+1); dGo(DSTEP+1); } }
 function dPrev(n){ dGo(n); }
 // Personas: named agent voices saved to settings (vt_personas). A workflow SELECTS one by name; the
 // server composes it into {{personality}} on that workflow's live + bench calls.
-let PERSONAS=[], PN_SEL='Professional', WF_PERSONA='', PN_EDIT=-1;
+let PERSONAS=[], PN_SEL='Custom', WF_PERSONA='', PN_EDIT=-1;
 const PN_BASE=['Professional','Friendly','Hyped','Warm','Custom'];
 function pnBaseRender(){ const b=document.getElementById('pn_base'); if(!b) return; b.innerHTML=PN_BASE.map(p=>`<span class="chip-sm" onclick="pnPick('${p}')" style="cursor:pointer;${p===PN_SEL?'color:var(--green);background:var(--tint-green-bg);border:1px solid var(--tint-green-border)':'background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border-medium)'}">${p}</span>`).join(''); }
 function pnPick(p){ PN_SEL=p; pnBaseRender(); }
@@ -1724,7 +1725,7 @@ function pnEditHint(){ const h=document.getElementById('pn_edit_hint'), c=docume
 }
 function pnClearForm(){ ['pn_name','pn_tone','pn_greet'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   ['pn_slang','pn_swear','pn_affection'].forEach(id=>{ const e=document.getElementById(id); if(e) e.checked=false; });
-  PN_SEL='Professional'; pnBaseRender(); }
+  PN_SEL='Custom'; pnBaseRender(); }
 function pnLoad(i){ const p=PERSONAS[i]; if(!p) return; PN_EDIT=i;
   document.getElementById('pn_name').value=p.name||'';
   PN_SEL=p.base||'Professional'; pnBaseRender();
