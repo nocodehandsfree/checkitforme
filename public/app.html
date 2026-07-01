@@ -1735,7 +1735,7 @@ async function saveWorkflow(){ const name=v('wf_name'); if(!name){ toast('Name t
   const i=WFS.findIndex(w=>w.name===name); if(i>=0) WFS[i]=wf; else WFS.push(wf);
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WFS)})});
   if(window.WF) WF.list=WFS;  // keep the assignment pickers (Settings/Chains/Stores) in sync without a reload
-  document.getElementById('wf_msg').textContent = (r&&!r.error)?'Saved. Set it as the default in Calls → Settings.':'Could not save.'; toast('Workflow saved'); }
+  document.getElementById('wf_msg').textContent = (r&&!r.error)?'Saved. Set it as the default in Calls → Settings.':"Couldn't save the workflow."; toast((r&&!r.error)?'Workflow saved':"Couldn't save the workflow"); }
 async function vsSetActive(){
   const id=document.getElementById('vs_select').value; if(!id) return;
   const r=await api('/api/voices/active',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({voiceId:id})});
@@ -3746,9 +3746,9 @@ async function loadGwStoreReqs(){
       <button class="ghost" style="font-size:12px;color:#ff8a8a" onclick="srStatus(${r.id},'rejected')">Reject</button>
     </div>`).join('');
 }
-async function srStatus(id,status){ await api('/api/store-requests/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({status})}); toast('Updated'); loadGwStoreReqs(); }
-async function modCommunity(id,approved){ await api('/api/community/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({approved})}); toast(approved?'Approved':'Hidden'); loadGwCommunity(); }
-async function delCommunity(id){ await api('/api/community/'+id,{method:'DELETE'}); toast('Deleted'); loadGwCommunity(); }
+async function srStatus(id,status){ const r=await api('/api/store-requests/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({status})}); toast((r&&!r.error)?'Updated':"Couldn't update the request"); loadGwStoreReqs(); }
+async function modCommunity(id,approved){ const r=await api('/api/community/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({approved})}); toast((r&&!r.error)?(approved?'Approved':'Hidden'):"Couldn't update the post"); loadGwCommunity(); }
+async function delCommunity(id){ const r=await api('/api/community/'+id,{method:'DELETE'}); toast((r&&!r.error)?'Deleted':"Couldn't delete the post"); loadGwCommunity(); }
 
 function clock(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString(); }
 setInterval(clock,1000); clock();
