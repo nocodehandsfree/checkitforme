@@ -100,7 +100,7 @@
   select:hover{border-color:var(--border-strong)}
   select:focus{outline:none;border-color:rgba(74,222,128,.30);box-shadow:0 0 0 2px rgba(74,222,128,.10)}
   select option{background:#15151f;color:#e8e8f0;font-weight:500}
-  label{display:block;font-size:10px;color:var(--text-tertiary);margin:14px 0 8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+  label{display:block;font-size:10px;color:var(--text-tertiary);margin:16px 0 8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
   /* labels that WRAP a control (checkbox/day pill/toggle) keep normal case + size — the uppercase micro-label is for field labels only */
   label:has(input),label:has(select){text-transform:none;font-size:13px;font-weight:600;letter-spacing:0;color:inherit}
   /* unified custom checkbox — brand green when checked, everywhere */
@@ -206,12 +206,12 @@
   .stcdval{flex:1;min-width:0;color:var(--text-body)}
   .stcdval b{font-weight:700}
   .stcdsum{font-size:12.5px;color:var(--text-muted);font-style:italic;line-height:1.5;margin:-3px 0 9px 76px}
-  .stcown{margin-top:11px;padding-top:11px;border-top:1px solid var(--border)}
+  .stcown{margin-top:12px;padding-top:11px;border-top:1px solid var(--border)}
   /* recall confirm — store checked < 24h ago */
-  .stcdlg{margin-top:13px;border-top:1px solid var(--border);padding-top:14px}
+  .stcdlg{margin-top:12px;border-top:1px solid var(--border);padding-top:14px}
   .stcdlg .q{font:500 13px Inter;color:var(--text-body);line-height:1.55;text-align:center}
   .stcdlg .q b{color:#f3f3f7}
-  .stcdlg .yes{display:block;width:100%;text-align:center;border:none;border-radius:11px;padding:12px;margin-top:14px;font:800 13.5px Inter;background:linear-gradient(180deg,#5BEA93,#34C268);color:#06210f;cursor:pointer}
+  .stcdlg .yes{display:block;width:100%;text-align:center;border:none;border-radius:11px;padding:12px;margin-top:16px;font:800 13.5px Inter;background:linear-gradient(180deg,#5BEA93,#34C268);color:#06210f;cursor:pointer}
   .stcdlg .no{display:block;text-align:center;margin-top:12px;color:var(--muted);font-weight:700;font-size:13px;cursor:pointer}
   /* live transcript view — identical to the website */
   .lvhead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
@@ -249,7 +249,7 @@
   .upill.out{color:var(--text-muted);background:var(--surface-2);border-color:var(--border)}
   .upill.gray{color:var(--purple);background:rgba(167,139,250,.1);border-color:rgba(167,139,250,.3)}
   /* workflows manager */
-  .wfm{background:var(--surface-1);border:1px solid var(--border-default);border-radius:var(--r-card);padding:14px;margin-bottom:11px}
+  .wfm{background:var(--surface-1);border:1px solid var(--border-default);border-radius:var(--r-card);padding:14px;margin-bottom:12px}
   .wfm.def{border-color:rgba(74,222,128,.34)}
   .wfmhead{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
   .wfmname{font-size:15px;font-weight:800;color:#f3f3f7}
@@ -298,7 +298,7 @@
   .wfmop .opdel:hover{color:var(--red)}
   .wfmadd{display:flex;gap:7px;align-items:center;margin-top:9px}
   .wfmadd input{flex:1;min-width:0}
-  .wfmmeta{display:flex;gap:14px;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--border)}
+  .wfmmeta{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
   .wfmmeta>div{flex:1;min-width:150px}
   .wfmmeta label{display:block;font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
   /* restock intel */
@@ -315,7 +315,7 @@
   .rschip b{color:var(--green)}
   .rsrow{cursor:pointer;padding-left:6px;padding-right:6px;border-radius:8px}
   .rsrow:hover{background:var(--surface-2)}
-  .sracts{display:flex;gap:9px;align-items:center;margin-top:13px}
+  .sracts{display:flex;gap:9px;align-items:center;margin-top:12px}
   #leafletmap{height:520px;border-radius:14px;border:1px solid var(--border);overflow:hidden}
   .leaflet-popup-content{font-family:Inter,sans-serif}
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(108px,1fr));gap:10px;margin-bottom:16px}
@@ -349,7 +349,7 @@
   .fbtn[aria-expanded="true"] .msel-car{transform:rotate(180deg)}
   .fcount{display:none;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--purple);color:#160e2e;font-size:10.5px;font-weight:800;align-items:center;justify-content:center;line-height:1}
   .fcount.show{display:inline-flex}
-  .filterpanel{display:none;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:14px;padding:12px;background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-card)}
+  .filterpanel{display:none;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:16px;padding:12px;background:var(--surface-1);border:1px solid var(--border);border-radius:var(--r-card)}
   .filterpanel.open{display:grid}
   .filterpanel select,.filterpanel .msel{width:100%;min-width:0}
   .filterpanel .fclear{grid-column:1 / -1;justify-self:start;margin-top:2px}
@@ -416,7 +416,7 @@
     .ractions{flex-wrap:wrap}
   }
   /* Playbook sub-nav (mobile segmented control) */
-  .subnav{display:flex;gap:6px;margin:0 0 14px;flex-wrap:nowrap}
+  .subnav{display:flex;gap:6px;margin:0 0 12px;flex-wrap:nowrap}
   .subnav button{flex:1;min-width:0;white-space:nowrap;background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--muted);padding:9px 8px;border-radius:10px;font-weight:700;font-size:12.5px;cursor:pointer}
   .subnav button.active{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.4);color:var(--green)}
   /* Collapsible cards on the Test Bench */
@@ -590,18 +590,18 @@
   </section>
   <section id="restock">
     <h2>Restock intel</h2>
-    <div class="meta" style="margin:0 0 13px">When stores restock, and what's landing. <span data-tip="Learned from real call data. Tap a store for its own breakdown."></span></div>
+    <div class="meta" style="margin:0 0 12px">When stores restock, and what's landing. <span data-tip="Learned from real call data. Tap a store for its own breakdown."></span></div>
     <div id="restock_detail"></div>
     <div id="restock_net" class="meta">Loading…</div>
   </section>
   <section id="workflows">
     <h2>Workflows</h2>
-    <div class="meta" style="margin:0 0 13px">Each workflow is a saved <b>opener set + voice + persona</b>. <span data-tip="The ★ default powers every store; assign others per chain/store in Stores. Build new ones in Voice → Designer, then edit openers here."></span></div>
+    <div class="meta" style="margin:0 0 12px">Each workflow is a saved <b>opener set + voice + persona</b>. <span data-tip="The ★ default powers every store; assign others per chain/store in Stores. Build new ones in Voice → Designer, then edit openers here."></span></div>
     <div id="wfm_list" class="meta">Loading…</div>
   </section>
   <section id="testing">
     <h2>Testing</h2>
-    <div class="meta" style="margin:0 0 13px">Your test-call log. <b>Owner-only, Fun stores only.</b> <span data-tip="These never touch the real-store numbers. Call yourself, mess with the caller, and read back the workflow, the opener used in rotation, the status, and the timing."></span></div>
+    <div class="meta" style="margin:0 0 12px">Your test-call log. <b>Owner-only, Fun stores only.</b> <span data-tip="These never touch the real-store numbers. Call yourself, mess with the caller, and read back the workflow, the opener used in rotation, the status, and the timing."></span></div>
     <div id="testing_summary"></div>
     <div id="testing_log" class="meta">Loading…</div>
   </section>
@@ -879,7 +879,7 @@
         <label data-tip="Use {category}, fills in Pokémon, One Piece, etc.">Write a new opener</label>
         <textarea id="rot_opener_new" rows="3" style="font-size:13px;line-height:1.5" placeholder="e.g. Heyy! Got any {category} in today?"></textarea>
         <div class="btnrow"><button class="ghost" onclick="addOpener()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save opener</button></div>
-        <label style="margin-top:14px">Your openers <span id="rot_opener_count" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></label>
+        <label style="margin-top:16px">Your openers <span id="rot_opener_count" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></label>
         <div id="rot_opener_list" style="margin-top:4px"></div>
       </div>
 
@@ -906,7 +906,7 @@
         <div class="name">Step 5 · Rotation</div>
         <label>Scripts in rotation</label>
         <div id="rot_opener_list2" style="margin-top:4px" class="meta">Add scripts in Step 3.</div>
-        <label style="margin-top:14px" data-tip="Tick the voices to rotate through in TEST">Voices in rotation</label>
+        <label style="margin-top:16px" data-tip="Tick the voices to rotate through in TEST">Voices in rotation</label>
         <div id="rot_voices" class="meta" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px">Loading voices…</div>
         <div class="meta" style="margin-top:8px;color:var(--orange)">Voice rotation is test-only right now. Live calls use the single live voice until DevOps turns it on.</div>
         <div class="btnrow"><button class="ghost" onclick="saveRotation(this)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save rotation</button><span class="meta" id="rot_msg"></span></div>
@@ -918,7 +918,7 @@
         <label>Category to ask about</label><select id="sim_cat" onchange="previewMaybe()"></select>
         <label data-tip="The agent dials this number">Your phone</label><input id="sim_phone" placeholder="+13106662331">
         <label data-tip="Only your rotation voices show here.">Voice for this test</label><select id="sim_voice" onchange="refreshTestRotation()"><option value="">Bench default voice</option></select>
-        <details class="card" style="margin:14px 0 0;background:var(--surface-1)">
+        <details class="card" style="margin:16px 0 0;background:var(--surface-1)">
           <summary><span class="name" style="font-size:13px">Advanced</span></summary>
           <label>Flow</label><select id="sim_mode"><option value="restock">Restock (did your shipment include it?)</option><option value="carry">Carry (do you sell it at all?)</option></select>
           <label>Decision tree</label><select id="sim_tree" onchange="syncTreeUI();previewMaybe()"><option value="general">General (any of it counts)</option><option value="specific">Specific (only that exact set)</option></select>
@@ -926,7 +926,7 @@
         </details>
         <div id="tb_rot_line" class="meta" style="color:var(--green);font-weight:600;min-height:16px;margin:12px 0 8px"></div>
         <div class="btnrow"><button class="act" onclick="benchCall()">Call me</button></div>
-        <div class="card" id="tb_transcript_card" style="display:none;margin-top:14px">
+        <div class="card" id="tb_transcript_card" style="display:none;margin-top:16px">
           <div class="row" style="align-items:center;margin-bottom:8px"><div class="grow"><div class="name">Test result</div><div class="meta" id="tb_t_status">Waiting for the call to connect…</div></div><button class="ghost" onclick="hideTranscript('tb')">Clear</button></div>
           <div id="tb_verdict" style="display:none;text-align:center;padding:14px;border-radius:12px;margin-bottom:10px;border:1px solid var(--border)"></div>
           <div id="tb_t_summary" class="meta" style="color:#ddd;margin-bottom:8px"></div>
@@ -964,21 +964,21 @@
     <div id="set_body" style="display:none">
       <details class="card setsec" open id="set_storewrap">
         <summary><span id="set_storelogo" class="setlogo"></span><span class="name">Store settings</span></summary>
-        <div id="set_store" style="margin-top:18px"></div>
+        <div id="set_store" style="margin-top:16px"></div>
       </details>
       <details class="card setsec" open id="set_datawrap">
         <summary><span class="name">Store data</span></summary>
-        <div id="set_data" style="margin-top:18px"></div>
+        <div id="set_data" style="margin-top:16px"></div>
       </details>
       <details class="card setsec" open id="set_callwrap">
         <summary><span class="name">Call settings</span></summary>
-        <div id="set_call" style="margin-top:18px"></div>
+        <div id="set_call" style="margin-top:16px"></div>
       </details>
       <details class="card setsec" open id="set_mapwrap">
         <summary><span class="name">Mapping</span><span id="set_mapstatus" style="margin-left:auto"></span></summary>
-        <div style="margin-top:18px">
+        <div style="margin-top:16px">
           <div id="set_mapping" class="meta" style="margin-top:2px">—</div>
-          <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
+          <div class="row" style="gap:8px;margin-top:16px;flex-wrap:wrap">
             <button class="act" id="set_mapbtn" onclick="setMapChain()">Map</button>
             <span class="meta" data-tip="One real call. The navigator works the menu to a human, records the recipe + time, then you Lock it." style="align-self:center"></span>
           </div>
@@ -990,7 +990,7 @@
             <div id="tr_live_feed" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto"></div>
             <div id="tr_live_result" style="margin-top:12px;display:none"></div>
           </div>
-          <div style="margin-top:14px">
+          <div style="margin-top:16px">
             <div class="name" style="font-size:13px">Call log</div>
             <div id="set_runs"><div class="meta">Loading…</div></div>
           </div>
@@ -1005,7 +1005,7 @@
       <div class="card">
         <div class="name" data-tip="Edit the icon, label, color or tone. Consumer + Test Bench verdicts update instantly">What customers see</div>
         <div id="st_list"><div class="empty">Loading…</div></div>
-        <div style="height:1px;background:var(--border);margin:14px 0"></div>
+        <div style="height:1px;background:var(--border);margin:16px 0"></div>
         <div class="name" style="font-size:13px">Add a status</div>
         <div class="row" style="gap:8px">
           <button type="button" class="sticon-btn" id="st_new_icon_btn" onclick="pickNewStatusIcon()" title="Pick an icon"><span class="meta" style="font-size:10px">icon</span></button>
@@ -1099,7 +1099,7 @@ function showAuthGate(){
   d.innerHTML='<div style="text-align:center;max-width:330px">'
     +'<div style="width:62px;height:62px;border-radius:50%;margin:0 auto 18px;display:grid;place-items:center;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>'
     +'<div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:7px;letter-spacing:-.2px">Admin login required</div>'
-    +'<div style="font-size:13px;color:#9a9aac;line-height:1.5;margin-bottom:22px">Your session isn’t active, so the dashboard can’t load. Log in to continue.</div>'
+    +'<div style="font-size:13px;color:#9a9aac;line-height:1.5;margin-bottom:24px">Your session isn’t active, so the dashboard can’t load. Log in to continue.</div>'
     +'<a href="/admin-login" style="display:inline-block;background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;font-weight:800;font-size:15px;padding:13px 30px;border-radius:12px;text-decoration:none;box-shadow:0 8px 20px -6px rgba(52,197,107,.5)">Log in</a></div>';
   document.body.appendChild(d);
 }
@@ -1425,7 +1425,7 @@ function calcShell(){
   const seg=Object.keys(CALC_STORE).map(t=>`<button type="button" id="calc_seg_${t}" onclick="calcPick('${t}')" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(CALC_STORE[t].nc)}${t}</span><span style="font-size:10.5px;color:var(--text-tertiary)">${CALC_STORE[t].sub}</span></button>`).join('');
   const rate=(label,k,suf)=>`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:var(--text-muted)">${label}</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.0001" value="${CALC.rates[k]}" oninput="calcSetRate('${k}',this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:13px;font-weight:600;padding:8px 2px;width:62px"><span style="color:var(--text-tertiary);font-size:10.5px">${suf}</span></span></label>`;
   return `
-  <div class="hero" style="margin-bottom:14px">
+  <div class="hero" style="margin-bottom:16px">
     <div class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
       <div><div class="hero-eyebrow">All-in cost per call</div>
         <div id="calc_total" style="font-size:30px;font-weight:800;color:var(--green);letter-spacing:-.02em;line-height:1.05;margin-top:6px;font-variant-numeric:tabular-nums">$0.000</div></div>
@@ -1437,17 +1437,17 @@ function calcShell(){
   <div class="card report">
     <div class="name">Scenario</div>
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Store type</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px">${seg}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">${seg}</div>
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px"><span style="font-size:13px;color:var(--text-muted)">Navigation time</span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700"><span id="calc_navval">0</span><span style="font-size:12.5px;color:var(--text-tertiary)">s</span></span></div>
     <input id="calc_nav" type="range" min="0" max="120" value="${CALC.nav}" oninput="calcSetNav(this.value)">
     <div id="calc_navnote" style="font-size:10.5px;color:var(--text-tertiary);margin-top:2px;display:none">Direct line, no menu</div>
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin:14px 0 2px"><span style="font-size:13px;color:var(--text-muted)">Talk time with human</span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700"><span id="calc_talkval">0</span><span style="font-size:12.5px;color:var(--text-tertiary)">s</span></span></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin:16px 0 2px"><span style="font-size:13px;color:var(--text-muted)">Talk time with human</span><span style="font-family:ui-monospace,monospace;font-size:19px;font-weight:700"><span id="calc_talkval">0</span><span style="font-size:12.5px;color:var(--text-tertiary)">s</span></span></div>
     <input id="calc_talk" type="range" min="0" max="120" value="${CALC.talk}" oninput="calcSetTalk(this.value)">
   </div>
   <div class="card report">
     <div class="name">Breakdown</div>
     <div id="calc_breakdown"></div>
-    <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border-dashed)"><span style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700">FLAT MONTHLY · ≈ $0.000 / CALL</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${['Railway compute','Twilio number rental','Helicone gateway','TiDB'].map(f=>`<span style="font-size:10.5px;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:7px;padding:3px 8px">${f}</span>`).join('')}</div></div>
+    <div style="margin-top:16px;padding-top:12px;border-top:1px dashed var(--border-dashed)"><span style="font-size:10px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700">FLAT MONTHLY · ≈ $0.000 / CALL</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${['Railway compute','Twilio number rental','Helicone gateway','TiDB'].map(f=>`<span style="font-size:10.5px;color:var(--text-muted);background:var(--surface-1);border:1px solid var(--border);border-radius:7px;padding:3px 8px">${f}</span>`).join('')}</div></div>
   </div>
   <div class="card report">
     <div class="name">Rate card · editable</div>
@@ -1465,7 +1465,7 @@ function calcShell(){
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">Margin</span><div id="calc_margin" style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0%</div></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:12.5px;color:var(--text-muted)">× return <span data-tip="Revenue ÷ cost. How many times the call pays for itself."></span></span><div id="calc_return" style="font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0×</div></div>
     </div>
-    <div id="calc_sentence" style="margin-top:14px;font-size:13px;color:var(--text-muted);line-height:1.5"></div>
+    <div id="calc_sentence" style="margin-top:16px;font-size:13px;color:var(--text-muted);line-height:1.5"></div>
   </div>`;
 }
 function calcPick(t){ CALC.storeType=t; CALC.nav=CALC_STORE[t].nav; calcSync(); calcUpdate(); }
@@ -2317,9 +2317,9 @@ function ssRenderStore(){
   el.innerHTML=
     `<div style="font-size:13px;color:var(--text-muted);margin:2px 0 7px">Status</div>`
     +(SS.repack?`<div class="row" style="gap:8px;align-items:center;margin-bottom:9px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);border-radius:20px;padding:3px 11px">${ssDot('#FBBF24')}Repack-only</span><button class="ghost" onclick="ssClearRepack()" style="font-size:12.5px;padding:5px 10px">Clear</button></div>`:'')
-    +`<div class="row" style="gap:8px;margin-bottom:18px">${status}</div>`
+    +`<div class="row" style="gap:8px;margin-bottom:16px">${status}</div>`
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Type <span data-tip="What kind of retailer this chain is. Sets grouping + scoring."></span></div>`
-    +`<select onchange="ssSetType(this.value)" style="margin-bottom:18px">${SS_TYPES.map(([v,l])=>`<option value="${esch(v)}"${SS.type===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
+    +`<select onchange="ssSetType(this.value)" style="margin-bottom:16px">${SS_TYPES.map(([v,l])=>`<option value="${esch(v)}"${SS.type===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
     +`<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:9px"><div style="font-size:13px;color:var(--text-muted)">Rating</div><span class="meta" id="set_ratemsg" style="font-size:10.5px"></span></div>`
     +`<div class="row" style="gap:7px;flex-wrap:wrap">${pills}</div>`
     +`<div style="height:14px"></div>`
@@ -3508,7 +3508,7 @@ async function loadGwPulse(){
   const f=d.funnel||{}, a=d.activity||{}, cm=d.community||{};
   const st=(n,l,g)=>`<div class="stat${g?' green':''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   const money=c=>'$'+((c||0)/100).toFixed(2);
-  const sub=t=>`<div style="font-size:12.5px;font-weight:700;color:var(--text-strong);margin:14px 0 7px">${t}</div>`;
+  const sub=t=>`<div style="font-size:12.5px;font-weight:700;color:var(--text-strong);margin:16px 0 7px">${t}</div>`;
   el.innerHTML=
     sub('Activity <span class="meta" style="font-weight:500" data-tip="Real consumer calls. Excludes Fun/MVPs and admin tests."></span>')+`<div class="stats">`+
       st(a.checks||0,'checks')+st(a.checks24h||0,'last 24h')+st(a.confirms||0,'confirms',1)+st(secsFmt(a.avgTalkSec||0),'avg talk',1)+st(secsFmt(a.avgCallSec||0),'avg call')+
@@ -3550,9 +3550,9 @@ async function loadCallHealth(){
     +irow('First real call',fd(a.firstDialedCall))
     +irow('Latest call',fd(a.lastCall))
     +irow('Confirmed in stock',a.confirmedInStock||0)
-    +`<div class="rgrp" style="margin-top:13px">By status</div>`
+    +`<div class="rgrp" style="margin-top:12px">By status</div>`
       +((a.byStatus||[]).map(x=>rsBar(x.k,x.n,sMax)).join('')||'<div class="meta">—</div>')
-    +(purge?`<div class="rgrp" style="margin-top:13px">Cleanup preview <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· dry run · billed calls protected · restorable from ElevenLabs</span></div>`
+    +(purge?`<div class="rgrp" style="margin-top:12px">Cleanup preview <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· dry run · billed calls protected · restorable from ElevenLabs</span></div>`
        +`<div class="meta" style="line-height:1.55"><b style="color:${purge.flagged?'var(--orange)':'var(--green)'}">${purge.flagged}</b> of ${purge.total} rows are unprovable${reasons?' ('+esch(reasons)+')':''}; <b style="color:#e8e8f0">${purge.keptDefinitive}</b> are definitive. Nothing is deleted from here. run the purge deliberately when ready.</div>`:'');
 }
 // User dashboard: everyone who signed up (phone-first, Clerk-free) — newest first.
@@ -3618,7 +3618,7 @@ async function loadRestock(){
       +brow('❌','Not in stock',b.not_in,'bad')
       +brow('☎️','Picked up · no answer',b.reached_no_answer,'soon')
       +brow('🤖','Never reached a human',b.never_reached,'bad')
-      +`<div class="rgrp" style="margin-top:14px">Reach rate by chain <span class="meta">· where a human actually picks up</span></div>`
+      +`<div class="rgrp" style="margin-top:16px">Reach rate by chain <span class="meta">· where a human actually picks up</span></div>`
       +((af.byChain||[]).map(chrow).join('')||'<div class="meta">—</div>');
   }
   const daysBody=(d.shipmentDays||[]).slice(0,7).map(x=>rsBar(x.day,x.n,dMax)).join('')||'<div class="meta">No days learned yet.</div>';
@@ -3650,12 +3650,12 @@ async function openStoreRestock(id){
     <button class="ghost" style="float:right;font-size:10.5px;padding:5px 9px" onclick="document.getElementById('restock_detail').innerHTML=''">✕</button>
     <div class="name">${esch(d.store)}${d.location?' <span class="meta" style="font-weight:500">· '+esch(d.location)+'</span>':''}</div>
     <div style="font-size:30px;font-weight:800;color:${low?'var(--text-muted)':'var(--green)'};line-height:1.1;letter-spacing:-.02em">${d.bestDay||'Learning…'}</div>
-    <div class="meta" style="margin-bottom:13px">${d.bestDay?('best restock day · based on '+d.confidence+' hit'+(d.confidence===1?'':'s')+(low?' (low confidence)':'')):'not enough data yet'}${d.storedShipmentDay?' · stored: '+esch(d.storedShipmentDay):''} · last confirm ${esch(ago(d.lastConfirm))}</div>
+    <div class="meta" style="margin-bottom:12px">${d.bestDay?('best restock day · based on '+d.confidence+' hit'+(d.confidence===1?'':'s')+(low?' (low confidence)':'')):'not enough data yet'}${d.storedShipmentDay?' · stored: '+esch(d.storedShipmentDay):''} · last confirm ${esch(ago(d.lastConfirm))}</div>
     <div class="rgrp">Staff said</div>${(d.staffSaid.tally||[]).map(x=>rsBar(x.day,x.n,sMax)).join('')||'<div class="meta">nothing yet</div>'}
-    <div class="rgrp" style="margin-top:13px">Confirmed in stock · by weekday</div>${(d.empirical.byWeekday||[]).map(x=>rsBar(x.day,x.confirms,eMax,'soon')).join('')}
-    <div class="rgrp" style="margin-top:13px">Product forms</div>${(d.products.forms||[]).map(x=>rsBar(x.form,x.n,pfMax)).join('')||'<div class="meta">none captured</div>'}
-    ${(d.products.sets||[]).length?'<div class="rgrp" style="margin-top:13px">Sets</div>'+(d.products.sets||[]).map(x=>`<span class="rschip">${esch(x.set)} <b>${x.n}</b></span>`).join(''):''}
-    <div class="rgrp" style="margin-top:13px">By category</div>${(d.byCategory||[]).map(x=>rsBar(x.category,x.n,bcMax)).join('')||'<div class="meta">—</div>'}
+    <div class="rgrp" style="margin-top:12px">Confirmed in stock · by weekday</div>${(d.empirical.byWeekday||[]).map(x=>rsBar(x.day,x.confirms,eMax,'soon')).join('')}
+    <div class="rgrp" style="margin-top:12px">Product forms</div>${(d.products.forms||[]).map(x=>rsBar(x.form,x.n,pfMax)).join('')||'<div class="meta">none captured</div>'}
+    ${(d.products.sets||[]).length?'<div class="rgrp" style="margin-top:12px">Sets</div>'+(d.products.sets||[]).map(x=>`<span class="rschip">${esch(x.set)} <b>${x.n}</b></span>`).join(''):''}
+    <div class="rgrp" style="margin-top:12px">By category</div>${(d.byCategory||[]).map(x=>rsBar(x.category,x.n,bcMax)).join('')||'<div class="meta">—</div>'}
   </div>`;
 }
 async function loadGwIntel(){
