@@ -2327,7 +2327,7 @@ async function geocodeSearch(){
 function savedLoc(){ try{ const s=JSON.parse(localStorage.getItem('cifm_loc')||'null'); if(s&&typeof s.lat==='number'&&typeof s.lng==='number'&&(Date.now()-(s.t||0)<7*24*3600*1000)) return s; }catch(e){} return null; }
 function setUserLoc(lat,lng){
   USER_LOC={lat,lng};
-  MAP_ROAMED=false; // an authoritative new location (📍 findMe, ZIP search, master pin-drop) → allow the map to reframe on this location again
+  MAP_FIT_NEXT=true; // a new authoritative location (📍 findMe, ZIP search, master pin-drop) → frame its radius on the next map render
   try{ localStorage.setItem('cifm_loc', JSON.stringify({lat,lng,t:Date.now()})); }catch(e){} // remember across refreshes — no re-prompt
   $('rchips').style.display='block'; setRadius(RADIUS);
   const mt=$('maptoggle'); if(mt){ mt.style.display=''; mt.classList.add('glow'); } // pulse so they notice the map is tappable
@@ -2356,11 +2356,11 @@ async function loadBestBet(){
 // --- Store map (members): Leaflet is lazy-loaded only when the map is opened, so it never affects
 //     the main page load. Dark CartoDB tiles (no API key); stores are circle pins, tap to check. ---
 let MAP=null, MAP_LOADED=false, MAP_MARKERS=[], PINNING=false, MY_PIN=null, MY_RING=null;
-// Once the master pans/zooms the map BY HAND, we stop auto-reframing it (fitBounds) on store refreshes —
-// so changing the radius, or a background reload, leaves the view exactly where they roamed to. The 📍
-// location button (findMe → setUserLoc) clears this to snap back to where they actually are. MAP_PROG
-// guards our OWN programmatic moves so they don't count as roaming.
-let MAP_ROAMED=false, MAP_PROG=false;
+// The map auto-frames the SEARCH RADIUS only on intentional moments — opening the map, or a new location
+// (📍 findMe / ZIP / master pin-drop). A radius change or a background store refresh never re-frames it, so
+// the view stays exactly where you left it (zoomed into wherever you're looking). MAP_FIT_NEXT is the
+// one-shot "frame on the next render" flag those intentional moments set.
+let MAP_FIT_NEXT=false;
 // Neon store-color legend shown along the bottom of the map.
 function mapLegendHtml(){
   const dot=(c)=>`<span class="lgd" style="background:${c};box-shadow:0 0 7px ${c},0 0 2px ${c}"></span>`;
@@ -2376,7 +2376,7 @@ function toggleMap(forceOpen){
   if(isMaster()) toast(t('toast.zoomout','📍 Zoom out, roam anywhere, tap to drop a pin'));
 }
 function loadMap(){
-  if(window.L){ if(!MAP){ MAP_LOADED=true; initMap(); } else { setTimeout(()=>{ MAP.invalidateSize(); if(USER_LOC) placeMyPin(USER_LOC.lat,USER_LOC.lng,true); renderMapPins(); },60); } return; }
+  if(window.L){ if(!MAP){ MAP_LOADED=true; initMap(); } else { setTimeout(()=>{ MAP.invalidateSize(); if(USER_LOC) placeMyPin(USER_LOC.lat,USER_LOC.lng,true); MAP_FIT_NEXT=true; renderMapPins(); },60); } return; }
   const css=document.createElement('link'); css.rel='stylesheet'; css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(css);
   const js=document.createElement('script'); js.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
   js.onload=()=>{ initMap(); }; js.onerror=()=>{ toast(t('toast.maploading',"Map couldn't load. Showing the list.")); toggleMap(); };
@@ -2392,10 +2392,7 @@ function initMap(){
     // Regular users tap store pins to check; the map never moves them.
     // Master drops a pin → load that area's stores, then close the map to the LIST so they're callable.
     MAP.on('click',(e)=>{ if(!isMaster()) return; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng); toast(t('toast.locating','Locating stores near you')); setTimeout(()=>{ toggleMap(false); }, 500); });
-    // A hand pan (dragstart is only ever user-driven) or a hand zoom (zoomstart, unless it's our own
-    // programmatic move) marks the map as "roamed" so it stops snapping back on the next store refresh.
-    MAP.on('dragstart',()=>{ MAP_ROAMED=true; });
-    MAP.on('zoomstart',()=>{ if(!MAP_PROG) MAP_ROAMED=true; });
+    MAP_FIT_NEXT=true; // first paint → frame the search radius (then it stays put until a new location)
     setTimeout(()=>MAP.invalidateSize(),60); renderMapPins();
   }catch(e){ toast(t('toast.maploading','Map could not load. Showing the list.')); toggleMap(); }
 }
@@ -2405,7 +2402,7 @@ function placeMyPin(lat,lng,fromTap){
   if(MY_PIN) MY_PIN.setLatLng([lat,lng]); else MY_PIN=L.circleMarker([lat,lng],{radius:7,color:'#fff',weight:2,fillColor:'#A78BFA',fillOpacity:1}).addTo(MAP);
   const m=RADIUS*1609.34;
   if(MY_RING) MY_RING.setLatLng([lat,lng]).setRadius(m); else MY_RING=L.circle([lat,lng],{radius:m,color:'#A78BFA',weight:1,fillColor:'#A78BFA',fillOpacity:.07}).addTo(MAP);
-  if(!fromTap){ MAP_PROG=true; try{MAP.panTo([lat,lng]);}catch(_){} MAP_PROG=false; } // recenter only on first place, not on every tap (programmatic — doesn't count as roaming)
+  if(!fromTap){ try{MAP.panTo([lat,lng]);}catch(_){} } // recenter only on first place, not on every tap
 }
 function renderMapPins(){
   if(!MAP||!window.L) return;
@@ -2426,9 +2423,16 @@ function renderMapPins(){
     MAP_MARKERS.push(m); pts.push([s.lat,s.lng]);
   });
   if(USER_LOC) pts.push([USER_LOC.lat,USER_LOC.lng]);
-  // Auto-frame the stores only until the master has roamed by hand — after that, leave the view put so a
-  // radius change or refresh doesn't drag them back to base (the 📍 button clears MAP_ROAMED to snap back).
-  if(pts.length>1 && !MAP_ROAMED){ MAP_PROG=true; try{ MAP.fitBounds(pts,{padding:[28,28],maxZoom:13}); }catch(e){} MAP_PROG=false; }
+  // Only frame on an intentional moment (open / new location) — never on a radius change or refresh, so the
+  // view stays where you're looking. And frame the SEARCH-RADIUS ring, NOT every pin: a far in-stock store
+  // outside the radius used to drag the bounds out and zoom the whole map away from your area.
+  if(MAP_FIT_NEXT){
+    MAP_FIT_NEXT=false;
+    try{
+      if(USER_LOC && MY_RING) MAP.fitBounds(MY_RING.getBounds(),{padding:[20,20],maxZoom:15});
+      else if(pts.length>1) MAP.fitBounds(pts,{padding:[28,28],maxZoom:13});
+    }catch(e){}
+  }
 }
 function mapPick(id){ pickStore(id); try{ if(MAP) MAP.closePopup(); }catch(e){} }
 const RADII=[1,2,5,10,20];
@@ -3539,8 +3543,10 @@ function showResult(o, cid){
 
   const proofText=(o.summary||'')+' '+(o.transcript||'');
   const foreign=looksForeign(proofText);
-  // Translate is ONLY for English-mode users whose call reached a Spanish-speaking clerk.
-  const canTranslate = (o.summary||o.transcript) && LANG!=='es' && foreign;
+  // Translate offers the conversation in the READER's language when the call happened in the other one:
+  // English site + Spanish clerk → translate to English; Spanish site + English clerk → translate to Spanish
+  // (that second case was missing, so a Spanish site left the conversation stuck in English).
+  const canTranslate = !!(o.summary||o.transcript) && (LANG==='es' ? !foreign : foreign);
   // Concise "what we did" recap — stages to a human + call length. Replaces the long AI narration;
   // the transcript right below IS the detail, so we don't repeat it in prose.
   const _fmtS = s => s>=60 ? (Math.floor(s/60)+'m'+(s%60?(' '+(s%60)+'s'):'')) : (s+'s');
@@ -3703,6 +3709,10 @@ function showResult(o, cid){
   // bar to it AT LOAD with zero JS dependency (a JS-only change to theme-color is unreliable on iOS). The
   // ?call= also restores the exact result on refresh.
   try{ if(cid){ const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',cid); if(cls) sp.set('tone',cls); history.replaceState({v:'result'},'',location.pathname+'?'+sp.toString()); } }catch(e){}
+  // Full Spanish experience: the site is in Spanish but the call happened in English — show the
+  // conversation in Spanish right away (toggleTranslate caches it and flips the button to "Ver original").
+  // Only when there's a real transcript and we haven't already translated this render.
+  if(LANG==='es' && canTranslate && !TRANSLATED && o.transcript && String(o.transcript).trim()){ try{ toggleTranslate(); }catch(e){} }
   // Side tabs to every other call — render from what we have, then refresh with server history.
   renderCallRail(cid);
   if(isAuthed() && !HIST_CACHE.length) ensureHistCache().then(()=>renderCallRail(cid));
