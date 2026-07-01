@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live — clean mock</title>
+<style>
+  :root{
+    --bg:#0C0C12; --sheet:#141420; --card:#101018; --terminal:#0A0A0E;
+    --green:#4ADE80; --yellow:#FBBF24; --orange:#E89A4A; --red:#EF4444;
+    --muted:#6B6B7B; --text:#EDEDF2; --border:rgba(255,255,255,.07);
+    --purple:#A78BFA; --ptint:rgba(167,139,250,.14); --pline:rgba(167,139,250,.42);
+    /* ONE type scale */
+    --t-title:26px; --t-stat:22px; --t-label:15px; --t-body:13px; --t-cap:11px;
+    /* ONE spacing scale: 4 / 8 / 12 / 16 / 24 */
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);margin:0;
+    font-family:Inter,-apple-system,system-ui,sans-serif;
+    background-image:radial-gradient(1200px 480px at 50% -120px,rgba(74,222,128,.10),transparent 70%);
+    max-width:430px;margin:0 auto;min-height:100dvh}
+  /* header */
+  header{display:flex;align-items:center;gap:8px;padding:14px 16px;
+    border-bottom:1px solid var(--border);position:sticky;top:0;z-index:9;
+    background:rgba(12,12,18,.85);backdrop-filter:blur(10px)}
+  .logo{font-size:19px;font-weight:900;letter-spacing:-.5px}
+  .logo b{color:var(--green)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
+  .spacer{flex:1}
+  .time{color:var(--muted);font-size:var(--t-body)}
+  /* group nav */
+  .grp{display:flex;gap:8px;padding:12px 16px;overflow-x:auto;scrollbar-width:none}
+  .grp::-webkit-scrollbar{display:none}
+  .grp button{flex:0 0 auto;display:flex;align-items:center;gap:6px;
+    background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--muted);
+    padding:8px 14px;border-radius:12px;font-weight:700;font-size:var(--t-body);cursor:pointer}
+  .grp button.on{background:var(--ptint);border-color:var(--pline);color:#C4B5FD}
+  /* sub nav with overflow FADE (the fix) */
+  .subwrap{position:relative}
+  .subwrap:after{content:"";position:absolute;top:0;right:0;bottom:0;width:36px;pointer-events:none;
+    background:linear-gradient(90deg,transparent,var(--bg))}
+  .sub{display:flex;gap:6px;padding:4px 16px 12px;overflow-x:auto;scrollbar-width:none}
+  .sub::-webkit-scrollbar{display:none}
+  .sub button{flex:0 0 auto;background:transparent;border:1px solid transparent;color:var(--muted);
+    padding:6px 12px;border-radius:14px;font-weight:700;font-size:12.5px;cursor:pointer;white-space:nowrap}
+  .sub button.on{background:var(--ptint);border-color:var(--pline);color:#C4B5FD}
+  main{padding:8px 16px 40px}
+  h1{font-size:var(--t-title);font-weight:800;letter-spacing:-.4px;margin:8px 2px 4px}
+  .sublabel{color:var(--muted);font-size:var(--t-body);margin:0 2px 20px}
+  /* HERO: 5 vitals, color = meaning, nothing else */
+  .hero{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px}
+  .hero .v:first-child{grid-column:1 / -1}
+  .v{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}
+  .v .n{font-size:var(--t-stat);font-weight:800;line-height:1;letter-spacing:-.5px}
+  .v.big .n{font-size:34px}
+  .v .l{color:var(--muted);font-size:var(--t-cap);margin-top:8px;text-transform:uppercase;letter-spacing:.06em}
+  .g{color:var(--green)} .a{color:var(--yellow)} .r{color:var(--red)} .m{color:var(--text)}
+  /* collapsed detail — tap to open, closed by default */
+  details.row{background:var(--card);border:1px solid var(--border);border-radius:16px;margin-bottom:12px;overflow:hidden}
+  details.row>summary{list-style:none;cursor:pointer;display:flex;align-items:center;
+    justify-content:space-between;padding:16px}
+  details.row>summary::-webkit-details-marker{display:none}
+  .rlabel{font-size:var(--t-label);font-weight:700}
+  .rmeta{color:var(--muted);font-size:var(--t-body);display:flex;align-items:center;gap:8px}
+  .chev{color:var(--muted);transition:.2s;font-size:14px}
+  details[open] .chev{transform:rotate(180deg)}
+  .rbody{padding:0 16px 16px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .mini .n{font-size:18px;font-weight:800} .mini .l{color:var(--muted);font-size:var(--t-cap);margin-top:4px}
+  .goto{color:var(--purple);font-size:var(--t-body);font-weight:700;text-decoration:none;
+    display:block;padding:14px 2px 2px}
+  .note{color:var(--muted);font-size:12px;text-align:center;margin-top:24px;line-height:1.6}
+</style></head>
+<body>
+  <header>
+    <div class="dot"></div>
+    <div class="logo"><b>✓</b>heck</div>
+    <div class="spacer"></div>
+    <div class="time">9:11</div>
+  </header>
+
+  <nav class="grp">
+    <button class="on">⚡ Live</button>
+    <button>▦ Stores</button>
+    <button>☎ Calls</button>
+    <button>🎙 Voice</button>
+  </nav>
+  <div class="subwrap"><div class="sub">
+    <button class="on">Live</button>
+    <button>Users</button>
+    <button>Restock</button>
+    <button>Policy</button>
+    <button>Calc</button>
+  </div></div>
+
+  <main>
+    <h1>Today</h1>
+    <div class="sublabel">Tuesday, July 1</div>
+
+    <!-- ONE hero row: the 5 you check first. Color says the state before you read it. -->
+    <div class="hero">
+      <div class="v big"><div class="n g">34</div><div class="l">Checks today</div></div>
+      <div class="v"><div class="n g">1</div><div class="l">Confirms</div></div>
+      <div class="v"><div class="n a">40%</div><div class="l">Reach rate</div></div>
+      <div class="v"><div class="n a">27%</div><div class="l">Credits left</div></div>
+      <div class="v"><div class="n m">0%</div><div class="l">Margin</div></div>
+    </div>
+
+    <!-- Everything else: collapsed. Open only what you want. -->
+    <details class="row">
+      <summary><span class="rlabel">Today's pulse</span>
+        <span class="rmeta">3 leads · 30s avg <span class="chev">▾</span></span></summary>
+      <div class="rbody">
+        <div class="mini"><div class="n">3</div><div class="l">Leads</div></div>
+        <div class="mini"><div class="n">0</div><div class="l">Signups</div></div>
+        <div class="mini"><div class="n">0</div><div class="l">Paying</div></div>
+        <div class="mini"><div class="n g">30s</div><div class="l">Avg talk</div></div>
+        <div class="mini"><div class="n">1:05</div><div class="l">Avg call</div></div>
+        <div class="mini"><div class="n">0</div><div class="l">Last 24h</div></div>
+      </div>
+    </details>
+
+    <details class="row">
+      <summary><span class="rlabel">Money</span>
+        <span class="rmeta a">-$16.17 · 0% <span class="chev">▾</span></span></summary>
+      <div class="rbody">
+        <div class="mini"><div class="n">$0</div><div class="l">Revenue</div></div>
+        <div class="mini"><div class="n r">-$16</div><div class="l">Loss</div></div>
+        <div class="mini"><div class="n">$16</div><div class="l">Costs</div></div>
+      </div>
+      <a class="goto" style="padding:0 16px 16px">Open full money view in Calc →</a>
+    </details>
+
+    <details class="row">
+      <summary><span class="rlabel">Call health</span>
+        <span class="rmeta">35 dialed · 40% reached <span class="chev">▾</span></span></summary>
+      <div class="rbody">
+        <div class="mini"><div class="n">35</div><div class="l">Dialed</div></div>
+        <div class="mini"><div class="n">14</div><div class="l">Reached</div></div>
+        <div class="mini"><div class="n g">9</div><div class="l">Answered</div></div>
+      </div>
+      <a class="goto" style="padding:0 16px 16px">Open call analytics in Calls →</a>
+    </details>
+
+    <div class="note">Same data as before, one focus.<br>
+      Business, Funnel, Community, and Call analytics now live in<br>their own tabs — not stacked on the landing.</div>
+  </main>
+</body></html>
