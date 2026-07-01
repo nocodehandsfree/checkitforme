@@ -2326,6 +2326,7 @@ async function geocodeSearch(){
 function savedLoc(){ try{ const s=JSON.parse(localStorage.getItem('cifm_loc')||'null'); if(s&&typeof s.lat==='number'&&typeof s.lng==='number'&&(Date.now()-(s.t||0)<7*24*3600*1000)) return s; }catch(e){} return null; }
 function setUserLoc(lat,lng){
   USER_LOC={lat,lng};
+  MAP_ROAMED=false; // an authoritative new location (📍 findMe, ZIP search, master pin-drop) → allow the map to reframe on this location again
   try{ localStorage.setItem('cifm_loc', JSON.stringify({lat,lng,t:Date.now()})); }catch(e){} // remember across refreshes — no re-prompt
   $('rchips').style.display='block'; setRadius(RADIUS);
   const mt=$('maptoggle'); if(mt){ mt.style.display=''; mt.classList.add('glow'); } // pulse so they notice the map is tappable
@@ -2354,6 +2355,11 @@ async function loadBestBet(){
 // --- Store map (members): Leaflet is lazy-loaded only when the map is opened, so it never affects
 //     the main page load. Dark CartoDB tiles (no API key); stores are circle pins, tap to check. ---
 let MAP=null, MAP_LOADED=false, MAP_MARKERS=[], PINNING=false, MY_PIN=null, MY_RING=null;
+// Once the master pans/zooms the map BY HAND, we stop auto-reframing it (fitBounds) on store refreshes —
+// so changing the radius, or a background reload, leaves the view exactly where they roamed to. The 📍
+// location button (findMe → setUserLoc) clears this to snap back to where they actually are. MAP_PROG
+// guards our OWN programmatic moves so they don't count as roaming.
+let MAP_ROAMED=false, MAP_PROG=false;
 // Neon store-color legend shown along the bottom of the map.
 function mapLegendHtml(){
   const dot=(c)=>`<span class="lgd" style="background:${c};box-shadow:0 0 7px ${c},0 0 2px ${c}"></span>`;
@@ -2385,6 +2391,10 @@ function initMap(){
     // Regular users tap store pins to check; the map never moves them.
     // Master drops a pin → load that area's stores, then close the map to the LIST so they're callable.
     MAP.on('click',(e)=>{ if(!isMaster()) return; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng); toast(t('toast.locating','Locating stores near you')); setTimeout(()=>{ toggleMap(false); }, 500); });
+    // A hand pan (dragstart is only ever user-driven) or a hand zoom (zoomstart, unless it's our own
+    // programmatic move) marks the map as "roamed" so it stops snapping back on the next store refresh.
+    MAP.on('dragstart',()=>{ MAP_ROAMED=true; });
+    MAP.on('zoomstart',()=>{ if(!MAP_PROG) MAP_ROAMED=true; });
     setTimeout(()=>MAP.invalidateSize(),60); renderMapPins();
   }catch(e){ toast(t('toast.maploading','Map could not load. Showing the list.')); toggleMap(); }
 }
@@ -2394,7 +2404,7 @@ function placeMyPin(lat,lng,fromTap){
   if(MY_PIN) MY_PIN.setLatLng([lat,lng]); else MY_PIN=L.circleMarker([lat,lng],{radius:7,color:'#fff',weight:2,fillColor:'#A78BFA',fillOpacity:1}).addTo(MAP);
   const m=RADIUS*1609.34;
   if(MY_RING) MY_RING.setLatLng([lat,lng]).setRadius(m); else MY_RING=L.circle([lat,lng],{radius:m,color:'#A78BFA',weight:1,fillColor:'#A78BFA',fillOpacity:.07}).addTo(MAP);
-  if(!fromTap){ try{MAP.panTo([lat,lng]);}catch(_){} } // recenter only on first place, not on every tap
+  if(!fromTap){ MAP_PROG=true; try{MAP.panTo([lat,lng]);}catch(_){} MAP_PROG=false; } // recenter only on first place, not on every tap (programmatic — doesn't count as roaming)
 }
 function renderMapPins(){
   if(!MAP||!window.L) return;
@@ -2415,7 +2425,9 @@ function renderMapPins(){
     MAP_MARKERS.push(m); pts.push([s.lat,s.lng]);
   });
   if(USER_LOC) pts.push([USER_LOC.lat,USER_LOC.lng]);
-  if(pts.length>1){ try{ MAP.fitBounds(pts,{padding:[28,28],maxZoom:13}); }catch(e){} }
+  // Auto-frame the stores only until the master has roamed by hand — after that, leave the view put so a
+  // radius change or refresh doesn't drag them back to base (the 📍 button clears MAP_ROAMED to snap back).
+  if(pts.length>1 && !MAP_ROAMED){ MAP_PROG=true; try{ MAP.fitBounds(pts,{padding:[28,28],maxZoom:13}); }catch(e){} MAP_PROG=false; }
 }
 function mapPick(id){ pickStore(id); try{ if(MAP) MAP.closePopup(); }catch(e){} }
 const RADII=[1,2,5,10,20];
