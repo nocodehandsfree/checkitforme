@@ -665,7 +665,7 @@
           <option value="Pacific/Honolulu">Hawaii · Pacific/Honolulu</option>
         </select></div>
       </div>
-      <label data-tip="How to reach the right person">Phone tree</label>
+      <label data-tip="How to reach the right person">Phone menu</label>
       <textarea id="r_tree" rows="2" placeholder="When asked if you're a healthcare provider, say no. Then ask for the front store."></textarea>
       <div style="margin-top:12px"><button class="act" onclick="addRetailer()">Add store</button></div>
     </div>
@@ -1370,7 +1370,7 @@ async function loadCallTiming(){
   // By model (Charlie direct · Alpha tone tree · Bravo voice tree) — the split that matters: time-to-human + talk per call type.
   if(md) md.innerHTML=(d.byModel&&d.byModel.length)?('<div class="rgrp" style="margin-top:12px">By model · all-time</div>'
     +d.byModel.map(m=>`<div class="repline"><span class="rl"><b style="color:#e8e8f0">${esch(m.model)}</b> <span class="meta">· ${esch(m.type)} · ${m.n} call${m.n===1?'':'s'}</span></span><b>${secsFmt(m.avgNavSec)} to human · <span style="color:var(--green)">${secsFmt(m.avgTalkSec)} talk</span> · ${secsFmt(m.avgCallSec)} call</b></div>`).join('')
-    +'<div class="meta" style="margin-top:6px;font-size:10.5px">Alpha/Bravo “talk” still counts phone-tree time until we tag the live-human handoff per call. Charlie (direct) is exact.</div>'):'';
+    +'<div class="meta" style="margin-top:6px;font-size:10.5px">Alpha/Bravo “talk” still counts phone menu time until we tag the live-human handoff per call. Charlie (direct) is exact.</div>'):'';
   // Talk time per verdict.
   if(stt) stt.innerHTML=(d.byStatus&&d.byStatus.length)?('<div class="rgrp" style="margin-top:12px">Talk time by status</div>'
     +d.byStatus.map(s=>{const lbl=(STATUSES[s.key]&&STATUSES[s.key].label)||s.key;return `<div class="repline"><span class="rl">${esch(lbl)} <span class="meta">· ${s.n} call${s.n===1?'':'s'}</span></span><b><span style="color:var(--green)">${secsFmt(s.avgTalkSec)} talk</span> · ${secsFmt(s.avgCallSec)} call</b></div>`;}).join('')):'';
@@ -2431,7 +2431,7 @@ function renderChainMapping(ch){
     +`</div>`
     +`<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5"><b style="color:#fff">Recipe:</b> ${recipe}</div>`
     +ro('Keypad shortcut',ch.dtmfShortcut)
-    +ro('Phone-tree default',ch.phoneTreeDefault);
+    +ro('Phone menu default',ch.phoneTreeDefault);
   const sp=document.getElementById('set_mapstatus');
   if(sp){
     const cfg = isLocked?['var(--green)','rgba(74,222,128,.12)','rgba(74,222,128,.4)','Mapped']
@@ -2471,7 +2471,7 @@ function loadChainTree(){
   document.getElementById('pt_treesecs').value = (ch&&ch.avgTreeSeconds!=null) ? ch.avgTreeSeconds : '';
   document.getElementById('pt_repack').checked = !!(ch&&ch.repackOnly);
   document.getElementById('pt_muted').checked = !!(ch&&ch.muted);
-  document.getElementById('pt_status').textContent = ch&&ch.phoneTreeDefault ? 'This chain has a phone tree set.' : 'No tree yet. stores of this chain use only the global rules.';
+  document.getElementById('pt_status').textContent = ch&&ch.phoneTreeDefault ? 'This chain has a phone menu set.' : 'No tree yet. stores of this chain use only the global rules.';
 }
 function insertCvsTemplate(){ document.getElementById('pt_tree').value=CVS_TEMPLATE; }
 async function saveChainTree(){
@@ -2491,7 +2491,7 @@ async function saveChainTree(){
   if(r&&r.id){ const i=CHAINS.findIndex(c=>c.id===id); if(i>=0) CHAINS[i]=r;
     document.getElementById('pt_status').textContent='Saved ✓. applies to every store of this chain on the next call.';
     loadChains(); renderChainList(); }
-  else document.getElementById('pt_status').textContent="Couldn't save the phone tree.";
+  else document.getElementById('pt_status').textContent="Couldn't save the phone menu.";
 }
 // All-chains table: 30-day stats from the god view + one-tap mute/repack flips.
 const PATH_LBL={direct_human:'🙋 direct',simple_ivr:'🔢 simple menu',deep_ivr:'🌀 deep menu'};
@@ -2533,9 +2533,9 @@ async function loadPreview(){
   const p=await api(`/api/preview/${rid}?categoryId=${cid}`);
   const body=document.getElementById('pv_body');
   if(!p||p.error){ document.getElementById('pv_meta').textContent='Could not load preview.'; body.style.display='none'; return; }
-  const src = p.usedStoreOverride ? 'store override' : (p.phoneTree ? 'chain tree ('+(p.chainName||'chain')+')' : 'global rules only. no phone tree');
+  const src = p.usedStoreOverride ? 'store override' : (p.phoneTree ? 'chain menu ('+(p.chainName||'chain')+')' : 'global rules only. no phone tree');
   const dtmf = p.dtmf ? ` · <span style="color:var(--yellow,#F4D03F)">⌨️ auto-press ${p.dtmf}</span>` : '';
-  document.getElementById('pv_meta').innerHTML = `<b>${p.retailerName}</b> · phone-tree source: <span style="color:var(--green)">${src}</span>${dtmf}`;
+  document.getElementById('pv_meta').innerHTML = `<b>${p.retailerName}</b> · phone menu source: <span style="color:var(--green)">${src}</span>${dtmf}`;
   body.textContent=p.prompt; body.style.display='';
 }
 function syncTreeUI(){ const t=document.getElementById('sim_tree'); const w=document.getElementById('sim_specific_wrap'); if(t&&w) w.style.display = t.value==='specific' ? 'block' : 'none'; }
@@ -3452,7 +3452,7 @@ async function loadGrowth(){
   const f=POL.flags||{};
   document.getElementById('gw_flags').innerHTML=Object.keys(FLAG_LABELS).map(k=>{
     const on=f[k]!==false&&f[k]!==undefined?f[k]:!!f[k];
-    const tip=k==='dogfoodHours'?'Leave OFF until you say go':(k==='connectOnHuman'?'Cost saver: Twilio handles the phone tree + hold for free, and the paid voice agent only opens once a human actually picks up.':'');
+    const tip=k==='dogfoodHours'?'Leave OFF until you say go':(k==='connectOnHuman'?'Cost saver: Twilio handles the phone menu + hold for free, and the paid voice agent only opens once a human actually picks up.':'');
     return `<label style="display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;color:var(--text)">
       <input type="checkbox" ${f[k]?'checked':''} onchange="toggleFlag('${k}',this.checked)">
       <span${tip?` data-tip="${tip}"`:''}>${FLAG_LABELS[k]}</span></label>`;
