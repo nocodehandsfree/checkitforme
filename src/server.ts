@@ -26,7 +26,8 @@ import { getPolicy, setPolicy, publicPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
-import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores } from "./calls/navigator";
+import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
+import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, type Recipe } from "./calls/recipe";
 import { llm } from "./llm";
@@ -497,6 +498,12 @@ app.post("/nav/step", async (c) => {
   return c.body(await navStep(id, speech), 200, { "Content-Type": "text/xml" });
 });
 app.post("/nav/ended", (c) => { navEnded(c.req.query("session") || ""); return c.body("ok", 200); });
+// The confirm-ask mp3 in the workflow's voice (Branson) — Twilio <Play> fetches this mid-call.
+app.get("/nav/ask-audio", (c) => {
+  const b = navAskAudio(c.req.query("session") || "");
+  if (!b) return c.body("not found", 404);
+  return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
+});
 
 // ---- Health ----
 app.get("/api/health", (c) => c.json({ ok: true }));
@@ -3560,6 +3567,16 @@ app.post("/api/admin/trainer/batch", async (c) => {
   return c.json(await startBatch({ onlyMissing: b.onlyMissing, limit: b.limit, gapSec: b.gapSec }));
 });
 app.get("/api/admin/trainer/batch", (c) => c.json(batchStatus()));
+// ---- Mapper: "map until locked" — the auto-continue loop (listen → baseline → optimize → lock) ----
+app.post("/api/admin/mapper/start", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number };
+  return c.json(await startMapper(Number(b.chainId || 0)));
+});
+app.post("/api/admin/mapper/stop", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number };
+  return c.json(stopMapper(Number(b.chainId || 0)));
+});
+app.get("/api/admin/mapper/state", (c) => c.json(mapperState()));
 app.get("/api/admin/agent/models", (c) => c.json(AGENT_MODELS));
 app.post("/api/admin/agent", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { messages?: Array<{ role: "user" | "assistant"; text: string }>; model?: string };
