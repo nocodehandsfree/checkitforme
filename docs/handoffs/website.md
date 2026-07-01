@@ -48,10 +48,10 @@ You are **Check - Website**: you own **checkitforme.com** (`public/checkit.html`
 - **Lane (yours):** `public/checkit.html`, consumer routes in `src/server.ts` (`/`, `/<brand>`, `/pub/*`,
   `/auth/phone` UI calls), consumer assets in `public/`. **NOT yours:** `public/app.html` (Admin), `src/**`
   core (DevOps).
-- **⛔ Off-limits — the live-call pipe** (FROZEN; ask DevOps first): the live-transcript **socket + step log**
-  in `checkit.html` (`stageForLines`/`liveStage`; socket → `location.host`); `src/voice/bridge.ts` + the
-  `/listen`+`/bridge` WS handlers; the **`checkit-staging-proxy`** Cloudflare worker that carries the WebSocket
-  for `staging.checkitforme.com` (don't delete or redeploy it).
+- **Handle with care — the live-call pipe** (it's finicky; test with a Fun call after any change): the
+  live-transcript **socket + step log** in `checkit.html` (`stageForLines`/`liveStage`; socket → `location.host`);
+  `src/voice/bridge.ts` + the `/listen`+`/bridge` WS handlers; the **`checkit-staging-proxy`** Cloudflare worker
+  that carries the WebSocket for `staging.checkitforme.com` (don't delete or redeploy it).
 - **Rules:** after ANY change, **call the Fun store — confirm the transcript streams + the call hangs up clean**
   before "done." **Deploy ≠ commit** (a Cloudflare worker only goes live when its deploy script runs). One
   Build on **staging** (`…pagiis` → staging.checkitforme.com), then promote to prod. Push collides?

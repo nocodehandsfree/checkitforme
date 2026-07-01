@@ -20,13 +20,13 @@ unless you're promoting to prod. `main` is the dead card app — ignore it.
   prod. Test calls hit the owner-only **Fun** store (Admin → Testing; never touches real-store stats).
 - **Admin reads live PRODUCTION data.** The one admin (`admin.checkitforme.com`) is how you run the business,
   off prod's data. Snapshot the volume before any destructive DB op (a bad delete once cascade-wiped call history).
-- **Run your lane autonomously.** Default-and-proceed on in-lane calls; stop only for human testing or a
-  genuinely irreversible/cross-lane/business call. Don't open a decision-box for technical choices — pick the
-  safe option, leave a `DevOps: need X` note for cross-lane, keep going. Fix issues in your lane on sight.
+- **Build autonomously — don't ask the owner permission.** Everything ships to staging first, so mistakes are
+  cheap. Pick the safe option and proceed. Need something from another lane? Leave a `DevOps: need X` note and
+  keep going — don't stop, don't open a decision box. Only pause for the owner to run a Fun-store test call.
 - **Before every push:** `npx tsc --noEmit` + `bash scripts/test-all.sh`. Risky/untested → behind a `policy` flag, default off.
 - **Checkpoint docs as you go** (rule 13) — update your handoff the moment there's something worth keeping, not just at the end.
 
-## Lanes (stay in yours; request cross-lane)
+## Lanes (stay in yours; for cross-lane leave a note, don't ask)
 - **Fungie** — owner (the human). **Website** — `checkit.html` + `/pub`. **Admin** — `app.html` + `/api`.
   **Data Dev** — `data/` + importer + store rows. **DevOps** — backend core/infra/security/deploys/API contract.
 - **QA** — *optional, owner-invoked* for larger/risky builds: verifies the change on **`staging.checkitforme.com`**
