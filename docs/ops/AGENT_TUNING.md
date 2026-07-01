@@ -1,27 +1,32 @@
 # ElevenLabs Agent Tuning — source of truth
 
 The voice agent's behavior (how fast it responds, when it lets the clerk interrupt, voice stability) lives
-on **ElevenLabs**, not in this repo's code. This file is the **record** of what's set on each environment so
-we know staging vs prod at a glance and can change/promote deliberately.
+on **ElevenLabs**, not in this repo's code. This file is the **record** of what's set on each agent so we can
+change/promote deliberately.
 
 > ⚠️ These values are LIVE on ElevenLabs. Editing this file does NOT change the agent — run the PATCH below.
 > Keep this file in sync whenever you change an agent (update the table + date).
 
-## Which agent each environment uses
-The server reads `ELEVENLABS_AGENT_ID` (Railway env var, per service) at boot. **Staging and prod use
-DIFFERENT agents on purpose** so we can tune staging without touching prod calls.
+## The two agents (one environment now — no staging)
+There's **one live environment** (prod, `checkitforme.com`, Railway svc `d363a982-…`). The server reads
+`ELEVENLABS_AGENT_ID` at boot. Two ElevenLabs agents still exist from the old split:
 
-| Env | Railway service | `ELEVENLABS_AGENT_ID` |
+| Agent | `ELEVENLABS_AGENT_ID` | State |
 |---|---|---|
-| **staging** (`staging.checkitforme.com`) | `8165df7a-…` | `agent_7301kvvbpy3afssvaqrte3bd6cj3` (clone, tunable) |
-| **production** (`checkitforme.com`) | `d363a982-…` | `agent_7501ktapdef5f7e9k9qat8pnz4e7` (original) |
+| **Tuned** (formerly the "staging clone") | `agent_7301kvvbpy3afssvaqrte3bd6cj3` | Has ALL the good v3 script + turn-taking fixes below. |
+| **Original** | `agent_7501ktapdef5f7e9k9qat8pnz4e7` | Untuned — still the old shipment-style opener. |
 
-The staging clone was duplicated from the prod agent on 2026-06-23, then tuned (below).
+The tuned agent was duplicated from the original on 2026-06-23, then tuned (below).
+
+> ⚠️ **DevOps open question — verify which agent prod points at.** All the good tuning lives on the *tuned*
+> agent. If prod's `ELEVENLABS_AGENT_ID` (svc `d363a982-…`) still points at the *original*, none of it is live.
+> Read the env var, and either point prod at the tuned agent or PATCH the fixes onto whatever agent prod uses.
+> The old references to "staging" below are historical — treat "staging clone" = the **tuned** agent.
 
 ## Current tuning (last updated 2026-06-23)
 Knobs that affect responsiveness + interruptions. `conversation_config.turn.*`, `.agent.*`, `.tts.*`.
 
-| Setting | Prod (`…7501ktap`) | Staging (`…7301kvvbpy3`) | What it does |
+| Setting | Original (`…7501ktap`) | Tuned (`…7301kvvbpy3`) | What it does |
 |---|---|---|---|
 | `turn.turn_eagerness` | `normal` | `normal` | How long it waits to be sure the clerk is done before replying. `patient` = fewer false interruptions but SLOWER replies (tried it, too slow). `eager` = snappier but jumpier. |
 | `turn.speculative_turn` | `true` | **`false`** | `true` = starts forming its reply before the clerk finishes (snappy, but can jump in early). `false` = waits for a clean end-of-turn (no premature cut-ins). |
@@ -31,9 +36,9 @@ Knobs that affect responsiveness + interruptions. `conversation_config.turn.*`, 
 | `turn.turn_timeout` | `10s` | `10s` | Silence before it re-prompts / assumes the turn ended. |
 | `vad.background_voice_detection` | `true` | `true` | Filters background voices from being treated as the clerk. |
 
-**Why staging differs:** a test call had background noise interrupting the agent mid-sentence (the "chipmunk"
-restart). The staging changes (`speculative_turn=false`, first-message protection, filler ignore-terms) reduce
-that without the slowness of `turn_eagerness=patient` (which was reverted to `normal`).
+**Why the tuned agent differs:** a test call had background noise interrupting the agent mid-sentence (the
+"chipmunk" restart). The tuned changes (`speculative_turn=false`, first-message protection, filler
+ignore-terms) reduce that without the slowness of `turn_eagerness=patient` (which was reverted to `normal`).
 
 ## Read the current settings
 ```bash
@@ -85,10 +90,10 @@ The conversation prompt lives on the agent (not in repo code). Changed on the **
 > Possible lever for the "agent sounds rushed": `conversation_config.tts.optimize_streaming_latency`
 > (currently 3 — higher = lower latency but can sound choppy/rushed). Try 1–2 for smoother speech.
 
-## Promoting tuning to production
-Code promotion (merging `checkit.html`/server to the prod branch) does **NOT** change the agent — the agent is
-an env var. To make prod behave like staging, do ONE of:
-1. **PATCH prod's agent** (`…7501ktap`) with the same settings (recommended — keeps prod's own agent), or
-2. Point prod's `ELEVENLABS_AGENT_ID` (Railway service `d363a982-…`) at the staging clone.
+## Making the tuning live in prod
+Code (merging `checkit.html`/server) does **NOT** change the agent — the agent is an env var. To make the
+live calls use the tuned behavior, do ONE of:
+1. Point prod's `ELEVENLABS_AGENT_ID` (Railway svc `d363a982-…`) at the **tuned** agent (`…7301kvvbpy3`), or
+2. **PATCH whatever agent prod points at** with the settings + prompt above.
 
-Do this only after listening to staging and confirming you like it.
+Confirm by placing a Fun-store test call and listening.

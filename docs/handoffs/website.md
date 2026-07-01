@@ -43,8 +43,8 @@ You are **Check - Website**: you own **checkitforme.com** (`public/checkit.html`
   `/auth/phone` UI calls), consumer assets in `public/`. **NOT yours:** `public/app.html` (Admin), `src/**`
   core (DevOps).
 - **⛔ Off-limits — the live-call pipe** (FROZEN; ask DevOps first — it broke a build once): the live-transcript
-  **socket + step log** in `checkit.html` (`stageForLines`/`liveStage`; socket → `location.host`); the
-  **`checkit-staging-proxy`** worker (never redeploy); `src/voice/bridge.ts` + the `/listen`+`/bridge` WS handlers.
+  **socket + step log** in `checkit.html` (`stageForLines`/`liveStage`; socket → `location.host`);
+  `src/voice/bridge.ts` + the `/listen`+`/bridge` WS handlers.
 - **Rules:** after ANY change, **call the Fun store — confirm the transcript streams + the call hangs up clean**
   before "done." **Deploy ≠ commit** (a Cloudflare worker only goes live when its deploy script runs). One
   branch, no staging. Push collides? `git pull --no-rebase`, push again; gnarly conflict → ping DevOps.

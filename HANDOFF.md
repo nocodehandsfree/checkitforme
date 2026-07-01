@@ -26,9 +26,9 @@ git checkout claude/retail-stock-voice-calls-OcyMS && git pull
   build on the one prod branch and verify by calling the **Fun** store from **Admin → Testing** (owner-only;
   never touches real-store stats). Once a change works on Fun it's already live for real calls. When real-store
   calling begins, press **Start fresh** (Pulse → Stats baseline) so only post-launch calls count.
-- **DATA direction = PROD is source of truth.** Manage the business from the prod Admin. Code flows
-  staging→prod; **data flows prod→staging only** (`table-dump`→`table-load`, staging-only). No staging→prod
-  data promote — one once cascade-wiped call history. Prod volume has daily/weekly backups.
+- **One environment — PROD is the only source of truth.** Manage the business from the one Admin
+  (`admin.checkitforme.com`). There's no staging to mirror to/from anymore. The prod volume has daily/weekly
+  backups; snapshot before any destructive DB op (a bad delete once cascade-wiped call history).
 - **Run your lane autonomously.** Default-and-proceed on in-lane calls; stop only for human testing or a
   genuinely irreversible/cross-lane/business call. Don't open a decision-box for technical choices — pick the
   safe option, leave a `DevOps: need X` note for cross-lane, keep going. Fix issues in your lane on sight.
@@ -38,12 +38,12 @@ git checkout claude/retail-stock-voice-calls-OcyMS && git pull
 ## Lanes (stay in yours; request cross-lane)
 - **Fungie** — owner (the human). **Website** — `checkit.html` + `/pub`. **Admin** — `app.html` + `/api`.
   **Data Dev** — `data/` + importer + store rows. **DevOps** — backend core/infra/security/deploys/API contract.
-- **QA** — *optional, owner-invoked* for larger/risky builds: self-scopes from the staging↔prod diff, thoroughly
-  tests on staging, reports pass/fail. Read-only, never edits code.
-- Read your role doc: `docs/handoffs/{website,admin,data,devops,design,qa}.md`.
+- **QA** — *optional, owner-invoked* for larger/risky builds: verifies the change on the **one admin
+  (`admin.checkitforme.com`)** or the live site, reports pass/fail. Read-only, never edits code.
+- Read your role doc: `docs/handoffs/{website,admin,data,devops}.md`.
 
 ## Secrets — self-serve from Railway (don't ask Fungie)
-ONE `RAILWAY_API_TOKEN` reads every var (incl. `ADMIN_TOKEN`). Prod svc `d363a982-…`, staging `8165df7a-…`.
+ONE `RAILWAY_API_TOKEN` reads every var (incl. `ADMIN_TOKEN`). Prod svc `d363a982-…` (the only live service).
 ```bash
 curl -s -X POST https://backboard.railway.app/graphql/v2 \
   -H "Authorization: Bearer $RAILWAY_API_TOKEN" -H "Content-Type: application/json" \

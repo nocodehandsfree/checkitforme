@@ -16,7 +16,7 @@ Discipline comes from these, not from hoping.
 
 ## Earned in this repo
 11. **Destructive DB ops: check FK cascades + snapshot first.** A `delete` on a parent table can `SET NULL` / `CASCADE` its children (deleting `categories` once wiped prod `call_results`). Read the schema, back up the volume, prefer upsert over delete-replace.
-12. **Prod data is never overwritten by a deploy.** Prod is the source of truth for live data. **Code** flows staging→prod (branches); **data** flows prod→staging only.
+12. **Prod data is never overwritten by a deploy.** One environment (prod) is the source of truth for both code and live data — there's no staging. A deploy ships code; it never rewrites the prod DB. Snapshot the volume before any destructive data op.
 13. **Checkpoint as you go.** Update your handoff doc the moment there's something worth keeping — not just at the end. Context windows close; only what's written survives.
 
 — after Karpathy, *Field Notes on Getting a Language Model to Write Code You Will Not Rewrite*.

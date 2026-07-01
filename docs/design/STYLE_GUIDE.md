@@ -9,7 +9,8 @@ redrawing. When the live site and this doc disagree, fix whichever is wrong and 
 - **Type detail:** `docs/design/STYLE_GUIDE.md`
 - **Admin patterns:** `docs/design/STYLE_GUIDE.md`
 - **Logo production:** `docs/STORE_LOGOS.md` (data-dev owns the chain assets)
-- **Verify against:** `https://staging.checkitforme.com` (NOT prod)
+- **Verify against:** the live site `https://checkitforme.com` / the one admin `https://admin.checkitforme.com`
+  (one environment — there is no staging)
 
 ---
 
@@ -310,6 +311,6 @@ inside the same slot (`.wm` — 900 weight, ~8px, `#cdcdd8`) — never a made-up
 
 ---
 
-_Maintained by Check — Design. Verify every value against `staging.checkitforme.com` before relying on
-it; update this file (and commit) when the live styles change. **Pending owner (Fungie) approval before
-this is final.**_
+_Maintained by Check — Design. Verify every value against the live site (`checkitforme.com` /
+`admin.checkitforme.com` — one environment, no staging) before relying on it; update this file (and commit)
+when the live styles change. **Pending owner (Fungie) approval before this is final.**_

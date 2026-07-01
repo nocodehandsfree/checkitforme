@@ -1,7 +1,9 @@
-# Loop contract — test-coverage (overnight, staging only)
+# Loop contract — test-coverage (overnight, unattended)
 
-The agent runs this ONE iteration at a time, on the **staging branch**, unattended. State lives on disk
-(`progress.md`). Goal: harden the code that has actually broken by adding **unit tests for untested pure logic**.
+The agent runs this ONE iteration at a time, on the **one branch** (`claude/retail-stock-voice-calls-OcyMS`),
+unattended. State lives on disk (`progress.md`). Goal: harden the code that has actually broken by adding
+**unit tests for untested pure logic**. Tests-only + throwaway DBs, so running on the live branch is safe
+(see hard rules below) — there is no staging branch anymore.
 
 ## Each iteration (do exactly one module, then stop the iteration)
 1. Read `progress.md` — don't repeat a module already done/skipped.
@@ -19,7 +21,8 @@ The agent runs this ONE iteration at a time, on the **staging branch**, unattend
      + why to `progress.md`, and end. Don't push a broken suite.
 
 ## Hard rules (unattended safety)
-- **Staging branch only.** Never checkout/push prod. Never touch the database beyond throwaway test DBs.
+- **Tests only, throwaway DBs only.** Never touch the database beyond throwaway `file:./.t-*.db` sandboxes.
+  Never run the live suite against the prod volume.
 - **Tests only.** Do NOT modify anything under `src/` (if a test reveals a bug, log it, don't fix it here).
 - **One commit per passing test.** Small, surgical.
 - **Never** place a real call, hit a paid API, or do anything with side effects outside the test sandbox.

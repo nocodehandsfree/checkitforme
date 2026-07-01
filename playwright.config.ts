@@ -1,9 +1,11 @@
 import { defineConfig, devices } from "@playwright/test";
 
 // E2E path tests for Check — the consumer site (public/checkit.html) and the admin (public/app.html).
-// Runs against STAGING by default (never prod). Override with E2E_BASE_URL. Admin specs need
-// ADMIN_TOKEN (pull it from Railway — see docs/handoffs/devops.md). See tests/e2e/README.md.
-const BASE = process.env.E2E_BASE_URL || "https://staging.checkitforme.com";
+// One environment now (no staging): runs against the live site by default. Override with E2E_BASE_URL.
+// These specs are READ-path only; for anything that places a call/writes data, use the owner-only Fun
+// store from Admin → Testing (never real-store write paths). Admin specs need ADMIN_TOKEN (pull it from
+// Railway — see docs/handoffs/devops.md). See tests/e2e/README.md.
+const BASE = process.env.E2E_BASE_URL || "https://checkitforme.com";
 
 export default defineConfig({
   testDir: "./tests/e2e",

@@ -187,10 +187,10 @@ logo/serving behavior? Fix it at the source (`chainLogoInfo`), not per surface. 
 
 A store's **`carries`** is **derived at serve-time**, NOT read from the per-store column, for any chain
 mapped in **`data/distributors.json`** (distributor → products, chain → distributor(s); a chain's list =
-the union of its distributors' products). The config lives in **code**, so the list is **identical on
-every environment** (Admin/staging/prod — prod & staging run *separate DBs*, so a stored column would
-drift; a derived one can't) and **auto-applies to any newly-imported store** of a mapped chain with zero
-stamping. Resolver: `storeCarriesList(chainName, storedCarries)` / `carriesForChain(name)` (`src/server.ts`).
+the union of its distributors' products). The config lives in **code**, so the list is **consistent for
+every store** (a stored column would drift as rows are edited; a derived one can't) and **auto-applies to
+any newly-imported store** of a mapped chain with zero stamping. Resolver:
+`storeCarriesList(chainName, storedCarries)` / `carriesForChain(name)` (`src/server.ts`).
 
 **The dev rule — READ THIS before touching carries:**
 - **Never** edit `retailers.carries` to change a *mapped* chain's products — it's ignored at serve-time.

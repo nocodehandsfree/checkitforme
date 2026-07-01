@@ -3,7 +3,8 @@
 > **Lane:** website dev (`public/checkit.html` @ r85). Copy + the design notes here.
 > **Not here:** code identifiers / file names / storage keys → git history (DevOps lane).
 > **Lenses:** fewest words · friend voice · color/image over copy · pixel alignment · Jobs-clean · a little poetry.
-> **Status:** owner-approved. Grows as we go, page by page. Final sweep → staging review → prod.
+> **Status:** owner-approved. Grows as we go, page by page. One environment — changes go live on the one
+> branch; verify on `checkitforme.com` itself (no staging step).
 
 ---
 

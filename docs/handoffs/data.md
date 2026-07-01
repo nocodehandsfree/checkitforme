@@ -58,7 +58,7 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
 
 **Session 2026-06-27 — learned restock "best day" from call data (serve-time, no schema change).**
 
-### Shipped to STAGING (code — awaits owner "ship it" to promote to prod)
+### Shipped (one branch → live on prod once merged; no staging step)
 - **best-bet now learns the restock day.** `/pub/best-bet` ranked on the last-write-wins
   `retailers.shipmentDay` column (one wrong clerk answer flipped it). New `learnedShipDow()` uses the
   **mode of `call_results.shipmentDayHeard`** across a store's confirmed calls, falling back to the
@@ -125,15 +125,13 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
 - **Consumer store-feed fix (`/pub/stores/near`):** in a dense metro a 20-mi radius holds 400+ stores (200+
   tier-5); the page limit dropped a sparse FAR green-group chain (a Dollar General ~19mi out, in-radius but
   past the cut → "Dollar General never shows up near me"). Fix **pins the nearest store of each tier-5 chain**
-  (first page) so every green-group chain always surfaces. **Live on staging; awaiting owner OK for prod**
-  (code change → staging-first rule).
+  (first page) so every green-group chain always surfaces. Live on the one branch (deploys to prod on merge).
 
-### ⚠️ Promote pipeline DOWN — flag for DevOps/Website
-- Staging→prod data promote (`scripts/promote-config.mjs` → `POST /api/admin/promote-apply`) now **404s on
-  BOTH envs** after the website team's 2026-06-26 deploys removed/renamed that endpoint (it worked earlier
-  today). **Until restored, staging DB edits do NOT auto-sync to prod.**
-- **Workaround in use:** push new/updated tier-5 rows **directly to BOTH** staging and prod via
-  `POST /api/stores/import` (dedup-by-phone, idempotent) and `PATCH /api/retailers/:id`.
+### Store writes go straight to the one prod DB
+- There's one environment now — no staging, no promote pipeline (the old `scripts/promote-config.mjs` →
+  `POST /api/admin/promote-apply` mirror is retired along with staging).
+- Push new/updated tier-5 rows to prod via `POST /api/stores/import` (dedup-by-phone, idempotent) and
+  `PATCH /api/retailers/:id`. Snapshot the volume before any bulk/destructive write — that's the safety net.
 
 ### Store API — what it serves (incl. logos) + apps it powers
 One DB, read three ways; **carries + logos DERIVE at serve-time** (no per-row copies that drift):
@@ -149,8 +147,8 @@ One DB, read three ways; **carries + logos DERIVE at serve-time** (no per-row co
   and can't drift. ~99.97% of stores carry an R2 logo.
 - **Carries:** `storeCarriesList(chainName, stored)` = distributor-derived (`data/distributors.json`, inlined
   fallback in `server.ts`) for mapped chains, else the stored `carries` column.
-- **Apps powered:** consumer website (checkitforme.com / staging.checkitforme.com), the iOS app, and the Admin
-  store list — all read these SAME rows, so a store/logo/tier/intel added here shows up everywhere.
+- **Apps powered:** consumer website (checkitforme.com), the iOS app, and the Admin store list — all read
+  these SAME rows, so a store/logo/tier/intel added here shows up everywhere.
 
 ---
 
@@ -160,8 +158,8 @@ One DB, read three ways; **carries + logos DERIVE at serve-time** (no per-row co
 > DB-first from **shared R2** (`logos.fungibles.com`); (2) store **`carries`** is **derived** from
 > `data/distributors.json`, not the per-store column. Both are a written contract in
 > `docs/DATA_PROVENANCE.md` ("Carries — derived from distributors") + guarded by
-> `scripts/check-store-contract.mjs` (`pnpm check`). **prod and staging are SEPARATE DBs + separate
-> deploys** — code goes to BOTH branches; admin-API DB writes hit only the env you call.
+> `scripts/check-store-contract.mjs` (`pnpm check`). **One environment now** — one prod DB, one branch;
+> admin-API DB writes hit the one prod DB directly.
 
 Shipped (live + verified on prod, and staging where noted):
 - [x] **Distributor-driven carries.** `data/distributors.json` = distributor→products + chain→distributors
