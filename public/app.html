@@ -1764,7 +1764,11 @@ async function savePersona(){ const name=v('pn_name'); if(!name){ toast('Name th
 async function saveWorkflow(){ const name=v('wf_name'); if(!name){ toast('Name the workflow first'); return; }
   const wf={name, voiceId:(document.getElementById('vs_select')||{}).value||'', tuning:sandboxBody(), openers:OPENERS.filter(o=>o.on).map(o=>o.text), persona:WF_PERSONA, savedAt:Date.now()};
   let WFS=[]; const s=await api('/api/settings')||{}; try{ WFS=JSON.parse(s.vt_workflows||'[]'); }catch(e){}
-  const i=WFS.findIndex(w=>w.name===name); if(i>=0) WFS[i]=wf; else WFS.push(wf);
+  const i=WFS.findIndex(w=>w.name===name);
+  // Preserve the voice-rotation strip (managed in Workflows) across a Designer re-save: the Designer's
+  // picked voice becomes slot #1 of the strip; the rest of the rotation is kept.
+  if(i>=0 && Array.isArray(WFS[i].voices) && WFS[i].voices.length){ const rest=WFS[i].voices.filter(v=>v&&v!==wf.voiceId); wf.voices=[wf.voiceId,...(wf.voiceId?rest:WFS[i].voices)].filter(Boolean); }
+  if(i>=0) WFS[i]=wf; else WFS.push(wf);
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WFS)})});
   if(window.WF) WF.list=WFS;  // keep the assignment pickers (Settings/Chains/Stores) in sync without a reload
   document.getElementById('wf_msg').textContent = (r&&!r.error)?'Saved. Set it as the default in Calls → Settings.':"Couldn't save the workflow."; toast((r&&!r.error)?'Workflow saved':"Couldn't save the workflow"); }
@@ -3305,6 +3309,19 @@ async function wfgDel(i){ if(WFM_GLOBAL[i]==null) return; WFM_GLOBAL.splice(i,1)
 async function wfgEdit(i,text){ if(WFM_GLOBAL[i]==null) return; const t=(text||'').trim(); if(!t){ WFM_GLOBAL.splice(i,1); renderWorkflowMgr(); } else { WFM_GLOBAL[i].text=t; } await wfgSave(); }
 async function wfgToggle(i,on){ if(WFM_GLOBAL[i]){ WFM_GLOBAL[i].on=on; await wfgSave(); } }
 function wfmVoiceOpts(sel){ return '<option value="">Default voice</option>'+WFM_VOICES.map(v=>`<option value="${esch(v.id)}"${v.id===sel?' selected':''}>${esch(v.name)}${v.cloned?' (cloned)':''}</option>`).join(''); }
+// ---- Voice strip: a workflow can carry SEVERAL voices; the call path rotates them round-robin
+// (per-workflow counter, same as openers — "Reset rotation" restarts both). voices[] is the strip;
+// voiceId mirrors voices[0] so older code (Designer, call fallbacks) keeps working untouched.
+function wfmVoices(w){ return (Array.isArray(w.voices)&&w.voices.length)?w.voices.filter(Boolean):(w.voiceId?[w.voiceId]:[]); }
+function wfmVoiceName(id){ const v=WFM_VOICES.find(x=>x.id===id); return v?v.name:(id?id.slice(0,10)+'…':''); }
+function wfmVoiceChips(wi,w){
+  const vs=wfmVoices(w);
+  if(!vs.length) return '<div class="meta" style="margin:2px 0 6px">Default voice — add one or more below.</div>';
+  return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px">${vs.map((id,vi)=>
+    `<span class="wfmasgpin" style="display:inline-flex;align-items:center;gap:5px">${esch(wfmVoiceName(id))}${vs.length>1&&vi===0?' <span class="meta" style="font-weight:500">first</span>':''}<a onclick="wfmDelVoice(${wi},${vi})" title="Remove from rotation" style="cursor:pointer;font-weight:900">×</a></span>`).join('')}</div>`;
+}
+async function wfmAddVoice(wi,id){ if(!id) return; const w=WF.list[wi]; if(!w) return; const vs=wfmVoices(w); if(vs.includes(id)){ toast('Already in the rotation'); renderWorkflowMgr(); return; } vs.push(id); w.voices=vs; w.voiceId=vs[0]; renderWorkflowMgr(); await wfmSaveList(); toast(vs.length>1?'Added. '+vs.length+' voices now rotate on this workflow':'Voice set'); }
+async function wfmDelVoice(wi,vi){ const w=WF.list[wi]; if(!w) return; const vs=wfmVoices(w); vs.splice(vi,1); w.voices=vs; w.voiceId=vs[0]||''; renderWorkflowMgr(); await wfmSaveList(); toast('Removed from the rotation'); }
 function wfmPersonaOpts(sel){ return '<option value="">No persona</option>'+(PERSONAS||[]).map(p=>`<option value="${esch(p.name)}"${p.name===sel?' selected':''}>${esch(p.name)}</option>`).join(''); }
 function wfmAssignCount(name){ let n=0; const ch=WF.chains||{}, st=WF.stores||{}; for(const k in ch) if(ch[k]===name)n++; for(const k in st) if(st[k]===name)n++; return n; }
 function renderWorkflowMgr(){
@@ -3332,7 +3349,7 @@ function renderWorkflowMgr(){
     return `<div class="wfm${isDef?' def':''}">
       <div class="wfmhead">
         <div style="flex:1 1 100%;min-width:0"><span class="wfmname">${esch(w.name)}</span>${isDef?'<span class="wfmdef">★ default · all stores</span>':''}
-          <div class="meta" style="margin-top:3px">${ops.length} opener${ops.length===1?'':'s'} · ${w.voiceId?'custom voice':'default voice'} · ${esch(w.persona||'no persona')}</div>
+          <div class="meta" style="margin-top:3px">${ops.length} opener${ops.length===1?'':'s'} · ${(vv=>vv.length>1?vv.length+' voices (rotating)':vv.length===1?'custom voice':'default voice')(wfmVoices(w))} · ${esch(w.persona||'no persona')}</div>
           ${asgLine}</div>
         <div class="wfmacts">
           <button class="ghost" onclick="editWorkflowInDesigner(${wi})" title="Open in the Designer to tweak voice, tuning &amp; openers">${lucideSvg('sliders-horizontal',14,'currentColor')}Edit in Designer</button>
@@ -3341,13 +3358,15 @@ function renderWorkflowMgr(){
           <button class="ghost wfmtrash" onclick="wfmDelete(${wi})" title="Delete workflow">${lucideSvg('trash-2',15,'currentColor')}</button>
         </div>
       </div>
-      <div class="wfmsub" style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>Openers <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· rotated round-robin every call</span></span><button class="ghost" style="font-size:10.5px;padding:4px 9px;text-transform:none;letter-spacing:0;display:inline-flex;align-items:center;gap:4px" onclick="wfmResetRotation(${wi})" title="Next call to this workflow starts at opener #1">${lucideSvg('rotate-ccw',12,'currentColor')}Reset rotation</button></div>
+      <div class="wfmsub" style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>Openers <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· rotated round-robin every call</span></span><button class="ghost" style="font-size:10.5px;padding:4px 9px;text-transform:none;letter-spacing:0;display:inline-flex;align-items:center;gap:4px" onclick="wfmResetRotation(${wi})" title="Next call to this workflow starts at opener #1 and voice #1">${lucideSvg('rotate-ccw',12,'currentColor')}Reset rotation</button></div>
       <div class="wfmops">
         ${ops.map((o,oi)=>`<div class="wfmop"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfmEditOpener(${wi},${oi},this.value)">${esch(o)}</textarea><button class="ghost opdel" onclick="wfmDelOpener(${wi},${oi})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('')||'<div class="meta" style="padding:4px 0 8px">No openers. calls fall back to the global opener.</div>'}
         <div class="wfmadd"><input id="wfmadd_${wi}" placeholder="Add an opener. e.g. Hey! You guys get any {category} in?" onkeydown="if(event.key==='Enter')wfmAddOpener(${wi})"><button class="act" onclick="wfmAddOpener(${wi})">Add</button></div>
       </div>
       <div class="wfmmeta">
-        <div><label>Voice</label><select onchange="wfmSetField(${wi},'voiceId',this.value)">${wfmVoiceOpts(w.voiceId)}</select></div>
+        <div><label>Voices <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· 2+ rotate per call, like openers</span></label>
+          ${wfmVoiceChips(wi,w)}
+          <select onchange="wfmAddVoice(${wi},this.value)"><option value="">+ Add a voice…</option>${WFM_VOICES.map(v=>`<option value="${esch(v.id)}">${esch(v.name)}${v.cloned?' (cloned)':''}</option>`).join('')}</select></div>
         <div><label>Persona</label><select onchange="wfmSetField(${wi},'persona',this.value)">${wfmPersonaOpts(w.persona)}</select></div>
       </div>
     </div>`;

@@ -50,7 +50,7 @@ export function resetRotation(key: string): void { rotCounters.set(key, -1); }
 // ---- Workflows: the Voice→Designer "voice + script + persona + voice tuning" bundle, assignable
 // per store / per chain / as the global default. resolveWorkflow picks one for a store and composes
 // its persona; buildRestockVars applies it to the call (opener rotation, {{personality}}, voice). ----
-export interface AppliedWorkflow { name: string; voiceId?: string; tuning?: Record<string, unknown>; openers: string[]; personality: string }
+export interface AppliedWorkflow { name: string; voiceId?: string; voices: string[]; tuning?: Record<string, unknown>; openers: string[]; personality: string }
 type AnyObj = Record<string, unknown>;
 const jparse = (s: string | null, fb: unknown) => { try { return s ? JSON.parse(s) : fb; } catch { return fb; } };
 
@@ -88,9 +88,15 @@ export async function resolveWorkflow(retailerId: number, chainId: number | null
   if (!wf) return null;
   const personas = jparse(personaS, []) as AnyObj[];
   const persona = Array.isArray(personas) ? personas.find((p) => p && p.name === wf.persona) : undefined;
+  // Voice strip: `voices` (array) rotates per call, same round-robin as openers. Legacy workflows
+  // that only carry the single `voiceId` behave as a 1-voice strip — identical to before.
+  const voices = Array.isArray(wf.voices) && (wf.voices as unknown[]).length
+    ? (wf.voices as unknown[]).map(String).filter(Boolean)
+    : (wf.voiceId ? [String(wf.voiceId)] : []);
   return {
     name: String(wf.name),
     voiceId: wf.voiceId ? String(wf.voiceId) : undefined,
+    voices,
     tuning: wf.tuning && typeof wf.tuning === "object" ? (wf.tuning as Record<string, unknown>) : undefined,
     openers: Array.isArray(wf.openers) ? (wf.openers as unknown[]).map(String).filter(Boolean) : [],
     personality: composePersona(persona),
@@ -176,8 +182,9 @@ export async function buildRestockVars(
     connectAtSec: chain?.avgTreeSeconds ?? null,
     // Per-store talk cap (chains.maxTalkSeconds). Null = caller falls back to the global bail cap.
     maxTalk: chain?.maxTalkSeconds ?? null,
-    // Workflow voice (Voice→Designer): per-call voice + TTS tuning override when a workflow is assigned.
-    voiceId: workflow?.voiceId ?? null,
+    // Workflow voice strip: rotates round-robin per call on this workflow's own counter (same pattern
+    // as openers; "Reset rotation" restarts it). One voice in the strip = fixed voice, same as before.
+    voiceId: (workflow ? rotatePick("voice:" + workflow.name, workflow.voices) : undefined) ?? null,
     voiceTuning: workflow?.tuning ?? null,
     dynamicVars: {
       internal_call_id: "0",
@@ -362,10 +369,10 @@ export async function triggerCall(a: TriggerArgs) {
       productName: category.label,
       question,
       agentId,
-      // Voice: explicit override → rotate the voice pool → workflow voice → default. The pool wins over
-      // a workflow's single voice so an owner-configured ROTATION is never silently disabled by a
-      // default workflow; pool rotation is LIVE — with 2+ voices, consecutive calls alternate.
-      voiceId: a.voiceId ?? rotatePick("voice", ((await getSetting("vt_voice_pool")) || "").split(",").map((s) => s.trim()).filter(Boolean)) ?? wf?.voiceId ?? config.voice.defaultVoiceId,
+      // Voice: explicit override → rotate the global voice pool → rotate the workflow's voice strip →
+      // default. The pool wins over a workflow's strip so an owner-configured GLOBAL rotation is never
+      // silently disabled by a default workflow; both rotations are live round-robins.
+      voiceId: a.voiceId ?? rotatePick("voice", ((await getSetting("vt_voice_pool")) || "").split(",").map((s) => s.trim()).filter(Boolean)) ?? (wf ? rotatePick("voice:" + wf.name, wf.voices) : undefined) ?? config.voice.defaultVoiceId,
       clarification,
       openingLine: mode === "restock" ? openingLine : undefined,
       phoneTree,

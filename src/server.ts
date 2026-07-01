@@ -2707,9 +2707,9 @@ app.get("/api/admin/workflow-assignments", async (c) => {
 app.post("/api/admin/reset-rotation", async (c) => {
   const b = await c.req.json().catch(() => ({} as Record<string, unknown>));
   const wf = typeof b.workflow === "string" && b.workflow.trim() ? b.workflow.trim() : "";
-  // Reset the workflow's own counter (bridge / listen-live path) AND the global one (scheduled path),
-  // so the next call starts at opener #1 no matter which path places it.
-  const keys = wf ? ["opener:" + wf, "opener"] : ["opener"];
+  // Reset the workflow's own counters (bridge / listen-live path) AND the global ones (scheduled path),
+  // so the next call starts at opener #1 AND voice #1 no matter which path places it.
+  const keys = wf ? ["opener:" + wf, "opener", "voice:" + wf, "voice"] : ["opener", "voice"];
   keys.forEach(resetRotation);
   return c.json({ ok: true, keys, workflow: wf || null });
 });
