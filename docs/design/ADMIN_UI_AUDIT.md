@@ -33,7 +33,7 @@ The Pulse/Live landing is the "too much shit to focus" page: **~40 numbers, 6 st
   **Net: Pulse goes from ~40 numbers + 5 paragraphs to ~5 vitals + tap-to-expand. Same data, one focus.** Apply the same "hero + collapse" cut to the other dense pages (Restock intel, Call time & cost) after.
 
 ### 2. One rhythm (the type + spacing scale — see §F)
-Even clean content reads as noise at **28 different font sizes** and a dozen ad-hoc margins. Lock the **type scale defined in `COPY_STYLE_GUIDE.md` (Header 26 / Data 22 / Subhead 15 / Body 13 / Caption 11, weights 500/700/800 only)** and the 4/8/12/16/24 spacing scale, apply everywhere. This alone makes the same data feel calm. Worst offenders in §F.
+Even clean content reads as noise at **28 different font sizes** and a dozen ad-hoc margins. Conform to the **type scale in `docs/design/STYLE_GUIDE.md` §3** (Design's authority — hero 30 / section 19 / card 15 / body 14–16 / meta 12.5 / eyebrow 10.5; **16px focusable inputs**). Apply it everywhere and kill the ad-hoc sizes. This alone makes the same data feel calm. Worst offenders in §F.
 
 *(A clean static mock of the redesigned Pulse page — built on the shared tokens — can be handed to Admin as the visual target if you want one. Offered, not built yet.)*
 
@@ -125,7 +125,7 @@ Full line-by-line table is in the working notes if Admin wants every one.
 
 ## F. Size, spacing, color — does it read right for the task?  **[P2, one P1 root cause]**
 
-**Root cause (P1 to decide, then P2 to apply):** there is **no type scale and no spacing scale.** The file uses **28 different font sizes** (10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 15.5 … up to 46px) and margins scattered across 2/3/4/5/6/8/10/12/13/14/16/18px — almost all as inline `style=` magic numbers. That ad-hoc drift is exactly the "spacing doesn't feel right" instinct. **Fix:** apply the canonical type scale now written in `COPY_STYLE_GUIDE.md` (Header 26 / Data 22 / Subhead 15 / Body 13 / Caption 11; weights 500/700/800 only) and the 4/8/12/16/24 spacing scale as classes, and replace every inline number. Below are the highest-value specific offenders to start with:
+**Root cause (P1 to decide, then P2 to apply):** there is **no type scale and no spacing scale.** The file uses **28 different font sizes** (10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 15.5 … up to 46px) and margins scattered across 2/3/4/5/6/8/10/12/13/14/16/18px — almost all as inline `style=` magic numbers. That ad-hoc drift is exactly the "spacing doesn't feel right" instinct. **Fix:** conform to `docs/design/STYLE_GUIDE.md` §3 (Design's existing type/size/color scale, incl. 16px inputs) as shared classes, and replace every ad-hoc inline size/margin. Do NOT invent a new scale — match Design's. Below are the highest-value specific offenders to start with:
 
 - **[P1] Card-header gap is all over the map.** `.card>.name` already defaults to `margin-bottom:6px`, but inline overrides set it to **2 / 4 / 8 / 12px** across cards (e.g. Settings cards all 4px at 769/778/782/786/790, Designer steps all 12px at 823/837/880/889…, and two neighbors on one page differ: "Today's pulse" 8px @551 vs "Business & money" 12px @555). Pick one value, delete the overrides.
 - **[P1] Stat-grid bottom gap has six values.** `.stats` defaults to 16px but is overridden to **0 / 4 / 6 / 12 / 14 / 16** (556, 579, 618, 953, 2452, 3542, 3602, 3615…). Most visible where two stat cards stack. Standardize.

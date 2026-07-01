@@ -1,6 +1,7 @@
 # Admin overhaul — QA test harness
 
-> Hand to QA **after** Admin ships the overhaul. Test on `checkitforme.com/admin` (branch `claude/retail-stock-voice-calls-OcyMS`). Each row: do the action, confirm the expected result. Mark PASS/FAIL. Spec lives in `ADMIN_UI_AUDIT.md`, `COPY_STYLE_GUIDE.md`, `COPY_ADMIN_MASTER.md`.
+> Hand to QA **after** Admin ships the overhaul. **STAGING-FIRST: test on `staging.checkitforme.com/admin`** — the overhaul lands on the staging branch (`claude/checkitforme-website-takeover-pagiis`) and QA verifies there; only after sign-off does it promote (merge) to prod. Do NOT QA on prod. Each row: do the action, confirm the expected result. Mark PASS/FAIL.
+> **Specs:** `voice-caller/docs/design/ADMIN_UI_AUDIT.md` (the punch list) · `voice-caller/docs/design/STYLE_GUIDE.md` §3 (the type/size/color authority — Design's) · `voice-caller/docs/business/COPY_STYLE_GUIDE.md` (voice) · `voice-caller/docs/design/COPY_ADMIN_MASTER.md` (copy sweep).
 
 ## 1. The two bugs (must pass)
 - [ ] **Save-workflow on failure** — trigger a workflow save that fails (kill network or force an error). **Expect:** NO green "Workflow saved" toast; you see "Couldn't save the workflow." Only.
@@ -15,12 +16,14 @@
 - [ ] Total numbers visible on first screen is roughly **5**, not ~40.
 
 ## 3. Type & spacing (the 42-size fix)
-- [ ] Every font size on screen is one of **26 / 22 / 15 / 13 / 11px** — no in-between sizes.
-- [ ] Only three weights in use: **500 / 700 / 800**. No thin/black outliers.
+Verify against the **authority: `docs/design/STYLE_GUIDE.md` §3** (not a separate list).
+- [ ] Every font size maps to a **role in Design's §3 table** (hero 30 / section 19 / card 14.5–15.5 / body 14–16 / meta 12.5 / eyebrow 10.5 / micro-label 10). No sizes outside those roles.
+- [ ] **Focusable inputs are 16px** (anti-zoom) — a 16px input is CORRECT, not a "wrong size." Do not FAIL it.
+- [ ] Weights match the table (heroes 900/800, body 500, meta 600) — no random outliers.
 - [ ] Card titles all share the **same gap** below them (no card tighter/looser than its neighbor).
 - [ ] Stacked stat cards share the **same gap** between them.
 - [ ] Font is **Inter** everywhere (no system-font fallback showing).
-- [ ] Spacing looks like it's on a **4/8/12/16/24** rhythm — no lone 3px/6px/13px oddities.
+- [ ] Spacing looks like it's on a consistent rhythm — no lone 3px/6px/13px one-offs.
 
 ## 4. Flow & labels
 - [ ] The live sub-tab reads **"Live"** (was "Pulse").
@@ -43,10 +46,16 @@
 - [ ] Success toasts still fire on success (only the failure paths changed).
 
 ## 7. Cleanup after sign-off (do this — don't let docs go stale)
-Once every box above is PASS and the owner signs off, **delete the one-time work-order docs.** Their job is done; the durable rules already live in the style guide.
+Once every box above is PASS and the owner signs off on the **promote-to-prod**, **delete the one-time work-order docs.** Their job is done; the durable rules live in the guides. Confirm the target branch with the owner before deleting.
 - [ ] Delete `voice-caller/docs/design/ADMIN_UI_AUDIT.md` (executed).
 - [ ] Delete `voice-caller/docs/design/COPY_ADMIN_MASTER.md` (applied — it's a change list, not a reference).
 - [ ] Delete this file, `voice-caller/docs/design/ADMIN_QA_HARNESS.md` (verified).
-- [ ] Commit as "docs: remove applied admin work-orders (in git history if needed)."
+- [ ] Commit as "docs: remove applied admin work-orders (recoverable in git history)."
 
-**Keep (living references — do NOT delete):** `COPY_STYLE_GUIDE.md` (voice + type scale) · `BRAND.md`. Anything deleted is fully recoverable from git history.
+**Keep — living references, do NOT delete:**
+- `voice-caller/docs/design/STYLE_GUIDE.md` (Design: type/size/color/components — the authority)
+- `voice-caller/docs/business/COPY_STYLE_GUIDE.md` (Copy: voice)
+- `voice-caller/docs/brand/CHECK_BRAND_STYLE_GUIDE.md` (brand mark)
+- `voice-caller/docs/design/COPY_CHANGES_APPROVED.md` — **not part of this cleanup** (it's the consumer-site source of truth, owned separately). Leave it.
+
+Anything deleted is fully recoverable from git history.
