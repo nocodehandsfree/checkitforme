@@ -19,6 +19,12 @@ needs them (don't pre-read).
 - Result entrance animation / CTA sweep — re-look after the above.
 
 **🔨 Build / fix:**
+- **Green at the bottom bar (iOS Compact Safari)** — owner saw a green bottom toolbar on the live-call screen.
+  Confirmed there is **NO `theme-color` meta** anywhere (source + served staging HTML), so it's not a meta:
+  it's iOS **per-edge page sampling** picking up a green pixel at the page's *bottom edge*. Couldn't repro the
+  toolbar tint headlessly. **Need owner input:** does the green show only during a live call, everywhere, or
+  only after an in-stock (green) result? Then pin that edge dark. Don't blind-edit the tint CSS — it's fragile
+  ("re-breaks the top"). Mechanism spec lives in the big comment at top of `checkit.html` (~L6-14).
 - **Topps hero logo** (`/toppsbasketball`): `logos/topps.png` is low-res white-fringe → halo on the dark hero.
   Needs a clean **transparent brand-RED** export (black is invisible on `#0C0C12`) — get it from owner/Logo,
   **don't recolor the trademark**. Then size `--logo-scale`, match `og/topps.png`. (Verified: the hero `<img>`
@@ -37,6 +43,14 @@ needs them (don't pre-read).
 consumer "Working → forward your receipt = free check" nudge is yours.
 
 **✅ Recently done** (newest first; trim when long):
+- **On staging, awaiting owner Fun-call verification** (3 bug fixes, `checkit.html`):
+  - **Status flip**: `finalizeLive` no longer flashes "nobody answered" when the server verdict is slow on a
+    *connected* call — it shows the neutral "getting the answer…" dots and `reconcileVerdict` upgrades in place
+    (window widened ~30s→~60s). "No answer" now only shows when there's no transcript or the SERVER says so.
+  - **Spanish step log**: step labels were snapshotted in English at call time; both renderers now resolve from
+    the step number (`liveStageLabel(s.n)`) so a language flip re-localizes the whole log (+ mid-call re-render).
+  - **Map pin (master)**: a hand pan/zoom now marks the map "roamed" and suppresses the auto-reframe, so changing
+    the radius no longer yanks you back to your real location; the 📍 button clears it to snap back.
 - Filed 2 cross-lane endpoint asks with DevOps (`section=thrift` param + `GET /pub/store/:id`, exact shapes in
   devops.md) to unblock the thrift toggle + reopened-call address. Verified both are absent from `server.ts` today.
 
