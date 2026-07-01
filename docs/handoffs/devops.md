@@ -64,6 +64,16 @@ copies of everything, everywhere. Never again. On every session, before you end:
 - [ ] **Transcript echo** — bridge feeds some agent audio back as clerk input, corrupting extraction. Fix at bridge.
 - [ ] **Real-store launch** — when it begins, press **Start fresh** (Pulse → Stats baseline, `stats_since`) so only
   post-launch calls count; then resume mapping (chains recipe/avgTreeSeconds).
+- [ ] **Website→DevOps: `section=thrift` param on `/pub/stores/near`.** Website wants an OFF-by-default
+  Treasure-Hunt toggle for the 3,479 `chains.type="Thrift"` stores **without un-muting them** (un-muting dumps
+  3.5k rows into the default list). Add an opt-in query param: absent = today's behavior (muted chains excluded);
+  `section=thrift` = return ONLY `type="Thrift"` stores (they stay globally muted, so they never leak into the
+  default list). Payload shape unchanged (`isMSRP:false` already emitted so Website can badge "may exceed MSRP").
+- [ ] **Website→DevOps: `GET /pub/store/:id`.** A reopened call from history whose store is outside the current
+  nearby slice has no `address` (only near-slice stores carry it). Website needs a single-store fetch returning the
+  same per-store shape `/pub/stores/near` emits (id, name, location, address, logoUrl/logoWide/logoDark, storeType,
+  lat/lng, shipmentDay, mapsUri…) to backfill `SEL_STORE.address` when missing. Gate owner-only (`ownerOnly`) stores
+  behind the same comp check as `/pub/stores/near`.
 - [x] **Branch pile pruned** — 41→5 (OcyMS / main / keen-edison-3mmWu / test-coverage / test-coverage-loop-7cojsl).
   **TRICK for deleting remote branches:** the CI git proxy (`127.0.0.1:41729`) 403s `git push --delete`, but a
   direct push bypasses it — `git push "https://x-access-token:$GITHUB_PAT@github.com/nocodehandsfree/fungibles.git"

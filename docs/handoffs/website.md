@@ -21,18 +21,24 @@ needs them (don't pre-read).
 **🔨 Build / fix:**
 - **Topps hero logo** (`/toppsbasketball`): `logos/topps.png` is low-res white-fringe → halo on the dark hero.
   Needs a clean **transparent brand-RED** export (black is invisible on `#0C0C12`) — get it from owner/Logo,
-  **don't recolor the trademark**. Then size `--logo-scale`, match `og/topps.png`.
+  **don't recolor the trademark**. Then size `--logo-scale`, match `og/topps.png`. (Verified: the hero `<img>`
+  src is `BRAND.logoUrl`, injected server-side via `__BRAND_JSON__` — `renderIcons()` in checkit.html ~L2591.
+  So the real fix = swap the file the brand config points at; no in-lane CSS trick fixes baked-in white fringe.)
 - **Treasure Hunt + Hobby sections**: 3,479 thrift stores live (`chains.type="Thrift"`, muted, off MSRP).
-  Surface behind a **user toggle, OFF by default**. Do **NOT** un-mute (dumps 3.5k into the main list) — ask
-  DevOps for a param like `/pub/stores/near?section=thrift`. "Hobby" = a future rail, not imported yet.
-- **Address on reopened calls**: old calls outside the nearby slice show no address → ask DevOps for a
-  `/pub/store/:id` endpoint, then fill when `SEL_STORE.address` is missing.
+  Surface behind a **user toggle, OFF by default**. Do **NOT** un-mute (dumps 3.5k into the main list).
+  ✅ **Filed with DevOps** (`section=thrift` param on `/pub/stores/near`, see devops.md) — waiting on the endpoint;
+  build the OFF-by-default toggle once it lands. "Hobby" = a future rail, not imported yet.
+- **Address on reopened calls**: old calls outside the nearby slice show no address (only the near-slice carries
+  `address`). ✅ **Filed with DevOps** (`GET /pub/store/:id`, see devops.md) — waiting on the endpoint; then fill
+  when `SEL_STORE.address` is missing.
 - **Workflow openers**: delete the "shipment" opener default (owner + Admin lane).
 
 **⏳ Blocked / waiting on others:** kiosk call script (Voice/Admin) before kiosk calling can promote; then the
 consumer "Working → forward your receipt = free check" nudge is yours.
 
-**✅ Recently done** (newest first; trim when long): —
+**✅ Recently done** (newest first; trim when long):
+- Filed 2 cross-lane endpoint asks with DevOps (`section=thrift` param + `GET /pub/store/:id`, exact shapes in
+  devops.md) to unblock the thrift toggle + reopened-call address. Verified both are absent from `server.ts` today.
 
 ---
 
