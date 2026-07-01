@@ -3592,33 +3592,48 @@ async function loadRestock(){
   const fMax=Math.max(1,...(d.productForms||[]).map(x=>x.n));
   const cMax=Math.max(1,...(d.byCategory||[]).map(x=>x.n));
   // Call reality funnel — the honest read of what calls achieved (most never reach a human).
-  const af=d.answerFunnel; let funnelCard='';
+  const af=d.answerFunnel||{};
+  const reach=af.dialed?Math.round(af.reachedHuman/af.dialed*100):null;
+  const v=(n,l,cls,big)=>`<div class="v${big?' big':''}"><div class="n ${cls||'m'}">${n}</div><div class="l">${esch(l)}</div></div>`;
+  const drow=(label,meta,body,open)=>`<details class="drow"${open?' open':''}><summary><span class="rl">${esch(label)}</span><span class="rr">${meta||''} <span class="chev">▾</span></span></summary><div class="rbody">${body}</div></details>`;
+  // Hero: the restock vitals you check first. Color = state before you read the number.
+  const hero=`<div class="herog">`
+    +v((t.confirmRate||0)+'%','Confirm rate',(t.confirmRate||0)>0?'g':'m',true)
+    +v(t.confirms||0,'Confirms',(t.confirms||0)>0?'g':'m')
+    +v(reach==null?'—':reach+'%','Reach a human',reach==null?'m':(reach>=60?'g':reach>=30?'a':'r'))
+    +v(t.confirms7d||0,'Last 7 days',(t.confirms7d||0)>0?'g':'m')
+    +v(t.checks||0,'Checks','m')
+    +`</div>`;
+  // Call reality funnel — the honest read of what calls achieved (collapsed).
+  let funnelBody='';
   if(af&&af.dialed){
     const fc=s=>{ if(!s)return ''; const dt=new Date(s*1000); return dt.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); };
     const b=af.buckets||{}, dial=af.dialed||1;
     const brow=(ic,label,n,cls)=>`<div class="rsbar"><span class="rsbl" style="flex-basis:188px">${ic} ${esch(label)}</span><span class="rsbt"><span class="rsbf ${cls||''}" style="width:${Math.round((n||0)/dial*100)}%"></span></span><b>${n||0}</b></div>`;
     const chrow=x=>{ const pct=x.dialed?Math.round(x.reached/x.dialed*100):0, cls=pct>=80?'':(pct>=40?'soon':'bad'); return `<div class="rsbar"><span class="rsbl">${esch(x.chain)}</span><span class="rsbt"><span class="rsbf ${cls}" style="width:${pct}%"></span></span><b>${x.reached}/${x.dialed}</b></div>`; };
-    const reachPct=Math.round(af.reachedHuman/dial*100);
-    funnelCard=`<div class="card report" style="border-color:rgba(167,139,250,.3)">
-      <div class="rgrp">Call reality <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· read from the transcripts, not the saved status${af.firstCall?' · first store call '+fc(af.firstCall):''}</span></div>
-      <div class="stats">${tile(af.dialed,'dialed')}${tile(af.reachedHuman,'reached a human','purple')}${tile(af.gotAnswer,'got an answer','green')}</div>
-      ${brow('✅','In stock',b.in_stock,'')}
-      ${brow('📦','Just landed · not shelved',b.got_some,'soon')}
-      ${brow('❌','Not in stock',b.not_in,'bad')}
-      ${brow('☎️','Picked up · no answer',b.reached_no_answer,'soon')}
-      ${brow('🤖','Never reached a human',b.never_reached,'bad')}
-      <div class="rgrp" style="margin-top:14px">Reach rate by chain <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· where a human actually picks up</span></div>
-      ${(af.byChain||[]).map(chrow).join('')}
-    </div>`;
+    funnelBody=`<div class="meta" style="margin:0 0 10px">Read from the transcripts, not the saved status${af.firstCall?' · first store call '+fc(af.firstCall):''}.</div>`
+      +`<div class="stats">${tile(af.dialed,'dialed')}${tile(af.reachedHuman,'reached a human','purple')}${tile(af.gotAnswer,'got an answer','green')}</div>`
+      +brow('✅','In stock',b.in_stock,'')
+      +brow('📦','Just landed · not shelved',b.got_some,'soon')
+      +brow('❌','Not in stock',b.not_in,'bad')
+      +brow('☎️','Picked up · no answer',b.reached_no_answer,'soon')
+      +brow('🤖','Never reached a human',b.never_reached,'bad')
+      +`<div class="rgrp" style="margin-top:14px">Reach rate by chain <span class="meta">· where a human actually picks up</span></div>`
+      +((af.byChain||[]).map(chrow).join('')||'<div class="meta">—</div>');
   }
+  const daysBody=(d.shipmentDays||[]).slice(0,7).map(x=>rsBar(x.day,x.n,dMax)).join('')||'<div class="meta">No days learned yet.</div>';
+  const landingBody=`<div class="rgrp" style="margin-top:0">Product forms</div>`+((d.productForms||[]).slice(0,8).map(x=>rsBar(x.form,x.n,fMax)).join('')||'<div class="meta">none captured yet</div>')
+    +`<div class="rgrp">Top sets</div>`+((d.productSets||[]).slice(0,12).map(x=>`<span class="rschip">${esch(x.set)} <b>${x.n}</b></span>`).join('')||'<div class="meta">none named yet</div>')
+    +`<div class="rgrp">By category</div>`+((d.byCategory||[]).map(x=>rsBar(x.category,x.n,cMax)).join('')||'<div class="meta">—</div>');
+  const storesBody=(d.topStores||[]).map(s=>`<div class="repline rsrow" onclick="openStoreRestock(${s.id})"><span class="rl">${esch(s.store)}${s.location?' <span class="meta">· '+esch(s.location)+'</span>':(s.region?' <span class="meta">· '+esch(s.region)+'</span>':'')}</span><b>${s.bestDay?esch(s.bestDay)+' · ':''}<span style="color:var(--green)">${s.confirms} hit${s.confirms===1?'':'s'}</span></b></div>`).join('')||'<div class="meta">No confirmed restocks yet.</div>';
+  const topDay=(d.shipmentDays&&d.shipmentDays[0])?d.shipmentDays[0].day:'';
+  const topForm=(d.productForms&&d.productForms[0])?d.productForms[0].form:'';
   net.innerHTML=
-    funnelCard
-    +`<div class="card report"><div class="stats" style="margin-bottom:0">`+tile((t.confirmRate||0)+'%','confirm rate','green')+tile(t.confirms||0,'confirms')+tile(t.confirms7d||0,'last 7d')+tile(t.checks||0,'checks')+`</div></div>`
-    +`<div class="card report"><div class="rgrp">Dominant restock days <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· what staff told us</span></div>`+((d.shipmentDays||[]).slice(0,7).map(x=>rsBar(x.day,x.n,dMax)).join('')||'<div class="meta">No days learned yet.</div>')+`</div>`
-    +`<div class="card report"><div class="rgrp">Product forms landing</div>`+((d.productForms||[]).slice(0,8).map(x=>rsBar(x.form,x.n,fMax)).join('')||'<div class="meta">none captured yet</div>')
-      +`<div class="rgrp" style="margin-top:13px">Top sets</div>`+((d.productSets||[]).slice(0,12).map(x=>`<span class="rschip">${esch(x.set)} <b>${x.n}</b></span>`).join('')||'<div class="meta">none named yet</div>')
-      +`<div class="rgrp" style="margin-top:13px">By category</div>`+((d.byCategory||[]).map(x=>rsBar(x.category,x.n,cMax)).join('')||'<div class="meta">—</div>')+`</div>`
-    +`<div class="card report"><div class="rgrp">Top restock stores <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· tap for its own breakdown</span></div>`+((d.topStores||[]).map(s=>`<div class="repline rsrow" onclick="openStoreRestock(${s.id})"><span class="rl">${esch(s.store)}${s.location?' <span class="meta">· '+esch(s.location)+'</span>':(s.region?' <span class="meta">· '+esch(s.region)+'</span>':'')}</span><b>${s.bestDay?esch(s.bestDay)+' · ':''}<span style="color:var(--green)">${s.confirms} hit${s.confirms===1?'':'s'}</span></b></div>`).join('')||'<div class="meta">No confirmed restocks yet.</div>')+`</div>`;
+    hero
+    +(funnelBody?drow('Call reality',`${af.reachedHuman||0}/${af.dialed||0} reached`,funnelBody):'')
+    +drow('Restock days',topDay?esch(topDay)+' leads':'what staff told us',daysBody)
+    +drow("What's landing",topForm?esch(topForm)+' leads':'forms · sets · category',landingBody)
+    +drow('Top restock stores',(d.topStores||[]).length+' store'+((d.topStores||[]).length===1?'':'s'),storesBody);
 }
 async function openStoreRestock(id){
   const det=document.getElementById('restock_detail'); if(!det) return;
