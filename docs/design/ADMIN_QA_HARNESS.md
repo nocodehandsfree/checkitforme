@@ -1,6 +1,6 @@
 # Admin overhaul — QA test harness
 
-> Hand to QA **after** Admin ships the overhaul. **How our environment works:** there is **ONE Admin — `admin.checkitforme.com`** — internal (owner's eyes only), always live. **There is NO staging** (it was retired). Everyone builds on the one branch `claude/retail-stock-voice-calls-OcyMS`, which auto-deploys to that admin. So **QA verifies directly on `admin.checkitforme.com`** — a rough edge caught here is fine (no customers). Each row: do the action, confirm the expected result. Mark PASS/FAIL.
+> Hand to QA **after** Admin ships the overhaul. **How our environment works:** there is **ONE Admin — `admin.checkitforme.com`** — internal (owner's eyes only), always live. **There is NO staging** (it was retired). Everyone builds on the one branch `claude/retail-stock-voice-calls-OcyMS`, which auto-deploys to that admin. So **QA verifies directly on `admin.checkitforme.com`** (and consumer copy on `checkitforme.com`) — a rough edge caught here is fine (no customers). Each row: do the action, confirm the expected result. Mark PASS/FAIL.
 > **Specs:** `voice-caller/docs/design/ADMIN_UI_AUDIT.md` (the punch list) · `voice-caller/docs/design/STYLE_GUIDE.md` §3 (the type/size/color authority — Design's) · `voice-caller/docs/business/COPY_STYLE_GUIDE.md` (voice) · `voice-caller/docs/design/COPY_ADMIN_MASTER.md` (copy sweep).
 
 ## 1. The two bugs (must pass)

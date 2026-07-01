@@ -128,8 +128,7 @@ Buttons (`Call zone`, `Mark added`, `Import stores`, `Use for live calls`, `Paus
 
 ---
 
-## Open questions for you
-1. **"Phone trees" / "phone tree"** — keep as the operator term, or switch to "phone menu" everywhere? (It's internal-facing, so either works.)
-2. Any status/option here that needs *new* copy (not just a tidy)? Send me the situation and I'll write it.
+## Decided
+1. **"phone tree" → "phone menu"** in prose/helper copy (plainer, per the jargon rule). The chain screen is now named **"Chains,"** so there's no "Phone trees" screen label to preserve. Apply everywhere it appears as prose.
 
 *Apply §1 globally, then §2 by area. Same single-source pattern as the consumer doc.*

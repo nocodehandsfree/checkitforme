@@ -13,8 +13,13 @@ Priority tiers are marked **[P1]** (do first — visible or a real bug), **[P2]*
 The Pulse/Live landing is the "too much shit to focus" page: **~40 numbers, 6 stacked multi-section cards, and 5 explanatory paragraphs on one screen.** The website feels clean **not** because of different colors — the design tokens already match (same `--bg #0C0C12`, `--green #4ADE80`, `--purple #A78BFA`, `--muted`, `--border`). The site feels clean because it shows **one thing at a time with air around it.** Bring that restraint here. Two moves:
 
 ### 1. Less per screen (the style guide, applied: fewest words · one thought · color over copy)
-- **Above the fold = one hero row of ≤5 vitals, color-coded, nothing else.** The numbers you actually check first: e.g. *Checks today · Confirms · Reach rate · Credits left · Margin.* **You pick the 5.** Everything else is one tap away, not stacked.
-- **Move the rest to where it belongs** (this also feeds the IA rethink in §G — the dashboard is cramming what other tabs are for):
+
+**BUILD SPEC — no mock needed, build straight from `docs/design/STYLE_GUIDE.md`.** Don't improvise the *look* (that's the guardrail); the look is fully specified there. Improvise nothing — this is the layout:
+
+- **Hero = one row of exactly 5 vitals, color-coded, and nothing else above the fold.** The 5 (swap only if the owner says so): **Checks today · Confirms · Reach rate · Credits left · Margin.**
+  - Layout: first vital full-width, the other 4 in a 2-col grid. Use Design's card (radius 16, 1px border, 16px padding) and the number in Design's Data/stat size; label under it in the eyebrow style (10.5px UPPERCASE muted).
+  - **Color = state, per Design's rule:** green when the number is genuinely good, amber = watch, red = bad, grey when neutral (Reach 40% → amber, Credits 27% → amber, Margin 0% → grey/red).
+- **Move every other card off the landing** to the tab it belongs to (the dashboard is doing five tabs' jobs):
   | Card crammed on Pulse now | Belongs in |
   |---|---|
   | Business & money (8 stats) | its own Money view / the Calc tab |
@@ -30,12 +35,14 @@ The Pulse/Live landing is the "too much shit to focus" page: **~40 numbers, 6 st
   - "Real-call stats (Pulse · Restock · Call timing) count everything."
   - "Only 40% of calls reach a person… **that's** the gap to close, not stock." (also a sweep artifact.)
 
-  **Net: Pulse goes from ~40 numbers + 5 paragraphs to ~5 vitals + tap-to-expand. Same data, one focus.** Apply the same "hero + collapse" cut to the other dense pages (Restock intel, Call time & cost) after.
+- **Detail that stays on the landing collapses.** Anything not in the hero sits in a closed `<details>` row: Subhead title + one-line summary + chevron, tap to open. Closed by default. (Design's card + radius; no new styles.)
+
+  **Net: Pulse goes from ~40 numbers + 5 paragraphs to 5 vitals + tap-to-expand. Same data, one focus.** Apply the same "hero + collapse" cut to the other dense pages (Restock intel, Call time & cost) after.
 
 ### 2. One rhythm (the type + spacing scale — see §F)
 Even clean content reads as noise at **28 different font sizes** and a dozen ad-hoc margins. Conform to the **type scale in `docs/design/STYLE_GUIDE.md` §3** (Design's authority — hero 30 / section 19 / card 15 / body 14–16 / meta 12.5 / eyebrow 10.5; **16px focusable inputs**). Apply it everywhere and kill the ad-hoc sizes. This alone makes the same data feel calm. Worst offenders in §F.
 
-*(A clean static mock of the redesigned Pulse page — built on the shared tokens — can be handed to Admin as the visual target if you want one. Offered, not built yet.)*
+*(No mock is required — the spec above plus `docs/design/STYLE_GUIDE.md` is the direction. A reference mock exists at `docs/design/pulse_clean_mock.html` if you want to eyeball the shape, but the style guide is the source of truth, not the mock.)*
 
 ---
 
