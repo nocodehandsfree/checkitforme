@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="x-rev" content="admin-r44" />
-<title>Check It For Me — Admin</title>
+<title>Check It For Me · Admin</title>
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -568,14 +568,14 @@
       <div id="credit_limit_wrap" style="display:none;margin-top:12px">
         <div class="hint" style="margin-bottom:8px">Estimate from the last 31 days <span data-tip="Enable user_read on the ElevenLabs API key for a live, auto-updating balance."></span>. Enter your plan size below until live balance is on.</div>
         <div class="row" style="gap:8px">
-          <input id="credit_limit" type="number" placeholder="Plan size — e.g. 100000" style="flex:1">
+          <input id="credit_limit" type="number" placeholder="Plan size, e.g. 100000" style="flex:1">
           <button class="ghost" onclick="saveCreditLimit()">Save</button>
         </div>
       </div>
     </div>
     <details class="card report" id="d_timing_card" open>
       <summary style="cursor:pointer"><span class="name">Call time &amp; cost</span></summary>
-      <div class="meta" style="margin:10px 0 8px">Time-to-human (phone-tree nav) vs. talk — ElevenLabs bills the whole connected call, so nav + hold is real cost.</div>
+      <div class="meta" style="margin:10px 0 8px">Time to reach a person vs. talk time. We're billed for the whole call (ring, menu, hold, talk), so reaching someone is real cost.</div>
       <div class="stats" id="d_timing" style="margin-bottom:6px"></div>
       <div id="d_timing_model"></div>
       <div id="d_timing_status"></div>
@@ -583,7 +583,7 @@
     </details>
     <details class="card report" id="d_health_card" open>
       <summary style="cursor:pointer"><span class="name">Call data health</span></summary>
-      <div class="meta" style="margin:10px 0 8px">The unfiltered truth about every call row — real dialed calls vs. seed / rehearsal / never-placed. The true first call ignores seed rows and the "Fun" rehearsal store.</div>
+      <div class="meta" style="margin:10px 0 8px">The unfiltered truth about every call row. real dialed calls vs. seed / rehearsal / never-placed. The true first call ignores seed rows and the "Fun" rehearsal store.</div>
       <div id="d_health" class="meta">Loading…</div>
     </details>
     </div>
@@ -596,7 +596,7 @@
   </section>
   <section id="restock">
     <h2>Restock intel</h2>
-    <div class="meta" style="margin:0 0 13px">When stores restock + what's landing — learned from real call data. Tap a store for its own breakdown.</div>
+    <div class="meta" style="margin:0 0 13px">When stores restock + what's landing. learned from real call data. Tap a store for its own breakdown.</div>
     <div id="restock_detail"></div>
     <div id="restock_net" class="meta">Loading…</div>
   </section>
@@ -607,7 +607,7 @@
   </section>
   <section id="testing">
     <h2>Testing</h2>
-    <div class="meta" style="margin:0 0 13px">Your test-call log — <b>owner-only / Fun stores only</b>. These never touch the real-store numbers. Call yourself, mess with the agent, and read back the workflow, the exact opener used in rotation, the status, and the timing.</div>
+    <div class="meta" style="margin:0 0 13px">Your test-call log. <b>owner-only / Fun stores only</b>. These never touch the real-store numbers. Call yourself, mess with the caller, and read back the workflow, the exact opener used in rotation, the status, and the timing.</div>
     <div id="testing_summary"></div>
     <div id="testing_log" class="meta">Loading…</div>
   </section>
@@ -625,7 +625,7 @@
   <section id="search">
     <h2>Search stores</h2>
     <div class="filters">
-      <input id="f_search" placeholder="Search name, city, ZIP — or just pick a filter…" oninput="onAdminSearch()">
+      <input id="f_search" placeholder="Search name, city, ZIP, or pick a filter…" oninput="onAdminSearch()">
       <div class="msel" id="ftype_wrap"><button type="button" class="msel-btn" id="ftype_btn" onclick="ftypeToggle(event)"><span id="ftype_lbl">All types</span><span class="msel-car">▾</span></button><div class="msel-menu" id="ftype_menu"></div></div>
       <select id="f_region" onchange="loadRetailers()"><option value="">All regions</option></select>
       <select id="f_zone" onchange="onStoreFilter()"><option value="">All zones</option></select>
@@ -669,8 +669,8 @@
     <h2>Add a store</h2>
     <div class="card">
       <div class="grid2">
-        <div><label>Name</label><input id="r_name" placeholder="Barnes & Noble — Brentwood"></div>
-        <div><label>Phone (E.164)</label><input id="r_phone" placeholder="+13105551234"></div>
+        <div><label>Name</label><input id="r_name" placeholder="Barnes & Noble Brentwood"></div>
+        <div><label>Phone</label><input id="r_phone" placeholder="+13105551234"></div>
         <div><label>Location</label><input id="r_loc" placeholder="Brentwood, TN"></div>
         <div><label>Timezone</label><select id="r_tz">
           <option value="" disabled selected>Select a timezone</option>
@@ -688,8 +688,8 @@
       <div style="margin-top:12px"><button class="act" onclick="addRetailer()">Add store</button></div>
     </div>
     <details class="card">
-      <summary><span class="name">Bulk import</span> <span class="meta" data-tip="Paste store JSON — upserts by phone; region + timezone come from state. active:false soft-removes."></span></summary>
-      <textarea id="gw_import" spellcheck="false" placeholder='[{"name":"Target — Sunset","phone":"+13105551212","address":"...","state":"CA","chain":"Target","carries":"Pokémon"}]' style="width:100%;min-height:150px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box;margin-top:10px"></textarea>
+      <summary><span class="name">Bulk import</span> <span class="meta" data-tip="Paste store JSON. We match on phone; region and timezone come from the state."></span></summary>
+      <textarea id="gw_import" spellcheck="false" placeholder='[{"name":"Target Sunset","phone":"+13105551212","address":"...","state":"CA","chain":"Target","carries":"Pokémon"}]' style="width:100%;min-height:150px;background:#0e0e14;color:#cfe;border:1px solid var(--border);border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,monospace;box-sizing:border-box;margin-top:10px"></textarea>
       <div id="gw_import_msg" class="meta" style="margin:8px 0;min-height:16px"></div>
       <div><button class="act" onclick="importStoresJson()">Import stores</button> <button class="ghost" onclick="backfillRegions()">Backfill regions</button></div>
     </details>
@@ -755,7 +755,7 @@
       <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px">
         <div class="name">Emailed-in receipts</div>
         <button class="ghost" style="font-size:12px;padding:5px 10px" onclick="inspectInbox()">Inspect inbox</button>
-        <span data-tip="Reads the ingest inbox and shows how each email parsed — whether a receipt landed, and why." style="margin-left:7px;cursor:help"></span>
+        <span data-tip="Reads the ingest inbox and shows how each email parsed. whether a receipt landed, and why." style="margin-left:7px;cursor:help"></span>
       </div>
       <div class="meta" id="rcpt_status" style="margin-bottom:8px">Loading…</div>
       <div id="rcpt_debug" class="meta" style="margin-bottom:8px"></div>
@@ -828,7 +828,7 @@
         <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
         <label data-tip="Record ~30–60s of clear speech, name it, then clone.">Clone a new voice</label>
         <div class="row" style="margin-bottom:8px"><button class="ghost" id="vs_rec" onclick="vsToggleRec()"><span style="color:var(--red)">●</span> Record</button><span id="vs_rectime" class="meta"></span><audio id="vs_play" controls style="display:none;height:34px"></audio></div>
-        <input id="vs_name" placeholder="Voice name — e.g. Branson, Jared">
+        <input id="vs_name" placeholder="Voice name (e.g. Branson)">
         <div class="btnrow"><button class="ghost" id="vs_clone" onclick="vsClone()" disabled><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Clone &amp; save voice</button></div>
         <div id="vs_msg" class="meta" style="margin-top:8px;min-height:16px"></div>
       </div>
@@ -850,17 +850,17 @@
             <label style="margin-top:0">Beat</label>
             <select id="sb_beat" onchange="updateDraftDot()">
               <option value="" disabled selected>Select a beat</option>
-              <option value="normal">Normal — snappy, waits for you to finish</option>
-              <option value="eager">Eager — fastest replies</option>
-              <option value="patient">Patient — long beat, waits for a clear pause</option>
+              <option value="normal">Normal (snappy, waits for you to finish)</option>
+              <option value="eager">Eager (fastest, may cut people off)</option>
+              <option value="patient">Patient (long pause, slowest)</option>
             </select>
           </div>
           <div>
             <label style="margin-top:0">Voice model</label>
             <select id="sb_model" onchange="updateDraftDot()">
               <option value="" disabled selected>Select a voice model</option>
-              <option value="eleven_turbo_v2">Turbo v2 — natural</option>
-              <option value="eleven_flash_v2">Flash v2 — fastest, robotic</option>
+              <option value="eleven_turbo_v2">Turbo v2 (natural)</option>
+              <option value="eleven_flash_v2">Flash v2 (fastest, robotic)</option>
             </select>
           </div>
         </div>
@@ -869,7 +869,7 @@
           <label class="day" style="margin:0"><input id="sb_soft_on" type="checkbox" onchange="sbSoftToggle()"> Say a quick line if the pause runs long</label>
           <div id="sb_soft_detail" class="grid2" style="margin-top:10px;display:none">
             <div><label style="margin-top:0">After how long</label><div class="row" style="gap:6px"><input id="sb_soft_secs" type="number" min="0.5" max="6" step="0.5" value="1.5" style="max-width:90px"><span class="meta">seconds</span></div></div>
-            <div><label style="margin-top:0">Line to say</label><input id="sb_soft_msg" type="text" placeholder="Yeah—hi, I'm here!"></div>
+            <div><label style="margin-top:0">Line to say</label><input id="sb_soft_msg" type="text" placeholder="Yeah, hi, I'm here!"></div>
           </div>
         </div>
         <div class="btnrow"><button class="ghost" onclick="loadSandbox()">Reload</button><button class="ghost" onclick="applySandbox()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save draft</button></div>
@@ -878,7 +878,7 @@
 
       <div class="card dstep" data-step="3" style="display:none">
         <div class="name" style="margin-bottom:12px">Step 3 · Script</div>
-        <label data-tip="Use {category} — fills in Pokémon, One Piece, etc.">Write a new opener</label>
+        <label data-tip="Use {category}. fills in Pokémon, One Piece, etc.">Write a new opener</label>
         <textarea id="rot_opener_new" rows="3" style="font-size:14px;line-height:1.5" placeholder="e.g. Heyy! Got any {category} in today?"></textarea>
         <div class="btnrow"><button class="ghost" onclick="addOpener()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save opener</button></div>
         <label style="margin-top:14px">Your openers <span id="rot_opener_count" class="meta" style="text-transform:none;letter-spacing:0;font-weight:500"></span></label>
@@ -910,7 +910,7 @@
         <div id="rot_opener_list2" style="margin-top:4px" class="meta">Add scripts in Step 3.</div>
         <label style="margin-top:14px" data-tip="Tick the voices to rotate through in TEST">Voices in rotation</label>
         <div id="rot_voices" class="meta" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px">Loading voices…</div>
-        <div class="meta" style="margin-top:8px;color:var(--orange)">Voice rotation is test-only right now — live calls use the single live voice until DevOps enables it.</div>
+        <div class="meta" style="margin-top:8px;color:var(--orange)">Voice rotation is test-only right now. Live calls use the single live voice until DevOps turns it on.</div>
         <div class="btnrow"><button class="ghost" onclick="saveRotation(this)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save rotation</button><span class="meta" id="rot_msg"></span></div>
       </div>
 
@@ -922,8 +922,8 @@
         <label data-tip="Only your rotation voices show here.">Voice for this test</label><select id="sim_voice" onchange="refreshTestRotation()"><option value="">Bench default voice</option></select>
         <details class="card" style="margin:14px 0 0;background:var(--surface-1)">
           <summary><span class="name" style="font-size:13px">Advanced</span></summary>
-          <label>Flow</label><select id="sim_mode"><option value="restock">Restock — did your shipment include it?</option><option value="carry">Carry — do you even sell it?</option></select>
-          <label>Decision tree</label><select id="sim_tree" onchange="syncTreeUI();previewMaybe()"><option value="general">General — any of it counts</option><option value="specific">Specific — only that exact set counts</option></select>
+          <label>Flow</label><select id="sim_mode"><option value="restock">Restock (did your shipment include it?)</option><option value="carry">Carry (do you sell it at all?)</option></select>
+          <label>Decision tree</label><select id="sim_tree" onchange="syncTreeUI();previewMaybe()"><option value="general">General (any of it counts)</option><option value="specific">Specific (only that exact set)</option></select>
           <div id="sim_specific_wrap" style="display:none"><label>Specific set / product</label><input id="sim_specific" placeholder="151 booster boxes"></div>
         </details>
         <div id="tb_rot_line" class="meta" style="color:var(--green);font-weight:600;min-height:16px;margin:12px 0 8px"></div>
@@ -957,7 +957,7 @@
       <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
         <input id="set_search" placeholder="Search chains…" oninput="filterChainPicker()" style="flex:1 1 150px;min-width:0">
         <select id="set_fmap" onchange="filterChainPicker()" style="flex:0 0 auto;width:auto;font-size:13px"><option value="">All</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option></select>
-        <select id="set_frate" onchange="filterChainPicker()" style="flex:0 0 auto;width:auto;font-size:13px"><option value="">All ratings</option><option value="5">5 — Best Chance</option><option value="4">4 — Mostly Reliable</option><option value="3">3 — Spotty</option><option value="2">2 — Over MSRP</option><option value="1">1 — Unknown</option></select>
+        <select id="set_frate" onchange="filterChainPicker()" style="flex:0 0 auto;width:auto;font-size:13px"><option value="">All ratings</option><option value="5">5. Best Chance</option><option value="4">4. Mostly Reliable</option><option value="3">3. Spotty</option><option value="2">2. Over MSRP</option><option value="1">1. Unknown</option></select>
       </div>
       <select id="set_chain" onchange="setPickChain()" style="display:none"><option value="">Select a chain</option></select>
       <div id="set_pickcount" class="meta" style="margin-bottom:4px"></div>
@@ -982,7 +982,7 @@
           <div id="set_mapping" class="meta" style="margin-top:2px">—</div>
           <div class="row" style="gap:8px;margin-top:14px;flex-wrap:wrap">
             <button class="act" id="set_mapbtn" onclick="setMapChain()">Map</button>
-            <span class="meta" data-tip="One real call — the navigator works the menu to a human, records the recipe + time, then you Lock it." style="align-self:center"></span>
+            <span class="meta" data-tip="One real call. the navigator works the menu to a human, records the recipe + time, then you Lock it." style="align-self:center"></span>
           </div>
           <div class="card" id="tr_live" style="display:none;border-color:var(--green);margin-top:12px">
             <div class="row" style="justify-content:space-between;align-items:center">
@@ -1005,7 +1005,7 @@
     <h2>Statuses</h2>
     <div id="pb_statuses">
       <div class="card">
-        <div class="name" style="margin-bottom:12px" data-tip="Edit the icon, label, color or tone — consumer + Test Bench verdicts update instantly">What customers see</div>
+        <div class="name" style="margin-bottom:12px" data-tip="Edit the icon, label, color or tone. consumer + Test Bench verdicts update instantly">What customers see</div>
         <div id="st_list"><div class="empty">Loading…</div></div>
         <div style="height:1px;background:var(--border);margin:14px 0"></div>
         <div class="name" style="font-size:14px;margin-bottom:8px">Add a status</div>
@@ -1031,11 +1031,11 @@
   </section>
 
   <section id="fun">
-    <h2 data-tip="Ring your own phone (or a friend's) in any cloned voice + persona — just to mess around. Never touches store calls.">Fun</h2>
+    <h2 data-tip="Ring your own phone (or a friend's) in any cloned voice + persona. just to mess around. Never touches store calls.">Fun</h2>
     <div class="card">
-      <label>Phone number (E.164)</label>
+      <label>Phone</label>
       <input id="lab_phone" placeholder="+13105551234">
-      <label data-tip="Optional — opens with e.g. 'hey what's up Matt'">First name</label>
+      <label data-tip="Optional. opens with e.g. 'hey what's up Matt'">First name</label>
       <input id="lab_name" placeholder="Matt">
       <label>Flow</label>
       <select id="lab_mode">
@@ -1049,7 +1049,7 @@
         <option value="homie">Homie</option>
         <option value="family">Family</option>
       </select>
-      <label data-tip="Ring in any clone — the live store voice is never touched">Voice</label>
+      <label data-tip="Ring in any clone. the live store voice is never touched">Voice</label>
       <select id="lab_voice"><option value="">Default voice</option></select>
       <div class="btnrow"><button class="act" onclick="labCall()">Call</button></div>
     </div>
@@ -1068,11 +1068,11 @@
 <div class="toast" id="toast"></div>
 
 <!-- In-admin Claude agent ("Admin dev") — chat to manage the store DB by conversation -->
-<button id="agentFab" class="agent-fab" onclick="agentToggle()" title="Admin dev — add, look up, or fix a store" aria-label="Admin dev agent"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9.5l-4 3.4V15.5H4z"/><path d="M8.5 10.2h7M8.5 13h4.5"/></svg></button>
+<button id="agentFab" class="agent-fab" onclick="agentToggle()" title="Admin dev. Add, look up, or fix a store." aria-label="Admin dev agent"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v10H9.5l-4 3.4V15.5H4z"/><path d="M8.5 10.2h7M8.5 13h4.5"/></svg></button>
 <div id="agentPanel" class="agent-panel" style="display:none">
   <div class="agent-head">
     <span class="agent-title"><span class="livedot" style="background:var(--green);box-shadow:0 0 8px var(--green)"></span> Admin dev</span>
-    <select id="agentModel" class="agent-model" onchange="agentSetModel(this.value)" title="Switch the model — Claude / GPT / Gemini"></select>
+    <select id="agentModel" class="agent-model" onchange="agentSetModel(this.value)" title="Switch the brain (Claude, GPT, or Gemini)"></select>
     <button class="agent-x" onclick="agentToggle(false)" aria-label="Close">×</button>
   </div>
   <div id="agentLog" class="agent-log"></div>
@@ -1186,8 +1186,8 @@ async function loadReceipts(){
   if(!Array.isArray(rows)){ list.innerHTML='<div class="empty">Could not load receipts.</div>'; if(stat)stat.textContent='—'; return; }
   const ago=s=>{ if(!s)return '—'; const m=Math.floor(Date.now()/1000)-s; if(m<3600)return Math.max(1,Math.floor(m/60))+'m ago'; if(m<86400)return Math.floor(m/3600)+'h ago'; return Math.floor(m/86400)+'d ago'; };
   const claimed=rows.filter(r=>r.claimedBy).length;
-  if(stat) stat.innerHTML=`<b>${rows.length}</b> received · <b>${claimed}</b> claimed a free check. <span class="hint" data-tip="Only kiosk receipts (Machine ID, or product + total) land here — a normal store / online receipt won't.">why some don’t count</span>`;
-  if(!rows.length){ list.innerHTML='<div class="empty">No receipts yet — they appear here once a shopper emails one in and it parses.</div>'; return; }
+  if(stat) stat.innerHTML=`<b>${rows.length}</b> received · <b>${claimed}</b> claimed a free check. <span class="hint" data-tip="Only kiosk receipts land here (a Machine ID, or product + total). A normal store or online receipt won't.">why some don’t count</span>`;
+  if(!rows.length){ list.innerHTML='<div class="empty">No receipts yet. They show up once a shopper emails one in and we can read it.</div>'; return; }
   list.innerHTML=rows.map(r=>{
     const badge=r.claimedBy?'<span class="tag-verified">✓ free check granted</span>':'<span class="pill">unclaimed</span>';
     const bits=[r.machineId?`Machine ${esch(r.machineId)}`:'',r.total?`$${esch(r.total)}`:'',r.orderId?`Order ${esch(r.orderId)}`:'',r.txnAt?esch(r.txnAt):''].filter(Boolean).join(' · ');
@@ -1210,7 +1210,7 @@ async function inspectInbox(){
   if(!rows.length){ el.innerHTML='No emails in the inbox over the last 72h.'; return; }
   const dt=ms=>{ const m=Math.floor((Date.now()-ms)/60000); return m<60?Math.max(1,m)+'m ago':(m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago'); };
   const stored=rows.filter(r=>r.stored).length;
-  el.innerHTML=`<div style="margin:4px 0 6px"><b>${rows.length}</b> emails · last 72h — <b style="color:var(--green)">${stored}</b> parse as kiosk receipts</div>`+
+  el.innerHTML=`<div style="margin:4px 0 6px"><b>${rows.length}</b> emails · last 72h. <b style="color:var(--green)">${stored}</b> parse as kiosk receipts</div>`+
     rows.map(r=>{ const p=r.parsed||{};
       const head=`<b style="color:${r.stored?'var(--green)':'#ff8a8a'}">${r.stored?'✓ parses':'✗ rejected'}</b> · ${esch(r.from||'?')} · ${dt(r.date)}`;
       const fields=r.stored
@@ -1316,13 +1316,13 @@ async function trPoll(){
     // CONFIRM-mode redirect: we reached a human but they sent us elsewhere (wrong desk) — captured, not lockable.
     if(s.confirm==='redirect'){
       res.innerHTML=`<div style="background:rgba(245,158,11,.1);border:1px solid #f59e0b;border-radius:12px;padding:12px">
-        <div class="name" style="color:#f59e0b">↪︎ Reached a human — wrong desk (they redirected us)</div>
-        <div class="meta" style="margin-top:5px">They said: “${esch(s.redirectTo||'(transfer)')}”. Captured — call back rotates to a fresh store.</div>
+        <div class="name" style="color:#f59e0b">↪︎ Reached a person, wrong desk (they redirected us)</div>
+        <div class="meta" style="margin-top:5px">They said: “${esch(s.redirectTo||'(transfer)')}”. Captured. Call back rotates to a fresh store.</div>
         <div class="row" style="gap:8px;margin-top:10px"><button class="ghost" onclick="trRetry()">↻ Try another store</button></div></div>`;
     } else if(s.status==='human'&&s.recipe){
       TR_RESULT={chainId:TR_CHAIN,recipe:s.recipe,confidence:s.confidence||0};
       const steps=s.recipe.steps.map(x=>x.action==='press'?('press '+x.value+' @'+x.atSec+'s'):('say "'+x.value+'" @'+x.atSec+'s')).join('  →  ')||'picked up directly';
-      const rightDesk=s.confirm==='answered'?`<div class="meta" style="color:var(--green);margin-top:3px">✓ Right desk — they answered the stock question</div>`:'';
+      const rightDesk=s.confirm==='answered'?`<div class="meta" style="color:var(--green);margin-top:3px">✓ Right desk (they answered the stock question)</div>`:'';
       res.innerHTML=`<div style="background:rgba(74,222,128,.1);border:1px solid var(--green);border-radius:12px;padding:12px">
         <div class="name" style="color:var(--green)">✅ Reached a human in ${s.recipe.seconds}s · ${esch(s.recipe.type)}</div>
         ${rightDesk}
@@ -1370,22 +1370,22 @@ async function loadTreeLab(){
 async function tlOne(kind,chainId,btn){ const o=btn.textContent; btn.textContent='…'; btn.disabled=true;
   const r=await api('/api/admin/tree/'+kind,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chainId})});
   btn.textContent=o; btn.disabled=false;
-  toast(r&&r.ok?`Calling ${r.retailer||'a store'} — ${kind} running; refresh in a minute`:`Couldn't place: ${(r&&r.error)||'error'}`);
+  toast(r&&r.ok?`Calling ${r.retailer||'a store'}, ${kind} running. Refresh in a minute`:`Couldn't place: ${(r&&r.error)||'error'}`);
 }
 async function tlBatch(kind){ const n=Number(document.getElementById('tl_count').value)||5; const msg=document.getElementById('tl_msg'); if(msg)msg.textContent='Placing calls…';
   const r=await api('/api/admin/tree/'+kind,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({count:n})});
-  if(msg)msg.textContent=(r&&r.placed!=null)?`Placed ${r.placed} ${kind} call(s)${r.names&&r.names.length?': '+r.names.join(', '):''}. Results fill in as calls finish — hit Refresh.`:'Error placing calls.';
+  if(msg)msg.textContent=(r&&r.placed!=null)?`Placed ${r.placed} ${kind} call(s)${r.names&&r.names.length?': '+r.names.join(', '):''}. Results fill in as calls finish. hit Refresh.`:'Error placing calls.';
 }
 async function loadCallTiming(){
   const d=await api('/api/admin/call-timing'); const el=document.getElementById('d_timing'); if(!el) return;
   const md=document.getElementById('d_timing_model'), stt=document.getElementById('d_timing_status'), se=document.getElementById('d_timing_stores');
-  if(!d||d.error||!d.aggregate||!d.aggregate.calls){ el.innerHTML='<div class="meta">No timed calls yet — this fills in as calls come through.</div>'; if(md)md.innerHTML=''; if(stt)stt.innerHTML=''; if(se)se.innerHTML=''; return; }
+  if(!d||d.error||!d.aggregate||!d.aggregate.calls){ el.innerHTML='<div class="meta">No timed calls yet. this fills in as calls come through.</div>'; if(md)md.innerHTML=''; if(stt)stt.innerHTML=''; if(se)se.innerHTML=''; return; }
   const a=d.aggregate, tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   el.innerHTML = tile(secsFmt(a.avgTalkSec),'avg talk','green')+tile(secsFmt(a.avgNavSec),'avg to human')+tile(secsFmt(a.avgCallSec),'avg call')+tile(a.totalMinutes+'m','total minutes')+tile(a.calls,'calls timed');
   // By model (Charlie direct · Alpha tone tree · Bravo voice tree) — the split that matters: time-to-human + talk per call type.
   if(md) md.innerHTML=(d.byModel&&d.byModel.length)?('<div class="rgrp" style="margin-top:12px">By model · all-time</div>'
     +d.byModel.map(m=>`<div class="repline"><span class="rl"><b style="color:#e8e8f0">${esch(m.model)}</b> <span class="meta">· ${esch(m.type)} · ${m.n} call${m.n===1?'':'s'}</span></span><b>${secsFmt(m.avgNavSec)} to human · <span style="color:var(--green)">${secsFmt(m.avgTalkSec)} talk</span> · ${secsFmt(m.avgCallSec)} call</b></div>`).join('')
-    +'<div class="meta" style="margin-top:6px;font-size:11px">Alpha/Bravo “talk” still counts phone-tree time until we tag the live-human handoff per call — Charlie (direct) is exact.</div>'):'';
+    +'<div class="meta" style="margin-top:6px;font-size:11px">Alpha/Bravo “talk” still counts phone-tree time until we tag the live-human handoff per call. Charlie (direct) is exact.</div>'):'';
   // Talk time per verdict.
   if(stt) stt.innerHTML=(d.byStatus&&d.byStatus.length)?('<div class="rgrp" style="margin-top:12px">Talk time by status</div>'
     +d.byStatus.map(s=>{const lbl=(STATUSES[s.key]&&STATUSES[s.key].label)||s.key;return `<div class="repline"><span class="rl">${esch(lbl)} <span class="meta">· ${s.n} call${s.n===1?'':'s'}</span></span><b><span style="color:var(--green)">${secsFmt(s.avgTalkSec)} talk</span> · ${secsFmt(s.avgCallSec)} call</b></div>`;}).join('')):'';
@@ -1453,7 +1453,7 @@ function calcShell(){
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:18px">${seg}</div>
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px"><span style="font-size:13px;color:var(--text-muted)">Navigation time</span><span style="font-family:ui-monospace,monospace;font-size:18px;font-weight:700"><span id="calc_navval">0</span><span style="font-size:12px;color:var(--text-tertiary)">s</span></span></div>
     <input id="calc_nav" type="range" min="0" max="120" value="${CALC.nav}" oninput="calcSetNav(this.value)">
-    <div id="calc_navnote" style="font-size:11px;color:var(--text-tertiary);margin-top:2px;display:none">direct line — no menu</div>
+    <div id="calc_navnote" style="font-size:11px;color:var(--text-tertiary);margin-top:2px;display:none">direct line. no menu</div>
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin:14px 0 2px"><span style="font-size:13px;color:var(--text-muted)">Talk time with human</span><span style="font-family:ui-monospace,monospace;font-size:18px;font-weight:700"><span id="calc_talkval">0</span><span style="font-size:12px;color:var(--text-tertiary)">s</span></span></div>
     <input id="calc_talk" type="range" min="0" max="120" value="${CALC.talk}" oninput="calcSetTalk(this.value)">
   </div>
@@ -1476,7 +1476,7 @@ function calcShell(){
     <div class="row" style="gap:12px">
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Revenue / call</span><span style="display:inline-flex;align-items:center;align-self:flex-start;background:var(--terminal);border:1px solid var(--border-strong);border-radius:10px;padding:0 10px"><span style="color:var(--text-tertiary)">$</span><input id="calc_rev" type="number" step="0.01" min="0" value="${CALC.revenue}" oninput="calcSetRev(this.value)" style="flex:0 0 auto;background:transparent;border:none;outline:none;color:var(--text-primary);font-size:20px;font-weight:700;padding:10px 2px;width:84px"></span></div>
       <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">Margin</span><div id="calc_margin" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0%</div></div>
-      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">× return <span data-tip="Revenue ÷ cost — how many times the call pays for itself."></span></span><div id="calc_return" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0×</div></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="font-size:11.5px;color:var(--text-muted)">× return <span data-tip="Revenue ÷ cost. how many times the call pays for itself."></span></span><div id="calc_return" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;padding:6px 0">0×</div></div>
     </div>
     <div id="calc_sentence" style="margin-top:14px;font-size:13.5px;color:var(--text-muted);line-height:1.5"></div>
   </div>`;
@@ -1540,8 +1540,8 @@ async function loadDash(){
       st($$(m.revenueCents),'revenue')+
       st($$(m.profitCents),m.profitCents>=0?'profit':'loss',m.profitCents>=0?'green':'')+
       st(m.marginPct!=null?Math.round(m.marginPct)+'%':'—','margin',(m.marginPct||0)>=0?'green':'')+
-      st($$(m.mrrCents)+'/mo','MRR')+
-      st($$(m.cogs?.totalCents),'COGS')+
+      st($$(m.mrrCents)+'/mo','MRR (monthly)')+
+      st($$(m.cogs?.totalCents),'Costs')+
       st(m.callsMade!=null?m.callsMade:'—','paid calls')+
       st(m.users,'users')+st(m.subscribers,'members');
   }
@@ -1556,11 +1556,11 @@ async function loadBail(){
   const tg=(k,lbl,sub)=>`<label style="display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer"><input type="checkbox" ${BAIL[k]?'checked':''} onchange="saveBail('${k}',this.checked)"><span><b style="color:#fff">${lbl}</b>${sub?` <span class="meta" data-tip="${esch(sub)}"></span>`:''}</span></label>`;
   const num=(k,lbl)=>`<label class="meta" style="display:block">${lbl}<input type="number" min="0" value="${BAIL[k]??''}" onchange="saveBail('${k}',Number(this.value)||0)" style="width:100%;margin-top:4px"></label>`;
   document.getElementById('bail_body').innerHTML=
-    `<label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;border-bottom:1px solid var(--border);margin-bottom:6px"><input type="checkbox" ${BAIL.enabled?'checked':''} onchange="saveBail('enabled',this.checked)"><span><b style="color:${BAIL.enabled?'var(--green)':'#FBBF24'}" data-tip="Stays OFF until enforcement is wired + bench-tested">MASTER — enforce bail rules on live calls</b></span></label>`
+    `<label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;border-bottom:1px solid var(--border);margin-bottom:6px"><input type="checkbox" ${BAIL.enabled?'checked':''} onchange="saveBail('enabled',this.checked)"><span><b style="color:${BAIL.enabled?'var(--green)':'#FBBF24'}" data-tip="Stays OFF until enforcement is wired + bench-tested">Master switch. Enforce bail rules on live calls.</b></span></label>`
     +tg('gotAnswerHangup','Got the answer → hang up','a clear yes/no lands, wrap instantly')
     +tg('voicemailBail','Voicemail → instant bail','recording detected, never leave a message')
     +tg('closedBail','Closed recording → instant bail','')
-    +`<div class="grid2" style="margin-top:8px">${num('ivrMaxSeconds','IVR max seconds')}${num('holdMaxSeconds','Hold max seconds')}${num('ringMaxSeconds','Ring max seconds')}${num('maxCallSeconds','Absolute cap (seconds)')}</div>`;
+    +`<div class="grid2" style="margin-top:8px">${num('ivrMaxSeconds','Phone menu max seconds')}${num('holdMaxSeconds','Hold max seconds')}${num('ringMaxSeconds','Ring max seconds')}${num('maxCallSeconds','Absolute cap (seconds)')}</div>`;
 }
 async function saveBail(k,v){
   const r=await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({bail:{[k]:v}})});
@@ -1602,7 +1602,7 @@ function openersFromSettings(s){
 function firstActiveOpener(){ const a=OPENERS.filter(o=>o.on); return a.length?a[0].text:''; }
 function renderOpeners(){
   const box=document.getElementById('rot_opener_list');
-  if(box) box.innerHTML = OPENERS.length ? OPENERS.map((o,i)=>`<label class="oprow"><input type="checkbox" ${o.on?'checked':''} onchange="toggleOpener(${i},this.checked)"><span class="optext">${esch(o.text)}</span><button class="ghost opdel" title="Remove" onclick="deleteOpener(${i})">${lucideSvg('x',14,'currentColor')}</button></label>`).join('') : '<div class="meta" style="padding:8px 0">No openers yet — write one above.</div>';
+  if(box) box.innerHTML = OPENERS.length ? OPENERS.map((o,i)=>`<label class="oprow"><input type="checkbox" ${o.on?'checked':''} onchange="toggleOpener(${i},this.checked)"><span class="optext">${esch(o.text)}</span><button class="ghost opdel" title="Remove" onclick="deleteOpener(${i})">${lucideSvg('x',14,'currentColor')}</button></label>`).join('') : '<div class="meta" style="padding:8px 0">No openers yet. write one above.</div>';
   const box2=document.getElementById('rot_opener_list2'); // Step 5 (Rotation) mirrors the same list
   if(box2) box2.innerHTML = OPENERS.length ? OPENERS.map((o,i)=>`<label class="oprow"><input type="checkbox" ${o.on?'checked':''} onchange="toggleOpener(${i},this.checked)"><span class="optext">${esch(o.text)}</span></label>`).join('') : '<div class="meta" style="padding:8px 0">Add scripts in Step 3.</div>';
   const on=OPENERS.filter(o=>o.on).length;
@@ -1628,7 +1628,7 @@ async function saveRotation(btn){
   const library=JSON.stringify(OPENERS.map(x=>({text:x.text,on:x.on})));
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({voicePool,openerVariants,openerLibrary:library})});
   btn.textContent=o; btn.disabled=false;
-  const m=document.getElementById('rot_msg'); if(m) m.textContent=(r&&!r.error)?'Saved — live calls rotate these scripts. (Voice rotation is test-only for now.)':'Could not save';
+  const m=document.getElementById('rot_msg'); if(m) m.textContent=(r&&!r.error)?'Saved. live calls rotate these scripts. (Voice rotation is test-only for now.)':'Could not save';
 }
 // ---- Test: store list from /api/test-stores, voice pool + rotate, visible per-call rotation ----
 let TEST_STORES=[], TEST_ROT={call:0};
@@ -1637,7 +1637,7 @@ async function loadTestStores(){
   const d=await api('/api/test-stores');
   if(!Array.isArray(d)||!d.length){ sel.innerHTML='<option value="" disabled selected>No test stores yet</option>'; TEST_STORES=[]; return; }
   TEST_STORES=d; const cur=sel.value;
-  sel.innerHTML='<option value="" disabled selected>Choose a store</option>'+d.map(s=>`<option value="${s.id}">${esch(s.name)}${s.location?' · '+esch(s.location):''}${s.chainName?' — '+esch(s.chainName):''}</option>`).join('');
+  sel.innerHTML='<option value="" disabled selected>Choose a store</option>'+d.map(s=>`<option value="${s.id}">${esch(s.name)}${s.location?' · '+esch(s.location):''}${s.chainName?' · '+esch(s.chainName):''}</option>`).join('');
   if(cur) sel.value=cur;
 }
 function poolVoices(){ return [...document.querySelectorAll('.rotvoice:checked')].map(c=>({id:c.value,name:c.dataset.name||c.value})); }
@@ -1688,7 +1688,7 @@ function pnBaseRender(){ const b=document.getElementById('pn_base'); if(!b) retu
 function pnPick(p){ PN_SEL=p; pnBaseRender(); }
 function renderPersonas(){
   const el=document.getElementById('pn_list'); if(!el) return;
-  if(!PERSONAS.length){ el.innerHTML='<div class="meta">No personas yet — fill in the fields above and save one.</div>'; return; }
+  if(!PERSONAS.length){ el.innerHTML='<div class="meta">No personas yet. fill in the fields above and save one.</div>'; return; }
   el.innerHTML=PERSONAS.map((p,i)=>{
     const tags=[]; if(p.slang)tags.push('Casual slang'); if(p.swear)tags.push('Profanity OK'); if(p.affection)tags.push('Affectionate');
     const pills=tags.map(t=>`<span class="chip-sm" style="color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border-medium)">${t}</span>`).join('');
@@ -1716,7 +1716,7 @@ function pnLoad(i){ const p=PERSONAS[i]; if(!p) return;
   document.getElementById('pn_affection').checked=!!p.affection;
   document.getElementById('pn_greet').value=p.greet||'';
   const d=document.getElementById('designer'); if(d) d.scrollIntoView({behavior:'smooth',block:'start'});
-  toast('Loaded — edit, then Save persona to update it');
+  toast('Loaded. Edit, then Save to update it.');
 }
 async function pnDelete(i){ const p=PERSONAS[i]; if(!p) return; if(!confirm('Delete persona “'+p.name+'”?')) return;
   PERSONAS.splice(i,1);
@@ -1735,7 +1735,7 @@ async function saveWorkflow(){ const name=v('wf_name'); if(!name){ toast('Name t
   const i=WFS.findIndex(w=>w.name===name); if(i>=0) WFS[i]=wf; else WFS.push(wf);
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WFS)})});
   if(window.WF) WF.list=WFS;  // keep the assignment pickers (Settings/Chains/Stores) in sync without a reload
-  document.getElementById('wf_msg').textContent = (r&&!r.error)?'Saved — set it as the default in Calls → Settings, or assign it per chain/store.':'Could not save.'; toast('Workflow saved'); }
+  document.getElementById('wf_msg').textContent = (r&&!r.error)?'Saved. Set it as the default in Calls → Settings.':'Could not save.'; toast('Workflow saved'); }
 async function vsSetActive(){
   const id=document.getElementById('vs_select').value; if(!id) return;
   const r=await api('/api/voices/active',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({voiceId:id})});
@@ -1751,7 +1751,7 @@ async function vsToggleRec(){
     VS_REC.onstop=()=>{ VS_BLOB=new Blob(VS_CHUNKS,{type:'audio/webm'}); const u=URL.createObjectURL(VS_BLOB); const a=document.getElementById('vs_play'); a.src=u; a.style.display=''; document.getElementById('vs_clone').disabled=false; stream.getTracks().forEach(t=>t.stop()); clearInterval(VS_TIMER); btn.innerHTML='<span style="color:var(--red)">●</span> Record'; btn.style.color=''; };
     VS_REC.start(); btn.innerHTML='<span style="color:var(--red)">■</span> Stop'; btn.style.color='#EF4444';
     let s=0; const rt=document.getElementById('vs_rectime'); VS_TIMER=setInterval(()=>{ s++; rt.textContent=s+'s'; },1000);
-  }catch(e){ toast('Mic blocked — allow microphone access'); }
+  }catch(e){ toast('Mic blocked. allow microphone access'); }
 }
 async function vsClone(){
   const name=(document.getElementById('vs_name').value||'').trim();
@@ -1762,7 +1762,7 @@ async function vsClone(){
   const t=await clerkToken();
   const r=await fetch('/api/voices/clone',{method:'POST',headers:t?{Authorization:'Bearer '+t}:{},body:fd}).then(x=>x.json()).catch(()=>null);
   btn.disabled=false;
-  if(r&&r.ok){ msg.style.color='var(--green)'; msg.textContent='✓ Cloned: '+name+' — select it above to go live.'; loadVoices(); }
+  if(r&&r.ok){ msg.style.color='var(--green)'; msg.textContent='✓ Cloned: '+name+'. select it above to go live.'; loadVoices(); }
   else { msg.style.color='#EF4444'; msg.textContent='Clone failed'+(r&&r.error?': '+r.error:''); }
 }
 
@@ -1824,7 +1824,7 @@ function bubbles(t){
     const m=line.match(/^(Agent|Clerk):\s*(.*)$/);
     if(!m) return `<div class="bub-note">${esch(line)}</div>`;
     const who=m[1]==='Agent'?'a':'c';
-    return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'<img src="/logos/check.png?v=1" alt="CheckIt" style="height:12px;width:auto;vertical-align:middle;display:inline-block">':'Clerk'}</span>${esch(m[2])}</div>`;
+    return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'<img src="/logos/check.png?v=1" alt="CheckIt" style="height:12px;width:auto;vertical-align:middle;display:inline-block">':'Staff'}</span>${esch(m[2])}</div>`;
   }).join('')+'</div>';
 }
 let RETAILERS=[];
@@ -1874,7 +1874,7 @@ async function loadCoverage(){
   const el=document.getElementById('storecoverage'); if(!el) return;
   const d=await api('/api/admin/coverage'); if(!d||d.error||d.coveragePct==null){ el.style.display='none'; return; }
   el.style.display='';
-  const TIP="Coverage — the % of the retail chains we know carry Pokémon at MSRP whose store locations we've loaded. It measures how many of those chains' stores we cover nationally — it does NOT mean every store has Pokémon in stock right now. A \"spotty\" (tier-3) chain carries it, but only at some locations.";
+  const TIP="Coverage. the % of the retail chains we know carry Pokémon at MSRP whose store locations we've loaded. It measures how many of those chains' stores we cover nationally. it does NOT mean every store has Pokémon in stock right now. A \"spotty\" (tier-3) chain carries it, but only at some locations.";
   const f=n=>Number(n||0).toLocaleString('en-US');
   const gaps=d.gaps||[];
   const gapRows=gaps.map(g=>`<div class="carryrow"><span>${esch(g.chain)} <span class="meta" style="text-transform:none;letter-spacing:0">${f(g.ours)}/${f(g.national)}</span></span><b style="color:${g.pct>=90?'var(--green)':g.pct>=70?'#FBBF24':'#ff8a8a'}">${g.pct}%</b></div>`).join('');
@@ -1885,7 +1885,7 @@ async function loadCoverage(){
     +`</div>`
     +`<div class="meta" style="margin-top:5px;text-transform:none;letter-spacing:0">${f(d.loaded)} of ${f(d.national)} stores loaded across ${d.msrpChains} chains that carry Pokémon at MSRP (tiers 3–5).</div>`
     +(gaps.length?`<details style="margin-top:10px"><summary><span class="name">Under-covered chains (${gaps.length})</span></summary>`
-        +`<div class="meta" style="margin:7px 0 9px;text-transform:none;letter-spacing:0">CVS shows a reduced % only because the CVS-inside-Target stores are quarantined — that's expected, not a real gap.</div>`
+        +`<div class="meta" style="margin:7px 0 9px;text-transform:none;letter-spacing:0">CVS shows a reduced % only because the CVS-inside-Target stores are quarantined. that's expected, not a real gap.</div>`
         +`<div class="carrygrid">${gapRows}</div></details>`:'');
 }
 // The database at a glance — DB-wide totals (exact), independent of the current search.
@@ -2015,7 +2015,7 @@ function updateBulkBar(rs){ const bar=document.getElementById('bulkbar'); if(!ba
 async function bulkEdit(action){
   const rs=filteredRetailers(); const vis=new Set(rs.map(r=>r.id)); const ids=[...SEL].filter(id=>vis.has(id));
   if(!ids.length){ toast('Tick some stores first'); return; }
-  if(action==='deactivate' && !confirm(`Remove ${ids.length} store(s) from the consumer list? (soft-remove — reversible)`)) return;
+  if(action==='deactivate' && !confirm(`Remove ${ids.length} store(s) from the consumer list? (soft-remove. reversible)`)) return;
   const body = action==='verify'?{stockStatus:'verified'} : action==='unverify'?{stockStatus:'unverified'} : action==='online'?{online:true} : action==='offline'?{online:false} : {active:false};
   toast(`Updating ${ids.length}…`); let ok=0;
   for(const id of ids){ const r=await api('/api/retailers/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); if(r&&!r.error) ok++; }
@@ -2037,7 +2037,7 @@ function renderRetailers(){
     const af=activeStoreFilters();
     if(af.length){
       const hasRegion=!!(document.getElementById('f_region')?.value);
-      el.innerHTML=`<div class="empty">No stores match: ${af.map(esch).join(' · ')}.<div style="margin-top:12px"><button class="ghost" onclick="clearStoreFilters()">Clear filters</button></div>${hasRegion?'<div class="meta" style="margin-top:10px">Tip: online / national stores (e.g. type “Online”) usually have no region — clear <b>Region</b> to include them.</div>':''}</div>`;
+      el.innerHTML=`<div class="empty">No stores match: ${af.map(esch).join(' · ')}.<div style="margin-top:12px"><button class="ghost" onclick="clearStoreFilters()">Clear filters</button></div>${hasRegion?'<div class="meta" style="margin-top:10px">Tip: online / national stores (e.g. type “Online”) usually have no region. clear <b>Region</b> to include them.</div>':''}</div>`;
     } else el.innerHTML='';
     renderStorePager(0); return;
   }
@@ -2057,7 +2057,7 @@ function storeCardHTML(r){
   const results=cs.inStock+cs.notIn+cs.restock;
   const pills=results?`<div class="stcpills"><span class="cp in">${vmark('✅','in',13)} ${cs.inStock}</span><span class="cp out">${vmark('❌','out',13)} ${cs.notIn}</span><span class="cp soon">${vmark('🚚','soon',13)} ${cs.restock}</span></div>`:'';
   const dot=results?`<div class="stcdot ${cs.inStock/results>=0.5?'good':cs.inStock/results>0?'mid':'low'}"></div>`:'';
-  const own=r.ownerOnly?`<div class="stcown"><div class="row" style="gap:8px;align-items:center"><input id="ph_${r.id}" value="${esch(r.phone||'')}" placeholder="+13105551234" inputmode="tel" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')saveStorePhone(${r.id})" style="flex:1;min-width:0"><button class="act" onclick="event.stopPropagation();saveStorePhone(${r.id})">Save phone</button></div><div class="hint" style="margin-top:6px;font-style:normal">Demo store — the phone number is its on/off switch. ${r.active?'<b style="color:var(--green)">● live</b>':'<span style="color:var(--muted)">○ off — add a number</span>'}</div></div>`:'';
+  const own=r.ownerOnly?`<div class="stcown"><div class="row" style="gap:8px;align-items:center"><input id="ph_${r.id}" value="${esch(r.phone||'')}" placeholder="+13105551234" inputmode="tel" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')saveStorePhone(${r.id})" style="flex:1;min-width:0"><button class="act" onclick="event.stopPropagation();saveStorePhone(${r.id})">Save phone</button></div><div class="hint" style="margin-top:6px;font-style:normal">Demo store. The phone number is its on/off switch. ${r.active?'<b style="color:var(--green)">● live</b>':'<span style="color:var(--muted)">○ off. Add a number</span>'}</div></div>`:'';
   return `<div class="stc${armed?' armed':''}${closed?' closed':''}" id="stc_${r.id}" onclick="storeTap(${r.id},event)">
     <div class="stchead">
       ${logoTile(r)}
@@ -2115,7 +2115,7 @@ function storeTap(id, ev){
     const s=STORE_TAP[id]||{}; s.tapTimer=0; STORE_TAP[id]=s;
     if(s.recall||s.calling||!s.armed) return;
     const r=RETAILERS.find(x=>x.id===id); if(!r) return;
-    const os=r.openState||{}; if(os.known && !os.open){ toast('🔒 Closed — no call placed'); return; }
+    const os=r.openState||{}; if(os.known && !os.open){ toast('🔒 Closed. no call placed'); return; }
     const lc=r.lastCall, recent=lc&&lc.startedAt&&(Date.now()/1000-lc.startedAt)<86400;
     if(recent) openRecall(id,r); else openCallConfirm(id,r);
   }, 450);
@@ -2142,7 +2142,7 @@ function openRecall(id, r){
   const box=document.getElementById('stclive_'+id); if(!box) return;
   const lc=r.lastCall, ago=agoTs(lc&&lc.startedAt)||'recently', out=lastOutcome(lc);
   box.innerHTML=`<div class="stcdlg">
-    <div class="q">You checked <b>${esch(r.name||'this store')}</b> ${esch(ago)}${out?' — '+esch(out):''}. Want us to check again?</div>
+    <div class="q">You checked <b>${esch(r.name||'this store')}</b> ${esch(ago)}${out?'. '+esch(out):''}. Want us to check again?</div>
     <button class="yes" onclick="recallYes(${id},event)">Yes, check again →</button>
     <div class="no" onclick="recallNo(${id},event)">Not now</div>
   </div>`;
@@ -2157,7 +2157,7 @@ async function placeStoreCall(id){
   const st=STORE_TAP[id]||{}; st.recall=false; st.calling=true; st.armed=true; STORE_TAP[id]=st;
   renderCallView(id, r);
   const resp=await api('/api/call-now',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:id,categoryId:catId})});
-  if(!resp||resp.error){ toast(/closed/i.test((resp&&resp.error)||'')?'🔒 Closed — no call placed':'Could not place the call'); closeStoreCall(id); return; }
+  if(!resp||resp.error){ toast(/closed/i.test((resp&&resp.error)||'')?'🔒 Closed. no call placed':'Could not place the call'); closeStoreCall(id); return; }
   st.cid=resp.providerCallId; st.callSid=resp.callSid; STORE_TAP[id]=st;
   scPoll(id, resp.providerCallId);
 }
@@ -2222,7 +2222,7 @@ async function saveStorePhone(id){
   const phone=inp.value.trim();
   const r=await api('/api/retailers/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({phone})});
   if(!r||r.error){ toast('Could not save the number'); return; }
-  toast(phone?'Saved — store is live ✓':'Phone cleared — store hidden');
+  toast(phone?'Saved. store is live ✓':'Phone cleared. store hidden');
   const t=RETAILERS.find(x=>x.id===id); if(t){ t.phone=phone; t.active=!!phone; }
   renderRetailers();
 }
@@ -2233,7 +2233,7 @@ async function labCall(){
   toast('Calling…');
   const r=await api('/api/talk',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone,mode,personality,name,voiceId})});
   if(r&&r.error){toast('Error: '+r.error);return;}
-  toast('Call placed — answer it!');
+  toast('Call placed. Answer it!');
   if(r&&r.providerCallId) pollTranscript(r.providerCallId);
 }
 // --- Store simulator: agent calls YOUR phone; result records against the chosen store ---
@@ -2246,7 +2246,7 @@ function fillSimSelects(){
 
 // ---- Playbook: chain phone trees + store preview ----
 let CHAINS=[];
-const CVS_TEMPLATE="This is a CVS. The phone system is VOICE-driven — navigate by speaking ONE WORD at a time to reach a live person at the FRONT store:\n1. \"Are you a healthcare provider?\" → say \"No.\"\n2. \"Pharmacy or front store services?\" → say \"Front.\"\n3. \"beauty and fragrances, OTC health, or general store inquiries\" → say \"General.\"\n4. If it stalls or repeats, say \"General\" again each time until you hear \"transferring you now\" and a person picks up.\nThe pharmacy can be closed while the front store is open — \"pharmacy closed\" does NOT mean the store is closed; always route to the front.";
+const CVS_TEMPLATE="This is a CVS. The phone system is VOICE-driven. navigate by speaking ONE WORD at a time to reach a live person at the FRONT store:\n1. \"Are you a healthcare provider?\" → say \"No.\"\n2. \"Pharmacy or front store services?\" → say \"Front.\"\n3. \"beauty and fragrances, OTC health, or general store inquiries\" → say \"General.\"\n4. If it stalls or repeats, say \"General\" again each time until you hear \"transferring you now\" and a person picks up.\nThe pharmacy can be closed while the front store is open. \"pharmacy closed\" does NOT mean the store is closed; always route to the front.";
 // ---- Settings page: pick a store/chain → editable Settings (writes the chain record) + read-only
 //      Mapping (auto-filled by the Trainer/learner). navType keypad→Alpha, voice→Bravo, direct→Charlie. ----
 const NAV_MODE={ keypad:{m:'Alpha',sub:'keypad tones',c:'#60a5fa'}, voice:{m:'Bravo',sub:'spoke menu',c:'var(--yellow)'}, direct:{m:'Charlie',sub:'direct human',c:'var(--green)'} };
@@ -2268,7 +2268,7 @@ async function loadChains(){
 //      dtmf + phone-tree — the chain PATCH never sends those). RATING is per-store (retailers.tier — no
 //      chains.tier), so picking a tier stamps every store. (docs/specs/scoring.md + DATA_PROVENANCE.md) ----
 const SS_TYPES=[['Big Box','Big Box'],['Pharmacy','Pharmacy'],['Grocery','Grocery'],['Off-Price','Off-Price'],['Discount','Discount'],['Sporting Goods','Sporting Goods'],['Bookstore','Bookstore'],['Craft','Craft'],['Department','Department'],['Gift','Gift'],['Hardware','Hardware'],['Office','Office'],['Warehouse','Warehouse'],['Mall/Specialty','Mall/Specialty'],['Online','Online'],['Thrift','Treasure Hunt (Thrift)'],['Hobby','Hobby'],['Other','Other']];
-const SS_RATING={5:['Best near you','#2BFF88','Reliable, predictable restock — worth checking on a rhythm.'],4:['Mostly reliable','#29D4FF','Carries broadly, no dependable rhythm.'],3:['Spotty','#FF9E2C','Carries, but varies by location.'],2:['Over MSRP','','Has it, but above MSRP.'],1:['Unknown','','Unconfirmed — hidden from customers.']};
+const SS_RATING={5:['Best near you','#2BFF88','Reliable, predictable restock. worth checking on a rhythm.'],4:['Mostly reliable','#29D4FF','Carries broadly, no dependable rhythm.'],3:['Spotty','#FF9E2C','Carries, but varies by location.'],2:['Over MSRP','','Has it, but above MSRP.'],1:['Unknown','','Unconfirmed. hidden from customers.']};
 let SS=null;
 const ssDot=c=>`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};flex-shrink:0"></span>`;
 function ssPill(t){ const p=SS_RATING[t]; if(!p) return '<span class="meta">unrated</span>'; if(!p[1]) return `<span style="display:inline-flex;align-items:center;font-size:12px;font-weight:700;color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:3px 11px">${esch(p[0])}</span>`; return `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:${p[1]};background:${p[1]}1a;border:1px solid ${p[1]}66;border-radius:20px;padding:3px 11px">${ssDot(p[1])}${esch(p[0])}</span>`; }
@@ -2318,17 +2318,17 @@ function ssRenderStore(){
     `<div style="font-size:13px;color:var(--text-muted);margin:2px 0 7px">Status</div>`
     +(SS.repack?`<div class="row" style="gap:8px;align-items:center;margin-bottom:9px"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.4);border-radius:20px;padding:3px 11px">${ssDot('#FBBF24')}Repack-only</span><button class="ghost" onclick="ssClearRepack()" style="font-size:12px;padding:5px 10px">Clear</button></div>`:'')
     +`<div class="row" style="gap:8px;margin-bottom:18px">${status}</div>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Type <span data-tip="What kind of retailer this chain is — sets grouping + scoring."></span></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Type <span data-tip="What kind of retailer this chain is. sets grouping + scoring."></span></div>`
     +`<select onchange="ssSetType(this.value)" style="margin-bottom:18px">${SS_TYPES.map(([v,l])=>`<option value="${esch(v)}"${SS.type===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
     +`<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:9px"><div style="font-size:13px;color:var(--text-muted)">Rating</div><span class="meta" id="set_ratemsg" style="font-size:11px"></span></div>`
     +`<div class="row" style="gap:7px;flex-wrap:wrap">${pills}</div>`
     +`<div style="height:14px"></div>`
     +row('Callable','We can phone this store to check stock. Off = kiosk-only / not called.',SS.cCallable,tog(maj('Callable'),'ssToggleCallable()'))
     +row('Kiosk',"Has a Pokémon vending machine. (Kiosk store shows 'Best near you' + in the Kiosk tab.)",SS.cKiosk,(SS.cKiosk?`<button type="button" class="ghost" onclick="ssClearKiosk()" style="font-size:12px;padding:5px 11px">Clear</button>`:`<span class="meta" style="font-size:11px">per-store</span>`))
-    +row('Online','Sells online — pickup or shipped.',SS.cOnline,tog(maj('Online'),'ssToggleOnline()'))
+    +row('Online','Sells online. pickup or shipped.',SS.cOnline,tog(maj('Online'),'ssToggleOnline()'))
     +row('Stock verified','Confirmed it carries (vs just suspected).',SS.cVerified,tog(maj('Verified'),'ssToggleVerified()'));
 }
-async function ssMute(){ if(!SS) return; if(!confirm('Are you sure you want to mute this store?')) return; if(await ssPatch('muted',true)){ SS.muted=true; ssRenderStore(); toast('Muted — dropped from customers'); } }
+async function ssMute(){ if(!SS) return; if(!confirm('Are you sure you want to mute this store?')) return; if(await ssPatch('muted',true)){ SS.muted=true; ssRenderStore(); toast('Muted. dropped from customers'); } }
 async function ssActivate(){ if(!SS) return; if(await ssPatch('muted',false)){ SS.muted=false; ssRenderStore(); toast('Active'); } }
 async function ssClearRepack(){ if(!SS) return; if(await ssPatch('repackOnly',false)){ SS.repack=false; ssRenderStore(); toast('Repack-only cleared'); } }
 async function ssSetType(v){ if(!SS) return; SS.type=v; if(await ssPatch('type',v)) toast('Type: '+v); }
@@ -2392,8 +2392,8 @@ function ssRenderData(){
   const sccOpts=[['','—'],['confirmed','confirmed'],['probable','probable']];
   const scmOpts=[['','—'],['site','site · read the website'],['call','call · phone the store']];
   el.innerHTML=
-    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> First-party — sells at MSRP</label><span data-tip="We price the store's own shelf at retail — not a reseller that may mark it up."></span></div>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check method <span data-tip="How we check this chain's stock — read their website (site) or phone the store (call)."></span></div>`
+    `<div class="row" style="gap:7px;align-items:center;margin:2px 0 16px"><label style="display:inline-flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;color:var(--text-body)"><input type="checkbox" id="set_msrp" ${SS.isMSRP?'checked':''}> First-party. sells at MSRP</label><span data-tip="We price the store's own shelf at retail. not a reseller that may mark it up."></span></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check method <span data-tip="How we check this chain's stock. read their website (site) or phone the store (call)."></span></div>`
     +`<select id="set_scm" style="margin-bottom:16px">${scmOpts.map(([v,l])=>`<option value="${v}"${(SS.scm||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
     +`<div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">Stock-check confidence <span data-tip="How sure we are it carries: confirmed (seen/called) vs probable (expected, unverified)."></span></div>`
     +`<select id="set_scc" style="margin-bottom:16px">${sccOpts.map(([v,l])=>`<option value="${v}"${(SS.scc||'')===v?' selected':''}>${esch(l)}</option>`).join('')}</select>`
@@ -2417,11 +2417,11 @@ function ssRenderCall(){
   const tog=(on,onclick)=>`<button type="button" onclick="${onclick}" style="width:48px;padding:5px;border-radius:8px;border:1px solid ${on?'var(--green)':'var(--border)'};background:${on?'rgba(74,222,128,.14)':'var(--surface-1)'};color:${on?'var(--green)':'var(--text-muted)'};font-weight:700;cursor:pointer;font-size:12px">${on?'ON':'OFF'}</button>`;
   el.innerHTML=
     `<div class="row" style="gap:26px;align-items:center;flex-wrap:wrap;margin:2px 0 4px">`
-    +`<div class="row" style="gap:9px;align-items:center"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" onchange="ssSetMaxTalk(this.value)" style="width:68px;padding:9px 10px;font-size:15px;text-align:center"><div style="font-weight:700;font-size:13px;line-height:1.15">Max talk <span data-tip="Hard cap on how long the agent talks to a person before wrapping up."></span><div class="meta" style="font-size:11px;font-weight:500">seconds</div></div></div>`
+    +`<div class="row" style="gap:9px;align-items:center"><input id="set_maxtalk" type="number" min="0" placeholder="45" value="${esch(SS.maxTalk)}" onchange="ssSetMaxTalk(this.value)" style="width:68px;padding:9px 10px;font-size:15px;text-align:center"><div style="font-weight:700;font-size:13px;line-height:1.15">Max talk <span data-tip="Hard cap on how long the caller talks to a person before wrapping up.ping up."></span><div class="meta" style="font-size:11px;font-weight:500">seconds</div></div></div>`
     +`<div class="row" style="gap:9px;align-items:flex-start"><input type="checkbox" id="set_vm" ${SS.vm?'checked':''} onchange="ssSetHangup(this.checked)" style="margin-top:2px"><div style="line-height:1.25"><div style="display:flex;align-items:center;gap:5px"><label for="set_vm" style="font-weight:700;font-size:13px;color:var(--text-body);cursor:pointer;text-transform:none;letter-spacing:0;display:inline;margin:0">Hang up</label><span data-tip="Voicemail or a closed / recorded line → hang up at once. No message, no charge."></span></div><div class="meta" style="font-size:11px;margin-top:1px">voicemail / closed</div></div></div>`
     +`</div>`
     +`<div class="setrow" style="justify-content:flex-end;gap:11px"><div class="setlbl">Phone this chain <span data-tip="ON = we call this chain's stores to check stock. OFF = listed, but never dialed."></span></div>${tog(SS.callTarget,'ssToggleCallTarget()')}</div>`
-    +`<div style="font-size:13px;color:var(--text-muted);margin:16px 0 6px">Default workflow <span data-tip="Voice / script for every store of this chain — overrides the global default."></span></div>`
+    +`<div style="font-size:13px;color:var(--text-muted);margin:16px 0 6px">Default workflow <span data-tip="Voice / script for every store of this chain. overrides the global default."></span></div>`
     +`<select id="set_wf" onchange="setChainWorkflow(SS.id,this.value)">${wfOptions(SS.wf, WF.def?('Default · '+WF.def):'Default')}</select>`;
 }
 async function ssToggleCallTarget(){ if(!SS) return; const v=!SS.callTarget; if(await ssPatch('callTarget',v)){ SS.callTarget=v; ssRenderCall(); toast(v?'Phoning this chain':'Will not dial this chain'); } }
@@ -2455,7 +2455,7 @@ function renderChainMapping(ch){
     +`<div class="stat"><div class="n" style="font-size:15px">${mapped}</div><div class="l">last mapped</div></div>`
     +`</div>`
     +`<div class="meta" style="text-transform:none;letter-spacing:0;line-height:1.5"><b style="color:#fff">Recipe:</b> ${recipe}</div>`
-    +ro('Keypad shortcut (DTMF)',ch.dtmfShortcut)
+    +ro('Keypad shortcut',ch.dtmfShortcut)
     +ro('Phone-tree default',ch.phoneTreeDefault);
   const sp=document.getElementById('set_mapstatus');
   if(sp){
@@ -2496,7 +2496,7 @@ function loadChainTree(){
   document.getElementById('pt_treesecs').value = (ch&&ch.avgTreeSeconds!=null) ? ch.avgTreeSeconds : '';
   document.getElementById('pt_repack').checked = !!(ch&&ch.repackOnly);
   document.getElementById('pt_muted').checked = !!(ch&&ch.muted);
-  document.getElementById('pt_status').textContent = ch&&ch.phoneTreeDefault ? 'This chain has a phone tree set.' : 'No tree yet — stores of this chain use only the global rules.';
+  document.getElementById('pt_status').textContent = ch&&ch.phoneTreeDefault ? 'This chain has a phone tree set.' : 'No tree yet. stores of this chain use only the global rules.';
 }
 function insertCvsTemplate(){ document.getElementById('pt_tree').value=CVS_TEMPLATE; }
 async function saveChainTree(){
@@ -2514,12 +2514,12 @@ async function saveChainTree(){
     muted:document.getElementById('pt_muted').checked };
   const r=await api('/api/chains/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   if(r&&r.id){ const i=CHAINS.findIndex(c=>c.id===id); if(i>=0) CHAINS[i]=r;
-    document.getElementById('pt_status').textContent='Saved ✓ — applies to every store of this chain on the next call.';
+    document.getElementById('pt_status').textContent='Saved ✓. applies to every store of this chain on the next call.';
     loadChains(); renderChainList(); }
   else document.getElementById('pt_status').textContent='Could not save.';
 }
 // All-chains table: 30-day stats from the god view + one-tap mute/repack flips.
-const PATH_LBL={direct_human:'🙋 direct',simple_ivr:'🔢 simple IVR',deep_ivr:'🌀 deep IVR'};
+const PATH_LBL={direct_human:'🙋 direct',simple_ivr:'🔢 simple menu',deep_ivr:'🌀 deep menu'};
 let CHAIN_STATS=[], CHAIN_FILTER='';
 function chainFilter(v){ CHAIN_FILTER=v||''; renderChainList(); }
 function renderChainList(){
@@ -2546,7 +2546,7 @@ function renderChainList(){
 }
 async function quickChain(id,field,val){
   const r=await api('/api/chains/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({[field]:val})});
-  if(r&&r.id){ toast(field==='muted'?(val?'Muted — hidden from consumers in every city':'Unmuted'):'Saved'); const s=CHAIN_STATS.find(c=>c.id===id); if(s) s[field]=val; const ch=CHAINS.find(c=>c.id===id); if(ch) ch[field]=val; renderChainList(); }
+  if(r&&r.id){ toast(field==='muted'?(val?'Muted. hidden from consumers in every city':'Unmuted'):'Saved'); const s=CHAIN_STATS.find(c=>c.id===id); if(s) s[field]=val; const ch=CHAINS.find(c=>c.id===id); if(ch) ch[field]=val; renderChainList(); }
   else toast('Could not save');
 }
 function previewMaybe(){ const d=document.getElementById('tb_preview_card'); if(d&&d.open) loadPreview(); }
@@ -2558,7 +2558,7 @@ async function loadPreview(){
   const p=await api(`/api/preview/${rid}?categoryId=${cid}`);
   const body=document.getElementById('pv_body');
   if(!p||p.error){ document.getElementById('pv_meta').textContent='Could not load preview.'; body.style.display='none'; return; }
-  const src = p.usedStoreOverride ? 'store override' : (p.phoneTree ? 'chain tree ('+(p.chainName||'chain')+')' : 'global rules only — no phone tree');
+  const src = p.usedStoreOverride ? 'store override' : (p.phoneTree ? 'chain tree ('+(p.chainName||'chain')+')' : 'global rules only. no phone tree');
   const dtmf = p.dtmf ? ` · <span style="color:var(--yellow,#F4D03F)">⌨️ auto-press ${p.dtmf}</span>` : '';
   document.getElementById('pv_meta').innerHTML = `<b>${p.retailerName}</b> · phone-tree source: <span style="color:var(--green)">${src}</span>${dtmf}`;
   body.textContent=p.prompt; body.style.display='';
@@ -2580,7 +2580,7 @@ async function benchCall(){
   const sv=document.getElementById('sim_voice'); let voiceId=sv?sv.value:'';
   const pool=poolVoices(); if(voiceId==='__rotate__') voiceId = pool.length ? pool[TEST_ROT.call%pool.length].id : '';
   const active=OPENERS.filter(o=>o.on); const opening = active.length ? active[TEST_ROT.call%active.length].text : undefined;
-  toast('Calling you — answer like the clerk!');
+  toast('Calling you. Answer like you work there!');
   const r=await api('/api/bench/call',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId,categoryId,mode,toNumber,specificProduct,voiceId,opening})});
   if(r&&r.error){toast('Error: '+r.error);return;}
   TEST_ROT.call++; refreshTestRotation();
@@ -2590,7 +2590,7 @@ async function benchCall(){
 async function resetScript(){
   document.getElementById('sb_status').textContent='Resetting the live agent script to default…';
   const r=await api('/api/voice-tuning',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({pushPrompt:true})});
-  document.getElementById('sb_status').textContent = (r&&r.error) ? 'Error: '+r.error : 'Script reset ✓ — the live agent runs the known-good built-in script again.';
+  document.getElementById('sb_status').textContent = (r&&r.error) ? 'Error: '+r.error : 'Script reset ✓. the live agent runs the known-good built-in script again.';
 }
 
 // --- The LIVE strip: always shows what real store calls use right now ---
@@ -2649,14 +2649,14 @@ function sandboxBody(){
     turnEagerness:g('sb_beat').value,
     turnTimeout: g('sb_turntimeout')?Number(g('sb_turntimeout').value):undefined,
     softTimeoutSecs: softOn ? Number(v('sb_soft_secs')||1.5) : -1,
-    softTimeoutMsg: v('sb_soft_msg')||"Yeah—hi, I'm here!",
+    softTimeoutMsg: v('sb_soft_msg')||"Yeah, hi, I'm here!",
     llm:g('sb_llm').value, opening:firstActiveOpener() };
 }
 async function applySandbox(){
   document.getElementById('sb_status').textContent='Saving the draft…';
   const r=await api('/api/sandbox-tuning',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(sandboxBody())});
   if(r&&r.error){ document.getElementById('sb_status').textContent='Error: '+r.error; return; }
-  document.getElementById('sb_status').textContent='Draft saved — store calls unchanged. Test it in Step 6.';
+  document.getElementById('sb_status').textContent='Draft saved. store calls unchanged. Test it in Step 6.';
   updateDraftDot();
 }
 async function pushSandboxToStores(){
@@ -2665,7 +2665,7 @@ async function pushSandboxToStores(){
   await api('/api/sandbox-tuning',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(sandboxBody())});
   const r=await api('/api/sandbox-tuning/apply-to-stores',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
   if(r&&r.error){ document.getElementById('sb_status').textContent='Error: '+r.error; toast('Error: '+r.error); return; }
-  document.getElementById('sb_status').textContent='✅ LIVE on '+(r.applied||0)+' store agent(s) — every store call now uses this.';
+  document.getElementById('sb_status').textContent='✅ LIVE on '+(r.applied||0)+' store agent(s). every store call now uses this.';
   toast('Applied to all store calls'); loadLiveStrip();
 }
 // --- Script library (saved tuning profiles, loaded into the DRAFT) ---
@@ -2687,7 +2687,7 @@ async function loadPreset(){
   const name=document.getElementById('vt_preset').value; if(!name){ toast('Pick a saved script'); return; }
   const t=await api('/api/voice-presets/apply',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name})});
   if(t&&t.error){ toast('Error: '+t.error); return; }
-  await loadSandbox(); toast('Loaded “'+name+'” into the draft — test it, then apply to stores');
+  await loadSandbox(); toast('Loaded “'+name+'” into the draft. test it, then apply to stores');
 }
 async function removePreset(){
   const name=document.getElementById('vt_preset').value; if(!name){ toast('Pick a saved script'); return; }
@@ -2708,7 +2708,7 @@ function playMu(b64,track){
   if(LL_NEXT[track]==null) LL_NEXT[track]=LL_CTX.currentTime+0.35;        // per-track timeline -> agent & clerk mix
   const at=Math.max(LL_NEXT[track], LL_CTX.currentTime+0.04);
   src.start(at); LL_NEXT[track]=at+buf.duration;
-  if((++LL_FRAMES)%25===0) setLL('🔴 LIVE — listening… ('+Math.round(LL_FRAMES*0.02/2)+'s)');
+  if((++LL_FRAMES)%25===0) setLL('🔴 LIVE. listening… ('+Math.round(LL_FRAMES*0.02/2)+'s)');
 }
 async function callAndListen(){
   const phone=(document.getElementById('ll_phone').value||'').trim();
@@ -2718,15 +2718,15 @@ async function callAndListen(){
   try{ LL_CTX=new (window.AudioContext||window.webkitAudioContext)(); await LL_CTX.resume(); }catch(e){ setLL('Audio blocked by browser.'); btn.disabled=false; return; }
   const t=await api('/api/talk',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone,mode:'restock'})});
   if(!t||t.error||!t.providerCallId){ setLL('Could not place call: '+((t&&t.error)||'error')); btn.disabled=false; return; }
-  setLL('📞 Call placed — waiting for the store to pick up…');
+  setLL('📞 Call placed. waiting for the store to pick up…');
   const m=await api('/api/monitor/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({providerCallId:t.providerCallId})});
   if(!m||m.error||!m.room){ setLL('Could not start live audio: '+((m&&m.error)||'error')); btn.disabled=false; return; }
   const url='wss://'+m.wsHost+'/listen?room='+encodeURIComponent(m.room);
   LL_WS=new WebSocket(url);
-  LL_WS.onopen=()=>{ setLL('🔴 LIVE — listening…'); document.getElementById('ll_stop').style.display=''; };
+  LL_WS.onopen=()=>{ setLL('🔴 LIVE. listening…'); document.getElementById('ll_stop').style.display=''; };
   LL_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data); if(d.audio) playMu(d.audio,d.track); }catch(e){} };
   LL_WS.onclose=()=>{ setLL('Audio ended.'); document.getElementById('ll_stop').style.display='none'; btn.disabled=false; };
-  LL_WS.onerror=()=>{ setLL('Audio connection error — the call may still be going.'); };
+  LL_WS.onerror=()=>{ setLL('Audio connection error. the call may still be going.'); };
 }
 function stopListen(){ if(LL_WS){LL_WS.close();LL_WS=null;} if(LL_CTX){LL_CTX.close().catch(()=>{});LL_CTX=null;} LL_NEXT={}; }
 
@@ -2740,9 +2740,9 @@ async function bridgeCall(){
   try{ LL_CTX=new (window.AudioContext||window.webkitAudioContext)(); await LL_CTX.resume(); }catch(e){ setBC('Audio blocked by browser.'); btn.disabled=false; return; }
   const m=await api('/api/bridge/call',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({toNumber:phone})});
   if(!m||m.error||!m.room){ setBC('Call failed: '+((m&&m.error)||'error')); btn.disabled=false; return; }
-  setBC('📞 Calling '+phone+' — connecting live audio…');
+  setBC('📞 Calling '+phone+'. connecting live audio…');
   LL_WS=new WebSocket('wss://'+m.wsHost+'/listen?room='+encodeURIComponent(m.room));
-  LL_WS.onopen=()=>{ setBC('🔴 LIVE — answer the phone and you should hear yourself here.'); document.getElementById('bc_stop').style.display=''; };
+  LL_WS.onopen=()=>{ setBC('🔴 LIVE. answer the phone and you should hear yourself here.'); document.getElementById('bc_stop').style.display=''; };
   LL_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data); if(d.audio) playMu(d.audio,d.track); }catch(e){} };
   LL_WS.onclose=()=>{ setBC('Audio ended.'); document.getElementById('bc_stop').style.display='none'; btn.disabled=false; };
   LL_WS.onerror=()=>{ setBC('Audio connection error.'); };
@@ -2807,7 +2807,7 @@ function customerVerdict(o){
   if(s){
     let n=(key==='failed'&&o.failureReason)?o.failureReason:(s.note||'');
     n=n.replace(/\{product\}/g, o.productName||'it');   // {product} token → the live product name (registry-driven)
-    if(!n && s.tone==='in' && o.productName) n="They've got "+o.productName+" in — go get it.";
+    if(!n && s.tone==='in' && o.productName) n="They've got "+o.productName+" in. go get it.";
     return {e:s.emoji, t:s.label, c:s.color, n, key};
   }
   // Registry not loaded yet (first paint) — minimal built-in fallback keeps the row sane.
@@ -2913,13 +2913,13 @@ function renderStatuses(list){
         <input type="hidden" data-f="emoji" value="${escH(s.emoji)}">
         <input value="${escH(s.label)}" data-f="label" onchange="statusAutoSave(this)" style="flex:1;min-width:0;font-size:15px" placeholder="Label">
         ${s.key==='in_stock'
-          ? `<input type="color" value="#4ADE80" data-f="color" disabled title="Locked to brand green — matches the logo" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1.5px solid var(--green);background:none;flex:0 0 auto;cursor:not-allowed">`
+          ? `<input type="color" value="#4ADE80" data-f="color" disabled title="Locked to brand green. matches the logo" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1.5px solid var(--green);background:none;flex:0 0 auto;cursor:not-allowed">`
           : `<input type="color" value="${escH(s.color)}" data-f="color" oninput="statusRecolor(this)" onchange="statusAutoSave(this)" title="Icon color" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1px solid var(--border);background:none;flex:0 0 auto">`}
       </div>
       <textarea data-f="note" rows="3" onchange="statusAutoSave(this)" placeholder="Message the customer sees" style="margin-top:10px;font-size:14px;line-height:1.5">${escH(s.note)}</textarea>
       <div class="meta" style="margin-top:5px;font-size:11px;line-height:1.45">Use <code>{product}</code> for the live product name · <code>&lt;b&gt;…&lt;/b&gt;</code> to bold.</div>
       <div class="row" style="gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
-        <select data-f="tone" onchange="statusToneChange(this);statusAutoSave(this)" title="Verdict bucket — sets the color + filter" style="flex:0 0 auto;max-width:180px">
+        <select data-f="tone" onchange="statusToneChange(this);statusAutoSave(this)" title="Verdict bucket. sets the color + filter" style="flex:0 0 auto;max-width:180px">
           <option value="in"${s.tone==='in'?' selected':''}>In stock</option>
           <option value="out"${s.tone==='out'?' selected':''}>Not in stock</option>
           <option value="unk"${s.tone==='unk'?' selected':''}>Check failed</option>
@@ -2934,7 +2934,7 @@ async function saveStatus(id,btn){
   const card=btn.closest('[data-sid]'); const body={};
   card.querySelectorAll('[data-f]').forEach(i=>{ body[i.dataset.f]=i.value; });
   const r=await api('/api/statuses/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  if(r&&r.id){ STATUSES[r.key]=r; toast('Saved — live in Check It For Me + Test Bench now'); }
+  if(r&&r.id){ STATUSES[r.key]=r; toast('Saved. live in Check It For Me + Test Bench now'); }
   else toast('Could not save');
 }
 function pickNewStatusIcon(){ openIconPicker(n=>{ document.getElementById('st_new_emoji').value=n; document.getElementById('st_new_icon_btn').innerHTML=statusIcon(n,'#9CA3AF',22); }, document.getElementById('st_new_emoji').value); }
@@ -2947,7 +2947,7 @@ async function addStatus(){
   const body={ key:label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''), label,
     emoji:v('st_new_emoji')||'•', note:v('st_new_note'), tone:document.getElementById('st_new_tone').value };
   const r=await api('/api/statuses',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  if(r&&r.id){ document.getElementById('st_msg').textContent='Added ✓ — note: DISPLAY is live, but detecting this situation on calls needs Claude to wire the extraction (tell it what the clerk says).';
+  if(r&&r.id){ document.getElementById('st_msg').textContent='Added ✓. Note: DISPLAY is live, but detecting this situation on calls needs the Admin dev agent to wire the extraction (tell it what the staff says).';
     ['st_new_label','st_new_emoji','st_new_note'].forEach(x=>document.getElementById(x).value='');
     loadStatusReg(); }
   else document.getElementById('st_msg').textContent='Could not add'+(r&&r.error?': '+r.error:'');
@@ -2960,7 +2960,7 @@ async function callNow(id){
   if(!catId){ toast('No product category configured'); return; }
   toast('Dialing…');
   await api('/api/call-now',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:id,categoryId:catId})});
-  toast('Call placed — the result lands in this store’s record shortly.');
+  toast('Call placed. the result lands in this store’s record shortly.');
 }
 async function mapCall(id){
   const cat=(CATEGORIES.find(c=>/pok/i.test(c.label))||CATEGORIES[0]);
@@ -3064,7 +3064,7 @@ async function loadZones(){
     <div class="slogo"><span class="mono">${z.retailerIds.length}</span></div>
     <div class="grow"><div class="sname">${esch(z.name)}</div><div class="smeta">${esch(z.centerZip||'')} · ${z.radiusMiles||'?'} mi radius · ${z.retailerIds.length} stores</div></div>
     <button class="act" id="zonebtn_${z.id}" onclick="callZoneNow(${z.id},'${(z.name||'').replace(/'/g,'')}',${z.retailerIds.length})">${ICO('phone',15)} Call zone</button>
-  </div></div>`).join('') : '<div class="empty">No zones yet — tell Claude an area and it can build one.</div>';
+  </div></div>`).join('') : '<div class="empty">No zones yet. Ask the Admin dev agent to build one.</div>';
 }
 async function callZoneNow(id,name,count){
   const stores=await api('/api/zones/'+id+'/stores').catch(()=>[]);
@@ -3170,7 +3170,7 @@ async function loadCredits(){
     bar.style.width = pctLeft+'%';
     bar.style.background = pctLeft<=10?'#EF4444':pctLeft<=25?'#FBBF24':'var(--green)';
     document.getElementById('credit_stats').innerHTML =
-      `~<b style="color:#fff">${fmtN(c.callsLeft)} calls</b> left <span style="color:var(--muted)">· ElevenLabs bills the whole connected call (ring · IVR · hold · talk)</span>`
+      `~<b style="color:#fff">${fmtN(c.callsLeft)} calls</b> left <span style="color:var(--muted)">· We're billed for the whole call (ring · menu · hold · talk)</span>`
       + (c.source==='estimated' ? ` · ${fmtN(c.used)} used in last 31d` : '')
       + (c.resetUnix ? ` · resets ${new Date(c.resetUnix*1000).toLocaleDateString()}` : '');
   } else {
@@ -3274,7 +3274,7 @@ function renderWorkflowMgr(){
     <div class="wfmsub">Openers <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· tick = in rotation</span></div>
     <div class="wfmops">
       ${g.map((o,i)=>`<div class="wfmop"><input type="checkbox" ${o.on?'checked':''} onchange="wfgToggle(${i},this.checked)" title="In rotation"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfgEdit(${i},this.value)">${esch(o.text)}</textarea><button class="ghost opdel" onclick="wfgDel(${i})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('')||'<div class="meta" style="padding:4px 0 8px">No global openers.</div>'}
-      <div class="wfmadd"><input id="wfg_add" placeholder="Add a global opener — e.g. Hey! Got any {category} in?" onkeydown="if(event.key==='Enter')wfgAdd()"><button class="act" onclick="wfgAdd()">Add</button></div>
+      <div class="wfmadd"><input id="wfg_add" placeholder="Add a global opener. e.g. Hey! Got any {category} in?" onkeydown="if(event.key==='Enter')wfgAdd()"><button class="act" onclick="wfgAdd()">Add</button></div>
     </div>
   </div>`;
   const wfCards=list.length?list.map((w,wi)=>{
@@ -3282,10 +3282,10 @@ function renderWorkflowMgr(){
     const a=(WFM_ASSIGN&&WFM_ASSIGN[w.name])||{stores:[],chains:[]};
     const pins=[...(a.chains||[]).map(c=>`<span class="wfmpin">${esch(c.name)} · chain</span>`), ...(a.stores||[]).map(s=>`<span class="wfmpin">${esch(s.name)}${s.location?' · '+esch(s.location):''}</span>`)];
     const asgLine = isDef
-      ? `<div class="wfmasg"><span class="meta">Powers every store — unless a workflow below is assigned to it.</span>${pins.length?'<span class="wfmasglab" style="margin-left:4px">also pinned:</span>'+pins.join(''):''}</div>`
+      ? `<div class="wfmasg"><span class="meta">Powers every store. unless a workflow below is assigned to it.</span>${pins.length?'<span class="wfmasglab" style="margin-left:4px">also pinned:</span>'+pins.join(''):''}</div>`
       : (pins.length
           ? `<div class="wfmasg"><span class="wfmasglab">On</span>${pins.join('')}</div>`
-          : `<div class="wfmasg"><span class="meta">Not assigned yet — assign it from a store or chain row, or Set default.</span></div>`);
+          : `<div class="wfmasg"><span class="meta">Not assigned yet. assign it from a store or chain row, or Set default.</span></div>`);
     return `<div class="wfm${isDef?' def':''}">
       <div class="wfmhead">
         <div style="flex:1 1 100%;min-width:0"><span class="wfmname">${esch(w.name)}</span>${isDef?'<span class="wfmdef">★ default · all stores</span>':''}
@@ -3300,15 +3300,15 @@ function renderWorkflowMgr(){
       </div>
       <div class="wfmsub" style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>Openers <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· rotated round-robin every call</span></span><button class="ghost" style="font-size:10.5px;padding:4px 9px;text-transform:none;letter-spacing:0;display:inline-flex;align-items:center;gap:4px" onclick="wfmResetRotation(${wi})" title="Next call to this workflow starts at opener #1">${lucideSvg('rotate-ccw',12,'currentColor')}Reset rotation</button></div>
       <div class="wfmops">
-        ${ops.map((o,oi)=>`<div class="wfmop"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfmEditOpener(${wi},${oi},this.value)">${esch(o)}</textarea><button class="ghost opdel" onclick="wfmDelOpener(${wi},${oi})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('')||'<div class="meta" style="padding:4px 0 8px">No openers — calls fall back to the global opener.</div>'}
-        <div class="wfmadd"><input id="wfmadd_${wi}" placeholder="Add an opener — e.g. Hey! You guys get any {category} in?" onkeydown="if(event.key==='Enter')wfmAddOpener(${wi})"><button class="act" onclick="wfmAddOpener(${wi})">Add</button></div>
+        ${ops.map((o,oi)=>`<div class="wfmop"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfmEditOpener(${wi},${oi},this.value)">${esch(o)}</textarea><button class="ghost opdel" onclick="wfmDelOpener(${wi},${oi})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('')||'<div class="meta" style="padding:4px 0 8px">No openers. calls fall back to the global opener.</div>'}
+        <div class="wfmadd"><input id="wfmadd_${wi}" placeholder="Add an opener. e.g. Hey! You guys get any {category} in?" onkeydown="if(event.key==='Enter')wfmAddOpener(${wi})"><button class="act" onclick="wfmAddOpener(${wi})">Add</button></div>
       </div>
       <div class="wfmmeta">
         <div><label>Voice</label><select onchange="wfmSetField(${wi},'voiceId',this.value)">${wfmVoiceOpts(w.voiceId)}</select></div>
         <div><label>Persona</label><select onchange="wfmSetField(${wi},'persona',this.value)">${wfmPersonaOpts(w.persona)}</select></div>
       </div>
     </div>`;
-  }).join(''):'<div class="meta" style="margin:4px 2px 0">No saved workflows yet — build one in <b>Voice → Designer</b> to override these per store.</div>';
+  }).join(''):'<div class="meta" style="margin:4px 2px 0">No saved workflows yet. build one in <b>Voice → Designer</b> to override these per store.</div>';
   el.innerHTML = globalCard + wfCards;
   el.querySelectorAll('.wfmop textarea').forEach(wfmGrow); // size opener boxes to their wrapped text
 }
@@ -3318,7 +3318,7 @@ async function wfmAddOpener(wi){ const inp=document.getElementById('wfmadd_'+wi)
 async function wfmDelOpener(wi,oi){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; w.openers.splice(oi,1); renderWorkflowMgr(); await wfmSaveList(); toast('Opener removed'); }
 async function wfmEditOpener(wi,oi,text){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; const t=(text||'').trim(); if(!t){ w.openers.splice(oi,1); renderWorkflowMgr(); } else { w.openers[oi]=t; } await wfmSaveList(); }
 async function wfmSetField(wi,field,val){ const w=WF.list[wi]; if(!w) return; w[field]=val; await wfmSaveList(); renderWorkflowMgr(); toast('Saved'); }
-async function wfmClone(wi){ const w=WF.list[wi]; if(!w) return; const name=(prompt('Name for the cloned workflow:', w.name+' copy')||'').trim(); if(!name) return; if(WF.list.some(x=>x.name===name)){ toast('A workflow named “'+name+'” already exists'); return; } const copy=JSON.parse(JSON.stringify(w)); copy.name=name; copy.savedAt=Date.now(); WF.list.push(copy); renderWorkflowMgr(); await wfmSaveList(); toast('Cloned as “'+name+'” — edit it below, then assign it to a store'); }
+async function wfmClone(wi){ const w=WF.list[wi]; if(!w) return; const name=(prompt('Name for the cloned workflow:', w.name+' copy')||'').trim(); if(!name) return; if(WF.list.some(x=>x.name===name)){ toast('A workflow named “'+name+'” already exists'); return; } const copy=JSON.parse(JSON.stringify(w)); copy.name=name; copy.savedAt=Date.now(); WF.list.push(copy); renderWorkflowMgr(); await wfmSaveList(); toast('Cloned as “'+name+'”. edit it below, then assign it to a store'); }
 // ---- Round-trip: open an existing workflow back in the Designer (the only place to tweak tuning) ----
 let EDIT_TARGET=null; // a workflow staged to load into the Designer once its async loaders settle
 // Designer tab loader: await the voice/persona/store loaders FIRST, then (if we arrived via "Edit in
@@ -3352,20 +3352,20 @@ function applyWorkflowToDesigner(w){
   OPENERS=(Array.isArray(w.openers)?w.openers:[]).map(text=>({text,on:true}));
   if(typeof renderOpeners==='function') renderOpeners();
   if(w.persona){ PN_SEL=w.persona; if(typeof pnBaseRender==='function') pnBaseRender(); if(typeof renderPersonas==='function') renderPersonas(); }
-  const msg=g('wf_msg'); if(msg) msg.textContent='Editing “'+w.name+'” — change anything (including tuning), then Save workflow to overwrite it.';
+  const msg=g('wf_msg'); if(msg) msg.textContent='Editing “'+w.name+'”. change anything (including tuning), then Save workflow to overwrite it.';
   toast('Loaded “'+w.name+'” into the Designer');
 }
 async function wfmSetDefault(wi){ const w=WF.list[wi]; if(!w) return; WF.def=w.name; const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:w.name})}); renderWorkflowMgr(); toast((r&&!r.error)?(w.name+' powers all stores now'):'Could not set default'); }
 async function wfmDelete(wi){ const w=WF.list[wi]; if(!w) return; if(!confirm('Delete workflow “'+w.name+'”?\nStores assigned to it fall back to the default.')) return; const wasDef=WF.def===w.name; WF.list=WF.list.filter((x,i)=>i!==wi); if(wasDef){ WF.def=''; await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:''})}); } renderWorkflowMgr(); await wfmSaveList(); toast('Workflow deleted'); }
 // Reset this workflow's opener rotation so the next call to it starts at opener #1 (predictable testing).
-async function wfmResetRotation(wi){ const w=WF.list[wi]; if(!w) return; const r=await api('/api/admin/reset-rotation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workflow:w.name})}); toast((r&&r.ok)?'Rotation reset — next call uses opener #1':'Could not reset rotation'); }
+async function wfmResetRotation(wi){ const w=WF.list[wi]; if(!w) return; const r=await api('/api/admin/reset-rotation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workflow:w.name})}); toast((r&&r.ok)?'Rotation reset. next call uses opener #1':'Could not reset rotation'); }
 // Testing tab — the Fun-store test-call log (workflow · opener used · status · timing). Owner-only data.
 function tcStatusPill(key){ const F=({in_stock:['In stock','#4ADE80'],not_in_stock:['Not in','#EF4444'],sold_out:['Sold out','#EF4444'],does_not_sell:["Doesn't carry",'#EF4444'],no_clear_answer:['Maybe','#FBBF24'],too_busy:['Too busy','#FBBF24'],left_on_hold:['On hold','#FBBF24'],nobody_answered:['No answer','#9CA3AF'],closed:['Closed','#9CA3AF'],failed:['Failed','#FBBF24'],completed:['Done','#9CA3AF'],admin_hangup:['Canceled','#9CA3AF']})[key]||[key||'—','#9CA3AF']; return `<span class="tcpill" style="color:${F[1]};border-color:${F[1]}44;background:${F[1]}14">${esch(F[0])}</span>`; }
 async function loadTesting(){
   const sum=document.getElementById('testing_summary'), log=document.getElementById('testing_log');
   if(!sum||!log) return;
   const d=await api('/api/admin/test-calls');
-  if(!d||d.error){ sum.innerHTML=''; log.textContent='No test calls yet — call the Fun store to start logging.'; return; }
+  if(!d||d.error){ sum.innerHTML=''; log.textContent='No test calls yet. call the Fun store to start logging.'; return; }
   const s=d.summary||{};
   const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   sum.innerHTML=`<div class="card report"><div class="rgrp">Test-call timing <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· Fun store · kept separate from real stats</span></div>
@@ -3381,14 +3381,14 @@ async function loadTesting(){
           <div class="tcop">${opLine}</div>
           <div class="tctime"><span>to-human <b>${t(r.navSec)}</b></span><span>talk <b style="color:var(--green)">${t(r.talkSec)}</b></span><span>total <b>${t(r.callSec)}</b></span></div>
         </div>`;
-      }).join('') || '<div class="meta" style="padding:6px 2px">No test calls yet — call the Fun store.</div>')
+      }).join('') || '<div class="meta" style="padding:6px 2px">No test calls yet. call the Fun store.</div>')
     + `</div>`;
 }
 // Settings → the one global default workflow.
 async function loadDefaultWorkflow(){
   await loadWorkflows();
   const sel=document.getElementById('set_default_wf'); if(!sel) return;
-  if(!WF.list.length){ sel.innerHTML='<option value="">No workflows yet — build one in Voice → Designer (Step 7)</option>'; sel.disabled=true; return; }
+  if(!WF.list.length){ sel.innerHTML='<option value="">No workflows yet. build one in Voice → Designer (Step 7)</option>'; sel.disabled=true; return; }
   sel.disabled=false; sel.innerHTML=wfOptions(WF.def,'No default (use the global voice/opener settings)');
 }
 async function saveDefaultWorkflow(){
@@ -3497,7 +3497,7 @@ async function loadGrowth(){
     fld('gw_ga4','GA4 measurement id',POL.ga4Id||'');
   // Volume top-up tiers — set in the checkout build (Stripe), surfaced read-only so they're not edited via raw JSON.
   const packs=(POL.catalog||{}).packs||{};
-  if(Object.keys(packs).length) document.getElementById('gw_pricing').innerHTML += `<div class="meta" style="grid-column:1/-1;margin-top:2px"><b style="color:#c7c7d2">Volume tiers</b> <span data-tip="Top-up packs — set in the checkout build (Stripe), read-only here."></span><div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${Object.values(packs).map(pk=>`<span style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:#dcdce6">${pk.credits} checks · $${(pk.cents/100).toFixed(0)}</span>`).join('')}</div></div>`;
+  if(Object.keys(packs).length) document.getElementById('gw_pricing').innerHTML += `<div class="meta" style="grid-column:1/-1;margin-top:2px"><b style="color:#c7c7d2">Volume tiers</b> <span data-tip="Top-up packs. set in the checkout build (Stripe), read-only here."></span><div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${Object.values(packs).map(pk=>`<span style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:#dcdce6">${pk.credits} checks · $${(pk.cents/100).toFixed(0)}</span>`).join('')}</div></div>`;
   loadGwPulse(); loadGwIntel(); loadGwKiosks(); loadGwWatches(); loadGwCommunity(); loadGwWaitlist(); loadGwStoreReqs();
 }
 async function loadGwPulse(){
@@ -3510,7 +3510,7 @@ async function loadGwPulse(){
   el.innerHTML=
     `<div class="rgrp">Funnel</div><div class="stats">`+
       st(f.leads||0,'leads')+st(f.signups||0,'signups')+st(f.paying||0,'paying',1)+st(f.members||0,'members',1)+st(money(f.revenueCents),'revenue',1)+
-    `</div><div class="rgrp">Activity <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· real consumer calls — excludes Fun/MVPs + admin tests</span></div><div class="stats">`+
+    `</div><div class="rgrp">Activity <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· real consumer calls. excludes Fun/MVPs + admin tests</span></div><div class="stats">`+
       st(a.checks||0,'checks')+st(a.checks24h||0,'last 24h')+st(a.confirms||0,'confirms',1)+st(secsFmt(a.avgTalkSec||0),'avg talk',1)+st(secsFmt(a.avgCallSec||0),'avg call')+
     `</div><div class="rgrp">Community</div><div class="stats" style="margin-bottom:0">`+
       st(cm.watches||0,'watching')+st(cm.kioskReports||0,'kiosk intel')+st(cm.posts||0,'scores')+st(cm.postsPending||0,'pending')+st(cm.newLeads7d||0,'new leads 7d')+
@@ -3520,9 +3520,9 @@ async function loadGwPulse(){
 }
 // Stamp a "count from now" cutoff so real-call stats reset for the live launch. Test calls are unaffected.
 async function startFresh(clear){
-  if(!clear && !confirm('Start fresh?\n\nReal-call stats (Pulse, Restock, Call timing) will only count calls placed from NOW on — so launch-day dialing starts clean. Test/Fun calls are unaffected, and this is reversible (“Count all again”).')) return;
+  if(!clear && !confirm('Start fresh?\n\nReal-call stats (Pulse, Restock, Call timing) will only count calls placed from NOW on. so launch-day dialing starts clean. Test/Fun calls are unaffected, and this is reversible (“Count all again”).')) return;
   const r=await api('/api/admin/stats-since',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(clear?{clear:true}:{})});
-  if(r&&r.ok){ toast(clear?'Counting all calls again':'Fresh start — real-call stats now count from today'); loadGwPulse(); if(typeof loadCallHealth==='function')loadCallHealth(); } else toast('Could not update');
+  if(r&&r.ok){ toast(clear?'Counting all calls again':'Fresh start. real-call stats now count from today'); loadGwPulse(); if(typeof loadCallHealth==='function')loadCallHealth(); } else toast('Could not update');
 }
 // Call data health — the unfiltered truth about call_results (real dialed calls vs seed/rehearsal/
 // never-placed), + a dry-run cleanup preview. Read-only: no delete button (purge is run deliberately).
@@ -3551,7 +3551,7 @@ async function loadCallHealth(){
     +`<div class="rgrp" style="margin-top:13px">By status</div>`
       +((a.byStatus||[]).map(x=>rsBar(x.k,x.n,sMax)).join('')||'<div class="meta">—</div>')
     +(purge?`<div class="rgrp" style="margin-top:13px">Cleanup preview <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· dry run · billed calls protected · restorable from ElevenLabs</span></div>`
-       +`<div class="meta" style="line-height:1.55"><b style="color:${purge.flagged?'var(--orange)':'var(--green)'}">${purge.flagged}</b> of ${purge.total} rows are unprovable${reasons?' ('+esch(reasons)+')':''}; <b style="color:#e8e8f0">${purge.keptDefinitive}</b> are definitive. Nothing is deleted from here — run the purge deliberately when ready.</div>`:'');
+       +`<div class="meta" style="line-height:1.55"><b style="color:${purge.flagged?'var(--orange)':'var(--green)'}">${purge.flagged}</b> of ${purge.total} rows are unprovable${reasons?' ('+esch(reasons)+')':''}; <b style="color:#e8e8f0">${purge.keptDefinitive}</b> are definitive. Nothing is deleted from here. run the purge deliberately when ready.</div>`:'');
 }
 // User dashboard: everyone who signed up (phone-first, Clerk-free) — newest first.
 async function loadUsers(){
@@ -3576,14 +3576,14 @@ async function loadUsers(){
         </div>
       </div>`).join('');
 }
-async function toggleStaff(id,on){ const r=await api('/api/admin/users/staff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,on})}); if(r&&!r.error){ toast(on?'Flagged as admin/test — won’t count as a customer':'Unflagged'); loadUsers(); } else toast('Could not update'); }
+async function toggleStaff(id,on){ const r=await api('/api/admin/users/staff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,on})}); if(r&&!r.error){ toast(on?'Flagged as admin/test. won’t count as a customer':'Unflagged'); loadUsers(); } else toast('Could not update'); }
 // ---- Restock intel (God View → Restock): network view + per-store breakdown on tap ----
 function rsBar(label,n,max,cls){ return `<div class="rsbar"><span class="rsbl">${esch(label)}</span><span class="rsbt"><span class="rsbf ${cls||''}" style="width:${max?Math.round(n/max*100):0}%"></span></span><b>${n}</b></div>`; }
 async function loadRestock(){
   const net=document.getElementById('restock_net'); if(!net) return;
   const det=document.getElementById('restock_detail'); if(det) det.innerHTML='';
   const d=await api('/api/admin/restock-intel');
-  if(!d||d.error){ net.textContent='No restock data yet — fills in as confirmed calls land.'; return; }
+  if(!d||d.error){ net.textContent='No restock data yet. fills in as confirmed calls land.'; return; }
   const t=d.totals||{};
   const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   const dMax=Math.max(1,...(d.shipmentDays||[]).map(x=>x.n));
@@ -3607,7 +3607,7 @@ async function loadRestock(){
       ${brow('🤖','Never reached a human',b.never_reached,'bad')}
       <div class="rgrp" style="margin-top:14px">Reach rate by chain <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· where a human actually picks up</span></div>
       ${(af.byChain||[]).map(chrow).join('')}
-      <div class="meta" style="margin-top:10px;line-height:1.55">Only <b style="color:var(--purple)">${reachPct}%</b> of calls reach a person. Direct-dial stores (Barnes &amp; Noble) answer every time; pharmacy phone bots (CVS, Walgreens) and press-for-department trees (Target) swallow most calls before anyone picks up — that's the gap to close, not stock.</div>
+      <div class="meta" style="margin-top:10px;line-height:1.55">Only <b style="color:var(--purple)">${reachPct}%</b> of calls reach a person. Direct-dial stores (Barnes &amp; Noble) answer every time; pharmacy phone bots (CVS, Walgreens) and press-for-department trees (Target) swallow most calls before anyone picks up. that's the gap to close, not stock.</div>
     </div>`;
   }
   net.innerHTML=
@@ -3802,7 +3802,7 @@ async function agentSend(){
   const payload=AGENT_MSGS.filter(m=>m.role==='user'||m.role==='assistant').map(m=>({role:m.role,text:m.text}));
   const r=await api('/api/admin/agent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({messages:payload,model:AGENT_MODEL})});
   AGENT_BUSY=false; if(sb) sb.disabled=false;
-  if(!r || r.error){ AGENT_MSGS.push({role:'error',text:(r&&r.error)||'Something went wrong — check the server has ANTHROPIC_API_KEY.'}); agentRender(); return; }
+  if(!r || r.error){ AGENT_MSGS.push({role:'error',text:(r&&r.error)||'Something went wrong. check the server has ANTHROPIC_API_KEY.'}); agentRender(); return; }
   AGENT_MSGS.push({role:'assistant',text:r.reply||'(done)',actions:r.actions||[]});
   agentRender();
   if(r.actions&&r.actions.length){ try{ loadStoreIntel(); const rt=document.getElementById('retailers'); if(rt&&rt.classList.contains('active')) loadRetailers(); }catch(e){} }
