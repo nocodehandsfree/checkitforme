@@ -49,8 +49,14 @@ consumer "Working → forward your receipt = free check" nudge is yours.
     (window widened ~30s→~60s). "No answer" now only shows when there's no transcript or the SERVER says so.
   - **Spanish step log**: step labels were snapshotted in English at call time; both renderers now resolve from
     the step number (`liveStageLabel(s.n)`) so a language flip re-localizes the whole log (+ mid-call re-render).
-  - **Map pin (master)**: a hand pan/zoom now marks the map "roamed" and suppresses the auto-reframe, so changing
-    the radius no longer yanks you back to your real location; the 📍 button clears it to snap back.
+  - **Map framing (master)** *(v2 — v1's roam-detect didn't hold)*: real cause was `fitBounds` framing ALL pins,
+    so a far in-stock store outside the radius zoomed the map away. Now it only auto-frames on intentional moments
+    (open / new location) and frames the search-**radius ring**, not far pins; radius change/refresh never
+    re-frames. One-shot `MAP_FIT_NEXT` flag replaced the roam detection.
+  - **Spanish conversation** *(round 2)*: `canTranslate` was gated to EN-mode only; now it offers the reader's
+    language either way, and an ES site auto-shows the conversation in Spanish (`toggleTranslate`, cached,
+    "Ver original" to flip). NOTE: this fires a `/pub/translate` call per ES result viewed — flag to owner if cost matters.
+  - **Status flip / Spanish step log**: shipped (see prior entry). Status piece now also being worked by Admin.
 - Filed 2 cross-lane endpoint asks with DevOps (`section=thrift` param + `GET /pub/store/:id`, exact shapes in
   devops.md) to unblock the thrift toggle + reopened-call address. Verified both are absent from `server.ts` today.
 
