@@ -1,6 +1,6 @@
 # Admin overhaul — QA test harness
 
-> Hand to QA **after** Admin ships the overhaul. **STAGING-FIRST: test on `staging.checkitforme.com/admin`** — the overhaul lands on the staging branch (`claude/checkitforme-website-takeover-pagiis`) and QA verifies there; only after sign-off does it promote (merge) to prod. Do NOT QA on prod. Each row: do the action, confirm the expected result. Mark PASS/FAIL.
+> Hand to QA **after** Admin ships the overhaul. **How our environments work:** there is **ONE Admin** — it always shows **production data**. Admin UI **code is promoted staging → production**. So QA verifies the overhaul on the **staging build** first; once it passes and the owner signs off, the code promotes to prod and is live on the one Admin. Verify on staging before promotion — not on prod, and there is no separate "staging admin." Each row: do the action, confirm the expected result. Mark PASS/FAIL.
 > **Specs:** `voice-caller/docs/design/ADMIN_UI_AUDIT.md` (the punch list) · `voice-caller/docs/design/STYLE_GUIDE.md` §3 (the type/size/color authority — Design's) · `voice-caller/docs/business/COPY_STYLE_GUIDE.md` (voice) · `voice-caller/docs/design/COPY_ADMIN_MASTER.md` (copy sweep).
 
 ## 1. The two bugs (must pass)
