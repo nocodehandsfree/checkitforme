@@ -53,6 +53,10 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
 consumer "Working → forward your receipt = free check" nudge is yours.
 
 **✅ Recently done** (newest first; trim when long):
+- **Voice strip rotation shipped** (owner-authorized cross-lane): workflows carry `voices[]`, rotated per call
+  on the workflow's counter (bridge path rotates the strip; admin dial: override → global pool → strip →
+  default). Admin → Workflows: chip strip + "+ Add a voice…"; Reset rotation now also resets voice #1.
+  Designer re-save preserves the strip. tsc + full test suite green.
 - **On staging, awaiting owner Fun-call verification** (3 bug fixes, `checkit.html`):
   - **Status flip**: `finalizeLive` no longer flashes "nobody answered" when the server verdict is slow on a
     *connected* call — it shows the neutral "getting the answer…" dots and `reconcileVerdict` upgrades in place
