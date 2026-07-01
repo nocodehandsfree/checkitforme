@@ -18,8 +18,9 @@ There is **one** source of truth and nothing may hardcode or duplicate a logo:
 - **Files:** `public/logos/chains/<slug>.png` — one transparent PNG per chain.
 - **Metadata:** `public/logos/chains/_meta.json` — per file `{ "w": 0|1, "d": 0|1 }`
   (`w:1` = wide wordmark, `d:1` = needs a light plate). 
-- **Resolver:** `chainLogoInfo(name)` in `src/server.ts` maps a store/chain **name → logo file**
-  and returns `{ url, wide, dark }`.
+- **Resolver:** `chainLogoInfo(name)` in `src/server.ts` maps a store/chain **name → logo** and
+  returns `{ url, wide, dark }`. It is **DB-first**: if the chain row has `logo_url` (shared R2 —
+  see §3) that wins; otherwise it falls back to the filesystem file above.
 - **Live tracker:** `public/logos/chains/STATUS.md` (which chains are done/approved).
 - **Design rules for an asset:** `public/logos/chains/README.md` (the 8 rules + new-store steps).
 
@@ -67,11 +68,13 @@ The registry is authoritative, but surfaces must stay fast:
    `chainLogoInfo` when an asset changes). The browser/CDN caches them after first paint.
 4. **The name→file resolve is already cached** server-side (~60s) and attached per-store, so
    there is no per-logo recompute at render time.
-5. **Keep images as static files. Do NOT store image blobs in a database** — that's slower, not
-   faster. If we ever want to skip even the request-time resolve at scale, denormalize just the
-   **pointer** (resolved filename + `w`/`d` flags) onto the chain record in the DB at
-   import/write time and read that column in `/pub/stores`. The files stay the source of truth;
-   the DB only caches the pointer — it never becomes a second source.
+5. **Never store image blobs in a database.** But logos ARE **DB-first from shared R2 (live now):**
+   each chain row carries `logo_url` → `logos.fungibles.com/chain-logos/<slug>.png` (shared R2,
+   identical on every environment). `chainLogoInfo` returns that URL when present and **falls back
+   to the filesystem file** when it's null. Populate it with `POST /api/chains/:id/logo` (one chain)
+   or `POST /api/admin/migrate-logos-to-r2` (one-shot: pushes every file to R2 and writes `logo_url`
+   + the `w`/`d` flags from `_meta`). The PNG files stay the source of truth; R2/the DB only cache
+   the image + pointer — never a second source. Full contract: `docs/DATA_PROVENANCE.md`.
 
 ---
 
@@ -87,7 +90,7 @@ Full rules + the step-by-step for a new chain live in `public/logos/chains/READM
 5. **Long mark-less names → two balanced lines** of their real lettering.
 6. **Readable on the dark grey** — keep brand color, lighten it if it's too dark.
 7. **Uniform size**, fill the tile, but margin so nothing clips/cuts off.
-8. **Verify at the true 46px tile size** (use `/logo-wall`), not a blown-up preview.
+8. **Verify at the true 52px tile size** (use `/logo-wall`), not a blown-up preview.
 
 ---
 
@@ -100,8 +103,9 @@ The admin now renders the same source of truth as the consumer. Implementation i
   `logoUrl`/`logoWide`/`logoDark` — no bulk load, no `/logo-wall` fetch.
 - **`storeWordmark(name,type)`** (`app.html:1428`) is the no-logo fallback, ported verbatim from
   `checkit.html` (the shared text wordmark — *not* a 2-letter monogram).
-- **`.slogo`** CSS (`app.html:246`) is pixel-identical to the consumer's `.ic` (46px tile, 42px
-  square mark, 44×auto·max-34 wide, `#f2f2f5` light plate for dark marks).
+- **`.slogo`** CSS (`app.html`) mirrors the consumer's `.ic` **logic** (44×auto·max-34 wide,
+  `#f2f2f5` light plate for dark marks) but at a **smaller tile for admin density**: `.slogo` is
+  **46px tile / 42px mark**, while the consumer `.ic` is **52px tile / 40px mark**.
 - The generic `storeTypeIco()` (`cart/box/store`) was demoted to a small secondary chip next to
   the name; the **logo leads**. The old dead `storeTile`/`loadLogos`/`LOGOS` map was removed.
 
@@ -114,7 +118,8 @@ Kept here as the spec to hold any future surface (or regression) to:
 - [x] **Fallback = the shared text wordmark** (`storeWordmark(name, type)`), not a 2-letter monogram.
 - [x] **Lazy + on-screen only:** `<img loading="lazy" decoding="async">`; per-row `logoUrl`, no bulk
       load, no `/logo-wall` in the app.
-- [x] **Same tile as the consumer** (pixel parity — these exact values, now in `.slogo`):
+- [x] **Same render logic as the consumer**, at the admin's own (smaller) tile — consumer `.ic` =
+      **52px tile / 40px mark**, admin `.slogo` = **46px / 42px** (values below):
 
 ```css
 /* tile */            width:46px; height:46px; border-radius:12px; background:rgba(255,255,255,.06);
