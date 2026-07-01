@@ -1,6 +1,7 @@
 # Admin overhaul — QA test harness
 
-> Hand to QA **after** Admin ships to staging. **How our environment works:** STAGING-FIRST. Changes land on the staging branch (`claude/checkitforme-website-takeover-pagiis`) → deploy to **`staging.checkitforme.com`**, where QA verifies *before* it's promoted to production. (There is **ONE Admin** — `admin.checkitforme.com`, internal, reads live prod data; "one admin" = one dashboard, NOT "no staging".) So **QA verifies on `staging.checkitforme.com`** — a rough edge caught here is fine (it hasn't shipped to prod yet). Each row: do the action, confirm the expected result. Mark PASS/FAIL.
+> Hand to QA **after** Admin ships. **How our environment works (per DevOps, current):** there is **ONE Admin — `admin.checkitforme.com`** (internal, owner-only, reads live prod data). **There is NO staging** — `staging.checkitforme.com` was retired and is dead. There is no "verify on staging then promote" step: **what's live is what ships.** So **QA verifies directly on `admin.checkitforme.com`** (and consumer copy on `checkitforme.com`) — a rough edge caught here is fine, no customers see the admin. Each row: do the action, confirm the expected result. Mark PASS/FAIL.
+> ⚠️ If you see this header say "staging-first," it was reverted in error — the line above is the current truth (DevOps killed staging). Do not send QA to `staging.checkitforme.com`.
 > **Specs:** `voice-caller/docs/design/ADMIN_UI_AUDIT.md` (the punch list) · `voice-caller/docs/design/STYLE_GUIDE.md` §3 (the type/size/color authority — Design's) · `voice-caller/docs/business/COPY_STYLE_GUIDE.md` (voice) · `voice-caller/docs/design/COPY_ADMIN_MASTER.md` (copy sweep).
 
 ## 1. The two bugs (must pass)
