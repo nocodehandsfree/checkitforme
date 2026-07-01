@@ -57,9 +57,11 @@ The gate between 1 and 2 is the owner confirming the Fun-store experience + cost
   (`fillP` in checkit.html); verdict flicker fix + "completed ≠ nobody_answered" + faster verdict (skip 2nd-read
   LLM when EL is decisive) + direct-call step log fix. Registry filled in prod.
 - [x] **Docs 51→21.** Deletions recoverable from git history.
-- [ ] **ROI win — wire ABC's exact-second open.** `chains.avgTreeSeconds` (learned time-to-human, 43 chains
-  have it) is NOT passed into the live call — ABC opens via VAD *guess*. Thread `connectAtSec = avgTreeSeconds`
-  through `buildRestockVars`→`placeBridgeCall` so voice-tree chains (CVS) open deterministically.
+- [x] **ROI win — wire ABC's exact-second open** (2026-07-01). `chains.avgTreeSeconds` now threads
+  `connectAtSec = avgTreeSeconds` through `buildRestockVars`→`bridgeStoreCall`→`placeBridgeCall`→`setBridgeContext`,
+  so the bridge's `recipe-timer` opens the billed agent on the learned second and VAD is skipped for chains that
+  have a time (0/null → old VAD + hold-timeout fallback, unchanged). Typecheck + suite green. Owner to confirm on a
+  Fun-store call that ABC fires on-second (needs `policy.flags.connectOnHuman:true`).
 - [ ] **Kill "Call failed" → real reasons.** voicemail/busy/bad_number exist in the registry but `mapStatus`
   never produces them (collapses to failed/no_answer). Map EL `termination_reason` → those, then drop "failed".
 - [ ] **Transcript echo** — bridge feeds some agent audio back as clerk input, corrupting extraction. Fix at bridge.

@@ -11,7 +11,7 @@ admin features (God-view, store CMS UI, voice studio, Tree Trainer, analytics, p
 - `public/checkit.html` (that's **Check - Website**), the store *data* itself (that's **Check - Data
   Dev** — you build the admin UI; they manage the rows), `src/**` core logic (request from **DevOps**).
 
-## ⛔ OFF-LIMITS — the live-call pipe (FROZEN; do NOT touch without DevOps sign-off)
+## Handle with care — the live-call pipe (it's finicky; test with a Fun call after any change)
 - `src/voice/bridge.ts` and the `/listen` + `/bridge` WebSocket handlers in `src/server.ts`.
 - The Cloudflare worker **`checkit-staging-proxy`** — carries the WebSocket for `staging.checkitforme.com`
   (source: `scripts/checkit-staging-proxy.worker.js`). Don't delete or redeploy it.

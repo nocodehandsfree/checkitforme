@@ -85,6 +85,16 @@ export class ElevenLabsProvider implements VoiceProvider {
 
     // Not finished yet — let the poller try again later.
     if (!["done", "completed", "failed"].includes(d.status)) return null;
+    // EL flips to "done" a beat BEFORE it finishes transcribing/analyzing. In that gap the transcript is
+    // still empty, and normalize() would mislabel a CONNECTED call (call_duration_secs > 0) as "no
+    // answer" — the "nobody answered, then not-in-stock only after reload" bug. If it's done but neither
+    // the transcript nor the analysis has landed yet on a call that DID connect, treat it as still
+    // finishing (return null → poller + consumer keep polling) so the first verdict shown is the real
+    // one. Self-clears the instant either lands; a call that never connected (0s) passes straight through
+    // as a genuine no-answer, and "failed" is always terminal.
+    const transcriptReady = (d.transcript?.length ?? 0) > 0;
+    const analysisReady = d.analysis != null;
+    if (d.status !== "failed" && !transcriptReady && !analysisReady && (d.metadata?.call_duration_secs ?? 0) > 0) return null;
 
     return normalize(d);
   }

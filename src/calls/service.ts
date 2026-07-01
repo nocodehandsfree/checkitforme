@@ -58,11 +58,16 @@ const jparse = (s: string | null, fb: unknown) => { try { return s ? JSON.parse(
 function composePersona(p: AnyObj | undefined): string {
   if (!p) return "";
   const bits: string[] = [];
-  if (p.base) bits.push(`Your overall vibe is ${String(p.base).toLowerCase()}.`);
+  // "Custom" (or blank) base = no canned vibe line — let the free-text Tone field carry it.
+  const base = p.base ? String(p.base).trim().toLowerCase() : "";
+  if (base && base !== "custom") bits.push(`Your overall vibe is ${base}.`);
   if (p.tone) bits.push(String(p.tone).trim());
   if (p.slang) bits.push("Use casual, natural slang the way a real local would.");
-  if (p.affection) bits.push("Be warm and a little affectionate — like chatting with a friendly regular.");
-  if (p.swear) bits.push("A light, casual swear word is fine if it fits naturally — keep it friendly, never aggressive.");
+  // Affection is what controls whether you use the staff member's name. On = warm + first-name once;
+  // off = stay professional and never call them by name even if they give it.
+  if (p.affection) bits.push("Be warm and a little affectionate, like chatting with a friendly regular. If they tell you their name, you can use it once, naturally.");
+  else bits.push("Keep it friendly but professional. Don't address them by name, even if they give it.");
+  if (p.swear) bits.push("A light, casual swear word is fine if it fits naturally. keep it friendly, never aggressive.");
   if (p.greet) bits.push(`A natural way you might open: "${String(p.greet).trim()}".`);
   return bits.join(" ").trim();
 }
@@ -113,7 +118,7 @@ export async function buildRestockVars(
   specificProduct?: string,
   extraCategoryIds?: number[],
   kioskMode?: boolean,
-): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; dynamicVars: Record<string, string> } | null> {
+): Promise<{ retailer: typeof retailers.$inferSelect; category: typeof categories.$inferSelect; chainName: string | null; dtmf: string | null; say: string | null; connectAtSec: number | null; maxTalk: number | null; voiceId: string | null; voiceTuning: Record<string, unknown> | null; dynamicVars: Record<string, string> } | null> {
   const retailer = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
   if (!retailer) return null;
   const category = (await db.select().from(categories).where(eq(categories.id, categoryId)))[0];
@@ -165,6 +170,10 @@ export async function buildRestockVars(
     // Bridge-level keypad shortcut (chain-wide): pressed by OUR code at a fixed time, not the LLM.
     dtmf: chain?.dtmfShortcut ?? null,
     say,
+    // ABC deterministic hand-off: open the billed agent at the chain's LEARNED time-to-human
+    // (chains.avgTreeSeconds, set from the locked recipe) instead of guessing from VAD. 0/null =
+    // no learned timer, so the bridge falls back to VAD + hold-timeout.
+    connectAtSec: chain?.avgTreeSeconds ?? null,
     // Per-store talk cap (chains.maxTalkSeconds). Null = caller falls back to the global bail cap.
     maxTalk: chain?.maxTalkSeconds ?? null,
     // Workflow voice (Voice→Designer): per-call voice + TTS tuning override when a workflow is assigned.
@@ -306,6 +315,11 @@ export async function triggerCall(a: TriggerArgs) {
   const phoneTree = retailer.phoneTree ?? chain?.phoneTreeDefault ?? undefined;
   const question = (a.question ?? defaultQ).replace(/\{category\}/g, category.label);
 
+  // Apply the store's assigned workflow (store → chain → global default), if any. Additive: when no
+  // workflow resolves, voice / opener / persona fall back to the exact global behavior below, so
+  // stores with no assignment behave identically to before.
+  const wf = await resolveWorkflow(retailer.id, retailer.chainId ?? null).catch(() => null);
+
   // Other tracked lines this store carries (for the restock cascade), excluding the primary.
   const otherCategories = (retailer.carries ?? "")
     .split(",").map((s) => s.trim()).filter((s) => s && s !== category.label);
@@ -317,8 +331,11 @@ export async function triggerCall(a: TriggerArgs) {
   // Test Bench passes its DRAFT opener via openingTemplate; live calls read the vt_opening setting.
   // Rotation (optional): if opener variants are set, round-robin them so the same store doesn't hear
   // the identical line every time (same voice, slightly different phrasing next call).
-  const openerVariants = ((await getSetting("vt_opener_variants")) || "").split("\n").map((s) => s.trim()).filter(Boolean);
-  const openerTemplate = a.openingTemplate ?? (rotatePick("opener", openerVariants) || (await getSetting("vt_opening")) || DEFAULT_OPENER);
+  // Workflow openers win when the assigned workflow defines them (rotated on their own per-workflow
+  // counter); otherwise the global vt_opener_variants list rotates as before.
+  const wfOpeners = wf?.openers ?? [];
+  const openerVariants = wfOpeners.length ? wfOpeners : ((await getSetting("vt_opener_variants")) || "").split("\n").map((s) => s.trim()).filter(Boolean);
+  const openerTemplate = a.openingTemplate ?? (rotatePick(wfOpeners.length ? "opener:" + wf!.name : "opener", openerVariants) || (await getSetting("vt_opening")) || DEFAULT_OPENER);
   const openingLine = openerTemplate.replace(/\{category\}/g, category.label);
 
   // Two decision trees off "verified": specific product check vs general restock.
@@ -345,7 +362,10 @@ export async function triggerCall(a: TriggerArgs) {
       productName: category.label,
       question,
       agentId,
-      voiceId: a.voiceId ?? rotatePick("voice", ((await getSetting("vt_voice_pool")) || "").split(",").map((s) => s.trim()).filter(Boolean)) ?? config.voice.defaultVoiceId,
+      // Voice: explicit override → rotate the voice pool → workflow voice → default. The pool wins over
+      // a workflow's single voice so an owner-configured ROTATION is never silently disabled by a
+      // default workflow; pool rotation is LIVE — with 2+ voices, consecutive calls alternate.
+      voiceId: a.voiceId ?? rotatePick("voice", ((await getSetting("vt_voice_pool")) || "").split(",").map((s) => s.trim()).filter(Boolean)) ?? wf?.voiceId ?? config.voice.defaultVoiceId,
       clarification,
       openingLine: mode === "restock" ? openingLine : undefined,
       phoneTree,
@@ -353,6 +373,8 @@ export async function triggerCall(a: TriggerArgs) {
       otherCategories: mode === "restock" ? otherCategories : [],
       askShipmentDay: a.askShipmentDay,
       voicemailPolicy,
+      // Persona from the assigned workflow fills {{personality}}. Empty when no workflow → same as before.
+      personalityTone: wf?.personality || undefined,
       // Kiosk-only store → agent asks about the vending kiosk. Explicit request flag wins; else inferred.
       kioskMode: a.kioskMode ?? kioskOnly(retailer),
       // Premium gate: subscribers (and comp/owner) get the product-type follow-up; free finders skip it.
@@ -540,6 +562,8 @@ export async function benchTestCall(a: {
     retailerId: a.retailerId, categoryId: a.categoryId, mode: a.mode ?? "restock",
     toOverride: a.toNumber, specificProduct: a.specificProduct,
     agentOverride: bench, openingTemplate: opening,
+    // Keep the bench's picked voice authoritative when workflow-voice preference kicks in below.
+    voiceId: a.voiceId,
   });
 }
 
