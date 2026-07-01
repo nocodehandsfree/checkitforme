@@ -41,3 +41,12 @@
 - [ ] Admin loads clean (no console errors, no blank sections).
 - [ ] Placing a real call, adding a store, editing a status, and saving a workflow all still work end to end.
 - [ ] Success toasts still fire on success (only the failure paths changed).
+
+## 7. Cleanup after sign-off (do this — don't let docs go stale)
+Once every box above is PASS and the owner signs off, **delete the one-time work-order docs.** Their job is done; the durable rules already live in the style guide.
+- [ ] Delete `voice-caller/docs/design/ADMIN_UI_AUDIT.md` (executed).
+- [ ] Delete `voice-caller/docs/design/COPY_ADMIN_MASTER.md` (applied — it's a change list, not a reference).
+- [ ] Delete this file, `voice-caller/docs/design/ADMIN_QA_HARNESS.md` (verified).
+- [ ] Commit as "docs: remove applied admin work-orders (in git history if needed)."
+
+**Keep (living references — do NOT delete):** `COPY_STYLE_GUIDE.md` (voice + type scale) · `BRAND.md`. Anything deleted is fully recoverable from git history.
