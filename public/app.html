@@ -876,6 +876,7 @@
 
       <div class="card dstep" data-step="3" style="display:none">
         <div class="name">Step 3 · Script</div>
+        <div class="meta" style="margin:2px 0 12px">The openers this workflow rotates through. <span data-tip="These are your shared scripts. Tick the ones to rotate on live calls. Once the workflow is saved, you can also fine-tune its openers per store on the Workflows page."></span></div>
         <label data-tip="Use {category}, fills in Pokémon, One Piece, etc.">Write a new opener</label>
         <textarea id="rot_opener_new" rows="3" style="font-size:13px;line-height:1.5" placeholder="e.g. Heyy! Got any {category} in today?"></textarea>
         <div class="btnrow"><button class="ghost" onclick="addOpener()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save opener</button></div>
@@ -885,18 +886,23 @@
 
       <div class="card dstep" data-step="4" style="display:none">
         <div class="name">Step 4 · Persona</div>
-        <label>Persona name</label><input id="pn_name" placeholder="e.g. Friendly Jared">
-        <label>Base personality</label>
+        <label data-tip="The persona live calls use for this workflow. Build one below, then tap it here to select it.">Persona for this workflow</label>
+        <div id="wf_persona_pick" class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:4px"></div>
+        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+        <div class="name" style="font-size:13px">Build a persona</div>
+        <div id="pn_edit_hint" class="meta" style="margin-top:4px"></div>
+        <label style="margin-top:8px">Persona name</label><input id="pn_name" placeholder="e.g. Friendly Jared">
+        <label>Base personality <span data-tip="A quick starting vibe. Pick Custom to skip the canned vibe line and let your Tone &amp; style text carry it."></span></label>
         <div id="pn_base" class="row" style="gap:6px"></div>
-        <label>Tone &amp; style</label><textarea id="pn_tone" rows="3" style="font-size:13px"></textarea>
+        <label>Tone &amp; style <span data-tip="Free text — whatever you write drops straight into the persona (e.g. 'Calm, a little dry humor, never pushy')."></span></label><textarea id="pn_tone" rows="3" style="font-size:13px"></textarea>
         <label>Style toggles</label>
         <div style="display:flex;flex-direction:column;gap:8px">
           <label class="day" style="margin:0"><input id="pn_slang" type="checkbox"> Casual slang</label>
           <label class="day" style="margin:0"><input id="pn_swear" type="checkbox"> Profanity OK</label>
-          <label class="day" style="margin:0"><input id="pn_affection" type="checkbox"> Affectionate (uses your name)</label>
+          <label class="day" style="margin:0" data-tip="On: if staff give their name, the agent may use it once. Off: it never calls them by name."><input id="pn_affection" type="checkbox"> Affectionate <span class="meta" style="font-weight:500">· uses the staff member's name</span></label>
         </div>
         <label>Greeting style</label><input id="pn_greet" placeholder="How they open the call">
-        <div class="btnrow"><button class="ghost" onclick="savePersona()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save persona</button></div>
+        <div class="btnrow"><button class="ghost" id="pn_cancel" onclick="pnCancel()" style="display:none">Cancel edit</button><button class="act" onclick="savePersona()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save persona</button></div>
         <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
         <label style="margin-top:0">Your personas</label>
         <div id="pn_list" style="margin-top:6px"></div>
@@ -906,14 +912,15 @@
         <div class="name">Step 5 · Rotation</div>
         <label>Scripts in rotation</label>
         <div id="rot_opener_list2" style="margin-top:4px" class="meta">Add scripts in Step 3.</div>
-        <label style="margin-top:16px" data-tip="Tick the voices to rotate through in TEST">Voices in rotation</label>
+        <label style="margin-top:16px" data-tip="Tick 2+ and live calls alternate between them, one per call. Tick just one to always use that voice.">Voices in rotation</label>
         <div id="rot_voices" class="meta" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px">Loading voices…</div>
-        <div class="meta" style="margin-top:8px;color:var(--orange)">Voice rotation is test-only right now. Live calls use the single live voice until DevOps turns it on.</div>
+        <div class="meta" style="margin-top:8px">Live calls rotate through the ticked voices and scripts, one per call.</div>
         <div class="btnrow"><button class="ghost" onclick="saveRotation(this)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save rotation</button><span class="meta" id="rot_msg"></span></div>
       </div>
 
       <div class="card dstep" data-step="6" style="display:none">
-        <div class="name">Step 6 · Test</div>
+        <div class="name">Step 6 · Test <span class="meta" style="font-weight:500">· optional</span></div>
+        <div class="meta" style="margin:2px 0 12px">Rings your phone so you can hear the voice, tuning, and openers before you save. <span data-tip="A quick gut-check. Staging (staging.checkitforme.com) is still the full end-to-end test with real store calls."></span></div>
         <label>Store</label><select id="sim_store" onchange="previewMaybe()"><option value="" disabled selected>Loading stores</option></select>
         <label>Category to ask about</label><select id="sim_cat" onchange="previewMaybe()"></select>
         <label data-tip="The agent dials this number">Your phone</label><input id="sim_phone" placeholder="+13106662331">
@@ -1581,7 +1588,7 @@ async function loadRotation(voices){
   OPENERS=openersFromSettings(s); renderOpeners(); syncTestVoices();
 }
 // Openers = a LIBRARY of scripts, each on/off. Ticked ones rotate on live calls (vt_opener_variants);
-// the full list saves to vt_opener_library (DevOps adding) so unticked drafts survive.
+// the full list saves to vt_opener_library so unticked drafts survive.
 let OPENERS=[]; // [{text, on}]
 function openersFromSettings(s){
   let lib=null; try{ if(s.vt_opener_library) lib=JSON.parse(s.vt_opener_library); }catch(e){}
@@ -1618,7 +1625,7 @@ async function saveRotation(btn){
   const library=JSON.stringify(OPENERS.map(x=>({text:x.text,on:x.on})));
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({voicePool,openerVariants,openerLibrary:library})});
   btn.textContent=o; btn.disabled=false;
-  const m=document.getElementById('rot_msg'); if(m) m.textContent=(r&&!r.error)?'Saved. Live calls rotate these scripts. (Voice rotation is test-only for now.)':"Couldn't save the scripts";
+  const m=document.getElementById('rot_msg'); if(m) m.textContent=(r&&!r.error)?'Saved. Live calls rotate these voices and scripts.':"Couldn't save the scripts";
 }
 // ---- Test: store list from /api/test-stores, voice pool + rotate, visible per-call rotation ----
 let TEST_STORES=[], TEST_ROT={call:0};
@@ -1671,33 +1678,54 @@ function dNext(n){ DMAX=Math.max(DMAX,n); dGo(n); }
 function dBack(){ if(DSTEP>1) dGo(DSTEP-1); }
 function dFwd(){ if(DSTEP<7){ DMAX=Math.max(DMAX,DSTEP+1); dGo(DSTEP+1); } }
 function dPrev(n){ dGo(n); }
-// Personas (scaffold — saved to settings; backend wiring to live calls is pending DevOps).
-let PERSONAS=[], PN_SEL='Professional';
+// Personas: named agent voices saved to settings (vt_personas). A workflow SELECTS one by name; the
+// server composes it into {{personality}} on that workflow's live + bench calls.
+let PERSONAS=[], PN_SEL='Professional', WF_PERSONA='', PN_EDIT=-1;
 const PN_BASE=['Professional','Friendly','Hyped','Warm','Custom'];
 function pnBaseRender(){ const b=document.getElementById('pn_base'); if(!b) return; b.innerHTML=PN_BASE.map(p=>`<span class="chip-sm" onclick="pnPick('${p}')" style="cursor:pointer;${p===PN_SEL?'color:var(--green);background:var(--tint-green-bg);border:1px solid var(--tint-green-border)':'background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border-medium)'}">${p}</span>`).join(''); }
 function pnPick(p){ PN_SEL=p; pnBaseRender(); }
+// The workflow's persona selector — chips of saved personas (+ None). Picking one binds it to the workflow.
+function wfPersonaRender(){
+  const el=document.getElementById('wf_persona_pick'); if(!el) return;
+  const chip=(idx,label,on)=>`<span class="chip-sm" onclick="wfPersonaPickIdx(${idx})" style="cursor:pointer;${on?'color:var(--green);background:var(--tint-green-bg);border:1px solid var(--tint-green-border)':'background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border-medium)'}">${esch(label)}</span>`;
+  let html=chip(-1,'None',!WF_PERSONA);
+  html+=(PERSONAS||[]).map((p,idx)=>chip(idx,p.name,WF_PERSONA===p.name)).join('');
+  if(!(PERSONAS||[]).length) html+='<span class="meta" style="align-self:center">— build one below</span>';
+  el.innerHTML=html;
+}
+function wfPersonaPickIdx(idx){ WF_PERSONA=(idx<0||!PERSONAS[idx])?'':PERSONAS[idx].name; renderPersonas(); }
 function renderPersonas(){
+  wfPersonaRender();
   const el=document.getElementById('pn_list'); if(!el) return;
-  if(!PERSONAS.length){ el.innerHTML='<div class="meta">No personas yet. fill in the fields above and save one.</div>'; return; }
+  if(!PERSONAS.length){ el.innerHTML='<div class="meta">No personas yet. build one above and save it.</div>'; return; }
   el.innerHTML=PERSONAS.map((p,i)=>{
     const tags=[]; if(p.slang)tags.push('Casual slang'); if(p.swear)tags.push('Profanity OK'); if(p.affection)tags.push('Affectionate');
     const pills=tags.map(t=>`<span class="chip-sm" style="color:var(--text-muted);background:var(--surface-2);border:1px solid var(--border-medium)">${t}</span>`).join('');
-    return `<div class="card" style="background:var(--surface-1);padding:12px 14px;margin-bottom:8px">
+    const sel=WF_PERSONA===p.name;
+    return `<div class="card" style="background:var(--surface-1);padding:12px 14px;margin-bottom:8px;${sel?'border-color:var(--tint-green-border)':''}">
       <div class="row" style="align-items:flex-start;gap:10px">
         <div class="grow">
-          <div class="name" style="font-size:13px">${esch(p.name)}</div>
+          <div class="name" style="font-size:13px">${esch(p.name)}${sel?' <span class="meta" style="color:var(--green);font-weight:600">· in this workflow</span>':''}</div>
           ${p.base?`<div class="meta" style="margin-top:2px">${esch(p.base)} personality</div>`:''}
         </div>
-        <button class="ghost" style="padding:6px 10px" title="Load to edit" onclick="pnLoad(${i})">${lucideSvg('pencil',14,'currentColor')}</button>
+        <button class="ghost" style="padding:6px 10px" title="Use in this workflow" onclick="wfPersonaPickIdx(${i})">${lucideSvg('check',14,'currentColor')}</button>
+        <button class="ghost" style="padding:6px 10px" title="Edit" onclick="pnLoad(${i})">${lucideSvg('pencil',14,'currentColor')}</button>
         <button class="ghost" style="padding:6px 10px" title="Delete" onclick="pnDelete(${i})">${lucideSvg('trash-2',14,'currentColor')}</button>
       </div>
-      ${p.greet?`<div class="meta" style="margin-top:8px;color:var(--text-body)">Greets with: “${esch(p.greet)}”</div>`:''}
+      ${p.greet?`<div class="meta" style="margin-top:8px;color:var(--text-body)">Greets with: \u201c${esch(p.greet)}\u201d</div>`:''}
       ${p.tone?`<div class="meta" style="margin-top:6px;color:var(--text-body);line-height:1.45">${esch(p.tone)}</div>`:''}
       ${pills?`<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">${pills}</div>`:''}
     </div>`;
   }).join('');
 }
-function pnLoad(i){ const p=PERSONAS[i]; if(!p) return;
+function pnEditHint(){ const h=document.getElementById('pn_edit_hint'), c=document.getElementById('pn_cancel');
+  if(PN_EDIT>=0 && PERSONAS[PN_EDIT]){ if(h) h.textContent='Editing \u201c'+(PERSONAS[PN_EDIT].name||'')+'\u201d. change anything, then Save to update it.'; if(c) c.style.display=''; }
+  else { if(h) h.textContent='New persona.'; if(c) c.style.display='none'; }
+}
+function pnClearForm(){ ['pn_name','pn_tone','pn_greet'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  ['pn_slang','pn_swear','pn_affection'].forEach(id=>{ const e=document.getElementById(id); if(e) e.checked=false; });
+  PN_SEL='Professional'; pnBaseRender(); }
+function pnLoad(i){ const p=PERSONAS[i]; if(!p) return; PN_EDIT=i;
   document.getElementById('pn_name').value=p.name||'';
   PN_SEL=p.base||'Professional'; pnBaseRender();
   document.getElementById('pn_tone').value=p.tone||'';
@@ -1705,22 +1733,35 @@ function pnLoad(i){ const p=PERSONAS[i]; if(!p) return;
   document.getElementById('pn_swear').checked=!!p.swear;
   document.getElementById('pn_affection').checked=!!p.affection;
   document.getElementById('pn_greet').value=p.greet||'';
+  pnEditHint();
   const d=document.getElementById('designer'); if(d) d.scrollIntoView({behavior:'smooth',block:'start'});
-  toast('Loaded. Edit, then Save to update it.');
+  toast('Loaded \u201c'+(p.name||'')+'\u201d. edit, then Save.');
 }
-async function pnDelete(i){ const p=PERSONAS[i]; if(!p) return; if(!confirm('Delete persona “'+p.name+'”?')) return;
+function pnCancel(){ PN_EDIT=-1; pnClearForm(); pnEditHint(); }
+async function pnDelete(i){ const p=PERSONAS[i]; if(!p) return; if(!confirm('Delete persona \u201c'+p.name+'\u201d?')) return;
+  if(WF_PERSONA===p.name) WF_PERSONA='';
+  if(PN_EDIT===i) pnCancel(); else if(PN_EDIT>i) PN_EDIT--;
   PERSONAS.splice(i,1);
   await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})});
   renderPersonas(); toast('Deleted');
 }
-async function loadPersonas(){ pnBaseRender(); const s=await api('/api/settings')||{}; try{ PERSONAS=JSON.parse(s.vt_personas||'[]'); }catch(e){ PERSONAS=[]; } renderPersonas(); }
+async function loadPersonas(){ pnBaseRender(); const s=await api('/api/settings')||{}; try{ PERSONAS=JSON.parse(s.vt_personas||'[]'); }catch(e){ PERSONAS=[]; } if(!Array.isArray(PERSONAS)) PERSONAS=[];
+  // One-time cleanup: drop any seeded "(sample)" placeholder persona (the owner asked to remove 'Friendly Local (sample)').
+  const _n0=PERSONAS.length; PERSONAS=PERSONAS.filter(p=>p&&!/\(sample\)/i.test(String(p.name||'')));
+  if(PERSONAS.length!==_n0){ try{ await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})}); }catch(e){} }
+  pnEditHint(); renderPersonas(); }
 async function savePersona(){ const name=v('pn_name'); if(!name){ toast('Name the persona first'); return; }
   const p={name, base:PN_SEL, tone:v('pn_tone'), slang:document.getElementById('pn_slang').checked, swear:document.getElementById('pn_swear').checked, affection:document.getElementById('pn_affection').checked, greet:v('pn_greet')};
-  const idx=PERSONAS.findIndex(x=>x.name===name); if(idx>=0) PERSONAS[idx]=p; else PERSONAS.push(p);
-  await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})});
-  document.getElementById('pn_name').value=''; renderPersonas(); toast(idx>=0?'Persona updated':'Persona saved'); }
+  let updated=false, oldName='';
+  if(PN_EDIT>=0 && PERSONAS[PN_EDIT]){ oldName=PERSONAS[PN_EDIT].name; PERSONAS[PN_EDIT]=p; updated=true; }
+  else { const idx=PERSONAS.findIndex(x=>x.name===name); if(idx>=0){ oldName=name; PERSONAS[idx]=p; updated=true; } else PERSONAS.push(p); }
+  if(updated && oldName && WF_PERSONA===oldName) WF_PERSONA=name;  // follow a rename
+  if(!WF_PERSONA) WF_PERSONA=name;  // first persona auto-selects for the workflow
+  const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})});
+  PN_EDIT=-1; pnClearForm(); pnEditHint(); renderPersonas();
+  toast((r&&!r.error)?(updated?'Persona updated':'Persona saved, selected for this workflow'):"Couldn't save the persona"); }
 async function saveWorkflow(){ const name=v('wf_name'); if(!name){ toast('Name the workflow first'); return; }
-  const wf={name, voiceId:(document.getElementById('vs_select')||{}).value||'', tuning:sandboxBody(), openers:OPENERS.filter(o=>o.on).map(o=>o.text), persona:PN_SEL, savedAt:Date.now()};
+  const wf={name, voiceId:(document.getElementById('vs_select')||{}).value||'', tuning:sandboxBody(), openers:OPENERS.filter(o=>o.on).map(o=>o.text), persona:WF_PERSONA, savedAt:Date.now()};
   let WFS=[]; const s=await api('/api/settings')||{}; try{ WFS=JSON.parse(s.vt_workflows||'[]'); }catch(e){}
   const i=WFS.findIndex(w=>w.name===name); if(i>=0) WFS[i]=wf; else WFS.push(wf);
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WFS)})});
@@ -3352,7 +3393,7 @@ function applyWorkflowToDesigner(w){
   if(typeof updateDraftDot==='function') updateDraftDot();
   OPENERS=(Array.isArray(w.openers)?w.openers:[]).map(text=>({text,on:true}));
   if(typeof renderOpeners==='function') renderOpeners();
-  if(w.persona){ PN_SEL=w.persona; if(typeof pnBaseRender==='function') pnBaseRender(); if(typeof renderPersonas==='function') renderPersonas(); }
+  WF_PERSONA = (Array.isArray(PERSONAS)&&PERSONAS.some(p=>p&&p.name===w.persona)) ? w.persona : ''; if(typeof renderPersonas==='function') renderPersonas();
   const msg=g('wf_msg'); if(msg) msg.textContent='Editing “'+w.name+'”. change anything (including tuning), then Save workflow to overwrite it.';
   toast('Loaded “'+w.name+'” into the Designer');
 }
