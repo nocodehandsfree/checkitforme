@@ -175,6 +175,10 @@ __BRAND_HEAD__
     box-shadow:0 8px 26px color-mix(in srgb,var(--accent,#FFCB05) 30%,transparent);transition:transform .08s}
   .csheet-call:active{transform:translateY(1px)}
   .csheet-call:disabled{opacity:.55;cursor:not-allowed}
+  /* Left group inside the call CTA (icon+label) — inherits the button gap so v1 renders identically;
+     the trailing arrow only exists in the v2 layout (P2 comp: label left, arrow right). */
+  .cs-l{display:inline-flex;align-items:center;gap:10px;min-width:0}
+  .cs-arrow{display:none}
   /* animated sound-wave phone INSIDE the gold slide-up button (dark, currentColor — reuses ckWave) */
   .cs-ph{fill:currentColor}
   .cs-wv{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;transform-box:view-box;transform-origin:31px 15px;animation:ckWave 2s ease-out infinite}
@@ -1117,10 +1121,33 @@ html[data-skin="v2"] .maplegend{background:linear-gradient(180deg,#2E2E35 0%,#25
 /* Capsule CTAs (§5.2): 2.5px gradient ring around a dark capsule, tracked-caps label. Green ring =
    primary; the CALL action inside the sheet takes the accent ring (P2 "CHECK THIS STORE"). */
 html[data-skin="v2"] .cta{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#4ADE80;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 28px -8px rgba(25,177,69,.45)}
-html[data-skin="v2"] .csheet .cta,html[data-skin="v2"] .cs-call{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,color-mix(in srgb,var(--accent,#FFCB05) 55%,#FFF) 0%,var(--accent,#FFCB05) 55%,color-mix(in srgb,var(--accent,#FFCB05) 45%,#000) 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:var(--accent,#FFCB05);font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 28px -8px color-mix(in srgb,var(--accent,#FFCB05) 40%,transparent)}
+html[data-skin="v2"] .csheet .cta,html[data-skin="v2"] .csheet-call{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,color-mix(in srgb,var(--accent,#FFCB05) 55%,#FFF) 0%,var(--accent,#FFCB05) 55%,color-mix(in srgb,var(--accent,#FFCB05) 45%,#000) 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:var(--accent,#FFCB05);font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 28px -8px color-mix(in srgb,var(--accent,#FFCB05) 40%,transparent)}
 /* Bottom sheet (P2/§5.11): big-card surface, top radius 28, 40×5 grabber; keys raised. */
 html[data-skin="v2"] .csheet{background:#26262B;border:0;border-radius:28px 28px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7)}
 html[data-skin="v2"] .csheet-handle{width:40px;height:5px;background:rgba(255,255,255,.22)}
+/* P2 EXACTNESS — dim rgba(5,6,9,.6); pad 10/22/30; head gap 13; logo tile raised w/ 42px art;
+   name 20/800/-.3; meta 13/600 #8A8A96 (Open = #4ADE80); product line 14 w/ accent-800 name +
+   muted-white suffix; CTA capsule 14/24: waves-phone + label LEFT, arrow RIGHT (space-between). */
+/* §3 law: green is THE action color — the old skin's purple accents (search pin, Find-my-stores,
+   translate key, share chips) all re-key to green under v2. Comp P2 shows the well pin green. */
+html[data-skin="v2"]{--purple:#4ADE80;--ptint:rgba(74,222,128,.14);--pline:rgba(74,222,128,.42)}
+html[data-skin="v2"] .csheet-bd{background:rgba(5,6,9,.6)}
+html[data-skin="v2"] .csheet{padding:10px 22px calc(30px + env(safe-area-inset-bottom))}
+html[data-skin="v2"] .csheet-handle{margin:0 auto 18px}
+html[data-skin="v2"] .csheet-head{gap:13px}
+html[data-skin="v2"] .csheet-ic img{max-width:42px;max-height:42px}
+html[data-skin="v2"] .csheet-ic.widelogo img{max-width:52px}
+html[data-skin="v2"] .csheet-nm{font-size:20px;font-weight:800;letter-spacing:-.3px}
+html[data-skin="v2"] .csheet-addr{margin-top:3px;font-size:13px;font-weight:600;color:#8A8A96;white-space:normal} /* never ellipsize the green Open state */
+html[data-skin="v2"] .csheet-addr .cs-open{color:#4ADE80}
+html[data-skin="v2"] .csheet-prod{font-size:14px;font-weight:800}
+html[data-skin="v2"] .csheet-prod span{color:rgba(255,255,255,.75);font-weight:600}
+html[data-skin="v2"] .csheet-call{padding:14px 24px}
+html[data-skin="v2"] #cs_call{justify-content:space-between}
+html[data-skin="v2"] #cs_call .cs-l>svg{width:20px;height:20px}
+html[data-skin="v2"] #cs_call .cs-arrow{display:block;flex:0 0 auto}
+html[data-skin="v2"] .csheet-charge{color:#8A8A96}
+html[data-skin="v2"] .csheet-charge b{color:#CDCDD8}
 html[data-skin="v2"] .cs-key{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);animation:none}
 /* Option chips (§5.12): raised buttons that LIGHT UP green when on — never carved form fields. */
 html[data-skin="v2"] .chip{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;color:#CDCDD8;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
@@ -1219,7 +1246,7 @@ html[data-skin="v2"] .plan.sub{background:#26251E;box-shadow:0 0 0 2px color-mix
 html[data-skin="v2"] .rhead{background:#26262B;border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .proof{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
 html[data-skin="v2"] .smline{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
-html[data-skin="v2"] .csheet-ic{background:#1F1F25;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+html[data-skin="v2"] .csheet-ic{background:#1F1F25;border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] #mapview{border:0;background:#17171C;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
 html[data-skin="v2"] .kioskhint{border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
 /* AUDIT SWEEP 2 — remaining v1 borders/fills, grouped by role. Raised = interactive chrome;
@@ -1478,7 +1505,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <div style="min-width:0;flex:1"><div class="csheet-nm" id="cs_nm"></div><div class="csheet-addr" id="cs_addr"></div></div>
   </div>
   <div class="csheet-prod" id="cs_prod"></div>
-  <button class="csheet-call" id="cs_call" onclick="startCheck()"><svg width="30" height="30" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span>Check this store</span></button>
+  <button class="csheet-call" id="cs_call" onclick="startCheck()"><span class="cs-l"><svg width="30" height="30" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span>Check this store</span></span><svg class="cs-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
   <div class="csheet-charge" data-i18n="charge"><b>No answer = no charge.</b></div>
 </div>
 

@@ -101,7 +101,15 @@ v2 DOM to MIRROR it — layout, order, spacing, copy positions — not restyle t
 renders (isV2() branches) so the default site stays untouched. One screen per cycle, screenshot proof.**
 - [~] 6m RESULT rebuilt in code (comp timeline: gradient rail + full-width STAFF/CHECK-AI cards + verdict line; comp section order; emoji circle gone) — screenshot proof vs comp still owed
 - [~] live-call rebuilt (shares the 6m timeline renderer; live state = green rail, no verdict) — screenshot proof owed
-- [ ] P2 sheet exact (store head, 'costs 1 check' line, capsule)
+- [x] P2 sheet exact (cycle): FOUND+FIXED a dead selector — the v2 capsule rule targeted `.cs-call` but the real
+  class is `.csheet-call`, so the sheet CTA was still old-skin gold under v2. Now: accent ring capsule 14/24,
+  tracked-caps label + waves-phone LEFT, arrow RIGHT (arrow exists in markup but display:none outside v2 —
+  v1 renders identically); dim rgba(5,6,9,.6); sheet pad 10/22/30, grabber 18px gap; head gap 13, logo tile
+  raised + 42px art; name 20/800/-.3; meta 13/600 #8A8A96 w/ #4ADE80 Open (wrap allowed — never ellipsize the
+  open state); product line 14 accent-800 + muted-white suffix. BONUS: v2 re-keys the old skin's PURPLE vars
+  (--purple/--ptint/--pline) → green — kills the purple search-pin/Find-my-stores/translate-key/share-chip
+  leaks in one move (§3 green = THE action color; comp P2 shows the well pin green).
+  **PROOF: `loops/site-redesign/proofs/P2-sheet-v2.png`** (proofs dir started this cycle — backfilling owed shots next).
 - [x] L1a–c exact (cycle): phone/code wells carved (inline old-skin overridden), CONTINUE/VERIFY = green ring capsules, Resend/Change-number purple→GREEN dashed links (comp note), staging dev-hint hidden under v2 (L1c law: env chrome never ships), 🇺🇸+1 prefix + 'First check's on us!' already matched · [~] 6a upsell BUILT (pop-up: 2-line 900 title, 3 green feature rows, SEE CHECK+ PLANS capsule; fires ONCE after the first free check under v2; ?show=signup previews it) · [~] 6b plans REBUILT (bottom sheet w/ grabber, 2-line 900 header, 'Every plan gets' 2-col check grid, cycle toggle + POLICY tier tiles w/ muted-yellow ring; Check+/Buy-checks toggle DEFERRED on the catalog-debt note in devops.md) — screenshot proof owed · [ ] 6c checkout (DECIDED: Stripe-hosted stays — backend architecture; sheet covers through plan pick) · [~] 6d you're-in REBUILT (pop-up: 'You're in.' 24/900, runtime plan/credits line, stat tiles, 'Now live' green-check list, '+5 more in Manage plan›', RUN A CHECK capsule; fires on ?paid=1 under v2 after auth refresh; preview ?show=paid) — screenshot proof owed
 - [~] 6e overview REBUILT (green-wash header My✓/Done/phone/plan-chip, overlapping stat tiles CHECKS LEFT/RUN, Overview·Activity·Earn keys, yellow icon rows; legacy header hidden) — screenshot proof owed · [~] 6f activity REBUILT (8-wk bar chart, tone stat chips, History›, last-3 rows w/ status chips — all from local+server history) · [~] 6g earn REBUILT (lead line + 4 earn rows wired: add-store, invite, post-score, kiosk receipt; reward-number chips omitted until runtime numbers exist — DECIDED, never invent) · [x] 6h new-user variant (Free/'Free check used' chip; full-width UPGRADE·from-$X capsule from runtime tiers for non-members) · [x] 6i history header ('Check history' 20/800 + Done + 'N checks in {month}' on both landing renders)
 - [ ] R1/R2/R3 restock exact · [ ] SC1/SC2 exact · [ ] RN1/RN2 exact · [ ] P1 home detail pass · [ ] P6/P6b/P6c detail pass
@@ -195,6 +203,11 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
 - [x] Error/empty sweep: all ride restyled toast/modal/CTA systems; no bespoke chrome found.
 
 ## DECIDED LOG
+- FIXED (P2 pass): v2 sheet-CTA rule targeted nonexistent `.cs-call` (real class `.csheet-call`) — the call
+  button was still v1 gold under v2 until now. This is exactly the class of miss the rendered-screenshot pass
+  exists to catch; harness already covers it going forward (qa-e2e renders the accent pieces per brand).
+- DECIDED (P2 pass): v2 re-keys --purple/--ptint/--pline to green rather than per-selector fixes — one rule,
+  zero purple anywhere under v2, v1 untouched. #again_yes ("check again") inherits the accent capsule too.
 - DECIDED: L1c staging hint (code-prefilled note) hidden under v2 per the board's own law; v1 keeps it for owner testing convenience.
 - FIXED (found during L1 pass): corrupted duplicate shareOverlay opening tag (bad merge artifact) — invalid HTML repaired.
 - DECIDED: comp animation names collide with the existing ripple `ckWave` — v2 uses ckWaveV2/ckGlowV2 (same curves as §5.3; the guide's requirement is the behavior, not the name).
