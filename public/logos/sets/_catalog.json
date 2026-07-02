@@ -1,0 +1,1540 @@
+{
+ "_note": "All Pokémon TCG eras/sets (pokemontcg.io) + data-dev upcoming. For /logo-wall/sets. Filenames = api id.",
+ "eras": [
+  {
+   "era": "Base",
+   "short": "BS",
+   "years": "1999–2000",
+   "sets": [
+    {
+     "code": "BS",
+     "name": "Base",
+     "release": "1999-01-09",
+     "apiId": "base1",
+     "logoFile": "base1.png",
+     "dom": "#f8f8f8"
+    },
+    {
+     "code": "JU",
+     "name": "Jungle",
+     "release": "1999-06-16",
+     "apiId": "base2",
+     "logoFile": "base2.png",
+     "dom": "#f8f8f8"
+    },
+    {
+     "code": "PR",
+     "name": "Wizards Black Star Promos",
+     "release": "1999-07-01",
+     "apiId": "basep",
+     "logoFile": "basep.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "FO",
+     "name": "Fossil",
+     "release": "1999-10-10",
+     "apiId": "base3",
+     "logoFile": "base3.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "B2",
+     "name": "Base Set 2",
+     "release": "2000-02-24",
+     "apiId": "base4",
+     "logoFile": "base4.png",
+     "dom": "#584828"
+    },
+    {
+     "code": "TR",
+     "name": "Team Rocket",
+     "release": "2000-04-24",
+     "apiId": "base5",
+     "logoFile": "base5.png",
+     "dom": "#281818"
+    }
+   ]
+  },
+  {
+   "era": "Gym",
+   "short": "GYM",
+   "years": "2000–2000",
+   "sets": [
+    {
+     "code": "G1",
+     "name": "Gym Heroes",
+     "release": "2000-08-14",
+     "apiId": "gym1",
+     "logoFile": "gym1.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "G2",
+     "name": "Gym Challenge",
+     "release": "2000-10-16",
+     "apiId": "gym2",
+     "logoFile": "gym2.png",
+     "dom": "#f8f8f8"
+    }
+   ]
+  },
+  {
+   "era": "Neo",
+   "short": "NEO",
+   "years": "2000–2002",
+   "sets": [
+    {
+     "code": "N1",
+     "name": "Neo Genesis",
+     "release": "2000-12-16",
+     "apiId": "neo1",
+     "logoFile": "neo1.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "N2",
+     "name": "Neo Discovery",
+     "release": "2001-06-01",
+     "apiId": "neo2",
+     "logoFile": "neo2.png",
+     "dom": "#f80818"
+    },
+    {
+     "code": "N3",
+     "name": "Neo Revelation",
+     "release": "2001-09-21",
+     "apiId": "neo3",
+     "logoFile": "neo3.png",
+     "dom": "#e88828"
+    },
+    {
+     "code": "N4",
+     "name": "Neo Destiny",
+     "release": "2002-02-28",
+     "apiId": "neo4",
+     "logoFile": "neo4.png",
+     "dom": "#080808"
+    }
+   ]
+  },
+  {
+   "era": "Other",
+   "short": "OTH",
+   "years": "2001–2022",
+   "sets": [
+    {
+     "code": "OTH01",
+     "name": "Southern Islands",
+     "release": "2001-07-31",
+     "apiId": "si1",
+     "logoFile": "si1.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "LC",
+     "name": "Legendary Collection",
+     "release": "2002-05-24",
+     "apiId": "base6",
+     "logoFile": "base6.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "BP",
+     "name": "Best of Game",
+     "release": "2002-12-01",
+     "apiId": "bp",
+     "logoFile": "bp.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "OTH04",
+     "name": "Pokémon Rumble",
+     "release": "2009-12-02",
+     "apiId": "ru1",
+     "logoFile": "ru1.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "OTH05",
+     "name": "McDonald's Collection 2011",
+     "release": "2011-06-17",
+     "apiId": "mcd11",
+     "logoFile": "mcd11.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "OTH06",
+     "name": "McDonald's Collection 2012",
+     "release": "2012-06-15",
+     "apiId": "mcd12",
+     "logoFile": "mcd12.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "OTH07",
+     "name": "McDonald's Collection 2014",
+     "release": "2014-05-23",
+     "apiId": "mcd14",
+     "logoFile": "mcd14.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "OTH08",
+     "name": "McDonald's Collection 2015",
+     "release": "2015-11-27",
+     "apiId": "mcd15",
+     "logoFile": "mcd15.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "OTH09",
+     "name": "McDonald's Collection 2016",
+     "release": "2016-08-19",
+     "apiId": "mcd16",
+     "logoFile": "mcd16.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "OTH10",
+     "name": "McDonald's Collection 2017",
+     "release": "2017-11-07",
+     "apiId": "mcd17",
+     "logoFile": "mcd17.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "OTH11",
+     "name": "McDonald's Collection 2018",
+     "release": "2018-10-16",
+     "apiId": "mcd18",
+     "logoFile": "mcd18.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "OTH12",
+     "name": "McDonald's Collection 2019",
+     "release": "2019-10-15",
+     "apiId": "mcd19",
+     "logoFile": "mcd19.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "FUT20",
+     "name": "Pokémon Futsal Collection",
+     "release": "2020-09-11",
+     "apiId": "fut20",
+     "logoFile": "fut20.png",
+     "dom": "#180848"
+    },
+    {
+     "code": "OTH14",
+     "name": "McDonald's Collection 2021",
+     "release": "2021-02-09",
+     "apiId": "mcd21",
+     "logoFile": "mcd21.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "OTH15",
+     "name": "McDonald's Collection 2022",
+     "release": "2022-08-03",
+     "apiId": "mcd22",
+     "logoFile": "mcd22.png",
+     "dom": "#080808"
+    }
+   ]
+  },
+  {
+   "era": "E-Card",
+   "short": "EC",
+   "years": "2002–2003",
+   "sets": [
+    {
+     "code": "EX",
+     "name": "Expedition Base Set",
+     "release": "2002-09-15",
+     "apiId": "ecard1",
+     "logoFile": "ecard1.png",
+     "dom": "#b8c8c8"
+    },
+    {
+     "code": "AQ",
+     "name": "Aquapolis",
+     "release": "2003-01-15",
+     "apiId": "ecard2",
+     "logoFile": "ecard2.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SK",
+     "name": "Skyridge",
+     "release": "2003-05-12",
+     "apiId": "ecard3",
+     "logoFile": "ecard3.png",
+     "dom": "#f8f8f8"
+    }
+   ]
+  },
+  {
+   "era": "EX",
+   "short": "EX",
+   "years": "2003–2007",
+   "sets": [
+    {
+     "code": "RS",
+     "name": "Ruby & Sapphire",
+     "release": "2003-07-01",
+     "apiId": "ex1",
+     "logoFile": "ex1.png",
+     "dom": "#f8f8f8"
+    },
+    {
+     "code": "SS",
+     "name": "Sandstorm",
+     "release": "2003-09-18",
+     "apiId": "ex2",
+     "logoFile": "ex2.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "DR",
+     "name": "Dragon",
+     "release": "2003-11-24",
+     "apiId": "ex3",
+     "logoFile": "ex3.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "MA",
+     "name": "Team Magma vs Team Aqua",
+     "release": "2004-03-01",
+     "apiId": "ex4",
+     "logoFile": "ex4.png",
+     "dom": "#281818"
+    },
+    {
+     "code": "HL",
+     "name": "Hidden Legends",
+     "release": "2004-06-01",
+     "apiId": "ex5",
+     "logoFile": "ex5.png",
+     "dom": "#a80818"
+    },
+    {
+     "code": "EX06",
+     "name": "EX Trainer Kit Latias",
+     "release": "2004-06-01",
+     "apiId": "tk1a",
+     "logoFile": "tk1a.png",
+     "dom": "#085898"
+    },
+    {
+     "code": "EX07",
+     "name": "EX Trainer Kit Latios",
+     "release": "2004-06-01",
+     "apiId": "tk1b",
+     "logoFile": "tk1b.png",
+     "dom": "#085898"
+    },
+    {
+     "code": "RG",
+     "name": "FireRed & LeafGreen",
+     "release": "2004-09-01",
+     "apiId": "ex6",
+     "logoFile": "ex6.png",
+     "dom": "#a8c838"
+    },
+    {
+     "code": "TRR",
+     "name": "Team Rocket Returns",
+     "release": "2004-11-01",
+     "apiId": "ex7",
+     "logoFile": "ex7.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "DX",
+     "name": "Deoxys",
+     "release": "2005-02-01",
+     "apiId": "ex8",
+     "logoFile": "ex8.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "EM",
+     "name": "Emerald",
+     "release": "2005-05-01",
+     "apiId": "ex9",
+     "logoFile": "ex9.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "UF",
+     "name": "Unseen Forces",
+     "release": "2005-08-01",
+     "apiId": "ex10",
+     "logoFile": "ex10.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "DS",
+     "name": "Delta Species",
+     "release": "2005-10-31",
+     "apiId": "ex11",
+     "logoFile": "ex11.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "LM",
+     "name": "Legend Maker",
+     "release": "2006-02-01",
+     "apiId": "ex12",
+     "logoFile": "ex12.png",
+     "dom": "#d8d8c8"
+    },
+    {
+     "code": "EX15",
+     "name": "EX Trainer Kit 2 Plusle",
+     "release": "2006-03-01",
+     "apiId": "tk2a",
+     "logoFile": "tk2a.png",
+     "dom": "#085898"
+    },
+    {
+     "code": "EX16",
+     "name": "EX Trainer Kit 2 Minun",
+     "release": "2006-03-01",
+     "apiId": "tk2b",
+     "logoFile": "tk2b.png",
+     "dom": "#085898"
+    },
+    {
+     "code": "HP",
+     "name": "Holon Phantoms",
+     "release": "2006-05-01",
+     "apiId": "ex13",
+     "logoFile": "ex13.png",
+     "dom": "#180808"
+    },
+    {
+     "code": "CG",
+     "name": "Crystal Guardians",
+     "release": "2006-08-01",
+     "apiId": "ex14",
+     "logoFile": "ex14.png",
+     "dom": "#98d8f8"
+    },
+    {
+     "code": "DF",
+     "name": "Dragon Frontiers",
+     "release": "2006-11-01",
+     "apiId": "ex15",
+     "logoFile": "ex15.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "PK",
+     "name": "Power Keepers",
+     "release": "2007-02-02",
+     "apiId": "ex16",
+     "logoFile": "ex16.png",
+     "dom": "#484848"
+    }
+   ]
+  },
+  {
+   "era": "NP",
+   "short": "NP",
+   "years": "2003–2003",
+   "sets": [
+    {
+     "code": "PR-NP",
+     "name": "Nintendo Black Star Promos",
+     "release": "2003-10-01",
+     "apiId": "np",
+     "logoFile": "np.png",
+     "dom": "#080808"
+    }
+   ]
+  },
+  {
+   "era": "POP",
+   "short": "POP",
+   "years": "2004–2009",
+   "sets": [
+    {
+     "code": "POP01",
+     "name": "POP Series 1",
+     "release": "2004-09-01",
+     "apiId": "pop1",
+     "logoFile": "pop1.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "POP02",
+     "name": "POP Series 2",
+     "release": "2005-08-01",
+     "apiId": "pop2",
+     "logoFile": "pop2.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "POP03",
+     "name": "POP Series 3",
+     "release": "2006-04-01",
+     "apiId": "pop3",
+     "logoFile": "pop3.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "POP04",
+     "name": "POP Series 4",
+     "release": "2006-08-01",
+     "apiId": "pop4",
+     "logoFile": "pop4.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "POP05",
+     "name": "POP Series 5",
+     "release": "2007-03-01",
+     "apiId": "pop5",
+     "logoFile": "pop5.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "POP06",
+     "name": "POP Series 6",
+     "release": "2007-09-01",
+     "apiId": "pop6",
+     "logoFile": "pop6.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "POP07",
+     "name": "POP Series 7",
+     "release": "2008-03-01",
+     "apiId": "pop7",
+     "logoFile": "pop7.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "POP08",
+     "name": "POP Series 8",
+     "release": "2008-09-01",
+     "apiId": "pop8",
+     "logoFile": "pop8.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "POP09",
+     "name": "POP Series 9",
+     "release": "2009-03-01",
+     "apiId": "pop9",
+     "logoFile": "pop9.png",
+     "dom": "#080808"
+    }
+   ]
+  },
+  {
+   "era": "Diamond & Pearl",
+   "short": "DP",
+   "years": "2007–2008",
+   "sets": [
+    {
+     "code": "DP",
+     "name": "Diamond & Pearl",
+     "release": "2007-05-01",
+     "apiId": "dp1",
+     "logoFile": "dp1.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "PR-DPP",
+     "name": "DP Black Star Promos",
+     "release": "2007-05-01",
+     "apiId": "dpp",
+     "logoFile": "dpp.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "MT",
+     "name": "Mysterious Treasures",
+     "release": "2007-08-01",
+     "apiId": "dp2",
+     "logoFile": "dp2.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SW",
+     "name": "Secret Wonders",
+     "release": "2007-11-01",
+     "apiId": "dp3",
+     "logoFile": "dp3.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "GE",
+     "name": "Great Encounters",
+     "release": "2008-02-01",
+     "apiId": "dp4",
+     "logoFile": "dp4.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "MD",
+     "name": "Majestic Dawn",
+     "release": "2008-05-01",
+     "apiId": "dp5",
+     "logoFile": "dp5.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "LA",
+     "name": "Legends Awakened",
+     "release": "2008-08-01",
+     "apiId": "dp6",
+     "logoFile": "dp6.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SF",
+     "name": "Stormfront",
+     "release": "2008-11-01",
+     "apiId": "dp7",
+     "logoFile": "dp7.png",
+     "dom": "#080808"
+    }
+   ]
+  },
+  {
+   "era": "Platinum",
+   "short": "PL",
+   "years": "2009–2009",
+   "sets": [
+    {
+     "code": "PL",
+     "name": "Platinum",
+     "release": "2009-02-11",
+     "apiId": "pl1",
+     "logoFile": "pl1.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "RR",
+     "name": "Rising Rivals",
+     "release": "2009-05-16",
+     "apiId": "pl2",
+     "logoFile": "pl2.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SV",
+     "name": "Supreme Victors",
+     "release": "2009-08-19",
+     "apiId": "pl3",
+     "logoFile": "pl3.png",
+     "dom": "#f8f8f8"
+    },
+    {
+     "code": "AR",
+     "name": "Arceus",
+     "release": "2009-11-04",
+     "apiId": "pl4",
+     "logoFile": "pl4.png",
+     "dom": "#080808"
+    }
+   ]
+  },
+  {
+   "era": "HeartGold & SoulSilver",
+   "short": "HGSS",
+   "years": "2010–2011",
+   "sets": [
+    {
+     "code": "HS",
+     "name": "HeartGold & SoulSilver",
+     "release": "2010-02-10",
+     "apiId": "hgss1",
+     "logoFile": "hgss1.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "PR-HS",
+     "name": "HGSS Black Star Promos",
+     "release": "2010-02-10",
+     "apiId": "hsp",
+     "logoFile": "hsp.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "UL",
+     "name": "HS—Unleashed",
+     "release": "2010-05-12",
+     "apiId": "hgss2",
+     "logoFile": "hgss2.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "UD",
+     "name": "HS—Undaunted",
+     "release": "2010-08-18",
+     "apiId": "hgss3",
+     "logoFile": "hgss3.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "TM",
+     "name": "HS—Triumphant",
+     "release": "2010-11-03",
+     "apiId": "hgss4",
+     "logoFile": "hgss4.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "CL",
+     "name": "Call of Legends",
+     "release": "2011-02-09",
+     "apiId": "col1",
+     "logoFile": "col1.png",
+     "dom": "#682898"
+    }
+   ]
+  },
+  {
+   "era": "Black & White",
+   "short": "BW",
+   "years": "2011–2013",
+   "sets": [
+    {
+     "code": "PR-BLW",
+     "name": "BW Black Star Promos",
+     "release": "2011-03-01",
+     "apiId": "bwp",
+     "logoFile": "bwp.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "BLW",
+     "name": "Black & White",
+     "release": "2011-04-25",
+     "apiId": "bw1",
+     "logoFile": "bw1.png",
+     "dom": "#e8e8e8"
+    },
+    {
+     "code": "EPO",
+     "name": "Emerging Powers",
+     "release": "2011-08-31",
+     "apiId": "bw2",
+     "logoFile": "bw2.png",
+     "dom": "#f8f8f8"
+    },
+    {
+     "code": "NVI",
+     "name": "Noble Victories",
+     "release": "2011-11-16",
+     "apiId": "bw3",
+     "logoFile": "bw3.png",
+     "dom": "#f8f8f8"
+    },
+    {
+     "code": "NXD",
+     "name": "Next Destinies",
+     "release": "2012-02-08",
+     "apiId": "bw4",
+     "logoFile": "bw4.png",
+     "dom": "#f8f8f8"
+    },
+    {
+     "code": "DEX",
+     "name": "Dark Explorers",
+     "release": "2012-05-09",
+     "apiId": "bw5",
+     "logoFile": "bw5.png",
+     "dom": "#f8f8f8"
+    },
+    {
+     "code": "DRX",
+     "name": "Dragons Exalted",
+     "release": "2012-08-15",
+     "apiId": "bw6",
+     "logoFile": "bw6.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "DRV",
+     "name": "Dragon Vault",
+     "release": "2012-10-05",
+     "apiId": "dv1",
+     "logoFile": "dv1.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "BCR",
+     "name": "Boundaries Crossed",
+     "release": "2012-11-07",
+     "apiId": "bw7",
+     "logoFile": "bw7.png",
+     "dom": "#387898"
+    },
+    {
+     "code": "PLS",
+     "name": "Plasma Storm",
+     "release": "2013-02-06",
+     "apiId": "bw8",
+     "logoFile": "bw8.png",
+     "dom": "#e8e8e8"
+    },
+    {
+     "code": "PLF",
+     "name": "Plasma Freeze",
+     "release": "2013-05-08",
+     "apiId": "bw9",
+     "logoFile": "bw9.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "PLB",
+     "name": "Plasma Blast",
+     "release": "2013-08-14",
+     "apiId": "bw10",
+     "logoFile": "bw10.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "LTR",
+     "name": "Legendary Treasures",
+     "release": "2013-11-06",
+     "apiId": "bw11",
+     "logoFile": "bw11.png",
+     "dom": "#e8e8e8"
+    }
+   ]
+  },
+  {
+   "era": "XY",
+   "short": "XY",
+   "years": "2013–2016",
+   "sets": [
+    {
+     "code": "PR-XY",
+     "name": "XY Black Star Promos",
+     "release": "2013-10-12",
+     "apiId": "xyp",
+     "logoFile": "xyp.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "KSS",
+     "name": "Kalos Starter Set",
+     "release": "2013-11-08",
+     "apiId": "xy0",
+     "logoFile": "xy0.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "XY",
+     "name": "XY",
+     "release": "2014-02-05",
+     "apiId": "xy1",
+     "logoFile": "xy1.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "FLF",
+     "name": "Flashfire",
+     "release": "2014-05-07",
+     "apiId": "xy2",
+     "logoFile": "xy2.png",
+     "dom": "#e8e8e8"
+    },
+    {
+     "code": "FFI",
+     "name": "Furious Fists",
+     "release": "2014-08-13",
+     "apiId": "xy3",
+     "logoFile": "xy3.png",
+     "dom": "#e8e8e8"
+    },
+    {
+     "code": "PHF",
+     "name": "Phantom Forces",
+     "release": "2014-11-05",
+     "apiId": "xy4",
+     "logoFile": "xy4.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "PRC",
+     "name": "Primal Clash",
+     "release": "2015-02-04",
+     "apiId": "xy5",
+     "logoFile": "xy5.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "DCR",
+     "name": "Double Crisis",
+     "release": "2015-03-25",
+     "apiId": "dc1",
+     "logoFile": "dc1.png",
+     "dom": "#f8f8f8"
+    },
+    {
+     "code": "ROS",
+     "name": "Roaring Skies",
+     "release": "2015-05-06",
+     "apiId": "xy6",
+     "logoFile": "xy6.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "AOR",
+     "name": "Ancient Origins",
+     "release": "2015-08-12",
+     "apiId": "xy7",
+     "logoFile": "xy7.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "BKT",
+     "name": "BREAKthrough",
+     "release": "2015-11-04",
+     "apiId": "xy8",
+     "logoFile": "xy8.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "BKP",
+     "name": "BREAKpoint",
+     "release": "2016-02-03",
+     "apiId": "xy9",
+     "logoFile": "xy9.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "GEN",
+     "name": "Generations",
+     "release": "2016-02-22",
+     "apiId": "g1",
+     "logoFile": "g1.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "FCO",
+     "name": "Fates Collide",
+     "release": "2016-05-02",
+     "apiId": "xy10",
+     "logoFile": "xy10.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "STS",
+     "name": "Steam Siege",
+     "release": "2016-08-03",
+     "apiId": "xy11",
+     "logoFile": "xy11.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "EVO",
+     "name": "Evolutions",
+     "release": "2016-11-02",
+     "apiId": "xy12",
+     "logoFile": "xy12.png",
+     "dom": "#080808"
+    }
+   ]
+  },
+  {
+   "era": "Sun & Moon",
+   "short": "SM",
+   "years": "2017–2019",
+   "sets": [
+    {
+     "code": "SUM",
+     "name": "Sun & Moon",
+     "release": "2017-02-03",
+     "apiId": "sm1",
+     "logoFile": "sm1.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "PR-SM",
+     "name": "SM Black Star Promos",
+     "release": "2017-02-03",
+     "apiId": "smp",
+     "logoFile": "smp.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "GRI",
+     "name": "Guardians Rising",
+     "release": "2017-05-05",
+     "apiId": "sm2",
+     "logoFile": "sm2.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "BUS",
+     "name": "Burning Shadows",
+     "release": "2017-08-05",
+     "apiId": "sm3",
+     "logoFile": "sm3.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SLG",
+     "name": "Shining Legends",
+     "release": "2017-10-06",
+     "apiId": "sm35",
+     "logoFile": "sm35.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "CIN",
+     "name": "Crimson Invasion",
+     "release": "2017-11-03",
+     "apiId": "sm4",
+     "logoFile": "sm4.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "UPR",
+     "name": "Ultra Prism",
+     "release": "2018-02-02",
+     "apiId": "sm5",
+     "logoFile": "sm5.png",
+     "dom": "#f8f8f8"
+    },
+    {
+     "code": "FLI",
+     "name": "Forbidden Light",
+     "release": "2018-05-04",
+     "apiId": "sm6",
+     "logoFile": "sm6.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "CES",
+     "name": "Celestial Storm",
+     "release": "2018-08-03",
+     "apiId": "sm7",
+     "logoFile": "sm7.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "DRM",
+     "name": "Dragon Majesty",
+     "release": "2018-09-07",
+     "apiId": "sm75",
+     "logoFile": "sm75.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "LOT",
+     "name": "Lost Thunder",
+     "release": "2018-11-02",
+     "apiId": "sm8",
+     "logoFile": "sm8.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "TEU",
+     "name": "Team Up",
+     "release": "2019-02-01",
+     "apiId": "sm9",
+     "logoFile": "sm9.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "DET",
+     "name": "Detective Pikachu",
+     "release": "2019-04-05",
+     "apiId": "det1",
+     "logoFile": "det1.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "UNB",
+     "name": "Unbroken Bonds",
+     "release": "2019-05-03",
+     "apiId": "sm10",
+     "logoFile": "sm10.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "UNM",
+     "name": "Unified Minds",
+     "release": "2019-08-02",
+     "apiId": "sm11",
+     "logoFile": "sm11.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "HIF",
+     "name": "Hidden Fates",
+     "release": "2019-08-23",
+     "apiId": "sm115",
+     "logoFile": "sm115.png",
+     "dom": "#080828"
+    },
+    {
+     "code": "HIF",
+     "name": "Hidden Fates Shiny Vault",
+     "release": "2019-08-23",
+     "apiId": "sma",
+     "logoFile": "sma.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "CEC",
+     "name": "Cosmic Eclipse",
+     "release": "2019-11-01",
+     "apiId": "sm12",
+     "logoFile": "sm12.png",
+     "dom": "#080808"
+    }
+   ]
+  },
+  {
+   "era": "Sword & Shield",
+   "short": "SWSH",
+   "years": "2019–2023",
+   "sets": [
+    {
+     "code": "PR-SW",
+     "name": "SWSH Black Star Promos",
+     "release": "2019-11-15",
+     "apiId": "swshp",
+     "logoFile": "swshp.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SSH",
+     "name": "Sword & Shield",
+     "release": "2020-02-07",
+     "apiId": "swsh1",
+     "logoFile": "swsh1.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "RCL",
+     "name": "Rebel Clash",
+     "release": "2020-05-01",
+     "apiId": "swsh2",
+     "logoFile": "swsh2.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "DAA",
+     "name": "Darkness Ablaze",
+     "release": "2020-08-14",
+     "apiId": "swsh3",
+     "logoFile": "swsh3.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "CPA",
+     "name": "Champion's Path",
+     "release": "2020-09-25",
+     "apiId": "swsh35",
+     "logoFile": "swsh35.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "VIV",
+     "name": "Vivid Voltage",
+     "release": "2020-11-13",
+     "apiId": "swsh4",
+     "logoFile": "swsh4.png",
+     "dom": "#486848"
+    },
+    {
+     "code": "SHF",
+     "name": "Shining Fates",
+     "release": "2021-02-19",
+     "apiId": "swsh45",
+     "logoFile": "swsh45.png",
+     "dom": "#486848"
+    },
+    {
+     "code": "SHF",
+     "name": "Shining Fates Shiny Vault",
+     "release": "2021-02-19",
+     "apiId": "swsh45sv",
+     "logoFile": "swsh45sv.png",
+     "dom": "#486848"
+    },
+    {
+     "code": "BST",
+     "name": "Battle Styles",
+     "release": "2021-03-19",
+     "apiId": "swsh5",
+     "logoFile": "swsh5.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "CRE",
+     "name": "Chilling Reign",
+     "release": "2021-06-18",
+     "apiId": "swsh6",
+     "logoFile": "swsh6.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "EVS",
+     "name": "Evolving Skies",
+     "release": "2021-08-27",
+     "apiId": "swsh7",
+     "logoFile": "swsh7.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "CEL",
+     "name": "Celebrations",
+     "release": "2021-10-08",
+     "apiId": "cel25",
+     "logoFile": "cel25.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "CEL",
+     "name": "Celebrations: Classic Collection",
+     "release": "2021-10-08",
+     "apiId": "cel25c",
+     "logoFile": "cel25c.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "FST",
+     "name": "Fusion Strike",
+     "release": "2021-11-12",
+     "apiId": "swsh8",
+     "logoFile": "swsh8.png",
+     "dom": "#282878"
+    },
+    {
+     "code": "BRS",
+     "name": "Brilliant Stars",
+     "release": "2022-02-25",
+     "apiId": "swsh9",
+     "logoFile": "swsh9.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "BRS",
+     "name": "Brilliant Stars Trainer Gallery",
+     "release": "2022-02-25",
+     "apiId": "swsh9tg",
+     "logoFile": "swsh9tg.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "ASR",
+     "name": "Astral Radiance",
+     "release": "2022-05-27",
+     "apiId": "swsh10",
+     "logoFile": "swsh10.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "ASR",
+     "name": "Astral Radiance Trainer Gallery",
+     "release": "2022-05-27",
+     "apiId": "swsh10tg",
+     "logoFile": "swsh10tg.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "PGO",
+     "name": "Pokémon GO",
+     "release": "2022-07-01",
+     "apiId": "pgo",
+     "logoFile": "pgo.png",
+     "dom": "#f8f8f8"
+    },
+    {
+     "code": "LOR",
+     "name": "Lost Origin",
+     "release": "2022-09-09",
+     "apiId": "swsh11",
+     "logoFile": "swsh11.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "LOR",
+     "name": "Lost Origin Trainer Gallery",
+     "release": "2022-09-09",
+     "apiId": "swsh11tg",
+     "logoFile": "swsh11tg.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SIT",
+     "name": "Silver Tempest",
+     "release": "2022-11-11",
+     "apiId": "swsh12",
+     "logoFile": "swsh12.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SIT",
+     "name": "Silver Tempest Trainer Gallery",
+     "release": "2022-11-11",
+     "apiId": "swsh12tg",
+     "logoFile": "swsh12tg.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "CRZ",
+     "name": "Crown Zenith",
+     "release": "2023-01-20",
+     "apiId": "swsh12pt5",
+     "logoFile": "swsh12pt5.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "CRZ",
+     "name": "Crown Zenith Galarian Gallery",
+     "release": "2023-01-20",
+     "apiId": "swsh12pt5gg",
+     "logoFile": "swsh12pt5gg.png",
+     "dom": "#080808"
+    }
+   ]
+  },
+  {
+   "era": "Scarlet & Violet",
+   "short": "SV",
+   "years": "2023–2025",
+   "sets": [
+    {
+     "code": "PR-SV",
+     "name": "Scarlet & Violet Black Star Promos",
+     "release": "2023-01-01",
+     "apiId": "svp",
+     "logoFile": "svp.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SV01",
+     "name": "Scarlet & Violet",
+     "release": "2023-03-31",
+     "apiId": "sv1",
+     "logoFile": "sv1.png",
+     "dom": "#685878"
+    },
+    {
+     "code": "SVE",
+     "name": "Scarlet & Violet Energies",
+     "release": "2023-03-31",
+     "apiId": "sve",
+     "logoFile": "sve.png",
+     "dom": "#f8f8f8"
+    },
+    {
+     "code": "SV02",
+     "name": "Paldea Evolved",
+     "release": "2023-06-09",
+     "apiId": "sv2",
+     "logoFile": "sv2.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SV03",
+     "name": "Obsidian Flames",
+     "release": "2023-08-11",
+     "apiId": "sv3",
+     "logoFile": "sv3.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SV03.5",
+     "name": "151",
+     "release": "2023-09-22",
+     "apiId": "sv3pt5",
+     "logoFile": "sv3pt5.png",
+     "dom": "#486848"
+    },
+    {
+     "code": "SV04",
+     "name": "Paradox Rift",
+     "release": "2023-11-03",
+     "apiId": "sv4",
+     "logoFile": "sv4.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SV04.5",
+     "name": "Paldean Fates",
+     "release": "2024-01-26",
+     "apiId": "sv4pt5",
+     "logoFile": "sv4pt5.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SV05",
+     "name": "Temporal Forces",
+     "release": "2024-03-22",
+     "apiId": "sv5",
+     "logoFile": "sv5.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SV06",
+     "name": "Twilight Masquerade",
+     "release": "2024-05-24",
+     "apiId": "sv6",
+     "logoFile": "sv6.png",
+     "dom": "#983888"
+    },
+    {
+     "code": "SV06.5",
+     "name": "Shrouded Fable",
+     "release": "2024-08-02",
+     "apiId": "sv6pt5",
+     "logoFile": "sv6pt5.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SV07",
+     "name": "Stellar Crown",
+     "release": "2024-09-13",
+     "apiId": "sv7",
+     "logoFile": "sv7.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SV08",
+     "name": "Surging Sparks",
+     "release": "2024-11-08",
+     "apiId": "sv8",
+     "logoFile": "sv8.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SV08.5",
+     "name": "Prismatic Evolutions",
+     "release": "2025-01-17",
+     "apiId": "sv8pt5",
+     "logoFile": "sv8pt5.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SV09",
+     "name": "Journey Together",
+     "release": "2025-03-28",
+     "apiId": "sv9",
+     "logoFile": "sv9.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SV10",
+     "name": "Destined Rivals",
+     "release": "2025-05-30",
+     "apiId": "sv10",
+     "logoFile": "sv10.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "SV-BWF",
+     "name": "Black Bolt & White Flare",
+     "release": "2025-06-06",
+     "apiId": null,
+     "logoFile": null,
+     "dom": null
+    },
+    {
+     "code": "BLK",
+     "name": "Black Bolt",
+     "release": "2025-07-18",
+     "apiId": "zsv10pt5",
+     "logoFile": "zsv10pt5.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "WHT",
+     "name": "White Flare",
+     "release": "2025-07-18",
+     "apiId": "rsv10pt5",
+     "logoFile": "rsv10pt5.png",
+     "dom": "#080808"
+    }
+   ]
+  },
+  {
+   "era": "Mega Evolution",
+   "short": "ME",
+   "years": "2025–2026",
+   "sets": [
+    {
+     "code": "ME01",
+     "name": "Mega Evolution",
+     "release": "2025-09-26",
+     "apiId": "me1",
+     "logoFile": "me1.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "ME02",
+     "name": "Phantasmal Flames",
+     "release": "2025-11-14",
+     "apiId": "me2",
+     "logoFile": "me2.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "ME-FP",
+     "name": "First Partner Collection 2026",
+     "release": "2026",
+     "apiId": null,
+     "logoFile": null,
+     "dom": null
+    },
+    {
+     "code": "ASC",
+     "name": "Ascended Heroes",
+     "release": "2026-01-30",
+     "apiId": "me2pt5",
+     "logoFile": "me2pt5.png",
+     "dom": "#486848"
+    },
+    {
+     "code": "ME03",
+     "name": "Perfect Order",
+     "release": "2026-03-27",
+     "apiId": "me3",
+     "logoFile": "me3.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "ME04",
+     "name": "Chaos Rising",
+     "release": "2026-05-22",
+     "apiId": "me4",
+     "logoFile": "me4.png",
+     "dom": "#080808"
+    },
+    {
+     "code": "ME05",
+     "name": "Pitch Black",
+     "release": "2026-07-17",
+     "apiId": null,
+     "logoFile": null,
+     "dom": null
+    },
+    {
+     "code": "ME06",
+     "name": "Delta Reign",
+     "release": "2026-11-06",
+     "apiId": null,
+     "logoFile": null,
+     "dom": null
+    }
+   ]
+  }
+ ]
+}
