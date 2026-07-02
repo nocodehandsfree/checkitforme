@@ -3459,7 +3459,11 @@ function showResult(o, cid){
   // Statuses registry first — the owner-edited single source of truth (with ES variants by key).
   else if(o.statusKey && RSTATUSES[o.statusKey]){
     const s=RSTATUSES[o.statusKey];
-    cls=s.tone||'unk'; big=s.emoji||'•'; title=t('st.'+o.statusKey, s.label);
+    // The admin Statuses page can store a drawn-icon NAME ("pause", "mic-off", "store"…) instead of an
+    // emoji. Translate names to their emoji twin here so the verdict hero never prints raw text.
+    const I2E={'pause':'⏸️','mic-off':'🗣️','clock':'🕗','voicemail':'📮','phone-missed':'📞','user-x':'🔢','store':'🔒','flag':'🤔','phone-off':'📵','x':'❌','ban':'🚫','circle-check':'✅','lock':'🔒','truck':'🚚','triangle-alert':'⚠️','circle-x':'❌','phone':'📞','hourglass':'⏳'};
+    const raw=s.emoji||'•';
+    cls=s.tone||'unk'; big=I2E[raw]||(/^[a-z][a-z0-9-]{1,24}$/.test(raw)?'•':raw); title=t('st.'+o.statusKey, s.label);
     note=(o.statusKey==='failed'&&o.failureReason)?safeReason(o.failureReason):t('stn.'+o.statusKey, s.note||'');
   }
   else if(o.statusKey==='left_on_hold'){ cls='unk'; big='⏳'; title=t('v.hold','Left on hold'); note=t('note.hold',"They went to check, but the call dropped on hold. No charge. Try again."); }
