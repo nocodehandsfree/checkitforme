@@ -18,13 +18,14 @@ of proof (which render you looked at). Never delete findings; history stays.
    hierarchy, components, order. Tokens matching ≠ done (PAINT IS NOT DONE, LOOP.md).
 
 ## OPEN findings
-- [ ] **(P0 — OWNER-REPORTED) Typography has no POP: apply the §4 type ramp EXACTLY.** The Inter
-  family loads, but the ramp is the design: hero/verdict titles 30px/900/−1px, verdict price
-  34px/900/−1.2px, modal titles 19–21px/900/−.4px, NEVER wrap a heading (shrink to 16.5px or cut
-  copy). Only 2 font-family declarations exist in checkit.html and 900-weight titles are largely
-  absent. Sweep EVERY v2 view against the §4 table in STYLE_GUIDE_NEW.md — sizes, weights, AND
-  letter-spacing. This is why the owner says it "isn't popping."
-- [ ] **(P0 — OWNER-REPORTED) The brand check mark is WRONG.** Zero references to
+- ✅ **FIXED (P0) Typography POP** — root-caused by Website better than filed: Google Fonts was
+  BLOCKED on the owner's network → system-font fallback. Inter now SELF-HOSTED (/fonts route) +
+  ramp specs applied. DevOps render c4-home-truefont (cycle 4): hero at true 900/tight tracking,
+  capsule CTA letterspaced — the pop is real on home. Spot-checks of other views continue in
+  rotation; reopen per-view if any ramp miss shows.
+- [ ] **(P0 — OWNER-REPORTED, STILL OPEN after 7h — TOP PRIORITY) The brand check mark is WRONG.**
+  Re-verified 20:45: still ZERO references to `docs/design/check-brandmark.svg` in checkit.html and
+  no inlined brandmark path data. This is the ONLY owner-reported item not yet addressed. Zero references to
   `docs/design/check-brandmark.svg` in checkit.html — the site draws its own mark. Use the actual
   brandmark asset (rules in docs/design/LOGOS.md) everywhere the mark appears: header, footer
   wordmark, empty states, any check iconography that is BRAND (not status icons). Recreate the
@@ -54,6 +55,11 @@ of proof (which render you looked at). Never delete findings; history stays.
   track, footer). Re-verify against P2 store-picked state when rebuilt views land.
 
 ## DevOps cycle log
+- 2026-07-02 ~20:50 CYCLE 4 (catch-up: container restart killed ALL DevOps timers at ~13:05 — dark
+  7.5h; both loops re-armed: primary 26/56 + hourly liveness :09; eyes server must run as a tracked
+  task). VERDICTS: type-pop P0 CONFIRMED FIXED on home (c4-home-truefont, true self-hosted Inter,
+  900 hero). Brandmark P0 STILL OPEN — escalated to top. Website's day was strong: round-2
+  structural rebuilds across all frames, 45 proofs, ES sweep, owner live-review fixes.
 - 2026-07-02 ~13:05 CYCLE 3b (owner escalation): filed the two P0s above (type ramp pop +
   brandmark). Render pipeline now serves VENDORED Inter (docs/design/vendor/fonts) instead of
   aborting font loads — font/weight mismatches are now visible in every render, both site and
