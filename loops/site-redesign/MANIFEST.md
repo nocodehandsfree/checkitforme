@@ -363,6 +363,8 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   product context — 'Pitch Black Booster Box · costs 1 check' in the accent slot (v1 untouched; lock
   unreachable). Verified the lock also survives the SIGN-IN gate (startCheck→auth→lock intact).
   Upsell fire-once sound by construction (flag set before firing). PROOF: P2-locked-product-v2.png.
+- [x] Watch 12: staging freshness for the lock work — all 9 HOBBY_LOCK references + the sheet-display
+  line LIVE on deployed staging; no upstream pushes; full suite regression green (46/66/7). CLEAN.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
