@@ -821,7 +821,7 @@ app.get("/logo-wall", async (c) => {
 // Pokémon TCG set logos — the "swap-to" wall for the Hobby picker. Era pills → set cards
 // ([logo] · code · name · release), data-driven from data/pokemon-sets.json (data-dev's catalog)
 // + the downloaded logos in public/logos/sets/. QA page only; no auth (public logos + set names).
-app.get("/logo-wall/sets", (c) => {
+app.get("/logo-wall/sets", async (c) => {
   const nslug = (x: any) => String(x || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
   // Asset lookup by set NAME (logos + dominant colour) from the full pokemontcg.io catalog — so
   // logos/banners resolve no matter which data source drives the list.
@@ -834,7 +834,14 @@ app.get("/logo-wall/sets", (c) => {
   // Data source: prefer website-dev's expanded feed catalog (data/pokemon-sets.json) the moment it
   // lands (13 eras / 129 sets, presentation-ordered); until then use the full pokemontcg.io catalog.
   let cat: any = catalog;
-  try { const feed = JSON.parse(readFileSync(join(here, "../data/pokemon-sets.json"), "utf8")); if ((feed.eras || []).length >= 5) cat = feed; } catch { /* keep catalog */ }
+  // Pull the canonical feed FRESH (owner: "ONE PULL, EVERYTHING" — GET /pub/pokemon-sets) from this
+  // same origin. Falls back to the local data file, then the full card catalog, if the feed isn't on
+  // this deployment yet (e.g. prod before it's promoted).
+  try {
+    const r = await fetch(new URL(c.req.url).origin + "/pub/pokemon-sets", { signal: AbortSignal.timeout(5000) });
+    if (r.ok) { const feed: any = await r.json(); if ((feed.eras || []).length >= 5) cat = feed; }
+  } catch { /* feed not reachable on this deployment yet */ }
+  if (cat === catalog) { try { const f = JSON.parse(readFileSync(join(here, "../data/pokemon-sets.json"), "utf8")); if ((f.eras || []).length >= 5) cat = f; } catch { /* keep catalog */ } }
   const eras = (cat.eras || []) as Array<{ era: string; short?: string; years?: string; sets: Array<{ code: string; name: string; release: string; logoFile?: string | null }> }>;
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const fmt = (r: string) => { const m = /^(\d{4})[-/](\d{2})/.exec(r || ""); return m ? `${MON[+m[2] - 1]} ${m[1]}` : (r || "TBA"); };
