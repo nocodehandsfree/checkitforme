@@ -20,8 +20,9 @@ _Morning report goes HERE at the top when the exit condition is met._
   ME2.5 (Jan 2026), ME03 = Perfect Order (Mar 2026, missing from comp), Mega Evolution era = 7 sets
   (ME01…ME06 + ME2.5). The comp's era screen has BROKEN img markup on the Mega Evolution card
   (raw style=/alt= text visible) — build era logos from the feed + logo wall, not the comp's card.
-- **Hobby logos/banners**: `checkitforme.com/logo-wall` (Logo lane, still building it out — use what
-  exists; missing art → art-placeholder pattern per style guide §5.17, note in HIDDEN PAGES).
+- **Hobby logos/banners** (rev. Data Dev 2026-07-02): the FEED carries same-origin `logo`/`banner` paths
+  per era + set (`/logos/sets/*.png`, `/logos/set-banners/*.png`) — rendered as-is; placeholder until the
+  logo lane's files land, then they light up on their own. Never guess paths.
 - **Hobby flow = sports cards + TCG only.** Never NeeDoh/non-card products.
 - **COPY**: existing approved copy is truth; comp copy is placeholder → COPY QUEUE below (LOOP.md rule).
 
@@ -103,7 +104,7 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 ### Runnr (RN1/RN2)
 - [x] RN1/RN2 shells (cycle 11): 30px nodes (active solid green + halo, done green outline), 2px connector, raised step cards idle@50%, carved toggle w/ raised active key. Driver-preview/star details to verify in audit sweep.
 ### Hobby (P3a/P3/P4/P5) — BUILD, HIDDEN (owner preview only)
-- [x] P3a era picker (cycle 13): feed-driven, era art from the logo wall (absolute prod URLs — wall still building; onerror → §5.17 placeholder w/ Inter label, DECIDED over the spec's mono), press-dip
+- [x] P3a era picker (cycles 13+15): feed-driven, era art = feed's own `era.logo` path (onerror → §5.17 placeholder w/ Inter label), press-dip
 - [x] P3 set picker (cycle 13): banner IS the tile (cover 112px, no overlays/names), JUST DROPPED chip (≤45d), UPCOMING glass badge on future releases (kept, never dropped), code+date strip
 - [x] P4 product picker (cycle 13): full-bleed banner card top + floating back key; carved 38px tiles; feed retail anchors; products:[] → generic list; retail:null never prints. DECIDED: single carton icon this pass — the 7-type icon set (§5.13) is its own box below.
 - [x] Product-type icon set (cycle 14): all 7 comp-exact icons extracted from P4 + loose name matching (feed types like 'ETB'/'Elite Trainer Box' both hit); carton fallback for unknown types

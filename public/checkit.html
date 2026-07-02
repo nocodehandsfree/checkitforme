@@ -4184,7 +4184,6 @@ async function openHistEntry(e){
 // from the logo wall (absolute prod URLs — the wall is still being built out); anything missing falls
 // to the §5.17 art placeholder. Sports cards + TCG ONLY — this flow never touches NeeDoh/non-card.
 let HOBBY={data:null,era:null,set:null,prods:null};
-const HOBBY_ART='https://checkitforme.com';
 // §5.17 art placeholder: 45° stripes + label. (Spec says mono label; §4 + the token harness mandate
 // Inter — Inter uppercase wins; DECIDED in manifest.)
 function v2ArtPh(label,h){ return `<div style="height:${h}px;border-radius:16px;background:repeating-linear-gradient(45deg,#2B2B33 0 12px,#25252C 12px 24px);display:grid;place-items:center"><span style="font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${esc(label)}</span></div>`; }
@@ -4204,7 +4203,7 @@ function renderHobbyEras(){
   const h=$('hobby');
   h.innerHTML=`<div style="font-size:20px;font-weight:800;letter-spacing:-.3px;padding:4px 2px 18px">Pick your era</div>`+
     HOBBY.data.eras.map((e,i)=>`<button class="hob-era" onclick="hobbyPickEra(${i})" aria-label="${esc(e.era)}">
-      <img src="${HOBBY_ART}/logos/eras/${esc(String(e.code||'').toLowerCase())}.png" alt="" style="width:100%;filter:drop-shadow(0 10px 18px rgba(0,0,0,.55)) drop-shadow(0 24px 40px rgba(0,0,0,.4))" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh(this.nextElementSibling.textContent.split('·')[0],86));this.remove()">
+      <img src="${esc(e.logo||'')}" alt="" style="width:100%;filter:drop-shadow(0 10px 18px rgba(0,0,0,.55)) drop-shadow(0 24px 40px rgba(0,0,0,.4))" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh(this.nextElementSibling.textContent.split('·')[0],86));this.remove()">
       <div style="margin-top:7px;font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${esc(e.era)} · ${esc(e.years||'')}</div></button>`).join('');
 }
 function hobbyPickEra(i){ HOBBY.era=HOBBY.data.eras[i]; renderHobbySets(); window.scrollTo({top:0}); }
@@ -4220,7 +4219,7 @@ function renderHobbySets(){
       const future=rel>now, fresh=!future&&rel>now-45*86400000;
       return `<button class="hob-set" onclick="hobbyPickSet(${si})" aria-label="${esc(st.code)}">
       <div style="position:relative;border-radius:16px;overflow:hidden">
-        <img src="${HOBBY_ART}/logos/sets/banners/${esc(String(st.code||'').toLowerCase())}.jpeg" alt="" style="display:block;width:100%;height:112px;object-fit:cover" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh('${esc(st.code)}',112));this.remove()">
+        <img src="${esc(st.banner||'')}" alt="" style="display:block;width:100%;height:112px;object-fit:cover" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh('${esc(st.code)}',112));this.remove()">
         ${fresh?`<span class="hob-chip" style="background:linear-gradient(180deg,#FFE066,#FFCB05);color:#26251E">Just dropped</span>`:''}
         ${future?`<span class="hob-chip" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#FFF">Upcoming</span>`:''}
       </div>
@@ -4260,7 +4259,7 @@ function renderHobbyProducts(){
   const prods=(Array.isArray(st.products)&&st.products.length)?st.products:HOBBY_GENERIC.map(t=>({type:t,retail:null}));
   h.innerHTML=`<div class="card" style="padding:0;overflow:hidden">
     <div style="position:relative">
-      <img src="${HOBBY_ART}/logos/sets/banners/${esc(String(st.code||'').toLowerCase())}.jpeg" alt="" style="display:block;width:100%;height:132px;object-fit:cover" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh('${esc(st.code)}',132));this.remove()">
+      <img src="${esc(st.banner||'')}" alt="" style="display:block;width:100%;height:132px;object-fit:cover" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh('${esc(st.code)}',132));this.remove()">
       <button onclick="renderHobbySets()" aria-label="Back" style="position:absolute;top:10px;left:10px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(5,6,9,.5);color:#FFF;cursor:pointer;font-size:16px">‹</button>
     </div>
     <div style="padding:14px 16px 18px">
