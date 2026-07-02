@@ -77,7 +77,7 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - [x] Call sheet P2 (cycle 6): big-card sheet (radius 28 top, 40×5 grabber), raised keys, chips light green when on, call CTA = accent-ring capsule w/ tracked caps (CSS uppercase — copy string unchanged). Green-ring capsule = all primary .cta.
 - [x] Pre-call gates + all overlays (cycle 6): pop-ups = big card r26 over rgba(5,6,9,.66) dim, no grabbers
 ### Live call (6m)
-- [ ] Live view: phone icon ckWave arcs, step timeline (2px line, 3 dots), streaming bubbles (STAFF muted/CHECK AI green labels), Stop & hang up (owner/comp only)
+- [x] Live call 6m (cycle 7): phone arcs pulse (ckWaveV2, staggered .35s — split ICO.call arc paths), message well carved, bubbles raised, CHECK AI green / STAFF muted labels; RESULT-chip breathing dot armed for the verdict cycle. Timeline verdict colors ride existing classes.
 ### Result / status pages (P6, P6b, P6c, IS1)
 - [ ] Verdict wash pages (in/out/unclear/soon) + glass pills + RESULT chip ckGlow
 - [ ] Verdict title/price/sentence format (§5.8, max 2 lines, tokens bold, over-retail #F59E0B)
@@ -113,6 +113,7 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - [ ] Error/empty states sweep (network fail toasts, callgone, no-credits)
 
 ## DECIDED LOG
+- DECIDED: comp animation names collide with the existing ripple `ckWave` — v2 uses ckWaveV2/ckGlowV2 (same curves as §5.3; the guide's requirement is the behavior, not the name).
 - DECIDED(rev. cycle 3): S2 track fill = #1B1B20 — the standalone S2 comp shows #17171C (on page bg) but P1's IN-CARD track is #1B1B20, matching guide §5.1; the live track sits in the card.
 - DECIDED: apex `/` is host-routed (localhost serves Admin) — 0a benchmarks the 4 brand paths, which are the consumer surface.
 - DECIDED: preview switch = `?skin=v2` / localStorage `cifm_skin` / `body.skin-v2` scope (cycle 1).

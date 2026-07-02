@@ -1115,6 +1115,19 @@ html[data-skin="v2"] .chip.sel{color:#4ADE80;background:linear-gradient(180deg,#
 /* Pop-ups (§5.11): big card radius 26 over the dim, no grabber, no border. */
 html[data-skin="v2"] .overlay{background:rgba(5,6,9,.66)}
 html[data-skin="v2"] .modal{background:#26262B;border:0;border-radius:26px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
+/* Signature animations (§5.3 — comp names collide with the existing ripple ckWave, so V2-suffixed). */
+@keyframes ckWaveV2{0%,100%{opacity:.15}50%{opacity:1}}
+@keyframes ckGlowV2{0%,100%{opacity:.4}50%{opacity:1}}
+/* Live call (6m/§5.17): phone-icon sound arcs pulse; message well carved; bubbles raised;
+   CHECK AI label green, STAFF muted. Timeline verdict colors ride the existing ctl classes. */
+html[data-skin="v2"] .rhead.live .ckarc1{animation:ckWaveV2 1.5s ease-in-out infinite}
+html[data-skin="v2"] .rhead.live .ckarc2{animation:ckWaveV2 1.5s ease-in-out .35s infinite}
+html[data-skin="v2"] .callmsg{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+html[data-skin="v2"] .bub{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+html[data-skin="v2"] .bub.a .nm{color:#4ADE80;opacity:1}
+html[data-skin="v2"] .bub.c .nm{color:#8A8A96;opacity:1}
+/* RESULT chip breathing dot (§5.3) — armed for the verdict-page cycle. */
+html[data-skin="v2"] .rpill .d{animation:ckGlowV2 2s ease-in-out infinite}
 /*V2END*/</style>
 </head>
 <body>
@@ -2643,7 +2656,7 @@ const ICO={
   fungie:c=>`<svg width="24" height="24" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="${c}"/><g fill="#fff"><rect x="9" y="6.5" width="16" height="6" rx="3"/><rect x="9" y="6.5" width="6" height="19" rx="3"/><rect x="9" y="14" width="12" height="6" rx="3"/></g></svg>`,
   pin:c=>`<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 22s7-6.4 7-12a7 7 0 1 0-14 0c0 5.6 7 12 7 12z" fill="${c}" opacity=".16"/><path d="M12 22s7-6.4 7-12a7 7 0 1 0-14 0c0 5.6 7 12 7 12z" stroke="${c}" stroke-width="2"/><circle cx="12" cy="10" r="2.5" fill="${c}"/></svg>`,
   store:c=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 9l1.4-4h13.2L20 9" stroke="${c}" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 9.5V19h14V9.5" stroke="${c}" stroke-width="1.8"/><path d="M4 9h16" stroke="${c}" stroke-width="1.8"/><path d="M10 19v-4h4v4" stroke="${c}" stroke-width="1.8"/></svg>`,
-  call:c=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 4h3l1.5 4-2 1.2a11 11 0 0 0 5.3 5.3L15 16.5 19 18v3a1.5 1.5 0 0 1-1.6 1.5C9.7 21.9 2.1 14.3 1.5 6.6A1.5 1.5 0 0 1 3 5h3z" transform="translate(1 -1)" fill="${c}" opacity=".15"/><path d="M5 3.5h3L9.4 7.4 7.6 8.7a11 11 0 0 0 4.7 4.7l1.3-1.8 3.9 1.4v3A1.6 1.6 0 0 1 15.8 21C8.6 20.3 1.7 13.4 1 6.2A1.6 1.6 0 0 1 2.6 4.5" stroke="${c}" stroke-width="1.7" stroke-linejoin="round" fill="none"/><path d="M13.3 7.5a2 2 0 0 1 1.5 1.5M12.8 9.5a.8 .8 0 0 1 .5 .5" stroke="${c}" stroke-width="1.6" stroke-linecap="round"/></svg>`,
+  call:c=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M6 4h3l1.5 4-2 1.2a11 11 0 0 0 5.3 5.3L15 16.5 19 18v3a1.5 1.5 0 0 1-1.6 1.5C9.7 21.9 2.1 14.3 1.5 6.6A1.5 1.5 0 0 1 3 5h3z" transform="translate(1 -1)" fill="${c}" opacity=".15"/><path d="M5 3.5h3L9.4 7.4 7.6 8.7a11 11 0 0 0 4.7 4.7l1.3-1.8 3.9 1.4v3A1.6 1.6 0 0 1 15.8 21C8.6 20.3 1.7 13.4 1 6.2A1.6 1.6 0 0 1 2.6 4.5" stroke="${c}" stroke-width="1.7" stroke-linejoin="round" fill="none"/><path class="ckarc1" d="M13.3 7.5a2 2 0 0 1 1.5 1.5" stroke="${c}" stroke-width="1.6" stroke-linecap="round"/><path class="ckarc2" d="M12.8 9.5a.8 .8 0 0 1 .5 .5" stroke="${c}" stroke-width="1.6" stroke-linecap="round"/></svg>`,
   proof:c=>`<svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="${c}" stroke-width="1.8"/><path d="M8 12.3l2.6 2.6L16 9.5" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   spark:c=>`<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 .8l1.5 5.1 5.1 1.6-5.1 1.6L8 14.2 6.5 9.1 1.4 7.5l5.1-1.6z" fill="${c}"/></svg>`,
   star:c=>`<svg width="15" height="15" viewBox="0 0 24 24" fill="${c}"><path d="M12 2.4l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3.1-5.8 3.1 1.1-6.5L2.6 9.2l6.5-.9z"/></svg>`,
