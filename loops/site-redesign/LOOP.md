@@ -60,7 +60,9 @@ manifest order.** Use your EYES per that doc: render the comp board + your view 
 4. Repeat. Manifest 100% checked → **AUDIT SWEEP**: walk every page fresh against the design docs;
    anything off → re-open its box with `REOPENED: <why>`. A sweep is logged at the bottom of
    MANIFEST.md with its fix count.
-5. **Exit only when two consecutive audit sweeps log ZERO fixes.** Then write the morning report at
+5. ~~Exit on two clean sweeps~~ **OWNER OVERRIDE 2026-07-02: the loop NEVER self-exits this round.**
+   Sweeps repeat with rotating lenses (comp fidelity via screenshots · behavior paths · type · copy ·
+   ES · spacing) until the OWNER stops the loop. Two clean sweeps only gates writing a status report. Then write the morning report at
    the top of MANIFEST.md: done / decided / blocked, and update `docs/handoffs/website.md`.
 6. **After exit, loop firings are no-ops:** if MANIFEST.md already shows the exit condition met,
    reply exactly `LOOP COMPLETE` and do nothing. (The owner stops the /loop in the morning.)

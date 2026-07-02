@@ -1222,6 +1222,48 @@ html[data-skin="v2"] .stat,html[data-skin="v2"] .credline,html[data-skin="v2"] .
 html[data-skin="v2"] .smchip,html[data-skin="v2"] .upmod-h .t .pchip,html[data-skin="v2"] .smwarn{border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
 html[data-skin="v2"] .acctav,html[data-skin="v2"] .ighead .av,html[data-skin="v2"] .callhead .ci{border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
 html[data-skin="v2"] .acctrow .chev,html[data-skin="v2"] .scoretile img{border:0}
+/* 6e MY-CHECKS POP-UP REBUILD — comp structure: green wash header (My ✓ · Done · phone · plan chip),
+   two overlapping raised stat tiles, Overview/Activity/Earn keys, yellow icon rows. Legacy header
+   (avatar/name/cred pill) hides under v2 — the wash header replaces it. */
+html[data-skin="v2"] #acctOverlay .modal{padding:0;overflow:hidden;border-radius:30px}
+html[data-skin="v2"] #acctOverlay .modal>*:not(.acctv2head):not(.acctrows):not(.x){display:none}
+html[data-skin="v2"] #acctOverlay .acctrows{padding:0 18px 22px}
+html[data-skin="v2"] #acctOverlay .x{display:none}
+html[data-skin="v2"] .acctv2head .wash{background:#266440;padding:14px 18px 46px}
+html[data-skin="v2"] .acctv2head .stats{margin:-28px 18px 0;display:flex;gap:10px}
+html[data-skin="v2"] .acctv2head .stat2{flex:1;background:linear-gradient(180deg,#31313A 0%,#26262B 100%);border-radius:16px;padding:14px 0;text-align:center;box-shadow:0 14px 26px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1)}
+html[data-skin="v2"] .acctv2head .stat2 b{font-size:24px;font-weight:800;display:block}
+html[data-skin="v2"] .acctv2head .stat2 i{font-style:normal;margin-top:3px;font-size:10px;font-weight:700;letter-spacing:.15em;color:#8A8A96;display:block}
+html[data-skin="v2"] .acctv2head .tabs{display:flex;gap:8px;padding:16px 18px 0}
+html[data-skin="v2"] .acctv2head .tab{flex:1;padding:10px 0;border-radius:12px;color:#7C7C88;font-size:13px;font-weight:700;text-align:center;cursor:pointer;background:none;border:0}
+html[data-skin="v2"] .acctv2head .tab.on{background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#4ADE80}
+html[data-skin="v2"] #acctOverlay .acctrow{border-radius:16px;padding:13px 14px;margin-top:10px}
+/* 6m RESULT REBUILD — comp structure. Section order via flex order (markup untouched, behaviors keep
+   their nodes): title block → poll (unclear) → CHECK ANOTHER STORE capsule → timeline+convo → in-stock
+   actions → restock → checks-used → footer. The big emoji verdict circle is NOT in the comp — gone. */
+html[data-skin="v2"] #result{display:flex;flex-direction:column}
+html[data-skin="v2"] #result>.rverdict{order:0}
+html[data-skin="v2"] #result>.fbk{order:1}
+html[data-skin="v2"] #result>.topcta{order:2}
+html[data-skin="v2"] #result>.callsec{order:3}
+html[data-skin="v2"] #result>*{order:4}
+html[data-skin="v2"] #result>.upmod{order:5}
+html[data-skin="v2"] #result>.foot{order:6}
+html[data-skin="v2"] .vmark{display:none}
+/* Comp timeline: left rail (green dot → gradient line → verdict dot) + full-width labeled cards. */
+html[data-skin="v2"] .ctlv2{display:flex;gap:14px;margin-top:10px}
+html[data-skin="v2"] .ctlv2-rail{width:12px;display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+html[data-skin="v2"] .ctlv2-rail .d1{width:10px;height:10px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px rgba(74,222,128,.6);flex-shrink:0}
+html[data-skin="v2"] .ctlv2-rail .ln{flex:1;width:2px}
+html[data-skin="v2"] .ctlv2-rail .d2{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+html[data-skin="v2"] .ctlv2 details>summary{display:flex;align-items:baseline;justify-content:space-between;list-style:none;cursor:pointer}
+html[data-skin="v2"] .ctlv2 details>summary::-webkit-details-marker{display:none}
+html[data-skin="v2"] .ctlv2-steps{margin-top:10px;display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:500;color:#5C5C68}
+html[data-skin="v2"] .ctlv2-steps .cur{color:#4ADE80;font-weight:700}
+html[data-skin="v2"] .ctlv2-bub{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:12px 15px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+html[data-skin="v2"] .ctlv2-bub .who{font-size:10px;font-weight:700;letter-spacing:.13em;color:#8A8A96}
+html[data-skin="v2"] .ctlv2-bub.ai .who{color:#4ADE80}
+html[data-skin="v2"] .ctlv2-bub .tx{margin-top:4px;font-size:15px;font-weight:500;color:rgba(255,255,255,.85)}
 /* ROUND 2 — OWNER SCREENSHOT FIXES */
 /* Account screen (§3/§8): the icon set is ALL accent — no purple on account screens, ever. */
 html[data-skin="v2"] .acctrow>svg *[stroke]:not([stroke="none"]){stroke:var(--accent,#FFCB05)}
@@ -1445,6 +1487,14 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   </div>
 </footer>
 
+<!-- 6a — after-the-free-check upsell (v2 preview; comp copy queued for Copy ratification) -->
+<div class="overlay" id="upsellOverlay" onclick="if(event.target===this)closeUpsell()">
+  <div class="modal" style="position:relative;max-width:400px;text-align:left;padding:22px 20px">
+    <div style="font-size:21px;font-weight:900;letter-spacing:-.4px;line-height:1.2" data-i18n="up6a.title">That was your free check.<br>Ready for the good stuff?</div>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px" id="up6a_rows"></div>
+    <button class="cta" style="margin-top:18px;width:100%" onclick="closeUpsell();openBuy()" data-i18n="up6a.cta">See Check+ plans</button>
+  </div>
+</div>
 <!-- Buy / subscribe modal -->
 <div class="overlay" id="buyOverlay" onclick="if(event.target===this)closeBuy()">
   <div class="modal" style="position:relative;max-width:430px;text-align:left">
@@ -2097,7 +2147,7 @@ async function boot(){
   if(sp.get('call')) restoreCall(sp.get('call'), sp.get('store'), sp.get('cat'));
   else if(sp.get('v')==='history') openHistory();
   else if(sp.get('flow')==='hobby'&&isV2()) setTimeout(()=>{try{openHobby();}catch(e){}},60); // HIDDEN hobby preview (owner override)
-  else if(sp.get('show')==='signup'&&isV2()) setTimeout(()=>{try{openBuy('out');}catch(e){}},400);   // HIDDEN sign-up/plans preview (6a–6d)
+  else if(sp.get('show')==='signup'&&isV2()) setTimeout(()=>{try{openUpsell();}catch(e){}},400);   // HIDDEN sign-up preview: 6a → SEE PLANS → 6b sheet
   else if(sp.get('show')==='mychecks'&&isV2()) setTimeout(()=>{try{openHistory();}catch(e){}},400);  // HIDDEN My-checks preview (6e–6i)
   else if(sp.get('v')==='success') openSuccess();
   // HYDRATE — dynamic data loads in the background, then re-render only the parts that need it.
@@ -2401,6 +2451,30 @@ function openAccount(){
   }
   // The "Earn free checks" block now lives in this panel — refresh its referral link/count on open.
   try{ loadRefer(); }catch(_){}
+  // 6e comp header (v2): green wash (My ✓ · Done · phone · plan chip) + overlapping stat tiles + tabs.
+  if(isV2()){ try{
+    const modal=document.querySelector('#acctOverlay .modal');
+    let head=modal.querySelector('.acctv2head');
+    if(!head){ head=document.createElement('div'); head.className='acctv2head'; modal.insertBefore(head,modal.firstChild); }
+    const planChip = comp?('∞ '+t('acct.unlimited','Unlimited')):(member?('★ '+t('acct.member','Member')):t('acct.free','Free'));
+    const left = comp?'∞':String(n);
+    let run=0; try{ const now=new Date(); run=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length; }catch(_){ }
+    head.innerHTML=`<div class="wash">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="display:flex;align-items:center;gap:9px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('acct.my','My')}</span>${FCHK(24)}</span>
+          <button onclick="closeAccount()" style="background:none;border:0;font-size:12px;font-weight:700;color:rgba(255,255,255,.55);cursor:pointer">${t('acct.done','Done')}</button>
+        </div>
+        <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,.8);white-space:nowrap">${esc(idn.primary)}</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);font-size:12px;font-weight:700">${esc(planChip)}</span>
+        </div></div>
+      <div class="stats"><div class="stat2"><b>${esc(left)}</b><i>${esc(t('acct.stat.left','Checks left').toUpperCase())}</i></div><div class="stat2"><b>${run}</b><i>${esc(t('acct.stat.run','Checks run').toUpperCase())}</i></div></div>
+      <div class="tabs">
+        <button class="tab on">${t('acct.tab.overview','Overview')}</button>
+        <button class="tab" onclick="closeAccount();openHistory()">${t('acct.tab.activity','Activity')}</button>
+        <button class="tab" onclick="const e=document.getElementById('earndemo');if(e){e.scrollIntoView({behavior:'smooth'});}">${t('acct.tab.earn','Earn')}</button>
+      </div>`;
+  }catch(_){} }
   $('acctOverlay').classList.add('on'); track('account_open');
 }
 function closeAccount(){ $('acctOverlay').classList.remove('on'); }
@@ -3297,6 +3371,37 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
   const reached = human.length>0 || (n>0 && steps[n-1].n>=6);
   // Steps list — DROP the first "Calling {store}…" step (the roll-up header carries it, so the store
   // name shows ONCE). Greyed text, no dots; the final connection step turns green ✓ when we got a person.
+  if(isV2()){
+    // 6m comp structure: left gradient rail; steps under a collapsible "Ringing the store… · N steps"
+    // header; CONVERSATION eyebrow; FULL-WIDTH labeled cards (STAFF muted / CHECK AI green); the
+    // verdict line closes the block. Same node ids (#convo_body) so translate/repaints keep working.
+    const TONE={in:'#4ADE80',out:'#EF4444',unk:'#FBBF24',soon:'#F59E0B'};
+    const tone=TONE[(status&&status.cls)||'unk']||'#FBBF24';
+    const live=finalElapsed==null&&!(status&&status.title);
+    const stepEls=steps.slice(1).map((s,idx)=>{
+      const realI=idx+1; let secs=null;
+      if(realI<n-1){ if(steps[realI+1].at>s.at) secs=Math.round(steps[realI+1].at-s.at); }
+      else if(finalElapsed!=null&&s.at>0&&finalElapsed>s.at) secs=Math.round(finalElapsed-s.at);
+      const last=realI===n-1;
+      return `<span class="${last?'cur':''}">${esc(liveStageLabel(s.n)||s.label)}${secs!=null?` <span style="color:#5C5C68;font-weight:600;font-size:12.5px">${secs}s</span>`:''}</span>`;
+    }).join('');
+    const totalS=finalElapsed!=null?Math.round(finalElapsed):(n>0?Math.round(steps[n-1].at):0);
+    const bubs=human.map(l=>{ const m=l.match(/^(Agent|Clerk):\s*(.*)$/); if(!m) return '';
+      const ai=m[1]==='Agent';
+      return `<div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?esc(t('lbl.agent','CHECK AI').toUpperCase()):esc(t('lbl.assoc','STAFF').toUpperCase())}</div><div class="tx">${esc(m[2])}</div></div>`; }).join('');
+    const vline=(status&&(status.term||status.title))?`<div style="margin-top:12px;font-size:15px;font-weight:800;color:${tone}">${esc(status.term||status.title)}</div>`:'';
+    return `<div class="ctlv2">
+      <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80':tone} 100%)"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
+      <div style="flex:1;min-width:0">
+        <details open><summary><span style="font-size:15px;font-weight:700">${t('step.ringing','Ringing the store…')}</span><span style="font-size:13px;font-weight:600;color:#8A8A96">${n} ${n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''} ⌃</span></summary>
+          <div class="ctlv2-steps">${stepEls}</div>
+        </details>
+        ${human.length?`<div style="margin-top:18px;font-size:11px;font-weight:700;letter-spacing:.15em;color:rgba(255,255,255,.5)">${esc(t('res.conversation','Conversation').toUpperCase())}</div>`:''}
+        <div id="convo_body" style="margin-top:10px;display:flex;flex-direction:column;gap:9px">${bubs||(finalElapsed==null?`<div class="cs-wait">${t('live.waitperson','Reaching a person…')}</div>`:'')}</div>
+        ${vline}
+      </div>
+    </div>`;
+  }
   const stepRows = steps.slice(1).map((s,idx)=>{
     const realI=idx+1; let secs=null; // seconds this step took (real timings only — derived steps are all at:0)
     if(realI<n-1){ if(steps[realI+1].at>s.at) secs=Math.round(steps[realI+1].at-s.at); }
@@ -3539,7 +3644,9 @@ async function finalizeLive(cid){
   if(!res.transcript){ try{ const lv=await appApi('/pub/live/'+encodeURIComponent(cid)); if(lv&&lv.transcript) res.transcript=lv.transcript; }catch(_){} }
   if(res.status==='completed'){
     if(isAuthed()){ appApi('/app/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}).then(c=>{ if(c&&c.credits!=null){ if(ACCOUNT)ACCOUNT.credits=c.credits; renderAuth(); } }); }
-    else { localStorage.setItem('runnr_free_used','1'); api('/pub/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}); renderAuth(); }
+    else { localStorage.setItem('runnr_free_used','1'); api('/pub/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}); renderAuth();
+      // 6a: right after the FIRST free check's result, send off into premium (once, v2 preview only).
+      if(isV2()&&!localStorage.getItem('cifm_upsell_seen')){ localStorage.setItem('cifm_upsell_seen','1'); setTimeout(openUpsell,1600); } }
   }
   saveCheckToHistory(res, cid); showResult(res, cid);
   // If we only have a PROVISIONAL read (no hard yes/no yet), upgrade it in place once the server's
@@ -4239,6 +4346,15 @@ async function openHistEntry(e){
   if(!resultSame(o,cached)) showResult(o, e.cid);
   // Deep-link the open call so a refresh restores exactly this transcript.
   try{ const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',e.cid); history.replaceState({v:'result'},'',location.pathname+'?'+sp.toString()); }catch(_){}
+}
+// ---- 6a upsell (v2): send-off into premium right after the FIRST free check result. ----
+function closeUpsell(){ const o=$('upsellOverlay'); if(o)o.classList.remove('on'); }
+function openUpsell(){
+  if(!isV2()) return;
+  const rows=$('up6a_rows');
+  if(rows){ const feat=(ic,txt)=>`<div style="display:flex;align-items:center;gap:11px"><span style="display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:rgba(74,222,128,.15);flex:0 0 auto">${ic}</span><span style="font-size:14.5px;font-weight:700">${txt}</span></div>`;
+    rows.innerHTML=feat(ICO.pin('#4ADE80'),t('up6a.f1','Check any town in America'))+feat(ICO.bell('#4ADE80'),t('up6a.f2','Restock alerts'))+feat(ICO.store('#4ADE80'),t('up6a.f3','Check multiple stores at once')); }
+  $('upsellOverlay').classList.add('on'); try{track('upsell6a_open');}catch(e){}
 }
 // ==== HOBBY flow (P3a→P5, §5.13) — HIDDEN preview (owner override 2026-07-02) ====================
 // Reachable ONLY with the v2 skin on + ?flow=hobby. Data comes exclusively from /pub/pokemon-sets
