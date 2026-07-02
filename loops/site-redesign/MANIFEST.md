@@ -377,6 +377,12 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   Invita a un amigo / Publica tu logro / Recibo de kiosco). All 10 hobby ES strings verified through
   the live t() layer (the sandbox feed flake blocked a full render — strings themselves resolve).
   PROOF: ES-6g-earn-v2.png. CLEAN.
+- [x] Watch 17: **6f REBUILT to its frame** — the 16KB 6f comp had never been deep-read; my cycle-16
+  build followed its general pattern, not its specs. Comp-exact now: chart in a RAISED CARD w/ ACCENT
+  'History ›' (was naked + green), past-week bars translucent-white flat-bottomed w/ ONLY the current
+  week green-gradient + glow (was all-green), 72px scale, tone stats = 4-col grid CARD w/ WHITE 18/800
+  values (was colored inline chips), last checks = 40px logo-tile rows w/ verdict + time-ago right
+  blocks (was chip buttons). PROOF: 6f-activity-v2.png (re-shot, direct frame match).
 - [x] Watch 16: PWA manifest inspected (never checked) — theme/background = v1 #0C0C12 (CORRECT today;
   at takeover the installed-app splash would flash old navy against #1D1D22 pages) → **added as step
   3b in PROMOTE.md's takeover section; do NOT touch before**. Staging carries watch-14/15 ES work;
