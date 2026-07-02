@@ -325,6 +325,9 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   upstream pushes from other lanes.
 - [x] Watch 2: Lens A regression re-shoot of the owner-flagged screens (P1 home, 6e overview) —
   both hold comp-true, Lens E wash fix visible; no drift. No upstream pushes. CLEAN.
+- [x] Watch 3: pre-font proof batch RE-SHOT in true Inter (R1/R2/R3, RN1/RN2, SC1/SC2, P2) — all hold
+  comp-true; the tighter real type resolves the fallback-font wraps (RN1 step titles now single-line
+  per comp). Every proof in the repo is now true-Inter. CLEAN.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
