@@ -266,6 +266,11 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   sub locked 12/600 #8A8A96, distance 14→**17/800 white** + 10/700 muted unit, selected accent ring now
   carries the comp's glow (color-mix per vertical). PROOF: store-rows-v2.png (real chain logos, ringed
   selected row — direct match to the P2 frame's list).
+- [x] Rotation 2 pass 3: 6m + footer computed-value probe — 3 fixes: RESULT chip pad 5×11→7×14 (comp) ·
+  verdict sentence .65→.72-white (comp) · homepage DEMO bubbles still carried the v1 chat-tail radius
+  under v2 → uniform r16 pad 12×15 + 10/700/.13em labels (the probe first flagged them as result-page
+  bubbles; the result page's ctlv2 bubbles were already comp-exact). Steps head, chip tracking, foot
+  links verified exact.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles

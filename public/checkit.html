@@ -1186,7 +1186,8 @@ html[data-skin="v2"] .modal{background:#26262B;border:0;border-radius:26px;box-s
 html[data-skin="v2"] .rhead.live .ckarc1{animation:ckWaveV2 1.5s ease-in-out infinite}
 html[data-skin="v2"] .rhead.live .ckarc2{animation:ckWaveV2 1.5s ease-in-out .35s infinite}
 html[data-skin="v2"] .callmsg{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
-html[data-skin="v2"] .bub{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+html[data-skin="v2"] .bub{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);border-radius:16px;padding:12px 15px;border:0} /* rotation 2: kill the v1 chat-tail radius on the DEMO bubbles too */
+html[data-skin="v2"] .bub .nm{font-size:10px;font-weight:700;letter-spacing:.13em}
 html[data-skin="v2"] .bub.a .nm{color:#4ADE80;opacity:1}
 html[data-skin="v2"] .bub.c .nm{color:#8A8A96;opacity:1}
 /* RESULT chip breathing dot (§5.3) — armed for the verdict-page cycle. */
@@ -1194,13 +1195,13 @@ html[data-skin="v2"] .rpill .d{animation:ckGlowV2 2s ease-in-out infinite}
 /* Verdict pages (6m/P6/§5.8): chrome on a wash is GLASS — translucent + faint border, never dark
    pills. RESULT chip = glass with the verdict-tinted border; title solid verdict color 30/900. */
 html[data-skin="v2"] body.rview .pill,html[data-skin="v2"] body.rview .vsw-trig,html[data-skin="v2"] body.rview .railcal,html[data-skin="v2"] body.rview .rnav-b{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
-html[data-skin="v2"] .rpill{background:rgba(255,255,255,.06)}
+html[data-skin="v2"] .rpill{background:rgba(255,255,255,.06);padding:7px 14px} /* rotation 2: comp 7/14, was 5/11 */
 html[data-skin="v2"] .rverdict.in .rpill{border:1px solid rgba(74,222,128,.45)}
 html[data-skin="v2"] .rverdict.out .rpill{border:1px solid rgba(239,68,68,.45);color:#FF7B7B}
 html[data-skin="v2"] .rverdict.unk .rpill{border:1px solid rgba(251,191,36,.45)}
 html[data-skin="v2"] .rverdict.soon .rpill{border:1px solid rgba(245,158,11,.45)}
 html[data-skin="v2"] .rverdict.in .rtitle2{background:none;-webkit-background-clip:initial;background-clip:initial;-webkit-text-fill-color:currentColor;color:#4ADE80;filter:none}
-html[data-skin="v2"] .rsub{font-size:16px;font-weight:500;color:rgba(255,255,255,.65)}
+html[data-skin="v2"] .rsub{font-size:16px;font-weight:500;color:rgba(255,255,255,.72)} /* rotation 2: comp .72, was .65 */
 /* Calls-by-day pop-over (P6c/§5.10): calendar card #26262B r22, raised nav keys, selected day =
    accent raised key, today = 1.5px white outline. */
 html[data-skin="v2"] .railcalpop{background:#26262B;border:0;border-radius:22px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
