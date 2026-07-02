@@ -207,7 +207,14 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   live = green rail, no verdict); a true live shot needs a real call — owner sees it on their first
   staging check. NOT owed as a separate rendered proof.
 ### AUDIT LENS ROTATION (never exits — one lens per firing, then start over)
-- [ ] Lens A: comp fidelity re-diff, screen by screen, shot vs extracted comp (type scale first)
+- [~] Lens A pass 1 (this firing — IS1 + T1, the two never-diffed frames): IS1 REBUILT to comp — share =
+  white 12.5/800/.13em ring capsule w/ upload icon LEFT + arrow RIGHT (was green centered text), Too far?/
+  Grabbed it? = 2-col GRID of tile-cards (32px green-tint tiles, 13.5/700 + 10.5/600 two-line labels; was
+  stacked full-width rows). Approved strings split at the '?' — no invented copy, EN+ES both carry one.
+  T1 toasts to comp: 14.5/800 pad 12/22, comp shadows + inner top light, success text #0C2916, neutral
+  #31313A→#26262C (both comp-verbatim, added to tokens). BONUS §8 catch: 'That was your free check 🎯'
+  emoji stripped under v2 (regex on render — string untouched for v1/Copy). PROOFS: IS1-actions-v2.png ·
+  T1-success/neutral/accent-v2.png. Remaining Lens A targets: S2 re-diff · P3/P4 detail vs frames · 6h.
 - [ ] Lens B: button paths — every tap lands its outcome (rendered clicks)
 - [ ] Lens C: copy — served strings vs approved copy; comp-isms leaking; COPY QUEUE current
 - [ ] Lens D: ES — full flow in Spanish, no English leaks in v2-added strings

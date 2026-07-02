@@ -1099,9 +1099,18 @@ html[data-skin="v2"] .site-footer{padding:22px 18px}
 html[data-skin="v2"] .foot-links a{font-size:13px;font-weight:600;color:#8A8A96}
 html[data-skin="v2"] .foot-social a,html[data-skin="v2"] .foot-social button{width:36px;height:36px;border-radius:50%;background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 /* Toasts (T1/§5.4): bottom capsule, green success gradient + dark-green text. */
-html[data-skin="v2"] .toast{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210F;border:0;border-radius:999px;box-shadow:0 12px 28px -8px rgba(25,177,69,.45)}
-html[data-skin="v2"] .toast.tneutral{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);color:#FFF;box-shadow:0 12px 28px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
-html[data-skin="v2"] .toast.taccent{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;box-shadow:0 12px 28px -8px color-mix(in srgb,var(--accent,#FFCB05) 40%,transparent)}
+/* T1 EXACT: 14.5/800, pad 12/22, comp shadows (deep drop + inner top light). */
+html[data-skin="v2"] .toast{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#0C2916;border:0;border-radius:999px;font-size:14.5px;font-weight:800;padding:12px 22px;box-shadow:0 14px 30px -8px rgba(25,177,69,.5),inset 0 1px 0 rgba(255,255,255,.35)}
+html[data-skin="v2"] .toast.tneutral{background:linear-gradient(180deg,#31313A 0%,#26262C 100%);color:#FFF;box-shadow:0 14px 30px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.12)}
+html[data-skin="v2"] .toast.taccent{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;box-shadow:0 14px 30px -8px color-mix(in srgb,var(--accent,#FFCB05) 45%,transparent),inset 0 1px 0 rgba(255,255,255,.4)}
+/* IS1 EXACT: share = white 12.5/800/.13em label capsule (icon left, arrow right); action tiles 2-col. */
+html[data-skin="v2"] .smbtn.is1s{display:flex;align-items:center;justify-content:space-between;width:100%;color:#FFF;font-size:12.5px;letter-spacing:.13em;padding:13px 22px}
+html[data-skin="v2"] .is1g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+html[data-skin="v2"] .is1t{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:11px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left}
+html[data-skin="v2"] .is1t:active{transform:translateY(2px)}
+html[data-skin="v2"] .is1t .tl{width:32px;height:32px;border-radius:10px;background:rgba(74,222,128,.12);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+html[data-skin="v2"] .is1t .a{display:block;font-size:13.5px;font-weight:700}
+html[data-skin="v2"] .is1t .b{display:block;margin-top:1px;font-size:10.5px;font-weight:600;color:#8A8A96}
 /* Dropdown menus (product/language switchers): big-card surface, depth not borders. */
 html[data-skin="v2"] .vsw-menu{background:#26262B;border:0;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 /* Finds ticker chips (NO COMP — extended): raised row cards, green accents stay in content. */
@@ -4102,11 +4111,24 @@ function showResult(o, cid){
   const PURP='#4ADE80'; // brand green (was Runnr purple) — keep the restock module on-brand
   const inStock=cls==='in', canNotify=cls!=='in' && o.status!=='failed' && o.status!=='pending';
   const restockDay=shipmentDayShort(SEL_STORE), isMember=(ACCOUNT&&ACCOUNT.subscription==='active');
-  const inActions = inStock ? [
+  // IS1 (v2): SHARE = white-label ring capsule w/ upload icon + arrow; Too far?/Grabbed it? = 2-col
+  // grid of tile-cards. Approved strings split at the '?' into title/sub (EN + ES both carry one) —
+  // no new copy. v1 markup untouched.
+  const inActions = inStock ? (isV2() ? (()=>{
+    const sp=s=>{const i=s.indexOf('?');return i>0?[s.slice(0,i+1),s.slice(i+1).trim()]:[s,''];};
+    const [dT,dS]=sp(t('res.driver','Too far? Have a local grab it')), [cT,cS]=sp(t('res.score','Grabbed it? Post your score'));
+    const up='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>';
+    const arr='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>';
+    const truck='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35a1 1 0 0 0-.78-.38H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>';
+    const cam='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg>';
+    const tileBtn=(ic,ti,su,fn)=>`<button class="is1t" onclick="${fn}"><span class="tl">${ic}</span><span><span class="a">${esc(ti)}</span><span class="b">${esc(su)}</span></span></button>`;
+    return (F.shareCards!==false?`<button class="smbtn is1s" onclick="shareFind()"><span style="display:inline-flex;align-items:center;gap:9px">${up}<span>${t('res.share','Share this find')}</span></span>${arr}</button>`:'')
+      +`<div class="is1g">${F.driverHandoff!==false?tileBtn(truck,dT,dS,'openDriverDemo()'):''}${F.community?tileBtn(cam,cT,cS,'openSuccess()'):''}</div>`;
+  })() : [
     F.shareCards!==false?`<button class="act2 gr" onclick="shareFind()">${ICO.mega('currentColor')} ${t('res.share','Share this find')}</button>`:'',
     F.driverHandoff!==false?`<button class="act2" onclick="openDriverDemo()">${ICO.truck('#fff')} ${t('res.driver','Too far? Have a local grab it')}</button>`:'',
     F.community?`<button class="act2" onclick="openSuccess()">${ICO.cam('#fff')} ${t('res.score','Grabbed it? Post your score')}</button>`:'',
-  ].join('') : '';
+  ].join('')) : '';
   // Restock section: PREMIUM gets the real "we'll text you" signup; non-premium gets a simple "check
   // back soon" nudge (restock alerts are a paid perk).
   const upsell = !(canNotify && (F.restockAlerts!==false || F.scheduling!==false)) ? '' : (isMember ? `
@@ -4163,7 +4185,7 @@ function showResult(o, cid){
   const primaryCta = isAuthed()
     ? `<button class="cta" onclick="backToBuilder()">${t('cta.another','Check another store')}${arrow}</button>`
     : `<div class="card" style="border-color:rgba(74,222,128,.4);text-align:center">
-        <div style="font-weight:800;font-size:16px;margin-bottom:6px">${t('res.free','That was your free check 🎯')}</div>
+        <div style="font-weight:800;font-size:16px;margin-bottom:6px">${isV2()?t('res.free','That was your free check 🎯').replace(/\s*[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]️?/gu,''):t('res.free','That was your free check 🎯')}</div>
         <div class="meta" style="margin-bottom:14px">${t('res.free.sub',"Sign up free. Keep hunting.")}</div>
         <button class="cta" onclick="signUp()">${t('res.signup','Sign up & keep checking')}</button>
       </div>`;

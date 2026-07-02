@@ -37,7 +37,7 @@ const TOKENS = new Set([
   "#17171C","#20202A","#23232A","#1F1F25","#34343D","#23232B","#08090D","#26251E","#141419",
   "#2F2F36", // R2/R3 comp: modal ✕-circle gradient top (key raised ON the #26262B card)
   "#D9D9E0","#F4F4F6","#0B0B0F", // RN2 comp: paste-message text · driver pay key fill/text
-  "#4ADE80","#4CF286","#5BEA93","#19B145","#0B5A2C","#34C268","#06210F",
+  "#4ADE80","#4CF286","#5BEA93","#19B145","#0B5A2C","#34C268","#06210F","#0C2916","#26262C",
   "#FFCB05","#FFE066","#8A6D00","#EF4444","#FF7B7B","#FBBF24","#F59E0B","#FF9B9B","#7F1D1D",
   "#266440","#6B2427","#6C5419","#6E490F",
   "#FFF","#FFFFFF","#000","#000000","#8A8A96","#7C7C88","#5C5C68","#6B6B7B","#CDCDD8","#B9B9C4",
