@@ -2240,7 +2240,7 @@ async function restoreCall(cid, storeName, catName){
   // so the store name/category are already resolved synchronously and the header is correct.)
   const cached = known ? resultCacheGet(cid) : null;
   if(cached){ if(known&&known.steps) cached.savedSteps=known.steps; showResult(cached, cid); }
-  const o=await api('/pub/result/'+encodeURIComponent(cid));
+  const o=await appApi('/pub/result/'+encodeURIComponent(cid));
   if(!o||o.error||o.status==='in_progress'){ if(cached) return; toast(t('toast.callgone',"That check is no longer available")); backToBuilder(); return; }
   if(!SEL_STORE.name && isAuthed()){ const srv=(await fetchServerHistory()).find(x=>x.cid===cid); if(srv){ SEL_STORE={id:srv.storeId,name:srv.storeName}; } }
   if(!SEL_STORE.name) SEL_STORE.name=t('hist.acheck','Store check');
@@ -2968,7 +2968,7 @@ async function startCheck(){
   const stop=()=>{ clearInterval(POLL);clearInterval(phaseT);clearInterval(elT); };
   POLL=setInterval(async()=>{
     if(secs>=210){ stop(); finalize(cid); return; } // client timeout (long ring/hold)
-    const o=await api('/pub/live/'+encodeURIComponent(cid));
+    const o=await appApi('/pub/live/'+encodeURIComponent(cid));
     if(o&&o.transcript){                                 // stream the conversation live
       $('live_tr').style.display=''; appendLiveTranscript(o.transcript);
       const lines=o.transcript.split('\n').filter(Boolean);
@@ -3252,7 +3252,7 @@ async function startCheckLive(){
       // (no premature "Answered" here — the bridge engaging isn't a person; we only leave Calling/Answering when a real transcript line lands)
       else return; // still ringing / connecting
     }
-    const o=await api('/pub/live/'+encodeURIComponent(cid));
+    const o=await appApi('/pub/live/'+encodeURIComponent(cid));
     if(o&&o.transcript){
       const lines=o.transcript.split('\n').filter(Boolean);
       if(!LIVE_TR.length) LIVE_TRANSCRIPT=o.transcript; // WS gave nothing yet → render the script from the poll
@@ -3281,7 +3281,7 @@ async function finalizeLive(cid){
   if(!cid){ const res={status:'no_answer',transcript:live,summary:''}; saveCheckToHistory(res,null); showResult(res); return; }
   // ONE quick fetch. If EL already has the verdict, we flip straight to it. If not, keep pulling and repaint
   // when it lands (we already flipped off the call screen above).
-  let o=null; try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){}
+  let o=null; try{ o=await appApi('/pub/result/'+encodeURIComponent(cid)); }catch(_){}
   // Wait for a CONFIDENT verdict before leaving the dots — not just "not in_progress". An early read can
   // come back "no clear answer" and then the consensus upgrades it to in-stock; showing that flip looked
   // broken. Hold on "Getting the answer…" until it's settled (yes / no / sold-out / a terminal status) or
@@ -3290,7 +3290,7 @@ async function finalizeLive(cid){
   // second-read included) and always stamps a statusKey — so any keyed response is final, INCLUDING a genuine
   // "no clear answer" (which must flip to the unclear screen + poll right away, not sit on dots for 15s).
   const _confident=(r)=>!!(r&&r.status&&r.status!=='in_progress'&&(r.statusKey||r.confirmed===true||r.confirmed===false||r.soldOut||r.doesNotSell||r.status!=='completed'));
-  { let tries=0; while(!_confident(o)&&tries<15){ await new Promise(r=>setTimeout(r,1000)); try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){} tries++; } }
+  { let tries=0; while(!_confident(o)&&tries<15){ await new Promise(r=>setTimeout(r,1000)); try{ o=await appApi('/pub/result/'+encodeURIComponent(cid)); }catch(_){} tries++; } }
   // If we actually reached someone (we have a streamed transcript) but the server verdict hasn't settled
   // inside the window, DO NOT fall back to "nobody answered" — that's the bug where a real "not in stock"
   // call flashed as no-answer until it was reopened. Show the neutral "getting the answer…" placeholder
@@ -3301,7 +3301,7 @@ async function finalizeLive(cid){
   // If EL hasn't attached the transcript yet, fall back to what we streamed live, then to /pub/live, so the
   // conversation always prints on the result without a hard refresh.
   if(!res.transcript && live) res.transcript=live;
-  if(!res.transcript){ try{ const lv=await api('/pub/live/'+encodeURIComponent(cid)); if(lv&&lv.transcript) res.transcript=lv.transcript; }catch(_){} }
+  if(!res.transcript){ try{ const lv=await appApi('/pub/live/'+encodeURIComponent(cid)); if(lv&&lv.transcript) res.transcript=lv.transcript; }catch(_){} }
   if(res.status==='completed'){
     if(isAuthed()){ appApi('/app/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}).then(c=>{ if(c&&c.credits!=null){ if(ACCOUNT)ACCOUNT.credits=c.credits; renderAuth(); } }); }
     else { localStorage.setItem('runnr_free_used','1'); api('/pub/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}); renderAuth(); }
@@ -3324,7 +3324,7 @@ async function reconcileVerdict(cid, prevKey){
   for(let i=0;i<20;i++){
     await new Promise(r=>setTimeout(r,3000));
     if(CALL_GEN!==gen || RAIL_CID!==cid || NAV_VIEW!=='result') return; // a new call started, or user moved on
-    let o=null; try{ o=await api('/pub/result/'+encodeURIComponent(cid)); }catch(_){}
+    let o=null; try{ o=await appApi('/pub/result/'+encodeURIComponent(cid)); }catch(_){}
     if(!o||o.error||o.status==='in_progress') continue;
     const settled = (o.confirmed===true||o.confirmed===false) || (o.statusKey && o.statusKey!==prevKey);
     if(!settled) continue;
@@ -3386,7 +3386,7 @@ function appendLiveTranscript(t){
   if(lines.length>have){ try{ chat.lastElementChild.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){} }
 }
 async function finalize(cid){
-  const o=await api('/pub/result/'+encodeURIComponent(cid));
+  const o=await appApi('/pub/result/'+encodeURIComponent(cid));
   const res=(o&&o.status&&o.status!=='in_progress')?o:{status:'no_answer',transcript:'',summary:''};
   if(res.status==='completed'){      // only charge on a definitive answer
     if(isAuthed()){ appApi('/app/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}).then(c=>{ if(c&&c.credits!=null){ if(ACCOUNT)ACCOUNT.credits=c.credits; renderAuth(); } }); }
@@ -3994,7 +3994,7 @@ async function openHistEntry(e){
   if(cached){ cached.cats=e.cats||cached.cats; if(!cached.categoryResults&&e.categoryResults) cached.categoryResults=e.categoryResults; if(e.steps) cached.savedSteps=e.steps; showResult(cached, e.cid); }
   else { showResult({ status:e.status, confirmed:e.confirmed, soldOut:!!e.soldOut, doesNotSell:!!e.doesNotSell, shipmentDay:e.shipmentDay||null, statusKey:e.statusKey||null, transcript:'', summary:'', cats:e.cats||[], categoryResults:e.categoryResults||null, savedSteps:e.steps||null }, e.cid); }
   // No spinner — we already painted. Fetch the full transcript in the background and re-render if richer.
-  const o=await api('/pub/result/'+encodeURIComponent(e.cid));
+  const o=await appApi('/pub/result/'+encodeURIComponent(e.cid));
   if(!o||o.error||o.status==='in_progress'){ if(cached||e.status) return; HIST_BAD.add(e.cid); HIST_CACHE=HIST_CACHE.filter(x=>x.cid!==e.cid); toast(t('toast.callgone',"That check is no longer available")); openHistory(); return; }
   o.cats=e.cats||ASKED_CATS.map(x=>x.label);
   if(!o.categoryResults && e.categoryResults) o.categoryResults=e.categoryResults;

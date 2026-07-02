@@ -44,15 +44,17 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
   only after an in-stock (green) result? Then pin that edge dark. Don't blind-edit the tint CSS — it's fragile
   ("re-breaks the top"). Mechanism spec lives in the big comment at top of `checkit.html` (~L6-14).
 - **Treasure Hunt / thrift toggle** — ON HOLD per owner (front-end being designed with Design + Data).
-- **DevOps → Website (security, small): send the session token on transcripts.** Add
-  `Authorization: Bearer <check_session>` to `GET /pub/result/:cid` + `GET /pub/live/:cid` whenever the
-  user is signed in (same token you already send on `/app/*`). Backend accepts it today; once you ship,
-  DevOps flips `policy.flags.transcriptAuth` on and strangers can no longer read a customer's transcript
-  by call id. Details: API_CONTRACT change log 2026-07-01.
 
 **⏳ Blocked / waiting on others:** — (kiosk nudge, shipment opener, Topps logo, entrance animation all closed by owner 2026-07-01)
 
 **✅ Recently done** (newest first; trim when long):
+- **Transcript auth header shipped** (DevOps ask): all 9 `/pub/result/:cid` + `/pub/live/:cid` call sites now
+  go through `appApi` → `Authorization: Bearer <check_session>` whenever signed in (anonymous unchanged).
+  ➡️ DevOps can flip `policy.flags.transcriptAuth` ON once this deploys.
+- **Full-site redesign incoming** (owner + Claude Design): plan agreed — enumerate every view in checkit.html,
+  map comps to views, restyle uncovered views to the new design system, ship as a PREVIEW MODE on staging
+  (owner flips a switch to walk the whole new look; approve → becomes default → promote). Comps will include
+  hobby/kiosk/thrift layouts (hobby = sports cards + TCG only).
 - **Security lockdown (owner-priority)**: `/pub/stores` (full-table dump) now admin-auth only (header or
   admin cookie — Admin keeps working); `/pub/*` 300/min/IP ceiling; text-search path q≥2 chars, offset≤600,
   30/min/IP. Phones were never exposed; muted + owner-only stay hidden. tsc+tests green.
