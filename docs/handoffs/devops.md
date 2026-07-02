@@ -63,6 +63,15 @@ Admin lane. DevOps takes dev work only when the owner assigns it. Kickoff prompt
 3. **Staging and prod can run different workflows.** Already true — separate DBs, separate `vt_*` settings.
 
 ## Current state (2026-07-01 — KEEP UPDATED)
+- [x] **COMMERCE LIVE ON STAGING (test mode, 2026-07-02).** Stripe test keys + webhook secret set on
+  the staging service (webhook endpoint `we_1TohvW…` → staging/webhooks/stripe: checkout.completed,
+  invoice.paid, subscription.deleted). Proven end-to-end: real test-card subscription PAID ($9.99) →
+  Stripe's signed webhooks delivered + verified (pending_webhooks 0); handler logic covered by the
+  13-test stripe suite; UI was already fully wired (plan cards → /app/checkout, ?paid=1 toast+refresh,
+  Manage-plan dashboard). Test sub canceled after proof. ⚠️ AT PROMOTE: create a LIVE-mode webhook
+  endpoint for checkitforme.com/webhooks/stripe + confirm prod's whsec matches it; prod key is rk_live.
+  Debt note: /app/me `catalog` serves the stale SUB/PACKS constants ($4.99 "Fungibles Membership") while
+  checkout+UI use policy ($9.99 Check+/Family) — align when touching billing next.
 - [x] **Mapping decoupled from staging (2026-07-02):** passive tree-learn now skips staging entirely +
   skips owner-only stores everywhere (that's how the bogus 19s got written — Fun-store test transcript).
   Explicit Tree Trainer unaffected. tsc + suite green.
