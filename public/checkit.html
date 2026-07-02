@@ -1092,6 +1092,15 @@ html[data-skin="v2"] .rng::-webkit-slider-runnable-track{background:linear-gradi
 html[data-skin="v2"] .rng::-webkit-slider-thumb{width:24px;height:24px;border:0;margin-top:-9px;box-shadow:0 0 12px rgba(74,222,128,.6),0 3px 10px rgba(0,0,0,.5)}
 html[data-skin="v2"] .rng::-moz-range-track{background:#1B1B20}
 html[data-skin="v2"] .rng::-moz-range-thumb{width:24px;height:24px;border:0;box-shadow:0 0 12px rgba(74,222,128,.6),0 3px 10px rgba(0,0,0,.5)}
+/* Store rows (§5.6): chain-art logo slot on #1F1F25; independents keep the embossed initials tile.
+   Selection = accent ring + #23232A fill (§5.5); BEST row = green ring + soft glow. */
+html[data-skin="v2"] .store .ic{background:#1F1F25;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+html[data-skin="v2"] .store .ic:not(:has(img)){background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5)}
+html[data-skin="v2"] .store.sel{background:#23232A;border:0;box-shadow:0 0 0 2px var(--accent,#FFCB05),0 8px 14px -8px rgba(0,0,0,.55)}
+html[data-skin="v2"] .store:has(.besttag){background:#23232A;box-shadow:0 0 0 2px #4ADE80,0 8px 14px -8px rgba(0,0,0,.55),0 0 18px rgba(74,222,128,.18)}
+/* Map chrome: Map/List toggle = accent pill (§3); legend = raised pill (glassless — it sits on the card). */
+html[data-skin="v2"] .maptgl{background:linear-gradient(180deg,#FFE066 0%,#FFCB05 100%);color:#26251E;border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.35)}
+html[data-skin="v2"] .maplegend{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 /*V2END*/</style>
 </head>
 <body>

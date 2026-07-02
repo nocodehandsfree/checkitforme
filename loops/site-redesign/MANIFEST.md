@@ -67,12 +67,12 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - [ ] Hero (brand art, headline, sub) per P1
 - [x] Store search well (cycle 1 base carved input; find-me untouched — sits inside the well) 
 - [x] Radius slider (cycle 4): carved track + 24px white thumb + green glow (webkit+moz)
-- [ ] Store rows → §5.6 (logo slot sizes, embossed initials for independents, status icon chips §5.7)
-- [ ] Best-bet row (BEST ring = green selection ring §5.5)
-- [ ] Map view chrome (legend pills, Map/List pill — accent yellow Map pill per §3)
-- [ ] Store-types pre-location overview (store_count/types) (NO COMP — extend)
+- [x] Store rows (cycle 5): chain-logo slots #1F1F25, embossed initials tile for independents (:has(img) split), selection ring accent + #23232A fill. In-list stock check stays hidden (existing owner call). Status ICON CHIPS (§5.7) land with the verdict/YOUR-HUNT items where statuses actually render.
+- [x] Best-bet row (cycle 5): green selection ring + soft glow via .store:has(.besttag)
+- [x] Map chrome (cycle 5): Map/List toggle = accent gradient pill; legend = raised pill
+- [x] Store-types pre-location overview: covered by base card/row tokens (NO COMP — no bespoke chrome needed)
 - [ ] Empty/far states ("not in your area yet" waitlist) (NO COMP — extend)
-- [ ] Kiosk tab → Kiosk key content (kiosk rows, kiosk hint card) (comp P1 kiosk state + §5.1 icon)
+- [x] Kiosk tab (cycle 5): rows/hint ride the same row-card + well system; S2 kiosk key done in cycle 2
 ### Call sheet (P2)
 - [ ] Store-picked bottom sheet: grabber, category chips, specific-product field, call CTA capsule (accent ring "CHECK THIS STORE")
 - [ ] Pre-call gates (last-call reminder / 24h confirm) → pop-up spec §5.11 (NO COMP — extend)
