@@ -1222,6 +1222,17 @@ html[data-skin="v2"] .stat,html[data-skin="v2"] .credline,html[data-skin="v2"] .
 html[data-skin="v2"] .smchip,html[data-skin="v2"] .upmod-h .t .pchip,html[data-skin="v2"] .smwarn{border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
 html[data-skin="v2"] .acctav,html[data-skin="v2"] .ighead .av,html[data-skin="v2"] .callhead .ci{border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
 html[data-skin="v2"] .acctrow .chev,html[data-skin="v2"] .scoretile img{border:0}
+/* 6b PLANS SHEET REBUILD — comp: bottom sheet over the page (grabber above the content), 2-line 900
+   header, 'Every plan gets' check grid, cycle toggle, tier tiles (muted-yellow ring = §5.5). */
+html[data-skin="v2"] #buyOverlay{align-items:flex-end;padding:0}
+html[data-skin="v2"] #buyOverlay .modal{max-width:520px;width:100%;margin:0 auto;border-radius:28px 28px 0 0;padding:8px 20px calc(22px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto}
+html[data-skin="v2"] #buyOverlay .modal::before{content:'';display:block;width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.22);margin:6px auto 16px}
+html[data-skin="v2"] #buyOverlay .modal .x{display:none}
+html[data-skin="v2"] #buyOverlay h3{text-align:left!important;font-size:21px;font-weight:900;letter-spacing:-.4px;line-height:1.2}
+html[data-skin="v2"] .buygrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 14px}
+html[data-skin="v2"] .buygrid .g{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:rgba(255,255,255,.85)}
+html[data-skin="v2"] .buygrid .g svg{flex:0 0 auto}
+html[data-skin="v2"] .buygrid-h{font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96;margin-top:14px}
 /* 6e MY-CHECKS POP-UP REBUILD — comp structure: green wash header (My ✓ · Done · phone · plan chip),
    two overlapping raised stat tiles, Overview/Activity/Earn keys, yellow icon rows. Legacy header
    (avatar/name/cred pill) hides under v2 — the wash header replaces it. */
@@ -4659,6 +4670,17 @@ function openBuy(reason){
   else if(reason==='premium'){ $('buy_title').textContent=t('buy.premium.title','That\'s a member perk ⭐'); lead.style.display=''; lead.textContent=t('buy.premium.lead',"We watch the shelves so you don't have to."); }
   else { $('buy_title').textContent=t('buy.title','Pick your plan'); lead.style.display='none'; }
   renderBuyPlans();
+  // 6b (v2): comp header + the 'Every plan gets' grid above the cycle toggle. Comp copy under preview
+  // only — every string queued for Copy (see COPY QUEUE); plan tiles/prices stay runtime-POLICY.
+  if(isV2()){ try{
+    if(!reason){ $('buy_title').innerHTML=t('buy6b.title','Every feature.<br>Pick your checks.'); }
+    let g=$('buy_grid');
+    if(!g){ g=document.createElement('div'); g.id='buy_grid';
+      const bc=$('billcycle'); bc.parentElement.insertBefore(g,bc); }
+    const ck='<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+    const feats=[t('buy6b.f1','Exact products'),t('buy6b.f2','Zone sweeps'),t('buy6b.f3','Restock alerts'),t('buy6b.f4','Scheduled checks'),t('buy6b.f5','Any town'),t('buy6b.f6','Store holds'),t('buy6b.f7','Your voice'),t('buy6b.f8','Thrift hunts')];
+    g.innerHTML=`<div class="buygrid-h">${t('buy6b.grid','Every plan gets')}</div><div class="buygrid">${feats.map(f=>`<div class="g">${ck}${esc(f)}</div>`).join('')}</div>`;
+  }catch(_){} }
   setI('buy_note', `${ICO.lock('#7a7a88')} ${t('buy.secure2','Secure checkout via Stripe')}`);
   track('buy_open',{reason:reason||'manual'});
   $('buyOverlay').classList.add('on');
