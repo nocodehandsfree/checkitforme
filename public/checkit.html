@@ -1111,6 +1111,17 @@ html[data-skin="v2"] .is1t:active{transform:translateY(2px)}
 html[data-skin="v2"] .is1t .tl{width:32px;height:32px;border-radius:10px;background:rgba(74,222,128,.12);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 html[data-skin="v2"] .is1t .a{display:block;font-size:13.5px;font-weight:700}
 html[data-skin="v2"] .is1t .b{display:block;margin-top:1px;font-size:10.5px;font-weight:600;color:#8A8A96}
+/* ROTATION 2 — STORE ROW EXACTNESS (P2 frame: the most-seen element): 44px r12 logo tile w/ 34px art,
+   r14 rows pad 10/12, name 15/700, sub 12/600 #8A8A96, distance 17/800 + 10/700 muted unit,
+   selected ring gets the comp's accent glow. */
+html[data-skin="v2"] .store{border-radius:14px;padding:10px 12px}
+html[data-skin="v2"] .store .ic{width:44px;height:44px;border-radius:12px}
+html[data-skin="v2"] .store .ic img{max-width:34px;max-height:34px}
+html[data-skin="v2"] .store .nm{font-size:15px;font-weight:700}
+html[data-skin="v2"] .store .lo{font-size:12px;font-weight:600;color:#8A8A96}
+html[data-skin="v2"] .store .smi{font-size:17px;font-weight:800;color:#FFF}
+html[data-skin="v2"] .store .smi small{font-size:10px;font-weight:700;color:#8A8A96}
+html[data-skin="v2"] .store.sel{box-shadow:0 0 0 2px var(--accent,#FFCB05),0 10px 22px -8px color-mix(in srgb,var(--accent,#FFCB05) 35%,transparent)}
 /* Dropdown menus (product/language switchers): big-card surface, depth not borders. */
 html[data-skin="v2"] .vsw-menu{background:#26262B;border:0;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 /* Finds ticker chips (NO COMP — extended): raised row cards, green accents stay in content. */

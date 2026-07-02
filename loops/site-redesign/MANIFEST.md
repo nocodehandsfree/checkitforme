@@ -261,6 +261,11 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   CONVERSATION eyebrow + CHECK AI/STAFF live bubbles. Pulsing phone chip needs real call state —
   blank in the forge (cycle-7 code verified; owner sees it on any staging call). PROOF: live-call-v2.png.
   EVERY screen on the board now has a rendered proof.
+- [x] Rotation 2 pass 2: STORE ROWS (the most-seen element, P2-frame spec) — type/scale re-diff found
+  drift the token sweeps missed: logo tile 52→44 r12 (art 34px), rows r12→14 pad 10/12, name 14.5→15/700,
+  sub locked 12/600 #8A8A96, distance 14→**17/800 white** + 10/700 muted unit, selected accent ring now
+  carries the comp's glow (color-mix per vertical). PROOF: store-rows-v2.png (real chain logos, ringed
+  selected row — direct match to the P2 frame's list).
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
