@@ -188,10 +188,16 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   by element (type scale first — the owner's exact complaint). ALSO: kill stray qa servers before every
   proof run (a crashed script's stale server on 8797 served pre-change HTML for ~an hour — every 'flaky'
   hobby 500/font error was that).
+- [x] 6e comp-diff pass (true-Inter cycle): the overview tab was FALLING BACK to the legacy account rows
+  (bare icons, no subs, wrong set) — comp overview now renders in the v2 panel: 3 raised rows w/ 34px
+  #1F1F25 ACCENT-icon tiles + runtime subs (Manage plan · billed-line / Check history · 'N checks in
+  {month}' / Earn free checks · comp sub queued for Copy) → RUN A CHECK capsule (shared .capsW: white
+  tracked label + arrow) → Sign out 13/700 #7C7C88. Legacy .acctrows hidden under v2. 6f/6g re-verified
+  in true Inter — comp-true. PROOFS: 6e-overview-v2.png · 6f-activity-v2.png · 6g-earn-v2.png.
 ### Proof backfill owed (rotating)
-- [ ] 6m result vs comp (real call data) · [ ] live-call · [ ] 6e/6f/6g/6h account tabs · [ ] 6a upsell ·
-  [ ] 6b plans sheet · [ ] 6d you're-in · [ ] 6i history header · [ ] P6c calls-by-day pop (seeded history)
-  · [ ] hobby P3a/P3/P4 (art live) · [ ] L1a-c login states
+- [ ] 6m result vs comp (real call data) · [ ] live-call · [x] 6e/6f/6g account tabs · [x] 6a upsell ·
+  [x] 6b plans sheet · [x] 6d you're-in · [ ] 6i history header · [ ] P6c calls-by-day pop (seeded history)
+  · [x] hobby P3a/P3/P4 (art live) · [x] L1a login (L1b/c states owed)
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
