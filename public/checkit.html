@@ -52,9 +52,11 @@
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+<!-- Inter is SELF-HOSTED (variable weight 100-900): Google Fonts is blocked on some users' networks
+     (DNS ad-blockers), which silently swapped the whole site to the system font — the design is only
+     the design in Inter. One origin, one file, no third-party dependency. -->
+<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format('woff2')}</style>
 <!-- Auth is 100% phone/SMS (Twilio). Clerk was fully removed — no external auth bundle loads. -->
 <style>
   :root{
@@ -1360,6 +1362,18 @@ html[data-skin="v2"] .plan .pp{font-size:19px;font-weight:800}
 html[data-skin="v2"] .plan .pp span{font-size:12.5px;font-weight:600;color:#8A8A96}
 html[data-skin="v2"] #buy_cta{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:16px;background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#FFF;font-size:14px;font-weight:800;letter-spacing:.04em;padding:14px 24px;box-shadow:0 12px 28px -8px rgba(25,177,69,.45);cursor:pointer}
 html[data-skin="v2"] #buy_note{font-size:13px;font-weight:600;color:#8A8A96;margin-top:14px}
+/* 6a comp = BOTTOM SHEET (was a centered pop-up): r28 top, grabber, pad 10/22/30. */
+html[data-skin="v2"] #upsellOverlay{align-items:flex-end;padding:0}
+html[data-skin="v2"] #upsellOverlay .modal{max-width:520px;width:100%;margin:0 auto;border-radius:28px 28px 0 0;padding:8px 22px calc(30px + env(safe-area-inset-bottom))}
+html[data-skin="v2"] #upsellOverlay .modal::before{content:'';display:block;width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.22);margin:6px auto 18px}
+/* 6a/6d capsules: WHITE tracked label + arrow, space-between (comp). */
+html[data-skin="v2"] #up6a_cta,html[data-skin="v2"] #p6d_cta{display:flex;align-items:center;justify-content:space-between;color:#FFF;padding:14px 24px}
+/* 6d: green header band + overlapping stat tiles + raised NOW-LIVE card. */
+html[data-skin="v2"] .p6d-head{background:#266440;padding:10px 18px 50px;text-align:center;border-radius:26px 26px 0 0}
+html[data-skin="v2"] .p6d-bar{width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.35);margin:0 auto 22px}
+html[data-skin="v2"] .p6d-stats{margin:-28px 18px 0;display:flex;gap:10px}
+html[data-skin="v2"] .p6d-live{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:15px 16px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
+html[data-skin="v2"] .p6d-live .buygrid-h{color:#8A8A96}
 /* 6e MY-CHECKS POP-UP REBUILD — comp structure: green wash header (My ✓ · Done · phone · plan chip),
    two overlapping raised stat tiles, Overview/Activity/Earn keys, yellow icon rows. Legacy header
    (avatar/name/cred pill) hides under v2 — the wash header replaces it. */
@@ -1628,24 +1642,36 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 </footer>
 
 <!-- 6d — "You're in" return state after Stripe (v2 preview; strings queued with the sign-up set) -->
+<!-- 6d comp: GREEN header band (grabber-bar, lockup, 30/900 'You're in.', plan line) → overlapping
+     stat tiles → raised 'NOW LIVE' card (eyebrow + bold-check lines + accent more-link) → capsule. -->
 <div class="overlay" id="paidOverlay" onclick="if(event.target===this)closePaid()">
-  <div class="modal" style="position:relative;max-width:400px;text-align:left;padding:22px 20px">
-    <div style="font-size:24px;font-weight:900;letter-spacing:-.5px" data-i18n="up6d.title">You're in.</div>
-    <div id="paid_sub" style="margin-top:6px;font-size:14px;font-weight:600;color:#8A8A96"></div>
-    <div style="margin-top:14px;display:flex;gap:10px" id="paid_stats"></div>
-    <div class="buygrid-h" data-i18n="up6d.live">Now live on your account</div>
-    <div id="paid_feats" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
-    <a onclick="closePaid();openBuy('manage')" style="display:inline-block;margin-top:8px;font-size:12.5px;font-weight:700;color:var(--accent,#FFCB05);cursor:pointer" data-i18n="up6d.more">+ 5 more in Manage plan ›</a>
-    <button class="cta" style="margin-top:16px;width:100%" onclick="closePaid()" data-i18n="up6d.cta">Run a check</button>
-    <div style="margin-top:12px;text-align:center;font-size:12px;font-weight:600;color:#8A8A96" data-i18n="up6d.note">Manage plan anytime in My checks.</div>
+  <div class="modal" style="position:relative;max-width:400px;text-align:left;padding:0;overflow:hidden">
+    <div class="p6d-head">
+      <div class="p6d-bar"></div>
+      <div class="buy6b-logo" style="justify-content:center"><svg width="30" height="30" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>heck<span style="color:#4ADE80">+</span></span></div>
+      <div style="margin-top:12px;font-size:30px;font-weight:900;letter-spacing:-1px" data-i18n="up6d.title">You're in.</div>
+      <div id="paid_sub" style="margin-top:6px;font-size:14px;font-weight:600;color:rgba(255,255,255,.8)"></div>
+    </div>
+    <div class="p6d-stats" id="paid_stats"></div>
+    <div style="padding:16px 18px 24px">
+      <div class="p6d-live">
+        <div class="buygrid-h" style="margin-top:0" data-i18n="up6d.live">Now live on your account</div>
+        <div id="paid_feats" style="margin-top:9px;display:flex;flex-direction:column;gap:9px"></div>
+        <a onclick="closePaid();openBuy('manage')" style="display:inline-block;margin-top:9px;font-size:12.5px;font-weight:700;color:var(--accent,#FFCB05);cursor:pointer" data-i18n="up6d.more">+ 5 more in Manage plan ›</a>
+      </div>
+      <button class="cta" id="p6d_cta" style="margin-top:16px;width:100%" onclick="closePaid()"><span data-i18n="up6d.cta">Run a check</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+      <div style="margin-top:12px;text-align:center;font-size:12px;font-weight:600;color:#8A8A96" data-i18n="up6d.note">Manage plan anytime in My checks.</div>
+    </div>
   </div>
 </div>
-<!-- 6a — after-the-free-check upsell (v2 preview; comp copy queued for Copy ratification) -->
+<!-- 6a — after-the-free-check upsell (v2 preview; comp copy queued for Copy ratification).
+     Comp = BOTTOM SHEET: grabber, left lockup, 26/900 title, plain bold-check lines, white-label capsule. -->
 <div class="overlay" id="upsellOverlay" onclick="if(event.target===this)closeUpsell()">
   <div class="modal" style="position:relative;max-width:400px;text-align:left;padding:22px 20px">
-    <div style="font-size:21px;font-weight:900;letter-spacing:-.4px;line-height:1.2" data-i18n="up6a.title">That was your free check.<br>Ready for the good stuff?</div>
+    <div class="buy6b-logo" style="justify-content:flex-start;margin:0 0 14px"><svg width="26" height="26" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>heck<span style="color:#4ADE80">+</span></span></div>
+    <div style="font-size:26px;font-weight:900;letter-spacing:-.8px;line-height:1.2" data-i18n="up6a.title">That was your free check.<br>Ready for the good stuff?</div>
     <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px" id="up6a_rows"></div>
-    <button class="cta" style="margin-top:18px;width:100%" onclick="closeUpsell();openBuy()" data-i18n="up6a.cta">See Check+ plans</button>
+    <button class="cta" id="up6a_cta" style="margin-top:20px;width:100%" onclick="closeUpsell();openBuy()"><span data-i18n="up6a.cta">See Check+ plans</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
   </div>
 </div>
 <!-- Buy / subscribe modal -->
@@ -4545,8 +4571,8 @@ function openPaid(){
   const sub=$('paid_sub'); if(sub) sub.textContent = comp?t('acct.unlimited','Unlimited'):(n?`${n} ${t('acct.left2','checks left')}`:'');
   let run=0; try{ const now=new Date(); run=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length; }catch(_){ }
   const st=$('paid_stats'); if(st) st.innerHTML=`<div class="stat2" style="flex:1"><b>${comp?'∞':n}</b><i>${esc(t('acct.stat.left','Checks left').toUpperCase())}</i></div><div class="stat2" style="flex:1"><b>${run}</b><i>${esc(t('acct.stat.run','Checks run').toUpperCase())}</i></div>`;
-  const ck='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
-  const ft=$('paid_feats'); if(ft) ft.innerHTML=[t('buy6b.f1','Exact products'),t('buy6b.f3','Restock alerts'),t('buy6b.f2','Zone sweeps')].map(f=>`<div style="display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700">${ck}${esc(f)}</div>`).join('');
+  const ck='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 12.5l5 5L20 6.5"/></svg>';
+  const ft=$('paid_feats'); if(ft) ft.innerHTML=[t('buy6b.f1','Exact products'),t('buy6b.f3','Restock alerts'),t('buy6b.f2','Zone sweeps')].map(f=>`<div style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:rgba(255,255,255,.85)">${ck}${esc(f)}</div>`).join('');
   $('paidOverlay').classList.add('on'); try{track('paid6d_open');}catch(e){}
 }
 // ---- 6a upsell (v2): send-off into premium right after the FIRST free check result. ----
@@ -4554,8 +4580,10 @@ function closeUpsell(){ const o=$('upsellOverlay'); if(o)o.classList.remove('on'
 function openUpsell(){
   if(!isV2()) return;
   const rows=$('up6a_rows');
-  if(rows){ const feat=(ic,txt)=>`<div style="display:flex;align-items:center;gap:11px"><span style="display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:rgba(74,222,128,.15);flex:0 0 auto">${ic}</span><span style="font-size:14.5px;font-weight:700">${txt}</span></div>`;
-    rows.innerHTML=feat(ICO.pin('#4ADE80'),t('up6a.f1','Check any town in America'))+feat(ICO.bell('#4ADE80'),t('up6a.f2','Restock alerts'))+feat(ICO.store('#4ADE80'),t('up6a.f3','Check multiple stores at once')); }
+  // 6a comp lines: PLAIN rows — bold 15px green check (stroke 3.4) + 14/600 .85-white text. No tiles.
+  if(rows){ const ck='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 12.5l5 5L20 6.5"/></svg>';
+    const feat=txt=>`<div style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:rgba(255,255,255,.85)">${ck}${txt}</div>`;
+    rows.innerHTML=feat(t('up6a.f1','Check any town in America'))+feat(t('up6a.f2','Restock alerts'))+feat(t('up6a.f3','Check multiple stores at once')); }
   $('upsellOverlay').classList.add('on'); try{track('upsell6a_open');}catch(e){}
 }
 // ==== HOBBY flow (P3a→P5, §5.13) — HIDDEN preview (owner override 2026-07-02) ====================

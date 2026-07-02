@@ -440,6 +440,17 @@ app.get("/logos/:file", (c) => {
     return c.body(buf, 200, { "Content-Type": ct });
   } catch { return c.notFound(); }
 });
+// Self-hosted webfonts (Inter variable) — Google Fonts is unreachable for users behind DNS
+// ad-blockers, and the design only reads as the design in Inter. One origin, one file.
+app.get("/fonts/:file", (c) => {
+  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
+  if (!file.endsWith(".woff2")) return c.notFound();
+  try {
+    const buf = readFileSync(join(here, `../public/fonts/${file}`));
+    c.header("Cache-Control", "public, max-age=31536000, immutable");
+    return c.body(buf, 200, { "Content-Type": "font/woff2" });
+  } catch { return c.notFound(); }
+});
 // Pokémon set assets — same repo/logo-wall system as chains, dropped by the logo lane at the exact
 // paths /pub/pokemon-sets derives from each set code: set logo -> /logos/sets/<logoKey>.png, set
 // banner -> /logos/set-banners/<logoKey>.png, era logo -> /logos/eras/<era-slug>.png. All PNG. A

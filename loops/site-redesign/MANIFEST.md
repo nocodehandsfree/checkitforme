@@ -170,9 +170,24 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   pad 14/16) · **tap-selects + CONTINUE ring capsule** (was buy-on-tap; v1 behavior unchanged) ·
   Stripe note 13/600. Check+/Buy-checks tabs still deferred: POLICY.packs is empty (catalog debt) —
   tab code lands when packs ship. PROOFS: proofs/6b-plans-v2.png · 6b-plans-selected-v2.png.
+- [x] **OWNER: "you're not using the same font — that's why it's not hitting" → ROOT-CAUSED + FIXED:
+  Inter is now SELF-HOSTED** (`/fonts/inter-var-latin.woff2`, variable 100-900, immutable-cached; new
+  `/fonts/:file` route in server.ts; Google Fonts links removed from the head). The site loaded Inter
+  from fonts.googleapis.com — blocked on networks running DNS ad-blockers (and in this sandbox), so
+  the ENTIRE site silently fell back to the system font. Same font file the comps load. Rendered
+  verification: `document.fonts.check('900 26px Inter') === true` locally; proofs now shoot in true
+  Inter. (Also explains why every proof screenshot rendered a fallback face.)
+- [x] 6a REBUILT to comp: bottom sheet (was a centered pop-up) w/ grabber, LEFT Check+ lockup, 26/900/-.8
+  title, PLAIN bold-check rows (stroke-3.4 15px checks + 14/600 .85-white — the icon tiles were invented),
+  white-label capsule + arrow. 6d REBUILT to comp: GREEN #266440 header band (grabber bar, centered
+  lockup, 30/900 'You're in.', .8-white plan line) → overlapping stat tiles (-28px) → raised NOW-LIVE card
+  (eyebrow + checks + accent more-link INSIDE) → RUN A CHECK white capsule + arrow. PROOFS re-shot in
+  true Inter: 6a-upsell/6b-plans/6d-yourein/P1-home.
 - [ ] LESSON → new audit lens: my proofs passed because they compared against MY OWN build, not the
   comp frame side-by-side. Every remaining sweep must diff the SHOT against the EXTRACTED COMP, element
-  by element (type scale first — the owner's exact complaint).
+  by element (type scale first — the owner's exact complaint). ALSO: kill stray qa servers before every
+  proof run (a crashed script's stale server on 8797 served pre-change HTML for ~an hour — every 'flaky'
+  hobby 500/font error was that).
 ### Proof backfill owed (rotating)
 - [ ] 6m result vs comp (real call data) · [ ] live-call · [ ] 6e/6f/6g/6h account tabs · [ ] 6a upsell ·
   [ ] 6b plans sheet · [ ] 6d you're-in · [ ] 6i history header · [ ] P6c calls-by-day pop (seeded history)
