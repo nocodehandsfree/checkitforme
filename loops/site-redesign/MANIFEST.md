@@ -332,6 +332,12 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   self-hosted Inter loads+renders (the owner's font catch can never silently regress) · 6e wash pad
   (Lens E fix) · v1 invariant (no skin attr/badge, GOLD sheet CTA, --purple untouched). Any future
   push from any lane trips these automatically. All green.
+- [x] Watch 5: owner's morning-walk DEEP LINKS verified — show=signup/paid/mychecks all land; flow=hobby
+  landed in the dedicated probe + qa-e2e (13 eras) but flaked in one ad-hoc run. INVESTIGATED HARD:
+  curl NEVER fails (boot-burst, concurrency, gzip, browser headers all 200), server logs ZERO errors,
+  whole browser runs fail-or-pass together, un-reproducible under observation → **sandbox Chromium↔
+  localhost flake, environment-attributed, NOT a site bug. STAGING FEED VERIFIED 3× 200, 13 eras/129
+  sets.** No upstream pushes; staging HTML current. Full suite green (43/66/7).
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
