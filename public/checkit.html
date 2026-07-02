@@ -1242,9 +1242,9 @@ html[data-skin="v2"] #acctOverlay .acctrows{padding:0 18px 22px}
 html[data-skin="v2"] #acctOverlay .x{display:none}
 html[data-skin="v2"] .acctv2head .wash{background:#266440;padding:14px 18px 46px}
 html[data-skin="v2"] .acctv2head .stats{margin:-28px 18px 0;display:flex;gap:10px}
-html[data-skin="v2"] .acctv2head .stat2{flex:1;background:linear-gradient(180deg,#31313A 0%,#26262B 100%);border-radius:16px;padding:14px 0;text-align:center;box-shadow:0 14px 26px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1)}
-html[data-skin="v2"] .acctv2head .stat2 b{font-size:24px;font-weight:800;display:block}
-html[data-skin="v2"] .acctv2head .stat2 i{font-style:normal;margin-top:3px;font-size:10px;font-weight:700;letter-spacing:.15em;color:#8A8A96;display:block}
+html[data-skin="v2"] .acctv2head .stat2,html[data-skin="v2"] #paid_stats .stat2{flex:1;background:linear-gradient(180deg,#31313A 0%,#26262B 100%);border-radius:16px;padding:14px 0;text-align:center;box-shadow:0 14px 26px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1)}
+html[data-skin="v2"] .acctv2head .stat2 b,html[data-skin="v2"] #paid_stats .stat2 b{font-size:24px;font-weight:800;display:block}
+html[data-skin="v2"] .acctv2head .stat2 i,html[data-skin="v2"] #paid_stats .stat2 i{font-style:normal;margin-top:3px;font-size:10px;font-weight:700;letter-spacing:.15em;color:#8A8A96;display:block}
 html[data-skin="v2"] .acctv2head .tabs{display:flex;gap:8px;padding:16px 18px 0}
 html[data-skin="v2"] .acctv2head .tab{flex:1;padding:10px 0;border-radius:12px;color:#7C7C88;font-size:13px;font-weight:700;text-align:center;cursor:pointer;background:none;border:0}
 html[data-skin="v2"] .acctv2head .tab.on{background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#4ADE80}
@@ -1498,6 +1498,19 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   </div>
 </footer>
 
+<!-- 6d — "You're in" return state after Stripe (v2 preview; strings queued with the sign-up set) -->
+<div class="overlay" id="paidOverlay" onclick="if(event.target===this)closePaid()">
+  <div class="modal" style="position:relative;max-width:400px;text-align:left;padding:22px 20px">
+    <div style="font-size:24px;font-weight:900;letter-spacing:-.5px" data-i18n="up6d.title">You're in.</div>
+    <div id="paid_sub" style="margin-top:6px;font-size:14px;font-weight:600;color:#8A8A96"></div>
+    <div style="margin-top:14px;display:flex;gap:10px" id="paid_stats"></div>
+    <div class="buygrid-h" data-i18n="up6d.live">Now live on your account</div>
+    <div id="paid_feats" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
+    <a onclick="closePaid();openBuy('manage')" style="display:inline-block;margin-top:8px;font-size:12.5px;font-weight:700;color:var(--accent,#FFCB05);cursor:pointer" data-i18n="up6d.more">+ 5 more in Manage plan ›</a>
+    <button class="cta" style="margin-top:16px;width:100%" onclick="closePaid()" data-i18n="up6d.cta">Run a check</button>
+    <div style="margin-top:12px;text-align:center;font-size:12px;font-weight:600;color:#8A8A96" data-i18n="up6d.note">Manage plan anytime in My checks.</div>
+  </div>
+</div>
 <!-- 6a — after-the-free-check upsell (v2 preview; comp copy queued for Copy ratification) -->
 <div class="overlay" id="upsellOverlay" onclick="if(event.target===this)closeUpsell()">
   <div class="modal" style="position:relative;max-width:400px;text-align:left;padding:22px 20px">
@@ -2154,11 +2167,12 @@ async function boot(){
   initGA();
   buildSwitcher(); applyBrand(); renderIcons(); buildLangSel(); applyLang();
   renderAuth(); renderStores(); renderChips(); renderFooter(); refreshAuth();
-  if(sp.get('paid')){ history.replaceState({},'','/'); toast(t('toast.payment','🎉 Payment received. Adding your credits…')); setTimeout(refreshAuth,2500); setTimeout(refreshAuth,6000); }
+  if(sp.get('paid')){ history.replaceState({},'','/'); toast(t('toast.payment','🎉 Payment received. Adding your credits…')); setTimeout(refreshAuth,2500); setTimeout(refreshAuth,6000); if(isV2()) setTimeout(openPaid,3200); }
   if(sp.get('call')) restoreCall(sp.get('call'), sp.get('store'), sp.get('cat'));
   else if(sp.get('v')==='history') openHistory();
   else if(sp.get('flow')==='hobby'&&isV2()) setTimeout(()=>{try{openHobby();}catch(e){}},60); // HIDDEN hobby preview (owner override)
   else if(sp.get('show')==='signup'&&isV2()) setTimeout(()=>{try{openUpsell();}catch(e){}},400);   // HIDDEN sign-up preview: 6a → SEE PLANS → 6b sheet
+  else if(sp.get('show')==='paid'&&isV2()) setTimeout(()=>{try{openPaid();}catch(e){}},600);      // HIDDEN 6d you're-in preview
   else if(sp.get('show')==='mychecks'&&isV2()) setTimeout(()=>{try{openHistory();}catch(e){}},400);  // HIDDEN My-checks preview (6e–6i)
   else if(sp.get('v')==='success') openSuccess();
   // HYDRATE — dynamic data loads in the background, then re-render only the parts that need it.
@@ -4357,6 +4371,18 @@ async function openHistEntry(e){
   if(!resultSame(o,cached)) showResult(o, e.cid);
   // Deep-link the open call so a refresh restores exactly this transcript.
   try{ const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',e.cid); history.replaceState({v:'result'},'',location.pathname+'?'+sp.toString()); }catch(_){}
+}
+// ---- 6d "You're in" (v2): the post-Stripe return state — stats + what's now live. ----
+function closePaid(){ const o=$('paidOverlay'); if(o)o.classList.remove('on'); }
+function openPaid(){
+  if(!isV2()) return;
+  const n=(ACCOUNT&&ACCOUNT.credits)||0, comp=!!(ACCOUNT&&ACCOUNT.comp);
+  const sub=$('paid_sub'); if(sub) sub.textContent = comp?t('acct.unlimited','Unlimited'):(n?`${n} ${t('acct.left2','checks left')}`:'');
+  let run=0; try{ const now=new Date(); run=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length; }catch(_){ }
+  const st=$('paid_stats'); if(st) st.innerHTML=`<div class="stat2" style="flex:1"><b>${comp?'∞':n}</b><i>${esc(t('acct.stat.left','Checks left').toUpperCase())}</i></div><div class="stat2" style="flex:1"><b>${run}</b><i>${esc(t('acct.stat.run','Checks run').toUpperCase())}</i></div>`;
+  const ck='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+  const ft=$('paid_feats'); if(ft) ft.innerHTML=[t('buy6b.f1','Exact products'),t('buy6b.f3','Restock alerts'),t('buy6b.f2','Zone sweeps')].map(f=>`<div style="display:flex;align-items:center;gap:9px;font-size:14px;font-weight:700">${ck}${esc(f)}</div>`).join('');
+  $('paidOverlay').classList.add('on'); try{track('paid6d_open');}catch(e){}
 }
 // ---- 6a upsell (v2): send-off into premium right after the FIRST free check result. ----
 function closeUpsell(){ const o=$('upsellOverlay'); if(o)o.classList.remove('on'); }
