@@ -1190,6 +1190,10 @@ html[data-skin="v2"] .hob-set:active{transform:translateY(2px)}
 html[data-skin="v2"] .hob-chip{position:absolute;top:8px;right:8px;font-size:8.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 8px}
 html[data-skin="v2"] .hob-prod{display:flex;align-items:center;gap:12px;width:100%;margin-top:9px;padding:11px 12px;border:0;border-radius:13px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;transition:transform .1s}
 html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
+/* Sign-up plans (6b/§5.5/§3): raised tiles; the SELECTED tier takes the MUTED-yellow ring + #26251E
+   fill — it must never fight a green CTA on the same screen. */
+html[data-skin="v2"] .plan{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:16px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+html[data-skin="v2"] .plan.sub{background:#26251E;box-shadow:0 0 0 2px rgba(255,203,5,.45),0 8px 14px -8px rgba(0,0,0,.55),0 0 18px rgba(255,203,5,.18)}
 /*V2END*/</style>
 </head>
 <body>
@@ -2037,6 +2041,8 @@ async function boot(){
   if(sp.get('call')) restoreCall(sp.get('call'), sp.get('store'), sp.get('cat'));
   else if(sp.get('v')==='history') openHistory();
   else if(sp.get('flow')==='hobby'&&isV2()) setTimeout(()=>{try{openHobby();}catch(e){}},60); // HIDDEN hobby preview (owner override)
+  else if(sp.get('show')==='signup'&&isV2()) setTimeout(()=>{try{openBuy('out');}catch(e){}},400);   // HIDDEN sign-up/plans preview (6a–6d)
+  else if(sp.get('show')==='mychecks'&&isV2()) setTimeout(()=>{try{openHistory();}catch(e){}},400);  // HIDDEN My-checks preview (6e–6i)
   else if(sp.get('v')==='success') openSuccess();
   // HYDRATE — dynamic data loads in the background, then re-render only the parts that need it.
   const [c,st,pol]=await Promise.all([api('/pub/categories'),api('/pub/statuses').catch(()=>null),api('/pub/policy').catch(()=>null)]);

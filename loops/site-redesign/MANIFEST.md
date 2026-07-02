@@ -36,8 +36,11 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
   set banners (JUST DROPPED / UPCOMING badges) → product list (feed prices; generic types when empty) →
   tap a product = locks it onto the call flow (specific-product), back on the store picker. Back keys
   navigate up the chain. Unreachable without the v2 skin (hard `isV2()` gate; no visible links).
-- (pending build) Sign-up 6a–6d (upsell → plans → checkout → you're in): `/?skin=v2&show=signup`.
-- (pending build) My-checks 6e–6i (overview/activity/earn/new-user/history): `/?skin=v2&show=mychecks`.
+- ✅ **Sign-up 6a–6d preview: `staging.checkitforme.com/pokemon?skin=v2&show=signup`** — opens the plans
+  flow (upsell copy → tier tiles w/ muted-yellow selected ring → Stripe checkout → 'you're in' toast).
+- ✅ **My-checks 6e–6i preview: `staging.checkitforme.com/pokemon?skin=v2&show=mychecks`** — lands on the
+  My-checks/today view (overview/activity/history ride the P6c + base systems; earn/new-user states show
+  per account state).
 - (pending build) Runnr RN1/RN2 new skin: existing handoff flow with skin on.
 
 ## COPY QUEUE (view · element · comp copy · current approved copy) — Copy lane processes
@@ -96,9 +99,9 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - [x] L1b (cycle 10): 2px red ring on the well via :has(err:not(:empty)) — zero JS; under-field line 12.5/600 #FF7B7B left-aligned. DECIDED: solid #EF4444 ring (comp's gradient ring can't ride box-shadow).
 - [x] L1c (cycle 10): code well carved via base; dashed-green sentence links in modals; no env chrome present.
 ### Sign-up / plans (6a–6d) — HIDDEN until owner exposes
-- [ ] 6a upsell · [ ] 6b plans (muted-yellow tier rings §3/§5.5) · [ ] 6c checkout · [ ] 6d "You're in" toast/state
+- [x] 6a–6d (cycle 16): raised plan tiles + muted-yellow selected ring (solid-ring approximation of the comp gradient — DECIDED), billcycle rides the carved toggle, checkout/'you're in' ride modal+toast systems. Deep-linked for preview.
 ### My checks (6e–6i) — HIDDEN
-- [ ] 6e overview · [ ] 6f activity · [ ] 6g earn · [ ] 6h new-user · [ ] 6i history
+- [x] 6e–6i (cycle 16): all ride the restyled My-checks systems (today landing, calendar/day list, account modal); deep-linked for preview. Comp-detail deltas → audit sweep.
 ### Scores (SC1/SC2)
 - [x] SC1 (cycle 11): dashed carved panel + accent Post pill · [~] SC2 feed: cards ride the raised row system; photo letterbox strip to verify in audit sweep (feed markup renders from community data)
 ### Runnr (RN1/RN2)
