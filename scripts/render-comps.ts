@@ -54,6 +54,8 @@ async function main() {
     route.fulfill({ body: readFileSync(join(DESIGN, "vendor", f), "utf8"), contentType: "application/javascript" });
   });
   await ctx.route(/https:\/\/(fonts\.|checkitforme\.com|logos\.)/, (r) => r.abort());
+  // Signed-in renders: CIFM_TOKEN=<phone-session JWT> (localStorage key the app reads is cifm_token).
+  if (process.env.CIFM_TOKEN) await ctx.addInitScript((t: string) => { try { localStorage.setItem("cifm_token", t); } catch { /* no storage */ } }, process.env.CIFM_TOKEN);
   const page = await ctx.newPage();
 
   if (mode === "board") {

@@ -18,12 +18,15 @@ of proof (which render you looked at). Never delete findings; history stays.
    hierarchy, components, order. Tokens matching ≠ done (PAINT IS NOT DONE, LOOP.md).
 
 ## OPEN findings
-- [ ] **(P0) My checks (6e–6i) is old bones with new paint.** DevOps render 2026-07-02: the live
-  `?skin=v2&show=mychecks` view bears no structural resemblance to comps 6e (overview) / 6f
-  (activity) / 6g (earn) / 6h (new user) / 6i (history). Rebuild to the comp structure.
-- [ ] **(P0) Result page (6M) doesn't match the comp.** Comp 6M: verdict wash + `RESULT` chip +
-  solid verdict title + "CHECK ANOTHER STORE" ring CTA + step timeline. Owner saw old bones on a
-  real call. Rebuild to 6M (and its in-stock / poll variants P6/P6b/IS1).
+- [~] **(P0) My checks (6e–6i)** — partially confirmed rebuilt (DevOps cycle 1 render, commit
+  de68845): the EMPTY state is genuinely in the new structure (empty card + raised calendar +
+  ring CTA). The POPULATED structure (history rows, 6f activity, 6g earn, 6i history) is
+  unverified — DevOps seeds local data next cycle and re-renders. Leave open until then.
+- ✅ **FIXED (P0) Result page (6M)** — CONFIRMED REBUILT by DevOps eyes, cycle 1 (commit ec82224,
+  render c1-result vs comp 6M): verdict wash ✓ RESULT chip ✓ solid verdict title ✓ CHECK ANOTHER
+  STORE ring CTA ✓ step timeline with colored progression ✓ STAFF/CHECK-AI conversation bubbles ✓
+  restock module ✓ "1 check used" ✓. Still verify: in-stock (P6), poll (P6b), IS1 variants —
+  DevOps renders sim_..._in / _maybe next cycle.
 - [ ] **(P1) Every other view: re-verify with renders, not memory.** Round-1 sweeps compared
   tokens, not structure. Walk the board nav (S2, T1, P1, P2, 6m, L1a–c, P3a–P5, P6/P6b/IS1,
   R1–R3, SC1–2, RN1–2, 6a–6d, 6e–6i) and reopen any view whose bones differ from its comp.
@@ -33,5 +36,9 @@ of proof (which render you looked at). Never delete findings; history stays.
   track, footer). Re-verify against P2 store-picked state when rebuilt views land.
 
 ## DevOps cycle log
+- 2026-07-02 ~11:20 CYCLE 1 — 6M result: CONFIRMED structural rebuild (see above). 6e My-checks:
+  empty state confirmed; populated structure pending seeded data. Render tool now supports
+  signed-in renders (CIFM_TOKEN env → cifm_token localStorage). Next cycle: seed eyes.db
+  call_results, render 6M variants (_in/_maybe), populated 6e-6i, and the 6a upsell claim.
 - 2026-07-02 ~11:00 — Tool + review pipeline created. Board renders (20,237px, 0 errors) after
   React vendoring. Initial verdicts above from home/signup/mychecks renders vs board slices 0–7.
