@@ -15,11 +15,24 @@ agent's memory — any fresh session resumes by reading `MANIFEST.md` and contin
   `docs/brand/CHECK_BRAND_STYLE_GUIDE.md` + `docs/business/COPY_STYLE_GUIDE.md`. Never invent
   colors/type/spacing/copy.
 - **Every cycle: `npx tsc --noEmit` + `bash scripts/test-all.sh` green → commit → push.** Small
-  commits. A cycle that doesn't push didn't happen.
+  commits. A cycle that doesn't push didn't happen. (test-all will include the design-token harness
+  — `scripts/qa-design.ts`, DevOps builds it from the new style guide's tokens — which fails on any
+  off-system color/size/spacing and on banned/invented terms. Fix harness failures IN the cycle.)
+
+## Copy rule — comp copy is PLACEHOLDER, never truth
+Claude Design invents terms. For every text string: keep the existing approved copy (copy docs +
+the live site + the statuses registry are truth). Comp copy that exists nowhere approved →
+implement the layout with the approved/existing text and log the comp's wording under
+`## COPY QUEUE` in MANIFEST.md (view · element · comp copy · current copy). The Copy lane
+processes that queue + a full-site voice pass; Website applies what Copy approves. Never ship
+invented copy.
 
 ## The loop
-0. **Cycle 0 (once):** enumerate EVERY view/section/element/copy-string of the site into
-   `MANIFEST.md` as unchecked boxes, grouped by page. Map each to its comp. Commit.
+0. **Cycle 0 (once):** enumerate EVERY view/section/element/copy-string **from the LIVE SITE**
+   (`checkit.html` — all views, brands, languages, error/empty states) into `MANIFEST.md` as
+   unchecked boxes, grouped by page. THEN map comps onto that list. A view with no comp is marked
+   `NO COMP` and gets restyled by EXTENDING the system (existing components + style-guide rules) —
+   never skipped. The site defines the work; the comps only inform it. Commit.
 1. Read `MANIFEST.md` → take the first unchecked item (or the first re-opened one).
 2. Implement it to match the design exactly. Verify rendered output (serve locally or check the
    served staging HTML after push).
