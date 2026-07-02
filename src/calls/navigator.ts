@@ -246,12 +246,15 @@ export async function navStep(id: string, speech: string): Promise<string> {
   // store never sits in silence.
   if (s.listenFirst) {
     const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim().slice(0, 80);
+    // The menu ASKED for input ("press 1…", "para español…", "say yes/no") — listening longer adds
+    // nothing and SHORT menus (Family Dollar) hang up if you don't answer within ~20s. Act now.
+    const askedForInput = !!speech && /press (\d|one|two|three)|para espa[ñn]ol|by saying|please say|say (yes|no)\b|enter your/i.test(speech);
     if (speech && speech.trim()) {
       s.heard = s.heard || [];
       const n = norm(speech);
       const repeated = !!n && s.heard.some((h) => h === n || (n.length > 25 && h.startsWith(n.slice(0, 25))));
       s.heard.push(n);
-      if (repeated || s.heard.length >= 4 || atSec > 50) s.listenFirst = false; // heard enough → act NOW (fall through to decide)
+      if (askedForInput || repeated || s.heard.length >= 4 || atSec > 50) s.listenFirst = false; // heard enough → act NOW (fall through to decide)
       else return twiml(gather(id)); // keep listening
     } else if (atSec > 50) s.listenFirst = false;
     else return twiml(gather(id));
