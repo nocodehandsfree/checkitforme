@@ -7,7 +7,7 @@
 //  - /logos/*, images, fonts → cache-first (they're stable/versioned).
 //  - everything else  → left to the browser.
 // Defensive throughout: any error falls back to the network, so the SW can never white-screen the app.
-const VERSION = 'cifm-v1';
+const VERSION = 'cifm-v2';
 const SHELL = VERSION + '-shell';
 const DATA = VERSION + '-data';
 const STATIC = VERSION + '-static';
@@ -17,7 +17,7 @@ const SWR_PATHS = ['/app/history', '/pub/statuses', '/pub/categories', '/pub/pol
 
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
-    try { const c = await caches.open(SHELL); await c.addAll(['/']); } catch (_) { /* precache best-effort */ }
+    try { const c = await caches.open(SHELL); await c.addAll(['/', '/pokemon', '/onepiece', '/toppsbasketball', '/needoh']); } catch (_) { /* precache best-effort */ }
     self.skipWaiting();
   })());
 });
@@ -49,13 +49,20 @@ self.addEventListener('fetch', (e) => {
 function timeout(ms) { return new Promise((resolve) => setTimeout(() => resolve(null), ms)); }
 
 async function networkFirst(req) {
+  // Adaptive race: when we HOLD a cached copy of this page, only give the network a short head start
+  // (slow LTE was making every product-page hop feel stuck for seconds). No cached copy -> patient.
+  // The losing network response still lands in the cache below, so the NEXT hop is fresh.
+  let cached = null; try { cached = await caches.match(req); } catch (_) {}
+  const patience = cached ? 1200 : 3500;
+  const net = fetch(req).then((r) => {
+    if (r && r.ok) { const copy = r.clone(); caches.open(SHELL).then((c) => c.put(req, copy)).catch(() => {}); }
+    return r;
+  }).catch(() => null);
   try {
-    const fresh = await Promise.race([fetch(req).catch(() => null), timeout(3500)]);
-    if (fresh && fresh.ok) { try { (await caches.open(SHELL)).put(req, fresh.clone()); } catch (_) {} return fresh; }
+    const fresh = await Promise.race([net, timeout(patience)]);
     if (fresh) return fresh;
   } catch (_) { /* fall through */ }
-  const cached = (await caches.match(req)) || (await caches.match('/'));
-  return cached || fetch(req);
+  return cached || (await caches.match('/')) || net.then((r) => r || fetch(req));
 }
 
 async function staleWhileRevalidate(req) {

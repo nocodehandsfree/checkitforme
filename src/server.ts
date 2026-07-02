@@ -361,7 +361,7 @@ h1{font-size:30px;margin:26px 0 14px}.body{color:#c2c2cf;font-size:16px}.body a{
 });
 
 app.get("/", (c) => {
-  c.header("Cache-Control", "no-store, no-cache, must-revalidate");
+  c.header("Cache-Control", "no-cache"); // revalidate always, but let bfcache/back-forward restore instantly
   const host = (c.req.header("host") || "").toLowerCase();
   const override = c.req.query("brand");
   const brand = resolveBrand(host, override);
@@ -392,7 +392,7 @@ app.get("/demo/:slug", (c) => {
 // link to clean same-domain paths instead of subdomain hops.
 for (const slug of ["pokemon", "onepiece", "toppsbasketball", "needoh"]) {
   app.get(`/${slug}`, (c) => {
-    c.header("Cache-Control", "no-store");
+    c.header("Cache-Control", "no-cache"); // see "/" — bfcache-friendly, still always revalidated
     const host = (c.req.header("host") || "").toLowerCase();
     return c.html(renderRunner(resolveBrand(host, slug), host, "checkit.html", c.req.query("tone") || ""));
   });

@@ -27,17 +27,6 @@
   if(spk==='v2') localStorage.setItem('cifm_skin','v2'); else if(spk==='off') localStorage.removeItem('cifm_skin');
   if(localStorage.getItem('cifm_skin')==='v2') document.documentElement.setAttribute('data-skin','v2');
 }catch(e){}})();</script>
-<script>window.addEventListener('DOMContentLoaded',function(){try{
-  // TEMPORARY preview affordance (not part of the design — strip before promote): when the v2 skin is
-  // active, pin a small glass badge so there is never any doubt the preview is on. Tap = turn it off.
-  if(document.documentElement.getAttribute('data-skin')==='v2'){
-    var b=document.createElement('button');
-    b.textContent='NEW LOOK · preview';
-    b.setAttribute('style','position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:9999;font:800 10px Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#4ADE80;background:rgba(5,6,9,.72);border:1px solid rgba(74,222,128,.4);border-radius:999px;padding:6px 12px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);cursor:pointer');
-    b.onclick=function(){ localStorage.removeItem('cifm_skin'); location.href=location.pathname; };
-    document.body.appendChild(b);
-  }
-}catch(e){}});</script>
 <script>(function(){try{
   var sp=new URLSearchParams(location.search);
   // The tone the SERVER baked into <meta theme-color> at load (?tone=in|out|unk|soon). iOS only tints the
@@ -853,7 +842,7 @@ __BRAND_HEAD__
   .rcal-big .rcal-d{font-size:15px;border-radius:11px}
   .todaywrap .cta{width:100%;box-sizing:border-box}
   /* Day-list view inside the popover: every call on the chosen day, tap to open. */
-  .rday-list{display:flex;flex-direction:column;gap:4px;max-height:230px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .rday-list{display:flex;flex-direction:column;gap:4px;max-height:322px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:4px}
   .rday-item{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:8px 9px;border-radius:10px;border:1px solid transparent;background:var(--terminal);color:#e9e9f0;cursor:pointer}
   .rday-item.on{border-color:var(--accent,#4ADE80)}
   .rday-item:active{transform:scale(.985)}
@@ -911,10 +900,11 @@ __BRAND_HEAD__
     /* One-shot entrance — only while .r-play is set (added per fresh final result). */
     #result.r-play .rtitle2{animation:rTitleIn 1s cubic-bezier(.2,.7,.2,1) .2s both}
     #result.r-play .rverdict.in .rtitle2{animation:rTitleInGlow 1s cubic-bezier(.2,.7,.2,1) .2s both}
-    #result.r-play .rpill{animation:rRise .5s ease-out .15s both}
+    #result.r-play .rpill{animation:rRise .5s ease-out .15s both,rPillGlow 1.9s ease-in-out .9s infinite}
     #result.r-play .rsub{animation:rRiseSm .6s ease-out .35s both}
     #result.r-play .topcta{animation:rRise .6s ease-out .4s both}
     body.rview.rv-in #result.r-play .topcta .cta{animation:rCtaGlow 2.8s ease-in-out 1s infinite}
+    html[data-skin="v2"] body.rview #result .topcta .cta{animation:rCtaGlow 2.8s ease-in-out 1s infinite}
     /* CTA light-sweep — a moving sheen that loops on EVERY result tone (the button is green on all
        statuses, so a white sheen reads on any). Continuous (not gated on the one-shot entrance). */
     @keyframes rCtaSweep{0%{transform:translateX(-160%) skewX(-20deg)}100%{transform:translateX(330%) skewX(-20deg)}}
@@ -1121,7 +1111,7 @@ html[data-skin="v2"] .store .nm{font-size:15px;font-weight:700}
 html[data-skin="v2"] .store .lo{font-size:12px;font-weight:600;color:#8A8A96}
 html[data-skin="v2"] .store .smi{font-size:17px;font-weight:800;color:#FFF}
 html[data-skin="v2"] .store .smi small{font-size:10px;font-weight:700;color:#8A8A96}
-html[data-skin="v2"] .store.sel{box-shadow:0 0 0 2px var(--accent,#FFCB05),0 10px 22px -8px color-mix(in srgb,var(--accent,#FFCB05) 35%,transparent)}
+html[data-skin="v2"] .store.sel{box-shadow:0 0 0 2px #4ADE80,0 10px 22px -8px rgba(74,222,128,.35)}
 /* Dropdown menus (product/language switchers): big-card surface, depth not borders. */
 html[data-skin="v2"] .vsw-menu{background:#26262B;border:0;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 /* Finds ticker chips (NO COMP — extended): raised row cards, green accents stay in content. */
@@ -1135,8 +1125,9 @@ html[data-skin="v2"] .rng::-moz-range-thumb{width:24px;height:24px;border:0;box-
    Selection = accent ring + #23232A fill (§5.5); BEST row = green ring + soft glow. */
 html[data-skin="v2"] .store .ic{background:#1F1F25;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
 html[data-skin="v2"] .store .ic:not(:has(img)){background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5)}
-html[data-skin="v2"] .store.sel{background:#23232A;border:0;box-shadow:0 0 0 2px var(--accent,#FFCB05),0 8px 14px -8px rgba(0,0,0,.55)}
-html[data-skin="v2"] .store:has(.besttag){background:#23232A;box-shadow:0 0 0 2px #4ADE80,0 8px 14px -8px rgba(0,0,0,.55),0 0 18px rgba(74,222,128,.18)}
+html[data-skin="v2"] .store.sel{background:#23232A;border:0;box-shadow:0 0 0 2px #4ADE80,0 8px 14px -8px rgba(0,0,0,.55)}
+html[data-skin="v2"] .store:has(.besttag){background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 0 0 1.5px rgba(74,222,128,.5),0 8px 14px -8px rgba(0,0,0,.55)}
+html[data-skin="v2"] .store.best{border:0;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%)}
 /* Map key (P1/P2 comp EXACT): raised DARK key with ACCENT TEXT — not an accent-filled pill. */
 html[data-skin="v2"] .maptgl{background:linear-gradient(180deg,#31313A 0%,#26262B 100%);color:var(--accent,#FFCB05);border:0;padding:5px 13px;border-radius:999px;font-size:12px;font-weight:700;box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 html[data-skin="v2"] .maptgl.on{background:linear-gradient(180deg,#31313A 0%,#26262B 100%);color:var(--accent,#FFCB05)}
@@ -1206,10 +1197,15 @@ html[data-skin="v2"] .rsub{font-size:16px;font-weight:500;color:rgba(255,255,255
    accent raised key, today = 1.5px white outline. */
 html[data-skin="v2"] .railcalpop{background:#26262B;border:0;border-radius:22px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 html[data-skin="v2"] .rcal-h button{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
-html[data-skin="v2"] .rcal-d.sel{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6)}
+html[data-skin="v2"] body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:2px;background:#1D1D22;z-index:2147483000;pointer-events:none}
+html[data-skin="v2"] .rcal-d.has.t-in{background:rgba(74,222,128,.15);color:#4ADE80;border-radius:11px}
+html[data-skin="v2"] .rcal-d.has.t-soon{background:rgba(245,158,11,.15);color:color-mix(in srgb,#F59E0B 70%,#FFF);border-radius:11px}
+html[data-skin="v2"] .rcal-d.has.t-out{background:rgba(239,68,68,.14);color:color-mix(in srgb,#EF4444 55%,#FFF);border-radius:11px}
+html[data-skin="v2"] .rcal-d.has.t-unk{background:rgba(251,191,36,.10);color:color-mix(in srgb,#FBBF24 55%,#FFF);border-radius:11px}
+html[data-skin="v2"] .rcal-d.sel{background:linear-gradient(180deg,color-mix(in srgb,#4ADE80 70%,#FFF) 0%,#4ADE80 100%);color:#0C2916;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6)}
 html[data-skin="v2"] .rcal-d.today{box-shadow:inset 0 0 0 1.5px #FFF;border-radius:11px}
 html[data-skin="v2"] .rday-item{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:13px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
-html[data-skin="v2"] .rday-item.on{box-shadow:0 0 0 2px var(--accent,#FFCB05),0 8px 14px -8px rgba(0,0,0,.55)}
+html[data-skin="v2"] .rday-item.on{box-shadow:0 0 0 2px #4ADE80,0 8px 14px -8px rgba(0,0,0,.55)}
 /* Couldn't-tell poll (P6b/§5.8): raised keys DIRECTLY on the page — no wrapping box; 34px icon
    chips; press dips the key (buttons look raised, never like form depressions). */
 html[data-skin="v2"] .fbk{background:none;border:0;padding:0}
@@ -1259,7 +1255,7 @@ html[data-skin="v2"] .modal a{text-decoration:underline dashed rgba(74,222,128,.
 /* Scores SC1 EXACTNESS: bar title 21/900/-.5; Post = accent gradient pill (dark text stays the
    per-vertical #26251E DECIDED token); empty panel r22 carved+dashed, 42/20 pad, 17/800 + 13/600. */
 html[data-skin="v2"] .scoresbar .t{font-size:21px;font-weight:900;letter-spacing:-.5px}
-html[data-skin="v2"] .emptybox{border:1.5px dashed rgba(255,255,255,.13);background:#1B1B20;box-shadow:inset 0 2px 8px rgba(0,0,0,.45);border-radius:22px;padding:42px 20px}
+html[data-skin="v2"] .emptybox{border:1.5px dashed rgba(255,255,255,.13);background:#1B1B20;box-shadow:inset 0 2px 8px rgba(0,0,0,.45);border-radius:22px;padding:42px 20px;justify-content:center}
 html[data-skin="v2"] .emptybox .eb-t{font-size:17px;font-weight:800;color:#FFF;margin-top:8px}
 html[data-skin="v2"] .emptybox .eb-s{font-size:13px;font-weight:600;color:#8A8A96;margin-top:5px}
 html[data-skin="v2"] .postbtn{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;box-shadow:0 10px 22px -8px color-mix(in srgb,var(--accent,#FFCB05) 50%,transparent),inset 0 1px 0 rgba(255,255,255,.4);padding:9px 16px;border-radius:999px;font-size:13px;font-weight:800}
@@ -1398,7 +1394,7 @@ html[data-skin="v2"] .p6d-live .buygrid-h{color:#8A8A96}
 /* 6e MY-CHECKS POP-UP REBUILD — comp structure: green wash header (My ✓ · Done · phone · plan chip),
    two overlapping raised stat tiles, Overview/Activity/Earn keys, yellow icon rows. Legacy header
    (avatar/name/cred pill) hides under v2 — the wash header replaces it. */
-html[data-skin="v2"] #acctOverlay .modal{padding:0;overflow:hidden;border-radius:30px}
+html[data-skin="v2"] #acctOverlay .modal{padding:0;overflow-y:auto;overflow-x:hidden;border-radius:30px}
 html[data-skin="v2"] #acctOverlay .modal>*:not(.acctv2head):not(.x){display:none} /* legacy rows too — the v2 overview panel replaces them (6e comp rows) */
 html[data-skin="v2"] #acctv2panel{padding-bottom:22px!important}
 /* Capsule w/ WHITE tracked label + right arrow (comp CTA shape) — shared. */
@@ -1416,7 +1412,7 @@ html[data-skin="v2"] #acctOverlay .acctrow{border-radius:16px;padding:13px 14px;
 /* 6m RESULT REBUILD — comp structure. Section order via flex order (markup untouched, behaviors keep
    their nodes): title block → poll (unclear) → CHECK ANOTHER STORE capsule → timeline+convo → in-stock
    actions → restock → checks-used → footer. The big emoji verdict circle is NOT in the comp — gone. */
-html[data-skin="v2"] #result{display:flex;flex-direction:column}
+html[data-skin="v2"] #result:not(.hidden){display:flex;flex-direction:column}
 html[data-skin="v2"] #result>.rverdict{order:0}
 html[data-skin="v2"] #result>.fbk{order:1}
 html[data-skin="v2"] #result>.topcta{order:2}
@@ -1671,7 +1667,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   <div class="modal" style="position:relative;max-width:400px;text-align:left;padding:0;overflow:hidden">
     <div class="p6d-head">
       <div class="p6d-bar"></div>
-      <div class="buy6b-logo" style="justify-content:center"><svg width="30" height="30" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>heck<span style="color:#4ADE80">+</span></span></div>
+      <div class="buy6b-logo" style="justify-content:center"><img src="/logos/checkplus.png" alt="Check+" style="height:30px;width:auto"></div>
       <div style="margin-top:12px;font-size:30px;font-weight:900;letter-spacing:-1px" data-i18n="up6d.title">You're in.</div>
       <div id="paid_sub" style="margin-top:6px;font-size:14px;font-weight:600;color:rgba(255,255,255,.8)"></div>
     </div>
@@ -1691,7 +1687,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
      Comp = BOTTOM SHEET: grabber, left lockup, 26/900 title, plain bold-check lines, white-label capsule. -->
 <div class="overlay" id="upsellOverlay" onclick="if(event.target===this)closeUpsell()">
   <div class="modal" style="position:relative;max-width:400px;text-align:left;padding:22px 20px">
-    <div class="buy6b-logo" style="justify-content:flex-start;margin:0 0 14px"><svg width="26" height="26" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>heck<span style="color:#4ADE80">+</span></span></div>
+    <div class="buy6b-logo" style="justify-content:flex-start;margin:0 0 14px"><img src="/logos/checkplus.png" alt="Check+" style="height:26px;width:auto"></div>
     <div style="font-size:26px;font-weight:900;letter-spacing:-.8px;line-height:1.2" data-i18n="up6a.title">That was your free check.<br>Ready for the good stuff?</div>
     <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px" id="up6a_rows"></div>
     <button class="cta" id="up6a_cta" style="margin-top:20px;width:100%" onclick="closeUpsell();openBuy()"><span data-i18n="up6a.cta">See Check+ plans</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
@@ -1753,13 +1749,13 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 <div class="overlay" id="scheduleOverlay" onclick="if(event.target===this)closeSchedule()">
   <div class="modal" style="position:relative;max-width:420px;text-align:left">
     <span class="x" onclick="closeSchedule()">×</span>
-    <h3 style="margin:2px 0"><span class="mico" id="schIco"></span><span data-i18n="sch.title">Auto-check on shipment days</span></h3>
-    <p style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5" data-i18n="sch.body">We call <b id="sch_store">the store</b> on shipment days. You get pinged the second <b id="sch_cat">cards</b> land. 1 check per call.</p>
-    <label class="klbl" data-i18n="sch.days">Which days? <span style="color:var(--muted);font-weight:400">· leave all off to use the store's known shipment day</span></label>
+    <h3 style="margin:2px 0"><span class="mico" id="schIco"></span><span data-i18n="sch.title">Auto-check</span></h3>
+    <p style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5" data-i18n="sch.body">We'll check <b id="sch_store">the store</b> automatically and ping you with the results. 1 check per call.<b id="sch_cat" style="display:none"></b></p>
+    <label class="klbl" data-i18n="sch.days">Which days?</label>
     <div id="sch_days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:6px 0 8px"></div>
     <label class="klbl" data-i18n="sch.time">Earliest call time</label>
     <input id="sch_time" type="time" value="10:00" class="kin">
-    <label class="klbl" data-i18n="sch.where">Where do we alert you?</label>
+    <label class="klbl" data-i18n="sch.where">Add your cell or email</label>
     <input id="sch_contact" type="text" inputmode="email" autocomplete="email" data-i18n-ph="ph.schednum" placeholder="Enter number" class="kin">
     <div id="sch_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
     <button class="cta" id="sch_btn" onclick="submitSchedule()" style="margin-top:8px;width:100%" data-i18n="sch.cta">Turn on auto-check →</button>
@@ -2065,7 +2061,7 @@ const I18N={ es:{
   'earn.share':'¡Comparte lo que conseguiste!','earn.share.sub':'Publica tu hallazgo y gana minutos de llamada gratis.',
   'earn.store':'Agrega tu tienda','earn.store.sub':'Pon una tienda en el mapa y gana una verificación gratis.',
   'res.free':'Esa fue tu llamada gratis 🎯','res.free.sub':'Regístrate gratis. Sigue cazando.','res.signup':'Regístrate y sigue verificando',
-  'res.share':'Comparte este hallazgo','res.driver':'¿Muy lejos? Que un local lo recoja','res.score':'¿Lo conseguiste? Publica tu logro',
+  'res.share':'Comparte tu logro','res.driver':'¿Muy lejos? Que un local lo recoja','res.score':'¿Lo conseguiste? Publica tu logro',
   'res.proof':'Prueba. Lo que dijo el empleado','res.translate':'Traducir',
   'live.convo':'Conversación','live.steps':'Progreso de la llamada','cs.call':'Llamada','lbl.assoc':'Asociado','lbl.menu':'Menú','lbl.agent':'Check AI',
   'up.restock':'No te pierdas el reabastecimiento','up.restock.sub':'Te avisamos por mensaje en cuanto vuelva.','up.checkback':'Vuelve pronto','up.checkback.sub':'Reabastecen seguido. Vuelve en un día o dos.','up.watch':'Avísame cuando vuelva','up.watch.sub':'Una alerta en cuanto una llamada lo confirme.','up.sched':'Auto-verificar en días de envío','up.sched.sub':'Llamamos por ti en días de reabastecimiento.',
@@ -2092,6 +2088,7 @@ const I18N={ es:{
   'empty.radius':'No hay tiendas abiertas en {r} mi. Amplía el radio.',
   'empty.far.title':'Aún no estamos en tu zona…','empty.far.sub':'¡Llegaste temprano! Sé el primero en saber cuando {b} llegue cerca de ti.','empty.far.cta':'🔔 Avísame cuando lleguen',
   'tick.found':'¡Encontrado!','tick.restock':'Reabastecimiento en camino','besttag':'Más probable','bestwhy':'buenas probabilidades ahora',
+  'ref.sharemsg':'Uso Check It For Me para cazar reabastecimientos — únete con mi enlace y ambos ganamos verificaciones gratis.','ref.copied':'¡Enlace de invitación copiado!','ref.copy':'Copia tu enlace de invitación:',
   'kioskonly':'Solo kiosco','kiosk.precall':'Solo kiosco. Preguntaremos si su kiosco está funcionando y surtido, no por un envío.',
   'closednow':'· cerrado ahora',
   // live view
@@ -2150,9 +2147,9 @@ const I18N={ es:{
   'sm.buyonline':'Comprar en línea','sm.notify':'Avísame cuando vuelva','sm.nocall':'No podemos llamar a {x}. Revisa su sitio o recibe un aviso cuando se reabastezca.',
   // watch modal
   'watch.title':'Avísame cuando vuelva','watch.sub':'Te avisamos en cuanto una llamada lo confirme en stock aquí.','watch.ph':'correo o teléfono','watch.cta':'Vigilar esta tienda →','sc.photolabel':'Foto',
-  'sch.body':'Llamamos a <b id="sch_store">la tienda</b> los días de envío. Te avisamos en cuanto llegue <b id="sch_cat">el producto</b>. 1 verificación por llamada.','watch.setting':'Configurando…','watch.done':"🔔 Listo. Te avisamos en cuanto vuelva",
+  'sch.body':'Verificamos <b id="sch_store">la tienda</b> automáticamente y te avisamos con los resultados. 1 verificación por llamada.<b id="sch_cat" style="display:none"></b>','watch.setting':'Configurando…','watch.done':"🔔 Listo. Te avisamos en cuanto vuelva",
   // schedule modal
-  'sch.perk':'Beneficio de miembro Fungie+','sch.title':'Auto-verificar en días de envío','sch.days':'¿Qué días? <span style="color:var(--muted);font-weight:400">· déjalos apagados para usar el día de envío conocido de la tienda</span>','sch.time':'Hora más temprana para llamar','sch.where':'¿Dónde te avisamos?','sch.ph':'correo o teléfono','sch.cta':'Activar auto-verificación →','sch.setting':'Configurando…','sch.on.days':'📅 Auto-verificación activa. Llamaremos esos días','sch.on.ship':'📅 Auto-verificación activa. Llamaremos el día de envío de esta tienda','sch.canceled':'Auto-verificación cancelada','sch.cancelfail':'No se pudo cancelar. Inténtalo de nuevo',
+  'sch.perk':'Beneficio de miembro Fungie+','sch.title':'Auto-verificación','sch.days':'¿Qué días?','sch.time':'Hora más temprana para llamar','sch.where':'Agrega tu celular o correo','sch.ph':'correo o teléfono','sch.cta':'Activar auto-verificación →','sch.setting':'Configurando…','sch.on.days':'📅 Auto-verificación activa. Llamaremos esos días','sch.on.ship':'📅 Auto-verificación activa. Llamaremos el día de envío de esta tienda','sch.canceled':'Auto-verificación cancelada','sch.cancelfail':'No se pudo cancelar. Inténtalo de nuevo',
   // waitlist modal
   'wl.title':'Te avisamos cuando lancemos aquí','wl.sub':'Deja tu correo o número. En cuanto lleguemos a tu zona, serás el primero en saberlo.','wl.ph':'correo o número de teléfono','wl.cta':'Unirme a la lista →','wl.adding':'Agregándote…','wl.done':"🙌 Estás en la lista. Te contactamos en cuanto lancemos cerca de ti",
   // refer modal
@@ -2208,7 +2205,7 @@ const I18N={ es:{
   'stn.too_busy':'{store} estaba saturado. Sin cargo.',
   'sub.in':'<b>{s}</b> tiene <b>{c}</b>. Ve por ello antes de que se agote.','sub.in.named':'<b>{s}</b> tiene <b>{p}</b>. Ve por ello antes de que se agote.',
   'sub.out':'<b>{s}</b> no tiene <b>{c}</b> ahora. Vuelve a checar en un día o dos.','sub.soldout':'{s} está agotado de <b>{c}</b> ahora mismo.',
-  'term.in':'En stock. Confirmado','term.out':'No está en stock','term.soon':'Reabastecimiento confirmado · {d}','term.unk':'Sin respuesta clara',
+  'term.in':'En stock','term.out':'No está en stock','term.soon':'Reabastecimiento confirmado · {d}','term.unk':'Sin respuesta clara',
   'res.conversation':'Conversación','res.result':'Resultado',
   'pre.again.body':'{o} {a}. ¿Verificar de nuevo?','pre.again.no':'Ahora no',
   'rail.backcal':'Volver al calendario','rail.noneday':'Sin verificaciones ese día','rail.noneday2':'Sin verificaciones este día.','rail.pickanother':'← Elegir otro día',
@@ -2432,7 +2429,7 @@ async function refreshAuth(){
 }
 // --- Launch waitlist: capture out-of-area visitors (also demand-by-region intel) ---
 function openWaitlist(){ $('wl_err').textContent=''; $('wl_contact').value=''; track('waitlist_open'); $('waitlistOverlay').classList.add('on'); setTimeout(()=>{try{$('wl_contact').focus();}catch(e){}},80); }
-function closeWaitlist(){ $('waitlistOverlay').classList.remove('on'); }
+function closeWaitlist(){ $('waitlistOverlay').classList.remove('on'); acctReturn(); }
 async function submitWaitlist(){
   const c=($('wl_contact').value||'').trim();
   const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(c);
@@ -2688,11 +2685,11 @@ function openAccount(){
     let run=0; try{ const now=new Date(); run=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length; }catch(_){ }
     head.innerHTML=`<div class="wash">
         <div style="display:flex;align-items:center;justify-content:space-between">
-          <span style="display:flex;align-items:center;gap:9px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('acct.my','My')}</span>${FCHK(24)}</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('acct.my','My')}</span>${FCHK(24)}</span>
           <button onclick="closeAccount()" style="background:none;border:0;font-size:12px;font-weight:700;color:rgba(255,255,255,.55);cursor:pointer">${t('acct.done','Done')}</button>
         </div>
         <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between">
-          <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,.8);white-space:nowrap">${esc(idn.primary)}</span>
+          <span style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:rgba(255,255,255,.8);white-space:nowrap">${esc(idn.primary)}<button onclick="editPhone()" aria-label="Change number" style="background:none;border:0;padding:2px;cursor:pointer;display:inline-flex"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg></button></span>
           <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);font-size:12px;font-weight:700">${esc(planChip)}</span>
         </div></div>
       <div class="stats"><div class="stat2"><b>${esc(left)}</b><i>${esc(t('acct.stat.left','Checks left').toUpperCase())}</i></div><div class="stat2"><b>${run}</b><i>${esc(t('acct.stat.run','Checks run').toUpperCase())}</i></div></div>
@@ -2707,6 +2704,18 @@ function openAccount(){
   $('acctOverlay').classList.add('on'); track('account_open');
 }
 function closeAccount(){ $('acctOverlay').classList.remove('on'); }
+// Change number: the phone IS the login — re-verify a new one through the same code flow.
+function editPhone(){ closeAccount(); try{ const f=$('auth_phone'); if(f) f.value=''; }catch(_){} openAuth(); }
+async function acctInvite(){
+  try{ if(!REFER||!REFER.code){ await loadRefer(); } }catch(_){ }
+  const link=(REFER&&REFER.code)?referLink(REFER.code):location.origin;
+  const msg=t('ref.sharemsg','I use Check It For Me to catch restocks — join with my link and we both earn free checks.');
+  try{ if(navigator.share){ await navigator.share({text:msg,url:link}); return; } }catch(_){ return; }
+  try{ await navigator.clipboard.writeText(link); toast(t('ref.copied','Invite link copied!')); }catch(_){ try{ prompt(t('ref.copy','Copy your invite link:'),link); }catch(__){} }
+}
+// Sub-screens opened FROM the account sheet return TO it on close (owner: closing dumped to homepage).
+let ACCT_RETURN='';
+function acctReturn(){ if(!ACCT_RETURN) return false; const tb=ACCT_RETURN; ACCT_RETURN=''; try{ openAccount(); if(tb!=='overview') acctTab(tb); }catch(_){ } return true; }
 async function doSignOut(){ PHONE_TOKEN=''; try{ localStorage.removeItem('cifm_token'); localStorage.removeItem('cifm_acct'); localStorage.removeItem('cifm_loc'); localStorage.setItem('runnr_authed','0'); }catch(_){} ACCOUNT=null; USER_LOC=null; closeAccount(); try{ location.href='/'; }catch(_){ refreshAuth(); } } // fully sign out → back to homepage; ALSO drop the saved location so they re-allow location (true reset, no stores until they tap Find)
 // ---- Caller-ID verification: register the customer's verified cell so /app/check-live dials AS it
 //      (stores answer their own number far more than an unknown line). Twilio calls them; they key in
@@ -3005,9 +3014,18 @@ function storeRowHtml(s){
   }
   if(!TIER_VIEW && BEST && s.id===BEST.id){
     const rowBest=(SEL_STORE && SEL_STORE.id!==s.id)?'':'best';
+    const bwhy=esc(LANG==='es'?t('bestwhy','great odds right now'):(BEST.why||'great odds right now'));
+    if(isV2()){
+      // v2 (owner 2026-07-02): the store LOGO stays, the name line stays clean — the "Most likely"
+      // chip leads the sub-line instead of sitting inside the name.
+      return `<div class="store ${rowBest} ${sel}" onclick="pickStore(${s.id})">
+        <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
+        <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)}</div><div class="lo bestwhy"><span class="besttag" style="margin-left:0;margin-right:6px">${t('besttag','Most likely')}</span>${bwhy}</div></div>
+        ${right}</div>`;
+    }
     return `<div class="store ${rowBest} ${sel}" onclick="pickStore(${s.id})">
       <div class="ic best">${ICO.star('#06210f')}</div>
-      <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)} <span class="besttag">${t('besttag','Most likely')}</span></div><div class="lo bestwhy">${esc(LANG==='es'?t('bestwhy','great odds right now'):(BEST.why||'great odds right now'))}</div></div>
+      <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)} <span class="besttag">${t('besttag','Most likely')}</span></div><div class="lo bestwhy">${bwhy}</div></div>
       ${right}</div>`;
   }
   const dot=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
@@ -3036,7 +3054,7 @@ function renderStores(){
   // Float the single "most likely" to the top — but NOT in tier view (the green group is the headline).
   if(BEST && !kiosk && !TIER_VIEW){
     let bi=list.findIndex(s=>s.id===BEST.id);
-    if(bi<0){ const bs=STORES.find(s=>s.id===BEST.id); if(bs){ list.unshift(bs); bi=0; } }
+    if(bi<0 && !q){ const bs=STORES.find(s=>s.id===BEST.id); if(bs){ list.unshift(bs); bi=0; } }
     if(bi>0){ const [b]=list.splice(bi,1); list.unshift(b); }
   }
   const total=list.length;
@@ -3149,7 +3167,7 @@ function renderIcons(){
   setI('scTrophy', ICO.trophy(AC()).replace('width="14" height="14"','width="20" height="20"'));
   setI('succCam', ICO.cam('#06210f').replace('width="15" height="15"','width="16" height="16"'));
   setI('watchIco', ICO.bell(AC2()).replace('width="15" height="15"','width="20" height="20"'));
-  setI('schIco', ICO.cal(AC2()).replace('width="15" height="15"','width="20" height="20"'));
+  setI('schIco', ICO.cal(AC2()).replace('width="15" height="15"','width="26" height="26"'));
   setI('kIco', ICO.kioskMini(AC2()).replace('width="18" height="18"','width="20" height="20"'));
   setI('shareIco', ICO.mega(AC2()).replace('width="15" height="15"','width="20" height="20"'));
   setI('ddIco', ICO.truck(AC2()).replace('width="15" height="15"','width="20" height="20"'));
@@ -3613,26 +3631,28 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     const TONE={in:'#4ADE80',out:'#EF4444',unk:'#FBBF24',soon:'#F59E0B'};
     const tone=TONE[(status&&status.cls)||'unk']||'#FBBF24';
     const live=finalElapsed==null&&!(status&&status.title);
-    const stepEls=steps.slice(1).map((s,idx)=>{
+    const stepRows=steps.slice(1).map((s,idx)=>{
       const realI=idx+1; let secs=null;
       if(realI<n-1){ if(steps[realI+1].at>s.at) secs=Math.round(steps[realI+1].at-s.at); }
       else if(finalElapsed!=null&&s.at>0&&finalElapsed>s.at) secs=Math.round(finalElapsed-s.at);
-      const last=realI===n-1;
-      return `<span class="${last?'cur':''}">${esc(liveStageLabel(s.n)||s.label)}${secs!=null?` <span style="color:#5C5C68;font-weight:600;font-size:12.5px">${secs}s</span>`:''}</span>`;
-    }).join('');
+      return {s, secs, last:realI===n-1};
+    // Direct-dial calls log menu stages (4/5/6) in a 0s pass-through — they never happened; drop them.
+    }).filter(r=>!((r.s.n===4||r.s.n===5||r.s.n===6)&&!r.last&&r.secs!=null&&r.secs<1));
+    // The final step ("Asking about {product}") shows NO trailing seconds (owner 2026-07-02).
+    const stepEls=stepRows.map(r=>`<span class="${r.last?'cur':''}">${esc(liveStageLabel(r.s.n)||r.s.label)}${r.secs!=null&&!r.last?` <span style="color:#5C5C68;font-weight:600;font-size:12.5px">${r.secs}s</span>`:''}</span>`).join('');
     const totalS=finalElapsed!=null?Math.round(finalElapsed):(n>0?Math.round(steps[n-1].at):0);
     const bubs=human.map(l=>{ const m=l.match(/^(Agent|Clerk):\s*(.*)$/); if(!m) return '';
       const ai=m[1]==='Agent';
       return `<div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?esc(t('lbl.agent','CHECK AI').toUpperCase()):esc(t('lbl.assoc','STAFF').toUpperCase())}</div><div class="tx">${esc(m[2])}</div></div>`; }).join('');
-    const vline=(status&&(status.term||status.title))?`<div style="margin-top:12px;font-size:15px;font-weight:800;color:${tone}">${esc(status.term||status.title)}</div>`:'';
+    const vline=(status&&(status.term||status.title))?`<div style="margin:12px 0 22px;font-size:15px;font-weight:800;color:${tone}">${esc(status.term||status.title)}</div>`:'';
     return `<div class="ctlv2">
       <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80 100%':`color-mix(in srgb,#4ADE80 35%,${tone}) 60%,${tone} 100%`})"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
       <div style="flex:1;min-width:0">
-        <details open><summary><span style="font-size:15px;font-weight:700">${t('step.ringing','Ringing the store…')}</span><span style="font-size:13px;font-weight:600;color:#8A8A96">${n} ${n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''} ⌃</span></summary>
+        <details open><summary><span style="font-size:15px;font-weight:700">${t('step.ringing','Ringing the store…')}</span><span style="font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''} ⌃</span></summary>
           <div class="ctlv2-steps">${stepEls}</div>
         </details>
         ${human.length?`<div style="margin-top:18px;font-size:11px;font-weight:700;letter-spacing:.15em;color:rgba(255,255,255,.5)">${esc(t('res.conversation','Conversation').toUpperCase())}</div>`:''}
-        <div id="convo_body" style="margin-top:10px;display:flex;flex-direction:column;gap:9px">${bubs||(finalElapsed==null?`<div class="cs-wait">${t('live.waitperson','Reaching a person…')}</div>`:'')}</div>
+        <div id="convo_body" style="margin-top:10px;display:flex;flex-direction:column;gap:9px">${bubs||(live?`<div class="cs-wait">${t('live.waitperson','Reaching a person…')}</div>`:'')}</div>
         ${vline}
       </div>
     </div>`;
@@ -4164,10 +4184,10 @@ function showResult(o, cid){
     const truck='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35a1 1 0 0 0-.78-.38H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>';
     const cam='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg>';
     const tileBtn=(ic,ti,su,fn)=>`<button class="is1t" onclick="${fn}"><span class="tl">${ic}</span><span><span class="a">${esc(ti)}</span><span class="b">${esc(su)}</span></span></button>`;
-    return (F.shareCards!==false?`<button class="smbtn is1s" onclick="shareFind()"><span style="display:inline-flex;align-items:center;gap:9px">${up}<span>${t('res.share','Share this find')}</span></span>${arr}</button>`:'')
+    return (F.shareCards!==false?`<button class="smbtn is1s" onclick="shareFind()"><span style="display:inline-flex;align-items:center;gap:9px">${up}<span>${t('res.share','Share your score')}</span></span>${arr}</button>`:'')
       +`<div class="is1g">${F.driverHandoff!==false?tileBtn(truck,dT,dS,'openDriverDemo()'):''}${F.community?tileBtn(cam,cT,cS,'openSuccess()'):''}</div>`;
   })() : [
-    F.shareCards!==false?`<button class="act2 gr" onclick="shareFind()">${ICO.mega('currentColor')} ${t('res.share','Share this find')}</button>`:'',
+    F.shareCards!==false?`<button class="act2 gr" onclick="shareFind()">${ICO.mega('currentColor')} ${t('res.share','Share your score')}</button>`:'',
     F.driverHandoff!==false?`<button class="act2" onclick="openDriverDemo()">${ICO.truck('#fff')} ${t('res.driver','Too far? Have a local grab it')}</button>`:'',
     F.community?`<button class="act2" onclick="openSuccess()">${ICO.cam('#fff')} ${t('res.score','Grabbed it? Post your score')}</button>`:'',
   ].join('')) : '';
@@ -4245,7 +4265,7 @@ function showResult(o, cid){
   // Unclear verdict → point them at the transcript AND ask for a quick one-tap label. That label is the
   // training signal: it tells us what the answer REALLY was on the calls our consensus couldn't call.
   // Verdict-specific terminus line at the bottom of the timeline (distinct from the big verdict title).
-  const termLabel = cls==='in' ? t('term.in',"In stock. Confirmed.")
+  const termLabel = cls==='in' ? t('term.in',"In stock.")
     : cls==='out' ? t('term.out','Not in stock')
     : cls==='soon' ? tf('term.soon','Restock confirmed · {d}',{d:esc(fmtShipDay(o.shipmentDay)||'soon')})
     : cls==='unk' ? t('term.unk','No clear answer') : '';
@@ -4545,7 +4565,7 @@ function showTodayLanding(){
   }
   $('result').innerHTML=(isV2()?`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 2px 2px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('hist.title','Check history')}</span><button onclick="backToBuilder()" style="background:none;border:0;font-size:12px;font-weight:700;color:rgba(255,255,255,.55);cursor:pointer">${t('acct.done','Done')}</button></div><div style="padding:0 2px 8px;font-size:12.5px;font-weight:600;color:#8A8A96">${(()=>{try{const now=new Date();const nn=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length;return nn+' '+t('hist.inmonth','checks in')+' '+now.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long'});}catch(_){return ''}})()}</div>`:'')+`
     <div class="todaywrap">
-      <div class="emptybox" style="margin-top:6px;padding-bottom:2px">
+      <div class="emptybox" style="margin-top:6px">
         <span style="opacity:.45;filter:grayscale(.7)">${FCHK(42)}</span>
         <div class="eb-t" style="margin-top:12px">${t('hist.today.none','No checks today')}</div>
         <div class="eb-s">${t('hist.today.sub0','Select a day below to see your past checks.')}</div>
@@ -4625,9 +4645,9 @@ function acctTab(which){
     const fromP=(typeof tiers==='function'&&tiers()[0])?tierPrice(tiers()[0].cents)+t('plan.mo','/mo'):'';
     const caps=member
       ?`<button class="capsW" onclick="closeAccount();backToBuilder()"><span>${t('acct.runcheck','Run a check')}</span>${arr2}</button>`
-      :`<button class="capsW" onclick="closeAccount();openBuy()"><span style="display:inline-flex;align-items:center;gap:9px"><svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${t('acct.upgrade2','Upgrade')} · ${t('acct.from','from')} ${esc(fromP)}</span></span>${arr2}</button>`;
+      :`<button class="capsW" onclick="ACCT_RETURN='overview';closeAccount();openBuy()"><span style="display:inline-flex;align-items:center;gap:9px"><svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${t('acct.upgrade2','Upgrade')} · ${t('acct.from','from')} ${esc(fromP)}</span></span>${arr2}</button>`;
     panel.innerHTML=
-      (member?row(spark,t('acct.row.plan','Manage plan'),t('plan.cycle','Billed monthly · cancel anytime'),"closeAccount();openBuy('manage')"):'')+
+      (member?row(spark,t('acct.row.plan','Manage plan'),t('plan.cycle','Billed monthly · cancel anytime'),"ACCT_RETURN='overview';closeAccount();openBuy('manage')"):'')+
       row(calic,t('acct.row.hist','Check history'),histSub,"closeAccount();openHistory()")+
       row(gift,t('acct.row.earn','Earn free checks'),t('acct.row.earn.sub','4 ways. Open to everyone.'),"acctTab('earn')")+
       caps+
@@ -4668,7 +4688,7 @@ function acctTab(which){
     // chip renders the moment a runtime number exists). Handlers preserved.
     const stats=modal.querySelector('.acctv2head .stats');
     if(stats){ if(!stats.dataset.orig) stats.dataset.orig=stats.innerHTML;
-      stats.innerHTML=`<div style="flex:1;background:linear-gradient(180deg,#31313A 0%,#26262B 100%);border-radius:16px;padding:13px 16px;box-shadow:0 14px 26px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1);text-align:center;font-size:13px;font-weight:600;color:rgba(255,255,255,.75)">${t('acct.earn.lead','Help the hunt. We load you up with free checks.')}</div>`; }
+      stats.innerHTML=`<div style="flex:1;background:linear-gradient(180deg,#31313A 0%,#26262B 100%);border-radius:16px;padding:12px 8px;box-shadow:0 14px 26px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1);text-align:center;font-size:12px;font-weight:600;color:rgba(255,255,255,.75);${LANG==='es'?'':'white-space:nowrap;overflow:hidden'}">${t('acct.earn.lead','Help the hunt. We load you up with free checks.')}</div>`; }
     const IC=p=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
     const icons={
       store:IC('<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>'),
@@ -4681,10 +4701,10 @@ function acctTab(which){
       <div style="margin-top:3px;font-size:11.5px;font-weight:600;color:#8A8A96;line-height:1.45">${sub}</div>
       ${reward?`<div style="margin-top:10px;display:inline-flex;padding:4px 9px;border-radius:999px;background:rgba(74,222,128,.12);color:#4ADE80;font-size:10.5px;font-weight:800;letter-spacing:.06em;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)">${reward}</div>`:''}</button>`;
     panel.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      ${tile(icons.store,t('earn.store','Add your store'),t('earn.store.sub','Put a store on the map.'),'',"closeAccount();openWaitlist&&openWaitlist()")}
-      ${tile(icons.invite,t('earn.invite','Invite a friend'),t('earn.invite.sub','They sign up. You both win.'),'',"const e=document.getElementById('earndemo');closeAccount();if(e)e.scrollIntoView()")}
+      ${tile(icons.store,t('earn.store','Add your store'),t('earn.store.sub','Put a store on the map.'),'',"ACCT_RETURN='earn';closeAccount();openWaitlist&&openWaitlist()")}
+      ${tile(icons.invite,t('earn.invite','Invite a friend'),t('earn.invite.sub','They sign up. You both win.'),'',"acctInvite()")}
       ${tile(icons.score,t('earn.score','Post your score'),t('earn.score.sub','Your pulls, on the home page.'),'',"closeAccount();openSuccess()")}
-      ${tile(icons.receipt,t('earn.receipt','Kiosk receipt'),t('earn.receipt.sub','Use our email at checkout, or forward it.'),'',"closeAccount();openReceipt()")}
+      ${tile(icons.receipt,t('earn.receipt','Kiosk receipt'),t('earn.receipt.sub','Use our email at checkout, or forward it.'),'',"ACCT_RETURN='earn';closeAccount();openReceipt()")}
     </div>
     <div style="margin-top:14px;text-align:center;font-size:12px;font-weight:600;color:#8A8A96">${t('acct.earn.open','Open to everyone. No plan needed.')}</div>`;
   }
@@ -4933,6 +4953,9 @@ let RAIL_CAL_M=null;
 // Highlight EVERY day you have a call on — independent of the store/outcome dropdowns, so a day you
 // called earlier in the week always shows up (picking it clears those filters so it always opens).
 function railCalDays(){ return new Set(histList().filter(e=>e.cid&&e.ts&&railInCat(e)).map(e=>tsDay(e.ts))); }
+// Per-day verdict tone for the calendar tint (owner 2026-07-02): any IN wins, then SOON, OUT, UNK.
+function railCalDayTones(){ const m={}; const P={in:4,soon:3,out:2,unk:1};
+  histList().filter(e=>e.cid&&e.ts&&railInCat(e)).forEach(e=>{ const k=tsDay(e.ts), t0=railTone(e); if(!m[k]||P[t0]>P[m[k]]) m[k]=t0; }); return m; }
 function openRailCal(){
   const pop=$('railcalpop'); if(!pop) return;
   if(pop.classList.contains('on')){ closeRailCal(); return; } // toggle
@@ -4969,7 +4992,7 @@ function renderRailCal(){
   const pop=$('railcalpop'); if(!pop) return;
   if(RAIL_F.date){ renderRailDayList(pop); return; } // a day is picked → show that day's calls list
   const m=new Date(RAIL_CAL_M), y=m.getFullYear(), mo=m.getMonth();
-  const days=railCalDays();
+  const days=railCalDays(), dayTones=railCalDayTones();
   const first=new Date(y,mo,1).getDay(), n=new Date(y,mo+1,0).getDate();
   const title=m.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long',year:'numeric'});
   const dow=(LANG==='es'?['D','L','M','M','J','V','S']:['S','M','T','W','T','F','S']);
@@ -4979,7 +5002,7 @@ function renderRailCal(){
   const today=tsDay(Date.now());
   // Days WITH checks are tappable; TODAY is always tappable too (even with no checks) so you can land on
   // the "no checks this day" state and pick another from the calendar.
-  for(let d=1;d<=n;d++){ const key=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); const has=days.has(key), sel=RAIL_F.date===key, isToday=key===today; cells+=`<div class="rcal-d ${has?'has':''} ${sel?'sel':''} ${isToday?'today':''}" ${(has||isToday)?`onclick="railPickDay('${key}',event)"`:''}>${d}</div>`; }
+  for(let d=1;d<=n;d++){ const key=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); const has=days.has(key), sel=RAIL_F.date===key, isToday=key===today; cells+=`<div class="rcal-d ${has?'has t-'+(dayTones[key]||'unk'):''} ${sel?'sel':''} ${isToday?'today':''}" ${(has||isToday)?`onclick="railPickDay('${key}',event)"`:''}>${d}</div>`; }
   pop.innerHTML=`<div class="rcal-h">${nav(-1,'Previous month')}<b>${esc(title)}</b>${nav(1,'Next month')}</div>
     <div class="rcal-grid">${dow.map(x=>`<div class="rcal-dow">${x}</div>`).join('')}${cells}</div>
     ${RAIL_F.date?`<div style="text-align:center;margin-top:9px"><a onclick="railPickDay('',event)" style="color:var(--muted);font-weight:700;font-size:12px;cursor:pointer">${t('rail.allday','Show all days')}</a></div>`:''}`;
@@ -4992,14 +5015,14 @@ function renderTodayCal(){
   const base = f.length ? new Date(f[0].ts) : new Date();
   if(RAIL_CAL_M==null) RAIL_CAL_M=new Date(base.getFullYear(), base.getMonth(), 1).getTime();
   const m=new Date(RAIL_CAL_M), y=m.getFullYear(), mo=m.getMonth();
-  const days=railCalDays();
+  const days=railCalDays(), dayTones=railCalDayTones();
   const title=m.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long',year:'numeric'});
   const dow=(LANG==='es'?['D','L','M','M','J','V','S']:['S','M','T','W','T','F','S']);
   const nav=(d,p)=>`<button onclick="todayCalMonth(${d})" aria-label="${p}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="${d<0?'M14.5 5L8 12l6.5 7':'M9.5 5l6.5 7-6.5 7'}" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
   const first=new Date(y,mo,1).getDay(), n=new Date(y,mo+1,0).getDate();
   const today=tsDay(Date.now());
   let cells=''; for(let i=0;i<first;i++) cells+='<div></div>';
-  for(let d=1;d<=n;d++){ const key=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); const has=days.has(key), isToday=key===today; cells+=`<div class="rcal-d ${has?'has':''} ${isToday?'today':''}" ${has?`onclick="todayPickDay('${key}')"`:''}>${d}</div>`; }
+  for(let d=1;d<=n;d++){ const key=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); const has=days.has(key), isToday=key===today; cells+=`<div class="rcal-d ${has?'has t-'+(dayTones[key]||'unk'):''} ${isToday?'today':''}" ${has?`onclick="todayPickDay('${key}')"`:''}>${d}</div>`; }
   el.innerHTML=`<div class="rcal-h">${nav(-1,'Previous month')}<b>${esc(title)}</b>${nav(1,'Next month')}</div>
     <div class="rcal-grid">${dow.map(x=>`<div class="rcal-dow">${x}</div>`).join('')}${cells}</div>`;
 }
@@ -5069,7 +5092,7 @@ function openBuy(reason){
     let lg=$('buy6blogo');
     if(!lg){ lg=document.createElement('div'); lg.id='buy6blogo'; lg.className='buy6b-logo';
       const h3=$('buy_title'); h3.parentElement.insertBefore(lg,h3); }
-    lg.innerHTML=`<svg width="26" height="26" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>heck<span style="color:#4ADE80">+</span></span>`;
+    lg.innerHTML=`<img src="/logos/checkplus.png" alt="Check+" style="height:26px;width:auto">`;
     let g=$('buy_grid');
     if(!g){ g=document.createElement('div'); g.id='buy_grid';
       const bc=$('billcycle'); bc.parentElement.insertBefore(g,bc); }
@@ -5094,7 +5117,7 @@ function openBuy(reason){
   track('buy_open',{reason:reason||'manual'});
   $('buyOverlay').classList.add('on');
 }
-function closeBuy(){ $('buyOverlay').classList.remove('on'); }
+function closeBuy(){ $('buyOverlay').classList.remove('on'); acctReturn(); }
 async function buy(kind){
   if(!isAuthed()){ signUp(); return; }
   $('buy_note').textContent=t('buy.opening','Opening secure checkout…');
@@ -5302,7 +5325,7 @@ async function openReceipt(){
   $('rcpt_msg').textContent=t('rcpt.waiting','Waiting for your receipt…'); $('rcpt_state').style.display='flex';
   startReceiptPoll();
 }
-function closeReceipt(){ $('receiptOverlay').classList.remove('on'); if(RCPT_TIMER){clearInterval(RCPT_TIMER);RCPT_TIMER=null;} }
+function closeReceipt(){ $('receiptOverlay').classList.remove('on'); if(RCPT_TIMER){clearInterval(RCPT_TIMER);RCPT_TIMER=null;} acctReturn(); }
 function copyReceiptEmail(){ try{ navigator.clipboard.writeText($('rcpt_email').textContent); }catch(e){} toast(t('rcpt.copied','Email copied 📋'),'neutral'); }
 function startReceiptPoll(){
   if(RCPT_TIMER) clearInterval(RCPT_TIMER);

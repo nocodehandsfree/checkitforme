@@ -31,7 +31,7 @@ try {
     await pg.waitForTimeout(600);
     eq(`${path}: --accent var`, (await pg.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())).toUpperCase(), accent);
     eq(`${path}: v2 page bg`, await pg.evaluate(() => getComputedStyle(document.body).backgroundColor), rgb('1D1D22'));
-    has(`${path}: preview badge visible`, await pg.evaluate(() => !![...document.querySelectorAll('button')].find(b => b.textContent.includes('NEW LOOK'))));
+    has(`${path}: no preview badge (owner-removed)`, await pg.evaluate(() => ![...document.querySelectorAll('button')].find(b => b.textContent.includes('NEW LOOK'))));
     await pg.close();
   }
 

@@ -404,6 +404,42 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   at takeover the installed-app splash would flash old navy against #1D1D22 pages) → **added as step
   3b in PROMOTE.md's takeover section; do NOT touch before**. Staging carries watch-14/15 ES work;
   no upstream pushes. CLEAN.
+### 🔴 OWNER LIVE-REVIEW ROUND (2026-07-02 midday — owner walking staging on his phone; ~20 items, all shipped this round)
+- [x] **MAJOR: v2 `#result{display:flex}` beat `.hidden`** → the result section could NEVER hide under
+  v2: home + status page stacked after back-nav (owner screenshot), history landing bleeding under the
+  builder. Fixed with `:not(.hidden)`; verified computed display swaps block/none. THE bug of the round.
+- [x] Preview badge REMOVED site-wide (owner call — overrides the strip-at-promote plan; PROMOTE.md B.1
+  updated, qa-e2e now asserts absence ×4 brands).
+- [x] Gold "outline" complaints = selection rings keyed to var(--accent) (gold on Pokémon): store .sel,
+  day-pop row .on, calendar sel day → all COMP GREEN now.
+- [x] Result page: terminus "In stock." (Confirmed. dropped, EN+ES) · 22px gap before share · share
+  button = "Share your score" (EN+ES) · pill entrance now CHAINS into the infinite breathing glow
+  (rRise,rPillGlow — the .r-play rule was overriding the ambient loop forever) · v2 CHECK-ANOTHER-STORE
+  glows on EVERY settled tone (v1 keeps in-stock-only).
+- [x] Step log: final "Asking about {product}" carries NO seconds · menu stages (4/5/6) with a 0s
+  pass-through are DROPPED (direct-dial calls no longer show "Listening to the menu… 0s") · header
+  count matches visible rows · "Reaching a person…" placeholder only while LIVE.
+- [x] Calendar: per-date verdict tints (IN wins > SOON > OUT > UNK; color-mix'd, token-clean) on both
+  the rail pop and the landing calendar · day-pop list 230→322px + overscroll-contain (no mid-row clip).
+- [x] Account family: v2 modal overflow:hidden killed Activity scroll → overflow-y:auto · "My ✓" gap
+  9→4px · PENCIL next to the phone number → editPhone() re-verify flow · earn lead one-line ·
+  ACCT_RETURN: buy/waitlist/receipt sheets REOPEN the account (right tab) on close instead of dumping
+  to home · Invite-a-friend = real share/clipboard action (was scrollIntoView on an element inside the
+  just-closed modal) · Check+ LOGO asset (owner file → /logos/checkplus.png, bg removed) replaces the
+  drawn ✓heck+ lockup on 6b/6a/6d (render-verified, naturalWidth 480).
+- [x] BEST row ("Most likely"): real store logo (was dark star on dark), chip moved OUT of the name
+  line into the sub-line (v2), clean raised chrome (v1 border was fighting the v2 background = the
+  "weird corners"), and NEVER injected into a text-search it doesn't match (searching "walgreens"
+  no longer surfaces Fun).
+- [x] Auto-check modal: title "Auto-check" (one line) · icon 26px (header-height) · body "We'll check
+  {store} automatically and ping you with the results. 1 check per call." · "leave all off…" hint
+  removed · "Add your cell or email" (all EN+ES).
+- [x] Empty-day card content centered (justify-content + inline pad fix).
+- [x] iOS green bottom toolbar over the map: v2 body::after 2px fixed #1D1D22 strip pins the bottom
+  edge sample dark (owner to confirm on device — headless can't).
+- [x] PERF: brand pages no-store→no-cache (bfcache lives again) · sw.js v2: brand paths precached +
+  adaptive network race (cached copy → 1.2s patience instead of 3.5s; losing response still refreshes
+  the cache for the next hop). Product-page hops stop hanging on slow LTE.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [x] **RESULT PAGE (6m) STRUCTURAL REBUILD** — done in the rebuild queue above (6m entry) + watch 19
   frame deep-read (store-token tint, 3-stop rail). PROOFS: 6m backfill shots + P6-out-v2.png.

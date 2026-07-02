@@ -21,11 +21,11 @@ Steps:
 5. Owner previews v2 ON PROD via `checkitforme.com/pokemon?skin=v2` with real calls.
 
 ## B. THE TAKEOVER — make v2 the default look (owner's explicit call only)
-1. In `public/checkit.html` boot script (~line 23-40):
+1. In `public/checkit.html` boot script (~line 23-30):
    - Make the skin unconditional: replace the localStorage gate with
      `document.documentElement.setAttribute('data-skin','v2')` (keep `?skin=off` as a session escape
      hatch during the first days if desired).
-   - **DELETE the preview badge block** (the `NEW LOOK · preview` injection, ~lines 33-40).
+   - (The preview badge was already removed at the owner's request on 2026-07-02 — nothing to strip.)
 2. Decide the hidden pages separately — they have their OWN gates and stay hidden through the takeover:
    - Hobby (`?flow=hobby` + isV2) · sign-up previews (`?show=…`) — expose each only when its lane is
      ready (hobby: owner call; YOUR HUNT still blocked on the price backend).
