@@ -287,6 +287,10 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   Verified both langs render + flip live. Poll-click path (Lens B gap): key tap → ES thanks line
   ('Gracias. Esto entrena…') ✓ lands its outcome. ES verdict/prod/charge lines all ✓.
   PROOFS: ES-sheet-v2.png · ES-poll-v2.png · ES-poll-after-v2.png.
+- [x] Rotation 3 pass 2: ES walk of the sign-up family — 6a (title/rows/CTA), 6b (title/feature tiles/
+  CONTINUAR), 6d (Ya estás dentro./Ya activo/+5 más/CTA) ALL render Spanish; zero leaks. Share tap on an
+  in-stock result lands its outcome (share sheet opens as the no-navigator.share fallback). CLEAN PASS —
+  no fixes needed. PROOFS: ES-6a-v2.png · ES-6b-v2.png · ES-6d-v2.png.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
