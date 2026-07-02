@@ -369,6 +369,10 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   ride cross-brand: switchVertical is a HARD NAVIGATION (location.href to the vertical's path), all
   state resets. Rendered-verified: lock on /pokemon → switch → /onepiece arrives lock:false, product
   empty. Bug class closed on all three axes (brand gate in, skin seal, nav reset). CLEAN.
+- [x] Watch 14 (Lens C/D re-run over the full 536-key inventory): 7 real gaps found — the 6g EARN rows
+  (invite/score/receipt pairs — 3 of 4 rows were English under Spanish) + err.badcode (verify-code
+  error). ES drafts added (same voice; Copy to ratify). **App-wide ES coverage is now TOTAL: zero keys
+  without Spanish.** Suite green.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
