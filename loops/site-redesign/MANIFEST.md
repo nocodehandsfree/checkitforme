@@ -25,11 +25,10 @@ _Morning report goes HERE at the top when the exit condition is met._
 - **Hobby flow = sports cards + TCG only.** Never NeeDoh/non-card products.
 - **COPY**: existing approved copy is truth; comp copy is placeholder → COPY QUEUE below (LOOP.md rule).
 
-## PREVIEW MODE (how the owner sees the new skin)
-DECIDED (cycle 1): `?skin=v2` on any page turns the new skin ON for that device (persisted in
-localStorage `cifm_skin`); `?skin=off` reverts. Redesign CSS/markup is scoped under `body.skin-v2`
-+ `data-v2` blocks so the default site is byte-identical for normal visitors. qa-design.ts audits
-only inside that scope.
+## PREVIEW MODE — ✅ LIVE (cycle 1)
+**Owner: open `staging.checkitforme.com/pokemon?skin=v2`** → new skin ON for that device (persisted);
+`?skin=off` reverts. Scope = `html[data-skin="v2"]` + `/*V2*/` CSS blocks — the default site render
+is untouched for normal visitors. qa-design.ts audits only inside that scope.
 
 ## HIDDEN PAGES — how the owner reaches each (filled in as built)
 - (pending build) Hobby era picker (P3a): with `?skin=v2` on → long-press the S2 "Retail" key 1.5s
@@ -59,7 +58,7 @@ only inside that scope.
 - [ ] Header: brand logomark/wordmark, product switcher pill (vsw), My/auth pill (comp P1 header)
 - [ ] Footer new skin: one-line links w/ Legal merge + EN pill; wordmark ©2026 + Discord/X circles (comp/§5.14) — NOTE Legal merge = copy change → COPY QUEUE
 - [ ] Toasts → bottom capsule system (comp T1, §5.4)
-- [ ] Page bg/tokens: #1D1D22 page, cards #26262B, no hairline borders — global v2 base CSS
+- [x] Page bg/tokens (cycle 1): CSS-var re-key under html[data-skin=v2] (--bg/--sheet/--terminal/--border) + base card/store-row/input/pill/footer surfaces — washes + iOS tint adapt via var(--bg)
 - [ ] Finds ticker (community finds strip) → strip token #17171C (NO COMP — extend system)
 - [ ] Language switcher (EN/ES pill + menu) restyle (NO COMP — extend)
 ### Retail home (P1)
