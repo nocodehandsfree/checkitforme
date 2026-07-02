@@ -301,6 +301,11 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   visually verified for the first time since cycle 1** after ~30 cycles of edits: old navy bg, purple
   find/pin accents (--purple #A78BFA intact), v1 'Check a store/Kiosks' labels, GOLD sheet CTA r16 w/
   arrow hidden, bordered old sheet, no badge, no data-skin. CLEAN. PROOF: v1-unchanged.png.
+- [x] Rotation 3 pass 5: three never-clicked interactions — steps '⌃' toggle collapses (convo stays,
+  per comp) · rail prev → older check's verdict renders w/ tokened store sentence · history calendar
+  day-pick → that day's check opens (first probe was doubly wrong: no list exists in this flow + seeds
+  lacked categoryId so railInCat filtered them — behavior itself correct). CLEAN PASS #4 — no fixes.
+  PROOFS: railnav-v2.png · 6i-daypick-v2.png.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
