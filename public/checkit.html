@@ -1146,6 +1146,21 @@ html[data-skin="v2"] .rcal-d.sel{background:linear-gradient(180deg,#FFE066 0%,#F
 html[data-skin="v2"] .rcal-d.today{box-shadow:inset 0 0 0 1.5px #FFF;border-radius:11px}
 html[data-skin="v2"] .rday-item{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:13px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .rday-item.on{box-shadow:0 0 0 2px #FFCB05,0 8px 14px -8px rgba(0,0,0,.55)}
+/* Couldn't-tell poll (P6b/§5.8): raised keys DIRECTLY on the page — no wrapping box; 34px icon
+   chips; press dips the key (buttons look raised, never like form depressions). */
+html[data-skin="v2"] .fbk{background:none;border:0;padding:0}
+html[data-skin="v2"] .fbk-b{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+html[data-skin="v2"] .fbk-b:active{transform:translateY(2px);box-shadow:0 4px 8px -6px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+html[data-skin="v2"] .fbk-ic{width:34px;height:34px}
+/* In-stock actions (IS1/§5.9): SHARE = green ring capsule; Too far?/Grabbed it? = raised cards
+   with green icon tiles. */
+html[data-skin="v2"] .smbtn{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#4ADE80;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 28px -8px rgba(25,177,69,.45)}
+html[data-skin="v2"] .act2{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+html[data-skin="v2"] .act2:active{transform:translateY(2px)}
+/* Restock module (R1–R3): raised card, carved-free rows with green icon tiles. */
+html[data-skin="v2"] .upmod{background:#26262B;border:0;border-radius:16px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+html[data-skin="v2"] .uprow{border:0}
+html[data-skin="v2"] .uprow .upi{background:rgba(74,222,128,.15);border-radius:11px}
 /*V2END*/</style>
 </head>
 <body>

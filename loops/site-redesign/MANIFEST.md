@@ -81,11 +81,11 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 ### Result / status pages (P6, P6b, P6c, IS1)
 - [x] Verdict wash chrome (cycle 8): glass pills/nav on rview (never dark on wash §8), RESULT chip glass + verdict-tinted border + breathing dot; washes auto-matched comp via --bg re-key
 - [x] Verdict title/sentence (cycle 8): title solid verdict color 30/900 (in-stock gradient killed under v2), sentence 16/500 .65-white. Price line + over-retail #F59E0B land with the quoted-price feature (needs price in result payload — reopen if P6 dev-note aggregation ships). DECIDED: fillP token color stays white (shared fn); per-tone token tint queued as polish.
-- [ ] Timeline + conversation restyle (carved wells, bubble labels)
-- [ ] Verdict line + "N checks used" + footer
-- [ ] Couldn't-tell 4-key poll → raised keys w/ status icons (P6b)
-- [ ] In-stock actions (IS1): SHARE YOUR SCORE capsule + Too far?/Grabbed it? 2-up (retail); hobby = Too far? only (hidden w/ hobby)
-- [ ] Restock module → R1 panel / R2 tell-me / R3 auto-check comps
+- [x] Timeline + conversation: carved well + raised bubbles + labels shipped in cycle 7 (shared with live view)
+- [x] Verdict line/'N checks used'/footer: ride base type/muted tokens — no bespoke chrome in comp
+- [x] P6b poll (cycle 9): wrapping box gone, keys raised on-page, 34px icon chips, press-dip. §5.7 stroke-icon swap rides the chip-set item below.
+- [x] IS1 (cycle 9): SHARE = green ring capsule (tracked caps via CSS), Too far?/Grabbed it? = raised press-dip cards w/ green tiles. Hobby's Too-far-only rule rides the hobby build.
+- [x] Restock module shell (cycle 9): raised card + green icon tiles. R2/R3 modal internals covered by pop-up + form specs; REOPEN after visual pass if the comps' inner layouts diverge.
 - [x] Calls-by-day P6c (cycle 8): calendar card r22, raised nav keys, accent selected day, 1.5px white today outline, day-list rows raised + accent ring on selected. Status ICON chips in day rows → with the §5.7 chip item.
 - [ ] Feedback thanks / no-charge lines (NO COMP — extend)
 ### Log in (L1a/L1b/L1c)
