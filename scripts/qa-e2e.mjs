@@ -75,6 +75,10 @@ try {
   await pg2.goto(`${BASE}/pokemon?flow=hobby`, { waitUntil: 'domcontentloaded' }); // no skin flag!
   await pg2.waitForTimeout(700);
   has('hobby stays HIDDEN without v2', await pg2.evaluate(() => document.getElementById('hobby')?.classList.contains('hidden')));
+  // owner law: hobby is Pokémon-gated (cards/TCG only, NEVER NeeDoh; the feed is Pokémon's registry)
+  await pg2.goto(`${BASE}/needoh?skin=v2&flow=hobby`, { waitUntil: 'domcontentloaded' });
+  await pg2.waitForTimeout(1200);
+  has('hobby stays HIDDEN on non-Pokémon brands (owner law)', await pg2.evaluate(() => document.getElementById('hobby')?.classList.contains('hidden')));
   await pg2.goto(`${BASE}/pokemon?skin=v2&flow=hobby`, { waitUntil: 'domcontentloaded' });
   await pg2.waitForTimeout(1500);
   const hob = await pg2.evaluate(() => { const h = document.getElementById('hobby'); return { open: h && !h.classList.contains('hidden'), eras: h ? h.querySelectorAll('.hob-era').length : 0 }; });

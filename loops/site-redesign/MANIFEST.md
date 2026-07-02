@@ -339,6 +339,11 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   whole browser runs fail-or-pass together, un-reproducible under observation → **sandbox Chromium↔
   localhost flake, environment-attributed, NOT a site bug. STAGING FEED VERIFIED 3× 200, 13 eras/129
   sets.** No upstream pushes; staging HTML current. Full suite green (43/66/7).
+- [x] Watch 7: **REAL LEAK FOUND + FIXED — the hobby flow opened on NON-Pokémon brands** (One Piece,
+  even NeeDoh — owner law: cards/TCG only, never NeeDoh; and the feed is Pokémon's registry, so One
+  Piece visitors would have seen POKÉMON eras). openHobby now brand-gated to `BRAND.key==='poke'` until
+  per-brand feeds exist; verified all 3 brands render correctly; gate encoded as a permanent qa-e2e
+  check (now 44). First site defect since rotation 3 — the watch earns its keep.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles

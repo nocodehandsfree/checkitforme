@@ -4677,6 +4677,9 @@ let HOBBY={data:null,era:null,set:null,prods:null};
 function v2ArtPh(label,h){ return `<div style="height:${h}px;border-radius:16px;background:repeating-linear-gradient(45deg,#2B2B33 0 12px,#25252C 12px 24px);display:grid;place-items:center"><span style="font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${esc(label)}</span></div>`; }
 async function openHobby(){
   if(!isV2()) return; // hard gate: never reachable outside the preview skin
+  // Brand gate (owner law: hobby = sports cards + TCG, NEVER NeeDoh — and /pub/pokemon-sets is
+  // Pokémon's registry): only the Pokémon brand opens this flow until per-brand feeds exist.
+  if(!(typeof BRAND!=='undefined'&&BRAND&&BRAND.key==='poke')) return;
   ['live','result','history','success','handoff','builder'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
   const h=$('hobby'); if(!h) return; h.classList.remove('hidden');
   if(!HOBBY.data){
