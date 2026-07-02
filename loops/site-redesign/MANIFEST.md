@@ -377,6 +377,11 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   Invita a un amigo / Publica tu logro / Recibo de kiosco). All 10 hobby ES strings verified through
   the live t() layer (the sandbox feed flake blocked a full render — strings themselves resolve).
   PROOF: ES-6g-earn-v2.png. CLEAN.
+- [x] Watch 18: **6g REBUILT to its frame** (deep-read follow-through): the lead line is the
+  OVERLAPPING CARD replacing the stat tiles on this tab (restored on tab-away); earn items = 2-COL
+  GRID of icon tiles (green icons, 14/700 + 11.5/600, reward-chip SLOT built — numbers stay OMITTED
+  per DECIDED until runtime rewards exist; comp's '+N CHECKS' are placeholders); footer 'Open to
+  everyone. No plan needed.' (+ES draft). Handlers preserved. PROOF: 6g-earn-v2.png (frame match).
 - [x] Watch 17: **6f REBUILT to its frame** — the 16KB 6f comp had never been deep-read; my cycle-16
   build followed its general pattern, not its specs. Comp-exact now: chart in a RAISED CARD w/ ACCENT
   'History ›' (was naked + green), past-week bars translucent-white flat-bottomed w/ ONLY the current

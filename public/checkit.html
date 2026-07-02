@@ -2038,6 +2038,7 @@ const I18N={ es:{
   'earn.score':'Publica tu logro','earn.score.sub':'Tus hallazgos, en la página principal.',
   'earn.receipt':'Recibo de kiosco','earn.receipt.sub':'Usa nuestro correo al pagar, o reenvíalo.',
   'err.badcode':'Ese código no coincide. Inténtalo de nuevo.',
+  'acct.earn.open':'Abierto a todos. Sin plan.',
   'acct.my':'Mi','acct.done':'Listo','acct.member':'Miembro','acct.free':'Gratis','acct.freeused':'Verificación gratis usada',
   'acct.stat.left':'Restantes','acct.stat.run':'Hechas','acct.tab.overview':'Resumen','acct.tab.activity':'Actividad','acct.tab.earn':'Gana',
   'acct.row.plan':'Administrar plan','acct.row.hist':'Historial de verificaciones','acct.row.earn':'Gana verificaciones gratis','acct.row.earn.sub':'4 formas. Abierto a todos.',
@@ -4601,6 +4602,7 @@ function acctTab(which){
   const rows=modal.querySelector('.acctrows'), panel=$('acctv2panel');
   if(!panel) return;
   if(rows)rows.style.display='none'; panel.style.display='';
+  { const st0=modal.querySelector('.acctv2head .stats'); if(st0&&st0.dataset.orig&&which!=='earn'){ st0.innerHTML=st0.dataset.orig; } } // leaving Earn restores the stat tiles
   if(which==='overview'){
     // 6e comp overview: 3 raised rows w/ 34px #1F1F25 icon tiles + subs → RUN A CHECK capsule → Sign out.
     const member=!!(ACCOUNT&&(ACCOUNT.comp||ACCOUNT.subscription==='active'));
@@ -4658,13 +4660,31 @@ function acctTab(which){
       <div style="margin-top:18px;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${t('acct.last','Last checks')}</div>
       <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">${last||`<div style="font-size:12.5px;color:#8A8A96">${t('acct.none','No checks yet.')}</div>`}</div>`;
   } else if(which==='earn'){
-    // 6g: the four earn rows (existing handlers; reward chips only where a runtime number exists).
-    const row=(ttl,sub,chipTx,fn)=>`<button onclick="${fn}" style="display:flex;align-items:center;gap:12px;width:100%;margin-top:10px;padding:13px 14px;border:0;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);color:#FFF;cursor:pointer;text-align:left"><span style="flex:1;min-width:0"><span style="display:block;font-size:15px;font-weight:700">${ttl}</span><span style="display:block;margin-top:2px;font-size:12px;font-weight:600;color:#8A8A96">${sub}</span></span>${chipTx?`<span style="font-size:9px;font-weight:900;letter-spacing:.06em;color:#4ADE80;background:rgba(74,222,128,.15);border-radius:999px;padding:4px 8px;white-space:nowrap">${chipTx}</span>`:''}</button>`;
-    panel.innerHTML=`<div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.75)">${t('acct.earn.lead','Help the hunt. We load you up with free checks.')}</div>
-      ${row(t('earn.store','Add your store'),t('earn.store.sub','Put a store on the map.'),'',"closeAccount();openWaitlist&&openWaitlist()")}
-      ${row(t('earn.invite','Invite a friend'),t('earn.invite.sub','They sign up. You both win.'),'',"const e=document.getElementById('earndemo');closeAccount();if(e)e.scrollIntoView()")}
-      ${row(t('earn.score','Post your score'),t('earn.score.sub','Your pulls, on the home page.'),'',"closeAccount();openSuccess()")}
-      ${row(t('earn.receipt','Kiosk receipt'),t('earn.receipt.sub','Use our email at checkout, or forward it.'),'',"closeAccount();openReceipt()")}`;
+    // 6g EXACT (watch-18 deep-read): the LEAD CARD replaces the overlapping stat tiles on this tab;
+    // earn items = 2-COL GRID of icon tiles (14/700 + 11.5/600 + reward-chip SLOT); footer line.
+    // Reward numbers stay OMITTED (DECIDED: never invent — comp's +N CHECKS are placeholders; the
+    // chip renders the moment a runtime number exists). Handlers preserved.
+    const stats=modal.querySelector('.acctv2head .stats');
+    if(stats){ if(!stats.dataset.orig) stats.dataset.orig=stats.innerHTML;
+      stats.innerHTML=`<div style="flex:1;background:linear-gradient(180deg,#31313A 0%,#26262B 100%);border-radius:16px;padding:13px 16px;box-shadow:0 14px 26px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1);text-align:center;font-size:13px;font-weight:600;color:rgba(255,255,255,.75)">${t('acct.earn.lead','Help the hunt. We load you up with free checks.')}</div>`; }
+    const IC=p=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+    const icons={
+      store:IC('<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>'),
+      invite:IC('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>'),
+      score:IC('<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/>'),
+      receipt:IC('<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><path d="M16 8h-6"/><path d="M16 12h-6"/>'),
+    };
+    const tile=(ic,ttl,sub,reward,fn)=>`<button onclick="${fn}" style="background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:16px;padding:14px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);color:#FFF;cursor:pointer;text-align:left">${ic}
+      <div style="margin-top:9px;font-size:14px;font-weight:700">${ttl}</div>
+      <div style="margin-top:3px;font-size:11.5px;font-weight:600;color:#8A8A96;line-height:1.45">${sub}</div>
+      ${reward?`<div style="margin-top:10px;display:inline-flex;padding:4px 9px;border-radius:999px;background:rgba(74,222,128,.12);color:#4ADE80;font-size:10.5px;font-weight:800;letter-spacing:.06em;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)">${reward}</div>`:''}</button>`;
+    panel.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      ${tile(icons.store,t('earn.store','Add your store'),t('earn.store.sub','Put a store on the map.'),'',"closeAccount();openWaitlist&&openWaitlist()")}
+      ${tile(icons.invite,t('earn.invite','Invite a friend'),t('earn.invite.sub','They sign up. You both win.'),'',"const e=document.getElementById('earndemo');closeAccount();if(e)e.scrollIntoView()")}
+      ${tile(icons.score,t('earn.score','Post your score'),t('earn.score.sub','Your pulls, on the home page.'),'',"closeAccount();openSuccess()")}
+      ${tile(icons.receipt,t('earn.receipt','Kiosk receipt'),t('earn.receipt.sub','Use our email at checkout, or forward it.'),'',"closeAccount();openReceipt()")}
+    </div>
+    <div style="margin-top:14px;text-align:center;font-size:12px;font-weight:600;color:#8A8A96">${t('acct.earn.open','Open to everyone. No plan needed.')}</div>`;
   }
 }
 // ---- 6d "You're in" (v2): the post-Stripe return state — stats + what's now live. ----
