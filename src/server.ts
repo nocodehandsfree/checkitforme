@@ -1258,8 +1258,20 @@ app.get("/pub/pokemon-sets", async (c) => {
     // one entry per type; keep the first real price seen (retailer copies share the same retail price)
     if (!m.has(p.type as string) || (m.get(p.type as string) == null && p.msrp != null)) m.set(p.type as string, p.msrp ?? null);
   }
-  const v = { ...file, eras: file.eras.map((e) => ({ ...e, sets: e.sets.map((s) => ({ ...s,
-    products: [...(bySet.get(norm(String(s.name))) ?? new Map<string, number | null>()).entries()].map(([type, retail]) => ({ type, retail })) })) })) };
+  // Logo/banner CONTRACT: asset URLs are derived from the set code (stable, verified), so the logo
+  // wall and the website need zero coordination — logo dev uploads to exactly these R2 keys
+  // (set-logos/<logoKey>.png wordmark, set-banners/<logoKey>.png wide art, era-logos/<slug>.png),
+  // the front end renders feed.logo/banner with an onerror text fallback until the asset lands.
+  // Same shared bucket + domain as chain logos (logos.fungibles.com).
+  const LOGO_BASE = "https://logos.fungibles.com";
+  const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const v = { ...file, logoBase: LOGO_BASE, eras: file.eras.map((e) => ({ ...e,
+    slug: slug(e.era), logo: `${LOGO_BASE}/era-logos/${slug(e.era)}.png`,
+    sets: e.sets.map((s) => ({ ...s,
+      logoKey: slug(String(s.code)),
+      logo: `${LOGO_BASE}/set-logos/${slug(String(s.code))}.png`,
+      banner: `${LOGO_BASE}/set-banners/${slug(String(s.code))}.png`,
+      products: [...(bySet.get(norm(String(s.name))) ?? new Map<string, number | null>()).entries()].map(([type, retail]) => ({ type, retail })) })) })) };
   pokemonSetsCache = { t: Date.now(), v };
   return c.json(v);
 });
