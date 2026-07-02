@@ -1,0 +1,104 @@
+{
+ "SV01": {
+  "logo": true,
+  "slug": "sv01",
+  "apiId": "sv1"
+ },
+ "SV02": {
+  "logo": true,
+  "slug": "sv02",
+  "apiId": "sv2"
+ },
+ "SV03": {
+  "logo": true,
+  "slug": "sv03",
+  "apiId": "sv3"
+ },
+ "SV03.5": {
+  "logo": true,
+  "slug": "sv035",
+  "apiId": "sv3pt5"
+ },
+ "SV04": {
+  "logo": true,
+  "slug": "sv04",
+  "apiId": "sv4"
+ },
+ "SV04.5": {
+  "logo": true,
+  "slug": "sv045",
+  "apiId": "sv4pt5"
+ },
+ "SV05": {
+  "logo": true,
+  "slug": "sv05",
+  "apiId": "sv5"
+ },
+ "SV06": {
+  "logo": true,
+  "slug": "sv06",
+  "apiId": "sv6"
+ },
+ "SV06.5": {
+  "logo": true,
+  "slug": "sv065",
+  "apiId": "sv6pt5"
+ },
+ "SV07": {
+  "logo": true,
+  "slug": "sv07",
+  "apiId": "sv7"
+ },
+ "SV08": {
+  "logo": true,
+  "slug": "sv08",
+  "apiId": "sv8"
+ },
+ "SV08.5": {
+  "logo": true,
+  "slug": "sv085",
+  "apiId": "sv8pt5"
+ },
+ "SV09": {
+  "logo": true,
+  "slug": "sv09",
+  "apiId": "sv9"
+ },
+ "SV10": {
+  "logo": true,
+  "slug": "sv10",
+  "apiId": "sv10"
+ },
+ "SV-BWF": {
+  "logo": false
+ },
+ "ME01": {
+  "logo": true,
+  "slug": "me01",
+  "apiId": "me1"
+ },
+ "ME02": {
+  "logo": true,
+  "slug": "me02",
+  "apiId": "me2"
+ },
+ "ME03": {
+  "logo": true,
+  "slug": "me03",
+  "apiId": "me3"
+ },
+ "ME04": {
+  "logo": true,
+  "slug": "me04",
+  "apiId": "me4"
+ },
+ "ME05": {
+  "logo": false
+ },
+ "ME06": {
+  "logo": false
+ },
+ "ME-FP": {
+  "logo": false
+ }
+}

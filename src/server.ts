@@ -778,6 +778,10 @@ app.get("/logo-wall", async (c) => {
     .ic.lite{background:#f2f2f5;border-color:rgba(255,255,255,.28)}
   </style>
   <body>
+  <div style="display:flex;gap:8px;margin-bottom:14px">
+    <a href="/logo-wall" style="padding:8px 14px;border-radius:999px;font-size:13px;font-weight:700;text-decoration:none;background:#22c55e;color:#06210f">Store logos</a>
+    <a href="/logo-wall/sets" style="padding:8px 14px;border-radius:999px;font-size:13px;font-weight:700;text-decoration:none;background:#1a1a22;color:#cfcfd6;border:1px solid rgba(255,255,255,.14)">Pokémon sets →</a>
+  </div>
   <h2>Logo wall · ${files.length} marks</h2>
   <div class="sub">Each mark exactly as the store list renders it — same 52px tile, plate &amp; wide handling from _meta.json.</div>
   <div class="bar">
@@ -811,6 +815,70 @@ app.get("/logo-wall", async (c) => {
     boxes.forEach(function(b){b.addEventListener('change',function(){if(!boxes.some(function(x){return x.checked;})){b.checked=true;return;}apply();});});
     document.addEventListener('click',function(){treatPop.setAttribute('hidden','');treatBtn.setAttribute('aria-expanded','false');});
     sel.addEventListener('change',apply);apply();
+  </script>
+  </body>`);
+});
+// Pokémon TCG set logos — the "swap-to" wall for the Hobby picker. Era pills → set cards
+// ([logo] · code · name · release), data-driven from data/pokemon-sets.json (data-dev's catalog)
+// + the downloaded logos in public/logos/sets/. QA page only; no auth (public logos + set names).
+app.get("/logo-wall/sets", (c) => {
+  let cat: any = { eras: [] };
+  try { cat = JSON.parse(readFileSync(join(here, "../data/pokemon-sets.json"), "utf8")); } catch { /* none yet */ }
+  let setFiles = new Set<string>();
+  try { setFiles = new Set(readdirSync(join(here, "../public/logos/sets")).filter((f) => /\.(png|webp|svg)$/i.test(f))); } catch { /* none yet */ }
+  const eras = (cat.eras || []) as Array<{ era: string; code: string; years?: string; sets: Array<{ code: string; name: string; release: string }> }>;
+  const slug = (code: string) => code.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const fmt = (r: string) => { const m = /^(\d{4})-(\d{2})/.exec(r || ""); return m ? `${MON[+m[2] - 1]} ${m[1]}` : (r || "TBA"); };
+  const totalSets = eras.reduce((n, e) => n + e.sets.length, 0);
+  const withLogo = eras.reduce((n, e) => n + e.sets.filter((s) => setFiles.has(slug(s.code) + ".png")).length, 0);
+  const def = Math.max(0, eras.length - 1); // newest era shown first (matches the app's "newest" default)
+  const card = (s: { code: string; name: string; release: string }) => {
+    const file = slug(s.code) + ".png";
+    const art = setFiles.has(file)
+      ? `<div class="setart"><img src="/logos/sets/${file}?v=1" alt="" loading="lazy"></div>`
+      : `<div class="setart noimg"><span>${esc(s.name)}</span><small>logo coming</small></div>`;
+    return `<div class="setcard">${art}<div class="setname">${esc(s.name)}</div><div class="setmeta">${esc(s.code)} · ${esc(fmt(s.release))}</div></div>`;
+  };
+  const pills = eras.map((e, i) => `<button type="button" class="pill${i === def ? " on" : ""}" data-era="${i}">${esc(e.era)} <small>${e.sets.length}</small></button>`).join("");
+  const sections = eras.map((e, i) => `<section class="era${i === def ? " on" : ""}" data-era="${i}"><div class="grid">${e.sets.map(card).join("")}</div></section>`).join("");
+  return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    *{box-sizing:border-box}
+    body{background:#0C0C12;font-family:-apple-system,system-ui,sans-serif;color:#fff;padding:20px;margin:0}
+    .nav{display:flex;gap:8px;margin-bottom:14px}
+    .nav a{padding:8px 14px;border-radius:999px;font-size:13px;font-weight:700;text-decoration:none;background:#1a1a22;color:#cfcfd6;border:1px solid rgba(255,255,255,.14)}
+    .nav a.on{background:#22c55e;color:#06210f;border-color:transparent}
+    h2{font-weight:900;margin:0 0 4px}
+    .sub{color:#9a9aac;font-size:12px;margin-bottom:16px}
+    .sub code{color:#cfcfd6}
+    .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+    .pill{background:#16161e;color:#cfcfd6;border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:9px 16px;font-size:14px;font-weight:700;cursor:pointer}
+    .pill small{color:#8a8a98;font-weight:600;margin-left:4px}
+    .pill.on{border-color:#eab308;color:#fff;box-shadow:0 0 0 1px #eab308,0 0 18px rgba(234,179,8,.25)}
+    .era{display:none} .era.on{display:block}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+    .setcard{background:#16161e;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:2px}
+    .setart{height:104px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+    .setart img{max-width:100%;max-height:96px;object-fit:contain}
+    .setart.noimg{flex-direction:column;gap:4px;border:1px dashed rgba(255,255,255,.14);border-radius:12px;color:#9a9aac;text-align:center;padding:8px;width:100%}
+    .setart.noimg span{font-weight:800;font-size:14px;color:#cfcfd6}
+    .setart.noimg small{font-size:11px;color:#6f6f80}
+    .setname{font-weight:800;font-size:15px;line-height:1.2}
+    .setmeta{font-size:12px;color:#8a8a98}
+  </style>
+  <body>
+  <div class="nav"><a href="/logo-wall">Store logos</a><a class="on" href="/logo-wall/sets">Pokémon sets</a></div>
+  <h2>Pokémon set logos · ${totalSets} sets</h2>
+  <div class="sub">${withLogo}/${totalSets} with official logos · grouped by era from <code>data/pokemon-sets.json</code>. Pick an era.</div>
+  <div class="pills">${pills}</div>
+  ${sections}
+  <script>
+    var pills=[].slice.call(document.querySelectorAll('.pill'));
+    var eras=[].slice.call(document.querySelectorAll('.era'));
+    pills.forEach(function(p){p.addEventListener('click',function(){var e=p.getAttribute('data-era');
+      pills.forEach(function(x){x.classList.toggle('on',x===p);});
+      eras.forEach(function(s){s.classList.toggle('on',s.getAttribute('data-era')===e);});});});
   </script>
   </body>`);
 });
@@ -859,6 +927,16 @@ app.get("/logos/chains/:file", (c) => {
   const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
   try {
     const buf = readFileSync(join(here, `../public/logos/chains/${file}`));
+    const ext = file.split(".").pop()?.toLowerCase();
+    c.header("Cache-Control", "public, max-age=86400");
+    return c.body(buf, 200, { "Content-Type": ext === "svg" ? "image/svg+xml" : ext === "webp" ? "image/webp" : "image/png" });
+  } catch { return c.notFound(); }
+});
+// Pokémon TCG set logos (for /logo-wall/sets) — same static-serve pattern as chain logos.
+app.get("/logos/sets/:file", (c) => {
+  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
+  try {
+    const buf = readFileSync(join(here, `../public/logos/sets/${file}`));
     const ext = file.split(".").pop()?.toLowerCase();
     c.header("Cache-Control", "public, max-age=86400");
     return c.body(buf, 200, { "Content-Type": ext === "svg" ? "image/svg+xml" : ext === "webp" ? "image/webp" : "image/png" });
