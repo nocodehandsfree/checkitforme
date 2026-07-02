@@ -64,7 +64,7 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - [x] Header (cycle 3): transparent bar (pills float on page), switcher/My pills already raised via base; hero title 30/900/-1px per P1. Per-brand accent dot kept (comp shows Pokémon only — DECIDED).
 - [x] Footer (cycle 3): strip tokens, 13/600 muted links, 36px raised social circles, tight padding. 'Legal' merge NOT applied — stays in COPY QUEUE (link-text change needs Copy).
 - [x] Toasts (cycle 3): green success capsule gradient + dark-green text + glow. DECIDED: neutral/accent variants land when toast() call sites get a type param — queued as follow-up box below.
-- [ ] Toast type variants (T1): classify toast() call sites → success/neutral/accent capsules (comp T1)
+- [x] Toast variants (cycle 17): toast(msg,kind) — green success default, 'neutral' raised-dark (the 3 copy-toasts classified), 'accent' yellow armed for refund-style moments. v2-scoped styles; v1 unchanged.
 - [x] §5.7 status ICON chips (cycle 12): shared v2StatusChip(tone,size) — tinted circle + stroke icons (truck w/ day tone, ✕, bold ?); IN-STOCK uses the owner's brand-check FILE per the standing logo rule (DECIDED — owner law beats comp's drawn ✓). Day list swapped off colored dots; poll already chip-based; YOUR HUNT consumes it when hobby builds.
 - [x] Page bg/tokens (cycle 1): CSS-var re-key under html[data-skin=v2] (--bg/--sheet/--terminal/--border) + base card/store-row/input/pill/footer surfaces — washes + iOS tint adapt via var(--bg)
 - [x] Finds ticker (cycle 4): chips → raised row cards (NO COMP — extended system)

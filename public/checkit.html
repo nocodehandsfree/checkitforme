@@ -1083,6 +1083,8 @@ html[data-skin="v2"] .foot-links a{font-size:13px;font-weight:600;color:#8A8A96}
 html[data-skin="v2"] .foot-social a,html[data-skin="v2"] .foot-social button{width:36px;height:36px;border-radius:50%;background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 /* Toasts (T1/§5.4): bottom capsule, green success gradient + dark-green text. */
 html[data-skin="v2"] .toast{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210F;border:0;border-radius:999px;box-shadow:0 12px 28px -8px rgba(25,177,69,.45)}
+html[data-skin="v2"] .toast.tneutral{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);color:#FFF;box-shadow:0 12px 28px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
+html[data-skin="v2"] .toast.taccent{background:linear-gradient(180deg,#FFE066 0%,#FFCB05 100%);color:#26251E;box-shadow:0 12px 28px -8px rgba(255,203,5,.4)}
 /* Dropdown menus (product/language switchers): big-card surface, depth not borders. */
 html[data-skin="v2"] .vsw-menu{background:#26262B;border:0;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 /* Finds ticker chips (NO COMP — extended): raised row cards, green accents stay in content. */
@@ -1718,7 +1720,7 @@ function chainCarriesBrand(st){
 let POLICY={flags:{driverHandoff:true,restockAlerts:true,shareCards:true,kiosks:true,specificSets:true},packs:[],sub:{cents:499},perCallCents:25,headstartMin:10,kioskRefreshChecks:1}; // owner-tunable, loaded at boot
 let LEAD_PENDING=null, AUTH_PENDING=null;
 const $=id=>document.getElementById(id);
-const toast=m=>{const t=$('toast');t.innerHTML=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);};
+const toast=(m,kind)=>{const t=$('toast');t.innerHTML=m;t.classList.remove('tneutral','taccent');if(kind)t.classList.add('t'+kind);t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}; // kind: undefined=green success · 'neutral' raised dark · 'accent' yellow (T1 §5.4; styled under v2 only)
 // ── i18n (rollout-ready; Spanish live, other languages fall back to English until filled) ──
 const LANGS=[['en','EN'],['es','ES']];
 const I18N={ es:{
@@ -4524,7 +4526,7 @@ function shareTo(target){
   if(target==='x') window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text)+'&url='+encodeURIComponent(url),'_blank');
   else if(target==='fb') window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(url)+'&quote='+encodeURIComponent(text),'_blank');
   else if(target==='sms') location.href='sms:?&body='+encodeURIComponent(text+' '+url);
-  else if(target==='copy'){ try{ navigator.clipboard.writeText(text+' '+url); }catch(e){} toast(t('share.copied',"Copied. Paste it anywhere 📋")); }
+  else if(target==='copy'){ try{ navigator.clipboard.writeText(text+' '+url); }catch(e){} toast(t('share.copied',"Copied. Paste it anywhere 📋"),'neutral'); }
   closeShare();
 }
 function closeShare(){ $('shareOverlay').classList.remove('on'); }
@@ -4668,7 +4670,7 @@ function hoAdvance(n){
 function hoCopy(){
   const raw=($('ho_msg')&&$('ho_msg').dataset.raw)||'';
   try{ navigator.clipboard.writeText(raw); }catch(e){}
-  toast(t('ho.copied',"Copied. Paste it in the driver chat."));
+  toast(t('ho.copied',"Copied. Paste it in the driver chat."),'neutral');
 }
 function hoStar(v){ HO.rating=v; document.querySelectorAll('#ho_stars span').forEach((x,i)=>x.classList.toggle('lit',i<v)); }
 function hoFinish(){ $('ho_steps').style.display='none'; document.querySelector('#handoff .ho-job').style.display='none'; $('ho_done').style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); track('handoff_done',{bonus:HO.bonus,drop:HO.drop,rating:HO.rating}); }
@@ -4701,7 +4703,7 @@ async function openReceipt(){
   startReceiptPoll();
 }
 function closeReceipt(){ $('receiptOverlay').classList.remove('on'); if(RCPT_TIMER){clearInterval(RCPT_TIMER);RCPT_TIMER=null;} }
-function copyReceiptEmail(){ try{ navigator.clipboard.writeText($('rcpt_email').textContent); }catch(e){} toast(t('rcpt.copied','Email copied 📋')); }
+function copyReceiptEmail(){ try{ navigator.clipboard.writeText($('rcpt_email').textContent); }catch(e){} toast(t('rcpt.copied','Email copied 📋'),'neutral'); }
 function startReceiptPoll(){
   if(RCPT_TIMER) clearInterval(RCPT_TIMER);
   const t0=Date.now();
