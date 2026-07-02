@@ -54,7 +54,18 @@ DevOps is the owner's central point of contact: docs/token health, `docs/busines
 security + go-live readiness, cross-lane coordination. Voice tuning = Website lane; store mapping =
 Admin lane. DevOps takes dev work only when the owner assigns it. Kickoff prompts: `docs/KICKOFFS.md`.
 
+## Architecture rules (owner-set, 2026-07-02)
+1. **Mapping is decoupled from staging.** Mapping (chains navType/navRecipe/avgTreeSeconds/dtmf) is a
+   real-world ROI dataset: prod real calls + explicit Tree Trainer runs. Staging NEVER passively
+   learns (gated `!config.staging.on` in ingest), and owner-only test stores never feed mapping in any env.
+2. **Workflows in Admin power both envs.** Not true yet — Admin edits PROD's workflows only; staging's
+   are edited via staging's own API. Env-picker feature filed with Admin lane (see admin.md + ROADMAP).
+3. **Staging and prod can run different workflows.** Already true — separate DBs, separate `vt_*` settings.
+
 ## Current state (2026-07-01 — KEEP UPDATED)
+- [x] **Mapping decoupled from staging (2026-07-02):** passive tree-learn now skips staging entirely +
+  skips owner-only stores everywhere (that's how the bogus 19s got written — Fun-store test transcript).
+  Explicit Tree Trainer unaffected. tsc + suite green.
 - [~] **🐛 ABC silent-agent bug: FIXED in code (DevOps, 2026-07-02), awaiting Fun-call verify.**
   Root cause: DevOps's `connectAtSec` wiring passed `chains.avgTreeSeconds` unguarded; a bogus 19s on the
   direct-answer Fungibles chain armed the timer, which mutes the agent (VAD skipped) → 19s dead air.

@@ -37,6 +37,12 @@ You share the deploy branch with every lane. You own `public/app.html` + the `/a
 DevOps — don't redo your work blind.
 
 ## Current focus — staged plan (do in order; KEEP UPDATED)
+0. [ ] **DevOps → Admin (owner rule 2026-07-02): Workflows must power BOTH envs from the one Admin.**
+   Today Admin edits PROD's workflows only (per-env DBs; staging's `vt_*` settings get edited via
+   staging's own API). Build an **environment picker** on the Workflows screen: Prod | Staging, where
+   Staging reads/writes `staging.checkitforme.com/api/*` (its own ADMIN_TOKEN — coordinate the
+   cross-origin auth with DevOps before building). Envs stay independent: owner tests a workflow on
+   staging, then deliberately applies the winner to prod. No auto-sync.
 1. [ ] **Fix the admin** so it's up to date (it lagged during the website/admin split).
 2. [ ] **Voice-switcher + tree-learner ready to test** — confirm the Haiku-nav → Sonnet-human switch
    (`connectOnHuman` flag + Helicone) and the phone-tree learner (Tree Trainer) are wired. Code:
