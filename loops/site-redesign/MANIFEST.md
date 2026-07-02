@@ -93,6 +93,14 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
   must be in STYLE_GUIDE_NEW.md's token set; banned terms repo-wide in checkit.html (scraper/scraping/
   Marketplace Insights); COPY QUEUE comp-isms must not leak into served copy. Added to test-all.sh.
 
+## ROUND 2 (owner-requested re-check, 2026-07-02 morning) — loop re-armed
+- [x] Unmissable preview badge (tap to exit) — temporary chrome, STRIP BEFORE PROMOTE
+- [x] Per-vertical accent colors: all accent pieces now color-mix off var(--accent) (owner's call — comps only showed Pokémon)
+- [x] Logo-lane assets LIVE on staging (their commit 3f5702d + serving routes; eras/sets/banners 200; ME05/ME06 logos pending publication → text fallback; 66 old-set banners = route-level fallback). Hobby art lights up now.
+- [ ] Module-by-module RENDERED audit against comps (owner expects misses: per-product modules, module chrome)
+- [ ] Error-message states sweep: every error string/state rendered + §5.12-conformant (owner call-out)
+- [ ] Per-vertical visual audit on all 4 brand paths with the accent derivation live
+
 ## VIEW ENUMERATION (from the LIVE site) × comp mapping
 ### Global chrome
 - [x] S2 store-type switcher (cycle 2): carved #17171C track + raised active key (comp-exact), storefront/kiosk-awning icons via currentColor, launch = Retail+Kiosk with active flex 1.2. EN labels locked Retail·Kiosk under v2; ES untouched pending Copy.
