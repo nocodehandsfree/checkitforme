@@ -373,6 +373,10 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   (invite/score/receipt pairs — 3 of 4 rows were English under Spanish) + err.badcode (verify-code
   error). ES drafts added (same voice; Copy to ratify). **App-wide ES coverage is now TOTAL: zero keys
   without Spanish.** Suite green.
+- [x] Watch 15: watch-14 fix RENDER-verified — ES Earn tab shows all 4 rows Spanish (Agrega tu tienda /
+  Invita a un amigo / Publica tu logro / Recibo de kiosco). All 10 hobby ES strings verified through
+  the live t() layer (the sandbox feed flake blocked a full render — strings themselves resolve).
+  PROOF: ES-6g-earn-v2.png. CLEAN.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
