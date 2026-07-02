@@ -306,6 +306,10 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   day-pick → that day's check opens (first probe was doubly wrong: no list exists in this flow + seeds
   lacked categoryId so railInCat filtered them — behavior itself correct). CLEAN PASS #4 — no fixes.
   PROOFS: railnav-v2.png · 6i-daypick-v2.png.
+- [x] ROTATION 4 pass 1: DESKTOP (1280px — never checked; comps are phone frames): content column
+  centers at 680, card constrained, call sheet (520) + plans modal (430) both center, NO horizontal
+  scroll, hero/footer coherent. Header pills span the page edges (existing v1 behavior, not a v2
+  regression). CLEAN PASS #5. PROOFS: desktop-home-v2.png · desktop-6b-v2.png.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
