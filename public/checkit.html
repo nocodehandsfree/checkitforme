@@ -1196,6 +1196,17 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
    fill — it must never fight a green CTA on the same screen. */
 html[data-skin="v2"] .plan{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:16px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .plan.sub{background:#26251E;box-shadow:0 0 0 2px rgba(255,203,5,.45),0 8px 14px -8px rgba(0,0,0,.55),0 0 18px rgba(255,203,5,.18)}
+/* AUDIT SWEEP 1 — v1 hairlines/terminal fills that leaked through under v2. */
+html[data-skin="v2"] .rhead{background:#26262B;border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+html[data-skin="v2"] .proof{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+html[data-skin="v2"] .smline{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+html[data-skin="v2"] .csheet-ic{background:#1F1F25;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+html[data-skin="v2"] #mapview{border:0;background:#17171C;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+html[data-skin="v2"] .kioskhint{border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+/* Reduced motion: kill the v2 signature loops when the OS asks. */
+@media (prefers-reduced-motion:reduce){
+  html[data-skin="v2"] .ckarc1,html[data-skin="v2"] .ckarc2,html[data-skin="v2"] .rpill .d{animation:none}
+}
 /*V2END*/</style>
 </head>
 <body>
@@ -4203,13 +4214,13 @@ async function openHobby(){
     h.innerHTML='<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:48px 0"><span></span><span></span><span></span></div>';
     try{ const d=await api('/pub/pokemon-sets'); if(d&&Array.isArray(d.eras)) HOBBY.data=d; }catch(e){}
   }
-  if(!HOBBY.data){ $('hobby').innerHTML='<div style="text-align:center;color:#8A8A96;padding:36px 0;font-size:13px">Set data unavailable right now.</div>'; return; }
+  if(!HOBBY.data){ $('hobby').innerHTML='<div style="text-align:center;color:#8A8A96;padding:36px 0;font-size:13px">'+t('hob.nodata','Set data unavailable right now.')+'</div>'; return; }
   renderHobbyEras(); window.scrollTo({top:0});
 }
 // P3a — era logos sit DIRECTLY on the page, big, raised by stacked shadows; press dips them.
 function renderHobbyEras(){
   const h=$('hobby');
-  h.innerHTML=`<div style="font-size:20px;font-weight:800;letter-spacing:-.3px;padding:4px 2px 18px">Pick your era</div>`+
+  h.innerHTML=`<div style="font-size:20px;font-weight:800;letter-spacing:-.3px;padding:4px 2px 18px">${t('hob.era','Pick your era')}</div>`+
     HOBBY.data.eras.map((e,i)=>`<button class="hob-era" onclick="hobbyPickEra(${i})" aria-label="${esc(e.era)}">
       <img src="${esc(e.logo||'')}" alt="" style="width:100%;filter:drop-shadow(0 10px 18px rgba(0,0,0,.55)) drop-shadow(0 24px 40px rgba(0,0,0,.4))" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh(this.nextElementSibling.textContent.split('·')[0],86));this.remove()">
       <div style="margin-top:7px;font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${esc(e.era)} · ${esc(e.years||'')}</div></button>`).join('');
@@ -4228,8 +4239,8 @@ function renderHobbySets(){
       return `<button class="hob-set" onclick="hobbyPickSet(${si})" aria-label="${esc(st.code)}">
       <div style="position:relative;border-radius:16px;overflow:hidden">
         <img src="${esc(st.banner||'')}" alt="" style="display:block;width:100%;height:112px;object-fit:cover" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh('${esc(st.code)}',112));this.remove()">
-        ${fresh?`<span class="hob-chip" style="background:linear-gradient(180deg,#FFE066,#FFCB05);color:#26251E">Just dropped</span>`:''}
-        ${future?`<span class="hob-chip" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#FFF">Upcoming</span>`:''}
+        ${fresh?`<span class="hob-chip" style="background:linear-gradient(180deg,#FFE066,#FFCB05);color:#26251E">${t('hob.dropped','Just dropped')}</span>`:''}
+        ${future?`<span class="hob-chip" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#FFF">${t('hob.upcoming','Upcoming')}</span>`:''}
       </div>
       <div style="display:flex;align-items:baseline;justify-content:space-between;padding:7px 4px 0">
         <span style="font-size:11.5px;font-weight:800">${esc(st.code)}</span>
@@ -4284,7 +4295,7 @@ function renderHobbyProducts(){
 function hobbyPickProduct(pi){
   const p=(HOBBY.prods||[])[pi]; if(!p) return;
   SEL_PRODUCT=((HOBBY.set&&HOBBY.set.name)?HOBBY.set.name+' ':'')+p.type;
-  toast(SEL_PRODUCT+', pick a store to check it');
+  toast(SEL_PRODUCT+t('hob.locked',', pick a store to check it'));
   backToBuilder();
 }
 // ==== /HOBBY ======================================================================================

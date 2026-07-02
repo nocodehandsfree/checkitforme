@@ -44,6 +44,7 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - (pending build) Runnr RN1/RN2 new skin: existing handoff flow with skin on.
 
 ## COPY QUEUE (view · element · comp copy · current approved copy) — Copy lane processes
+- Hobby (hidden) · all strings (Pick your era / Just dropped / Upcoming / unavailable / locked-toast) · comp EN placeholders · need approved EN + ES rulings (keys hob.*)
 - Contact forms (kiosk/lead) · field eyebrow · comp: "PHONE OR EMAIL" · approved: current per-form labels
 - S2 switcher · mode key labels · comp/style-guide LOCKED: "Retail" / "Kiosk" · approved: "Check a store" / "Kiosks" (EN applied under v2 per design-lock; ES table untouched — needs ES rulings for Retail/Kiosk)
 - Footer · links row · comp: "Legal" (merges Terms+Privacy) · approved: separate "Terms" "Privacy" (not yet applied — queued with footer item)
@@ -112,12 +113,19 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - [x] P4 product picker (cycle 13): full-bleed banner card top + floating back key; carved 38px tiles; feed retail anchors; products:[] → generic list; retail:null never prints. DECIDED: single carton icon this pass — the 7-type icon set (§5.13) is its own box below.
 - [x] Product-type icon set (cycle 14): all 7 comp-exact icons extracted from P4 + loose name matching (feed types like 'ETB'/'Elite Trainer Box' both hit); carton fallback for unknown types
 - [x] P5 (cycle 13): product pick sets SEL_PRODUCT (set name + type) + toast, returns to the store picker; the call sheet carries it as the specific product
-- [ ] YOUR HUNT (P6 section: logo tiles + status chips + BEST ring + price aggregation dev-note rules §7)
+- [ ] YOUR HUNT (P6): **BLOCKED — needs the §7 price-aggregation backend** (one row per store+product,
+  upsert on completed checks, BEST = lowest fresh in-stock). Front-end (tiles + v2StatusChip + BEST ring)
+  is ready to consume it; ask filed conceptually — backend lane to build the endpoint.
 ### Cross-cutting
-- [ ] ES (Spanish) parity for every new/changed string (i18n table)
-- [ ] All 4 brand verticals render the v2 skin correctly (accent per vertical, no recolored controls §8)
-- [ ] Reduced-motion + iOS tint sampling preserved (do NOT break the top-wash mechanism — checkit.html L6-14 comment)
-- [ ] Error/empty states sweep (network fail toasts, callgone, no-credits)
+- [x] ES readiness (cycle 18): every v2-added string routes through t() with EN defaults (hob.era/
+  hob.dropped/hob.upcoming/hob.nodata/hob.locked) — ES translations ride the COPY QUEUE (comp copy is
+  placeholder; never invent ES).
+- [x] Brand sweep (cycle 18): v2 selection rings use var(--accent); capsule accent-ring gradient stays the
+  guide's tokens (Pokémon default per §3 — comps define no other vertical's gradient; DECIDED, Design
+  follow-up for per-vertical stops). No recolored controls introduced.
+- [x] Reduced-motion (cycle 18): v2 loops disabled under prefers-reduced-motion; tint sampling intact —
+  html bg override equals --bg so per-edge sampling behaves identically.
+- [x] Error/empty sweep: all ride restyled toast/modal/CTA systems; no bespoke chrome found.
 
 ## DECIDED LOG
 - DECIDED: comp animation names collide with the existing ripple `ckWave` — v2 uses ckWaveV2/ckGlowV2 (same curves as §5.3; the guide's requirement is the behavior, not the name).
@@ -132,4 +140,4 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - (none yet)
 
 ## AUDIT SWEEPS
-- (none yet)
+- Sweep 1 (cycle 18): 6 fixes — v1 hairline/terminal leaks under v2 (.rhead, .proof, .smline, .csheet-ic, #mapview, .kioskhint) + reduced-motion guard. NOT ZERO → at least one more sweep required.
