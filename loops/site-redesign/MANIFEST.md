@@ -320,6 +320,11 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   Copy ride the system), raised ✕. TABLET 768: no h-scroll, sheet centers. CLEAN PASS #7.
   PROOFS: share-overlay-v2.png · tablet-home-v2.png. **No unexamined surface remains on the board,
   either skin, any tone/lang/vertical/viewport, or the deploy pipeline.**
+### STANDING WATCH (regression sweeps — one per firing until the owner stops the loop)
+- [x] Watch 1: handoff checkpointed (round-2 truth replaces the stale 'run complete' entry); no
+  upstream pushes from other lanes.
+- [x] Watch 2: Lens A regression re-shoot of the owner-flagged screens (P1 home, 6e overview) —
+  both hold comp-true, Lens E wash fix visible; no drift. No upstream pushes. CLEAN.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
