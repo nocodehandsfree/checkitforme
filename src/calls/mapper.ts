@@ -186,7 +186,9 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
         await sleep(3000);
       }
       run.navId = undefined;
-      const reached = !!(s && s.status === "human" && s.confirmResult !== "redirect");
+      // Reached = ANY hard evidence of a person/transfer (status, the path-confirmed timestamp, or an
+      // answered confirm) — a raced Twilio "ended" callback must not score a good call as unsafe.
+      const reached = !!(s && (s.status === "human" || s.humanAtSec != null || s.confirmResult === "answered") && s.confirmResult !== "redirect");
       const recipe = s ? (s.recipe ?? recipeFromSteps(s.steps as NavStep[], s.humanAtSec)) : null;
       const secs = recipe?.seconds ?? null;
 
