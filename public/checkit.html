@@ -94,7 +94,7 @@ __BRAND_HEAD__
   .step{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:800;margin-bottom:14px}
   input{background:var(--terminal);border:1px solid var(--border);color:#fff;padding:13px 14px;border-radius:12px;font-size:16px;font-family:inherit;width:100%}
   input:focus{outline:none;border-color:rgba(74,222,128,.45);box-shadow:0 0 0 2px rgba(74,222,128,.12)}
-  .storelist{margin-top:12px;max-height:480px;overflow-y:auto;display:flex;flex-direction:column;gap:7px}
+  .storelist{margin-top:12px;max-height:480px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding:3px}
   .store{display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid var(--border);border-radius:12px;cursor:pointer;background:var(--terminal);transition:border-color .12s,background .12s}
   .store:hover{border-color:rgba(255,255,255,.18)}
   .store.sel{border-color:var(--accent,#FFCB05);background:color-mix(in srgb,var(--accent,#FFCB05) 9%,transparent)}
@@ -1090,7 +1090,7 @@ html[data-skin="v2"] .foot-links a{font-size:13px;font-weight:600;color:#8A8A96}
 html[data-skin="v2"] .foot-social a,html[data-skin="v2"] .foot-social button{width:36px;height:36px;border-radius:50%;background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 /* Toasts (T1/§5.4): bottom capsule, green success gradient + dark-green text. */
 /* T1 EXACT: 14.5/800, pad 12/22, comp shadows (deep drop + inner top light). */
-html[data-skin="v2"] .toast{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#0C2916;border:0;border-radius:999px;font-size:14.5px;font-weight:800;padding:12px 22px;box-shadow:0 14px 30px -8px rgba(25,177,69,.5),inset 0 1px 0 rgba(255,255,255,.35)}
+html[data-skin="v2"] .toast{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#0C2916;border:0;border-radius:22px;font-size:14px;font-weight:800;padding:12px 20px;box-shadow:0 14px 30px -8px rgba(25,177,69,.5),inset 0 1px 0 rgba(255,255,255,.35);max-width:calc(100vw - 36px);white-space:normal;text-align:center;line-height:1.35;bottom:34px;box-sizing:border-box}
 html[data-skin="v2"] .toast.tneutral{background:linear-gradient(180deg,#31313A 0%,#26262C 100%);color:#FFF;box-shadow:0 14px 30px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.12)}
 html[data-skin="v2"] .toast.taccent{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;box-shadow:0 14px 30px -8px color-mix(in srgb,var(--accent,#FFCB05) 45%,transparent),inset 0 1px 0 rgba(255,255,255,.4)}
 /* IS1 EXACT: share = white 12.5/800/.13em label capsule (icon left, arrow right); action tiles 2-col. */
@@ -1111,7 +1111,7 @@ html[data-skin="v2"] .store .nm{font-size:15px;font-weight:700}
 html[data-skin="v2"] .store .lo{font-size:12px;font-weight:600;color:#8A8A96}
 html[data-skin="v2"] .store .smi{font-size:17px;font-weight:800;color:#FFF}
 html[data-skin="v2"] .store .smi small{font-size:10px;font-weight:700;color:#8A8A96}
-html[data-skin="v2"] .store.sel{box-shadow:0 0 0 2px #4ADE80,0 10px 22px -8px rgba(74,222,128,.35)}
+html[data-skin="v2"] .store.sel{box-shadow:0 0 0 2px var(--accent,#FFCB05),0 10px 22px -8px color-mix(in srgb,var(--accent,#FFCB05) 35%,transparent)}
 /* Dropdown menus (product/language switchers): big-card surface, depth not borders. */
 html[data-skin="v2"] .vsw-menu{background:#26262B;border:0;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 /* Finds ticker chips (NO COMP — extended): raised row cards, green accents stay in content. */
@@ -1125,7 +1125,7 @@ html[data-skin="v2"] .rng::-moz-range-thumb{width:24px;height:24px;border:0;box-
    Selection = accent ring + #23232A fill (§5.5); BEST row = green ring + soft glow. */
 html[data-skin="v2"] .store .ic{background:#1F1F25;border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
 html[data-skin="v2"] .store .ic:not(:has(img)){background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5)}
-html[data-skin="v2"] .store.sel{background:#23232A;border:0;box-shadow:0 0 0 2px #4ADE80,0 8px 14px -8px rgba(0,0,0,.55)}
+html[data-skin="v2"] .store.sel{background:#23232A;border:0;box-shadow:0 0 0 2px var(--accent,#FFCB05),0 8px 14px -8px rgba(0,0,0,.55)}
 html[data-skin="v2"] .store:has(.besttag){background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 0 0 1.5px rgba(74,222,128,.5),0 8px 14px -8px rgba(0,0,0,.55)}
 html[data-skin="v2"] .store.best{border:0;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%)}
 /* Map key (P1/P2 comp EXACT): raised DARK key with ACCENT TEXT — not an accent-filled pill. */
@@ -1202,10 +1202,11 @@ html[data-skin="v2"] .rcal-d.has.t-in{background:rgba(74,222,128,.15);color:#4AD
 html[data-skin="v2"] .rcal-d.has.t-soon{background:rgba(245,158,11,.15);color:color-mix(in srgb,#F59E0B 70%,#FFF);border-radius:11px}
 html[data-skin="v2"] .rcal-d.has.t-out{background:rgba(239,68,68,.14);color:color-mix(in srgb,#EF4444 55%,#FFF);border-radius:11px}
 html[data-skin="v2"] .rcal-d.has.t-unk{background:rgba(251,191,36,.10);color:color-mix(in srgb,#FBBF24 55%,#FFF);border-radius:11px}
-html[data-skin="v2"] .rcal-d.sel{background:linear-gradient(180deg,color-mix(in srgb,#4ADE80 70%,#FFF) 0%,#4ADE80 100%);color:#0C2916;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6)}
+html[data-skin="v2"] .rcal-d.sel{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6)}
 html[data-skin="v2"] .rcal-d.today{box-shadow:inset 0 0 0 1.5px #FFF;border-radius:11px}
+html[data-skin="v2"] .rday-list{padding:3px 3px 6px}
 html[data-skin="v2"] .rday-item{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:13px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
-html[data-skin="v2"] .rday-item.on{box-shadow:0 0 0 2px #4ADE80,0 8px 14px -8px rgba(0,0,0,.55)}
+html[data-skin="v2"] .rday-item.on{box-shadow:0 0 0 2px var(--accent,#FFCB05),0 8px 14px -8px rgba(0,0,0,.55)}
 /* Couldn't-tell poll (P6b/§5.8): raised keys DIRECTLY on the page — no wrapping box; 34px icon
    chips; press dips the key (buttons look raised, never like form depressions). */
 html[data-skin="v2"] .fbk{background:none;border:0;padding:0}
@@ -1337,7 +1338,7 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 /* Sign-up plans (6b/§5.5/§3): raised tiles; the SELECTED tier takes the MUTED-yellow ring + #26251E
    fill — it must never fight a green CTA on the same screen. */
 html[data-skin="v2"] .plan{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:16px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
-html[data-skin="v2"] .plan.sub{background:#23232A;box-shadow:0 0 0 2px #4ADE80,0 8px 14px -8px rgba(0,0,0,.55),0 0 18px rgba(74,222,128,.18)}
+html[data-skin="v2"] .plan.sub{background:#23232A;box-shadow:0 0 0 2px var(--accent,#FFCB05),0 8px 14px -8px rgba(0,0,0,.55),0 0 18px color-mix(in srgb,var(--accent,#FFCB05) 18%,transparent)}
 /* AUDIT SWEEP 1 — v1 hairlines/terminal fills that leaked through under v2. */
 html[data-skin="v2"] .rhead{background:#26262B;border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .proof{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
@@ -2397,7 +2398,7 @@ function silentLocRecheck(){
       if(!p || p.state!=='granted') return; // only when already allowed — never trigger the OS prompt here
       navigator.geolocation.getCurrentPosition(pos=>{
         const la=pos.coords.latitude, ln=pos.coords.longitude;
-        const moved = !USER_LOC || miBetween(USER_LOC.lat,USER_LOC.lng,la,ln) > 12; // ~12 mi = a real move, not GPS jitter
+        const moved = !USER_LOC || miBetween(USER_LOC.lat,USER_LOC.lng,la,ln) > 2; // ~2 mi = a real move (owner drives town-to-town), still above GPS jitter
         if(moved){ setUserLoc(la,ln); toast(ICO.pin(AC2())+t('toast.locupdated','Updated to your current location')); }
       }, ()=>{}, {enableHighAccuracy:false, timeout:8000, maximumAge:300000}); // cheap/low-power; a 5-min cached fix is fine
     }).catch(()=>{});
@@ -2978,6 +2979,10 @@ function setRadiusIdx(idx){
   document.querySelectorAll('#rng_ticks span').forEach((s,i)=>s.classList.toggle('on', i===idx));
   if(MY_RING && USER_LOC){ try{ MY_RING.setRadius(RADIUS*1609.34); }catch(_){} } // grow/shrink the radius ring with the slider
   if(USER_LOC) fetchNear(); else renderStores(); // wider/narrower radius = reload the nearby slice
+  // Touching the radius = "show me what's around ME" — quietly re-sync to the real position too
+  // (owner 2026-07-02: drove to the next town, slider still searched the old spot). Debounced;
+  // never prompts (permission-granted only inside silentLocRecheck).
+  clearTimeout(window.__radLoc); window.__radLoc=setTimeout(()=>{ try{ silentLocRecheck(); }catch(_){ } },700);
 }
 function setRadius(mi){ const i=RADII.indexOf(mi); setRadiusIdx(i<0?2:i); }
 function setMode(m){
@@ -4453,7 +4458,7 @@ async function preCallGate(){
     const logoHTML=`<span class="railchip${railClass({storeId:SEL_STORE.id,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}" style="display:grid">${railFace({storeId:SEL_STORE.id,storeName:SEL_STORE.name,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}</span>`;
     return await confirmAgain({store:headline, logoHTML, body:tf('pre.again.body','{o} {a}. Check again?',{o:String(callOutcomeLabel(e)||'').toLowerCase(),a:timeAgo(e.ts)})});
   }
-  toast(tf('pre.note','You called {s} {a} · {o}',{s:base,a:ago,o:callOutcomeLabel(e)}));
+  toast(tf('pre.note','You called {s} {a} · {o}',{s:base,a:ago,o:callOutcomeLabel(e)}),'neutral');
   await new Promise(r=>setTimeout(r,2200));
   return true;
 }
