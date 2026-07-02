@@ -271,6 +271,10 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   under v2 → uniform r16 pad 12×15 + 10/700/.13em labels (the probe first flagged them as result-page
   bubbles; the result page's ctlv2 bubbles were already comp-exact). Steps head, chip tracking, foot
   links verified exact.
+- [x] Rotation 2 pass 4: NINE modals probed (watch/schedule/storeReq/score/receipt/kiosk/lead/share/
+  caller-id) — all uniform: r26 #26262B cards, .66 dim, 32px ✕ circles, 900 titles, carved #1B1B20
+  fields. ONE fix: watch field radius 12→14 (inline beat the rule; !important added). DECIDED: dim stays
+  the system-wide .66 (R2/R3 frames show .72 — uniformity wins over per-modal fragmentation).
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
