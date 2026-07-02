@@ -79,6 +79,7 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 
 ## COPY QUEUE (view · element · comp copy · current approved copy) — Copy lane processes
 - Hobby (hidden) · all strings (Pick your era / Just dropped / Upcoming / unavailable / locked-toast) · comp EN placeholders · need approved EN + ES rulings (keys hob.*)
+- Sign-up 6a–6d · ALL strings ('That was your free check…', feature names incl. Zone sweeps/Store holds/Thrift hunts, plan tier names, 'You're in.') · comp EN under v2 preview (keys up6a.*) · need Copy ratification + ES; plan names/prices ALWAYS from POLICY at runtime, never comp's
 - Contact forms (kiosk/lead) · field eyebrow · comp: "PHONE OR EMAIL" · approved: current per-form labels
 - S2 switcher · mode key labels · comp/style-guide LOCKED: "Retail" / "Kiosk" · approved: "Check a store" / "Kiosks" (EN applied under v2 per design-lock; ES table untouched — needs ES rulings for Retail/Kiosk)
 - Footer · links row · comp: "Legal" (merges Terms+Privacy) · approved: separate "Terms" "Privacy" (not yet applied — queued with footer item)
@@ -101,7 +102,7 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
 - [~] 6m RESULT rebuilt in code (comp timeline: gradient rail + full-width STAFF/CHECK-AI cards + verdict line; comp section order; emoji circle gone) — screenshot proof vs comp still owed
 - [~] live-call rebuilt (shares the 6m timeline renderer; live state = green rail, no verdict) — screenshot proof owed
 - [ ] P2 sheet exact (store head, 'costs 1 check' line, capsule)
-- [ ] L1a/L1b/L1c login pop-ups exact · [ ] 6a upsell · [ ] 6b plans · [ ] 6c checkout · [ ] 6d you're-in
+- [ ] L1a/L1b/L1c login pop-ups exact · [~] 6a upsell BUILT (pop-up: 2-line 900 title, 3 green feature rows, SEE CHECK+ PLANS capsule; fires ONCE after the first free check under v2; ?show=signup previews it) · [ ] 6b plans sheet-ification + 'Every plan gets' grid (copy queued) · [ ] 6c checkout (DECIDED: Stripe-hosted stays — backend architecture; sheet covers through plan pick) · [ ] 6d you're-in state on ?paid=1
 - [~] 6e overview REBUILT (green-wash header My✓/Done/phone/plan-chip, overlapping stat tiles CHECKS LEFT/RUN, Overview·Activity·Earn keys, yellow icon rows; legacy header hidden) — screenshot proof owed · [ ] 6f activity exact · [ ] 6g earn exact · [ ] 6h new-user · [ ] 6i history exact
 - [ ] R1/R2/R3 restock exact · [ ] SC1/SC2 exact · [ ] RN1/RN2 exact · [ ] P1 home detail pass · [ ] P6/P6b/P6c detail pass
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above

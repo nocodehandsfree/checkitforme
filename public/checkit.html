@@ -1487,6 +1487,14 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   </div>
 </footer>
 
+<!-- 6a — after-the-free-check upsell (v2 preview; comp copy queued for Copy ratification) -->
+<div class="overlay" id="upsellOverlay" onclick="if(event.target===this)closeUpsell()">
+  <div class="modal" style="position:relative;max-width:400px;text-align:left;padding:22px 20px">
+    <div style="font-size:21px;font-weight:900;letter-spacing:-.4px;line-height:1.2" data-i18n="up6a.title">That was your free check.<br>Ready for the good stuff?</div>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px" id="up6a_rows"></div>
+    <button class="cta" style="margin-top:18px;width:100%" onclick="closeUpsell();openBuy()" data-i18n="up6a.cta">See Check+ plans</button>
+  </div>
+</div>
 <!-- Buy / subscribe modal -->
 <div class="overlay" id="buyOverlay" onclick="if(event.target===this)closeBuy()">
   <div class="modal" style="position:relative;max-width:430px;text-align:left">
@@ -2139,7 +2147,7 @@ async function boot(){
   if(sp.get('call')) restoreCall(sp.get('call'), sp.get('store'), sp.get('cat'));
   else if(sp.get('v')==='history') openHistory();
   else if(sp.get('flow')==='hobby'&&isV2()) setTimeout(()=>{try{openHobby();}catch(e){}},60); // HIDDEN hobby preview (owner override)
-  else if(sp.get('show')==='signup'&&isV2()) setTimeout(()=>{try{openBuy('out');}catch(e){}},400);   // HIDDEN sign-up/plans preview (6a–6d)
+  else if(sp.get('show')==='signup'&&isV2()) setTimeout(()=>{try{openUpsell();}catch(e){}},400);   // HIDDEN sign-up preview: 6a → SEE PLANS → 6b sheet
   else if(sp.get('show')==='mychecks'&&isV2()) setTimeout(()=>{try{openHistory();}catch(e){}},400);  // HIDDEN My-checks preview (6e–6i)
   else if(sp.get('v')==='success') openSuccess();
   // HYDRATE — dynamic data loads in the background, then re-render only the parts that need it.
@@ -3636,7 +3644,9 @@ async function finalizeLive(cid){
   if(!res.transcript){ try{ const lv=await appApi('/pub/live/'+encodeURIComponent(cid)); if(lv&&lv.transcript) res.transcript=lv.transcript; }catch(_){} }
   if(res.status==='completed'){
     if(isAuthed()){ appApi('/app/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}).then(c=>{ if(c&&c.credits!=null){ if(ACCOUNT)ACCOUNT.credits=c.credits; renderAuth(); } }); }
-    else { localStorage.setItem('runnr_free_used','1'); api('/pub/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}); renderAuth(); }
+    else { localStorage.setItem('runnr_free_used','1'); api('/pub/charge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cid})}); renderAuth();
+      // 6a: right after the FIRST free check's result, send off into premium (once, v2 preview only).
+      if(isV2()&&!localStorage.getItem('cifm_upsell_seen')){ localStorage.setItem('cifm_upsell_seen','1'); setTimeout(openUpsell,1600); } }
   }
   saveCheckToHistory(res, cid); showResult(res, cid);
   // If we only have a PROVISIONAL read (no hard yes/no yet), upgrade it in place once the server's
@@ -4336,6 +4346,15 @@ async function openHistEntry(e){
   if(!resultSame(o,cached)) showResult(o, e.cid);
   // Deep-link the open call so a refresh restores exactly this transcript.
   try{ const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',e.cid); history.replaceState({v:'result'},'',location.pathname+'?'+sp.toString()); }catch(_){}
+}
+// ---- 6a upsell (v2): send-off into premium right after the FIRST free check result. ----
+function closeUpsell(){ const o=$('upsellOverlay'); if(o)o.classList.remove('on'); }
+function openUpsell(){
+  if(!isV2()) return;
+  const rows=$('up6a_rows');
+  if(rows){ const feat=(ic,txt)=>`<div style="display:flex;align-items:center;gap:11px"><span style="display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:rgba(74,222,128,.15);flex:0 0 auto">${ic}</span><span style="font-size:14.5px;font-weight:700">${txt}</span></div>`;
+    rows.innerHTML=feat(ICO.pin('#4ADE80'),t('up6a.f1','Check any town in America'))+feat(ICO.bell('#4ADE80'),t('up6a.f2','Restock alerts'))+feat(ICO.store('#4ADE80'),t('up6a.f3','Check multiple stores at once')); }
+  $('upsellOverlay').classList.add('on'); try{track('upsell6a_open');}catch(e){}
 }
 // ==== HOBBY flow (P3a→P5, §5.13) — HIDDEN preview (owner override 2026-07-02) ====================
 // Reachable ONLY with the v2 skin on + ?flow=hobby. Data comes exclusively from /pub/pokemon-sets
