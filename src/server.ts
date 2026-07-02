@@ -1300,7 +1300,7 @@ app.get("/pub/pokemon-sets", async (c) => {
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   // Cache-bust: the service worker caches /logos/* cache-first, so bump this whenever the set assets
   // are re-cut and the front end will request fresh URLs (old cached copies are orphaned harmlessly).
-  const av = "?v=5";
+  const av = "?v=4";
   const v = { ...file, logoBase: "/logos", eras: file.eras.map((e) => ({ ...e,
     slug: slug(e.era), logo: `/logos/eras/${slug(e.era)}.png${av}`,
     sets: e.sets.map((s) => ({ ...s,
