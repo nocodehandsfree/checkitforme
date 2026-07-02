@@ -2495,10 +2495,12 @@ function openAccount(){
         </div></div>
       <div class="stats"><div class="stat2"><b>${esc(left)}</b><i>${esc(t('acct.stat.left','Checks left').toUpperCase())}</i></div><div class="stat2"><b>${run}</b><i>${esc(t('acct.stat.run','Checks run').toUpperCase())}</i></div></div>
       <div class="tabs">
-        <button class="tab on">${t('acct.tab.overview','Overview')}</button>
-        <button class="tab" onclick="closeAccount();openHistory()">${t('acct.tab.activity','Activity')}</button>
-        <button class="tab" onclick="const e=document.getElementById('earndemo');if(e){e.scrollIntoView({behavior:'smooth'});}">${t('acct.tab.earn','Earn')}</button>
-      </div>`;
+        <button class="tab on" data-t="overview" onclick="acctTab('overview')">${t('acct.tab.overview','Overview')}</button>
+        <button class="tab" data-t="activity" onclick="acctTab('activity')">${t('acct.tab.activity','Activity')}</button>
+        <button class="tab" data-t="earn" onclick="acctTab('earn')">${t('acct.tab.earn','Earn')}</button>
+      </div>
+      <div id="acctv2panel" style="display:none;padding:14px 18px 0"></div>`;
+    acctTab('overview');
   }catch(_){} }
   $('acctOverlay').classList.add('on'); track('account_open');
 }
@@ -4371,6 +4373,38 @@ async function openHistEntry(e){
   if(!resultSame(o,cached)) showResult(o, e.cid);
   // Deep-link the open call so a refresh restores exactly this transcript.
   try{ const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',e.cid); history.replaceState({v:'result'},'',location.pathname+'?'+sp.toString()); }catch(_){}
+}
+// ---- My-checks tabs (6e/6f/6g): in-place panels inside the account pop-up. ----
+function acctTab(which){
+  const modal=document.querySelector('#acctOverlay .modal'); if(!modal) return;
+  modal.querySelectorAll('.acctv2head .tab').forEach(b=>b.classList.toggle('on',b.dataset.t===which));
+  const rows=modal.querySelector('.acctrows'), panel=$('acctv2panel');
+  if(!panel) return;
+  if(which==='overview'){ panel.style.display='none'; if(rows)rows.style.display=''; return; }
+  if(rows)rows.style.display='none'; panel.style.display='';
+  const hist=histList().filter(e=>e.cid&&e.ts);
+  if(which==='activity'){
+    // 6f: CHECKS PER WEEK bars (8 wks) + History› + tone stat chips + last checks.
+    const now=Date.now(), wk=7*86400000, weeks=Array.from({length:8},(_,i)=>hist.filter(e=>e.ts>now-(8-i)*wk&&e.ts<=now-(7-i)*wk).length);
+    const mx=Math.max(1,...weeks);
+    const bars=weeks.map(v=>`<span style="flex:1;display:flex;flex-direction:column;justify-content:flex-end"><span style="display:block;height:${Math.round(v/mx*46)+4}px;border-radius:4px;background:${v?'#4ADE80':'#31313A'}"></span></span>`).join('');
+    const tones={in:0,out:0,soon:0,unk:0}; hist.forEach(e=>{ tones[railTone(e)]=(tones[railTone(e)]||0)+1; });
+    const chip=(nv,lb,c)=>`<span style="display:inline-flex;align-items:baseline;gap:5px"><b style="font-size:15px;color:${c}">${nv}</b><span style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:#8A8A96">${lb}</span></span>`;
+    const last=hist.slice(0,3).map(e=>`<button onclick="closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:10px;width:100%;margin-top:8px;padding:10px 12px;border:0;border-radius:13px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer">${v2StatusChip(railTone(e),22)}<span style="flex:1;min-width:0;text-align:left;font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span></button>`).join('');
+    panel.innerHTML=`<div style="display:flex;align-items:baseline;justify-content:space-between"><span class="buygrid-h" style="margin:0">${esc(t('acct.perweek','Checks per week').toUpperCase())}</span><a onclick="closeAccount();openHistory()" style="font-size:12px;font-weight:700;color:#4ADE80;cursor:pointer">${t('acct.hist','History')} ›</a></div>
+      <div style="display:flex;gap:5px;align-items:flex-end;height:56px;margin-top:10px">${bars}</div>
+      <div style="display:flex;justify-content:space-between;font-size:9.5px;font-weight:600;color:#5C5C68;margin-top:4px"><span>${t('acct.8wks','8 wks ago')}</span><span>${t('acct.thisweek','this week')}</span></div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:12px">${chip(tones.in,t('fbk.in','In stock').toUpperCase(),'#4ADE80')}${chip(tones.out,t('fbk.out','Out').toUpperCase(),'#EF4444')}${chip(tones.soon,t('fbk.soon','Restock').toUpperCase(),'#F59E0B')}${chip(tones.unk,t('fbk.unsure','Unclear').toUpperCase(),'#FBBF24')}</div>
+      <div class="buygrid-h">${esc(t('acct.last','Last checks').toUpperCase())}</div>${last||`<div style="font-size:12.5px;color:#8A8A96;margin-top:6px">${t('acct.none','No checks yet.')}</div>`}`;
+  } else if(which==='earn'){
+    // 6g: the four earn rows (existing handlers; reward chips only where a runtime number exists).
+    const row=(ttl,sub,chipTx,fn)=>`<button onclick="${fn}" style="display:flex;align-items:center;gap:12px;width:100%;margin-top:10px;padding:13px 14px;border:0;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);color:#FFF;cursor:pointer;text-align:left"><span style="flex:1;min-width:0"><span style="display:block;font-size:15px;font-weight:700">${ttl}</span><span style="display:block;margin-top:2px;font-size:12px;font-weight:600;color:#8A8A96">${sub}</span></span>${chipTx?`<span style="font-size:9px;font-weight:900;letter-spacing:.06em;color:#4ADE80;background:rgba(74,222,128,.15);border-radius:999px;padding:4px 8px;white-space:nowrap">${chipTx}</span>`:''}</button>`;
+    panel.innerHTML=`<div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.75)">${t('acct.earn.lead','Help the hunt. We load you up with free checks.')}</div>
+      ${row(t('earn.store','Add your store'),t('earn.store.sub','Put a store on the map.'),'',"closeAccount();openWaitlist&&openWaitlist()")}
+      ${row(t('earn.invite','Invite a friend'),t('earn.invite.sub','They sign up. You both win.'),'',"const e=document.getElementById('earndemo');closeAccount();if(e)e.scrollIntoView()")}
+      ${row(t('earn.score','Post your score'),t('earn.score.sub','Your pulls, on the home page.'),'',"closeAccount();openSuccess()")}
+      ${row(t('earn.receipt','Kiosk receipt'),t('earn.receipt.sub','Use our email at checkout, or forward it.'),'',"closeAccount();openReceipt()")}`;
+  }
 }
 // ---- 6d "You're in" (v2): the post-Stripe return state — stats + what's now live. ----
 function closePaid(){ const o=$('paidOverlay'); if(o)o.classList.remove('on'); }
