@@ -1115,8 +1115,9 @@ html[data-skin="v2"] .store .ic{background:#1F1F25;border:0;box-shadow:inset 0 1
 html[data-skin="v2"] .store .ic:not(:has(img)){background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5)}
 html[data-skin="v2"] .store.sel{background:#23232A;border:0;box-shadow:0 0 0 2px var(--accent,#FFCB05),0 8px 14px -8px rgba(0,0,0,.55)}
 html[data-skin="v2"] .store:has(.besttag){background:#23232A;box-shadow:0 0 0 2px #4ADE80,0 8px 14px -8px rgba(0,0,0,.55),0 0 18px rgba(74,222,128,.18)}
-/* Map chrome: Map/List toggle = accent pill (§3); legend = raised pill (glassless — it sits on the card). */
-html[data-skin="v2"] .maptgl{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.35)}
+/* Map key (P1/P2 comp EXACT): raised DARK key with ACCENT TEXT — not an accent-filled pill. */
+html[data-skin="v2"] .maptgl{background:linear-gradient(180deg,#31313A 0%,#26262B 100%);color:var(--accent,#FFCB05);border:0;padding:5px 13px;border-radius:999px;font-size:12px;font-weight:700;box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
+html[data-skin="v2"] .maptgl.on{background:linear-gradient(180deg,#31313A 0%,#26262B 100%);color:var(--accent,#FFCB05)}
 html[data-skin="v2"] .maplegend{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 /* Capsule CTAs (§5.2): 2.5px gradient ring around a dark capsule, tracked-caps label. Green ring =
    primary; the CALL action inside the sheet takes the accent ring (P2 "CHECK THIS STORE"). */
@@ -1293,6 +1294,19 @@ html[data-skin="v2"] .ho-dv ol{font-size:12px;font-weight:600;color:#8A8A96;line
 html[data-skin="v2"] .ho-dv .paybtn{background:#F4F4F6;color:#0B0B0F;border-radius:12px;padding:11px;font-size:13px;font-weight:800}
 html[data-skin="v2"] .ho-stars{font-size:26px;gap:10px}
 html[data-skin="v2"] .ho-link{text-decoration:none;font-size:12px;font-weight:600;color:#8A8A96}
+/* P1 HOME DETAIL PASS — big card pad 16/16/20 (guide); FIND-YOUR-STORE eyebrow 10.5/700/.15em;
+   open-count + radius label 12-13/600 #8A8A96; ticks 11/700 #7C7C88 (active green);
+   FIND MY STORES = green ring capsule w/ WHITE tracked label (was a raised neutral key). */
+html[data-skin="v2"] .card{padding:16px 16px 20px}
+html[data-skin="v2"] .findhead .step{font-size:10.5px;font-weight:700;letter-spacing:.15em;color:#8A8A96}
+html[data-skin="v2"] .opencount{font-size:12px;font-weight:600;color:#8A8A96}
+html[data-skin="v2"] .rsl-lbl{font-size:13px;font-weight:600;color:#8A8A96}
+html[data-skin="v2"] .rsl-val{font-size:17px;font-weight:800}
+html[data-skin="v2"] .rsl-val i{font-size:12px;font-weight:600;color:#8A8A96}
+html[data-skin="v2"] .rng-ticks span{font-size:11px;font-weight:700;color:#7C7C88}
+html[data-skin="v2"] .rng-ticks span.on{color:#4ADE80}
+html[data-skin="v2"] .findbtn-primary{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#FFF;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;padding:14px 24px;box-shadow:0 12px 28px -8px rgba(25,177,69,.45)}
+html[data-skin="v2"] .findbtn-primary.on{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;color:#4ADE80}
 /* HOBBY flow (P3a–P5/§5.13) — hidden preview. Era art on the page, press-dip; set tiles; product rows. */
 html[data-skin="v2"] .hob-era{display:block;width:82%;margin:0 auto 26px;background:none;border:0;padding:0;cursor:pointer;transition:transform .12s}
 html[data-skin="v2"] .hob-era:active{transform:translateY(3px) scale(.97)}

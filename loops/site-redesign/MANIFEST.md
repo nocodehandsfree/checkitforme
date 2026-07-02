@@ -144,7 +144,14 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   'Driver said no?' link unstyled-muted. Tokens added: #D9D9E0/#F4F4F6/#0B0B0F (comp-verbatim). COPY QUEUE +=
   comp's 'Powered by Fungibles · runner.fungibles.com' footer (absent live; domain conflicts w/ approved
   checkitforme.com/d links — Copy ruling needed). PROOFS: proofs/RN1-steps-v2.png · RN2-deal-v2.png.
-- [ ] P1 home detail pass · [ ] P6/P6b/P6c detail pass
+- [x] P1 home detail pass (cycle): **Map key CORRECTED — comp shows a raised DARK key with ACCENT TEXT, not
+  the accent-filled pill from cycle 5** (verified with a 4× computed-style clip: proofs cross-check) ·
+  **FIND MY STORES rebuilt: raised neutral key → green ring capsule w/ WHITE 13/800/.14em tracked label** ·
+  big-card pad 16/16/20 (guide, was 22) · ①-FIND-YOUR-STORE eyebrow 10.5/700/.15em #8A8A96 · open-count +
+  radius label + mi unit 12-13/600 #8A8A96 · radius value 17/800 · tick labels 11/700 #7C7C88 w/ green
+  active (structure already existed). Search well/S2/hero/footer already comp-true from earlier cycles.
+  PROOF: proofs/P1-home-v2.png (+ scratch 4× clip of the Map key).
+- [ ] P6/P6b/P6c detail pass
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
