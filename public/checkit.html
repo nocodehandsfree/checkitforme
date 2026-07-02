@@ -2018,6 +2018,22 @@ const toast=(m,kind)=>{const t=$('toast');t.innerHTML=m;t.classList.remove('tneu
 // ── i18n (rollout-ready; Spanish live, other languages fall back to English until filled) ──
 const LANGS=[['en','EN'],['es','ES']];
 const I18N={ es:{
+  // ── v2/redesign strings — DRAFT ES (same voice as the table below; flagged in COPY QUEUE for
+  //    ratification — an English string mid-Spanish UI is the worse defect) ──
+  'acct.my':'Mi','acct.done':'Listo','acct.member':'Miembro','acct.free':'Gratis','acct.freeused':'Verificación gratis usada',
+  'acct.stat.left':'Restantes','acct.stat.run':'Hechas','acct.tab.overview':'Resumen','acct.tab.activity':'Actividad','acct.tab.earn':'Gana',
+  'acct.row.plan':'Administrar plan','acct.row.hist':'Historial de verificaciones','acct.row.earn':'Gana verificaciones gratis','acct.row.earn.sub':'4 formas. Abierto a todos.',
+  'acct.run1':'1 verificación hecha','acct.runN':'{n} verificaciones hechas','acct.runcheck':'Haz una verificación','acct.upgrade2':'Mejorar','acct.from':'desde','acct.signout':'Cerrar sesión',
+  'acct.perweek':'Verificaciones por semana','acct.hist':'Historial','acct.8wks':'hace 8 sem','acct.thisweek':'esta semana','acct.last':'Últimas verificaciones','acct.none':'Aún no hay verificaciones.',
+  'acct.earn.lead':'Ayuda a la cacería. Te llenamos de verificaciones gratis.',
+  'buy6b.title':'Cada función.<br>Elige tus verificaciones.','buy6b.grid':'Todo plan incluye','buy6b.cta':'Continuar',
+  'buy6b.f1':'Productos exactos','buy6b.f2':'Barridos de zona','buy6b.f3':'Alertas de reabastecimiento','buy6b.f4':'Verificaciones programadas','buy6b.f5':'Cualquier ciudad','buy6b.f6':'Apartados en tienda','buy6b.f7':'Tu voz','buy6b.f8':'Cacerías thrift',
+  'up6a.title':'Esa fue tu verificación gratis.<br>¿Listo para lo bueno?','up6a.cta':'Ver planes Check+','up6a.f1':'Verifica cualquier ciudad de EE. UU.','up6a.f2':'Alertas de reabastecimiento','up6a.f3':'Verifica varias tiendas a la vez',
+  'up6d.title':'Ya estás dentro.','up6d.live':'Ya activo en tu cuenta','up6d.more':'+ 5 más en Administrar plan ›','up6d.cta':'Haz una verificación','up6d.note':'Administra tu plan cuando quieras en Mis verificaciones.',
+  'hob.title':'¿Qué estás cazando?','hob.sub':'Elige tu era. Luego los sets.','hob.sub2':'Sets específicos, sobre retail. Elige un set y luego un producto.',
+  'hob.sets':'sets','hob.change':'Cambiar','hob.dropped':'Recién salido','hob.upcoming':'Próximamente','hob.retail':'RETAIL',
+  'hob.nodata':'Datos de sets no disponibles ahora.','hob.locked':', elige una tienda para verificarlo',
+  'hist.count':'{n} verificaciones en {m}','hist.inmonth':'verificaciones en',
   'trust.pick':'Elige una tienda','trust.call':'Verificamos en vivo','trust.answer':'Respuesta + prueba',
   'value':'Evita el viaje de <b>$10 en gasolina</b> a un estante agotado',
   'mode.call':'Verificar una tienda','mode.kiosk':'Kioscos','find.step':'① Encuentra tu tienda','find.kiosk':'① Encuentra un kiosco',

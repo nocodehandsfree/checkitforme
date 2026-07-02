@@ -78,6 +78,9 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - (pending build) Runnr RN1/RN2 new skin: existing handoff flow with skin on.
 
 ## COPY QUEUE (view · element · comp copy · current approved copy) — Copy lane processes
+- **ES DRAFTS (Lens C/D)** · ALL 58 v2-era keys (acct.* / buy6b.* / up6a.* / up6d.* / hob.* / hist.count)
+  now carry DRAFT Spanish in the I18N table (marked with a comment banner) — written in the approved
+  table's voice, never shipped-approved. Copy lane: ratify or re-rule each; EN defaults unchanged.
 - Hobby (hidden) · all strings (Pick your era / Just dropped / Upcoming / unavailable / locked-toast) · comp EN placeholders · need approved EN + ES rulings (keys hob.*)
 - Sign-up 6a–6d · ALL strings ('That was your free check…', feature names incl. Zone sweeps/Store holds/Thrift hunts, plan tier names, 'You're in.') · comp EN under v2 preview (keys up6a.*) · need Copy ratification + ES; plan names/prices ALWAYS from POLICY at runtime, never comp's
 - Contact forms (kiosk/lead) · field eyebrow · comp: "PHONE OR EMAIL" · approved: current per-form labels
@@ -236,8 +239,13 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   account Earn→4 rows · Too far→Runnr view · watch empty-submit→error line. ALL passed first run (behaviors
   held through every rebuild); they now guard regressions every cycle. Paths already covered elsewhere:
   S2 kiosk flip, ES flip, hobby full chain, product lock, L1 error ring (original qa-e2e) + 66 qa-pages.
-- [ ] Lens C: copy — served strings vs approved copy; comp-isms leaking; COPY QUEUE current
-- [ ] Lens D: ES — full flow in Spanish, no English leaks in v2-added strings
+- [x] Lens C+D (copy + ES, one pass): full key inventory — 68 v2-era t()/tf() keys + 7 data-i18n keys
+  audited. ZERO hardcoded English bypassing t() in v2 renders; comp-ism scan clean (harness-enforced).
+  **58 v2 keys had NO ES entry → English mid-Spanish UI. DRAFT ES written for all of them** (same voice
+  as the approved table — 'verificación', informal tú; an English leak is the worse defect than a draft).
+  DRAFTS FLAGGED FOR COPY RATIFICATION — see COPY QUEUE. Render-verified in ES: hobby '¿Qué estás
+  cazando?', account 'Resumen/Actividad/Gana', 'Mejorar · desde $9.99/mes'. Duplicate cs.costs deduped.
+  PROOFS: ES-hobby-v2.png · ES-account-v2.png. Lens D full-flow sweep can now run clean next rotation.
 - [ ] Lens E: spacing — margins/gaps/paddings vs comp numbers
 - [ ] Lens F: per-vertical accents on all 4 brand paths
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
