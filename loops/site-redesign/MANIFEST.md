@@ -61,12 +61,12 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - [x] Toasts (cycle 3): green success capsule gradient + dark-green text + glow. DECIDED: neutral/accent variants land when toast() call sites get a type param — queued as follow-up box below.
 - [ ] Toast type variants (T1): classify toast() call sites → success/neutral/accent capsules (comp T1)
 - [x] Page bg/tokens (cycle 1): CSS-var re-key under html[data-skin=v2] (--bg/--sheet/--terminal/--border) + base card/store-row/input/pill/footer surfaces — washes + iOS tint adapt via var(--bg)
-- [ ] Finds ticker (community finds strip) → strip token #17171C (NO COMP — extend system)
-- [ ] Language switcher (EN/ES pill + menu) restyle (NO COMP — extend)
+- [x] Finds ticker (cycle 4): chips → raised row cards (NO COMP — extended system)
+- [x] Language switcher (cycle 4): trigger covered by base pill styling; menus (vsw-menu incl. lsw) → big-card surface, no border
 ### Retail home (P1)
 - [ ] Hero (brand art, headline, sub) per P1
-- [ ] Store search well (carved input) + 📍 find-me
-- [ ] Radius slider → §5.17 well/slider (24px white thumb, green glow)
+- [x] Store search well (cycle 1 base carved input; find-me untouched — sits inside the well) 
+- [x] Radius slider (cycle 4): carved track + 24px white thumb + green glow (webkit+moz)
 - [ ] Store rows → §5.6 (logo slot sizes, embossed initials for independents, status icon chips §5.7)
 - [ ] Best-bet row (BEST ring = green selection ring §5.5)
 - [ ] Map view chrome (legend pills, Map/List pill — accent yellow Map pill per §3)
