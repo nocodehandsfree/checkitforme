@@ -74,9 +74,18 @@ const hasRealPhone = (p?: string | null) => !!p && !p.startsWith("nophone:") && 
  *  national chain almost always has a 24h or west-coast location open at this hour. Score each store
  *  by openState (24h > real-hours-open > daytime-unknown) and dial the best; return null only if every
  *  callable store is genuinely closed (so the chain is skipped tonight, not wasted on a dead line). */
+// Chains that famously run 24h — their stores are staffed at any hour even when our hours data is
+// null (WinCo/Sheetz rows have no hours on file). Move to a data flag when hours backfill lands.
+const KNOWN_24H = /winco|sheetz|wawa|buc-?ee|7-?eleven|circle k|quiktrip|speedway|casey'?s|kum ?& ?go/i;
+
 export async function storeForChain(chainId: number, excludeIds?: number[], daytimeOnly?: boolean) {
   let rows = await db.select().from(retailers)
     .where(and(eq(retailers.chainId, chainId), eq(retailers.active, true))).limit(4000);
+  // Known-24h chain → skip the local-hour gate entirely; night crews answer the phone.
+  if (daytimeOnly) {
+    const ch = (await db.select({ name: chains.name }).from(chains).where(eq(chains.id, chainId)))[0];
+    if (ch && KNOWN_24H.test(ch.name || "")) daytimeOnly = false;
+  }
   // Rotation (mapper): skip stores we already dialed this run — unless that would leave nothing.
   if (excludeIds?.length) {
     const ex = new Set(excludeIds);
