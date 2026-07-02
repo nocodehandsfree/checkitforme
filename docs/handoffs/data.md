@@ -57,6 +57,21 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
 
 ## Current focus (KEEP UPDATED)
 
+**Session 2026-07-02 — consumer surfaces show only what we KNOW (owner rule). Staging.**
+- **No unverified restock info reaches consumers, anywhere.** (1) `/pub/stores/near` no longer sends
+  `shipmentDay` (the site printed junk like "drops eve" = "every single week" truncated). (2) Best
+  Bets: `shipmentDow` signal set to null, so the unverified day neither ranks nor labels a bet (no
+  "usually restocks Friday", no "Restock day" tag). Verified live on staging. **Comeback path:**
+  `learnedShipDow()` once a store's day has 2+ agreeing confirmed calls. A call RESULT saying "shipment
+  lands {day}" stays (staff just said it = known). Admin restock intel untouched.
+- **Open-state labels trimmed** (`store-hours.ts`): "till 10 PM" / "24h" (the word "Open" was redundant;
+  the green dot + being listed say it). Closed labels unchanged. Updated the trainer-batch "24h" match +
+  both hours test scripts (12/12 each; 3 pre-existing time-of-day flakes in test-storehours.ts remain).
+- **Google Cloud $62.29 charge explained** (owner's Places API spike, June): $262.29 usage minus the
+  $200 monthly Maps credit auto-billed at invoice close. Our code has ZERO Google Places/Maps usage
+  (geocoding = US Census + Nominatim). Console lockdown (disable Places, cap quota, restrict+regen key)
+  pending with owner; until then the unrestricted key can keep accruing.
+
 **Session 2026-06-27 — learned restock "best day" from call data (serve-time, no schema change).**
 
 ### Shipped to STAGING (`…pagiis`) — promote to prod by merging staging → prod
