@@ -115,5 +115,31 @@ Notes:
 5. Hold-handback in the bridge.
 6. Dial-window scheduler from reach-rate data.
 
+## 7. The D-lane and beyond (new, 2026-07-02 late session)
+
+A/B/C solved the NAV. These attack the remaining spend — the talk itself, and mapping speed:
+
+- **D-lane "tape deck"** — standard checks are one question, one answer. Twilio plays a
+  PRE-RECORDED Branson clip at pickup (instant, studio-clean, never repeats awkwardly), captures
+  the reply, classifies it async with a cheap model; a small clip library covers follow-ups
+  ("booster boxes or packs?" / "know what day?" / "awesome, thanks!"). Anything off-script
+  escalates mid-call to the live agent (bridge supports join). ~5¢ → **~2.5¢** on the majority of
+  checks; the live agent becomes the exception. Also kills greeting latency as a side effect.
+  Step 1 (zero risk): pre-rolled OPENER only — play the clip at pickup while the agent connects,
+  saving 3-5s of billed agent time per call and the awkward first-second gap.
+- **Learned direct lines** — mapping calls already reach a human; ask ONE extra question during
+  mapping only: "is there an extension that rings the front directly?" Store per-store. A 65s
+  tree becomes a ~10s extension dial. The menu stops existing for us.
+- **IVR genome** — most chains run one of ~6 IVR vendors with signature behavior (barge windows,
+  0-routing, extension syntax). Fingerprint the greeting → apply the vendor template → unmapped
+  chains map in one call instead of discovery rounds.
+- **Script tournament** — rotation already logs opener → outcome. Score openers on answer rate,
+  seconds-to-answer, and clarity (how often the clerk says "what?"); auto-promote winners. Feeds
+  the tape-deck clip library with proven lines.
+- **Day/night recipe variants** — menus change after hours (CVS pharmacy-closed variant,
+  live-observed 2026-07-02). Lock a recipe per window.
+- **Parallel racing (product-level checks)** — race 2-3 nearby stores on the cheap lane, first
+  human wins, others hang up pre-agent. Answer in min(t) not avg(t) for ~1¢ extra line time.
+
 _Numbers from Admin → Calc rates; call timings from the 2026-07-02 mapping runs (WinCo direct 36s,
 CVS 65s nav / 80s to person). Owned by the owner; maintained in Admin lane._
