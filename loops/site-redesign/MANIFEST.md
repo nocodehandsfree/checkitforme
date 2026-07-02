@@ -291,6 +291,12 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   CONTINUAR), 6d (Ya estás dentro./Ya activo/+5 más/CTA) ALL render Spanish; zero leaks. Share tap on an
   in-stock result lands its outcome (share sheet opens as the no-navigator.share fallback). CLEAN PASS —
   no fixes needed. PROOFS: ES-6a-v2.png · ES-6b-v2.png · ES-6d-v2.png.
+- [x] Rotation 3 pass 3: remaining VERDICT TONES proofed — OUT (red wash, 'Not in stock') and SOON
+  (amber wash, 'Restock incoming', tokened shipment sentence, amber rail bookends + 'Restock
+  confirmed · Tue' line, non-member check-back module) — the full tone system now has rendered
+  evidence for all four states. 6f activity re-proofed with REAL 8-week data: bars scale, stat chips
+  color-coded (9 IN STOCK/11 OUT), icon-chip history rows. CLEAN PASS — no fixes.
+  PROOFS: P6-out-v2.png · P6-soon-v2.png · 6f-activity-v2.png (re-shot).
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
