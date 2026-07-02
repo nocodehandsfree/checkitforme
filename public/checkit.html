@@ -4169,6 +4169,17 @@ async function openHistEntry(e){
 // ---- Call switcher: hop call-to-call; filter by store and outcome (scales to 20+ calls) ----
 let RAIL_F={store:'',tone:''}, RAIL_CID=null;
 function railTone(e){ if(e.confirmed===true) return 'in'; if(e.confirmed===false||e.soldOut||e.doesNotSell) return e.shipmentDay?'soon':'out'; return 'unk'; }
+// §5.7 status ICON chips (v2): tinted circle + stroke icon — never plain colored dots. In-stock uses
+// the owner's real brand-check FILE (FCHK), per the standing logo rule — never a drawn approximation.
+function v2StatusChip(tone,size){ size=size||24;
+  const C={in:'#4ADE80',out:'#EF4444',soon:'#F59E0B',unk:'#FBBF24'};
+  const B={in:'rgba(74,222,128,.15)',out:'rgba(239,68,68,.15)',soon:'rgba(245,158,11,.15)',unk:'rgba(251,191,36,.15)'};
+  const inner = tone==='in' ? FCHK(Math.round(size*.62))
+    : tone==='soon' ? `<svg width="${Math.round(size*.72)}" height="${Math.round(size*.72)}" viewBox="0 0 24 24"><g stroke="${C.soon}" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15V8h9v7"/><path d="M13 10h3l2.4 2.6V15h-2.4"/><circle cx="7.5" cy="16.6" r="1.5"/><circle cx="14.8" cy="16.6" r="1.5"/></g></svg>`
+    : tone==='out' ? `<svg width="${Math.round(size*.66)}" height="${Math.round(size*.66)}" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17" stroke="${C.out}" stroke-width="2.4" stroke-linecap="round"/></svg>`
+    : `<span style="font-size:${Math.round(size*.55)}px;font-weight:900;color:${C.unk};line-height:1">?</span>`;
+  return `<span style="display:inline-grid;place-items:center;width:${size}px;height:${size}px;border-radius:50%;background:${B[tone]||B.unk};flex:0 0 auto">${inner}</span>`;
+}
 function railBase(n){ return (n||'').split('—')[0].trim(); }
 // Monogram tile (transparent store logos drop in automatically once stores carry a logoUrl).
 function railClass(e){ const st=STORES.find(x=>x.id===e.storeId)||{}; const lu=e.logoUrl||st.logoUrl, lw=e.logoWide??st.logoWide, ld=e.logoDark??st.logoDark; return lu?((ld?' lite':'')+(lw?' widelogo':'')):''; }
@@ -4268,7 +4279,7 @@ function renderRailDayList(pop){
   const lbl=new Date(day+'T12:00:00').toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'short',month:'short',day:'numeric'});
   const back=`<button onclick="railPickDay('',event)" aria-label="${esc(t('rail.backcal','Back to calendar'))}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
   pop.innerHTML=`<div class="rcal-h">${back}<b>${esc(lbl)}</b><span style="width:13px"></span></div>
-    <div class="rday-list">${calls.length?calls.map(e=>`<button class="rday-item ${e.cid===RAIL_CID?'on':''}" onclick="railOpen('${esc(e.cid)}')"><span class="rday-dot ${railTone(e)}"></span><span class="rday-nm">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span class="rday-tm">${new Date(e.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}</span></button>`).join(''):`<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:12px 10px;line-height:1.5">${t('rail.noneday2','No checks this day.')}<br><a onclick="railPickDay('',event)" style="color:var(--green);font-weight:700;cursor:pointer">${t('rail.pickanother','← Pick another day')}</a></div>`}</div>`;
+    <div class="rday-list">${calls.length?calls.map(e=>`<button class="rday-item ${e.cid===RAIL_CID?'on':''}" onclick="railOpen('${esc(e.cid)}')">${isV2()?v2StatusChip(railTone(e),24):`<span class="rday-dot ${railTone(e)}"></span>`}<span class="rday-nm">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span class="rday-tm">${new Date(e.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}</span></button>`).join(''):`<div style="color:var(--muted);font-size:12.5px;text-align:center;padding:12px 10px;line-height:1.5">${t('rail.noneday2','No checks this day.')}<br><a onclick="railPickDay('',event)" style="color:var(--green);font-weight:700;cursor:pointer">${t('rail.pickanother','← Pick another day')}</a></div>`}</div>`;
 }
 function renderRailCal(){
   const pop=$('railcalpop'); if(!pop) return;

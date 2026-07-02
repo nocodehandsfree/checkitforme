@@ -61,6 +61,7 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - [x] Footer (cycle 3): strip tokens, 13/600 muted links, 36px raised social circles, tight padding. 'Legal' merge NOT applied — stays in COPY QUEUE (link-text change needs Copy).
 - [x] Toasts (cycle 3): green success capsule gradient + dark-green text + glow. DECIDED: neutral/accent variants land when toast() call sites get a type param — queued as follow-up box below.
 - [ ] Toast type variants (T1): classify toast() call sites → success/neutral/accent capsules (comp T1)
+- [x] §5.7 status ICON chips (cycle 12): shared v2StatusChip(tone,size) — tinted circle + stroke icons (truck w/ day tone, ✕, bold ?); IN-STOCK uses the owner's brand-check FILE per the standing logo rule (DECIDED — owner law beats comp's drawn ✓). Day list swapped off colored dots; poll already chip-based; YOUR HUNT consumes it when hobby builds.
 - [x] Page bg/tokens (cycle 1): CSS-var re-key under html[data-skin=v2] (--bg/--sheet/--terminal/--border) + base card/store-row/input/pill/footer surfaces — washes + iOS tint adapt via var(--bg)
 - [x] Finds ticker (cycle 4): chips → raised row cards (NO COMP — extended system)
 - [x] Language switcher (cycle 4): trigger covered by base pill styling; menus (vsw-menu incl. lsw) → big-card surface, no border
