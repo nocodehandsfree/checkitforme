@@ -30,8 +30,9 @@ In-stock chips use the brand-check FILE (owner law > comp's drawn ✓) · S2 in-
 ckWaveV2/ckGlowV2 names (v1 collision) · solid error/tier rings (gradients can't ride box-shadow) ·
 accent gradients stay Pokémon-default (comps define no other vertical).
 
-## Suggested next: owner preview walk → QA read-only pass (LOOP.md morning steps) → fix round if
-needed → promote when happy.
+## Suggested next: owner preview walk → promote when happy — **exact steps in `PROMOTE.md`**
+(A = safe code promote: prod look unchanged, font + i18n + June-calendar fixes ship; B = the
+takeover switch, owner's explicit call; hidden pages keep their own gates either way).
 
 ---
 
