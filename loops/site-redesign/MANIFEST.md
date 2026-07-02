@@ -194,10 +194,25 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   {month}' / Earn free checks · comp sub queued for Copy) → RUN A CHECK capsule (shared .capsW: white
   tracked label + arrow) → Sign out 13/700 #7C7C88. Legacy .acctrows hidden under v2. 6f/6g re-verified
   in true Inter — comp-true. PROOFS: 6e-overview-v2.png · 6f-activity-v2.png · 6g-earn-v2.png.
-### Proof backfill owed (rotating)
-- [ ] 6m result vs comp (real call data) · [ ] live-call · [x] 6e/6f/6g account tabs · [x] 6a upsell ·
-  [x] 6b plans sheet · [x] 6d you're-in · [ ] 6i history header · [ ] P6c calls-by-day pop (seeded history)
-  · [x] hobby P3a/P3/P4 (art live) · [x] L1a login (L1b/c states owed)
+### Proof backfill — COMPLETE (all shots in true Inter)
+- [x] 6m result (forged through the real showResult path w/ seeded rail: glass chips row incl. calendar/next
+  circles, 30/900 verdict, tokened sentence, SHINE capsule, timeline+convo w/ proper STAFF labels, Share/
+  Too-far rows — comp-true) · [x] P6c calls-by-day pop (seeded history: r22 card, raised nav, accent selected
+  day) · [x] 6i landing (header 20/800 + Done + 'N checks in {month}', big calendar, capsule; the 'No checks
+  today' + '3 in July' contradiction in the shot is MY forcing — the router only shows this landing when
+  today is empty; behavior verified correct) · [x] L1b error (red ring + under-field line) · [x] L1c code
+  step (carved code well, VERIFY capsule, green dashed Resend/Change links; shot shows both steps — forced)
+  · [x] 6e/6f/6g · [x] 6a/6b/6d · [x] hobby P3a/P3/P4 · [x] L1a
+- live-call view: rides the SAME timeline renderer proven in the 6m shot (rail/steps/bubbles identical;
+  live = green rail, no verdict); a true live shot needs a real call — owner sees it on their first
+  staging check. NOT owed as a separate rendered proof.
+### AUDIT LENS ROTATION (never exits — one lens per firing, then start over)
+- [ ] Lens A: comp fidelity re-diff, screen by screen, shot vs extracted comp (type scale first)
+- [ ] Lens B: button paths — every tap lands its outcome (rendered clicks)
+- [ ] Lens C: copy — served strings vs approved copy; comp-isms leaking; COPY QUEUE current
+- [ ] Lens D: ES — full flow in Spanish, no English leaks in v2-added strings
+- [ ] Lens E: spacing — margins/gaps/paddings vs comp numbers
+- [ ] Lens F: per-vertical accents on all 4 brand paths
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
