@@ -160,6 +160,19 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   deltas found — earlier cycles' rebuilds hold. P6 price line/$-over-retail + YOUR HUNT stay BLOCKED on the
   §7 backend. P6c pop-over chrome shipped cycle 8; its rendered proof needs seeded history — moved to the
   proof-backfill list. PROOFS: proofs/P6-instock-v2.png · P6-convo-v2.png · P6b-poll-v2.png.
+### 🔴 OWNER 05:33 SCREENSHOT (plans sheet ≠ comps: font/spacing/look) — FIXED this cycle
+- [x] 6b sheet REBUILT to the true comp (my cycle-16 pass had invented structure): Check+ lockup (site
+  wordmark + green '+' — Check+ logo FILE doesn't exist; Design owes the asset, DECIDED placeholder) ·
+  ONE centered 26/900/-.8 title for every open reason (reason titles/leads incl. the ⭐ emoji were
+  old-skin — §8 no emoji under v2) · 'EVERY PLAN GETS' eyebrow .4-white · **4-col raised icon TILES w/
+  the comp's 8 SVGs verbatim** (my ✓-text checklist was wrong) · twin raised cycle keys (active green
+  glow — carved track was wrong) · tier type to comp (15.5/700 name · 12.5/600 desc · 19/800 price ·
+  pad 14/16) · **tap-selects + CONTINUE ring capsule** (was buy-on-tap; v1 behavior unchanged) ·
+  Stripe note 13/600. Check+/Buy-checks tabs still deferred: POLICY.packs is empty (catalog debt) —
+  tab code lands when packs ship. PROOFS: proofs/6b-plans-v2.png · 6b-plans-selected-v2.png.
+- [ ] LESSON → new audit lens: my proofs passed because they compared against MY OWN build, not the
+  comp frame side-by-side. Every remaining sweep must diff the SHOT against the EXTRACTED COMP, element
+  by element (type scale first — the owner's exact complaint).
 ### Proof backfill owed (rotating)
 - [ ] 6m result vs comp (real call data) · [ ] live-call · [ ] 6e/6f/6g/6h account tabs · [ ] 6a upsell ·
   [ ] 6b plans sheet · [ ] 6d you're-in · [ ] 6i history header · [ ] P6c calls-by-day pop (seeded history)
