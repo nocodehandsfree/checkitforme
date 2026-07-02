@@ -27,22 +27,27 @@ listen to hold music. The mapper's replay machinery (timed barge plans + mechani
 recovery, shipped 2026-07-02) is exactly the tech that walks a menu with **zero AI** — and the
 bridge already supports **connect-on-human**.
 
-## 2. Cost per completed check — today vs optimized (30s talk)
+## 2. Cost per completed check — the two paths (30s talk)
 
-| Lane | Today (agent on whole call) | Optimized (agent joins at the human) |
+**CORRECTION (owner review, 2026-07-02):** the cheap lane is IMPLEMENTED and LIVE for consumer
+checks — `connectOnHuman: true` in production policy, bail rules on. A 20s-talk bridge check runs
+~5¢ today, as designed. The expensive column below is NOT "today for everything" — it is the
+DIRECT-AGENT path that some callers still use.
+
+| Lane | Direct-agent path (agent on from dial) | Bridge path (agent joins at the human) |
 |---|---|---|
-| Charlie — direct (WinCo, 36s to human) | ~10¢ | **~4.8¢** ✅ |
-| Alpha — tone tree (recipe DTMF, ~40s nav) | ~11¢ | **~5.1¢** ✅ |
-| Bravo — voice tree (CVS, 65s nav) | ~14.5¢ | **~5.5¢** (≤5¢ as barge maps shave nav) |
+| Charlie — direct (WinCo, 36s to human) | ~10¢ | **~4.8¢** ✅ live today |
+| Alpha — tone tree (recipe DTMF, ~40s nav) | ~11¢ | **~5.1¢** ✅ live today |
+| Bravo — voice tree (CVS, 65s nav) | ~14.5¢ | **~5.5¢** ✅ live today |
 
-Optimized = Twilio carries ring+nav+hold (recipe replay), agent connects at pickup for ~30s,
-cheap-tier LLM for the standard yes/no ask (the ask is simple; a small model classifies it fine —
-reserve the smart model for premium calls and mid-call weirdness).
+**Who still rides the direct-agent path (the real gap):**
+- **Scheduled checks / restock alerts** (customer-schedules → triggerCall) — the volume driver for
+  subscription tiers, paying ~2× per call
+- The plain `/pub/check` fallback (non-live variant)
+- Zone fires (callZone) and admin call-now
+- Bench/test calls (fine — they are rehearsal)
 
-**Failed dials get cheap too:** reach rate is ~40%, so every check carries ~1.5 wasted dials.
-Today a wasted dial burns agent minutes (4-10¢); with connect-on-human + instant voicemail/closed
-bail (shipped), a wasted dial is **~1-1.5¢ of phone line**. Blended cost per delivered answer:
-**~7-8¢ today's path → ~6¢ optimized → ~5¢ with nav shaving.**
+Failed dials on the bridge are ~1-1.5¢ (no agent); on the direct-agent path they burn agent time.
 
 ## 3. The levers, ranked (first two are step-changes)
 
@@ -97,14 +102,13 @@ Notes:
 - Premium asks are the $19.99 hook: "ask for the exact set and product, get the price quoted."
 - The cache turns high tiers profitable even at 100% usage: heavy users concentrate on hot stores,
   which are exactly the stores most likely to be answered from cache.
-- Gate: these numbers hold ONLY after lever #1 (connect-on-human default). At today's
-  whole-call-agent cost, Operator at 100% usage is ~14.5¢ rev vs ~15¢+ premium-mix cost — thin.
-  **Lever #1 is the pricing unlock, not a nice-to-have.**
+- Gate: margins hold today for BRIDGE checks. Subscriber auto-checks (scheduled) still ride the
+  direct-agent path at ~2× cost — migrate them to the bridge before pushing subscription volume.
 
 ## 6. What to build, in order
 
-1. Connect-on-human default for live checks (wiring + a per-chain "recipe verified" gate — the
-   mapper's locks are the safety proof).
+1. Migrate the remaining callers onto the bridge: scheduled checks FIRST (subscription volume),
+   then /pub/check fallback + zone calls. (Connect-on-human itself is already live.)
 2. Fresh-verdict cache with a per-category TTL + premium "force fresh."
 3. Queue coalescing per store (60s window).
 4. Model ladder config in Admin (standard vs premium LLM).
