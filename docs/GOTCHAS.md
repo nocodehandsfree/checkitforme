@@ -56,3 +56,8 @@ worse than no comment. Several entries below started as wrong comments.)
   owner Fun-store test transcript once wrote a bogus `avgTreeSeconds=19` onto a direct-answer chain and
   silenced the agent for 19s (2026-07-02). Fixed: passive learning is gated `!config.staging.on` and skips
   `ownerOnly` stores in every env. Mapping data comes from prod real calls + explicit Tree Trainer runs ONLY.
+- **Every push to the staging branch RESTARTS the staging service and (before 2026-07-02) KILLED any
+  live call mid-air** (EL logs "Client disconnected: 1006"; the owner got dead-air-then-hangup, a mapped
+  store got hung up on). Fixed: SIGTERM drain in server.ts (old instance finishes its live bridge calls,
+  cap 240s) + `drainingSeconds: 300` in railway.json. STILL: check `GET /api/voice/live` (or ask the
+  owner) before pushing during an active testing session — don't rely on the drain alone.

@@ -72,6 +72,12 @@ export function takeBridgeSay(room: string): string | null {
 const conversations = new Map<string, string>();
 export function bridgeConversationId(room: string): string | null { return conversations.get(room) ?? null; }
 
+// Live-call count for graceful deploys: a deploy restart once killed the owner's call mid-air
+// (EL "Client disconnected: 1006", 2026-07-02). The SIGTERM handler in server.ts waits on this
+// before letting the old instance exit.
+let activeCalls = 0;
+export function activeBridgeCalls(): number { return activeCalls; }
+
 // In-memory event log so we can diagnose the bridge live (logs aren't surfacing in Railway).
 const debugLog: string[] = [];
 function log(msg: string) { debugLog.push(new Date().toISOString().slice(11, 23) + " " + msg); if (debugLog.length > 300) debugLog.shift(); }
@@ -149,6 +155,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   const signalEnd = () => { if (ended) return; ended = true; try { relayEnd?.(room); } catch { /* best-effort */ } };
   const pending: string[] = []; // store audio buffered until the agent WS is ready
   let ctx = room ? contexts.get(room) : undefined;
+  activeCalls++;
   // connect-on-human state
   let connecting = false;     // true once we've committed to opening ElevenLabs (buffer from here)
   let humanAtMs = 0;          // when a human was detected (connect-on-human)
@@ -283,5 +290,5 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       else if (ctx?.connectOnHuman && !ctx.connectAtSec) maybeDetectHuman(b64); // VAD only when we have no learned timer
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
-  twilio.on("close", () => { log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); if (eleven) eleven.close(); });
+  twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); if (eleven) eleven.close(); });
 }
