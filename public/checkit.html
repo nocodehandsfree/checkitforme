@@ -1337,7 +1337,7 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 /* Sign-up plans (6b/§5.5/§3): raised tiles; the SELECTED tier takes the MUTED-yellow ring + #26251E
    fill — it must never fight a green CTA on the same screen. */
 html[data-skin="v2"] .plan{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:16px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
-html[data-skin="v2"] .plan.sub{background:#26251E;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent,#FFCB05) 45%,transparent),0 8px 14px -8px rgba(0,0,0,.55),0 0 18px color-mix(in srgb,var(--accent,#FFCB05) 18%,transparent)}
+html[data-skin="v2"] .plan.sub{background:#23232A;box-shadow:0 0 0 2px #4ADE80,0 8px 14px -8px rgba(0,0,0,.55),0 0 18px rgba(74,222,128,.18)}
 /* AUDIT SWEEP 1 — v1 hairlines/terminal fills that leaked through under v2. */
 html[data-skin="v2"] .rhead{background:#26262B;border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .proof{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
@@ -2924,8 +2924,9 @@ function initMap(){
     if(USER_LOC) placeMyPin(USER_LOC.lat,USER_LOC.lng,false);
     // Master drop-a-pin: tap anywhere (zoom out & roam first) → that becomes your location, stores reload.
     // Regular users tap store pins to check; the map never moves them.
-    // Master drops a pin → load that area's stores, then close the map to the LIST so they're callable.
-    MAP.on('click',(e)=>{ if(!isMaster()) return; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng); toast(t('toast.locating','Locating stores near you')); setTimeout(()=>{ toggleMap(false); }, 500); });
+    // Master drops a pin → load that area's stores ON the open map (owner 2026-07-02: the map stays
+    // up until they close it — the pins repaint in place via renderStores' map hook).
+    MAP.on('click',(e)=>{ if(!isMaster()) return; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng); toast(t('toast.locating','Locating stores near you')); });
     MAP_FIT_NEXT=true; // first paint → frame the search radius (then it stays put until a new location)
     setTimeout(()=>MAP.invalidateSize(),60); renderMapPins();
   }catch(e){ toast(t('toast.maploading','Map could not load. Showing the list.')); toggleMap(); }
