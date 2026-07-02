@@ -297,6 +297,10 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   evidence for all four states. 6f activity re-proofed with REAL 8-week data: bars scale, stat chips
   color-coded (9 IN STOCK/11 OUT), icon-chip history rows. CLEAN PASS — no fixes.
   PROOFS: P6-out-v2.png · P6-soon-v2.png · 6f-activity-v2.png (re-shot).
+- [x] Rotation 3 pass 4: **V1 REGRESSION PROOF — the 'normal visitors see ZERO change' invariant,
+  visually verified for the first time since cycle 1** after ~30 cycles of edits: old navy bg, purple
+  find/pin accents (--purple #A78BFA intact), v1 'Check a store/Kiosks' labels, GOLD sheet CTA r16 w/
+  arrow hidden, bordered old sheet, no badge, no data-skin. CLEAN. PROOF: v1-unchanged.png.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
