@@ -1222,6 +1222,22 @@ html[data-skin="v2"] .stat,html[data-skin="v2"] .credline,html[data-skin="v2"] .
 html[data-skin="v2"] .smchip,html[data-skin="v2"] .upmod-h .t .pchip,html[data-skin="v2"] .smwarn{border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
 html[data-skin="v2"] .acctav,html[data-skin="v2"] .ighead .av,html[data-skin="v2"] .callhead .ci{border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
 html[data-skin="v2"] .acctrow .chev,html[data-skin="v2"] .scoretile img{border:0}
+/* 6e MY-CHECKS POP-UP REBUILD — comp structure: green wash header (My ✓ · Done · phone · plan chip),
+   two overlapping raised stat tiles, Overview/Activity/Earn keys, yellow icon rows. Legacy header
+   (avatar/name/cred pill) hides under v2 — the wash header replaces it. */
+html[data-skin="v2"] #acctOverlay .modal{padding:0;overflow:hidden;border-radius:30px}
+html[data-skin="v2"] #acctOverlay .modal>*:not(.acctv2head):not(.acctrows):not(.x){display:none}
+html[data-skin="v2"] #acctOverlay .acctrows{padding:0 18px 22px}
+html[data-skin="v2"] #acctOverlay .x{display:none}
+html[data-skin="v2"] .acctv2head .wash{background:#266440;padding:14px 18px 46px}
+html[data-skin="v2"] .acctv2head .stats{margin:-28px 18px 0;display:flex;gap:10px}
+html[data-skin="v2"] .acctv2head .stat2{flex:1;background:linear-gradient(180deg,#31313A 0%,#26262B 100%);border-radius:16px;padding:14px 0;text-align:center;box-shadow:0 14px 26px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1)}
+html[data-skin="v2"] .acctv2head .stat2 b{font-size:24px;font-weight:800;display:block}
+html[data-skin="v2"] .acctv2head .stat2 i{font-style:normal;margin-top:3px;font-size:10px;font-weight:700;letter-spacing:.15em;color:#8A8A96;display:block}
+html[data-skin="v2"] .acctv2head .tabs{display:flex;gap:8px;padding:16px 18px 0}
+html[data-skin="v2"] .acctv2head .tab{flex:1;padding:10px 0;border-radius:12px;color:#7C7C88;font-size:13px;font-weight:700;text-align:center;cursor:pointer;background:none;border:0}
+html[data-skin="v2"] .acctv2head .tab.on{background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#4ADE80}
+html[data-skin="v2"] #acctOverlay .acctrow{border-radius:16px;padding:13px 14px;margin-top:10px}
 /* 6m RESULT REBUILD — comp structure. Section order via flex order (markup untouched, behaviors keep
    their nodes): title block → poll (unclear) → CHECK ANOTHER STORE capsule → timeline+convo → in-stock
    actions → restock → checks-used → footer. The big emoji verdict circle is NOT in the comp — gone. */
@@ -2427,6 +2443,30 @@ function openAccount(){
   }
   // The "Earn free checks" block now lives in this panel — refresh its referral link/count on open.
   try{ loadRefer(); }catch(_){}
+  // 6e comp header (v2): green wash (My ✓ · Done · phone · plan chip) + overlapping stat tiles + tabs.
+  if(isV2()){ try{
+    const modal=document.querySelector('#acctOverlay .modal');
+    let head=modal.querySelector('.acctv2head');
+    if(!head){ head=document.createElement('div'); head.className='acctv2head'; modal.insertBefore(head,modal.firstChild); }
+    const planChip = comp?('∞ '+t('acct.unlimited','Unlimited')):(member?('★ '+t('acct.member','Member')):t('acct.free','Free'));
+    const left = comp?'∞':String(n);
+    let run=0; try{ const now=new Date(); run=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length; }catch(_){ }
+    head.innerHTML=`<div class="wash">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="display:flex;align-items:center;gap:9px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('acct.my','My')}</span>${FCHK(24)}</span>
+          <button onclick="closeAccount()" style="background:none;border:0;font-size:12px;font-weight:700;color:rgba(255,255,255,.55);cursor:pointer">${t('acct.done','Done')}</button>
+        </div>
+        <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:13px;font-weight:600;color:rgba(255,255,255,.8);white-space:nowrap">${esc(idn.primary)}</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);font-size:12px;font-weight:700">${esc(planChip)}</span>
+        </div></div>
+      <div class="stats"><div class="stat2"><b>${esc(left)}</b><i>${esc(t('acct.stat.left','Checks left').toUpperCase())}</i></div><div class="stat2"><b>${run}</b><i>${esc(t('acct.stat.run','Checks run').toUpperCase())}</i></div></div>
+      <div class="tabs">
+        <button class="tab on">${t('acct.tab.overview','Overview')}</button>
+        <button class="tab" onclick="closeAccount();openHistory()">${t('acct.tab.activity','Activity')}</button>
+        <button class="tab" onclick="const e=document.getElementById('earndemo');if(e){e.scrollIntoView({behavior:'smooth'});}">${t('acct.tab.earn','Earn')}</button>
+      </div>`;
+  }catch(_){} }
   $('acctOverlay').classList.add('on'); track('account_open');
 }
 function closeAccount(){ $('acctOverlay').classList.remove('on'); }

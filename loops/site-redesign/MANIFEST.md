@@ -102,7 +102,7 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
 - [~] live-call rebuilt (shares the 6m timeline renderer; live state = green rail, no verdict) — screenshot proof owed
 - [ ] P2 sheet exact (store head, 'costs 1 check' line, capsule)
 - [ ] L1a/L1b/L1c login pop-ups exact · [ ] 6a upsell · [ ] 6b plans · [ ] 6c checkout · [ ] 6d you're-in
-- [ ] 6e overview · [ ] 6f activity · [ ] 6g earn · [ ] 6h new-user · [ ] 6i history
+- [~] 6e overview REBUILT (green-wash header My✓/Done/phone/plan-chip, overlapping stat tiles CHECKS LEFT/RUN, Overview·Activity·Earn keys, yellow icon rows; legacy header hidden) — screenshot proof owed · [ ] 6f activity exact · [ ] 6g earn exact · [ ] 6h new-user · [ ] 6i history exact
 - [ ] R1/R2/R3 restock exact · [ ] SC1/SC2 exact · [ ] RN1/RN2 exact · [ ] P1 home detail pass · [ ] P6/P6b/P6c detail pass
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
