@@ -29,8 +29,11 @@ Steps:
 2. Decide the hidden pages separately — they have their OWN gates and stay hidden through the takeover:
    - Hobby (`?flow=hobby` + isV2) · sign-up previews (`?show=…`) — expose each only when its lane is
      ready (hobby: owner call; YOUR HUNT still blocked on the price backend).
-3. Copy: ratify the COPY QUEUE first (comp-copy rulings + 58 draft ES strings) — the takeover ships
+3. Copy: ratify the COPY QUEUE first (comp-copy rulings + the draft ES strings) — the takeover ships
    that copy to everyone.
+3b. **PWA manifest** (`public/manifest.webmanifest`): `background_color` + `theme_color` are the v1
+   `#0C0C12` — switch both to `#1D1D22` at takeover or installed home-screen apps flash the old navy
+   splash against the new pages. (Do NOT touch before the takeover — v1 is still the default.)
 4. Later cleanup (separate PR, no rush): fold `/*V2*/` CSS into the base sheet and drop dead v1 rules.
 
 ## Standing guards that ride along

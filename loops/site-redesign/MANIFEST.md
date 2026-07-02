@@ -377,6 +377,10 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   Invita a un amigo / Publica tu logro / Recibo de kiosco). All 10 hobby ES strings verified through
   the live t() layer (the sandbox feed flake blocked a full render — strings themselves resolve).
   PROOF: ES-6g-earn-v2.png. CLEAN.
+- [x] Watch 16: PWA manifest inspected (never checked) — theme/background = v1 #0C0C12 (CORRECT today;
+  at takeover the installed-app splash would flash old navy against #1D1D22 pages) → **added as step
+  3b in PROMOTE.md's takeover section; do NOT touch before**. Staging carries watch-14/15 ES work;
+  no upstream pushes. CLEAN.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
