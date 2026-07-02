@@ -30,6 +30,7 @@ run "unit: schedules"  "env DATABASE_URL=file:./.t-sch.db $ENV $TSX scripts/test
 run "unit: referrals"  "env DATABASE_URL=file:./.t-ref.db $ENV $TSX scripts/test-referrals.ts; rm -f .t-ref.db"
 run "unit: receipt"    "$ENV $TSX scripts/test-receipt.ts"
   run "unit: auth/billing" "env DATABASE_URL=file:./.t-auth.db $ENV $TSX scripts/test-auth.ts; rm -f .t-auth.db"
+run "unit: stripe billing" "env DATABASE_URL=file:./.t-stripe.db STRIPE_WEBHOOK_SECRET=whsec_test $ENV $TSX scripts/test-stripe.ts; rm -f .t-stripe.db"
 run "integration: growth/CMS/community" "bash scripts/test-growth.sh"
 run "qa: pages (behavior benchmark)" "bash scripts/qa-pages.sh"
 run "qa: design tokens (v2 skin)" "$TSX scripts/qa-design.ts"
