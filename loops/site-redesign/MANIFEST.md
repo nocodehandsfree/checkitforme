@@ -231,7 +231,11 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   new users lose the Manage-plan row, history sub = lifetime count, capsule = UPGRADE·FROM $X w/ lockup
   mark (head-injected duplicate CTA removed). Copy: hob.title/sub/sub2/sets/change join the hob.* queue.
   PROOFS: P3a-eras-v2.png · P3-sets-v2.png · 6h-newuser-v2.png. → Lens B next (button paths).
-- [ ] Lens B: button paths — every tap lands its outcome (rendered clicks)
+- [x] Lens B (button paths): 9 rendered click-paths added PERMANENTLY to qa-e2e (now 38 checks) — brand
+  switcher→menu · anon My→auth · language→menu · Scores→wall · 6a CTA→6b sheet · 6b tier tap→ring+CONTINUE ·
+  account Earn→4 rows · Too far→Runnr view · watch empty-submit→error line. ALL passed first run (behaviors
+  held through every rebuild); they now guard regressions every cycle. Paths already covered elsewhere:
+  S2 kiosk flip, ES flip, hobby full chain, product lock, L1 error ring (original qa-e2e) + 66 qa-pages.
 - [ ] Lens C: copy — served strings vs approved copy; comp-isms leaking; COPY QUEUE current
 - [ ] Lens D: ES — full flow in Spanish, no English leaks in v2-added strings
 - [ ] Lens E: spacing — margins/gaps/paddings vs comp numbers

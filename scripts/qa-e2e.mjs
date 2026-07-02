@@ -94,6 +94,61 @@ try {
   has('product click → returns to builder', await pg2.evaluate(() => !document.getElementById('builder').classList.contains('hidden')));
   await pg2.close();
 
+  // ---- 6b. LENS B — BUTTON PATHS: every tap lands its outcome (rendered clicks).
+  const pg3 = await browser.newPage();
+  await pg3.goto(`${BASE}/pokemon?skin=v2`, { waitUntil: 'domcontentloaded' });
+  await pg3.waitForTimeout(900);
+  // brand switcher opens its menu
+  await pg3.evaluate(() => document.getElementById('vsw_trig')?.click());
+  await pg3.waitForTimeout(250);
+  has('brand switcher → menu opens', await pg3.evaluate(() => { const m = document.querySelector('.vsw-menu'); return m && getComputedStyle(m).display !== 'none' && m.offsetParent !== null; }));
+  await pg3.keyboard.press('Escape');
+  // anon My pill → auth pop-up
+  await pg3.evaluate(() => { document.querySelectorAll('.vsw-menu').forEach(m => m.classList.remove('open')); signUp(); });
+  await pg3.waitForTimeout(350);
+  has('anon My/Join → auth opens', await pg3.evaluate(() => !!document.getElementById('auth_phone') && !!document.querySelector('#authOverlay.on,#authOverlay .modal')));
+  await pg3.evaluate(() => { try { closeAuth(); } catch (e) { document.querySelectorAll('.overlay.on').forEach(o => o.classList.remove('on')); } });
+  // language switcher opens
+  await pg3.evaluate(() => document.getElementById('lsw_trig')?.click());
+  await pg3.waitForTimeout(250);
+  has('language switcher → menu opens', await pg3.evaluate(() => [...document.querySelectorAll('.vsw-menu')].some(m => m.offsetParent !== null)));
+  await pg3.evaluate(() => document.querySelectorAll('.vsw-menu').forEach(m => m.classList.remove('open')));
+  // footer Scores → success wall view
+  await pg3.evaluate(() => { openSuccess(); });
+  await pg3.waitForTimeout(400);
+  has('Scores → wall view shows', await pg3.evaluate(() => !document.getElementById('success').classList.contains('hidden')));
+  await pg3.evaluate(() => backToBuilder());
+  // 6a SEE PLANS → closes upsell, opens the 6b sheet (auth-stubbed)
+  await pg3.evaluate(() => { window.isAuthed = () => true; ACCOUNT = { phone: '+1', credits: 1, subscription: null }; openUpsell(); });
+  await pg3.waitForTimeout(300);
+  await pg3.evaluate(() => { document.getElementById('up6a_cta')?.click(); });
+  await pg3.waitForTimeout(400);
+  has('6a SEE PLANS → 6b sheet opens', await pg3.evaluate(() => document.getElementById('buyOverlay').classList.contains('on') && !document.getElementById('upsellOverlay').classList.contains('on')));
+  // 6b tier tap → selection ring moves + CONTINUE capsule present
+  await pg3.evaluate(() => pickTier('t1'));
+  await pg3.waitForTimeout(300);
+  has('6b tier tap → ring moves + CONTINUE', await pg3.evaluate(() => { const sel = document.querySelector('#buy_plans .plan.sub'); return !!sel && !!document.getElementById('buy_cta'); }));
+  await pg3.evaluate(() => closeBuy());
+  // account rows: history + earn land their outcomes
+  await pg3.evaluate(() => { openAccount(); });
+  await pg3.waitForTimeout(400);
+  await pg3.evaluate(() => acctTab('earn'));
+  await pg3.waitForTimeout(250);
+  has('account Earn tab → 4 earn rows', await pg3.evaluate(() => document.querySelectorAll('#acctv2panel button').length >= 4));
+  await pg3.evaluate(() => { closeAccount(); });
+  // result-page paths: Too far → Runnr view; restock row → watch modal; watch empty submit → error
+  await pg3.evaluate((tr) => { SEL_STORE = { id: 1, name: 'Card Kingdom' }; SEL_CATS = ['pokemon']; showResult({ status: 'completed', confirmed: true, transcript: tr }, 'local:q'); }, 'Agent: in stock?\nClerk: yes');
+  await pg3.waitForTimeout(600);
+  await pg3.evaluate(() => openDriverDemo());
+  await pg3.waitForTimeout(400);
+  has('Too far → Runnr hand-off view', await pg3.evaluate(() => !document.getElementById('handoff').classList.contains('hidden')));
+  await pg3.evaluate(() => { backToBuilder(); openWatch(); });
+  await pg3.waitForTimeout(400);
+  await pg3.evaluate(() => { const b = document.getElementById('watch_btn'); const i = document.getElementById('watch_contact'); if (i) i.value = ''; b && b.click(); });
+  await pg3.waitForTimeout(400);
+  has('watch empty submit → error line', await pg3.evaluate(() => (document.getElementById('watch_err')?.textContent || '').length > 3));
+  await pg3.close();
+
   // ---- 7. LOGIN ERROR STATE (§5.12): submit empty → under-field line + red ring on the well.
   await pg.evaluate(() => { window.signIn && signIn(); });
   await pg.waitForTimeout(400);
