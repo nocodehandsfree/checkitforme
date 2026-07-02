@@ -31,10 +31,10 @@ _Morning report goes HERE at the top when the exit condition is met._
 is untouched for normal visitors. qa-design.ts audits only inside that scope.
 
 ## HIDDEN PAGES — how the owner reaches each (filled in as built)
-- (pending build) Hobby era picker (P3a): with `?skin=v2` on → long-press the S2 "Retail" key 1.5s
-  OR visit `/?skin=v2&flow=hobby`. Exact mechanism finalized when built; this line updates then.
-- (pending build) Hobby set picker (P3) / product picker (P4) / product-locked call sheet (P5):
-  reached from P3a chain.
+- ✅ **Hobby flow (P3a→P4→P5): `staging.checkitforme.com/pokemon?skin=v2&flow=hobby`** — era picker →
+  set banners (JUST DROPPED / UPCOMING badges) → product list (feed prices; generic types when empty) →
+  tap a product = locks it onto the call flow (specific-product), back on the store picker. Back keys
+  navigate up the chain. Unreachable without the v2 skin (hard `isV2()` gate; no visible links).
 - (pending build) Sign-up 6a–6d (upsell → plans → checkout → you're in): `/?skin=v2&show=signup`.
 - (pending build) My-checks 6e–6i (overview/activity/earn/new-user/history): `/?skin=v2&show=mychecks`.
 - (pending build) Runnr RN1/RN2 new skin: existing handoff flow with skin on.
@@ -103,10 +103,11 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 ### Runnr (RN1/RN2)
 - [x] RN1/RN2 shells (cycle 11): 30px nodes (active solid green + halo, done green outline), 2px connector, raised step cards idle@50%, carved toggle w/ raised active key. Driver-preview/star details to verify in audit sweep.
 ### Hobby (P3a/P3/P4/P5) — BUILD, HIDDEN (owner preview only)
-- [ ] P3a era picker from /pub/pokemon-sets (era logos on page, press-dip; logo-wall art, placeholders where missing)
-- [ ] P3 set picker (banner tiles, JUST DROPPED chip, code+date strip, no set names; future sets badged not dropped)
-- [ ] P4 product picker (carved icon tiles + retail anchors; products:[] → generic type list; never a price for retail:null)
-- [ ] P5 product-locked call sheet
+- [x] P3a era picker (cycle 13): feed-driven, era art from the logo wall (absolute prod URLs — wall still building; onerror → §5.17 placeholder w/ Inter label, DECIDED over the spec's mono), press-dip
+- [x] P3 set picker (cycle 13): banner IS the tile (cover 112px, no overlays/names), JUST DROPPED chip (≤45d), UPCOMING glass badge on future releases (kept, never dropped), code+date strip
+- [x] P4 product picker (cycle 13): full-bleed banner card top + floating back key; carved 38px tiles; feed retail anchors; products:[] → generic list; retail:null never prints. DECIDED: single carton icon this pass — the 7-type icon set (§5.13) is its own box below.
+- [ ] Product-type icon set (§5.13): 7 distinct 20px/1.7px icons (booster box/ETB/bundle/premium/blister/tin/sleeved) replacing the generic carton
+- [x] P5 (cycle 13): product pick sets SEL_PRODUCT (set name + type) + toast, returns to the store picker; the call sheet carries it as the specific product
 - [ ] YOUR HUNT (P6 section: logo tiles + status chips + BEST ring + price aggregation dev-note rules §7)
 ### Cross-cutting
 - [ ] ES (Spanish) parity for every new/changed string (i18n table)

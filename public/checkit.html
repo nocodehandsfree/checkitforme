@@ -1182,6 +1182,14 @@ html[data-skin="v2"] .ho-card{background:linear-gradient(180deg,#2D2D34 0%,#2727
 html[data-skin="v2"] .ho-step:not(.active):not(.done) .ho-card{opacity:.5}
 html[data-skin="v2"] .ho-toggle{background:#1B1B20;border:0;border-radius:999px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
 html[data-skin="v2"] .ho-toggle button.on{background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
+/* HOBBY flow (P3a–P5/§5.13) — hidden preview. Era art on the page, press-dip; set tiles; product rows. */
+html[data-skin="v2"] .hob-era{display:block;width:82%;margin:0 auto 26px;background:none;border:0;padding:0;cursor:pointer;transition:transform .12s}
+html[data-skin="v2"] .hob-era:active{transform:translateY(3px) scale(.97)}
+html[data-skin="v2"] .hob-set{display:block;width:100%;margin:0 0 16px;background:none;border:0;padding:0;cursor:pointer;transition:transform .12s;color:#FFF}
+html[data-skin="v2"] .hob-set:active{transform:translateY(2px)}
+html[data-skin="v2"] .hob-chip{position:absolute;top:8px;right:8px;font-size:8.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 8px}
+html[data-skin="v2"] .hob-prod{display:flex;align-items:center;gap:12px;width:100%;margin-top:9px;padding:11px 12px;border:0;border-radius:13px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;transition:transform .1s}
+html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 /*V2END*/</style>
 </head>
 <body>
@@ -1305,6 +1313,9 @@ html[data-skin="v2"] .ho-toggle button.on{background:linear-gradient(180deg,#313
 
   <!-- DRIVER HAND-OFF (Runner) -->
   <div id="handoff" class="hidden"></div>
+  <!-- HOBBY flow (P3a→P5) — HIDDEN preview build (owner override 2026-07-02). Only reachable with the
+       v2 preview skin on via ?flow=hobby; never linked from visible UI. Data: /pub/pokemon-sets ONLY. -->
+  <div id="hobby" class="hidden"></div>
 
   <!-- SUCCESS WALL -->
   <div id="success" class="hidden">
@@ -2025,6 +2036,7 @@ async function boot(){
   if(sp.get('paid')){ history.replaceState({},'','/'); toast(t('toast.payment','🎉 Payment received. Adding your credits…')); setTimeout(refreshAuth,2500); setTimeout(refreshAuth,6000); }
   if(sp.get('call')) restoreCall(sp.get('call'), sp.get('store'), sp.get('cat'));
   else if(sp.get('v')==='history') openHistory();
+  else if(sp.get('flow')==='hobby'&&isV2()) setTimeout(()=>{try{openHobby();}catch(e){}},60); // HIDDEN hobby preview (owner override)
   else if(sp.get('v')==='success') openSuccess();
   // HYDRATE — dynamic data loads in the background, then re-render only the parts that need it.
   const [c,st,pol]=await Promise.all([api('/pub/categories'),api('/pub/statuses').catch(()=>null),api('/pub/policy').catch(()=>null)]);
@@ -3556,7 +3568,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -4092,7 +4104,7 @@ function openHistory(){
 // state with a CTA to check a store. Reuses the result-view chrome so the calendar/switcher are present.
 function showTodayLanding(){
   stopLiveTimers(); if($('hangup_btn'))$('hangup_btn').style.display='none';
-  ['live','builder','history','success','handoff'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
+  ['live','builder','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
   document.body.classList.remove('fabbed');
   ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); // neutral (dark) — no verdict tone
   RAIL_F.date=''; RAIL_F.store=''; RAIL_F.tone=''; RAIL_CID=null; LASTRES=null; RAIL_CAL_M=null;
@@ -4166,6 +4178,87 @@ async function openHistEntry(e){
   // Deep-link the open call so a refresh restores exactly this transcript.
   try{ const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',e.cid); history.replaceState({v:'result'},'',location.pathname+'?'+sp.toString()); }catch(_){}
 }
+// ==== HOBBY flow (P3a→P5, §5.13) — HIDDEN preview (owner override 2026-07-02) ====================
+// Reachable ONLY with the v2 skin on + ?flow=hobby. Data comes exclusively from /pub/pokemon-sets
+// (presentation-ordered, 5-min server cache — pulled fresh, never bundled). Art: era/set banners load
+// from the logo wall (absolute prod URLs — the wall is still being built out); anything missing falls
+// to the §5.17 art placeholder. Sports cards + TCG ONLY — this flow never touches NeeDoh/non-card.
+let HOBBY={data:null,era:null,set:null,prods:null};
+const HOBBY_ART='https://checkitforme.com';
+// §5.17 art placeholder: 45° stripes + label. (Spec says mono label; §4 + the token harness mandate
+// Inter — Inter uppercase wins; DECIDED in manifest.)
+function v2ArtPh(label,h){ return `<div style="height:${h}px;border-radius:16px;background:repeating-linear-gradient(45deg,#2B2B33 0 12px,#25252C 12px 24px);display:grid;place-items:center"><span style="font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${esc(label)}</span></div>`; }
+async function openHobby(){
+  if(!isV2()) return; // hard gate: never reachable outside the preview skin
+  ['live','result','history','success','handoff','builder'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
+  const h=$('hobby'); if(!h) return; h.classList.remove('hidden');
+  if(!HOBBY.data){
+    h.innerHTML='<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:48px 0"><span></span><span></span><span></span></div>';
+    try{ const d=await api('/pub/pokemon-sets'); if(d&&Array.isArray(d.eras)) HOBBY.data=d; }catch(e){}
+  }
+  if(!HOBBY.data){ $('hobby').innerHTML='<div style="text-align:center;color:#8A8A96;padding:36px 0;font-size:13px">Set data unavailable right now.</div>'; return; }
+  renderHobbyEras(); window.scrollTo({top:0});
+}
+// P3a — era logos sit DIRECTLY on the page, big, raised by stacked shadows; press dips them.
+function renderHobbyEras(){
+  const h=$('hobby');
+  h.innerHTML=`<div style="font-size:20px;font-weight:800;letter-spacing:-.3px;padding:4px 2px 18px">Pick your era</div>`+
+    HOBBY.data.eras.map((e,i)=>`<button class="hob-era" onclick="hobbyPickEra(${i})" aria-label="${esc(e.era)}">
+      <img src="${HOBBY_ART}/logos/eras/${esc(String(e.code||'').toLowerCase())}.png" alt="" style="width:100%;filter:drop-shadow(0 10px 18px rgba(0,0,0,.55)) drop-shadow(0 24px 40px rgba(0,0,0,.4))" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh(this.nextElementSibling.textContent.split('·')[0],86));this.remove()">
+      <div style="margin-top:7px;font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${esc(e.era)} · ${esc(e.years||'')}</div></button>`).join('');
+}
+function hobbyPickEra(i){ HOBBY.era=HOBBY.data.eras[i]; renderHobbySets(); window.scrollTo({top:0}); }
+// P3 — the banner IS the tile (no overlays, no set names, never grayed); JUST DROPPED chip on fresh
+// releases; future sets stay, badged UPCOMING (feed rule: badge, don’t drop); strip = code · date.
+function renderHobbySets(){
+  const h=$('hobby'); const era=HOBBY.era; const now=Date.now();
+  const fmt=d=>{ try{ return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',year:'numeric'}); }catch(e){ return d||''; } };
+  h.innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:4px 2px 16px">
+      <button onclick="renderHobbyEras()" aria-label="Back" style="width:34px;height:34px;border-radius:50%;border:0;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#FFF;cursor:pointer;font-size:16px">‹</button>
+      <div style="font-size:20px;font-weight:800;letter-spacing:-.3px">${esc(era.era)}</div></div>`+
+    era.sets.map((st,si)=>{ const rel=st.release?Date.parse(st.release+'T12:00:00'):0;
+      const future=rel>now, fresh=!future&&rel>now-45*86400000;
+      return `<button class="hob-set" onclick="hobbyPickSet(${si})" aria-label="${esc(st.code)}">
+      <div style="position:relative;border-radius:16px;overflow:hidden">
+        <img src="${HOBBY_ART}/logos/sets/banners/${esc(String(st.code||'').toLowerCase())}.jpeg" alt="" style="display:block;width:100%;height:112px;object-fit:cover" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh('${esc(st.code)}',112));this.remove()">
+        ${fresh?`<span class="hob-chip" style="background:linear-gradient(180deg,#FFE066,#FFCB05);color:#26251E">Just dropped</span>`:''}
+        ${future?`<span class="hob-chip" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#FFF">Upcoming</span>`:''}
+      </div>
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:7px 4px 0">
+        <span style="font-size:11.5px;font-weight:800">${esc(st.code)}</span>
+        <span style="font-size:10.5px;font-weight:600;color:#8A8A96">${esc(fmt(st.release))}</span>
+      </div></button>`; }).join('');
+}
+// P4 — banner takes the card top full-bleed, back key floats on it; product rows = carved 38px icon
+// tile + name + retail anchor. products:[] → the generic type list; NEVER a price for retail:null.
+const HOBBY_GENERIC=['Booster Box','ETB','Booster Bundle','Premium Collection','3-Pack Blister','Mini Tin','Sleeved Booster'];
+function hobbyPickSet(si){ HOBBY.set=HOBBY.era.sets[si]; renderHobbyProducts(); window.scrollTo({top:0}); }
+function renderHobbyProducts(){
+  const h=$('hobby'); const st=HOBBY.set;
+  const prods=(Array.isArray(st.products)&&st.products.length)?st.products:HOBBY_GENERIC.map(t=>({type:t,retail:null}));
+  h.innerHTML=`<div class="card" style="padding:0;overflow:hidden">
+    <div style="position:relative">
+      <img src="${HOBBY_ART}/logos/sets/banners/${esc(String(st.code||'').toLowerCase())}.jpeg" alt="" style="display:block;width:100%;height:132px;object-fit:cover" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh('${esc(st.code)}',132));this.remove()">
+      <button onclick="renderHobbySets()" aria-label="Back" style="position:absolute;top:10px;left:10px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(5,6,9,.5);color:#FFF;cursor:pointer;font-size:16px">‹</button>
+    </div>
+    <div style="padding:14px 16px 18px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px"><span style="font-size:11.5px;font-weight:800">${esc(st.code)}</span><span style="font-size:10.5px;font-weight:600;color:#8A8A96">${esc(st.name||'')}</span></div>
+      ${prods.map((p,pi)=>`<button class="hob-prod" onclick="hobbyPickProduct(${pi})">
+        <span style="display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);flex:0 0 auto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#CDCDD8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>
+        <span style="flex:1;min-width:0;text-align:left;font-size:14px;font-weight:700">${esc(p.type)}</span>
+        ${(p.retail!=null&&isFinite(p.retail))?`<span style="font-size:13px;font-weight:800;color:#8A8A96">$${Number(p.retail).toFixed(2)}</span>`:''}
+      </button>`).join('')}
+    </div></div>`;
+  HOBBY.prods=prods;
+}
+// P5 — lock the product onto the call flow (SEL_PRODUCT rides the sheet’s specific-product ask).
+function hobbyPickProduct(pi){
+  const p=(HOBBY.prods||[])[pi]; if(!p) return;
+  SEL_PRODUCT=((HOBBY.set&&HOBBY.set.name)?HOBBY.set.name+' ':'')+p.type;
+  toast(SEL_PRODUCT+', pick a store to check it');
+  backToBuilder();
+}
+// ==== /HOBBY ======================================================================================
 // ---- Call switcher: hop call-to-call; filter by store and outcome (scales to 20+ calls) ----
 let RAIL_F={store:'',tone:''}, RAIL_CID=null;
 function railTone(e){ if(e.confirmed===true) return 'in'; if(e.confirmed===false||e.soldOut||e.doesNotSell) return e.shipmentDay?'soon':'out'; return 'unk'; }
@@ -4439,7 +4532,7 @@ let HO={drop:'ship',bonus:25,app:'Uber',rating:0,step:1};
 function hoIcon(){ return (BRAND&&BRAND.logoUrl)?`<img src="${esc(BRAND.logoUrl)}" alt="">`:((BRAND&&BRAND.key==='poke')?ICO.pokeball.replace('width="28" height="28"','width="26" height="26"'):'🃏'); }
 function openHandoff(){
   HO={drop:'ship',bonus:25,app:'Uber',rating:0,step:1};
-  ['builder','live','result','history','success'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
+  ['builder','live','result','history','success','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
   const v=$('handoff'); v.classList.remove('hidden');
   const prod=findProductLabel(), store=findStoreName();
   const stepShell=(n,label,title,body)=>`
