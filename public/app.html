@@ -2881,7 +2881,11 @@ function vmark(emoji,tc,size){
     '🚚':`<rect x="2.5" y="7.5" width="11" height="8" rx="1"/><path d="M13.5 9.5h3.8l3.2 3.2v2.8h-7z"/><circle cx="6.4" cy="17.6" r="1.7"/><circle cx="16.6" cy="17.6" r="1.7"/>`,
     '·':`<circle cx="12" cy="12" r="2.6" fill="${col}" stroke="none"/>`,
   };
-  return G[emoji]?W(G[emoji]):`<span style="font-size:${Math.round(size*.85)}px">${emoji}</span>`;
+  if(G[emoji]) return W(G[emoji]);
+  // Statuses may store a Lucide icon NAME (the Statuses-page picker: "pause", "mic-off", "store"…) —
+  // draw it in the verdict color instead of printing the name as text.
+  const lu=(typeof lucideSvg==='function'&&typeof LUCIDE!=='undefined'&&LUCIDE[emoji])?`<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">${LUCIDE[emoji]}</svg>`:'';
+  return lu||`<span style="font-size:${Math.round(size*.85)}px">${emoji}</span>`;
 }
 // Resolve the registry status key for a call row: the persisted verdict when present, else a
 // best-effort re-derive from the stored fields (mirrors elevenlabs.ts) so legacy/history rows that
