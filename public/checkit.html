@@ -1222,6 +1222,16 @@ html[data-skin="v2"] .stat,html[data-skin="v2"] .credline,html[data-skin="v2"] .
 html[data-skin="v2"] .smchip,html[data-skin="v2"] .upmod-h .t .pchip,html[data-skin="v2"] .smwarn{border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
 html[data-skin="v2"] .acctav,html[data-skin="v2"] .ighead .av,html[data-skin="v2"] .callhead .ci{border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
 html[data-skin="v2"] .acctrow .chev,html[data-skin="v2"] .scoretile img{border:0}
+/* ROUND 2 — OWNER SCREENSHOT FIXES */
+/* Account screen (§3/§8): the icon set is ALL accent — no purple on account screens, ever. */
+html[data-skin="v2"] .acctrow>svg *[stroke]:not([stroke="none"]){stroke:var(--accent,#FFCB05)}
+html[data-skin="v2"] .acctrow>svg *[fill]:not([fill="none"]){fill:var(--accent,#FFCB05)}
+html[data-skin="v2"] .acctav svg *[stroke]{stroke:var(--accent,#FFCB05)}
+html[data-skin="v2"] .acctav svg *[fill]:not([fill="none"]){fill:var(--accent,#FFCB05)}
+/* Scores strip empty line: one line, small, never a wrapping feature-size string (§8). */
+html[data-skin="v2"] #finds .lo,html[data-skin="v2"] .scoresbar+* .lo{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Hero art must never clip: give the art block its own top padding under the transparent header. */
+html[data-skin="v2"] .heroart{padding-top:10px}
 /* ROUND 2 SWEEP — hardcoded old-skin fills that the CSS-var re-key can't reach. */
 html[data-skin="v2"] .filepick,html[data-skin="v2"] .rcptmail{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
 html[data-skin="v2"] .leaflet-container{background:#17171C!important}

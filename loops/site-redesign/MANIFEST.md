@@ -94,6 +94,20 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
   Marketplace Insights); COPY QUEUE comp-isms must not leak into served copy. Added to test-all.sh.
 
 ## ROUND 2 (owner-requested re-check, 2026-07-02 morning) — loop re-armed
+### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — top of queue, structural, several cycles each
+- [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
+  NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
+  row → verdict title 30/900 → sentence w/ tokens → green shine capsule → timeline+convo → status icons.
+  Extract 6m markup fully, restructure showResult's v2 render. THE flagship screen.
+- [ ] **LIVE-CALL SCREEN STRUCTURAL** — same treatment for the in-call view (phone arcs hero, steps, bubbles).
+- [ ] **MY-CHECKS 6e–6i STRUCTURAL SCREENS** — owner: "doesn't look anything like the comps." Build the five
+  designed pop-up screens (overview/activity/earn/new-user/history) per comps — NOT "rides existing".
+- [x] Account screen purple icons → accent (comp/§8: NO purple on account screens) — CSS pass; full 6e
+  account layout lands with the structural item above.
+- [x] Scores strip "Show us the goods!" wrapping → one-line small (§8 no two-line lines); SC1-on-home
+  treatment rides the structural pass.
+- [x] Hero art clipping at top — heroart top padding under the transparent header.
+- [ ] Full-page screenshot pass per firing (local Chromium): screenshot each view vs comp, log deltas.
 - [x] Unmissable preview badge (tap to exit) — temporary chrome, STRIP BEFORE PROMOTE
 - [x] Per-vertical accent colors: all accent pieces now color-mix off var(--accent) (owner's call — comps only showed Pokémon)
 - [x] Logo-lane assets LIVE on staging (their commit 3f5702d + serving routes; eras/sets/banners 200; ME05/ME06 logos pending publication → text fallback; 66 old-set banners = route-level fallback). Hobby art lights up now.
