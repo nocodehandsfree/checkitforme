@@ -4085,8 +4085,12 @@ function openRailCal(){
   setTimeout(()=>document.addEventListener('click',railCalAway),0);
 }
 function closeRailCal(){ const pop=$('railcalpop'); if(pop){ pop.classList.remove('on'); pop.innerHTML=''; } document.removeEventListener('click',railCalAway); }
-function railCalAway(e){ if(!e.target.closest('#railcalpop') && !e.target.closest('.railcal')) closeRailCal(); }
-function railCalMonth(d){ const m=new Date(RAIL_CAL_M); RAIL_CAL_M=new Date(m.getFullYear(), m.getMonth()+d, 1).getTime(); renderRailCal(); }
+// A node detached by an innerHTML re-render (month nav, day pick) can't prove it was inside the popover —
+// treat detached targets as INSIDE (never close on them), so re-rendering taps can't dismiss the calendar.
+function railCalAway(e){ if(e.target && !e.target.isConnected) return; if(!e.target.closest('#railcalpop') && !e.target.closest('.railcal')) closeRailCal(); }
+// stopPropagation for the same reason as railPickDay: the re-render detaches the tapped arrow, and the
+// bubbled click would hit railCalAway as "outside" → the calendar vanished when stepping to a past month.
+function railCalMonth(d,ev){ if(ev&&ev.stopPropagation)ev.stopPropagation(); const m=new Date(RAIL_CAL_M); RAIL_CAL_M=new Date(m.getFullYear(), m.getMonth()+d, 1).getTime(); renderRailCal(); }
 // Pick a day → the popover switches to a LIST of that day's calls (don't auto-open; let them choose).
 // key='' goes back to the month grid.
 // stopPropagation is ESSENTIAL: tapping a day re-renders the popover innerHTML, which detaches the tapped
@@ -4111,7 +4115,7 @@ function renderRailCal(){
   const first=new Date(y,mo,1).getDay(), n=new Date(y,mo+1,0).getDate();
   const title=m.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long',year:'numeric'});
   const dow=(LANG==='es'?['D','L','M','M','J','V','S']:['S','M','T','W','T','F','S']);
-  const nav=(d,p)=>`<button onclick="railCalMonth(${d})" aria-label="${p}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="${d<0?'M14.5 5L8 12l6.5 7':'M9.5 5l6.5 7-6.5 7'}" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+  const nav=(d,p)=>`<button onclick="railCalMonth(${d},event)" aria-label="${p}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="${d<0?'M14.5 5L8 12l6.5 7':'M9.5 5l6.5 7-6.5 7'}" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
   let cells='';
   for(let i=0;i<first;i++) cells+='<div></div>';
   const today=tsDay(Date.now());
