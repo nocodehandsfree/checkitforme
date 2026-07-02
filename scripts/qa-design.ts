@@ -35,6 +35,7 @@ const scope = v2blocks.join("\n");
 const TOKENS = new Set([
   "#1D1D22","#26262B","#2D2D34","#27272D","#2E2E35","#25252B","#31313A","#28282E","#1B1B20",
   "#17171C","#20202A","#23232A","#1F1F25","#34343D","#23232B","#08090D","#26251E","#141419",
+  "#2F2F36", // R2/R3 comp: modal ✕-circle gradient top (key raised ON the #26262B card)
   "#4ADE80","#4CF286","#5BEA93","#19B145","#0B5A2C","#34C268","#06210F",
   "#FFCB05","#FFE066","#8A6D00","#EF4444","#FF7B7B","#FBBF24","#F59E0B","#FF9B9B","#7F1D1D",
   "#266440","#6B2427","#6C5419","#6E490F",

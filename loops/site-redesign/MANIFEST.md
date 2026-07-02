@@ -112,7 +112,19 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   **PROOF: `loops/site-redesign/proofs/P2-sheet-v2.png`** (proofs dir started this cycle — backfilling owed shots next).
 - [x] L1a–c exact (cycle): phone/code wells carved (inline old-skin overridden), CONTINUE/VERIFY = green ring capsules, Resend/Change-number purple→GREEN dashed links (comp note), staging dev-hint hidden under v2 (L1c law: env chrome never ships), 🇺🇸+1 prefix + 'First check's on us!' already matched · [~] 6a upsell BUILT (pop-up: 2-line 900 title, 3 green feature rows, SEE CHECK+ PLANS capsule; fires ONCE after the first free check under v2; ?show=signup previews it) · [~] 6b plans REBUILT (bottom sheet w/ grabber, 2-line 900 header, 'Every plan gets' 2-col check grid, cycle toggle + POLICY tier tiles w/ muted-yellow ring; Check+/Buy-checks toggle DEFERRED on the catalog-debt note in devops.md) — screenshot proof owed · [ ] 6c checkout (DECIDED: Stripe-hosted stays — backend architecture; sheet covers through plan pick) · [~] 6d you're-in REBUILT (pop-up: 'You're in.' 24/900, runtime plan/credits line, stat tiles, 'Now live' green-check list, '+5 more in Manage plan›', RUN A CHECK capsule; fires on ?paid=1 under v2 after auth refresh; preview ?show=paid) — screenshot proof owed
 - [~] 6e overview REBUILT (green-wash header My✓/Done/phone/plan-chip, overlapping stat tiles CHECKS LEFT/RUN, Overview·Activity·Earn keys, yellow icon rows; legacy header hidden) — screenshot proof owed · [~] 6f activity REBUILT (8-wk bar chart, tone stat chips, History›, last-3 rows w/ status chips — all from local+server history) · [~] 6g earn REBUILT (lead line + 4 earn rows wired: add-store, invite, post-score, kiosk receipt; reward-number chips omitted until runtime numbers exist — DECIDED, never invent) · [x] 6h new-user variant (Free/'Free check used' chip; full-width UPGRADE·from-$X capsule from runtime tiers for non-members) · [x] 6i history header ('Check history' 20/800 + Done + 'N checks in {month}' on both landing renders)
-- [ ] R1/R2/R3 restock exact · [ ] SC1/SC2 exact · [ ] RN1/RN2 exact · [ ] P1 home detail pass · [ ] P6/P6b/P6c detail pass
+- [x] R1/R2/R3 restock exact (cycle): R1 module = raised gradient card r20 + CARVED rows (#1B1B20 inset, 38px
+  green-tint tiles, sub indented under the title) — the old v2 rule had rows flat; head 15.5/700, row type
+  14.5/700 + 11.5/600; chevrons #7C7C88 under v2 (isV2() at the render — inline SVG stroke, CSS can't reach).
+  R2/R3 modals: global v2 ✕ = 32px raised circle (auth/acct/buy keep their own via ID rules), watch modal
+  left-aligned (!important beats inline centering), watch input + ALL .kin fields carved — **.kin was
+  mis-swept into the RAISED group in sweep 3; §5.12: fields are wells, never raised** — .klbl labels =
+  tracked eyebrows (inline hint spans stay sentence-case), R2/R3 CTA labels WHITE on the green ring per comp.
+  Day keys already comp-true via .chip/.chip.sel (raised + green-glow selected). #2F2F36 (comp's ✕ gradient
+  top) added to the token set. Comp's "PHONE OR EMAIL" eyebrow copy for these forms stays in COPY QUEUE (the
+  watch form has no label today — never invent copy). PROOFS: proofs/R1-module-v2.png · R2-watch-v2.png ·
+  R3-schedule-v2.png (proof harness renders with a fallback font — wraps in shots are font-load artifacts,
+  not chrome; real pages load Inter).
+- [ ] SC1/SC2 exact · [ ] RN1/RN2 exact · [ ] P1 home detail pass · [ ] P6/P6b/P6c detail pass
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
