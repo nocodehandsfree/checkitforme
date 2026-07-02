@@ -156,9 +156,17 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
       // general" words at their known seconds). Optimize phase: the current best with one tweak.
       const replay = run.phase === "verify" && lockedRecipe ? { plan: lockedRecipe.steps.map((st) => ({ action: st.action || "say", value: st.value || "", at: st.atSec ?? 0 })) } : undefined;
       const barge = ex && run.best ? { plan: planFor(run.best, ex) } : replay;
+      // The PROVEN word-path rides along as the recovery playbook: if a barge misses or the menu
+      // varies (Spanish intro, pharmacy-closed detour), the in-call brain answers each prompt with
+      // the known words in order instead of flailing — the same logic live calls already use.
+      const known = (run.best ?? lockedRecipe)?.steps || [];
+      const hint = known.length
+        ? known.map((st) => (st.action === "press" ? `press ${st.value}` : `say "${st.value}"`)).join(", then ")
+          + ". If the menu restarts, speaks Spanish first, or mentions the pharmacy being closed, keep answering each prompt with these words in this order — they route to the FRONT STORE."
+        : undefined;
       const placed = await placeNavCall(
         chainId, store.id, store.name, store.phone,
-        undefined, undefined, barge, undefined,
+        undefined, hint, barge, undefined,
         { product: "Pokémon cards" },
         { listenFirst: isListen, askVoiceId: ask.voiceId, askText: ask.text },
       );
