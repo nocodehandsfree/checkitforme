@@ -1042,7 +1042,10 @@ app.get("/pub/stores/near", async (c) => {
       return { id: r.id, chainId: r.chainId, name: r.name, location: r.location, address: r.address || null, storeType: (r.chainId && types.get(r.chainId)) || "Other",
         ...((l) => ({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo(chainName)),
         carries: storeCarriesList(chainName, r.carries),
-        lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
+        // shipmentDay is deliberately NOT sent to consumers: it's unverified (auto-learned, junk values
+        // like "every single week" rendered as "drops eve"). It returns confidence-gated once a store
+        // has 2+ confirmed calls agreeing (learnedShipDow). Admin surfaces still see it via /api paths.
+        lat: r.lat, lng: r.lng, region: r.region, state: r.state,
         sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
         tier: r.hasKiosk === true ? 5 : (r.tier ?? null), inStock: confirmedSet.has(r.id), // any kiosk store = tier 5; inStock = brand-check pin
         callable: callable(r), ownerOnly: r.ownerOnly === true, // ownerOnly → client shows it regardless of radius

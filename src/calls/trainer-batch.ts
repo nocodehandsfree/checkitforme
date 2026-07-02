@@ -95,7 +95,7 @@ export async function storeForChain(chainId: number, excludeIds?: number[], dayt
     if (!hasRealPhone(r.phone)) return -1;
     if (daytimeOnly) { const h = localHour(r.timezone); if (h < 9 || h >= 20) return 0; }
     const st = openState(r.hours, r.timezone || "America/Chicago", now);
-    if (st.label === "Open 24h") return 4;          // best: never a closed-store dead end
+    if (st.label === "24h") return 4;          // best: never a closed-store dead end
     if (st.open && st.known) return 3;               // real hours say open now (e.g. "till 12 AM")
     if (st.open && !st.known) return 2;              // unknown hours but daytime in its tz (west coast now)
     return 0;                                         // known-closed / overnight-unknown

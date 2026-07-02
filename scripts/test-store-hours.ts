@@ -19,7 +19,7 @@ const at6am = new Date("2026-06-17T11:00:00Z");    // 06:00 local (window end, e
 
 console.log("▶ known hours still work (regression guard)");
 let s = openState(uni(["09:00", "18:00"]), TZ, at2pm);
-ok(s.known && s.open && s.label.startsWith("Open"), "9–6 store at 2 PM → Open");
+ok(s.known && s.open && s.label.startsWith("till"), "9–6 store at 2 PM → open, label names the close time");
 s = openState(uni(["09:00", "18:00"]), TZ, at2am);
 ok(s.known && !s.open && s.label.startsWith("Closed"), "9–6 store at 2 AM → Closed (before open)");
 ok(openState(uni("24h"), TZ, at2am).open === true, "real 24h store at 2 AM → still Open 24h");

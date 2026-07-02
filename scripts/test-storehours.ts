@@ -27,18 +27,18 @@ const mid = new Date("2026-06-29T14:30:00Z");   // 14:30 UTC
 const early = new Date("2026-06-29T07:00:00Z");  // 07:00 UTC
 const late = new Date("2026-06-29T22:00:00Z");   // 22:00 UTC
 ok(openState(day, "UTC", mid).open === true, "14:30 is inside 9–21 → open");
-ok(openState(day, "UTC", mid).label === "Open · till 9 PM", "open label names the close time");
+ok(openState(day, "UTC", mid).label === "till 9 PM", "open label names the close time");
 ok(openState(day, "UTC", early).open === false && openState(day, "UTC", early).label === "Closed · opens 9 AM", "before open → 'opens 9 AM'");
 ok(openState(day, "UTC", late).open === false && openState(day, "UTC", late).label === "Closed", "after close → 'Closed'");
 
 console.log("▶ 24h");
 const all = openState(J(everyDay("24h")), "UTC", mid);
-ok(all.open === true && all.label === "Open 24h", "24h day is always open");
+ok(all.open === true && all.label === "24h", "24h day is always open");
 
 console.log("▶ hours that cross midnight (18:00 → 02:00)");
 const owl = J(everyDay(["18:00", "02:00"]));
 ok(openState(owl, "UTC", new Date("2026-06-29T20:00:00Z")).open === true, "20:00 (after open, before midnight) → open");
-ok(openState(owl, "UTC", new Date("2026-06-29T20:00:00Z")).label === "Open · till 2 AM", "crossing-midnight open names the 2 AM close");
+ok(openState(owl, "UTC", new Date("2026-06-29T20:00:00Z")).label === "till 2 AM", "crossing-midnight open names the 2 AM close");
 ok(openState(owl, "UTC", new Date("2026-06-29T01:00:00Z")).open === true, "01:00 → still open via yesterday's spillover");
 ok(openState(owl, "UTC", new Date("2026-06-29T03:00:00Z")).open === false, "03:00 (after 2 AM close, before 6 PM open) → closed");
 
