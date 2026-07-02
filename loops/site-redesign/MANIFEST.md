@@ -315,6 +315,11 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   (cs.cta + ES draft) present — Railway auto-deploy keeping pace with every push. Reduced-motion
   guard render-verified: with the preference set, phone-wave arcs + breathing chip dot both
   animation:none. CLEAN PASS #6.
+- [x] Rotation 4 pass 3 (final untouched corners): SHARE OVERLAY renders on-system — 900 title w/
+  megaphone, sub, 2×2 keys (X/Facebook keep PLATFORM colors — DECIDED brand exception; Text-it green +
+  Copy ride the system), raised ✕. TABLET 768: no h-scroll, sheet centers. CLEAN PASS #7.
+  PROOFS: share-overlay-v2.png · tablet-home-v2.png. **No unexamined surface remains on the board,
+  either skin, any tone/lang/vertical/viewport, or the deploy pipeline.**
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
