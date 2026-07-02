@@ -31,6 +31,12 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
   "check back soon". Owner is comp/premium so only sees member view; behavior is a clean on/off in code.
 
 **🔨 Build / fix:**
+- **PROD-only, check after promote:** owner can't navigate back to June's calls on production. Staging's
+  history/calendar code is far ahead — promote likely fixes it; verify on prod after pushing, else debug
+  the calendar month-nav (`RAIL_CAL_M`/`openRailCal`). Not blocking.
+- **Design round queued** — see ROADMAP "Design round": Check+ signup flow (1a–1d HTML comp, awaiting file),
+  thrift+hobby types/paths (hobby = sports cards + TCG ONLY, no NeeDoh), My-checks redesign, home layout.
+  Implement on staging as comps land; owner reviews before promote.
 - **Green at the bottom bar (iOS Compact Safari)** — owner saw a green bottom toolbar on the live-call screen.
   Confirmed there is **NO `theme-color` meta** anywhere (source + served staging HTML), so it's not a meta:
   it's iOS **per-edge page sampling** picking up a green pixel at the page's *bottom edge*. Couldn't repro the

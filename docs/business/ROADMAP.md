@@ -8,6 +8,15 @@ verified by real phone calls — that data IS the moat.** Everything below compo
 ## Open backlog (consolidated — newest thinking on top)
 Status of each is detailed in the linked ops/security docs; this is the single checklist.
 
+**Design round — owner + Claude Design (Website implements on staging as comps land in repo)**
+- [ ] **Check+ premium signup flow (1a–1d)** — locked design exists as a self-contained HTML comp; commit to
+  `docs/design/checkplus-signup-flow.html` when the owner delivers it (Design chat is read-only, can't push).
+- [ ] **Thrift + Hobby store types & paths** — new store types with their own consumer flows. ⚠️ **Hobby-store
+  flow applies ONLY to sports cards + TCG** — never NeeDoh/other non-card products.
+- [ ] **"My checks" section redesign** — comps coming.
+- [ ] **Home page layout with stores** — comps coming.
+Owner reviews each on staging before promote. Status testing (13-status sweep) resumes after this round.
+
 **Launch-path / now**
 - [ ] Merge staging → prod and deploy; set `COMP_PHONES` in prod policy; verify phone + second-cell caller-ID.
 - [ ] Route the consumer "check" through the **bridge** so caller-ID applies (plain `/app/check` uses the house number).
