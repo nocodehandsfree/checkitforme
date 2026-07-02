@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Schedule natural-sounding calls to local retailers asking whether a product (e.g. Pok\u00e9mon) arrived.",
+  "description": "Schedule natural-sounding calls to local retailers asking whether a product (e.g. Pokémon) arrived.",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
-    "build": "echo 'no build step \u2014 runs via tsx'",
+    "build": "echo 'no build step — runs via tsx'",
     "check:store-contract": "node scripts/check-store-contract.mjs",
     "check": "tsc --noEmit && node scripts/check-store-contract.mjs",
     "db:generate": "drizzle-kit generate",
@@ -30,10 +30,11 @@
     "ws": "^8.21.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.48.0",
     "@types/node": "^22.10.6",
     "@types/ws": "^8.5.13",
     "drizzle-kit": "^0.30.2",
-    "typescript": "^5.7.3",
-    "@playwright/test": "^1.48.0"
+    "playwright-core": "^1.61.1",
+    "typescript": "^5.7.3"
   }
 }

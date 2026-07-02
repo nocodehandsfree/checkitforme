@@ -48,6 +48,9 @@ importers:
       drizzle-kit:
         specifier: ^0.30.2
         version: 0.30.6
+      playwright-core:
+        specifier: ^1.61.1
+        version: 1.61.1
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -915,6 +918,11 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
+  playwright-core@1.61.1:
+    resolution: {integrity: sha512-h7Qlt6m4REp25qvIdvbDtVmD4LqVXfpRxhORv9L0jzETM05p4fuPJ3dKyuSXQxDSbXnmS79HAgi9589lGSpLkg==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   playwright@1.61.0:
     resolution: {integrity: sha512-Z+7BeeqQPRRzklHsVFP4KTGIyMxKUmfeRA4WisM6G3/XW6nwGeX6fX9qYaDa+CiUqpOkb2f6X3nar05R3kSuJQ==}
     engines: {node: '>=18'}
@@ -1742,6 +1750,8 @@ snapshots:
       thread-stream: 4.2.0
 
   playwright-core@1.61.0: {}
+
+  playwright-core@1.61.1: {}
 
   playwright@1.61.0:
     dependencies:

@@ -35,7 +35,10 @@ processes that queue + a full-site voice pass; Website applies what Copy approve
 invented copy.
 
 ## The loop
-Start EVERY cycle with `git pull --no-rebase` (DevOps/Copy may land harness/copy updates overnight).
+Start EVERY cycle with `git pull --no-rebase`, then **read `DEVOPS_REVIEW.md` in this folder —
+DevOps re-checks your work with rendered screenshots all night, and its OPEN findings outrank the
+manifest order.** Use your EYES per that doc: render the comp board + your view with
+`scripts/render-comps.ts` and LOOK at both PNGs before checking anything off.
 0a. **Cycle 0a (once, BEFORE any redesign change) — the behavior benchmark:** write
    `scripts/qa-pages.ts`: fetch every brand page + main view from the local served site, assert HTTP
    200 + the critical behavior markers (search, check button, live call view, results rail, history,
