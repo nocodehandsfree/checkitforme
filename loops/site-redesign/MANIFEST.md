@@ -40,6 +40,7 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - (pending build) Runnr RN1/RN2 new skin: existing handoff flow with skin on.
 
 ## COPY QUEUE (view · element · comp copy · current approved copy) — Copy lane processes
+- Contact forms (kiosk/lead) · field eyebrow · comp: "PHONE OR EMAIL" · approved: current per-form labels
 - S2 switcher · mode key labels · comp/style-guide LOCKED: "Retail" / "Kiosk" · approved: "Check a store" / "Kiosks" (EN applied under v2 per design-lock; ES table untouched — needs ES rulings for Retail/Kiosk)
 - Footer · links row · comp: "Legal" (merges Terms+Privacy) · approved: separate "Terms" "Privacy" (not yet applied — queued with footer item)
 
@@ -89,9 +90,9 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - [x] Calls-by-day P6c (cycle 8): calendar card r22, raised nav keys, accent selected day, 1.5px white today outline, day-list rows raised + accent ring on selected. Status ICON chips in day rows → with the §5.7 chip item.
 - [ ] Feedback thanks / no-charge lines (NO COMP — extend)
 ### Log in (L1a/L1b/L1c)
-- [ ] Phone number pop-up (L1a: carved well, italic placeholder, PHONE OR EMAIL eyebrow rule §5.12)
-- [ ] Error state (L1b: 2px red ring + under-field line, never floating)
-- [ ] Verify code (L1c: code wells; NO env/staging chrome in UI)
+- [x] L1a (cycle 10): carved well (base) + italic muted placeholder. 'PHONE OR EMAIL' eyebrow applies to CONTACT fields (kiosk/lead), not phone-auth — queued in COPY QUEUE for those forms.
+- [x] L1b (cycle 10): 2px red ring on the well via :has(err:not(:empty)) — zero JS; under-field line 12.5/600 #FF7B7B left-aligned. DECIDED: solid #EF4444 ring (comp's gradient ring can't ride box-shadow).
+- [x] L1c (cycle 10): code well carved via base; dashed-green sentence links in modals; no env chrome present.
 ### Sign-up / plans (6a–6d) — HIDDEN until owner exposes
 - [ ] 6a upsell · [ ] 6b plans (muted-yellow tier rings §3/§5.5) · [ ] 6c checkout · [ ] 6d "You're in" toast/state
 ### My checks (6e–6i) — HIDDEN
