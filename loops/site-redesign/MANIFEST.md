@@ -106,7 +106,7 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - [x] P3a era picker (cycle 13): feed-driven, era art from the logo wall (absolute prod URLs — wall still building; onerror → §5.17 placeholder w/ Inter label, DECIDED over the spec's mono), press-dip
 - [x] P3 set picker (cycle 13): banner IS the tile (cover 112px, no overlays/names), JUST DROPPED chip (≤45d), UPCOMING glass badge on future releases (kept, never dropped), code+date strip
 - [x] P4 product picker (cycle 13): full-bleed banner card top + floating back key; carved 38px tiles; feed retail anchors; products:[] → generic list; retail:null never prints. DECIDED: single carton icon this pass — the 7-type icon set (§5.13) is its own box below.
-- [ ] Product-type icon set (§5.13): 7 distinct 20px/1.7px icons (booster box/ETB/bundle/premium/blister/tin/sleeved) replacing the generic carton
+- [x] Product-type icon set (cycle 14): all 7 comp-exact icons extracted from P4 + loose name matching (feed types like 'ETB'/'Elite Trainer Box' both hit); carton fallback for unknown types
 - [x] P5 (cycle 13): product pick sets SEL_PRODUCT (set name + type) + toast, returns to the store picker; the call sheet carries it as the specific product
 - [ ] YOUR HUNT (P6 section: logo tiles + status chips + BEST ring + price aggregation dev-note rules §7)
 ### Cross-cutting

@@ -4231,6 +4231,28 @@ function renderHobbySets(){
 }
 // P4 — banner takes the card top full-bleed, back key floats on it; product rows = carved 38px icon
 // tile + name + retail anchor. products:[] → the generic type list; NEVER a price for retail:null.
+// §5.13 product-type icon set — comp-exact 20px/1.7px strokes; loose name match, carton fallback.
+const HOBBY_ICONS={
+  'booster box':'<path d="M3.5 9.5h17V21h-17z"/><path d="M3.5 13.5h17"/><path d="M7 9.5v-5a1 1 0 0 1 1-1h3v6"/><path d="M13 9.5v-6h3a1 1 0 0 1 1 1v5"/>',
+  'etb':'<path d="M4 8.2 12 4l8 4.2v8.6L12 21l-8-4.2z"/><path d="M12 12.5 4 8.2"/><path d="m12 12.5 8-4.3"/><path d="M12 12.5V21"/>',
+  'bundle':'<rect x="5" y="3.5" width="14" height="17" rx="1.5"/><path d="M12 3.5v17"/><path d="M5 12h14"/><rect x="10.1" y="10.1" width="3.8" height="3.8" rx=".6" transform="rotate(45 12 12)"/>',
+  'premium':'<rect x="2.5" y="7.5" width="19" height="10.5" rx="1.2"/><path d="M8.5 7.5v10.5"/><path d="m15.8 9.8.7 1.7 1.7.7-1.7.7-.7 1.7-.7-1.7-1.7-.7 1.7-.7z"/>',
+  'blister':'<rect x="3.5" y="5" width="5.4" height="13.5" rx=".9"/><rect x="9.3" y="5" width="5.4" height="13.5" rx=".9"/><rect x="15.1" y="5" width="5.4" height="13.5" rx=".9"/><rect x="8.7" y="8.4" width="6.6" height="8.4" rx=".8"/>',
+  'sleeved':'<rect x="7" y="3.5" width="10" height="17" rx="1"/><path d="M7 6.3h10"/><path d="M7 17.7h10"/><circle cx="12" cy="12" r="2.4"/>',
+  'tin':'<rect x="6.5" y="2.5" width="11" height="19" rx="3.5"/><path d="M6.5 8h11"/><path d="M9.4 4.6c-.5.3-1 .8-1.3 1.4"/>',
+};
+function hobbyIcon(type){
+  const t=String(type||'').toLowerCase();
+  const key = t.includes('booster box')||t.includes('display') ? 'booster box'
+    : (t.includes('etb')||t.includes('elite trainer')) ? 'etb'
+    : t.includes('bundle') ? 'bundle'
+    : (t.includes('premium')||t.includes('collection')) ? 'premium'
+    : t.includes('blister') ? 'blister'
+    : t.includes('sleeved') ? 'sleeved'
+    : t.includes('tin') ? 'tin' : null;
+  const inner = key ? HOBBY_ICONS[key] : '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>';
+  return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#CDCDD8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+}
 const HOBBY_GENERIC=['Booster Box','ETB','Booster Bundle','Premium Collection','3-Pack Blister','Mini Tin','Sleeved Booster'];
 function hobbyPickSet(si){ HOBBY.set=HOBBY.era.sets[si]; renderHobbyProducts(); window.scrollTo({top:0}); }
 function renderHobbyProducts(){
@@ -4244,7 +4266,7 @@ function renderHobbyProducts(){
     <div style="padding:14px 16px 18px">
       <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px"><span style="font-size:11.5px;font-weight:800">${esc(st.code)}</span><span style="font-size:10.5px;font-weight:600;color:#8A8A96">${esc(st.name||'')}</span></div>
       ${prods.map((p,pi)=>`<button class="hob-prod" onclick="hobbyPickProduct(${pi})">
-        <span style="display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);flex:0 0 auto"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#CDCDD8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>
+        <span style="display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);flex:0 0 auto">${hobbyIcon(p.type)}</span>
         <span style="flex:1;min-width:0;text-align:left;font-size:14px;font-weight:700">${esc(p.type)}</span>
         ${(p.retail!=null&&isFinite(p.retail))?`<span style="font-size:13px;font-weight:800;color:#8A8A96">$${Number(p.retail).toFixed(2)}</span>`:''}
       </button>`).join('')}
