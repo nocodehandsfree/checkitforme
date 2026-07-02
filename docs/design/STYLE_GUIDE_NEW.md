@@ -3,8 +3,8 @@
 The visual source of truth for the **elevated / soft-depth** skin on the website-takeover branch.
 Every spec here is extracted 1:1 from the approved master board in this folder:
 **`NEW_CHECK_COMPS.html`** (self-contained, open anywhere) / **`NEW_CHECK_COMPS.dc.html`** (source).
-Words are owned by `docs/design/COPY_STYLE_GUIDE.md`; the brand mark by
-`docs/design/LOGOS.md`. Where this guide and the older flat `STYLE_GUIDE.md`
+Words are owned by `docs/business/COPY_STYLE_GUIDE.md`; the brand mark by
+`docs/brand/CHECK_BRAND_STYLE_GUIDE.md`. Where this guide and the older flat `STYLE_GUIDE.md`
 disagree, **this one wins for the takeover surfaces**.
 
 ---
@@ -241,4 +241,4 @@ tile/banner 16 · poll/day key 11–14 · selection ring = inner + 2 · logo slo
 ---
 
 _Owned by Design. Screens: `NEW_CHECK_COMPS.html` (this folder). Words:
-`docs/design/COPY_STYLE_GUIDE.md`._
+`docs/business/COPY_STYLE_GUIDE.md`._
