@@ -29,7 +29,13 @@ agent's memory — any fresh session resumes by reading `MANIFEST.md` and contin
    MANIFEST.md with its fix count.
 5. **Exit only when two consecutive audit sweeps log ZERO fixes.** Then write the morning report at
    the top of MANIFEST.md: done / decided / blocked, and update `docs/handoffs/website.md`.
+6. **After exit, loop firings are no-ops:** if MANIFEST.md already shows the exit condition met,
+   reply exactly `LOOP COMPLETE` and do nothing. (The owner stops the /loop in the morning.)
 
 ## Morning (owner)
-Flip the preview switch on staging.checkitforme.com → walk the new design → feedback becomes new
-unchecked manifest items → re-run the same kickoff to burn them down.
+1. Stop the /loop → read the report at the top of MANIFEST.md.
+2. **Independent QA (separate chat, read-only):** QA walks the PREVIEW on staging.checkitforme.com
+   page by page against STYLE_GUIDE + brand + copy docs + this manifest — judging the RENDERED site,
+   never trusting Website's checkboxes. Output: findings list (page · element · which rule it violates).
+3. Owner triages QA findings + preview walk → accepted items become new unchecked manifest boxes →
+   re-run the same kickoff to burn them down. Repeat until QA comes back clean.
