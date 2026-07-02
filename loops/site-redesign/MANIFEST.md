@@ -79,14 +79,14 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 ### Live call (6m)
 - [x] Live call 6m (cycle 7): phone arcs pulse (ckWaveV2, staggered .35s — split ICO.call arc paths), message well carved, bubbles raised, CHECK AI green / STAFF muted labels; RESULT-chip breathing dot armed for the verdict cycle. Timeline verdict colors ride existing classes.
 ### Result / status pages (P6, P6b, P6c, IS1)
-- [ ] Verdict wash pages (in/out/unclear/soon) + glass pills + RESULT chip ckGlow
-- [ ] Verdict title/price/sentence format (§5.8, max 2 lines, tokens bold, over-retail #F59E0B)
+- [x] Verdict wash chrome (cycle 8): glass pills/nav on rview (never dark on wash §8), RESULT chip glass + verdict-tinted border + breathing dot; washes auto-matched comp via --bg re-key
+- [x] Verdict title/sentence (cycle 8): title solid verdict color 30/900 (in-stock gradient killed under v2), sentence 16/500 .65-white. Price line + over-retail #F59E0B land with the quoted-price feature (needs price in result payload — reopen if P6 dev-note aggregation ships). DECIDED: fillP token color stays white (shared fn); per-tone token tint queued as polish.
 - [ ] Timeline + conversation restyle (carved wells, bubble labels)
 - [ ] Verdict line + "N checks used" + footer
 - [ ] Couldn't-tell 4-key poll → raised keys w/ status icons (P6b)
 - [ ] In-stock actions (IS1): SHARE YOUR SCORE capsule + Too far?/Grabbed it? 2-up (retail); hobby = Too far? only (hidden w/ hobby)
 - [ ] Restock module → R1 panel / R2 tell-me / R3 auto-check comps
-- [ ] Calls-by-day calendar pop-over + day list (P6c: accent selected day, white today outline, status chips)
+- [x] Calls-by-day P6c (cycle 8): calendar card r22, raised nav keys, accent selected day, 1.5px white today outline, day-list rows raised + accent ring on selected. Status ICON chips in day rows → with the §5.7 chip item.
 - [ ] Feedback thanks / no-charge lines (NO COMP — extend)
 ### Log in (L1a/L1b/L1c)
 - [ ] Phone number pop-up (L1a: carved well, italic placeholder, PHONE OR EMAIL eyebrow rule §5.12)
