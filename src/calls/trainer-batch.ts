@@ -74,7 +74,7 @@ const hasRealPhone = (p?: string | null) => !!p && !p.startsWith("nophone:") && 
  *  national chain almost always has a 24h or west-coast location open at this hour. Score each store
  *  by openState (24h > real-hours-open > daytime-unknown) and dial the best; return null only if every
  *  callable store is genuinely closed (so the chain is skipped tonight, not wasted on a dead line). */
-export async function storeForChain(chainId: number, excludeIds?: number[]) {
+export async function storeForChain(chainId: number, excludeIds?: number[], daytimeOnly?: boolean) {
   let rows = await db.select().from(retailers)
     .where(and(eq(retailers.chainId, chainId), eq(retailers.active, true))).limit(4000);
   // Rotation (mapper): skip stores we already dialed this run — unless that would leave nothing.
@@ -84,8 +84,16 @@ export async function storeForChain(chainId: number, excludeIds?: number[]) {
     if (rest.length) rows = rest;
   }
   const now = new Date();
+  // Local hour in the store's timezone. Mapping needs a FRONT-STORE human: a "24h" pharmacy at 10pm
+  // routes to voicemail (live-observed), so daytimeOnly gates to 9:00–19:59 local — east coast first
+  // in the morning, west coast last at night, exactly the owner's dialing order.
+  const localHour = (tz: string | null) => {
+    try { return Number(new Intl.DateTimeFormat("en-US", { timeZone: tz || "America/Chicago", hour: "numeric", hour12: false }).format(now)); }
+    catch { return 12; }
+  };
   const score = (r: typeof rows[number]) => {
     if (!hasRealPhone(r.phone)) return -1;
+    if (daytimeOnly) { const h = localHour(r.timezone); if (h < 9 || h >= 20) return 0; }
     const st = openState(r.hours, r.timezone || "America/Chicago", now);
     if (st.label === "Open 24h") return 4;          // best: never a closed-store dead end
     if (st.open && st.known) return 3;               // real hours say open now (e.g. "till 12 AM")

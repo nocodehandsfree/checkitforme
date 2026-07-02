@@ -138,8 +138,10 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
       if (run.phase === "optimize" && !ex) { // nothing left to test → final lock below
         run.phase = "locked"; break;
       }
-      const store = await storeForChain(chainId, run.usedStores);
-      if (!store) { run.stopReason = "no open store to dial right now"; break; }
+      // Daytime gate: only dial stores where it's 9am–8pm LOCAL (a front-store human can exist).
+      // Naturally works east → west across the day, the owner's dialing order.
+      const store = await storeForChain(chainId, run.usedStores, true);
+      if (!store) { run.stopReason = "no store in local daytime hours right now — re-run when stores are open (mornings hit the east coast first)"; run.phase = run.baseline ? run.phase : "needs-review"; break; }
 
       // ---- place this attempt's call ----
       run.attempt++; run.callsToday = await bumpDaily(chainId);
