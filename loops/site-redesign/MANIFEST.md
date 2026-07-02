@@ -252,8 +252,15 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
 - [x] Lens F (verticals): rendered probe on all 4 brand paths — Map-key text, hero accent span, and
   capsule ring glow all derive exactly from each brand's --accent (FFCB05/E23636/E4002B/EC4899).
   Zero hardcoded yellow. (qa-e2e's per-brand accent/bg/badge checks continue every cycle.)
-### ROTATION 1 COMPLETE (A–F all run, fixes landed). Rotation 2 begins next firing: re-diff comp
-### fidelity with fresh eyes, tightest screens first — the loop NEVER self-exits; owner stops it.
+### ROTATION 1 COMPLETE (A–F all run, fixes landed). Rotation 2 in progress — the loop NEVER
+### self-exits; owner stops it.
+- [x] Rotation 2 pass 1: LIVE-CALL VIEW — the last never-rendered screen — forged through the real
+  state path (LIVE_STEPS w/ timings + LIVE_TR + fillLiveHeader + renderLiveMsg): green-ringed live
+  header w/ embossed store tile, green rail, **per-step seconds visible ('We've connected 13s' ·
+  'A person picked up 5s' · '4 steps · 24s' — the owner's requested feature)**, active step green,
+  CONVERSATION eyebrow + CHECK AI/STAFF live bubbles. Pulsing phone chip needs real call state —
+  blank in the forge (cycle-7 code verified; owner sees it on any staging call). PROOF: live-call-v2.png.
+  EVERY screen on the board now has a rendered proof.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
