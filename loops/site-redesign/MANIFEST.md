@@ -83,6 +83,7 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - Contact forms (kiosk/lead) · field eyebrow · comp: "PHONE OR EMAIL" · approved: current per-form labels
 - S2 switcher · mode key labels · comp/style-guide LOCKED: "Retail" / "Kiosk" · approved: "Check a store" / "Kiosks" (EN applied under v2 per design-lock; ES table untouched — needs ES rulings for Retail/Kiosk)
 - Footer · links row · comp: "Legal" (merges Terms+Privacy) · approved: separate "Terms" "Privacy" (not yet applied — queued with footer item)
+- Runnr RN1/RN2 · page footer · comp: "Powered by Fungibles · runner.fungibles.com" · approved: (none — line absent; live deal links use checkitforme.com/d/…) — needs Copy ruling on the attribution + domain
 
 ## CYCLES 0a/0b — benchmark harnesses
 - [x] 0a `scripts/qa-pages.sh` behavior benchmark: boot server on throwaway DB, fetch `/`,
@@ -134,7 +135,16 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   later in the cascade). Composer filepick's purple dashed border auto-healed by the P2 cycle's purple→green
   var re-key. PROOFS: proofs/SC1-empty-v2.png · SC2-feed-v2.png (stand-in logos as photos — they scale to the
   206px cap; real photos letterbox naturally).
-- [ ] RN1/RN2 exact · [ ] P1 home detail pass · [ ] P6/P6b/P6c detail pass
+- [x] RN1/RN2 exact (cycle): head = 32px raised ‹ circle + 19/800 title + 12/600 sub; job card raised r16 w/
+  CARVED 40px icon tile (was green-tint); step eyebrows 10/700/.15em, card titles 15/700, cards r16 comp
+  shadow; done node = 2px green ring, done connector solid green, idle connector .1-white; bonus stepper
+  25/800 + 38px keys; **primary CTAs rebuilt: solid green fills → green RING capsules w/ white tracked
+  labels** (comp); violet book-ride key → raised neutral (no purple under v2); paste box 12.5/500 #D9D9E0;
+  driver preview = deep-carved #141419 r15 panel, 9.5/700 tag, white #F4F4F6 pay key; stars 26/gap 10;
+  'Driver said no?' link unstyled-muted. Tokens added: #D9D9E0/#F4F4F6/#0B0B0F (comp-verbatim). COPY QUEUE +=
+  comp's 'Powered by Fungibles · runner.fungibles.com' footer (absent live; domain conflicts w/ approved
+  checkitforme.com/d links — Copy ruling needed). PROOFS: proofs/RN1-steps-v2.png · RN2-deal-v2.png.
+- [ ] P1 home detail pass · [ ] P6/P6b/P6c detail pass
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
