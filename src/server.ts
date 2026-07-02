@@ -822,30 +822,46 @@ app.get("/logo-wall", async (c) => {
 // ([logo] · code · name · release), data-driven from data/pokemon-sets.json (data-dev's catalog)
 // + the downloaded logos in public/logos/sets/. QA page only; no auth (public logos + set names).
 app.get("/logo-wall/sets", (c) => {
-  let cat: any = { eras: [] };
-  try { cat = JSON.parse(readFileSync(join(here, "../public/logos/sets/_catalog.json"), "utf8")); } catch { /* not built yet */ }
-  const eras = (cat.eras || []) as Array<{ era: string; short?: string; years?: string; sets: Array<{ code: string; name: string; release: string; logoFile: string | null; dom: string | null }> }>;
+  const nslug = (x: any) => String(x || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  // Asset lookup by set NAME (logos + dominant colour) from the full pokemontcg.io catalog — so
+  // logos/banners resolve no matter which data source drives the list.
+  const logoByName = new Map<string, string | null>();
+  let catalog: any = { eras: [] };
+  try {
+    catalog = JSON.parse(readFileSync(join(here, "../public/logos/sets/_catalog.json"), "utf8"));
+    for (const e of catalog.eras || []) for (const s of e.sets || []) logoByName.set(nslug(s.name), s.logoFile);
+  } catch { /* not built yet */ }
+  // Data source: prefer website-dev's expanded feed catalog (data/pokemon-sets.json) the moment it
+  // lands (13 eras / 129 sets, presentation-ordered); until then use the full pokemontcg.io catalog.
+  let cat: any = catalog;
+  try { const feed = JSON.parse(readFileSync(join(here, "../data/pokemon-sets.json"), "utf8")); if ((feed.eras || []).length >= 5) cat = feed; } catch { /* keep catalog */ }
+  const eras = (cat.eras || []) as Array<{ era: string; short?: string; years?: string; sets: Array<{ code: string; name: string; release: string; logoFile?: string | null }> }>;
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const fmt = (r: string) => { const m = /^(\d{4})[-/](\d{2})/.exec(r || ""); return m ? `${MON[+m[2] - 1]} ${m[1]}` : (r || "TBA"); };
-  // Mute the logo's dominant colour into a dark banner wash (each channel × 0.42).
-  // Real banner art lives in public/logos/sets/banners/<apiId>.<ext> — drop a file in and it renders.
+  const logoOf = (s: any) => s.logoFile || logoByName.get(nslug(s.name)) || null;
+  // Real banner key-art in public/logos/sets/banners/<name>.<ext>; else the shared Pokémon fallback.
   let bannerFiles = new Set<string>();
   try { bannerFiles = new Set(readdirSync(join(here, "../public/logos/sets/banners")).filter((f) => /\.(jpe?g|png|webp)$/i.test(f))); } catch { /* none yet */ }
-  const bannerFor = (s: any) => { const ks: string[] = []; if (s.code) ks.push(String(s.code).toLowerCase().replace(/[^a-z0-9]/g, "")); if (s.apiId) ks.push(String(s.apiId).toLowerCase().replace(/[^a-z0-9]/g, "")); for (const k of ks) for (const ext of ["jpg", "jpeg", "png", "webp"]) if (bannerFiles.has(k + "." + ext)) return k + "." + ext; return null; };
+  const bannerFor = (s: any) => { for (const k of [nslug(s.name), nslug(s.code), nslug(s.apiId)]) { if (!k) continue; for (const ext of ["jpeg", "jpg", "png", "webp"]) if (bannerFiles.has(k + "." + ext)) return k + "." + ext; } return null; };
+  const fallbackBanner = bannerFiles.has("_fallback.jpeg") ? "/logos/sets/banners/_fallback.jpeg" : null;
   const totalSets = eras.reduce((n, e) => n + e.sets.length, 0);
-  const withLogo = eras.reduce((n, e) => n + e.sets.filter((s) => s.logoFile).length, 0);
+  const withLogo = eras.reduce((n, e) => n + e.sets.filter((s) => logoOf(s)).length, 0);
+  const withBanner = eras.reduce((n, e) => n + e.sets.filter((s) => bannerFor(s)).length, 0);
   const def = Math.max(0, eras.length - 1); // newest era shown first
   const logoCard = (s: any) => {
-    const art = s.logoFile
-      ? `<div class="setart"><img src="/logos/sets/${s.logoFile}?v=2" alt="" loading="lazy"></div>`
+    const lf = logoOf(s);
+    const art = lf
+      ? `<div class="setart"><img src="/logos/sets/${lf}?v=2" alt="" loading="lazy"></div>`
       : `<div class="setart noimg"><span>${esc(s.name)}</span><small>logo coming soon</small></div>`;
     return `<div class="setcard">${art}<div class="setname">${esc(s.name)}</div><div class="setmeta">${esc(s.code)} · ${esc(fmt(s.release))}</div></div>`;
   };
   const bannerCard = (s: any) => {
     const bf = bannerFor(s);
-    if (!bf) return `<div class="banner noimg"><span>${esc(s.name)}</span><small>banner coming soon</small></div>`;
-    const logo = s.logoFile ? `<img class="blogo" src="/logos/sets/${s.logoFile}?v=2" alt="" loading="lazy">` : "";
-    return `<div class="banner"><img class="bart" src="/logos/sets/banners/${bf}" alt="" loading="lazy">${logo}<div class="bcap"><b>${esc(s.name)}</b><span>${esc(s.code)} · ${esc(fmt(s.release))}</span></div></div>`;
+    const art = bf ? `/logos/sets/banners/${bf}` : fallbackBanner;
+    if (!art) return `<div class="banner noimg"><span>${esc(s.name)}</span><small>banner coming soon</small></div>`;
+    const lf = logoOf(s);
+    const logo = lf ? `<img class="blogo" src="/logos/sets/${lf}?v=2" alt="" loading="lazy">` : "";
+    return `<div class="banner${bf ? "" : " fb"}"><img class="bart" src="${art}" alt="" loading="lazy">${logo}<div class="bcap"><b>${esc(s.name)}</b><span>${esc(s.code)} · ${esc(fmt(s.release))}</span></div></div>`;
   };
   const pills = eras.map((e, i) => `<button type="button" class="pill${i === def ? " on" : ""}" data-era="${i}">${esc(e.era)} <small>${e.sets.length}</small></button>`).join("");
   const sections = eras.map((e, i) => `<section class="era${i === def ? " on" : ""}" data-era="${i}"><h3 class="sech">Logos <small>${e.sets.length} sets</small></h3><div class="grid">${e.sets.map(logoCard).join("")}</div><h3 class="sech">Banners <small>enlarged logo · muted background</small></h3><div class="bgrid">${e.sets.map(bannerCard).join("")}</div></section>`).join("");
@@ -875,7 +891,8 @@ app.get("/logo-wall/sets", (c) => {
     .setmeta{font-size:12px;color:#8a8a98}
     .bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
     .banner{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.08);background:#0b0b11}
-    .bart{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.45) saturate(.95)}
+    .bart{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.4) saturate(.92)}
+    .banner.fb .bart{filter:brightness(.28) saturate(.55)}
     .blogo{position:relative;max-width:82%;max-height:66%;object-fit:contain;filter:drop-shadow(0 10px 26px rgba(0,0,0,.85))}
     .bcap{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:1px;padding:12px 12px 9px;background:linear-gradient(transparent,rgba(0,0,0,.82))}
     .bcap b{font-size:14px;font-weight:800} .bcap span{font-size:11px;color:#c9c9d4}
@@ -885,7 +902,7 @@ app.get("/logo-wall/sets", (c) => {
   <body>
   <div class="nav"><a href="/logo-wall">Store logos</a><a class="on" href="/logo-wall/sets">Pokémon sets</a></div>
   <h2>Pokémon sets · ${eras.length} eras · ${totalSets} sets</h2>
-  <div class="sub">${withLogo}/${totalSets} with official logos · Base Set → newest. Each era has a <b>Logos</b> section and a <b>Banners</b> section (enlarged logo on a muted background). Pick an era.</div>
+  <div class="sub">${withLogo}/${totalSets} logos · ${withBanner}/${totalSets} real banners (rest use the shared Pokémon fallback) · Base Set → newest. Each era has a <b>Logos</b> and a <b>Banners</b> section — banner = enlarged logo on the muted key art. Pick an era.</div>
   <div class="pills">${pills}</div>
   ${sections}
   <script>
