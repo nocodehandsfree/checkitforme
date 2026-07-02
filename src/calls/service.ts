@@ -28,6 +28,7 @@ import { config } from "../config";
 import { ElevenLabsProvider } from "../voice/elevenlabs";
 import { takeBridgeNav } from "../voice/bridge";
 import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
+import { connectAtSecFor } from "./recipe";
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
 import { getSetting, setSetting } from "../db/settings";
@@ -176,10 +177,11 @@ export async function buildRestockVars(
     // Bridge-level keypad shortcut (chain-wide): pressed by OUR code at a fixed time, not the LLM.
     dtmf: chain?.dtmfShortcut ?? null,
     say,
-    // ABC deterministic hand-off: open the billed agent at the chain's LEARNED time-to-human
-    // (chains.avgTreeSeconds, set from the locked recipe) instead of guessing from VAD. 0/null =
-    // no learned timer, so the bridge falls back to VAD + hold-timeout.
-    connectAtSec: chain?.avgTreeSeconds ?? null,
+    // ABC deterministic hand-off: open the billed agent at the chain's LEARNED time-to-human.
+    // Guarded (connectAtSecFor): direct-answer chains and chains with no tree evidence NEVER get a
+    // timer — the timer mutes the agent until it fires (the 2026-07-02 silent-agent bug). null =
+    // bridge falls back to VAD + hold-timeout.
+    connectAtSec: connectAtSecFor(chain),
     // Per-store talk cap (chains.maxTalkSeconds). Null = caller falls back to the global bail cap.
     maxTalk: chain?.maxTalkSeconds ?? null,
     // Workflow voice strip: rotates round-robin per call on this workflow's own counter (same pattern

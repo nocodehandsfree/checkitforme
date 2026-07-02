@@ -69,3 +69,21 @@ export function recipeToTreeText(r: Recipe): string {
 export function recipeAnswerPath(r: Recipe): string {
   return (r.steps || []).map((s) => `${s.action}:${s.value}`).join(">") || "";
 }
+
+/** ABC connect-timer guard: when (seconds after connect) to open the billed agent for a chain, or
+ *  null for "no timer" (bridge falls back to VAD + hold-timeout). The timer MUTES the agent until it
+ *  fires, so a DIRECT-answer chain must NEVER arm it — a human is on the line at pickup (the
+ *  2026-07-02 silent-agent bug: bogus avgTreeSeconds=19 on a navType:"direct" chain). Beyond that,
+ *  require actual tree evidence (nav type / recipe / keypad shortcut / learned IVR path) so a stray
+ *  avgTreeSeconds on an unmapped chain can't silence anyone. */
+export function connectAtSecFor(chain?: {
+  navType?: string | null; ringsDirect?: boolean | null; answerPath?: string | null;
+  navRecipe?: string | null; dtmfShortcut?: string | null; avgTreeSeconds?: number | null;
+} | null): number | null {
+  if (!chain) return null;
+  if (chain.navType === "direct" || chain.ringsDirect === true || chain.answerPath === "direct_human") return null;
+  const hasTree = chain.navType === "voice" || chain.navType === "keypad" || !!chain.navRecipe ||
+    !!chain.dtmfShortcut || chain.answerPath === "simple_ivr" || chain.answerPath === "deep_ivr";
+  const s = chain.avgTreeSeconds ?? 0;
+  return hasTree && s > 0 ? s : null;
+}

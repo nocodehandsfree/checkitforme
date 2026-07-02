@@ -1,6 +1,7 @@
 // Unit: recipe → live-call artifacts. Covers the press-TIMING logic that broke Big 5 (digits fired at a
-// flat 2s instead of the learned atSec). Pure functions, no DB.
-import { recipeToDtmf, recipeToVoice, isDirect, recipeAnswerPath } from "../src/calls/recipe";
+// flat 2s instead of the learned atSec), and the ABC connect-timer guard that silenced the agent 19s
+// on a direct-answer store (2026-07-02). Pure functions, no DB.
+import { recipeToDtmf, recipeToVoice, isDirect, recipeAnswerPath, connectAtSecFor } from "../src/calls/recipe";
 
 let fail = 0;
 const eq = (got: unknown, want: unknown, label: string) => {
@@ -27,6 +28,18 @@ eq(recipeToVoice({ steps: [{ action: "press", value: "0" }] }), "", "voice: empt
 
 // recipeAnswerPath — the compact signature used for verify/compare
 eq(recipeAnswerPath({ steps: [{ action: "press", value: "2" }, { action: "say", value: "front" }] }), "press:2>say:front", "answerPath: press>say");
+
+// connectAtSecFor — the ABC timer guard. THE 2026-07-02 bug: a direct-answer chain carried a bogus
+// avgTreeSeconds=19 and the timer muted the agent for 19s on a call a human answered instantly.
+eq(connectAtSecFor({ navType: "direct", avgTreeSeconds: 19 }), null, "timer: navType direct NEVER arms (the Fun-store bug)");
+eq(connectAtSecFor({ ringsDirect: true, avgTreeSeconds: 12 }), null, "timer: ringsDirect never arms");
+eq(connectAtSecFor({ answerPath: "direct_human", avgTreeSeconds: 8 }), null, "timer: answerPath direct_human never arms");
+eq(connectAtSecFor({ navType: "voice", avgTreeSeconds: 26 }), 26, "timer: voice-tree chain arms at the learned second");
+eq(connectAtSecFor({ dtmfShortcut: "0@4", avgTreeSeconds: 14 }), 14, "timer: keypad chain (dtmf) arms at the learned second");
+eq(connectAtSecFor({ answerPath: "simple_ivr", avgTreeSeconds: 11 }), 11, "timer: transcript-learned IVR chain arms (no recipe needed)");
+eq(connectAtSecFor({ avgTreeSeconds: 19 }), null, "timer: NO tree evidence -> never arms (garbage-data guard)");
+eq(connectAtSecFor({ navType: "voice", avgTreeSeconds: 0 }), null, "timer: zero/unset seconds -> no timer");
+eq(connectAtSecFor(undefined), null, "timer: no chain -> no timer");
 
 if (fail) { console.error(`recipe: ${fail} test(s) FAILED`); process.exit(1); }
 console.log("recipe: all passed");
