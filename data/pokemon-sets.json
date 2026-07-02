@@ -1,42 +1,201 @@
 {
-  "_note": "Pokémon TCG set reference for Check's series→set picker. era = top picker level, set = second level. Standalone catalog (NOT synced with DropsDB). Sourced 2026-06-30 from pokemon.com, CardCodex, Bulbapedia + the owner's drops_db.json. inDropsDb = already present in data/drops_db.json.",
-  "v": 1,
+  "v": 2,
+  "updated": "2026-07-02",
+  "_note": "CANONICAL Pokémon era/set registry for the Hobby picker. Owned by Data Dev; updated whenever a new set is announced or released (upcoming sets ship here early with their future release date, so the front end can badge or hide them). Serve path for the website: GET /pub/pokemon-sets (adds per-set product types + retail prices from the products catalog where we have them). Order is presentation-ready: eras newest→oldest, sets newest→oldest. Codes: modern eras use official set numbers (ME/SV/SWSH/SM/XY/BW/HGSS/PL/DP + .5 specials); pre-2007 sets use the community-standard abbreviations (BS, JU, FO, N1…, E1…, RS…). Release dates are US/English; day-level for modern sets, best-known for vintage (UI shows month-year). Verified 2026-07-02 vs TCGplayer set listings (ME01/ME2.5/ME03), pokemon.com, CardCodex.",
   "category": "Pokémon TCG",
   "eras": [
     {
-      "era": "Scarlet & Violet",
-      "code": "SV",
-      "years": "2023–2025",
+      "era": "Mega Evolution", "code": "ME", "years": "2025–2026",
       "sets": [
-        { "code": "SV01",   "name": "Scarlet & Violet",        "release": "2023-03-31", "kind": "main",    "inDropsDb": false },
-        { "code": "SV02",   "name": "Paldea Evolved",          "release": "2023-06-09", "kind": "main",    "inDropsDb": false },
-        { "code": "SV03",   "name": "Obsidian Flames",         "release": "2023-08-11", "kind": "main",    "inDropsDb": false },
-        { "code": "SV03.5", "name": "151",                     "release": "2023-09-22", "kind": "special", "inDropsDb": false },
-        { "code": "SV04",   "name": "Paradox Rift",            "release": "2023-11-03", "kind": "main",    "inDropsDb": false },
-        { "code": "SV04.5", "name": "Paldean Fates",           "release": "2024-01-26", "kind": "special", "inDropsDb": false },
-        { "code": "SV05",   "name": "Temporal Forces",         "release": "2024-03-22", "kind": "main",    "inDropsDb": false },
-        { "code": "SV06",   "name": "Twilight Masquerade",     "release": "2024-05-24", "kind": "main",    "inDropsDb": false },
-        { "code": "SV06.5", "name": "Shrouded Fable",          "release": "2024-08-02", "kind": "special", "inDropsDb": false },
-        { "code": "SV07",   "name": "Stellar Crown",           "release": "2024-09-13", "kind": "main",    "inDropsDb": true },
-        { "code": "SV08",   "name": "Surging Sparks",          "release": "2024-11-08", "kind": "main",    "inDropsDb": true },
-        { "code": "SV08.5", "name": "Prismatic Evolutions",    "release": "2025-01-17", "kind": "special", "inDropsDb": true },
-        { "code": "SV09",   "name": "Journey Together",        "release": "2025-03-28", "kind": "main",    "inDropsDb": true },
-        { "code": "SV10",   "name": "Destined Rivals",         "release": "2025-05-30", "kind": "main",    "inDropsDb": false },
-        { "code": "SV-BWF", "name": "Black Bolt & White Flare","release": "2025-06-06", "kind": "special", "inDropsDb": true }
+        { "code": "ME06",  "name": "Delta Reign",            "release": "2026-11-06", "kind": "main" },
+        { "code": "ME05",  "name": "Pitch Black",            "release": "2026-07-17", "kind": "main" },
+        { "code": "ME04",  "name": "Chaos Rising",           "release": "2026-05-22", "kind": "main" },
+        { "code": "ME03",  "name": "Perfect Order",          "release": "2026-03-13", "kind": "main" },
+        { "code": "ME2.5", "name": "Ascended Heroes",        "release": "2026-01-30", "kind": "special" },
+        { "code": "ME02",  "name": "Phantasmal Flames",      "release": "2025-11-14", "kind": "main" },
+        { "code": "ME01",  "name": "Mega Evolution",         "release": "2025-09-26", "kind": "main" }
       ]
     },
     {
-      "era": "Mega Evolution",
-      "code": "ME",
-      "years": "2025–2026",
+      "era": "Scarlet & Violet", "code": "SV", "years": "2023–2025",
       "sets": [
-        { "code": "ME01", "name": "Mega Evolution",            "release": "2025-09-26", "kind": "main",    "inDropsDb": true },
-        { "code": "ME02", "name": "Phantasmal Flames",         "release": "2025-11-14", "kind": "main",    "inDropsDb": true },
-        { "code": "ME03", "name": "Perfect Order",             "release": "2026-03-13", "kind": "main",    "inDropsDb": true },
-        { "code": "ME04", "name": "Chaos Rising",              "release": "2026-05-22", "kind": "main",    "inDropsDb": true },
-        { "code": "ME05", "name": "Pitch Black",               "release": "2026-07-17", "kind": "main",    "inDropsDb": true },
-        { "code": "ME06", "name": "Delta Reign",               "release": "2026-11-06", "kind": "main",    "inDropsDb": false },
-        { "code": "ME-FP", "name": "First Partner Collection 2026", "release": "2026", "kind": "special",  "inDropsDb": false }
+        { "code": "SV-BWF", "name": "Black Bolt & White Flare", "release": "2025-07-18", "kind": "special" },
+        { "code": "SV10",  "name": "Destined Rivals",        "release": "2025-05-30", "kind": "main" },
+        { "code": "SV09",  "name": "Journey Together",       "release": "2025-03-28", "kind": "main" },
+        { "code": "SV8.5", "name": "Prismatic Evolutions",   "release": "2025-01-17", "kind": "special" },
+        { "code": "SV08",  "name": "Surging Sparks",         "release": "2024-11-08", "kind": "main" },
+        { "code": "SV07",  "name": "Stellar Crown",          "release": "2024-09-13", "kind": "main" },
+        { "code": "SV6.5", "name": "Shrouded Fable",         "release": "2024-08-02", "kind": "special" },
+        { "code": "SV06",  "name": "Twilight Masquerade",    "release": "2024-05-24", "kind": "main" },
+        { "code": "SV05",  "name": "Temporal Forces",        "release": "2024-03-22", "kind": "main" },
+        { "code": "SV4.5", "name": "Paldean Fates",          "release": "2024-01-26", "kind": "special" },
+        { "code": "SV04",  "name": "Paradox Rift",           "release": "2023-11-03", "kind": "main" },
+        { "code": "SV3.5", "name": "151",                    "release": "2023-09-22", "kind": "special" },
+        { "code": "SV03",  "name": "Obsidian Flames",        "release": "2023-08-11", "kind": "main" },
+        { "code": "SV02",  "name": "Paldea Evolved",         "release": "2023-06-09", "kind": "main" },
+        { "code": "SV01",  "name": "Scarlet & Violet",       "release": "2023-03-31", "kind": "main" }
+      ]
+    },
+    {
+      "era": "Sword & Shield", "code": "SWSH", "years": "2020–2023",
+      "sets": [
+        { "code": "SWSH12.5", "name": "Crown Zenith",        "release": "2023-01-20", "kind": "special" },
+        { "code": "SWSH12", "name": "Silver Tempest",        "release": "2022-11-11", "kind": "main" },
+        { "code": "SWSH11", "name": "Lost Origin",           "release": "2022-09-09", "kind": "main" },
+        { "code": "SWSH10.5", "name": "Pokémon GO",          "release": "2022-07-01", "kind": "special" },
+        { "code": "SWSH10", "name": "Astral Radiance",       "release": "2022-05-27", "kind": "main" },
+        { "code": "SWSH09", "name": "Brilliant Stars",       "release": "2022-02-25", "kind": "main" },
+        { "code": "SWSH08", "name": "Fusion Strike",         "release": "2021-11-12", "kind": "main" },
+        { "code": "SWSH7.5", "name": "Celebrations",         "release": "2021-10-08", "kind": "special" },
+        { "code": "SWSH07", "name": "Evolving Skies",        "release": "2021-08-27", "kind": "main" },
+        { "code": "SWSH06", "name": "Chilling Reign",        "release": "2021-06-18", "kind": "main" },
+        { "code": "SWSH05", "name": "Battle Styles",         "release": "2021-03-19", "kind": "main" },
+        { "code": "SWSH4.5", "name": "Shining Fates",        "release": "2021-02-19", "kind": "special" },
+        { "code": "SWSH04", "name": "Vivid Voltage",         "release": "2020-11-13", "kind": "main" },
+        { "code": "SWSH3.5", "name": "Champion's Path",      "release": "2020-09-25", "kind": "special" },
+        { "code": "SWSH03", "name": "Darkness Ablaze",       "release": "2020-08-14", "kind": "main" },
+        { "code": "SWSH02", "name": "Rebel Clash",           "release": "2020-05-01", "kind": "main" },
+        { "code": "SWSH01", "name": "Sword & Shield",        "release": "2020-02-07", "kind": "main" }
+      ]
+    },
+    {
+      "era": "Sun & Moon", "code": "SM", "years": "2017–2019",
+      "sets": [
+        { "code": "SM12",  "name": "Cosmic Eclipse",         "release": "2019-11-01", "kind": "main" },
+        { "code": "SM11.5", "name": "Hidden Fates",          "release": "2019-08-23", "kind": "special" },
+        { "code": "SM11",  "name": "Unified Minds",          "release": "2019-08-02", "kind": "main" },
+        { "code": "SM10",  "name": "Unbroken Bonds",         "release": "2019-05-03", "kind": "main" },
+        { "code": "SM-DET", "name": "Detective Pikachu",     "release": "2019-03-29", "kind": "special" },
+        { "code": "SM09",  "name": "Team Up",                "release": "2019-02-01", "kind": "main" },
+        { "code": "SM08",  "name": "Lost Thunder",           "release": "2018-11-02", "kind": "main" },
+        { "code": "SM7.5", "name": "Dragon Majesty",         "release": "2018-09-07", "kind": "special" },
+        { "code": "SM07",  "name": "Celestial Storm",        "release": "2018-08-03", "kind": "main" },
+        { "code": "SM06",  "name": "Forbidden Light",        "release": "2018-05-04", "kind": "main" },
+        { "code": "SM05",  "name": "Ultra Prism",            "release": "2018-02-02", "kind": "main" },
+        { "code": "SM04",  "name": "Crimson Invasion",       "release": "2017-11-03", "kind": "main" },
+        { "code": "SM3.5", "name": "Shining Legends",        "release": "2017-10-06", "kind": "special" },
+        { "code": "SM03",  "name": "Burning Shadows",        "release": "2017-08-04", "kind": "main" },
+        { "code": "SM02",  "name": "Guardians Rising",       "release": "2017-05-05", "kind": "main" },
+        { "code": "SM01",  "name": "Sun & Moon",             "release": "2017-02-03", "kind": "main" }
+      ]
+    },
+    {
+      "era": "XY", "code": "XY", "years": "2014–2016",
+      "sets": [
+        { "code": "XY12",  "name": "Evolutions",             "release": "2016-11-02", "kind": "main" },
+        { "code": "XY11",  "name": "Steam Siege",            "release": "2016-08-03", "kind": "main" },
+        { "code": "XY10",  "name": "Fates Collide",          "release": "2016-05-02", "kind": "main" },
+        { "code": "XY-GEN", "name": "Generations",           "release": "2016-02-22", "kind": "special" },
+        { "code": "XY09",  "name": "BREAKpoint",             "release": "2016-02-03", "kind": "main" },
+        { "code": "XY08",  "name": "BREAKthrough",           "release": "2015-11-04", "kind": "main" },
+        { "code": "XY07",  "name": "Ancient Origins",        "release": "2015-08-12", "kind": "main" },
+        { "code": "XY06",  "name": "Roaring Skies",          "release": "2015-05-06", "kind": "main" },
+        { "code": "XY-DC", "name": "Double Crisis",          "release": "2015-03-25", "kind": "special" },
+        { "code": "XY05",  "name": "Primal Clash",           "release": "2015-02-04", "kind": "main" },
+        { "code": "XY04",  "name": "Phantom Forces",         "release": "2014-11-05", "kind": "main" },
+        { "code": "XY03",  "name": "Furious Fists",          "release": "2014-08-13", "kind": "main" },
+        { "code": "XY02",  "name": "Flashfire",              "release": "2014-05-07", "kind": "main" },
+        { "code": "XY01",  "name": "XY",                     "release": "2014-02-05", "kind": "main" },
+        { "code": "XY00",  "name": "Kalos Starter Set",      "release": "2013-11-08", "kind": "special" }
+      ]
+    },
+    {
+      "era": "Black & White", "code": "BW", "years": "2011–2013",
+      "sets": [
+        { "code": "BW11",  "name": "Legendary Treasures",    "release": "2013-11-06", "kind": "special" },
+        { "code": "BW10",  "name": "Plasma Blast",           "release": "2013-08-14", "kind": "main" },
+        { "code": "BW09",  "name": "Plasma Freeze",          "release": "2013-05-08", "kind": "main" },
+        { "code": "BW08",  "name": "Plasma Storm",           "release": "2013-02-06", "kind": "main" },
+        { "code": "BW07",  "name": "Boundaries Crossed",     "release": "2012-11-07", "kind": "main" },
+        { "code": "BW-DV", "name": "Dragon Vault",           "release": "2012-10-05", "kind": "special" },
+        { "code": "BW06",  "name": "Dragons Exalted",        "release": "2012-08-15", "kind": "main" },
+        { "code": "BW05",  "name": "Dark Explorers",         "release": "2012-05-09", "kind": "main" },
+        { "code": "BW04",  "name": "Next Destinies",         "release": "2012-02-08", "kind": "main" },
+        { "code": "BW03",  "name": "Noble Victories",        "release": "2011-11-16", "kind": "main" },
+        { "code": "BW02",  "name": "Emerging Powers",        "release": "2011-08-31", "kind": "main" },
+        { "code": "BW01",  "name": "Black & White",          "release": "2011-04-25", "kind": "main" }
+      ]
+    },
+    {
+      "era": "HeartGold & SoulSilver", "code": "HGSS", "years": "2010–2011",
+      "sets": [
+        { "code": "CL",    "name": "Call of Legends",        "release": "2011-02-09", "kind": "special" },
+        { "code": "HGSS04", "name": "Triumphant",            "release": "2010-11-03", "kind": "main" },
+        { "code": "HGSS03", "name": "Undaunted",             "release": "2010-08-18", "kind": "main" },
+        { "code": "HGSS02", "name": "Unleashed",             "release": "2010-05-12", "kind": "main" },
+        { "code": "HGSS01", "name": "HeartGold & SoulSilver", "release": "2010-02-10", "kind": "main" }
+      ]
+    },
+    {
+      "era": "Platinum", "code": "PL", "years": "2009–2010",
+      "sets": [
+        { "code": "PL04",  "name": "Arceus",                 "release": "2009-11-04", "kind": "main" },
+        { "code": "PL03",  "name": "Supreme Victors",        "release": "2009-08-19", "kind": "main" },
+        { "code": "PL02",  "name": "Rising Rivals",          "release": "2009-05-16", "kind": "main" },
+        { "code": "PL01",  "name": "Platinum",               "release": "2009-02-11", "kind": "main" }
+      ]
+    },
+    {
+      "era": "Diamond & Pearl", "code": "DP", "years": "2007–2009",
+      "sets": [
+        { "code": "DP07",  "name": "Stormfront",             "release": "2008-11-05", "kind": "main" },
+        { "code": "DP06",  "name": "Legends Awakened",       "release": "2008-08-20", "kind": "main" },
+        { "code": "DP05",  "name": "Majestic Dawn",          "release": "2008-05-21", "kind": "main" },
+        { "code": "DP04",  "name": "Great Encounters",       "release": "2008-02-13", "kind": "main" },
+        { "code": "DP03",  "name": "Secret Wonders",         "release": "2007-11-07", "kind": "main" },
+        { "code": "DP02",  "name": "Mysterious Treasures",   "release": "2007-08-22", "kind": "main" },
+        { "code": "DP01",  "name": "Diamond & Pearl",        "release": "2007-05-23", "kind": "main" }
+      ]
+    },
+    {
+      "era": "EX", "code": "EX", "years": "2003–2007",
+      "sets": [
+        { "code": "PK",    "name": "EX Power Keepers",       "release": "2007-02-14", "kind": "main" },
+        { "code": "DF",    "name": "EX Dragon Frontiers",    "release": "2006-11-08", "kind": "main" },
+        { "code": "CG",    "name": "EX Crystal Guardians",   "release": "2006-08-30", "kind": "main" },
+        { "code": "HP",    "name": "EX Holon Phantoms",      "release": "2006-05-03", "kind": "main" },
+        { "code": "LM",    "name": "EX Legend Maker",        "release": "2006-02-13", "kind": "main" },
+        { "code": "DS",    "name": "EX Delta Species",       "release": "2005-10-31", "kind": "main" },
+        { "code": "UF",    "name": "EX Unseen Forces",       "release": "2005-08-22", "kind": "main" },
+        { "code": "EM",    "name": "EX Emerald",             "release": "2005-05-09", "kind": "main" },
+        { "code": "DX",    "name": "EX Deoxys",              "release": "2005-02-14", "kind": "main" },
+        { "code": "TRR",   "name": "EX Team Rocket Returns", "release": "2004-11-08", "kind": "main" },
+        { "code": "FRLG",  "name": "EX FireRed & LeafGreen", "release": "2004-08-30", "kind": "main" },
+        { "code": "HL",    "name": "EX Hidden Legends",      "release": "2004-06-14", "kind": "main" },
+        { "code": "MA",    "name": "EX Team Magma vs Team Aqua", "release": "2004-03-15", "kind": "main" },
+        { "code": "DR",    "name": "EX Dragon",              "release": "2003-11-24", "kind": "main" },
+        { "code": "SS",    "name": "EX Sandstorm",           "release": "2003-09-18", "kind": "main" },
+        { "code": "RS",    "name": "EX Ruby & Sapphire",     "release": "2003-06-18", "kind": "main" }
+      ]
+    },
+    {
+      "era": "e-Card", "code": "E", "years": "2002–2003",
+      "sets": [
+        { "code": "E3",    "name": "Skyridge",               "release": "2003-05-12", "kind": "main" },
+        { "code": "E2",    "name": "Aquapolis",              "release": "2003-01-15", "kind": "main" },
+        { "code": "E1",    "name": "Expedition Base Set",    "release": "2002-09-15", "kind": "main" }
+      ]
+    },
+    {
+      "era": "Neo", "code": "N", "years": "2000–2002",
+      "sets": [
+        { "code": "LC",    "name": "Legendary Collection",   "release": "2002-05-24", "kind": "special" },
+        { "code": "N4",    "name": "Neo Destiny",            "release": "2002-02-28", "kind": "main" },
+        { "code": "N3",    "name": "Neo Revelation",         "release": "2001-09-21", "kind": "main" },
+        { "code": "N2",    "name": "Neo Discovery",          "release": "2001-06-01", "kind": "main" },
+        { "code": "N1",    "name": "Neo Genesis",            "release": "2000-12-16", "kind": "main" }
+      ]
+    },
+    {
+      "era": "Original Series", "code": "BS", "years": "1999–2000",
+      "sets": [
+        { "code": "G2",    "name": "Gym Challenge",          "release": "2000-10-16", "kind": "main" },
+        { "code": "G1",    "name": "Gym Heroes",             "release": "2000-08-14", "kind": "main" },
+        { "code": "TR",    "name": "Team Rocket",            "release": "2000-04-24", "kind": "main" },
+        { "code": "B2",    "name": "Base Set 2",             "release": "2000-02-24", "kind": "special" },
+        { "code": "FO",    "name": "Fossil",                 "release": "1999-10-10", "kind": "main" },
+        { "code": "JU",    "name": "Jungle",                 "release": "1999-06-16", "kind": "main" },
+        { "code": "BS",    "name": "Base Set",               "release": "1999-01-09", "kind": "main" }
       ]
     }
   ]

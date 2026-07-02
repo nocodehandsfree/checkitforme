@@ -1234,6 +1234,36 @@ function learnedShipDow(days: Record<string, number> | undefined, fallback: stri
   }
   return shipDow(fallback);
 }
+// ---- Canonical Pokémon era/set registry (the Hobby picker's data) ----
+// data/pokemon-sets.json is the source of truth: every era back to Base Set 1999, sets with official
+// codes + release dates, newest first (Data Dev keeps it current; upcoming sets ship early with future
+// dates so the front end can badge them). Serve-time we attach each set's known PRODUCT TYPES + retail
+// anchors from the products catalog (recent sets only) — one pull powers era → set → type. Sets with
+// no catalog rows return products: [] (front end falls back to generic types). Cached 5 min.
+let pokemonSetsCache: { t: number; v: unknown } | null = null;
+app.get("/pub/pokemon-sets", async (c) => {
+  if (pokemonSetsCache && Date.now() - pokemonSetsCache.t < 300_000) return c.json(pokemonSetsCache.v);
+  const file = JSON.parse(readFileSync(join(here, "../data/pokemon-sets.json"), "utf8")) as
+    { v: number; updated: string; category: string; eras: Array<{ era: string; code: string; years: string; sets: Array<Record<string, unknown>> }> };
+  // Catalog series names vary slightly from registry names ("Mega Evolution (base)", "Black Bolt/White
+  // Flare") — normalize both sides before matching.
+  const norm = (s: string) => s.toLowerCase().replace(/\s*\(base\)\s*/g, "").replace(/\s*\/\s*/g, " & ").trim();
+  const pokeCats = new Set([...(await categoryLabelMap()).entries()].filter(([, l]) => /pok/i.test(l)).map(([id]) => id));
+  const rows = (await db.select().from(products))
+    .filter((p) => p.active !== false && pokeCats.has(p.categoryId) && p.series && p.type && p.type !== "Single");
+  const bySet = new Map<string, Map<string, number | null>>();
+  for (const p of rows) {
+    const k = norm(p.series as string);
+    let m = bySet.get(k); if (!m) { m = new Map(); bySet.set(k, m); }
+    // one entry per type; keep the first real price seen (retailer copies share the same retail price)
+    if (!m.has(p.type as string) || (m.get(p.type as string) == null && p.msrp != null)) m.set(p.type as string, p.msrp ?? null);
+  }
+  const v = { ...file, eras: file.eras.map((e) => ({ ...e, sets: e.sets.map((s) => ({ ...s,
+    products: [...(bySet.get(norm(String(s.name))) ?? new Map<string, number | null>()).entries()].map(([type, retail]) => ({ type, retail })) })) })) };
+  pokemonSetsCache = { t: Date.now(), v };
+  return c.json(v);
+});
+
 // Product FORM ("how it's sold") classifier over the free-text productDetail we capture per call
 // (staff name it: "booster box", "Surging Sparks ETB", "3-pack blister"). The verdict extractor
 // already pulls form+set separately but persists only the combined label, so we re-derive the form

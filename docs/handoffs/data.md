@@ -55,6 +55,14 @@ shipment days, values, and the import structure. (You manage the *rows*; Admin b
     result, plus a "has it but wouldn't quote a price" state. Call scripts/workflows are added per store
     (`vt_store_workflows`), so a rotation of scripts that try to get the price can be dropped in now.
 
+## Standing duty: the Pokémon set registry
+`data/pokemon-sets.json` is the CANONICAL era/set registry (13 eras, 129 sets, Base Set 1999 → today;
+codes + release dates, newest first). The website pulls it at **`GET /pub/pokemon-sets`** (serve-time
+merge of each set's product types + retail anchors from the products catalog). **Whenever a new set is
+announced or released: add it here** (upcoming sets go in early with their future date so the front end
+can badge them), bump `updated`, push. Verified codes 2026-07-02 vs TCGplayer (ME2.5 = Ascended Heroes,
+ME03 = Perfect Order — the design grid had these mislabeled).
+
 ## Current focus (KEEP UPDATED)
 
 **Session 2026-07-02 — consumer surfaces show only what we KNOW (owner rule). Staging.**
