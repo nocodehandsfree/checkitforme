@@ -104,8 +104,8 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 **Rule for every box below: extract that screen's comp markup (COMP-EXTRACT.md) and rebuild the screen's
 v2 DOM to MIRROR it — layout, order, spacing, copy positions — not restyle the old markup. v2-gated
 renders (isV2() branches) so the default site stays untouched. One screen per cycle, screenshot proof.**
-- [~] 6m RESULT rebuilt in code (comp timeline: gradient rail + full-width STAFF/CHECK-AI cards + verdict line; comp section order; emoji circle gone) — screenshot proof vs comp still owed
-- [~] live-call rebuilt (shares the 6m timeline renderer; live state = green rail, no verdict) — screenshot proof owed
+- [x] 6m RESULT rebuilt in code (comp timeline: gradient rail + full-width STAFF/CHECK-AI cards + verdict line; comp section order; emoji circle gone) — proofed (see Proof backfill + watch 19)
+- [x] live-call rebuilt (shares the 6m timeline renderer; live state = green rail, no verdict) — proofed (rotation 2 pass 1, live-call-v2.png)
 - [x] P2 sheet exact (cycle): FOUND+FIXED a dead selector — the v2 capsule rule targeted `.cs-call` but the real
   class is `.csheet-call`, so the sheet CTA was still old-skin gold under v2. Now: accent ring capsule 14/24,
   tracked-caps label + waves-phone LEFT, arrow RIGHT (arrow exists in markup but display:none outside v2 —
@@ -377,6 +377,18 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   Invita a un amigo / Publica tu logro / Recibo de kiosco). All 10 hobby ES strings verified through
   the live t() layer (the sandbox feed flake blocked a full render — strings themselves resolve).
   PROOF: ES-6g-earn-v2.png. CLEAN.
+- [x] Watch 19: **6m FRAME EXTRACTED + DEEP-READ for the first time** — the OUT flagship had been built
+  from the P6 frame + owner findings; the board's own "Result · not in stock" frame (6m-frame.html) was
+  never element-diffed. Two comp specs were missing, both now live: (1) the **{store} token tints
+  #FF7B7B on the OUT verdict** ('Fun' red in the sentence) — fillP now takes the verdict tone (v2-only;
+  v1 stays white); this confirms the previously-queued "per-tone token tint" polish as actual comp spec.
+  (2) the timeline rail is a **3-stop gradient** — comp: #4ADE80 → #8a7a2a 60% → #EF4444; generalized
+  per-tone as `color-mix(in srgb,#4ADE80 35%,tone) 60%` so SOON gets an amber mid-stop the same way
+  (live/IN rails stay solid green). DECIDED: the verdict sentence keeps rgba(255,255,255,.72) (P6 frame
+  + rotation-2-pass-3 correction) though 6m shows .65 — the two comps disagree by .07 opacity; .72 reads
+  better over the toned wash. Computed-style probes: token rgb(255,123,123) ✓ sentence .72 ✓ rail
+  color-mix gradient ✓. PROOF: P6-out-v2.png (re-shot — red 'Fun' token, graded rail to red terminus).
+  All suites green (qa-e2e 46 · qa-pages 66 · qa-design 7 · tsc · test-all).
 - [x] Watch 18: **6g REBUILT to its frame** (deep-read follow-through): the lead line is the
   OVERLAPPING CARD replacing the stat tiles on this tab (restored on tab-away); earn items = 2-COL
   GRID of icon tiles (green icons, 14/700 + 11.5/600, reward-chip SLOT built — numbers stay OMITTED
@@ -393,13 +405,11 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   3b in PROMOTE.md's takeover section; do NOT touch before**. Staging carries watch-14/15 ES work;
   no upstream pushes. CLEAN.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
-- [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
-  NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
-  row → verdict title 30/900 → sentence w/ tokens → green shine capsule → timeline+convo → status icons.
-  Extract 6m markup fully, restructure showResult's v2 render. THE flagship screen.
-- [ ] **LIVE-CALL SCREEN STRUCTURAL** — same treatment for the in-call view (phone arcs hero, steps, bubbles).
-- [ ] **MY-CHECKS 6e–6i STRUCTURAL SCREENS** — owner: "doesn't look anything like the comps." Build the five
-  designed pop-up screens (overview/activity/earn/new-user/history) per comps — NOT "rides existing".
+- [x] **RESULT PAGE (6m) STRUCTURAL REBUILD** — done in the rebuild queue above (6m entry) + watch 19
+  frame deep-read (store-token tint, 3-stop rail). PROOFS: 6m backfill shots + P6-out-v2.png.
+- [x] **LIVE-CALL SCREEN STRUCTURAL** — done (rotation 2 pass 1; live-call-v2.png).
+- [x] **MY-CHECKS 6e–6i STRUCTURAL SCREENS** — done: 6e overview (account-family rebuild), 6f (watch 17),
+  6g (watch 18), 6i landing + 6h variants (proof backfill). PROOFS: 6e/6f/6g/6i shots.
 - [x] Account screen purple icons → accent (comp/§8: NO purple on account screens) — CSS pass; full 6e
   account layout lands with the structural item above.
 - [x] Scores strip "Show us the goods!" wrapping → one-line small (§8 no two-line lines); SC1-on-home

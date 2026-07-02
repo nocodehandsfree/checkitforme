@@ -3626,7 +3626,7 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
       return `<div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?esc(t('lbl.agent','CHECK AI').toUpperCase()):esc(t('lbl.assoc','STAFF').toUpperCase())}</div><div class="tx">${esc(m[2])}</div></div>`; }).join('');
     const vline=(status&&(status.term||status.title))?`<div style="margin-top:12px;font-size:15px;font-weight:800;color:${tone}">${esc(status.term||status.title)}</div>`:'';
     return `<div class="ctlv2">
-      <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80':tone} 100%)"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
+      <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80 100%':`color-mix(in srgb,#4ADE80 35%,${tone}) 60%,${tone} 100%`})"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
       <div style="flex:1;min-width:0">
         <details open><summary><span style="font-size:15px;font-weight:700">${t('step.ringing','Ringing the store…')}</span><span style="font-size:13px;font-weight:600;color:#8A8A96">${n} ${n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''} ⌃</span></summary>
           <div class="ctlv2-steps">${stepEls}</div>
@@ -4046,8 +4046,10 @@ async function sendFeedback(v){
 function nl2(s){ return String(s==null?'':s).replace(/([.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡])/g,'$1<br>'); }
 // Registry/owner-written notes can use a {product} token — we fill it with the live product name (bolded),
 // so the owner writes the message in Admin and it still reads "…check if Pokémon was in stock…".
-function fillP(s,o){ try{ const oc=(o&&Array.isArray(o.cats)&&o.cats[0])||(o&&o.category)||''; // the CALL's own saved category — beats a generic 'it' when the picker state isn't loaded (deep link / server-history reopen)
-  const pn=esc((o&&o.productName)||catLabel()||oc||'it'); const sn=esc((o&&o.storeName)||(SEL_STORE&&SEL_STORE.name)||'the store'); const cn=esc(catLabel()||oc||'it'); const dy=esc((o&&o.shipmentDay)?fmtShipDay(o.shipmentDay):'soon'); return String(s==null?'':s).replace(/\{product\}/g,'<b style="color:#fff">'+pn+'</b>').replace(/\{store\}/g,'<b style="color:#fff">'+sn+'</b>').replace(/\{category\}/g,'<b style="color:#fff">'+cn+'</b>').replace(/\{day\}/g,'<b style="color:#fff">'+dy+'</b>'); }catch(e){ return String(s==null?'':s); } }
+function fillP(s,o,tn){ try{ const oc=(o&&Array.isArray(o.cats)&&o.cats[0])||(o&&o.category)||''; // the CALL's own saved category — beats a generic 'it' when the picker state isn't loaded (deep link / server-history reopen)
+  // 6m comp: on the OUT verdict the {store} token tints red ('Fun' in #FF7B7B) — v2 only; v1 stays white.
+  const sc=(typeof isV2==='function'&&isV2()&&tn==='out')?'#FF7B7B':'#fff';
+  const pn=esc((o&&o.productName)||catLabel()||oc||'it'); const sn=esc((o&&o.storeName)||(SEL_STORE&&SEL_STORE.name)||'the store'); const cn=esc(catLabel()||oc||'it'); const dy=esc((o&&o.shipmentDay)?fmtShipDay(o.shipmentDay):'soon'); return String(s==null?'':s).replace(/\{product\}/g,'<b style="color:#fff">'+pn+'</b>').replace(/\{store\}/g,'<b style="color:'+sc+'">'+sn+'</b>').replace(/\{category\}/g,'<b style="color:#fff">'+cn+'</b>').replace(/\{day\}/g,'<b style="color:#fff">'+dy+'</b>'); }catch(e){ return String(s==null?'':s); } }
 function showResult(o, cid){
   resultCacheSet(cid,o);
   { const _r=$('result'); if(_r) _r.classList.remove('r-play'); } // clear the entrance trigger before every (re)render — the block below re-arms it only on the content-ready render
@@ -4266,7 +4268,7 @@ function showResult(o, cid){
       <div class="rnav" id="rnav"></div>
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
       <div class="rtitle2">${esc(showFeedback ? t('v.unclear2','Couldn’t tell') : vTitle)}</div>
-      ${note?`<div class="rsub">${nl2(fillP(note,o))}</div>`:''}
+      ${note?`<div class="rsub">${nl2(fillP(note,o,cls))}</div>`:''}
       ${breakdown}
     </div>
     ${feedbackBlock}
