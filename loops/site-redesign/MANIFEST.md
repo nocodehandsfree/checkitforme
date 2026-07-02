@@ -98,7 +98,9 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 **Rule for every box below: extract that screen's comp markup (COMP-EXTRACT.md) and rebuild the screen's
 v2 DOM to MIRROR it — layout, order, spacing, copy positions — not restyle the old markup. v2-gated
 renders (isV2() branches) so the default site stays untouched. One screen per cycle, screenshot proof.**
-- [ ] 6m RESULT rebuild · [ ] live-call rebuild · [ ] P2 sheet exact (store head, 'costs 1 check' line, capsule)
+- [~] 6m RESULT rebuilt in code (comp timeline: gradient rail + full-width STAFF/CHECK-AI cards + verdict line; comp section order; emoji circle gone) — screenshot proof vs comp still owed
+- [~] live-call rebuilt (shares the 6m timeline renderer; live state = green rail, no verdict) — screenshot proof owed
+- [ ] P2 sheet exact (store head, 'costs 1 check' line, capsule)
 - [ ] L1a/L1b/L1c login pop-ups exact · [ ] 6a upsell · [ ] 6b plans · [ ] 6c checkout · [ ] 6d you're-in
 - [ ] 6e overview · [ ] 6f activity · [ ] 6g earn · [ ] 6h new-user · [ ] 6i history
 - [ ] R1/R2/R3 restock exact · [ ] SC1/SC2 exact · [ ] RN1/RN2 exact · [ ] P1 home detail pass · [ ] P6/P6b/P6c detail pass

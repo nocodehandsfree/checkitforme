@@ -1222,6 +1222,32 @@ html[data-skin="v2"] .stat,html[data-skin="v2"] .credline,html[data-skin="v2"] .
 html[data-skin="v2"] .smchip,html[data-skin="v2"] .upmod-h .t .pchip,html[data-skin="v2"] .smwarn{border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
 html[data-skin="v2"] .acctav,html[data-skin="v2"] .ighead .av,html[data-skin="v2"] .callhead .ci{border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
 html[data-skin="v2"] .acctrow .chev,html[data-skin="v2"] .scoretile img{border:0}
+/* 6m RESULT REBUILD — comp structure. Section order via flex order (markup untouched, behaviors keep
+   their nodes): title block → poll (unclear) → CHECK ANOTHER STORE capsule → timeline+convo → in-stock
+   actions → restock → checks-used → footer. The big emoji verdict circle is NOT in the comp — gone. */
+html[data-skin="v2"] #result{display:flex;flex-direction:column}
+html[data-skin="v2"] #result>.rverdict{order:0}
+html[data-skin="v2"] #result>.fbk{order:1}
+html[data-skin="v2"] #result>.topcta{order:2}
+html[data-skin="v2"] #result>.callsec{order:3}
+html[data-skin="v2"] #result>*{order:4}
+html[data-skin="v2"] #result>.upmod{order:5}
+html[data-skin="v2"] #result>.foot{order:6}
+html[data-skin="v2"] .vmark{display:none}
+/* Comp timeline: left rail (green dot → gradient line → verdict dot) + full-width labeled cards. */
+html[data-skin="v2"] .ctlv2{display:flex;gap:14px;margin-top:10px}
+html[data-skin="v2"] .ctlv2-rail{width:12px;display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+html[data-skin="v2"] .ctlv2-rail .d1{width:10px;height:10px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px rgba(74,222,128,.6);flex-shrink:0}
+html[data-skin="v2"] .ctlv2-rail .ln{flex:1;width:2px}
+html[data-skin="v2"] .ctlv2-rail .d2{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+html[data-skin="v2"] .ctlv2 details>summary{display:flex;align-items:baseline;justify-content:space-between;list-style:none;cursor:pointer}
+html[data-skin="v2"] .ctlv2 details>summary::-webkit-details-marker{display:none}
+html[data-skin="v2"] .ctlv2-steps{margin-top:10px;display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:500;color:#5C5C68}
+html[data-skin="v2"] .ctlv2-steps .cur{color:#4ADE80;font-weight:700}
+html[data-skin="v2"] .ctlv2-bub{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:12px 15px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+html[data-skin="v2"] .ctlv2-bub .who{font-size:10px;font-weight:700;letter-spacing:.13em;color:#8A8A96}
+html[data-skin="v2"] .ctlv2-bub.ai .who{color:#4ADE80}
+html[data-skin="v2"] .ctlv2-bub .tx{margin-top:4px;font-size:15px;font-weight:500;color:rgba(255,255,255,.85)}
 /* ROUND 2 — OWNER SCREENSHOT FIXES */
 /* Account screen (§3/§8): the icon set is ALL accent — no purple on account screens, ever. */
 html[data-skin="v2"] .acctrow>svg *[stroke]:not([stroke="none"]){stroke:var(--accent,#FFCB05)}
@@ -3297,6 +3323,37 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
   const reached = human.length>0 || (n>0 && steps[n-1].n>=6);
   // Steps list — DROP the first "Calling {store}…" step (the roll-up header carries it, so the store
   // name shows ONCE). Greyed text, no dots; the final connection step turns green ✓ when we got a person.
+  if(isV2()){
+    // 6m comp structure: left gradient rail; steps under a collapsible "Ringing the store… · N steps"
+    // header; CONVERSATION eyebrow; FULL-WIDTH labeled cards (STAFF muted / CHECK AI green); the
+    // verdict line closes the block. Same node ids (#convo_body) so translate/repaints keep working.
+    const TONE={in:'#4ADE80',out:'#EF4444',unk:'#FBBF24',soon:'#F59E0B'};
+    const tone=TONE[(status&&status.cls)||'unk']||'#FBBF24';
+    const live=finalElapsed==null&&!(status&&status.title);
+    const stepEls=steps.slice(1).map((s,idx)=>{
+      const realI=idx+1; let secs=null;
+      if(realI<n-1){ if(steps[realI+1].at>s.at) secs=Math.round(steps[realI+1].at-s.at); }
+      else if(finalElapsed!=null&&s.at>0&&finalElapsed>s.at) secs=Math.round(finalElapsed-s.at);
+      const last=realI===n-1;
+      return `<span class="${last?'cur':''}">${esc(liveStageLabel(s.n)||s.label)}${secs!=null?` <span style="color:#5C5C68;font-weight:600;font-size:12.5px">${secs}s</span>`:''}</span>`;
+    }).join('');
+    const totalS=finalElapsed!=null?Math.round(finalElapsed):(n>0?Math.round(steps[n-1].at):0);
+    const bubs=human.map(l=>{ const m=l.match(/^(Agent|Clerk):\s*(.*)$/); if(!m) return '';
+      const ai=m[1]==='Agent';
+      return `<div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?esc(t('lbl.agent','CHECK AI').toUpperCase()):esc(t('lbl.assoc','STAFF').toUpperCase())}</div><div class="tx">${esc(m[2])}</div></div>`; }).join('');
+    const vline=(status&&(status.term||status.title))?`<div style="margin-top:12px;font-size:15px;font-weight:800;color:${tone}">${esc(status.term||status.title)}</div>`:'';
+    return `<div class="ctlv2">
+      <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80':tone} 100%)"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
+      <div style="flex:1;min-width:0">
+        <details open><summary><span style="font-size:15px;font-weight:700">${t('step.ringing','Ringing the store…')}</span><span style="font-size:13px;font-weight:600;color:#8A8A96">${n} ${n===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''} ⌃</span></summary>
+          <div class="ctlv2-steps">${stepEls}</div>
+        </details>
+        ${human.length?`<div style="margin-top:18px;font-size:11px;font-weight:700;letter-spacing:.15em;color:rgba(255,255,255,.5)">${esc(t('res.conversation','Conversation').toUpperCase())}</div>`:''}
+        <div id="convo_body" style="margin-top:10px;display:flex;flex-direction:column;gap:9px">${bubs||(finalElapsed==null?`<div class="cs-wait">${t('live.waitperson','Reaching a person…')}</div>`:'')}</div>
+        ${vline}
+      </div>
+    </div>`;
+  }
   const stepRows = steps.slice(1).map((s,idx)=>{
     const realI=idx+1; let secs=null; // seconds this step took (real timings only — derived steps are all at:0)
     if(realI<n-1){ if(steps[realI+1].at>s.at) secs=Math.round(steps[realI+1].at-s.at); }
