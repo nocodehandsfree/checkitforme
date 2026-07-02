@@ -440,6 +440,37 @@ app.get("/logos/:file", (c) => {
     return c.body(buf, 200, { "Content-Type": ct });
   } catch { return c.notFound(); }
 });
+// Pokémon set assets — same repo/logo-wall system as chains, dropped by the logo lane at the exact
+// paths /pub/pokemon-sets derives from each set code: set logo -> /logos/sets/<logoKey>.png, set
+// banner -> /logos/set-banners/<logoKey>.png, era logo -> /logos/eras/<era-slug>.png. All PNG. A
+// missing set banner falls back to the shared Pokémon banner (_fallback.png) so a card never shows a
+// broken image; a missing logo 404s so the front end renders its own text fallback.
+app.get("/logos/sets/:file", (c) => {
+  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
+  try {
+    const buf = readFileSync(join(here, `../public/logos/sets/${file}`));
+    c.header("Cache-Control", "public, max-age=86400");
+    return c.body(buf, 200, { "Content-Type": "image/png" });
+  } catch { return c.notFound(); }
+});
+app.get("/logos/eras/:file", (c) => {
+  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
+  try {
+    const buf = readFileSync(join(here, `../public/logos/eras/${file}`));
+    c.header("Cache-Control", "public, max-age=86400");
+    return c.body(buf, 200, { "Content-Type": "image/png" });
+  } catch { return c.notFound(); }
+});
+app.get("/logos/set-banners/:file", (c) => {
+  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
+  const send = (rel: string) => {
+    const buf = readFileSync(join(here, `../public/logos/set-banners/${rel}`));
+    c.header("Cache-Control", "public, max-age=86400");
+    return c.body(buf, 200, { "Content-Type": "image/png" });
+  };
+  try { return send(file); }
+  catch { try { return send("_fallback.png"); } catch { return c.notFound(); } }
+});
 app.get("/robots.txt", (c) => {
   const host = (c.req.header("host") || "").toLowerCase();
   return c.text(`User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /app/\nDisallow: /pub/\nSitemap: https://${host}/sitemap.xml\n`);
