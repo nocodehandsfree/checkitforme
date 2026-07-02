@@ -71,11 +71,11 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - [x] Best-bet row (cycle 5): green selection ring + soft glow via .store:has(.besttag)
 - [x] Map chrome (cycle 5): Map/List toggle = accent gradient pill; legend = raised pill
 - [x] Store-types pre-location overview: covered by base card/row tokens (NO COMP — no bespoke chrome needed)
-- [ ] Empty/far states ("not in your area yet" waitlist) (NO COMP — extend)
+- [x] Empty/far states: ride card/CTA/system tokens (NO COMP — no bespoke chrome)
 - [x] Kiosk tab (cycle 5): rows/hint ride the same row-card + well system; S2 kiosk key done in cycle 2
 ### Call sheet (P2)
-- [ ] Store-picked bottom sheet: grabber, category chips, specific-product field, call CTA capsule (accent ring "CHECK THIS STORE")
-- [ ] Pre-call gates (last-call reminder / 24h confirm) → pop-up spec §5.11 (NO COMP — extend)
+- [x] Call sheet P2 (cycle 6): big-card sheet (radius 28 top, 40×5 grabber), raised keys, chips light green when on, call CTA = accent-ring capsule w/ tracked caps (CSS uppercase — copy string unchanged). Green-ring capsule = all primary .cta.
+- [x] Pre-call gates + all overlays (cycle 6): pop-ups = big card r26 over rgba(5,6,9,.66) dim, no grabbers
 ### Live call (6m)
 - [ ] Live view: phone icon ckWave arcs, step timeline (2px line, 3 dots), streaming bubbles (STAFF muted/CHECK AI green labels), Stop & hang up (owner/comp only)
 ### Result / status pages (P6, P6b, P6c, IS1)

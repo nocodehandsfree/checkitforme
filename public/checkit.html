@@ -1101,6 +1101,20 @@ html[data-skin="v2"] .store:has(.besttag){background:#23232A;box-shadow:0 0 0 2p
 /* Map chrome: Map/List toggle = accent pill (§3); legend = raised pill (glassless — it sits on the card). */
 html[data-skin="v2"] .maptgl{background:linear-gradient(180deg,#FFE066 0%,#FFCB05 100%);color:#26251E;border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.35)}
 html[data-skin="v2"] .maplegend{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
+/* Capsule CTAs (§5.2): 2.5px gradient ring around a dark capsule, tracked-caps label. Green ring =
+   primary; the CALL action inside the sheet takes the accent ring (P2 "CHECK THIS STORE"). */
+html[data-skin="v2"] .cta{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#4ADE80;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 28px -8px rgba(25,177,69,.45)}
+html[data-skin="v2"] .csheet .cta,html[data-skin="v2"] .cs-call{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#FFE066 0%,#FFCB05 55%,#8A6D00 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#FFCB05;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 28px -8px rgba(255,203,5,.4)}
+/* Bottom sheet (P2/§5.11): big-card surface, top radius 28, 40×5 grabber; keys raised. */
+html[data-skin="v2"] .csheet{background:#26262B;border:0;border-radius:28px 28px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7)}
+html[data-skin="v2"] .csheet-handle{width:40px;height:5px;background:rgba(255,255,255,.22)}
+html[data-skin="v2"] .cs-key{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);animation:none}
+/* Option chips (§5.12): raised buttons that LIGHT UP green when on — never carved form fields. */
+html[data-skin="v2"] .chip{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;color:#CDCDD8;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+html[data-skin="v2"] .chip.sel{color:#4ADE80;background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1),0 0 14px rgba(74,222,128,.25)}
+/* Pop-ups (§5.11): big card radius 26 over the dim, no grabber, no border. */
+html[data-skin="v2"] .overlay{background:rgba(5,6,9,.66)}
+html[data-skin="v2"] .modal{background:#26262B;border:0;border-radius:26px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 /*V2END*/</style>
 </head>
 <body>
