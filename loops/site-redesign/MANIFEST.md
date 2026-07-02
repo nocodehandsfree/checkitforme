@@ -347,6 +347,9 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
 - [x] Watch 8 (mirror of watch 7's bug class): every v2 deep link probed against the DEFAULT skin —
   flow=hobby, show=signup/paid/mychecks, and the post-payment paid=1 hook (waited past its 3.2s timer):
   **V1 FULLY SEALED, zero leaks.** Seal encoded as a permanent qa-e2e check (now 45). CLEAN.
+- [x] Watch 9: CONSOLE-ERROR sweep (never run) — all 8 brand×skin combos load with ZERO console/page
+  errors. Page-weight telemetry: 525KB raw / **154KB gzipped** carrying BOTH skins (post-takeover CSS
+  fold-in in PROMOTE.md will shrink it). CLEAN.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
