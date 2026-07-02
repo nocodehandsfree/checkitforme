@@ -246,8 +246,14 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   DRAFTS FLAGGED FOR COPY RATIFICATION — see COPY QUEUE. Render-verified in ES: hobby '¿Qué estás
   cazando?', account 'Resumen/Actividad/Gana', 'Mejorar · desde $9.99/mes'. Duplicate cs.costs deduped.
   PROOFS: ES-hobby-v2.png · ES-account-v2.png. Lens D full-flow sweep can now run clean next rotation.
-- [ ] Lens E: spacing — margins/gaps/paddings vs comp numbers
-- [ ] Lens F: per-vertical accents on all 4 brand paths
+- [x] Lens E (spacing): 12 computed-style probes vs comp numbers across P1 (card 16/16/20, S2 5/2,
+  capsule 14/24), P2 (sheet 10/22, head 13, CTA 14/24), 6b (grid 8, cycle 8/16, tiles 14×16/10), 6e
+  (stats -28, tabs 16/18, wash). **11/12 exact; ONE delta fixed: 6e wash top pad 14→10 (comp).**
+- [x] Lens F (verticals): rendered probe on all 4 brand paths — Map-key text, hero accent span, and
+  capsule ring glow all derive exactly from each brand's --accent (FFCB05/E23636/E4002B/EC4899).
+  Zero hardcoded yellow. (qa-e2e's per-brand accent/bg/badge checks continue every cycle.)
+### ROTATION 1 COMPLETE (A–F all run, fixes landed). Rotation 2 begins next firing: re-diff comp
+### fidelity with fresh eyes, tightest screens first — the loop NEVER self-exits; owner stops it.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
