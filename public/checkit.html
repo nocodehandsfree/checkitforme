@@ -1232,9 +1232,29 @@ html[data-skin="v2"] #auth_send,html[data-skin="v2"] #auth_verify{background:lin
 html[data-skin="v2"] .modal:has(#auth_err:not(:empty)) div:has(> #auth_phone){box-shadow:inset 0 2px 6px rgba(0,0,0,.45),0 0 0 2px #EF4444;border-radius:14px}
 html[data-skin="v2"] .modal:has(#auth_codeerr:not(:empty)) div:has(> #auth_code),html[data-skin="v2"] .modal:has(#auth_codeerr:not(:empty)) input#auth_code:not([style*="transparent"]){box-shadow:inset 0 2px 6px rgba(0,0,0,.45),0 0 0 2px #EF4444;border-radius:14px}
 html[data-skin="v2"] .modal a{text-decoration:underline dashed rgba(74,222,128,.55);text-underline-offset:4px}
-/* Scores (SC1/SC2/§5.15): dashed carved empty panel; Post = accent gradient pill w/ dark text. */
-html[data-skin="v2"] .emptybox{border:1.5px dashed rgba(255,255,255,.13);background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
-html[data-skin="v2"] .postbtn{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.35)}
+/* Scores SC1 EXACTNESS: bar title 21/900/-.5; Post = accent gradient pill (dark text stays the
+   per-vertical #26251E DECIDED token); empty panel r22 carved+dashed, 42/20 pad, 17/800 + 13/600. */
+html[data-skin="v2"] .scoresbar .t{font-size:21px;font-weight:900;letter-spacing:-.5px}
+html[data-skin="v2"] .emptybox{border:1.5px dashed rgba(255,255,255,.13);background:#1B1B20;box-shadow:inset 0 2px 8px rgba(0,0,0,.45);border-radius:22px;padding:42px 20px}
+html[data-skin="v2"] .emptybox .eb-t{font-size:17px;font-weight:800;color:#FFF;margin-top:8px}
+html[data-skin="v2"] .emptybox .eb-s{font-size:13px;font-weight:600;color:#8A8A96;margin-top:5px}
+html[data-skin="v2"] .postbtn{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;box-shadow:0 10px 22px -8px color-mix(in srgb,var(--accent,#FFCB05) 50%,transparent),inset 0 1px 0 rgba(255,255,255,.4);padding:9px 16px;border-radius:999px;font-size:13px;font-weight:800}
+/* SC2 feed EXACTNESS: each post = ONE raised card r18 (header/letterbox/foot inside, overflow
+   hidden); 38px embossed initials tile; photo letterboxed on #17171C, contained w/ drop-shadow. */
+html[data-skin="v2"] .igfeed{gap:12px}
+html[data-skin="v2"] .igpost{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:18px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);overflow:hidden}
+html[data-skin="v2"] .ighead{padding:12px 13px 9px}
+html[data-skin="v2"] .ighead .av{border-radius:11px;background:linear-gradient(145deg,#34343D,#23232B);border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4)}
+html[data-skin="v2"] .ighead .av .mono{font-size:10px;font-weight:900;color:#CDCDD8;letter-spacing:.04em}
+html[data-skin="v2"] .ighead .hdl{font-size:13.5px;font-weight:700}
+html[data-skin="v2"] .ighead .loc{font-size:11px;font-weight:600;color:#8A8A96}
+html[data-skin="v2"] .ighead .ago{font-size:11px;font-weight:600;color:#5C5C68}
+html[data-skin="v2"] .igimgwrap{border:0;border-radius:0;background:#17171C;height:230px;display:flex;align-items:center;justify-content:center}
+html[data-skin="v2"] .igimgwrap img{max-height:206px;max-width:80%;width:auto;object-fit:contain;filter:drop-shadow(0 12px 20px rgba(0,0,0,.55))}
+html[data-skin="v2"] .igactions{padding:12px 13px 0}
+html[data-skin="v2"] .iglike{font-size:13px;font-weight:700;color:#8A8A96}
+html[data-skin="v2"] .iglike.liked{color:#FF7B7B}
+html[data-skin="v2"] .igcap{padding:7px 13px 14px;font-size:13px;font-weight:500;color:rgba(255,255,255,.85)}
 /* Runnr (RN1/RN2/§5.16): 30px nodes, 2px connector, halo on the active node; step cards raised,
    idle steps at half opacity; bonus stepper = carved well + raised keys. */
 html[data-skin="v2"] .ho-node{width:30px;height:30px;border:0;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);color:#8A8A96}
@@ -1267,7 +1287,8 @@ html[data-skin="v2"] .kioskhint{border:0;box-shadow:inset 0 1px 0 rgba(255,255,2
 /* AUDIT SWEEP 2 — remaining v1 borders/fills, grouped by role. Raised = interactive chrome;
    carved = wells/tracks; tinted chips keep their tint but drop the hairline. */
 html[data-skin="v2"] .findbtn,html[data-skin="v2"] .findbtn-primary,html[data-skin="v2"] .tbtn,html[data-skin="v2"] .demotab,html[data-skin="v2"] .vswitch,html[data-skin="v2"] .sharetile,html[data-skin="v2"] .oauthtile,html[data-skin="v2"] .acctrow,html[data-skin="v2"] .acctout,html[data-skin="v2"] .modrow,html[data-skin="v2"] .callkey,html[data-skin="v2"] .smbtn.ghost{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
-html[data-skin="v2"] .stat,html[data-skin="v2"] .credline,html[data-skin="v2"] .demoverdict,html[data-skin="v2"] .tickcopy,html[data-skin="v2"] .igimgwrap{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+html[data-skin="v2"] .stat,html[data-skin="v2"] .credline,html[data-skin="v2"] .demoverdict,html[data-skin="v2"] .tickcopy{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+/* (.igimgwrap left this group — SC2 gives it its own letterbox treatment below) */
 html[data-skin="v2"] .smchip,html[data-skin="v2"] .upmod-h .t .pchip,html[data-skin="v2"] .smwarn{border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
 html[data-skin="v2"] .acctav,html[data-skin="v2"] .ighead .av,html[data-skin="v2"] .callhead .ci{border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
 html[data-skin="v2"] .acctrow .chev,html[data-skin="v2"] .scoretile img{border:0}

@@ -124,7 +124,17 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   watch form has no label today — never invent copy). PROOFS: proofs/R1-module-v2.png · R2-watch-v2.png ·
   R3-schedule-v2.png (proof harness renders with a fallback font — wraps in shots are font-load artifacts,
   not chrome; real pages load Inter).
-- [ ] SC1/SC2 exact · [ ] RN1/RN2 exact · [ ] P1 home detail pass · [ ] P6/P6b/P6c detail pass
+- [x] SC1/SC2 exact (cycle): SC1 — bar title 21/900/-.5, Post pill = accent gradient w/ camera + accent-tinted
+  glow (dark text stays the per-vertical #26251E DECIDED token vs comp's Pokémon-only #3A2C00), empty panel
+  r22 carved+dashed 42/20 w/ 17/800 + 13/600 lines. SC2 — each post rebuilt as ONE raised r18 card (header/
+  letterbox/foot inside, overflow hidden): 38px embossed initials tile 10/900 #CDCDD8, handle 13.5/700 +
+  muted store, location 11/600 #8A8A96, ago #5C5C68, photo LETTERBOXED on #17171C (230px, img contained
+  206px/80% + drop-shadow — was full-bleed cover), heart 13/700 #8A8A96 (liked #FF7B7B), caption 13/500
+  .85-white, feed gap 12. **.igimgwrap pulled OUT of sweep-2's carved group** (would've fought the letterbox
+  later in the cascade). Composer filepick's purple dashed border auto-healed by the P2 cycle's purple→green
+  var re-key. PROOFS: proofs/SC1-empty-v2.png · SC2-feed-v2.png (stand-in logos as photos — they scale to the
+  206px cap; real photos letterbox naturally).
+- [ ] RN1/RN2 exact · [ ] P1 home detail pass · [ ] P6/P6b/P6c detail pass
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
