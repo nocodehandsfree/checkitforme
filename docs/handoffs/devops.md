@@ -62,9 +62,13 @@ Admin lane. DevOps takes dev work only when the owner assigns it. Kickoff prompt
   `design/ADMIN_UI_AUDIT.md` + `design/COPY_CHANGES_APPROVED.md` to git history **when their rounds
   finish**; slim `handoffs/data.md` (2.8k words → ~700, spec content → DATA_PROVENANCE/store-data-schema,
   coordinate with Data); propose merging the 5 design/copy style docs → 2 (coordinate with Design/Copy).
-- [ ] Security pre-launch: rotate leaked keys (RAILWAY_API_TOKEN pasted in chats, GITHUB_PAT, TiDB pw);
-  fix transcript IDOR (`/pub/result/:cid` + `/pub/live/:cid` are unauthenticated); set
-  STRIPE_WEBHOOK_SECRET on staging (missing; prod has it). Boot gate + rate limiting verified solid.
+- [~] Transcript IDOR: backend shipped 2026-07-01 (`canReadTranscript` + `flags.transcriptAuth`, off).
+  Waiting on Website to send the Bearer header (note filed in website.md) → then flip the flag on.
+- [ ] Security pre-PUBLIC hardening (owner: rotate at launch, not now): rotate leaked keys
+  (RAILWAY_API_TOKEN, GITHUB_PAT, TiDB pw), STRIPE_WEBHOOK_SECRET on staging, verify PostHog.
+  Boot gate + rate limiting verified solid. Details in ROADMAP → Security.
+- [x] Staging call policy set per owner (2026-07-01): `connectOnHuman:true`,
+  `bail:{enabled:true, ringMaxSeconds:20, holdMaxSeconds:25}` (ivr 90 / maxCall 300 kept as safety nets).
 - [x] **Envs live.** staging `…pagiis` → staging.checkitforme.com (dev); prod `…OcyMS` → checkitforme.com (promote by merge).
 - [x] **ABC (connect-on-human) restored** — `policy.flags.connectOnHuman` + `bail.enabled` re-enabled in prod
   (a DB wipe had reset them to code defaults; that's the whole cost lever — Charlie only bills the human).

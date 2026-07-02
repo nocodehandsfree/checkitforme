@@ -10,7 +10,8 @@ import { db } from "../db/client";
 import { chains } from "../db/schema";
 import { eq } from "drizzle-orm";
 
-const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
+// Twilio webhooks must come back to THIS service — staging maps from staging, prod from prod.
+const RAILWAY_HOST = config.staging.on ? "voice-caller-staging-production.up.railway.app" : "voice-caller-production-2d6b.up.railway.app";
 // MAPPING model — drives tree DISCOVERY only (the learner). Cost is irrelevant here (map once); at
 // SCALE live calls replay the LOCKED keypad recipe (deterministic DTMF, no model). We WANT a smarter
 // model for mapping accuracy, but gemini-2.5-flash was returning 503s (overloaded) and stalling the
@@ -56,6 +57,10 @@ export interface NavSession {
   //  • redirect ("that's the X dept, let me transfer you") → wrong desk; capture where + hang up.
   confirm?: { product: string; asked?: boolean; askedAtSec?: number };
   confirmResult?: "answered" | "redirect"; redirectTo?: string;
+  // LISTEN-FIRST (mapping stage 1): hear the menu out before acting; flips off once a prompt repeats.
+  listenFirst?: boolean; heard?: string[];
+  // Confirm ask pre-synthesized in the workflow's ElevenLabs voice (Branson) — Polly is the fallback.
+  askAudio?: Buffer; askText?: string;
   lastActTurn?: number; escaped?: boolean; routingSeen?: boolean; autoZeros?: number; persisted?: boolean;
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
@@ -147,11 +152,47 @@ function reachHuman(s: NavSession, atSec: number, id: string): string {
   s.humanAtSec = atSec;
   if (s.confirm && !s.confirm.asked) {
     s.confirm.asked = true; s.confirm.askedAtSec = atSec;
-    const q = `Hi! Real quick — do you have any ${s.confirm.product} in stock right now?`;
+    const q = s.askText || `Hi! Real quick — do you have any ${s.confirm.product} in stock right now?`;
     s.steps.push({ who: "us", text: `asked: "${q}"`, atSec, action: "say", value: q });
-    return twiml(`<Say voice="Polly.Joanna">${esc(q)}</Say>${gather(id)}`); // wait for their answer
+    // Speak in the workflow's own voice when the synth is ready; otherwise the stock phone voice.
+    const speak = s.askAudio ? `<Play>https://${RAILWAY_HOST}/nav/ask-audio?session=${id}</Play>` : `<Say voice="Polly.Joanna">${esc(q)}</Say>`;
+    return twiml(`${speak}${gather(id)}`); // wait for their answer
   }
   finish(s, "human"); return twiml(`<Hangup/>`);
+}
+
+/** Serve the pre-synthesized confirm-ask mp3 (Twilio <Play> fetches this mid-call). */
+export function navAskAudio(id: string): Buffer | null { return sessions.get(id)?.askAudio || null; }
+
+/** Pre-synthesize the confirm ask in an ElevenLabs voice so the HUMAN hears Branson, not a robot.
+ *  Best-effort: on any failure the session keeps askAudio unset and reachHuman falls back to Polly. */
+async function synthAsk(s: NavSession, voiceId: string, text: string): Promise<void> {
+  try {
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_64`, {
+      method: "POST",
+      headers: { "xi-api-key": config.voice.apiKey, "content-type": "application/json" },
+      body: JSON.stringify({ text, model_id: "eleven_turbo_v2", voice_settings: { stability: 0.4, similarity_boost: 0.85 } }),
+    });
+    if (r.ok) s.askAudio = Buffer.from(await r.arrayBuffer());
+    else console.error("[navigator] synthAsk", r.status, (await r.text()).slice(0, 120));
+  } catch (e) { console.error("[navigator] synthAsk", e); }
+}
+
+/** The ask used at every mapping human: the DEFAULT workflow's first opener in ITS voice (Branson
+ *  global), {category} → "Pokémon cards". Falls back to the stock question + the default voice. */
+export async function defaultWorkflowAsk(): Promise<{ text: string; voiceId: string }> {
+  const fallback = { text: "Hi! Real quick — do you have any Pokémon cards in stock right now?", voiceId: config.voice.defaultVoiceId };
+  try {
+    const [wfsRaw, defName] = await Promise.all([getSetting("vt_workflows"), getSetting("vt_default_workflow")]);
+    const wfs = JSON.parse(wfsRaw || "[]") as Array<{ name?: string; voiceId?: string; openers?: unknown[] }>;
+    const wf = wfs.find((w) => w && w.name === (defName || "")) || null;
+    if (!wf) return fallback;
+    const opener = Array.isArray(wf.openers) && wf.openers.length ? String(wf.openers[0]) : "";
+    return {
+      text: (opener || fallback.text).replace(/\{category\}/g, "Pokémon cards"),
+      voiceId: (wf.voiceId && String(wf.voiceId)) || config.voice.defaultVoiceId,
+    };
+  } catch { return fallback; }
 }
 
 /** One navigation turn — Twilio posts what the store said; we decide and return the next TwiML. */
@@ -182,7 +223,28 @@ export async function navStep(id: string, speech: string): Promise<string> {
   // already excludes "press N" menus + long recordings, so it won't trip on an opening IVR. Map mode →
   // hang up instantly; confirm mode → ask the one stock question.
   if (speech && looksLikeLivePerson(speech)) return reachHuman(s, atSec, id);
+  // FAST-FAIL on after-hours / voicemail funnels (live-observed: closed CVS pharmacy at night presses
+  // toward "leave a message… name and date of birth"). No human exists down this branch — hang up NOW
+  // instead of burning 100+ seconds hammering 0 into a mailbox.
+  const CLOSED_RE = /(pharmacy|store|we) (is|are) (currently |now )?closed|connect(ing)? you to (our|the) voicemail|leave (a |your )?(message|voicemail)|voicemail box|record (a |your )?message|providing your name,? (and )?date of birth|after[- ]hours|call back during (regular|normal|business)|our (business )?hours are/i;
+  if (speech && CLOSED_RE.test(speech)) { finish(s, "failed"); return twiml(`<Hangup/>`); }
   s.status = "navigating";
+  // LISTEN-FIRST (mapping call 1): hear the menu out before acting — capture every prompt; the moment
+  // a prompt REPEATS (the menu looped, we've heard it all), or after 4 prompts / 50s, flip to acting
+  // mode and navigate on this SAME call. A live person still short-circuits above, so a direct-answer
+  // store never sits in silence.
+  if (s.listenFirst) {
+    const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim().slice(0, 80);
+    if (speech && speech.trim()) {
+      s.heard = s.heard || [];
+      const n = norm(speech);
+      const repeated = !!n && s.heard.some((h) => h === n || (n.length > 25 && h.startsWith(n.slice(0, 25))));
+      s.heard.push(n);
+      if (repeated || s.heard.length >= 4 || atSec > 50) s.listenFirst = false; // heard enough → act NOW (fall through to decide)
+      else return twiml(gather(id)); // keep listening
+    } else if (atSec > 50) s.listenFirst = false;
+    else return twiml(gather(id));
+  }
   // REACTIVE PRESS: the human way — wait until we HEAR a prompt, then press the digit; repeat for the
   // first `max` prompts (e.g. 0 after Spanish, 0 after the next, 0 after the next), then listen for the
   // person. Synced to the actual prompts, so ring-time/store differences don't throw the timing off.
@@ -293,15 +355,17 @@ async function recordConfirmAsked(chainId: number, retailerId: number): Promise<
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string }): Promise<{ id?: string; error?: string }> {
   if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined };
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText };
   sessions.set(id, session);
+  // Synthesize the ask in the workflow voice NOW (fire-and-forget) — ready long before any human is.
+  if (confirm && extra?.askVoiceId) void synthAsk(session, extra.askVoiceId, extra.askText || `Hi! Real quick — do you have any ${confirm.product} in stock right now?`);
   const body = new URLSearchParams({
     To: e164(phone), From: from,
     Url: `https://${RAILWAY_HOST}/nav/twiml?session=${id}`,

@@ -988,7 +988,17 @@
           <div id="set_mapping" class="meta" style="margin-top:2px">—</div>
           <div class="row" style="gap:8px;margin-top:16px;flex-wrap:wrap">
             <button class="act" id="set_mapbtn" onclick="setMapChain()">Map</button>
-            <span class="meta" data-tip="One real call. The navigator works the menu to a human, records the recipe + time, then you Lock it." style="align-self:center"></span>
+            <button class="ghost" id="set_maploop" onclick="mapperStart()">Map until locked</button>
+            <button class="ghost" id="set_mapstop" onclick="mapperStop()" style="display:none">Stop</button>
+            <span class="meta" data-tip="Map = one call. Map until locked = keeps calling on its own (listen → reach a human → speed the path up) until the fastest safe path is locked. Rotates stores, ~75s between calls, 12-call daily cap, every human hears the real Pokémon-cards ask in the workflow voice." style="align-self:center"></span>
+          </div>
+          <div class="card" id="mapper_live" style="display:none;border-color:var(--tint-purple-border);margin-top:12px">
+            <div class="row" style="justify-content:space-between;align-items:center">
+              <div class="name" id="mapper_phase">—</div>
+              <div class="meta" id="mapper_meta">—</div>
+            </div>
+            <div class="meta" id="mapper_bench" style="margin-top:6px"></div>
+            <div id="mapper_log" style="margin-top:10px;display:flex;flex-direction:column;gap:5px;max-height:260px;overflow:auto"></div>
           </div>
           <div class="card" id="tr_live" style="display:none;border-color:var(--green);margin-top:12px">
             <div class="row" style="justify-content:space-between;align-items:center">
@@ -1282,6 +1292,47 @@ async function loadRuns(chainId, box){
       <div style="padding:2px 11px 10px">${mx||'<div class="meta" style="padding:6px 0">no steps recorded</div>'}</div>
     </details>`;
   }).join('');
+}
+// ---- Mapper: "Map until locked" — the auto-continue loop. Start it, then this panel narrates every
+// attempt (phase, experiment, win/unsafe) live until the fastest safe path is locked. ----
+let MAPPER_POLL=null;
+async function mapperStart(){
+  const chainId=Number((document.getElementById('set_chain')||{}).value||0);
+  if(!chainId){ toast('Pick a chain first'); return; }
+  const nm=(document.querySelector('#set_picker .pickrow.on b')||{}).textContent||'this chain';
+  if(!confirm('Map '+nm+' until locked?\n\nPlaces REAL calls on its own (~75s apart, 12/day cap), rotating stores, until the fastest path to a human is locked. Every human hears the real Pokémon-cards ask.')) return;
+  const r=await api('/api/admin/mapper/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chainId})});
+  if(r&&r.started){ toast('Mapping until locked'); mapperPollStart(); }
+  else toast((r&&r.error)?('Mapper: '+r.error):'Could not start the mapper');
+}
+async function mapperStop(){
+  const chainId=Number((document.getElementById('set_chain')||{}).value||0);
+  const r=await api('/api/admin/mapper/stop',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chainId})});
+  toast((r&&r.ok)?'Stopping after the current call':'Nothing running for this chain');
+}
+function mapperPollStart(){ clearInterval(MAPPER_POLL); MAPPER_POLL=setInterval(mapperPoll,3000); mapperPoll(); }
+async function mapperPoll(){
+  const box=document.getElementById('mapper_live'); if(!box){ clearInterval(MAPPER_POLL); return; }
+  const chainId=Number((document.getElementById('set_chain')||{}).value||0); if(!chainId) return;
+  const d=await api('/api/admin/mapper/state'); const run=((d&&d.runs)||[]).find(x=>x.chainId===chainId);
+  const stopBtn=document.getElementById('set_mapstop'), loopBtn=document.getElementById('set_maploop');
+  if(!run){ box.style.display='none'; if(stopBtn)stopBtn.style.display='none'; if(loopBtn)loopBtn.disabled=false; return; }
+  box.style.display='';
+  if(stopBtn) stopBtn.style.display=run.running?'':'none';
+  if(loopBtn) loopBtn.disabled=!!run.running;
+  const PHASE={listen:'Listening to the menu',baseline:'Finding a path to a human','optimize':'Speeding the path up',locked:'Locked ✓','needs-review':'Needs your eyes',stopped:'Stopped'};
+  document.getElementById('mapper_phase').textContent=PHASE[run.phase]||run.phase;
+  document.getElementById('mapper_meta').textContent='call '+run.attempt+' · '+run.callsToday+'/12 today'+(run.running?'':' · done');
+  const best=run.best&&run.best.seconds!=null?run.best.seconds+'s':'—';
+  const bench=run.benchmark!=null?run.benchmark+'s':'—';
+  document.getElementById('mapper_bench').innerHTML='Before: <b>'+bench+'</b> to a human · best now: <b style="color:var(--green)">'+best+'</b>'+(run.stopReason?' · '+esch(run.stopReason):'');
+  document.getElementById('mapper_log').innerHTML=(run.log||[]).slice().reverse().map(a=>
+    `<div style="display:grid;grid-template-columns:34px 1fr auto;gap:8px;font-size:12.5px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      <span class="meta">#${a.n}</span>
+      <span style="color:#cfcfe0;overflow-wrap:anywhere">${esch(a.store)}${a.experiment?(' · '+esch(a.experiment)):''} — ${esch(a.outcome)}</span>
+      <span style="font-weight:700;color:var(--text-strong);white-space:nowrap">${a.seconds!=null?a.seconds+'s':''}</span></div>`
+  ).join('')||'<div class="meta">Dialing the first call…</div>';
+  if(!run.running) clearInterval(MAPPER_POLL);
 }
 async function trDocument(chainId,name,opts){
   opts=opts||{};
@@ -2431,6 +2482,7 @@ function pickChainRow(id){
   if(sel){ if(![...sel.options].some(o=>o.value===String(id))) sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(''); sel.value=String(id); }
   document.querySelectorAll('#set_picker .pickrow').forEach(r=>r.classList.toggle('on', r.getAttribute('data-id')===String(id)));
   setPickChain();
+  if(typeof mapperPollStart==='function') mapperPollStart(); // show a live mapper run for this chain, if any
 }
 // Store Data: store FACTS (chain fields) — its OWN Save (isMSRP / stock-check confidence / sell methods).
 function ssRenderData(){
@@ -2829,7 +2881,11 @@ function vmark(emoji,tc,size){
     '🚚':`<rect x="2.5" y="7.5" width="11" height="8" rx="1"/><path d="M13.5 9.5h3.8l3.2 3.2v2.8h-7z"/><circle cx="6.4" cy="17.6" r="1.7"/><circle cx="16.6" cy="17.6" r="1.7"/>`,
     '·':`<circle cx="12" cy="12" r="2.6" fill="${col}" stroke="none"/>`,
   };
-  return G[emoji]?W(G[emoji]):`<span style="font-size:${Math.round(size*.85)}px">${emoji}</span>`;
+  if(G[emoji]) return W(G[emoji]);
+  // Statuses may store a Lucide icon NAME (the Statuses-page picker: "pause", "mic-off", "store"…) —
+  // draw it in the verdict color instead of printing the name as text.
+  const lu=(typeof lucideSvg==='function'&&typeof LUCIDE!=='undefined'&&LUCIDE[emoji])?`<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">${LUCIDE[emoji]}</svg>`:'';
+  return lu||`<span style="font-size:${Math.round(size*.85)}px">${emoji}</span>`;
 }
 // Resolve the registry status key for a call row: the persisted verdict when present, else a
 // best-effort re-derive from the stored fields (mirrors elevenlabs.ts) so legacy/history rows that

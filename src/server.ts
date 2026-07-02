@@ -26,7 +26,8 @@ import { getPolicy, setPolicy, publicPolicy } from "./policy";
 import { importStores, backfillRegions } from "./stores-import";
 import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
-import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores } from "./calls/navigator";
+import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
+import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, type Recipe } from "./calls/recipe";
 import { llm } from "./llm";
@@ -497,6 +498,12 @@ app.post("/nav/step", async (c) => {
   return c.body(await navStep(id, speech), 200, { "Content-Type": "text/xml" });
 });
 app.post("/nav/ended", (c) => { navEnded(c.req.query("session") || ""); return c.body("ok", 200); });
+// The confirm-ask mp3 in the workflow's voice (Branson) — Twilio <Play> fetches this mid-call.
+app.get("/nav/ask-audio", (c) => {
+  const b = navAskAudio(c.req.query("session") || "");
+  if (!b) return c.body("not found", 404);
+  return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
+});
 
 // ---- Health ----
 app.get("/api/health", (c) => c.json({ ok: true }));
@@ -1035,7 +1042,10 @@ app.get("/pub/stores/near", async (c) => {
       return { id: r.id, chainId: r.chainId, name: r.name, location: r.location, address: r.address || null, storeType: (r.chainId && types.get(r.chainId)) || "Other",
         ...((l) => ({ logoUrl: l.url, logoWide: l.wide, logoDark: l.dark }))(chainLogoInfo(chainName)),
         carries: storeCarriesList(chainName, r.carries),
-        lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
+        // shipmentDay is deliberately NOT sent to consumers: it's unverified (auto-learned, junk values
+        // like "every single week" rendered as "drops eve"). It returns confidence-gated once a store
+        // has 2+ confirmed calls agreeing (learnedShipDow). Admin surfaces still see it via /api paths.
+        lat: r.lat, lng: r.lng, region: r.region, state: r.state,
         sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
         tier: r.hasKiosk === true ? 5 : (r.tier ?? null), inStock: confirmedSet.has(r.id), // any kiosk store = tier 5; inStock = brand-check pin
         callable: callable(r), ownerOnly: r.ownerOnly === true, // ownerOnly → client shows it regardless of radius
@@ -2106,8 +2116,23 @@ app.post("/pub/check-live", async (c) => {
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
 });
+// Transcript privacy (flags.transcriptAuth): a call placed by a signed-in finder is readable only by
+// that finder (phone-session Bearer token) or the admin. Anonymous calls stay readable by cid — the
+// cid was only ever handed to the caller's own browser. Flag OFF = today's open behavior, so the
+// consumer UI can start sending the token before enforcement flips on.
+async function canReadTranscript(c: { req: { header: (n: string) => string | undefined; raw: Request } }, cid: string): Promise<boolean> {
+  if (!(await getPolicy()).flags.transcriptAuth) return true;
+  const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
+  if (!row?.finderUserId) return true;
+  if (config.adminToken && c.req.header("x-admin-token") === config.adminToken) return true;
+  const cookie = (c.req.header("cookie") || "").match(/(?:^|;\s*)admin_session=([^;]+)/)?.[1];
+  if (cookie) { const s = await verifySession(decodeURIComponent(cookie)); if (s?.id === "admin") return true; }
+  const u = await verifyClerkToken(c.req.header("authorization"));
+  return !!u && u.id === row.finderUserId;
+}
 app.get("/pub/result/:cid", async (c) => {
   const cid = c.req.param("cid");
+  if (!(await canReadTranscript(c, cid))) return c.json({ error: "unauthorized" }, 401);
   if (config.staging.on && isSimId(cid)) return c.json(simResult(cid)); // preview: simulated verdict
   const o = await provider.getConversation(cid);
   // Prefer the FINALIZED row once it exists — it carries the consensus verdict (the reconciled
@@ -2152,6 +2177,7 @@ app.get("/pub/result/:cid", async (c) => {
 });
 // Live, mid-call transcript: returns whatever the agent + clerk have said SO FAR (no audio needed).
 app.get("/pub/live/:cid", async (c) => {
+  if (!(await canReadTranscript(c, c.req.param("cid")))) return c.json({ error: "unauthorized" }, 401);
   if (config.staging.on && isSimId(c.req.param("cid"))) return c.json(simLive(c.req.param("cid"))); // preview: simulated live transcript
   try {
     const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${c.req.param("cid")}`, { headers: { "xi-api-key": config.voice.apiKey } });
@@ -3560,6 +3586,16 @@ app.post("/api/admin/trainer/batch", async (c) => {
   return c.json(await startBatch({ onlyMissing: b.onlyMissing, limit: b.limit, gapSec: b.gapSec }));
 });
 app.get("/api/admin/trainer/batch", (c) => c.json(batchStatus()));
+// ---- Mapper: "map until locked" — the auto-continue loop (listen → baseline → optimize → lock) ----
+app.post("/api/admin/mapper/start", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number };
+  return c.json(await startMapper(Number(b.chainId || 0)));
+});
+app.post("/api/admin/mapper/stop", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number };
+  return c.json(stopMapper(Number(b.chainId || 0)));
+});
+app.get("/api/admin/mapper/state", (c) => c.json(mapperState()));
 app.get("/api/admin/agent/models", (c) => c.json(AGENT_MODELS));
 app.post("/api/admin/agent", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { messages?: Array<{ role: "user" | "assistant"; text: string }>; model?: string };

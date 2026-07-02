@@ -19,12 +19,26 @@ Owner reviews each on staging before promote. Status testing (13-status sweep) r
 
 **Launch-path / now**
 - [ ] Merge staging → prod and deploy; set `COMP_PHONES` in prod policy; verify phone + second-cell caller-ID.
+- [ ] **Promote checklist (owner, 2026-07-01):** after the staging→prod merge, verify prod calls are
+  REAL store calls and the Admin God view reflects them accurately (cost/call, mapping performance);
+  staging keeps feeding the owner's test-call reports separately. Press "Start fresh" (`stats_since`)
+  at launch so only post-launch calls count.
+- [ ] **Commerce build-out — owner + DevOps together** (owner-requested 2026-07-01): Stripe
+  products/prices, packs/membership, the money path end-to-end.
+- [ ] **Premium sign-up area redesign** on the website using Claude design (Website + Design lanes;
+  owner-requested 2026-07-01).
 - [ ] Route the consumer "check" through the **bridge** so caller-ID applies (plain `/app/check` uses the house number).
 - [ ] "Create your agent" caller-ID panel (Admin/Website) using `/auth/callerid/*`.
 - [ ] Flip `requirePhoneSignup` ON + remove Clerk once the phone UI is solid.
 - [ ] **Split `src/server.ts` into route modules** (public/admin/auth/webhooks) — unblocks Website + Admin parallel work.
 
 **Scale / infra**
+- [ ] **Mid-call hold suspend (measure first — owner asked 2026-07-01):** today Charlie (EL) keeps
+  billing through a mid-call "let me check the back" hold; only the 25s hold-bail caps it (~4-5¢ worst
+  case, and the bail loses the answer). ABC covers pre-human only. Fix = un-patch EL during hold, cheap
+  listener waits for a returning voice, re-patch a fresh EL session with re-briefed context — real work
+  (one EL session = one brain, per CHEAP_NAV_ARCHITECTURE). Decide AFTER staging test calls show how
+  often/long mid-call holds actually happen.
 - [ ] Redis-backed rate limiter (multi-instance) · single-leader schedulers ✅(done).
 - [ ] TiDB cutover (connection staged; needs SQL string + backfill — git history).
 - [ ] Analytics → SQL (dashboards load whole tables today).
@@ -32,9 +46,13 @@ Owner reviews each on staging before promote. Status testing (13-status sweep) r
 - [ ] Telephony at scale: concurrency planning + pickup-rate monitoring.
 
 **Security** (git history)
-- [ ] Transcript IDOR (needs frontend to send the session token on `/pub/result`,`/pub/live`).
+- [~] Transcript IDOR — **backend shipped 2026-07-01** (`flags.transcriptAuth`, off). Remaining:
+  Website sends the Bearer token on `/pub/result`+`/pub/live` (filed in website.md) → DevOps flips the flag.
 - [x] XFF rate-limit, SVG XSS, constant-time webhook sig, prod security boot-gate, esc() — done.
-- [ ] End-of-session key rotation (Railway token, TiDB password — leaked in chat).
+- [ ] **Pre-public hardening (owner decision 2026-07-01: rotate at launch, not now — key flexibility
+  needed while devs move fast):** rotate ALL leaked keys (Railway token — pasted in chats, GITHUB_PAT,
+  TiDB password), set STRIPE_WEBHOOK_SECRET on staging, verify PostHog actually captures events,
+  define the key-handling process (who gets keys, how, rotation cadence).
 
 **Revenue / GTM** (git history)
 - [ ] Finalize Stripe (products/prices) before paid tiers.

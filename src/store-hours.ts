@@ -90,7 +90,7 @@ function localNow(tz: string, at: Date): { dow: number; min: number } {
 export interface OpenState {
   known: boolean;     // do we have hours data at all
   open: boolean;      // open right now
-  label: string;      // short badge, e.g. "Open · till 9 PM", "Closed · opens 10 AM", "Open 24h"
+  label: string;      // short badge, e.g. "till 9 PM", "Closed · opens 10 AM", "24h"
 }
 
 // A store with NO usable hours still defaults to "open/unknown" by day — we don't hide it or block
@@ -121,14 +121,16 @@ export function openState(hoursJson: string | null | undefined, tz: string, at: 
   const yest = h[DOW_KEYS[(dow + 6) % 7]];
 
   // Spillover: yesterday's hours that cross midnight into now (e.g. open till 1 AM).
+  // Open labels carry only the useful part (when it closes) — the word "Open" is redundant on every
+  // surface: the green dot + simply being listed already say it (owner call, 2026-07-01).
   if (Array.isArray(yest) && toMin(yest[1]) <= toMin(yest[0]) && min < toMin(yest[1])) {
-    return { known: true, open: true, label: `Open · till ${fmt(toMin(yest[1]))}` };
+    return { known: true, open: true, label: `till ${fmt(toMin(yest[1]))}` };
   }
-  if (today === "24h") return { known: true, open: true, label: "Open 24h" };
+  if (today === "24h") return { known: true, open: true, label: "24h" };
   if (Array.isArray(today)) {
     const o = toMin(today[0]); let c = toMin(today[1]);
     const crosses = c <= o; if (crosses) c += 24 * 60; // closes after midnight
-    if (min >= o && min < c) return { known: true, open: true, label: `Open · till ${fmt(toMin(today[1]))}` };
+    if (min >= o && min < c) return { known: true, open: true, label: `till ${fmt(toMin(today[1]))}` };
     if (min < o) return { known: true, open: false, label: `Closed · opens ${fmt(o)}` };
     return { known: true, open: false, label: "Closed" }; // after close
   }

@@ -44,6 +44,11 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
   only after an in-stock (green) result? Then pin that edge dark. Don't blind-edit the tint CSS — it's fragile
   ("re-breaks the top"). Mechanism spec lives in the big comment at top of `checkit.html` (~L6-14).
 - **Treasure Hunt / thrift toggle** — ON HOLD per owner (front-end being designed with Design + Data).
+- **DevOps → Website (security, small): send the session token on transcripts.** Add
+  `Authorization: Bearer <check_session>` to `GET /pub/result/:cid` + `GET /pub/live/:cid` whenever the
+  user is signed in (same token you already send on `/app/*`). Backend accepts it today; once you ship,
+  DevOps flips `policy.flags.transcriptAuth` on and strangers can no longer read a customer's transcript
+  by call id. Details: API_CONTRACT change log 2026-07-01.
 
 **⏳ Blocked / waiting on others:** — (kiosk nudge, shipment opener, Topps logo, entrance animation all closed by owner 2026-07-01)
 
