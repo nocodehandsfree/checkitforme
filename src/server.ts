@@ -109,7 +109,7 @@ import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPh
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
-import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay } from "./voice/bridge";
+import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls } from "./voice/bridge";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
@@ -4119,3 +4119,25 @@ setInterval(() => withLock("cust-sched", 85, customerScheduleTick).catch((e) => 
 setInterval(() => withLock("gmail-receipts", 25, gmailReceiptTick).catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)
 refreshChainLogoDb().catch(() => {}); // DB-first chain-logo cache: initial load + refresh (no lock — read-only, idempotent)
 setInterval(() => refreshChainLogoDb().catch(() => {}), 60_000);
+
+// ---- Graceful deploy drain ----
+// A deploy restart once killed the owner's live call mid-air (EL "Client disconnected: 1006",
+// 2026-07-02): Railway SIGTERMs the old instance while its Twilio<->EL bridge sockets are still
+// carrying audio. Now: on SIGTERM, stop when the last live bridge call ends (checked every 2s),
+// hard cap 240s (under railway.json drainingSeconds). New calls land on the new instance; the old
+// one just finishes what it's carrying. Registering the handler defers Node's default exit.
+process.once("SIGTERM", () => {
+  const started = Date.now();
+  const n = activeBridgeCalls();
+  console.log(`[drain] SIGTERM: ${n} live bridge call(s); draining before exit`);
+  if (n === 0) process.exit(0);
+  const t = setInterval(() => {
+    const left = activeBridgeCalls();
+    const waited = Math.round((Date.now() - started) / 1000);
+    if (left === 0 || waited >= 240) {
+      console.log(`[drain] exiting after ${waited}s (${left} call(s) left)`);
+      clearInterval(t);
+      process.exit(0);
+    }
+  }, 2000);
+});
