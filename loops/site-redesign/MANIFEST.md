@@ -56,9 +56,10 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 ## VIEW ENUMERATION (from the LIVE site) × comp mapping
 ### Global chrome
 - [x] S2 store-type switcher (cycle 2): carved #17171C track + raised active key (comp-exact), storefront/kiosk-awning icons via currentColor, launch = Retail+Kiosk with active flex 1.2. EN labels locked Retail·Kiosk under v2; ES untouched pending Copy.
-- [ ] Header: brand logomark/wordmark, product switcher pill (vsw), My/auth pill (comp P1 header)
-- [ ] Footer new skin: one-line links w/ Legal merge + EN pill; wordmark ©2026 + Discord/X circles (comp/§5.14) — NOTE Legal merge = copy change → COPY QUEUE
-- [ ] Toasts → bottom capsule system (comp T1, §5.4)
+- [x] Header (cycle 3): transparent bar (pills float on page), switcher/My pills already raised via base; hero title 30/900/-1px per P1. Per-brand accent dot kept (comp shows Pokémon only — DECIDED).
+- [x] Footer (cycle 3): strip tokens, 13/600 muted links, 36px raised social circles, tight padding. 'Legal' merge NOT applied — stays in COPY QUEUE (link-text change needs Copy).
+- [x] Toasts (cycle 3): green success capsule gradient + dark-green text + glow. DECIDED: neutral/accent variants land when toast() call sites get a type param — queued as follow-up box below.
+- [ ] Toast type variants (T1): classify toast() call sites → success/neutral/accent capsules (comp T1)
 - [x] Page bg/tokens (cycle 1): CSS-var re-key under html[data-skin=v2] (--bg/--sheet/--terminal/--border) + base card/store-row/input/pill/footer surfaces — washes + iOS tint adapt via var(--bg)
 - [ ] Finds ticker (community finds strip) → strip token #17171C (NO COMP — extend system)
 - [ ] Language switcher (EN/ES pill + menu) restyle (NO COMP — extend)
@@ -112,7 +113,7 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - [ ] Error/empty states sweep (network fail toasts, callgone, no-credits)
 
 ## DECIDED LOG
-- DECIDED: S2 track fill #17171C (comp markup) over guide §5.1's #1B1B20 — the guide defers to the board as master; both are system tokens.
+- DECIDED(rev. cycle 3): S2 track fill = #1B1B20 — the standalone S2 comp shows #17171C (on page bg) but P1's IN-CARD track is #1B1B20, matching guide §5.1; the live track sits in the card.
 - DECIDED: apex `/` is host-routed (localhost serves Admin) — 0a benchmarks the 4 brand paths, which are the consumer surface.
 - DECIDED: preview switch = `?skin=v2` / localStorage `cifm_skin` / `body.skin-v2` scope (cycle 1).
 - DECIDED: 0a harness as bash boot-script matching repo's test-growth.sh integration pattern (LOOP
