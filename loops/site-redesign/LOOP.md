@@ -12,7 +12,7 @@ agent's memory — any fresh session resumes by reading `MANIFEST.md` and contin
   staging site stays intact for morning testing. Build the switch in cycle 1 if it doesn't exist.
 - **Website lane only**: `public/checkit.html` + assets. No `/api`, no backend, no other lanes.
 - **Design truth**: the comps in `docs/design/` + `docs/design/STYLE_GUIDE.md` +
-  `docs/brand/CHECK_BRAND_STYLE_GUIDE.md` + `docs/business/COPY_STYLE_GUIDE.md`. Never invent
+  `docs/design/LOGOS.md` + `docs/design/COPY_STYLE_GUIDE.md`. Never invent
   colors/type/spacing/copy.
 - **Every cycle: `npx tsc --noEmit` + `bash scripts/test-all.sh` green → commit → push.** Small
   commits. A cycle that doesn't push didn't happen. (test-all will include the design-token harness
@@ -28,6 +28,16 @@ processes that queue + a full-site voice pass; Website applies what Copy approve
 invented copy.
 
 ## The loop
+Start EVERY cycle with `git pull --no-rebase` (DevOps/Copy may land harness/copy updates overnight).
+0a. **Cycle 0a (once, BEFORE any redesign change) — the behavior benchmark:** write
+   `scripts/qa-pages.ts`: fetch every brand page + main view from the local served site, assert HTTP
+   200 + the critical behavior markers (search, check button, live call view, results rail, history,
+   ES toggle). Add to `test-all.sh`. This captures HOW THE SITE WORKS NOW; it must stay green all
+   night — the redesign changes look and copy, never behavior.
+0b. **Cycle 0b (once):** build `scripts/qa-design.ts` from `STYLE_GUIDE_NEW.md`'s exact tokens:
+   fail on any color/font-size/spacing outside the new system (within preview-mode markup) + banned
+   terms (see Terminology in the root CLAUDE.md) + COPY-QUEUE invented terms leaking into the page.
+   Add to `test-all.sh`.
 0. **Cycle 0 (once):** enumerate EVERY view/section/element/copy-string **from the LIVE SITE**
    (`checkit.html` — all views, brands, languages, error/empty states) into `MANIFEST.md` as
    unchecked boxes, grouped by page. THEN map comps onto that list. A view with no comp is marked
