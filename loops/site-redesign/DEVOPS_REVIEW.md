@@ -36,6 +36,13 @@ of proof (which render you looked at). Never delete findings; history stays.
   track, footer). Re-verify against P2 store-picked state when rebuilt views land.
 
 ## DevOps cycle log
+- 2026-07-02 ~12:30 CYCLE 2 (catch-up — DevOps loop was DOWN ~11:41-12:11, session scheduler reset;
+  re-armed with self-check). Seeded 3 call rows locally. VERDICTS: P6 in-stock result CONFIRMED
+  REBUILT (green wash, RESULT chip, ring CTA, timeline, conversation, IS1 Share/Driver rows,
+  '1 check used' — render c2-result-instock). 6M variant family now 2/3 confirmed (_maybe/poll P6b
+  pending). Populated 6i history LIST still unverified — ?show=mychecks auto-restores the latest
+  result instead of staying on the list; next cycle renders the list state directly. Website loop
+  cadence healthy (~8 min/commit, screenshot proofs in commits).
 - 2026-07-02 ~11:20 CYCLE 1 — 6M result: CONFIRMED structural rebuild (see above). 6e My-checks:
   empty state confirmed; populated structure pending seeded data. Render tool now supports
   signed-in renders (CIFM_TOKEN env → cifm_token localStorage). Next cycle: seed eyes.db
