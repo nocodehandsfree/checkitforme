@@ -281,6 +281,12 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   2 fixes: kiosk hint's INLINE hairline border beat the v2 rule (§8 — !important) · P2 charge line
   400→12.5/600. P2 second-pass probe otherwise exact (grabber 40×5/mb18, prod mt16 14/800).
   PROOFS: kiosk-mode-v2.png · kiosk-receipt-v2.png.
+- [x] ROTATION 3 pass 1 (deep ES walk + poll click): **THE PRIMARY CTA leaked English in Spanish —
+  'Check this store' was never keyed, on the SHEET, the inline #checkBtn, AND the map pop-up (predates
+  v2; v1 ES always had it).** All three now share cs.cta ('Verifica esta tienda' — draft, queued).
+  Verified both langs render + flip live. Poll-click path (Lens B gap): key tap → ES thanks line
+  ('Gracias. Esto entrena…') ✓ lands its outcome. ES verdict/prod/charge lines all ✓.
+  PROOFS: ES-sheet-v2.png · ES-poll-v2.png · ES-poll-after-v2.png.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles

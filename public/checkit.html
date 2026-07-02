@@ -1539,7 +1539,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
       </div>
     </div>
 
-    <button class="callkey" id="checkBtn" onclick="startCheck()" style="display:none">Check this store</button>
+    <button class="callkey" id="checkBtn" onclick="startCheck()" style="display:none" data-i18n="cs.cta">Check this store</button>
     <div class="foot" id="chargefoot" style="display:none;margin-top:10px" data-i18n="charge"><b>No answer = no charge.</b></div>
     <!-- Sell-methods card: live online stock / ways to get it / resale warning / notify.
          Replaces the call button for non-callable chains (Micro Center, Amazon). -->
@@ -1637,7 +1637,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <div style="min-width:0;flex:1"><div class="csheet-nm" id="cs_nm"></div><div class="csheet-addr" id="cs_addr"></div></div>
   </div>
   <div class="csheet-prod" id="cs_prod"></div>
-  <button class="csheet-call" id="cs_call" onclick="startCheck()"><span class="cs-l"><svg width="30" height="30" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span>Check this store</span></span><svg class="cs-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+  <button class="csheet-call" id="cs_call" onclick="startCheck()"><span class="cs-l"><svg width="30" height="30" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span data-i18n="cs.cta">Check this store</span></span><svg class="cs-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
   <div class="csheet-charge" data-i18n="charge"><b>No answer = no charge.</b></div>
 </div>
 
@@ -2032,6 +2032,7 @@ const LANGS=[['en','EN'],['es','ES']];
 const I18N={ es:{
   // ── v2/redesign strings — DRAFT ES (same voice as the table below; flagged in COPY QUEUE for
   //    ratification — an English string mid-Spanish UI is the worse defect) ──
+  'cs.cta':'Verifica esta tienda', // rotation 3 catch: the sheet/inline/map CTA was NEVER keyed — English leaked in ES since v1
   'acct.my':'Mi','acct.done':'Listo','acct.member':'Miembro','acct.free':'Gratis','acct.freeused':'Verificación gratis usada',
   'acct.stat.left':'Restantes','acct.stat.run':'Hechas','acct.tab.overview':'Resumen','acct.tab.activity':'Actividad','acct.tab.earn':'Gana',
   'acct.row.plan':'Administrar plan','acct.row.hist':'Historial de verificaciones','acct.row.earn':'Gana verificaciones gratis','acct.row.earn.sub':'4 formas. Abierto a todos.',
@@ -2937,7 +2938,7 @@ function renderMapPins(){
       : L.marker([s.lat,s.lng],{icon:L.divIcon({className:'tierpin',html: neon
           ? `<span style="display:block;width:15px;height:15px;border-radius:50%;background:${neon};border:1.5px solid #0C0C12;box-shadow:0 0 9px ${neon},0 0 3px ${neon}"></span>`
           : `<span style="display:block;width:12px;height:12px;border-radius:50%;background:#9aa0b0;border:1.5px solid #0C0C12"></span>`, iconSize: neon?[15,15]:[12,12], iconAnchor: neon?[8,8]:[6,6]})}).addTo(MAP);
-    m.bindPopup(`<div class="mappop"><b>${esc(s.name)}</b><div class="mp-lo">${esc(s.location||'')}${mi!=null?' · '+(mi<10?mi.toFixed(1):Math.round(mi))+' mi':''}</div><button onclick="mapPick(${s.id})">Check this store</button></div>`);
+    m.bindPopup(`<div class="mappop"><b>${esc(s.name)}</b><div class="mp-lo">${esc(s.location||'')}${mi!=null?' · '+(mi<10?mi.toFixed(1):Math.round(mi))+' mi':''}</div><button onclick="mapPick(${s.id})">${t('cs.cta','Check this store')}</button></div>`);
     MAP_MARKERS.push(m); pts.push([s.lat,s.lng]);
   });
   if(USER_LOC) pts.push([USER_LOC.lat,USER_LOC.lng]);
