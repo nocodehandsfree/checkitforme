@@ -828,7 +828,10 @@ app.get("/logo-wall/sets", (c) => {
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const fmt = (r: string) => { const m = /^(\d{4})[-/](\d{2})/.exec(r || ""); return m ? `${MON[+m[2] - 1]} ${m[1]}` : (r || "TBA"); };
   // Mute the logo's dominant colour into a dark banner wash (each channel × 0.42).
-  const mute = (hex: string | null) => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || ""); if (!m) return "#23232b"; const n = parseInt(m[1], 16); const c2 = (x: number) => Math.round(x * 0.42).toString(16).padStart(2, "0"); return `#${c2((n >> 16) & 255)}${c2((n >> 8) & 255)}${c2(n & 255)}`; };
+  // Real banner art lives in public/logos/sets/banners/<apiId>.<ext> — drop a file in and it renders.
+  let bannerFiles = new Set<string>();
+  try { bannerFiles = new Set(readdirSync(join(here, "../public/logos/sets/banners")).filter((f) => /\.(jpe?g|png|webp)$/i.test(f))); } catch { /* none yet */ }
+  const bannerFor = (s: any) => { const ks: string[] = []; if (s.code) ks.push(String(s.code).toLowerCase().replace(/[^a-z0-9]/g, "")); if (s.apiId) ks.push(String(s.apiId).toLowerCase().replace(/[^a-z0-9]/g, "")); for (const k of ks) for (const ext of ["jpg", "jpeg", "png", "webp"]) if (bannerFiles.has(k + "." + ext)) return k + "." + ext; return null; };
   const totalSets = eras.reduce((n, e) => n + e.sets.length, 0);
   const withLogo = eras.reduce((n, e) => n + e.sets.filter((s) => s.logoFile).length, 0);
   const def = Math.max(0, eras.length - 1); // newest era shown first
@@ -839,9 +842,10 @@ app.get("/logo-wall/sets", (c) => {
     return `<div class="setcard">${art}<div class="setname">${esc(s.name)}</div><div class="setmeta">${esc(s.code)} · ${esc(fmt(s.release))}</div></div>`;
   };
   const bannerCard = (s: any) => {
-    if (!s.logoFile) return `<div class="banner noimg"><span>${esc(s.name)}</span><small>banner coming soon</small></div>`;
-    const u = `/logos/sets/${s.logoFile}?v=2`;
-    return `<div class="banner" style="background:linear-gradient(135deg,${mute(s.dom)},#0b0b11)"><div class="bwash" style="background-image:url(${u})"></div><img class="blogo" src="${u}" alt="" loading="lazy"><div class="bcap"><b>${esc(s.name)}</b><span>${esc(s.code)} · ${esc(fmt(s.release))}</span></div></div>`;
+    const bf = bannerFor(s);
+    if (!bf) return `<div class="banner noimg"><span>${esc(s.name)}</span><small>banner coming soon</small></div>`;
+    const logo = s.logoFile ? `<img class="blogo" src="/logos/sets/${s.logoFile}?v=2" alt="" loading="lazy">` : "";
+    return `<div class="banner"><img class="bart" src="/logos/sets/banners/${bf}" alt="" loading="lazy">${logo}<div class="bcap"><b>${esc(s.name)}</b><span>${esc(s.code)} · ${esc(fmt(s.release))}</span></div></div>`;
   };
   const pills = eras.map((e, i) => `<button type="button" class="pill${i === def ? " on" : ""}" data-era="${i}">${esc(e.era)} <small>${e.sets.length}</small></button>`).join("");
   const sections = eras.map((e, i) => `<section class="era${i === def ? " on" : ""}" data-era="${i}"><h3 class="sech">Logos <small>${e.sets.length} sets</small></h3><div class="grid">${e.sets.map(logoCard).join("")}</div><h3 class="sech">Banners <small>enlarged logo · muted background</small></h3><div class="bgrid">${e.sets.map(bannerCard).join("")}</div></section>`).join("");
@@ -870,9 +874,9 @@ app.get("/logo-wall/sets", (c) => {
     .setname{font-weight:800;font-size:15px;line-height:1.2}
     .setmeta{font-size:12px;color:#8a8a98}
     .bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
-    .banner{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.08)}
-    .bwash{position:absolute;inset:-12%;background-size:cover;background-position:center;filter:blur(32px) brightness(.5) saturate(1.3);opacity:.55}
-    .blogo{position:relative;max-width:80%;max-height:62%;object-fit:contain;filter:drop-shadow(0 10px 26px rgba(0,0,0,.75))}
+    .banner{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.08);background:#0b0b11}
+    .bart{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.45) saturate(.95)}
+    .blogo{position:relative;max-width:82%;max-height:66%;object-fit:contain;filter:drop-shadow(0 10px 26px rgba(0,0,0,.85))}
     .bcap{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:1px;padding:12px 12px 9px;background:linear-gradient(transparent,rgba(0,0,0,.82))}
     .bcap b{font-size:14px;font-weight:800} .bcap span{font-size:11px;color:#c9c9d4}
     .banner.noimg{flex-direction:column;gap:5px;background:#141019;border:1px dashed rgba(255,255,255,.14);color:#9a9aac}
@@ -952,6 +956,16 @@ app.get("/logos/sets/:file", (c) => {
     const ext = file.split(".").pop()?.toLowerCase();
     c.header("Cache-Control", "public, max-age=86400");
     return c.body(buf, 200, { "Content-Type": ext === "svg" ? "image/svg+xml" : ext === "webp" ? "image/webp" : "image/png" });
+  } catch { return c.notFound(); }
+});
+// Full-art set BANNER images (key art) for /logo-wall/sets — drop <apiId>.jpg into public/logos/sets/banners/.
+app.get("/logos/sets/banners/:file", (c) => {
+  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
+  try {
+    const buf = readFileSync(join(here, `../public/logos/sets/banners/${file}`));
+    const ext = file.split(".").pop()?.toLowerCase();
+    c.header("Cache-Control", "public, max-age=86400");
+    return c.body(buf, 200, { "Content-Type": ext === "webp" ? "image/webp" : ext === "png" ? "image/png" : "image/jpeg" });
   } catch { return c.notFound(); }
 });
 
