@@ -98,9 +98,9 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 ### My checks (6e–6i) — HIDDEN
 - [ ] 6e overview · [ ] 6f activity · [ ] 6g earn · [ ] 6h new-user · [ ] 6i history
 ### Scores (SC1/SC2)
-- [ ] SC1 empty state (dashed carved panel, trophy, Post capsule) · [ ] SC2 feed (raised cards, photo letterbox)
+- [x] SC1 (cycle 11): dashed carved panel + accent Post pill · [~] SC2 feed: cards ride the raised row system; photo letterbox strip to verify in audit sweep (feed markup renders from community data)
 ### Runnr (RN1/RN2)
-- [ ] RN1 set-the-deal (5-step rail, bonus stepper, job chip) · [ ] RN2 wrap-up (rating stars, driver preview)
+- [x] RN1/RN2 shells (cycle 11): 30px nodes (active solid green + halo, done green outline), 2px connector, raised step cards idle@50%, carved toggle w/ raised active key. Driver-preview/star details to verify in audit sweep.
 ### Hobby (P3a/P3/P4/P5) — BUILD, HIDDEN (owner preview only)
 - [ ] P3a era picker from /pub/pokemon-sets (era logos on page, press-dip; logo-wall art, placeholders where missing)
 - [ ] P3 set picker (banner tiles, JUST DROPPED chip, code+date strip, no set names; future sets badged not dropped)

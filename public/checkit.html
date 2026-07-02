@@ -1169,6 +1169,19 @@ html[data-skin="v2"] #auth_err,html[data-skin="v2"] #auth_codeerr{color:#FF7B7B;
 html[data-skin="v2"] .modal:has(#auth_err:not(:empty)) #auth_phone{box-shadow:inset 0 2px 6px rgba(0,0,0,.45),0 0 0 2px #EF4444}
 html[data-skin="v2"] .modal:has(#auth_codeerr:not(:empty)) #auth_code{box-shadow:inset 0 2px 6px rgba(0,0,0,.45),0 0 0 2px #EF4444}
 html[data-skin="v2"] .modal a{text-decoration:underline dashed rgba(74,222,128,.55);text-underline-offset:4px}
+/* Scores (SC1/SC2/§5.15): dashed carved empty panel; Post = accent gradient pill w/ dark text. */
+html[data-skin="v2"] .emptybox{border:1.5px dashed rgba(255,255,255,.13);background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+html[data-skin="v2"] .postbtn{background:linear-gradient(180deg,#FFE066 0%,#FFCB05 100%);color:#26251E;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.35)}
+/* Runnr (RN1/RN2/§5.16): 30px nodes, 2px connector, halo on the active node; step cards raised,
+   idle steps at half opacity; bonus stepper = carved well + raised keys. */
+html[data-skin="v2"] .ho-node{width:30px;height:30px;border:0;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);color:#8A8A96}
+html[data-skin="v2"] .ho-step.active .ho-node{background:#4ADE80;color:#06210F;box-shadow:0 0 0 5px rgba(74,222,128,.14)}
+html[data-skin="v2"] .ho-step.done .ho-node{background:transparent;box-shadow:inset 0 0 0 1.5px #4ADE80;color:#4ADE80}
+html[data-skin="v2"] .ho-conn{width:2px}
+html[data-skin="v2"] .ho-card{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+html[data-skin="v2"] .ho-step:not(.active):not(.done) .ho-card{opacity:.5}
+html[data-skin="v2"] .ho-toggle{background:#1B1B20;border:0;border-radius:999px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
+html[data-skin="v2"] .ho-toggle button.on{background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 /*V2END*/</style>
 </head>
 <body>
