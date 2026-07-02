@@ -1309,7 +1309,10 @@ app.get("/pub/best-bet", async (c) => {
       const miles = (hasLoc && r.lat != null && r.lng != null) ? haversineMi(lat, lng, r.lat, r.lng) : null;
       const hist = byStore.get(r.id);
       return { id: r.id, name: r.name.split("—")[0].trim(), miles, signals: {
-        miles, todayDow: tzDow(r.timezone), shipmentDow: learnedShipDow(hist?.days, r.shipmentDay),
+        // shipmentDow stays OFF for consumers: restock day is unverified data, so it neither ranks
+        // nor labels a best bet ("usually restocks Friday" is gone) until a store's day is confirmed
+        // by 2+ agreeing calls (owner rule, 2026-07-02). learnedShipDow is the comeback path.
+        miles, todayDow: tzDow(r.timezone), shipmentDow: null,
         confirms: hist?.confirms ?? 0, lastConfirmAgoHrs: hist ? Math.round((now - hist.last) / 3600) : null,
       } };
     })
