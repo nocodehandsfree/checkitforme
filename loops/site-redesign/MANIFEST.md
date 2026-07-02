@@ -151,7 +151,19 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   radius label + mi unit 12-13/600 #8A8A96 · radius value 17/800 · tick labels 11/700 #7C7C88 w/ green
   active (structure already existed). Search well/S2/hero/footer already comp-true from earlier cycles.
   PROOF: proofs/P1-home-v2.png (+ scratch 4× clip of the Map key).
-- [ ] P6/P6b/P6c detail pass
+- [x] P6/P6b/P6c detail pass (cycle): RENDERED verification against the comps with forged results driven
+  through the real showResult path. P6 in-stock: green wash, glass RESULT chip + pills (verified via
+  computed-style probe — rgba(255,255,255,.07); the dark look in low-res shots is scale artifact), 30/900
+  verdict, tokened sentence, timeline rail + full-width bubbles + CONVERSATION eyebrow + green verdict line,
+  raised Share/Too-far rows. P6b: amber wash + 4 poll keys w/ §5.7 icon chips — comp-exact. Transcript staff
+  prefix is `Clerk:` (my forged 'Caller:' line vanishing was the harness's fault, not the parser's). NO code
+  deltas found — earlier cycles' rebuilds hold. P6 price line/$-over-retail + YOUR HUNT stay BLOCKED on the
+  §7 backend. P6c pop-over chrome shipped cycle 8; its rendered proof needs seeded history — moved to the
+  proof-backfill list. PROOFS: proofs/P6-instock-v2.png · P6-convo-v2.png · P6b-poll-v2.png.
+### Proof backfill owed (rotating)
+- [ ] 6m result vs comp (real call data) · [ ] live-call · [ ] 6e/6f/6g/6h account tabs · [ ] 6a upsell ·
+  [ ] 6b plans sheet · [ ] 6d you're-in · [ ] 6i history header · [ ] P6c calls-by-day pop (seeded history)
+  · [ ] hobby P3a/P3/P4 (art live) · [ ] L1a-c login states
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
