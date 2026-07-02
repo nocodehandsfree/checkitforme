@@ -11,7 +11,7 @@ agent's memory — any fresh session resumes by reading `MANIFEST.md` and contin
 - **Preview mode first.** All redesign renders behind the agreed PREVIEW switch so the current
   staging site stays intact for morning testing. Build the switch in cycle 1 if it doesn't exist.
 - **Website lane only**: `public/checkit.html` + assets. No `/api`, no backend, no other lanes.
-- **Design truth**: the comps in `docs/design/` + `docs/design/STYLE_GUIDE.md` +
+- **Design truth**: the comps in `docs/design/` + `docs/design/STYLE_GUIDE_NEW.md` +
   `docs/design/LOGOS.md` + `docs/design/COPY_STYLE_GUIDE.md`. Never invent
   colors/type/spacing/copy.
 - **Every cycle: `npx tsc --noEmit` + `bash scripts/test-all.sh` green → commit → push.** Small
