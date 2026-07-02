@@ -52,3 +52,7 @@ worse than no comment. Several entries below started as wrong comments.)
   `config.staging` from `config.ts` (typecheck breaks, and staging loses its behavior).
 - **Logos:** the Cloudflare token lacks R2-admin and the S3 keys are object-scoped to `fungibles-cards`, so logos
   serve via the `fungibles-logos` Worker on `logos.fungibles.com` (chain-logos/ prefix), not a public R2 bucket.
+- **Test calls used to WRITE mapping data** — the passive tree-learner ran on every completed call, so an
+  owner Fun-store test transcript once wrote a bogus `avgTreeSeconds=19` onto a direct-answer chain and
+  silenced the agent for 19s (2026-07-02). Fixed: passive learning is gated `!config.staging.on` and skips
+  `ownerOnly` stores in every env. Mapping data comes from prod real calls + explicit Tree Trainer runs ONLY.

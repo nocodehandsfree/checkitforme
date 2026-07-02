@@ -747,7 +747,11 @@ export async function ingestPending(): Promise<number> {
     // ---- Phone-tree learning: every call's transcript contains the store's IVR, so we can map the
     // route to a human for the whole chain. Learn once for unmapped chains (passive), and force a
     // re-check + compare when a verify was queued for this chain. Cheap model; skipped otherwise.
-    if (store?.chainId && outcome.status === "completed" && (outcome.transcript || "").length > 20) {
+    // MAPPING IS DECOUPLED FROM STAGING (owner rule, 2026-07-02): mapping is a real-world ROI
+    // dataset — staging test calls must never write it (a Fun-store test transcript once wrote a
+    // bogus avgTreeSeconds=19 onto a direct chain → the silent-agent bug). Owner-only test stores
+    // aren't IVR data in ANY env. Explicit Tree Trainer runs are untouched by this gate.
+    if (!config.staging.on && !store?.ownerOnly && store?.chainId && outcome.status === "completed" && (outcome.transcript || "").length > 20) {
       const ch = (await db.select().from(chains).where(eq(chains.id, store.chainId)))[0];
       const force = ch ? consumeTreeRelearn(ch.id) : false;
       if (ch && (force || ch.treeStatus == null)) {
