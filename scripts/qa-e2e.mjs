@@ -149,6 +149,32 @@ try {
   has('watch empty submit → error line', await pg3.evaluate(() => (document.getElementById('watch_err')?.textContent || '').length > 3));
   await pg3.close();
 
+  // ---- 6c. STANDING-WATCH INVARIANTS (manual probes made permanent).
+  const pg4 = await browser.newPage();
+  await pg4.goto(`${BASE}/pokemon?skin=v2`, { waitUntil: 'domcontentloaded' });
+  await pg4.waitForTimeout(1200);
+  // self-hosted Inter actually loads and renders (the owner's font catch — never regress this)
+  has('self-hosted Inter loads (900 weight)', await pg4.evaluate(async () => { try { await document.fonts.load('900 26px Inter'); return document.fonts.check('900 26px Inter'); } catch (e) { return false; } }));
+  // Lens E fix holds: 6e wash top pad = 10px
+  const wash = await pg4.evaluate(() => { window.isAuthed = () => true; ACCOUNT = { phone: '+1', credits: 1, subscription: 'active' }; openAccount(); const w = document.querySelector('.acctv2head .wash'); return w ? getComputedStyle(w).paddingTop : '?'; });
+  eq('6e wash top pad (comp)', wash, '10px');
+  await pg4.close();
+  // v1 invariant: default site untouched — gold sheet CTA, purple accents, no badge, no skin attr
+  const pg5 = await browser.newPage();
+  await pg5.goto(`${BASE}/pokemon?skin=off`, { waitUntil: 'domcontentloaded' });
+  await pg5.waitForTimeout(1200);
+  const v1 = await pg5.evaluate(() => {
+    SEL_STORE = { id: 1, name: 'X' }; SEL_CATS = ['x']; showCallSheet();
+    const cta = getComputedStyle(document.getElementById('cs_call'));
+    hideCallSheet();
+    return { skin: document.documentElement.dataset.skin || '', badge: !![...document.querySelectorAll('button')].find(b => b.textContent.includes('NEW LOOK')),
+      gold: cta.backgroundColor, purple: getComputedStyle(document.documentElement).getPropertyValue('--purple').trim() };
+  });
+  has('v1: no skin attr + no badge', v1.skin === '' && !v1.badge);
+  eq('v1: sheet CTA still GOLD', v1.gold, 'rgb(255, 203, 5)');
+  eq('v1: --purple untouched', v1.purple, '#A78BFA');
+  await pg5.close();
+
   // ---- 7. LOGIN ERROR STATE (§5.12): submit empty → under-field line + red ring on the well.
   await pg.evaluate(() => { window.signIn && signIn(); });
   await pg.waitForTimeout(400);

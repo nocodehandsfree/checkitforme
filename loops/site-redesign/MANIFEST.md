@@ -328,6 +328,10 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
 - [x] Watch 3: pre-font proof batch RE-SHOT in true Inter (R1/R2/R3, RN1/RN2, SC1/SC2, P2) — all hold
   comp-true; the tighter real type resolves the fallback-font wraps (RN1 step titles now single-line
   per comp). Every proof in the repo is now true-Inter. CLEAN.
+- [x] Watch 4: THE WATCH ITSELF HARDENED — 5 manual probes made permanent qa-e2e checks (now 43):
+  self-hosted Inter loads+renders (the owner's font catch can never silently regress) · 6e wash pad
+  (Lens E fix) · v1 invariant (no skin attr/badge, GOLD sheet CTA, --purple untouched). Any future
+  push from any lane trips these automatically. All green.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
