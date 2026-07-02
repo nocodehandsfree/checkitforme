@@ -2481,7 +2481,8 @@ function openAccount(){
     const modal=document.querySelector('#acctOverlay .modal');
     let head=modal.querySelector('.acctv2head');
     if(!head){ head=document.createElement('div'); head.className='acctv2head'; modal.insertBefore(head,modal.firstChild); }
-    const planChip = comp?('∞ '+t('acct.unlimited','Unlimited')):(member?('★ '+t('acct.member','Member')):t('acct.free','Free'));
+    const freeUsed=(()=>{try{return localStorage.getItem('runnr_free_used')==='1';}catch(_){return false;}})();
+    const planChip = comp?('∞ '+t('acct.unlimited','Unlimited')):(member?('★ '+t('acct.member','Member')):(freeUsed?t('acct.freeused','Free check used'):t('acct.free','Free')));
     const left = comp?'∞':String(n);
     let run=0; try{ const now=new Date(); run=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length; }catch(_){ }
     head.innerHTML=`<div class="wash">
@@ -2499,7 +2500,8 @@ function openAccount(){
         <button class="tab" data-t="activity" onclick="acctTab('activity')">${t('acct.tab.activity','Activity')}</button>
         <button class="tab" data-t="earn" onclick="acctTab('earn')">${t('acct.tab.earn','Earn')}</button>
       </div>
-      <div id="acctv2panel" style="display:none;padding:14px 18px 0"></div>`;
+      <div id="acctv2panel" style="display:none;padding:14px 18px 0"></div>
+      ${(!member&&!comp)?`<div style="padding:14px 18px 0"><button class="cta" style="width:100%" onclick="closeAccount();openBuy()">${t('acct.upgrade2','Upgrade')} · ${t('acct.from','from')} ${(typeof tiers==='function'&&tiers()[0])?tierPrice(tiers()[0].cents)+t('plan.mo','/mo'):''}</button></div>`:''}`;
     acctTab('overview');
   }catch(_){} }
   $('acctOverlay').classList.add('on'); track('account_open');
@@ -4307,7 +4309,7 @@ function showTodayLanding(){
   // Logged out (e.g. a freshly-installed Home-Screen app has its OWN empty storage) → your checks live in
   // your account, so show a clear Sign-in CTA instead of an empty "No checks today" that looks broken.
   if(!isAuthed()){
-    $('result').innerHTML=`
+    $('result').innerHTML=(isV2()?`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 2px 2px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('hist.title','Check history')}</span><button onclick="backToBuilder()" style="background:none;border:0;font-size:12px;font-weight:700;color:rgba(255,255,255,.55);cursor:pointer">${t('acct.done','Done')}</button></div><div style="padding:0 2px 8px;font-size:12.5px;font-weight:600;color:#8A8A96">${(()=>{try{const now=new Date();const nn=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length;return nn+' '+t('hist.inmonth','checks in')+' '+now.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long'});}catch(_){return ''}})()}</div>`:'')+`
       <div class="todaywrap">
         <div class="emptybox" style="margin-top:24px">
           <span style="opacity:.45;filter:grayscale(.7)">${FCHK(42)}</span>
@@ -4320,7 +4322,7 @@ function showTodayLanding(){
     navMark('result');
     return;
   }
-  $('result').innerHTML=`
+  $('result').innerHTML=(isV2()?`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 2px 2px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('hist.title','Check history')}</span><button onclick="backToBuilder()" style="background:none;border:0;font-size:12px;font-weight:700;color:rgba(255,255,255,.55);cursor:pointer">${t('acct.done','Done')}</button></div><div style="padding:0 2px 8px;font-size:12.5px;font-weight:600;color:#8A8A96">${(()=>{try{const now=new Date();const nn=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length;return nn+' '+t('hist.inmonth','checks in')+' '+now.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long'});}catch(_){return ''}})()}</div>`:'')+`
     <div class="todaywrap">
       <div class="emptybox" style="margin-top:6px;padding-bottom:2px">
         <span style="opacity:.45;filter:grayscale(.7)">${FCHK(42)}</span>
