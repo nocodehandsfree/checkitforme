@@ -223,11 +223,13 @@ export async function navStep(id: string, speech: string): Promise<string> {
   // already excludes "press N" menus + long recordings, so it won't trip on an opening IVR. Map mode →
   // hang up instantly; confirm mode → ask the one stock question.
   if (speech && looksLikeLivePerson(speech)) return reachHuman(s, atSec, id);
-  // FAST-FAIL on after-hours / voicemail funnels (live-observed: closed CVS pharmacy at night presses
-  // toward "leave a message… name and date of birth"). No human exists down this branch — hang up NOW
-  // instead of burning 100+ seconds hammering 0 into a mailbox.
-  const CLOSED_RE = /(pharmacy|store|we) (is|are) (currently |now )?closed|connect(ing)? you to (our|the) voicemail|leave (a |your )?(message|voicemail)|voicemail box|record (a |your )?message|providing your name,? (and )?date of birth|after[- ]hours|call back during (regular|normal|business)|our (business )?hours are/i;
-  if (speech && CLOSED_RE.test(speech)) { finish(s, "failed"); return twiml(`<Hangup/>`); }
+  // FAST-FAIL only on TRUE dead-ends: an actual voicemail box, or the STORE itself closed.
+  // NEVER on "pharmacy is closed" — the front store is open and is exactly where we're going
+  // (pharmacy can't sell Pokémon cards anyway). Live-observed funnel: "connect you to our
+  // voicemail… leave a message with your name and date of birth" = mailbox, bail instantly.
+  const DEADEND_RE = /connect(ing)? you to (our|the) voicemail|leave (a |your )?(message|voicemail) (at|after|with)|voicemail box|record (a |your )?message after|providing your name,? (and )?date of birth|(store|we) (is|are) (currently |now )?closed(?![^.]*pharmacy)|closed for the (day|night)|our store hours are/i;
+  const PHARM_OK = /pharmacy .{0,30}(closed|hours)/i; // pharmacy-only closure — keep navigating to the front store
+  if (speech && DEADEND_RE.test(speech) && !PHARM_OK.test(speech)) { finish(s, "failed"); return twiml(`<Hangup/>`); }
   s.status = "navigating";
   // LISTEN-FIRST (mapping call 1): hear the menu out before acting — capture every prompt; the moment
   // a prompt REPEATS (the menu looped, we've heard it all), or after 4 prompts / 50s, flip to acting
@@ -271,11 +273,13 @@ export async function navStep(id: string, speech: string): Promise<string> {
     s.lastActTurn = s.turns;
     return twiml(`<Say voice="Polly.Joanna">${esc(d.value)}</Say>${gather(id)}`);
   }
-  // AUTO-ESCAPE (hands-free): the model stalled on a deflecting system. After 2 prompts with no
-  // progress, stop trusting it and HAMMER 0 for the operator on every prompt until a human answers —
-  // passivity is no longer possible, and no per-store hint is needed.
+  // AUTO-ESCAPE (hands-free): the model stalled on a deflecting system — stop trusting it and press 0
+  // for the operator until a human answers. GATED HARD: 0 is the universal operator shortcut on most
+  // systems, but on CVS it routes into the PHARMACY queue (voicemail at night) — so never hammer 0
+  // while a long intro is still playing (≥3 stalled turns AND ≥4 total), and never during a barge
+  // replay (the plan IS the strategy; if it misses, fail honestly so the mapper learns).
   const stalled = s.turns - (s.lastActTurn ?? 0);
-  if (s.escaped || stalled >= 2) {
+  if (!s.barge && (s.escaped || (stalled >= 3 && s.turns >= 4))) {
     s.escaped = true;
     if (speech && speech.trim()) {
       // STOP the instant a person answers — a clear live greeting/self-ID means a human picked up, so

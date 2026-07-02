@@ -84,16 +84,16 @@ export async function storeForChain(chainId: number, excludeIds?: number[], dayt
     if (rest.length) rows = rest;
   }
   const now = new Date();
-  // Local hour in the store's timezone. Mapping needs a FRONT-STORE human: a "24h" pharmacy at 10pm
-  // routes to voicemail (live-observed), so daytimeOnly gates to 9:00–19:59 local — east coast first
-  // in the morning, west coast last at night, exactly the owner's dialing order.
+  // Local hour in the store's timezone. Mapping needs a FRONT-STORE human, so daytimeOnly gates to
+  // 9:00–21:59 local (front stores commonly run to 10pm; pharmacy hours are irrelevant — we never
+  // want the pharmacy). Walks east → west across the day, the owner's dialing order.
   const localHour = (tz: string | null) => {
     try { return Number(new Intl.DateTimeFormat("en-US", { timeZone: tz || "America/Chicago", hour: "numeric", hour12: false }).format(now)); }
     catch { return 12; }
   };
   const score = (r: typeof rows[number]) => {
     if (!hasRealPhone(r.phone)) return -1;
-    if (daytimeOnly) { const h = localHour(r.timezone); if (h < 9 || h >= 20) return 0; }
+    if (daytimeOnly) { const h = localHour(r.timezone); if (h < 9 || h >= 22) return 0; }
     const st = openState(r.hours, r.timezone || "America/Chicago", now);
     if (st.label === "24h") return 4;          // best: never a closed-store dead end
     if (st.open && st.known) return 3;               // real hours say open now (e.g. "till 12 AM")
