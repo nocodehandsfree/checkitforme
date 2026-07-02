@@ -177,6 +177,11 @@ try {
   has('v1: no skin attr + no badge', v1.skin === '' && !v1.badge);
   eq('v1: sheet CTA still GOLD', v1.gold, 'rgb(255, 203, 5)');
   eq('v1: --purple untouched', v1.purple, '#A78BFA');
+  // v2 deep links must NOT leak into the default skin (watch-8 seal)
+  await pg5.goto(`${BASE}/pokemon?skin=off&show=signup&flow=hobby`, { waitUntil: 'domcontentloaded' });
+  await pg5.waitForTimeout(1500);
+  has('v1: v2 deep links sealed (no upsell/hobby)', await pg5.evaluate(() =>
+    !document.getElementById('upsellOverlay')?.classList.contains('on') && document.getElementById('hobby')?.classList.contains('hidden')));
   await pg5.close();
 
   // ---- 7. LOGIN ERROR STATE (§5.12): submit empty → under-field line + red ring on the well.
