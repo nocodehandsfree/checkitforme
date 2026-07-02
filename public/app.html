@@ -1320,7 +1320,7 @@ async function mapperPoll(){
   box.style.display='';
   if(stopBtn) stopBtn.style.display=run.running?'':'none';
   if(loopBtn) loopBtn.disabled=!!run.running;
-  const PHASE={listen:'Listening to the menu',baseline:'Finding a path to a human','optimize':'Speeding the path up',locked:'Locked ✓','needs-review':'Needs your eyes',stopped:'Stopped'};
+  const PHASE={verify:'Verifying the locked map',listen:'Listening to the menu',baseline:'Finding a path to a human','optimize':'Speeding the path up',locked:'Locked ✓','needs-review':'Needs your eyes',stopped:'Stopped'};
   document.getElementById('mapper_phase').textContent=PHASE[run.phase]||run.phase;
   document.getElementById('mapper_meta').textContent='call '+run.attempt+' · '+run.callsToday+'/12 today'+(run.running?'':' · done');
   const best=run.best&&run.best.seconds!=null?run.best.seconds+'s':'—';

@@ -37,7 +37,7 @@ export interface Experiment {
 interface Attempt { n: number; phase: string; store: string; experiment?: string; outcome: string; seconds?: number | null }
 export interface MapperRun {
   chainId: number; chainName: string;
-  phase: "listen" | "baseline" | "optimize" | "locked" | "needs-review" | "stopped";
+  phase: "verify" | "listen" | "baseline" | "optimize" | "locked" | "needs-review" | "stopped";
   running: boolean; stop?: boolean; stopReason?: string;
   attempt: number; callsToday: number;
   usedStores: number[];
@@ -83,7 +83,8 @@ function buildExperiments(recipe: NavRecipe): Experiment[] {
     const prevAt = i === 0 ? 0 : (steps[i - 1].atSec ?? 0);
     const at = st.atSec ?? 0;
     if (at - prevAt > 3) {
-      out.push({ kind: "barge", stepIdx: i, at: Math.max(prevAt + 1, at - 3), label: `${st.action} "${st.value}" at ${Math.max(prevAt + 1, at - 3)}s (was ${at}s)`, status: "pending" });
+      const earlier = Math.max(prevAt + 1, at - 5); // meaningful cut per try; a loop = barge-unsafe, keep last good
+      out.push({ kind: "barge", stepIdx: i, at: earlier, label: `${st.action} "${st.value}" at ${earlier}s (was ${at}s)`, status: "pending" });
     }
   }
   return out.slice(0, 8); // bounded: 8 experiments ≈ 8 extra calls max on top of the baseline
@@ -115,9 +116,14 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
   const usedToday = Number((await getSetting(`mapper_calls:${chainId}:${today()}`)) || 0);
   if (usedToday >= DAILY_CAP) return { error: `daily cap reached (${DAILY_CAP}) — try tomorrow or raise the cap` };
 
+  // Already-mapped chain (e.g. CVS): VERIFY the locked recipe first — replay it as a timed barge plan,
+  // measure the REAL seconds, then optimize from there. Fresh discovery only if the replay misses twice.
+  let lockedRecipe: NavRecipe | null = null;
+  try { const r = ch.navRecipe ? (JSON.parse(ch.navRecipe) as NavRecipe) : null; if (r && Array.isArray(r.steps) && r.steps.length) lockedRecipe = r; } catch { /* fresh discovery */ }
+
   const run: MapperRun = {
     chainId, chainName: ch.name,
-    phase: "listen", running: true,
+    phase: lockedRecipe ? "verify" : "listen", running: true,
     attempt: 0, callsToday: usedToday,
     usedStores: [],
     benchmark: ch.navSeconds ?? null,   // what we're trying to beat (the CVS benchmark readout)
@@ -128,7 +134,7 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
 
   (async () => {
     const ask = await defaultWorkflowAsk(); // Branson global's opener + voice, fetched once
-    let baselineMisses = 0;
+    let baselineMisses = 0, verifyMisses = 0;
     while (run.running && !run.stop) {
       run.updatedAt = Date.now();
       // ---- guards ----
@@ -146,7 +152,10 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
       // ---- place this attempt's call ----
       run.attempt++; run.callsToday = await bumpDaily(chainId);
       const isListen = run.phase === "listen";
-      const barge = ex && run.best ? { plan: planFor(run.best, ex) } : undefined;
+      // Verify phase: replay the LOCKED recipe as a timed barge plan (the known "no → front →
+      // general" words at their known seconds). Optimize phase: the current best with one tweak.
+      const replay = run.phase === "verify" && lockedRecipe ? { plan: lockedRecipe.steps.map((st) => ({ action: st.action || "say", value: st.value || "", at: st.atSec ?? 0 })) } : undefined;
+      const barge = ex && run.best ? { plan: planFor(run.best, ex) } : replay;
       const placed = await placeNavCall(
         chainId, store.id, store.name, store.phone,
         undefined, undefined, barge, undefined,
@@ -174,14 +183,19 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
       const secs = recipe?.seconds ?? null;
 
       // ---- learn from the outcome ----
-      if (run.phase === "listen" || run.phase === "baseline") {
+      if (run.phase === "verify" || run.phase === "listen" || run.phase === "baseline") {
+        const wasVerify = run.phase === "verify";
         if (reached && recipe) {
           run.baseline = recipe as NavRecipe; run.best = recipe as NavRecipe;
           await lockRecipeToChain(chainId, recipe, s?.confidence ?? null); // usable by live checks NOW
           run.experiments = buildExperiments(recipe as NavRecipe);
           run.phase = run.experiments.length ? "optimize" : "locked";
-          run.log.push({ n: run.attempt, phase: "baseline", store: store.name, outcome: `human reached — baseline locked (${classifyMode((s?.steps || []) as NavStep[]).label})`, seconds: secs });
+          run.log.push({ n: run.attempt, phase: wasVerify ? "verify" : "baseline", store: store.name, outcome: `${wasVerify ? `locked map VERIFIED — real time ${secs ?? "?"}s (stored ${run.benchmark ?? "?"}s)` : "human reached — baseline locked"} (${classifyMode((s?.steps || []) as NavStep[]).label})`, seconds: secs });
           if (run.phase === "locked") break;
+        } else if (wasVerify) {
+          verifyMisses++;
+          run.log.push({ n: run.attempt, phase: "verify", store: store.name, outcome: `replay missed (${s?.status || "timeout"})${verifyMisses >= 2 ? " — relearning from scratch" : ""}`, seconds: secs });
+          if (verifyMisses >= 2) run.phase = "listen"; // the stored map may be stale — rediscover
         } else {
           baselineMisses++; run.phase = "baseline";
           run.log.push({ n: run.attempt, phase: "baseline", store: store.name, outcome: `no human (${s?.status || "timeout"})${s?.confirmResult === "redirect" ? " — redirected: " + (s?.redirectTo || "") : ""}`, seconds: secs });
