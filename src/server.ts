@@ -28,6 +28,7 @@ import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
+import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, type Recipe } from "./calls/recipe";
 import { llm } from "./llm";
@@ -495,6 +496,28 @@ app.get("/nav/ask-audio", (c) => {
   const b = navAskAudio(c.req.query("session") || "");
   if (!b) return c.body("not found", 404);
   return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
+});
+// ---- Tape deck (D-lane rehearsal): pre-synthesized clips call the OWNER's phone — Fun tab ----
+app.all("/tapedeck/twiml", (c) => c.body(tapedeckTwiml(c.req.query("session") || ""), 200, { "Content-Type": "text/xml" }));
+app.post("/tapedeck/step", async (c) => {
+  let speech = "";
+  try { const b = await c.req.parseBody(); speech = String(b.SpeechResult || ""); } catch { /* silent turn */ }
+  return c.body(await tapedeckStep(c.req.query("session") || "", speech), 200, { "Content-Type": "text/xml" });
+});
+app.post("/tapedeck/ended", (c) => { tapedeckEnded(c.req.query("session") || ""); return c.body("ok", 200); });
+app.get("/tapedeck/clip", (c) => {
+  const b = tdClip(c.req.query("session") || "", Number(c.req.query("i") || 0));
+  if (!b) return c.body("not found", 404);
+  return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
+});
+app.post("/api/admin/tapedeck/call", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { phone?: string };
+  return c.json(await tapedeckCall(String(b.phone || "")));
+});
+app.get("/api/admin/tapedeck/session/:id", (c) => {
+  const s = tdSession(c.req.param("id"));
+  if (!s) return c.json({ error: "not found" }, 404);
+  return c.json({ id: s.id, status: s.status, steps: s.steps, clipText: s.clipText });
 });
 
 // ---- Health ----

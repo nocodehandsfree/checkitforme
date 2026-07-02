@@ -1048,6 +1048,17 @@
 
   <section id="fun">
     <h2 data-tip="Ring your own phone (or a friend's) in any cloned voice + persona. Never touches store calls.">Fun</h2>
+    <div class="card" style="border-color:var(--tint-purple-border)">
+      <div class="name">Tape deck <span class="meta" style="font-weight:500">· D-lane rehearsal</span></div>
+      <div class="meta" style="margin:4px 0 12px">Calls you and runs a whole check on pre-recorded Branson clips — no live agent. <span data-tip="The ~2.5¢ lane: the opener plays the INSTANT you pick up, your reply is classified by a cheap model in ~½s, the matching clip answers. Say something weird ('who's this?') to hear where Charlie would barge in. Judge: does it sound normal and natural?"></span></div>
+      <label>Your phone</label>
+      <input id="td_phone" placeholder="+13105551234">
+      <div class="btnrow"><button class="act" onclick="tdCall()">Call me on tape</button></div>
+      <div id="td_live" style="display:none;margin-top:12px">
+        <div class="meta" id="td_status" style="margin-bottom:8px">dialing…</div>
+        <div id="td_feed" style="display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto"></div>
+      </div>
+    </div>
     <div class="card">
       <label>Phone</label>
       <input id="lab_phone" placeholder="+13105551234">
@@ -1292,6 +1303,31 @@ async function loadRuns(chainId, box){
       <div style="padding:2px 11px 10px">${mx||'<div class="meta" style="padding:6px 0">no steps recorded</div>'}</div>
     </details>`;
   }).join('');
+}
+// ---- Tape deck (Fun): rehearse the D-lane — clips + cheap classifier, no live agent ----
+let TD_POLL=null, TD_ID=null;
+async function tdCall(){
+  const phone=v("td_phone"); if(!phone){ toast("Enter your phone first"); return; }
+  const r=await api("/api/admin/tapedeck/call",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({phone})});
+  if(!(r&&r.id)){ toast((r&&r.error)?("Tape deck: "+r.error):"Could not start the call"); return; }
+  TD_ID=r.id; document.getElementById("td_live").style.display="";
+  document.getElementById("td_status").textContent="dialing…";
+  document.getElementById("td_feed").innerHTML="";
+  clearInterval(TD_POLL); TD_POLL=setInterval(tdPoll,1500); tdPoll();
+  toast("Calling you — pick up and answer like a clerk");
+}
+async function tdPoll(){
+  if(!TD_ID) return;
+  const s=await api("/api/admin/tapedeck/session/"+TD_ID);
+  if(!s||s.error) return;
+  document.getElementById("td_status").textContent=s.status==="live"?"● live — answer like a clerk (try a weird reply too)":s.status;
+  document.getElementById("td_feed").innerHTML=(s.steps||[]).map(st=>{
+    const us=st.who==="us";
+    return `<div style="display:grid;grid-template-columns:34px 1fr;gap:8px;font-size:12.5px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+      <span class="meta">${st.atSec}s</span>
+      <span><b style="color:${us?"var(--green)":"#e8e8f0"}">${us?"TAPE":"YOU"}</b> ${esch(st.text||"")}${st.label?` <span class="meta">· ${esch(st.label)}</span>`:""}</span></div>`;
+  }).join("");
+  if(s.status==="done"||s.status==="failed") clearInterval(TD_POLL);
 }
 // ---- Mapper: "Map until locked" — the auto-continue loop. Start it, then this panel narrates every
 // attempt (phase, experiment, win/unsafe) live until the fastest safe path is locked. ----
@@ -1850,7 +1886,7 @@ async function vsClone(){
 }
 
 // --- Field persistence (remember what you typed across refresh) ---
-const PERSIST=['lab_phone','lab_name','lab_personality','sim_store','sim_cat','sim_mode','sim_tree','sim_specific','sim_phone','s_name','s_cat','s_mode','s_time','s_q','s_clar','r_name','r_phone','r_loc','r_tz','r_tree','f_search','f_zone','f_carries','f_status','f_sort'];
+const PERSIST=['td_phone','lab_phone','lab_name','lab_personality','sim_store','sim_cat','sim_mode','sim_tree','sim_specific','sim_phone','s_name','s_cat','s_mode','s_time','s_q','s_clar','r_name','r_phone','r_loc','r_tz','r_tree','f_search','f_zone','f_carries','f_status','f_sort'];
 function saveDays(){ localStorage.setItem('fld_s_days', [...document.querySelectorAll('#s_days input:checked')].map(c=>c.value).join(',')); }
 function restorePersist(){
   PERSIST.forEach(id=>{ const el=document.getElementById(id); const val=localStorage.getItem('fld_'+id); if(el && val!==null) el.value=val; });
