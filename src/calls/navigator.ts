@@ -258,6 +258,20 @@ export async function navStep(id: string, speech: string): Promise<string> {
     }
     return twiml(gather(id)); // silence so far — keep listening for the prompt
   }
+  // MECHANICAL RECOVERY after a timed plan: if the menu is still prompting and the prompt NAMES one of
+  // our known-path words ("…pharmacy or FRONT door services?", "…GENERAL store inquiries…"), say that
+  // word immediately — no model in the loop. The LLM goes passive after a barge plan (live-observed:
+  // three re-prompts, zero replies), but the proven words always route to the front store.
+  if (s.barge?.plan?.length && speech && speech.trim()) {
+    const saidAlready = new Set(s.steps.filter((st) => st.who === "us" && st.action === "say" && (st.atSec ?? 0) >= atSec - 1).map((st) => st.value));
+    const low = " " + speech.toLowerCase() + " ";
+    const next = s.barge.plan.find((p) => p.action !== "press" && p.value && low.includes(" " + p.value.toLowerCase()) && !saidAlready.has(p.value));
+    if (next) {
+      s.steps.push({ who: "us", text: `said "${next.value}" (recovery — prompt named it)`, atSec, action: "say", value: next.value });
+      s.lastActTurn = s.turns;
+      return twiml(`<Say voice="Polly.Joanna">${esc(next.value)}</Say>${gather(id)}`);
+    }
+  }
   const d = await decide(s, speech || "");
   if (d.type) s.type = d.type;
   s.confidence = d.confidence;
