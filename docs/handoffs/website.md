@@ -10,9 +10,16 @@ needs them (don't pre-read).
 > **Update rule:** the moment you finish, get blocked, or discover a task — edit this block. And do a quick
 > pass before you end a session. This is the only thing the next chat re-reads, so it must be current.
 
-**▶ Doing now:** **Owner call-testing loop on staging** — Website owns the voice-on-website lane now (Admin
-stays on the admin panel). Owner places Fun-store calls testing the **Branson test workflow** (openers/persona/
-voice) + status printing; we fix what the calls surface. Goal: staging call experience as good as possible →
+**▶ Doing now:** **Site-redesign loop in STANDING-WATCH mode** (cron `ca599466` — never self-exits, owner
+stops it). Round 2 structurally rebuilt EVERY comp screen after the owner's correction ("reskin ≠ rebuild")
+and his font catch: Google Fonts was BLOCKED on his network so the whole site silently fell back to the
+system font — **Inter is now SELF-HOSTED** (`/fonts/inter-var-latin.woff2` + new `/fonts/:file` route in
+`server.ts`; Google links removed from the head). 7 consecutive clean audit passes since; 45 rendered proofs
+in `loops/site-redesign/proofs/`; full state of record = `loops/site-redesign/MANIFEST.md`. Each firing now
+= regression sweep + audit anything other lanes push.
+ALSO still live: **owner call-testing loop on staging** — Website owns voice-on-website (Admin stays on the
+admin panel). Owner places Fun-store calls testing the **Branson test workflow** (openers/persona/voice) +
+status printing; we fix what the calls surface. Goal: staging call experience as good as possible →
 promote to prod → owner starts real-store calls for real ABC/ROI data.
 - Status pipeline (learned): `/pub/result` finalizes ON-DEMAND at call end (EL hydration-gap guarded in
   `elevenlabs.ts`; consensus second-read only when EL unclear) and stamps `statusKey` on every settled verdict.
@@ -48,10 +55,17 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
 **⏳ Blocked / waiting on others:** — (kiosk nudge, shipment opener, Topps logo, entrance animation all closed by owner 2026-07-01)
 
 **✅ Recently done** (newest first; trim when long):
-- **🌅 OVERNIGHT REDESIGN RUN COMPLETE (2026-07-02)** — full report at `loops/site-redesign/MANIFEST.md`
-  (top). 23 cycles, exit on two clean audit sweeps. Preview: `?skin=v2` (+`&flow=hobby` /`&show=signup`
-  /`&show=mychecks` hidden pages); `?skin=off` reverts; default site untouched. 1 BLOCKED: YOUR HUNT
-  needs the price-aggregation backend. COPY QUEUE has 4 items for Copy lane.
+- **🌅 REDESIGN ROUND 2 (2026-07-02, ~25 cycles after the owner's correction)** — every comp frame
+  STRUCTURALLY rebuilt to its extracted markup (6a/6b/6d sheets, 6e–6i account, R1–R3, SC1/SC2, RN1/RN2,
+  P1–P6, hobby P3a–P5, IS1/T1, L1a–c), all proofed in true Inter. **Font root-cause (owner caught it):
+  Google Fonts blocked on some networks → SELF-HOSTED Inter now.** ES: 58 missing v2 keys drafted + a
+  pre-v2 leak fixed (the PRIMARY 'Check this store' CTA was never keyed — English in Spanish since v1;
+  now `cs.cta`). Lens rotations A–F ×4: store-row scale, RESULT-chip/sentence specs, demo-bubble tails,
+  kiosk hint border, v1-untouched proof, desktop/tablet, reduced-motion, deployed-staging freshness all
+  verified. 7 clean passes running. Preview: `?skin=v2` (+`&flow=hobby`/`&show=signup`/`&show=paid`
+  /`&show=mychecks`); `?skin=off` reverts. Blocked: YOUR HUNT (price backend) · Check+/Buy-checks tab
+  (empty packs). COPY QUEUE: comp copy rulings + ES draft ratification + Runnr footer + 'Legal' merge.
+  ⚠ Preview badge + `?skin` gate are TEMPORARY — strip at promote.
 - **Silent-agent incident (2026-07-02) root-caused + mitigated in minutes:** ABC recipe-timer muted the agent
   19s on the direct-answer Fun store (`avgTreeSeconds=19` on a `navType:'direct'` chain; VAD skipped). Cleared
   the chain value + flipped `connectOnHuman:false` on staging. Bug filed with DevOps; don't re-enable ABC on
