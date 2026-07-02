@@ -94,7 +94,15 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
   Marketplace Insights); COPY QUEUE comp-isms must not leak into served copy. Added to test-all.sh.
 
 ## ROUND 2 (owner-requested re-check, 2026-07-02 morning) — loop re-armed
-### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — top of queue, structural, several cycles each
+### 🔴 THE CORRECTION (owner zip 03:5x — comps verified byte-identical; the miss is REBUILD vs RESKIN)
+**Rule for every box below: extract that screen's comp markup (COMP-EXTRACT.md) and rebuild the screen's
+v2 DOM to MIRROR it — layout, order, spacing, copy positions — not restyle the old markup. v2-gated
+renders (isV2() branches) so the default site stays untouched. One screen per cycle, screenshot proof.**
+- [ ] 6m RESULT rebuild · [ ] live-call rebuild · [ ] P2 sheet exact (store head, 'costs 1 check' line, capsule)
+- [ ] L1a/L1b/L1c login pop-ups exact · [ ] 6a upsell · [ ] 6b plans · [ ] 6c checkout · [ ] 6d you're-in
+- [ ] 6e overview · [ ] 6f activity · [ ] 6g earn · [ ] 6h new-user · [ ] 6i history
+- [ ] R1/R2/R3 restock exact · [ ] SC1/SC2 exact · [ ] RN1/RN2 exact · [ ] P1 home detail pass · [ ] P6/P6b/P6c detail pass
+### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
   row → verdict title 30/900 → sentence w/ tokens → green shine capsule → timeline+convo → status icons.
