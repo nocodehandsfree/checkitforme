@@ -55,6 +55,12 @@ security + go-live readiness, cross-lane coordination. Voice tuning = Website la
 Admin lane. DevOps takes dev work only when the owner assigns it. Kickoff prompts: `docs/KICKOFFS.md`.
 
 ## Current state (2026-07-01 — KEEP UPDATED)
+- [ ] **🐛 ABC exact-second open: BUG found live (Website, 2026-07-02).** Fun-store call went 19s dead air →
+  owner hung up. `chains.avgTreeSeconds=19` was set on the Fungibles chain even though `navType='direct'`,
+  and the recipe-timer MUTES the agent for the full 19s (VAD skipped) on a call a human answers instantly.
+  Fix needed: never arm the timer when `navType='direct'` (and probably: cap/ignore avgTreeSeconds when no
+  recipe exists). Website mitigated: cleared avgTreeSeconds on chain 120 + set `connectOnHuman:false` on
+  staging so owner testing can continue. Re-enable ABC only after this is fixed + verified on a Fun call.
 - [x] Salvaged the 8 unit suites from `test-coverage-loop` into staging (bridge, tree-learn, security
   gate, geo, brands, prompts, store-hours, stores-import); security suite updated to the ADMIN_TOKEN
   gate. 19/19 green. `test-coverage*` + `pk3ujx` branches are now safe to delete (owner to authorize).

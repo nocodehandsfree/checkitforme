@@ -48,6 +48,10 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
 **⏳ Blocked / waiting on others:** — (kiosk nudge, shipment opener, Topps logo, entrance animation all closed by owner 2026-07-01)
 
 **✅ Recently done** (newest first; trim when long):
+- **Silent-agent incident (2026-07-02) root-caused + mitigated in minutes:** ABC recipe-timer muted the agent
+  19s on the direct-answer Fun store (`avgTreeSeconds=19` on a `navType:'direct'` chain; VAD skipped). Cleared
+  the chain value + flipped `connectOnHuman:false` on staging. Bug filed with DevOps; don't re-enable ABC on
+  staging until the timer respects `navType:'direct'`.
 - **Transcript auth header shipped** (DevOps ask): all 9 `/pub/result/:cid` + `/pub/live/:cid` call sites now
   go through `appApi` → `Authorization: Bearer <check_session>` whenever signed in (anonymous unchanged).
   ➡️ DevOps can flip `policy.flags.transcriptAuth` ON once this deploys.
