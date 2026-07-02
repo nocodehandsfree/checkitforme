@@ -4708,17 +4708,25 @@ function hobbyPickSet(si){ HOBBY.set=HOBBY.era.sets[si]; renderHobbyProducts(); 
 function renderHobbyProducts(){
   const h=$('hobby'); const st=HOBBY.set;
   const prods=(Array.isArray(st.products)&&st.products.length)?st.products:HOBBY_GENERIC.map(t=>({type:t,retail:null}));
+  // P4 exact: 152px banner + 32px glass back key; rows 15/700 names, WHITE 15.5/800 price over a
+  // 9/700/.14em RETAIL eyebrow; the FIRST priced row takes the accent ring (comp hero product —
+  // DECIDED); unpriced rows dim to .6 only when siblings carry prices (never dim a whole generic list).
+  const anyPrice=prods.some(p=>p.retail!=null&&isFinite(p.retail));
+  const firstPriced=prods.findIndex(p=>p.retail!=null&&isFinite(p.retail));
   h.innerHTML=`<div class="card" style="padding:0;overflow:hidden">
     <div style="position:relative">
-      <img src="${esc(st.banner||'')}" alt="" style="display:block;width:100%;height:132px;object-fit:cover" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh('${esc(st.code)}',132));this.remove()">
-      <button onclick="renderHobbySets()" aria-label="Back" style="position:absolute;top:10px;left:10px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(5,6,9,.5);color:#FFF;cursor:pointer;font-size:16px">‹</button>
+      <img src="${esc(st.banner||'')}" alt="" style="display:block;width:100%;height:152px;object-fit:cover;object-position:50% 72%" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh('${esc(st.code)}',152));this.remove()">
+      <button onclick="renderHobbySets()" aria-label="Back" style="position:absolute;top:12px;left:12px;width:32px;height:32px;border-radius:50%;border:0;background:rgba(10,10,14,.55);backdrop-filter:blur(4px);color:#FFF;cursor:pointer;font-size:16px">‹</button>
     </div>
     <div style="padding:14px 16px 18px">
-      ${prods.map((p,pi)=>`<button class="hob-prod" onclick="hobbyPickProduct(${pi})">
-        <span style="display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);flex:0 0 auto">${hobbyIcon(p.type)}</span>
-        <span style="flex:1;min-width:0;text-align:left;font-size:14px;font-weight:700">${esc(p.type)}</span>
-        ${(p.retail!=null&&isFinite(p.retail))?`<span style="font-size:13px;font-weight:800;color:#8A8A96">$${Number(p.retail).toFixed(2)}</span>`:''}
-      </button>`).join('')}
+      ${prods.map((p,pi)=>{
+        const priced=p.retail!=null&&isFinite(p.retail);
+        const inner=`<span style="display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:#1B1B20;box-shadow:inset 0 2px 5px rgba(0,0,0,.45);flex:0 0 auto">${hobbyIcon(p.type)}</span>
+        <span style="flex:1;min-width:0;text-align:left;font-size:15px;font-weight:700">${esc(p.type)}</span>
+        ${priced?`<span style="text-align:right"><span style="display:block;font-size:15.5px;font-weight:800">$${Number(p.retail).toFixed(2)}</span><span style="display:block;font-size:9px;font-weight:700;letter-spacing:.14em;color:#8A8A96">${t('hob.retail','RETAIL')}</span></span>`:''}`;
+        if(pi===firstPriced) return `<div style="padding:2px;border-radius:16px;background:linear-gradient(120deg,color-mix(in srgb,var(--accent,#FFCB05) 55%,#FFF) 0%,var(--accent,#FFCB05) 55%,color-mix(in srgb,var(--accent,#FFCB05) 45%,#000) 100%);box-shadow:0 10px 22px -8px color-mix(in srgb,var(--accent,#FFCB05) 35%,transparent);margin-top:9px"><button class="hob-prod" onclick="hobbyPickProduct(${pi})" style="margin-top:0;background:#23232A;box-shadow:none;border-radius:14px">${inner}</button></div>`;
+        return `<button class="hob-prod" onclick="hobbyPickProduct(${pi})"${(!priced&&anyPrice)?' style="opacity:.6"':''}>${inner}</button>`;
+      }).join('')}
     </div></div>`;
   HOBBY.prods=prods;
 }

@@ -215,6 +215,13 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   #31313A→#26262C (both comp-verbatim, added to tokens). BONUS §8 catch: 'That was your free check 🎯'
   emoji stripped under v2 (regex on render — string untouched for v1/Copy). PROOFS: IS1-actions-v2.png ·
   T1-success/neutral/accent-v2.png. Remaining Lens A targets: S2 re-diff · P3/P4 detail vs frames · 6h.
+- [~] Lens A pass 2 (this firing): S2 re-diffed — comp-true, no change (in-card #1B1B20 DECIDED holds).
+  P4 detail EXACT: names 14→15/700 · price block rebuilt (grey inline → WHITE 15.5/800 over 9/700/.14em
+  RETAIL eyebrow; label keyed hob.retail → COPY QUEUE) · banner 152px w/ comp crop · back key = 32px
+  glass blur (border dropped) · FIRST priced row = accent ring (comp hero product — DECIDED) · unpriced
+  rows dim .6 only when siblings have prices (a generic list never dims). Verified BOTH variants live:
+  generic (Delta Reign, products:[]) and priced (ME05 Pitch Black — real feed data, same set the comp
+  mocked). PROOFS: P4-products-v2.png · P4-priced-v2.png. Next: P3a/P3 detail diff · 6h · then Lens B.
 - [ ] Lens B: button paths — every tap lands its outcome (rendered clicks)
 - [ ] Lens C: copy — served strings vs approved copy; comp-isms leaking; COPY QUEUE current
 - [ ] Lens D: ES — full flow in Spanish, no English leaks in v2-added strings
