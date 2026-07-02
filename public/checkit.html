@@ -2666,8 +2666,7 @@ function openAccount(){
         <button class="tab" data-t="activity" onclick="acctTab('activity')">${t('acct.tab.activity','Activity')}</button>
         <button class="tab" data-t="earn" onclick="acctTab('earn')">${t('acct.tab.earn','Earn')}</button>
       </div>
-      <div id="acctv2panel" style="display:none;padding:14px 18px 0"></div>
-      ${(!member&&!comp)?`<div style="padding:14px 18px 0"><button class="cta" style="width:100%" onclick="closeAccount();openBuy()">${t('acct.upgrade2','Upgrade')} · ${t('acct.from','from')} ${(typeof tiers==='function'&&tiers()[0])?tierPrice(tiers()[0].cents)+t('plan.mo','/mo'):''}</button></div>`:''}`;
+      <div id="acctv2panel" style="display:none;padding:14px 18px 0"></div>`; /* 6h upgrade capsule now lives in the overview panel */
     acctTab('overview');
   }catch(_){} }
   $('acctOverlay').classList.add('on'); track('account_open');
@@ -4574,12 +4573,21 @@ function acctTab(which){
     const calic=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="stroke:${AC2}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>`;
     const gift=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="stroke:${AC2}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 4.8 0 0 1 12 8a4.8 4.8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></svg>`;
     const row=(ic,ttl,sub,fn)=>`<button onclick="${fn}" style="display:flex;align-items:center;gap:12px;width:100%;margin-top:10px;padding:13px 14px;border:0;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);color:#FFF;cursor:pointer;text-align:left">${tile(ic)}<span style="flex:1;min-width:0"><span style="display:block;font-size:15px;font-weight:700">${ttl}</span><span style="display:block;margin-top:2px;font-size:12px;font-weight:600;color:#8A8A96">${sub}</span></span>${chev}</button>`;
+    // 6e (member): Manage plan + history + earn → RUN A CHECK. 6h (new user): NO Manage-plan row,
+    // history sub = lifetime count, capsule = UPGRADE · FROM $X (runtime tiers, lockup mark).
+    const total=histList().filter(e=>e.cid).length;
+    const histSub=member?tf('hist.count','{n} checks in {m}',{n:mrun,m:mon}):(total===1?t('acct.run1','1 check run'):tf('acct.runN','{n} checks run',{n:total}));
+    const arr2='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>';
+    const fromP=(typeof tiers==='function'&&tiers()[0])?tierPrice(tiers()[0].cents)+t('plan.mo','/mo'):'';
+    const caps=member
+      ?`<button class="capsW" onclick="closeAccount();backToBuilder()"><span>${t('acct.runcheck','Run a check')}</span>${arr2}</button>`
+      :`<button class="capsW" onclick="closeAccount();openBuy()"><span style="display:inline-flex;align-items:center;gap:9px"><svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${t('acct.upgrade2','Upgrade')} · ${t('acct.from','from')} ${esc(fromP)}</span></span>${arr2}</button>`;
     panel.innerHTML=
-      row(spark,t('acct.row.plan','Manage plan'),member?t('plan.cycle','Billed monthly · cancel anytime'):t('acct.row.plan.sub','Plans & checks'),"closeAccount();openBuy('manage')")+
-      row(calic,t('acct.row.hist','Check history'),tf('hist.count','{n} checks in {m}',{n:mrun,m:mon}),"closeAccount();openHistory()")+
+      (member?row(spark,t('acct.row.plan','Manage plan'),t('plan.cycle','Billed monthly · cancel anytime'),"closeAccount();openBuy('manage')"):'')+
+      row(calic,t('acct.row.hist','Check history'),histSub,"closeAccount();openHistory()")+
       row(gift,t('acct.row.earn','Earn free checks'),t('acct.row.earn.sub','4 ways. Open to everyone.'),"acctTab('earn')")+
-      `<button class="capsW" onclick="closeAccount();backToBuilder()"><span>${t('acct.runcheck','Run a check')}</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
-      <button onclick="doSignOut()" style="display:block;width:100%;margin-top:16px;background:none;border:0;text-align:center;font-size:13px;font-weight:700;color:#7C7C88;cursor:pointer">${t('acct.signout','Sign out')}</button>`;
+      caps+
+      `<button onclick="doSignOut()" style="display:block;width:100%;margin-top:16px;background:none;border:0;text-align:center;font-size:13px;font-weight:700;color:#7C7C88;cursor:pointer">${t('acct.signout','Sign out')}</button>`;
     return;
   }
   const hist=histList().filter(e=>e.cid&&e.ts);
@@ -4650,34 +4658,57 @@ async function openHobby(){
   renderHobbyEras(); window.scrollTo({top:0});
 }
 // P3a — era logos sit DIRECTLY on the page, big, raised by stacked shadows; press dips them.
+// P3a comp: everything INSIDE the big card — centered 24/900 title + 12.5/600 sub, era rows 96px
+// centered w/ 82%-wide logos (comp drop shadows); missing logo = EMBOSSED TEXT (comp), not stripes.
+// The era·years strip is comp-absent — dropped (era context lives in P3's chip).
+function hobEraTxt(nm){ const s=document.createElement('span'); s.style.cssText='font-size:19px;font-weight:900;letter-spacing:.1em;color:#B9B9C4;text-shadow:0 1.5px 0 rgba(255,255,255,.1),0 -2px 3px rgba(0,0,0,.65),0 12px 18px rgba(0,0,0,.5)'; s.textContent=(nm||'').toUpperCase(); return s; }
 function renderHobbyEras(){
   const h=$('hobby');
-  h.innerHTML=`<div style="font-size:20px;font-weight:800;letter-spacing:-.3px;padding:4px 2px 18px">${t('hob.era','Pick your era')}</div>`+
-    HOBBY.data.eras.map((e,i)=>`<button class="hob-era" onclick="hobbyPickEra(${i})" aria-label="${esc(e.era)}">
-      <img src="${esc(e.logo||'')}" alt="" style="width:100%;filter:drop-shadow(0 10px 18px rgba(0,0,0,.55)) drop-shadow(0 24px 40px rgba(0,0,0,.4))" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh(this.nextElementSibling.textContent.split('·')[0],86));this.remove()">
-      <div style="margin-top:7px;font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${esc(e.era)} · ${esc(e.years||'')}</div></button>`).join('');
+  h.innerHTML=`<div class="card" style="padding:20px 16px 22px">
+    <div style="text-align:center;font-size:24px;font-weight:900;letter-spacing:-.6px">${t('hob.title','What are you hunting?')}</div>
+    <div style="margin-top:6px;text-align:center;font-size:12.5px;font-weight:600;color:#8A8A96">${t('hob.sub','Pick your era. Sets come next.')}</div>
+    <div style="margin-top:18px;display:flex;flex-direction:column;gap:10px">`+
+    HOBBY.data.eras.map((e,i)=>`<button class="hob-era" onclick="hobbyPickEra(${i})" aria-label="${esc(e.era)}" style="min-height:96px;display:flex;align-items:center;justify-content:center;width:100%;margin:0">
+      ${e.logo?`<img src="${esc(e.logo)}" alt="${esc(e.era)}" style="width:82%;height:auto;filter:drop-shadow(0 18px 26px rgba(0,0,0,.75)) drop-shadow(0 4px 8px rgba(0,0,0,.55))" onerror="this.replaceWith(hobEraTxt(this.alt))">`
+        :`<span style="font-size:19px;font-weight:900;letter-spacing:.1em;color:#B9B9C4;text-shadow:0 1.5px 0 rgba(255,255,255,.1),0 -2px 3px rgba(0,0,0,.65),0 12px 18px rgba(0,0,0,.5)">${esc(e.era.toUpperCase())}</span>`}
+    </button>`).join('')+`</div></div>`;
 }
 function hobbyPickEra(i){ HOBBY.era=HOBBY.data.eras[i]; renderHobbySets(); window.scrollTo({top:0}); }
 // P3 — the banner IS the tile (no overlays, no set names, never grayed); JUST DROPPED chip on fresh
 // releases; future sets stay, badged UPCOMING (feed rule: badge, don’t drop); strip = code · date.
 function renderHobbySets(){
+  // P3 comp: inside the big card — centered title + sub, accent-ringed ERA CHIP (logo · 'N sets' ·
+  // Change key), then a 2-COL GRID of set tiles (112px covers, chips, code+date strip ON the tile);
+  // the freshest JUST-DROPPED tile takes the accent ring. Comp's full S2 track on this screen is
+  // SKIPPED — the launch-state law (Retail+Kiosk only) outranks the comp here; DECIDED.
   const h=$('hobby'); const era=HOBBY.era; const now=Date.now();
   const fmt=d=>{ try{ return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',year:'numeric'}); }catch(e){ return d||''; } };
-  h.innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:4px 2px 16px">
-      <button onclick="renderHobbyEras()" aria-label="Back" style="width:34px;height:34px;border-radius:50%;border:0;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#FFF;cursor:pointer;font-size:16px">‹</button>
-      <div style="font-size:20px;font-weight:800;letter-spacing:-.3px">${esc(era.era)}</div></div>`+
-    era.sets.map((st,si)=>{ const rel=st.release?Date.parse(st.release+'T12:00:00'):0;
-      const future=rel>now, fresh=!future&&rel>now-45*86400000;
-      return `<button class="hob-set" onclick="hobbyPickSet(${si})" aria-label="${esc(st.code)}">
-      <div style="position:relative;border-radius:16px;overflow:hidden">
-        <img src="${esc(st.banner||'')}" alt="" style="display:block;width:100%;height:112px;object-fit:cover" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh('${esc(st.code)}',112));this.remove()">
+  const ring='linear-gradient(120deg,color-mix(in srgb,var(--accent,#FFCB05) 55%,#FFF) 0%,var(--accent,#FFCB05) 55%,color-mix(in srgb,var(--accent,#FFCB05) 45%,#000) 100%)';
+  let heroDone=false;
+  const tiles=era.sets.map((st,si)=>{ const rel=st.release?Date.parse(st.release+'T12:00:00'):0;
+    const future=rel>now, fresh=!future&&rel>now-45*86400000;
+    const hero=fresh&&!heroDone; if(hero)heroDone=true;
+    const inner=`<div style="border-radius:16px;overflow:hidden;background:${hero?'#23232A':'linear-gradient(180deg,#2D2D34 0%,#27272D 100%)'};box-shadow:${hero?'none':'0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)'}">
+      <div style="position:relative;height:112px;overflow:hidden">
+        <img src="${esc(st.banner||'')}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh('${esc(st.code)}',112));this.remove()">
         ${fresh?`<span class="hob-chip" style="background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF),var(--accent,#FFCB05));color:#26251E">${t('hob.dropped','Just dropped')}</span>`:''}
         ${future?`<span class="hob-chip" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#FFF">${t('hob.upcoming','Upcoming')}</span>`:''}
       </div>
-      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:7px 4px 0">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;padding:7px 11px 9px">
         <span style="font-size:11.5px;font-weight:800">${esc(st.code)}</span>
         <span style="font-size:10.5px;font-weight:600;color:#8A8A96">${esc(fmt(st.release))}</span>
-      </div></button>`; }).join('');
+      </div></div>`;
+    return `<button class="hob-set" onclick="hobbyPickSet(${si})" aria-label="${esc(st.code)}" style="margin:0">${hero?`<div style="padding:2px;border-radius:18px;background:${ring};box-shadow:0 10px 22px -8px color-mix(in srgb,var(--accent,#FFCB05) 35%,transparent)">${inner}</div>`:inner}</button>`; }).join('');
+  h.innerHTML=`<div class="card" style="padding:16px 16px 20px">
+    <div style="text-align:center;font-size:24px;font-weight:900;letter-spacing:-.6px">${t('hob.title','What are you hunting?')}</div>
+    <div style="margin-top:6px;text-align:center;font-size:12px;font-weight:600;color:#8A8A96">${t('hob.sub2','Specific sets, above retail. Pick a set, then a product.')}</div>
+    <div style="margin-top:16px;padding:2px;border-radius:16px;background:${ring};box-shadow:0 10px 22px -8px color-mix(in srgb,var(--accent,#FFCB05) 35%,transparent)">
+      <div style="display:flex;align-items:center;gap:12px;background:#23232A;border-radius:14px;padding:9px 12px">
+        ${era.logo?`<img src="${esc(era.logo)}" alt="${esc(era.era)}" style="height:38px;object-fit:contain" onerror="this.replaceWith(hobEraTxt(this.alt))">`:`<span style="font-size:13px;font-weight:900;letter-spacing:.06em;color:#B9B9C4">${esc(era.era.toUpperCase())}</span>`}
+        <span style="flex:1;font-size:11.5px;font-weight:700;color:var(--accent,#FFCB05)">${era.sets.length} ${t('hob.sets','sets')}</span>
+        <button onclick="renderHobbyEras()" style="padding:7px 13px;border-radius:999px;border:0;background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:12px;font-weight:700;color:#FFF;cursor:pointer">${t('hob.change','Change')}</button>
+      </div></div>
+    <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px">${tiles}</div></div>`;
 }
 // P4 — banner takes the card top full-bleed, back key floats on it; product rows = carved 38px icon
 // tile + name + retail anchor. products:[] → the generic type list; NEVER a price for retail:null.

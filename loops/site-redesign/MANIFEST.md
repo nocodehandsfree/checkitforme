@@ -222,6 +222,15 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   rows dim .6 only when siblings have prices (a generic list never dims). Verified BOTH variants live:
   generic (Delta Reign, products:[]) and priced (ME05 Pitch Black — real feed data, same set the comp
   mocked). PROOFS: P4-products-v2.png · P4-priced-v2.png. Next: P3a/P3 detail diff · 6h · then Lens B.
+- [x] Lens A pass 3 — **Lens A COMPLETE, every comp frame now individually diffed**: P3a rebuilt to comp
+  (big-card container, centered 24/900 'What are you hunting?' + 12.5/600 sub, 96px era rows w/ 82% logos
+  + comp shadows; missing-logo fallback = EMBOSSED TEXT per comp, stripes dropped; era·years strip dropped
+  — comp-absent). P3 rebuilt to comp (card + title/sub, accent-ringed ERA CHIP w/ logo + 'N sets' + Change
+  key, 2-COL tile grid w/ code+date strips ON the tiles, hero accent ring on the freshest RELEASED set;
+  comp's full S2 track on this screen SKIPPED — launch-state law outranks the comp, DECIDED). 6h to comp:
+  new users lose the Manage-plan row, history sub = lifetime count, capsule = UPGRADE·FROM $X w/ lockup
+  mark (head-injected duplicate CTA removed). Copy: hob.title/sub/sub2/sets/change join the hob.* queue.
+  PROOFS: P3a-eras-v2.png · P3-sets-v2.png · 6h-newuser-v2.png. → Lens B next (button paths).
 - [ ] Lens B: button paths — every tap lands its outcome (rendered clicks)
 - [ ] Lens C: copy — served strings vs approved copy; comp-isms leaking; COPY QUEUE current
 - [ ] Lens D: ES — full flow in Spanish, no English leaks in v2-added strings
