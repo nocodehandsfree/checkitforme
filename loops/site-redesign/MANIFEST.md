@@ -40,7 +40,8 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - (pending build) Runnr RN1/RN2 new skin: existing handoff flow with skin on.
 
 ## COPY QUEUE (view · element · comp copy · current approved copy) — Copy lane processes
-- (empty — filled as comp copy diverges from approved during implementation)
+- S2 switcher · mode key labels · comp/style-guide LOCKED: "Retail" / "Kiosk" · approved: "Check a store" / "Kiosks" (EN applied under v2 per design-lock; ES table untouched — needs ES rulings for Retail/Kiosk)
+- Footer · links row · comp: "Legal" (merges Terms+Privacy) · approved: separate "Terms" "Privacy" (not yet applied — queued with footer item)
 
 ## CYCLES 0a/0b — benchmark harnesses
 - [x] 0a `scripts/qa-pages.sh` behavior benchmark: boot server on throwaway DB, fetch `/`,
@@ -54,7 +55,7 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 
 ## VIEW ENUMERATION (from the LIVE site) × comp mapping
 ### Global chrome
-- [ ] S2 store-type switcher replaces the Check-a-store/Kiosks mode tabs (comp S2; launch = Retail+Kiosk)
+- [x] S2 store-type switcher (cycle 2): carved #17171C track + raised active key (comp-exact), storefront/kiosk-awning icons via currentColor, launch = Retail+Kiosk with active flex 1.2. EN labels locked Retail·Kiosk under v2; ES untouched pending Copy.
 - [ ] Header: brand logomark/wordmark, product switcher pill (vsw), My/auth pill (comp P1 header)
 - [ ] Footer new skin: one-line links w/ Legal merge + EN pill; wordmark ©2026 + Discord/X circles (comp/§5.14) — NOTE Legal merge = copy change → COPY QUEUE
 - [ ] Toasts → bottom capsule system (comp T1, §5.4)
@@ -111,6 +112,7 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - [ ] Error/empty states sweep (network fail toasts, callgone, no-credits)
 
 ## DECIDED LOG
+- DECIDED: S2 track fill #17171C (comp markup) over guide §5.1's #1B1B20 — the guide defers to the board as master; both are system tokens.
 - DECIDED: apex `/` is host-routed (localhost serves Admin) — 0a benchmarks the 4 brand paths, which are the consumer surface.
 - DECIDED: preview switch = `?skin=v2` / localStorage `cifm_skin` / `body.skin-v2` scope (cycle 1).
 - DECIDED: 0a harness as bash boot-script matching repo's test-growth.sh integration pattern (LOOP

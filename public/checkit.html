@@ -1067,6 +1067,13 @@ html[data-skin="v2"] input{background:#1B1B20;border:0;border-radius:14px;box-sh
 html[data-skin="v2"] .pill,html[data-skin="v2"] .vsw-trig{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.1)}
 /* Footer strip. */
 html[data-skin="v2"] .site-footer{background:#17171C;border-top:0}
+/* S2 store-type switcher (comp-exact; launch state = Retail + Kiosk keys). Carved track, raised
+   active key, icons tint via currentColor (#4ADE80 active / #7C7C88 idle). */
+html[data-skin="v2"] .modetabs{background:#17171C;border:0;border-radius:999px;padding:5px;gap:2px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
+html[data-skin="v2"] .modetab{border-radius:999px;color:#7C7C88;font-size:12.5px;font-weight:700;padding:9px 0;gap:6px;text-shadow:none;background:transparent;box-shadow:none}
+html[data-skin="v2"] .modetab.on{flex:1.2;background:linear-gradient(180deg,#31313A 0%,#28282E 100%);color:#FFF;font-size:13px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);text-shadow:none}
+html[data-skin="v2"] .modetab .mti{color:#7C7C88}
+html[data-skin="v2"] .modetab.on .mti{color:#4ADE80}
 /*V2END*/</style>
 </head>
 <body>
@@ -1775,11 +1782,15 @@ const HERO_I18N={es:{
   'Topps NBA':'Topps NBA <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
   'NeeDoh':'NeeDoh <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
 }};
+function isV2(){ return document.documentElement.getAttribute('data-skin')==='v2'; }
 function applyLang(){
   document.documentElement.lang=LANG;
   document.querySelectorAll('[data-i18n]').forEach(el=>{ if(!el.hasAttribute('data-en')) el.setAttribute('data-en',el.innerHTML); el.innerHTML=t(el.getAttribute('data-i18n'),el.getAttribute('data-en')); });
   document.querySelectorAll('[data-i18n-ph]').forEach(el=>{ if(!el.hasAttribute('data-en-ph')) el.setAttribute('data-en-ph',el.getAttribute('placeholder')||''); el.placeholder=t(el.getAttribute('data-i18n-ph'),el.getAttribute('data-en-ph')); });
   const h1=document.querySelector('.hero h1'); if(h1){ if(!h1.dataset.en) h1.dataset.en=h1.innerHTML; const k=(BRAND&&BRAND.category)||''; h1.innerHTML=(LANG!=='en'&&HERO_I18N[LANG]&&HERO_I18N[LANG][k])||h1.dataset.en; }
+  // v2 skin, EN only: S2 store-type labels are LOCKED by design (§5.1 Retail·Kiosk launch state).
+  // ES keeps its approved table strings until the Copy lane rules (logged in the redesign COPY QUEUE).
+  if(isV2()&&LANG==='en'){ const mc=document.querySelector('.modetab[data-mode="call"] [data-i18n]'); if(mc) mc.textContent='Retail'; const mk=document.querySelector('.modetab[data-mode="kiosk"] [data-i18n]'); if(mk) mk.textContent='Kiosk'; }
 }
 function setLang(l){ LANG=l; localStorage.setItem('runnr_lang',l); applyLang();
   // Re-render everything built in JS so a language flip is instant and complete.
@@ -2637,7 +2648,12 @@ function renderIcons(){
   const ha=$('heroart'); if(ha && LU){ ha.innerHTML=`<img src="${LU}" alt="${(BRAND&&BRAND.short)||''}">`; ha.style.setProperty('--logo-scale', /needoh/i.test((BRAND&&BRAND.category)||'') ? '.62' : '1'); } // NeeDoh's wordmark is oversized — shrink it on the landing hero
   setI('tsi1', ICO.store(c)); setI('tsi2', ICO.call(c)); setI('tsi3', ICO.proof(c));
   document.querySelectorAll('.tsd').forEach(d=>d.innerHTML=ICO.chev('#56566a'));
-  setI('mti_call', ICO.call('currentColor')); setI('mti_kiosk', ICO.kioskMini('currentColor'));
+  // v2 skin: S2 store-type keys use the comp's 14px 2px-stroke icon set (storefront · kiosk awning)
+  // in place of the phone/kiosk glyphs; color rides currentColor so the track CSS tints active/idle.
+  if(isV2()){
+    setI('mti_call','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>');
+    setI('mti_kiosk','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.5 5.2 3h13.6l1.7 3.5z"/><path d="M5 6.5V21h14V6.5"/><rect x="8.3" y="10" width="7.4" height="4.8" rx="1"/><path d="M8.3 18.2h7.4"/></svg>');
+  } else { setI('mti_call', ICO.call('currentColor')); setI('mti_kiosk', ICO.kioskMini('currentColor')); }
   const fb=$('findbtn'); if(fb && !fb.classList.contains('on')) fb.innerHTML=ICO.pin('currentColor');
   setI('kioskmark', ICO.kiosk('#A78BFA'));
   setI('khspark', ICO.spark('#A78BFA'));
