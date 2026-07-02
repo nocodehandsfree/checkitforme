@@ -18,6 +18,17 @@ of proof (which render you looked at). Never delete findings; history stays.
    hierarchy, components, order. Tokens matching ≠ done (PAINT IS NOT DONE, LOOP.md).
 
 ## OPEN findings
+- [ ] **(P0 — OWNER-REPORTED) Typography has no POP: apply the §4 type ramp EXACTLY.** The Inter
+  family loads, but the ramp is the design: hero/verdict titles 30px/900/−1px, verdict price
+  34px/900/−1.2px, modal titles 19–21px/900/−.4px, NEVER wrap a heading (shrink to 16.5px or cut
+  copy). Only 2 font-family declarations exist in checkit.html and 900-weight titles are largely
+  absent. Sweep EVERY v2 view against the §4 table in STYLE_GUIDE_NEW.md — sizes, weights, AND
+  letter-spacing. This is why the owner says it "isn't popping."
+- [ ] **(P0 — OWNER-REPORTED) The brand check mark is WRONG.** Zero references to
+  `docs/design/check-brandmark.svg` in checkit.html — the site draws its own mark. Use the actual
+  brandmark asset (rules in docs/design/LOGOS.md) everywhere the mark appears: header, footer
+  wordmark, empty states, any check iconography that is BRAND (not status icons). Recreate the
+  handed design exactly — no interpretations.
 - [ ] **(P1→Website) Populated My-checks list is unreachable by URL.** Both `?show=mychecks` and
   `?v=history` auto-restore the NEWEST result when history rows exist (DevOps cycle 3, renders
   c3-history-list vs c2). If intended UX, fine — but then add a preview hook (e.g.
@@ -43,6 +54,10 @@ of proof (which render you looked at). Never delete findings; history stays.
   track, footer). Re-verify against P2 store-picked state when rebuilt views land.
 
 ## DevOps cycle log
+- 2026-07-02 ~13:05 CYCLE 3b (owner escalation): filed the two P0s above (type ramp pop +
+  brandmark). Render pipeline now serves VENDORED Inter (docs/design/vendor/fonts) instead of
+  aborting font loads — font/weight mismatches are now visible in every render, both site and
+  comp board. Re-render your views after type fixes and compare the ramp against the board.
 - 2026-07-02 ~12:50 CYCLE 3 (owner-driven /loop now primary at :26/:56; internal cron backup at :09
   hourly — previous cron pair silently died AGAIN, confirming session timers are unreliable).
   VERDICTS: P6b poll CONFIRMED REBUILT (c3-result-poll) — result family 3/3 done. NEW FINDING:
