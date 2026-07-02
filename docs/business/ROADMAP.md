@@ -23,8 +23,9 @@ Owner reviews each on staging before promote. Status testing (13-status sweep) r
   REAL store calls and the Admin God view reflects them accurately (cost/call, mapping performance);
   staging keeps feeding the owner's test-call reports separately. Press "Start fresh" (`stats_since`)
   at launch so only post-launch calls count.
-- [ ] **Commerce build-out — owner + DevOps together** (owner-requested 2026-07-01): Stripe
-  products/prices, packs/membership, the money path end-to-end.
+- [~] **Commerce build-out — owner + DevOps** — staging is LIVE in test mode (2026-07-02): keys +
+  signed webhook + proven test-card payment; UI wired (plans → checkout → paid toast). Remaining:
+  owner click-through sign-off, LIVE-mode webhook at promote, align /app/me catalog with policy pricing.
 - [ ] **Premium sign-up area redesign** on the website using Claude design (Website + Design lanes;
   owner-requested 2026-07-01).
 - [ ] Route the consumer "check" through the **bridge** so caller-ID applies (plain `/app/check` uses the house number).
@@ -55,7 +56,7 @@ Owner reviews each on staging before promote. Status testing (13-status sweep) r
   define the key-handling process (who gets keys, how, rotation cadence).
 
 **Revenue / GTM** (git history)
-- [ ] Finalize Stripe (products/prices) before paid tiers.
+- [~] Finalize Stripe — test-mode staging proven 2026-07-02; live-mode webhook + pricing sign-off at promote.
 - [ ] Wire confirmed call-cost rates into the admin cost dashboard (after the voice switcher is validated).
 - [ ] 3-tier customer support (FAQ → Claude → ticket) + Discord; on-site + Discord support agents (RAG via Qdrant).
 - [ ] Legal/compliance review of AI voice calling (gates public marketing).
