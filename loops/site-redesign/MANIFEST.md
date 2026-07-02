@@ -275,6 +275,12 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   caller-id) — all uniform: r26 #26262B cards, .66 dim, 32px ✕ circles, 900 titles, carved #1B1B20
   fields. ONE fix: watch field radius 12→14 (inline beat the rule; !important added). DECIDED: dim stays
   the system-wide .66 (R2/R3 frames show .72 — uniformity wins over per-modal fragmentation).
+- [x] Rotation 2 pass 5: KIOSK MODE walked end-to-end (least-exercised flow) — key flip, '① FIND A KIOSK'
+  eyebrow, kiosk count, rows w/ embossed wordmark fallbacks, green hint card (auto-healed from purple),
+  receipt modal (VERIFIED INTEL eyebrow, numbered chips, carved email well + COPY chip) all on-system.
+  2 fixes: kiosk hint's INLINE hairline border beat the v2 rule (§8 — !important) · P2 charge line
+  400→12.5/600. P2 second-pass probe otherwise exact (grabber 40×5/mb18, prod mt16 14/800).
+  PROOFS: kiosk-mode-v2.png · kiosk-receipt-v2.png.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles

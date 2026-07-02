@@ -1169,7 +1169,7 @@ html[data-skin="v2"] .csheet-call{padding:14px 24px}
 html[data-skin="v2"] #cs_call{justify-content:space-between}
 html[data-skin="v2"] #cs_call .cs-l>svg{width:20px;height:20px}
 html[data-skin="v2"] #cs_call .cs-arrow{display:block;flex:0 0 auto}
-html[data-skin="v2"] .csheet-charge{color:#8A8A96}
+html[data-skin="v2"] .csheet-charge{color:#8A8A96;font-size:12.5px;font-weight:600}
 html[data-skin="v2"] .csheet-charge b{color:#CDCDD8}
 html[data-skin="v2"] .cs-key{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);animation:none}
 /* Option chips (§5.12): raised buttons that LIGHT UP green when on — never carved form fields. */
@@ -1348,7 +1348,7 @@ html[data-skin="v2"] .proof{background:#1B1B20;border:0;box-shadow:inset 0 2px 6
 html[data-skin="v2"] .smline{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
 html[data-skin="v2"] .csheet-ic{background:#1F1F25;border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] #mapview{border:0;background:#17171C;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
-html[data-skin="v2"] .kioskhint{border:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+html[data-skin="v2"] .kioskhint,html[data-skin="v2"] #kioskhint{border:0!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)} /* rotation 2: the hint carries an INLINE hairline — important beats it (§8) */
 /* AUDIT SWEEP 2 — remaining v1 borders/fills, grouped by role. Raised = interactive chrome;
    carved = wells/tracks; tinted chips keep their tint but drop the hairline. */
 html[data-skin="v2"] .findbtn,html[data-skin="v2"] .findbtn-primary,html[data-skin="v2"] .tbtn,html[data-skin="v2"] .demotab,html[data-skin="v2"] .vswitch,html[data-skin="v2"] .sharetile,html[data-skin="v2"] .oauthtile,html[data-skin="v2"] .acctrow,html[data-skin="v2"] .acctout,html[data-skin="v2"] .modrow,html[data-skin="v2"] .callkey,html[data-skin="v2"] .smbtn.ghost{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
