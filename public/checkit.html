@@ -3401,7 +3401,9 @@ function renderCallSheet(){
     if(s.openState&&s.openState.known){ const o=s.openState.open; html+=(html?' · ':'')+`<span class="${o?'cs-open':'cs-closed'}">${o?t('st.open','Open'):t('st.closed','Closed')}</span>`; }
     ad.innerHTML=html;
   }
-  const prod = SEL_KIOSK ? t('cta.kioskword','kiosk') : catLabels();
+  // A hobby-locked product IS the ask — print it where the comp prints the product context
+  // ("Pokémon · costs 1 check" → "Pitch Black Booster Box · costs 1 check"). v1: lock never set.
+  const prod = SEL_KIOSK ? t('cta.kioskword','kiosk') : ((typeof HOBBY_LOCK!=='undefined'&&HOBBY_LOCK&&SEL_PRODUCT)?SEL_PRODUCT:catLabels());
   const pe=$('cs_prod'); if(pe) pe.innerHTML = `${esc(prod)} <span>· ${t('cs.costs','costs 1 check')}</span>`;
 }
 function showCallSheet(){ const el=$('csheet'); if(!el) return; renderCallSheet(); el.style.transform=''; el.style.transition=''; el.classList.add('on'); el.setAttribute('aria-hidden','false'); const bd=$('csheetBd'); if(bd) bd.classList.add('on'); }

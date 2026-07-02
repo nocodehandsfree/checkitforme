@@ -359,6 +359,10 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   change, true multi-select (intent changes). v1 semantics byte-identical (lock unreachable there;
   verified). End-to-end proven: lock → store pick → call payload carries 'Pitch Black Booster Box'.
   Permanent qa-e2e guard added (now 46). Staging carries the watch-7 brand gate (verified deployed).
+- [x] Watch 11 (lock story finished): the sheet now SHOWS the locked product where the comp prints
+  product context — 'Pitch Black Booster Box · costs 1 check' in the accent slot (v1 untouched; lock
+  unreachable). Verified the lock also survives the SIGN-IN gate (startCheck→auth→lock intact).
+  Upsell fire-once sound by construction (flag set before firing). PROOF: P2-locked-product-v2.png.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
