@@ -231,7 +231,11 @@ export async function navStep(id: string, speech: string): Promise<string> {
   // an LLM round-trip) leaves dead air while they keep saying "hello" until we hang up. looksLikeLivePerson
   // already excludes "press N" menus + long recordings, so it won't trip on an opening IVR. Map mode →
   // hang up instantly; confirm mode → ask the one stock question.
-  if (speech && looksLikeLivePerson(speech)) return reachHuman(s, atSec, id);
+  // Direct pickup, store-name greeting ("Gateway WinCo.", "Bakery, this is Sam"): the FIRST thing on
+  // the line, ≤4 words, with zero menu language = a person. IVRs open with long recorded sentences.
+  const firstShortPickup = s.turns <= 2 && !!speech && speech.trim().split(/\s+/).length <= 4
+    && !/press|menu|para |website|hours|dial|closed|extension|welcome|recorded|automated/i.test(speech);
+  if (speech && (looksLikeLivePerson(speech) || firstShortPickup)) return reachHuman(s, atSec, id);
   // FAST-FAIL only on TRUE dead-ends: an actual voicemail box, or the STORE itself closed.
   // NEVER on "pharmacy is closed" — the front store is open and is exactly where we're going
   // (pharmacy can't sell Pokémon cards anyway). Live-observed funnel: "connect you to our
