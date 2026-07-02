@@ -61,7 +61,7 @@ export interface NavSession {
   listenFirst?: boolean; heard?: string[];
   // Confirm ask pre-synthesized in the workflow's ElevenLabs voice (Branson) — Polly is the fallback.
   askAudio?: Buffer; askText?: string;
-  lastActTurn?: number; escaped?: boolean; routingSeen?: boolean; autoZeros?: number; persisted?: boolean;
+  lastActTurn?: number; escaped?: boolean; routingSeen?: boolean; routedAtSec?: number; autoZeros?: number; persisted?: boolean;
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
   humanAtSec: number | null; confidence: number; callSid?: string; recipe: NavRecipe | null;
@@ -148,9 +148,12 @@ export function navInitialTwiml(id: string): string {
 
 /** We've reached a live person. Plain training mode → hang up before troubling them. CONFIRM mode →
  *  ask the one stock question ONCE, then listen for their reply (classified next turn). */
-function reachHuman(s: NavSession, atSec: number, id: string): string {
-  s.humanAtSec = atSec;
+function reachHuman(s: NavSession, atSec: number, id: string, viaRouting = false): string {
+  s.humanAtSec = s.humanAtSec ?? atSec; // path-confirmed moment (first of transfer/person)
   if (s.confirm && !s.confirm.asked) {
+    // Transfer ANNOUNCED ("transferring you now") isn't a person — hold the question until the real
+    // human greets us (next live utterance), so the ask never plays into hold music.
+    if (viaRouting) { s.routingSeen = true; s.routedAtSec = atSec; return twiml(gather(id)); }
     s.confirm.asked = true; s.confirm.askedAtSec = atSec;
     const q = s.askText || `Hi! Real quick — do you have any ${s.confirm.product} in stock right now?`;
     s.steps.push({ who: "us", text: `asked: "${q}"`, atSec, action: "say", value: q });
@@ -189,7 +192,8 @@ export async function defaultWorkflowAsk(): Promise<{ text: string; voiceId: str
     if (!wf) return fallback;
     const opener = Array.isArray(wf.openers) && wf.openers.length ? String(wf.openers[0]) : "";
     return {
-      text: (opener || fallback.text).replace(/\{category\}/g, "Pokémon cards"),
+      // Collapse "cards cards" when the opener already says cards after {category}.
+      text: (opener || fallback.text).replace(/\{category\}/g, "Pokémon cards").replace(/\bcards(\s+cards)+\b/gi, "cards"),
       voiceId: (wf.voiceId && String(wf.voiceId)) || config.voice.defaultVoiceId,
     };
   } catch { return fallback; }
@@ -216,6 +220,11 @@ export async function navStep(id: string, speech: string): Promise<string> {
     }
     if (atSec - (s.confirm.askedAtSec ?? atSec) > 9) { s.confirmResult = "answered"; finish(s, "human"); return twiml(`<Hangup/>`); }
     return twiml(gather(id)); // brief silence — give them a moment to answer
+  }
+  // Holding the ask for a real person after an announced transfer, but the hold runs long with no
+  // pickup → the path is still CONFIRMED (transfer reached); count it human and hang up politely.
+  if (s.confirm && !s.confirm.asked && s.routedAtSec != null && atSec - s.routedAtSec > 30 && !(speech && speech.trim())) {
+    finish(s, "human"); return twiml(`<Hangup/>`);
   }
   // LIVE PICKUP — fire on the FIRST human utterance, in EVERY mode. A direct store answers "Hello" /
   // "Store, Bob speak" with no IVR, so we must reach the human on turn 1 — waiting for a 2nd line (or
@@ -261,7 +270,7 @@ export async function navStep(id: string, speech: string): Promise<string> {
   const d = await decide(s, speech || "");
   if (d.type) s.type = d.type;
   s.confidence = d.confidence;
-  if (d.action === "human") return reachHuman(s, atSec, id); // reached a person → confirm (or hang up)
+  if (d.action === "human") return reachHuman(s, atSec, id, !!(speech && ROUTING_RE.test(speech))); // person OR announced transfer → confirm waits for the person
   if (d.action === "press" && d.value) {
     const digits = d.value.replace(/[^0-9*#]/g, "").slice(0, 6);
     s.steps.push({ who: "us", text: `pressed ${digits}`, atSec, action: "press", value: digits });
