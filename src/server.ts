@@ -1298,12 +1298,15 @@ app.get("/pub/pokemon-sets", async (c) => {
   //   set banner-> public/logos/set-banners/<logoKey>.png (served at /logos/set-banners/…)
   //   era logo  -> public/logos/eras/<era-slug>.png       (served at /logos/eras/…)
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  // Cache-bust: the service worker caches /logos/* cache-first, so bump this whenever the set assets
+  // are re-cut and the front end will request fresh URLs (old cached copies are orphaned harmlessly).
+  const av = "?v=2";
   const v = { ...file, logoBase: "/logos", eras: file.eras.map((e) => ({ ...e,
-    slug: slug(e.era), logo: `/logos/eras/${slug(e.era)}.png`,
+    slug: slug(e.era), logo: `/logos/eras/${slug(e.era)}.png${av}`,
     sets: e.sets.map((s) => ({ ...s,
       logoKey: slug(String(s.code)),
-      logo: `/logos/sets/${slug(String(s.code))}.png`,
-      banner: `/logos/set-banners/${slug(String(s.code))}.png`,
+      logo: `/logos/sets/${slug(String(s.code))}.png${av}`,
+      banner: `/logos/set-banners/${slug(String(s.code))}.png${av}`,
       products: [...(bySet.get(norm(String(s.name))) ?? new Map<string, number | null>()).entries()].map(([type, retail]) => ({ type, retail })) })) })) };
   pokemonSetsCache = { t: Date.now(), v };
   return c.json(v);
