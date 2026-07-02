@@ -141,3 +141,4 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 
 ## AUDIT SWEEPS
 - Sweep 1 (cycle 18): 6 fixes — v1 hairline/terminal leaks under v2 (.rhead, .proof, .smline, .csheet-ic, #mapview, .kioskhint) + reduced-motion guard. NOT ZERO → at least one more sweep required.
+- Sweep 2 (cycle 19): ~26 fixes — systematic residual-border pass (find-me buttons, translate btn, demo tabs, share/auth tiles, account rows/avatar/stats, call keys, chips) grouped into role-based v2 rules; P4 off-comp code+name strip removed (the banner says it). NOT ZERO → sweeps 3+4 must both be clean to exit.
