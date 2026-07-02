@@ -27,6 +27,17 @@
   if(spk==='v2') localStorage.setItem('cifm_skin','v2'); else if(spk==='off') localStorage.removeItem('cifm_skin');
   if(localStorage.getItem('cifm_skin')==='v2') document.documentElement.setAttribute('data-skin','v2');
 }catch(e){}})();</script>
+<script>window.addEventListener('DOMContentLoaded',function(){try{
+  // TEMPORARY preview affordance (not part of the design — strip before promote): when the v2 skin is
+  // active, pin a small glass badge so there is never any doubt the preview is on. Tap = turn it off.
+  if(document.documentElement.getAttribute('data-skin')==='v2'){
+    var b=document.createElement('button');
+    b.textContent='NEW LOOK · preview';
+    b.setAttribute('style','position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:9999;font:800 10px Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#4ADE80;background:rgba(5,6,9,.72);border:1px solid rgba(74,222,128,.4);border-radius:999px;padding:6px 12px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);cursor:pointer');
+    b.onclick=function(){ localStorage.removeItem('cifm_skin'); location.href=location.pathname; };
+    document.body.appendChild(b);
+  }
+}catch(e){}});</script>
 <script>(function(){try{
   var sp=new URLSearchParams(location.search);
   // The tone the SERVER baked into <meta theme-color> at load (?tone=in|out|unk|soon). iOS only tints the
@@ -1084,7 +1095,7 @@ html[data-skin="v2"] .foot-social a,html[data-skin="v2"] .foot-social button{wid
 /* Toasts (T1/§5.4): bottom capsule, green success gradient + dark-green text. */
 html[data-skin="v2"] .toast{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210F;border:0;border-radius:999px;box-shadow:0 12px 28px -8px rgba(25,177,69,.45)}
 html[data-skin="v2"] .toast.tneutral{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);color:#FFF;box-shadow:0 12px 28px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
-html[data-skin="v2"] .toast.taccent{background:linear-gradient(180deg,#FFE066 0%,#FFCB05 100%);color:#26251E;box-shadow:0 12px 28px -8px rgba(255,203,5,.4)}
+html[data-skin="v2"] .toast.taccent{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;box-shadow:0 12px 28px -8px color-mix(in srgb,var(--accent,#FFCB05) 40%,transparent)}
 /* Dropdown menus (product/language switchers): big-card surface, depth not borders. */
 html[data-skin="v2"] .vsw-menu{background:#26262B;border:0;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 /* Finds ticker chips (NO COMP — extended): raised row cards, green accents stay in content. */
@@ -1101,12 +1112,12 @@ html[data-skin="v2"] .store .ic:not(:has(img)){background:linear-gradient(145deg
 html[data-skin="v2"] .store.sel{background:#23232A;border:0;box-shadow:0 0 0 2px var(--accent,#FFCB05),0 8px 14px -8px rgba(0,0,0,.55)}
 html[data-skin="v2"] .store:has(.besttag){background:#23232A;box-shadow:0 0 0 2px #4ADE80,0 8px 14px -8px rgba(0,0,0,.55),0 0 18px rgba(74,222,128,.18)}
 /* Map chrome: Map/List toggle = accent pill (§3); legend = raised pill (glassless — it sits on the card). */
-html[data-skin="v2"] .maptgl{background:linear-gradient(180deg,#FFE066 0%,#FFCB05 100%);color:#26251E;border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.35)}
+html[data-skin="v2"] .maptgl{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.35)}
 html[data-skin="v2"] .maplegend{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 /* Capsule CTAs (§5.2): 2.5px gradient ring around a dark capsule, tracked-caps label. Green ring =
    primary; the CALL action inside the sheet takes the accent ring (P2 "CHECK THIS STORE"). */
 html[data-skin="v2"] .cta{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#4ADE80;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 28px -8px rgba(25,177,69,.45)}
-html[data-skin="v2"] .csheet .cta,html[data-skin="v2"] .cs-call{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#FFE066 0%,#FFCB05 55%,#8A6D00 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#FFCB05;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 28px -8px rgba(255,203,5,.4)}
+html[data-skin="v2"] .csheet .cta,html[data-skin="v2"] .cs-call{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,color-mix(in srgb,var(--accent,#FFCB05) 55%,#FFF) 0%,var(--accent,#FFCB05) 55%,color-mix(in srgb,var(--accent,#FFCB05) 45%,#000) 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:var(--accent,#FFCB05);font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 28px -8px color-mix(in srgb,var(--accent,#FFCB05) 40%,transparent)}
 /* Bottom sheet (P2/§5.11): big-card surface, top radius 28, 40×5 grabber; keys raised. */
 html[data-skin="v2"] .csheet{background:#26262B;border:0;border-radius:28px 28px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7)}
 html[data-skin="v2"] .csheet-handle{width:40px;height:5px;background:rgba(255,255,255,.22)}
@@ -1144,10 +1155,10 @@ html[data-skin="v2"] .rsub{font-size:16px;font-weight:500;color:rgba(255,255,255
    accent raised key, today = 1.5px white outline. */
 html[data-skin="v2"] .railcalpop{background:#26262B;border:0;border-radius:22px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 html[data-skin="v2"] .rcal-h button{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
-html[data-skin="v2"] .rcal-d.sel{background:linear-gradient(180deg,#FFE066 0%,#FFCB05 100%);color:#26251E;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6)}
+html[data-skin="v2"] .rcal-d.sel{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6)}
 html[data-skin="v2"] .rcal-d.today{box-shadow:inset 0 0 0 1.5px #FFF;border-radius:11px}
 html[data-skin="v2"] .rday-item{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:13px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
-html[data-skin="v2"] .rday-item.on{box-shadow:0 0 0 2px #FFCB05,0 8px 14px -8px rgba(0,0,0,.55)}
+html[data-skin="v2"] .rday-item.on{box-shadow:0 0 0 2px var(--accent,#FFCB05),0 8px 14px -8px rgba(0,0,0,.55)}
 /* Couldn't-tell poll (P6b/§5.8): raised keys DIRECTLY on the page — no wrapping box; 34px icon
    chips; press dips the key (buttons look raised, never like form depressions). */
 html[data-skin="v2"] .fbk{background:none;border:0;padding:0}
@@ -1173,7 +1184,7 @@ html[data-skin="v2"] .modal:has(#auth_codeerr:not(:empty)) #auth_code{box-shadow
 html[data-skin="v2"] .modal a{text-decoration:underline dashed rgba(74,222,128,.55);text-underline-offset:4px}
 /* Scores (SC1/SC2/§5.15): dashed carved empty panel; Post = accent gradient pill w/ dark text. */
 html[data-skin="v2"] .emptybox{border:1.5px dashed rgba(255,255,255,.13);background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
-html[data-skin="v2"] .postbtn{background:linear-gradient(180deg,#FFE066 0%,#FFCB05 100%);color:#26251E;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.35)}
+html[data-skin="v2"] .postbtn{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.35)}
 /* Runnr (RN1/RN2/§5.16): 30px nodes, 2px connector, halo on the active node; step cards raised,
    idle steps at half opacity; bonus stepper = carved well + raised keys. */
 html[data-skin="v2"] .ho-node{width:30px;height:30px;border:0;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);color:#8A8A96}
@@ -1195,7 +1206,7 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 /* Sign-up plans (6b/§5.5/§3): raised tiles; the SELECTED tier takes the MUTED-yellow ring + #26251E
    fill — it must never fight a green CTA on the same screen. */
 html[data-skin="v2"] .plan{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:16px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
-html[data-skin="v2"] .plan.sub{background:#26251E;box-shadow:0 0 0 2px rgba(255,203,5,.45),0 8px 14px -8px rgba(0,0,0,.55),0 0 18px rgba(255,203,5,.18)}
+html[data-skin="v2"] .plan.sub{background:#26251E;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent,#FFCB05) 45%,transparent),0 8px 14px -8px rgba(0,0,0,.55),0 0 18px color-mix(in srgb,var(--accent,#FFCB05) 18%,transparent)}
 /* AUDIT SWEEP 1 — v1 hairlines/terminal fills that leaked through under v2. */
 html[data-skin="v2"] .rhead{background:#26262B;border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .proof{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
@@ -4256,7 +4267,7 @@ function renderHobbySets(){
       return `<button class="hob-set" onclick="hobbyPickSet(${si})" aria-label="${esc(st.code)}">
       <div style="position:relative;border-radius:16px;overflow:hidden">
         <img src="${esc(st.banner||'')}" alt="" style="display:block;width:100%;height:112px;object-fit:cover" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh('${esc(st.code)}',112));this.remove()">
-        ${fresh?`<span class="hob-chip" style="background:linear-gradient(180deg,#FFE066,#FFCB05);color:#26251E">${t('hob.dropped','Just dropped')}</span>`:''}
+        ${fresh?`<span class="hob-chip" style="background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF),var(--accent,#FFCB05));color:#26251E">${t('hob.dropped','Just dropped')}</span>`:''}
         ${future?`<span class="hob-chip" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#FFF">${t('hob.upcoming','Upcoming')}</span>`:''}
       </div>
       <div style="display:flex;align-items:baseline;justify-content:space-between;padding:7px 4px 0">
