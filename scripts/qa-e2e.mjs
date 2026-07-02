@@ -96,6 +96,13 @@ try {
   // click product → outcome manifests: back on builder with a lock toast
   await pg2.click('.hob-prod'); await pg2.waitForTimeout(600);
   has('product click → returns to builder', await pg2.evaluate(() => !document.getElementById('builder').classList.contains('hidden')));
+  // watch-10 regression guard: the P5 lock must SURVIVE a store pick (it was silently erased before)
+  has('P5 lock survives store pick → call carries the product', await pg2.evaluate(() => {
+    if (!SEL_PRODUCT) return false;
+    STORES = [{ id: 991, name: 'QA Store' }]; window.isClosed = () => false; window.chainCarriesBrand = () => true;
+    pickStore(991);
+    return !!SEL_PRODUCT;
+  }));
   await pg2.close();
 
   // ---- 6b. LENS B — BUTTON PATHS: every tap lands its outcome (rendered clicks).

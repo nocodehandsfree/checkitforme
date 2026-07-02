@@ -3294,7 +3294,7 @@ function pickStore(id){
   const opts=storeCatOptions();
   // Vertical site → ALWAYS the brand's category (never guess Pokémon from what the store carries).
   const pref = BRAND_CAT || opts.find(c=>/pok/i.test(c.label)) || opts[0];
-  SEL_CATS = pref?[pref.id]:[]; SEL_CAT=SEL_CATS[0]||null; SEL_PRODUCT='';
+  SEL_CATS = pref?[pref.id]:[]; SEL_CAT=SEL_CATS[0]||null; if(!(typeof HOBBY_LOCK!=='undefined'&&HOBBY_LOCK)) SEL_PRODUCT='';
   renderStores();
   if(!BRAND_CAT){ $('catcard').style.display=''; renderChips(); syncProductUI(); } // vertical sites skip the picker
   syncCta();
@@ -3307,7 +3307,7 @@ function pickKiosk(id){
   SEL_STORE=st; SEL_KIOSK=true; KIOSK_OK=false;
   if(!BRAND_CAT) applyBrand();
   const pref = BRAND_CAT || CATS.find(c=>/pok/i.test(c.label)) || CATS[0];
-  SEL_CATS = pref?[pref.id]:[]; SEL_CAT=SEL_CATS[0]||null; SEL_PRODUCT='';
+  SEL_CATS = pref?[pref.id]:[]; SEL_CAT=SEL_CATS[0]||null; SEL_PRODUCT=''; try{HOBBY_LOCK=false;}catch(_){ } // kiosk checks the MACHINE — product lock doesn't apply
   renderStores(); syncCta();
   if(window.innerWidth<900){ const b=$('checkBtn'); if(b) setTimeout(()=>{ try{ b.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){} },150); }
 }
@@ -3323,13 +3323,17 @@ function confirmKioskCall(){ KIOSK_OK=true; closeKioskConfirm(); startCheck(); }
 function pickCat(id){
   const i=SEL_CATS.indexOf(id);
   if(i>=0){ if(SEL_CATS.length>1) SEL_CATS.splice(i,1); } else SEL_CATS.push(id);
-  SEL_CAT=SEL_CATS[0]||null; SEL_PRODUCT='';
+  SEL_CAT=SEL_CATS[0]||null; SEL_PRODUCT=''; try{HOBBY_LOCK=false;}catch(_){ } // user changed intent
   renderChips(); syncProductUI(); syncCta();
 }
 // The SKU dropdown only makes sense for a single category — hide it when multiple are picked.
 function syncProductUI(){
   if(SEL_CATS.length===1) loadProducts(SEL_CATS[0]);
-  else { const w=$('prodwrap'); if(w) w.style.display='none'; SEL_PRODUCT=''; }
+  else { const w=$('prodwrap'); if(w) w.style.display='none';
+    // hobby-locked products survive an EMPTY cat state (data not loaded yet ≠ changed intent);
+    // a true multi-select DOES clear the lock. v1 (lock never set) behaves exactly as before.
+    if(!(typeof HOBBY_LOCK!=='undefined'&&HOBBY_LOCK)) SEL_PRODUCT='';
+    else if(SEL_CATS.length>1){ SEL_PRODUCT=''; HOBBY_LOCK=false; } }
 }
 // SKU-level selector: pull this category's products; show the dropdown only if there are any.
 async function loadProducts(catId){
@@ -3965,7 +3969,7 @@ function backToBuilder(){ TONE_NAV_DONE=false; /* new call coming → let the ne
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
   // — the category re-locks the moment a store is picked again (pickStore→applyBrand).
-  SEL_STORE=null; SEL_KIOSK=false; KIOSK_OK=false; SEL_CATS=[]; SEL_CAT=null; ASKED_CATS=[]; SEL_PRODUCT='';
+  SEL_STORE=null; SEL_KIOSK=false; KIOSK_OK=false; SEL_CATS=[]; SEL_CAT=null; ASKED_CATS=[]; if(!(typeof HOBBY_LOCK!=='undefined'&&HOBBY_LOCK)) SEL_PRODUCT=''; // the P5 hobby lock survives the return trip (v1: HOBBY_LOCK never true)
   $('catcard').style.display='none'; renderStores(); renderChips(); syncCta(); renderCallRail(); loadCommunity(); window.scrollTo({top:0});
   // Clear any ?call deep-link so back/refresh never replays it — keep ?brand etc. intact.
   NAV_VIEW='builder';
@@ -4794,9 +4798,12 @@ function renderHobbyProducts(){
   HOBBY.prods=prods;
 }
 // P5 — lock the product onto the call flow (SEL_PRODUCT rides the sheet’s specific-product ask).
+let HOBBY_LOCK=false; // the P5 lock: survives store-picks (else pickStore's reset erases it and the
+                      // call asks generic Pokémon); cleared when the user changes category/mode.
 function hobbyPickProduct(pi){
   const p=(HOBBY.prods||[])[pi]; if(!p) return;
   SEL_PRODUCT=((HOBBY.set&&HOBBY.set.name)?HOBBY.set.name+' ':'')+p.type;
+  HOBBY_LOCK=true;
   toast(SEL_PRODUCT+t('hob.locked',', pick a store to check it'));
   backToBuilder();
 }

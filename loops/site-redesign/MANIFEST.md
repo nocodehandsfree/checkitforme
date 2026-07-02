@@ -350,6 +350,15 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
 - [x] Watch 9: CONSOLE-ERROR sweep (never run) — all 8 brand×skin combos load with ZERO console/page
   errors. Page-weight telemetry: 525KB raw / **154KB gzipped** carrying BOTH skins (post-takeover CSS
   fold-in in PROMOTE.md will shrink it). CLEAN.
+- [x] Watch 10: **MAJOR BUG — THE HOBBY LOCK NEVER WORKED END-TO-END.** A ghost-state probe found
+  SEL_PRODUCT empty right after the P5 lock: `backToBuilder()` (called BY the lock) wiped it, and even
+  guarded, `pickStore` → `syncProductUI` with an unresolved/empty cat state wiped it again — so every
+  hobby-locked call would have asked GENERIC Pokémon, never the chosen set/product. The flow's entire
+  purpose was silently dead; earlier proofs only verified the lock SET + view return. FIX: `HOBBY_LOCK`
+  flag — survives backToBuilder + pickStore + empty-cat states; cleared on kiosk switch, category
+  change, true multi-select (intent changes). v1 semantics byte-identical (lock unreachable there;
+  verified). End-to-end proven: lock → store pick → call payload carries 'Pitch Black Booster Box'.
+  Permanent qa-e2e guard added (now 46). Staging carries the watch-7 brand gate (verified deployed).
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
 - [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
   NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
