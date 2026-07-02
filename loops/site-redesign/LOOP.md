@@ -5,6 +5,13 @@ Autonomous overnight implementation of the new design across the ENTIRE consumer
 agent's memory — any fresh session resumes by reading `MANIFEST.md` and continuing.
 
 ## Rules (non-negotiable)
+- **PAINT IS NOT DONE (owner, 2026-07-02).** Re-skinning an existing screen with new tokens is NOT
+  implementing the design. Every view with a comp must be REBUILT to the comp's conceptual
+  STRUCTURE — its sections, hierarchy, components, and layout — as rendered in
+  `docs/design/NEW_CHECK_COMPS.html`. Audit sweeps must compare each view against its comp
+  ELEMENT BY ELEMENT (open the comp, open the page, walk them side by side) — a view whose bones
+  differ from the comp is REOPENED even if every token matches. Token conformance (`qa-design.ts`)
+  is the floor, never the definition of done.
 - **Never stop to ask.** Ambiguous → implement the best design-system-conforming option, note it in
   the manifest (`DECIDED: <what>`); truly impossible (missing comp/asset) → mark `BLOCKED: <reason>`
   and MOVE ON. The owner reviews decisions + blockers in the morning.
