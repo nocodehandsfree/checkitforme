@@ -1,6 +1,40 @@
 # Site-redesign MANIFEST — state of record (LOOP.md is the protocol)
 
-_Morning report goes HERE at the top when the exit condition is met._
+# 🌅 MORNING REPORT — overnight run COMPLETE (2026-07-02, cycles 0a→23)
+**Exit condition met: sweeps 5 and 6 both ZERO fixes.** All suites green every cycle (behavior
+benchmark 66 checks · design-token harness · tsc · full test-all).
+
+## See it
+- **New skin (retail + kiosk):** `staging.checkitforme.com/pokemon?skin=v2` (any brand path works)
+- **Hobby flow (hidden):** `…/pokemon?skin=v2&flow=hobby` — era → sets → products → lock
+- **Sign-up (hidden):** `…?skin=v2&show=signup` · **My checks (hidden):** `…?skin=v2&show=mychecks`
+- **Revert:** `?skin=off`. Normal visitors see ZERO change without the flag.
+
+## Done (23 cycles)
+Preview switch + token re-key · S2 switcher (Retail+Kiosk launch) · header/hero/footer/toasts(3 kinds)
+· menus/ticker/slider · store rows + BEST ring + map chrome · call sheet + ring-capsule CTAs + chips +
+pop-ups · live call (pulsing arcs, carved well, raised bubbles) · verdict pages (glass-on-wash, RESULT
+chip, solid verdict titles) · calls-by-day calendar · P6b poll · IS1 actions · restock · login/forms
+(auto error rings) · Scores · Runnr · plans (muted-yellow rings) · §5.7 status chips · hobby P3a–P5
+(feed-driven, feed's own art paths, 7 comp-exact product icons) · 4 audit sweeps (6+26+19+1 fixes).
+
+## Blocked (1)
+- **YOUR HUNT (P6)** — needs the §7 price-aggregation backend (store+product price rows, BEST=lowest
+  fresh). Front-end ready to consume.
+
+## For Copy (COPY QUEUE below)
+S2 labels ES · footer "Legal" merge · contact-form eyebrow · hobby strings (hob.*) EN+ES rulings.
+
+## Key DECIDEDs (full log below)
+In-stock chips use the brand-check FILE (owner law > comp's drawn ✓) · S2 in-card track #1B1B20 ·
+ckWaveV2/ckGlowV2 names (v1 collision) · solid error/tier rings (gradients can't ride box-shadow) ·
+accent gradients stay Pokémon-default (comps define no other vertical).
+
+## Suggested next: owner preview walk → QA read-only pass (LOOP.md morning steps) → fix round if
+needed → promote when happy.
+
+---
+
 
 ## OWNER DIRECTIVES (law — supersede LOOP.md/kickoff where they conflict)
 - 2026-07-02 kickoff: new design for **RETAIL + KIOSK** store types ONLY as the exposed launch state
@@ -145,3 +179,4 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - Sweep 3 (cycle 20): 19 fixes — deeper selector scan (today-landing calendar, rail nav/selectors, Runnr internals, earn box, leaflet popup, icon buttons) + modal titles to §4 (900 weight, -.4px). Post-batch re-scan: **0 residual bordered selectors**. NOT ZERO (19 fixes) → sweeps 4+5 must both be clean.
 - Sweep 4 (cycle 21): 1 fix — translate pill was dark on the verdict wash (§8: glass only). Checks run: border re-scan 0 · v2 JS inline hexes 0 off-token · wash-chrome audit. NOT ZERO (1) → sweeps 5+6 must both be clean.
 - Sweep 5 (cycle 22): **ZERO fixes** — borders 0, v2 inline hexes on-token, no emoji in v2 UI, banned terms absent, full suite green. First clean sweep; sweep 6 confirms exit.
+- Sweep 6 (cycle 23): **ZERO fixes** — all families re-run clean + tsc + harnesses. **EXIT CONDITION MET.**

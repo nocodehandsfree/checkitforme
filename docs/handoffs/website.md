@@ -48,6 +48,10 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
 **⏳ Blocked / waiting on others:** — (kiosk nudge, shipment opener, Topps logo, entrance animation all closed by owner 2026-07-01)
 
 **✅ Recently done** (newest first; trim when long):
+- **🌅 OVERNIGHT REDESIGN RUN COMPLETE (2026-07-02)** — full report at `loops/site-redesign/MANIFEST.md`
+  (top). 23 cycles, exit on two clean audit sweeps. Preview: `?skin=v2` (+`&flow=hobby` /`&show=signup`
+  /`&show=mychecks` hidden pages); `?skin=off` reverts; default site untouched. 1 BLOCKED: YOUR HUNT
+  needs the price-aggregation backend. COPY QUEUE has 4 items for Copy lane.
 - **Silent-agent incident (2026-07-02) root-caused + mitigated in minutes:** ABC recipe-timer muted the agent
   19s on the direct-answer Fun store (`avgTreeSeconds=19` on a `navType:'direct'` chain; VAD skipped). Cleared
   the chain value + flipped `connectOnHuman:false` on staging. Bug filed with DevOps; don't re-enable ABC on
