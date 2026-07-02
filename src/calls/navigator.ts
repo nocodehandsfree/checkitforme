@@ -223,6 +223,11 @@ export async function navStep(id: string, speech: string): Promise<string> {
   // already excludes "press N" menus + long recordings, so it won't trip on an opening IVR. Map mode →
   // hang up instantly; confirm mode → ask the one stock question.
   if (speech && looksLikeLivePerson(speech)) return reachHuman(s, atSec, id);
+  // FAST-FAIL on after-hours / voicemail funnels (live-observed: closed CVS pharmacy at night presses
+  // toward "leave a message… name and date of birth"). No human exists down this branch — hang up NOW
+  // instead of burning 100+ seconds hammering 0 into a mailbox.
+  const CLOSED_RE = /(pharmacy|store|we) (is|are) (currently |now )?closed|connect(ing)? you to (our|the) voicemail|leave (a |your )?(message|voicemail)|voicemail box|record (a |your )?message|providing your name,? (and )?date of birth|after[- ]hours|call back during (regular|normal|business)|our (business )?hours are/i;
+  if (speech && CLOSED_RE.test(speech)) { finish(s, "failed"); return twiml(`<Hangup/>`); }
   s.status = "navigating";
   // LISTEN-FIRST (mapping call 1): hear the menu out before acting — capture every prompt; the moment
   // a prompt REPEATS (the menu looped, we've heard it all), or after 4 prompts / 50s, flip to acting
