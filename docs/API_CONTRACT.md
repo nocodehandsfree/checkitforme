@@ -173,6 +173,15 @@ GET `/`, `/r`, `/s`, `/p/:slug` (+`?partial=1` → `{title,body}`), `/og/:file`,
 ---
 
 ## Change log
+- 2026-07-03 — **Plans = 4 tiers + premium-feature matrix.** `GET /pub/plans` →
+  `{ features:[{key,label}], everyPlanGets:[key…], tiers:[{key,name,monthlyCents,annualCents,
+  checksPerMonth,premiumAsks,features:{key:bool}}], payg:[{checks,cents}] }`. Tier keys:
+  `family|collector|hunter|operator`. `GET /api/admin/plans` adds the same `features` catalog + per-tier
+  map (admin edits the matrix; `POST /api/admin/plans` accepts `features` per tier). `GET /app/me` adds
+  `features:{key:bool}` = the account's entitlements (comp→all, subscriber→tier, PAYG/free→none) plus
+  existing `premiumAsks` (= features.exact_products). Checkout: `POST /app/checkout {kind, annual}`,
+  kind = tier key or `payg:<checks>`. Website gates premium UI on `/app/me.features` and HIDES premium
+  for PAYG. Additive — old `sub`/pack kinds still resolve.
 - 2026-07-03 — **Plans + PAYG + entitlements.** New `GET /pub/plans` →
   `{ tiers:[{key,name,monthlyCents,annualCents,checksPerMonth,premiumAsks}], payg:[{checks,cents}] }`
   (owner-edited in Admin → Plans, source of truth = settings `vt_plans`). `POST /app/checkout` now

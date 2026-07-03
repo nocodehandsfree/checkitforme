@@ -23,21 +23,24 @@ end-to-end in test mode (2026-07-02).
 **Plans source of truth:** Admin → God View → **Plans** tab. Edit prices/checks there, hit **Publish
 to Stripe**, and it mirrors into Stripe automatically. `docs/finance/COST_MODEL.md` has the margins.
 
-### The plan ladder  ⚠️ PENDING OWNER'S FINAL NUMBERS (2026-07-03)
-Owner wants four tiers in this order: **Family · Starter · Collectr · Hunter.** Fill in and DevOps
-sets it as the source of truth + republishes to Stripe:
+### The plan ladder (LIVE — set + published to Stripe test mode 2026-07-03)
+Four monthly tiers, low → high. Annual = −17% of 12× monthly (auto). Edit any of it in Admin → Plans.
 
-| Tier | Monthly | Annual | Checks / month | Premium asks?* |
-|---|---|---|---|---|
-| Family | $?? | auto −17% | ?? | ? |
-| Starter | $?? | auto −17% | ?? | ? |
-| Collectr | $?? | auto −17% | ?? | ? |
-| Hunter | $?? | auto −17% | ?? | ? |
+| Tier | Monthly | Checks / month |
+|---|---|---|
+| **Family** | $4.99 | 15 |
+| **Collector** | $9.99 | 30 |
+| **Hunter** | $19.99 | 100 |
+| **Operator** | $49.99 | 300 |
 
-\*Premium asks = the agent can ask for an exact set/product/price on the call (vs. a general "any
-Pokémon in stock?"). Today only the top tier has it.
+**PAYG (no subscription):** 10 checks $9.90 (99¢ ea) · 25 $19.99 (80¢) · 50 $34.99 (70¢) · 75 $47.99
+(64¢) · 100 $60.00 (60¢) — price per check slides down with volume.
 
-**PAYG bundles (current):** 10 / $9.99 · 25 / $19.99 · 50 / $34.99 · 75 / $47.99 · 100 / $59.99.
+### Premium features (subscription-only — the "EVERY PLAN GETS" grid)
+8 features, **ON for every paid tier by default**, toggled **per tier in Admin → Plans** (data, not
+code). **Pay-as-you-go customers get none of these** — they're a membership perk:
+**Exact products · Zone sweeps · Restock alerts · Scheduled checks · Any town · Store holds · Your
+voice · Thrift hunts.** (Some aren't launched to customers yet, but they all exist and are toggleable.)
 
 ### Checkout look & feel (decided 2026-07-03)
 The payment form will be **embedded in our own site** (Stripe Elements), styled to the Claude Design
