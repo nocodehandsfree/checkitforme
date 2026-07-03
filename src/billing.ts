@@ -4,7 +4,7 @@ import { and, eq, gt, sql } from "drizzle-orm";
 import { db } from "./db/client";
 import { accounts } from "./db/schema";
 import { getPolicy } from "./policy";
-import { resolvePlanCheckout, tierQuota } from "./plans";
+import { resolvePlanCheckout, tierQuota, getPlans, tierByPriceId } from "./plans";
 
 /** Constant-time string compare (length-checked) — avoids timing side-channels on HMAC checks. */
 function safeEqual(a: string, b: string): boolean {
@@ -219,6 +219,57 @@ export async function createCheckout(userId: string, email: string | undefined, 
   return d.url ?? null;
 }
 
+// ---- Embedded checkout (Stripe Elements — the custom branded page) ----
+// The hosted Checkout above redirects to Stripe. For the on-site branded form, the server creates the
+// PaymentIntent/Subscription and hands back a client_secret the Website confirms with Elements.
+async function stripeForm(path: string, params: Record<string, string>): Promise<Record<string, unknown>> {
+  const sk = process.env.STRIPE_SECRET_KEY!;
+  const r = await fetch("https://api.stripe.com/v1" + path, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${sk}`, "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(params).toString(),
+  });
+  const d = (await r.json()) as Record<string, unknown>;
+  if (!r.ok) throw new Error(`stripe ${path}: ${r.status} ${JSON.stringify(d).slice(0, 200)}`);
+  return d;
+}
+/** The account's Stripe customer id, created + saved on first use. */
+async function getOrCreateCustomer(userId: string, email?: string): Promise<string> {
+  const a = await getAccount(userId);
+  if (a?.stripeCustomerId) return a.stripeCustomerId;
+  const cust = await stripeForm("/customers", { ...(email ? { email } : {}), "metadata[clerkUserId]": userId });
+  const id = cust.id as string;
+  await db.update(accounts).set({ stripeCustomerId: id }).where(eq(accounts.clerkUserId, userId));
+  return id;
+}
+export interface CheckoutIntent { mode: "subscription" | "payment"; clientSecret: string; publishableKey: string; amountCents: number; }
+/** Create the on-site payment for `kind` (tier key or payg:<checks>) and return the Elements
+ *  client_secret + publishable key. Subscriptions use default_incomplete (first invoice's PI); PAYG a
+ *  one-time PaymentIntent. The webhook grants entitlement on success — same as the hosted path. */
+export async function createCheckoutIntent(userId: string, email: string | undefined, kind: string, annual: boolean): Promise<CheckoutIntent | null> {
+  const pk = process.env.STRIPE_PUBLISHABLE_KEY;
+  if (!process.env.STRIPE_SECRET_KEY || !pk) return null;
+  const plan = await resolvePlanCheckout(kind, annual);
+  if (!plan) return null;
+  const customer = await getOrCreateCustomer(userId, email);
+  if (plan.mode === "subscription") {
+    if (!plan.priceId) return null; // subscription must be published to Stripe first (Publish button)
+    const sub = await stripeForm("/subscriptions", {
+      customer, "items[0][price]": plan.priceId, payment_behavior: "default_incomplete",
+      "payment_settings[save_default_payment_method]": "on_subscription", "expand[]": "latest_invoice.payment_intent",
+      "metadata[clerkUserId]": userId, "metadata[tierKey]": plan.metadata.tierKey || "", "metadata[checks]": plan.metadata.checks || "",
+    });
+    const pi = (sub.latest_invoice as { payment_intent?: { client_secret?: string } } | undefined)?.payment_intent;
+    if (!pi?.client_secret) return null;
+    return { mode: "subscription", clientSecret: pi.client_secret, publishableKey: pk, amountCents: plan.cents };
+  }
+  const pi = await stripeForm("/payment_intents", {
+    customer, amount: String(plan.cents), currency: "usd", "automatic_payment_methods[enabled]": "true",
+    "metadata[clerkUserId]": userId, "metadata[kind]": "payg", "metadata[credits]": plan.metadata.credits || "", "metadata[source]": "elements",
+  });
+  return { mode: "payment", clientSecret: pi.client_secret as string, publishableKey: pk, amountCents: plan.cents };
+}
+
 // ---- Webhook: verify Stripe signature, then grant credits / toggle subscription ----
 export async function verifyStripeSig(payload: string, header: string | null): Promise<boolean> {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -233,6 +284,7 @@ export async function verifyStripeSig(payload: string, header: string | null): P
   return safeEqual(actual, v1);
 }
 
+const piCharged = new Set<string>(); // idempotency for Elements PAYG payment_intent.succeeded
 interface StripeEvent { type: string; data?: { object?: Record<string, unknown> } }
 export async function handleStripeEvent(event: StripeEvent) {
   const obj = (event.data?.object ?? {}) as Record<string, unknown>;
@@ -254,12 +306,29 @@ export async function handleStripeEvent(event: StripeEvent) {
       if (credits) await grantCredits(userId, credits, amount);
     }
   } else if (event.type === "invoice.paid") {
-    // Only renewals (subscription_cycle) — the first invoice is checkout.session.completed's job.
-    if (obj.billing_reason !== "subscription_cycle") return;
     const customer = obj.customer as string;
     const amount = Number(obj.amount_paid || 0);
     const a = (await db.select().from(accounts).where(eq(accounts.stripeCustomerId, customer)))[0];
-    if (a) { await resetQuota(a.clerkUserId, await tierQuota(a.subTier)); await bumpRevenue(a.clerkUserId, amount); }
+    if (!a) return;
+    if (obj.billing_reason === "subscription_cycle") {
+      await resetQuota(a.clerkUserId, await tierQuota(a.subTier)); await bumpRevenue(a.clerkUserId, amount);
+    } else if (obj.billing_reason === "subscription_create") {
+      // Embedded-Elements first payment — no checkout.session.completed fires, so set entitlement here
+      // from the invoice's price → tier. setSubEntitlement SETS (idempotent) so it's safe even if the
+      // hosted path also ran. Revenue is booked once, on create only.
+      const priceId = ((obj.lines as { data?: Array<{ price?: { id?: string } }> } | undefined)?.data?.[0]?.price)?.id;
+      const tier = tierByPriceId(await getPlans(), priceId);
+      if (tier) { await setSubEntitlement(a.clerkUserId, tier.key, tier.checksPerMonth, customer); await bumpRevenue(a.clerkUserId, amount); }
+    }
+  } else if (event.type === "payment_intent.succeeded") {
+    // Embedded-Elements PAYG bundle. Only our Elements PIs carry these metadata keys (the hosted
+    // path credits via checkout.session.completed), so there is no double-grant. Idempotent per PI id.
+    const md = (obj.metadata ?? {}) as Record<string, string>;
+    const id = obj.id as string;
+    if (md.source === "elements" && md.kind === "payg" && md.clerkUserId && md.credits && !piCharged.has(id)) {
+      piCharged.add(id);
+      await grantCredits(md.clerkUserId, Number(md.credits), Number(obj.amount_received || obj.amount || 0));
+    }
   } else if (event.type === "customer.subscription.deleted") {
     const customer = obj.customer as string;
     const a = (await db.select().from(accounts).where(eq(accounts.stripeCustomerId, customer)))[0];
