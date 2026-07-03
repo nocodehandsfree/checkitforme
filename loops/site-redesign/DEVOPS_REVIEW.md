@@ -29,11 +29,7 @@ of proof (which render you looked at). Never delete findings; history stays.
   The real issue: `logos/fcheck.png` (v7, the older Fungibles-era check; 14 call sites via FCHK) vs
   `logos/check.png`/`check-icon.png` (June-17 official Check pack; header/footer) — two different
   marks depending on the surface. AWAITING OWNER: which is canonical? Then swap every use of the
-  loser for the winner (mechanical; FCHK() is the single chokepoint for 14 of them). Zero references to
-  `docs/design/check-brandmark.svg` in checkit.html — the site draws its own mark. Use the actual
-  brandmark asset (rules in docs/design/LOGOS.md) everywhere the mark appears: header, footer
-  wordmark, empty states, any check iconography that is BRAND (not status icons). Recreate the
-  handed design exactly — no interpretations.
+  loser for the winner (mechanical; FCHK() is the single chokepoint for 14 of them).
 - [ ] **(P1→Website) Populated My-checks list is unreachable by URL.** Both `?show=mychecks` and
   `?v=history` auto-restore the NEWEST result when history rows exist (DevOps cycle 3, renders
   c3-history-list vs c2). If intended UX, fine — but then add a preview hook (e.g.
