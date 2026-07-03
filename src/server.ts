@@ -234,12 +234,14 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
     // status bar black on every result. One theme-color in the document, JS-controlled, full stop.
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${esc(plainName)}">`,
-    `<meta property="og:title" content="${esc(brand.title)}">`,
+    // Apex/invite embeds (owner): the CARD IMAGE carries the headline, so the visible link title is
+    // just the address — no repeated "Is it in stock?" under the image.
+    `<meta property="og:title" content="${esc(brand.key === "runner" ? host.replace(/^www\./, "") : brand.title)}">`,
     `<meta property="og:description" content="${esc(brand.desc)}">`,
     `<meta property="og:url" content="${canonical}">`,
     `<meta property="og:image" content="${ogImage}">`,
     `<meta name="twitter:card" content="summary_large_image">`,
-    `<meta name="twitter:title" content="${esc(brand.title)}">`,
+    `<meta name="twitter:title" content="${esc(brand.key === "runner" ? host.replace(/^www\./, "") : brand.title)}">`,
     `<meta name="twitter:description" content="${esc(brand.desc)}">`,
     `<meta name="twitter:image" content="${ogImage}">`,
     `<style>:root{--accent:${brand.accent};--accent2:${brand.accent2 || brand.accent};--logo-scale:${brand.logoScale || 1}}</style>`,
@@ -1048,9 +1050,16 @@ app.get("/pub/stores/near", async (c) => {
   } else if (state) {
     rows = await db.select().from(retailers).where(and(eq(retailers.active, true), eq(retailers.state, state)));
   } else {
-    const pat = `%${q}%`;
+    // Token-AND search so "barnes westlake" (or the typo "barns westlake") finds "Barnes & Noble
+    // Westlake Village": every word must hit name OR city; words 5+ chars drop their last letter to
+    // absorb trailing typos/plurals.
+    const toks = q.split(/\s+/).filter((t) => t.length >= 2).slice(0, 5);
+    const conds = toks.map((t) => {
+      const pat = `%${t.length >= 5 ? t.slice(0, -1) : t}%`;
+      return or(like(retailers.name, pat), like(retailers.location, pat));
+    });
     rows = await db.select().from(retailers)
-      .where(and(eq(retailers.active, true), or(like(retailers.name, pat), like(retailers.location, pat)))).limit(2000);
+      .where(and(eq(retailers.active, true), ...(conds.length ? conds : [like(retailers.name, `%${q}%`)]))).limit(2000);
   }
 
   const callable = (r: typeof retailers.$inferSelect) => r.sellsPacks !== false && !!r.phone && !r.phone.startsWith("nophone:");

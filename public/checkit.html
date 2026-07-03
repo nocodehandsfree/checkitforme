@@ -909,7 +909,7 @@ __BRAND_HEAD__
        statuses, so a white sheen reads on any). Continuous (not gated on the one-shot entrance). */
     @keyframes rCtaSweep{0%{transform:translateX(-160%) skewX(-20deg)}100%{transform:translateX(330%) skewX(-20deg)}}
     body.rview #result .topcta .cta{position:relative;overflow:hidden}
-    body.rview #result .topcta .cta::after{content:'';position:absolute;top:0;bottom:0;left:0;width:34%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-160%) skewX(-20deg);animation:rCtaSweep 3.4s ease-in-out 1s infinite;pointer-events:none}
+    body.rview #result .topcta .cta::after{content:'';position:absolute;top:0;bottom:0;left:0;width:34%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:translateX(-160%) skewX(-20deg);animation:rCtaSweep 3.4s ease-in-out 1s infinite;pointer-events:none}
     #result.r-play .ctl::before{transform-origin:top;animation:rBarDraw 1.15s cubic-bezier(.4,0,.1,1) .55s both}
     #result.r-play .reach>summary .ctl-dot{animation:rDotPopY .4s cubic-bezier(.2,.8,.3,1.2) .55s both}
     #result.r-play .ctl-conv .ctl-dot{animation:rDotPop .4s cubic-bezier(.2,.8,.3,1.2) 1.18s both}
@@ -1751,7 +1751,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   <div class="modal" style="position:relative;max-width:420px;text-align:left">
     <span class="x" onclick="closeSchedule()">×</span>
     <h3 style="margin:2px 0"><span class="mico" id="schIco"></span><span data-i18n="sch.title">Auto-check</span></h3>
-    <p style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5" data-i18n="sch.body">We'll check <b id="sch_store">the store</b> automatically and ping you with the results. 1 check per call.<b id="sch_cat" style="display:none"></b></p>
+    <p style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5" data-i18n="sch.body">We'll check <b id="sch_store">the store</b> automatically and ping you with the results.<b id="sch_cat" style="display:none"></b></p>
     <label class="klbl" data-i18n="sch.days">Which days?</label>
     <div id="sch_days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:6px 0 8px"></div>
     <label class="klbl" data-i18n="sch.time">Earliest call time</label>
@@ -1767,7 +1767,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   <div class="modal" style="position:relative;max-width:420px;text-align:left">
     <span class="x" onclick="closeStoreReq()">×</span>
     <div id="srMark" style="display:flex;justify-content:center;margin-bottom:6px"></div>
-    <h3 style="margin:6px 0 2px;text-align:center" data-i18n="sr.title">Don't see your store?</h3>
+    <h3 style="margin:6px 0 2px;text-align:center" data-i18n="sr.title">Add your store</h3>
     <div class="meta" style="margin-bottom:14px;text-align:center" data-i18n="sr.sub">Tell us which store to add. When it goes live, <b>your next check is free</b>.</div>
     <label class="klbl" data-i18n="sr.name">Store name <span style="color:var(--muted);font-weight:400">(required)</span></label>
     <input id="sr_name" class="kin" data-i18n-ph="ph.storereq" placeholder="e.g. Target, Thousand Oaks">
@@ -1775,8 +1775,8 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <input id="sr_city" class="kin" data-i18n-ph="ph.storecity" placeholder="Thousand Oaks, CA">
     <label class="klbl" data-i18n="sr.note">Anything else <span style="color:var(--muted);font-weight:400">(optional)</span></label>
     <input id="sr_note" class="kin" data-i18n-ph="ph.storedetails" placeholder="address, which products, etc.">
-    <label class="klbl" data-i18n="sr.email">Your email <span style="color:var(--muted);font-weight:400">(optional) so we can tell you when it's live</span></label>
-    <input id="sr_contact" class="kin" type="text" inputmode="email" placeholder="you@email.com">
+    <label class="klbl" data-i18n="sr.email">Your cell or email <span style="color:var(--muted);font-weight:400">(optional) so we can tell you when it's live</span></label>
+    <input id="sr_contact" class="kin" type="text" inputmode="email" autocomplete="on" data-i18n-ph="ph.cellmail" placeholder="cell number or email">
     <div id="sr_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
     <button class="cta" id="sr_btn" onclick="submitStoreReq()" style="margin-top:8px;width:100%" data-i18n="sr.submit">Submit store →</button>
   </div>
@@ -1905,10 +1905,10 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <span class="x" onclick="closeKioskConfirm()">×</span>
     <div id="kcall_logo" style="display:flex;justify-content:center;margin-bottom:8px"></div>
     <h3 style="margin:0 0 8px;font-size:20px" id="kcall_store">this store</h3>
-    <div class="meta" style="margin-bottom:18px;line-height:1.55"><span data-i18n="kcall.body1">We'll call and ask if their</span> <b id="kcall_cat">Pokémon</b> <span data-i18n="kcall.body2">kiosk is working and stocked, then text you what they say.</span> <span style="color:var(--muted);white-space:nowrap">· 1 check</span></div>
+    <div class="meta" style="margin-bottom:18px;line-height:1.55"><span data-i18n="kcall.body1">We'll check to see if their</span> <b id="kcall_cat">Pokémon</b> <span data-i18n="kcall.body2">Kiosk is on and working.</span></div>
     <button class="cta" onclick="confirmKioskCall()" style="width:100%" data-i18n="kcall.yes">📞 Yes, check it now →</button>
     <div><a onclick="closeKioskConfirm()" style="display:inline-block;margin-top:12px;color:var(--muted);font-weight:700;font-size:14px;cursor:pointer" data-i18n="kcall.no">Not now</a></div>
-    <div style="margin-top:16px;background:var(--ptint);border:1px solid var(--pline);border-radius:12px;padding:11px 12px;font-size:12.5px;color:#e6e2f7;line-height:1.5;text-align:left"><b data-i18n="kcall.atkiosk">At the kiosk right now?</b> <a onclick="closeKioskConfirm();openReceipt()" style="color:var(--purple);font-weight:800;cursor:pointer" data-i18n="kcall.receipt">Use our email at checkout or forward your receipt → free check.</a></div>
+    <div style="margin-top:14px;font-size:12.5px;text-align:center"><a onclick="closeKioskConfirm();openReceipt()" style="color:var(--muted);font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px" data-i18n="kcall.receipt">If you're at a kiosk, email us for a free check</a></div>
   </div>
 </div>
 
@@ -2072,13 +2072,13 @@ const I18N={ es:{
   'v.in':'¡En stock!','v.out':'No está en stock','v.unclear':'Nos dieron un “quizás”','v.soldout':'Agotado','v.noanswer':'Nadie contestó','v.hold':'En espera','v.soon':'¡Reabastecimiento en camino!','note.soon':'Llega un envío <b>{d}</b>. Sé el primero cuando caiga.',
   'search.ph':'Busca por tienda o ciudad…',
   'cta.pick':'Elige una tienda para verificar','cta.check':'Verificar','cta.for':'por','cta.checkunit':'verificación','cta.kioskword':'kiosco',
-  'kcall.store':'esta tienda','kcall.body1':'Llamaremos y preguntaremos si su kiosco de','kcall.body2':'está funcionando y surtido, y te enviaremos lo que digan.','kcall.yes':'📞 Sí, llamar ahora →','kcall.no':'Ahora no','kcall.atkiosk':'¿Estás en el kiosco ahora?','kcall.receipt':'Usa nuestro correo al pagar o reenvía tu recibo → verificación gratis.',
+  'kcall.store':'esta tienda','kcall.body1':'Verificaremos si su kiosco de','kcall.body2':'está encendido y funcionando.','kcall.yes':'📞 Sí, llamar ahora →','kcall.no':'Ahora no','kcall.receipt':'Si estás en un kiosco, escríbenos para una verificación gratis',
   'count.open':'abiertas','count.kiosks':'kioscos',
   'grp.best':'Mejores opciones','grp.mostly':'Mayormente confiable','grp.spotty':'Irregular','instock.now':'En stock ahora','lg.best':'Mejor','lg.mostly':'Confiable',
   'cover.types':'Tipos de tienda que cubrimos. Toca el pin para ver <b>las tuyas</b>:',
   'st.open':'Abierto','st.closed':'Cerrado','st.till':'hasta',
   'sc.post':'Publica tu logro','sc.where':'¿Dónde lo conseguiste?','sc.store.ph':'Busca tu tienda…','sc.what':'¿Qué conseguiste?','sc.photo':'Agrega una foto de tu logro','sc.postit':'Publícalo →','back':'← Atrás',
-  'sr.title':'¿No ves tu tienda?','sr.sub':'Dinos qué tienda agregar. Cuando esté disponible, <b>tu próxima llamada es gratis</b>.','sr.name':'Nombre de la tienda <span style="color:var(--muted);font-weight:400">(requerido)</span>','sr.city':'Ciudad y estado','sr.note':'Algo más <span style="color:var(--muted);font-weight:400">(opcional)</span>','sr.email':'Tu correo <span style="color:var(--muted);font-weight:400">(opcional) para avisarte cuando esté lista</span>','sr.submit':'Enviar tienda →',
+  'sr.title':'Agrega tu tienda','sr.sub':'Dinos qué tienda agregar. Cuando esté disponible, <b>tu próxima llamada es gratis</b>.','sr.name':'Nombre de la tienda <span style="color:var(--muted);font-weight:400">(requerido)</span>','sr.city':'Ciudad y estado','sr.note':'Algo más <span style="color:var(--muted);font-weight:400">(opcional)</span>','sr.email':'Tu celular o correo <span style="color:var(--muted);font-weight:400">(opcional) para avisarte cuando esté lista</span>','sr.submit':'Enviar tienda →',
   // builder extras
   'cat.specific':'¿Algo específico?','cat.specific.note':'(opcional) fija el producto exacto','cat.any':'Cualquier {x}. Todo cuenta',
   'sched.step':'📅 Tus auto-verificaciones','sched.step.note':'· llamamos en días de envío','sched.from':'desde','sched.shipday':'día de envío','sched.cancel':'Cancelar',
@@ -2089,7 +2089,8 @@ const I18N={ es:{
   'empty.radius':'No hay tiendas abiertas en {r} mi. Amplía el radio.',
   'empty.far.title':'Aún no estamos en tu zona…','empty.far.sub':'¡Llegaste temprano! Sé el primero en saber cuando {b} llegue cerca de ti.','empty.far.cta':'🔔 Avísame cuando lleguen',
   'tick.found':'¡Encontrado!','tick.restock':'Reabastecimiento en camino','besttag':'Más probable','bestwhy':'buenas probabilidades ahora',
-  'ref.sharemsg':'Uso Check It For Me para cazar reabastecimientos — únete con mi enlace y ambos ganamos verificaciones gratis.','ref.copied':'¡Enlace de invitación copiado!','ref.copy':'Copia tu enlace de invitación:',
+  'buy.tabplans':'Planes','buy.tabpayg':'Por uso','plan.on':'Tienes','plan.checks':'verificaciones','plan.percheck':'aprox.','plan.percheck2':'por verificación','plan.noexpire':'no caducan','acct.stat.run2':'Verificaciones hoy','acct.perweek2':'Verificaciones esta semana','auth.newcell':'Danos tu nuevo celular','ph.cellmail':'celular o correo',
+  'ref.sharemsg':'¡Oye! Mira esta tecnología. Está increíble.\nNos ayuda a encontrar productos virales en stock como cartas Pokémon a precio de tienda.\nRegístrate y ambos ganamos 3 verificaciones gratis: ','ref.copied':'¡Enlace de invitación copiado!','ref.copy':'Copia tu enlace de invitación:','ref.both':'Ambos reciben <b style="color:#fff">3 verificaciones gratis</b> cuando se registran.','ref.copybtn':'COPIAR','ref.text':'Mensaje','ref.post':'Publicar','ref.more':'Más',
   'kioskonly':'Solo kiosco','kiosk.precall':'Solo kiosco. Preguntaremos si su kiosco está funcionando y surtido, no por un envío.',
   'closednow':'· cerrado ahora',
   // live view
@@ -2101,7 +2102,7 @@ const I18N={ es:{
   'res.percat.in':'en stock','res.percat.out':'no está','res.percat.unk':'sin respuesta clara','res.have':'Esto es lo que tienen','res.nonein':'Ninguno en stock',
   'res.original':'Ver original','res.translating':'Traduciendo…',
   // verdict notes (mirror of the statuses registry, used when a note isn't registry-driven)
-  'note.in':'Lo tienen. Ve por él.','note.in.named':'Tienen <b>{x}</b>. Ve por él.','note.out':'No lo tienen ahora mismo.',
+  'note.in':'Lo tienen. Ve por él.','note.in.named':'Tienen <b>{x}</b>. Ve por él.','note.out':'No lo tienen ahora mismo.','note.out2':'No tienen <b style="color:#fff">{c}</b> en stock ahora mismo.',
   'note.soldout':'Llegó, pero ya se acabó. Vale la pena esperar el próximo envío.','note.nocarry':'Esta tienda no vende {x}. Prueba otra.',
   'note.noanswer':'Sonó y sonó. Nadie contestó. Sin cargo.','note.noanswer.desk':'Pasamos el menú, pero nadie contestó en el mostrador. Sin cargo.',
   'note.unclear':'Alguien contestó pero no dio un sí o no claro. Mira lo que dijeron abajo.',
@@ -2148,7 +2149,7 @@ const I18N={ es:{
   'sm.buyonline':'Comprar en línea','sm.notify':'Avísame cuando vuelva','sm.nocall':'No podemos llamar a {x}. Revisa su sitio o recibe un aviso cuando se reabastezca.',
   // watch modal
   'watch.title':'Avísame cuando vuelva','watch.sub':'Te avisamos en cuanto una llamada lo confirme en stock aquí.','watch.ph':'correo o teléfono','watch.cta':'Vigilar esta tienda →','sc.photolabel':'Foto',
-  'sch.body':'Verificamos <b id="sch_store">la tienda</b> automáticamente y te avisamos con los resultados. 1 verificación por llamada.<b id="sch_cat" style="display:none"></b>','watch.setting':'Configurando…','watch.done':"🔔 Listo. Te avisamos en cuanto vuelva",
+  'sch.body':'Verificamos <b id="sch_store">la tienda</b> automáticamente y te avisamos con los resultados.<b id="sch_cat" style="display:none"></b>','watch.setting':'Configurando…','watch.done':"🔔 Listo. Te avisamos en cuanto vuelva",
   // schedule modal
   'sch.perk':'Beneficio de miembro Fungie+','sch.title':'Auto-verificación','sch.days':'¿Qué días?','sch.time':'Hora más temprana para llamar','sch.where':'Agrega tu celular o correo','sch.ph':'correo o teléfono','sch.cta':'Activar auto-verificación →','sch.setting':'Configurando…','sch.on.days':'📅 Auto-verificación activa. Llamaremos esos días','sch.on.ship':'📅 Auto-verificación activa. Llamaremos el día de envío de esta tienda','sch.canceled':'Auto-verificación cancelada','sch.cancelfail':'No se pudo cancelar. Inténtalo de nuevo',
   // waitlist modal
@@ -2205,7 +2206,7 @@ const I18N={ es:{
   'st.too_busy':'Muy ocupados para revisar',
   'stn.too_busy':'{store} estaba saturado. Sin cargo.',
   'sub.in':'<b>{s}</b> tiene <b>{c}</b>. Ve por ello antes de que se agote.','sub.in.named':'<b>{s}</b> tiene <b>{p}</b>. Ve por ello antes de que se agote.',
-  'sub.out':'<b>{s}</b> no tiene <b>{c}</b> ahora. Vuelve a checar en un día o dos.','sub.soldout':'{s} está agotado de <b>{c}</b> ahora mismo.',
+  'sub.out':'<b>{s}</b> no tiene <b>{c}</b> en stock ahora mismo.','sub.soldout':'{s} está agotado de <b>{c}</b> ahora mismo.',
   'term.in':'En stock','term.out':'No está en stock','term.soon':'Reabastecimiento confirmado · {d}','term.unk':'Sin respuesta clara',
   'res.conversation':'Conversación','res.result':'Resultado',
   'pre.again.body':'{o} {a}. ¿Verificar de nuevo?','pre.again.no':'Ahora no',
@@ -2331,7 +2332,7 @@ function applyFlags(){
 function renderFooter(){
   const L=(POLICY.links)||{}, by=$('footYear'); if(by) by.textContent=new Date().getFullYear();
   const fb=$('footBrand'); if(fb) fb.textContent='';  // the brand name lives inside the logo now
-  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:21px;width:auto;object-fit:contain;border-radius:0;display:block">`; }
+  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:30px;width:auto;object-fit:contain;border-radius:0;display:block;margin:-4px 0">`; }
   // Discord + X always shown; link to policy URLs when set, else a placeholder.
   const SOC=[['discord',ICO.discord,'Discord'],['x',ICO.x,'X']];
   const el=$('footSocials'); if(!el) return;
@@ -2398,7 +2399,7 @@ function silentLocRecheck(){
       if(!p || p.state!=='granted') return; // only when already allowed — never trigger the OS prompt here
       navigator.geolocation.getCurrentPosition(pos=>{
         const la=pos.coords.latitude, ln=pos.coords.longitude;
-        const moved = !USER_LOC || miBetween(USER_LOC.lat,USER_LOC.lng,la,ln) > 2; // ~2 mi = a real move (owner drives town-to-town), still above GPS jitter
+        const moved = !USER_LOC || miBetween(USER_LOC.lat,USER_LOC.lng,la,ln) > 1; // 1 mi = a real move (owner call), still well above GPS jitter
         if(moved){ setUserLoc(la,ln); toast(ICO.pin(AC2())+t('toast.locupdated','Updated to your current location')); }
       }, ()=>{}, {enableHighAccuracy:false, timeout:8000, maximumAge:300000}); // cheap/low-power; a 5-min cached fix is fine
     }).catch(()=>{});
@@ -2683,7 +2684,7 @@ function openAccount(){
     const freeUsed=(()=>{try{return localStorage.getItem('runnr_free_used')==='1';}catch(_){return false;}})();
     const planChip = comp?('∞ '+t('acct.unlimited','Unlimited')):(member?('★ '+t('acct.member','Member')):(freeUsed?t('acct.freeused','Free check used'):t('acct.free','Free')));
     const left = comp?'∞':String(n);
-    let run=0; try{ const now=new Date(); run=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length; }catch(_){ }
+    let run=0; try{ const td=new Date().toDateString(); run=histList().filter(e=>e.ts&&new Date(e.ts).toDateString()===td).length; }catch(_){ }
     head.innerHTML=`<div class="wash">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <span style="display:flex;align-items:center;gap:4px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('acct.my','My')}</span>${FCHK(24)}</span>
@@ -2693,7 +2694,7 @@ function openAccount(){
           <span style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:rgba(255,255,255,.8);white-space:nowrap">${esc(idn.primary)}<button onclick="editPhone()" aria-label="Change number" style="background:none;border:0;padding:2px;cursor:pointer;display:inline-flex"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg></button></span>
           <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);font-size:12px;font-weight:700">${esc(planChip)}</span>
         </div></div>
-      <div class="stats"><div class="stat2"><b>${esc(left)}</b><i>${esc(t('acct.stat.left','Checks left').toUpperCase())}</i></div><div class="stat2"><b>${run}</b><i>${esc(t('acct.stat.run','Checks run').toUpperCase())}</i></div></div>
+      <div class="stats"><div class="stat2"><b>${esc(left)}</b><i>${esc(t('acct.stat.left','Checks left').toUpperCase())}</i></div><div class="stat2"><b>${run}</b><i>${esc(t('acct.stat.run2','Checks today').toUpperCase())}</i></div></div>
       <div class="tabs">
         <button class="tab on" data-t="overview" onclick="acctTab('overview')">${t('acct.tab.overview','Overview')}</button>
         <button class="tab" data-t="activity" onclick="acctTab('activity')">${t('acct.tab.activity','Activity')}</button>
@@ -2703,17 +2704,40 @@ function openAccount(){
     acctTab('overview');
   }catch(_){} }
   $('acctOverlay').classList.add('on'); track('account_open');
+  try{ if(!(history.state&&history.state.v==='acct')) history.pushState({v:'acct'},''); }catch(_){ } // back closes the sheet, not the page
 }
 function closeAccount(){ $('acctOverlay').classList.remove('on'); }
 // Change number: the phone IS the login — re-verify a new one through the same code flow.
-function editPhone(){ closeAccount(); try{ const f=$('auth_phone'); if(f) f.value=''; }catch(_){} openAuth(); }
-async function acctInvite(){
+function editPhone(){ closeAccount(); try{ const f=$('auth_phone'); if(f) f.value=''; }catch(_){} openAuth(); try{ const l=$('auth_lead'); if(l){ l.textContent=t('auth.newcell','Give us your new celly'); l.removeAttribute('data-i18n'); } }catch(_){} }
+function inviteMsg(link){ return t('ref.sharemsg',"Yo! Check this tech out. It's sick.\nHelps us quickly find viral products in stock like Pokémon cards at retail prices.\nSign up and we both get 3 free checks: ")+link; }
+async function acctInvitePanel(btn){
   try{ if(!REFER||!REFER.code){ await loadRefer(); } }catch(_){ }
   const link=(REFER&&REFER.code)?referLink(REFER.code):location.origin;
-  const msg=t('ref.sharemsg','I use Check It For Me to catch restocks — join with my link and we both earn free checks.');
-  try{ if(navigator.share){ await navigator.share({text:msg,url:link}); return; } }catch(_){ return; }
-  try{ await navigator.clipboard.writeText(link); toast(t('ref.copied','Invite link copied!')); }catch(_){ try{ prompt(t('ref.copy','Copy your invite link:'),link); }catch(__){} }
+  const short=link.replace(/^https?:\/\//,'');
+  let pan=$('acctInvitePan');
+  if(pan){ pan.remove(); return; } // tap again = fold away
+  pan=document.createElement('div'); pan.id='acctInvitePan';
+  const btnS='flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0;border:0;border-radius:14px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;font-size:10px;font-weight:800;letter-spacing:.12em;cursor:pointer';
+  const ic=(pth)=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${pth}</svg>`;
+  pan.innerHTML=`
+    <div style="margin-top:10px;font-size:12.5px;font-weight:600;color:#8A8A96;text-align:center">${t('ref.both','You both get <b style="color:#fff">3 free checks</b> when they sign up.')}</div>
+    <div style="margin-top:9px;display:flex;align-items:center;gap:8px;border:1.5px dashed rgba(255,255,255,.16);border-radius:13px;padding:10px 12px">
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:700">${esc(short)}</span>
+      <button onclick="inviteCopy()" style="background:none;border:0;color:#4ADE80;font-size:11px;font-weight:800;letter-spacing:.1em;cursor:pointer">${t('ref.copybtn','COPY')}</button>
+    </div>
+    <div style="margin-top:9px;display:flex;gap:8px">
+      <button style="${btnS}" onclick="inviteText()">${ic('<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/>')}<span>${t('ref.text','Text')}</span></button>
+      <button style="${btnS}" onclick="invitePost()"><svg width="17" height="17" viewBox="0 0 24 24" fill="#4ADE80"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg><span>${t('ref.post','Post')}</span></button>
+      <button style="${btnS}" onclick="inviteMore()">${ic('<path d="M12 3v12"/><path d="m8 7 4-4 4 4"/><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/>')}<span>${t('ref.more','More')}</span></button>
+    </div>`;
+  const grid=btn.closest('#acctv2panel')?btn.parentElement:null; // the 2-col tile grid
+  if(grid&&grid.parentElement) grid.parentElement.insertBefore(pan, grid.nextSibling); else btn.parentElement.appendChild(pan);
+  window.__invLink=link;
 }
+function inviteCopy(){ try{ navigator.clipboard.writeText(window.__invLink||location.origin); toast(t('ref.copied','Invite link copied!')); }catch(_){ try{ prompt(t('ref.copy','Copy your invite link:'),window.__invLink||''); }catch(__){} } }
+function inviteText(){ const l=window.__invLink||location.origin; location.href='sms:?&body='+encodeURIComponent(inviteMsg(l)); }
+function invitePost(){ const l=window.__invLink||location.origin; window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(inviteMsg(l)),'_blank'); }
+async function inviteMore(){ const l=window.__invLink||location.origin; try{ if(navigator.share){ await navigator.share({text:inviteMsg(l)}); return; } }catch(_){ return; } inviteCopy(); }
 // Sub-screens opened FROM the account sheet return TO it on close (owner: closing dumped to homepage).
 let ACCT_RETURN='';
 function acctReturn(){ if(!ACCT_RETURN) return false; const tb=ACCT_RETURN; ACCT_RETURN=''; try{ openAccount(); if(tb!=='overview') acctTab(tb); }catch(_){ } return true; }
@@ -3050,7 +3074,7 @@ function renderStores(){
   let list=STORES.filter(s=>{
     if(kiosk){ if(!s.hasKiosk) return false; }                    // kiosk mode: vending machines (open OR closed)
     else { if(s.sellsPacks===false) return false; if(isClosed(s)) return false; } // call mode: shelf stores only (kiosks live in the Kiosk tab)
-    if(q && !(s.name+' '+(s.location||'')).toLowerCase().includes(q)) return false;
+    if(q && !storeMatch(s.name+' '+(s.location||''),q)) return false;
     if(!kiosk && !chainCarriesBrand(s)) return false;
     if(USER_LOC && !s.ownerOnly){ const mi=storeMi(s); if(mi==null || mi>RADIUS) return false; } // owner-only "Fun" store shows from any location
     return true;
@@ -3156,7 +3180,7 @@ function renderIcons(){
   const CATMARK={'Pokémon':ICO.pokeball,'One Piece TCG':ICO.strawhat,'Topps NBA':ICO.bball,'NeeDoh':ICO.squish};
   const drawn=CATMARK[(BRAND&&BRAND.category)||'']||ICO.logomark(c);
   setI('logomark', LU?`<img src="${LU}" alt="${(BRAND&&BRAND.short)||''}">`:drawn);
-  const ha=$('heroart'); if(ha && LU){ ha.innerHTML=`<img src="${LU}" alt="${(BRAND&&BRAND.short)||''}">`; ha.style.setProperty('--logo-scale', /needoh/i.test((BRAND&&BRAND.category)||'') ? '.62' : '1'); } // NeeDoh's wordmark is oversized — shrink it on the landing hero
+  const ha=$('heroart'); if(ha && LU){ ha.innerHTML=`<img src="${LU}" alt="${(BRAND&&BRAND.short)||''}">`; ha.style.setProperty('--logo-scale', /needoh/i.test((BRAND&&BRAND.category)||'') ? '.85' : '1'); } // NeeDoh's wordmark is oversized — shrink it on the landing hero
   setI('tsi1', ICO.store(c)); setI('tsi2', ICO.call(c)); setI('tsi3', ICO.proof(c));
   document.querySelectorAll('.tsd').forEach(d=>d.innerHTML=ICO.chev('#56566a'));
   // v2 skin: S2 store-type keys use the comp's 14px 2px-stroke icon set (storefront · kiosk awning)
@@ -3652,14 +3676,14 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     const bubs=human.map(l=>{ const m=l.match(/^(Agent|Clerk):\s*(.*)$/); if(!m) return '';
       const ai=m[1]==='Agent';
       return `<div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?esc(t('lbl.agent','CHECK AI').toUpperCase()):esc(t('lbl.assoc','STAFF').toUpperCase())}</div><div class="tx">${esc(m[2])}</div></div>`; }).join('');
-    const vline=(status&&(status.term||status.title))?`<div style="margin:12px 0 22px;font-size:15px;font-weight:800;color:${tone}">${esc(status.term||status.title)}</div>`:'';
-    return `<div class="ctlv2">
+    const vline=(status&&(status.term||status.title))?`<div style="margin-top:12px;font-size:15px;font-weight:800;color:${tone}">${esc(status.term||status.title)}</div>`:'';
+    return `<div class="ctlv2" style="margin-bottom:22px">
       <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80 100%':`color-mix(in srgb,#4ADE80 35%,${tone}) 60%,${tone} 100%`})"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
       <div style="flex:1;min-width:0">
         <details open><summary><span style="font-size:15px;font-weight:700">${t('step.ringing','Ringing the store…')}</span><span style="font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''} ⌃</span></summary>
           <div class="ctlv2-steps">${stepEls}</div>
         </details>
-        ${human.length?`<div style="margin-top:18px;font-size:11px;font-weight:700;letter-spacing:.15em;color:rgba(255,255,255,.5)">${esc(t('res.conversation','Conversation').toUpperCase())}</div>`:''}
+        ${human.length?`<div style="margin-top:18px;font-size:11px;font-weight:700;letter-spacing:.15em;color:rgba(255,255,255,.5);text-align:right">${esc(t('res.conversation','Conversation').toUpperCase())}</div>`:''}
         <div id="convo_body" style="margin-top:10px;display:flex;flex-direction:column;gap:9px">${bubs||(live?`<div class="cs-wait">${t('live.waitperson','Reaching a person…')}</div>`:'')}</div>
         ${vline}
       </div>
@@ -4040,6 +4064,16 @@ function setThemeTone(){}
 let TONE_NAV_DONE=false;
 function ensureToneLoaded(){ return false; }
 window.addEventListener('popstate',()=>{
+  // Back inside the account sheet: earn/activity fold to Overview, Overview closes the sheet —
+  // instead of yanking the user to a different page (owner 2026-07-02).
+  try{ const ov=$('acctOverlay');
+    if(ov&&ov.classList.contains('on')){
+      const on=document.querySelector('#acctOverlay .acctv2head .tab.on');
+      if(on&&on.dataset.t!=='overview'){ acctTab('overview'); } else { closeAccount(); }
+      return;
+    }
+    if(typeof acctReturn==='function'&&acctReturn()) return; // e.g. back from a check opened off the Activity tab
+  }catch(_){ }
   // Handle BOTH directions. Going forward to a ?call= entry used to do nothing (only "back" was handled),
   // so the URL changed but the call page never re-opened. Now we read the target URL and restore it.
   try{
@@ -4071,12 +4105,12 @@ async function sendFeedback(v){
 }
 // Status-detail formatting rule: a new sentence starts a new line — but a single sentence never
 // wraps across two lines on its own (each sentence is its own non-wrapping line).
-function nl2(s){ return String(s==null?'':s).replace(/([.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡])/g,'$1<br>'); }
+function nl2(s){ if(typeof isV2==='function'&&isV2()) return String(s==null?'':s); return String(s==null?'':s).replace(/([.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡])/g,'$1<br>'); }
 // Registry/owner-written notes can use a {product} token — we fill it with the live product name (bolded),
 // so the owner writes the message in Admin and it still reads "…check if Pokémon was in stock…".
 function fillP(s,o,tn){ try{ const oc=(o&&Array.isArray(o.cats)&&o.cats[0])||(o&&o.category)||''; // the CALL's own saved category — beats a generic 'it' when the picker state isn't loaded (deep link / server-history reopen)
-  // 6m comp: on the OUT verdict the {store} token tints red ('Fun' in #FF7B7B) — v2 only; v1 stays white.
-  const sc=(typeof isV2==='function'&&isV2()&&tn==='out')?'#FF7B7B':'#fff';
+  // Owner 2026-07-02: the {store} token stays WHITE on every verdict (overrides the 6m comp's red — too hard to read on the wash).
+  const sc='#fff';
   const pn=esc((o&&o.productName)||catLabel()||oc||'it'); const sn=esc((o&&o.storeName)||(SEL_STORE&&SEL_STORE.name)||'the store'); const cn=esc(catLabel()||oc||'it'); const dy=esc((o&&o.shipmentDay)?fmtShipDay(o.shipmentDay):'soon'); return String(s==null?'':s).replace(/\{product\}/g,'<b style="color:#fff">'+pn+'</b>').replace(/\{store\}/g,'<b style="color:'+sc+'">'+sn+'</b>').replace(/\{category\}/g,'<b style="color:#fff">'+cn+'</b>').replace(/\{day\}/g,'<b style="color:#fff">'+dy+'</b>'); }catch(e){ return String(s==null?'':s); } }
 function showResult(o, cid){
   resultCacheSet(cid,o);
@@ -4109,7 +4143,7 @@ function showResult(o, cid){
   else if(o.status==='completed'&&o.doesNotSell){ cls='out'; big='🚫'; title=t('v.nocarry',"They don't carry it"); note=tf('note.nocarry',"This store doesn't carry "+(catLabel()||'this')+". Try another.",{x:catLabel()||'this'}); }
   else if(o.status==='completed'&&o.soldOut){ cls='out'; big='🕐'; title=t('v.soldout','Sold out'); note=t('note.soldout',"Came in, but it's already gone. Worth catching the next shipment."); }
   else if(o.status==='completed'&&o.confirmed===true){ cls='in'; big='✅'; title=t('v.in','In stock!'); note=tf('note.in','They have {c}. Go grab it.',{c:'<b style="color:#fff;font-weight:800">'+esc(catLabel()||'them')+'</b>'}); }
-  else if(o.status==='completed'&&o.confirmed===false){ cls='out'; big='❌'; title=t('v.out','Not in stock'); note=t('note.out',"They don't have it."); }
+  else if(o.status==='completed'&&o.confirmed===false){ cls='out'; big='❌'; title=t('v.out','Not in stock'); const _oc=catLabel()||(Array.isArray(o.cats)&&o.cats[0])||(typeof BRAND_CAT!=='undefined'&&BRAND_CAT&&BRAND_CAT.label)||''; note=_oc?tf('note.out2',"They don't have any <b style=\"color:#fff\">{c}</b> in stock right now.",{c:esc(_oc)}):t('note.out',"They don't have it."); }
   else if(o.status==='completed'){ // reached the end but no yes/no extracted
     if(asked){ cls='unk'; big='🔄'; title=t('v.unclear',"No clear answer. Recheck."); note=t('note.unclear','Someone answered but didn’t give a clear yes or no. See what they said below.'); }
     else { cls='unk'; big='📵'; title=t('v.noanswer','Nobody answered'); note=t('note.noanswer.desk','Got through the menu, but no one picked up at the desk. No charge.'); }
@@ -4149,7 +4183,7 @@ function showResult(o, cid){
     const anyIn=askedLabels.some(lb=>cr[lb]===true);
     cls=anyIn?'in':'out'; big=anyIn?'🛒':'❌'; title=anyIn?t('res.have','Here’s what they have'):t('res.nonein','None in stock'); note='';
   }
-  const headLabel = askedLabels.length ? askedLabels.join(', ') : catLabel();
+  const headLabel = askedLabels.length ? askedLabels.join(', ') : (catLabel()||(Array.isArray(o.cats)&&o.cats[0])||(typeof BRAND_CAT!=='undefined'&&BRAND_CAT&&BRAND_CAT.label)||'');
   // Product-aware copy for the no-answer outcomes (the demo case) — name WHAT we checked for + no charge.
   // (No-answer copy stays the concise registry/default note — the verdict strip is just title + one short
   //  summary line, and the "no charge" reassurance already shows in the footer below.)
@@ -4230,7 +4264,7 @@ function showResult(o, cid){
   // A reopened call reuses the SAVED live step timings (so "…3s / …2s" persists); else derive (no per-step secs).
   const savedSteps=(!haveLive && Array.isArray(o.savedSteps) && o.savedSteps.length) ? o.savedSteps : null;
   const resultSteps=haveLive?LIVE_STEPS:(savedSteps||deriveSteps(o.transcript||''));
-  const finalElapsed=haveLive&&LIVE_T0?((Date.now()-LIVE_T0)/1000):(savedSteps&&typeof o.durationSecs==='number'&&o.durationSecs>0?o.durationSecs:null);
+  const finalElapsed=haveLive&&LIVE_T0?((Date.now()-LIVE_T0)/1000):((typeof o.durationSecs==='number'&&o.durationSecs>0)?o.durationSecs:null);
   const vTitle=String(title).replace(/[\s!?.:：]+$/,''); // "In stock!" → "In stock" so the "Status: summary" line reads clean (colon separator, no dash)
   // Rich verdict sub-line (mirrors the /demo design): "{store} has / doesn't have {category} … right
   // now". Only for a completed single-category check where we know the store + category; every other
@@ -4244,7 +4278,7 @@ function showResult(o, cid){
         : tf('sub.in','<b>{s}</b> has <b>{c}</b> in. Go grab it before it’s gone.',{s:_SN,c:_C});
       richSub=true; }
     else if(o.soldOut){ note=tf('sub.soldout','{s} is sold out of <b>{c}</b> right now.',{s:_SN,c:_C}); richSub=true; }
-    else if(cls==='out'){ note=tf('sub.out',"<b>{s}</b> doesn't have <b>{c}</b> in. Worth a check back in a day or two.",{s:_SN,c:_C}); richSub=true; }
+    else if(cls==='out'){ note=tf('sub.out',"<b>{s}</b> doesn't have any <b>{c}</b> in stock right now.",{s:_SN,c:_C}); richSub=true; }
   }
   // Boxless "The call" subline: "{ago} · {dur}" — both pieces reuse existing prod helpers/vars
   // (timeAgo for the ago, callSummary already carries the "Call · Ns" duration). No new copy/keys.
@@ -4549,11 +4583,11 @@ function histList(){
 }
 // "My checks" lands on TODAY for the CURRENT product. A check made today → open it. None today → the
 // today-landing (NOT some old in-stock result from days ago); the calendar there still reaches past days.
-function openHistory(){
+function openHistory(forceCal){
   const today=tsDay(Date.now());
   const todayMatch=e=>e.cid && railInCat(e) && tsDay(e.ts)===today;
   // Snappy: open instantly from local history if there's a check from today.
-  const localToday=loadHist().find(todayMatch);
+  const localToday=forceCal?null:loadHist().find(todayMatch);
   if(localToday){
     RAIL_F.date=today; openHistEntry(localToday);
     ensureHistCache().then(()=>{ try{ renderCallRail(); }catch(_){} });
@@ -4590,7 +4624,7 @@ function showTodayLanding(){
   }
   $('result').innerHTML=(isV2()?`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 2px 2px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('hist.title','Check history')}</span><button onclick="backToBuilder()" style="background:none;border:0;font-size:12px;font-weight:700;color:rgba(255,255,255,.55);cursor:pointer">${t('acct.done','Done')}</button></div><div style="padding:0 2px 8px;font-size:12.5px;font-weight:600;color:#8A8A96">${(()=>{try{const now=new Date();const nn=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length;return nn+' '+t('hist.inmonth','checks in')+' '+now.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long'});}catch(_){return ''}})()}</div>`:'')+`
     <div class="todaywrap">
-      <div class="emptybox" style="margin-top:6px">
+      <div class="emptybox" style="margin-top:6px;${forceCal?'display:none':''}">
         <span style="opacity:.45;filter:grayscale(.7)">${FCHK(42)}</span>
         <div class="eb-t" style="margin-top:12px">${t('hist.today.none','No checks today')}</div>
         <div class="eb-s">${t('hist.today.sub0','Select a day below to see your past checks.')}</div>
@@ -4643,6 +4677,9 @@ async function openHistEntry(e){
   try{ const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',e.cid); history.replaceState({v:'result'},'',location.pathname+'?'+sp.toString()); }catch(_){}
 }
 // ---- My-checks tabs (6e/6f/6g): in-place panels inside the account pop-up. ----
+let ACT_WOFF=0, ACT_DAY=null;
+function actWeek(d){ ACT_WOFF=Math.max(0,ACT_WOFF-d); ACT_DAY=null; acctTab('activity'); }
+function actPick(i){ ACT_DAY=(ACT_DAY===i?null:i); acctTab('activity'); }
 function acctTab(which){
   const modal=document.querySelector('#acctOverlay .modal'); if(!modal) return;
   modal.querySelectorAll('.acctv2head .tab').forEach(b=>b.classList.toggle('on',b.dataset.t===which));
@@ -4681,27 +4718,40 @@ function acctTab(which){
   }
   const hist=histList().filter(e=>e.cid&&e.ts);
   if(which==='activity'){
-    // 6f EXACT (watch-17 deep-read): chart in a RAISED CARD w/ ACCENT History› — past-week bars
-    // translucent white, flat-bottomed, ONLY the current week green-gradient + glow, 72px scale;
-    // tone stats = 4-col grid CARD (white 18/800 values); last checks = logo-tile rows w/ verdict
-    // + time-ago right blocks.
-    const now=Date.now(), wk=7*86400000, weeks=Array.from({length:8},(_,i)=>hist.filter(e=>e.ts>now-(8-i)*wk&&e.ts<=now-(7-i)*wk).length);
-    const mx=Math.max(1,...weeks);
-    const bars=weeks.map((v,i)=>{ const bh=Math.max(6,Math.round(v/mx*72)); const cur=i===7;
-      return `<div style="flex:1;height:${bh}px;border-radius:4px 4px 0 0;background:${cur?'linear-gradient(180deg,#5BEA93,#34C268);box-shadow:0 0 14px rgba(74,222,128,.4)':'rgba(255,255,255,.13)'}"></div>`; }).join('');
-    const tones={in:0,out:0,soon:0,unk:0}; hist.forEach(e=>{ tones[railTone(e)]=(tones[railTone(e)]||0)+1; });
+    // Owner spec 2026-07-02: one WEEK per view (days across the bottom w/ dates), ‹ › arrows to move
+    // between weeks, tap a bar to scope the stat grid to that day; calendar icon -> calendar landing.
+    const day0=new Date(); day0.setHours(0,0,0,0); day0.setDate(day0.getDate()-day0.getDay()-ACT_WOFF*7); // Sunday of the viewed week
+    const dayTs=Array.from({length:7},(_,i)=>day0.getTime()+i*86400000);
+    const perDay=dayTs.map((t0,i)=>hist.filter(e=>e.ts>=t0&&e.ts<t0+86400000));
+    const mx=Math.max(1,...perDay.map(a=>a.length));
+    const todayT=(()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime();})();
+    const selIdx=(ACT_DAY!=null)?ACT_DAY:dayTs.indexOf(todayT); // default highlight = today (if in view)
+    const dws=(LANG==='es'?['D','L','M','M','J','V','S']:['S','M','T','W','T','F','S']);
+    const bars=perDay.map((a,i)=>{ const bh=Math.max(6,Math.round(a.length/mx*64)); const cur=i===selIdx;
+      return `<div onclick="actPick(${i})" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer">
+        <div style="width:100%;height:${bh}px;border-radius:4px 4px 0 0;align-self:flex-end;background:${cur?'linear-gradient(180deg,#5BEA93,#34C268);box-shadow:0 0 14px rgba(74,222,128,.4)':'rgba(255,255,255,.13)'}"></div>
+        <span style="font-size:9.5px;font-weight:700;color:${cur?'#4ADE80':'#7C7C88'}">${dws[i]}</span>
+        <span style="font-size:9px;font-weight:600;color:#66666F;margin-top:-3px">${new Date(dayTs[i]).getMonth()+1}/${new Date(dayTs[i]).getDate()}</span>
+      </div>`; }).join('');
+    const scope=(selIdx>=0&&ACT_DAY!=null)?perDay[selIdx]:hist.filter(e=>e.ts>=dayTs[0]&&e.ts<dayTs[6]+86400000);
+    const tones={in:0,out:0,soon:0,unk:0}; scope.forEach(e=>{ tones[railTone(e)]=(tones[railTone(e)]||0)+1; });
     const cell=(nv,lb)=>`<div style="text-align:center"><div style="font-size:18px;font-weight:800">${nv}</div><div style="margin-top:2px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#8A8A96">${lb}</div></div>`;
     const vlabel=e=>{ const tn=railTone(e); return tn==='in'?t('v.in','In stock!'):tn==='out'?t('v.out','Not in stock'):tn==='soon'?t('v.soon','Restock incoming!'):t('fbk.unsure','Unclear'); };
     const agoTx=e=>{ try{ return agoStr(e.ts); }catch(_){ return ''; } };
-    const last=hist.slice(0,3).map(e=>`<button onclick="closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:11px;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:9px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left">
+    const last=hist.slice(0,3).map(e=>`<button onclick="ACCT_RETURN='activity';closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:11px;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:9px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left">
       <span style="width:40px;height:40px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${e.logoUrl?`<img src="${esc(e.logoUrl)}" style="width:32px;height:32px;object-fit:contain" alt="">`:`<span style="font-size:11px;font-weight:900;color:#CDCDD8">${esc((railBase(e.storeName)||'?').slice(0,2).toUpperCase())}</span>`}</span>
       <span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span style="display:block;margin-top:2px;font-size:11.5px;font-weight:600;color:#8A8A96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.location||e.address||'')}</span></span>
       <span style="text-align:right;flex:0 0 auto"><span style="display:block;font-size:12.5px;font-weight:700;color:rgba(255,255,255,.7)">${vlabel(e)}</span><span style="display:block;margin-top:2px;font-size:11px;font-weight:600;color:#8A8A96">${agoTx(e)}</span></span>
     </button>`).join('');
+    const arrow=(d,dis)=>`<button ${dis?'disabled':''} onclick="actWeek(${d})" style="flex:0 0 auto;width:26px;height:26px;border:0;border-radius:9px;background:${dis?'rgba(255,255,255,.04)':'linear-gradient(180deg,#31313A 0%,#26262C 100%)'};color:${dis?'#4A4A52':'#CDCDD8'};display:flex;align-items:center;justify-content:center;cursor:${dis?'default':'pointer'};box-shadow:${dis?'none':'0 6px 10px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)'}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="${d<0?'M15 18l-6-6 6-6':'M9 18l6-6-6-6'}"/></svg></button>`;
+    const calico='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>';
     panel.innerHTML=`<div style="background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:14px 16px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">
-        <div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font-size:10px;font-weight:700;letter-spacing:.15em;color:#8A8A96">${esc(t('acct.perweek','Checks per week').toUpperCase())}</span><a onclick="closeAccount();openHistory()" style="font-size:11px;font-weight:700;color:var(--accent,#FFCB05);cursor:pointer">${t('acct.hist','History')} ›</a></div>
-        <div style="margin-top:12px;display:flex;align-items:flex-end;gap:6px;height:72px">${bars}</div>
-        <div style="margin-top:8px;display:flex;justify-content:space-between;font-size:10px;font-weight:600;color:#7C7C88"><span>${t('acct.8wks','8 wks ago')}</span><span>${t('acct.thisweek','this week')}</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:10px;font-weight:700;letter-spacing:.15em;color:#8A8A96">${esc(t('acct.perweek2','Checks this week').toUpperCase())}</span><a onclick="ACCT_RETURN='activity';closeAccount();openHistory(true)" style="cursor:pointer;display:inline-flex">${calico}</a></div>
+        <div style="margin-top:12px;display:flex;align-items:flex-end;gap:6px">
+          ${arrow(1,false)}
+          <div style="flex:1;display:flex;align-items:flex-end;gap:5px;height:92px">${bars}</div>
+          ${arrow(-1,ACT_WOFF<=0)}
+        </div>
       </div>
       <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:13px 0;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">${cell(tones.in,t('fbk.in','In stock').toUpperCase())}${cell(tones.out,t('fbk.out','Out').toUpperCase())}${cell(tones.soon,t('fbk.soon','Restock').toUpperCase())}${cell(tones.unk,t('fbk.unsure','Unclear').toUpperCase())}</div>
       <div style="margin-top:18px;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${t('acct.last','Last checks')}</div>
@@ -4711,9 +4761,6 @@ function acctTab(which){
     // earn items = 2-COL GRID of icon tiles (14/700 + 11.5/600 + reward-chip SLOT); footer line.
     // Reward numbers stay OMITTED (DECIDED: never invent — comp's +N CHECKS are placeholders; the
     // chip renders the moment a runtime number exists). Handlers preserved.
-    const stats=modal.querySelector('.acctv2head .stats');
-    if(stats){ if(!stats.dataset.orig) stats.dataset.orig=stats.innerHTML;
-      stats.innerHTML=`<div style="flex:1;background:linear-gradient(180deg,#31313A 0%,#26262B 100%);border-radius:16px;padding:12px 8px;box-shadow:0 14px 26px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1);text-align:center;font-size:12px;font-weight:600;color:rgba(255,255,255,.75);${LANG==='es'?'':'white-space:nowrap;overflow:hidden'}">${t('acct.earn.lead','Help the hunt. We load you up with free checks.')}</div>`; }
     const IC=p=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
     const icons={
       store:IC('<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>'),
@@ -4726,8 +4773,8 @@ function acctTab(which){
       <div style="margin-top:3px;font-size:11.5px;font-weight:600;color:#8A8A96;line-height:1.45">${sub}</div>
       ${reward?`<div style="margin-top:10px;display:inline-flex;padding:4px 9px;border-radius:999px;background:rgba(74,222,128,.12);color:#4ADE80;font-size:10.5px;font-weight:800;letter-spacing:.06em;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)">${reward}</div>`:''}</button>`;
     panel.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      ${tile(icons.store,t('earn.store','Add your store'),t('earn.store.sub','Put a store on the map.'),'',"ACCT_RETURN='earn';closeAccount();openWaitlist&&openWaitlist()")}
-      ${tile(icons.invite,t('earn.invite','Invite a friend'),t('earn.invite.sub','They sign up. You both win.'),'',"acctInvite()")}
+      ${tile(icons.store,t('earn.store','Add your store'),t('earn.store.sub','Put a store on the map.'),'',"ACCT_RETURN='earn';closeAccount();openStoreReq()")}
+      ${tile(icons.invite,t('earn.invite','Invite a friend'),t('earn.invite.sub','They sign up. You both win.'),'',"acctInvitePanel(this)")}
       ${tile(icons.score,t('earn.score','Post your score'),t('earn.score.sub','Your pulls, on the home page.'),'',"closeAccount();openSuccess()")}
       ${tile(icons.receipt,t('earn.receipt','Kiosk receipt'),t('earn.receipt.sub','Use our email at checkout, or forward it.'),'',"ACCT_RETURN='earn';closeAccount();openReceipt()")}
     </div>
@@ -5059,8 +5106,8 @@ function money(c){ return '$'+(c/100).toFixed(c%100?2:0); }
 let BILLING_ANNUAL=false;
 function tiers(){ return [
   {key:'t1',name:'Family',    cents:999,  checks:30,   perk:t('plan.p1','Restock alerts')},
-  {key:'t2',name:'Collector', cents:1999, checks:100,  perk:t('plan.p2','+ Auto-checks on shipment days')},
-  {key:'t3',name:'Operator',  cents:4999, checks:350,  perk:t('plan.p3',"+ Exact products. More than one per call."), featured:true},
+  {key:'t2',name:'Collector', cents:1999, checks:100,  perk:t('plan.p2','+ Auto-checks on shipment days'), featured:true},
+  {key:'t3',name:'Operator',  cents:4999, checks:350,  perk:t('plan.p3',"+ Exact products. More than one per call.")},
   {key:'t4',name:'Pro Seller',cents:14900,checks:1500, perk:t('plan.p4',"+ Zone sweeps. Every store near you, one tap."), plus:true},
 ]; }
 function setCycle(annual,btn){ BILLING_ANNUAL=annual; document.querySelectorAll('#billcycle button').forEach(b=>b.classList.toggle('on',b===btn)); renderBuyPlans(); }
@@ -5069,7 +5116,12 @@ function renderBuyPlans(){
   const member=!!(ACCOUNT&&ACCOUNT.subscription==='active'), comp=!!(ACCOUNT&&ACCOUNT.comp);
   const per=BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo');
   let html='';
-  if(member||comp){
+  if((member||comp)&&isV2()){
+    // Owner 2026-07-02: this sheet SELLS — the pill + stat tiles on My-checks already tell you your
+    // plan. Just a small note here, then the upgrade options.
+    html+=`<div style="margin:0 0 12px;text-align:center;font-size:12.5px;font-weight:600;color:#8A8A96">${t('plan.on',"You're on")} <b style="color:#FFF">${comp?t('plan.founder',"Founder. Unlimited."):('Family · '+money(999)+t('plan.mo','/mo'))}</b> <span style="color:#4ADE80">✓</span></div>`;
+  }
+  else if(member||comp){
     // The plan dashboard: what you're on, what you've used, where to grow.
     html+=`<div class="plan sub" style="cursor:default">
       <div class="grow"><div class="pn">${ICO.spark('#FFCB05')} ${comp?t('plan.founder',"Founder. Unlimited."):('Family · '+money(999)+t('plan.mo','/mo'))}</div>
@@ -5081,20 +5133,45 @@ function renderBuyPlans(){
     </div>
     <div class="psep">${t('plan.upsep','Need more firepower?')}</div>`;
   }
+  if(isV2()){
+    // Plans | Pay as you go — the designed either/or. Packs ride POLICY + the live /app/checkout.
+    if(!document.getElementById('buymode')){
+      const bc=$('billcycle');
+      if(bc){ const mt=document.createElement('div'); mt.id='buymode'; mt.className='ho-toggle'; mt.style.margin='0 0 10px';
+        mt.innerHTML=`<button class="on" onclick="setBuyMode('plans',this)">${t('buy.tabplans','Plans')}</button><button onclick="setBuyMode('packs',this)">${t('buy.tabpayg','Pay as you go')}</button>`;
+        bc.parentElement.insertBefore(mt,bc); }
+    }
+    if(BUY_MODE==='packs'){
+      const packs=(POLICY.packs&&POLICY.packs.length)?POLICY.packs:[{key:'starter',credits:20,cents:500},{key:'hunter',credits:100,cents:2000},{key:'pro',credits:300,cents:5000}];
+      const i=Math.max(0,Math.min(packs.length-1,PACK_IDX)), pk=packs[i];
+      const perC=(pk.cents/pk.credits/100);
+      html+=`<div style="background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:20px 18px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center">
+        <div style="font-size:34px;font-weight:900;letter-spacing:-1px">${pk.credits} <span style="font-size:16px;font-weight:800;color:#8A8A96">${t('plan.checks','checks')}</span></div>
+        <div style="margin-top:2px;font-size:22px;font-weight:800;color:#4ADE80">${money(pk.cents)}</div>
+        <input type="range" min="0" max="${packs.length-1}" step="1" value="${i}" oninput="setPackIdx(this.value)" style="width:100%;margin:18px 0 6px;accent-color:#4ADE80">
+        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:#7C7C88">${packs.map(x=>`<span>${x.credits}</span>`).join('')}</div>
+        <div style="margin-top:12px;font-size:12px;font-weight:600;color:#8A8A96">${t('plan.percheck','about')} ${'$'+perC.toFixed(2)} ${t('plan.percheck2','per check')} · ${t('plan.noexpire','checks never expire')}</div>
+      </div>`;
+      $('buy_plans').innerHTML=html; return;
+    }
+  }
   html+=tiers().map((p,i)=>`<div class="plan ${(isV2()&&SEL_TIER_KEY ? p.key===SEL_TIER_KEY : p.featured)?'sub':''}" onclick="pickTier('${p.key}')">
       <div class="grow"><div class="pn">${esc(p.name)}${p.featured?` <span style="color:var(--green);font-size:11px">${t('plan.popular','most popular')}</span>`:''}</div>
         <div class="pd">${p.checks.toLocaleString()}${p.plus?'+':''} ${t('plan.checksmo','checks/mo')} · ${p.perk}</div></div>
-      <div class="pp">${tierPrice(p.cents)}${p.plus?'+':''}<span>${per}</span></div>
+      <div class="pp">${tierPrice(p.cents)}<span>${per}</span></div>
     </div>`).join('');
   $('buy_plans').innerHTML=html;
 }
-let SEL_TIER_KEY=null;
+let SEL_TIER_KEY=null, BUY_MODE='plans', PACK_IDX=1;
+function setBuyMode(m,btn){ BUY_MODE=m; document.querySelectorAll('#buymode button').forEach(b=>b.classList.toggle('on',b===btn)); const bc=$('billcycle'); if(bc) bc.style.display=(m==='packs'?'none':''); renderBuyPlans(); }
+function setPackIdx(i){ PACK_IDX=Math.max(0,Math.min(((POLICY.packs||[]).length||1)-1, i|0)); renderBuyPlans(); }
 function pickTier(k){
   if(isV2()){ SEL_TIER_KEY=k; renderBuyPlans(); return; } // 6b comp: tap selects (ring moves), CONTINUE buys
   if(k==='t1'&&!BILLING_ANNUAL){ buy('sub'); return; }
   toast(t('plan.soon','That tier opens this week. Family monthly is live now.'));
 }
 function buyContinue(){
+  if(BUY_MODE==='packs'){ const packs=(POLICY.packs&&POLICY.packs.length)?POLICY.packs:[]; const pk=packs[Math.max(0,Math.min(packs.length-1,PACK_IDX))]; if(pk){ buy(pk.key); } return; }
   const k=SEL_TIER_KEY||'t1';
   if(k==='t1'&&!BILLING_ANNUAL){ buy('sub'); return; }
   toast(t('plan.soon','That tier opens this week. Family monthly is live now.'));
@@ -5142,7 +5219,13 @@ function openBuy(reason){
   track('buy_open',{reason:reason||'manual'});
   $('buyOverlay').classList.add('on');
 }
-function closeBuy(){ $('buyOverlay').classList.remove('on'); acctReturn(); }
+function closeBuy(){ const m=document.querySelector('#buyOverlay .modal'); if(m){ m.style.transform=''; m.style.transition=''; } $('buyOverlay').classList.remove('on'); acctReturn(); }
+// Swipe-down dismiss on the plans sheet (owner: it slides up but wouldn't slide down).
+(function(){ let y0=0,dy=0,drag=false;
+  document.addEventListener('touchstart',e=>{ const ov=$('buyOverlay'); if(!ov||!ov.classList.contains('on'))return; const m=e.target.closest('#buyOverlay .modal'); if(!m||m.scrollTop>2)return; y0=e.touches[0].clientY; dy=0; drag=true; m.style.transition='none'; },{passive:true});
+  document.addEventListener('touchmove',e=>{ if(!drag)return; const m=document.querySelector('#buyOverlay .modal'); if(!m)return; dy=Math.max(0,e.touches[0].clientY-y0); if(dy>4) m.style.transform='translateY('+dy+'px)'; },{passive:true});
+  document.addEventListener('touchend',()=>{ if(!drag)return; drag=false; const m=document.querySelector('#buyOverlay .modal'); if(!m)return; m.style.transition='transform .22s'; if(dy>90){ closeBuy(); } else { m.style.transform=''; } });
+})();
 async function buy(kind){
   if(!isAuthed()){ signUp(); return; }
   $('buy_note').textContent=t('buy.opening','Opening secure checkout…');
@@ -5476,6 +5559,11 @@ function myHandle(){
     if(e) return e.split('@')[0].replace(/[^a-z0-9._]/gi,'').slice(0,24)||null; }catch(_){ }
   return null;
 }
+// Token-AND store matcher (mirrors the server): every word must hit; 5+ char words shed their
+// last letter so "barns westlake" still finds "Barnes & Noble Westlake Village".
+function storeMatch(hay,q){ hay=String(hay||'').toLowerCase();
+  const toks=String(q||'').toLowerCase().split(/\s+/).filter(Boolean);
+  return toks.every(tk=>hay.includes(tk)||(tk.length>=5&&hay.includes(tk.slice(0,-1)))); }
 function succFilter(){
   const q=($('succ_store').value||'').toLowerCase();
   // Picked a store → the pin becomes a working × (clear + reopen the list)
@@ -5484,7 +5572,7 @@ function succFilter(){
   if(SUCC_STORE){ $('succ_storelist').innerHTML=''; return; }
   if(!q&&!USER_LOC){ $('succ_storelist').innerHTML=''; return; }
   const paint=(list)=>{ $('succ_storelist').innerHTML=list.slice(0,5).map(st=>`<div class="store" onclick="succPick(${st.id})" style="margin-top:8px"><div class="ic">${st.logoUrl?`<img src="${esc(st.logoUrl)}" alt="" style="width:22px;height:22px;object-fit:contain">`:storeWordmark(st.name,st.storeType)}</div><div style="min-width:0;flex:1"><div class="nm">${esc(st.name)}</div><div class="lo">${esc(st.location||'')}</div></div></div>`).join(''); };
-  let local=STORES.filter(st=>!q||(st.name+' '+(st.location||'')).toLowerCase().includes(q));
+  let local=STORES.filter(st=>!q||storeMatch(st.name+' '+(st.location||''),q));
   if(USER_LOC) local.sort((a,b)=>(storeMi(a)??1e9)-(storeMi(b)??1e9));
   paint(local);
   // No local match (stores load lazily now) → ask the server so any store is taggable.
