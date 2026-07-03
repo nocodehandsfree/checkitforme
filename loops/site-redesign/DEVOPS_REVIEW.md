@@ -23,13 +23,13 @@ of proof (which render you looked at). Never delete findings; history stays.
   ramp specs applied. DevOps render c4-home-truefont (cycle 4): hero at true 900/tight tracking,
   capsule CTA letterspaced — the pop is real on home. Spot-checks of other views continue in
   rotation; reopen per-view if any ramp miss shows.
-- [ ] **(P0 — OWNER-REPORTED, refined) v2's HAND-DRAWN check iconography must be the official mark.**
-  Nuance found 07-03: the header/footer marks DO use the official June-17 brand pack
-  (`logos/check.png` / `check-icon.png`, exported from the same pack as check-brandmark.svg). The
-  offenders are the v2-DRAWN check glyphs (`ck-*`/`ckarc*` classes, e.g. the My-checks empty-state
-  circle-check) — custom vectors instead of the official mark. Replace every v2-drawn check that
-  represents BRAND with the official asset; status icons stay per the icon set. Owner is actively
-  reviewing with you today — close this in that round and post a render proof. Zero references to
+- [ ] **(P0 — OWNER-REPORTED, corrected 07-03) TWO check-mark assets in circulation — unify on the
+  canonical one.** DevOps retraction: there are NO hand-drawn brand glyphs (`ckarc*`/`ck-wv`/`ck-ph`
+  = the comp-spec'd live-call phone animation; the empty-state mark is the `FCHK()` FILE asset).
+  The real issue: `logos/fcheck.png` (v7, the older Fungibles-era check; 14 call sites via FCHK) vs
+  `logos/check.png`/`check-icon.png` (June-17 official Check pack; header/footer) — two different
+  marks depending on the surface. AWAITING OWNER: which is canonical? Then swap every use of the
+  loser for the winner (mechanical; FCHK() is the single chokepoint for 14 of them). Zero references to
   `docs/design/check-brandmark.svg` in checkit.html — the site draws its own mark. Use the actual
   brandmark asset (rules in docs/design/LOGOS.md) everywhere the mark appears: header, footer
   wordmark, empty states, any check iconography that is BRAND (not status icons). Recreate the
@@ -59,6 +59,11 @@ of proof (which render you looked at). Never delete findings; history stays.
   track, footer). Re-verify against P2 store-picked state when rebuilt views land.
 
 ## DevOps cycle log
+- 2026-07-03 ~04:20 CYCLE 6 (light regression after owner rounds 3-5): OUT result re-render clean —
+  type pop holds (900 title), red wash, ring CTA, 3-stop rail gradient (green→amber→red) live per
+  d2d0111; conversation/restock modules intact; buy sheet rendered (c6-buysheet). Brandmark finding
+  CORRECTED (see above): not hand-drawn — a two-asset brand mix; awaiting owner's canonical pick.
+  Both cron jobs verified alive.
 - 2026-07-03 ~ CYCLE 5 (hobby-pipeline seam check, 3 lanes): Data registry LIVE (13 eras/129 sets,
   /pub/pokemon-sets). Logo assets COMPLETE AND LIVE — 129/129 set logos, 130 banners, 13/13 era
   logos, delivered REPO-NATIVE (public/logos/{sets,set-banners,eras}) with serving routes, 200s on
