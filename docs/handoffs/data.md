@@ -65,6 +65,25 @@ ME03 = Perfect Order — the design grid had these mislabeled).
 
 ## Current focus (KEEP UPDATED)
 
+**Session 2026-07-03 — Hobby went live on staging (stores + sets + filter).**
+- **Hobby STORES exist now** (they didn't — that was the "website waiting on data" blocker):
+  GameStop chain 30 → type "Hobby", isMSRP false, stockCheckMethod call, all 1,186 stores tier 2→3
+  (visible). Imported the owner's two named indie shops (verified address/phone/hours, Census-geocoded):
+  **Burbank Sportscards** (id 106573) + **PokeMall TCG** (id 106574), each its own chain (122/123),
+  type Hobby. More metro card shops = next.
+- **`/pub/stores/near?type=Hobby`** — new server-side chain-type filter (the home chips). Without it
+  the nearest-200 page in a metro is all Retail and the Hobby chip starves client-side.
+- **Pokémon set registry shipped**: `data/pokemon-sets.json` (13 eras / 129 sets, Base Set 1999 →
+  Delta Reign 2026) served at **`GET /pub/pokemon-sets`** with per-set products (type + retail from the
+  catalog) and SAME-ORIGIN asset paths (`/logos/sets|set-banners|eras/<logoKey>.png`) matching the
+  /logo-wall repo system. Logo dev drops PNGs at those paths; website renders feed.logo/banner.
+  ME codes verified vs TCGplayer: **ME2.5 = Ascended Heroes, ME03 = Perfect Order.**
+- **⚠️ CLOBBER WATCH:** something re-synced the `chains` table on staging tonight and reverted my
+  chain PATCHes once (GameStop back to type Other; the 2 new chains reset). Store rows survived.
+  Re-applied + verified. If Hobby stores vanish from the feed again, a chains config sync is
+  overwriting live edits — flag DevOps to make it respect newer rows.
+
+
 **Session 2026-07-02 — consumer surfaces show only what we KNOW (owner rule). Staging.**
 - **No unverified restock info reaches consumers, anywhere.** (1) `/pub/stores/near` no longer sends
   `shipmentDay` (the site printed junk like "drops eve" = "every single week" truncated). (2) Best
