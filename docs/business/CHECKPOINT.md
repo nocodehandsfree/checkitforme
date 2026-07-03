@@ -136,10 +136,10 @@ surfacing script improvements that feed back into every lane.
 
 | Plan      | Price   | Checks / mo       |
 |-----------|---------|-------------------|
-| Starter   | $4.99   | 15                |
+| Family    | $4.99   | 15                |
 | Collector | $9.99   | 30                |
-| Operator  | $19.99  | 100               |
-| Hunter    | $49.99  | 300 _(confirm)_   |
+| Hunter    | $19.99  | 100               |
+| Operator  | $49.99  | 300 _(confirm)_   |
 
 **Pay-as-you-go (PAYG):** 10 → 100 checks, price per check slides **99¢ down to 60¢** with volume.
 
