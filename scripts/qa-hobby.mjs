@@ -20,7 +20,7 @@ ok('needoh v2: no hobby chip', await pg.evaluate(() => !document.querySelector('
 
 await pg.goto('http://localhost:8797/pokemon?skin=v2',{waitUntil:'networkidle',timeout:20000}).catch(()=>{});
 await pg.waitForTimeout(700);
-ok('pokemon v2: chip order call,hobby,kiosk', await pg.evaluate(() => [...document.querySelectorAll('.modetab')].map(x=>x.dataset.mode).join(','))==='call,hobby,kiosk');
+ok('pokemon v2: chip order call,hobby,thrift,kiosk', await pg.evaluate(() => [...document.querySelectorAll('.modetab')].map(x=>x.dataset.mode).join(','))==='call,hobby,thrift,kiosk');
 
 const hunt = await pg.evaluate(() => new Promise(res => {
   setMode('hobby');
