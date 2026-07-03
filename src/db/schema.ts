@@ -258,8 +258,10 @@ export const accounts = sqliteTable("accounts", {
   email: text("email"),
   phone: text("phone"),         // E.164 cell for phone-first (Clerk-free) identity
   callerId: text("caller_id"),  // verified caller-ID number for this account's outbound calls
-  credits: integer("credits").notNull().default(0),
+  credits: integer("credits").notNull().default(0),           // PAYG balance — never expires, additive
+  quotaCredits: integer("quota_credits").notNull().default(0), // subscription monthly allotment — reset each cycle, no rollover
   subscription: text("subscription").notNull().default("none"), // "none" | "active"
+  subTier: text("sub_tier"),                                    // plans.ts tier key when subscribed ("starter"|"collector"|"hunter")
   stripeCustomerId: text("stripe_customer_id"),
   subRenewsAt: integer("sub_renews_at"),
   totalSpentCents: integer("total_spent_cents").notNull().default(0), // lifetime revenue (for margin dashboard)

@@ -104,7 +104,8 @@ async function getStatsSince(): Promise<number> {
   const n = v ? Number(v) : 0;
   return Number.isFinite(n) ? n : 0;
 }
-import { getAccount, getAccountByPhone, phoneAccountExists, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, SUB, PACKS } from "./billing";
+import { getAccount, getAccountByPhone, phoneAccountExists, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, spendableCredits, SUB, PACKS } from "./billing";
+import { getPlans, savePlans, publishPlansToStripe, plansSyncView, publicPlans, normalizePlans } from "./plans";
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
@@ -590,7 +591,7 @@ app.post("/auth/phone/check", async (c) => {
     const domain = cookieRootDomain(c.req.header("host"));
     setCookie(c, "admin_session", adminJwt, { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 24 * 30, ...(domain ? { domain } : {}) });
   }
-  return c.json({ token, account: { phone: e, credits: a.credits, subscription: a.subscription, callerIdReady: !!a.callerId && a.callerId === e } });
+  return c.json({ token, account: { phone: e, credits: spendableCredits(a), subscription: a.subscription, callerIdReady: !!a.callerId && a.callerId === e } });
 });
 // Step 3 (after login): kick off the caller-ID verification CALL; show the code to enter.
 app.post("/auth/callerid/start", async (c) => {
@@ -2370,8 +2371,13 @@ app.get("/app/me", async (c) => {
   if (a && !a.phone && u.phone) {
     await db.update(accounts).set({ phone: u.phone }).where(eq(accounts.clerkUserId, u.id)); a.phone = u.phone;
   }
+  // premiumAsks entitlement (Hunter tier) — the call path / Website consume this to allow exact
+  // set/product/price questions. Comp accounts get everything.
+  const premiumAsks = comp || (a?.subTier ? (await getPlans()).tiers.find((t) => t.key === a.subTier)?.premiumAsks === true : false);
   return c.json({
-    credits: comp ? 9999 : (a?.credits ?? 0), subscription: comp ? "active" : (a?.subscription ?? "none"),
+    // Displayed balance = subscription quota + PAYG (both spendable). quota/payg broken out for the UI.
+    credits: comp ? 9999 : spendableCredits(a), subscription: comp ? "active" : (a?.subscription ?? "none"),
+    subTier: comp ? "founder" : (a?.subTier ?? null), quota: comp ? 9999 : (a?.quotaCredits ?? 0), payg: comp ? 9999 : (a?.credits ?? 0), premiumAsks,
     comp, callsMade: a?.callsMade ?? 0, phone: a?.phone ?? null,
     // caller_id is only set after Twilio's caller-ID verify call → the "create your agent" panel uses
     // callerIdReady to know whether to prompt for it.
@@ -2390,7 +2396,7 @@ app.post("/app/check", async (c) => {
   const a = await getAccount(u.id, u.email);
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
   if (!isCompAccount(a) && !isComp(u.email || undefined) && await isOwnerOnlyStore(Number(retailerId))) return c.json({ error: "not_found" }, 404);
-  if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
+  if (!isCompAccount(a) && (!a || spendableCredits(a) <= 0)) return c.json({ error: "no_credits" }, 402);
   try {
     const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a), kioskMode });
     return c.json({ providerCallId: r.providerCallId, status: r.status });
@@ -2408,7 +2414,7 @@ app.post("/app/check-live", async (c) => {
   const a = await getAccount(u.id, u.email);
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
   if (!isCompAccount(a) && !isComp(u.email || undefined) && await isOwnerOnlyStore(Number(b.retailerId))) return c.json({ error: "not_found" }, 404);
-  if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
+  if (!isCompAccount(a) && (!a || spendableCredits(a) <= 0)) return c.json({ error: "no_credits" }, 402);
   const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
@@ -2494,17 +2500,48 @@ app.post("/app/charge", async (c) => {
   // Charging is now SERVER-SIDE on call completion (ingestPending, atomic + idempotent). This
   // endpoint no longer trusts the client to bill itself — it just returns the live balance.
   const a = await getAccount(u.id, u.email);
-  return c.json({ credits: isCompAccount(a) ? 9999 : (a?.credits ?? 0) });
+  return c.json({ credits: isCompAccount(a) ? 9999 : spendableCredits(a) });
 });
 // Create a Stripe Checkout session (kind = "sub" | pack key). Returns a redirect URL.
 app.post("/app/checkout", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  const { kind, email } = await c.req.json();
+  const { kind, email, annual } = await c.req.json();
   const origin = (c.req.header("origin") || "https://runner.fungibles.com").replace(/\/$/, "");
-  const url = await createCheckout(u.id, u.email || email, kind, origin);
+  const url = await createCheckout(u.id, u.email || email, kind, origin, !!annual);
   if (!url) return c.json({ error: "checkout_failed" }, 400);
   return c.json({ url });
+});
+
+// Public: the live tiers + PAYG ladder for the consumer checkout sheet (Website's lane renders it).
+app.get("/pub/plans", async (c) => c.json(publicPlans(await getPlans())));
+
+// ---- Admin Plans manager (God View → Plans): edit tiers/PAYG, publish to Stripe. Admin-gated by /api/*. ----
+app.get("/api/admin/plans", async (c) => c.json(plansSyncView(await getPlans())));
+app.post("/api/admin/plans", async (c) => {
+  try {
+    const body = await c.req.json();
+    // The editor sends names/prices/quotas/flags; preserve Stripe ids + publish snapshots server-side.
+    const cur = await getPlans();
+    const merged = normalizePlans({
+      tiers: (body.tiers || []).map((t: Record<string, unknown>) => {
+        const ex = cur.tiers.find((x) => x.key === t.key);
+        return { ...ex, ...t, stripeProductId: ex?.stripeProductId ?? null, monthlyPriceId: ex?.monthlyPriceId ?? null, annualPriceId: ex?.annualPriceId ?? null, pub: ex?.pub ?? null };
+      }),
+      payg: { stripeProductId: cur.payg.stripeProductId, bundles: (body.payg || []).map((b: Record<string, unknown>) => {
+        const ex = cur.payg.bundles.find((x) => x.checks === Number(b.checks));
+        return { ...b, priceId: ex?.priceId ?? null, pubCents: ex?.pubCents ?? null };
+      }) },
+    });
+    return c.json(plansSyncView(await savePlans(merged)));
+  } catch (e) { return c.json({ error: String(e) }, 400); }
+});
+app.post("/api/admin/plans/publish", async (c) => {
+  if (!process.env.STRIPE_SECRET_KEY) return c.json({ error: "stripe_key_missing" }, 400);
+  try {
+    const published = await publishPlansToStripe(await getPlans());
+    return c.json(plansSyncView(await savePlans(published)));
+  } catch (e) { return c.json({ error: String(e) }, 400); }
 });
 
 // ---- Stripe webhook (public, signature-verified) ----

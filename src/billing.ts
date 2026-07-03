@@ -4,6 +4,7 @@ import { and, eq, gt, sql } from "drizzle-orm";
 import { db } from "./db/client";
 import { accounts } from "./db/schema";
 import { getPolicy } from "./policy";
+import { resolvePlanCheckout, tierQuota } from "./plans";
 
 /** Constant-time string compare (length-checked) — avoids timing side-channels on HMAC checks. */
 function safeEqual(a: string, b: string): boolean {
@@ -101,14 +102,24 @@ export async function phoneAccountExists(phone: string): Promise<boolean> {
   return !!row;
 }
 
+/** Total spendable checks = subscription quota (use-it-or-lose-it) + PAYG balance (permanent). */
+export function spendableCredits(a?: { credits?: number; quotaCredits?: number } | null): number {
+  return a ? (a.credits ?? 0) + (a.quotaCredits ?? 0) : 0;
+}
+
 export async function chargeOneCredit(userId: string): Promise<boolean> {
-  // Atomic guarded decrement: the WHERE credits>0 makes concurrent charges race-safe (no
-  // read-then-write window, can never go negative). rowsAffected===1 ⇒ we actually charged.
+  // Spend the subscription quota FIRST (it resets each cycle and doesn't roll over — burn it before
+  // touching the PAYG balance, which never expires). Each decrement is an atomic guarded update
+  // (WHERE bucket>0) so concurrent charges are race-safe and can never go negative.
   await getAccount(userId); // ensure the account row exists first
-  const res = await db.update(accounts)
+  const fromQuota = await db.update(accounts)
+    .set({ quotaCredits: sql`${accounts.quotaCredits} - 1`, callsMade: sql`${accounts.callsMade} + 1` })
+    .where(and(eq(accounts.clerkUserId, userId), gt(accounts.quotaCredits, 0)));
+  if ((fromQuota.rowsAffected ?? 0) > 0) return true;
+  const fromPayg = await db.update(accounts)
     .set({ credits: sql`${accounts.credits} - 1`, callsMade: sql`${accounts.callsMade} + 1` })
     .where(and(eq(accounts.clerkUserId, userId), gt(accounts.credits, 0)));
-  return (res.rowsAffected ?? 0) > 0;
+  return (fromPayg.rowsAffected ?? 0) > 0;
 }
 
 export async function grantCredits(userId: string, n: number, spentCents = 0) {
@@ -127,8 +138,29 @@ async function setSubscription(userId: string, active: boolean, customerId?: str
     .where(eq(accounts.clerkUserId, userId));
 }
 
-// ---- Stripe Checkout (inline price_data — no pre-created products needed) ----
-export async function createCheckout(userId: string, email: string | undefined, kind: string, origin: string): Promise<string | null> {
+/** Grant a subscription tier: activate, record the tier, and RESET the monthly quota to `checks`
+ *  (a reset, not an add — unused checks don't roll over). PAYG `credits` are untouched. */
+export async function setSubEntitlement(userId: string, tierKey: string, checks: number, customerId?: string) {
+  const a = await getAccount(userId);
+  if (!a) return;
+  await db.update(accounts)
+    .set({ subscription: "active", subTier: tierKey, quotaCredits: Math.max(0, Math.round(checks)), stripeCustomerId: customerId ?? a.stripeCustomerId })
+    .where(eq(accounts.clerkUserId, userId));
+}
+/** Reset the monthly quota for an active subscriber (billing-cycle renewal). No rollover. */
+export async function resetQuota(userId: string, checks: number) {
+  await db.update(accounts).set({ quotaCredits: Math.max(0, Math.round(checks)) }).where(eq(accounts.clerkUserId, userId));
+}
+/** End a subscription: drop the tier + forfeit the remaining quota; PAYG credits stay. */
+export async function clearSubEntitlement(userId: string) {
+  await db.update(accounts).set({ subscription: "none", subTier: null, quotaCredits: 0 }).where(eq(accounts.clerkUserId, userId));
+}
+
+// ---- Stripe Checkout ----
+// Resolution order: (1) the owner's Plans config (tiers `starter|collector|hunter`, or `payg:<n>`)
+// — uses the published Price id when synced, else an inline price_data fallback so checkout works
+// before/without a publish; (2) legacy policy packs/`sub` for back-compat during the migration.
+export async function createCheckout(userId: string, email: string | undefined, kind: string, origin: string, annual = false): Promise<string | null> {
   const sk = process.env.STRIPE_SECRET_KEY;
   if (!sk) return null;
   const p = new URLSearchParams();
@@ -138,24 +170,44 @@ export async function createCheckout(userId: string, email: string | undefined, 
   if (email) p.set("customer_email", email);
   p.set("metadata[clerkUserId]", userId);
   p.set("line_items[0][quantity]", "1");
-  p.set("line_items[0][price_data][currency]", "usd");
-  const pol = await getPolicy(); // owner-tunable pricing
-  if (kind === "sub") {
-    p.set("mode", "subscription");
-    p.set("line_items[0][price_data][unit_amount]", String(pol.pricing.sub.cents));
-    p.set("line_items[0][price_data][product_data][name]", pol.pricing.sub.label);
-    p.set("line_items[0][price_data][recurring][interval]", "month");
-    p.set("metadata[kind]", "sub");
-    p.set("metadata[credits]", String(pol.pricing.sub.credits));
-    p.set("subscription_data[metadata][clerkUserId]", userId);
+
+  const plan = await resolvePlanCheckout(kind, annual);
+  if (plan) {
+    p.set("mode", plan.mode);
+    if (plan.priceId) {
+      p.set("line_items[0][price]", plan.priceId);
+    } else {
+      p.set("line_items[0][price_data][currency]", "usd");
+      p.set("line_items[0][price_data][unit_amount]", String(plan.cents));
+      p.set("line_items[0][price_data][product_data][name]", plan.productName);
+      if (plan.interval) p.set("line_items[0][price_data][recurring][interval]", plan.interval);
+    }
+    for (const [k, v] of Object.entries(plan.metadata)) p.set(`metadata[${k}]`, v);
+    if (plan.mode === "subscription") {
+      p.set("subscription_data[metadata][clerkUserId]", userId);
+      p.set("subscription_data[metadata][tierKey]", plan.metadata.tierKey || "");
+    }
   } else {
-    const pack = pol.pricing.packs.find((x) => x.key === kind);
-    if (!pack) return null;
-    p.set("mode", "payment");
-    p.set("line_items[0][price_data][unit_amount]", String(pack.cents));
-    p.set("line_items[0][price_data][product_data][name]", `Check It For Me — ${pack.label}`);
-    p.set("metadata[kind]", "pack");
-    p.set("metadata[credits]", String(pack.credits));
+    // Legacy fallback (policy packs / the old $ sub) — keeps pre-migration checkout links alive.
+    const pol = await getPolicy();
+    p.set("line_items[0][price_data][currency]", "usd");
+    if (kind === "sub") {
+      p.set("mode", "subscription");
+      p.set("line_items[0][price_data][unit_amount]", String(pol.pricing.sub.cents));
+      p.set("line_items[0][price_data][product_data][name]", pol.pricing.sub.label);
+      p.set("line_items[0][price_data][recurring][interval]", "month");
+      p.set("metadata[kind]", "sub");
+      p.set("metadata[credits]", String(pol.pricing.sub.credits));
+      p.set("subscription_data[metadata][clerkUserId]", userId);
+    } else {
+      const pack = pol.pricing.packs.find((x) => x.key === kind);
+      if (!pack) return null;
+      p.set("mode", "payment");
+      p.set("line_items[0][price_data][unit_amount]", String(pack.cents));
+      p.set("line_items[0][price_data][product_data][name]", `Check It For Me — ${pack.label}`);
+      p.set("metadata[kind]", "pack");
+      p.set("metadata[credits]", String(pack.credits));
+    }
   }
   const r = await fetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",
@@ -187,25 +239,36 @@ export async function handleStripeEvent(event: StripeEvent) {
   if (event.type === "checkout.session.completed") {
     const md = (obj.metadata ?? {}) as Record<string, string>;
     const userId = md.clerkUserId || (obj.client_reference_id as string);
-    const credits = Number(md.credits || 0);
     const amount = Number(obj.amount_total || 0);
     if (!userId) return;
     if (obj.mode === "subscription") {
-      await setSubscription(userId, true, obj.customer as string);
+      // Tier subscription: activate + SET the monthly quota (reset, not add). `checks` is the tier
+      // allotment; falls back to legacy `credits` for old sub links.
+      const tierKey = md.tierKey || "sub";
+      const checks = Number(md.checks || md.credits || 0);
+      await setSubEntitlement(userId, tierKey, checks, obj.customer as string);
+      if (amount) await bumpRevenue(userId, amount);
+    } else {
+      // PAYG one-time: add permanent credits.
+      const credits = Number(md.credits || 0);
       if (credits) await grantCredits(userId, credits, amount);
-    } else if (credits) {
-      await grantCredits(userId, credits, amount);
     }
   } else if (event.type === "invoice.paid") {
-    // Only renewals (subscription_cycle) — the first invoice is handled by checkout.session.completed.
+    // Only renewals (subscription_cycle) — the first invoice is checkout.session.completed's job.
     if (obj.billing_reason !== "subscription_cycle") return;
     const customer = obj.customer as string;
     const amount = Number(obj.amount_paid || 0);
     const a = (await db.select().from(accounts).where(eq(accounts.stripeCustomerId, customer)))[0];
-    if (a) await grantCredits(a.clerkUserId, (await getPolicy()).pricing.sub.credits, amount);
+    if (a) { await resetQuota(a.clerkUserId, await tierQuota(a.subTier)); await bumpRevenue(a.clerkUserId, amount); }
   } else if (event.type === "customer.subscription.deleted") {
     const customer = obj.customer as string;
     const a = (await db.select().from(accounts).where(eq(accounts.stripeCustomerId, customer)))[0];
-    if (a) await setSubscription(a.clerkUserId, false);
+    if (a) await clearSubEntitlement(a.clerkUserId);
   }
+}
+
+/** Record subscription revenue without granting credits (quota is set separately). */
+async function bumpRevenue(userId: string, cents: number) {
+  if (cents <= 0) return;
+  await db.update(accounts).set({ totalSpentCents: sql`${accounts.totalSpentCents} + ${cents}` }).where(eq(accounts.clerkUserId, userId));
 }
