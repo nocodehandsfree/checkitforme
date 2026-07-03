@@ -115,7 +115,8 @@ export function tapedeckTwiml(id: string): string {
   s.status = "live";
   s.steps.push({ who: "us", text: s.clipText[0], atSec: 0, label: "opener clip — after a natural ~1.5s beat" });
   // A real caller takes a beat after "hello" before speaking — also gives you time to hit speaker.
-  return twiml(`<Pause length="1"/>${play(id, 0)}${gather(id)}`);
+  // (Rehearsal-only path; real store checks never touch this, so a generous 2s beat is free here.)
+  return twiml(`<Pause length="2"/>${play(id, 0)}${gather(id)}`);
 }
 
 /** One turn: classify the reply with the cheap model, answer with the matching clip. */
