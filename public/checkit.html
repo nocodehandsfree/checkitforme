@@ -1424,6 +1424,31 @@ html[data-skin="v2"] #acctOverlay,html[data-skin="v2"] #buyOverlay{align-items:f
 html[data-skin="v2"] #acctOverlay .modal,html[data-skin="v2"] #buyOverlay .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:86vh;margin:0;transform:translateY(24px);opacity:0;transition:transform .28s cubic-bezier(.2,.8,.3,1),opacity .2s}
 html[data-skin="v2"] #acctOverlay.on .modal,html[data-skin="v2"] #buyOverlay.on .modal{transform:none;opacity:1}
 html[data-skin="v2"] #buyOverlay .modal{overflow-y:auto;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
+/* 6c CHECKOUT (v2) — branded on-site Stripe Elements page. Bottom sheet, comp tokens: raised order
+   card, carved "or pay with card" divider, Payment Element in the well, green SUBSCRIBE ring capsule. */
+html[data-skin="v2"] #coOverlay{align-items:flex-end;padding:0}
+html[data-skin="v2"] #coOverlay .modal{width:100%;max-width:520px;margin:0 auto;border-radius:28px 28px 0 0;max-height:92vh;overflow-y:auto;background:#26262B;padding:8px 20px calc(22px + env(safe-area-inset-bottom));transform:translateY(24px);opacity:0;transition:transform .28s cubic-bezier(.2,.8,.3,1),opacity .2s}
+html[data-skin="v2"] #coOverlay.on .modal{transform:none;opacity:1}
+html[data-skin="v2"] #coOverlay .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:6px auto 16px}
+html[data-skin="v2"] .co-head{display:flex;align-items:center;gap:12px;margin-bottom:2px}
+html[data-skin="v2"] .co-back{width:32px;height:32px;border-radius:50%;border:0;background:linear-gradient(180deg,#2F2F36 0%,#26262B 100%);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#8A8A96;font-size:18px;font-weight:700;cursor:pointer;line-height:1}
+html[data-skin="v2"] .co-title{font-size:19px;font-weight:800}
+html[data-skin="v2"] .co-summary{display:flex;align-items:center;gap:12px;margin-top:18px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:14px 16px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
+html[data-skin="v2"] .co-logo{width:44px;height:44px;flex-shrink:0;border-radius:12px;background:#1F1F25;display:grid;place-items:center}
+html[data-skin="v2"] .co-plan{font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-skin="v2"] .co-sub{font-size:12.5px;font-weight:600;color:#8A8A96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+html[data-skin="v2"] .co-price{font-size:15.5px;font-weight:800}
+html[data-skin="v2"] .co-change{font-size:11px;font-weight:700;color:#FFCB05;cursor:pointer;display:inline-block;margin-top:3px}
+html[data-skin="v2"] .co-div{display:flex;align-items:center;gap:12px;margin:18px 0 14px;color:#7C7C88}
+html[data-skin="v2"] .co-div::before,html[data-skin="v2"] .co-div::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
+html[data-skin="v2"] .co-div span{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#7C7C88}
+html[data-skin="v2"] #co_pay_el{min-height:48px}
+html[data-skin="v2"] .co-loading{color:#8A8A96;font-size:13px;font-weight:600;text-align:center;padding:16px 0}
+html[data-skin="v2"] .co-err{color:#ff6b6b;font-size:12.5px;font-weight:600;margin-top:10px;min-height:0;text-align:center}
+html[data-skin="v2"] #co_cta{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:16px;background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#FFF;font-size:13px;font-weight:800;letter-spacing:.08em;padding:14px 24px;box-shadow:0 12px 28px -8px rgba(25,177,69,.45);cursor:pointer;text-transform:uppercase}
+html[data-skin="v2"] #co_cta:disabled{opacity:.55;cursor:default;box-shadow:none}
+html[data-skin="v2"] .co-trust{font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:12px;text-align:center}
+html[data-skin="v2"] .co-trust b{color:rgba(255,255,255,.75);font-weight:800}
 html[data-skin="v2"] #acctOverlay .modal{padding:0;overflow-y:auto;overflow-x:hidden;border-radius:28px 28px 0 0;padding-bottom:env(safe-area-inset-bottom)}
 html[data-skin="v2"] #acctOverlay .modal>*:not(.acctv2head):not(.x){display:none} /* legacy rows too — the v2 overview panel replaces them (6e comp rows) */
 html[data-skin="v2"] #acctv2panel{padding-bottom:22px!important}
@@ -1742,6 +1767,37 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     </div>
     <div id="buy_plans"></div>
     <div class="meta" id="buy_note" style="text-align:center;margin-top:12px"></div>
+  </div>
+</div>
+
+<!-- 6c CHECKOUT (v2) — the custom BRANDED on-site payment page. Stripe Payment Element mounts into
+     #co_pay_el, styled to NEW_CHECK_COMPS via the Elements appearance API. Never Stripe's hosted page.
+     Client secret + publishable key from POST /app/checkout-intent {kind, annual}. -->
+<div class="overlay" id="coOverlay" onclick="if(event.target===this)closeCheckout()">
+  <div class="modal" id="coModal" style="position:relative;text-align:left">
+    <div class="co-head">
+      <button class="co-back" type="button" onclick="closeCheckout(true)" aria-label="Back">&#8249;</button>
+      <span class="co-title" data-i18n="co.title">Checkout</span>
+    </div>
+    <div class="co-summary">
+      <div class="co-logo"><img src="/logos/checkplus.png" alt="Check+" style="width:30px;height:auto"></div>
+      <div style="min-width:0;flex:1">
+        <div class="co-plan" id="co_plan">—</div>
+        <div class="co-sub" id="co_sub"></div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div class="co-price" id="co_price"></div>
+        <a class="co-change" onclick="closeCheckout(true)" data-i18n="co.change">Change</a>
+      </div>
+    </div>
+    <div class="co-div"><span data-i18n="co.orcard">Or pay with card</span></div>
+    <div id="co_pay_el"><div class="co-loading" id="co_loading" data-i18n="co.loading">Loading secure payment…</div></div>
+    <div class="co-err" id="co_err"></div>
+    <button class="cta" id="co_cta" type="button" onclick="confirmCheckout()" disabled>
+      <span id="co_cta_label">Subscribe</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+    </button>
+    <div class="co-trust" id="co_trust"></div>
   </div>
 </div>
 
@@ -2128,6 +2184,7 @@ const I18N={ es:{
   'tick.found':'¡Encontrado!','tick.restock':'Reabastecimiento en camino','besttag':'Más probable','bestwhy':'buenas probabilidades ahora',
   'mode.hobby':'Hobby','find.hobby':'① Encuentra una tienda de cartas','find.hobbystore':'① Ahora elige una tienda de cartas','hob.hunting':'BUSCANDO','hob.shopprices':'PRECIOS DE TIENDA','empty.hobby':'No hay tiendas de cartas en {r} mi — amplía el radio.','hob.pickexact':'Elige el set o producto exacto',
   'mode.thrift':'Segunda mano','find.thrift':'① Encuentra una tienda de segunda mano','empty.thrift':'No hay tiendas de segunda mano en {r} mi — amplía el radio.',
+  'co.title':'Pago','co.change':'Cambiar','co.orcard':'O paga con tarjeta','co.loading':'Cargando pago seguro…','co.subscribe':'Suscribirse','co.pay':'Pagar','co.cancel':'Cancela cuando quieras','co.secured':'Protegido por','co.processing':'Procesando…','co.failed':'Pago fallido. Inténtalo de nuevo.','co.redirect':'Abriendo pago seguro…','co.checksmo':'verificaciones al mes','co.monthly':'mensual','co.annual':'anual','co.paygsub':'Pago único · las verificaciones no caducan',
   'buy.tabplans':'Planes','buy.tabpayg':'Por uso','plan.on':'Tienes','plan.checks':'verificaciones','plan.percheck':'aprox.','plan.percheck2':'por verificación','plan.noexpire':'no caducan','acct.stat.run2':'Verificaciones hoy','acct.perweek2':'Verificaciones esta semana','auth.newcell':'Danos tu nuevo celular','ph.cellmail':'celular o correo',
   'ref.sharemsg':'¡Oye! Mira esta tecnología. Está increíble.\nNos ayuda a encontrar productos virales en stock como cartas Pokémon a precio de tienda.\nRegístrate y ambos ganamos 3 verificaciones gratis: ','ref.copied':'¡Enlace de invitación copiado!','ref.copy':'Copia tu enlace de invitación:','ref.both':'Ambos reciben <b style="color:#fff">3 verificaciones gratis</b> cuando se registran.','ref.copybtn':'COPIAR','ref.text':'Mensaje','ref.post':'Publicar','ref.more':'Más',
   'kioskonly':'Solo kiosco','kiosk.precall':'Solo kiosco. Preguntaremos si su kiosco está funcionando y surtido, no por un envío.',
@@ -5300,15 +5357,45 @@ function todayPickDay(key){ const calls=histList().filter(e=>e.cid&&e.ts&&railIn
 function money(c){ return '$'+(c/100).toFixed(c%100?2:0); }
 // Four tiers, no per-check math shown — the names + unlocks do the selling.
 let BILLING_ANNUAL=false;
-function tiers(){ return [
-  {key:'t1',name:'Family',    cents:999,  checks:30,   perk:t('plan.p1','Restock alerts')},
-  {key:'t2',name:'Collector', cents:1999, checks:100,  perk:t('plan.p2','+ Auto-checks on shipment days'), featured:true},
-  {key:'t3',name:'Operator',  cents:4999, checks:350,  perk:t('plan.p3',"+ Exact products. More than one per call.")},
-  {key:'t4',name:'Pro Seller',cents:14900,checks:1500, perk:t('plan.p4',"+ Zone sweeps. Every store near you, one tap."), plus:true},
-]; }
+// ---- LIVE plans (owner-edited, GET /pub/plans) — the sheet renders from this, never hardcoded. ----
+let PLANS=null; // { features:[{key,label}], everyPlanGets:[key…], tiers:[{key,name,monthlyCents,annualCents,checksPerMonth,premiumAsks,features}], payg:[{checks,cents}] }
+async function loadPlans(){ try{ const r=await fetch('/pub/plans').then(x=>x.json()); if(r&&Array.isArray(r.tiers)&&r.tiers.length){ PLANS=r; } }catch(_){ } return PLANS; }
+// Account entitlements (GET /app/me.features): comp → all 8, subscriber → their tier, PAYG/free → none.
+function hasFeature(key){ try{ return !!(ACCOUNT&&ACCOUNT.features&&ACCOUNT.features[key]); }catch(_){ return false; } }
+// feature-key → the Lucide glyph, so the live "every plan gets" grid draws the right icon per key.
+const FEAT_ICON={
+  exact_products:'<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/>',
+  zone_sweeps:'<path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/>',
+  restock_alerts:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  scheduled_checks:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/>',
+  any_town:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+  store_holds:'<path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>',
+  your_voice:'<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/>',
+  thrift_hunts:'<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>',
+};
+function featLabel(key){ const f=(PLANS&&PLANS.features||[]).find(x=>x.key===key); return f?f.label:key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); }
+// The tier tiles: live tiers straight off /pub/plans (fallback to a static ladder only if the fetch failed).
+function tiers(){
+  if(PLANS&&PLANS.tiers&&PLANS.tiers.length){
+    return PLANS.tiers.map((tr,i)=>({ key:tr.key, name:tr.name, cents:tr.monthlyCents, annualCents:tr.annualCents,
+      checks:tr.checksPerMonth, featured:(i===1), live:true,
+      perk:`${(tr.checksPerMonth||0).toLocaleString()} ${t('plan.checksmo','checks/mo')}` }));
+  }
+  return [
+    {key:'family',name:'Family',cents:499,checks:15},
+    {key:'collector',name:'Collector',cents:999,checks:30,featured:true},
+    {key:'hunter',name:'Hunter',cents:1999,checks:100},
+    {key:'operator',name:'Operator',cents:4999,checks:300},
+  ];
+}
+// The PAYG ladder: live off /pub/plans.payg (fallback to POLICY.packs → static).
+function paygBundles(){
+  if(PLANS&&Array.isArray(PLANS.payg)&&PLANS.payg.length) return PLANS.payg.map(p=>({checks:p.checks,cents:p.cents,credits:p.checks,key:'payg:'+p.checks}));
+  if(POLICY.packs&&POLICY.packs.length) return POLICY.packs.map(p=>({checks:p.credits,cents:p.cents,credits:p.credits,key:p.key}));
+  return [{checks:10,cents:990,credits:10,key:'payg:10'},{checks:25,cents:1999,credits:25,key:'payg:25'},{checks:50,cents:3499,credits:50,key:'payg:50'}];
+}
 function setCycle(annual,btn){ BILLING_ANNUAL=annual; document.querySelectorAll('#billcycle button').forEach(b=>b.classList.toggle('on',b===btn)); renderBuyPlans(); }
-const ANNUAL_CENTS={t1:9999,t2:19999,t3:49899,t4:148499}; // owner-set yearly prices
-function tierPrice(c,key){ return BILLING_ANNUAL?money(ANNUAL_CENTS[key]||Math.round(c*12*0.83/100)*100):money(c); }
+function tierPrice(tr){ return BILLING_ANNUAL?money(tr.annualCents||Math.round(tr.cents*12*0.83/100)*100):money(tr.cents); }
 function renderBuyPlans(){
   const member=!!(ACCOUNT&&ACCOUNT.subscription==='active'), comp=!!(ACCOUNT&&ACCOUNT.comp);
   const per=BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo');
@@ -5339,43 +5426,53 @@ function renderBuyPlans(){
         bc.parentElement.insertBefore(mt,bc); }
     }
     if(BUY_MODE==='packs'){
-      const packs=(POLICY.packs&&POLICY.packs.length)?POLICY.packs:[{key:'starter',credits:20,cents:500},{key:'hunter',credits:100,cents:2000},{key:'pro',credits:300,cents:5000}];
+      const packs=paygBundles();
       const i=Math.max(0,Math.min(packs.length-1,PACK_IDX)), pk=packs[i];
-      const perC=(pk.cents/pk.credits/100);
+      const perC=(pk.cents/pk.checks/100);
       html+=`<div style="background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:18px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">
-        <div style="display:flex;align-items:baseline;justify-content:space-between"><span id="payg_n" style="font-size:22px;font-weight:900;letter-spacing:-.5px">${pk.credits} ${t('plan.checks','checks')}</span><span id="payg_p" style="font-size:22px;font-weight:800;color:#4ADE80">${money(pk.cents)}</span></div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between"><span id="payg_n" style="font-size:22px;font-weight:900;letter-spacing:-.5px">${pk.checks} ${t('plan.checks','checks')}</span><span id="payg_p" style="font-size:22px;font-weight:800;color:#4ADE80">${money(pk.cents)}</span></div>
         <input type="range" min="0" max="${packs.length-1}" step="1" value="${i}" oninput="setPackIdx(this.value)" style="display:block;width:100%;margin:16px 0 6px;accent-color:#4ADE80">
-        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:#7C7C88">${packs.map(x=>`<span>${x.credits}</span>`).join('')}</div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:#7C7C88">${packs.map(x=>`<span>${x.checks}</span>`).join('')}</div>
         <div id="payg_per" style="margin-top:12px;text-align:center;font-size:12px;font-weight:600;color:#8A8A96">${t('plan.percheck','about')} ${'$'+perC.toFixed(2)} ${t('plan.percheck2','per check')} · ${t('plan.noexpire','checks never expire')}</div>
       </div>`;
       $('buy_plans').innerHTML=html; return;
     }
   }
-  html+=tiers().map((p,i)=>`<div class="plan ${(isV2()&&SEL_TIER_KEY ? p.key===SEL_TIER_KEY : p.featured)?'sub':''}" onclick="pickTier('${p.key}')">
+  const _tiers=tiers();
+  html+=_tiers.map((p,i)=>`<div class="plan ${(isV2()&&SEL_TIER_KEY ? p.key===SEL_TIER_KEY : p.featured)?'sub':''}" onclick="pickTier('${p.key}')">
       <div class="grow"><div class="pn">${esc(p.name)}${p.featured?` <span style="color:var(--green);font-size:11px">${t('plan.popular','most popular')}</span>`:''}</div>
-        <div class="pd">${p.checks.toLocaleString()}${p.plus?'+':''} ${t('plan.checksmo','checks/mo')} · ${p.perk}</div></div>
-      <div class="pp">${tierPrice(p.cents,p.key)}<span>${per}</span></div>
+        <div class="pd">${p.perk||((p.checks||0).toLocaleString()+' '+t('plan.checksmo','checks/mo'))}</div></div>
+      <div class="pp">${tierPrice(p)}<span>${per}</span></div>
     </div>`).join('');
   $('buy_plans').innerHTML=html;
 }
 let SEL_TIER_KEY=null, BUY_MODE='plans', PACK_IDX=1;
 function setBuyMode(m,btn){ BUY_MODE=m; document.querySelectorAll('#buymode button').forEach(b=>b.classList.toggle('on',b===btn)); const bc=$('billcycle'); if(bc) bc.style.display=(m==='packs'?'none':''); renderBuyPlans(); }
-function setPackIdx(i){ PACK_IDX=Math.max(0,Math.min(((POLICY.packs||[]).length||1)-1, i|0));
-  const packs=(POLICY.packs&&POLICY.packs.length)?POLICY.packs:[]; const pk=packs[PACK_IDX]; if(!pk) return;
+function setPackIdx(i){ const packs=paygBundles(); PACK_IDX=Math.max(0,Math.min(packs.length-1, i|0));
+  const pk=packs[PACK_IDX]; if(!pk) return;
   const n=$('payg_n'), pr=$('payg_p'), per=$('payg_per');
-  if(n) n.textContent=pk.credits+' '+t('plan.checks','checks');
+  if(n) n.textContent=pk.checks+' '+t('plan.checks','checks');
   if(pr) pr.textContent=money(pk.cents);
-  if(per) per.textContent=t('plan.percheck','about')+' $'+(pk.cents/pk.credits/100).toFixed(2)+' '+t('plan.percheck2','per check')+' · '+t('plan.noexpire','checks never expire'); }
+  if(per) per.textContent=t('plan.percheck','about')+' $'+(pk.cents/pk.checks/100).toFixed(2)+' '+t('plan.percheck2','per check')+' · '+t('plan.noexpire','checks never expire'); }
 function pickTier(k){
   if(isV2()){ SEL_TIER_KEY=k; renderBuyPlans(); return; } // 6b comp: tap selects (ring moves), CONTINUE buys
-  if(k==='t1'&&!BILLING_ANNUAL){ buy('sub'); return; }
-  toast(t('plan.soon','That tier opens this week. Family monthly is live now.'));
+  buyContinue();
 }
 function buyContinue(){
-  if(BUY_MODE==='packs'){ const packs=(POLICY.packs&&POLICY.packs.length)?POLICY.packs:[]; const pk=packs[Math.max(0,Math.min(packs.length-1,PACK_IDX))]; if(pk){ buy(pk.key); } return; }
-  const k=SEL_TIER_KEY||'t1';
-  if(k==='t1'&&!BILLING_ANNUAL){ buy('sub'); return; }
-  toast(t('plan.soon','That tier opens this week. Family monthly is live now.'));
+  if(BUY_MODE==='packs'){ const packs=paygBundles(); const pk=packs[Math.max(0,Math.min(packs.length-1,PACK_IDX))];
+    if(pk){ openCheckout('payg:'+pk.checks, false, pk.cents, pk.checks+' '+t('plan.checks','checks'), t('co.paygsub','One-time · checks never expire')); } return; }
+  const _t=tiers(); const ti=_t.find(x=>x.key===SEL_TIER_KEY)||_t[0]; if(!ti) return;
+  const cents=BILLING_ANNUAL?(ti.annualCents||Math.round(ti.cents*12*0.83/100)*100):ti.cents;
+  const cyc=BILLING_ANNUAL?t('co.annual','annual'):t('co.monthly','monthly');
+  openCheckout(ti.key, BILLING_ANNUAL, cents, ti.name+' · '+cyc, (ti.checks||0).toLocaleString()+' '+t('co.checksmo','checks a month'));
+}
+// The "EVERY PLAN GETS" grid — driven by live /pub/plans.everyPlanGets (fallback to the 8-key set).
+function renderBuyGrid(){
+  const g=$('buy_grid'); if(!g) return;
+  const I=p=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const keys=(PLANS&&PLANS.everyPlanGets&&PLANS.everyPlanGets.length)?PLANS.everyPlanGets:['exact_products','zone_sweeps','restock_alerts','scheduled_checks','any_town','store_holds','your_voice','thrift_hunts'];
+  const cells=keys.map(k=>`<div class="g">${I(FEAT_ICON[k]||'')}${esc(featLabel(k))}</div>`).join('');
+  g.innerHTML=`<div class="buygrid-h">${t('buy6b.grid','Every plan gets')}</div><div class="buygrid">${cells}</div>`;
 }
 function openBuy(reason){
   if(!isAuthed()){ toast(t('toast.signupfirst','Sign up first to add checks')); signUp(); return; }
@@ -5396,21 +5493,9 @@ function openBuy(reason){
     if(!lg){ lg=document.createElement('div'); lg.id='buy6blogo'; lg.className='buy6b-logo';
       const h3=$('buy_title'); h3.parentElement.insertBefore(lg,h3); }
     lg.innerHTML=`<img src="/logos/checkplus.png" alt="Check+" style="height:26px;width:auto">`;
-    let g=$('buy_grid');
-    if(!g){ g=document.createElement('div'); g.id='buy_grid';
+    if(!$('buy_grid')){ const g=document.createElement('div'); g.id='buy_grid';
       const bc=$('billcycle'); bc.parentElement.insertBefore(g,bc); }
-    const I=p=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
-    const feats=[
-      [t('buy6b.f1','Exact products'),I('<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/>')],
-      [t('buy6b.f2','Zone sweeps'),I('<path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/>')],
-      [t('buy6b.f3','Restock alerts'),I('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>')],
-      [t('buy6b.f4','Scheduled checks'),I('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/>')],
-      [t('buy6b.f5','Any town'),I('<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>')],
-      [t('buy6b.f6','Store holds'),I('<path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>')],
-      [t('buy6b.f7','Your voice'),I('<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/>')],
-      [t('buy6b.f8','Thrift hunts'),I('<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="#4ADE80"/>')],
-    ];
-    g.innerHTML=`<div class="buygrid-h">${t('buy6b.grid','Every plan gets')}</div><div class="buygrid">${feats.map(([f,ic])=>`<div class="g">${ic}${esc(f)}</div>`).join('')}</div>`;
+    renderBuyGrid();
     let cta=$('buy_cta');
     if(!cta){ cta=document.createElement('button'); cta.id='buy_cta'; cta.type='button'; cta.onclick=()=>buyContinue();
       const note=$('buy_note'); note.parentElement.insertBefore(cta,note); }
@@ -5419,8 +5504,76 @@ function openBuy(reason){
   setI('buy_note', `${ICO.lock('#7a7a88')} ${t('buy.secure2','Secure checkout via Stripe')}`);
   track('buy_open',{reason:reason||'manual'});
   $('buyOverlay').classList.add('on');
+  // Live plans may not be cached yet on first open — fetch, then re-render tiles + grid in place.
+  if(!PLANS){ loadPlans().then(p=>{ if(p&&$('buyOverlay').classList.contains('on')){ try{ renderBuyPlans(); if(isV2()) renderBuyGrid(); }catch(_){ } } }); }
 }
 function closeBuy(){ const m=document.querySelector('#buyOverlay .modal'); if(m){ m.style.transform=''; m.style.transition=''; } $('buyOverlay').classList.remove('on'); acctReturn(); }
+
+// ===== 6c BRANDED CHECKOUT — Stripe Payment Element on our own page (never the hosted page). =====
+// intent from POST /app/checkout-intent {kind, annual} → { mode, clientSecret, publishableKey, amountCents }.
+let CO=null, _stripe=null, _coElements=null, _stripeJsP=null;
+function setT(id,v){ const e=$(id); if(e) e.textContent=v; }
+function loadStripeJs(){ if(window.Stripe) return Promise.resolve(window.Stripe);
+  if(_stripeJsP) return _stripeJsP;
+  _stripeJsP=new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://js.stripe.com/v3'; s.async=true;
+    s.onload=()=>window.Stripe?res(window.Stripe):rej(new Error('no Stripe')); s.onerror=()=>rej(new Error('stripe.js blocked')); document.head.appendChild(s); });
+  return _stripeJsP; }
+// Elements appearance = the 6c comp: dark, carved #1B1B20 wells, green primary, Inter.
+function coAppearance(){ return { theme:'night', variables:{ colorPrimary:'#19B145', colorBackground:'#1B1B20', colorText:'#ffffff',
+    colorTextSecondary:'#8A8A96', colorTextPlaceholder:'#6b6b78', colorDanger:'#ff6b6b',
+    fontFamily:'Inter, -apple-system, system-ui, sans-serif', borderRadius:'14px', fontSizeBase:'16px' },
+  rules:{ '.Input':{ backgroundColor:'#1B1B20', border:'none', boxShadow:'inset 0 2px 6px rgba(0,0,0,.45)', padding:'14px 16px', color:'#fff' },
+    '.Input:focus':{ boxShadow:'inset 0 2px 6px rgba(0,0,0,.45), 0 0 0 2px rgba(25,177,69,.5)' },
+    '.Label':{ color:'#8A8A96', fontWeight:'600', fontSize:'12.5px' },
+    '.Tab,.Block':{ backgroundColor:'#1B1B20', border:'none' }, '.Tab--selected':{ boxShadow:'0 0 0 2px rgba(25,177,69,.6)' } } }; }
+function coCtaLabel(){ const isSub=!/^payg:/.test(String(CO&&CO.kind)); const per=isSub?(CO&&CO.annual?t('plan.yr','/yr'):t('plan.mo','/mo')):'';
+  return (isSub?t('co.subscribe','Subscribe'):t('co.pay','Pay'))+' · '+money((CO&&CO.amountCents)||0)+per; }
+async function openCheckout(kind, annual, amountCents, planLabel, planSub){
+  if(!isAuthed()){ signUp(); return; }
+  if(!isV2()){ buy(kind, annual); return; } // v1 keeps the hosted redirect
+  CO={kind, annual:!!annual, amountCents:amountCents||0, planLabel, planSub};
+  setT('co_plan', planLabel||''); setT('co_sub', planSub||''); setT('co_price', money(amountCents||0));
+  setT('co_cta_label', coCtaLabel());
+  setI('co_trust', `${t('co.cancel','Cancel anytime')} · ${ICO.lock('#7a7a88')} ${t('co.secured','Secured by')} <b>Stripe</b>`);
+  setT('co_err',''); const ld=$('co_loading'); if(ld) ld.style.display='';
+  const cta=$('co_cta'); if(cta) cta.disabled=true;
+  $('coOverlay').classList.add('on'); track('checkout_open',{kind});
+  try{
+    const r=await appApi('/app/checkout-intent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,annual:!!annual})});
+    if(!r||r.error||!r.clientSecret||!r.publishableKey){ return coFallback(); }
+    if(r.amountCents){ CO.amountCents=r.amountCents; setT('co_price', money(r.amountCents)); setT('co_cta_label', coCtaLabel()); }
+    const Stripe=await loadStripeJs();
+    _stripe=Stripe(r.publishableKey);
+    _coElements=_stripe.elements({ clientSecret:r.clientSecret, appearance:coAppearance() });
+    const pe=_coElements.create('payment', { layout:'tabs' });
+    const host=$('co_pay_el'); if(host){ host.innerHTML=''; pe.mount(host); }
+    pe.on('ready',()=>{ const l=$('co_loading'); if(l) l.style.display='none'; const c=$('co_cta'); if(c) c.disabled=false; });
+    pe.on('loaderror',()=>coFallback());
+  }catch(e){ coFallback(); }
+}
+function coFallback(){ // no on-page intent (Stripe key absent / Stripe.js blocked) → hosted Stripe redirect
+  setT('co_err', t('co.redirect','Opening secure checkout…'));
+  if(CO) buy(CO.kind, CO.annual); }
+async function confirmCheckout(){
+  if(!_stripe||!_coElements||!CO) return;
+  const cta=$('co_cta'); if(cta) cta.disabled=true; setT('co_err',''); setT('co_cta_label', t('co.processing','Processing…'));
+  const prevCredits=(ACCOUNT&&ACCOUNT.credits)||0;
+  try{
+    const {error}=await _stripe.confirmPayment({ elements:_coElements, confirmParams:{ return_url:location.origin+'/?paid=1' }, redirect:'if_required' });
+    if(error){ setT('co_err', error.message||t('co.failed','Payment failed. Try again.')); if(cta) cta.disabled=false; setT('co_cta_label', coCtaLabel()); return; }
+    // success (no 3DS redirect) — the webhook grants entitlement; poll /app/me then celebrate (6d).
+    track('checkout_paid',{kind:CO.kind});
+    closeCheckout(); closeBuy();
+    toast(t('toast.payment2','Payment received. Adding your checks…'),'neutral');
+    const me=await pollEntitled(prevCredits); if(me){ ACCOUNT=me; try{ renderAuth(); }catch(_){ } }
+    refreshAuth(); if(isV2()) setTimeout(openPaid,600);
+  }catch(e){ setT('co_err', t('co.failed','Payment failed. Try again.')); if(cta) cta.disabled=false; setT('co_cta_label', coCtaLabel()); }
+}
+async function pollEntitled(prevCredits){ for(let i=0;i<12;i++){ await new Promise(r=>setTimeout(r,1500));
+  const me=await appApi('/app/me'); if(me&&!me.error){ if(me.subscription==='active'||(me.credits||0)>prevCredits||me.comp) return me; } } return null; }
+function closeCheckout(){ const o=$('coOverlay'); if(o) o.classList.remove('on');
+  _coElements=null; _stripe=null; const h=$('co_pay_el'); if(h) h.innerHTML='<div class="co-loading" id="co_loading">'+t('co.loading','Loading secure payment…')+'</div>'; }
+
 // Swipe-down-to-dismiss for the bottom sheets (plans + My checks). passive:false on move so the
 // drag beats the scroll once it starts; only arms when the sheet is scrolled to the top.
 function sheetDrag(overlayId, closeFn){
@@ -5434,10 +5587,11 @@ function sheetDrag(overlayId, closeFn){
 }
 sheetDrag('buyOverlay', ()=>closeBuy());
 sheetDrag('acctOverlay', ()=>{ try{ closeAccount(); }catch(_){ } });
-async function buy(kind){
+sheetDrag('coOverlay', ()=>{ try{ closeCheckout(); }catch(_){ } });
+async function buy(kind, annual){
   if(!isAuthed()){ signUp(); return; }
   $('buy_note').textContent=t('buy.opening','Opening secure checkout…');
-  const r=await appApi('/app/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind})});
+  const r=await appApi('/app/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,annual:!!annual})});
   if(r&&r.url){ location.href=r.url; } else { $('buy_note').textContent=t('buy.fail',"Couldn't start checkout. Try again."); }
 }
 

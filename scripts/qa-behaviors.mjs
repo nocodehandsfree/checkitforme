@@ -118,17 +118,18 @@ const payg = await pg.evaluate(() => { const rng=document.querySelector('#buy_pl
   if(!rng) return { rng:false };
   rng.value=rng.max; rng.dispatchEvent(new Event('input'));
   return { rng:true, max:rng.max, n:document.getElementById('payg_n').textContent, p:document.getElementById('payg_p').textContent }; });
-ok('payg slider reaches the end', payg.rng && payg.n.includes('300') && payg.p==='$50');
+ok('payg slider reaches the end (live /pub/plans: 100 checks)', payg.rng && payg.n.includes('100') && /\$60/.test(payg.p));
 await pg.screenshot({ path: 'loops/site-redesign/proofs/behav-payg.png' });
 const cont = await pg.evaluate(() => new Promise(res => {
+  // buyContinue → openCheckout → /app/checkout-intent (401 in test) → hosted fallback POST /app/checkout {kind}
   const orig=window.fetch; let hit=null;
-  window.fetch=(u,o)=>{ if(String(u).includes('/app/checkout')){ hit=JSON.parse(o.body).kind; } return orig(u,o); };
-  buyContinue(); setTimeout(()=>{ window.fetch=orig; res(hit); },500);
+  window.fetch=(u,o)=>{ if(String(u).includes('/app/checkout')&&!String(u).includes('checkout-intent')&&o&&o.body){ try{hit=JSON.parse(o.body).kind;}catch(_){}} return orig(u,o); };
+  buyContinue(); setTimeout(()=>{ window.fetch=orig; try{closeCheckout();}catch(_){}; res(hit); },700);
 }));
-ok('payg CONTINUE posts pack checkout', cont==='pro');
+ok('payg CONTINUE posts live payg:100 checkout', cont==='payg:100', cont);
 await pg.evaluate(() => { setBuyMode('plans', document.querySelectorAll('#buymode button')[0]); setCycle(true, document.querySelectorAll('#billcycle button')[1]); });
 await pg.waitForTimeout(250);
-ok('annual Family $99.99', await pg.evaluate(() => document.querySelector('#buy_plans .plan .pp').textContent.includes('$99.99')));
+ok('annual Family $49.70 (live annualCents)', await pg.evaluate(() => document.querySelector('#buy_plans .plan .pp').textContent.includes('$49.70')));
 await pg.evaluate(() => { setCycle(false, document.querySelectorAll('#billcycle button')[0]); closeBuy(); });
 
 // ---- 6. WATCH: in-place confirmation, no toast
