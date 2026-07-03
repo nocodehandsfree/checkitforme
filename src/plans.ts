@@ -244,6 +244,13 @@ export async function resolvePlanCheckout(kind: string, annual: boolean): Promis
   return null;
 }
 
+/** Find the tier that owns a Stripe price id (monthly or annual) — maps a webhook invoice back to
+ *  its plan for the embedded-Elements path (no checkout.session metadata). */
+export function tierByPriceId(cfg: PlansConfig, priceId: string | null | undefined): Tier | null {
+  if (!priceId) return null;
+  return cfg.tiers.find((t) => t.monthlyPriceId === priceId || t.annualPriceId === priceId) ?? null;
+}
+
 /** The monthly quota for a tier key (for renewal resets). 0 if unknown. */
 export async function tierQuota(tierKey: string | null | undefined): Promise<number> {
   if (!tierKey) return 0;

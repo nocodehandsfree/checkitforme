@@ -41,7 +41,13 @@ curl -s -X POST https://backboard.railway.app/graphql/v2 \
   -d '{"query":"{ variables(projectId: \"889e332c-30fe-46e9-a18e-d8de4f7523aa\", environmentId: \"7cbf9327-357a-415e-9031-d1609aead2b4\", serviceId: \"d363a982-e918-4433-b175-defe8faf0ec9\") }"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['variables']['ADMIN_TOKEN'])"
 ```
-If it hangs/`unauthorized`: the sandbox can't reach Railway — allow `backboard.railway.app` in the env network policy, or ask Fungie to paste the value.
+⚠️ **If the Railway call hangs / times out / can't connect: STOP after ONE try — do NOT loop.** The
+session's **Network access** is too tight to reach `backboard.railway.app` (the default "Trusted"
+level blocks it). Fixes, in order: **(1) now:** ask Fungie to paste the one secret you need directly
+(usually `ADMIN_TOKEN` for staging or prod) and keep moving. **(2) permanent (Fungie, once):** edit
+the environment → **Network access → Full**, or **Custom** with `backboard.railway.app`, `api.stripe.com`,
+`api.readme.com`, `api.elevenlabs.io`, `api.twilio.com`, `api.cloudflare.com`, `*.checkitforme.com`,
+`logos.fungibles.com`. Editable after creation; the chat prompt has nothing to do with it.
 
 ## Docs map (open only what you need)
 - `docs/GUIDEBOOK.md` — **owner's front door: what Check is, the money model, plans, where everything lives.**

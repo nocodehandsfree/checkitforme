@@ -172,6 +172,11 @@ GET `/`, `/r`, `/s`, `/p/:slug` (+`?partial=1` → `{title,body}`), `/og/:file`,
 
 ---
 
+- 2026-07-03b — **Embedded checkout (Stripe Elements):** `POST /app/checkout-intent {kind, annual}` →
+  `{ mode, clientSecret, publishableKey, amountCents }`. Website confirms with Elements on our own
+  comp-styled page (subscription = tier key; one-time = `payg:<checks>`). Entitlement is granted by the
+  webhook (invoice.paid subscription_create / payment_intent.succeeded), same result as the hosted path.
+
 ## Change log
 - 2026-07-03 — **Plans = 4 tiers + premium-feature matrix.** `GET /pub/plans` →
   `{ features:[{key,label}], everyPlanGets:[key…], tiers:[{key,name,monthlyCents,annualCents,

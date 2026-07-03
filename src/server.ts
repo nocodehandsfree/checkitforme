@@ -104,7 +104,7 @@ async function getStatsSince(): Promise<number> {
   const n = v ? Number(v) : 0;
   return Number.isFinite(n) ? n : 0;
 }
-import { getAccount, getAccountByPhone, phoneAccountExists, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, spendableCredits, SUB, PACKS } from "./billing";
+import { getAccount, getAccountByPhone, phoneAccountExists, chargeOneCredit, createCheckout, createCheckoutIntent, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, spendableCredits, SUB, PACKS } from "./billing";
 import { getPlans, savePlans, publishPlansToStripe, plansSyncView, publicPlans, normalizePlans, accountFeatures } from "./plans";
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
 import { brevoUpsertContact } from "./brevo";
@@ -1335,7 +1335,7 @@ app.get("/pub/pokemon-sets", async (c) => {
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   // Cache-bust: the service worker caches /logos/* cache-first, so bump this whenever the set assets
   // are re-cut and the front end will request fresh URLs (old cached copies are orphaned harmlessly).
-  const av = "?v=6";
+  const av = "?v=7";
   const v = { ...file, logoBase: "/logos", eras: file.eras.map((e) => ({ ...e,
     slug: slug(e.era), logo: `/logos/eras/${slug(e.era)}.png${av}`,
     sets: e.sets.map((s) => ({ ...s,
@@ -2514,6 +2514,18 @@ app.post("/app/checkout", async (c) => {
   const url = await createCheckout(u.id, u.email || email, kind, origin, !!annual);
   if (!url) return c.json({ error: "checkout_failed" }, 400);
   return c.json({ url });
+});
+// Embedded checkout (Stripe Elements — the custom BRANDED on-site page). Returns the client_secret +
+// publishable key the Website confirms with Elements. kind = tier key or "payg:<checks>".
+app.post("/app/checkout-intent", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const { kind, annual } = await c.req.json();
+  try {
+    const intent = await createCheckoutIntent(u.id, u.email || undefined, String(kind || ""), !!annual);
+    if (!intent) return c.json({ error: "checkout_unavailable" }, 400);
+    return c.json(intent);
+  } catch (e) { return c.json({ error: String(e).slice(0, 200) }, 400); }
 });
 
 // Public: the live tiers + PAYG ladder for the consumer checkout sheet (Website's lane renders it).
