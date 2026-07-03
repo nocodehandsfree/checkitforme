@@ -404,6 +404,24 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   at takeover the installed-app splash would flash old navy against #1D1D22 pages) → **added as step
   3b in PROMOTE.md's takeover section; do NOT touch before**. Staging carries watch-14/15 ES work;
   no upstream pushes. CLEAN.
+### 🔬 ULTRACODE AUDIT + HUNT-FIRST HOBBY (2026-07-03 — 9-agent parallel audit of the full redesign)
+Audited every requested change across all owner rounds via 9 parallel section auditors (Result/Call,
+My-checks nav, Activity/Calendar, Buy/Plans, Map, Earn/Invite, Watch/Auto-check, Home/Footer/Copy,
+Hobby). Result: ENTIRE redesign verified DONE except two items, both now FIXED:
+- **[was PARTIAL] two stray green toasts** — `toast.locupdated` (silent GPS move) and `toast.searchmi`
+  (city search) still fired green; both now `'neutral'` (owner: no big green pills).
+- **[was MISSING] HOBBY was store-first; must be HUNT-FIRST.** Rebuilt per the comps: tapping the
+  Hobby chip now opens **"What are you hunting?" (era → set → product) FIRST**, with the
+  Retail/Hobby/Kiosk switcher still on top (body.huntmode hides the store-finder + other builder
+  blocks; #findbody wrapper + #findcard id added; #hobby drops in below the switcher). Product-lock
+  then lands on the type=Hobby SHOP LIST with a "HUNTING · {product} · Change" banner; pick a shop →
+  call sheet carries the locked product. No toast on lock. openHobby keeps the builder visible (was
+  hiding it), exitHunt() clears huntmode on backToBuilder/showResult/setMode(non-hobby). PROOFS:
+  hobby-hunt-first.png (era picker + switcher) · hobby-shop-list.png (locked banner + shops).
+- 16-check hunt-first suite scripts/qa-hobby.mjs (rewritten); full regression green
+  (16 hobby + 29 behavior + 15 round-6 + 46 e2e + 66 pages + 7 design + tsc). v1 DOM unaffected.
+- Approved overrides re-confirmed intact by the audit: bottom toasts removed, all copy changes kept.
+
 ### 🎴 HOBBY CHIP SHIPPED (2026-07-03 overnight — owner-requested morning deliverable)
 - Third switcher key **Retail · Hobby · Kiosk** (v2, card verticals only — poke/onepiece/topps,
   NEVER NeeDoh). Hobby mode pulls `/pub/stores/near?…&type=Hobby` (Data's server filter), skips the

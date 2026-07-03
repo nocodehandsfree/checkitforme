@@ -1349,6 +1349,9 @@ html[data-skin="v2"] .rng-ticks span.on{color:#4ADE80}
 html[data-skin="v2"] .findbtn-primary{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#FFF;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;padding:14px 24px;box-shadow:0 12px 28px -8px rgba(25,177,69,.45)}
 html[data-skin="v2"] .findbtn-primary.on{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;color:#4ADE80}
 /* HOBBY flow (P3a–P5/§5.13) — hidden preview. Era art on the page, press-dip; set tiles; product rows. */
+body.huntmode #builder > *:not(#findcard){display:none!important}
+body.huntmode #findcard #findbody{display:none!important}
+body.huntmode #hobby{display:block}
 html[data-skin="v2"] .hob-era{display:block;width:82%;margin:0 auto 26px;background:none;border:0;padding:0;cursor:pointer;transition:transform .12s}
 html[data-skin="v2"] .hob-era:active{transform:translateY(3px) scale(.97)}
 html[data-skin="v2"] .hob-set{display:block;width:100%;margin:0 0 16px;background:none;border:0;padding:0;cursor:pointer;transition:transform .12s;color:#FFF}
@@ -1532,11 +1535,12 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
       <div class="ts"><span class="tsi" id="tsi3"></span><span data-i18n="trust.answer">Get proof</span></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="findcard">
       <div class="modetabs" id="modetabs">
         <button class="modetab on" data-mode="call" onclick="setMode('call')"><span class="mti" id="mti_call"></span><span data-i18n="mode.call">Check a store</span></button>
         <button class="modetab" data-mode="kiosk" onclick="setMode('kiosk')"><span class="mti" id="mti_kiosk"></span><span data-i18n="mode.kiosk">Kiosks</span></button>
       </div>
+      <div id="findbody">
       <div class="findhead">
         <div class="step" style="margin:0" id="findstep" data-i18n="find.step">① Find your store</div>
         <div style="display:flex;align-items:center;gap:10px"><button class="maptgl" id="maptoggle" onclick="toggleMap()" style="display:none">Map</button><div class="opencount" id="store_count"></div></div>
@@ -1556,6 +1560,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
       <div class="storelist" id="storelist" style="margin-top:12px"></div>
       <div id="mapview" style="display:none"></div>
       <div id="maplegend" class="maplegend" style="display:none"></div>
+      </div>
     </div>
 
     <div class="card" id="catcard" style="display:none">
@@ -2121,7 +2126,7 @@ const I18N={ es:{
   'empty.radius':'No hay tiendas abiertas en {r} mi. Amplía el radio.',
   'empty.far.title':'Aún no estamos en tu zona…','empty.far.sub':'¡Llegaste temprano! Sé el primero en saber cuando {b} llegue cerca de ti.','empty.far.cta':'🔔 Avísame cuando lleguen',
   'tick.found':'¡Encontrado!','tick.restock':'Reabastecimiento en camino','besttag':'Más probable','bestwhy':'buenas probabilidades ahora',
-  'mode.hobby':'Hobby','find.hobby':'① Encuentra una tienda de cartas','hob.shopprices':'PRECIOS DE TIENDA','empty.hobby':'No hay tiendas de cartas en {r} mi — amplía el radio.','hob.pickexact':'Elige el set o producto exacto',
+  'mode.hobby':'Hobby','find.hobby':'① Encuentra una tienda de cartas','find.hobbystore':'① Ahora elige una tienda de cartas','hob.hunting':'BUSCANDO','hob.shopprices':'PRECIOS DE TIENDA','empty.hobby':'No hay tiendas de cartas en {r} mi — amplía el radio.','hob.pickexact':'Elige el set o producto exacto',
   'buy.tabplans':'Planes','buy.tabpayg':'Por uso','plan.on':'Tienes','plan.checks':'verificaciones','plan.percheck':'aprox.','plan.percheck2':'por verificación','plan.noexpire':'no caducan','acct.stat.run2':'Verificaciones hoy','acct.perweek2':'Verificaciones esta semana','auth.newcell':'Danos tu nuevo celular','ph.cellmail':'celular o correo',
   'ref.sharemsg':'¡Oye! Mira esta tecnología. Está increíble.\nNos ayuda a encontrar productos virales en stock como cartas Pokémon a precio de tienda.\nRegístrate y ambos ganamos 3 verificaciones gratis: ','ref.copied':'¡Enlace de invitación copiado!','ref.copy':'Copia tu enlace de invitación:','ref.both':'Ambos reciben <b style="color:#fff">3 verificaciones gratis</b> cuando se registran.','ref.copybtn':'COPIAR','ref.text':'Mensaje','ref.post':'Publicar','ref.more':'Más',
   'kioskonly':'Solo kiosco','kiosk.precall':'Solo kiosco. Preguntaremos si su kiosco está funcionando y surtido, no por un envío.',
@@ -2454,7 +2459,7 @@ function silentLocRecheck(){
       navigator.geolocation.getCurrentPosition(pos=>{
         const la=pos.coords.latitude, ln=pos.coords.longitude;
         const moved = !USER_LOC || miBetween(USER_LOC.lat,USER_LOC.lng,la,ln) > 1; // 1 mi = a real move (owner call), still well above GPS jitter
-        if(moved){ setUserLoc(la,ln); toast(ICO.pin(AC2())+t('toast.locupdated','Updated to your current location')); }
+        if(moved){ setUserLoc(la,ln); toast(t('toast.locupdated','Updated to your current location'),'neutral'); }
       }, ()=>{}, {enableHighAccuracy:false, timeout:8000, maximumAge:300000}); // cheap/low-power; a 5-min cached fix is fine
     }).catch(()=>{});
   }catch(e){}
@@ -2973,7 +2978,7 @@ async function geocodeSearch(){
   const r=await api('/pub/geocode?'+(isZip?'zip=':'q=')+encodeURIComponent(q));
   if(r&&!r.error&&r.lat!=null){
     // Clear the box so the store list isn't ALSO text-filtered by the ZIP (that filter hid every store).
-    $('search').value=''; setUserLoc(r.lat,r.lng); toast(tf('toast.searchmi','📍 {q} · stores within {n} mi',{q:q,n:RADIUS})); return true;
+    $('search').value=''; setUserLoc(r.lat,r.lng); toast(tf('toast.searchmi','{q} · stores within {n} mi',{q:q,n:RADIUS}),'neutral'); return true;
   }
   if(!isZip){ fetchNear(); } // not a known place — try it as a store/location search
   return false;
@@ -3108,14 +3113,22 @@ function setRadiusIdx(idx){
 }
 function setRadius(mi){ const i=RADII.indexOf(mi); setRadiusIdx(i<0?2:i); }
 function setMode(m){
+  const wasHobby=(MODE==='hobby');
   MODE=m;
   try{ localStorage.setItem('cifm_mode', m); }catch(e){} // remember the tab across reloads
   if(m!=='kiosk'){ SEL_KIOSK=false; KIOSK_OK=false; }
   document.querySelectorAll('.modetab').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
   const kh=$('kioskhint'); if(kh) kh.style.display='none'; // the kiosk "free check" carrot now lives in the call-confirm modal
-  $('findstep').textContent = m==='kiosk'?t('find.kiosk','① Find a kiosk'):(m==='hobby'?t('find.hobby','① Find a card shop'):t('find.step','① Find your store'));
-  if(USER_LOC&&(m==='hobby'||setMode._wasHobby)) fetchNear(); // hobby pulls a different server slice — refetch on enter AND exit
-  setMode._wasHobby=(m==='hobby');
+  if(m==='hobby'){
+    // Hunt-first: the Hobby chip ALWAYS starts a fresh hunt at "What are you hunting?" (owner 2026-07-03).
+    try{ HOBBY_LOCK=false; }catch(_){ } SEL_PRODUCT='';
+    try{ openHobby(); }catch(e){}
+    track('mode_switch',{mode:m}); return;
+  }
+  exitHunt(); const _lb0=$('hoblockbar'); if(_lb0) _lb0.style.display='none';
+  $('findstep').textContent = m==='kiosk'?t('find.kiosk','① Find a kiosk'):t('find.step','① Find your store');
+  if(USER_LOC && (wasHobby || setMode._wasHobby)) fetchNear(); // leaving hobby -> refetch the normal slice
+  setMode._wasHobby=false;
   // The call-only bits (category, call button, charge note) hide in kiosk mode.
   const cc=$('catcard');
   if(m==='kiosk'){ if(cc)cc.style.display='none'; }
@@ -4124,7 +4137,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -4213,6 +4226,7 @@ function fillP(s,o,tn){ try{ const oc=(o&&Array.isArray(o.cats)&&o.cats[0])||(o&
   const sc='#fff';
   const pn=esc((o&&o.productName)||catLabel()||oc||'it'); const sn=esc((o&&o.storeName)||(SEL_STORE&&SEL_STORE.name)||'the store'); const cn=esc(catLabel()||oc||'it'); const dy=esc((o&&o.shipmentDay)?fmtShipDay(o.shipmentDay):'soon'); return String(s==null?'':s).replace(/\{product\}/g,'<b style="color:#fff">'+pn+'</b>').replace(/\{store\}/g,'<b style="color:'+sc+'">'+sn+'</b>').replace(/\{category\}/g,'<b style="color:#fff">'+cn+'</b>').replace(/\{day\}/g,'<b style="color:#fff">'+dy+'</b>'); }catch(e){ return String(s==null?'':s); } }
 function showResult(o, cid){
+  try{ exitHunt(); }catch(_){ }
   resultCacheSet(cid,o);
   { const _r=$('result'); if(_r) _r.classList.remove('r-play'); } // clear the entrance trigger before every (re)render — the block below re-arms it only on the content-ready render
   stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
@@ -4935,12 +4949,21 @@ let HOBBY={data:null,era:null,set:null,prods:null};
 // §5.17 art placeholder: 45° stripes + label. (Spec says mono label; §4 + the token harness mandate
 // Inter — Inter uppercase wins; DECIDED in manifest.)
 function v2ArtPh(label,h){ return `<div style="height:${h}px;border-radius:16px;background:repeating-linear-gradient(45deg,#2B2B33 0 12px,#25252C 12px 24px);display:grid;place-items:center"><span style="font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${esc(label)}</span></div>`; }
+function exitHunt(){ document.body.classList.remove('huntmode'); const h=$('hobby'); if(h) h.classList.add('hidden'); }
 async function openHobby(){
   if(!isV2()) return; // hard gate: never reachable outside the preview skin
   // Brand gate (owner law: hobby = sports cards + TCG, NEVER NeeDoh — and /pub/pokemon-sets is
   // Pokémon's registry): only the Pokémon brand opens this flow until per-brand feeds exist.
   if(!(typeof BRAND!=='undefined'&&BRAND&&BRAND.key==='poke')) return;
-  ['live','result','history','success','handoff','builder'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
+  // Hunt-first (owner 2026-07-03): tapping Hobby opens "What are you hunting?" FIRST, with the
+  // Retail/Hobby/Kiosk switcher still on top. body.huntmode hides the store-finder + other builder
+  // blocks; the hunt card drops in below the switcher. A store is picked AFTER the product is locked.
+  ['live','result','history','success','handoff'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
+  const _bl=$('builder'); if(_bl) _bl.classList.remove('hidden');
+  document.body.classList.add('huntmode');
+  try{ hideCallSheet(); }catch(_){}
+  MODE='hobby'; try{ document.querySelectorAll('.modetab').forEach(b=>b.classList.toggle('on',b.dataset.mode==='hobby')); }catch(_){}
+  const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none';
   const h=$('hobby'); if(!h) return; h.classList.remove('hidden');
   if(!HOBBY.data){
     h.innerHTML='<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:48px 0"><span></span><span></span><span></span></div>';
@@ -5060,8 +5083,24 @@ function hobbyPickProduct(pi){
   const p=(HOBBY.prods||[])[pi]; if(!p) return;
   SEL_PRODUCT=((HOBBY.set&&HOBBY.set.name)?HOBBY.set.name+' ':'')+p.type;
   HOBBY_LOCK=true;
-  toast(SEL_PRODUCT+t('hob.locked',', pick a store to check it'));
-  backToBuilder();
+  // Hunt-first: product locked -> now show the HOBBY store list (type=Hobby) so they pick a shop.
+  exitHunt();
+  MODE='hobby'; try{ localStorage.setItem('cifm_mode','hobby'); }catch(_){ }
+  ['live','result','history','success','handoff'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
+  const _bl=$('builder'); if(_bl) _bl.classList.remove('hidden');
+  document.querySelectorAll('.modetab').forEach(b=>b.classList.toggle('on',b.dataset.mode==='hobby'));
+  const cc=$('catcard'); if(cc) cc.style.display='none';
+  $('findstep').textContent=t('find.hobbystore','① Now pick a card shop');
+  // Locked-product banner above the shop list (no toast — owner-averse; this gives lasting context).
+  let lb=$('hoblockbar');
+  if(!lb){ lb=document.createElement('div'); lb.id='hoblockbar'; const sl=$('storelist'); if(sl&&sl.parentElement) sl.parentElement.insertBefore(lb,sl); }
+  if(lb){ lb.style.display='';
+    lb.innerHTML=`<div style="display:flex;align-items:center;gap:11px;margin:2px 0 12px;padding:11px 13px;border-radius:14px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)">
+      <span style="width:32px;height:32px;border-radius:10px;background:#1B1B20;display:grid;place-items:center;flex:0 0 auto">${hobbyIcon(p.type)}</span>
+      <span style="flex:1;min-width:0"><span style="display:block;font-size:9px;font-weight:800;letter-spacing:.14em;color:#8A8A96">${esc(t('hob.hunting','HUNTING').toUpperCase())}</span><span style="display:block;font-size:13.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(SEL_PRODUCT)}</span></span>
+      <button onclick="setMode('hobby')" style="flex:0 0 auto;border:0;border-radius:999px;background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#FFF;font-size:12px;font-weight:700;padding:7px 13px;cursor:pointer">${t('hob.change','Change')}</button></div>`; }
+  if(USER_LOC) fetchNear(); else renderStores();
+  window.scrollTo({top:0});
 }
 // ==== /HOBBY ======================================================================================
 // ---- Call switcher: hop call-to-call; filter by store and outcome (scales to 20+ calls) ----
