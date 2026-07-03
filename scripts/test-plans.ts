@@ -6,7 +6,7 @@ import { bootstrap } from "../src/db/bootstrap";
 import { db } from "../src/db/client";
 import { accounts } from "../src/db/schema";
 import { getAccountByPhone, chargeOneCredit, spendableCredits, handleStripeEvent } from "../src/billing";
-import { normalizePlans, annualDefaultCents, resolvePlanCheckout, savePlans, getPlans, tierSync, bundleSync, DEFAULT_PLANS } from "../src/plans";
+import { normalizePlans, annualDefaultCents, resolvePlanCheckout, savePlans, getPlans, tierSync, bundleSync, DEFAULT_PLANS, accountFeatures, FEATURE_KEYS } from "../src/plans";
 import { setPolicy } from "../src/policy";
 
 let pass = 0, fail = 0;
@@ -18,11 +18,22 @@ async function main() {
   await setPolicy({ pricing: { freeChecks: 0 } } as never); // no signup free credit → clean balance math
 
   console.log("▶ normalize + annual default");
-  const n = normalizePlans({ tiers: [{ key: "starter", monthlyCents: "499" as unknown as number }] });
-  ok(n.tiers.length === 3 && n.tiers[0].key === "starter", "always yields the 3 canonical tiers");
+  const n = normalizePlans({ tiers: [{ key: "family", monthlyCents: "499" as unknown as number }] });
+  ok(n.tiers.length === 4 && n.tiers.map((t) => t.key).join(",") === "family,collector,hunter,operator", "always yields the 4 canonical tiers low→high");
   ok(n.tiers[0].monthlyCents === 499 && n.tiers[0].annualCents === annualDefaultCents(499), "coerces cents + defaults annual to −17%×12");
+  ok(n.tiers[3].key === "operator" && n.tiers[3].monthlyCents === 4999 && n.tiers[3].checksPerMonth === 300, "top tier Operator = $49.99 / 300 checks");
   ok(annualDefaultCents(999) === 9950, "annual default: 999/mo → 9950/yr");
-  ok(n.payg.bundles.length === 5 && n.payg.bundles[0].checks === 10, "PAYG ladder defaults to 5 bundles, sorted");
+  ok(n.payg.bundles.length === 5 && n.payg.bundles[0].checks === 10 && n.payg.bundles[0].cents === 990, "PAYG: 5 bundles, 10 checks = 99¢/check");
+  ok(n.payg.bundles[4].checks === 100 && n.payg.bundles[4].cents === 6000, "PAYG top: 100 checks = 60¢/check");
+
+  console.log("▶ premium-feature matrix (8 features, all ON for every paid tier by default)");
+  ok(FEATURE_KEYS.length === 8 && FEATURE_KEYS.includes("thrift_hunts") && FEATURE_KEYS.includes("your_voice"), "8 features incl. thrift_hunts + your_voice");
+  ok(n.tiers.every((t) => FEATURE_KEYS.every((k) => t.features[k] === true)), "every paid tier defaults ALL features ON");
+  const off = normalizePlans({ tiers: [{ key: "family", features: { zone_sweeps: false } }] });
+  ok(off.tiers[0].features.zone_sweeps === false && off.tiers[0].features.restock_alerts === true, "admin can turn ONE feature off per tier; others stay on");
+  ok(off.tiers[0].premiumAsks === true, "premiumAsks derives from features.exact_products");
+  const off2 = normalizePlans({ tiers: [{ key: "family", features: { exact_products: false } }] });
+  ok(off2.tiers[0].premiumAsks === false, "turning off exact_products flips premiumAsks off");
 
   console.log("▶ checkout resolution");
   await savePlans(DEFAULT_PLANS);
@@ -30,8 +41,10 @@ async function main() {
   ok(sub?.mode === "subscription" && sub.cents === 999 && sub.interval === "month" && sub.metadata.checks === "30", "tier monthly → subscription w/ quota metadata");
   const subY = await resolvePlanCheckout("collector", true);
   ok(subY?.interval === "year" && subY.cents === annualDefaultCents(999), "annual flag → yearly interval + annual cents");
+  const family = await resolvePlanCheckout("family", false);
+  ok(family?.cents === 499 && family.metadata.checks === "15", "Family = $4.99 / 15 checks");
   const hunter = await resolvePlanCheckout("hunter", false);
-  ok(hunter?.metadata.premiumAsks === "1", "Hunter carries premiumAsks entitlement");
+  ok(hunter?.metadata.premiumAsks === "1", "Hunter carries premiumAsks entitlement (all-on default)");
   const payg = await resolvePlanCheckout("payg:50", false);
   ok(payg?.mode === "payment" && payg.cents === 3499 && payg.metadata.credits === "50", "payg:50 → one-time 50-credit payment");
   ok((await resolvePlanCheckout("nonsense", false)) === null, "unknown kind → null (legacy fallback)");
@@ -78,6 +91,14 @@ async function main() {
   a = await acct(buyer.clerkUserId);
   ok(a.subscription === "none" && a.subTier === null && a.quotaCredits === 0, "cancel: sub off, tier cleared, quota forfeited");
   ok(a.credits === 49, "PAYG credits never expire — still 49 after cancel");
+
+  console.log("▶ feature entitlement by account");
+  const paid = await accountFeatures("collector");
+  ok(FEATURE_KEYS.every((k) => paid[k] === true), "a subscriber gets their tier's features (all on)");
+  const payU = await accountFeatures(null);
+  ok(FEATURE_KEYS.every((k) => payU[k] === false), "PAYG/free (no tier) → NO premium features");
+  const compU = await accountFeatures(null, true);
+  ok(FEATURE_KEYS.every((k) => compU[k] === true), "comp/founder → all features");
 
   console.log(`\n════════════════════════════════\n  PASS: ${pass}   FAIL: ${fail}\n════════════════════════════════`);
   process.exit(fail === 0 ? 0 : 1);

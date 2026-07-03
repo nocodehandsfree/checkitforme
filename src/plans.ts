@@ -5,13 +5,32 @@
 // never deleted (never orphan an active subscriber).
 import { getSetting, setSetting } from "./db/settings";
 
+// ---- Premium feature catalog (the "EVERY PLAN GETS" grid) ----
+// Subscription-only entitlements, toggled PER TIER in Admin (data, not hardcoded). PAYG gets none.
+// Labels are the owner's simple names (2026-07-03 image); keys are stable ids the app gates on.
+export const FEATURES: { key: string; label: string }[] = [
+  { key: "exact_products", label: "Exact products" },   // set + product-type asks; multiple products/call
+  { key: "zone_sweeps",    label: "Zone sweeps" },       // every store near you, one tap
+  { key: "restock_alerts", label: "Restock alerts" },
+  { key: "scheduled_checks", label: "Scheduled checks" },// auto-check on a schedule
+  { key: "any_town",       label: "Any town" },          // search past the 20-mile radius
+  { key: "store_holds",    label: "Store holds" },       // ask the store to hold a product
+  { key: "your_voice",     label: "Your voice" },        // personalize / clone the agent voice
+  { key: "thrift_hunts",   label: "Thrift hunts" },      // thrift stores & hobby shops
+];
+export const FEATURE_KEYS = FEATURES.map((f) => f.key);
+/** Default entitlement map for a PAID tier: everything ON (owner default, 2026-07-03). */
+export const allFeaturesOn = (): Record<string, boolean> => Object.fromEntries(FEATURE_KEYS.map((k) => [k, true]));
+export const noFeatures = (): Record<string, boolean> => Object.fromEntries(FEATURE_KEYS.map((k) => [k, false]));
+
 export interface Tier {
-  key: string;            // stable id ("starter"|"collector"|"hunter") — checkout `kind` + entitlement key
+  key: string;            // stable id ("family"|"collector"|"hunter"|"operator") — checkout `kind` + entitlement key
   name: string;
   monthlyCents: number;
   annualCents: number;    // billed once/year; default = −17% of 12×monthly (owner-editable)
   checksPerMonth: number; // subscription quota, reset each billing cycle (no rollover)
-  premiumAsks: boolean;   // exact set/product/price questions on the call (Hunter)
+  features: Record<string, boolean>; // per-tier premium entitlements (admin-editable matrix)
+  premiumAsks: boolean;   // DERIVED = features.exact_products (kept for existing call-gating call-sites)
   stripeProductId: string | null;
   monthlyPriceId: string | null;
   annualPriceId: string | null;
@@ -26,20 +45,28 @@ export interface PlansConfig {
 /** Annual default: 12 months at −17% (matches the site comps). Owner can override per tier. */
 export const annualDefaultCents = (monthlyCents: number): number => Math.round(monthlyCents * 12 * 0.83);
 
+// Owner's ladder (2026-07-03), low → high. All premium features ON for every paid tier by default.
+const tierDef = (key: string, name: string, monthlyCents: number, checksPerMonth: number): Tier => ({
+  key, name, monthlyCents, annualCents: annualDefaultCents(monthlyCents), checksPerMonth,
+  features: allFeaturesOn(), premiumAsks: true,
+  stripeProductId: null, monthlyPriceId: null, annualPriceId: null, pub: null,
+});
 export const DEFAULT_PLANS: PlansConfig = {
   tiers: [
-    { key: "starter",   name: "Starter",   monthlyCents: 499,  annualCents: annualDefaultCents(499),  checksPerMonth: 15,  premiumAsks: false, stripeProductId: null, monthlyPriceId: null, annualPriceId: null, pub: null },
-    { key: "collector", name: "Collector", monthlyCents: 999,  annualCents: annualDefaultCents(999),  checksPerMonth: 30,  premiumAsks: false, stripeProductId: null, monthlyPriceId: null, annualPriceId: null, pub: null },
-    { key: "hunter",    name: "Hunter",    monthlyCents: 1999, annualCents: annualDefaultCents(1999), checksPerMonth: 100, premiumAsks: true,  stripeProductId: null, monthlyPriceId: null, annualPriceId: null, pub: null },
+    tierDef("family",   "Family",   499,  15),
+    tierDef("collector", "Collector", 999,  30),
+    tierDef("hunter",   "Hunter",   1999, 100),
+    tierDef("operator", "Operator", 4999, 300),
   ],
+  // PAYG: per-check slides 99¢ (10) → 60¢ (100) with volume (owner, 2026-07-03).
   payg: {
     stripeProductId: null,
     bundles: [
-      { checks: 10,  cents: 999,  priceId: null, pubCents: null },
-      { checks: 25,  cents: 1999, priceId: null, pubCents: null },
-      { checks: 50,  cents: 3499, priceId: null, pubCents: null },
-      { checks: 75,  cents: 4799, priceId: null, pubCents: null },
-      { checks: 100, cents: 5999, priceId: null, pubCents: null },
+      { checks: 10,  cents: 990,  priceId: null, pubCents: null }, // 99¢
+      { checks: 25,  cents: 1999, priceId: null, pubCents: null }, // 80¢
+      { checks: 50,  cents: 3499, priceId: null, pubCents: null }, // 70¢
+      { checks: 75,  cents: 4799, priceId: null, pubCents: null }, // 64¢
+      { checks: 100, cents: 6000, priceId: null, pubCents: null }, // 60¢
     ],
   },
 };
@@ -53,13 +80,17 @@ export function normalizePlans(raw: unknown): PlansConfig {
     const t = (r.tiers || []).find((x) => x && x.key === d.key) as Partial<Tier> | undefined;
     if (!t) return { ...d };
     const monthlyCents = clampCents(t.monthlyCents ?? d.monthlyCents);
+    // Feature matrix: coerce each catalog key from the stored config; default ON (owner default).
+    const storedF = (t.features && typeof t.features === "object" ? t.features : {}) as Record<string, unknown>;
+    const features = Object.fromEntries(FEATURE_KEYS.map((k) => [k, storedF[k] == null ? true : !!storedF[k]]));
     return {
       key: d.key,
       name: String(t.name ?? d.name).slice(0, 40) || d.name,
       monthlyCents,
       annualCents: t.annualCents != null ? clampCents(t.annualCents) : annualDefaultCents(monthlyCents),
       checksPerMonth: Math.max(0, Math.round(Number(t.checksPerMonth ?? d.checksPerMonth) || 0)),
-      premiumAsks: !!(t.premiumAsks ?? d.premiumAsks),
+      features,
+      premiumAsks: !!features.exact_products, // derived: the "exact set/product" call ask
       stripeProductId: t.stripeProductId ?? null,
       monthlyPriceId: t.monthlyPriceId ?? null,
       annualPriceId: t.annualPriceId ?? null,
@@ -93,17 +124,32 @@ export function bundleSync(b: Bundle): "in_sync" | "pending" {
 }
 export function plansSyncView(cfg: PlansConfig) {
   return {
+    features: FEATURES, // catalog so Admin renders the toggle-matrix columns
     tiers: cfg.tiers.map((t) => ({ ...t, sync: tierSync(t) })),
     payg: { ...cfg.payg, bundles: cfg.payg.bundles.map((b) => ({ ...b, sync: bundleSync(b) })) },
   };
 }
 
-/** The public shape Website's checkout sheet renders from (no Stripe ids). */
+/** The public shape Website's checkout sheet renders from (no Stripe ids). Each tier carries its
+ *  feature map; `features` is the label catalog; `everyPlanGets` = keys ON in ALL paid tiers (the
+ *  "EVERY PLAN GETS" grid). PAYG has NO premium features — Website hides them for pay-as-you-go. */
 export function publicPlans(cfg: PlansConfig) {
   return {
-    tiers: cfg.tiers.map((t) => ({ key: t.key, name: t.name, monthlyCents: t.monthlyCents, annualCents: t.annualCents, checksPerMonth: t.checksPerMonth, premiumAsks: t.premiumAsks })),
+    features: FEATURES,
+    everyPlanGets: FEATURE_KEYS.filter((k) => cfg.tiers.length > 0 && cfg.tiers.every((t) => t.features[k])),
+    tiers: cfg.tiers.map((t) => ({ key: t.key, name: t.name, monthlyCents: t.monthlyCents, annualCents: t.annualCents, checksPerMonth: t.checksPerMonth, premiumAsks: t.premiumAsks, features: t.features })),
     payg: cfg.payg.bundles.map((b) => ({ checks: b.checks, cents: b.cents })),
   };
+}
+
+/** The premium features an account is entitled to. Comp → all ON. A subscriber → their tier's matrix.
+ *  PAYG / free / anonymous → none (premium is subscription-only). Website gates UI on this; the
+ *  backend enforces the same on feature endpoints. */
+export async function accountFeatures(subTier: string | null | undefined, comp = false): Promise<Record<string, boolean>> {
+  if (comp) return allFeaturesOn();
+  if (!subTier) return noFeatures();
+  const cfg = await getPlans();
+  return cfg.tiers.find((t) => t.key === subTier)?.features ?? noFeatures();
 }
 
 // ---- Stripe REST (no SDK; same style as billing.ts) ----

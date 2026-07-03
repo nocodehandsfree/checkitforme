@@ -105,7 +105,7 @@ async function getStatsSince(): Promise<number> {
   return Number.isFinite(n) ? n : 0;
 }
 import { getAccount, getAccountByPhone, phoneAccountExists, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, spendableCredits, SUB, PACKS } from "./billing";
-import { getPlans, savePlans, publishPlansToStripe, plansSyncView, publicPlans, normalizePlans } from "./plans";
+import { getPlans, savePlans, publishPlansToStripe, plansSyncView, publicPlans, normalizePlans, accountFeatures } from "./plans";
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
@@ -2373,11 +2373,14 @@ app.get("/app/me", async (c) => {
   }
   // premiumAsks entitlement (Hunter tier) — the call path / Website consume this to allow exact
   // set/product/price questions. Comp accounts get everything.
-  const premiumAsks = comp || (a?.subTier ? (await getPlans()).tiers.find((t) => t.key === a.subTier)?.premiumAsks === true : false);
+  // Premium entitlements (subscription-only): per-feature map the UI gates on, plus premiumAsks
+  // (= features.exact_products) for the call path. Comp -> all; PAYG/free -> none.
+  const features = await accountFeatures(a?.subTier, comp);
+  const premiumAsks = features.exact_products === true;
   return c.json({
     // Displayed balance = subscription quota + PAYG (both spendable). quota/payg broken out for the UI.
     credits: comp ? 9999 : spendableCredits(a), subscription: comp ? "active" : (a?.subscription ?? "none"),
-    subTier: comp ? "founder" : (a?.subTier ?? null), quota: comp ? 9999 : (a?.quotaCredits ?? 0), payg: comp ? 9999 : (a?.credits ?? 0), premiumAsks,
+    subTier: comp ? "founder" : (a?.subTier ?? null), quota: comp ? 9999 : (a?.quotaCredits ?? 0), payg: comp ? 9999 : (a?.credits ?? 0), premiumAsks, features,
     comp, callsMade: a?.callsMade ?? 0, phone: a?.phone ?? null,
     // caller_id is only set after Twilio's caller-ID verify call → the "create your agent" panel uses
     // callerIdReady to know whether to prompt for it.
