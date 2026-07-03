@@ -173,6 +173,15 @@ GET `/`, `/r`, `/s`, `/p/:slug` (+`?partial=1` → `{title,body}`), `/og/:file`,
 ---
 
 ## Change log
+- 2026-07-03 — **Plans + PAYG + entitlements.** New `GET /pub/plans` →
+  `{ tiers:[{key,name,monthlyCents,annualCents,checksPerMonth,premiumAsks}], payg:[{checks,cents}] }`
+  (owner-edited in Admin → Plans, source of truth = settings `vt_plans`). `POST /app/checkout` now
+  takes `{kind, annual?}`: kind = tier key (`starter|collector|hunter`, `annual:true`=yearly) OR
+  `payg:<checks>`. Legacy `sub` + pack keys still resolve. `GET /app/me` adds `subTier`, `quota`
+  (subscription checks left this cycle — resets each billing cycle, no rollover), `payg` (permanent
+  PAYG balance), `premiumAsks` (Hunter entitlement); `credits` is now quota+payg. Admin-only:
+  `GET/POST /api/admin/plans`, `POST /api/admin/plans/publish` (mirrors to Stripe: new Price + archive
+  old, idempotent; Products never deleted). Additive — existing callers unaffected.
 - 2026-07-01 — **transcript privacy (IDOR fix).** `/pub/result/:cid` + `/pub/live/:cid` now accept
   `Authorization: Bearer <check_session>`. Website: send it on both whenever the user is signed in
   (same token as `/app/*`). Enforcement is behind `policy.flags.transcriptAuth` (currently OFF), so

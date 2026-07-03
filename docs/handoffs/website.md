@@ -38,6 +38,15 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
   "check back soon". Owner is comp/premium so only sees member view; behavior is a clean on/off in code.
 
 **🔨 Build / fix:**
+- **DevOps → Website (2026-07-03): wire the checkout sheet to the live plans.** New `GET /pub/plans`
+  is the source of truth → `{ tiers:[{key,name,monthlyCents,annualCents,checksPerMonth,premiumAsks}],
+  payg:[{checks,cents}] }` (owner edits these in Admin → Plans). Render the 3 tiers + PAYG slider
+  from it instead of hardcoded/POLICY packs. Checkout call is now
+  `POST /app/checkout {kind, annual}`: kind = tier key (`starter|collector|hunter`) with `annual:true`
+  for yearly, OR `payg:<checks>` (e.g. `payg:25`) for a bundle. `/app/me` now returns `subTier`,
+  `quota` (subscription checks left this cycle), `payg` (permanent balance), `credits` (sum to show),
+  and `premiumAsks` (Hunter perk — gate the "exact set/product/price" ask UI on it). Old `sub`/pack
+  kinds still work, so nothing breaks until you migrate. Full contract: API_CONTRACT change log 2026-07-03.
 - **PROD-only, check after promote:** owner can't navigate back to June's calls on production. Staging's
   history/calendar code is far ahead — promote likely fixes it; verify on prod after pushing, else debug
   the calendar month-nav (`RAIL_CAL_M`/`openRailCal`). Not blocking.
