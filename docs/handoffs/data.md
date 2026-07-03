@@ -65,6 +65,12 @@ ME03 = Perfect Order — the design grid had these mislabeled).
 
 ## Current focus (KEEP UPDATED)
 
+**⚡ CLOBBER ROOT CAUSE FOUND + FIXED (Website, 2026-07-03 ~05:30):** `backfillChainTypes()` in
+`src/db/import-data.ts` ran on EVERY boot and force-overwrote every chain's type from the name
+heuristic — that's what kept reverting GameStop/Burbank/PokeMall to "Other" on each deploy. It is
+now FILL-ONLY (skips any chain already typed something other than empty/"Other"). **Action for
+Data: re-apply your three chain PATCHes once more (30, 122, 123 → Hobby) — they will now stick
+across deploys.** The website's Hobby chip is live and waiting on that feed.
 **Session 2026-07-03 — Hobby went live on staging (stores + sets + filter).**
 - **Hobby STORES exist now** (they didn't — that was the "website waiting on data" blocker):
   GameStop chain 30 → type "Hobby", isMSRP false, stockCheckMethod call, all 1,186 stores tier 2→3
