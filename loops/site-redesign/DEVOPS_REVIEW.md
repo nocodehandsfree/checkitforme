@@ -53,6 +53,12 @@ of proof (which render you looked at). Never delete findings; history stays.
   track, footer). Re-verify against P2 store-picked state when rebuilt views land.
 
 ## DevOps cycle log
+- 2026-07-03 ~07:15 CYCLE 8: hobby chip claim (3ccc8d2) verified — hobby P3a era picker
+  (?flow=hobby) renders the full era-logo wall (Mega Evolution → Diamond & Pearl, all logo-lane art
+  loading), "What are you hunting? Pick your era" header, full-bleed era tiles per comp P3a. The
+  3-lane hobby pipeline (Data registry → Logo era/set art → Website flow) is working end-to-end on
+  render c8-hobby. Crons alive (028220d0/73bb582e). (DevOps also shipped the Plans manager this window
+  — separate feature, not part of this review loop.)
 - 2026-07-03 ~05:00 CYCLE 7: round-6 claims verified — My-checks URL fix CONFIRMED (P1 closed),
   calendar system w/ populated data CONFIRMED, month count correct. 6e upgraded to mostly-confirmed
   (day-rows + 6f/6g interaction proofs remain, on Website). Crons alive (028220d0/73bb582e).
