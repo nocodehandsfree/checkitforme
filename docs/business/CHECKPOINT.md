@@ -132,17 +132,27 @@ surfacing script improvements that feed back into every lane.
 
 ## 6. Locked pricing (feeds the Stripe wiring + the admin price-editor)
 
-**Monthly plans**
+**Monthly plans — 4 tiers.** All premium features are subscription-only (for now).
 
-| Plan      | Price   | Checks / mo |
-|-----------|---------|-------------|
-| Starter   | $4.99   | 15          |
-| Collector | $9.99   | 30          |
-| Hunter    | $19.99  | 100         |
+| Plan      | Price   | Checks / mo       |
+|-----------|---------|-------------------|
+| Starter   | $4.99   | 15                |
+| Collector | $9.99   | 30                |
+| Operator  | $19.99  | 100               |
+| Hunter    | $49.99  | 300 _(confirm)_   |
 
 **Pay-as-you-go (PAYG):** 10 → 100 checks, price per check slides **99¢ down to 60¢** with volume.
 
-**Rules:** No "Operator" tier. Delta is the default lane; the live agent is the exception, not the norm.
+**Premium features — subscription-only; admin-toggleable per tier; all ON by default for now:**
+Auto-check · Zone calling · Restock alerts · Check any city (zoom past the 20-mile radius) · Advanced
+checks (set & product-type info · multiple products at once · put a product on hold) · Personalize your
+agent / clone your voice · Treasure hunts (thrift stores & hobby shops).
+
+**Build requirement:** a tier↔feature **toggle matrix** in admin — turn any feature on/off per tier with
+no code change (default: everything on for all paid tiers now). Pairs with the price-editor + the Stripe
+entitlements, so what a plan *unlocks* is data you control, not hardcoded.
+
+**Rules:** Delta is the default lane; the live agent is the exception, not the norm.
 
 Next step for pricing: an **admin price-editor** so you can change any monthly price or PAYG rate
 yourself and have it push straight into Stripe — no code change, no DevOps ticket. (This is the build
