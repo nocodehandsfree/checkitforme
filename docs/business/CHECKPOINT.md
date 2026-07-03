@@ -176,6 +176,9 @@ disagreements. So this is a **surfacing** build, not new plumbing:
 - A **filterable list** of all poll responses: date, store, our verdict, user verdict, transcript link.
 - A **count badge** for unreviewed disagreements (the training queue).
 
+This is a dedicated **Feedback / Polling** view in Admin whose whole purpose is to **improve our
+transcripts + verdicts** — every "user disagreed" row is a training signal we act on.
+
 *Small additions needed: the feedback query doesn't join the store name yet, and there's no "reviewed"
 concept yet for the badge — I'd add a `reviewed` flag on `call_feedback`.*
 
@@ -186,12 +189,16 @@ with no verification, and alerts send to whatever was typed.
 - `/pub/watch`: email → send a verify link; cell → send a 6-digit code + `POST /pub/watch/verify`.
 - Alerts (`notifyWatches`) only send to **verified** contacts — add a `verified` column to `watches`.
 - Store the verified contact **on the account**, expose it in `/app/me` (email / altContact), add an
-  update endpoint that re-verifies on change.
+  update endpoint that re-verifies on change. **"My Checks" displays the saved contact + lets the user
+  change it** — the site already shows "verify your inbox" but has nothing to read/edit until the
+  backend returns the saved contact; that's this build.
+- The alert itself must **send well**: a nice-looking branded email (Brevo) + a real SMS, not a
+  best-effort stub. Copy for both comes from the copy guy — keep the templates copy-swappable.
 - Return `verified: true/false` on the watch object.
 
 *Reuses what exists: `startPhoneVerify` / `checkPhoneVerify` (Twilio 6-digit SMS) in `src/auth.ts`, and
-the Brevo email send path already used for in-stock alerts. Email verification (the link) is the one new
-primitive.*
+the Brevo email path already used for in-stock alerts. New: the email verify-link primitive + the branded
+email/SMS templates.*
 
 ---
 
