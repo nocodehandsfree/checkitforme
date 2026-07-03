@@ -1169,6 +1169,15 @@ html[data-skin="v2"] .chip{background:linear-gradient(180deg,#2D2D34 0%,#27272D 
 html[data-skin="v2"] .chip.sel{color:#4ADE80;background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1),0 0 14px rgba(74,222,128,.25)}
 /* Pop-ups (§5.11): big card radius 26 over the dim, no grabber, no border. */
 html[data-skin="v2"] .overlay{background:rgba(5,6,9,.66)}
+html[data-skin="v2"] #success .fab-back{position:static;width:auto;height:auto;border-radius:999px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);color:#FFF;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);display:flex;align-items:center;gap:8px;margin:18px auto 8px;padding:11px 22px;font-size:12.5px;font-weight:800;letter-spacing:.1em}
+html[data-skin="v2"] #success .fab-back svg{width:15px;height:15px}
+html[data-skin="v2"] #success .fab-back svg path{stroke:#FFF}
+html[data-skin="v2"] #success .fab-back .fbk-lbl::after{content:"BACK"}
+.fbk-lbl{display:none}
+html[data-skin="v2"] #success .fab-back .fbk-lbl{display:inline}
+html[data-skin="v2"] .mychk{width:24px;height:24px;margin-left:-2px}
+html[data-skin="v2"] .fld-err{background:rgba(239,68,68,.07)!important;border:1.5px dashed rgba(239,68,68,.55)!important;box-shadow:none!important}
+.fld-err{background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.55)}
 html[data-skin="v2"] .modal{background:#26262B;border:0;border-radius:26px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 /* Signature animations (§5.3 — comp names collide with the existing ripple ckWave, so V2-suffixed). */
 @keyframes ckWaveV2{0%,100%{opacity:.15}50%{opacity:1}}
@@ -1199,11 +1208,21 @@ html[data-skin="v2"] .rsub{font-size:16px;font-weight:500;color:rgba(255,255,255
 html[data-skin="v2"] .railcalpop{background:#26262B;border:0;border-radius:22px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 html[data-skin="v2"] .rcal-h button{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 html[data-skin="v2"] body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:2px;background:#1D1D22;z-index:2147483000;pointer-events:none}
-html[data-skin="v2"] .rcal-d.has.t-in{background:rgba(74,222,128,.15);color:#4ADE80;border-radius:11px}
-html[data-skin="v2"] .rcal-d.has.t-soon{background:rgba(245,158,11,.15);color:color-mix(in srgb,#F59E0B 70%,#FFF);border-radius:11px}
-html[data-skin="v2"] .rcal-d.has.t-out{background:rgba(239,68,68,.14);color:color-mix(in srgb,#EF4444 55%,#FFF);border-radius:11px}
-html[data-skin="v2"] .rcal-d.has.t-unk{background:rgba(251,191,36,.10);color:color-mix(in srgb,#FBBF24 55%,#FFF);border-radius:11px}
+html[data-skin="v2"] .rcal-d.has{color:#FFF;font-weight:700;position:relative}
+html[data-skin="v2"] .rcal-d.has::after{content:"";position:absolute;left:50%;transform:translateX(-50%);bottom:3px;width:5px;height:5px;border-radius:50%}
+html[data-skin="v2"] .rcal-d.has.t-in::after{background:#4ADE80}
+html[data-skin="v2"] .rcal-d.has.t-soon::after{background:#F5B301}
+html[data-skin="v2"] .rcal-d.has.t-out::after{background:#FF8080}
+html[data-skin="v2"] .rcal-d.has.t-unk::after{background:#9CA3AF}
+html[data-skin="v2"] .rcal-d.schday{border:1.5px dashed rgba(74,222,128,.55);border-radius:11px;color:rgba(255,255,255,.75)}
+html[data-skin="v2"] .rcal-d.sel::after{background:#26251E}
 html[data-skin="v2"] .rcal-d.sel{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6)}
+html[data-skin="v2"] .rcal-big{padding:20px 16px 22px}
+html[data-skin="v2"] .rcal-big .rcal-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+html[data-skin="v2"] .rcal-big .rcal-h b{font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 6px}
+html[data-skin="v2"] .rcal-big .rcal-grid{gap:6px}
+html[data-skin="v2"] .rcal-big .rcal-d{height:46px;display:grid;place-items:center;font-size:16px}
+html[data-skin="v2"] .todaywrap>.cta{width:auto;margin:4px auto 0;display:inline-flex;padding:12px 28px;font-size:13px;left:50%;position:relative;transform:translateX(-50%)}
 html[data-skin="v2"] .rcal-d.today{box-shadow:inset 0 0 0 1.5px #FFF;border-radius:11px}
 html[data-skin="v2"] .rday-list{padding:3px 3px 6px}
 html[data-skin="v2"] .rday-item{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:13px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
@@ -1372,6 +1391,7 @@ html[data-skin="v2"] .buygrid .g{background:linear-gradient(180deg,#2E2E35 0%,#2
 html[data-skin="v2"] .buygrid .g svg{flex:0 0 auto}
 html[data-skin="v2"] .buygrid-h{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-top:18px}
 html[data-skin="v2"] #billcycle,html[data-skin="v2"] #buymode{display:flex;background:#1B1B20;border:0;border-radius:999px;padding:5px;gap:2px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5);margin:12px 0}
+html[data-skin="v2"] #buymode{margin-top:22px}
 html[data-skin="v2"] #billcycle button,html[data-skin="v2"] #buymode button{flex:1;border:0;border-radius:999px;background:transparent;color:#7C7C88;font-size:12.5px;font-weight:700;padding:9px 0;box-shadow:none;text-shadow:none;cursor:pointer}
 html[data-skin="v2"] #billcycle button.on,html[data-skin="v2"] #buymode button.on{flex:1.2;background:linear-gradient(180deg,#31313A 0%,#28282E 100%);color:#FFF;font-size:13px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 html[data-skin="v2"] .plan{padding:14px 16px;margin-top:10px}
@@ -1396,7 +1416,11 @@ html[data-skin="v2"] .p6d-live .buygrid-h{color:#8A8A96}
 /* 6e MY-CHECKS POP-UP REBUILD — comp structure: green wash header (My ✓ · Done · phone · plan chip),
    two overlapping raised stat tiles, Overview/Activity/Earn keys, yellow icon rows. Legacy header
    (avatar/name/cred pill) hides under v2 — the wash header replaces it. */
-html[data-skin="v2"] #acctOverlay .modal{padding:0;overflow-y:auto;overflow-x:hidden;border-radius:30px}
+html[data-skin="v2"] #acctOverlay,html[data-skin="v2"] #buyOverlay{align-items:flex-end;padding:0}
+html[data-skin="v2"] #acctOverlay .modal,html[data-skin="v2"] #buyOverlay .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:92vh;margin:0;transform:translateY(24px);opacity:0;transition:transform .28s cubic-bezier(.2,.8,.3,1),opacity .2s}
+html[data-skin="v2"] #acctOverlay.on .modal,html[data-skin="v2"] #buyOverlay.on .modal{transform:none;opacity:1}
+html[data-skin="v2"] #buyOverlay .modal{overflow-y:auto;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
+html[data-skin="v2"] #acctOverlay .modal{padding:0;overflow-y:auto;overflow-x:hidden;border-radius:28px 28px 0 0;padding-bottom:env(safe-area-inset-bottom)}
 html[data-skin="v2"] #acctOverlay .modal>*:not(.acctv2head):not(.x){display:none} /* legacy rows too — the v2 overview panel replaces them (6e comp rows) */
 html[data-skin="v2"] #acctv2panel{padding-bottom:22px!important}
 /* Capsule w/ WHITE tracked label + right arrow (comp CTA shape) — shared. */
@@ -1436,6 +1460,8 @@ html[data-skin="v2"] .ctlv2-steps .cur{color:#4ADE80;font-weight:700;position:re
 html[data-skin="v2"] .ctlv2-steps .cur::before{content:"";position:absolute;left:-24px;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor}
 html[data-skin="v2"] .ctl-term{position:relative}
 html[data-skin="v2"] .ctl-term::before{content:"";position:absolute;left:-25px;top:50%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor}
+html[data-skin="v2"] #convo_body{padding-left:0}
+html[data-skin="v2"] .ctlv2-rail .d2{display:none} /* the verdict line carries its own dot — two dots doubled up */
 html[data-skin="v2"] .ctlv2-bub{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:12px 15px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .ctlv2-bub .who{font-size:10px;font-weight:700;letter-spacing:.13em;color:#8A8A96}
 html[data-skin="v2"] .ctlv2-bub.ai .who{color:#4ADE80}
@@ -1622,7 +1648,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     </div>
     <div id="succ_wall" class="igfeed"></div>
     <!-- thumb-zone back: bottom-right floating, right-hand reach — not a full-width bar -->
-    <button class="fab-back" onclick="fabBack()" aria-label="Back" title="Back"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="#06210f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="fab-back" onclick="fabBack()" aria-label="Back" title="Back"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="#06210f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="fbk-lbl"></span></button>
   </div>
 </main>
 
@@ -1754,8 +1780,8 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 <div class="overlay" id="scheduleOverlay" onclick="if(event.target===this)closeSchedule()">
   <div class="modal" style="position:relative;max-width:420px;text-align:left">
     <span class="x" onclick="closeSchedule()">×</span>
-    <h3 style="margin:2px 0"><span class="mico" id="schIco"></span><span data-i18n="sch.title">Auto-check</span></h3>
-    <p style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5" data-i18n="sch.body">We'll check <b id="sch_store">the store</b> automatically and ping you with the results.<b id="sch_cat" style="display:none"></b></p>
+    <div style="display:flex;gap:10px;align-items:flex-start;margin:2px 0 14px"><span class="mico" id="schIco" style="margin-top:2px"></span><div style="min-width:0"><h3 style="margin:0" data-i18n="sch.title">Auto-check</h3>
+    <p style="margin:4px 0 0;color:#b9b9c8;font-size:13px;line-height:1.5" data-i18n="sch.body">We'll check <b id="sch_store">the store</b> automatically and ping you with the results.<b id="sch_cat" style="display:none"></b></p></div></div>
     <label class="klbl" data-i18n="sch.days">Which days?</label>
     <div id="sch_days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:6px 0 8px"></div>
     <label class="klbl" data-i18n="sch.time">Earliest call time</label>
@@ -2027,6 +2053,7 @@ function chainCarriesBrand(st){
 let POLICY={flags:{driverHandoff:true,restockAlerts:true,shareCards:true,kiosks:true,specificSets:true},packs:[],sub:{cents:499},perCallCents:25,headstartMin:10,kioskRefreshChecks:1}; // owner-tunable, loaded at boot
 let LEAD_PENDING=null, AUTH_PENDING=null;
 const $=id=>document.getElementById(id);
+const markFld=(el,on)=>{ if(!el)return; el.classList.toggle('fld-err',!!on); if(on&&!el.__fldClr){ el.__fldClr=1; el.addEventListener('input',()=>el.classList.remove('fld-err'),{once:false}); } };
 const toast=(m,kind)=>{const t=$('toast');t.innerHTML=m;t.classList.remove('tneutral','taccent');if(kind)t.classList.add('t'+kind);t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}; // kind: undefined=green success · 'neutral' raised dark · 'accent' yellow (T1 §5.4; styled under v2 only)
 // ── i18n (rollout-ready; Spanish live, other languages fall back to English until filled) ──
 const LANGS=[['en','EN'],['es','ES']];
@@ -2337,6 +2364,17 @@ function renderFooter(){
   const L=(POLICY.links)||{}, by=$('footYear'); if(by) by.textContent=new Date().getFullYear();
   const fb=$('footBrand'); if(fb) fb.textContent='';  // the brand name lives inside the logo now
   const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:30px;width:auto;object-fit:contain;border-radius:0;display:block;margin:-4px 0">`; }
+  // v2 footer = TWO lines: links row, then [logo …spacer… socials + lang] (owner). The © stays tiny by the logo.
+  if(isV2()){ try{
+    const meta=document.querySelector('.foot-meta'), bot=document.querySelector('.foot-bottom');
+    if(meta&&bot&&fm&&!meta.contains(fm)){
+      meta.insertBefore(fm,meta.firstChild);
+      const cp=bot.querySelector('.foot-copy'); if(cp){ cp.style.cssText='font-size:11px;color:#66666F;align-self:center;margin-right:auto'; meta.insertBefore(cp,fm.nextSibling); }
+      bot.style.display='none';
+      meta.style.cssText='display:flex;align-items:center;gap:12px;width:100%';
+      const soc=meta.querySelector('.foot-social'); if(soc) soc.style.marginLeft='auto';
+    }
+  }catch(_){ } }
   // Discord + X always shown; link to policy URLs when set, else a placeholder.
   const SOC=[['discord',ICO.discord,'Discord'],['x',ICO.x,'X']];
   const el=$('footSocials'); if(!el) return;
@@ -2347,7 +2385,7 @@ function openStoreReq(){ ['sr_name','sr_city','sr_note','sr_contact'].forEach(id
 function closeStoreReq(){ $('storeReqOverlay').classList.remove('on'); acctReturn(); }
 async function submitStoreReq(){
   const name=($('sr_name').value||'').trim();
-  if(!name){ $('sr_err').textContent=t('err.storename','Add the store name'); return; }
+  if(!name){ markFld($('sr_name'),true); $('sr_err').textContent=''; return; }
   const btn=$('sr_btn'); btn.disabled=true; btn.textContent=t('toast.submitting','Submitting…');
   const r=await api('/pub/store-request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({storeName:name,city:($('sr_city').value||'').trim(),note:($('sr_note').value||'').trim(),contact:($('sr_contact').value||'').trim()})});
   btn.disabled=false; btn.textContent=t('sr.submit','Submit store →');
@@ -2440,7 +2478,7 @@ function closeWaitlist(){ $('waitlistOverlay').classList.remove('on'); acctRetur
 async function submitWaitlist(){
   const c=($('wl_contact').value||'').trim();
   const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(c);
-  if(!isEmail&&!isPhone){ $('wl_err').textContent=t('err.contact',"Enter a valid email or phone number."); return; }
+  if(!isEmail&&!isPhone){ markFld($('wl_contact'),true); $('wl_err').textContent=''; return; }
   const btn=$('wl_btn'); btn.disabled=true; btn.textContent=t('wl.adding','Adding you…');
   const body={ contact:c, lat:USER_LOC&&USER_LOC.lat, lng:USER_LOC&&USER_LOC.lng };
   const r=await api('/pub/waitlist',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
@@ -2505,8 +2543,10 @@ async function loadSchedules(){
   if(!(isAuthed()&&ACCOUNT&&ACCOUNT.subscription==='active')){ card.style.display='none'; return; }
   const list=await appApi('/app/schedules');
   if(!Array.isArray(list)||!list.length){ card.style.display='none'; return; }
+  window.SCHEDS=list; try{ if(isV2()&&$('acctOverlay').classList.contains('on')) renderAcctScheds(); }catch(_){ }
+  if(isV2()){ card.style.display='none'; try{ renderTodayCal(); }catch(_){ } return; } // v2: auto-checks moved into My checks (owner) — and repaint sched rings
   card.style.display='';
-  if(isV2()){
+  if(false){
     // v2 (§5/6 design): eyebrow header, 34px icon tile, 14/700 line + 12/600 sub, danger capsule.
     const hd=card.querySelector('.step');
     if(hd) hd.innerHTML=`<span style="display:inline-flex;align-items:center;gap:8px;font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${AC2()}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>${t('sched.step2','Your auto-checks')}<span style="letter-spacing:.02em;text-transform:none;font-weight:600;color:#66666F">· ${t('sched.step.note2','we call on shipment days')}</span></span>`;
@@ -2540,7 +2580,7 @@ function renderAuth(){
     const cr=(ACCOUNT&&ACCOUNT.comp)?'∞':((ACCOUNT&&ACCOUNT.credits!=null)?(''+ACCOUNT.credits):'');
     const low=!(ACCOUNT&&ACCOUNT.comp) && (ACCOUNT&&ACCOUNT.credits!=null) && ACCOUNT.credits<=1;
     const badge = cr!=='' ? `<span class="credn${low?' low':''}">${cr}</span>` : '';
-    ap.innerHTML=`<b style="font-weight:800;font-size:13px">${t('pill.my','My')}</b><span class="mychk">${FCHK(13)}</span>${badge}`;
+    ap.innerHTML=`<b style="font-weight:800;font-size:13px">${t('pill.my','My')}</b><span class="mychk">${FCHK(isV2()?16:13)}</span>${badge}`;
     ap.onclick=()=>openAccount(); ap.classList.remove('anon');
   } else {
     // Anon: one pill combining the free check + sign-in, tap → phone sign-up.
@@ -2705,7 +2745,7 @@ function openAccount(fromPop){
     const planChip = comp?('∞ '+t('acct.unlimited','Unlimited')):(member?('★ '+t('acct.member','Member')):(freeUsed?t('acct.freeused','Free check used'):t('acct.free','Free')));
     const left = comp?'∞':String(n);
     let run=0; try{ const td=new Date().toDateString(); run=histList().filter(e=>e.ts&&new Date(e.ts).toDateString()===td).length; }catch(_){ }
-    head.innerHTML=`<div style="display:flex;justify-content:center;padding:9px 0 0"><span style="width:44px;height:4px;border-radius:99px;background:rgba(255,255,255,.22)"></span></div><div class="wash">
+    head.innerHTML=`<div style="display:flex;justify-content:center;padding:10px 0 0"><span style="width:52px;height:5px;border-radius:99px;background:rgba(255,255,255,.38)"></span></div><div class="wash">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <span style="display:flex;align-items:center;gap:4px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('acct.my','My')}</span>${FCHK(24)}</span>
           <span></span>
@@ -2748,7 +2788,7 @@ function closeScorePop(){
   if(c&&hm&&hm.parent){ try{ hm.parent.insertBefore(c,hm.next); }catch(_){ hm.parent.appendChild(c); } c.style.display='none'; }
   COMPOSER=false;
 }
-function inviteMsg(link){ return t('ref.sharemsg',"Yo! Check this tech out. It's sick.\nHelps us quickly find viral products in stock like Pokémon cards at retail prices.\nSign up and we both get 3 free checks: ")+link; }
+function inviteMsg(link){ const n=POLICY.referralChecks||1; return tf('ref.sharemsg2',"Yo! Check this tech out. It's sick.\nHelps us quickly find viral products in stock like Pokémon cards at retail prices.\nSign up and we both get {n} free {c}: ",{n,c:n===1?t('ref.check1','check'):t('ref.checkN','checks')})+link; }
 async function acctInvitePanel(btn){
   try{ if(!REFER||!REFER.code){ await loadRefer(); } }catch(_){ }
   const link=(REFER&&REFER.code)?referLink(REFER.code):location.origin;
@@ -2762,7 +2802,7 @@ async function acctInvitePanel(btn){
   const btnS='flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0;border:0;border-radius:14px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;font-size:10px;font-weight:800;letter-spacing:.12em;cursor:pointer';
   const ic=(pth)=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${pth}</svg>`;
   pan.innerHTML=`
-    <div style="margin-top:10px;font-size:12.5px;font-weight:600;color:#8A8A96;text-align:center">${t('ref.both','You both get <b style="color:#fff">3 free checks</b> when they sign up.')}</div>
+    <div style="margin-top:10px;font-size:12.5px;font-weight:600;color:#8A8A96;text-align:center">${tf('ref.both2','You both get <b style="color:#fff">{n} free {c}</b> when they sign up.',{n:POLICY.referralChecks||1,c:(POLICY.referralChecks||1)===1?t('ref.check1','check'):t('ref.checkN','checks')})}</div>
     <div style="margin-top:9px;display:flex;align-items:center;gap:8px;border:1.5px dashed rgba(255,255,255,.16);border-radius:13px;padding:10px 12px">
       <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:700">${esc(short)}</span>
       <button onclick="inviteCopy()" style="background:none;border:0;color:#4ADE80;font-size:11px;font-weight:800;letter-spacing:.1em;cursor:pointer">${t('ref.copybtn','COPY')}</button>
@@ -3244,7 +3284,7 @@ function renderIcons(){
   setI('scTrophy', ICO.trophy(AC()).replace('width="14" height="14"','width="20" height="20"'));
   setI('succCam', ICO.cam('#06210f').replace('width="15" height="15"','width="16" height="16"'));
   setI('watchIco', ICO.bell(AC2()).replace('width="15" height="15"','width="20" height="20"'));
-  setI('schIco', ICO.cal(AC2()).replace('width="15" height="15"','width="26" height="26"'));
+  setI('schIco', ICO.cal(AC()).replace('width="15" height="15"','width="26" height="26"'));
   setI('kIco', ICO.kioskMini(AC2()).replace('width="18" height="18"','width="20" height="20"'));
   setI('shareIco', ICO.mega(AC2()).replace('width="15" height="15"','width="20" height="20"'));
   setI('ddIco', ICO.truck(AC2()).replace('width="15" height="15"','width="20" height="20"'));
@@ -4650,7 +4690,7 @@ function showTodayLanding(forceCal){
   // Logged out (e.g. a freshly-installed Home-Screen app has its OWN empty storage) → your checks live in
   // your account, so show a clear Sign-in CTA instead of an empty "No checks today" that looks broken.
   if(!isAuthed()){
-    $('result').innerHTML=(isV2()?`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 2px 2px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('hist.title','Check history')}</span><button onclick="backToBuilder()" style="background:none;border:0;font-size:12px;font-weight:700;color:rgba(255,255,255,.55);cursor:pointer">${t('acct.done','Done')}</button></div><div style="padding:0 2px 8px;font-size:12.5px;font-weight:600;color:#8A8A96">${(()=>{try{const now=new Date();const nn=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length;return nn+' '+t('hist.inmonth','checks in')+' '+now.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long'});}catch(_){return ''}})()}</div>`:'')+`
+    $('result').innerHTML=(isV2()?`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 2px 2px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('hist.title','Check history')}</span><span></span></div><div style="padding:0 2px 8px;font-size:12.5px;font-weight:600;color:#8A8A96">${(()=>{try{const now=new Date();const nn=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length;return nn+' '+t('hist.inmonth','checks in')+' '+now.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long'});}catch(_){return ''}})()}</div>`:'')+`
       <div class="todaywrap">
         <div class="emptybox" style="margin-top:24px">
           <span style="opacity:.45;filter:grayscale(.7)">${FCHK(42)}</span>
@@ -4663,7 +4703,7 @@ function showTodayLanding(forceCal){
     navMark('result');
     return;
   }
-  $('result').innerHTML=(isV2()?`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 2px 2px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('hist.title','Check history')}</span><button onclick="backToBuilder()" style="background:none;border:0;font-size:12px;font-weight:700;color:rgba(255,255,255,.55);cursor:pointer">${t('acct.done','Done')}</button></div><div style="padding:0 2px 8px;font-size:12.5px;font-weight:600;color:#8A8A96">${(()=>{try{const now=new Date();const nn=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length;return nn+' '+t('hist.inmonth','checks in')+' '+now.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long'});}catch(_){return ''}})()}</div>`:'')+`
+  $('result').innerHTML=(isV2()?`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 2px 2px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('hist.title','Check history')}</span><span></span></div><div style="padding:0 2px 8px;font-size:12.5px;font-weight:600;color:#8A8A96">${(()=>{try{const now=new Date();const nn=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length;return nn+' '+t('hist.inmonth','checks in')+' '+now.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long'});}catch(_){return ''}})()}</div>`:'')+`
     <div class="todaywrap">
       <div class="emptybox" style="margin-top:6px;${forceCal?'display:none':''}">
         <span style="opacity:.45;filter:grayscale(.7)">${FCHK(42)}</span>
@@ -4722,6 +4762,22 @@ let ACT_WOFF=0, ACT_DAY=null, ACT_TONE='';
 function actWeek(d){ ACT_WOFF=Math.max(0,ACT_WOFF-d); ACT_DAY=null; ACT_TONE=''; acctTab('activity',true); }
 function actPick(i){ ACT_DAY=(ACT_DAY===i?null:i); ACT_TONE=''; acctTab('activity',true); }
 function actTone(tn){ ACT_TONE=(ACT_TONE===tn?'':tn); acctTab('activity',true); }
+// Auto-checks block inside My checks (owner: manage them where the account lives; shows the product
+// per check so multi-vertical users see what each auto-check is for).
+function renderAcctScheds(){
+  const host=$('acctScheds'); if(!host) return;
+  const list=window.SCHEDS||[];
+  if(!list.length){ host.innerHTML=''; return; }
+  const cal='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>';
+  host.innerHTML=`<div style="margin-top:16px;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${t('sched.step2','Your auto-checks')}</div>`+
+    list.map(sc=>{ const days=(sc.daysOfWeek||'').split(',').filter(Boolean).map(d=>DOWSHORT[d]).join(', ')||t('sched.shipday','shipment day');
+      return `<div style="display:flex;align-items:center;gap:11px;margin-top:8px;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)">
+      <span style="width:34px;height:34px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${cal}</span>
+      <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sc.store)} · <b style="color:var(--accent,#FFCB05)">${esc(sc.category)}</b></div>
+        <div style="margin-top:2px;font-size:12px;font-weight:600;color:#8A8A96">${esc(days)} · ${t('sched.from','from')} ${esc(sc.timeLocal||'10:00')}${sc.specificProduct?(' · '+esc(sc.specificProduct)):''}</div></div>
+      <button onclick="cancelSchedule(${sc.id})" style="flex:0 0 auto;background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.4);color:#FF8A8A;padding:7px 14px;border-radius:999px;font-weight:700;font-size:12px;cursor:pointer">${t('sched.cancel','Cancel')}</button>
+    </div>`;}).join('');
+}
 function acctTab(which,fromPop){
   const modal=document.querySelector('#acctOverlay .modal'); if(!modal) return;
   try{ if(!fromPop && $('acctOverlay').classList.contains('on') && !(history.state&&history.state.v==='acct'&&history.state.t===which)) history.pushState({v:'acct',t:which},''); }catch(_){ }
@@ -4755,8 +4811,10 @@ function acctTab(which,fromPop){
       (member?row(spark,t('acct.row.plan','Manage plan'),t('plan.cycle','Billed monthly · cancel anytime'),"ACCT_RETURN='overview';closeAccount();openBuy('manage')"):'')+
       row(calic,t('acct.row.hist','Check history'),histSub,"ACCT_RETURN='overview';closeAccount();openHistory(true)")+
       row(gift,t('acct.row.earn','Earn free checks'),t('acct.row.earn.sub','4 ways. Open to everyone.'),"acctTab('earn')")+
+      `<div id="acctScheds"></div>`+
       caps+
       `<button onclick="doSignOut()" style="display:block;width:100%;margin-top:16px;background:none;border:0;text-align:center;font-size:13px;font-weight:700;color:#7C7C88;cursor:pointer">${t('acct.signout','Sign out')}</button>`;
+    renderAcctScheds(); if(!(window.SCHEDS&&window.SCHEDS.length)) try{ loadSchedules(); }catch(_){ }
     return;
   }
   const hist=histList().filter(e=>e.cid&&e.ts);
@@ -4778,7 +4836,7 @@ function acctTab(which,fromPop){
       </div>`; }).join('');
     const scope=(selIdx>=0&&ACT_DAY!=null)?perDay[selIdx]:hist.filter(e=>e.ts>=dayTs[0]&&e.ts<dayTs[6]+86400000);
     const tones={in:0,out:0,soon:0,unk:0}; scope.forEach(e=>{ tones[railTone(e)]=(tones[railTone(e)]||0)+1; });
-    const TONECOL={in:'#4ADE80',out:'#FF8080',soon:'#F5B301',unk:'#FBBF24'};
+    const TONECOL={in:'#4ADE80',out:'#FF8080',soon:'#F5B301',unk:'#9CA3AF'};
     const cell=(nv,lb,tn)=>`<div onclick="actTone('${tn}')" style="text-align:center;cursor:pointer;${ACT_TONE===tn?'background:rgba(255,255,255,.05);border-radius:12px;':''}padding:2px 0"><div style="font-size:18px;font-weight:800;color:${ACT_TONE&&ACT_TONE!==tn?'rgba(255,255,255,.35)':(TONECOL[tn]||'#FFF')}">${nv}</div><div style="margin-top:2px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#8A8A96">${lb}</div></div>`;
     const vlabel=e=>{ const tn=railTone(e); return tn==='in'?t('v.in','In stock!'):tn==='out'?t('v.out','Not in stock'):tn==='soon'?t('v.soon','Restock incoming!'):t('fbk.unsure','Unclear'); };
     const agoTx=e=>{ try{ return agoStr(e.ts); }catch(_){ return ''; } };
@@ -4789,7 +4847,7 @@ function acctTab(which,fromPop){
       <span style="text-align:right;flex:0 0 auto"><span style="display:block;font-size:12.5px;font-weight:700;color:rgba(255,255,255,.7)">${vlabel(e)}</span><span style="display:block;margin-top:2px;font-size:11px;font-weight:600;color:#8A8A96">${agoTx(e)}</span></span>
     </button>`).join('');
     const arrow=(d,dis)=>`<button ${dis?'disabled':''} onclick="actWeek(${d})" style="flex:0 0 auto;width:26px;height:26px;border:0;border-radius:9px;background:${dis?'rgba(255,255,255,.04)':'linear-gradient(180deg,#31313A 0%,#26262C 100%)'};color:${dis?'#4A4A52':'#CDCDD8'};display:flex;align-items:center;justify-content:center;cursor:${dis?'default':'pointer'};box-shadow:${dis?'none':'0 6px 10px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)'}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="${d<0?'M15 18l-6-6 6-6':'M9 18l6-6-6-6'}"/></svg></button>`;
-    const calico='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>';
+    const calico='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>';
     panel.innerHTML=`<div style="background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:14px 16px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">
         <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:10px;font-weight:700;letter-spacing:.15em;color:#8A8A96">${esc(t('acct.perweek2','Checks this week').toUpperCase())}</span><a onclick="ACCT_RETURN='activity';closeAccount();openHistory(true)" style="cursor:pointer;display:inline-flex">${calico}</a></div>
         <div style="margin-top:12px;display:flex;align-items:flex-end;gap:6px">
@@ -4806,7 +4864,7 @@ function acctTab(which,fromPop){
     // earn items = 2-COL GRID of icon tiles (14/700 + 11.5/600 + reward-chip SLOT); footer line.
     // Reward numbers stay OMITTED (DECIDED: never invent — comp's +N CHECKS are placeholders; the
     // chip renders the moment a runtime number exists). Handlers preserved.
-    const IC=p=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+    const IC=p=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
     const icons={
       store:IC('<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>'),
       invite:IC('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>'),
@@ -5139,7 +5197,10 @@ function renderTodayCal(){
   const first=new Date(y,mo,1).getDay(), n=new Date(y,mo+1,0).getDate();
   const today=tsDay(Date.now());
   let cells=''; for(let i=0;i<first;i++) cells+='<div></div>';
-  for(let d=1;d<=n;d++){ const key=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); const has=days.has(key), isToday=key===today; cells+=`<div class="rcal-d ${has?'has t-'+(dayTones[key]||'unk'):''} ${isToday?'today':''}" ${has?`onclick="todayPickDay('${key}')"`:''}>${d}</div>`; }
+  const schDows=new Set((window.SCHEDS||[]).flatMap(x=>String(x.daysOfWeek||'').split(',').filter(Boolean).map(Number)));
+  for(let d=1;d<=n;d++){ const key=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); const has=days.has(key), isToday=key===today;
+    const sched=schDows.size&&key>=today&&schDows.has(new Date(y,mo,d).getDay());
+    cells+=`<div class="rcal-d ${has?'has t-'+(dayTones[key]||'unk'):''} ${sched&&!has?'schday':''} ${isToday?'today':''}" ${has?`onclick="todayPickDay('${key}')"`:''}>${d}</div>`; }
   el.innerHTML=`<div class="rcal-h">${nav(-1,'Previous month')}<b>${esc(title)}</b>${nav(1,'Next month')}</div>
     <div class="rcal-grid">${dow.map(x=>`<div class="rcal-dow">${x}</div>`).join('')}${cells}</div>`;
 }
@@ -5334,7 +5395,7 @@ function closeWatch(){ $('watchOverlay').classList.remove('on'); }
 async function submitWatch(){
   const c=($('watch_contact').value||'').trim();
   const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(c);
-  if(!isEmail&&!isPhone){ $('watch_err').textContent=t('err.contact',"Enter a valid email or phone number."); return; }
+  if(!isEmail&&!isPhone){ markFld($('watch_contact'),true); $('watch_err').textContent=''; return; }
   const btn=$('watch_btn'); btn.disabled=true; btn.textContent=t('watch.setting','Setting it up…');
   const r=await api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,contact:c})});
   btn.disabled=false; btn.textContent=t('watch.cta','Watch this store →');
@@ -5750,7 +5811,7 @@ function closeSchedule(){ $('scheduleOverlay').classList.remove('on'); }
 async function submitSchedule(){
   let contact=($('sch_contact').value||'').trim();
   if(!contact){ try{ contact=(ACCOUNT&&ACCOUNT.email)||(ACCOUNT&&ACCOUNT.phone)||''; }catch(e){} } // empty box → default to their account contact
-  if(contact){ const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(contact); if(!isEmail&&!isPhone){ $('sch_err').textContent=t('err.contact',"Enter a valid email or phone number."); return; } }
+  if(contact){ const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(contact); if(!isEmail&&!isPhone){ markFld($('sch_contact'),true); $('sch_err').textContent=''; return; } }
   const btn=$('sch_btn'); btn.disabled=true; btn.textContent=t('sch.setting','Setting it up…');
   const body={ retailerId:SEL_STORE.id, categoryId:SEL_CAT, specificProduct:SEL_PRODUCT||undefined,
     daysOfWeek:[...SCH_DAYS].join(','), timeLocal:$('sch_time').value||'10:00', contact:contact||undefined };

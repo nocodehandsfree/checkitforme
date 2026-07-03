@@ -157,7 +157,7 @@ try {
   await pg3.waitForTimeout(400);
   await pg3.evaluate(() => { const b = document.getElementById('watch_btn'); const i = document.getElementById('watch_contact'); if (i) i.value = ''; b && b.click(); });
   await pg3.waitForTimeout(400);
-  has('watch empty submit → error line', await pg3.evaluate(() => (document.getElementById('watch_err')?.textContent || '').length > 3));
+  has('watch empty submit → field highlighted (owner: no red words)', await pg3.evaluate(() => document.getElementById('watch_contact')?.classList.contains('fld-err')));
   await pg3.close();
 
   // ---- 6c. STANDING-WATCH INVARIANTS (manual probes made permanent).
