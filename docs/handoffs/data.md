@@ -65,6 +65,33 @@ ME03 = Perfect Order — the design grid had these mislabeled).
 
 ## Current focus (KEEP UPDATED)
 
+**Session 2026-07-03 (late) — Hobby expansion + phonebook-source assessment. Staging.**
+- **8 more verified card shops live on the LA Hobby chip** (was 16 CA Hobby, mostly GameStop; the LA
+  metro read as 5 GameStop + 2 indies). New indies, each Census-geocoded, real address/phone/hours,
+  in **`data/hobby-shops.json`** (version-controlled = re-importable to any env): Cards and Coffee
+  (Hollywood, Calabasas, Murrieta, Salt Lake City), Cash Cards Unlimited (Canoga Park, Thousand Oaks),
+  CoreTCG (Pasadena), LA Sports Cards (Burbank). Import result 8 inserted / 0 dup. LA Hobby chip now
+  **13 near-LA (5 GameStop + 8 indie)**, open/closed labels computing right off the hours I set.
+  Each got its OWN chain typed Hobby at insert (importer: category "hobby" → type Hobby), so they
+  survive the now-fixed boot backfill (fill-only skips already-typed chains).
+- **⚠️ CA GameStop under-imported:** CA has only 14 GameStop rows typed Hobby vs FL 106 / TX 64 / NY 59.
+  National GameStop = 1,186 (the Hobby backbone) but the CA slice is a thin early batch. Backfilling CA
+  GameStop needs a store list (their locator is bot-walled like WPN) — follow-up, owner's call.
+- **Phonebook-source verdict (owner asked "is there a source to grab a whole bunch like a phonebook"):**
+  the clean bulk sources are all walled from a plain fetch — WPN/Wizards locator = HTTP 403, Cards&Coffee
+  site = 402, cardshophub.com = a JS-rendered SPA (fetch sees only the title) AND rate-limited ("Too many
+  requests"). So no vacuum-it API. Two real paths: (a) point the research-Claude at a metro and have it
+  emit JSON in the importStores shape (schema below) — I one-shot import it; (b) a headless-browser
+  (Playwright is installed) harvest of cardshophub/locators — bigger job, ToS-gray, needs owner OK.
+  Nothing for the owner to do locally either way.
+- **Review pass (owner: "make sure everything's good"):** merged 30 upstream commits, `tsc` clean.
+  Verified intact on staging: `/pub/pokemon-sets` serves JSON (13 eras, v7 assets), `?type=Hobby`
+  filter, unverified `shipmentDay` still withheld from consumers, trimmed hours labels rendering.
+  One latent gap: a **Thrift** chip (owner's 4th taxonomy word) would be EMPTY — zero chains typed
+  "Thrift" (thrift stores sit under Discount/Off-Price). Not wired as a live chip yet, so not blocking.
+- **Durability:** all of the above is on STAGING. To make permanent, import `data/hobby-shops.json` to
+  prod (`POST checkitforme.com/api/stores/import`) — owner go/no-go, since prod shops are instantly callable.
+
 **⚡ CLOBBER ROOT CAUSE FOUND + FIXED (Website, 2026-07-03 ~05:30):** `backfillChainTypes()` in
 `src/db/import-data.ts` ran on EVERY boot and force-overwrote every chain's type from the name
 heuristic — that's what kept reverting GameStop/Burbank/PokeMall to "Other" on each deploy. It is
