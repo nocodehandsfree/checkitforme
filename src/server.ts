@@ -235,13 +235,14 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${esc(plainName)}">`,
     // Apex/invite embeds (owner): the CARD IMAGE carries the headline, so the visible link title is
-    // just the address — no repeated "Is it in stock?" under the image.
-    `<meta property="og:title" content="${esc(brand.key === "runner" ? host.replace(/^www\./, "") : brand.title)}">`,
+    // just the address — no repeated "Is it in stock?" under the image. NB: behind the proxy the Host
+    // header is the internal Railway hostname — show the public domain, never that.
+    `<meta property="og:title" content="${esc(brand.key === "runner" ? (/railway\.app$/i.test(host) ? (config.staging.on ? "staging.checkitforme.com" : "checkitforme.com") : host.replace(/^www\./, "")) : brand.title)}">`,
     `<meta property="og:description" content="${esc(brand.desc)}">`,
     `<meta property="og:url" content="${canonical}">`,
     `<meta property="og:image" content="${ogImage}">`,
     `<meta name="twitter:card" content="summary_large_image">`,
-    `<meta name="twitter:title" content="${esc(brand.key === "runner" ? host.replace(/^www\./, "") : brand.title)}">`,
+    `<meta name="twitter:title" content="${esc(brand.key === "runner" ? (/railway\.app$/i.test(host) ? (config.staging.on ? "staging.checkitforme.com" : "checkitforme.com") : host.replace(/^www\./, "")) : brand.title)}">`,
     `<meta name="twitter:description" content="${esc(brand.desc)}">`,
     `<meta name="twitter:image" content="${ogImage}">`,
     `<style>:root{--accent:${brand.accent};--accent2:${brand.accent2 || brand.accent};--logo-scale:${brand.logoScale || 1}}</style>`,
