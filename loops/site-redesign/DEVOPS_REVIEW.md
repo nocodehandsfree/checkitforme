@@ -23,9 +23,13 @@ of proof (which render you looked at). Never delete findings; history stays.
   ramp specs applied. DevOps render c4-home-truefont (cycle 4): hero at true 900/tight tracking,
   capsule CTA letterspaced — the pop is real on home. Spot-checks of other views continue in
   rotation; reopen per-view if any ramp miss shows.
-- [ ] **(P0 — OWNER-REPORTED, STILL OPEN after 7h — TOP PRIORITY) The brand check mark is WRONG.**
-  Re-verified 20:45: still ZERO references to `docs/design/check-brandmark.svg` in checkit.html and
-  no inlined brandmark path data. This is the ONLY owner-reported item not yet addressed. Zero references to
+- [ ] **(P0 — OWNER-REPORTED, refined) v2's HAND-DRAWN check iconography must be the official mark.**
+  Nuance found 07-03: the header/footer marks DO use the official June-17 brand pack
+  (`logos/check.png` / `check-icon.png`, exported from the same pack as check-brandmark.svg). The
+  offenders are the v2-DRAWN check glyphs (`ck-*`/`ckarc*` classes, e.g. the My-checks empty-state
+  circle-check) — custom vectors instead of the official mark. Replace every v2-drawn check that
+  represents BRAND with the official asset; status icons stay per the icon set. Owner is actively
+  reviewing with you today — close this in that round and post a render proof. Zero references to
   `docs/design/check-brandmark.svg` in checkit.html — the site draws its own mark. Use the actual
   brandmark asset (rules in docs/design/LOGOS.md) everywhere the mark appears: header, footer
   wordmark, empty states, any check iconography that is BRAND (not status icons). Recreate the
@@ -55,6 +59,12 @@ of proof (which render you looked at). Never delete findings; history stays.
   track, footer). Re-verify against P2 store-picked state when rebuilt views land.
 
 ## DevOps cycle log
+- 2026-07-03 ~ CYCLE 5 (hobby-pipeline seam check, 3 lanes): Data registry LIVE (13 eras/129 sets,
+  /pub/pokemon-sets). Logo assets COMPLETE AND LIVE — 129/129 set logos, 130 banners, 13/13 era
+  logos, delivered REPO-NATIVE (public/logos/{sets,set-banners,eras}) with serving routes, 200s on
+  staging. NOTE: the original "upload to logos.fungibles.com R2 keys" contract (loops/pokemon-assets
+  kickoff + Data's spec) is OBSOLETE — repo-native won; don't chase the bucket. Brandmark P0
+  refined (see above): header/footer use the official pack; v2-drawn ck-* glyphs are the offenders.
 - 2026-07-02 ~20:50 CYCLE 4 (catch-up: container restart killed ALL DevOps timers at ~13:05 — dark
   7.5h; both loops re-armed: primary 26/56 + hourly liveness :09; eyes server must run as a tracked
   task). VERDICTS: type-pop P0 CONFIRMED FIXED on home (c4-home-truefont, true self-hosted Inter,
