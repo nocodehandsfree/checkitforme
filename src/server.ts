@@ -1031,6 +1031,10 @@ app.get("/pub/stores/near", async (c) => {
     if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
   }
   const mode = c.req.query("mode") || ""; // call | kiosk | site | "" = all
+  // Store-type filter (the home chips): ?type=Hobby returns ONLY that type, SERVER-side — in a dense
+  // metro the nearest-200 page is wall-to-wall Retail, so client-side filtering would starve the
+  // Hobby/Thrift chips. Matches the chain's admin type exactly ("Hobby", "Thrift", …).
+  const typeF = (c.req.query("type") || "").trim();
 
   const chainRows = await cachedChains();
   const types = new Map(chainRows.map((x) => [x.id, x.type]));
@@ -1087,6 +1091,7 @@ app.get("/pub/stores/near", async (c) => {
       || (mode === "call" && callable(r))
       || (mode === "kiosk" && r.hasKiosk === true)
       || (mode === "site" && r.chainId != null && stockMethod.get(r.chainId) === "site"))
+    .filter((r) => !typeF || (((r.chainId && types.get(r.chainId)) || "Other") === typeF))
     .filter((r) => !q || r.name.toLowerCase().includes(q) || (r.location || "").toLowerCase().includes(q))
     .map((r) => {
       const miles = hasLoc && r.lat != null && r.lng != null ? Math.round(haversineMi(lat, lng, r.lat, r.lng) * 10) / 10 : null;
