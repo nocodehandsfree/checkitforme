@@ -4949,6 +4949,22 @@ let HOBBY={data:null,era:null,set:null,prods:null};
 // §5.17 art placeholder: 45° stripes + label. (Spec says mono label; §4 + the token harness mandate
 // Inter — Inter uppercase wins; DECIDED in manifest.)
 function v2ArtPh(label,h){ return `<div style="height:${h}px;border-radius:16px;background:repeating-linear-gradient(45deg,#2B2B33 0 12px,#25252C 12px 24px);display:grid;place-items:center"><span style="font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${esc(label)}</span></div>`; }
+// Square art placeholder (missing set-banner): 45° stripes + centered code, fills the tile.
+function hobArtPh(label){ return `<div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,#2B2B33 0 12px,#25252C 12px 24px);display:grid;place-items:center"><span style="font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#8A8A96">${esc(label)}</span></div>`; }
+// Area-normalized set-logo sizing: equal VISUAL footprint no matter the logo's shape, so a wide logo
+// (Black Bolt/White Flare, Pitch Black) never renders tiny next to a chunky one. Matches the delivery
+// recipe: scale=sqrt(targetArea/area), clamped to a max width/height, expressed as % so it stays
+// responsive if the tile resizes. Runs on <img> load once naturalWidth/Height are known.
+function hobSizeLogo(img){
+  const box=img.parentElement; if(!box) return;
+  const W=box.clientWidth; if(!W){ requestAnimationFrame(()=>hobSizeLogo(img)); return; }
+  const nw=img.naturalWidth, nh=img.naturalHeight; if(!nw||!nh) return;
+  const targetArea=0.155*W*W, maxW=0.90*W, maxH=0.60*W;
+  let sc=Math.sqrt(targetArea/(nw*nh));
+  if(nw*sc>maxW) sc=maxW/nw;
+  if(nh*sc>maxH) sc=maxH/nh;
+  img.style.width=(100*nw*sc/W)+'%';
+}
 function exitHunt(){ document.body.classList.remove('huntmode'); const h=$('hobby'); if(h) h.classList.add('hidden'); }
 async function openHobby(){
   if(!isV2()) return; // hard gate: never reachable outside the preview skin
@@ -4989,11 +5005,13 @@ function renderHobbyEras(){
     </button>`).join('')+`</div></div>`;
 }
 function hobbyPickEra(i){ HOBBY.era=HOBBY.data.eras[i]; renderHobbySets(); window.scrollTo({top:0}); }
-// P3 — the banner IS the tile (no overlays, no set names, never grayed); JUST DROPPED chip on fresh
-// releases; future sets stay, badged UPCOMING (feed rule: badge, don’t drop); strip = code · date.
+// P3 — composited SQUARE tiles (owner 2026-07-03): darkened set key art as the field + the set logo
+// raised on top with a drop shadow, area-normalized so every logo carries equal visual weight. JUST
+// DROPPED chip on fresh releases; future sets stay, badged UPCOMING (feed rule: badge, don’t drop);
+// strip below = code · date. Art -> /logos/set-banners/<key>, logo -> /logos/sets/<key> (both from feed).
 function renderHobbySets(){
   // P3 comp: inside the big card — centered title + sub, accent-ringed ERA CHIP (logo · 'N sets' ·
-  // Change key), then a 2-COL GRID of set tiles (112px covers, chips, code+date strip ON the tile);
+  // Change key), then a 2-COL GRID of square set tiles (art+logo composite, chips, code+date strip);
   // the freshest JUST-DROPPED tile takes the accent ring. Comp's full S2 track on this screen is
   // SKIPPED — the launch-state law (Retail+Kiosk only) outranks the comp here; DECIDED.
   const h=$('hobby'); const era=HOBBY.era; const now=Date.now();
@@ -5004,8 +5022,10 @@ function renderHobbySets(){
     const future=rel>now, fresh=!future&&rel>now-45*86400000;
     const hero=fresh&&!heroDone; if(hero)heroDone=true;
     const inner=`<div style="border-radius:16px;overflow:hidden;background:${hero?'#23232A':'linear-gradient(180deg,#2D2D34 0%,#27272D 100%)'};box-shadow:${hero?'none':'0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)'}">
-      <div style="position:relative;height:112px;overflow:hidden">
-        <img src="${esc(st.banner||'')}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh('${esc(st.code)}',112));this.remove()">
+      <div style="position:relative;aspect-ratio:1/1;overflow:hidden">
+        <img src="${esc(st.banner||'')}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.6)" onerror="this.parentElement.insertAdjacentHTML('afterbegin',hobArtPh('${esc(st.code)}'));this.remove()">
+        <div style="position:absolute;inset:0;background:radial-gradient(62% 62% at 50% 52%,rgba(0,0,0,.34) 0%,rgba(0,0,0,0) 70%);pointer-events:none"></div>
+        ${st.logo?`<img src="${esc(st.logo)}" alt="${esc(st.name||st.code)}" onload="hobSizeLogo(this)" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:78%;height:auto;filter:drop-shadow(0 5px 7px rgba(0,0,0,.6))" onerror="this.remove()">`:''}
         ${fresh?`<span class="hob-chip" style="background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF),var(--accent,#FFCB05));color:#26251E">${t('hob.dropped','Just dropped')}</span>`:''}
         ${future?`<span class="hob-chip" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#FFF">${t('hob.upcoming','Upcoming')}</span>`:''}
       </div>
