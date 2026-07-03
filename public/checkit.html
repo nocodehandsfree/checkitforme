@@ -796,6 +796,17 @@ __BRAND_HEAD__
   .maplegend .lgd{width:10px;height:10px;border-radius:50%;display:inline-block;flex:0 0 auto}
   .instk{display:inline-flex;vertical-align:-3px;margin-right:3px}
   .besttag{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#06210f;background:var(--green);padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
+  /* PRICE HUNT (item 3) — verdict price line + cross-store cheapest-first panel. Hidden until a quote exists. */
+  .rprice{margin-top:8px;font-size:14px;font-weight:700;color:#e8e8ee}
+  .rprice b{color:#fff;font-weight:900}
+  .ph-panel{margin:12px 0 4px;background:#1B1B20;border-radius:14px;padding:10px 12px;box-shadow:inset 0 2px 6px rgba(0,0,0,.4)}
+  .ph-h{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#8A8A96;margin-bottom:6px}
+  .ph-row{display:flex;justify-content:space-between;align-items:center;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px;font-weight:700}
+  .ph-row:last-child{border-bottom:0}
+  .ph-row.best .ph-pr{color:var(--green)}
+  .ph-st{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ph-oos{font-size:9px;font-weight:800;text-transform:uppercase;color:#8A8A96;margin-left:4px}
+  .ph-pr{font-weight:900;white-space:nowrap;margin-left:10px}
   .kioskbadge{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--purple);padding:2px 6px;border-radius:6px;margin-left:6px;vertical-align:middle}
   .bestwhy{color:#a9e6bd !important}
   .kioskmark{width:42px;height:42px;flex:0 0 auto;display:grid;place-items:center}
@@ -2185,6 +2196,7 @@ const I18N={ es:{
   'mode.hobby':'Hobby','find.hobby':'① Encuentra una tienda de cartas','find.hobbystore':'① Ahora elige una tienda de cartas','hob.hunting':'BUSCANDO','hob.shopprices':'PRECIOS DE TIENDA','empty.hobby':'No hay tiendas de cartas en {r} mi — amplía el radio.','hob.pickexact':'Elige el set o producto exacto',
   'mode.thrift':'Segunda mano','find.thrift':'① Encuentra una tienda de segunda mano','empty.thrift':'No hay tiendas de segunda mano en {r} mi — amplía el radio.',
   'co.title':'Pago','co.change':'Cambiar','co.orcard':'O paga con tarjeta','co.loading':'Cargando pago seguro…','co.subscribe':'Suscribirse','co.pay':'Pagar','co.cancel':'Cancela cuando quieras','co.secured':'Protegido por','co.processing':'Procesando…','co.failed':'Pago fallido. Inténtalo de nuevo.','co.redirect':'Abriendo pago seguro…','co.checksmo':'verificaciones al mes','co.monthly':'mensual','co.annual':'anual','co.paygsub':'Pago único · las verificaciones no caducan',
+  'ph.quoted':'Precio indicado','ph.overmsrp':'sobre el precio de lista','ph.title':'Precios encontrados','ph.best':'MEJOR','ph.oos':'agotado',
   'buy.tabplans':'Planes','buy.tabpayg':'Por uso','plan.on':'Tienes','plan.checks':'verificaciones','plan.percheck':'aprox.','plan.percheck2':'por verificación','plan.noexpire':'no caducan','acct.stat.run2':'Verificaciones hoy','acct.perweek2':'Verificaciones esta semana','auth.newcell':'Danos tu nuevo celular','ph.cellmail':'celular o correo',
   'ref.sharemsg':'¡Oye! Mira esta tecnología. Está increíble.\nNos ayuda a encontrar productos virales en stock como cartas Pokémon a precio de tienda.\nRegístrate y ambos ganamos 3 verificaciones gratis: ','ref.copied':'¡Enlace de invitación copiado!','ref.copy':'Copia tu enlace de invitación:','ref.both':'Ambos reciben <b style="color:#fff">3 verificaciones gratis</b> cuando se registran.','ref.copybtn':'COPIAR','ref.text':'Mensaje','ref.post':'Publicar','ref.more':'Más',
   'kioskonly':'Solo kiosco','kiosk.precall':'Solo kiosco. Preguntaremos si su kiosco está funcionando y surtido, no por un envío.',
@@ -4294,8 +4306,42 @@ function fillP(s,o,tn){ try{ const oc=(o&&Array.isArray(o.cats)&&o.cats[0])||(o&
   // Owner 2026-07-02: the {store} token stays WHITE on every verdict (overrides the 6m comp's red — too hard to read on the wash).
   const sc='#fff';
   const pn=esc((o&&o.productName)||catLabel()||oc||'it'); const sn=esc((o&&o.storeName)||(SEL_STORE&&SEL_STORE.name)||'the store'); const cn=esc(catLabel()||oc||'it'); const dy=esc((o&&o.shipmentDay)?fmtShipDay(o.shipmentDay):'soon'); return String(s==null?'':s).replace(/\{product\}/g,'<b style="color:#fff">'+pn+'</b>').replace(/\{store\}/g,'<b style="color:'+sc+'">'+sn+'</b>').replace(/\{category\}/g,'<b style="color:#fff">'+cn+'</b>').replace(/\{day\}/g,'<b style="color:#fff">'+dy+'</b>'); }catch(e){ return String(s==null?'':s); } }
+// ===== PRICE HUNT (item 3) — cross-store cheapest-first comparison. Populates from a completed check's
+// quoted price (o.priceCents). That field is pending on GET /pub/result + /app/history (see the price
+// contract note); until it lands this renders NOTHING — the moment it ships, the price line + panel light
+// up with zero UI change. "Get ahead of it" so calling multiple stores displays the cheapest. =====
+let PRICE_HUNT=(()=>{ try{ return JSON.parse(localStorage.getItem('cifm_pricehunt')||'{}')||{}; }catch(_){ return {}; } })();
+function phSave(){ try{ localStorage.setItem('cifm_pricehunt', JSON.stringify(PRICE_HUNT)); }catch(_){ } }
+function phProductKey(o){ const p=(o&&o.productName)||(o&&Array.isArray(o.cats)&&o.cats.join(', '))||(catLabel()||''); return String(p).toLowerCase().trim(); }
+function phFeedRetail(o){ // best-effort MSRP for the over-retail delta (hobby feed carries products[].retail)
+  try{ const name=String((o&&o.productName)||'').toLowerCase(); if(!name||!HOBBY||!HOBBY.data) return null;
+    for(const era of (HOBBY.data.eras||[])) for(const set of (era.sets||[])) for(const pr of (set.products||[]))
+      if(pr.retail!=null && (name.includes(String(pr.type||'').toLowerCase()) || String(pr.type||'').toLowerCase().includes(name))) return Math.round(pr.retail*100);
+  }catch(_){ } return null; }
+function recordResultPrice(o){
+  try{ const cents=Number(o&&o.priceCents); if(!o||!isFinite(cents)||cents<=0) return;
+    const key=phProductKey(o); if(!key) return;
+    const store=(o.storeName)||(SEL_STORE&&SEL_STORE.name)||''; const sid=(o.storeId)||(SEL_STORE&&SEL_STORE.id)||store;
+    const arr=(PRICE_HUNT[key]=PRICE_HUNT[key]||[]);
+    const row={ store, sid, cents, inStock:o.confirmed===true, ts:o.ts||Date.now() };
+    const i=arr.findIndex(x=>String(x.sid)===String(sid)); if(i>=0) arr[i]=row; else arr.push(row);
+    phSave();
+  }catch(_){ } }
+function priceLineHTML(o){ // reserved verdict price line + amber over-MSRP delta (empty if no quote)
+  const cents=Number(o&&o.priceCents); if(!isFinite(cents)||cents<=0) return '';
+  const msrp=phFeedRetail(o); const over=(msrp&&cents>msrp)?` <span style="color:#F59E0B;font-weight:800">+${money(cents-msrp)} ${t('ph.overmsrp','over MSRP')}</span>`:'';
+  return `<div class="rprice">${t('ph.quoted','They quoted')} <b>${money(cents)}</b>${over}</div>`; }
+function pricesFoundHTML(o){ // cross-store cheapest-first list for the checked product (empty if none)
+  const key=phProductKey(o); const rows=(PRICE_HUNT[key]||[]).slice().filter(r=>isFinite(r.cents)&&r.cents>0);
+  if(rows.length<1) return '';
+  rows.sort((a,b)=> (a.inStock===b.inStock ? a.cents-b.cents : (a.inStock?-1:1)) );
+  const best=rows.find(r=>r.inStock)||rows[0];
+  const li=rows.map(r=>{ const isBest=r===best;
+    return `<div class="ph-row${isBest?' best':''}"><span class="ph-st">${esc(r.store||'—')}${isBest?` <span class="besttag">${t('ph.best','BEST')}</span>`:''}${r.inStock?'':` <span class="ph-oos">${t('ph.oos','out')}</span>`}</span><span class="ph-pr">${money(r.cents)}</span></div>`; }).join('');
+  return `<div class="ph-panel"><div class="ph-h">${t('ph.title','Prices found')}</div>${li}</div>`; }
 function showResult(o, cid){
   try{ exitHunt(); }catch(_){ }
+  try{ recordResultPrice(o); }catch(_){ }
   resultCacheSet(cid,o);
   { const _r=$('result'); if(_r) _r.classList.remove('r-play'); } // clear the entrance trigger before every (re)render — the block below re-arms it only on the content-ready render
   stopLiveTimers(); LIVE_ROOM=null; if($('hangup_btn'))$('hangup_btn').style.display='none';
@@ -4514,8 +4560,10 @@ function showResult(o, cid){
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
       <div class="rtitle2">${esc(showFeedback ? t('v.unclear2','Couldn’t tell') : vTitle)}</div>
       ${note?`<div class="rsub">${nl2(fillP(note,o,cls))}</div>`:''}
+      ${priceLineHTML(o)}
       ${breakdown}
     </div>
+    ${pricesFoundHTML(o)}
     ${feedbackBlock}
     ${o.status==='pending'
       ? `<div class="topcta" style="display:flex;justify-content:center"><div class="loaddots"><span></span><span></span><span></span></div></div>` /* still pulling the verdict — animated dots, NOT the "Check another store" CTA (reads as calling again) */
