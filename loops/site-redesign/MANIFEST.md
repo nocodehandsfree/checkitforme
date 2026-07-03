@@ -404,6 +404,15 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   at takeover the installed-app splash would flash old navy against #1D1D22 pages) → **added as step
   3b in PROMOTE.md's takeover section; do NOT touch before**. Staging carries watch-14/15 ES work;
   no upstream pushes. CLEAN.
+### 🔁 CONFIRMATION LOOP (cron f08dcfbe, every 12m — runs until the owner signs off)
+- Pass 1: found + fixed the search post-filter (full-phrase includes() after the tokenized SQL — the
+  real reason "barns westlake" kept failing) and killed a ZOMBIE local server from 02:04 that had been
+  serving stale server-code during earlier "verifications" (client HTML was re-read per request, so the
+  29-check browser suite results stand). Staging re-verified end-to-end by curl: token+typo search ✓
+  og:title=domain ✓ og card byte-identical ✓ shine .1 ✓ kiosk copy ✓ "1 check per call" gone ✓
+  checkplus logo 200 ✓ packs×3 ✓ checkout 401-anon ✓ upstream type= filter intact ✓. NOTE: sandbox
+  Chromium cannot reach external HTTPS — browser-level suites run locally per-commit (same tree staging
+  builds); staging checks are curl-level.
 ### 🔴 OWNER LIVE-REVIEW ROUND (2026-07-02 midday — owner walking staging on his phone; ~20 items, all shipped this round)
 - [x] **MAJOR: v2 `#result{display:flex}` beat `.hidden`** → the result section could NEVER hide under
   v2: home + status page stacked after back-nav (owner screenshot), history landing bleeding under the
