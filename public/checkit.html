@@ -909,7 +909,7 @@ __BRAND_HEAD__
        statuses, so a white sheen reads on any). Continuous (not gated on the one-shot entrance). */
     @keyframes rCtaSweep{0%{transform:translateX(-160%) skewX(-20deg)}100%{transform:translateX(330%) skewX(-20deg)}}
     body.rview #result .topcta .cta{position:relative;overflow:hidden}
-    body.rview #result .topcta .cta::after{content:'';position:absolute;top:0;bottom:0;left:0;width:34%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);transform:translateX(-160%) skewX(-20deg);animation:rCtaSweep 3.4s ease-in-out 1s infinite;pointer-events:none}
+    body.rview #result .topcta .cta::after{content:'';position:absolute;top:0;bottom:0;left:0;width:34%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.1),transparent);transform:translateX(-160%) skewX(-20deg);animation:rCtaSweep 4.2s ease-in-out 1.4s infinite;pointer-events:none}
     #result.r-play .ctl::before{transform-origin:top;animation:rBarDraw 1.15s cubic-bezier(.4,0,.1,1) .55s both}
     #result.r-play .reach>summary .ctl-dot{animation:rDotPopY .4s cubic-bezier(.2,.8,.3,1.2) .55s both}
     #result.r-play .ctl-conv .ctl-dot{animation:rDotPop .4s cubic-bezier(.2,.8,.3,1.2) 1.18s both}
@@ -1154,6 +1154,7 @@ html[data-skin="v2"] .csheet-ic.widelogo img{max-width:52px}
 html[data-skin="v2"] .csheet-nm{font-size:20px;font-weight:800;letter-spacing:-.3px}
 html[data-skin="v2"] .csheet-addr{margin-top:3px;font-size:13px;font-weight:600;color:#8A8A96;white-space:normal} /* never ellipsize the green Open state */
 html[data-skin="v2"] .csheet-addr .cs-open{color:#4ADE80}
+html[data-skin="v2"] #schedCard{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:16px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)}
 html[data-skin="v2"] .csheet-prod{font-size:14px;font-weight:800}
 html[data-skin="v2"] .csheet-prod span{color:rgba(255,255,255,.75);font-weight:600}
 html[data-skin="v2"] .csheet-call{padding:14px 24px}
@@ -1162,7 +1163,7 @@ html[data-skin="v2"] #cs_call .cs-l>svg{width:20px;height:20px}
 html[data-skin="v2"] #cs_call .cs-arrow{display:block;flex:0 0 auto}
 html[data-skin="v2"] .csheet-charge{color:#8A8A96;font-size:12.5px;font-weight:600}
 html[data-skin="v2"] .csheet-charge b{color:#CDCDD8}
-html[data-skin="v2"] .cs-key{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);animation:none}
+html[data-skin="v2"] .cs-key{background:transparent;border:0;box-shadow:none;animation:none;padding:13px 2px}
 /* Option chips (§5.12): raised buttons that LIGHT UP green when on — never carved form fields. */
 html[data-skin="v2"] .chip{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;color:#CDCDD8;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .chip.sel{color:#4ADE80;background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1),0 0 14px rgba(74,222,128,.25)}
@@ -1370,9 +1371,9 @@ html[data-skin="v2"] .buygrid{display:grid;grid-template-columns:repeat(4,1fr);g
 html[data-skin="v2"] .buygrid .g{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border-radius:14px;padding:12px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:0 10px 20px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08);font-size:10px;font-weight:700;color:rgba(255,255,255,.85);text-align:center;line-height:1.25}
 html[data-skin="v2"] .buygrid .g svg{flex:0 0 auto}
 html[data-skin="v2"] .buygrid-h{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-top:18px}
-html[data-skin="v2"] #billcycle{background:none;border:0;box-shadow:none;padding:0;gap:8px;margin:16px 0 12px}
-html[data-skin="v2"] #billcycle button{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border-radius:11px;padding:9px 0;font-size:13px;font-weight:700;color:#CDCDD8;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
-html[data-skin="v2"] #billcycle button.on{background:linear-gradient(180deg,#31313A 0%,#28282E 100%);color:#4ADE80;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1),0 0 14px rgba(74,222,128,.25)}
+html[data-skin="v2"] #billcycle,html[data-skin="v2"] #buymode{display:flex;background:#1B1B20;border:0;border-radius:999px;padding:5px;gap:2px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5);margin:12px 0}
+html[data-skin="v2"] #billcycle button,html[data-skin="v2"] #buymode button{flex:1;border:0;border-radius:999px;background:transparent;color:#7C7C88;font-size:12.5px;font-weight:700;padding:9px 0;box-shadow:none;text-shadow:none;cursor:pointer}
+html[data-skin="v2"] #billcycle button.on,html[data-skin="v2"] #buymode button.on{flex:1.2;background:linear-gradient(180deg,#31313A 0%,#28282E 100%);color:#FFF;font-size:13px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 html[data-skin="v2"] .plan{padding:14px 16px;margin-top:10px}
 html[data-skin="v2"] .plan .pn{font-size:15.5px;font-weight:700}
 html[data-skin="v2"] .plan .pd{font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:3px}
@@ -1431,7 +1432,10 @@ html[data-skin="v2"] .ctlv2-rail .d2{width:10px;height:10px;border-radius:50%;fl
 html[data-skin="v2"] .ctlv2 details>summary{display:flex;align-items:baseline;justify-content:space-between;list-style:none;cursor:pointer}
 html[data-skin="v2"] .ctlv2 details>summary::-webkit-details-marker{display:none}
 html[data-skin="v2"] .ctlv2-steps{margin-top:10px;display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:500;color:#5C5C68}
-html[data-skin="v2"] .ctlv2-steps .cur{color:#4ADE80;font-weight:700}
+html[data-skin="v2"] .ctlv2-steps .cur{color:#4ADE80;font-weight:700;position:relative}
+html[data-skin="v2"] .ctlv2-steps .cur::before{content:"";position:absolute;left:-24px;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor}
+html[data-skin="v2"] .ctl-term{position:relative}
+html[data-skin="v2"] .ctl-term::before{content:"";position:absolute;left:-25px;top:50%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor}
 html[data-skin="v2"] .ctlv2-bub{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:12px 15px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .ctlv2-bub .who{font-size:10px;font-weight:700;letter-spacing:.13em;color:#8A8A96}
 html[data-skin="v2"] .ctlv2-bub.ai .who{color:#4ADE80}
@@ -2340,7 +2344,7 @@ function renderFooter(){
 }
 // "Don't see your store?" submission.
 function openStoreReq(){ ['sr_name','sr_city','sr_note','sr_contact'].forEach(id=>{const e=$(id);if(e)e.value='';}); $('sr_err').textContent=''; track('storereq_open'); $('storeReqOverlay').classList.add('on'); setTimeout(()=>{try{$('sr_name').focus();}catch(e){}},80); }
-function closeStoreReq(){ $('storeReqOverlay').classList.remove('on'); }
+function closeStoreReq(){ $('storeReqOverlay').classList.remove('on'); acctReturn(); }
 async function submitStoreReq(){
   const name=($('sr_name').value||'').trim();
   if(!name){ $('sr_err').textContent=t('err.storename','Add the store name'); return; }
@@ -2367,7 +2371,8 @@ async function boot(){
   initGA();
   buildSwitcher(); applyBrand(); renderIcons(); buildLangSel(); applyLang();
   renderAuth(); renderStores(); renderChips(); renderFooter(); refreshAuth();
-  if(sp.get('paid')){ history.replaceState({},'','/'); toast(t('toast.payment','🎉 Payment received. Adding your credits…')); setTimeout(refreshAuth,2500); setTimeout(refreshAuth,6000); if(isV2()) setTimeout(openPaid,3200); }
+  if(sp.get('paid')){ history.replaceState({},'','/'); toast(t('toast.payment2','Payment received. Adding your checks…'),'neutral'); setTimeout(refreshAuth,2500); setTimeout(refreshAuth,6000); if(isV2()) setTimeout(openPaid,3200); }
+  if(sp.get('buy')){ history.replaceState({},'',location.pathname); setTimeout(()=>{ try{ openBuy('manage'); }catch(_){} },700); } // Stripe cancel lands back on the plans sheet
   if(sp.get('call')) restoreCall(sp.get('call'), sp.get('store'), sp.get('cat'));
   else if(sp.get('v')==='history') openHistory();
   else if(sp.get('flow')==='hobby'&&isV2()) setTimeout(()=>{try{openHobby();}catch(e){}},60); // HIDDEN hobby preview (owner override)
@@ -2501,6 +2506,20 @@ async function loadSchedules(){
   const list=await appApi('/app/schedules');
   if(!Array.isArray(list)||!list.length){ card.style.display='none'; return; }
   card.style.display='';
+  if(isV2()){
+    // v2 (§5/6 design): eyebrow header, 34px icon tile, 14/700 line + 12/600 sub, danger capsule.
+    const hd=card.querySelector('.step');
+    if(hd) hd.innerHTML=`<span style="display:inline-flex;align-items:center;gap:8px;font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${AC2()}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>${t('sched.step2','Your auto-checks')}<span style="letter-spacing:.02em;text-transform:none;font-weight:600;color:#66666F">· ${t('sched.step.note2','we call on shipment days')}</span></span>`;
+    $('schedList').innerHTML=list.map(s=>{
+      const days=(s.daysOfWeek||'').split(',').filter(Boolean).map(d=>DOWSHORT[d]).join(', ')||t('sched.shipday','shipment day');
+      return `<div style="display:flex;align-items:center;gap:11px;padding:11px 0;border-top:1px solid rgba(255,255,255,.06)">
+        <span style="width:34px;height:34px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${AC2()}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg></span>
+        <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.store)} · <b style="color:${AC2()}">${esc(s.category)}</b></div>
+          <div style="margin-top:2px;font-size:12px;font-weight:600;color:#8A8A96">${esc(days)} · ${t('sched.from','from')} ${esc(s.timeLocal||'10:00')}${s.specificProduct?(' · '+esc(s.specificProduct)):''}</div></div>
+        <button onclick="cancelSchedule(${s.id})" style="flex:0 0 auto;background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.4);color:#FF8A8A;padding:7px 14px;border-radius:999px;font-weight:700;font-size:12px;cursor:pointer">${t('sched.cancel','Cancel')}</button>
+      </div>`;}).join('');
+    return;
+  }
   $('schedList').innerHTML=list.map(s=>{
     const days=(s.daysOfWeek||'').split(',').filter(Boolean).map(d=>DOWSHORT[d]).join(', ')||t('sched.shipday','shipment day');
     return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--border)">
@@ -2511,7 +2530,7 @@ async function loadSchedules(){
 }
 async function cancelSchedule(id){
   const r=await appApi('/app/schedules/'+id,{method:'DELETE'});
-  if(r&&r.ok){ track('schedule_cancel',{id}); toast(t('sch.canceled','Auto-check canceled')); loadSchedules(); }
+  if(r&&r.ok){ track('schedule_cancel',{id}); toast(t('sch.canceled','Auto-check canceled'),'neutral'); loadSchedules(); }
   else toast(t('sch.cancelfail',"Couldn't cancel. Try again."));
 }
 function renderAuth(){
@@ -2640,8 +2659,9 @@ function acctIdentity(){
   const initial = name ? name[0].toUpperCase() : (email ? email[0].toUpperCase() : '');
   return { primary, secondary:subs.join('   ·   '), initial };
 }
-function openAccount(){
+function openAccount(fromPop){
   if(!isAuthed()) return;
+  openAccount._pop=!!fromPop;
   const idn=acctIdentity();
   $('acct_name').textContent=idn.primary;
   const sub=$('acct_sub'); if(sub){ sub.textContent=idn.secondary; sub.style.display=idn.secondary?'':'none'; }
@@ -2685,10 +2705,10 @@ function openAccount(){
     const planChip = comp?('∞ '+t('acct.unlimited','Unlimited')):(member?('★ '+t('acct.member','Member')):(freeUsed?t('acct.freeused','Free check used'):t('acct.free','Free')));
     const left = comp?'∞':String(n);
     let run=0; try{ const td=new Date().toDateString(); run=histList().filter(e=>e.ts&&new Date(e.ts).toDateString()===td).length; }catch(_){ }
-    head.innerHTML=`<div class="wash">
+    head.innerHTML=`<div style="display:flex;justify-content:center;padding:9px 0 0"><span style="width:44px;height:4px;border-radius:99px;background:rgba(255,255,255,.22)"></span></div><div class="wash">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <span style="display:flex;align-items:center;gap:4px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('acct.my','My')}</span>${FCHK(24)}</span>
-          <button onclick="closeAccount()" style="background:none;border:0;font-size:12px;font-weight:700;color:rgba(255,255,255,.55);cursor:pointer">${t('acct.done','Done')}</button>
+          <span></span>
         </div>
         <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between">
           <span style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:rgba(255,255,255,.8);white-space:nowrap">${esc(idn.primary)}<button onclick="editPhone()" aria-label="Change number" style="background:none;border:0;padding:2px;cursor:pointer;display:inline-flex"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg></button></span>
@@ -2704,19 +2724,41 @@ function openAccount(){
     acctTab('overview');
   }catch(_){} }
   $('acctOverlay').classList.add('on'); track('account_open');
-  try{ if(!(history.state&&history.state.v==='acct')) history.pushState({v:'acct'},''); }catch(_){ } // back closes the sheet, not the page
+  try{ if(!openAccount._pop && !(history.state&&history.state.v==='acct')) history.pushState({v:'acct',t:'overview'},''); }catch(_){ } // back closes the sheet, not the page
+  openAccount._pop=false;
 }
 function closeAccount(){ $('acctOverlay').classList.remove('on'); }
 // Change number: the phone IS the login — re-verify a new one through the same code flow.
 function editPhone(){ closeAccount(); try{ const f=$('auth_phone'); if(f) f.value=''; }catch(_){} openAuth(); try{ const l=$('auth_lead'); if(l){ l.textContent=t('auth.newcell','Give us your new celly'); l.removeAttribute('data-i18n'); } }catch(_){} }
+// Post-your-score as a POPUP (uniform with every other action): the composer card moves into an
+// overlay and back when closed — all its ids/handlers keep working.
+function openScorePop(){
+  let ov=$('scorePostOv');
+  if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='scorePostOv';
+    ov.innerHTML='<div class="modal" style="position:relative;max-width:430px;text-align:left"><span class="x" onclick="closeScorePop()">×</span><h3 style="margin:2px 0 10px" >'+t('sc.pop.title','Post your score')+'</h3><div id="scorePostHost"></div></div>';
+    ov.onclick=e=>{ if(e.target===ov) closeScorePop(); };
+    document.body.appendChild(ov); }
+  const c=$('composer');
+  if(c){ if(!openScorePop._home){ openScorePop._home={parent:c.parentElement,next:c.nextElementSibling}; } $('scorePostHost').appendChild(c); c.style.display=''; }
+  ov.classList.add('on'); track('score_pop_open');
+}
+function closeScorePop(){
+  const ov=$('scorePostOv'); if(ov)ov.classList.remove('on');
+  const c=$('composer'), hm=openScorePop._home;
+  if(c&&hm&&hm.parent){ try{ hm.parent.insertBefore(c,hm.next); }catch(_){ hm.parent.appendChild(c); } c.style.display='none'; }
+  COMPOSER=false;
+}
 function inviteMsg(link){ return t('ref.sharemsg',"Yo! Check this tech out. It's sick.\nHelps us quickly find viral products in stock like Pokémon cards at retail prices.\nSign up and we both get 3 free checks: ")+link; }
 async function acctInvitePanel(btn){
   try{ if(!REFER||!REFER.code){ await loadRefer(); } }catch(_){ }
   const link=(REFER&&REFER.code)?referLink(REFER.code):location.origin;
   const short=link.replace(/^https?:\/\//,'');
-  let pan=$('acctInvitePan');
-  if(pan){ pan.remove(); return; } // tap again = fold away
-  pan=document.createElement('div'); pan.id='acctInvitePan';
+  let ov=$('inviteOverlay');
+  if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='inviteOverlay';
+    ov.innerHTML='<div class="modal" style="position:relative;max-width:400px;text-align:left"><span class="x" onclick="closeInvite()">×</span><h3 style="margin:2px 0 2px">'+t('earn.invite','Invite a friend')+'</h3><div id="inviteHost"></div></div>';
+    ov.onclick=e=>{ if(e.target===ov) closeInvite(); };
+    document.body.appendChild(ov); }
+  const pan=document.createElement('div');
   const btnS='flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0;border:0;border-radius:14px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;font-size:10px;font-weight:800;letter-spacing:.12em;cursor:pointer';
   const ic=(pth)=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${pth}</svg>`;
   pan.innerHTML=`
@@ -2730,10 +2772,11 @@ async function acctInvitePanel(btn){
       <button style="${btnS}" onclick="invitePost()"><svg width="17" height="17" viewBox="0 0 24 24" fill="#4ADE80"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg><span>${t('ref.post','Post')}</span></button>
       <button style="${btnS}" onclick="inviteMore()">${ic('<path d="M12 3v12"/><path d="m8 7 4-4 4 4"/><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"/>')}<span>${t('ref.more','More')}</span></button>
     </div>`;
-  const grid=btn.closest('#acctv2panel')?btn.parentElement:null; // the 2-col tile grid
-  if(grid&&grid.parentElement) grid.parentElement.insertBefore(pan, grid.nextSibling); else btn.parentElement.appendChild(pan);
+  const host=$('inviteHost'); host.innerHTML=''; host.appendChild(pan);
+  ov.classList.add('on');
   window.__invLink=link;
 }
+function closeInvite(){ const ov=$('inviteOverlay'); if(ov)ov.classList.remove('on'); }
 function inviteCopy(){ try{ navigator.clipboard.writeText(window.__invLink||location.origin); toast(t('ref.copied','Invite link copied!')); }catch(_){ try{ prompt(t('ref.copy','Copy your invite link:'),window.__invLink||''); }catch(__){} } }
 function inviteText(){ const l=window.__invLink||location.origin; location.href='sms:?&body='+encodeURIComponent(inviteMsg(l)); }
 function invitePost(){ const l=window.__invLink||location.origin; window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(inviteMsg(l)),'_blank'); }
@@ -2898,7 +2941,7 @@ function setUserLoc(lat,lng){
 }
 function findMe(after){
   if(!navigator.geolocation){ toast(t('toast.noloc','Location not supported on this device')); return; }
-  const b=$('findbtn'); if(b)b.classList.add('loading'); toast(ICO.radar(AC2())+t('toast.locating','Locating stores near you'));
+  const b=$('findbtn'); if(b)b.classList.add('loading'); toast(t('toast.locating2','Locating stores'),'neutral');
   navigator.geolocation.getCurrentPosition(p=>{
     setUserLoc(p.coords.latitude,p.coords.longitude);
     if(typeof after==='function') after();
@@ -2953,7 +2996,7 @@ function initMap(){
     // Regular users tap store pins to check; the map never moves them.
     // Master drops a pin → load that area's stores ON the open map (owner 2026-07-02: the map stays
     // up until they close it — the pins repaint in place via renderStores' map hook).
-    MAP.on('click',(e)=>{ if(!isMaster()) return; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng); toast(t('toast.locating','Locating stores near you')); });
+    MAP.on('click',(e)=>{ if(!isMaster()) return; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng); toast(t('toast.locating2','Locating stores'),'neutral'); });
     MAP_FIT_NEXT=true; // first paint → frame the search radius (then it stays put until a new location)
     setTimeout(()=>MAP.invalidateSize(),60); renderMapPins();
   }catch(e){ toast(t('toast.maploading','Map could not load. Showing the list.')); toggleMap(); }
@@ -2978,9 +3021,11 @@ function renderMapPins(){
     // inStock (recent confirmed hit) → the brand CHECK as the pin; tiered → a glowing neon dot; else plain.
     const m = s.inStock
       ? L.marker([s.lat,s.lng],{icon:L.divIcon({className:'instkpin',html:`<span style="display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#0C0C12;border:2px solid ${neon||'#2BFF88'};box-shadow:0 0 11px ${neon||'#2BFF88'},0 0 4px ${neon||'#2BFF88'}">${FCHK(16)}</span>`,iconSize:[28,28],iconAnchor:[14,14]})}).addTo(MAP)
-      : L.marker([s.lat,s.lng],{icon:L.divIcon({className:'tierpin',html: neon
+      : L.marker([s.lat,s.lng],{icon:L.divIcon({className:'tierpin',html: s.logoUrl
+          ? `<span style="display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:${s.logoDark?'#15151C':'#FFF'};border:2px solid ${neon||'#3A3A44'};box-shadow:0 2px 10px rgba(0,0,0,.5)${neon?`,0 0 9px ${neon}`:''}"><img src="${esc(s.logoUrl)}" style="width:20px;height:20px;object-fit:contain" alt=""></span>`
+          : neon
           ? `<span style="display:block;width:15px;height:15px;border-radius:50%;background:${neon};border:1.5px solid #0C0C12;box-shadow:0 0 9px ${neon},0 0 3px ${neon}"></span>`
-          : `<span style="display:block;width:12px;height:12px;border-radius:50%;background:#9aa0b0;border:1.5px solid #0C0C12"></span>`, iconSize: neon?[15,15]:[12,12], iconAnchor: neon?[8,8]:[6,6]})}).addTo(MAP);
+          : `<span style="display:block;width:12px;height:12px;border-radius:50%;background:#9aa0b0;border:1.5px solid #0C0C12"></span>`, iconSize: s.logoUrl?[30,30]:(neon?[15,15]:[12,12]), iconAnchor: s.logoUrl?[15,15]:(neon?[8,8]:[6,6])})}).addTo(MAP);
     m.bindPopup(`<div class="mappop"><b>${esc(s.name)}</b><div class="mp-lo">${esc(s.location||'')}${mi!=null?' · '+(mi<10?mi.toFixed(1):Math.round(mi))+' mi':''}</div><button onclick="mapPick(${s.id})">${t('cs.cta','Check this store')}</button></div>`);
     MAP_MARKERS.push(m); pts.push([s.lat,s.lng]);
   });
@@ -3676,15 +3721,14 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     const bubs=human.map(l=>{ const m=l.match(/^(Agent|Clerk):\s*(.*)$/); if(!m) return '';
       const ai=m[1]==='Agent';
       return `<div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?esc(t('lbl.agent','CHECK AI').toUpperCase()):esc(t('lbl.assoc','STAFF').toUpperCase())}</div><div class="tx">${esc(m[2])}</div></div>`; }).join('');
-    const vline=(status&&(status.term||status.title))?`<div style="margin-top:12px;font-size:15px;font-weight:800;color:${tone}">${esc(status.term||status.title)}</div>`:'';
+    const vline=(status&&(status.term||status.title))?`<div class="ctl-term" style="margin-top:14px;font-size:15px;font-weight:800;color:${tone}">${esc(status.term||status.title)}</div>`:'';
     return `<div class="ctlv2" style="margin-bottom:22px">
       <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80 100%':`color-mix(in srgb,#4ADE80 35%,${tone}) 60%,${tone} 100%`})"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
       <div style="flex:1;min-width:0">
-        <details open><summary><span style="font-size:15px;font-weight:700">${t('step.ringing','Ringing the store…')}</span><span style="font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''} ⌃</span></summary>
+        <details open><summary><span style="font-size:15px;font-weight:700">${t('step.ringing','Ringing the store…').replace(/[…\u2026.]+\s*$/,'')}</span><span style="text-align:right"><span style="font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''} ⌃</span>${status&&status.ts?`<span style="display:block;margin-top:2px;font-size:11px;font-weight:600;color:#66666F">${new Date(status.ts).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'short',day:'numeric'})} · ${new Date(status.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}</span>`:''}</span></summary>
           <div class="ctlv2-steps">${stepEls}</div>
         </details>
-        ${human.length?`<div style="margin-top:18px;font-size:11px;font-weight:700;letter-spacing:.15em;color:rgba(255,255,255,.5);text-align:right">${esc(t('res.conversation','Conversation').toUpperCase())}</div>`:''}
-        <div id="convo_body" style="margin-top:10px;display:flex;flex-direction:column;gap:9px">${bubs||(live?`<div class="cs-wait">${t('live.waitperson','Reaching a person…')}</div>`:'')}</div>
+        <div id="convo_body" style="margin-top:12px;display:flex;flex-direction:column;gap:9px">${bubs||(live?`<div class="cs-wait">${t('live.waitperson','Reaching a person…')}</div>`:'')}</div>
         ${vline}
       </div>
     </div>`;
@@ -4063,15 +4107,12 @@ function setThemeTone(){}
 // blacked out the top in Compact Safari). The top now tints via page-sampling of the body/html gradient.
 let TONE_NAV_DONE=false;
 function ensureToneLoaded(){ return false; }
-window.addEventListener('popstate',()=>{
-  // Back inside the account sheet: earn/activity fold to Overview, Overview closes the sheet —
-  // instead of yanking the user to a different page (owner 2026-07-02).
-  try{ const ov=$('acctOverlay');
-    if(ov&&ov.classList.contains('on')){
-      const on=document.querySelector('#acctOverlay .acctv2head .tab.on');
-      if(on&&on.dataset.t!=='overview'){ acctTab('overview'); } else { closeAccount(); }
-      return;
-    }
+window.addEventListener('popstate',(ev)=>{
+  // History-driven account nav: back AND forward walk the sheet's sections; leaving the sheet's
+  // states closes it; a check opened FROM the sheet returns to its tab.
+  try{ const st=ev&&ev.state, ov=$('acctOverlay'), open=ov&&ov.classList.contains('on');
+    if(st&&st.v==='acct'){ if(!open&&isAuthed()){ openAccount(true); } if(st.t) acctTab(st.t,true); return; }
+    if(open){ closeAccount(); return; }
     if(typeof acctReturn==='function'&&acctReturn()) return; // e.g. back from a check opened off the Activity tab
   }catch(_){ }
   // Handle BOTH directions. Going forward to a ?call= entry used to do nothing (only "back" was handled),
@@ -4227,7 +4268,7 @@ function showResult(o, cid){
     const cam='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg>';
     const tileBtn=(ic,ti,su,fn)=>`<button class="is1t" onclick="${fn}"><span class="tl">${ic}</span><span><span class="a">${esc(ti)}</span><span class="b">${esc(su)}</span></span></button>`;
     return (F.shareCards!==false?`<button class="smbtn is1s" onclick="shareFind()"><span style="display:inline-flex;align-items:center;gap:9px">${up}<span>${t('res.share','Share your score')}</span></span>${arr}</button>`:'')
-      +`<div class="is1g">${F.driverHandoff!==false?tileBtn(truck,dT,dS,'openDriverDemo()'):''}${F.community?tileBtn(cam,cT,cS,'openSuccess()'):''}</div>`;
+      +`<div class="is1g">${F.driverHandoff!==false?tileBtn(truck,dT,dS,'openDriverDemo()'):''}${F.community?tileBtn(cam,cT,cS,'openScorePop()'):''}</div>`;
   })() : [
     F.shareCards!==false?`<button class="act2 gr" onclick="shareFind()">${ICO.mega('currentColor')} ${t('res.share','Share your score')}</button>`:'',
     F.driverHandoff!==false?`<button class="act2" onclick="openDriverDemo()">${ICO.truck('#fff')} ${t('res.driver','Too far? Have a local grab it')}</button>`:'',
@@ -4282,7 +4323,7 @@ function showResult(o, cid){
   }
   // Boxless "The call" subline: "{ago} · {dur}" — both pieces reuse existing prod helpers/vars
   // (timeAgo for the ago, callSummary already carries the "Call · Ns" duration). No new copy/keys.
-  const callSubline=[o.ts?timeAgo(o.ts):'', _secs?(_secs+'s'):''].filter(Boolean).join(' · '); // header now says "Call" — keep the subline just ago · duration (no redundant "Call")
+  const callSubline=[o.ts?new Date(o.ts).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'short',day:'numeric'})+' · '+new Date(o.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'}):'', _secs?(_secs+'s'):''].filter(Boolean).join(' · '); // header now says "Call" — keep the subline just ago · duration (no redundant "Call")
   // Primary "what next" CTA — prod's existing button HTML, unchanged. Pulled to the TOP for
   // anything not-in-stock; kept after inActions for in-stock (same placement rule as before).
   const arrow=`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" style="vertical-align:-3px;margin-left:7px"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -4339,7 +4380,7 @@ function showResult(o, cid){
       : `<div class="topcta">${primaryCta}</div>`}
     <div class="callsec">
       ${canTranslate?`<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button></div>`:''}
-      ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed, {cls, title:vTitle, term:termLabel})}
+      ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed, {cls, title:vTitle, term:termLabel, ts:o.ts})}
     </div>
     ${o.status==='pending' ? '' : (inStock ? inActions : '')}
     ${o.status==='pending' ? '' : upsell}
@@ -4595,12 +4636,12 @@ function openHistory(forceCal){
   }
   // No local today check → paint the landing INSTANTLY (no network wait — that was the slow part). Then
   // revalidate in the background in case a today check exists server-side that isn't local yet.
-  showTodayLanding();
-  ensureHistCache().then(()=>{ try{ const f=histList().find(todayMatch); if(f && NAV_VIEW==='result' && !RAIL_CID){ RAIL_F.date=today; openHistEntry(f); } else { renderCallRail(); } }catch(_){} });
+  showTodayLanding(forceCal);
+  ensureHistCache().then(()=>{ try{ const f=histList().find(todayMatch); if(!forceCal && f && NAV_VIEW==='result' && !RAIL_CID){ RAIL_F.date=today; openHistEntry(f); } else { renderCallRail(); renderTodayCal(); } }catch(_){} });
 }
 // The empty-today screen: clean header (product switcher + calendar to browse past days) and an empty
 // state with a CTA to check a store. Reuses the result-view chrome so the calendar/switcher are present.
-function showTodayLanding(){
+function showTodayLanding(forceCal){
   stopLiveTimers(); if($('hangup_btn'))$('hangup_btn').style.display='none';
   ['live','builder','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
   document.body.classList.remove('fabbed');
@@ -4677,11 +4718,13 @@ async function openHistEntry(e){
   try{ const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',e.cid); history.replaceState({v:'result'},'',location.pathname+'?'+sp.toString()); }catch(_){}
 }
 // ---- My-checks tabs (6e/6f/6g): in-place panels inside the account pop-up. ----
-let ACT_WOFF=0, ACT_DAY=null;
-function actWeek(d){ ACT_WOFF=Math.max(0,ACT_WOFF-d); ACT_DAY=null; acctTab('activity'); }
-function actPick(i){ ACT_DAY=(ACT_DAY===i?null:i); acctTab('activity'); }
-function acctTab(which){
+let ACT_WOFF=0, ACT_DAY=null, ACT_TONE='';
+function actWeek(d){ ACT_WOFF=Math.max(0,ACT_WOFF-d); ACT_DAY=null; ACT_TONE=''; acctTab('activity',true); }
+function actPick(i){ ACT_DAY=(ACT_DAY===i?null:i); ACT_TONE=''; acctTab('activity',true); }
+function actTone(tn){ ACT_TONE=(ACT_TONE===tn?'':tn); acctTab('activity',true); }
+function acctTab(which,fromPop){
   const modal=document.querySelector('#acctOverlay .modal'); if(!modal) return;
+  try{ if(!fromPop && $('acctOverlay').classList.contains('on') && !(history.state&&history.state.v==='acct'&&history.state.t===which)) history.pushState({v:'acct',t:which},''); }catch(_){ }
   modal.querySelectorAll('.acctv2head .tab').forEach(b=>b.classList.toggle('on',b.dataset.t===which));
   const rows=modal.querySelector('.acctrows'), panel=$('acctv2panel');
   if(!panel) return;
@@ -4710,7 +4753,7 @@ function acctTab(which){
       :`<button class="capsW" onclick="ACCT_RETURN='overview';closeAccount();openBuy()"><span style="display:inline-flex;align-items:center;gap:9px"><svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${t('acct.upgrade2','Upgrade')} · ${t('acct.from','from')} ${esc(fromP)}</span></span>${arr2}</button>`;
     panel.innerHTML=
       (member?row(spark,t('acct.row.plan','Manage plan'),t('plan.cycle','Billed monthly · cancel anytime'),"ACCT_RETURN='overview';closeAccount();openBuy('manage')"):'')+
-      row(calic,t('acct.row.hist','Check history'),histSub,"closeAccount();openHistory()")+
+      row(calic,t('acct.row.hist','Check history'),histSub,"ACCT_RETURN='overview';closeAccount();openHistory(true)")+
       row(gift,t('acct.row.earn','Earn free checks'),t('acct.row.earn.sub','4 ways. Open to everyone.'),"acctTab('earn')")+
       caps+
       `<button onclick="doSignOut()" style="display:block;width:100%;margin-top:16px;background:none;border:0;text-align:center;font-size:13px;font-weight:700;color:#7C7C88;cursor:pointer">${t('acct.signout','Sign out')}</button>`;
@@ -4735,10 +4778,12 @@ function acctTab(which){
       </div>`; }).join('');
     const scope=(selIdx>=0&&ACT_DAY!=null)?perDay[selIdx]:hist.filter(e=>e.ts>=dayTs[0]&&e.ts<dayTs[6]+86400000);
     const tones={in:0,out:0,soon:0,unk:0}; scope.forEach(e=>{ tones[railTone(e)]=(tones[railTone(e)]||0)+1; });
-    const cell=(nv,lb)=>`<div style="text-align:center"><div style="font-size:18px;font-weight:800">${nv}</div><div style="margin-top:2px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#8A8A96">${lb}</div></div>`;
+    const TONECOL={in:'#4ADE80',out:'#FF8080',soon:'#F5B301',unk:'#FBBF24'};
+    const cell=(nv,lb,tn)=>`<div onclick="actTone('${tn}')" style="text-align:center;cursor:pointer;${ACT_TONE===tn?'background:rgba(255,255,255,.05);border-radius:12px;':''}padding:2px 0"><div style="font-size:18px;font-weight:800;color:${ACT_TONE&&ACT_TONE!==tn?'rgba(255,255,255,.35)':(TONECOL[tn]||'#FFF')}">${nv}</div><div style="margin-top:2px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#8A8A96">${lb}</div></div>`;
     const vlabel=e=>{ const tn=railTone(e); return tn==='in'?t('v.in','In stock!'):tn==='out'?t('v.out','Not in stock'):tn==='soon'?t('v.soon','Restock incoming!'):t('fbk.unsure','Unclear'); };
     const agoTx=e=>{ try{ return agoStr(e.ts); }catch(_){ return ''; } };
-    const last=hist.slice(0,3).map(e=>`<button onclick="ACCT_RETURN='activity';closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:11px;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:9px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left">
+    const lastPool=(ACT_TONE?scope.filter(e=>railTone(e)===ACT_TONE):hist);
+    const last=lastPool.slice(0,ACT_TONE?6:3).map(e=>`<button onclick="ACCT_RETURN='activity';closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:11px;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:9px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left">
       <span style="width:40px;height:40px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${e.logoUrl?`<img src="${esc(e.logoUrl)}" style="width:32px;height:32px;object-fit:contain" alt="">`:`<span style="font-size:11px;font-weight:900;color:#CDCDD8">${esc((railBase(e.storeName)||'?').slice(0,2).toUpperCase())}</span>`}</span>
       <span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span style="display:block;margin-top:2px;font-size:11.5px;font-weight:600;color:#8A8A96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.location||e.address||'')}</span></span>
       <span style="text-align:right;flex:0 0 auto"><span style="display:block;font-size:12.5px;font-weight:700;color:rgba(255,255,255,.7)">${vlabel(e)}</span><span style="display:block;margin-top:2px;font-size:11px;font-weight:600;color:#8A8A96">${agoTx(e)}</span></span>
@@ -4753,8 +4798,8 @@ function acctTab(which){
           ${arrow(-1,ACT_WOFF<=0)}
         </div>
       </div>
-      <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:13px 0;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">${cell(tones.in,t('fbk.in','In stock').toUpperCase())}${cell(tones.out,t('fbk.out','Out').toUpperCase())}${cell(tones.soon,t('fbk.soon','Restock').toUpperCase())}${cell(tones.unk,t('fbk.unsure','Unclear').toUpperCase())}</div>
-      <div style="margin-top:18px;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${t('acct.last','Last checks')}</div>
+      <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:13px 0;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">${cell(tones.in,t('fbk.in','In stock').toUpperCase(),'in')}${cell(tones.out,t('fbk.out','Out').toUpperCase(),'out')}${cell(tones.soon,t('fbk.soon','Restock').toUpperCase(),'soon')}${cell(tones.unk,t('fbk.unsure','Unclear').toUpperCase(),'unk')}</div>
+      <div style="margin-top:18px;font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${ACT_TONE?`${t('acct.filtered','Showing')} ${(ACT_TONE==='in'?t('fbk.in','In stock'):ACT_TONE==='out'?t('fbk.out','Out'):ACT_TONE==='soon'?t('fbk.soon','Restock'):t('fbk.unsure','Unclear')).toUpperCase()} <a onclick="actTone('${ACT_TONE}')" style="color:#4ADE80;cursor:pointer">✕</a>`:t('acct.last','Last checks')}</div>
       <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">${last||`<div style="font-size:12.5px;color:#8A8A96">${t('acct.none','No checks yet.')}</div>`}</div>`;
   } else if(which==='earn'){
     // 6g EXACT (watch-18 deep-read): the LEAD CARD replaces the overlapping stat tiles on this tab;
@@ -4775,7 +4820,7 @@ function acctTab(which){
     panel.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       ${tile(icons.store,t('earn.store','Add your store'),t('earn.store.sub','Put a store on the map.'),'',"ACCT_RETURN='earn';closeAccount();openStoreReq()")}
       ${tile(icons.invite,t('earn.invite','Invite a friend'),t('earn.invite.sub','They sign up. You both win.'),'',"acctInvitePanel(this)")}
-      ${tile(icons.score,t('earn.score','Post your score'),t('earn.score.sub','Your pulls, on the home page.'),'',"closeAccount();openSuccess()")}
+      ${tile(icons.score,t('earn.score','Post your score'),t('earn.score.sub','Your pulls, on the home page.'),'',"openScorePop()")}
       ${tile(icons.receipt,t('earn.receipt','Kiosk receipt'),t('earn.receipt.sub','Use our email at checkout, or forward it.'),'',"ACCT_RETURN='earn';closeAccount();openReceipt()")}
     </div>
     <div style="margin-top:14px;text-align:center;font-size:12px;font-weight:600;color:#8A8A96">${t('acct.earn.open','Open to everyone. No plan needed.')}</div>`;
@@ -5111,7 +5156,8 @@ function tiers(){ return [
   {key:'t4',name:'Pro Seller',cents:14900,checks:1500, perk:t('plan.p4',"+ Zone sweeps. Every store near you, one tap."), plus:true},
 ]; }
 function setCycle(annual,btn){ BILLING_ANNUAL=annual; document.querySelectorAll('#billcycle button').forEach(b=>b.classList.toggle('on',b===btn)); renderBuyPlans(); }
-function tierPrice(c){ return BILLING_ANNUAL?money(Math.round(c*12*0.83/100)*100):money(c); }
+const ANNUAL_CENTS={t1:9999,t2:19999,t3:49899,t4:148499}; // owner-set yearly prices
+function tierPrice(c,key){ return BILLING_ANNUAL?money(ANNUAL_CENTS[key]||Math.round(c*12*0.83/100)*100):money(c); }
 function renderBuyPlans(){
   const member=!!(ACCOUNT&&ACCOUNT.subscription==='active'), comp=!!(ACCOUNT&&ACCOUNT.comp);
   const per=BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo');
@@ -5145,12 +5191,11 @@ function renderBuyPlans(){
       const packs=(POLICY.packs&&POLICY.packs.length)?POLICY.packs:[{key:'starter',credits:20,cents:500},{key:'hunter',credits:100,cents:2000},{key:'pro',credits:300,cents:5000}];
       const i=Math.max(0,Math.min(packs.length-1,PACK_IDX)), pk=packs[i];
       const perC=(pk.cents/pk.credits/100);
-      html+=`<div style="background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:20px 18px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);text-align:center">
-        <div style="font-size:34px;font-weight:900;letter-spacing:-1px">${pk.credits} <span style="font-size:16px;font-weight:800;color:#8A8A96">${t('plan.checks','checks')}</span></div>
-        <div style="margin-top:2px;font-size:22px;font-weight:800;color:#4ADE80">${money(pk.cents)}</div>
-        <input type="range" min="0" max="${packs.length-1}" step="1" value="${i}" oninput="setPackIdx(this.value)" style="width:100%;margin:18px 0 6px;accent-color:#4ADE80">
+      html+=`<div style="background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:18px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">
+        <div style="display:flex;align-items:baseline;justify-content:space-between"><span id="payg_n" style="font-size:22px;font-weight:900;letter-spacing:-.5px">${pk.credits} ${t('plan.checks','checks')}</span><span id="payg_p" style="font-size:22px;font-weight:800;color:#4ADE80">${money(pk.cents)}</span></div>
+        <input type="range" min="0" max="${packs.length-1}" step="1" value="${i}" oninput="setPackIdx(this.value)" style="display:block;width:100%;margin:16px 0 6px;accent-color:#4ADE80">
         <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:#7C7C88">${packs.map(x=>`<span>${x.credits}</span>`).join('')}</div>
-        <div style="margin-top:12px;font-size:12px;font-weight:600;color:#8A8A96">${t('plan.percheck','about')} ${'$'+perC.toFixed(2)} ${t('plan.percheck2','per check')} · ${t('plan.noexpire','checks never expire')}</div>
+        <div id="payg_per" style="margin-top:12px;text-align:center;font-size:12px;font-weight:600;color:#8A8A96">${t('plan.percheck','about')} ${'$'+perC.toFixed(2)} ${t('plan.percheck2','per check')} · ${t('plan.noexpire','checks never expire')}</div>
       </div>`;
       $('buy_plans').innerHTML=html; return;
     }
@@ -5158,13 +5203,18 @@ function renderBuyPlans(){
   html+=tiers().map((p,i)=>`<div class="plan ${(isV2()&&SEL_TIER_KEY ? p.key===SEL_TIER_KEY : p.featured)?'sub':''}" onclick="pickTier('${p.key}')">
       <div class="grow"><div class="pn">${esc(p.name)}${p.featured?` <span style="color:var(--green);font-size:11px">${t('plan.popular','most popular')}</span>`:''}</div>
         <div class="pd">${p.checks.toLocaleString()}${p.plus?'+':''} ${t('plan.checksmo','checks/mo')} · ${p.perk}</div></div>
-      <div class="pp">${tierPrice(p.cents)}<span>${per}</span></div>
+      <div class="pp">${tierPrice(p.cents,p.key)}<span>${per}</span></div>
     </div>`).join('');
   $('buy_plans').innerHTML=html;
 }
 let SEL_TIER_KEY=null, BUY_MODE='plans', PACK_IDX=1;
 function setBuyMode(m,btn){ BUY_MODE=m; document.querySelectorAll('#buymode button').forEach(b=>b.classList.toggle('on',b===btn)); const bc=$('billcycle'); if(bc) bc.style.display=(m==='packs'?'none':''); renderBuyPlans(); }
-function setPackIdx(i){ PACK_IDX=Math.max(0,Math.min(((POLICY.packs||[]).length||1)-1, i|0)); renderBuyPlans(); }
+function setPackIdx(i){ PACK_IDX=Math.max(0,Math.min(((POLICY.packs||[]).length||1)-1, i|0));
+  const packs=(POLICY.packs&&POLICY.packs.length)?POLICY.packs:[]; const pk=packs[PACK_IDX]; if(!pk) return;
+  const n=$('payg_n'), pr=$('payg_p'), per=$('payg_per');
+  if(n) n.textContent=pk.credits+' '+t('plan.checks','checks');
+  if(pr) pr.textContent=money(pk.cents);
+  if(per) per.textContent=t('plan.percheck','about')+' $'+(pk.cents/pk.credits/100).toFixed(2)+' '+t('plan.percheck2','per check')+' · '+t('plan.noexpire','checks never expire'); }
 function pickTier(k){
   if(isV2()){ SEL_TIER_KEY=k; renderBuyPlans(); return; } // 6b comp: tap selects (ring moves), CONTINUE buys
   if(k==='t1'&&!BILLING_ANNUAL){ buy('sub'); return; }
@@ -5198,7 +5248,7 @@ function openBuy(reason){
     let g=$('buy_grid');
     if(!g){ g=document.createElement('div'); g.id='buy_grid';
       const bc=$('billcycle'); bc.parentElement.insertBefore(g,bc); }
-    const I=p=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+    const I=p=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
     const feats=[
       [t('buy6b.f1','Exact products'),I('<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/>')],
       [t('buy6b.f2','Zone sweeps'),I('<path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/>')],
@@ -5220,12 +5270,19 @@ function openBuy(reason){
   $('buyOverlay').classList.add('on');
 }
 function closeBuy(){ const m=document.querySelector('#buyOverlay .modal'); if(m){ m.style.transform=''; m.style.transition=''; } $('buyOverlay').classList.remove('on'); acctReturn(); }
-// Swipe-down dismiss on the plans sheet (owner: it slides up but wouldn't slide down).
-(function(){ let y0=0,dy=0,drag=false;
-  document.addEventListener('touchstart',e=>{ const ov=$('buyOverlay'); if(!ov||!ov.classList.contains('on'))return; const m=e.target.closest('#buyOverlay .modal'); if(!m||m.scrollTop>2)return; y0=e.touches[0].clientY; dy=0; drag=true; m.style.transition='none'; },{passive:true});
-  document.addEventListener('touchmove',e=>{ if(!drag)return; const m=document.querySelector('#buyOverlay .modal'); if(!m)return; dy=Math.max(0,e.touches[0].clientY-y0); if(dy>4) m.style.transform='translateY('+dy+'px)'; },{passive:true});
-  document.addEventListener('touchend',()=>{ if(!drag)return; drag=false; const m=document.querySelector('#buyOverlay .modal'); if(!m)return; m.style.transition='transform .22s'; if(dy>90){ closeBuy(); } else { m.style.transform=''; } });
-})();
+// Swipe-down-to-dismiss for the bottom sheets (plans + My checks). passive:false on move so the
+// drag beats the scroll once it starts; only arms when the sheet is scrolled to the top.
+function sheetDrag(overlayId, closeFn){
+  let y0=0,dy=0,drag=false;
+  const modal=()=>document.querySelector('#'+overlayId+' .modal');
+  document.addEventListener('touchstart',e=>{ const ov=$(overlayId); if(!ov||!ov.classList.contains('on'))return; const m=e.target.closest('#'+overlayId+' .modal'); if(!m||m.scrollTop>2)return; y0=e.touches[0].clientY; dy=0; drag=true; },{passive:true});
+  document.addEventListener('touchmove',e=>{ if(!drag)return; const m=modal(); if(!m)return; dy=e.touches[0].clientY-y0;
+    if(dy<=0){ drag=false; m.style.transform=''; return; } // scrolled up — hand back to the scroller
+    if(dy>6){ e.preventDefault(); m.style.transition='none'; m.style.transform='translateY('+dy+'px)'; } },{passive:false});
+  document.addEventListener('touchend',()=>{ if(!drag)return; drag=false; const m=modal(); if(!m)return; m.style.transition='transform .22s'; if(dy>90){ closeFn(); setTimeout(()=>{ m.style.transform=''; m.style.transition=''; },250); } else { m.style.transform=''; } });
+}
+sheetDrag('buyOverlay', ()=>closeBuy());
+sheetDrag('acctOverlay', ()=>{ try{ closeAccount(); }catch(_){ } });
 async function buy(kind){
   if(!isAuthed()){ signUp(); return; }
   $('buy_note').textContent=t('buy.opening','Opening secure checkout…');
@@ -5266,12 +5323,12 @@ async function openWatch(){
   if(!SEL_STORE||!SEL_STORE.id){ toast(t('err.pickstore','Pick a store first')); return; }
   if(!isAuthed()){ toast(t('toast.joinalerts','Join free to set alerts')); signUp(); return; }
   if(!(ACCOUNT&&(ACCOUNT.comp||ACCOUNT.subscription==='active'))){ openBuy('premium'); return; }
-  $('watch_err').textContent=''; $('watch_contact').value='';
+  $('watch_err').textContent=''; $('watch_contact').value=''; $('watch_contact').style.display=''; { const wb=$('watch_btn'); if(wb){ wb.textContent=t('watch.cta','Watch this store →'); wb.onclick=submitWatch; } } { const ws=$('watch_sub'); if(ws) ws.innerHTML=t('watch.sub',"We'll ping you the instant anyone confirms it in stock here."); }
   const sub=$('watch_sub'); if(sub) sub.textContent=LANG==='es'?`Te avisamos en cuanto alguien confirme ${findProductLabel()} en stock en ${findStoreName()}.`:`We'll ping you the instant anyone confirms ${findProductLabel()} in stock at ${findStoreName()}.`;
   track('watch_open',{retailerId:SEL_STORE.id});
   $('watchOverlay').classList.add('on'); setTimeout(()=>{try{$('watch_contact').focus();}catch(e){}},80);
   // Social proof: surface how many others are already waiting on this store.
-  if(SEL_CAT){ try{ const r=await api(`/pub/watch-count?retailerId=${SEL_STORE.id}&categoryId=${SEL_CAT}`); if(r&&r.count>0&&sub) sub.innerHTML=`👀 <b>${r.count} ${r.count===1?'person is':'people are'}</b> already watching ${esc(findStoreName())} for ${esc(findProductLabel())}. We'll ping you all the instant it's confirmed in stock.`; }catch(e){} }
+
 }
 function closeWatch(){ $('watchOverlay').classList.remove('on'); }
 async function submitWatch(){
@@ -5283,7 +5340,12 @@ async function submitWatch(){
   btn.disabled=false; btn.textContent=t('watch.cta','Watch this store →');
   if(!r||r.error){ $('watch_err').textContent=t('err.generic',"Something went wrong. Try again."); return; }
   track('watch_set',{retailerId:SEL_STORE.id,channel:isEmail?'email':'sms'});
-  closeWatch(); toast(t('watch.done',"🔔 You're on the list. We'll reach out the moment it's back."));
+  // In-place confirmation (owner: no toasts, no crowd counts). The input goes away; the box tells
+  // them the ONE next step, then how the alert lands. Verification wiring = Admin build.
+  $('watch_contact').style.display='none';
+  const sub2=$('watch_sub');
+  if(sub2) sub2.innerHTML=(isEmail?t('watch.verify.email','<b>Go to your inbox to verify your email.</b>'):t('watch.verify.sms',"<b>We'll text you to confirm your cell.</b>"))+'<br><span style="color:#8A8A96">'+t('watch.then',"Then we'll ping you the instant it's confirmed in stock.")+'</span>';
+  btn.textContent=t('watch.done2','Done'); btn.onclick=closeWatch;
 }
 
 function openDriverDemo(){ track('driver_demo_open'); openHandoff(); }
@@ -5608,7 +5670,8 @@ async function submitSuccess(){
     const fl2=$('succ_filelabel'); if(fl2)fl2.classList.remove('has');
     const ft=$('succ_filetext'); if(ft)ft.textContent=t('sc.photo','Add a photo of your score');
     succClear();
-    toast(rr.pending?t('sc.posted.review','🙌 Posted! We review before it goes live'):t('sc.posted','🏆 You\'re on the wall!'));
+    toast(rr.pending?t('sc.posted.review','Posted! We review before it goes live'):t('sc.posted','You\'re on the wall!'),'neutral');
+    if($('scorePostOv')&&$('scorePostOv').classList.contains('on')){ closeScorePop(); closeAccount(); openSuccess(); }
     toggleComposer(false); loadSuccessWall(); loadCommunity();
   }catch(e){ $('succ_err').textContent=(e&&e.message)||t('err.generic',"Something went wrong. Try again."); }
   finally{ btn.disabled=false; btn.textContent=t('sc.postit','Post it →'); }
@@ -5697,7 +5760,7 @@ async function submitSchedule(){
   if(!r||r.error){ $('sch_err').textContent=t('err.generic',"Something went wrong. Try again."); return; }
   track('schedule_set',{retailerId:SEL_STORE.id,days:[...SCH_DAYS].join(',')||'auto'});
   closeSchedule(); loadSchedules();
-  toast(SCH_DAYS.size?t('sch.on.days',"📅 Auto-check on. We'll call on those days."):t('sch.on.ship',"📅 Auto-check on. We'll call on this store's shipment day."));
+  toast(SCH_DAYS.size?t('sch.on.days2',"Auto-check on"):t('sch.on.ship2',"Auto-check on · this store's shipment day"),'neutral');
 }
 boot();
 </script>
