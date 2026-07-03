@@ -38,6 +38,24 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
   "check back soon". Owner is comp/premium so only sees member view; behavior is a clean on/off in code.
 
 **🔨 Build / fix:**
+- **🅿️ DevOps → Website (2026-07-03, UPDATED — 4 tiers + premium features): wire the plans sheet to
+  `GET /pub/plans`.** It's the live source of truth (published to Stripe), shape now:
+  `{ features:[{key,label}], everyPlanGets:[key…], tiers:[{key,name,monthlyCents,annualCents,
+  checksPerMonth,premiumAsks,features:{key:bool}}], payg:[{checks,cents}] }`.
+  - **Render the 4 tiers** (low→high: Family/Collector/Hunter/Operator) + the **PAYG slider** from it —
+    NOT the hardcoded `tiers()` (those names/prices are stale). Owner edits all of it in Admin → Plans.
+  - **"EVERY PLAN GETS" grid** = map `everyPlanGets` → `features[].label` (icons per the comp). These are
+    the 8 premium features; render them exactly as `NEW_CHECK_COMPS` shows.
+  - **Gate premium UI on entitlement:** `/app/me` now returns `features:{key:bool}` (comp→all,
+    subscriber→their tier, **PAYG/free→ALL false**). Show/enable a premium feature's UI only when its
+    key is true. **PAYG customers must NOT see premium features as available** — that's the sync rule.
+  - **Checkout:** `POST /app/checkout {kind, annual}` — kind = tier key (`family|collector|hunter|
+    operator`) with `annual:true` for yearly, OR `payg:<checks>` (e.g. `payg:25`). `/app/me` also has
+    `subTier`, `quota` (sub checks left this cycle), `payg` (permanent balance), `credits` (sum).
+  - **Checkout LOOK (owner, embedded):** payment happens ON our site in the comp design — Stripe
+    **Elements**, not the hosted page. DevOps builds the PaymentIntent endpoint; you style the form to
+    the comp. Coordinate when you reach it (separate from rendering the plan cards). Full contract:
+    API_CONTRACT change log 2026-07-03.
 - **PROD-only, check after promote:** owner can't navigate back to June's calls on production. Staging's
   history/calendar code is far ahead — promote likely fixes it; verify on prod after pushing, else debug
   the calendar month-nav (`RAIL_CAL_M`/`openRailCal`). Not blocking.

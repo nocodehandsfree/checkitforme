@@ -44,6 +44,7 @@ curl -s -X POST https://backboard.railway.app/graphql/v2 \
 If it hangs/`unauthorized`: the sandbox can't reach Railway — allow `backboard.railway.app` in the env network policy, or ask Fungie to paste the value.
 
 ## Docs map (open only what you need)
+- `docs/GUIDEBOOK.md` — **owner's front door: what Check is, the money model, plans, where everything lives.**
 - `docs/AGENT_RULES.md` — how to write code here (read first).
 - `docs/GOTCHAS.md` — non-obvious traps that cost real time; read before debugging something weird, **add to it the moment you learn one.**
 - `docs/ARCHITECTURE.md` · `docs/RUNBOOK.md` — layout + stack/run/deploy.
