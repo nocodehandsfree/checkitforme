@@ -30,16 +30,14 @@ of proof (which render you looked at). Never delete findings; history stays.
   `logos/check.png`/`check-icon.png` (June-17 official Check pack; header/footer) — two different
   marks depending on the surface. AWAITING OWNER: which is canonical? Then swap every use of the
   loser for the winner (mechanical; FCHK() is the single chokepoint for 14 of them).
-- [ ] **(P1→Website) Populated My-checks list is unreachable by URL.** Both `?show=mychecks` and
-  `?v=history` auto-restore the NEWEST result when history rows exist (DevOps cycle 3, renders
-  c3-history-list vs c2). If intended UX, fine — but then add a preview hook (e.g.
-  `&stay=1`) so the populated 6e-6i list/calendar can be rendered and verified, and post your own
-  render proof of the populated list against comps 6e/6i. Until a render exists, the populated
-  list stays UNVERIFIED.
-- [~] **(P0) My checks (6e–6i)** — partially confirmed rebuilt (DevOps cycle 1 render, commit
-  de68845): the EMPTY state is genuinely in the new structure (empty card + raised calendar +
-  ring CTA). The POPULATED structure (history rows, 6f activity, 6g earn, 6i history) is
-  unverified — DevOps seeds local data next cycle and re-renders. Leave open until then.
+- ✅ **FIXED (P1) My-checks reachable by URL** — round 6 (242515e) resolved the auto-restore;
+  DevOps render c7-mychecks-r6: Check history header with month count ("3 checks in July" = the
+  seeded rows), calendar with days-with-checks highlighted (Jul 2 accent + dot), today ringed,
+  empty-today card, CHECK A STORE ring capsule. Calendar system CONFIRMED with populated data.
+- [~] **(P0) My checks (6e–6i)** — mostly confirmed: empty state (cycle 1) + populated
+  calendar/counts (cycle 7, c7-mychecks-r6) verified. Remaining: the per-DAY check ROWS (tap a
+  highlighted day) and 6f/6g tabs need an interaction render — Website: post a proof of a day's
+  rows + Activity + Earn against their frames, then this closes.
 - ✅ **FIXED (P0) Result page (6M)** — CONFIRMED REBUILT by DevOps eyes, cycle 1 (commit ec82224,
   render c1-result vs comp 6M): verdict wash ✓ RESULT chip ✓ solid verdict title ✓ CHECK ANOTHER
   STORE ring CTA ✓ step timeline with colored progression ✓ STAFF/CHECK-AI conversation bubbles ✓
@@ -55,6 +53,9 @@ of proof (which render you looked at). Never delete findings; history stays.
   track, footer). Re-verify against P2 store-picked state when rebuilt views land.
 
 ## DevOps cycle log
+- 2026-07-03 ~05:00 CYCLE 7: round-6 claims verified — My-checks URL fix CONFIRMED (P1 closed),
+  calendar system w/ populated data CONFIRMED, month count correct. 6e upgraded to mostly-confirmed
+  (day-rows + 6f/6g interaction proofs remain, on Website). Crons alive (028220d0/73bb582e).
 - 2026-07-03 ~04:20 CYCLE 6 (light regression after owner rounds 3-5): OUT result re-render clean —
   type pop holds (900 title), red wash, ring CTA, 3-stop rail gradient (green→amber→red) live per
   d2d0111; conversation/restock modules intact; buy sheet rendered (c6-buysheet). Brandmark finding
