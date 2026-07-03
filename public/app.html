@@ -1306,8 +1306,11 @@ async function loadRuns(chainId, box){
 }
 // ---- Tape deck (Fun): rehearse the D-lane — clips + cheap classifier, no live agent ----
 let TD_POLL=null, TD_ID=null;
+let TD_BUSY=false;
 async function tdCall(){
+  if(TD_BUSY){ toast("A rehearsal call is already going"); return; }
   const phone=v("td_phone"); if(!phone){ toast("Enter your phone first"); return; }
+  const btn=document.querySelector("#fun [onclick=\"tdCall()\"]"); TD_BUSY=true; if(btn){btn.disabled=true;btn.textContent="Calling…";}
   const r=await api("/api/admin/tapedeck/call",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({phone})});
   if(!(r&&r.id)){ toast((r&&r.error)?("Tape deck: "+r.error):"Could not start the call"); return; }
   TD_ID=r.id; document.getElementById("td_live").style.display="";
@@ -1327,7 +1330,7 @@ async function tdPoll(){
       <span class="meta">${st.atSec}s</span>
       <span><b style="color:${us?"var(--green)":"#e8e8f0"}">${us?"TAPE":"YOU"}</b> ${esch(st.text||"")}${st.label?` <span class="meta">· ${esch(st.label)}</span>`:""}</span></div>`;
   }).join("");
-  if(s.status==="done"||s.status==="failed") clearInterval(TD_POLL);
+  if(s.status==="done"||s.status==="failed"){ clearInterval(TD_POLL); TD_BUSY=false; const btn=document.querySelector("#fun [onclick=\"tdCall()\"]"); if(btn){btn.disabled=false;btn.textContent="Call me on tape";} }
 }
 // ---- Mapper: "Map until locked" — the auto-continue loop. Start it, then this panel narrates every
 // attempt (phase, experiment, win/unsafe) live until the fastest safe path is locked. ----
