@@ -202,6 +202,43 @@ email/SMS templates.*
 
 ---
 
+## 7.5 Locked build decisions (owner Q&A, 2026-07-03)
+
+**Feedback / Polling view (Prompt 1):**
+- Each row opens the **transcript + the user's poll selection** together, and lets the owner
+  **correct/relabel our verdict** right there. Corrections **feed training** — this is the loop that
+  makes the system better, not just "mark reviewed."
+- Placement: its **own focused section within Calls** (the call log still shows statuses; this is the
+  dedicated training/review surface).
+
+**Alert verification + sending (Prompt 2):**
+- **Verify once.** A cell is approved at signup; never re-verify to subscribe to a new alert. Re-verify
+  **only** when the user changes their number. A logged-in user's phone is already verified — reuse it.
+- **Staging** keeps the money-saver (fixed dev code, no paid SMS) exactly like login; **production**
+  sends real texts wherever we have permission.
+- **Channel per premium module:** the user picks **email, text, or both** for any alert that supports it.
+
+**Text-alert economics (Q5) — proposed model:**
+- **Email alerts: free + unlimited for everyone** (Brevo ≈ $0). Default channel.
+- **Text alerts: metered, a premium lever** — each SMS has real marginal cost:
+  - Twilio A2P 10DLC: ~$0.008 Twilio + ~$0.003 carrier ≈ **~1.5¢ per text** (1 segment).
+  - Twilio Verify code: ~5¢ once per phone (signup / number change only — negligible).
+- **Sender:** NOT a shared short code (US carriers deprecated those in 2021). Register **A2P 10DLC**
+  (compliant, ~$4/mo brand+campaign, unblocks all customer texting); toll-free SMS as an interim if
+  10DLC lags. A dedicated short code (~$1k/mo) is overkill until huge volume.
+- **Cap by tier** so a power-user following 40 stores can't silently cost $5/mo in texts. Proposed
+  monthly text allowance (email stays unlimited beyond it): Family email-only · Collector ~50 ·
+  Hunter ~200 · Operator ~1000 (fair use). Bulk pricing drops per-text cost as volume grows.
+  **← owner to confirm the allowances.**
+
+**Delta = the active priority.** Dial Delta in until it's reliably good and **apply it to the Branson
+testing workflow** so persona testing can be finished — the last piece before the website is done.
+Code-side work (tuning needs the owner's live test calls): opener timing so it doesn't talk before
+speakerphone, bring the "what days do you restock?" follow-up into the live/Branson flow, and the
+classifier/clip-routing fixes from the last test.
+
+---
+
 ## 8. Open questions — answer inline (leave your answer under each)
 
 > Copy this section into notes if that's easier. I'll build both prompts the moment these are answered.
