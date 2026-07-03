@@ -1012,6 +1012,14 @@ app.get("/pub/stores", async (c) => {
 // /pub/stores ships every row (fine at ~100 stores, a page-killer at 102k). This endpoint returns
 // only stores near the user: the bounding box rides the retailers(lat,lng) index, distance sorts,
 // and pages. Falls back to ?state= or ?q= (SQL-side) when the visitor hasn't shared location.
+// Token-AND matcher shared by the /pub/stores/near text paths: every word must hit the store's
+// name-or-city; words of 5+ chars shed their last letter to absorb trailing typos ("barns" -> "barn").
+function qTokenMatch(hay: string, q: string): boolean {
+  const h = hay.toLowerCase();
+  const toks = q.split(/\s+/).filter((t) => t.length >= 2).slice(0, 5);
+  if (!toks.length) return h.includes(q);
+  return toks.every((t) => h.includes(t) || (t.length >= 5 && h.includes(t.slice(0, -1))));
+}
 app.get("/pub/stores/near", async (c) => {
   const lat = Number(c.req.query("lat")), lng = Number(c.req.query("lng"));
   const hasLoc = Number.isFinite(lat) && Number.isFinite(lng);
@@ -1087,7 +1095,7 @@ app.get("/pub/stores/near", async (c) => {
       || (mode === "call" && callable(r))
       || (mode === "kiosk" && r.hasKiosk === true)
       || (mode === "site" && r.chainId != null && stockMethod.get(r.chainId) === "site"))
-    .filter((r) => !q || r.name.toLowerCase().includes(q) || (r.location || "").toLowerCase().includes(q))
+    .filter((r) => !q || qTokenMatch(`${r.name} ${r.location || ""}`, q))
     .map((r) => {
       const miles = hasLoc && r.lat != null && r.lng != null ? Math.round(haversineMi(lat, lng, r.lat, r.lng) * 10) / 10 : null;
       const chainName = (r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0];
