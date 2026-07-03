@@ -27,7 +27,8 @@ Owner reviews each on staging before promote. Status testing (13-status sweep) r
   (Family/Collector/Hunter/Operator) + PAYG + 8-feature admin matrix built, live, published to Stripe.**
   Remaining: Website renders /pub/plans + gates premium (PAYG hidden) + Admin feature-matrix UI (both
   filed); embedded Stripe Elements checkout in comp design (Website+DevOps); LIVE-mode webhook at promote;
-  ReadMe docs (needs a valid API key).
+  ReadMe LAUNCHED 2026-07-03 (project "Checkitforme" → Plans & Pricing: Plans · Premium features ·
+  Pay as you go · How billing works). Optional: GitHub Action auto-sync (README_API_KEY as a secret — owner to authorize).
 - [ ] **Premium sign-up area redesign** on the website using Claude design (Website + Design lanes;
   owner-requested 2026-07-01).
 - [ ] Route the consumer "check" through the **bridge** so caller-ID applies (plain `/app/check` uses the house number).
