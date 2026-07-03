@@ -139,7 +139,7 @@ surfacing script improvements that feed back into every lane.
 | Family    | $4.99   | 15                |
 | Collector | $9.99   | 30                |
 | Hunter    | $19.99  | 100               |
-| Operator  | $49.99  | 300 _(confirm)_   |
+| Operator  | $49.99  | 300               |
 
 **Pay-as-you-go (PAYG):** 10 → 100 checks, price per check slides **99¢ down to 60¢** with volume.
 
