@@ -72,6 +72,7 @@ Full prompts: `docs/KICKOFFS.md`. How they work: `HANDOFF.md`.
 - **Store data** → `docs/DATA_PROVENANCE.md` · `docs/specs/store-data-schema.md`
 - **Traps that cost us time** → `docs/GOTCHAS.md`
 - **Finished work** → git history (nothing is kept as a stale doc)
+- **Human-facing docs (customers/team)** → **ReadMe** project "Checkitforme" (Plans/pricing/features live there; this Guidebook is the internal source).
 
 ## 7. Launch readiness (DevOps keeps current — 2026-07-03)
 - ✅ Commerce proven on staging (test mode) · ✅ transcript-privacy fix shipped · ✅ boot security gate
