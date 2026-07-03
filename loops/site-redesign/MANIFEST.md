@@ -404,6 +404,21 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   at takeover the installed-app splash would flash old navy against #1D1D22 pages) → **added as step
   3b in PROMOTE.md's takeover section; do NOT touch before**. Staging carries watch-14/15 ES work;
   no upstream pushes. CLEAN.
+### 🎴 HOBBY CHIP SHIPPED (2026-07-03 overnight — owner-requested morning deliverable)
+- Third switcher key **Retail · Hobby · Kiosk** (v2, card verticals only — poke/onepiece/topps,
+  NEVER NeeDoh). Hobby mode pulls `/pub/stores/near?…&type=Hobby` (Data's server filter), skips the
+  chain-carries gate (the type IS the gate), tags non-MSRP shops **SHOP PRICES** (accent chip), has
+  its own find-step copy + empty state, drops the filter cleanly on switch-back.
+- Pokémon + hobby store picked → the call sheet offers **"Pick the exact set or product →"** into
+  the existing sets flow; the product LOCK now also keeps the picked SHOP through backToBuilder
+  (v1 untouched — HOBBY_LOCK never true there) and re-presents the call sheet ready to dial.
+- **Clobber root cause found + fixed:** boot-time `backfillChainTypes()` force-overwrote manual
+  chain types every deploy (Data's GameStop/indie Hobby types kept reverting). Now fill-only.
+  Data must re-apply chains 30/122/123 once; the staging feed is empty until then (the classifier
+  correctly blocked me from PATCHing shared data directly).
+- 13-check rendered suite `scripts/qa-hobby.mjs` (+ `qa-hobby-seed.ts` for the local DB): gating
+  (v1/NeeDoh negative), type-filtered fetch, rows+tag, sheet link, era→set→product lock roundtrip
+  keeping the shop, empty state, filter cleanup. ALL PASS + full regression green (29+15+46+66+7+tsc).
 ### 🔁 CONFIRMATION LOOP (cron f08dcfbe, every 12m — runs until the owner signs off)
 - Pass 1: found + fixed the search post-filter (full-phrase includes() after the tokenized SQL — the
   real reason "barns westlake" kept failing) and killed a ZOMBIE local server from 02:04 that had been
