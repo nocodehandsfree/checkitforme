@@ -65,6 +65,32 @@ ME03 = Perfect Order — the design grid had these mislabeled).
 
 ## Current focus (KEEP UPDATED)
 
+**Session 2026-07-04 — THE PHONEBOOK: 4,123 card + 436 comic shops harvested; Thrift turned on. Staging.**
+- **National Hobby 1,188 → 5,710. Thrift 0 → 3,479.** All on staging, all correctly tagged, zero tag drift.
+- **cardshophub.com is fully harvestable** (the "phonebook"): each shop page is server-rendered JSON-LD
+  (`<script id="shop-json-ld">` → name/streetAddress/city/state/zip/telephone/geo). Sitemap enumerates
+  6,672 shop URLs at `/states/<st>/<city>/<shop>/`. Plain curl (browser is proxy-blocked with
+  ERR_CONNECTION_RESET; curl through `$HTTPS_PROXY` works). Harvested all 6,672 → **4,123 card shops,
+  50 states** after dropping 2,254 big-chain rows (GameStop/Target/etc — NEVER re-chain those) + 254
+  no-phone + 41 dup. Tooling committed: `scripts/harvest-shop-directory.py` + `scripts/transform-shops.py`.
+- **comicshoplocator.com = one-file dump.** Its locator.js does `fetch('/comic-shops/stores-search.json')`
+  — the whole directory (443 shops, compact keys n/st/c/sta/z/la/lo/p) in ONE request. → **436 comic
+  shops, 45 states.** Comic shops carry Pokémon/Magic/Yu-Gi-Oh/One Piece/Lorcana.
+- **Store-type model (owner: "must figure out the store type… maybe a Bookstore vertical later"):** chip
+  `type` is the UMBRELLA (both comic + card = "Hobby" so they ride the Hobby chip); the CHAIN is the
+  specific kind — **"Comic Book Shop" (chain 129)** vs **"Independent Card Shop" (chain 128)**, both
+  `type=Hobby isMSRP=false` (SHOP PRICES). Thrift kinds = Goodwill/Salvation Army/Savers/**Unique** (116-119,
+  `type=Thrift`). A **Bookstore** vertical is a straight `?type=Bookstore` later (that type already exists, 746).
+- **⚠️ HOURS ARE THE GAP.** Neither directory publishes structured open/close times — harvested shops
+  default to "open by day, closed 1-6am". The paid lookup works (proved on 6 LA shops → real hours +
+  live labels): `POST /api/hours/backfill` (bulk, fire-and-forget) or `POST /api/hours/:id/refresh`,
+  gated by policy flag `dogfoodHours` (OFF, ~1-2¢/store, ~5k hobby shops ≈ ~$100). **Owner deciding
+  whether to green-light.** Server has the OPENAI/GEMINI keys; my shell does not.
+- **Durable + prod-promotable:** `data/hobby-card-shops.json` (4,123), `data/comic-shops.json` (436),
+  `data/hobby-shops.json` (8 curated). **Promote to prod** = `POST checkitforme.com/api/stores/import`
+  each file, then PATCH the thrift chains (116-119→Thrift) + assert 128/129→Hobby on prod. Loop cron
+  `9e2bde0e` (15-min, 12x) keeps re-verifying tags (clobber watch) and stands ready to fold in hours.
+
 **Session 2026-07-03 (late) — Hobby expansion + phonebook-source assessment. Staging.**
 - **8 more verified card shops live on the LA Hobby chip** (was 16 CA Hobby, mostly GameStop; the LA
   metro read as 5 GameStop + 2 indies). New indies, each Census-geocoded, real address/phone/hours,
