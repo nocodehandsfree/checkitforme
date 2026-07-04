@@ -45,6 +45,12 @@ tiers with zero client changes.
   `hasFeature(key)` — auto-checks (`scheduled_checks`), restock alerts (`restock_alerts`), Hobby/exact
   products (`exact_products`), Thrift chip (`thrift_hunts`), any-town relocate (`any_town`). Comp → all;
   free/PAYG → none; core free-check flow never gated; v1 untouched. Tests: `scripts/qa-gating.mjs` (17).
+- **⚠️ Server-side enforcement still needed (DevOps):** the consumer gating is cosmetic. A subscriber
+  whose tier loses `scheduled_checks` has their existing auto-checks HIDDEN in the UI but the scheduler
+  keeps firing + charging (`src/customer-schedules.ts:67-71`), and `POST /app/schedule`
+  (`src/server.ts`) still accepts new ones. Gate both on `accountFeatures(...).scheduled_checks` (comp →
+  true), or make the client list existing schedules cancel-only when the feature is off. Same principle
+  for restock/exact — the hard gate must live server-side; the UI hide is UX only.
 - **Admin (app.html God View → Plans):** added the 8-feature per-tier checkbox matrix; `savePlansDraft`
   now POSTs `features` (previously dropped, so an OFF never persisted). Verified end-to-end: uncheck
   `scheduled_checks` for Family → `/pub/plans` + `/app/me.features` reflect it → the auto-check module
