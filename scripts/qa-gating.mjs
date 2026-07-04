@@ -81,6 +81,19 @@ ok('any_town ON: geocode path is allowed to proceed', await pg.evaluate(async ()
   // with entitlement it passes the gate (proceeds to the q.length check, not the early return)
   const src=geocodeSearch.toString(); return /hasFeature\('any_town'\)/.test(src); }));
 
+// ---- P2: a non-comp subscriber sees their REAL tier + price (not hardcoded "Family · $9.99") ----
+await pg.evaluate(async () => { await loadPlans(); ACCOUNT={subscription:'active',comp:false,subTier:'collector',credits:30,features:{}}; });
+const label = await pg.evaluate(() => new Promise(r=>{ try{ closeBuy(); }catch(_){}; openBuy('manage'); setTimeout(()=>{ const ov=document.getElementById('buyOverlay'); r(ov?ov.textContent:''); },300); }));
+ok('subscriber label shows their real tier (Collector, not Family)', /Collector/.test(label) && !/Family/.test(label.split('Every plan')[0]||label), (label.match(/You're on[^✓]*/)||[''])[0].trim());
+await pg.evaluate(() => { try{ closeBuy(); }catch(_){}} );
+
+// ---- P3: Hobby chip is Pokémon-only (dead on onepiece/topps, whose hunt feed doesn't exist) ----
+await pg.goto('http://localhost:8797/onepiece?skin=v2',{waitUntil:'networkidle',timeout:20000}).catch(()=>{});
+await pg.waitForTimeout(500);
+await pg.evaluate(() => { ACCOUNT={comp:true,credits:9999}; try{ensureModeChips();}catch(_){}} );
+await pg.waitForTimeout(200);
+ok('onepiece v2 (comp): NO hobby chip (Pokémon-only), thrift still present', !/hobby/.test(await chips()) && /thrift/.test(await chips()), await chips());
+
 // ---- v1 (skin=off): builder untouched — multi-select still works, no chips ----
 await pg.goto('http://localhost:8797/pokemon?skin=off',{waitUntil:'networkidle',timeout:20000}).catch(()=>{});
 await pg.waitForTimeout(400);

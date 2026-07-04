@@ -2197,6 +2197,7 @@ const I18N={ es:{
   'mode.thrift':'Segunda mano','find.thrift':'① Encuentra una tienda de segunda mano','empty.thrift':'No hay tiendas de segunda mano en {r} mi — amplía el radio.',
   'co.title':'Pago','co.change':'Cambiar','co.orcard':'O paga con tarjeta','co.loading':'Cargando pago seguro…','co.subscribe':'Suscribirse','co.pay':'Pagar','co.cancel':'Cancela cuando quieras','co.secured':'Protegido por','co.processing':'Procesando…','co.failed':'Pago fallido. Inténtalo de nuevo.','co.redirect':'Abriendo pago seguro…','co.checksmo':'verificaciones al mes','co.monthly':'mensual','co.annual':'anual','co.paygsub':'Pago único · las verificaciones no caducan',
   'ph.quoted':'Precio indicado','ph.overmsrp':'sobre el precio de lista','ph.title':'Precios encontrados','ph.best':'MEJOR','ph.oos':'agotado',
+  'plan.member':'Miembro',
   'buy.tabplans':'Planes','buy.tabpayg':'Por uso','plan.on':'Tienes','plan.checks':'verificaciones','plan.percheck':'aprox.','plan.percheck2':'por verificación','plan.noexpire':'no caducan','acct.stat.run2':'Verificaciones hoy','acct.perweek2':'Verificaciones esta semana','auth.newcell':'Danos tu nuevo celular','ph.cellmail':'celular o correo',
   'ref.sharemsg':'¡Oye! Mira esta tecnología. Está increíble.\nNos ayuda a encontrar productos virales en stock como cartas Pokémon a precio de tienda.\nRegístrate y ambos ganamos 3 verificaciones gratis: ','ref.copied':'¡Enlace de invitación copiado!','ref.copy':'Copia tu enlace de invitación:','ref.both':'Ambos reciben <b style="color:#fff">3 verificaciones gratis</b> cuando se registran.','ref.copybtn':'COPIAR','ref.text':'Mensaje','ref.post':'Publicar','ref.more':'Más',
   'kioskonly':'Solo kiosco','kiosk.precall':'Solo kiosco. Preguntaremos si su kiosco está funcionando y surtido, no por un envío.',
@@ -2362,8 +2363,9 @@ function applyLang(){
 function ensureModeChips(){
   if(!isV2()||!BRAND) return;
   const kioskBtn=()=>document.querySelector('.modetab[data-mode="kiosk"]');
-  // HOBBY (card verticals only — never NeeDoh — AND the exact_products entitlement).
-  { const want=['poke','onepiece','topps'].includes(BRAND.key)&&hasFeature('exact_products');
+  // HOBBY (Pokémon only — the hunt feed is Pokémon-only, so onepiece/topps would get a dead chip —
+  // AND the exact_products entitlement).
+  { const want=BRAND.key==='poke'&&hasFeature('exact_products');
     const ex=document.querySelector('.modetab[data-mode="hobby"]'), kb=kioskBtn();
     if(want&&!ex&&kb){ const hb=document.createElement('button'); hb.className='modetab'; hb.dataset.mode='hobby'; hb.setAttribute('onclick',"setMode('hobby')");
       hb.innerHTML='<span class="mti"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg></span><span>'+t('mode.hobby','Hobby')+'</span>';
@@ -2519,7 +2521,13 @@ async function boot(){
   initGA();
   buildSwitcher(); applyBrand(); renderIcons(); buildLangSel(); applyLang();
   renderAuth(); renderStores(); renderChips(); renderFooter(); refreshAuth();
-  if(sp.get('paid')){ history.replaceState({},'','/'); toast(t('toast.payment2','Payment received. Adding your checks…'),'neutral'); setTimeout(refreshAuth,2500); setTimeout(refreshAuth,6000); if(isV2()) setTimeout(openPaid,3200); }
+  if(sp.get('paid')){ history.replaceState({},'','/'); toast(t('toast.payment2','Payment received. Adding your checks…'),'neutral');
+    // Success redirect (hosted or 3DS return) — the grant is async via webhook. Poll /app/me until the
+    // tier/credits actually land, THEN celebrate, instead of firing openPaid on a fixed timer that can
+    // beat the webhook (which showed stale "0 checks left").
+    let _prev=0; try{ const c=JSON.parse(localStorage.getItem('cifm_acct')||'null'); _prev=(c&&c.credits)||0; }catch(_){ }
+    (async()=>{ const me=await pollEntitled(_prev); if(me){ ACCOUNT=me; try{ renderAuth(); }catch(_){ } } else { try{ await refreshAuth(); }catch(_){ } } if(isV2()) openPaid(); })();
+  }
   if(sp.get('buy')){ history.replaceState({},'',location.pathname); setTimeout(()=>{ try{ openBuy('manage'); }catch(_){} },700); } // Stripe cancel lands back on the plans sheet
   if(sp.get('call')) restoreCall(sp.get('call'), sp.get('store'), sp.get('cat'));
   else if(sp.get('v')==='history') openHistory();
@@ -2576,6 +2584,7 @@ async function refreshAuth(){
   } else { ACCOUNT=null; STORES_AUTH_TOKEN=null; try{ localStorage.setItem('runnr_authed','0'); localStorage.removeItem('cifm_acct'); }catch(e){} }
   renderAuth();
   try{ ensureModeChips(); }catch(_){ } // entitlement now known → show/hide the Hobby/Thrift chips
+  try{ if(isV2()&&$('paidOverlay')&&$('paidOverlay').classList.contains('on')) openPaid(); }catch(_){ } // refresh the "You're in" numbers if the grant landed while it's open
   loadSchedules();
   claimPendingReferral();
   loadRefer();
@@ -4483,8 +4492,11 @@ function showResult(o, cid){
     F.community?`<button class="act2" onclick="openSuccess()">${ICO.cam('#fff')} ${t('res.score','Grabbed it? Post your score')}</button>`:'',
   ].join('')) : '';
   // Restock section: PREMIUM gets the real "we'll text you" signup; non-premium gets a simple "check
-  // back soon" nudge (restock alerts are a paid perk).
-  const upsell = !(canNotify && (F.restockAlerts!==false || F.scheduling!==false)) ? '' : ((hasFeature('restock_alerts')||hasFeature('scheduled_checks')) ? `
+  // back soon" nudge (restock alerts are a paid perk). The premium branch is entered ONLY when at least
+  // one actionable row will render (entitlement AND its global flag), so it can never show an empty module.
+  const _rAlert = F.restockAlerts!==false && hasFeature('restock_alerts');
+  const _sAuto  = F.scheduling!==false && hasFeature('scheduled_checks');
+  const upsell = !(canNotify && (F.restockAlerts!==false || F.scheduling!==false)) ? '' : ((_rAlert||_sAuto) ? `
     <div class="upmod">
       <button type="button" class="upmod-h" onclick="this.closest('.upmod').classList.toggle('open')" aria-label="${esc(t('up.restock',"Don't miss the restock"))}">
         <div class="t">${ICO.bell(PURP)} ${t('up.restock',"Don't miss the restock")}</div>
@@ -4492,8 +4504,8 @@ function showResult(o, cid){
       </button>
       <div class="upmod-body">
         <div class="s">${t('up.restock.sub',"We'll text you the second it's back in stock.")}</div>
-        ${F.restockAlerts!==false&&hasFeature('restock_alerts')?`<div class="uprow" onclick="openWatch()"><div class="upi">${ICO.msg(PURP)}</div><div class="uptxt"><div class="a">${t('up.watch',"Tell me when it's back")}</div><div class="b">${t('up.watch.sub',"One alert the instant a check confirms stock.")}</div></div><div class="upc">${ICO.chev(isV2()?'#7C7C88':'#56566a')}</div></div>`:''}
-        ${F.scheduling!==false&&hasFeature('scheduled_checks')?`<div class="uprow" onclick="openSchedule()"><div class="upi">${ICO.cal(PURP)}</div><div class="uptxt"><div class="a">${t('up.sched','Auto-check on shipment days')}</div><div class="b">${t('up.sched.sub',"We call for you on restock days. Hands-free.")}</div></div><div class="upc">${ICO.chev(isV2()?'#7C7C88':'#56566a')}</div></div>`:''}
+        ${_rAlert?`<div class="uprow" onclick="openWatch()"><div class="upi">${ICO.msg(PURP)}</div><div class="uptxt"><div class="a">${t('up.watch',"Tell me when it's back")}</div><div class="b">${t('up.watch.sub',"One alert the instant a check confirms stock.")}</div></div><div class="upc">${ICO.chev(isV2()?'#7C7C88':'#56566a')}</div></div>`:''}
+        ${_sAuto?`<div class="uprow" onclick="openSchedule()"><div class="upi">${ICO.cal(PURP)}</div><div class="uptxt"><div class="a">${t('up.sched','Auto-check on shipment days')}</div><div class="b">${t('up.sched.sub',"We call for you on restock days. Hands-free.")}</div></div><div class="upc">${ICO.chev(isV2()?'#7C7C88':'#56566a')}</div></div>`:''}
       </div>
     </div>` : `
     <div class="upmod open">
@@ -5468,6 +5480,13 @@ function paygBundles(){
 }
 function setCycle(annual,btn){ BILLING_ANNUAL=annual; document.querySelectorAll('#billcycle button').forEach(b=>b.classList.toggle('on',b===btn)); renderBuyPlans(); }
 function tierPrice(tr){ return BILLING_ANNUAL?money(tr.annualCents||Math.round(tr.cents*12*0.83/100)*100):money(tr.cents); }
+// The subscriber's CURRENT plan label — derived from ACCOUNT.subTier + live tiers (never hardcoded, so a
+// Collector/Hunter/Operator member sees their real tier + price, not "Family · $9.99").
+function curTierLabel(){
+  const st=ACCOUNT&&ACCOUNT.subTier;
+  const ti=(typeof tiers==='function'?tiers():[]).find(x=>x.key===st);
+  return ti ? esc(ti.name)+' · '+tierPrice(ti)+(BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo')) : t('plan.member','Member');
+}
 function renderBuyPlans(){
   const member=!!(ACCOUNT&&ACCOUNT.subscription==='active'), comp=!!(ACCOUNT&&ACCOUNT.comp);
   const per=BILLING_ANNUAL?t('plan.yr','/yr'):t('plan.mo','/mo');
@@ -5475,12 +5494,12 @@ function renderBuyPlans(){
   if((member||comp)&&isV2()){
     // Owner 2026-07-02: this sheet SELLS — the pill + stat tiles on My-checks already tell you your
     // plan. Just a small note here, then the upgrade options.
-    html+=`<div style="margin:0 0 12px;text-align:center;font-size:12.5px;font-weight:600;color:#8A8A96">${t('plan.on',"You're on")} <b style="color:#FFF">${comp?t('plan.founder',"Founder. Unlimited."):('Family · '+money(999)+t('plan.mo','/mo'))}</b> <span style="color:#4ADE80">✓</span></div>`;
+    html+=`<div style="margin:0 0 12px;text-align:center;font-size:12.5px;font-weight:600;color:#8A8A96">${t('plan.on',"You're on")} <b style="color:#FFF">${comp?t('plan.founder',"Founder. Unlimited."):curTierLabel()}</b> <span style="color:#4ADE80">✓</span></div>`;
   }
   else if(member||comp){
     // The plan dashboard: what you're on, what you've used, where to grow.
     html+=`<div class="plan sub" style="cursor:default">
-      <div class="grow"><div class="pn">${ICO.spark('#FFCB05')} ${comp?t('plan.founder',"Founder. Unlimited."):('Family · '+money(999)+t('plan.mo','/mo'))}</div>
+      <div class="grow"><div class="pn">${ICO.spark('#FFCB05')} ${comp?t('plan.founder',"Founder. Unlimited."):curTierLabel()}</div>
         <div class="pd">${comp?t('plan.founder.sub','All tiers, all features, forever.'):t('plan.cycle','Billed monthly · cancel anytime')}</div></div>
       <div class="pp" style="font-size:14px;color:var(--green)">${t('plan.active','ACTIVE')}</div></div>
     <div style="display:flex;gap:8px;margin:10px 0 14px">
@@ -5641,7 +5660,7 @@ async function confirmCheckout(){
     refreshAuth(); if(isV2()) setTimeout(openPaid,600);
   }catch(e){ setT('co_err', t('co.failed','Payment failed. Try again.')); if(cta) cta.disabled=false; setT('co_cta_label', coCtaLabel()); }
 }
-async function pollEntitled(prevCredits){ for(let i=0;i<12;i++){ await new Promise(r=>setTimeout(r,1500));
+async function pollEntitled(prevCredits){ for(let i=0;i<20;i++){ await new Promise(r=>setTimeout(r,1500)); // ~30s, covers webhook lag
   const me=await appApi('/app/me'); if(me&&!me.error){ if(me.subscription==='active'||(me.credits||0)>prevCredits||me.comp) return me; } } return null; }
 function closeCheckout(){ const o=$('coOverlay'); if(o) o.classList.remove('on');
   _coElements=null; _stripe=null; const h=$('co_pay_el'); if(h) h.innerHTML='<div class="co-loading" id="co_loading">'+t('co.loading','Loading secure payment…')+'</div>'; }
