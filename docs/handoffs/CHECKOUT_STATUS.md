@@ -40,7 +40,21 @@ OR create the first-invoice PaymentIntent explicitly. PAYG (one-time PI) already
 subscription branch needs this. The moment it returns a `clientSecret`, the Website sheet lights up for
 tiers with zero client changes.
 
-## Follow-up — `me.features` gating (Website)
-`hasFeature(key)` helper is in place (reads `/app/me.features`). The plans sheet is already correct
-(PAYG has no subscription → no premium shown). The broader app-wide sweep to HIDE premium entry points
-(thrift/hobby-exact-product/scheduled/restock/etc.) for pay-as-you-go accounts is a queued Website task.
+## `me.features` per-tier gating — DONE (2026-07-04, both halves)
+- **Consumer (checkit.html):** every premium module hides when the tier lacks the feature via
+  `hasFeature(key)` — auto-checks (`scheduled_checks`), restock alerts (`restock_alerts`), Hobby/exact
+  products (`exact_products`), Thrift chip (`thrift_hunts`), any-town relocate (`any_town`). Comp → all;
+  free/PAYG → none; core free-check flow never gated; v1 untouched. Tests: `scripts/qa-gating.mjs` (17).
+- **Admin (app.html God View → Plans):** added the 8-feature per-tier checkbox matrix; `savePlansDraft`
+  now POSTs `features` (previously dropped, so an OFF never persisted). Verified end-to-end: uncheck
+  `scheduled_checks` for Family → `/pub/plans` + `/app/me.features` reflect it → the auto-check module
+  vanishes for Family subscribers. Test: `scripts/qa-admin-plans.mjs`.
+
+## NEW blocker — subscription ACTIVATION webhook (DevOps)
+DevOps's `confirmation_secret` fix works: `POST /app/checkout-intent {kind:"family"}` now returns a real
+`clientSecret`, and confirming with test card 4242 → PaymentIntent **succeeded**. BUT `/app/me` stays
+`subscription:"none"` / `subTier:null` after payment (polled ~25s) — the subscription-activation webhook
+isn't flipping the account. **PAYG activation works fine** (payment_intent.succeeded → credits granted),
+so this is specific to the subscription path: verify `handleStripeEvent` activates the account on
+`invoice.payment_succeeded` / `customer.subscription.updated` (status active) and maps by
+customer/`metadata.clerkUserId`. Until then, a bought tier charges but the account doesn't upgrade.
