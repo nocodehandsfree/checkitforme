@@ -1492,6 +1492,16 @@ function syncPill(s){ return s==='in_sync'
   : '<span style="font-size:10.5px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);border-radius:7px;padding:2px 8px">● pending publish</span>'; }
 function priceInput(val,oninput,w){ return '<span style="display:inline-flex;align-items:center;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.01" min="0" value="'+((val||0)/100).toFixed(2)+'" oninput="'+oninput+'" style="background:transparent;border:none;outline:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px 2px;width:'+(w||60)+'px"></span>'; }
 function numInput(val,oninput,w){ return '<input type="number" min="0" step="1" value="'+(val||0)+'" oninput="'+oninput+'" style="background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px;width:'+(w||56)+'px">'; }
+// Per-tier feature matrix: which of the premium features this tier includes. Drives /app/me.features →
+// the consumer app hides a module when its key is OFF here (comp always gets all). exact_products also
+// recomputes premiumAsks server-side, so unchecking it turns off the exact-product asks too.
+function featMatrix(t,i){
+  const feats=(PLANS.features||[]); if(!feats.length) return '';
+  const cell=f=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" ${t.features&&t.features[f.key]?'checked':''} onchange="if(!PLANS.tiers[${i}].features)PLANS.tiers[${i}].features={};PLANS.tiers[${i}].features['${f.key}']=this.checked;plansTouch(${i})" style="width:16px;height:16px;accent-color:var(--green)"><span style="font-size:12.5px;color:var(--text-muted)">${esch(f.label)}</span></label>`;
+  return `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+    <div style="font-size:11px;letter-spacing:.08em;color:var(--text-tertiary);font-weight:700;margin-bottom:9px">FEATURES IN THIS TIER</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 14px">${feats.map(cell).join('')}</div></div>`;
+}
 function renderPlans(){
   const anyPending=PLANS.tiers.some(t=>t.sync!=='in_sync')||PLANS.payg.bundles.some(b=>b.sync!=='in_sync');
   const tierCard=(t,i)=>`<div class="card report">
@@ -1503,8 +1513,8 @@ function renderPlans(){
       <label style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:var(--text-muted)">Monthly</span>${priceInput(t.monthlyCents,`PLANS.tiers[${i}].monthlyCents=toCents(this.value);plansTouch(${i})`)}</label>
       <label style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:var(--text-muted)">Annual <span style="color:var(--text-tertiary)">(−17% default)</span></span>${priceInput(t.annualCents,`PLANS.tiers[${i}].annualCents=toCents(this.value);plansTouch(${i})`,72)}</label>
       <label style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:var(--text-muted)">Checks / month</span>${numInput(t.checksPerMonth,`PLANS.tiers[${i}].checksPerMonth=parseInt(this.value)||0;plansTouch(${i})`)}</label>
-      <label style="display:flex;align-items:center;gap:8px;align-self:end;padding-bottom:8px"><input type="checkbox" ${t.premiumAsks?'checked':''} onchange="PLANS.tiers[${i}].premiumAsks=this.checked;plansTouch(${i})" style="width:17px;height:17px;accent-color:var(--green)"><span style="font-size:12.5px;color:var(--text-muted)">Premium asks</span></label>
     </div>
+    ${featMatrix(t,i)}
   </div>`;
   const bundleRow=(b,i)=>`<div class="row" style="justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--border-dashed)">
     <span style="display:flex;align-items:center;gap:8px">${numInput(b.checks,`PLANS.payg.bundles[${i}].checks=parseInt(this.value)||0;plansTouch()`,54)}<span style="font-size:13px;color:var(--text-muted)">checks</span></span>
@@ -1532,7 +1542,7 @@ function plansTouch(i){
   clearTimeout(_plansSaveT); _plansSaveT=setTimeout(savePlansDraft,600);
 }
 async function savePlansDraft(){
-  const body={ tiers:PLANS.tiers.map(t=>({key:t.key,name:t.name,monthlyCents:t.monthlyCents,annualCents:t.annualCents,checksPerMonth:t.checksPerMonth,premiumAsks:t.premiumAsks})),
+  const body={ tiers:PLANS.tiers.map(t=>({key:t.key,name:t.name,monthlyCents:t.monthlyCents,annualCents:t.annualCents,checksPerMonth:t.checksPerMonth,premiumAsks:t.premiumAsks,features:t.features})),
     payg:PLANS.payg.bundles.map(b=>({checks:b.checks,cents:b.cents})) };
   const r=await api('/api/admin/plans',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   if(r&&!r.error){ PLANS=r; renderPlans(); }
