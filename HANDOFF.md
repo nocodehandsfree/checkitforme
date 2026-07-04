@@ -41,7 +41,11 @@ curl -s -X POST https://backboard.railway.app/graphql/v2 \
   -d '{"query":"{ variables(projectId: \"889e332c-30fe-46e9-a18e-d8de4f7523aa\", environmentId: \"7cbf9327-357a-415e-9031-d1609aead2b4\", serviceId: \"d363a982-e918-4433-b175-defe8faf0ec9\") }"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['variables']['ADMIN_TOKEN'])"
 ```
-If it hangs/`unauthorized`: the sandbox can't reach Railway — allow `backboard.railway.app` in the env network policy, or ask Fungie to paste the value.
+⚠️ **Use `curl` for the Railway call (and any secret/API fetch) — NOT python urllib, requests, or
+WebFetch.** Outbound goes through a proxy that `curl` is preconfigured for; other HTTP clients get a
+**403 from the proxy** and look like "Railway is down" when it isn't (network access is Full by
+default — not the problem). If the `curl` command above still errors after ONE try, **ask Fungie for
+the `ADMIN_TOKEN` and keep moving — never loop on it.**
 
 ## Docs map (open only what you need)
 - `docs/AGENT_RULES.md` — how to write code here (read first).
