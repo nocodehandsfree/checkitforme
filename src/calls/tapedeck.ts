@@ -17,6 +17,7 @@ export interface TdSession {
   steps: TdStep[]; turns: number;
   clips: Buffer[]; clipText: string[];
   callSid?: string;
+  opened?: boolean; // has the opener clip played yet? (we wait to hear you pick up first)
 }
 const sessions = new Map<string, TdSession>();
 export function tdSession(id: string): TdSession | null { return sessions.get(id) || null; }
@@ -113,10 +114,11 @@ export function tapedeckTwiml(id: string): string {
   const s = sessions.get(id);
   if (!s) return twiml("<Hangup/>");
   s.status = "live";
-  s.steps.push({ who: "us", text: s.clipText[0], atSec: 0, label: "opener clip — after a natural ~1.5s beat" });
-  // A real caller takes a beat after "hello" before speaking — also gives you time to hit speaker.
-  // (Rehearsal-only path; real store checks never touch this, so a generous 2s beat is free here.)
-  return twiml(`<Pause length="2"/>${play(id, 0)}${gather(id)}`);
+  // Don't open into dead air. Listen for YOU to pick up (your "hello?") before the opener plays —
+  // that's how a real inbound greeting works, and it gives you time to hit speaker first. The opener
+  // fires on the first /step hit, whether you greeted or the listen timed out (handled in tapedeckStep).
+  // Owner-observed: a fixed pre-opener pause still talked before the phone reached speaker.
+  return twiml(`<Pause length="1"/>${gather(id)}`);
 }
 
 /** One turn: classify the reply with the cheap model, answer with the matching clip. */
@@ -124,6 +126,14 @@ export async function tapedeckStep(id: string, speech: string): Promise<string> 
   const s = sessions.get(id);
   if (!s) return twiml("<Hangup/>");
   const atSec = Math.round((Date.now() - s.startMs) / 1000);
+  // First /step hit = you just picked up (said "hello", or the greeting listen timed out). NOW play
+  // the opener — this is the "wait for the greeting" beat so it never talks before you reach speaker.
+  // Doesn't count as a turn and isn't classified; it just launches the opener.
+  if (!s.opened) {
+    s.opened = true;
+    s.steps.push({ who: "us", text: s.clipText[0], atSec, label: "opener — played after you picked up" });
+    return twiml(`${play(id, 0)}${gather(id)}`);
+  }
   s.turns++;
   if (s.turns > 8 || atSec > 150) { s.status = "done"; return twiml(`${play(id, 3)}<Hangup/>`); }
   if (speech && speech.trim()) s.steps.push({ who: "you", text: speech.trim().slice(0, 200), atSec });
