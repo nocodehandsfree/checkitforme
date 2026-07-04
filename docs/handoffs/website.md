@@ -52,13 +52,14 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
   - **Checkout:** `POST /app/checkout {kind, annual}` — kind = tier key (`family|collector|hunter|
     operator`) with `annual:true` for yearly, OR `payg:<checks>` (e.g. `payg:25`). `/app/me` also has
     `subTier`, `quota` (sub checks left this cycle), `payg` (permanent balance), `credits` (sum).
-  - **Checkout LOOK — embedded, BACKEND READY (DevOps, 2026-07-03):** payment happens ON our site in
-    the comp design via Stripe **Elements** (not the hosted page). Call **`POST /app/checkout-intent
-    {kind, annual}`** → `{ mode:"subscription"|"payment", clientSecret, publishableKey, amountCents }`.
-    Load Stripe.js with `publishableKey`, mount the Payment Element with `clientSecret`, style it to the
-    comp, confirm on submit; on success route back (the webhook grants the tier/credits — poll `/app/me`
-    until `subscription`/`credits` update). `payg:<checks>` = one-time; a tier key = subscription. Full
-    contract: API_CONTRACT change log 2026-07-03.
+  - **Checkout LOOK — embedded, SHIPPED (Website, 2026-07-03):** DONE. Live plans sheet (tiers/grid/PAYG
+    off `/pub/plans`) + the branded 6c `#coOverlay` (Stripe Payment Element styled to `NEW_CHECK_COMPS`
+    via `POST /app/checkout-intent`, `confirmPayment(redirect:if_required)`, poll `/app/me`, 6d success).
+    Graceful hosted-redirect fallback when no on-page intent. **PAYG branded flow VERIFIED end-to-end on
+    staging with test card 4242** (credits 1→26). ⚠️ **Subscription-tier Elements is blocked on a DevOps
+    backend bug** — `createCheckoutIntent` reads `latest_invoice.payment_intent` which the current Stripe
+    API version returns null; tiers fall back to the working hosted redirect until fixed. Full status +
+    the me.features gating follow-up: **`docs/handoffs/CHECKOUT_STATUS.md`**.
 - **PROD-only, check after promote:** owner can't navigate back to June's calls on production. Staging's
   history/calendar code is far ahead — promote likely fixes it; verify on prod after pushing, else debug
   the calendar month-nav (`RAIL_CAL_M`/`openRailCal`). Not blocking.
