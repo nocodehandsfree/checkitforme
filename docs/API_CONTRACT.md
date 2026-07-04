@@ -172,7 +172,30 @@ GET `/`, `/r`, `/s`, `/p/:slug` (+`?partial=1` → `{title,body}`), `/og/:file`,
 
 ---
 
+- 2026-07-03b — **Embedded checkout (Stripe Elements):** `POST /app/checkout-intent {kind, annual}` →
+  `{ mode, clientSecret, publishableKey, amountCents }`. Website confirms with Elements on our own
+  comp-styled page (subscription = tier key; one-time = `payg:<checks>`). Entitlement is granted by the
+  webhook (invoice.paid subscription_create / payment_intent.succeeded), same result as the hosted path.
+
 ## Change log
+- 2026-07-03 — **Plans = 4 tiers + premium-feature matrix.** `GET /pub/plans` →
+  `{ features:[{key,label}], everyPlanGets:[key…], tiers:[{key,name,monthlyCents,annualCents,
+  checksPerMonth,premiumAsks,features:{key:bool}}], payg:[{checks,cents}] }`. Tier keys:
+  `family|collector|hunter|operator`. `GET /api/admin/plans` adds the same `features` catalog + per-tier
+  map (admin edits the matrix; `POST /api/admin/plans` accepts `features` per tier). `GET /app/me` adds
+  `features:{key:bool}` = the account's entitlements (comp→all, subscriber→tier, PAYG/free→none) plus
+  existing `premiumAsks` (= features.exact_products). Checkout: `POST /app/checkout {kind, annual}`,
+  kind = tier key or `payg:<checks>`. Website gates premium UI on `/app/me.features` and HIDES premium
+  for PAYG. Additive — old `sub`/pack kinds still resolve.
+- 2026-07-03 — **Plans + PAYG + entitlements.** New `GET /pub/plans` →
+  `{ tiers:[{key,name,monthlyCents,annualCents,checksPerMonth,premiumAsks}], payg:[{checks,cents}] }`
+  (owner-edited in Admin → Plans, source of truth = settings `vt_plans`). `POST /app/checkout` now
+  takes `{kind, annual?}`: kind = tier key (`starter|collector|hunter`, `annual:true`=yearly) OR
+  `payg:<checks>`. Legacy `sub` + pack keys still resolve. `GET /app/me` adds `subTier`, `quota`
+  (subscription checks left this cycle — resets each billing cycle, no rollover), `payg` (permanent
+  PAYG balance), `premiumAsks` (Hunter entitlement); `credits` is now quota+payg. Admin-only:
+  `GET/POST /api/admin/plans`, `POST /api/admin/plans/publish` (mirrors to Stripe: new Price + archive
+  old, idempotent; Products never deleted). Additive — existing callers unaffected.
 - 2026-07-01 — **transcript privacy (IDOR fix).** `/pub/result/:cid` + `/pub/live/:cid` now accept
   `Authorization: Bearer <check_session>`. Website: send it on both whenever the user is signed in
   (same token as `/app/*`). Enforcement is behind `policy.flags.transcriptAuth` (currently OFF), so

@@ -18,15 +18,32 @@ of proof (which render you looked at). Never delete findings; history stays.
    hierarchy, components, order. Tokens matching ≠ done (PAINT IS NOT DONE, LOOP.md).
 
 ## OPEN findings
-- [~] **(P0) My checks (6e–6i)** — partially confirmed rebuilt (DevOps cycle 1 render, commit
-  de68845): the EMPTY state is genuinely in the new structure (empty card + raised calendar +
-  ring CTA). The POPULATED structure (history rows, 6f activity, 6g earn, 6i history) is
-  unverified — DevOps seeds local data next cycle and re-renders. Leave open until then.
+- ✅ **FIXED (P0) Typography POP** — root-caused by Website better than filed: Google Fonts was
+  BLOCKED on the owner's network → system-font fallback. Inter now SELF-HOSTED (/fonts route) +
+  ramp specs applied. DevOps render c4-home-truefont (cycle 4): hero at true 900/tight tracking,
+  capsule CTA letterspaced — the pop is real on home. Spot-checks of other views continue in
+  rotation; reopen per-view if any ramp miss shows.
+- [ ] **(P0 — OWNER-REPORTED, corrected 07-03) TWO check-mark assets in circulation — unify on the
+  canonical one.** DevOps retraction: there are NO hand-drawn brand glyphs (`ckarc*`/`ck-wv`/`ck-ph`
+  = the comp-spec'd live-call phone animation; the empty-state mark is the `FCHK()` FILE asset).
+  The real issue: `logos/fcheck.png` (v7, the older Fungibles-era check; 14 call sites via FCHK) vs
+  `logos/check.png`/`check-icon.png` (June-17 official Check pack; header/footer) — two different
+  marks depending on the surface. AWAITING OWNER: which is canonical? Then swap every use of the
+  loser for the winner (mechanical; FCHK() is the single chokepoint for 14 of them).
+- ✅ **FIXED (P1) My-checks reachable by URL** — round 6 (242515e) resolved the auto-restore;
+  DevOps render c7-mychecks-r6: Check history header with month count ("3 checks in July" = the
+  seeded rows), calendar with days-with-checks highlighted (Jul 2 accent + dot), today ringed,
+  empty-today card, CHECK A STORE ring capsule. Calendar system CONFIRMED with populated data.
+- [~] **(P0) My checks (6e–6i)** — mostly confirmed: empty state (cycle 1) + populated
+  calendar/counts (cycle 7, c7-mychecks-r6) verified. Remaining: the per-DAY check ROWS (tap a
+  highlighted day) and 6f/6g tabs need an interaction render — Website: post a proof of a day's
+  rows + Activity + Earn against their frames, then this closes.
 - ✅ **FIXED (P0) Result page (6M)** — CONFIRMED REBUILT by DevOps eyes, cycle 1 (commit ec82224,
   render c1-result vs comp 6M): verdict wash ✓ RESULT chip ✓ solid verdict title ✓ CHECK ANOTHER
   STORE ring CTA ✓ step timeline with colored progression ✓ STAFF/CHECK-AI conversation bubbles ✓
-  restock module ✓ "1 check used" ✓. Still verify: in-stock (P6), poll (P6b), IS1 variants —
-  DevOps renders sim_..._in / _maybe next cycle.
+  restock module ✓ "1 check used" ✓. ALL THREE VARIANTS now confirmed: in-stock P6 + IS1 actions
+  (cycle 2, c2-result-instock) and poll P6b (cycle 3, c3-result-poll: amber wash, 4-key poll row
+  In stock/Not in/Restocking/Unclear, amber timeline end). The result family is DONE.
 - [ ] **(P1) Every other view: re-verify with renders, not memory.** Round-1 sweeps compared
   tokens, not structure. Walk the board nav (S2, T1, P1, P2, 6m, L1a–c, P3a–P5, P6/P6b/IS1,
   R1–R3, SC1–2, RN1–2, 6a–6d, 6e–6i) and reopen any view whose bones differ from its comp.
@@ -36,6 +53,40 @@ of proof (which render you looked at). Never delete findings; history stays.
   track, footer). Re-verify against P2 store-picked state when rebuilt views land.
 
 ## DevOps cycle log
+- 2026-07-03 ~07:15 CYCLE 8: hobby chip claim (3ccc8d2) verified — hobby P3a era picker
+  (?flow=hobby) renders the full era-logo wall (Mega Evolution → Diamond & Pearl, all logo-lane art
+  loading), "What are you hunting? Pick your era" header, full-bleed era tiles per comp P3a. The
+  3-lane hobby pipeline (Data registry → Logo era/set art → Website flow) is working end-to-end on
+  render c8-hobby. Crons alive (028220d0/73bb582e). (DevOps also shipped the Plans manager this window
+  — separate feature, not part of this review loop.)
+- 2026-07-03 ~05:00 CYCLE 7: round-6 claims verified — My-checks URL fix CONFIRMED (P1 closed),
+  calendar system w/ populated data CONFIRMED, month count correct. 6e upgraded to mostly-confirmed
+  (day-rows + 6f/6g interaction proofs remain, on Website). Crons alive (028220d0/73bb582e).
+- 2026-07-03 ~04:20 CYCLE 6 (light regression after owner rounds 3-5): OUT result re-render clean —
+  type pop holds (900 title), red wash, ring CTA, 3-stop rail gradient (green→amber→red) live per
+  d2d0111; conversation/restock modules intact; buy sheet rendered (c6-buysheet). Brandmark finding
+  CORRECTED (see above): not hand-drawn — a two-asset brand mix; awaiting owner's canonical pick.
+  Both cron jobs verified alive.
+- 2026-07-03 ~ CYCLE 5 (hobby-pipeline seam check, 3 lanes): Data registry LIVE (13 eras/129 sets,
+  /pub/pokemon-sets). Logo assets COMPLETE AND LIVE — 129/129 set logos, 130 banners, 13/13 era
+  logos, delivered REPO-NATIVE (public/logos/{sets,set-banners,eras}) with serving routes, 200s on
+  staging. NOTE: the original "upload to logos.fungibles.com R2 keys" contract (loops/pokemon-assets
+  kickoff + Data's spec) is OBSOLETE — repo-native won; don't chase the bucket. Brandmark P0
+  refined (see above): header/footer use the official pack; v2-drawn ck-* glyphs are the offenders.
+- 2026-07-02 ~20:50 CYCLE 4 (catch-up: container restart killed ALL DevOps timers at ~13:05 — dark
+  7.5h; both loops re-armed: primary 26/56 + hourly liveness :09; eyes server must run as a tracked
+  task). VERDICTS: type-pop P0 CONFIRMED FIXED on home (c4-home-truefont, true self-hosted Inter,
+  900 hero). Brandmark P0 STILL OPEN — escalated to top. Website's day was strong: round-2
+  structural rebuilds across all frames, 45 proofs, ES sweep, owner live-review fixes.
+- 2026-07-02 ~13:05 CYCLE 3b (owner escalation): filed the two P0s above (type ramp pop +
+  brandmark). Render pipeline now serves VENDORED Inter (docs/design/vendor/fonts) instead of
+  aborting font loads — font/weight mismatches are now visible in every render, both site and
+  comp board. Re-render your views after type fixes and compare the ramp against the board.
+- 2026-07-02 ~12:50 CYCLE 3 (owner-driven /loop now primary at :26/:56; internal cron backup at :09
+  hourly — previous cron pair silently died AGAIN, confirming session timers are unreliable).
+  VERDICTS: P6b poll CONFIRMED REBUILT (c3-result-poll) — result family 3/3 done. NEW FINDING:
+  populated My-checks list unreachable by URL (above). Ops note: run the eyes server as a tracked
+  background task, not shell `&` — shell-backgrounded servers get reaped between turns.
 - 2026-07-02 ~12:30 CYCLE 2 (catch-up — DevOps loop was DOWN ~11:41-12:11, session scheduler reset;
   re-armed with self-check). Seeded 3 call rows locally. VERDICTS: P6 in-stock result CONFIRMED
   REBUILT (green wash, RESULT chip, ring CTA, timeline, conversation, IS1 Share/Driver rows,

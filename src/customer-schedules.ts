@@ -5,7 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "./db/client";
 import { customerSchedules, retailers, categories, watches } from "./db/schema";
 import { triggerCall, storeOpenInfo } from "./calls/service";
-import { getAccount, chargeOneCredit, isComp } from "./billing";
+import { getAccount, chargeOneCredit, isComp, spendableCredits } from "./billing";
 import { getPolicy } from "./policy";
 
 const DOW: Record<string, number> = {
@@ -68,7 +68,7 @@ export async function customerScheduleTick(): Promise<number> {
       const acct = await getAccount(r.finderUserId);
       const comp = isComp(acct?.email);
       const subbed = acct?.subscription === "active";
-      if (!comp && (!subbed || !acct || acct.credits <= 0)) { continue; }
+      if (!comp && (!subbed || !acct || spendableCredits(acct) <= 0)) { continue; }
       const gate = await storeOpenInfo(r.retailerId);
       if (gate && gate.known && !gate.open) continue;             // closed now — try a later tick today
       try {

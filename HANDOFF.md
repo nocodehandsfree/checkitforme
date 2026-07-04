@@ -48,6 +48,7 @@ default — not the problem). If the `curl` command above still errors after ONE
 the `ADMIN_TOKEN` and keep moving — never loop on it.**
 
 ## Docs map (open only what you need)
+- `docs/GUIDEBOOK.md` — **owner's front door: what Check is, the money model, plans, where everything lives.**
 - `docs/AGENT_RULES.md` — how to write code here (read first).
 - `docs/GOTCHAS.md` — non-obvious traps that cost real time; read before debugging something weird, **add to it the moment you learn one.**
 - `docs/ARCHITECTURE.md` · `docs/RUNBOOK.md` — layout + stack/run/deploy.

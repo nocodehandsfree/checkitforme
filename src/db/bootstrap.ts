@@ -144,6 +144,9 @@ export async function bootstrap() {
   // Phone-first identity: verified cell + the caller ID we dial as (set once Twilio verifies it).
   await client.execute("ALTER TABLE accounts ADD COLUMN phone TEXT").catch(() => {});
   await client.execute("ALTER TABLE accounts ADD COLUMN caller_id TEXT").catch(() => {});
+  // Plans: subscription monthly quota (resets each cycle, no rollover) + which tier is active.
+  await client.execute("ALTER TABLE accounts ADD COLUMN quota_credits INTEGER NOT NULL DEFAULT 0").catch(() => {});
+  await client.execute("ALTER TABLE accounts ADD COLUMN sub_tier TEXT").catch(() => {});
   // Statuses registry — the single source of truth for customer-facing call verdicts.
   await client.execute(`CREATE TABLE IF NOT EXISTS statuses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

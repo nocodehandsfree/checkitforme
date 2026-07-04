@@ -8,6 +8,7 @@ import { bootstrap } from "../src/db/bootstrap";
 import { db } from "../src/db/client";
 import { accounts } from "../src/db/schema";
 import { getAccountByPhone, verifyStripeSig, handleStripeEvent } from "../src/billing";
+import { savePlans, getPlans, DEFAULT_PLANS } from "../src/plans";
 import { setPolicy, getPolicy } from "../src/policy";
 
 let pass = 0, fail = 0;
@@ -44,35 +45,59 @@ async function main() {
 
   console.log("▶ subscription: checkout.session.completed (mode=subscription) → active + monthly credits");
   await handleStripeEvent({ type: "checkout.session.completed", data: { object: {
-    mode: "subscription", amount_total: pol.pricing.sub.cents, customer: "cus_TEST1",
-    client_reference_id: buyer.clerkUserId,
-    metadata: { clerkUserId: buyer.clerkUserId, kind: "sub", credits: String(pol.pricing.sub.credits) },
+    mode: "subscription", amount_total: 499, customer: "cus_TEST1", client_reference_id: buyer.clerkUserId,
+    metadata: { clerkUserId: buyer.clerkUserId, kind: "sub", tierKey: "family", checks: "15" },
   } } });
   row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, buyer.clerkUserId)))[0];
-  ok(row.subscription === "active", "subscription flips active");
+  ok(row.subscription === "active" && row.subTier === "family", "subscription flips active on the Family tier");
   ok(row.stripeCustomerId === "cus_TEST1", "stripe customer id stored");
-  ok(row.credits === before + 100 + pol.pricing.sub.credits, "first month's credits granted");
+  ok(row.quotaCredits === 15 && row.credits === before + 100, "quota SET to 15; PAYG (100) untouched");
 
-  console.log("▶ renewal: invoice.paid (subscription_cycle) → monthly credits again");
-  const beforeRenew = row.credits;
+  console.log("▶ renewal: invoice.paid (subscription_cycle) → quota reset to the tier allotment");
+  await db.update(accounts).set({ quotaCredits: 3 }).where(eq(accounts.clerkUserId, buyer.clerkUserId)); // simulate a partly-spent cycle
   await handleStripeEvent({ type: "invoice.paid", data: { object: {
-    billing_reason: "subscription_cycle", customer: "cus_TEST1", amount_paid: pol.pricing.sub.cents,
+    billing_reason: "subscription_cycle", customer: "cus_TEST1", amount_paid: 499,
   } } });
   row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, buyer.clerkUserId)))[0];
-  ok(row.credits === beforeRenew + pol.pricing.sub.credits, "renewal grants the monthly credits");
+  ok(row.quotaCredits === 15, "renewal RESETS quota to Family's 15 (no rollover)");
 
-  console.log("▶ first invoice is NOT double-granted (billing_reason=subscription_create ignored)");
+  console.log("▶ subscription_create with no mapped price → no-op (hosted path already granted)");
   const beforeCreate = row.credits;
   await handleStripeEvent({ type: "invoice.paid", data: { object: {
     billing_reason: "subscription_create", customer: "cus_TEST1", amount_paid: pol.pricing.sub.cents,
   } } });
   row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, buyer.clerkUserId)))[0];
-  ok(row.credits === beforeCreate, "subscription_create invoice grants nothing (checkout already did)");
+  ok(row.credits === beforeCreate, "unmapped subscription_create grants nothing (checkout.session owns hosted)");
 
   console.log("▶ cancellation: customer.subscription.deleted → back to none");
   await handleStripeEvent({ type: "customer.subscription.deleted", data: { object: { customer: "cus_TEST1" } } });
   row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, buyer.clerkUserId)))[0];
   ok(row.subscription === "none", "subscription flips off on cancellation");
+
+  console.log("▶ embedded Elements: subscription_create invoice sets the tier (no checkout.session)");
+  // Give a tier a price id so the webhook can map invoice → tier.
+  const cfg = await getPlans(); cfg.tiers[1].monthlyPriceId = "price_COLL_M"; await savePlans(cfg);
+  const el = await getAccountByPhone("+13105550777");
+  await db.update(accounts).set({ stripeCustomerId: "cus_EL1" }).where(eq(accounts.clerkUserId, el.clerkUserId));
+  await handleStripeEvent({ type: "invoice.paid", data: { object: {
+    billing_reason: "subscription_create", customer: "cus_EL1", amount_paid: 999,
+    lines: { data: [{ price: { id: "price_COLL_M" } }] },
+  } } });
+  let er = (await db.select().from(accounts).where(eq(accounts.clerkUserId, el.clerkUserId)))[0];
+  ok(er.subscription === "active" && er.subTier === "collector" && er.quotaCredits === 30, "Elements first invoice → active Collector w/ 30 quota");
+
+  console.log("▶ embedded Elements: PAYG payment_intent.succeeded grants once (idempotent)");
+  const beforePayg = er.credits;
+  const piEvt = { type: "payment_intent.succeeded", data: { object: {
+    id: "pi_EL_777", amount_received: 1999, metadata: { source: "elements", kind: "payg", clerkUserId: el.clerkUserId, credits: "25" },
+  } } } as const;
+  await handleStripeEvent(piEvt);
+  await handleStripeEvent(piEvt); // duplicate delivery
+  er = (await db.select().from(accounts).where(eq(accounts.clerkUserId, el.clerkUserId)))[0];
+  ok(er.credits === beforePayg + 25, "Elements PAYG grants 25 exactly once despite duplicate webhook");
+  await handleStripeEvent({ type: "payment_intent.succeeded", data: { object: { id: "pi_hosted", amount_received: 500, metadata: {} } } });
+  er = (await db.select().from(accounts).where(eq(accounts.clerkUserId, el.clerkUserId)))[0];
+  ok(er.credits === beforePayg + 25, "a non-Elements PI (no metadata) grants nothing (hosted path owns it)");
 
   console.log("▶ unknown user / malformed events are safe no-ops");
   await handleStripeEvent({ type: "checkout.session.completed", data: { object: { mode: "payment", metadata: { credits: "50" } } } });

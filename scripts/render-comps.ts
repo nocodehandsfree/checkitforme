@@ -53,7 +53,14 @@ async function main() {
     const f = route.request().url().includes("react-dom") ? "react-dom.production.min.js" : "react.production.min.js";
     route.fulfill({ body: readFileSync(join(DESIGN, "vendor", f), "utf8"), contentType: "application/javascript" });
   });
-  await ctx.route(/https:\/\/(fonts\.|checkitforme\.com|logos\.)/, (r) => r.abort());
+  // Fonts render TRUTHFULLY from the vendored files (aborting them hid font/weight crimes from
+  // verification — the 2026-07-02 "wrong font, no pop" miss). Logos still abort (offline sandbox).
+  await ctx.route(/https:\/\/fonts\.googleapis\.com\//, (r) =>
+    r.fulfill({ body: readFileSync(join(DESIGN, "vendor/fonts/inter.css"), "utf8"), contentType: "text/css" }));
+  await ctx.route(/https:\/\/fonts\.gstatic\.com\//, (r) => r.abort());
+  await ctx.route(/\/inter-\d+\.woff2$/, (r) =>
+    r.fulfill({ body: readFileSync(join(DESIGN, "vendor/fonts", r.request().url().split("/").pop() as string)), contentType: "font/woff2" }));
+  await ctx.route(/https:\/\/(checkitforme\.com|logos\.)/, (r) => r.abort());
   // Signed-in renders: CIFM_TOKEN=<phone-session JWT> (localStorage key the app reads is cifm_token).
   if (process.env.CIFM_TOKEN) await ctx.addInitScript((t: string) => { try { localStorage.setItem("cifm_token", t); } catch { /* no storage */ } }, process.env.CIFM_TOKEN);
   const page = await ctx.newPage();

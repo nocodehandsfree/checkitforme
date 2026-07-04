@@ -4,6 +4,7 @@ import { and, eq, gt, sql } from "drizzle-orm";
 import { db } from "./db/client";
 import { accounts } from "./db/schema";
 import { getPolicy } from "./policy";
+import { resolvePlanCheckout, tierQuota, getPlans, tierByPriceId } from "./plans";
 
 /** Constant-time string compare (length-checked) — avoids timing side-channels on HMAC checks. */
 function safeEqual(a: string, b: string): boolean {
@@ -101,14 +102,24 @@ export async function phoneAccountExists(phone: string): Promise<boolean> {
   return !!row;
 }
 
+/** Total spendable checks = subscription quota (use-it-or-lose-it) + PAYG balance (permanent). */
+export function spendableCredits(a?: { credits?: number; quotaCredits?: number } | null): number {
+  return a ? (a.credits ?? 0) + (a.quotaCredits ?? 0) : 0;
+}
+
 export async function chargeOneCredit(userId: string): Promise<boolean> {
-  // Atomic guarded decrement: the WHERE credits>0 makes concurrent charges race-safe (no
-  // read-then-write window, can never go negative). rowsAffected===1 ⇒ we actually charged.
+  // Spend the subscription quota FIRST (it resets each cycle and doesn't roll over — burn it before
+  // touching the PAYG balance, which never expires). Each decrement is an atomic guarded update
+  // (WHERE bucket>0) so concurrent charges are race-safe and can never go negative.
   await getAccount(userId); // ensure the account row exists first
-  const res = await db.update(accounts)
+  const fromQuota = await db.update(accounts)
+    .set({ quotaCredits: sql`${accounts.quotaCredits} - 1`, callsMade: sql`${accounts.callsMade} + 1` })
+    .where(and(eq(accounts.clerkUserId, userId), gt(accounts.quotaCredits, 0)));
+  if ((fromQuota.rowsAffected ?? 0) > 0) return true;
+  const fromPayg = await db.update(accounts)
     .set({ credits: sql`${accounts.credits} - 1`, callsMade: sql`${accounts.callsMade} + 1` })
     .where(and(eq(accounts.clerkUserId, userId), gt(accounts.credits, 0)));
-  return (res.rowsAffected ?? 0) > 0;
+  return (fromPayg.rowsAffected ?? 0) > 0;
 }
 
 export async function grantCredits(userId: string, n: number, spentCents = 0) {
@@ -127,8 +138,29 @@ async function setSubscription(userId: string, active: boolean, customerId?: str
     .where(eq(accounts.clerkUserId, userId));
 }
 
-// ---- Stripe Checkout (inline price_data — no pre-created products needed) ----
-export async function createCheckout(userId: string, email: string | undefined, kind: string, origin: string): Promise<string | null> {
+/** Grant a subscription tier: activate, record the tier, and RESET the monthly quota to `checks`
+ *  (a reset, not an add — unused checks don't roll over). PAYG `credits` are untouched. */
+export async function setSubEntitlement(userId: string, tierKey: string, checks: number, customerId?: string) {
+  const a = await getAccount(userId);
+  if (!a) return;
+  await db.update(accounts)
+    .set({ subscription: "active", subTier: tierKey, quotaCredits: Math.max(0, Math.round(checks)), stripeCustomerId: customerId ?? a.stripeCustomerId })
+    .where(eq(accounts.clerkUserId, userId));
+}
+/** Reset the monthly quota for an active subscriber (billing-cycle renewal). No rollover. */
+export async function resetQuota(userId: string, checks: number) {
+  await db.update(accounts).set({ quotaCredits: Math.max(0, Math.round(checks)) }).where(eq(accounts.clerkUserId, userId));
+}
+/** End a subscription: drop the tier + forfeit the remaining quota; PAYG credits stay. */
+export async function clearSubEntitlement(userId: string) {
+  await db.update(accounts).set({ subscription: "none", subTier: null, quotaCredits: 0 }).where(eq(accounts.clerkUserId, userId));
+}
+
+// ---- Stripe Checkout ----
+// Resolution order: (1) the owner's Plans config (tiers `starter|collector|hunter`, or `payg:<n>`)
+// — uses the published Price id when synced, else an inline price_data fallback so checkout works
+// before/without a publish; (2) legacy policy packs/`sub` for back-compat during the migration.
+export async function createCheckout(userId: string, email: string | undefined, kind: string, origin: string, annual = false): Promise<string | null> {
   const sk = process.env.STRIPE_SECRET_KEY;
   if (!sk) return null;
   const p = new URLSearchParams();
@@ -138,24 +170,44 @@ export async function createCheckout(userId: string, email: string | undefined, 
   if (email) p.set("customer_email", email);
   p.set("metadata[clerkUserId]", userId);
   p.set("line_items[0][quantity]", "1");
-  p.set("line_items[0][price_data][currency]", "usd");
-  const pol = await getPolicy(); // owner-tunable pricing
-  if (kind === "sub") {
-    p.set("mode", "subscription");
-    p.set("line_items[0][price_data][unit_amount]", String(pol.pricing.sub.cents));
-    p.set("line_items[0][price_data][product_data][name]", pol.pricing.sub.label);
-    p.set("line_items[0][price_data][recurring][interval]", "month");
-    p.set("metadata[kind]", "sub");
-    p.set("metadata[credits]", String(pol.pricing.sub.credits));
-    p.set("subscription_data[metadata][clerkUserId]", userId);
+
+  const plan = await resolvePlanCheckout(kind, annual);
+  if (plan) {
+    p.set("mode", plan.mode);
+    if (plan.priceId) {
+      p.set("line_items[0][price]", plan.priceId);
+    } else {
+      p.set("line_items[0][price_data][currency]", "usd");
+      p.set("line_items[0][price_data][unit_amount]", String(plan.cents));
+      p.set("line_items[0][price_data][product_data][name]", plan.productName);
+      if (plan.interval) p.set("line_items[0][price_data][recurring][interval]", plan.interval);
+    }
+    for (const [k, v] of Object.entries(plan.metadata)) p.set(`metadata[${k}]`, v);
+    if (plan.mode === "subscription") {
+      p.set("subscription_data[metadata][clerkUserId]", userId);
+      p.set("subscription_data[metadata][tierKey]", plan.metadata.tierKey || "");
+    }
   } else {
-    const pack = pol.pricing.packs.find((x) => x.key === kind);
-    if (!pack) return null;
-    p.set("mode", "payment");
-    p.set("line_items[0][price_data][unit_amount]", String(pack.cents));
-    p.set("line_items[0][price_data][product_data][name]", `Check It For Me — ${pack.label}`);
-    p.set("metadata[kind]", "pack");
-    p.set("metadata[credits]", String(pack.credits));
+    // Legacy fallback (policy packs / the old $ sub) — keeps pre-migration checkout links alive.
+    const pol = await getPolicy();
+    p.set("line_items[0][price_data][currency]", "usd");
+    if (kind === "sub") {
+      p.set("mode", "subscription");
+      p.set("line_items[0][price_data][unit_amount]", String(pol.pricing.sub.cents));
+      p.set("line_items[0][price_data][product_data][name]", pol.pricing.sub.label);
+      p.set("line_items[0][price_data][recurring][interval]", "month");
+      p.set("metadata[kind]", "sub");
+      p.set("metadata[credits]", String(pol.pricing.sub.credits));
+      p.set("subscription_data[metadata][clerkUserId]", userId);
+    } else {
+      const pack = pol.pricing.packs.find((x) => x.key === kind);
+      if (!pack) return null;
+      p.set("mode", "payment");
+      p.set("line_items[0][price_data][unit_amount]", String(pack.cents));
+      p.set("line_items[0][price_data][product_data][name]", `Check It For Me — ${pack.label}`);
+      p.set("metadata[kind]", "pack");
+      p.set("metadata[credits]", String(pack.credits));
+    }
   }
   const r = await fetch("https://api.stripe.com/v1/checkout/sessions", {
     method: "POST",
@@ -165,6 +217,57 @@ export async function createCheckout(userId: string, email: string | undefined, 
   if (!r.ok) { console.error("stripe checkout failed:", await r.text()); return null; }
   const d = (await r.json()) as { url?: string };
   return d.url ?? null;
+}
+
+// ---- Embedded checkout (Stripe Elements — the custom branded page) ----
+// The hosted Checkout above redirects to Stripe. For the on-site branded form, the server creates the
+// PaymentIntent/Subscription and hands back a client_secret the Website confirms with Elements.
+async function stripeForm(path: string, params: Record<string, string>): Promise<Record<string, unknown>> {
+  const sk = process.env.STRIPE_SECRET_KEY!;
+  const r = await fetch("https://api.stripe.com/v1" + path, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${sk}`, "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(params).toString(),
+  });
+  const d = (await r.json()) as Record<string, unknown>;
+  if (!r.ok) throw new Error(`stripe ${path}: ${r.status} ${JSON.stringify(d).slice(0, 200)}`);
+  return d;
+}
+/** The account's Stripe customer id, created + saved on first use. */
+async function getOrCreateCustomer(userId: string, email?: string): Promise<string> {
+  const a = await getAccount(userId);
+  if (a?.stripeCustomerId) return a.stripeCustomerId;
+  const cust = await stripeForm("/customers", { ...(email ? { email } : {}), "metadata[clerkUserId]": userId });
+  const id = cust.id as string;
+  await db.update(accounts).set({ stripeCustomerId: id }).where(eq(accounts.clerkUserId, userId));
+  return id;
+}
+export interface CheckoutIntent { mode: "subscription" | "payment"; clientSecret: string; publishableKey: string; amountCents: number; }
+/** Create the on-site payment for `kind` (tier key or payg:<checks>) and return the Elements
+ *  client_secret + publishable key. Subscriptions use default_incomplete (first invoice's PI); PAYG a
+ *  one-time PaymentIntent. The webhook grants entitlement on success — same as the hosted path. */
+export async function createCheckoutIntent(userId: string, email: string | undefined, kind: string, annual: boolean): Promise<CheckoutIntent | null> {
+  const pk = process.env.STRIPE_PUBLISHABLE_KEY;
+  if (!process.env.STRIPE_SECRET_KEY || !pk) return null;
+  const plan = await resolvePlanCheckout(kind, annual);
+  if (!plan) return null;
+  const customer = await getOrCreateCustomer(userId, email);
+  if (plan.mode === "subscription") {
+    if (!plan.priceId) return null; // subscription must be published to Stripe first (Publish button)
+    const sub = await stripeForm("/subscriptions", {
+      customer, "items[0][price]": plan.priceId, payment_behavior: "default_incomplete",
+      "payment_settings[save_default_payment_method]": "on_subscription", "expand[]": "latest_invoice.payment_intent",
+      "metadata[clerkUserId]": userId, "metadata[tierKey]": plan.metadata.tierKey || "", "metadata[checks]": plan.metadata.checks || "",
+    });
+    const pi = (sub.latest_invoice as { payment_intent?: { client_secret?: string } } | undefined)?.payment_intent;
+    if (!pi?.client_secret) return null;
+    return { mode: "subscription", clientSecret: pi.client_secret, publishableKey: pk, amountCents: plan.cents };
+  }
+  const pi = await stripeForm("/payment_intents", {
+    customer, amount: String(plan.cents), currency: "usd", "automatic_payment_methods[enabled]": "true",
+    "metadata[clerkUserId]": userId, "metadata[kind]": "payg", "metadata[credits]": plan.metadata.credits || "", "metadata[source]": "elements",
+  });
+  return { mode: "payment", clientSecret: pi.client_secret as string, publishableKey: pk, amountCents: plan.cents };
 }
 
 // ---- Webhook: verify Stripe signature, then grant credits / toggle subscription ----
@@ -181,31 +284,60 @@ export async function verifyStripeSig(payload: string, header: string | null): P
   return safeEqual(actual, v1);
 }
 
+const piCharged = new Set<string>(); // idempotency for Elements PAYG payment_intent.succeeded
 interface StripeEvent { type: string; data?: { object?: Record<string, unknown> } }
 export async function handleStripeEvent(event: StripeEvent) {
   const obj = (event.data?.object ?? {}) as Record<string, unknown>;
   if (event.type === "checkout.session.completed") {
     const md = (obj.metadata ?? {}) as Record<string, string>;
     const userId = md.clerkUserId || (obj.client_reference_id as string);
-    const credits = Number(md.credits || 0);
     const amount = Number(obj.amount_total || 0);
     if (!userId) return;
     if (obj.mode === "subscription") {
-      await setSubscription(userId, true, obj.customer as string);
+      // Tier subscription: activate + SET the monthly quota (reset, not add). `checks` is the tier
+      // allotment; falls back to legacy `credits` for old sub links.
+      const tierKey = md.tierKey || "sub";
+      const checks = Number(md.checks || md.credits || 0);
+      await setSubEntitlement(userId, tierKey, checks, obj.customer as string);
+      if (amount) await bumpRevenue(userId, amount);
+    } else {
+      // PAYG one-time: add permanent credits.
+      const credits = Number(md.credits || 0);
       if (credits) await grantCredits(userId, credits, amount);
-    } else if (credits) {
-      await grantCredits(userId, credits, amount);
     }
   } else if (event.type === "invoice.paid") {
-    // Only renewals (subscription_cycle) — the first invoice is handled by checkout.session.completed.
-    if (obj.billing_reason !== "subscription_cycle") return;
     const customer = obj.customer as string;
     const amount = Number(obj.amount_paid || 0);
     const a = (await db.select().from(accounts).where(eq(accounts.stripeCustomerId, customer)))[0];
-    if (a) await grantCredits(a.clerkUserId, (await getPolicy()).pricing.sub.credits, amount);
+    if (!a) return;
+    if (obj.billing_reason === "subscription_cycle") {
+      await resetQuota(a.clerkUserId, await tierQuota(a.subTier)); await bumpRevenue(a.clerkUserId, amount);
+    } else if (obj.billing_reason === "subscription_create") {
+      // Embedded-Elements first payment — no checkout.session.completed fires, so set entitlement here
+      // from the invoice's price → tier. setSubEntitlement SETS (idempotent) so it's safe even if the
+      // hosted path also ran. Revenue is booked once, on create only.
+      const priceId = ((obj.lines as { data?: Array<{ price?: { id?: string } }> } | undefined)?.data?.[0]?.price)?.id;
+      const tier = tierByPriceId(await getPlans(), priceId);
+      if (tier) { await setSubEntitlement(a.clerkUserId, tier.key, tier.checksPerMonth, customer); await bumpRevenue(a.clerkUserId, amount); }
+    }
+  } else if (event.type === "payment_intent.succeeded") {
+    // Embedded-Elements PAYG bundle. Only our Elements PIs carry these metadata keys (the hosted
+    // path credits via checkout.session.completed), so there is no double-grant. Idempotent per PI id.
+    const md = (obj.metadata ?? {}) as Record<string, string>;
+    const id = obj.id as string;
+    if (md.source === "elements" && md.kind === "payg" && md.clerkUserId && md.credits && !piCharged.has(id)) {
+      piCharged.add(id);
+      await grantCredits(md.clerkUserId, Number(md.credits), Number(obj.amount_received || obj.amount || 0));
+    }
   } else if (event.type === "customer.subscription.deleted") {
     const customer = obj.customer as string;
     const a = (await db.select().from(accounts).where(eq(accounts.stripeCustomerId, customer)))[0];
-    if (a) await setSubscription(a.clerkUserId, false);
+    if (a) await clearSubEntitlement(a.clerkUserId);
   }
+}
+
+/** Record subscription revenue without granting credits (quota is set separately). */
+async function bumpRevenue(userId: string, cents: number) {
+  if (cents <= 0) return;
+  await db.update(accounts).set({ totalSpentCents: sql`${accounts.totalSpentCents} + ${cents}` }).where(eq(accounts.clerkUserId, userId));
 }

@@ -104,7 +104,8 @@ async function getStatsSince(): Promise<number> {
   const n = v ? Number(v) : 0;
   return Number.isFinite(n) ? n : 0;
 }
-import { getAccount, getAccountByPhone, phoneAccountExists, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, SUB, PACKS } from "./billing";
+import { getAccount, getAccountByPhone, phoneAccountExists, chargeOneCredit, createCheckout, createCheckoutIntent, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, spendableCredits, SUB, PACKS } from "./billing";
+import { getPlans, savePlans, publishPlansToStripe, plansSyncView, publicPlans, normalizePlans, accountFeatures } from "./plans";
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
@@ -234,12 +235,15 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
     // status bar black on every result. One theme-color in the document, JS-controlled, full stop.
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${esc(plainName)}">`,
-    `<meta property="og:title" content="${esc(brand.title)}">`,
+    // Apex/invite embeds (owner): the CARD IMAGE carries the headline, so the visible link title is
+    // just the address — no repeated "Is it in stock?" under the image. NB: behind the proxy the Host
+    // header is the internal Railway hostname — show the public domain, never that.
+    `<meta property="og:title" content="${esc(brand.key === "runner" ? (/railway\.app$/i.test(host) ? (config.staging.on ? "staging.checkitforme.com" : "checkitforme.com") : host.replace(/^www\./, "")) : brand.title)}">`,
     `<meta property="og:description" content="${esc(brand.desc)}">`,
     `<meta property="og:url" content="${canonical}">`,
     `<meta property="og:image" content="${ogImage}">`,
     `<meta name="twitter:card" content="summary_large_image">`,
-    `<meta name="twitter:title" content="${esc(brand.title)}">`,
+    `<meta name="twitter:title" content="${esc(brand.key === "runner" ? (/railway\.app$/i.test(host) ? (config.staging.on ? "staging.checkitforme.com" : "checkitforme.com") : host.replace(/^www\./, "")) : brand.title)}">`,
     `<meta name="twitter:description" content="${esc(brand.desc)}">`,
     `<meta name="twitter:image" content="${ogImage}">`,
     `<style>:root{--accent:${brand.accent};--accent2:${brand.accent2 || brand.accent};--logo-scale:${brand.logoScale || 1}}</style>`,
@@ -361,7 +365,7 @@ h1{font-size:30px;margin:26px 0 14px}.body{color:#c2c2cf;font-size:16px}.body a{
 });
 
 app.get("/", (c) => {
-  c.header("Cache-Control", "no-store, no-cache, must-revalidate");
+  c.header("Cache-Control", "no-cache"); // revalidate always, but let bfcache/back-forward restore instantly
   const host = (c.req.header("host") || "").toLowerCase();
   const override = c.req.query("brand");
   const brand = resolveBrand(host, override);
@@ -392,7 +396,7 @@ app.get("/demo/:slug", (c) => {
 // link to clean same-domain paths instead of subdomain hops.
 for (const slug of ["pokemon", "onepiece", "toppsbasketball", "needoh"]) {
   app.get(`/${slug}`, (c) => {
-    c.header("Cache-Control", "no-store");
+    c.header("Cache-Control", "no-cache"); // see "/" — bfcache-friendly, still always revalidated
     const host = (c.req.header("host") || "").toLowerCase();
     return c.html(renderRunner(resolveBrand(host, slug), host, "checkit.html", c.req.query("tone") || ""));
   });
@@ -438,6 +442,17 @@ app.get("/logos/:file", (c) => {
     const ct = ext === "png" ? "image/png" : ext === "svg" ? "image/svg+xml" : ext === "webp" ? "image/webp" : "image/jpeg";
     c.header("Cache-Control", "public, max-age=86400");
     return c.body(buf, 200, { "Content-Type": ct });
+  } catch { return c.notFound(); }
+});
+// Self-hosted webfonts (Inter variable) — Google Fonts is unreachable for users behind DNS
+// ad-blockers, and the design only reads as the design in Inter. One origin, one file.
+app.get("/fonts/:file", (c) => {
+  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
+  if (!file.endsWith(".woff2")) return c.notFound();
+  try {
+    const buf = readFileSync(join(here, `../public/fonts/${file}`));
+    c.header("Cache-Control", "public, max-age=31536000, immutable");
+    return c.body(buf, 200, { "Content-Type": "font/woff2" });
   } catch { return c.notFound(); }
 });
 // Pokémon set assets — same repo/logo-wall system as chains, dropped by the logo lane at the exact
@@ -576,7 +591,7 @@ app.post("/auth/phone/check", async (c) => {
     const domain = cookieRootDomain(c.req.header("host"));
     setCookie(c, "admin_session", adminJwt, { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 24 * 30, ...(domain ? { domain } : {}) });
   }
-  return c.json({ token, account: { phone: e, credits: a.credits, subscription: a.subscription, callerIdReady: !!a.callerId && a.callerId === e } });
+  return c.json({ token, account: { phone: e, credits: spendableCredits(a), subscription: a.subscription, callerIdReady: !!a.callerId && a.callerId === e } });
 });
 // Step 3 (after login): kick off the caller-ID verification CALL; show the code to enter.
 app.post("/auth/callerid/start", async (c) => {
@@ -786,6 +801,29 @@ app.get("/logo-wall", async (c) => {
     const cls = (m.d === 1 ? " lite" : "") + (m.w === 1 ? " widelogo" : "");
     return `<div class="cell" data-type="${esc(info?.type || "Other")}" data-treat="${treatKey(m)}"><div class="ic${cls}"><img src="/logos/chains/${f}?v=73" alt=""></div><div class="nm">${esc(info?.name || pretty(f))}</div></div>`;
   };
+  // ── Pokémon set & era logos — same repo/logo-wall system as chains, but shown BIG (owner 2026-07-03:
+  //    "take up the box, be the main attraction"): these are wordmark logos, not 52px store marks.
+  //    Grouped by era; a set with no logo file yet shows a striped gap so the wall reveals what's missing.
+  const listPng = (dir: string) => { try { return new Set(readdirSync(join(here, dir)).filter((f) => /\.png$/i.test(f))); } catch { return new Set<string>(); } };
+  const setLogoFiles = listPng("../public/logos/sets"), eraLogoFiles = listPng("../public/logos/eras");
+  const pslug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  let pokeEras: Array<{ era: string; slug: string; hasEra: boolean; sets: Array<{ code: string; name: string; key: string; has: boolean }> }> = [];
+  try {
+    const pj = JSON.parse(readFileSync(join(here, "../data/pokemon-sets.json"), "utf8")) as { eras: Array<{ era: string; sets: Array<{ code: string; name?: string }> }> };
+    pokeEras = pj.eras.map((e) => ({ era: e.era, slug: pslug(e.era), hasEra: eraLogoFiles.has(pslug(e.era) + ".png"),
+      sets: e.sets.map((s) => ({ code: String(s.code), name: String(s.name || ""), key: pslug(String(s.code)), has: setLogoFiles.has(pslug(String(s.code)) + ".png") })) }));
+  } catch { /* no data file → section stays empty */ }
+  const pokeSetCount = pokeEras.reduce((n, e) => n + e.sets.filter((s) => s.has).length, 0);
+  const pokeSection = pokeEras.length ? `
+  <div class="pwrap">
+    <h2>Pokémon · ${pokeSetCount} set logos</h2>
+    <div class="sub">Set + era wordmarks the hobby lane drops at <code>/logos/sets</code> &amp; <code>/logos/eras</code>. Shown big — the logo IS the tile, area-normalized so every mark carries equal weight.</div>
+    ${pokeEras.map((e) => `
+    <div class="pera">${e.hasEra ? `<img src="/logos/eras/${e.slug}.png?v=73" alt="">` : ""}<span class="en">${esc(e.era)}</span><span class="ec">${e.sets.filter((s) => s.has).length}/${e.sets.length}</span></div>
+    <div class="pgrid">${e.sets.map((s) => s.has
+      ? `<div class="pset"><div class="ptile"><img src="/logos/sets/${s.key}.png?v=73" alt="" onload="pnorm(this)"></div><div class="pnm">${esc(s.code)}<span>${esc(s.name)}</span></div></div>`
+      : `<div class="pset"><div class="ptile pmiss"><span style="font-size:11px;color:#8a8a98;font-weight:700">${esc(s.code)}</span></div><div class="pnm" style="opacity:.5">${esc(s.code)}<span>no logo yet</span></div></div>`).join("")}</div>`).join("")}
+  </div>` : "";
   return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
     *{box-sizing:border-box}
@@ -815,7 +853,26 @@ app.get("/logo-wall", async (c) => {
     .ic img{width:40px;height:40px;object-fit:contain}
     .ic.widelogo img{width:44px;height:auto;max-height:34px}
     .ic.lite{background:#f2f2f5;border-color:rgba(255,255,255,.28)}
+    /* —— Pokémon set/era logos — BIG: the logo is the hero, filling the tile (not a 52px mark) —— */
+    .pwrap{margin-top:34px}
+    .pwrap h2{margin-top:0}
+    .pera{display:flex;align-items:center;gap:13px;margin:26px 0 14px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08)}
+    .pera img{height:38px;width:auto;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}
+    .pera .en{font-size:13px;font-weight:800;letter-spacing:.03em;color:#c7c7d4}
+    .pera .ec{margin-left:auto;font-size:12px;color:#8a8a98;font-variant-numeric:tabular-nums}
+    .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px}
+    .pset{display:flex;flex-direction:column;gap:8px}
+    .ptile{position:relative;aspect-ratio:16/10;border-radius:16px;background:linear-gradient(145deg,#34343d,#23232b);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.05);overflow:hidden;display:flex;align-items:center;justify-content:center}
+    .ptile img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:86%;height:auto;filter:drop-shadow(0 5px 8px rgba(0,0,0,.55))}
+    .ptile.pmiss{background:repeating-linear-gradient(45deg,#2B2B33 0 12px,#25252C 12px 24px)}
+    .pnm{font-size:11px;color:#c7c7d4;text-align:center;font-weight:700;line-height:1.3}
+    .pnm span{display:block;color:#8a8a98;font-weight:500;font-size:10px;overflow-wrap:anywhere}
   </style>
+  <script>
+    // Area-normalized sizing for the Pokémon logo tiles: equal VISUAL footprint regardless of shape,
+    // filling the tile so the logo is the hero. Defined before <body> so img onload always resolves it.
+    function pnorm(img){var box=img.parentElement;if(!box)return;var W=box.clientWidth,H=box.clientHeight;if(!W||!H){requestAnimationFrame(function(){pnorm(img);});return;}var nw=img.naturalWidth,nh=img.naturalHeight;if(!nw||!nh)return;var tA=0.52*W*H,mW=0.92*W,mH=0.82*H,sc=Math.sqrt(tA/(nw*nh));if(nw*sc>mW)sc=mW/nw;if(nh*sc>mH)sc=mH/nh;img.style.width=(100*nw*sc/W)+'%';}
+  </script>
   <body>
   <h2>Logo wall · ${files.length} marks</h2>
   <div class="sub">Each mark exactly as the store list renders it — same 52px tile, plate &amp; wide handling from _meta.json.</div>
@@ -832,6 +889,7 @@ app.get("/logo-wall", async (c) => {
     <span id="count"></span>
   </div>
   <div class="grid" id="grid">${files.map(tile).join("")}</div>
+  ${pokeSection}
   <script>
     var sel=document.getElementById('type'),grid=document.getElementById('grid'),count=document.getElementById('count');
     var treatBtn=document.getElementById('treatBtn'),treatPop=document.getElementById('treatPop'),treatSum=document.getElementById('treatSum');
@@ -998,6 +1056,14 @@ app.get("/pub/stores", async (c) => {
 // /pub/stores ships every row (fine at ~100 stores, a page-killer at 102k). This endpoint returns
 // only stores near the user: the bounding box rides the retailers(lat,lng) index, distance sorts,
 // and pages. Falls back to ?state= or ?q= (SQL-side) when the visitor hasn't shared location.
+// Token-AND matcher shared by the /pub/stores/near text paths: every word must hit the store's
+// name-or-city; words of 5+ chars shed their last letter to absorb trailing typos ("barns" -> "barn").
+function qTokenMatch(hay: string, q: string): boolean {
+  const h = hay.toLowerCase();
+  const toks = q.split(/\s+/).filter((t) => t.length >= 2).slice(0, 5);
+  if (!toks.length) return h.includes(q);
+  return toks.every((t) => h.includes(t) || (t.length >= 5 && h.includes(t.slice(0, -1))));
+}
 app.get("/pub/stores/near", async (c) => {
   const lat = Number(c.req.query("lat")), lng = Number(c.req.query("lng"));
   const hasLoc = Number.isFinite(lat) && Number.isFinite(lng);
@@ -1017,6 +1083,10 @@ app.get("/pub/stores/near", async (c) => {
     if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
   }
   const mode = c.req.query("mode") || ""; // call | kiosk | site | "" = all
+  // Store-type filter (the home chips): ?type=Hobby returns ONLY that type, SERVER-side — in a dense
+  // metro the nearest-200 page is wall-to-wall Retail, so client-side filtering would starve the
+  // Hobby/Thrift chips. Matches the chain's admin type exactly ("Hobby", "Thrift", …).
+  const typeF = (c.req.query("type") || "").trim();
 
   const chainRows = await cachedChains();
   const types = new Map(chainRows.map((x) => [x.id, x.type]));
@@ -1037,9 +1107,16 @@ app.get("/pub/stores/near", async (c) => {
   } else if (state) {
     rows = await db.select().from(retailers).where(and(eq(retailers.active, true), eq(retailers.state, state)));
   } else {
-    const pat = `%${q}%`;
+    // Token-AND search so "barnes westlake" (or the typo "barns westlake") finds "Barnes & Noble
+    // Westlake Village": every word must hit name OR city; words 5+ chars drop their last letter to
+    // absorb trailing typos/plurals.
+    const toks = q.split(/\s+/).filter((t) => t.length >= 2).slice(0, 5);
+    const conds = toks.map((t) => {
+      const pat = `%${t.length >= 5 ? t.slice(0, -1) : t}%`;
+      return or(like(retailers.name, pat), like(retailers.location, pat));
+    });
     rows = await db.select().from(retailers)
-      .where(and(eq(retailers.active, true), or(like(retailers.name, pat), like(retailers.location, pat)))).limit(2000);
+      .where(and(eq(retailers.active, true), ...(conds.length ? conds : [like(retailers.name, `%${q}%`)]))).limit(2000);
   }
 
   const callable = (r: typeof retailers.$inferSelect) => r.sellsPacks !== false && !!r.phone && !r.phone.startsWith("nophone:");
@@ -1066,7 +1143,8 @@ app.get("/pub/stores/near", async (c) => {
       || (mode === "call" && callable(r))
       || (mode === "kiosk" && r.hasKiosk === true)
       || (mode === "site" && r.chainId != null && stockMethod.get(r.chainId) === "site"))
-    .filter((r) => !q || r.name.toLowerCase().includes(q) || (r.location || "").toLowerCase().includes(q))
+    .filter((r) => !typeF || (((r.chainId && types.get(r.chainId)) || "Other") === typeF))
+    .filter((r) => !q || qTokenMatch(`${r.name} ${r.location || ""}`, q))
     .map((r) => {
       const miles = hasLoc && r.lat != null && r.lng != null ? Math.round(haversineMi(lat, lng, r.lat, r.lng) * 10) / 10 : null;
       const chainName = (r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0];
@@ -1300,7 +1378,7 @@ app.get("/pub/pokemon-sets", async (c) => {
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   // Cache-bust: the service worker caches /logos/* cache-first, so bump this whenever the set assets
   // are re-cut and the front end will request fresh URLs (old cached copies are orphaned harmlessly).
-  const av = "?v=4";
+  const av = "?v=7";
   const v = { ...file, logoBase: "/logos", eras: file.eras.map((e) => ({ ...e,
     slug: slug(e.era), logo: `/logos/eras/${slug(e.era)}.png${av}`,
     sets: e.sets.map((s) => ({ ...s,
@@ -2336,8 +2414,16 @@ app.get("/app/me", async (c) => {
   if (a && !a.phone && u.phone) {
     await db.update(accounts).set({ phone: u.phone }).where(eq(accounts.clerkUserId, u.id)); a.phone = u.phone;
   }
+  // premiumAsks entitlement (Hunter tier) — the call path / Website consume this to allow exact
+  // set/product/price questions. Comp accounts get everything.
+  // Premium entitlements (subscription-only): per-feature map the UI gates on, plus premiumAsks
+  // (= features.exact_products) for the call path. Comp -> all; PAYG/free -> none.
+  const features = await accountFeatures(a?.subTier, comp);
+  const premiumAsks = features.exact_products === true;
   return c.json({
-    credits: comp ? 9999 : (a?.credits ?? 0), subscription: comp ? "active" : (a?.subscription ?? "none"),
+    // Displayed balance = subscription quota + PAYG (both spendable). quota/payg broken out for the UI.
+    credits: comp ? 9999 : spendableCredits(a), subscription: comp ? "active" : (a?.subscription ?? "none"),
+    subTier: comp ? "founder" : (a?.subTier ?? null), quota: comp ? 9999 : (a?.quotaCredits ?? 0), payg: comp ? 9999 : (a?.credits ?? 0), premiumAsks, features,
     comp, callsMade: a?.callsMade ?? 0, phone: a?.phone ?? null,
     // caller_id is only set after Twilio's caller-ID verify call → the "create your agent" panel uses
     // callerIdReady to know whether to prompt for it.
@@ -2356,7 +2442,7 @@ app.post("/app/check", async (c) => {
   const a = await getAccount(u.id, u.email);
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
   if (!isCompAccount(a) && !isComp(u.email || undefined) && await isOwnerOnlyStore(Number(retailerId))) return c.json({ error: "not_found" }, 404);
-  if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
+  if (!isCompAccount(a) && (!a || spendableCredits(a) <= 0)) return c.json({ error: "no_credits" }, 402);
   try {
     const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a), kioskMode });
     return c.json({ providerCallId: r.providerCallId, status: r.status });
@@ -2374,7 +2460,7 @@ app.post("/app/check-live", async (c) => {
   const a = await getAccount(u.id, u.email);
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
   if (!isCompAccount(a) && !isComp(u.email || undefined) && await isOwnerOnlyStore(Number(b.retailerId))) return c.json({ error: "not_found" }, 404);
-  if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
+  if (!isCompAccount(a) && (!a || spendableCredits(a) <= 0)) return c.json({ error: "no_credits" }, 402);
   const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
@@ -2460,17 +2546,60 @@ app.post("/app/charge", async (c) => {
   // Charging is now SERVER-SIDE on call completion (ingestPending, atomic + idempotent). This
   // endpoint no longer trusts the client to bill itself — it just returns the live balance.
   const a = await getAccount(u.id, u.email);
-  return c.json({ credits: isCompAccount(a) ? 9999 : (a?.credits ?? 0) });
+  return c.json({ credits: isCompAccount(a) ? 9999 : spendableCredits(a) });
 });
 // Create a Stripe Checkout session (kind = "sub" | pack key). Returns a redirect URL.
 app.post("/app/checkout", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  const { kind, email } = await c.req.json();
+  const { kind, email, annual } = await c.req.json();
   const origin = (c.req.header("origin") || "https://runner.fungibles.com").replace(/\/$/, "");
-  const url = await createCheckout(u.id, u.email || email, kind, origin);
+  const url = await createCheckout(u.id, u.email || email, kind, origin, !!annual);
   if (!url) return c.json({ error: "checkout_failed" }, 400);
   return c.json({ url });
+});
+// Embedded checkout (Stripe Elements — the custom BRANDED on-site page). Returns the client_secret +
+// publishable key the Website confirms with Elements. kind = tier key or "payg:<checks>".
+app.post("/app/checkout-intent", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const { kind, annual } = await c.req.json();
+  try {
+    const intent = await createCheckoutIntent(u.id, u.email || undefined, String(kind || ""), !!annual);
+    if (!intent) return c.json({ error: "checkout_unavailable" }, 400);
+    return c.json(intent);
+  } catch (e) { return c.json({ error: String(e).slice(0, 200) }, 400); }
+});
+
+// Public: the live tiers + PAYG ladder for the consumer checkout sheet (Website's lane renders it).
+app.get("/pub/plans", async (c) => c.json(publicPlans(await getPlans())));
+
+// ---- Admin Plans manager (God View → Plans): edit tiers/PAYG, publish to Stripe. Admin-gated by /api/*. ----
+app.get("/api/admin/plans", async (c) => c.json(plansSyncView(await getPlans())));
+app.post("/api/admin/plans", async (c) => {
+  try {
+    const body = await c.req.json();
+    // The editor sends names/prices/quotas/flags; preserve Stripe ids + publish snapshots server-side.
+    const cur = await getPlans();
+    const merged = normalizePlans({
+      tiers: (body.tiers || []).map((t: Record<string, unknown>) => {
+        const ex = cur.tiers.find((x) => x.key === t.key);
+        return { ...ex, ...t, stripeProductId: ex?.stripeProductId ?? null, monthlyPriceId: ex?.monthlyPriceId ?? null, annualPriceId: ex?.annualPriceId ?? null, pub: ex?.pub ?? null };
+      }),
+      payg: { stripeProductId: cur.payg.stripeProductId, bundles: (body.payg || []).map((b: Record<string, unknown>) => {
+        const ex = cur.payg.bundles.find((x) => x.checks === Number(b.checks));
+        return { ...b, priceId: ex?.priceId ?? null, pubCents: ex?.pubCents ?? null };
+      }) },
+    });
+    return c.json(plansSyncView(await savePlans(merged)));
+  } catch (e) { return c.json({ error: String(e) }, 400); }
+});
+app.post("/api/admin/plans/publish", async (c) => {
+  if (!process.env.STRIPE_SECRET_KEY) return c.json({ error: "stripe_key_missing" }, 400);
+  try {
+    const published = await publishPlansToStripe(await getPlans());
+    return c.json(plansSyncView(await savePlans(published)));
+  } catch (e) { return c.json({ error: String(e) }, 400); }
 });
 
 // ---- Stripe webhook (public, signature-verified) ----
