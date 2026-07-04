@@ -801,6 +801,29 @@ app.get("/logo-wall", async (c) => {
     const cls = (m.d === 1 ? " lite" : "") + (m.w === 1 ? " widelogo" : "");
     return `<div class="cell" data-type="${esc(info?.type || "Other")}" data-treat="${treatKey(m)}"><div class="ic${cls}"><img src="/logos/chains/${f}?v=73" alt=""></div><div class="nm">${esc(info?.name || pretty(f))}</div></div>`;
   };
+  // ── Pokémon set & era logos — same repo/logo-wall system as chains, but shown BIG (owner 2026-07-03:
+  //    "take up the box, be the main attraction"): these are wordmark logos, not 52px store marks.
+  //    Grouped by era; a set with no logo file yet shows a striped gap so the wall reveals what's missing.
+  const listPng = (dir: string) => { try { return new Set(readdirSync(join(here, dir)).filter((f) => /\.png$/i.test(f))); } catch { return new Set<string>(); } };
+  const setLogoFiles = listPng("../public/logos/sets"), eraLogoFiles = listPng("../public/logos/eras");
+  const pslug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  let pokeEras: Array<{ era: string; slug: string; hasEra: boolean; sets: Array<{ code: string; name: string; key: string; has: boolean }> }> = [];
+  try {
+    const pj = JSON.parse(readFileSync(join(here, "../data/pokemon-sets.json"), "utf8")) as { eras: Array<{ era: string; sets: Array<{ code: string; name?: string }> }> };
+    pokeEras = pj.eras.map((e) => ({ era: e.era, slug: pslug(e.era), hasEra: eraLogoFiles.has(pslug(e.era) + ".png"),
+      sets: e.sets.map((s) => ({ code: String(s.code), name: String(s.name || ""), key: pslug(String(s.code)), has: setLogoFiles.has(pslug(String(s.code)) + ".png") })) }));
+  } catch { /* no data file → section stays empty */ }
+  const pokeSetCount = pokeEras.reduce((n, e) => n + e.sets.filter((s) => s.has).length, 0);
+  const pokeSection = pokeEras.length ? `
+  <div class="pwrap">
+    <h2>Pokémon · ${pokeSetCount} set logos</h2>
+    <div class="sub">Set + era wordmarks the hobby lane drops at <code>/logos/sets</code> &amp; <code>/logos/eras</code>. Shown big — the logo IS the tile, area-normalized so every mark carries equal weight.</div>
+    ${pokeEras.map((e) => `
+    <div class="pera">${e.hasEra ? `<img src="/logos/eras/${e.slug}.png?v=73" alt="">` : ""}<span class="en">${esc(e.era)}</span><span class="ec">${e.sets.filter((s) => s.has).length}/${e.sets.length}</span></div>
+    <div class="pgrid">${e.sets.map((s) => s.has
+      ? `<div class="pset"><div class="ptile"><img src="/logos/sets/${s.key}.png?v=73" alt="" onload="pnorm(this)"></div><div class="pnm">${esc(s.code)}<span>${esc(s.name)}</span></div></div>`
+      : `<div class="pset"><div class="ptile pmiss"><span style="font-size:11px;color:#8a8a98;font-weight:700">${esc(s.code)}</span></div><div class="pnm" style="opacity:.5">${esc(s.code)}<span>no logo yet</span></div></div>`).join("")}</div>`).join("")}
+  </div>` : "";
   return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
     *{box-sizing:border-box}
@@ -830,7 +853,26 @@ app.get("/logo-wall", async (c) => {
     .ic img{width:40px;height:40px;object-fit:contain}
     .ic.widelogo img{width:44px;height:auto;max-height:34px}
     .ic.lite{background:#f2f2f5;border-color:rgba(255,255,255,.28)}
+    /* —— Pokémon set/era logos — BIG: the logo is the hero, filling the tile (not a 52px mark) —— */
+    .pwrap{margin-top:34px}
+    .pwrap h2{margin-top:0}
+    .pera{display:flex;align-items:center;gap:13px;margin:26px 0 14px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08)}
+    .pera img{height:38px;width:auto;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}
+    .pera .en{font-size:13px;font-weight:800;letter-spacing:.03em;color:#c7c7d4}
+    .pera .ec{margin-left:auto;font-size:12px;color:#8a8a98;font-variant-numeric:tabular-nums}
+    .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px}
+    .pset{display:flex;flex-direction:column;gap:8px}
+    .ptile{position:relative;aspect-ratio:16/10;border-radius:16px;background:linear-gradient(145deg,#34343d,#23232b);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.05);overflow:hidden;display:flex;align-items:center;justify-content:center}
+    .ptile img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:86%;height:auto;filter:drop-shadow(0 5px 8px rgba(0,0,0,.55))}
+    .ptile.pmiss{background:repeating-linear-gradient(45deg,#2B2B33 0 12px,#25252C 12px 24px)}
+    .pnm{font-size:11px;color:#c7c7d4;text-align:center;font-weight:700;line-height:1.3}
+    .pnm span{display:block;color:#8a8a98;font-weight:500;font-size:10px;overflow-wrap:anywhere}
   </style>
+  <script>
+    // Area-normalized sizing for the Pokémon logo tiles: equal VISUAL footprint regardless of shape,
+    // filling the tile so the logo is the hero. Defined before <body> so img onload always resolves it.
+    function pnorm(img){var box=img.parentElement;if(!box)return;var W=box.clientWidth,H=box.clientHeight;if(!W||!H){requestAnimationFrame(function(){pnorm(img);});return;}var nw=img.naturalWidth,nh=img.naturalHeight;if(!nw||!nh)return;var tA=0.52*W*H,mW=0.92*W,mH=0.82*H,sc=Math.sqrt(tA/(nw*nh));if(nw*sc>mW)sc=mW/nw;if(nh*sc>mH)sc=mH/nh;img.style.width=(100*nw*sc/W)+'%';}
+  </script>
   <body>
   <h2>Logo wall · ${files.length} marks</h2>
   <div class="sub">Each mark exactly as the store list renders it — same 52px tile, plate &amp; wide handling from _meta.json.</div>
@@ -847,6 +889,7 @@ app.get("/logo-wall", async (c) => {
     <span id="count"></span>
   </div>
   <div class="grid" id="grid">${files.map(tile).join("")}</div>
+  ${pokeSection}
   <script>
     var sel=document.getElementById('type'),grid=document.getElementById('grid'),count=document.getElementById('count');
     var treatBtn=document.getElementById('treatBtn'),treatPop=document.getElementById('treatPop'),treatSum=document.getElementById('treatSum');

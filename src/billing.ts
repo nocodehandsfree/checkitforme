@@ -256,12 +256,17 @@ export async function createCheckoutIntent(userId: string, email: string | undef
     if (!plan.priceId) return null; // subscription must be published to Stripe first (Publish button)
     const sub = await stripeForm("/subscriptions", {
       customer, "items[0][price]": plan.priceId, payment_behavior: "default_incomplete",
-      "payment_settings[save_default_payment_method]": "on_subscription", "expand[]": "latest_invoice.payment_intent",
+      "payment_settings[save_default_payment_method]": "on_subscription",
+      "expand[]": "latest_invoice.confirmation_secret",
       "metadata[clerkUserId]": userId, "metadata[tierKey]": plan.metadata.tierKey || "", "metadata[checks]": plan.metadata.checks || "",
     });
-    const pi = (sub.latest_invoice as { payment_intent?: { client_secret?: string } } | undefined)?.payment_intent;
-    if (!pi?.client_secret) return null;
-    return { mode: "subscription", clientSecret: pi.client_secret, publishableKey: pk, amountCents: plan.cents };
+    // Newer Stripe API versions moved the first-invoice client_secret from latest_invoice.payment_intent
+    // (now null) to latest_invoice.confirmation_secret. Read the new field first, fall back to the old
+    // for accounts pinned to an older version. (Verified against the account's live API 2026-07-04.)
+    const inv = sub.latest_invoice as { confirmation_secret?: { client_secret?: string }; payment_intent?: { client_secret?: string } } | undefined;
+    const clientSecret = inv?.confirmation_secret?.client_secret || inv?.payment_intent?.client_secret;
+    if (!clientSecret) return null;
+    return { mode: "subscription", clientSecret, publishableKey: pk, amountCents: plan.cents };
   }
   const pi = await stripeForm("/payment_intents", {
     customer, amount: String(plan.cents), currency: "usd", "automatic_payment_methods[enabled]": "true",
