@@ -775,7 +775,17 @@ function distributorsForChain(name: string | null | undefined): string | null {
 // same .ic tile (52px, plate + wide handling from _meta.json), ONE mark each (no 2x detail), so
 // the page mirrors the real website. Filter by the chain's admin "type" (Big Box, Pharmacy,
 // Grocer…), pulled live from the chains table. No auth — leaks nothing but public logos.
+// Admin gate for the internal logo walls (owner: never public). Same check as /api/*: x-admin-token
+// header or the admin_session cookie (owner-phone login mints it). Open only in dev with no token set.
+async function adminOk(c: any): Promise<boolean> {
+  if (!config.adminToken) return true;
+  if (c.req.header("x-admin-token") === config.adminToken) return true;
+  const ck = getCookie(c, "admin_session");
+  if (ck) { const s = await verifySession(ck); if (s && s.id === "admin") return true; }
+  return false;
+}
 app.get("/logo-wall", async (c) => {
+  if (!(await adminOk(c))) return c.notFound(); // private: not a public page
   const files = [...chainLogoFiles()].sort();
   const meta = logoMeta();
   // Pair each logo file to its chain's admin store-type (chains = the Admin source of truth).
@@ -805,24 +815,24 @@ app.get("/logo-wall", async (c) => {
   //    "take up the box, be the main attraction"): these are wordmark logos, not 52px store marks.
   //    Grouped by era; a set with no logo file yet shows a striped gap so the wall reveals what's missing.
   const listPng = (dir: string) => { try { return new Set(readdirSync(join(here, dir)).filter((f) => /\.png$/i.test(f))); } catch { return new Set<string>(); } };
-  const setLogoFiles = listPng("../public/logos/sets"), eraLogoFiles = listPng("../public/logos/eras");
+  const setLogoFiles = listPng("../public/logos/sets"), eraLogoFiles = listPng("../public/logos/eras"), bannerFiles = listPng("../public/logos/set-banners");
   const pslug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  let pokeEras: Array<{ era: string; slug: string; hasEra: boolean; sets: Array<{ code: string; name: string; key: string; has: boolean }> }> = [];
+  let pokeEras: Array<{ era: string; slug: string; hasEra: boolean; sets: Array<{ code: string; name: string; key: string; has: boolean; banner: boolean }> }> = [];
   try {
     const pj = JSON.parse(readFileSync(join(here, "../data/pokemon-sets.json"), "utf8")) as { eras: Array<{ era: string; sets: Array<{ code: string; name?: string }> }> };
     pokeEras = pj.eras.map((e) => ({ era: e.era, slug: pslug(e.era), hasEra: eraLogoFiles.has(pslug(e.era) + ".png"),
-      sets: e.sets.map((s) => ({ code: String(s.code), name: String(s.name || ""), key: pslug(String(s.code)), has: setLogoFiles.has(pslug(String(s.code)) + ".png") })) }));
+      sets: e.sets.map((s) => { const key = pslug(String(s.code)); return { code: String(s.code), name: String(s.name || ""), key, has: setLogoFiles.has(key + ".png"), banner: bannerFiles.has(key + ".png") }; }) }));
   } catch { /* no data file → section stays empty */ }
   const pokeSetCount = pokeEras.reduce((n, e) => n + e.sets.filter((s) => s.has).length, 0);
   const pokeSection = pokeEras.length ? `
-  <div class="pwrap">
-    <h2>Pokémon · ${pokeSetCount} set logos</h2>
-    <div class="sub">Set + era wordmarks the hobby lane drops at <code>/logos/sets</code> &amp; <code>/logos/eras</code>. Shown big — the logo IS the tile, area-normalized so every mark carries equal weight.</div>
+  <div id="pokeArea" hidden>
+    <h2>Pokémon set tiles · ${pokeSetCount} sets</h2>
+    <div class="sub">The exact composite the hobby wall renders — set art (<code>/logos/set-banners</code>) with the set logo (<code>/logos/sets</code>) raised on top, area-normalized. Grouped by era.</div>
     ${pokeEras.map((e) => `
     <div class="pera">${e.hasEra ? `<img src="/logos/eras/${e.slug}.png?v=73" alt="">` : ""}<span class="en">${esc(e.era)}</span><span class="ec">${e.sets.filter((s) => s.has).length}/${e.sets.length}</span></div>
     <div class="pgrid">${e.sets.map((s) => s.has
-      ? `<div class="pset"><div class="ptile"><img src="/logos/sets/${s.key}.png?v=73" alt="" onload="pnorm(this)"></div><div class="pnm">${esc(s.code)}<span>${esc(s.name)}</span></div></div>`
-      : `<div class="pset"><div class="ptile pmiss"><span style="font-size:11px;color:#8a8a98;font-weight:700">${esc(s.code)}</span></div><div class="pnm" style="opacity:.5">${esc(s.code)}<span>no logo yet</span></div></div>`).join("")}</div>`).join("")}
+      ? `<div class="pset"><div class="ptile">${s.banner ? `<img class="pbg" src="/logos/set-banners/${s.key}.png?v=73" alt="">` : ""}<img class="plogo" src="/logos/sets/${s.key}.png?v=73" alt="" onload="pnorm(this)"></div><div class="pnm">${esc(s.code)}<span>${esc(s.name)}</span></div></div>`
+      : `<div class="pset"><div class="ptile pmiss"><span class="pcode">${esc(s.code)}</span></div><div class="pnm" style="opacity:.5">${esc(s.code)}<span>no logo yet</span></div></div>`).join("")}</div>`).join("")}
   </div>` : "";
   return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
@@ -853,27 +863,33 @@ app.get("/logo-wall", async (c) => {
     .ic img{width:40px;height:40px;object-fit:contain}
     .ic.widelogo img{width:44px;height:auto;max-height:34px}
     .ic.lite{background:#f2f2f5;border-color:rgba(255,255,255,.28)}
-    /* —— Pokémon set/era logos — BIG: the logo is the hero, filling the tile (not a 52px mark) —— */
-    .pwrap{margin-top:34px}
-    .pwrap h2{margin-top:0}
+    /* —— tabs: Store logos | Pokémon sets (separate areas on this private wall) —— */
+    .tabs{display:flex;gap:8px;margin-bottom:16px}
+    .tab{appearance:none;background:#1a1a22;color:#c7c7d4;border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer}
+    .tab.on{background:#4ADE80;color:#06210f;border-color:transparent}
+    /* —— Pokémon set tiles — composited: set art + logo raised on top (exactly like the hobby wall) —— */
     .pera{display:flex;align-items:center;gap:13px;margin:26px 0 14px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08)}
     .pera img{height:38px;width:auto;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}
     .pera .en{font-size:13px;font-weight:800;letter-spacing:.03em;color:#c7c7d4}
     .pera .ec{margin-left:auto;font-size:12px;color:#8a8a98;font-variant-numeric:tabular-nums}
-    .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px}
+    .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:16px}
     .pset{display:flex;flex-direction:column;gap:8px}
-    .ptile{position:relative;aspect-ratio:16/10;border-radius:16px;background:linear-gradient(145deg,#34343d,#23232b);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.05);overflow:hidden;display:flex;align-items:center;justify-content:center}
-    .ptile img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:86%;height:auto;filter:drop-shadow(0 5px 8px rgba(0,0,0,.55))}
-    .ptile.pmiss{background:repeating-linear-gradient(45deg,#2B2B33 0 12px,#25252C 12px 24px)}
+    .ptile{position:relative;aspect-ratio:1/1;border-radius:16px;overflow:hidden;background:#1b1b20;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 6px 14px -6px rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.05)}
+    .ptile .pbg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.6)}
+    .ptile .plogo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:82%;height:auto;filter:drop-shadow(0 5px 8px rgba(0,0,0,.6))}
+    .ptile.pmiss{background:repeating-linear-gradient(45deg,#2B2B33 0 12px,#25252C 12px 24px);display:grid;place-items:center}
+    .pcode{font-size:12px;color:#8a8a98;font-weight:800}
     .pnm{font-size:11px;color:#c7c7d4;text-align:center;font-weight:700;line-height:1.3}
     .pnm span{display:block;color:#8a8a98;font-weight:500;font-size:10px;overflow-wrap:anywhere}
   </style>
   <script>
-    // Area-normalized sizing for the Pokémon logo tiles: equal VISUAL footprint regardless of shape,
-    // filling the tile so the logo is the hero. Defined before <body> so img onload always resolves it.
-    function pnorm(img){var box=img.parentElement;if(!box)return;var W=box.clientWidth,H=box.clientHeight;if(!W||!H){requestAnimationFrame(function(){pnorm(img);});return;}var nw=img.naturalWidth,nh=img.naturalHeight;if(!nw||!nh)return;var tA=0.52*W*H,mW=0.92*W,mH=0.82*H,sc=Math.sqrt(tA/(nw*nh));if(nw*sc>mW)sc=mW/nw;if(nh*sc>mH)sc=mH/nh;img.style.width=(100*nw*sc/W)+'%';}
+    // Area-normalized logo sizing (equal visual footprint, filling the tile) — matches the hobby wall.
+    // Defined before <body> so img onload always resolves it.
+    function pnorm(img){var box=img.parentElement;if(!box)return;var W=box.clientWidth,H=box.clientHeight;if(!W||!H){requestAnimationFrame(function(){pnorm(img);});return;}var nw=img.naturalWidth,nh=img.naturalHeight;if(!nw||!nh)return;var tA=0.40*W*H,mW=0.92*W,mH=0.74*H,sc=Math.sqrt(tA/(nw*nh));if(nw*sc>mW)sc=mW/nw;if(nh*sc>mH)sc=mH/nh;img.style.width=(100*nw*sc/W)+'%';}
   </script>
   <body>
+  <div class="tabs"><button class="tab on" data-area="storeArea">Store logos · ${files.length}</button><button class="tab" data-area="pokeArea">Pokémon sets · ${pokeSetCount}</button></div>
+  <div id="storeArea">
   <h2>Logo wall · ${files.length} marks</h2>
   <div class="sub">Each mark exactly as the store list renders it — same 52px tile, plate &amp; wide handling from _meta.json.</div>
   <div class="bar">
@@ -889,6 +905,7 @@ app.get("/logo-wall", async (c) => {
     <span id="count"></span>
   </div>
   <div class="grid" id="grid">${files.map(tile).join("")}</div>
+  </div>
   ${pokeSection}
   <script>
     var sel=document.getElementById('type'),grid=document.getElementById('grid'),count=document.getElementById('count');
@@ -908,6 +925,7 @@ app.get("/logo-wall", async (c) => {
     boxes.forEach(function(b){b.addEventListener('change',function(){if(!boxes.some(function(x){return x.checked;})){b.checked=true;return;}apply();});});
     document.addEventListener('click',function(){treatPop.setAttribute('hidden','');treatBtn.setAttribute('aria-expanded','false');});
     sel.addEventListener('change',apply);apply();
+    document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(){document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});t.classList.add('on');['storeArea','pokeArea'].forEach(function(id){var el=document.getElementById(id);if(el)el.hidden=(id!==t.dataset.area);});});});
   </script>
   </body>`);
 });
@@ -1378,7 +1396,7 @@ app.get("/pub/pokemon-sets", async (c) => {
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   // Cache-bust: the service worker caches /logos/* cache-first, so bump this whenever the set assets
   // are re-cut and the front end will request fresh URLs (old cached copies are orphaned harmlessly).
-  const av = "?v=7";
+  const av = "?v=8";
   const v = { ...file, logoBase: "/logos", eras: file.eras.map((e) => ({ ...e,
     slug: slug(e.era), logo: `/logos/eras/${slug(e.era)}.png${av}`,
     sets: e.sets.map((s) => ({ ...s,
