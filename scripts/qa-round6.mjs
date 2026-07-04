@@ -3,6 +3,7 @@
 import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 const b = await chromium.launch();
 const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+await ctx.route('**/app/me*', r => r.fulfill({ contentType: 'application/json', body: JSON.stringify({credits:9999,comp:true,subscription:"active",subTier:"founder",quota:9999,payg:9999,premiumAsks:true,features:{exact_products:true,zone_sweeps:true,restock_alerts:true,scheduled_checks:true,any_town:true,store_holds:true,your_voice:true,thrift_hunts:true},callsMade:0,phone:"+15550000000",callerId:null,callerIdReady:false,catalog:{}}) })); // entitled account (all features) so gated modules render
 await ctx.addInitScript(() => { localStorage.setItem('cifm_skin','v2'); localStorage.setItem('cifm_token','probe'); localStorage.setItem('runnr_authed','1'); });
 const pg = await ctx.newPage();
 const fails = [];

@@ -1455,7 +1455,7 @@ html[data-skin="v2"] .co-div::before,html[data-skin="v2"] .co-div::after{content
 html[data-skin="v2"] .co-div span{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#7C7C88}
 html[data-skin="v2"] #co_pay_el{min-height:48px}
 html[data-skin="v2"] .co-loading{color:#8A8A96;font-size:13px;font-weight:600;text-align:center;padding:16px 0}
-html[data-skin="v2"] .co-err{color:#ff6b6b;font-size:12.5px;font-weight:600;margin-top:10px;min-height:0;text-align:center}
+html[data-skin="v2"] .co-err{color:#FF7B7B;font-size:12.5px;font-weight:600;margin-top:10px;min-height:0;text-align:center}
 html[data-skin="v2"] #co_cta{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:16px;background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#FFF;font-size:13px;font-weight:800;letter-spacing:.08em;padding:14px 24px;box-shadow:0 12px 28px -8px rgba(25,177,69,.45);cursor:pointer;text-transform:uppercase}
 html[data-skin="v2"] #co_cta:disabled{opacity:.55;cursor:default;box-shadow:none}
 html[data-skin="v2"] .co-trust{font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:12px;text-align:center}
@@ -2275,7 +2275,7 @@ const I18N={ es:{
   'dd.tag':'Vista previa · próximamente','dd.title':'Que un local lo recoja','dd.sub':'¿Muy lejos para manejar? Manda a un conductor de Uber/Lyft cercano a comprarlo y enviártelo. Él paga <b>$0 de su bolsillo</b>, tú solo pones el bono.','dd.instock':'En stock','dd.s1':'Define el <b style="color:var(--green)">bono</b> del conductor (ej. $25) sobre su tarifa','dd.s2':'Pide el viaje en <b>Uber</b> o <b>Lyft</b>. Recogida en la tienda','dd.s3':'Envía una tarjeta prepagada (producto + envío) + un mensaje listo','dd.s4':'Él lo compra, lo envía y toca <b>Listo</b> → tu bono se libera al instante','dd.sees':'lo que ve el conductor','dd.pickup':'Tienes una recogida de <span style="color:var(--green)">$25</span> 🏃','dd.applepay':'Agregar tarjeta a Apple Pay (60 seg)','dd.cta':'Quiero acceso anticipado →','dd.noted':'Anotado. Te buscamos para el acceso anticipado 🤝','dd.grab':'recoger en {s} → te lo envían',
   // generic errors / toasts / misc
   'err.generic':'Algo salió mal. Inténtalo de nuevo.','err.sendcode':'No pudimos enviar un código. Inténtalo de nuevo.','err.verify':'No se pudo verificar. Inténtalo de nuevo.','err.post':'No se pudo publicar. Inténtalo de nuevo.','err.upload':'Falló la subida.','err.photobig':'La foto pesa demasiado. Prueba con una más pequeña.','auth.verifying':'Verificando…','map.list':'Lista','store.closed':'Cerrado','toast.nocall':'. No se hizo la llamada.','auth.welcome':"✓ Ya entraste",'err.email':'Ingresa un correo válido','err.contact':'Ingresa un correo o teléfono válido.','err.pickstore':'Elige una tienda primero',
-  'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete gratis para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la verificación','toast.callgone':'Esa llamada ya no está disponible','toast.loadingcall':'Cargando tu llamada…','toast.translate.fail':'No se pudo traducir','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Mostrando la lista','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
+  'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la verificación','toast.callgone':'Esa llamada ya no está disponible','toast.loadingcall':'Cargando tu llamada…','toast.translate.fail':'No se pudo traducir','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Mostrando la lista','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
   'find.me':'Encuentra mis tiendas','find.near':'cerca de ti, abiertas ahora',
   'scores.title':'Logros de la caza','scores.post':'Publica el tuyo →','scores.first':'¡Muéstranos el botín!',
   'ho.title':'Pásalo a un conductor','ho.sub':'Él lo compra. Y te lo lleva a tu puerta o te lo envía.','ho.ship':'Envíamelo','ho.home':'Tráelo a mi casa','ho.ship.btn':'📦 Envíamelo','ho.home.btn':'🏠 Tráelo a mi casa',
@@ -2352,22 +2352,36 @@ function applyLang(){
   // v2 skin, EN only: S2 store-type labels are LOCKED by design (§5.1 Retail·Kiosk launch state).
   // ES keeps its approved table strings until the Copy lane rules (logged in the redesign COPY QUEUE).
   if(isV2()&&LANG==='en'){ const mc=document.querySelector('.modetab[data-mode="call"] [data-i18n]'); if(mc) mc.textContent='Retail'; const mk=document.querySelector('.modetab[data-mode="kiosk"] [data-i18n]'); if(mk) mk.textContent='Kiosk'; }
-  // HOBBY chip (v2, card verticals only — sports cards + TCG, never NeeDoh): local card shops via
-  // the server-side type filter (Data 2026-07-03). Injected so the default site markup is untouched.
-  if(isV2()&&BRAND&&['poke','onepiece','topps'].includes(BRAND.key)&&!document.querySelector('.modetab[data-mode="hobby"]')){
-    const kb=document.querySelector('.modetab[data-mode="kiosk"]');
-    if(kb){ const hb=document.createElement('button'); hb.className='modetab'; hb.dataset.mode='hobby'; hb.setAttribute('onclick',"setMode('hobby')");
+  // Entitlement-gated mode chips (Hobby=exact_products, Thrift=thrift_hunts) — injected OR removed to
+  // match hasFeature(). Re-run from refreshAuth once /app/me resolves so it's correct across login and
+  // admin per-tier toggles (ACCOUNT is null at boot → chips appear only once entitlement loads).
+  try{ ensureModeChips(); }catch(_){ }
+}
+// Inject/remove the premium mode chips to match the account's entitlements. Add-only DOM (no v1 markup),
+// with a removal branch so un-entitling (logout / admin toggle) drops the chip and bounces out of its mode.
+function ensureModeChips(){
+  if(!isV2()||!BRAND) return;
+  const kioskBtn=()=>document.querySelector('.modetab[data-mode="kiosk"]');
+  // HOBBY (card verticals only — never NeeDoh — AND the exact_products entitlement).
+  { const want=['poke','onepiece','topps'].includes(BRAND.key)&&hasFeature('exact_products');
+    const ex=document.querySelector('.modetab[data-mode="hobby"]'), kb=kioskBtn();
+    if(want&&!ex&&kb){ const hb=document.createElement('button'); hb.className='modetab'; hb.dataset.mode='hobby'; hb.setAttribute('onclick',"setMode('hobby')");
       hb.innerHTML='<span class="mti"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg></span><span>'+t('mode.hobby','Hobby')+'</span>';
       kb.parentElement.insertBefore(hb,kb); }
+    else if(!want&&ex){ ex.remove(); if(typeof MODE!=='undefined'&&MODE==='hobby'){ try{ setMode('call'); }catch(_){ } } }
   }
-  // THRIFT chip (v2, all brands): same retail call flow, filtered to thrift stores via the server-side
-  // type filter (type=Thrift). No product picker — thrift = call a thrift shop for whatever you hunt.
-  if(isV2()&&BRAND&&!document.querySelector('.modetab[data-mode="thrift"]')){
-    const kb2=document.querySelector('.modetab[data-mode="kiosk"]');
-    if(kb2){ const tb=document.createElement('button'); tb.className='modetab'; tb.dataset.mode='thrift'; tb.setAttribute('onclick',"setMode('thrift')");
+  // THRIFT (all v2 brands + the thrift_hunts entitlement).
+  { const want=hasFeature('thrift_hunts');
+    const ex=document.querySelector('.modetab[data-mode="thrift"]'), kb2=kioskBtn();
+    if(want&&!ex&&kb2){ const tb=document.createElement('button'); tb.className='modetab'; tb.dataset.mode='thrift'; tb.setAttribute('onclick',"setMode('thrift')");
       tb.innerHTML='<span class="mti"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg></span><span>'+t('mode.thrift','Thrift')+'</span>';
       kb2.parentElement.insertBefore(tb,kb2); }
+    else if(!want&&ex){ ex.remove(); if(typeof MODE!=='undefined'&&MODE==='thrift'){ try{ setMode('call'); }catch(_){ } } }
   }
+  // Restore a premium mode persisted from last session, once its chip exists (entitlement now known).
+  try{ const cm=localStorage.getItem('cifm_mode');
+    if((cm==='hobby'||cm==='thrift') && (typeof MODE==='undefined'||MODE!==cm) && document.querySelector('.modetab[data-mode="'+cm+'"]')) setMode(cm);
+  }catch(_){ }
 }
 function setLang(l){ LANG=l; localStorage.setItem('runnr_lang',l); applyLang();
   // Re-render everything built in JS so a language flip is instant and complete.
@@ -2449,8 +2463,9 @@ function applyFlags(){
   const kt=document.querySelector('.modetab[data-mode="kiosk"]'); const kioskOK=(BRAND&&BRAND.category==='Pokémon')&&(f.kiosks!==false||f.kioskReceipts!==false); if(kt) kt.style.display=kioskOK?'':'none'; const mt=$('modetabs'); if(mt) mt.style.display=kioskOK?'':'none';
   // Stay on the Kiosk tab across reloads (last choice) — only when the tab actually exists.
   if(kioskOK && MODE!=='kiosk'){ try{ if(localStorage.getItem('cifm_mode')==='kiosk') setMode('kiosk'); }catch(e){} }
-  try{ if(localStorage.getItem('cifm_mode')==='hobby'){ if(document.querySelector('.modetab[data-mode="hobby"]')) setMode('hobby'); else localStorage.setItem('cifm_mode','call'); } }catch(e){}
-  try{ if(localStorage.getItem('cifm_mode')==='thrift'){ if(document.querySelector('.modetab[data-mode="thrift"]')) setMode('thrift'); else localStorage.setItem('cifm_mode','call'); } }catch(e){}
+  // Hobby/Thrift restore is entitlement-gated + handled by ensureModeChips (runs at boot AND after
+  // /app/me loads), so a premium mode persisted from last session restores once the chip is (re)injected.
+  try{ ensureModeChips(); }catch(e){}
   loadCommunity();
   renderFooter();
 }
@@ -2560,6 +2575,7 @@ async function refreshAuth(){
     if(USER_LOC && STORES_AUTH_TOKEN!==PHONE_TOKEN){ STORES_AUTH_TOKEN=PHONE_TOKEN; try{ fetchNear(); loadBestBet(); }catch(_){} }
   } else { ACCOUNT=null; STORES_AUTH_TOKEN=null; try{ localStorage.setItem('runnr_authed','0'); localStorage.removeItem('cifm_acct'); }catch(e){} }
   renderAuth();
+  try{ ensureModeChips(); }catch(_){ } // entitlement now known → show/hide the Hobby/Thrift chips
   loadSchedules();
   claimPendingReferral();
   loadRefer();
@@ -2635,7 +2651,9 @@ async function claimPendingReferral(){
 const DOWSHORT={'0':'Sun','1':'Mon','2':'Tue','3':'Wed','4':'Thu','5':'Fri','6':'Sat'};
 async function loadSchedules(){
   const card=$('schedCard'); if(!card) return;
-  if(!(isAuthed()&&ACCOUNT&&ACCOUNT.subscription==='active')){ card.style.display='none'; return; }
+  // Auto-checks are a per-tier premium module: gate on scheduled_checks (comp→true). Starves window.SCHEDS
+  // so #schedCard, the My-checks #acctScheds block, AND the calendar rings all go empty in one shot.
+  if(!(isAuthed()&&ACCOUNT&&ACCOUNT.subscription==='active'&&hasFeature('scheduled_checks'))){ card.style.display='none'; window.SCHEDS=[]; return; }
   const list=await appApi('/app/schedules');
   if(!Array.isArray(list)||!list.length){ card.style.display='none'; return; }
   window.SCHEDS=list; try{ if(isV2()&&$('acctOverlay').classList.contains('on')) renderAcctScheds(); }catch(_){ }
@@ -3046,12 +3064,12 @@ let SEARCH_T=null;
 function isMaster(){ return !!(ACCOUNT&&ACCOUNT.comp); }
 function onSearchInput(){ clearTimeout(SEARCH_T); SEARCH_T=setTimeout(async()=>{
   const q=($('search').value||'').trim();
-  if(isMaster() && /^\d{5}$/.test(q)){ if(await geocodeSearch()) return; }  // master: a typed ZIP drops you there
+  if((isMaster()||hasFeature('any_town')) && /^\d{5}$/.test(q)){ if(await geocodeSearch()) return; }  // any_town/master: a typed ZIP drops you there
   if(USER_LOC) renderStores(); else fetchNear();
 }, 300); }
 // Master-only: type a city/ZIP → land there (same box). Non-master: just a normal store/city search.
 async function geocodeSearch(){
-  if(!isMaster()){ if(USER_LOC) renderStores(); else fetchNear(); return false; }
+  if(!isMaster() && !hasFeature('any_town')){ if(USER_LOC) renderStores(); else fetchNear(); return false; } // relocate = the any_town perk
   const q=($('search').value||'').trim(); if(q.length<3) return false;
   const isZip=/^\d{5}$/.test(q);
   const r=await api('/pub/geocode?'+(isZip?'zip=':'q=')+encodeURIComponent(q));
@@ -3131,7 +3149,7 @@ function initMap(){
     // Regular users tap store pins to check; the map never moves them.
     // Master drops a pin → load that area's stores ON the open map (owner 2026-07-02: the map stays
     // up until they close it — the pins repaint in place via renderStores' map hook).
-    MAP.on('click',(e)=>{ if(!isMaster()) return; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng); toast(t('toast.locating2','Locating stores'),'neutral'); });
+    MAP.on('click',(e)=>{ if(!isMaster() && !hasFeature('any_town')) return; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng); toast(t('toast.locating2','Locating stores'),'neutral'); });
     MAP_FIT_NEXT=true; // first paint → frame the search radius (then it stays put until a new location)
     setTimeout(()=>MAP.invalidateSize(),60); renderMapPins();
   }catch(e){ toast(t('toast.maploading','Map could not load. Showing the list.')); toggleMap(); }
@@ -3572,12 +3590,14 @@ function confirmKioskCall(){ KIOSK_OK=true; closeKioskConfirm(); startCheck(); }
 // Toggle a category in/out of the selection (multi-select), keeping at least one.
 function pickCat(id){
   const i=SEL_CATS.indexOf(id);
-  if(i>=0){ if(SEL_CATS.length>1) SEL_CATS.splice(i,1); } else SEL_CATS.push(id);
+  // Multiple products per call = the exact_products perk. v1 unchanged; v2 without the perk single-selects.
+  if(i>=0){ if(SEL_CATS.length>1) SEL_CATS.splice(i,1); } else { if(!isV2()||hasFeature('exact_products')) SEL_CATS.push(id); else SEL_CATS=[id]; }
   SEL_CAT=SEL_CATS[0]||null; SEL_PRODUCT=''; try{HOBBY_LOCK=false;}catch(_){ } // user changed intent
   renderChips(); syncProductUI(); syncCta();
 }
 // The SKU dropdown only makes sense for a single category — hide it when multiple are picked.
 function syncProductUI(){
+  if(isV2()&&!hasFeature('exact_products')){ const w=$('prodwrap'); if(w) w.style.display='none'; if(!(typeof HOBBY_LOCK!=='undefined'&&HOBBY_LOCK)) SEL_PRODUCT=''; return; } // exact SKU picker = perk (v2)
   if(SEL_CATS.length===1) loadProducts(SEL_CATS[0]);
   else { const w=$('prodwrap'); if(w) w.style.display='none';
     // hobby-locked products survive an EMPTY cat state (data not loaded yet ≠ changed intent);
@@ -3600,7 +3620,7 @@ async function loadProducts(catId){
       const t=p.type?` · ${esc(p.type)}`:''; return `<option value="${esc(p.name)}">${esc(p.name)}${t}</option>`;
     }).join('')+`</optgroup>`;
   });
-  sel.innerHTML=html; wrap.style.display='';
+  sel.innerHTML=html; if(!isV2()||hasFeature('exact_products')) wrap.style.display=''; // reveal only if entitled (v2)
 }
 function pickProduct(){ SEL_PRODUCT=$('prodsel').value||''; }
 
@@ -3655,7 +3675,7 @@ function renderCallSheet(){
   // ("Pokémon · costs 1 check" → "Pitch Black Booster Box · costs 1 check"). v1: lock never set.
   const prod = SEL_KIOSK ? t('cta.kioskword','kiosk') : ((typeof HOBBY_LOCK!=='undefined'&&HOBBY_LOCK&&SEL_PRODUCT)?SEL_PRODUCT:catLabels());
   const pe=$('cs_prod'); if(pe) pe.innerHTML = `${esc(prod)} <span>· ${t('cs.costs','costs 1 check')}</span>`+
-    ((isV2()&&MODE==='hobby'&&BRAND&&BRAND.key==='poke')?`<a onclick="openHobby()" style="display:block;margin-top:6px;font-size:12.5px;font-weight:700;color:#4ADE80;cursor:pointer">${t('hob.pickexact','Pick the exact set or product')} →</a>`:'');
+    ((isV2()&&MODE==='hobby'&&BRAND&&BRAND.key==='poke'&&hasFeature('exact_products'))?`<a onclick="openHobby()" style="display:block;margin-top:6px;font-size:12.5px;font-weight:700;color:#4ADE80;cursor:pointer">${t('hob.pickexact','Pick the exact set or product')} →</a>`:'');
 }
 function showCallSheet(){ const el=$('csheet'); if(!el) return; renderCallSheet(); el.style.transform=''; el.style.transition=''; el.classList.add('on'); el.setAttribute('aria-hidden','false'); const bd=$('csheetBd'); if(bd) bd.classList.add('on'); }
 function hideCallSheet(){ const el=$('csheet'); if(el){ el.classList.remove('on'); el.setAttribute('aria-hidden','true'); el.style.transform=''; } const bd=$('csheetBd'); if(bd) bd.classList.remove('on'); }
@@ -4464,7 +4484,7 @@ function showResult(o, cid){
   ].join('')) : '';
   // Restock section: PREMIUM gets the real "we'll text you" signup; non-premium gets a simple "check
   // back soon" nudge (restock alerts are a paid perk).
-  const upsell = !(canNotify && (F.restockAlerts!==false || F.scheduling!==false)) ? '' : (isMember ? `
+  const upsell = !(canNotify && (F.restockAlerts!==false || F.scheduling!==false)) ? '' : ((hasFeature('restock_alerts')||hasFeature('scheduled_checks')) ? `
     <div class="upmod">
       <button type="button" class="upmod-h" onclick="this.closest('.upmod').classList.toggle('open')" aria-label="${esc(t('up.restock',"Don't miss the restock"))}">
         <div class="t">${ICO.bell(PURP)} ${t('up.restock',"Don't miss the restock")}</div>
@@ -4472,8 +4492,8 @@ function showResult(o, cid){
       </button>
       <div class="upmod-body">
         <div class="s">${t('up.restock.sub',"We'll text you the second it's back in stock.")}</div>
-        ${F.restockAlerts!==false?`<div class="uprow" onclick="openWatch()"><div class="upi">${ICO.msg(PURP)}</div><div class="uptxt"><div class="a">${t('up.watch',"Tell me when it's back")}</div><div class="b">${t('up.watch.sub',"One alert the instant a check confirms stock.")}</div></div><div class="upc">${ICO.chev(isV2()?'#7C7C88':'#56566a')}</div></div>`:''}
-        ${F.scheduling!==false?`<div class="uprow" onclick="openSchedule()"><div class="upi">${ICO.cal(PURP)}</div><div class="uptxt"><div class="a">${t('up.sched','Auto-check on shipment days')}</div><div class="b">${t('up.sched.sub',"We call for you on restock days. Hands-free.")}</div></div><div class="upc">${ICO.chev(isV2()?'#7C7C88':'#56566a')}</div></div>`:''}
+        ${F.restockAlerts!==false&&hasFeature('restock_alerts')?`<div class="uprow" onclick="openWatch()"><div class="upi">${ICO.msg(PURP)}</div><div class="uptxt"><div class="a">${t('up.watch',"Tell me when it's back")}</div><div class="b">${t('up.watch.sub',"One alert the instant a check confirms stock.")}</div></div><div class="upc">${ICO.chev(isV2()?'#7C7C88':'#56566a')}</div></div>`:''}
+        ${F.scheduling!==false&&hasFeature('scheduled_checks')?`<div class="uprow" onclick="openSchedule()"><div class="upi">${ICO.cal(PURP)}</div><div class="uptxt"><div class="a">${t('up.sched','Auto-check on shipment days')}</div><div class="b">${t('up.sched.sub',"We call for you on restock days. Hands-free.")}</div></div><div class="upc">${ICO.chev(isV2()?'#7C7C88':'#56566a')}</div></div>`:''}
       </div>
     </div>` : `
     <div class="upmod open">
@@ -4916,6 +4936,7 @@ function actTone(tn){ ACT_TONE=(ACT_TONE===tn?'':tn); acctTab('activity',true); 
 // per check so multi-vertical users see what each auto-check is for).
 function renderAcctScheds(){
   const host=$('acctScheds'); if(!host) return;
+  if(!hasFeature('scheduled_checks')){ host.innerHTML=''; return; } // tier without auto-checks → no module
   const list=window.SCHEDS||[];
   if(!list.length){ host.innerHTML=''; return; }
   const cal='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>';
@@ -5085,6 +5106,7 @@ function hobSizeLogo(img){
 function exitHunt(){ document.body.classList.remove('huntmode'); const h=$('hobby'); if(h) h.classList.add('hidden'); }
 async function openHobby(){
   if(!isV2()) return; // hard gate: never reachable outside the preview skin
+  if(!hasFeature('exact_products')){ try{ openBuy('premium'); }catch(_){ } return; } // exact-product hunt = a per-tier perk
   // Brand gate (owner law: hobby = sports cards + TCG, NEVER NeeDoh — and /pub/pokemon-sets is
   // Pokémon's registry): only the Pokémon brand opens this flow until per-brand feeds exist.
   if(!(typeof BRAND!=='undefined'&&BRAND&&BRAND.key==='poke')) return;
@@ -5409,7 +5431,7 @@ let BILLING_ANNUAL=false;
 let PLANS=null; // { features:[{key,label}], everyPlanGets:[key…], tiers:[{key,name,monthlyCents,annualCents,checksPerMonth,premiumAsks,features}], payg:[{checks,cents}] }
 async function loadPlans(){ try{ const r=await fetch('/pub/plans').then(x=>x.json()); if(r&&Array.isArray(r.tiers)&&r.tiers.length){ PLANS=r; } }catch(_){ } return PLANS; }
 // Account entitlements (GET /app/me.features): comp → all 8, subscriber → their tier, PAYG/free → none.
-function hasFeature(key){ try{ return !!(ACCOUNT&&ACCOUNT.features&&ACCOUNT.features[key]); }catch(_){ return false; } }
+function hasFeature(key){ try{ if(ACCOUNT&&ACCOUNT.comp) return true; return !!(ACCOUNT&&ACCOUNT.features&&ACCOUNT.features[key]); }catch(_){ return false; } }
 // feature-key → the Lucide glyph, so the live "every plan gets" grid draws the right icon per key.
 const FEAT_ICON={
   exact_products:'<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/>',
@@ -5674,8 +5696,8 @@ function closeShare(){ $('shareOverlay').classList.remove('on'); }
 
 async function openWatch(){
   if(!SEL_STORE||!SEL_STORE.id){ toast(t('err.pickstore','Pick a store first')); return; }
-  if(!isAuthed()){ toast(t('toast.joinalerts','Join free to set alerts')); signUp(); return; }
-  if(!(ACCOUNT&&(ACCOUNT.comp||ACCOUNT.subscription==='active'))){ openBuy('premium'); return; }
+  if(!isAuthed()){ toast(t('toast.joinalerts','Join to set alerts')); signUp(); return; }
+  if(!hasFeature('restock_alerts')){ openBuy('premium'); return; } // restock alerts = a per-tier perk
   $('watch_err').textContent=''; $('watch_contact').value=''; $('watch_contact').style.display=''; { const wb=$('watch_btn'); if(wb){ wb.textContent=t('watch.cta','Watch this store →'); wb.onclick=submitWatch; } } { const ws=$('watch_sub'); if(ws) ws.innerHTML=t('watch.sub',"We'll ping you the instant anyone confirms it in stock here."); }
   const sub=$('watch_sub'); if(sub) sub.textContent=LANG==='es'?`Te avisamos en cuanto alguien confirme ${findProductLabel()} en stock en ${findStoreName()}.`:`We'll ping you the instant anyone confirms ${findProductLabel()} in stock at ${findStoreName()}.`;
   track('watch_open',{retailerId:SEL_STORE.id});
@@ -6088,7 +6110,7 @@ const DOWLBL=[['1','Mon'],['2','Tue'],['3','Wed'],['4','Thu'],['5','Fri'],['6','
 let SCH_DAYS=new Set();
 function openSchedule(){
   if(!isAuthed()){ toast(t('toast.signupauto','Sign up to set auto-checks')); signUp(); return; }
-  if(!(ACCOUNT&&(ACCOUNT.comp||ACCOUNT.subscription==='active'))){ openBuy('premium'); return; } // members-only → elegant upsell
+  if(!hasFeature('scheduled_checks')){ openBuy('premium'); return; } // auto-checks = a per-tier perk
   if(!SEL_STORE||!SEL_STORE.id){ toast(t('err.pickstore','Pick a store first')); return; }
   SCH_DAYS=new Set();
   $('sch_err').textContent='';
