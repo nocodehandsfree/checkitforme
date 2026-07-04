@@ -27,6 +27,8 @@ await pg.goto('http://localhost:8797/pokemon?skin=v2',{waitUntil:'networkidle',t
 await pg.waitForTimeout(700);
 const order = await pg.evaluate(() => [...document.querySelectorAll('.modetab')].map(x=>x.dataset.mode).join(','));
 ok('pokemon v2: order call,hobby,thrift,kiosk ('+order+')', order==='call,hobby,thrift,kiosk');
+// Owner 07-04: Thrift chip carries the accent price-TAG icon (moved off Hobby).
+ok('thrift chip = accent tag icon', await pg.evaluate(() => { const s=document.querySelector('.modetab[data-mode="thrift"] svg'); return !!s && /--accent/.test(s.getAttribute('stroke')||'') && /M12\.586 2\.586/.test(s.querySelector('path')?.getAttribute('d')||''); }));
 
 // click Thrift -> fetch carries type=Thrift, NOT huntmode, stores render, findstep says thrift
 const thr = await pg.evaluate(() => new Promise(res => {

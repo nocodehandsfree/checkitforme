@@ -140,7 +140,9 @@ await pg.waitForTimeout(250);
 ok('annual Family matches /pub/plans ('+famAnnual+')', await pg.evaluate((m) => document.querySelector('#buy_plans .plan .pp').textContent.includes(m), famAnnual));
 await pg.evaluate(() => { setCycle(false, document.querySelectorAll('#billcycle button')[0]); closeBuy(); });
 
-// ---- 6. WATCH: in-place confirmation, no toast
+// ---- 6. WATCH: in-place confirmation, no toast. Stub /pub/watch so the test verifies the client
+// success-UI deterministically (a fresh throwaway DB has no store id=1, so the real call would 400).
+await pg.route('**/pub/watch', r => r.fulfill({ contentType:'application/json', body:'{"ok":true}' }));
 await pg.evaluate(() => { SEL_STORE={id:1,name:'Fun'}; SEL_CAT=railCatId(); openWatch&&openWatch(); });
 await pg.waitForTimeout(250);
 const wOpen = await pg.evaluate(() => !!document.getElementById('watchOverlay')?.classList.contains('on'));

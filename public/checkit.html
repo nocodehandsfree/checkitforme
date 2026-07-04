@@ -2359,6 +2359,17 @@ function applyLang(){
   try{ ensureModeChips(); }catch(_){ }
 }
 // Inject/remove the premium mode chips to match the account's entitlements. Add-only DOM (no v1 markup),
+// Hobby = local card SHOPS → a storefront ("actual store") icon; Thrift = bargain hunting → the price-tag
+// icon. Both tinted to the brand --accent (yellow for Pokémon, each product's theme elsewhere). Owner 07-04.
+const SVG_STORE = p => `<svg width="${p}" height="${p}" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l1.6-4.2h12.8L20 9"/><path d="M5 9v9.5h14V9"/><path d="M4 9h16"/><path d="M10 18.5V14h4v4.5"/></svg>`;
+const SVG_TAG   = p => `<svg width="${p}" height="${p}" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".9" fill="var(--accent,#FFCB05)"/></svg>`;
+// A store row's face: real logo if we have one; every HOBBY card shop shows the storefront icon (accent)
+// instead of messy name-initials; everyone else keeps their wordmark tile.
+function storeFace(s){
+  if(s&&s.logoUrl) return `<img src="${esc(s.logoUrl)}" alt="">`;
+  if(s&&s.storeType==='Hobby') return SVG_STORE(24);
+  return storeWordmark(s&&s.name, s&&s.storeType);
+}
 // with a removal branch so un-entitling (logout / admin toggle) drops the chip and bounces out of its mode.
 function ensureModeChips(){
   if(!isV2()||!BRAND) return;
@@ -2368,7 +2379,7 @@ function ensureModeChips(){
   { const want=BRAND.key==='poke'&&hasFeature('exact_products');
     const ex=document.querySelector('.modetab[data-mode="hobby"]'), kb=kioskBtn();
     if(want&&!ex&&kb){ const hb=document.createElement('button'); hb.className='modetab'; hb.dataset.mode='hobby'; hb.setAttribute('onclick',"setMode('hobby')");
-      hb.innerHTML='<span class="mti"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg></span><span>'+t('mode.hobby','Hobby')+'</span>';
+      hb.innerHTML='<span class="mti">'+SVG_STORE(15)+'</span><span>'+t('mode.hobby','Hobby')+'</span>';
       kb.parentElement.insertBefore(hb,kb); }
     else if(!want&&ex){ ex.remove(); if(typeof MODE!=='undefined'&&MODE==='hobby'){ try{ setMode('call'); }catch(_){ } } }
   }
@@ -2376,7 +2387,7 @@ function ensureModeChips(){
   { const want=hasFeature('thrift_hunts');
     const ex=document.querySelector('.modetab[data-mode="thrift"]'), kb2=kioskBtn();
     if(want&&!ex&&kb2){ const tb=document.createElement('button'); tb.className='modetab'; tb.dataset.mode='thrift'; tb.setAttribute('onclick',"setMode('thrift')");
-      tb.innerHTML='<span class="mti"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg></span><span>'+t('mode.thrift','Thrift')+'</span>';
+      tb.innerHTML='<span class="mti">'+SVG_TAG(15)+'</span><span>'+t('mode.thrift','Thrift')+'</span>';
       kb2.parentElement.insertBefore(tb,kb2); }
     else if(!want&&ex){ ex.remove(); if(typeof MODE!=='undefined'&&MODE==='thrift'){ try{ setMode('call'); }catch(_){ } } }
   }
@@ -3258,7 +3269,7 @@ function storeRowHtml(s){
     const dot2=(o&&o.label)?`<span class="sdot ${o.open?'on':'off'}"></span>`:'';
     const st=(o&&o.label)?esc(tLbl(o.label)):'';
     return `<div class="store ${sel}" onclick="pickKiosk(${s.id})">
-      <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
+      <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${storeFace(s)}</div>
       <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${dot2}${[esc(s.location||''),st].filter(Boolean).join(' · ')}</div></div>
       ${right}</div>`;
   }
@@ -3269,7 +3280,7 @@ function storeRowHtml(s){
       // v2 (owner 2026-07-02): the store LOGO stays, the name line stays clean — the "Most likely"
       // chip leads the sub-line instead of sitting inside the name.
       return `<div class="store ${rowBest} ${sel}" onclick="pickStore(${s.id})">
-        <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
+        <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${storeFace(s)}</div>
         <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)}</div><div class="lo bestwhy"><span class="besttag" style="margin-left:0;margin-right:6px">${t('besttag','Most likely')}</span>${bwhy}</div></div>
         ${right}</div>`;
     }
@@ -3283,7 +3294,7 @@ function storeRowHtml(s){
   const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', drop?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
   const shopTag=(MODE==='hobby'&&s.isMSRP===false)?` <span class="shoptag">${t('hob.shopprices','SHOP PRICES')}</span>`:'';
   return `<div class="store ${sel}" onclick="pickStore(${s.id})">
-    <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType)}</div>
+    <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${storeFace(s)}</div>
     <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)}${shopTag}</div><div class="lo">${dot}${meta}</div></div>
     ${right}</div>`;
 }
@@ -3672,7 +3683,7 @@ function syncCta(){
 // ── Call slider: populate from the picked store, slide up, swipe down to dismiss ──
 function renderCallSheet(){
   const s=SEL_STORE; if(!s) return;
-  const ic=$('cs_ic'); if(ic){ ic.className='csheet-ic'+(s.logoDark?' lite':'')+(s.logoWide?' widelogo':''); ic.innerHTML = s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="">`:storeWordmark(s.name,s.storeType); }
+  const ic=$('cs_ic'); if(ic){ ic.className='csheet-ic'+(s.logoDark?' lite':'')+(s.logoWide?' widelogo':''); ic.innerHTML = storeFace(s); }
   const nm=$('cs_nm'); if(nm) nm.textContent = splitStoreName(s.name).base || (s.name||'').split('—')[0].trim();
   const mi=(s.miles!=null)?(s.miles+' mi'):''; const addr=s.address||s.location||'';
   const ad=$('cs_addr'); if(ad){

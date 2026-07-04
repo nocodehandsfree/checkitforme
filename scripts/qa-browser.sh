@@ -16,16 +16,18 @@ rm -f .t-browser.db
 for pid in $(ss -tlnp 2>/dev/null | grep ":$PORT " | grep -oP 'pid=\K[0-9]+'); do kill "$pid" 2>/dev/null; done
 sleep 1
 
+# Seed the Hobby + Thrift QA chains BEFORE booting — the server caches chains at boot, so seeding after
+# would leave the new chains invisible to the type=Hobby/Thrift filters.
+echo "▶ qa-browser: seeding QA chains …"
+env DATABASE_URL="$DB" $ENVV ./node_modules/.bin/tsx scripts/qa-hobby-seed.ts  >/dev/null 2>&1
+env DATABASE_URL="$DB" $ENVV ./node_modules/.bin/tsx scripts/qa-thrift-seed.ts >/dev/null 2>&1
+
 echo "▶ qa-browser: booting seeded server on :$PORT …"
 env DATABASE_URL="$DB" PORT=$PORT CLERK_ENFORCE=false $ENVV \
   ./node_modules/.bin/tsx src/server.ts >/tmp/qa-browser.log 2>&1 &
 SRV=$!
 trap 'kill $SRV 2>/dev/null; rm -f .t-browser.db' EXIT
 for i in $(seq 1 60); do curl -fsS "$BASE/pub/policy" >/dev/null 2>&1 && break; sleep 0.5; done
-
-# seed the Hobby + Thrift QA chains the flow suites need
-env DATABASE_URL="$DB" $ENVV ./node_modules/.bin/tsx scripts/qa-hobby-seed.ts  >/dev/null 2>&1
-env DATABASE_URL="$DB" $ENVV ./node_modules/.bin/tsx scripts/qa-thrift-seed.ts >/dev/null 2>&1
 
 FAILED=""
 run(){ echo ""; echo "── $1 ──"; if node "scripts/$1"; then echo "   → $1 OK"; else echo "   → $1 FAILED"; FAILED="$FAILED $1"; fi; }

@@ -61,6 +61,9 @@ ok('product locked -> exits hunt, shows shop list', !afterLock.huntmode && after
 ok('locked-product banner over the shop list', afterLock.lockBanner);
 ok('shop list renders after lock ('+afterLock.stores+')', afterLock.stores>=2);
 ok('find-step says "pick a card shop"', /card shop/i.test(afterLock.findstep));
+// Owner 07-04: every hobby store row shows the accent STORE icon (not name-initials); chip = storefront.
+ok('hobby store rows use the accent store icon (not initials)', await pg.evaluate(() => { const rows=[...document.querySelectorAll('#storelist .store')]; return rows.length>0 && rows.every(r=>{ const s=r.querySelector('.ic svg'); return s && /--accent/.test(s.getAttribute('stroke')||''); }); }));
+ok('hobby chip = accent storefront icon', await pg.evaluate(() => { const s=document.querySelector('.modetab[data-mode="hobby"] svg'); return !!s && /--accent/.test(s.getAttribute('stroke')||'') && /M4 9l1\.6-4\.2/.test(s.querySelector('path')?.getAttribute('d')||''); }));
 await pg.screenshot({ path: 'loops/site-redesign/proofs/hobby-shop-list.png', fullPage: true });
 
 ok('SHOP PRICES tag on non-MSRP shops', await pg.evaluate(() => [...document.querySelectorAll('#storelist .store')].some(r=>/SHOP PRICES/i.test(r.textContent))));
