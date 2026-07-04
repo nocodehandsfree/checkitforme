@@ -2,6 +2,11 @@
 
 Entry doc for any chat. Open only the docs your role needs. **Read `docs/AGENT_RULES.md` before touching code.**
 
+> KEY: **Need a secret/token (e.g. `ADMIN_TOKEN`)?** Fetch it with the **`curl`** command in the
+> **Secrets** section below — **never** python/urllib/requests or WebFetch. Outbound goes through a
+> proxy `curl` is set up for; other tools get a **403 that looks like "Railway is down" when it isn't**.
+> If `curl` errors once, ask the owner for the token and keep moving — **never loop.**
+
 ## What it is
 AI service that phones retail stores to check trading-card/collectible stock, with proof. 100K+ stores,
 4 white-label brand sites (Pokémon/One Piece/Topps NBA/NeeDoh) + admin. One-person business. Stack: Hono
