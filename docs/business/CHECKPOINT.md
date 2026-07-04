@@ -239,6 +239,26 @@ classifier/clip-routing fixes from the last test.
 
 ---
 
+## 7.6 Mapper — approved adjustments from the first live map (Academy Sports, locked 36s)
+
+The Mapping Operator owns building these (staging-first). Approved, priority order:
+1. **Target customer-service / front**, not "any department" — prefer a CS/operator option; fall back to
+   a department only when the tree has none (Academy has none). Owner can override the target per chain.
+2. **Capture + persist the full menu tree** to the CHAIN (reuse the documented-tree slot) and show it in
+   the Tree-Trainer panel. The tree is a chain property (all stores share the IVR) → **map it once per
+   chain, validate on 1–2 stores**, don't re-map per store.
+3. **Same-store retry** until a human answers or the line is clearly dead (rotating stores pollutes the
+   recipe with per-store ring variance).
+4. **Gate out non-callable chains**: muted, online-only / no-direct-store (Micro Center = stock:site),
+   national call-center chains.
+5. **Only dial open stores** — real store hours on top of the 9am–8pm daytime gate.
+6. **Persist everything to Admin** (recipe + tree + chosen target + per-attempt log), auditable after the
+   session expires.
+Plus: **record ring-time variance** (146s vs 36s) so a lucky call doesn't set a misleading benchmark; and
+for department-only chains **surface a target-choice** to the owner (pick the desk most likely to know card stock).
+
+---
+
 ## 8. Open questions — answer inline (leave your answer under each)
 
 > Copy this section into notes if that's easier. I'll build both prompts the moment these are answered.
