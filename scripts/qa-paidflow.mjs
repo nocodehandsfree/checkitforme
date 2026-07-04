@@ -25,20 +25,29 @@ const plans = await pg.evaluate(async () => {
   const grid=[...document.querySelectorAll('#buy_grid .buygrid .g')].map(g=>g.textContent.trim());
   return { tiles, grid, plansLoaded: (typeof PLANS!=='undefined' && !!(PLANS&&PLANS.tiers)) };
 });
+// Derive expected values from LIVE /pub/plans (not hardcoded defaults) — robust to owner price edits,
+// and asserts the rendered DOM matches the API, catching a live→default regression.
+const QA_BASE = process.env.QA_BASE || 'http://localhost:8797';
+const LIVE = await (await fetch(QA_BASE+'/pub/plans')).json();
+const money = c => '$'+((c||0)/100).toFixed((c||0)%100?2:0); // matches the app's money(): no .00 on whole dollars
+const expNames = LIVE.tiers.map(t=>t.name);
+const expMonthly = LIVE.tiers.map(t=>money(t.monthlyCents));
+const expAnnual = LIVE.tiers.map(t=>money(t.annualCents));
+const expPayg = LIVE.payg.map(p=>String(p.checks));
 ok('PLANS loaded from /pub/plans', plans.plansLoaded);
-ok('4 live tiers rendered', plans.tiles.length===4, JSON.stringify(plans.tiles));
-ok('tier names = Family/Collector/Hunter/Operator', plans.tiles.map(t=>t.name).join(',')==='Family,Collector,Hunter,Operator', plans.tiles.map(t=>t.name).join(','));
-ok('monthly prices live ($4.99…$49.99)', /\$4\.99/.test(plans.tiles[0].price) && /\$49\.99/.test(plans.tiles[3].price), plans.tiles.map(t=>t.price).join(' | '));
-ok('EVERY PLAN GETS grid = 8 live features', plans.grid.length===8, JSON.stringify(plans.grid));
+ok('live tier count rendered ('+LIVE.tiers.length+')', plans.tiles.length===LIVE.tiers.length, JSON.stringify(plans.tiles));
+ok('tier names match /pub/plans', plans.tiles.map(t=>t.name).join(',')===expNames.join(','), plans.tiles.map(t=>t.name).join(',')+' vs '+expNames.join(','));
+ok('monthly prices match /pub/plans', plans.tiles.every((t,i)=>t.price.includes(expMonthly[i])), plans.tiles.map(t=>t.price).join(' | ')+' vs '+expMonthly.join(' | '));
+ok('EVERY PLAN GETS grid = live feature count ('+LIVE.features.length+')', plans.grid.length===LIVE.features.length, JSON.stringify(plans.grid));
 ok('grid carries live labels (Exact products, Thrift hunts)', plans.grid.some(x=>/Exact products/i.test(x)) && plans.grid.some(x=>/Thrift hunts/i.test(x)));
 
-// ---- annual toggle shows annualCents ----
+// ---- annual toggle shows the live annualCents ----
 const annual = await pg.evaluate(async () => {
   const btn=[...document.querySelectorAll('#billcycle button')][1]; setCycle(true,btn);
   await new Promise(r=>setTimeout(r,150));
   return [...document.querySelectorAll('#buy_plans .plan .pp')].map(p=>p.textContent.trim());
 });
-ok('annual prices live ($49.70 family, $497.90 operator)', /\$49\.70/.test(annual[0]) && /\$497\.90/.test(annual[3]), annual.join(' | '));
+ok('annual prices match /pub/plans', annual.every((p,i)=>p.includes(expAnnual[i])), annual.join(' | ')+' vs '+expAnnual.join(' | '));
 await pg.evaluate(()=>{ const btn=[...document.querySelectorAll('#billcycle button')][0]; setCycle(false,btn); });
 
 // ---- PAYG ladder is live ----
@@ -48,7 +57,7 @@ const payg = await pg.evaluate(async () => {
   const ticks=[...document.querySelectorAll('#buy_plans span')].map(s=>s.textContent.trim()).filter(x=>/^\d+$/.test(x));
   return { ticks, n: document.getElementById('payg_n')?.textContent };
 });
-ok('PAYG ladder live (10,25,50,75,100)', ['10','25','50','75','100'].every(x=>payg.ticks.includes(x)), JSON.stringify(payg.ticks));
+ok('PAYG ladder matches /pub/plans ('+expPayg.join(',')+')', expPayg.every(x=>payg.ticks.includes(x)), JSON.stringify(payg.ticks));
 
 // ---- Part 2: branded checkout sheet (stub Stripe + intent for the happy path) ----
 const co = await pg.evaluate(async () => {

@@ -35,6 +35,7 @@ run "unit: plans + entitlements" "env DATABASE_URL=file:./.t-plans.db $ENV $TSX 
 run "integration: growth/CMS/community" "bash scripts/test-growth.sh"
 run "qa: pages (behavior benchmark)" "bash scripts/qa-pages.sh"
 run "qa: design tokens (v2 skin)" "$TSX scripts/qa-design.ts"
+run "qa: browser suites (v2 redesign)" "bash scripts/qa-browser.sh"
 
 echo ""
 echo "════════════════════════════════════════════════"

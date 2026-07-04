@@ -113,13 +113,20 @@ const buy1 = await pg.evaluate(() => { const bm=document.getElementById('buymode
     iconStroke: document.querySelector('#buy_grid svg')?.getAttribute('stroke')||'' }; });
 ok('buy mode toggle carved', buy1.toggles && buy1.carved);
 ok('grid icons use accent var', /var\(--accent/.test(buy1.iconStroke));
+// Derive PAYG end + family annual from LIVE /pub/plans (robust to owner edits).
+const QA_BASE = process.env.QA_BASE || 'http://localhost:8797';
+const LIVE = await (await fetch(QA_BASE+'/pub/plans')).json();
+const money = c => '$'+((c||0)/100).toFixed((c||0)%100?2:0); // matches the app's money(): no .00 on whole dollars
+const lastPayg = LIVE.payg[LIVE.payg.length-1];
+const paygEndMoney = money(lastPayg.cents);
+const famAnnual = money((LIVE.tiers.find(t=>t.key==='family')||LIVE.tiers[0]).annualCents);
 await pg.evaluate(() => setBuyMode('packs', document.querySelectorAll('#buymode button')[1]));
 await pg.waitForTimeout(300);
 const payg = await pg.evaluate(() => { const rng=document.querySelector('#buy_plans input[type=range]');
   if(!rng) return { rng:false };
   rng.value=rng.max; rng.dispatchEvent(new Event('input'));
   return { rng:true, max:rng.max, n:document.getElementById('payg_n').textContent, p:document.getElementById('payg_p').textContent }; });
-ok('payg slider reaches the end (live /pub/plans: 100 checks)', payg.rng && payg.n.includes('100') && /\$60/.test(payg.p));
+ok('payg slider reaches the live end ('+lastPayg.checks+' checks '+paygEndMoney+')', payg.rng && payg.n.includes(String(lastPayg.checks)) && payg.p.includes(paygEndMoney), JSON.stringify(payg));
 await pg.screenshot({ path: 'loops/site-redesign/proofs/behav-payg.png' });
 const cont = await pg.evaluate(() => new Promise(res => {
   // buyContinue → openCheckout → /app/checkout-intent (401 in test) → hosted fallback POST /app/checkout {kind}
@@ -127,10 +134,10 @@ const cont = await pg.evaluate(() => new Promise(res => {
   window.fetch=(u,o)=>{ if(String(u).includes('/app/checkout')&&!String(u).includes('checkout-intent')&&o&&o.body){ try{hit=JSON.parse(o.body).kind;}catch(_){}} return orig(u,o); };
   buyContinue(); setTimeout(()=>{ window.fetch=orig; try{closeCheckout();}catch(_){}; res(hit); },700);
 }));
-ok('payg CONTINUE posts live payg:100 checkout', cont==='payg:100', cont);
+ok('payg CONTINUE posts the live payg:'+lastPayg.checks+' checkout', cont==='payg:'+lastPayg.checks, cont);
 await pg.evaluate(() => { setBuyMode('plans', document.querySelectorAll('#buymode button')[0]); setCycle(true, document.querySelectorAll('#billcycle button')[1]); });
 await pg.waitForTimeout(250);
-ok('annual Family $49.70 (live annualCents)', await pg.evaluate(() => document.querySelector('#buy_plans .plan .pp').textContent.includes('$49.70')));
+ok('annual Family matches /pub/plans ('+famAnnual+')', await pg.evaluate((m) => document.querySelector('#buy_plans .plan .pp').textContent.includes(m), famAnnual));
 await pg.evaluate(() => { setCycle(false, document.querySelectorAll('#billcycle button')[0]); closeBuy(); });
 
 // ---- 6. WATCH: in-place confirmation, no toast
