@@ -13,7 +13,7 @@ import { isCallingPaused, setBatchState, getBatchState } from "../redis";
 import { openState } from "../store-hours";
 
 type Step = { who?: string; action?: string; value?: string; atSec?: number };
-type Recipe = { type?: string; steps?: Array<{ action?: string; value?: string; atSec?: number }>; seconds?: number };
+type Recipe = { type?: string; steps?: Array<{ action?: string; value?: string; atSec?: number }>; seconds?: number; menu?: Array<{ digit: string; label: string }>; menuPrompts?: string[]; ringVariable?: boolean; target?: string };
 
 const state = {
   running: false, stop: false, total: 0, done: 0, learned: 0, review: 0, skipped: 0, failed: 0,
@@ -41,9 +41,18 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
   if (typeof recipe.seconds === "number") log.push(recipe.seconds);
   const steps = Array.isArray(recipe.steps) ? recipe.steps : [];
   const direct = recipe.type === "direct" || steps.length === 0;
-  const treeText = direct
+  // navText drives LIVE consumer calls — keep it to the navigation instruction only (unchanged).
+  const navText = direct
     ? "A live person usually answers directly — no phone menu to work through."
     : "To reach a live person: " + steps.map((s) => (s.action === "press" ? `press ${s.value}` : `say "${s.value}"`)).join(", then ") + ".";
+  // docText is the DOCUMENTED tree the owner reads (#2/#6): nav path + target desk + menu options +
+  // ring-variance warning. Kept out of phoneTreeDefault so it never changes live-call behavior.
+  const menuText = Array.isArray(recipe.menu) && recipe.menu.length
+    ? " Menu options heard: " + recipe.menu.map((o) => `[${o.digit}] ${o.label || "?"}`).join("; ") + "."
+    : "";
+  const targetText = recipe.target ? ` Reaches: ${recipe.target}.` : "";
+  const varText = recipe.ringVariable ? " ⚠ Variable ring (department pickup) — time-to-human varies call to call." : "";
+  const docText = navText + targetText + varText + menuText;
   const firstPress = steps.find((s) => s.action === "press");
   const now = Math.floor(Date.now() / 1000);
   await db.update(chains).set({
@@ -51,8 +60,8 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
     navSeconds: typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null,
     navStatus: "locked", navConfidence: typeof confidence === "number" ? confidence : null,
     navLog: JSON.stringify(log.slice(-10)), navUpdatedAt: now,
-    // ↓ applied to LIVE consumer calls:
-    phoneTreeDefault: treeText, treeNote: treeText,
+    // ↓ applied to LIVE consumer calls (navText only — the menu/notes live in treeNote for the owner):
+    phoneTreeDefault: navText, treeNote: docText,
     dtmfShortcut: firstPress ? String(firstPress.value || "") : null,
     answerPath: steps.map((s) => `${s.action}:${s.value}`).join(">") || null,
     ringsDirect: direct, avgTreeSeconds: typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null,

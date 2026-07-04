@@ -45,7 +45,15 @@ const REDIRECT_RE = /transfer|connect(ing)? you|that('?s| is| would be) the |you
 
 export type NavAction = "say" | "press" | "wait" | "human" | "fail";
 export interface NavStep { who: "ivr" | "us"; text: string; atSec: number; action?: NavAction; value?: string }
-export interface NavRecipe { type: string; steps: { action: string; value: string; atSec: number }[]; seconds: number }
+// One pressable option heard in the IVR (#2): the digit + what it routes to. Best-effort from messy STT.
+export interface MenuOption { digit: string; label: string }
+export interface NavRecipe {
+  type: string; steps: { action: string; value: string; atSec: number }[]; seconds: number;
+  menu?: MenuOption[];         // the pressable department/option tree we heard (chain property)
+  menuPrompts?: string[];      // the raw IVR menu lines, for the owner to read when STT parsing is fuzzy
+  ringVariable?: boolean;      // time-to-human depends on a department picking up (variance high) — #A
+  target?: string;             // the desk this path reaches ("customer service" / a department name)
+}
 export interface NavSession {
   id: string; chainId: number | null; retailerId: number; retailerName: string; phone: string;
   startMs: number; steps: NavStep[]; turns: number; model?: string; hint?: string;
@@ -59,9 +67,13 @@ export interface NavSession {
   confirmResult?: "answered" | "redirect"; redirectTo?: string;
   // LISTEN-FIRST (mapping stage 1): hear the menu out before acting; flips off once a prompt repeats.
   listenFirst?: boolean; heard?: string[];
+  // MENU CAPTURE (#2) + owner TARGET (#1): the pressable tree we heard, the raw menu lines, and the
+  // desk the owner wants us to reach (customer service by default; a chosen department for dept-only chains).
+  target?: string; menu?: MenuOption[]; menuPrompts?: string[];
   // Confirm ask pre-synthesized in the workflow's ElevenLabs voice (Branson) — Polly is the fallback.
   askAudio?: Buffer; askText?: string;
   lastActTurn?: number; escaped?: boolean; routingSeen?: boolean; routedAtSec?: number; autoZeros?: number; persisted?: boolean;
+  deadLine?: boolean; // a TRUE dead end (voicemail / disconnected / store closed) — mapper rotates stores
   status: "dialing" | "navigating" | "human" | "failed" | "done";
   type: "direct" | "keypad" | "voice" | null;
   humanAtSec: number | null; confidence: number; callSid?: string; recipe: NavRecipe | null;
@@ -69,6 +81,45 @@ export interface NavSession {
 
 const sessions = new Map<string, NavSession>();
 export function getNavSession(id: string): NavSession | null { return sessions.get(id) || null; }
+
+// ---- Menu capture (#2) ---------------------------------------------------------------------------
+// Pull the pressable options out of what the IVR says so the WHOLE tree is visible per chain
+// (digit → what it routes to). STT is messy, so this is best-effort: good enough for the owner to read
+// and choose a target from, NOT something we navigate by (we navigate by the learned recipe).
+const NUMWORD: Record<string, string> = { zero: "0", one: "1", two: "2", three: "3", four: "4", five: "5", six: "6", seven: "7", eight: "8", nine: "9" };
+const cleanLabel = (s: string) => s.replace(/^(for|to)\s+/i, "").replace(/\b(please|our|the)\b/gi, "").replace(/[ ,.;:-]+$/g, "").replace(/\s+/g, " ").trim();
+export function parseMenuOptions(text: string): MenuOption[] {
+  const t = " " + String(text || "").replace(/\s+/g, " ").trim() + " ";
+  const found = new Map<string, string>();
+  const put = (raw: string, label: string) => {
+    const d = NUMWORD[raw.toLowerCase()] ?? raw;
+    if (!/^[0-9*#]$/.test(d)) return;
+    label = cleanLabel(label);
+    if (!found.has(d)) found.set(d, label);
+    else if (label && !found.get(d)) found.set(d, label); // fill in a missing label
+  };
+  // "press N for|to LABEL" — label follows the digit (stop at the next press/for/punctuation).
+  for (const m of t.matchAll(/\bpress (\d|[*#]|zero|one|two|three|four|five|six|seven|eight|nine)\b\s*(?:(?:for|to)\s+([a-z][a-z0-9 '&/-]{1,44}?))?(?=,|;|\.|\bpress\b|\bfor \b|$)/gi)) {
+    put(m[1], m[2] || "");
+  }
+  // "for LABEL, press N" — label precedes the digit (some menus phrase it this way).
+  for (const m of t.matchAll(/\bfor ([a-z][a-z0-9 '&/-]{1,44}?),?\s*press (\d|[*#]|zero|one|two|three|four|five|six|seven|eight|nine)\b/gi)) {
+    put(m[2], m[1]);
+  }
+  return [...found].map(([digit, label]) => ({ digit, label })).sort((a, b) => a.digit.localeCompare(b.digit));
+}
+/** Merge freshly-heard options into the running menu (union by digit; keep the first real label). */
+export function mergeMenu(prev: MenuOption[] | undefined, next: MenuOption[]): MenuOption[] {
+  const by = new Map((prev || []).map((o) => [o.digit, o.label] as const));
+  for (const o of next) if (!by.has(o.digit) || (o.label && !by.get(o.digit))) by.set(o.digit, o.label);
+  return [...by].map(([digit, label]) => ({ digit, label })).sort((a, b) => a.digit.localeCompare(b.digit));
+}
+// A customer-service / front-desk / operator / general path — what we PREFER to reach (#1) and whose
+// ABSENCE flags a department-only chain that needs an owner-chosen target (#B).
+const CS_RE = /customer service|guest services?|front (desk|end|store|counter|of)|\boperator\b|receptionist|representative|\bassociate\b|main store|general (store|inquir|question)|help desk|service desk|all other/i;
+export function menuHasCustomerService(menu: MenuOption[] | undefined): boolean {
+  return !!menu && menu.some((o) => CS_RE.test(o.label));
+}
 
 const esc = (s: string) => s.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c] as string));
 const twiml = (inner: string) => `<?xml version="1.0" encoding="UTF-8"?><Response>${inner}</Response>`;
@@ -84,9 +135,16 @@ async function decide(s: NavSession, latest: string): Promise<Decision> {
   const hintBlock = s.hint
     ? `KNOWN FAST PATH for THIS exact store (learned on an earlier call): ${s.hint}\nFollow it: use these EXACT short single words at the matching prompt, answer the INSTANT the prompt makes sense (barge in — don't wait for it to finish), and NEVER improvise longer phrases. Only deviate if what you hear clearly doesn't match.\n\n`
     : "";
+  // #1: whoever can check shelf stock — customer service / front / operator — by default; the owner can
+  // pin a specific desk per chain (used for department-only trees with no CS path).
+  const targetBlock = s.target
+    ? `OWNER-SET TARGET for this chain: reach "${s.target}". Prefer routing to that desk/department above all else; only deviate if that option clearly isn't offered.\n\n`
+    : "";
   const prompt = `You are calling a retail store and navigating its phone system to reach a real HUMAN employee as fast as possible. You can only: SAY a short word, PRESS a digit, WAIT (listen more), or finish (HUMAN reached, or FAIL dead-end).
 
 WHO YOU ARE: a regular SHOPPER calling to ask if a product is in stock. You are NOT a patient, NOT a healthcare/medical/insurance provider, NOT a vendor. If a menu asks "are you a healthcare provider / calling from a doctor's office?", the answer is always NO (say "no" or press the option for no / "to continue"). At a pharmacy or any store with departments, ALWAYS head to the FRONT STORE / GENERAL store / sales floor — NEVER choose "pharmacy" (it dead-ends in patient/date-of-birth verification). Never give a date of birth, prescription number, or member ID — if a menu demands one, that branch is wrong; back out toward the general store / operator.
+
+${targetBlock}WHO TO REACH (priority order — a shopper asking about shelf stock): (1) CUSTOMER SERVICE / guest services / front desk / operator / "0" / receptionist; (2) "all other inquiries" / general store / representative / associate. Choose a SPECIFIC PRODUCT DEPARTMENT (footwear, apparel, electronics, sporting goods, toys, fishing/hunting, grocery, etc.) ONLY as a LAST RESORT when the menu offers no customer-service / front / operator / general option at all — a product-department clerk is the wrong person to ask about card stock and often rings unanswered. Never pick a department just because it's listed first.
 
 ${hintBlock}Conversation so far (STORE = what their phone system or a person said, US = what we did), seconds since the call started:
 ${log || "(call just connected, nothing heard yet)"}
@@ -206,7 +264,17 @@ export async function navStep(id: string, speech: string): Promise<string> {
   const atSec = Math.round((Date.now() - s.startMs) / 1000);
   s.turns++;
   if (s.turns > 22 || atSec > 165) { finish(s, "failed"); return twiml(`<Hangup/>`); } // safety stop (slow IVRs like Walgreens take ~95s to a human)
-  if (speech && speech.trim()) s.steps.push({ who: "ivr", text: speech.trim().slice(0, 300), atSec });
+  if (speech && speech.trim()) {
+    s.steps.push({ who: "ivr", text: speech.trim().slice(0, 300), atSec });
+    // #2: harvest the pressable options from any menu line into the chain's menu tree + keep the raw
+    // line (STT is fuzzy, so the owner can read the exact wording when the parse is imperfect).
+    if (/press \d|press the|option \d|\bfor [a-z].{0,40}\bpress\b/i.test(speech)) {
+      const opts = parseMenuOptions(speech);
+      if (opts.length) s.menu = mergeMenu(s.menu, opts);
+      (s.menuPrompts = s.menuPrompts || []).push(speech.trim().slice(0, 240));
+      if (s.menuPrompts.length > 12) s.menuPrompts = s.menuPrompts.slice(-12);
+    }
+  }
   if (speech && ROUTING_RE.test(speech)) s.routingSeen = true; // routed to a person → next greeting is human
   // CONFIRM mode: we already asked "do you have {product}?" — this turn is their answer. Classify it.
   // A redirect ("that's the X dept / let me transfer you") = wrong desk → capture where + hang up.
@@ -242,7 +310,7 @@ export async function navStep(id: string, speech: string): Promise<string> {
   // voicemail… leave a message with your name and date of birth" = mailbox, bail instantly.
   const DEADEND_RE = /connect(ing)? you to (our|the) voicemail|leave (a |your )?(message|voicemail) (at|after|with)|voicemail box|record (a |your )?message after|providing your name,? (and )?date of birth|(store|we) (is|are) (currently |now )?closed(?![^.]*pharmacy)|closed for the (day|night)|our store hours are/i;
   const PHARM_OK = /pharmacy .{0,30}(closed|hours)/i; // pharmacy-only closure — keep navigating to the front store
-  if (speech && DEADEND_RE.test(speech) && !PHARM_OK.test(speech)) { finish(s, "failed"); return twiml(`<Hangup/>`); }
+  if (speech && DEADEND_RE.test(speech) && !PHARM_OK.test(speech)) { s.deadLine = true; finish(s, "failed"); return twiml(`<Hangup/>`); }
   s.status = "navigating";
   // LISTEN-FIRST (mapping call 1): hear the menu out before acting — capture every prompt; the moment
   // a prompt REPEATS (the menu looped, we've heard it all), or after 4 prompts / 50s, flip to acting
@@ -340,7 +408,13 @@ function finish(s: NavSession, status: "human" | "failed") {
       .map((st) => ({ action: st.action || "say", value: st.value || "", atSec: st.atSec }));
     const type = acts.length === 0 ? "direct" : (acts.every((a) => a.action === "press") ? "keypad" : "voice");
     s.type = type;
-    s.recipe = { type, steps: acts, seconds: s.humanAtSec ?? (s.steps[s.steps.length - 1]?.atSec ?? 0) };
+    s.recipe = {
+      type, steps: acts, seconds: s.humanAtSec ?? (s.steps[s.steps.length - 1]?.atSec ?? 0),
+      // #2/#6: carry the captured menu tree + raw lines with the recipe so they persist per chain.
+      menu: s.menu && s.menu.length ? s.menu : undefined,
+      menuPrompts: s.menuPrompts && s.menuPrompts.length ? s.menuPrompts : undefined,
+      target: s.target,
+    };
   }
   if (s.confirm?.asked && s.chainId != null) void recordConfirmAsked(s.chainId, s.retailerId); // rotate off this store next time
   void persistRun(s); // log this run so the admin can watch the learner's history per chain
@@ -370,6 +444,8 @@ async function persistRun(s: NavSession): Promise<void> {
       outcome: s.status, seconds: s.humanAtSec ?? (s.steps[s.steps.length - 1]?.atSec ?? null),
       // Confirm-mode result: did we reach the RIGHT desk (answered) or get sent elsewhere (redirect → where)?
       confirm: s.confirm ? (s.confirmResult ?? "asked") : null, redirectTo: s.redirectTo ?? null,
+      // #2/#6: the menu tree we heard + the desk we aimed for, so each attempt is auditable after expiry.
+      menu: s.menu && s.menu.length ? s.menu : null, target: s.target ?? null,
       steps: s.steps.map((st) => ({ who: st.who, text: st.text, atSec: st.atSec, action: st.action ?? null, value: st.value ?? null })),
     });
     await setSetting(key, JSON.stringify(arr.slice(-20)));
@@ -389,14 +465,14 @@ async function recordConfirmAsked(chainId: number, retailerId: number): Promise<
 }
 
 /** Place the documentation call; returns the session id the admin polls for live progress. */
-export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string }): Promise<{ id?: string; error?: string }> {
+export async function placeNavCall(chainId: number | null, retailerId: number, retailerName: string, phone: string, model?: string, hint?: string, barge?: { plan: Array<{ action: string; value: string; at: number }> }, reactivePress?: { digit: string; max: number }, confirm?: { product: string }, extra?: { listenFirst?: boolean; askVoiceId?: string; askText?: string; target?: string }): Promise<{ id?: string; error?: string }> {
   if (!config.callsEnabled) return { error: "calls disabled on this preview deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
   const id = crypto.randomUUID().slice(0, 8);
-  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText };
+  const session: NavSession = { id, chainId, retailerId, retailerName, phone, startMs: Date.now(), steps: [], turns: 0, status: "dialing", type: null, humanAtSec: null, confidence: 0, recipe: null, model, hint, barge, reactivePress: reactivePress ? { ...reactivePress, count: 0 } : undefined, confirm: confirm ? { product: confirm.product } : undefined, listenFirst: extra?.listenFirst, askText: extra?.askText, target: extra?.target };
   sessions.set(id, session);
   // Synthesize the ask in the workflow voice NOW (fire-and-forget) — ready long before any human is.
   if (confirm && extra?.askVoiceId) void synthAsk(session, extra.askVoiceId, extra.askText || `Hi! Real quick — do you have any ${confirm.product} in stock right now?`);

@@ -3643,9 +3643,11 @@ app.post("/api/admin/trainer/document", async (c) => {
     }
   }
   if (!r || !r.phone) return c.json({ error: "no callable store for that chain" }, 400);
-  // Respect the global mute list — never trainer-dial a muted chain (no direct store line, etc.).
+  // Respect the global mute list + online-only flag — never trainer-dial a chain with no direct store
+  // line (muted / owner-hidden, or callTarget off = national call-center like Micro Center / Best Buy).
   const _ch = r.chainId != null ? (await db.select().from(chains).where(eq(chains.id, r.chainId)))[0] : undefined;
   if (_ch?.muted) return c.json({ error: `${_ch.name} is muted — skipped (no trainer call placed)` }, 400);
+  if (_ch?.callTarget === false) return c.json({ error: `${_ch.name} has no direct store line (online-only / call-center) — skipped` }, 400);
   if (b.chainId) await db.update(chains).set({ navStatus: "learning", navUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(chains.id, Number(b.chainId)));
   const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, b.barge, b.reactivePress, confirm);
   return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name, confirm: !!confirm });
@@ -3657,6 +3659,8 @@ app.get("/api/admin/trainer/session/:id", (c) => {
     elapsed: Math.round((Date.now() - s.startMs) / 1000), humanAtSec: s.humanAtSec,
     // Confirm-mode: did we hit the RIGHT desk ("answered") or get sent elsewhere ("redirect" + where)?
     confirm: s.confirm ? (s.confirmResult ?? "asked") : null, redirectTo: s.redirectTo ?? null,
+    // #2: the pressable menu tree heard so far + the desk we're aiming for (owner target).
+    menu: s.menu ?? [], menuPrompts: s.menuPrompts ?? [], target: s.target ?? null,
     steps: s.steps, recipe: s.recipe });
 });
 // Call log for a chain: every learner run (Alpha/Bravo/Charlie path + the step matrix). Powers the
@@ -3720,6 +3724,25 @@ app.post("/api/admin/mapper/stop", async (c) => {
   return c.json(stopMapper(Number(b.chainId || 0)));
 });
 app.get("/api/admin/mapper/state", (c) => c.json(mapperState()));
+// #B: department-only chains (no customer-service option) — read the flag + captured menu so the panel
+// can ask the owner which desk to press; POST sets the per-chain target and clears the flag so the next
+// "Map until locked" aims for it.
+app.get("/api/admin/mapper/target", async (c) => {
+  const chainId = Number(c.req.query("chainId"));
+  if (!chainId) return c.json({ error: "chainId required" }, 400);
+  const flag = (await getSetting(`nav_needs_target:${chainId}`)) || "";
+  const target = (await getSetting(`nav_target:${chainId}`)) || "";
+  return c.json({ target: target || null, needsTarget: flag ? JSON.parse(flag) : null });
+});
+app.post("/api/admin/mapper/target", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; target?: string };
+  const chainId = Number(b.chainId || 0);
+  if (!chainId) return c.json({ error: "chainId required" }, 400);
+  const target = String(b.target || "").trim();
+  await setSetting(`nav_target:${chainId}`, target);
+  await setSetting(`nav_needs_target:${chainId}`, ""); // owner chose → clear the needs-target flag
+  return c.json({ ok: true, target: target || null });
+});
 app.get("/api/admin/agent/models", (c) => c.json(AGENT_MODELS));
 app.post("/api/admin/agent", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { messages?: Array<{ role: "user" | "assistant"; text: string }>; model?: string };

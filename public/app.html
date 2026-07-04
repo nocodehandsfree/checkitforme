@@ -1349,7 +1349,7 @@ async function mapperStart(){
   const chainId=Number((document.getElementById('set_chain')||{}).value||0);
   if(!chainId){ toast('Pick a chain first'); return; }
   const nm=(document.querySelector('#set_picker .pickrow.on b')||{}).textContent||'this chain';
-  if(!confirm('Map '+nm+' until locked?\n\nPlaces REAL calls on its own (~75s apart, 12/day cap), rotating stores, until the fastest path to a human is locked. Every human hears the real Pokémon-cards ask.')) return;
+  if(!confirm('Map '+nm+' until locked?\n\nPlaces REAL calls on its own (~75s apart, 12/day cap), sticking to ONE store until a human answers (rotates only on a dead line), aiming for customer service / front. Every human hears the real Pokémon-cards ask.')) return;
   const r=await api('/api/admin/mapper/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chainId})});
   if(r&&r.started){ toast('Mapping until locked'); mapperPollStart(); }
   else toast((r&&r.error)?('Mapper: '+r.error):'Could not start the mapper');
@@ -1358,6 +1358,14 @@ async function mapperStop(){
   const chainId=Number((document.getElementById('set_chain')||{}).value||0);
   const r=await api('/api/admin/mapper/stop',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chainId})});
   toast((r&&r.ok)?'Stopping after the current call':'Nothing running for this chain');
+}
+// #B: owner picks the desk to press when the menu has no customer-service option, then we re-map to it.
+async function mapperSetTarget(chainId){
+  const v=((document.getElementById('mapper_target_in')||{}).value||'').trim();
+  if(!v){ toast('Type a target desk'); return; }
+  const r=await api('/api/admin/mapper/target',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chainId,target:v})});
+  if(r&&r.ok){ toast('Target set: '+r.target); const sel=document.getElementById('set_chain'); if(sel) sel.value=String(chainId); mapperStart(); }
+  else toast('Could not set target');
 }
 function mapperPollStart(){ clearInterval(MAPPER_POLL); MAPPER_POLL=setInterval(mapperPoll,3000); mapperPoll(); }
 async function mapperPoll(){
@@ -1374,7 +1382,17 @@ async function mapperPoll(){
   document.getElementById('mapper_meta').textContent='call '+run.attempt+' · '+run.callsToday+'/12 today'+(run.running?'':' · done');
   const best=run.best&&run.best.seconds!=null?run.best.seconds+'s':'—';
   const bench=run.benchmark!=null?run.benchmark+'s':'—';
-  document.getElementById('mapper_bench').innerHTML='Before: <b>'+bench+'</b> to a human · best now: <b style="color:var(--green)">'+best+'</b>'+(run.stopReason?' · '+esch(run.stopReason):'');
+  // #2 menu tree · #A ring-variance · #1 target · #B choose-a-target prompt
+  const rec=run.best||run.baseline||{};
+  const menu=Array.isArray(rec.menu)?rec.menu:[];
+  const menuHtml=menu.length?('<div class="meta" style="margin-top:6px">Menu heard: '+menu.map(o=>'<code>'+esch(o.digit)+'</code> '+esch(o.label||'?')).join(' · ')+'</div>'):'';
+  const varHtml=rec.ringVariable?'<div class="meta" style="margin-top:4px;color:#FBBF24">⚠ Variable ring (department pickup) — time-to-human varies call to call</div>':'';
+  const tgtHtml=run.target?('<div class="meta" style="margin-top:4px">🎯 Target: <b>'+esch(run.target)+'</b></div>'):'';
+  const needHtml=run.needsTarget?('<div style="margin-top:8px;background:rgba(251,191,36,.1);border:1px solid #FBBF24;border-radius:10px;padding:9px 11px">'
+    +'<div class="meta" style="color:#FBBF24">No customer-service option in this menu — which desk should we press for card stock?</div>'
+    +'<div class="row" style="gap:6px;margin-top:6px"><input id="mapper_target_in" placeholder="e.g. customer service, front, sporting goods" style="flex:1;min-width:120px"/>'
+    +'<button class="act" onclick="mapperSetTarget('+run.chainId+')">Set target &amp; re-map</button></div></div>'):'';
+  document.getElementById('mapper_bench').innerHTML='Before: <b>'+bench+'</b> to a human · best now: <b style="color:var(--green)">'+best+'</b>'+(run.stopReason?' · '+esch(run.stopReason):'')+tgtHtml+varHtml+menuHtml+needHtml;
   document.getElementById('mapper_log').innerHTML=(run.log||[]).slice().reverse().map(a=>
     `<div style="display:grid;grid-template-columns:34px 1fr auto;gap:8px;font-size:12.5px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)">
       <span class="meta">#${a.n}</span>
