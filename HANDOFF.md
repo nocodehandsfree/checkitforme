@@ -55,6 +55,7 @@ the `ADMIN_TOKEN` and keep moving — never loop on it.**
 ## Docs map (open only what you need)
 - `docs/GUIDEBOOK.md` — **owner's front door: what Check is, the money model, plans, where everything lives.**
 - `docs/AGENT_RULES.md` — how to write code here (read first).
+- `scripts/site-health.mjs` — **walk every page + form, report anything broken** (`node scripts/site-health.mjs` local, or pass a URL for live).
 - `docs/GOTCHAS.md` — non-obvious traps that cost real time; read before debugging something weird, **add to it the moment you learn one.**
 - `docs/ARCHITECTURE.md` · `docs/RUNBOOK.md` — layout + stack/run/deploy.
 - `docs/API_CONTRACT.md` · `docs/STOCK_AND_GEO_API.md` — front⇄back interface.

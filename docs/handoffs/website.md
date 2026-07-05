@@ -38,6 +38,9 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
   "check back soon". Owner is comp/premium so only sees member view; behavior is a clean on/off in code.
 
 **🔨 Build / fix:**
+- **DevOps site-health caught: `/p/privacy` loads a 404 resource** (2026-07-04, `scripts/site-health.mjs`).
+  The privacy content page pulls something that 404s — fill/fix the privacy page body (POLICY.pages.privacy)
+  or the missing asset. Every other view (4 brands × 8 views) + all forms are healthy.
 - **🅿️ DevOps → Website (2026-07-03, UPDATED — 4 tiers + premium features): wire the plans sheet to
   `GET /pub/plans`.** It's the live source of truth (published to Stripe), shape now:
   `{ features:[{key,label}], everyPlanGets:[key…], tiers:[{key,name,monthlyCents,annualCents,
