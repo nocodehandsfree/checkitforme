@@ -2013,7 +2013,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
           </div>
         </div>
         <div id="refBlock" style="border-top:1px solid var(--border);margin-top:14px">
-          <div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;margin:12px 0 6px"><span id="refIcon" style="display:inline-flex"></span><span data-i18n="ref.row">Invite a friend</span></div>
+          <div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;margin:12px 0 6px"><span id="refIcon" style="display:inline-flex"></span><span data-i18n="ref.row">Give a check, get a check</span></div>
           <div style="color:var(--muted);font-size:12.5px;line-height:1.45;margin-bottom:8px" data-i18n="ref.sub2">You both get a free check when they sign up.</div>
           <button class="shareticket" onclick="copyRefer()" title="Tap to copy">
             <span id="refer_link" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left"></span>
@@ -2195,6 +2195,7 @@ const I18N={ es:{
   'cs.cta':'Verifica esta tienda', // rotation 3 catch: the sheet/inline/map CTA was NEVER keyed — English leaked in ES since v1
   // watch-14 catch: the 6g Earn rows + verify error had no ES (drafts, same voice, Copy to ratify)
   'earn.invite':'Invita a un amigo','earn.invite.sub':'Se registran. Ambos ganan.',
+  'ref.row':'Da una verificación, recibe una','ref.tagline':'Da una verificación, recibe una',
   'earn.score':'Publica tu logro','earn.score.sub':'Tus hallazgos, en la página principal.',
   'earn.receipt':'Recibo de kiosco','earn.receipt.sub':'Usa nuestro correo al pagar, o reenvíalo.',
   'err.badcode':'Ese código no coincide. Inténtalo de nuevo.',
@@ -3017,7 +3018,7 @@ async function acctInvitePanel(btn){
   const short=link.replace(/^https?:\/\//,'');
   let ov=$('inviteOverlay');
   if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='inviteOverlay';
-    ov.innerHTML='<div class="modal" style="position:relative;max-width:400px;text-align:left"><span class="x" onclick="closeInvite()">×</span><h3 style="margin:2px 0 2px">'+t('earn.invite','Invite a friend')+'</h3><div id="inviteHost"></div></div>';
+    ov.innerHTML='<div class="modal" style="position:relative;max-width:400px;text-align:left"><span class="x" onclick="closeInvite()">×</span><h3 style="margin:2px 0 2px">'+t('ref.tagline','Give a check, get a check')+'</h3><div id="inviteHost"></div></div>';
     ov.onclick=e=>{ if(e.target===ov) closeInvite(); };
     document.body.appendChild(ov); }
   const pan=document.createElement('div');
