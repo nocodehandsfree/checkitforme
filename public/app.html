@@ -3613,7 +3613,7 @@ const v = (id) => document.getElementById(id).value.trim();
 
 // --- Growth & Policy ---
 let POL=null;
-const FLAG_LABELS={connectOnHuman:'Connect-on-human',dogfoodHours:'Dog-food hours',driverHandoff:'Driver hand-off demo',scheduling:'Scheduled shipment-day calls',restockAlerts:'Restock alerts',kiosks:'Kiosk intel + rewards',shareCards:'Share cards',multiProduct:'Multi-product asks',specificSets:'Specific-set asks'};
+const FLAG_LABELS={connectOnHuman:'Connect-on-human',dogfoodHours:'Dog-food hours',driverHandoff:'Driver hand-off demo',scheduling:'Scheduled shipment-day calls',restockAlerts:'Restock alerts',kiosks:'Kiosk intel + rewards',hobby:'Hobby chip (global on/off — every account)',thrift:'Thrift chip (global on/off — every account)',shareCards:'Share cards',multiProduct:'Multi-product asks',specificSets:'Specific-set asks'};
 const esch=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // Product mark: show a known product's logo instead of its plain name (Pokémon for now).
 function prodMark(name,size){

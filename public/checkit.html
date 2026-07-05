@@ -1461,7 +1461,7 @@ html[data-skin="v2"] #co_cta{display:flex;align-items:center;justify-content:spa
 html[data-skin="v2"] #co_cta:disabled{opacity:.55;cursor:default;box-shadow:none}
 html[data-skin="v2"] .co-trust{font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:12px;text-align:center}
 html[data-skin="v2"] .co-trust b{color:rgba(255,255,255,.75);font-weight:800}
-html[data-skin="v2"] #acctOverlay .modal{padding:0;overflow-y:auto;overflow-x:hidden;border-radius:28px 28px 0 0;padding-bottom:env(safe-area-inset-bottom);min-height:74vh;max-height:92vh} /* stable height: the sheet's top edge stays put across Overview/Activity/Earn (owner 07-04) — content scrolls inside */
+html[data-skin="v2"] #acctOverlay .modal{padding:0;overflow-y:auto;overflow-x:hidden;border-radius:28px 28px 0 0;padding-bottom:env(safe-area-inset-bottom);height:86vh} /* FIXED height so the sheet's top edge is identical across Overview/Activity/Earn (owner 07-05: min-height let taller tabs grow past it, so Earn dropped lower) — content scrolls inside */
 html[data-skin="v2"] #acctOverlay .modal>*:not(.acctv2head):not(.x){display:none} /* legacy rows too — the v2 overview panel replaces them (6e comp rows) */
 html[data-skin="v2"] #acctv2panel{padding-bottom:22px!important}
 /* Capsule w/ WHITE tracked label + right arrow (comp CTA shape) — shared. */
@@ -2378,9 +2378,13 @@ function ensureModeChips(){
   // Hobby + Thrift are PAID-PLAN perks (owner 07-05): a subscription (or comp) is required, so
   // pay-as-you-go and free NEVER see them — regardless of what /app/me sends for their features.
   const paid=!!(ACCOUNT&&(ACCOUNT.comp||ACCOUNT.subscription==='active'));
+  // GLOBAL master switches (admin → Feature flags): when off, the chip is hidden for EVERY account,
+  // including comp/owner. Default on (undefined → shown) until /pub/policy loads.
+  const gFlags=(POLICY&&POLICY.flags)||{};
+  const hobbyOn=gFlags.hobby!==false, thriftOn=gFlags.thrift!==false;
   // HOBBY (Pokémon only — the hunt feed is Pokémon-only, so onepiece/topps would get a dead chip —
   // AND the exact_products entitlement).
-  { const want=paid&&BRAND.key==='poke'&&hasFeature('exact_products');
+  { const want=hobbyOn&&paid&&BRAND.key==='poke'&&hasFeature('exact_products');
     const ex=document.querySelector('.modetab[data-mode="hobby"]'), kb=kioskBtn();
     if(want&&!ex&&kb){ const hb=document.createElement('button'); hb.className='modetab'; hb.dataset.mode='hobby'; hb.setAttribute('onclick',"setMode('hobby')");
       hb.innerHTML='<span class="mti">'+SVG_STORE(15)+'</span><span>'+t('mode.hobby','Hobby')+'</span>';
@@ -2388,7 +2392,7 @@ function ensureModeChips(){
     else if(!want&&ex){ ex.remove(); if(typeof MODE!=='undefined'&&MODE==='hobby'){ try{ setMode('call'); }catch(_){ } } }
   }
   // THRIFT (all v2 brands + the thrift_hunts entitlement — paid plans only).
-  { const want=paid&&hasFeature('thrift_hunts');
+  { const want=thriftOn&&paid&&hasFeature('thrift_hunts');
     const ex=document.querySelector('.modetab[data-mode="thrift"]'), kb2=kioskBtn();
     if(want&&!ex&&kb2){ const tb=document.createElement('button'); tb.className='modetab'; tb.dataset.mode='thrift'; tb.setAttribute('onclick',"setMode('thrift')");
       tb.innerHTML='<span class="mti">'+SVG_TAG(15)+'</span><span>'+t('mode.thrift','Thrift')+'</span>';
@@ -3098,12 +3102,24 @@ let SEARCH_T=null;
 function isMaster(){ return !!(ACCOUNT&&ACCOUNT.comp); }
 function onSearchInput(){ clearTimeout(SEARCH_T); SEARCH_T=setTimeout(async()=>{
   const q=($('search').value||'').trim();
-  if((isMaster()||hasFeature('any_town')) && /^\d{5}$/.test(q)){ if(await geocodeSearch()) return; }  // any_town/master: a typed ZIP drops you there
+  if(/^\d{5}$/.test(q)){                                   // a typed ZIP = "take me to another area"
+    if(isMaster()||hasFeature('any_town')){ if(await geocodeSearch()) return; }  // entitled: drop them there
+    else { anyTownUpsell(); return; }                       // free/PAYG: relocating past your area is a Check+ perk
+  }
   if(USER_LOC) renderStores(); else fetchNear();
 }, 300); }
+// Free/PAYG can only search within their own ~20 mi area; jumping to another ZIP/area is a Check+ perk.
+function anyTownUpsell(){
+  try{ $('search').value=''; }catch(_){ }
+  try{ toast(t('toast.anytown','Checking another area is a Check+ feature — upgrade to search any town.'),'accent'); }catch(_){ }
+  try{ ACCT_RETURN=''; openBuy(); }catch(_){ } // the plans sheet is the upgrade path
+}
 // Master-only: type a city/ZIP → land there (same box). Non-master: just a normal store/city search.
 async function geocodeSearch(){
-  if(!isMaster() && !hasFeature('any_town')){ if(USER_LOC) renderStores(); else fetchNear(); return false; } // relocate = the any_town perk
+  if(!isMaster() && !hasFeature('any_town')){ // relocate = the any_town perk
+    if(/^\d{5}$/.test(($('search').value||'').trim())){ anyTownUpsell(); return false; } // ZIP → they're trying to leave their area
+    if(USER_LOC) renderStores(); else fetchNear(); return false;
+  }
   const q=($('search').value||'').trim(); if(q.length<3) return false;
   const isZip=/^\d{5}$/.test(q);
   const r=await api('/pub/geocode?'+(isZip?'zip=':'q=')+encodeURIComponent(q));
@@ -3320,6 +3336,7 @@ function renderStores(){
     else { if(s.sellsPacks===false) return false; if(isClosed(s)) return false; } // call mode: shelf stores only (kiosks live in the Kiosk tab)
     if(q && !storeMatch(s.name+' '+(s.location||''),q)) return false;
     if(MODE==='call' && (s.storeType==='Hobby'||s.storeType==='Thrift')) return false; // Retail = general retail only; card shops & thrift live in their own chips
+    if(MODE==='call' && s.storeType==='Grocery' && s.hasKiosk) return false; // grocery chains (Ralphs/Albertsons/Pavilions) carry Pokémon via KIOSK only, not shelf — keep them in the Kiosk chip (owner 07-05; authoritative fix = mark these chains sellsPacks:false in data)
     if(!kiosk && MODE!=='hobby' && MODE!=='thrift' && !chainCarriesBrand(s)) return false; // hobby/thrift: the server type filter is the gate
     if(USER_LOC && !s.ownerOnly){ const mi=storeMi(s); if(mi==null || mi>RADIUS) return false; } // owner-only "Fun" store shows from any location
     return true;

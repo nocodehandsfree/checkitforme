@@ -29,6 +29,8 @@ export interface Policy {
     scheduling: boolean;             // subscriber: schedule calls on known shipment days
     restockAlerts: boolean;          // subscriber: notify when something comes back in stock
     kiosks: boolean;                 // kiosk picker + crowd refresh-time submissions
+    hobby: boolean;                  // GLOBAL master switch for the Hobby chip (off = hidden for EVERY account, incl. comp)
+    thrift: boolean;                 // GLOBAL master switch for the Thrift chip (off = hidden for EVERY account, incl. comp)
     shareCards: boolean;             // shareable "found it" cards / OG images
     multiProduct: boolean;           // subscriber: ask about >1 product in one call
     specificSets: boolean;           // subscriber: narrow to a specific set
@@ -79,7 +81,7 @@ export const DEFAULT_POLICY: Policy = {
   rewards: { kioskRefreshChecks: 1, referralChecks: 1 }, // referral = 1+1 -> ~$1 CAC at ~$0.50/check
   flags: {
     dogfoodHours: false, driverHandoff: true, scheduling: true, restockAlerts: true,
-    kiosks: true, shareCards: true, multiProduct: true, specificSets: true,
+    kiosks: true, hobby: true, thrift: true, shareCards: true, multiProduct: true, specificSets: true,
     community: false, communityAutoApprove: false, referrals: true, kioskReceipts: true,
     liveListen: false, stockSignals: true, requirePhoneSignup: false, connectOnHuman: false,
     oneCheckPerStorePerDay: false, transcriptAuth: false,
