@@ -50,10 +50,21 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
   Overview/Activity/Earn (#38); add-store close-X hardened (z-index) + notify copy sharpened — data
   lands in **Admin → Store requests**, contact field drives the "when it's live" notify (#39); post-score
   photo picker dashes red on empty submit like the add-store form (#9).
-- **⚖️ OWNER DECISION NEEDED (#12):** owner mused "only pull in stores you've checked + got an in-stock
-  status." Left UNBUILT — the literal reading breaks new-store discovery (you can't check a store you've
-  never checked). The concern it came from (too many/irrelevant stores) is already solved by #40. Confirm
-  intent before building anything here.
+- **#12 RESOLVED (07-05):** owner clarified it was about SHARING a score — the "Where'd you score?" picker
+  in the Post-your-score composer now offers only stores where YOU found it in stock (from your own
+  checks); nobody shares a win for an item they couldn't get. Also kills the every-store long list.
+- **SHIPPED 07-05 batch B (screenshots IMG_7654/7660/7661 + video):** calendar Saturday column no longer
+  clipped off-page (aspect-ratio min-width bug); map logo pins on dark bg + bold white popup name; master
+  map toast = "Pinch to zoom, tap to drop a pin."; Post-your-score field-red on empty store/product/photo
+  + swept auth/lead forms; My-checks sheet slides fully up/down (batch A) and now a FIXED 86vh height so
+  Overview/Activity/Earn share one top edge; Hobby/Thrift are paid-plan only (batch A) AND have GLOBAL
+  admin kill-switches (Admin → Feature flags → Hobby/Thrift, off = hidden for everyone incl. comp);
+  free/PAYG ZIP relocate now shows a Check+ upsell + plans sheet; grocery kiosk-only chains dropped from
+  Retail. Regression tests: qa-sheet-gate.mjs, qa-huntback.mjs.
+- **🅿️ DATA follow-up:** mark the kiosk-only grocery chains (Ralphs / Albertsons / Pavilions / Vons etc.)
+  `sellsPacks:false` so they're authoritatively kiosk-only — the consumer now hides Grocery+kiosk from
+  Retail as a stopgap, but the data flag is the real fix.
+- **NEXT (owner):** Zones wireframes + spec (see `docs/specs/manage-zones.md` stub).
 - **My-checks sheet now a true bottom sheet (07-05):** slides fully UP on open + DOWN on close/swipe
   (was a 24px nudge + hard disappear). `closeAccount()` animates the slide-down; `sheetDrag` animates the
   swipe-release; `openAccount` clears leftover inline styles. Same keyframe given to the buy/plans sheet.
