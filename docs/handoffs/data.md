@@ -117,6 +117,22 @@ ME03 = Perfect Order — the design grid had these mislabeled).
 
 ## Current focus (KEEP UPDATED)
 
+**Session 2026-07-04 — Drops DB is the product SOURCE OF TRUTH; catalog now syncs from it.**
+- **dropsdb.fungibles.com** (closed beta, password login) is where product types/MSRP/retailers are
+  captured. `data/drops_db.json` is a SNAPSHOT that `seed.ts` loads → `products` table → `/pub/pokemon-sets`.
+  **New sync tool: `scripts/sync-dropsdb.ts`** (`DROPSDB_PASSWORD=… npx tsx scripts/sync-dropsdb.ts`) pulls
+  the live catalog into the snapshot. Store `DROPSDB_PASSWORD` in Railway so it can run in CI/on-demand.
+  seed.ts is `onConflictDoNothing`, so NEW products flow in on the next deploy (price changes on existing
+  rows need an upsert — future improvement).
+- **Answered "why do some sets have more product types than others":** they don't in OUR pipeline — the
+  feed mirrors the Drops DB EXACTLY (verified product-by-product with the beta pw). Chaos Rising = 3 types
+  in BOTH feed and Drops DB (7 rows, per-retailer, dedupe to ETB/Booster Bundle/Booster Box); Ascended
+  Heroes = 7 in both. So the variance is **Drops DB data-ENTRY completeness**, not a sync bug. 112 of 129
+  registry sets have 0 products because the Drops DB only tracks CURRENT drops (older sets are out of print).
+- **Gap audit for whoever maintains the Drops DB** (entered types are uneven — even core types missing):
+  Prismatic Evolutions missing Booster Box+Bundle; Ascended Heroes missing Booster Box; Chaos Rising
+  missing Blister/Build&Battle; many sets 1-3 types. Complete those IN the Drops DB → they flow to the feed.
+
 **Session 2026-07-04 (latest) — Data-integrity principles written up top + online-only flag.**
 - Added the **⚠️ CORE PRINCIPLES** block at the top of this doc (read-first). Owner directive: the Data
   Dev is the data STEWARD and must push back on any instruction that would break integrity, BEFORE
