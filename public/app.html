@@ -44,7 +44,7 @@
   html{-webkit-text-size-adjust:100%}
   html,body{max-width:100%;overflow-x:hidden}
   header,nav,main,section,.card,.stats,.filters,.ractions{max-width:100%}
-  button,a,select,input,textarea,label,summary,[onclick],.drow>summary,.stat,.v{touch-action:manipulation}   /* kill iOS double-tap zoom */
+  *{touch-action:manipulation}   /* kill iOS double-tap zoom on EVERY element (was interactive-only, so cards/text/numbers on Restock + Store-Intel still zoomed on double-tap). manipulation keeps scroll/pan + pinch, only drops double-tap-zoom; any element needing pan-x/none overrides via its own rule. */
   body{background:var(--bg);color:#e6e6ef;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;margin:0;padding:0;touch-action:manipulation;
     background-image:radial-gradient(1200px 500px at 50% -100px,rgba(74,222,128,.08),transparent 70%)}
   header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;position:sticky;top:0;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:30}
