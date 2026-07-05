@@ -27,17 +27,21 @@ this wrong erodes user trust in the whole product. Data integrity ALWAYS wins.
    | Machine **+** shelf | true | true | real | call | Kiosk **and** Retail (dual, tier 5) |
    | Machine only (no shelf) | true | false | (any) | call | Kiosk only |
    | Shelf only, no machine | false | true | real | call | Retail only |
-   | **Online-only / no store line** | false | **false** | (recording/none) | **site** | neither (Buy-online/Notify card) |
+   | **Uncallable, HIDE** (call center / recording, no stock feed) | any | false | (any) | (any) + **`muted=true`** | nothing — hidden everywhere (Best Buy, Spencer's) |
+   | **Uncallable, SHOW** (site mirrors live stock) | false | false | (recording/none) | **site** | Buy-online / live-stock card, no call (Micro Center) |
    - `callable = sellsPacks !== false && phone && !phone.startsWith("nophone:")` — this is THE gate.
    - The call script follows the TAB the user tapped (kioskMode from the request wins over store flags),
      so ONE dual-flagged row serves both sections. Do not create duplicate rows.
 
-**4. Online-only chains (no callable store line) MUST be flagged so they never show as a call target.**
-   Set the CHAIN `stockCheckMethod="site"` + set its stores `sellsPacks=false, online=true`. They then
-   drop out of the call list and render as "check their site / buy online".
-   *Confirmed online-only (flag on sight): **Spencer's** (store # is a corporate recording:
-   "our stores are not taking calls… search availability on our website," then hangs up — flagged
-   2026-07-04, chain 19, 271 stores). Watch for more from the mapping dev.*
+**4. Uncallable chains (no human at the store answers) — pick the right treatment, never leave callable:**
+   - **HIDE it → `muted=true`** (chain-level kill-switch): vanishes from every list, never called. Use
+     when we can neither call NOR show useful stock (central call center / recording, no live-stock feed).
+     e.g. **Best Buy**, **Spencer's** (chain 19, store # is a corporate recording that hangs up — muted
+     2026-07-04). `muted` is independent of `online`/`sellsPacks` (a muted chain may still sell packs/online).
+   - **SHOW as buy-online → `stockCheckMethod="site"` + `sellsPacks=false`** (site-rail): uncallable but
+     the chain's website mirrors live stock, so we show it with live stock + buy link, no call. e.g.
+     **Micro Center**. ONLY when a `/pub/stock` feed exists — else it renders a dead "checking…" state,
+     so mute instead. (Schema doc: `docs/specs/store-data-schema.md` §5, muted row fixed 2026-07-04.)
 
 **5. "Absolutely certain" has a standard.** Shelf presence = the chain's OWN online store lists the SKU
    (chain-level) OR a machine is on site (per-store). Social-media / anecdotal sightings = NOT certain →
@@ -137,10 +141,13 @@ ME03 = Perfect Order — the design grid had these mislabeled).
 - Added the **⚠️ CORE PRINCIPLES** block at the top of this doc (read-first). Owner directive: the Data
   Dev is the data STEWARD and must push back on any instruction that would break integrity, BEFORE
   acting — not after. Captured the grocery over-reach as the cautionary example.
-- **Online-only flag defined + applied:** chains with no callable store line get `stockCheckMethod=site`
-  (chain) + `sellsPacks=false, online=true` (stores) → they leave the call list, render "buy online".
-  Flagged **Spencer's** (chain 19, 271 stores — store # is a corporate recording that hangs up).
-  Mapping dev is surfacing more online-only chains; flag each on confirmation.
+- **Uncallable-chain flagging (reconciled with mapping dev + the muted convention):** two treatments —
+  `muted=true` HIDES the chain (Best Buy), `stockCheckMethod=site`+`sellsPacks=false` SHOWS it as
+  buy-online with live stock (Micro Center). **Spencer's** (chain 19, corporate recording, hangs up):
+  first flagged site-rail, then **MUTED 2026-07-04** because owner wants it gone AND there's no live-stock
+  feed → hidden (199→61 search results). Fixed the misleading muted definition in
+  `docs/specs/store-data-schema.md` §5 (it said "repack-only only" — now covers the uncallable reason too).
+  Mapping dev surfacing more uncallable chains; mute or site-rail each per the §3 table.
 - **Minor debt spotted:** a few non-Spencer rows ("Spencer School", "Spencer's Corners Farm") are
   mis-mapped under chain 19 — a name-match import artifact; re-chain/clean when convenient.
 

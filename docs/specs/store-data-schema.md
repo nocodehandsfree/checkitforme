@@ -92,7 +92,7 @@ Source of truth: `src/stores-import.ts` (`StoreIn` interface + `importStores`). 
 | `mapsUri` | `mapsUri` | Google Maps deep link. |
 | `stockStatus` | `stockStatus` | Explicit wins; else from `carryConfidence`. |
 | `carryConfidence` | `stockStatus` | `confirmed`→`verified`, `unconfirmed`→`unverified`. |
-| `visibility` | (chain-level) | `"muted"` → mutes the **whole chain** (repack-only; hidden, never deleted). |
+| `visibility` | (chain-level) | `"muted"` → hides the **whole chain** + never calls it (kill-switch, never deleted). Reasons: (a) repack-only, or (b) uncallable-and-hidden (e.g. Best Buy: central call center). Independent of `online`/`sellsPacks`. |
 | `specialInstructions` | `specialInstructions` | Explicit wins; else composed (next row). |
 | `intelNote`, `department_to_ask`, `restock_best_hunt_window`, `distributor`, `msrp_reliability` | `specialInstructions` (composed) | Folded into one prose string injected into the agent prompt. |
 | `productDetails` | *(not imported yet)* | See §6 — the most valuable thing to wire next. |
@@ -164,7 +164,7 @@ chain). To retire stores, send them with `active:false` — don't drop them from
 | `shipmentDay` | Usual restock day. | Powers best-bet timing + scheduling; absent = weaker best-bet. |
 | `hours` | Real local hours. | See §3 — missing/fake hours = "open at 2 AM" + calls to closed stores. |
 | `region` / `timezone` | Derived from `state`. | Wrong state → wrong tz → wrong open/closed + wrong call time. |
-| `visibility:"muted"` | Repack-only chain → hidden. | Mutes the **entire chain**, not one store. Use only for genuinely repack-only chains. |
+| `visibility:"muted"` | Kill-switch: hides the **whole chain** + never calls it (independent of `online`/`sellsPacks` — a muted chain may still sell packs/online; we just can't reach a human to ask, so we hide it). | Mutes the **entire chain**, not one store. **Two reasons:** (a) repack-only (Marshalls, TJ Maxx), or (b) **uncallable** and we hide it — central call center / no per-store line (e.g. Best Buy). If uncallable BUT the chain's site shows live stock, use `stockCheckMethod:"site"` + `sellsPacks:false` instead (site-rail — **shown** as buy-online, e.g. Micro Center), NOT mute. |
 
 ---
 
