@@ -1220,13 +1220,16 @@ html[data-skin="v2"] .rsub{font-size:16px;font-weight:500;color:rgba(255,255,255
 html[data-skin="v2"] .railcalpop{background:#26262B;border:0;border-radius:22px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 html[data-skin="v2"] .rcal-h button{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 html[data-skin="v2"] body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:2px;background:#1D1D22;z-index:2147483000;pointer-events:none}
-html[data-skin="v2"] .rcal-d.has{color:#FFF;font-weight:700;position:relative}
+/* Check-days = the Check green, NOT the per-brand accent (Pokémon's accent is yellow, which read as
+   off-brand/alarming on the history calendar). Days you checked are product activity, so they take the
+   product color like the CHECK-A-STORE CTA + My toggle — consistent across every vertical. Owner 07-05. */
+html[data-skin="v2"] .rcal-d.has{background:#4ADE80;color:#06210f;font-weight:800;position:relative}
 /* Owner 07-04: the per-day status dots (red/green) are off for now — the accent fill already marks a
    day with checks. Keeping the .t-* classes for later; the ::after just doesn't render. */
 html[data-skin="v2"] .rcal-d.has::after{display:none}
 html[data-skin="v2"] .rcal-d.schday{border:1.5px dashed rgba(74,222,128,.55);border-radius:11px;color:rgba(255,255,255,.75)}
 html[data-skin="v2"] .rcal-d.sel::after{background:#26251E}
-html[data-skin="v2"] .rcal-d.sel{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6)}
+html[data-skin="v2"] .rcal-d.sel{background:linear-gradient(180deg,color-mix(in srgb,#4ADE80 70%,#FFF) 0%,#4ADE80 100%);color:#06210f;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6)}
 html[data-skin="v2"] .rcal-big{padding:20px 16px 22px}
 html[data-skin="v2"] .rcal-big .rcal-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
 html[data-skin="v2"] .rcal-big .rcal-h b{font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 6px}
@@ -2196,6 +2199,8 @@ const I18N={ es:{
   // watch-14 catch: the 6g Earn rows + verify error had no ES (drafts, same voice, Copy to ratify)
   'earn.invite':'Invita a un amigo','earn.invite.sub':'Se registran. Ambos ganan.',
   'ref.row':'Da una verificación, recibe una','ref.tagline':'Da una verificación, recibe una',
+  'ref.both2one':'Ambos reciben <b style="color:#fff">una verificación gratis</b> cuando se registran.',
+  'ref.sharemsg2one':"¡Mira esta tecnología! Está increíble.\nNos ayuda a encontrar rápido productos virales en stock como cartas Pokémon a precio de tienda.\nRegístrate y ambos recibimos una verificación gratis: ",
   'earn.score':'Publica tu logro','earn.score.sub':'Tus hallazgos, en la página principal.',
   'earn.receipt':'Recibo de kiosco','earn.receipt.sub':'Usa nuestro correo al pagar, o reenvíalo.',
   'err.badcode':'Ese código no coincide. Inténtalo de nuevo.',
@@ -2709,16 +2714,16 @@ async function loadRefer(){
   if(!isAuthed()){ REFER=null; $('refer_link').textContent=t('ref.signin','tap here for your invite link'); $('refer_count').textContent=''; return; }
   REFER=await appApi('/app/referral');
   if(!REFER||REFER.error||!REFER.enabled){ blk.style.display='none'; return; }
-  const r=REFER.reward||1;
+  // "Give a check, get a check" is a FIXED 1-for-1 promise, so the consumer copy always reads a single
+  // free check — never the tunable grant count (which the owner keeps at 1; a stale >1 override must not
+  // leak "3 free checks" into the text/invite copy). Backend grant still follows policy.rewards.referralChecks.
   const sub=document.querySelector('[data-i18n="ref.sub2"]');
-  if(sub) sub.innerHTML = r===1 ? t('ref.sub.one','You both get a <b>free check</b> when they sign up.')
-                                : tf('ref.sub.n','You both get <b>{n} free checks</b> when they sign up.',{n:r});
+  if(sub) sub.innerHTML = t('ref.sub.one','You both get a <b>free check</b> when they sign up.');
   if(REFER.code) $('refer_link').textContent=referLink(REFER.code).replace(/^https?:\/\//,'');
   $('refer_count').textContent=REFER.referrals>0?tf('ref.joined',`🎉 ${REFER.referrals} friend${REFER.referrals===1?'':'s'} joined so far`,{n:REFER.referrals}):'';
 }
 function referMessage(){
-  const r=(REFER&&REFER.reward)||1;
-  const reward=r===1?t('ref.msg.r1','a free check'):tf('ref.msg.rN','{n} free checks',{n:r});
+  const reward=t('ref.msg.r1','a free check'); // fixed 1-for-1: "give a check, get a check"
   const c=(BRAND&&BRAND.category)||'cards';
   const isCards=!/needoh/i.test(c); // card verticals get the pack/box/ETB line
   return isCards
@@ -3011,7 +3016,7 @@ function closeScorePop(){
   if(c&&hm&&hm.parent){ try{ hm.parent.insertBefore(c,hm.next); }catch(_){ hm.parent.appendChild(c); } c.style.display='none'; }
   COMPOSER=false;
 }
-function inviteMsg(link){ const n=POLICY.referralChecks||1; return tf('ref.sharemsg2',"Yo! Check this tech out. It's sick.\nHelps us quickly find viral products in stock like Pokémon cards at retail prices.\nSign up and we both get {n} free {c}: ",{n,c:n===1?t('ref.check1','check'):t('ref.checkN','checks')})+link; }
+function inviteMsg(link){ return t('ref.sharemsg2one',"Yo! Check this tech out. It's sick.\nHelps us quickly find viral products in stock like Pokémon cards at retail prices.\nSign up and we both get a free check: ")+link; }
 async function acctInvitePanel(btn){
   try{ if(!REFER||!REFER.code){ await loadRefer(); } }catch(_){ }
   const link=(REFER&&REFER.code)?referLink(REFER.code):location.origin;
@@ -3025,7 +3030,7 @@ async function acctInvitePanel(btn){
   const btnS='flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0;border:0;border-radius:14px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;font-size:10px;font-weight:800;letter-spacing:.12em;cursor:pointer';
   const ic=(pth)=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${pth}</svg>`;
   pan.innerHTML=`
-    <div style="margin-top:10px;font-size:12.5px;font-weight:600;color:#8A8A96;text-align:center">${tf('ref.both2','You both get <b style="color:#fff">{n} free {c}</b> when they sign up.',{n:POLICY.referralChecks||1,c:(POLICY.referralChecks||1)===1?t('ref.check1','check'):t('ref.checkN','checks')})}</div>
+    <div style="margin-top:10px;font-size:12.5px;font-weight:600;color:#8A8A96;text-align:center">${t('ref.both2one','You both get <b style="color:#fff">a free check</b> when they sign up.')}</div>
     <div style="margin-top:9px;display:flex;align-items:center;gap:8px;border:1.5px dashed rgba(255,255,255,.16);border-radius:13px;padding:10px 12px">
       <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:700">${esc(short)}</span>
       <button onclick="inviteCopy()" style="background:none;border:0;color:#4ADE80;font-size:11px;font-weight:800;letter-spacing:.1em;cursor:pointer">${t('ref.copybtn','COPY')}</button>
