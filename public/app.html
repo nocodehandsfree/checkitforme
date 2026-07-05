@@ -931,6 +931,10 @@
       <div class="name">Mapped stats</div>
       <div class="stats" id="tr_stats" style="margin-bottom:0"></div>
     </div>
+    <details class="card report">
+      <summary><span class="name">How a call flows · A / B / C / D</span></summary>
+      <div id="abcd_flow" style="margin-top:14px"></div>
+    </details>
     <div class="card">
       <label>Select a chain</label>
       <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
@@ -1244,6 +1248,27 @@ async function loadTrainer(){
   const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   ss.innerHTML=st(ch.length,'chains')+st(lock(),'mapped','green')+st(unmapped,'unmapped')
     +st(lock('keypad'),'Alpha')+st(lock('voice'),'Bravo')+st(lock('direct'),'Charlie');
+  renderABCD(ch);
+}
+// ABCD — how a call flows: Alpha (keypad) / Bravo (voice) / Charlie (live agent) / Delta (recorded clips).
+// Nav counts reuse the locked-recipe navType (keypad→Alpha, voice→Bravo, direct→Charlie); Delta is the
+// recorded-agent rehearsal lane (not a navType yet).
+function renderABCD(ch){
+  const el=document.getElementById('abcd_flow'); if(!el) return;
+  const lock=t=>ch.filter(c=>c.navStatus==='locked'&&c.navType===t).length;
+  const lanes=[
+    ['A','Alpha','#60a5fa','Presses digits through a phone menu — a locked recipe, zero AI.','~$0 nav',lock('keypad')+' chains'],
+    ['B','Bravo','#F4D03F','Says the menu words to navigate — locked recipe, zero AI.','~$0 nav',lock('voice')+' chains'],
+    ['C','Charlie','#4ADE80','A real agent joins the moment a human answers and does the talking.','~5¢/check',lock('direct')+' ring direct'],
+    ['D','Delta','#a78bfa','Runs the whole talk on pre-recorded clips + a cheap classifier; escalates to Charlie only off-script.','~2.5¢/check','rehearsal'],
+  ];
+  el.innerHTML='<div class="meta" style="text-transform:none;margin-bottom:10px">Dial → <b>navigate</b> the menu (Alpha keypad / Bravo voice, via the locked recipe) → <b>human</b> → <b>Charlie</b> or <b>Delta</b> handles the conversation.</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+    +lanes.map(L=>`<div style="border:1px solid var(--border);border-left:3px solid ${L[2]};border-radius:10px;padding:10px 11px">
+      <div style="display:flex;align-items:baseline;gap:7px"><span style="font-weight:800;color:${L[2]}">${L[0]}</span><span style="font-weight:700;font-size:13.5px">${L[1]}</span><span class="meta" style="margin-left:auto;font-size:10.5px">${L[4]}</span></div>
+      <div class="meta" style="font-size:11.5px;margin-top:4px;text-transform:none">${L[3]}</div>
+      <div class="meta" style="font-size:10.5px;margin-top:5px">${L[5]}</div>
+    </div>`).join('')+'</div>';
 }
 // Expandable per-chain call log: every learner run with its Alpha/Bravo/Charlie path + the step matrix.
 async function loadRuns(chainId, box){
