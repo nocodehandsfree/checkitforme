@@ -31,6 +31,10 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
   "check back soon". Owner is comp/premium so only sees member view; behavior is a clean on/off in code.
 
 **🔨 Build / fix:**
+- **🅿️ Manage Zones (premium `zone_sweeps`) — full spec `docs/specs/manage-zones.md`.** In My Checks:
+  build a zone (radius quick-add + tap-to-light-up stores), save it, then "Check all" → a live
+  multi-store report (one row per store, reuses the 6M result card). Terminology: "check" NEVER "call".
+  DevOps builds the `/app/zones/*` contract in the spec; wire the 3 screens against it.
 - **PROD-only, check after promote:** owner can't navigate back to June's calls on production. Staging's
   history/calendar code is far ahead — promote likely fixes it; verify on prod after pushing, else debug
   the calendar month-nav (`RAIL_CAL_M`/`openRailCal`). Not blocking.

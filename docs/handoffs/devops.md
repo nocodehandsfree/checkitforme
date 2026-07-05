@@ -63,6 +63,11 @@ Admin lane. DevOps takes dev work only when the owner assigns it. Kickoff prompt
 3. **Staging and prod can run different workflows.** Already true — separate DBs, separate `vt_*` settings.
 
 ## Current state (2026-07-01 — KEEP UPDATED)
+- [ ] **Manage Zones backend (consumer) — spec `docs/specs/manage-zones.md`.** Engine exists
+  (zones/zoneRetailers, zoneQuote, canAffordZone, callZone). Build: `ownerUserId` on `zones`; a
+  `zoneRunId` grouping on callResults; consumer `/app/zones/*` (CRUD, quote, /check, /run/:id, /stop),
+  entitlement-gated on `zone_sweeps`; charge 1 check/callable store via canAffordZone. Rename user-facing
+  copy to "check". Admin owner-only zones stay ownerUserId=null (unaffected).
 - [x] **COMMERCE LIVE ON STAGING (test mode, 2026-07-02).** Stripe test keys + webhook secret set on
   the staging service (webhook endpoint `we_1TohvW…` → staging/webhooks/stripe: checkout.completed,
   invoice.paid, subscription.deleted). Proven end-to-end: real test-card subscription PAID ($9.99) →
