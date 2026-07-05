@@ -3556,9 +3556,23 @@ async function openPage(slug){
   $('pg_title').textContent=r.title||''; $('pg_body').innerHTML=r.body;
 }
 function closePage(){ $('pageOverlay').classList.remove('on'); }
+// Prod = the bare apex/www checkitforme.com. Staging (staging.checkitforme.com), previews and localhost
+// are all NON-prod, where the owner's test stores are allowed to show. The SAME code ships to both envs
+// (staging branch → promoted to prod), so we gate on the live host, not a build flag.
+function isProdHost(){ return /^(www\.)?checkitforme\.com$/i.test(location.hostname||''); }
+// The owner's throwaway test stores ("Fun", "MVP") — the ones his account dials to bench the pipeline.
+// Match the store name as a leading whole word so "Fun Calabasas"/"MVP Store" count but "Funko" doesn't.
+function isTestStore(name){ return /^(fun|mvp)\b/i.test(String(name||'').trim()); }
 function renderFindsBanner(f){
   const el=$('finds'); if(!el) return;
-  if(BRAND_CAT) f=(Array.isArray(f)?f:[]).filter(x=>String(x.category||'').toLowerCase()===BRAND_CAT.label.toLowerCase());
+  f=Array.isArray(f)?f:[];
+  if(BRAND_CAT) f=f.filter(x=>String(x.category||'').toLowerCase()===BRAND_CAT.label.toLowerCase());
+  // Staleness cap (owner 07-05): an in-stock find goes cold — drop it from the rotating banner once it's
+  // older than 2 days. Restock "coming Tuesday" notices are forward-looking, so they're exempt.
+  const _now=Math.floor(Date.now()/1000), TWO_DAYS=2*24*3600;
+  f=f.filter(x=>{ const restock=x.type==='restock'||x.restock===true||x.status==='restock_coming'; return restock || (x.at && (_now-x.at)<=TWO_DAYS); });
+  // Test stores (Fun/MVP) are fine to surface on staging, but NEVER on production — real stores only there.
+  if(isProdHost()) f=f.filter(x=>!isTestStore(x.store));
   // The ticker belongs ONLY on the homepage — never on the call/result page (it was removed there on
   // purpose: too busy + faster). loadFinds also fires on boot-idle and on location changes, so guard the
   // current view here, not just in showResult, or it leaks back onto a result page after a reload.
