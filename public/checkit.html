@@ -1358,7 +1358,7 @@ html[data-skin="v2"] .rng-ticks span.on{color:#4ADE80}
 html[data-skin="v2"] .findbtn-primary{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#FFF;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;padding:14px 24px;box-shadow:0 12px 28px -8px rgba(25,177,69,.45)}
 html[data-skin="v2"] .findbtn-primary.on{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;color:#4ADE80}
 /* HOBBY flow (P3a–P5/§5.13) — hidden preview. Era art on the page, press-dip; set tiles; product rows. */
-body.huntmode #builder > *:not(#findcard){display:none!important}
+body.huntmode #builder > *:not(#findcard):not(.hero){display:none!important}
 body.huntmode #findcard #findbody{display:none!important}
 body.huntmode #hobby{display:block}
 html[data-skin="v2"] .hob-era{display:block;width:82%;margin:0 auto 26px;background:none;border:0;padding:0;cursor:pointer;transition:transform .12s}
@@ -3241,7 +3241,7 @@ function setMode(m){
     try{ openHobby(); }catch(e){}
     track('mode_switch',{mode:m}); return;
   }
-  exitHunt(); const _lb0=$('hoblockbar'); if(_lb0) _lb0.style.display='none';
+  exitHunt(); HUNT_STEP=''; const _lb0=$('hoblockbar'); if(_lb0) _lb0.style.display='none';
   $('findstep').textContent = m==='kiosk'?t('find.kiosk','① Find a kiosk'):m==='thrift'?t('find.thrift','① Find a thrift store'):t('find.step','① Find your store');
   if(USER_LOC && (wasHobby || wasThrift || m==='thrift' || setMode._wasHobby)) fetchNear(); // hobby/thrift changes -> refetch the right slice
   setMode._wasHobby=false;
@@ -3303,6 +3303,7 @@ function renderStores(){
     if(kiosk){ if(!s.hasKiosk) return false; }                    // kiosk mode: vending machines (open OR closed)
     else { if(s.sellsPacks===false) return false; if(isClosed(s)) return false; } // call mode: shelf stores only (kiosks live in the Kiosk tab)
     if(q && !storeMatch(s.name+' '+(s.location||''),q)) return false;
+    if(MODE==='call' && (s.storeType==='Hobby'||s.storeType==='Thrift')) return false; // Retail = general retail only; card shops & thrift live in their own chips
     if(!kiosk && MODE!=='hobby' && MODE!=='thrift' && !chainCarriesBrand(s)) return false; // hobby/thrift: the server type filter is the gate
     if(USER_LOC && !s.ownerOnly){ const mi=storeMi(s); if(mi==null || mi>RADIUS) return false; } // owner-only "Fun" store shows from any location
     return true;
@@ -4291,6 +4292,7 @@ function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _l
 // before (the old bug: back from a transcript landed on a different product's page).
 let NAV_VIEW='builder';
 function navMark(view){
+  if(view!=='builder') HUNT_STEP=''; // leaving the builder ends the hobby-hunt back-stack
   try{ document.body.classList.toggle('rview', view==='result'); if(view!=='result'){ ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); } }catch(e){} // result-only top treatment (transparent nav + color wash)
   try{ if(view!=='builder') hideCallSheet(); }catch(e){} // the call sheet belongs to the builder only
   try{ setThemeTone(); renderCallRail(); }catch(e){}
@@ -4322,6 +4324,15 @@ window.addEventListener('popstate',(ev)=>{
     if(open){ closeAccount(); return; }
     if(typeof acctReturn==='function'&&acctReturn()) return; // e.g. back from a check opened off the Activity tab
   }catch(_){ }
+  // Hobby HUNT: browser-back walks the steps out (shop→prods→sets→eras) then drops to Retail —
+  // so it returns to the previous hunt page, never a stale My-checks entry (owner 07-04).
+  try{ if(HUNT_STEP){
+    const prev={shop:'prods',prods:'sets',sets:'eras'}[HUNT_STEP];
+    if(prev){ document.body.classList.add('huntmode'); const h=$('hobby'); if(h) h.classList.remove('hidden');
+      if(prev==='prods') renderHobbyProducts(); else if(prev==='sets') renderHobbySets(); else renderHobbyEras();
+      markHunt(prev); window.scrollTo({top:0}); return; }
+    HUNT_STEP=''; setMode('call'); return; // backed out of the era screen → Retail
+  } }catch(_){ }
   // Handle BOTH directions. Going forward to a ?call= entry used to do nothing (only "back" was handled),
   // so the URL changed but the call page never re-opened. Now we read the target URL and restore it.
   try{
@@ -5164,7 +5175,7 @@ async function openHobby(){
     try{ const d=await api('/pub/pokemon-sets'); if(d&&Array.isArray(d.eras)) HOBBY.data=d; }catch(e){}
   }
   if(!HOBBY.data){ $('hobby').innerHTML='<div style="text-align:center;color:#8A8A96;padding:36px 0;font-size:13px">'+t('hob.nodata','Set data unavailable right now.')+'</div>'; return; }
-  renderHobbyEras(); window.scrollTo({top:0});
+  renderHobbyEras(); markHunt('eras'); window.scrollTo({top:0});
 }
 // P3a — era logos sit DIRECTLY on the page, big, raised by stacked shadows; press dips them.
 // P3a comp: everything INSIDE the big card — centered 24/900 title + 12.5/600 sub, era rows 96px
@@ -5182,7 +5193,7 @@ function renderHobbyEras(){
         :`<span style="font-size:19px;font-weight:900;letter-spacing:.1em;color:#B9B9C4;text-shadow:0 1.5px 0 rgba(255,255,255,.1),0 -2px 3px rgba(0,0,0,.65),0 12px 18px rgba(0,0,0,.5)">${esc(e.era.toUpperCase())}</span>`}
     </button>`).join('')+`</div></div>`;
 }
-function hobbyPickEra(i){ HOBBY.era=HOBBY.data.eras[i]; renderHobbySets(); window.scrollTo({top:0}); }
+function hobbyPickEra(i){ HOBBY.era=HOBBY.data.eras[i]; renderHobbySets(); markHunt('sets'); window.scrollTo({top:0}); }
 // P3 — composited SQUARE tiles (owner 2026-07-03): darkened set key art as the field + the set logo
 // raised on top with a drop shadow, area-normalized so every logo carries equal visual weight. JUST
 // DROPPED chip on fresh releases; future sets stay, badged UPCOMING (feed rule: badge, don’t drop);
@@ -5217,9 +5228,9 @@ function renderHobbySets(){
     <div style="margin-top:6px;text-align:center;font-size:12px;font-weight:600;color:#8A8A96">${t('hob.sub2','Specific sets, above retail. Pick a set, then a product.')}</div>
     <div style="margin-top:16px;padding:2px;border-radius:16px;background:${ring};box-shadow:0 10px 22px -8px color-mix(in srgb,var(--accent,#FFCB05) 35%,transparent)">
       <div style="display:flex;align-items:center;gap:12px;background:#23232A;border-radius:14px;padding:9px 12px">
-        ${era.logo?`<img src="${esc(era.logo)}" alt="${esc(era.era)}" style="height:38px;object-fit:contain" onerror="this.replaceWith(hobEraTxt(this.alt))">`:`<span style="font-size:13px;font-weight:900;letter-spacing:.06em;color:#B9B9C4">${esc(era.era.toUpperCase())}</span>`}
+        ${era.logo?`<img src="${esc(era.logo)}" alt="${esc(era.era)}" style="height:38px;max-width:40%;width:auto;object-fit:contain;flex:0 0 auto" onerror="this.replaceWith(hobEraTxt(this.alt))">`:`<span style="font-size:13px;font-weight:900;letter-spacing:.06em;color:#B9B9C4">${esc(era.era.toUpperCase())}</span>`}
         <span style="flex:1;font-size:11.5px;font-weight:700;color:var(--accent,#FFCB05)">${era.sets.length} ${t('hob.sets','sets')}</span>
-        <button onclick="renderHobbyEras()" style="padding:7px 13px;border-radius:999px;border:0;background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:12px;font-weight:700;color:#FFF;cursor:pointer">${t('hob.change','Change')}</button>
+        <button onclick="renderHobbyEras();markHunt('eras')" style="padding:7px 13px;border-radius:999px;border:0;background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:12px;font-weight:700;color:#FFF;cursor:pointer">${t('hob.change','Change')}</button>
       </div></div>
     <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:10px">${tiles}</div></div>`;
 }
@@ -5248,7 +5259,7 @@ function hobbyIcon(type){
   return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#CDCDD8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
 }
 const HOBBY_GENERIC=['Booster Box','ETB','Booster Bundle','Premium Collection','3-Pack Blister','Mini Tin','Sleeved Booster'];
-function hobbyPickSet(si){ HOBBY.set=HOBBY.era.sets[si]; renderHobbyProducts(); window.scrollTo({top:0}); }
+function hobbyPickSet(si){ HOBBY.set=HOBBY.era.sets[si]; renderHobbyProducts(); markHunt('prods'); window.scrollTo({top:0}); }
 function renderHobbyProducts(){
   const h=$('hobby'); const st=HOBBY.set;
   const prods=(Array.isArray(st.products)&&st.products.length)?st.products:HOBBY_GENERIC.map(t=>({type:t,retail:null}));
@@ -5262,7 +5273,7 @@ function renderHobbyProducts(){
       <img src="${esc(st.banner||'')}" alt="" style="display:block;width:100%;height:152px;object-fit:cover;object-position:50% 72%" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh('${esc(st.code)}',152));this.remove()">
       <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,14,.15) 0%,rgba(10,10,14,.05) 45%,rgba(10,10,14,.55) 100%);pointer-events:none"></div>
       ${st.logo?`<img src="${esc(st.logo)}" alt="${esc(st.name||st.code)}" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:64%;max-height:96px;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,.75));pointer-events:none" onerror="this.remove()">`:''}
-      <button onclick="renderHobbySets()" aria-label="Back" style="position:absolute;top:12px;left:12px;width:32px;height:32px;border-radius:50%;border:0;background:rgba(10,10,14,.55);backdrop-filter:blur(4px);color:#FFF;cursor:pointer;font-size:16px">‹</button>
+      <button onclick="renderHobbySets();markHunt('sets')" aria-label="Back" style="position:absolute;top:12px;left:12px;width:32px;height:32px;border-radius:50%;border:0;background:rgba(10,10,14,.55);backdrop-filter:blur(4px);color:#FFF;cursor:pointer;font-size:16px">‹</button>
     </div>
     <div style="padding:14px 16px 18px">
       ${prods.map((p,pi)=>{
@@ -5279,10 +5290,18 @@ function renderHobbyProducts(){
 // P5 — lock the product onto the call flow (SEL_PRODUCT rides the sheet’s specific-product ask).
 let HOBBY_LOCK=false; // the P5 lock: survives store-picks (else pickStore's reset erases it and the
                       // call asks generic Pokémon); cleared when the user changes category/mode.
+// The hobby hunt owns ONE history entry so a browser/OS back walks its steps (shop→prods→sets→eras→
+// Retail) instead of escaping to a stale My-checks entry (owner 07-04). Each step just relabels; the
+// popstate handler steps HUNT_STEP back and re-pushes the sentinel until it drops out at 'eras'.
+let HUNT_STEP=''; // '', 'eras', 'sets', 'prods', 'shop'
+function markHunt(step){ HUNT_STEP=step; try{ if(!(history.state&&history.state.v==='hunt')) history.pushState({v:'hunt'},''); }catch(_){ } }
 function hobbyPickProduct(pi){
   const p=(HOBBY.prods||[])[pi]; if(!p) return;
   SEL_PRODUCT=((HOBBY.set&&HOBBY.set.name)?HOBBY.set.name+' ':'')+p.type;
   HOBBY_LOCK=true;
+  // Fresh shop pick: clear any store carried in from a prior hunt so the list opens with NOTHING
+  // selected (owner 07-04: re-entering the shop list kept the old pick + double-highlighted rows).
+  SEL_STORE=null; SEL_KIOSK=false; KIOSK_OK=false; CS_DISMISSED=false; try{ hideCallSheet(); }catch(_){ }
   // Hunt-first: product locked -> now show the HOBBY store list (type=Hobby) so they pick a shop.
   exitHunt();
   MODE='hobby'; try{ localStorage.setItem('cifm_mode','hobby'); }catch(_){ }
@@ -5300,6 +5319,7 @@ function hobbyPickProduct(pi){
       <span style="flex:1;min-width:0"><span style="display:block;font-size:9px;font-weight:800;letter-spacing:.14em;color:#8A8A96">${esc(t('hob.hunting','HUNTING').toUpperCase())}</span><span style="display:block;font-size:13.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(SEL_PRODUCT)}</span></span>
       <button onclick="setMode('hobby')" style="flex:0 0 auto;border:0;border-radius:999px;background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#FFF;font-size:12px;font-weight:700;padding:7px 13px;cursor:pointer">${t('hob.change','Change')}</button></div>`; }
   if(USER_LOC) fetchNear(); else renderStores();
+  markHunt('shop');
   window.scrollTo({top:0});
 }
 // ==== /HOBBY ======================================================================================
