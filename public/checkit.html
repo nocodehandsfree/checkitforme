@@ -101,9 +101,9 @@ __BRAND_HEAD__
   .store .ic{width:52px;height:52px;border-radius:15px;background:linear-gradient(145deg,#34343d,#23232b);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
   /* name-only stores: their name as a tight two-line wordmark inside the logo slot (no made-up logo) */
   .wm{display:flex;flex-direction:column;justify-content:center;align-items:center;width:100%;height:100%;padding:2px;box-sizing:border-box;overflow:hidden;text-align:center}
-  .wm span{display:block;font-weight:900;font-size:8px;line-height:1.05;letter-spacing:-.02em;text-transform:uppercase;color:#cdcdd8;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wm span{display:block;font-weight:900;font-size:15px;line-height:1;letter-spacing:.01em;text-transform:uppercase;color:#cdcdd8;max-width:100%}
   .railchip .wm span{font-size:8.5px;color:#d6d6e0}
-  .store .nm{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .store .nm{font-weight:700;font-size:14.5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden} /* wrap to 2 lines, never a single-line "…" clip (owner) */
   .store .lo{color:var(--muted);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .store .sdot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:middle}
   .store .sdot.on{background:#cfcfe0} .store .sdot.off{background:#7a7a86} .store .sdot.instock{background:var(--green)} .store .sdot.outstock{background:var(--red)}
@@ -1378,6 +1378,11 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zsub{font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:3px}
 #zones .zlast{font-size:11.5px;font-weight:600;color:#7C7C88;margin-top:4px}
 #zones .zmore{width:30px;height:30px;flex:0 0 auto;border:0;border-radius:9px;background:#1B1B20;color:#B9B9C4;font-size:17px;line-height:1;cursor:pointer}
+#zones .zloc{display:flex;gap:8px;margin:0 2px 12px}
+#zones .zloc .kin{flex:1}
+#zones .zgo,#zones .zmapbtn{flex:0 0 auto;border:0;border-radius:11px;padding:0 15px;font-size:13px;font-weight:800;cursor:pointer;background:#1F1F25;color:#B9B9C4;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+#zones .zmapbtn.on{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#4ADE80) 70%,#FFF),var(--accent,#4ADE80));color:#0C2916}
+#zones .zpin{background:none;border:0}
 #zones .zradrow{display:flex;align-items:center;justify-content:space-between;margin:2px 2px 10px}
 #zones .zradlbl{font-size:13px;font-weight:700;color:#8A8A96}
 #zones .zrads{display:flex;align-items:center;gap:6px}
@@ -1387,7 +1392,8 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zaddall{width:100%;border:1.5px dashed rgba(74,222,128,.5);background:rgba(74,222,128,.06);border-radius:12px;padding:11px;color:#4ADE80;font-size:13.5px;font-weight:800;cursor:pointer;margin-bottom:6px}
 #zones .zstore{display:flex;align-items:center;gap:11px;width:100%;margin-top:8px;padding:9px 11px;border:0;border-radius:13px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06);color:#FFF;cursor:pointer;transition:box-shadow .12s}
 #zones .zstore.on{box-shadow:0 0 0 2px var(--accent,#4ADE80),0 8px 16px -8px color-mix(in srgb,var(--accent,#4ADE80) 30%,transparent)}
-#zones .zstore .nm{display:block;font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#zones .zstore .nm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:14.5px;font-weight:700}
+#zones .zstore .ic{overflow:hidden} #zones .ic img{max-width:24px;max-height:24px;object-fit:contain}
 #zones .zstore .lo{display:block;font-size:11.5px;font-weight:600;color:#8A8A96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #zones .zcheck{width:22px;height:22px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;background:#1B1B20;box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
 #zones .zstore.on .zcheck{background:var(--accent,#4ADE80)}
@@ -2494,16 +2500,17 @@ function storeIco(type){
 // Name-only stores (no logo image) show THEIR name as a tight two-line wordmark — not a generic icon,
 // not a made-up logo. We balance the words across two lines; a single long word stays on one.
 function storeWordmark(name,type){
+  // Clean 2-letter MONOGRAM (never truncates in a tile) — owner 07-05: full names were ellipsis'd to
+  // "BARNE…THOUS…". Skip filler words, take the first letters of the first two real words.
   const base=((name||'').split(/[—–]| - /)[0]||'').trim();
   if(!base) return storeIco(type);
-  const words=base.split(/\s+/).filter(Boolean);
-  let l1=base,l2='';
-  if(words.length>=2){
-    let best=1,bestDiff=1e9,acc=0;
-    for(let i=1;i<words.length;i++){ acc+=words[i-1].length+1; const d=Math.abs(acc-base.length/2); if(d<bestDiff){bestDiff=d;best=i;} }
-    l1=words.slice(0,best).join(' '); l2=words.slice(best).join(' ');
-  }
-  return `<span class="wm"><span>${esc(l1)}</span>${l2?`<span>${esc(l2)}</span>`:''}</span>`;
+  const skip=new Set(['&','and','the','of','at','on','de','la','el','los','y']);
+  const words=base.split(/[\s.]+/).filter(w=>w&&!skip.has(w.toLowerCase()));
+  let mono;
+  if(words.length>=2) mono=(words[0][0]||'')+(words[1][0]||'');
+  else if(words.length===1) mono=words[0].slice(0,2);
+  else mono=base.replace(/[^A-Za-z0-9]/g,'').slice(0,2);
+  return `<span class="wm"><span>${esc((mono||'?').toUpperCase())}</span></span>`;
 }
 
 let ACCOUNT=null;
@@ -5066,7 +5073,7 @@ function renderAcctScheds(){
     list.map(sc=>{ const days=(sc.daysOfWeek||'').split(',').filter(Boolean).map(d=>DOWSHORT[d]).join(', ')||t('sched.shipday','shipment day');
       return `<div style="display:flex;align-items:center;gap:11px;margin-top:8px;padding:12px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)">
       <span style="width:34px;height:34px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${cal}</span>
-      <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sc.store)} · <b style="color:var(--accent,#FFCB05)">${esc(sc.category)}</b></div>
+      <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;line-height:1.3">${esc(sc.store)} · <b style="color:var(--accent,#FFCB05)">${esc(sc.category)}</b></div>
         <div style="margin-top:2px;font-size:12px;font-weight:600;color:#8A8A96">${esc(days)} · ${t('sched.from','from')} ${esc(sc.timeLocal||'10:00')}${sc.specificProduct?(' · '+esc(sc.specificProduct)):''}</div></div>
       <button onclick="cancelSchedule(${sc.id})" style="flex:0 0 auto;background:rgba(239,68,68,.1);border:1.5px solid rgba(239,68,68,.4);color:#FF8A8A;padding:7px 14px;border-radius:999px;font-weight:700;font-size:12px;cursor:pointer">${t('sched.cancel','Cancel')}</button>
     </div>`;}).join('');
@@ -5402,7 +5409,7 @@ function hobbyPickProduct(pi){
 // Consumer UI for the /app/zones/* contract (DevOps builds the backend). Three screens, one view:
 //   B My Zones list → A build/edit a zone → C the live multi-store check report. "CHECK", never "call".
 let ZONES={ sel:new Set(), storeById:new Map(), editId:null, radius:5, run:null, poll:null };
-function zHideAll(){ ['builder','live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); }
+function zHideAll(){ try{ exitHunt(); }catch(_){ } try{ if(typeof HUNT_STEP!=='undefined') HUNT_STEP=''; }catch(_){ } ['builder','live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); } // exitHunt: else body.huntmode keeps #hobby (era/set art) visible under the zones view
 function zShow(){ const z=$('zones'); if(z){ z.classList.remove('hidden'); } }
 function zoneStopPoll(){ if(ZONES.poll){ clearInterval(ZONES.poll); ZONES.poll=null; } }
 function backFromZones(){ zoneStopPoll(); const z=$('zones'); if(z) z.classList.add('hidden'); try{ backToBuilder(); }catch(_){ } try{ openAccount(); }catch(_){ } }
@@ -5427,6 +5434,7 @@ async function renderZonesList(){
   ZONES.editId=null; ZONES.run=null;
   const z=$('zones'); z.innerHTML=`<div class="zwrap">${zHead(t('zones.title','Manage Zones'))}<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:40px 0"><span></span><span></span><span></span></div></div>`;
   let list=[]; try{ const r=await appApi('/app/zones'); if(Array.isArray(r)) list=r; else if(r&&Array.isArray(r.zones)) list=r.zones; }catch(_){ }
+  ZONES.list=list;
   const cards=(list||[]).map(zn=>{
     const n=zn.checkCount!=null?zn.checkCount:(zn.stores?zn.stores.length:0);
     const last=zn.lastRun?`<div class="zlast">${t('zones.last','last check')} ${esc(zAgo(zn.lastRun.at))} · ${zn.lastRun.inStock||0} ${t('zones.instock','in stock')}</div>`:`<div class="zlast">${t('zones.never','not checked yet')}</div>`;
@@ -5439,21 +5447,38 @@ async function renderZonesList(){
     </div>`;
   }).join('');
   z.innerHTML=`<div class="zwrap">${zHead(t('zones.title','Manage Zones'))}
-    ${cards||`<div class="card" style="text-align:center;color:#8A8A96;padding:26px 18px;font-size:13.5px;line-height:1.5">${t('zones.empty','No zones yet. Build one to check a whole area in a single tap.')}</div>`}
+    ${cards||`<div class="card" style="text-align:center;color:#8A8A96;padding:22px 18px;font-size:14px;line-height:1.4">${t('zones.empty','Build a zone to check a whole area in one tap.')}</div>`}
     <button class="cta" style="margin-top:14px;width:100%" onclick="zoneNew()">＋ ${t('zones.new','New zone')}</button></div>`;
 }
 function zAgo(at){ try{ const s=Math.max(1,Math.floor((Date.now()-new Date(at).getTime())/1000)); if(s<3600) return Math.floor(s/60)+'m'; if(s<86400) return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; }catch(_){ return ''; } }
-function zoneMenu(id,ev){ if(ev)ev.stopPropagation(); const nm=prompt(t('zones.rename.ask','Rename this zone (blank = delete):')); if(nm===null) return; if(nm.trim()===''){ if(confirm(t('zones.delete.ask','Delete this zone?'))) zoneDelete(id); return; } zoneRename(id,nm.trim()); }
+function zoneMenu(id,ev){ if(ev)ev.stopPropagation();
+  const zn=((ZONES.list||[]).find(x=>x.id===id))||{};
+  let ov=$('zmenuOv');
+  if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='zmenuOv'; ov.onclick=e=>{ if(e.target===ov) ov.classList.remove('on'); }; document.body.appendChild(ov); }
+  ov.innerHTML=`<div class="modal" style="max-width:340px;text-align:left"><h3 style="margin:2px 0 4px">${esc(zn.name||t('zones.untitled','Untitled zone'))}</h3>
+    <div class="meta" style="margin-bottom:14px">${t('zones.menu.sub','Rename or delete this zone.')}</div>
+    <button class="cta sm" style="width:100%;margin-bottom:10px" onclick="$('zmenuOv').classList.remove('on');zoneRenamePrompt(${id})">${t('zones.rename','Rename')}</button>
+    <button class="cta sm" style="width:100%;background:rgba(239,68,68,.12);border:1.5px solid rgba(239,68,68,.4);color:#FF8A8A;box-shadow:none" onclick="$('zmenuOv').classList.remove('on');zoneDeleteConfirm(${id})">🗑 ${t('zones.delete','Delete zone')}</button></div>`;
+  ov.classList.add('on');
+}
+function zoneRenamePrompt(id){ const cur=((ZONES.list||[]).find(x=>x.id===id)||{}).name||''; const nm=prompt(t('zones.rename.ask2','New name for this zone:'),cur); if(nm==null) return; const v=nm.trim(); if(!v){ toast(t('zones.needname','Give the zone a name.')); return; } zoneRename(id,v); } // blank = cancel, NEVER delete
+function zoneDeleteConfirm(id){ if(confirm(t('zones.delete.ask','Delete this zone? This can\'t be undone.'))) zoneDelete(id); }
 async function zoneRename(id,name){ try{ await appApi('/app/zones/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({name})}); }catch(_){ } renderZonesList(); }
 async function zoneDelete(id){ try{ await appApi('/app/zones/'+id,{method:'DELETE'}); }catch(_){ } renderZonesList(); }
 // ---- Screen A — build / edit a zone ----
-async function zoneNew(){ zHideAll(); zShow(); ZONES.editId=null; ZONES.sel=new Set(); ZONES.name=''; renderZoneBuild(); await zoneEnsureStores(); renderZoneBuild(); }
+async function zoneNew(){ zHideAll(); zShow(); ZONES.editId=null; ZONES.sel=new Set(); ZONES.name=''; ZONES.mapOpen=false; renderZoneBuild(); await zoneEnsureStores(); renderZoneBuild(); }
 async function zoneEdit(id){ zHideAll(); zShow(); ZONES.editId=id; ZONES.sel=new Set(); ZONES.name='';
   try{ const r=await appApi('/app/zones/'+id); const zn=(r&&r.id)?r:((r&&r.zone)||null); if(zn){ ZONES.name=zn.name||''; (zn.stores||[]).forEach(s=>{ ZONES.sel.add(s.retailerId); ZONES.storeById.set(s.retailerId,s); }); } }catch(_){ }
   await zoneEnsureStores(); renderZoneBuild();
 }
-async function zoneEnsureStores(){ if(!USER_LOC){ try{ await new Promise(res=>{ findMe(res); setTimeout(res,4000); }); }catch(_){ } } if(USER_LOC && (!STORES||!STORES.length)){ try{ await fetchNear(); }catch(_){ } } (STORES||[]).forEach(s=>ZONES.storeById.set(s.id,s)); }
-function zoneBuildStores(){ const seen=new Map(); (STORES||[]).forEach(s=>{ if(s&&s.id!=null&&s.sellsPacks!==false) seen.set(s.id,s); }); ZONES.sel.forEach(id=>{ if(!seen.has(id)&&ZONES.storeById.has(id)) seen.set(id,ZONES.storeById.get(id)); }); let arr=[...seen.values()]; if(USER_LOC) arr.sort((a,b)=>(storeMi(a)??1e9)-(storeMi(b)??1e9)); return arr; }
+async function zoneEnsureStores(){
+  if(!USER_LOC){ try{ await new Promise(res=>{ findMe(res); setTimeout(res,4000); }); }catch(_){ } }
+  // Zones are RETAIL sweeps: fetch the general callable list fresh (never the leftover hobby/thrift
+  // slice the last mode left in STORES), so the builder never shows card shops or a stale filter.
+  if(USER_LOC){ try{ const u=`/pub/stores/near?lat=${USER_LOC.lat}&lng=${USER_LOC.lng}&radius=${Math.max(10,ZONES.radius||5)}&limit=200`; const r=await appApi(u); if(r&&Array.isArray(r.stores)) STORES=r.stores; }catch(_){ } }
+  (STORES||[]).forEach(s=>ZONES.storeById.set(s.id,s));
+}
+function zoneBuildStores(){ const seen=new Map(); (STORES||[]).forEach(s=>{ if(s&&s.id!=null&&s.sellsPacks!==false&&s.storeType!=='Hobby'&&s.storeType!=='Thrift') seen.set(s.id,s); }); ZONES.sel.forEach(id=>{ if(!seen.has(id)&&ZONES.storeById.has(id)) seen.set(id,ZONES.storeById.get(id)); }); let arr=[...seen.values()]; if(USER_LOC) arr.sort((a,b)=>(storeMi(a)??1e9)-(storeMi(b)??1e9)); return arr; }
 function renderZoneBuild(){
   const z=$('zones'); const stores=zoneBuildStores();
   const rings=[1,2,5,10].map(r=>`<button class="zrad ${ZONES.radius===r?'on':''}" onclick="ZONES.radius=${r};renderZoneBuild()">${r}</button>`).join('');
@@ -5465,17 +5490,59 @@ function renderZoneBuild(){
     : `<div class="card" style="text-align:center;color:#8A8A96;padding:20px;font-size:13px">${t('zones.needloc','Share your location to pick stores.')}<br><button class="cta sm" style="margin-top:12px" onclick="zoneNew()">${t('find.me','Find my stores')}</button></div>`;
   const n=ZONES.sel.size;
   z.innerHTML=`<div class="zwrap zbuild">${zHead(ZONES.editId?t('zones.edit','Edit zone'):t('zones.newz','New zone'),'renderZonesList()')}
+    <div class="zloc"><input id="z_loc" class="kin" placeholder="${t('zones.locph','ZIP or town…')}" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();zoneGeocode();}"><button class="zgo" onclick="zoneGeocode()">${t('zones.go','Go')}</button><button class="zmapbtn ${ZONES.mapOpen?'on':''}" onclick="zoneToggleMap()">${ZONES.mapOpen?t('zones.list','List'):t('zones.map','Map')}</button></div>
     <div class="zradrow"><span class="zradlbl">${t('zones.radius','Radius')}</span><div class="zrads">${rings}<span class="zradmi">mi</span></div></div>
     <button class="zaddall" onclick="zoneAddRadius()">＋ ${tf('zones.addall','Add all within {r} mi',{r:ZONES.radius})}</button>
-    <div class="zlist">${rows}</div>
+    <div id="zmap" style="display:${ZONES.mapOpen?'block':'none'};height:300px;border-radius:16px;overflow:hidden;margin-bottom:10px;background:#15151c"></div>
+    <div class="zlist" style="display:${ZONES.mapOpen?'none':'block'}">${rows}</div>
     <div class="zbar">
       <div class="zbarcost"><b id="z_count">${n}</b> ${n===1?t('zones.store','store'):t('zones.stores','stores')} · <span id="z_cost">${n} ${n===1?t('zones.check','check'):t('zones.checks','checks')}</span></div>
       <div class="zbarrow"><input id="z_name" class="kin" placeholder="${t('zones.nameph','Name it…')}" value="${esc(ZONES.name||'')}" maxlength="40" oninput="ZONES.name=this.value"><button class="cta sm" id="z_save" onclick="zoneSave()" ${n?'':'disabled'}>${t('zones.save','Save zone')}</button></div>
     </div></div>`;
   zoneQuoteRefresh();
+  if(ZONES.mapOpen) setTimeout(zoneMapEnsure,30); // (re)build the Leaflet map into the fresh #zmap node
 }
 function zoneToggle(id){ if(ZONES.sel.has(id)) ZONES.sel.delete(id); else { ZONES.sel.add(id); const s=(STORES||[]).find(x=>x.id===id); if(s) ZONES.storeById.set(id,s); } renderZoneBuild(); }
-function zoneAddRadius(){ zoneBuildStores().forEach(s=>{ const mi=storeMi(s); if(mi!=null && mi<=ZONES.radius && s.sellsPacks!==false){ ZONES.sel.add(s.id); ZONES.storeById.set(s.id,s); } }); renderZoneBuild(); }
+function zoneAddRadius(){ zoneBuildStores().forEach(s=>{ const mi=storeMi(s); if(mi!=null && mi<=ZONES.radius && s.sellsPacks!==false){ ZONES.sel.add(s.id); ZONES.storeById.set(s.id,s); } }); if(ZONES.mapOpen){ zoneMapDraw(); zoneBarSync(); } else renderZoneBuild(); }
+// --- Zone location search + map ('pin a zone'): type a ZIP/town or tap the map to recenter, tap pins to add ---
+let ZMAP=null, ZMARKERS={}, ZRING=null;
+function zoneBarSync(){ const n=ZONES.sel.size; const c=$('z_count'); if(c) c.textContent=n; const co=$('z_cost'); if(co) co.textContent=n+' '+(n===1?t('zones.check','check'):t('zones.checks','checks')); const sv=$('z_save'); if(sv) sv.disabled=!n; zoneQuoteRefresh(); }
+async function zoneGeocode(){
+  const q=($('z_loc')&&$('z_loc').value||'').trim(); if(q.length<3){ toast(t('zones.typloc','Type a ZIP or town first.')); return; }
+  const isZip=/^\d{5}$/.test(q); let r=null;
+  try{ r=await api('/pub/geocode?'+(isZip?'zip=':'q=')+encodeURIComponent(q)); }catch(_){ }
+  if(r&&!r.error&&r.lat!=null){ USER_LOC={lat:r.lat,lng:r.lng}; await zoneEnsureStores();
+    if(ZONES.mapOpen){ if(ZMAP){ try{ ZMAP.setView([r.lat,r.lng],12); }catch(_){ } } zoneMapDraw(); zoneBarSync(); } else renderZoneBuild();
+    toast(tf('zones.located','Centered on {q}',{q}),'neutral'); }
+  else toast(t('zones.noplace',"Couldn't find that place."));
+}
+function zoneToggleMap(){ ZONES.mapOpen=!ZONES.mapOpen; renderZoneBuild(); }
+function zoneMapEnsure(){
+  if(!ZONES.mapOpen) return;
+  if(window.L){ zoneMapInit(); return; }
+  if(!document.querySelector('link[data-leaflet]')){ const css=document.createElement('link'); css.rel='stylesheet'; css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; css.setAttribute('data-leaflet','1'); document.head.appendChild(css); }
+  const js=document.createElement('script'); js.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; js.onload=()=>zoneMapInit(); js.onerror=()=>{ toast(t('toast.maploading',"Map didn't load. Here's the list.")); ZONES.mapOpen=false; renderZoneBuild(); }; document.body.appendChild(js);
+}
+function zoneMapInit(){
+  const el=$('zmap'); if(!el||!window.L) return;
+  try{ if(ZMAP){ ZMAP.remove(); ZMAP=null; } }catch(_){ } ZMARKERS={}; ZRING=null;
+  const c=USER_LOC?[USER_LOC.lat,USER_LOC.lng]:[34.15,-118.63];
+  ZMAP=L.map('zmap',{zoomControl:false,attributionControl:false}).setView(c, USER_LOC?12:10);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{maxZoom:19,minZoom:3,subdomains:'abcd'}).addTo(ZMAP);
+  ZMAP.on('click', async (e)=>{ USER_LOC={lat:e.latlng.lat,lng:e.latlng.lng}; await zoneEnsureStores(); zoneMapDraw(); zoneBarSync(); toast(t('zones.recentered','Zone recentered here'),'neutral'); });
+  setTimeout(()=>{ try{ ZMAP.invalidateSize(); }catch(_){ } zoneMapDraw(); },60);
+}
+function zoneMapDraw(){
+  if(!ZMAP||!window.L) return;
+  Object.values(ZMARKERS).forEach(m=>{ try{ ZMAP.removeLayer(m); }catch(_){ } }); ZMARKERS={};
+  try{ if(ZRING){ ZMAP.removeLayer(ZRING); ZRING=null; } }catch(_){ }
+  if(USER_LOC){ ZRING=L.circle([USER_LOC.lat,USER_LOC.lng],{radius:(ZONES.radius||5)*1609.34,color:'#4ADE80',weight:1.5,fillColor:'#4ADE80',fillOpacity:.06}).addTo(ZMAP); }
+  zoneBuildStores().forEach(s=>{ if(s.lat==null||s.lng==null) return; const on=ZONES.sel.has(s.id); const sz=on?26:20;
+    const m=L.marker([s.lat,s.lng],{icon:L.divIcon({className:'zpin',html:`<span style="display:grid;place-items:center;width:${sz}px;height:${sz}px;border-radius:50%;background:${on?'#4ADE80':'#17171E'};border:2px solid ${on?'#0C2916':'#3A3A44'};box-shadow:0 0 ${on?10:4}px ${on?'rgba(74,222,128,.7)':'rgba(0,0,0,.5)'};color:#0C2916;font-weight:900;font-size:12px">${on?'✓':''}</span>`,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]})}).addTo(ZMAP);
+    m.on('click',(ev)=>{ try{ ev.originalEvent&&ev.originalEvent.stopPropagation&&ev.originalEvent.stopPropagation(); }catch(_){ } zoneMapToggle(s.id); });
+    ZMARKERS[s.id]=m; });
+}
+function zoneMapToggle(id){ if(ZONES.sel.has(id)) ZONES.sel.delete(id); else { ZONES.sel.add(id); const s=(STORES||[]).find(x=>x.id===id); if(s) ZONES.storeById.set(id,s); } zoneMapDraw(); zoneBarSync(); }
 async function zoneQuoteRefresh(){
   const ids=[...ZONES.sel]; if(!ids.length) return;
   try{ const r=await appApi('/app/zones/quote?retailerIds='+ids.join(',')); if(r&&!r.error){ const cc=$('z_cost'); if(cc) cc.textContent=(r.checks!=null?r.checks:ids.length)+' '+((r.checks===1)?t('zones.check','check'):t('zones.checks','checks'))+(r.cents!=null?' · '+money(r.cents):''); } }catch(_){ }
@@ -6254,6 +6321,9 @@ let SUCC_STORE=null, COMPOSER=false;
 function toggleComposer(force){
   COMPOSER=(typeof force==='boolean')?force:!COMPOSER;
   const c=$('composer'); if(c) c.style.display=COMPOSER?'':'none';
+  // When the post box is open it takes over — hide the "Be the first to post a score" wall prompt
+  // below it (owner 07-05: it was duplicating the composer's job and pushing the page down).
+  const w=$('succ_wall'); if(w) w.style.display=COMPOSER?'none':'';
   if(COMPOSER){ try{ c.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }
 }
 // If Scores was opened FROM a check, remember it so the back button returns to that check (not home).
