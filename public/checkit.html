@@ -1430,8 +1430,11 @@ html[data-skin="v2"] .p6d-live .buygrid-h{color:#8A8A96}
    two overlapping raised stat tiles, Overview/Activity/Earn keys, yellow icon rows. Legacy header
    (avatar/name/cred pill) hides under v2 — the wash header replaces it. */
 html[data-skin="v2"] #acctOverlay,html[data-skin="v2"] #buyOverlay{align-items:flex-end;padding:0}
-html[data-skin="v2"] #acctOverlay .modal,html[data-skin="v2"] #buyOverlay .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:86vh;margin:0;transform:translateY(24px);opacity:0;transition:transform .28s cubic-bezier(.2,.8,.3,1),opacity .2s}
-html[data-skin="v2"] #acctOverlay.on .modal,html[data-skin="v2"] #buyOverlay.on .modal{transform:none;opacity:1}
+html[data-skin="v2"] #acctOverlay .modal,html[data-skin="v2"] #buyOverlay .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:86vh;margin:0}
+/* Bottom sheets slide the WHOLE way up from below the fold (owner 07-05: the old 24px nudge+fade read as
+   "appearing", not sliding). Close/swipe-down slide back down — handled in closeAccount/closeBuy + sheetDrag. */
+html[data-skin="v2"] #acctOverlay.on .modal,html[data-skin="v2"] #buyOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
+@keyframes sheetUpV2{from{transform:translateY(100%)}to{transform:translateY(0)}}
 html[data-skin="v2"] #buyOverlay .modal{overflow-y:auto;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
 /* 6c CHECKOUT (v2) — branded on-site Stripe Elements page. Bottom sheet, comp tokens: raised order
    card, carved "or pay with card" divider, Payment Element in the well, green SUBSCRIBE ring capsule. */
@@ -2372,17 +2375,20 @@ function storeFace(s){
 function ensureModeChips(){
   if(!isV2()||!BRAND) return;
   const kioskBtn=()=>document.querySelector('.modetab[data-mode="kiosk"]');
+  // Hobby + Thrift are PAID-PLAN perks (owner 07-05): a subscription (or comp) is required, so
+  // pay-as-you-go and free NEVER see them — regardless of what /app/me sends for their features.
+  const paid=!!(ACCOUNT&&(ACCOUNT.comp||ACCOUNT.subscription==='active'));
   // HOBBY (Pokémon only — the hunt feed is Pokémon-only, so onepiece/topps would get a dead chip —
   // AND the exact_products entitlement).
-  { const want=BRAND.key==='poke'&&hasFeature('exact_products');
+  { const want=paid&&BRAND.key==='poke'&&hasFeature('exact_products');
     const ex=document.querySelector('.modetab[data-mode="hobby"]'), kb=kioskBtn();
     if(want&&!ex&&kb){ const hb=document.createElement('button'); hb.className='modetab'; hb.dataset.mode='hobby'; hb.setAttribute('onclick',"setMode('hobby')");
       hb.innerHTML='<span class="mti">'+SVG_STORE(15)+'</span><span>'+t('mode.hobby','Hobby')+'</span>';
       kb.parentElement.insertBefore(hb,kb); }
     else if(!want&&ex){ ex.remove(); if(typeof MODE!=='undefined'&&MODE==='hobby'){ try{ setMode('call'); }catch(_){ } } }
   }
-  // THRIFT (all v2 brands + the thrift_hunts entitlement).
-  { const want=hasFeature('thrift_hunts');
+  // THRIFT (all v2 brands + the thrift_hunts entitlement — paid plans only).
+  { const want=paid&&hasFeature('thrift_hunts');
     const ex=document.querySelector('.modetab[data-mode="thrift"]'), kb2=kioskBtn();
     if(want&&!ex&&kb2){ const tb=document.createElement('button'); tb.className='modetab'; tb.dataset.mode='thrift'; tb.setAttribute('onclick',"setMode('thrift')");
       tb.innerHTML='<span class="mti">'+SVG_TAG(15)+'</span><span>'+t('mode.thrift','Thrift')+'</span>';
@@ -2894,11 +2900,21 @@ function openAccount(fromPop){
       <div id="acctv2panel" style="display:none;padding:14px 18px 0"></div>`; /* 6h upgrade capsule now lives in the overview panel */
     acctTab('overview');
   }catch(_){} }
-  $('acctOverlay').classList.add('on'); track('account_open');
+  { const _ov=$('acctOverlay'), _m=_ov&&_ov.querySelector('.modal'); if(_m){ _m.style.transition=''; _m.style.transform=''; _m.style.animation=''; } _ov.classList.add('on'); } track('account_open');
   try{ if(!openAccount._pop && !(history.state&&history.state.v==='acct')) history.pushState({v:'acct',t:'overview'},''); }catch(_){ } // back closes the sheet, not the page
   openAccount._pop=false;
 }
-function closeAccount(){ $('acctOverlay').classList.remove('on'); }
+function closeAccount(instant){
+  const ov=$('acctOverlay'); if(!ov) return; const m=ov.querySelector('.modal');
+  if(!instant && isV2() && m && ov.classList.contains('on')){
+    // slide the sheet DOWN out of view, then hide it (owner 07-05 — was a hard disappear)
+    m.style.animation='none'; m.getBoundingClientRect(); // drop the entrance keyframe + lock current spot
+    m.style.transition='transform .26s cubic-bezier(.32,.72,0,1)'; m.style.transform='translateY(100%)';
+    setTimeout(()=>{ ov.classList.remove('on'); m.style.transform=''; m.style.transition=''; m.style.animation=''; }, 250);
+  } else {
+    ov.classList.remove('on'); if(m){ m.style.transform=''; m.style.transition=''; m.style.animation=''; }
+  }
+}
 // Change number: the phone IS the login — re-verify a new one through the same code flow.
 function editPhone(){ closeAccount(); try{ const f=$('auth_phone'); if(f) f.value=''; }catch(_){} openAuth(); try{ const l=$('auth_lead'); if(l){ l.textContent=t('auth.newcell','Give us your new celly'); l.removeAttribute('data-i18n'); } }catch(_){} }
 // Post-your-score as a POPUP (uniform with every other action): the composer card moves into an
@@ -5721,10 +5737,12 @@ function sheetDrag(overlayId, closeFn){
   document.addEventListener('touchmove',e=>{ if(!drag)return; const m=modal(); if(!m)return; dy=e.touches[0].clientY-y0;
     if(dy<=0){ drag=false; m.style.transform=''; return; } // scrolled up — hand back to the scroller
     if(dy>6){ e.preventDefault(); const shown = dy<=60 ? dy : 60 + (dy-60)*0.5; m.style.transition='none'; m.style.transform='translateY('+shown+'px)'; } },{passive:false});
-  document.addEventListener('touchend',()=>{ if(!drag)return; drag=false; const m=modal(); if(!m)return; m.style.transition='transform .22s'; if(dy>140){ closeFn(); setTimeout(()=>{ m.style.transform=''; m.style.transition=''; },250); } else { m.style.transform=''; } });
+  document.addEventListener('touchend',()=>{ if(!drag)return; drag=false; const m=modal(); if(!m)return;
+    if(dy>110){ m.style.transition='transform .24s cubic-bezier(.32,.72,0,1)'; m.style.transform='translateY(100%)'; setTimeout(()=>{ closeFn(); m.style.transform=''; m.style.transition=''; },240); } // slide the rest of the way DOWN, then hide
+    else { m.style.transition='transform .2s'; m.style.transform=''; } }); // snap back up
 }
 sheetDrag('buyOverlay', ()=>closeBuy());
-sheetDrag('acctOverlay', ()=>{ try{ closeAccount(); }catch(_){ } });
+sheetDrag('acctOverlay', ()=>{ try{ closeAccount(true); }catch(_){ } }); // sheetDrag already ran the slide-down → instant hide
 sheetDrag('coOverlay', ()=>{ try{ closeCheckout(); }catch(_){ } });
 async function buy(kind, annual){
   if(!isAuthed()){ signUp(); return; }
