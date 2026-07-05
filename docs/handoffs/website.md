@@ -69,10 +69,15 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
   ES unit drift llamada→verificación, warm errors, i18n wiring (auth.sending/resending, err.usonly,
   err.toofast, sc.posted keys) + ES for all new keys. Left per doc: err.generic warm-up (owner's call),
   v.failed removal (DevOps/status-table).
-- **Manage Zones consumer DONE (07-05) — wired to the contract, backend pending:** 3 screens built in
-  `#zones` (list → build/edit → live report), gated on `zone_sweeps`, "check" never "call". Verified
-  against a MOCKED `/app/zones/*`. **Blocked on DevOps shipping the real endpoints** (see below); UI
-  degrades to an empty state until they're live. Test: `scripts/_zones` (adhoc, mock-based).
+- **Manage Zones consumer DONE + REDESIGNED (07-05) — wired to the contract, backend pending:** 3 screens
+  in `#zones` (list → build/edit → live report), gated on `zone_sweeps`, "check" never "call".
+  **Redesigned map-first** per owner feedback (IMG_7684–7691): green selection (not brand-yellow), NO cost
+  shown, retail-identical store rows, prominent name field, content-flow layout (no more right-edge Save
+  cutoff), logo pins on the map, ZIP/town search + **GPS pin to re-sync location** (`zoneGPS`). Save now
+  **validates both**: no store → toast; no name → `#z_name` red + toast; never POSTs half-filled. My-Zones
+  list **paints from cached `ZONES.list` instantly** then refreshes (no loaddots on every open). Full ES
+  copy added (was English-only). **Blocked on DevOps shipping the real endpoints** (see below); UI degrades
+  to an empty state until live. Test: `scripts/qa-zones.mjs` (10 checks, mock-based, no-seed server).
 - **⛳ DEVOPS NEEDS TO SHIP (Zones):** the 7 `/app/zones/*` endpoints exactly per `manage-zones.md`
   (GET/POST/PATCH/DELETE `/app/zones`, GET `/app/zones/quote`, POST `/app/zones/:id/check`, GET
   `/app/zones/run/:runId`, POST `/app/zones/run/:runId/stop`) + `ownerUserId` on zones + a `zoneRunId`
