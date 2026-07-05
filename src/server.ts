@@ -368,8 +368,6 @@ app.get("/", (c) => {
   return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "") : page("app.html"));
 });
 app.get("/r", (c) => { c.header("Cache-Control", "no-store"); const h=(c.req.header("host") || "").toLowerCase(); return c.html(renderRunner(resolveBrand(h, c.req.query("brand")), h, "checkit.html", c.req.query("tone") || "")); });
-// Public documentation "book" — self-hosted at /book (customer-facing; no internal engineering section).
-app.get("/book", (c) => { c.header("Cache-Control", "no-store"); return c.html(page("book.html")); });
 // Preview-only: the redesigned result/live UI served from checkit-demo.html, so the live
 // site keeps the current design while we evaluate the new one. /demo?brand=<slug> picks a vertical.
 app.get("/demo", (c) => {
