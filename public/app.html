@@ -712,36 +712,9 @@
     </div>
   </section>
 
-  <section id="schedules">
-    <h2>Schedules</h2>
-    <div id="scheduleList"><div class="empty">Loading…</div></div>
-    <div class="card">
-      <div class="name">New schedule</div>
-      <div class="grid2">
-        <div><label>Name</label><input id="s_name" placeholder="Thursday B&N Pokémon"></div>
-        <div><label>Category</label><select id="s_cat"></select></div>
-        <div><label>Mode</label><select id="s_mode"><option value="restock">Restock</option><option value="carry">Carry</option></select></div>
-        <div><label data-tip="24h, store-local">Time</label><input id="s_time" placeholder="09:00"></div>
-      </div>
-      <label>Days</label>
-      <div id="s_days" class="daypick">
-        <label class="day"><input type="checkbox" value="0">Sun</label>
-        <label class="day"><input type="checkbox" value="1">Mon</label>
-        <label class="day"><input type="checkbox" value="2">Tue</label>
-        <label class="day"><input type="checkbox" value="3">Wed</label>
-        <label class="day"><input type="checkbox" value="4">Thu</label>
-        <label class="day"><input type="checkbox" value="5">Fri</label>
-        <label class="day"><input type="checkbox" value="6">Sat</label>
-      </div>
-      <label>Question</label>
-      <textarea id="s_q" rows="2" style="font-size:13px">Hi! I was just checking to see if you have any {category} in stock right now?</textarea>
-      <label>Clarification / what doesn't count</label>
-      <textarea id="s_clar" rows="2" placeholder="Sealed packs/tins/boxes from The Pokémon Company. Repackaged or off-brand does NOT count."></textarea>
-      <div style="margin-top:12px"><button class="act" onclick="addSchedule()">Create</button></div>
-    </div>
-  </section>
 
-  <section id="zones"><h2>Zones</h2><div id="zoneList"><div class="empty">Loading…</div></div></section>
+
+
   <section id="catalog"><h2>Tracked categories</h2><div id="catList"><div class="empty">Loading…</div></div></section>
   <section id="receipts">
     <h2>Kiosk</h2>
@@ -1160,8 +1133,8 @@ let CATEGORIES = [];
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
   godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Live','bolt'],['users','Users','card'],['restock','Restock','cal'],['growth','Policy','rise'],['calc','Calc','sliders']]},
-  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
-  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Chains','tree'],['settings','App','sliders']]},
+  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['receipts','Kiosk','tag']]},
+  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['statuses','Statuses','tag'],['trees','Chains','tree'],['settings','App','sliders']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['workflows','Workflows','note'],['testing','Testing','phone-call'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
@@ -3237,62 +3210,12 @@ function renderResults(){
   }).join('')+'</div>';
 }
 
-async function loadSchedules(){
-  const rows=await api('/api/schedules');
-  const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  document.getElementById('scheduleList').innerHTML = rows.length? rows.map(s=>{
-    const on=new Set(String(s.daysOfWeek||'').split(',').filter(x=>x!==''));
-    return `<div class="card"><div class="row" style="gap:12px">
-    <div class="grow">
-      <div class="sname"><span class="sdot ${s.active?'on':'off'}"></span>${esch(s.name)}</div>
-      <div class="smeta" style="margin-top:6px">${DOW.map((d,i)=>`<span class="daychip ${on.has(String(i))?'on':''}">${d}</span>`).join('')}</div>
-      <div class="smeta" style="margin-top:6px">fires ${esch(s.timeLocal)} store-local · cap ${s.maxCallSeconds}s</div>
-    </div>
-    <button class="ghost" onclick="toggleSchedule(${s.id},${!s.active})">${s.active?'Pause':'Resume'}</button>
-  </div></div>`;}).join('') : '<div class="empty">No schedules yet.</div>';
-}
-async function toggleSchedule(id,active){ await api('/api/schedules/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({active})}); loadSchedules(); }
-async function addSchedule(){
-  const days=[...document.querySelectorAll('#s_days input:checked')].map(c=>c.value).join(',');
-  const body={name:v('s_name'),categoryId:Number(v('s_cat')),mode:v('s_mode'),timeLocal:v('s_time'),daysOfWeek:days,
-    questionTemplate:v('s_q'),clarification:v('s_clar')||null,voiceId:'pm9SHWV7dZpfvnpJ6hSK'};
-  if(!body.name||!body.categoryId||!body.timeLocal||!days){toast('Name, category, time, and at least one day required');return;}
-  await api('/api/schedules',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  toast('Schedule created'); loadSchedules();
-}
 
-async function loadZones(){
-  const rows=await api('/api/zones');
-  if(Array.isArray(rows)) fillOptions('f_zone', [...new Set(rows.map(z=>z.name).filter(Boolean))].sort(), 'All zones'); // fill the Stores zone filter
-  document.getElementById('zoneList').innerHTML = rows.length? rows.map(z=>`<div class="card"><div class="row" style="gap:12px">
-    <div class="slogo"><span class="mono">${z.retailerIds.length}</span></div>
-    <div class="grow"><div class="sname">${esch(z.name)}</div><div class="smeta">${esch(z.centerZip||'')} · ${z.radiusMiles||'?'} mi radius · ${z.retailerIds.length} stores</div></div>
-    <button class="act" id="zonebtn_${z.id}" onclick="callZoneNow(${z.id},'${(z.name||'').replace(/'/g,'')}',${z.retailerIds.length})">${ICO('phone',15)} Call zone</button>
-  </div></div>`).join('') : '<div class="empty">No zones yet. Ask the Admin dev agent to build one.</div>';
-}
-async function callZoneNow(id,name,count){
-  const stores=await api('/api/zones/'+id+'/stores').catch(()=>[]);
-  const names=Array.isArray(stores)?stores.map(s=>s.name).filter(Boolean):[];
-  const n=names.length||count||0;
-  const list=names.length?('\n\nIt will call:\n'+names.slice(0,25).map(x=>'• '+x).join('\n')+(names.length>25?('\n…and '+(names.length-25)+' more'):'')):'';
-  if(!confirm('⚠️ Call ALL '+n+' stores in "'+name+'" right now?\n\nThis places '+n+' REAL phone calls to real stores at once. Use “Cancel zone” to hang up the whole batch.'+list)) return;
-  toast('Placing '+n+' calls…');
-  const r=await api('/api/zones/'+id+'/call-now',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
-  toast((r.placed||0)+' calls placed'); setTimeout(loadResults,2000);
-  const b=document.getElementById('zonebtn_'+id);
-  if(b) b.outerHTML=`<button class="ghost" id="zonebtn_${id}" onclick="cancelZone(${id},'${String(name).replace(/'/g,'')}')" style="color:#EF4444;border-color:rgba(239,68,68,.4)"><span style="color:#EF4444">■</span> Cancel zone</button>`;
-}
-// Cancel an in-progress zone — bulk hang-up of the batch (mirrors the single-call Stop button). POSTs
-// /api/zones/:id/hangup, then reverts the card.
-async function cancelZone(id,name){
-  const b=document.getElementById('zonebtn_'+id); if(b){ b.disabled=true; b.textContent='Cancelling…'; }
-  const r=await api('/api/zones/'+id+'/hangup',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
-  toast((r&&!r.error)?('Cancelled '+(r.cancelled!=null?r.cancelled+' ':'')+'calls in '+name):'Could not cancel the zone');
-  loadZones();
-}
+
+
 async function loadCatalog(){
   CATEGORIES = await api('/api/categories');
-  document.getElementById('s_cat').innerHTML = '<option value="" disabled selected>Choose a category</option>'+CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
+  const _sc=document.getElementById('s_cat'); if(_sc) _sc.innerHTML = '<option value="" disabled selected>Choose a category</option>'+CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
   fillSimSelects();
   // Each tracked category with how many stores carry it — turns an empty page into real intel.
   const intel=await api('/api/admin/store-intel').catch(()=>null); const bp=(intel&&intel.byProduct)||{};
@@ -4037,7 +3960,7 @@ async function agentSend(){
     const sec=SECTION_GROUP[want]?want:'dash';
     showGroup(SECTION_GROUP[sec], sec); })();
   await Promise.all([loadCatalog()]);
-  await Promise.all([loadStoreIntel(),loadResults(),loadSchedules(),loadZones(),loadSettings(),loadLiveStrip(),loadCredits(),loadTestStores(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen(),loadWorkflows()]);
+  await Promise.all([loadStoreIntel(),loadResults(),loadSettings(),loadLiveStrip(),loadCredits(),loadTestStores(),loadChains(),loadSandbox(),loadStatusReg(),loadDash(),loadLiveListen(),loadWorkflows()]);
   const sp=new URLSearchParams(location.search);
   restorePersist();
   decorateChrome();
