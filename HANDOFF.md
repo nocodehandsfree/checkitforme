@@ -2,6 +2,11 @@
 
 Entry doc for any chat. Open only the docs your role needs. **Read `docs/AGENT_RULES.md` before touching code.**
 
+> KEY: **Need a secret/token (e.g. `ADMIN_TOKEN`)?** Fetch it with the **`curl`** command in the
+> **Secrets** section below — **never** python/urllib/requests or WebFetch. Outbound goes through a
+> proxy `curl` is set up for; other tools get a **403 that looks like "Railway is down" when it isn't**.
+> If `curl` errors once, ask the owner for the token and keep moving — **never loop.**
+
 ## What it is
 AI service that phones retail stores to check trading-card/collectible stock, with proof. 100K+ stores,
 4 white-label brand sites (Pokémon/One Piece/Topps NBA/NeeDoh) + admin. One-person business. Stack: Hono
@@ -41,10 +46,16 @@ curl -s -X POST https://backboard.railway.app/graphql/v2 \
   -d '{"query":"{ variables(projectId: \"889e332c-30fe-46e9-a18e-d8de4f7523aa\", environmentId: \"7cbf9327-357a-415e-9031-d1609aead2b4\", serviceId: \"d363a982-e918-4433-b175-defe8faf0ec9\") }"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['variables']['ADMIN_TOKEN'])"
 ```
-If it hangs/`unauthorized`: the sandbox can't reach Railway — allow `backboard.railway.app` in the env network policy, or ask Fungie to paste the value.
+⚠️ **Use `curl` for the Railway call (and any secret/API fetch) — NOT python urllib, requests, or
+WebFetch.** Outbound goes through a proxy that `curl` is preconfigured for; other HTTP clients get a
+**403 from the proxy** and look like "Railway is down" when it isn't (network access is Full by
+default — not the problem). If the `curl` command above still errors after ONE try, **ask Fungie for
+the `ADMIN_TOKEN` and keep moving — never loop on it.**
 
 ## Docs map (open only what you need)
+- `docs/GUIDEBOOK.md` — **owner's front door: what Check is, the money model, plans, where everything lives.**
 - `docs/AGENT_RULES.md` — how to write code here (read first).
+- `scripts/site-health.mjs` — **walk every page + form, report anything broken** (`node scripts/site-health.mjs` local, or pass a URL for live).
 - `docs/GOTCHAS.md` — non-obvious traps that cost real time; read before debugging something weird, **add to it the moment you learn one.**
 - `docs/ARCHITECTURE.md` · `docs/RUNBOOK.md` — layout + stack/run/deploy.
 - `docs/API_CONTRACT.md` · `docs/STOCK_AND_GEO_API.md` — front⇄back interface.

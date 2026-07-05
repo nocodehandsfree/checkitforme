@@ -10,9 +10,16 @@ needs them (don't pre-read).
 > **Update rule:** the moment you finish, get blocked, or discover a task — edit this block. And do a quick
 > pass before you end a session. This is the only thing the next chat re-reads, so it must be current.
 
-**▶ Doing now:** **Owner call-testing loop on staging** — Website owns the voice-on-website lane now (Admin
-stays on the admin panel). Owner places Fun-store calls testing the **Branson test workflow** (openers/persona/
-voice) + status printing; we fix what the calls surface. Goal: staging call experience as good as possible →
+**▶ Doing now:** **Site-redesign loop in STANDING-WATCH mode** (cron `ca599466` — never self-exits, owner
+stops it). Round 2 structurally rebuilt EVERY comp screen after the owner's correction ("reskin ≠ rebuild")
+and his font catch: Google Fonts was BLOCKED on his network so the whole site silently fell back to the
+system font — **Inter is now SELF-HOSTED** (`/fonts/inter-var-latin.woff2` + new `/fonts/:file` route in
+`server.ts`; Google links removed from the head). 7 consecutive clean audit passes since; 45 rendered proofs
+in `loops/site-redesign/proofs/`; full state of record = `loops/site-redesign/MANIFEST.md`. Each firing now
+= regression sweep + audit anything other lanes push.
+ALSO still live: **owner call-testing loop on staging** — Website owns voice-on-website (Admin stays on the
+admin panel). Owner places Fun-store calls testing the **Branson test workflow** (openers/persona/voice) +
+status printing; we fix what the calls surface. Goal: staging call experience as good as possible →
 promote to prod → owner starts real-store calls for real ABC/ROI data.
 - Status pipeline (learned): `/pub/result` finalizes ON-DEMAND at call end (EL hydration-gap guarded in
   `elevenlabs.ts`; consensus second-read only when EL unclear) and stamps `statusKey` on every settled verdict.
@@ -30,11 +37,54 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
 - Restock premium vs non-premium — logic verified: `isMember` (active sub) → alert-me module; free →
   "check back soon". Owner is comp/premium so only sees member view; behavior is a clean on/off in code.
 
+**✅ SHIPPED 07-05 (owner screenshot batch IMG_7643–7651 — all on staging):**
+- Hobby/retail cluster: hero "in stock?" header stays visible through the hunt (#41); era-lock logo
+  width capped so "N sets" + Change always fit (#43); product-lock clears the carried-in store so the
+  shop list opens unselected — no more double-highlight/stuck pick (#42); **Retail lists general retail
+  ONLY** — Hobby card shops & Thrift stores stay in their own chips (#40); the hobby hunt owns one
+  history entry so browser/OS **back walks the steps out** (shop→products→sets→eras→Retail) instead of
+  escaping to a stale My-checks entry (#44). Regression test: `scripts/qa-huntback.mjs`.
+- Result rail line now ends at the terminus dot's center, not below the verdict text (#37); driver
+  handoff drop-toggle relabelled to single-line balanced "Ship to me / Drive to me" + more space under
+  the heading (#36); account sheet pinned to a stable height so its top edge stays put across
+  Overview/Activity/Earn (#38); add-store close-X hardened (z-index) + notify copy sharpened — data
+  lands in **Admin → Store requests**, contact field drives the "when it's live" notify (#39); post-score
+  photo picker dashes red on empty submit like the add-store form (#9).
+- **⚖️ OWNER DECISION NEEDED (#12):** owner mused "only pull in stores you've checked + got an in-stock
+  status." Left UNBUILT — the literal reading breaks new-store discovery (you can't check a store you've
+  never checked). The concern it came from (too many/irrelevant stores) is already solved by #40. Confirm
+  intent before building anything here.
+
 **🔨 Build / fix:**
 - **🅿️ Manage Zones (premium `zone_sweeps`) — full spec `docs/specs/manage-zones.md`.** In My Checks:
   build a zone (radius quick-add + tap-to-light-up stores), save it, then "Check all" → a live
   multi-store report (one row per store, reuses the 6M result card). Terminology: "check" NEVER "call".
   DevOps builds the `/app/zones/*` contract in the spec; wire the 3 screens against it.
+- **DevOps site-health caught: `/p/privacy` loads a 404 resource** (2026-07-04, `scripts/site-health.mjs`).
+  The privacy content page pulls something that 404s — fill/fix the privacy page body (POLICY.pages.privacy)
+  or the missing asset. Every other view (4 brands × 8 views) + all forms are healthy.
+- **🅿️ DevOps → Website (2026-07-03, UPDATED — 4 tiers + premium features): wire the plans sheet to
+  `GET /pub/plans`.** It's the live source of truth (published to Stripe), shape now:
+  `{ features:[{key,label}], everyPlanGets:[key…], tiers:[{key,name,monthlyCents,annualCents,
+  checksPerMonth,premiumAsks,features:{key:bool}}], payg:[{checks,cents}] }`.
+  - **Render the 4 tiers** (low→high: Family/Collector/Hunter/Operator) + the **PAYG slider** from it —
+    NOT the hardcoded `tiers()` (those names/prices are stale). Owner edits all of it in Admin → Plans.
+  - **"EVERY PLAN GETS" grid** = map `everyPlanGets` → `features[].label` (icons per the comp). These are
+    the 8 premium features; render them exactly as `NEW_CHECK_COMPS` shows.
+  - **Gate premium UI on entitlement:** `/app/me` now returns `features:{key:bool}` (comp→all,
+    subscriber→their tier, **PAYG/free→ALL false**). Show/enable a premium feature's UI only when its
+    key is true. **PAYG customers must NOT see premium features as available** — that's the sync rule.
+  - **Checkout:** `POST /app/checkout {kind, annual}` — kind = tier key (`family|collector|hunter|
+    operator`) with `annual:true` for yearly, OR `payg:<checks>` (e.g. `payg:25`). `/app/me` also has
+    `subTier`, `quota` (sub checks left this cycle), `payg` (permanent balance), `credits` (sum).
+  - **Checkout LOOK — embedded, SHIPPED (Website, 2026-07-03):** DONE. Live plans sheet (tiers/grid/PAYG
+    off `/pub/plans`) + the branded 6c `#coOverlay` (Stripe Payment Element styled to `NEW_CHECK_COMPS`
+    via `POST /app/checkout-intent`, `confirmPayment(redirect:if_required)`, poll `/app/me`, 6d success).
+    Graceful hosted-redirect fallback when no on-page intent. **PAYG branded flow VERIFIED end-to-end on
+    staging with test card 4242** (credits 1→26). ⚠️ **Subscription-tier Elements is blocked on a DevOps
+    backend bug** — `createCheckoutIntent` reads `latest_invoice.payment_intent` which the current Stripe
+    API version returns null; tiers fall back to the working hosted redirect until fixed. Full status +
+    the me.features gating follow-up: **`docs/handoffs/CHECKOUT_STATUS.md`**.
 - **PROD-only, check after promote:** owner can't navigate back to June's calls on production. Staging's
   history/calendar code is far ahead — promote likely fixes it; verify on prod after pushing, else debug
   the calendar month-nav (`RAIL_CAL_M`/`openRailCal`). Not blocking.
@@ -52,10 +102,17 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
 **⏳ Blocked / waiting on others:** — (kiosk nudge, shipment opener, Topps logo, entrance animation all closed by owner 2026-07-01)
 
 **✅ Recently done** (newest first; trim when long):
-- **🌅 OVERNIGHT REDESIGN RUN COMPLETE (2026-07-02)** — full report at `loops/site-redesign/MANIFEST.md`
-  (top). 23 cycles, exit on two clean audit sweeps. Preview: `?skin=v2` (+`&flow=hobby` /`&show=signup`
-  /`&show=mychecks` hidden pages); `?skin=off` reverts; default site untouched. 1 BLOCKED: YOUR HUNT
-  needs the price-aggregation backend. COPY QUEUE has 4 items for Copy lane.
+- **🌅 REDESIGN ROUND 2 (2026-07-02, ~25 cycles after the owner's correction)** — every comp frame
+  STRUCTURALLY rebuilt to its extracted markup (6a/6b/6d sheets, 6e–6i account, R1–R3, SC1/SC2, RN1/RN2,
+  P1–P6, hobby P3a–P5, IS1/T1, L1a–c), all proofed in true Inter. **Font root-cause (owner caught it):
+  Google Fonts blocked on some networks → SELF-HOSTED Inter now.** ES: 58 missing v2 keys drafted + a
+  pre-v2 leak fixed (the PRIMARY 'Check this store' CTA was never keyed — English in Spanish since v1;
+  now `cs.cta`). Lens rotations A–F ×4: store-row scale, RESULT-chip/sentence specs, demo-bubble tails,
+  kiosk hint border, v1-untouched proof, desktop/tablet, reduced-motion, deployed-staging freshness all
+  verified. 7 clean passes running. Preview: `?skin=v2` (+`&flow=hobby`/`&show=signup`/`&show=paid`
+  /`&show=mychecks`); `?skin=off` reverts. Blocked: YOUR HUNT (price backend) · Check+/Buy-checks tab
+  (empty packs). COPY QUEUE: comp copy rulings + ES draft ratification + Runnr footer + 'Legal' merge.
+  ⚠ Preview badge + `?skin` gate are TEMPORARY — strip at promote.
 - **Silent-agent incident (2026-07-02) root-caused + mitigated in minutes:** ABC recipe-timer muted the agent
   19s on the direct-answer Fun store (`avgTreeSeconds=19` on a `navType:'direct'` chain; VAD skipped). Cleared
   the chain value + flipped `connectOnHuman:false` on staging. Bug filed with DevOps; don't re-enable ABC on

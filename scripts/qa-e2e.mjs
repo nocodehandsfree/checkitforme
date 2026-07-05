@@ -31,7 +31,7 @@ try {
     await pg.waitForTimeout(600);
     eq(`${path}: --accent var`, (await pg.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent').trim())).toUpperCase(), accent);
     eq(`${path}: v2 page bg`, await pg.evaluate(() => getComputedStyle(document.body).backgroundColor), rgb('1D1D22'));
-    has(`${path}: preview badge visible`, await pg.evaluate(() => !![...document.querySelectorAll('button')].find(b => b.textContent.includes('NEW LOOK'))));
+    has(`${path}: no preview badge (owner-removed)`, await pg.evaluate(() => ![...document.querySelectorAll('button')].find(b => b.textContent.includes('NEW LOOK'))));
     await pg.close();
   }
 
@@ -75,6 +75,10 @@ try {
   await pg2.goto(`${BASE}/pokemon?flow=hobby`, { waitUntil: 'domcontentloaded' }); // no skin flag!
   await pg2.waitForTimeout(700);
   has('hobby stays HIDDEN without v2', await pg2.evaluate(() => document.getElementById('hobby')?.classList.contains('hidden')));
+  // owner law: hobby is Pokémon-gated (cards/TCG only, NEVER NeeDoh; the feed is Pokémon's registry)
+  await pg2.goto(`${BASE}/needoh?skin=v2&flow=hobby`, { waitUntil: 'domcontentloaded' });
+  await pg2.waitForTimeout(1200);
+  has('hobby stays HIDDEN on non-Pokémon brands (owner law)', await pg2.evaluate(() => document.getElementById('hobby')?.classList.contains('hidden')));
   await pg2.goto(`${BASE}/pokemon?skin=v2&flow=hobby`, { waitUntil: 'domcontentloaded' });
   await pg2.waitForTimeout(1500);
   const hob = await pg2.evaluate(() => { const h = document.getElementById('hobby'); return { open: h && !h.classList.contains('hidden'), eras: h ? h.querySelectorAll('.hob-era').length : 0 }; });
@@ -92,7 +96,100 @@ try {
   // click product → outcome manifests: back on builder with a lock toast
   await pg2.click('.hob-prod'); await pg2.waitForTimeout(600);
   has('product click → returns to builder', await pg2.evaluate(() => !document.getElementById('builder').classList.contains('hidden')));
+  // watch-10 regression guard: the P5 lock must SURVIVE a store pick (it was silently erased before)
+  has('P5 lock survives store pick → call carries the product', await pg2.evaluate(() => {
+    if (!SEL_PRODUCT) return false;
+    STORES = [{ id: 991, name: 'QA Store' }]; window.isClosed = () => false; window.chainCarriesBrand = () => true;
+    pickStore(991);
+    return !!SEL_PRODUCT;
+  }));
   await pg2.close();
+
+  // ---- 6b. LENS B — BUTTON PATHS: every tap lands its outcome (rendered clicks).
+  const pg3 = await browser.newPage();
+  await pg3.goto(`${BASE}/pokemon?skin=v2`, { waitUntil: 'domcontentloaded' });
+  await pg3.waitForTimeout(900);
+  // brand switcher opens its menu
+  await pg3.evaluate(() => document.getElementById('vsw_trig')?.click());
+  await pg3.waitForTimeout(250);
+  has('brand switcher → menu opens', await pg3.evaluate(() => { const m = document.querySelector('.vsw-menu'); return m && getComputedStyle(m).display !== 'none' && m.offsetParent !== null; }));
+  await pg3.keyboard.press('Escape');
+  // anon My pill → auth pop-up
+  await pg3.evaluate(() => { document.querySelectorAll('.vsw-menu').forEach(m => m.classList.remove('open')); signUp(); });
+  await pg3.waitForTimeout(350);
+  has('anon My/Join → auth opens', await pg3.evaluate(() => !!document.getElementById('auth_phone') && !!document.querySelector('#authOverlay.on,#authOverlay .modal')));
+  await pg3.evaluate(() => { try { closeAuth(); } catch (e) { document.querySelectorAll('.overlay.on').forEach(o => o.classList.remove('on')); } });
+  // language switcher opens
+  await pg3.evaluate(() => document.getElementById('lsw_trig')?.click());
+  await pg3.waitForTimeout(250);
+  has('language switcher → menu opens', await pg3.evaluate(() => [...document.querySelectorAll('.vsw-menu')].some(m => m.offsetParent !== null)));
+  await pg3.evaluate(() => document.querySelectorAll('.vsw-menu').forEach(m => m.classList.remove('open')));
+  // footer Scores → success wall view
+  await pg3.evaluate(() => { openSuccess(); });
+  await pg3.waitForTimeout(400);
+  has('Scores → wall view shows', await pg3.evaluate(() => !document.getElementById('success').classList.contains('hidden')));
+  await pg3.evaluate(() => backToBuilder());
+  // 6a SEE PLANS → closes upsell, opens the 6b sheet (auth-stubbed)
+  await pg3.evaluate(() => { window.isAuthed = () => true; ACCOUNT = { phone: '+1', credits: 1, subscription: null }; openUpsell(); });
+  await pg3.waitForTimeout(300);
+  await pg3.evaluate(() => { document.getElementById('up6a_cta')?.click(); });
+  await pg3.waitForTimeout(400);
+  has('6a SEE PLANS → 6b sheet opens', await pg3.evaluate(() => document.getElementById('buyOverlay').classList.contains('on') && !document.getElementById('upsellOverlay').classList.contains('on')));
+  // 6b tier tap → selection ring moves + CONTINUE capsule present
+  await pg3.evaluate(() => pickTier('t1'));
+  await pg3.waitForTimeout(300);
+  has('6b tier tap → ring moves + CONTINUE', await pg3.evaluate(() => { const sel = document.querySelector('#buy_plans .plan.sub'); return !!sel && !!document.getElementById('buy_cta'); }));
+  await pg3.evaluate(() => closeBuy());
+  // account rows: history + earn land their outcomes
+  await pg3.evaluate(() => { openAccount(); });
+  await pg3.waitForTimeout(400);
+  await pg3.evaluate(() => acctTab('earn'));
+  await pg3.waitForTimeout(250);
+  has('account Earn tab → 4 earn rows', await pg3.evaluate(() => document.querySelectorAll('#acctv2panel button').length >= 4));
+  await pg3.evaluate(() => { closeAccount(); });
+  // result-page paths: Too far → Runnr view; restock row → watch modal; watch empty submit → error
+  await pg3.evaluate((tr) => { SEL_STORE = { id: 1, name: 'Card Kingdom' }; SEL_CATS = ['pokemon']; showResult({ status: 'completed', confirmed: true, transcript: tr }, 'local:q'); }, 'Agent: in stock?\nClerk: yes');
+  await pg3.waitForTimeout(600);
+  await pg3.evaluate(() => openDriverDemo());
+  await pg3.waitForTimeout(400);
+  has('Too far → Runnr hand-off view', await pg3.evaluate(() => !document.getElementById('handoff').classList.contains('hidden')));
+  await pg3.evaluate(() => { backToBuilder(); openWatch(); });
+  await pg3.waitForTimeout(400);
+  await pg3.evaluate(() => { const b = document.getElementById('watch_btn'); const i = document.getElementById('watch_contact'); if (i) i.value = ''; b && b.click(); });
+  await pg3.waitForTimeout(400);
+  has('watch empty submit → field highlighted (owner: no red words)', await pg3.evaluate(() => document.getElementById('watch_contact')?.classList.contains('fld-err')));
+  await pg3.close();
+
+  // ---- 6c. STANDING-WATCH INVARIANTS (manual probes made permanent).
+  const pg4 = await browser.newPage();
+  await pg4.goto(`${BASE}/pokemon?skin=v2`, { waitUntil: 'domcontentloaded' });
+  await pg4.waitForTimeout(1200);
+  // self-hosted Inter actually loads and renders (the owner's font catch — never regress this)
+  has('self-hosted Inter loads (900 weight)', await pg4.evaluate(async () => { try { await document.fonts.load('900 26px Inter'); return document.fonts.check('900 26px Inter'); } catch (e) { return false; } }));
+  // Lens E fix holds: 6e wash top pad = 10px
+  const wash = await pg4.evaluate(() => { window.isAuthed = () => true; ACCOUNT = { phone: '+1', credits: 1, subscription: 'active' }; openAccount(); const w = document.querySelector('.acctv2head .wash'); return w ? getComputedStyle(w).paddingTop : '?'; });
+  eq('6e wash top pad (comp)', wash, '10px');
+  await pg4.close();
+  // v1 invariant: default site untouched — gold sheet CTA, purple accents, no badge, no skin attr
+  const pg5 = await browser.newPage();
+  await pg5.goto(`${BASE}/pokemon?skin=off`, { waitUntil: 'domcontentloaded' });
+  await pg5.waitForTimeout(1200);
+  const v1 = await pg5.evaluate(() => {
+    SEL_STORE = { id: 1, name: 'X' }; SEL_CATS = ['x']; showCallSheet();
+    const cta = getComputedStyle(document.getElementById('cs_call'));
+    hideCallSheet();
+    return { skin: document.documentElement.dataset.skin || '', badge: !![...document.querySelectorAll('button')].find(b => b.textContent.includes('NEW LOOK')),
+      gold: cta.backgroundColor, purple: getComputedStyle(document.documentElement).getPropertyValue('--purple').trim() };
+  });
+  has('v1: no skin attr + no badge', v1.skin === '' && !v1.badge);
+  eq('v1: sheet CTA still GOLD', v1.gold, 'rgb(255, 203, 5)');
+  eq('v1: --purple untouched', v1.purple, '#A78BFA');
+  // v2 deep links must NOT leak into the default skin (watch-8 seal)
+  await pg5.goto(`${BASE}/pokemon?skin=off&show=signup&flow=hobby`, { waitUntil: 'domcontentloaded' });
+  await pg5.waitForTimeout(1500);
+  has('v1: v2 deep links sealed (no upsell/hobby)', await pg5.evaluate(() =>
+    !document.getElementById('upsellOverlay')?.classList.contains('on') && document.getElementById('hobby')?.classList.contains('hidden')));
+  await pg5.close();
 
   // ---- 7. LOGIN ERROR STATE (§5.12): submit empty → under-field line + red ring on the well.
   await pg.evaluate(() => { window.signIn && signIn(); });

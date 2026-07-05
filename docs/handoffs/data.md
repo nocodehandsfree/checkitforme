@@ -65,6 +65,109 @@ ME03 = Perfect Order — the design grid had these mislabeled).
 
 ## Current focus (KEEP UPDATED)
 
+**Session 2026-07-04 (later) — Grocers made callable for SHELF Pokémon (dual kiosk+retail). Staging.**
+- **Problem:** grocery chains were in our data ONLY as Pokémon vending-KIOSK sites (from
+  `pokemon-vending-import.json`, 1,915 machines) — `sellsPacks=false`, so a call only asked "is the
+  machine working?", never "do you have Pokémon in stock?". But these grocers also sell Pokémon on
+  SHELVES, so they should be callable.
+- **Model (verified in code):** the call script follows the TAB, not the store — `SEL_KIOSK` is set by
+  which section you tap (checkit.html 3560 retail→false, 3575 kiosk→true) and the request's `kioskMode`
+  WINS over the store's flags (service.ts 208). So ONE dual-flagged row (`hasKiosk=true` +
+  `sellsPacks=true` + real phone) shows in BOTH sections and asks the right question each. No duplicate rows.
+- **Did it (scope = ALL stores of verified chains, not just machine-sites):** flipped `sellsPacks=true`
+  via `POST /api/stores/patch {where:{chain},set:{sellsPacks:true}}` on **23 verified banners, 4,647 rows** —
+  Kroger family (Kroger, Fred Meyer, Fry's, King Soopers, Food 4 Less, Smith's, QFC, Pick 'n Save, Metro
+  Market, Mariano's, City Market, Harris Teeter, Ralphs) + Albertsons family (Albertsons, Safeway,
+  Jewel-Osco, Vons, Shaw's, Acme, Tom Thumb, Randalls, Star Market, Pavilions). They already had real
+  phones + Pokémon in carries + logos, so they now show callable in Pokémon retail mode; machine-ones
+  are dual-section (tier 5 kept). Verified near LA (36 grocers callable, machine-ones both sections).
+- **Certainty gate (owner: "absolutely certain they sell shelf Pokémon"):** confirmed via each family's
+  online store (kroger.com, safeway/vons/albertsons.com list live Pokémon SKUs). H-E-B confirmed too.
+- **HELD (not flipped):** **H-E-B** (84 rows — verified shelf-seller BUT placeholder rows have NO phone;
+  heb.com is Akamai-walled, so phones need a local pull / research-Claude — "you run the rest" case).
+  **WinCo, Woodman's, Gelson's, Lucky, FoodMaxx, H Mart, Uwajimaya** = shelf-Pokémon unproven, held.
+  **Mall kiosks** (Citadel/Chapel Hills/etc.) = no shelf, stay kiosk-only.
+- **Promote to prod:** re-run the same `/api/stores/patch` sellsPacks=true for those 23 banner names on
+  checkitforme.com. Then do H-E-B once its phones exist.
+
+**Session 2026-07-04 — THE PHONEBOOK: 4,123 card + 436 comic shops harvested; Thrift turned on. Staging.**
+- **National Hobby 1,188 → 5,710. Thrift 0 → 3,479.** All on staging, all correctly tagged, zero tag drift.
+- **cardshophub.com is fully harvestable** (the "phonebook"): each shop page is server-rendered JSON-LD
+  (`<script id="shop-json-ld">` → name/streetAddress/city/state/zip/telephone/geo). Sitemap enumerates
+  6,672 shop URLs at `/states/<st>/<city>/<shop>/`. Plain curl (browser is proxy-blocked with
+  ERR_CONNECTION_RESET; curl through `$HTTPS_PROXY` works). Harvested all 6,672 → **4,123 card shops,
+  50 states** after dropping 2,254 big-chain rows (GameStop/Target/etc — NEVER re-chain those) + 254
+  no-phone + 41 dup. Tooling committed: `scripts/harvest-shop-directory.py` + `scripts/transform-shops.py`.
+- **comicshoplocator.com = one-file dump.** Its locator.js does `fetch('/comic-shops/stores-search.json')`
+  — the whole directory (443 shops, compact keys n/st/c/sta/z/la/lo/p) in ONE request. → **436 comic
+  shops, 45 states.** Comic shops carry Pokémon/Magic/Yu-Gi-Oh/One Piece/Lorcana.
+- **Store-type model (owner: "must figure out the store type… maybe a Bookstore vertical later"):** chip
+  `type` is the UMBRELLA (both comic + card = "Hobby" so they ride the Hobby chip); the CHAIN is the
+  specific kind — **"Comic Book Shop" (chain 129)** vs **"Independent Card Shop" (chain 128)**, both
+  `type=Hobby isMSRP=false` (SHOP PRICES). Thrift kinds = Goodwill/Salvation Army/Savers/**Unique** (116-119,
+  `type=Thrift`). A **Bookstore** vertical is a straight `?type=Bookstore` later (that type already exists, 746).
+- **⚠️ HOURS ARE THE GAP.** Neither directory publishes structured open/close times — harvested shops
+  default to "open by day, closed 1-6am". The paid lookup works (proved on 6 LA shops → real hours +
+  live labels): `POST /api/hours/backfill` (bulk, fire-and-forget) or `POST /api/hours/:id/refresh`,
+  gated by policy flag `dogfoodHours` (OFF, ~1-2¢/store, ~5k hobby shops ≈ ~$100). **Owner deciding
+  whether to green-light.** Server has the OPENAI/GEMINI keys; my shell does not.
+- **Durable + prod-promotable:** `data/hobby-card-shops.json` (4,123), `data/comic-shops.json` (436),
+  `data/hobby-shops.json` (8 curated). **Promote to prod** = `POST checkitforme.com/api/stores/import`
+  each file, then PATCH the thrift chains (116-119→Thrift) + assert 128/129→Hobby on prod. Loop cron
+  `9e2bde0e` (15-min, 12x) keeps re-verifying tags (clobber watch) and stands ready to fold in hours.
+
+**Session 2026-07-03 (late) — Hobby expansion + phonebook-source assessment. Staging.**
+- **8 more verified card shops live on the LA Hobby chip** (was 16 CA Hobby, mostly GameStop; the LA
+  metro read as 5 GameStop + 2 indies). New indies, each Census-geocoded, real address/phone/hours,
+  in **`data/hobby-shops.json`** (version-controlled = re-importable to any env): Cards and Coffee
+  (Hollywood, Calabasas, Murrieta, Salt Lake City), Cash Cards Unlimited (Canoga Park, Thousand Oaks),
+  CoreTCG (Pasadena), LA Sports Cards (Burbank). Import result 8 inserted / 0 dup. LA Hobby chip now
+  **13 near-LA (5 GameStop + 8 indie)**, open/closed labels computing right off the hours I set.
+  Each got its OWN chain typed Hobby at insert (importer: category "hobby" → type Hobby), so they
+  survive the now-fixed boot backfill (fill-only skips already-typed chains).
+- **⚠️ CA GameStop under-imported:** CA has only 14 GameStop rows typed Hobby vs FL 106 / TX 64 / NY 59.
+  National GameStop = 1,186 (the Hobby backbone) but the CA slice is a thin early batch. Backfilling CA
+  GameStop needs a store list (their locator is bot-walled like WPN) — follow-up, owner's call.
+- **Phonebook-source verdict (owner asked "is there a source to grab a whole bunch like a phonebook"):**
+  the clean bulk sources are all walled from a plain fetch — WPN/Wizards locator = HTTP 403, Cards&Coffee
+  site = 402, cardshophub.com = a JS-rendered SPA (fetch sees only the title) AND rate-limited ("Too many
+  requests"). So no vacuum-it API. Two real paths: (a) point the research-Claude at a metro and have it
+  emit JSON in the importStores shape (schema below) — I one-shot import it; (b) a headless-browser
+  (Playwright is installed) harvest of cardshophub/locators — bigger job, ToS-gray, needs owner OK.
+  Nothing for the owner to do locally either way.
+- **Review pass (owner: "make sure everything's good"):** merged 30 upstream commits, `tsc` clean.
+  Verified intact on staging: `/pub/pokemon-sets` serves JSON (13 eras, v7 assets), `?type=Hobby`
+  filter, unverified `shipmentDay` still withheld from consumers, trimmed hours labels rendering.
+  One latent gap: a **Thrift** chip (owner's 4th taxonomy word) would be EMPTY — zero chains typed
+  "Thrift" (thrift stores sit under Discount/Off-Price). Not wired as a live chip yet, so not blocking.
+- **Durability:** all of the above is on STAGING. To make permanent, import `data/hobby-shops.json` to
+  prod (`POST checkitforme.com/api/stores/import`) — owner go/no-go, since prod shops are instantly callable.
+
+**⚡ CLOBBER ROOT CAUSE FOUND + FIXED (Website, 2026-07-03 ~05:30):** `backfillChainTypes()` in
+`src/db/import-data.ts` ran on EVERY boot and force-overwrote every chain's type from the name
+heuristic — that's what kept reverting GameStop/Burbank/PokeMall to "Other" on each deploy. It is
+now FILL-ONLY (skips any chain already typed something other than empty/"Other"). **Action for
+Data: re-apply your three chain PATCHes once more (30, 122, 123 → Hobby) — they will now stick
+across deploys.** The website's Hobby chip is live and waiting on that feed.
+**Session 2026-07-03 — Hobby went live on staging (stores + sets + filter).**
+- **Hobby STORES exist now** (they didn't — that was the "website waiting on data" blocker):
+  GameStop chain 30 → type "Hobby", isMSRP false, stockCheckMethod call, all 1,186 stores tier 2→3
+  (visible). Imported the owner's two named indie shops (verified address/phone/hours, Census-geocoded):
+  **Burbank Sportscards** (id 106573) + **PokeMall TCG** (id 106574), each its own chain (122/123),
+  type Hobby. More metro card shops = next.
+- **`/pub/stores/near?type=Hobby`** — new server-side chain-type filter (the home chips). Without it
+  the nearest-200 page in a metro is all Retail and the Hobby chip starves client-side.
+- **Pokémon set registry shipped**: `data/pokemon-sets.json` (13 eras / 129 sets, Base Set 1999 →
+  Delta Reign 2026) served at **`GET /pub/pokemon-sets`** with per-set products (type + retail from the
+  catalog) and SAME-ORIGIN asset paths (`/logos/sets|set-banners|eras/<logoKey>.png`) matching the
+  /logo-wall repo system. Logo dev drops PNGs at those paths; website renders feed.logo/banner.
+  ME codes verified vs TCGplayer: **ME2.5 = Ascended Heroes, ME03 = Perfect Order.**
+- **⚠️ CLOBBER WATCH:** something re-synced the `chains` table on staging tonight and reverted my
+  chain PATCHes once (GameStop back to type Other; the 2 new chains reset). Store rows survived.
+  Re-applied + verified. If Hobby stores vanish from the feed again, a chains config sync is
+  overwriting live edits — flag DevOps to make it respect newer rows.
+
+
 **Session 2026-07-02 — consumer surfaces show only what we KNOW (owner rule). Staging.**
 - **No unverified restock info reaches consumers, anywhere.** (1) `/pub/stores/near` no longer sends
   `shipmentDay` (the site printed junk like "drops eve" = "every single week" truncated). (2) Best

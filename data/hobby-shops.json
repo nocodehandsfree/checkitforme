@@ -1,0 +1,359 @@
+[
+  {
+    "chain": "Cards and Coffee",
+    "name": "Cards and Coffee Hollywood",
+    "category": "hobby",
+    "address": "6363 Hollywood Blvd",
+    "city": "Los Angeles",
+    "state": "CA",
+    "zip": "90028",
+    "lat": 34.101665,
+    "lng": -118.328752,
+    "phone": "(213) 713-5973",
+    "carries": [
+      "Sports Cards (Topps/Panini)",
+      "Pokémon"
+    ],
+    "sellsPacks": true,
+    "tier": 3,
+    "hours": {
+      "mon": [
+        "11:00",
+        "18:00"
+      ],
+      "tue": [
+        "11:00",
+        "18:00"
+      ],
+      "wed": [
+        "11:00",
+        "18:00"
+      ],
+      "thu": [
+        "11:00",
+        "18:00"
+      ],
+      "fri": [
+        "11:00",
+        "18:00"
+      ],
+      "sat": [
+        "11:00",
+        "18:00"
+      ],
+      "sun": [
+        "11:00",
+        "18:00"
+      ]
+    }
+  },
+  {
+    "chain": "Cards and Coffee",
+    "name": "Cards and Coffee Calabasas",
+    "category": "hobby",
+    "address": "23383 Mulholland Dr",
+    "city": "Woodland Hills",
+    "state": "CA",
+    "zip": "91364",
+    "lat": 34.157922,
+    "lng": -118.635552,
+    "phone": "(213) 448-7231",
+    "carries": [
+      "Sports Cards (Topps/Panini)",
+      "Pokémon"
+    ],
+    "sellsPacks": true,
+    "tier": 3,
+    "hours": {
+      "mon": [
+        "12:00",
+        "20:00"
+      ],
+      "tue": [
+        "12:00",
+        "20:00"
+      ],
+      "wed": [
+        "12:00",
+        "20:00"
+      ],
+      "thu": [
+        "12:00",
+        "20:00"
+      ],
+      "fri": [
+        "12:00",
+        "20:00"
+      ],
+      "sat": [
+        "12:00",
+        "20:00"
+      ],
+      "sun": [
+        "12:00",
+        "20:00"
+      ]
+    }
+  },
+  {
+    "chain": "Cards and Coffee",
+    "name": "Cards and Coffee Murrieta",
+    "category": "hobby",
+    "address": "40165 Murrieta Hot Springs Rd #B",
+    "city": "Murrieta",
+    "state": "CA",
+    "zip": "92563",
+    "lat": 33.555371,
+    "lng": -117.170769,
+    "phone": "(951) 319-6788",
+    "carries": [
+      "Sports Cards (Topps/Panini)",
+      "Pokémon"
+    ],
+    "sellsPacks": true,
+    "tier": 3,
+    "hours": {
+      "mon": [
+        "10:00",
+        "16:30"
+      ],
+      "tue": [
+        "10:30",
+        "19:00"
+      ],
+      "wed": [
+        "10:30",
+        "19:00"
+      ],
+      "thu": [
+        "10:30",
+        "19:00"
+      ],
+      "fri": [
+        "10:30",
+        "19:00"
+      ],
+      "sat": [
+        "10:30",
+        "19:00"
+      ],
+      "sun": null
+    }
+  },
+  {
+    "chain": "Cards and Coffee",
+    "name": "Cards and Coffee Salt Lake City",
+    "category": "hobby",
+    "address": "351 W 400 S",
+    "city": "Salt Lake City",
+    "state": "UT",
+    "zip": "84101",
+    "lat": 40.760586,
+    "lng": -111.901127,
+    "phone": "(385) 867-8388",
+    "carries": [
+      "Sports Cards (Topps/Panini)",
+      "Pokémon"
+    ],
+    "sellsPacks": true,
+    "tier": 3
+  },
+  {
+    "chain": "Cash Cards Unlimited",
+    "name": "Cash Cards Unlimited Canoga Park",
+    "category": "hobby",
+    "address": "6600 Topanga Canyon Blvd Suite 2104",
+    "city": "Canoga Park",
+    "state": "CA",
+    "zip": "91303",
+    "lat": 34.189746,
+    "lng": -118.605749,
+    "phone": "(818) 912-6556",
+    "carries": [
+      "Sports Cards (Topps/Panini)",
+      "Pokémon",
+      "Magic: The Gathering",
+      "Disney Lorcana"
+    ],
+    "sellsPacks": true,
+    "tier": 3,
+    "hours": {
+      "mon": [
+        "10:00",
+        "20:00"
+      ],
+      "tue": [
+        "10:00",
+        "20:00"
+      ],
+      "wed": [
+        "10:00",
+        "20:00"
+      ],
+      "thu": [
+        "10:00",
+        "20:00"
+      ],
+      "fri": [
+        "10:00",
+        "21:00"
+      ],
+      "sat": [
+        "10:00",
+        "21:00"
+      ],
+      "sun": [
+        "11:00",
+        "19:00"
+      ]
+    }
+  },
+  {
+    "chain": "Cash Cards Unlimited",
+    "name": "Cash Cards Unlimited Thousand Oaks",
+    "category": "hobby",
+    "address": "215 N Moorpark Rd #G",
+    "city": "Thousand Oaks",
+    "state": "CA",
+    "zip": "91360",
+    "lat": 34.182743,
+    "lng": -118.875809,
+    "phone": "(805) 319-4047",
+    "carries": [
+      "Sports Cards (Topps/Panini)",
+      "Pokémon",
+      "Magic: The Gathering",
+      "Disney Lorcana"
+    ],
+    "sellsPacks": true,
+    "tier": 3,
+    "hours": {
+      "mon": [
+        "12:00",
+        "20:00"
+      ],
+      "tue": [
+        "12:00",
+        "20:00"
+      ],
+      "wed": [
+        "12:00",
+        "20:00"
+      ],
+      "thu": [
+        "12:00",
+        "20:00"
+      ],
+      "fri": [
+        "12:00",
+        "22:00"
+      ],
+      "sat": [
+        "10:00",
+        "20:00"
+      ],
+      "sun": [
+        "11:00",
+        "19:00"
+      ]
+    }
+  },
+  {
+    "chain": "CoreTCG",
+    "name": "CoreTCG Pasadena",
+    "category": "hobby",
+    "address": "770 S Arroyo Pkwy #110",
+    "city": "Pasadena",
+    "state": "CA",
+    "zip": "91105",
+    "lat": 34.132633,
+    "lng": -118.14724,
+    "phone": "(626) 577-6699",
+    "carries": [
+      "Pokémon",
+      "Magic: The Gathering",
+      "One Piece TCG",
+      "Yu-Gi-Oh"
+    ],
+    "sellsPacks": true,
+    "tier": 3,
+    "hours": {
+      "mon": [
+        "11:00",
+        "20:00"
+      ],
+      "tue": [
+        "11:00",
+        "20:00"
+      ],
+      "wed": [
+        "11:00",
+        "20:00"
+      ],
+      "thu": [
+        "11:00",
+        "20:00"
+      ],
+      "fri": [
+        "11:00",
+        "20:00"
+      ],
+      "sat": [
+        "11:00",
+        "20:00"
+      ],
+      "sun": [
+        "11:00",
+        "20:00"
+      ]
+    }
+  },
+  {
+    "chain": "LA Sports Cards",
+    "name": "LA Sports Cards Burbank",
+    "category": "hobby",
+    "address": "1922 W Olive Ave",
+    "city": "Burbank",
+    "state": "CA",
+    "zip": "91506",
+    "lat": 34.165571,
+    "lng": -118.324774,
+    "phone": "(818) 859-7800",
+    "carries": [
+      "Sports Cards (Topps/Panini)",
+      "Pokémon"
+    ],
+    "sellsPacks": true,
+    "tier": 3,
+    "hours": {
+      "mon": [
+        "09:30",
+        "19:00"
+      ],
+      "tue": [
+        "09:30",
+        "21:30"
+      ],
+      "wed": [
+        "09:30",
+        "21:30"
+      ],
+      "thu": [
+        "09:30",
+        "21:30"
+      ],
+      "fri": [
+        "09:30",
+        "21:30"
+      ],
+      "sat": [
+        "09:30",
+        "21:30"
+      ],
+      "sun": [
+        "09:30",
+        "19:00"
+      ]
+    }
+  }
+]
