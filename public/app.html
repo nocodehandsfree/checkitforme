@@ -3540,7 +3540,33 @@ const v = (id) => document.getElementById(id).value.trim();
 
 // --- Growth & Policy ---
 let POL=null;
-const FLAG_LABELS={connectOnHuman:'Connect-on-human',dogfoodHours:'Dog-food hours',driverHandoff:'Driver hand-off demo',scheduling:'Scheduled shipment-day calls',restockAlerts:'Restock alerts',kiosks:'Kiosk intel + rewards',shareCards:'Share cards',multiProduct:'Multi-product asks',specificSets:'Specific-set asks'};
+// Grouped feature flags: [key, label, info-tip]. connect-on-human + require-phone are intentionally
+// absent — both are baked in (always on), not owner-toggleable. Toggling any flag is GLOBAL (all users).
+const FLAG_GROUPS=[
+  {title:'Check+ (premium)',flags:[
+    ['scheduling','Auto-checks','Check+ members schedule calls on known shipment days.'],
+    ['restockAlerts','Restock alerts','Notify Check+ members when a product comes back in stock.'],
+    ['multiProduct','Advanced checks · multiple products','Let one call ask about more than one product at once.'],
+    ['specificSets','Advanced checks · specific set','Let a check narrow to a single specific set.'],
+    ['hobby','Hobby shops','Members can check hobby shops. Off = unavailable for every user.'],
+    ['thrift','Thrift · treasure hunts','Members can check thrift stores. Off = unavailable for every user.'],
+  ]},
+  {title:'Consumer (free)',flags:[
+    ['kiosks','Kiosk intel + rewards','Kiosk picker + crowd refresh-time submissions (earns a free check).'],
+    ['kioskReceipts','Kiosk-receipt rewards','Email a kiosk receipt for verified intel + a free check.'],
+    ['community','Community wall','The moderated I-scored photo wall.'],
+    ['communityAutoApprove','Community · auto-approve','Skip moderation; posts go live immediately.'],
+    ['referrals','Referrals','Refer-a-friend free-check loop (both sides earn).'],
+    ['shareCards','Share cards','Shareable found-it cards / preview images.'],
+    ['stockSignals','Live stock feed','Free real-time stock rail (site checkers + drops) in the consumer UI.'],
+    ['driverHandoff','Driver hand-off demo','Shows the local-driver hand-off demo under an in-stock result.'],
+    ['liveListen','Live-listen','Stream call audio + a hang-up button to customers (testing tool).'],
+  ]},
+  {title:'Admin & Global',flags:[
+    ['oneCheckPerStorePerDay','Fresh-result cache (24h)','Reuse a recent result instead of re-calling the same store+product within 24h.'],
+    ['dogfoodHours','Overnight hours-harvest','Night-time store-hours auto-calling. Leave OFF until you say go.'],
+  ]},
+];
 const esch=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // Product mark: show a known product's logo instead of its plain name (Pokémon for now).
 function prodMark(name,size){
@@ -3602,13 +3628,13 @@ async function loadGrowth(){
   if(!POL||POL.error){ document.getElementById('gw_flags').textContent='Could not load policy.'; return; }
   // flags
   const f=POL.flags||{};
-  document.getElementById('gw_flags').innerHTML=Object.keys(FLAG_LABELS).map(k=>{
-    const on=f[k]!==false&&f[k]!==undefined?f[k]:!!f[k];
-    const tip=k==='dogfoodHours'?'Leave OFF until you say go':(k==='connectOnHuman'?'Cost saver: Twilio handles the phone menu + hold for free, and the paid voice agent only opens once a human actually picks up.':'');
-    return `<label style="display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;color:var(--text)">
+  document.getElementById('gw_flags').innerHTML=FLAG_GROUPS.map(g=>
+    `<div style="margin-bottom:14px"><div class="meta" style="font-weight:700;color:var(--text-muted);margin:2px 0 6px">${g.title}</div>`+
+    g.flags.map(fl=>{const k=fl[0];return `<label style="display:flex;align-items:center;gap:10px;padding:7px 0;cursor:pointer;color:var(--text)">
       <input type="checkbox" ${f[k]?'checked':''} onchange="toggleFlag('${k}',this.checked)">
-      <span${tip?` data-tip="${tip}"`:''}>${FLAG_LABELS[k]}</span></label>`;
-  }).join('');
+      <span data-tip="${String(fl[2]).replace(/"/g,'&quot;')}">${fl[1]}</span></label>`;}).join('')+
+    `</div>`
+  ).join('');
   // pricing
   const p=POL.pricing||{}, sub=p.sub||{};
   const fld=(id,lbl,val)=>`<label class="meta" style="display:block">${lbl}<input id="${id}" value="${esch(val)}" inputmode="numeric" style="display:block;width:90px;margin-top:4px;background:#0e0e14;color:#fff;border:1px solid var(--border);border-radius:8px;padding:9px 10px"></label>`;
