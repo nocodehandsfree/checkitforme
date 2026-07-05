@@ -65,6 +65,31 @@ ME03 = Perfect Order — the design grid had these mislabeled).
 
 ## Current focus (KEEP UPDATED)
 
+**Session 2026-07-04 (later) — Grocers made callable for SHELF Pokémon (dual kiosk+retail). Staging.**
+- **Problem:** grocery chains were in our data ONLY as Pokémon vending-KIOSK sites (from
+  `pokemon-vending-import.json`, 1,915 machines) — `sellsPacks=false`, so a call only asked "is the
+  machine working?", never "do you have Pokémon in stock?". But these grocers also sell Pokémon on
+  SHELVES, so they should be callable.
+- **Model (verified in code):** the call script follows the TAB, not the store — `SEL_KIOSK` is set by
+  which section you tap (checkit.html 3560 retail→false, 3575 kiosk→true) and the request's `kioskMode`
+  WINS over the store's flags (service.ts 208). So ONE dual-flagged row (`hasKiosk=true` +
+  `sellsPacks=true` + real phone) shows in BOTH sections and asks the right question each. No duplicate rows.
+- **Did it (scope = ALL stores of verified chains, not just machine-sites):** flipped `sellsPacks=true`
+  via `POST /api/stores/patch {where:{chain},set:{sellsPacks:true}}` on **23 verified banners, 4,647 rows** —
+  Kroger family (Kroger, Fred Meyer, Fry's, King Soopers, Food 4 Less, Smith's, QFC, Pick 'n Save, Metro
+  Market, Mariano's, City Market, Harris Teeter, Ralphs) + Albertsons family (Albertsons, Safeway,
+  Jewel-Osco, Vons, Shaw's, Acme, Tom Thumb, Randalls, Star Market, Pavilions). They already had real
+  phones + Pokémon in carries + logos, so they now show callable in Pokémon retail mode; machine-ones
+  are dual-section (tier 5 kept). Verified near LA (36 grocers callable, machine-ones both sections).
+- **Certainty gate (owner: "absolutely certain they sell shelf Pokémon"):** confirmed via each family's
+  online store (kroger.com, safeway/vons/albertsons.com list live Pokémon SKUs). H-E-B confirmed too.
+- **HELD (not flipped):** **H-E-B** (84 rows — verified shelf-seller BUT placeholder rows have NO phone;
+  heb.com is Akamai-walled, so phones need a local pull / research-Claude — "you run the rest" case).
+  **WinCo, Woodman's, Gelson's, Lucky, FoodMaxx, H Mart, Uwajimaya** = shelf-Pokémon unproven, held.
+  **Mall kiosks** (Citadel/Chapel Hills/etc.) = no shelf, stay kiosk-only.
+- **Promote to prod:** re-run the same `/api/stores/patch` sellsPacks=true for those 23 banner names on
+  checkitforme.com. Then do H-E-B once its phones exist.
+
 **Session 2026-07-04 — THE PHONEBOOK: 4,123 card + 436 comic shops harvested; Thrift turned on. Staging.**
 - **National Hobby 1,188 → 5,710. Thrift 0 → 3,479.** All on staging, all correctly tagged, zero tag drift.
 - **cardshophub.com is fully harvestable** (the "phonebook"): each shop page is server-rendered JSON-LD
