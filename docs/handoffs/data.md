@@ -74,13 +74,17 @@ ME03 = Perfect Order — the design grid had these mislabeled).
   which section you tap (checkit.html 3560 retail→false, 3575 kiosk→true) and the request's `kioskMode`
   WINS over the store's flags (service.ts 208). So ONE dual-flagged row (`hasKiosk=true` +
   `sellsPacks=true` + real phone) shows in BOTH sections and asks the right question each. No duplicate rows.
-- **Did it (scope = ALL stores of verified chains, not just machine-sites):** flipped `sellsPacks=true`
-  via `POST /api/stores/patch {where:{chain},set:{sellsPacks:true}}` on **23 verified banners, 4,647 rows** —
-  Kroger family (Kroger, Fred Meyer, Fry's, King Soopers, Food 4 Less, Smith's, QFC, Pick 'n Save, Metro
-  Market, Mariano's, City Market, Harris Teeter, Ralphs) + Albertsons family (Albertsons, Safeway,
-  Jewel-Osco, Vons, Shaw's, Acme, Tom Thumb, Randalls, Star Market, Pavilions). They already had real
-  phones + Pokémon in carries + logos, so they now show callable in Pokémon retail mode; machine-ones
-  are dual-section (tier 5 kept). Verified near LA (36 grocers callable, machine-ones both sections).
+- **Did it — CORRECTED to MACHINE-STORES ONLY (scope A).** First pass flipped `sellsPacks=true` on ALL
+  rows of the 23 verified banners (4,647) — WRONG: it flooded the retail list with plain grocery stores
+  that have no card presence (owner saw 14 grocers near Woodland Hills, only 2 with machines). The rule
+  is: a store is dual ONLY if it has a MACHINE **and** the chain sells shelf. So reverted the **2,972
+  non-machine** grocery rows back to `sellsPacks=false` (out of retail) via table-dump scan → patch by
+  ids; **kept the 1,675 machine-grocers dual** (`hasKiosk=true`+`sellsPacks=true`, tier 5). Verified:
+  Woodland Hills retail went 14 grocers → 2 (both machine-stores); machine-grocer still in both sections.
+  Verified banners: Kroger family (Kroger, Fred Meyer, Fry's, King Soopers, Food 4 Less, Smith's, QFC,
+  Pick 'n Save, Metro Market, Mariano's, City Market, Harris Teeter, Ralphs) + Albertsons family
+  (Albertsons, Safeway, Jewel-Osco, Vons, Shaw's, Acme, Tom Thumb, Randalls, Star Market, Pavilions).
+  **LESSON: only flip machine-stores dual; do NOT make a whole grocery chain callable.**
 - **Certainty gate (owner: "absolutely certain they sell shelf Pokémon"):** confirmed via each family's
   online store (kroger.com, safeway/vons/albertsons.com list live Pokémon SKUs). H-E-B confirmed too.
 - **HELD (not flipped):** **H-E-B** (84 rows — verified shelf-seller BUT placeholder rows have NO phone;
