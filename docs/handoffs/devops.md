@@ -40,6 +40,7 @@ the priority. The calculator's running "Hybrid" line is the live benchmark.
 2. **Then: resume store mapping** — cover as many chains as possible for the nationwide launch, using the
    latest working tech (recipe / avgTreeSeconds / connect-on-human). We were mid-mapping; hard IVR chains + the
    intentionally-muted ones (Best Buy = central call center, can't dial the store) are the remaining buckets.
+   (`muted` = hide the whole chain + never call it; canonical definition in `docs/specs/store-data-schema.md` §5.)
 3. Roadmap / bigger backlog: `docs/business/ROADMAP.md`.
 The gate between 1 and 2 is the owner confirming the Fun-store experience + cost are where they want them.
 
