@@ -242,3 +242,45 @@ The `es` map is thorough; these strings just bypass it. Score modal already fixe
 ## Notes
 - Every reworded EN line ships with its ES twin (above).
 - "No answer = no charge" is the spine — 4 beats, parallel. Everything else tunes to that cadence.
+
+---
+
+## 🔎 Round 6 — post-redesign copy sweep (full-site review)
+
+> From a full pass over the current staging build. EN + ES given so Design/Dev can drop them straight in. Same rules: no em-dashes, fewest words, "check/verificación" is the customer unit (not "call/llamada").
+
+### 1. Membership name — **Fungie+ → Check+**
+- `sch.perk` ES: `Beneficio de miembro Fungie+` → **`Beneficio de miembro Check+`**. Add the EN twin: **`Check+ member benefit`**.
+
+### 2. Em-dashes → period/comma (visible copy)
+- **Demo dialogue** (EN 3496–3499 + ES 3504–3507, all 4 categories): `Hi — do you have any {x} in?` → **`Hi, do you have any {x} in?`** · `We sure do — a shipment…` → **`We sure do. A shipment…`** · `In stock — {set}` → **`In stock. {set}`** · ES: `Claro que sí — …` → **`Claro que sí. …`** · `En stock — {set}` → **`En stock. {set}`**
+- **Empty states** `empty.hobby / empty.thrift / empty.radius / empty.kiosk` (EN 3314/3320–3322 + ES 2196/2197): `…within {r} mi — try a bigger radius.` → **`…within {r} mi. Try a bigger radius.`** · ES `…en {r} mi — amplía el radio.` → **`…en {r} mi. Amplía el radio.`**
+- `cat.any` (3615): `Any {label} — anything counts` → **`Any {label}. Anything counts.`**
+
+### 3. Unit drift — ES says "llamada," should be "verificación"
+- `res.free` ES: `Esa fue tu llamada gratis 🎯` → **`Esa fue tu verificación gratis 🎯`**
+- `toast.callgone` ES: `Esa llamada ya no está disponible` → **`Esa verificación ya no está disponible`**
+- `toast.loadingcall` ES: `Cargando tu llamada…` → **`Cargando tu verificación…`**
+- `rail.all` / `rail.calls` ES: `Todas las llamadas` / `Llamadas` → **`Todas las verificaciones`** / **`Verificaciones`**
+- `pre.note` (EN "You called {s}…" / ES "Llamaste a {s}…") — **review:** switch to **`You checked {s}`** / **`Verificaste {s}`** for the unit (leave if you want to keep the literal-call read).
+- `v.failed` "Call failed" (4406) — should already be **removed** per the status table; confirm it's gone.
+
+### 4. Cold → warm error copy (EN + ES)
+- `co.failed`: `Payment failed. Try again.` → **`That payment didn't go through. Try again.`** / ES **`El pago no se procesó. Inténtalo de nuevo.`**
+- `err.upload`: `Upload failed.` → **`Photo didn't upload. Try again.`** / ES **`La foto no se subió. Inténtalo de nuevo.`**
+- `cid.unavail`: `Verification is down for now…` → **`Verification isn't available right now. Try again soon.`** / ES **`La verificación no está disponible ahora. Vuelve a intentarlo pronto.`**
+- `toast.translate.fail`: `Could not translate` → **`Couldn't translate that one.`**
+- `err.generic` (`Something went wrong. Try again.`) — fine and single-sourced; optional warm-up **`That didn't go through. Give it another try.`** (owner's call).
+
+### 5. Duplicated / inconsistent source strings (pick one)
+- `toast.maploading` renders with **two** different EN fallbacks (`Map couldn't load…` vs `Map could not load…`). Standardize to **`Map didn't load. Here's the list.`**
+- `sc.posted` / `sc.posted.review` — one code path hardcodes English with different wording than the keyed version. Use the key everywhere.
+
+### 6. i18n wiring — Copy supplies text, Dev wraps in `t()` + adds ES (these bypass `t()`, so ES users see English)
+- Rate-limit (2765) → key `err.toofast`: EN **`Give it a sec, then try again.`** / ES **`Espera un momento e inténtalo de nuevo.`**
+- US-only (2766) → key `err.usonly`: EN **`We can only text US mobile numbers right now.`** / ES **`Por ahora solo enviamos SMS a números de EE. UU.`**
+- Photo posted (5965) → use existing `sc.posted.review` / `sc.posted` keys.
+- Generic fallback (5966) → use `err.generic`.
+- Send-code button (2760) → `auth.sending` **`Sending…`** / `auth.resending` **`Resending…`** + ES **`Enviando…`** / **`Reenviando…`**
+
+*Not copy (routed elsewhere): the selected-card green-border clip, low-contrast tiles, modal alignment, spacing rhythm → Design (CSS). The "call didn't hang up after it ended" → DevOps (backend).*
