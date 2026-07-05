@@ -16,9 +16,10 @@ const weekdayKey = (d: Date, off = 0) => {
 };
 
 console.log("▶ unknown / malformed hours → 'known:false' and fail-open");
-ok(openState(null, "UTC").known === false && openState(null, "UTC").open === true, "null hours → unknown + open (fail-open gate)");
-ok(openState("not json", "UTC").known === false, "garbage JSON → unknown");
-ok(openState("123", "UTC").known === false, "non-object JSON → unknown");
+const noonUTC = new Date("2026-06-17T12:00:00Z"); // fixed daytime so the unknown-hours night window doesn't flake
+ok(openState(null, "UTC", noonUTC).known === false && openState(null, "UTC", noonUTC).open === true, "null hours (daytime) → unknown + open (fail-open gate)");
+ok(openState("not json", "UTC", noonUTC).known === false, "garbage JSON (daytime) → unknown");
+ok(openState("123", "UTC", noonUTC).known === false, "non-object JSON (daytime) → unknown");
 ok(openState(J(everyDay(null)), "UTC").known === true, "explicit all-closed week is still 'known'");
 
 console.log("▶ standard 9-to-9 day");

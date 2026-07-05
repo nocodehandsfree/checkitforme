@@ -93,19 +93,22 @@ export interface OpenState {
   label: string;      // short badge, e.g. "till 9 PM", "Closed · opens 10 AM", "24h"
 }
 
-// A store with NO usable hours still defaults to "open/unknown" by day — we don't hide it or block
-// daytime calls on missing data. BUT defaulting to open around the clock is the "open at 2 AM" bug:
-// in the dead-of-night window below we instead report a confident "closed" so the open/closed badge
-// and the call gates (scheduler + call service both gate on `known && !open`) treat it as closed.
-// A genuinely 24-hour store carries an explicit "24h" stamp and never reaches this path. The window
-// is intentionally narrow (deep overnight only) to preserve daytime coverage — widen here if needed.
+// A store with NO usable hours defaults to "open/unknown" during normal retail daytime — we don't hide
+// it or block calls on missing data then, to preserve coverage. OUTSIDE those hours we can't honestly
+// claim it's open, so we report a confident "likely closed" (the open/closed badge shows closed, the
+// "open now" map filters it out, and the call gates — scheduler + call service both gate on
+// `known && !open` — won't dial it). A genuinely 24-hour store carries an explicit "24h" stamp and never
+// reaches this path. Window CROSSES midnight (owner 2026-07-05: unknown-hours stores like Hallmark + the
+// thrift chains were showing "open" at 00:11 because the old window was 01:00–06:00 only). The real fix
+// is per-store hours (backfillHours); this is the honest fallback until every store has them.
 // NOTE: this only covers MISSING/unparseable hours; fake placeholder stamps (e.g. 00:00–24:00 on a
 // store that isn't really 24h) parse as real hours and must be cleaned in the data (Data Dev).
-const UNKNOWN_NIGHT_CLOSED_FROM = 1 * 60; // 01:00 local
-const UNKNOWN_NIGHT_CLOSED_TO = 6 * 60;   // 06:00 local
+const UNKNOWN_CLOSED_FROM = 21 * 60; // 21:00 local (9 PM) — assume closed after normal retail hours
+const UNKNOWN_CLOSED_TO = 7 * 60;    // 07:00 local (7 AM) — assume closed before normal open
 function unknownHoursState(tz: string, at: Date): OpenState {
   const { min } = localNow(tz || "America/Los_Angeles", at);
-  if (min >= UNKNOWN_NIGHT_CLOSED_FROM && min < UNKNOWN_NIGHT_CLOSED_TO) {
+  // Window wraps past midnight, so "closed" is >= FROM (evening) OR < TO (early morning).
+  if (min >= UNKNOWN_CLOSED_FROM || min < UNKNOWN_CLOSED_TO) {
     return { known: true, open: false, label: "Likely closed" };
   }
   return { known: false, open: true, label: "" };
