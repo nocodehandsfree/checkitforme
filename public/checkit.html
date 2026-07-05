@@ -819,7 +819,7 @@ __BRAND_HEAD__
   .leaflet-container{background:#0e0e16!important;font-family:inherit}
   .leaflet-popup-content-wrapper{background:#1a1a24;color:#fff;border:1px solid var(--border);border-radius:12px}
   .leaflet-popup-tip{background:#1a1a24}
-  .mappop b{font-size:13.5px} .mappop .mp-lo{color:var(--muted);font-size:12px;margin:2px 0 8px}
+  .mappop b{font-size:15px;font-weight:800;color:#fff;display:block} .mappop .mp-lo{color:#c9c9d4;font-size:12px;margin:2px 0 8px}
   .mappop button{background:var(--green);color:#06210f;border:none;padding:7px 12px;border-radius:9px;font-weight:800;font-size:12.5px;cursor:pointer;width:100%}
   /* Call rail — every past check as a tappable chip (retailer logo, outcome-colored ring).
      Mobile: horizontal scroll above the result. Desktop: vertical tabs in the left margin. */
@@ -1231,7 +1231,7 @@ html[data-skin="v2"] .rcal-big{padding:20px 16px 22px}
 html[data-skin="v2"] .rcal-big .rcal-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
 html[data-skin="v2"] .rcal-big .rcal-h b{font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 6px}
 html[data-skin="v2"] .rcal-big .rcal-grid{gap:6px}
-html[data-skin="v2"] .rcal-big .rcal-d{height:46px;display:grid;place-items:center;font-size:16px}
+html[data-skin="v2"] .rcal-big .rcal-d{height:46px;display:grid;place-items:center;font-size:16px;aspect-ratio:auto;min-width:0} /* aspect-ratio:1 (base) forced a 46px min-width per column → 7 cols overflowed the card, clipping the Saturday column off-page. Let cells shrink to their 1fr track. */
 html[data-skin="v2"] .todaywrap>.cta{width:auto;margin:4px auto 0;display:inline-flex;padding:12px 28px;font-size:13px;left:50%;position:relative;transform:translateX(-50%)}
 html[data-skin="v2"] .rcal-d.today{box-shadow:inset 0 0 0 1.5px #FFF;border-radius:11px}
 html[data-skin="v2"] .rday-list{padding:3px 3px 6px}
@@ -2298,7 +2298,7 @@ const I18N={ es:{
   'err.phone':'Ingresa tu número de celular de EE.UU.','err.code':'Escribe el código de 6 dígitos','auth.resent':'Código reenviado 📲',
   'sc.crew':'Presume con la banda','sc.scored':'¡La conseguiste!','sc.snap':'Toma tu foto. Publícala.','sc.photo':'Tu foto','sc.caption':'Descripción','sc.name':'Tu nombre / usuario','sc.optional':'(opcional)','sc.ph.caption':'¡Saqué un Charizard en el Target de Sunset!','sc.ph.handle':'@tuusuario','sc.post':'Publicar en el muro →','sc.uploading':'Subiendo…','sc.err.big':'La foto pesa demasiado (máx. 12 MB).','sc.err.nophoto':'Agrega una foto primero',
   'ph.schednum':'Escribe tu número','ph.storereq':'ej. Target, Thousand Oaks','ph.storecity':'ej. Thousand Oaks, CA','ph.storedetails':'dirección, qué productos, etc.','ph.kiosk':'ej. Albertsons, Sunset Blvd, LA','ph.kioskhint':'ej. A veces se salta la reposición de los :03',
-  'toast.searchmi':'📍 {q}. Tiendas a {n} mi','toast.zoomout':'📍 Aleja el mapa, explora a donde quieras, toca para fijar un punto','toast.community':'La comunidad llega pronto','toast.locupdated':'Actualizado a tu ubicación actual',
+  'toast.searchmi':'📍 {q}. Tiendas a {n} mi','toast.zoomout':'Pellizca para acercar, toca para fijar un punto','toast.community':'La comunidad llega pronto','toast.locupdated':'Actualizado a tu ubicación actual',
   'cs.costs':'cuesta 1 verificación','cs.toggle':'Ver pasos de la llamada',
   'err.storename':'Agrega el nombre de la tienda',
   'fbk.in':'En stock','fbk.out':'No está','fbk.soon':'Reabasteciendo','fbk.unsure':'Sin claridad',
@@ -2779,7 +2779,7 @@ function fmtPhoneInput(el){ const d=(el.value||'').replace(/\D/g,'').slice(0,10)
 async function phoneStart(resend){
   if(AUTH.busy) return;
   const e=normUsPhone($('auth_phone').value);
-  if(!e){ $('auth_err').textContent=t('err.phone',"Enter your US mobile number."); return; }
+  if(!e){ markFld($('auth_phone'),true); $('auth_err').textContent=t('err.phone',"Enter your US mobile number."); return; }
   AUTH_PHONE=e; AUTH.busy=true;
   const btn=$('auth_send'); if(btn){ btn.disabled=true; btn.textContent=resend?'Resending…':'Sending…'; }
   $('auth_err').textContent='';
@@ -2927,7 +2927,7 @@ function openScorePop(){
     document.body.appendChild(ov); }
   const c=$('composer');
   if(c){ if(!openScorePop._home){ openScorePop._home={parent:c.parentElement,next:c.nextElementSibling}; } $('scorePostHost').appendChild(c); c.style.display=''; }
-  ov.classList.add('on'); track('score_pop_open');
+  ov.classList.add('on'); try{ succFilter(); }catch(_){ } track('score_pop_open'); // surface the in-stock store list right away
 }
 function closeScorePop(){
   const ov=$('scorePostOv'); if(ov)ov.classList.remove('on');
@@ -3164,7 +3164,7 @@ function toggleMap(forceOpen){
   const mv=$('mapview'), sl=$('storelist'), btn=$('maptoggle'), lg=$('maplegend');
   if(mv.style.display==='block' && !forceOpen){ mv.style.display='none'; sl.style.display=''; if(lg)lg.style.display='none'; if(btn){btn.classList.remove('on'); btn.textContent='Map';} return; }
   sl.style.display='none'; mv.style.display='block'; if(lg){ lg.innerHTML=mapLegendHtml(); lg.style.display='flex'; } if(btn){btn.classList.add('on'); btn.textContent=t('map.list','List');} track('map_open'); loadMap();
-  if(isMaster()) toast(t('toast.zoomout','📍 Zoom out, roam anywhere, tap to drop a pin'));
+  if(isMaster()) toast(t('toast.zoomout','Pinch to zoom, tap to drop a pin.'));
 }
 function loadMap(){
   if(window.L){ if(!MAP){ MAP_LOADED=true; initMap(); } else { setTimeout(()=>{ MAP.invalidateSize(); if(USER_LOC) placeMyPin(USER_LOC.lat,USER_LOC.lng,true); MAP_FIT_NEXT=true; renderMapPins(); },60); } return; }
@@ -3209,7 +3209,7 @@ function renderMapPins(){
     const m = s.inStock
       ? L.marker([s.lat,s.lng],{icon:L.divIcon({className:'instkpin',html:`<span style="display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#0C0C12;border:2px solid ${neon||'#2BFF88'};box-shadow:0 0 11px ${neon||'#2BFF88'},0 0 4px ${neon||'#2BFF88'}">${FCHK(16)}</span>`,iconSize:[28,28],iconAnchor:[14,14]})}).addTo(MAP)
       : L.marker([s.lat,s.lng],{icon:L.divIcon({className:'tierpin',html: s.logoUrl
-          ? `<span style="display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:${s.logoDark?'#15151C':'#FFF'};border:2px solid ${neon||'#3A3A44'};box-shadow:0 2px 10px rgba(0,0,0,.5)${neon?`,0 0 9px ${neon}`:''}"><img src="${esc(s.logoUrl)}" style="width:20px;height:20px;object-fit:contain" alt=""></span>`
+          ? `<span style="display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#17171E;border:2px solid ${neon||'#3A3A44'};box-shadow:0 2px 10px rgba(0,0,0,.5)${neon?`,0 0 9px ${neon}`:''}"><img src="${esc(s.logoUrl)}" style="width:20px;height:20px;object-fit:contain" alt=""></span>`
           : neon
           ? `<span style="display:block;width:15px;height:15px;border-radius:50%;background:${neon};border:1.5px solid #0C0C12;box-shadow:0 0 9px ${neon},0 0 3px ${neon}"></span>`
           : `<span style="display:block;width:12px;height:12px;border-radius:50%;background:#9aa0b0;border:1.5px solid #0C0C12"></span>`, iconSize: s.logoUrl?[30,30]:(neon?[15,15]:[12,12]), iconAnchor: s.logoUrl?[15,15]:(neon?[8,8]:[6,6])})}).addTo(MAP);
@@ -3666,7 +3666,7 @@ function openLead(){ $('lead_err').textContent=''; $('leadOverlay').classList.ad
 function closeLead(){ $('leadOverlay').classList.remove('on'); }
 async function submitLead(){
   const e=($('lead_email').value||'').trim();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ $('lead_err').textContent=t('err.email','Please enter a valid email.'); return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ markFld($('lead_email'),true); $('lead_err').textContent=t('err.email','Please enter a valid email.'); return; }
   $('lead_btn').disabled=true; $('lead_btn').textContent=t('lead.wait','One sec…');
   try{ await api('/pub/lead',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:e,source:'runner_free'})}); }catch(err){}
   localStorage.setItem('runnr_lead_email',e);
@@ -6087,24 +6087,31 @@ function myHandle(){
 function storeMatch(hay,q){ hay=String(hay||'').toLowerCase();
   const toks=String(q||'').toLowerCase().split(/\s+/).filter(Boolean);
   return toks.every(tk=>hay.includes(tk)||(tk.length>=5&&hay.includes(tk.slice(0,-1)))); }
+// Owner 07-05 (real #12): you can only post a score for a store where YOU found it in stock — nobody
+// shares a win for an item they couldn't get. So the picker offers only the stores from your own
+// in-stock checks (dedup by store), never the whole map. Also kills the "every store / page goes long".
+function succInStockStores(){
+  const out=new Map();
+  try{ histList().forEach(e=>{ if(e&&e.confirmed===true&&e.storeId!=null&&!out.has(e.storeId)){
+    const st=STORES.find(x=>x.id===e.storeId);
+    out.set(e.storeId, st||{id:e.storeId,name:e.storeName||('Store #'+e.storeId),location:e.location||''});
+  } }); }catch(_){ }
+  return [...out.values()];
+}
 function succFilter(){
   const q=($('succ_store').value||'').toLowerCase();
   // Picked a store → the pin becomes a working × (clear + reopen the list)
   const lb=$('succloc'); if(lb) lb.innerHTML=SUCC_STORE?'<span style="font-size:18px;font-weight:800;color:#ff8a8a">×</span>':ICO.pin('currentColor');
   if(lb) lb.onclick=SUCC_STORE?function(){ succClear(); }:function(){ findMe(succFilter); };
   if(SUCC_STORE){ $('succ_storelist').innerHTML=''; return; }
-  if(!q&&!USER_LOC){ $('succ_storelist').innerHTML=''; return; }
-  const paint=(list)=>{ $('succ_storelist').innerHTML=list.slice(0,5).map(st=>`<div class="store" onclick="succPick(${st.id})" style="margin-top:8px"><div class="ic">${st.logoUrl?`<img src="${esc(st.logoUrl)}" alt="" style="width:22px;height:22px;object-fit:contain">`:storeWordmark(st.name,st.storeType)}</div><div style="min-width:0;flex:1"><div class="nm">${esc(st.name)}</div><div class="lo">${esc(st.location||'')}</div></div></div>`).join(''); };
-  let local=STORES.filter(st=>!q||storeMatch(st.name+' '+(st.location||''),q));
-  if(USER_LOC) local.sort((a,b)=>(storeMi(a)??1e9)-(storeMi(b)??1e9));
-  paint(local);
-  // No local match (stores load lazily now) → ask the server so any store is taggable.
-  if(q.length>=2 && local.length<3){ const seq=++SUCC_SEQ; api('/pub/stores/near?q='+encodeURIComponent(q)+'&limit=8').then(r=>{ if(seq!==SUCC_SEQ)return; const srv=(r&&r.stores)||[]; const seen=new Set(local.map(s=>s.id)); srv.forEach(s=>{ if(!STORES.some(x=>x.id===s.id)) STORES.push(s); }); paint(local.concat(srv.filter(s=>!seen.has(s.id)))); }).catch(()=>{}); }
+  const list=succInStockStores().filter(st=>!q||storeMatch(st.name+' '+(st.location||''),q));
+  if(!list.length){ $('succ_storelist').innerHTML=`<div class="lo" style="padding:11px 3px;color:var(--muted);font-size:12.5px;line-height:1.5">${q?t('sc.noinstock.q','No in-stock check matches that.'):t('sc.noinstock','Only stores where you found it in stock show here — run a check first.')}</div>`; return; }
+  $('succ_storelist').innerHTML=list.slice(0,6).map(st=>`<div class="store" onclick="succPick(${st.id})" style="margin-top:8px"><div class="ic">${st.logoUrl?`<img src="${esc(st.logoUrl)}" alt="" style="width:22px;height:22px;object-fit:contain">`:storeWordmark(st.name,st.storeType)}</div><div style="min-width:0;flex:1"><div class="nm">${esc(st.name)}</div><div class="lo">${esc(st.location||'')}</div></div></div>`).join('');
 }
 let SUCC_SEQ=0;
-function succPick(id){ SUCC_STORE=STORES.find(st=>st.id===id)||null; if(SUCC_STORE)$('succ_store').value=SUCC_STORE.name; succFilter(); }
+function succPick(id){ SUCC_STORE=STORES.find(st=>st.id===id)||succInStockStores().find(st=>st.id===id)||null; if(SUCC_STORE){ $('succ_store').value=SUCC_STORE.name; markFld($('succ_store'),false); } succFilter(); }
 function succClear(){ SUCC_STORE=null; $('succ_store').value=''; succFilter(); try{$('succ_store').focus();}catch(e){} }
-function succPreview(){ const fl=$('succ_file').files&&$('succ_file').files[0]; if(!fl)return; const lb=$('succ_filelabel'); if(lb)lb.classList.add('has'); const tx=$('succ_filetext'); if(tx)tx.textContent=fl.name.length>26?fl.name.slice(0,24)+'…':fl.name; const r=new FileReader(); r.onload=e=>{ $('succ_img').src=e.target.result; $('succ_prev').style.display=''; }; r.readAsDataURL(fl); }
+function succPreview(){ const fl=$('succ_file').files&&$('succ_file').files[0]; if(!fl)return; const lb=$('succ_filelabel'); if(lb){lb.classList.add('has'); lb.classList.remove('fld-err');} const tx=$('succ_filetext'); if(tx)tx.textContent=fl.name.length>26?fl.name.slice(0,24)+'…':fl.name; const r=new FileReader(); r.onload=e=>{ $('succ_img').src=e.target.result; $('succ_prev').style.display=''; }; r.readAsDataURL(fl); }
 function compressImg(file,cb){
   const img=new Image(); const r=new FileReader();
   r.onload=e=>{ img.onload=()=>{ const M=900,sc=Math.min(1,M/Math.max(img.width,img.height));
@@ -6115,7 +6122,13 @@ function compressImg(file,cb){
 }
 async function submitSuccess(){
   const fl=$('succ_file').files&&$('succ_file').files[0];
-  if(!fl){ $('succ_err').textContent=t('sc.err.photo','Add a photo of the score'); return; }
+  const prod=($('succ_prod').value||'').trim();
+  // Field-red validation (matches every other form): flag each missing field, no error word.
+  let bad=false;
+  if(!SUCC_STORE){ markFld($('succ_store'),true); bad=true; }
+  if(!prod){ markFld($('succ_prod'),true); bad=true; }
+  if(!fl){ const _lb=$('succ_filelabel'); if(_lb) _lb.classList.add('fld-err'); bad=true; }
+  if(bad){ $('succ_err').textContent=''; return; }
   const btn=$('succ_btn'); btn.disabled=true; btn.textContent=t('sc.posting','Posting…');
   try{
     let imageUrl=null, imageKey=null;
