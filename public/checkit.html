@@ -2317,8 +2317,8 @@ const I18N={ es:{
   // driver / runner teaser
   'dd.tag':'Vista previa · próximamente','dd.title':'Que un local lo recoja','dd.sub':'¿Muy lejos para manejar? Manda a un conductor de Uber/Lyft cercano a comprarlo y enviártelo. Él paga <b>$0 de su bolsillo</b>, tú solo pones el bono.','dd.instock':'En stock','dd.s1':'Define el <b style="color:var(--green)">bono</b> del conductor (ej. $25) sobre su tarifa','dd.s2':'Pide el viaje en <b>Uber</b> o <b>Lyft</b>. Recogida en la tienda','dd.s3':'Envía una tarjeta prepagada (producto + envío) + un mensaje listo','dd.s4':'Él lo compra, lo envía y toca <b>Listo</b> → tu bono se libera al instante','dd.sees':'lo que ve el conductor','dd.pickup':'Tienes una recogida de <span style="color:var(--green)">$25</span> 🏃','dd.applepay':'Agregar tarjeta a Apple Pay (60 seg)','dd.cta':'Quiero acceso anticipado →','dd.noted':'Anotado. Te buscamos para el acceso anticipado 🤝','dd.grab':'recoger en {s} → te lo envían',
   // generic errors / toasts / misc
-  'err.generic':'Algo salió mal. Inténtalo de nuevo.','err.sendcode':'No pudimos enviar un código. Inténtalo de nuevo.','err.verify':'No se pudo verificar. Inténtalo de nuevo.','err.post':'No se pudo publicar. Inténtalo de nuevo.','err.upload':'La foto no se subió. Inténtalo de nuevo.','err.photobig':'La foto pesa demasiado. Prueba con una más pequeña.','auth.verifying':'Verificando…','map.list':'Lista','store.closed':'Cerrado','toast.nocall':'. No se hizo la llamada.','auth.welcome':"✓ Ya entraste",'err.email':'Ingresa un correo válido','err.usonly':'Por ahora solo enviamos SMS a números de EE. UU.','err.toofast':'Espera un momento e inténtalo de nuevo.','auth.sending':'Enviando…','auth.resending':'Reenviando…','err.contact':'Ingresa un correo o teléfono válido.','err.pickstore':'Elige una tienda primero',
-  'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la verificación','toast.callgone':'Esa verificación ya no está disponible','toast.loadingcall':'Cargando tu verificación…','toast.translate.fail':'No se pudo traducir eso.','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Aquí está la lista.','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
+  'err.generic':'No se procesó. Vuelve a intentarlo.','err.sendcode':'No pudimos enviar un código. Inténtalo de nuevo.','err.verify':'No se pudo verificar. Inténtalo de nuevo.','err.post':'No se pudo publicar. Inténtalo de nuevo.','err.upload':'La foto no se subió. Inténtalo de nuevo.','err.photobig':'La foto pesa demasiado. Prueba con una más pequeña.','auth.verifying':'Verificando…','map.list':'Lista','store.closed':'Cerrado','toast.nocall':'. No se hizo la llamada.','auth.welcome':"✓ Ya entraste",'err.email':'Ingresa un correo válido','err.usonly':'Por ahora solo enviamos SMS a números de EE. UU.','err.toofast':'Espera un momento e inténtalo de nuevo.','auth.sending':'Enviando…','auth.resending':'Reenviando…','err.contact':'Ingresa un correo o teléfono válido.','err.pickstore':'Elige una tienda primero',
+  'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la verificación','toast.callgone':'Esa verificación ya no está disponible','toast.toosoon':'Acabas de verificar esta tienda — vuelve a verificar en unos {n} min.','toast.loadingcall':'Cargando tu verificación…','toast.translate.fail':'No se pudo traducir eso.','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Aquí está la lista.','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
   'find.me':'Encuentra mis tiendas','find.near':'cerca de ti, abiertas ahora',
   'scores.title':'Logros de la caza','scores.post':'Publica el tuyo →','scores.first':'¡Muéstranos el botín!',
   'ho.title':'Pásalo a un conductor','ho.sub':'Él lo compra. Y te lo lleva a tu puerta o te lo envía.','ho.ship':'Envíamelo','ho.home':'Tráelo a mi casa','ho.ship.btn':'📦 Envíamelo','ho.home.btn':'🏠 Tráelo a mi casa',
@@ -2561,7 +2561,7 @@ async function submitStoreReq(){
   const btn=$('sr_btn'); btn.disabled=true; btn.textContent=t('toast.submitting','Submitting…');
   const r=await api('/pub/store-request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({storeName:name,city:($('sr_city').value||'').trim(),note:($('sr_note').value||'').trim(),contact:($('sr_contact').value||'').trim()})});
   btn.disabled=false; btn.textContent=t('sr.submit','Submit store →');
-  if(!r||r.error){ $('sr_err').textContent=t('err.generic',"Something went wrong. Try again."); return; }
+  if(!r||r.error){ $('sr_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
   track('storereq_submit'); closeStoreReq(); toast(t('toast.storethanks',"🙌 Thanks! We'll work on adding that store"));
 }
 // Run non-critical work (the top finds-ticker banner, the demo body) when the browser is idle, so it
@@ -2663,7 +2663,7 @@ async function submitWaitlist(){
   const body={ contact:c, lat:USER_LOC&&USER_LOC.lat, lng:USER_LOC&&USER_LOC.lng };
   const r=await api('/pub/waitlist',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   btn.disabled=false; btn.textContent=t('wl.cta','Join the list →');
-  if(!r||r.error){ $('wl_err').textContent=t('err.generic',"Something went wrong. Try again."); return; }
+  if(!r||r.error){ $('wl_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
   track('waitlist_join');
   closeWaitlist(); toast(t('wl.done',"🙌 You're on the list. We'll reach out the moment we launch near you."));
 }
@@ -3522,7 +3522,7 @@ async function openPage(slug){
   $('pg_title').textContent=''; $('pg_body').innerHTML='…';
   $('pageOverlay').classList.add('on'); track('page_open',{slug});
   const r=await api('/p/'+slug+'?partial=1');
-  if(!r||r.error||!r.body){ $('pg_body').innerHTML=t('err.generic',"Something went wrong. Try again."); return; }
+  if(!r||r.error||!r.body){ $('pg_body').innerHTML=t('err.generic',"That didn't go through. Give it another try."); return; }
   $('pg_title').textContent=r.title||''; $('pg_body').innerHTML=r.body;
 }
 function closePage(){ $('pageOverlay').classList.remove('on'); }
@@ -3872,7 +3872,7 @@ async function startCheck(){
 
   const useApp=isAuthed();
   const r=await (useApp?appApi:api)(useApp?'/app/check':'/pub/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
-  if(r.error){ clearInterval(phaseT);clearInterval(elT); backToBuilder(); if(r.error==='no_credits'){ openBuy('out'); } else if(r.error==='unauthorized'){ signIn(); } else if(r.error==='store_closed'){ toast('🔒 '+(r.label||t('store.closed','Store is closed'))+t('toast.nocall','. No call placed.')); } else toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
+  if(r.error){ clearInterval(phaseT);clearInterval(elT); backToBuilder(); if(r.error==='no_credits'){ openBuy('out'); } else if(r.error==='unauthorized'){ signIn(); } else if(r.error==='too_soon'){ toast(r.message||tf('toast.toosoon','You just checked this store — check again in about {n} min.',{n:r.retryAfterMin||60}),'accent'); } else if(r.error==='store_closed'){ toast('🔒 '+(r.label||t('store.closed','Store is closed'))+t('toast.nocall','. No call placed.')); } else toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
   const cid=r.providerCallId;
   try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){}
   const stop=()=>{ clearInterval(POLL);clearInterval(phaseT);clearInterval(elT); };
@@ -4155,7 +4155,7 @@ async function startCheckLive(){
   let secs=0; const elT=setInterval(()=>{ secs+=1; },1000); // counts toward the hard cap only — no on-screen timer
   LIVE_TIMERS=[elT];
   const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
-  if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x}. No call placed.',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
+  if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='too_soon'){ toast(r.message||tf('toast.toosoon','You just checked this store — check again in about {n} min.',{n:r.retryAfterMin||60}),'accent'); } else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x}. No call placed.',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
   LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
   // Transcript + stage stream over the WS for EVERYONE — instant, the moment ElevenLabs emits a line
   // (no poll lag, no waiting on the conversation-id). Audio only PLAYS for listeners (canListen).
@@ -5488,14 +5488,14 @@ async function zoneSave(){
     if(ZONES.editId) await appApi('/app/zones/'+ZONES.editId,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({name,retailerIds:ids})});
     else await appApi('/app/zones',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name,retailerIds:ids})});
     toast(t('zones.saved','Zone saved'),'neutral'); renderZonesList();
-  }catch(e){ if(btn){ btn.disabled=false; btn.textContent=t('zones.save','Save zone'); } toast(t('err.generic','Something went wrong. Try again.')); }
+  }catch(e){ if(btn){ btn.disabled=false; btn.textContent=t('zones.save','Save zone'); } toast(t('err.generic',"That didn't go through. Give it another try.")); }
 }
 // ---- Screen C — the live zone-check report ----
 async function zoneCheckAll(id){
   let quoteTxt=''; try{ const zl=await appApi('/app/zones'); const zn=(Array.isArray(zl)?zl:(zl&&zl.zones)||[]).find(x=>x.id===id); if(zn&&zn.checkCents!=null) quoteTxt=' ('+money(zn.checkCents)+')'; }catch(_){ }
   if(!confirm(tf('zones.confirm','Check all stores in this zone?{q} 1 check per store.',{q:quoteTxt}))) return;
   let run=null; try{ run=await appApi('/app/zones/'+id+'/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({categoryId:(BRAND_CAT&&BRAND_CAT.id)||SEL_CAT||undefined})}); }catch(e){ run={error:'net'}; }
-  if(!run||run.error){ toast(run&&run.error==='no_credits'?t('zones.nocredits','Not enough checks for the whole zone.'):t('err.generic','Something went wrong. Try again.')); if(run&&run.error==='no_credits'){ setTimeout(()=>{ backToBuilder(); openBuy(); },600); } return; }
+  if(!run||run.error){ toast(run&&run.error==='no_credits'?t('zones.nocredits','Not enough checks for the whole zone.'):t('err.generic',"That didn't go through. Give it another try.")); if(run&&run.error==='no_credits'){ setTimeout(()=>{ backToBuilder(); openBuy(); },600); } return; }
   ZONES.run={ id, runId:run.runId, name:run.name||'' }; renderZoneRun(); zoneStartPoll();
 }
 function zoneStartPoll(){ zoneStopPoll(); ZONES.poll=setInterval(zonePollTick,1800); zonePollTick(); }
@@ -5997,7 +5997,7 @@ async function submitWatch(){
   const btn=$('watch_btn'); btn.disabled=true; btn.textContent=t('watch.setting','Setting it up…');
   const r=await api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,contact:c})});
   btn.disabled=false; btn.textContent=t('watch.cta','Watch this store →');
-  if(!r||r.error){ $('watch_err').textContent=t('err.generic',"Something went wrong. Try again."); return; }
+  if(!r||r.error){ $('watch_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
   track('watch_set',{retailerId:SEL_STORE.id,channel:isEmail?'email':'sms'});
   // In-place confirmation (owner: no toasts, no crowd counts). The input goes away; the box tells
   // them the ONE next step, then how the alert lands. Verification wiring = Admin build.
@@ -6189,7 +6189,7 @@ async function submitKiosk(){
   const btn=$('k_btn'); btn.disabled=true; btn.textContent=t('k.submitting','Submitting…');
   const r=await (isAuthed()?appApi:api)('/pub/kiosks/report',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   btn.disabled=false; btn.textContent=t('k.cta',"Claim my free check →");
-  if(!r||r.error){ $('k_err').textContent=t('err.generic',"Something went wrong. Try again."); return; }
+  if(!r||r.error){ $('k_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
   track('kiosk_report',{authed:isAuthed()});
   closeKiosk();
   if(r.reward&&r.reward.credits){ if(ACCOUNT)ACCOUNT.credits=(ACCOUNT.credits||0)+r.reward.credits; renderAuth(); toast(tf('k.thanks.credits','🎁 Thanks! '+r.reward.credits+' free check'+(r.reward.credits>1?'s':'')+' added',{n:r.reward.credits})); }
@@ -6345,7 +6345,7 @@ async function submitSuccess(){
     toast(rr.pending?t('sc.posted.review','Posted! We review before it goes live'):t('sc.posted','You\'re on the wall!'),'neutral');
     if($('scorePostOv')&&$('scorePostOv').classList.contains('on')){ closeScorePop(); closeAccount(); openSuccess(); }
     toggleComposer(false); loadSuccessWall(); loadCommunity();
-  }catch(e){ $('succ_err').textContent=(e&&e.message)||t('err.generic',"Something went wrong. Try again."); }
+  }catch(e){ $('succ_err').textContent=(e&&e.message)||t('err.generic',"That didn't go through. Give it another try."); }
   finally{ btn.disabled=false; btn.textContent=t('sc.postit','Post it →'); }
 }
 function igHandle(p){ return '@'+esc((p.handle||'hunter').replace(/^@/,'')); }
@@ -6429,7 +6429,7 @@ async function submitSchedule(){
   const r=await appApi('/app/schedule',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   btn.disabled=false; btn.textContent=t('sch.cta','Turn on auto-check →');
   if(r&&r.error==='members_only'){ closeSchedule(); openBuy('out'); return; }
-  if(!r||r.error){ $('sch_err').textContent=t('err.generic',"Something went wrong. Try again."); return; }
+  if(!r||r.error){ $('sch_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
   track('schedule_set',{retailerId:SEL_STORE.id,days:[...SCH_DAYS].join(',')||'auto'});
   closeSchedule(); loadSchedules();
   toast(SCH_DAYS.size?t('sch.on.days2',"Auto-check on"):t('sch.on.ship2',"Auto-check on · this store's shipment day"),'neutral');
