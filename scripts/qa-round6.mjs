@@ -80,14 +80,15 @@ ok('calendar: big cells (46px)', cal.cellH===46);
 ok('calendar: CTA no longer full-width', cal.ctaW>0 && cal.ctaW < cal.vw*0.8);
 await pg.screenshot({ path: 'loops/site-redesign/proofs/r6-calendar.png', fullPage: true });
 
-// 6) store-request empty submit highlights the field, no red word
+// 6) store-request empty submit flags the required fields (name + city) dashed-red AND shows a message
+// (owner 07-05: validation must tell people what's missing — same rule as the Zones save form).
 await pg.evaluate(() => { backToBuilder(); openStoreReq(); });
 await pg.waitForTimeout(300);
 await pg.evaluate(() => submitStoreReq());
 await pg.waitForTimeout(200);
-const v = await pg.evaluate(() => ({ marked: document.getElementById('sr_name').classList.contains('fld-err'), err: document.getElementById('sr_err').textContent.trim(),
+const v = await pg.evaluate(() => ({ nameMarked: document.getElementById('sr_name').classList.contains('fld-err'), cityMarked: document.getElementById('sr_city').classList.contains('fld-err'), err: document.getElementById('sr_err').textContent.trim(),
   border: getComputedStyle(document.getElementById('sr_name')).borderStyle }));
-ok('empty submit -> field dashed-red, no error word', v.marked && v.err==='' && v.border==='dashed');
+ok('empty submit -> name + city dashed-red WITH a message', v.nameMarked && v.cityMarked && v.err!=='' && v.border==='dashed');
 await pg.screenshot({ path: 'loops/site-redesign/proofs/r6-validation.png' });
 await pg.evaluate(() => closeStoreReq());
 

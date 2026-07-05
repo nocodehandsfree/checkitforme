@@ -843,7 +843,7 @@ __BRAND_HEAD__
   .rcal-d.today.has{color:#06210f} /* today WITH checks sits on the accent fill — keep text dark so it's legible (was white-on-yellow) */
   /* "No checks today" landing: an expanded on-page month calendar + a full-width CTA below it.
      The calendar and the button share one max-width column so they're exactly the same width. */
-  .todaywrap{max-width:360px;margin:20px auto 0;padding:0 6px}
+  .todaywrap{width:100%;max-width:360px;box-sizing:border-box;margin:20px auto 0;padding:0 6px;align-self:center} /* #result is a flex container — without an explicit width this single child shrank to its content (~227px), crushing the 7 calendar columns to ~21px wide while the cells stayed 46px tall → stretched-oval days. Fill the parent so columns get their full track. */
   .rcal-big{width:100%;background:var(--sheet);border:1px solid var(--border);border-radius:16px;padding:16px 14px 18px;margin:14px 0 16px;box-sizing:border-box}
   .rcal-big .rcal-h{margin-bottom:14px}
   .rcal-big .rcal-h b{font-size:16px}
@@ -1931,12 +1931,13 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 <div class="overlay" id="storeReqOverlay" onclick="if(event.target===this)closeStoreReq()">
   <div class="modal" style="position:relative;max-width:420px;text-align:left">
     <span class="x" onclick="closeStoreReq()">×</span>
+    <div id="sr_body">
     <div id="srMark" style="display:flex;justify-content:center;margin-bottom:6px"></div>
     <h3 style="margin:6px 0 2px;text-align:center" data-i18n="sr.title">Add your store</h3>
     <div class="meta" style="margin-bottom:14px;text-align:center" data-i18n="sr.sub">Tell us which store to add. When it goes live, <b>your next check is free</b>.</div>
     <label class="klbl" data-i18n="sr.name">Store name <span style="color:var(--muted);font-weight:400">(required)</span></label>
     <input id="sr_name" class="kin" data-i18n-ph="ph.storereq" placeholder="e.g. Target, Thousand Oaks">
-    <label class="klbl" data-i18n="sr.city">City &amp; state</label>
+    <label class="klbl" data-i18n="sr.city">City &amp; state <span style="color:var(--muted);font-weight:400">(required)</span></label>
     <input id="sr_city" class="kin" data-i18n-ph="ph.storecity" placeholder="Thousand Oaks, CA">
     <label class="klbl" data-i18n="sr.note">Anything else <span style="color:var(--muted);font-weight:400">(optional)</span></label>
     <input id="sr_note" class="kin" data-i18n-ph="ph.storedetails" placeholder="address, which products, etc.">
@@ -1944,6 +1945,13 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <input id="sr_contact" class="kin" type="text" inputmode="email" autocomplete="on" data-i18n-ph="ph.cellmail" placeholder="cell number or email">
     <div id="sr_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
     <button class="cta" id="sr_btn" onclick="submitStoreReq()" style="margin-top:8px;width:100%" data-i18n="sr.submit">Submit store →</button>
+    </div>
+    <div id="sr_done" style="display:none;text-align:center;padding:6px 2px 2px">
+      <div id="sr_donemark" style="display:flex;justify-content:center;margin-bottom:12px"></div>
+      <h3 style="margin:2px 0 6px" data-i18n="sr.done.title">Store submitted 🙌</h3>
+      <div class="meta" style="line-height:1.5">${''}<span id="sr_donebody"></span></div>
+      <button class="cta" onclick="closeStoreReq()" style="margin-top:16px;width:100%" data-i18n="sr.done.cta">Done</button>
+    </div>
   </div>
 </div>
 
@@ -2247,7 +2255,7 @@ const I18N={ es:{
   'cover.types':'Tipos de tienda que cubrimos. Toca el pin para ver <b>las tuyas</b>:',
   'st.open':'Abierto','st.closed':'Cerrado','st.till':'hasta',
   'sc.post':'Publica tu logro','sc.where':'¿Dónde lo conseguiste?','sc.store.ph':'Busca tu tienda…','sc.what':'¿Qué conseguiste?','sc.photo':'Agrega una foto de tu logro','sc.postit':'Publícalo →','back':'← Atrás',
-  'sr.title':'Agrega tu tienda','sr.sub':'Dinos qué tienda agregar. Cuando esté disponible, <b>tu próxima llamada es gratis</b>.','sr.name':'Nombre de la tienda <span style="color:var(--muted);font-weight:400">(requerido)</span>','sr.city':'Ciudad y estado','sr.note':'Algo más <span style="color:var(--muted);font-weight:400">(opcional)</span>','sr.email':'Tu celular o correo <span style="color:var(--muted);font-weight:400">(opcional) para avisarte cuando esté lista</span>','sr.submit':'Enviar tienda →',
+  'sr.title':'Agrega tu tienda','sr.sub':'Dinos qué tienda agregar. Cuando esté disponible, <b>tu próxima llamada es gratis</b>.','sr.name':'Nombre de la tienda <span style="color:var(--muted);font-weight:400">(requerido)</span>','sr.city':'Ciudad y estado <span style="color:var(--muted);font-weight:400">(requerido)</span>','sr.note':'Algo más <span style="color:var(--muted);font-weight:400">(opcional)</span>','sr.email':'Tu celular o correo <span style="color:var(--muted);font-weight:400">(opcional) para avisarte cuando esté lista</span>','sr.submit':'Enviar tienda →','sr.err.need':'Agrega el nombre de la tienda y su ciudad para que podamos encontrarla.','sr.done.title':'Tienda enviada 🙌','sr.done.cta':'Listo','sr.done.body':"Revisaremos <b>{s}</b> y la agregaremos al mapa. En cuanto esté disponible, <b>tu próxima verificación es gratis</b>.",
   // builder extras
   'cat.specific':'¿Algo específico?','cat.specific.note':'(opcional) fija el producto exacto','cat.any':'Cualquier {x}. Todo cuenta',
   'sched.step':'📅 Tus auto-verificaciones','sched.step.note':'· llamamos en días de envío','sched.from':'desde','sched.shipday':'día de envío','sched.cancel':'Cancelar',
@@ -2589,16 +2597,30 @@ function renderFooter(){
   el.innerHTML=SOC.map(([k,ico,lbl])=>`<a href="${L[k]?esc(L[k]):'#'}" ${L[k]?'target="_blank" rel="noopener"':'onclick="event.preventDefault();toast(\'Link coming soon\')"'} title="${lbl}" aria-label="${lbl}">${ico('currentColor')}</a>`).join('');
 }
 // "Don't see your store?" submission.
-function openStoreReq(){ ['sr_name','sr_city','sr_note','sr_contact'].forEach(id=>{const e=$(id);if(e)e.value='';}); $('sr_err').textContent=''; track('storereq_open'); $('storeReqOverlay').classList.add('on'); setTimeout(()=>{try{$('sr_name').focus();}catch(e){}},80); }
+function openStoreReq(){ ['sr_name','sr_city','sr_note','sr_contact'].forEach(id=>{const e=$(id);if(e){e.value='';markFld(e,false);}}); $('sr_err').textContent='';
+  const bd=$('sr_body'), dn=$('sr_done'); if(bd)bd.style.display=''; if(dn)dn.style.display='none'; // reset to the form (not a leftover success state)
+  track('storereq_open'); $('storeReqOverlay').classList.add('on'); setTimeout(()=>{try{$('sr_name').focus();}catch(e){}},80); }
 function closeStoreReq(){ $('storeReqOverlay').classList.remove('on'); acctReturn(); }
 async function submitStoreReq(){
-  const name=($('sr_name').value||'').trim();
-  if(!name){ markFld($('sr_name'),true); $('sr_err').textContent=''; return; }
+  const name=($('sr_name').value||'').trim(), city=($('sr_city').value||'').trim();
+  // Require BOTH the store name AND its city — a name alone (e.g. "fungie") isn't enough to find & add it.
+  // Flag every missing field at once so the person sees all of them, and never POST a half-empty request.
+  let bad=false;
+  if(!name){ markFld($('sr_name'),true); bad=true; }
+  if(!city){ markFld($('sr_city'),true); bad=true; }
+  if(bad){ $('sr_err').textContent=t('sr.err.need','Add the store name and its city so we can find it.'); return; }
+  $('sr_err').textContent='';
   const btn=$('sr_btn'); btn.disabled=true; btn.textContent=t('toast.submitting','Submitting…');
-  const r=await api('/pub/store-request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({storeName:name,city:($('sr_city').value||'').trim(),note:($('sr_note').value||'').trim(),contact:($('sr_contact').value||'').trim()})});
+  const r=await api('/pub/store-request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({storeName:name,city,note:($('sr_note').value||'').trim(),contact:($('sr_contact').value||'').trim()})});
   btn.disabled=false; btn.textContent=t('sr.submit','Submit store →');
   if(!r||r.error){ $('sr_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
-  track('storereq_submit'); closeStoreReq(); toast(t('toast.storethanks',"🙌 Thanks! We'll work on adding that store"));
+  track('storereq_submit');
+  // Show a real confirmation IN the modal (not a fleeting toast that dumps you onto the page behind) — restate
+  // the store, that we'll add it, and that the free check lands when it goes live. Owner 07-05.
+  try{ setI('sr_donemark', FCHK(46)); }catch(_){ }
+  const nm=esc(name)+(city?', '+esc(city):'');
+  const db=$('sr_donebody'); if(db) db.innerHTML=tf('sr.done.body',"We'll review <b>{s}</b> and add it to the map. The moment it goes live, <b>your next check is free</b>.",{s:nm});
+  const bd=$('sr_body'), dn=$('sr_done'); if(bd)bd.style.display='none'; if(dn)dn.style.display='';
 }
 // Run non-critical work (the top finds-ticker banner, the demo body) when the browser is idle, so it
 // never competes with first paint or the first scroll after a product switch (each switch is a full
@@ -2714,16 +2736,18 @@ async function loadRefer(){
   if(!isAuthed()){ REFER=null; $('refer_link').textContent=t('ref.signin','tap here for your invite link'); $('refer_count').textContent=''; return; }
   REFER=await appApi('/app/referral');
   if(!REFER||REFER.error||!REFER.enabled){ blk.style.display='none'; return; }
-  // "Give a check, get a check" is a FIXED 1-for-1 promise, so the consumer copy always reads a single
-  // free check — never the tunable grant count (which the owner keeps at 1; a stale >1 override must not
-  // leak "3 free checks" into the text/invite copy). Backend grant still follows policy.rewards.referralChecks.
+  // Reward count is Admin-tunable (policy.rewards.referralChecks) and must reflect live on EVERY spot —
+  // singular copy at 1, plural at >1. The owner sets the number in Admin → it flows here via /app/referral.
+  const r=REFER.reward||1;
   const sub=document.querySelector('[data-i18n="ref.sub2"]');
-  if(sub) sub.innerHTML = t('ref.sub.one','You both get a <b>free check</b> when they sign up.');
+  if(sub) sub.innerHTML = r===1 ? t('ref.sub.one','You both get a <b>free check</b> when they sign up.')
+                                : tf('ref.sub.n','You both get <b>{n} free checks</b> when they sign up.',{n:r});
   if(REFER.code) $('refer_link').textContent=referLink(REFER.code).replace(/^https?:\/\//,'');
   $('refer_count').textContent=REFER.referrals>0?tf('ref.joined',`🎉 ${REFER.referrals} friend${REFER.referrals===1?'':'s'} joined so far`,{n:REFER.referrals}):'';
 }
 function referMessage(){
-  const reward=t('ref.msg.r1','a free check'); // fixed 1-for-1: "give a check, get a check"
+  const r=(REFER&&REFER.reward)||1;
+  const reward=r===1?t('ref.msg.r1','a free check'):tf('ref.msg.rN','{n} free checks',{n:r});
   const c=(BRAND&&BRAND.category)||'cards';
   const isCards=!/needoh/i.test(c); // card verticals get the pack/box/ETB line
   return isCards
@@ -3016,7 +3040,7 @@ function closeScorePop(){
   if(c&&hm&&hm.parent){ try{ hm.parent.insertBefore(c,hm.next); }catch(_){ hm.parent.appendChild(c); } c.style.display='none'; }
   COMPOSER=false;
 }
-function inviteMsg(link){ return t('ref.sharemsg2one',"Yo! Check this tech out. It's sick.\nHelps us quickly find viral products in stock like Pokémon cards at retail prices.\nSign up and we both get a free check: ")+link; }
+function inviteMsg(link){ const n=POLICY.referralChecks||1; return tf('ref.sharemsg2',"Yo! Check this tech out. It's sick.\nHelps us quickly find viral products in stock like Pokémon cards at retail prices.\nSign up and we both get {n} free {c}: ",{n,c:n===1?t('ref.check1','check'):t('ref.checkN','checks')})+link; }
 async function acctInvitePanel(btn){
   try{ if(!REFER||!REFER.code){ await loadRefer(); } }catch(_){ }
   const link=(REFER&&REFER.code)?referLink(REFER.code):location.origin;
@@ -3030,7 +3054,7 @@ async function acctInvitePanel(btn){
   const btnS='flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0;border:0;border-radius:14px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;font-size:10px;font-weight:800;letter-spacing:.12em;cursor:pointer';
   const ic=(pth)=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${pth}</svg>`;
   pan.innerHTML=`
-    <div style="margin-top:10px;font-size:12.5px;font-weight:600;color:#8A8A96;text-align:center">${t('ref.both2one','You both get <b style="color:#fff">a free check</b> when they sign up.')}</div>
+    <div style="margin-top:10px;font-size:12.5px;font-weight:600;color:#8A8A96;text-align:center">${tf('ref.both2','You both get <b style="color:#fff">{n} free {c}</b> when they sign up.',{n:POLICY.referralChecks||1,c:(POLICY.referralChecks||1)===1?t('ref.check1','check'):t('ref.checkN','checks')})}</div>
     <div style="margin-top:9px;display:flex;align-items:center;gap:8px;border:1.5px dashed rgba(255,255,255,.16);border-radius:13px;padding:10px 12px">
       <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;font-weight:700">${esc(short)}</span>
       <button onclick="inviteCopy()" style="background:none;border:0;color:#4ADE80;font-size:11px;font-weight:800;letter-spacing:.1em;cursor:pointer">${t('ref.copybtn','COPY')}</button>
