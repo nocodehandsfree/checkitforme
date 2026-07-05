@@ -1,0 +1,372 @@
+<style>
+  :root{
+    --bg:#0C0C12; --panel:#14141C; --panel-2:#1A1A24; --line:rgba(255,255,255,.09);
+    --ink:#ECECF2; --ink-soft:#C7C7D2; --muted:#8E8EA0; --faint:#5C5C6B;
+    --green:#4ADE80; --green-ink:#06210f; --purple:#A78BFA; --amber:#FBBF24; --red:#EF4444;
+    --accent:var(--green);
+    --measure:66ch;
+    --f-sans:Inter,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+    --f-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#F6F7F3; --panel:#FFFFFF; --panel-2:#F0F1EC; --line:rgba(20,24,18,.10);
+      --ink:#181A20; --ink-soft:#33363F; --muted:#5B5E68; --faint:#8A8D96;
+      --green:#159E56; --green-ink:#ffffff; --purple:#7A56E0; --amber:#B4720A; --red:#D33A34;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0C0C12; --panel:#14141C; --panel-2:#1A1A24; --line:rgba(255,255,255,.09);
+    --ink:#ECECF2; --ink-soft:#C7C7D2; --muted:#8E8EA0; --faint:#5C5C6B;
+    --green:#4ADE80; --green-ink:#06210f; --purple:#A78BFA; --amber:#FBBF24; --red:#EF4444;
+  }
+  :root[data-theme="light"]{
+    --bg:#F6F7F3; --panel:#FFFFFF; --panel-2:#F0F1EC; --line:rgba(20,24,18,.10);
+    --ink:#181A20; --ink-soft:#33363F; --muted:#5B5E68; --faint:#8A8D96;
+    --green:#159E56; --green-ink:#ffffff; --purple:#7A56E0; --amber:#B4720A; --red:#D33A34;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-sans);
+    -webkit-font-smoothing:antialiased;line-height:1.65;
+    background-image:radial-gradient(900px 420px at 82% -160px,rgba(74,222,128,.08),transparent 70%);}
+  a{color:inherit}
+  ::selection{background:rgba(74,222,128,.28)}
+
+  /* shell */
+  .wrap{display:grid;grid-template-columns:264px minmax(0,1fr);min-height:100vh}
+  /* rail */
+  .rail{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
+    border-right:1px solid var(--line);padding:22px 18px 40px;background:transparent}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:900;font-size:20px;letter-spacing:-.5px;
+    padding:4px 6px 18px}
+  .brand .tick{width:22px;height:22px;border-radius:50%;background:var(--green);color:var(--green-ink);
+    display:grid;place-items:center;font-size:14px;font-weight:900;box-shadow:0 0 14px rgba(74,222,128,.4)}
+  .railcat{font-size:11px;text-transform:uppercase;letter-spacing:.13em;color:var(--faint);
+    font-weight:800;margin:22px 8px 7px}
+  .rail a{display:block;text-decoration:none;color:var(--muted);font-size:13.5px;font-weight:600;
+    padding:6px 10px;border-radius:8px;border-left:2px solid transparent;line-height:1.35}
+  .rail a:hover{color:var(--ink);background:var(--panel)}
+  .rail a.on{color:var(--ink);border-left-color:var(--green);background:var(--panel)}
+  .rail a.gated{color:var(--faint)}
+  .rail a.gated::after{content:"gated";float:right;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--faint);border:1px solid var(--line);border-radius:5px;padding:1px 5px;margin-top:1px}
+
+  /* topbar */
+  .top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;
+    padding:12px 30px;border-bottom:1px solid var(--line);
+    background:color-mix(in srgb,var(--bg) 84%,transparent);backdrop-filter:blur(10px)}
+  .crumb{font-size:12.5px;color:var(--muted);font-weight:600}
+  .crumb b{color:var(--ink)}
+  .toggle{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--muted);
+    font:inherit;font-size:12px;font-weight:700;padding:6px 12px;border-radius:20px;cursor:pointer;display:flex;gap:6px;align-items:center}
+  .toggle:hover{color:var(--ink)}
+  .toggle:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+
+  /* reading column */
+  main{padding:0 30px 120px}
+  .col{max-width:var(--measure);margin:0 auto}
+  .chapter{padding-top:64px;scroll-margin-top:80px}
+  .eyebrow{font-size:11.5px;text-transform:uppercase;letter-spacing:.15em;font-weight:800;color:var(--green);margin-bottom:14px}
+  h1.disp{font-size:clamp(32px,5vw,46px);line-height:1.04;font-weight:900;letter-spacing:-1.4px;
+    text-wrap:balance;margin:0 0 18px}
+  h1.disp .hl{color:var(--green)}
+  h2{font-size:26px;font-weight:850;letter-spacing:-.6px;line-height:1.15;text-wrap:balance;margin:52px 0 12px}
+  h3{font-size:16.5px;font-weight:750;letter-spacing:-.2px;margin:30px 0 8px;color:var(--ink)}
+  p{margin:0 0 15px;color:var(--ink-soft);font-size:16.5px}
+  .lead{font-size:19px;line-height:1.55;color:var(--ink);margin-bottom:22px}
+  strong{color:var(--ink);font-weight:700}
+  em{color:var(--ink);font-style:italic}
+  code{font-family:var(--f-mono);font-size:.85em;background:var(--panel-2);color:var(--purple);
+    padding:2px 6px;border-radius:6px;border:1px solid var(--line)}
+  ul{margin:0 0 16px;padding-left:0;list-style:none}
+  ul li{position:relative;padding-left:22px;margin-bottom:9px;color:var(--ink-soft);font-size:16px}
+  ul li::before{content:"";position:absolute;left:3px;top:11px;width:6px;height:6px;border-radius:50%;
+    background:var(--green);opacity:.85}
+  hr{border:0;border-top:1px solid var(--line);margin:40px 0}
+
+  /* devices */
+  .spine{border-left:2px solid var(--green);padding:2px 0 2px 18px;margin:24px 0;
+    font-size:20px;font-weight:800;line-height:1.35;color:var(--ink);letter-spacing:-.3px}
+  .spine .sub{display:block;font-size:14px;font-weight:600;color:var(--muted);margin-top:6px;letter-spacing:0}
+
+  .steps{display:grid;gap:12px;margin:22px 0}
+  .step{display:grid;grid-template-columns:34px 1fr;gap:14px;align-items:start;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .step .n{width:34px;height:34px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);
+    display:grid;place-items:center;font-weight:900;font-size:15px;color:var(--green)}
+  .step h4{margin:2px 0 4px;font-size:15.5px;font-weight:750;color:var(--ink);letter-spacing:-.2px}
+  .step p{margin:0;font-size:14.5px;color:var(--muted)}
+
+  .verdicts{display:grid;gap:10px;margin:22px 0}
+  .vd{display:flex;gap:13px;align-items:baseline;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:13px 15px;border-left:3px solid var(--dot)}
+  .vd .k{font-weight:800;font-size:15px;color:var(--ink);min-width:112px;flex:0 0 auto}
+  .vd .d{font-size:14.5px;color:var(--muted)}
+  .vd.in{--dot:var(--green)} .vd.out{--dot:var(--red)} .vd.unk{--dot:var(--amber)} .vd.non{--dot:var(--faint)}
+
+  .callout{background:linear-gradient(180deg,rgba(74,222,128,.10),rgba(74,222,128,.03));
+    border:1px solid rgba(74,222,128,.30);border-radius:16px;padding:20px 22px;margin:28px 0}
+  .callout .lab{font-size:11px;text-transform:uppercase;letter-spacing:.14em;font-weight:800;color:var(--green);margin-bottom:8px}
+  .callout p{margin:0;color:var(--ink);font-size:16px}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:22px 0}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 17px}
+  .tile h4{margin:0 0 5px;font-size:15px;font-weight:750;color:var(--ink);display:flex;align-items:center;gap:8px}
+  .tile .tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;border-radius:20px}
+  .tile p{margin:0;font-size:13.5px;color:var(--muted)}
+  .tag.best{background:rgba(74,222,128,.16);color:var(--green)}
+  .tag.mid{background:rgba(167,139,250,.16);color:var(--purple)}
+  .tag.warn{background:rgba(251,191,36,.16);color:var(--amber)}
+
+  .tiers{width:100%;border-collapse:collapse;margin:20px 0;font-size:14.5px}
+  .tiers th,.tiers td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  .tiers th{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);font-weight:800}
+  .tiers td.t{font-weight:900;font-size:16px;font-variant-numeric:tabular-nums}
+  .tiers .pill{font-weight:800;font-size:13px}
+  .swatch{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:middle}
+
+  .gatecard{background:var(--panel);border:1px dashed var(--line);border-radius:16px;padding:26px;margin:24px 0;text-align:center}
+  .gatecard .lab{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:800}
+  .gatecard p{max-width:46ch;margin:10px auto 0;color:var(--muted);font-size:15px}
+
+  .foot{margin-top:80px;padding-top:26px;border-top:1px solid var(--line);color:var(--faint);font-size:12.5px}
+  .draftflag{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--amber);border:1px solid rgba(251,191,36,.4);border-radius:6px;padding:2px 8px;margin-left:10px;vertical-align:middle}
+
+  @media (max-width:880px){
+    .wrap{grid-template-columns:1fr}
+    .rail{display:none}
+    .grid2{grid-template-columns:1fr}
+    .vd{flex-direction:column;gap:4px}
+    .vd .k{min-width:0}
+  }
+  @media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+</style>
+
+<div class="wrap">
+  <aside class="rail">
+    <div class="brand"><span class="tick">✓</span>heck<span style="color:var(--faint);font-weight:600;font-size:13px;margin-left:2px">docs</span></div>
+
+    <div class="railcat">Start here</div>
+    <a href="#what">What Check It For Me is</a>
+    <a href="#how">How a check works</a>
+    <a href="#unit">What a "check" is</a>
+    <a href="#result">Reading your result</a>
+
+    <div class="railcat">The stores</div>
+    <a href="#universe">The store universe</a>
+    <a href="#types">Store types &amp; price</a>
+    <a href="#ranking">How we rank stores</a>
+    <a href="#kiosks">Kiosks</a>
+
+    <div class="railcat">Under the hood</div>
+    <a href="#life">The life of a check</a>
+    <a href="#ai">Meet Check AI</a>
+    <a href="#cost">Why the person is the cost</a>
+    <a href="#proof">Proof, not guesses</a>
+
+    <div class="railcat">Plans &amp; trust</div>
+    <a href="#billing">Checks &amp; billing</a>
+    <a href="#nocharge">No answer = no charge</a>
+    <a href="#terms">Privacy &amp; terms</a>
+  </aside>
+
+  <div>
+    <header class="top">
+      <div class="crumb"><b>Check It For Me</b> · the book </div>
+      <button class="toggle" id="tg" aria-label="Toggle light or dark theme"><span id="tglab">Light</span></button>
+    </header>
+
+    <main>
+      <div class="col">
+
+        <!-- ===================== 1 · START HERE ===================== -->
+        <section class="chapter" id="what">
+          <div class="eyebrow">Start here</div>
+          <h1 class="disp">Pokémon <span class="hl">in stock?</span><br>We'll check for you.</h1>
+          <p class="lead">You want the sealed booster box before it's gone. Driving store to store is a waste of gas, and calling around yourself is worse. So we do it. You tap a store, our AI phones it, talks to a real person, and tells you what they said.</p>
+          <p>The stuff worth hunting sells out in minutes. A hot Pokémon set drops and it's gone from every website before you can refresh, but it's sitting on a shelf somewhere near you <em>right now</em>, because a truck just dropped it and nobody's found it yet. That's the whole game: getting to that shelf before the next person does. Check calls the stores for you, so you find the one that has it and walk in while it's still there.</p>
+          <p>That's the whole thing. No apps to babysit, no accounts to wrangle, no guessing whether a website is lying about "in stock." A real call to a real store, and a straight answer back on your phone in about two minutes.</p>
+          <p>It works for the collectibles that actually sell out: <strong>Pokémon, One Piece, Topps Chrome NBA, and NeeDoh</strong>. And the first check is on us.</p>
+          <div class="callout">
+            <div class="lab">The promise</div>
+            <p><strong>No answer = no charge.</strong> If nobody picks up, or we can't get you a clear yes-or-no, you don't spend a thing. You only pay when we actually get you an answer.</p>
+          </div>
+        </section>
+
+        <section class="chapter" id="how">
+          <h2>How a check works</h2>
+          <p>Three steps. You barely lift a finger.</p>
+          <div class="steps">
+            <div class="step"><div class="n">1</div><div><h4>Pick a store</h4><p>Tell us what you're hunting and where you are. We show the stores nearby that actually stock it, closest first, with the open ones flagged.</p></div></div>
+            <div class="step"><div class="n">2</div><div><h4>We call</h4><p>Check AI dials the store, waits through the hold music and the phone menu, and asks a real person the one question that matters: "Got any of it in right now?" You can watch the conversation live, the transcript streaming to your phone as it happens.</p></div></div>
+            <div class="step"><div class="n">3</div><div><h4>You get the verdict</h4><p>The moment the call wraps, you get a plain answer, color-coded so you know before you even read it.</p></div></div>
+          </div>
+        </section>
+
+        <section class="chapter" id="unit">
+          <h2>What a "check" is</h2>
+          <p>A <strong>check</strong> is one call to one store about one thing. It's the unit you spend. "Free check," "1 check," "checks left", that's the currency.</p>
+          <p>Your <strong>first check is free</strong>, no card needed. After that you either buy checks as you go or get a monthly bundle on a plan. A check only gets spent when we come back with a real yes or no. Everything else is on the house (see <a href="#nocharge" style="color:var(--green);text-decoration:none;font-weight:600">No answer = no charge</a>).</p>
+          <div class="spine">One check. One store. One straight answer.<span class="sub">The word "call" is the literal phone call we place. The word "check" is what you spend. When in doubt, you think in checks.</span></div>
+        </section>
+
+        <section class="chapter" id="result">
+          <h2>Reading your result</h2>
+          <p>Every check comes back as a short verdict. Color carries the meaning, so a glance tells you the story before you read a word.</p>
+          <div class="verdicts">
+            <div class="vd in"><div class="k">🟢 In stock</div><div class="d">They've got it. Go grab it before it's gone.</div></div>
+            <div class="vd out"><div class="k">🔴 Not in / Sold out</div><div class="d">They don't have it right now. Save the trip.</div></div>
+            <div class="vd unk"><div class="k">🟡 Couldn't tell</div><div class="d">The answer wasn't clear. Read the convo and you decide. No charge.</div></div>
+            <div class="vd non"><div class="k">⚪ No answer</div><div class="d">Nobody picked up, or the line was dead. No charge, try again later.</div></div>
+          </div>
+          <p>Under the verdict you get the actual conversation, the real back-and-forth between Check AI and the store, so you're never taking our word for it. If a store says a shipment landed this morning, you'll see them say it.</p>
+        </section>
+
+        <!-- ===================== 2 · THE STORES ===================== -->
+        <section class="chapter" id="universe">
+          <div class="eyebrow">The stores</div>
+          <h2>The store universe</h2>
+          <p>Behind every check is a national map of <strong>over 100,000 real store locations</strong>, grouped under roughly 80 core retail brands, plus card shops, thrift stores, and the Pokémon vending machines. When you open the app, that's the haystack we search for the needle near you.</p>
+          <p>It's built on one rule that keeps everything honest: <strong>there's a single source of truth.</strong> Every store you see is read live from one database, no screen keeps its own private list, no hardcoded names, no stale spreadsheet. When a store gets fixed, it's fixed everywhere at once.</p>
+          <h3>Stores vs. brands</h3>
+          <p>A <strong>brand</strong> (a "chain") is Target, or CVS, or Barnes &amp; Noble, it carries the logo, the reliability rating, and how its phone system works. A <strong>store</strong> is one physical Target on one street, its address, its hours, its own confirmed restock day. Anything true for the whole brand is inherited; anything local lives on the store.</p>
+        </section>
+
+        <section class="chapter" id="types">
+          <h2>Store types &amp; what they mean for price</h2>
+          <p>Not every store is the same kind of bet. The type tells you whether you're likely to find genuine product at list price, or roll the dice.</p>
+          <div class="grid2">
+            <div class="tile"><h4>Retail <span class="tag best">MSRP</span></h4><p>Target, Walmart, CVS, Barnes &amp; Noble. Sealed, genuine product at or near list price. The best-value hunt, and the highest-rated.</p></div>
+            <div class="tile"><h4>Card shop <span class="tag warn">markup</span></h4><p>Local hobby shops. Real sealed product, but almost always priced above MSRP. Great selection, you pay for it.</p></div>
+            <div class="tile"><h4>Thrift <span class="tag mid">used</span></h4><p>Goodwill, Savers, and the like. A treasure hunt for loose, used cards from collections. Spotty by nature, kept as its own separate experience.</p></div>
+            <div class="tile"><h4>Kiosk <span class="tag best">exact MSRP</span></h4><p>The official Pokémon vending machines. A machine sets the price, so it's always exact MSRP, the best possible target when one's near you.</p></div>
+          </div>
+        </section>
+
+        <section class="chapter" id="ranking">
+          <h2>How we rank stores</h2>
+          <p>The rating answers one question: <em>how reliably is it worth checking this store for genuine product at MSRP right now?</em> It's a best chance, never a promise. A small, predictable restocker beats a big random one.</p>
+          <table class="tiers">
+            <thead><tr><th>Tier</th><th>What you see</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td class="t">5</td><td class="pill" style="color:var(--green)"><span class="swatch" style="background:var(--green)"></span>Best Chance</td><td>Genuine MSRP, carries broadly, restock rhythm you can time. Plus every kiosk store.</td></tr>
+              <tr><td class="t">4</td><td class="pill" style="color:var(--purple)"><span class="swatch" style="background:var(--purple)"></span>Mostly Reliable</td><td>Genuine MSRP and broad, but no dependable rhythm.</td></tr>
+              <tr><td class="t">3</td><td class="pill" style="color:var(--amber)"><span class="swatch" style="background:var(--amber)"></span>Spotty</td><td>Genuine MSRP but varies store to store.</td></tr>
+              <tr><td class="t">2</td><td class="pill" style="color:var(--muted)"><span class="swatch" style="background:var(--muted)"></span>Over MSRP</td><td>Has it, but above list price, card shops, GameStop, resellers.</td></tr>
+            </tbody>
+          </table>
+          <p>There's a separate thing we track that never shows up as a star rating: <strong>reach rate</strong>, whether a human actually picks up the phone. A Barnes &amp; Noble answers direct; a pharmacy hides behind a phone bot. That's about how hard the store is to reach, not how good the shelf is, and it's what we quietly work to get faster.</p>
+        </section>
+
+        <section class="chapter" id="kiosks">
+          <h2>Kiosks, the Pokémon vending machines</h2>
+          <p>These are the official TPCi vending machines, usually tucked inside a supermarket. They dispense sealed Pokémon product at exact MSRP, with no staff and no markup, which is why a kiosk store is always rated Best Chance.</p>
+          <p>There's one hard rule: a store only counts as a kiosk if it's on the <strong>official machine list</strong>. If it's not on that list, it's not a kiosk, full stop. That keeps the map from filling up with wishful thinking.</p>
+          <p>A check on a kiosk asks a different question than a shelf check. There's nobody to ask about a shipment, so the call just confirms the machine is <strong>powered on and stocked</strong>, because they go down, get switched off, and run dry on their own cycles. Shoppers help keep them honest too: forward a machine's email receipt and it's hard proof it was working at that moment (and it earns you credit).</p>
+        </section>
+
+        <!-- ===================== 3 · UNDER THE HOOD ===================== -->
+        <section class="chapter" id="life">
+          <div class="eyebrow">Under the hood</div>
+          <h2>The life of a check</h2>
+          <p>Here's what actually happens between your tap and your verdict. It's more machinery than it looks.</p>
+          <div class="steps">
+            <div class="step"><div class="n">1</div><div><h4>You start it</h4><p>You sign in with your phone number (a texted code, no passwords ever). You pick a store and a product, and that kicks off the check.</p></div></div>
+            <div class="step"><div class="n">2</div><div><h4>We dial</h4><p>The call goes out over the real phone network, and it can even show the store your own verified number, so it's a normal local call, not a robocall.</p></div></div>
+            <div class="step"><div class="n">3</div><div><h4>We get to a person</h4><p>Most stores answer with a menu or a phone tree. Check AI knows the fastest route through each one and works the menu to a human, without burning money doing it (see below).</p></div></div>
+            <div class="step"><div class="n">4</div><div><h4>We ask</h4><p>Once a person is on the line, Check AI asks the one stock question and listens. The whole exchange streams to your phone live.</p></div></div>
+            <div class="step"><div class="n">5</div><div><h4>We read the answer twice</h4><p>Two independent reads decide the verdict. If they disagree, we don't guess, you get an honest "couldn't tell," and it's free.</p></div></div>
+          </div>
+        </section>
+
+        <section class="chapter" id="ai">
+          <h2>Meet Check AI</h2>
+          <p>Check AI is the voice that makes the call. It sounds like a friendly person calling around, because that's the job, a store associate is far more helpful to a real "hey, quick question" than to a robot.</p>
+          <p>The clever part is how it gets <em>to</em> that associate. Every store's phone system is one of three kinds, and Check AI handles each differently:</p>
+          <ul>
+            <li><strong>Direct</strong>, a person just picks up. Nothing to navigate.</li>
+            <li><strong>Keypad menu</strong>, "press 3 for the store." We press the right keys automatically, for free.</li>
+            <li><strong>Voice menu</strong>, the kind that wants you to <em>say</em> "front desk." We speak the right words to get through, cheaply.</li>
+          </ul>
+          <p>It learns each store's fastest path once and reuses it, so the calls get quicker and cheaper over time.</p>
+        </section>
+
+        <section class="chapter" id="cost">
+          <h2>Why reaching a person is the real cost</h2>
+          <p>A phone call is cheap. A phone call with a smart AI listening and talking the whole time is not, and while you're just sitting in a phone menu, that smart part is doing nothing useful but still running the meter.</p>
+          <p>So we keep it switched off until it's needed. Check AI navigates the menu with free keypad presses or cheap prerecorded speech, and the expensive, conversational part only wakes up <strong>the moment a human actually answers</strong>. The deeper the phone tree, the more we save, because those are exactly the minutes you'd otherwise be paying full price for.</p>
+          <div class="callout">
+            <div class="lab">Why it matters to you</div>
+            <p>This is what makes "no answer = no charge" affordable. We spend almost nothing getting to the person, so we can eat the cost of every call that doesn't reach one.</p>
+          </div>
+        </section>
+
+        <section class="chapter" id="proof">
+          <h2>Proof, not guesses</h2>
+          <p>Stock-checker websites lie constantly, they say "in stock" when the shelf is bare, because their inventory feed is hours behind reality. A phone call to a person standing near the shelf isn't.</p>
+          <p>That's why every check comes with the <strong>receipt</strong>: the live transcript of the actual conversation. You see the question, you see the answer, you see the store say a shipment landed this morning. If we tell you it's in stock, you can read exactly why we think so.</p>
+        </section>
+
+        <!-- ===================== 4 · PLANS & TRUST ===================== -->
+        <section class="chapter" id="billing">
+          <div class="eyebrow">Plans &amp; trust</div>
+          <h2>Checks &amp; billing</h2>
+          <p>Your first check is free. After that, you choose how you spend:</p>
+          <ul>
+            <li><strong>Pay as you go</strong>, buy a pack of checks, use them whenever. They don't expire.</li>
+            <li><strong>A monthly plan</strong>, a bundle of checks each month, plus extras like restock alerts, auto-checks on shipment days, and zone sweeps that check all your stores in one tap.</li>
+            <li><strong>Check+</strong>, the membership, for the people who hunt seriously.</li>
+          </ul>
+          <p>Billing is handled entirely on our side and only ever fires on a real, answered verdict. You never get charged mid-call or on a maybe.</p>
+        </section>
+
+        <section class="chapter" id="nocharge">
+          <h2>No answer = no charge</h2>
+          <p>This isn't a marketing line, it's how the system is wired. A check only costs you something when the call ends in a <strong>definitive</strong> answer, a clear in-stock, not-in-stock, sold-out, or doesn't-carry.</p>
+          <p>Every other outcome is free, automatically: nobody answered, the line was busy, they put us on hold too long, they were slammed and couldn't check, a language barrier, a bad number, the store turned out closed, or the two reads disagreed. If we didn't get you a straight answer, you keep your check.</p>
+          <div class="spine">You pay for answers, not attempts.<span class="sub">The charge is decided by the server after the call, on the verdict alone, there's no way for a dead-end call to quietly cost you.</span></div>
+        </section>
+
+        <section class="chapter" id="terms">
+          <h2>Privacy &amp; terminology</h2>
+          <p>We keep it lean. Sign-in is your phone number and a texted code, no passwords to leak. We store what's needed to place your checks and show your history, and nothing we don't use.</p>
+          <p>A couple of words we use carefully, so the app always reads the same way:</p>
+          <ul>
+            <li><strong>Check</strong>, what you spend, and one call about one product.</li>
+            <li><strong>Call</strong>, the literal phone call we place to the store.</li>
+            <li><strong>Check AI</strong>, the voice that makes the call.</li>
+            <li><strong>Staff</strong>, the person who answers at the store.</li>
+          </ul>
+        </section>
+
+        <!-- ===================== 5 · INTERNAL (GATED) ===================== -->
+        <div class="foot">
+          Draft preview · sections 1–4 written from a code-level review of the live platform. Section 5 gated. Destined for ReadMe once the structure and voice are approved. Not yet published anywhere.
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  (function(){
+    var root=document.documentElement, btn=document.getElementById('tg'), lab=document.getElementById('tglab');
+    function cur(){ var t=root.getAttribute('data-theme'); if(t) return t;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'; }
+    function paint(){ lab.textContent = cur()==='dark' ? 'Light' : 'Dark'; }
+    btn.addEventListener('click',function(){ root.setAttribute('data-theme', cur()==='dark'?'light':'dark'); paint(); });
+    paint();
+
+    // active chapter tracking in the rail
+    var links=[].slice.call(document.querySelectorAll('.rail a'));
+    var map={}; links.forEach(function(a){ var id=a.getAttribute('href').slice(1); map[id]=a; });
+    var obs=new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ var a=map[e.target.id];
+        if(a){ links.forEach(function(l){l.classList.remove('on');}); a.classList.add('on'); } } });
+    },{rootMargin:'-15% 0px -70% 0px',threshold:0});
+    document.querySelectorAll('.chapter').forEach(function(s){ obs.observe(s); });
+  })();
+</script>
