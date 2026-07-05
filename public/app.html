@@ -3518,10 +3518,10 @@ async function loadTesting(){
   const sum=document.getElementById('testing_summary'), log=document.getElementById('testing_log');
   if(!sum||!log) return;
   const d=await api('/api/admin/test-calls');
-  if(!d||d.error){ sum.innerHTML=''; log.textContent='No test calls yet. Call the Fun store to start logging.'; return; }
+  if(!d||d.error){ sum.innerHTML=''; log.textContent='No test calls yet. Call the Fun or MVP store to start logging.'; return; }
   const s=d.summary||{};
   const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
-  sum.innerHTML=`<div class="card report"><div class="rgrp">Test-call timing <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· Fun store · kept separate from real stats</span></div>
+  sum.innerHTML=`<div class="card report"><div class="rgrp">Test-call timing <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· Fun + MVP stores · kept separate from real stats</span></div>
     <div class="stats" style="margin-bottom:0">${tile(d.count||0,'test calls')}${tile(secsFmt(s.avgNavSec||0),'avg to-human')}${tile(secsFmt(s.avgTalkSec||0),'avg talk','green')}${tile(secsFmt(s.avgCallSec||0),'avg total')}</div></div>`;
   const when=u=>{ if(!u)return '—'; const dt=new Date(u*1000); return dt.toLocaleDateString([],{month:'short',day:'numeric'})+' '+dt.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}); };
   const t=v=>v!=null?secsFmt(v):'—';
