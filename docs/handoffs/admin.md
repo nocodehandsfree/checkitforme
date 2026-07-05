@@ -51,6 +51,14 @@ DevOps — don't redo your work blind.
    Staging reads/writes `staging.checkitforme.com/api/*` (its own ADMIN_TOKEN — coordinate the
    cross-origin auth with DevOps before building). Envs stay independent: owner tests a workflow on
    staging, then deliberately applies the winner to prod. No auto-sync.
+0b. [ ] **🅿️ Per-customer account view (owner 2026-07-04) — spec `docs/specs/admin-user-view.md`.**
+   Make each Users row clickable → a detail panel showing their plan/tier, entitlements (the 8
+   features), credits (quota+PAYG), saved zones, schedules, recent checks + lifetime spend. DevOps
+   builds `GET /api/admin/users/:id` + a grant-credits endpoint; you build the panel + comp/grant actions.
+0c. [ ] **🗑️ Remove the Admin "Zones" area (owner 2026-07-04).** Owner manages zones from their own
+   account now (consumer Manage Zones). Delete the Zones tab/UI in `public/app.html` (~30 refs).
+   DevOps removes the `/api/zones*` endpoints when consumer `/app/zones` ships (no gap). The zones
+   ENGINE stays — don't touch the tables/service.
 1. [ ] **Fix the admin** so it's up to date (it lagged during the website/admin split).
 2. [ ] **Voice-switcher + tree-learner ready to test** — confirm the Haiku-nav → Sonnet-human switch
    (`connectOnHuman` flag + Helicone) and the phone-tree learner (Tree Trainer) are wired. Code:

@@ -63,6 +63,12 @@ Admin lane. DevOps takes dev work only when the owner assigns it. Kickoff prompt
 3. **Staging and prod can run different workflows.** Already true — separate DBs, separate `vt_*` settings.
 
 ## Current state (2026-07-01 — KEEP UPDATED)
+- [ ] **Admin per-customer view backend (owner 2026-07-04) — spec `docs/specs/admin-user-view.md`.**
+  Build `GET /api/admin/users/:id` (full account: identity, subscription, entitlements via
+  accountFeatures, credits, zones, schedules, recentChecks, lifetime spend) + `POST
+  /api/admin/users/:id/grant {checks}`. Admin builds the panel.
+- [ ] **Remove the `/api/zones*` admin endpoints** when consumer `/app/zones` ships (owner: admin zones
+  area is redundant weight). Keep the zones engine (tables + zoneQuote/canAffordZone/callZone).
 - [ ] **Manage Zones backend (consumer) — spec `docs/specs/manage-zones.md`.** Engine exists
   (zones/zoneRetailers, zoneQuote, canAffordZone, callZone). Build: `ownerUserId` on `zones`; a
   `zoneRunId` grouping on callResults; consumer `/app/zones/*` (CRUD, quote, /check, /run/:id, /stop),
