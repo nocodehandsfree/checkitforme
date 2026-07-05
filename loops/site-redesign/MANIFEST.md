@@ -96,7 +96,7 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
   result (`id="result"`), calendar (`hcalwrap`), ES i18n table (`'es'`), footer links, brand switcher.
   Added to test-all.sh. MUST STAY GREEN ALL NIGHT.
 - [x] 0b `scripts/qa-design.ts` token harness: inside `skin-v2`-scoped markup only — every hex/size
-  must be in STYLE_GUIDE_NEW.md's token set; banned terms repo-wide in checkit.html (scraper/scraping/
+  must be in STYLE_GUIDE.md's token set; banned terms repo-wide in checkit.html (scraper/scraping/
   Marketplace Insights); COPY QUEUE comp-isms must not leak into served copy. Added to test-all.sh.
 
 ## ROUND 2 (owner-requested re-check, 2026-07-02 morning) — loop re-armed

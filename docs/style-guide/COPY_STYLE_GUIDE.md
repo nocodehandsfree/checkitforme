@@ -78,13 +78,13 @@ Hand-write the fixed UI lines (keeps the voice + the tokens). Machine-translate 
 ---
 
 ## Type, size, color, spacing — not this doc
-Sizes/weights/color/radii are **Design's lane**, and there's already one authority: **`docs/design/STYLE_GUIDE.md` §3** (the type scale, the 10.5px eyebrow, the **16px focusable inputs** anti-zoom rule, the color-opacity scale). Conform admin **and** site to that table — don't invent a second scale here. This doc owns the **words**; that one owns the **look**.
+Sizes/weights/color/radii are **Design's lane**, and there's already one authority: **`docs/style-guide/STYLE_GUIDE.md` §3** (the type scale, the 10.5px eyebrow, the **16px focusable inputs** anti-zoom rule, the color-opacity scale). Conform admin **and** site to that table — don't invent a second scale here. This doc owns the **words**; that one owns the **look**.
 
 *(The "42 different sizes" cleanup means making the admin match Design's scale — not a new set of numbers.)*
 
 ---
 
-## Go deeper
-- Everything to ship (consumer site): `docs/design/COPY_CHANGES_APPROVED.md`
-- Admin app copy: `docs/design/COPY_ADMIN_MASTER.md`
-- Brand mark: `docs/brand/CHECK_BRAND_STYLE_GUIDE.md`
+## The rest of the system
+- The look (type, color, spacing, components): `docs/style-guide/STYLE_GUIDE.md`
+- The brand mark + colors + logo pack: `docs/style-guide/BRAND.md`
+- Approved, in-flight copy edits live on the **prod branch** as `COPY_CHANGES_APPROVED.md` (Website's ship list) — not on staging.

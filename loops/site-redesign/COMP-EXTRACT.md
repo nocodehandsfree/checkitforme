@@ -1,6 +1,6 @@
 # COMP-EXTRACT.md — how cycles read the comps (saves re-deriving each firing)
 
-The board markup is PLAIN inline-styled HTML inside `docs/design/NEW_CHECK_COMPS.dc.html`
+The board markup is PLAIN inline-styled HTML inside `docs/style-guide/NEW_CHECK_COMPS.dc.html`
 (the .html twin is the JS-bundled viewer — ignore it for extraction). Python: find a screen's
 caption text, print the following chunk. Screen captions are `<div>` text like `P3 Hobby · pick
 your set`. Legend (all codes) sits at offset ~82k; real frames are `width:390px` divs.

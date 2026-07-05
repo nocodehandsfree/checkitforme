@@ -1,6 +1,6 @@
 // qa-design — DESIGN-TOKEN harness for the site-redesign loop (LOOP.md cycle 0b).
 // Audits checkit.html's NEW-SKIN markup (everything scoped under `skin-v2` / data-v2 blocks)
-// against docs/design/STYLE_GUIDE_NEW.md's exact tokens, and the WHOLE file against banned terms.
+// against docs/style-guide/STYLE_GUIDE.md's exact tokens, and the WHOLE file against banned terms.
 // Fails on: off-system colors inside v2 scope · banned/invented terms anywhere · hairline borders
 // on v2 cards (the "old skin" tell). Run: tsx scripts/qa-design.ts
 import { readFileSync } from "node:fs";
@@ -31,7 +31,7 @@ let m: RegExpExecArray | null;
 while ((m = cssRe.exec(html))) v2blocks.push(m[1]);
 const scope = v2blocks.join("\n");
 
-// STYLE_GUIDE_NEW.md §2/§3 exact palette (surfaces, color, text, verdicts, rings, accents).
+// STYLE_GUIDE.md §2/§3 exact palette (surfaces, color, text, verdicts, rings, accents).
 const TOKENS = new Set([
   "#1D1D22","#26262B","#2D2D34","#27272D","#2E2E35","#25252B","#31313A","#28282E","#1B1B20",
   "#17171C","#20202A","#23232A","#1F1F25","#34343D","#23232B","#08090D","#26251E","#141419",

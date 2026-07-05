@@ -30,7 +30,7 @@ Category **Plans & Pricing** → pages: `plans`, `premium-features`, `pay-as-you
 there, update the matching ReadMe page.
 
 ## How to work
-1. Owner asks to document something public → draft it in the brand voice (`docs/design/COPY_STYLE_GUIDE.md`).
+1. Owner asks to document something public → draft it in the brand voice (`docs/style-guide/COPY_STYLE_GUIDE.md`).
 2. Publish/update the page via the API above (create the category first if it's a new section).
 3. Note what you published in your handoff so the next chat knows it's live.
 

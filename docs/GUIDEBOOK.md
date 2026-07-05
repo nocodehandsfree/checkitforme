@@ -67,7 +67,7 @@ Full prompts: `docs/KICKOFFS.md`. How they work: `HANDOFF.md`.
 ## 6. Where everything lives (pointers — open only what you need)
 - **Roadmap / backlog** → `docs/business/ROADMAP.md`
 - **Money / margins** → `docs/finance/COST_MODEL.md` · `CHEAP_NAV_ARCHITECTURE.md`
-- **Design** → `docs/design/STYLE_GUIDE_NEW.md` · `NEW_CHECK_COMPS.html` · `LOGOS.md` · `COPY_STYLE_GUIDE.md`
+- **Design** → `docs/style-guide/STYLE_GUIDE.md` · `NEW_CHECK_COMPS.html` · `BRAND.md` · `COPY_STYLE_GUIDE.md`
 - **The front↔back interface** → `docs/API_CONTRACT.md`
 - **Store data** → `docs/DATA_PROVENANCE.md` · `docs/specs/store-data-schema.md`
 - **Traps that cost us time** → `docs/GOTCHAS.md`

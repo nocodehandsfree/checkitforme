@@ -60,10 +60,10 @@ control, and **tooltip.** You can't write good words for a tool you don't unders
    restock alerts) — same voice, see `docs/business/ROADMAP.md`.
 
 ## Where things live
-- **Brand + visual voice:** `docs/handoffs/website.md` → `docs/design/STYLE_GUIDE.md` (colors, type, components).
+- **Brand + visual voice:** `docs/handoffs/website.md` → `docs/style-guide/STYLE_GUIDE.md` (colors, type, components).
 - **What the product does (so your words are true):** `HANDOFF.md`, `docs/business/ROADMAP.md`.
 - **The premium "✔️+" feature names** you'll be selling: `docs/business/ROADMAP.md`.
-- **Brand pack / name:** `docs/brand/CHECK_BRAND_STYLE_GUIDE.md`.
+- **Brand pack / name:** `docs/style-guide/BRAND.md`.
 
 ## The bar
 Every line passes two tests: **(1) would a 10-year-old get it in one read?** **(2) does it sound like a
