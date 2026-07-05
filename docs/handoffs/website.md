@@ -37,6 +37,24 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
 - Restock premium vs non-premium — logic verified: `isMember` (active sub) → alert-me module; free →
   "check back soon". Owner is comp/premium so only sees member view; behavior is a clean on/off in code.
 
+**✅ SHIPPED 07-05 (owner screenshot batch IMG_7643–7651 — all on staging):**
+- Hobby/retail cluster: hero "in stock?" header stays visible through the hunt (#41); era-lock logo
+  width capped so "N sets" + Change always fit (#43); product-lock clears the carried-in store so the
+  shop list opens unselected — no more double-highlight/stuck pick (#42); **Retail lists general retail
+  ONLY** — Hobby card shops & Thrift stores stay in their own chips (#40); the hobby hunt owns one
+  history entry so browser/OS **back walks the steps out** (shop→products→sets→eras→Retail) instead of
+  escaping to a stale My-checks entry (#44). Regression test: `scripts/qa-huntback.mjs`.
+- Result rail line now ends at the terminus dot's center, not below the verdict text (#37); driver
+  handoff drop-toggle relabelled to single-line balanced "Ship to me / Drive to me" + more space under
+  the heading (#36); account sheet pinned to a stable height so its top edge stays put across
+  Overview/Activity/Earn (#38); add-store close-X hardened (z-index) + notify copy sharpened — data
+  lands in **Admin → Store requests**, contact field drives the "when it's live" notify (#39); post-score
+  photo picker dashes red on empty submit like the add-store form (#9).
+- **⚖️ OWNER DECISION NEEDED (#12):** owner mused "only pull in stores you've checked + got an in-stock
+  status." Left UNBUILT — the literal reading breaks new-store discovery (you can't check a store you've
+  never checked). The concern it came from (too many/irrelevant stores) is already solved by #40. Confirm
+  intent before building anything here.
+
 **🔨 Build / fix:**
 - **DevOps site-health caught: `/p/privacy` loads a 404 resource** (2026-07-04, `scripts/site-health.mjs`).
   The privacy content page pulls something that 404s — fill/fix the privacy page body (POLICY.pages.privacy)
