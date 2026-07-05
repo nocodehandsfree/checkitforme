@@ -122,6 +122,20 @@ adds per-IP limits + one-check-per-store-per-day; response shapes stay the same.
 | GET `/app/history` | — | `[{ cid, storeId, storeName, categoryId, category, ts, status, confirmed }]` |
 | POST `/app/charge` **[$][CHANGING→server-side]** | `{ cid }` | `{ credits }` |
 | POST `/app/checkout` | `{ kind, email }` | `{ url }` \| `{ error }` |
+| GET `/app/zones` **[F: zone_sweeps]** | — | `Zone[]` (see shape below) |
+| POST `/app/zones` **[F]** | `{ name, retailerIds[], centerZip?, radiusMiles? }` | `Zone` · 201 · 400 `no_stores` |
+| PATCH `/app/zones/:id` **[F]** | `{ name?, retailerIds? }` (replaces set) | `Zone` · 404 |
+| DELETE `/app/zones/:id` **[F]** | — | `{ ok }` · 404 |
+| GET `/app/zones/quote?retailerIds=1,2` **[F]** | — | `{ stores, checks, cents }` (callable only) |
+| **POST `/app/zones/:id/check`** **[$][F]** | `{ categoryId? }` (default Pokémon) | `{ runId, stores:[{retailerId,cid}] }` · 402 `no_credits` · 404 · 503 `calling_paused` |
+| GET `/app/zones/run/:runId` **[F]** | — | `{ done, total, summary:{inStock,no,noAnswer,checking}, results[] }` |
+| POST `/app/zones/run/:runId/stop` **[F]** | — | `{ ok, stopped }` |
+
+> **Zone shape:** `{ id, name, stores:[{ retailerId, name, location, callable }], checkCount, lastRun:{ at, inStock, total } | null }`.
+> **[F]** = premium-gated on `zone_sweeps` → **403 `not_entitled`** for free/PAYG accounts. All zone
+> routes are Bearer-authed and ownership-scoped (a zone belongs to the phone account that made it).
+> `check` fires one call per **callable** store (kiosk-only excluded), groups them under `runId`
+> (`z<zoneId>-<uuid>`); poll `run/:runId` for the live report.
 
 > **[CHANGING] billing:** `/pub/charge` + `/app/charge` are client-driven and will be **removed** —
 > charging moves server-side to call-completion (ingest/webhook). Frontend should stop relying on
