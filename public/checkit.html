@@ -1368,41 +1368,51 @@ html[data-skin="v2"] .hob-set:active{transform:translateY(2px)}
 html[data-skin="v2"] .hob-chip{position:absolute;top:8px;right:8px;font-size:8.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 8px}
 html[data-skin="v2"] .hob-prod{display:flex;align-items:center;gap:12px;width:100%;margin-top:9px;padding:11px 12px;border:0;border-radius:13px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;transition:transform .1s}
 html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
-/* MANAGE ZONES — build/edit, list, live report. Reuses .card/.cta/.kin; accent = brand color. */
-#zones .zwrap{max-width:440px;margin:0 auto;padding:6px 14px 120px}
-#zones .zhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 2px 14px}
+/* MANAGE ZONES — map-first builder + live report. Green = selected; store rows reuse the retail .store look. */
+#zones .zwrap{max-width:460px;margin:0 auto;padding:6px 14px 24px}
+#zones .zbuild{display:flex;flex-direction:column;min-height:calc(100dvh - 18px);padding-bottom:14px}
+#zones .zhead{display:flex;align-items:center;gap:10px;margin:6px 2px 12px}
 #zones .zhead b{font-size:19px;font-weight:800;letter-spacing:-.3px;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#zones .zback{width:34px;height:34px;flex:0 0 auto;border:0;border-radius:50%;background:linear-gradient(180deg,#2F2F36 0%,#26262B 100%);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#8A8A96;font-size:17px;cursor:pointer}
-#zones .zcard{padding:14px 15px;margin-top:12px}
-#zones .znm{font-size:16px;font-weight:800}
+#zones .zback{width:34px;height:34px;flex:0 0 auto;border:0;border-radius:50%;background:linear-gradient(180deg,#2F2F36,#26262B);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#8A8A96;font-size:17px;cursor:pointer}
+#zones .zcard{padding:15px 16px;margin-top:12px}
+#zones .znm{font-size:16.5px;font-weight:800}
 #zones .zsub{font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:3px}
-#zones .zlast{font-size:11.5px;font-weight:600;color:#7C7C88;margin-top:4px}
-#zones .zmore{width:30px;height:30px;flex:0 0 auto;border:0;border-radius:9px;background:#1B1B20;color:#B9B9C4;font-size:17px;line-height:1;cursor:pointer}
-#zones .zloc{display:flex;gap:8px;margin:0 2px 12px}
-#zones .zloc .kin{flex:1}
-#zones .zgo,#zones .zmapbtn{flex:0 0 auto;border:0;border-radius:11px;padding:0 15px;font-size:13px;font-weight:800;cursor:pointer;background:#1F1F25;color:#B9B9C4;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
-#zones .zmapbtn.on{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#4ADE80) 70%,#FFF),var(--accent,#4ADE80));color:#0C2916}
+#zones .zlast{font-size:11.5px;font-weight:600;color:#7C7C88;margin-top:5px}
+#zones .zmore{width:32px;height:32px;flex:0 0 auto;border:0;border-radius:10px;background:#1B1B20;color:#B9B9C4;font-size:18px;line-height:1;cursor:pointer}
+#zones .zempty{text-align:center;color:#8A8A96;font-size:14.5px;line-height:1.5;padding:30px 24px 6px;text-wrap:balance}
+/* controls */
+#zones .zsearch{position:relative;margin:0 0 10px}
+#zones .zsearch input{width:100%;box-sizing:border-box;padding-right:56px}
+#zones .zsearch .zgo{position:absolute;right:5px;top:5px;bottom:5px;border:0;border-radius:9px;padding:0 14px;background:#33333c;color:#e6e6ee;font-weight:800;font-size:13px;cursor:pointer}
+#zones .zseg{display:flex;background:#1B1B20;border-radius:12px;padding:4px;gap:4px;margin-bottom:12px}
+#zones .zseg button{flex:1;border:0;background:transparent;color:#8A8A96;font-weight:800;font-size:13.5px;padding:9px;border-radius:9px;cursor:pointer}
+#zones .zseg button.on{background:linear-gradient(180deg,#31313A,#28282E);color:#fff;box-shadow:0 6px 12px -6px rgba(0,0,0,.6)}
+#zones .zradrow{display:flex;align-items:center;gap:7px;margin:0 0 12px}
+#zones .zradlbl{font-size:12.5px;font-weight:700;color:#8A8A96}
+#zones .zrad{min-width:38px;height:32px;padding:0 8px;border:0;border-radius:9px;background:#1B1B20;color:#B9B9C4;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:inset 0 2px 5px rgba(0,0,0,.45)}
+#zones .zrad.on{background:linear-gradient(180deg,#5BEA93,#19B145);color:#04240f;box-shadow:0 6px 12px -6px rgba(25,177,69,.5)}
+#zones .zradmi{font-size:12px;font-weight:700;color:#7C7C88}
+#zones .zaddall{margin-left:auto;border:0;background:rgba(74,222,128,.1);border-radius:999px;padding:8px 14px;color:#4ADE80;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+/* stage fills the rest of the screen */
+#zones .zstage{flex:1;min-height:280px;display:flex;flex-direction:column}
+#zones #zmap{flex:1;min-height:280px;border-radius:16px;overflow:hidden;background:#15151c}
+#zones .zlist{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
 #zones .zpin{background:none;border:0}
-#zones .zradrow{display:flex;align-items:center;justify-content:space-between;margin:2px 2px 10px}
-#zones .zradlbl{font-size:13px;font-weight:700;color:#8A8A96}
-#zones .zrads{display:flex;align-items:center;gap:6px}
-#zones .zrad{width:38px;height:34px;border:0;border-radius:10px;background:#1B1B20;color:#B9B9C4;font-size:14px;font-weight:800;cursor:pointer;box-shadow:inset 0 2px 5px rgba(0,0,0,.45)}
-#zones .zrad.on{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#4ADE80) 70%,#FFF),var(--accent,#4ADE80));color:#0C2916;box-shadow:0 6px 12px -6px rgba(0,0,0,.5)}
-#zones .zradmi{font-size:12px;font-weight:700;color:#7C7C88;margin-left:2px}
-#zones .zaddall{width:100%;border:1.5px dashed rgba(74,222,128,.5);background:rgba(74,222,128,.06);border-radius:12px;padding:11px;color:#4ADE80;font-size:13.5px;font-weight:800;cursor:pointer;margin-bottom:6px}
-#zones .zstore{display:flex;align-items:center;gap:11px;width:100%;margin-top:8px;padding:9px 11px;border:0;border-radius:13px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06);color:#FFF;cursor:pointer;transition:box-shadow .12s}
-#zones .zstore.on{box-shadow:0 0 0 2px var(--accent,#4ADE80),0 8px 16px -8px color-mix(in srgb,var(--accent,#4ADE80) 30%,transparent)}
-#zones .zstore .nm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:14.5px;font-weight:700}
-#zones .zstore .ic{overflow:hidden} #zones .ic img{max-width:24px;max-height:24px;object-fit:contain}
-#zones .zstore .lo{display:block;font-size:11.5px;font-weight:600;color:#8A8A96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#zones .zcheck{width:22px;height:22px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;background:#1B1B20;box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
-#zones .zstore.on .zcheck{background:var(--accent,#4ADE80)}
-#zones .zmi{font-size:12px;font-weight:800;color:#B9B9C4;flex:0 0 auto} #zones .zmi small{font-size:9px;font-weight:700;color:#7C7C88}
-#zones .zbar{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(18,18,22,.4),#121216 40%);backdrop-filter:blur(8px);padding:12px 16px calc(14px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.06);z-index:30}
-#zones .zbarcost{font-size:13px;font-weight:700;color:#B9B9C4;margin-bottom:8px;text-align:center} #zones .zbarcost b{color:#FFF;font-size:15px}
-#zones .zbarrow{display:flex;gap:10px;max-width:440px;margin:0 auto}
-#zones .zbarrow .kin{flex:1}
-#zones .zbarrow .cta{flex:0 0 auto;white-space:nowrap}
+/* store row = retail .store look + leading check + green ring when picked (logos identical to retail) */
+#zones .zpick{cursor:pointer;position:relative;margin-top:9px}
+#zones .zpick.picked{box-shadow:0 0 0 2px #4ADE80,0 8px 16px -8px rgba(74,222,128,.35)}
+#zones .zpick.zclosed{opacity:.6}
+#zones .zck{width:22px;height:22px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;background:#1B1B20;box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
+#zones .zpick.picked .zck{background:#4ADE80}
+#zones .zempty2{text-align:center;color:#8A8A96;font-size:13.5px;padding:26px 14px;line-height:1.5}
+/* footer (in-flow — never overlaps the map) */
+#zones .zfoot{margin-top:14px}
+#zones .zcount{text-align:center;font-size:13.5px;font-weight:700;color:#B9B9C4;margin-bottom:10px} #zones .zcount b{color:#4ADE80;font-size:16px}
+#zones .zname{width:100%;box-sizing:border-box;margin-bottom:10px;background:#20202a;border:1.5px solid #3a3a46;color:#fff;border-radius:13px;padding:14px;font-size:16px;font-weight:600}
+#zones .zname::placeholder{color:#9a9aa6;font-weight:600}
+#zones input:-webkit-autofill,#zones textarea:-webkit-autofill{-webkit-text-fill-color:#fff!important;-webkit-box-shadow:0 0 0 40px #20202a inset!important;caret-color:#fff} /* kill the iOS yellow autofill wash */
+#zones .zbar{margin-top:14px} /* live-report action bar — in-flow, not fixed */
+#zones .zbarrow{display:flex;gap:10px}
 #zones .zdots{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
 #zones .zdot{width:9px;height:9px;border-radius:50%;background:#2A2A31}
 #zones .zdot.done{background:var(--accent,#4ADE80);box-shadow:0 0 6px color-mix(in srgb,var(--accent,#4ADE80) 60%,transparent)}
@@ -5449,8 +5459,8 @@ async function renderZonesList(){
     </div>`;
   }).join('');
   z.innerHTML=`<div class="zwrap">${zHead(t('zones.title','Manage Zones'))}
-    ${cards||`<div class="card" style="text-align:center;color:#8A8A96;padding:22px 18px;font-size:14px;line-height:1.45;text-wrap:balance">${t('zones.empty','Build a zone to check a whole area at once.')}</div>`}
-    <button class="cta" style="margin-top:14px;width:100%" onclick="zoneNew()">＋ ${t('zones.new','New zone')}</button></div>`;
+    ${cards||`<div class="zempty">${t('zones.empty','Save the stores near you as a zone, then check them all in one tap.')}</div>`}
+    <button class="cta" style="margin-top:16px;width:100%" onclick="zoneNew()">＋ ${t('zones.new','New zone')}</button></div>`;
 }
 function zAgo(at){ try{ const s=Math.max(1,Math.floor((Date.now()-new Date(at).getTime())/1000)); if(s<3600) return Math.floor(s/60)+'m'; if(s<86400) return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; }catch(_){ return ''; } }
 function zoneMenu(id,ev){ if(ev)ev.stopPropagation();
@@ -5485,38 +5495,48 @@ function zoneBuildStores(){ const R=ZONES.radius||5; const seen=new Map();
   ZONES.sel.forEach(id=>{ if(!seen.has(id)&&ZONES.storeById.has(id)) seen.set(id,ZONES.storeById.get(id)); });
   let arr=[...seen.values()]; if(USER_LOC) arr.sort((a,b)=>(storeMi(a)??1e9)-(storeMi(b)??1e9)); return arr; }
 function zoneSetRadius(r){ ZONES.radius=r;
-  if(ZONES.mapOpen){ document.querySelectorAll('#zones .zrad').forEach(btn=>btn.classList.toggle('on',+btn.textContent===r)); const aa=document.querySelector('#zones .zaddall'); if(aa) aa.textContent='＋ '+tf('zones.addall','Add all within {r} mi',{r}); zoneMapDraw(); }
+  if(ZONES.mapOpen){ document.querySelectorAll('#zones .zrad').forEach(btn=>btn.classList.toggle('on',+btn.textContent===r)); zoneMapDraw(); }
   else renderZoneBuild();
 }
+const ZCHECK='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#04240f" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+function zoneRowHTML(s){ const on=ZONES.sel.has(s.id); const mi=storeMi(s); const closed=(function(){try{return isClosed(s);}catch(_){return false;}})();
+  return `<div class="store zpick ${on?'picked':''} ${closed?'zclosed':''}" onclick="zoneToggle(${s.id})">
+    <span class="zck">${on?ZCHECK:''}</span>
+    <div class="ic ${s.logoDark?'lite':''} ${s.logoWide?'widelogo':''}">${storeFace(s)}</div>
+    <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${esc(s.location||'')}${closed?' · '+t('zones.closed','closed'):''}</div></div>
+    ${mi!=null?`<div class="smi">${mi<10?mi.toFixed(1):Math.round(mi)}<small>mi</small></div>`:''}</div>`; }
 function renderZoneBuild(){
-  const z=$('zones'); const stores=zoneBuildStores();
-  const rings=[1,2,5,10].map(r=>`<button class="zrad ${ZONES.radius===r?'on':''}" onclick="zoneSetRadius(${r})">${r}</button>`).join('');
-  const rows=stores.length?stores.map(s=>{ const on=ZONES.sel.has(s.id); const mi=storeMi(s); return `<button class="zstore ${on?'on':''}" onclick="zoneToggle(${s.id})">
-      <span class="zcheck">${on?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>':''}</span>
-      <div class="ic ${s.logoDark?'lite':''} ${s.logoWide?'widelogo':''}" style="width:34px;height:34px">${storeFace(s)}</div>
-      <span style="flex:1;min-width:0;text-align:left"><span class="nm">${esc(s.name)}</span><span class="lo">${esc(s.location||'')}</span></span>
-      ${mi!=null?`<span class="zmi">${mi<10?mi.toFixed(1):Math.round(mi)}<small>mi</small></span>`:''}</button>`; }).join('')
-    : `<div class="card" style="text-align:center;color:#8A8A96;padding:20px;font-size:13px">${t('zones.needloc','Share your location to pick stores.')}<br><button class="cta sm" style="margin-top:12px" onclick="zoneNew()">${t('find.me','Find my stores')}</button></div>`;
-  const n=ZONES.sel.size;
-  z.innerHTML=`<div class="zwrap zbuild">${zHead(ZONES.editId?t('zones.edit','Edit zone'):t('zones.newz','New zone'),'renderZonesList()')}
-    <div class="zloc"><input id="z_loc" class="kin" placeholder="${t('zones.locph','ZIP or town…')}" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();zoneGeocode();}"><button class="zgo" onclick="zoneGeocode()">${t('zones.go','Go')}</button><button class="zmapbtn ${ZONES.mapOpen?'on':''}" onclick="zoneToggleMap()">${ZONES.mapOpen?t('zones.list','List'):t('zones.map','Map')}</button></div>
-    <div class="zradrow"><span class="zradlbl">${t('zones.radius','Radius')}</span><div class="zrads">${rings}<span class="zradmi">mi</span></div></div>
-    <button class="zaddall" onclick="zoneAddRadius()">＋ ${tf('zones.addall','Add all within {r} mi',{r:ZONES.radius})}</button>
-    <div id="zmap" style="display:${ZONES.mapOpen?'block':'none'};height:min(60vh,520px);border-radius:16px;overflow:hidden;margin-bottom:10px;background:#15151c"></div>
-    <div class="zlist" style="display:${ZONES.mapOpen?'none':'block'}">${rows}</div>
-    <div class="zbar">
-      <div class="zbarcost"><b id="z_count">${n}</b> ${n===1?t('zones.store','store'):t('zones.stores','stores')} · <span id="z_cost">${n} ${n===1?t('zones.check','check'):t('zones.checks','checks')}</span></div>
-      <input id="z_name" class="kin" style="width:100%;box-sizing:border-box;margin-bottom:8px" placeholder="${t('zones.nameph','Name your zone…')}" value="${esc(ZONES.name||'')}" maxlength="40" oninput="ZONES.name=this.value">
-      <button class="cta" id="z_save" style="width:100%;box-sizing:border-box" onclick="zoneSave()" ${n?'':'disabled'}>${t('zones.save','Save zone')}</button>
-    </div></div>`;
-  zoneQuoteRefresh();
-  if(ZONES.mapOpen) setTimeout(zoneMapEnsure,30); // (re)build the Leaflet map into the fresh #zmap node
+  const z=$('zones'); const stores=zoneBuildStores(); const n=ZONES.sel.size; const R=ZONES.radius||5; const map=!!ZONES.mapOpen;
+  const rings=[1,2,5,10].map(r=>`<button class="zrad ${R===r?'on':''}" onclick="zoneSetRadius(${r})">${r}</button>`).join('');
+  const rows=stores.length?stores.map(zoneRowHTML).join('')
+    : `<div class="zempty2">${USER_LOC?tf('zones.norad','No stores within {r} mi. Try a bigger radius, or search a place.',{r:R}):t('zones.needloc','Share your location or search a ZIP/town to see stores.')}</div>`;
+  z.innerHTML=`<div class="zbuild">
+    ${zHead(ZONES.editId?t('zones.edit','Edit zone'):t('zones.newz','New zone'),'renderZonesList()')}
+    <div class="zsearch"><input id="z_loc" class="kin" placeholder="${t('zones.locph','Search a ZIP or town…')}" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();zoneGeocode();}"><button class="zgo" onclick="zoneGeocode()">${t('zones.go','Go')}</button></div>
+    <div class="zseg"><button class="${!map?'on':''}" onclick="if(ZONES.mapOpen)zoneToggleMap()">${t('zones.list','List')}</button><button class="${map?'on':''}" onclick="if(!ZONES.mapOpen)zoneToggleMap()">${t('zones.map','Map')}</button></div>
+    <div class="zradrow"><span class="zradlbl">${t('zones.radius','Radius')}</span>${rings}<span class="zradmi">mi</span><button class="zaddall" onclick="zoneAddRadius()">＋ ${t('zones.addallshort','Add all')}</button></div>
+    <div class="zstage">
+      <div id="zmap" style="display:${map?'block':'none'}"></div>
+      <div class="zlist" style="display:${map?'none':'block'}">${rows}</div>
+    </div>
+    <div class="zfoot">
+      <div class="zcount"><b id="z_count">${n}</b> ${n===1?t('zones.selstore','store selected'):t('zones.selstores','stores selected')}</div>
+      <input id="z_name" class="zname" placeholder="${t('zones.nameph2','Name this zone')}" value="${esc(ZONES.name||'')}" maxlength="40" oninput="ZONES.name=this.value">
+      <button class="cta" id="z_save" style="width:100%;box-sizing:border-box" onclick="zoneSave()" ${n?'':'disabled'}>${t('zones.save','Save zone')}${n?' · '+n:''}</button>
+    </div>
+  </div>`;
+  if(map) setTimeout(zoneMapEnsure,30); // (re)build the Leaflet map into the fresh #zmap node
 }
-function zoneToggle(id){ if(ZONES.sel.has(id)) ZONES.sel.delete(id); else { ZONES.sel.add(id); const s=(STORES||[]).find(x=>x.id===id); if(s) ZONES.storeById.set(id,s); } renderZoneBuild(); }
-function zoneAddRadius(){ zoneBuildStores().forEach(s=>{ const mi=storeMi(s); if(mi!=null && mi<=ZONES.radius && s.sellsPacks!==false){ ZONES.sel.add(s.id); ZONES.storeById.set(s.id,s); } }); if(ZONES.mapOpen){ zoneMapDraw(); zoneBarSync(); } else renderZoneBuild(); }
+function zoneBarSync(){ const n=ZONES.sel.size; const c=$('z_count'); if(c) c.textContent=n; const sv=$('z_save'); if(sv){ sv.disabled=!n; sv.textContent=t('zones.save','Save zone')+(n?' · '+n:''); } }
+function zoneToggle(id){ const add=!ZONES.sel.has(id); if(add){ ZONES.sel.add(id); const s=(STORES||[]).find(x=>x.id===id); if(s) ZONES.storeById.set(id,s); } else ZONES.sel.delete(id);
+  // update the tapped row + footer in place (keeps the list scroll position)
+  const row=document.querySelector('#zones .zlist .zpick[onclick="zoneToggle('+id+')"]');
+  if(row){ row.classList.toggle('picked',add); const ck=row.querySelector('.zck'); if(ck) ck.innerHTML=add?ZCHECK:''; } else renderZoneBuild();
+  zoneBarSync();
+}
+function zoneAddRadius(){ zoneBuildStores().forEach(s=>{ const mi=storeMi(s); if(mi!=null && mi<=(ZONES.radius||5)){ ZONES.sel.add(s.id); ZONES.storeById.set(s.id,s); } }); if(ZONES.mapOpen){ zoneMapDraw(); zoneBarSync(); } else renderZoneBuild(); }
 // --- Zone location search + map ('pin a zone'): type a ZIP/town or tap the map to recenter, tap pins to add ---
 let ZMAP=null, ZMARKERS={}, ZRING=null;
-function zoneBarSync(){ const n=ZONES.sel.size; const c=$('z_count'); if(c) c.textContent=n; const co=$('z_cost'); if(co) co.textContent=n+' '+(n===1?t('zones.check','check'):t('zones.checks','checks')); const sv=$('z_save'); if(sv) sv.disabled=!n; zoneQuoteRefresh(); }
 async function zoneGeocode(){
   const q=($('z_loc')&&$('z_loc').value||'').trim(); if(q.length<3){ toast(t('zones.typloc','Type a ZIP or town first.')); return; }
   const isZip=/^\d{5}$/.test(q); let r=null;
