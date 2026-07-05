@@ -265,6 +265,7 @@ interface TriggerArgs {
   openingTemplate?: string; // Test Bench: use the DRAFT opener instead of the live vt_opening setting
   finderUserId?: string;    // clerk id of whoever placed it (for finds privacy/headstart attribution)
   isPrivate?: boolean;      // keep this find out of the public feed (subscriber perk / paid privacy)
+  zoneRunId?: string;       // groups this check into a zone sweep run (Manage Zones report)
   kioskMode?: boolean;      // kiosk-only store → agent asks about the vending kiosk, not a shelf shipment (else inferred from the store)
   force?: boolean;          // skip the 24h one-check-per-store dedup (admin "check again" places a real call every time)
 }
@@ -358,7 +359,7 @@ export async function triggerCall(a: TriggerArgs) {
     categoryId: category.id,
     mode,
     status: "dialing",
-    finderUserId: a.finderUserId ?? null,
+    finderUserId: a.finderUserId ?? null, zoneRunId: a.zoneRunId ?? null,
     isPrivate: a.isPrivate ?? false,
   }).returning();
 

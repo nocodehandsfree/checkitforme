@@ -67,6 +67,8 @@ export async function bootstrap() {
     created_at INTEGER NOT NULL DEFAULT (unixepoch())
   )`);
   // Chains: deterministic keypad shortcut column (added post-migration; SQLite has no IF NOT EXISTS for columns).
+  await client.execute("ALTER TABLE zones ADD COLUMN owner_user_id TEXT").catch(() => {});
+  await client.execute("ALTER TABLE call_results ADD COLUMN zone_run_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN dtmf_shortcut TEXT").catch(() => {});
   // Chains: answer-path classification + per-chain consumer mute.
   await client.execute("ALTER TABLE chains ADD COLUMN answer_path TEXT").catch(() => {});

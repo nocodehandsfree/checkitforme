@@ -18,7 +18,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -2483,6 +2483,134 @@ app.post("/app/check-live", async (c) => {
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
 });
+
+// ============ Manage Zones (consumer, premium `zone_sweeps`) — spec docs/specs/manage-zones.md ============
+const zoneRunSids = new Map<string, string[]>(); // runId -> Twilio callSids (in-memory, for "Stop all")
+
+/** Bearer auth + zone_sweeps entitlement. ok:false short-circuits with the right status. */
+async function zoneAuth(authHeader?: string): Promise<
+  { ok: true; u: { id: string; email?: string; phone?: string }; a: Awaited<ReturnType<typeof getAccount>>; comp: boolean }
+  | { ok: false; status: 401 | 403; error: string }> {
+  const u = await verifyClerkToken(authHeader);
+  if (!u) return { ok: false, status: 401, error: "unauthorized" };
+  const a = await getAccount(u.id, u.email);
+  const comp = isCompAccount(a) || isComp(u.email || undefined);
+  const feats = await accountFeatures(a?.subTier, comp);
+  if (!feats.zone_sweeps) return { ok: false, status: 403, error: "not_entitled" };
+  return { ok: true, u, a, comp };
+}
+/** API shape for one zone: its stores, callable check count, and last-run summary. */
+async function zoneView(z: typeof zones.$inferSelect) {
+  const links = await db.select().from(zoneRetailers).where(eq(zoneRetailers.zoneId, z.id));
+  const rows = links.length ? await db.select().from(retailers).where(inArray(retailers.id, links.map((l) => l.retailerId))) : [];
+  const stores = rows.map((r) => ({ retailerId: r.id, name: r.name, location: r.location || "", callable: r.sellsPacks !== false }));
+  const last = (await db.select().from(callResults).where(like(callResults.zoneRunId, `z${z.id}-%`)).orderBy(desc(callResults.startedAt)).limit(1))[0];
+  let lastRun = null;
+  if (last?.zoneRunId) {
+    const rr = await db.select().from(callResults).where(eq(callResults.zoneRunId, last.zoneRunId));
+    lastRun = { at: last.startedAt, inStock: rr.filter((r) => r.statusKey === "in_stock").length, total: rr.length };
+  }
+  return { id: z.id, name: z.name, stores, checkCount: stores.filter((s) => s.callable).length, lastRun };
+}
+
+app.get("/app/zones", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const zs = await db.select().from(zones).where(eq(zones.ownerUserId, g.u.id)).orderBy(desc(zones.createdAt));
+  return c.json(await Promise.all(zs.map(zoneView)));
+});
+app.post("/app/zones", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const b = await c.req.json();
+  const retailerIds = (Array.isArray(b.retailerIds) ? b.retailerIds : []).map(Number).filter(Boolean);
+  if (!retailerIds.length) return c.json({ error: "no_stores" }, 400);
+  const [z] = await db.insert(zones).values({ name: String(b.name || "").trim().slice(0, 60) || "My zone", ownerUserId: g.u.id, centerZip: b.centerZip ?? null, radiusMiles: b.radiusMiles ?? null }).returning();
+  await db.insert(zoneRetailers).values(retailerIds.map((rid: number) => ({ zoneId: z.id, retailerId: rid })));
+  return c.json(await zoneView(z), 201);
+});
+app.patch("/app/zones/:id", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const id = Number(c.req.param("id"));
+  const z = (await db.select().from(zones).where(and(eq(zones.id, id), eq(zones.ownerUserId, g.u.id))))[0];
+  if (!z) return c.json({ error: "not_found" }, 404);
+  const b = await c.req.json();
+  if (typeof b.name === "string") await db.update(zones).set({ name: b.name.trim().slice(0, 60) || z.name }).where(eq(zones.id, id));
+  if (Array.isArray(b.retailerIds)) {
+    const ids = b.retailerIds.map(Number).filter(Boolean);
+    await db.delete(zoneRetailers).where(eq(zoneRetailers.zoneId, id));
+    if (ids.length) await db.insert(zoneRetailers).values(ids.map((rid: number) => ({ zoneId: id, retailerId: rid })));
+  }
+  return c.json(await zoneView((await db.select().from(zones).where(eq(zones.id, id)))[0]));
+});
+app.delete("/app/zones/:id", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const id = Number(c.req.param("id"));
+  const z = (await db.select().from(zones).where(and(eq(zones.id, id), eq(zones.ownerUserId, g.u.id))))[0];
+  if (!z) return c.json({ error: "not_found" }, 404);
+  await db.delete(zones).where(eq(zones.id, id));
+  return c.json({ ok: true });
+});
+app.get("/app/zones/quote", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const ids = (c.req.query("retailerIds") || "").split(",").map(Number).filter(Boolean);
+  const rows = ids.length ? await db.select().from(retailers).where(inArray(retailers.id, ids)) : [];
+  const checks = rows.filter((r) => r.sellsPacks !== false).length;
+  return c.json({ stores: checks, checks, cents: checks * (await getPolicy()).pricing.perCallCents });
+});
+app.post("/app/zones/:id/check", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  if (await isCallingPaused()) return c.json({ error: "calling_paused" }, 503);
+  const id = Number(c.req.param("id"));
+  const z = (await db.select().from(zones).where(and(eq(zones.id, id), eq(zones.ownerUserId, g.u.id))))[0];
+  if (!z) return c.json({ error: "not_found" }, 404);
+  const afford = await canAffordZone({ zoneId: id, credits: spendableCredits(g.a), comp: g.comp });
+  if (!afford.ok) return c.json({ error: "no_credits", need: afford.creditsNeeded, have: afford.have, short: afford.short }, 402);
+  const b = await c.req.json().catch(() => ({}));
+  const cat = b.categoryId
+    ? (await db.select().from(categories).where(eq(categories.id, Number(b.categoryId))))[0]
+    : (await db.select().from(categories).where(eq(categories.key, "pokemon")))[0];
+  if (!cat) return c.json({ error: "category_not_found" }, 400);
+  const links = await db.select().from(zoneRetailers).where(eq(zoneRetailers.zoneId, id));
+  const rows = (await db.select().from(retailers).where(inArray(retailers.id, links.map((l) => l.retailerId)))).filter((r) => r.sellsPacks !== false);
+  const runId = `z${id}-${crypto.randomUUID()}`;
+  const isPrivate = await isFinderPrivate(g.a);
+  const placed: { retailerId: number; cid: string | null }[] = [];
+  const sids: string[] = [];
+  for (const s of rows) {
+    try {
+      const r = await triggerCall({ retailerId: s.id, categoryId: cat.id, mode: "restock", finderUserId: g.u.id, isPrivate, zoneRunId: runId });
+      placed.push({ retailerId: s.id, cid: (r as { providerCallId?: string }).providerCallId ?? null });
+      const sid = (r as { callSid?: string }).callSid; if (sid) sids.push(sid);
+    } catch (e) { console.error("zone check failed", s.id, e); placed.push({ retailerId: s.id, cid: null }); }
+  }
+  zoneRunSids.set(runId, sids); setTimeout(() => zoneRunSids.delete(runId), 30 * 60 * 1000);
+  return c.json({ runId, stores: placed });
+});
+app.get("/app/zones/run/:runId", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const rows = await db.select().from(callResults).where(and(eq(callResults.zoneRunId, c.req.param("runId")), eq(callResults.finderUserId, g.u.id)));
+  const stores = await retailerMap();
+  const results = rows.map((r) => ({ retailerId: r.retailerId, name: stores.get(r.retailerId)?.name || "A store", cid: r.providerCallId, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, summary: r.summary }));
+  const live = (st: string) => st === "in_progress" || st === "queued";
+  const summary = {
+    inStock: results.filter((r) => r.statusKey === "in_stock").length,
+    no: results.filter((r) => r.statusKey === "not_in_stock" || r.statusKey === "does_not_sell" || r.statusKey === "sold_out").length,
+    noAnswer: results.filter((r) => r.statusKey === "nobody_answered" || r.status === "no_answer").length,
+    checking: results.filter((r) => live(r.status)).length,
+  };
+  return c.json({ done: results.filter((r) => !live(r.status)).length, total: results.length, summary, results });
+});
+app.post("/app/zones/run/:runId/stop", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const sids = zoneRunSids.get(c.req.param("runId")) || [];
+  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  if (sid && tok) for (const callSid of sids) {
+    await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
+      method: "POST", headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" }, body: "Status=completed",
+    }).catch(() => {});
+  }
+  return c.json({ ok: true, stopped: sids.length });
+});
+
 // ---- Subscriber auto-checks (scheduled shipment-day calls) ----
 app.get("/app/schedules", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));

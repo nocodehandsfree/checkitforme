@@ -176,6 +176,7 @@ export const retailers = sqliteTable(
 export const zones = sqliteTable("zones", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),        // e.g. "SF Valley Zone"
+  ownerUserId: text("owner_user_id"),  // consumer phone id (phone:+E164); null = admin/global zone
   centerZip: text("center_zip"),       // zip the radius was built around
   centerLat: real("center_lat"),
   centerLng: real("center_lng"),
@@ -454,6 +455,7 @@ export const callResults = sqliteTable(
     transcript: text("transcript"), // text transcript (no audio is ever stored)
     providerCallId: text("provider_call_id"), // ElevenLabs conversation id
     finderUserId: text("finder_user_id"), // clerk id of whoever placed it (null = anon/free)
+    zoneRunId: text("zone_run_id"), // groups the checks of one zone sweep (z<zoneId>-<uuid>) for the report
     isPrivate: integer("is_private", { mode: "boolean" }).default(false), // never show in public finds feed
     startedAt: integer("started_at").notNull().default(now),
     completedAt: integer("completed_at"),
