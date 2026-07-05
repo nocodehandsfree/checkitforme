@@ -64,7 +64,20 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
 - **🅿️ DATA follow-up:** mark the kiosk-only grocery chains (Ralphs / Albertsons / Pavilions / Vons etc.)
   `sellsPacks:false` so they're authoritatively kiosk-only — the consumer now hides Grocery+kiosk from
   Retail as a stopgap, but the data flag is the real fix.
-- **NEXT (owner):** Zones wireframes + spec (see `docs/specs/manage-zones.md` stub).
+- **Copy Round 6 DONE (07-05):** applied the "Round 6 — post-redesign copy sweep" from
+  `COPY_CHANGES_APPROVED.md` (that file lives on the PROD branch): Fungie+→Check+, em-dash purge,
+  ES unit drift llamada→verificación, warm errors, i18n wiring (auth.sending/resending, err.usonly,
+  err.toofast, sc.posted keys) + ES for all new keys. Left per doc: err.generic warm-up (owner's call),
+  v.failed removal (DevOps/status-table).
+- **Manage Zones consumer DONE (07-05) — wired to the contract, backend pending:** 3 screens built in
+  `#zones` (list → build/edit → live report), gated on `zone_sweeps`, "check" never "call". Verified
+  against a MOCKED `/app/zones/*`. **Blocked on DevOps shipping the real endpoints** (see below); UI
+  degrades to an empty state until they're live. Test: `scripts/_zones` (adhoc, mock-based).
+- **⛳ DEVOPS NEEDS TO SHIP (Zones):** the 7 `/app/zones/*` endpoints exactly per `manage-zones.md`
+  (GET/POST/PATCH/DELETE `/app/zones`, GET `/app/zones/quote`, POST `/app/zones/:id/check`, GET
+  `/app/zones/run/:runId`, POST `/app/zones/run/:runId/stop`) + `ownerUserId` on zones + a `zoneRunId`
+  run-grouping. All Bearer-authed + `zone_sweeps`-gated (403 not_entitled, 402 no_credits). The consumer
+  already calls them with the field names in the contract.
 - **My-checks sheet now a true bottom sheet (07-05):** slides fully UP on open + DOWN on close/swipe
   (was a 24px nudge + hard disappear). `closeAccount()` animates the slide-down; `sheetDrag` animates the
   swipe-release; `openAccount` clears leftover inline styles. Same keyframe given to the buy/plans sheet.
