@@ -18,7 +18,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -2360,6 +2360,17 @@ app.post("/app/check", async (c) => {
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
   if (!isCompAccount(a) && !isComp(u.email || undefined) && await isOwnerOnlyStore(Number(retailerId))) return c.json({ error: "not_found" }, 404);
   if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
+  // Hard block: no second check of the same store+product within the HOUR (customers only; comp/owner
+  // exempt so the Fun store can be re-tested). The front end already shows a 24h "you've checked this"
+  // reminder; this stops rapid re-dials — a store that said "no shipment yet" can be re-checked later,
+  // just not spammed. Website renders the notice on this 429 (error:"too_soon", retryAfterMin).
+  if (!isCompAccount(a) && !isComp(u.email || undefined)) {
+    const recent = await findRecentCheck(u.id, Number(retailerId), Number(categoryId), 1);
+    if (recent) {
+      const mins = Math.max(1, 60 - Math.floor((Date.now() / 1000 - (recent.startedAt || 0)) / 60));
+      return c.json({ error: "too_soon", retryAfterMin: mins, message: `You just checked this store — you can check again in about ${mins} min.` }, 429);
+    }
+  }
   try {
     const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a), kioskMode });
     return c.json({ providerCallId: r.providerCallId, status: r.status });
@@ -2378,6 +2389,14 @@ app.post("/app/check-live", async (c) => {
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
   if (!isCompAccount(a) && !isComp(u.email || undefined) && await isOwnerOnlyStore(Number(b.retailerId))) return c.json({ error: "not_found" }, 404);
   if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
+  // Hard block: one check per store+product per hour (customers only; comp/owner exempt). See /app/check.
+  if (!isCompAccount(a) && !isComp(u.email || undefined)) {
+    const recent = await findRecentCheck(u.id, Number(b.retailerId), catIds[0], 1);
+    if (recent) {
+      const mins = Math.max(1, 60 - Math.floor((Date.now() / 1000 - (recent.startedAt || 0)) / 60));
+      return c.json({ error: "too_soon", retryAfterMin: mins, message: `You just checked this store — you can check again in about ${mins} min.` }, 429);
+    }
+  }
   const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
