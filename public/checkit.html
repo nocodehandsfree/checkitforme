@@ -1221,11 +1221,9 @@ html[data-skin="v2"] .railcalpop{background:#26262B;border:0;border-radius:22px;
 html[data-skin="v2"] .rcal-h button{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 html[data-skin="v2"] body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:2px;background:#1D1D22;z-index:2147483000;pointer-events:none}
 html[data-skin="v2"] .rcal-d.has{color:#FFF;font-weight:700;position:relative}
-html[data-skin="v2"] .rcal-d.has::after{content:"";position:absolute;left:50%;transform:translateX(-50%);bottom:3px;width:5px;height:5px;border-radius:50%}
-html[data-skin="v2"] .rcal-d.has.t-in::after{background:#4ADE80}
-html[data-skin="v2"] .rcal-d.has.t-soon::after{background:#F5B301}
-html[data-skin="v2"] .rcal-d.has.t-out::after{background:#FF8080}
-html[data-skin="v2"] .rcal-d.has.t-unk::after{background:#9CA3AF}
+/* Owner 07-04: the per-day status dots (red/green) are off for now — the accent fill already marks a
+   day with checks. Keeping the .t-* classes for later; the ::after just doesn't render. */
+html[data-skin="v2"] .rcal-d.has::after{display:none}
 html[data-skin="v2"] .rcal-d.schday{border:1.5px dashed rgba(74,222,128,.55);border-radius:11px;color:rgba(255,255,255,.75)}
 html[data-skin="v2"] .rcal-d.sel::after{background:#26251E}
 html[data-skin="v2"] .rcal-d.sel{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6)}
@@ -1696,7 +1694,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 
 <!-- Call slider — slides up from the bottom when a store is picked. Swipe down (or tap the backdrop)
      to dismiss. Replaces the inline "Check this store" button. -->
-<div class="csheet-bd" id="csheetBd" onclick="hideCallSheet()"></div>
+<div class="csheet-bd" id="csheetBd" onclick="dismissCallSheet()"></div>
 <div class="csheet" id="csheet" aria-hidden="true">
   <div class="csheet-handle" id="csheetHandle"></div>
   <!-- Everything stays (logo + name + address + product). ONLY the button changed: it says "Check this
@@ -3577,7 +3575,7 @@ function renderChips(){
 function pickStore(id){
   const st=STORES.find(s=>s.id===id);
   if(isClosed(st)){ toast(tLbl(st.openState.label||'Closed')+' '+t('closednow',"· closed now")); return; }
-  SEL_STORE=st; SEL_KIOSK=false; KIOSK_OK=false;
+  SEL_STORE=st; SEL_KIOSK=false; KIOSK_OK=false; CS_DISMISSED=false; // fresh pick → the sheet may slide up again
   if(!BRAND_CAT) applyBrand();   // categories may have loaded after first paint — re-resolve the brand's category
   const opts=storeCatOptions();
   // Vertical site → ALWAYS the brand's category (never guess Pokémon from what the store carries).
@@ -3662,6 +3660,7 @@ async function submitLead(){
 // result render still names the category instead of flashing a blank "They have  — go get it".
 function catLabel(){ const c=CATS.find(c=>c.id===SEL_CAT); if(c&&c.label) return c.label; return (ASKED_CATS[0]&&ASKED_CATS[0].label)||''; }
 function catLabels(){ return SEL_CATS.map(id=>(CATS.find(c=>c.id===id)||{}).label).filter(Boolean).join(', '); }
+let CS_DISMISSED=false; // the user tapped/swiped the call sheet away — don't auto-re-open it on the next syncCta
 function syncCta(){
   // No store picked = no dead button. The gas value prop holds the spot; the CTA only EXISTS
   // once it's tappable — and arrives armed (pulse + glide into the thumb zone).
@@ -3675,7 +3674,9 @@ function syncCta(){
   b.style.display='none'; b.classList.remove('armed'); if(cf)cf.style.display='none';
   if(SEL_STORE&&SEL_CATS.length&&(MODE!=='kiosk'||SEL_KIOSK)&&(SEL_KIOSK||!cantCall)){ // kiosks are always callable
     if(vv)vv.style.display='none';
-    showCallSheet();
+    // Only auto-slide the sheet up if the user hasn't dismissed it — otherwise a later syncCta (e.g. a
+    // mode switch to Thrift) would re-pop the sheet they just tapped away. Picking a store re-arms it.
+    if(!CS_DISMISSED) showCallSheet(); else hideCallSheet();
   }
   else { if(vv)vv.style.display=(MODE==='kiosk'||cantCall)?'none':''; hideCallSheet(); }
   renderStoreActions();
@@ -3697,14 +3698,27 @@ function renderCallSheet(){
   const pe=$('cs_prod'); if(pe) pe.innerHTML = `${esc(prod)} <span>· ${t('cs.costs','costs 1 check')}</span>`+
     ((isV2()&&MODE==='hobby'&&BRAND&&BRAND.key==='poke'&&hasFeature('exact_products'))?`<a onclick="openHobby()" style="display:block;margin-top:6px;font-size:12.5px;font-weight:700;color:#4ADE80;cursor:pointer">${t('hob.pickexact','Pick the exact set or product')} →</a>`:'');
 }
-function showCallSheet(){ const el=$('csheet'); if(!el) return; renderCallSheet(); el.style.transform=''; el.style.transition=''; el.classList.add('on'); el.setAttribute('aria-hidden','false'); const bd=$('csheetBd'); if(bd) bd.classList.add('on'); }
-function hideCallSheet(){ const el=$('csheet'); if(el){ el.classList.remove('on'); el.setAttribute('aria-hidden','true'); el.style.transform=''; } const bd=$('csheetBd'); if(bd) bd.classList.remove('on'); }
+function showCallSheet(){ const el=$('csheet'); if(!el) return; const already=el.classList.contains('on'); renderCallSheet();
+  if(!already){ // guarantee the slide UP from the bottom: pin to off-screen, reflow, then release to .on
+    el.style.transition='none'; el.style.transform='translateY(112%)'; void el.offsetHeight;
+    el.style.transition=''; }
+  el.style.transform=''; el.classList.add('on'); el.setAttribute('aria-hidden','false'); const bd=$('csheetBd'); if(bd) bd.classList.add('on'); }
+function hideCallSheet(){ const el=$('csheet'); if(el){ el.style.transition=''; el.style.transform=''; el.classList.remove('on'); el.setAttribute('aria-hidden','true'); } const bd=$('csheetBd'); if(bd) bd.classList.remove('on'); }
+// User-initiated dismiss (tap the backdrop / swipe down): also latch CS_DISMISSED so switching modes
+// (or any re-render) doesn't slide it back up until they pick a store again.
+function dismissCallSheet(){ CS_DISMISSED=true; hideCallSheet(); }
 (function csheetSwipe(){
   let y0=0, dy=0, drag=false;
   const sh=()=>$('csheet');
   document.addEventListener('touchstart',e=>{ const el=sh(); if(!el||!el.classList.contains('on'))return; if(!e.target.closest('#csheet')||e.target.closest('#cs_call'))return; y0=e.touches[0].clientY; dy=0; drag=true; el.style.transition='none'; },{passive:true});
   document.addEventListener('touchmove',e=>{ if(!drag)return; dy=Math.max(0,e.touches[0].clientY-y0); sh().style.transform='translateY('+dy+'px)'; },{passive:true});
-  document.addEventListener('touchend',()=>{ if(!drag)return; drag=false; const el=sh(); el.style.transition=''; el.style.transform=''; if(dy>80) hideCallSheet(); });
+  document.addEventListener('touchend',()=>{ if(!drag)return; drag=false; const el=sh();
+    el.style.transition='transform .28s cubic-bezier(.32,.72,0,1)';
+    if(dy>80){ // continue the gesture DOWN to off-screen, then tidy up — never a mid-air disappear
+      CS_DISMISSED=true; el.style.transform='translateY(112%)'; const bd=$('csheetBd'); if(bd) bd.classList.remove('on');
+      setTimeout(()=>{ el.classList.remove('on'); el.setAttribute('aria-hidden','true'); el.style.transition=''; el.style.transform=''; }, 300);
+    } else { el.style.transform=''; } // snap back up to open
+  });
 })();
 // Sell-methods card — what's actually possible at THIS store: live online stock, ways to get it,
 // resale warning, notify. Non-callable chains (Micro Center, Amazon) get "Buy online" instead of a
@@ -5246,6 +5260,8 @@ function renderHobbyProducts(){
   h.innerHTML=`<div class="card" style="padding:0;overflow:hidden">
     <div style="position:relative">
       <img src="${esc(st.banner||'')}" alt="" style="display:block;width:100%;height:152px;object-fit:cover;object-position:50% 72%" onerror="this.parentElement.insertAdjacentHTML('afterbegin',v2ArtPh('${esc(st.code)}',152));this.remove()">
+      <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,14,.15) 0%,rgba(10,10,14,.05) 45%,rgba(10,10,14,.55) 100%);pointer-events:none"></div>
+      ${st.logo?`<img src="${esc(st.logo)}" alt="${esc(st.name||st.code)}" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:64%;max-height:96px;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,.75));pointer-events:none" onerror="this.remove()">`:''}
       <button onclick="renderHobbySets()" aria-label="Back" style="position:absolute;top:12px;left:12px;width:32px;height:32px;border-radius:50%;border:0;background:rgba(10,10,14,.55);backdrop-filter:blur(4px);color:#FFF;cursor:pointer;font-size:16px">‹</button>
     </div>
     <div style="padding:14px 16px 18px">

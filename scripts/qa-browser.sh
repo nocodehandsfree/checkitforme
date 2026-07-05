@@ -16,13 +16,7 @@ rm -f .t-browser.db
 for pid in $(ss -tlnp 2>/dev/null | grep ":$PORT " | grep -oP 'pid=\K[0-9]+'); do kill "$pid" 2>/dev/null; done
 sleep 1
 
-# Seed the Hobby + Thrift QA chains BEFORE booting — the server caches chains at boot, so seeding after
-# would leave the new chains invisible to the type=Hobby/Thrift filters.
-echo "▶ qa-browser: seeding QA chains …"
-env DATABASE_URL="$DB" $ENVV ./node_modules/.bin/tsx scripts/qa-hobby-seed.ts  >/dev/null 2>&1
-env DATABASE_URL="$DB" $ENVV ./node_modules/.bin/tsx scripts/qa-thrift-seed.ts >/dev/null 2>&1
-
-echo "▶ qa-browser: booting seeded server on :$PORT …"
+echo "▶ qa-browser: booting server on :$PORT …"
 env DATABASE_URL="$DB" PORT=$PORT CLERK_ENFORCE=false $ENVV \
   ./node_modules/.bin/tsx src/server.ts >/tmp/qa-browser.log 2>&1 &
 SRV=$!
@@ -32,7 +26,12 @@ for i in $(seq 1 60); do curl -fsS "$BASE/pub/policy" >/dev/null 2>&1 && break; 
 FAILED=""
 run(){ echo ""; echo "── $1 ──"; if node "scripts/$1"; then echo "   → $1 OK"; else echo "   → $1 FAILED"; FAILED="$FAILED $1"; fi; }
 
-for S in qa-hobby.mjs qa-thrift.mjs qa-behaviors.mjs qa-round6.mjs qa-paidflow.mjs qa-price.mjs qa-gating.mjs qa-admin-plans.mjs; do
+# qa-hobby / qa-thrift are intentionally NOT run here: they need seeded Hobby/Thrift chains, and running the
+# seed scripts against this live server's SQLite double-bootstraps the schema and corrupts it (poisoning
+# every later suite). Run them by hand against a dedicated seeded DB:
+#   DATABASE_URL="file:$PWD/.t-p.db" tsx scripts/qa-hobby-seed.ts && tsx scripts/qa-thrift-seed.ts
+#   (boot a server on :8797 with that DB, then: node scripts/qa-hobby.mjs / qa-thrift.mjs)
+for S in qa-behaviors.mjs qa-round6.mjs qa-paidflow.mjs qa-price.mjs qa-gating.mjs qa-admin-plans.mjs; do
   run "$S"
 done
 
