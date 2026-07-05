@@ -6011,10 +6011,10 @@ function closeScore(){ $('scoreOverlay').classList.remove('on'); }
 function scorePreview(){
   const f=$('score_file').files&&$('score_file').files[0]; if(!f) return;
   if(f.size>12*1024*1024){ $('score_err').textContent=t('sc.err.big',"Photo's too big (max 12MB)."); return; }
-  SCORE_FILE=f; const r=new FileReader(); r.onload=e=>{ $('score_img').src=e.target.result; $('score_prev').style.display=''; }; r.readAsDataURL(f);
+  SCORE_FILE=f; markFld($('score_file'),false); $('score_err').textContent=''; const r=new FileReader(); r.onload=e=>{ $('score_img').src=e.target.result; $('score_prev').style.display=''; }; r.readAsDataURL(f); // clear the field-red once a photo is picked (file inputs fire 'change', not 'input')
 }
 async function submitScore(){
-  if(!SCORE_FILE){ $('score_err').textContent=t('sc.err.nophoto','Add a photo first'); return; }
+  if(!SCORE_FILE){ markFld($('score_file'),true); $('score_err').textContent=t('sc.err.nophoto','Add a photo first'); return; } // dashed-red the picker (matches the add-store field validation)
   const btn=$('score_btn'); btn.disabled=true; btn.textContent=t('sc.uploading','Uploading…');
   try{
     const ext=(SCORE_FILE.name.split('.').pop()||'jpg').toLowerCase();
