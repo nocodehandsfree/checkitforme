@@ -54,6 +54,14 @@ promote to prod → owner starts real-store calls for real ABC/ROI data.
   status." Left UNBUILT — the literal reading breaks new-store discovery (you can't check a store you've
   never checked). The concern it came from (too many/irrelevant stores) is already solved by #40. Confirm
   intent before building anything here.
+- **My-checks sheet now a true bottom sheet (07-05):** slides fully UP on open + DOWN on close/swipe
+  (was a 24px nudge + hard disappear). `closeAccount()` animates the slide-down; `sheetDrag` animates the
+  swipe-release; `openAccount` clears leftover inline styles. Same keyframe given to the buy/plans sheet.
+- **Hobby + Thrift are PAID-PLAN only (07-05):** hard client guard `comp || subscription==='active'` in
+  `ensureModeChips` — PAYG/free never see the chips even if `/app/me` sends the feature flags true. Sits
+  on top of the per-tier feature matrix. Test: `scripts/qa-sheet-gate.mjs`.
+- **NEXT (owner):** sending wireframes + spec for **building & checking Zones** (there's already a
+  `docs/specs/manage-zones.md` stub from DevOps — cross-check against the owner's wireframes when they land).
 
 **🔨 Build / fix:**
 - **🅿️ Manage Zones (premium `zone_sweeps`) — full spec `docs/specs/manage-zones.md`.** In My Checks:
