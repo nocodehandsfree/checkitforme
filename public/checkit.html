@@ -985,10 +985,10 @@ __BRAND_HEAD__
   .ho-card .label{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
   .ho-card h3{margin:5px 0 0;font-size:16px;font-weight:800;letter-spacing:-.2px}
   .ho-card p.hint{font-size:13px;color:var(--muted);line-height:1.5;margin:8px 0 0}
-  .ho-card .body{margin-top:13px;display:none}
+  .ho-card .body{margin-top:16px;display:none}
   .ho-step.active .ho-card .body{display:block}
   .ho-toggle{display:flex;background:var(--terminal);border:1px solid var(--border);border-radius:13px;padding:4px;gap:4px}
-  .ho-toggle button{flex:1;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:13px;padding:10px 6px;border-radius:9px;cursor:pointer;transition:.18s}
+  .ho-toggle button{flex:1;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:13px;padding:10px 6px;border-radius:9px;cursor:pointer;transition:.18s;white-space:nowrap}
   .ho-toggle button.on{background:var(--sheet);color:#fff}
   .ho-stepper{display:flex;align-items:center;justify-content:space-between;background:var(--terminal);border:1px solid var(--border);border-radius:13px;padding:8px 10px}
   .ho-stepper .amt{font-size:26px;font-weight:900;letter-spacing:-.4px}
@@ -1261,7 +1261,7 @@ html[data-skin="v2"] .uprow .uptxt .a{font-size:14.5px;font-weight:700}
 html[data-skin="v2"] .uprow .uptxt .b{font-size:11.5px;font-weight:600;color:#8A8A96}
 /* R2/R3 modal chrome: ✕ = 32px raised circle (global pop-up law; auth/acct/buy keep their own);
    field labels = tracked eyebrows; CTA labels WHITE on the green ring (comp R2/R3). */
-html[data-skin="v2"] .modal .x{width:32px;height:32px;border-radius:50%;background:linear-gradient(180deg,#2F2F36 0%,#26262B 100%);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);display:grid;place-items:center;color:#8A8A96;font-size:15px;line-height:1;top:14px;right:14px}
+html[data-skin="v2"] .modal .x{width:32px;height:32px;border-radius:50%;background:linear-gradient(180deg,#2F2F36 0%,#26262B 100%);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);display:grid;place-items:center;color:#8A8A96;font-size:15px;line-height:1;top:14px;right:14px;z-index:6} /* always on top so the close tap never lands on a field/heading below it */
 html[data-skin="v2"] #watchOverlay .modal{text-align:left!important} /* inline old-skin centering */
 html[data-skin="v2"] #watchOverlay .cta,html[data-skin="v2"] #scheduleOverlay .cta{color:#FFF}
 html[data-skin="v2"] #watch_contact{background:#1B1B20!important;border:0!important;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px!important}
@@ -1458,7 +1458,7 @@ html[data-skin="v2"] #co_cta{display:flex;align-items:center;justify-content:spa
 html[data-skin="v2"] #co_cta:disabled{opacity:.55;cursor:default;box-shadow:none}
 html[data-skin="v2"] .co-trust{font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:12px;text-align:center}
 html[data-skin="v2"] .co-trust b{color:rgba(255,255,255,.75);font-weight:800}
-html[data-skin="v2"] #acctOverlay .modal{padding:0;overflow-y:auto;overflow-x:hidden;border-radius:28px 28px 0 0;padding-bottom:env(safe-area-inset-bottom)}
+html[data-skin="v2"] #acctOverlay .modal{padding:0;overflow-y:auto;overflow-x:hidden;border-radius:28px 28px 0 0;padding-bottom:env(safe-area-inset-bottom);min-height:74vh;max-height:92vh} /* stable height: the sheet's top edge stays put across Overview/Activity/Earn (owner 07-04) — content scrolls inside */
 html[data-skin="v2"] #acctOverlay .modal>*:not(.acctv2head):not(.x){display:none} /* legacy rows too — the v2 overview panel replaces them (6e comp rows) */
 html[data-skin="v2"] #acctv2panel{padding-bottom:22px!important}
 /* Capsule w/ WHITE tracked label + right arrow (comp CTA shape) — shared. */
@@ -1487,7 +1487,7 @@ html[data-skin="v2"] #result>.foot{order:6}
 html[data-skin="v2"] .vmark{display:none}
 /* Comp timeline: left rail (green dot → gradient line → verdict dot) + full-width labeled cards. */
 html[data-skin="v2"] .ctlv2{display:flex;gap:14px;margin-top:10px}
-html[data-skin="v2"] .ctlv2-rail{width:12px;display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+html[data-skin="v2"] .ctlv2-rail{width:12px;display:flex;flex-direction:column;align-items:center;flex-shrink:0;margin-bottom:9px} /* stop the rail line at the terminus dot's center (½ the verdict line), not below it (owner 07-04) */
 html[data-skin="v2"] .ctlv2-rail .d1{width:10px;height:10px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px rgba(74,222,128,.6);flex-shrink:0}
 html[data-skin="v2"] .ctlv2-rail .ln{flex:1;width:2px}
 html[data-skin="v2"] .ctlv2-rail .d2{width:10px;height:10px;border-radius:50%;flex-shrink:0}
@@ -1876,7 +1876,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <input id="sr_city" class="kin" data-i18n-ph="ph.storecity" placeholder="Thousand Oaks, CA">
     <label class="klbl" data-i18n="sr.note">Anything else <span style="color:var(--muted);font-weight:400">(optional)</span></label>
     <input id="sr_note" class="kin" data-i18n-ph="ph.storedetails" placeholder="address, which products, etc.">
-    <label class="klbl" data-i18n="sr.email">Your cell or email <span style="color:var(--muted);font-weight:400">(optional) so we can tell you when it's live</span></label>
+    <label class="klbl" data-i18n="sr.email">Email or cell <span style="color:var(--muted);font-weight:400">(optional) — we'll notify you the moment it's added</span></label>
     <input id="sr_contact" class="kin" type="text" inputmode="email" autocomplete="on" data-i18n-ph="ph.cellmail" placeholder="cell number or email">
     <div id="sr_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
     <button class="cta" id="sr_btn" onclick="submitStoreReq()" style="margin-top:8px;width:100%" data-i18n="sr.submit">Submit store →</button>
@@ -5824,8 +5824,8 @@ function openHandoff(){
     <div id="ho_steps">
     ${stepShell(1,t('ho.s1.label','Confirm'),t('ho.s1.title','Where should it land?'),`
       <div class="ho-toggle" id="ho_drop">
-        <button class="on" onclick="hoDrop('ship',this)">${t('ho.ship.btn','📦 Ship it to me')}</button>
-        <button onclick="hoDrop('home',this)">${t('ho.home.btn','🏠 Drive it to my place')}</button>
+        <button class="on" onclick="hoDrop('ship',this)">${t('ho.ship.btn','📦 Ship to me')}</button>
+        <button onclick="hoDrop('home',this)">${t('ho.home.btn','🏠 Drive to me')}</button>
       </div>
       <p class="hint" id="ho_drophint">${t('ho.ship.hint',"Packaging and postage go on the driver's card. They ship it on the way back, tracking texted to you.")}</p>
       <button class="ho-btn primary" onclick="hoAdvance(1)">${t('ho.s1.cta','Looks right →')}</button>`)}
