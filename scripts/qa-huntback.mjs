@@ -19,7 +19,7 @@ const steps = await pg.evaluate(() => new Promise(res => {
   const out={};
   setMode('hobby');
   setTimeout(()=>{ out.eras=HUNT_STEP;
-    document.querySelector('#hobby .hob-era').click();
+    document.querySelector('#hobby .hob-erabtn').click();
     setTimeout(()=>{ out.sets=HUNT_STEP;
       document.querySelector('#hobby .hob-set').click();
       setTimeout(()=>{ out.prods=HUNT_STEP;
@@ -45,7 +45,7 @@ ok('back: shop -> products', await pg.evaluate(()=>HUNT_STEP==='prods' && docume
 await pg.goBack(); await pg.waitForTimeout(500);
 ok('back: products -> sets', await pg.evaluate(()=>HUNT_STEP==='sets' && document.querySelectorAll('#hobby .hob-set').length>=3));
 await pg.goBack(); await pg.waitForTimeout(500);
-ok('back: sets -> eras', await pg.evaluate(()=>HUNT_STEP==='eras' && document.querySelectorAll('#hobby .hob-era').length>=10));
+ok('back: sets -> eras', await pg.evaluate(()=>HUNT_STEP==='eras' && document.querySelectorAll('#hobby .hob-erabtn').length>=10));
 await pg.goBack(); await pg.waitForTimeout(600);
 ok('back: eras -> Retail (huntmode off, mode=call)', await pg.evaluate(()=>HUNT_STEP==='' && MODE==='call' && !document.body.classList.contains('huntmode')));
 

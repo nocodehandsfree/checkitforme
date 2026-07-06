@@ -349,51 +349,53 @@ const PAGE_TITLES: Record<string, string> = { about: "About", contact: "Contact"
 // per brand via policy.pages (a non-empty override wins); this is the version-controlled fallback that
 // serves on every brand + environment. Rendered inside .body — plain HTML (<h2>/<p>/<ul>) only.
 const H2 = 'style="font-size:19px;font-weight:800;color:#e9e9f0;margin:26px 0 8px"';
+const RM = "https://checkitforme.readme.io"; // the source-of-truth docs (how it works, full FAQ)
 const DEFAULT_PAGES: Record<string, string> = {
-  about: `<p><b>Check</b> finds out — by phone — whether the thing you want is actually on the shelf, so you don't drive across town for nothing.</p>
-<p>You pick a store and a product; we place a quick, friendly call to that location and ask. You get the answer, the timestamp, and (when we can) the transcript. No bots pretending to be you, no camping refresh pages — just a real call and a straight answer.</p>
+  about: `<p><b>Check It For Me</b> finds out if the thing you want is on the shelf. By phone. So you don't drive across town for nothing.</p>
+<p>You pick a store and a product. Check AI calls the store, asks the staff, and sends you the answer. Real call. Straight answer. No bots pretending to be you. No camping a refresh page.</p>
 <h2 ${H2}>Why we built it</h2>
-<p>Hyped releases sell out in minutes and store websites lie about "in stock." A 30-second call cuts through it. We turned that call into one tap.</p>
-<h2 ${H2}>Support</h2>
-<p>Questions, ideas, or a store we should add? Our community and AI support bot live in Discord — see the Contact page.</p>`,
-  contact: `<p>The fastest way to reach us is <b>Discord</b> — our AI support bot answers common questions in seconds, any time, and a human picks up the rest.</p>
-<p>You can also submit a store for us to add right inside the app (Account → Earn → <i>Add your store</i>). When a store you requested goes live, your next check is on us.</p>
-<p>We don't offer phone or email support — keeping overhead low is part of how checks stay cheap.</p>`,
-  faq: `<h2 ${H2}>What does Check do?</h2>
-<p>You choose a store and a product. We call the store, ask if it's in stock, and send you the answer — usually within a couple of minutes.</p>
-<h2 ${H2}>Is it accurate?</h2>
-<p>We report what the store tells us on the call, with a timestamp and (when available) a transcript so you can judge for yourself. Shelves change fast, so treat every answer as "as of right now."</p>
-<h2 ${H2}>What does it cost?</h2>
-<p>Checks run on credits — buy a small pack or subscribe for a monthly allowance. New accounts get a free check to try it, and you can earn more (add a store, refer a friend, post a score, submit a kiosk receipt).</p>
-<h2 ${H2}>Do you buy the item for me?</h2>
-<p>No. Check confirms availability. What you do with a "yes" is up to you.</p>
-<h2 ${H2}>Refunds?</h2>
-<p>Unused credits can be refunded on request. A check that already placed a call has been used and isn't refundable. See the Terms.</p>`,
-  terms: `<p>By using <b>Check</b> (checkitforme.com) you agree to these terms. If you don't, please don't use the service.</p>
-<h2 ${H2}>The service</h2>
-<p>Check places phone calls to retail locations to ask whether a product is in stock and reports back what we're told. Answers reflect a single moment in time and can be wrong if the store's information is wrong — we don't guarantee availability, pricing, or that any item will still be there when you arrive.</p>
-<h2 ${H2}>Credits &amp; payments</h2>
-<p>Checks are paid for with credits, bought as packs or included in a subscription and processed by Stripe. A credit is spent when a check places its call. Unused credits can be refunded on request; spent ones cannot. Subscriptions renew until cancelled and can be cancelled any time for the next period.</p>
-<h2 ${H2}>Acceptable use</h2>
-<p>Don't use Check to harass a store, place calls you have no legitimate interest in, resell the service, or break the law. We may pause accounts that abuse the service or the stores we call.</p>
-<h2 ${H2}>Disclaimer &amp; liability</h2>
-<p>The service is provided "as is." To the extent the law allows, we aren't liable for a missed item, a wrong answer, or a wasted trip. Our total liability is limited to what you paid us in the prior 30 days.</p>
+<p>Hyped drops sell out in minutes. Store websites say "in stock" when it's long gone. A 30 second call cuts through it. We made that call one tap.</p>
+<h2 ${H2}>Want the deep version?</h2>
+<p>How it works, top to bottom, lives at <a href="${RM}" target="_blank" rel="noopener">checkitforme.readme.io</a>.</p>`,
+  contact: `<p>Fastest way to reach us is <b>Discord</b>. Our support bot answers the common stuff in seconds, any time. A human picks up the rest.</p>
+<p>Want a store added? Do it right in the app. Account, then Earn, then <i>Add your store</i>. When a store you asked for goes live, your next check is on us.</p>
+<p>We skip phone and email support on purpose. Low overhead is how checks stay cheap.</p>`,
+  faq: `<h2 ${H2}>What does Check It For Me do?</h2>
+<p>You pick a store and a product. Check AI calls the store and asks if it's in stock. You get the answer, usually in a couple minutes.</p>
+<h2 ${H2}>Is it right?</h2>
+<p>We tell you exactly what the staff said, with the time and the whole convo. Shelves move fast, so read every answer as "right now."</p>
+<h2 ${H2}>What's it cost?</h2>
+<p>You pay in checks. Grab a small pack or subscribe for a monthly stack. New accounts get a free check to try it. Earn more by adding a store, inviting a friend, or posting a score.</p>
+<h2 ${H2}>Do you buy it for me?</h2>
+<p>No. We confirm it's there. The grab is yours.</p>
+<h2 ${H2}>No answer?</h2>
+<p>No answer = no charge.</p>
+<p style="margin-top:26px"><a href="${RM}" target="_blank" rel="noopener" style="display:inline-block;padding:13px 22px;border-radius:14px;font-weight:800;text-decoration:none;border:1.5px solid currentColor">Read the full guide →</a></p>`,
+  terms: `<p>By using <b>Check It For Me</b> (checkitforme.com) you're good with these terms. If not, no hard feelings. Just don't use it.</p>
+<h2 ${H2}>What we do</h2>
+<p>We call stores and ask if something's in stock, then tell you what they said. Answers are a snapshot. Stores get it wrong sometimes, so we can't promise the item is there, or the price, or that it'll still be there when you show up.</p>
+<h2 ${H2}>Checks and payments</h2>
+<p>You pay with checks, bought in packs or included in a plan. Stripe handles the card. A check is spent when it places a call. Unused checks can be refunded if you ask. Spent ones can't. Plans renew until you cancel, and you can cancel any time for the next round.</p>
+<h2 ${H2}>Play nice</h2>
+<p>Don't use us to harass a store, place calls you've got no real reason for, resell the service, or break the law. We can pause accounts that abuse the service or the stores we call.</p>
+<h2 ${H2}>The fine print</h2>
+<p>The service is "as is." As far as the law allows, we're not on the hook for a missed item, a wrong answer, or a wasted trip. If it ever comes to it, our max liability is what you paid us in the last 30 days.</p>
 <h2 ${H2}>Changes</h2>
-<p>We may update these terms; continued use means you accept the update. Questions? Reach us via the Contact page.</p>`,
-  privacy: `<p>This explains what <b>Check</b> (checkitforme.com) collects and why. Short version: we collect what we need to run your checks, and we don't sell your data.</p>
+<p>We may update these terms. Keep using the app and that's a yes. Questions? Hit the Contact page.</p>`,
+  privacy: `<p>Here's what <b>Check It For Me</b> (checkitforme.com) collects, and why. Short version: we grab what we need to run your checks. We don't sell your info.</p>
 <h2 ${H2}>What we collect</h2>
 <ul>
-<li><b>Your phone number</b> — it's how you sign in and how we attach your checks to you.</li>
-<li><b>Checks you run</b> — the store, product, result, and call transcript.</li>
-<li><b>Approximate location</b> — only when you allow it, to show stores near you. You can decline and search by ZIP instead.</li>
-<li><b>Payment info</b> — handled by Stripe; we never see your full card number.</li>
+<li><b>Your cell number.</b> It's how you sign in. And we call stores on your behalf, so a verified number is required. No number, no checks.</li>
+<li><b>Your checks.</b> The store, the product, the result, the call convo.</li>
+<li><b>Rough location.</b> Only if you allow it, to show stores near you. Say no and search by ZIP instead.</li>
+<li><b>Payment info.</b> Stripe handles it. We never see your full card.</li>
 </ul>
 <h2 ${H2}>How we use it</h2>
-<p>To place your calls, show your history, process payments, prevent abuse, and improve accuracy. That's it.</p>
-<h2 ${H2}>Who we share it with</h2>
-<p>Only the vendors that make the product work: a calling/voice provider to place the calls, an authentication provider to sign you in, and Stripe for payments. They process data on our behalf under their own terms. <b>We do not sell your personal information.</b></p>
-<h2 ${H2}>Retention &amp; your choices</h2>
-<p>We keep your account and check history until you ask us to delete it. You can request a copy or deletion of your data, or turn off location any time in your browser. Reach us via the Contact page.</p>`,
+<p>To place your calls, show your history, take payment, stop abuse, and get more accurate. That's it.</p>
+<h2 ${H2}>Who sees it</h2>
+<p>Only the vendors that make it work. A voice provider to place calls, a sign-in provider, and Stripe for payments. They handle it for us under their own terms. We do not sell your personal info.</p>
+<h2 ${H2}>Your data, your call</h2>
+<p>We keep your account and history until you ask us to delete it. Want a copy, or a delete? Hit the Contact page. You can turn off location any time in your browser.</p>`,
 };
 app.get("/p/:slug", async (c) => {
   const slug = c.req.param("slug").toLowerCase();
@@ -403,24 +405,19 @@ app.get("/p/:slug", async (c) => {
   const brand = resolveBrand(host, c.req.query("brand"));
   const pol = await getPolicy();
   const plain = brand.name.replace(/<[^>]+>/g, "");
-  const discordUrl = pol.links.discord || pol.support.discord || "";
-  const helpLine = (slug === "contact" || slug === "about")
-    ? (discordUrl
-        ? `<p>Need a hand? <a href="${esc(discordUrl)}" style="color:${brand.accent}">Join our Discord</a> — our AI support bot answers in seconds, any time.</p>`
-        : `<p>Need a hand? Support lives in our Discord — our AI bot answers in seconds. Invite link coming soon.</p>`)
-    : "";
   const body = ((pol.pages as Record<string, string>)[slug] || "").trim()
-    || (DEFAULT_PAGES[slug] ? DEFAULT_PAGES[slug] + helpLine : `<p>This page is coming soon. We're putting it together — check back shortly.</p>${helpLine}`);
+    || DEFAULT_PAGES[slug]
+    || `<p>This page is on the way. Check back soon.</p>`;
   // In-app sheet: the consumer page fetches the content instead of navigating away from the app.
   if (c.req.query("partial")) return c.json({ title: PAGE_TITLES[slug], body });
   return c.html(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(PAGE_TITLES[slug])} — ${esc(plain)}</title><meta name="robots" content="index,follow">
+<title>${esc(PAGE_TITLES[slug])} · ${esc(plain)}</title><meta name="robots" content="index,follow">
 <style>*{box-sizing:border-box}body{margin:0;background:#0A0A0E;color:#e9e9f0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.65}
 .wrap{max-width:680px;margin:0 auto;padding:28px 22px 80px}a.home{color:${brand.accent};text-decoration:none;font-weight:800;font-size:15px}
 h1{font-size:30px;margin:26px 0 14px}.body{color:#c2c2cf;font-size:16px}.body a{color:${brand.accent}}.muted{color:#7a7a88;font-size:13px;margin-top:40px}</style></head>
 <style>.fab{position:fixed;right:18px;bottom:22px;width:58px;height:58px;border-radius:50%;background:${brand.accent};color:#06210f;border:none;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:60;text-decoration:none}</style>
 <body><div class="wrap"><a class="home" href="/">← ${esc(plain)}</a><h1>${esc(PAGE_TITLES[slug])}</h1><div class="body">${body}</div>
-<div class="muted">© ${new Date().getFullYear()} ${esc(plain)} · Powered by Fungibles</div></div>
+<div class="muted">© ${new Date().getFullYear()} ${esc(plain)}</div></div>
 <a class="fab" href="/" title="Back" aria-label="Back to ${esc(plain)}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="#06210f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
 </body></html>`);
 });
@@ -1198,7 +1195,11 @@ app.get("/pub/stores/near", async (c) => {
       .where(and(eq(retailers.active, true), ...(conds.length ? conds : [like(retailers.name, `%${q}%`)]))).limit(2000);
   }
 
-  const callable = (r: typeof retailers.$inferSelect) => r.sellsPacks !== false && !!r.phone && !r.phone.startsWith("nophone:");
+  // Callable = a line we can dial at THIS store. Kiosk stores count too: even with no shelf packs
+  // (sellsPacks:false) we call to verify the machine is on and stocked — kiosks go down a lot
+  // (owner 2026-07-06). The shelf-only surfaces still gate on sellsPacks, so this doesn't add
+  // kiosk-only stores to "most likely on the shelf".
+  const callable = (r: typeof retailers.$inferSelect) => (r.sellsPacks !== false || r.hasKiosk === true) && !!r.phone && !r.phone.startsWith("nophone:");
   // inStock badge = a confirmed in-stock call in the last 7 days (drives the brand-check pin/row).
   const inStockSince = Math.floor(Date.now() / 1000) - 7 * 86400;
   const confirmedSet = new Set(
@@ -1287,7 +1288,8 @@ app.get("/pub/store/:id", async (c) => {
     lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
     sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
     tier: r.hasKiosk === true ? 5 : (r.tier ?? null),
-    callable: r.sellsPacks !== false && !!r.phone && !r.phone.startsWith("nophone:"),
+    // Kiosk stores are callable too (verify the machine is on) — see the near-feed note above.
+    callable: (r.sellsPacks !== false || r.hasKiosk === true) && !!r.phone && !r.phone.startsWith("nophone:"),
     ownerOnly: r.ownerOnly === true,
     stockCheckMethod: chain?.stockCheckMethod || "call",
     sellMethods: (chain?.sellMethods || "in_store").split(",").map((s) => s.trim()).filter(Boolean),
