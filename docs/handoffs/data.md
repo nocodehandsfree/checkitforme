@@ -158,12 +158,16 @@ ME03 = Perfect Order — the design grid had these mislabeled).
   **non-destructive `POST /api/stores/patch {where:{ids:[id]},set:{hours,hoursUpdatedAt}}`** — only the
   hours columns change (import would blank carries/lat/lng, so DON'T use import for hours-only updates).
   `hoursUpdatedAt` set = "verified" stamp so reverify (PAID) skips them.
-  - **Wave 1 (420 shops) DONE:** 310 real hours patched, 21 permanently-closed deactivated, 89 no-data
-    (online/home-based/appointment sellers — left on night fallback). 74% hit rate. Verified live.
-  - Tooling in scratchpad: `hobby_nohours.py` (build batches, sorted by state/city, skips done ids),
-    14 agents/wave → `hobbyout/hb*.json`, `agg_hobby.py --apply` (canonicalize → group by identical hours
-    → patch; all-7-closed → deactivate; all-unknown → skip). `hobby_applied.json` records handled ids.
-  - **~3,900 remain** — repeat waves (each: rebuild batches excluding done ids → spawn 14 → `agg_hobby.py --apply`).
+  - **Waves 1–3 DONE (1,260 shops):** 940 real hours patched, 64 permanently-closed deactivated, 256 no-data
+    (online/home-based/appointment sellers — left on night fallback). ~75% hit rate. Verified live.
+    **Hobby-store hours coverage: 23% → 40%** (2,258/5,617). Overall network hours: 90.8% → **91.7%**.
+  - Tooling in scratchpad (repeatable): `build_wave.py` (reads `hobby_done_ids.txt`, rebuilds 14 batch files
+    excluding all done ids, sorted by state/city) → spawn 14 agents (id-keyed, write `hobbyout/hb*.json`) →
+    `agg_hobby.py --apply` (canonicalize → group by identical hours → patch; all-7-closed → deactivate;
+    all-unknown → skip; "24:00"→"00:00"). After each wave: fold ids into `hobby_done_ids.txt`, archive
+    `hobbyout/` → `hobbyout_done/wN/`. `hobby_nohours.csv` = the full 4,363-store worklist (id,name,addr,city,state,phone,chain).
+  - **~3,360 hobby stores remain** (of which ~256 are no-data online sellers with no findable hours) —
+    repeat waves. Each wave ≈ 300 real hours in ~8 min, $0 (my WebSearch subagents, never the paid backfill).
 
 **Session 2026-07-04 — Drops DB is the product SOURCE OF TRUTH; catalog now syncs from it.**
 - **dropsdb.fungibles.com** (closed beta, password login) is where product types/MSRP/retailers are
