@@ -32,10 +32,6 @@ A check must land in ONE of these two boxes, and your job is to find anywhere we
 ABC/connect-on-human is the main lever (keep Charlie/EL asleep through the tree+hold, wake only on the human).
 Every call-path change gets measured against this — if it doesn't move us toward one of those boxes, it's not
 the priority. The calculator's running "Hybrid" line is the live benchmark.
-**Measure it live:** `GET /api/cost` (admin) turns real `call_seconds`/`nav_seconds` into ¢/check under
-both EL pricing scenarios + the % of calls in each box, and shows exactly what connect-on-human would
-save. `GET /api/readiness` rolls cost + secrets + rate limits + kill-switch into one go/no-go checklist.
-(`src/calls/cost.ts` is the model; Fun-store calls are excluded so they can't skew the number.)
 
 ## Directive — the owner's priority order (do NOT jump straight to mapping)
 1. **First: help the owner nail testing + hit THE NUMBER.** Workflows + persona on the **Fun** store

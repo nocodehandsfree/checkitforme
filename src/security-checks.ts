@@ -34,25 +34,3 @@ export function assertProdSecurity(): void {
     console.warn("[security] (non-prod boot: continuing despite the above)");
   }
 }
-
-export interface ReadinessCheck { id: string; label: string; status: "pass" | "warn" | "fail"; detail: string }
-
-/** Non-throwing sibling of assertProdSecurity: the same secret/config checks as a structured list the
- *  admin readiness endpoint can render. `fail` = the boot-fatal ones; `warn` = the loud-but-ok ones. */
-export function securityReport(): ReadinessCheck[] {
-  const out: ReadinessCheck[] = [];
-  out.push(config.adminToken
-    ? { id: "admin_token", label: "Admin API authenticated", status: "pass", detail: "ADMIN_TOKEN set — /api/* is gated." }
-    : { id: "admin_token", label: "Admin API authenticated", status: "fail", detail: "ADMIN_TOKEN unset — /api/* would be OPEN." });
-  const sec = process.env.SESSION_SECRET || "";
-  out.push(!sec || sec === "dev-insecure-secret-change-me" || sec.length < 32
-    ? { id: "session_secret", label: "Session tokens unforgeable", status: "fail", detail: "SESSION_SECRET missing/weak (need ≥32 chars)." }
-    : { id: "session_secret", label: "Session tokens unforgeable", status: "pass", detail: "SESSION_SECRET is strong." });
-  out.push(process.env.STRIPE_WEBHOOK_SECRET
-    ? { id: "stripe_webhook", label: "Stripe webhook signed", status: "pass", detail: "STRIPE_WEBHOOK_SECRET set." }
-    : { id: "stripe_webhook", label: "Stripe webhook signed", status: "warn", detail: "STRIPE_WEBHOOK_SECRET unset — unsigned events accepted." });
-  out.push(config.voice.webhookSecret
-    ? { id: "el_webhook", label: "ElevenLabs webhook verified", status: "pass", detail: "ELEVENLABS_WEBHOOK_SECRET set." }
-    : { id: "el_webhook", label: "ElevenLabs webhook verified", status: "warn", detail: "ELEVENLABS_WEBHOOK_SECRET unset — EL signatures unverified." });
-  return out;
-}

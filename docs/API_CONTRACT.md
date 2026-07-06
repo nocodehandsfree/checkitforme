@@ -169,14 +169,6 @@ normal call are unchanged.
   GET/POST/PATCH/DELETE `/api/statuses`.
 - **Dashboards:** GET `/api/admin/metrics | pulse | overview | restock-intel | store-intel |
   user-history`. **[CHANGING]** these move table-scans → SQL aggregation; response shapes preserved.
-- **THE NUMBER (cost):** GET `/api/cost?days=30&limit=800` → `{ headline:{ calls, avgTalkSeconds,
-  avgCentsB, pctInTargetB, verdict:"in_target"|"over"|"no_data", connectOnHumanSavesCents }, n,
-  seconds:{avg/median/p90 Call+Talk}, pctTalkBox, cost:{ A|B:{ current, abc }:{avgCents,medianCents,
-  pctCostBox} }, abcOn, target, rates }`. Est. ¢/check from recorded call/nav timing; both EL pricing
-  scenarios; Fun (owner-only) calls excluded. Talk = call − nav (the ABC-billed portion).
-- **Go-live readiness:** GET `/api/readiness` → `{ ready:bool, fails, warns, checks:[{id,label,
-  status:"pass"|"warn"|"fail",detail}] }` — secrets/webhooks, money-endpoint rate limits, kill-switch,
-  DB, and cost-in-target as one launch checklist.
 - **Admin agent:** POST `/api/admin/agent` `{ messages:[{role,text}] }` → `{ reply, actions, error? }`.
 - **Stock/discord:** POST `/api/stock/ingest`, `/api/stock/intel/reapply`; GET/POST/DELETE
   `/api/discord/channels`.
