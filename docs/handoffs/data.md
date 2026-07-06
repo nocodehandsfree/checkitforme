@@ -152,11 +152,18 @@ ME03 = Perfect Order — the design grid had these mislabeled).
   shelf lists. **Verified: 0 kiosk chains muted.** Kiosk data: 1,886 active kiosks, 213 kiosk-only (77 w/
   phone), 186 nophone (can't be called until we backfill store lines). Zone-cost calc (`zoneQuote`) left as-is
   (future/billing path). Typecheck clean.
-- **National hobby-hours backfill STARTED (owner: "get the rest").** 4,315 active Hobby stores still lack
-  hours (all have phones). Same FREE Google method, now **id-keyed** (agents return `{"id":…,"mon":…}` →
-  exact join, no name-matching). Wave 1 = 420 shops / 14 agents writing to `scratchpad/hobbyout/hb*.json`;
-  aggregator imports by id. Batches built by `scratchpad/hobby_nohours.py` (sorted by state/city). Repeat
-  waves to finish the remaining ~3,900.
+- **National hobby-hours backfill IN PROGRESS (owner: "get the rest").** 4,363 active Hobby stores lacked
+  hours (4,315 with a complete city+state address; all have phones). Same FREE Google method, now
+  **id-keyed** (agents return `{"id":…,"mon":…}` → exact join, no name-matching). Per-store write is a
+  **non-destructive `POST /api/stores/patch {where:{ids:[id]},set:{hours,hoursUpdatedAt}}`** — only the
+  hours columns change (import would blank carries/lat/lng, so DON'T use import for hours-only updates).
+  `hoursUpdatedAt` set = "verified" stamp so reverify (PAID) skips them.
+  - **Wave 1 (420 shops) DONE:** 310 real hours patched, 21 permanently-closed deactivated, 89 no-data
+    (online/home-based/appointment sellers — left on night fallback). 74% hit rate. Verified live.
+  - Tooling in scratchpad: `hobby_nohours.py` (build batches, sorted by state/city, skips done ids),
+    14 agents/wave → `hobbyout/hb*.json`, `agg_hobby.py --apply` (canonicalize → group by identical hours
+    → patch; all-7-closed → deactivate; all-unknown → skip). `hobby_applied.json` records handled ids.
+  - **~3,900 remain** — repeat waves (each: rebuild batches excluding done ids → spawn 14 → `agg_hobby.py --apply`).
 
 **Session 2026-07-04 — Drops DB is the product SOURCE OF TRUTH; catalog now syncs from it.**
 - **dropsdb.fungibles.com** (closed beta, password login) is where product types/MSRP/retailers are
