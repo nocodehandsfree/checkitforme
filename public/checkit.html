@@ -2492,7 +2492,7 @@ function ensureModeChips(){
   const hobbyOn=gFlags.hobby!==false, thriftOn=gFlags.thrift!==false;
   // HOBBY (Pokémon only — the hunt feed is Pokémon-only, so onepiece/topps would get a dead chip —
   // AND the exact_products entitlement).
-  { const want=hobbyOn&&paid&&BRAND.key==='poke'&&hasFeature('exact_products');
+  { const want=hobbyOn&&paid&&BRAND.category==='Pokémon'&&hasFeature('exact_products'); // category, not key: the apex brand is key:'runner' but category:'Pokémon' (leads-with-Pokémon), so key==='poke' wrongly hid Hobby on the root domain while Thrift/Kiosk (category-gated) stayed
     const ex=document.querySelector('.modetab[data-mode="hobby"]'), kb=kioskBtn();
     if(want&&!ex&&kb){ const hb=document.createElement('button'); hb.className='modetab'; hb.dataset.mode='hobby'; hb.setAttribute('onclick',"setMode('hobby')");
       hb.innerHTML='<span class="mti">'+SVG_STORE(15)+'</span><span>'+t('mode.hobby','Hobby')+'</span>';
@@ -3876,7 +3876,7 @@ function renderCallSheet(){
   // ("Pokémon · costs 1 check" → "Pitch Black Booster Box · costs 1 check"). v1: lock never set.
   const prod = SEL_KIOSK ? t('cta.kioskword','kiosk') : ((typeof HOBBY_LOCK!=='undefined'&&HOBBY_LOCK&&SEL_PRODUCT)?SEL_PRODUCT:catLabels());
   const pe=$('cs_prod'); if(pe) pe.innerHTML = `${esc(prod)} <span>· ${t('cs.costs','costs 1 check')}</span>`+
-    ((isV2()&&MODE==='hobby'&&BRAND&&BRAND.key==='poke'&&hasFeature('exact_products'))?`<a onclick="openHobby()" style="display:block;margin-top:6px;font-size:12.5px;font-weight:700;color:#4ADE80;cursor:pointer">${t('hob.pickexact','Pick the exact set or product')} →</a>`:'');
+    ((isV2()&&MODE==='hobby'&&BRAND&&BRAND.category==='Pokémon'&&hasFeature('exact_products'))?`<a onclick="openHobby()" style="display:block;margin-top:6px;font-size:12.5px;font-weight:700;color:#4ADE80;cursor:pointer">${t('hob.pickexact','Pick the exact set or product')} →</a>`:'');
 }
 function showCallSheet(){ const el=$('csheet'); if(!el) return; const already=el.classList.contains('on'); renderCallSheet();
   if(!already){ // guarantee the slide UP from the bottom: pin to off-screen, reflow, then release to .on
@@ -5365,7 +5365,7 @@ async function openHobby(){
   if(!hasFeature('exact_products')){ try{ openBuy('premium'); }catch(_){ } return; } // exact-product hunt = a per-tier perk
   // Brand gate (owner law: hobby = sports cards + TCG, NEVER NeeDoh — and /pub/pokemon-sets is
   // Pokémon's registry): only the Pokémon brand opens this flow until per-brand feeds exist.
-  if(!(typeof BRAND!=='undefined'&&BRAND&&BRAND.key==='poke')) return;
+  if(!(typeof BRAND!=='undefined'&&BRAND&&BRAND.category==='Pokémon')) return; // apex brand key is 'runner' but category 'Pokémon' — gate on category so Hobby opens on the root domain too
   // Hunt-first (owner 2026-07-03): tapping Hobby opens "What are you hunting?" FIRST, with the
   // Retail/Hobby/Kiosk switcher still on top. body.huntmode hides the store-finder + other builder
   // blocks; the hunt card drops in below the switcher. A store is picked AFTER the product is locked.
