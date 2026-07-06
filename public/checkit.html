@@ -1375,12 +1375,13 @@ html[data-skin="v2"] .hob-search .ic{display:inline-flex;flex:0 0 auto;opacity:.
 html[data-skin="v2"] .hob-search input{flex:1;min-width:0;background:none;border:0;outline:none;color:#fff;font-size:16px;font-weight:600;padding:13px 4px}
 html[data-skin="v2"] .hob-search input::placeholder{color:#8A8A96;font-weight:600}
 html[data-skin="v2"] .hob-search .clr{display:none;flex:0 0 auto;width:26px;height:26px;border:0;border-radius:50%;background:rgba(255,255,255,.08);color:#cfcfd9;font-size:16px;line-height:1;cursor:pointer;place-items:center}
-html[data-skin="v2"] .hob-erabtn{display:flex;flex-direction:column;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:16px;padding:0;overflow:hidden;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);cursor:pointer;transition:transform .1s}
+html[data-skin="v2"] #hobEraGrid{min-width:0}
+html[data-skin="v2"] #hobEraGrid .hob-eracell{min-width:0}
+html[data-skin="v2"] .hob-erabtn{display:flex;flex-direction:column;width:100%;min-width:0;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:16px;padding:0;overflow:hidden;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);cursor:pointer;transition:transform .1s}
 html[data-skin="v2"] .hob-erabtn:active{transform:translateY(2px) scale(.985)}
-html[data-skin="v2"] .hob-erabtn-art{display:flex;align-items:center;justify-content:center;height:84px;padding:10px 12px 4px}
-html[data-skin="v2"] .hob-erabtn-lbl{padding:2px 12px 12px;text-align:left}
-html[data-skin="v2"] .hob-erabtn-lbl .nm{display:block;font-size:13.5px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-html[data-skin="v2"] .hob-erabtn-lbl .sub{display:block;margin-top:2px;font-size:11px;font-weight:600;color:#8A8A96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-skin="v2"] .hob-erabtn-art{display:flex;align-items:center;justify-content:center;height:92px;padding:12px}
+html[data-skin="v2"] .hob-erabtn-lbl{padding:0 12px 13px;text-align:center}
+html[data-skin="v2"] .hob-erabtn-lbl .sub{display:block;font-size:11.5px;font-weight:700;color:#9a9aa6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html[data-skin="v2"] .hob-set{display:block;width:100%;margin:0 0 16px;background:none;border:0;padding:0;cursor:pointer;transition:transform .12s;color:#FFF}
 html[data-skin="v2"] .hob-set:active{transform:translateY(2px)}
 html[data-skin="v2"] .hob-chip{position:absolute;top:8px;right:8px;font-size:8.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 8px}
@@ -2496,7 +2497,7 @@ function ensureModeChips(){
     const ex=document.querySelector('.modetab[data-mode="hobby"]'), kb=kioskBtn();
     if(want&&!ex&&kb){ const hb=document.createElement('button'); hb.className='modetab'; hb.dataset.mode='hobby'; hb.setAttribute('onclick',"setMode('hobby')");
       hb.innerHTML='<span class="mti">'+SVG_STORE(15)+'</span><span>'+t('mode.hobby','Hobby')+'</span>';
-      kb.parentElement.insertBefore(hb,kb); }
+      kb.parentElement.insertBefore(hb,kb); try{ prefetchHobby(); }catch(_){ } } // warm the set registry so tapping Hobby opens instantly
     else if(!want&&ex){ ex.remove(); if(typeof MODE!=='undefined'&&MODE==='hobby'){ try{ setMode('call'); }catch(_){ } } }
   }
   // THRIFT (all v2 brands + the thrift_hunts entitlement — paid plans only).
@@ -5359,6 +5360,21 @@ function hobSizeLogo(img){
   if(nh*sc>maxH) sc=maxH/nh;
   img.style.width=(100*nw*sc/W)+'%';
 }
+// Era-card logo: EQUAL VISUAL FOOTPRINT for every era logo no matter its aspect ratio. A thin wide
+// wordmark (Black & White, EX Ruby & Sapphire) otherwise renders tiny next to a chunky one. Area-normalize
+// to a fixed target, then clamp to the art box so nothing overflows. Owner 07-06: "all logos same size."
+function hobSizeEra(img){
+  const box=img.parentElement; if(!box) return;
+  const W=box.clientWidth, H=box.clientHeight; if(!W||!H){ requestAnimationFrame(()=>hobSizeEra(img)); return; }
+  const nw=img.naturalWidth, nh=img.naturalHeight; if(!nw||!nh) return;
+  // These are all left-to-right WORDMARKS, so a consistent WIDTH reads as "the same size" (a thin logo
+  // like Black & White and a chunky one like Mega Evolution both span the card). Fill ~90% of the card
+  // width; only shrink if that would make a tall logo overflow the box. Width as a % of the box (never
+  // fixed px) so it's responsive and can never spill the cell even if this ran before the grid laid out.
+  let w=0.90*W, h=nh*(w/nw); const maxH=0.84*H;
+  if(h>maxH){ h=maxH; w=nw*(h/nh); }
+  img.style.width=(100*w/W)+'%'; img.style.height='auto';
+}
 function exitHunt(){ document.body.classList.remove('huntmode'); const h=$('hobby'); if(h) h.classList.add('hidden'); }
 async function openHobby(){
   if(!isV2()) return; // hard gate: never reachable outside the preview skin
@@ -5376,13 +5392,24 @@ async function openHobby(){
   MODE='hobby'; try{ document.querySelectorAll('.modetab').forEach(b=>b.classList.toggle('on',b.dataset.mode==='hobby')); }catch(_){}
   const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none';
   const h=$('hobby'); if(!h) return; h.classList.remove('hidden');
-  if(!HOBBY.data){
-    h.innerHTML='<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:48px 0"><span></span><span></span><span></span></div>';
-    try{ const d=await api('/pub/pokemon-sets'); if(d&&Array.isArray(d.eras)) HOBBY.data=d; }catch(e){}
-  }
+  // INSTANT open: the set registry is prefetched at boot + cached in localStorage, so HOBBY.data is almost
+  // always ready. Fall back to the cache synchronously, then only show the spinner if we truly have nothing.
+  if(!HOBBY.data) hobbyLoadCache();
+  if(HOBBY.data){ renderHobbyEras(); markHunt('eras'); window.scrollTo({top:0}); hobbyFetchSets(); return; } // paint now, refresh under the hood
+  h.innerHTML='<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:48px 0"><span></span><span></span><span></span></div>';
+  await hobbyFetchSets();
   if(!HOBBY.data){ $('hobby').innerHTML='<div style="text-align:center;color:#8A8A96;padding:36px 0;font-size:13px">'+t('hob.nodata','Set data unavailable right now.')+'</div>'; return; }
   renderHobbyEras(); markHunt('eras'); window.scrollTo({top:0});
 }
+// Paint-from-cache: the last-fetched set registry, so the era grid is instant on repeat opens + reloads.
+function hobbyLoadCache(){ try{ const c=JSON.parse(localStorage.getItem('cifm_pokesets')||'null'); if(c&&Array.isArray(c.eras)) HOBBY.data=c; }catch(_){ } }
+// Fetch the live registry (server 5-min cache) and re-cache. If the era grid is already up, repaint it.
+async function hobbyFetchSets(){
+  try{ const d=await api('/pub/pokemon-sets'); if(d&&Array.isArray(d.eras)){ HOBBY.data=d; try{ localStorage.setItem('cifm_pokesets',JSON.stringify(d)); }catch(_){ }
+    if(MODE==='hobby'&&HUNT_STEP==='eras'&&$('hobEraGrid')) renderHobbyEras(); } }catch(_){ }
+}
+// Warm the registry the moment we know the user can reach Hobby (chip shown), so tapping it is instant.
+function prefetchHobby(){ if(HOBBY.data) return; hobbyLoadCache(); if(!HOBBY.data){ try{ idle(()=>hobbyFetchSets()); }catch(_){ hobbyFetchSets(); } } }
 // P3a — era logos sit DIRECTLY on the page, big, raised by stacked shadows; press dips them.
 // P3a comp: everything INSIDE the big card — centered 24/900 title + 12.5/600 sub, era rows 96px
 // centered w/ 82%-wide logos (comp drop shadows); missing logo = EMBOSSED TEXT (comp), not stripes.
@@ -5397,11 +5424,12 @@ function renderHobbyEras(){
     const s=esc(((e.era||'')+' '+(e.years||'')+' '+(e.sets||[]).map(x=>(x.name||'')+' '+(x.code||'')).join(' ')).toLowerCase());
     const n=(e.sets||[]).length;
     const face=e.logo
-      ? `<img src="${esc(e.logo)}" alt="${esc(e.era)}" style="max-width:86%;max-height:56px;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 8px 12px rgba(0,0,0,.6))" onerror="this.replaceWith(hobEraTxt(this.alt))">`
+      ? `<img src="${esc(e.logo)}" alt="${esc(e.era)}" style="display:block;width:auto;height:auto;filter:drop-shadow(0 8px 12px rgba(0,0,0,.6))" onload="hobSizeEra(this)" onerror="this.replaceWith(hobEraTxt(this.alt))">`
       : `<span style="font-size:15px;font-weight:900;letter-spacing:.08em;color:#B9B9C4;text-align:center;text-shadow:0 1.5px 0 rgba(255,255,255,.1),0 12px 18px rgba(0,0,0,.5)">${esc((e.era||'').toUpperCase())}</span>`;
+    // No era name text — the logo already says it. Just set count + years, centered.
     const inner=`<button class="hob-erabtn" onclick="hobbyPickEra(${i})" aria-label="${esc(e.era)}">
         <div class="hob-erabtn-art">${face}</div>
-        <div class="hob-erabtn-lbl"><span class="nm">${esc(e.era)}</span><span class="sub">${n} ${n===1?t('hob.set','set'):t('hob.sets','sets')}${e.years?' · '+esc(e.years):''}</span></div>
+        <div class="hob-erabtn-lbl"><span class="sub">${n} ${n===1?t('hob.set','set'):t('hob.sets','sets')}${e.years?' · '+esc(e.years):''}</span></div>
       </button>`;
     // Newest era (feed is newest-first) wears the accent ring — a hero cue, not a wall of equal logos.
     return `<div class="hob-eracell" data-s="${s}">${i===0?`<div style="padding:2px;border-radius:18px;background:${ring};box-shadow:0 10px 22px -8px color-mix(in srgb,var(--accent,#FFCB05) 35%,transparent)">${inner}</div>`:inner}</div>`;

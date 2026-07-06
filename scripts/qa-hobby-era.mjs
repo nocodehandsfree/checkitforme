@@ -33,7 +33,7 @@ const base = await pg.evaluate(() => ({
   cards: document.querySelectorAll('#hobEraGrid .hob-erabtn').length,
   twoCol: getComputedStyle(document.getElementById('hobEraGrid')).gridTemplateColumns.split(' ').length===2,
   hasImagery: !!document.querySelector('#hobEraGrid .hob-erabtn img'),
-  firstName: (document.querySelector('#hobEraGrid .hob-erabtn .nm')||{}).textContent,
+  firstName: (document.querySelector('#hobEraGrid .hob-erabtn')||{}).getAttribute&&document.querySelector('#hobEraGrid .hob-erabtn').getAttribute('aria-label'),
 }));
 ok('era picker renders a search box', base.hasSearch);
 ok('eras render as button-cards (one per era)', base.cards===3);
@@ -44,14 +44,14 @@ ok('newest era is first', /Scarlet/.test(base.firstName||''));
 // Filter by a SET name that lives inside an era → only that era shows.
 const f1 = await pg.evaluate(() => new Promise(res => {
   const inp=document.getElementById('hobEraSearch'); inp.value='surging sparks'; hobEraFilter();
-  setTimeout(()=>{ const vis=[...document.querySelectorAll('#hobEraGrid .hob-eracell')].filter(c=>c.style.display!=='none').map(c=>c.querySelector('.nm').textContent); res(vis); },150);
+  setTimeout(()=>{ const vis=[...document.querySelectorAll('#hobEraGrid .hob-eracell')].filter(c=>c.style.display!=='none').map(c=>c.querySelector('.hob-erabtn').getAttribute('aria-label')); res(vis); },150);
 }));
 ok('search a set name surfaces only its era', f1.length===1 && /Scarlet/.test(f1[0]));
 
 // Filter by a set CODE.
 const f2 = await pg.evaluate(() => new Promise(res => {
   const inp=document.getElementById('hobEraSearch'); inp.value='swsh12'; hobEraFilter();
-  setTimeout(()=>{ const vis=[...document.querySelectorAll('#hobEraGrid .hob-eracell')].filter(c=>c.style.display!=='none').map(c=>c.querySelector('.nm').textContent); res(vis); },150);
+  setTimeout(()=>{ const vis=[...document.querySelectorAll('#hobEraGrid .hob-eracell')].filter(c=>c.style.display!=='none').map(c=>c.querySelector('.hob-erabtn').getAttribute('aria-label')); res(vis); },150);
 }));
 ok('search a set code surfaces only its era', f2.length===1 && /Sword/.test(f2[0]));
 
