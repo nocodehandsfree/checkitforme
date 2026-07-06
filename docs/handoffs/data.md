@@ -121,6 +121,51 @@ ME03 = Perfect Order — the design grid had these mislabeled).
 
 ## Current focus (KEEP UPDATED)
 
+**Session 2026-07-06 (later) — "Hobby vanished at night" diagnosed + CATEGORY-SWEEP PLAYBOOK (owner directive).**
+
+- **"Hobby disappeared from the map" = NOT a data loss, NOT a broken chip. Data is 100% intact** (5,617
+  Hobby stores, `/pub/store-types` lists Hobby, feed returns them). Root cause: it was 11 PM PT / 2 AM ET.
+  **`public/checkit.html` line 3462** drops any `isClosed(s)` store (`openState.known && !openState.open`)
+  from the Retail/Hobby/Thrift lists. Before the midnight-hours fix, unknown-hours shops read `known:false`
+  → never `isClosed` → showed 24/7 (falsely "open"). After the fix they honestly read "likely closed" at
+  night → the filter now hides them → the whole category empties after hours. **Real-hours shops that are
+  genuinely closed at 2 AM are dropped too**, so more hours won't fix it.
+  - **RECOMMENDED FIX (mapping/website lane — checkit.html, NOT data):** show closed Hobby/Thrift stores
+    **greyed with their "Closed · opens 10 AM" label** instead of hiding them (Kiosk mode already shows
+    open+closed, line 3461). Keeps categories populated 24/7 + honest. ~1-line change at 3462. Flagged to
+    owner; do NOT unilaterally edit the UI file — coordinate.
+- **Chip architecture (answer to "does each store have a chip?"):** NOT a stored per-store tag. Derived:
+  **Retail / Hobby / Thrift / Pharmacy / …  = the store's CHAIN `type`** (one bucket per store via chainId);
+  **Kiosk = the per-store `hasKiosk` flag** (independent; a store can be Hobby AND Kiosk). Front-end chips:
+  hobby→`storeType==='Hobby'`, kiosk→`hasKiosk`, Retail→carries-brand minus Hobby/Thrift. Hobby+Thrift
+  chips are also gated: v2 skin + comp/subscription + global `flags.hobby/thrift` + **Pokémon brand** +
+  entitlement (`ensureModeChips`, checkit.html ~L2482). New category = new `chains.type` + new UI chip.
+
+- **THE CATEGORY-SWEEP PLAYBOOK (repeatable, owner 07-06 — hobby ✓ → thrift → comic → toy → beauty → …):**
+  Build a big national DB per store CATEGORY, each its own chip, big chains top-down → independents
+  bottom-up, all with hours. Per category:
+  1. **Chip** = new `chains.type` value (my lane) + front-end mode chip (mapping lane, entitlement-gated).
+  2. **Tier-1 big chains (top-down):** enumerate national/regional chains, import all locations from their
+     store-locators (consistent hours). Thrift: Goodwill, Savers/Value Village, Salvation Army, Plato's
+     Closet, Buffalo Exchange, 2nd Ave. Beauty: Sally Beauty, Ulta, SEPHORA, CosmoProf. Toy: few chains
+     (most closed) — independents dominate. Comic: almost all independent.
+  3. **Tier-2 independents (bottom-up):** harvest the category's directory (like cardshophub for hobby);
+     else WebSearch sweeps by metro. Dedupe by phone. Import with `sellsPacks:true` + the category type.
+  4. **Hours:** run the FREE WebSearch-agent wave machine (`build_wave.py` → 14 agents → `agg_hobby.py`,
+     id-keyed patch). ~300 real hours/wave in ~8 min, $0. Generalize `build_wave`/`agg` to filter by the
+     category's type instead of "Hobby".
+  5. **Continuous re-sweep:** periodically re-discover per metro — the count is never "done" (there are
+     surely more hobby shops than our 5,617; keep sweeping).
+- **IVR / phone-tree flagging (owner 07-06, coordinate w/ mapping agent):** most independents ring straight
+  to a human (callable as-is). Some use an IVR / call-center / recording. **The data model ALREADY supports
+  this:** `retailers.phoneTree` (per-store) + `chains.phoneTreeDefault` (chain) → call service reads
+  dtmf/say/connectAtSec (`buildRestockVars`), and `muted` kills dead recordings. **NEED (build):** a
+  detection step that flags stores whose calls hit an IVR (from call-result signal or an admin flag) into a
+  "needs phone-tree mapping" queue for the mapping agent to fill `phoneTree` steps. Propose an `ivr` status
+  on call results + an admin queue endpoint. This is the coordination surface the owner asked for.
+- **This week: run NONSTOP** — keep chaining hobby waves to finish ~3,055 remaining, then start thrift.
+  Hobby wave 4 (IL–LA) launched.
+
 **Session 2026-07-06 — hours truth fix + real LA shop hours + launch-readiness board (autonomy grant).**
 - **Midnight "open" bug (owner's 00:11 map, Hallmark + thrifts showing Open) — FIXED.** `src/store-hours.ts`
   `unknownHoursState()`: stores with NO looked-up hours now read **"Likely closed" 9 PM–7 AM** (window
