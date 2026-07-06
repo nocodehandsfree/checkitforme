@@ -27,10 +27,12 @@ async function main() {
   const auth = { Authorization: `Bearer ${token}`, "content-type": "application/json" };
 
   // Two callable stores (sellsPacks default true, no hours → openState unknown → not blocked).
-  const [r1] = await db.insert(retailers).values({ name: "Zone Store A", location: "Sylmar, CA", phone: "+13105550101" }).returning();
-  const [r2] = await db.insert(retailers).values({ name: "Zone Store B", location: "Reseda, CA", phone: "+13105550102" }).returning();
+  // Open 24/7 so triggerCall doesn't reject them as "likely closed" (no-hours stores are treated as closed).
+  const open24 = JSON.stringify({ mon: "24h", tue: "24h", wed: "24h", thu: "24h", fri: "24h", sat: "24h", sun: "24h" });
+  const [r1] = await db.insert(retailers).values({ name: "Zone Store A", location: "Sylmar, CA", phone: "+13105550101", hours: open24 }).returning();
+  const [r2] = await db.insert(retailers).values({ name: "Zone Store B", location: "Reseda, CA", phone: "+13105550102", hours: open24 }).returning();
   // A kiosk-only store (not callable) to prove it's filtered out of checks/quote.
-  const [r3] = await db.insert(retailers).values({ name: "Kiosk Only", location: "Van Nuys, CA", phone: "+13105550103", sellsPacks: false }).returning();
+  const [r3] = await db.insert(retailers).values({ name: "Kiosk Only", location: "Van Nuys, CA", phone: "+13105550103", sellsPacks: false, hours: open24 }).returning();
 
   // Boot the server (imports register routes + start listening). Import after seed so DB exists.
   await import("../src/server");

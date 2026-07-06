@@ -14,11 +14,12 @@ import {
   callResults, categories, chains, communityPosts, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, waitlist, watches, zones, zoneRetailers,
 } from "./db/schema";
 import { config } from "./config";
-import { assertProdSecurity } from "./security-checks";
+import { assertProdSecurity, securityReport, type ReadinessCheck } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
+import { summarizeCosts } from "./calls/cost";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -118,6 +119,17 @@ await bootstrap(); // apply migrations + seed catalog if empty
 
 const here = dirname(fileURLToPath(import.meta.url));
 const app = new Hono();
+
+// ---- Baseline security headers (OWASP-safe subset) ----
+// Applied to every response. Deliberately conservative so nothing breaks: no frame-ancestors/CSP that
+// could block the embedded Stripe checkout, the live-call WebSocket, or a white-label embed. HSTS is
+// prod-only (Railway/Cloudflare already force HTTPS). nosniff + Referrer-Policy are universally safe.
+app.use("*", async (c, next) => {
+  await next();
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (process.env.RAILWAY_ENVIRONMENT) c.header("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
+});
 
 // ---- Staging (STAGING=1) — a private replica, NOT password-walled ----
 // Staging used to sit behind an HTTP Basic / login-form gate, but it was constant friction (iOS
@@ -2317,6 +2329,8 @@ app.post("/api/hours/reverify-stamps", async (c) => {
 });
 // Anonymous FREE check (1 per device, client-tracked; bounded globally by the demo pool).
 app.post("/pub/check", async (c) => {
+  const rl = rlCheck("check", clientIp(c.req.raw.headers), LIMITS.check);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
   const b = await c.req.json();
   // Phone-first model: no anonymous calls — every call must come from a verified-phone account.
   if ((await getPolicy()).flags.requirePhoneSignup) return c.json({ error: "signin_required" }, 401);
@@ -2332,6 +2346,8 @@ app.post("/pub/check", async (c) => {
 });
 // Free check WITH live audio (bridged through our Twilio). Returns a room to listen on.
 app.post("/pub/check-live", async (c) => {
+  const rl = rlCheck("check", clientIp(c.req.raw.headers), LIMITS.check);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
   if ((await getPolicy()).flags.requirePhoneSignup) return c.json({ error: "signin_required" }, 401);
   if ((await pubCredits()) <= 0) return c.json({ error: "no_credits" }, 402);
   const b = await c.req.json();
@@ -2508,9 +2524,12 @@ app.post("/app/check", async (c) => {
   if (config.staging.on && !config.callsEnabled) return c.json(simStartCall()); // preview: simulated call, no real dial
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
+  const comp = isCompAccount(a) || isComp(u.email || undefined);
+  // Per-IP rate limit on the money surface (bypassed for comp/owner — they test call-by-call).
+  if (!comp) { const rl = rlCheck("check", clientIp(c.req.raw.headers), LIMITS.check); if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429); }
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
-  if (!isCompAccount(a) && !isComp(u.email || undefined) && await isOwnerOnlyStore(Number(retailerId))) return c.json({ error: "not_found" }, 404);
-  if (!isCompAccount(a) && (!a || spendableCredits(a) <= 0)) return c.json({ error: "no_credits" }, 402);
+  if (!comp && await isOwnerOnlyStore(Number(retailerId))) return c.json({ error: "not_found" }, 404);
+  if (!comp && (!a || spendableCredits(a) <= 0)) return c.json({ error: "no_credits" }, 402);
   try {
     const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a), kioskMode });
     return c.json({ providerCallId: r.providerCallId, status: r.status });
@@ -2526,9 +2545,12 @@ app.post("/app/check-live", async (c) => {
   if (config.staging.on && !config.callsEnabled) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
+  const comp = isCompAccount(a) || isComp(u.email || undefined);
+  // Per-IP rate limit on the money surface (bypassed for comp/owner — they test call-by-call).
+  if (!comp) { const rl = rlCheck("check", clientIp(c.req.raw.headers), LIMITS.check); if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429); }
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
-  if (!isCompAccount(a) && !isComp(u.email || undefined) && await isOwnerOnlyStore(Number(b.retailerId))) return c.json({ error: "not_found" }, 404);
-  if (!isCompAccount(a) && (!a || spendableCredits(a) <= 0)) return c.json({ error: "no_credits" }, 402);
+  if (!comp && await isOwnerOnlyStore(Number(b.retailerId))) return c.json({ error: "not_found" }, 404);
+  if (!comp && (!a || spendableCredits(a) <= 0)) return c.json({ error: "no_credits" }, 402);
   const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
@@ -3439,6 +3461,76 @@ app.patch("/api/settings", async (c) => {
 
 // ---- ElevenLabs credit status (live if the key has user_read, else estimated) ----
 app.get("/api/credits", async (c) => c.json(await getCreditStatus()));
+
+// THE NUMBER — cost dashboard. Turns recorded call timing (call_seconds / nav_seconds) into the
+// real per-check cost picture: billed-second distribution, ¢/call under both EL pricing scenarios
+// (as-billed-today vs projected-with-connect-on-human), and the % of calls landing in the target
+// boxes (≤20s human OR ≤5¢). Owner-only "Fun" test calls are excluded so they can't skew the number.
+app.get("/api/cost", async (c) => {
+  const days = Math.min(Math.max(Number(c.req.query("days") || 30), 1), 365);
+  const limit = Math.min(Math.max(Number(c.req.query("limit") || 800), 1), 4000);
+  const since = Date.now() - days * 86_400_000;
+  const funIds = new Set((await db.select({ id: retailers.id }).from(retailers).where(eq(retailers.ownerOnly, true))).map((r) => r.id));
+  const rows = (await db.select({ callSeconds: callResults.callSeconds, navSeconds: callResults.navSeconds, retailerId: callResults.retailerId })
+    .from(callResults)
+    .where(and(eq(callResults.status, "completed"), gte(callResults.startedAt, since)))
+    .orderBy(desc(callResults.startedAt)).limit(limit))
+    .filter((r) => (r.callSeconds ?? 0) > 0 && (r.retailerId == null || !funIds.has(r.retailerId)));
+  const pol = await getPolicy();
+  const sum = summarizeCosts(rows, pol.flags.connectOnHuman);
+  // Headline verdict against THE NUMBER, using the likely-real scenario B, as billed today.
+  const b = sum.cost.B.current;
+  const headline = {
+    calls: sum.n, days,
+    avgTalkSeconds: sum.seconds.avgTalk,
+    avgCentsB: b.avgCents,
+    pctInTargetB: Math.max(sum.pctTalkBox, b.pctCostBox),
+    verdict: sum.n === 0 ? "no_data"
+      : (b.avgCents <= sum.target.costCents || sum.seconds.avgTalk <= sum.target.talkSeconds ? "in_target" : "over"),
+    // What flipping connect-on-human ON would shave off the average check (scenario B).
+    connectOnHumanSavesCents: Math.max(0, Math.round((b.avgCents - sum.cost.B.abc.avgCents) * 10) / 10),
+  };
+  return c.json({ headline, ...sum });
+});
+
+// Go-live readiness — a single launch checklist the operator can read at a glance: secrets/webhooks,
+// the money-endpoint rate limits, the spend kill-switch, DB reachability, and whether the live cost is
+// in THE NUMBER's target. pass = ready; warn = ships but watch it; fail = do not launch.
+app.get("/api/readiness", async (c) => {
+  const checks: ReadinessCheck[] = [...securityReport()];
+
+  checks.push({ id: "rate_limits", label: "Money endpoints rate-limited", status: "pass",
+    detail: `Per-IP cap on /pub/check(-live) + /app/check(-live): ${LIMITS.check.max}/min (comp bypassed).` });
+
+  try {
+    const paused = await isCallingPaused();
+    checks.push({ id: "kill_switch", label: "Spend kill-switch reachable", status: paused ? "warn" : "pass",
+      detail: paused ? "Calling is PAUSED right now (no checks will place)." : "Reachable; calling live." });
+  } catch (e) { checks.push({ id: "kill_switch", label: "Spend kill-switch reachable", status: "fail", detail: "Redis unreachable: " + String(e).slice(0, 80) }); }
+
+  try { await db.select({ n: sql<number>`1` }).from(settingsTbl).limit(1); checks.push({ id: "db", label: "Database reachable", status: "pass", detail: "SELECT ok." }); }
+  catch (e) { checks.push({ id: "db", label: "Database reachable", status: "fail", detail: String(e).slice(0, 80) }); }
+
+  try {
+    const since = Date.now() - 30 * 86_400_000;
+    const funIds = new Set((await db.select({ id: retailers.id }).from(retailers).where(eq(retailers.ownerOnly, true))).map((r) => r.id));
+    const rows = (await db.select({ callSeconds: callResults.callSeconds, navSeconds: callResults.navSeconds, retailerId: callResults.retailerId })
+      .from(callResults).where(and(eq(callResults.status, "completed"), gte(callResults.startedAt, since))).orderBy(desc(callResults.startedAt)).limit(1500))
+      .filter((r) => (r.callSeconds ?? 0) > 0 && (r.retailerId == null || !funIds.has(r.retailerId)));
+    const pol = await getPolicy();
+    const sum = summarizeCosts(rows, pol.flags.connectOnHuman);
+    const b = sum.cost.B.current;
+    checks.push(sum.n === 0
+      ? { id: "cost", label: "Cost within THE NUMBER", status: "warn", detail: "No completed calls in 30d — nothing to measure yet." }
+      : (b.avgCents <= sum.target.costCents || sum.seconds.avgTalk <= sum.target.talkSeconds)
+        ? { id: "cost", label: "Cost within THE NUMBER", status: "pass", detail: `avg ${b.avgCents}¢ / ${sum.seconds.avgTalk}s talk over ${sum.n} calls (target ≤5¢ or ≤20s).` }
+        : { id: "cost", label: "Cost within THE NUMBER", status: "warn", detail: `avg ${b.avgCents}¢ / ${sum.seconds.avgTalk}s talk over ${sum.n} calls — over target. connect-on-human would save ~${Math.max(0, Math.round(b.avgCents - sum.cost.B.abc.avgCents))}¢.` });
+  } catch (e) { checks.push({ id: "cost", label: "Cost within THE NUMBER", status: "warn", detail: "Cost read failed: " + String(e).slice(0, 60) }); }
+
+  const fails = checks.filter((k) => k.status === "fail").length;
+  const warns = checks.filter((k) => k.status === "warn").length;
+  return c.json({ ready: fails === 0, fails, warns, checks });
+});
 
 // ---- Global calling kill-switch (cost runaway protection) ----
 app.get("/api/admin/calling/status", async (c) => c.json({ paused: await isCallingPaused(), spendTodayCents: await spendTodayCents() }));

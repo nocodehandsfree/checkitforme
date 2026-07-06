@@ -104,8 +104,9 @@ Full feature spec (all three lanes' parts): the kiosk spec in git history. Store
 | GET `/pub/bridge/:room` | — | `{ conversationId, wsHost }` |
 | POST `/pub/bridge-hangup` | `{ room }` | `{ ok }` |
 
-`·rl` = per-IP rate-limited. **Note:** `/pub/check*` are NOT yet rate-limited — the backend work
-adds per-IP limits + one-check-per-store-per-day; response shapes stay the same.
+`·rl` = per-IP rate-limited. **`/pub/check*` and `/app/check*` are now per-IP rate-limited** (8/min/IP;
+comp/owner bypassed) — a flood returns `429 {error:"rate_limited", retryAfter}`. Response shapes on a
+normal call are unchanged.
 
 ## Authed customer — `/app/*` (Bearer token)
 
@@ -168,6 +169,14 @@ adds per-IP limits + one-check-per-store-per-day; response shapes stay the same.
   GET/POST/PATCH/DELETE `/api/statuses`.
 - **Dashboards:** GET `/api/admin/metrics | pulse | overview | restock-intel | store-intel |
   user-history`. **[CHANGING]** these move table-scans → SQL aggregation; response shapes preserved.
+- **THE NUMBER (cost):** GET `/api/cost?days=30&limit=800` → `{ headline:{ calls, avgTalkSeconds,
+  avgCentsB, pctInTargetB, verdict:"in_target"|"over"|"no_data", connectOnHumanSavesCents }, n,
+  seconds:{avg/median/p90 Call+Talk}, pctTalkBox, cost:{ A|B:{ current, abc }:{avgCents,medianCents,
+  pctCostBox} }, abcOn, target, rates }`. Est. ¢/check from recorded call/nav timing; both EL pricing
+  scenarios; Fun (owner-only) calls excluded. Talk = call − nav (the ABC-billed portion).
+- **Go-live readiness:** GET `/api/readiness` → `{ ready:bool, fails, warns, checks:[{id,label,
+  status:"pass"|"warn"|"fail",detail}] }` — secrets/webhooks, money-endpoint rate limits, kill-switch,
+  DB, and cost-in-target as one launch checklist.
 - **Admin agent:** POST `/api/admin/agent` `{ messages:[{role,text}] }` → `{ reply, actions, error? }`.
 - **Stock/discord:** POST `/api/stock/ingest`, `/api/stock/intel/reapply`; GET/POST/DELETE
   `/api/discord/channels`.
