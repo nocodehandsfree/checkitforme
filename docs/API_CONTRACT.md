@@ -104,8 +104,9 @@ Full feature spec (all three lanes' parts): the kiosk spec in git history. Store
 | GET `/pub/bridge/:room` | — | `{ conversationId, wsHost }` |
 | POST `/pub/bridge-hangup` | `{ room }` | `{ ok }` |
 
-`·rl` = per-IP rate-limited. **Note:** `/pub/check*` are NOT yet rate-limited — the backend work
-adds per-IP limits + one-check-per-store-per-day; response shapes stay the same.
+`·rl` = per-IP rate-limited. **`/pub/check*` and `/app/check*` are now per-IP rate-limited** (8/min/IP;
+comp/owner bypassed) — a flood returns `429 {error:"rate_limited", retryAfter}`. Response shapes on a
+normal call are unchanged.
 
 ## Authed customer — `/app/*` (Bearer token)
 
@@ -122,6 +123,20 @@ adds per-IP limits + one-check-per-store-per-day; response shapes stay the same.
 | GET `/app/history` | — | `[{ cid, storeId, storeName, categoryId, category, ts, status, confirmed }]` |
 | POST `/app/charge` **[$][CHANGING→server-side]** | `{ cid }` | `{ credits }` |
 | POST `/app/checkout` | `{ kind, email }` | `{ url }` \| `{ error }` |
+| GET `/app/zones` **[F: zone_sweeps]** | — | `Zone[]` (see shape below) |
+| POST `/app/zones` **[F]** | `{ name, retailerIds[], centerZip?, radiusMiles? }` | `Zone` · 201 · 400 `no_stores` |
+| PATCH `/app/zones/:id` **[F]** | `{ name?, retailerIds? }` (replaces set) | `Zone` · 404 |
+| DELETE `/app/zones/:id` **[F]** | — | `{ ok }` · 404 |
+| GET `/app/zones/quote?retailerIds=1,2` **[F]** | — | `{ stores, checks, cents }` (callable only) |
+| **POST `/app/zones/:id/check`** **[$][F]** | `{ categoryId? }` (default Pokémon) | `{ runId, stores:[{retailerId,cid}] }` · 402 `no_credits` · 404 · 503 `calling_paused` |
+| GET `/app/zones/run/:runId` **[F]** | — | `{ done, total, summary:{inStock,no,noAnswer,checking}, results[] }` |
+| POST `/app/zones/run/:runId/stop` **[F]** | — | `{ ok, stopped }` |
+
+> **Zone shape:** `{ id, name, stores:[{ retailerId, name, location, callable }], checkCount, lastRun:{ at, inStock, total } | null }`.
+> **[F]** = premium-gated on `zone_sweeps` → **403 `not_entitled`** for free/PAYG accounts. All zone
+> routes are Bearer-authed and ownership-scoped (a zone belongs to the phone account that made it).
+> `check` fires one call per **callable** store (kiosk-only excluded), groups them under `runId`
+> (`z<zoneId>-<uuid>`); poll `run/:runId` for the live report.
 
 > **[CHANGING] billing:** `/pub/charge` + `/app/charge` are client-driven and will be **removed** —
 > charging moves server-side to call-completion (ingest/webhook). Frontend should stop relying on
@@ -172,7 +187,30 @@ GET `/`, `/r`, `/s`, `/p/:slug` (+`?partial=1` → `{title,body}`), `/og/:file`,
 
 ---
 
+- 2026-07-03b — **Embedded checkout (Stripe Elements):** `POST /app/checkout-intent {kind, annual}` →
+  `{ mode, clientSecret, publishableKey, amountCents }`. Website confirms with Elements on our own
+  comp-styled page (subscription = tier key; one-time = `payg:<checks>`). Entitlement is granted by the
+  webhook (invoice.paid subscription_create / payment_intent.succeeded), same result as the hosted path.
+
 ## Change log
+- 2026-07-03 — **Plans = 4 tiers + premium-feature matrix.** `GET /pub/plans` →
+  `{ features:[{key,label}], everyPlanGets:[key…], tiers:[{key,name,monthlyCents,annualCents,
+  checksPerMonth,premiumAsks,features:{key:bool}}], payg:[{checks,cents}] }`. Tier keys:
+  `family|collector|hunter|operator`. `GET /api/admin/plans` adds the same `features` catalog + per-tier
+  map (admin edits the matrix; `POST /api/admin/plans` accepts `features` per tier). `GET /app/me` adds
+  `features:{key:bool}` = the account's entitlements (comp→all, subscriber→tier, PAYG/free→none) plus
+  existing `premiumAsks` (= features.exact_products). Checkout: `POST /app/checkout {kind, annual}`,
+  kind = tier key or `payg:<checks>`. Website gates premium UI on `/app/me.features` and HIDES premium
+  for PAYG. Additive — old `sub`/pack kinds still resolve.
+- 2026-07-03 — **Plans + PAYG + entitlements.** New `GET /pub/plans` →
+  `{ tiers:[{key,name,monthlyCents,annualCents,checksPerMonth,premiumAsks}], payg:[{checks,cents}] }`
+  (owner-edited in Admin → Plans, source of truth = settings `vt_plans`). `POST /app/checkout` now
+  takes `{kind, annual?}`: kind = tier key (`starter|collector|hunter`, `annual:true`=yearly) OR
+  `payg:<checks>`. Legacy `sub` + pack keys still resolve. `GET /app/me` adds `subTier`, `quota`
+  (subscription checks left this cycle — resets each billing cycle, no rollover), `payg` (permanent
+  PAYG balance), `premiumAsks` (Hunter entitlement); `credits` is now quota+payg. Admin-only:
+  `GET/POST /api/admin/plans`, `POST /api/admin/plans/publish` (mirrors to Stripe: new Price + archive
+  old, idempotent; Products never deleted). Additive — existing callers unaffected.
 - 2026-07-01 — **transcript privacy (IDOR fix).** `/pub/result/:cid` + `/pub/live/:cid` now accept
   `Authorization: Bearer <check_session>`. Website: send it on both whenever the user is signed in
   (same token as `/app/*`). Enforcement is behind `policy.flags.transcriptAuth` (currently OFF), so

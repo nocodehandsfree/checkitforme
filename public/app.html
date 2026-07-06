@@ -584,6 +584,7 @@
     </div></details>
   </section>
   <section id="calc"><div id="calc_root"></div></section>
+  <section id="plans"><div id="plans_root"></div></section>
   <section id="users">
     <h2>Users</h2>
     <div class="card report"><div id="users_list" class="meta">Loading…</div></div>
@@ -1080,6 +1081,36 @@
       <div id="lab_t_body" class="transcript">…</div>
     </div>
   </section>
+
+  <section id="gtm">
+    <h2>Go-to-Market</h2>
+    <div class="meta" style="margin:-4px 0 12px">Everything left before we're live. Tick items off; filter by who owns them or where the work sits. Add your own anytime.</div>
+    <div class="card" style="margin-bottom:12px">
+      <div id="gtm_bar" class="meta" style="font-weight:800;color:#fff;font-size:14px">Loading…</div>
+      <div id="gtm_progress" style="height:8px;border-radius:6px;background:rgba(255,255,255,.06);margin:9px 0 2px;overflow:hidden"><div id="gtm_progress_fill" style="height:100%;width:0%;background:linear-gradient(90deg,#4ADE80,#22c55e);transition:width .3s"></div></div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
+        <span class="meta" style="font-size:11px">Area</span>
+        <select id="gtm_f_area" onchange="renderGtm()" style="flex:0 0 auto"><option value="">All</option><option value="backend">Backend</option><option value="frontend">Frontend</option><option value="ops">Ops / Growth</option></select>
+        <span class="meta" style="font-size:11px">Agent</span>
+        <select id="gtm_f_agent" onchange="renderGtm()" style="flex:0 0 auto"></select>
+        <span class="meta" style="font-size:11px">Show</span>
+        <select id="gtm_f_status" onchange="renderGtm()" style="flex:0 0 auto"><option value="open">Open</option><option value="">All</option><option value="done">Done</option><option value="critical">Launch-critical</option></select>
+      </div>
+    </div>
+    <div id="gtm_list"><div class="empty">Loading…</div></div>
+    <div class="card" style="margin-top:12px">
+      <div class="name" style="font-size:13px">Add an item</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
+        <input id="gtm_new_title" placeholder="What needs doing" style="flex:1 1 240px">
+        <select id="gtm_new_area" style="flex:0 0 auto"><option value="backend">Backend</option><option value="frontend">Frontend</option><option value="ops" selected>Ops / Growth</option></select>
+        <select id="gtm_new_agent" style="flex:0 0 auto"></select>
+        <label class="meta" style="font-size:11px;display:inline-flex;align-items:center;gap:5px"><input type="checkbox" id="gtm_new_crit"> Launch-critical</label>
+        <button type="button" class="btn" onclick="gtmAdd()">Add</button>
+      </div>
+    </div>
+  </section>
 </main>
 <div class="toast" id="toast"></div>
 
@@ -1148,13 +1179,14 @@ let CATEGORIES = [];
 
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
-  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Live','bolt'],['users','Users','card'],['restock','Restock','cal'],['growth','Policy','rise'],['calc','Calc','sliders']]},
+  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Live','bolt'],['users','Users','card'],['restock','Restock','cal'],['growth','Policy','rise'],['calc','Calc','sliders'],['plans','Plans','card']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
   calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Chains','tree'],['settings','App','sliders']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['workflows','Workflows','note'],['testing','Testing','phone-call'],['fun','Fun','sliders']]},
+  launch:   {label:'Launch',   ico:'trophy',tabs:[['gtm','Go-to-Market','check']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
 function renderGroupNav(){
@@ -1193,6 +1225,67 @@ window.addEventListener('popstate', (e)=>{
   const id=e.state&&e.state.tab; if(!id||!SECTION_GROUP[id]) return;
   NAV_RESTORING=true; try{ showSection(id); } finally { NAV_RESTORING=false; }
 });
+
+// ---- Go-to-Market launch checklist. Fetches /api/gtm, renders with area+agent+status filters,
+//      ticks items off (todo → doing → done), and lets the owner add/remove. The client owns the list
+//      and POSTs the whole thing back on every change (fine for one operator). ----
+const GTM_AGENTS={owner:'Owner',devops:'DevOps',website:'Website',admin:'Admin',data:'Data',copy:'Copy',design:'Design',qa:'QA',support:'Support agent',discord:'Discord',social:'Social / X'};
+const GTM_AREA={backend:'Backend',frontend:'Frontend',ops:'Ops / Growth'};
+let GTM_ITEMS=[];
+function gtmAgentLabel(a){ return GTM_AGENTS[a]||a||'—'; }
+async function loadGtm(){
+  // populate the agent selects once
+  const opts='<option value="">All agents</option>'+Object.entries(GTM_AGENTS).map(([k,v])=>`<option value="${k}">${esch(v)}</option>`).join('');
+  const fa=document.getElementById('gtm_f_agent'); if(fa&&!fa.dataset.done){ fa.innerHTML=opts; fa.dataset.done='1'; }
+  const na=document.getElementById('gtm_new_agent'); if(na&&!na.dataset.done){ na.innerHTML=Object.entries(GTM_AGENTS).map(([k,v])=>`<option value="${k}"${k==='owner'?' selected':''}>${esch(v)}</option>`).join(''); na.dataset.done='1'; }
+  const r=await api('/api/gtm'); GTM_ITEMS=(r&&r.items)||[]; renderGtm();
+}
+function renderGtm(){
+  const fArea=(document.getElementById('gtm_f_area')||{}).value||'';
+  const fAgent=(document.getElementById('gtm_f_agent')||{}).value||'';
+  const fStatus=(document.getElementById('gtm_f_status')||{}).value; const showStat=(fStatus===undefined)?'open':fStatus;
+  const done=GTM_ITEMS.filter(i=>i.status==='done').length, total=GTM_ITEMS.length;
+  const crit=GTM_ITEMS.filter(i=>i.critical), critDone=crit.filter(i=>i.status==='done').length;
+  const bar=document.getElementById('gtm_bar'); if(bar) bar.textContent=`${done}/${total} done · launch-critical ${critDone}/${crit.length}`;
+  const fill=document.getElementById('gtm_progress_fill'); if(fill) fill.style.width=(total?Math.round(done/total*100):0)+'%';
+  let list=GTM_ITEMS.filter(i=>{
+    if(fArea&&i.area!==fArea) return false;
+    if(fAgent&&i.agent!==fAgent) return false;
+    if(showStat==='open'&&i.status==='done') return false;
+    if(showStat==='done'&&i.status!=='done') return false;
+    if(showStat==='critical'&&!i.critical) return false;
+    return true;
+  });
+  const el=document.getElementById('gtm_list'); if(!el) return;
+  if(!list.length){ el.innerHTML='<div class="empty">Nothing here — adjust the filters or add an item.</div>'; return; }
+  const dot={todo:'#64748b',doing:'#fbbf24',done:'#4ADE80'}, next={todo:'doing',doing:'done',done:'todo'};
+  el.innerHTML=list.map(i=>{
+    const idx=GTM_ITEMS.indexOf(i);
+    const strike=i.status==='done'?'text-decoration:line-through;opacity:.55':'';
+    return `<div class="card" style="display:flex;gap:11px;align-items:flex-start;margin-bottom:8px">
+      <button type="button" title="Cycle status" onclick="gtmCycle(${idx})" style="flex:0 0 auto;margin-top:2px;width:20px;height:20px;border-radius:50%;border:2px solid ${dot[i.status]};background:${i.status==='done'?dot.done:'transparent'};cursor:pointer"></button>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;color:#fff;font-size:14px;${strike}">${esch(i.title)}${i.critical?' <span style="color:#f87171;font-size:10px;font-weight:800;vertical-align:middle">● LAUNCH</span>':''}</div>
+        ${i.detail?`<div class="meta" style="font-size:12px;margin-top:3px;${strike}">${esch(i.detail)}</div>`:''}
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+          <span class="meta" style="font-size:10.5px;background:rgba(167,139,250,.14);border:1px solid rgba(167,139,250,.35);color:#c4b5fd;padding:1px 8px;border-radius:10px">${esch(gtmAgentLabel(i.agent))}</span>
+          <span class="meta" style="font-size:10.5px;background:rgba(255,255,255,.05);border:1px solid var(--border);padding:1px 8px;border-radius:10px">${esch(GTM_AREA[i.area]||i.area)}</span>
+          <span class="meta" style="font-size:10.5px;color:${dot[i.status]}">${i.status==='doing'?'In progress':i.status==='done'?'Done':'To do'}</span>
+        </div>
+      </div>
+      <button type="button" title="Remove" onclick="gtmDelete(${idx})" style="flex:0 0 auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1">×</button>
+    </div>`;
+  }).join('');
+}
+async function gtmSave(){ const r=await api('/api/gtm',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({items:GTM_ITEMS})}); if(r&&r.items) GTM_ITEMS=r.items; renderGtm(); }
+function gtmCycle(idx){ const it=GTM_ITEMS[idx]; if(!it) return; const next={todo:'doing',doing:'done',done:'todo'}; it.status=next[it.status]||'todo'; renderGtm(); gtmSave(); }
+function gtmDelete(idx){ const it=GTM_ITEMS[idx]; if(!it) return; if(!confirm('Remove "'+it.title+'"?')) return; GTM_ITEMS.splice(idx,1); renderGtm(); gtmSave(); }
+function gtmAdd(){
+  const t=(document.getElementById('gtm_new_title')||{}).value||''; if(!t.trim()) return;
+  GTM_ITEMS.unshift({ id:'', title:t.trim(), detail:'', area:(document.getElementById('gtm_new_area')||{}).value||'ops', agent:(document.getElementById('gtm_new_agent')||{}).value||'owner', critical:!!(document.getElementById('gtm_new_crit')||{}).checked, status:'todo' });
+  document.getElementById('gtm_new_title').value=''; document.getElementById('gtm_new_crit').checked=false;
+  renderGtm(); gtmSave();
+}
 
 // ---- Receipts: shoppers email a receipt → parsed into kiosk_receipts → a free check. "Claimed"
 //      means the reward was granted to that device/account. Server: /api/kiosk-receipts, flow in
@@ -1473,6 +1566,88 @@ function calcCompute(storeType,nav,talk,r){
   return { items, total: items.reduce((s,i)=>s+i.amount,0) };
 }
 // Toggle the God-view sub-nav between the live Overview and the Calc.
+// ---- God View · Plans: owner-editable pricing tiers + PAYG ladder, published to Stripe ----
+// The config is the app's source of truth (settings vt_plans); Publish mirrors it into Stripe
+// (new Price + archive the old — prices are immutable; Products are only ever archived).
+let PLANS=null;
+const dollars=c=>'$'+((Number(c)||0)/100).toFixed(2);
+const toCents=v=>Math.max(0,Math.round((parseFloat(v)||0)*100));
+async function loadPlans(){
+  const root=document.getElementById('plans_root'); if(!root) return;
+  root.innerHTML='<div class="card report"><div class="name">Plans</div><div style="color:var(--text-muted);font-size:13px">Loading…</div></div>';
+  PLANS=await api('/api/admin/plans');
+  if(!PLANS||PLANS.error){ root.innerHTML='<div class="card report"><div class="name">Plans</div><div style="color:#f87171;font-size:13px">Couldn\'t load ('+((PLANS&&PLANS.error)||'error')+')</div></div>'; return; }
+  renderPlans();
+}
+function syncPill(s){ return s==='in_sync'
+  ? '<span style="font-size:10.5px;font-weight:700;color:#4ADE80;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);border-radius:7px;padding:2px 8px">✓ in sync</span>'
+  : '<span style="font-size:10.5px;font-weight:700;color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.3);border-radius:7px;padding:2px 8px">● pending publish</span>'; }
+function priceInput(val,oninput,w){ return '<span style="display:inline-flex;align-items:center;background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;padding:0 8px"><span style="color:var(--text-tertiary);font-size:13px">$</span><input type="number" step="0.01" min="0" value="'+((val||0)/100).toFixed(2)+'" oninput="'+oninput+'" style="background:transparent;border:none;outline:none;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px 2px;width:'+(w||60)+'px"></span>'; }
+function numInput(val,oninput,w){ return '<input type="number" min="0" step="1" value="'+(val||0)+'" oninput="'+oninput+'" style="background:var(--terminal);border:1px solid var(--border-strong);border-radius:9px;color:var(--text-primary);font-size:14px;font-weight:600;padding:8px;width:'+(w||56)+'px">'; }
+// Per-tier feature matrix: which of the premium features this tier includes. Drives /app/me.features →
+// the consumer app hides a module when its key is OFF here (comp always gets all). exact_products also
+// recomputes premiumAsks server-side, so unchecking it turns off the exact-product asks too.
+function featMatrix(t,i){
+  const feats=(PLANS.features||[]); if(!feats.length) return '';
+  const cell=f=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" ${t.features&&t.features[f.key]?'checked':''} onchange="if(!PLANS.tiers[${i}].features)PLANS.tiers[${i}].features={};PLANS.tiers[${i}].features['${f.key}']=this.checked;plansTouch(${i})" style="width:16px;height:16px;accent-color:var(--green)"><span style="font-size:12.5px;color:var(--text-muted)">${esch(f.label)}</span></label>`;
+  return `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+    <div style="font-size:11px;letter-spacing:.08em;color:var(--text-tertiary);font-weight:700;margin-bottom:9px">FEATURES IN THIS TIER</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 14px">${feats.map(cell).join('')}</div></div>`;
+}
+function renderPlans(){
+  const anyPending=PLANS.tiers.some(t=>t.sync!=='in_sync')||PLANS.payg.bundles.some(b=>b.sync!=='in_sync');
+  const tierCard=(t,i)=>`<div class="card report">
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px">
+      <input value="${esch(t.name)}" oninput="PLANS.tiers[${i}].name=this.value;plansTouch(${i})" style="background:transparent;border:none;border-bottom:1px solid var(--border);outline:none;color:var(--text-primary);font-size:17px;font-weight:800;padding:2px 0;width:150px">
+      ${syncPill(t.sync)}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 14px">
+      <label style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:var(--text-muted)">Monthly</span>${priceInput(t.monthlyCents,`PLANS.tiers[${i}].monthlyCents=toCents(this.value);plansTouch(${i})`)}</label>
+      <label style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:var(--text-muted)">Annual <span style="color:var(--text-tertiary)">(−17% default)</span></span>${priceInput(t.annualCents,`PLANS.tiers[${i}].annualCents=toCents(this.value);plansTouch(${i})`,72)}</label>
+      <label style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:var(--text-muted)">Checks / month</span>${numInput(t.checksPerMonth,`PLANS.tiers[${i}].checksPerMonth=parseInt(this.value)||0;plansTouch(${i})`)}</label>
+    </div>
+    ${featMatrix(t,i)}
+  </div>`;
+  const bundleRow=(b,i)=>`<div class="row" style="justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--border-dashed)">
+    <span style="display:flex;align-items:center;gap:8px">${numInput(b.checks,`PLANS.payg.bundles[${i}].checks=parseInt(this.value)||0;plansTouch()`,54)}<span style="font-size:13px;color:var(--text-muted)">checks</span></span>
+    <span style="display:flex;align-items:center;gap:10px">${priceInput(b.cents,`PLANS.payg.bundles[${i}].cents=toCents(this.value);plansTouch()`)}<span style="font-size:11px;color:var(--text-tertiary);width:74px;text-align:right">${b.checks?('~'+dollars(Math.round(b.cents/b.checks))+'/ea'):''}</span>${syncPill(b.sync)}</span>
+  </div>`;
+  document.getElementById('plans_root').innerHTML=`
+    <div class="hero" style="margin-bottom:16px">
+      <div class="row" style="justify-content:space-between;align-items:center;gap:12px">
+        <div><div class="hero-eyebrow">Pricing — source of truth</div>
+          <div style="font-size:14px;color:var(--text-muted);margin-top:6px;max-width:440px;line-height:1.5">Edit tiers &amp; the pay-as-you-go ladder, then <b>Publish to Stripe</b>. Quota resets each cycle (no rollover); PAYG credits never expire. Sanity-check margins in <a onclick="showSection('calc')" style="color:var(--green);cursor:pointer">Calc</a>.</div>
+        </div>
+        <button type="button" onclick="publishPlans()" ${anyPending?'':'disabled'} style="background:${anyPending?'linear-gradient(180deg,#5BEA93 0%,#34C268 100%)':'var(--surface-2)'};color:${anyPending?'#06210f':'var(--text-tertiary)'};border:none;font-weight:800;font-size:14px;padding:12px 20px;border-radius:12px;cursor:${anyPending?'pointer':'default'};white-space:nowrap;box-shadow:${anyPending?'0 8px 18px -8px rgba(52,197,107,.5)':'none'}">${anyPending?'Publish to Stripe':'All in sync'}</button>
+      </div>
+    </div>
+    <div style="font-size:11px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700;margin:4px 2px 10px">SUBSCRIPTION TIERS</div>
+    ${PLANS.tiers.map(tierCard).join('')}
+    <div style="font-size:11px;letter-spacing:.1em;color:var(--text-tertiary);font-weight:700;margin:18px 2px 10px">PAY AS YOU GO · one-time bundles</div>
+    <div class="card report">${PLANS.payg.bundles.map(bundleRow).join('')}</div>`;
+}
+// A local edit flips the row to "pending" and auto-saves the config (draft); Publish pushes to Stripe.
+let _plansSaveT=null;
+function plansTouch(i){
+  if(typeof i==='number'&&PLANS.tiers[i]) PLANS.tiers[i].sync='pending';
+  PLANS.payg.bundles.forEach(b=>{ if(b.pubCents!==b.cents||!b.priceId) b.sync='pending'; });
+  clearTimeout(_plansSaveT); _plansSaveT=setTimeout(savePlansDraft,600);
+}
+async function savePlansDraft(){
+  const body={ tiers:PLANS.tiers.map(t=>({key:t.key,name:t.name,monthlyCents:t.monthlyCents,annualCents:t.annualCents,checksPerMonth:t.checksPerMonth,premiumAsks:t.premiumAsks,features:t.features})),
+    payg:PLANS.payg.bundles.map(b=>({checks:b.checks,cents:b.cents})) };
+  const r=await api('/api/admin/plans',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+  if(r&&!r.error){ PLANS=r; renderPlans(); }
+}
+async function publishPlans(){
+  if(!confirm('Publish these prices to Stripe? This creates new Stripe Prices and archives the old ones (existing subscribers keep their current price until they change plans). Products are never deleted.')) return;
+  toast('Publishing to Stripe…');
+  await savePlansDraft();
+  const r=await api('/api/admin/plans/publish',{method:'POST'});
+  if(r&&!r.error){ PLANS=r; renderPlans(); toast('Published — all tiers in sync'); }
+  else toast('Publish failed: '+((r&&r.error)||'error'));
+}
+
 // Calc lives only in its own God-view tab now (the duplicate in-Pulse toggle was removed).
 function calcInit(){
   const target=document.getElementById('calc_root');
@@ -3530,7 +3705,7 @@ const v = (id) => document.getElementById(id).value.trim();
 
 // --- Growth & Policy ---
 let POL=null;
-const FLAG_LABELS={connectOnHuman:'Connect-on-human',dogfoodHours:'Dog-food hours',driverHandoff:'Driver hand-off demo',scheduling:'Scheduled shipment-day calls',restockAlerts:'Restock alerts',kiosks:'Kiosk intel + rewards',shareCards:'Share cards',multiProduct:'Multi-product asks',specificSets:'Specific-set asks'};
+const FLAG_LABELS={connectOnHuman:'Connect-on-human',dogfoodHours:'Dog-food hours',driverHandoff:'Driver hand-off demo',scheduling:'Scheduled shipment-day calls',restockAlerts:'Restock alerts',kiosks:'Kiosk intel + rewards',hobby:'Hobby chip (global on/off — every account)',thrift:'Thrift chip (global on/off — every account)',shareCards:'Share cards',multiProduct:'Multi-product asks',specificSets:'Specific-set asks'};
 const esch=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // Product mark: show a known product's logo instead of its plain name (Pokémon for now).
 function prodMark(name,size){
@@ -3608,6 +3783,7 @@ async function loadGrowth(){
     fld('gw_free','Free checks (new visitor)',p.freeChecks)+
     fld('gw_kreward','Kiosk reward (checks)',(POL.rewards||{}).kioskRefreshChecks)+
     fld('gw_referral','Referral reward (checks · both)',(POL.rewards||{}).referralChecks)+
+    fld('gw_storeadd','Store-add reward (checks · on go-live)',(POL.rewards||{}).storeAddChecks)+
     fld('gw_subcents','Membership price (¢/mo)',sub.cents)+
     fld('gw_subcredits','Membership checks/mo',sub.credits)+
     fld('gw_subper','Member per-check (¢)',sub.perCallCents)+
@@ -3805,7 +3981,7 @@ async function savePolicyForm(){
   const n=id=>{const x=Number(document.getElementById(id).value);return isFinite(x)?x:undefined;};
   const patch={pricing:{perCallCents:n('gw_percall'),minPurchaseCents:n('gw_minpur'),freeChecks:n('gw_free'),
       sub:Object.assign({},(POL.pricing||{}).sub,{cents:n('gw_subcents'),credits:n('gw_subcredits'),perCallCents:n('gw_subper')})},
-    rewards:{kioskRefreshChecks:n('gw_kreward'),referralChecks:n('gw_referral')},
+    rewards:{kioskRefreshChecks:n('gw_kreward'),referralChecks:n('gw_referral'),storeAddChecks:n('gw_storeadd')},
     finds:Object.assign({},POL.finds,{headstartMin:n('gw_headstart')}),
     ga4Id:document.getElementById('gw_ga4').value.trim()};
   await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(patch)});

@@ -41,6 +41,10 @@ export const LIMITS: Record<string, Limit> = {
   // of /pub/stores/near specifically — the only way to page the store table without a location.
   pubRead: { windowMs: 60_000, max: 300 },       // all /pub traffic: 300/min/IP
   storeSearch: { windowMs: 60_000, max: 30 },    // q-text store searches: 30/min/IP
+  // Money surface: the four check endpoints place a REAL, billed phone call. A human never needs more
+  // than a handful a minute; farming/DoS does. Comp/owner accounts bypass this (owner tests call-by-
+  // call on the Fun store). Per-IP so an anonymous /pub/check flood can't drain the pool or rack cost.
+  check: { windowMs: 60_000, max: 8 },           // real paid checks: 8/min/IP
 };
 
 /** Client IP from trusted proxy headers. Prefer `cf-connecting-ip` — Cloudflare OVERWRITES it with

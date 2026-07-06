@@ -40,6 +40,7 @@ the priority. The calculator's running "Hybrid" line is the live benchmark.
 2. **Then: resume store mapping** — cover as many chains as possible for the nationwide launch, using the
    latest working tech (recipe / avgTreeSeconds / connect-on-human). We were mid-mapping; hard IVR chains + the
    intentionally-muted ones (Best Buy = central call center, can't dial the store) are the remaining buckets.
+   (`muted` = hide the whole chain + never call it; canonical definition in `docs/specs/store-data-schema.md` §5.)
 3. Roadmap / bigger backlog: `docs/business/ROADMAP.md`.
 The gate between 1 and 2 is the owner confirming the Fun-store experience + cost are where they want them.
 
@@ -63,6 +64,31 @@ Admin lane. DevOps takes dev work only when the owner assigns it. Kickoff prompt
 3. **Staging and prod can run different workflows.** Already true — separate DBs, separate `vt_*` settings.
 
 ## Current state (2026-07-01 — KEEP UPDATED)
+- [ ] **Admin per-customer view backend (owner 2026-07-04) — spec `docs/specs/admin-user-view.md`.**
+  Build `GET /api/admin/users/:id` (full account: identity, subscription, entitlements via
+  accountFeatures, credits, zones, schedules, recentChecks, lifetime spend) + `POST
+  /api/admin/users/:id/grant {checks}`. Admin builds the panel.
+- [ ] **Remove the `/api/zones*` admin endpoints** when consumer `/app/zones` ships (owner: admin zones
+  area is redundant weight). Keep the zones engine (tables + zoneQuote/canAffordZone/callZone).
+- [ ] **Manage Zones backend (consumer) — spec `docs/specs/manage-zones.md`.** Engine exists
+  (zones/zoneRetailers, zoneQuote, canAffordZone, callZone). Build: `ownerUserId` on `zones`; a
+  `zoneRunId` grouping on callResults; consumer `/app/zones/*` (CRUD, quote, /check, /run/:id, /stop),
+  entitlement-gated on `zone_sweeps`; charge 1 check/callable store via canAffordZone. Rename user-facing
+  copy to "check". Admin owner-only zones stay ownerUserId=null (unaffected).
+- [x] **PLANS MANAGER + ENTITLEMENTS SHIPPED (2026-07-03).** Owner-editable pricing → Stripe.
+  - `src/plans.ts` = source of truth (settings `vt_plans`): 3 tiers (Starter $4.99/15 · Collector
+    $9.99/30 · Hunter $19.99/100 +premiumAsks) + PAYG ladder (10/25/50/75/100 = 999…5999¢),
+    annual −17% default. Admin → God View → **Plans** tab edits it; **Publish** mirrors to Stripe
+    (new Price + archive old — immutable; Products archived, never deleted). PUBLISH IS IDEMPOTENT
+    (verified on staging: no price churn on no-op republish; 4 products live in Stripe test mode).
+  - Two-bucket credits: `quota_credits` (subscription monthly, resets each cycle via invoice.paid,
+    NO rollover) vs `credits` (PAYG, never expires, additive). `chargeOneCredit` spends quota first.
+    Webhook: sub→setSubEntitlement (quota reset), payg→grantCredits, cancel→forfeit quota keep PAYG.
+  - Endpoints: `GET /pub/plans` (Website reads), `GET/POST /api/admin/plans` (+`/publish`).
+    `/app/checkout` now takes `{kind, annual}` where kind = tier key OR `payg:<n>` (legacy `sub`/pack
+    keys still work). `/app/me` exposes `subTier`, `quota`, `payg`, `premiumAsks`, `credits`(=sum).
+  - 24-test suite `scripts/test-plans.ts`. ⚠️ AT PROMOTE: hit `/api/admin/plans/publish` once on PROD
+    (live key) so prod has its own Products/Prices; staging's test-mode ids don't carry over.
 - [x] **COMMERCE LIVE ON STAGING (test mode, 2026-07-02).** Stripe test keys + webhook secret set on
   the staging service (webhook endpoint `we_1TohvW…` → staging/webhooks/stripe: checkout.completed,
   invoice.paid, subscription.deleted). Proven end-to-end: real test-card subscription PAID ($9.99) →

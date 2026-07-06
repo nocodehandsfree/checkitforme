@@ -37,12 +37,28 @@ You share the deploy branch with every lane. You own `public/app.html` + the `/a
 DevOps — don't redo your work blind.
 
 ## Current focus — staged plan (do in order; KEEP UPDATED)
+0a. [ ] **🅿️ DevOps → Admin (owner 2026-07-03): add the PREMIUM-FEATURE TOGGLE MATRIX to God View →
+   Plans.** Backend is done — `GET /api/admin/plans` now returns `features:[{key,label}]` (8 features)
+   and each tier carries `features:{key:bool}`. Add a matrix UI (features × the 4 tiers = checkboxes)
+   under the price/quota editors. Save exactly what you already do — `POST /api/admin/plans` accepts
+   `features` per tier verbatim (no shape change needed). Default is ALL ON for every paid tier; the
+   owner toggles individual cells. After saving, the existing **Publish to Stripe** button applies
+   prices; features are app-enforced entitlements (no Stripe price). PAYG has no features by design.
+   The 4 tiers (Family/Collector/Hunter/Operator) + PAYG are already live + published to Stripe (test).
 0. [ ] **DevOps → Admin (owner rule 2026-07-02): Workflows must power BOTH envs from the one Admin.**
    Today Admin edits PROD's workflows only (per-env DBs; staging's `vt_*` settings get edited via
    staging's own API). Build an **environment picker** on the Workflows screen: Prod | Staging, where
    Staging reads/writes `staging.checkitforme.com/api/*` (its own ADMIN_TOKEN — coordinate the
    cross-origin auth with DevOps before building). Envs stay independent: owner tests a workflow on
    staging, then deliberately applies the winner to prod. No auto-sync.
+0b. [ ] **🅿️ Per-customer account view (owner 2026-07-04) — spec `docs/specs/admin-user-view.md`.**
+   Make each Users row clickable → a detail panel showing their plan/tier, entitlements (the 8
+   features), credits (quota+PAYG), saved zones, schedules, recent checks + lifetime spend. DevOps
+   builds `GET /api/admin/users/:id` + a grant-credits endpoint; you build the panel + comp/grant actions.
+0c. [ ] **🗑️ Remove the Admin "Zones" area (owner 2026-07-04).** Owner manages zones from their own
+   account now (consumer Manage Zones). Delete the Zones tab/UI in `public/app.html` (~30 refs).
+   DevOps removes the `/api/zones*` endpoints when consumer `/app/zones` ships (no gap). The zones
+   ENGINE stays — don't touch the tables/service.
 1. [ ] **Fix the admin** so it's up to date (it lagged during the website/admin split).
 2. [ ] **Voice-switcher + tree-learner ready to test** — confirm the Haiku-nav → Sonnet-human switch
    (`connectOnHuman` flag + Helicone) and the phone-tree learner (Tree Trainer) are wired. Code:

@@ -18,7 +18,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -104,7 +104,8 @@ async function getStatsSince(): Promise<number> {
   const n = v ? Number(v) : 0;
   return Number.isFinite(n) ? n : 0;
 }
-import { getAccount, getAccountByPhone, phoneAccountExists, chargeOneCredit, createCheckout, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, SUB, PACKS } from "./billing";
+import { getAccount, getAccountByPhone, phoneAccountExists, chargeOneCredit, createCheckout, createCheckoutIntent, verifyStripeSig, handleStripeEvent, isComp, isCompAccount, grantCredits, spendableCredits, SUB, PACKS } from "./billing";
+import { getPlans, savePlans, publishPlansToStripe, plansSyncView, publicPlans, normalizePlans, accountFeatures } from "./plans";
 import { e164 as authE164, signSession, verifySession, startPhoneVerify, checkPhoneVerify, startCallerIdVerify, isCallerIdVerified } from "./auth";
 import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
@@ -117,6 +118,17 @@ await bootstrap(); // apply migrations + seed catalog if empty
 
 const here = dirname(fileURLToPath(import.meta.url));
 const app = new Hono();
+
+// ---- Baseline security headers (OWASP-safe subset) ----
+// Applied to every response. Deliberately conservative so nothing breaks: no frame-ancestors/CSP that
+// could block the embedded Stripe checkout, the live-call WebSocket, or a white-label embed. HSTS is
+// prod-only (Railway/Cloudflare already force HTTPS). nosniff + Referrer-Policy are universally safe.
+app.use("*", async (c, next) => {
+  await next();
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (process.env.RAILWAY_ENVIRONMENT) c.header("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
+});
 
 // ---- Staging (STAGING=1) — a private replica, NOT password-walled ----
 // Staging used to sit behind an HTTP Basic / login-form gate, but it was constant friction (iOS
@@ -234,12 +246,15 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
     // status bar black on every result. One theme-color in the document, JS-controlled, full stop.
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${esc(plainName)}">`,
-    `<meta property="og:title" content="${esc(brand.title)}">`,
+    // Apex/invite embeds (owner): the CARD IMAGE carries the headline, so the visible link title is
+    // just the address — no repeated "Is it in stock?" under the image. NB: behind the proxy the Host
+    // header is the internal Railway hostname — show the public domain, never that.
+    `<meta property="og:title" content="${esc(brand.key === "runner" ? (/railway\.app$/i.test(host) ? (config.staging.on ? "staging.checkitforme.com" : "checkitforme.com") : host.replace(/^www\./, "")) : brand.title)}">`,
     `<meta property="og:description" content="${esc(brand.desc)}">`,
     `<meta property="og:url" content="${canonical}">`,
     `<meta property="og:image" content="${ogImage}">`,
     `<meta name="twitter:card" content="summary_large_image">`,
-    `<meta name="twitter:title" content="${esc(brand.title)}">`,
+    `<meta name="twitter:title" content="${esc(brand.key === "runner" ? (/railway\.app$/i.test(host) ? (config.staging.on ? "staging.checkitforme.com" : "checkitforme.com") : host.replace(/^www\./, "")) : brand.title)}">`,
     `<meta name="twitter:description" content="${esc(brand.desc)}">`,
     `<meta name="twitter:image" content="${ogImage}">`,
     `<style>:root{--accent:${brand.accent};--accent2:${brand.accent2 || brand.accent};--logo-scale:${brand.logoScale || 1}}</style>`,
@@ -330,6 +345,58 @@ app.get("/s", (c) => {
 
 // Static content pages (about/contact/faq/terms/privacy) — branded, owner-editable via policy.pages.
 const PAGE_TITLES: Record<string, string> = { about: "About", contact: "Contact", faq: "FAQ", terms: "Terms of Service", privacy: "Privacy Policy" };
+// Real, shipped content for the legal/info pages so none of them read "coming soon". Owner-overridable
+// per brand via policy.pages (a non-empty override wins); this is the version-controlled fallback that
+// serves on every brand + environment. Rendered inside .body — plain HTML (<h2>/<p>/<ul>) only.
+const H2 = 'style="font-size:19px;font-weight:800;color:#e9e9f0;margin:26px 0 8px"';
+const RM = "https://checkitforme.readme.io"; // the source-of-truth docs (how it works, full FAQ)
+const DEFAULT_PAGES: Record<string, string> = {
+  about: `<p><b>Check It For Me</b> finds out if the thing you want is on the shelf. By phone. So you don't drive across town for nothing.</p>
+<p>You pick a store and a product. Check AI calls the store, asks the staff, and sends you the answer. Real call. Straight answer. No bots pretending to be you. No camping a refresh page.</p>
+<h2 ${H2}>Why we built it</h2>
+<p>Hyped drops sell out in minutes. Store websites say "in stock" when it's long gone. A 30 second call cuts through it. We made that call one tap.</p>
+<h2 ${H2}>Want the deep version?</h2>
+<p>How it works, top to bottom, lives at <a href="${RM}" target="_blank" rel="noopener">checkitforme.readme.io</a>.</p>`,
+  contact: `<p>Fastest way to reach us is <b>Discord</b>. Our support bot answers the common stuff in seconds, any time. A human picks up the rest.</p>
+<p>Want a store added? Do it right in the app. Account, then Earn, then <i>Add your store</i>. When a store you asked for goes live, your next check is on us.</p>
+<p>We skip phone and email support on purpose. Low overhead is how checks stay cheap.</p>`,
+  faq: `<h2 ${H2}>What does Check It For Me do?</h2>
+<p>You pick a store and a product. Check AI calls the store and asks if it's in stock. You get the answer, usually in a couple minutes.</p>
+<h2 ${H2}>Is it right?</h2>
+<p>We tell you exactly what the staff said, with the time and the whole convo. Shelves move fast, so read every answer as "right now."</p>
+<h2 ${H2}>What's it cost?</h2>
+<p>You pay in checks. Grab a small pack or subscribe for a monthly stack. New accounts get a free check to try it. Earn more by adding a store, inviting a friend, or posting a score.</p>
+<h2 ${H2}>Do you buy it for me?</h2>
+<p>No. We confirm it's there. The grab is yours.</p>
+<h2 ${H2}>No answer?</h2>
+<p>No answer = no charge.</p>
+<p style="margin-top:26px"><a href="${RM}" target="_blank" rel="noopener" style="display:inline-block;padding:13px 22px;border-radius:14px;font-weight:800;text-decoration:none;border:1.5px solid currentColor">Read the full guide →</a></p>`,
+  terms: `<p>By using <b>Check It For Me</b> (checkitforme.com) you're good with these terms. If not, no hard feelings. Just don't use it.</p>
+<h2 ${H2}>What we do</h2>
+<p>We call stores and ask if something's in stock, then tell you what they said. Answers are a snapshot. Stores get it wrong sometimes, so we can't promise the item is there, or the price, or that it'll still be there when you show up.</p>
+<h2 ${H2}>Checks and payments</h2>
+<p>You pay with checks, bought in packs or included in a plan. Stripe handles the card. A check is spent when it places a call. Unused checks can be refunded if you ask. Spent ones can't. Plans renew until you cancel, and you can cancel any time for the next round.</p>
+<h2 ${H2}>Play nice</h2>
+<p>Don't use us to harass a store, place calls you've got no real reason for, resell the service, or break the law. We can pause accounts that abuse the service or the stores we call.</p>
+<h2 ${H2}>The fine print</h2>
+<p>The service is "as is." As far as the law allows, we're not on the hook for a missed item, a wrong answer, or a wasted trip. If it ever comes to it, our max liability is what you paid us in the last 30 days.</p>
+<h2 ${H2}>Changes</h2>
+<p>We may update these terms. Keep using the app and that's a yes. Questions? Hit the Contact page.</p>`,
+  privacy: `<p>Here's what <b>Check It For Me</b> (checkitforme.com) collects, and why. Short version: we grab what we need to run your checks. We don't sell your info.</p>
+<h2 ${H2}>What we collect</h2>
+<ul>
+<li><b>Your cell number.</b> It's how you sign in. And we call stores on your behalf, so a verified number is required. No number, no checks.</li>
+<li><b>Your checks.</b> The store, the product, the result, the call convo.</li>
+<li><b>Rough location.</b> Only if you allow it, to show stores near you. Say no and search by ZIP instead.</li>
+<li><b>Payment info.</b> Stripe handles it. We never see your full card.</li>
+</ul>
+<h2 ${H2}>How we use it</h2>
+<p>To place your calls, show your history, take payment, stop abuse, and get more accurate. That's it.</p>
+<h2 ${H2}>Who sees it</h2>
+<p>Only the vendors that make it work. A voice provider to place calls, a sign-in provider, and Stripe for payments. They handle it for us under their own terms. We do not sell your personal info.</p>
+<h2 ${H2}>Your data, your call</h2>
+<p>We keep your account and history until you ask us to delete it. Want a copy, or a delete? Hit the Contact page. You can turn off location any time in your browser.</p>`,
+};
 app.get("/p/:slug", async (c) => {
   const slug = c.req.param("slug").toLowerCase();
   if (!(slug in PAGE_TITLES)) return c.notFound();
@@ -338,30 +405,25 @@ app.get("/p/:slug", async (c) => {
   const brand = resolveBrand(host, c.req.query("brand"));
   const pol = await getPolicy();
   const plain = brand.name.replace(/<[^>]+>/g, "");
-  const discordUrl = pol.links.discord || pol.support.discord || "";
-  const helpLine = (slug === "contact" || slug === "about")
-    ? (discordUrl
-        ? `<p>Need a hand? <a href="${esc(discordUrl)}" style="color:${brand.accent}">Join our Discord</a> — our AI support bot answers in seconds, any time.</p>`
-        : `<p>Need a hand? Support lives in our Discord — our AI bot answers in seconds. Invite link coming soon.</p>`)
-    : "";
-  const body = (pol.pages as Record<string, string>)[slug]
-    || `<p>This page is coming soon. We're putting it together — check back shortly.</p>${helpLine}`;
+  const body = ((pol.pages as Record<string, string>)[slug] || "").trim()
+    || DEFAULT_PAGES[slug]
+    || `<p>This page is on the way. Check back soon.</p>`;
   // In-app sheet: the consumer page fetches the content instead of navigating away from the app.
   if (c.req.query("partial")) return c.json({ title: PAGE_TITLES[slug], body });
   return c.html(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(PAGE_TITLES[slug])} — ${esc(plain)}</title><meta name="robots" content="index,follow">
+<title>${esc(PAGE_TITLES[slug])} · ${esc(plain)}</title><meta name="robots" content="index,follow">
 <style>*{box-sizing:border-box}body{margin:0;background:#0A0A0E;color:#e9e9f0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.65}
 .wrap{max-width:680px;margin:0 auto;padding:28px 22px 80px}a.home{color:${brand.accent};text-decoration:none;font-weight:800;font-size:15px}
 h1{font-size:30px;margin:26px 0 14px}.body{color:#c2c2cf;font-size:16px}.body a{color:${brand.accent}}.muted{color:#7a7a88;font-size:13px;margin-top:40px}</style></head>
 <style>.fab{position:fixed;right:18px;bottom:22px;width:58px;height:58px;border-radius:50%;background:${brand.accent};color:#06210f;border:none;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:60;text-decoration:none}</style>
 <body><div class="wrap"><a class="home" href="/">← ${esc(plain)}</a><h1>${esc(PAGE_TITLES[slug])}</h1><div class="body">${body}</div>
-<div class="muted">© ${new Date().getFullYear()} ${esc(plain)} · Powered by Fungibles</div></div>
+<div class="muted">© ${new Date().getFullYear()} ${esc(plain)}</div></div>
 <a class="fab" href="/" title="Back" aria-label="Back to ${esc(plain)}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="#06210f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
 </body></html>`);
 });
 
 app.get("/", (c) => {
-  c.header("Cache-Control", "no-store, no-cache, must-revalidate");
+  c.header("Cache-Control", "no-cache"); // revalidate always, but let bfcache/back-forward restore instantly
   const host = (c.req.header("host") || "").toLowerCase();
   const override = c.req.query("brand");
   const brand = resolveBrand(host, override);
@@ -392,7 +454,7 @@ app.get("/demo/:slug", (c) => {
 // link to clean same-domain paths instead of subdomain hops.
 for (const slug of ["pokemon", "onepiece", "toppsbasketball", "needoh"]) {
   app.get(`/${slug}`, (c) => {
-    c.header("Cache-Control", "no-store");
+    c.header("Cache-Control", "no-cache"); // see "/" — bfcache-friendly, still always revalidated
     const host = (c.req.header("host") || "").toLowerCase();
     return c.html(renderRunner(resolveBrand(host, slug), host, "checkit.html", c.req.query("tone") || ""));
   });
@@ -438,6 +500,17 @@ app.get("/logos/:file", (c) => {
     const ct = ext === "png" ? "image/png" : ext === "svg" ? "image/svg+xml" : ext === "webp" ? "image/webp" : "image/jpeg";
     c.header("Cache-Control", "public, max-age=86400");
     return c.body(buf, 200, { "Content-Type": ct });
+  } catch { return c.notFound(); }
+});
+// Self-hosted webfonts (Inter variable) — Google Fonts is unreachable for users behind DNS
+// ad-blockers, and the design only reads as the design in Inter. One origin, one file.
+app.get("/fonts/:file", (c) => {
+  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
+  if (!file.endsWith(".woff2")) return c.notFound();
+  try {
+    const buf = readFileSync(join(here, `../public/fonts/${file}`));
+    c.header("Cache-Control", "public, max-age=31536000, immutable");
+    return c.body(buf, 200, { "Content-Type": "font/woff2" });
   } catch { return c.notFound(); }
 });
 // Pokémon set assets — same repo/logo-wall system as chains, dropped by the logo lane at the exact
@@ -576,7 +649,7 @@ app.post("/auth/phone/check", async (c) => {
     const domain = cookieRootDomain(c.req.header("host"));
     setCookie(c, "admin_session", adminJwt, { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 24 * 30, ...(domain ? { domain } : {}) });
   }
-  return c.json({ token, account: { phone: e, credits: a.credits, subscription: a.subscription, callerIdReady: !!a.callerId && a.callerId === e } });
+  return c.json({ token, account: { phone: e, credits: spendableCredits(a), subscription: a.subscription, callerIdReady: !!a.callerId && a.callerId === e } });
 });
 // Step 3 (after login): kick off the caller-ID verification CALL; show the code to enter.
 app.post("/auth/callerid/start", async (c) => {
@@ -760,7 +833,17 @@ function distributorsForChain(name: string | null | undefined): string | null {
 // same .ic tile (52px, plate + wide handling from _meta.json), ONE mark each (no 2x detail), so
 // the page mirrors the real website. Filter by the chain's admin "type" (Big Box, Pharmacy,
 // Grocer…), pulled live from the chains table. No auth — leaks nothing but public logos.
+// Admin gate for the internal logo walls (owner: never public). Same check as /api/*: x-admin-token
+// header or the admin_session cookie (owner-phone login mints it). Open only in dev with no token set.
+async function adminOk(c: any): Promise<boolean> {
+  if (!config.adminToken) return true;
+  if (c.req.header("x-admin-token") === config.adminToken) return true;
+  const ck = getCookie(c, "admin_session");
+  if (ck) { const s = await verifySession(ck); if (s && s.id === "admin") return true; }
+  return false;
+}
 app.get("/logo-wall", async (c) => {
+  if (!(await adminOk(c))) return c.notFound(); // private: not a public page
   const files = [...chainLogoFiles()].sort();
   const meta = logoMeta();
   // Pair each logo file to its chain's admin store-type (chains = the Admin source of truth).
@@ -786,6 +869,29 @@ app.get("/logo-wall", async (c) => {
     const cls = (m.d === 1 ? " lite" : "") + (m.w === 1 ? " widelogo" : "");
     return `<div class="cell" data-type="${esc(info?.type || "Other")}" data-treat="${treatKey(m)}"><div class="ic${cls}"><img src="/logos/chains/${f}?v=73" alt=""></div><div class="nm">${esc(info?.name || pretty(f))}</div></div>`;
   };
+  // ── Pokémon set & era logos — same repo/logo-wall system as chains, but shown BIG (owner 2026-07-03:
+  //    "take up the box, be the main attraction"): these are wordmark logos, not 52px store marks.
+  //    Grouped by era; a set with no logo file yet shows a striped gap so the wall reveals what's missing.
+  const listPng = (dir: string) => { try { return new Set(readdirSync(join(here, dir)).filter((f) => /\.png$/i.test(f))); } catch { return new Set<string>(); } };
+  const setLogoFiles = listPng("../public/logos/sets"), eraLogoFiles = listPng("../public/logos/eras"), bannerFiles = listPng("../public/logos/set-banners");
+  const pslug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  let pokeEras: Array<{ era: string; slug: string; hasEra: boolean; sets: Array<{ code: string; name: string; key: string; has: boolean; banner: boolean }> }> = [];
+  try {
+    const pj = JSON.parse(readFileSync(join(here, "../data/pokemon-sets.json"), "utf8")) as { eras: Array<{ era: string; sets: Array<{ code: string; name?: string }> }> };
+    pokeEras = pj.eras.map((e) => ({ era: e.era, slug: pslug(e.era), hasEra: eraLogoFiles.has(pslug(e.era) + ".png"),
+      sets: e.sets.map((s) => { const key = pslug(String(s.code)); return { code: String(s.code), name: String(s.name || ""), key, has: setLogoFiles.has(key + ".png"), banner: bannerFiles.has(key + ".png") }; }) }));
+  } catch { /* no data file → section stays empty */ }
+  const pokeSetCount = pokeEras.reduce((n, e) => n + e.sets.filter((s) => s.has).length, 0);
+  const pokeSection = pokeEras.length ? `
+  <div id="pokeArea" hidden>
+    <h2>Pokémon set tiles · ${pokeSetCount} sets</h2>
+    <div class="sub">The exact composite the hobby wall renders — set art (<code>/logos/set-banners</code>) with the set logo (<code>/logos/sets</code>) raised on top, area-normalized. Grouped by era.</div>
+    ${pokeEras.map((e) => `
+    <div class="pera">${e.hasEra ? `<img src="/logos/eras/${e.slug}.png?v=73" alt="">` : ""}<span class="en">${esc(e.era)}</span><span class="ec">${e.sets.filter((s) => s.has).length}/${e.sets.length}</span></div>
+    <div class="pgrid">${e.sets.map((s) => s.has
+      ? `<div class="pset"><div class="ptile">${s.banner ? `<img class="pbg" src="/logos/set-banners/${s.key}.png?v=73" alt="">` : ""}<img class="plogo" src="/logos/sets/${s.key}.png?v=73" alt="" onload="pnorm(this)"></div><div class="pnm">${esc(s.code)}<span>${esc(s.name)}</span></div></div>`
+      : `<div class="pset"><div class="ptile pmiss"><span class="pcode">${esc(s.code)}</span></div><div class="pnm" style="opacity:.5">${esc(s.code)}<span>no logo yet</span></div></div>`).join("")}</div>`).join("")}
+  </div>` : "";
   return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
     *{box-sizing:border-box}
@@ -815,8 +921,33 @@ app.get("/logo-wall", async (c) => {
     .ic img{width:40px;height:40px;object-fit:contain}
     .ic.widelogo img{width:44px;height:auto;max-height:34px}
     .ic.lite{background:#f2f2f5;border-color:rgba(255,255,255,.28)}
+    /* —— tabs: Store logos | Pokémon sets (separate areas on this private wall) —— */
+    .tabs{display:flex;gap:8px;margin-bottom:16px}
+    .tab{appearance:none;background:#1a1a22;color:#c7c7d4;border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer}
+    .tab.on{background:#4ADE80;color:#06210f;border-color:transparent}
+    /* —— Pokémon set tiles — composited: set art + logo raised on top (exactly like the hobby wall) —— */
+    .pera{display:flex;align-items:center;gap:13px;margin:26px 0 14px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08)}
+    .pera img{height:38px;width:auto;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}
+    .pera .en{font-size:13px;font-weight:800;letter-spacing:.03em;color:#c7c7d4}
+    .pera .ec{margin-left:auto;font-size:12px;color:#8a8a98;font-variant-numeric:tabular-nums}
+    .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:16px}
+    .pset{display:flex;flex-direction:column;gap:8px}
+    .ptile{position:relative;aspect-ratio:1/1;border-radius:16px;overflow:hidden;background:#1b1b20;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 6px 14px -6px rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.05)}
+    .ptile .pbg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.6)}
+    .ptile .plogo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:82%;height:auto;filter:drop-shadow(0 5px 8px rgba(0,0,0,.6))}
+    .ptile.pmiss{background:repeating-linear-gradient(45deg,#2B2B33 0 12px,#25252C 12px 24px);display:grid;place-items:center}
+    .pcode{font-size:12px;color:#8a8a98;font-weight:800}
+    .pnm{font-size:11px;color:#c7c7d4;text-align:center;font-weight:700;line-height:1.3}
+    .pnm span{display:block;color:#8a8a98;font-weight:500;font-size:10px;overflow-wrap:anywhere}
   </style>
+  <script>
+    // Area-normalized logo sizing (equal visual footprint, filling the tile) — matches the hobby wall.
+    // Defined before <body> so img onload always resolves it.
+    function pnorm(img){var box=img.parentElement;if(!box)return;var W=box.clientWidth,H=box.clientHeight;if(!W||!H){requestAnimationFrame(function(){pnorm(img);});return;}var nw=img.naturalWidth,nh=img.naturalHeight;if(!nw||!nh)return;var tA=0.40*W*H,mW=0.92*W,mH=0.74*H,sc=Math.sqrt(tA/(nw*nh));if(nw*sc>mW)sc=mW/nw;if(nh*sc>mH)sc=mH/nh;img.style.width=(100*nw*sc/W)+'%';}
+  </script>
   <body>
+  <div class="tabs"><button class="tab on" data-area="storeArea">Store logos · ${files.length}</button><button class="tab" data-area="pokeArea">Pokémon sets · ${pokeSetCount}</button></div>
+  <div id="storeArea">
   <h2>Logo wall · ${files.length} marks</h2>
   <div class="sub">Each mark exactly as the store list renders it — same 52px tile, plate &amp; wide handling from _meta.json.</div>
   <div class="bar">
@@ -832,6 +963,8 @@ app.get("/logo-wall", async (c) => {
     <span id="count"></span>
   </div>
   <div class="grid" id="grid">${files.map(tile).join("")}</div>
+  </div>
+  ${pokeSection}
   <script>
     var sel=document.getElementById('type'),grid=document.getElementById('grid'),count=document.getElementById('count');
     var treatBtn=document.getElementById('treatBtn'),treatPop=document.getElementById('treatPop'),treatSum=document.getElementById('treatSum');
@@ -850,6 +983,7 @@ app.get("/logo-wall", async (c) => {
     boxes.forEach(function(b){b.addEventListener('change',function(){if(!boxes.some(function(x){return x.checked;})){b.checked=true;return;}apply();});});
     document.addEventListener('click',function(){treatPop.setAttribute('hidden','');treatBtn.setAttribute('aria-expanded','false');});
     sel.addEventListener('change',apply);apply();
+    document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(){document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});t.classList.add('on');['storeArea','pokeArea'].forEach(function(id){var el=document.getElementById(id);if(el)el.hidden=(id!==t.dataset.area);});});});
   </script>
   </body>`);
 });
@@ -998,6 +1132,14 @@ app.get("/pub/stores", async (c) => {
 // /pub/stores ships every row (fine at ~100 stores, a page-killer at 102k). This endpoint returns
 // only stores near the user: the bounding box rides the retailers(lat,lng) index, distance sorts,
 // and pages. Falls back to ?state= or ?q= (SQL-side) when the visitor hasn't shared location.
+// Token-AND matcher shared by the /pub/stores/near text paths: every word must hit the store's
+// name-or-city; words of 5+ chars shed their last letter to absorb trailing typos ("barns" -> "barn").
+function qTokenMatch(hay: string, q: string): boolean {
+  const h = hay.toLowerCase();
+  const toks = q.split(/\s+/).filter((t) => t.length >= 2).slice(0, 5);
+  if (!toks.length) return h.includes(q);
+  return toks.every((t) => h.includes(t) || (t.length >= 5 && h.includes(t.slice(0, -1))));
+}
 app.get("/pub/stores/near", async (c) => {
   const lat = Number(c.req.query("lat")), lng = Number(c.req.query("lng"));
   const hasLoc = Number.isFinite(lat) && Number.isFinite(lng);
@@ -1017,6 +1159,10 @@ app.get("/pub/stores/near", async (c) => {
     if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
   }
   const mode = c.req.query("mode") || ""; // call | kiosk | site | "" = all
+  // Store-type filter (the home chips): ?type=Hobby returns ONLY that type, SERVER-side — in a dense
+  // metro the nearest-200 page is wall-to-wall Retail, so client-side filtering would starve the
+  // Hobby/Thrift chips. Matches the chain's admin type exactly ("Hobby", "Thrift", …).
+  const typeF = (c.req.query("type") || "").trim();
 
   const chainRows = await cachedChains();
   const types = new Map(chainRows.map((x) => [x.id, x.type]));
@@ -1037,12 +1183,23 @@ app.get("/pub/stores/near", async (c) => {
   } else if (state) {
     rows = await db.select().from(retailers).where(and(eq(retailers.active, true), eq(retailers.state, state)));
   } else {
-    const pat = `%${q}%`;
+    // Token-AND search so "barnes westlake" (or the typo "barns westlake") finds "Barnes & Noble
+    // Westlake Village": every word must hit name OR city; words 5+ chars drop their last letter to
+    // absorb trailing typos/plurals.
+    const toks = q.split(/\s+/).filter((t) => t.length >= 2).slice(0, 5);
+    const conds = toks.map((t) => {
+      const pat = `%${t.length >= 5 ? t.slice(0, -1) : t}%`;
+      return or(like(retailers.name, pat), like(retailers.location, pat));
+    });
     rows = await db.select().from(retailers)
-      .where(and(eq(retailers.active, true), or(like(retailers.name, pat), like(retailers.location, pat)))).limit(2000);
+      .where(and(eq(retailers.active, true), ...(conds.length ? conds : [like(retailers.name, `%${q}%`)]))).limit(2000);
   }
 
-  const callable = (r: typeof retailers.$inferSelect) => r.sellsPacks !== false && !!r.phone && !r.phone.startsWith("nophone:");
+  // Callable = a line we can dial at THIS store. Kiosk stores count too: even with no shelf packs
+  // (sellsPacks:false) we call to verify the machine is on and stocked — kiosks go down a lot
+  // (owner 2026-07-06). The shelf-only surfaces still gate on sellsPacks, so this doesn't add
+  // kiosk-only stores to "most likely on the shelf".
+  const callable = (r: typeof retailers.$inferSelect) => (r.sellsPacks !== false || r.hasKiosk === true) && !!r.phone && !r.phone.startsWith("nophone:");
   // inStock badge = a confirmed in-stock call in the last 7 days (drives the brand-check pin/row).
   const inStockSince = Math.floor(Date.now() / 1000) - 7 * 86400;
   const confirmedSet = new Set(
@@ -1066,7 +1223,8 @@ app.get("/pub/stores/near", async (c) => {
       || (mode === "call" && callable(r))
       || (mode === "kiosk" && r.hasKiosk === true)
       || (mode === "site" && r.chainId != null && stockMethod.get(r.chainId) === "site"))
-    .filter((r) => !q || r.name.toLowerCase().includes(q) || (r.location || "").toLowerCase().includes(q))
+    .filter((r) => !typeF || (((r.chainId && types.get(r.chainId)) || "Other") === typeF))
+    .filter((r) => !q || qTokenMatch(`${r.name} ${r.location || ""}`, q))
     .map((r) => {
       const miles = hasLoc && r.lat != null && r.lng != null ? Math.round(haversineMi(lat, lng, r.lat, r.lng) * 10) / 10 : null;
       const chainName = (r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0];
@@ -1130,7 +1288,8 @@ app.get("/pub/store/:id", async (c) => {
     lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
     sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
     tier: r.hasKiosk === true ? 5 : (r.tier ?? null),
-    callable: r.sellsPacks !== false && !!r.phone && !r.phone.startsWith("nophone:"),
+    // Kiosk stores are callable too (verify the machine is on) — see the near-feed note above.
+    callable: (r.sellsPacks !== false || r.hasKiosk === true) && !!r.phone && !r.phone.startsWith("nophone:"),
     ownerOnly: r.ownerOnly === true,
     stockCheckMethod: chain?.stockCheckMethod || "call",
     sellMethods: (chain?.sellMethods || "in_store").split(",").map((s) => s.trim()).filter(Boolean),
@@ -1300,7 +1459,7 @@ app.get("/pub/pokemon-sets", async (c) => {
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   // Cache-bust: the service worker caches /logos/* cache-first, so bump this whenever the set assets
   // are re-cut and the front end will request fresh URLs (old cached copies are orphaned harmlessly).
-  const av = "?v=4";
+  const av = "?v=8";
   const v = { ...file, logoBase: "/logos", eras: file.eras.map((e) => ({ ...e,
     slug: slug(e.era), logo: `/logos/eras/${slug(e.era)}.png${av}`,
     sets: e.sets.map((s) => ({ ...s,
@@ -2171,6 +2330,8 @@ app.post("/api/hours/reverify-stamps", async (c) => {
 });
 // Anonymous FREE check (1 per device, client-tracked; bounded globally by the demo pool).
 app.post("/pub/check", async (c) => {
+  const rl = rlCheck("check", clientIp(c.req.raw.headers), LIMITS.check);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
   const b = await c.req.json();
   // Phone-first model: no anonymous calls — every call must come from a verified-phone account.
   if ((await getPolicy()).flags.requirePhoneSignup) return c.json({ error: "signin_required" }, 401);
@@ -2186,6 +2347,8 @@ app.post("/pub/check", async (c) => {
 });
 // Free check WITH live audio (bridged through our Twilio). Returns a room to listen on.
 app.post("/pub/check-live", async (c) => {
+  const rl = rlCheck("check", clientIp(c.req.raw.headers), LIMITS.check);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
   if ((await getPolicy()).flags.requirePhoneSignup) return c.json({ error: "signin_required" }, 401);
   if ((await pubCredits()) <= 0) return c.json({ error: "no_credits" }, 402);
   const b = await c.req.json();
@@ -2336,8 +2499,16 @@ app.get("/app/me", async (c) => {
   if (a && !a.phone && u.phone) {
     await db.update(accounts).set({ phone: u.phone }).where(eq(accounts.clerkUserId, u.id)); a.phone = u.phone;
   }
+  // premiumAsks entitlement (Hunter tier) — the call path / Website consume this to allow exact
+  // set/product/price questions. Comp accounts get everything.
+  // Premium entitlements (subscription-only): per-feature map the UI gates on, plus premiumAsks
+  // (= features.exact_products) for the call path. Comp -> all; PAYG/free -> none.
+  const features = await accountFeatures(a?.subTier, comp);
+  const premiumAsks = features.exact_products === true;
   return c.json({
-    credits: comp ? 9999 : (a?.credits ?? 0), subscription: comp ? "active" : (a?.subscription ?? "none"),
+    // Displayed balance = subscription quota + PAYG (both spendable). quota/payg broken out for the UI.
+    credits: comp ? 9999 : spendableCredits(a), subscription: comp ? "active" : (a?.subscription ?? "none"),
+    subTier: comp ? "founder" : (a?.subTier ?? null), quota: comp ? 9999 : (a?.quotaCredits ?? 0), payg: comp ? 9999 : (a?.credits ?? 0), premiumAsks, features,
     comp, callsMade: a?.callsMade ?? 0, phone: a?.phone ?? null,
     // caller_id is only set after Twilio's caller-ID verify call → the "create your agent" panel uses
     // callerIdReady to know whether to prompt for it.
@@ -2354,9 +2525,12 @@ app.post("/app/check", async (c) => {
   if (config.staging.on && !config.callsEnabled) return c.json(simStartCall()); // preview: simulated call, no real dial
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
+  const comp = isCompAccount(a) || isComp(u.email || undefined);
+  // Per-IP rate limit on the money surface (bypassed for comp/owner — they test call-by-call).
+  if (!comp) { const rl = rlCheck("check", clientIp(c.req.raw.headers), LIMITS.check); if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429); }
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
-  if (!isCompAccount(a) && !isComp(u.email || undefined) && await isOwnerOnlyStore(Number(retailerId))) return c.json({ error: "not_found" }, 404);
-  if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
+  if (!comp && await isOwnerOnlyStore(Number(retailerId))) return c.json({ error: "not_found" }, 404);
+  if (!comp && (!a || spendableCredits(a) <= 0)) return c.json({ error: "no_credits" }, 402);
   try {
     const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a), kioskMode });
     return c.json({ providerCallId: r.providerCallId, status: r.status });
@@ -2372,13 +2546,144 @@ app.post("/app/check-live", async (c) => {
   if (config.staging.on && !config.callsEnabled) return c.json({ room: simStartCall().providerCallId, wsHost: STAGING_HOST }); // preview: simulated live call
   const closed = await closedGate(Number(b.retailerId)); if (closed) return c.json(closed, 409);
   const a = await getAccount(u.id, u.email);
+  const comp = isCompAccount(a) || isComp(u.email || undefined);
+  // Per-IP rate limit on the money surface (bypassed for comp/owner — they test call-by-call).
+  if (!comp) { const rl = rlCheck("check", clientIp(c.req.raw.headers), LIMITS.check); if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429); }
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
-  if (!isCompAccount(a) && !isComp(u.email || undefined) && await isOwnerOnlyStore(Number(b.retailerId))) return c.json({ error: "not_found" }, 404);
-  if (!isCompAccount(a) && (!a || a.credits <= 0)) return c.json({ error: "no_credits" }, 402);
+  if (!comp && await isOwnerOnlyStore(Number(b.retailerId))) return c.json({ error: "not_found" }, 404);
+  if (!comp && (!a || spendableCredits(a) <= 0)) return c.json({ error: "no_credits" }, 402);
   const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
 });
+
+// ============ Manage Zones (consumer, premium `zone_sweeps`) — spec docs/specs/manage-zones.md ============
+const zoneRunSids = new Map<string, string[]>(); // runId -> Twilio callSids (in-memory, for "Stop all")
+
+/** Bearer auth + zone_sweeps entitlement. ok:false short-circuits with the right status. */
+async function zoneAuth(authHeader?: string): Promise<
+  { ok: true; u: { id: string; email?: string; phone?: string }; a: Awaited<ReturnType<typeof getAccount>>; comp: boolean }
+  | { ok: false; status: 401 | 403; error: string }> {
+  const u = await verifyClerkToken(authHeader);
+  if (!u) return { ok: false, status: 401, error: "unauthorized" };
+  const a = await getAccount(u.id, u.email);
+  const comp = isCompAccount(a) || isComp(u.email || undefined);
+  const feats = await accountFeatures(a?.subTier, comp);
+  if (!feats.zone_sweeps) return { ok: false, status: 403, error: "not_entitled" };
+  return { ok: true, u, a, comp };
+}
+/** API shape for one zone: its stores, callable check count, and last-run summary. */
+async function zoneView(z: typeof zones.$inferSelect) {
+  const links = await db.select().from(zoneRetailers).where(eq(zoneRetailers.zoneId, z.id));
+  const rows = links.length ? await db.select().from(retailers).where(inArray(retailers.id, links.map((l) => l.retailerId))) : [];
+  const stores = rows.map((r) => ({ retailerId: r.id, name: r.name, location: r.location || "", callable: r.sellsPacks !== false }));
+  const last = (await db.select().from(callResults).where(like(callResults.zoneRunId, `z${z.id}-%`)).orderBy(desc(callResults.startedAt)).limit(1))[0];
+  let lastRun = null;
+  if (last?.zoneRunId) {
+    const rr = await db.select().from(callResults).where(eq(callResults.zoneRunId, last.zoneRunId));
+    lastRun = { at: last.startedAt, inStock: rr.filter((r) => r.statusKey === "in_stock").length, total: rr.length };
+  }
+  return { id: z.id, name: z.name, stores, checkCount: stores.filter((s) => s.callable).length, lastRun };
+}
+
+app.get("/app/zones", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const zs = await db.select().from(zones).where(eq(zones.ownerUserId, g.u.id)).orderBy(desc(zones.createdAt));
+  return c.json(await Promise.all(zs.map(zoneView)));
+});
+app.post("/app/zones", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const b = await c.req.json();
+  const retailerIds = (Array.isArray(b.retailerIds) ? b.retailerIds : []).map(Number).filter(Boolean);
+  if (!retailerIds.length) return c.json({ error: "no_stores" }, 400);
+  const [z] = await db.insert(zones).values({ name: String(b.name || "").trim().slice(0, 60) || "My zone", ownerUserId: g.u.id, centerZip: b.centerZip ?? null, radiusMiles: b.radiusMiles ?? null }).returning();
+  await db.insert(zoneRetailers).values(retailerIds.map((rid: number) => ({ zoneId: z.id, retailerId: rid })));
+  return c.json(await zoneView(z), 201);
+});
+app.patch("/app/zones/:id", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const id = Number(c.req.param("id"));
+  const z = (await db.select().from(zones).where(and(eq(zones.id, id), eq(zones.ownerUserId, g.u.id))))[0];
+  if (!z) return c.json({ error: "not_found" }, 404);
+  const b = await c.req.json();
+  if (typeof b.name === "string") await db.update(zones).set({ name: b.name.trim().slice(0, 60) || z.name }).where(eq(zones.id, id));
+  if (Array.isArray(b.retailerIds)) {
+    const ids = b.retailerIds.map(Number).filter(Boolean);
+    await db.delete(zoneRetailers).where(eq(zoneRetailers.zoneId, id));
+    if (ids.length) await db.insert(zoneRetailers).values(ids.map((rid: number) => ({ zoneId: id, retailerId: rid })));
+  }
+  return c.json(await zoneView((await db.select().from(zones).where(eq(zones.id, id)))[0]));
+});
+app.delete("/app/zones/:id", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const id = Number(c.req.param("id"));
+  const z = (await db.select().from(zones).where(and(eq(zones.id, id), eq(zones.ownerUserId, g.u.id))))[0];
+  if (!z) return c.json({ error: "not_found" }, 404);
+  await db.delete(zones).where(eq(zones.id, id));
+  return c.json({ ok: true });
+});
+app.get("/app/zones/quote", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const ids = (c.req.query("retailerIds") || "").split(",").map(Number).filter(Boolean);
+  const rows = ids.length ? await db.select().from(retailers).where(inArray(retailers.id, ids)) : [];
+  const checks = rows.filter((r) => r.sellsPacks !== false).length;
+  return c.json({ stores: checks, checks, cents: checks * (await getPolicy()).pricing.perCallCents });
+});
+app.post("/app/zones/:id/check", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  if (await isCallingPaused()) return c.json({ error: "calling_paused" }, 503);
+  const id = Number(c.req.param("id"));
+  const z = (await db.select().from(zones).where(and(eq(zones.id, id), eq(zones.ownerUserId, g.u.id))))[0];
+  if (!z) return c.json({ error: "not_found" }, 404);
+  const afford = await canAffordZone({ zoneId: id, credits: spendableCredits(g.a), comp: g.comp });
+  if (!afford.ok) return c.json({ error: "no_credits", need: afford.creditsNeeded, have: afford.have, short: afford.short }, 402);
+  const b = await c.req.json().catch(() => ({}));
+  const cat = b.categoryId
+    ? (await db.select().from(categories).where(eq(categories.id, Number(b.categoryId))))[0]
+    : (await db.select().from(categories).where(eq(categories.key, "pokemon")))[0];
+  if (!cat) return c.json({ error: "category_not_found" }, 400);
+  const links = await db.select().from(zoneRetailers).where(eq(zoneRetailers.zoneId, id));
+  const rows = (await db.select().from(retailers).where(inArray(retailers.id, links.map((l) => l.retailerId)))).filter((r) => r.sellsPacks !== false);
+  const runId = `z${id}-${crypto.randomUUID()}`;
+  const isPrivate = await isFinderPrivate(g.a);
+  const placed: { retailerId: number; cid: string | null }[] = [];
+  const sids: string[] = [];
+  for (const s of rows) {
+    try {
+      const r = await triggerCall({ retailerId: s.id, categoryId: cat.id, mode: "restock", finderUserId: g.u.id, isPrivate, zoneRunId: runId });
+      placed.push({ retailerId: s.id, cid: (r as { providerCallId?: string }).providerCallId ?? null });
+      const sid = (r as { callSid?: string }).callSid; if (sid) sids.push(sid);
+    } catch (e) { console.error("zone check failed", s.id, e); placed.push({ retailerId: s.id, cid: null }); }
+  }
+  zoneRunSids.set(runId, sids); setTimeout(() => zoneRunSids.delete(runId), 30 * 60 * 1000);
+  return c.json({ runId, stores: placed });
+});
+app.get("/app/zones/run/:runId", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const rows = await db.select().from(callResults).where(and(eq(callResults.zoneRunId, c.req.param("runId")), eq(callResults.finderUserId, g.u.id)));
+  const stores = await retailerMap();
+  const results = rows.map((r) => ({ retailerId: r.retailerId, name: stores.get(r.retailerId)?.name || "A store", cid: r.providerCallId, status: r.status, statusKey: r.statusKey, confirmed: r.confirmed, summary: r.summary }));
+  const live = (st: string) => st === "in_progress" || st === "queued";
+  const summary = {
+    inStock: results.filter((r) => r.statusKey === "in_stock").length,
+    no: results.filter((r) => r.statusKey === "not_in_stock" || r.statusKey === "does_not_sell" || r.statusKey === "sold_out").length,
+    noAnswer: results.filter((r) => r.statusKey === "nobody_answered" || r.status === "no_answer").length,
+    checking: results.filter((r) => live(r.status)).length,
+  };
+  return c.json({ done: results.filter((r) => !live(r.status)).length, total: results.length, summary, results });
+});
+app.post("/app/zones/run/:runId/stop", async (c) => {
+  const g = await zoneAuth(c.req.header("Authorization")); if (!g.ok) return c.json({ error: g.error }, g.status);
+  const sids = zoneRunSids.get(c.req.param("runId")) || [];
+  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
+  if (sid && tok) for (const callSid of sids) {
+    await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls/${callSid}.json`, {
+      method: "POST", headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" }, body: "Status=completed",
+    }).catch(() => {});
+  }
+  return c.json({ ok: true, stopped: sids.length });
+});
+
 // ---- Subscriber auto-checks (scheduled shipment-day calls) ----
 app.get("/app/schedules", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
@@ -2460,17 +2765,60 @@ app.post("/app/charge", async (c) => {
   // Charging is now SERVER-SIDE on call completion (ingestPending, atomic + idempotent). This
   // endpoint no longer trusts the client to bill itself — it just returns the live balance.
   const a = await getAccount(u.id, u.email);
-  return c.json({ credits: isCompAccount(a) ? 9999 : (a?.credits ?? 0) });
+  return c.json({ credits: isCompAccount(a) ? 9999 : spendableCredits(a) });
 });
 // Create a Stripe Checkout session (kind = "sub" | pack key). Returns a redirect URL.
 app.post("/app/checkout", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  const { kind, email } = await c.req.json();
+  const { kind, email, annual } = await c.req.json();
   const origin = (c.req.header("origin") || "https://runner.fungibles.com").replace(/\/$/, "");
-  const url = await createCheckout(u.id, u.email || email, kind, origin);
+  const url = await createCheckout(u.id, u.email || email, kind, origin, !!annual);
   if (!url) return c.json({ error: "checkout_failed" }, 400);
   return c.json({ url });
+});
+// Embedded checkout (Stripe Elements — the custom BRANDED on-site page). Returns the client_secret +
+// publishable key the Website confirms with Elements. kind = tier key or "payg:<checks>".
+app.post("/app/checkout-intent", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const { kind, annual } = await c.req.json();
+  try {
+    const intent = await createCheckoutIntent(u.id, u.email || undefined, String(kind || ""), !!annual);
+    if (!intent) return c.json({ error: "checkout_unavailable" }, 400);
+    return c.json(intent);
+  } catch (e) { return c.json({ error: String(e).slice(0, 200) }, 400); }
+});
+
+// Public: the live tiers + PAYG ladder for the consumer checkout sheet (Website's lane renders it).
+app.get("/pub/plans", async (c) => c.json(publicPlans(await getPlans())));
+
+// ---- Admin Plans manager (God View → Plans): edit tiers/PAYG, publish to Stripe. Admin-gated by /api/*. ----
+app.get("/api/admin/plans", async (c) => c.json(plansSyncView(await getPlans())));
+app.post("/api/admin/plans", async (c) => {
+  try {
+    const body = await c.req.json();
+    // The editor sends names/prices/quotas/flags; preserve Stripe ids + publish snapshots server-side.
+    const cur = await getPlans();
+    const merged = normalizePlans({
+      tiers: (body.tiers || []).map((t: Record<string, unknown>) => {
+        const ex = cur.tiers.find((x) => x.key === t.key);
+        return { ...ex, ...t, stripeProductId: ex?.stripeProductId ?? null, monthlyPriceId: ex?.monthlyPriceId ?? null, annualPriceId: ex?.annualPriceId ?? null, pub: ex?.pub ?? null };
+      }),
+      payg: { stripeProductId: cur.payg.stripeProductId, bundles: (body.payg || []).map((b: Record<string, unknown>) => {
+        const ex = cur.payg.bundles.find((x) => x.checks === Number(b.checks));
+        return { ...b, priceId: ex?.priceId ?? null, pubCents: ex?.pubCents ?? null };
+      }) },
+    });
+    return c.json(plansSyncView(await savePlans(merged)));
+  } catch (e) { return c.json({ error: String(e) }, 400); }
+});
+app.post("/api/admin/plans/publish", async (c) => {
+  if (!process.env.STRIPE_SECRET_KEY) return c.json({ error: "stripe_key_missing" }, 400);
+  try {
+    const published = await publishPlansToStripe(await getPlans());
+    return c.json(plansSyncView(await savePlans(published)));
+  } catch (e) { return c.json({ error: String(e) }, 400); }
 });
 
 // ---- Stripe webhook (public, signature-verified) ----
@@ -3115,6 +3463,60 @@ app.patch("/api/settings", async (c) => {
 // ---- ElevenLabs credit status (live if the key has user_read, else estimated) ----
 app.get("/api/credits", async (c) => c.json(await getCreditStatus()));
 
+// ---- Go-to-Market launch checklist (owner + agents track go-live readiness) ----
+// Persisted as one JSON blob in settings ("gtm_checklist"), seeded on first read. The admin renders it
+// with area (backend/frontend/ops) + agent filters; each item is a status the owner ticks off. The
+// frontend owns the edits and POSTs the full list back — race-safe enough for a single operator.
+const GTM_SEED: { id: string; title: string; detail: string; area: "backend" | "frontend" | "ops"; agent: string; critical: boolean; status: "todo" | "doing" | "done" }[] = [
+  { id: "support-agent", title: "Customer-service agent on the site", detail: "A support bot users can talk to on the front end; reads the ReadMe to answer.", area: "backend", agent: "support", critical: true, status: "todo" },
+  { id: "readme-copy", title: "Copy agent owns + fully updates the ReadMe", detail: "Spin up a copy agent with access to the ReadMe repo (+ Fungibles); fully write/polish the Check ReadMe. Solve the cross-repo access.", area: "ops", agent: "copy", critical: true, status: "todo" },
+  { id: "discord-support", title: "Discord support agent + FAQ routing (Helicone)", detail: "Working Discord; same support agent. Cheap-model FAQ from the ReadMe → escalate to a smart model → ticket to a support email if unresolved.", area: "backend", agent: "discord", critical: true, status: "todo" },
+  { id: "alerts-forms", title: "Every alert form works end-to-end", detail: "Email/SMS restock alerts actually send; branded email; Twilio A2P 10DLC live for texts; user can view/edit their email + cell in My Checks.", area: "backend", agent: "devops", critical: true, status: "todo" },
+  { id: "zones-test", title: "Zones tested at scale", detail: "Call many stores at once and watch the combined multi-store report render correctly.", area: "backend", agent: "qa", critical: true, status: "todo" },
+  { id: "store-request-form", title: "Store-request form lands in the backend", detail: "A store submitted from the site shows up in the admin queue.", area: "backend", agent: "devops", critical: true, status: "todo" },
+  { id: "referrals", title: "Refer-a-friend works + is tracked", detail: "Track who referred whom; both parties actually receive their free checks, everywhere a free check is promised.", area: "backend", agent: "qa", critical: true, status: "todo" },
+  { id: "voice-rotation", title: "Workflows / persona / script + voice rotation", detail: "Rotate scripts and voices, confirm they work well, and lock the voice you like.", area: "ops", agent: "website", critical: false, status: "todo" },
+  { id: "thrift-hobby-workflows", title: "Thrift + hobby call workflows built", detail: "Done and ready (gated off until launch, even for paid).", area: "ops", agent: "website", critical: false, status: "todo" },
+  { id: "paid-plans-e2e", title: "Paid plans — full real-card end-to-end test", detail: "Sign up with a real credit card and confirm the whole flow: checkout → Stripe → entitlement → credits.", area: "backend", agent: "devops", critical: true, status: "todo" },
+  { id: "site-paths-tested", title: "Every website path tested pre-launch", detail: "Walk every page/flow and confirm it behaves exactly as built.", area: "frontend", agent: "qa", critical: true, status: "todo" },
+  { id: "copy-color-sweep", title: "Copy sweep + product-page colors", detail: "Copy reads well everywhere; product-page colors render right per brand (Pokémon vs NeeDoh, etc.).", area: "frontend", agent: "copy", critical: true, status: "todo" },
+  { id: "multi-brand-workflows", title: "Non-Pokémon call workflows", detail: "Workflows set up so the agent can call and ask for Topps NBA, One Piece, etc. — not just Pokémon.", area: "ops", agent: "data", critical: true, status: "todo" },
+  { id: "discord-plan", title: "Discord community set up + planned", detail: "Free area vs. flagged paid-customer community; channel plan (share scores, talk stores). Stand up a planning agent.", area: "ops", agent: "discord", critical: false, status: "todo" },
+  { id: "spanish", title: "Spanish + live translation button", detail: "Confirm Spanish works and the translate button engages when a store speaks Spanish.", area: "frontend", agent: "qa", critical: true, status: "todo" },
+  { id: "statuses-new", title: "New call statuses surface in Admin", detail: "When a never-seen status comes back, it shows up in the Admin statuses area so we can build it into behavior.", area: "backend", agent: "admin", critical: false, status: "todo" },
+  { id: "hobby-thrift-data", title: "Populate hobby + thrift stores nationwide", detail: "Data: hobby stores with open/close times; a nationwide thrift + hobby search (like the main-chain sweep) to populate many more.", area: "backend", agent: "data", critical: false, status: "todo" },
+  { id: "x-autopost", title: "X account + daily auto-posting agent", detail: "Create the X account; an agent posts cool info daily. Keep the business hands-free.", area: "ops", agent: "social", critical: false, status: "todo" },
+  { id: "repo-split", title: "Extract Check into its own repo", detail: "Major overhaul — pause everything and rip Check out of Fungibles into a clean repo. (Post-launch; expect breakage.)", area: "ops", agent: "devops", critical: false, status: "todo" },
+  { id: "deck-video", title: "Finalize the check deck + share video", detail: "Not critical for launch.", area: "ops", agent: "owner", critical: false, status: "todo" },
+  { id: "analytics", title: "Analytics ready on production", detail: "The non-GA analytics tool (API key already set) is live on prod tracking every page, so we can see paths + optimize after launch.", area: "backend", agent: "devops", critical: true, status: "todo" },
+  // DevOps-surfaced items (my lane) —
+  { id: "cheap-lane-wiring", title: "Move leftover call paths onto the cheap bridge lane", detail: "Scheduled checks, zone fires, admin call-now, and the /pub/check fallback still ride the pricey direct-agent path. Wiring, not a build — straight cost cut. (CALL_ECONOMICS §2)", area: "backend", agent: "devops", critical: false, status: "todo" },
+  { id: "price-editor", title: "Admin price-editor → Stripe", detail: "Change any monthly price / PAYG rate in admin and push straight to Stripe, no code change.", area: "backend", agent: "devops", critical: false, status: "todo" },
+  { id: "money-endpoint-guard", title: "Money-endpoint rate limits + security headers", detail: "Per-IP limits on the four call-placing endpoints + baseline security headers. Shipped.", area: "backend", agent: "devops", critical: true, status: "done" },
+];
+app.get("/api/gtm", async (c) => {
+  let items = GTM_SEED;
+  try { const raw = await getSetting("gtm_checklist"); if (raw) { const p = JSON.parse(raw); if (Array.isArray(p?.items)) items = p.items; } }
+  catch { /* fall back to seed */ }
+  return c.json({ items });
+});
+app.post("/api/gtm", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  if (!Array.isArray(b.items)) return c.json({ error: "items[] required" }, 400);
+  // Keep the shape tight so a bad client can't bloat the blob.
+  const clean = b.items.slice(0, 300).map((it: Record<string, unknown>) => ({
+    id: String(it.id || crypto.randomUUID()).slice(0, 60),
+    title: String(it.title || "").slice(0, 200),
+    detail: String(it.detail || "").slice(0, 600),
+    area: (["backend", "frontend", "ops"] as const).includes(it.area as never) ? it.area : "ops",
+    agent: String(it.agent || "owner").slice(0, 24),
+    critical: !!it.critical,
+    status: (["todo", "doing", "done"] as const).includes(it.status as never) ? it.status : "todo",
+  })).filter((it: { title: string }) => it.title);
+  await setSetting("gtm_checklist", JSON.stringify({ items: clean, updatedAt: Date.now() }));
+  return c.json({ ok: true, items: clean });
+});
+
 // ---- Global calling kill-switch (cost runaway protection) ----
 app.get("/api/admin/calling/status", async (c) => c.json({ paused: await isCallingPaused(), spendTodayCents: await spendTodayCents() }));
 app.post("/api/admin/calling/pause", async (c) => {
@@ -3259,6 +3661,9 @@ app.post("/pub/store-request", async (c) => {
   const b = await c.req.json().catch(() => ({}));
   const storeName = String(b.storeName || "").trim();
   if (!storeName) return c.json({ error: "storeName required" }, 400);
+  // Attribute the submitter when they're signed in, so we can grant their free check the moment the store
+  // goes live (see the PATCH below). Anonymous submissions still land — they just can't be auto-rewarded.
+  const u = await verifyClerkToken(c.req.header("Authorization")).catch(() => null);
   await db.insert(storeRequests).values({
     contact: (b.contact ? String(b.contact) : "").slice(0, 120) || null,
     storeName: storeName.slice(0, 160), chain: (b.chain ? String(b.chain) : "").slice(0, 80) || null,
@@ -3266,13 +3671,41 @@ app.post("/pub/store-request", async (c) => {
     city: (b.city ? String(b.city) : "").slice(0, 80) || null,
     state: (b.state ? String(b.state) : "").slice(0, 20) || null,
     note: (b.note ? String(b.note) : "").slice(0, 400) || null,
+    userId: u?.id || null,
   });
   return c.json({ ok: true });
+});
+// Consumer: the signed-in user's own store submissions + their live/earned state (Earn-tab "stores you added").
+app.get("/app/my-store-requests", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const rows = await db.select().from(storeRequests).where(eq(storeRequests.userId, u.id)).orderBy(desc(storeRequests.createdAt));
+  const reward = (await getPolicy()).rewards.storeAddChecks;
+  return c.json({
+    reward,
+    requests: rows.map((r) => ({ id: r.id, storeName: r.storeName, city: r.city, status: r.status, rewarded: !!r.rewardedAt, createdAt: r.createdAt })),
+  });
 });
 app.get("/api/store-requests", async (c) => c.json(await db.select().from(storeRequests).orderBy(desc(storeRequests.createdAt))));
 app.patch("/api/store-requests/:id", async (c) => {
   const b = await c.req.json().catch(() => ({}));
-  if (b.status) await db.update(storeRequests).set({ status: String(b.status) }).where(eq(storeRequests.id, Number(c.req.param("id"))));
+  const id = Number(c.req.param("id"));
+  if (b.status) {
+    const status = String(b.status);
+    await db.update(storeRequests).set({ status }).where(eq(storeRequests.id, id));
+    // Go-live reward: when a request is marked 'added', grant the submitter their free check(s) — ONCE
+    // (rewardedAt guards double-grants across repeated PATCHes). Amount is Admin-tunable (rewards.storeAddChecks).
+    if (status === "added") {
+      const row = (await db.select().from(storeRequests).where(eq(storeRequests.id, id)))[0];
+      const reward = (await getPolicy()).rewards.storeAddChecks;
+      if (row && row.userId && !row.rewardedAt && reward > 0) {
+        await getAccount(row.userId);
+        await grantCredits(row.userId, reward);
+        await db.update(storeRequests).set({ rewardedAt: Date.now() }).where(eq(storeRequests.id, id));
+        return c.json({ ok: true, granted: { userId: row.userId, checks: reward } });
+      }
+    }
+  }
   return c.json({ ok: true });
 });
 

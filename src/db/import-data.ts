@@ -42,9 +42,13 @@ async function chainId(name?: string): Promise<number | null> {
   return row.id;
 }
 
-/** Set/refresh the store-category on every chain (so existing chains get typed). */
+/** FILL the store-category on untyped chains. Backfill-only: a chain that already carries a real
+ * type (anything besides empty/"Other") was set deliberately — via admin PATCH or import — and this
+ * boot pass must never clobber it. (It did: every deploy reverted Data's Hobby chains to the name
+ * heuristic — the 2026-07-03 "clobber watch".) */
 export async function backfillChainTypes(): Promise<void> {
   for (const c of await db.select().from(chains)) {
+    if (c.type && c.type !== "Other") continue; // manual/typed rows are authoritative
     const t = chainType(c.name);
     if (c.type !== t) await db.update(chains).set({ type: t }).where(eq(chains.id, c.id));
   }

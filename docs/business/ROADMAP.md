@@ -10,7 +10,7 @@ Status of each is detailed in the linked ops/security docs; this is the single c
 
 **Design round — owner + Claude Design (Website implements on staging as comps land in repo)**
 - [ ] **Check+ premium signup flow (1a–1d)** — locked design exists as a self-contained HTML comp; commit to
-  `docs/design/checkplus-signup-flow.html` when the owner delivers it (Design chat is read-only, can't push).
+  `docs/style-guide/checkplus-signup-flow.html` when the owner delivers it (Design chat is read-only, can't push).
 - [ ] **Thrift + Hobby store types & paths** — new store types with their own consumer flows. ⚠️ **Hobby-store
   flow applies ONLY to sports cards + TCG** — never NeeDoh/other non-card products.
 - [ ] **"My checks" section redesign** — comps coming.
@@ -23,9 +23,12 @@ Owner reviews each on staging before promote. Status testing (13-status sweep) r
   REAL store calls and the Admin God view reflects them accurately (cost/call, mapping performance);
   staging keeps feeding the owner's test-call reports separately. Press "Start fresh" (`stats_since`)
   at launch so only post-launch calls count.
-- [~] **Commerce build-out — owner + DevOps** — staging is LIVE in test mode (2026-07-02): keys +
-  signed webhook + proven test-card payment; UI wired (plans → checkout → paid toast). Remaining:
-  owner click-through sign-off, LIVE-mode webhook at promote, align /app/me catalog with policy pricing.
+- [~] **Commerce build-out — owner + DevOps.** Test-mode staging proven; **2026-07-03: 4-tier ladder
+  (Family/Collector/Hunter/Operator) + PAYG + 8-feature admin matrix built, live, published to Stripe.**
+  Remaining: Website renders /pub/plans + gates premium (PAYG hidden) + Admin feature-matrix UI (both
+  filed); embedded Stripe Elements checkout in comp design (Website+DevOps); LIVE-mode webhook at promote;
+  ReadMe LAUNCHED 2026-07-03 (project "Checkitforme" → Plans & Pricing: Plans · Premium features ·
+  Pay as you go · How billing works). Optional: GitHub Action auto-sync (README_API_KEY as a secret — owner to authorize).
 - [ ] **Premium sign-up area redesign** on the website using Claude design (Website + Design lanes;
   owner-requested 2026-07-01).
 - [ ] Route the consumer "check" through the **bridge** so caller-ID applies (plain `/app/check` uses the house number).

@@ -14,7 +14,13 @@ Every store row now answers three independent questions:
 | `stockCheckMethod: "site"` | Chain's website mirrors the shelf — 20 chains: 12 confirmed (Micro Center, Best Buy, Target, GameStop, B&N, Scheels, Costco, Hot Topic, Kohl's, Office Depot, Staples, Walgreens) + 8 probable → **free real-time stock, no call** | Show live stock from `/pub/stock/*`; hide/de-emphasize the call button |
 
 A store can be any combination. `stockCheckMethod: "call"` (or absent) = phone rail only.
-Site-rail stores can be **uncallable entirely** (Micro Center has no per-store line → `callable: false`).
+Site-rail stores can be **uncallable entirely** (Micro Center has no per-store line → `callable: false`,
+still SHOWN as buy-online/live-stock).
+**`muted` (chain-level) overrides all of the above: a muted chain is HIDDEN and never surfaces, even when
+`stockCheckMethod: "site"`.** Best Buy is currently **muted** (central call center, can't dial the store),
+so despite the `site` tag in the table it does NOT show — un-mute it to expose its live-stock rail. The
+`site` list above is the *stock-capable* set, not the *shown* set. Full `muted` semantics:
+`docs/specs/store-data-schema.md` §5.
 Gate the stock-rail UI on `policy.flags.stockSignals`.
 
 ## Geo-paginated stores (use this once the 102k import lands — `/pub/stores` will not survive it)

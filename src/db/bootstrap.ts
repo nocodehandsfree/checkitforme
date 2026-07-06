@@ -67,6 +67,11 @@ export async function bootstrap() {
     created_at INTEGER NOT NULL DEFAULT (unixepoch())
   )`);
   // Chains: deterministic keypad shortcut column (added post-migration; SQLite has no IF NOT EXISTS for columns).
+  await client.execute("ALTER TABLE zones ADD COLUMN owner_user_id TEXT").catch(() => {});
+  // Store-request reward loop: attribute the submitter + guard the one-time go-live free-check grant.
+  await client.execute("ALTER TABLE store_requests ADD COLUMN user_id TEXT").catch(() => {});
+  await client.execute("ALTER TABLE store_requests ADD COLUMN rewarded_at INTEGER").catch(() => {});
+  await client.execute("ALTER TABLE call_results ADD COLUMN zone_run_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN dtmf_shortcut TEXT").catch(() => {});
   // Chains: answer-path classification + per-chain consumer mute.
   await client.execute("ALTER TABLE chains ADD COLUMN answer_path TEXT").catch(() => {});
@@ -144,6 +149,9 @@ export async function bootstrap() {
   // Phone-first identity: verified cell + the caller ID we dial as (set once Twilio verifies it).
   await client.execute("ALTER TABLE accounts ADD COLUMN phone TEXT").catch(() => {});
   await client.execute("ALTER TABLE accounts ADD COLUMN caller_id TEXT").catch(() => {});
+  // Plans: subscription monthly quota (resets each cycle, no rollover) + which tier is active.
+  await client.execute("ALTER TABLE accounts ADD COLUMN quota_credits INTEGER NOT NULL DEFAULT 0").catch(() => {});
+  await client.execute("ALTER TABLE accounts ADD COLUMN sub_tier TEXT").catch(() => {});
   // Statuses registry — the single source of truth for customer-facing call verdicts.
   await client.execute(`CREATE TABLE IF NOT EXISTS statuses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -187,7 +195,8 @@ export async function bootstrap() {
     notified INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
   await client.execute(`CREATE TABLE IF NOT EXISTS store_requests (
     id INTEGER PRIMARY KEY AUTOINCREMENT, contact TEXT, store_name TEXT NOT NULL, chain TEXT, address TEXT,
-    city TEXT, state TEXT, note TEXT, status TEXT NOT NULL DEFAULT 'new', created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+    city TEXT, state TEXT, note TEXT, status TEXT NOT NULL DEFAULT 'new', user_id TEXT, rewarded_at INTEGER,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
   await client.execute(`CREATE TABLE IF NOT EXISTS kiosk_receipts (
     id INTEGER PRIMARY KEY AUTOINCREMENT, message_id TEXT NOT NULL UNIQUE, machine_id TEXT, product TEXT,
     total TEXT, order_id TEXT, txn_at TEXT, claimed_by TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);

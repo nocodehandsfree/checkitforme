@@ -176,6 +176,7 @@ export const retailers = sqliteTable(
 export const zones = sqliteTable("zones", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),        // e.g. "SF Valley Zone"
+  ownerUserId: text("owner_user_id"),  // consumer phone id (phone:+E164); null = admin/global zone
   centerZip: text("center_zip"),       // zip the radius was built around
   centerLat: real("center_lat"),
   centerLng: real("center_lng"),
@@ -258,8 +259,10 @@ export const accounts = sqliteTable("accounts", {
   email: text("email"),
   phone: text("phone"),         // E.164 cell for phone-first (Clerk-free) identity
   callerId: text("caller_id"),  // verified caller-ID number for this account's outbound calls
-  credits: integer("credits").notNull().default(0),
+  credits: integer("credits").notNull().default(0),           // PAYG balance — never expires, additive
+  quotaCredits: integer("quota_credits").notNull().default(0), // subscription monthly allotment — reset each cycle, no rollover
   subscription: text("subscription").notNull().default("none"), // "none" | "active"
+  subTier: text("sub_tier"),                                    // plans.ts tier key when subscribed ("starter"|"collector"|"hunter")
   stripeCustomerId: text("stripe_customer_id"),
   subRenewsAt: integer("sub_renews_at"),
   totalSpentCents: integer("total_spent_cents").notNull().default(0), // lifetime revenue (for margin dashboard)
@@ -399,6 +402,8 @@ export const storeRequests = sqliteTable("store_requests", {
   address: text("address"), city: text("city"), state: text("state"),
   note: text("note"),
   status: text("status").notNull().default("new"), // new | added | rejected
+  userId: text("user_id"),               // the submitter's account (when signed in) — so we can grant their free check on 'added'
+  rewardedAt: integer("rewarded_at"),    // set once the go-live free check has been granted (idempotency guard)
   createdAt: integer("created_at").notNull().default(now),
 });
 
@@ -452,6 +457,7 @@ export const callResults = sqliteTable(
     transcript: text("transcript"), // text transcript (no audio is ever stored)
     providerCallId: text("provider_call_id"), // ElevenLabs conversation id
     finderUserId: text("finder_user_id"), // clerk id of whoever placed it (null = anon/free)
+    zoneRunId: text("zone_run_id"), // groups the checks of one zone sweep (z<zoneId>-<uuid>) for the report
     isPrivate: integer("is_private", { mode: "boolean" }).default(false), // never show in public finds feed
     startedAt: integer("started_at").notNull().default(now),
     completedAt: integer("completed_at"),

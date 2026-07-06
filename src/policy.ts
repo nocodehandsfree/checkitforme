@@ -22,6 +22,7 @@ export interface Policy {
   rewards: {
     kioskRefreshChecks: number;      // free checks granted for submitting a kiosk refresh time
     referralChecks: number;          // free checks granted to BOTH parties on a successful referral
+    storeAddChecks: number;          // free checks granted to the submitter when their requested store goes live
   };
   flags: {
     dogfoodHours: boolean;           // night-time hours-harvest auto-calling (OFF until owner says go)
@@ -29,6 +30,8 @@ export interface Policy {
     scheduling: boolean;             // subscriber: schedule calls on known shipment days
     restockAlerts: boolean;          // subscriber: notify when something comes back in stock
     kiosks: boolean;                 // kiosk picker + crowd refresh-time submissions
+    hobby: boolean;                  // GLOBAL master switch for the Hobby chip (off = hidden for EVERY account, incl. comp)
+    thrift: boolean;                 // GLOBAL master switch for the Thrift chip (off = hidden for EVERY account, incl. comp)
     shareCards: boolean;             // shareable "found it" cards / OG images
     multiProduct: boolean;           // subscriber: ask about >1 product in one call
     specificSets: boolean;           // subscriber: narrow to a specific set
@@ -76,10 +79,10 @@ export const DEFAULT_POLICY: Policy = {
     sub: { cents: 999, credits: 15, label: "Check — Family", perCallCents: 18 },
   },
   finds: { publicFeed: true, headstartMin: 10, subscriberPrivateAlways: true, keepPrivateCostChecks: 0 },
-  rewards: { kioskRefreshChecks: 1, referralChecks: 1 }, // referral = 1+1 -> ~$1 CAC at ~$0.50/check
+  rewards: { kioskRefreshChecks: 1, referralChecks: 1, storeAddChecks: 1 }, // referral = 1+1 -> ~$1 CAC at ~$0.50/check; store-add = 1 free check when it goes live
   flags: {
     dogfoodHours: false, driverHandoff: true, scheduling: true, restockAlerts: true,
-    kiosks: true, shareCards: true, multiProduct: true, specificSets: true,
+    kiosks: true, hobby: true, thrift: true, shareCards: true, multiProduct: true, specificSets: true,
     community: false, communityAutoApprove: false, referrals: true, kioskReceipts: true,
     liveListen: false, stockSignals: true, requirePhoneSignup: false, connectOnHuman: false,
     oneCheckPerStorePerDay: false, transcriptAuth: false,
@@ -140,6 +143,7 @@ export async function publicPolicy() {
     publicFeed: p.finds.publicFeed,
     kioskRefreshChecks: p.rewards.kioskRefreshChecks,
     referralChecks: p.rewards.referralChecks,
+    storeAddChecks: p.rewards.storeAddChecks,
     flags: p.flags,
     links: p.links,
     support: p.support,

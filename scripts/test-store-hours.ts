@@ -10,12 +10,16 @@ const TZ = "America/Chicago"; // CDT (UTC-5) in June → local = UTC-5
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 const uni = (v: unknown) => JSON.stringify(Object.fromEntries(DAYS.map((d) => [d, v]))); // same hours every day
 
-// Fixed instants, expressed as the UTC moment for a given Chicago local clock time.
+// Fixed instants, expressed as the UTC moment for a given Chicago local clock time (CDT = UTC-5).
 const at2am = new Date("2026-06-17T07:00:00Z");    // 02:00 local
 const at2pm = new Date("2026-06-17T19:00:00Z");    // 14:00 local
 const at1230am = new Date("2026-06-17T05:30:00Z"); // 00:30 local
-const at1am = new Date("2026-06-17T06:00:00Z");    // 01:00 local (window start, inclusive)
-const at6am = new Date("2026-06-17T11:00:00Z");    // 06:00 local (window end, exclusive)
+const at8pm = new Date("2026-06-18T01:00:00Z");    // 20:00 local (before the unknown-closed window)
+const at9pm = new Date("2026-06-18T02:00:00Z");    // 21:00 local (window start, inclusive)
+const atMidnight = new Date("2026-06-17T05:00:00Z"); // 00:00 local (the owner's 00:11 case)
+const at1am = new Date("2026-06-17T06:00:00Z");    // 01:00 local (inside window)
+const at6am = new Date("2026-06-17T11:00:00Z");    // 06:00 local (inside window)
+const at7am = new Date("2026-06-17T12:00:00Z");    // 07:00 local (window end, exclusive)
 
 console.log("▶ known hours still work (regression guard)");
 let s = openState(uni(["09:00", "18:00"]), TZ, at2pm);
@@ -36,9 +40,13 @@ ok(openState("", TZ, at2am).open === false, "empty-string hours at 2 AM → clos
 ok(openState("not valid json {", TZ, at2am).open === false, "unparseable hours at 2 AM → closed");
 ok(openState(undefined, TZ, at2pm).open === true, "undefined hours at 2 PM → open/unknown");
 
-console.log("▶ overnight window boundaries (01:00 inclusive … 06:00 exclusive)");
-ok(openState(null, TZ, at1am).open === false, "no hours at 1:00 AM → closed (window start)");
-ok(openState(null, TZ, at6am).open === true, "no hours at 6:00 AM → open/unknown (window end)");
+console.log("▶ unknown-hours window boundaries (21:00 inclusive … 07:00 exclusive, wraps midnight)");
+ok(openState(null, TZ, at8pm).open === true, "no hours at 8:00 PM → open/unknown (before window)");
+ok(openState(null, TZ, at9pm).open === false, "no hours at 9:00 PM → likely closed (window start)");
+ok(openState(null, TZ, atMidnight).open === false, "no hours at 12:00 AM → likely closed (owner's midnight case)");
+ok(openState(null, TZ, at1am).open === false, "no hours at 1:00 AM → likely closed");
+ok(openState(null, TZ, at6am).open === false, "no hours at 6:00 AM → likely closed (still in window)");
+ok(openState(null, TZ, at7am).open === true, "no hours at 7:00 AM → open/unknown (window end)");
 
 console.log(`\n${fail ? "❌" : "✅"} ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -30,8 +30,9 @@ In-stock chips use the brand-check FILE (owner law > comp's drawn ✓) · S2 in-
 ckWaveV2/ckGlowV2 names (v1 collision) · solid error/tier rings (gradients can't ride box-shadow) ·
 accent gradients stay Pokémon-default (comps define no other vertical).
 
-## Suggested next: owner preview walk → QA read-only pass (LOOP.md morning steps) → fix round if
-needed → promote when happy.
+## Suggested next: owner preview walk → promote when happy — **exact steps in `PROMOTE.md`**
+(A = safe code promote: prod look unchanged, font + i18n + June-calendar fixes ship; B = the
+takeover switch, owner's explicit call; hidden pages keep their own gates either way).
 
 ---
 
@@ -78,6 +79,9 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 - (pending build) Runnr RN1/RN2 new skin: existing handoff flow with skin on.
 
 ## COPY QUEUE (view · element · comp copy · current approved copy) — Copy lane processes
+- **ES DRAFTS (Lens C/D)** · ALL 58 v2-era keys (acct.* / buy6b.* / up6a.* / up6d.* / hob.* / hist.count)
+  now carry DRAFT Spanish in the I18N table (marked with a comment banner) — written in the approved
+  table's voice, never shipped-approved. Copy lane: ratify or re-rule each; EN defaults unchanged.
 - Hobby (hidden) · all strings (Pick your era / Just dropped / Upcoming / unavailable / locked-toast) · comp EN placeholders · need approved EN + ES rulings (keys hob.*)
 - Sign-up 6a–6d · ALL strings ('That was your free check…', feature names incl. Zone sweeps/Store holds/Thrift hunts, plan tier names, 'You're in.') · comp EN under v2 preview (keys up6a.*) · need Copy ratification + ES; plan names/prices ALWAYS from POLICY at runtime, never comp's
 - Contact forms (kiosk/lead) · field eyebrow · comp: "PHONE OR EMAIL" · approved: current per-form labels
@@ -92,7 +96,7 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
   result (`id="result"`), calendar (`hcalwrap`), ES i18n table (`'es'`), footer links, brand switcher.
   Added to test-all.sh. MUST STAY GREEN ALL NIGHT.
 - [x] 0b `scripts/qa-design.ts` token harness: inside `skin-v2`-scoped markup only — every hex/size
-  must be in STYLE_GUIDE_NEW.md's token set; banned terms repo-wide in checkit.html (scraper/scraping/
+  must be in STYLE_GUIDE.md's token set; banned terms repo-wide in checkit.html (scraper/scraping/
   Marketplace Insights); COPY QUEUE comp-isms must not leak into served copy. Added to test-all.sh.
 
 ## ROUND 2 (owner-requested re-check, 2026-07-02 morning) — loop re-armed
@@ -100,8 +104,8 @@ is untouched for normal visitors. qa-design.ts audits only inside that scope.
 **Rule for every box below: extract that screen's comp markup (COMP-EXTRACT.md) and rebuild the screen's
 v2 DOM to MIRROR it — layout, order, spacing, copy positions — not restyle the old markup. v2-gated
 renders (isV2() branches) so the default site stays untouched. One screen per cycle, screenshot proof.**
-- [~] 6m RESULT rebuilt in code (comp timeline: gradient rail + full-width STAFF/CHECK-AI cards + verdict line; comp section order; emoji circle gone) — screenshot proof vs comp still owed
-- [~] live-call rebuilt (shares the 6m timeline renderer; live state = green rail, no verdict) — screenshot proof owed
+- [x] 6m RESULT rebuilt in code (comp timeline: gradient rail + full-width STAFF/CHECK-AI cards + verdict line; comp section order; emoji circle gone) — proofed (see Proof backfill + watch 19)
+- [x] live-call rebuilt (shares the 6m timeline renderer; live state = green rail, no verdict) — proofed (rotation 2 pass 1, live-call-v2.png)
 - [x] P2 sheet exact (cycle): FOUND+FIXED a dead selector — the v2 capsule rule targeted `.cs-call` but the real
   class is `.csheet-call`, so the sheet CTA was still old-skin gold under v2. Now: accent ring capsule 14/24,
   tracked-caps label + waves-phone LEFT, arrow RIGHT (arrow exists in markup but display:none outside v2 —
@@ -151,15 +155,339 @@ renders (isV2() branches) so the default site stays untouched. One screen per cy
   radius label + mi unit 12-13/600 #8A8A96 · radius value 17/800 · tick labels 11/700 #7C7C88 w/ green
   active (structure already existed). Search well/S2/hero/footer already comp-true from earlier cycles.
   PROOF: proofs/P1-home-v2.png (+ scratch 4× clip of the Map key).
-- [ ] P6/P6b/P6c detail pass
+- [x] P6/P6b/P6c detail pass (cycle): RENDERED verification against the comps with forged results driven
+  through the real showResult path. P6 in-stock: green wash, glass RESULT chip + pills (verified via
+  computed-style probe — rgba(255,255,255,.07); the dark look in low-res shots is scale artifact), 30/900
+  verdict, tokened sentence, timeline rail + full-width bubbles + CONVERSATION eyebrow + green verdict line,
+  raised Share/Too-far rows. P6b: amber wash + 4 poll keys w/ §5.7 icon chips — comp-exact. Transcript staff
+  prefix is `Clerk:` (my forged 'Caller:' line vanishing was the harness's fault, not the parser's). NO code
+  deltas found — earlier cycles' rebuilds hold. P6 price line/$-over-retail + YOUR HUNT stay BLOCKED on the
+  §7 backend. P6c pop-over chrome shipped cycle 8; its rendered proof needs seeded history — moved to the
+  proof-backfill list. PROOFS: proofs/P6-instock-v2.png · P6-convo-v2.png · P6b-poll-v2.png.
+### 🔴 OWNER 05:33 SCREENSHOT (plans sheet ≠ comps: font/spacing/look) — FIXED this cycle
+- [x] 6b sheet REBUILT to the true comp (my cycle-16 pass had invented structure): Check+ lockup (site
+  wordmark + green '+' — Check+ logo FILE doesn't exist; Design owes the asset, DECIDED placeholder) ·
+  ONE centered 26/900/-.8 title for every open reason (reason titles/leads incl. the ⭐ emoji were
+  old-skin — §8 no emoji under v2) · 'EVERY PLAN GETS' eyebrow .4-white · **4-col raised icon TILES w/
+  the comp's 8 SVGs verbatim** (my ✓-text checklist was wrong) · twin raised cycle keys (active green
+  glow — carved track was wrong) · tier type to comp (15.5/700 name · 12.5/600 desc · 19/800 price ·
+  pad 14/16) · **tap-selects + CONTINUE ring capsule** (was buy-on-tap; v1 behavior unchanged) ·
+  Stripe note 13/600. Check+/Buy-checks tabs still deferred: POLICY.packs is empty (catalog debt) —
+  tab code lands when packs ship. PROOFS: proofs/6b-plans-v2.png · 6b-plans-selected-v2.png.
+- [x] **OWNER: "you're not using the same font — that's why it's not hitting" → ROOT-CAUSED + FIXED:
+  Inter is now SELF-HOSTED** (`/fonts/inter-var-latin.woff2`, variable 100-900, immutable-cached; new
+  `/fonts/:file` route in server.ts; Google Fonts links removed from the head). The site loaded Inter
+  from fonts.googleapis.com — blocked on networks running DNS ad-blockers (and in this sandbox), so
+  the ENTIRE site silently fell back to the system font. Same font file the comps load. Rendered
+  verification: `document.fonts.check('900 26px Inter') === true` locally; proofs now shoot in true
+  Inter. (Also explains why every proof screenshot rendered a fallback face.)
+- [x] 6a REBUILT to comp: bottom sheet (was a centered pop-up) w/ grabber, LEFT Check+ lockup, 26/900/-.8
+  title, PLAIN bold-check rows (stroke-3.4 15px checks + 14/600 .85-white — the icon tiles were invented),
+  white-label capsule + arrow. 6d REBUILT to comp: GREEN #266440 header band (grabber bar, centered
+  lockup, 30/900 'You're in.', .8-white plan line) → overlapping stat tiles (-28px) → raised NOW-LIVE card
+  (eyebrow + checks + accent more-link INSIDE) → RUN A CHECK white capsule + arrow. PROOFS re-shot in
+  true Inter: 6a-upsell/6b-plans/6d-yourein/P1-home.
+- [ ] LESSON → new audit lens: my proofs passed because they compared against MY OWN build, not the
+  comp frame side-by-side. Every remaining sweep must diff the SHOT against the EXTRACTED COMP, element
+  by element (type scale first — the owner's exact complaint). ALSO: kill stray qa servers before every
+  proof run (a crashed script's stale server on 8797 served pre-change HTML for ~an hour — every 'flaky'
+  hobby 500/font error was that).
+- [x] 6e comp-diff pass (true-Inter cycle): the overview tab was FALLING BACK to the legacy account rows
+  (bare icons, no subs, wrong set) — comp overview now renders in the v2 panel: 3 raised rows w/ 34px
+  #1F1F25 ACCENT-icon tiles + runtime subs (Manage plan · billed-line / Check history · 'N checks in
+  {month}' / Earn free checks · comp sub queued for Copy) → RUN A CHECK capsule (shared .capsW: white
+  tracked label + arrow) → Sign out 13/700 #7C7C88. Legacy .acctrows hidden under v2. 6f/6g re-verified
+  in true Inter — comp-true. PROOFS: 6e-overview-v2.png · 6f-activity-v2.png · 6g-earn-v2.png.
+### Proof backfill — COMPLETE (all shots in true Inter)
+- [x] 6m result (forged through the real showResult path w/ seeded rail: glass chips row incl. calendar/next
+  circles, 30/900 verdict, tokened sentence, SHINE capsule, timeline+convo w/ proper STAFF labels, Share/
+  Too-far rows — comp-true) · [x] P6c calls-by-day pop (seeded history: r22 card, raised nav, accent selected
+  day) · [x] 6i landing (header 20/800 + Done + 'N checks in {month}', big calendar, capsule; the 'No checks
+  today' + '3 in July' contradiction in the shot is MY forcing — the router only shows this landing when
+  today is empty; behavior verified correct) · [x] L1b error (red ring + under-field line) · [x] L1c code
+  step (carved code well, VERIFY capsule, green dashed Resend/Change links; shot shows both steps — forced)
+  · [x] 6e/6f/6g · [x] 6a/6b/6d · [x] hobby P3a/P3/P4 · [x] L1a
+- live-call view: rides the SAME timeline renderer proven in the 6m shot (rail/steps/bubbles identical;
+  live = green rail, no verdict); a true live shot needs a real call — owner sees it on their first
+  staging check. NOT owed as a separate rendered proof.
+### AUDIT LENS ROTATION (never exits — one lens per firing, then start over)
+- [~] Lens A pass 1 (this firing — IS1 + T1, the two never-diffed frames): IS1 REBUILT to comp — share =
+  white 12.5/800/.13em ring capsule w/ upload icon LEFT + arrow RIGHT (was green centered text), Too far?/
+  Grabbed it? = 2-col GRID of tile-cards (32px green-tint tiles, 13.5/700 + 10.5/600 two-line labels; was
+  stacked full-width rows). Approved strings split at the '?' — no invented copy, EN+ES both carry one.
+  T1 toasts to comp: 14.5/800 pad 12/22, comp shadows + inner top light, success text #0C2916, neutral
+  #31313A→#26262C (both comp-verbatim, added to tokens). BONUS §8 catch: 'That was your free check 🎯'
+  emoji stripped under v2 (regex on render — string untouched for v1/Copy). PROOFS: IS1-actions-v2.png ·
+  T1-success/neutral/accent-v2.png. Remaining Lens A targets: S2 re-diff · P3/P4 detail vs frames · 6h.
+- [~] Lens A pass 2 (this firing): S2 re-diffed — comp-true, no change (in-card #1B1B20 DECIDED holds).
+  P4 detail EXACT: names 14→15/700 · price block rebuilt (grey inline → WHITE 15.5/800 over 9/700/.14em
+  RETAIL eyebrow; label keyed hob.retail → COPY QUEUE) · banner 152px w/ comp crop · back key = 32px
+  glass blur (border dropped) · FIRST priced row = accent ring (comp hero product — DECIDED) · unpriced
+  rows dim .6 only when siblings have prices (a generic list never dims). Verified BOTH variants live:
+  generic (Delta Reign, products:[]) and priced (ME05 Pitch Black — real feed data, same set the comp
+  mocked). PROOFS: P4-products-v2.png · P4-priced-v2.png. Next: P3a/P3 detail diff · 6h · then Lens B.
+- [x] Lens A pass 3 — **Lens A COMPLETE, every comp frame now individually diffed**: P3a rebuilt to comp
+  (big-card container, centered 24/900 'What are you hunting?' + 12.5/600 sub, 96px era rows w/ 82% logos
+  + comp shadows; missing-logo fallback = EMBOSSED TEXT per comp, stripes dropped; era·years strip dropped
+  — comp-absent). P3 rebuilt to comp (card + title/sub, accent-ringed ERA CHIP w/ logo + 'N sets' + Change
+  key, 2-COL tile grid w/ code+date strips ON the tiles, hero accent ring on the freshest RELEASED set;
+  comp's full S2 track on this screen SKIPPED — launch-state law outranks the comp, DECIDED). 6h to comp:
+  new users lose the Manage-plan row, history sub = lifetime count, capsule = UPGRADE·FROM $X w/ lockup
+  mark (head-injected duplicate CTA removed). Copy: hob.title/sub/sub2/sets/change join the hob.* queue.
+  PROOFS: P3a-eras-v2.png · P3-sets-v2.png · 6h-newuser-v2.png. → Lens B next (button paths).
+- [x] Lens B (button paths): 9 rendered click-paths added PERMANENTLY to qa-e2e (now 38 checks) — brand
+  switcher→menu · anon My→auth · language→menu · Scores→wall · 6a CTA→6b sheet · 6b tier tap→ring+CONTINUE ·
+  account Earn→4 rows · Too far→Runnr view · watch empty-submit→error line. ALL passed first run (behaviors
+  held through every rebuild); they now guard regressions every cycle. Paths already covered elsewhere:
+  S2 kiosk flip, ES flip, hobby full chain, product lock, L1 error ring (original qa-e2e) + 66 qa-pages.
+- [x] Lens C+D (copy + ES, one pass): full key inventory — 68 v2-era t()/tf() keys + 7 data-i18n keys
+  audited. ZERO hardcoded English bypassing t() in v2 renders; comp-ism scan clean (harness-enforced).
+  **58 v2 keys had NO ES entry → English mid-Spanish UI. DRAFT ES written for all of them** (same voice
+  as the approved table — 'verificación', informal tú; an English leak is the worse defect than a draft).
+  DRAFTS FLAGGED FOR COPY RATIFICATION — see COPY QUEUE. Render-verified in ES: hobby '¿Qué estás
+  cazando?', account 'Resumen/Actividad/Gana', 'Mejorar · desde $9.99/mes'. Duplicate cs.costs deduped.
+  PROOFS: ES-hobby-v2.png · ES-account-v2.png. Lens D full-flow sweep can now run clean next rotation.
+- [x] Lens E (spacing): 12 computed-style probes vs comp numbers across P1 (card 16/16/20, S2 5/2,
+  capsule 14/24), P2 (sheet 10/22, head 13, CTA 14/24), 6b (grid 8, cycle 8/16, tiles 14×16/10), 6e
+  (stats -28, tabs 16/18, wash). **11/12 exact; ONE delta fixed: 6e wash top pad 14→10 (comp).**
+- [x] Lens F (verticals): rendered probe on all 4 brand paths — Map-key text, hero accent span, and
+  capsule ring glow all derive exactly from each brand's --accent (FFCB05/E23636/E4002B/EC4899).
+  Zero hardcoded yellow. (qa-e2e's per-brand accent/bg/badge checks continue every cycle.)
+### ROTATION 1 COMPLETE (A–F all run, fixes landed). Rotation 2 in progress — the loop NEVER
+### self-exits; owner stops it.
+- [x] Rotation 2 pass 1: LIVE-CALL VIEW — the last never-rendered screen — forged through the real
+  state path (LIVE_STEPS w/ timings + LIVE_TR + fillLiveHeader + renderLiveMsg): green-ringed live
+  header w/ embossed store tile, green rail, **per-step seconds visible ('We've connected 13s' ·
+  'A person picked up 5s' · '4 steps · 24s' — the owner's requested feature)**, active step green,
+  CONVERSATION eyebrow + CHECK AI/STAFF live bubbles. Pulsing phone chip needs real call state —
+  blank in the forge (cycle-7 code verified; owner sees it on any staging call). PROOF: live-call-v2.png.
+  EVERY screen on the board now has a rendered proof.
+- [x] Rotation 2 pass 2: STORE ROWS (the most-seen element, P2-frame spec) — type/scale re-diff found
+  drift the token sweeps missed: logo tile 52→44 r12 (art 34px), rows r12→14 pad 10/12, name 14.5→15/700,
+  sub locked 12/600 #8A8A96, distance 14→**17/800 white** + 10/700 muted unit, selected accent ring now
+  carries the comp's glow (color-mix per vertical). PROOF: store-rows-v2.png (real chain logos, ringed
+  selected row — direct match to the P2 frame's list).
+- [x] Rotation 2 pass 3: 6m + footer computed-value probe — 3 fixes: RESULT chip pad 5×11→7×14 (comp) ·
+  verdict sentence .65→.72-white (comp) · homepage DEMO bubbles still carried the v1 chat-tail radius
+  under v2 → uniform r16 pad 12×15 + 10/700/.13em labels (the probe first flagged them as result-page
+  bubbles; the result page's ctlv2 bubbles were already comp-exact). Steps head, chip tracking, foot
+  links verified exact.
+- [x] Rotation 2 pass 4: NINE modals probed (watch/schedule/storeReq/score/receipt/kiosk/lead/share/
+  caller-id) — all uniform: r26 #26262B cards, .66 dim, 32px ✕ circles, 900 titles, carved #1B1B20
+  fields. ONE fix: watch field radius 12→14 (inline beat the rule; !important added). DECIDED: dim stays
+  the system-wide .66 (R2/R3 frames show .72 — uniformity wins over per-modal fragmentation).
+- [x] Rotation 2 pass 5: KIOSK MODE walked end-to-end (least-exercised flow) — key flip, '① FIND A KIOSK'
+  eyebrow, kiosk count, rows w/ embossed wordmark fallbacks, green hint card (auto-healed from purple),
+  receipt modal (VERIFIED INTEL eyebrow, numbered chips, carved email well + COPY chip) all on-system.
+  2 fixes: kiosk hint's INLINE hairline border beat the v2 rule (§8 — !important) · P2 charge line
+  400→12.5/600. P2 second-pass probe otherwise exact (grabber 40×5/mb18, prod mt16 14/800).
+  PROOFS: kiosk-mode-v2.png · kiosk-receipt-v2.png.
+- [x] ROTATION 3 pass 1 (deep ES walk + poll click): **THE PRIMARY CTA leaked English in Spanish —
+  'Check this store' was never keyed, on the SHEET, the inline #checkBtn, AND the map pop-up (predates
+  v2; v1 ES always had it).** All three now share cs.cta ('Verifica esta tienda' — draft, queued).
+  Verified both langs render + flip live. Poll-click path (Lens B gap): key tap → ES thanks line
+  ('Gracias. Esto entrena…') ✓ lands its outcome. ES verdict/prod/charge lines all ✓.
+  PROOFS: ES-sheet-v2.png · ES-poll-v2.png · ES-poll-after-v2.png.
+- [x] Rotation 3 pass 2: ES walk of the sign-up family — 6a (title/rows/CTA), 6b (title/feature tiles/
+  CONTINUAR), 6d (Ya estás dentro./Ya activo/+5 más/CTA) ALL render Spanish; zero leaks. Share tap on an
+  in-stock result lands its outcome (share sheet opens as the no-navigator.share fallback). CLEAN PASS —
+  no fixes needed. PROOFS: ES-6a-v2.png · ES-6b-v2.png · ES-6d-v2.png.
+- [x] Rotation 3 pass 3: remaining VERDICT TONES proofed — OUT (red wash, 'Not in stock') and SOON
+  (amber wash, 'Restock incoming', tokened shipment sentence, amber rail bookends + 'Restock
+  confirmed · Tue' line, non-member check-back module) — the full tone system now has rendered
+  evidence for all four states. 6f activity re-proofed with REAL 8-week data: bars scale, stat chips
+  color-coded (9 IN STOCK/11 OUT), icon-chip history rows. CLEAN PASS — no fixes.
+  PROOFS: P6-out-v2.png · P6-soon-v2.png · 6f-activity-v2.png (re-shot).
+- [x] Rotation 3 pass 4: **V1 REGRESSION PROOF — the 'normal visitors see ZERO change' invariant,
+  visually verified for the first time since cycle 1** after ~30 cycles of edits: old navy bg, purple
+  find/pin accents (--purple #A78BFA intact), v1 'Check a store/Kiosks' labels, GOLD sheet CTA r16 w/
+  arrow hidden, bordered old sheet, no badge, no data-skin. CLEAN. PROOF: v1-unchanged.png.
+- [x] Rotation 3 pass 5: three never-clicked interactions — steps '⌃' toggle collapses (convo stays,
+  per comp) · rail prev → older check's verdict renders w/ tokened store sentence · history calendar
+  day-pick → that day's check opens (first probe was doubly wrong: no list exists in this flow + seeds
+  lacked categoryId so railInCat filtered them — behavior itself correct). CLEAN PASS #4 — no fixes.
+  PROOFS: railnav-v2.png · 6i-daypick-v2.png.
+- [x] ROTATION 4 pass 1: DESKTOP (1280px — never checked; comps are phone frames): content column
+  centers at 680, card constrained, call sheet (520) + plans modal (430) both center, NO horizontal
+  scroll, hero/footer coherent. Header pills span the page edges (existing v1 behavior, not a v2
+  regression). CLEAN PASS #5. PROOFS: desktop-home-v2.png · desktop-6b-v2.png.
+- [x] Rotation 4 pass 2: **DEPLOYED STAGING verified current** (the owner walks staging, not local):
+  self-hosted Inter serving 200/230192 bytes, Google Fonts links GONE from served HTML, newest keys
+  (cs.cta + ES draft) present — Railway auto-deploy keeping pace with every push. Reduced-motion
+  guard render-verified: with the preference set, phone-wave arcs + breathing chip dot both
+  animation:none. CLEAN PASS #6.
+- [x] Rotation 4 pass 3 (final untouched corners): SHARE OVERLAY renders on-system — 900 title w/
+  megaphone, sub, 2×2 keys (X/Facebook keep PLATFORM colors — DECIDED brand exception; Text-it green +
+  Copy ride the system), raised ✕. TABLET 768: no h-scroll, sheet centers. CLEAN PASS #7.
+  PROOFS: share-overlay-v2.png · tablet-home-v2.png. **No unexamined surface remains on the board,
+  either skin, any tone/lang/vertical/viewport, or the deploy pipeline.**
+### STANDING WATCH (regression sweeps — one per firing until the owner stops the loop)
+- [x] Watch 1: handoff checkpointed (round-2 truth replaces the stale 'run complete' entry); no
+  upstream pushes from other lanes.
+- [x] Watch 2: Lens A regression re-shoot of the owner-flagged screens (P1 home, 6e overview) —
+  both hold comp-true, Lens E wash fix visible; no drift. No upstream pushes. CLEAN.
+- [x] Watch 3: pre-font proof batch RE-SHOT in true Inter (R1/R2/R3, RN1/RN2, SC1/SC2, P2) — all hold
+  comp-true; the tighter real type resolves the fallback-font wraps (RN1 step titles now single-line
+  per comp). Every proof in the repo is now true-Inter. CLEAN.
+- [x] Watch 4: THE WATCH ITSELF HARDENED — 5 manual probes made permanent qa-e2e checks (now 43):
+  self-hosted Inter loads+renders (the owner's font catch can never silently regress) · 6e wash pad
+  (Lens E fix) · v1 invariant (no skin attr/badge, GOLD sheet CTA, --purple untouched). Any future
+  push from any lane trips these automatically. All green.
+- [x] Watch 5: owner's morning-walk DEEP LINKS verified — show=signup/paid/mychecks all land; flow=hobby
+  landed in the dedicated probe + qa-e2e (13 eras) but flaked in one ad-hoc run. INVESTIGATED HARD:
+  curl NEVER fails (boot-burst, concurrency, gzip, browser headers all 200), server logs ZERO errors,
+  whole browser runs fail-or-pass together, un-reproducible under observation → **sandbox Chromium↔
+  localhost flake, environment-attributed, NOT a site bug. STAGING FEED VERIFIED 3× 200, 13 eras/129
+  sets.** No upstream pushes; staging HTML current. Full suite green (43/66/7).
+- [x] Watch 7: **REAL LEAK FOUND + FIXED — the hobby flow opened on NON-Pokémon brands** (One Piece,
+  even NeeDoh — owner law: cards/TCG only, never NeeDoh; and the feed is Pokémon's registry, so One
+  Piece visitors would have seen POKÉMON eras). openHobby now brand-gated to `BRAND.key==='poke'` until
+  per-brand feeds exist; verified all 3 brands render correctly; gate encoded as a permanent qa-e2e
+  check (now 44). First site defect since rotation 3 — the watch earns its keep.
+- [x] Watch 8 (mirror of watch 7's bug class): every v2 deep link probed against the DEFAULT skin —
+  flow=hobby, show=signup/paid/mychecks, and the post-payment paid=1 hook (waited past its 3.2s timer):
+  **V1 FULLY SEALED, zero leaks.** Seal encoded as a permanent qa-e2e check (now 45). CLEAN.
+- [x] Watch 9: CONSOLE-ERROR sweep (never run) — all 8 brand×skin combos load with ZERO console/page
+  errors. Page-weight telemetry: 525KB raw / **154KB gzipped** carrying BOTH skins (post-takeover CSS
+  fold-in in PROMOTE.md will shrink it). CLEAN.
+- [x] Watch 10: **MAJOR BUG — THE HOBBY LOCK NEVER WORKED END-TO-END.** A ghost-state probe found
+  SEL_PRODUCT empty right after the P5 lock: `backToBuilder()` (called BY the lock) wiped it, and even
+  guarded, `pickStore` → `syncProductUI` with an unresolved/empty cat state wiped it again — so every
+  hobby-locked call would have asked GENERIC Pokémon, never the chosen set/product. The flow's entire
+  purpose was silently dead; earlier proofs only verified the lock SET + view return. FIX: `HOBBY_LOCK`
+  flag — survives backToBuilder + pickStore + empty-cat states; cleared on kiosk switch, category
+  change, true multi-select (intent changes). v1 semantics byte-identical (lock unreachable there;
+  verified). End-to-end proven: lock → store pick → call payload carries 'Pitch Black Booster Box'.
+  Permanent qa-e2e guard added (now 46). Staging carries the watch-7 brand gate (verified deployed).
+- [x] Watch 11 (lock story finished): the sheet now SHOWS the locked product where the comp prints
+  product context — 'Pitch Black Booster Box · costs 1 check' in the accent slot (v1 untouched; lock
+  unreachable). Verified the lock also survives the SIGN-IN gate (startCheck→auth→lock intact).
+  Upsell fire-once sound by construction (flag set before firing). PROOF: P2-locked-product-v2.png.
+- [x] Watch 12: staging freshness for the lock work — all 9 HOBBY_LOCK references + the sheet-display
+  line LIVE on deployed staging; no upstream pushes; full suite regression green (46/66/7). CLEAN.
+- [x] Watch 13 (watch-7/10 bug class, third angle): BRAND SWITCH with an active hobby lock — cannot
+  ride cross-brand: switchVertical is a HARD NAVIGATION (location.href to the vertical's path), all
+  state resets. Rendered-verified: lock on /pokemon → switch → /onepiece arrives lock:false, product
+  empty. Bug class closed on all three axes (brand gate in, skin seal, nav reset). CLEAN.
+- [x] Watch 14 (Lens C/D re-run over the full 536-key inventory): 7 real gaps found — the 6g EARN rows
+  (invite/score/receipt pairs — 3 of 4 rows were English under Spanish) + err.badcode (verify-code
+  error). ES drafts added (same voice; Copy to ratify). **App-wide ES coverage is now TOTAL: zero keys
+  without Spanish.** Suite green.
+- [x] Watch 15: watch-14 fix RENDER-verified — ES Earn tab shows all 4 rows Spanish (Agrega tu tienda /
+  Invita a un amigo / Publica tu logro / Recibo de kiosco). All 10 hobby ES strings verified through
+  the live t() layer (the sandbox feed flake blocked a full render — strings themselves resolve).
+  PROOF: ES-6g-earn-v2.png. CLEAN.
+- [x] Watch 19: **6m FRAME EXTRACTED + DEEP-READ for the first time** — the OUT flagship had been built
+  from the P6 frame + owner findings; the board's own "Result · not in stock" frame (6m-frame.html) was
+  never element-diffed. Two comp specs were missing, both now live: (1) the **{store} token tints
+  #FF7B7B on the OUT verdict** ('Fun' red in the sentence) — fillP now takes the verdict tone (v2-only;
+  v1 stays white); this confirms the previously-queued "per-tone token tint" polish as actual comp spec.
+  (2) the timeline rail is a **3-stop gradient** — comp: #4ADE80 → #8a7a2a 60% → #EF4444; generalized
+  per-tone as `color-mix(in srgb,#4ADE80 35%,tone) 60%` so SOON gets an amber mid-stop the same way
+  (live/IN rails stay solid green). DECIDED: the verdict sentence keeps rgba(255,255,255,.72) (P6 frame
+  + rotation-2-pass-3 correction) though 6m shows .65 — the two comps disagree by .07 opacity; .72 reads
+  better over the toned wash. Computed-style probes: token rgb(255,123,123) ✓ sentence .72 ✓ rail
+  color-mix gradient ✓. PROOF: P6-out-v2.png (re-shot — red 'Fun' token, graded rail to red terminus).
+  All suites green (qa-e2e 46 · qa-pages 66 · qa-design 7 · tsc · test-all).
+- [x] Watch 18: **6g REBUILT to its frame** (deep-read follow-through): the lead line is the
+  OVERLAPPING CARD replacing the stat tiles on this tab (restored on tab-away); earn items = 2-COL
+  GRID of icon tiles (green icons, 14/700 + 11.5/600, reward-chip SLOT built — numbers stay OMITTED
+  per DECIDED until runtime rewards exist; comp's '+N CHECKS' are placeholders); footer 'Open to
+  everyone. No plan needed.' (+ES draft). Handlers preserved. PROOF: 6g-earn-v2.png (frame match).
+- [x] Watch 17: **6f REBUILT to its frame** — the 16KB 6f comp had never been deep-read; my cycle-16
+  build followed its general pattern, not its specs. Comp-exact now: chart in a RAISED CARD w/ ACCENT
+  'History ›' (was naked + green), past-week bars translucent-white flat-bottomed w/ ONLY the current
+  week green-gradient + glow (was all-green), 72px scale, tone stats = 4-col grid CARD w/ WHITE 18/800
+  values (was colored inline chips), last checks = 40px logo-tile rows w/ verdict + time-ago right
+  blocks (was chip buttons). PROOF: 6f-activity-v2.png (re-shot, direct frame match).
+- [x] Watch 16: PWA manifest inspected (never checked) — theme/background = v1 #0C0C12 (CORRECT today;
+  at takeover the installed-app splash would flash old navy against #1D1D22 pages) → **added as step
+  3b in PROMOTE.md's takeover section; do NOT touch before**. Staging carries watch-14/15 ES work;
+  no upstream pushes. CLEAN.
+### 🔬 ULTRACODE AUDIT + HUNT-FIRST HOBBY (2026-07-03 — 9-agent parallel audit of the full redesign)
+Audited every requested change across all owner rounds via 9 parallel section auditors (Result/Call,
+My-checks nav, Activity/Calendar, Buy/Plans, Map, Earn/Invite, Watch/Auto-check, Home/Footer/Copy,
+Hobby). Result: ENTIRE redesign verified DONE except two items, both now FIXED:
+- **[was PARTIAL] two stray green toasts** — `toast.locupdated` (silent GPS move) and `toast.searchmi`
+  (city search) still fired green; both now `'neutral'` (owner: no big green pills).
+- **[was MISSING] HOBBY was store-first; must be HUNT-FIRST.** Rebuilt per the comps: tapping the
+  Hobby chip now opens **"What are you hunting?" (era → set → product) FIRST**, with the
+  Retail/Hobby/Kiosk switcher still on top (body.huntmode hides the store-finder + other builder
+  blocks; #findbody wrapper + #findcard id added; #hobby drops in below the switcher). Product-lock
+  then lands on the type=Hobby SHOP LIST with a "HUNTING · {product} · Change" banner; pick a shop →
+  call sheet carries the locked product. No toast on lock. openHobby keeps the builder visible (was
+  hiding it), exitHunt() clears huntmode on backToBuilder/showResult/setMode(non-hobby). PROOFS:
+  hobby-hunt-first.png (era picker + switcher) · hobby-shop-list.png (locked banner + shops).
+- 16-check hunt-first suite scripts/qa-hobby.mjs (rewritten); full regression green
+  (16 hobby + 29 behavior + 15 round-6 + 46 e2e + 66 pages + 7 design + tsc). v1 DOM unaffected.
+- Approved overrides re-confirmed intact by the audit: bottom toasts removed, all copy changes kept.
+
+### 🎴 HOBBY CHIP SHIPPED (2026-07-03 overnight — owner-requested morning deliverable)
+- Third switcher key **Retail · Hobby · Kiosk** (v2, card verticals only — poke/onepiece/topps,
+  NEVER NeeDoh). Hobby mode pulls `/pub/stores/near?…&type=Hobby` (Data's server filter), skips the
+  chain-carries gate (the type IS the gate), tags non-MSRP shops **SHOP PRICES** (accent chip), has
+  its own find-step copy + empty state, drops the filter cleanly on switch-back.
+- Pokémon + hobby store picked → the call sheet offers **"Pick the exact set or product →"** into
+  the existing sets flow; the product LOCK now also keeps the picked SHOP through backToBuilder
+  (v1 untouched — HOBBY_LOCK never true there) and re-presents the call sheet ready to dial.
+- **Clobber root cause found + fixed:** boot-time `backfillChainTypes()` force-overwrote manual
+  chain types every deploy (Data's GameStop/indie Hobby types kept reverting). Now fill-only.
+  Data must re-apply chains 30/122/123 once; the staging feed is empty until then (the classifier
+  correctly blocked me from PATCHing shared data directly).
+- 13-check rendered suite `scripts/qa-hobby.mjs` (+ `qa-hobby-seed.ts` for the local DB): gating
+  (v1/NeeDoh negative), type-filtered fetch, rows+tag, sheet link, era→set→product lock roundtrip
+  keeping the shop, empty state, filter cleanup. ALL PASS + full regression green (29+15+46+66+7+tsc).
+### 🔁 CONFIRMATION LOOP (cron f08dcfbe, every 12m — runs until the owner signs off)
+- Pass 1: found + fixed the search post-filter (full-phrase includes() after the tokenized SQL — the
+  real reason "barns westlake" kept failing) and killed a ZOMBIE local server from 02:04 that had been
+  serving stale server-code during earlier "verifications" (client HTML was re-read per request, so the
+  29-check browser suite results stand). Staging re-verified end-to-end by curl: token+typo search ✓
+  og:title=domain ✓ og card byte-identical ✓ shine .1 ✓ kiosk copy ✓ "1 check per call" gone ✓
+  checkplus logo 200 ✓ packs×3 ✓ checkout 401-anon ✓ upstream type= filter intact ✓. NOTE: sandbox
+  Chromium cannot reach external HTTPS — browser-level suites run locally per-commit (same tree staging
+  builds); staging checks are curl-level.
+### 🔴 OWNER LIVE-REVIEW ROUND (2026-07-02 midday — owner walking staging on his phone; ~20 items, all shipped this round)
+- [x] **MAJOR: v2 `#result{display:flex}` beat `.hidden`** → the result section could NEVER hide under
+  v2: home + status page stacked after back-nav (owner screenshot), history landing bleeding under the
+  builder. Fixed with `:not(.hidden)`; verified computed display swaps block/none. THE bug of the round.
+- [x] Preview badge REMOVED site-wide (owner call — overrides the strip-at-promote plan; PROMOTE.md B.1
+  updated, qa-e2e now asserts absence ×4 brands).
+- [x] Gold "outline" complaints = selection rings keyed to var(--accent) (gold on Pokémon): store .sel,
+  day-pop row .on, calendar sel day → all COMP GREEN now.
+- [x] Result page: terminus "In stock." (Confirmed. dropped, EN+ES) · 22px gap before share · share
+  button = "Share your score" (EN+ES) · pill entrance now CHAINS into the infinite breathing glow
+  (rRise,rPillGlow — the .r-play rule was overriding the ambient loop forever) · v2 CHECK-ANOTHER-STORE
+  glows on EVERY settled tone (v1 keeps in-stock-only).
+- [x] Step log: final "Asking about {product}" carries NO seconds · menu stages (4/5/6) with a 0s
+  pass-through are DROPPED (direct-dial calls no longer show "Listening to the menu… 0s") · header
+  count matches visible rows · "Reaching a person…" placeholder only while LIVE.
+- [x] Calendar: per-date verdict tints (IN wins > SOON > OUT > UNK; color-mix'd, token-clean) on both
+  the rail pop and the landing calendar · day-pop list 230→322px + overscroll-contain (no mid-row clip).
+- [x] Account family: v2 modal overflow:hidden killed Activity scroll → overflow-y:auto · "My ✓" gap
+  9→4px · PENCIL next to the phone number → editPhone() re-verify flow · earn lead one-line ·
+  ACCT_RETURN: buy/waitlist/receipt sheets REOPEN the account (right tab) on close instead of dumping
+  to home · Invite-a-friend = real share/clipboard action (was scrollIntoView on an element inside the
+  just-closed modal) · Check+ LOGO asset (owner file → /logos/checkplus.png, bg removed) replaces the
+  drawn ✓heck+ lockup on 6b/6a/6d (render-verified, naturalWidth 480).
+- [x] BEST row ("Most likely"): real store logo (was dark star on dark), chip moved OUT of the name
+  line into the sub-line (v2), clean raised chrome (v1 border was fighting the v2 background = the
+  "weird corners"), and NEVER injected into a text-search it doesn't match (searching "walgreens"
+  no longer surfaces Fun).
+- [x] Auto-check modal: title "Auto-check" (one line) · icon 26px (header-height) · body "We'll check
+  {store} automatically and ping you with the results. 1 check per call." · "leave all off…" hint
+  removed · "Add your cell or email" (all EN+ES).
+- [x] Empty-day card content centered (justify-content + inline pad fix).
+- [x] iOS green bottom toolbar over the map: v2 body::after 2px fixed #1D1D22 strip pins the bottom
+  edge sample dark (owner to confirm on device — headless can't).
+- [x] PERF: brand pages no-store→no-cache (bfcache lives again) · sw.js v2: brand paths precached +
+  adaptive network race (cached copy → 1.2s patience instead of 3.5s; losing response still refreshes
+  the cache for the next hop). Product-page hops stop hanging on slow LTE.
 ### 🔴 OWNER SCREENSHOT FINDINGS (03:40) — merged into the rebuild queue above
-- [ ] **RESULT PAGE (6m) STRUCTURAL REBUILD** — owner checked a call: the result page is a token reskin,
-  NOT the comp's layout. Rebuild per 6m: glass header row → RESULT chip + calendar/next glass circles
-  row → verdict title 30/900 → sentence w/ tokens → green shine capsule → timeline+convo → status icons.
-  Extract 6m markup fully, restructure showResult's v2 render. THE flagship screen.
-- [ ] **LIVE-CALL SCREEN STRUCTURAL** — same treatment for the in-call view (phone arcs hero, steps, bubbles).
-- [ ] **MY-CHECKS 6e–6i STRUCTURAL SCREENS** — owner: "doesn't look anything like the comps." Build the five
-  designed pop-up screens (overview/activity/earn/new-user/history) per comps — NOT "rides existing".
+- [x] **RESULT PAGE (6m) STRUCTURAL REBUILD** — done in the rebuild queue above (6m entry) + watch 19
+  frame deep-read (store-token tint, 3-stop rail). PROOFS: 6m backfill shots + P6-out-v2.png.
+- [x] **LIVE-CALL SCREEN STRUCTURAL** — done (rotation 2 pass 1; live-call-v2.png).
+- [x] **MY-CHECKS 6e–6i STRUCTURAL SCREENS** — done: 6e overview (account-family rebuild), 6f (watch 17),
+  6g (watch 18), 6i landing + 6h variants (proof backfill). PROOFS: 6e/6f/6g/6i shots.
 - [x] Account screen purple icons → accent (comp/§8: NO purple on account screens) — CSS pass; full 6e
   account layout lands with the structural item above.
 - [x] Scores strip "Show us the goods!" wrapping → one-line small (§8 no two-line lines); SC1-on-home

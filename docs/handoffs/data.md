@@ -3,6 +3,62 @@
 You are **Check - Data Dev.** You own the store dataset: adding/cleaning stores, logos, types,
 shipment days, values, and the import structure. (You manage the *rows*; Admin builds the *UI*.)
 
+## ⚠️ CORE PRINCIPLES — data integrity (READ FIRST, never violate)
+
+You are the STEWARD of this data. Your job is not to obey instructions blindly — it is to keep the
+data honest. If an instruction (even from the owner) would put wrong or un-callable stores in front of
+users, **STOP and push back BEFORE you do it.** The owner has explicitly asked you to do this. Getting
+this wrong erodes user trust in the whole product. Data integrity ALWAYS wins.
+
+**1. The prime directive — a store is "callable" ONLY if a human at THAT physical location can answer
+   about stock right now.** Not the chain. Not a call center. Not a recording. If there is no dialable
+   store line, it is NOT callable. Period.
+
+**2. Never make a whole chain callable by assumption.** "The brand sells Pokémon online / at this
+   chain" is chain-level evidence — it does NOT prove a given store has product on its shelf or a human
+   who can check. Flipping a whole chain to callable floods the list with dead calls and looks broken.
+   *(Real mistake, 2026-07-04: flipped every Kroger/Ralphs/Vons/Albertsons store callable → owner saw
+   14 grocers in one retail screen. Correct move was machine-stores ONLY. I should have refused the
+   blanket flip and proposed the narrow one.)*
+
+**3. The four store modes (get the flags right):**
+   | Real-world store | hasKiosk | sellsPacks | phone | stockCheckMethod | shows in |
+   |---|---|---|---|---|---|
+   | Machine **+** shelf | true | true | real | call | Kiosk **and** Retail (dual, tier 5) |
+   | Machine only (no shelf) | true | false | (any) | call | Kiosk only |
+   | Shelf only, no machine | false | true | real | call | Retail only |
+   | **Uncallable, HIDE** (call center / recording, no stock feed) | any | false | (any) | (any) + **`muted=true`** | nothing — hidden everywhere (Best Buy, Spencer's) |
+   | **Uncallable, SHOW** (site mirrors live stock) | false | false | (recording/none) | **site** | Buy-online / live-stock card, no call (Micro Center) |
+   - `callable = sellsPacks !== false && phone && !phone.startsWith("nophone:")` — this is THE gate.
+   - The call script follows the TAB the user tapped (kioskMode from the request wins over store flags),
+     so ONE dual-flagged row serves both sections. Do not create duplicate rows.
+
+**4. Uncallable chains (no human at the store answers) — pick the right treatment, never leave callable:**
+   - **HIDE it → `muted=true`** (chain-level kill-switch): vanishes from every list, never called. Use
+     when we can neither call NOR show useful stock (central call center / recording, no live-stock feed).
+     e.g. **Best Buy**, **Spencer's** (chain 19, store # is a corporate recording that hangs up — muted
+     2026-07-04). `muted` is independent of `online`/`sellsPacks` (a muted chain may still sell packs/online).
+   - **SHOW as buy-online → `stockCheckMethod="site"` + `sellsPacks=false`** (site-rail): uncallable but
+     the chain's website mirrors live stock, so we show it with live stock + buy link, no call. e.g.
+     **Micro Center**. ONLY when a `/pub/stock` feed exists — else it renders a dead "checking…" state,
+     so mute instead. (Schema doc: `docs/specs/store-data-schema.md` §5, muted row fixed 2026-07-04.)
+
+**5. "Absolutely certain" has a standard.** Shelf presence = the chain's OWN online store lists the SKU
+   (chain-level) OR a machine is on site (per-store). Social-media / anecdotal sightings = NOT certain →
+   HOLD, do not flip. (Held for this reason: WinCo, Woodman's, Gelson's, Lucky, FoodMaxx, H Mart.)
+
+**6. Safe-change discipline.** Staging first; prod only on the owner's explicit word. Every bulk change
+   must be reversible and you must know how to revert it before you run it. NEVER delete a real store
+   (deactivate only). Snapshot / dry-run before big writes.
+
+**7. The levers (endpoints, all admin-gated, browser UA + `x-admin-token`):**
+   - Surgical bulk update: `POST /api/stores/patch {where:{chain|ids[]|state}, set:{...}, dryRun}`.
+   - Full scan (for filtering by hasKiosk/etc.): `GET /api/admin/table-dump?name=retailers&limit=20000&offset=N`.
+   - Chain edit: `PATCH /api/chains/:id` (type, muted, stockCheckMethod, isMSRP, repackOnly, sellMethods…).
+   - Import/upsert-by-phone: `POST /api/stores/import`. Region/tz backfill: `POST /api/stores/backfill-regions`.
+   - Key chain flags: `type` (chip bucket; the CHAIN NAME is the specific kind), `muted` (hide chain),
+     `isMSRP` (false ⇒ resale/market-price ⇒ "SHOP PRICES" tag), `stockCheckMethod` (call|site).
+
 ## Your lane
 - `data/` — the 100K-store source JSON (stores-master, zones, intel).
 - `src/stores-import.ts` — the importer (field mapping, dedupe-by-phone, region/tz).
@@ -64,6 +120,236 @@ can badge them), bump `updated`, push. Verified codes 2026-07-02 vs TCGplayer (M
 ME03 = Perfect Order — the design grid had these mislabeled).
 
 ## Current focus (KEEP UPDATED)
+
+**Session 2026-07-06 (later) — "Hobby vanished at night" diagnosed + CATEGORY-SWEEP PLAYBOOK (owner directive).**
+
+- **"Hobby disappeared from the map" = NOT a data loss, NOT a broken chip. Data is 100% intact** (5,617
+  Hobby stores, `/pub/store-types` lists Hobby, feed returns them). Root cause: it was 11 PM PT / 2 AM ET.
+  **`public/checkit.html` line 3462** drops any `isClosed(s)` store (`openState.known && !openState.open`)
+  from the Retail/Hobby/Thrift lists. Before the midnight-hours fix, unknown-hours shops read `known:false`
+  → never `isClosed` → showed 24/7 (falsely "open"). After the fix they honestly read "likely closed" at
+  night → the filter now hides them → the whole category empties after hours. **Real-hours shops that are
+  genuinely closed at 2 AM are dropped too**, so more hours won't fix it.
+  - **RECOMMENDED FIX (mapping/website lane — checkit.html, NOT data):** show closed Hobby/Thrift stores
+    **greyed with their "Closed · opens 10 AM" label** instead of hiding them (Kiosk mode already shows
+    open+closed, line 3461). Keeps categories populated 24/7 + honest. ~1-line change at 3462. Flagged to
+    owner; do NOT unilaterally edit the UI file — coordinate.
+- **Chip architecture (answer to "does each store have a chip?"):** NOT a stored per-store tag. Derived:
+  **Retail / Hobby / Thrift / Pharmacy / …  = the store's CHAIN `type`** (one bucket per store via chainId);
+  **Kiosk = the per-store `hasKiosk` flag** (independent; a store can be Hobby AND Kiosk). Front-end chips:
+  hobby→`storeType==='Hobby'`, kiosk→`hasKiosk`, Retail→carries-brand minus Hobby/Thrift. Hobby+Thrift
+  chips are also gated: v2 skin + comp/subscription + global `flags.hobby/thrift` + **Pokémon brand** +
+  entitlement (`ensureModeChips`, checkit.html ~L2482). New category = new `chains.type` + new UI chip.
+
+- **THE CATEGORY-SWEEP PLAYBOOK (repeatable, owner 07-06 — hobby ✓ → thrift → comic → toy → beauty → …):**
+  Build a big national DB per store CATEGORY, each its own chip, big chains top-down → independents
+  bottom-up, all with hours. Per category:
+  1. **Chip** = new `chains.type` value (my lane) + front-end mode chip (mapping lane, entitlement-gated).
+  2. **Tier-1 big chains (top-down):** enumerate national/regional chains, import all locations from their
+     store-locators (consistent hours). Thrift: Goodwill, Savers/Value Village, Salvation Army, Plato's
+     Closet, Buffalo Exchange, 2nd Ave. Beauty: Sally Beauty, Ulta, SEPHORA, CosmoProf. Toy: few chains
+     (most closed) — independents dominate. Comic: almost all independent.
+  3. **Tier-2 independents (bottom-up):** harvest the category's directory (like cardshophub for hobby);
+     else WebSearch sweeps by metro. Dedupe by phone. Import with `sellsPacks:true` + the category type.
+  4. **Hours:** run the FREE WebSearch-agent wave machine (`build_wave.py` → 14 agents → `agg_hobby.py`,
+     id-keyed patch). ~300 real hours/wave in ~8 min, $0. Generalize `build_wave`/`agg` to filter by the
+     category's type instead of "Hobby".
+  5. **Continuous re-sweep:** periodically re-discover per metro — the count is never "done" (there are
+     surely more hobby shops than our 5,617; keep sweeping).
+- **IVR / phone-tree flagging (owner 07-06, coordinate w/ mapping agent):** most independents ring straight
+  to a human (callable as-is). Some use an IVR / call-center / recording. **The data model ALREADY supports
+  this:** `retailers.phoneTree` (per-store) + `chains.phoneTreeDefault` (chain) → call service reads
+  dtmf/say/connectAtSec (`buildRestockVars`), and `muted` kills dead recordings. **NEED (build):** a
+  detection step that flags stores whose calls hit an IVR (from call-result signal or an admin flag) into a
+  "needs phone-tree mapping" queue for the mapping agent to fill `phoneTree` steps. Propose an `ivr` status
+  on call results + an admin queue endpoint. This is the coordination surface the owner asked for.
+- **This week: run NONSTOP** — keep chaining hobby waves to finish ~3,055 remaining, then start thrift.
+  Hobby wave 4 (IL–LA) launched.
+
+**Session 2026-07-06 — hours truth fix + real LA shop hours + launch-readiness board (autonomy grant).**
+- **Midnight "open" bug (owner's 00:11 map, Hallmark + thrifts showing Open) — FIXED.** `src/store-hours.ts`
+  `unknownHoursState()`: stores with NO looked-up hours now read **"Likely closed" 9 PM–7 AM** (window
+  crosses midnight) and the call gate (`known && !open`) refuses them in that window. Daytime unchanged
+  (fail-open to preserve coverage). 16/16 unit tests pass (`scripts/test-store-hours.ts`, `test-storehours.ts`).
+- **Real per-day hours imported for 119 LA card/comic shops** — looked up via **FREE Google (my WebSearch
+  subagents), $0 owner spend** (the server's backfillHours/OpenAI path BILLS the owner — do NOT run it;
+  I killed a mistaken run last session). Method: 5 batches of ~30 shops → agents return per-day
+  `{mon:"HH:MM-HH:MM"|"closed"|"unknown",…}` → `scratchpad/agg_hours.py` zips to input list, matches shop
+  data by name for phone, converts to canonical `hours` JSON, upserts via `POST /api/stores/import`
+  (updated 119, inserted 0 = no dupes). "24:00" close → "00:00" (renders "till 12 AM"). Verified live:
+  LVLUP "Closed" (past Sun close), Joyful Toad "till 12 AM", Best Deer Antlers "Closed · opens 9 AM tomorrow".
+- **6 stores deactivated** (never deleted): 5 permanently-closed (returned closed ALL 7 days — Meltdown
+  Comics, Comics Unlimited, Earth-2, Card Shack HB, LA Gaming TCG) + Evike.com (airsoft big-box
+  mis-harvested into the card set; was already inactive from the prior junk sweep).
+- **23 all-"unknown" shops left on the fallback** (night-window covers them) — next: scale the free-lookup
+  method nationwide to the ~10K stores still without real hours.
+- **Launch-readiness board** committed to the repo at **`voice-caller/public/launch-readiness.html`** (for
+  Admin to bake into the dashboard; also live as an Artifact). Store network 110,316 / callable 104,047 /
+  **90.8% real hours** / 52 states / catalog 11-of-129 sets with products. Honest about the 2 gaps: hours
+  tail + older-era product depth. Numbers from `/api/admin/store-intel` + full `retailers` scan (`scratchpad/scan_launch.py`).
+- **KIOSKS ARE CALLABLE — fixed (owner correction 2026-07-06).** The pitch is "we call to verify the machine
+  is on/stocked" (kiosks go down a lot). The call service already scripted this (`calls/service.ts`
+  `kioskOnly()` → asks if the machine works), but the consumer feed's `callable` predicate excluded
+  `sellsPacks:false`, so kiosk pins showed no call button. Fixed both feed predicates in `src/server.ts`
+  (~L1202/L1291): `callable = (sellsPacks !== false || hasKiosk) && phone && !nophone`. Now the 77 kiosk-only
+  stores that have a real phone are callable; the 1,673 dual (machine+shelf) were already callable. The
+  `sellsPacks`-gated "most likely on the SHELF" surfaces (L1541) are untouched, so kiosk-only stays OUT of
+  shelf lists. **Verified: 0 kiosk chains muted.** Kiosk data: 1,886 active kiosks, 213 kiosk-only (77 w/
+  phone), 186 nophone (can't be called until we backfill store lines). Zone-cost calc (`zoneQuote`) left as-is
+  (future/billing path). Typecheck clean.
+- **National hobby-hours backfill IN PROGRESS (owner: "get the rest").** 4,363 active Hobby stores lacked
+  hours (4,315 with a complete city+state address; all have phones). Same FREE Google method, now
+  **id-keyed** (agents return `{"id":…,"mon":…}` → exact join, no name-matching). Per-store write is a
+  **non-destructive `POST /api/stores/patch {where:{ids:[id]},set:{hours,hoursUpdatedAt}}`** — only the
+  hours columns change (import would blank carries/lat/lng, so DON'T use import for hours-only updates).
+  `hoursUpdatedAt` set = "verified" stamp so reverify (PAID) skips them.
+  - **Waves 1–3 DONE (1,260 shops):** 940 real hours patched, 64 permanently-closed deactivated, 256 no-data
+    (online/home-based/appointment sellers — left on night fallback). ~75% hit rate. Verified live.
+    **Hobby-store hours coverage: 23% → 40%** (2,258/5,617). Overall network hours: 90.8% → **91.7%**.
+  - Tooling in scratchpad (repeatable): `build_wave.py` (reads `hobby_done_ids.txt`, rebuilds 14 batch files
+    excluding all done ids, sorted by state/city) → spawn 14 agents (id-keyed, write `hobbyout/hb*.json`) →
+    `agg_hobby.py --apply` (canonicalize → group by identical hours → patch; all-7-closed → deactivate;
+    all-unknown → skip; "24:00"→"00:00"). After each wave: fold ids into `hobby_done_ids.txt`, archive
+    `hobbyout/` → `hobbyout_done/wN/`. `hobby_nohours.csv` = the full 4,363-store worklist (id,name,addr,city,state,phone,chain).
+  - **~3,360 hobby stores remain** (of which ~256 are no-data online sellers with no findable hours) —
+    repeat waves. Each wave ≈ 300 real hours in ~8 min, $0 (my WebSearch subagents, never the paid backfill).
+
+**Session 2026-07-04 — Drops DB is the product SOURCE OF TRUTH; catalog now syncs from it.**
+- **dropsdb.fungibles.com** (closed beta, password login) is where product types/MSRP/retailers are
+  captured. `data/drops_db.json` is a SNAPSHOT that `seed.ts` loads → `products` table → `/pub/pokemon-sets`.
+  **New sync tool: `scripts/sync-dropsdb.ts`** (`DROPSDB_PASSWORD=… npx tsx scripts/sync-dropsdb.ts`) pulls
+  the live catalog into the snapshot. Store `DROPSDB_PASSWORD` in Railway so it can run in CI/on-demand.
+  seed.ts is `onConflictDoNothing`, so NEW products flow in on the next deploy (price changes on existing
+  rows need an upsert — future improvement).
+- **Answered "why do some sets have more product types than others":** they don't in OUR pipeline — the
+  feed mirrors the Drops DB EXACTLY (verified product-by-product with the beta pw). Chaos Rising = 3 types
+  in BOTH feed and Drops DB (7 rows, per-retailer, dedupe to ETB/Booster Bundle/Booster Box); Ascended
+  Heroes = 7 in both. So the variance is **Drops DB data-ENTRY completeness**, not a sync bug. 112 of 129
+  registry sets have 0 products because the Drops DB only tracks CURRENT drops (older sets are out of print).
+- **Gap audit for whoever maintains the Drops DB** (entered types are uneven — even core types missing):
+  Prismatic Evolutions missing Booster Box+Bundle; Ascended Heroes missing Booster Box; Chaos Rising
+  missing Blister/Build&Battle; many sets 1-3 types. Complete those IN the Drops DB → they flow to the feed.
+
+**Session 2026-07-04 (latest) — Data-integrity principles written up top + online-only flag.**
+- Added the **⚠️ CORE PRINCIPLES** block at the top of this doc (read-first). Owner directive: the Data
+  Dev is the data STEWARD and must push back on any instruction that would break integrity, BEFORE
+  acting — not after. Captured the grocery over-reach as the cautionary example.
+- **Uncallable-chain flagging (reconciled with mapping dev + the muted convention):** two treatments —
+  `muted=true` HIDES the chain (Best Buy), `stockCheckMethod=site`+`sellsPacks=false` SHOWS it as
+  buy-online with live stock (Micro Center). **Spencer's** (chain 19, corporate recording, hangs up):
+  first flagged site-rail, then **MUTED 2026-07-04** because owner wants it gone AND there's no live-stock
+  feed → hidden (199→61 search results). Fixed the misleading muted definition in
+  `docs/specs/store-data-schema.md` §5 (it said "repack-only only" — now covers the uncallable reason too).
+  Mapping dev surfacing more uncallable chains; mute or site-rail each per the §3 table.
+- **Minor debt spotted:** a few non-Spencer rows ("Spencer School", "Spencer's Corners Farm") are
+  mis-mapped under chain 19 — a name-match import artifact; re-chain/clean when convenient.
+
+**Session 2026-07-04 (later) — Grocers made callable for SHELF Pokémon (dual kiosk+retail). Staging.**
+- **Problem:** grocery chains were in our data ONLY as Pokémon vending-KIOSK sites (from
+  `pokemon-vending-import.json`, 1,915 machines) — `sellsPacks=false`, so a call only asked "is the
+  machine working?", never "do you have Pokémon in stock?". But these grocers also sell Pokémon on
+  SHELVES, so they should be callable.
+- **Model (verified in code):** the call script follows the TAB, not the store — `SEL_KIOSK` is set by
+  which section you tap (checkit.html 3560 retail→false, 3575 kiosk→true) and the request's `kioskMode`
+  WINS over the store's flags (service.ts 208). So ONE dual-flagged row (`hasKiosk=true` +
+  `sellsPacks=true` + real phone) shows in BOTH sections and asks the right question each. No duplicate rows.
+- **Did it — CORRECTED to MACHINE-STORES ONLY (scope A).** First pass flipped `sellsPacks=true` on ALL
+  rows of the 23 verified banners (4,647) — WRONG: it flooded the retail list with plain grocery stores
+  that have no card presence (owner saw 14 grocers near Woodland Hills, only 2 with machines). The rule
+  is: a store is dual ONLY if it has a MACHINE **and** the chain sells shelf. So reverted the **2,972
+  non-machine** grocery rows back to `sellsPacks=false` (out of retail) via table-dump scan → patch by
+  ids; **kept the 1,675 machine-grocers dual** (`hasKiosk=true`+`sellsPacks=true`, tier 5). Verified:
+  Woodland Hills retail went 14 grocers → 2 (both machine-stores); machine-grocer still in both sections.
+  Verified banners: Kroger family (Kroger, Fred Meyer, Fry's, King Soopers, Food 4 Less, Smith's, QFC,
+  Pick 'n Save, Metro Market, Mariano's, City Market, Harris Teeter, Ralphs) + Albertsons family
+  (Albertsons, Safeway, Jewel-Osco, Vons, Shaw's, Acme, Tom Thumb, Randalls, Star Market, Pavilions).
+  **LESSON: only flip machine-stores dual; do NOT make a whole grocery chain callable.**
+- **Certainty gate (owner: "absolutely certain they sell shelf Pokémon"):** confirmed via each family's
+  online store (kroger.com, safeway/vons/albertsons.com list live Pokémon SKUs). H-E-B confirmed too.
+- **HELD (not flipped):** **H-E-B** (84 rows — verified shelf-seller BUT placeholder rows have NO phone;
+  heb.com is Akamai-walled, so phones need a local pull / research-Claude — "you run the rest" case).
+  **WinCo, Woodman's, Gelson's, Lucky, FoodMaxx, H Mart, Uwajimaya** = shelf-Pokémon unproven, held.
+  **Mall kiosks** (Citadel/Chapel Hills/etc.) = no shelf, stay kiosk-only.
+- **Promote to prod:** re-run the same `/api/stores/patch` sellsPacks=true for those 23 banner names on
+  checkitforme.com. Then do H-E-B once its phones exist.
+
+**Session 2026-07-04 — THE PHONEBOOK: 4,123 card + 436 comic shops harvested; Thrift turned on. Staging.**
+- **National Hobby 1,188 → 5,710. Thrift 0 → 3,479.** All on staging, all correctly tagged, zero tag drift.
+- **cardshophub.com is fully harvestable** (the "phonebook"): each shop page is server-rendered JSON-LD
+  (`<script id="shop-json-ld">` → name/streetAddress/city/state/zip/telephone/geo). Sitemap enumerates
+  6,672 shop URLs at `/states/<st>/<city>/<shop>/`. Plain curl (browser is proxy-blocked with
+  ERR_CONNECTION_RESET; curl through `$HTTPS_PROXY` works). Harvested all 6,672 → **4,123 card shops,
+  50 states** after dropping 2,254 big-chain rows (GameStop/Target/etc — NEVER re-chain those) + 254
+  no-phone + 41 dup. Tooling committed: `scripts/harvest-shop-directory.py` + `scripts/transform-shops.py`.
+- **comicshoplocator.com = one-file dump.** Its locator.js does `fetch('/comic-shops/stores-search.json')`
+  — the whole directory (443 shops, compact keys n/st/c/sta/z/la/lo/p) in ONE request. → **436 comic
+  shops, 45 states.** Comic shops carry Pokémon/Magic/Yu-Gi-Oh/One Piece/Lorcana.
+- **Store-type model (owner: "must figure out the store type… maybe a Bookstore vertical later"):** chip
+  `type` is the UMBRELLA (both comic + card = "Hobby" so they ride the Hobby chip); the CHAIN is the
+  specific kind — **"Comic Book Shop" (chain 129)** vs **"Independent Card Shop" (chain 128)**, both
+  `type=Hobby isMSRP=false` (SHOP PRICES). Thrift kinds = Goodwill/Salvation Army/Savers/**Unique** (116-119,
+  `type=Thrift`). A **Bookstore** vertical is a straight `?type=Bookstore` later (that type already exists, 746).
+- **⚠️ HOURS ARE THE GAP.** Neither directory publishes structured open/close times — harvested shops
+  default to "open by day, closed 1-6am". The paid lookup works (proved on 6 LA shops → real hours +
+  live labels): `POST /api/hours/backfill` (bulk, fire-and-forget) or `POST /api/hours/:id/refresh`,
+  gated by policy flag `dogfoodHours` (OFF, ~1-2¢/store, ~5k hobby shops ≈ ~$100). **Owner deciding
+  whether to green-light.** Server has the OPENAI/GEMINI keys; my shell does not.
+- **Durable + prod-promotable:** `data/hobby-card-shops.json` (4,123), `data/comic-shops.json` (436),
+  `data/hobby-shops.json` (8 curated). **Promote to prod** = `POST checkitforme.com/api/stores/import`
+  each file, then PATCH the thrift chains (116-119→Thrift) + assert 128/129→Hobby on prod. Loop cron
+  `9e2bde0e` (15-min, 12x) keeps re-verifying tags (clobber watch) and stands ready to fold in hours.
+
+**Session 2026-07-03 (late) — Hobby expansion + phonebook-source assessment. Staging.**
+- **8 more verified card shops live on the LA Hobby chip** (was 16 CA Hobby, mostly GameStop; the LA
+  metro read as 5 GameStop + 2 indies). New indies, each Census-geocoded, real address/phone/hours,
+  in **`data/hobby-shops.json`** (version-controlled = re-importable to any env): Cards and Coffee
+  (Hollywood, Calabasas, Murrieta, Salt Lake City), Cash Cards Unlimited (Canoga Park, Thousand Oaks),
+  CoreTCG (Pasadena), LA Sports Cards (Burbank). Import result 8 inserted / 0 dup. LA Hobby chip now
+  **13 near-LA (5 GameStop + 8 indie)**, open/closed labels computing right off the hours I set.
+  Each got its OWN chain typed Hobby at insert (importer: category "hobby" → type Hobby), so they
+  survive the now-fixed boot backfill (fill-only skips already-typed chains).
+- **⚠️ CA GameStop under-imported:** CA has only 14 GameStop rows typed Hobby vs FL 106 / TX 64 / NY 59.
+  National GameStop = 1,186 (the Hobby backbone) but the CA slice is a thin early batch. Backfilling CA
+  GameStop needs a store list (their locator is bot-walled like WPN) — follow-up, owner's call.
+- **Phonebook-source verdict (owner asked "is there a source to grab a whole bunch like a phonebook"):**
+  the clean bulk sources are all walled from a plain fetch — WPN/Wizards locator = HTTP 403, Cards&Coffee
+  site = 402, cardshophub.com = a JS-rendered SPA (fetch sees only the title) AND rate-limited ("Too many
+  requests"). So no vacuum-it API. Two real paths: (a) point the research-Claude at a metro and have it
+  emit JSON in the importStores shape (schema below) — I one-shot import it; (b) a headless-browser
+  (Playwright is installed) harvest of cardshophub/locators — bigger job, ToS-gray, needs owner OK.
+  Nothing for the owner to do locally either way.
+- **Review pass (owner: "make sure everything's good"):** merged 30 upstream commits, `tsc` clean.
+  Verified intact on staging: `/pub/pokemon-sets` serves JSON (13 eras, v7 assets), `?type=Hobby`
+  filter, unverified `shipmentDay` still withheld from consumers, trimmed hours labels rendering.
+  One latent gap: a **Thrift** chip (owner's 4th taxonomy word) would be EMPTY — zero chains typed
+  "Thrift" (thrift stores sit under Discount/Off-Price). Not wired as a live chip yet, so not blocking.
+- **Durability:** all of the above is on STAGING. To make permanent, import `data/hobby-shops.json` to
+  prod (`POST checkitforme.com/api/stores/import`) — owner go/no-go, since prod shops are instantly callable.
+
+**⚡ CLOBBER ROOT CAUSE FOUND + FIXED (Website, 2026-07-03 ~05:30):** `backfillChainTypes()` in
+`src/db/import-data.ts` ran on EVERY boot and force-overwrote every chain's type from the name
+heuristic — that's what kept reverting GameStop/Burbank/PokeMall to "Other" on each deploy. It is
+now FILL-ONLY (skips any chain already typed something other than empty/"Other"). **Action for
+Data: re-apply your three chain PATCHes once more (30, 122, 123 → Hobby) — they will now stick
+across deploys.** The website's Hobby chip is live and waiting on that feed.
+**Session 2026-07-03 — Hobby went live on staging (stores + sets + filter).**
+- **Hobby STORES exist now** (they didn't — that was the "website waiting on data" blocker):
+  GameStop chain 30 → type "Hobby", isMSRP false, stockCheckMethod call, all 1,186 stores tier 2→3
+  (visible). Imported the owner's two named indie shops (verified address/phone/hours, Census-geocoded):
+  **Burbank Sportscards** (id 106573) + **PokeMall TCG** (id 106574), each its own chain (122/123),
+  type Hobby. More metro card shops = next.
+- **`/pub/stores/near?type=Hobby`** — new server-side chain-type filter (the home chips). Without it
+  the nearest-200 page in a metro is all Retail and the Hobby chip starves client-side.
+- **Pokémon set registry shipped**: `data/pokemon-sets.json` (13 eras / 129 sets, Base Set 1999 →
+  Delta Reign 2026) served at **`GET /pub/pokemon-sets`** with per-set products (type + retail from the
+  catalog) and SAME-ORIGIN asset paths (`/logos/sets|set-banners|eras/<logoKey>.png`) matching the
+  /logo-wall repo system. Logo dev drops PNGs at those paths; website renders feed.logo/banner.
+  ME codes verified vs TCGplayer: **ME2.5 = Ascended Heroes, ME03 = Perfect Order.**
+- **⚠️ CLOBBER WATCH:** something re-synced the `chains` table on staging tonight and reverted my
+  chain PATCHes once (GameStop back to type Other; the 2 new chains reset). Store rows survived.
+  Re-applied + verified. If Hobby stores vanish from the feed again, a chains config sync is
+  overwriting live edits — flag DevOps to make it respect newer rows.
+
 
 **Session 2026-07-02 — consumer surfaces show only what we KNOW (owner rule). Staging.**
 - **No unverified restock info reaches consumers, anywhere.** (1) `/pub/stores/near` no longer sends
