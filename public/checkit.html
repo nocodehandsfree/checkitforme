@@ -96,6 +96,7 @@ __BRAND_HEAD__
   input:focus{outline:none;border-color:rgba(74,222,128,.45);box-shadow:0 0 0 2px rgba(74,222,128,.12)}
   .storelist{margin-top:12px;max-height:480px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding:3px}
   .store{display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid var(--border);border-radius:12px;cursor:pointer;background:var(--terminal);transition:border-color .12s,background .12s}
+.store.shut{opacity:.56}
   .store:hover{border-color:rgba(255,255,255,.18)}
   .store.sel{border-color:var(--accent,#FFCB05);background:color-mix(in srgb,var(--accent,#FFCB05) 9%,transparent)}
   .store .ic{width:52px;height:52px;border-radius:15px;background:linear-gradient(145deg,#34343d,#23232b);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
@@ -3454,7 +3455,7 @@ function storeRowHtml(s){
   const drop=shipmentDayShort(s);
   const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', drop?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
   const shopTag=(MODE==='hobby'&&s.isMSRP===false)?` <span class="shoptag">${t('hob.shopprices','SHOP PRICES')}</span>`:'';
-  return `<div class="store ${sel}" onclick="pickStore(${s.id})">
+  return `<div class="store ${sel}${isClosed(s)?' shut':''}" onclick="pickStore(${s.id})">
     <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${storeFace(s)}</div>
     <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)}${shopTag}</div><div class="lo">${dot}${meta}</div></div>
     ${right}</div>`;
@@ -3464,7 +3465,7 @@ function renderStores(){
   const kiosk=MODE==='kiosk';
   let list=STORES.filter(s=>{
     if(kiosk){ if(!s.hasKiosk) return false; }                    // kiosk mode: vending machines (open OR closed)
-    else { if(s.sellsPacks===false) return false; if(isClosed(s)) return false; } // call mode: shelf stores only (kiosks live in the Kiosk tab)
+    else { if(s.sellsPacks===false) return false; if(isClosed(s) && MODE!=='hobby' && MODE!=='thrift') return false; } // retail hides closed; hobby/thrift KEEP closed (shown greyed) so the category never empties at night
     if(q && !storeMatch(s.name+' '+(s.location||''),q)) return false;
     if(MODE==='call' && (s.storeType==='Hobby'||s.storeType==='Thrift')) return false; // Retail = general retail only; card shops & thrift live in their own chips
     if(MODE==='call' && s.storeType==='Grocery' && s.hasKiosk) return false; // grocery chains (Ralphs/Albertsons/Pavilions) carry Pokémon via KIOSK only, not shelf — keep them in the Kiosk chip (owner 07-05; authoritative fix = mark these chains sellsPacks:false in data)
