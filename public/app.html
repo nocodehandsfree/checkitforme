@@ -1150,6 +1150,12 @@ const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEa
 const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), feedback:()=>loadFeedback(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
+let FB_OPEN=0; // unreviewed poll disagreements — count badge on the Calls ▸ Feedback tab
+async function refreshFbBadge(){
+  try{ const rows=await api('/api/feedback'); if(!Array.isArray(rows)) return; FB_OPEN=rows.filter(r=>r.disagree&&!r.reviewed).length; }catch(e){ return; }
+  const b=document.querySelector('#subnav2 button[data-sec="feedback"] .fbbadge');
+  if(b){ b.textContent=FB_OPEN>0?FB_OPEN:''; b.style.display=FB_OPEN>0?'inline-block':'none'; }
+}
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
   nav.innerHTML=Object.entries(NAV_GROUPS).map(([g,o])=>
@@ -1160,9 +1166,10 @@ function showGroup(g, sectionId){
   document.querySelectorAll('#grpnav button').forEach(b=>b.classList.toggle('active',b.dataset.grp===g));
   const sn=document.getElementById('subnav2');
   if(sn){ sn.style.display = grp.tabs.length>1?'flex':'none';
-    sn.innerHTML=grp.tabs.map(t=>`<button data-sec="${t[0]}" onclick="showSection('${t[0]}')">${ICO(t[2],15)}<span style="vertical-align:middle">${esch(t[1])}</span></button>`).join('');
+    sn.innerHTML=grp.tabs.map(t=>`<button data-sec="${t[0]}" onclick="showSection('${t[0]}')">${ICO(t[2],15)}<span style="vertical-align:middle">${esch(t[1])}</span>${t[0]==='feedback'?`<span class="fbbadge" style="display:${FB_OPEN>0?'inline-block':'none'};background:#F4D03F;color:#111;font-size:10px;font-weight:800;border-radius:20px;padding:1px 6px;margin-left:5px">${FB_OPEN>0?FB_OPEN:''}</span>`:''}</button>`).join('');
     const setFade=()=>sn.classList.toggle('ovf', sn.scrollWidth - sn.scrollLeft > sn.clientWidth + 2); // fade the right edge while tabs are off-screen
     sn.onscroll=setFade; requestAnimationFrame(setFade); }
+  if(g==='calls') refreshFbBadge();
   showSection(sectionId || GROUP_LAST[g] || grp.tabs[0][0], true);
 }
 function showSection(id, fromGroup){
@@ -2017,6 +2024,7 @@ async function loadFeedback(){
   const rows=await api('/api/feedback');
   if(!Array.isArray(rows)){ list.innerHTML='<div class="empty">Could not load feedback.</div>'; return; }
   const openDis=rows.filter(r=>r.disagree&&!r.reviewed).length;
+  FB_OPEN=openDis; { const _b=document.querySelector('#subnav2 button[data-sec="feedback"] .fbbadge'); if(_b){ _b.textContent=FB_OPEN>0?FB_OPEN:''; _b.style.display=FB_OPEN>0?'inline-block':'none'; } }
   const sum=document.getElementById('fb_summary');
   const st=(n,l,cls)=>`<div class="stat"><div class="n"${cls?` style="color:${cls}"`:''}>${n}</div><div class="l">${l}</div></div>`;
   if(sum) sum.innerHTML=`<div class="card report"><div class="stats" style="margin-bottom:0">${st(openDis,'to review',openDis?'#F4D03F':'')}${st(rows.filter(r=>r.disagree).length,'disagreements')}${st(rows.length,'responses')}</div></div>`;
