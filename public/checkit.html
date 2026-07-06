@@ -1487,11 +1487,15 @@ html[data-skin="v2"] .p6d-live .buygrid-h{color:#8A8A96}
 /* 6e MY-CHECKS POP-UP REBUILD — comp structure: green wash header (My ✓ · Done · phone · plan chip),
    two overlapping raised stat tiles, Overview/Activity/Earn keys, yellow icon rows. Legacy header
    (avatar/name/cred pill) hides under v2 — the wash header replaces it. */
-html[data-skin="v2"] #acctOverlay,html[data-skin="v2"] #buyOverlay{align-items:flex-end;padding:0}
-html[data-skin="v2"] #acctOverlay .modal,html[data-skin="v2"] #buyOverlay .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:86vh;margin:0}
+html[data-skin="v2"] #acctOverlay,html[data-skin="v2"] #buyOverlay,html[data-skin="v2"] #pageOverlay{align-items:flex-end;padding:0}
+/* Footer links (About/FAQ/Terms/Privacy/Contact) slide up as a bottom sheet, like every other panel. */
+html[data-skin="v2"] #pageOverlay .modal{padding:6px 22px calc(24px + env(safe-area-inset-bottom));overflow-y:auto;max-height:86vh}
+html[data-skin="v2"] #pageOverlay .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:10px auto 14px}
+html[data-skin="v2"] #pageOverlay .modal h3{font-size:24px;font-weight:900;letter-spacing:-.5px;margin:2px 0 12px}
+html[data-skin="v2"] #acctOverlay .modal,html[data-skin="v2"] #buyOverlay .modal,html[data-skin="v2"] #pageOverlay .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:86vh;margin:0}
 /* Bottom sheets slide the WHOLE way up from below the fold (owner 07-05: the old 24px nudge+fade read as
    "appearing", not sliding). Close/swipe-down slide back down — handled in closeAccount/closeBuy + sheetDrag. */
-html[data-skin="v2"] #acctOverlay.on .modal,html[data-skin="v2"] #buyOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
+html[data-skin="v2"] #acctOverlay.on .modal,html[data-skin="v2"] #buyOverlay.on .modal,html[data-skin="v2"] #pageOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 @keyframes sheetUpV2{from{transform:translateY(100%)}to{transform:translateY(0)}}
 html[data-skin="v2"] #buyOverlay .modal{overflow-y:auto;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
 /* 6c CHECKOUT (v2) — branded on-site Stripe Elements page. Bottom sheet, comp tokens: raised order
@@ -6141,6 +6145,7 @@ function sheetDrag(overlayId, closeFn){
     else { m.style.transition='transform .2s'; m.style.transform=''; } }); // snap back up
 }
 sheetDrag('buyOverlay', ()=>closeBuy());
+sheetDrag('pageOverlay', ()=>closePage()); // footer pages are a bottom sheet now — swipe down to dismiss
 sheetDrag('acctOverlay', ()=>{ try{ closeAccount(true); }catch(_){ } }); // sheetDrag already ran the slide-down → instant hide
 sheetDrag('coOverlay', ()=>{ try{ closeCheckout(); }catch(_){ } });
 async function buy(kind, annual){
