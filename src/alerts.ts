@@ -100,25 +100,38 @@ async function espEmail(_to: string, _subject: string, _body: string): Promise<{
   return { ok: false, detail: "esp_send_todo" };
 }
 
-/** Send one alert to a user. Resolves channel + recipient, meters SMS, sends (or stubs), and logs. */
-export async function sendAlert(userId: string, event: AlertEvent, tokens: Record<string, string | number | undefined> = {}, opts: { to?: string } = {}): Promise<{ status: string; detail?: string }> {
+/** Send one alert to a user. Resolves channel + recipient, meters SMS, sends (or stubs), and logs.
+ *  opts.tag is appended to the logged detail (e.g. "r:42" for restock cooldown lookups). */
+export async function sendAlert(userId: string, event: AlertEvent, tokens: Record<string, string | number | undefined> = {}, opts: { to?: string; tag?: string } = {}): Promise<{ status: string; detail?: string }> {
   const channel = EVENT_CHANNEL[event];
   const account = await getAccount(userId).catch(() => null);
   const tpls = await getAlertTemplates();
   const to = opts.to || (channel === "sms" ? account?.phone : account?.email) || "";
-  if (!to) { await log(userId, event, channel, null, "skipped_nocontact"); return { status: "skipped_nocontact" }; }
+  const tagged = (d?: string) => [opts.tag, d].filter(Boolean).join(" ") || undefined;
+  if (!to) { await log(userId, event, channel, null, "skipped_nocontact", tagged()); return { status: "skipped_nocontact" }; }
 
   if (channel === "sms") {
     const { left, cap } = await smsAlertsLeft(userId);
-    if (cap != null && left != null && left <= 0) { await log(userId, event, channel, to, "skipped_cap"); return { status: "skipped_cap" }; }
+    if (cap != null && left != null && left <= 0) { await log(userId, event, channel, to, "skipped_cap", tagged()); return { status: "skipped_cap" }; }
     const body = fill(tpls[event].sms, tokens);
     const res = await twilioSms(to, body);
-    const status = res.ok ? "sent" : "stubbed"; await log(userId, event, channel, to, status, res.detail);
+    const status = res.ok ? "sent" : "stubbed"; await log(userId, event, channel, to, status, tagged(res.detail));
     return { status, detail: res.detail };
   }
   const subject = fill(tpls[event].emailSubject, tokens), body = fill(tpls[event].emailBody, tokens);
   const res = await espEmail(to, subject, body);
-  const status = res.ok ? "sent" : "stubbed"; await log(userId, event, channel, to, status, res.detail);
+  const status = res.ok ? "sent" : "stubbed"; await log(userId, event, channel, to, status, tagged(res.detail));
+  return { status, detail: res.detail };
+}
+
+/** Send an email-only alert to an address with no account (waitlist signups). No metering, always logs. */
+export async function sendAnonEmail(event: AlertEvent, tokens: Record<string, string | number | undefined>, to: string): Promise<{ status: string; detail?: string }> {
+  if (EVENT_CHANNEL[event] !== "email") return { status: "skipped_notemail" };
+  if (!to) { await log(null, event, "email", null, "skipped_nocontact"); return { status: "skipped_nocontact" }; }
+  const tpls = await getAlertTemplates();
+  const subject = fill(tpls[event].emailSubject, tokens), body = fill(tpls[event].emailBody, tokens);
+  const res = await espEmail(to, subject, body);
+  const status = res.ok ? "sent" : "stubbed"; await log(null, event, "email", to, status, res.detail);
   return { status, detail: res.detail };
 }
 
@@ -130,6 +143,35 @@ export async function alertSubscribe(userId: string, o: { kind?: string; retaile
   if (existing) { await db.update(alertSubscriptions).set({ active: 1, channel }).where(eq(alertSubscriptions.id, existing.id)); return { ok: true, id: existing.id }; }
   const ins = await db.insert(alertSubscriptions).values({ userId, kind, retailerId: o.retailerId ?? null, categoryId: o.categoryId ?? null, productLabel: o.productLabel ?? null, channel }).returning({ id: alertSubscriptions.id });
   return { ok: true, id: ins[0]?.id ?? 0 };
+}
+
+/** Have we already texted this user about this store recently? Stops a burst of in_stock signals
+ *  (site + Discord + a call, all within minutes) from firing three texts for one restock. */
+async function restockedRecently(userId: string, retailerId: number, withinHours = 6): Promise<boolean> {
+  const since = Math.floor(Date.now() / 1000) - withinHours * 3600;
+  const rows = await db.select().from(alertSends).where(and(eq(alertSends.userId, userId), eq(alertSends.event, "restock")));
+  const tag = `r:${retailerId}`;
+  return rows.some((r) => (r.detail || "").includes(tag) && (r.createdAt || 0) >= since);
+}
+
+/** A store just showed in stock: text every active watcher of that store (or any-store watchers of the
+ *  category), respecting the per-user monthly cap and the per-store cooldown. Best-effort, never throws. */
+export async function fanoutRestock(retailerId: number, o: { storeName?: string; product?: string; categoryId?: number | null } = {}): Promise<{ notified: number; skipped: number }> {
+  let notified = 0, skipped = 0;
+  try {
+    const subs = await db.select().from(alertSubscriptions).where(and(eq(alertSubscriptions.kind, "restock"), eq(alertSubscriptions.active, 1)));
+    for (const s of subs) {
+      // Match: this store (or an any-store opt-in), and category if the sub pinned one.
+      if (s.retailerId != null && s.retailerId !== retailerId) { continue; }
+      if (s.categoryId != null && o.categoryId != null && s.categoryId !== o.categoryId) { continue; }
+      if (await restockedRecently(s.userId, retailerId)) { skipped++; continue; }
+      const product = o.product || s.productLabel || "your product";
+      // tag "r:<id>" is stamped into the send's logged detail so the cooldown can find it next time.
+      const res = await sendAlert(s.userId, "restock", { store: o.storeName || "the store", product }, { tag: `r:${retailerId}` });
+      if (res.status === "sent" || res.status === "stubbed") notified++; else skipped++;
+    }
+  } catch { /* fan-out must never break ingest */ }
+  return { notified, skipped };
 }
 
 /** A user's active alert opt-ins + how many restock texts they have left this month. */

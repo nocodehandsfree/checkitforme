@@ -4119,7 +4119,22 @@ async function loadGwWaitlist(){
   if(!d||d.error||!d.total){ el.textContent='No waitlist signups yet.'; return; }
   const regions=(d.byRegion||[]).map(r=>`${esch(r.region)} <b style="color:var(--green)">${r.n}</b>`).join(' · ');
   const recent=(d.recent||[]).slice(0,12).map(w=>`<div style="padding:5px 0;border-top:1px solid var(--border);font-size:12.5px">${esch(w.contact)}${w.area?(' · '+esch(w.area)):''}${w.region?(' · '+esch(w.region)):''}</div>`).join('');
-  el.innerHTML=`<div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px">${d.total} waiting</div><div style="margin-bottom:10px">${regions||'—'}</div>${recent}`;
+  // "We're live in your area" send: pick a region, email everyone waiting there (once). Email-only, never SMS.
+  const opts=(d.byRegion||[]).filter(r=>r.region&&r.region!=='Unknown').map(r=>`<option value="${esch(r.region)}">${esch(r.region)} (${r.n})</option>`).join('');
+  const notify=opts?`<div style="display:flex;gap:8px;align-items:center;margin:10px 0 4px"><select id="wl_region" style="flex:1;background:var(--terminal);border:1px solid var(--border);border-radius:8px;padding:7px 9px;color:var(--text-strong);font-size:12.5px"><option value="">Notify a region we just launched…</option>${opts}</select><button class="act" style="font-size:12.5px;padding:7px 11px" onclick="notifyWaitlist()">Email them</button></div><div id="wl_notify_out" class="meta" style="font-size:11px"></div>`:'';
+  el.innerHTML=`<div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px">${d.total} waiting</div><div style="margin-bottom:10px">${regions||'—'}</div>${notify}${recent}`;
+}
+async function notifyWaitlist(){
+  const region=(document.getElementById('wl_region')||{}).value; const out=document.getElementById('wl_notify_out');
+  if(!region){ if(out) out.textContent='Pick a region first.'; return; }
+  // Dry-run first so the operator sees the count before sending.
+  const dry=await api('/api/waitlist/notify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({region,dry:1})});
+  const n=dry&&dry.would_notify||0;
+  if(!n){ if(out) out.textContent='Nobody with an email is still un-notified in '+region+'.'; return; }
+  if(!confirm(`Email ${n} ${region} waitlist signup(s) that we're live? This can't be undone.`)) return;
+  const r=await api('/api/waitlist/notify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({region})});
+  if(r&&!r.error){ toast(`Emailed ${r.notified} in ${region}`); loadGwWaitlist(); }
+  else toast('Could not send');
 }
 async function loadGwStoreReqs(){
   const el=document.getElementById('gw_storereqs'); if(!el) return;

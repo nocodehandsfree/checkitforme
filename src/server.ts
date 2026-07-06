@@ -44,7 +44,7 @@ import { check as rlCheck, clientIp, LIMITS } from "./ratelimit";
 import { isGmailConfigured, gmailReceiptTick, debugRecentInbox } from "./gmail-receipts";
 import { rankBets } from "./best-bet";
 import { referralStatus, claimReferral } from "./referrals";
-import { sendAlert, alertSubscribe, myAlerts, getAlertTemplatesPublic, setAlertTemplates, monthKey } from "./alerts";
+import { sendAlert, sendAnonEmail, alertSubscribe, myAlerts, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
 
 /** 409-style gate: returns a closed payload if we KNOW the store is closed right now, else null. */
 async function closedGate(retailerId: number): Promise<{ error: string; label: string } | null> {
@@ -674,10 +674,13 @@ app.post("/app/email", async (c) => {
   const { email } = await c.req.json().catch(() => ({}));
   const e = String(email || "").trim().toLowerCase();
   if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return c.json({ error: "invalid_email" }, 400);
-  await getAccount(u.id);
+  const before = await getAccount(u.id);
+  const isFirstEmail = e && !before?.email; // going from no email → an email = time for the welcome
   await db.update(accounts).set({ email: e || null }).where(eq(accounts.clerkUserId, u.id));
   // Opt-in email → Brevo (newsletter/alerts). Fire-and-forget so the UI isn't blocked on Brevo.
   if (e) brevoUpsertContact(e, { PHONE: u.phone || "" }).catch(() => {});
+  // First time we have an address to reach them → send the branded welcome (first check on us).
+  if (isFirstEmail) { try { await sendAlert(u.id, "welcome", {}, { to: e }); } catch { /* never block saving the email */ } }
   return c.json({ ok: true, email: e || null });
 });
 
@@ -1354,7 +1357,16 @@ app.post("/api/stock/ingest", async (c) => {
   const b = await c.req.json();
   const items = Array.isArray(b) ? b : b?.signals;
   if (!Array.isArray(items) || !items.length) return c.json({ error: "signals[] required" }, 400);
-  return c.json(await ingestSignals(items));
+  const out = await ingestSignals(items);
+  // A confirmed restock at a known store → text everyone watching it (cap + cooldown enforced in fanoutRestock).
+  let notified = 0;
+  for (const it of items) {
+    if (it?.status !== "in_stock" || !it?.retailerId) continue;
+    const st = (await db.select({ name: retailers.name }).from(retailers).where(eq(retailers.id, Number(it.retailerId))))[0];
+    const r = await fanoutRestock(Number(it.retailerId), { storeName: (st?.name || "the store").split("—")[0].trim(), product: it.product, categoryId: it.categoryId ?? null });
+    notified += r.notified;
+  }
+  return c.json({ ...out, restockNotified: notified });
 });
 // New intel revision landed in data/stock_check_intel.json → push it over already-classified
 // chains (the boot seed only fills blanks). Deliberate owner action, hence force.
@@ -3764,6 +3776,22 @@ app.get("/api/waitlist", async (c) => {
   const byRegion: Record<string, number> = {};
   for (const r of rows) byRegion[r.region || "Unknown"] = (byRegion[r.region || "Unknown"] || 0) + 1;
   return c.json({ total: rows.length, byRegion: Object.entries(byRegion).sort((a, b) => b[1] - a[1]).map(([region, n]) => ({ region, n })), recent: rows.slice(0, 50) });
+});
+// Admin: "we're live in your area" — email every not-yet-notified waitlist signup in a region, then mark
+// them notified so nobody gets it twice. Email-only (owner: never text the waitlist). Preview with dry=1.
+app.post("/api/waitlist/notify", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const region = String(b.region || "").trim();
+  if (!region) return c.json({ error: "region required" }, 400);
+  const rows = (await db.select().from(waitlist).where(and(eq(waitlist.region, region), eq(waitlist.notified, false))))
+    .filter((r) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(r.contact)); // email-only
+  if (b.dry) return c.json({ dry: true, region, would_notify: rows.length });
+  let sent = 0;
+  for (const r of rows) {
+    try { await sendAnonEmail("waitlist", { city: r.area || region }, r.contact); sent++; } catch { /* keep going */ }
+    await db.update(waitlist).set({ notified: true }).where(eq(waitlist.id, r.id));
+  }
+  return c.json({ ok: true, region, notified: sent });
 });
 
 // ---- Retailers (with green status) ----
