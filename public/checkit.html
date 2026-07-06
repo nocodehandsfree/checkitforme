@@ -1964,8 +1964,8 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <input id="sr_city" class="kin" data-i18n-ph="ph.storecity" placeholder="Thousand Oaks, CA">
     <label class="klbl" data-i18n="sr.note">Anything else <span style="color:var(--muted);font-weight:400">(optional)</span></label>
     <input id="sr_note" class="kin" data-i18n-ph="ph.storedetails" placeholder="address, which products, etc.">
-    <label class="klbl" data-i18n="sr.email">Email or cell <span style="color:var(--muted);font-weight:400">(optional) — we'll notify you the moment it's added</span></label>
-    <input id="sr_contact" class="kin" type="text" inputmode="email" autocomplete="on" data-i18n-ph="ph.cellmail" placeholder="cell number or email">
+    <label class="klbl" data-i18n="sr.email">Email <span style="color:var(--muted);font-weight:400">(optional). We'll email you the moment it's live.</span></label>
+    <input id="sr_contact" class="kin" type="email" inputmode="email" autocomplete="email" data-i18n-ph="ph.cellmail" placeholder="your email">
     <div id="sr_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
     <button class="cta" id="sr_btn" onclick="submitStoreReq()" style="margin-top:8px;width:100%" data-i18n="sr.submit">Submit store →</button>
     </div>
@@ -1982,9 +1982,9 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   <div class="modal" style="position:relative;max-width:400px;text-align:center">
     <span class="x" onclick="closeWaitlist()">×</span>
     <div id="wlMark" style="display:flex;justify-content:center;margin-bottom:6px"></div>
-    <h3 style="margin:6px 0 2px" data-i18n="wl.title">Get notified when we launch here</h3>
-    <div class="meta" style="margin-bottom:16px" data-i18n="wl.sub">Drop your email or number. The second we go live in your area, you'll be first to know.</div>
-    <input id="wl_contact" type="text" inputmode="email" autocomplete="email" placeholder="email or phone number" data-i18n-ph="wl.ph" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 12px;font-size:16px;box-sizing:border-box">
+    <h3 style="margin:6px 0 2px" data-i18n="wl.title">We'll email you when we launch here</h3>
+    <div class="meta" style="margin-bottom:16px" data-i18n="wl.sub">Drop your email. The second we go live in your area, you're the first to know.</div>
+    <input id="wl_contact" type="email" inputmode="email" autocomplete="email" placeholder="your email" data-i18n-ph="wl.ph" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 12px;font-size:16px;box-sizing:border-box">
     <div id="wl_err" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
     <button class="cta" id="wl_btn" onclick="submitWaitlist()" style="margin-top:6px;width:100%" data-i18n="wl.cta">Join the list →</button>
   </div>
@@ -2280,7 +2280,7 @@ const I18N={ es:{
   'cover.types':'Tipos de tienda que cubrimos. Toca el pin para ver <b>las tuyas</b>:',
   'st.open':'Abierto','st.closed':'Cerrado','st.till':'hasta',
   'sc.post':'Publica tu logro','sc.where':'¿Dónde lo conseguiste?','sc.store.ph':'Busca tu tienda…','sc.what':'¿Qué conseguiste?','sc.photo':'Agrega una foto de tu logro','sc.postit':'Publícalo →','back':'← Atrás',
-  'sr.title':'Agrega tu tienda','sr.sub':'Dinos qué tienda agregar. Cuando esté disponible, <b>tu próxima llamada es gratis</b>.','sr.name':'Nombre de la tienda <span style="color:var(--muted);font-weight:400">(requerido)</span>','sr.city':'Ciudad y estado <span style="color:var(--muted);font-weight:400">(requerido)</span>','sr.note':'Algo más <span style="color:var(--muted);font-weight:400">(opcional)</span>','sr.email':'Tu celular o correo <span style="color:var(--muted);font-weight:400">(opcional) para avisarte cuando esté lista</span>','sr.submit':'Enviar tienda →','sr.err.need':'Agrega el nombre de la tienda y su ciudad para que podamos encontrarla.','sr.done.title':'Tienda enviada 🙌','sr.done.cta':'Listo','sr.done.body':"Revisaremos <b>{s}</b> y la agregaremos al mapa. En cuanto esté disponible, <b>tu próxima verificación es gratis</b>.",
+  'sr.title':'Agrega tu tienda','sr.sub':'Dinos qué tienda agregar. Cuando esté disponible, <b>tu próxima llamada es gratis</b>.','sr.name':'Nombre de la tienda <span style="color:var(--muted);font-weight:400">(requerido)</span>','sr.city':'Ciudad y estado <span style="color:var(--muted);font-weight:400">(requerido)</span>','sr.note':'Algo más <span style="color:var(--muted);font-weight:400">(opcional)</span>','sr.email':'Correo <span style="color:var(--muted);font-weight:400">(opcional). Te enviamos un correo en cuanto esté lista.</span>','sr.submit':'Enviar tienda →','sr.err.need':'Agrega el nombre de la tienda y su ciudad para que podamos encontrarla.','sr.done.title':'Tienda enviada 🙌','sr.done.cta':'Listo','sr.done.body':"Revisaremos <b>{s}</b> y la agregaremos al mapa. En cuanto esté disponible, <b>tu próxima verificación es gratis</b>.",
   // builder extras
   'cat.specific':'¿Algo específico?','cat.specific.note':'(opcional) fija el producto exacto','cat.any':'Cualquier {x}. Todo cuenta',
   'sched.step':'📅 Tus auto-verificaciones','sched.step.note':'· llamamos en días de envío','sched.from':'desde','sched.shipday':'día de envío','sched.cancel':'Cancelar',
@@ -2296,7 +2296,7 @@ const I18N={ es:{
   'co.title':'Pago','co.change':'Cambiar','co.orcard':'O paga con tarjeta','co.loading':'Cargando pago seguro…','co.subscribe':'Suscribirse','co.pay':'Pagar','co.cancel':'Cancela cuando quieras','co.secured':'Protegido por','co.processing':'Procesando…','co.failed':'El pago no se procesó. Inténtalo de nuevo.','co.redirect':'Abriendo pago seguro…','co.checksmo':'verificaciones al mes','co.monthly':'mensual','co.annual':'anual','co.paygsub':'Pago único · las verificaciones no caducan',
   'ph.quoted':'Precio indicado','ph.overmsrp':'sobre el precio de lista','ph.title':'Precios encontrados','ph.best':'MEJOR','ph.oos':'agotado',
   'plan.member':'Miembro',
-  'buy.tabplans':'Planes','buy.tabpayg':'Por uso','plan.on':'Tienes','plan.checks':'verificaciones','plan.percheck':'aprox.','plan.percheck2':'por verificación','plan.noexpire':'no caducan','acct.stat.run2':'Verificaciones hoy','acct.perweek2':'Verificaciones esta semana','auth.newcell':'Danos tu nuevo celular','ph.cellmail':'celular o correo',
+  'buy.tabplans':'Planes','buy.tabpayg':'Por uso','plan.on':'Tienes','plan.checks':'verificaciones','plan.percheck':'aprox.','plan.percheck2':'por verificación','plan.noexpire':'no caducan','acct.stat.run2':'Verificaciones hoy','acct.perweek2':'Verificaciones esta semana','auth.newcell':'Danos tu nuevo celular','ph.cellmail':'tu correo',
   'ref.sharemsg':'¡Oye! Mira esta tecnología. Está increíble.\nNos ayuda a encontrar productos virales en stock como cartas Pokémon a precio de tienda.\nRegístrate y ambos ganamos 3 verificaciones gratis: ','ref.copied':'¡Enlace de invitación copiado!','ref.copy':'Copia tu enlace de invitación:','ref.both':'Ambos reciben <b style="color:#fff">3 verificaciones gratis</b> cuando se registran.','ref.copybtn':'COPIAR','ref.text':'Mensaje','ref.post':'Publicar','ref.more':'Más',
   'kioskonly':'Solo kiosco','kiosk.precall':'Solo kiosco. Preguntaremos si su kiosco está funcionando y surtido, no por un envío.',
   'closednow':'· cerrado ahora',
@@ -2360,7 +2360,7 @@ const I18N={ es:{
   // schedule modal
   'sch.perk':'Beneficio de miembro Check+','sch.title':'Auto-verificación','sch.days':'¿Qué días?','sch.time':'Hora más temprana para llamar','sch.where':'Agrega tu celular o correo','sch.ph':'correo o teléfono','sch.cta':'Activar auto-verificación →','sch.setting':'Configurando…','sch.on.days':'📅 Auto-verificación activa. Llamaremos esos días','sch.on.ship':'📅 Auto-verificación activa. Llamaremos el día de envío de esta tienda','sch.canceled':'Auto-verificación cancelada','sch.cancelfail':'No se pudo cancelar. Inténtalo de nuevo',
   // waitlist modal
-  'wl.title':'Te avisamos cuando lancemos aquí','wl.sub':'Deja tu correo o número. En cuanto lleguemos a tu zona, serás el primero en saberlo.','wl.ph':'correo o número de teléfono','wl.cta':'Unirme a la lista →','wl.adding':'Agregándote…','wl.done':"🙌 Estás en la lista. Te contactamos en cuanto lancemos cerca de ti",
+  'wl.title':'Te enviamos un correo cuando lancemos aquí','wl.sub':'Deja tu correo. En cuanto lleguemos a tu zona, eres el primero en saberlo.','wl.ph':'tu correo','wl.cta':'Unirme a la lista →','wl.adding':'Agregándote…','wl.done':"🙌 Estás en la lista. Te enviamos un correo en cuanto lancemos cerca de ti",
   // refer modal
   'ref.title':'Da {n} verificaciones, recibe {n}','ref.sub':'Cuando un amigo se registre con tu enlace y haga su primera verificación, <b>ambos</b> reciben {n} verificaciones gratis.','ref.row':'Invita a un amigo. Ambos reciben una verificación gratis','ref.sub.one':'Se une con tu enlace y hace una verificación. Una verificación gratis para <b>los dos</b>.','ref.sub.n':'Se une con tu enlace y hace una verificación. <b>{n} verificaciones gratis</b> para los dos.','ref.copy':'copiar','ref.copied2':'copiado ✓','ref.signin':'toca aquí para tu enlace de invitación','ref.t.text':'Texto','ref.t.post':'Publicar','ref.t.more':'Más','ref.msg.r1':'una verificación gratis','ref.msg.rN':'{n} verificaciones gratis','ref.msg':'¡Oye! Mira esta tecnología, está increíble.\nNos ayuda a encontrar rápido sobres, cajas y ETBs de {x} a precio de tienda.\nRegístrate y los dos recibimos {r}:','ref.msg.simple':'¡Oye! Mira esta tecnología, está increíble.\nNos ayuda a encontrar {x} en stock a precio de tienda.\nRegístrate y los dos recibimos {r}:','ref.sms':'Mándalo a un amigo','ref.post':'𝕏 Publicar','ref.joined':'🎉 {n} ya se unieron','ref.loading':'Cargando tu enlace…','ref.welcome':'🎁 ¡Bienvenido! {n} verificaciones gratis agregadas',
   // receipt modal
@@ -2755,7 +2755,7 @@ async function submitWaitlist(){
   btn.disabled=false; btn.textContent=t('wl.cta','Join the list →');
   if(!r||r.error){ $('wl_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
   track('waitlist_join');
-  closeWaitlist(); toast(t('wl.done',"🙌 You're on the list. We'll reach out the moment we launch near you."));
+  closeWaitlist(); toast(t('wl.done',"🙌 You're on the list. We'll email you the moment we launch near you."));
 }
 
 // --- Referrals: give free checks, get free checks ---
