@@ -3720,7 +3720,18 @@ app.get("/api/alerts/log", async (c) => {
   // Rollup: sends this month by event+channel+status, so the dashboard can show volume at a glance.
   const mk = monthKey(); const roll: Record<string, number> = {};
   for (const r of rows) { if (r.monthKey === mk) { const k = `${r.event}.${r.channel}.${r.status}`; roll[k] = (roll[k] || 0) + 1; } }
-  return c.json({ month: mk, rollup: roll, recent: rows.map((r) => ({ id: r.id, userId: r.userId, event: r.event, channel: r.channel, to: r.toAddr, status: r.status, detail: r.detail, at: r.createdAt })) });
+  // Who's signed up (active restock opt-ins), newest first — so Admin sees the customer list.
+  const subs = await db.select().from(alertSubscriptions).where(eq(alertSubscriptions.active, 1)).orderBy(desc(alertSubscriptions.createdAt));
+  const subUsers = new Set(subs.map((s) => s.userId));
+  // Delivery readiness: are the provider creds actually set? (drives the "live vs stubbed" banner in Admin)
+  const smsLive = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && (process.env.TWILIO_SMS_FROM || process.env.TWILIO_MESSAGING_SERVICE_SID));
+  const emailLive = !!(process.env.BRAVO_API_KEY || process.env.ESP_API_KEY);
+  return c.json({
+    month: mk, rollup: roll,
+    delivery: { sms: smsLive, email: emailLive },
+    subscribers: { total: subUsers.size, subscriptions: subs.length, recent: subs.slice(0, 50).map((s) => ({ id: s.id, userId: s.userId, kind: s.kind, retailerId: s.retailerId, productLabel: s.productLabel, channel: s.channel, at: s.createdAt })) },
+    recent: rows.map((r) => ({ id: r.id, userId: r.userId, event: r.event, channel: r.channel, to: r.toAddr, status: r.status, detail: r.detail, at: r.createdAt })),
+  });
 });
 app.get("/api/store-requests", async (c) => c.json(await db.select().from(storeRequests).orderBy(desc(storeRequests.createdAt))));
 app.patch("/api/store-requests/:id", async (c) => {

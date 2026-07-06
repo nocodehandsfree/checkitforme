@@ -127,6 +127,14 @@
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   @media(max-width:560px){.grid2{grid-template-columns:1fr}}
   .pill{display:inline-flex;align-items:center;font-size:10.5px;font-weight:700;color:var(--purple);background:var(--tint-purple-bg);border:1px solid var(--tint-purple-border);padding:4px 11px;border-radius:var(--r-pill)}
+  .pill.g{color:var(--green);background:rgba(74,222,128,.1);border-color:rgba(74,222,128,.3)}
+  .pill.a{color:#F59E0B;background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3)}
+  .pill.r{color:var(--red);background:rgba(248,113,113,.1);border-color:rgba(248,113,113,.3)}
+  /* Alerts editor fields (God View → Alerts) */
+  .fld{display:block;margin-bottom:8px} .fld:last-child{margin-bottom:0}
+  .fld .fl{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:4px}
+  .fld input,.fld textarea{background:var(--terminal);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text-strong);font-size:13px;font-family:inherit}
+  .fld textarea{resize:vertical;line-height:1.4}
   .transcript{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12.5px;color:#cfcfe0;background:var(--terminal);border-radius:10px;padding:12px;margin-top:10px}
   .empty{color:var(--muted);font-size:13px;padding:30px;text-align:center}
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--sheet);border:1px solid var(--border);padding:12px 18px;border-radius:12px;font-size:13px;opacity:0;transition:.2s}
@@ -594,6 +602,27 @@
     <div class="meta" style="margin:0 0 12px">When stores restock, and what's landing. <span data-tip="Learned from real call data. Tap a store for its own breakdown."></span></div>
     <div id="restock_detail"></div>
     <div id="restock_net" class="meta">Loading…</div>
+  </section>
+  <section id="alerts">
+    <h2>Alerts</h2>
+    <div class="meta" style="margin:0 0 12px">The messages we send customers, who's signed up, and every send. <span data-tip="Restock alerts go by text (each plan gets a monthly cap, it's a cost line). Store-live, waitlist and welcome go by email. Nothing sends for real until the Twilio number and the Bravo email key are set in Railway — until then every send is logged as 'stubbed' so you can watch the flow."></span></div>
+    <div class="card">
+      <div class="name">Delivery status</div>
+      <div id="al_status" class="meta">Loading…</div>
+    </div>
+    <div class="card">
+      <div class="name">This month</div>
+      <div id="al_rollup" class="meta">Loading…</div>
+    </div>
+    <div class="card">
+      <div class="name">Message templates <span data-tip="Tokens fill in per send: {store} {product} {city} {name}. Keep the copy-guide voice — a friend who did you a favor, no dashes, 'check' is the unit."></span></div>
+      <div id="al_templates">Loading…</div>
+      <div style="margin-top:12px"><button class="act" onclick="saveAlertTemplates()">Save messages</button> <span id="al_saved" class="meta"></span></div>
+    </div>
+    <div class="card">
+      <div class="name">Recent sends</div>
+      <div id="al_log" class="meta">Loading…</div>
+    </div>
   </section>
   <section id="workflows">
     <h2>Workflows</h2>
@@ -1179,14 +1208,14 @@ let CATEGORIES = [];
 
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
-  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Live','bolt'],['users','Users','card'],['restock','Restock','cal'],['growth','Policy','rise'],['calc','Calc','sliders'],['plans','Plans','card']]},
+  godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Live','bolt'],['users','Users','card'],['restock','Restock','cal'],['alerts','Alerts','note'],['growth','Policy','rise'],['calc','Calc','sliders'],['plans','Plans','card']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
   calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Chains','tree'],['settings','App','sliders']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['workflows','Workflows','note'],['testing','Testing','phone-call'],['fun','Fun','sliders']]},
   launch:   {label:'Launch',   ico:'trophy',tabs:[['gtm','Go-to-Market','check']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), alerts:()=>loadAlerts(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
 function renderGroupNav(){
@@ -3761,6 +3790,56 @@ function decorateChrome(){
     const cp=[...m[1].replace(/[️‍]/g,'')][0];
     const mark = EMOJI_ICO[cp]==='live' ? '<span class="livedot"></span>' : '';
     el.innerHTML = mark + el.innerHTML.slice(m[0].length); });
+}
+// ---- Alerts (God View → Alerts): editable message templates, subscribers, and the send log ----
+const AL_EVENTS=[
+  ['restock','Restock (text)','sms','Sent by text when a store restocks a product they’re watching. Counts against the plan’s monthly text cap.'],
+  ['store_added','Store went live (email)','email','Sent when a store a customer requested goes live. Their free check is already granted.'],
+  ['waitlist','We’re live in your area (email)','email','Sent to a waitlist signup when we launch in their region.'],
+  ['welcome','Welcome (email)','email','First email after signup. First check is on us.'],
+];
+let AL_TPL={};
+function alField(id,label,val,tall){ return `<label class="fld"><span class="fl">${esch(label)}</span>`
+  +(tall?`<textarea id="${id}" rows="3" style="width:100%;box-sizing:border-box">${esch(val||'')}</textarea>`
+        :`<input id="${id}" type="text" value="${esch(val||'')}" style="width:100%;box-sizing:border-box">`)+`</label>`; }
+async function loadAlerts(){
+  const tEl=document.getElementById('al_templates'); if(!tEl) return;
+  AL_TPL=await api('/api/alerts/templates')||{};
+  tEl.innerHTML=AL_EVENTS.map(([k,label,chan,hint])=>{
+    const t=AL_TPL[k]||{};
+    const body= chan==='sms'
+      ? alField('al_'+k+'_sms','Text message',t.sms,true)
+      : alField('al_'+k+'_subj','Email subject',t.emailSubject,false)+alField('al_'+k+'_body','Email body',t.emailBody,true);
+    return `<div class="drow" style="padding:10px 0;border-top:1px solid var(--border)"><div class="name" style="margin-bottom:2px">${esch(label)}</div><div class="meta" style="margin:0 0 8px">${esch(hint)}</div>${body}</div>`;
+  }).join('');
+  const log=await api('/api/alerts/log')||{};
+  // Delivery banner: green when the provider creds are set, amber "stubbed" until then.
+  const dv=log.delivery||{};
+  const chip=(on,label)=>`<span class="pill ${on?'g':'a'}" style="margin-right:8px">${on?'●':'○'} ${esch(label)} ${on?'live':'not set yet'}</span>`;
+  const sEl=document.getElementById('al_status'); if(sEl) sEl.innerHTML=chip(dv.sms,'Text (Twilio)')+chip(dv.email,'Email (Bravo)')+`<div class="meta" style="margin-top:6px">${(dv.sms&&dv.email)?'Both channels are live.':'Sends are logged as “stubbed” until the missing keys are set in Railway. Nothing goes to a customer yet.'}</div>`;
+  // Month rollup
+  const roll=log.rollup||{}, rEl=document.getElementById('al_rollup');
+  if(rEl){ const ks=Object.keys(roll); const subs=log.subscribers||{};
+    rEl.innerHTML=`<div class="stats"><div class="stat"><div class="n">${subs.total||0}</div><div class="l">signed up</div></div><div class="stat"><div class="n">${Object.values(roll).reduce((a,b)=>a+b,0)}</div><div class="l">sends this month</div></div></div>`
+      +(ks.length?`<div style="margin-top:8px">`+ks.sort().map(k=>{const [ev,ch,st]=k.split('.');return `<div class="rsbar"><span class="rsbl">${esch(ev)} · ${esch(ch)} · ${esch(st)}</span><b>${roll[k]}</b></div>`;}).join('')+`</div>`:'<div class="meta" style="margin-top:6px">No sends yet this month.</div>'); }
+  // Recent sends
+  const lg=document.getElementById('al_log'), recent=log.recent||[];
+  if(lg){ lg.innerHTML=recent.length?recent.slice(0,60).map(r=>{
+      const when=r.at?new Date(r.at*1000).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
+      const stcls=r.status==='sent'?'g':(r.status==='stubbed'?'a':'r');
+      return `<div class="rsbar"><span class="rsbl" style="flex-basis:auto">${esch(r.event)} → ${esch(r.to||r.userId||'—')}</span><span class="pill ${stcls}">${esch(r.status)}</span><span class="meta" style="margin-left:8px">${esch(when)}</span></div>`;
+    }).join(''):'No sends yet.'; }
+}
+async function saveAlertTemplates(){
+  const patch={};
+  for(const [k,,chan] of AL_EVENTS){
+    if(chan==='sms'){ const v=(document.getElementById('al_'+k+'_sms')||{}).value; patch[k]={sms:v||''}; }
+    else{ const subj=(document.getElementById('al_'+k+'_subj')||{}).value, body=(document.getElementById('al_'+k+'_body')||{}).value; patch[k]={emailSubject:subj||'',emailBody:body||''}; }
+  }
+  const r=await api('/api/alerts/templates',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(patch)});
+  const s=document.getElementById('al_saved');
+  if(r&&!r.error){ AL_TPL=r; if(s){ s.textContent='Saved'; setTimeout(()=>{s.textContent='';},2000); } toast('Messages saved'); }
+  else toast('Could not save messages');
 }
 async function loadGrowth(){
   POL=await api('/api/policy');

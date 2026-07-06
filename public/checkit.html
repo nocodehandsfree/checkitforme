@@ -2371,6 +2371,7 @@ const I18N={ es:{
   // watch modal
   'watch.title':'Avísame cuando vuelva','watch.sub':'Te avisamos en cuanto una llamada lo confirme en stock aquí.','watch.ph':'correo o teléfono','watch.cta':'Vigilar esta tienda →','sc.photolabel':'Foto',
   'sch.body':'Verificamos <b id="sch_store">la tienda</b> automáticamente y te avisamos con los resultados.<b id="sch_cat" style="display:none"></b>','watch.setting':'Configurando…','watch.done':"🔔 Listo. Te avisamos en cuanto vuelva",
+  'watch.verify.email':'<b>Ve a tu correo para verificar tu email.</b>','watch.verify.sms':'<b>Te enviaremos un mensaje para confirmar tu celular.</b>','watch.then':'Luego te avisamos en cuanto se confirme en stock.','watch.done2':'Listo','watch.left':'Te quedan {n} de {cap} alertas de texto este mes.',
   // schedule modal
   'sch.perk':'Beneficio de miembro Check+','sch.title':'Auto-verificación','sch.days':'¿Qué días?','sch.time':'Hora más temprana para llamar','sch.where':'Agrega tu celular o correo','sch.ph':'correo o teléfono','sch.cta':'Activar auto-verificación →','sch.setting':'Configurando…','sch.on.days':'📅 Auto-verificación activa. Llamaremos esos días','sch.on.ship':'📅 Auto-verificación activa. Llamaremos el día de envío de esta tienda','sch.canceled':'Auto-verificación cancelada','sch.cancelfail':'No se pudo cancelar. Inténtalo de nuevo',
   // waitlist modal
@@ -6291,15 +6292,24 @@ async function submitWatch(){
   const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(c);
   if(!isEmail&&!isPhone){ markFld($('watch_contact'),true); $('watch_err').textContent=''; return; }
   const btn=$('watch_btn'); btn.disabled=true; btn.textContent=t('watch.setting','Setting it up…');
-  const r=await api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,contact:c})});
+  const channel=isEmail?'email':'sms';
+  // Register the standing opt-in twice: /pub/watch feeds the legacy Admin "Restock watches" card,
+  // and /app/alerts/subscribe puts it in the metered alerts system (per-plan SMS cap + Admin tracking).
+  const [r,sub]=await Promise.all([
+    api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,contact:c})}),
+    appApi('/app/alerts/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:'restock',retailerId:SEL_STORE.id,categoryId:SEL_CAT,productLabel:findProductLabel(),channel})}),
+  ]);
   btn.disabled=false; btn.textContent=t('watch.cta','Watch this store →');
-  if(!r||r.error){ $('watch_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
-  track('watch_set',{retailerId:SEL_STORE.id,channel:isEmail?'email':'sms'});
+  if((!r||r.error)&&(!sub||sub.error)){ $('watch_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
+  track('watch_set',{retailerId:SEL_STORE.id,channel});
   // In-place confirmation (owner: no toasts, no crowd counts). The input goes away; the box tells
   // them the ONE next step, then how the alert lands. Verification wiring = Admin build.
   $('watch_contact').style.display='none';
   const sub2=$('watch_sub');
-  if(sub2) sub2.innerHTML=(isEmail?t('watch.verify.email','<b>Go to your inbox to verify your email.</b>'):t('watch.verify.sms',"<b>We'll text you to confirm your cell.</b>"))+'<br><span style="color:#8A8A96">'+t('watch.then',"Then we'll ping you the instant it's confirmed in stock.")+'</span>';
+  let leftLine='';
+  // For text alerts on a capped plan, tell them how many they have left this month.
+  try{ const me=await appApi('/app/alerts/me'); if(channel==='sms'&&me&&me.smsAlertsCap!=null){ leftLine='<br><span style="color:#8A8A96">'+tf('watch.left','{n} of {cap} text alerts left this month.',{n:me.smsAlertsLeft,cap:me.smsAlertsCap})+'</span>'; } }catch(_){ }
+  if(sub2) sub2.innerHTML=(isEmail?t('watch.verify.email','<b>Go to your inbox to verify your email.</b>'):t('watch.verify.sms',"<b>We'll text you to confirm your cell.</b>"))+'<br><span style="color:#8A8A96">'+t('watch.then',"Then we'll ping you the instant it's confirmed in stock.")+'</span>'+leftLine;
   btn.textContent=t('watch.done2','Done'); btn.onclick=closeWatch;
 }
 
