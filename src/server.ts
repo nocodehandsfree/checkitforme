@@ -11,7 +11,7 @@ import { WebSocketServer, type WebSocket } from "ws";
 import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql } from "drizzle-orm";
 import { db, client } from "./db/client";
 import {
-  callResults, categories, chains, communityPosts, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, waitlist, watches, zones, zoneRetailers,
+  alertSends, alertSubscriptions, callResults, categories, chains, communityPosts, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, waitlist, watches, zones, zoneRetailers,
 } from "./db/schema";
 import { config } from "./config";
 import { assertProdSecurity } from "./security-checks";
@@ -44,6 +44,7 @@ import { check as rlCheck, clientIp, LIMITS } from "./ratelimit";
 import { isGmailConfigured, gmailReceiptTick, debugRecentInbox } from "./gmail-receipts";
 import { rankBets } from "./best-bet";
 import { referralStatus, claimReferral } from "./referrals";
+import { sendAlert, alertSubscribe, myAlerts, getAlertTemplatesPublic, setAlertTemplates, monthKey } from "./alerts";
 
 /** 409-style gate: returns a closed payload if we KNOW the store is closed right now, else null. */
 async function closedGate(retailerId: number): Promise<{ error: string; label: string } | null> {
@@ -3687,6 +3688,40 @@ app.get("/app/my-store-requests", async (c) => {
     requests: rows.map((r) => ({ id: r.id, storeName: r.storeName, city: r.city, status: r.status, rewarded: !!r.rewardedAt, createdAt: r.createdAt })),
   });
 });
+
+// ---- Customer alerts (restock opt-in + status) ----
+app.post("/app/alerts/subscribe", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const b = await c.req.json().catch(() => ({}));
+  await getAccount(u.id, u.email || undefined);
+  const r = await alertSubscribe(u.id, {
+    kind: b.kind ? String(b.kind) : "restock",
+    retailerId: b.retailerId != null ? Number(b.retailerId) : null,
+    categoryId: b.categoryId != null ? Number(b.categoryId) : null,
+    productLabel: b.productLabel ? String(b.productLabel).slice(0, 120) : null,
+    channel: b.channel === "email" ? "email" : "sms",
+  });
+  return c.json(r);
+});
+app.get("/app/alerts/me", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  return c.json(await myAlerts(u.id));
+});
+
+// ---- Admin: editable alert message templates + the send log (tracking) ----
+app.get("/api/alerts/templates", async (c) => c.json(await getAlertTemplatesPublic()));
+app.patch("/api/alerts/templates", async (c) => {
+  try { return c.json(await setAlertTemplates(await c.req.json())); } catch (e) { return c.json({ error: String(e) }, 400); }
+});
+app.get("/api/alerts/log", async (c) => {
+  const rows = await db.select().from(alertSends).orderBy(desc(alertSends.createdAt)).limit(200);
+  // Rollup: sends this month by event+channel+status, so the dashboard can show volume at a glance.
+  const mk = monthKey(); const roll: Record<string, number> = {};
+  for (const r of rows) { if (r.monthKey === mk) { const k = `${r.event}.${r.channel}.${r.status}`; roll[k] = (roll[k] || 0) + 1; } }
+  return c.json({ month: mk, rollup: roll, recent: rows.map((r) => ({ id: r.id, userId: r.userId, event: r.event, channel: r.channel, to: r.toAddr, status: r.status, detail: r.detail, at: r.createdAt })) });
+});
 app.get("/api/store-requests", async (c) => c.json(await db.select().from(storeRequests).orderBy(desc(storeRequests.createdAt))));
 app.patch("/api/store-requests/:id", async (c) => {
   const b = await c.req.json().catch(() => ({}));
@@ -3703,6 +3738,8 @@ app.patch("/api/store-requests/:id", async (c) => {
         await getAccount(row.userId);
         await grantCredits(row.userId, reward);
         await db.update(storeRequests).set({ rewardedAt: Date.now() }).where(eq(storeRequests.id, id));
+        // Tell the submitter their store is live (email — never SMS for this event).
+        try { await sendAlert(row.userId, "store_added", { store: row.storeName, city: row.city || "" }); } catch { /* never block the grant */ }
         return c.json({ ok: true, granted: { userId: row.userId, checks: reward } });
       }
     }

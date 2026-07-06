@@ -29,6 +29,7 @@ export interface Tier {
   monthlyCents: number;
   annualCents: number;    // billed once/year; default = −17% of 12×monthly (owner-editable)
   checksPerMonth: number; // subscription quota, reset each billing cycle (no rollover)
+  smsAlertsPerMonth: number; // COGS cap: how many restock SMS alerts this tier gets per month (email uncapped)
   features: Record<string, boolean>; // per-tier premium entitlements (admin-editable matrix)
   premiumAsks: boolean;   // DERIVED = features.exact_products (kept for existing call-gating call-sites)
   stripeProductId: string | null;
@@ -46,17 +47,18 @@ export interface PlansConfig {
 export const annualDefaultCents = (monthlyCents: number): number => Math.round(monthlyCents * 12 * 0.83);
 
 // Owner's ladder (2026-07-03), low → high. All premium features ON for every paid tier by default.
-const tierDef = (key: string, name: string, monthlyCents: number, checksPerMonth: number): Tier => ({
-  key, name, monthlyCents, annualCents: annualDefaultCents(monthlyCents), checksPerMonth,
+const tierDef = (key: string, name: string, monthlyCents: number, checksPerMonth: number, smsAlertsPerMonth: number): Tier => ({
+  key, name, monthlyCents, annualCents: annualDefaultCents(monthlyCents), checksPerMonth, smsAlertsPerMonth,
   features: allFeaturesOn(), premiumAsks: true,
   stripeProductId: null, monthlyPriceId: null, annualPriceId: null, pub: null,
 });
 export const DEFAULT_PLANS: PlansConfig = {
   tiers: [
-    tierDef("family",   "Family",   499,  15),
-    tierDef("collector", "Collector", 999,  30),
-    tierDef("hunter",   "Hunter",   1999, 100),
-    tierDef("operator", "Operator", 4999, 300),
+    // smsAlertsPerMonth = restock-text budget per tier (COGS control; owner: Family = 5). Email is uncapped.
+    tierDef("family",   "Family",   499,  15,  5),
+    tierDef("collector", "Collector", 999,  30,  15),
+    tierDef("hunter",   "Hunter",   1999, 100,  40),
+    tierDef("operator", "Operator", 4999, 300, 150),
   ],
   // PAYG: per-check slides 99¢ (10) → 60¢ (100) with volume (owner, 2026-07-03).
   payg: {
@@ -89,6 +91,7 @@ export function normalizePlans(raw: unknown): PlansConfig {
       monthlyCents,
       annualCents: t.annualCents != null ? clampCents(t.annualCents) : annualDefaultCents(monthlyCents),
       checksPerMonth: Math.max(0, Math.round(Number(t.checksPerMonth ?? d.checksPerMonth) || 0)),
+      smsAlertsPerMonth: Math.max(0, Math.round(Number((t as Partial<Tier>).smsAlertsPerMonth ?? d.smsAlertsPerMonth) || 0)),
       features,
       premiumAsks: !!features.exact_products, // derived: the "exact set/product" call ask
       stripeProductId: t.stripeProductId ?? null,

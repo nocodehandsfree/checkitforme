@@ -197,6 +197,16 @@ export async function bootstrap() {
     id INTEGER PRIMARY KEY AUTOINCREMENT, contact TEXT, store_name TEXT NOT NULL, chain TEXT, address TEXT,
     city TEXT, state TEXT, note TEXT, status TEXT NOT NULL DEFAULT 'new', user_id TEXT, rewarded_at INTEGER,
     created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+  // Customer alerts: standing opt-ins + the send log (tracking + per-plan SMS metering).
+  await client.execute(`CREATE TABLE IF NOT EXISTS alert_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'restock',
+    retailer_id INTEGER, category_id INTEGER, product_label TEXT, channel TEXT NOT NULL DEFAULT 'sms',
+    active INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+  await client.execute("CREATE INDEX IF NOT EXISTS alert_subs_user_idx ON alert_subscriptions(user_id, active)").catch(() => {});
+  await client.execute(`CREATE TABLE IF NOT EXISTS alert_sends (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, event TEXT NOT NULL, channel TEXT NOT NULL,
+    to_addr TEXT, status TEXT NOT NULL, detail TEXT, month_key TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+  await client.execute("CREATE INDEX IF NOT EXISTS alert_sends_meter_idx ON alert_sends(user_id, channel, month_key)").catch(() => {});
   await client.execute(`CREATE TABLE IF NOT EXISTS kiosk_receipts (
     id INTEGER PRIMARY KEY AUTOINCREMENT, message_id TEXT NOT NULL UNIQUE, machine_id TEXT, product TEXT,
     total TEXT, order_id TEXT, txn_at TEXT, claimed_by TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);

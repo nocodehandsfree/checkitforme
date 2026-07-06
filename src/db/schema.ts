@@ -407,6 +407,32 @@ export const storeRequests = sqliteTable("store_requests", {
   createdAt: integer("created_at").notNull().default(now),
 });
 
+/** A customer's standing opt-in to be alerted (today: restock of a product at a store). */
+export const alertSubscriptions = sqliteTable("alert_subscriptions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").notNull(),        // whose alert
+  kind: text("kind").notNull().default("restock"), // restock | (future kinds)
+  retailerId: integer("retailer_id"),       // null = any store
+  categoryId: integer("category_id"),       // the brand/category they're watching
+  productLabel: text("product_label"),      // free-text product (e.g. "151 booster box")
+  channel: text("channel").notNull().default("sms"), // sms | email
+  active: integer("active").notNull().default(1),
+  createdAt: integer("created_at").notNull().default(now),
+});
+
+/** One row per message we send (or would send) — the audit log for tracking + per-plan SMS metering. */
+export const alertSends = sqliteTable("alert_sends", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id"),                  // recipient account (null for anonymous contact sends)
+  event: text("event").notNull(),           // restock | store_added | waitlist | welcome
+  channel: text("channel").notNull(),       // sms | email
+  toAddr: text("to_addr"),                  // phone or email we sent to
+  status: text("status").notNull(),         // sent | stubbed | failed | skipped_cap | skipped_nocontact
+  detail: text("detail"),                   // provider id / error / reason
+  monthKey: text("month_key"),              // "YYYY-MM" bucket for cheap monthly metering
+  createdAt: integer("created_at").notNull().default(now),
+});
+
 /** Email leads captured from the public Runnr gate (one free call requires an email). */
 export const leads = sqliteTable("leads", {
   id: integer("id").primaryKey({ autoIncrement: true }),
