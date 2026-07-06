@@ -723,7 +723,7 @@ __BRAND_HEAD__
      the footer reserves the fab's WHOLE corner (58px + 22px gap ≈ 80px each way) so no row —
      copyright, socials, language — can ever sit under the thumb button. */
   body.fabbed .site-footer{padding-right:90px;padding-bottom:92px}
-  .foot-links{display:flex;flex-wrap:wrap;gap:8px 18px;margin-bottom:14px}
+  .foot-links{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 18px;margin-bottom:14px}
   .foot-links a{color:#8f8fa0;font-size:13px;font-weight:700;text-decoration:none;cursor:pointer}
   .foot-links a:hover{color:#fff}
   .foot-meta{display:flex;align-items:center;gap:12px;margin-bottom:16px;justify-content:space-between} /* Option B: Discord/X left, language switcher pushed far right */
@@ -1477,6 +1477,8 @@ html[data-skin="v2"] #buyOverlay{align-items:flex-end;padding:0}
 html[data-skin="v2"] #buyOverlay .modal{max-width:520px;width:100%;margin:0 auto;border-radius:28px 28px 0 0;padding:8px 20px calc(22px + env(safe-area-inset-bottom));max-height:88vh;overflow-y:auto}
 html[data-skin="v2"] #buyOverlay .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:10px auto 18px}
 html[data-skin="v2"] #buyOverlay .modal .x{display:none}
+/* Bottom sheets have a grab handle + swipe-down + backdrop-tap to close, so the corner × is redundant clutter. Kill it on every slide-up. */
+html[data-skin="v2"] #acctOverlay .modal>.x,html[data-skin="v2"] #buyOverlay .modal>.x,html[data-skin="v2"] #pageOverlay .modal>.x,html[data-skin="v2"] #upsellOverlay .modal>.x,html[data-skin="v2"] #coOverlay .modal>.x,html[data-skin="v2"] #paidOverlay .modal>.x{display:none!important}
 /* OWNER 05:33 SCREENSHOT PASS — the sheet must be the comp's type scale: centered logo + 26/900/-.8
    CENTERED title, 4-col raised icon TILES (not a text checklist), twin raised cycle keys, tier type
    15.5/12.5/19, CONTINUE ring capsule + Stripe line. */
@@ -2615,15 +2617,17 @@ function renderFooter(){
   const L=(POLICY.links)||{}, by=$('footYear'); if(by) by.textContent=new Date().getFullYear();
   const fb=$('footBrand'); if(fb) fb.textContent='';  // the brand name lives inside the logo now
   const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:30px;width:auto;object-fit:contain;border-radius:0;display:block;margin:-4px 0">`; }
-  // v2 footer = TWO lines: links row, then [logo …spacer… socials + lang] (owner). The © stays tiny by the logo.
+  // v2 footer = TWO centered lines: the links row, then a tidy CENTERED cluster [logo · ©year · socials ·
+  // lang]. (Was logo-left / socials-right, which spread into an awkward wide gap on desktop. Owner 07-06:
+  // center it so desktop + phone read the same.) The © stays tiny next to the logo.
   if(isV2()){ try{
     const meta=document.querySelector('.foot-meta'), bot=document.querySelector('.foot-bottom');
     if(meta&&bot&&fm&&!meta.contains(fm)){
       meta.insertBefore(fm,meta.firstChild);
-      const cp=bot.querySelector('.foot-copy'); if(cp){ cp.style.cssText='font-size:11px;color:#66666F;align-self:center;margin-right:auto'; meta.insertBefore(cp,fm.nextSibling); }
+      const cp=bot.querySelector('.foot-copy'); if(cp){ cp.style.cssText='font-size:11px;color:#66666F;align-self:center'; meta.insertBefore(cp,fm.nextSibling); }
       bot.style.display='none';
-      meta.style.cssText='display:flex;align-items:center;gap:12px;width:100%';
-      const soc=meta.querySelector('.foot-social'); if(soc) soc.style.marginLeft='auto';
+      meta.style.cssText='display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;width:100%';
+      const soc=meta.querySelector('.foot-social'); if(soc) soc.style.marginLeft='';
     }
   }catch(_){ } }
   // Discord + X always shown; link to policy URLs when set, else a placeholder.
