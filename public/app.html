@@ -1081,6 +1081,36 @@
       <div id="lab_t_body" class="transcript">…</div>
     </div>
   </section>
+
+  <section id="gtm">
+    <h2>Go-to-Market</h2>
+    <div class="meta" style="margin:-4px 0 12px">Everything left before we're live. Tick items off; filter by who owns them or where the work sits. Add your own anytime.</div>
+    <div class="card" style="margin-bottom:12px">
+      <div id="gtm_bar" class="meta" style="font-weight:800;color:#fff;font-size:14px">Loading…</div>
+      <div id="gtm_progress" style="height:8px;border-radius:6px;background:rgba(255,255,255,.06);margin:9px 0 2px;overflow:hidden"><div id="gtm_progress_fill" style="height:100%;width:0%;background:linear-gradient(90deg,#4ADE80,#22c55e);transition:width .3s"></div></div>
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
+        <span class="meta" style="font-size:11px">Area</span>
+        <select id="gtm_f_area" onchange="renderGtm()" style="flex:0 0 auto"><option value="">All</option><option value="backend">Backend</option><option value="frontend">Frontend</option><option value="ops">Ops / Growth</option></select>
+        <span class="meta" style="font-size:11px">Agent</span>
+        <select id="gtm_f_agent" onchange="renderGtm()" style="flex:0 0 auto"></select>
+        <span class="meta" style="font-size:11px">Show</span>
+        <select id="gtm_f_status" onchange="renderGtm()" style="flex:0 0 auto"><option value="open">Open</option><option value="">All</option><option value="done">Done</option><option value="critical">Launch-critical</option></select>
+      </div>
+    </div>
+    <div id="gtm_list"><div class="empty">Loading…</div></div>
+    <div class="card" style="margin-top:12px">
+      <div class="name" style="font-size:13px">Add an item</div>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
+        <input id="gtm_new_title" placeholder="What needs doing" style="flex:1 1 240px">
+        <select id="gtm_new_area" style="flex:0 0 auto"><option value="backend">Backend</option><option value="frontend">Frontend</option><option value="ops" selected>Ops / Growth</option></select>
+        <select id="gtm_new_agent" style="flex:0 0 auto"></select>
+        <label class="meta" style="font-size:11px;display:inline-flex;align-items:center;gap:5px"><input type="checkbox" id="gtm_new_crit"> Launch-critical</label>
+        <button type="button" class="btn" onclick="gtmAdd()">Add</button>
+      </div>
+    </div>
+  </section>
 </main>
 <div class="toast" id="toast"></div>
 
@@ -1153,9 +1183,10 @@ const NAV_GROUPS={
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
   calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['statuses','Statuses','tag'],['trees','Chains','tree'],['settings','App','sliders']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['workflows','Workflows','note'],['testing','Testing','phone-call'],['fun','Fun','sliders']]},
+  launch:   {label:'Launch',   ico:'trophy',tabs:[['gtm','Go-to-Market','check']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
 function renderGroupNav(){
@@ -1194,6 +1225,67 @@ window.addEventListener('popstate', (e)=>{
   const id=e.state&&e.state.tab; if(!id||!SECTION_GROUP[id]) return;
   NAV_RESTORING=true; try{ showSection(id); } finally { NAV_RESTORING=false; }
 });
+
+// ---- Go-to-Market launch checklist. Fetches /api/gtm, renders with area+agent+status filters,
+//      ticks items off (todo → doing → done), and lets the owner add/remove. The client owns the list
+//      and POSTs the whole thing back on every change (fine for one operator). ----
+const GTM_AGENTS={owner:'Owner',devops:'DevOps',website:'Website',admin:'Admin',data:'Data',copy:'Copy',design:'Design',qa:'QA',support:'Support agent',discord:'Discord',social:'Social / X'};
+const GTM_AREA={backend:'Backend',frontend:'Frontend',ops:'Ops / Growth'};
+let GTM_ITEMS=[];
+function gtmAgentLabel(a){ return GTM_AGENTS[a]||a||'—'; }
+async function loadGtm(){
+  // populate the agent selects once
+  const opts='<option value="">All agents</option>'+Object.entries(GTM_AGENTS).map(([k,v])=>`<option value="${k}">${esch(v)}</option>`).join('');
+  const fa=document.getElementById('gtm_f_agent'); if(fa&&!fa.dataset.done){ fa.innerHTML=opts; fa.dataset.done='1'; }
+  const na=document.getElementById('gtm_new_agent'); if(na&&!na.dataset.done){ na.innerHTML=Object.entries(GTM_AGENTS).map(([k,v])=>`<option value="${k}"${k==='owner'?' selected':''}>${esch(v)}</option>`).join(''); na.dataset.done='1'; }
+  const r=await api('/api/gtm'); GTM_ITEMS=(r&&r.items)||[]; renderGtm();
+}
+function renderGtm(){
+  const fArea=(document.getElementById('gtm_f_area')||{}).value||'';
+  const fAgent=(document.getElementById('gtm_f_agent')||{}).value||'';
+  const fStatus=(document.getElementById('gtm_f_status')||{}).value; const showStat=(fStatus===undefined)?'open':fStatus;
+  const done=GTM_ITEMS.filter(i=>i.status==='done').length, total=GTM_ITEMS.length;
+  const crit=GTM_ITEMS.filter(i=>i.critical), critDone=crit.filter(i=>i.status==='done').length;
+  const bar=document.getElementById('gtm_bar'); if(bar) bar.textContent=`${done}/${total} done · launch-critical ${critDone}/${crit.length}`;
+  const fill=document.getElementById('gtm_progress_fill'); if(fill) fill.style.width=(total?Math.round(done/total*100):0)+'%';
+  let list=GTM_ITEMS.filter(i=>{
+    if(fArea&&i.area!==fArea) return false;
+    if(fAgent&&i.agent!==fAgent) return false;
+    if(showStat==='open'&&i.status==='done') return false;
+    if(showStat==='done'&&i.status!=='done') return false;
+    if(showStat==='critical'&&!i.critical) return false;
+    return true;
+  });
+  const el=document.getElementById('gtm_list'); if(!el) return;
+  if(!list.length){ el.innerHTML='<div class="empty">Nothing here — adjust the filters or add an item.</div>'; return; }
+  const dot={todo:'#64748b',doing:'#fbbf24',done:'#4ADE80'}, next={todo:'doing',doing:'done',done:'todo'};
+  el.innerHTML=list.map(i=>{
+    const idx=GTM_ITEMS.indexOf(i);
+    const strike=i.status==='done'?'text-decoration:line-through;opacity:.55':'';
+    return `<div class="card" style="display:flex;gap:11px;align-items:flex-start;margin-bottom:8px">
+      <button type="button" title="Cycle status" onclick="gtmCycle(${idx})" style="flex:0 0 auto;margin-top:2px;width:20px;height:20px;border-radius:50%;border:2px solid ${dot[i.status]};background:${i.status==='done'?dot.done:'transparent'};cursor:pointer"></button>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;color:#fff;font-size:14px;${strike}">${esch(i.title)}${i.critical?' <span style="color:#f87171;font-size:10px;font-weight:800;vertical-align:middle">● LAUNCH</span>':''}</div>
+        ${i.detail?`<div class="meta" style="font-size:12px;margin-top:3px;${strike}">${esch(i.detail)}</div>`:''}
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+          <span class="meta" style="font-size:10.5px;background:rgba(167,139,250,.14);border:1px solid rgba(167,139,250,.35);color:#c4b5fd;padding:1px 8px;border-radius:10px">${esch(gtmAgentLabel(i.agent))}</span>
+          <span class="meta" style="font-size:10.5px;background:rgba(255,255,255,.05);border:1px solid var(--border);padding:1px 8px;border-radius:10px">${esch(GTM_AREA[i.area]||i.area)}</span>
+          <span class="meta" style="font-size:10.5px;color:${dot[i.status]}">${i.status==='doing'?'In progress':i.status==='done'?'Done':'To do'}</span>
+        </div>
+      </div>
+      <button type="button" title="Remove" onclick="gtmDelete(${idx})" style="flex:0 0 auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1">×</button>
+    </div>`;
+  }).join('');
+}
+async function gtmSave(){ const r=await api('/api/gtm',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({items:GTM_ITEMS})}); if(r&&r.items) GTM_ITEMS=r.items; renderGtm(); }
+function gtmCycle(idx){ const it=GTM_ITEMS[idx]; if(!it) return; const next={todo:'doing',doing:'done',done:'todo'}; it.status=next[it.status]||'todo'; renderGtm(); gtmSave(); }
+function gtmDelete(idx){ const it=GTM_ITEMS[idx]; if(!it) return; if(!confirm('Remove "'+it.title+'"?')) return; GTM_ITEMS.splice(idx,1); renderGtm(); gtmSave(); }
+function gtmAdd(){
+  const t=(document.getElementById('gtm_new_title')||{}).value||''; if(!t.trim()) return;
+  GTM_ITEMS.unshift({ id:'', title:t.trim(), detail:'', area:(document.getElementById('gtm_new_area')||{}).value||'ops', agent:(document.getElementById('gtm_new_agent')||{}).value||'owner', critical:!!(document.getElementById('gtm_new_crit')||{}).checked, status:'todo' });
+  document.getElementById('gtm_new_title').value=''; document.getElementById('gtm_new_crit').checked=false;
+  renderGtm(); gtmSave();
+}
 
 // ---- Receipts: shoppers email a receipt → parsed into kiosk_receipts → a free check. "Claimed"
 //      means the reward was granted to that device/account. Server: /api/kiosk-receipts, flow in

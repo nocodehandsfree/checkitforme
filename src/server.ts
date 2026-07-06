@@ -3463,6 +3463,60 @@ app.patch("/api/settings", async (c) => {
 // ---- ElevenLabs credit status (live if the key has user_read, else estimated) ----
 app.get("/api/credits", async (c) => c.json(await getCreditStatus()));
 
+// ---- Go-to-Market launch checklist (owner + agents track go-live readiness) ----
+// Persisted as one JSON blob in settings ("gtm_checklist"), seeded on first read. The admin renders it
+// with area (backend/frontend/ops) + agent filters; each item is a status the owner ticks off. The
+// frontend owns the edits and POSTs the full list back — race-safe enough for a single operator.
+const GTM_SEED: { id: string; title: string; detail: string; area: "backend" | "frontend" | "ops"; agent: string; critical: boolean; status: "todo" | "doing" | "done" }[] = [
+  { id: "support-agent", title: "Customer-service agent on the site", detail: "A support bot users can talk to on the front end; reads the ReadMe to answer.", area: "backend", agent: "support", critical: true, status: "todo" },
+  { id: "readme-copy", title: "Copy agent owns + fully updates the ReadMe", detail: "Spin up a copy agent with access to the ReadMe repo (+ Fungibles); fully write/polish the Check ReadMe. Solve the cross-repo access.", area: "ops", agent: "copy", critical: true, status: "todo" },
+  { id: "discord-support", title: "Discord support agent + FAQ routing (Helicone)", detail: "Working Discord; same support agent. Cheap-model FAQ from the ReadMe → escalate to a smart model → ticket to a support email if unresolved.", area: "backend", agent: "discord", critical: true, status: "todo" },
+  { id: "alerts-forms", title: "Every alert form works end-to-end", detail: "Email/SMS restock alerts actually send; branded email; Twilio A2P 10DLC live for texts; user can view/edit their email + cell in My Checks.", area: "backend", agent: "devops", critical: true, status: "todo" },
+  { id: "zones-test", title: "Zones tested at scale", detail: "Call many stores at once and watch the combined multi-store report render correctly.", area: "backend", agent: "qa", critical: true, status: "todo" },
+  { id: "store-request-form", title: "Store-request form lands in the backend", detail: "A store submitted from the site shows up in the admin queue.", area: "backend", agent: "devops", critical: true, status: "todo" },
+  { id: "referrals", title: "Refer-a-friend works + is tracked", detail: "Track who referred whom; both parties actually receive their free checks, everywhere a free check is promised.", area: "backend", agent: "qa", critical: true, status: "todo" },
+  { id: "voice-rotation", title: "Workflows / persona / script + voice rotation", detail: "Rotate scripts and voices, confirm they work well, and lock the voice you like.", area: "ops", agent: "website", critical: false, status: "todo" },
+  { id: "thrift-hobby-workflows", title: "Thrift + hobby call workflows built", detail: "Done and ready (gated off until launch, even for paid).", area: "ops", agent: "website", critical: false, status: "todo" },
+  { id: "paid-plans-e2e", title: "Paid plans — full real-card end-to-end test", detail: "Sign up with a real credit card and confirm the whole flow: checkout → Stripe → entitlement → credits.", area: "backend", agent: "devops", critical: true, status: "todo" },
+  { id: "site-paths-tested", title: "Every website path tested pre-launch", detail: "Walk every page/flow and confirm it behaves exactly as built.", area: "frontend", agent: "qa", critical: true, status: "todo" },
+  { id: "copy-color-sweep", title: "Copy sweep + product-page colors", detail: "Copy reads well everywhere; product-page colors render right per brand (Pokémon vs NeeDoh, etc.).", area: "frontend", agent: "copy", critical: true, status: "todo" },
+  { id: "multi-brand-workflows", title: "Non-Pokémon call workflows", detail: "Workflows set up so the agent can call and ask for Topps NBA, One Piece, etc. — not just Pokémon.", area: "ops", agent: "data", critical: true, status: "todo" },
+  { id: "discord-plan", title: "Discord community set up + planned", detail: "Free area vs. flagged paid-customer community; channel plan (share scores, talk stores). Stand up a planning agent.", area: "ops", agent: "discord", critical: false, status: "todo" },
+  { id: "spanish", title: "Spanish + live translation button", detail: "Confirm Spanish works and the translate button engages when a store speaks Spanish.", area: "frontend", agent: "qa", critical: true, status: "todo" },
+  { id: "statuses-new", title: "New call statuses surface in Admin", detail: "When a never-seen status comes back, it shows up in the Admin statuses area so we can build it into behavior.", area: "backend", agent: "admin", critical: false, status: "todo" },
+  { id: "hobby-thrift-data", title: "Populate hobby + thrift stores nationwide", detail: "Data: hobby stores with open/close times; a nationwide thrift + hobby search (like the main-chain sweep) to populate many more.", area: "backend", agent: "data", critical: false, status: "todo" },
+  { id: "x-autopost", title: "X account + daily auto-posting agent", detail: "Create the X account; an agent posts cool info daily. Keep the business hands-free.", area: "ops", agent: "social", critical: false, status: "todo" },
+  { id: "repo-split", title: "Extract Check into its own repo", detail: "Major overhaul — pause everything and rip Check out of Fungibles into a clean repo. (Post-launch; expect breakage.)", area: "ops", agent: "devops", critical: false, status: "todo" },
+  { id: "deck-video", title: "Finalize the check deck + share video", detail: "Not critical for launch.", area: "ops", agent: "owner", critical: false, status: "todo" },
+  { id: "analytics", title: "Analytics ready on production", detail: "The non-GA analytics tool (API key already set) is live on prod tracking every page, so we can see paths + optimize after launch.", area: "backend", agent: "devops", critical: true, status: "todo" },
+  // DevOps-surfaced items (my lane) —
+  { id: "cheap-lane-wiring", title: "Move leftover call paths onto the cheap bridge lane", detail: "Scheduled checks, zone fires, admin call-now, and the /pub/check fallback still ride the pricey direct-agent path. Wiring, not a build — straight cost cut. (CALL_ECONOMICS §2)", area: "backend", agent: "devops", critical: false, status: "todo" },
+  { id: "price-editor", title: "Admin price-editor → Stripe", detail: "Change any monthly price / PAYG rate in admin and push straight to Stripe, no code change.", area: "backend", agent: "devops", critical: false, status: "todo" },
+  { id: "money-endpoint-guard", title: "Money-endpoint rate limits + security headers", detail: "Per-IP limits on the four call-placing endpoints + baseline security headers. Shipped.", area: "backend", agent: "devops", critical: true, status: "done" },
+];
+app.get("/api/gtm", async (c) => {
+  let items = GTM_SEED;
+  try { const raw = await getSetting("gtm_checklist"); if (raw) { const p = JSON.parse(raw); if (Array.isArray(p?.items)) items = p.items; } }
+  catch { /* fall back to seed */ }
+  return c.json({ items });
+});
+app.post("/api/gtm", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  if (!Array.isArray(b.items)) return c.json({ error: "items[] required" }, 400);
+  // Keep the shape tight so a bad client can't bloat the blob.
+  const clean = b.items.slice(0, 300).map((it: Record<string, unknown>) => ({
+    id: String(it.id || crypto.randomUUID()).slice(0, 60),
+    title: String(it.title || "").slice(0, 200),
+    detail: String(it.detail || "").slice(0, 600),
+    area: (["backend", "frontend", "ops"] as const).includes(it.area as never) ? it.area : "ops",
+    agent: String(it.agent || "owner").slice(0, 24),
+    critical: !!it.critical,
+    status: (["todo", "doing", "done"] as const).includes(it.status as never) ? it.status : "todo",
+  })).filter((it: { title: string }) => it.title);
+  await setSetting("gtm_checklist", JSON.stringify({ items: clean, updatedAt: Date.now() }));
+  return c.json({ ok: true, items: clean });
+});
+
 // ---- Global calling kill-switch (cost runaway protection) ----
 app.get("/api/admin/calling/status", async (c) => c.json({ paused: await isCallingPaused(), spendTodayCents: await spendTodayCents() }));
 app.post("/api/admin/calling/pause", async (c) => {
