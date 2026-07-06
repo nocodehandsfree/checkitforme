@@ -2294,17 +2294,34 @@ app.post("/pub/feedback", async (c) => {
 });
 // Admin: recent feedback joined with what we showed + the transcript — the review/training surface.
 app.get("/api/feedback", async (c) => {
+  const stores = await retailerMap();
   const r = await client.execute(
-    `SELECT f.cid, f.user_verdict, f.shown_status, f.created_at, r.confirmed, r.status_key, r.transcript, r.summary
+    `SELECT f.id, f.cid, f.user_verdict, f.shown_status, f.created_at, f.reviewed, r.confirmed, r.status_key, r.transcript, r.summary, r.retailer_id
      FROM call_feedback f LEFT JOIN call_results r ON r.provider_call_id = f.cid
      ORDER BY f.created_at DESC LIMIT 200`);
   // Flag the disagreements (where the human verdict contradicts what we showed) — the cases to learn from.
   const rows = r.rows.map((x: Record<string, unknown>) => {
     const uv = x.user_verdict, conf = x.confirmed == null ? null : Number(x.confirmed), shownIn = conf === 1, shownOut = conf === 0;
     const disagree = (uv === "in" && !shownIn) || (uv === "out" && !shownOut);
-    return { ...x, disagree };
+    const rid = x.retailer_id == null ? null : Number(x.retailer_id);
+    const store = rid != null ? (stores.get(rid)?.name?.split("—")[0].trim() ?? null) : null;
+    return { ...x, store, reviewed: Number(x.reviewed || 0) === 1, disagree };
   });
   return c.json(rows);
+});
+// Triage a poll response: mark it reviewed, and optionally CORRECT our verdict on the underlying call so
+// the record (and the training signal we learn from) reflects what the customer actually saw. id = call_feedback row.
+app.post("/api/feedback/:id/review", async (c) => {
+  const id = Number(c.req.param("id")); if (!id) return c.json({ error: "id required" }, 400);
+  const b = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  await client.execute({ sql: "UPDATE call_feedback SET reviewed = 1 WHERE id = ?", args: [id] });
+  const correct = String(b.correct ?? "");
+  if (correct === "in" || correct === "out") {
+    const fb = (await client.execute({ sql: "SELECT cid FROM call_feedback WHERE id = ?", args: [id] })).rows[0];
+    const cid = fb ? String(fb.cid) : "";
+    if (cid) await client.execute({ sql: "UPDATE call_results SET confirmed = ?, status_key = ? WHERE provider_call_id = ?", args: [correct === "in" ? 1 : 0, correct === "in" ? "in_stock" : "sold_out", cid] });
+  }
+  return c.json({ ok: true });
 });
 app.post("/pub/translate", async (c) => {
   const { text, to } = await c.req.json();
@@ -3067,7 +3084,13 @@ app.get("/api/admin/overview", async (c) => {
   const stores = await retailerMap();
   const cats = await categoryLabelMap();
   const ownerOnly = await ownerOnlyRetailerIds();
-  const recent = (await db.select().from(callResults).where(gte(callResults.startedAt, d30)).orderBy(desc(callResults.startedAt))).filter((r) => !ownerOnly.has(r.retailerId) && r.status !== "admin_hangup");
+  // Production-only: the god view is the launch dashboard, so it counts REAL customer demand — exclude
+  // owner-only stores (Fun/MVP), the master/owner account's own test checks, and flagged staff/test
+  // accounts. (Same "real" definition the Metrics view uses.)
+  const masterUid = "phone:" + (process.env.OWNER_PHONE || "+13106662331").trim();
+  const flagged = await staffAccountIds();
+  const recent = (await db.select().from(callResults).where(gte(callResults.startedAt, d30)).orderBy(desc(callResults.startedAt)))
+    .filter((r) => !ownerOnly.has(r.retailerId) && r.status !== "admin_hangup" && r.finderUserId !== masterUid && !(r.finderUserId && flagged.has(r.finderUserId)));
   // Live: anything started in the last 30 min that hasn't finished.
   const live = recent.filter((r) => ["queued", "dialing", "in_progress"].includes(r.status) && r.startedAt >= now - 1800)
     .map((r) => ({ id: r.id, store: stores.get(r.retailerId)?.name || "?", category: cats.get(r.categoryId) || "", secs: now - r.startedAt, cid: r.providerCallId }));

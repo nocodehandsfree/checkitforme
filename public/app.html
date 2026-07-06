@@ -693,6 +693,11 @@
     </details>
   </section>
 
+  <section id="feedback">
+    <h2 data-tip="When a check ends unclear, the customer taps what they actually saw. This is the review + training queue — fix where we were wrong and it corrects the call record.">Feedback</h2>
+    <div id="fb_summary"></div>
+    <div id="fb_list"><div class="empty">Loading…</div></div>
+  </section>
   <section id="results"><h2>Recent calls</h2>
     <div class="filters">
       <select id="r_cat" onchange="renderResults()"><option value="">All products</option></select>
@@ -1138,11 +1143,11 @@ let CATEGORIES = [];
 const NAV_GROUPS={
   godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Live','bolt'],['users','Users','card'],['restock','Restock','cal'],['growth','Policy','rise'],['calc','Calc','sliders']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['receipts','Kiosk','tag']]},
-  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['statuses','Statuses','tag'],['trees','Chains','tree'],['settings','App','sliders']]},
+  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['feedback','Feedback','chart'],['statuses','Statuses','tag'],['trees','Chains','tree'],['settings','App','sliders']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['workflows','Workflows','note'],['testing','Testing','phone-call'],['fun','Fun','sliders']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), feedback:()=>loadFeedback(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();} };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
 function renderGroupNav(){
@@ -2005,6 +2010,39 @@ function storeWordmark(name,type){
   return `<span class="wm"><span>${esch(l1)}</span>${l2?`<span>${esch(l2)}</span>`:''}</span>`;
 }
 function agoTs(unix){ if(!unix) return ''; const sec=Math.floor(Date.now()/1000-unix); if(sec<90) return 'just now'; const m=Math.floor(sec/60); if(m<60) return m+'m ago'; const h=Math.floor(m/60); if(h<24) return h+'h ago'; return Math.floor(h/24)+'d ago'; }
+// ---- Feedback / training loop: the "couldn't understand" poll answers. See where our verdict was wrong,
+// open the transcript, and one-click correct it (which fixes the call record + the training signal). ----
+async function loadFeedback(){
+  const list=document.getElementById('fb_list'); if(!list) return;
+  const rows=await api('/api/feedback');
+  if(!Array.isArray(rows)){ list.innerHTML='<div class="empty">Could not load feedback.</div>'; return; }
+  const openDis=rows.filter(r=>r.disagree&&!r.reviewed).length;
+  const sum=document.getElementById('fb_summary');
+  const st=(n,l,cls)=>`<div class="stat"><div class="n"${cls?` style="color:${cls}"`:''}>${n}</div><div class="l">${l}</div></div>`;
+  if(sum) sum.innerHTML=`<div class="card report"><div class="stats" style="margin-bottom:0">${st(openDis,'to review',openDis?'#F4D03F':'')}${st(rows.filter(r=>r.disagree).length,'disagreements')}${st(rows.length,'responses')}</div></div>`;
+  if(!rows.length){ list.innerHTML='<div class="empty">No poll responses yet. They appear when a customer taps what they saw after an unclear check.</div>'; return; }
+  const UV={in:'In stock',out:'Not in',soon:'Restocking',unsure:'Unclear'};
+  const ours=r=>r.confirmed===1?'In stock':r.confirmed===0?'Not in':(r.status_key?String(r.status_key).replace(/_/g,' '):'—');
+  list.innerHTML=rows.map(r=>{
+    const tx=r.transcript?`<div id="fbtx_${r.id}" class="meta" style="display:none;white-space:pre-wrap;text-transform:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;line-height:1.55">${esch(r.transcript)}</div>`:'';
+    const canCorrect=r.disagree&&!r.reviewed&&(r.user_verdict==='in'||r.user_verdict==='out');
+    return `<div class="card" style="${r.disagree&&!r.reviewed?'border-color:#F4D03F':''}">
+      <div class="row" style="justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="min-width:0">
+          <div style="font-size:13.5px"><b>${esch(r.store||'Unknown store')}</b> <span class="meta" style="text-transform:none">${agoTs(r.created_at)}</span></div>
+          <div class="meta" style="text-transform:none;margin-top:4px">We said <b>${esch(ours(r))}</b> · they said <b>${esch(UV[r.user_verdict]||r.user_verdict||'?')}</b>${r.disagree?' <span class="chip-sm" style="color:#F4D03F;background:rgba(244,208,63,.12)">user disagreed</span>':''}${r.reviewed?' <span class="chip-sm" style="color:var(--text-muted)">reviewed</span>':''}</div>
+        </div>
+        <div class="row" style="gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+          ${r.transcript?`<button class="ghost" style="font-size:12px;padding:5px 9px" onclick="var e=document.getElementById('fbtx_${r.id}');e.style.display=e.style.display==='block'?'none':'block'">Transcript</button>`:''}
+          ${canCorrect?`<button class="act" style="font-size:12px;padding:5px 9px" onclick="fbCorrect(${r.id},'${r.user_verdict}')">Correct → ${esch(UV[r.user_verdict])}</button>`:''}
+          ${!r.reviewed?`<button class="ghost" style="font-size:12px;padding:5px 9px" onclick="fbReview(${r.id})">Mark reviewed</button>`:''}
+        </div>
+      </div>${tx}
+    </div>`;
+  }).join('');
+}
+async function fbReview(id){ const r=await api('/api/feedback/'+id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}); toast((r&&r.ok)?'Marked reviewed':"Couldn't update"); loadFeedback(); }
+async function fbCorrect(id,verdict){ const r=await api('/api/feedback/'+id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({correct:verdict})}); toast((r&&r.ok)?'Corrected + reviewed':"Couldn't update"); loadFeedback(); }
 function bubbles(t){
   if(!t) return '';
   return '<div class="chat">'+t.split('\n').filter(Boolean).map(line=>{
