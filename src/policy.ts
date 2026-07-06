@@ -22,6 +22,7 @@ export interface Policy {
   rewards: {
     kioskRefreshChecks: number;      // free checks granted for submitting a kiosk refresh time
     referralChecks: number;          // free checks granted to BOTH parties on a successful referral
+    storeAddChecks: number;          // free checks granted to the submitter when their requested store goes live
   };
   flags: {
     dogfoodHours: boolean;           // night-time hours-harvest auto-calling (OFF until owner says go)
@@ -78,7 +79,7 @@ export const DEFAULT_POLICY: Policy = {
     sub: { cents: 999, credits: 15, label: "Check — Family", perCallCents: 18 },
   },
   finds: { publicFeed: true, headstartMin: 10, subscriberPrivateAlways: true, keepPrivateCostChecks: 0 },
-  rewards: { kioskRefreshChecks: 1, referralChecks: 1 }, // referral = 1+1 -> ~$1 CAC at ~$0.50/check
+  rewards: { kioskRefreshChecks: 1, referralChecks: 1, storeAddChecks: 1 }, // referral = 1+1 -> ~$1 CAC at ~$0.50/check; store-add = 1 free check when it goes live
   flags: {
     dogfoodHours: false, driverHandoff: true, scheduling: true, restockAlerts: true,
     kiosks: true, hobby: true, thrift: true, shareCards: true, multiProduct: true, specificSets: true,
@@ -142,6 +143,7 @@ export async function publicPolicy() {
     publicFeed: p.finds.publicFeed,
     kioskRefreshChecks: p.rewards.kioskRefreshChecks,
     referralChecks: p.rewards.referralChecks,
+    storeAddChecks: p.rewards.storeAddChecks,
     flags: p.flags,
     links: p.links,
     support: p.support,

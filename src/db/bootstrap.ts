@@ -68,6 +68,9 @@ export async function bootstrap() {
   )`);
   // Chains: deterministic keypad shortcut column (added post-migration; SQLite has no IF NOT EXISTS for columns).
   await client.execute("ALTER TABLE zones ADD COLUMN owner_user_id TEXT").catch(() => {});
+  // Store-request reward loop: attribute the submitter + guard the one-time go-live free-check grant.
+  await client.execute("ALTER TABLE store_requests ADD COLUMN user_id TEXT").catch(() => {});
+  await client.execute("ALTER TABLE store_requests ADD COLUMN rewarded_at INTEGER").catch(() => {});
   await client.execute("ALTER TABLE call_results ADD COLUMN zone_run_id TEXT").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN dtmf_shortcut TEXT").catch(() => {});
   // Chains: answer-path classification + per-chain consumer mute.
@@ -192,7 +195,8 @@ export async function bootstrap() {
     notified INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
   await client.execute(`CREATE TABLE IF NOT EXISTS store_requests (
     id INTEGER PRIMARY KEY AUTOINCREMENT, contact TEXT, store_name TEXT NOT NULL, chain TEXT, address TEXT,
-    city TEXT, state TEXT, note TEXT, status TEXT NOT NULL DEFAULT 'new', created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+    city TEXT, state TEXT, note TEXT, status TEXT NOT NULL DEFAULT 'new', user_id TEXT, rewarded_at INTEGER,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
   await client.execute(`CREATE TABLE IF NOT EXISTS kiosk_receipts (
     id INTEGER PRIMARY KEY AUTOINCREMENT, message_id TEXT NOT NULL UNIQUE, machine_id TEXT, product TEXT,
     total TEXT, order_id TEXT, txn_at TEXT, claimed_by TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);

@@ -2207,6 +2207,7 @@ const I18N={ es:{
   // watch-14 catch: the 6g Earn rows + verify error had no ES (drafts, same voice, Copy to ratify)
   'earn.invite':'Invita a un amigo','earn.invite.sub':'Se registran. Ambos ganan.',
   'ref.row':'Da una verificación, recibe una','ref.tagline':'Da una verificación, recibe una',
+  'mystore.title':'Tiendas que agregaste','mystore.live':'Activa','mystore.no':'No agregada','mystore.pending':'En revisión','mystore.earned':'+{n} verificaciones gratis ganadas',
   'ref.both2one':'Ambos reciben <b style="color:#fff">una verificación gratis</b> cuando se registran.',
   'ref.sharemsg2one':"¡Mira esta tecnología! Está increíble.\nNos ayuda a encontrar rápido productos virales en stock como cartas Pokémon a precio de tienda.\nRegístrate y ambos recibimos una verificación gratis: ",
   'earn.score':'Publica tu logro','earn.score.sub':'Tus hallazgos, en la página principal.',
@@ -2611,7 +2612,9 @@ async function submitStoreReq(){
   if(bad){ $('sr_err').textContent=t('sr.err.need','Add the store name and its city so we can find it.'); return; }
   $('sr_err').textContent='';
   const btn=$('sr_btn'); btn.disabled=true; btn.textContent=t('toast.submitting','Submitting…');
-  const r=await api('/pub/store-request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({storeName:name,city,note:($('sr_note').value||'').trim(),contact:($('sr_contact').value||'').trim()})});
+  // Use appApi so a signed-in submitter is ATTRIBUTED (Bearer token) — that's what lets us auto-grant their
+  // free check the moment the store goes live. Anonymous submissions still work; they just aren't attributed.
+  const r=await appApi('/pub/store-request',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({storeName:name,city,note:($('sr_note').value||'').trim(),contact:($('sr_contact').value||'').trim()})});
   btn.disabled=false; btn.textContent=t('sr.submit','Submit store →');
   if(!r||r.error){ $('sr_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
   track('storereq_submit');
@@ -5249,8 +5252,34 @@ function acctTab(which,fromPop){
       ${tile(icons.score,t('earn.score','Post your score'),t('earn.score.sub','Your pulls, on the home page.'),'',"openScorePop()")}
       ${tile(icons.receipt,t('earn.receipt','Kiosk receipt'),t('earn.receipt.sub','Use our email at checkout, or forward it.'),'',"ACCT_RETURN='earn';closeAccount();openReceipt()")}
     </div>
-    <div style="margin-top:14px;text-align:center;font-size:12px;font-weight:600;color:#8A8A96">${t('acct.earn.open','Open to everyone. No plan needed.')}</div>`;
+    <div style="margin-top:14px;text-align:center;font-size:12px;font-weight:600;color:#8A8A96">${t('acct.earn.open','Open to everyone. No plan needed.')}</div>
+    <div id="myStoresBlock" style="margin-top:18px"></div>`;
+    loadMyStores();
   }
+}
+// "Stores you've added": the signed-in user's own submissions + live/earned state. Renders under the Earn
+// tiles once we know they've asked for at least one store — closes the loop on the "free check when it goes
+// live" promise so it's visible, not invisible. (Server auto-grants the check when Admin marks it 'added'.)
+async function loadMyStores(){
+  const el=$('myStoresBlock'); if(!el) return; if(!isAuthed()){ el.innerHTML=''; return; }
+  let d=null; try{ d=await appApi('/app/my-store-requests'); }catch(_){ }
+  const reqs=(d&&Array.isArray(d.requests))?d.requests:[];
+  if(!reqs.length){ el.innerHTML=''; return; }
+  const reward=(d&&d.reward)||1;
+  const chip=(r)=>{
+    if(r.status==='added') return `<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;background:rgba(74,222,128,.13);color:#4ADE80;font-size:10.5px;font-weight:800;letter-spacing:.04em">${t('mystore.live','Live')} 🎉${r.rewarded?` · +${reward}`:''}</span>`;
+    if(r.status==='rejected') return `<span style="display:inline-flex;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.06);color:#8A8A96;font-size:10.5px;font-weight:800">${t('mystore.no','Not added')}</span>`;
+    return `<span style="display:inline-flex;padding:4px 9px;border-radius:999px;background:rgba(251,191,36,.13);color:#FBBF24;font-size:10.5px;font-weight:800">${t('mystore.pending','Pending review')}</span>`;
+  };
+  const rows=reqs.map(r=>`<div style="display:flex;align-items:center;gap:11px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:14px;padding:11px 13px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)">
+      <span style="width:34px;height:34px;border-radius:10px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ICO.store('#A78BFA')}</span>
+      <span style="flex:1;min-width:0"><span style="display:block;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.storeName)}</span>${r.city?`<span style="display:block;margin-top:1px;font-size:11.5px;font-weight:600;color:#8A8A96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.city)}</span>`:''}</span>
+      ${chip(r)}</div>`).join('');
+  const earned=reqs.filter(r=>r.status==='added'&&r.rewarded).length*reward;
+  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">${t('mystore.title','Stores you added')}</span>
+      ${earned?`<span style="font-size:11px;font-weight:800;color:#4ADE80">${tf('mystore.earned','+{n} free checks earned',{n:earned})}</span>`:''}</div>
+    <div style="display:flex;flex-direction:column;gap:8px">${rows}</div>`;
 }
 // ---- 6d "You're in" (v2): the post-Stripe return state — stats + what's now live. ----
 function closePaid(){ const o=$('paidOverlay'); if(o)o.classList.remove('on'); }

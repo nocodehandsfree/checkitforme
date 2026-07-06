@@ -3691,6 +3691,7 @@ async function loadGrowth(){
     fld('gw_free','Free checks (new visitor)',p.freeChecks)+
     fld('gw_kreward','Kiosk reward (checks)',(POL.rewards||{}).kioskRefreshChecks)+
     fld('gw_referral','Referral reward (checks · both)',(POL.rewards||{}).referralChecks)+
+    fld('gw_storeadd','Store-add reward (checks · on go-live)',(POL.rewards||{}).storeAddChecks)+
     fld('gw_subcents','Membership price (¢/mo)',sub.cents)+
     fld('gw_subcredits','Membership checks/mo',sub.credits)+
     fld('gw_subper','Member per-check (¢)',sub.perCallCents)+
@@ -3888,7 +3889,7 @@ async function savePolicyForm(){
   const n=id=>{const x=Number(document.getElementById(id).value);return isFinite(x)?x:undefined;};
   const patch={pricing:{perCallCents:n('gw_percall'),minPurchaseCents:n('gw_minpur'),freeChecks:n('gw_free'),
       sub:Object.assign({},(POL.pricing||{}).sub,{cents:n('gw_subcents'),credits:n('gw_subcredits'),perCallCents:n('gw_subper')})},
-    rewards:{kioskRefreshChecks:n('gw_kreward'),referralChecks:n('gw_referral')},
+    rewards:{kioskRefreshChecks:n('gw_kreward'),referralChecks:n('gw_referral'),storeAddChecks:n('gw_storeadd')},
     finds:Object.assign({},POL.finds,{headstartMin:n('gw_headstart')}),
     ga4Id:document.getElementById('gw_ga4').value.trim()};
   await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(patch)});

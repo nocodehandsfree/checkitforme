@@ -402,6 +402,8 @@ export const storeRequests = sqliteTable("store_requests", {
   address: text("address"), city: text("city"), state: text("state"),
   note: text("note"),
   status: text("status").notNull().default("new"), // new | added | rejected
+  userId: text("user_id"),               // the submitter's account (when signed in) — so we can grant their free check on 'added'
+  rewardedAt: integer("rewarded_at"),    // set once the go-live free check has been granted (idempotency guard)
   createdAt: integer("created_at").notNull().default(now),
 });
 
