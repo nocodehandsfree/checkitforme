@@ -2496,7 +2496,7 @@ const NAV_MODE={ keypad:{m:'Alpha',sub:'keypad tones',c:'#60a5fa'}, voice:{m:'Br
 // Distinct CHAINS only (one row per chain), from /api/chains — NOT the store list. Drop "_"-prefixed
 // deprecated/merged placeholders (e.g. the old per-city "_H Mart …" rows). Muted chains stay (flagged)
 // so they remain unmute-able from Settings.
-function chainOpts(q){ const f=(q||'').trim().toLowerCase(); return CHAINS.filter(ch=>!(ch.name||'').startsWith('_')&&(!f||(ch.name||'').toLowerCase().includes(f))).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(ch=>`<option value="${ch.id}">${esch(ch.name)}${ch.muted?' · muted':(ch.repackOnly?' · repack':'')}</option>`).join(''); }
+function chainOpts(q){ const f=(q||'').trim().toLowerCase(); return CHAINS.filter(ch=>(!f||(ch.name||'').toLowerCase().includes(f))).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(ch=>`<option value="${ch.id}">${esch(ch.name)}${ch.muted?' · muted':(ch.repackOnly?' · repack':'')}</option>`).join(''); }
 function setFilterChains(q){ const sel=document.getElementById('set_chain'); if(!sel) return; const cur=sel.value; sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(q); if([...sel.options].some(o=>o.value===cur)) sel.value=cur; }
 async function loadChains(){
   CHAINS = await api('/api/chains') || [];
@@ -2592,16 +2592,15 @@ function mapChipMini(ch){ const locked=ch.navStatus==='locked'; const c=locked?'
 function buildChainPicker(){
   const el=document.getElementById('set_picker'); if(!el) return;
   const cur=(document.getElementById('set_chain')||{}).value||'';
-  // Only chains with ≥1 callable store (sellsPacks≠false). Drops all-kiosk pseudo-chains like
-  // "Pokémon Vending" (0 callable) from the picker WITHOUT muting them — they stay active so their
-  // machines keep showing on the consumer Kiosk tab. Keyed on callable-store count (the chain PATCH
-  // doesn't take callTarget), so any future all-kiosk chain is excluded automatically.
-  const live=(CHAINS||[]).filter(c=>!(c.name||'').startsWith('_')&&Number((c.stores&&c.stores.callable)||0)>0).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  // Show EVERY chain in the table — including muted, _-prefixed alias/dupe rows, and 0-callable
+  // pseudo-chains (Pokemon Vending) — so nothing is silently hidden. Non-mappable ones are dimmed and
+  // labelled (muted + store count) so it's clear why they can't be mapped, but they're always visible.
+  const live=(CHAINS||[]).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
   el.innerHTML=live.map(ch=>{
     const locked=ch.navStatus==='locked';
     return `<div class="pickrow${String(ch.id)===cur?' on':''}" data-id="${ch.id}" data-name="${esch((ch.name||'').toLowerCase())}" data-tier="${ch.tier??''}" data-mapped="${locked?1:0}" onclick="pickChainRow(${ch.id})"${ch.muted?' style="opacity:.55"':''}>
       <span class="setlogo">${logoTile(ch)}</span>
-      <b style="flex:1;min-width:0;color:#fff;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}${ch.muted?' <span class="meta" style="font-size:10.5px">· muted</span>':''}</b>
+      <b style="flex:1;min-width:0;color:#fff;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esch(ch.name)}${ch.muted?` <span class="meta" style="font-size:10.5px">· muted · ${Number((ch.stores&&ch.stores.n)||0)} stores</span>`:''}</b>
       ${ratePillMini(ch.tier)}${mapChipMini(ch)}</div>`;
   }).join('')||'<div class="empty" style="padding:16px">No chains loaded.</div>';
   filterChainPicker();
