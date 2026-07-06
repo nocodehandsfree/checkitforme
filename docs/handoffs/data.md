@@ -121,6 +121,27 @@ ME03 = Perfect Order — the design grid had these mislabeled).
 
 ## Current focus (KEEP UPDATED)
 
+**Session 2026-07-06 — hours truth fix + real LA shop hours + launch-readiness board (autonomy grant).**
+- **Midnight "open" bug (owner's 00:11 map, Hallmark + thrifts showing Open) — FIXED.** `src/store-hours.ts`
+  `unknownHoursState()`: stores with NO looked-up hours now read **"Likely closed" 9 PM–7 AM** (window
+  crosses midnight) and the call gate (`known && !open`) refuses them in that window. Daytime unchanged
+  (fail-open to preserve coverage). 16/16 unit tests pass (`scripts/test-store-hours.ts`, `test-storehours.ts`).
+- **Real per-day hours imported for 119 LA card/comic shops** — looked up via **FREE Google (my WebSearch
+  subagents), $0 owner spend** (the server's backfillHours/OpenAI path BILLS the owner — do NOT run it;
+  I killed a mistaken run last session). Method: 5 batches of ~30 shops → agents return per-day
+  `{mon:"HH:MM-HH:MM"|"closed"|"unknown",…}` → `scratchpad/agg_hours.py` zips to input list, matches shop
+  data by name for phone, converts to canonical `hours` JSON, upserts via `POST /api/stores/import`
+  (updated 119, inserted 0 = no dupes). "24:00" close → "00:00" (renders "till 12 AM"). Verified live:
+  LVLUP "Closed" (past Sun close), Joyful Toad "till 12 AM", Best Deer Antlers "Closed · opens 9 AM tomorrow".
+- **6 stores deactivated** (never deleted): 5 permanently-closed (returned closed ALL 7 days — Meltdown
+  Comics, Comics Unlimited, Earth-2, Card Shack HB, LA Gaming TCG) + Evike.com (airsoft big-box
+  mis-harvested into the card set; was already inactive from the prior junk sweep).
+- **23 all-"unknown" shops left on the fallback** (night-window covers them) — next: scale the free-lookup
+  method nationwide to the ~10K stores still without real hours.
+- **Launch-readiness board** published as an Artifact (store network 110,316 / callable 103,970 / **90.8%
+  real hours** / 52 states / catalog 11-of-129 sets with products). Honest about the 2 gaps: hours tail +
+  older-era product depth. Numbers from `/api/admin/store-intel` + full `retailers` scan (`scratchpad/scan_launch.py`).
+
 **Session 2026-07-04 — Drops DB is the product SOURCE OF TRUTH; catalog now syncs from it.**
 - **dropsdb.fungibles.com** (closed beta, password login) is where product types/MSRP/retailers are
   captured. `data/drops_db.json` is a SNAPSHOT that `seed.ts` loads → `products` table → `/pub/pokemon-sets`.
