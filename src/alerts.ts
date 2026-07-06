@@ -2,7 +2,8 @@
 // Channels by event (owner): restock = SMS (per-plan capped, COGS), store_added / waitlist / welcome = EMAIL.
 // Copy is written to docs/style-guide/COPY_STYLE_GUIDE.md (friend voice, no em-dashes, "check" is the unit).
 // SMS goes out via Twilio once a sending number is configured + A2P/toll-free approved; until then it logs
-// as "stubbed". Email goes out via the ESP once its key is set; until then it logs as "stubbed". Nothing
+// as "stubbed". Email goes out live via Brevo (BREVO_API_KEY, already set); a per-event brevoTemplateId
+// swaps the inline HTML for Design's branded template when it's ready. Nothing
 // throws — a send that can't complete is recorded, never crashes a trigger.
 import { and, eq } from "drizzle-orm";
 import { db } from "./db/client";
@@ -10,12 +11,15 @@ import { alertSubscriptions, alertSends } from "./db/schema";
 import { getSetting, setSetting } from "./db/settings";
 import { getAccount, isCompAccount } from "./billing";
 import { getPlans } from "./plans";
+import { config } from "./config";
 
 export type AlertEvent = "restock" | "store_added" | "waitlist" | "welcome";
 export type Channel = "sms" | "email";
 export const EVENT_CHANNEL: Record<AlertEvent, Channel> = { restock: "sms", store_added: "email", waitlist: "email", welcome: "email" };
 
-export interface AlertTemplate { sms?: string; emailSubject?: string; emailBody?: string }
+// brevoTemplateId: when Claude Design's branded email is built in Brevo, drop its template id here
+// (per event, editable in Admin) and we send that instead of the inline HTML — tokens flow as params.
+export interface AlertTemplate { sms?: string; emailSubject?: string; emailBody?: string; brevoTemplateId?: number }
 // Defaults (copy-guide voice). Admin can override any field live via `alerts_json` (setAlertTemplates).
 export const DEFAULT_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   restock: { sms: "{product} is back at {store}. Go grab it before it's gone. checkitforme.com" },
@@ -94,10 +98,23 @@ async function twilioSms(to: string, body: string): Promise<{ ok: boolean; detai
     const d = (await r.json()) as { sid?: string }; return { ok: true, detail: d.sid || "sent" };
   } catch (e) { return { ok: false, detail: String(e).slice(0, 80) }; }
 }
-async function espEmail(_to: string, _subject: string, _body: string): Promise<{ ok: boolean; detail: string }> {
-  if (!process.env.BRAVO_API_KEY && !process.env.ESP_API_KEY) return { ok: false, detail: "email_not_configured" }; // Bravo key pending → stubbed
-  // Wire the actual ESP send here once the key + branded template id are set. Left as a single seam.
-  return { ok: false, detail: "esp_send_todo" };
+function escHtml(s: string): string { return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string)); }
+async function espEmail(to: string, subject: string, body: string, opts: { templateId?: number; params?: Record<string, string | number | undefined> } = {}): Promise<{ ok: boolean; detail: string }> {
+  const key = config.alerts.brevoApiKey;
+  if (!key) return { ok: false, detail: "email_not_configured" }; // BREVO_API_KEY unset → stubbed
+  const sender = { name: "Check It For Me", email: config.alerts.senderEmail };
+  // Prefer a branded Brevo template (Design owns the look) when its id is set; else a clean inline fallback.
+  const payload: Record<string, unknown> = opts.templateId
+    ? { sender, to: [{ email: to }], templateId: opts.templateId, params: opts.params || {} }
+    : { sender, to: [{ email: to }], subject,
+        htmlContent: `<div style="font-family:Inter,Arial,sans-serif;color:#111;max-width:520px"><p style="font-size:15px;line-height:1.55">${escHtml(body)}</p><p style="color:#999;font-size:12px">Check It For Me · <a href="https://checkitforme.com" style="color:#16A34A;text-decoration:none">checkitforme.com</a></p></div>`,
+        textContent: `${body}\n\nCheck It For Me · checkitforme.com` };
+  try {
+    const r = await fetch("https://api.brevo.com/v3/smtp/email", { method: "POST", headers: { "api-key": key, "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    if (!r.ok) return { ok: false, detail: `brevo_${r.status}` };
+    const d = (await r.json().catch(() => ({}))) as { messageId?: string };
+    return { ok: true, detail: d.messageId || "sent" };
+  } catch (e) { return { ok: false, detail: String(e).slice(0, 80) }; }
 }
 
 /** Send one alert to a user. Resolves channel + recipient, meters SMS, sends (or stubs), and logs.
@@ -119,9 +136,13 @@ export async function sendAlert(userId: string, event: AlertEvent, tokens: Recor
     return { status, detail: res.detail };
   }
   const subject = fill(tpls[event].emailSubject, tokens), body = fill(tpls[event].emailBody, tokens);
-  const res = await espEmail(to, subject, body);
+  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: strTokens(tokens) });
   const status = res.ok ? "sent" : "stubbed"; await log(userId, event, channel, to, status, tagged(res.detail));
   return { status, detail: res.detail };
+}
+/** Coerce token values to strings for Brevo template params. */
+function strTokens(t: Record<string, string | number | undefined>): Record<string, string> {
+  const o: Record<string, string> = {}; for (const k of Object.keys(t)) o[k] = String(t[k] ?? ""); return o;
 }
 
 /** Send an email-only alert to an address with no account (waitlist signups). No metering, always logs. */
@@ -130,7 +151,7 @@ export async function sendAnonEmail(event: AlertEvent, tokens: Record<string, st
   if (!to) { await log(null, event, "email", null, "skipped_nocontact"); return { status: "skipped_nocontact" }; }
   const tpls = await getAlertTemplates();
   const subject = fill(tpls[event].emailSubject, tokens), body = fill(tpls[event].emailBody, tokens);
-  const res = await espEmail(to, subject, body);
+  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: strTokens(tokens) });
   const status = res.ok ? "sent" : "stubbed"; await log(null, event, "email", to, status, res.detail);
   return { status, detail: res.detail };
 }

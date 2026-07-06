@@ -3737,7 +3737,7 @@ app.get("/api/alerts/log", async (c) => {
   const subUsers = new Set(subs.map((s) => s.userId));
   // Delivery readiness: are the provider creds actually set? (drives the "live vs stubbed" banner in Admin)
   const smsLive = !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && (process.env.TWILIO_SMS_FROM || process.env.TWILIO_MESSAGING_SERVICE_SID));
-  const emailLive = !!(process.env.BRAVO_API_KEY || process.env.ESP_API_KEY);
+  const emailLive = !!process.env.BREVO_API_KEY;
   return c.json({
     month: mk, rollup: roll,
     delivery: { sms: smsLive, email: emailLive },

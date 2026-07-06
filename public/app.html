@@ -605,7 +605,7 @@
   </section>
   <section id="alerts">
     <h2>Alerts</h2>
-    <div class="meta" style="margin:0 0 12px">The messages we send customers, who's signed up, and every send. <span data-tip="Restock alerts go by text (each plan gets a monthly cap, it's a cost line). Store-live, waitlist and welcome go by email. Nothing sends for real until the Twilio number and the Bravo email key are set in Railway — until then every send is logged as 'stubbed' so you can watch the flow."></span></div>
+    <div class="meta" style="margin:0 0 12px">The messages we send customers, who's signed up, and every send. <span data-tip="Restock alerts go by text (each plan gets a monthly cap, it's a cost line). Store-live, waitlist and welcome go by email. Restock texts stay stubbed until the Twilio number clears carrier registration; email is live now via Brevo. Anything not yet deliverable is logged as 'stubbed' so you can watch the flow."></span></div>
     <div class="card">
       <div class="name">Delivery status</div>
       <div id="al_status" class="meta">Loading…</div>
@@ -3816,7 +3816,7 @@ async function loadAlerts(){
   // Delivery banner: green when the provider creds are set, amber "stubbed" until then.
   const dv=log.delivery||{};
   const chip=(on,label)=>`<span class="pill ${on?'g':'a'}" style="margin-right:8px">${on?'●':'○'} ${esch(label)} ${on?'live':'not set yet'}</span>`;
-  const sEl=document.getElementById('al_status'); if(sEl) sEl.innerHTML=chip(dv.sms,'Text (Twilio)')+chip(dv.email,'Email (Bravo)')+`<div class="meta" style="margin-top:6px">${(dv.sms&&dv.email)?'Both channels are live.':'Sends are logged as “stubbed” until the missing keys are set in Railway. Nothing goes to a customer yet.'}</div>`;
+  const sEl=document.getElementById('al_status'); if(sEl) sEl.innerHTML=chip(dv.sms,'Text (Twilio)')+chip(dv.email,'Email (Brevo)')+`<div class="meta" style="margin-top:6px">${(dv.sms&&dv.email)?'Both channels are live.':'Sends are logged as “stubbed” until the missing keys are set in Railway. Nothing goes to a customer yet.'}</div>`;
   // Month rollup
   const roll=log.rollup||{}, rEl=document.getElementById('al_rollup');
   if(rEl){ const ks=Object.keys(roll); const subs=log.subscribers||{};
