@@ -7,7 +7,7 @@
 //  - /logos/*, images, fonts → cache-first (they're stable/versioned).
 //  - everything else  → left to the browser.
 // Defensive throughout: any error falls back to the network, so the SW can never white-screen the app.
-const VERSION = 'cifm-v2';
+const VERSION = 'cifm-v3';
 const SHELL = VERSION + '-shell';
 const DATA = VERSION + '-data';
 const STATIC = VERSION + '-static';

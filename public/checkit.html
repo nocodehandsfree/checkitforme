@@ -18,7 +18,17 @@
 <link rel="manifest" href="/manifest.webmanifest" />
 
 <script>/* PWA: register the service worker (instant cold-start: cached shell + stale-while-revalidate checks). Fail-open — registration errors never affect the page. */
-  if('serviceWorker' in navigator){ window.addEventListener('load',function(){ try{ navigator.serviceWorker.register('/sw.js').catch(function(){}); }catch(e){} }); }</script>
+  if('serviceWorker' in navigator){ window.addEventListener('load',function(){ try{
+    navigator.serviceWorker.register('/sw.js').then(function(reg){ try{ reg.update(); }catch(_){}
+      // A waiting worker (new deploy) → tell it to take over now instead of waiting for all tabs to close.
+      function nudge(w){ if(w) try{ w.postMessage('skipWaiting'); }catch(_){}} if(reg.waiting) nudge(reg.waiting);
+      reg.addEventListener('updatefound',function(){ nudge(reg.installing); });
+    }).catch(function(){});
+    // When a NEW worker replaces the old one, reload ONCE so the fresh design lands with no manual
+    // cache-clearing. Guard on _hadController so a brand-new visitor's first install never triggers a reload.
+    var _swReloaded=false, _hadController=!!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange',function(){ if(_swReloaded||!_hadController)return; _swReloaded=true; try{ location.reload(); }catch(_){} });
+  }catch(e){} }); }</script>
 <script>(function(){try{
   // PREVIEW SKIN (site-redesign loop): ?skin=v2 turns the new elevated skin ON for this device
   // (persisted); ?skin=off reverts. Normal visitors never see it — everything v2 is scoped under
