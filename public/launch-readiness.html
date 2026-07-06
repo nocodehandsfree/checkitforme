@@ -216,7 +216,7 @@
       <div class="subverdicts">
         <div class="sv"><span class="pill ready">Ready</span><span class="lbl">Store network</span><span class="val">110,316 · 52 states</span></div>
         <div class="sv"><span class="pill ready">Ready</span><span class="lbl">Call engine</span><span class="val">104,047 callable</span></div>
-        <div class="sv"><span class="pill ready">Ready</span><span class="lbl">Store hours</span><span class="val">90.8% real</span></div>
+        <div class="sv"><span class="pill ready">Ready</span><span class="lbl">Store hours</span><span class="val">91.7% real</span></div>
         <div class="sv"><span class="pill partial">Partial</span><span class="lbl">Product catalog</span><span class="val">11 / 129 sets</span></div>
       </div>
     </section>
@@ -234,8 +234,8 @@
       </div>
       <div class="kpi">
         <div class="k-label">Real hours</div>
-        <div class="k-num">90.8<span class="u">%</span></div>
-        <div class="k-sub">100,213 with looked-up weekly hours</div>
+        <div class="k-num">91.7<span class="u">%</span></div>
+        <div class="k-sub">101,153 with looked-up weekly hours</div>
       </div>
       <div class="kpi gold">
         <div class="k-label">Kiosks tracked</div>
@@ -259,15 +259,15 @@
           <span class="note">open/closed truth</span>
         </header>
         <div class="gauge-wrap">
-          <div class="gauge" id="hoursGauge">
+          <div class="gauge" id="hoursGauge" style="--p:91.7">
             <div class="gauge-center">
-              <div class="g-num">90.8%</div>
+              <div class="g-num">91.7%</div>
               <div class="g-lab">real hours</div>
             </div>
           </div>
           <div class="gauge-legend">
-            <div class="leg"><span class="sw a"></span><div><div class="lt">Looked-up hours <span class="ln">· 100,213</span></div><div class="ld">Exact weekly schedule — accurate open/closed badge.</div></div></div>
-            <div class="leg"><span class="sw w"></span><div><div class="lt">Honest fallback <span class="ln">· 10,103</span></div><div class="ld">No hours yet — held to a safe window instead of guessing.</div></div></div>
+            <div class="leg"><span class="sw a"></span><div><div class="lt">Looked-up hours <span class="ln">· 101,153</span></div><div class="ld">Exact weekly schedule — accurate open/closed badge.</div></div></div>
+            <div class="leg"><span class="sw w"></span><div><div class="lt">Honest fallback <span class="ln">· 9,099</span></div><div class="ld">No hours yet — held to a safe window instead of guessing.</div></div></div>
           </div>
         </div>
         <div class="fallnote">
@@ -401,17 +401,17 @@
      d:'Kiosk stores with a phone are now marked callable — the app offers “we’ll call to check the machine is on.” Confirmed none are muted. Fixes the “no call” label that was showing on kiosks.'},
     {s:'go', t:'Midnight “open” bug fixed', chips:[['done','shipped']], m:'store-hours.ts',
      d:'Stores with unknown hours were showing “Open” at 12 AM. They now read “Likely closed” from 9 PM–7 AM (window crosses midnight) and are never dialed — no more open Hallmarks or thrift stores at 00:11.'},
-    {s:'go', t:'+119 LA card &amp; comic shops got real hours', chips:[['free','$0 · google']], m:'148 looked up',
-     d:'Per-day weekly hours pulled via free Google lookups and imported — LVLUP, Undercity, Joyful Toad, Kingslayer and 115 more now show accurate open/closed instead of the fallback.'},
-    {s:'crit', t:'6 permanently-closed shops pulled off the map', chips:[['done','removed']], m:'deactivated',
-     d:'Meltdown Comics, Comics Unlimited, Earth-2, Card Shack HB and LA Gaming TCG returned closed every day of the week — deactivated so no one is sent to a shuttered store.'},
+    {s:'go', t:'~1,060 card/comic/hobby shops got real hours', chips:[['free','$0 · google']], m:'nationwide',
+     d:'Per-day weekly hours pulled via free Google lookups and imported by store ID. Hobby-store hours coverage jumped from 23% to 40% — LA plus national waves across ~40 states, and still going.'},
+    {s:'crit', t:'~70 permanently-closed shops pulled off the map', chips:[['done','removed']], m:'deactivated',
+     d:'Shops that returned closed every day of the week (each cross-checked — Yelp “closed”, units listed for lease) were deactivated so no one is sent to a shuttered store. Real stores are only ever deactivated, never deleted.'},
     {s:'go', t:'Non-card junk cleaned out', chips:[['done','shipped']], m:'dupes + Evike',
      d:'Duplicate rows and a mis-harvested airsoft big-box (Evike.com) removed from the callable card-shop set. Real stores are only ever deactivated, never deleted.'}
   ]);
 
   renderLog(document.getElementById('gapLog'), [
-    {s:'warn', t:'~10K stores still on fallback hours', chips:[['next','next']],
-     d:'Mostly newly-added independent shops nationwide. Same free Google-lookup method that just did LA scales to the rest, batch by batch.'},
+    {s:'warn', t:'~9,100 stores still on fallback hours', chips:[['next','in progress']],
+     d:'~3,400 are independent hobby shops; the rest are big-box/pharmacy stragglers. National hobby waves are running now (~1,260 done) and continue batch by batch until the tail is closed.'},
     {s:'warn', t:'Backfill older-era product rows', chips:[['next','catalog']],
      d:'Sword & Shield back to the Original Series are mapped as sets but carry no product rows yet. Depth comes from the Drops DB as entries are completed.'},
     {s:'go', t:'Fixes go live automatically', chips:[['done','wired']],
