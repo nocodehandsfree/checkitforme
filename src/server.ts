@@ -367,6 +367,18 @@ app.get("/", (c) => {
     : (host.startsWith("runner.") || brand.key !== "runner" || !!override);
   return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "") : page("app.html"));
 });
+// Clean admin deep links (/feedback, /trees, etc.): serve the same app, the client reads the path to pick
+// the section. Regex-scoped to the known section ids so it never shadows /api, /pub, /admin-login, /r, etc.
+app.get("/:section{dash|users|restock|growth|calc|retailers|search|add|receipts|results|feedback|statuses|trees|settings|designer|workflows|testing|fun}", (c) => {
+  c.header("Cache-Control", "no-store, no-cache, must-revalidate");
+  const host = (c.req.header("host") || "").toLowerCase();
+  const override = c.req.query("brand");
+  const brand = resolveBrand(host, override);
+  const consumer = config.staging.on
+    ? (!(host.startsWith("caller.") || host.startsWith("admin.")) || !!override)
+    : (host.startsWith("runner.") || brand.key !== "runner" || !!override);
+  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "") : page("app.html"));
+});
 app.get("/r", (c) => { c.header("Cache-Control", "no-store"); const h=(c.req.header("host") || "").toLowerCase(); return c.html(renderRunner(resolveBrand(h, c.req.query("brand")), h, "checkit.html", c.req.query("tone") || "")); });
 // Preview-only: the redesigned result/live UI served from checkit-demo.html, so the live
 // site keeps the current design while we evaluate the new one. /demo?brand=<slug> picks a vertical.
