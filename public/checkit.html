@@ -2715,7 +2715,12 @@ async function refreshAuth(){
   if(isAuthed()){
     // Optimistic: paint the cached credits/comp INSTANTLY so the "My ✅ N" count doesn't lag on /app/me.
     if(!ACCOUNT){ try{ const c=JSON.parse(localStorage.getItem('cifm_acct')||'null'); if(c){ ACCOUNT=c; renderAuth(); } }catch(_){} }
-    ACCOUNT=await appApi('/app/me'); // the phone-session token identifies the account
+    const _me=await appApi('/app/me'); // the phone-session token identifies the account
+    // NEVER clobber a good account with a transient error. appApi returns {error:'network'} on any hiccup;
+    // that object has no comp/subscription, so ensureModeChips would read paid=false and REMOVE the
+    // Hobby/Thrift chips on a single blip (owner 07-06: "hobby is completely gone"). Keep the last-good
+    // account (or the optimistic cache) on error; only update when /app/me actually answers.
+    if(_me && !_me.error) ACCOUNT=_me;
     try{ localStorage.setItem('runnr_authed','1'); if(ACCOUNT&&!ACCOUNT.error) localStorage.setItem('cifm_acct',JSON.stringify({credits:ACCOUNT.credits,comp:ACCOUNT.comp,subscription:ACCOUNT.subscription})); }catch(e){}
     // Prime call history right after login so the calendar shows its yellow "call-made" days immediately
     // (it used to stay blank until the first My-checks open, because HIST_CACHE hadn't loaded yet).
