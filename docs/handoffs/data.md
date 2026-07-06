@@ -138,9 +138,25 @@ ME03 = Perfect Order — the design grid had these mislabeled).
   mis-harvested into the card set; was already inactive from the prior junk sweep).
 - **23 all-"unknown" shops left on the fallback** (night-window covers them) — next: scale the free-lookup
   method nationwide to the ~10K stores still without real hours.
-- **Launch-readiness board** published as an Artifact (store network 110,316 / callable 103,970 / **90.8%
-  real hours** / 52 states / catalog 11-of-129 sets with products). Honest about the 2 gaps: hours tail +
-  older-era product depth. Numbers from `/api/admin/store-intel` + full `retailers` scan (`scratchpad/scan_launch.py`).
+- **Launch-readiness board** committed to the repo at **`voice-caller/public/launch-readiness.html`** (for
+  Admin to bake into the dashboard; also live as an Artifact). Store network 110,316 / callable 104,047 /
+  **90.8% real hours** / 52 states / catalog 11-of-129 sets with products. Honest about the 2 gaps: hours
+  tail + older-era product depth. Numbers from `/api/admin/store-intel` + full `retailers` scan (`scratchpad/scan_launch.py`).
+- **KIOSKS ARE CALLABLE — fixed (owner correction 2026-07-06).** The pitch is "we call to verify the machine
+  is on/stocked" (kiosks go down a lot). The call service already scripted this (`calls/service.ts`
+  `kioskOnly()` → asks if the machine works), but the consumer feed's `callable` predicate excluded
+  `sellsPacks:false`, so kiosk pins showed no call button. Fixed both feed predicates in `src/server.ts`
+  (~L1202/L1291): `callable = (sellsPacks !== false || hasKiosk) && phone && !nophone`. Now the 77 kiosk-only
+  stores that have a real phone are callable; the 1,673 dual (machine+shelf) were already callable. The
+  `sellsPacks`-gated "most likely on the SHELF" surfaces (L1541) are untouched, so kiosk-only stays OUT of
+  shelf lists. **Verified: 0 kiosk chains muted.** Kiosk data: 1,886 active kiosks, 213 kiosk-only (77 w/
+  phone), 186 nophone (can't be called until we backfill store lines). Zone-cost calc (`zoneQuote`) left as-is
+  (future/billing path). Typecheck clean.
+- **National hobby-hours backfill STARTED (owner: "get the rest").** 4,315 active Hobby stores still lack
+  hours (all have phones). Same FREE Google method, now **id-keyed** (agents return `{"id":…,"mon":…}` →
+  exact join, no name-matching). Wave 1 = 420 shops / 14 agents writing to `scratchpad/hobbyout/hb*.json`;
+  aggregator imports by id. Batches built by `scratchpad/hobby_nohours.py` (sorted by state/city). Repeat
+  waves to finish the remaining ~3,900.
 
 **Session 2026-07-04 — Drops DB is the product SOURCE OF TRUTH; catalog now syncs from it.**
 - **dropsdb.fungibles.com** (closed beta, password login) is where product types/MSRP/retailers are

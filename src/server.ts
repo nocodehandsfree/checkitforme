@@ -1199,7 +1199,11 @@ app.get("/pub/stores/near", async (c) => {
       .where(and(eq(retailers.active, true), ...(conds.length ? conds : [like(retailers.name, `%${q}%`)]))).limit(2000);
   }
 
-  const callable = (r: typeof retailers.$inferSelect) => r.sellsPacks !== false && !!r.phone && !r.phone.startsWith("nophone:");
+  // Callable = a line we can dial at THIS store. Kiosk stores count too: even with no shelf packs
+  // (sellsPacks:false) we call to verify the machine is on and stocked — kiosks go down a lot
+  // (owner 2026-07-06). The shelf-only surfaces still gate on sellsPacks, so this doesn't add
+  // kiosk-only stores to "most likely on the shelf".
+  const callable = (r: typeof retailers.$inferSelect) => (r.sellsPacks !== false || r.hasKiosk === true) && !!r.phone && !r.phone.startsWith("nophone:");
   // inStock badge = a confirmed in-stock call in the last 7 days (drives the brand-check pin/row).
   const inStockSince = Math.floor(Date.now() / 1000) - 7 * 86400;
   const confirmedSet = new Set(
@@ -1288,7 +1292,8 @@ app.get("/pub/store/:id", async (c) => {
     lat: r.lat, lng: r.lng, region: r.region, state: r.state, shipmentDay: r.shipmentDay || null,
     sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
     tier: r.hasKiosk === true ? 5 : (r.tier ?? null),
-    callable: r.sellsPacks !== false && !!r.phone && !r.phone.startsWith("nophone:"),
+    // Kiosk stores are callable too (verify the machine is on) — see the near-feed note above.
+    callable: (r.sellsPacks !== false || r.hasKiosk === true) && !!r.phone && !r.phone.startsWith("nophone:"),
     ownerOnly: r.ownerOnly === true,
     stockCheckMethod: chain?.stockCheckMethod || "call",
     sellMethods: (chain?.sellMethods || "in_store").split(",").map((s) => s.trim()).filter(Boolean),

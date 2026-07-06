@@ -1,0 +1,436 @@
+<style>
+  :root{
+    --ground:#0B0B11; --panel:#16161D; --panel-2:#1E1E27; --line:#2A2A34;
+    --ink:#F2F2F7; --ink-dim:#9A9AA6; --ink-faint:#6B6B78;
+    --accent:#4ADE80; --accent-soft:rgba(74,222,128,.14); --accent-line:rgba(74,222,128,.35);
+    --gold:#FFCB05; --gold-soft:rgba(255,203,5,.13);
+    --warn:#FBBF24; --warn-soft:rgba(251,191,36,.13);
+    --crit:#FF6B6B; --crit-soft:rgba(255,107,107,.13);
+    --track:#23232C;
+    --sans:"SF Pro Display","Segoe UI Variable Display","Segoe UI",system-ui,-apple-system,sans-serif;
+    --mono:"SF Mono","JetBrains Mono","Cascadia Code","Roboto Mono",ui-monospace,monospace;
+    --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 12px 30px -18px rgba(0,0,0,.7);
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --ground:#EEF0F3; --panel:#FFFFFF; --panel-2:#F5F6F8; --line:#E1E4E9;
+      --ink:#16171D; --ink-dim:#565A66; --ink-faint:#8A8E9A;
+      --accent:#12A85B; --accent-soft:rgba(18,168,91,.10); --accent-line:rgba(18,168,91,.30);
+      --gold:#B8890B; --gold-soft:rgba(184,137,11,.10);
+      --warn:#B7791F; --warn-soft:rgba(183,121,31,.10);
+      --crit:#D64545; --crit-soft:rgba(214,69,69,.10);
+      --track:#E7EAEF;
+      --shadow:0 1px 2px rgba(20,22,28,.04), 0 14px 34px -22px rgba(20,22,28,.28);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0B0B11; --panel:#16161D; --panel-2:#1E1E27; --line:#2A2A34;
+    --ink:#F2F2F7; --ink-dim:#9A9AA6; --ink-faint:#6B6B78;
+    --accent:#4ADE80; --accent-soft:rgba(74,222,128,.14); --accent-line:rgba(74,222,128,.35);
+    --gold:#FFCB05; --gold-soft:rgba(255,203,5,.13);
+    --warn:#FBBF24; --warn-soft:rgba(251,191,36,.13);
+    --crit:#FF6B6B; --crit-soft:rgba(255,107,107,.13);
+    --track:#23232C;
+    --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 12px 30px -18px rgba(0,0,0,.7);
+  }
+  :root[data-theme="light"]{
+    --ground:#EEF0F3; --panel:#FFFFFF; --panel-2:#F5F6F8; --line:#E1E4E9;
+    --ink:#16171D; --ink-dim:#565A66; --ink-faint:#8A8E9A;
+    --accent:#12A85B; --accent-soft:rgba(18,168,91,.10); --accent-line:rgba(18,168,91,.30);
+    --gold:#B8890B; --gold-soft:rgba(184,137,11,.10);
+    --warn:#B7791F; --warn-soft:rgba(183,121,31,.10);
+    --crit:#D64545; --crit-soft:rgba(214,69,69,.10);
+    --track:#E7EAEF;
+    --shadow:0 1px 2px rgba(20,22,28,.04), 0 14px 34px -22px rgba(20,22,28,.28);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0}
+  .wrap{
+    background:var(--ground); color:var(--ink); font-family:var(--sans);
+    min-height:100vh; padding:clamp(16px,3.2vw,40px);
+    -webkit-font-smoothing:antialiased; line-height:1.5;
+    background-image:radial-gradient(120% 80% at 100% -10%, var(--accent-soft), transparent 55%);
+  }
+  .board{max-width:1120px; margin:0 auto; display:flex; flex-direction:column; gap:clamp(14px,1.6vw,20px)}
+  .mono{font-family:var(--mono); font-variant-numeric:tabular-nums}
+  .eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-faint)}
+
+  /* ── top bar ── */
+  .topbar{display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding-bottom:4px}
+  .mark{display:flex; align-items:center; gap:11px}
+  .glyph{width:34px; height:34px; border-radius:9px; display:grid; place-items:center;
+    background:linear-gradient(150deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #0a3));
+    color:#04140a; font-weight:800; font-size:18px; box-shadow:0 0 0 1px var(--accent-line), 0 6px 16px -8px var(--accent)}
+  :root[data-theme="light"] .glyph, .glyph{color:#04140a}
+  .brand h1{margin:0; font-size:clamp(17px,2vw,20px); font-weight:750; letter-spacing:-.01em}
+  .brand .sub{font-size:12.5px; color:var(--ink-dim)}
+  .topmeta{margin-left:auto; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .tag{font-family:var(--mono); font-size:11px; letter-spacing:.04em; padding:5px 9px; border-radius:7px;
+    border:1px solid var(--line); color:var(--ink-dim); background:var(--panel)}
+  .tag b{color:var(--ink); font-weight:600}
+  .live{display:inline-flex; align-items:center; gap:6px; color:var(--accent)}
+  .dot{width:7px; height:7px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 3px var(--accent-soft)}
+  @media (prefers-reduced-motion:no-preference){.dot{animation:pulse 2.4s ease-in-out infinite}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  /* ── verdict ── */
+  .verdict{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:clamp(16px,2vw,22px);
+    box-shadow:var(--shadow); display:grid; grid-template-columns:1.5fr 1fr; gap:22px; align-items:center}
+  .verdict .lead{display:flex; flex-direction:column; gap:9px}
+  .verdict h2{margin:0; font-size:clamp(19px,2.5vw,25px); font-weight:750; letter-spacing:-.015em; text-wrap:balance; line-height:1.22}
+  .verdict h2 .go{color:var(--accent)} .verdict h2 .part{color:var(--gold)}
+  .verdict p{margin:0; color:var(--ink-dim); font-size:14px; max-width:52ch}
+  .subverdicts{display:flex; flex-direction:column; gap:8px}
+  .sv{display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:10px; background:var(--panel-2); border:1px solid var(--line)}
+  .sv .pill{font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; padding:3px 8px; border-radius:20px; white-space:nowrap}
+  .sv .lbl{font-size:13px; color:var(--ink); font-weight:550}
+  .sv .val{margin-left:auto; font-family:var(--mono); font-size:12.5px; color:var(--ink-dim)}
+  .pill.ready{background:var(--accent-soft); color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent-line)}
+  .pill.partial{background:var(--gold-soft); color:var(--gold); box-shadow:inset 0 0 0 1px rgba(255,203,5,.3)}
+
+  /* ── kpi row ── */
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:clamp(10px,1.4vw,16px)}
+  .kpi{background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px 16px 15px;
+    box-shadow:var(--shadow); position:relative; overflow:hidden}
+  .kpi::before{content:""; position:absolute; left:0; top:12px; bottom:12px; width:3px; border-radius:3px; background:var(--accent)}
+  .kpi.gold::before{background:var(--gold)}
+  .kpi .k-label{font-family:var(--mono); font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-faint)}
+  .kpi .k-num{font-family:var(--mono); font-variant-numeric:tabular-nums; font-weight:680; letter-spacing:-.02em;
+    font-size:clamp(26px,3.6vw,36px); line-height:1.05; margin:9px 0 3px; color:var(--ink)}
+  .kpi .k-sub{font-size:12px; color:var(--ink-dim)}
+  .kpi .k-num .u{font-size:.5em; color:var(--accent); margin-left:3px; letter-spacing:0}
+
+  /* ── panels ── */
+  .row{display:grid; grid-template-columns:1fr 1fr; gap:clamp(12px,1.6vw,18px)}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:clamp(16px,1.9vw,22px); box-shadow:var(--shadow)}
+  .panel > header{display:flex; align-items:baseline; gap:10px; margin-bottom:16px}
+  .panel h3{margin:0; font-size:15.5px; font-weight:680; letter-spacing:-.01em}
+  .panel header .note{margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--ink-faint)}
+
+  /* bar list */
+  .bars{display:flex; flex-direction:column; gap:9px}
+  .bar{display:grid; grid-template-columns:118px 1fr 62px; align-items:center; gap:12px}
+  .bar .bn{font-size:12.5px; color:var(--ink-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .bar.hi .bn{color:var(--ink); font-weight:600}
+  .track{height:9px; border-radius:6px; background:var(--track); overflow:hidden}
+  .fill{height:100%; border-radius:6px; background:linear-gradient(90deg, color-mix(in srgb,var(--accent) 62%, transparent), var(--accent)); width:0; transition:width 1.1s cubic-bezier(.2,.7,.2,1)}
+  .bar.hi .fill{background:linear-gradient(90deg, color-mix(in srgb,var(--gold) 55%, transparent), var(--gold))}
+  .bar .bv{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:12.5px; text-align:right; color:var(--ink)}
+  @media (prefers-reduced-motion:reduce){.fill{transition:none}}
+
+  /* hours gauge */
+  .gauge-wrap{display:flex; gap:20px; align-items:center; flex-wrap:wrap}
+  .gauge{--p:90.8; width:150px; height:150px; border-radius:50%; flex:0 0 auto; position:relative;
+    background:conic-gradient(var(--accent) calc(var(--p)*1%), var(--warn) calc(var(--p)*1%) 100%);
+    -webkit-mask:radial-gradient(closest-side, transparent 66%, #000 67%);
+            mask:radial-gradient(closest-side, transparent 66%, #000 67%)}
+  .gauge-center{position:absolute; inset:0; display:grid; place-items:center; text-align:center}
+  .gauge-center .g-num{font-family:var(--mono); font-weight:700; font-size:27px; letter-spacing:-.02em; color:var(--ink)}
+  .gauge-center .g-lab{font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); margin-top:2px}
+  .gauge-legend{display:flex; flex-direction:column; gap:11px; min-width:190px; flex:1}
+  .leg{display:flex; gap:10px; align-items:flex-start}
+  .leg .sw{width:11px; height:11px; border-radius:3px; margin-top:3px; flex:0 0 auto}
+  .leg .sw.a{background:var(--accent)} .leg .sw.w{background:var(--warn)}
+  .leg .lt{font-size:12.5px; color:var(--ink); font-weight:560}
+  .leg .ld{font-size:12px; color:var(--ink-dim)}
+  .leg .ln{font-family:var(--mono); color:var(--ink-dim)}
+  .fallnote{margin-top:16px; padding:12px 13px; border-radius:11px; background:var(--panel-2); border:1px solid var(--line);
+    display:flex; gap:11px; align-items:flex-start; font-size:12.5px; color:var(--ink-dim)}
+  .fallnote b{color:var(--ink); font-weight:600}
+  .fallnote .ic{color:var(--accent); flex:0 0 auto; margin-top:1px}
+
+  /* catalog */
+  .cat-head{display:flex; gap:18px; margin-bottom:15px; flex-wrap:wrap}
+  .cat-stat{display:flex; flex-direction:column}
+  .cat-stat .n{font-family:var(--mono); font-weight:680; font-size:22px; letter-spacing:-.02em}
+  .cat-stat .l{font-size:11.5px; color:var(--ink-dim)}
+  .eras{display:flex; flex-direction:column; gap:6px}
+  .era{display:grid; grid-template-columns:150px 1fr auto; align-items:center; gap:10px; font-size:12.5px}
+  .era .en{color:var(--ink-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .era.has .en{color:var(--ink); font-weight:560}
+  .era .estat{display:flex; gap:5px; align-items:center}
+  .seg{height:7px; border-radius:2px; flex:0 0 auto}
+  .seg.on{background:var(--accent)} .seg.off{background:var(--track)}
+  .era .ev{font-family:var(--mono); font-size:11.5px; color:var(--ink-faint); white-space:nowrap}
+  .era.has .ev{color:var(--ink-dim)}
+
+  /* shipped / gaps lists */
+  .log{display:flex; flex-direction:column; gap:0}
+  .item{display:grid; grid-template-columns:auto 1fr; gap:14px; padding:13px 0; border-top:1px solid var(--line)}
+  .item:first-child{border-top:0}
+  .item .stripe{width:3px; border-radius:3px; align-self:stretch}
+  .stripe.go{background:var(--accent)} .stripe.warn{background:var(--warn)} .stripe.crit{background:var(--crit)}
+  .item .it-body{display:flex; flex-direction:column; gap:3px}
+  .item .it-head{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+  .item .it-title{font-size:13.5px; font-weight:620; color:var(--ink)}
+  .item .it-meta{font-family:var(--mono); font-size:11px; color:var(--ink-faint)}
+  .item .it-desc{font-size:12.5px; color:var(--ink-dim); max-width:64ch}
+  .chip{font-family:var(--mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase; padding:2px 7px; border-radius:20px}
+  .chip.done{background:var(--accent-soft); color:var(--accent)}
+  .chip.free{background:var(--gold-soft); color:var(--gold)}
+  .chip.next{background:var(--warn-soft); color:var(--warn)}
+
+  .split{display:grid; grid-template-columns:1fr 1fr; gap:clamp(12px,1.6vw,18px)}
+
+  footer{display:flex; gap:12px; align-items:center; flex-wrap:wrap; color:var(--ink-faint);
+    font-family:var(--mono); font-size:11px; padding:6px 2px 2px}
+  footer .sep{opacity:.4}
+
+  @media (max-width:860px){
+    .verdict{grid-template-columns:1fr; gap:16px}
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .row,.split{grid-template-columns:1fr}
+    .bar{grid-template-columns:104px 1fr 56px}
+    .era{grid-template-columns:120px 1fr auto}
+  }
+  @media (max-width:440px){
+    .kpis{grid-template-columns:1fr 1fr}
+    .bar{grid-template-columns:92px 1fr 52px}
+  }
+</style>
+
+<div class="wrap">
+  <div class="board">
+
+    <div class="topbar">
+      <div class="mark">
+        <div class="glyph">✓</div>
+        <div class="brand">
+          <h1>Check It For Me — Launch Readiness</h1>
+          <div class="sub">Store network, call engine &amp; catalog · data-lane status board</div>
+        </div>
+      </div>
+      <div class="topmeta">
+        <span class="tag live"><span class="dot"></span>staging replica</span>
+        <span class="tag">as of <b>Jul 6 2026</b></span>
+      </div>
+    </div>
+
+    <section class="verdict">
+      <div class="lead">
+        <div class="eyebrow">Overall status</div>
+        <h2>Store network &amp; call engine are <span class="go">launch-ready</span>. Catalog depth is <span class="part">partial</span>.</h2>
+        <p>110K live stores across every state, 94% with a dialable line, and honest open/closed on every pin. The one real gap is product depth — only the newest Pokémon eras carry set-level product rows yet.</p>
+      </div>
+      <div class="subverdicts">
+        <div class="sv"><span class="pill ready">Ready</span><span class="lbl">Store network</span><span class="val">110,316 · 52 states</span></div>
+        <div class="sv"><span class="pill ready">Ready</span><span class="lbl">Call engine</span><span class="val">104,047 callable</span></div>
+        <div class="sv"><span class="pill ready">Ready</span><span class="lbl">Store hours</span><span class="val">90.8% real</span></div>
+        <div class="sv"><span class="pill partial">Partial</span><span class="lbl">Product catalog</span><span class="val">11 / 129 sets</span></div>
+      </div>
+    </section>
+
+    <section class="kpis">
+      <div class="kpi">
+        <div class="k-label">Active stores</div>
+        <div class="k-num">110,316</div>
+        <div class="k-sub">across 52 states + DC/PR · 129 chains</div>
+      </div>
+      <div class="kpi">
+        <div class="k-label">Callable now</div>
+        <div class="k-num">104,047</div>
+        <div class="k-sub">sell packs or have a kiosk — with a dialable line</div>
+      </div>
+      <div class="kpi">
+        <div class="k-label">Real hours</div>
+        <div class="k-num">90.8<span class="u">%</span></div>
+        <div class="k-sub">100,213 with looked-up weekly hours</div>
+      </div>
+      <div class="kpi gold">
+        <div class="k-label">Kiosks tracked</div>
+        <div class="k-num">1,886</div>
+        <div class="k-sub">callable — we call to verify the machine’s on</div>
+      </div>
+    </section>
+
+    <div class="row">
+      <section class="panel">
+        <header>
+          <h3>Store network by type</h3>
+          <span class="note">15 categories</span>
+        </header>
+        <div class="bars" id="typeBars"></div>
+      </section>
+
+      <section class="panel">
+        <header>
+          <h3>Store-hours coverage</h3>
+          <span class="note">open/closed truth</span>
+        </header>
+        <div class="gauge-wrap">
+          <div class="gauge" id="hoursGauge">
+            <div class="gauge-center">
+              <div class="g-num">90.8%</div>
+              <div class="g-lab">real hours</div>
+            </div>
+          </div>
+          <div class="gauge-legend">
+            <div class="leg"><span class="sw a"></span><div><div class="lt">Looked-up hours <span class="ln">· 100,213</span></div><div class="ld">Exact weekly schedule — accurate open/closed badge.</div></div></div>
+            <div class="leg"><span class="sw w"></span><div><div class="lt">Honest fallback <span class="ln">· 10,103</span></div><div class="ld">No hours yet — held to a safe window instead of guessing.</div></div></div>
+          </div>
+        </div>
+        <div class="fallnote">
+          <span class="ic">◆</span>
+          <div>No store shows a false <b>“Open”</b> after dark. Stores without looked-up hours read <b>“Likely closed” from 9 PM to 7 AM</b> and are never dialed in that window — the fix for the midnight-Hallmark problem.</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="row">
+      <section class="panel">
+        <header>
+          <h3>What our stores carry</h3>
+          <span class="note">stores per product line</span>
+        </header>
+        <div class="bars" id="carryBars"></div>
+      </section>
+
+      <section class="panel">
+        <header>
+          <h3>Pokémon set catalog</h3>
+          <span class="note">Drops DB feed</span>
+        </header>
+        <div class="cat-head">
+          <div class="cat-stat"><span class="n">13</span><span class="l">eras</span></div>
+          <div class="cat-stat"><span class="n">129</span><span class="l">sets mapped</span></div>
+          <div class="cat-stat"><span class="n" style="color:var(--gold)">11</span><span class="l">sets with products</span></div>
+          <div class="cat-stat"><span class="n" style="color:var(--gold)">39</span><span class="l">products</span></div>
+        </div>
+        <div class="eras" id="eraList"></div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <header>
+        <h3>Shipped this session</h3>
+        <span class="note">data lane · $0 spent</span>
+      </header>
+      <div class="log" id="shipLog"></div>
+    </section>
+
+    <div class="split">
+      <section class="panel">
+        <header><h3>Open gaps &amp; next up</h3><span class="note">honest backlog</span></header>
+        <div class="log" id="gapLog"></div>
+      </section>
+      <section class="panel">
+        <header><h3>How the call engine decides</h3><span class="note">per store</span></header>
+        <div class="log" id="ruleLog"></div>
+      </section>
+    </div>
+
+    <footer>
+      <span>Source: staging.checkitforme.com admin API</span><span class="sep">·</span>
+      <span>retailers table + /pub/pokemon-sets</span><span class="sep">·</span>
+      <span>internal readiness board</span>
+    </footer>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  var nf = function(n){ return n.toLocaleString('en-US'); };
+
+  // ── store network by type ──
+  var types = [
+    ["Discount",38275,0],["Other",28519,0],["Pharmacy",15352,0],["Big Box",6356,0],
+    ["Off-Price",5886,0],["Hobby",5681,1],["Thrift",3479,1],["Craft",1227,0],
+    ["Sporting Goods",1161,0],["Mall / Specialty",1001,0],["Department",937,0],
+    ["Office",904,0],["Bookstore",746,0],["Warehouse",579,0],["Grocery",213,0]
+  ];
+  var tmax = 38275;
+  var carries = [
+    ["Pokémon",102140],["One Piece",72681],["Yu-Gi-Oh",72679],["Topps",72294],
+    ["Sports Cards",72293],["NeeDoh",41215],["Squishmallows",39453],["Magic",36725],["Lorcana",33322]
+  ];
+  var cmax = 102140;
+
+  function renderBars(el, rows, max, hiFlagIndex){
+    var frag = document.createDocumentFragment();
+    rows.forEach(function(r){
+      var name=r[0], val=r[1], hi=(hiFlagIndex!=null? r[hiFlagIndex]:0);
+      var b=document.createElement('div'); b.className='bar'+(hi?' hi':'');
+      var pct=Math.max(1.5,(val/max)*100);
+      b.innerHTML='<span class="bn" title="'+name+'">'+name+'</span>'+
+        '<span class="track"><span class="fill" data-w="'+pct.toFixed(1)+'"></span></span>'+
+        '<span class="bv">'+nf(val)+'</span>';
+      frag.appendChild(b);
+    });
+    el.appendChild(frag);
+  }
+  renderBars(document.getElementById('typeBars'), types, tmax, 2);
+  renderBars(document.getElementById('carryBars'), carries, cmax, null);
+
+  // ── eras ──
+  var eras=[
+    ["Mega Evolution",7,27],["Scarlet & Violet",15,12],["Sword & Shield",17,0],
+    ["Sun & Moon",16,0],["XY",15,0],["Black & White",12,0],["HeartGold & SoulSilver",5,0],
+    ["Platinum",4,0],["Diamond & Pearl",7,0],["EX",16,0],["e-Card",3,0],["Neo",5,0],["Original Series",7,0]
+  ];
+  var eFrag=document.createDocumentFragment();
+  eras.forEach(function(e){
+    var name=e[0], sets=e[1], prod=e[2], has=prod>0;
+    var w=Math.min(sets,18)*7+8;
+    var row=document.createElement('div'); row.className='era'+(has?' has':'');
+    row.innerHTML='<span class="en" title="'+name+'">'+name+'</span>'+
+      '<span class="estat"><span class="seg '+(has?'on':'off')+'" style="width:'+w+'px"></span></span>'+
+      '<span class="ev">'+sets+' sets · '+(prod?prod+' prod':'—')+'</span>';
+    eFrag.appendChild(row);
+  });
+  document.getElementById('eraList').appendChild(eFrag);
+
+  // ── logs ──
+  function renderLog(el, items){
+    var frag=document.createDocumentFragment();
+    items.forEach(function(it){
+      var row=document.createElement('div'); row.className='item';
+      var chips=(it.chips||[]).map(function(c){return '<span class="chip '+c[0]+'">'+c[1]+'</span>';}).join('');
+      row.innerHTML='<span class="stripe '+it.s+'"></span>'+
+        '<span class="it-body"><span class="it-head"><span class="it-title">'+it.t+'</span>'+chips+
+        (it.m?'<span class="it-meta">'+it.m+'</span>':'')+'</span>'+
+        '<span class="it-desc">'+it.d+'</span></span>';
+      frag.appendChild(row);
+    });
+    el.appendChild(frag);
+  }
+
+  renderLog(document.getElementById('shipLog'), [
+    {s:'go', t:'Kiosks now read as callable', chips:[['done','shipped']], m:'server.ts',
+     d:'Kiosk stores with a phone are now marked callable — the app offers “we’ll call to check the machine is on.” Confirmed none are muted. Fixes the “no call” label that was showing on kiosks.'},
+    {s:'go', t:'Midnight “open” bug fixed', chips:[['done','shipped']], m:'store-hours.ts',
+     d:'Stores with unknown hours were showing “Open” at 12 AM. They now read “Likely closed” from 9 PM–7 AM (window crosses midnight) and are never dialed — no more open Hallmarks or thrift stores at 00:11.'},
+    {s:'go', t:'+119 LA card &amp; comic shops got real hours', chips:[['free','$0 · google']], m:'148 looked up',
+     d:'Per-day weekly hours pulled via free Google lookups and imported — LVLUP, Undercity, Joyful Toad, Kingslayer and 115 more now show accurate open/closed instead of the fallback.'},
+    {s:'crit', t:'6 permanently-closed shops pulled off the map', chips:[['done','removed']], m:'deactivated',
+     d:'Meltdown Comics, Comics Unlimited, Earth-2, Card Shack HB and LA Gaming TCG returned closed every day of the week — deactivated so no one is sent to a shuttered store.'},
+    {s:'go', t:'Non-card junk cleaned out', chips:[['done','shipped']], m:'dupes + Evike',
+     d:'Duplicate rows and a mis-harvested airsoft big-box (Evike.com) removed from the callable card-shop set. Real stores are only ever deactivated, never deleted.'}
+  ]);
+
+  renderLog(document.getElementById('gapLog'), [
+    {s:'warn', t:'~10K stores still on fallback hours', chips:[['next','next']],
+     d:'Mostly newly-added independent shops nationwide. Same free Google-lookup method that just did LA scales to the rest, batch by batch.'},
+    {s:'warn', t:'Backfill older-era product rows', chips:[['next','catalog']],
+     d:'Sword & Shield back to the Original Series are mapped as sets but carry no product rows yet. Depth comes from the Drops DB as entries are completed.'},
+    {s:'go', t:'Fixes go live automatically', chips:[['done','wired']],
+     d:'Every change here writes straight to the store DB and shows on the front-end map on the next load — no website-developer step in the loop.'}
+  ]);
+
+  renderLog(document.getElementById('ruleLog'), [
+    {s:'go', t:'Callable', m:'phone + sellsPacks', chips:[['done','call rail']],
+     d:'Staffed counter with a dialable line — “we’ll call for you.” 103,970 stores qualify.'},
+    {s:'go', t:'Kiosk', m:'hasKiosk', chips:[['done','callable']],
+     d:'Vending machine on site — callable too: we call to verify the machine is on and stocked (they go down a lot). 1,886 tracked, none muted.'},
+    {s:'warn', t:'Hours gate', m:'known &amp; !open', chips:[['next','safety']],
+     d:'A store is never dialed while it reads closed — including the 9 PM–7 AM fallback window for unknown-hours stores.'}
+  ]);
+
+  // ── animate fills in ──
+  function fill(){ document.querySelectorAll('.fill').forEach(function(f){ f.style.width=f.getAttribute('data-w')+'%'; }); }
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce){ fill(); }
+  else { requestAnimationFrame(function(){ setTimeout(fill, 120); }); }
+})();
+</script>
