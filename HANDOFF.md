@@ -17,8 +17,9 @@ AI service that phones retail stores to check trading-card/collectible stock, wi
 - **Production** — `checkitforme.com` (branch `main`). Promote by merging staging → prod.
 - **Admin** — `admin.checkitforme.com`. The operator dashboard; runs on live production data.
 
-**First thing every session:** `git checkout staging && git pull` (staging),
-unless you're promoting to prod. `main` is the dead card app — ignore it.
+**First thing every session:** `git checkout staging && git pull` — all work happens on `staging`,
+unless you're promoting to prod. **`main` IS production** — never push it directly; it only moves by
+merging a verified `staging`. (Branch `v1.0` is the ReadMe book mirror — ReadMe lane only, never merge it.)
 
 ## Rules of the road
 - **Build on staging, promote to prod.** Verify a change on `staging.checkitforme.com`, then merge staging →
