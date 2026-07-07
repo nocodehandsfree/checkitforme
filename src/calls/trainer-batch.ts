@@ -13,7 +13,7 @@ import { isCallingPaused, setBatchState, getBatchState } from "../redis";
 import { openState } from "../store-hours";
 
 type Step = { who?: string; action?: string; value?: string; atSec?: number };
-type Recipe = { type?: string; steps?: Array<{ action?: string; value?: string; atSec?: number }>; seconds?: number };
+type Recipe = { type?: string; steps?: Array<{ action?: string; value?: string; atSec?: number }>; seconds?: number; menu?: Array<{ digit: string; label: string }>; menuPrompts?: string[]; ringVariable?: boolean; target?: string };
 
 const state = {
   running: false, stop: false, total: 0, done: 0, learned: 0, review: 0, skipped: 0, failed: 0,
@@ -25,9 +25,11 @@ export function stopBatch() { state.stop = true; void setBatchState(null); retur
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Build a recipe from the steps the navigator actually took (mirrors navigator's human-path build). */
+/** Build a recipe from the steps the navigator actually took (mirrors navigator's human-path build).
+ *  The confirm question ("asked: …") is training scaffolding, not navigation — drop it, or a
+ *  direct-answer store's recipe would tell live calls to recite the ask as a menu step. */
 export function recipeFromSteps(steps: Step[], humanAtSec: number | null): Recipe {
-  const acts = (steps || []).filter((st) => st.who === "us").map((st) => ({ action: st.action || "say", value: st.value || "", atSec: st.atSec }));
+  const acts = (steps || []).filter((st) => st.who === "us" && !String((st as { text?: string }).text || "").startsWith("asked:")).map((st) => ({ action: st.action || "say", value: st.value || "", atSec: st.atSec }));
   const type = acts.length === 0 ? "direct" : (acts.every((a) => a.action === "press") ? "keypad" : "voice");
   return { type, steps: acts, seconds: humanAtSec ?? (steps[steps.length - 1]?.atSec ?? 0) };
 }
@@ -39,9 +41,18 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
   if (typeof recipe.seconds === "number") log.push(recipe.seconds);
   const steps = Array.isArray(recipe.steps) ? recipe.steps : [];
   const direct = recipe.type === "direct" || steps.length === 0;
-  const treeText = direct
+  // navText drives LIVE consumer calls — keep it to the navigation instruction only (unchanged).
+  const navText = direct
     ? "A live person usually answers directly — no phone menu to work through."
     : "To reach a live person: " + steps.map((s) => (s.action === "press" ? `press ${s.value}` : `say "${s.value}"`)).join(", then ") + ".";
+  // docText is the DOCUMENTED tree the owner reads (#2/#6): nav path + target desk + menu options +
+  // ring-variance warning. Kept out of phoneTreeDefault so it never changes live-call behavior.
+  const menuText = Array.isArray(recipe.menu) && recipe.menu.length
+    ? " Menu options heard: " + recipe.menu.map((o) => `[${o.digit}] ${o.label || "?"}`).join("; ") + "."
+    : "";
+  const targetText = recipe.target ? ` Reaches: ${recipe.target}.` : "";
+  const varText = recipe.ringVariable ? " ⚠ Variable ring (department pickup) — time-to-human varies call to call." : "";
+  const docText = navText + targetText + varText + menuText;
   const firstPress = steps.find((s) => s.action === "press");
   const now = Math.floor(Date.now() / 1000);
   await db.update(chains).set({
@@ -49,8 +60,8 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
     navSeconds: typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null,
     navStatus: "locked", navConfidence: typeof confidence === "number" ? confidence : null,
     navLog: JSON.stringify(log.slice(-10)), navUpdatedAt: now,
-    // ↓ applied to LIVE consumer calls:
-    phoneTreeDefault: treeText, treeNote: treeText,
+    // ↓ applied to LIVE consumer calls (navText only — the menu/notes live in treeNote for the owner):
+    phoneTreeDefault: navText, treeNote: docText,
     dtmfShortcut: firstPress ? String(firstPress.value || "") : null,
     answerPath: steps.map((s) => `${s.action}:${s.value}`).join(">") || null,
     ringsDirect: direct, avgTreeSeconds: typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null,
@@ -74,9 +85,18 @@ const hasRealPhone = (p?: string | null) => !!p && !p.startsWith("nophone:") && 
  *  national chain almost always has a 24h or west-coast location open at this hour. Score each store
  *  by openState (24h > real-hours-open > daytime-unknown) and dial the best; return null only if every
  *  callable store is genuinely closed (so the chain is skipped tonight, not wasted on a dead line). */
+// Chains that famously run 24h — their stores are staffed at any hour even when our hours data is
+// null (WinCo/Sheetz rows have no hours on file). Move to a data flag when hours backfill lands.
+const KNOWN_24H = /winco|sheetz|wawa|buc-?ee|7-?eleven|circle k|quiktrip|speedway|casey'?s|kum ?& ?go/i;
+
 export async function storeForChain(chainId: number, excludeIds?: number[], daytimeOnly?: boolean) {
   let rows = await db.select().from(retailers)
     .where(and(eq(retailers.chainId, chainId), eq(retailers.active, true))).limit(4000);
+  // Known-24h chain → skip the local-hour gate entirely; night crews answer the phone.
+  if (daytimeOnly) {
+    const ch = (await db.select({ name: chains.name }).from(chains).where(eq(chains.id, chainId)))[0];
+    if (ch && KNOWN_24H.test(ch.name || "")) daytimeOnly = false;
+  }
   // Rotation (mapper): skip stores we already dialed this run — unless that would leave nothing.
   if (excludeIds?.length) {
     const ex = new Set(excludeIds);
@@ -93,9 +113,9 @@ export async function storeForChain(chainId: number, excludeIds?: number[], dayt
   };
   const score = (r: typeof rows[number]) => {
     if (!hasRealPhone(r.phone)) return -1;
-    if (daytimeOnly) { const h = localHour(r.timezone); if (h < 9 || h >= 22) return 0; }
     const st = openState(r.hours, r.timezone || "America/Chicago", now);
-    if (st.label === "24h") return 4;          // best: never a closed-store dead end
+    if (st.label === "Open 24h") return 4;          // 24h = staffed right now, any hour — always fair game
+    if (daytimeOnly) { const h = localHour(r.timezone); if (h < 9 || h >= 22) return 0; }
     if (st.open && st.known) return 3;               // real hours say open now (e.g. "till 12 AM")
     if (st.open && !st.known) return 2;              // unknown hours but daytime in its tz (west coast now)
     return 0;                                         // known-closed / overnight-unknown

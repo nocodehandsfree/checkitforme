@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { WebSocketServer, type WebSocket } from "ws";
 import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql } from "drizzle-orm";
@@ -18,7 +18,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -28,6 +28,7 @@ import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
+import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, type Recipe } from "./calls/recipe";
 import { llm } from "./llm";
@@ -423,8 +424,8 @@ h1{font-size:30px;margin:26px 0 14px}.body{color:#c2c2cf;font-size:16px}.body a{
 </body></html>`);
 });
 
-app.get("/", (c) => {
-  c.header("Cache-Control", "no-cache"); // revalidate always, but let bfcache/back-forward restore instantly
+const rootHandler = (c: Context) => {
+  c.header("Cache-Control", "no-store, no-cache, must-revalidate");
   const host = (c.req.header("host") || "").toLowerCase();
   const override = c.req.query("brand");
   const brand = resolveBrand(host, override);
@@ -436,7 +437,12 @@ app.get("/", (c) => {
     ? (!(host.startsWith("caller.") || host.startsWith("admin.")) || !!override)
     : (host.startsWith("runner.") || brand.key !== "runner" || !!override);
   return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "") : page("app.html"));
-});
+};
+app.get("/", rootHandler);
+// Clean admin deep-links (/feedback, /trees, …): one STATIC route per admin section, all serving the same
+// SPA; the client reads location.pathname to pick the section. Static-only on purpose — the earlier
+// :param{regex} attempt crashed Hono's router on boot. These names never collide with /api, /pub, /r, /s, etc.
+for (const s of ["dash","users","restock","growth","calc","plans","retailers","search","add","zones","receipts","results","schedules","feedback","statuses","trees","settings","designer","workflows","testing","fun","gtm"]) app.get("/" + s, rootHandler);
 app.get("/r", (c) => { c.header("Cache-Control", "no-store"); const h=(c.req.header("host") || "").toLowerCase(); return c.html(renderRunner(resolveBrand(h, c.req.query("brand")), h, "checkit.html", c.req.query("tone") || "")); });
 // Preview-only: the redesigned result/live UI served from checkit-demo.html, so the live
 // site keeps the current design while we evaluate the new one. /demo?brand=<slug> picks a vertical.
@@ -608,6 +614,28 @@ app.get("/nav/ask-audio", (c) => {
   const b = navAskAudio(c.req.query("session") || "");
   if (!b) return c.body("not found", 404);
   return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
+});
+// ---- Tape deck (D-lane rehearsal): pre-synthesized clips call the OWNER's phone — Fun tab ----
+app.all("/tapedeck/twiml", (c) => c.body(tapedeckTwiml(c.req.query("session") || ""), 200, { "Content-Type": "text/xml" }));
+app.post("/tapedeck/step", async (c) => {
+  let speech = "";
+  try { const b = await c.req.parseBody(); speech = String(b.SpeechResult || ""); } catch { /* silent turn */ }
+  return c.body(await tapedeckStep(c.req.query("session") || "", speech), 200, { "Content-Type": "text/xml" });
+});
+app.post("/tapedeck/ended", (c) => { tapedeckEnded(c.req.query("session") || ""); return c.body("ok", 200); });
+app.get("/tapedeck/clip", (c) => {
+  const b = tdClip(c.req.query("session") || "", Number(c.req.query("i") || 0));
+  if (!b) return c.body("not found", 404);
+  return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
+});
+app.post("/api/admin/tapedeck/call", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { phone?: string };
+  return c.json(await tapedeckCall(String(b.phone || "")));
+});
+app.get("/api/admin/tapedeck/session/:id", (c) => {
+  const s = tdSession(c.req.param("id"));
+  if (!s) return c.json({ error: "not found" }, 404);
+  return c.json({ id: s.id, status: s.status, steps: s.steps, clipText: s.clipText });
 });
 
 // ---- Health ----
@@ -991,6 +1019,110 @@ app.get("/logo-wall", async (c) => {
   </script>
   </body>`);
 });
+// Pokémon TCG set logos — the "swap-to" wall for the Hobby picker. Era pills → set cards
+// ([logo] · code · name · release), data-driven from data/pokemon-sets.json (data-dev's catalog)
+// + the downloaded logos in public/logos/sets/. QA page only; no auth (public logos + set names).
+app.get("/logo-wall/sets", async (c) => {
+  const nslug = (x: any) => String(x || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  // Asset lookup by set NAME (logos + dominant colour) from the full pokemontcg.io catalog — so
+  // logos/banners resolve no matter which data source drives the list.
+  const logoByName = new Map<string, string | null>();
+  let catalog: any = { eras: [] };
+  try {
+    catalog = JSON.parse(readFileSync(join(here, "../public/logos/sets/_catalog.json"), "utf8"));
+    for (const e of catalog.eras || []) for (const s of e.sets || []) logoByName.set(nslug(s.name), s.logoFile);
+  } catch { /* not built yet */ }
+  // Data source: prefer website-dev's expanded feed catalog (data/pokemon-sets.json) the moment it
+  // lands (13 eras / 129 sets, presentation-ordered); until then use the full pokemontcg.io catalog.
+  let cat: any = catalog;
+  // Pull the canonical feed FRESH (owner: "ONE PULL, EVERYTHING" — GET /pub/pokemon-sets) from this
+  // same origin. Falls back to the local data file, then the full card catalog, if the feed isn't on
+  // this deployment yet (e.g. prod before it's promoted).
+  try {
+    const r = await fetch(new URL(c.req.url).origin + "/pub/pokemon-sets", { signal: AbortSignal.timeout(5000) });
+    if (r.ok) { const feed: any = await r.json(); if ((feed.eras || []).length >= 5) cat = feed; }
+  } catch { /* feed not reachable on this deployment yet */ }
+  if (cat === catalog) { try { const f = JSON.parse(readFileSync(join(here, "../data/pokemon-sets.json"), "utf8")); if ((f.eras || []).length >= 5) cat = f; } catch { /* keep catalog */ } }
+  const eras = (cat.eras || []) as Array<{ era: string; short?: string; years?: string; sets: Array<{ code: string; name: string; release: string; logoFile?: string | null }> }>;
+  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const fmt = (r: string) => { const m = /^(\d{4})[-/](\d{2})/.exec(r || ""); return m ? `${MON[+m[2] - 1]} ${m[1]}` : (r || "TBA"); };
+  const logoOf = (s: any) => s.logoFile || logoByName.get(nslug(s.name)) || null;
+  // Real banner key-art in public/logos/sets/banners/<name>.<ext>; else the shared Pokémon fallback.
+  let bannerFiles = new Set<string>();
+  try { bannerFiles = new Set(readdirSync(join(here, "../public/logos/sets/banners")).filter((f) => /\.(jpe?g|png|webp)$/i.test(f))); } catch { /* none yet */ }
+  const bannerFor = (s: any) => { for (const k of [nslug(s.name), nslug(s.code), nslug(s.apiId)]) { if (!k) continue; for (const ext of ["jpeg", "jpg", "png", "webp"]) if (bannerFiles.has(k + "." + ext)) return k + "." + ext; } return null; };
+  const fallbackBanner = bannerFiles.has("_fallback.jpeg") ? "/logos/sets/banners/_fallback.jpeg" : null;
+  const totalSets = eras.reduce((n, e) => n + e.sets.length, 0);
+  const withLogo = eras.reduce((n, e) => n + e.sets.filter((s) => logoOf(s)).length, 0);
+  const withBanner = eras.reduce((n, e) => n + e.sets.filter((s) => bannerFor(s)).length, 0);
+  const def = Math.max(0, eras.length - 1); // newest era shown first
+  const logoCard = (s: any) => {
+    const lf = logoOf(s);
+    const art = lf
+      ? `<div class="setart"><img src="/logos/sets/${lf}?v=2" alt="" loading="lazy"></div>`
+      : `<div class="setart noimg"><span>${esc(s.name)}</span><small>logo coming soon</small></div>`;
+    return `<div class="setcard">${art}<div class="setname">${esc(s.name)}</div><div class="setmeta">${esc(s.code)} · ${esc(fmt(s.release))}</div></div>`;
+  };
+  const bannerCard = (s: any) => {
+    const bf = bannerFor(s);
+    const art = bf ? `/logos/sets/banners/${bf}` : fallbackBanner;
+    if (!art) return `<div class="banner noimg"><span>${esc(s.name)}</span><small>banner coming soon</small></div>`;
+    const lf = logoOf(s);
+    const logo = lf ? `<img class="blogo" src="/logos/sets/${lf}?v=2" alt="" loading="lazy">` : "";
+    return `<div class="banner${bf ? "" : " fb"}"><img class="bart" src="${art}" alt="" loading="lazy">${logo}<div class="bcap"><b>${esc(s.name)}</b><span>${esc(s.code)} · ${esc(fmt(s.release))}</span></div></div>`;
+  };
+  const pills = eras.map((e, i) => `<button type="button" class="pill${i === def ? " on" : ""}" data-era="${i}">${esc(e.era)} <small>${e.sets.length}</small></button>`).join("");
+  const sections = eras.map((e, i) => `<section class="era${i === def ? " on" : ""}" data-era="${i}"><h3 class="sech">Logos <small>${e.sets.length} sets</small></h3><div class="grid">${e.sets.map(logoCard).join("")}</div><h3 class="sech">Banners <small>enlarged logo · muted background</small></h3><div class="bgrid">${e.sets.map(bannerCard).join("")}</div></section>`).join("");
+  return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    *{box-sizing:border-box}
+    body{background:#0C0C12;font-family:-apple-system,system-ui,sans-serif;color:#fff;padding:20px;margin:0}
+    .nav{display:flex;gap:8px;margin-bottom:14px}
+    .nav a{padding:8px 14px;border-radius:999px;font-size:13px;font-weight:700;text-decoration:none;background:#1a1a22;color:#cfcfd6;border:1px solid rgba(255,255,255,.14)}
+    .nav a.on{background:#22c55e;color:#06210f;border-color:transparent}
+    h2{font-weight:900;margin:0 0 4px}
+    .sub{color:#9a9aac;font-size:12px;margin-bottom:16px}
+    .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+    .pill{background:#16161e;color:#cfcfd6;border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer}
+    .pill small{color:#8a8a98;font-weight:600;margin-left:4px}
+    .pill.on{border-color:#eab308;color:#fff;box-shadow:0 0 0 1px #eab308,0 0 18px rgba(234,179,8,.25)}
+    .era{display:none} .era.on{display:block}
+    .sech{font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:#8a8a98;margin:24px 0 12px;border-top:1px solid rgba(255,255,255,.07);padding-top:18px}
+    .sech small{font-weight:600;text-transform:none;letter-spacing:0;color:#6f6f80;margin-left:8px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+    .setcard{background:#16161e;border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:2px}
+    .setart{height:100px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+    .setart img{max-width:100%;max-height:92px;object-fit:contain}
+    .setart.noimg{flex-direction:column;gap:4px;border:1px dashed rgba(255,255,255,.14);border-radius:12px;color:#9a9aac;text-align:center;padding:8px;width:100%}
+    .setart.noimg span{font-weight:800;font-size:13px;color:#cfcfd6} .setart.noimg small{font-size:11px;color:#6f6f80}
+    .setname{font-weight:800;font-size:15px;line-height:1.2}
+    .setmeta{font-size:12px;color:#8a8a98}
+    .bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+    .banner{position:relative;aspect-ratio:16/9;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.08);background:#0b0b11}
+    .bart{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.4) saturate(.92)}
+    .banner.fb .bart{filter:brightness(.28) saturate(.55)}
+    .blogo{position:relative;max-width:82%;max-height:66%;object-fit:contain;filter:drop-shadow(0 10px 26px rgba(0,0,0,.85))}
+    .bcap{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:1px;padding:12px 12px 9px;background:linear-gradient(transparent,rgba(0,0,0,.82))}
+    .bcap b{font-size:14px;font-weight:800} .bcap span{font-size:11px;color:#c9c9d4}
+    .banner.noimg{flex-direction:column;gap:5px;background:#141019;border:1px dashed rgba(255,255,255,.14);color:#9a9aac}
+    .banner.noimg span{font-weight:800;font-size:15px;color:#cfcfd6;text-align:center;padding:0 12px} .banner.noimg small{font-size:11px;color:#6f6f80}
+  </style>
+  <body>
+  <div class="nav"><a href="/logo-wall">Store logos</a><a class="on" href="/logo-wall/sets">Pokémon sets</a></div>
+  <h2>Pokémon sets · ${eras.length} eras · ${totalSets} sets</h2>
+  <div class="sub">${withLogo}/${totalSets} logos · ${withBanner}/${totalSets} real banners (rest use the shared Pokémon fallback) · Base Set → newest. Each era has a <b>Logos</b> and a <b>Banners</b> section — banner = enlarged logo on the muted key art. Pick an era.</div>
+  <div class="pills">${pills}</div>
+  ${sections}
+  <script>
+    var pills=[].slice.call(document.querySelectorAll('.pill'));
+    var eras=[].slice.call(document.querySelectorAll('.era'));
+    pills.forEach(function(p){p.addEventListener('click',function(){var e=p.getAttribute('data-era');
+      pills.forEach(function(x){x.classList.toggle('on',x===p);});
+      eras.forEach(function(s){s.classList.toggle('on',s.getAttribute('data-era')===e);});
+      window.scrollTo(0,0);});});
+  </script>
+  </body>`);
+});
 // Owner preview: "the check" — a SOLID gradient disc with a white check CENTERED inside it, tip
 // reaching the top-right edge (never past it), exactly like the reference. 4 to choose:
 // flat / raised × purple / green. The winner becomes FCHK() everywhere (ticker, footer, verdicts).
@@ -1039,6 +1171,26 @@ app.get("/logos/chains/:file", (c) => {
     const ext = file.split(".").pop()?.toLowerCase();
     c.header("Cache-Control", "public, max-age=86400");
     return c.body(buf, 200, { "Content-Type": ext === "svg" ? "image/svg+xml" : ext === "webp" ? "image/webp" : "image/png" });
+  } catch { return c.notFound(); }
+});
+// Pokémon TCG set logos (for /logo-wall/sets) — same static-serve pattern as chain logos.
+app.get("/logos/sets/:file", (c) => {
+  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
+  try {
+    const buf = readFileSync(join(here, `../public/logos/sets/${file}`));
+    const ext = file.split(".").pop()?.toLowerCase();
+    c.header("Cache-Control", "public, max-age=86400");
+    return c.body(buf, 200, { "Content-Type": ext === "svg" ? "image/svg+xml" : ext === "webp" ? "image/webp" : "image/png" });
+  } catch { return c.notFound(); }
+});
+// Full-art set BANNER images (key art) for /logo-wall/sets — drop <apiId>.jpg into public/logos/sets/banners/.
+app.get("/logos/sets/banners/:file", (c) => {
+  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
+  try {
+    const buf = readFileSync(join(here, `../public/logos/sets/banners/${file}`));
+    const ext = file.split(".").pop()?.toLowerCase();
+    c.header("Cache-Control", "public, max-age=86400");
+    return c.body(buf, 200, { "Content-Type": ext === "webp" ? "image/webp" : ext === "png" ? "image/png" : "image/jpeg" });
   } catch { return c.notFound(); }
 });
 
@@ -2467,17 +2619,34 @@ app.post("/pub/feedback", async (c) => {
 });
 // Admin: recent feedback joined with what we showed + the transcript — the review/training surface.
 app.get("/api/feedback", async (c) => {
+  const stores = await retailerMap();
   const r = await client.execute(
-    `SELECT f.cid, f.user_verdict, f.shown_status, f.created_at, r.confirmed, r.status_key, r.transcript, r.summary
+    `SELECT f.id, f.cid, f.user_verdict, f.shown_status, f.created_at, f.reviewed, r.confirmed, r.status_key, r.transcript, r.summary, r.retailer_id
      FROM call_feedback f LEFT JOIN call_results r ON r.provider_call_id = f.cid
      ORDER BY f.created_at DESC LIMIT 200`);
   // Flag the disagreements (where the human verdict contradicts what we showed) — the cases to learn from.
   const rows = r.rows.map((x: Record<string, unknown>) => {
     const uv = x.user_verdict, conf = x.confirmed == null ? null : Number(x.confirmed), shownIn = conf === 1, shownOut = conf === 0;
     const disagree = (uv === "in" && !shownIn) || (uv === "out" && !shownOut);
-    return { ...x, disagree };
+    const rid = x.retailer_id == null ? null : Number(x.retailer_id);
+    const store = rid != null ? (stores.get(rid)?.name?.split("—")[0].trim() ?? null) : null;
+    return { ...x, store, reviewed: Number(x.reviewed || 0) === 1, disagree };
   });
   return c.json(rows);
+});
+// Triage a poll response: mark it reviewed, and optionally CORRECT our verdict on the underlying call so
+// the record (and the training signal we learn from) reflects what the customer actually saw. id = call_feedback row.
+app.post("/api/feedback/:id/review", async (c) => {
+  const id = Number(c.req.param("id")); if (!id) return c.json({ error: "id required" }, 400);
+  const b = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  await client.execute({ sql: "UPDATE call_feedback SET reviewed = 1 WHERE id = ?", args: [id] });
+  const correct = String(b.correct ?? "");
+  if (correct === "in" || correct === "out") {
+    const fb = (await client.execute({ sql: "SELECT cid FROM call_feedback WHERE id = ?", args: [id] })).rows[0];
+    const cid = fb ? String(fb.cid) : "";
+    if (cid) await client.execute({ sql: "UPDATE call_results SET confirmed = ?, status_key = ? WHERE provider_call_id = ?", args: [correct === "in" ? 1 : 0, correct === "in" ? "in_stock" : "sold_out", cid] });
+  }
+  return c.json({ ok: true });
 });
 app.post("/pub/translate", async (c) => {
   const { text, to } = await c.req.json();
@@ -2544,6 +2713,17 @@ app.post("/app/check", async (c) => {
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
   if (!comp && await isOwnerOnlyStore(Number(retailerId))) return c.json({ error: "not_found" }, 404);
   if (!comp && (!a || spendableCredits(a) <= 0)) return c.json({ error: "no_credits" }, 402);
+  // Hard block: no second check of the same store+product within the HOUR (customers only; comp/owner
+  // exempt so the Fun store can be re-tested). The front end already shows a 24h "you've checked this"
+  // reminder; this stops rapid re-dials — a store that said "no shipment yet" can be re-checked later,
+  // just not spammed. Website renders the notice on this 429 (error:"too_soon", retryAfterMin).
+  if (!comp) {
+    const recent = await findRecentCheck(u.id, Number(retailerId), Number(categoryId), 1);
+    if (recent) {
+      const mins = Math.max(1, 60 - Math.floor((Date.now() / 1000 - (recent.startedAt || 0)) / 60));
+      return c.json({ error: "too_soon", retryAfterMin: mins, message: `You just checked this store — you can check again in about ${mins} min.` }, 429);
+    }
+  }
   try {
     const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a), kioskMode });
     return c.json({ providerCallId: r.providerCallId, status: r.status });
@@ -2565,6 +2745,14 @@ app.post("/app/check-live", async (c) => {
   // Owner-only demo store ("Fun") — only the master/comp account may call it (404 so we never reveal it).
   if (!comp && await isOwnerOnlyStore(Number(b.retailerId))) return c.json({ error: "not_found" }, 404);
   if (!comp && (!a || spendableCredits(a) <= 0)) return c.json({ error: "no_credits" }, 402);
+  // Hard block: one check per store+product per hour (customers only; comp/owner exempt). See /app/check.
+  if (!comp) {
+    const recent = await findRecentCheck(u.id, Number(b.retailerId), catIds[0], 1);
+    if (recent) {
+      const mins = Math.max(1, 60 - Math.floor((Date.now() / 1000 - (recent.startedAt || 0)) / 60));
+      return c.json({ error: "too_soon", retryAfterMin: mins, message: `You just checked this store — you can check again in about ${mins} min.` }, 429);
+    }
+  }
   const r = await bridgeStoreCall(Number(b.retailerId), catIds, b.specificProduct, { userId: u.id, isPrivate: await isFinderPrivate(a) }, b.kioskMode);
   if (r.error) return c.json({ error: r.error }, 502);
   return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
@@ -3406,7 +3594,13 @@ app.get("/api/admin/overview", async (c) => {
   const stores = await retailerMap();
   const cats = await categoryLabelMap();
   const ownerOnly = await ownerOnlyRetailerIds();
-  const recent = (await db.select().from(callResults).where(gte(callResults.startedAt, d30)).orderBy(desc(callResults.startedAt))).filter((r) => !ownerOnly.has(r.retailerId) && r.status !== "admin_hangup");
+  // Production-only: the god view is the launch dashboard, so it counts REAL customer demand — exclude
+  // owner-only stores (Fun/MVP), the master/owner account's own test checks, and flagged staff/test
+  // accounts. (Same "real" definition the Metrics view uses.)
+  const masterUid = "phone:" + (process.env.OWNER_PHONE || "+13106662331").trim();
+  const flagged = await staffAccountIds();
+  const recent = (await db.select().from(callResults).where(gte(callResults.startedAt, d30)).orderBy(desc(callResults.startedAt)))
+    .filter((r) => !ownerOnly.has(r.retailerId) && r.status !== "admin_hangup" && r.finderUserId !== masterUid && !(r.finderUserId && flagged.has(r.finderUserId)));
   // Live: anything started in the last 30 min that hasn't finished.
   const live = recent.filter((r) => ["queued", "dialing", "in_progress"].includes(r.status) && r.startedAt >= now - 1800)
     .map((r) => ({ id: r.id, store: stores.get(r.retailerId)?.name || "?", category: cats.get(r.categoryId) || "", secs: now - r.startedAt, cid: r.providerCallId }));
@@ -4120,9 +4314,11 @@ app.post("/api/admin/trainer/document", async (c) => {
     }
   }
   if (!r || !r.phone) return c.json({ error: "no callable store for that chain" }, 400);
-  // Respect the global mute list — never trainer-dial a muted chain (no direct store line, etc.).
+  // Respect the global mute list + online-only flag — never trainer-dial a chain with no direct store
+  // line (muted / owner-hidden, or callTarget off = national call-center like Micro Center / Best Buy).
   const _ch = r.chainId != null ? (await db.select().from(chains).where(eq(chains.id, r.chainId)))[0] : undefined;
   if (_ch?.muted) return c.json({ error: `${_ch.name} is muted — skipped (no trainer call placed)` }, 400);
+  if (_ch?.callTarget === false) return c.json({ error: `${_ch.name} has no direct store line (online-only / call-center) — skipped` }, 400);
   if (b.chainId) await db.update(chains).set({ navStatus: "learning", navUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(chains.id, Number(b.chainId)));
   const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, b.barge, b.reactivePress, confirm);
   return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name, confirm: !!confirm });
@@ -4134,6 +4330,8 @@ app.get("/api/admin/trainer/session/:id", (c) => {
     elapsed: Math.round((Date.now() - s.startMs) / 1000), humanAtSec: s.humanAtSec,
     // Confirm-mode: did we hit the RIGHT desk ("answered") or get sent elsewhere ("redirect" + where)?
     confirm: s.confirm ? (s.confirmResult ?? "asked") : null, redirectTo: s.redirectTo ?? null,
+    // #2: the pressable menu tree heard so far + the desk we're aiming for (owner target).
+    menu: s.menu ?? [], menuPrompts: s.menuPrompts ?? [], target: s.target ?? null,
     steps: s.steps, recipe: s.recipe });
 });
 // Call log for a chain: every learner run (Alpha/Bravo/Charlie path + the step matrix). Powers the
@@ -4197,6 +4395,25 @@ app.post("/api/admin/mapper/stop", async (c) => {
   return c.json(stopMapper(Number(b.chainId || 0)));
 });
 app.get("/api/admin/mapper/state", (c) => c.json(mapperState()));
+// #B: department-only chains (no customer-service option) — read the flag + captured menu so the panel
+// can ask the owner which desk to press; POST sets the per-chain target and clears the flag so the next
+// "Map until locked" aims for it.
+app.get("/api/admin/mapper/target", async (c) => {
+  const chainId = Number(c.req.query("chainId"));
+  if (!chainId) return c.json({ error: "chainId required" }, 400);
+  const flag = (await getSetting(`nav_needs_target:${chainId}`)) || "";
+  const target = (await getSetting(`nav_target:${chainId}`)) || "";
+  return c.json({ target: target || null, needsTarget: flag ? JSON.parse(flag) : null });
+});
+app.post("/api/admin/mapper/target", async (c) => {
+  const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; target?: string };
+  const chainId = Number(b.chainId || 0);
+  if (!chainId) return c.json({ error: "chainId required" }, 400);
+  const target = String(b.target || "").trim();
+  await setSetting(`nav_target:${chainId}`, target);
+  await setSetting(`nav_needs_target:${chainId}`, ""); // owner chose → clear the needs-target flag
+  return c.json({ ok: true, target: target || null });
+});
 app.get("/api/admin/agent/models", (c) => c.json(AGENT_MODELS));
 app.post("/api/admin/agent", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { messages?: Array<{ role: "user" | "assistant"; text: string }>; model?: string };
@@ -4460,7 +4677,7 @@ async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, str
   // Dial AS the customer's verified number when we have it (phone-first model); else the house line.
   const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
   const pol = await getPolicy();
-  setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? pol.flags.connectOnHuman, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
+  setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
   const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
   const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${host}/twiml/bridge?room=${room}` });
   // REAL call-progress feed: Twilio POSTs each transition so the live timeline shows what's actually

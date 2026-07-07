@@ -222,6 +222,8 @@ export async function bootstrap() {
   await client.execute(`CREATE TABLE IF NOT EXISTS call_feedback (
     id INTEGER PRIMARY KEY AUTOINCREMENT, cid TEXT NOT NULL, user_verdict TEXT NOT NULL,
     shown_status TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+  // reviewed = admin has triaged this poll response (0/1). Post-launch add; ALTER guarded (idempotent).
+  try { await client.execute(`ALTER TABLE call_feedback ADD COLUMN reviewed INTEGER NOT NULL DEFAULT 0`); } catch { /* column already exists */ }
   await client.execute(`CREATE TABLE IF NOT EXISTS discord_channels (
     id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id TEXT NOT NULL UNIQUE, label TEXT, chain TEXT,
     category TEXT NOT NULL DEFAULT 'Pokémon', note TEXT, active INTEGER NOT NULL DEFAULT 1,

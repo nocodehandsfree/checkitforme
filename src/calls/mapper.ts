@@ -18,7 +18,7 @@ import { db } from "./../db/client";
 import { chains } from "../db/schema";
 import { getSetting, setSetting } from "../db/settings";
 import { isCallingPaused } from "../redis";
-import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, NavRecipe, NavStep } from "./navigator";
+import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, NavRecipe, NavStep } from "./navigator";
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
 
 const DAILY_CAP = 12;        // calls per chain per day — past this, a human should look at it
@@ -41,6 +41,11 @@ export interface MapperRun {
   running: boolean; stop?: boolean; stopReason?: string;
   attempt: number; callsToday: number;
   usedStores: number[];
+  store?: { id: number; name: string; phone: string } | null; // #3: the ONE store we hold across attempts
+  rotate?: boolean;              // set when the held store proved a dead line → pick a fresh one
+  target?: string;               // #1: owner-set desk to reach ("customer service" default)
+  needsTarget?: boolean;         // #B: department-only tree, no CS option — owner should pick a target
+  reachedSecs: number[];         // #A: every human-reached time this run, to measure ring variance
   benchmark: number | null;      // the chain's navSeconds BEFORE this run (the CVS comparison)
   baseline: NavRecipe | null;
   best: NavRecipe | null;
@@ -99,6 +104,34 @@ function planFor(recipe: NavRecipe, ex: Experiment): Array<{ action: string; val
   }));
 }
 
+/** #A: flag a recipe whose time-to-human depends on a department pickup — a big spread across this
+ *  run's reached times, OR a navigated path with no customer-service option — so a lucky fast call
+ *  doesn't set a misleading benchmark. Mutates the recipe in place. */
+function markVariance(run: MapperRun, recipe: NavRecipe): void {
+  const secs = run.reachedSecs.filter((n) => typeof n === "number");
+  const spread = secs.length > 1 ? Math.max(...secs) - Math.min(...secs) : 0;
+  const noCS = !menuHasCustomerService(recipe.menu);
+  const navigated = recipe.type !== "direct" && (recipe.steps?.length ?? 0) > 0;
+  if (spread > 40 || (noCS && navigated)) recipe.ringVariable = true;
+}
+
+/** Persist a reached recipe as the chain's locked path — stamping the owner target + the ring-variance
+ *  flag (#A), and, for a department-only tree with NO customer-service option, raising a needs-target
+ *  flag (#B) with the captured menu so the owner can pick the desk. Clears the flag once resolved. */
+async function finalizeAndLock(run: MapperRun, chainId: number, recipe: NavRecipe, confidence: number | null): Promise<void> {
+  if (run.target && !recipe.target) recipe.target = run.target;
+  markVariance(run, recipe);
+  await lockRecipeToChain(chainId, recipe, confidence);
+  const navigated = recipe.type !== "direct" && (recipe.steps?.length ?? 0) > 0;
+  const deptOnly = navigated && !menuHasCustomerService(recipe.menu);
+  if (!run.target && deptOnly) {
+    run.needsTarget = true;
+    await setSetting(`nav_needs_target:${chainId}`, JSON.stringify({ menu: recipe.menu || [], menuPrompts: recipe.menuPrompts || [] }));
+  } else {
+    await setSetting(`nav_needs_target:${chainId}`, ""); // CS path found or owner target set → clear
+  }
+}
+
 async function bumpDaily(chainId: number): Promise<number> {
   const key = `mapper_calls:${chainId}:${today()}`;
   const n = Number((await getSetting(key)) || 0) + 1;
@@ -113,8 +146,15 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
   if (existing?.running) return { error: "already mapping this chain" };
   const ch = (await db.select().from(chains).where(eq(chains.id, chainId)))[0];
   if (!ch) return { error: "chain not found" };
+  // #4: never map a chain with no direct store line — muted (owner-hidden / no line) or callTarget off
+  // (online-only / national call-center, e.g. Micro Center, Best Buy). These answer a call center, not
+  // the store, so a "recipe" is meaningless and it wastes a real call.
+  if (ch.muted) return { error: `${ch.name} is muted — skipped (no direct store line / owner-hidden)` };
+  if (ch.callTarget === false) return { error: `${ch.name} has no direct store line (online-only / call-center) — skipped` };
   const usedToday = Number((await getSetting(`mapper_calls:${chainId}:${today()}`)) || 0);
   if (usedToday >= DAILY_CAP) return { error: `daily cap reached (${DAILY_CAP}) — try tomorrow or raise the cap` };
+  // #1: the owner-set desk to aim for (customer service by default; a chosen department for dept-only chains).
+  const target = ((await getSetting(`nav_target:${chainId}`)) || "").trim() || undefined;
 
   // Already-mapped chain (e.g. CVS): VERIFY the locked recipe first — replay it as a timed barge plan,
   // measure the REAL seconds, then optimize from there. Fresh discovery only if the replay misses twice.
@@ -125,7 +165,7 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
     chainId, chainName: ch.name,
     phase: lockedRecipe ? "verify" : "listen", running: true,
     attempt: 0, callsToday: usedToday,
-    usedStores: [],
+    usedStores: [], store: null, rotate: false, target, needsTarget: false, reachedSecs: [],
     benchmark: ch.navSeconds ?? null,   // what we're trying to beat (the CVS benchmark readout)
     baseline: null, best: null, experiments: [], log: [],
     startedAt: Date.now(), updatedAt: Date.now(),
@@ -144,10 +184,17 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
       if (run.phase === "optimize" && !ex) { // nothing left to test → final lock below
         run.phase = "locked"; break;
       }
-      // Daytime gate: only dial stores where it's 9am–8pm LOCAL (a front-store human can exist).
-      // Naturally works east → west across the day, the owner's dialing order.
-      const store = await storeForChain(chainId, run.usedStores, true);
-      if (!store) { run.stopReason = "no store in local daytime hours right now — re-run when stores are open (mornings hit the east coast first)"; run.phase = run.baseline ? run.phase : "needs-review"; break; }
+      // Daytime gate (#5): storeForChain only returns a store that's OPEN NOW (real hours) and in 9am–8pm
+      // LOCAL — naturally works east → west across the day, the owner's dialing order.
+      // #3: hold ONE store across attempts — ring variance must not rotate us. Pick a fresh store only on
+      // the first attempt or after the held line proved DEAD (disconnected / voicemail / store closed).
+      if (!run.store || run.rotate) {
+        const picked = await storeForChain(chainId, run.usedStores, true);
+        if (!picked) { run.stopReason = "no store in local daytime hours right now — re-run when stores are open (mornings hit the east coast first)"; run.phase = run.baseline ? run.phase : "needs-review"; break; }
+        run.store = { id: picked.id, name: picked.name, phone: picked.phone };
+        run.usedStores.push(picked.id); run.rotate = false;
+      }
+      const store = run.store;
 
       // ---- place this attempt's call ----
       run.attempt++; run.callsToday = await bumpDaily(chainId);
@@ -168,14 +215,13 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
         chainId, store.id, store.name, store.phone,
         undefined, hint, barge, undefined,
         { product: "Pokémon cards" },
-        { listenFirst: isListen, askVoiceId: ask.voiceId, askText: ask.text },
+        { listenFirst: isListen, askVoiceId: ask.voiceId, askText: ask.text, target: run.target },
       );
       if (placed.error || !placed.id) {
         run.log.push({ n: run.attempt, phase: run.phase, store: store.name, experiment: ex?.label, outcome: "dial failed: " + (placed.error || "?") });
         await sleep(GAP_SEC * 1000); continue;
       }
       run.navId = placed.id;
-      run.usedStores.push(store.id);
 
       // ---- watch the call ----
       const deadline = Date.now() + CALL_MAX_SEC * 1000;
@@ -191,13 +237,17 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
       const reached = !!(s && (s.status === "human" || s.humanAtSec != null || s.confirmResult === "answered") && s.confirmResult !== "redirect");
       const recipe = s ? (s.recipe ?? recipeFromSteps(s.steps as NavStep[], s.humanAtSec)) : null;
       const secs = recipe?.seconds ?? null;
+      // #3: rotate to a fresh store ONLY on a confirmed dead line; ring-outs / menu-loops keep the same
+      // store (per owner). #A: record every reached time so markVariance can spot department-ring swings.
+      if (!reached && s?.deadLine) run.rotate = true;
+      if (reached && typeof secs === "number") run.reachedSecs.push(secs);
 
       // ---- learn from the outcome ----
       if (run.phase === "verify" || run.phase === "listen" || run.phase === "baseline") {
         const wasVerify = run.phase === "verify";
         if (reached && recipe) {
           run.baseline = recipe as NavRecipe; run.best = recipe as NavRecipe;
-          await lockRecipeToChain(chainId, recipe, s?.confidence ?? null); // usable by live checks NOW
+          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null); // usable by live checks NOW
           run.experiments = buildExperiments(recipe as NavRecipe);
           run.phase = run.experiments.length ? "optimize" : "locked";
           run.log.push({ n: run.attempt, phase: wasVerify ? "verify" : "baseline", store: store.name, outcome: `${wasVerify ? `locked map VERIFIED — real time ${secs ?? "?"}s (stored ${run.benchmark ?? "?"}s)` : "human reached — baseline locked"} (${classifyMode((s?.steps || []) as NavStep[]).label})`, seconds: secs });
@@ -216,7 +266,7 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
         if (reached && recipe && typeof secs === "number" && secs < bestSecs - 1) {
           ex.status = "win";
           run.best = recipe as NavRecipe;
-          await lockRecipeToChain(chainId, recipe, s?.confidence ?? null); // faster path → re-lock
+          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null); // faster path → re-lock
           run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `WIN — ${secs}s (was ${bestSecs}s)`, seconds: secs });
         } else if (reached) {
           ex.status = "fail"; // reached a human but not faster — keep the old best
@@ -233,8 +283,10 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
     // ---- wrap up ----
     if (run.stop && !run.stopReason) run.stopReason = "stopped by admin";
     if (run.phase === "locked" && run.best) {
-      await lockRecipeToChain(chainId, run.best, null); // final state (idempotent)
-      run.stopReason = run.stopReason || "nothing left to learn";
+      await finalizeAndLock(run, chainId, run.best, null); // final state (idempotent)
+      run.stopReason = run.stopReason || (run.needsTarget
+        ? "locked, but no customer-service option in the menu — pick a target desk to re-map"
+        : "nothing left to learn");
     } else if (run.stop) run.phase = "stopped";
     run.running = false; run.updatedAt = Date.now();
   })().catch((e) => {
