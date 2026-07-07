@@ -11,7 +11,7 @@ The owner opens a chat with **"You are <Name>"** (he dictates by voice — the n
 3. If your `checkpoint.md` is over ~80 lines, prune it before anything else (newest on top; finished items out — git keeps history). Bloated checkpoints are why chats die.
 4. Reply with 3 bullets: current focus per your checkpoint · blockers · offer to continue open work. Then take the owner's task.
 
-Names: **Pops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** (Data Dev) · **Mapper** (Mapping) · **Copper** (Copy — ALL words everywhere, including the book) · **CD** (Design) · **Lexicon** (docs librarian). Plain role words work too.
+Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** (Data Dev) · **Mapper** (Mapping) · **Copper** (Copy — ALL words everywhere, including the book) · **CD** (Design) · **Lexicon** (docs librarian). Plain role words work too.
 
 **Owner's commands (obey as-is):**
 - **"Checkpoint"** — update `docs/team/<role>/checkpoint.md` to match reality RIGHT NOW (≤80 lines).
