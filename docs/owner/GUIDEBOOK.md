@@ -62,7 +62,7 @@ Both auto-deploy ~3 min after a push. Admin (`admin.checkitforme.com`) always ru
 Start any agent by typing **"You are Check - <Role>. Ready up."** — it reads its own docs and reports
 in. Roles: **Website** (consumer site), **Admin** (dashboard), **Data Dev** (store data), **DevOps**
 (backend/infra/security/docs — your point of contact), **Design** (look), **QA** (read-only checks).
-Full prompts: `docs/owner/new-chat-prompts.md`. How they work: `HANDOFF.md`.
+Full prompts: `docs/owner/new-chat-prompts.md`. How they work: `CLAUDE.md`.
 
 ## 6. Where everything lives (pointers — open only what you need)
 - **Roadmap / backlog** → `docs/business/ROADMAP.md`

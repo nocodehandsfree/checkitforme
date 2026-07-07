@@ -61,7 +61,7 @@ control, and **tooltip.** You can't write good words for a tool you don't unders
 
 ## Where things live
 - **Brand + visual voice:** `docs/team/website/handoff.md` → `docs/design/STYLE_GUIDE.md` (colors, type, components).
-- **What the product does (so your words are true):** `HANDOFF.md`, `docs/business/ROADMAP.md`.
+- **What the product does (so your words are true):** `CLAUDE.md`, `docs/business/ROADMAP.md`.
 - **The premium "✔️+" feature names** you'll be selling: `docs/business/ROADMAP.md`.
 - **Brand pack / name:** `docs/design/brand/BRAND.md`.
 

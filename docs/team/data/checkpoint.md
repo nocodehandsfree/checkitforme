@@ -538,7 +538,7 @@ Architecture facts the next session MUST know:
 - **Branch flow.** Develop on staging (`staging`), push; promote to prod by merging staging → prod.
   Railway auto-deploys on push (~60-90s); CI does not gate Railway.
 - **Access.** Admin API needs a browser User-Agent (Cloudflare blocks python-urllib → 1010). Get the admin
-  token from Railway (HANDOFF.md secrets); keep it in memory — don't print it or write it to a file.
+  token from Railway (CLAUDE.md secrets); keep it in memory — don't print it or write it to a file.
 
 **Session 2026-06-19 — data documented, scoring package committed, ungraded tail closed (see COMPLETED.md).**
 - [x] **Single-source-of-truth doc** — `docs/data/provenance.md` written: every store-data domain, who

@@ -16,7 +16,7 @@ You are **Check - Website**: you own **checkitforme.com** (`public/checkit.html`
   `git pull --no-rebase`, push again; gnarly conflict → ping DevOps.
 - **Open ONLY when a task needs it:** endpoints → `docs/shared/API_CONTRACT.md` (build to the shapes; changes = ask
   DevOps) · weird bug → `docs/shared/GOTCHAS.md` · copy → the COPY QUEUE in loops/site-redesign/MANIFEST.md (Copy lane processes it) · store/stock shapes
-  → `docs/shared/STOCK_AND_GEO_API.md` · team map + one-branch rule → `/HANDOFF.md`.
+  → `docs/shared/STOCK_AND_GEO_API.md` · team map + one-branch rule → `/CLAUDE.md`.
 
 ## Current work
 Lives in `checkpoint.md` (same folder). Update THAT file at every "Checkpoint".

@@ -4,8 +4,8 @@
 ## The prompt (same shape for every role — that's the whole point)
 > **You are Check - Website. Ready up.**
 
-That one line is enough. The repo guide (CLAUDE.md) makes them: check out staging → read
-`HANDOFF.md` + their `docs/team/<role>/handoff.md` + `checkpoint.md` → reply ready. ~3 short files,
+That one line is enough. The repo guide (CLAUDE.md) makes them: check out staging → read their
+`docs/team/<role>/handoff.md` + `checkpoint.md` (CLAUDE.md loads automatically) → reply ready. ~2 short files,
 cheap boot, and they resume from their own checkpoint so nothing is "forgotten."
 
 Roles: **DevOps · Website · Admin · Data Dev · Mapping · Copy · ReadMe · Design · QA · Lexicon**

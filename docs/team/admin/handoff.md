@@ -20,7 +20,7 @@ admin features (God-view, store CMS UI, voice studio, Tree Trainer, analytics, p
   up cleanly before calling it done.** "Deploy ≠ commit" — a Worker only goes live when its deploy script runs.
 
 ## Read (in order) — open only what you need
-1. `/HANDOFF.md` · `docs/shared/ARCHITECTURE.md`
+1. `/CLAUDE.md` · `docs/shared/ARCHITECTURE.md`
 2. `docs/shared/API_CONTRACT.md` — the `/api/*` admin endpoints you call.
 3. `docs/business/ROADMAP.md` (admin features) · `docs/finance/COST_MODEL.md` (for the cost
    dashboard) · the caller-tech spec in git history (the admin caller tech: LLM switcher + phone-tree

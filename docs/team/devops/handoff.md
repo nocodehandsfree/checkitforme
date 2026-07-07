@@ -10,7 +10,7 @@ API contract. You unblock the other lanes.
   voice-caller-staging service; promote = merge to prod `main` → the voice-caller service; each auto-deploys ~3 min**).
 - `docs/shared/API_CONTRACT.md` is yours to evolve (announce shape changes to Website/Admin).
 
-## Environments (see HANDOFF.md)
+## Environments (see CLAUDE.md)
 - **Staging** `staging` → `staging.checkitforme.com` (Railway svc `voice-caller-staging`) — develop here.
 - **Production** `main` → `checkitforme.com` (Railway svc `voice-caller`) — promote by merging staging → prod.
 - **Admin** `admin.checkitforme.com` — operator dashboard on live prod data.

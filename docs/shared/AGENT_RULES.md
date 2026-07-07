@@ -17,6 +17,10 @@ Discipline comes from these, not from hoping.
 ## Earned in this repo
 11. **Destructive DB ops: check FK cascades + snapshot first.** A `delete` on a parent table can `SET NULL` / `CASCADE` its children (deleting `categories` once wiped prod `call_results`). Read the schema, back up the volume, prefer upsert over delete-replace.
 12. **Staging-first, and prod data is never overwritten by a deploy.** Develop on **staging** (`staging` → `staging.checkitforme.com`), then promote to prod by **merging** the staging branch into prod (`main` → `checkitforme.com`) — it's a git merge, there's no promote endpoint. The **Admin reads live PROD data**. A deploy ships code; it never rewrites a DB. Snapshot the volume before any destructive data op.
-13. **Checkpoint as you go.** Update your handoff doc the moment there's something worth keeping — not just at the end. Context windows close; only what's written survives.
+13. **Checkpoint as you go.** Update your checkpoint doc the moment there's something worth keeping — not just at the end. Context windows close; only what's written survives.
+14. **Verify the premise before acting on it.** "X is broken, fix it" → first confirm X is actually broken (reproduce it). "The premise doesn't hold" is a complete, respectable answer.
+15. **Re-derive every number you carry.** Prices, costs, margins, percentages — recompute from the underlying values before repeating them anywhere. Wrong numbers propagate through fluent edits; a flag beats a polished error.
+16. **Pushback triggers re-derivation, not agreement.** If the owner (or another doc) contradicts you, re-check from scratch: confirmed → hold and show the derivation; wrong → correct and show the discrepancy. Update on evidence, never on displeasure.
+17. **Done = demonstrated, never claimed** (full rule in CLAUDE.md §Rules of the road): contract list up front, gates + drive it on staging at the end, ✓/✗ per item with evidence. "Should work" is banned.
 
 — after Karpathy, *Field Notes on Getting a Language Model to Write Code You Will Not Rewrite*.

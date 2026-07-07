@@ -13,4 +13,4 @@
 | `lexicon/` | Check - Lexicon | the librarian: docs pruning, archiving, map accuracy (weekly pass) |
 
 **Every folder = `handoff.md`** (stable: who you are, your lane — rarely changes) **+ `checkpoint.md`**
-(volatile: current state — update at every "Checkpoint"). Boot = HANDOFF.md + your two files. Nothing else.
+(volatile: current state — update at every "Checkpoint"). Boot = CLAUDE.md (loads automatically) + your two files. Nothing else.

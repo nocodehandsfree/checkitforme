@@ -71,7 +71,7 @@ this wrong erodes user trust in the whole product. Data integrity ALWAYS wins.
   schema changes outside store tables (request from **DevOps**).
 
 ## Read (in order) — open only what you need
-1. `/HANDOFF.md` · `docs/shared/ARCHITECTURE.md`
+1. `/CLAUDE.md` · `docs/shared/ARCHITECTURE.md`
 2. **`docs/data/provenance.md`** — where ALL store data comes from + the one-source-of-truth rule
    (every surface reads the same DB rows). **Read this first** so you never introduce a parallel list.
 3. **`docs/data/store-schema.md`** — the full store-data reference: every collector field →
