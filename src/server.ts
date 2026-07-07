@@ -3706,7 +3706,22 @@ app.get("/api/gtm", async (c) => {
   let items = GTM_SEED;
   try { const raw = await getSetting("gtm_checklist"); if (raw) { const p = JSON.parse(raw); if (Array.isArray(p?.items)) items = p.items; } }
   catch { /* fall back to seed */ }
-  return c.json({ items });
+  // Self-healing: report any seeded default that's no longer in the saved list (accidental delete) so
+  // the UI can offer a one-tap restore — the owner shouldn't need to remember what vanished.
+  const have = new Set(items.map((i: { id?: string }) => i.id));
+  const missingDefaults = GTM_SEED.filter((s) => !have.has(s.id)).map((s) => ({ id: s.id, title: s.title }));
+  return c.json({ items, missingDefaults });
+});
+// One-tap restore: re-append any seeded defaults missing from the saved list (status reset to todo).
+app.post("/api/gtm/restore-defaults", async (c) => {
+  let items: typeof GTM_SEED = GTM_SEED;
+  try { const raw = await getSetting("gtm_checklist"); if (raw) { const p = JSON.parse(raw); if (Array.isArray(p?.items)) items = p.items; } }
+  catch { /* seed */ }
+  const have = new Set(items.map((i) => i.id));
+  const restored = GTM_SEED.filter((s) => !have.has(s.id)).map((s) => ({ ...s, status: "todo" as const }));
+  const next = [...items, ...restored];
+  await setSetting("gtm_checklist", JSON.stringify({ items: next, updatedAt: Date.now() }));
+  return c.json({ ok: true, restored: restored.length, items: next });
 });
 app.post("/api/gtm", async (c) => {
   const b = await c.req.json().catch(() => ({}));

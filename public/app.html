@@ -1281,7 +1281,13 @@ async function loadGtm(){
   const opts='<option value="">All agents</option>'+Object.entries(GTM_AGENTS).map(([k,v])=>`<option value="${k}">${esch(v)}</option>`).join('');
   const fa=document.getElementById('gtm_f_agent'); if(fa&&!fa.dataset.done){ fa.innerHTML=opts; fa.dataset.done='1'; }
   const na=document.getElementById('gtm_new_agent'); if(na&&!na.dataset.done){ na.innerHTML=Object.entries(GTM_AGENTS).map(([k,v])=>`<option value="${k}"${k==='owner'?' selected':''}>${esch(v)}</option>`).join(''); na.dataset.done='1'; }
-  const r=await api('/api/gtm'); GTM_ITEMS=(r&&r.items)||[]; renderGtm();
+  const r=await api('/api/gtm'); GTM_ITEMS=(r&&r.items)||[]; GTM_MISSING=(r&&r.missingDefaults)||[]; renderGtm();
+}
+// Accidental-delete recovery: one tap re-adds any default items missing from the saved list.
+let GTM_MISSING=[];
+async function gtmRestore(){
+  const r=await api('/api/gtm/restore-defaults',{method:'POST'});
+  if(r&&r.ok){ GTM_ITEMS=r.items||GTM_ITEMS; GTM_MISSING=[]; toast('Restored '+r.restored+' item(s)'); renderGtm(); }
 }
 function renderGtm(){
   const fArea=(document.getElementById('gtm_f_area')||{}).value||'';
@@ -1300,9 +1306,10 @@ function renderGtm(){
     return true;
   });
   const el=document.getElementById('gtm_list'); if(!el) return;
-  if(!list.length){ el.innerHTML='<div class="empty">Nothing here — adjust the filters or add an item.</div>'; return; }
+  const rb=GTM_MISSING.length?('<div class="card" style="margin-bottom:8px;display:flex;align-items:center;gap:10px;border:1px solid rgba(251,191,36,.4)"><span class="meta" style="flex:1;color:#FBBF24">'+GTM_MISSING.length+' default item(s) missing (deleted?): '+GTM_MISSING.map(m=>esch(m.title)).join(' · ')+'</span><button type="button" class="btn" onclick="gtmRestore()">Restore</button></div>'):'';
+  if(!list.length){ el.innerHTML=rb+'<div class="empty">Nothing here — adjust the filters or add an item.</div>'; return; }
   const dot={todo:'#64748b',doing:'#fbbf24',done:'#4ADE80'}, next={todo:'doing',doing:'done',done:'todo'};
-  el.innerHTML=list.map(i=>{
+  el.innerHTML=rb+list.map(i=>{
     const idx=GTM_ITEMS.indexOf(i);
     const strike=i.status==='done'?'text-decoration:line-through;opacity:.55':'';
     return `<div class="card" style="display:flex;gap:11px;align-items:flex-start;margin-bottom:8px">
@@ -1321,7 +1328,7 @@ function renderGtm(){
   }).join('');
 }
 async function gtmSave(){ const r=await api('/api/gtm',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({items:GTM_ITEMS})}); if(r&&r.items) GTM_ITEMS=r.items; renderGtm(); }
-function gtmCycle(idx){ const it=GTM_ITEMS[idx]; if(!it) return; const next={todo:'doing',doing:'done',done:'todo'}; it.status=next[it.status]||'todo'; renderGtm(); gtmSave(); }
+function gtmCycle(idx){ const it=GTM_ITEMS[idx]; if(!it) return; const next={todo:'doing',doing:'done',done:'todo'}; const to=next[it.status]||'todo'; if(to==='done'&&!confirm('Mark "'+it.title+'" as DONE?\n\n(Done items are hidden from the default Open view.)')) return; it.status=to; renderGtm(); gtmSave(); }
 function gtmDelete(idx){ const it=GTM_ITEMS[idx]; if(!it) return; if(!confirm('Remove "'+it.title+'"?')) return; GTM_ITEMS.splice(idx,1); renderGtm(); gtmSave(); }
 function gtmAdd(){
   const t=(document.getElementById('gtm_new_title')||{}).value||''; if(!t.trim()) return;
