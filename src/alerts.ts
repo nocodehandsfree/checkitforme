@@ -99,16 +99,49 @@ async function twilioSms(to: string, body: string): Promise<{ ok: boolean; detai
   } catch (e) { return { ok: false, detail: String(e).slice(0, 80) }; }
 }
 function escHtml(s: string): string { return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string)); }
-async function espEmail(to: string, subject: string, body: string, opts: { templateId?: number; params?: Record<string, string | number | undefined> } = {}): Promise<{ ok: boolean; detail: string }> {
+// The one CTA per email — label + where it lands. Restock is SMS, so no email CTA.
+const EMAIL_CTA: Partial<Record<AlertEvent, { label: string; url: string }>> = {
+  welcome: { label: "Pick a store", url: "https://checkitforme.com" },
+  store_added: { label: "Use my free check", url: "https://checkitforme.com" },
+  waitlist: { label: "Find a store near you", url: "https://checkitforme.com" },
+};
+/** Email-safe branded HTML: table layout + inline styles so it renders the same in every mail client
+ *  (Gmail/Outlook/Apple). Dark card, green accent, wordmark, one CTA button. This is what "the design"
+ *  actually has to be — a web-layout mockup (flex/grid) won't render in email. */
+function renderBrandedEmail(event: AlertEvent, subject: string, body: string): string {
+  const cta = EMAIL_CTA[event];
+  const button = cta
+    ? `<tr><td style="padding:6px 0 2px"><a href="${cta.url}" style="display:inline-block;background:#4ADE80;color:#06210f;font-weight:800;font-size:15px;text-decoration:none;padding:13px 24px;border-radius:10px;font-family:Inter,Arial,sans-serif">${escHtml(cta.label)} &rarr;</a></td></tr>`
+    : "";
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#0B0B10">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0B0B10;margin:0;padding:0"><tr><td align="center" style="padding:26px 16px">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
+      <tr><td style="padding:6px 4px 18px;font-family:Inter,Arial,sans-serif">
+        <span style="font-size:16px;font-weight:800;color:#FFFFFF;letter-spacing:.2px">Check It For Me</span>
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#4ADE80;vertical-align:middle;margin-left:7px"></span>
+      </td></tr>
+      <tr><td style="background:#14141A;border:1px solid #22222A;border-radius:16px;padding:30px 28px;font-family:Inter,Arial,sans-serif">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr><td style="font-size:22px;font-weight:800;color:#FFFFFF;line-height:1.28;padding-bottom:12px">${escHtml(subject)}</td></tr>
+          <tr><td style="font-size:15px;line-height:1.62;color:#C9C9D2;padding-bottom:22px">${escHtml(body)}</td></tr>
+          ${button}
+        </table>
+      </td></tr>
+      <tr><td style="padding:18px 6px;font-family:Inter,Arial,sans-serif;font-size:12px;color:#6B6B78">Check It For Me &middot; <a href="https://checkitforme.com" style="color:#4ADE80;text-decoration:none">checkitforme.com</a></td></tr>
+    </table>
+  </td></tr></table></body></html>`;
+}
+async function espEmail(to: string, subject: string, body: string, opts: { templateId?: number; params?: Record<string, string | number | undefined>; event?: AlertEvent } = {}): Promise<{ ok: boolean; detail: string }> {
   const key = config.alerts.brevoApiKey;
   if (!key) return { ok: false, detail: "email_not_configured" }; // BREVO_API_KEY unset → stubbed
   const sender = { name: "Check It For Me", email: config.alerts.senderEmail };
-  // Prefer a branded Brevo template (Design owns the look) when its id is set; else a clean inline fallback.
+  // Prefer a branded Brevo template (Design owns the look) when its id is set; else our email-safe template.
   const payload: Record<string, unknown> = opts.templateId
     ? { sender, to: [{ email: to }], templateId: opts.templateId, params: opts.params || {} }
     : { sender, to: [{ email: to }], subject,
-        htmlContent: `<div style="font-family:Inter,Arial,sans-serif;color:#111;max-width:520px"><p style="font-size:15px;line-height:1.55">${escHtml(body)}</p><p style="color:#999;font-size:12px">Check It For Me · <a href="https://checkitforme.com" style="color:#16A34A;text-decoration:none">checkitforme.com</a></p></div>`,
-        textContent: `${body}\n\nCheck It For Me · checkitforme.com` };
+        htmlContent: opts.event ? renderBrandedEmail(opts.event, subject, body)
+          : `<div style="font-family:Inter,Arial,sans-serif;color:#111;max-width:520px"><p style="font-size:15px;line-height:1.55">${escHtml(body)}</p></div>`,
+        textContent: `${subject}\n\n${body}\n\nCheck It For Me · checkitforme.com` };
   try {
     const r = await fetch("https://api.brevo.com/v3/smtp/email", { method: "POST", headers: { "api-key": key, "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     if (!r.ok) return { ok: false, detail: `brevo_${r.status}` };
@@ -136,7 +169,7 @@ export async function sendAlert(userId: string, event: AlertEvent, tokens: Recor
     return { status, detail: res.detail };
   }
   const subject = fill(tpls[event].emailSubject, tokens), body = fill(tpls[event].emailBody, tokens);
-  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: strTokens(tokens) });
+  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: strTokens(tokens), event });
   const status = res.ok ? "sent" : "stubbed"; await log(userId, event, channel, to, status, tagged(res.detail));
   return { status, detail: res.detail };
 }
@@ -151,7 +184,7 @@ export async function sendAnonEmail(event: AlertEvent, tokens: Record<string, st
   if (!to) { await log(null, event, "email", null, "skipped_nocontact"); return { status: "skipped_nocontact" }; }
   const tpls = await getAlertTemplates();
   const subject = fill(tpls[event].emailSubject, tokens), body = fill(tpls[event].emailBody, tokens);
-  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: strTokens(tokens) });
+  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: strTokens(tokens), event });
   const status = res.ok ? "sent" : "stubbed"; await log(null, event, "email", to, status, res.detail);
   return { status, detail: res.detail };
 }
@@ -170,7 +203,7 @@ export async function sendTestAlert(event: AlertEvent, to: string): Promise<{ st
     return { status: res.ok ? "sent" : "stubbed", detail: res.detail, channel };
   }
   const subject = fill(tpls[event].emailSubject, SAMPLE_TOKENS), body = fill(tpls[event].emailBody, SAMPLE_TOKENS);
-  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: SAMPLE_TOKENS });
+  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: SAMPLE_TOKENS, event });
   await log(null, event, "email", to, res.ok ? "test_sent" : "test_stubbed", res.detail);
   return { status: res.ok ? "sent" : "stubbed", detail: res.detail, channel };
 }
