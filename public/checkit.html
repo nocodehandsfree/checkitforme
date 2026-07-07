@@ -5423,7 +5423,10 @@ function hobbyLoadCache(){ try{ const c=JSON.parse(localStorage.getItem('cifm_po
 // Fetch the live registry (server 5-min cache) and re-cache. If the era grid is already up, repaint it.
 async function hobbyFetchSets(){
   try{ const d=await api('/pub/pokemon-sets'); if(d&&Array.isArray(d.eras)){ HOBBY.data=d; try{ localStorage.setItem('cifm_pokesets',JSON.stringify(d)); }catch(_){ }
-    if(MODE==='hobby'&&HUNT_STEP==='eras'&&$('hobEraGrid')) renderHobbyEras(); } }catch(_){ }
+    // Repaint whichever hunt screen is showing, not just eras — otherwise a stale localStorage feed
+    // (old asset URLs) stays on screen for the whole sets step even after the fresh registry lands.
+    if(MODE==='hobby'&&HUNT_STEP==='eras'&&$('hobEraGrid')) renderHobbyEras();
+    else if(MODE==='hobby'&&HUNT_STEP==='sets'&&HOBBY.era){ const fresh=d.eras.find(e=>e.era===HOBBY.era.era); if(fresh){ HOBBY.era=fresh; renderHobbySets(); } } } }catch(_){ }
 }
 // Warm the registry the moment we know the user can reach Hobby (chip shown), so tapping it is instant.
 function prefetchHobby(){ if(HOBBY.data) return; hobbyLoadCache(); if(!HOBBY.data){ try{ idle(()=>hobbyFetchSets()); }catch(_){ hobbyFetchSets(); } } }
@@ -5485,8 +5488,7 @@ function renderHobbySets(){
     const hero=fresh&&!heroDone; if(hero)heroDone=true;
     const inner=`<div style="border-radius:16px;overflow:hidden;background:${hero?'#23232A':'linear-gradient(180deg,#2D2D34 0%,#27272D 100%)'};box-shadow:${hero?'none':'0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)'}">
       <div style="position:relative;aspect-ratio:1/1;overflow:hidden">
-        <img src="${esc(st.banner||'')}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.6)" onerror="this.parentElement.insertAdjacentHTML('afterbegin',hobArtPh('${esc(st.code)}'));this.remove()">
-        <div style="position:absolute;inset:0;background:radial-gradient(62% 62% at 50% 52%,rgba(0,0,0,.34) 0%,rgba(0,0,0,0) 70%);pointer-events:none"></div>
+        <img src="${esc(st.banner||'')}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:brightness(.78)" onerror="this.parentElement.insertAdjacentHTML('afterbegin',hobArtPh('${esc(st.code)}'));this.remove()">
         ${st.logo?`<img src="${esc(st.logo)}" alt="${esc(st.name||st.code)}" onload="hobSizeLogo(this)" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:86%;height:auto;filter:drop-shadow(0 6px 9px rgba(0,0,0,.62))" onerror="this.remove()">`:''}
         ${fresh?`<span class="hob-chip" style="background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF),var(--accent,#FFCB05));color:#26251E">${t('hob.dropped','Just dropped')}</span>`:''}
         ${future?`<span class="hob-chip" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:#FFF">${t('hob.upcoming','Upcoming')}</span>`:''}
