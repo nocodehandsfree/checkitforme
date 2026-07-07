@@ -156,6 +156,25 @@ export async function sendAnonEmail(event: AlertEvent, tokens: Record<string, st
   return { status, detail: res.detail };
 }
 
+/** Admin "send me a test": fires any one template to an address/phone with realistic sample tokens,
+ *  bypassing metering + subscriptions. Logged with status "test" prefix so it's obvious in the feed. */
+const SAMPLE_TOKENS: Record<string, string> = { store: "Target Glendale", product: "151 Booster Box", city: "Glendale", name: "there" };
+export async function sendTestAlert(event: AlertEvent, to: string): Promise<{ status: string; detail?: string; channel: Channel }> {
+  const channel = EVENT_CHANNEL[event];
+  const tpls = await getAlertTemplates();
+  if (!to) { await log(null, event, channel, null, "test_nocontact"); return { status: "skipped_nocontact", channel }; }
+  if (channel === "sms") {
+    const body = fill(tpls[event].sms, SAMPLE_TOKENS);
+    const res = await twilioSms(to, body);
+    await log(null, event, "sms", to, res.ok ? "test_sent" : "test_stubbed", res.detail);
+    return { status: res.ok ? "sent" : "stubbed", detail: res.detail, channel };
+  }
+  const subject = fill(tpls[event].emailSubject, SAMPLE_TOKENS), body = fill(tpls[event].emailBody, SAMPLE_TOKENS);
+  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: SAMPLE_TOKENS });
+  await log(null, event, "email", to, res.ok ? "test_sent" : "test_stubbed", res.detail);
+  return { status: res.ok ? "sent" : "stubbed", detail: res.detail, channel };
+}
+
 /** Opt a user into an alert (restock of a store/product). Dedups on the same target; reactivates if muted. */
 export async function alertSubscribe(userId: string, o: { kind?: string; retailerId?: number | null; categoryId?: number | null; productLabel?: string | null; channel?: Channel }): Promise<{ ok: true; id: number }> {
   const kind = o.kind || "restock", channel: Channel = o.channel === "email" ? "email" : "sms";

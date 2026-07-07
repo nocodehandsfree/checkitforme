@@ -620,6 +620,20 @@
       <div style="margin-top:12px"><button class="act" onclick="saveAlertTemplates()">Save messages</button> <span id="al_saved" class="meta"></span></div>
     </div>
     <div class="card">
+      <div class="name">Send yourself a test <span data-tip="Fires the chosen message to any address with sample data (Target Glendale, 151 Booster Box). Email sends for real via Brevo. Restock is a text and will show 'stubbed' until the Twilio number is live."></span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="al_test_event" style="background:var(--terminal);border:1px solid var(--border);border-radius:8px;padding:8px 9px;color:var(--text-strong);font-size:12.5px">
+          <option value="welcome">Welcome (email)</option>
+          <option value="store_added">Store went live (email)</option>
+          <option value="waitlist">We’re live in your area (email)</option>
+          <option value="restock">Restock (text)</option>
+        </select>
+        <input id="al_test_to" type="text" placeholder="your email (or phone for restock)" style="flex:1;min-width:180px;background:var(--terminal);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text-strong);font-size:13px">
+        <button class="act" onclick="sendAlertTest()">Send test</button>
+      </div>
+      <div id="al_test_out" class="meta" style="margin-top:8px;font-size:12px"></div>
+    </div>
+    <div class="card">
       <div class="name">Recent sends</div>
       <div id="al_log" class="meta">Loading…</div>
     </div>
@@ -3840,6 +3854,20 @@ async function saveAlertTemplates(){
   const s=document.getElementById('al_saved');
   if(r&&!r.error){ AL_TPL=r; if(s){ s.textContent='Saved'; setTimeout(()=>{s.textContent='';},2000); } toast('Messages saved'); }
   else toast('Could not save messages');
+}
+async function sendAlertTest(){
+  const event=(document.getElementById('al_test_event')||{}).value||'welcome';
+  const to=((document.getElementById('al_test_to')||{}).value||'').trim();
+  const out=document.getElementById('al_test_out');
+  if(!to){ if(out){ out.style.color='#F59E0B'; out.textContent='Enter where to send it first.'; } return; }
+  if(out){ out.style.color=''; out.textContent='Sending…'; }
+  const r=await api('/api/alerts/test',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event,to})});
+  if(!r||r.error){ if(out){ out.style.color='#F87171'; out.textContent='Error: '+((r&&r.error)||'no response'); } return; }
+  // sent = it actually went out; stubbed = the provider key/number isn't live yet.
+  if(r.status==='sent'){ if(out){ out.style.color='var(--green)'; out.textContent='✅ Sent to '+to+' — check your '+(r.channel==='sms'?'phone':'inbox (and spam)')+'.'; } toast('Test sent'); }
+  else if(r.status==='stubbed'){ if(out){ out.style.color='#F59E0B'; out.textContent='Logged but NOT delivered — '+(r.channel==='sms'?'the Twilio number isn’t live yet (pending A2P).':'Brevo key not set on this service.')+' ('+(r.detail||'')+')'; } }
+  else{ if(out){ out.style.color='#F59E0B'; out.textContent=r.status+(r.detail?(' · '+r.detail):''); } }
+  loadAlerts();
 }
 async function loadGrowth(){
   POL=await api('/api/policy');

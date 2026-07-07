@@ -44,7 +44,7 @@ import { check as rlCheck, clientIp, LIMITS } from "./ratelimit";
 import { isGmailConfigured, gmailReceiptTick, debugRecentInbox } from "./gmail-receipts";
 import { rankBets } from "./best-bet";
 import { referralStatus, claimReferral } from "./referrals";
-import { sendAlert, sendAnonEmail, alertSubscribe, myAlerts, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
+import { sendAlert, sendAnonEmail, sendTestAlert, alertSubscribe, myAlerts, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
 
 /** 409-style gate: returns a closed payload if we KNOW the store is closed right now, else null. */
 async function closedGate(retailerId: number): Promise<{ error: string; label: string } | null> {
@@ -3724,6 +3724,16 @@ app.get("/app/alerts/me", async (c) => {
 
 // ---- Admin: editable alert message templates + the send log (tracking) ----
 app.get("/api/alerts/templates", async (c) => c.json(await getAlertTemplatesPublic()));
+// Admin: fire one template to yourself with sample data — the fastest way to eyeball a real send.
+app.post("/api/alerts/test", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const event = String(b.event || "welcome");
+  const to = String(b.to || "").trim();
+  if (!["restock", "store_added", "waitlist", "welcome"].includes(event)) return c.json({ error: "bad_event" }, 400);
+  if (!to) return c.json({ error: "recipient required" }, 400);
+  const r = await sendTestAlert(event as "restock" | "store_added" | "waitlist" | "welcome", to);
+  return c.json(r);
+});
 app.patch("/api/alerts/templates", async (c) => {
   try { return c.json(await setAlertTemplates(await c.req.json())); } catch (e) { return c.json({ error: String(e) }, 400); }
 });
