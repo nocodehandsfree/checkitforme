@@ -8,7 +8,7 @@ That one line is enough. The repo guide (CLAUDE.md) makes them: check out stagin
 `HANDOFF.md` + their `docs/team/<role>/handoff.md` + `checkpoint.md` → reply ready. ~3 short files,
 cheap boot, and they resume from their own checkpoint so nothing is "forgotten."
 
-Roles: **DevOps · Website · Admin · Data Dev · Mapping · Copy · ReadMe · Design · QA**
+Roles: **DevOps · Website · Admin · Data Dev · Mapping · Copy · ReadMe · Design · QA · Lexicon**
 (add the day's task on a second line if you want: "Today: <one line>").
 
 ## How to keep chats from dying (the 3 habits)
@@ -18,4 +18,3 @@ Roles: **DevOps · Website · Admin · Data Dev · Mapping · Copy · ReadMe · 
 
 ## If an agent seems lost
 - "Where did doc X go?" → `docs/START-HERE.md` is the map; finished stuff is in `docs/archive/`.
-- Old chats may reference `docs/handoffs/…` — stubs there redirect until 2026-07-14.

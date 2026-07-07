@@ -11,9 +11,8 @@ Every folder below has a README that explains its contents **right on the folder
 | `specs/` | **Active builds only** — one file/folder per feature; ships → moves to `archive/` | The lanes building them |
 | `data/` | Store-data reference + `samples/` (raw .json/.csv kept apart from docs) | Data Dev |
 | `business/` | Roadmap | Owner + DevOps |
-| `finance/` | Cost model + calculator (deeper economics live on the prod branch: `CALL_ECONOMICS.md`, `CHECKPOINT.md`) | Owner + DevOps |
+| `finance/` | Cost model + calculator (`CALL_ECONOMICS.md` is in `business/` pending merge into `COST_MODEL.md`) | Owner + DevOps |
 | `archive/` | Done or superseded — "where did X go?" answers | Anyone |
-| `handoffs/` | ⚠️ Transition stubs only (old paths → `team/`), deleted after 2026-07-14 | Nobody new |
 
 ## The rules (what keeps this clean — DevOps enforces)
 1. **Docs root stays empty** except this file. Everything lives in a folder with a README.
