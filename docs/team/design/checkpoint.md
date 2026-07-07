@@ -10,26 +10,29 @@
   Side-by-side pictures: `docs/specs/design-gap/inventory.html`. Vote each line below —
   **site wins (fold into the guide) or comp wins (fix the site).** `✅` = already approved.
 
-### Read this first — the skin gate
-- Staging serves **two skins**. The new **elevated skin (`?skin=v2`)** is what YOU see — it’s
-  gated per-device with `?skin=v2` and stays "off by default" for normal visitors *until you
-  approve the takeover* (that’s baked into the code as a comment). A plain visitor still gets the
-  **old flat v1** default. My first pass shot the default and reported v1 — wrong baseline. This
-  list is now **comp vs the v2 skin you actually use.**
-- **Verdict: v2 ≈ the comp.** The elevated look matches the guide — page `#1D1D22`, raised
-  cards, green **ring** CTAs, Retail·Kiosk labels, plans with perk-icons + **yellow** tier ring,
-  sheets with a grabber and no corner ×. The big "drifts" from my first pass (flat page, purple
-  button, solid CTA, "Check a store" labels, green plan ring, missing perk icons, corner ×) were
-  **all v1 artifacts** — gone in v2. **The real action isn’t a redesign — it’s: promote v2 to the
-  default so normal visitors stop getting v1.**
+### Read this first — skin + comp status (resolved)
+- **"v3" = a cache bump, not a new skin.** The elevated skin is still `?skin=v2`. The recent
+  service-worker/cache-version bump (the "stuck stale design on my laptop / Cloudflare" fix) is what
+  let you finally load it — so what you see now = the v2 elevated skin. There is no v3 in any branch.
+- **v2 ≈ the comp.** The elevated look matches the guide. My first pass mistakenly shot the *default*
+  render (still the old flat **v1** — gated off until you approve the takeover), so flat page / purple
+  button / "Check a store" / green plan ring / corner × were all v1 artifacts, gone in v2. **The real
+  action is: promote v2 to default so normal visitors stop getting v1.**
+- **One comp now.** `NEW_CHECK_COMPS.dc.html` is the single visual comp; the duplicate bundle
+  `NEW_CHECK_COMPS.html` is retired to `docs/archive/`. The guide, the comp, and the copy guide now
+  reference each other (see `STYLE_GUIDE.md` header + `comps/README.md`).
 
-### Genuine comp-vs-v2 nits (small — vote per line)
-- **Footer links** · comp: one line ending `…Contact Legal` (Terms+Privacy collapsed to "Legal", §5.14) · v2: still shows `…Contact Terms Privacy` (split)
-- **Mode-tab icon color** · comp: active icon green `#4ADE80` (§5.1) · v2: active Retail/Kiosk icon rides accent yellow · ⚠️
-- **Login contact field** · comp: eyebrow "PHONE OR EMAIL", accepts phone OR email (§5.12) · v2: phone-only (+1 flag), keeps a corner × (× removal was scoped to account/buy/page sheets, not login)
-- **Store-row logos** · comp: chain PNG on `#1F1F25`, else embossed 2-letter tile — never blank · v2: some rows render a broken-image placeholder (should fall back to initials)
+### Reconciled INTO the guide (shipped decisions — no vote needed)
+- **Mode-tab icons** now ride the brand accent, not green (commit 5bcb734) → §5.1 updated.
+- **Calendar selected day** = Check-green, not accent-yellow (commit 977cbc7) → §5.10 updated.
+- **Footer** = one centered, unified cluster (commit 9a39fd4) → §5.14 updated.
 
-### Copy (skin-independent — these stand regardless of v1/v2)
+### Still open — vote per line
+- **Footer "Legal"** · collapse `Terms` + `Privacy` into one **Legal** link (comp intent) · v2: still split
+- **Login contact field** · comp §5.12: eyebrow "PHONE OR EMAIL", phone OR email · v2: phone-only (+1 flag) — likely the intended "phone IS the login"; confirm which the guide should say
+- **Store-row logos** · never blank (chain PNG or embossed initials) · v2: some rows show a broken-image placeholder — a site bug, should fall back to initials
+
+### Copy (skin-independent — for the copy lane)
 - **"No charge" wording** · guide: a green shield carries it — don’t write the words · site: verdict notes write "No charge." literally (checkit.html:4640–4648)
 - **Em-dashes** · guide: banned · site: still in `notify.ts` email subject/headline + toast "…any town." (3264)
 - **Banned names** · guide: never CheckIt/Runnr · site: `notify.ts` still sends sender "CheckIt" + "Runnr" footer
@@ -40,6 +43,6 @@
   yellow tier ring · Sheet grabber, no corner × · "No answer = no charge." · Check It For Me /
   Check+ (not Fungibles/Fungie+) · "1 check used" (no "Powered by").
 
-### Not re-verified in v2 (gaps)
-- Calendar selected-day color, full verdict page + "couldn’t tell" poll, calls-by-day pop-over
-  (`#calbtn` wouldn’t click). Recapture with `?skin=v2` next pass.
+### Not re-shot in v2 (gaps to close next pass)
+- Full verdict page + "couldn’t tell" poll (simulated call didn’t resolve in the window), and the
+  calls-by-day pop-over (`#calbtn` wouldn’t click). Recapture with `?skin=v2`.

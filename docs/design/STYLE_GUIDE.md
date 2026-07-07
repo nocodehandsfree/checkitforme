@@ -2,11 +2,23 @@
 
 The single visual source of truth for **checkitforme.com** ("Check") and its admin/vertical
 surfaces — the **elevated / soft-depth** skin the live site runs. Every spec here is extracted 1:1
-from the approved master board in this folder:
-**`NEW_CHECK_COMPS.html`** (self-contained, open anywhere) / **`NEW_CHECK_COMPS.dc.html`** (source).
-Words are owned by `docs/design/copy/COPY_STYLE_GUIDE.md`; the brand mark + colors by
-`docs/design/brand/BRAND.md`. When the live site and this doc disagree, fix whichever is wrong and
-note it here.
+from the one approved master board in this folder: **`comps/NEW_CHECK_COMPS.dc.html`** (the visual
+comp — this guide and that board reference each other; the guide is the words for what the board
+shows). The old self-contained bundle `NEW_CHECK_COMPS.html` was a generated duplicate and is
+retired to `docs/archive/`.
+
+**This doc is one of three that reference each other — keep them in sync:**
+- **Look** (this file): type, color, spacing, the raised/carved depth system, components.
+- **Words**: `docs/design/copy/COPY_STYLE_GUIDE.md` owns every string a customer reads. Where the
+  comp board's baked-in copy predates that pass, the copy guide wins — this doc never overrides it.
+- **Brand mark + colors**: `docs/design/brand/BRAND.md`.
+- **Live-vs-comp proof** (screenshots): `docs/specs/design-gap/inventory.html`.
+
+**What "live" means here.** The elevated skin renders under `?skin=v2` and is being promoted to the
+default; a "v3" you may hear about is a service-worker/cache-version bump (the fix for stale v1
+sticking through Cloudflare), **not** a new skin. When this doc and the live `?skin=v2` site
+disagree, fix whichever is wrong and note it. Open reconciliation items are tracked as votable
+bullets in `docs/team/design/checkpoint.md`.
 
 ---
 
@@ -102,7 +114,7 @@ shorten the copy or the font, never wrap. Price units lowercase (`$49.99/mo`, `/
 One carved track (`#1B1B20`, inset `0 2px 6px rgba(0,0,0,.5)`, radius 999, 5px padding), active key
 raised inside (active `flex:1.4`, others `flex:1`). Labels locked: **Retail · Thrift · Hobby ·
 Kiosk**. **Launch state ships Retail + Kiosk only** (active `flex:1.2`) and grows into the full
-track as verticals open. Icons all 14px, 2px stroke, `#4ADE80` when active / `#7C7C88` idle:
+track as verticals open. Icons all 14px, 2px stroke, **`var(--accent)` (the vertical's brand accent) when active** / `#7C7C88` idle — active tabs ride the accent so Retail + Kiosk read the same as Hobby + Thrift (shipped: commit 5bcb734; was green in the original comp):
 storefront · tag · **trading cards** (two fanned cards, pokéball on the front card) · **kiosk**
 (awning booth: canopy + body + screen + slot).
 
@@ -159,8 +171,9 @@ Retail flow: green capsule **SHARE YOUR SCORE** (opens OS share sheet) + 2-up ra
 Hobby flow: **only** the full-width "Too far?" row. Shown on every in-stock result.
 
 ### 5.10 Calls-by-day pop-over
-Calendar card (`#26262B` radius 22): raised nav keys, selected day = accent-yellow raised key,
-today = 1.5px white outline, past/future muted. Day list card: back key + centered date, rows =
+Calendar card (`#26262B` radius 22): raised nav keys, **selected day = Check-green `#4ADE80` raised
+key** (shipped: commit 977cbc7; was accent-yellow in the original comp — green reads cleaner and
+doesn't fight the accent), today = 1.5px white outline, past/future muted. Day list card: back key + centered date, rows =
 raised store rows with 24px status chips + time; selected call gets the accent ring.
 
 ### 5.11 Pop-ups vs bottom sheets
@@ -191,9 +204,12 @@ Contact fields accept phone **or** email — eyebrow `PHONE OR EMAIL`.
   mini tin (rounded, lid line) · sleeved booster.
 
 ### 5.14 Footer (locked)
-Two rows on the `#17171C` strip: ① links on ONE line — `Scores About FAQ Contact Legal`
-(Terms+Privacy = **Legal**) 13/600 muted + EN dropdown pill at the row's end. ② wordmark + ©2026
-left, Discord/X 36px raised circles right. Tight: padding ~22px 18px.
+On the `#17171C` strip, **one centered, unified cluster — desktop = mobile** (shipped: commit
+9a39fd4; the original comp split wordmark-left / socials-right). Links on one line —
+`Scores About FAQ Contact Terms Privacy` 13/600 muted, EN dropdown pill, then wordmark + ©2026 and
+the Discord/X 36px raised circles, all centered. Tight: padding ~22px 18px.
+**Open item (owner vote):** collapse `Terms` + `Privacy` into a single **`Legal`** link (the comp's
+intent) — tracked in `docs/team/design/checkpoint.md`.
 
 ### 5.15 Scores ("Scores from the hunt")
 Yellow trophy + 21/900 title + accent **Post** pill (camera icon, `#FFE066→#FFCB05`, dark text).
