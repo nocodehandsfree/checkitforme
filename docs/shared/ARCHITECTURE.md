@@ -23,7 +23,7 @@
 | `data/` | store-master JSON (gzipped), zones, intel | the 100K-store import source data |
 | `scripts/` | test + import + smoke scripts | `test-all.sh`, store importer, `smoke-auth.sh` |
 | `workers/` | `verticals.mjs` | the Cloudflare Worker that serves the brand sites |
-| `docs/` | all documentation | see the HANDOFF docs map |
+| `docs/` | all documentation | see the CLAUDE.md docs map |
 
 ## Folder-naming notes (FYI)
 - **`drizzle/`** — the name is the ORM (drizzle-orm); it auto-generates SQL migrations into this folder.

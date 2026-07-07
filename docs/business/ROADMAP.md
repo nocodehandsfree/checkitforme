@@ -66,7 +66,7 @@ Owner reviews each on staging before promote. Status testing (13-status sweep) r
 
 **Domain / brand** (git history)
 - [ ] 301 redirects fungibles verticals → checkitforme; deprecate fungibles after cutover.
-- [ ] Finish the "Check" rebrand text sweep across all docs (HANDOFF done; others have stray "Fungibles/Runnr").
+- [ ] Finish the "Check" rebrand text sweep across all docs (boot doc done; others have stray "Fungibles/Runnr").
 
 **Big later**
 - [x] **Migrate `voice-caller/` to its own repo.** DONE 2026-07 — you are in it (`nocodehandsfree/checkitforme`). It's a self-contained product; a split gives clean
