@@ -199,7 +199,7 @@ truth / everything happens on staging first → pushed to prod." Anything before
   mis-harvested into the card set; was already inactive from the prior junk sweep).
 - **23 all-"unknown" shops left on the fallback** (night-window covers them) — next: scale the free-lookup
   method nationwide to the ~10K stores still without real hours.
-- **Launch-readiness board** committed to the repo at **`voice-caller/public/launch-readiness.html`** (for
+- **Launch-readiness board** committed to the repo at **`public/launch-readiness.html`** (for
   Admin to bake into the dashboard; also live as an Artifact). Store network 110,316 / callable 104,047 /
   **90.8% real hours** / 52 states / catalog 11-of-129 sets with products. Honest about the 2 gaps: hours
   tail + older-era product depth. Numbers from `/api/admin/store-intel` + full `retailers` scan (`scratchpad/scan_launch.py`).
@@ -384,7 +384,7 @@ across deploys.** The website's Hobby chip is live and waiting on that feed.
 
 **Session 2026-06-27 — learned restock "best day" from call data (serve-time, no schema change).**
 
-### Shipped to STAGING (`…pagiis`) — promote to prod by merging staging → prod
+### Shipped to STAGING (`staging`) — promote to prod by merging staging → prod
 - **best-bet now learns the restock day.** `/pub/best-bet` ranked on the last-write-wins
   `retailers.shipmentDay` column (one wrong clerk answer flipped it). New `learnedShipDow()` uses the
   **mode of `call_results.shipmentDayHeard`** across a store's confirmed calls, falling back to the
@@ -403,7 +403,7 @@ across deploys.** The website's Hobby chip is live and waiting on that feed.
 - **Terminology: clerk → staff** in these endpoints/comments (owner's current term for store humans).
   Lots of `clerk` remains in the call-backend/schema (not data-dev lane) — flagged for a later sweep.
 - All serve-time derivation from `call_results` — **no new columns.** Helpers unit-checked; tsc +
-  store-contract clean. Branch: `…-pagiis` (commits 1887fe1, 11bf36d).
+  store-contract clean. Branch: `staging` (commits 1887fe1, 11bf36d).
 - **Admin placement recommendation (given to owner):** split by altitude —
   - **God-view → its own "Restock" tab (NETWORK):** confirm rate, dominant days, `productForms`/
     `productSets` mix, `byCategory`, top-25 restock stores (clickable). Feeds from `restock-intel`
@@ -451,10 +451,10 @@ across deploys.** The website's Hobby chip is live and waiting on that feed.
 - **Consumer store-feed fix (`/pub/stores/near`):** in a dense metro a 20-mi radius holds 400+ stores (200+
   tier-5); the page limit dropped a sparse FAR green-group chain (a Dollar General ~19mi out, in-radius but
   past the cut → "Dollar General never shows up near me"). Fix **pins the nearest store of each tier-5 chain**
-  (first page) so every green-group chain always surfaces. Live on **staging** (`…pagiis`); promote to prod by merging.
+  (first page) so every green-group chain always surfaces. Live on **staging** (`staging`); promote to prod by merging.
 
 ### Store writes — staging DB vs prod DB
-- Two environments: **staging** (`…pagiis` → staging.checkitforme.com) and **prod** (`…OcyMS` →
+- Two environments: **staging** (`staging` → staging.checkitforme.com) and **prod** (`main` →
   checkitforme.com), each with its OWN SQLite DB. Develop/verify on staging, then promote CODE by merging
   staging → prod. The **Admin reads live PROD data** (prod is the data source of truth).
 - Push new/updated tier-5 rows via `POST /api/stores/import` (dedup-by-phone, idempotent) and
@@ -524,18 +524,18 @@ Pending / next session:
   `distributor→{products,chains}` + `our-chain→distributor` for our ~120 chains, plus emerging lines
   (Pop Mart/Labubu blind-box, Star Wars Unlimited/Riftbound, etc.) worth adding. **When it arrives:** add
   entries (chain keys MUST match `chains.name` EXACTLY — verify via `/api/chains`); only high-confidence
-  (flag low-confidence for call-verify); `pnpm check`; commit; deploy to **both** OcyMS + pagiis; verify
+  (flag low-confidence for call-verify); `pnpm check`; commit; deploy to **both** main + staging; verify
   carries derives identically on both envs (curl `/api/retailers?q=<chain>` on both hosts).
 - [ ] **DevOps prompt sent** (owner relaying): add `node scripts/check-store-contract.mjs` to
-  `voice-caller-ci.yml`; fix the pre-existing `config.staging` tsc error (`src/server.ts:1430`) that reds the
+  `ci.yml`; fix the pre-existing `config.staging` tsc error (`src/server.ts:1430`) that reds the
   typecheck gate; make CI a required merge check.
 - [ ] **Handoff pointers** — `docs/team/admin/handoff.md` + `website.md` need a 2-line "carries+logos are
   derived, don't edit the column / drop a file" note. Offered; awaiting owner go.
 
 Architecture facts the next session MUST know:
-- **Separate DBs.** staging = `…pagiis` → staging.checkitforme.com; prod = `…OcyMS` → checkitforme.com.
+- **Separate DBs.** staging = `staging` → staging.checkitforme.com; prod = `main` → checkitforme.com.
   Each has its own DB. Carries derives from code config (auto-consistent); logo_url + store rows are per-DB.
-- **Branch flow.** Develop on staging (`…pagiis`), push; promote to prod by merging staging → prod.
+- **Branch flow.** Develop on staging (`staging`), push; promote to prod by merging staging → prod.
   Railway auto-deploys on push (~60-90s); CI does not gate Railway.
 - **Access.** Admin API needs a browser User-Agent (Cloudflare blocks python-urllib → 1010). Get the admin
   token from Railway (HANDOFF.md secrets); keep it in memory — don't print it or write it to a file.

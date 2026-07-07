@@ -6,13 +6,13 @@ API contract. You unblock the other lanes.
 ## Your lane
 - `src/**` core: `auth.ts`, `billing.ts`, `calls/`, `voice/` (infra side), `db/`, `redis.ts`,
   `policy.ts`, `security-checks.ts`, `server.ts` (the routing/bootstrap), `brevo.ts`, `stock/`.
-- Railway env/services, Cloudflare (DNS/worker/WAF), CI, the deploys (**push staging `…pagiis` → the
-  voice-caller-staging service; promote = merge to prod `…OcyMS` → the voice-caller service; each auto-deploys ~3 min**).
+- Railway env/services, Cloudflare (DNS/worker/WAF), CI, the deploys (**push staging `staging` → the
+  voice-caller-staging service; promote = merge to prod `main` → the voice-caller service; each auto-deploys ~3 min**).
 - `docs/shared/API_CONTRACT.md` is yours to evolve (announce shape changes to Website/Admin).
 
 ## Environments (see HANDOFF.md)
-- **Staging** `…pagiis` → `staging.checkitforme.com` (Railway svc `voice-caller-staging`) — develop here.
-- **Production** `…OcyMS` → `checkitforme.com` (Railway svc `voice-caller`) — promote by merging staging → prod.
+- **Staging** `staging` → `staging.checkitforme.com` (Railway svc `voice-caller-staging`) — develop here.
+- **Production** `main` → `checkitforme.com` (Railway svc `voice-caller`) — promote by merging staging → prod.
 - **Admin** `admin.checkitforme.com` — operator dashboard on live prod data.
 
 `git checkout` the staging branch + `git pull` first thing. Test calls hit the owner-only **Fun** store
@@ -45,7 +45,7 @@ the priority. The calculator's running "Hybrid" line is the live benchmark.
 The gate between 1 and 2 is the owner confirming the Fun-store experience + cost are where they want them.
 
 ## 🧹 Standing duty — keep the repo/infra pruned
-- **Two real branches: staging (`…pagiis`) + prod (`…OcyMS`)** — both load-bearing; never delete them or the
+- **Two real branches: staging (`staging`) + prod (`main`)** — both load-bearing; never delete them or the
   staging service/URL. Prune only throwaway session branches (`…-pk3ujx`, `…-z8dokp`) and genuine duplicates.
 - **No doc bloat.** Finished work → git history, not a new doc.
 - **No dead code/config accumulating** — flag or remove it.

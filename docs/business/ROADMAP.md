@@ -69,7 +69,7 @@ Owner reviews each on staging before promote. Status testing (13-status sweep) r
 - [ ] Finish the "Check" rebrand text sweep across all docs (HANDOFF done; others have stray "Fungibles/Runnr").
 
 **Big later**
-- [ ] **Migrate `voice-caller/` to its own repo.** It's a self-contained product; a split gives clean
+- [x] **Migrate `voice-caller/` to its own repo.** DONE 2026-07 — you are in it (`nocodehandsfree/checkitforme`). It's a self-contained product; a split gives clean
   CI/deploy/history separation from the Fungibles app. Significant work (new Railway service config,
   CI, secrets, git history) — capture now, do when there's room. (See `docs/shared/ARCHITECTURE.md`.)
 

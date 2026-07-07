@@ -94,7 +94,7 @@ this wrong erodes user trust in the whole product. Data integrity ALWAYS wins.
   **Admin** (admin UI) or **Website** (consumer UI); you supply the rows + assets, they render.
 - **Loading data:** dry-run first (`tsx scripts/import-stores.ts <file> … --dry`), then the real run.
   Import is an idempotent upsert keyed on phone — safe to re-run; appending can't create dupes.
-- Work on the **staging** branch `claude/checkitforme-website-takeover-pagiis`; push = live at
+- Work on the **staging** branch `staging`; push = live at
   staging.checkitforme.com in ~3 min. Promote to prod by merging staging → prod.
 
 ## Roadmap (later)

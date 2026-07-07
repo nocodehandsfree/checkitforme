@@ -44,8 +44,7 @@ worse than no comment. Several entries below started as wrong comments.)
   `viewport-fit=cover` (the body paints *under* the bar). That's why "Add to Home Screen" tints when web doesn't.
 
 ## Infra / branches
-- **GitHub defaults to `main` = the card app (dead for us).** voice-caller lives on two branches: staging
-  `…pagiis` (dev) and prod `…OcyMS` (promote target).
+- **Two branches:** `staging` (develop — auto-deploys staging.checkitforme.com) and `main` (production — promote target).
 - **`config.staging.on` is what makes the staging service behave as staging** — `true` on the
   voice-caller-staging service, `false` on prod. The code branches on it in ~20 spots (`server.ts`, `auth.ts`,
   `staging-sim.ts`): simulated calls, the staging login code, staging websocket host. Don't remove

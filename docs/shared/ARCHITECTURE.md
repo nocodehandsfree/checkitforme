@@ -2,12 +2,12 @@
 
 ## Two products in one repo (monorepo)
 - Root (`/`) = the **Fungibles** iOS app (Expo / React Native) — a *separate* product.
-- `voice-caller/` = **Check** (this product) — self-contained: own `package.json`, database, Railway
+- This repo = **Check** — self-contained: own `package.json`, database, Railway
   deploy, and docs. Keeping it a subfolder is intentional. **Don't rename the folder** — it would
   break the Railway build path + many references. (A full split into its own repo is a later option;
   not worth the deploy/CI risk now.)
 
-## `voice-caller/` folders — what's in each
+## Folders — what's in each
 | Folder | What's in it | Function |
 |---|---|---|
 | `src/` | TypeScript backend | the Hono server + all logic |

@@ -8,7 +8,7 @@ One module per iteration: read this log → pick next untested module → write 
 > (pure-TS suites importing from `../src`, manual asserts, exit code, ELEVENLABS_* test env).
 
 ## Environment note
-- Fresh containers need `pnpm install` in `voice-caller/` before `scripts/test-all.sh` will run
+- Fresh containers need `pnpm install` at the repo root before `scripts/test-all.sh` will run
   (otherwise `./node_modules/.bin/tsx` and `@types/node` are missing).
 
 ## Baseline

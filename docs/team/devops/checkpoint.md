@@ -146,7 +146,7 @@ summary — treat those DONE marks as summary-sourced, not witnessed.
   Boot gate + rate limiting verified solid. Details in ROADMAP → Security.
 - [x] Staging call policy set per owner (2026-07-01): `connectOnHuman:true`,
   `bail:{enabled:true, ringMaxSeconds:20, holdMaxSeconds:25}` (ivr 90 / maxCall 300 kept as safety nets).
-- [x] **Envs live.** staging `…pagiis` → staging.checkitforme.com (dev); prod `…OcyMS` → checkitforme.com (promote by merge).
+- [x] **Envs live.** staging `staging` → staging.checkitforme.com (dev); prod `main` → checkitforme.com (promote by merge).
 - [x] **ABC (connect-on-human) restored** — `policy.flags.connectOnHuman` + `bail.enabled` re-enabled in prod
   (a DB wipe had reset them to code defaults; that's the whole cost lever — Charlie only bills the human).
 - [x] **Status system live** — 13 statuses, final copy EN+ES, `{store}/{product}/{category}` tokens wired
@@ -173,7 +173,7 @@ summary — treat those DONE marks as summary-sourced, not witnessed.
   same per-store shape `/pub/stores/near` emits (id, name, location, address, logoUrl/logoWide/logoDark, storeType,
   lat/lng, shipmentDay, mapsUri…) to backfill `SEL_STORE.address` when missing. Gate owner-only (`ownerOnly`) stores
   behind the same comp check as `/pub/stores/near`.
-- [x] **Branch pile pruned** — 41→5 (OcyMS / main / keen-edison-3mmWu / test-coverage / test-coverage-loop-7cojsl).
+- [x] **Branch pile pruned** (old fungibles repo, pre-split — historical).
   **TRICK for deleting remote branches:** the CI git proxy (`127.0.0.1:41729`) 403s `git push --delete`, but a
   direct push bypasses it — `git push "https://x-access-token:$GITHUB_PAT@github.com/nocodehandsfree/fungibles.git"
   --delete <branch…>` (GITHUB_PAT lives on the api service). The raw GitHub *API* (`api.github.com`) is intercepted

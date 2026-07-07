@@ -10,14 +10,14 @@ Entry doc for any chat. Open only the docs your role needs. **Read `docs/shared/
 ## What it is
 AI service that phones retail stores to check trading-card/collectible stock, with proof. 100K+ stores,
 4 white-label brand sites (Pokémon/One Piece/Topps NBA/NeeDoh) + admin. One-person business. Stack: Hono
-+ Drizzle on Railway, in `voice-caller/`. Consumer UI `public/checkit.html`; admin `public/app.html`.
++ Drizzle on Railway (this repo). Consumer UI `public/checkit.html`; admin `public/app.html`.
 
 ## The three environments
-- **Staging** — `staging.checkitforme.com` (branch `claude/checkitforme-website-takeover-pagiis`). Build and test here.
-- **Production** — `checkitforme.com` (branch `claude/retail-stock-voice-calls-OcyMS`). Promote by merging staging → prod.
+- **Staging** — `staging.checkitforme.com` (branch `staging`). Build and test here.
+- **Production** — `checkitforme.com` (branch `main`). Promote by merging staging → prod.
 - **Admin** — `admin.checkitforme.com`. The operator dashboard; runs on live production data.
 
-**First thing every session:** `git checkout claude/checkitforme-website-takeover-pagiis && git pull` (staging),
+**First thing every session:** `git checkout staging && git pull` (staging),
 unless you're promoting to prod. `main` is the dead card app — ignore it.
 
 ## Rules of the road

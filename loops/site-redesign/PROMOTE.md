@@ -12,9 +12,9 @@ merge ships everything dormant, PLUS the always-on wins riding this branch:
 - June history/calendar fixes the owner is waiting on for prod.
 
 Steps:
-1. `git checkout claude/retail-stock-voice-calls-OcyMS && git pull`
-2. `git merge origin/claude/checkitforme-website-takeover-pagiis` (resolve nothing blindly; staging is ahead)
-3. `git push -u origin claude/retail-stock-voice-calls-OcyMS` → Railway auto-deploys checkitforme.com
+1. `git checkout main && git pull`
+2. `git merge origin/staging` (resolve nothing blindly; staging is ahead)
+3. `git push -u origin main` → Railway auto-deploys checkitforme.com
 4. Post-verify on PROD: `curl -s https://checkitforme.com/fonts/inter-var-latin.woff2 -o /dev/null -w "%{http_code}"`
    → 200 · served HTML has no `fonts.googleapis` · `/pokemon` renders v1 look · `?skin=v2` renders the
    new look (owner-only preview on prod) · **June calendar nav works** (the owner's open prod bug).

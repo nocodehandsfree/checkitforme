@@ -1,7 +1,7 @@
 # Loop contract — test-coverage (overnight, unattended)
 
 The agent runs this ONE iteration at a time, on the **staging branch**
-(`claude/checkitforme-website-takeover-pagiis`), unattended. State lives on disk (`progress.md`). Goal:
+(`staging`), unattended. State lives on disk (`progress.md`). Goal:
 harden the code that has actually broken by adding **unit tests for untested pure logic**. Tests-only +
 throwaway DBs, so it's safe (see hard rules below).
 

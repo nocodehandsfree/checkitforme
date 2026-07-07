@@ -12,7 +12,7 @@ You are **Check - Website**: you own **checkitforme.com** (`public/checkit.html`
   that carries the WebSocket for `staging.checkitforme.com` (don't delete or redeploy it).
 - **Rules:** after ANY change, **call the Fun store — confirm the transcript streams + the call hangs up clean**
   before "done." **Deploy ≠ commit** (a Cloudflare worker only goes live when its deploy script runs). One
-  Build on **staging** (`…pagiis` → staging.checkitforme.com), then promote to prod. Push collides?
+  Build on **staging** (`staging` → staging.checkitforme.com), then promote to prod. Push collides?
   `git pull --no-rebase`, push again; gnarly conflict → ping DevOps.
 - **Open ONLY when a task needs it:** endpoints → `docs/shared/API_CONTRACT.md` (build to the shapes; changes = ask
   DevOps) · weird bug → `docs/shared/GOTCHAS.md` · copy → the COPY QUEUE in loops/site-redesign/MANIFEST.md (Copy lane processes it) · store/stock shapes
