@@ -7,6 +7,26 @@
 
 ## Current focus (KEEP UPDATED)
 
+**Session 2026-07-07 — staging↔prod MAPPING sync + owner's MSRP/callable rule.**
+- **ENV (owner, now unambiguous):** `staging.checkitforme.com` = **source of truth** (change here first);
+  `checkitforme.com` = prod, catches up on the staging→prod push; **one admin** (its mapping view reads the
+  prod DB). **Stores auto-propagate via the shared store API; CHAINS/mapping do NOT** — reconcile by hand.
+  *That* mismatch = "the admin, especially mapping, was not in sync."
+- **OWNER'S CALLABLE RULE (apply everywhere):** **MSRP retailer → NOT callable → `stockCheckMethod:"site"`**
+  (no point calling fixed-MSRP w/ online stock). **Hobby sells ABOVE MSRP → `call` (callable)** — the product.
+- **Chain categorization SYNCED + VERIFIED (staging==prod, zero category/mute diffs):** Aldi + Pokémon
+  Vending → muted; **GameStop → Other/site/isMSRP=true** (was Hobby/call); Goodwill+Unique → Thrift/un-muted/
+  spotty/not-MSRP; Savers+Salvation → not-MSRP/spotty; Spencer's → muted/site. Buc-ee's/Marshalls/Micro Center
+  already OK. Tools: `scratchpad/{chain_diff,named_state,reconcile_apply}.py` (DRY default; `--stag/--prod/--apply`).
+- **Do NOT "sync" the residual chain diffs:** (a) ~29 chains where prod holds **learned phone-tree recipes**
+  (`treeStatus:"learned"`, `navRecipe`) — prod call-system runtime artifacts, not consumer data, not PATCH-able;
+  (b) 8 hobby chains staging-only (Burbank Sportscards, Independent Card Shop, …).
+- **PROD front-end is BEHIND staging — needs a promote (NOT my lane to deploy; flagged to owner):**
+  `/pub/stores/near` proof — staging `type=Hobby`→175 real Hobby stores; **prod returns identical 216 for
+  Hobby/Thrift/none → ignores `type` and has ~0 Hobby-typed stores.** Fixes on the staging→prod push: the
+  `type` filter (`typeF`, server.ts L1165/1226) is staging-branch-only, and hobby store data hasn't propagated.
+- **Paused:** national hobby-hours WebSearch loop (Claude monthly spend cap). Resume on reset; ~956+ shops left.
+
 **Session 2026-07-06 (later) — "Hobby vanished at night" diagnosed + CATEGORY-SWEEP PLAYBOOK (owner directive).**
 
 - **"Hobby disappeared from the map" = NOT a data loss, NOT a broken chip. Data is 100% intact** (5,617
