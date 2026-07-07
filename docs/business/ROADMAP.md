@@ -10,7 +10,7 @@ Status of each is detailed in the linked ops/security docs; this is the single c
 
 **Design round — owner + Claude Design (Website implements on staging as comps land in repo)**
 - [ ] **Check+ premium signup flow (1a–1d)** — locked design exists as a self-contained HTML comp; commit to
-  `docs/style-guide/checkplus-signup-flow.html` when the owner delivers it (Design chat is read-only, can't push).
+  `docs/design/comps/checkplus-signup-flow.html` when the owner delivers it (Design chat is read-only, can't push).
 - [ ] **Thrift + Hobby store types & paths** — new store types with their own consumer flows. ⚠️ **Hobby-store
   flow applies ONLY to sports cards + TCG** — never NeeDoh/other non-card products.
 - [ ] **"My checks" section redesign** — comps coming.
@@ -71,7 +71,7 @@ Owner reviews each on staging before promote. Status testing (13-status sweep) r
 **Big later**
 - [ ] **Migrate `voice-caller/` to its own repo.** It's a self-contained product; a split gives clean
   CI/deploy/history separation from the Fungibles app. Significant work (new Railway service config,
-  CI, secrets, git history) — capture now, do when there's room. (See `docs/ARCHITECTURE.md`.)
+  CI, secrets, git history) — capture now, do when there's room. (See `docs/shared/ARCHITECTURE.md`.)
 
 ---
 

@@ -1,6 +1,6 @@
 // Sell-methods taxonomy seed — per-chain "ways to get it" + first-party/MSRP flag.
 // Mirrors stock/intel.ts: loads data/sell_methods_intel.json and fills the chains table.
-// Three axes stay separate (see docs/SELL_METHODS_PLAN.md):
+// Three axes stay separate (see SELL_METHODS_PLAN, git history):
 //   A. ways to get it  → chains.sellMethods (in_store|pickup|ship)
 //   B. how we check    → chains.stockCheckMethod (call|site)
 //   C. can we call?    → retailers.sellsPacks (callable)

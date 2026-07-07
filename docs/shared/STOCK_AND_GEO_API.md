@@ -20,7 +20,7 @@ still SHOWN as buy-online/live-stock).
 `stockCheckMethod: "site"`.** Best Buy is currently **muted** (central call center, can't dial the store),
 so despite the `site` tag in the table it does NOT show — un-mute it to expose its live-stock rail. The
 `site` list above is the *stock-capable* set, not the *shown* set. Full `muted` semantics:
-`docs/specs/store-data-schema.md` §5.
+`docs/data/store-schema.md` §5.
 Gate the stock-rail UI on `policy.flags.stockSignals`.
 
 ## Geo-paginated stores (use this once the 102k import lands — `/pub/stores` will not survive it)

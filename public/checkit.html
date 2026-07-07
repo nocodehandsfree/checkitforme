@@ -207,7 +207,7 @@ __BRAND_HEAD__
   @keyframes ckHalo{0%,100%{box-shadow:0 0 14px color-mix(in srgb,var(--accent,#FFCB05) 22%,transparent)}50%{box-shadow:0 0 28px color-mix(in srgb,var(--accent,#FFCB05) 50%,transparent)}}
   @keyframes ckWave{0%{opacity:0;transform:scale(.45)}25%{opacity:.95}100%{opacity:0;transform:scale(1.15)}}
   @media (prefers-reduced-motion:reduce){.callkey{animation:none}.ck-wv{animation:none;opacity:.85}}
-  /* Sell-methods card (docs/SELL_METHODS_PLAN.md): what's possible at THIS store — live online
+  /* Sell-methods card (SELL_METHODS_PLAN, git history): what's possible at THIS store — live online
      stock, ways to get it, resale warning, notify. Non-callable chains (Micro Center, Amazon) show
      "Buy online" here instead of a call button; callable stores get a slim notify row under the CTA. */
   #sellmeta{display:flex;flex-direction:column;gap:9px}
@@ -3866,7 +3866,7 @@ function syncCta(){
   const CKCHIP=`<span class="ck-chip"><svg viewBox="0 0 46 46" aria-hidden="true"><path class="ck-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="ck-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="ck-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg></span>`;
   const wasHidden=b.style.display==='none';
   // Non-callable chains (Micro Center, Amazon) NEVER get a call button — the sell-methods card
-  // below carries "Buy online" + notify instead. (docs/SELL_METHODS_PLAN.md rule 1.)
+  // below carries "Buy online" + notify instead. (SELL_METHODS_PLAN, git history rule 1.)
   const cantCall=SEL_STORE&&SEL_STORE.callable===false;
   // A store with a category slides the call sheet up from the bottom (the inline button stays hidden).
   b.style.display='none'; b.classList.remove('armed'); if(cf)cf.style.display='none';
@@ -3920,7 +3920,7 @@ function dismissCallSheet(){ CS_DISMISSED=true; hideCallSheet(); }
 })();
 // Sell-methods card — what's actually possible at THIS store: live online stock, ways to get it,
 // resale warning, notify. Non-callable chains (Micro Center, Amazon) get "Buy online" instead of a
-// call. Contract: docs/SELL_METHODS_PLAN.md; fields come straight off /pub/stores/near (SEL_STORE).
+// call. Contract: SELL_METHODS_PLAN, git history; fields come straight off /pub/stores/near (SEL_STORE).
 function renderStoreActions(){
   const wrap=$('sellmeta'); if(!wrap) return;
   const st=SEL_STORE;

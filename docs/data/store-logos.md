@@ -74,7 +74,7 @@ The registry is authoritative, but surfaces must stay fast:
    to the filesystem file** when it's null. Populate it with `POST /api/chains/:id/logo` (one chain)
    or `POST /api/admin/migrate-logos-to-r2` (one-shot: pushes every file to R2 and writes `logo_url`
    + the `w`/`d` flags from `_meta`). The PNG files stay the source of truth; R2/the DB only cache
-   the image + pointer — never a second source. Full contract: `docs/DATA_PROVENANCE.md`.
+   the image + pointer — never a second source. Full contract: `docs/data/provenance.md`.
 
 ---
 

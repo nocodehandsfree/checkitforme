@@ -17,7 +17,7 @@ pnpm e2e:ui                                 # interactive runner (watch it click
 - **Target a different site:** `E2E_BASE_URL=https://staging.checkitforme.com pnpm e2e` (default is staging —
   **never point at prod for write paths**). For anything that places a call, drive the owner-only **Fun**
   store from Admin → Testing.
-- **Admin specs:** need `ADMIN_TOKEN` (pull from Railway — see `docs/handoffs/devops.md`). Without it, admin tests skip.
+- **Admin specs:** need `ADMIN_TOKEN` (pull from Railway — see `docs/team/devops/handoff.md`). Without it, admin tests skip.
 
 ## Add a path test (the rule: one assertion per user path before launch)
 1. Open the path in `pnpm e2e:ui`, click through it, copy the selectors Playwright suggests.

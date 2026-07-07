@@ -4,7 +4,7 @@ This is the **referee** for parallel work. Backend owns this file. **Backend may
 documented request/response shape without bumping it here and telling the Frontend/Admin lanes.**
 Frontend/Admin consume these; they don't invent endpoints — they request new ones from Backend.
 
-Pairs with `docs/STOCK_AND_GEO_API.md` (deeper detail on the stock + geo rails).
+Pairs with `docs/shared/STOCK_AND_GEO_API.md` (deeper detail on the stock + geo rails).
 
 Auth:
 - `/pub/*` — **no Clerk gate** (public). Some are per-IP rate-limited (noted).
@@ -58,7 +58,7 @@ Auth:
   working and stocked?"* instead of *"did you get a shipment today?"* (`src/voice/prompts.ts`).
 
 Full feature spec (all three lanes' parts): the kiosk spec in git history. Store-flag data model:
-`docs/specs/store-data-schema.md` §5.
+`docs/data/store-schema.md` §5.
 
 ---
 

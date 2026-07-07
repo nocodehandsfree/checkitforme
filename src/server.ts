@@ -747,7 +747,7 @@ function chainLogoFile(name: string | null | undefined): string | null {
   }
   return null;
 }
-// DB-first logo (docs/specs/logo-r2-keystone.md): chains.logo_url (shared R2) wins over the per-branch
+// DB-first logo (logo-r2-keystone spec, git history): chains.logo_url (shared R2) wins over the per-branch
 // filesystem, so a chain's logo travels to every environment and can't drift. Cached name→logo map,
 // refreshed on a timer + immediately after an upload/migration. Empty cache (cold start, or a chain
 // with no logo_url yet) simply falls through to the filesystem resolver — fully backward-compatible.
@@ -1042,7 +1042,7 @@ app.get("/logos/chains/:file", (c) => {
   } catch { return c.notFound(); }
 });
 
-// ---- Chain logo upload + migration (docs/specs/logo-r2-keystone.md) ----
+// ---- Chain logo upload + migration (logo-r2-keystone spec, git history) ----
 // Upload a chain's logo straight to shared R2 and point the chain row at it (logo_url). Server-side PUT
 // via a presigned URL — one request from the Admin. ?wide=1 / ?dark=1 set the render flags. After this
 // the logo travels to every environment through the DB row and can't drift.
@@ -1893,7 +1893,7 @@ app.post("/api/stores/flag", async (c) => {
   invalidateRefCache();
   return c.json({ updated });
 });
-// ---- Admin: table dump / load — the staging↔prod DATA MIRROR (docs/ops/STAGING.md). Dump is
+// ---- Admin: table dump / load — the staging↔prod DATA MIRROR (STAGING doc, git history). Dump is
 // read-only and works anywhere; load REPLACES a table and is staging-ONLY, so prod can never be
 // wiped by it. Used to make staging an exact data replica of prod (chains/retailers/catalog). ----
 const MIRROR_TABLES: Record<string, typeof retailers> = { categories: categories as never, chains: chains as never, products: products as never, retailers, statuses: statuses as never, kiosks: kiosks as never, settings: settingsTbl as never };
@@ -1926,7 +1926,7 @@ app.post("/api/admin/table-load", async (c) => {
 // business data (calls, customers, reports); the Admin manages it directly. CONFIG/feature work flows
 // staging→prod via CODE branches, and staging is refreshed FROM prod (table-dump→table-load, above) —
 // one-way, prod→staging only. We never write staging's data over prod (that once cascade-wiped call
-// history). See docs/ops/STAGING.md "Data direction".
+// history). See STAGING doc, git history "Data direction".
 
 // RECOVERY: rebuild call_results from ElevenLabs conversation history (the source of truth for what was
 // actually said on each call). Insert-only + idempotent by providerCallId, so it's safe to re-run and
@@ -2570,7 +2570,7 @@ app.post("/app/check-live", async (c) => {
   return c.json({ room: r.room, wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST });
 });
 
-// ============ Manage Zones (consumer, premium `zone_sweeps`) — spec docs/specs/manage-zones.md ============
+// ============ Manage Zones (consumer, premium `zone_sweeps`) — spec docs/archive/manage-zones-SHIPPED.md ============
 const zoneRunSids = new Map<string, string[]>(); // runId -> Twilio callSids (in-memory, for "Stop all")
 
 /** Bearer auth + zone_sweeps entitlement. ok:false short-circuits with the right status. */
@@ -3545,7 +3545,7 @@ app.get("/api/categories", async (c) => c.json(await db.select().from(categories
 app.get("/api/chains", async (c) => {
   const rows = await db.select().from(chains);
   // Representative tier per chain = the most common retailers.tier among its active, graded stores
-  // (the rating is stored PER STORE; there is no chains.tier column — see docs/specs/scoring.md).
+  // (the rating is stored PER STORE; there is no chains.tier column — see docs/data/scoring.md).
   const tr = await db.select({ cid: retailers.chainId, tier: retailers.tier, n: sql<number>`count(*)` })
     .from(retailers).where(and(eq(retailers.active, true), sql`${retailers.tier} is not null`)).groupBy(retailers.chainId, retailers.tier);
   const tierByChain = new Map<number, number>(), bestN = new Map<number, number>();

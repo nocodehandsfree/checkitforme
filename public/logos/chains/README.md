@@ -1,6 +1,6 @@
 # Store logo best practices — READ THIS FIRST
 
-> **Hub doc: `docs/STORE_LOGOS.md`** covers the system/architecture, source of truth, how every
+> **Hub doc: `docs/data/store-logos.md`** covers the system/architecture, source of truth, how every
 > surface renders logos, performance rules, the admin gap, and the processing pipeline. **This
 > file is the asset design detail** (the rules + new-store steps).
 

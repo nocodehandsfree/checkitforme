@@ -1,6 +1,6 @@
 // qa-design — DESIGN-TOKEN harness for the site-redesign loop (LOOP.md cycle 0b).
 // Audits checkit.html's NEW-SKIN markup (everything scoped under `skin-v2` / data-v2 blocks)
-// against docs/style-guide/STYLE_GUIDE.md's exact tokens, and the WHOLE file against banned terms.
+// against docs/design/STYLE_GUIDE.md's exact tokens, and the WHOLE file against banned terms.
 // Fails on: off-system colors inside v2 scope · banned/invented terms anywhere · hairline borders
 // on v2 cards (the "old skin" tell). Run: tsx scripts/qa-design.ts
 import { readFileSync } from "node:fs";

@@ -83,7 +83,7 @@ export const chains = sqliteTable("chains", {
   // on a voicemail / "we're closed" recording instead of waiting (default on when null).
   maxTalkSeconds: integer("max_talk_seconds"),
   hangupOnVoicemail: integer("hangup_on_voicemail", { mode: "boolean" }),
-  // Logo linkage (docs/specs/logo-r2-keystone.md): the chain's logo lives in shared R2, referenced here
+  // Logo linkage (logo-r2-keystone spec, git history): the chain's logo lives in shared R2, referenced here
   // so it travels with the row to every environment and can't drift. logo_url =
   // https://logos.fungibles.com/chain-logos/<slug>.png; null = fall back to the filesystem resolver.
   logoUrl: text("logo_url"),

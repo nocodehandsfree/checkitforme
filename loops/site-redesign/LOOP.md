@@ -8,7 +8,7 @@ agent's memory — any fresh session resumes by reading `MANIFEST.md` and contin
 - **PAINT IS NOT DONE (owner, 2026-07-02).** Re-skinning an existing screen with new tokens is NOT
   implementing the design. Every view with a comp must be REBUILT to the comp's conceptual
   STRUCTURE — its sections, hierarchy, components, and layout — as rendered in
-  `docs/style-guide/NEW_CHECK_COMPS.html`. Audit sweeps must compare each view against its comp
+  `docs/design/comps/NEW_CHECK_COMPS.html`. Audit sweeps must compare each view against its comp
   ELEMENT BY ELEMENT (open the comp, open the page, walk them side by side) — a view whose bones
   differ from the comp is REOPENED even if every token matches. Token conformance (`qa-design.ts`)
   is the floor, never the definition of done.
@@ -18,8 +18,8 @@ agent's memory — any fresh session resumes by reading `MANIFEST.md` and contin
 - **Preview mode first.** All redesign renders behind the agreed PREVIEW switch so the current
   staging site stays intact for morning testing. Build the switch in cycle 1 if it doesn't exist.
 - **Website lane only**: `public/checkit.html` + assets. No `/api`, no backend, no other lanes.
-- **Design truth**: the comps in `docs/style-guide/` + `docs/style-guide/STYLE_GUIDE.md` +
-  `docs/style-guide/BRAND.md` + `docs/style-guide/COPY_STYLE_GUIDE.md`. Never invent
+- **Design truth**: the comps in `docs/design/` + `docs/design/STYLE_GUIDE.md` +
+  `docs/design/brand/BRAND.md` + `docs/design/copy/COPY_STYLE_GUIDE.md`. Never invent
   colors/type/spacing/copy.
 - **Every cycle: `npx tsc --noEmit` + `bash scripts/test-all.sh` green → commit → push.** Small
   commits. A cycle that doesn't push didn't happen. (test-all will include the design-token harness
@@ -63,7 +63,7 @@ manifest order.** Use your EYES per that doc: render the comp board + your view 
 5. ~~Exit on two clean sweeps~~ **OWNER OVERRIDE 2026-07-02: the loop NEVER self-exits this round.**
    Sweeps repeat with rotating lenses (comp fidelity via screenshots · behavior paths · type · copy ·
    ES · spacing) until the OWNER stops the loop. Two clean sweeps only gates writing a status report. Then write the morning report at
-   the top of MANIFEST.md: done / decided / blocked, and update `docs/handoffs/website.md`.
+   the top of MANIFEST.md: done / decided / blocked, and update `docs/team/website/handoff.md`.
 6. **After exit, loop firings are no-ops:** if MANIFEST.md already shows the exit condition met,
    reply exactly `LOOP COMPLETE` and do nothing. (The owner stops the /loop in the morning.)
 

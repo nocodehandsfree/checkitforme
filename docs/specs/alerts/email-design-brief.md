@@ -1,7 +1,7 @@
 # Email design brief for Claude Design — Check It For Me alert emails
 
 Paste-ready prompts (below) for designing the alert emails. Copy is written to
-`docs/style-guide/COPY_STYLE_GUIDE.md` (referenced as `business/COPY_STYLE_GUIDE.md` in Design's context).
+`docs/design/copy/COPY_STYLE_GUIDE.md` (referenced as `business/COPY_STYLE_GUIDE.md` in Design's context).
 Website wires these once the templates + Admin `/app/alerts/*` API exist.
 
 READ FIRST (all): review the copy style guide and write every word to it — friend voice, fewest words,

@@ -1,6 +1,6 @@
 // Customer alerts — standing opt-ins + sending over SMS/email, per-plan SMS metering, and an audit log.
 // Channels by event (owner): restock = SMS (per-plan capped, COGS), store_added / waitlist / welcome = EMAIL.
-// Copy is written to docs/style-guide/COPY_STYLE_GUIDE.md (friend voice, no em-dashes, "check" is the unit).
+// Copy is written to docs/design/copy/COPY_STYLE_GUIDE.md (friend voice, no em-dashes, "check" is the unit).
 // SMS goes out via Twilio once a sending number is configured + A2P/toll-free approved; until then it logs
 // as "stubbed". Email goes out live via Brevo (BREVO_API_KEY, already set); a per-event brevoTemplateId
 // swaps the inline HTML for Design's branded template when it's ready. Nothing

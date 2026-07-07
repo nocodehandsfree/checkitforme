@@ -1,6 +1,6 @@
 # Check — Handoff (read first)
 
-Entry doc for any chat. Open only the docs your role needs. **Read `docs/AGENT_RULES.md` before touching code.**
+Entry doc for any chat. Open only the docs your role needs. **Read `docs/shared/AGENT_RULES.md` before touching code.**
 
 > KEY: **Need a secret/token (e.g. `ADMIN_TOKEN`)?** Fetch it with the **`curl`** command in the
 > **Secrets** section below — **never** python/urllib/requests or WebFetch. Outbound goes through a
@@ -36,7 +36,7 @@ unless you're promoting to prod. `main` is the dead card app — ignore it.
   **Data Dev** — `data/` + importer + store rows. **DevOps** — backend core/infra/security/deploys/API contract.
 - **QA** — *optional, owner-invoked* for larger/risky builds: verifies the change on **`staging.checkitforme.com`**
   (where changes land first) before it's promoted to prod, reports pass/fail. Read-only, never edits code.
-- Read your role doc: `docs/handoffs/{website,admin,data,devops}.md`.
+- Read YOUR folder: `docs/team/<role>/handoff.md` (your lane) + `checkpoint.md` (current state — update THIS at every "Checkpoint"). That is the whole boot; `docs/START-HERE.md` is the map when a task needs more.
 
 ## Secrets — self-serve from Railway (don't ask Fungie)
 ONE `RAILWAY_API_TOKEN` reads every var (incl. `ADMIN_TOKEN`). Prod svc `d363a982-…`, **staging svc `8165df7a-…`** (both live).
@@ -53,18 +53,18 @@ default — not the problem). If the `curl` command above still errors after ONE
 the `ADMIN_TOKEN` and keep moving — never loop on it.**
 
 ## Docs map (open only what you need)
-- `docs/GUIDEBOOK.md` — **owner's front door: what Check is, the money model, plans, where everything lives.**
-- `docs/AGENT_RULES.md` — how to write code here (read first).
+- `docs/owner/GUIDEBOOK.md` — **owner's front door: what Check is, the money model, plans, where everything lives.**
+- `docs/shared/AGENT_RULES.md` — how to write code here (read first).
 - `scripts/site-health.mjs` — **walk every page + form, report anything broken** (`node scripts/site-health.mjs` local, or pass a URL for live).
-- `docs/GOTCHAS.md` — non-obvious traps that cost real time; read before debugging something weird, **add to it the moment you learn one.**
-- `docs/ARCHITECTURE.md` · `docs/RUNBOOK.md` — layout + stack/run/deploy.
-- `docs/API_CONTRACT.md` · `docs/STOCK_AND_GEO_API.md` — front⇄back interface.
-- `docs/DATA_PROVENANCE.md` — store-data source of truth (read before touching store data).
-- `docs/STORE_LOGOS.md` — logos (read before touching logos).
+- `docs/shared/GOTCHAS.md` — non-obvious traps that cost real time; read before debugging something weird, **add to it the moment you learn one.**
+- `docs/shared/ARCHITECTURE.md` · `docs/shared/RUNBOOK.md` — layout + stack/run/deploy.
+- `docs/shared/API_CONTRACT.md` · `docs/shared/STOCK_AND_GEO_API.md` — front⇄back interface.
+- `docs/data/provenance.md` — store-data source of truth (read before touching store data).
+- `docs/data/store-logos.md` — logos (read before touching logos).
 - `docs/business/ROADMAP.md` · `docs/finance/COST_MODEL.md` + `CHEAP_NAV_ARCHITECTURE.md` (the ROI/ABC model).
 - Finished/older work isn't kept as a doc — it's in **git history** (nothing is lost; `git log`/`git show` it).
 
 ## Every session
-Read this + your role doc → keep your role's **Current focus** updated as you go.
+Read this + your team folder → keep your `checkpoint.md` updated as you go.
 **Before a big push, doc-lint:** skim the docs you touched against the code — a comment/claim that lies is worse
-than none. Fix or delete it, and log any new trap in `docs/GOTCHAS.md`.
+than none. Fix or delete it, and log any new trap in `docs/shared/GOTCHAS.md`.

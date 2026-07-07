@@ -26,11 +26,11 @@ export README_KEY="rdme_…"
 
 ## What's already published
 Category **Plans & Pricing** → pages: `plans`, `premium-features`, `pay-as-you-go`,
-`how-billing-works`. Source of truth for their *content* is `docs/GUIDEBOOK.md` §2 — if plans change
+`how-billing-works`. Source of truth for their *content* is `docs/owner/GUIDEBOOK.md` §2 — if plans change
 there, update the matching ReadMe page.
 
 ## How to work
-1. Owner asks to document something public → draft it in the brand voice (`docs/style-guide/COPY_STYLE_GUIDE.md`).
+1. Owner asks to document something public → draft it in the brand voice (`docs/design/copy/COPY_STYLE_GUIDE.md`).
 2. Publish/update the page via the API above (create the category first if it's a new section).
 3. Note what you published in your handoff so the next chat knows it's live.
 

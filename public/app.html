@@ -452,7 +452,7 @@
   .hint code{font-style:normal}
   /* ── consumer design system ports ── */
   /* Chain logo tile — pixel-parity with the consumer (.store .ic, checkit.html) per
-     docs/STORE_LOGOS.md §5 DoD: copy these exact values. 46px tile, 42px mark, wide wordmarks
+     docs/data/store-logos.md §5 DoD: copy these exact values. 46px tile, 42px mark, wide wordmarks
      44px·auto, dark marks on a #f2f2f5 light plate. No-logo fallback = shared storeWordmark. */
   .slogo{width:46px;height:46px;flex:0 0 auto;border-radius:12px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:hidden}
   .slogo img{width:42px;height:42px;object-fit:contain}
@@ -2081,7 +2081,7 @@ function statusBadge(r){
 }
 
 // Store/chain logos — the admin renders the SAME source of truth as the consumer, per
-// docs/STORE_LOGOS.md. logoUrl/logoWide/logoDark are denormalized onto each row by the server
+// docs/data/store-logos.md. logoUrl/logoWide/logoDark are denormalized onto each row by the server
 // (chainLogoInfo) — so every list (Stores, Chains, Calls feed) reads the row's logoUrl and never
 // bulk-loads /pub/stores or /logo-wall. One tile, pixel-identical to checkit.html's `.ic`:
 //   logoUrl present → <img loading=lazy decoding=async>, honoring logoWide / logoDark
@@ -2567,7 +2567,7 @@ async function loadChains(){
 // ---- Settings page: 4 collapsible sections. Store Settings + Call Settings commit INLINE (each control
 //      saves on its own); Store Data has its own Save; Mapping is READ-ONLY (the navigator/lock writes
 //      dtmf + phone-tree — the chain PATCH never sends those). RATING is per-store (retailers.tier — no
-//      chains.tier), so picking a tier stamps every store. (docs/specs/scoring.md + DATA_PROVENANCE.md) ----
+//      chains.tier), so picking a tier stamps every store. (docs/data/scoring.md + DATA_PROVENANCE.md) ----
 const SS_TYPES=[['Big Box','Big Box'],['Pharmacy','Pharmacy'],['Grocery','Grocery'],['Off-Price','Off-Price'],['Discount','Discount'],['Sporting Goods','Sporting Goods'],['Bookstore','Bookstore'],['Craft','Craft'],['Department','Department'],['Gift','Gift'],['Hardware','Hardware'],['Office','Office'],['Warehouse','Warehouse'],['Mall/Specialty','Mall/Specialty'],['Online','Online'],['Thrift','Treasure Hunt (Thrift)'],['Hobby','Hobby'],['Other','Other']];
 const SS_RATING={5:['Best near you','#2BFF88','Reliable, predictable restock. Worth checking on a rhythm.'],4:['Mostly reliable','#29D4FF','Carries broadly, no dependable rhythm.'],3:['Spotty','#FF9E2C','Carries, but varies by location.'],2:['Over MSRP','','Has it, but above MSRP.'],1:['Unknown','','Unconfirmed. Hidden from customers.']};
 let SS=null;
@@ -2640,7 +2640,7 @@ function ssToggleVerified(){ const on=SS.cVerified>SS.storesN/2; ssStoreBulk({st
 function ssClearKiosk(){ if(!SS||!SS.cKiosk) return; ssStoreBulk({hasKiosk:false}, 'Kiosks cleared'); }
 // ---- Chain picker: a filterable LIST (replaces the dropdown). Built once per CHAINS load; the search +
 // the two filters (mapping status / rating) just toggle row visibility, so logos never reload. Tier
-// names in the rating filter are canonical from docs/specs/scoring.md. ----
+// names in the rating filter are canonical from docs/data/scoring.md. ----
 const RATING_CANON={5:'Best Chance',4:'Mostly Reliable',3:'Spotty',2:'Over MSRP',1:'Unknown'};
 // Compact tier pill for a picker row — CANONICAL names from scoring.md (matches the rating filter),
 // in the tier's color.

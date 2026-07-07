@@ -80,7 +80,7 @@ The conversation prompt lives on the agent (not in repo code). Changed on the **
   it comes in a tin or booster packs?" → wrap. If they don't know / won't commit → "ok, thanks anyways —
   have a good one!" and end.
 - **Backup for rollback:** the PRE-change prompt is saved at
-  `docs/ops/agent-backups/staging-prompt-backup.json`. To roll back: PATCH the clone's
+  `docs/archive/agent-backups/staging-prompt-backup.json`. To roll back: PATCH the clone's
   `conversation_config.agent.prompt.prompt` with the `prompt` field from that file (and `first_message`).
   (ElevenLabs also keeps its own agent version history.)
 - **Prod's agent prompt is UNCHANGED** (still the shipment-style opener). Apply the same prompt edits to

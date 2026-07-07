@@ -23,12 +23,12 @@ tier column. So the per-chain `tier_1_5` here is applied by **stamping that inte
 
 - **Kiosk overlay** — any store with an official TPCi vending kiosk projects as **tier 5** regardless
   of its chain tier (`tier: hasKiosk ? 5 : (tier ?? null)` in `/pub/stores/near`). See
-  `docs/specs/kiosk-call-flow.md` and the official list rule in `docs/DATA_PROVENANCE.md`.
+  `docs/specs/kiosk-call-flow.md` and the official list rule in `docs/data/provenance.md`.
 - **Per-store voice-confirm overrides** — once the agent calls a store, its measured confirm rate can
   re-grade that store's tier up or down (the decimal/`store_confirm_rate` mechanic in the spec).
 
 The repo-native, reconciled version of the rubric (aligned to the actual schema + current prod state)
-is **`docs/specs/scoring.md`** — read that for "how scoring works in this codebase today." This folder
+is **`docs/data/scoring.md`** — read that for "how scoring works in this codebase today." This folder
 is the upstream source it was derived from.
 
 ## Re-applying / refreshing the scores

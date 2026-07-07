@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Store-data contract guard (docs/DATA_PROVENANCE.md → "Carries — derived from distributors").
+// Store-data contract guard (docs/data/provenance.md → "Carries — derived from distributors").
 // Fails the build if a store-listing endpoint serves the RAW `retailers.carries` column instead of
 // the distributor-derived resolver `storeCarriesList()`. Keeps carries consistent across Admin/staging/
 // prod and auto-applied to new stores — a new endpoint can't silently regress coverage.
@@ -24,7 +24,7 @@ src.split("\n").forEach((ln, i) => {
 if (violations.length) {
   console.error("✗ store-contract: a store response serves the RAW carries column — use storeCarriesList(chainName, r.carries):");
   console.error(violations.join("\n"));
-  console.error("  → see docs/DATA_PROVENANCE.md → 'Carries — derived from distributors (same serve-time pattern as logos)'");
+  console.error("  → see docs/data/provenance.md → 'Carries — derived from distributors (same serve-time pattern as logos)'");
   process.exit(1);
 }
 console.log("✓ store-contract: every store response derives carries via storeCarriesList()");

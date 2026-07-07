@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 // Admin (public/app.html). Needs ADMIN_TOKEN to mint the admin_session cookie via /admin-login.
-// Pull ADMIN_TOKEN from Railway (command in docs/handoffs/devops.md), then: ADMIN_TOKEN=… npm run e2e
+// Pull ADMIN_TOKEN from Railway (command in docs/team/devops/handoff.md), then: ADMIN_TOKEN=… npm run e2e
 const TOKEN = process.env.ADMIN_TOKEN || "";
 
 test.describe("admin", () => {

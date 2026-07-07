@@ -8,7 +8,7 @@ of proof (which render you looked at). Never delete findings; history stays.
 ## How to use your eyes (mandatory before checking off any view)
 1. `./node_modules/.bin/tsx scripts/render-comps.ts board` — renders the ENTIRE master board to
    `loops/site-redesign/render/board-*.png`. **The board was a BLACK PAGE in this sandbox until
-   2026-07-02** (CDN React is blocked here; DevOps vendored it in `docs/style-guide/vendor/`). If you
+   2026-07-02** (CDN React is blocked here; DevOps vendored it in `docs/design/comps/vendor/`). If you
    never SAW the comps, you were painting blind — that's how round 1 failed.
 2. Serve the site locally (`PORT=8787 STAGING=1 DATABASE_URL=file:./eyes.db SESSION_SECRET=<32+ chars>
    ADMIN_TOKEN=x ELEVENLABS_API_KEY=test ELEVENLABS_AGENT_ID=test ELEVENLABS_PHONE_NUMBER_ID=test
@@ -79,7 +79,7 @@ of proof (which render you looked at). Never delete findings; history stays.
   900 hero). Brandmark P0 STILL OPEN — escalated to top. Website's day was strong: round-2
   structural rebuilds across all frames, 45 proofs, ES sweep, owner live-review fixes.
 - 2026-07-02 ~13:05 CYCLE 3b (owner escalation): filed the two P0s above (type ramp pop +
-  brandmark). Render pipeline now serves VENDORED Inter (docs/style-guide/vendor/fonts) instead of
+  brandmark). Render pipeline now serves VENDORED Inter (docs/design/comps/vendor/fonts) instead of
   aborting font loads — font/weight mismatches are now visible in every render, both site and
   comp board. Re-render your views after type fixes and compare the ramp against the board.
 - 2026-07-02 ~12:50 CYCLE 3 (owner-driven /loop now primary at :26/:56; internal cron backup at :09

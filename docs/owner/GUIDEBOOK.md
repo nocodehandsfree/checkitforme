@@ -62,15 +62,15 @@ Both auto-deploy ~3 min after a push. Admin (`admin.checkitforme.com`) always ru
 Start any agent by typing **"You are Check - <Role>. Ready up."** — it reads its own docs and reports
 in. Roles: **Website** (consumer site), **Admin** (dashboard), **Data Dev** (store data), **DevOps**
 (backend/infra/security/docs — your point of contact), **Design** (look), **QA** (read-only checks).
-Full prompts: `docs/KICKOFFS.md`. How they work: `HANDOFF.md`.
+Full prompts: `docs/owner/new-chat-prompts.md`. How they work: `HANDOFF.md`.
 
 ## 6. Where everything lives (pointers — open only what you need)
 - **Roadmap / backlog** → `docs/business/ROADMAP.md`
 - **Money / margins** → `docs/finance/COST_MODEL.md` · `CHEAP_NAV_ARCHITECTURE.md`
-- **Design** → `docs/style-guide/STYLE_GUIDE.md` · `NEW_CHECK_COMPS.html` · `BRAND.md` · `COPY_STYLE_GUIDE.md`
-- **The front↔back interface** → `docs/API_CONTRACT.md`
-- **Store data** → `docs/DATA_PROVENANCE.md` · `docs/specs/store-data-schema.md`
-- **Traps that cost us time** → `docs/GOTCHAS.md`
+- **Design** → `docs/design/STYLE_GUIDE.md` · `NEW_CHECK_COMPS.html` · `BRAND.md` · `COPY_STYLE_GUIDE.md`
+- **The front↔back interface** → `docs/shared/API_CONTRACT.md`
+- **Store data** → `docs/data/provenance.md` · `docs/data/store-schema.md`
+- **Traps that cost us time** → `docs/shared/GOTCHAS.md`
 - **Finished work** → git history (nothing is kept as a stale doc)
 - **Human-facing docs (customers/team)** → **ReadMe** project "Checkitforme" (Plans/pricing/features live there; this Guidebook is the internal source).
 

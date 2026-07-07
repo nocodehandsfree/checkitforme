@@ -64,6 +64,6 @@ redundant weight. Remove:
 - **Admin lane:** the Zones UI in `public/app.html` (~30 refs — tab/loader/handlers).
 - **DevOps lane:** the `/api/zones*` admin endpoints (`GET/POST /api/zones`, `/:id/retailers`,
   `/call-now`, `/hangup`, `/quote`, `/stores`) — remove when the consumer `/app/zones/*` ships (spec:
-  `docs/specs/manage-zones.md`), so there's no gap.
+  `docs/archive/manage-zones-SHIPPED.md`), so there's no gap.
 - **KEEP** the engine: `zones` + `zoneRetailers` tables and `zoneQuote`/`canAffordZone`/`callZone` —
   the consumer feature runs on them (now with `ownerUserId` per user).

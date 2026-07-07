@@ -2,7 +2,7 @@
 // image files). The comp board loads React from a CDN that is BLOCKED in agent sandboxes — it
 // renders as a BLACK PAGE with "[bundle] error" (that's how the 2026-07-02 paint-not-structure
 // failure happened: the implementer could never see the design). This tool serves the vendored
-// React in docs/style-guide/vendor/ instead, so the board renders offline.
+// React in docs/design/comps/vendor/ instead, so the board renders offline.
 // Usage:
 //   ./node_modules/.bin/tsx scripts/render-comps.ts board                     # master board, sliced
 //   ./node_modules/.bin/tsx scripts/render-comps.ts url <url> <name> [width]  # any (local) URL
@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const DESIGN = join(here, "../docs/style-guide");
+const DESIGN = join(here, "../docs/design/comps");
 const OUT = join(here, "../loops/site-redesign/render");
 
 function chromePath(): string {
@@ -27,7 +27,7 @@ function chromePath(): string {
   throw new Error("no chromium found — set CHROME_EXE=<path to chrome>");
 }
 
-/** Tiny static server for docs/style-guide (the board misbehaves under file://). */
+/** Tiny static server for docs/design/comps (the board misbehaves under file://). */
 function serveDesign(): Promise<{ port: number; close: () => void }> {
   return new Promise((res) => {
     const srv = createServer((req, r) => {

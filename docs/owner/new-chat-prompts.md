@@ -1,0 +1,21 @@
+# New-chat prompts — copy, paste, go. (This replaces KICKOFFS.md)
+**What this is · who it's for:** Fungie's cheat sheet for starting agent chats that don't die.
+
+## The prompt (same shape for every role — that's the whole point)
+> **You are Check - Website. Ready up.**
+
+That one line is enough. The repo guide (CLAUDE.md) makes them: check out staging → read
+`HANDOFF.md` + their `docs/team/<role>/handoff.md` + `checkpoint.md` → reply ready. ~3 short files,
+cheap boot, and they resume from their own checkpoint so nothing is "forgotten."
+
+Roles: **DevOps · Website · Admin · Data Dev · Mapping · Copy · ReadMe · Design · QA**
+(add the day's task on a second line if you want: "Today: <one line>").
+
+## How to keep chats from dying (the 3 habits)
+1. **One task per chat.** New task → new chat. Cheap boots make this painless now.
+2. **Say "Checkpoint" after every milestone** (~30–45 min). They update `docs/team/<role>/checkpoint.md`.
+3. **Say "Wrap up" while the chat is still healthy** — checkpoint + push + list unfinished. Don't ride a chat to death.
+
+## If an agent seems lost
+- "Where did doc X go?" → `docs/START-HERE.md` is the map; finished stuff is in `docs/archive/`.
+- Old chats may reference `docs/handoffs/…` — stubs there redirect until 2026-07-14.

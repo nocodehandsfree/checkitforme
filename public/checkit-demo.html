@@ -87,7 +87,7 @@ __BRAND_HEAD__
   .cta .price{font-weight:700;opacity:.7;font-size:13px}
   /* dark/branded CTA variants drop the green glow (it bleeds weirdly behind black/blue buttons) */
   .cta.dark{box-shadow:0 4px 14px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.08)}
-  /* Sell-methods card (docs/SELL_METHODS_PLAN.md): what's possible at THIS store — live online
+  /* Sell-methods card (SELL_METHODS_PLAN, git history): what's possible at THIS store — live online
      stock, ways to get it, resale warning, notify. Non-callable chains (Micro Center, Amazon) show
      "Buy online" here instead of a call button; callable stores get a slim notify row under the CTA. */
   #sellmeta{display:flex;flex-direction:column;gap:9px}
@@ -2233,7 +2233,7 @@ function syncCta(){
   const ic=`<span style="display:inline-flex;vertical-align:-3px;margin-right:6px">${ICO.call('currentColor')}</span>`;
   const wasHidden=b.style.display==='none';
   // Non-callable chains (Micro Center, Amazon) NEVER get a call button — the sell-methods card
-  // below carries "Buy online" + notify instead. (docs/SELL_METHODS_PLAN.md rule 1.)
+  // below carries "Buy online" + notify instead. (SELL_METHODS_PLAN, git history rule 1.)
   const cantCall=SEL_STORE&&SEL_STORE.callable===false;
   if(SEL_STORE&&SEL_CATS.length&&MODE!=='kiosk'&&!cantCall){
     b.style.display=''; if(vv)vv.style.display='none'; if(cf)cf.style.display='';
@@ -2246,7 +2246,7 @@ function syncCta(){
 }
 // Sell-methods card — what's actually possible at THIS store: live online stock, ways to get it,
 // resale warning, notify. Non-callable chains (Micro Center, Amazon) get "Buy online" instead of a
-// call. Contract: docs/SELL_METHODS_PLAN.md; fields come straight off /pub/stores/near (SEL_STORE).
+// call. Contract: SELL_METHODS_PLAN, git history; fields come straight off /pub/stores/near (SEL_STORE).
 function renderStoreActions(){
   const wrap=$('sellmeta'); if(!wrap) return;
   const st=SEL_STORE;

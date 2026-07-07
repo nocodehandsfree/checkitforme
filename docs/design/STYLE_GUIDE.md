@@ -4,8 +4,8 @@ The single visual source of truth for **checkitforme.com** ("Check") and its adm
 surfaces — the **elevated / soft-depth** skin the live site runs. Every spec here is extracted 1:1
 from the approved master board in this folder:
 **`NEW_CHECK_COMPS.html`** (self-contained, open anywhere) / **`NEW_CHECK_COMPS.dc.html`** (source).
-Words are owned by `docs/style-guide/COPY_STYLE_GUIDE.md`; the brand mark + colors by
-`docs/style-guide/BRAND.md`. When the live site and this doc disagree, fix whichever is wrong and
+Words are owned by `docs/design/copy/COPY_STYLE_GUIDE.md`; the brand mark + colors by
+`docs/design/brand/BRAND.md`. When the live site and this doc disagree, fix whichever is wrong and
 note it here.
 
 ---
@@ -242,4 +242,4 @@ tile/banner 16 · poll/day key 11–14 · selection ring = inner + 2 · logo slo
 ---
 
 _Owned by Design. Screens: `NEW_CHECK_COMPS.html` (this folder). Words:
-`docs/style-guide/COPY_STYLE_GUIDE.md`._
+`docs/design/copy/COPY_STYLE_GUIDE.md`._

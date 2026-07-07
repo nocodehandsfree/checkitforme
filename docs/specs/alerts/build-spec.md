@@ -2,7 +2,7 @@
 
 Website will wire the consumer front end to this; you own the message store, the senders, the
 per-plan limits, and the tracking UI. Everything customer-facing runs through the Copy Style Guide
-(`docs/style-guide/COPY_STYLE_GUIDE.md`) — no em-dashes, friend voice, "check" is the unit.
+(`docs/design/copy/COPY_STYLE_GUIDE.md`) — no em-dashes, friend voice, "check" is the unit.
 
 ## 1. Channels & rules (owner-set)
 - **SMS (Twilio):** restock alerts, and any alert the owner marks SMS-eligible.
