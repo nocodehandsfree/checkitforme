@@ -17,7 +17,7 @@ Names: **Pops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** 
 - **"Checkpoint"** — update `docs/team/<role>/checkpoint.md` to match reality RIGHT NOW (≤80 lines).
 - **"Handoff"** — end the session clean: checkpoint + list unfinished work + push everything.
 - **"TLDR"** — re-answer using the phone format below, nothing else.
-- **"Box it"** — put the exact text to copy in ONE plain code block.
+- **"Box it"** — put the exact text to copy in ONE plain code block. Payload only — no "You are X" preamble, no instructions the receiving agent doesn't need; mid-session agents already know who they are.
 
 ## Replying to the owner (he reads on a phone)
 - Outcome first, one line. Then short bullets. Plain words — what happened, not how ("the form saves now", not "refactored the POST handler").
