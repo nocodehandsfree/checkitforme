@@ -447,18 +447,6 @@ app.get("/", rootHandler);
 // :param{regex} attempt crashed Hono's router on boot. These names never collide with /api, /pub, /r, /s, etc.
 for (const s of ["dash","users","restock","growth","calc","plans","retailers","search","add","zones","receipts","results","schedules","feedback","statuses","trees","settings","designer","workflows","testing","fun","gtm"]) app.get("/" + s, rootHandler);
 app.get("/r", (c) => { c.header("Cache-Control", "no-store"); const h=(c.req.header("host") || "").toLowerCase(); return c.html(renderRunner(resolveBrand(h, c.req.query("brand")), h, "checkit.html", c.req.query("tone") || "")); });
-// Preview-only: the redesigned result/live UI served from checkit-demo.html, so the live
-// site keeps the current design while we evaluate the new one. /demo?brand=<slug> picks a vertical.
-app.get("/demo", (c) => {
-  c.header("Cache-Control", "no-store");
-  const host = (c.req.header("host") || "").toLowerCase();
-  return c.html(renderRunner(resolveBrand(host, c.req.query("brand") || "pokemon"), host, "checkit-demo.html"));
-});
-app.get("/demo/:slug", (c) => {
-  c.header("Cache-Control", "no-store");
-  const host = (c.req.header("host") || "").toLowerCase();
-  return c.html(renderRunner(resolveBrand(host, c.req.param("slug")), host, "checkit-demo.html"));
-});
 // Verticals as PATHS on the apex (checkitforme.com/pokemon, /onepiece, /toppsbasketball, /needoh) —
 // same brand resolution as the subdomains, keyed off the slug. This is what lets the product switcher
 // link to clean same-domain paths instead of subdomain hops.
