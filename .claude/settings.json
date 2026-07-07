@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)", "Bash(git log:*)", "Bash(git diff:*)", "Bash(git show:*)",
+      "Bash(git add:*)", "Bash(git commit:*)", "Bash(git checkout:*)", "Bash(git pull:*)",
+      "Bash(git fetch:*)", "Bash(git push:*)", "Bash(git merge:*)", "Bash(git branch:*)",
+      "Bash(pnpm install:*)", "Bash(pnpm dev:*)", "Bash(pnpm check:*)", "Bash(pnpm typecheck:*)",
+      "Bash(npx tsc:*)", "Bash(npx tsx:*)", "Bash(node scripts/*)", "Bash(bash scripts/*)",
+      "Bash(curl -s -X POST https://backboard.railway.app/*)"
+    ]
+  }
+}
