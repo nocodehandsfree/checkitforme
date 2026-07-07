@@ -1182,8 +1182,8 @@ function showSection(id, fromGroup){
   // Record this view in browser history so Back/Forward walks the admin's tabs instead of escaping to
   // wherever you came from (Google). First view replaces the entry; later views push.
   if(!NAV_RESTORING){ try{ const st={tab:id};
-    if(!NAV_BOOTED){ history.replaceState(st,'','#'+id); NAV_BOOTED=true; }
-    else if((history.state&&history.state.tab)!==id){ history.pushState(st,'','#'+id); }
+    if(!NAV_BOOTED){ history.replaceState(st,'','/'+id); NAV_BOOTED=true; }
+    else if((history.state&&history.state.tab)!==id){ history.pushState(st,'','/'+id); }
   }catch(_){} }
   if(TAB_LOADERS[id]) TAB_LOADERS[id]();
   setTimeout(decorateChrome,150); setTimeout(decorateChrome,600); // strip emoji from freshly-rendered content too
@@ -4072,7 +4072,7 @@ async function agentSend(){
   renderGroupNav();
   // Show the tab you were on IMMEDIATELY (before data loads) so refresh doesn't flash God view first.
   (function(){ const sp=new URLSearchParams(location.search);
-    const want=sp.get('tab')||(sp.get('store')?'results':(localStorage.getItem('active_tab')||'dash'));
+    const want=(location.pathname.length>1?location.pathname.slice(1):'')||sp.get('tab')||(sp.get('store')?'results':(localStorage.getItem('active_tab')||'dash'));
     const sec=SECTION_GROUP[want]?want:'dash';
     showGroup(SECTION_GROUP[sec], sec); })();
   await Promise.all([loadCatalog()]);

@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { WebSocketServer, type WebSocket } from "ws";
 import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql } from "drizzle-orm";
@@ -353,7 +353,7 @@ h1{font-size:30px;margin:26px 0 14px}.body{color:#c2c2cf;font-size:16px}.body a{
 </body></html>`);
 });
 
-app.get("/", (c) => {
+const rootHandler = (c: Context) => {
   c.header("Cache-Control", "no-store, no-cache, must-revalidate");
   const host = (c.req.header("host") || "").toLowerCase();
   const override = c.req.query("brand");
@@ -366,7 +366,12 @@ app.get("/", (c) => {
     ? (!(host.startsWith("caller.") || host.startsWith("admin.")) || !!override)
     : (host.startsWith("runner.") || brand.key !== "runner" || !!override);
   return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "") : page("app.html"));
-});
+};
+app.get("/", rootHandler);
+// Clean admin deep-links (/feedback, /trees, …): one STATIC route per admin section, all serving the same
+// SPA; the client reads location.pathname to pick the section. Static-only on purpose — the earlier
+// :param{regex} attempt crashed Hono's router on boot. These names never collide with /api, /pub, /r, /s, etc.
+for (const s of ["dash","users","restock","growth","calc","retailers","search","add","receipts","results","feedback","statuses","trees","settings","designer","workflows","testing","fun"]) app.get("/" + s, rootHandler);
 app.get("/r", (c) => { c.header("Cache-Control", "no-store"); const h=(c.req.header("host") || "").toLowerCase(); return c.html(renderRunner(resolveBrand(h, c.req.query("brand")), h, "checkit.html", c.req.query("tone") || "")); });
 // Preview-only: the redesigned result/live UI served from checkit-demo.html, so the live
 // site keeps the current design while we evaluate the new one. /demo?brand=<slug> picks a vertical.
