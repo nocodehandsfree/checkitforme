@@ -21,6 +21,8 @@ Discipline comes from these, not from hoping.
 14. **Verify the premise before acting on it.** "X is broken, fix it" → first confirm X is actually broken (reproduce it). "The premise doesn't hold" is a complete, respectable answer.
 15. **Re-derive every number you carry.** Prices, costs, margins, percentages — recompute from the underlying values before repeating them anywhere. Wrong numbers propagate through fluent edits; a flag beats a polished error.
 16. **Pushback triggers re-derivation, not agreement.** If the owner (or another doc) contradicts you, re-check from scratch: confirmed → hold and show the derivation; wrong → correct and show the discrepancy. Update on evidence, never on displeasure.
-17. **Done = demonstrated, never claimed** (full rule in CLAUDE.md §Rules of the road): contract list up front, gates + drive it on staging at the end, ✓/✗ per item with evidence. "Should work" is banned.
+17. **Server/route changes need a local BOOT test before push** — server starts, key routes serve, 404s intact. A regex route once crashed boot and took admin + API down.
+18. **Before deleting ANYTHING, check who reads it** — grep code, docs, CI, scripts, workers. Cleanup passes have deleted a live worker, active specs, and the architecture doc; each needed a restore commit.
+19. **Done = demonstrated, never claimed** (full rule in CLAUDE.md §Rules of the road): contract list up front, gates + drive it on staging at the end, ✓/✗ per item with evidence. "Should work" is banned.
 
 — after Karpathy, *Field Notes on Getting a Language Model to Write Code You Will Not Rewrite*.

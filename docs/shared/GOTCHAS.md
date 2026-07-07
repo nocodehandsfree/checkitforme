@@ -33,6 +33,9 @@ worse than no comment. Several entries below started as wrong comments.)
   this must match.
 
 ## Frontend (checkit.html)
+- **No per-logo pixel-tuning — ever.** 157 commits were burned hand-sizing individual chain logos. Logos render through the one area-normalized tile contract (`docs/data/store-logos.md`); new logos get ADDED, never hand-sized one chain at a time.
+- **"Visual regression" = stale cache until proven otherwise.** Several "regressions" were device/SW cache (2026-07 hobby art). Hard-refresh / bump the SW cache version FIRST; reproduce fresh before touching code.
+- **Every user-facing string ships with its Spanish in the SAME commit.** ES gaps were caught late ~23 times (even the primary CTA). No literal strings — through `t()` with the ES value, same commit.
 - **iOS Safari only applies `<meta theme-color>` at PAGE LOAD** — a later JS change is ignored. The status-bar
   tint must be **baked into the served HTML** (server `?tone=` → `renderRunner`, `server.ts`). Also needs the
   device's "Allow Website Tinting" ON (default on).

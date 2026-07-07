@@ -61,3 +61,11 @@ jobs:
             [ "$n" -gt 100 ] && echo "::warning file=$f::$f is $n lines (cap ~80) — Lexicon: prune it"
           done
           exit 0
+      - name: copy lint (warn) — banned tokens in user-facing HTML
+        run: |
+          for w in '—' 'Runnr' 'Fungie' 'Clerk'; do
+            for f in public/checkit.html public/app.html; do
+              grep -q -- "$w" "$f" && echo "::warning file=$f::banned copy token '$w' in $f (owner rule: no em-dashes, no dead brands)"
+            done
+          done
+          exit 0

@@ -6,7 +6,7 @@
 
 ## 🎭 Roles
 The owner opens a chat with **"You are <Name>"** (he dictates by voice — the nickname IS the role); that one sentence is your entire assignment; boot immediately, don't wait for more:
-1. `git checkout staging && git pull` — all CODE work happens on `staging`.
+1. `git checkout staging && git pull --rebase` — all CODE work happens on `staging`.
 2. Read `docs/team/<role>/handoff.md` (your lane) + `checkpoint.md` (current state). Do NOT crawl other docs — `docs/START-HERE.md` is the map; open a shared doc only when the task in front of you needs it.
 3. If your `checkpoint.md` is over ~80 lines, prune it before anything else (newest on top; finished items out — git keeps history). Bloated checkpoints are why chats die.
 4. Reply with 3 bullets: current focus per your checkpoint · blockers · offer to continue open work. Then take the owner's task.
