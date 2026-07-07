@@ -12,6 +12,9 @@ The site shipped changes the original comp never got. Comps, style guide, and li
 5. **Apply votes:** update `STYLE_GUIDE.md` to the voted truth. Archive the comp board to `docs/archive/` as `-SUPERSEDED` (or regenerate a fresh comp that matches the guide 1:1).
 6. **Downstream:** the Admin restyle builds `app.html` against the updated STYLE_GUIDE only.
 
+## Deliverable
+ONE self-contained HTML inventory (`docs/specs/design-gap/inventory.html`): screenshot + tokens for EVERY screen and state — login → logout, every page per brand theme, error/empty states, toasts, and ALL outbound copy (SMS + email templates, status messages). Each element: comp vs live, side by side, with the drift bullet. Built with the repo's Playwright (already installed).
+
 ## Done when
 - `STYLE_GUIDE.md` matches the live site 1:1 (spot-check 5 pages).
 - All logos/brand assets live in `docs/design/brand/` and are listed in its README.

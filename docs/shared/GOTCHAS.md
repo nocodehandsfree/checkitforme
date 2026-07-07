@@ -31,10 +31,6 @@ worse than no comment. Several entries below started as wrong comments.)
   **billed** + 28s talk). Same for `bail.enabled`. **Check `GET /api/policy` after ANY DB restore**; expected prod =
   `connectOnHuman:true, bail.enabled:true`. The calculator's "Hybrid $0.07/min · running today" line is the benchmark
   this must match.
-- **Mapping's learned time-to-human (`chains.avgTreeSeconds`) is NOT yet wired into live calls.** `buildRestockVars`
-  returns `dtmf/say/maxTalk` but not the timer, so ABC opens via a VAD **guess**, not the exact mapped second. Wiring
-  `connectAtSec = avgTreeSeconds` through `buildRestockVars`→`placeBridgeCall` makes voice-tree chains (CVS) open
-  deterministically. Until then, mapping the time-to-human doesn't pay off on the call itself.
 
 ## Frontend (checkit.html)
 - **iOS Safari only applies `<meta theme-color>` at PAGE LOAD** — a later JS change is ignored. The status-bar
@@ -44,7 +40,6 @@ worse than no comment. Several entries below started as wrong comments.)
   `viewport-fit=cover` (the body paints *under* the bar). That's why "Add to Home Screen" tints when web doesn't.
 
 ## Infra / branches
-- **Two branches:** `staging` (develop — auto-deploys staging.checkitforme.com) and `main` (production — promote target).
 - **`config.staging.on` is what makes the staging service behave as staging** — `true` on the
   voice-caller-staging service, `false` on prod. The code branches on it in ~20 spots (`server.ts`, `auth.ts`,
   `staging-sim.ts`): simulated calls, the staging login code, staging websocket host. Don't remove

@@ -11,7 +11,7 @@ run(){ # label, command
   if eval "$2"; then echo "   → $1 OK"; else echo "   → $1 FAILED"; FAILED="$FAILED $1"; fi
 }
 
-echo "═══ Fungibles / voice-caller — full test run ═══"
+echo "═══ Check — full test run ═══"
 run "typecheck"        "npx tsc --noEmit"
 run "unit: ratelimit"  "env DATABASE_URL=file:./.t-rl.db $ENV $TSX scripts/test-ratelimit.ts; rm -f .t-rl.db"
 run "unit: r2 presign" "$ENV $TSX scripts/test-r2.ts"

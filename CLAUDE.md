@@ -1,17 +1,17 @@
 # Check (checkitforme) — the ONE boot doc (auto-loads every session)
 
-**Check** is one white-label storefront: an AI that phones retail stores to verify collectible-card stock and shows proof. ONE codebase serves four brand domains (pokemon / onepiece / toppsbasketball / needoh · *.checkitforme.com) plus the Admin dashboard. 100K+ store records. Hono + Drizzle on Railway; app at repo root. Consumer UI `public/checkit.html`; admin `public/app.html`. A solo owner — non-engineer, usually on his phone — runs everything through agent chats like this one.
+**Check** is one white-label storefront: an AI that phones retail stores to verify collectible-card stock and shows proof. ONE codebase serves four brand domains (pokemon / onepiece / toppsbasketball / needoh · *.checkitforme.com) plus the Admin dashboard. 100K+ store records. Hono + Drizzle on Railway; app at repo root. Consumer UI `public/checkit.html`; admin `public/app.html`. A solo owner-architect runs everything from his phone through agent chats — he owns design, brand, and business logic; talk outcomes and approach, not code internals, unless it affects those. The site is built like Legos: modular sections that snap together, each product section carrying its own color theme — new brands launch by snapping pieces on, features toggle per brand.
 
 **Your boot = this file (automatic) + your two team files. Nothing else.**
 
 ## 🎭 Roles
-The owner opens a chat with **"You are Check - <Role>"** — that one sentence is your entire assignment; boot immediately, don't wait for more:
+The owner opens a chat with **"You are <Name>"** (he dictates by voice — the nickname IS the role); that one sentence is your entire assignment; boot immediately, don't wait for more:
 1. `git checkout staging && git pull` — all CODE work happens on `staging`.
 2. Read `docs/team/<role>/handoff.md` (your lane) + `checkpoint.md` (current state). Do NOT crawl other docs — `docs/START-HERE.md` is the map; open a shared doc only when the task in front of you needs it.
 3. If your `checkpoint.md` is over ~80 lines, prune it before anything else (newest on top; finished items out — git keeps history). Bloated checkpoints are why chats die.
 4. Reply with 3 bullets: current focus per your checkpoint · blockers · offer to continue open work. Then take the owner's task.
 
-Roles: DevOps · Website · Admin · Data Dev · Mapping · Copy · ReadMe · Design · QA · Lexicon.
+Names: **Pops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** (Data Dev) · **Mapper** (Mapping) · **Copper** (Copy — ALL words everywhere, including the book) · **CD** (Design) · **Lexicon** (docs librarian). Plain role words work too.
 
 **Owner's commands (obey as-is):**
 - **"Checkpoint"** — update `docs/team/<role>/checkpoint.md` to match reality RIGHT NOW (≤80 lines).
@@ -34,7 +34,7 @@ Roles: DevOps · Website · Admin · Data Dev · Mapping · Copy · ReadMe · De
 | Admin | `admin.checkitforme.com` — operator dashboard on live PROD data; where the owner manages customers and runs the business. Owner-side changes made there (workflows, designer, settings) are live immediately. |
 | Fun store | owner-only test store (Admin → Testing). Test calls go here; never touches real-store stats. |
 | MVP store | second test store — the owner points it at any phone number and answers the call as if he's the store. |
-| the book | branch `v1.0` — ReadMe.com customer-docs mirror. ReadMe lane only; never merge it either way. |
+| the book | branch `v1.0` — readme.com customer-docs mirror. Copper's lane only; never merge it either way. |
 | GTM | Admin → GTM checklist — the single source of launch truth. Every task maps to an item. |
 
 No other long-lived branches exist. Session branches merge to `staging` and die.
@@ -56,6 +56,7 @@ curl -s -X POST https://backboard.railway.app/graphql/v2 \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['variables']['ADMIN_TOKEN'])"
 ```
 ⚠️ `curl` ONLY — python urllib/requests/WebFetch hit the proxy and 403 in a way that **looks like "Railway is down" when it isn't**. Errors once → ask the owner and keep moving; never loop.
+**Need another repo** (fungibles, etc.)? Fetch `GITHUB_PAT` the same way, then `git clone https://x-access-token:$GITHUB_PAT@github.com/nocodehandsfree/<repo>` — never say "I can't access that repo" before trying this.
 
 ## Map (open only what a task needs)
 - `docs/owner/GUIDEBOOK.md` — the business in plain English (what Check is, money model, plans).
