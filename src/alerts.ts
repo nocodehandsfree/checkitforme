@@ -99,35 +99,80 @@ async function twilioSms(to: string, body: string): Promise<{ ok: boolean; detai
   } catch (e) { return { ok: false, detail: String(e).slice(0, 80) }; }
 }
 function escHtml(s: string): string { return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string)); }
-// The one CTA per email — label + where it lands. Restock is SMS, so no email CTA.
-const EMAIL_CTA: Partial<Record<AlertEvent, { label: string; url: string }>> = {
-  welcome: { label: "Pick a store", url: "https://checkitforme.com" },
-  store_added: { label: "Use my free check", url: "https://checkitforme.com" },
-  waitlist: { label: "Find a store near you", url: "https://checkitforme.com" },
+
+// Per-event design content, ported from Claude Design's email mockups (kicker + serif headline + body
+// paragraphs + a middle module + one CTA). Tokens stay live; copy is editable here in git.
+type EmailModule =
+  | { type: "chip"; text: string }
+  | { type: "product"; title: string; sub: string; badge: string }
+  | { type: "steps"; steps: [string, string][] };
+interface EmailDesign { kicker: string; kickerColor: string; headline: string; body: string[]; module?: EmailModule; cta: string; url: string }
+const EMAIL_DESIGN: Record<AlertEvent, EmailDesign> = {
+  store_added: {
+    kicker: "YOUR STORE'S LIVE", kickerColor: "#4ADE80", headline: "You got your store.",
+    body: ["{store} in {city} is live. Your next check's on us.", "Pick your product, we call the staff, you get the answer."],
+    module: { type: "chip", text: "1 free check, ready" }, cta: "Use my free check", url: "https://checkitforme.com",
+  },
+  waitlist: {
+    kicker: "NOW LIVE NEAR YOU", kickerColor: "#4ADE80", headline: "{city}, we made it.",
+    body: ["You waited. Now check any store near you. Pick one, we call, you get the answer.", "Every check is a real call. One store, one straight answer."],
+    module: { type: "chip", text: "First check's on us" }, cta: "Check a store", url: "https://checkitforme.com",
+  },
+  restock: {
+    kicker: "BACK IN STOCK", kickerColor: "#FFCB05", headline: "{product}'s back.",
+    body: ["{store} in {city} has it again. This stuff doesn't sit long."],
+    module: { type: "product", title: "{product}", sub: "{store} · {city}", badge: "SPOTTED TODAY" }, cta: "See the details", url: "https://checkitforme.com",
+  },
+  welcome: {
+    kicker: "WELCOME", kickerColor: "#4ADE80", headline: "You're in.",
+    body: ["We call the store so you don't have to. You get a straight answer, about two minutes."],
+    module: { type: "steps", steps: [["1", "Pick a store and a product"], ["2", "Check AI calls the staff"], ["3", "You get a straight answer"], ["✓", "First check's on us"]] },
+    cta: "Run my first check", url: "https://checkitforme.com",
+  },
 };
-/** Email-safe branded HTML: table layout + inline styles so it renders the same in every mail client
- *  (Gmail/Outlook/Apple). Dark card, green accent, wordmark, one CTA button. This is what "the design"
- *  actually has to be — a web-layout mockup (flex/grid) won't render in email. */
-function renderBrandedEmail(event: AlertEvent, subject: string, body: string): string {
-  const cta = EMAIL_CTA[event];
-  const button = cta
-    ? `<tr><td style="padding:6px 0 2px"><a href="${cta.url}" style="display:inline-block;background:#4ADE80;color:#06210f;font-weight:800;font-size:15px;text-decoration:none;padding:13px 24px;border-radius:10px;font-family:Inter,Arial,sans-serif">${escHtml(cta.label)} &rarr;</a></td></tr>`
-    : "";
+const SERIF = "Georgia,'Times New Roman',serif";
+function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | number | undefined>): string {
+  if (!m) return "";
+  const wrap = (inner: string) => `<tr><td style="padding-bottom:22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#16161C;border-radius:13px"><tr><td style="padding:15px 17px">${inner}</td></tr></table></td></tr>`;
+  if (m.type === "chip") return wrap(`<span style="font-size:15px;font-weight:700;color:#FFFFFF;font-family:Inter,Arial,sans-serif">${escHtml(fill(m.text, tk))}</span>`);
+  if (m.type === "product") return wrap(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+    <td style="font-family:Inter,Arial,sans-serif"><div style="font-size:15px;font-weight:800;color:#FFFFFF">${escHtml(fill(m.title, tk))}</div><div style="font-size:12.5px;color:#8A8A96;margin-top:2px">${escHtml(fill(m.sub, tk))}</div></td>
+    <td align="right"><span style="font-size:10.5px;font-weight:800;letter-spacing:.5px;color:#4ADE80;background:rgba(74,222,128,.12);border-radius:6px;padding:5px 9px;font-family:Inter,Arial,sans-serif">${escHtml(m.badge)}</span></td></tr></table>`);
+  // steps
+  const rows = m.steps.map((s, i) => `<tr>
+    <td width="34" valign="middle" style="padding:${i ? "11px" : "2px"} 0 11px"><div style="width:26px;height:26px;line-height:26px;text-align:center;border-radius:50%;background:#1B2A1E;color:#4ADE80;font-size:12px;font-weight:800;font-family:Inter,Arial,sans-serif">${escHtml(s[0])}</div></td>
+    <td valign="middle" style="padding:${i ? "11px" : "2px"} 0 11px 12px;font-size:14.5px;font-weight:700;color:#FFFFFF;font-family:Inter,Arial,sans-serif;${i ? "border-top:1px solid #23232B" : ""}">${escHtml(s[1])}</td></tr>`).join("");
+  return wrap(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>`);
+}
+/** Email-safe branded HTML matching Design's mockups: table layout + inline styles (renders the same in
+ *  Gmail/Outlook/Apple Mail), Check wordmark, green/yellow kicker, serif headline, module, outlined CTA. */
+function renderBrandedEmail(event: AlertEvent, _subject: string, _body: string, tokens: Record<string, string | number | undefined> = {}): string {
+  const d = EMAIL_DESIGN[event];
+  const bodyHtml = d.body.map((p) => `<tr><td style="font-size:15.5px;line-height:1.6;color:#C9C9D2;font-family:Inter,Arial,sans-serif;padding-bottom:14px">${escHtml(fill(p, tokens))}</td></tr>`).join("");
   return `<!doctype html><html><body style="margin:0;padding:0;background:#0B0B10">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0B0B10;margin:0;padding:0"><tr><td align="center" style="padding:26px 16px">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
-      <tr><td style="padding:6px 4px 18px;font-family:Inter,Arial,sans-serif">
-        <span style="font-size:16px;font-weight:800;color:#FFFFFF;letter-spacing:.2px">Check It For Me</span>
-        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#4ADE80;vertical-align:middle;margin-left:7px"></span>
+      <tr><td style="padding:2px 2px 20px;font-family:Inter,Arial,sans-serif">
+        <span style="font-size:24px;font-weight:800;color:#4ADE80;letter-spacing:-.5px">&#10003;</span><span style="font-size:24px;font-weight:800;color:#FFFFFF;letter-spacing:-.5px">Check</span>
       </td></tr>
-      <tr><td style="background:#14141A;border:1px solid #22222A;border-radius:16px;padding:30px 28px;font-family:Inter,Arial,sans-serif">
+      <tr><td style="background:#101015;border:1px solid #1E1E26;border-radius:20px;padding:34px 30px">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          <tr><td style="font-size:22px;font-weight:800;color:#FFFFFF;line-height:1.28;padding-bottom:12px">${escHtml(subject)}</td></tr>
-          <tr><td style="font-size:15px;line-height:1.62;color:#C9C9D2;padding-bottom:22px">${escHtml(body)}</td></tr>
-          ${button}
+          <tr><td style="font-size:12px;font-weight:800;letter-spacing:1.5px;color:${d.kickerColor};font-family:Inter,Arial,sans-serif;padding-bottom:12px">${escHtml(d.kicker)}</td></tr>
+          <tr><td style="font-size:34px;font-weight:700;color:#FFFFFF;line-height:1.12;font-family:${SERIF};padding-bottom:18px">${escHtml(fill(d.headline, tokens))}</td></tr>
+          ${bodyHtml}
+          <tr><td style="height:8px"></td></tr>
+          ${moduleHtml(d.module, tokens)}
+          <tr><td>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+              <td align="center" style="border:2px solid #4ADE80;border-radius:40px;padding:16px 18px">
+                <a href="${d.url}" style="color:#4ADE80;font-weight:800;font-size:15px;letter-spacing:1.2px;text-decoration:none;font-family:Inter,Arial,sans-serif;text-transform:uppercase">${escHtml(d.cta)} &rarr;</a>
+              </td></tr></table>
+          </td></tr>
         </table>
       </td></tr>
-      <tr><td style="padding:18px 6px;font-family:Inter,Arial,sans-serif;font-size:12px;color:#6B6B78">Check It For Me &middot; <a href="https://checkitforme.com" style="color:#4ADE80;text-decoration:none">checkitforme.com</a></td></tr>
+      <tr><td style="padding:20px 6px;font-family:Inter,Arial,sans-serif;font-size:12px;color:#6B6B78">
+        <a href="https://checkitforme.com/account" style="color:#8A8A96;text-decoration:none">Manage alerts</a> &nbsp;&middot;&nbsp; <a href="https://checkitforme.com/unsubscribe" style="color:#8A8A96;text-decoration:none">Unsubscribe</a>
+      </td></tr>
     </table>
   </td></tr></table></body></html>`;
 }
@@ -139,7 +184,7 @@ async function espEmail(to: string, subject: string, body: string, opts: { templ
   const payload: Record<string, unknown> = opts.templateId
     ? { sender, to: [{ email: to }], templateId: opts.templateId, params: opts.params || {} }
     : { sender, to: [{ email: to }], subject,
-        htmlContent: opts.event ? renderBrandedEmail(opts.event, subject, body)
+        htmlContent: opts.event ? renderBrandedEmail(opts.event, subject, body, opts.params || {})
           : `<div style="font-family:Inter,Arial,sans-serif;color:#111;max-width:520px"><p style="font-size:15px;line-height:1.55">${escHtml(body)}</p></div>`,
         textContent: `${subject}\n\n${body}\n\nCheck It For Me · checkitforme.com` };
   try {
