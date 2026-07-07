@@ -5,51 +5,41 @@
 
 ## Current work
 
-- **Design gap analysis — one style guide vs the live site.** Screenshotted every staging
-  screen/state/theme, extracted comp + live tokens/copy, and cross-checked git for your
-  sign-offs. Side-by-side pictures: `docs/specs/design-gap/inventory.html`. Drift list below —
-  **vote each line: site wins (fold into the guide) or comp wins (fix the site).**
-  `✅` = you already approved this divergence (fast-yes). `⚠️` = no sign-off on file, your call.
+- **Design gap analysis — one style guide vs the live site.** Compared the comp
+  (`STYLE_GUIDE.md` / `NEW_CHECK_COMPS.dc.html`) against `staging.checkitforme.com`.
+  Side-by-side pictures: `docs/specs/design-gap/inventory.html`. Vote each line below —
+  **site wins (fold into the guide) or comp wins (fix the site).** `✅` = already approved.
 
-### The one that decides everything
-- **Whole skin** · comp: the "elevated / soft-depth" look (page `#1D1D22`, raised gradient cards, no borders) · site: flat near-black (`#0C0C12`, `#1A1A24` sheets). The elevated skin is fully BUILT in the code as `data-skin="v2"` (368 rules) but staging ships it OFF. Most bullets below are really "v1 shipped vs v2 dormant." One yes here can settle most of them.
+### Read this first — the skin gate
+- Staging serves **two skins**. The new **elevated skin (`?skin=v2`)** is what YOU see — it’s
+  gated per-device with `?skin=v2` and stays "off by default" for normal visitors *until you
+  approve the takeover* (that’s baked into the code as a comment). A plain visitor still gets the
+  **old flat v1** default. My first pass shot the default and reported v1 — wrong baseline. This
+  list is now **comp vs the v2 skin you actually use.**
+- **Verdict: v2 ≈ the comp.** The elevated look matches the guide — page `#1D1D22`, raised
+  cards, green **ring** CTAs, Retail·Kiosk labels, plans with perk-icons + **yellow** tier ring,
+  sheets with a grabber and no corner ×. The big "drifts" from my first pass (flat page, purple
+  button, solid CTA, "Check a store" labels, green plan ring, missing perk icons, corner ×) were
+  **all v1 artifacts** — gone in v2. **The real action isn’t a redesign — it’s: promote v2 to the
+  default so normal visitors stop getting v1.**
 
-### Foundation / tokens
-- **Page bg** · comp: `#1D1D22` · site: `#0C0C12`
-- **Card / sheet** · comp: `#26262B` + raised row gradient `#2D2D34→#27272D` · site: flat `#1A1A24`, no depth
-- **Muted text** · comp: `#8A8A96` · site: `#6B6B7B` (dimmer)
-- **Primary CTA shape** · comp: 2.5px gradient RING around a dark capsule · site: SOLID green fill button
-- **Finder CTA color** · comp: green/accent · site: PURPLE ("Find my stores" uses `--purple #A78BFA`) — guide §8 bans purple accents
-- **Plan-tier selection** · comp: MUTED-YELLOW ring (§5.5 "no green ring next to a green CTA") · site: GREEN ring on the selected tier
-- **Radii** · comp: big card/pop-up 26, sheet top 28 · site: cards/sheets mostly 16 — softer, less carved
+### Genuine comp-vs-v2 nits (small — vote per line)
+- **Footer links** · comp: one line ending `…Contact Legal` (Terms+Privacy collapsed to "Legal", §5.14) · v2: still shows `…Contact Terms Privacy` (split)
+- **Mode-tab icon color** · comp: active icon green `#4ADE80` (§5.1) · v2: active Retail/Kiosk icon rides accent yellow · ⚠️
+- **Login contact field** · comp: eyebrow "PHONE OR EMAIL", accepts phone OR email (§5.12) · v2: phone-only (+1 flag), keeps a corner × (× removal was scoped to account/buy/page sheets, not login)
+- **Store-row logos** · comp: chain PNG on `#1F1F25`, else embossed 2-letter tile — never blank · v2: some rows render a broken-image placeholder (should fall back to initials)
 
-### Components
-- **Login** · comp: centered pop-up, no grabber, eyebrow "PHONE OR EMAIL", takes phone OR email (§5.11–12) · site: bottom-sheet card with a corner ×, phone-only (+1 flag)
-- **Footer links** · comp: one line `Scores About FAQ Contact Legal` (Terms+Privacy = "Legal"), EN pill at row end (§5.14) · site: `Scores About FAQ Contact Terms Privacy` (split, no "Legal")
-- **Footer layout** · comp: wordmark+© left / socials right · site: centered cluster, socials on their own row · ⚠️
-- **Verdict title** · comp: 30px/900/−1px · site: 25px/900/−.6px
-- **Store-row logos** · comp: chain PNG on `#1F1F25`, else embossed 2-letter tile — never blank · site: several rows render a broken-image placeholder
-- **Plan-tier perks** · comp/approved: lead each tier with an icon (🔔/📅/🎯/🗺) ✅ · site: no perk icons yet (behind the approval)
-- **Sheet corner ×** · approved: drop it, rely on grabber ✅ · site: buy/plans + login still show the ×
-- **S2 mode-tab icons** · comp: active icon green `#4ADE80` (§5.1) · site: icons ride accent yellow · ⚠️
-- **Calendar selected day** · comp: accent-yellow key (§5.10) · site: green `#4ADE80` · ⚠️
-
-### Copy
-- **"No charge" line** · guide: a green shield carries it — don't write the words · site: verdict notes write "No charge." literally (checkit.html:4640–4648)
-- **Em-dashes** · guide: banned · site: still in `notify.ts` email subject/headline + toast "…any town." (checkit.html:3264)
+### Copy (skin-independent — these stand regardless of v1/v2)
+- **"No charge" wording** · guide: a green shield carries it — don’t write the words · site: verdict notes write "No charge." literally (checkit.html:4640–4648)
+- **Em-dashes** · guide: banned · site: still in `notify.ts` email subject/headline + toast "…any town." (3264)
 - **Banned names** · guide: never CheckIt/Runnr · site: `notify.ts` still sends sender "CheckIt" + "Runnr" footer
 - **Email templates** · one voice · site: two divergent systems in `alerts.ts` (plain vs branded) for the same events
-- **Charge spine** · comp: "No answer = no charge. You always get the verdict." · site: "No answer = no charge." ✅
-- **Brand fallback** · comp: "Fungibles" · site: "Check It For Me" ✅
-- **Membership name** · comp: "Fungie+" · site: "Check+" ✅
-- **Result foot** · comp: "Powered by {brand} · 1 check used" · site: "1 check used" only ✅
 
-### Already approved elsewhere (fast-yes ✅ — flow, not pixels)
-- Launch nav = Retail + Kiosk only (comp shows Retail·Thrift·Hobby·Kiosk); site labels them "Check a store · Kiosks"
-- Hobby + Thrift hard-gated to paid; Retail lists general retail only
-- "Post your score" picker offers only stores YOU found in stock (#12)
-- Waitlist + add-store forms are email-only (never text)
-- Zones: green check + green selection ring, cost line hidden
+### Already approved — confirmed present in v2 (fast-yes ✅)
+- Elevated skin, raised cards, green ring CTAs · Launch nav = Retail + Kiosk · Plan perk-icons +
+  yellow tier ring · Sheet grabber, no corner × · "No answer = no charge." · Check It For Me /
+  Check+ (not Fungibles/Fungie+) · "1 check used" (no "Powered by").
 
-### Not captured (gaps to close next pass)
-- Calls-by-day pop-over (`#calbtn` never became clickable on staging), full verdict page + "couldn't tell" poll, and the elevated comp frames as images (the comp `.dc.html` is a deck that won't self-render). Live tokens/copy for these are in the inventory, pulled from source.
+### Not re-verified in v2 (gaps)
+- Calendar selected-day color, full verdict page + "couldn’t tell" poll, calls-by-day pop-over
+  (`#calbtn` wouldn’t click). Recapture with `?skin=v2` next pass.
