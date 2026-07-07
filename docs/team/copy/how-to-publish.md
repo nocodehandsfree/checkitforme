@@ -26,7 +26,7 @@ export README_KEY="rdme_…"
 
 ## What's already published
 Category **Plans & Pricing** → pages: `plans`, `premium-features`, `pay-as-you-go`,
-`how-billing-works`. Source of truth for their *content* is `docs/owner/GUIDEBOOK.md` §2 — if plans change
+`how-billing-works`. Source of truth for their *content* is `src/plans.ts` (code truth) + the owner — if plans change
 there, update the matching ReadMe page.
 
 ## How to work

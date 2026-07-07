@@ -2,4 +2,4 @@
 | Doc | What it is |
 |---|---|
 | `new-chat-prompts.md` | **Copy-paste lines to start any agent chat** + how to keep chats from dying |
-| `GUIDEBOOK.md` | The whole business explained without code |
+| (GUIDEBOOK retired → the book on readme.com is the reference now) | The whole business explained without code |

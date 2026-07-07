@@ -31,7 +31,7 @@ Names: **Pops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** 
 | `staging` | branch **=** site `staging.checkitforme.com` **=** Railway svc `voice-caller-staging`. All code work HERE. |
 | `main` (prod) | branch **=** PRODUCTION `checkitforme.com` **=** Railway svc `voice-caller`. Never push it directly. |
 | promote | merge verified `staging` → `main` (`bash scripts/promote.sh`). The ONLY way prod code changes. |
-| Admin | `admin.checkitforme.com` — operator dashboard on live PROD data; where the owner manages customers and runs the business. Owner-side changes made there (workflows, designer, settings) are live immediately. |
+| Admin | `admin.checkitforme.com` — operator dashboard on live PROD data (plus staging-only testing areas); where the owner manages customers and runs the business. Owner-side changes made there (workflows, designer, settings) are live immediately. |
 | Fun store | owner-only test store (Admin → Testing). Test calls go here; never touches real-store stats. |
 | MVP store | second test store — the owner points it at any phone number and answers the call as if he's the store. |
 | the book | branch `v1.0` — readme.com customer-docs mirror. Copper's lane only; never merge it either way. |
@@ -59,7 +59,7 @@ curl -s -X POST https://backboard.railway.app/graphql/v2 \
 **Need another repo** (fungibles, etc.)? Fetch `GITHUB_PAT` the same way, then `git clone https://x-access-token:$GITHUB_PAT@github.com/nocodehandsfree/<repo>` — never say "I can't access that repo" before trying this.
 
 ## Map (open only what a task needs)
-- `docs/owner/GUIDEBOOK.md` — the business in plain English (what Check is, money model, plans).
+- **The book** (readme.com; source on branch `v1.0`) — how the whole system works, plans, FAQs. THE reference for product/business questions; plans/pricing code truth is `src/plans.ts`.
 - `docs/shared/` — AGENT_RULES (code discipline) · GOTCHAS (traps; add yours) · ARCHITECTURE · API_CONTRACT + STOCK_AND_GEO_API (front⇄back).
 - `docs/design/` — STYLE_GUIDE (the look) · `brand/` (all logos: brandmark, wordmark, favicon) · `comps/` (boards) · `copy/` (voice + approved copy). Design/Website/Copy read before any UI work.
 - `docs/data/provenance.md` — store-data source of truth · `store-logos.md` before touching logos.
