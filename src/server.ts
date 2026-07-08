@@ -29,7 +29,7 @@ import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
-import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession } from "./calls/tapedeck";
+import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, setDeltaBarge } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, type Recipe } from "./calls/recipe";
 import { llm } from "./llm";
@@ -639,6 +639,40 @@ app.get("/api/admin/tapedeck/session/:id", (c) => {
   const s = tdSession(c.req.param("id"));
   if (!s) return c.json({ error: "not found" }, 404);
   return c.json({ id: s.id, status: s.status, steps: s.steps, clipText: s.clipText });
+});
+
+// ---- Charlie barge-in: when a store-mode Delta call gets an off-script question it can't handle with
+// a clip, hand the SAME live call to the paid agent. We open a bridge room with the store's normal
+// restock vars, connect immediately (a human is already talking), point the call_results row at the new
+// EL conversation so ingestPending finalizes the verdict, and return <Connect><Stream> TwiML. Any error
+// returns null so the D-lane falls back to a graceful escalate-clip wrap (fail-safe, never a dead call).
+setDeltaBarge(async (s, _speech) => {
+  const chk = s.check;
+  if (!chk) return null;
+  try {
+    const v = await buildRestockVars(chk.retailerId, chk.categoryId, undefined, [], undefined);
+    if (!v || !v.retailer?.phone) return null;
+    const pol = await getPolicy();
+    const room = crypto.randomUUID();
+    setBridgeContext(room, {
+      agentId: config.voice.agentId,
+      dynamicVars: v.dynamicVars,
+      connectOnHuman: false, // the clerk is already on the line — open the agent right away
+      holdMaxSeconds: pol.bail.holdMaxSeconds,
+      voiceId: v.voiceId || undefined,
+      voiceTuning: v.voiceTuning || undefined,
+      onConversationId: (convId) => {
+        // Charlie's EL conversation now owns the verdict: point the existing row at it so ingestPending finalizes.
+        db.update(callResults).set({ providerCallId: convId, status: "in_progress" })
+          .where(eq(callResults.id, chk.callId)).catch((e) => console.error("[delta] barge row link", e));
+      },
+    });
+    const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
+    return `<?xml version="1.0" encoding="UTF-8"?><Response><Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
+  } catch (e) {
+    console.error("[delta] barge setup failed", e);
+    return null;
+  }
 });
 
 // ---- Health ----

@@ -29,6 +29,7 @@ import { ElevenLabsProvider } from "../voice/elevenlabs";
 import { takeBridgeNav } from "../voice/bridge";
 import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import { connectAtSecFor } from "./recipe";
+import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "./tapedeck";
 import type { AgentTuning } from "../voice/provider";
 import { notifyInStock, notifyContact } from "./notify";
 import { getSetting, setSetting } from "../db/settings";
@@ -51,7 +52,7 @@ export function resetRotation(key: string): void { rotCounters.set(key, -1); }
 // ---- Workflows: the Voice→Designer "voice + script + persona + voice tuning" bundle, assignable
 // per store / per chain / as the global default. resolveWorkflow picks one for a store and composes
 // its persona; buildRestockVars applies it to the call (opener rotation, {{personality}}, voice). ----
-export interface AppliedWorkflow { name: string; voiceId?: string; voices: string[]; tuning?: Record<string, unknown>; openers: string[]; personality: string }
+export interface AppliedWorkflow { name: string; voiceId?: string; voices: string[]; tuning?: Record<string, unknown>; openers: string[]; personality: string; lane: string }
 type AnyObj = Record<string, unknown>;
 const jparse = (s: string | null, fb: unknown) => { try { return s ? JSON.parse(s) : fb; } catch { return fb; } };
 
@@ -101,6 +102,8 @@ export async function resolveWorkflow(retailerId: number, chainId: number | null
     tuning: wf.tuning && typeof wf.tuning === "object" ? (wf.tuning as Record<string, unknown>) : undefined,
     openers: Array.isArray(wf.openers) ? (wf.openers as unknown[]).map(String).filter(Boolean) : [],
     personality: composePersona(persona),
+    // Which call lane this workflow runs: "delta" = cheap recorded-clip D-lane, else the live agent.
+    lane: typeof wf.lane === "string" ? wf.lane : "charlie",
   };
 }
 
@@ -363,6 +366,20 @@ export async function triggerCall(a: TriggerArgs) {
     isPrivate: a.isPrivate ?? false,
   }).returning();
 
+  // ---- Delta lane (workflow.lane === "delta"): run the cheap recorded-clip D-lane instead of the
+  // live agent. Dials the store; the D-lane engine handles the call and the registered finalize hook
+  // writes the verdict when it ends. Real store calls only — bench/simulator overrides keep the live path.
+  if (wf?.lane === "delta" && !a.toOverride) {
+    const dr = await deltaStoreCall({
+      callId: row.id, toNumber: retailer.phone, retailerId: retailer.id, categoryId: category.id,
+      chainId: retailer.chainId ?? null, finderUserId: a.finderUserId ?? null,
+      retailerName: retailer.name, categoryLabel: category.label,
+    }, wf.name);
+    if (dr.error) { await db.update(callResults).set({ status: "failed", summary: dr.error }).where(eq(callResults.id, row.id)); throw new Error(dr.error); }
+    await db.update(callResults).set({ status: "in_progress" }).where(eq(callResults.id, row.id));
+    return { ...row, status: "in_progress" as const };
+  }
+
   try {
     const { providerCallId, callSid } = await provider.startCall({
       callId: row.id,
@@ -399,6 +416,42 @@ export async function triggerCall(a: TriggerArgs) {
     throw e;
   }
 }
+
+/** Write the verdict for a finished Delta (D-lane) store call. Registered as the tapedeck finalize
+ *  hook so the engine needs no DB import. Mirrors the EL-lane finalize in ingestPending: map the
+ *  clip-flow outcome to a call_results verdict, charge once on a definitive answer, notify, and stamp
+ *  the restock day. Escalated calls (Charlie barged in) are finalized by the EL poll, not here. */
+async function finalizeDeltaSession(s: TdSession): Promise<void> {
+  const chk = s.check;
+  if (!chk || s.escalated) return;
+  const now = Math.floor(Date.now() / 1000);
+  const answered = !!s.opened; // opener only fires once the pickup is heard
+  const status = answered ? "completed" : "no_answer";
+  const confirmed = answered ? (s.resConfirmed ?? null) : null;
+  const statusKey = answered ? (s.resStatusKey || "no_clear_answer") : "nobody_answered";
+  const definitive = confirmed === true || confirmed === false;
+  await db.update(callResults).set({
+    status,
+    confirmed,
+    statusKey,
+    productDetail: s.resProduct || null,
+    shipmentDayHeard: s.resDay || null,
+    transcript: tdTranscript(s),
+    summary: `Delta lane (${s.workflow}): ${statusKey}`,
+    completedAt: now,
+    callSeconds: Math.round((Date.now() - s.startMs) / 1000),
+  }).where(eq(callResults.id, chk.callId));
+
+  // Charge one credit on a definitive in/out answer, exactly once (atomic).
+  if (chk.finderUserId && status === "completed" && definitive) await chargeCallOnce(chk.callId, chk.finderUserId);
+
+  if (confirmed === true) {
+    await notifyInStock(chk.retailerName, chk.categoryLabel, chk.retailerId, s.resDay || undefined);
+    await notifyWatches(chk.retailerId, chk.categoryId, chk.retailerName, chk.categoryLabel);
+  }
+  if (s.resDay) await db.update(retailers).set({ shipmentDay: s.resDay }).where(eq(retailers.id, chk.retailerId));
+}
+setDeltaFinalize(finalizeDeltaSession);
 
 /** Current voice-tuning controls (with sensible defaults). */
 export async function getVoiceTuning() {
