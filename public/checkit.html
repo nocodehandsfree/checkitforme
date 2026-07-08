@@ -7,47 +7,47 @@
      tints BOTH the top status bar AND the bottom toolbar (= green footer), AND it OVERRIDES iOS page-sampling
      so the top can never match the page. Without it, iOS SAMPLES the page background per-edge — the verdict
      wash at the page TOP shows under the status bar, while the dark page bottom keeps the bottom bar dark
-     (green top, dark bottom — exactly what we want). The sampling source is the html/body verdict gradient
-     (see `html:has(body.rview.rv-*)` + `body.rview.rv-*` in CSS), applied from frame one by the post-<body>
-     boot script. Do NOT reintroduce a theme-color meta — it re-breaks the top. In STANDALONE (home screen)
-     the apple-mobile metas + viewport-fit=cover paint content UNDER the status bar, so the wash shows at the
-     top there regardless (that path has always worked). -->
+     (green top, dark bottom — exactly what we want). Sampling only sees what is PAINTED when Safari samples,
+     so one system, two sources: (1) ?tone= deep-links — the server bakes a tone-* class onto the served
+     <html> tag (renderRunner in src/server.ts), so the FIRST paint is already the verdict colour via the
+     static `html.tone-*` CSS below, no JS timing involved; (2) in-page — the `html:has(body.rview.rv-*)` +
+     `body.rview.rv-*` gradient applied by the post-<body> boot script and the app, which outranks and then
+     drops the baked class (dropBakedTone). Do NOT reintroduce a theme-color meta — it re-breaks the top.
+     In STANDALONE (home screen) the apple-mobile metas + viewport-fit=cover paint content UNDER the status
+     bar, so the wash shows at the top there regardless (that path has always worked). -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Check it for me" />
 <link rel="manifest" href="/manifest.webmanifest" />
 
-<script>/* PWA: register the service worker (instant cold-start: cached shell + stale-while-revalidate checks). Fail-open — registration errors never affect the page. */
-  if('serviceWorker' in navigator){ window.addEventListener('load',function(){ try{
-    navigator.serviceWorker.register('/sw.js').then(function(reg){ try{ reg.update(); }catch(_){}
-      // A waiting worker (new deploy) → tell it to take over now instead of waiting for all tabs to close.
-      function nudge(w){ if(w) try{ w.postMessage('skipWaiting'); }catch(_){}} if(reg.waiting) nudge(reg.waiting);
-      reg.addEventListener('updatefound',function(){ nudge(reg.installing); });
-    }).catch(function(){});
-    // When a NEW worker replaces the old one, reload ONCE so the fresh design lands with no manual
-    // cache-clearing. Guard on _hadController so a brand-new visitor's first install never triggers a reload.
-    var _swReloaded=false, _hadController=!!navigator.serviceWorker.controller;
-    navigator.serviceWorker.addEventListener('controllerchange',function(){ if(_swReloaded||!_hadController)return; _swReloaded=true; try{ location.reload(); }catch(_){} });
-  }catch(e){} }); }</script>
+<script>/* NO service worker. The site is always fresh from the server — no offline shell, no cache, no version
+   dance (owner 07-07: "kill the workers, I just want one site"). This ALSO actively evicts any worker a
+   previous build left behind: unregister every registration and delete every Cache Storage bucket, so a
+   stale shell can never be served again. Fail-open — errors never affect the page. */
+  if('serviceWorker' in navigator){ try{
+    navigator.serviceWorker.getRegistrations().then(function(rs){ (rs||[]).forEach(function(r){ try{ r.unregister(); }catch(_){}} ); }).catch(function(){});
+  }catch(e){} }
+  try{ if(window.caches && caches.keys){ caches.keys().then(function(ks){ (ks||[]).forEach(function(k){ try{ caches.delete(k); }catch(_){}} ); }).catch(function(){}); } }catch(e){}
+</script>
 <script>(function(){try{
-  // PREVIEW SKIN (site-redesign loop): ?skin=v2 turns the new elevated skin ON for this device
-  // (persisted); ?skin=off reverts. Normal visitors never see it — everything v2 is scoped under
-  // html[data-skin="v2"], so the default render is untouched until the owner approves the takeover.
-  var spk=new URLSearchParams(location.search).get('skin');
-  if(spk==='v2') localStorage.setItem('cifm_skin','v2'); else if(spk==='off') localStorage.removeItem('cifm_skin');
-  if(localStorage.getItem('cifm_skin')==='v2') document.documentElement.setAttribute('data-skin','v2');
+  // THE design. The redesign is now the ONLY render — no preview flag, no old skin (owner 07-07:
+  // "kill the whole v2/v3 thing, staging is exactly how it'll look, always"). Set before first paint so
+  // there's never a flash of the old look. All the elevated styling is scoped under html[data-skin="v2"];
+  // making it unconditional here retires the toggle for good. ?skin is ignored now.
+  document.documentElement.setAttribute('data-skin','v2');
+  try{ localStorage.removeItem('cifm_skin'); }catch(e){} // clear the old per-device flag so nothing lingers
 }catch(e){}})();</script>
 <script>(function(){try{
   var sp=new URLSearchParams(location.search);
-  // The tone the SERVER baked into <meta theme-color> at load (?tone=in|out|unk|soon). iOS only tints the
-  // status bar from the value present at LOAD, so we compare against this to decide whether a result needs a
-  // real navigation to re-bake the colour (vs. a JS-only theme-color change that iOS ignores).
+  // The tone the SERVER baked as an html.tone-* class at load (?tone=in|out|unk|soon). iOS samples the
+  // status-bar colour at FIRST PAINT only, so a verdict that settles in-page compares against this to
+  // decide whether it needs ONE real navigation to re-bake the colour (ensureToneLoaded).
   window.__loadTone = sp.get('tone') || '';
   if(!sp.has('call')) return;
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r98" />
+<meta name="x-rev" content="tonebake-r101" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -270,6 +270,18 @@ __BRAND_HEAD__
   html:has(body.rview.rv-out){background:linear-gradient(180deg,#6b2427 0px,var(--bg) 460px)}
   html:has(body.rview.rv-unk){background:linear-gradient(180deg,#6c5419 0px,var(--bg) 460px)}
   html:has(body.rview.rv-soon){background:linear-gradient(180deg,#6e490f 0px,var(--bg) 460px)}
+  /* ?tone= deep-links: the server bakes tone-* onto the served <html> tag so the FIRST paint — the one
+     iOS samples for the status bar — is already the verdict colour, before any script runs. Sampling reads
+     the VISIBLE top-edge pixels, so the html canvas alone isn't enough (it only shows behind the notch /
+     overscroll): the BODY must carry the wash and the header slab must be transparent, exactly like the
+     result view paints them. Same gradient as the rv-* rules = seamless when the app takes over. The
+     body.rview.rv-* rules OUTRANK the body rules here (a live verdict always wins), and the app drops the
+     baked class on any in-page view change (dropBakedTone) so a stale tint can never strand at the top. */
+  html.tone-in, html.tone-in body{background:linear-gradient(180deg,#266440 0px,var(--bg) 460px)}
+  html.tone-out, html.tone-out body{background:linear-gradient(180deg,#6b2427 0px,var(--bg) 460px)}
+  html.tone-unk, html.tone-unk body{background:linear-gradient(180deg,#6c5419 0px,var(--bg) 460px)}
+  html.tone-soon, html.tone-soon body{background:linear-gradient(180deg,#6e490f 0px,var(--bg) 460px)}
+  html.tone-in header,html.tone-out header,html.tone-unk header,html.tone-soon header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
   /* On a result the nav + content LAY ON the color: header goes transparent (no dark slab, no hairline)
      so the wash reaches the top. The nav pills + day-picker take a BARELY-green fill (level 3) so they
      read as sitting on a green page without looking like dark chips. */
@@ -827,7 +839,9 @@ __BRAND_HEAD__
   .findhead .step{white-space:nowrap}
   .maptgl.on{background:var(--ptint);border-color:var(--pline);color:#fff}
   .maptgl.glow{border-color:color-mix(in srgb,var(--accent,var(--green)) 38%,transparent);color:#e6e6ee;box-shadow:none}
-  #mapview{height:320px;border-radius:14px;overflow:hidden;margin-top:12px;border:1px solid var(--border);background:#0e0e16}
+  #mapview{height:320px;border-radius:14px;overflow:hidden;margin-top:12px;border:1px solid var(--border);background:#0e0e16;position:relative}
+  #mapEmpty{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:1000;pointer-events:none;background:rgba(12,12,18,.9);border:1px solid rgba(255,255,255,.12);color:#E7E7EE;font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:999px;box-shadow:0 8px 20px rgba(0,0,0,.5);white-space:nowrap;display:none}
+  #mapEmpty.on{display:block}
   .leaflet-container{background:#0e0e16!important;font-family:inherit}
   .leaflet-popup-content-wrapper{background:#1a1a24;color:#fff;border:1px solid var(--border);border-radius:12px}
   .leaflet-popup-tip{background:#1a1a24}
@@ -997,7 +1011,7 @@ __BRAND_HEAD__
   .ho-card .label{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
   .ho-card h3{margin:5px 0 0;font-size:16px;font-weight:800;letter-spacing:-.2px}
   .ho-card p.hint{font-size:13px;color:var(--muted);line-height:1.5;margin:8px 0 0}
-  .ho-card .body{margin-top:16px;display:none}
+  .ho-card .body{margin-top:22px;display:none}
   .ho-step.active .ho-card .body{display:block}
   .ho-toggle{display:flex;background:var(--terminal);border:1px solid var(--border);border-radius:13px;padding:4px;gap:4px}
   .ho-toggle button{flex:1;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:13px;padding:10px 6px;border-radius:9px;cursor:pointer;transition:.18s;white-space:nowrap}
@@ -1120,7 +1134,7 @@ html[data-skin="v2"] .toast.tneutral{background:linear-gradient(180deg,#31313A 0
 html[data-skin="v2"] .toast.taccent{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;box-shadow:0 14px 30px -8px color-mix(in srgb,var(--accent,#FFCB05) 45%,transparent),inset 0 1px 0 rgba(255,255,255,.4)}
 /* IS1 EXACT: share = white 12.5/800/.13em label capsule (icon left, arrow right); action tiles 2-col. */
 html[data-skin="v2"] .smbtn.is1s{display:flex;align-items:center;justify-content:space-between;width:100%;color:#FFF;font-size:12.5px;letter-spacing:.13em;padding:13px 22px}
-html[data-skin="v2"] .is1g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+html[data-skin="v2"] .is1g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 html[data-skin="v2"] .is1t{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:11px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left}
 html[data-skin="v2"] .is1t:active{transform:translateY(2px)}
 html[data-skin="v2"] .is1t .tl{width:32px;height:32px;border-radius:10px;background:rgba(74,222,128,.12);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
@@ -1392,6 +1406,9 @@ html[data-skin="v2"] #hobEraGrid .hob-eracell{min-width:0}
 html[data-skin="v2"] .hob-erabtn{display:flex;flex-direction:column;width:100%;min-width:0;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:16px;padding:0;overflow:hidden;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);cursor:pointer;transition:transform .1s}
 html[data-skin="v2"] .hob-erabtn:active{transform:translateY(2px) scale(.985)}
 html[data-skin="v2"] .hob-erabtn-art{display:flex;align-items:center;justify-content:center;height:104px;padding:10px 14px}
+/* CSS-only era-logo fit: fills the card box, aspect preserved, identical on every device (no JS timing). */
+html[data-skin="v2"] .hob-eralg{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.55))}
+html[data-skin="v2"] .hob-eralg.sm{transform:scale(.82)} /* the already-wide/heavy marks a touch smaller so they don't tower */
 html[data-skin="v2"] .hob-erabtn-lbl{padding:0 12px 13px;text-align:center}
 html[data-skin="v2"] .hob-erabtn-lbl .sub{display:block;font-size:11.5px;font-weight:700;color:#9a9aa6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html[data-skin="v2"] .hob-set{display:block;width:100%;margin:0 0 16px;background:none;border:0;padding:0;cursor:pointer;transition:transform .12s;color:#FFF}
@@ -1530,6 +1547,12 @@ html[data-skin="v2"] #acctOverlay .modal,html[data-skin="v2"] #buyOverlay .modal
    "appearing", not sliding). Close/swipe-down slide back down — handled in closeAccount/closeBuy + sheetDrag. */
 html[data-skin="v2"] #acctOverlay.on .modal,html[data-skin="v2"] #buyOverlay.on .modal,html[data-skin="v2"] #pageOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 @keyframes sheetUpV2{from{transform:translateY(100%)}to{transform:translateY(0)}}
+/* Post-your-score = a bottom sheet like the rest (owner 07-07: was a centered popup with an X). */
+html[data-skin="v2"] #scorePostOv{align-items:flex-end;padding:0}
+html[data-skin="v2"] #scorePostOv .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
+html[data-skin="v2"] #scorePostOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
+html[data-skin="v2"] #scorePostOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
+html[data-skin="v2"] #scorePostOv .modal>.x{display:none!important}
 html[data-skin="v2"] #buyOverlay .modal{overflow-y:auto;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
 /* 6c CHECKOUT (v2) — branded on-site Stripe Elements page. Bottom sheet, comp tokens: raised order
    card, carved "or pay with card" divider, Payment Element in the well, green SUBSCRIBE ring capsule. */
@@ -2389,7 +2412,7 @@ const I18N={ es:{
   'dd.tag':'Vista previa · próximamente','dd.title':'Que un local lo recoja','dd.sub':'¿Muy lejos para manejar? Manda a un conductor de Uber/Lyft cercano a comprarlo y enviártelo. Él paga <b>$0 de su bolsillo</b>, tú solo pones el bono.','dd.instock':'En stock','dd.s1':'Define el <b style="color:var(--green)">bono</b> del conductor (ej. $25) sobre su tarifa','dd.s2':'Pide el viaje en <b>Uber</b> o <b>Lyft</b>. Recogida en la tienda','dd.s3':'Envía una tarjeta prepagada (producto + envío) + un mensaje listo','dd.s4':'Él lo compra, lo envía y toca <b>Listo</b> → tu bono se libera al instante','dd.sees':'lo que ve el conductor','dd.pickup':'Tienes una recogida de <span style="color:var(--green)">$25</span> 🏃','dd.applepay':'Agregar tarjeta a Apple Pay (60 seg)','dd.cta':'Quiero acceso anticipado →','dd.noted':'Anotado. Te buscamos para el acceso anticipado 🤝','dd.grab':'recoger en {s} → te lo envían',
   // generic errors / toasts / misc
   'err.generic':'No se procesó. Vuelve a intentarlo.','err.sendcode':'No pudimos enviar un código. Inténtalo de nuevo.','err.verify':'No se pudo verificar. Inténtalo de nuevo.','err.post':'No se pudo publicar. Inténtalo de nuevo.','err.upload':'La foto no se subió. Inténtalo de nuevo.','err.photobig':'La foto pesa demasiado. Prueba con una más pequeña.','auth.verifying':'Verificando…','map.list':'Lista','store.closed':'Cerrado','toast.nocall':'. No se hizo la llamada.','auth.welcome':"✓ Ya entraste",'err.email':'Ingresa un correo válido','err.usonly':'Por ahora solo enviamos SMS a números de EE. UU.','err.toofast':'Espera un momento e inténtalo de nuevo.','auth.sending':'Enviando…','auth.resending':'Reenviando…','err.contact':'Ingresa un correo o teléfono válido.','err.pickstore':'Elige una tienda primero',
-  'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la verificación','toast.callgone':'Esa verificación ya no está disponible','toast.toosoon':'Acabas de verificar esta tienda — vuelve a verificar en unos {n} min.','toast.loadingcall':'Cargando tu verificación…','toast.translate.fail':'No se pudo traducir eso.','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Aquí está la lista.','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
+  'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la verificación','toast.callgone':'Esa verificación ya no está disponible','toast.toosoon':'Acabas de verificar esta tienda — vuelve a verificar en unos {n} min.','toast.loadingcall':'Cargando tu verificación…','toast.translate.fail':'No se pudo traducir eso.','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Aquí está la lista.','map.nostores':'No hay tiendas aquí. Mueve el mapa a otro lugar.','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
   'find.me':'Encuentra mis tiendas','find.near':'cerca de ti, abiertas ahora',
   'scores.title':'Logros de la caza','scores.post':'Publica el tuyo →','scores.first':'¡Muéstranos el botín!',
   'ho.title':'Pásalo a un conductor','ho.sub':'Él lo compra. Y te lo lleva a tu puerta o te lo envía.','ho.ship':'Envíamelo','ho.home':'Tráelo a mi casa','ho.ship.btn':'📦 Envíamelo','ho.home.btn':'🏠 Tráelo a mi casa',
@@ -2723,7 +2746,10 @@ function silentLocRecheck(){
       navigator.geolocation.getCurrentPosition(pos=>{
         const la=pos.coords.latitude, ln=pos.coords.longitude;
         const moved = !USER_LOC || miBetween(USER_LOC.lat,USER_LOC.lng,la,ln) > 1; // 1 mi = a real move (owner call), still well above GPS jitter
-        if(moved){ setUserLoc(la,ln); toast(t('toast.locupdated','Updated to your current location'),'neutral'); }
+        // If the map is open, a background GPS refresh must NOT re-frame it — the user is actively
+        // zooming/panning to explore. Keep their view (owner 07-07: "zoom jumps back to my location").
+        const mapOpen = MAP && $('mapview') && $('mapview').style.display==='block';
+        if(moved){ setUserLoc(la,ln,mapOpen); toast(t('toast.locupdated','Updated to your current location'),'neutral'); }
       }, ()=>{}, {enableHighAccuracy:false, timeout:8000, maximumAge:300000}); // cheap/low-power; a 5-min cached fix is fine
     }).catch(()=>{});
   }catch(e){}
@@ -2971,7 +2997,7 @@ async function phoneVerify(){
   PHONE_TOKEN=r.token; try{ localStorage.setItem('cifm_token',r.token); }catch(_){}
   if(r.account) ACCOUNT=Object.assign({},ACCOUNT||{},r.account);
   track('auth_success',{flow:'phone'});
-  closeAuth(); toast(t('auth.welcome',"✓ You're in")); refreshAuth();
+  closeAuth(); toast(t('auth.welcome',"✓ You're in"),'neutral'); refreshAuth(); // neutral grey, not the celebratory green (owner 07-07)
 }
 function authBack(){ authStep('email'); $('auth_codeerr').textContent=''; setTimeout(()=>{try{$('auth_phone').focus();}catch(e){}},60); }
 // Custom account sheet
@@ -3078,7 +3104,8 @@ function openScorePop(){
   if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='scorePostOv';
     ov.innerHTML='<div class="modal" style="position:relative;max-width:430px;text-align:left"><span class="x" onclick="closeScorePop()">×</span><h3 style="margin:2px 0 10px" >'+t('sc.pop.title','Post your score')+'</h3><div id="scorePostHost"></div></div>';
     ov.onclick=e=>{ if(e.target===ov) closeScorePop(); };
-    document.body.appendChild(ov); }
+    document.body.appendChild(ov);
+    try{ sheetDrag('scorePostOv', ()=>closeScorePop()); }catch(_){ } } // bottom-sheet swipe-down to dismiss (owner 07-07)
   const c=$('composer');
   if(c){ if(!openScorePop._home){ openScorePop._home={parent:c.parentElement,next:c.nextElementSibling}; } $('scorePostHost').appendChild(c); c.style.display=''; }
   ov.classList.add('on'); try{ succFilter(); }catch(_){ } track('score_pop_open'); // surface the in-stock store list right away
@@ -3282,14 +3309,16 @@ async function geocodeSearch(){
 }
 // Set a location (from GPS, a master ZIP, or a dropped pin) and load its stores.
 function savedLoc(){ try{ const s=JSON.parse(localStorage.getItem('cifm_loc')||'null'); if(s&&typeof s.lat==='number'&&typeof s.lng==='number'&&(Date.now()-(s.t||0)<7*24*3600*1000)) return s; }catch(e){} return null; }
-function setUserLoc(lat,lng){
+function setUserLoc(lat,lng,keepView){
   USER_LOC={lat,lng};
-  MAP_FIT_NEXT=true; // a new authoritative location (📍 findMe, ZIP search, master pin-drop) → frame its radius on the next map render
+  // keepView = the user is tweaking their spot on an OPEN map (master pin-drop) — keep their current zoom.
+  // Only an authoritative relocate (📍 findMe, ZIP search, first fix) re-frames the radius.
+  MAP_FIT_NEXT=!keepView;
   try{ localStorage.setItem('cifm_loc', JSON.stringify({lat,lng,t:Date.now()})); }catch(e){} // remember across refreshes — no re-prompt
   $('rchips').style.display='block'; setRadius(RADIUS);
   const mt=$('maptoggle'); if(mt){ mt.style.display=''; mt.classList.add('glow'); } // pulse so they notice the map is tappable
   const b=$('findbtn'); if(b){ b.classList.remove('loading'); b.classList.add('on'); }
-  if(MAP && $('mapview') && $('mapview').style.display==='block') placeMyPin(lat,lng,false); // keep the map pin in sync (e.g. ZIP relocate)
+  if(MAP && $('mapview') && $('mapview').style.display==='block') placeMyPin(lat,lng,keepView?true:false); // keep the map pin in sync; keepView → no recenter pan
   fetchNear(); loadBestBet(); loadFinds(); // re-pull the banner localized to the new location
 }
 function findMe(after){
@@ -3317,7 +3346,7 @@ let MAP=null, MAP_LOADED=false, MAP_MARKERS=[], PINNING=false, MY_PIN=null, MY_R
 // (📍 findMe / ZIP / master pin-drop). A radius change or a background store refresh never re-frames it, so
 // the view stays exactly where you left it (zoomed into wherever you're looking). MAP_FIT_NEXT is the
 // one-shot "frame on the next render" flag those intentional moments set.
-let MAP_FIT_NEXT=false;
+let MAP_FIT_NEXT=false, MAP_GESTURING=false;
 // Neon store-color legend shown along the bottom of the map.
 function mapLegendHtml(){
   const dot=(c)=>`<span class="lgd" style="background:${c};box-shadow:0 0 7px ${c},0 0 2px ${c}"></span>`;
@@ -3349,7 +3378,12 @@ function initMap(){
     // Regular users tap store pins to check; the map never moves them.
     // Master drops a pin → load that area's stores ON the open map (owner 2026-07-02: the map stays
     // up until they close it — the pins repaint in place via renderStores' map hook).
-    MAP.on('click',(e)=>{ if(!isMaster() && !hasFeature('any_town')) return; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng); toast(t('toast.locating2','Locating stores'),'neutral'); });
+    // A pinch-zoom / drag can end in a stray 'click' — that used to drop a master pin and snap the view
+    // back to the radius ring, so zooming felt like it "jumped to my location." Ignore clicks that are the
+    // tail of a gesture, and when a master DOES drop a pin on an open map, keep their current zoom (don't refit).
+    MAP.on('movestart zoomstart dragstart',()=>{ MAP_GESTURING=true; });
+    MAP.on('moveend zoomend dragend',()=>{ clearTimeout(window.__mapg); window.__mapg=setTimeout(()=>{ MAP_GESTURING=false; },260); });
+    MAP.on('click',(e)=>{ if(!isMaster() && !hasFeature('any_town')) return; if(MAP_GESTURING) return; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng,true); toast(t('toast.locating2','Locating stores'),'neutral'); });
     MAP_FIT_NEXT=true; // first paint → frame the search radius (then it stays put until a new location)
     setTimeout(()=>MAP.invalidateSize(),60); renderMapPins();
   }catch(e){ toast(t('toast.maploading',"Map didn't load. Here's the list.")); toggleMap(); }
@@ -3393,6 +3427,8 @@ function renderMapPins(){
       else if(pts.length>1) MAP.fitBounds(pts,{padding:[28,28],maxZoom:13});
     }catch(e){}
   }
+  // No stores in this area → tell them to move the map, don't leave it silently empty (owner 07-07).
+  const mv=$('mapview'); if(mv){ let me=$('mapEmpty'); if(!me){ me=document.createElement('div'); me.id='mapEmpty'; mv.appendChild(me); } me.textContent=t('map.nostores','No stores found. Zoom somewhere else.'); me.classList.toggle('on', USER_LOC && MAP_MARKERS.length===0); }
 }
 function mapPick(id){ pickStore(id); try{ if(MAP) MAP.closePopup(); }catch(e){} }
 const RADII=[1,2,5,10,20];
@@ -4123,7 +4159,9 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     const bubs=human.map(l=>{ const m=l.match(/^(Agent|Clerk):\s*(.*)$/); if(!m) return '';
       const ai=m[1]==='Agent';
       return `<div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?esc(t('lbl.agent','CHECK AI').toUpperCase()):esc(t('lbl.assoc','STAFF').toUpperCase())}</div><div class="tx">${esc(m[2])}</div></div>`; }).join('');
-    const vline=(status&&(status.term||status.title))?`<div class="ctl-term" style="margin-top:14px;font-size:15px;font-weight:800;color:${tone}">${esc(status.term||status.title)}</div>`:'';
+    // Verdict line + the "1 check used" note on the SAME row, note pinned right (owner 07-07).
+    const usedTxt=status&&status.used?status.used:'';
+    const vline=(status&&(status.term||status.title))?`<div class="ctl-term" style="margin-top:14px;font-size:15px;font-weight:800;color:${tone};display:flex;align-items:center;justify-content:space-between;gap:12px"><span>${esc(status.term||status.title)}</span>${usedTxt?`<span style="font-size:11.5px;font-weight:600;color:#6B6B78;white-space:nowrap">${esc(usedTxt)}</span>`:''}</div>`:'';
     return `<div class="ctlv2" style="margin-bottom:22px">
       <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80 100%':`color-mix(in srgb,#4ADE80 35%,${tone}) 60%,${tone} 100%`})"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
       <div style="flex:1;min-width:0">
@@ -4470,7 +4508,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -4490,7 +4528,7 @@ function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _l
 let NAV_VIEW='builder';
 function navMark(view){
   if(view!=='builder') HUNT_STEP=''; // leaving the builder ends the hobby-hunt back-stack
-  try{ document.body.classList.toggle('rview', view==='result'); if(view!=='result'){ ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); } }catch(e){} // result-only top treatment (transparent nav + color wash)
+  try{ document.body.classList.toggle('rview', view==='result'); if(view!=='result'){ ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); } }catch(e){} // result-only top treatment (transparent nav + color wash)
   try{ if(view!=='builder') hideCallSheet(); }catch(e){} // the call sheet belongs to the builder only
   try{ setThemeTone(); renderCallRail(); }catch(e){}
   if(view===NAV_VIEW) return;
@@ -4509,10 +4547,31 @@ function navMark(view){
 // call-sites stay safe. Do NOT recreate a theme-color meta here: one theme-color tints both edges (green
 // footer) AND overrides sampling, which is exactly what kept the top black.
 function setThemeTone(){}
-// No-op: we no longer navigate to a ?tone URL to bake theme-color (that approach tinted the bottom bar and
-// blacked out the top in Compact Safari). The top now tints via page-sampling of the body/html gradient.
+// ?tone= deep-links: the server bakes html.tone-* onto the served <html> tag so the FIRST paint tints the
+// bar (sampling only sees what's painted when Safari samples). Once the app changes views in-page, the
+// rv-* system is the single source of tone — drop the baked class so leaving a result can't strand a
+// stale tint at the top.
+function dropBakedTone(){ try{ ['tone-in','tone-out','tone-unk','tone-soon'].forEach(c=>document.documentElement.classList.remove(c)); }catch(_){ } }
+// In-page verdicts (a live call settling, opening a check from the rail) change the page colour AFTER
+// iOS has already sampled the bar — Safari does NOT resample on script/CSS changes, so the bar keeps
+// whatever the load painted (owner repro: amber result page, black bar). The only reliable re-tint is a
+// real navigation: reload ONCE into the ?call&tone URL so the server bakes html.tone-* and the first
+// paint is the verdict colour. Plain iOS Safari only — standalone paints under the bar already, and no
+// other browser tints from sampling. One nav per result-session (TONE_NAV_DONE, reset by backToBuilder
+// when a new check starts) so browsing the call rail can never reload-loop. This is the CLASS-bake nav —
+// the old theme-color-meta nav it replaces is what tinted the bottom bar; do not bring that meta back.
 let TONE_NAV_DONE=false;
-function ensureToneLoaded(){ return false; }
+function ensureToneLoaded(cls,cid){
+  try{
+    if(TONE_NAV_DONE||!cid||!{in:1,out:1,unk:1,soon:1}[cls]) return false;
+    if(navigator.standalone||!/iP(hone|ad|od)/.test(navigator.userAgent||'')) return false;
+    TONE_NAV_DONE=true; // one shot per page load, hit or miss
+    if((window.__loadTone||'')===cls) return false; // server already baked this tone — the bar is right
+    var sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',cid); sp.set('tone',cls);
+    location.replace(location.pathname+'?'+sp.toString());
+    return true;
+  }catch(_){ return false; }
+}
 window.addEventListener('popstate',(ev)=>{
   // History-driven account nav: back AND forward walk the sheet's sections; leaving the sheet's
   // states closes it; a check opened FROM the sheet returns to its tab.
@@ -4790,13 +4849,14 @@ function showResult(o, cid){
   // Persist the tone CLASS first so a reload (the tone-nav below, or a pull-to-refresh) can pre-apply the
   // body wash synchronously at load (boot reads cifm_cls:<cid> into __bootTone) before restoreCall's async fetch.
   try{ localStorage.setItem('cifm_cls_last',cls); if(cid) localStorage.setItem('cifm_cls:'+cid,cls); }catch(e){}
-  // iOS status-bar tint: if this settled verdict's tone differs from what the server baked at load, RELOAD
-  // into the ?tone URL so the colour is present at load (the only thing iOS honors). Returns true when it's
-  // navigating away — stop here, the fresh load re-renders this result with the right bar. Pending never qualifies.
+  // A settled verdict whose tone differs from what the server baked at load reloads ONCE into its
+  // ?call&tone URL so the bar re-tints (iOS never resamples in-page). Returns true when navigating —
+  // stop here; the fresh load re-renders this exact result with the right bar. Pending never qualifies.
   if(o.status && o.status!=='pending' && ensureToneLoaded(cls,cid)) return;
   // Tone the body-level top wash for this verdict (the wash itself is CSS on body.rview::before).
   ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c));
   document.body.classList.add('rv-'+cls);
+  dropBakedTone(); // first paint is over — the rv-* system owns the tone from here
   try{ setThemeTone(); }catch(e){} // tint the browser status-bar strip to this verdict's tone (in-app fallback)
   // Unclear verdict → point them at the transcript AND ask for a quick one-tap label. That label is the
   // training signal: it tells us what the answer REALLY was on the calls our consensus couldn't call.
@@ -4835,11 +4895,10 @@ function showResult(o, cid){
       : `<div class="topcta">${primaryCta}</div>`}
     <div class="callsec">
       ${canTranslate?`<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button></div>`:''}
-      ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed, {cls, title:vTitle, term:termLabel, ts:o.ts})}
+      ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed, {cls, title:vTitle, term:termLabel, ts:o.ts, used:(o.status==='pending'?'':(o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one')))})}
     </div>
     ${o.status==='pending' ? '' : (inStock ? inActions : '')}
-    ${o.status==='pending' ? '' : upsell}
-    <div class="foot" style="margin-top:16px">${o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one')}</div>`;
+    ${o.status==='pending' ? '' : upsell}`;
   $('result').classList.remove('hidden');
   navMark('result');
   // Entrance motion: play ONCE per call, on the CONTENT-READY render. Reopening a past-day call renders
@@ -4863,8 +4922,8 @@ function showResult(o, cid){
     }
   }catch(e){}
   // Put ?call=<cid>&tone=<cls> in the URL for EVERY result. On a pull-to-refresh the server reads ?tone
-  // and bakes the verdict colour straight into the served <meta theme-color> — so iOS tints the status
-  // bar to it AT LOAD with zero JS dependency (a JS-only change to theme-color is unreliable on iOS). The
+  // and bakes the verdict tone-* class onto the served <html> tag — so iOS samples the right colour at
+  // FIRST PAINT with zero JS dependency (a tone that only arrives via script can miss the sample). The
   // ?call= also restores the exact result on refresh.
   try{ if(cid){ const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',cid); if(cls) sp.set('tone',cls); history.replaceState({v:'result'},'',location.pathname+'?'+sp.toString()); } }catch(e){}
   // Full Spanish experience: the site is in Spanish but the call happened in English — show the
@@ -5100,7 +5159,7 @@ function showTodayLanding(forceCal){
   stopLiveTimers(); if($('hangup_btn'))$('hangup_btn').style.display='none';
   ['live','builder','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
   document.body.classList.remove('fabbed');
-  ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); // neutral (dark) — no verdict tone
+  ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); // neutral (dark) — no verdict tone
   RAIL_F.date=''; RAIL_F.store=''; RAIL_F.tone=''; RAIL_CID=null; LASTRES=null; RAIL_CAL_M=null;
   // Logged out (e.g. a freshly-installed Home-Screen app has its OWN empty storage) → your checks live in
   // your account, so show a clear Sign-in CTA instead of an empty "No checks today" that looks broken.
@@ -5450,8 +5509,14 @@ function renderHobbyEras(){
     // surfaces the era that holds it. Filter is show/hide (keeps input focus, instant on mobile).
     const s=esc(((e.era||'')+' '+(e.years||'')+' '+(e.sets||[]).map(x=>(x.name||'')+' '+(x.code||'')).join(' ')).toLowerCase());
     const n=(e.sets||[]).length;
+    // Pure-CSS sizing (object-fit) — renders identically on every device with zero JS timing (a cached
+    // image on desktop used to measure the box before layout settled and size a logo tiny). The already
+    // wide/heavy ones (XY, HeartGold, e-Card/Expedition, Neo, Original/Pokemon) get a slightly smaller
+    // scale so they don't tower over the rest (owner 07-07).
+    const _nm=(e.era||'').toLowerCase();
+    const _sm=_nm.includes('xy')||_nm.includes('heartgold')||_nm.includes('e-card')||_nm.includes('neo')||_nm.includes('original');
     const face=e.logo
-      ? `<img src="${esc(e.logo)}" alt="${esc(e.era)}" style="display:block;width:auto;height:auto;filter:drop-shadow(0 8px 12px rgba(0,0,0,.6))" onload="hobSizeEra(this)" onerror="this.replaceWith(hobEraTxt(this.alt))">`
+      ? `<img src="${esc(e.logo)}" alt="${esc(e.era)}" class="hob-eralg${_sm?' sm':''}" onerror="this.replaceWith(hobEraTxt(this.alt))">`
       : `<span style="font-size:15px;font-weight:900;letter-spacing:.08em;color:#B9B9C4;text-align:center;text-shadow:0 1.5px 0 rgba(255,255,255,.1),0 12px 18px rgba(0,0,0,.5)">${esc((e.era||'').toUpperCase())}</span>`;
     // No era name text — the logo already says it. Just set count + years, centered.
     const inner=`<button class="hob-erabtn" onclick="hobbyPickEra(${i})" aria-label="${esc(e.era)}">
@@ -5612,7 +5677,7 @@ function hobbyPickProduct(pi){
 //   B My Zones list → A build/edit a zone → C the live multi-store check report. "CHECK", never "call".
 let ZONES={ sel:new Set(), storeById:new Map(), editId:null, radius:5, run:null, poll:null };
 function zHideAll(){ try{ exitHunt(); }catch(_){ } try{ if(typeof HUNT_STEP!=='undefined') HUNT_STEP=''; }catch(_){ }
-  try{ document.body.classList.remove('rview','rv-in','rv-out','rv-soon','rv-unk'); }catch(_){ } // drop the result-view verdict wash (else a red "out of stock" bg bleeds under zones)
+  try{ document.body.classList.remove('rview','rv-in','rv-out','rv-soon','rv-unk'); dropBakedTone(); }catch(_){ } // drop the result-view verdict wash (else a red "out of stock" bg bleeds under zones)
   ['builder','live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); } // exitHunt: else body.huntmode keeps #hobby (era/set art) visible under the zones view
 function zShow(){ const z=$('zones'); if(z){ z.classList.remove('hidden'); } }
 function zoneStopPoll(){ if(ZONES.poll){ clearInterval(ZONES.poll); ZONES.poll=null; } }
@@ -6080,7 +6145,7 @@ function renderBuyPlans(){
     // Plans | Pay as you go — the designed either/or. Packs ride POLICY + the live /app/checkout.
     if(!document.getElementById('buymode')){
       const bc=$('billcycle');
-      if(bc){ const mt=document.createElement('div'); mt.id='buymode'; mt.className='ho-toggle'; mt.style.margin='0 0 10px';
+      if(bc){ const mt=document.createElement('div'); mt.id='buymode'; mt.className='ho-toggle'; mt.style.margin='20px 0 12px'; /* top gap so the Plans/PAYG toggle clears the headline (was 0 → crammed) */
         mt.innerHTML=`<button class="on" onclick="setBuyMode('plans',this)">${t('buy.tabplans','Plans')}</button><button onclick="setBuyMode('packs',this)">${t('buy.tabpayg','Pay as you go')}</button>`;
         bc.parentElement.insertBefore(mt,bc); }
     }

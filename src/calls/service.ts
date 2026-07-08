@@ -381,7 +381,7 @@ export async function triggerCall(a: TriggerArgs) {
       phoneTree,
       specialInstructions: retailer.specialInstructions ?? undefined,
       otherCategories: mode === "restock" ? otherCategories : [],
-      askShipmentDay: a.askShipmentDay,
+      askShipmentDay: a.askShipmentDay ?? true, // Delta everywhere: default ON — ask the restock day on a no.
       voicemailPolicy,
       // Persona from the assigned workflow fills {{personality}}. Empty when no workflow → same as before.
       personalityTone: wf?.personality || undefined,
@@ -766,7 +766,7 @@ export async function ingestPending(): Promise<number> {
           } else {
             await db.update(chains).set({
               phoneTreeDefault: ch.phoneTreeDefault || learned.note, dtmfShortcut: ch.dtmfShortcut || learned.dtmf,
-              answerPath: learned.answerPath, avgTreeSeconds: learned.avgTreeSeconds, ringsDirect: learned.ringsDirect,
+              answerPath: learned.answerPath, avgTreeSeconds: learned.ringsDirect ? null : learned.avgTreeSeconds, ringsDirect: learned.ringsDirect,
               treeNote: learned.note, treeStatus: "learned", treeLearnedAt: now(),
             }).where(eq(chains.id, ch.id));
           }

@@ -57,14 +57,15 @@ export async function lockRecipeToChain(chainId: number, recipe: Recipe, confide
   const now = Math.floor(Date.now() / 1000);
   await db.update(chains).set({
     navType: recipe.type || null, navRecipe: JSON.stringify(recipe),
-    navSeconds: typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null,
+    navSeconds: direct ? null : (typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null),
     navStatus: "locked", navConfidence: typeof confidence === "number" ? confidence : null,
     navLog: JSON.stringify(log.slice(-10)), navUpdatedAt: now,
     // ↓ applied to LIVE consumer calls (navText only — the menu/notes live in treeNote for the owner):
     phoneTreeDefault: navText, treeNote: docText,
     dtmfShortcut: firstPress ? String(firstPress.value || "") : null,
     answerPath: steps.map((s) => `${s.action}:${s.value}`).join(">") || null,
-    ringsDirect: direct, avgTreeSeconds: typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null,
+    // Direct chains carry no seconds (a stray value mutes the agent — the silent-agent bug).
+    ringsDirect: direct, avgTreeSeconds: direct ? null : (typeof recipe.seconds === "number" ? Math.round(recipe.seconds) : null),
     treeStatus: "learned", treeLearnedAt: now,
   }).where(eq(chains.id, chainId));
 }

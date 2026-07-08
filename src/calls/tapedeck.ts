@@ -1,8 +1,9 @@
-// Tape deck — the D-lane rehearsal. Calls YOUR phone and runs a standard check entirely on
-// PRE-SYNTHESIZED clips in the default workflow's voice (Branson): opener plays the instant you
-// pick up, your reply is classified by a cheap model, the matching follow-up clip plays, wrap.
-// No live agent anywhere — this is the "recording + ears" lane the owner is auditioning for cost
-// (~2.5¢/check) and naturalness. Bench-only: dials ONE provided number, never a store.
+// Tape deck — the D-lane. Twilio places the call; we handle it entirely with pre-synthesized clips
+// in the workflow's voice + a cheap classifier (no live agent, ~2.5c/check). Workflow-driven: voice,
+// voice rotation, opener rotation, follow-up rotation and voice tuning all come from the assigned
+// workflow (falls back to the default). Set-first follow-up: on an in-stock yes we ask the SET, then
+// the product type, skipping whatever the clerk already named. Off-script / stuck → the escalate
+// slot: the point where Charlie takes over live (the transcript handoff is the next build).
 import { llm } from "../llm";
 import { config } from "../config";
 import { getSetting } from "../db/settings";
@@ -10,6 +11,7 @@ import { getSetting } from "../db/settings";
 const HOST = config.staging.on ? "voice-caller-staging-production.up.railway.app" : "voice-caller-production-2d6b.up.railway.app";
 const CLASSIFY_MODEL = "gemini-2.5-flash-lite";
 
+type Stage = "opener" | "askedSet" | "askedType" | "askedDay" | "done";
 interface TdStep { who: "us" | "you"; text: string; atSec: number; label?: string; ms?: number }
 export interface TdSession {
   id: string; phone: string; startMs: number;
@@ -18,6 +20,10 @@ export interface TdSession {
   clips: Buffer[]; clipText: string[];
   callSid?: string;
   opened?: boolean; // has the opener clip played yet? (we wait to hear you pick up first)
+  stage: Stage;     // where we are in the set-first script
+  needType: boolean; // after asking the set, do we still owe the product-type question?
+  clarified?: boolean; // used our one "sorry, I was asking..." already
+  workflow: string; // which workflow drove this call (shown in the log)
 }
 const sessions = new Map<string, TdSession>();
 export function tdSession(id: string): TdSession | null { return sessions.get(id) || null; }
@@ -31,47 +37,71 @@ const gather = (id: string) =>
   `<Redirect method="POST">https://${HOST}/tapedeck/step?session=${id}&amp;silent=1</Redirect>`;
 const play = (id: string, i: number) => `<Play>https://${HOST}/tapedeck/clip?session=${id}&amp;i=${i}</Play>`;
 
-// Clip slots: 0 opener · 1 yes-follow · 2 no-follow · 3 wrap-thanks · 4 clarify · 5 escalate-bridge
-const CLIP_SLOTS = (opener: string) => [
-  opener,
-  "Oh nice — is that like booster boxes, or just packs?",
-  "Ah, no worries — do you know what day you usually get card shipments in?",
-  "Awesome, thanks so much! Have a good one!",
-  "Oh sorry — I was just asking if you have any Pokémon cards in stock right now?",
-  "Oh — one sec —", // where Charlie would barge in; the rehearsal narrates it in the log
-];
+// One variant per call, rotated across calls. Clip slots:
+// 0 opener · 1 ask-SET · 2 ask-TYPE · 3 restock-day · 4 wrap · 5 clarify · 6 escalate (Charlie)
+function pick<T>(arr: T[] | undefined, fb: T): T { return arr && arr.length ? arr[Math.floor(Math.random() * arr.length)] : fb; }
 
-/** Synthesize one clip in the given ElevenLabs voice (mirrors the mapper's synthAsk). */
-async function synthClip(voiceId: string, text: string): Promise<Buffer | null> {
+// Defaults used when a workflow hasn't defined its own follow-up scripts. No em-dashes (owner rule);
+// commas carry the pauses. {category} is filled at synth time.
+const DEFAULT_FOLLOWUPS: Record<string, string[]> = {
+  set: ["Oh nice! Do you know which set it is?", "Awesome, any idea what set they are?", "Oh sweet, is it the newest set, or do you know which one?"],
+  type: ["Gotcha, are those booster packs or tins?", "Cool, is that packs, or more like a box or a tin?"],
+  no: ["Ah, no worries. Any idea what day you usually get card shipments in?", "Okay no problem, do you know when your next shipment usually lands?"],
+  wrap: ["Awesome, thanks so much! Have a good one!", "Perfect, thank you so much, take care!"],
+  clarify: ["Oh sorry, I was just asking if you have any {category} in stock right now?"],
+  escalate: ["Oh, one sec,"],
+};
+
+interface TdWorkflow { name: string; voiceId: string; voices: string[]; openers: string[]; tuning: Record<string, unknown>; followups: Record<string, string[]> }
+
+/** Resolve a workflow for the rehearsal: by name if given, else the global default. Pulls voice,
+ *  voice strip, openers, tuning and (optional) follow-up scripts, same source the live lane uses. */
+async function resolveTapedeckWorkflow(name?: string): Promise<TdWorkflow> {
+  const fb: TdWorkflow = { name: "default", voiceId: config.voice.defaultVoiceId, voices: [], openers: ["Heyy! I was just checking, do you have any {category} in stock right now?"], tuning: {}, followups: DEFAULT_FOLLOWUPS };
   try {
+    const [wfsRaw, defName] = await Promise.all([getSetting("vt_workflows"), getSetting("vt_default_workflow")]);
+    const wfs = JSON.parse(wfsRaw || "[]") as Array<Record<string, unknown>>;
+    const want = name || defName || "";
+    const wf = wfs.find((w) => w && w.name === want) || wfs.find((w) => w && w.name === (defName || ""));
+    if (!wf) return fb;
+    const openers = Array.isArray(wf.openers) && wf.openers.length ? (wf.openers as unknown[]).map(String) : fb.openers;
+    const voices = Array.isArray(wf.voices) ? (wf.voices as unknown[]).map(String).filter(Boolean) : [];
+    const fu = (wf.followups && typeof wf.followups === "object") ? (wf.followups as Record<string, string[]>) : {};
+    const slot = (k: string) => (Array.isArray(fu[k]) && fu[k].length ? fu[k].map(String) : DEFAULT_FOLLOWUPS[k]);
+    return {
+      name: String(wf.name || "default"),
+      voiceId: (typeof wf.voiceId === "string" && wf.voiceId) || voices[0] || config.voice.defaultVoiceId,
+      voices,
+      openers,
+      tuning: (wf.tuning && typeof wf.tuning === "object") ? (wf.tuning as Record<string, unknown>) : {},
+      followups: { set: slot("set"), type: slot("type"), no: slot("no"), wrap: slot("wrap"), clarify: slot("clarify"), escalate: slot("escalate") },
+    };
+  } catch { return fb; }
+}
+
+const fillCat = (t: string) => t.replace(/\{category\}/g, "Pokémon cards").replace(/\bcards(\s+cards)+\b/gi, "cards");
+
+/** Synthesize one clip in the given voice, honoring the workflow's tuning (mirrors the mapper). */
+async function synthClip(voiceId: string, text: string, tuning: Record<string, unknown>): Promise<Buffer | null> {
+  try {
+    const voice_settings: Record<string, number> = {
+      stability: typeof tuning.stability === "number" ? tuning.stability : 0.4,
+      similarity_boost: typeof tuning.similarity_boost === "number" ? tuning.similarity_boost : (typeof tuning.similarity === "number" ? tuning.similarity : 0.85),
+    };
+    if (typeof tuning.style === "number") voice_settings.style = tuning.style;
     const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_64`, {
       method: "POST",
       headers: { "xi-api-key": config.voice.apiKey, "content-type": "application/json" },
-      body: JSON.stringify({ text, model_id: "eleven_turbo_v2", voice_settings: { stability: 0.4, similarity_boost: 0.85 } }),
+      body: JSON.stringify({ text, model_id: "eleven_turbo_v2", voice_settings }),
     });
     if (!r.ok) { console.error("[tapedeck] synth", r.status, (await r.text()).slice(0, 100)); return null; }
     return Buffer.from(await r.arrayBuffer());
   } catch (e) { console.error("[tapedeck] synth", e); return null; }
 }
 
-/** The default workflow's opener + voice (same source the mapper's ask uses). */
-async function bransonOpener(): Promise<{ text: string; voiceId: string }> {
-  const fallback = { text: "Heyy! I was just checking — do you have any Pokémon cards in stock right now?", voiceId: config.voice.defaultVoiceId };
-  try {
-    const [wfsRaw, defName] = await Promise.all([getSetting("vt_workflows"), getSetting("vt_default_workflow")]);
-    const wfs = JSON.parse(wfsRaw || "[]") as Array<{ name?: string; voiceId?: string; openers?: unknown[] }>;
-    const wf = wfs.find((w) => w && w.name === (defName || ""));
-    if (!wf) return fallback;
-    const opener = Array.isArray(wf.openers) && wf.openers.length ? String(wf.openers[0]) : "";
-    return {
-      text: (opener || fallback.text).replace(/\{category\}/g, "Pokémon cards").replace(/\bcards(\s+cards)+\b/gi, "cards"),
-      voiceId: (wf.voiceId && String(wf.voiceId)) || config.voice.defaultVoiceId,
-    };
-  } catch { return fallback; }
-}
-
-/** Start a rehearsal call to the owner's phone. Clips synth first so playback is instant. */
-export async function tapedeckCall(phone: string): Promise<{ id?: string; error?: string }> {
+/** Start a rehearsal call to the owner's phone on the D-lane. Clips synth first so playback is
+ *  instant. `workflowName` picks which workflow drives it (voice/openers/follow-ups); default global. */
+export async function tapedeckCall(phone: string, workflowName?: string): Promise<{ id?: string; error?: string }> {
   if (!config.callsEnabled) return { error: "calls disabled on this deploy" };
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   if (!sid || !tok) return { error: "twilio not configured" };
@@ -84,13 +114,23 @@ export async function tapedeckCall(phone: string): Promise<{ id?: string; error?
   }
   const from = process.env.BRIDGE_FROM_NUMBER || "+13106662331";
 
-  const { text: openerText, voiceId } = await bransonOpener();
-  const texts = CLIP_SLOTS(openerText);
-  const clips = await Promise.all(texts.map((t) => synthClip(voiceId, t)));
+  const wf = await resolveTapedeckWorkflow(workflowName);
+  const voiceId = pick(wf.voices, wf.voiceId); // rotate the voice strip per call
+  // One rotated variant per slot, synthesized up front for instant playback.
+  const texts = [
+    fillCat(pick(wf.openers, "Heyy! I was just checking, do you have any {category} in stock right now?")),
+    fillCat(pick(wf.followups.set, DEFAULT_FOLLOWUPS.set[0])),
+    fillCat(pick(wf.followups.type, DEFAULT_FOLLOWUPS.type[0])),
+    fillCat(pick(wf.followups.no, DEFAULT_FOLLOWUPS.no[0])),
+    fillCat(pick(wf.followups.wrap, DEFAULT_FOLLOWUPS.wrap[0])),
+    fillCat(pick(wf.followups.clarify, DEFAULT_FOLLOWUPS.clarify[0])),
+    fillCat(pick(wf.followups.escalate, DEFAULT_FOLLOWUPS.escalate[0])),
+  ];
+  const clips = await Promise.all(texts.map((t) => synthClip(voiceId, t, wf.tuning)));
   if (clips.some((c) => !c)) return { error: "clip synthesis failed — check ElevenLabs credits" };
 
   const id = crypto.randomUUID().slice(0, 8);
-  const session: TdSession = { id, phone: to, startMs: Date.now(), status: "dialing", steps: [], turns: 0, clips: clips as Buffer[], clipText: texts };
+  const session: TdSession = { id, phone: to, startMs: Date.now(), status: "dialing", steps: [], turns: 0, clips: clips as Buffer[], clipText: texts, stage: "opener", needType: false, workflow: wf.name };
   sessions.set(id, session);
 
   const body = new URLSearchParams({
@@ -117,61 +157,70 @@ export function tapedeckTwiml(id: string): string {
   // Don't open into dead air. Listen for YOU to pick up (your "hello?") before the opener plays —
   // that's how a real inbound greeting works, and it gives you time to hit speaker first. The opener
   // fires on the first /step hit, whether you greeted or the listen timed out (handled in tapedeckStep).
-  // Owner-observed: a fixed pre-opener pause still talked before the phone reached speaker.
   return twiml(`<Pause length="1"/>${gather(id)}`);
 }
 
-/** One turn: classify the reply with the cheap model, answer with the matching clip. */
+/** One turn: classify the reply with the cheap model, answer with the matching clip. Set-first flow:
+ *  yes → ask the SET → then the product TYPE, skipping whatever they already named; no/day → ask the
+ *  restock day; off-script question → escalate (Charlie barge point). */
 export async function tapedeckStep(id: string, speech: string): Promise<string> {
   const s = sessions.get(id);
   if (!s) return twiml("<Hangup/>");
   const atSec = Math.round((Date.now() - s.startMs) / 1000);
-  // First /step hit = you just picked up (said "hello", or the greeting listen timed out). NOW play
-  // the opener — this is the "wait for the greeting" beat so it never talks before you reach speaker.
-  // Doesn't count as a turn and isn't classified; it just launches the opener.
+  // First /step hit = you just picked up. NOW play the opener (never before you reach speaker).
   if (!s.opened) {
     s.opened = true;
-    s.steps.push({ who: "us", text: s.clipText[0], atSec, label: "opener — played after you picked up" });
+    s.steps.push({ who: "us", text: s.clipText[0], atSec, label: `opener (${s.workflow}) — played after you picked up` });
     return twiml(`${play(id, 0)}${gather(id)}`);
   }
   s.turns++;
-  if (s.turns > 8 || atSec > 150) { s.status = "done"; return twiml(`${play(id, 3)}<Hangup/>`); }
+  if (s.turns > 8 || atSec > 150) { s.status = "done"; return twiml(`${play(id, 4)}<Hangup/>`); }
   if (speech && speech.trim()) s.steps.push({ who: "you", text: speech.trim().slice(0, 200), atSec });
   else { // silence — nudge once, then wrap
-    if (s.turns >= 3) { s.status = "done"; return twiml(`${play(id, 3)}<Hangup/>`); }
+    if (s.turns >= 3) { s.status = "done"; return twiml(`${play(id, 4)}<Hangup/>`); }
     return twiml(gather(id));
   }
 
   const t0 = Date.now();
-  let label = "unclear";
+  let label = "unclear", gotSet = false, gotType = false;
   try {
-    const out = await llm(CLASSIFY_MODEL, `You are on a phone call to a store, checking if Pokémon cards are in stock. You just spoke; the clerk replied: "${speech.trim().slice(0, 200)}"
-Classify the clerk's reply. Return ONLY JSON: {"label":"yes|no|day|product|question|unclear"}
-- yes: they have some / affirmative ("yeah we got a few", "we do")
-- no: they don't / negative / sold out
-- day: they name a day or shipment timing
-- product: they named a product TYPE or set ("booster box", "packs", "ETB", "just singles", "151")
+    const out = await llm(CLASSIFY_MODEL, `You are on a phone call to a store checking if Pokémon cards are in stock. The clerk just replied: "${speech.trim().slice(0, 200)}"
+Return ONLY JSON: {"label":"yes|no|day|product|question|unclear","set":"<pokemon set name they named, else empty>","type":"<packs|booster box|tin|etb|singles, else empty>"}
+- yes: they have some in stock ("yeah we got a few", "we do")
+- no: they don't / sold out
+- day: they named a day or shipment timing
+- product: they named a product type or set
 - question: THEY asked something back ("who's this?", "for pickup?")
-- unclear: genuinely can't tell / garbled`, { job: "tapedeck", json: true, temperature: 0, maxTokens: 30 });
-    label = String((JSON.parse(out) as { label?: string }).label || "unclear");
+- unclear: genuinely can't tell / garbled`, { job: "tapedeck", json: true, temperature: 0, maxTokens: 50 });
+    const j = JSON.parse(out) as { label?: string; set?: string; type?: string };
+    label = String(j.label || "unclear");
+    const clean = (v?: string) => !!(v && v.trim() && !/^(no|none|n\/?a|unsure|not sure|idk|unknown)$/i.test(v.trim()));
+    gotSet = clean(j.set); gotType = clean(j.type);
   } catch { /* keep unclear */ }
   const ms = Date.now() - t0;
 
-  // Multi-turn logic. Turn 1 = their answer to the opener. Turn 2+ = they're replying to OUR
-  // follow-up, so a substantive answer means the check is DONE — wrap warmly, never re-ask.
-  let clip = 3; let note = "warm wrap";
-  if (label === "question") { clip = 5; note = "off-script question → Charlie joins here (real build: hand him the transcript so he continues WITH context, not a restart)"; }
-  else if (s.turns === 1) {
-    if (label === "yes") { clip = 1; note = "in stock → product follow-up"; }
-    else if (label === "no" || label === "day") { clip = 2; note = label + " → shipment-day ask"; }
-    else if (label === "product") { clip = 3; note = "named the product on turn 1 → got what we need, wrap"; }
-    else { clip = 4; note = "unclear → clarify ONCE"; }
-  } else {
-    // turn 2+: product/day/yes/no all = a real answer to our follow-up → thank + wrap.
-    clip = 3; note = `answered our follow-up (${label}) → wrap`;
+  // Decide the next clip + stage. Slots: 1 ask-SET · 2 ask-TYPE · 3 restock-day · 4 wrap · 5 clarify · 6 escalate.
+  let clip = 4, note = "warm wrap", next: Stage = "done";
+  if (label === "question") { clip = 6; note = "off-script → Charlie barge point (live handoff = next build)"; next = "done"; }
+  else if (s.stage === "opener") {
+    if (label === "no" || label === "day") { clip = 3; note = "out → ask the restock day"; next = "askedDay"; }
+    else if (label === "yes" || label === "product") {
+      if (gotSet && gotType) { clip = 4; note = "named the set + type already → wrap"; next = "done"; }
+      else if (!gotSet) { s.needType = !gotType; clip = 1; note = "in stock → ask the SET first"; next = "askedSet"; }
+      else { clip = 2; note = "had the set → ask packs/tin"; next = "askedType"; }
+    } else if (!s.clarified) { s.clarified = true; clip = 5; note = "unclear → clarify once"; next = "opener"; }
+    else { clip = 4; note = "still unclear → wrap"; next = "done"; }
+  } else if (s.stage === "askedSet") {
+    if (s.needType && label !== "unclear") { clip = 2; note = "got the set → ask packs/tin"; next = "askedType"; }
+    else { clip = 4; note = "have what we need → wrap"; next = "done"; }
+  } else { // askedType / askedDay → their answer settles it
+    clip = 4; note = `answered our follow-up (${label}) → wrap`; next = "done";
   }
-  s.steps.push({ who: "us", text: s.clipText[clip], atSec: Math.round((Date.now() - s.startMs) / 1000), label: `classified "${label}" in ${ms}ms → ${note}`, ms });
-  if (clip === 3 || clip === 5) { s.status = "done"; return twiml(`${play(id, clip)}${clip === 5 ? play(id, 3) : ""}<Hangup/>`); }
+  s.stage = next;
+
+  s.steps.push({ who: "us", text: s.clipText[clip], atSec: Math.round((Date.now() - s.startMs) / 1000), label: `classified "${label}"${gotSet ? " +set" : ""}${gotType ? " +type" : ""} in ${ms}ms → ${note}`, ms });
+  const terminal = clip === 4 || clip === 6;
+  if (terminal) { s.status = "done"; return twiml(`${play(id, clip)}${clip === 6 ? play(id, 4) : ""}<Hangup/>`); }
   return twiml(`${play(id, clip)}${gather(id)}`);
 }
 

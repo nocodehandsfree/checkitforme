@@ -4,7 +4,7 @@ import { migrate } from "drizzle-orm/libsql/migrator";
 import { and, eq } from "drizzle-orm";
 import { db, client } from "./client";
 import { categories, chains, retailers } from "./schema";
-import { seed } from "./seed";
+import { seed, seedCatalogSupplement } from "./seed";
 import { backfillChainTypes } from "./import-data";
 import { getSetting, setSetting } from "./settings";
 import { seedStockCheckIntel } from "../stock/intel";
@@ -239,6 +239,10 @@ export async function bootstrap() {
     await seed();
     console.log("Catalog seeded.");
   }
+  // Pokémon core-SKU overlay (booster packs/bundles/blisters per set) — insert-if-absent on EVERY boot so
+  // new/edited catalog rows flow through on deploy (the full seed above only runs on an empty DB).
+  const supp = await seedCatalogSupplement();
+  if (supp) console.log(`Catalog supplement: +${supp} products.`);
   await backfillChainTypes(); // ensure every chain has a store-category for filtering
   await seedStockCheckIntel(); // classify chains site-rail vs call-rail (insert-if-absent)
   await seedSellMethods();      // per-chain ways-to-get-it + MSRP flag (insert-if-absent)

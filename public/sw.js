@@ -1,85 +1,19 @@
-// Check It For Me — service worker.
-// Goal: instant cold-start (esp. the "My Checks" section) without ever serving a stale deploy.
-//  - HTML document   → network-first (3.5s timeout) → cache fallback. Deploys ALWAYS land when online.
-//  - /app/history + a few STATIC config endpoints → stale-while-revalidate. The checks/statuses paint
-//    instantly from cache, then refresh in the background. (LIVE-call endpoints — /pub/live, /pub/bridge,
-//    /pub/result, /pub/check-live — are deliberately NOT cached, so real-time call data is never stale.)
-//  - /logos/*, images, fonts → cache-first (they're stable/versioned).
-//  - everything else  → left to the browser.
-// Defensive throughout: any error falls back to the network, so the SW can never white-screen the app.
-const VERSION = 'cifm-v4'; // v4: purge stale /logos/* images (old era/set art was pinned by cache-first)
-const SHELL = VERSION + '-shell';
-const DATA = VERSION + '-data';
-const STATIC = VERSION + '-static';
-// ONLY these GETs are stale-while-revalidated. Everything else under /pub/ (live transcript, bridge,
-// result polling, call start) goes straight to the network so a call is never served stale data.
-const SWR_PATHS = ['/app/history', '/pub/statuses', '/pub/categories', '/pub/policy'];
+// Service worker RETIRED (owner 07-07: "kill the workers, I just want one site").
+// The site is now a plain, always-fresh website — no offline cache, no version dance.
+//
+// This build exists only to evict the old worker from clients that still have it: on activate it deletes
+// every Cache Storage bucket, unregisters itself, and reloads any page it controls so the fresh (worker-
+// less) HTML lands. With no fetch handler, the browser goes straight to the network for everything.
+// /sw.js is served no-cache, so every client that still had the old worker fetches THIS and self-evicts.
 
-self.addEventListener('install', (e) => {
-  e.waitUntil((async () => {
-    try { const c = await caches.open(SHELL); await c.addAll(['/', '/pokemon', '/onepiece', '/toppsbasketball', '/needoh']); } catch (_) { /* precache best-effort */ }
-    self.skipWaiting();
+self.addEventListener('install', function () { self.skipWaiting(); });
+
+self.addEventListener('activate', function (e) {
+  e.waitUntil((async function () {
+    try { const ks = await caches.keys(); await Promise.all(ks.map(function (k) { return caches.delete(k); })); } catch (_) { /* best-effort */ }
+    try { await self.registration.unregister(); } catch (_) { /* best-effort */ }
+    try { const cs = await self.clients.matchAll({ type: 'window' }); cs.forEach(function (c) { try { c.navigate(c.url); } catch (_) {} }); } catch (_) { /* best-effort */ }
   })());
 });
 
-self.addEventListener('activate', (e) => {
-  e.waitUntil((async () => {
-    try {
-      const keys = await caches.keys();
-      await Promise.all(keys.filter((k) => !k.startsWith(VERSION)).map((k) => caches.delete(k)));
-    } catch (_) { /* cleanup best-effort */ }
-    await self.clients.claim();
-  })());
-});
-
-self.addEventListener('message', (e) => { if (e.data === 'skipWaiting') self.skipWaiting(); });
-
-self.addEventListener('fetch', (e) => {
-  const req = e.request;
-  if (req.method !== 'GET') return;
-  let url; try { url = new URL(req.url); } catch (_) { return; }
-  if (url.origin !== self.location.origin) return; // same-origin only
-
-  if (req.mode === 'navigate' || req.destination === 'document') { e.respondWith(networkFirst(req)); return; }
-  if (SWR_PATHS.includes(url.pathname)) { e.respondWith(staleWhileRevalidate(req)); return; }
-  if (url.pathname.startsWith('/logos/') || /\.(png|webp|svg|jpe?g|woff2?)$/i.test(url.pathname)) { e.respondWith(cacheFirst(req)); return; }
-  // else: browser default
-});
-
-function timeout(ms) { return new Promise((resolve) => setTimeout(() => resolve(null), ms)); }
-
-async function networkFirst(req) {
-  // Adaptive race: when we HOLD a cached copy of this page, only give the network a short head start
-  // (slow LTE was making every product-page hop feel stuck for seconds). No cached copy -> patient.
-  // The losing network response still lands in the cache below, so the NEXT hop is fresh.
-  let cached = null; try { cached = await caches.match(req); } catch (_) {}
-  const patience = cached ? 1200 : 3500;
-  const net = fetch(req).then((r) => {
-    if (r && r.ok) { const copy = r.clone(); caches.open(SHELL).then((c) => c.put(req, copy)).catch(() => {}); }
-    return r;
-  }).catch(() => null);
-  try {
-    const fresh = await Promise.race([net, timeout(patience)]);
-    if (fresh) return fresh;
-  } catch (_) { /* fall through */ }
-  return cached || (await caches.match('/')) || net.then((r) => r || fetch(req));
-}
-
-async function staleWhileRevalidate(req) {
-  try {
-    const cache = await caches.open(DATA);
-    const cached = await cache.match(req);
-    const fetching = fetch(req).then((res) => { if (res && res.ok) { try { cache.put(req, res.clone()); } catch (_) {} } return res; }).catch(() => null);
-    return cached || (await fetching) || fetch(req);
-  } catch (_) { return fetch(req); }
-}
-
-async function cacheFirst(req) {
-  try {
-    const cached = await caches.match(req);
-    if (cached) return cached;
-    const res = await fetch(req);
-    if (res && res.ok) { try { (await caches.open(STATIC)).put(req, res.clone()); } catch (_) {} }
-    return res;
-  } catch (_) { return fetch(req); }
-}
+// No 'fetch' handler on purpose: requests bypass the worker and hit the network directly. Always fresh.

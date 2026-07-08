@@ -31,6 +31,18 @@ const CHAIN_TYPES: Record<string, string> = {
   "Franklin's Ace Hardware": "Hardware",
   "Ralphs": "Grocery", "Pavilions": "Grocery",
   "Hallmark": "Gift", "Kohl's": "Department", "Staples": "Office", "Amazon": "Online",
+  // Thrift rail — treasure-hunt, "spotty" stock. Named here so the boot-time backfill classifies them
+  // correctly even under old/unguarded code (prod was reverting these to "Other" every deploy → admin
+  // mapping looked wrong; 2026-07-07). The stores-import.ts name-heuristic misses these (no "thrift"
+  // token in the brand name), so they must be explicit.
+  "Goodwill": "Thrift", "Savers": "Thrift", "Value Village": "Thrift", "Salvation Army": "Thrift",
+  "Salvation Army Family Store": "Thrift", "Unique": "Thrift", "Unique Thrift Store": "Thrift",
+  "Plato's Closet": "Thrift", "Buffalo Exchange": "Thrift", "2nd Ave Value Stores": "Thrift",
+  // Hobby rail — independent card/comic shops (ring straight to a human, sell ABOVE MSRP → callable).
+  // Same reason: keep the category durable through a boot backfill.
+  "Independent Card Shop": "Hobby", "Comic Book Shop": "Hobby", "Cards and Coffee": "Hobby",
+  "PokeMall TCG": "Hobby", "Burbank Sportscards": "Hobby", "CoreTCG": "Hobby",
+  "Cash Cards Unlimited": "Hobby", "LA Sports Cards": "Hobby",
 };
 export const chainType = (name?: string | null): string => (name && CHAIN_TYPES[name]) || "Other";
 

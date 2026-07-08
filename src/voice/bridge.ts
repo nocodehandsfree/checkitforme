@@ -254,9 +254,16 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   // ⇒ a human is on the line ⇒ bring in the (billed) agent. Imperfect vs hold music — bench-test/tune.
   function maybeDetectHuman(b64: string) {
     if (connecting) return;
-    if (Date.now() - startMs < lastDtmfMs + 1500) return; // let the keypad nav settle first
-    if (frameEnergy(b64) > VOICE_THRESH) { if (++voiced >= VOICE_FRAMES) triggerConnect("human"); }
-    else voiced = Math.max(0, voiced - 1);
+    if (Date.now() - startMs < lastDtmfMs + (lastDtmfMs ? 1500 : 300)) return; // settle after keypad nav; on a direct dial only skip the connect click, so the OPENING greeting still counts
+    // Direct-dial stores (no keypad nav) ring straight to a person. Detect the greeting FAST and tolerate
+    // the pause right after it — a quick "Hello, Fun store" then silence used to take ~20s to trip the old
+    // 0.9s-unbroken gate, so the agent sat silent and the caller hung up (owner 07-07). Tree stores keep
+    // the stricter gate (a slower, sustained read is safer against hold music).
+    const direct = !lastDtmfMs;
+    const need = direct ? 22 : VOICE_FRAMES;   // ~0.45s of voice on a direct dial vs ~0.9s through a tree
+    const leak = direct ? 0.34 : 1;            // slow leak so the pause between greeting words doesn't reset progress
+    if (frameEnergy(b64) > VOICE_THRESH) { if ((voiced += 1) >= need) triggerConnect("human"); }
+    else voiced = Math.max(0, voiced - leak);
   }
 
   twilio.on("message", (data: Buffer) => {
@@ -287,7 +294,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
       fanout(room, b64, "clerk"); // store/clerk audio -> browser
       if (eleven && ready) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
       else if (connecting) pending.push(b64);          // committed to connect → buffer for the agent
-      else if (ctx?.connectOnHuman && !ctx.connectAtSec) maybeDetectHuman(b64); // VAD only when we have no learned timer
+      else if (ctx?.connectOnHuman && (!ctx.connectAtSec || !ctx.dtmf)) maybeDetectHuman(b64); // VAD when no learned timer — and always on a direct dial, so a stale learned time can't leave a real human waiting
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
   });
   twilio.on("close", () => { activeCalls = Math.max(0, activeCalls - 1); log(`twilio close (frames in=${frames})`); signalEnd(); dtmfTimers.forEach(clearTimeout); if (eleven) eleven.close(); });

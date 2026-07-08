@@ -243,10 +243,11 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
     `<meta name="description" content="${esc(brand.desc)}">`,
     `<link rel="canonical" href="${canonical}">`,
     `<meta name="robots" content="index,follow,max-image-preview:large">`,
-    // NB: NO theme-color here. The runner files own their own <meta name="theme-color" id="themeColor">
-    // and mutate it live to tint the iOS status bar to the verdict tone. Injecting a second theme-color
-    // makes WebKit honor THIS hardcoded-dark one and ignore the live one — that's the bug that kept the
-    // status bar black on every result. One theme-color in the document, JS-controlled, full stop.
+    // NB: NO theme-color meta here — and none in checkit.html either, ON PURPOSE. One theme-color
+    // tints BOTH iOS Safari bars (green bottom toolbar) and overrides the per-edge page sampling we
+    // rely on. The status bar takes its colour from the painted page instead: the html/body verdict
+    // gradient (rv-* classes) in-page, and for ?tone= deep-links the tone-* class this renderer
+    // bakes onto the served <html> tag below. Do not add a theme-color meta back.
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${esc(plainName)}">`,
     // Apex/invite embeds (owner): the CARD IMAGE carries the headline, so the visible link title is
@@ -268,14 +269,15 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
       ...seoGraph(brand, plainName),
     ] })}</script>`,
   ].join("\n");
-  // Status-bar tone baked into the LITERAL served HTML. iOS Safari tints the status bar from the
-  // theme-color value present at page load — a later JS change to it is unreliable (often ignored). So a
-  // result deep-link (?call=…&tone=in|out|unk|soon) gets the verdict colour written straight into the
-  // meta here, guaranteeing the bar is the right colour on a hard-refresh with no JS dependency.
-  const TONE: Record<string, string> = { in: "#266440", out: "#6b2427", unk: "#6c5419", soon: "#6e490f" };
-  const themeColor = (tone && TONE[tone]) || "#0C0C12";
+  // Status-bar tone for verdict deep-links (?call=…&tone=in|out|unk|soon): baked as a CLASS on the
+  // literal served <html> tag (the html.tone-* static CSS lives in checkit.html). iOS samples the page
+  // background for the status bar at FIRST PAINT — a tone applied later by script (boot/fetch timing)
+  // often misses that sample and leaves the bar dark in plain Safari. Baking the class server-side makes
+  // the very first paint the verdict colour with zero JS dependency; the in-page rv-* class system takes
+  // over (and drops the baked class via dropBakedTone) as soon as the app renders a view.
+  const toneClass = /^(in|out|unk|soon)$/.test(tone) ? ` class="tone-${tone}"` : "";
   return page(file)
-    .replace('content="#0C0C12" id="themeColor"', `content="${themeColor}" id="themeColor"`)
+    .replace('<html lang="en">', `<html lang="en"${toneClass}>`)
     .replace(/__BRAND_HEAD__/g, head)
     .replace(/__BRAND_JSON__/g, JSON.stringify({ key: brand.key, name: brand.name, category: brand.category, accent: brand.accent, accent2: brand.accent2 || brand.accent, logoUrl: brand.logoUrl || "", emoji: brand.emoji }))
     .replace(/__BRAND_LOGO__/g, brand.logo || `${brand.emoji} ${brand.name}`)
@@ -630,8 +632,8 @@ app.get("/tapedeck/clip", (c) => {
   return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
 });
 app.post("/api/admin/tapedeck/call", async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as { phone?: string };
-  return c.json(await tapedeckCall(String(b.phone || "")));
+  const b = (await c.req.json().catch(() => ({}))) as { phone?: string; workflow?: string };
+  return c.json(await tapedeckCall(String(b.phone || ""), b.workflow ? String(b.workflow) : undefined));
 });
 app.get("/api/admin/tapedeck/session/:id", (c) => {
   const s = tdSession(c.req.param("id"));
@@ -1328,6 +1330,14 @@ app.get("/pub/stores/near", async (c) => {
   const sellMethodsByChain = new Map(chainRows.map((x) => [x.id, x.sellMethods]));
   const isMSRPByChain = new Map(chainRows.map((x) => [x.id, x.isMSRP]));
   const mutedChains = new Set(chainRows.filter((x) => x.muted === true).map((x) => x.id));
+  // Call-readiness (launch "no dead-end / no wasted paid call" gate): a chain is call-ready if it rings
+  // straight to a human OR its phone-tree is mapped. Consumer-direct types (Hobby/Thrift/independent)
+  // ring to a person and are ready by nature. Everything else callable-but-unmapped is shown GREYED
+  // ("coming soon") and never dialed — no wasted call/$. Mapping a chain (treeStatus/ringsDirect via the
+  // admin) flips it ready automatically, so the greyed set shrinks as the mapping lane works.
+  const ringsDirectChain = new Set(chainRows.filter((x) => x.ringsDirect === true).map((x) => x.id));
+  const treeMappedChain = new Set(chainRows.filter((x) => x.treeStatus === "learned" || x.treeStatus === "verified").map((x) => x.id));
+  const READY_TYPES = new Set(["Hobby", "Thrift"]);
 
   let rows: (typeof retailers.$inferSelect)[];
   if (hasLoc) {
@@ -1357,6 +1367,15 @@ app.get("/pub/stores/near", async (c) => {
   // (owner 2026-07-06). The shelf-only surfaces still gate on sellsPacks, so this doesn't add
   // kiosk-only stores to "most likely on the shelf".
   const callable = (r: typeof retailers.$inferSelect) => (r.sellsPacks !== false || r.hasKiosk === true) && !!r.phone && !r.phone.startsWith("nophone:");
+  // callReady = safe to place a paid call (we reach a human). callable-but-not-ready → front-end greys it
+  // "coming soon" and disables the call button (never dialed). Site-check stores are handled separately via
+  // stockCheckMethod; the front-end precedence is muted(hidden) > site("check online") > !callReady(grey) > call.
+  const callReady = (r: typeof retailers.$inferSelect) => callable(r) && (
+    r.chainId == null
+    || ringsDirectChain.has(r.chainId)
+    || treeMappedChain.has(r.chainId)
+    || READY_TYPES.has(((r.chainId && types.get(r.chainId)) || "Other") as string)
+  );
   // inStock badge = a confirmed in-stock call in the last 7 days (drives the brand-check pin/row).
   const inStockSince = Math.floor(Date.now() / 1000) - 7 * 86400;
   const confirmedSet = new Set(
@@ -1394,7 +1413,7 @@ app.get("/pub/stores/near", async (c) => {
         lat: r.lat, lng: r.lng, region: r.region, state: r.state,
         sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
         tier: r.hasKiosk === true ? 5 : (r.tier ?? null), inStock: confirmedSet.has(r.id), // any kiosk store = tier 5; inStock = brand-check pin
-        callable: callable(r), ownerOnly: r.ownerOnly === true, // ownerOnly → client shows it regardless of radius
+        callable: callable(r), callReady: callReady(r), ownerOnly: r.ownerOnly === true, // callReady:false → grey "coming soon", don't dial. ownerOnly → client shows it regardless of radius
         stockCheckMethod: (r.chainId && stockMethod.get(r.chainId)) || "call", // site = check their site, no call needed
         // Sell-methods taxonomy: how to get it (chain default), online flag, and price/source.
         sellMethods: (((r.chainId && sellMethodsByChain.get(r.chainId)) || "in_store").split(",").map((s) => s.trim()).filter(Boolean)),
@@ -1597,6 +1616,22 @@ function learnedShipDow(days: Record<string, number> | undefined, fallback: stri
 // anchors from the products catalog (recent sets only) — one pull powers era → set → type. Sets with
 // no catalog rows return products: [] (front end falls back to generic types). Cached 5 min.
 let pokemonSetsCache: { t: number; v: unknown } | null = null;
+// Display polish for the set → product picker: spell out cryptic type codes, and order the cards the way
+// a shop lists them (packs → boxes → blisters → ETBs → collections) instead of DB insertion order.
+const PRETTY_TYPE: Record<string, string> = { "PC ETB": "Pokémon Center ETB", "ETB": "Elite Trainer Box" };
+const prettyType = (t: string): string => PRETTY_TYPE[t] ?? t;
+const TYPE_ORDER = ["Booster Pack", "Booster Bundle", "Booster Box", "Single-Pack Blister", "Three-Pack Blister",
+  "Checklane Blister", "Elite Trainer Box", "Pokémon Center ETB", "Premium Collection", "Ultra-Premium Collection",
+  "Super-Premium Collection", "Special Collection", "Surprise Box", "Standard Tin", "Mini Tin", "Stacking Tin",
+  "Poster Collection", "Binder Collection", "Sticker Collection"];
+const orderProducts = (ps: Array<{ type: string; retail: number | null }>) => {
+  const seen = new Set<string>();
+  return ps.filter((p) => !seen.has(p.type) && !!seen.add(p.type)) // dedup by display label
+    .sort((a, b) => {
+      const ia = TYPE_ORDER.indexOf(a.type), ib = TYPE_ORDER.indexOf(b.type);
+      return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib) || a.type.localeCompare(b.type);
+    });
+};
 app.get("/pub/pokemon-sets", async (c) => {
   if (pokemonSetsCache && Date.now() - pokemonSetsCache.t < 300_000) return c.json(pokemonSetsCache.v);
   const file = JSON.parse(readFileSync(join(here, "../data/pokemon-sets.json"), "utf8")) as
@@ -1632,7 +1667,7 @@ app.get("/pub/pokemon-sets", async (c) => {
       logoKey: slug(String(s.code)),
       logo: `/logos/sets/${slug(String(s.code))}.png${av}`,
       banner: `/logos/set-banners/${slug(String(s.code))}.png${av}`,
-      products: [...(bySet.get(norm(String(s.name))) ?? new Map<string, number | null>()).entries()].map(([type, retail]) => ({ type, retail })) })) })) };
+      products: orderProducts([...(bySet.get(norm(String(s.name))) ?? new Map<string, number | null>()).entries()].map(([type, retail]) => ({ type: prettyType(type), retail }))) })) })) };
   pokemonSetsCache = { t: Date.now(), v };
   return c.json(v);
 });
@@ -3827,6 +3862,10 @@ app.patch("/api/chains/:id", async (c) => {
   if (b.stockCheckConfidence !== undefined) patch.stockCheckConfidence = b.stockCheckConfidence || null; // e.g. "spotty" = inconsistent stock (off-price/thrift), not a reliable MSRP source
   if (b.sellMethods !== undefined) patch.sellMethods = b.sellMethods || null; // CSV: in_store|pickup|ship
   if (typeof b.isMSRP === "boolean") patch.isMSRP = b.isMSRP;
+  // Invariant: a direct-answer chain has no menu, so it must carry NO tree-seconds — a stray value arms
+  // the connect-timer and mutes the agent (silent-agent bug). Enforce it here too, so a manual admin edit
+  // that flips a chain to direct can't recreate it (the learn/trainer paths already guard this).
+  if (patch.ringsDirect === true || patch.answerPath === "direct_human") patch.avgTreeSeconds = null;
   const [row] = await db.update(chains).set(patch).where(eq(chains.id, Number(c.req.param("id")))).returning();
   invalidateRefCache();
   return c.json(row);
@@ -4391,14 +4430,16 @@ app.post("/api/admin/trainer/lock", async (c) => {
   const now = Math.floor(Date.now() / 1000);
   await db.update(chains).set({
     navType: b.recipe.type || null, navRecipe: JSON.stringify(b.recipe),
-    navSeconds: typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null,
+    navSeconds: direct ? null : (typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null),
     navStatus: "locked", navConfidence: typeof b.confidence === "number" ? b.confidence : null,
     navLog: JSON.stringify(log.slice(-10)), navUpdatedAt: now,
     // ↓ applied to live consumer calls (this is the bridge from documentation → real calls):
     phoneTreeDefault: treeText, treeNote: treeText,
     dtmfShortcut: dtmf || null,
     answerPath: recipeAnswerPath(recipe) || null,
-    ringsDirect: direct, avgTreeSeconds: typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null,
+    // Direct-answer chains have no menu, so they must carry NO seconds — a stray value arms the ABC
+    // connect-timer and mutes the agent while a human is already on the line (the silent-agent bug).
+    ringsDirect: direct, avgTreeSeconds: direct ? null : (typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null),
     treeStatus: "learned", treeLearnedAt: now,
   }).where(eq(chains.id, Number(b.chainId)));
   return c.json({ ok: true });
