@@ -46,7 +46,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="tonebake-r99" />
+<meta name="x-rev" content="tonebake-r100" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -270,14 +270,17 @@ __BRAND_HEAD__
   html:has(body.rview.rv-unk){background:linear-gradient(180deg,#6c5419 0px,var(--bg) 460px)}
   html:has(body.rview.rv-soon){background:linear-gradient(180deg,#6e490f 0px,var(--bg) 460px)}
   /* ?tone= deep-links: the server bakes tone-* onto the served <html> tag so the FIRST paint — the one
-     iOS samples for the status bar — is already the verdict colour, before any script runs. Solid tone
-     through 45% then dark by 55% keeps the TOP edge toned and the bottom bar dark. The html:has() rules
-     above OUTRANK these once the app applies rv-* (a live verdict always wins), and the app drops the
+     iOS samples for the status bar — is already the verdict colour, before any script runs. Sampling reads
+     the VISIBLE top-edge pixels, so the html canvas alone isn't enough (it only shows behind the notch /
+     overscroll): the BODY must carry the wash and the header slab must be transparent, exactly like the
+     result view paints them. Same gradient as the rv-* rules = seamless when the app takes over. The
+     body.rview.rv-* rules OUTRANK the body rules here (a live verdict always wins), and the app drops the
      baked class on any in-page view change (dropBakedTone) so a stale tint can never strand at the top. */
-  html.tone-in{background:linear-gradient(#266440 0,#266440 45%,#0C0C12 55%)}
-  html.tone-out{background:linear-gradient(#6b2427 0,#6b2427 45%,#0C0C12 55%)}
-  html.tone-unk{background:linear-gradient(#6c5419 0,#6c5419 45%,#0C0C12 55%)}
-  html.tone-soon{background:linear-gradient(#6e490f 0,#6e490f 45%,#0C0C12 55%)}
+  html.tone-in, html.tone-in body{background:linear-gradient(180deg,#266440 0px,var(--bg) 460px)}
+  html.tone-out, html.tone-out body{background:linear-gradient(180deg,#6b2427 0px,var(--bg) 460px)}
+  html.tone-unk, html.tone-unk body{background:linear-gradient(180deg,#6c5419 0px,var(--bg) 460px)}
+  html.tone-soon, html.tone-soon body{background:linear-gradient(180deg,#6e490f 0px,var(--bg) 460px)}
+  html.tone-in header,html.tone-out header,html.tone-unk header,html.tone-soon header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
   /* On a result the nav + content LAY ON the color: header goes transparent (no dark slab, no hairline)
      so the wash reaches the top. The nav pills + day-picker take a BARELY-green fill (level 3) so they
      read as sitting on a green page without looking like dark chips. */
