@@ -1327,6 +1327,14 @@ app.get("/pub/stores/near", async (c) => {
   const sellMethodsByChain = new Map(chainRows.map((x) => [x.id, x.sellMethods]));
   const isMSRPByChain = new Map(chainRows.map((x) => [x.id, x.isMSRP]));
   const mutedChains = new Set(chainRows.filter((x) => x.muted === true).map((x) => x.id));
+  // Call-readiness (launch "no dead-end / no wasted paid call" gate): a chain is call-ready if it rings
+  // straight to a human OR its phone-tree is mapped. Consumer-direct types (Hobby/Thrift/independent)
+  // ring to a person and are ready by nature. Everything else callable-but-unmapped is shown GREYED
+  // ("coming soon") and never dialed — no wasted call/$. Mapping a chain (treeStatus/ringsDirect via the
+  // admin) flips it ready automatically, so the greyed set shrinks as the mapping lane works.
+  const ringsDirectChain = new Set(chainRows.filter((x) => x.ringsDirect === true).map((x) => x.id));
+  const treeMappedChain = new Set(chainRows.filter((x) => x.treeStatus === "learned" || x.treeStatus === "verified").map((x) => x.id));
+  const READY_TYPES = new Set(["Hobby", "Thrift"]);
 
   let rows: (typeof retailers.$inferSelect)[];
   if (hasLoc) {
@@ -1356,6 +1364,15 @@ app.get("/pub/stores/near", async (c) => {
   // (owner 2026-07-06). The shelf-only surfaces still gate on sellsPacks, so this doesn't add
   // kiosk-only stores to "most likely on the shelf".
   const callable = (r: typeof retailers.$inferSelect) => (r.sellsPacks !== false || r.hasKiosk === true) && !!r.phone && !r.phone.startsWith("nophone:");
+  // callReady = safe to place a paid call (we reach a human). callable-but-not-ready → front-end greys it
+  // "coming soon" and disables the call button (never dialed). Site-check stores are handled separately via
+  // stockCheckMethod; the front-end precedence is muted(hidden) > site("check online") > !callReady(grey) > call.
+  const callReady = (r: typeof retailers.$inferSelect) => callable(r) && (
+    r.chainId == null
+    || ringsDirectChain.has(r.chainId)
+    || treeMappedChain.has(r.chainId)
+    || READY_TYPES.has(((r.chainId && types.get(r.chainId)) || "Other") as string)
+  );
   // inStock badge = a confirmed in-stock call in the last 7 days (drives the brand-check pin/row).
   const inStockSince = Math.floor(Date.now() / 1000) - 7 * 86400;
   const confirmedSet = new Set(
@@ -1393,7 +1410,7 @@ app.get("/pub/stores/near", async (c) => {
         lat: r.lat, lng: r.lng, region: r.region, state: r.state,
         sellsPacks: r.sellsPacks !== false, hasKiosk: r.hasKiosk === true,
         tier: r.hasKiosk === true ? 5 : (r.tier ?? null), inStock: confirmedSet.has(r.id), // any kiosk store = tier 5; inStock = brand-check pin
-        callable: callable(r), ownerOnly: r.ownerOnly === true, // ownerOnly → client shows it regardless of radius
+        callable: callable(r), callReady: callReady(r), ownerOnly: r.ownerOnly === true, // callReady:false → grey "coming soon", don't dial. ownerOnly → client shows it regardless of radius
         stockCheckMethod: (r.chainId && stockMethod.get(r.chainId)) || "call", // site = check their site, no call needed
         // Sell-methods taxonomy: how to get it (chain default), online flag, and price/source.
         sellMethods: (((r.chainId && sellMethodsByChain.get(r.chainId)) || "in_store").split(",").map((s) => s.trim()).filter(Boolean)),
