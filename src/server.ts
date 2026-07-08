@@ -1615,6 +1615,22 @@ function learnedShipDow(days: Record<string, number> | undefined, fallback: stri
 // anchors from the products catalog (recent sets only) — one pull powers era → set → type. Sets with
 // no catalog rows return products: [] (front end falls back to generic types). Cached 5 min.
 let pokemonSetsCache: { t: number; v: unknown } | null = null;
+// Display polish for the set → product picker: spell out cryptic type codes, and order the cards the way
+// a shop lists them (packs → boxes → blisters → ETBs → collections) instead of DB insertion order.
+const PRETTY_TYPE: Record<string, string> = { "PC ETB": "Pokémon Center ETB", "ETB": "Elite Trainer Box" };
+const prettyType = (t: string): string => PRETTY_TYPE[t] ?? t;
+const TYPE_ORDER = ["Booster Pack", "Booster Bundle", "Booster Box", "Single-Pack Blister", "Three-Pack Blister",
+  "Checklane Blister", "Elite Trainer Box", "Pokémon Center ETB", "Premium Collection", "Ultra-Premium Collection",
+  "Super-Premium Collection", "Special Collection", "Surprise Box", "Standard Tin", "Mini Tin", "Stacking Tin",
+  "Poster Collection", "Binder Collection", "Sticker Collection"];
+const orderProducts = (ps: Array<{ type: string; retail: number | null }>) => {
+  const seen = new Set<string>();
+  return ps.filter((p) => !seen.has(p.type) && !!seen.add(p.type)) // dedup by display label
+    .sort((a, b) => {
+      const ia = TYPE_ORDER.indexOf(a.type), ib = TYPE_ORDER.indexOf(b.type);
+      return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib) || a.type.localeCompare(b.type);
+    });
+};
 app.get("/pub/pokemon-sets", async (c) => {
   if (pokemonSetsCache && Date.now() - pokemonSetsCache.t < 300_000) return c.json(pokemonSetsCache.v);
   const file = JSON.parse(readFileSync(join(here, "../data/pokemon-sets.json"), "utf8")) as
@@ -1650,7 +1666,7 @@ app.get("/pub/pokemon-sets", async (c) => {
       logoKey: slug(String(s.code)),
       logo: `/logos/sets/${slug(String(s.code))}.png${av}`,
       banner: `/logos/set-banners/${slug(String(s.code))}.png${av}`,
-      products: [...(bySet.get(norm(String(s.name))) ?? new Map<string, number | null>()).entries()].map(([type, retail]) => ({ type, retail })) })) })) };
+      products: orderProducts([...(bySet.get(norm(String(s.name))) ?? new Map<string, number | null>()).entries()].map(([type, retail]) => ({ type: prettyType(type), retail }))) })) })) };
   pokemonSetsCache = { t: Date.now(), v };
   return c.json(v);
 });

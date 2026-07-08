@@ -101,6 +101,32 @@ function slug(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 }
 
+/**
+ * Curated core-SKU overlay for current-era Pokémon sets (booster packs/bundles/blisters the Drops DB
+ * lacks per set). Kept in its OWN file (data/pokemon-catalog-supplement.json) so `sync-dropsdb` never
+ * overwrites it. Insert-if-absent by externalId, so it's safe to run on every boot and additive to the
+ * Drops DB snapshot. Regenerate with `npx tsx scripts/gen-pokemon-catalog.ts`. Returns rows inserted.
+ */
+export async function seedCatalogSupplement(): Promise<number> {
+  let data: DropsDb;
+  try { data = JSON.parse(readFileSync(join(here, "../../data/pokemon-catalog-supplement.json"), "utf8")); }
+  catch { return 0; } // overlay is optional
+  const catId = new Map((await db.select().from(categories)).map((c) => [c.key, c.id]));
+  let n = 0;
+  for (const p of data.products) {
+    const meta = CATEGORY_META[p.category] ?? { key: slug(p.category), label: p.category };
+    const cid = catId.get(meta.key);
+    if (!cid) continue;
+    const res = await db.insert(products).values({
+      externalId: p.id, categoryId: cid, name: p.title,
+      series: p.series || null, type: p.type || null,
+      language: p.language || null, msrp: p.pmsrp ?? p.rmsrp ?? null,
+    }).onConflictDoNothing();
+    n += res.rowsAffected ?? 0;
+  }
+  return n;
+}
+
 export { seed };
 
 // Run as a CLI: `pnpm db:seed`
