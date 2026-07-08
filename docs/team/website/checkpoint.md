@@ -9,6 +9,15 @@ compaction summary — earlier history is known only via that summary, not full 
 as second-hand.
 
 **PARTIAL / NOT DONE / NO ANSWER / UNSURE (act on these):**
+- **❗UNRESOLVED — owner unhappy: the nice Design template never actually renders in the inbox.** Owner spent
+  real time designing a good-looking email template in Claude Design and we could NEVER get it to render — even
+  with the new "send yourself a test" it still lands as **plain text** on his end. This was NOT solved this
+  session. My side ports Design's mockups to email-safe table HTML (`renderBrandedEmail`, `EMAIL_DESIGN`), but
+  the owner is still seeing plain text — so either the branded HTML isn't the part being sent on the path he
+  tested, the mail client (Outlook mobile) is stripping/downgrading it, or images aren't loading so it collapses
+  to text. TREAT AS OPEN: reproduce what HE receives (send to his real address, view in Outlook mobile), confirm
+  the `renderBrandedEmail` HTML is on the test path, check Brevo "download images"/image hosting, and consider
+  using a real Brevo-hosted template (`brevoTemplateId`) instead of inline HTML if the client keeps stripping it.
 - **Service worker — re-add correctly (PHASE 2, NOT DONE).** It is currently RETIRED: `public/sw.js` is a
   self-destroying stub (install→skipWaiting; activate→delete all caches + unregister + navigate clients) and
   `checkit.html` unregisters all workers + deletes all caches on load. Owner WANTS it back as a feature (fast
