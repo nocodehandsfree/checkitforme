@@ -39,6 +39,19 @@
   call button + "coming soon" label; render precedence: muted(hidden) > `stockCheckMethod:"site"`("check
   online", NOT greyed) > `callReady:false`(grey) > callable. NOTE: **staging over-greys** (~22k) because it
   lacks prod's learned call-trees/`ringsDirect`; **prod greys far fewer** and the set shrinks as mapping runs.
+- **POKÉMON PRODUCT CATALOG — filled missing per-set SKUs + clearer labels (owner: "show all product types
+  for every set").** Root cause: products come from the **Drops DB** (`dropsdb.fungibles.com`, read-only
+  sync via `scripts/sync-dropsdb.ts` → `data/drops_db.json` → `products` table, **seeded ONLY on an empty
+  DB**). The Drops DB had each set's collections + ETB but was **missing the core SKUs** (booster packs,
+  bundles, single/3-pack blisters), and seed never re-ran, so catalog edits couldn't reach the live app.
+  Fix (all on staging, verified — Prismatic 6→10 products): curated **sync-safe overlay**
+  `data/pokemon-catalog-supplement.json` (120 SKUs, current eras **SV + Mega only**, main/special-aware →
+  booster box on MAIN sets only) + **`seedCatalogSupplement()` inserts-if-absent on EVERY boot** (implements
+  the "flows through on deploy" the sync tool always claimed but the empty-DB gate broke) + serve-time label
+  polish in `/pub/pokemon-sets` (**PC ETB → Pokémon Center ETB**, ETB → Elite Trainer Box) + shop-order sort.
+  Regen: `scripts/gen-pokemon-catalog.ts`. **NOT done / owner to verify:** older eras (SWSH & back predate
+  ETBs/bundles — left alone); exact set-specific collection prices; standard MSRPs used (pack $4.49, bundle
+  $26.94, box $161.64, ETB $49.99, single blister $6.49, 3-pk $14.99, checklane $5.99).
 - **Paused:** national hobby-hours WebSearch loop (Claude monthly spend cap). Resume on reset; ~956+ shops left.
 
 **Session 2026-07-06 (later) — "Hobby vanished at night" diagnosed + CATEGORY-SWEEP PLAYBOOK (owner directive).**
