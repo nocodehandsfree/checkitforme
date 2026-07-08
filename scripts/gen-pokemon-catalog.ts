@@ -28,17 +28,17 @@ const ERA_TYPES: Record<string, string[]> = {
   "Sword & Shield": MODERN,
   "Sun & Moon": ["Booster Pack", "Booster Box", "Elite Trainer Box", "Pokémon Center Elite Trainer Box", "Theme Deck",
     "Trainer Kit", "Build & Battle", "1-Pack Blister", "3-Pack Blister", "Standard Tin", "Mini Tin", "Collector Chest"],
-  "XY": ["Booster Pack", "Booster Box", "Elite Trainer Box", "Theme Deck", "Trainer Kit", "Prerelease Kit",
+  "XY": ["Booster Pack", "Booster Box", "Elite Trainer Box", "Theme Deck", "Trainer Kit", "Pre-Release Kit",
     "1-Pack Blister", "3-Pack Blister", "Standard Tin", "Collector Chest", "Collection Box"],
-  "Black & White": ["Booster Pack", "Booster Box", "Theme Deck", "Trainer Kit", "Prerelease Kit",
+  "Black & White": ["Booster Pack", "Booster Box", "Theme Deck", "Trainer Kit", "Pre-Release Kit",
     "1-Pack Blister", "3-Pack Blister", "Standard Tin", "Collection Box"],
-  "HeartGold & SoulSilver": ["Booster Pack", "Booster Box", "Theme Deck", "Trainer Kit", "Prerelease Kit",
+  "HeartGold & SoulSilver": ["Booster Pack", "Booster Box", "Theme Deck", "Trainer Kit", "Pre-Release Kit",
     "1-Pack Blister", "3-Pack Blister", "Standard Tin", "Collection Box"],
-  "Platinum": ["Booster Pack", "Booster Box", "Theme Deck", "Prerelease Kit", "1-Pack Blister", "3-Pack Blister",
+  "Platinum": ["Booster Pack", "Booster Box", "Theme Deck", "Pre-Release Kit", "1-Pack Blister", "3-Pack Blister",
     "Standard Tin", "Collection Box"],
-  "Diamond & Pearl": ["Booster Pack", "Booster Box", "Theme Deck", "Trainer Kit", "Prerelease Kit",
+  "Diamond & Pearl": ["Booster Pack", "Booster Box", "Theme Deck", "Trainer Kit", "Pre-Release Kit",
     "1-Pack Blister", "3-Pack Blister", "Standard Tin"],
-  "EX": ["Booster Pack", "Booster Box", "Theme Deck", "Starter Kit", "Prerelease Kit", "1-Pack Blister",
+  "EX": ["Booster Pack", "Booster Box", "Theme Deck", "Starter Kit", "Pre-Release Kit", "1-Pack Blister",
     "3-Pack Blister", "Standard Tin", "Collection Box"],
   "e-Card": ["Booster Pack", "Booster Box", "Starter Deck", "1-Pack Blister", "3-Pack Blister"],
   "Neo": ["Booster Pack", "Booster Box", "1-Pack Blister"],
@@ -52,7 +52,7 @@ const MSRP: Record<string, number> = {
   "Pokémon Center Elite Trainer Box": 69.99, "Build & Battle": 24.99, "Build & Battle Stadium": 49.99,
 };
 // Sealed booster box + prerelease/checklane products only exist for MAIN sets, never the special ".5" sets.
-const MAIN_ONLY = new Set(["Booster Box", "Build & Battle", "Build & Battle Stadium", "Checklane Blister", "Prerelease Kit"]);
+const MAIN_ONLY = new Set(["Booster Box", "Build & Battle", "Build & Battle Stadium", "Checklane Blister", "Pre-Release Kit"]);
 
 const norm = (s: string) => (s || "").toLowerCase().replace(/\s*\(base\)\s*/g, "").replace(/\s*\/\s*/g, " & ").trim();
 // What each set already carries in the Drops DB — so we never duplicate a set-specific SKU already curated.
