@@ -1618,12 +1618,17 @@ function learnedShipDow(days: Record<string, number> | undefined, fallback: stri
 let pokemonSetsCache: { t: number; v: unknown } | null = null;
 // Display polish for the set → product picker: spell out cryptic type codes, and order the cards the way
 // a shop lists them (packs → boxes → blisters → ETBs → collections) instead of DB insertion order.
-const PRETTY_TYPE: Record<string, string> = { "PC ETB": "Pokémon Center ETB", "ETB": "Elite Trainer Box" };
+const PRETTY_TYPE: Record<string, string> = {
+  "PC ETB": "Pokémon Center Elite Trainer Box", "Pokémon Center ETB": "Pokémon Center Elite Trainer Box",
+  "ETB": "Elite Trainer Box", "Three-Pack Blister": "3-Pack Blister",
+};
 const prettyType = (t: string): string => PRETTY_TYPE[t] ?? t;
-const TYPE_ORDER = ["Booster Pack", "Booster Bundle", "Booster Box", "Single-Pack Blister", "Three-Pack Blister",
-  "Checklane Blister", "Elite Trainer Box", "Pokémon Center ETB", "Premium Collection", "Ultra-Premium Collection",
-  "Super-Premium Collection", "Special Collection", "Surprise Box", "Standard Tin", "Mini Tin", "Stacking Tin",
-  "Poster Collection", "Binder Collection", "Sticker Collection"];
+const TYPE_ORDER = ["Booster Pack", "Booster Bundle", "Booster Box", "Single-Pack Blister", "1-Pack Blister",
+  "2-Pack Blister", "3-Pack Blister", "Checklane Blister", "Elite Trainer Box", "Pokémon Center Elite Trainer Box",
+  "Build & Battle", "Build & Battle Stadium", "Theme Deck", "Starter Deck", "Starter Set", "Starter Kit",
+  "Trainer Kit", "Prerelease Kit", "Premium Collection", "Ultra-Premium Collection", "Super-Premium Collection",
+  "Special Collection", "Collection Box", "Surprise Box", "Collector Chest", "Standard Tin", "Mini Tin",
+  "Stacking Tin", "Poster Collection", "Binder Collection", "Sticker Collection"];
 const orderProducts = (ps: Array<{ type: string; retail: number | null }>) => {
   const seen = new Set<string>();
   return ps.filter((p) => !seen.has(p.type) && !!seen.add(p.type)) // dedup by display label
