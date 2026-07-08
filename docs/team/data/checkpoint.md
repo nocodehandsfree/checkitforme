@@ -62,11 +62,15 @@
   3 write paths so it can't return: `server.ts` mapping-write, `calls/trainer-batch.ts` (locked route +
   candidate), `calls/service.ts` (passive learn) — all now set `avgTreeSeconds`/`navSeconds` = **null when
   direct**. (Mapping-lane files, but the fix is a trivial guard; flagged here for the mapping dev.)
-- **TODO — ROUND 2 (owner): older-era Pokémon product types.** Extend the catalog overlay past the current
-  eras to **Sword & Shield and back**, with ERA-CORRECT lineups + pricing: SWSH packs ~$3.99 (box ~$143.64,
-  bundle ~$23.94); **no Booster Bundle pre-2019**; **no ETB pre-2013** (Plasma era on). Same generator
-  (`scripts/gen-pokemon-catalog.ts`) — add earlier eras to `ERAS` + an era→MSRP table instead of the single
-  SV/Mega constant set. Owner to confirm era prices.
+- **ROUND 2 DONE — all-era Pokémon catalog (owner's authoritative per-era type lists).**
+  `scripts/gen-pokemon-catalog.ts` now covers EVERY era (Base Set → Mega Evolution) → **1,112 SKUs** in
+  `data/pokemon-catalog-supplement.json`. Era-aware + honest: retail PRICES only on current shelf eras
+  (Mega + SV); older/out-of-print eras show the product TYPES with **no price** (never fabricate a historical
+  MSRP). Booster box / build&battle / checklane = MAIN-set only. Serve-layer label+order in `/pub/pokemon-sets`
+  (PC ETB → Pokémon Center Elite Trainer Box; Three-Pack → 3-Pack, display-deduped). 5 new front-end icons
+  (pack, deck, kit, build&battle, chest) in `checkit.html`. Verified live on staging: Base Set 6, Prismatic 10
+  (no dupes), Evolving Skies 10. NOTE: `seedCatalogSupplement` is insert-if-absent → round-1 "Three-Pack
+  Blister" rows linger in the DB but dedupe at display; switch it to upsert if we later need price EDITS to flow.
 - **Paused:** national hobby-hours WebSearch loop (Claude monthly spend cap). Resume on reset; ~956+ shops left.
 
 **Session 2026-07-06 (later) — "Hobby vanished at night" diagnosed + CATEGORY-SWEEP PLAYBOOK (owner directive).**
