@@ -1391,7 +1391,7 @@ html[data-skin="v2"] .findbtn-primary.on{background:linear-gradient(#20202A,#202
 /* HOBBY flow (P3a–P5/§5.13) — hidden preview. Era art on the page, press-dip; set tiles; product rows. */
 body.huntmode #builder > *:not(#findcard):not(.hero){display:none!important}
 body.huntmode #findcard #findbody{display:none!important}
-body.huntmode #hobby{display:block}
+body.huntmode #hobby:not(.hidden){display:block} /* :not(.hidden) so any view that hides #hobby (result/history/calendar/zones) actually wins — else huntmode's specificity kept the era/set art bleeding UNDER those views */
 html[data-skin="v2"] .hob-era{display:block;width:82%;margin:0 auto 26px;background:none;border:0;padding:0;cursor:pointer;transition:transform .12s}
 html[data-skin="v2"] .hob-era:active{transform:translateY(3px) scale(.97)}
 /* Era picker: a search box + 2-col grid of era BUTTON-CARDS (logo art up top, name + set count below).
@@ -2546,10 +2546,11 @@ function ensureModeChips(){
       kb2.parentElement.insertBefore(tb,kb2); }
     else if(!want&&ex){ ex.remove(); if(typeof MODE!=='undefined'&&MODE==='thrift'){ try{ setMode('call'); }catch(_){ } } }
   }
-  // Restore a premium mode persisted from last session, once its chip exists (entitlement now known).
-  try{ const cm=localStorage.getItem('cifm_mode');
-    if((cm==='hobby'||cm==='thrift') && (typeof MODE==='undefined'||MODE!==cm) && document.querySelector('.modetab[data-mode="'+cm+'"]')) setMode(cm);
-  }catch(_){ }
+  // NOTE (owner 07-08): do NOT auto-restore hobby/thrift on load. Reloading dumped the user into a full
+  // Pokémon hunt (body.huntmode) on the home page — and because /app/me is async, it re-flipped INTO hobby
+  // even after a call/result had already rendered, leaving the era/set art tinted under the status view.
+  // Retail ('call') is the home base on every reload; hobby/thrift are opt-in per session via their chip.
+  // (Kiosk is remembered separately below — that one the owner does want to persist.)
 }
 function setLang(l){ LANG=l; localStorage.setItem('runnr_lang',l); applyLang();
   // Re-render everything built in JS so a language flip is instant and complete.
@@ -5156,6 +5157,7 @@ function openHistory(forceCal){
 // The empty-today screen: clean header (product switcher + calendar to browse past days) and an empty
 // state with a CTA to check a store. Reuses the result-view chrome so the calendar/switcher are present.
 function showTodayLanding(forceCal){
+  try{ exitHunt(); }catch(_){ } // clear body.huntmode too — else the era/set art stays under the calendar/history view
   stopLiveTimers(); if($('hangup_btn'))$('hangup_btn').style.display='none';
   ['live','builder','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
   document.body.classList.remove('fabbed');
