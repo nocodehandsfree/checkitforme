@@ -7,7 +7,7 @@
 //  - /logos/*, images, fonts → cache-first (they're stable/versioned).
 //  - everything else  → left to the browser.
 // Defensive throughout: any error falls back to the network, so the SW can never white-screen the app.
-const VERSION = 'cifm-v5'; // v5: html.tone-* status-bar bake — also evicts the stale pre-redesign shell pinned in installed (A2HS) apps
+const VERSION = 'cifm-v6'; // v6: retire the v2 preview flag (redesign is now the ONLY render) + fresh-first HTML so a slow network can't serve the old design
 const SHELL = VERSION + '-shell';
 const DATA = VERSION + '-data';
 const STATIC = VERSION + '-static';
@@ -49,17 +49,18 @@ self.addEventListener('fetch', (e) => {
 function timeout(ms) { return new Promise((resolve) => setTimeout(() => resolve(null), ms)); }
 
 async function networkFirst(req) {
-  // Adaptive race: when we HOLD a cached copy of this page, only give the network a short head start
-  // (slow LTE was making every product-page hop feel stuck for seconds). No cached copy -> patient.
-  // The losing network response still lands in the cache below, so the NEXT hop is fresh.
+  // Fresh-first for HTML: when ONLINE the newest page always wins — no "serve the cached page after
+  // 1.2s" race, which is what kept showing the OLD design on a slightly slow connection (owner 07-07:
+  // "staging is exactly how it'll look, always"). We wait up to 6s for the network; only a truly stalled
+  // or offline connection falls back to the cached shell so the app still opens. The network response
+  // always refreshes the cache for next time.
   let cached = null; try { cached = await caches.match(req); } catch (_) {}
-  const patience = cached ? 1200 : 3500;
   const net = fetch(req).then((r) => {
     if (r && r.ok) { const copy = r.clone(); caches.open(SHELL).then((c) => c.put(req, copy)).catch(() => {}); }
     return r;
   }).catch(() => null);
   try {
-    const fresh = await Promise.race([net, timeout(patience)]);
+    const fresh = await Promise.race([net, timeout(6000)]);
     if (fresh) return fresh;
   } catch (_) { /* fall through */ }
   return cached || (await caches.match('/')) || net.then((r) => r || fetch(req));

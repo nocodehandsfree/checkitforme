@@ -33,12 +33,12 @@
     navigator.serviceWorker.addEventListener('controllerchange',function(){ if(_swReloaded||!_hadController)return; _swReloaded=true; try{ location.reload(); }catch(_){} });
   }catch(e){} }); }</script>
 <script>(function(){try{
-  // PREVIEW SKIN (site-redesign loop): ?skin=v2 turns the new elevated skin ON for this device
-  // (persisted); ?skin=off reverts. Normal visitors never see it — everything v2 is scoped under
-  // html[data-skin="v2"], so the default render is untouched until the owner approves the takeover.
-  var spk=new URLSearchParams(location.search).get('skin');
-  if(spk==='v2') localStorage.setItem('cifm_skin','v2'); else if(spk==='off') localStorage.removeItem('cifm_skin');
-  if(localStorage.getItem('cifm_skin')==='v2') document.documentElement.setAttribute('data-skin','v2');
+  // THE design. The redesign is now the ONLY render — no preview flag, no old skin (owner 07-07:
+  // "kill the whole v2/v3 thing, staging is exactly how it'll look, always"). Set before first paint so
+  // there's never a flash of the old look. All the elevated styling is scoped under html[data-skin="v2"];
+  // making it unconditional here retires the toggle for good. ?skin is ignored now.
+  document.documentElement.setAttribute('data-skin','v2');
+  try{ localStorage.removeItem('cifm_skin'); }catch(e){} // clear the old per-device flag so nothing lingers
 }catch(e){}})();</script>
 <script>(function(){try{
   var sp=new URLSearchParams(location.search);
