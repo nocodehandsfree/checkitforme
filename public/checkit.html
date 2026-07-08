@@ -1008,7 +1008,7 @@ __BRAND_HEAD__
   .ho-card .label{font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
   .ho-card h3{margin:5px 0 0;font-size:16px;font-weight:800;letter-spacing:-.2px}
   .ho-card p.hint{font-size:13px;color:var(--muted);line-height:1.5;margin:8px 0 0}
-  .ho-card .body{margin-top:16px;display:none}
+  .ho-card .body{margin-top:22px;display:none}
   .ho-step.active .ho-card .body{display:block}
   .ho-toggle{display:flex;background:var(--terminal);border:1px solid var(--border);border-radius:13px;padding:4px;gap:4px}
   .ho-toggle button{flex:1;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:13px;padding:10px 6px;border-radius:9px;cursor:pointer;transition:.18s;white-space:nowrap}
@@ -1131,7 +1131,7 @@ html[data-skin="v2"] .toast.tneutral{background:linear-gradient(180deg,#31313A 0
 html[data-skin="v2"] .toast.taccent{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;box-shadow:0 14px 30px -8px color-mix(in srgb,var(--accent,#FFCB05) 45%,transparent),inset 0 1px 0 rgba(255,255,255,.4)}
 /* IS1 EXACT: share = white 12.5/800/.13em label capsule (icon left, arrow right); action tiles 2-col. */
 html[data-skin="v2"] .smbtn.is1s{display:flex;align-items:center;justify-content:space-between;width:100%;color:#FFF;font-size:12.5px;letter-spacing:.13em;padding:13px 22px}
-html[data-skin="v2"] .is1g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+html[data-skin="v2"] .is1g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
 html[data-skin="v2"] .is1t{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:11px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left}
 html[data-skin="v2"] .is1t:active{transform:translateY(2px)}
 html[data-skin="v2"] .is1t .tl{width:32px;height:32px;border-radius:10px;background:rgba(74,222,128,.12);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
@@ -1541,6 +1541,12 @@ html[data-skin="v2"] #acctOverlay .modal,html[data-skin="v2"] #buyOverlay .modal
    "appearing", not sliding). Close/swipe-down slide back down — handled in closeAccount/closeBuy + sheetDrag. */
 html[data-skin="v2"] #acctOverlay.on .modal,html[data-skin="v2"] #buyOverlay.on .modal,html[data-skin="v2"] #pageOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 @keyframes sheetUpV2{from{transform:translateY(100%)}to{transform:translateY(0)}}
+/* Post-your-score = a bottom sheet like the rest (owner 07-07: was a centered popup with an X). */
+html[data-skin="v2"] #scorePostOv{align-items:flex-end;padding:0}
+html[data-skin="v2"] #scorePostOv .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
+html[data-skin="v2"] #scorePostOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
+html[data-skin="v2"] #scorePostOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
+html[data-skin="v2"] #scorePostOv .modal>.x{display:none!important}
 html[data-skin="v2"] #buyOverlay .modal{overflow-y:auto;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
 /* 6c CHECKOUT (v2) — branded on-site Stripe Elements page. Bottom sheet, comp tokens: raised order
    card, carved "or pay with card" divider, Payment Element in the well, green SUBSCRIBE ring capsule. */
@@ -3089,7 +3095,8 @@ function openScorePop(){
   if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='scorePostOv';
     ov.innerHTML='<div class="modal" style="position:relative;max-width:430px;text-align:left"><span class="x" onclick="closeScorePop()">×</span><h3 style="margin:2px 0 10px" >'+t('sc.pop.title','Post your score')+'</h3><div id="scorePostHost"></div></div>';
     ov.onclick=e=>{ if(e.target===ov) closeScorePop(); };
-    document.body.appendChild(ov); }
+    document.body.appendChild(ov);
+    try{ sheetDrag('scorePostOv', ()=>closeScorePop()); }catch(_){ } } // bottom-sheet swipe-down to dismiss (owner 07-07)
   const c=$('composer');
   if(c){ if(!openScorePop._home){ openScorePop._home={parent:c.parentElement,next:c.nextElementSibling}; } $('scorePostHost').appendChild(c); c.style.display=''; }
   ov.classList.add('on'); try{ succFilter(); }catch(_){ } track('score_pop_open'); // surface the in-stock store list right away
@@ -3293,14 +3300,16 @@ async function geocodeSearch(){
 }
 // Set a location (from GPS, a master ZIP, or a dropped pin) and load its stores.
 function savedLoc(){ try{ const s=JSON.parse(localStorage.getItem('cifm_loc')||'null'); if(s&&typeof s.lat==='number'&&typeof s.lng==='number'&&(Date.now()-(s.t||0)<7*24*3600*1000)) return s; }catch(e){} return null; }
-function setUserLoc(lat,lng){
+function setUserLoc(lat,lng,keepView){
   USER_LOC={lat,lng};
-  MAP_FIT_NEXT=true; // a new authoritative location (📍 findMe, ZIP search, master pin-drop) → frame its radius on the next map render
+  // keepView = the user is tweaking their spot on an OPEN map (master pin-drop) — keep their current zoom.
+  // Only an authoritative relocate (📍 findMe, ZIP search, first fix) re-frames the radius.
+  MAP_FIT_NEXT=!keepView;
   try{ localStorage.setItem('cifm_loc', JSON.stringify({lat,lng,t:Date.now()})); }catch(e){} // remember across refreshes — no re-prompt
   $('rchips').style.display='block'; setRadius(RADIUS);
   const mt=$('maptoggle'); if(mt){ mt.style.display=''; mt.classList.add('glow'); } // pulse so they notice the map is tappable
   const b=$('findbtn'); if(b){ b.classList.remove('loading'); b.classList.add('on'); }
-  if(MAP && $('mapview') && $('mapview').style.display==='block') placeMyPin(lat,lng,false); // keep the map pin in sync (e.g. ZIP relocate)
+  if(MAP && $('mapview') && $('mapview').style.display==='block') placeMyPin(lat,lng,keepView?true:false); // keep the map pin in sync; keepView → no recenter pan
   fetchNear(); loadBestBet(); loadFinds(); // re-pull the banner localized to the new location
 }
 function findMe(after){
@@ -3328,7 +3337,7 @@ let MAP=null, MAP_LOADED=false, MAP_MARKERS=[], PINNING=false, MY_PIN=null, MY_R
 // (📍 findMe / ZIP / master pin-drop). A radius change or a background store refresh never re-frames it, so
 // the view stays exactly where you left it (zoomed into wherever you're looking). MAP_FIT_NEXT is the
 // one-shot "frame on the next render" flag those intentional moments set.
-let MAP_FIT_NEXT=false;
+let MAP_FIT_NEXT=false, MAP_GESTURING=false;
 // Neon store-color legend shown along the bottom of the map.
 function mapLegendHtml(){
   const dot=(c)=>`<span class="lgd" style="background:${c};box-shadow:0 0 7px ${c},0 0 2px ${c}"></span>`;
@@ -3360,7 +3369,12 @@ function initMap(){
     // Regular users tap store pins to check; the map never moves them.
     // Master drops a pin → load that area's stores ON the open map (owner 2026-07-02: the map stays
     // up until they close it — the pins repaint in place via renderStores' map hook).
-    MAP.on('click',(e)=>{ if(!isMaster() && !hasFeature('any_town')) return; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng); toast(t('toast.locating2','Locating stores'),'neutral'); });
+    // A pinch-zoom / drag can end in a stray 'click' — that used to drop a master pin and snap the view
+    // back to the radius ring, so zooming felt like it "jumped to my location." Ignore clicks that are the
+    // tail of a gesture, and when a master DOES drop a pin on an open map, keep their current zoom (don't refit).
+    MAP.on('movestart zoomstart dragstart',()=>{ MAP_GESTURING=true; });
+    MAP.on('moveend zoomend dragend',()=>{ clearTimeout(window.__mapg); window.__mapg=setTimeout(()=>{ MAP_GESTURING=false; },260); });
+    MAP.on('click',(e)=>{ if(!isMaster() && !hasFeature('any_town')) return; if(MAP_GESTURING) return; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng,true); toast(t('toast.locating2','Locating stores'),'neutral'); });
     MAP_FIT_NEXT=true; // first paint → frame the search radius (then it stays put until a new location)
     setTimeout(()=>MAP.invalidateSize(),60); renderMapPins();
   }catch(e){ toast(t('toast.maploading',"Map didn't load. Here's the list.")); toggleMap(); }
@@ -4855,7 +4869,7 @@ function showResult(o, cid){
     </div>
     ${o.status==='pending' ? '' : (inStock ? inActions : '')}
     ${o.status==='pending' ? '' : upsell}
-    <div class="foot" style="margin-top:16px">${o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one')}</div>`;
+    <div class="foot" style="margin-top:26px">${o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one')}</div>`;
   $('result').classList.remove('hidden');
   navMark('result');
   // Entrance motion: play ONCE per call, on the CONTENT-READY render. Reopening a past-day call renders
@@ -6096,7 +6110,7 @@ function renderBuyPlans(){
     // Plans | Pay as you go — the designed either/or. Packs ride POLICY + the live /app/checkout.
     if(!document.getElementById('buymode')){
       const bc=$('billcycle');
-      if(bc){ const mt=document.createElement('div'); mt.id='buymode'; mt.className='ho-toggle'; mt.style.margin='0 0 10px';
+      if(bc){ const mt=document.createElement('div'); mt.id='buymode'; mt.className='ho-toggle'; mt.style.margin='20px 0 12px'; /* top gap so the Plans/PAYG toggle clears the headline (was 0 → crammed) */
         mt.innerHTML=`<button class="on" onclick="setBuyMode('plans',this)">${t('buy.tabplans','Plans')}</button><button onclick="setBuyMode('packs',this)">${t('buy.tabpayg','Pay as you go')}</button>`;
         bc.parentElement.insertBefore(mt,bc); }
     }
