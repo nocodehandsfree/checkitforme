@@ -25,6 +25,20 @@
   `/pub/stores/near` proof — staging `type=Hobby`→175 real Hobby stores; **prod returns identical 216 for
   Hobby/Thrift/none → ignores `type` and has ~0 Hobby-typed stores.** Fixes on the staging→prod push: the
   `type` filter (`typeF`, server.ts L1165/1226) is staging-branch-only, and hobby store data hasn't propagated.
+- **ROOT CAUSE of "admin mapping won't stay fixed" — FOUND + FIXED (`src/db/import-data.ts`):** boot-time
+  `backfillChainTypes()` (`bootstrap.ts:239`) re-derives `chain.type` from the `CHAIN_TYPES` name→type table
+  every deploy. Thrift/hobby brands weren't in it → prod (older/unguarded code) reset them to "Other" each
+  boot. Proven live: my `muted`/`isMSRP`/`spotty` edits **held** on prod, only `type` reverted. Fix: added
+  Goodwill/Savers/Salvation Army/Unique(+variants)→Thrift and the hobby independents→Hobby to `CHAIN_TYPES`,
+  so the category is correct at the source under any code path. Durable on prod at the promote (which also
+  brings staging's guard `if c.type!=="Other" continue`). Hand-patching prod `type` is futile — it reverts.
+- **NEW: `callReady` flag on `/pub/stores/near` (owner launch rule: don't dial unmapped stores = wasted $;
+  show them GREYED "coming soon" instead of hiding).** Server change (verified live on staging): `callReady`
+  = callable AND (independent/no-chain OR `ringsDirect` OR `treeStatus` learned/verified OR type Hobby/Thrift).
+  Unmapped corporate chains → `callReady:false`. **Front-end half is the WEBSITE lane** — grey + disable the
+  call button + "coming soon" label; render precedence: muted(hidden) > `stockCheckMethod:"site"`("check
+  online", NOT greyed) > `callReady:false`(grey) > callable. NOTE: **staging over-greys** (~22k) because it
+  lacks prod's learned call-trees/`ringsDirect`; **prod greys far fewer** and the set shrinks as mapping runs.
 - **Paused:** national hobby-hours WebSearch loop (Claude monthly spend cap). Resume on reset; ~956+ shops left.
 
 **Session 2026-07-06 (later) — "Hobby vanished at night" diagnosed + CATEGORY-SWEEP PLAYBOOK (owner directive).**
