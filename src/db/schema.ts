@@ -167,6 +167,9 @@ export const retailers = sqliteTable(
     // Owner-only demo store: hidden from every consumer list and un-callable EXCEPT for the
     // master/comp account. Powers the "Fun" rehearsal store (dials the owner's cell as the clerk).
     ownerOnly: integer("owner_only", { mode: "boolean" }).notNull().default(false),
+    // Draft/published gate for the one-dataset store sync: drafts (false) live on STAGING only —
+    // never pushed to prod — so a test store is invisible to customers until published.
+    published: integer("published", { mode: "boolean" }).notNull().default(true),
     createdAt: integer("created_at").notNull().default(now),
   },
   (t) => ({ byChain: index("retailers_chain_idx").on(t.chainId) }),

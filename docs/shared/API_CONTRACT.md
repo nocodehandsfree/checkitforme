@@ -167,6 +167,11 @@ normal call are unchanged.
 - **Hours:** POST `/api/hours/backfill`, `/api/hours/:id/refresh`.
 - **Reference:** GET `/api/categories`, `/api/chains`, PATCH `/api/chains/:id`, GET `/api/products`,
   GET/POST/PATCH/DELETE `/api/statuses`.
+- **Store-data sync (one dataset):** POST `/api/store-sync` (prod receives; staging returns 400
+  `staging_is_the_source`) — field-scoped upsert of CURATED chain/retailer data from staging; learned
+  columns (nav*, tree*, hours, shipmentDay, phoneTree…) are never written. GET `/api/store-sync/status`
+  → `{ enabled, lastRun }`. Retailers carry `published` (drafts stay staging-only). Sender: staging,
+  every 5 min, diffs-only; inert until `STORE_SYNC_URL` + `STORE_SYNC_TOKEN` are set on staging.
 - **Dashboards:** GET `/api/admin/metrics | pulse | overview | restock-intel | store-intel |
   user-history`. **[CHANGING]** these move table-scans → SQL aggregation; response shapes preserved.
 - **Admin agent:** POST `/api/admin/agent` `{ messages:[{role,text}] }` → `{ reply, actions, error? }`.

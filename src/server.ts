@@ -19,6 +19,7 @@ import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
+import { applyStoreSync, storeSyncTick, syncStatus } from "./store-sync";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -3695,6 +3696,7 @@ const GTM_SEED: { id: string; title: string; detail: string; area: "backend" | "
   { id: "hobby-thrift-data", title: "Populate hobby + thrift stores nationwide", detail: "Data: hobby stores with open/close times; a nationwide thrift + hobby search (like the main-chain sweep) to populate many more.", area: "backend", agent: "data", critical: false, status: "todo" },
   { id: "x-autopost", title: "X account + daily auto-posting agent", detail: "Create the X account; an agent posts cool info daily. Keep the business hands-free.", area: "ops", agent: "social", critical: false, status: "todo" },
   { id: "repo-split", title: "Extract Check into its own repo", detail: "Major overhaul — pause everything and rip Check out of Fungibles into a clean repo. (Post-launch; expect breakage.)", area: "ops", agent: "devops", critical: false, status: "todo" },
+  { id: "store-data-one-source", title: "Store data: one dataset everywhere", detail: "Staging is the curation home; curated store data auto-syncs to prod (field-scoped, diffs-only, drafts stay staging-only via the published flag). Learned call data never overwritten. Built; needs STORE_SYNC_URL + STORE_SYNC_TOKEN set on the staging service to activate.", area: "backend", agent: "devops", critical: true, status: "doing" },
   { id: "admin-redesign-reports", title: "Admin redesign — reports tell a story", detail: "Audit every report/card for performance, necessity, and placement: there are so many it feels like false positives. Cut or merge the noise, regroup what's left into one beginning-to-end story of the business (pulse -> calls -> money -> growth). Owner runs 5 Design comps off docs/design/STYLE_GUIDE.md; Design delivers comps, Admin implements.", area: "frontend", agent: "design", critical: false, status: "todo" },
   { id: "deck-video", title: "Finalize the check deck + share video", detail: "Not critical for launch.", area: "ops", agent: "owner", critical: false, status: "todo" },
   { id: "analytics", title: "Analytics ready on production", detail: "The non-GA analytics tool (API key already set) is live on prod tracking every page, so we can see paths + optimize after launch.", area: "backend", agent: "devops", critical: true, status: "todo" },
@@ -3703,6 +3705,15 @@ const GTM_SEED: { id: string; title: string; detail: string; area: "backend" | "
   { id: "price-editor", title: "Admin price-editor → Stripe", detail: "Change any monthly price / PAYG rate in admin and push straight to Stripe, no code change.", area: "backend", agent: "devops", critical: false, status: "todo" },
   { id: "money-endpoint-guard", title: "Money-endpoint rate limits + security headers", detail: "Per-IP limits on the four call-placing endpoints + baseline security headers. Shipped.", area: "backend", agent: "devops", critical: true, status: "done" },
 ];
+// ---- Store-data sync (one dataset): staging pushes curated store data here; see src/store-sync.ts ----
+app.post("/api/store-sync", async (c) => {
+  if (config.staging.on) return c.json({ error: "staging_is_the_source" }, 400); // only prod receives
+  const p = await c.req.json().catch(() => null);
+  if (!p) return c.json({ error: "bad_payload" }, 400);
+  return c.json({ ok: true, ...(await applyStoreSync(p)) });
+});
+app.get("/api/store-sync/status", (c) => c.json(syncStatus()));
+
 app.get("/api/gtm", async (c) => {
   let items = GTM_SEED;
   try { const raw = await getSetting("gtm_checklist"); if (raw) { const p = JSON.parse(raw); if (Array.isArray(p?.items)) items = p.items; } }
@@ -4939,6 +4950,7 @@ wssTwilio.on("connection", (ws: WebSocket, _req: unknown, qRoom: string) => {
 setInterval(() => withLock("ingest", 30, ingestPending).catch((e) => console.error("ingest:", e)), 8_000);
 setInterval(() => withLock("tick", 55, schedulerTick).catch((e) => console.error("tick:", e)), 60_000);
 setInterval(() => withLock("geocode", 10, () => geocodeMissing(1)).catch((e) => console.error("geocode:", e)), 3_000);
+setInterval(() => withLock("store-sync", 280, storeSyncTick).catch((e) => console.error("store-sync:", e)), 300_000); // staging→prod curated store data (inert until STORE_SYNC_URL/TOKEN set)
 setInterval(() => withLock("harvest", 110, harvestHoursTick).catch((e) => console.error("harvest:", e)), 120_000); // self-updating hours (policy-gated, off by default)
 setInterval(() => withLock("cust-sched", 85, customerScheduleTick).catch((e) => console.error("cust-sched:", e)), 90_000); // subscriber auto-checks (policy-gated)
 setInterval(() => withLock("gmail-receipts", 25, gmailReceiptTick).catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)
