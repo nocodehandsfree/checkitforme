@@ -3851,6 +3851,10 @@ app.patch("/api/chains/:id", async (c) => {
   if (b.stockCheckConfidence !== undefined) patch.stockCheckConfidence = b.stockCheckConfidence || null; // e.g. "spotty" = inconsistent stock (off-price/thrift), not a reliable MSRP source
   if (b.sellMethods !== undefined) patch.sellMethods = b.sellMethods || null; // CSV: in_store|pickup|ship
   if (typeof b.isMSRP === "boolean") patch.isMSRP = b.isMSRP;
+  // Invariant: a direct-answer chain has no menu, so it must carry NO tree-seconds — a stray value arms
+  // the connect-timer and mutes the agent (silent-agent bug). Enforce it here too, so a manual admin edit
+  // that flips a chain to direct can't recreate it (the learn/trainer paths already guard this).
+  if (patch.ringsDirect === true || patch.answerPath === "direct_human") patch.avgTreeSeconds = null;
   const [row] = await db.update(chains).set(patch).where(eq(chains.id, Number(c.req.param("id")))).returning();
   invalidateRefCache();
   return c.json(row);
