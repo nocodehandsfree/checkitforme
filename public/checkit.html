@@ -42,11 +42,15 @@
 }catch(e){}})();</script>
 <script>(function(){try{
   var sp=new URLSearchParams(location.search);
+  // The tone the SERVER baked as an html.tone-* class at load (?tone=in|out|unk|soon). iOS samples the
+  // status-bar colour at FIRST PAINT only, so a verdict that settles in-page compares against this to
+  // decide whether it needs ONE real navigation to re-bake the colour (ensureToneLoaded).
+  window.__loadTone = sp.get('tone') || '';
   if(!sp.has('call')) return;
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="tonebake-r100" />
+<meta name="x-rev" content="tonebake-r101" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -4539,10 +4543,26 @@ function setThemeTone(){}
 // rv-* system is the single source of tone — drop the baked class so leaving a result can't strand a
 // stale tint at the top.
 function dropBakedTone(){ try{ ['tone-in','tone-out','tone-unk','tone-soon'].forEach(c=>document.documentElement.classList.remove(c)); }catch(_){ } }
-// No-op: we no longer navigate to a ?tone URL to bake theme-color (that approach tinted the bottom bar and
-// blacked out the top in Compact Safari). The top now tints via page-sampling of the body/html gradient.
+// In-page verdicts (a live call settling, opening a check from the rail) change the page colour AFTER
+// iOS has already sampled the bar — Safari does NOT resample on script/CSS changes, so the bar keeps
+// whatever the load painted (owner repro: amber result page, black bar). The only reliable re-tint is a
+// real navigation: reload ONCE into the ?call&tone URL so the server bakes html.tone-* and the first
+// paint is the verdict colour. Plain iOS Safari only — standalone paints under the bar already, and no
+// other browser tints from sampling. One nav per result-session (TONE_NAV_DONE, reset by backToBuilder
+// when a new check starts) so browsing the call rail can never reload-loop. This is the CLASS-bake nav —
+// the old theme-color-meta nav it replaces is what tinted the bottom bar; do not bring that meta back.
 let TONE_NAV_DONE=false;
-function ensureToneLoaded(){ return false; }
+function ensureToneLoaded(cls,cid){
+  try{
+    if(TONE_NAV_DONE||!cid||!{in:1,out:1,unk:1,soon:1}[cls]) return false;
+    if(navigator.standalone||!/iP(hone|ad|od)/.test(navigator.userAgent||'')) return false;
+    TONE_NAV_DONE=true; // one shot per page load, hit or miss
+    if((window.__loadTone||'')===cls) return false; // server already baked this tone — the bar is right
+    var sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',cid); sp.set('tone',cls);
+    location.replace(location.pathname+'?'+sp.toString());
+    return true;
+  }catch(_){ return false; }
+}
 window.addEventListener('popstate',(ev)=>{
   // History-driven account nav: back AND forward walk the sheet's sections; leaving the sheet's
   // states closes it; a check opened FROM the sheet returns to its tab.
@@ -4820,8 +4840,9 @@ function showResult(o, cid){
   // Persist the tone CLASS first so a reload (the tone-nav below, or a pull-to-refresh) can pre-apply the
   // body wash synchronously at load (boot reads cifm_cls:<cid> into __bootTone) before restoreCall's async fetch.
   try{ localStorage.setItem('cifm_cls_last',cls); if(cid) localStorage.setItem('cifm_cls:'+cid,cls); }catch(e){}
-  // ensureToneLoaded is a kept no-op (always false — we no longer reload into a ?tone URL to re-bake the
-  // bar; the rv-* gradient below is sampled live). The call stays so old call-sites keep working.
+  // A settled verdict whose tone differs from what the server baked at load reloads ONCE into its
+  // ?call&tone URL so the bar re-tints (iOS never resamples in-page). Returns true when navigating —
+  // stop here; the fresh load re-renders this exact result with the right bar. Pending never qualifies.
   if(o.status && o.status!=='pending' && ensureToneLoaded(cls,cid)) return;
   // Tone the body-level top wash for this verdict (the wash itself is CSS on body.rview::before).
   ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c));
