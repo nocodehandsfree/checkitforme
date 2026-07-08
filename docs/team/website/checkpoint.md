@@ -1,3 +1,65 @@
+## Carry-over (2026-07-07 — for the new repo)
+
+> Written for the next chat / the migration to `nocodehandsfree/checkitforme` (branches `staging` + `main`).
+> Only what's WRITTEN HERE survives — chat memory does not. Newest working state is in the sections below;
+> this block is the "what's NOT finished + traps I learned" list so nothing gets re-broken or re-discovered.
+
+**My visible memory of this chat starts at:** the continuation of the alerts-pipeline backend build, after a
+compaction summary — earlier history is known only via that summary, not full recall. Treat pre-alerts detail
+as second-hand.
+
+**PARTIAL / NOT DONE / NO ANSWER / UNSURE (act on these):**
+- **Service worker — re-add correctly (PHASE 2, NOT DONE).** It is currently RETIRED: `public/sw.js` is a
+  self-destroying stub (install→skipWaiting; activate→delete all caches + unregister + navigate clients) and
+  `checkit.html` unregisters all workers + deletes all caches on load. Owner WANTS it back as a feature (fast
+  load + offline). Two-phase plan agreed: (1) reset everywhere — DONE; (2) after owner confirms the reset
+  propagated on every device, re-add a **network-first-HTML** worker (always fresh online, offline fallback,
+  cached static assets, instant `skipWaiting`+`clients.claim` takeover). Do NOT reintroduce the old stale-serve
+  race (network-first with a 1.2s timeout that served stale HTML = the original bug).
+- **Prod promotion of feature flags — NOT DONE.** At launch prod should have `flags.hobby=false` +
+  `flags.thrift=false` so only Retail+Kiosk are live for everyone; flip on later from backend. Set this on the
+  PROD branch (`claude/retail-stock-voice-calls-OcyMS`) / prod env, not staging.
+- **Restock SMS — externally blocked (NO ANSWER on the fallback).** Twilio A2P 10DLC was DENIED; toll-free not
+  approved. Pipeline stubs until creds land. I offered two fallbacks the owner never answered: (a) temporarily
+  route restock alerts as EMAIL, (b) pursue a toll-free number. Re-ask.
+- **A2P question — answered:** it IS required for app-initiated SMS to US consumers on a standard 10DLC number.
+  Email alerts (Brevo) do NOT need it and are live. So alerts ship on email now; SMS waits on carrier approval.
+- **Email copy — awaiting owner's corrected text.** Copy currently in `EMAIL_DESIGN` (src/alerts.ts) +
+  `DEFAULT_TEMPLATES` is DESIGN's copy. Owner said "I'll need to edit some of this text later" because the
+  edits he made in the Claude Design artifact page were lost and can't be re-pulled. Templates are editable
+  live in Admin → Alerts; swap when he sends the real copy.
+- **Brevo branded template IDs — optional swap, wired but unused.** Each event has a `brevoTemplateId` field
+  in Admin; if set, it overrides the inline table-HTML. Currently empty → inline email-safe HTML is used.
+- **Zones "show closed stores" — UNSURE owner is satisfied.** Verified `/pub/stores/near` already returns
+  closed stores (no code change needed) and zone build includes them. Confirm with owner it looks right.
+
+**Traps I learned the hard way (don't rediscover these):**
+- **Brevo env var is `BREVO_API_KEY`** (NOT "BRAVO", NOT "ESP_API_KEY"). `espEmail` in src/alerts.ts must gate
+  on `config.alerts.brevoApiKey`. I wasted a cycle gating on the wrong names → "email not configured".
+- **Email must be TABLE HTML + inline styles + `object-fit`.** Flexbox/grid/external CSS do NOT render in mail
+  clients (Outlook mobile especially). Design's saved file is React+flexbox → renders in a browser, NEVER in an
+  email. I ported all 4 mockups to email-safe table HTML in `renderBrandedEmail`. Don't try to "just use the
+  Design file" in an email again.
+- **Connect-on-human VAD had a settle-window bug** (the ~20s silent Fun-store call). Direct-dial stores: the
+  1500ms settle window swallowed the opening greeting and the 45-frame unbroken-voice gate reset on the
+  caller's natural pause → agent never connected. Fix in `src/voice/bridge.ts`: shorter gate on direct dials
+  (~22 frames), slow-leak tolerance for the post-greeting pause, and run VAD on direct dials even when a
+  `connectAtSec` is learned. Also (separate, earlier) ABC recipe-timer muted the agent 19s on direct chains —
+  direct-ring chains must carry `avgTreeSeconds=null` (fixed c55e46d/c2ceece).
+- **Desktop tiny-logos was NOT a cache bug** — it was `hobSizeEra` reading card width in each image's `onload`,
+  which on cached desktop images fires BEFORE layout settles → tiny. Fix = pure CSS `object-fit:contain`
+  (class `hob-eralg`, `.sm` scale(.82) for the wide/heavy keep-group), zero JS timing (6278520). If a logo/
+  image looks wrong at one viewport only, suspect an onload/JS-sizing race, reach for CSS object-fit first.
+- **Backgrounded `npx tsx` servers get SIGTERM (exit 144)** in this env. Run them with `run_in_background:true`;
+  and never put a leading `pgrep|kill` in the SAME command as a commit — it trips exit 144. Kill in a
+  separate command.
+- **"hi Bob" staff-name feature lives in the WORKFLOW** (`{{personality}}` / opener variables resolved in
+  `buildRestockVars`/resolveWorkflow), NOT hardcoded. Edit it in Admin → Workflows, not in code.
+- **Skin toggle is DEAD.** `checkit.html` head sets `data-skin=v2` unconditionally — the redesign is THE
+  render, one view always. There is no v2/v3 switch anymore. Don't reintroduce a preview gate.
+
+---
+
 # Check - Website — CHECKPOINT (current state)
 
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
