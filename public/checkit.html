@@ -842,7 +842,9 @@ __BRAND_HEAD__
   .findhead .step{white-space:nowrap}
   .maptgl.on{background:var(--ptint);border-color:var(--pline);color:#fff}
   .maptgl.glow{border-color:color-mix(in srgb,var(--accent,var(--green)) 38%,transparent);color:#e6e6ee;box-shadow:none}
-  #mapview{height:320px;border-radius:14px;overflow:hidden;margin-top:12px;border:1px solid var(--border);background:#0e0e16}
+  #mapview{height:320px;border-radius:14px;overflow:hidden;margin-top:12px;border:1px solid var(--border);background:#0e0e16;position:relative}
+  #mapEmpty{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:1000;pointer-events:none;background:rgba(12,12,18,.9);border:1px solid rgba(255,255,255,.12);color:#E7E7EE;font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:999px;box-shadow:0 8px 20px rgba(0,0,0,.5);white-space:nowrap;display:none}
+  #mapEmpty.on{display:block}
   .leaflet-container{background:#0e0e16!important;font-family:inherit}
   .leaflet-popup-content-wrapper{background:#1a1a24;color:#fff;border:1px solid var(--border);border-radius:12px}
   .leaflet-popup-tip{background:#1a1a24}
@@ -2410,7 +2412,7 @@ const I18N={ es:{
   'dd.tag':'Vista previa · próximamente','dd.title':'Que un local lo recoja','dd.sub':'¿Muy lejos para manejar? Manda a un conductor de Uber/Lyft cercano a comprarlo y enviártelo. Él paga <b>$0 de su bolsillo</b>, tú solo pones el bono.','dd.instock':'En stock','dd.s1':'Define el <b style="color:var(--green)">bono</b> del conductor (ej. $25) sobre su tarifa','dd.s2':'Pide el viaje en <b>Uber</b> o <b>Lyft</b>. Recogida en la tienda','dd.s3':'Envía una tarjeta prepagada (producto + envío) + un mensaje listo','dd.s4':'Él lo compra, lo envía y toca <b>Listo</b> → tu bono se libera al instante','dd.sees':'lo que ve el conductor','dd.pickup':'Tienes una recogida de <span style="color:var(--green)">$25</span> 🏃','dd.applepay':'Agregar tarjeta a Apple Pay (60 seg)','dd.cta':'Quiero acceso anticipado →','dd.noted':'Anotado. Te buscamos para el acceso anticipado 🤝','dd.grab':'recoger en {s} → te lo envían',
   // generic errors / toasts / misc
   'err.generic':'No se procesó. Vuelve a intentarlo.','err.sendcode':'No pudimos enviar un código. Inténtalo de nuevo.','err.verify':'No se pudo verificar. Inténtalo de nuevo.','err.post':'No se pudo publicar. Inténtalo de nuevo.','err.upload':'La foto no se subió. Inténtalo de nuevo.','err.photobig':'La foto pesa demasiado. Prueba con una más pequeña.','auth.verifying':'Verificando…','map.list':'Lista','store.closed':'Cerrado','toast.nocall':'. No se hizo la llamada.','auth.welcome':"✓ Ya entraste",'err.email':'Ingresa un correo válido','err.usonly':'Por ahora solo enviamos SMS a números de EE. UU.','err.toofast':'Espera un momento e inténtalo de nuevo.','auth.sending':'Enviando…','auth.resending':'Reenviando…','err.contact':'Ingresa un correo o teléfono válido.','err.pickstore':'Elige una tienda primero',
-  'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la verificación','toast.callgone':'Esa verificación ya no está disponible','toast.toosoon':'Acabas de verificar esta tienda — vuelve a verificar en unos {n} min.','toast.loadingcall':'Cargando tu verificación…','toast.translate.fail':'No se pudo traducir eso.','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Aquí está la lista.','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
+  'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la verificación','toast.callgone':'Esa verificación ya no está disponible','toast.toosoon':'Acabas de verificar esta tienda — vuelve a verificar en unos {n} min.','toast.loadingcall':'Cargando tu verificación…','toast.translate.fail':'No se pudo traducir eso.','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Aquí está la lista.','map.nostores':'No hay tiendas aquí. Mueve el mapa a otro lugar.','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
   'find.me':'Encuentra mis tiendas','find.near':'cerca de ti, abiertas ahora',
   'scores.title':'Logros de la caza','scores.post':'Publica el tuyo →','scores.first':'¡Muéstranos el botín!',
   'ho.title':'Pásalo a un conductor','ho.sub':'Él lo compra. Y te lo lleva a tu puerta o te lo envía.','ho.ship':'Envíamelo','ho.home':'Tráelo a mi casa','ho.ship.btn':'📦 Envíamelo','ho.home.btn':'🏠 Tráelo a mi casa',
@@ -2744,7 +2746,10 @@ function silentLocRecheck(){
       navigator.geolocation.getCurrentPosition(pos=>{
         const la=pos.coords.latitude, ln=pos.coords.longitude;
         const moved = !USER_LOC || miBetween(USER_LOC.lat,USER_LOC.lng,la,ln) > 1; // 1 mi = a real move (owner call), still well above GPS jitter
-        if(moved){ setUserLoc(la,ln); toast(t('toast.locupdated','Updated to your current location'),'neutral'); }
+        // If the map is open, a background GPS refresh must NOT re-frame it — the user is actively
+        // zooming/panning to explore. Keep their view (owner 07-07: "zoom jumps back to my location").
+        const mapOpen = MAP && $('mapview') && $('mapview').style.display==='block';
+        if(moved){ setUserLoc(la,ln,mapOpen); toast(t('toast.locupdated','Updated to your current location'),'neutral'); }
       }, ()=>{}, {enableHighAccuracy:false, timeout:8000, maximumAge:300000}); // cheap/low-power; a 5-min cached fix is fine
     }).catch(()=>{});
   }catch(e){}
@@ -3422,6 +3427,8 @@ function renderMapPins(){
       else if(pts.length>1) MAP.fitBounds(pts,{padding:[28,28],maxZoom:13});
     }catch(e){}
   }
+  // No stores in this area → tell them to move the map, don't leave it silently empty (owner 07-07).
+  const mv=$('mapview'); if(mv){ let me=$('mapEmpty'); if(!me){ me=document.createElement('div'); me.id='mapEmpty'; mv.appendChild(me); } me.textContent=t('map.nostores','No stores found. Zoom somewhere else.'); me.classList.toggle('on', USER_LOC && MAP_MARKERS.length===0); }
 }
 function mapPick(id){ pickStore(id); try{ if(MAP) MAP.closePopup(); }catch(e){} }
 const RADII=[1,2,5,10,20];
@@ -4152,7 +4159,9 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     const bubs=human.map(l=>{ const m=l.match(/^(Agent|Clerk):\s*(.*)$/); if(!m) return '';
       const ai=m[1]==='Agent';
       return `<div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?esc(t('lbl.agent','CHECK AI').toUpperCase()):esc(t('lbl.assoc','STAFF').toUpperCase())}</div><div class="tx">${esc(m[2])}</div></div>`; }).join('');
-    const vline=(status&&(status.term||status.title))?`<div class="ctl-term" style="margin-top:14px;font-size:15px;font-weight:800;color:${tone}">${esc(status.term||status.title)}</div>`:'';
+    // Verdict line + the "1 check used" note on the SAME row, note pinned right (owner 07-07).
+    const usedTxt=status&&status.used?status.used:'';
+    const vline=(status&&(status.term||status.title))?`<div class="ctl-term" style="margin-top:14px;font-size:15px;font-weight:800;color:${tone};display:flex;align-items:center;justify-content:space-between;gap:12px"><span>${esc(status.term||status.title)}</span>${usedTxt?`<span style="font-size:11.5px;font-weight:600;color:#6B6B78;white-space:nowrap">${esc(usedTxt)}</span>`:''}</div>`:'';
     return `<div class="ctlv2" style="margin-bottom:22px">
       <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80 100%':`color-mix(in srgb,#4ADE80 35%,${tone}) 60%,${tone} 100%`})"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
       <div style="flex:1;min-width:0">
@@ -4886,11 +4895,10 @@ function showResult(o, cid){
       : `<div class="topcta">${primaryCta}</div>`}
     <div class="callsec">
       ${canTranslate?`<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button></div>`:''}
-      ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed, {cls, title:vTitle, term:termLabel, ts:o.ts})}
+      ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed, {cls, title:vTitle, term:termLabel, ts:o.ts, used:(o.status==='pending'?'':(o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one')))})}
     </div>
     ${o.status==='pending' ? '' : (inStock ? inActions : '')}
-    ${o.status==='pending' ? '' : upsell}
-    <div class="foot" style="margin-top:26px">${o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one')}</div>`;
+    ${o.status==='pending' ? '' : upsell}`;
   $('result').classList.remove('hidden');
   navMark('result');
   // Entrance motion: play ONCE per call, on the CONTENT-READY render. Reopening a past-day call renders
