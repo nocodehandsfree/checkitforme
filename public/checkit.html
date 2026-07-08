@@ -2997,7 +2997,7 @@ async function phoneVerify(){
   PHONE_TOKEN=r.token; try{ localStorage.setItem('cifm_token',r.token); }catch(_){}
   if(r.account) ACCOUNT=Object.assign({},ACCOUNT||{},r.account);
   track('auth_success',{flow:'phone'});
-  closeAuth(); toast(t('auth.welcome',"✓ You're in")); refreshAuth();
+  closeAuth(); toast(t('auth.welcome',"✓ You're in"),'neutral'); refreshAuth(); // neutral grey, not the celebratory green (owner 07-07)
 }
 function authBack(){ authStep('email'); $('auth_codeerr').textContent=''; setTimeout(()=>{try{$('auth_phone').focus();}catch(e){}},60); }
 // Custom account sheet
