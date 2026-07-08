@@ -1851,7 +1851,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   </div>
   <div class="foot-bottom">
     <span class="foot-fav" id="footMark"></span>
-    <span class="foot-copy">© <span id="footYear"></span></span>
+    <span class="foot-copy">© <span id="footYear"></span> High Science LLC</span>
   </div>
 </footer>
 
@@ -2643,15 +2643,16 @@ function renderFooter(){
   const L=(POLICY.links)||{}, by=$('footYear'); if(by) by.textContent=new Date().getFullYear();
   const fb=$('footBrand'); if(fb) fb.textContent='';  // the brand name lives inside the logo now
   const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:30px;width:auto;object-fit:contain;border-radius:0;display:block;margin:-4px 0">`; }
-  // v2 footer = TWO centered lines: the links row, then a tidy CENTERED cluster [logo · ©year · socials ·
-  // lang]. (Was logo-left / socials-right, which spread into an awkward wide gap on desktop. Owner 07-06:
-  // center it so desktop + phone read the same.) The © stays tiny next to the logo.
+  // v2 footer = THREE centered lines: the links row, a tidy CENTERED cluster [logo · socials · lang], then
+  // the © line ALONE, centered, at the very bottom (owner 07-08 — was tucked next to the logo). Was
+  // logo-left / socials-right which spread into an awkward wide gap on desktop; centered reads the same
+  // on desktop + phone.
   if(isV2()){ try{
     const meta=document.querySelector('.foot-meta'), bot=document.querySelector('.foot-bottom');
     if(meta&&bot&&fm&&!meta.contains(fm)){
-      meta.insertBefore(fm,meta.firstChild);
-      const cp=bot.querySelector('.foot-copy'); if(cp){ cp.style.cssText='font-size:11px;color:#66666F;align-self:center'; meta.insertBefore(cp,fm.nextSibling); }
-      bot.style.display='none';
+      meta.insertBefore(fm,meta.firstChild); // logo joins the socials/lang cluster; © stays in foot-bottom
+      const cp=bot.querySelector('.foot-copy'); if(cp) cp.style.cssText='font-size:11px;color:#66666F';
+      bot.style.cssText='display:flex;align-items:center;justify-content:center;padding-top:14px'; // standalone centered © row
       meta.style.cssText='display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;width:100%';
       const soc=meta.querySelector('.foot-social'); if(soc) soc.style.marginLeft='';
     }
@@ -5605,7 +5606,7 @@ function hobbyIcon(type){
     : t.includes('sleeved') ? 'sleeved'
     : t.includes('tin') ? 'tin' : null;
   const inner = key ? HOBBY_ICONS[key] : '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>';
-  return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#CDCDD8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+  return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
 }
 const HOBBY_GENERIC=['Booster Box','ETB','Booster Bundle','Premium Collection','3-Pack Blister','Mini Tin','Sleeved Booster'];
 function hobbyPickSet(si){ HOBBY.set=HOBBY.era.sets[si]; renderHobbyProducts(); markHunt('prods'); window.scrollTo({top:0}); }
