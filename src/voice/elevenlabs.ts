@@ -61,7 +61,7 @@ export class ElevenLabsProvider implements VoiceProvider {
             personality: p.personalityTone ?? "",
             opening_line: p.openingLine ?? "",
             other_categories: (p.otherCategories ?? []).join(", "),
-            ask_shipment_day: p.askShipmentDay ? "If it comes up naturally, also ask what day they usually get their shipments in." : "",
+            ask_shipment_day: p.askShipmentDay ? "If they are out of it or don't have it right now, warmly ask when they expect their next shipment or restock, e.g. \"ah okay, no worries, any idea when you might get more in?\". Keep it to that one quick question, then wrap up." : "",
             // Kiosk-only store: the prompt branches on this to ask about the vending kiosk
             // (working/stocked) instead of a shelf shipment. "" = normal shelf check.
             kiosk_mode: p.kioskMode ? "true" : "",
@@ -209,7 +209,16 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
   // "Came in this morning but it's gone" — arrived, but NOT buyable now. Never count as in stock.
   const soldOut = /^(yes|true)/i.test(String(collected.sold_out?.value ?? "").trim());
   // "We don't carry that at all" — the store doesn't sell this category (distinct from out of stock).
-  const doesNotSell = /^(yes|true)/i.test(String(collected.does_not_carry?.value ?? "").trim());
+  // GUARD: "doesn't carry" is a PERMANENT verdict, so only honor the extractor's flag when the clerk
+  // actually used carry/sell/stock language. A bare "no" / "no we don't" answering the in-stock
+  // question means OUT OF STOCK, not "doesn't sell it" — never let a plain no become a "doesn't carry".
+  // (Regression seen live on a Fun-store test: "no we dont" surfaced as "they don't carry it.")
+  const clerkText = (d.transcript ?? []).filter((t) => t.role !== "agent" && t.message).map((t) => String(t.message)).join(" ");
+  const CARRY_NEG = /\b(?:don'?t|do ?n'?t|does ?n'?t|do not|does not|never|no longer|stopped|not something (?:we|they)|we'?re not a)\b[^.?!]{0,24}\b(?:carr(?:y|ies|ied|ying)|sell|sells|selling|sold|stock(?:s|ed|ing)?)\b/i;
+  const doesNotCarryFlag = /^(yes|true)/i.test(String(collected.does_not_carry?.value ?? "").trim());
+  const doesNotSell = doesNotCarryFlag && CARRY_NEG.test(clerkText);
+  // A rejected doesn't-carry (bare "no", no carry language) is still a negative answer → out of stock.
+  if (doesNotCarryFlag && !doesNotSell && confirmed === null) confirmed = false;
   // "Too slammed to check" — they didn't refuse, they just couldn't look (busy / short-staffed / lone clerk).
   // Primary signal is the structured field if the agent extracts one; the transcript heuristic below is the
   // workhorse so this works across every agent without a per-agent schema change.

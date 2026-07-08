@@ -381,7 +381,7 @@ export async function triggerCall(a: TriggerArgs) {
       phoneTree,
       specialInstructions: retailer.specialInstructions ?? undefined,
       otherCategories: mode === "restock" ? otherCategories : [],
-      askShipmentDay: a.askShipmentDay,
+      askShipmentDay: a.askShipmentDay ?? true, // Delta everywhere: default ON — ask the restock day on a no.
       voicemailPolicy,
       // Persona from the assigned workflow fills {{personality}}. Empty when no workflow → same as before.
       personalityTone: wf?.personality || undefined,
