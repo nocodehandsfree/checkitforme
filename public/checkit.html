@@ -1406,6 +1406,9 @@ html[data-skin="v2"] #hobEraGrid .hob-eracell{min-width:0}
 html[data-skin="v2"] .hob-erabtn{display:flex;flex-direction:column;width:100%;min-width:0;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:16px;padding:0;overflow:hidden;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);cursor:pointer;transition:transform .1s}
 html[data-skin="v2"] .hob-erabtn:active{transform:translateY(2px) scale(.985)}
 html[data-skin="v2"] .hob-erabtn-art{display:flex;align-items:center;justify-content:center;height:104px;padding:10px 14px}
+/* CSS-only era-logo fit: fills the card box, aspect preserved, identical on every device (no JS timing). */
+html[data-skin="v2"] .hob-eralg{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 10px rgba(0,0,0,.55))}
+html[data-skin="v2"] .hob-eralg.sm{transform:scale(.82)} /* the already-wide/heavy marks a touch smaller so they don't tower */
 html[data-skin="v2"] .hob-erabtn-lbl{padding:0 12px 13px;text-align:center}
 html[data-skin="v2"] .hob-erabtn-lbl .sub{display:block;font-size:11.5px;font-weight:700;color:#9a9aa6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html[data-skin="v2"] .hob-set{display:block;width:100%;margin:0 0 16px;background:none;border:0;padding:0;cursor:pointer;transition:transform .12s;color:#FFF}
@@ -5506,8 +5509,14 @@ function renderHobbyEras(){
     // surfaces the era that holds it. Filter is show/hide (keeps input focus, instant on mobile).
     const s=esc(((e.era||'')+' '+(e.years||'')+' '+(e.sets||[]).map(x=>(x.name||'')+' '+(x.code||'')).join(' ')).toLowerCase());
     const n=(e.sets||[]).length;
+    // Pure-CSS sizing (object-fit) — renders identically on every device with zero JS timing (a cached
+    // image on desktop used to measure the box before layout settled and size a logo tiny). The already
+    // wide/heavy ones (XY, HeartGold, e-Card/Expedition, Neo, Original/Pokemon) get a slightly smaller
+    // scale so they don't tower over the rest (owner 07-07).
+    const _nm=(e.era||'').toLowerCase();
+    const _sm=_nm.includes('xy')||_nm.includes('heartgold')||_nm.includes('e-card')||_nm.includes('neo')||_nm.includes('original');
     const face=e.logo
-      ? `<img src="${esc(e.logo)}" alt="${esc(e.era)}" style="display:block;width:auto;height:auto;filter:drop-shadow(0 8px 12px rgba(0,0,0,.6))" onload="hobSizeEra(this)" onerror="this.replaceWith(hobEraTxt(this.alt))">`
+      ? `<img src="${esc(e.logo)}" alt="${esc(e.era)}" class="hob-eralg${_sm?' sm':''}" onerror="this.replaceWith(hobEraTxt(this.alt))">`
       : `<span style="font-size:15px;font-weight:900;letter-spacing:.08em;color:#B9B9C4;text-align:center;text-shadow:0 1.5px 0 rgba(255,255,255,.1),0 12px 18px rgba(0,0,0,.5)">${esc((e.era||'').toUpperCase())}</span>`;
     // No era name text — the logo already says it. Just set count + years, centered.
     const inner=`<button class="hob-erabtn" onclick="hobbyPickEra(${i})" aria-label="${esc(e.era)}">
