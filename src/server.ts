@@ -631,8 +631,8 @@ app.get("/tapedeck/clip", (c) => {
   return c.body(new Uint8Array(b), 200, { "Content-Type": "audio/mpeg" });
 });
 app.post("/api/admin/tapedeck/call", async (c) => {
-  const b = (await c.req.json().catch(() => ({}))) as { phone?: string };
-  return c.json(await tapedeckCall(String(b.phone || "")));
+  const b = (await c.req.json().catch(() => ({}))) as { phone?: string; workflow?: string };
+  return c.json(await tapedeckCall(String(b.phone || ""), b.workflow ? String(b.workflow) : undefined));
 });
 app.get("/api/admin/tapedeck/session/:id", (c) => {
   const s = tdSession(c.req.param("id"));
