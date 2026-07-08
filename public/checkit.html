@@ -20,18 +20,15 @@
 <meta name="apple-mobile-web-app-title" content="Check it for me" />
 <link rel="manifest" href="/manifest.webmanifest" />
 
-<script>/* PWA: register the service worker (instant cold-start: cached shell + stale-while-revalidate checks). Fail-open — registration errors never affect the page. */
-  if('serviceWorker' in navigator){ window.addEventListener('load',function(){ try{
-    navigator.serviceWorker.register('/sw.js').then(function(reg){ try{ reg.update(); }catch(_){}
-      // A waiting worker (new deploy) → tell it to take over now instead of waiting for all tabs to close.
-      function nudge(w){ if(w) try{ w.postMessage('skipWaiting'); }catch(_){}} if(reg.waiting) nudge(reg.waiting);
-      reg.addEventListener('updatefound',function(){ nudge(reg.installing); });
-    }).catch(function(){});
-    // When a NEW worker replaces the old one, reload ONCE so the fresh design lands with no manual
-    // cache-clearing. Guard on _hadController so a brand-new visitor's first install never triggers a reload.
-    var _swReloaded=false, _hadController=!!navigator.serviceWorker.controller;
-    navigator.serviceWorker.addEventListener('controllerchange',function(){ if(_swReloaded||!_hadController)return; _swReloaded=true; try{ location.reload(); }catch(_){} });
-  }catch(e){} }); }</script>
+<script>/* NO service worker. The site is always fresh from the server — no offline shell, no cache, no version
+   dance (owner 07-07: "kill the workers, I just want one site"). This ALSO actively evicts any worker a
+   previous build left behind: unregister every registration and delete every Cache Storage bucket, so a
+   stale shell can never be served again. Fail-open — errors never affect the page. */
+  if('serviceWorker' in navigator){ try{
+    navigator.serviceWorker.getRegistrations().then(function(rs){ (rs||[]).forEach(function(r){ try{ r.unregister(); }catch(_){}} ); }).catch(function(){});
+  }catch(e){} }
+  try{ if(window.caches && caches.keys){ caches.keys().then(function(ks){ (ks||[]).forEach(function(k){ try{ caches.delete(k); }catch(_){}} ); }).catch(function(){}); } }catch(e){}
+</script>
 <script>(function(){try{
   // THE design. The redesign is now the ONLY render — no preview flag, no old skin (owner 07-07:
   // "kill the whole v2/v3 thing, staging is exactly how it'll look, always"). Set before first paint so
