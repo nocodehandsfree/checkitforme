@@ -242,10 +242,11 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
     `<meta name="description" content="${esc(brand.desc)}">`,
     `<link rel="canonical" href="${canonical}">`,
     `<meta name="robots" content="index,follow,max-image-preview:large">`,
-    // NB: NO theme-color here. The runner files own their own <meta name="theme-color" id="themeColor">
-    // and mutate it live to tint the iOS status bar to the verdict tone. Injecting a second theme-color
-    // makes WebKit honor THIS hardcoded-dark one and ignore the live one — that's the bug that kept the
-    // status bar black on every result. One theme-color in the document, JS-controlled, full stop.
+    // NB: NO theme-color meta here — and none in checkit.html either, ON PURPOSE. One theme-color
+    // tints BOTH iOS Safari bars (green bottom toolbar) and overrides the per-edge page sampling we
+    // rely on. The status bar takes its colour from the painted page instead: the html/body verdict
+    // gradient (rv-* classes) in-page, and for ?tone= deep-links the tone-* class this renderer
+    // bakes onto the served <html> tag below. Do not add a theme-color meta back.
     `<meta property="og:type" content="website">`,
     `<meta property="og:site_name" content="${esc(plainName)}">`,
     // Apex/invite embeds (owner): the CARD IMAGE carries the headline, so the visible link title is
@@ -267,14 +268,15 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
       ...seoGraph(brand, plainName),
     ] })}</script>`,
   ].join("\n");
-  // Status-bar tone baked into the LITERAL served HTML. iOS Safari tints the status bar from the
-  // theme-color value present at page load — a later JS change to it is unreliable (often ignored). So a
-  // result deep-link (?call=…&tone=in|out|unk|soon) gets the verdict colour written straight into the
-  // meta here, guaranteeing the bar is the right colour on a hard-refresh with no JS dependency.
-  const TONE: Record<string, string> = { in: "#266440", out: "#6b2427", unk: "#6c5419", soon: "#6e490f" };
-  const themeColor = (tone && TONE[tone]) || "#0C0C12";
+  // Status-bar tone for verdict deep-links (?call=…&tone=in|out|unk|soon): baked as a CLASS on the
+  // literal served <html> tag (the html.tone-* static CSS lives in checkit.html). iOS samples the page
+  // background for the status bar at FIRST PAINT — a tone applied later by script (boot/fetch timing)
+  // often misses that sample and leaves the bar dark in plain Safari. Baking the class server-side makes
+  // the very first paint the verdict colour with zero JS dependency; the in-page rv-* class system takes
+  // over (and drops the baked class via dropBakedTone) as soon as the app renders a view.
+  const toneClass = /^(in|out|unk|soon)$/.test(tone) ? ` class="tone-${tone}"` : "";
   return page(file)
-    .replace('content="#0C0C12" id="themeColor"', `content="${themeColor}" id="themeColor"`)
+    .replace('<html lang="en">', `<html lang="en"${toneClass}>`)
     .replace(/__BRAND_HEAD__/g, head)
     .replace(/__BRAND_JSON__/g, JSON.stringify({ key: brand.key, name: brand.name, category: brand.category, accent: brand.accent, accent2: brand.accent2 || brand.accent, logoUrl: brand.logoUrl || "", emoji: brand.emoji }))
     .replace(/__BRAND_LOGO__/g, brand.logo || `${brand.emoji} ${brand.name}`)

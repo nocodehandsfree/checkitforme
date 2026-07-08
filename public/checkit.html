@@ -7,11 +7,14 @@
      tints BOTH the top status bar AND the bottom toolbar (= green footer), AND it OVERRIDES iOS page-sampling
      so the top can never match the page. Without it, iOS SAMPLES the page background per-edge — the verdict
      wash at the page TOP shows under the status bar, while the dark page bottom keeps the bottom bar dark
-     (green top, dark bottom — exactly what we want). The sampling source is the html/body verdict gradient
-     (see `html:has(body.rview.rv-*)` + `body.rview.rv-*` in CSS), applied from frame one by the post-<body>
-     boot script. Do NOT reintroduce a theme-color meta — it re-breaks the top. In STANDALONE (home screen)
-     the apple-mobile metas + viewport-fit=cover paint content UNDER the status bar, so the wash shows at the
-     top there regardless (that path has always worked). -->
+     (green top, dark bottom — exactly what we want). Sampling only sees what is PAINTED when Safari samples,
+     so one system, two sources: (1) ?tone= deep-links — the server bakes a tone-* class onto the served
+     <html> tag (renderRunner in src/server.ts), so the FIRST paint is already the verdict colour via the
+     static `html.tone-*` CSS below, no JS timing involved; (2) in-page — the `html:has(body.rview.rv-*)` +
+     `body.rview.rv-*` gradient applied by the post-<body> boot script and the app, which outranks and then
+     drops the baked class (dropBakedTone). Do NOT reintroduce a theme-color meta — it re-breaks the top.
+     In STANDALONE (home screen) the apple-mobile metas + viewport-fit=cover paint content UNDER the status
+     bar, so the wash shows at the top there regardless (that path has always worked). -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Check it for me" />
@@ -39,15 +42,11 @@
 }catch(e){}})();</script>
 <script>(function(){try{
   var sp=new URLSearchParams(location.search);
-  // The tone the SERVER baked into <meta theme-color> at load (?tone=in|out|unk|soon). iOS only tints the
-  // status bar from the value present at LOAD, so we compare against this to decide whether a result needs a
-  // real navigation to re-bake the colour (vs. a JS-only theme-color change that iOS ignores).
-  window.__loadTone = sp.get('tone') || '';
   if(!sp.has('call')) return;
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="names-r98" />
+<meta name="x-rev" content="tonebake-r99" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -270,6 +269,15 @@ __BRAND_HEAD__
   html:has(body.rview.rv-out){background:linear-gradient(180deg,#6b2427 0px,var(--bg) 460px)}
   html:has(body.rview.rv-unk){background:linear-gradient(180deg,#6c5419 0px,var(--bg) 460px)}
   html:has(body.rview.rv-soon){background:linear-gradient(180deg,#6e490f 0px,var(--bg) 460px)}
+  /* ?tone= deep-links: the server bakes tone-* onto the served <html> tag so the FIRST paint — the one
+     iOS samples for the status bar — is already the verdict colour, before any script runs. Solid tone
+     through 45% then dark by 55% keeps the TOP edge toned and the bottom bar dark. The html:has() rules
+     above OUTRANK these once the app applies rv-* (a live verdict always wins), and the app drops the
+     baked class on any in-page view change (dropBakedTone) so a stale tint can never strand at the top. */
+  html.tone-in{background:linear-gradient(#266440 0,#266440 45%,#0C0C12 55%)}
+  html.tone-out{background:linear-gradient(#6b2427 0,#6b2427 45%,#0C0C12 55%)}
+  html.tone-unk{background:linear-gradient(#6c5419 0,#6c5419 45%,#0C0C12 55%)}
+  html.tone-soon{background:linear-gradient(#6e490f 0,#6e490f 45%,#0C0C12 55%)}
   /* On a result the nav + content LAY ON the color: header goes transparent (no dark slab, no hairline)
      so the wash reaches the top. The nav pills + day-picker take a BARELY-green fill (level 3) so they
      read as sitting on a green page without looking like dark chips. */
@@ -4470,7 +4478,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -4490,7 +4498,7 @@ function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _l
 let NAV_VIEW='builder';
 function navMark(view){
   if(view!=='builder') HUNT_STEP=''; // leaving the builder ends the hobby-hunt back-stack
-  try{ document.body.classList.toggle('rview', view==='result'); if(view!=='result'){ ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); } }catch(e){} // result-only top treatment (transparent nav + color wash)
+  try{ document.body.classList.toggle('rview', view==='result'); if(view!=='result'){ ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); } }catch(e){} // result-only top treatment (transparent nav + color wash)
   try{ if(view!=='builder') hideCallSheet(); }catch(e){} // the call sheet belongs to the builder only
   try{ setThemeTone(); renderCallRail(); }catch(e){}
   if(view===NAV_VIEW) return;
@@ -4509,6 +4517,11 @@ function navMark(view){
 // call-sites stay safe. Do NOT recreate a theme-color meta here: one theme-color tints both edges (green
 // footer) AND overrides sampling, which is exactly what kept the top black.
 function setThemeTone(){}
+// ?tone= deep-links: the server bakes html.tone-* onto the served <html> tag so the FIRST paint tints the
+// bar (sampling only sees what's painted when Safari samples). Once the app changes views in-page, the
+// rv-* system is the single source of tone — drop the baked class so leaving a result can't strand a
+// stale tint at the top.
+function dropBakedTone(){ try{ ['tone-in','tone-out','tone-unk','tone-soon'].forEach(c=>document.documentElement.classList.remove(c)); }catch(_){ } }
 // No-op: we no longer navigate to a ?tone URL to bake theme-color (that approach tinted the bottom bar and
 // blacked out the top in Compact Safari). The top now tints via page-sampling of the body/html gradient.
 let TONE_NAV_DONE=false;
@@ -4790,13 +4803,13 @@ function showResult(o, cid){
   // Persist the tone CLASS first so a reload (the tone-nav below, or a pull-to-refresh) can pre-apply the
   // body wash synchronously at load (boot reads cifm_cls:<cid> into __bootTone) before restoreCall's async fetch.
   try{ localStorage.setItem('cifm_cls_last',cls); if(cid) localStorage.setItem('cifm_cls:'+cid,cls); }catch(e){}
-  // iOS status-bar tint: if this settled verdict's tone differs from what the server baked at load, RELOAD
-  // into the ?tone URL so the colour is present at load (the only thing iOS honors). Returns true when it's
-  // navigating away — stop here, the fresh load re-renders this result with the right bar. Pending never qualifies.
+  // ensureToneLoaded is a kept no-op (always false — we no longer reload into a ?tone URL to re-bake the
+  // bar; the rv-* gradient below is sampled live). The call stays so old call-sites keep working.
   if(o.status && o.status!=='pending' && ensureToneLoaded(cls,cid)) return;
   // Tone the body-level top wash for this verdict (the wash itself is CSS on body.rview::before).
   ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c));
   document.body.classList.add('rv-'+cls);
+  dropBakedTone(); // first paint is over — the rv-* system owns the tone from here
   try{ setThemeTone(); }catch(e){} // tint the browser status-bar strip to this verdict's tone (in-app fallback)
   // Unclear verdict → point them at the transcript AND ask for a quick one-tap label. That label is the
   // training signal: it tells us what the answer REALLY was on the calls our consensus couldn't call.
@@ -4863,8 +4876,8 @@ function showResult(o, cid){
     }
   }catch(e){}
   // Put ?call=<cid>&tone=<cls> in the URL for EVERY result. On a pull-to-refresh the server reads ?tone
-  // and bakes the verdict colour straight into the served <meta theme-color> — so iOS tints the status
-  // bar to it AT LOAD with zero JS dependency (a JS-only change to theme-color is unreliable on iOS). The
+  // and bakes the verdict tone-* class onto the served <html> tag — so iOS samples the right colour at
+  // FIRST PAINT with zero JS dependency (a tone that only arrives via script can miss the sample). The
   // ?call= also restores the exact result on refresh.
   try{ if(cid){ const sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',cid); if(cls) sp.set('tone',cls); history.replaceState({v:'result'},'',location.pathname+'?'+sp.toString()); } }catch(e){}
   // Full Spanish experience: the site is in Spanish but the call happened in English — show the
@@ -5100,7 +5113,7 @@ function showTodayLanding(forceCal){
   stopLiveTimers(); if($('hangup_btn'))$('hangup_btn').style.display='none';
   ['live','builder','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
   document.body.classList.remove('fabbed');
-  ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); // neutral (dark) — no verdict tone
+  ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); // neutral (dark) — no verdict tone
   RAIL_F.date=''; RAIL_F.store=''; RAIL_F.tone=''; RAIL_CID=null; LASTRES=null; RAIL_CAL_M=null;
   // Logged out (e.g. a freshly-installed Home-Screen app has its OWN empty storage) → your checks live in
   // your account, so show a clear Sign-in CTA instead of an empty "No checks today" that looks broken.
@@ -5612,7 +5625,7 @@ function hobbyPickProduct(pi){
 //   B My Zones list → A build/edit a zone → C the live multi-store check report. "CHECK", never "call".
 let ZONES={ sel:new Set(), storeById:new Map(), editId:null, radius:5, run:null, poll:null };
 function zHideAll(){ try{ exitHunt(); }catch(_){ } try{ if(typeof HUNT_STEP!=='undefined') HUNT_STEP=''; }catch(_){ }
-  try{ document.body.classList.remove('rview','rv-in','rv-out','rv-soon','rv-unk'); }catch(_){ } // drop the result-view verdict wash (else a red "out of stock" bg bleeds under zones)
+  try{ document.body.classList.remove('rview','rv-in','rv-out','rv-soon','rv-unk'); dropBakedTone(); }catch(_){ } // drop the result-view verdict wash (else a red "out of stock" bg bleeds under zones)
   ['builder','live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); } // exitHunt: else body.huntmode keeps #hobby (era/set art) visible under the zones view
 function zShow(){ const z=$('zones'); if(z){ z.classList.remove('hidden'); } }
 function zoneStopPoll(){ if(ZONES.poll){ clearInterval(ZONES.poll); ZONES.poll=null; } }
