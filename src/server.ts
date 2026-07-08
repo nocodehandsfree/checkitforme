@@ -4415,14 +4415,16 @@ app.post("/api/admin/trainer/lock", async (c) => {
   const now = Math.floor(Date.now() / 1000);
   await db.update(chains).set({
     navType: b.recipe.type || null, navRecipe: JSON.stringify(b.recipe),
-    navSeconds: typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null,
+    navSeconds: direct ? null : (typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null),
     navStatus: "locked", navConfidence: typeof b.confidence === "number" ? b.confidence : null,
     navLog: JSON.stringify(log.slice(-10)), navUpdatedAt: now,
     // ↓ applied to live consumer calls (this is the bridge from documentation → real calls):
     phoneTreeDefault: treeText, treeNote: treeText,
     dtmfShortcut: dtmf || null,
     answerPath: recipeAnswerPath(recipe) || null,
-    ringsDirect: direct, avgTreeSeconds: typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null,
+    // Direct-answer chains have no menu, so they must carry NO seconds — a stray value arms the ABC
+    // connect-timer and mutes the agent while a human is already on the line (the silent-agent bug).
+    ringsDirect: direct, avgTreeSeconds: direct ? null : (typeof b.recipe.seconds === "number" ? Math.round(b.recipe.seconds) : null),
     treeStatus: "learned", treeLearnedAt: now,
   }).where(eq(chains.id, Number(b.chainId)));
   return c.json({ ok: true });

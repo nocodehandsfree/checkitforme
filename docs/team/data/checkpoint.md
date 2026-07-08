@@ -52,6 +52,21 @@
   Regen: `scripts/gen-pokemon-catalog.ts`. **NOT done / owner to verify:** older eras (SWSH & back predate
   ETBs/bundles — left alone); exact set-specific collection prices; standard MSRPs used (pack $4.49, bundle
   $26.94, box $161.64, ETB $49.99, single blister $6.49, 3-pk $14.99, checklane $5.99).
+- **SILENT-AGENT BUG (direct-ring calls) — data cleaned + 3 write-paths guarded.** Direct-answer chains
+  (`ringsDirect=true` / `navType='direct'` / `answerPath='direct_human'`) carried a stray `avgTreeSeconds`
+  (learned menu-seconds). That arms the ABC connect-timer → **mutes the agent while a human is already on
+  the line** (Fun store "said nothing"). Read-side guard exists (`connectAtSecFor`, recipe.ts returns null
+  for direct) but the DATA was self-contradictory + a footgun if the store-api↔chain sync drifts. Fixed:
+  nulled avgTreeSeconds on all **16 staging** direct-ring chains (`clean_direct_seconds.py`, PATCH
+  `avgTreeSeconds:0`→NULL); **prod (30) pending owner approval** (classifier-gated prod write). Guarded the
+  3 write paths so it can't return: `server.ts` mapping-write, `calls/trainer-batch.ts` (locked route +
+  candidate), `calls/service.ts` (passive learn) — all now set `avgTreeSeconds`/`navSeconds` = **null when
+  direct**. (Mapping-lane files, but the fix is a trivial guard; flagged here for the mapping dev.)
+- **TODO — ROUND 2 (owner): older-era Pokémon product types.** Extend the catalog overlay past the current
+  eras to **Sword & Shield and back**, with ERA-CORRECT lineups + pricing: SWSH packs ~$3.99 (box ~$143.64,
+  bundle ~$23.94); **no Booster Bundle pre-2019**; **no ETB pre-2013** (Plasma era on). Same generator
+  (`scripts/gen-pokemon-catalog.ts`) — add earlier eras to `ERAS` + an era→MSRP table instead of the single
+  SV/Mega constant set. Owner to confirm era prices.
 - **Paused:** national hobby-hours WebSearch loop (Claude monthly spend cap). Resume on reset; ~956+ shops left.
 
 **Session 2026-07-06 (later) — "Hobby vanished at night" diagnosed + CATEGORY-SWEEP PLAYBOOK (owner directive).**
