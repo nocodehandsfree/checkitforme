@@ -50,6 +50,9 @@ export async function fetchRecentReceipts(maxAgeMs = 30 * 60_000): Promise<Fetch
     auth: { user: process.env.GMAIL_USER!, pass: process.env.GMAIL_APP_PASSWORD! },
     logger: false,
   });
+  // A dropped Gmail socket emits 'error' OUTSIDE the await chain; with no listener that unhandled
+  // event kills the whole process (took prod down 2026-07-09). Contain it: log, never crash.
+  client.on("error", (e: unknown) => console.error("gmail imap error (contained):", String(e).slice(0, 150)));
   const out: FetchedReceipt[] = [];
   await client.connect();
   const lock = await client.getMailboxLock("INBOX");
@@ -77,6 +80,7 @@ export async function debugRecentInbox(maxAgeMs = 3 * 86400_000): Promise<InboxD
     auth: { user: process.env.GMAIL_USER!, pass: process.env.GMAIL_APP_PASSWORD! },
     logger: false,
   });
+  client.on("error", (e: unknown) => console.error("gmail imap error (contained):", String(e).slice(0, 150)));
   const out: InboxDebugRow[] = [];
   await client.connect();
   const lock = await client.getMailboxLock("INBOX");

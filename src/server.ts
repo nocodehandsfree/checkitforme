@@ -5043,6 +5043,13 @@ setInterval(() => refreshChainLogoDb().catch(() => {}), 60_000);
 // carrying audio. Now: on SIGTERM, stop when the last live bridge call ends (checked every 2s),
 // hard cap 240s (under railway.json drainingSeconds). New calls land on the new instance; the old
 // one just finishes what it's carrying. Registering the handler defers Node's default exit.
+// ---- Last-resort crash guard (added after the 2026-07-09 outage) ----
+// A Gmail IMAP socket timeout emitted an unhandled 'error' event and killed the WHOLE process —
+// site, admin, and live calls. Background integrations (IMAP, webhooks, ticks) must never be able
+// to take the service down: log loudly, keep serving. Truly broken state still surfaces in logs.
+process.on("uncaughtException", (e) => console.error("[FATAL-CAUGHT] uncaughtException (service kept alive):", e?.stack || String(e)));
+process.on("unhandledRejection", (e) => console.error("[FATAL-CAUGHT] unhandledRejection (service kept alive):", (e as Error)?.stack || String(e)));
+
 process.once("SIGTERM", () => {
   const started = Date.now();
   const n = activeBridgeCalls();
