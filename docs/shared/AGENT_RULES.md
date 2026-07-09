@@ -24,5 +24,7 @@ Discipline comes from these, not from hoping.
 17. **Server/route changes need a local BOOT test before push** — server starts, key routes serve, 404s intact. A regex route once crashed boot and took admin + API down.
 18. **Before deleting ANYTHING, check who reads it** — grep code, docs, CI, scripts, workers. Cleanup passes have deleted a live worker, active specs, and the architecture doc; each needed a restore commit.
 19. **Done = demonstrated, never claimed** (full rule in CLAUDE.md §Rules of the road): contract list up front, gates + drive it on staging at the end, ✓/✗ per item with evidence. "Should work" is banned.
+20. **The stuck rule: three failed attempts on one symptom = STOP. Attempt #4 is banned.** Go first-principles instead: (a) isolate — build the smallest possible test that shows the problem alone (like the /tinttest pages), (b) write down the assumption ALL your attempts shared and attack THAT, (c) try the obvious/dumb fix you dismissed early. A rabbit hole is just the same attempt three times in a trench coat.
+21. **Never cite what other sites/companies do unless you verified it THIS session.** "Apple does it too" is a guess wearing a suit — and it's been wrong here before. If you want to use a reference site as evidence, actually fetch it and inspect how it does the thing; otherwise say "I believe, unverified".
 
 — after Karpathy, *Field Notes on Getting a Language Model to Write Code You Will Not Rewrite*.
