@@ -46,6 +46,7 @@ export interface MapperRun {
   target?: string;               // #1: owner-set desk to reach ("customer service" default)
   needsTarget?: boolean;         // #B: department-only tree, no CS option — owner should pick a target
   reachedSecs: number[];         // #A: every human-reached time this run, to measure ring variance
+  bargeState?: Record<number, { lo: number; hi: number }>; // per-step binary-search bounds for "earliest second the IVR accepts"
   benchmark: number | null;      // the chain's navSeconds BEFORE this run (the CVS comparison)
   baseline: NavRecipe | null;
   best: NavRecipe | null;
@@ -71,12 +72,17 @@ export function stopMapper(chainId: number) {
   return { ok: true, stopping: true };
 }
 
-/** Build the experiment list from a locked baseline: for every spoken step try the first word alone;
- *  for every step that sat waiting >3s try acting earlier. Bounded — the list IS the remaining work,
- *  so "how many tries" answers itself: as many as there are things left to learn. */
-function buildExperiments(recipe: NavRecipe): Experiment[] {
+/** Build the experiment list from a locked baseline. Two levers, per the owner's rule that reaching a
+ *  human is only HALF the job — the other half is reaching them as fast as possible:
+ *   - shorten: for every spoken step, try the first word alone ("front" not "front store services").
+ *   - barge:   for every step the recipe sat >3s before acting, binary-search the EARLIEST second the
+ *              IVR still accepts the press/word. Seed at the midpoint of (prev step, this step); the
+ *              optimize loop then bisects toward the floor (see enqueueBinaryBarge). This converges on
+ *              "as early as the machine allows" in a handful of calls instead of one 5s nibble. */
+function buildExperiments(run: MapperRun, recipe: NavRecipe): Experiment[] {
   const out: Experiment[] = [];
   const steps = recipe.steps || [];
+  run.bargeState = {};
   for (let i = 0; i < steps.length; i++) {
     const st = steps[i];
     if (st.action === "say") {
@@ -88,11 +94,31 @@ function buildExperiments(recipe: NavRecipe): Experiment[] {
     const prevAt = i === 0 ? 0 : (steps[i - 1].atSec ?? 0);
     const at = st.atSec ?? 0;
     if (at - prevAt > 3) {
-      const earlier = Math.max(prevAt + 1, at - 5); // meaningful cut per try; a loop = barge-unsafe, keep last good
-      out.push({ kind: "barge", stepIdx: i, at: earlier, label: `${st.action} "${st.value}" at ${earlier}s (was ${at}s)`, status: "pending" });
+      const lo = prevAt, hi = at;                          // hi = known-good (baseline) time; lo = floor
+      const mid = Math.max(lo + 1, Math.round((lo + hi) / 2));
+      run.bargeState[i] = { lo, hi };
+      out.push({ kind: "barge", stepIdx: i, at: mid, label: `${st.action} "${st.value}" at ${mid}s (was ${at}s)`, status: "pending" });
     }
   }
-  return out.slice(0, 8); // bounded: 8 experiments ≈ 8 extra calls max on top of the baseline
+  return out.slice(0, 10); // initial list; convergence appends earlier bisections as it wins/backs off
+}
+
+/** Convergence step: after trying a barge at `mid`, tighten the bounds and queue the next bisection.
+ *  A real early-accept SHOWS UP AS A TIME GAIN (the press advanced the menu sooner). If the press was
+ *  dropped, the recovery brain still reaches the human but at ~the old time — so "reached, no gain" is
+ *  a DROP, not an accept, and we back off later. Stops when the window closes to <=3s. */
+function enqueueBinaryBarge(run: MapperRun, stepIdx: number, mid: number, accepted: boolean): void {
+  const map = run.bargeState || (run.bargeState = {});
+  const b = map[stepIdx];
+  if (!b) return;
+  if (accepted) b.hi = mid; else b.lo = mid;             // accepted here → can we go earlier? dropped → must go later
+  if (b.hi - b.lo <= 3) return;                          // converged: earliest accepted second is pinned
+  if (run.experiments.filter((e) => e.kind === "barge" && e.stepIdx === stepIdx).length >= 8) return; // runaway guard
+  const next = Math.max(b.lo + 1, Math.round((b.lo + b.hi) / 2));
+  if (next >= b.hi || next <= b.lo) return;
+  const st = (run.best?.steps || [])[stepIdx];
+  const label = st ? `${st.action} "${st.value}" at ${next}s (window ${b.lo}-${b.hi}s)` : `step ${stepIdx} at ${next}s`;
+  run.experiments.push({ kind: "barge", stepIdx, at: next, label, status: "pending" });
 }
 
 /** Apply one experiment to the best recipe → a timed barge plan for the next call. */
@@ -248,7 +274,7 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
         if (reached && recipe) {
           run.baseline = recipe as NavRecipe; run.best = recipe as NavRecipe;
           await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null); // usable by live checks NOW
-          run.experiments = buildExperiments(recipe as NavRecipe);
+          run.experiments = buildExperiments(run, recipe as NavRecipe);
           run.phase = run.experiments.length ? "optimize" : "locked";
           run.log.push({ n: run.attempt, phase: wasVerify ? "verify" : "baseline", store: store.name, outcome: `${wasVerify ? `locked map VERIFIED — real time ${secs ?? "?"}s (stored ${run.benchmark ?? "?"}s)` : "human reached — baseline locked"} (${classifyMode((s?.steps || []) as NavStep[]).label})`, seconds: secs });
           if (run.phase === "locked") break;
@@ -263,10 +289,23 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
         }
       } else if (run.phase === "optimize" && ex) {
         const bestSecs = run.best?.seconds ?? Infinity;
-        if (reached && recipe && typeof secs === "number" && secs < bestSecs - 1) {
-          ex.status = "win";
-          run.best = recipe as NavRecipe;
-          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null); // faster path → re-lock
+        const faster = reached && recipe && typeof secs === "number" && secs < bestSecs - 1;
+        if (ex.kind === "barge") {
+          // A faster time PROVES the early press/word landed. "Reached but not faster" means the press
+          // was dropped and the recovery brain saved it at the old time → treat as too-early, back off.
+          if (faster) {
+            ex.status = "win"; run.best = recipe as NavRecipe;
+            await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null); // earlier → re-lock
+            run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `WIN — ${secs}s (was ${bestSecs}s)`, seconds: secs });
+            enqueueBinaryBarge(run, ex.stepIdx, ex.at ?? 0, true);  // it accepted this early — try earlier still
+          } else {
+            ex.status = "fail";
+            run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: reached ? `@${ex.at}s dropped — recovery reached @${secs ?? "?"}s; backing off` : `@${ex.at}s too early — looped (${s?.status || "timeout"}); backing off`, seconds: secs });
+            enqueueBinaryBarge(run, ex.stepIdx, ex.at ?? 0, false); // too early — search later
+          }
+        } else if (faster) {
+          ex.status = "win"; run.best = recipe as NavRecipe;
+          await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null); // shorter word won → re-lock
           run.log.push({ n: run.attempt, phase: "optimize", store: store.name, experiment: ex.label, outcome: `WIN — ${secs}s (was ${bestSecs}s)`, seconds: secs });
         } else if (reached) {
           ex.status = "fail"; // reached a human but not faster — keep the old best
