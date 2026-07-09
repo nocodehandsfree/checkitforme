@@ -72,57 +72,108 @@ export async function buildSyncPayload(): Promise<{ payload: SyncPayload; nextSt
   return { payload, nextState: next };
 }
 
-/** TARGET side: apply a payload. Upserts curated fields only; never touches learned columns. */
+/** Hard cap per request — a batch, never the whole dataset (a 110k-row payload wedged prod 2026-07-09). */
+export const MAX_BATCH = { chains: 400, retailers: 1000, tombstones: 2000 };
+
+/** TARGET side: apply ONE BATCH. Upserts curated fields only; never touches learned columns.
+ *  Throws { code: "batch_too_large" } on oversized payloads instead of grinding the event loop. */
 export async function applyStoreSync(p: SyncPayload): Promise<{ chains: number; retailers: number; created: number; tombstoned: number }> {
+  if ((p.chains?.length || 0) > MAX_BATCH.chains || (p.retailers?.length || 0) > MAX_BATCH.retailers || (p.retailerTombstones?.length || 0) > MAX_BATCH.tombstones) {
+    throw Object.assign(new Error("batch_too_large"), { code: "batch_too_large" });
+  }
   let nC = 0, nR = 0, created = 0, dead = 0;
+  // bulk lookups once per request — no per-row SELECTs
+  const chainRows = await db.select({ id: chains.id, name: chains.name }).from(chains);
+  const chainIds = new Map(chainRows.map((c) => [c.name, c.id]));
   for (const c of p.chains || []) {
     if (!c?.name) continue;
-    const row = (await db.select().from(chains).where(eq(chains.name, c.name)))[0];
-    if (row) await db.update(chains).set(c.fields as never).where(eq(chains.id, row.id));
-    else await db.insert(chains).values({ name: c.name, ...(c.fields as object) } as never);
+    const id = chainIds.get(c.name);
+    if (id) await db.update(chains).set(c.fields as never).where(eq(chains.id, id));
+    else { const [row] = await db.insert(chains).values({ name: c.name, ...(c.fields as object) } as never).returning({ id: chains.id }); chainIds.set(c.name, row.id); }
     nC++;
   }
-  const chainIds = new Map((await db.select().from(chains)).map((c) => [c.name, c.id]));
+  const phoneRows = (p.retailers?.length || p.retailerTombstones?.length)
+    ? await db.select({ id: retailers.id, phone: retailers.phone }).from(retailers) : [];
+  const phoneIds = new Map(phoneRows.map((r) => [r.phone, r.id]));
   for (const r of p.retailers || []) {
     if (!r?.phone || !r.fields?.name || !r.fields?.location) continue;
     const set: Record<string, unknown> = { ...r.fields, chainId: r.chainName ? chainIds.get(r.chainName) ?? null : null };
     // never let a null staging geocode erase a prod geocode
     if (set.lat == null) delete set.lat;
     if (set.lng == null) delete set.lng;
-    const row = (await db.select().from(retailers).where(eq(retailers.phone, r.phone)))[0];
-    if (row) { await db.update(retailers).set(set as never).where(eq(retailers.id, row.id)); nR++; }
-    else { await db.insert(retailers).values({ phone: r.phone, published: true, ...set } as never); created++; }
+    const id = phoneIds.get(r.phone);
+    if (id) { await db.update(retailers).set(set as never).where(eq(retailers.id, id)); nR++; }
+    else { const [row] = await db.insert(retailers).values({ phone: r.phone, published: true, ...set } as never).returning({ id: retailers.id }); phoneIds.set(r.phone, row.id); created++; }
   }
   for (const phone of p.retailerTombstones || []) {
-    const row = (await db.select().from(retailers).where(eq(retailers.phone, phone)))[0];
-    if (row) { await db.update(retailers).set({ active: false }).where(eq(retailers.id, row.id)); dead++; }
+    const id = phoneIds.get(phone);
+    if (id) { await db.update(retailers).set({ active: false }).where(eq(retailers.id, id)); dead++; }
   }
   return { chains: nC, retailers: nR, created, tombstoned: dead };
 }
 
 // ---- Sender (staging only; inert unless both env vars are set) ----
-let lastRun: { at: number; sent: { chains: number; retailers: number; tombstones: number }; ok: boolean; error?: string } | null = null;
-export function syncStatus() {
-  return { enabled: !!(config.staging.on && process.env.STORE_SYNC_URL && process.env.STORE_SYNC_TOKEN), lastRun };
+// Batched + throttled: 400 retailers per POST, max 12 batches per tick (the initial 110k-store
+// catch-up spreads over ~2h of ticks; after that it's tiny diffs). Per-batch 30s timeout; state is
+// persisted after EVERY successful batch so progress survives restarts. lastRun is persisted too.
+const BATCH_ROWS = 400, MAX_BATCHES_PER_TICK = 12;
+let running = false;
+export async function syncStatus() {
+  let lastRun: unknown = null;
+  try { lastRun = JSON.parse((await getSetting("store_sync_last")) || "null"); } catch { /* none */ }
+  return { enabled: !!(config.staging.on && process.env.STORE_SYNC_URL && process.env.STORE_SYNC_TOKEN), running, lastRun };
 }
-export async function storeSyncTick(): Promise<void> {
-  if (!config.staging.on) return;                 // only staging pushes; prod never syncs outward
-  const url = process.env.STORE_SYNC_URL, token = process.env.STORE_SYNC_TOKEN;
-  if (!url || !token) return;                     // not activated yet
-  const { payload, nextState } = await buildSyncPayload();
-  const n = payload.chains.length + payload.retailers.length + payload.retailerTombstones.length;
-  if (n === 0) return;                            // nothing changed since last sync
+async function postBatch(url: string, token: string, batch: SyncPayload): Promise<void> {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 30_000);
   try {
     const r = await fetch(url.replace(/\/$/, "") + "/api/store-sync", {
       method: "POST", headers: { "content-type": "application/json", "x-admin-token": token },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(batch), signal: ctl.signal,
     });
     if (!r.ok) throw new Error(`target ${r.status}: ${(await r.text()).slice(0, 120)}`);
-    await setSetting("store_sync_state", JSON.stringify(nextState));
-    lastRun = { at: Date.now(), sent: { chains: payload.chains.length, retailers: payload.retailers.length, tombstones: payload.retailerTombstones.length }, ok: true };
-    console.log(`[store-sync] pushed ${payload.chains.length} chains, ${payload.retailers.length} retailers, ${payload.retailerTombstones.length} tombstones`);
+  } finally { clearTimeout(timer); }
+}
+export async function storeSyncTick(): Promise<void> {
+  if (!config.staging.on || running) return;      // only staging pushes; never overlap
+  const url = process.env.STORE_SYNC_URL, token = process.env.STORE_SYNC_TOKEN;
+  if (!url || !token) return;                     // not activated
+  running = true;
+  const stamp = async (o: object) => setSetting("store_sync_last", JSON.stringify({ at: Date.now(), ...o }));
+  try {
+    const { payload, nextState } = await buildSyncPayload();
+    const total = payload.chains.length + payload.retailers.length + payload.retailerTombstones.length;
+    if (total === 0) { await stamp({ ok: true, sent: 0, pending: 0 }); return; }
+    let state: Record<string, string> = {};
+    try { state = JSON.parse((await getSetting("store_sync_state")) || "{}"); } catch { /* fresh */ }
+    let sent = 0, batches = 0;
+    // chains first (small), then retailer chunks; persist hashes after each successful batch
+    if (payload.chains.length) {
+      await postBatch(url, token, { chains: payload.chains.slice(0, MAX_BATCH.chains), retailers: [], retailerTombstones: [] });
+      for (const c of payload.chains) state["c:" + c.name] = nextState["c:" + c.name];
+      await setSetting("store_sync_state", JSON.stringify(state));
+      sent += payload.chains.length; batches++;
+    }
+    let i = 0;
+    while (i < payload.retailers.length && batches < MAX_BATCHES_PER_TICK) {
+      const chunk = payload.retailers.slice(i, i + BATCH_ROWS);
+      await postBatch(url, token, { chains: [], retailers: chunk, retailerTombstones: [] });
+      for (const r of chunk) state["r:" + r.phone] = nextState["r:" + r.phone];
+      await setSetting("store_sync_state", JSON.stringify(state));
+      sent += chunk.length; i += chunk.length; batches++;
+    }
+    const pending = payload.retailers.length - i;
+    // tombstones only once the row backlog is clear (keeps ordering sane during the catch-up)
+    if (pending === 0 && payload.retailerTombstones.length) {
+      await postBatch(url, token, { chains: [], retailers: [], retailerTombstones: payload.retailerTombstones.slice(0, MAX_BATCH.tombstones) });
+      for (const ph of payload.retailerTombstones) delete state["r:" + ph];
+      await setSetting("store_sync_state", JSON.stringify(state));
+      sent += payload.retailerTombstones.length;
+    }
+    await stamp({ ok: true, sent, pending });
+    console.log(`[store-sync] pushed ${sent} rows in ${batches} batch(es); ${pending} pending for next tick`);
   } catch (e) {
-    lastRun = { at: Date.now(), sent: { chains: payload.chains.length, retailers: payload.retailers.length, tombstones: payload.retailerTombstones.length }, ok: false, error: String(e).slice(0, 200) };
-    console.error("[store-sync] push failed:", String(e).slice(0, 200));
-  }
+    await stamp({ ok: false, error: String(e).slice(0, 200) }).catch(() => {});
+    console.error("[store-sync] tick failed:", String(e).slice(0, 200));
+  } finally { running = false; }
 }

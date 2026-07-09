@@ -984,9 +984,9 @@
       <summary><span class="name">How a call flows · A / B / C / D</span></summary>
       <div id="abcd_flow" style="margin-top:14px"></div>
     </details>
-    <div class="card">
-      <label>Select a chain</label>
-      <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+    <details class="card" id="set_pickwrap" open>
+      <summary><span class="name">Select a chain</span><span class="meta" id="set_picked" style="margin-left:8px;text-transform:none"></span></summary>
+      <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0">
         <input id="set_search" placeholder="Search chains…" oninput="filterChainPicker()" style="flex:1 1 150px;min-width:0">
         <select id="set_fmap" onchange="filterChainPicker()" style="flex:0 0 auto;width:auto;font-size:13px"><option value="">All</option><option value="mapped">Mapped</option><option value="unmapped">Unmapped</option></select>
         <select id="set_frate" onchange="filterChainPicker()" style="flex:0 0 auto;width:auto;font-size:13px"><option value="">All ratings</option><option value="5">5. Best Chance</option><option value="4">4. Mostly Reliable</option><option value="3">3. Spotty</option><option value="2">2. Over MSRP</option><option value="1">1. Unknown</option></select>
@@ -994,7 +994,7 @@
       <select id="set_chain" onchange="setPickChain()" style="display:none"><option value="">Select a chain</option></select>
       <div id="set_pickcount" class="meta" style="margin-bottom:4px"></div>
       <div id="set_picker"><div class="meta" style="padding:8px 0">Loading…</div></div>
-    </div>
+    </details>
     <div id="set_body" style="display:none">
       <details class="card setsec" open id="set_storewrap">
         <summary><span id="set_storelogo" class="setlogo"></span><span class="name">Store settings</span></summary>
@@ -1216,7 +1216,7 @@ let CATEGORIES = [];
 // ---- Two-level nav: 5 groups across the top (no horizontal scroll), sub-nav switches sections ----
 const NAV_GROUPS={
   godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Live','bolt'],['users','Users','card'],['restock','Restock','cal'],['alerts','Alerts','note'],['growth','Policy','rise'],['calc','Calc','sliders'],['plans','Plans','card']]},
-  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['zones','Zones','target'],['receipts','Kiosk','tag']]},
+  stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['receipts','Kiosk','tag']]},
   calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['feedback','Feedback','chart'],['statuses','Statuses','tag'],['trees','Chains','tree'],['settings','App','sliders']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['workflows','Workflows','note'],['testing','Testing','phone-call'],['fun','Fun','sliders']]},
   launch:   {label:'Launch',   ico:'trophy',tabs:[['gtm','Go-to-Market','check']]},
@@ -1409,6 +1409,7 @@ async function loadTrainer(){
 // Nav counts reuse the locked-recipe navType (keypad→Alpha, voice→Bravo, direct→Charlie); Delta is the
 // recorded-agent rehearsal lane (not a navType yet).
 function renderABCD(ch){
+  ch=Array.isArray(ch)?ch:[];
   const el=document.getElementById('abcd_flow'); if(!el) return;
   const lock=t=>ch.filter(c=>c.navStatus==='locked'&&c.navType===t).length;
   const lanes=[
@@ -2249,6 +2250,9 @@ function splitName(n){ return {base:(n||'').trim(),branch:''}; }
 function logoTile(o){
   o=o||{};
   if(o.logoUrl) return `<div class="slogo${o.logoDark?' lite':''}${o.logoWide?' widelogo':''}"><img loading="lazy" decoding="async" src="${esch(o.logoUrl)}" alt=""></div>`;
+  // Independent hobby/thrift shops have no real logo — show the storefront icon (like the consumer
+  // site) instead of inventing a name-tile. Other logoless stores keep the wordmark fallback.
+  if(o.type==='Hobby'||o.type==='Thrift') return `<div class="slogo" style="display:grid;place-items:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F4D03F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M5 11.5V20h14v-8.5"/><path d="M9 20v-5h6v5"/></svg></div>`;
   return `<div class="slogo">${storeWordmark(o.name,o.type)}</div>`;
 }
 // Name-only stores/chains (no logo file) show THEIR real name as a tight two-line wordmark —
@@ -2376,9 +2380,7 @@ async function loadCoverage(){
       +`<div class="name" data-tip="${esch(TIP)}" style="margin:0">MSRP coverage</div>`
     +`</div>`
     +`<div class="meta" style="margin-top:5px;text-transform:none;letter-spacing:0">${f(d.loaded)} of ${f(d.national)} stores loaded across ${d.msrpChains} chains that carry Pokémon at MSRP (tiers 3–5).</div>`
-    +(gaps.length?`<details style="margin-top:10px"><summary><span class="name">Under-covered chains (${gaps.length})</span></summary>`
-        +`<div class="meta" style="margin:7px 0 9px;text-transform:none;letter-spacing:0">CVS shows a reduced % only because the CVS-inside-Target stores are quarantined. That's expected, not a real gap.</div>`
-        +`<div class="carrygrid">${gapRows}</div></details>`:'');
+    ;
 }
 // The database at a glance — DB-wide totals (exact), independent of the current search.
 async function loadStoreIntel(){
@@ -2780,6 +2782,11 @@ function setPickChain(){
     storesN:st.n, cCallable:st.callable, cKiosk:st.kiosk, cOnline:st.online, cVerified:st.verified };
   ssRenderStore(); ssRenderData(); ssRenderCall();
   renderChainMapping(ch); loadRuns(id, document.getElementById('set_runs'));
+  // Picking a chain collapses the (long) picker and jumps straight to the detail panel — no more
+  // scrolling past the whole chain list to find the mapping you just opened.
+  const pw=document.getElementById('set_pickwrap'); if(pw) pw.open=false;
+  const pk=document.getElementById('set_picked'); if(pk) pk.textContent='· '+ch.name+' (tap to change)';
+  try{ body.scrollIntoView({behavior:'smooth',block:'start'}); }catch(_){ }
 }
 // Inline-commit helpers — every Store/Call control saves on its own (no grouped Save).
 async function ssReload(){ const id=SS&&SS.id; CHAINS=await api('/api/chains')||CHAINS; const sel=document.getElementById('set_chain'); if(sel){ const cur=sel.value; sel.innerHTML='<option value="">Select a chain</option>'+chainOpts(''); sel.value=cur; } buildChainPicker(); if(id&&CHAINS.find(c=>c.id===id)) setPickChain(); }
