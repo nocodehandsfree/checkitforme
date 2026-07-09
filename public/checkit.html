@@ -47,7 +47,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="tonebake-r112" />
+<meta name="x-rev" content="tonebake-r113" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -271,20 +271,26 @@ __BRAND_HEAD__
      dark by one viewport). Two sources, same paint: html.tone-* (server-baked ?tone= deep-links,
      first paint, no JS) and html:has(body.rview.rv-*) (in-page verdicts; ensureToneLoaded's one-shot
      reload guarantees the chrome updates even if iOS doesn't re-read the colour live). */
-  /* ONE dark below the wash, everywhere. The root carries BOTH layers: background-COLOR = the tone
-     (what iOS paints its chrome strips with — proven, tinttest4) and a background-IMAGE gradient whose
-     end colour is var(--bg), which is what the canvas shows beyond the document (top overscroll = tone,
-     bottom overscroll/behind-toolbar = the SAME dark as the page end — no black stripe, no red band
-     against dark pixels, no seam at the document boundary). Standalone needs no special case: it has no
-     chrome to tint and the same gradient keeps its overscrolls correct. */
-  html.tone-in,html:has(body.rview.rv-in){background-color:#266440;background-image:linear-gradient(180deg,#266440 0px,#266440 140px,var(--bg) 100dvh)}
-  html.tone-out,html:has(body.rview.rv-out){background-color:#6b2427;background-image:linear-gradient(180deg,#6b2427 0px,#6b2427 140px,var(--bg) 100dvh)}
-  html.tone-unk,html:has(body.rview.rv-unk){background-color:#6c5419;background-image:linear-gradient(180deg,#6c5419 0px,#6c5419 140px,var(--bg) 100dvh)}
-  html.tone-soon,html:has(body.rview.rv-soon){background-color:#6e490f;background-image:linear-gradient(180deg,#6e490f 0px,#6e490f 140px,var(--bg) 100dvh)}
-  html.tone-in body,body.rview.rv-in{background:linear-gradient(180deg,#266440 0px,#266440 140px,var(--bg) 100dvh)}
-  html.tone-out body,body.rview.rv-out{background:linear-gradient(180deg,#6b2427 0px,#6b2427 140px,var(--bg) 100dvh)}
-  html.tone-unk body,body.rview.rv-unk{background:linear-gradient(180deg,#6c5419 0px,#6c5419 140px,var(--bg) 100dvh)}
-  html.tone-soon body,body.rview.rv-soon{background:linear-gradient(180deg,#6e490f 0px,#6e490f 140px,var(--bg) 100dvh)}
+  /* MIDDLE BLOOM (owner 07-09): in BROWSER Safari the page stays GRAY wherever it touches Apple's
+     furniture. Safari paints its two chrome pieces (status-bar strip + bottom plate) with the page's
+     ONE declared colour — the root's — so the root keeps the base dark and BOTH pieces blend invisibly,
+     apple.com-style. The verdict colour BLOOMS behind the headline (gray at the very top edge → tone by
+     ~110px → gray again by one viewport) instead of touching either edge. STANDALONE has no Apple
+     furniture, so it keeps the full to-the-top tint via the media block below. */
+  html.tone-in body,body.rview.rv-in{background:linear-gradient(180deg,var(--bg) 0px,#266440 110px,#266440 230px,var(--bg) 100dvh)}
+  html.tone-out body,body.rview.rv-out{background:linear-gradient(180deg,var(--bg) 0px,#6b2427 110px,#6b2427 230px,var(--bg) 100dvh)}
+  html.tone-unk body,body.rview.rv-unk{background:linear-gradient(180deg,var(--bg) 0px,#6c5419 110px,#6c5419 230px,var(--bg) 100dvh)}
+  html.tone-soon body,body.rview.rv-soon{background:linear-gradient(180deg,var(--bg) 0px,#6e490f 110px,#6e490f 230px,var(--bg) 100dvh)}
+  @media (display-mode: standalone){
+    html.tone-in,html:has(body.rview.rv-in){background-color:#266440;background-image:linear-gradient(180deg,#266440 0px,#266440 140px,var(--bg) 100dvh)}
+    html.tone-out,html:has(body.rview.rv-out){background-color:#6b2427;background-image:linear-gradient(180deg,#6b2427 0px,#6b2427 140px,var(--bg) 100dvh)}
+    html.tone-unk,html:has(body.rview.rv-unk){background-color:#6c5419;background-image:linear-gradient(180deg,#6c5419 0px,#6c5419 140px,var(--bg) 100dvh)}
+    html.tone-soon,html:has(body.rview.rv-soon){background-color:#6e490f;background-image:linear-gradient(180deg,#6e490f 0px,#6e490f 140px,var(--bg) 100dvh)}
+    html.tone-in body,body.rview.rv-in{background:linear-gradient(180deg,#266440 0px,#266440 140px,var(--bg) 100dvh)}
+    html.tone-out body,body.rview.rv-out{background:linear-gradient(180deg,#6b2427 0px,#6b2427 140px,var(--bg) 100dvh)}
+    html.tone-unk body,body.rview.rv-unk{background:linear-gradient(180deg,#6c5419 0px,#6c5419 140px,var(--bg) 100dvh)}
+    html.tone-soon body,body.rview.rv-soon{background:linear-gradient(180deg,#6e490f 0px,#6e490f 140px,var(--bg) 100dvh)}
+  }
   /* SLIDE-UP SHEETS (My/account, buy, page sheet, call sheet): while one is open the toned page glows
      around/behind the dark sheet and the chrome strips clash with it (owner 07-09). Revert the root
      colour AND the body wash to the regular dark for the duration — the :has() rules undo themselves
