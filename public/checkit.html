@@ -1851,7 +1851,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   </div>
   <div class="foot-bottom">
     <span class="foot-fav" id="footMark"></span>
-    <span class="foot-copy">© <span id="footYear"></span> High Science LLC</span>
+    <span class="foot-copy">© <span id="footYear"></span><br>High Science LLC</span>
   </div>
 </footer>
 
@@ -2651,8 +2651,8 @@ function renderFooter(){
     const meta=document.querySelector('.foot-meta'), bot=document.querySelector('.foot-bottom');
     if(meta&&bot&&fm&&!meta.contains(fm)){
       meta.insertBefore(fm,meta.firstChild); // logo joins the socials/lang cluster; © stays in foot-bottom
-      const cp=bot.querySelector('.foot-copy'); if(cp) cp.style.cssText='font-size:11px;color:#66666F';
-      bot.style.cssText='display:flex;align-items:center;justify-content:center;padding-top:14px'; // standalone centered © row
+      const cp=bot.querySelector('.foot-copy'); if(cp) cp.style.cssText='display:block;font-size:11px;color:#66666F;text-align:center;line-height:1.7'; // block (not flex) so the <br> stacks © 2026 over "High Science LLC" — two centered lines
+      bot.style.cssText='display:flex;align-items:center;justify-content:center;padding-top:10px'; // standalone centered © block
       meta.style.cssText='display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;width:100%';
       const soc=meta.querySelector('.foot-social'); if(soc) soc.style.marginLeft='';
     }
