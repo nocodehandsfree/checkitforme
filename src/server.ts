@@ -556,6 +556,33 @@ app.get("/tinttest5", (c) => {
 // (one value, both ends). If theme-color overrides only the TOP here — green top + dark bottom — that
 // is the exact goal and we ship theme-color per-tone. If the bottom goes green too, this iOS version
 // genuinely has a single tint colour and the owner must pick green-both or dark-both.
+// TEMP diagnostic step 7: option-1 preview. Test 6 proved theme-color is ignored — this iOS paints ONE
+// colour (the root background-color) at BOTH chrome strips, so tone-on-top requires tone-on-bottom.
+// This page makes that look deliberate: root colour = tone (both strips green), top wash as designed,
+// and a faint tone glow rising from the page bottom so the green band meets the page instead of
+// clashing with flat black. If the owner approves, THIS is the structure to port to checkit.html.
+app.get("/tinttest7", (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.html(`<!doctype html><html lang="en" style="background-color:#266440"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>tint test 7</title>
+<style>
+:root{--bg:#0C0C12;--sheet:#1A1A24;--border:rgba(255,255,255,.08)}
+*{box-sizing:border-box}
+body{margin:0;padding:0;min-height:100dvh;background:var(--bg);color:#fff;font-family:-apple-system,system-ui,sans-serif;position:relative}
+body::before{content:"";position:absolute;left:0;top:0;width:100%;height:460px;background:linear-gradient(180deg,#266440 0px,#266440 160px,var(--bg) 460px);z-index:0;pointer-events:none}
+body::after{content:"";position:fixed;left:0;bottom:0;width:100%;height:180px;background:linear-gradient(0deg,rgba(38,100,64,.55) 0px,rgba(38,100,64,0) 100%);z-index:0;pointer-events:none}
+header,main{position:relative;z-index:1}
+header{padding:14px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;background:transparent;z-index:20}
+.logo{font-size:19px;font-weight:900}
+.pill{display:inline-flex;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700;margin-left:auto}
+main{padding:14px 20px;max-width:520px;margin:0 auto;width:100%}
+.card{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;margin-top:200px}
+</style></head><body>
+<header><span class="logo">Check <b>it</b></span><span class="pill">My ✓</span></header>
+<main><div style="font-weight:800;text-align:center">test 7: option 1 polished — green strips both ends, wash on top, soft glow meeting the bottom band.</div><div class="card">a card, like the result view</div><div class="card">another card to scroll past</div></main>
+</body></html>`);
+});
 app.get("/tinttest6", (c) => {
   c.header("Cache-Control", "no-store");
   return c.html(`<!doctype html><html lang="en" style="background-color:#0C0C12"><head><meta charset="utf-8">
