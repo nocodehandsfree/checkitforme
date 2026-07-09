@@ -519,6 +519,38 @@ html.tone-in header{background:transparent;border-bottom-color:transparent;backd
 <main><div style="font-weight:800;text-align:center">Solid top block, gradient only below 240px.<br>GREEN strip = this is the structure we ship.</div><div class="card">a card, like the result view</div></main>
 </body></html>`);
 });
+// TEMP diagnostic step 4+5. Working theory after tests 1-3: the iOS top strip takes the ROOT's declared
+// background-COLOR (one solid value), not sampled pixels (that's macOS) — our html is #0C0C12 ≈ black,
+// hence every "black" result. /tinttest4: html background-color=tone PLUS a gradient background-image
+// (tone→dark by 460px) so the canvas pixels keep a dark bottom overscroll — green strip here means we
+// can have tone on top and dark at the bottom. /tinttest5: html background-color=tone with NO image —
+// isolates whether an image layer on html makes iOS bail. Remove all /tinttest* when done.
+const tintTestPage = (htmlStyle: string, label: string) => `<!doctype html><html lang="en" style="${htmlStyle}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>${label}</title>
+<style>
+:root{--bg:#0C0C12;--sheet:#1A1A24;--border:rgba(255,255,255,.08)}
+*{box-sizing:border-box}
+body{margin:0;padding:0;min-height:100dvh;background:transparent;color:#fff;font-family:-apple-system,system-ui,sans-serif}
+header{padding:14px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;background:transparent;z-index:20}
+.logo{font-size:19px;font-weight:900}
+.pill{display:inline-flex;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700;margin-left:auto}
+main{padding:14px 20px;max-width:520px;margin:0 auto;width:100%}
+.card{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;margin-top:200px}
+</style></head><body>
+<header><span class="logo">Check <b>it</b></span><span class="pill">My ✓</span></header>
+<main><div style="font-weight:800;text-align:center">${label}</div><div class="card">a card, like the result view</div></main>
+</body></html>`;
+app.get("/tinttest4", (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.html(tintTestPage("background-color:#266440;background-image:linear-gradient(180deg,#266440 0px,#0C0C12 460px)", "test 4: root COLOR = green + gradient image for a dark bottom"));
+});
+app.get("/tinttest5", (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.html(tintTestPage("background-color:#266440", "test 5: root COLOR = green, no image at all"));
+});
 // Preview-only: the redesigned result/live UI served from checkit-demo.html, so the live
 // site keeps the current design while we evaluate the new one. /demo?brand=<slug> picks a vertical.
 app.get("/demo", (c) => {
