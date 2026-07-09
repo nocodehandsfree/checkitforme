@@ -583,6 +583,68 @@ main{padding:14px 20px;max-width:520px;margin:0 auto;width:100%}
 <main><div style="font-weight:800;text-align:center">test 7: option 1 polished — green strips both ends, wash on top, soft glow meeting the bottom band.</div><div class="card">a card, like the result view</div><div class="card">another card to scroll past</div></main>
 </body></html>`);
 });
+// TEMP diagnostic step 8: the owner's requested preview — a REAL-looking call status page with a
+// FULL-PAGE gradient (tone at top → dark), root colour = tone so the top strip tints, one page per
+// verdict tone (?tone=in|out|unk|soon, in-page switcher). This is the candidate design to nail the top.
+app.get("/tinttest8", (c) => {
+  c.header("Cache-Control", "no-store");
+  const T: Record<string, { wash: string; title: string; tc: string; sub: string }> = {
+    in:   { wash: "#266440", title: "In stock!",        tc: "#4ADE80", sub: "They have it right now — go get it." },
+    out:  { wash: "#6b2427", title: "Not in",           tc: "#EF4444", sub: "Sold out at this store today." },
+    unk:  { wash: "#6c5419", title: "Couldn’t tell", tc: "#FBBF24", sub: "We couldn’t quite make out the answer." },
+    soon: { wash: "#6e490f", title: "Restock incoming", tc: "#F0A32E", sub: "A shipment lands soon. Be first when it drops." },
+  };
+  const tone = String(c.req.query("tone") || "in");
+  const t = T[tone] || T.in;
+  const sw = (Object.keys(T) as (keyof typeof T)[]).map((k) => `<a href="/tinttest8?tone=${k}" style="color:#fff;text-decoration:none;font-weight:800;font-size:12px;padding:6px 11px;border-radius:16px;border:1px solid rgba(255,255,255,.25);background:${k === tone ? "rgba(255,255,255,.18)" : "transparent"}">${String(k).toUpperCase()}</a>`).join(" ");
+  return c.html(`<!doctype html><html lang="en" style="background-color:${t.wash}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>tint test 8 — ${tone}</title>
+<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format('woff2')}
+:root{--bg:#0C0C12;--sheet:#1A1A24;--border:rgba(255,255,255,.08)}
+*{box-sizing:border-box}
+body{margin:0;padding:0;min-height:100dvh;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;
+  background:linear-gradient(180deg,${t.wash} 0px,${t.wash} 140px,var(--bg) 100dvh)}
+header{padding:14px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;background:transparent;z-index:20}
+.logo{font-size:19px;font-weight:900;letter-spacing:-.5px}
+.logo b{color:#4ADE80}
+.pill{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700;margin-left:auto}
+main{padding:10px 20px 40px;max-width:520px;margin:0 auto;width:100%}
+.rchip{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.3);border-radius:16px;padding:6px 13px;font-size:11px;font-weight:800;letter-spacing:1.5px;margin:8px 0 14px}
+.rchip .dot{width:7px;height:7px;border-radius:50%;background:${t.tc}}
+h1{font-size:40px;line-height:1.05;margin:0 0 10px;letter-spacing:-1.5px;font-weight:900;color:${t.tc}}
+.sub{color:#d9d9e2;font-size:16px;margin:0 0 22px}
+.cta{display:block;width:100%;text-align:center;background:transparent;border:1.5px solid #4ADE80;color:#4ADE80;font-weight:900;font-size:15px;letter-spacing:1px;padding:16px;border-radius:999px;text-transform:uppercase;box-shadow:0 0 22px rgba(74,222,128,.25);margin-bottom:28px}
+.tl{border-left:2px solid rgba(74,222,128,.5);padding-left:18px;margin-left:6px}
+.tl .step{margin-bottom:14px}
+.tl .t{font-weight:800;font-size:16px}
+.tl .m{color:#9a9aa8;font-size:14px;margin-top:6px}
+.bub{background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:13px 15px;margin:10px 0}
+.bub .who{font-size:10.5px;font-weight:800;letter-spacing:1.2px;color:#8a8a96;margin-bottom:5px}
+.bub.ai .who{color:#4ADE80}
+.sw{display:flex;gap:8px;margin:0 0 6px}
+</style></head><body>
+<header><span class="logo">Check <b>it</b></span><span class="pill">My ✓</span></header>
+<main>
+<div class="sw">${sw}</div>
+<div class="rchip"><span class="dot"></span> RESULT</div>
+<h1>${t.title}</h1>
+<p class="sub">${t.sub}</p>
+<a class="cta" href="#">Check another store →</a>
+<div class="tl">
+<div class="step"><div class="t">Ringing the store</div><div class="m">It’s ringing… 9s · We’ve connected · A person picked up</div></div>
+<div class="step"><div class="t" style="color:#4ADE80">Asking about Pokémon</div>
+<div class="bub"><div class="who">STAFF</div>How can I help you?</div>
+<div class="bub ai"><div class="who">CHECK AI</div>Hi there! I was just checking, do you have any Pokémon cards in stock right now?</div>
+<div class="bub"><div class="who">STAFF</div>Um, yeah, give me a second to check…</div>
+<div class="bub ai"><div class="who">CHECK AI</div>No worries, take your time!</div>
+</div>
+</div>
+</main>
+</body></html>`);
+});
 app.get("/tinttest6", (c) => {
   c.header("Cache-Control", "no-store");
   return c.html(`<!doctype html><html lang="en" style="background-color:#0C0C12"><head><meta charset="utf-8">
