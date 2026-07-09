@@ -3,6 +3,28 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-09 — two prod outages, both mine to own, both fixed
+
+- **Outage 1 (~90 min):** Gmail IMAP socket timeout in the kiosk-receipt poller emitted an unhandled
+  'error' event → killed the whole process. FIXED: error listeners on both ImapFlow clients +
+  process-level uncaughtException/unhandledRejection guards ([FATAL-CAUGHT] logs, never dies).
+  Receipts now do a 48h catch-up scan on first tick after any boot (outage self-heal). Owner's two
+  kiosk receipts recovered + verified (2 in DB).
+- **Outage 2 (server wedged, admin tabs stuck "Loading"):** store-sync's FIRST push sent the entire
+  ~110k-store dataset in one payload, no timeout, resent every 5 min → prod event loop starved.
+  Disarmed live (deleted STORE_SYNC_URL on staging svc), restarted prod, REBUILT the sync:
+  400-row batches (max 12/tick ⇒ full catch-up ≈ 2h), 30s/batch timeout, running guard, state
+  persisted per successful batch, durable lastRun (no-ops stamped), receiver bulk-lookups + 413 on
+  oversized batches. Suite still 16/16.
+  **⏸ SYNC IS DISARMED — to re-arm: set `STORE_SYNC_URL=https://checkitforme.com` back on the
+  staging service (STORE_SYNC_TOKEN is still set) and BABYSIT the first catch-up via
+  `/api/store-sync/status`. Do not re-arm casually.**
+- **Admin fixes shipped (owner list):** hobby/thrift logoless stores → storefront icon via the one
+  logoTile pipeline; "Under-covered chains" report removed; Zones sub-nav link removed; "How a call
+  flows" renders instantly (was empty-until-data = looked stuck); chain picker collapsible + picking
+  a chain collapses the list and scrolls to the mapping panel. All click-verified headless pre-ship.
+- **Standing rule learned hard:** prod down ⇒ restart it MYSELF, immediately, no asking.
+
 ## Carry-over (2026-07-07 — for the new repo)
 
 **Memory note:** my visible memory of the retiring chat starts at a COMPACTION SUMMARY (context ran
@@ -11,12 +33,6 @@ Everything before that (avgTreeSeconds wiring, commerce build, ReadMe setup) I k
 summary — treat those DONE marks as summary-sourced, not witnessed.
 
 ### PARTIAL / UNSURE
-- **Store-data sync — first run UNCONFIRMED.** Built + deployed both envs (`src/store-sync.ts`,
-  16-test suite `scripts/test-storesync.ts`); `STORE_SYNC_URL` + `STORE_SYNC_TOKEN` are set on the
-  staging Railway service; `/api/store-sync/status` shows `enabled:true, lastRun:null`.
-  **Observability gap (my bug): no-op ticks don't stamp lastRun and lastRun is in-memory (resets on
-  every deploy), so "never ran" vs "nothing to do" is indistinguishable.** Fix: persist lastRun to
-  settings + stamp no-op ticks; then verify prod actually received once (compare a curated field).
 - **Rules: staging is the curation home now** — Data Dev edits staging; prod hand-edits get overwritten
   next diff of the same row. Owner was told; confirm Data Dev knows.
 - **In-memory rate limiter is per-instance** (fires at limit × replica-count; measured 8/min becoming
