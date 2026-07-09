@@ -56,7 +56,7 @@
   addEventListener('scroll',function(){ if(!tick){ tick=true; requestAnimationFrame(upd); } },{passive:true});
   upd();
 }catch(e){}})();</script>
-<meta name="x-rev" content="tonebake-r106" />
+<meta name="x-rev" content="tonebake-r107" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -303,7 +303,7 @@ __BRAND_HEAD__
      "look like there's nothing there"). Middle path: the chrome is toned while the verdict is in view
      and reverts to regular dark once scrolled past it (class set by the scroll watcher next to the
      boot script). The page's own wash is untouched — only the chrome colour changes. */
-  html.tint-scrolled{background:#0C0C12!important}
+  html.tint-scrolled{background:#000!important} /* pure black, not --bg: Safari's expanded bottom toolbar renders the tint DIMMED, so #0C0C12 left a visible seam — black-on-black hides the toolbar's top edge (owner's "line") */
   /* Baked deep-link state mirrors the result view's top treatment (transparent header) so the wash is
      continuous from the strip into the page; dropBakedTone clears the class on any in-page view change. */
   html.tone-in header,html.tone-out header,html.tone-unk header,html.tone-soon header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
@@ -755,7 +755,7 @@ __BRAND_HEAD__
   .rcptwait{display:flex;align-items:center;justify-content:center;gap:10px;color:#cfcfd8;font-size:13.5px;font-weight:600;padding:6px 0}
   .rcptspin{width:16px;height:16px;flex:0 0 auto;border-radius:50%;border:2px solid var(--pline);border-top-color:var(--purple);animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .site-footer{border-top:0;margin-top:18px;padding:20px 22px 26px;background:transparent} /* transparent + borderless so the footer blends into the page — the 1px border-top + lighter #0e0e16 block WAS the grey line across the page bottom (owner 07-09; v2 got the same fix) */
+  .site-footer{border-top:0;margin-top:18px;padding:20px 22px 26px;background:linear-gradient(180deg,rgba(0,0,0,0) 0,#000 100%)} /* borderless (the old 1px border-top + lighter block WAS a grey line) and fading to PURE BLACK at the document end: Safari's expanded bottom toolbar is near-black glass, so the page must end black for its top edge to disappear (owner 07-09, "no line whatsoever") */
   /* one tight link row + one meta row — and when the floating back fab is up (.fabbed),
      the footer reserves the fab's WHOLE corner (58px + 22px gap ≈ 80px each way) so no row —
      copyright, socials, language — can ever sit under the thumb button. */
