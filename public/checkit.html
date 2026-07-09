@@ -107,6 +107,7 @@ __BRAND_HEAD__
   .storelist{margin-top:12px;max-height:480px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding:3px}
   .store{display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid var(--border);border-radius:12px;cursor:pointer;background:var(--terminal);transition:border-color .12s,background .12s}
 .store.shut{opacity:.56}
+.store.coming{opacity:.5} /* callable-but-unmapped: shown greyed, not callable (tap → "Adding store soon!") */
   .store:hover{border-color:rgba(255,255,255,.18)}
   .store.sel{border-color:var(--accent,#FFCB05);background:color-mix(in srgb,var(--accent,#FFCB05) 9%,transparent)}
   .store .ic{width:52px;height:52px;border-radius:15px;background:linear-gradient(145deg,#34343d,#23232b);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
@@ -1216,6 +1217,7 @@ html[data-skin="v2"] #success .fab-back .fbk-lbl::after{content:"BACK"}
 html[data-skin="v2"] #success .fab-back .fbk-lbl{display:inline}
 html[data-skin="v2"] .mychk{width:24px;height:24px;margin-left:-2px}
 html[data-skin="v2"] .shoptag{display:inline-block;vertical-align:middle;margin-left:6px;padding:2px 7px;border-radius:6px;font-size:8.5px;font-weight:900;letter-spacing:.06em;color:color-mix(in srgb,var(--accent,#FFCB05) 80%,#FFF);background:color-mix(in srgb,var(--accent,#FFCB05) 14%,transparent)}
+.soontag{display:inline-block;vertical-align:middle;margin-left:6px;padding:2px 7px;border-radius:6px;font-size:8.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#9A9AA6;background:rgba(255,255,255,.06)}
 html[data-skin="v2"] .fld-err{background:rgba(239,68,68,.07)!important;border:1.5px dashed rgba(239,68,68,.55)!important;box-shadow:none!important}
 .fld-err{background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.55)}
 html[data-skin="v2"] .modal{background:#26262B;border:0;border-radius:26px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
@@ -2336,7 +2338,7 @@ const I18N={ es:{
   'buy.tabplans':'Planes','buy.tabpayg':'Por uso','plan.on':'Tienes','plan.checks':'verificaciones','plan.percheck':'aprox.','plan.percheck2':'por verificación','plan.noexpire':'no caducan','acct.stat.run2':'Verificaciones hoy','acct.perweek2':'Verificaciones esta semana','auth.newcell':'Danos tu nuevo celular','ph.cellmail':'tu correo',
   'ref.sharemsg':'¡Oye! Mira esta tecnología. Está increíble.\nNos ayuda a encontrar productos virales en stock como cartas Pokémon a precio de tienda.\nRegístrate y ambos ganamos 3 verificaciones gratis: ','ref.copied':'¡Enlace de invitación copiado!','ref.copy':'Copia tu enlace de invitación:','ref.both':'Ambos reciben <b style="color:#fff">3 verificaciones gratis</b> cuando se registran.','ref.copybtn':'COPIAR','ref.text':'Mensaje','ref.post':'Publicar','ref.more':'Más',
   'kioskonly':'Solo kiosco','kiosk.precall':'Solo kiosco. Preguntaremos si su kiosco está funcionando y surtido, no por un envío.',
-  'closednow':'· cerrado ahora',
+  'closednow':'· cerrado ahora','store.soon':'¡Agregando tienda pronto!','store.soonchip':'Muy pronto',
   // live view
   'pre.had':'tenían en stock','pre.notin':'no tenían','pre.unclear':'sin respuesta clara','pre.again':'Verificaste {s} {a}. {o}. ¿Verificar de nuevo?','pre.note':'Verificaste {s} {a}. {o}',
   'live.mute':'🔇 Quita el silencio del teléfono para escuchar la llamada','live.calling':'📞 Colocando la llamada…','live.ringing':'📞 Timbrando…','live.connected':'✅ Contestaron. Escuchando…','live.talking':'🙋 Hablando con un empleado…','live.ivr':'🔢 Navegando el menú telefónico…','live.getting':'⏳ Obteniendo el resultado…','live.loading':'Cargando tu llamada…','live.connecting':'Conectando…',
@@ -3479,6 +3481,7 @@ function storeTier(s){ return Number(s&&s.tier)||0; } // 5 = best MSRP odds … 
 // inStock store (recent confirmed hit) leads with the brand check.
 function storeRowHtml(s){
   const kiosk=MODE==='kiosk';
+  const notReady=!kiosk && s && s.callReady===false; // callable but its phone-tree isn't mapped yet → greyed "coming soon", not dialable
   const mi=storeMi(s); const o=s&&s.openState;
   const sel=SEL_STORE&&SEL_STORE.id===s.id?'sel':'';
   const right=mi!=null?`<div class="smi">${mi<10?mi.toFixed(1):Math.round(mi)}<small>mi</small></div>`:'';
@@ -3491,7 +3494,7 @@ function storeRowHtml(s){
       <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${dot2}${[esc(s.location||''),st].filter(Boolean).join(' · ')}</div></div>
       ${right}</div>`;
   }
-  if(!TIER_VIEW && BEST && s.id===BEST.id){
+  if(!TIER_VIEW && BEST && s.id===BEST.id && !notReady){
     const rowBest=(SEL_STORE && SEL_STORE.id!==s.id)?'':'best';
     const bwhy=esc(LANG==='es'?t('bestwhy','great odds right now'):(BEST.why||'great odds right now'));
     if(isV2()){
@@ -3511,9 +3514,10 @@ function storeRowHtml(s){
   const drop=shipmentDayShort(s);
   const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', drop?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
   const shopTag=(MODE==='hobby'&&s.isMSRP===false)?` <span class="shoptag">${t('hob.shopprices','SHOP PRICES')}</span>`:'';
-  return `<div class="store ${sel}${isClosed(s)?' shut':''}" onclick="pickStore(${s.id})">
+  const soonTag=notReady?` <span class="soontag">${t('store.soonchip','Coming soon')}</span>`:'';
+  return `<div class="store ${sel}${isClosed(s)?' shut':''}${notReady?' coming':''}" onclick="pickStore(${s.id})">
     <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${storeFace(s)}</div>
-    <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)}${shopTag}</div><div class="lo">${dot}${meta}</div></div>
+    <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)}${shopTag}${soonTag}</div><div class="lo">${dot}${meta}</div></div>
     ${right}</div>`;
 }
 function renderStores(){
@@ -3810,6 +3814,7 @@ function renderChips(){
 }
 function pickStore(id){
   const st=STORES.find(s=>s.id===id);
+  if(st&&st.callReady===false){ toast(t('store.soon','Adding store soon!')); return; } // unmapped chain — greyed, not callable yet
   if(isClosed(st)){ toast(tLbl(st.openState.label||'Closed')+' '+t('closednow',"· closed now")); return; }
   SEL_STORE=st; SEL_KIOSK=false; KIOSK_OK=false; CS_DISMISSED=false; // fresh pick → the sheet may slide up again
   if(!BRAND_CAT) applyBrand();   // categories may have loaded after first paint — re-resolve the brand's category
