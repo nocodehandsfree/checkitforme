@@ -4003,9 +4003,10 @@ app.post("/api/store-sync", async (c) => {
   if (config.staging.on) return c.json({ error: "staging_is_the_source" }, 400); // only prod receives
   const p = await c.req.json().catch(() => null);
   if (!p) return c.json({ error: "bad_payload" }, 400);
-  return c.json({ ok: true, ...(await applyStoreSync(p)) });
+  try { return c.json({ ok: true, ...(await applyStoreSync(p)) }); }
+  catch (e) { return c.json({ error: String((e as { code?: string }).code || e).slice(0, 80) }, (e as { code?: string }).code === "batch_too_large" ? 413 : 500); }
 });
-app.get("/api/store-sync/status", (c) => c.json(syncStatus()));
+app.get("/api/store-sync/status", async (c) => c.json(await syncStatus()));
 
 app.get("/api/gtm", async (c) => {
   let items = GTM_SEED;

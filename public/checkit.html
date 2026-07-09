@@ -138,6 +138,7 @@ __BRAND_HEAD__
   .loaddots{display:inline-flex;gap:9px;align-items:center;padding:16px 0}
   .loaddots span{width:10px;height:10px;border-radius:50%;background:var(--green,#4ADE80);animation:loaddot 1.25s ease-in-out infinite}
   .loaddots span:nth-child(2){animation-delay:.18s} .loaddots span:nth-child(3){animation-delay:.36s}
+  .loaddots.lite span{background:#EAEAF0} /* light dots for washed/tinted backgrounds (e.g. the loading-your-check screen) */
   @keyframes loaddot{0%,65%,100%{opacity:.22;transform:translateY(0)}32%{opacity:1;transform:translateY(-5px)}}
   @media (prefers-reduced-motion:reduce){ .loaddots span{animation:none;opacity:.7} }
   @keyframes armPulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,.5)}100%{box-shadow:0 0 0 24px rgba(74,222,128,0)}}
@@ -1112,7 +1113,7 @@ html[data-skin="v2"] input{background:#1B1B20;border:0;border-radius:14px;box-sh
 /* Pills: raised chrome. */
 html[data-skin="v2"] .pill,html[data-skin="v2"] .vsw-trig{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.1)}
 /* Footer strip. */
-html[data-skin="v2"] .site-footer{background:#17171C;border-top:0}
+html[data-skin="v2"] .site-footer{background:transparent;border-top:0} /* transparent so the footer blends into the page — no grey band/line at its top edge (owner 07-09) */
 /* S2 store-type switcher (comp-exact; launch state = Retail + Kiosk keys). Carved track, raised
    active key, icons tint via currentColor (#4ADE80 active / #7C7C88 idle). */
 html[data-skin="v2"] .modetabs{background:#1B1B20;border:0;border-radius:999px;padding:5px;gap:2px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
@@ -1133,6 +1134,7 @@ html[data-skin="v2"] .foot-social a,html[data-skin="v2"] .foot-social button{wid
 /* T1 EXACT: 14.5/800, pad 12/22, comp shadows (deep drop + inner top light). */
 html[data-skin="v2"] .toast{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#0C2916;border:0;border-radius:22px;font-size:14px;font-weight:800;padding:12px 20px;box-shadow:0 14px 30px -8px rgba(25,177,69,.5),inset 0 1px 0 rgba(255,255,255,.35);max-width:calc(100vw - 36px);white-space:normal;text-align:center;line-height:1.35;bottom:34px;box-sizing:border-box}
 html[data-skin="v2"] .toast.tneutral{background:linear-gradient(180deg,#31313A 0%,#26262C 100%);color:#FFF;box-shadow:0 14px 30px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.12)}
+html[data-skin="v2"] .toast.oneline{white-space:nowrap;max-width:none} /* map hint etc. — one line, never wraps */
 html[data-skin="v2"] .toast.taccent{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;box-shadow:0 14px 30px -8px color-mix(in srgb,var(--accent,#FFCB05) 45%,transparent),inset 0 1px 0 rgba(255,255,255,.4)}
 /* IS1 EXACT: share = white 12.5/800/.13em label capsule (icon left, arrow right); action tiles 2-col. */
 html[data-skin="v2"] .smbtn.is1s{display:flex;align-items:center;justify-content:space-between;width:100%;color:#FFF;font-size:12.5px;letter-spacing:.13em;padding:13px 22px}
@@ -1250,7 +1252,8 @@ html[data-skin="v2"] .rsub{font-size:16px;font-weight:500;color:rgba(255,255,255
    accent raised key, today = 1.5px white outline. */
 html[data-skin="v2"] .railcalpop{background:#26262B;border:0;border-radius:22px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 html[data-skin="v2"] .rcal-h button{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
-html[data-skin="v2"] body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:2px;background:#1D1D22;z-index:2147483000;pointer-events:none}
+/* (removed) the fixed 2px bottom bar — it rendered as a visible grey line at the footer on tinted pages and
+   wasn't actually pinning the iOS toolbar dark anyway (the chrome still sampled the tint). Owner 07-09. */
 /* Check-days = the Check green, NOT the per-brand accent (Pokémon's accent is yellow, which read as
    off-brand/alarming on the history calendar). Days you checked are product activity, so they take the
    product color like the CHECK-A-STORE CTA + My toggle — consistent across every vertical. Owner 07-05. */
@@ -2260,7 +2263,7 @@ let POLICY={flags:{driverHandoff:true,restockAlerts:true,shareCards:true,kiosks:
 let LEAD_PENDING=null, AUTH_PENDING=null;
 const $=id=>document.getElementById(id);
 const markFld=(el,on)=>{ if(!el)return; el.classList.toggle('fld-err',!!on); if(on&&!el.__fldClr){ el.__fldClr=1; el.addEventListener('input',()=>el.classList.remove('fld-err'),{once:false}); } };
-const toast=(m,kind)=>{const t=$('toast');t.innerHTML=m;t.classList.remove('tneutral','taccent');if(kind)t.classList.add('t'+kind);t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}; // kind: undefined=green success · 'neutral' raised dark · 'accent' yellow (T1 §5.4; styled under v2 only)
+const toast=(m,kind)=>{const t=$('toast');t.innerHTML=m;t.classList.remove('tneutral','taccent','oneline');if(kind)t.classList.add('t'+kind);t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}; // kind: undefined=green success · 'neutral' raised dark · 'accent' yellow (T1 §5.4; styled under v2 only). '.oneline' (added by caller after) forces nowrap.
 // ── i18n (rollout-ready; Spanish live, other languages fall back to English until filled) ──
 const LANGS=[['en','EN'],['es','ES']];
 const I18N={ es:{
@@ -2371,7 +2374,7 @@ const I18N={ es:{
   'st.voicemail':'Buzón de voz','stn.voicemail':'Salió una grabación, no una persona. Sin cargo.',
   'st.busy':'Línea ocupada','stn.busy':'La línea estaba ocupada. Sin cargo.',
   'st.bad_number':'Número equivocado','stn.bad_number':'Ese número no conectó. Sin cargo.',
-  'st.closed':'Está cerrado','stn.closed':'{store} está cerrado ahora. Sin cargo.',
+  'st.closed':'Está cerrado','stn.closed':'{store} está cerrado ahora. Sin cargo.','stn.closed2':'La tienda está cerrada.',
   'st.failed':'Llamada fallida','stn.failed':'Algo falló de nuestro lado. Sin cargo.',
   // history badges (short)
   'hb.in':'En stock','hb.out':'No está','hb.nocarry':'No lo venden','hb.soldout':'Agotado','hb.hold':'En espera','hb.noanswer':'Sin respuesta','hb.voicemail':'Buzón','hb.busy':'Ocupado','hb.noperson':'Sin persona','hb.lang':'Idioma','hb.badnum':'Número malo','hb.closed':'Cerrado','hb.failed':'Falló','hb.unclear':'Un “quizás”',
@@ -2415,7 +2418,7 @@ const I18N={ es:{
   'dd.tag':'Vista previa · próximamente','dd.title':'Que un local lo recoja','dd.sub':'¿Muy lejos para manejar? Manda a un conductor de Uber/Lyft cercano a comprarlo y enviártelo. Él paga <b>$0 de su bolsillo</b>, tú solo pones el bono.','dd.instock':'En stock','dd.s1':'Define el <b style="color:var(--green)">bono</b> del conductor (ej. $25) sobre su tarifa','dd.s2':'Pide el viaje en <b>Uber</b> o <b>Lyft</b>. Recogida en la tienda','dd.s3':'Envía una tarjeta prepagada (producto + envío) + un mensaje listo','dd.s4':'Él lo compra, lo envía y toca <b>Listo</b> → tu bono se libera al instante','dd.sees':'lo que ve el conductor','dd.pickup':'Tienes una recogida de <span style="color:var(--green)">$25</span> 🏃','dd.applepay':'Agregar tarjeta a Apple Pay (60 seg)','dd.cta':'Quiero acceso anticipado →','dd.noted':'Anotado. Te buscamos para el acceso anticipado 🤝','dd.grab':'recoger en {s} → te lo envían',
   // generic errors / toasts / misc
   'err.generic':'No se procesó. Vuelve a intentarlo.','err.sendcode':'No pudimos enviar un código. Inténtalo de nuevo.','err.verify':'No se pudo verificar. Inténtalo de nuevo.','err.post':'No se pudo publicar. Inténtalo de nuevo.','err.upload':'La foto no se subió. Inténtalo de nuevo.','err.photobig':'La foto pesa demasiado. Prueba con una más pequeña.','auth.verifying':'Verificando…','map.list':'Lista','store.closed':'Cerrado','toast.nocall':'. No se hizo la llamada.','auth.welcome':"✓ Ya entraste",'err.email':'Ingresa un correo válido','err.usonly':'Por ahora solo enviamos SMS a números de EE. UU.','err.toofast':'Espera un momento e inténtalo de nuevo.','auth.sending':'Enviando…','auth.resending':'Reenviando…','err.contact':'Ingresa un correo o teléfono válido.','err.pickstore':'Elige una tienda primero',
-  'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la verificación','toast.callgone':'Esa verificación ya no está disponible','toast.toosoon':'Acabas de verificar esta tienda — vuelve a verificar en unos {n} min.','toast.loadingcall':'Cargando tu verificación…','toast.translate.fail':'No se pudo traducir eso.','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Aquí está la lista.','map.nostores':'No hay tiendas aquí. Mueve el mapa a otro lugar.','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
+  'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la verificación','toast.callgone':'Esa verificación ya no está disponible','toast.toosoon':'Acabas de verificar esta tienda — vuelve a verificar en unos {n} min.','toast.loadingcall':'Cargando tu verificación…','toast.loadingcall2':'Cargando tu verificación','toast.translate.fail':'No se pudo traducir eso.','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Aquí está la lista.','map.nostores':'No hay tiendas aquí. Mueve el mapa a otro lugar.','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
   'find.me':'Encuentra mis tiendas','find.near':'cerca de ti, abiertas ahora',
   'scores.title':'Logros de la caza','scores.post':'Publica el tuyo →','scores.first':'¡Muéstranos el botín!',
   'ho.title':'Pásalo a un conductor','ho.sub':'Él lo compra. Y te lo lleva a tu puerta o te lo envía.','ho.ship':'Envíamelo','ho.home':'Tráelo a mi casa','ho.ship.btn':'📦 Envíamelo','ho.home.btn':'🏠 Tráelo a mi casa',
@@ -2705,7 +2708,11 @@ async function boot(){
   const sp=new URLSearchParams(location.search);
   // Restoring a specific call (e.g. pull-to-refresh on a result page) → hide the homepage IMMEDIATELY so
   // it never flashes, and show a loader while the transcript fetches.
-  if(sp.get('call')){ const b=$('builder'); if(b)b.classList.add('hidden'); const r=$('result'); if(r){ r.classList.remove('hidden'); r.innerHTML='<div style="display:grid;place-items:center;min-height:48vh;gap:14px"><div class="ring"></div><div class="meta">'+esc(t('toast.loadingcall',"Loading your check…"))+'</div></div>'; } }
+  if(sp.get('call')){ const b=$('builder'); if(b)b.classList.add('hidden'); const r=$('result'); if(r){ r.classList.remove('hidden');
+    const dot='display:inline-block;width:11px;height:11px;border-radius:50%;background:#EAEAF0;animation:loaddot 1.25s ease-in-out infinite';
+    r.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:48vh;gap:16px;font-family:Inter,-apple-system,system-ui,sans-serif">'
+      +'<div style="font-size:24px;font-weight:800;letter-spacing:-.02em;color:#fff">'+esc(t('toast.loadingcall2',"Loading your check"))+'</div>'
+      +'<div style="display:flex;gap:9px;align-items:center"><span style="'+dot+'"></span><span style="'+dot+';animation-delay:.18s"></span><span style="'+dot+';animation-delay:.36s"></span></div></div>'; } }
   // PAINT FIRST — header, hero, switcher, logo, language + auth all come from injected brand data, so
   // render them instantly instead of waiting on the network (this is what made the header slow to appear).
   initGA();
@@ -3364,7 +3371,7 @@ function toggleMap(forceOpen){
   const mv=$('mapview'), sl=$('storelist'), btn=$('maptoggle'), lg=$('maplegend');
   if(mv.style.display==='block' && !forceOpen){ mv.style.display='none'; sl.style.display=''; if(lg)lg.style.display='none'; if(btn){btn.classList.remove('on'); btn.textContent='Map';} return; }
   sl.style.display='none'; mv.style.display='block'; if(lg){ lg.innerHTML=mapLegendHtml(); lg.style.display='flex'; } if(btn){btn.classList.add('on'); btn.textContent=t('map.list','List');} track('map_open'); loadMap();
-  if(isMaster()) toast(t('toast.zoomout','Pinch to zoom, tap to drop a pin.'));
+  if(isMaster()){ toast(t('toast.zoomout','Pinch to zoom, tap to drop a pin.'),'neutral'); try{ $('toast').classList.add('oneline'); }catch(_){ } } // dark (not green), forced to one line
 }
 function loadMap(){
   if(window.L){ if(!MAP){ MAP_LOADED=true; initMap(); } else { setTimeout(()=>{ MAP.invalidateSize(); if(USER_LOC) placeMyPin(USER_LOC.lat,USER_LOC.lng,true); MAP_FIT_NEXT=true; renderMapPins(); },60); } return; }
@@ -3826,7 +3833,7 @@ function renderChips(){
 function pickStore(id){
   const st=STORES.find(s=>s.id===id);
   if(st&&st.callReady===false){ toast(t('store.soon','Adding store soon!')); return; } // unmapped chain — greyed, not callable yet
-  if(isClosed(st)){ toast(tf('stn.closed','{store} is closed now. No charge.',{store:splitStoreName(st.name).base||st.name}),'neutral'); return; }
+  if(isClosed(st)){ toast(t('stn.closed2','The store is closed.'),'neutral'); return; }
   SEL_STORE=st; SEL_KIOSK=false; KIOSK_OK=false; CS_DISMISSED=false; // fresh pick → the sheet may slide up again
   if(!BRAND_CAT) applyBrand();   // categories may have loaded after first paint — re-resolve the brand's category
   const opts=storeCatOptions();
@@ -3841,7 +3848,7 @@ function pickStore(id){
 // flashes a confirmation that we're calling to check the MACHINE (working/stocked), not shelf stock.
 function pickKiosk(id){
   const st=STORES.find(s=>s.id===id); if(!st) return;
-  if(isClosed(st)){ toast(tf('stn.closed','{store} is closed now. No charge.',{store:splitStoreName(st.name).base||st.name}),'neutral'); return; }
+  if(isClosed(st)){ toast(t('stn.closed2','The store is closed.'),'neutral'); return; }
   SEL_STORE=st; SEL_KIOSK=true; KIOSK_OK=false;
   if(!BRAND_CAT) applyBrand();
   const pref = BRAND_CAT || CATS.find(c=>/pok/i.test(c.label)) || CATS[0];
