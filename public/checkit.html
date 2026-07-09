@@ -1252,7 +1252,8 @@ html[data-skin="v2"] .rsub{font-size:16px;font-weight:500;color:rgba(255,255,255
    accent raised key, today = 1.5px white outline. */
 html[data-skin="v2"] .railcalpop{background:#26262B;border:0;border-radius:22px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 html[data-skin="v2"] .rcal-h button{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;border-radius:11px;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
-html[data-skin="v2"] body::after{content:"";position:fixed;left:0;right:0;bottom:0;height:2px;background:#1D1D22;z-index:2147483000;pointer-events:none}
+/* (removed) the fixed 2px bottom bar — it rendered as a visible grey line at the footer on tinted pages and
+   wasn't actually pinning the iOS toolbar dark anyway (the chrome still sampled the tint). Owner 07-09. */
 /* Check-days = the Check green, NOT the per-brand accent (Pokémon's accent is yellow, which read as
    off-brand/alarming on the history calendar). Days you checked are product activity, so they take the
    product color like the CHECK-A-STORE CTA + My toggle — consistent across every vertical. Owner 07-05. */
@@ -2707,7 +2708,11 @@ async function boot(){
   const sp=new URLSearchParams(location.search);
   // Restoring a specific call (e.g. pull-to-refresh on a result page) → hide the homepage IMMEDIATELY so
   // it never flashes, and show a loader while the transcript fetches.
-  if(sp.get('call')){ const b=$('builder'); if(b)b.classList.add('hidden'); const r=$('result'); if(r){ r.classList.remove('hidden'); r.innerHTML='<div style="display:grid;place-items:center;min-height:48vh;gap:12px;font-family:Inter,-apple-system,system-ui,sans-serif"><div style="font-size:17px;font-weight:700;letter-spacing:-.01em;color:#fff">'+esc(t('toast.loadingcall2',"Loading your check"))+'</div><div class="loaddots lite"><span></span><span></span><span></span></div></div>'; } }
+  if(sp.get('call')){ const b=$('builder'); if(b)b.classList.add('hidden'); const r=$('result'); if(r){ r.classList.remove('hidden');
+    const dot='display:inline-block;width:11px;height:11px;border-radius:50%;background:#EAEAF0;animation:loaddot 1.25s ease-in-out infinite';
+    r.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:48vh;gap:16px;font-family:Inter,-apple-system,system-ui,sans-serif">'
+      +'<div style="font-size:24px;font-weight:800;letter-spacing:-.02em;color:#fff">'+esc(t('toast.loadingcall2',"Loading your check"))+'</div>'
+      +'<div style="display:flex;gap:9px;align-items:center"><span style="'+dot+'"></span><span style="'+dot+';animation-delay:.18s"></span><span style="'+dot+';animation-delay:.36s"></span></div></div>'; } }
   // PAINT FIRST — header, hero, switcher, logo, language + auth all come from injected brand data, so
   // render them instantly instead of waiting on the network (this is what made the header slow to appear).
   initGA();
