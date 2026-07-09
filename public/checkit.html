@@ -3,19 +3,18 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<!-- Status bar tint (regular Safari): NO theme-color meta ON PURPOSE. One theme-color tints BOTH the top
-     status bar AND the bottom toolbar (= green footer) and overrides sampling. Without it, iOS SAMPLES the
-     page's top-edge pixels for the bar colour — but it REJECTS any sample where an element under the point
-     has a background-image in its own style, and a CSS gradient IS a background-image. So the verdict wash
-     lives on body::before (pseudo-elements are invisible to that hit-test) while html/body/header keep
-     plain solid/transparent colours — see the "Verdict tone wash" CSS block for the full contract.
-     Two sources, one paint: (1) ?tone= deep-links — the server bakes a tone-* class onto the served <html>
-     tag (renderRunner in src/server.ts) so the FIRST paint carries the wash, no JS timing; (2) in-page —
-     the boot script / app applies body.rview.rv-*, which outranks and then drops the baked class
-     (dropBakedTone). iOS never RE-samples on script changes, so a verdict that settles in-page also does a
-     one-shot reload into its ?tone URL (ensureToneLoaded). Do NOT reintroduce a theme-color meta.
+<!-- Status bar tint (regular Safari) — PROVEN ON-DEVICE (tinttest1-8, 07-09): modern iOS Safari paints
+     its chrome (the status-bar strip AND the band behind the bottom address pill) from ONE value — the
+     ROOT element's background-COLOR. It does not read painted pixels (macOS does), it IGNORES theme-color,
+     and both strips always share the single colour (no way to split top from bottom). So the verdict tone
+     is set as html's background-color and the body carries the visible full-page gradient — see the
+     "Verdict tone wash" CSS block. Two sources, one paint: (1) ?tone= deep-links — the server bakes a
+     tone-* class onto the served <html> tag (renderRunner in src/server.ts), first paint carries it, no JS
+     timing; (2) in-page — the boot script / app applies body.rview.rv-* and a settled verdict does a
+     one-shot reload into its ?tone URL (ensureToneLoaded) so the chrome colour re-reads at load.
      In STANDALONE (home screen) the apple-mobile metas + viewport-fit=cover paint content UNDER the status
-     bar, so the wash shows at the top there regardless (that path has always worked). -->
+     bar (that path has always worked); a media query keeps its canvas base dark so the bottom overscroll
+     stays dark there. -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Check it for me" />
@@ -48,7 +47,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="tonebake-r102" />
+<meta name="x-rev" content="tonebake-r103" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -255,41 +254,35 @@ __BRAND_HEAD__
   /* ── result v2: boxless verdict + boxless "The call" header (mirrors checkit-demo look) ── */
   .rverdict{position:relative;padding:2px 2px 0;margin-bottom:4px}
   .rverdict>*{position:relative}
-  /* ── Verdict tone wash + iOS status-bar tint (plain Safari) ──────────────────────────────────
-     The wash lives on a PSEUDO-ELEMENT (body::before), NOT on the body/html backgrounds, because of
-     how iOS picks the status-bar colour: it samples pixels along the page's TOP EDGE and REJECTS any
-     sample point where an element under it carries a background-image in its own style — and a CSS
-     gradient IS a background-image (WebKit PageColorSampler::isValidSampleLocation). A gradient set
-     directly on body/html therefore guarantees a BLACK bar, which is exactly what we had. Pseudo-
-     elements never appear in that hit-test, so the same gradient on body::before samples clean.
-     The sampler also re-checks the page-edge colour ~100px down, so the tone holds SOLID for 160px
-     before fading to the page bg by 460px. Two tone sources share the one pseudo: html.tone-*
-     (server-baked ?tone= deep-links — first paint, no JS timing) and body.rview.rv-* (in-page
-     verdicts). Do NOT put gradients or animations on html/body/header — that re-blacks the bar. */
-  html.tone-in body::before,body.rview.rv-in::before{background:linear-gradient(180deg,#266440 0px,#266440 160px,var(--bg) 460px)}
-  html.tone-out body::before,body.rview.rv-out::before{background:linear-gradient(180deg,#6b2427 0px,#6b2427 160px,var(--bg) 460px)}
-  html.tone-unk body::before,body.rview.rv-unk::before{background:linear-gradient(180deg,#6c5419 0px,#6c5419 160px,var(--bg) 460px)}
-  html.tone-soon body::before,body.rview.rv-soon::before{background:linear-gradient(180deg,#6e490f 0px,#6e490f 160px,var(--bg) 460px)}
-  html.tone-in body::before,html.tone-out body::before,html.tone-unk body::before,html.tone-soon body::before,
-  body.rview.rv-in::before,body.rview.rv-out::before,body.rview.rv-unk::before,body.rview.rv-soon::before{
-    content:"";position:absolute;left:0;top:0;width:100%;height:460px;z-index:-1;pointer-events:none}
-  /* The pseudo has z-index:-1, which paints BELOW the body's own background — so in a tone state the
-     body must go transparent (the html canvas behind it is the same --bg dark, identical look).
-     !important because the v2 skin's `html[data-skin="v2"] body` background would out-rank this. */
-  html.tone-in body,html.tone-out body,html.tone-unk body,html.tone-soon body,
-  body.rview.rv-in,body.rview.rv-out,body.rview.rv-unk,body.rview.rv-soon{background:transparent!important}
-  /* STANDALONE (home screen) only: nothing samples there (content paints under the bar directly), so
-     the root canvas keeps the toned gradient for the pull-to-refresh / overscroll rubber-band — tone at
-     the top, dark by 460px so the bottom stays dark. In Safari this must NOT apply: a gradient on html
-     invalidates the top-colour sampling (black bar). */
+  /* ── Verdict tone wash + iOS Safari chrome tint ──────────────────────────────────────────────
+     PROVEN ON-DEVICE (owner, tinttest1-8): modern iOS Safari paints its chrome strips (status-bar
+     area AND the band behind the bottom address pill) from ONE value — the ROOT element's declared
+     background-COLOR. It never reads the painted pixels (that's macOS), it ignores theme-color, and a
+     background-image on html leaves the base colour in charge. So: the tone lives as html's
+     background-color (both strips take it — top green means the bottom band is green too; iOS offers
+     no way to split them), and the body carries the visible FULL-PAGE gradient (tone holds to 140px,
+     dark by one viewport). Two sources, same paint: html.tone-* (server-baked ?tone= deep-links,
+     first paint, no JS) and html:has(body.rview.rv-*) (in-page verdicts; ensureToneLoaded's one-shot
+     reload guarantees the chrome updates even if iOS doesn't re-read the colour live). */
+  html.tone-in,html:has(body.rview.rv-in){background:#266440}
+  html.tone-out,html:has(body.rview.rv-out){background:#6b2427}
+  html.tone-unk,html:has(body.rview.rv-unk){background:#6c5419}
+  html.tone-soon,html:has(body.rview.rv-soon){background:#6e490f}
+  html.tone-in body,body.rview.rv-in{background:linear-gradient(180deg,#266440 0px,#266440 140px,var(--bg) 100dvh)}
+  html.tone-out body,body.rview.rv-out{background:linear-gradient(180deg,#6b2427 0px,#6b2427 140px,var(--bg) 100dvh)}
+  html.tone-unk body,body.rview.rv-unk{background:linear-gradient(180deg,#6c5419 0px,#6c5419 140px,var(--bg) 100dvh)}
+  html.tone-soon body,body.rview.rv-soon{background:linear-gradient(180deg,#6e490f 0px,#6e490f 140px,var(--bg) 100dvh)}
+  /* STANDALONE (home screen): content paints under the status bar directly (the body gradient shows
+     there), and the canvas keeps a DARK base so the bottom overscroll stays dark like today — override
+     the root back to a toned-top gradient over a dark base colour. */
   @media (display-mode: standalone){
-    html:has(body.rview.rv-in){background:linear-gradient(180deg,#266440 0px,var(--bg) 460px)}
-    html:has(body.rview.rv-out){background:linear-gradient(180deg,#6b2427 0px,var(--bg) 460px)}
-    html:has(body.rview.rv-unk){background:linear-gradient(180deg,#6c5419 0px,var(--bg) 460px)}
-    html:has(body.rview.rv-soon){background:linear-gradient(180deg,#6e490f 0px,var(--bg) 460px)}
+    html.tone-in,html:has(body.rview.rv-in){background:linear-gradient(180deg,#266440 0px,var(--bg) 460px) #0C0C12}
+    html.tone-out,html:has(body.rview.rv-out){background:linear-gradient(180deg,#6b2427 0px,var(--bg) 460px) #0C0C12}
+    html.tone-unk,html:has(body.rview.rv-unk){background:linear-gradient(180deg,#6c5419 0px,var(--bg) 460px) #0C0C12}
+    html.tone-soon,html:has(body.rview.rv-soon){background:linear-gradient(180deg,#6e490f 0px,var(--bg) 460px) #0C0C12}
   }
-  /* Baked deep-link state mirrors the result view's top treatment (transparent header) so the sampled
-     top edge is pure wash; dropBakedTone clears the class on any in-page view change. */
+  /* Baked deep-link state mirrors the result view's top treatment (transparent header) so the wash is
+     continuous from the strip into the page; dropBakedTone clears the class on any in-page view change. */
   html.tone-in header,html.tone-out header,html.tone-unk header,html.tone-soon header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
   /* On a result the nav + content LAY ON the color: header goes transparent (no dark slab, no hairline)
      so the wash reaches the top. The nav pills + day-picker take a BARELY-green fill (level 3) so they
