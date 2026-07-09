@@ -43,7 +43,8 @@ Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · *
 No other long-lived branches exist. Session branches merge to `staging` and die.
 
 ## Rules of the road
-- **Contract first.** Non-trivial build → write 5–10 one-line testable assertions of what "done" looks like BEFORE coding (in chat; `docs/specs/<feature>/` if cross-lane). Build to that list.
+- **Contract first — and plan BACKWARDS.** Non-trivial build → first write the end state as if it already shipped, then derive the steps backwards from it (plan from the goal, not toward it). Turn that into 5–10 one-line testable assertions of "done" BEFORE coding (in chat; `docs/specs/<feature>/` if cross-lane). Build to that list.
+- **Design fidelity — nothing visual or written without the guides.** Any UI/UX or copy change: open `docs/design/STYLE_GUIDE.md` (and `docs/design/copy/` for words) FIRST and match it — components, logos, icons, fonts, colors. The guide beats what's currently in the code; think the guide is wrong? Flag it, don't freestyle. NEVER re-introduce a reverted design (the status pill is GRAY — it keeps coming back green; that ends now).
 - **Autonomous.** Don't ask permission — staging makes mistakes cheap. Need another lane? Leave a `DevOps: need X` note and keep going. Pause only for the owner to run a test-store call.
 - **Done = demonstrated, never claimed.** `npx tsc --noEmit` + `bash scripts/test-all.sh`, then drive your feature on `staging.checkitforme.com` like a user. Report the contract ✓/✗ with evidence (URL → action → observed). Can't verify? Say "NOT verified: X". "Should work" is banned.
 - **Touching code? Read `docs/shared/AGENT_RULES.md` first.** Non-negotiable.
