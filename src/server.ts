@@ -447,6 +447,14 @@ app.get("/", rootHandler);
 // :param{regex} attempt crashed Hono's router on boot. These names never collide with /api, /pub, /r, /s, etc.
 for (const s of ["dash","users","restock","growth","calc","plans","retailers","search","add","zones","receipts","results","schedules","feedback","statuses","trees","settings","designer","workflows","testing","fun","gtm"]) app.get("/" + s, rootHandler);
 app.get("/r", (c) => { c.header("Cache-Control", "no-store"); const h=(c.req.header("host") || "").toLowerCase(); return c.html(renderRunner(resolveBrand(h, c.req.query("brand")), h, "checkit.html", c.req.query("tone") || "")); });
+// TEMP diagnostic (owner iOS status-bar tint debugging): a minimal page — one SOLID colour, zero
+// scripts/gradients/images — nothing that can invalidate WebKit's top-colour sampling. If the very top
+// strip (clock/battery) goes green here, sampling works on the device and any remaining black bar comes
+// from page content; if it stays black, the device path needs a different mechanism. Remove when done.
+app.get("/tinttest", (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.html(`<!doctype html><html lang="en" style="background:#266440"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>tint test</title></head><body style="margin:0;min-height:100dvh;background:#266440;color:#fff;font-family:-apple-system,sans-serif"><div style="padding:40vh 20px 0;text-align:center;font-weight:800">If the strip with the clock/battery is GREEN, sampling works on this device.</div></body></html>`);
+});
 // Preview-only: the redesigned result/live UI served from checkit-demo.html, so the live
 // site keeps the current design while we evaluate the new one. /demo?brand=<slug> picks a vertical.
 app.get("/demo", (c) => {
