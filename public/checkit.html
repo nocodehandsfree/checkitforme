@@ -56,7 +56,7 @@
   addEventListener('scroll',function(){ if(!tick){ tick=true; requestAnimationFrame(upd); } },{passive:true});
   upd();
 }catch(e){}})();</script>
-<meta name="x-rev" content="tonebake-r107" />
+<meta name="x-rev" content="tonebake-r108" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -90,11 +90,17 @@ __BRAND_HEAD__
     /* Standalone (Home Screen) paints under the status bar — pad content past it; the body bg (green wash
        on a result, dark on the homepage) fills this inset so the status-bar area takes the per-edge colour.
        In a Safari tab the inset is 0, so this is a no-op there. */
-    padding:env(safe-area-inset-top) 0 0 0;
+    /* Paint BOTH safe areas explicitly. viewport-fit=cover extends the page into the home-indicator
+       zone at the bottom — leaving it unpadded meant the body's paint stopped short of the screen edge
+       and the gap rendered as a permanent stripe above the bottom bar (devops 07-09). */
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
     display:flex;flex-direction:column;min-height:100dvh}
   /* No ambient color anywhere on the body — solid dark on every page, top and bottom (kills the green
      that kept tinting the iOS Safari bars / showing through on the homepage + call history). */
-  header{padding:14px 16px;border-bottom:1px solid transparent;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;position:sticky;top:0;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:20}
+  /* Header SCROLLS AWAY with the page (like google.com on iOS 26) instead of pinning — a pinned nav
+     hovering over the toned top read as the nav "disappearing behind the tint" (owner 07-09). With it
+     gone on scroll, the top is one solid colour: strip + runway + page, nothing floating. */
+  header{padding:14px 16px;border-bottom:1px solid transparent;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;position:static;background:transparent;z-index:20}
   .logo{font-size:19px;font-weight:900;letter-spacing:-.5px;flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .logo b{color:var(--accent,var(--green))}
   .pill{display:inline-flex;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700;cursor:pointer;flex:0 0 auto;white-space:nowrap}
