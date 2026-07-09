@@ -2437,7 +2437,7 @@ const I18N={ es:{
   'sc.crew':'Presume con la banda','sc.scored':'¡La conseguiste!','sc.snap':'Toma tu foto. Publícala.','sc.photo':'Tu foto','sc.caption':'Descripción','sc.name':'Tu nombre / usuario','sc.optional':'(opcional)','sc.ph.caption':'¡Saqué un Charizard en el Target de Sunset!','sc.ph.handle':'@tuusuario','sc.post':'Publicar en el muro →','sc.uploading':'Subiendo…','sc.err.big':'La foto pesa demasiado (máx. 12 MB).','sc.err.nophoto':'Agrega una foto primero',
   'ph.schednum':'Escribe tu número','ph.storereq':'ej. Target, Thousand Oaks','ph.storecity':'ej. Thousand Oaks, CA','ph.storedetails':'dirección, qué productos, etc.','ph.kiosk':'ej. Albertsons, Sunset Blvd, LA','ph.kioskhint':'ej. A veces se salta la reposición de los :03',
   'toast.searchmi':'📍 {q}. Tiendas a {n} mi','toast.zoomout':'Pellizca para acercar, toca para fijar un punto','toast.community':'La comunidad llega pronto','toast.locupdated':'Actualizado a tu ubicación actual',
-  'cs.costs':'cuesta 1 verificación','cs.toggle':'Ver pasos de la llamada',
+  'cs.costs':'cuesta 1 verificación','cs.toggle':'Ver pasos de la llamada','cs.hobask':'Verificaremos precio y disponibilidad de',
   'err.storename':'Agrega el nombre de la tienda',
   'fbk.in':'En stock','fbk.out':'No está','fbk.soon':'Reabasteciendo','fbk.unsure':'Sin claridad',
   'fbk.q':'¿Puedes deducirlo de la conversación de abajo? ¿Qué opinas?',
@@ -3534,7 +3534,17 @@ function renderStores(){
     if(USER_LOC && !s.ownerOnly){ const mi=storeMi(s); if(mi==null || mi>RADIUS) return false; } // owner-only "Fun" store shows from any location
     return true;
   });
-  if(USER_LOC) list.sort((a,b)=>(storeMi(a)??1e9)-(storeMi(b)??1e9));
+  // Open stores float to the top of the modes that show closed ones (hobby/thrift), then nearest→farthest
+  // within each group (owner 07-09: an open store buried under closed ones is wrong). Retail hides closed,
+  // so there it stays pure distance.
+  if(USER_LOC){
+    const showsClosed=(MODE==='hobby'||MODE==='thrift');
+    const openRank=s=>(s&&s.openState&&s.openState.known&&s.openState.open)?0:1;
+    list.sort((a,b)=>{
+      if(showsClosed){ const d=openRank(a)-openRank(b); if(d) return d; }
+      return (storeMi(a)??1e9)-(storeMi(b)??1e9);
+    });
+  }
   // Tier view: green TIER-5 group on top, optional TIER-4, then everyone else (each nearest→farthest)
   // — surfaces best-MSRP-odds above closer low-tier stores. Active only when the backend tags tiers.
   TIER_VIEW = !kiosk && list.some(s=>storeTier(s)>=4);
@@ -3816,7 +3826,7 @@ function renderChips(){
 function pickStore(id){
   const st=STORES.find(s=>s.id===id);
   if(st&&st.callReady===false){ toast(t('store.soon','Adding store soon!')); return; } // unmapped chain — greyed, not callable yet
-  if(isClosed(st)){ toast(tLbl(st.openState.label||'Closed')+' '+t('closednow',"· closed now")); return; }
+  if(isClosed(st)){ toast(tf('stn.closed','{store} is closed now. No charge.',{store:splitStoreName(st.name).base||st.name}),'neutral'); return; }
   SEL_STORE=st; SEL_KIOSK=false; KIOSK_OK=false; CS_DISMISSED=false; // fresh pick → the sheet may slide up again
   if(!BRAND_CAT) applyBrand();   // categories may have loaded after first paint — re-resolve the brand's category
   const opts=storeCatOptions();
@@ -3831,7 +3841,7 @@ function pickStore(id){
 // flashes a confirmation that we're calling to check the MACHINE (working/stocked), not shelf stock.
 function pickKiosk(id){
   const st=STORES.find(s=>s.id===id); if(!st) return;
-  if(isClosed(st)){ toast(tLbl((st.openState&&st.openState.label)||'Closed')+' '+t('closednow',"· closed now")); return; }
+  if(isClosed(st)){ toast(tf('stn.closed','{store} is closed now. No charge.',{store:splitStoreName(st.name).base||st.name}),'neutral'); return; }
   SEL_STORE=st; SEL_KIOSK=true; KIOSK_OK=false;
   if(!BRAND_CAT) applyBrand();
   const pref = BRAND_CAT || CATS.find(c=>/pok/i.test(c.label)) || CATS[0];
@@ -3934,11 +3944,14 @@ function renderCallSheet(){
     if(s.openState&&s.openState.known){ const o=s.openState.open; html+=(html?' · ':'')+`<span class="${o?'cs-open':'cs-closed'}">${o?t('st.open','Open'):t('st.closed','Closed')}</span>`; }
     ad.innerHTML=html;
   }
-  // A hobby-locked product IS the ask — print it where the comp prints the product context
-  // ("Pokémon · costs 1 check" → "Pitch Black Booster Box · costs 1 check"). v1: lock never set.
-  const prod = SEL_KIOSK ? t('cta.kioskword','kiosk') : ((typeof HOBBY_LOCK!=='undefined'&&HOBBY_LOCK&&SEL_PRODUCT)?SEL_PRODUCT:catLabels());
-  const pe=$('cs_prod'); if(pe) pe.innerHTML = `${esc(prod)} <span>· ${t('cs.costs','costs 1 check')}</span>`+
-    ((isV2()&&MODE==='hobby'&&BRAND&&BRAND.category==='Pokémon'&&hasFeature('exact_products'))?`<a onclick="openHobby()" style="display:block;margin-top:6px;font-size:12.5px;font-weight:700;color:#4ADE80;cursor:pointer">${t('hob.pickexact','Pick the exact set or product')} →</a>`:'');
+  // A hobby-locked product IS the ask — print it in the product-context line. v1: lock never set.
+  const hob = (typeof HOBBY_LOCK!=='undefined'&&HOBBY_LOCK&&SEL_PRODUCT);
+  const prod = SEL_KIOSK ? t('cta.kioskword','kiosk') : (hob?SEL_PRODUCT:catLabels());
+  // Hobby (locked product): "We'll check on pricing and availability for {set} {product}". Everyone else:
+  // just the category. NO "costs 1 check" on any of it (owner 07-09), NO "pick the exact set" link.
+  const pe=$('cs_prod'); if(pe) pe.innerHTML = hob
+    ? `${t('cs.hobask',"We'll check on pricing and availability for")} ${esc(prod)}`
+    : esc(prod);
 }
 function showCallSheet(){ const el=$('csheet'); if(!el) return; const already=el.classList.contains('on'); renderCallSheet();
   if(!already){ // guarantee the slide UP from the bottom: pin to off-screen, reflow, then release to .on
