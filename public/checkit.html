@@ -47,16 +47,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<script>(function(){try{
-  // iOS chrome tint, scroll phase: past the verdict headline the chrome reverts to dark (html.tint-scrolled,
-  // see the CSS) so the band behind the bottom address pill disappears against the dark lower page. Passive +
-  // rAF-throttled; hysteresis (280 on / 200 off) so the colour never flutters at the threshold.
-  var on=false,tick=false;
-  function upd(){ tick=false; var s=on?(window.scrollY>200):(window.scrollY>280); if(s!==on){ on=s; document.documentElement.classList.toggle('tint-scrolled',s); } }
-  addEventListener('scroll',function(){ if(!tick){ tick=true; requestAnimationFrame(upd); } },{passive:true});
-  upd();
-}catch(e){}})();</script>
-<meta name="x-rev" content="tonebake-r108" />
+<meta name="x-rev" content="tonebake-r109" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -309,7 +300,20 @@ __BRAND_HEAD__
      "look like there's nothing there"). Middle path: the chrome is toned while the verdict is in view
      and reverts to regular dark once scrolled past it (class set by the scroll watcher next to the
      boot script). The page's own wash is untouched — only the chrome colour changes. */
-  html.tint-scrolled{background:#000!important} /* pure black, not --bg: Safari's expanded bottom toolbar renders the tint DIMMED, so #0C0C12 left a visible seam — black-on-black hides the toolbar's top edge (owner's "line") */
+  /* BOTTOM EDGE, the Apple/Google way (owner 07-09): their chrome looks seamless because its colour
+     always MATCHES the page pixels beside it. Our page is tone-on-top/dark-below, so the toned chrome
+     band kept meeting mismatched dark pixels (= the visible line), and swapping the chrome colour on
+     scroll flipped abruptly. Instead the PAGE now carries a soft, viewport-FIXED tone glow rising from
+     the bottom edge on toned views — the toolbar always borders tone-tinted pixels, like an image
+     sitting behind a translucent footer. No scroll swaps, no seams; it also covers the document-end
+     boundary. Sits above content (z:2) but under every control (fab z:60, sheets z:80). */
+  html.tone-in body::after,body.rview.rv-in::after{background:linear-gradient(0deg,rgba(38,100,64,.5) 0,rgba(38,100,64,0) 100%)}
+  html.tone-out body::after,body.rview.rv-out::after{background:linear-gradient(0deg,rgba(107,36,39,.5) 0,rgba(107,36,39,0) 100%)}
+  html.tone-unk body::after,body.rview.rv-unk::after{background:linear-gradient(0deg,rgba(108,84,25,.5) 0,rgba(108,84,25,0) 100%)}
+  html.tone-soon body::after,body.rview.rv-soon::after{background:linear-gradient(0deg,rgba(110,73,15,.5) 0,rgba(110,73,15,0) 100%)}
+  html.tone-in body::after,html.tone-out body::after,html.tone-unk body::after,html.tone-soon body::after,
+  body.rview.rv-in::after,body.rview.rv-out::after,body.rview.rv-unk::after,body.rview.rv-soon::after{
+    content:"";position:fixed;left:0;bottom:0;width:100%;height:130px;z-index:2;pointer-events:none}
   /* Baked deep-link state mirrors the result view's top treatment (transparent header) so the wash is
      continuous from the strip into the page; dropBakedTone clears the class on any in-page view change. */
   html.tone-in header,html.tone-out header,html.tone-unk header,html.tone-soon header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
