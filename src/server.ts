@@ -487,6 +487,38 @@ html.tone-in header{background:transparent;border-bottom-color:transparent;backd
 <main><div style="font-weight:800;text-align:center">Frozen first paint of the real page — no scripts.<br>GREEN strip = CSS is fine, scripts are the culprit.<br>BLACK strip = the CSS structure.</div><div class="card">a card, like the result view</div></main>
 </body></html>`);
 });
+// TEMP diagnostic step 3: same as /tinttest2 except the wash is a SOLID colour block for the top 240px
+// (a background-color, not a gradient) with the gradient fade on a separate pseudo BELOW it. /tinttest2
+// went black on-device, meaning iOS rejects a gradient at its sample points even on a pseudo-element —
+// solid top + fade below is the structure the sampler accepts. Green here = port this to checkit.html.
+app.get("/tinttest3", (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.html(`<!doctype html><html lang="en" class="tone-in"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>tint test 3</title>
+<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format('woff2')}
+:root{--bg:#0C0C12;--sheet:#1A1A24;--border:rgba(255,255,255,.08)}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;background:#0C0C12;color-scheme:dark}
+body{background:var(--bg);color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;margin:0;padding:env(safe-area-inset-top) 0 0 0;display:flex;flex-direction:column;min-height:100dvh}
+header{padding:14px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:20}
+.logo{font-size:19px;font-weight:900}
+.pill{display:inline-flex;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700;margin-left:auto}
+main{padding:14px 20px;max-width:520px;margin:0 auto;width:100%}
+.card{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;margin-top:200px}
+html.tone-in body::before{content:"";position:absolute;left:0;top:0;width:100%;height:240px;background:#266440;z-index:-1;pointer-events:none}
+html.tone-in body::after{content:"";position:absolute;left:0;top:240px;width:100%;height:220px;background:linear-gradient(180deg,#266440 0,var(--bg) 100%);z-index:-1;pointer-events:none}
+html.tone-in body{background:transparent!important}
+html.tone-in header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
+</style></head><body>
+<header><span class="logo">Check <b>it</b></span><span class="pill">My ✓</span></header>
+<main><div style="font-weight:800;text-align:center">Solid top block, gradient only below 240px.<br>GREEN strip = this is the structure we ship.</div><div class="card">a card, like the result view</div></main>
+</body></html>`);
+});
 // Preview-only: the redesigned result/live UI served from checkit-demo.html, so the live
 // site keeps the current design while we evaluate the new one. /demo?brand=<slug> picks a vertical.
 app.get("/demo", (c) => {
