@@ -3,6 +3,73 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## Carry-over (2026-07-07 — for the new repo)
+
+**Memory note:** my visible memory of the retiring chat starts at a COMPACTION SUMMARY (context ran
+out once); the earliest firsthand transcript I can see is finishing the Manage Zones consumer backend.
+Everything before that (avgTreeSeconds wiring, commerce build, ReadMe setup) I know only via that
+summary — treat those DONE marks as summary-sourced, not witnessed.
+
+### PARTIAL / UNSURE
+- **Store-data sync — first run UNCONFIRMED.** Built + deployed both envs (`src/store-sync.ts`,
+  16-test suite `scripts/test-storesync.ts`); `STORE_SYNC_URL` + `STORE_SYNC_TOKEN` are set on the
+  staging Railway service; `/api/store-sync/status` shows `enabled:true, lastRun:null`.
+  **Observability gap (my bug): no-op ticks don't stamp lastRun and lastRun is in-memory (resets on
+  every deploy), so "never ran" vs "nothing to do" is indistinguishable.** Fix: persist lastRun to
+  settings + stamp no-op ticks; then verify prod actually received once (compare a curated field).
+- **Rules: staging is the curation home now** — Data Dev edits staging; prod hand-edits get overwritten
+  next diff of the same row. Owner was told; confirm Data Dev knows.
+- **In-memory rate limiter is per-instance** (fires at limit × replica-count; measured 8/min becoming
+  ~16 live). Fine for launch (kill-switch + credit pool are the real caps); Redis-share LIMITS.check
+  if a hard cap is ever needed.
+
+### NOT DONE (my lane, in priority order)
+- **Move leftover call paths onto the cheap bridge lane** — scheduled checks, zone fires, admin
+  call-now, `/pub/check` fallback still ride the expensive direct-agent path. CALL_ECONOMICS.md §2
+  calls it "a wiring decision, not a build". Biggest cost cut available.
+- **Real-card E2E payment test + all-paths Playwright harness** (pre-launch gate; owner may run the
+  manual card test himself — the harness is mine). GTM item `paid-plans-e2e` / `site-paths-tested`.
+- **AT-PROMOTE Stripe steps (prod is on TEST mode!):** publish plans once on prod with the LIVE key
+  (`/api/admin/plans/publish`) + create a live-mode webhook endpoint for checkitforme.com/webhooks/stripe
+  and set its whsec. Needs owner/Railway.
+- **Admin per-customer view backend** — `GET /api/admin/users/:id` + grant-credits endpoint
+  (spec `docs/specs/admin-user-view.md`); Admin lane builds the panel against it.
+- **Remove `/api/zones*` admin endpoints** (consumer `/app/zones` shipped; Admin drops its Zones UI).
+- **Admin price-editor → Stripe** (owner edits any price, pushes live; GTM `price-editor`).
+- **Delete the transition stubs** `docs/handoffs/*` + old-path stubs — due after 2026-07-14.
+- **Standalone Store API service** — physical extraction ships WITH the repo split (owner decision:
+  API independent, every app consumes it; current flag+sync is the interim that must not be lost).
+
+### NO ANSWER (asked the owner, never heard back)
+- Open PRs: close **#379** (mis-targeted, work already live) and decide **#364** (Drops enrichment:
+  merge or close)? **#420/#421** are superseded by the branch reconciliation — safe to close.
+- Offered a "everything that should light up after buying a plan (site + admin)" manual checklist —
+  never delivered; still useful for his card test.
+
+### Learned here, written nowhere else (traps + owner rules)
+- **ONE admin** (admin.checkitforme.com, prod code/data). Never say "prod admin"/"staging admin" —
+  owner trauma from an old two-admin mess. Staging URL serves the CONSUMER site only.
+- **Recurring local-git trap:** HEAD silently regresses to stale commits in these cloud sessions —
+  always `git fetch && checkout -B <branch> origin/<branch>` before judging state; my zones test
+  "vanished" twice this way.
+- **urllib/WebFetch → proxy 403; curl works** (bit us again on Railway GraphQL).
+- `/api/*` gate 401s UNKNOWN paths too — a 401 is NOT proof a new endpoint deployed; use a route/
+  content marker instead. Railway var change auto-redeploys. `/gtm`-style admin deep links = static
+  whitelist in server.ts rootHandler loop — new admin section ⇒ add it there.
+- **Cost model truth:** Delta ~2.5¢ / bridge ~5¢ / escalation rate is THE margin lever; EL bills
+  $0.0012/sec while speaking. `docs/business/CHECKPOINT.md` + `CALL_ECONOMICS.md` (now on the unified
+  branch) are canonical — the old COST_MODEL per-minute framing misled me into building (then
+  reverting) a duplicate cost dashboard. Admin → Calc already models all of it.
+- **Owner prefs:** TLDR-first, short outcome-first replies; one topic at a time; no shorthand when
+  asked "real sentences"; Data lane never writes code (lane discipline is sacred); "check" never
+  "call"; "scraper" banned; secrets in memory only, never in files; classifier requires his explicit
+  naming for prod pushes + secret-store writes (get the literal sentence from him first).
+- **Reconciliation is DONE:** staging + prod are one line since 02b4b1b (rollback tag ref b624689,
+  local only — tag push 403s). Promote = fast-forward. GTM checklist lives at admin /gtm
+  (seed in server.ts `GTM_SEED`; missing-defaults restore bar heals accidental deletes).
+- **New-repo process (owner, 2026-07-07):** done = demonstrated on staging with evidence; a 5–10 line
+  testable contract precedes any build; replies = outcome-first short bullets.
+
 ## Current state (2026-07-01 — KEEP UPDATED)
 - [ ] **Admin per-customer view backend (owner 2026-07-04) — spec `docs/specs/admin-user-view.md`.**
   Build `GET /api/admin/users/:id` (full account: identity, subscription, entitlements via
