@@ -455,6 +455,38 @@ app.get("/tinttest", (c) => {
   c.header("Cache-Control", "no-store");
   return c.html(`<!doctype html><html lang="en" style="background:#266440"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>tint test</title></head><body style="margin:0;min-height:100dvh;background:#266440;color:#fff;font-family:-apple-system,sans-serif"><div style="padding:40vh 20px 0;text-align:center;font-weight:800">If the strip with the clock/battery is GREEN, sampling works on this device.</div></body></html>`);
 });
+// TEMP diagnostic step 2: checkit.html's FIRST PAINT, frozen — the exact tone-wash CSS structure
+// (pseudo gradient, transparent body, transparent sticky header with dark chips, Inter font, apple
+// metas) with ZERO JavaScript. Green here = the CSS passes the sampler and the app's scripts are the
+// remaining culprit; black here = the CSS structure itself. Remove with /tinttest when done.
+app.get("/tinttest2", (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.html(`<!doctype html><html lang="en" class="tone-in"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>tint test 2</title>
+<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format('woff2')}
+:root{--bg:#0C0C12;--sheet:#1A1A24;--border:rgba(255,255,255,.08)}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;background:#0C0C12;color-scheme:dark}
+body{background:var(--bg);color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;margin:0;padding:env(safe-area-inset-top) 0 0 0;display:flex;flex-direction:column;min-height:100dvh}
+header{padding:14px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:20}
+.logo{font-size:19px;font-weight:900}
+.pill{display:inline-flex;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700;margin-left:auto}
+main{padding:14px 20px;max-width:520px;margin:0 auto;width:100%}
+.card{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;margin-top:200px}
+html.tone-in body::before{background:linear-gradient(180deg,#266440 0px,#266440 160px,var(--bg) 460px)}
+html.tone-in body::before{content:"";position:absolute;left:0;top:0;width:100%;height:460px;z-index:-1;pointer-events:none}
+html.tone-in body{background:transparent!important}
+html.tone-in header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
+</style></head><body>
+<header><span class="logo">Check <b>it</b></span><span class="pill">My ✓</span></header>
+<main><div style="font-weight:800;text-align:center">Frozen first paint of the real page — no scripts.<br>GREEN strip = CSS is fine, scripts are the culprit.<br>BLACK strip = the CSS structure.</div><div class="card">a card, like the result view</div></main>
+</body></html>`);
+});
 // Preview-only: the redesigned result/live UI served from checkit-demo.html, so the live
 // site keeps the current design while we evaluate the new one. /demo?brand=<slug> picks a vertical.
 app.get("/demo", (c) => {
