@@ -3,6 +3,54 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## Carry-over (2026-07-09 — iOS tint / Safari-chrome lane — for the new repo)
+
+_Separate retiring chat (tint specialist). Lane: iOS status-bar/chrome tint + consumer status-page
+polish, all on this staging branch (final rev marker `tonebake-r116` in checkit.html, PR #424).
+Website dev owns view/mode/nav; I owned tint CSS only. 80-line cap waived for this section._
+
+**Memory starts at:** the owner's first message (fresh-eyes mission: "fix iOS status-bar tint + stale
+installed PWA", two screenshots). I can see the entire chat; no compaction marker.
+
+### The platform model — PROVEN on the owner's device (tinttest1-8, since deleted); written nowhere else
+- iOS 26 Safari paints BOTH chrome pieces (status strip + bottom plate) from ONE value: the ROOT
+  element's declared `background-color`. It never samples page pixels (macOS does), it IGNORES
+  `theme-color`, and a `background-image` on html leaves the colour layer in charge. Top ≠ bottom is
+  impossible in browser Safari. The faint bottom hairline = iOS liquid-glass edge, not page content
+  (owner verified against prod and conceded).
+- FINAL DESIGN (owner: "fucking amazing"): **middle bloom** — in browser the root stays `#0C0C12`
+  (both chrome joints blend invisibly) and the verdict wash blooms mid-page
+  (`var(--bg) 0 → tone 110px → tone 230px → var(--bg) 100dvh`); STANDALONE keeps the to-the-top tint
+  via a `display-mode: standalone` media block (it has no chrome). checkit.html "Verdict tone wash" block.
+
+### PARTIAL / UNSURE / NO ANSWER
+- **NO ANSWER — RAILWAY_API_TOKEN**: never provided; `/api/voice/live` pre-push check impossible
+  (admin-gated). Proxy used instead: `/pub/community` empty = no live staging call. Ask again when needed.
+- **UNSURE — standalone A2HS after the bloom change**: the media block should preserve the old
+  to-the-top look, but the owner never explicitly re-verified the installed app post-r113(→r116).
+- **UNSURE — base-skin timeline rows**: `.ctl-step-row` brightened to #DCDCE6 alongside the v2 fix;
+  owner only reviewed the v2 skin. Non-v2 visitors see brighter step text nobody approved.
+- **NOT DONE — production promotion**: prod still has the pre-bloom look. Promote = merge this staging
+  branch into the prod branch when the owner says go (staging-first rule).
+- **Candidate cleanup (LOW, works fine as-is)**: `ensureToneLoaded` one-shot reload + the sheet-open
+  `:has(#acctOverlay.on)` root overrides are now redundant in BROWSER under the bloom (root already
+  dark); still relevant/harmless in standalone. Remove only with on-device re-verification.
+
+### Traps for whoever touches this next
+- **v2 skin trap (cost 3 wasted rounds)**: the owner's devices run `?skin=v2` (localStorage
+  `cifm_skin`) — result timeline renders through the v2 `ctlv2` component, NOT `.ctl-step-row`; its
+  seconds colour was INLINE-hardcoded in the JS renderer (~line 4209). Style fixes must hit both skins.
+- **Stale-device trap**: iOS restores tab snapshots; "refreshed" ≠ fresh HTML. `x-rev` meta in
+  checkit.html is the deploy fingerprint — bump it on every checkit.html edit and check it on-device.
+- Header is now `position:static` (scrolls away, Google-style — owner loved); body pads
+  `env(safe-area-inset-bottom)`; `.site-footer` transparent + borderless. Don't reintroduce sticky
+  header slabs, footer borders/backgrounds, scroll-triggered chrome colour swaps (owner hated the
+  snap), bottom tone glows (owner: footer too coloured), or ANY `theme-color` meta.
+- Service worker is a self-evicting tombstone (website dev, owner: "one site, always fresh") — never
+  re-add caching. renderRunner (src/server.ts) bakes `tone-*` onto `<html>` for `?tone=` deep-links.
+- Owner's process note for the new repo (from devops): testable 5-10 line contract BEFORE building;
+  done = demonstrated on staging with evidence; outcome-first short-bullet replies.
+
 ## Carry-over (2026-07-07 — for the new repo)
 
 _This chat retires; only the repo survives. Design (CD) lane. The full design-gap work + every owner
