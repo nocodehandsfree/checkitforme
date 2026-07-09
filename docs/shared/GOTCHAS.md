@@ -31,7 +31,7 @@ worse than no comment. Several entries below started as wrong comments.)
 - **iOS Safari only applies `<meta theme-color>` at PAGE LOAD** — a later JS change is ignored. The status-bar
   tint must be **baked into the served HTML** (server `?tone=` → `renderRunner`, `server.ts`). Also needs the
   device's "Allow Website Tinting" ON (default on).
-- **OPEN BUG (owner, 2026-07-07): plain-Safari tint does NOT reach the top; the A2HS/PWA app is rendering an OLD design** (stale service-worker cache — the known cache-first trap). Webbie task, logged in his checkpoint.
+- **TINT IS SOLVED (owner, 2026-07-09) — the mechanism is a MIDDLE-OUT gradient, not top-to-bottom.** The verdict color radiates from mid-page up to the top edge; the bottom half stays flat dark. That combination is what finally tints plain Safari's top without coloring the bottom toolbar. This took ~10 days and ~45 turns to find. DO NOT rework the tint, "clean it up", or change its gradient direction without the owner verifying all 4 tones on a real device first.
 - **PWA status bar is a different mechanism** — `apple-mobile-web-app-status-bar-style: black-translucent` +
   `viewport-fit=cover` (the body paints *under* the bar). That's why "Add to Home Screen" tints when web doesn't.
 

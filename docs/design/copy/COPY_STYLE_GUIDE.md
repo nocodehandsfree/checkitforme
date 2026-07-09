@@ -1,5 +1,12 @@
 # Check It For Me — Copy Style Guide
 
+## ⛔ Hard rules (owner) — these keep getting violated; non-negotiable
+1. **No dashes inside sentences.** No em dashes, no hyphens as connectors. Write the whole sentence out. (CI warns on em dashes in the HTML.)
+2. **Never break a sentence badly across lines.** No orphan words (a wrapped line must never carry one leftover word). If copy needs two lines, balance them and break at a natural pause; if it fits on one line, keep it on one.
+3. **Every string ships with its Spanish in the SAME commit** — and the Spanish is length-checked in the layout (Spanish runs longer; it must never break the page, the footer, or push controls off-screen).
+4. **Bottom notifications: ONE line, GRAY pill. Always.** Never green, in English AND Spanish. Message too long for one line? Shorten the copy using this guide — never wrap it.
+5. **No copy without this guide open. No visual change without STYLE_GUIDE.md + the comp.** (Boot-doc design-fidelity rule; this is the copy half.)
+
 > For any agent (or human) writing words a customer reads. Write to this and you won't need a review.
 > Sibling to `BRAND.md` (the logo). This one is the voice.
 
