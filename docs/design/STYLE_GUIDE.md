@@ -188,7 +188,9 @@ directly under it, left-aligned: 13px alert icon + 12.5/600 `#FF7B7B`. Never flo
 error text. Option pickers (days, poll) are **raised buttons** that light up (`#4ADE80` text +
 green glow when on) — never carved form fields. Links inside sentences get
 `text-decoration: underline dashed rgba(74,222,128,.55); text-underline-offset: 4px`.
-Contact fields accept phone **or** email — eyebrow `PHONE OR EMAIL`.
+**Login/verify = phone number only** (🇺🇸 +1 field, no email — phone IS the login; owner-confirmed).
+Waitlist / add-a-store forms = **email only** (they promise an email). No generic "phone or email"
+contact field.
 
 ### 5.13 Set & era merchandising (hobby)
 - **Era step**: era logos sit **directly on the page**, big (~82% card width), raised by stacked
@@ -206,10 +208,10 @@ Contact fields accept phone **or** email — eyebrow `PHONE OR EMAIL`.
 ### 5.14 Footer (locked)
 On the `#17171C` strip, **one centered, unified cluster — desktop = mobile** (shipped: commit
 9a39fd4; the original comp split wordmark-left / socials-right). Links on one line —
-`Scores About FAQ Contact Terms Privacy` 13/600 muted, EN dropdown pill, then wordmark + ©2026 and
+`Scores About FAQ Contact Legal` 13/600 muted, EN dropdown pill, then wordmark + ©2026 and
 the Discord/X 36px raised circles, all centered. Tight: padding ~22px 18px.
-**Open item (owner vote):** collapse `Terms` + `Privacy` into a single **`Legal`** link (the comp's
-intent) — tracked in `docs/team/design/checkpoint.md`.
+**`Legal` is a single link that covers both Terms and Privacy** (owner-confirmed). **Site to-do:**
+the live footer still lists `Terms` and `Privacy` separately — collapse them into one `Legal` link.
 
 ### 5.15 Scores ("Scores from the hunt")
 Yellow trophy + 21/900 title + accent **Post** pill (camera icon, `#FFE066→#FFCB05`, dark text).

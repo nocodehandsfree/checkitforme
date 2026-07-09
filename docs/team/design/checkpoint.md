@@ -27,10 +27,13 @@
 - **Calendar selected day** = Check-green, not accent-yellow (commit 977cbc7) → §5.10 updated.
 - **Footer** = one centered, unified cluster (commit 9a39fd4) → §5.14 updated.
 
-### Still open — vote per line
-- **Footer "Legal"** · collapse `Terms` + `Privacy` into one **Legal** link (comp intent) · v2: still split
-- **Login contact field** · comp §5.12: eyebrow "PHONE OR EMAIL", phone OR email · v2: phone-only (+1 flag) — likely the intended "phone IS the login"; confirm which the guide should say
-- **Store-row logos** · never blank (chain PNG or embossed initials) · v2: some rows show a broken-image placeholder — a site bug, should fall back to initials
+### Decided by owner → guide updated
+- **Footer = single "Legal" link** covering Terms + Privacy (§5.14). **Site to-do:** live footer still
+  lists them separately — collapse to one `Legal` link.
+- **Login = phone number only**, no email (§5.12 updated; phone IS the login).
+
+### Open — site bug (not a design vote)
+- **Store-row logos** · never blank (chain PNG or embossed initials) · v2: some rows show a broken-image placeholder — should fall back to the initials tile.
 
 ### Copy (skin-independent — for the copy lane)
 - **"No charge" wording** · guide: a green shield carries it — don’t write the words · site: verdict notes write "No charge." literally (checkit.html:4640–4648)
