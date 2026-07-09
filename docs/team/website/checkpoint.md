@@ -2,8 +2,8 @@
 
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets, prune finished (history = git commits).
 > Lane: the consumer web app `public/checkit.html` (+ `public/app.html` admin). STAGING-FIRST:
-> branch `claude/checkitforme-website-takeover-pagiis` → `staging.checkitforme.com`. Prod = branch
-> `claude/retail-stock-voice-calls-OcyMS` (`checkitforme.com`); promote = apply the change on the prod branch.
+> branch `staging` → `staging.checkitforme.com`. Prod = branch
+> `main` (`checkitforme.com`); promote = apply the change on the prod branch.
 > Clean split with the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/the body wash), **I own
 > view/mode/nav**. Don't blind-edit the tint — it's fragile.
 

@@ -1,4 +1,8 @@
 # Check - Mapping — CHECKPOINT (current state)
+## ▶ Next mission (owner, 2026-07-09) — first task in the new repo
+Map the REST of the stores using the new converging engine (it's deployed on prod). Optimize for the
+FASTEST path through each tree — earliest-accepted press/say time, barge-in shortcuts — not just
+reaching a human. Capture per-chain barge-in rules in the recipe (see docs/specs/call-metrics/brief.md).
 
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets not prose, under ~80 lines.
 > Prune finished items (history lives in git commits).
