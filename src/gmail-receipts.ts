@@ -106,6 +106,7 @@ export async function debugRecentInbox(maxAgeMs = 3 * 86400_000): Promise<InboxD
 
 let running = false;
 /** Background ingest: pull new receipts from Gmail into kiosk_receipts. Gated by flag + creds. */
+let catchupDone = false;
 export async function gmailReceiptTick(): Promise<number> {
   if (running) return 0;
   const pol = await getPolicy();
@@ -113,7 +114,10 @@ export async function gmailReceiptTick(): Promise<number> {
   running = true;
   let added = 0;
   try {
-    const fresh = await fetchRecentReceipts(30 * 60_000);
+    // First tick after a boot scans 48h so receipts that arrived while the service was down (or
+    // being deployed) are caught up — dedup by messageId makes the wide window idempotent.
+    const fresh = await fetchRecentReceipts(catchupDone ? 30 * 60_000 : 48 * 3600_000);
+    catchupDone = true;
     for (const r of fresh) {
       const res = await db.insert(kioskReceipts).values({
         messageId: r.messageId, machineId: r.machineId, product: r.product, total: r.total,
