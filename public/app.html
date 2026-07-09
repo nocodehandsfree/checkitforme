@@ -2178,6 +2178,8 @@ async function saveWorkflow(){ const name=v('wf_name'); if(!name){ toast('Name t
   // Preserve the voice-rotation strip (managed in Workflows) across a Designer re-save: the Designer's
   // picked voice becomes slot #1 of the strip; the rest of the rotation is kept.
   if(i>=0 && Array.isArray(WFS[i].voices) && WFS[i].voices.length){ const rest=WFS[i].voices.filter(v=>v&&v!==wf.voiceId); wf.voices=[wf.voiceId,...(wf.voiceId?rest:WFS[i].voices)].filter(Boolean); }
+  // Preserve the Delta lane + follow-up scripts (edited on the Workflows page) across a Designer re-save.
+  if(i>=0){ if(WFS[i].lane) wf.lane=WFS[i].lane; if(WFS[i].followups) wf.followups=WFS[i].followups; }
   if(i>=0) WFS[i]=wf; else WFS.push(wf);
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WFS)})});
   if(window.WF) WF.list=WFS;  // keep the assignment pickers (Settings/Chains/Stores) in sync without a reload
@@ -3766,7 +3768,9 @@ function renderWorkflowMgr(){
           ${wfmVoiceChips(wi,w)}
           <select onchange="wfmAddVoice(${wi},this.value)"><option value="">+ Add a voice…</option>${WFM_VOICES.map(v=>`<option value="${esch(v.id)}">${esch(v.name)}${v.cloned?' (cloned)':''}</option>`).join('')}</select></div>
         <div><label>Persona</label><select onchange="wfmSetField(${wi},'persona',this.value)">${wfmPersonaOpts(w.persona)}</select></div>
+        <div><label>Call lane <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· Delta = recorded clips, ~2.5¢</span></label><select onchange="wfmSetField(${wi},'lane',this.value)"><option value="charlie"${(w.lane||'charlie')!=='delta'?' selected':''}>Charlie · live agent</option><option value="delta"${w.lane==='delta'?' selected':''}>Delta · recorded clips</option></select></div>
       </div>
+      ${wfmDeltaEditor(wi,w)}
     </div>`;
   }).join(''):'<div class="meta" style="margin:4px 2px 0">No saved workflows yet. Build one in <b>Voice → Designer</b> to override these per store.</div>';
   el.innerHTML = globalCard + wfCards;
@@ -3778,6 +3782,19 @@ async function wfmAddOpener(wi){ const inp=document.getElementById('wfmadd_'+wi)
 async function wfmDelOpener(wi,oi){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; w.openers.splice(oi,1); renderWorkflowMgr(); await wfmSaveList(); toast('Opener removed'); }
 async function wfmEditOpener(wi,oi,text){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; const t=(text||'').trim(); if(!t){ w.openers.splice(oi,1); renderWorkflowMgr(); } else { w.openers[oi]=t; } await wfmSaveList(); }
 async function wfmSetField(wi,field,val){ const w=WF.list[wi]; if(!w) return; w[field]=val; await wfmSaveList(); renderWorkflowMgr(); toast('Saved'); }
+// ---- Delta lane: per-workflow follow-up scripts (recorded clips, rotated). Shown when lane=Delta.
+// Set-first flow: after a YES ask the set, then the type; after a NO ask the restock day.
+function wfmFu(w,slot){ const f=w&&w.followups&&w.followups[slot]; return Array.isArray(f)?f:[]; }
+function wfmDeltaEditor(wi,w){ if((w.lane||'charlie')!=='delta') return '';
+  const box=(slot,label,ph)=>`<div style="margin-top:8px"><span class="meta" style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-strong)">${label}</span><textarea rows="2" style="font-size:12.5px;margin-top:3px;width:100%" oninput="wfmGrow(this)" onchange="wfmSetFollowup(${wi},'${slot}',this.value)" placeholder="${esch(ph)}">${esch(wfmFu(w,slot).join('\n'))}</textarea></div>`;
+  return `<div class="wfmmeta" style="grid-template-columns:1fr;border-top:1px dashed var(--border);margin-top:2px;padding-top:10px">
+    <div><label>Delta follow-ups <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· one per line, rotated per call. {category} fills in. Blank = use the built-in defaults.</span></label>
+    ${box('set','After a YES: ask the set (first)','Oh nice! Do you know which set it is?')}
+    ${box('type','After the set: ask the product type','Gotcha, are those booster packs or tins?')}
+    ${box('no','On a NO: ask the restock day','Ah, no worries. What day do you usually get shipments in?')}
+    </div></div>`;
+}
+async function wfmSetFollowup(wi,slot,text){ const w=WF.list[wi]; if(!w) return; if(!w.followups||typeof w.followups!=='object') w.followups={}; const arr=(text||'').split('\n').map(x=>x.trim()).filter(Boolean); if(arr.length) w.followups[slot]=arr; else delete w.followups[slot]; await wfmSaveList(); toast('Follow-up saved'); }
 async function wfmClone(wi){ const w=WF.list[wi]; if(!w) return; const name=(prompt('Name for the cloned workflow:', w.name+' copy')||'').trim(); if(!name) return; if(WF.list.some(x=>x.name===name)){ toast('A workflow named “'+name+'” already exists'); return; } const copy=JSON.parse(JSON.stringify(w)); copy.name=name; copy.savedAt=Date.now(); WF.list.push(copy); renderWorkflowMgr(); await wfmSaveList(); toast('Cloned as “'+name+'”. Edit it below, then assign it to a store'); }
 // ---- Round-trip: open an existing workflow back in the Designer (the only place to tweak tuning) ----
 let EDIT_TARGET=null; // a workflow staged to load into the Designer once its async loaders settle

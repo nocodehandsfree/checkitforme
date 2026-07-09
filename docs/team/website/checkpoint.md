@@ -1,3 +1,18 @@
+## SHIPPED 07-08 (staging + prod)
+- **Reload/nav regression fixed** (`checkit.html`, staging `4264162`): app was auto-restoring `cifm_mode=hobby`
+  on every load → dumped into the Pokémon hunt (`body.huntmode`) on the home page, and — because `/app/me` is
+  async — re-flipped INTO hobby even after a call/result had rendered, leaving the era/set art under the tinted
+  status view. Two fixes: (1) removed the hobby/thrift auto-restore — Retail is the home base on every reload
+  (kiosk still persists); (2) gated `body.huntmode #hobby{display:block}` with `:not(.hidden)` so any view that
+  hides `#hobby` (result/history/calendar/zones) actually wins — it was out-specificity'd before, so the art
+  bled UNDER those views. Also `exitHunt()` in `showTodayLanding`. **Tint itself untouched** (other dev's
+  call-status work — clean split: he owns tint CSS `__bootTone`/`tone-*` ~L40-48, I own view/mode/nav).
+- **Hobby product icons accent-tinted** (staging + prod): `hobbyIcon()` strokes the product-type icons
+  (ETB/booster box/tin/etc.) in `var(--accent,#FFCB05)` (Pokémon yellow) instead of flat grey.
+- **Footer copyright** (staging + prod, staging `2e62dac` / prod `5d02dde`): pulled `.foot-copy` out of the
+  centered logo cluster into its OWN centered bottom line, now reads **© <year> High Science LLC** (year is
+  dynamic via `#footYear`). v2 footer is now THREE centered rows: links · [logo·socials·lang] · © line.
+
 ## Carry-over (2026-07-07 — for the new repo)
 
 > Written for the next chat / the migration to `nocodehandsfree/checkitforme` (branches `staging` + `main`).

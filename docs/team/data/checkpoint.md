@@ -5,6 +5,70 @@
 >
 > ⚠️ This imported 445 lines from the old handoff — Data: prune it to what's actually current on your next 'Checkpoint'.
 
+## Carry-over (2026-07-07 — for the new repo)
+
+**⚠️ Memory-starts-at:** This chat was CONTINUED from a compaction summary. I can see the SUMMARY of the
+earlier session (hobby-hours loop, kiosk fix, launch dashboard, Google-Maps safe-state, chain QA) but NOT
+its raw messages. Full turn-by-turn memory begins at the owner's clarification "staging is the source of
+truth / everything happens on staging first → pushed to prod." Anything before that is secondhand.
+
+**NOT DONE / PARTIAL / WAITING:**
+- **National hobby-hours backfill — PAUSED** (org Claude monthly spend limit killed it). ~956+ shops still
+  have no real hours. Resume when spend resets. Method (scratchpad is EPHEMERAL — rebuild it): `build_wave.py`
+  → 14 free WebSearch subagents → `agg_hobby.py` (id-keyed `/api/stores/patch`). See session logs below.
+- **Promotion tool (staging→prod) — HANDED TO DEVOPS** ("DevOps is building the sync tool"). Rules it MUST
+  honor are under KEY FACTS → "Owner's promotion rule". I did NOT build it.
+- **Older-era set PRICES — intentionally omitted** (out of print → no honest retail price). Owner may want
+  some added later; an era→price table would go in `scripts/gen-pokemon-catalog.ts`.
+
+**NO ANSWER (I asked, never heard back):**
+- **"Fix the chains section to read the canonical API"** — I found `/api/chains` already reads the canonical
+  tables (chains + live `retailers` aggregates); the mismatch the owner saw was the staging↔prod two-DB split
+  (the promotion tool fixes it). I asked the owner to point at any specific admin screen STILL showing
+  stale/parallel numbers — no reply. If one is still wrong, that's the thing to trace.
+
+**TRAPS / UNSURE:**
+- **`seedCatalogSupplement` (src/db/seed.ts) is INSERT-IF-ABSENT.** Renaming a product type (did: Three-Pack
+  Blister→3-Pack, Prerelease Kit→Pre-Release Kit) leaves the OLD rows in the DB forever; they only vanish
+  because `PRETTY_TYPE` (server.ts) maps old→new and `orderProducts` dedups by display. **If price EDITS or
+  clean removals ever need to flow, switch it to upsert-by-externalId + deactivate `pk-supp-%` rows not in
+  the current file.**
+- **Scratchpad `/tmp/.../scratchpad/*.py` and secrets `/tmp/.atok` (admin token) + `/tmp/.ddpw` (dropsdb pw)
+  DIE with this chat's container.** New repo must re-provision the tokens (Railway has them). Rebuild the
+  worth-keeping scripts: hobby-hours wave machine + chain reconcile/audit (`chain_diff.py`,
+  `reconcile_apply.py`, `clean_direct_seconds.py`). Admin API needs a browser User-Agent (Cloudflare blocks
+  non-browser UA) + `x-admin-token`.
+
+**KEY FACTS / DECISIONS written nowhere else (do NOT re-learn the hard way):**
+- **ENV:** `staging.checkitforme.com` and `checkitforme.com` are SEPARATE deployments with SEPARATE databases
+  (`DATABASE_URL` per deploy — src/db/client.ts). No live shared API; **no staging→prod sync in code** (DevOps
+  building it). Stores only *seemed* synced because the import loads both. The single admin reads **PROD** data.
+- **Owner's PROMOTION RULE (field-scoped):** CURATED fields promote staging→prod = `muted`, `sellsPacks`/
+  callable, `hasKiosk`, `carries`, `phone`, `address`, new stores, catalog (products). **LEARNED fields NEVER
+  promote** (they refresh prod→staging) = `navRecipe`, `avgTreeSeconds`, `navSeconds`, `ringsDirect`,
+  `treeStatus`, `dtmfShortcut`/`answerPath`/`phoneTreeDefault`, call history, verified hours. Every promote =
+  **DRY-RUN first**, then apply. **DevOps reviews the tool before its first prod run.**
+- **SINGLE SOURCE OF TRUTH (owner mandate, standing job):** every page/report/endpoint reads the canonical
+  store API — NO parallel lists. Audit done this session: no rogue paths found. Enforce on every new surface.
+- **CHAIN-TYPE CLOBBER:** `bootstrap.ts` → `backfillChainTypes()` re-derives `chain.type` from `CHAIN_TYPES`
+  (src/db/import-data.ts) on EVERY boot. A thrift/hobby brand NOT in that table reverts to "Other" on prod
+  every deploy ("admin mapping won't stay fixed"). Fix = keep the brand IN `CHAIN_TYPES`.
+- **SILENT-AGENT BUG:** a stray `avgTreeSeconds` on a direct chain (`ringsDirect`/`navType='direct'`/
+  `answerPath='direct_human'`) arms the ABC connect-timer → mutes the agent while a human's on the line.
+  Read-guard = `connectAtSecFor` (recipe.ts). Write-guards added in 4 places: server.ts mapping-write,
+  calls/trainer-batch.ts (locked + candidate), calls/service.ts passive-learn, admin `PATCH /api/chains/:id`.
+- **PRICING PRINCIPLE (owner):** MSRP retailer → `stockCheckMethod="site"` (not called). Hobby (sells ABOVE
+  MSRP) → `"call"` (callable).
+- **`callReady` front-end precedence (greying is WEBSITE lane):** muted(hidden) > `stockCheckMethod="site"`
+  ("check online") > `callReady=false` (grey "coming soon", no call) > callable. API half shipped; front-end
+  greying handed to website dev via prompt.
+- **PRODUCTS PIPELINE:** products come from the **Drops DB** (dropsdb.fungibles.com, read-only sync via
+  `scripts/sync-dropsdb.ts` → `data/drops_db.json` → `products` table, seeded ONLY on empty DB). Curated
+  completeness = `data/pokemon-catalog-supplement.json` loaded by `seedCatalogSupplement()` every boot;
+  `sync-dropsdb` NEVER overwrites it (separate file).
+
+---
+
 ## Current focus (KEEP UPDATED)
 
 **Session 2026-07-07 — staging↔prod MAPPING sync + owner's MSRP/callable rule.**
@@ -62,11 +126,15 @@
   3 write paths so it can't return: `server.ts` mapping-write, `calls/trainer-batch.ts` (locked route +
   candidate), `calls/service.ts` (passive learn) — all now set `avgTreeSeconds`/`navSeconds` = **null when
   direct**. (Mapping-lane files, but the fix is a trivial guard; flagged here for the mapping dev.)
-- **TODO — ROUND 2 (owner): older-era Pokémon product types.** Extend the catalog overlay past the current
-  eras to **Sword & Shield and back**, with ERA-CORRECT lineups + pricing: SWSH packs ~$3.99 (box ~$143.64,
-  bundle ~$23.94); **no Booster Bundle pre-2019**; **no ETB pre-2013** (Plasma era on). Same generator
-  (`scripts/gen-pokemon-catalog.ts`) — add earlier eras to `ERAS` + an era→MSRP table instead of the single
-  SV/Mega constant set. Owner to confirm era prices.
+- **ROUND 2 DONE — all-era Pokémon catalog (owner's authoritative per-era type lists).**
+  `scripts/gen-pokemon-catalog.ts` now covers EVERY era (Base Set → Mega Evolution) → **1,112 SKUs** in
+  `data/pokemon-catalog-supplement.json`. Era-aware + honest: retail PRICES only on current shelf eras
+  (Mega + SV); older/out-of-print eras show the product TYPES with **no price** (never fabricate a historical
+  MSRP). Booster box / build&battle / checklane = MAIN-set only. Serve-layer label+order in `/pub/pokemon-sets`
+  (PC ETB → Pokémon Center Elite Trainer Box; Three-Pack → 3-Pack, display-deduped). 5 new front-end icons
+  (pack, deck, kit, build&battle, chest) in `checkit.html`. Verified live on staging: Base Set 6, Prismatic 10
+  (no dupes), Evolving Skies 10. NOTE: `seedCatalogSupplement` is insert-if-absent → round-1 "Three-Pack
+  Blister" rows linger in the DB but dedupe at display; switch it to upsert if we later need price EDITS to flow.
 - **Paused:** national hobby-hours WebSearch loop (Claude monthly spend cap). Resume on reset; ~956+ shops left.
 
 **Session 2026-07-06 (later) — "Hobby vanished at night" diagnosed + CATEGORY-SWEEP PLAYBOOK (owner directive).**

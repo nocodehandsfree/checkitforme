@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<!-- Status bar tint (regular Safari): NO theme-color meta ON PURPOSE. In Compact Safari one theme-color
-     tints BOTH the top status bar AND the bottom toolbar (= green footer), AND it OVERRIDES iOS page-sampling
-     so the top can never match the page. Without it, iOS SAMPLES the page background per-edge — the verdict
-     wash at the page TOP shows under the status bar, while the dark page bottom keeps the bottom bar dark
-     (green top, dark bottom — exactly what we want). Sampling only sees what is PAINTED when Safari samples,
-     so one system, two sources: (1) ?tone= deep-links — the server bakes a tone-* class onto the served
-     <html> tag (renderRunner in src/server.ts), so the FIRST paint is already the verdict colour via the
-     static `html.tone-*` CSS below, no JS timing involved; (2) in-page — the `html:has(body.rview.rv-*)` +
-     `body.rview.rv-*` gradient applied by the post-<body> boot script and the app, which outranks and then
-     drops the baked class (dropBakedTone). Do NOT reintroduce a theme-color meta — it re-breaks the top.
+<!-- Status bar tint (regular Safari) — PROVEN ON-DEVICE (tinttest1-8, 07-09): modern iOS Safari paints
+     its chrome (the status-bar strip AND the band behind the bottom address pill) from ONE value — the
+     ROOT element's background-COLOR. It does not read painted pixels (macOS does), it IGNORES theme-color,
+     and both strips always share the single colour (no way to split top from bottom). So the verdict tone
+     is set as html's background-color and the body carries the visible full-page gradient — see the
+     "Verdict tone wash" CSS block. Two sources, one paint: (1) ?tone= deep-links — the server bakes a
+     tone-* class onto the served <html> tag (renderRunner in src/server.ts), first paint carries it, no JS
+     timing; (2) in-page — the boot script / app applies body.rview.rv-* and a settled verdict does a
+     one-shot reload into its ?tone URL (ensureToneLoaded) so the chrome colour re-reads at load.
      In STANDALONE (home screen) the apple-mobile metas + viewport-fit=cover paint content UNDER the status
-     bar, so the wash shows at the top there regardless (that path has always worked). -->
+     bar (that path has always worked); a media query keeps its canvas base dark so the bottom overscroll
+     stays dark there. -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Check it for me" />
@@ -47,7 +47,7 @@
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
 }catch(e){}})();</script>
-<meta name="x-rev" content="tonebake-r101" />
+<meta name="x-rev" content="tonebake-r103" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
@@ -107,6 +107,7 @@ __BRAND_HEAD__
   .storelist{margin-top:12px;max-height:480px;overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding:3px}
   .store{display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid var(--border);border-radius:12px;cursor:pointer;background:var(--terminal);transition:border-color .12s,background .12s}
 .store.shut{opacity:.56}
+.store.coming{opacity:.5} /* callable-but-unmapped: shown greyed, not callable (tap → "Adding store soon!") */
   .store:hover{border-color:rgba(255,255,255,.18)}
   .store.sel{border-color:var(--accent,#FFCB05);background:color-mix(in srgb,var(--accent,#FFCB05) 9%,transparent)}
   .store .ic{width:52px;height:52px;border-radius:15px;background:linear-gradient(145deg,#34343d,#23232b);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
@@ -253,34 +254,35 @@ __BRAND_HEAD__
   /* ── result v2: boxless verdict + boxless "The call" header (mirrors checkit-demo look) ── */
   .rverdict{position:relative;padding:2px 2px 0;margin-bottom:4px}
   .rverdict>*{position:relative}
-  /* Verdict tone fills from the very TOP of the screen down into the page. It's the BODY's own
-     background (not a fixed ::before) so its top edge also fills the iOS pull-to-refresh / overscroll
-     rubber-band — no dark cut-off at the top. The blended hex == the old rgba wash over the page bg. */
-  body.rview.rv-out{background:linear-gradient(180deg,#6b2427 0px,var(--bg) 460px)}
-  body.rview.rv-in{background:linear-gradient(180deg,#266440 0px,var(--bg) 460px)}
-  body.rview.rv-unk{background:linear-gradient(180deg,#6c5419 0px,var(--bg) 460px)}
-  body.rview.rv-soon{background:linear-gradient(180deg,#6e490f 0px,var(--bg) 460px)}
-  /* On a result, make the ROOT transparent so the BODY's gradient propagates to the canvas: the iOS
-     overscroll rubber-band then shows tone at the TOP (pull-to-refresh) and the page bg at the BOTTOM —
-     no green at the bottom. Pure CSS via :has() so it always reverts off a result. */
-  /* Tone the ROOT canvas too (same gradient as the body), so the area BEHIND the status bar / notch and
-     the top overscroll get the verdict color — no dark band at the very top. Bottom stays dark because the
-     gradient fades to --bg by 460px. (Was transparent, which let the webview's dark canvas show at the top.) */
-  html:has(body.rview.rv-in){background:linear-gradient(180deg,#266440 0px,var(--bg) 460px)}
-  html:has(body.rview.rv-out){background:linear-gradient(180deg,#6b2427 0px,var(--bg) 460px)}
-  html:has(body.rview.rv-unk){background:linear-gradient(180deg,#6c5419 0px,var(--bg) 460px)}
-  html:has(body.rview.rv-soon){background:linear-gradient(180deg,#6e490f 0px,var(--bg) 460px)}
-  /* ?tone= deep-links: the server bakes tone-* onto the served <html> tag so the FIRST paint — the one
-     iOS samples for the status bar — is already the verdict colour, before any script runs. Sampling reads
-     the VISIBLE top-edge pixels, so the html canvas alone isn't enough (it only shows behind the notch /
-     overscroll): the BODY must carry the wash and the header slab must be transparent, exactly like the
-     result view paints them. Same gradient as the rv-* rules = seamless when the app takes over. The
-     body.rview.rv-* rules OUTRANK the body rules here (a live verdict always wins), and the app drops the
-     baked class on any in-page view change (dropBakedTone) so a stale tint can never strand at the top. */
-  html.tone-in, html.tone-in body{background:linear-gradient(180deg,#266440 0px,var(--bg) 460px)}
-  html.tone-out, html.tone-out body{background:linear-gradient(180deg,#6b2427 0px,var(--bg) 460px)}
-  html.tone-unk, html.tone-unk body{background:linear-gradient(180deg,#6c5419 0px,var(--bg) 460px)}
-  html.tone-soon, html.tone-soon body{background:linear-gradient(180deg,#6e490f 0px,var(--bg) 460px)}
+  /* ── Verdict tone wash + iOS Safari chrome tint ──────────────────────────────────────────────
+     PROVEN ON-DEVICE (owner, tinttest1-8): modern iOS Safari paints its chrome strips (status-bar
+     area AND the band behind the bottom address pill) from ONE value — the ROOT element's declared
+     background-COLOR. It never reads the painted pixels (that's macOS), it ignores theme-color, and a
+     background-image on html leaves the base colour in charge. So: the tone lives as html's
+     background-color (both strips take it — top green means the bottom band is green too; iOS offers
+     no way to split them), and the body carries the visible FULL-PAGE gradient (tone holds to 140px,
+     dark by one viewport). Two sources, same paint: html.tone-* (server-baked ?tone= deep-links,
+     first paint, no JS) and html:has(body.rview.rv-*) (in-page verdicts; ensureToneLoaded's one-shot
+     reload guarantees the chrome updates even if iOS doesn't re-read the colour live). */
+  html.tone-in,html:has(body.rview.rv-in){background:#266440}
+  html.tone-out,html:has(body.rview.rv-out){background:#6b2427}
+  html.tone-unk,html:has(body.rview.rv-unk){background:#6c5419}
+  html.tone-soon,html:has(body.rview.rv-soon){background:#6e490f}
+  html.tone-in body,body.rview.rv-in{background:linear-gradient(180deg,#266440 0px,#266440 140px,var(--bg) 100dvh)}
+  html.tone-out body,body.rview.rv-out{background:linear-gradient(180deg,#6b2427 0px,#6b2427 140px,var(--bg) 100dvh)}
+  html.tone-unk body,body.rview.rv-unk{background:linear-gradient(180deg,#6c5419 0px,#6c5419 140px,var(--bg) 100dvh)}
+  html.tone-soon body,body.rview.rv-soon{background:linear-gradient(180deg,#6e490f 0px,#6e490f 140px,var(--bg) 100dvh)}
+  /* STANDALONE (home screen): content paints under the status bar directly (the body gradient shows
+     there), and the canvas keeps a DARK base so the bottom overscroll stays dark like today — override
+     the root back to a toned-top gradient over a dark base colour. */
+  @media (display-mode: standalone){
+    html.tone-in,html:has(body.rview.rv-in){background:linear-gradient(180deg,#266440 0px,var(--bg) 460px) #0C0C12}
+    html.tone-out,html:has(body.rview.rv-out){background:linear-gradient(180deg,#6b2427 0px,var(--bg) 460px) #0C0C12}
+    html.tone-unk,html:has(body.rview.rv-unk){background:linear-gradient(180deg,#6c5419 0px,var(--bg) 460px) #0C0C12}
+    html.tone-soon,html:has(body.rview.rv-soon){background:linear-gradient(180deg,#6e490f 0px,var(--bg) 460px) #0C0C12}
+  }
+  /* Baked deep-link state mirrors the result view's top treatment (transparent header) so the wash is
+     continuous from the strip into the page; dropBakedTone clears the class on any in-page view change. */
   html.tone-in header,html.tone-out header,html.tone-unk header,html.tone-soon header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
   /* On a result the nav + content LAY ON the color: header goes transparent (no dark slab, no hairline)
      so the wash reaches the top. The nav pills + day-picker take a BARELY-green fill (level 3) so they
@@ -1216,6 +1218,7 @@ html[data-skin="v2"] #success .fab-back .fbk-lbl::after{content:"BACK"}
 html[data-skin="v2"] #success .fab-back .fbk-lbl{display:inline}
 html[data-skin="v2"] .mychk{width:24px;height:24px;margin-left:-2px}
 html[data-skin="v2"] .shoptag{display:inline-block;vertical-align:middle;margin-left:6px;padding:2px 7px;border-radius:6px;font-size:8.5px;font-weight:900;letter-spacing:.06em;color:color-mix(in srgb,var(--accent,#FFCB05) 80%,#FFF);background:color-mix(in srgb,var(--accent,#FFCB05) 14%,transparent)}
+.soontag{display:inline-block;vertical-align:middle;margin-left:6px;padding:2px 7px;border-radius:6px;font-size:8.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#9A9AA6;background:rgba(255,255,255,.06)}
 html[data-skin="v2"] .fld-err{background:rgba(239,68,68,.07)!important;border:1.5px dashed rgba(239,68,68,.55)!important;box-shadow:none!important}
 .fld-err{background:rgba(239,68,68,.07);border-color:rgba(239,68,68,.55)}
 html[data-skin="v2"] .modal{background:#26262B;border:0;border-radius:26px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
@@ -1391,7 +1394,7 @@ html[data-skin="v2"] .findbtn-primary.on{background:linear-gradient(#20202A,#202
 /* HOBBY flow (P3a–P5/§5.13) — hidden preview. Era art on the page, press-dip; set tiles; product rows. */
 body.huntmode #builder > *:not(#findcard):not(.hero){display:none!important}
 body.huntmode #findcard #findbody{display:none!important}
-body.huntmode #hobby{display:block}
+body.huntmode #hobby:not(.hidden){display:block} /* :not(.hidden) so any view that hides #hobby (result/history/calendar/zones) actually wins — else huntmode's specificity kept the era/set art bleeding UNDER those views */
 html[data-skin="v2"] .hob-era{display:block;width:82%;margin:0 auto 26px;background:none;border:0;padding:0;cursor:pointer;transition:transform .12s}
 html[data-skin="v2"] .hob-era:active{transform:translateY(3px) scale(.97)}
 /* Era picker: a search box + 2-col grid of era BUTTON-CARDS (logo art up top, name + set count below).
@@ -2336,7 +2339,7 @@ const I18N={ es:{
   'buy.tabplans':'Planes','buy.tabpayg':'Por uso','plan.on':'Tienes','plan.checks':'verificaciones','plan.percheck':'aprox.','plan.percheck2':'por verificación','plan.noexpire':'no caducan','acct.stat.run2':'Verificaciones hoy','acct.perweek2':'Verificaciones esta semana','auth.newcell':'Danos tu nuevo celular','ph.cellmail':'tu correo',
   'ref.sharemsg':'¡Oye! Mira esta tecnología. Está increíble.\nNos ayuda a encontrar productos virales en stock como cartas Pokémon a precio de tienda.\nRegístrate y ambos ganamos 3 verificaciones gratis: ','ref.copied':'¡Enlace de invitación copiado!','ref.copy':'Copia tu enlace de invitación:','ref.both':'Ambos reciben <b style="color:#fff">3 verificaciones gratis</b> cuando se registran.','ref.copybtn':'COPIAR','ref.text':'Mensaje','ref.post':'Publicar','ref.more':'Más',
   'kioskonly':'Solo kiosco','kiosk.precall':'Solo kiosco. Preguntaremos si su kiosco está funcionando y surtido, no por un envío.',
-  'closednow':'· cerrado ahora',
+  'closednow':'· cerrado ahora','store.soon':'¡Agregando tienda pronto!','store.soonchip':'Muy pronto',
   // live view
   'pre.had':'tenían en stock','pre.notin':'no tenían','pre.unclear':'sin respuesta clara','pre.again':'Verificaste {s} {a}. {o}. ¿Verificar de nuevo?','pre.note':'Verificaste {s} {a}. {o}',
   'live.mute':'🔇 Quita el silencio del teléfono para escuchar la llamada','live.calling':'📞 Colocando la llamada…','live.ringing':'📞 Timbrando…','live.connected':'✅ Contestaron. Escuchando…','live.talking':'🙋 Hablando con un empleado…','live.ivr':'🔢 Navegando el menú telefónico…','live.getting':'⏳ Obteniendo el resultado…','live.loading':'Cargando tu llamada…','live.connecting':'Conectando…',
@@ -2434,7 +2437,7 @@ const I18N={ es:{
   'sc.crew':'Presume con la banda','sc.scored':'¡La conseguiste!','sc.snap':'Toma tu foto. Publícala.','sc.photo':'Tu foto','sc.caption':'Descripción','sc.name':'Tu nombre / usuario','sc.optional':'(opcional)','sc.ph.caption':'¡Saqué un Charizard en el Target de Sunset!','sc.ph.handle':'@tuusuario','sc.post':'Publicar en el muro →','sc.uploading':'Subiendo…','sc.err.big':'La foto pesa demasiado (máx. 12 MB).','sc.err.nophoto':'Agrega una foto primero',
   'ph.schednum':'Escribe tu número','ph.storereq':'ej. Target, Thousand Oaks','ph.storecity':'ej. Thousand Oaks, CA','ph.storedetails':'dirección, qué productos, etc.','ph.kiosk':'ej. Albertsons, Sunset Blvd, LA','ph.kioskhint':'ej. A veces se salta la reposición de los :03',
   'toast.searchmi':'📍 {q}. Tiendas a {n} mi','toast.zoomout':'Pellizca para acercar, toca para fijar un punto','toast.community':'La comunidad llega pronto','toast.locupdated':'Actualizado a tu ubicación actual',
-  'cs.costs':'cuesta 1 verificación','cs.toggle':'Ver pasos de la llamada',
+  'cs.costs':'cuesta 1 verificación','cs.toggle':'Ver pasos de la llamada','cs.hobask':'Verificaremos precio y disponibilidad de',
   'err.storename':'Agrega el nombre de la tienda',
   'fbk.in':'En stock','fbk.out':'No está','fbk.soon':'Reabasteciendo','fbk.unsure':'Sin claridad',
   'fbk.q':'¿Puedes deducirlo de la conversación de abajo? ¿Qué opinas?',
@@ -2546,10 +2549,11 @@ function ensureModeChips(){
       kb2.parentElement.insertBefore(tb,kb2); }
     else if(!want&&ex){ ex.remove(); if(typeof MODE!=='undefined'&&MODE==='thrift'){ try{ setMode('call'); }catch(_){ } } }
   }
-  // Restore a premium mode persisted from last session, once its chip exists (entitlement now known).
-  try{ const cm=localStorage.getItem('cifm_mode');
-    if((cm==='hobby'||cm==='thrift') && (typeof MODE==='undefined'||MODE!==cm) && document.querySelector('.modetab[data-mode="'+cm+'"]')) setMode(cm);
-  }catch(_){ }
+  // NOTE (owner 07-08): do NOT auto-restore hobby/thrift on load. Reloading dumped the user into a full
+  // Pokémon hunt (body.huntmode) on the home page — and because /app/me is async, it re-flipped INTO hobby
+  // even after a call/result had already rendered, leaving the era/set art tinted under the status view.
+  // Retail ('call') is the home base on every reload; hobby/thrift are opt-in per session via their chip.
+  // (Kiosk is remembered separately below — that one the owner does want to persist.)
 }
 function setLang(l){ LANG=l; localStorage.setItem('runnr_lang',l); applyLang();
   // Re-render everything built in JS so a language flip is instant and complete.
@@ -3478,6 +3482,7 @@ function storeTier(s){ return Number(s&&s.tier)||0; } // 5 = best MSRP odds … 
 // inStock store (recent confirmed hit) leads with the brand check.
 function storeRowHtml(s){
   const kiosk=MODE==='kiosk';
+  const notReady=!kiosk && s && s.callReady===false; // callable but its phone-tree isn't mapped yet → greyed "coming soon", not dialable
   const mi=storeMi(s); const o=s&&s.openState;
   const sel=SEL_STORE&&SEL_STORE.id===s.id?'sel':'';
   const right=mi!=null?`<div class="smi">${mi<10?mi.toFixed(1):Math.round(mi)}<small>mi</small></div>`:'';
@@ -3490,7 +3495,7 @@ function storeRowHtml(s){
       <div style="min-width:0;flex:1"><div class="nm">${esc(s.name)}</div><div class="lo">${dot2}${[esc(s.location||''),st].filter(Boolean).join(' · ')}</div></div>
       ${right}</div>`;
   }
-  if(!TIER_VIEW && BEST && s.id===BEST.id){
+  if(!TIER_VIEW && BEST && s.id===BEST.id && !notReady){
     const rowBest=(SEL_STORE && SEL_STORE.id!==s.id)?'':'best';
     const bwhy=esc(LANG==='es'?t('bestwhy','great odds right now'):(BEST.why||'great odds right now'));
     if(isV2()){
@@ -3510,9 +3515,10 @@ function storeRowHtml(s){
   const drop=shipmentDayShort(s);
   const meta=[esc(s.address||s.location||''), (o&&o.label)?esc(tLbl(o.label)):'', drop?(t('drops','drops')+' '+esc(drop)):''].filter(Boolean).join(' · ');
   const shopTag=(MODE==='hobby'&&s.isMSRP===false)?` <span class="shoptag">${t('hob.shopprices','SHOP PRICES')}</span>`:'';
-  return `<div class="store ${sel}${isClosed(s)?' shut':''}" onclick="pickStore(${s.id})">
+  const soonTag=notReady?` <span class="soontag">${t('store.soonchip','Coming soon')}</span>`:'';
+  return `<div class="store ${sel}${isClosed(s)?' shut':''}${notReady?' coming':''}" onclick="pickStore(${s.id})">
     <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${storeFace(s)}</div>
-    <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)}${shopTag}</div><div class="lo">${dot}${meta}</div></div>
+    <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)}${shopTag}${soonTag}</div><div class="lo">${dot}${meta}</div></div>
     ${right}</div>`;
 }
 function renderStores(){
@@ -3528,7 +3534,17 @@ function renderStores(){
     if(USER_LOC && !s.ownerOnly){ const mi=storeMi(s); if(mi==null || mi>RADIUS) return false; } // owner-only "Fun" store shows from any location
     return true;
   });
-  if(USER_LOC) list.sort((a,b)=>(storeMi(a)??1e9)-(storeMi(b)??1e9));
+  // Open stores float to the top of the modes that show closed ones (hobby/thrift), then nearest→farthest
+  // within each group (owner 07-09: an open store buried under closed ones is wrong). Retail hides closed,
+  // so there it stays pure distance.
+  if(USER_LOC){
+    const showsClosed=(MODE==='hobby'||MODE==='thrift');
+    const openRank=s=>(s&&s.openState&&s.openState.known&&s.openState.open)?0:1;
+    list.sort((a,b)=>{
+      if(showsClosed){ const d=openRank(a)-openRank(b); if(d) return d; }
+      return (storeMi(a)??1e9)-(storeMi(b)??1e9);
+    });
+  }
   // Tier view: green TIER-5 group on top, optional TIER-4, then everyone else (each nearest→farthest)
   // — surfaces best-MSRP-odds above closer low-tier stores. Active only when the backend tags tiers.
   TIER_VIEW = !kiosk && list.some(s=>storeTier(s)>=4);
@@ -3809,7 +3825,8 @@ function renderChips(){
 }
 function pickStore(id){
   const st=STORES.find(s=>s.id===id);
-  if(isClosed(st)){ toast(tLbl(st.openState.label||'Closed')+' '+t('closednow',"· closed now")); return; }
+  if(st&&st.callReady===false){ toast(t('store.soon','Adding store soon!')); return; } // unmapped chain — greyed, not callable yet
+  if(isClosed(st)){ toast(tf('stn.closed','{store} is closed now. No charge.',{store:splitStoreName(st.name).base||st.name}),'neutral'); return; }
   SEL_STORE=st; SEL_KIOSK=false; KIOSK_OK=false; CS_DISMISSED=false; // fresh pick → the sheet may slide up again
   if(!BRAND_CAT) applyBrand();   // categories may have loaded after first paint — re-resolve the brand's category
   const opts=storeCatOptions();
@@ -3824,7 +3841,7 @@ function pickStore(id){
 // flashes a confirmation that we're calling to check the MACHINE (working/stocked), not shelf stock.
 function pickKiosk(id){
   const st=STORES.find(s=>s.id===id); if(!st) return;
-  if(isClosed(st)){ toast(tLbl((st.openState&&st.openState.label)||'Closed')+' '+t('closednow',"· closed now")); return; }
+  if(isClosed(st)){ toast(tf('stn.closed','{store} is closed now. No charge.',{store:splitStoreName(st.name).base||st.name}),'neutral'); return; }
   SEL_STORE=st; SEL_KIOSK=true; KIOSK_OK=false;
   if(!BRAND_CAT) applyBrand();
   const pref = BRAND_CAT || CATS.find(c=>/pok/i.test(c.label)) || CATS[0];
@@ -3927,11 +3944,14 @@ function renderCallSheet(){
     if(s.openState&&s.openState.known){ const o=s.openState.open; html+=(html?' · ':'')+`<span class="${o?'cs-open':'cs-closed'}">${o?t('st.open','Open'):t('st.closed','Closed')}</span>`; }
     ad.innerHTML=html;
   }
-  // A hobby-locked product IS the ask — print it where the comp prints the product context
-  // ("Pokémon · costs 1 check" → "Pitch Black Booster Box · costs 1 check"). v1: lock never set.
-  const prod = SEL_KIOSK ? t('cta.kioskword','kiosk') : ((typeof HOBBY_LOCK!=='undefined'&&HOBBY_LOCK&&SEL_PRODUCT)?SEL_PRODUCT:catLabels());
-  const pe=$('cs_prod'); if(pe) pe.innerHTML = `${esc(prod)} <span>· ${t('cs.costs','costs 1 check')}</span>`+
-    ((isV2()&&MODE==='hobby'&&BRAND&&BRAND.category==='Pokémon'&&hasFeature('exact_products'))?`<a onclick="openHobby()" style="display:block;margin-top:6px;font-size:12.5px;font-weight:700;color:#4ADE80;cursor:pointer">${t('hob.pickexact','Pick the exact set or product')} →</a>`:'');
+  // A hobby-locked product IS the ask — print it in the product-context line. v1: lock never set.
+  const hob = (typeof HOBBY_LOCK!=='undefined'&&HOBBY_LOCK&&SEL_PRODUCT);
+  const prod = SEL_KIOSK ? t('cta.kioskword','kiosk') : (hob?SEL_PRODUCT:catLabels());
+  // Hobby (locked product): "We'll check on pricing and availability for {set} {product}". Everyone else:
+  // just the category. NO "costs 1 check" on any of it (owner 07-09), NO "pick the exact set" link.
+  const pe=$('cs_prod'); if(pe) pe.innerHTML = hob
+    ? `${t('cs.hobask',"We'll check on pricing and availability for")} ${esc(prod)}`
+    : esc(prod);
 }
 function showCallSheet(){ const el=$('csheet'); if(!el) return; const already=el.classList.contains('on'); renderCallSheet();
   if(!already){ // guarantee the slide UP from the bottom: pin to off-screen, reflow, then release to .on
@@ -5157,6 +5177,7 @@ function openHistory(forceCal){
 // The empty-today screen: clean header (product switcher + calendar to browse past days) and an empty
 // state with a CTA to check a store. Reuses the result-view chrome so the calendar/switcher are present.
 function showTodayLanding(forceCal){
+  try{ exitHunt(); }catch(_){ } // clear body.huntmode too — else the era/set art stays under the calendar/history view
   stopLiveTimers(); if($('hangup_btn'))$('hangup_btn').style.display='none';
   ['live','builder','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
   document.body.classList.remove('fabbed');
@@ -5595,16 +5616,26 @@ const HOBBY_ICONS={
   'blister':'<rect x="3.5" y="5" width="5.4" height="13.5" rx=".9"/><rect x="9.3" y="5" width="5.4" height="13.5" rx=".9"/><rect x="15.1" y="5" width="5.4" height="13.5" rx=".9"/><rect x="8.7" y="8.4" width="6.6" height="8.4" rx=".8"/>',
   'sleeved':'<rect x="7" y="3.5" width="10" height="17" rx="1"/><path d="M7 6.3h10"/><path d="M7 17.7h10"/><circle cx="12" cy="12" r="2.4"/>',
   'tin':'<rect x="6.5" y="2.5" width="11" height="19" rx="3.5"/><path d="M6.5 8h11"/><path d="M9.4 4.6c-.5.3-1 .8-1.3 1.4"/>',
+  'pack':'<rect x="7.5" y="4.5" width="9" height="16" rx="1"/><path d="M7.5 8h9"/><path d="M10 4.5V3h4v1.5"/>',
+  'deck':'<rect x="6.5" y="3.5" width="11" height="16" rx="1.3"/><path d="M9.3 7.3h5.4"/><path d="M9.3 10.5h5.4"/><path d="M9.3 13.7h3.4"/>',
+  'kit':'<rect x="3.5" y="6" width="7.5" height="12.5" rx="1"/><rect x="13" y="6" width="7.5" height="12.5" rx="1"/><path d="M5.6 9.2h3.3"/><path d="M15.1 9.2h3.3"/>',
+  'battle':'<rect x="3" y="8.5" width="18" height="10.5" rx="1.2"/><path d="M3 12.3h18"/><rect x="13.5" y="3.5" width="4.2" height="7" rx=".6"/><path d="M13.5 5.8h4.2"/>',
+  'chest':'<path d="M4.5 10.5h15V18a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1z"/><path d="M5.2 10.5 7 6.4a1 1 0 0 1 .9-.6h8.2a1 1 0 0 1 .9.6l1.8 4.1"/><path d="M4.5 13.5h15"/><path d="M10.8 13.5v2.3h2.4v-2.3"/>',
 };
 function hobbyIcon(type){
   const t=String(type||'').toLowerCase();
   const key = t.includes('booster box')||t.includes('display') ? 'booster box'
+    : (t.includes('build')&&t.includes('battle')) ? 'battle'
     : (t.includes('etb')||t.includes('elite trainer')) ? 'etb'
     : t.includes('bundle') ? 'bundle'
-    : (t.includes('premium')||t.includes('collection')) ? 'premium'
     : t.includes('blister') ? 'blister'
+    : t.includes('chest') ? 'chest'
+    : (t.includes('premium')||t.includes('collection')) ? 'premium'
+    : t.includes('tin') ? 'tin'
+    : (t.includes('deck')||t.includes('starter set')) ? 'deck'
+    : t.includes('kit') ? 'kit'
     : t.includes('sleeved') ? 'sleeved'
-    : t.includes('tin') ? 'tin' : null;
+    : t.includes('pack') ? 'pack' : null;
   const inner = key ? HOBBY_ICONS[key] : '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>';
   return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
 }

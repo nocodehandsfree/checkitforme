@@ -50,6 +50,9 @@ export async function fetchRecentReceipts(maxAgeMs = 30 * 60_000): Promise<Fetch
     auth: { user: process.env.GMAIL_USER!, pass: process.env.GMAIL_APP_PASSWORD! },
     logger: false,
   });
+  // A dropped Gmail socket emits 'error' OUTSIDE the await chain; with no listener that unhandled
+  // event kills the whole process (took prod down 2026-07-09). Contain it: log, never crash.
+  client.on("error", (e: unknown) => console.error("gmail imap error (contained):", String(e).slice(0, 150)));
   const out: FetchedReceipt[] = [];
   await client.connect();
   const lock = await client.getMailboxLock("INBOX");
@@ -77,6 +80,7 @@ export async function debugRecentInbox(maxAgeMs = 3 * 86400_000): Promise<InboxD
     auth: { user: process.env.GMAIL_USER!, pass: process.env.GMAIL_APP_PASSWORD! },
     logger: false,
   });
+  client.on("error", (e: unknown) => console.error("gmail imap error (contained):", String(e).slice(0, 150)));
   const out: InboxDebugRow[] = [];
   await client.connect();
   const lock = await client.getMailboxLock("INBOX");
@@ -102,6 +106,7 @@ export async function debugRecentInbox(maxAgeMs = 3 * 86400_000): Promise<InboxD
 
 let running = false;
 /** Background ingest: pull new receipts from Gmail into kiosk_receipts. Gated by flag + creds. */
+let catchupDone = false;
 export async function gmailReceiptTick(): Promise<number> {
   if (running) return 0;
   const pol = await getPolicy();
@@ -109,7 +114,10 @@ export async function gmailReceiptTick(): Promise<number> {
   running = true;
   let added = 0;
   try {
-    const fresh = await fetchRecentReceipts(30 * 60_000);
+    // First tick after a boot scans 48h so receipts that arrived while the service was down (or
+    // being deployed) are caught up — dedup by messageId makes the wide window idempotent.
+    const fresh = await fetchRecentReceipts(catchupDone ? 30 * 60_000 : 48 * 3600_000);
+    catchupDone = true;
     for (const r of fresh) {
       const res = await db.insert(kioskReceipts).values({
         messageId: r.messageId, machineId: r.machineId, product: r.product, total: r.total,
