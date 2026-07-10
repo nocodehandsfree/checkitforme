@@ -8,6 +8,16 @@ verified by real phone calls — that data IS the moat.** Everything below compo
 ## Open backlog (consolidated — newest thinking on top)
 Status of each is detailed in the linked ops/security docs; this is the single checklist.
 
+**Agent-team infrastructure (owner priority — take the owner out of the middle)**
+- [ ] **Slack as the agent message bus + visibility layer.** Today every agent-to-agent handoff routes
+  through the owner copy-pasting between phone chats (the human is the network cable). Goal: agents post
+  status and hand off to each other in Slack, owner watches instead of relays. Two layers: (a) EASY WIN
+  FIRST — agents post their done-reports and blockers to a #check-activity channel for visibility;
+  (b) BIGGER BUILD — a shared handoff bus (start with `docs/team/HANDOFFS.md` that every lane watches,
+  graduate to Slack routing) so e.g. Mapper hands a commit to Pops without the owner between them.
+  Autonomous inter-agent routing is a real project; the repo-doc handoff bus works today and is the
+  cheap first step. Ties into the existing Grok-to-Claude repo automation the owner already runs.
+
 **Design round — owner + Claude Design (Website implements on staging as comps land in repo)**
 - [ ] **Check+ premium signup flow (1a–1d)** — locked design exists as a self-contained HTML comp; commit to
   `docs/design/comps/checkplus-signup-flow.html` when the owner delivers it (Design chat is read-only, can't push).
