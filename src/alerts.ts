@@ -110,7 +110,7 @@ interface EmailDesign { kicker: string; kickerColor: string; headline: string; b
 const EMAIL_DESIGN: Record<AlertEvent, EmailDesign> = {
   store_added: {
     kicker: "YOUR STORE'S LIVE", kickerColor: "#4ADE80", headline: "You got your store.",
-    body: ["{store} in {city} is live. Your next check's on us.", "Pick your product, we call the staff, you get the answer."],
+    body: ["**{store}** in {city} is live. Your next check's on us.", "Pick your product, we call the staff, you get the answer."],
     module: { type: "chip", text: "1 free check, ready" }, cta: "Use my free check", url: "https://checkitforme.com",
   },
   waitlist: {
@@ -120,7 +120,7 @@ const EMAIL_DESIGN: Record<AlertEvent, EmailDesign> = {
   },
   restock: {
     kicker: "BACK IN STOCK", kickerColor: "#FFCB05", headline: "{product}'s back.",
-    body: ["{store} in {city} has it again. This stuff doesn't sit long."],
+    body: ["**{store}** in {city} has it again. This stuff doesn't sit long."],
     module: { type: "product", title: "{product}", sub: "{store} · {city}", badge: "SPOTTED TODAY" }, cta: "See the details", url: "https://checkitforme.com",
   },
   welcome: {
@@ -130,50 +130,81 @@ const EMAIL_DESIGN: Record<AlertEvent, EmailDesign> = {
     cta: "Run my first check", url: "https://checkitforme.com",
   },
 };
-const SERIF = "Georgia,'Times New Roman',serif";
+const FONT = "Inter,'Segoe UI',Arial,sans-serif";
+/** Escape + fill, with **{token}** segments rendered bold-white (the mock bolds {store}/{product}). */
+function fillHtmlBold(t: string, tk: Record<string, string | number | undefined>): string {
+  return t.split(/(\*\*[^*]+\*\*)/).map((seg) => {
+    const m = seg.match(/^\*\*([^*]+)\*\*$/);
+    if (m) return `<b style="color:#FFFFFF;font-weight:700">${escHtml(fill(m[1], tk))}</b>`;
+    return escHtml(fill(seg, tk));
+  }).join("");
+}
 function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | number | undefined>): string {
   if (!m) return "";
-  const wrap = (inner: string) => `<tr><td style="padding-bottom:22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#16161C;border-radius:13px"><tr><td style="padding:15px 17px">${inner}</td></tr></table></td></tr>`;
-  if (m.type === "chip") return wrap(`<span style="font-size:15px;font-weight:700;color:#FFFFFF;font-family:Inter,Arial,sans-serif">${escHtml(fill(m.text, tk))}</span>`);
+  // Module card: #1B1B20 rounded (Outlook squares the corners off — acceptable, still a solid card).
+  const wrap = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1B1B20;border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
+  if (m.type === "chip") return wrap(`<span style="font-size:14px;font-weight:700;color:#FFFFFF;font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
   if (m.type === "product") return wrap(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-    <td style="font-family:Inter,Arial,sans-serif"><div style="font-size:15px;font-weight:800;color:#FFFFFF">${escHtml(fill(m.title, tk))}</div><div style="font-size:12.5px;color:#8A8A96;margin-top:2px">${escHtml(fill(m.sub, tk))}</div></td>
-    <td align="right"><span style="font-size:10.5px;font-weight:800;letter-spacing:.5px;color:#4ADE80;background:rgba(74,222,128,.12);border-radius:6px;padding:5px 9px;font-family:Inter,Arial,sans-serif">${escHtml(m.badge)}</span></td></tr></table>`);
-  // steps
-  const rows = m.steps.map((s, i) => `<tr>
-    <td width="34" valign="middle" style="padding:${i ? "11px" : "2px"} 0 11px"><div style="width:26px;height:26px;line-height:26px;text-align:center;border-radius:50%;background:#1B2A1E;color:#4ADE80;font-size:12px;font-weight:800;font-family:Inter,Arial,sans-serif">${escHtml(s[0])}</div></td>
-    <td valign="middle" style="padding:${i ? "11px" : "2px"} 0 11px 12px;font-size:14.5px;font-weight:700;color:#FFFFFF;font-family:Inter,Arial,sans-serif;${i ? "border-top:1px solid #23232B" : ""}">${escHtml(s[1])}</td></tr>`).join("");
-  return wrap(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>`);
+    <td style="font-family:${FONT}"><div style="font-size:16px;font-weight:800;color:#FFFFFF">${escHtml(fill(m.title, tk))}</div><div style="font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
+    <td align="right" valign="middle"><span style="display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.6px;color:#4ADE80;background:#122019;border-radius:999px;padding:6px 12px;font-family:${FONT}">${escHtml(m.badge)}</span></td></tr></table>`, "16px 18px", 16);
+  // steps: 26px numbered circles (#22222A; the ✓ row #122019), 1px #26262E dividers inset 18px
+  const rows = m.steps.map((s, i) => {
+    const last = i === m.steps.length - 1;
+    return `${i ? `<tr><td colspan="2" style="padding:0 18px"><div style="height:1px;line-height:1px;font-size:0;background:#26262E">&nbsp;</div></td></tr>` : ""}<tr>
+    <td width="57" valign="middle" style="padding:${i ? "12px" : "16px"} 0 ${last ? "16px" : "12px"} 18px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="26" height="26" align="center" valign="middle" style="width:26px;height:26px;border-radius:50%;background:${last ? "#122019" : "#22222A"};color:#4ADE80;font-size:12px;font-weight:800;font-family:${FONT}">${escHtml(s[0])}</td></tr></table></td>
+    <td valign="middle" style="padding:${i ? "12px" : "16px"} 18px ${last ? "16px" : "12px"} 0;font-size:15px;font-weight:${last ? 700 : 600};color:#FFFFFF;font-family:${FONT}">${escHtml(s[1])}</td></tr>`;
+  }).join("");
+  return `<tr><td style="padding-top:22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1B1B20;border-radius:16px">${rows}</table></td></tr>`;
 }
-/** Email-safe branded HTML matching Design's mockups: table layout + inline styles (renders the same in
- *  Gmail/Outlook/Apple Mail), Check wordmark, green/yellow kicker, serif headline, module, outlined CTA. */
+/** Email-safe branded HTML matching Design's approved mock (docs/design/emails/): #08090D board,
+ *  Check wordmark image, gradient card, Inter-black headline, module card, filled capsule CTA with
+ *  the green ring. Table layout + inline styles + MSO conditionals: Outlook (Word engine) gets a
+ *  solid-color card fallback and a VML roundrect button, so it renders clean there too. */
 function renderBrandedEmail(event: AlertEvent, _subject: string, _body: string, tokens: Record<string, string | number | undefined> = {}): string {
   const d = EMAIL_DESIGN[event];
-  const bodyHtml = d.body.map((p) => `<tr><td style="font-size:15.5px;line-height:1.6;color:#C9C9D2;font-family:Inter,Arial,sans-serif;padding-bottom:14px">${escHtml(fill(p, tokens))}</td></tr>`).join("");
-  return `<!doctype html><html><body style="margin:0;padding:0;background:#0B0B10">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0B0B10;margin:0;padding:0"><tr><td align="center" style="padding:26px 16px">
+  const bodyHtml = d.body.map((p, i) => i === 0
+    ? `<tr><td style="padding-top:15px;font-size:17px;line-height:1.5;color:#D1D1DA;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
+    : `<tr><td style="padding-top:16px;font-size:14px;line-height:1.5;color:#B9B9C4;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
+  const ctaLabel = `${escHtml(d.cta).toUpperCase()}&nbsp;&nbsp;&rarr;`;
+  // Capsule CTA: filled #16161C, 2px green ring, WHITE label. Outlook can't round a td, so MSO gets
+  // a VML roundrect (arcsize 50% = full capsule) and everyone else gets the styled <a>.
+  const cta = `<tr><td style="padding-top:24px">
+    <!--[if mso]>
+    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${d.url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="#4ADE80" strokeweight="2px" fillcolor="#16161C">
+      <w:anchorlock/>
+      <center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.6px;">${ctaLabel}</center>
+    </v:roundrect>
+    <![endif]-->
+    <!--[if !mso]><!-->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+      <td align="center" style="background:#16161C;border:2px solid #4ADE80;border-radius:999px">
+        <a href="${d.url}" style="display:block;padding:19px 24px;color:#FFFFFF;font-weight:800;font-size:14px;letter-spacing:1.6px;text-decoration:none;font-family:${FONT};text-transform:uppercase">${ctaLabel}</a>
+      </td></tr></table>
+    <!--<![endif]-->
+  </td></tr>`;
+  return `<!doctype html>
+<html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+</head><body style="margin:0;padding:0;background:#08090D" bgcolor="#08090D">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#08090D" style="background:#08090D;margin:0;padding:0"><tr><td align="center" style="padding:22px 16px 30px">
+    <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
-      <tr><td style="padding:2px 2px 20px;font-family:Inter,Arial,sans-serif">
-        <span style="font-size:24px;font-weight:800;color:#4ADE80;letter-spacing:-.5px">&#10003;</span><span style="font-size:24px;font-weight:800;color:#FFFFFF;letter-spacing:-.5px">Check</span>
-      </td></tr>
-      <tr><td style="background:#101015;border:1px solid #1E1E26;border-radius:20px;padding:34px 30px">
+      <tr><td style="padding:0 0 22px"><img src="https://checkitforme.com/logos/brand/check.png" width="104" height="33" alt="Check" style="display:block;width:104px;height:33px;border:0"></td></tr>
+      <tr><td bgcolor="#14141A" style="background:#14141A;background-image:linear-gradient(180deg,#191920 0%,#111117 100%);border-radius:26px;padding:30px 40px">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          <tr><td style="font-size:12px;font-weight:800;letter-spacing:1.5px;color:${d.kickerColor};font-family:Inter,Arial,sans-serif;padding-bottom:12px">${escHtml(d.kicker)}</td></tr>
-          <tr><td style="font-size:34px;font-weight:700;color:#FFFFFF;line-height:1.12;font-family:${SERIF};padding-bottom:18px">${escHtml(fill(d.headline, tokens))}</td></tr>
+          <tr><td style="font-size:10.5px;font-weight:700;letter-spacing:1.6px;color:${d.kickerColor};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
+          <tr><td style="padding-top:14px;font-size:33px;font-weight:900;color:#FFFFFF;line-height:1.1;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
           ${bodyHtml}
-          <tr><td style="height:8px"></td></tr>
           ${moduleHtml(d.module, tokens)}
-          <tr><td>
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-              <td align="center" style="border:2px solid #4ADE80;border-radius:40px;padding:16px 18px">
-                <a href="${d.url}" style="color:#4ADE80;font-weight:800;font-size:15px;letter-spacing:1.2px;text-decoration:none;font-family:Inter,Arial,sans-serif;text-transform:uppercase">${escHtml(d.cta)} &rarr;</a>
-              </td></tr></table>
-          </td></tr>
+          ${cta}
         </table>
       </td></tr>
-      <tr><td style="padding:20px 6px;font-family:Inter,Arial,sans-serif;font-size:12px;color:#6B6B78">
-        <a href="https://checkitforme.com/account" style="color:#8A8A96;text-decoration:none">Manage alerts</a> &nbsp;&middot;&nbsp; <a href="https://checkitforme.com/unsubscribe" style="color:#8A8A96;text-decoration:none">Unsubscribe</a>
+      <tr><td style="padding:22px 2px 0;font-family:${FONT};font-size:12.5px;color:#8A8A96">
+        <a href="https://checkitforme.com/account" style="color:#8A8A96;text-decoration:none">Manage alerts</a><span style="color:#333340">&nbsp;&middot;&nbsp;</span><a href="https://checkitforme.com/unsubscribe" style="color:#8A8A96;text-decoration:none">Unsubscribe</a>
       </td></tr>
     </table>
+    <!--[if mso]></td></tr></table><![endif]-->
   </td></tr></table></body></html>`;
 }
 async function espEmail(to: string, subject: string, body: string, opts: { templateId?: number; params?: Record<string, string | number | undefined>; event?: AlertEvent } = {}): Promise<{ ok: boolean; detail: string }> {
