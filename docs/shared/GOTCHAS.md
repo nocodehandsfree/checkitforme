@@ -4,6 +4,13 @@ Non-obvious traps that cost real time. Add one the moment you learn it; delete o
 (Pairs with the **doc-lint** habit: before a big push, skim the docs against the code — a comment that lies is
 worse than no comment. Several entries below started as wrong comments.)
 
+## Design rulings
+- **The call-timeline left rail is owner-approved — never remove it** (settled 2026-07-10). Addie read a
+  voice note ("no indenting, everything left adjusted") as "remove the rail" and cut the whole vertical
+  timeline; the owner immediately asked where it went; Webbie restored it (e34d72b). Lesson: owner feedback
+  that arrives WITHOUT its screenshot describes one element, not the layout — when a design change would
+  delete a whole visual structure, restyle the smallest thing that matches the words, or ask.
+
 ## Database
 - **Never delete-replace a table with FK children.** `call_results.categoryId` + `.retailerId` are
   `ON DELETE CASCADE`; `retailers.chainId` is `ON DELETE SET NULL`. Deleting `categories`/`retailers` **wipes
