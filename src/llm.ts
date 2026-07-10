@@ -12,7 +12,7 @@
 import { config } from "./config";
 
 const HELICONE = process.env.HELICONE_API_KEY || "";
-function heli(job?: string, cache?: boolean): Record<string, string> {
+export function heli(job?: string, cache?: boolean): Record<string, string> {
   return {
     ...(HELICONE ? { "Helicone-Auth": `Bearer ${HELICONE}` } : {}),
     ...(job ? { "Helicone-Property-Job": job } : {}),

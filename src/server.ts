@@ -32,7 +32,7 @@ import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, setDeltaBarge } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, type Recipe } from "./calls/recipe";
-import { llm } from "./llm";
+import { llm, heli } from "./llm";
 import { harvestHoursTick } from "./hours-harvest";
 import { createSchedule, listSchedulesDetailed, deleteSchedule, customerScheduleTick } from "./customer-schedules";
 import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, retailerMap, invalidateRefCache } from "./refcache";
@@ -2751,9 +2751,9 @@ app.post("/pub/translate", async (c) => {
   // Target language: English by default; Spanish when the UI is in Spanish mode.
   const lang = to === "es" ? "Spanish" : "English";
   try {
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    const r = await fetch("https://oai.helicone.ai/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
+      headers: { Authorization: `Bearer ${key}`, "content-type": "application/json", ...heli("translate") },
       body: JSON.stringify({
         model: "gpt-4o-mini", max_tokens: 800, temperature: 0,
         messages: [{ role: "user", content: `Translate this phone-call transcript to natural ${lang}. Keep each "Agent:" and "Clerk:" speaker label on its own line, exactly as given. If it's already ${lang}, return it unchanged. Output only the translation, no preamble.\n\n${text}` }],

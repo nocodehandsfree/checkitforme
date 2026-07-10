@@ -7,6 +7,7 @@ import { db } from "../db/client";
 import { retailers, chains, categories } from "../db/schema";
 import { invalidateRefCache } from "../refcache";
 import { config } from "../config";
+import { heli } from "../llm";
 import { retailersWithStatus } from "../calls/service";
 import { importStores, regionForState, tzForState, normCarries, e164 } from "../stores-import";
 import { geocodeMissing } from "../db/import-data";
@@ -127,9 +128,9 @@ async function callAnthropic(model: string, conv: CTurn[]): Promise<ProviderResu
     }
     return { role: "assistant", content: content.length ? content : [{ type: "text", text: " " }] };
   });
-  const r = await fetch("https://api.anthropic.com/v1/messages", {
+  const r = await fetch("https://anthropic.helicone.ai/v1/messages", {
     method: "POST",
-    headers: { "content-type": "application/json", "x-api-key": config.anthropicKey, "anthropic-version": "2023-06-01" },
+    headers: { "content-type": "application/json", "x-api-key": config.anthropicKey, "anthropic-version": "2023-06-01", ...heli("admin-agent") },
     body: JSON.stringify({ model, max_tokens: 2048, system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }], tools: TOOLS, messages }),
   });
   if (!r.ok) throw friendly(r.status, await r.text(), "Anthropic");
@@ -159,9 +160,9 @@ async function callOpenAI(model: string, conv: CTurn[]): Promise<ProviderResult>
     }
   }
   const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } }));
-  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+  const r = await fetch("https://oai.helicone.ai/v1/chat/completions", {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${config.openaiKey}` },
+    headers: { "content-type": "application/json", authorization: `Bearer ${config.openaiKey}`, ...heli("admin-agent") },
     body: JSON.stringify({ model, messages, tools, max_tokens: 1500 }),
   });
   if (!r.ok) throw friendly(r.status, await r.text(), "OpenAI");
@@ -197,8 +198,8 @@ async function callGemini(model: string, conv: CTurn[]): Promise<ProviderResult>
     return fn;
   });
   const body = { systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] }, contents, tools: [{ functionDeclarations: fns }] };
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${config.geminiKey}`;
-  const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+  const url = `https://gateway.helicone.ai/v1beta/models/${model}:generateContent`;
+  const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": config.geminiKey, "Helicone-Target-Url": "https://generativelanguage.googleapis.com", ...heli("admin-agent") }, body: JSON.stringify(body) });
   if (!r.ok) throw friendly(r.status, await r.text(), "Gemini");
   const d: any = await r.json();
   const parts: any[] = d.candidates?.[0]?.content?.parts || [];

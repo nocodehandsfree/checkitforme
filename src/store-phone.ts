@@ -2,6 +2,8 @@
 // gpt-4o-search-preview primary, Gemini grounded fallback). Returns an E.164 number or null.
 // Backfills CALL-RAIL stores that were imported with only an address (the "nophone:" sentinel).
 
+import { heli } from "./llm";
+
 /** Extract a US/Canada phone from free model text → E.164 (+1XXXXXXXXXX), or null. */
 export function normalizePhone(text: string): string | null {
   if (!text) return null;
@@ -29,9 +31,9 @@ export async function fetchStorePhone(name: string, address: string): Promise<st
     let text = "";
     // Primary: OpenAI web-search model (paid, no daily wall, accurate) — same as hours.
     if (oai) {
-      const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      const r = await fetch("https://oai.helicone.ai/v1/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${oai}`, "content-type": "application/json" },
+        headers: { Authorization: `Bearer ${oai}`, "content-type": "application/json", ...heli("store-phone") },
         body: JSON.stringify({ model: "gpt-4o-search-preview", messages: [{ role: "user", content: prompt }] }),
       });
       if (r.ok) {
@@ -41,8 +43,8 @@ export async function fetchStorePhone(name: string, address: string): Promise<st
     }
     // Fallback: Gemini grounded (free tier) if OpenAI missing or empty.
     if (!text && gem) {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${gem}`, {
-        method: "POST", headers: { "content-type": "application/json" },
+      const r = await fetch(`https://gateway.helicone.ai/v1beta/models/gemini-2.5-flash-lite:generateContent`, {
+        method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": gem, "Helicone-Target-Url": "https://generativelanguage.googleapis.com", ...heli("store-phone") },
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0 } }),
       });
       if (r.ok) {

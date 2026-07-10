@@ -2,6 +2,8 @@
 // turned into a live open/closed state in the store's own timezone. Powers the hours display and
 // the "don't let anyone call a closed store" gate.
 
+import { heli } from "./llm";
+
 export type DayHours = [string, string] | "24h" | null; // [open,close] "HH:MM" | open 24h | closed
 export type Hours = Record<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun", DayHours>;
 const DOW_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
@@ -19,9 +21,9 @@ export async function fetchStoreHours(name: string, address: string): Promise<st
     let text = "";
     // Primary: OpenAI web-search model (paid, no daily wall, accurate).
     if (oai) {
-      const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      const r = await fetch("https://oai.helicone.ai/v1/chat/completions", {
         method: "POST",
-        headers: { Authorization: `Bearer ${oai}`, "content-type": "application/json" },
+        headers: { Authorization: `Bearer ${oai}`, "content-type": "application/json", ...heli("store-hours") },
         body: JSON.stringify({ model: "gpt-4o-search-preview", messages: [{ role: "user", content: prompt }] }),
       });
       if (r.ok) {
@@ -31,8 +33,8 @@ export async function fetchStoreHours(name: string, address: string): Promise<st
     }
     // Fallback: Gemini grounded (free tier; used if OpenAI missing or returned nothing).
     if (!text && gem) {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${gem}`, {
-        method: "POST", headers: { "content-type": "application/json" },
+      const r = await fetch(`https://gateway.helicone.ai/v1beta/models/gemini-2.5-flash-lite:generateContent`, {
+        method: "POST", headers: { "content-type": "application/json", "x-goog-api-key": gem, "Helicone-Target-Url": "https://generativelanguage.googleapis.com", ...heli("store-hours") },
         body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], tools: [{ google_search: {} }], generationConfig: { temperature: 0 } }),
       });
       if (r.ok) {
