@@ -23,6 +23,18 @@
   out of scope, harmless. NOTE: staging today also carries others' batches (docs shuffle, PostHog,
   Helicone routing, backup-restore) — promote takes all of it unless DevOps splits.
 
+## ✅ 03:14 owner batch — SHIPPED + verified (commit 7da6019)
+- **TINT fully restored** (my mistake: removing the baked tone for items 24-25 broke the tint lane's
+  iOS nav/status-bar work). Server bakes tone-* again (verified live: html class="tone-in" served).
+  Items 24-25 (no color pre-load) now CONFLICT with the tint design — needs owner + tint-dev ruling.
+- Verified on staging: Sign out = plain link top right · empty store list breaks per sentence EN+ES ·
+  Activity ago labels real ("2h ago"/"1d ago"; was ms-vs-seconds → everything said "just now") ·
+  '¡Muéstranos el botín!' + chips re-render on language flip. Shipped, not yet driven: zone-card logos,
+  styled zone menus/confirm (needs entitled account), all-closed check-all block, swipe-close on the
+  3 new sheets, old-history logo/location heal, Stripe 11px tab labels.
+- "Back from Too far → homepage": could NOT reproduce (result→back lands on the check in tests both
+  before and after). Watch for it on the owner's account flow (came from calendar?).
+
 ## ✅ SHIPPED to staging — site-wide polish contract 07-10 (items 6-73, commit 7a9c7c1 + follow-up)
 - Contract lives in chat (owner list + shots in docs/specs/ui-polish/shots). Fixed: ES layout breaks
   (tabs/count/footer) + footer pages hand-translated (?lang=es) + Legal collapse (guide 5.14) · pill LAW
