@@ -3278,7 +3278,7 @@ function isClosed(s){ return s && s.openState && s.openState.known && !s.openSta
 // Kiosk-only = has a vending kiosk but no shelf stock (hasKiosk && !sellsPacks). Callable, but with a
 // different script ("is your kiosk working/stocked?") — we send kioskMode:true for them.
 function isKioskOnly(s){ return !!(s && s.hasKiosk && s.sellsPacks===false); }
-function tLbl(l){ if(LANG!=='es'||!l) return l; return String(l).replace(/\bOpen\b/g,'Abierto').replace(/\bClosed\b/g,'Cerrado').replace(/\btill\b/g,'hasta').replace(/\bCloses?\b/g,'Cierra').replace(/\bOpens?\b/g,'Abre'); }
+function tLbl(l){ if(LANG!=='es'||!l) return l; return String(l).replace(/\bLikely closed\b/gi,'Quizás cerrado').replace(/\bOpen\b/g,'Abierto').replace(/\bClosed\b/gi,'Cerrado').replace(/\btill\b/g,'hasta').replace(/\bCloses?\b/g,'Cierra').replace(/\bOpens?\b/g,'Abre'); }
 function hoursLine(s){
   const o=s&&s.openState; if(!o||!o.label) return '';
   const col = o.open ? 'var(--green)' : 'var(--red)';
