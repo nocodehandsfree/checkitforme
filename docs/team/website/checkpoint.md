@@ -23,6 +23,22 @@
   out of scope, harmless. NOTE: staging today also carries others' batches (docs shuffle, PostHog,
   Helicone routing, backup-restore) — promote takes all of it unless DevOps splits.
 
+## 🔴 CROSS-LANE: live-call AUDIO lost on Delta-lane stores (owner 14:40, Franklin's Ace call)
+- **DevOps/Addie: need audio on D-lane live checks.** f61bed2 routes live checks on lane:delta stores
+  through the tapedeck engine; its listen room streams TRANSCRIPT lines only (src/calls/tapedeck.ts:57)
+  — no Twilio media into the room, so the browser "listen live" is silent. The Charlie path bridges
+  audio via Twilio <Connect><Stream> (src/voice/bridge.ts); Delta needs the same media fork or its EL
+  conversation audio relayed. Not touched from this lane — the pipe is yours.
+
+## ✅ 14:40 owner batch (this deploy)
+- Live rail no longer runs past the current step ("Reaching a person…" moved out of the rail row) ·
+  verdict sub = one sentence per line (nlSent, rsub only) · sold-out copy → "{store} had it. It's gone
+  for now." (seed + one-time DB migration, owner edits untouched) · /pub/result now returns ts and the
+  status page falls back to the local call-start clock, so date+time shows on FRESH calls too ·
+  call sheet shows DD's reach field ("About {n} seconds to reach a human" / "This store picks up
+  directly", EN+ES) · Cash App label: CONFIRMED in Stripe docs the element's method labels are not
+  customizable — only options are dropping the Cash App method or a custom-built method picker.
+
 ## ✅ 03:14 owner batch — SHIPPED + verified (commit 7da6019)
 - **TINT fully restored** (my mistake: removing the baked tone for items 24-25 broke the tint lane's
   iOS nav/status-bar work). Server bakes tone-* again (verified live: html class="tone-in" served).
