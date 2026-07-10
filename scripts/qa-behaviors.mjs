@@ -27,8 +27,9 @@ const r1 = await pg.evaluate(() => new Promise(res => {
     const head=document.querySelector('.ctlv2 summary span');
     const cur=document.querySelector('.ctlv2-steps .cur');
     const term=document.querySelector('.ctl-term');
+    // Flat log (owner 07-10): NO ::before rail dots — the verdict line carries an INLINE dot span.
     const curDot=cur?getComputedStyle(cur,'::before').width:'none';
-    const termDot=term?getComputedStyle(term,'::before').width:'none';
+    const termDot=term?(()=>{const d=term.querySelector('span > span');return d?getComputedStyle(d).width:'none';})():'none';
     const convoWord=[...document.querySelectorAll('#result div')].some(d=>d.textContent.trim()==='CONVERSATION');
     const sub=[...document.querySelectorAll('#result .foot,#result div')].map(d=>d.textContent).join(' ');
     res({ steps, header:head?head.textContent:'', curDot, termDot, convoWord,
@@ -37,8 +38,8 @@ const r1 = await pg.evaluate(() => new Promise(res => {
 }));
 ok('IVR menu steps shown', r1.menuShown);
 ok('header has no ellipsis', !/…|\.\.\./.test(r1.header));
-ok('asking-step rail dot', r1.curDot==='8px');
-ok('verdict rail dot', r1.termDot==='10px');
+ok('asking-step: flat log, no rail dot', r1.curDot!=='8px');
+ok('verdict line inline dot', r1.termDot==='9px');
 ok('CONVERSATION word gone', !r1.convoWord);
 ok('date/time stamp present', r1.hasStamp);
 await pg.screenshot({ path: 'loops/site-redesign/proofs/behav-result-ivr.png', fullPage: true });
