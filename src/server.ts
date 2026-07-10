@@ -33,6 +33,7 @@ import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSes
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
+import { opsAlert, watchdogTick, watchdogState, backupTick, backupNow, backupState } from "./ops-watch";
 import { harvestHoursTick } from "./hours-harvest";
 import { createSchedule, listSchedulesDetailed, deleteSchedule, customerScheduleTick } from "./customer-schedules";
 import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, retailerMap, invalidateRefCache } from "./refcache";
@@ -697,6 +698,10 @@ setDeltaBarge(async (s, _speech) => {
 
 // ---- Health ----
 app.get("/api/health", (c) => c.json({ ok: true, commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null }));
+
+// ---- Ops (admin-gated by the /api/* wall): watchdog + backup visibility, manual backup trigger ----
+app.get("/api/ops/status", (c) => c.json({ env: config.staging.on ? "staging" : "production", watchdog: watchdogState(), backup: backupState() }));
+app.post("/api/ops/backup-now", async (c) => c.json(await backupNow()));
 
 // ---- Phone-first auth (Clerk-free): SMS code → our session → caller-ID verify call ----
 // Step 1: send an SMS code to the cell (browser auto-fills it). Rate-limited (SMS costs money).
@@ -5067,6 +5072,8 @@ setInterval(() => withLock("store-sync", 280, storeSyncTick).catch((e) => consol
 setInterval(() => withLock("harvest", 110, harvestHoursTick).catch((e) => console.error("harvest:", e)), 120_000); // self-updating hours (policy-gated, off by default)
 setInterval(() => withLock("cust-sched", 85, customerScheduleTick).catch((e) => console.error("cust-sched:", e)), 90_000); // subscriber auto-checks (policy-gated)
 setInterval(() => withLock("gmail-receipts", 25, gmailReceiptTick).catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)
+setInterval(() => withLock("ops-watch", 55, watchdogTick).catch((e) => console.error("ops-watch:", e)), 60_000); // cross-env down detector → owner alert
+setInterval(() => withLock("ops-backup", 3500, backupTick).catch((e) => console.error("ops-backup:", e)), 3_600_000); // daily encrypted DB backup → R2
 refreshChainLogoDb().catch(() => {}); // DB-first chain-logo cache: initial load + refresh (no lock — read-only, idempotent)
 setInterval(() => refreshChainLogoDb().catch(() => {}), 60_000);
 
@@ -5080,8 +5087,8 @@ setInterval(() => refreshChainLogoDb().catch(() => {}), 60_000);
 // A Gmail IMAP socket timeout emitted an unhandled 'error' event and killed the WHOLE process —
 // site, admin, and live calls. Background integrations (IMAP, webhooks, ticks) must never be able
 // to take the service down: log loudly, keep serving. Truly broken state still surfaces in logs.
-process.on("uncaughtException", (e) => console.error("[FATAL-CAUGHT] uncaughtException (service kept alive):", e?.stack || String(e)));
-process.on("unhandledRejection", (e) => console.error("[FATAL-CAUGHT] unhandledRejection (service kept alive):", (e as Error)?.stack || String(e)));
+process.on("uncaughtException", (e) => { console.error("[FATAL-CAUGHT] uncaughtException (service kept alive):", e?.stack || String(e)); void opsAlert("crash", "uncaughtException (kept alive)", String(e?.stack || e).slice(0, 500)); });
+process.on("unhandledRejection", (e) => { console.error("[FATAL-CAUGHT] unhandledRejection (service kept alive):", (e as Error)?.stack || String(e)); void opsAlert("crash", "unhandledRejection (kept alive)", String((e as Error)?.stack || e).slice(0, 500)); });
 
 process.once("SIGTERM", () => {
   const started = Date.now();
