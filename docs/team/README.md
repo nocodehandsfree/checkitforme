@@ -9,6 +9,7 @@
 | `copy/` | Copper | every word everywhere: site, admin, emails/SMS, and the book (readme.com) |
 | `design/` | CD | comps, brand, look & feel |
 | `lexicon/` | Lexicon | the librarian: docs pruning, archiving, map accuracy (weekly pass) |
+| `ideas/` | Ideas | ranked product/business/growth ideas grounded in what's built; hands picks to lanes |
 
 **Every folder = `handoff.md`** (stable: who you are, your lane — rarely changes) **+ `checkpoint.md`**
 (volatile: current state — update at every "Checkpoint"). Boot = CLAUDE.md (loads automatically) + your two files. Nothing else.
