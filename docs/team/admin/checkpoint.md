@@ -2,86 +2,72 @@
 
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
-> *(Over the cap right now because the fungibles ADMIN-HANDOFF content was ported in below,
-> per owner 2026-07-10 — secrets stripped. Next Addie session: prune hard at boot.)*
 
-## Ported 2026-07-10 from fungibles `ADMIN-HANDOFF` (bcae071), secrets stripped
+## 2026-07-10 session (owner's 8-call feedback) — SHIPPED to staging, awaiting owner live test
 
-**Lanes:** Addie owns `public/app.html` (admin SPA) + `/api/*` in `src/server.ts`. Consumer site = Website.
-Backend/Stripe = DevOps. Voice tuning = Website. Mapper runs = Mapping.
+**THE finding:** all 8 of the owner's 07-09 calls ran CHARLIE, not Delta. Two reasons:
+(1) they hit the OLD pre-repo-split staging deploy, and (2) the LIVE check path
+(`bridgeStoreCall`, what the site's Check button uses) never looked at `workflow.lane` at all —
+only `triggerCall` did. Delta is STILL un-live-tested. Fixed + shipped (f61bed2):
+- check-live now routes lane:delta stores to the D-lane; synthetic id `delta:<session>` doubles as
+  room + conversation id → /pub/bridge, /pub/live, /pub/result + the listen WebSocket all follow a
+  Delta call. Charlie barge-in reuses the same room, /pub/live proxies EL after a barge.
+- EL poller (`ingestPending`) skips `delta:` ids; Delta finalize still writes the verdict.
+- **NEXT OWNER TEST = the real first Delta live test.** Watch for: opener timing, set follow-up
+  ("Chaos Rising" example), tin/packs on unknown set, hello-nudge on silence, barge-in on off-script.
 
-**Branch/deploy/access (new-repo reality):** work on **`staging`** → owner verifies on
-staging.checkitforme.com → promote. Branch is SHARED — fetch + rebase before push. Push auto-deploys
-(SIGTERM drain protects live calls). **ADMIN_TOKEN**: in Railway (same on staging + prod), header
-`x-admin-token`. **RAILWAY_API_TOKEN**: in Railway/owner (fetch any secret with it) — project
-`889e332c-…`, env `7cbf9327-…`; svcs: prod `d363a982-…`, staging `8165df7a-…`, card-app `03d5f34f-…`
-(holds CLOUDFLARE_API_TOKEN; checkitforme.com CF zone `fd03cb4a`). URLs: admin.checkitforme.com,
-staging.checkitforme.com, staging Railway `voice-caller-staging-production.up.railway.app`.
+**Voice tuning shipped (both lanes):** no dashes in ANY spoken line (Charlie prompt rule + de-dashed
+examples; Delta defaults were clean) · set question always gives an example set name · unknown set →
+ask "booster packs or a tin?" instead of ending · restock-day ask also fires on "restock coming soon"
+and pushes once for the specific day (elevenlabs.ts ask_shipment_day) · dead-quiet pickup → agent says
+"Hello?" (Charlie prompt rule; Delta = new clip 7 nudge) · Delta pre-opener wait 8s→3s (dead-air fix) ·
+classifier + verdict pass map "three packs in one" → 3-pack blister.
 
-**Hard-won rules:** NEVER ship routing/route patterns without a local boot test (a `:param{regex}`
-route crashed Hono = full outage; boot with dummy EL vars, curl the routes). Copy guide before UI copy:
-fewest words, tooltips over paragraphs, NO em-dashes. Every app.html edit: `grep -c '</script>'` = 2 +
-`node --check` the inline script; `npx tsc --noEmit` = 0 for src edits. No model id in commits/PRs.
+**Verdict/productDetail fix:** decisive in-stock calls now run the extraction second-read too (verdict
+untouched — extraction only), so set + product form land in productDetail (was null on ALL 8 calls).
 
-**🎯 Delta production lane (built, on staging, NOT human-live-tested — ADDIE'S #1 with owner's 8-call feedback):**
-- Lane choice: workflow carries `lane:"delta"|"charlie"`; `triggerCall` runs `deltaStoreCall` when the
-  store's workflow.lane is delta, else live agent.
-- Engine `src/calls/tapedeck.ts`: bench + store modes — opener → gemini-2.5-flash-lite classifier →
-  set-first follow-up → restock-day on a no → wrap. `deltaDecide()` pure + unit-tested
-  (`scripts/test-delta.ts`, 17 cases). Voice/openers/follow-ups from the workflow, rotated per call.
-- Charlie barge-in (`setDeltaBarge`): off-script "question" at the opener hands the SAME live call to the
-  paid agent; fail-safe wraps clean, never dead air. Hard 5-min Twilio TimeLimit.
-- Finalize (`finalizeDeltaSession`): clip-flow outcome → call_results verdict, charge once on definitive
-  answer, notify, stamp `retailers.shipmentDay`. Barged calls finalize via the EL poll.
-- Control UI: Workflows → per-workflow Call-lane toggle + editable Delta follow-ups (`wfmDeltaEditor`).
-- Staging config: **Branson Test** = lane:delta + persona Branson; **Fun** store (106361) assigned to it →
-  ONLY Fun runs Delta (owner: test only to the Fun store). Default = Branson Global (charlie).
-- Verified: tsc clean, 17 tests green, boots, staging healthy. Barge-in needs a live off-script call.
-- Limits: name echo only on Charlie/barge (clips can't say names); Delta classifier has no "doesn't carry".
+**checkit.html live view (shipped):** pending verdict = neutral GRAY "Getting result…" (new `pend`
+tone; never yellow unclear) · "Restock confirmed · soon" drops the generic suffix (keeps "· Tuesday") ·
+call log is FLAT left-adjusted (v2 rail removed; inline dots on Ringing header + verdict line;
+qa-behaviors updated to assert this) · Twilio answered signal flips "We've connected" immediately.
 
-**Voice fixes shipped (staging, live lane):** bare "no" no longer misreads as does_not_carry (carry/sell/
-stock words required); `askShipmentDay` defaults ON everywhere + agent asks next-shipment day on a no;
-in-stock follow-up = set-first (`PREMIUM_FOLLOWUP`).
+**Alert emails (42768ed):** renderBrandedEmail rebuilt to Design's approved mock — #08090D board,
+wordmark image, gradient card w/ solid Outlook fallback, Inter-black headline (serif was wrong),
+filled capsule CTA w/ white label + VML roundrect for Outlook, mock-accurate modules. Two test emails
+SENT to owner (welcome + store_added) from staging (BREVO_API_KEY copied prod→staging via Railway).
+**NOT verified: actual Outlook rendering — owner must open the test in Outlook.** Restock-as-EMAIL has
+no test path (restock is SMS-channel in sendTestAlert) — small follow-up if owner wants to see E3.
 
-**Fun-store dead-air (context, fixed):** bogus `avgTreeSeconds=19` from passive tree-learn muted the agent
-19s. Fixed via `connectAtSecFor` + write-side guard. **Data Dev still owes:** null stale `avgTreeSeconds`
-on ~30 direct chains (harmless but UI shows contradictory "rings direct · 19s to human").
+**SMS / A2P prep:** creds present both envs (TWILIO_SMS_FROM set; code auto-prefers
+TWILIO_MESSAGING_SERVICE_SID when set). Approval-day runbook: if A2P lands on a Messaging Service,
+set TWILIO_MESSAGING_SERVICE_SID in Railway → Admin → God View → Alerts → test "restock" to owner
+phone → confirm delivery in Twilio console (error 30034 = A2P not active yet). Delivery chips +
+send log already on the Alerts tab.
 
-**Locked decisions:** Pricing Family $4.99/15 · Collector $9.99/30 · Hunter $19.99/100 · Operator
-$49.99/300; PAYG 99¢→60¢ over 10→100; premium = sub-only w/ admin toggle matrix; text alerts metered
-(Family 5/mo), email free. ONE follow-up for everyone (Delta is cheap; PAYG calls still end fast).
-Delta everywhere is the ROI plan; Charlie for hobby/off-script depth.
+**Admin (cbc2928):** Feedback tab now has an "Unclear checks" pill strip from the unfiltered
+/api/results (Fun included; god-view headline filter untouched) · Schedules nav tab deleted
+(section was already gone). app.html verified: </script>=2, node --check OK.
 
-**OPEN (ported priority order):**
-1. Owner's 8-call feedback on voice + Delta — tune from it (set-first, restock-day, barge-in).
-2. Alert emails must match `docs/design/emails/` AND render in Outlook (tables, inline CSS, VML); send a
-   test. A2P 10DLC at final Twilio stage — prep SMS end-to-end the day it approves.
-3. Show pills for unclear statuses even from Fun/owner-only store (god-view excludes Fun from headline —
-   surface Fun's `no_clear_answer` elsewhere).
-4. Remove the Schedules nav button.
-5. Dashboard cleanup: hero 5→3 vitals (Checks 24h · Reach 30d · EL credits), drop Confirms/Margin/pulse/
-   Money, keep Call-time, demote Data-health.
-6. Price-editor + tier↔feature matrix (w/ DevOps) · per-customer panel (DevOps builds the endpoint).
-7. Zero-data-for-launch "Reset for launch" (destructive; snapshot first). EL credits use-or-lose window.
+**Tests:** tsc 0 errors · 18/18 delta units green · qa-behaviors green (assertions updated to the flat
+log) · qa-round6 / qa-gating / qa-admin-plans fail IDENTICALLY on the pre-session baseline 93d19c1
+(legacy failures, already attributed by DevOps — not from this session).
 
-**Delegated (track):** Mapping — re-run the 13 "attempted", then Marshalls/Macy's/AAFES, skip kiosks.
-Data Dev — null stale avgTreeSeconds; confirm `_CVS Pharmacy at Target` (1375, muted) isn't double-counted.
-**Do not chase:** owner's laptop Safari stuck on old staging design (personal cache).
+**Known edge (accepted):** a BARGED Delta call reopened from history >15 min later (after the
+in-memory session expires) can't resolve `delta:<id>` → shows in_progress. Rare, owner-facing only.
 
-## Pre-port staged plan (older; merge with the OPEN list above as you work)
-0a. [ ] 🅿️ Premium-feature TOGGLE MATRIX in God View → Plans (backend done: `GET /api/admin/plans`
-    returns `features:[{key,label}]` + per-tier `features:{key:bool}`; save verbatim via POST; Publish
-    applies prices; features are app-enforced). *(Plans are now published LIVE on prod, 2026-07-10.)*
-0. [ ] Workflows must power BOTH envs from the one Admin — env picker Prod|Staging (staging reads/writes
-    its own API + token; coordinate cross-origin auth with DevOps).
-0b. [ ] Per-customer account view — spec `docs/specs/admin-user-view.md` (DevOps builds the endpoints).
-0c. [ ] 🗑️ Remove the Admin "Zones" area (~30 refs in app.html); engine/tables stay.
-1. [ ] Fix the admin so it's up to date (lagged during the website/admin split).
-2. [ ] Voice-switcher + tree-learner ready to test (`connectOnHuman` + Helicone; Tree Trainer wiring).
-3. [ ] Clean up admin UI to match the website's look; correct call-status icons.
-4. [ ] Spec + build the AGENT PERSONAS (in-admin dev agent, on-site support, Discord bot, call routing —
-    all via `src/llm.ts` gateway, cheapest-model-per-job, 3-tier escalation, Qdrant RAG). Spec first.
-5. [ ] Then run the voice-switcher + tree-learning bench TEST (model-per-phase + cost shown).
-- [ ] (Website) "Create your agent" caller-ID panel using `/auth/callerid/start` + `/status`.
-- [ ] (voice) Kiosk call script (`kioskMode` → "is your Pokémon kiosk working/stocked?").
-- [ ] Owner 2026-07-07: Chains page — collapse/roll-up control for the store list.
+**OPEN (priority order):**
+1. Owner runs the next Fun test round → THE first real Delta live test (incl. barge-in on an
+   off-script call). Tune again from that feedback.
+2. Owner confirms the test emails in OUTLOOK match docs/design/emails/ mock.
+3. A2P approval day → SMS end-to-end per runbook above.
+4. 🅿️ Premium-feature TOGGLE MATRIX in God View → Plans (qa-admin-plans failures live here —
+   backend done, matrix UI missing/regressed).
+5. Workflows env picker Prod|Staging (one Admin powers both; cross-origin auth w/ DevOps).
+6. Per-customer account view (spec docs/specs/admin-user-view.md; DevOps builds endpoints).
+7. Remove Admin "Zones" area (~30 refs in app.html); engine/tables stay.
+8. Dashboard hero 5→3 vitals (Checks 24h · Reach 30d · EL credits) · Chains page roll-up control ·
+   call-metrics brief items 2-3 (per-chain metrics + model-routing audit in Admin) · Delta write-up
+   into CHEAP_NAV_ARCHITECTURE.md (call-metrics brief item 5).
+
+**Delegated (track):** Data Dev — null stale avgTreeSeconds on ~30 direct chains. Mapping — 13
+"attempted" re-runs. **Do not chase:** owner's laptop Safari stuck on old staging design (cache).
