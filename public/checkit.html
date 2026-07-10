@@ -5288,7 +5288,7 @@ async function openHistEntry(e){
   // A never-connected call (synthetic "local:" id) has no server transcript — rebuild its verdict from
   // the fields we saved at call time and show it directly (no /pub/result fetch).
   if(String(e.cid).startsWith('local:')){
-    showResult({ status:e.status, confirmed:e.confirmed, soldOut:!!e.soldOut, doesNotSell:!!e.doesNotSell, shipmentDay:e.shipmentDay||null, statusKey:e.statusKey||null, transcript:'', summary:'', cats:e.cats||[], categoryResults:e.categoryResults||null, savedSteps:e.steps||null }, e.cid);
+    showResult({ status:e.status, confirmed:e.confirmed, soldOut:!!e.soldOut, doesNotSell:!!e.doesNotSell, shipmentDay:e.shipmentDay||null, statusKey:e.statusKey||null, transcript:'', summary:'', cats:e.cats||[], categoryResults:e.categoryResults||null, savedSteps:e.steps||null, ts:e.ts||null }, e.cid);
     return;
   }
   // Replaying a past call — go straight to the transcript. Never flash the live "calling" view.
@@ -5297,7 +5297,7 @@ async function openHistEntry(e){
   // screen with ZERO network wait; the /pub/result fetch below only fills in the full transcript.
   const cached=resultCacheGet(e.cid);
   if(cached){ cached.cats=e.cats||cached.cats; if(!cached.categoryResults&&e.categoryResults) cached.categoryResults=e.categoryResults; if(e.steps) cached.savedSteps=e.steps; showResult(cached, e.cid); }
-  else { showResult({ status:e.status, confirmed:e.confirmed, soldOut:!!e.soldOut, doesNotSell:!!e.doesNotSell, shipmentDay:e.shipmentDay||null, statusKey:e.statusKey||null, transcript:'', summary:'', cats:e.cats||[], categoryResults:e.categoryResults||null, savedSteps:e.steps||null }, e.cid); }
+  else { showResult({ status:e.status, confirmed:e.confirmed, soldOut:!!e.soldOut, doesNotSell:!!e.doesNotSell, shipmentDay:e.shipmentDay||null, statusKey:e.statusKey||null, transcript:'', summary:'', cats:e.cats||[], categoryResults:e.categoryResults||null, savedSteps:e.steps||null, ts:e.ts||null }, e.cid); }
   // No spinner — we already painted. Fetch the full transcript in the background and re-render if richer.
   const o=await appApi('/pub/result/'+encodeURIComponent(e.cid));
   if(!o||o.error||o.status==='in_progress'){ if(cached||e.status) return; HIST_BAD.add(e.cid); HIST_CACHE=HIST_CACHE.filter(x=>x.cid!==e.cid); toast(t('toast.callgone',"That check is no longer available")); openHistory(); return; }
@@ -5355,7 +5355,7 @@ function acctTab(which,fromPop){
     const total=histList().filter(e=>e.cid).length;
     const histSub=member?tf('hist.count','{n} checks in {m}',{n:mrun,m:mon}):(total===1?t('acct.run1','1 check run'):tf('acct.runN','{n} checks run',{n:total}));
     const arr2='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>';
-    const fromP=(typeof tiers==='function'&&tiers()[0])?tierPrice(tiers()[0].cents)+t('plan.mo','/mo'):'';
+    const fromP=(typeof tiers==='function'&&tiers()[0])?tierPrice(tiers()[0])+t('plan.mo','/mo'):''; // tierPrice takes the tier object — .cents made this '$NaN/mo'
     const caps=member
       ?`<button class="capsW" onclick="closeAccount();backToBuilder()"><span>${t('acct.runcheck','Run a check')}</span>${arr2}</button>`
       :`<button class="capsW" onclick="ACCT_RETURN='overview';closeAccount();openBuy()"><span style="display:inline-flex;align-items:center;gap:9px"><svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${t('acct.upgrade2','Upgrade')} · ${t('acct.from','from')} ${esc(fromP)}</span></span>${arr2}</button>`;
