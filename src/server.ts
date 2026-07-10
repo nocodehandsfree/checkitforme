@@ -664,7 +664,7 @@ setDeltaBarge(async (s, _speech) => {
 });
 
 // ---- Health ----
-app.get("/api/health", (c) => c.json({ ok: true }));
+app.get("/api/health", (c) => c.json({ ok: true, commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null }));
 
 // ---- Phone-first auth (Clerk-free): SMS code → our session → caller-ID verify call ----
 // Step 1: send an SMS code to the cell (browser auto-fills it). Rate-limited (SMS costs money).
