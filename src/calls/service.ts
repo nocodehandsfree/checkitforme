@@ -376,8 +376,11 @@ export async function triggerCall(a: TriggerArgs) {
       retailerName: retailer.name, categoryLabel: category.label,
     }, wf.name);
     if (dr.error) { await db.update(callResults).set({ status: "failed", summary: dr.error }).where(eq(callResults.id, row.id)); throw new Error(dr.error); }
-    await db.update(callResults).set({ status: "in_progress" }).where(eq(callResults.id, row.id));
-    return { ...row, status: "in_progress" as const };
+    // Synthetic provider id ("delta:<session>") so the consumer UI can follow a D-lane call through the
+    // SAME endpoints as an EL call (/pub/live, /pub/result, history deep-links). The EL poller skips it.
+    const deltaCid = `delta:${dr.id}`;
+    await db.update(callResults).set({ status: "in_progress", providerCallId: deltaCid }).where(eq(callResults.id, row.id));
+    return { ...row, providerCallId: deltaCid, status: "in_progress" as const };
   }
 
   try {
@@ -741,6 +744,7 @@ export async function ingestPending(): Promise<number> {
 
   for (const row of pending) {
     if (!row.providerCallId) continue;
+    if (row.providerCallId.startsWith("delta:")) continue; // D-lane call — its own finalize hook writes the verdict
     const outcome = await provider.getConversation(row.providerCallId);
     if (!outcome) continue; // not finished yet
 
@@ -760,11 +764,15 @@ export async function ingestPending(): Promise<number> {
     let productDetail: string | null = null;
     let restockDayHeard: string | null = null;
     if (outcome.status === "completed") {
-      // Speed: second-read LLM only when EL was unclear (the case it rescues); decisive EL answers stand.
-      const second = (primaryConfirmed === null && !outcome.soldOut && !outcome.doesNotSell) ? await classifyVerdict(outcome.transcript, primaryLabel || "the product") : null;
+      // Speed: the second read decides the VERDICT only when EL was unclear (the case it rescues);
+      // decisive EL answers stand. But on a confirmed YES we still run it for EXTRACTION ONLY — it's
+      // what captures the set + product form the clerk named ("3-pack blister · Pitch Black"), which
+      // decisive calls used to drop entirely (owner 07-10 call 8).
+      const needSecond = primaryConfirmed === null && !outcome.soldOut && !outcome.doesNotSell;
+      const second = (needSecond || primaryConfirmed === true) ? await classifyVerdict(outcome.transcript, primaryLabel || "the product") : null;
       const consensus = reconcile(
         { confirmed: primaryConfirmed, soldOut: outcome.soldOut, doesNotSell: outcome.doesNotSell, statusKey: outcome.statusKey },
-        second,
+        needSecond ? second : null,
       );
       finalConfirmed = consensus.confirmed;
       finalStatusKey = consensus.statusKey;

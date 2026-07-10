@@ -32,7 +32,9 @@ eq(D("opener", "unclear", false, false, true), { clip: 4, next: "done", confirme
 eq(D("askedSet", "product", true, false, false, true).clip, 2, "answered the set, still owe type → ask packs/tin");
 eq(D("askedSet", "product", true, false, false, true).next, "askedType", "answered the set → move to askedType");
 eq(D("askedSet", "product", true, false, false, false).clip, 4, "answered the set, type already had → wrap");
-eq(D("askedSet", "unclear", false, false, false, true).clip, 4, "set answer unclear → wrap, don't loop");
+// Owner 07-10 call 1: "I don't know the set name" must NOT end the call — ask tin/packs instead.
+eq(D("askedSet", "unclear", false, false, false, true), { clip: 2, next: "askedType", note: "didn't know the set → ask packs/tin instead" }, "didn't know the set, still owe type → ask packs/tin");
+eq(D("askedSet", "unclear", false, false, false, false).clip, 4, "set unclear and type already known → wrap, don't loop");
 
 // --- askedType / askedDay: their answer settles it ---
 eq(D("askedType", "product").clip, 4, "answered the product type → wrap");

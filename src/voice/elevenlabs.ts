@@ -61,7 +61,7 @@ export class ElevenLabsProvider implements VoiceProvider {
             personality: p.personalityTone ?? "",
             opening_line: p.openingLine ?? "",
             other_categories: (p.otherCategories ?? []).join(", "),
-            ask_shipment_day: p.askShipmentDay ? "If they are out of it or don't have it right now, warmly ask when they expect their next shipment or restock, e.g. \"ah okay, no worries, any idea when you might get more in?\". Keep it to that one quick question, then wrap up." : "",
+            ask_shipment_day: p.askShipmentDay ? "If they are out of it, sold out, or don't have it right now, warmly ask when they expect their next shipment or restock, e.g. \"ah okay, no worries, any idea when you might get more in?\". This INCLUDES when they volunteer that more is coming (\"we're getting a restock soon\", \"we should have more this week\"): don't just accept \"soon\", ask once for the specific day, e.g. \"oh nice, any idea what day that usually lands?\". Keep it to that ONE quick question, take whatever they give you, then wrap up." : "",
             // Kiosk-only store: the prompt branches on this to ask about the vending kiosk
             // (working/stocked) instead of a shelf shipment. "" = normal shelf check.
             kiosk_mode: p.kioskMode ? "true" : "",

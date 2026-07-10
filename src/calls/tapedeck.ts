@@ -33,6 +33,7 @@ export interface TdSession {
   stage: Stage;     // where we are in the set-first script
   needType: boolean; // after asking the set, do we still owe the product-type question?
   clarified?: boolean; // used our one "sorry, I was asking..." already
+  nudged?: boolean;  // used our one "hello, you still there?" silence nudge already
   workflow: string; // which workflow drove this call (shown in the log)
   // ---- store (production) mode ----
   mode: "bench" | "store";
@@ -53,6 +54,19 @@ export function setDeltaFinalize(fn: (s: TdSession) => Promise<void>): void { de
 // Returns handoff TwiML (Charlie takes the call) or null to fall back to the escalate clip.
 let deltaBarge: ((s: TdSession, speech: string) => Promise<string | null>) | null = null;
 export function setDeltaBarge(fn: (s: TdSession, speech: string) => Promise<string | null>): void { deltaBarge = fn; }
+// Live relay (registered by the server): streams each transcript line + the hang-up to the same
+// listen-room WebSocket the bridge lane uses, so the consumer live view follows a D-lane call too.
+let deltaRelayLine: ((s: TdSession, role: "Agent" | "Clerk", text: string) => void) | null = null;
+let deltaRelayEnd: ((s: TdSession) => void) | null = null;
+export function setDeltaRelay(line: (s: TdSession, role: "Agent" | "Clerk", text: string) => void, end: (s: TdSession) => void): void { deltaRelayLine = line; deltaRelayEnd = end; }
+
+/** Push one step onto the session log AND stream it to any live listeners (best-effort). */
+function pushStep(s: TdSession, step: TdStep): void {
+  s.steps.push(step);
+  if (step.text && !step.text.startsWith("[")) {
+    try { deltaRelayLine?.(s, step.who === "us" ? "Agent" : "Clerk", step.text); } catch { /* relay best-effort */ }
+  }
+}
 
 /** Plain-text transcript of the call so far (for the stored verdict). */
 export function tdTranscript(s: TdSession): string {
@@ -61,25 +75,28 @@ export function tdTranscript(s: TdSession): string {
 
 const esc = (s: string) => s.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c] as string));
 const twiml = (inner: string) => `<?xml version="1.0" encoding="UTF-8"?><Response>${inner}</Response>`;
-const gather = (id: string) =>
-  `<Gather input="speech" speechTimeout="auto" enhanced="true" speechModel="phone_call" timeout="8" ` +
+const gather = (id: string, timeoutSec = 8) =>
+  `<Gather input="speech" speechTimeout="auto" enhanced="true" speechModel="phone_call" timeout="${timeoutSec}" ` +
   `action="https://${HOST}/tapedeck/step?session=${id}" method="POST"/>` +
   `<Redirect method="POST">https://${HOST}/tapedeck/step?session=${id}&amp;silent=1</Redirect>`;
 const play = (id: string, i: number) => `<Play>https://${HOST}/tapedeck/clip?session=${id}&amp;i=${i}</Play>`;
 
 // One variant per call, rotated across calls. Clip slots:
-// 0 opener · 1 ask-SET · 2 ask-TYPE · 3 restock-day · 4 wrap · 5 clarify · 6 escalate (Charlie)
+// 0 opener · 1 ask-SET · 2 ask-TYPE · 3 restock-day · 4 wrap · 5 clarify · 6 escalate (Charlie) · 7 hello (silence nudge)
 function pick<T>(arr: T[] | undefined, fb: T): T { return arr && arr.length ? arr[Math.floor(Math.random() * arr.length)] : fb; }
 
-// Defaults used when a workflow hasn't defined its own follow-up scripts. No em-dashes (owner rule);
+// Defaults used when a workflow hasn't defined its own follow-up scripts. No dashes (owner rule);
 // commas carry the pauses. {category} is filled at synth time.
+// Set question ALWAYS offers an example set name (owner, 07-10 call feedback): clerks often don't know
+// what "set" means. The example is edit-per-workflow on the Workflows page when a brand needs its own.
 const DEFAULT_FOLLOWUPS: Record<string, string[]> = {
-  set: ["Oh nice! Do you know which set it is?", "Awesome, any idea what set they are?", "Oh sweet, is it the newest set, or do you know which one?"],
-  type: ["Gotcha, are those booster packs or tins?", "Cool, is that packs, or more like a box or a tin?"],
+  set: ["Oh nice! Is it Chaos Rising? Or do you know the name of the set?", "Awesome, any idea which set it is? Like Chaos Rising, or a different one?", "Oh sweet, do you know the name of the set? Like Chaos Rising?"],
+  type: ["Gotcha, do you know if it's booster packs or a tin?", "No worries, is it like booster packs, or more like a box or a tin?"],
   no: ["Ah, no worries. Any idea what day you usually get card shipments in?", "Okay no problem, do you know when your next shipment usually lands?"],
   wrap: ["Awesome, thanks so much! Have a good one!", "Perfect, thank you so much, take care!"],
   clarify: ["Oh sorry, I was just asking if you have any {category} in stock right now?"],
   escalate: ["Oh, one sec,"],
+  hello: ["Hello? Anyone there?"],
 };
 
 interface TdWorkflow { name: string; voiceId: string; voices: string[]; openers: string[]; tuning: Record<string, unknown>; followups: Record<string, string[]>; lane: string }
@@ -103,7 +120,7 @@ export async function resolveTapedeckWorkflow(name?: string): Promise<TdWorkflow
       voiceId: (typeof wf.voiceId === "string" && wf.voiceId) || voices[0] || config.voice.defaultVoiceId,
       voices, openers,
       tuning: (wf.tuning && typeof wf.tuning === "object") ? (wf.tuning as Record<string, unknown>) : {},
-      followups: { set: slot("set"), type: slot("type"), no: slot("no"), wrap: slot("wrap"), clarify: slot("clarify"), escalate: slot("escalate") },
+      followups: { set: slot("set"), type: slot("type"), no: slot("no"), wrap: slot("wrap"), clarify: slot("clarify"), escalate: slot("escalate"), hello: slot("hello") },
       lane: typeof wf.lane === "string" ? wf.lane : "charlie",
     };
   } catch { return fb; }
@@ -129,7 +146,7 @@ async function synthClip(voiceId: string, text: string, tuning: Record<string, u
   } catch (e) { console.error("[tapedeck] synth", e); return null; }
 }
 
-/** Synthesize the 7 rotated clips for a call from a resolved workflow. */
+/** Synthesize the 8 rotated clips for a call from a resolved workflow. */
 async function synthClips(wf: TdWorkflow, voiceId: string, cat: string): Promise<{ texts: string[]; clips: (Buffer | null)[] }> {
   const texts = [
     fillCat(pick(wf.openers, "Heyy! I was just checking, do you have any {category} in stock right now?"), cat),
@@ -139,6 +156,7 @@ async function synthClips(wf: TdWorkflow, voiceId: string, cat: string): Promise
     fillCat(pick(wf.followups.wrap, DEFAULT_FOLLOWUPS.wrap[0]), cat),
     fillCat(pick(wf.followups.clarify, DEFAULT_FOLLOWUPS.clarify[0]), cat),
     fillCat(pick(wf.followups.escalate, DEFAULT_FOLLOWUPS.escalate[0]), cat),
+    fillCat(pick(wf.followups.hello, DEFAULT_FOLLOWUPS.hello[0]), cat),
   ];
   const clips = await Promise.all(texts.map((t) => synthClip(voiceId, t, wf.tuning)));
   return { texts, clips };
@@ -218,7 +236,10 @@ export function tapedeckTwiml(id: string): string {
   s.status = "live";
   // Don't open into dead air. Listen for the pickup ("hello?") before the opener plays — that's how a
   // real inbound greeting works. The opener fires on the first /step hit (handled in tapedeckStep).
-  return twiml(`<Pause length="1"/>${gather(id)}`);
+  // SHORT first wait (3s, not 8): a silent pickup used to leave ~10s of dead air before the opener
+  // (owner 07-10 calls 1/2/7: "took too long to say anything"). If nobody greets us within ~3s of the
+  // answer, the redirect fires and the opener plays anyway.
+  return twiml(`<Pause length="1"/>${gather(id, 3)}`);
 }
 
 /** Pure decision for one D-lane turn (no I/O, unit-tested). Given the stage + classified reply, returns
@@ -238,7 +259,9 @@ export function deltaDecide(o: { stage: Stage; label: string; gotSet: boolean; g
     return { clip: 4, next: "done", confirmed: null, statusKey: "no_clear_answer", note: "still unclear → wrap" };
   }
   if (stage === "askedSet") {
-    if (o.needType && label !== "unclear") return { clip: 2, next: "askedType", note: "got the set → ask packs/tin" };
+    // Ask the product type even when they DIDN'T know the set (owner 07-10 call 1: "when I told him I
+    // don't know the name, he should've asked if it's a tin or booster packs").
+    if (o.needType) return { clip: 2, next: "askedType", note: label === "unclear" ? "didn't know the set → ask packs/tin instead" : "got the set → ask packs/tin" };
     return { clip: 4, next: "done", note: "have what we need → wrap" };
   }
   return { clip: 4, next: "done", note: `answered our follow-up (${label}) → wrap` };
@@ -254,15 +277,17 @@ export async function tapedeckStep(id: string, speech: string): Promise<string> 
   // First /step hit = the pickup just happened. NOW play the opener (never before they reach speaker).
   if (!s.opened) {
     s.opened = true;
-    s.steps.push({ who: "us", text: s.clipText[0], atSec, label: `opener (${s.workflow}) — played after pickup` });
+    pushStep(s, { who: "us", text: s.clipText[0], atSec, label: `opener (${s.workflow}) — played after pickup` });
     return twiml(`${play(id, 0)}${gather(id)}`);
   }
   s.turns++;
   if (s.turns > 8 || atSec > 150) return endCall(s, 4);
-  if (speech && speech.trim()) s.steps.push({ who: "you", text: speech.trim().slice(0, 200), atSec });
-  else { // silence — nudge once, then wrap
-    if (s.turns >= 3) return endCall(s, 4);
-    return twiml(gather(id));
+  if (speech && speech.trim()) pushStep(s, { who: "you", text: speech.trim().slice(0, 200), atSec });
+  else { // silence — say "hello, anyone there?" once, then wrap (owner 07-10 call 6: never sit mute)
+    if (s.turns >= 3 || s.nudged) return endCall(s, 4);
+    s.nudged = true;
+    pushStep(s, { who: "us", text: s.clipText[7], atSec, label: "silence → hello nudge" });
+    return twiml(`${play(id, 7)}${gather(id)}`);
   }
 
   const t0 = Date.now();
@@ -270,13 +295,14 @@ export async function tapedeckStep(id: string, speech: string): Promise<string> 
   try {
     const cat = s.check?.categoryLabel || "Pokémon cards";
     const out = await llm(CLASSIFY_MODEL, `You are on a phone call to a store checking if ${cat} are in stock. The clerk just replied: "${speech.trim().slice(0, 200)}"
-Return ONLY JSON: {"label":"yes|no|day|product|question|unclear","set":"<set name they named, else empty>","type":"<packs|booster box|tin|etb|singles, else empty>","day":"<shipment day/timing they named, else empty>"}
+Return ONLY JSON: {"label":"yes|no|day|product|question|unclear","set":"<set name they named, else empty>","type":"<packs|booster box|tin|etb|3-pack blister|singles, else empty>","day":"<shipment day/timing they named, else empty>"}
 - yes: they have some in stock ("yeah we got a few", "we do")
 - no: they don't / sold out
 - day: they named a day or shipment timing
 - product: they named a product type or set
 - question: THEY asked something back ("who's this?", "for pickup?")
-- unclear: genuinely can't tell / garbled`, { job: "tapedeck", json: true, temperature: 0, maxTokens: 60 });
+- unclear: genuinely can't tell / garbled
+Staff describe products loosely, so map descriptions to the trade name: "three packs in one" / "a pack with three smaller packs inside" = "3-pack blister"; "the big box with packs" = "booster box"; "the little box with a promo" = "etb".`, { job: "tapedeck", json: true, temperature: 0, maxTokens: 60 });
     const j = JSON.parse(out) as { label?: string; set?: string; type?: string; day?: string };
     label = String(j.label || "unclear");
     const clean = (v?: string) => (v && v.trim() && !/^(no|none|n\/?a|unsure|not sure|idk|unknown)$/i.test(v.trim()) ? v.trim() : "");
@@ -296,12 +322,12 @@ Return ONLY JSON: {"label":"yes|no|day|product|question|unclear","set":"<set nam
         const handoff = await deltaBarge(s, speech.trim());
         if (handoff) {
           s.escalated = true; s.stage = "done";
-          s.steps.push({ who: "us", text: "[Charlie takes over]", atSec: Math.round((Date.now() - s.startMs) / 1000), label: `off-script → Charlie barged in (${ms}ms classify)`, ms });
+          pushStep(s, { who: "us", text: "[Charlie takes over]", atSec: Math.round((Date.now() - s.startMs) / 1000), label: `off-script → Charlie barged in (${ms}ms classify)`, ms });
           return handoff;
         }
       } catch (e) { console.error("[delta] barge failed, falling back to escalate clip", e); }
     }
-    s.steps.push({ who: "us", text: s.clipText[6], atSec: Math.round((Date.now() - s.startMs) / 1000), label: `off-script → escalate (no live handoff)`, ms });
+    pushStep(s, { who: "us", text: s.clipText[6], atSec: Math.round((Date.now() - s.startMs) / 1000), label: `off-script → escalate (no live handoff)`, ms });
     return endCall(s, 6);
   }
 
@@ -314,7 +340,7 @@ Return ONLY JSON: {"label":"yes|no|day|product|question|unclear","set":"<set nam
   s.stage = d.next;
   const clip = d.clip;
 
-  s.steps.push({ who: "us", text: s.clipText[clip], atSec: Math.round((Date.now() - s.startMs) / 1000), label: `classified "${label}"${gotSet ? " +set" : ""}${gotType ? " +type" : ""} in ${ms}ms → ${d.note}`, ms });
+  pushStep(s, { who: "us", text: s.clipText[clip], atSec: Math.round((Date.now() - s.startMs) / 1000), label: `classified "${label}"${gotSet ? " +set" : ""}${gotType ? " +type" : ""} in ${ms}ms → ${d.note}`, ms });
   if (clip === 4) return endCall(s, 4);
   return twiml(`${play(id, clip)}${gather(id)}`);
 }
@@ -323,6 +349,7 @@ Return ONLY JSON: {"label":"yes|no|day|product|question|unclear","set":"<set nam
 function endCall(s: TdSession, clip: number): string {
   s.status = "done";
   finalizeIfStore(s);
+  try { deltaRelayEnd?.(s); } catch { /* relay best-effort */ }
   return twiml(`${play(s.id, clip)}<Hangup/>`);
 }
 
@@ -339,4 +366,5 @@ export function tapedeckEnded(id: string): void {
   if (s.status !== "done") s.status = s.steps.length > 1 ? "done" : "failed";
   // Twilio hung up before we reached a wrap clip (early hangup / no answer). Still record a verdict.
   finalizeIfStore(s);
+  try { deltaRelayEnd?.(s); } catch { /* relay best-effort */ }
 }

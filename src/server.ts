@@ -18,7 +18,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus } from "./store-sync";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
@@ -29,7 +29,7 @@ import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
-import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, setDeltaBarge } from "./calls/tapedeck";
+import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
@@ -696,7 +696,9 @@ setDeltaBarge(async (s, _speech) => {
     const v = await buildRestockVars(chk.retailerId, chk.categoryId, undefined, [], undefined);
     if (!v || !v.retailer?.phone) return null;
     const pol = await getPolicy();
-    const room = crypto.randomUUID();
+    // Reuse the D-lane listen room ("delta:<session>") so a consumer watching the call live keeps
+    // getting transcript lines + audio when Charlie takes over mid-call.
+    const room = "delta:" + s.id;
     setBridgeContext(room, {
       agentId: config.voice.agentId,
       dynamicVars: v.dynamicVars,
@@ -2644,6 +2646,23 @@ app.get("/pub/result/:cid", async (c) => {
   const cid = c.req.param("cid");
   if (!(await canReadTranscript(c, cid))) return c.json({ error: "unauthorized" }, 401);
   if (config.staging.on && isSimId(cid)) return c.json(simResult(cid)); // preview: simulated verdict
+  // D-lane call ("delta:<session>"): the verdict lives in OUR row (written by the Delta finalize hook),
+  // never in ElevenLabs. A Charlie barge-in repoints the row's providerCallId at the EL conversation,
+  // so fall back to resolving the row through the live session's callId.
+  if (cid.startsWith("delta:")) {
+    const s = tdSession(cid.slice(6));
+    let row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
+    if (!row && s?.check) row = (await db.select().from(callResults).where(eq(callResults.id, s.check.callId)))[0];
+    if (row && row.status && row.status !== "in_progress" && row.status !== "dialing") {
+      return c.json({
+        status: row.status, confirmed: row.confirmed, statusKey: row.statusKey,
+        productDetail: row.productDetail, shipmentDay: row.shipmentDayHeard ?? null,
+        summary: row.summary ?? "", transcript: row.transcript ?? "",
+        durationSecs: row.callSeconds ?? undefined,
+      });
+    }
+    return c.json({ status: "in_progress", transcript: row?.transcript ?? (s ? tdTranscript(s) : ""), summary: "" });
+  }
   const o = await provider.getConversation(cid);
   // Prefer the FINALIZED row once it exists — it carries the consensus verdict (the reconciled
   // status_key/confirmed) and the captured product detail, which the live outcome does not. While the
@@ -2669,10 +2688,11 @@ app.get("/pub/result/:cid", async (c) => {
   // first verdict the UI ever shows is already the final one.
   if (row && o && o.status === "completed") {
     const label = (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label;
-    // Speed: only spend the second-read LLM when ElevenLabs was UNCLEAR (the case it actually rescues).
-    // A decisive EL yes/no/sold-out/doesn't-carry confirms instantly — no extra round-trip.
-    const second = (o.confirmed === null && !o.soldOut && !o.doesNotSell) ? await classifyVerdict(o.transcript, label || "the product") : null;
-    const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, second);
+    // Speed: only spend the verdict-DECIDING second read when ElevenLabs was UNCLEAR (the case it
+    // actually rescues). A decisive yes still gets an extraction-only read for the set/product form.
+    const needSecond = o.confirmed === null && !o.soldOut && !o.doesNotSell;
+    const second = (needSecond || o.confirmed === true) ? await classifyVerdict(o.transcript, label || "the product") : null;
+    const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, needSecond ? second : null);
     const productDetail = productDetailLabel(second);
     await db.update(callResults).set({
       status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey,
@@ -2689,6 +2709,34 @@ app.get("/pub/result/:cid", async (c) => {
 app.get("/pub/live/:cid", async (c) => {
   if (!(await canReadTranscript(c, c.req.param("cid")))) return c.json({ error: "unauthorized" }, 401);
   if (config.staging.on && isSimId(c.req.param("cid"))) return c.json(simLive(c.req.param("cid"))); // preview: simulated live transcript
+  // D-lane call: the live transcript is the session's own step log (no ElevenLabs). After a Charlie
+  // barge-in, EL owns the rest of the call — proxy its live lines and append them to the clip turns.
+  const dcid = c.req.param("cid");
+  if (dcid.startsWith("delta:")) {
+    const s = tdSession(dcid.slice(6));
+    if (s) {
+      let tail = "";
+      let elLive: boolean | null = null;
+      if (s.escalated && s.check) {
+        try {
+          const row = (await db.select().from(callResults).where(eq(callResults.id, s.check.callId)))[0];
+          const conv = row?.providerCallId && !row.providerCallId.startsWith("delta:") ? row.providerCallId : null;
+          if (conv) {
+            const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${conv}`, { headers: { "xi-api-key": config.voice.apiKey } });
+            if (r.ok) {
+              const d = (await r.json()) as { status?: string; transcript?: { role: string; message: string | null }[] };
+              tail = (d.transcript ?? []).filter((t) => t.message).map((t) => `${t.role === "agent" ? "Agent" : "Clerk"}: ${t.message}`).join("\n");
+              elLive = !["done", "completed", "failed"].includes(d.status ?? "");
+            }
+          }
+        } catch { /* keep the clip turns only */ }
+      }
+      const done = elLive === null ? (s.status === "done" || s.status === "failed") : !elLive;
+      return c.json({ live: !done, status: done ? "done" : "in_progress", transcript: [tdTranscript(s), tail].filter(Boolean).join("\n") });
+    }
+    const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, dcid)))[0];
+    return c.json({ live: false, status: row?.status || "done", transcript: row?.transcript || "" });
+  }
   try {
     const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${c.req.param("cid")}`, { headers: { "xi-api-key": config.voice.apiKey } });
     if (!r.ok) return c.json({ live: true, status: "in_progress", transcript: "" });
@@ -4900,6 +4948,19 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   if (await isCallingPaused()) return { error: "calling_paused" }; // global spend kill-switch
   const primary = categoryIds[0];
   const extras = categoryIds.slice(1);
+  // D-lane routing (the gap that sent the owner's 07-09 Fun tests to Charlie): when the store's
+  // assigned workflow runs lane "delta", the LIVE check path must run the recorded-clip engine too,
+  // not just triggerCall's non-live path. The synthetic "delta:<session>" id doubles as the room —
+  // the live view follows it through /pub/bridge + /pub/live + the same listen-room WebSocket.
+  try {
+    const ret = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
+    const wf = ret ? await resolveWorkflow(ret.id, ret.chainId ?? null).catch(() => null) : null;
+    if (wf?.lane === "delta") {
+      const r = await triggerCall({ retailerId, categoryId: primary, mode: "restock", specificProduct, finderUserId: finder?.userId ?? undefined, isPrivate: finder?.isPrivate ?? false, kioskMode });
+      if (r.providerCallId) return { room: r.providerCallId };
+      return { error: "delta call did not start" };
+    }
+  } catch (e) { return { error: String((e as Error)?.message || e) }; }
   // Resolve the SAME three-tier vars (global + chain + store phone tree, clarification, etc.) the
   // scheduled calls use — Listen-live was previously running on the bare global prompt only.
   const v = await buildRestockVars(retailerId, primary, specificProduct, extras, kioskMode);
@@ -4924,6 +4985,19 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
 app.get("/pub/bridge/:room", (c) => {
   const room = c.req.param("room");
   if (config.staging.on && isSimId(room)) return c.json({ conversationId: room, wsHost: STAGING_HOST }); // sim: room IS the conversation id
+  // D-lane room: the room IS the conversation id, but only hand it out once the store PICKED UP
+  // (session leaves "dialing" when Twilio fetches the answer TwiML) — mirrors EL, where the conv id
+  // lands at engage, so the UI's "We've connected" step fires at the real pickup. A finished/expired
+  // session returns the id straight away so a reopened call can still resolve its result.
+  if (room.startsWith("delta:")) {
+    const s = tdSession(room.slice(6));
+    const answered = !s || s.status !== "dialing";
+    return c.json({
+      conversationId: answered ? room : null,
+      wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST,
+      callProgress: s ? { status: s.status === "dialing" ? "ringing" : s.status === "live" ? "in-progress" : "completed", at: Date.now() } : null,
+    });
+  }
   // callProgress = the REAL Twilio state (ringing/answered/…) so the live timeline shows what's actually
   // happening, not an inferred guess. null until the first status callback lands.
   return c.json({ conversationId: bridgeConversationId(room), wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST, callProgress: roomCallProgress.get(room) ?? null });
@@ -4963,8 +5037,11 @@ app.post("/webhooks/elevenlabs", async (c) => {
       let restockDayHeard: string | null = null;
       if (o.status === "completed") {
         const label = row ? (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label : undefined;
-        const second = (o.confirmed === null && !o.soldOut && !o.doesNotSell) ? await classifyVerdict(o.transcript, label || "the product") : null;
-        const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, second);
+        // Verdict-deciding second read only when EL was unclear; on a confirmed YES it still runs for
+        // EXTRACTION ONLY (set + product form), which decisive calls used to drop (owner 07-10 call 8).
+        const needSecond = o.confirmed === null && !o.soldOut && !o.doesNotSell;
+        const second = (needSecond || o.confirmed === true) ? await classifyVerdict(o.transcript, label || "the product") : null;
+        const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, needSecond ? second : null);
         confirmed = consensus.confirmed; statusKey = consensus.statusKey; definitive = consensus.definitive;
         productDetail = productDetailLabel(second);
         restockDayHeard = second?.restockDay ?? null; // staff-volunteered restock day, captured even unprompted
@@ -5034,6 +5111,13 @@ const relayEnd = (room: string) => {
   const msg = JSON.stringify({ ended: true });
   for (const ws of set) if (ws.readyState === 1) ws.send(msg);
 };
+// D-lane live view: stream every Delta turn + the hang-up into the same listen room the browser
+// watches ("delta:<session>"), so a D-lane check streams like an EL call. Registered here (not in
+// the engine) so tapedeck stays free of WebSocket imports.
+setDeltaRelay(
+  (s, role, text) => relayLine("delta:" + s.id, role, text),
+  (s) => relayEnd("delta:" + s.id),
+);
 const wssTwilio = new WebSocketServer({ noServer: true });
 const wssListen = new WebSocketServer({ noServer: true });
 const wssBridge = new WebSocketServer({ noServer: true });
