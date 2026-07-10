@@ -2,7 +2,7 @@
 
 The complete map of the consumer app (source: `public/checkit.html`, one file, ~6,900 lines; server
 public routes in `src/server.ts`; brands in `src/brands.ts`; plans in `src/plans.ts`). One codebase
-serves four brand domains plus the apex. Line refs point into `checkit.html` unless prefixed.
+serves four brand domains plus the apex. Siblings: `ADMIN_MANUAL.md` (operator UI) and `SYSTEM_MANUAL.md` (the backend machinery). Line refs point into `checkit.html` unless prefixed.
 
 ---
 

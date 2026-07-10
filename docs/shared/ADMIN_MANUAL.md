@@ -1,7 +1,7 @@
 # Admin manual — the whole dashboard, every feature
 
 The complete map of `admin.checkitforme.com` (source: `public/app.html`, one file; server: `src/server.ts`).
-Written so any agent or human can learn the system from zero. Line refs point into `app.html` unless
+Written so any agent or human can learn the system from zero. Siblings: `WEBSITE_MANUAL.md` (consumer UI) and `SYSTEM_MANUAL.md` (the backend machinery). Line refs point into `app.html` unless
 prefixed. Admin runs on **live prod data**: almost every save is live for customers the moment you tap it (§11).
 
 ---
