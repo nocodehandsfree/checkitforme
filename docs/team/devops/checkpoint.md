@@ -33,9 +33,13 @@
 6. **Discord** — not started; needs owner (server creation is his account).
 7. **Cleanups** — citation retargeted ✓; fungibles Actions secret waits on owner token rotation.
 
-**⛔ PROMOTE BLOCKER:** v2-redesign browser QA suites FAIL on staging (pre-existing, Website lane
-work in flight — verified by stash-rerun). Don't promote until Website lane greens them; PostHog/
-Helicone/ops-watch ride to prod on that promote.
+**PROMOTE BLOCKER LIFTED (owner + evidence 2026-07-10):** ALL of today's QA failures (design tokens,
+qa-round6, qa-gating, qa-admin-plans) reproduce on the UNTOUCHED migration baseline adc3b12 (worktree
+rerun) → legacy, not Website's new work, not promote blockers. Legacy fixes = their own task.
+**Ported from fungibles takeover branch (owner sweep):** mapping checkpoint (d3e8542, live token
+redacted + deploy fact-check: converging engine IS on prod), ADMIN-HANDOFF content → team/admin
+checkpoint (bcae071, ADMIN_TOKEN + RAILWAY_API_TOKEN values stripped — that file leaked both),
+scripts/data-tools/ 8 files (abcfd8f7, clean — token read from file path, not hardcoded).
 
 ## NOT DONE (older lane items, still real)
 - **Cheap-bridge lane for leftover call paths** (scheduled checks, zone fires, admin call-now,
