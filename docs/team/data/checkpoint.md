@@ -38,10 +38,14 @@
   (`/api/hours/backfill`, ~1-2¢/store) — use the FREE WebSearch-subagent wave method below.
 
 ## NOT DONE / PARTIAL / WAITING
-- **National hobby-hours backfill — PAUSED** (org Claude monthly spend cap). ~3,360 hobby stores remain
-  (~256 are no-data online sellers). Resume on reset. Repeatable tooling (scratchpad is EPHEMERAL — rebuild):
-  `build_wave.py` → 14 free WebSearch subagents → `agg_hobby.py --apply` (id-keyed `POST /api/stores/patch`,
-  hours-only; import would blank carries/lat/lng). Hobby hours coverage was 23% → 40%.
+- **Hours backfill — re-derived from live DB 2026-07-10 (old ~3,360 count was stale):** Hobby 4,360 active,
+  **1,595 missing hours (63% coverage)**, all with real phones, 1,547 wave-eligible (US+city). **Thrift
+  3,479 active, ALL 3,479 missing hours (0%)** — the thrift harvest imported with no hours. Combined
+  backlog ~5,074. Wave 1 (420 hobby stores) built, ready to fire. **WAITING on owner: confirm org monthly
+  spend reset before launching WebSearch waves** (each wave = 14 subagents; never the paid server lookup).
+  Tools now in `scripts/data-tools/` (curl-only — python urllib AND headless browser are proxy-blocked in
+  this env, verified; free direct-Google scraping impossible from here — owner's local machine covers
+  consumer-env cases). Patch is hours-only by id; import would blank carries/lat/lng.
 - **PROD front-end BEHIND staging — needs a promote (not my lane to deploy; flagged to owner):** the `type`
   filter (`typeF`, `server.ts`) + hobby store data are staging-only; prod `/pub/stores/near` ignores `type`.
 - **Older-era set PRICES — intentionally omitted** (out of print → no honest retail price); an era→price
