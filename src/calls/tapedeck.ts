@@ -12,7 +12,11 @@ import { config } from "../config";
 import { getSetting } from "../db/settings";
 
 const HOST = config.staging.on ? "voice-caller-staging-production.up.railway.app" : "voice-caller-production-2d6b.up.railway.app";
-const CLASSIFY_MODEL = "gemini-2.5-flash-lite";
+// The live-turn brain. Groq's llama-3.3-70b won the 2026-07-10 bench: correct on every classify line
+// (including the 3-pack-blister alias) at ~300-700ms, open-source, ~0.02c per classify. gpt-4o-mini is
+// the llm() gateway's automatic fallback; free-tier Gemini is banned from the live path (it 429'd
+// mid-call and turned clear answers into "unclear"). Override per-env via DELTA_CLASSIFY_MODEL.
+const CLASSIFY_MODEL = process.env.DELTA_CLASSIFY_MODEL || "groq:llama-3.3-70b-versatile";
 
 type Stage = "opener" | "askedSet" | "askedType" | "askedDay" | "done";
 interface TdStep { who: "us" | "you"; text: string; atSec: number; label?: string; ms?: number }
