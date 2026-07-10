@@ -12,20 +12,30 @@
 - **Leftover:** delete the two `claude/checkit-export-*` branches on fungibles (use direct-PAT push
   trick below). Owner to rotate RAILWAY_API_TOKEN (pasted in chat again 2026-07-10).
 
-## OWNER QUEUE (2026-07-10, top-down)
-1. **Stripe LIVE on prod** — publish plans w/ live key (`/api/admin/plans/publish`), LIVE webhook for
-   checkitforme.com/webhooks/stripe + whsec on prod svc, then owner real-card E2E. #1 launch gate.
-   Found: live endpoint `we_1TfY5G…` exists but points at OLD `caller.fungibles.com` URL — fix.
-2. **Re-arm store sync** — `STORE_SYNC_URL=https://checkitforme.com` on STAGING svc (token still set);
-   BABYSIT first catch-up via `/api/store-sync/status` (400-row batches ≈2h). Verify chain edit flows
-   staging→prod. Do not re-arm casually (first arming starved prod's event loop — since rebuilt).
-3. **PostHog** — key into Railway vars BOTH services, verify events from every page.
-4. **Helicone** — set up, verify LLM calls route through + show in dashboard (key already on prod svc).
-5. **Error monitoring + alerts** (ping owner on prod throw/down) + off-box backups w/ one TESTED restore
-   (R2 creds already on prod svc).
-6. **Discord** — free area + paid customer area (Support lane builds the agent).
-7. **Cleanups** — retarget CALL_ECONOMICS citation in server.ts → COST_MODEL Part II; after owner
-   rotates tokens, update fungibles GitHub Actions secret.
+## OWNER QUEUE (2026-07-10, top-down) — status after first pass
+1. **Stripe LIVE: DONE except owner's real-card test.** Plans published on prod (5 live products,
+   in_sync), NEW live webhook `we_1TrVv98…` → checkitforme.com/webhooks/stripe, its whsec on prod svc
+   (bad-signature → 400 verified live), OLD `caller.fungibles.com` endpoint disabled.
+2. **Store sync ARMED + catch-up in flight** — first tick clean (4.5k rows, prod healthy, no event-loop
+   starvation). ~97k pending @04:56Z, ≈4.8k/5min. THEN: chain-edit staging→prod flow test to close.
+3. **PostHog BUILT + verified on staging** (server-side snippet, every page, both env vars set; capture
+   accepted `{"status":"Ok"}`, event `deploy_verify_posthog_wiring` in dashboard). Prod+admin = after
+   next promote (see blocker below).
+4. **Helicone DONE** — llm.ts gateway existed; routed the 8 bypasses (store-hours, store-phone,
+   admin-agent×3, translate) with job tags; VERIFIED logged (query-clickhouse endpoint; plain
+   /v1/request/query lags — use query-clickhouse).
+5. **Ops-watch SHIPPED on staging** — cross-env watchdog live (staging⇄prod /api/health, 3 misses →
+   email+SMS via existing Brevo/Twilio creds, throttled 30min), crash guards now alert, daily encrypted
+   DB backup → R2 (AES-256-GCM; bucket is PUBLIC-served so plaintext never lands there) + restore
+   script `scripts/restore-backup.mjs`. ⛔ BLOCKED: classifier denied creating BACKUP_ENC_KEY
+   (owner must name it — then backup+tested-restore complete). Endpoints: `/api/ops/status`,
+   `/api/ops/backup-now` (admin-gated).
+6. **Discord** — not started; needs owner (server creation is his account).
+7. **Cleanups** — citation retargeted ✓; fungibles Actions secret waits on owner token rotation.
+
+**⛔ PROMOTE BLOCKER:** v2-redesign browser QA suites FAIL on staging (pre-existing, Website lane
+work in flight — verified by stash-rerun). Don't promote until Website lane greens them; PostHog/
+Helicone/ops-watch ride to prod on that promote.
 
 ## NOT DONE (older lane items, still real)
 - **Cheap-bridge lane for leftover call paths** (scheduled checks, zone fires, admin call-now,
