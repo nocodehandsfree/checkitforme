@@ -82,7 +82,8 @@ const gather = (id: string, timeoutSec = 8) =>
 const play = (id: string, i: number) => `<Play>https://${HOST}/tapedeck/clip?session=${id}&amp;i=${i}</Play>`;
 
 // One variant per call, rotated across calls. Clip slots:
-// 0 opener · 1 ask-SET · 2 ask-TYPE · 3 restock-day · 4 wrap · 5 clarify · 6 escalate (Charlie) · 7 hello (silence nudge)
+// 0 opener · 1 ask-SET · 2 ask-TYPE · 3 restock-day · 4 wrap (confirmed yes) · 5 clarify ·
+// 6 escalate (Charlie) · 7 hello (silence nudge) · 8 wrapNo (neutral goodbye for no / unclear)
 function pick<T>(arr: T[] | undefined, fb: T): T { return arr && arr.length ? arr[Math.floor(Math.random() * arr.length)] : fb; }
 
 // Defaults used when a workflow hasn't defined its own follow-up scripts. No dashes (owner rule);
@@ -97,6 +98,9 @@ const DEFAULT_FOLLOWUPS: Record<string, string[]> = {
   clarify: ["Oh sorry, I was just asking if you have any {category} in stock right now?"],
   escalate: ["Oh, one sec,"],
   hello: ["Hello? Anyone there?"],
+  // Neutral goodbye for a no / sold-out / unclear ending. NEVER the celebratory wrap — "Awesome!"
+  // after "we don't have any" read as tone-deaf (owner 07-10 Delta test, call 97).
+  wrapNo: ["Okay, no worries. Thanks so much, have a good one!"],
 };
 
 interface TdWorkflow { name: string; voiceId: string; voices: string[]; openers: string[]; tuning: Record<string, unknown>; followups: Record<string, string[]>; lane: string }
@@ -120,7 +124,7 @@ export async function resolveTapedeckWorkflow(name?: string): Promise<TdWorkflow
       voiceId: (typeof wf.voiceId === "string" && wf.voiceId) || voices[0] || config.voice.defaultVoiceId,
       voices, openers,
       tuning: (wf.tuning && typeof wf.tuning === "object") ? (wf.tuning as Record<string, unknown>) : {},
-      followups: { set: slot("set"), type: slot("type"), no: slot("no"), wrap: slot("wrap"), clarify: slot("clarify"), escalate: slot("escalate"), hello: slot("hello") },
+      followups: { set: slot("set"), type: slot("type"), no: slot("no"), wrap: slot("wrap"), clarify: slot("clarify"), escalate: slot("escalate"), hello: slot("hello"), wrapNo: slot("wrapNo") },
       lane: typeof wf.lane === "string" ? wf.lane : "charlie",
     };
   } catch { return fb; }
@@ -157,6 +161,7 @@ async function synthClips(wf: TdWorkflow, voiceId: string, cat: string): Promise
     fillCat(pick(wf.followups.clarify, DEFAULT_FOLLOWUPS.clarify[0]), cat),
     fillCat(pick(wf.followups.escalate, DEFAULT_FOLLOWUPS.escalate[0]), cat),
     fillCat(pick(wf.followups.hello, DEFAULT_FOLLOWUPS.hello[0]), cat),
+    fillCat(pick(wf.followups.wrapNo, DEFAULT_FOLLOWUPS.wrapNo[0]), cat),
   ];
   const clips = await Promise.all(texts.map((t) => synthClip(voiceId, t, wf.tuning)));
   return { texts, clips };
@@ -338,15 +343,19 @@ Staff describe products loosely, so map descriptions to the trade name: "three p
   if (d.confirmed !== undefined) s.resConfirmed = d.confirmed;
   if (d.statusKey) s.resStatusKey = d.statusKey;
   s.stage = d.next;
-  const clip = d.clip;
+  // Resolve the wrap tone HERE (before the step is logged) so the transcript shows the line that
+  // actually plays: celebratory wrap only on a confirmed yes, neutral goodbye otherwise.
+  const clip = d.clip === 4 && s.resConfirmed !== true ? 8 : d.clip;
 
   pushStep(s, { who: "us", text: s.clipText[clip], atSec: Math.round((Date.now() - s.startMs) / 1000), label: `classified "${label}"${gotSet ? " +set" : ""}${gotType ? " +type" : ""} in ${ms}ms → ${d.note}`, ms });
-  if (clip === 4) return endCall(s, 4);
+  if (clip === 4 || clip === 8) return endCall(s, clip);
   return twiml(`${play(id, clip)}${gather(id)}`);
 }
 
-/** Play a terminal clip, hang up, and (store mode) fire the verdict finalizer once. */
+/** Play a terminal clip, hang up, and (store mode) fire the verdict finalizer once. The celebratory
+ *  wrap (4) only plays on a CONFIRMED yes; every other ending gets the neutral goodbye (8). */
 function endCall(s: TdSession, clip: number): string {
+  if (clip === 4 && s.resConfirmed !== true) clip = 8;
   s.status = "done";
   finalizeIfStore(s);
   try { deltaRelayEnd?.(s); } catch { /* relay best-effort */ }

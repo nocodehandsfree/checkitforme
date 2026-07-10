@@ -57,3 +57,8 @@ worse than no comment. Several entries below started as wrong comments.)
   store got hung up on). Fixed: SIGTERM drain in server.ts (old instance finishes its live bridge calls,
   cap 240s) + `drainingSeconds: 300` in railway.json. STILL: check `GET /api/voice/live` (or ask the
   owner) before pushing during an active testing session — don't rely on the drain alone.
+- **The GEMINI_API_KEY is FREE-TIER — it rate-limits (429 RESOURCE_EXHAUSTED) under real traffic** and on
+  2026-07-10 it silently lobotomized a live Delta call: every classify threw, every clerk reply became
+  "unclear". The llm() gateway now falls back to a cheap OpenAI model on ANY Gemini failure (llm.ts,
+  GEMINI_FALLBACK_MODEL, default gpt-4o-mini) — but the real fix is billing on the Gemini key.
+  /api/admin/llm-ping is the quick check; note Cloudflare replaces the app's JSON 502 with its own error page.
