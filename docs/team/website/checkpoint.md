@@ -7,22 +7,24 @@
 > Clean split with the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/the body wash), **I own
 > view/mode/nav**. Don't blind-edit the tint — it's fragile.
 
-## ▶ Doing now — public/logos restructure (07-10, COPY-first protocol)
-- **Inventory DONE.** DB (staging+prod identical): chains.logoUrl = 96 R2 URLs (logos.fungibles.com), 10
-  relative `/logos/chains/…`, 23 null (filesystem resolver, also chains/). NO DB row references root-level
-  `/logos/<file>`, sets/, eras/, or set-banners — set/era paths are derived server-side from set codes
-  (`/pub/pokemon-sets`), no DB fields. → chains/ = DB-referenced (does NOT move); everything else = code-only.
-- **Fun store row** (chain "Fungibles", id 120 both envs) points at R2 `chain-logos/fungibles.png`, not a
-  repo file. Repo `chains/fungibles.png` is only its filesystem fallback. Plan: copy → `chains/fun.png`,
-  extend PATCH /api/chains/:id to accept logoUrl, repoint staging row → `/logos/chains/fun.png` after
-  deploy; prod row repoint only AFTER promote. fungibles-64/-f/root fungibles.png = unreferenced relics
-  (root one appears in a CSS comment only). Root `pokemon.png` + `checkitforme.png` also code-unreferenced.
-- **New structure (copies, old paths keep serving):** logos/brand/ (all Check marks), logos/products/
-  (pokemon onepiece topps needoh), logos/pokemon/{eras,sets,banners} (banners = set-banners + sets/banners
-  merged; only stem overlap `_fallback` but .png vs .jpeg so no collision). New server routes added
-  alongside old. SW is RETIRED (self-destruct stub, no precache) — no cache version to bump; manifest icon
-  gets ?v bump instead.
-- **DELETE NOTHING until owner OK** — old copies AND fungibles originals both wait for the gate.
+## ▶ Doing now — public/logos restructure (07-10) — SHIPPED TO STAGING, waiting on owner OK to delete
+- **Live on staging (commit 6c13b1e):** logos/brand/ (Check marks) · logos/products/ (4 product logos) ·
+  logos/pokemon/{eras,sets,banners} (banners = set-banners + sets/banners merged; no filename collisions).
+  All COPIES — every old path still serves. New routes alongside old; pokemon/banners keeps the
+  missing→_fallback.png contract. chains/ untouched (DB-referenced: 10 rows relative paths + 23 null
+  filesystem-resolved; 96 rows R2). SW retired → no cache version existed to bump; ?v bumped on moved URLs.
+- **Fun store:** chain "Fungibles" (id 120) pointed at R2 chain-logos/fungibles.png (not a repo file).
+  Added chains/fun.png + _meta entry; PATCH /api/chains/:id now accepts logoUrl/logoWide/logoDark;
+  STAGING row repointed → /logos/chains/fun.png?v=1 ✓. PROD row repoint only AFTER promote (prod has no
+  fun.png until then).
+- **VERIFIED on staging (screenshots in chat):** /logo-wall stores+pokemon tabs, /logo-wall/sets, all 4
+  brand homepages, retail/kiosk/thrift store lists — zero broken images everywhere. Hobby mode is
+  flag-gated off on staging (no tab to shoot); set tiles proven via /logo-wall Pokémon tab.
+- **⛔ GATED on owner OK (then one cleanup commit):** delete old copies (root Check/product pngs, eras/,
+  sets/, set-banners/, sets/banners/ + their legacy routes) · delete fungibles relics (root fungibles.png,
+  fungibles-64.png, fungibles-f.png — all code-unreferenced — AND chains/fungibles.png after the staging
+  row verifies on fun.png) · also unreferenced: root checkitforme.png (wordmark, copied to brand/).
+  After promote: repoint PROD Fungibles row via same PATCH. NOTHING to prod until owner says promote.
 
 ## ▶ Paused — owner UI-polish pass on staging (screenshot-driven)
 Rapid back-and-forth: owner screenshots staging, I fix, push, he re-verifies. All staging until he confirms,
