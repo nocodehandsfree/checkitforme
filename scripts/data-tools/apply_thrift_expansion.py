@@ -22,13 +22,21 @@ US = {'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA'
       'OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'}
 TOLLFREE = {"800", "888", "877", "866", "855", "844", "833", "822"}
 
+import tempfile
 def req(method, path, data=None):
     cmd = ["curl", "-s", "--max-time", "180", "-X", method,
            "-H", f"x-admin-token: {TOK}", "-H", f"User-Agent: {UA}"]
+    tmp = None
     if data is not None:
-        cmd += ["-H", "content-type: application/json", "-d", json.dumps(data)]
+        # POST body via a temp file (@file) — large batches overflow argv ("Argument list too long")
+        tmp = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        json.dump(data, tmp); tmp.close()
+        cmd += ["-H", "content-type: application/json", "--data-binary", "@" + tmp.name]
     cmd.append(BASE + path)
-    return json.loads(subprocess.run(cmd, capture_output=True, text=True, check=True).stdout)
+    try:
+        return json.loads(subprocess.run(cmd, capture_output=True, text=True, check=True).stdout)
+    finally:
+        if tmp: os.unlink(tmp.name)
 
 def norm(p):
     d = re.sub(r"\D", "", str(p or "")); return d[-10:] if len(d) >= 10 else None

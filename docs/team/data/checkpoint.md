@@ -65,10 +65,16 @@
   independent cardshophub lists. Reusable big-box/kiosk filter now in `apply_hobby_expansion.py` for
   future directory sweeps. **To grow hobby further we need NEW sources** (other directories, or paid
   WebSearch metro sweeps — spend-gated).
-- **NEXT expansion sources (all need a decision):** thrift = new CHAINS not yet in DB (Habitat ReStore
-  ~900 US, Buffalo Exchange, Plato's Closet / Once Upon a Child, St. Vincent de Paul, ARC) — each a fresh
-  locator harvest + a new chip/logo (owner's brand lane). hobby = other shop directories or WebSearch
-  metro sweeps (org spend — owner approval). The 3 big thrift chains + cardshophub are now fully mined.
+- **NEW CHAIN added — Habitat ReStore +748 US stores 2026-07-10** (chain id 130, type Thrift, all
+  active w/ phone+address, 49 states; 45 Canadian + 3 toll-free + 1 dupe dropped). Source
+  `harvest_habitat_restore.py` (habitat.org /local/restore?zip= national sweep). **NO HOURS in source
+  → needs a hours-backfill wave** (WebSearch or per-affiliate). **Owner TODO: logo** (defaults to Thrift
+  category icon until then). Owner OK'd new-chain expansion (logo not a blocker; independents use the
+  category icon, chains get a logo later). `apply_thrift_expansion.py` now posts the body via file
+  (@tmp) — 500-row batches overflowed argv.
+- **MORE new-chain candidates (same playbook, free):** Buffalo Exchange, Plato's Closet / Once Upon a
+  Child, St. Vincent de Paul, ARC Thrift. hobby = other directories or WebSearch metro sweeps (spend).
+  The 3 big thrift chains + cardshophub are fully mined.
 - **Env facts (verified):** python urllib AND headless Chromium are proxy-blocked here; Google/Bing/DDG
   bot-block curl. Free direct-Google scraping is impossible from this box — that's owner's-local only.
 - **PROD front-end BEHIND staging — needs a promote (not my lane to deploy; flagged to owner):** the `type`
