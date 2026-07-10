@@ -28,8 +28,11 @@ untouched — extraction only), so set + product form land in productDetail (was
 
 **checkit.html live view (shipped):** pending verdict = neutral GRAY "Getting result…" (new `pend`
 tone; never yellow unclear) · "Restock confirmed · soon" drops the generic suffix (keeps "· Tuesday") ·
-call log is FLAT left-adjusted (v2 rail removed; inline dots on Ringing header + verdict line;
-qa-behaviors updated to assert this) · Twilio answered signal flips "We've connected" immediately.
+Twilio answered signal flips "We've connected" immediately.
+**⚖️ SETTLED — timeline rail STAYS (owner ruling 07-10, do not re-flatten):** I read call 8's "no
+indenting" as "remove the rail" and cut the whole vertical timeline; the owner immediately asked where
+it went and Webbie restored it (e34d72b). The call-8 flat-log reading is DEAD. qa-behaviors asserts
+the rail dots again (4dc3250). Any future "flatter" ask needs the owner's explicit words + screenshot.
 
 **Alert emails (42768ed):** renderBrandedEmail rebuilt to Design's approved mock — #08090D board,
 wordmark image, gradient card w/ solid Outlook fallback, Inter-black headline (serif was wrong),
