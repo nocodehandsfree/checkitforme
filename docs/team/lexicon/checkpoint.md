@@ -27,11 +27,14 @@ Checkpoint backlog:
   as runtime output paths (gitignored — harmless, they'll recreate a root `loops/` at runtime); retarget to the
   archive path or a dedicated `.artifacts/` dir when convenient. `.gitignore` line left as-is (still matches
   the runtime path).
-- **Admin token: rotation PENDING owner** — my env has no `RAILWAY_API_TOKEN`, so I can't write Railway vars.
-  Owner to hand over the key (then I rotate `ADMIN_TOKEN` on both services) or paste a fresh token himself. The
-  old value is redacted in the working tree but still in git history — **rotation is what kills it** (history
-  copy becomes useless once the live token changes).
-- **CLAUDE.md:** added the "everything's in Railway → Variables; ask the owner for `RAILWAY_API_TOKEN`" note.
+- **Admin token: ROTATED 2026-07-10.** Confirmed the leaked value was the live `ADMIN_TOKEN` on BOTH
+  `voice-caller` (prod) + `voice-caller-staging` (same hash). Generated a fresh `adm_` token, upserted it to
+  both via Railway API, verified the read-back (old hash gone). Railway auto-redeploys on the var change. New
+  raw value lives only in Railway → Variables (never printed/committed). The leaked history copy is now dead.
+  **Owner: update any server-to-server caller of the old token** (e.g. site checkers / Discord listener posting
+  to `/api/stock/ingest`, local import scripts). Browser admin sessions (signed cookie) survive; a new
+  `/admin-login?token=` needs the new value.
+- **CLAUDE.md:** now says `RAILWAY_API_TOKEN` is embedded in the Claude env (ask the owner only if it 401s).
 - **`team/design/checkpoint.md` = 165 lines, left as-is** — the file itself declares "80-line cap waived for
   this section" (owner-sanctioned, twice) for the tint + design-gap carry-overs. Not pruning without owner OK.
 - **Minor:** `src/server.ts:3772` has a "(CALL_ECONOMICS §2)" citation in a GTM todo string — now points at a

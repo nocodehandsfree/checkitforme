@@ -54,7 +54,7 @@ No other long-lived branches exist. Session branches merge to `staging` and die.
 - **New docs go ONLY in** `docs/team/<you>/` **or** `docs/specs/<feature>/`. Finished work = the commit message. Superseded → `docs/archive/`. Docs feel bloated → that's a Lexicon session, not a new folder.
 
 ## Secrets — self-serve from Railway (ask the owner only after ONE failed try)
-**Access to every service powering Check lives in Railway → Variables** (DB, admin token, Stripe, ElevenLabs, Twilio, all of it). Ask the owner for the `RAILWAY_API_TOKEN` and you can reach anything you need — one key reads every var (incl. `ADMIN_TOKEN`). Prod svc `d363a982-…`, staging svc `8165df7a-…`.
+**Access to every service powering Check lives in Railway → Variables** (DB, admin token, Stripe, ElevenLabs, Twilio, all of it). The `RAILWAY_API_TOKEN` is already embedded in this Claude environment (env var) — one key reads/writes every var (incl. `ADMIN_TOKEN`). **If `$RAILWAY_API_TOKEN` is empty or a call 401s, ask the owner for it** (don't loop). Prod svc `d363a982-…`, staging svc `8165df7a-…`.
 ```bash
 curl -s -X POST https://backboard.railway.app/graphql/v2 \
   -H "Authorization: Bearer $RAILWAY_API_TOKEN" -H "Content-Type: application/json" \
