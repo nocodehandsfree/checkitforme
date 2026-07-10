@@ -11,7 +11,7 @@ import { WebSocketServer, type WebSocket } from "ws";
 import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql } from "drizzle-orm";
 import { db, client } from "./db/client";
 import {
-  alertSends, alertSubscriptions, callResults, categories, chains, communityPosts, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, waitlist, watches, zones, zoneRetailers,
+  alertSends, alertSubscriptions, callResults, categories, chains, communityPosts, customerSchedules, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, waitlist, watches, zones, zoneRetailers,
 } from "./db/schema";
 import { config } from "./config";
 import { assertProdSecurity } from "./security-checks";
@@ -3712,6 +3712,56 @@ app.post("/api/admin/users/staff", async (c) => {
   if (on) set.add(String(id)); else set.delete(String(id));
   await setSetting("staff_accounts", JSON.stringify([...set]));
   return c.json({ ok: true });
+});
+// Delete/reset an account: wipe an account and everything it owns so a phone can re-sign-up as a
+// brand-new user (free check regranted on next login). Cancels any live Stripe subscription first so
+// a reset customer isn't still billed. `?dry=1` reports what WOULD be removed without deleting.
+// The account row itself is the "reset" — getAccountByPhone recreates it fresh on next login.
+app.post("/api/admin/users/:id/delete", async (c) => {
+  const id = decodeURIComponent(c.req.param("id"));
+  const dry = c.req.query("dry") === "1";
+  const acc = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
+  if (!acc) return c.json({ error: "no such account", id }, 404);
+  const contacts = [acc.phone, acc.email].filter(Boolean) as string[];
+  // Count everything owned (by userId, plus watches/leads by contact) so the response is auditable.
+  const ownedZones = await db.select({ id: zones.id }).from(zones).where(eq(zones.ownerUserId, id));
+  const zoneIds = ownedZones.map((z) => z.id);
+  const counts = {
+    account: 1,
+    callResults: (await db.select({ id: callResults.id }).from(callResults).where(eq(callResults.finderUserId, id))).length,
+    customerSchedules: (await db.select({ id: customerSchedules.id }).from(customerSchedules).where(eq(customerSchedules.finderUserId, id))).length,
+    alertSubscriptions: (await db.select({ id: alertSubscriptions.id }).from(alertSubscriptions).where(eq(alertSubscriptions.userId, id))).length,
+    storeRequests: (await db.select({ id: storeRequests.id }).from(storeRequests).where(eq(storeRequests.userId, id))).length,
+    communityPosts: (await db.select({ id: communityPosts.id }).from(communityPosts).where(eq(communityPosts.finderUserId, id))).length,
+    zones: zoneIds.length,
+    watches: contacts.length ? (await db.select({ id: watches.id }).from(watches).where(inArray(watches.contact, contacts))).length : 0,
+  };
+  // Cancel any live Stripe subscription so the reset customer stops being billed.
+  let stripeCanceled: string[] = [];
+  if (acc.stripeCustomerId && (process.env.STRIPE_SECRET_KEY || "")) {
+    try {
+      const sk = process.env.STRIPE_SECRET_KEY!;
+      const list = await fetch(`https://api.stripe.com/v1/subscriptions?customer=${acc.stripeCustomerId}&status=active&limit=100`, { headers: { Authorization: `Bearer ${sk}` } });
+      const subs = (await list.json()) as { data?: { id: string }[] };
+      for (const s of subs.data || []) {
+        if (!dry) await fetch(`https://api.stripe.com/v1/subscriptions/${s.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${sk}` } });
+        stripeCanceled.push(s.id);
+      }
+    } catch (e) { return c.json({ error: `stripe cancel failed — aborted before any local delete: ${String(e).slice(0, 160)}` }, 502); }
+  }
+  if (dry) return c.json({ dry: true, id, phone: acc.phone, wouldRemove: counts, stripeSubsToCancel: stripeCanceled });
+  // Delete owned rows first (children before the account), then the account itself.
+  if (zoneIds.length) await db.delete(zoneRetailers).where(inArray(zoneRetailers.zoneId, zoneIds));
+  await db.delete(zones).where(eq(zones.ownerUserId, id));
+  await db.delete(callResults).where(eq(callResults.finderUserId, id));
+  await db.delete(customerSchedules).where(eq(customerSchedules.finderUserId, id));
+  await db.delete(alertSubscriptions).where(eq(alertSubscriptions.userId, id));
+  await db.delete(storeRequests).where(eq(storeRequests.userId, id));
+  await db.delete(communityPosts).where(eq(communityPosts.finderUserId, id));
+  if (contacts.length) await db.delete(watches).where(inArray(watches.contact, contacts));
+  await db.delete(accounts).where(eq(accounts.clerkUserId, id));
+  console.log(`[admin] account deleted ${id} — removed ${JSON.stringify(counts)} stripeCanceled=${stripeCanceled.join(",") || "none"}`);
+  return c.json({ ok: true, deleted: id, phone: acc.phone, removed: counts, stripeCanceled });
 });
 app.get("/api/admin/pulse", async (c) => {
   const now = Math.floor(Date.now() / 1000), d1 = now - 86400, d7 = now - 7 * 86400;
