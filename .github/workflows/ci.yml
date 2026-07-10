@@ -1,0 +1,71 @@
+name: CI
+
+# Gate the app on its own checks. Tests boot against dummy env + throwaway SQLite DBs — no real secrets.
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+
+jobs:
+  test:
+    name: Typecheck + tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Store contract (carries must be served-derived, not the raw column)
+        run: node scripts/check-store-contract.mjs
+
+      - name: Full test suite (units + integration)
+        run: bash scripts/test-all.sh
+
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Use the gitleaks BINARY (the gitleaks-action requires a paid license for private orgs).
+      - name: gitleaks
+        run: |
+          VER=8.21.2
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz" | tar -xz gitleaks
+          ./gitleaks detect --source . --redact --no-banner --exit-code 1
+
+  docs-lint:
+    name: Checkpoint size (cap ~80 lines)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: warn on bloated checkpoints
+        run: |
+          for f in docs/team/*/checkpoint.md; do
+            n=$(wc -l < "$f")
+            [ "$n" -gt 100 ] && echo "::warning file=$f::$f is $n lines (cap ~80) — Lexicon: prune it"
+          done
+          exit 0
+      - name: copy lint (warn) — banned tokens in user-facing HTML
+        run: |
+          for w in '—' 'Runnr' 'Fungie' 'Clerk'; do
+            for f in public/checkit.html public/app.html; do
+              grep -q -- "$w" "$f" && echo "::warning file=$f::banned copy token '$w' in $f (owner rule: no em-dashes, no dead brands)"
+            done
+          done
+          exit 0

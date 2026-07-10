@@ -447,237 +447,6 @@ app.get("/", rootHandler);
 // :param{regex} attempt crashed Hono's router on boot. These names never collide with /api, /pub, /r, /s, etc.
 for (const s of ["dash","users","restock","growth","calc","plans","retailers","search","add","zones","receipts","results","schedules","feedback","statuses","trees","settings","designer","workflows","testing","fun","gtm"]) app.get("/" + s, rootHandler);
 app.get("/r", (c) => { c.header("Cache-Control", "no-store"); const h=(c.req.header("host") || "").toLowerCase(); return c.html(renderRunner(resolveBrand(h, c.req.query("brand")), h, "checkit.html", c.req.query("tone") || "")); });
-// TEMP diagnostic (owner iOS status-bar tint debugging): a minimal page — one SOLID colour, zero
-// scripts/gradients/images — nothing that can invalidate WebKit's top-colour sampling. If the very top
-// strip (clock/battery) goes green here, sampling works on the device and any remaining black bar comes
-// from page content; if it stays black, the device path needs a different mechanism. Remove when done.
-app.get("/tinttest", (c) => {
-  c.header("Cache-Control", "no-store");
-  return c.html(`<!doctype html><html lang="en" style="background:#266440"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>tint test</title></head><body style="margin:0;min-height:100dvh;background:#266440;color:#fff;font-family:-apple-system,sans-serif"><div style="padding:40vh 20px 0;text-align:center;font-weight:800">If the strip with the clock/battery is GREEN, sampling works on this device.</div></body></html>`);
-});
-// TEMP diagnostic step 2: checkit.html's FIRST PAINT, frozen — the exact tone-wash CSS structure
-// (pseudo gradient, transparent body, transparent sticky header with dark chips, Inter font, apple
-// metas) with ZERO JavaScript. Green here = the CSS passes the sampler and the app's scripts are the
-// remaining culprit; black here = the CSS structure itself. Remove with /tinttest when done.
-app.get("/tinttest2", (c) => {
-  c.header("Cache-Control", "no-store");
-  return c.html(`<!doctype html><html lang="en" class="tone-in"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>tint test 2</title>
-<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
-<style>
-@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format('woff2')}
-:root{--bg:#0C0C12;--sheet:#1A1A24;--border:rgba(255,255,255,.08)}
-*{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;background:#0C0C12;color-scheme:dark}
-body{background:var(--bg);color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;margin:0;padding:env(safe-area-inset-top) 0 0 0;display:flex;flex-direction:column;min-height:100dvh}
-header{padding:14px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:20}
-.logo{font-size:19px;font-weight:900}
-.pill{display:inline-flex;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700;margin-left:auto}
-main{padding:14px 20px;max-width:520px;margin:0 auto;width:100%}
-.card{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;margin-top:200px}
-html.tone-in body::before{background:linear-gradient(180deg,#266440 0px,#266440 160px,var(--bg) 460px)}
-html.tone-in body::before{content:"";position:absolute;left:0;top:0;width:100%;height:460px;z-index:-1;pointer-events:none}
-html.tone-in body{background:transparent!important}
-html.tone-in header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
-</style></head><body>
-<header><span class="logo">Check <b>it</b></span><span class="pill">My ✓</span></header>
-<main><div style="font-weight:800;text-align:center">Frozen first paint of the real page — no scripts.<br>GREEN strip = CSS is fine, scripts are the culprit.<br>BLACK strip = the CSS structure.</div><div class="card">a card, like the result view</div></main>
-</body></html>`);
-});
-// TEMP diagnostic step 3: same as /tinttest2 except the wash is a SOLID colour block for the top 240px
-// (a background-color, not a gradient) with the gradient fade on a separate pseudo BELOW it. /tinttest2
-// went black on-device, meaning iOS rejects a gradient at its sample points even on a pseudo-element —
-// solid top + fade below is the structure the sampler accepts. Green here = port this to checkit.html.
-app.get("/tinttest3", (c) => {
-  c.header("Cache-Control", "no-store");
-  return c.html(`<!doctype html><html lang="en" class="tone-in"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>tint test 3</title>
-<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
-<style>
-@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format('woff2')}
-:root{--bg:#0C0C12;--sheet:#1A1A24;--border:rgba(255,255,255,.08)}
-*{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;background:#0C0C12;color-scheme:dark}
-body{background:var(--bg);color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;margin:0;padding:env(safe-area-inset-top) 0 0 0;display:flex;flex-direction:column;min-height:100dvh}
-header{padding:14px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:20}
-.logo{font-size:19px;font-weight:900}
-.pill{display:inline-flex;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700;margin-left:auto}
-main{padding:14px 20px;max-width:520px;margin:0 auto;width:100%}
-.card{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;margin-top:200px}
-html.tone-in body::before{content:"";position:absolute;left:0;top:0;width:100%;height:240px;background:#266440;z-index:-1;pointer-events:none}
-html.tone-in body::after{content:"";position:absolute;left:0;top:240px;width:100%;height:220px;background:linear-gradient(180deg,#266440 0,var(--bg) 100%);z-index:-1;pointer-events:none}
-html.tone-in body{background:transparent!important}
-html.tone-in header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
-</style></head><body>
-<header><span class="logo">Check <b>it</b></span><span class="pill">My ✓</span></header>
-<main><div style="font-weight:800;text-align:center">Solid top block, gradient only below 240px.<br>GREEN strip = this is the structure we ship.</div><div class="card">a card, like the result view</div></main>
-</body></html>`);
-});
-// TEMP diagnostic step 4+5. Working theory after tests 1-3: the iOS top strip takes the ROOT's declared
-// background-COLOR (one solid value), not sampled pixels (that's macOS) — our html is #0C0C12 ≈ black,
-// hence every "black" result. /tinttest4: html background-color=tone PLUS a gradient background-image
-// (tone→dark by 460px) so the canvas pixels keep a dark bottom overscroll — green strip here means we
-// can have tone on top and dark at the bottom. /tinttest5: html background-color=tone with NO image —
-// isolates whether an image layer on html makes iOS bail. Remove all /tinttest* when done.
-const tintTestPage = (htmlStyle: string, label: string) => `<!doctype html><html lang="en" style="${htmlStyle}"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>${label}</title>
-<style>
-:root{--bg:#0C0C12;--sheet:#1A1A24;--border:rgba(255,255,255,.08)}
-*{box-sizing:border-box}
-body{margin:0;padding:0;min-height:100dvh;background:transparent;color:#fff;font-family:-apple-system,system-ui,sans-serif}
-header{padding:14px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;background:transparent;z-index:20}
-.logo{font-size:19px;font-weight:900}
-.pill{display:inline-flex;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700;margin-left:auto}
-main{padding:14px 20px;max-width:520px;margin:0 auto;width:100%}
-.card{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;margin-top:200px}
-</style></head><body>
-<header><span class="logo">Check <b>it</b></span><span class="pill">My ✓</span></header>
-<main><div style="font-weight:800;text-align:center">${label}</div><div class="card">a card, like the result view</div></main>
-</body></html>`;
-app.get("/tinttest4", (c) => {
-  c.header("Cache-Control", "no-store");
-  return c.html(tintTestPage("background-color:#266440;background-image:linear-gradient(180deg,#266440 0px,#0C0C12 460px)", "test 4: root COLOR = green + gradient image for a dark bottom"));
-});
-app.get("/tinttest5", (c) => {
-  c.header("Cache-Control", "no-store");
-  return c.html(tintTestPage("background-color:#266440", "test 5: root COLOR = green, no image at all"));
-});
-// TEMP diagnostic step 6: theme-color meta = tone for the TOP strip, root background-color = DARK for
-// the bottom bar. Tests 4+5 proved this iOS paints both chrome strips from the root's declared colour
-// (one value, both ends). If theme-color overrides only the TOP here — green top + dark bottom — that
-// is the exact goal and we ship theme-color per-tone. If the bottom goes green too, this iOS version
-// genuinely has a single tint colour and the owner must pick green-both or dark-both.
-// TEMP diagnostic step 7: option-1 preview. Test 6 proved theme-color is ignored — this iOS paints ONE
-// colour (the root background-color) at BOTH chrome strips, so tone-on-top requires tone-on-bottom.
-// This page makes that look deliberate: root colour = tone (both strips green), top wash as designed,
-// and a faint tone glow rising from the page bottom so the green band meets the page instead of
-// clashing with flat black. If the owner approves, THIS is the structure to port to checkit.html.
-app.get("/tinttest7", (c) => {
-  c.header("Cache-Control", "no-store");
-  return c.html(`<!doctype html><html lang="en" style="background-color:#266440"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>tint test 7</title>
-<style>
-:root{--bg:#0C0C12;--sheet:#1A1A24;--border:rgba(255,255,255,.08)}
-*{box-sizing:border-box}
-body{margin:0;padding:0;min-height:100dvh;background:var(--bg);color:#fff;font-family:-apple-system,system-ui,sans-serif;position:relative}
-body::before{content:"";position:absolute;left:0;top:0;width:100%;height:460px;background:linear-gradient(180deg,#266440 0px,#266440 160px,var(--bg) 460px);z-index:0;pointer-events:none}
-body::after{content:"";position:fixed;left:0;bottom:0;width:100%;height:180px;background:linear-gradient(0deg,rgba(38,100,64,.55) 0px,rgba(38,100,64,0) 100%);z-index:0;pointer-events:none}
-header,main{position:relative;z-index:1}
-header{padding:14px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;background:transparent;z-index:20}
-.logo{font-size:19px;font-weight:900}
-.pill{display:inline-flex;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700;margin-left:auto}
-main{padding:14px 20px;max-width:520px;margin:0 auto;width:100%}
-.card{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;margin-top:200px}
-</style></head><body>
-<header><span class="logo">Check <b>it</b></span><span class="pill">My ✓</span></header>
-<main><div style="font-weight:800;text-align:center">test 7: option 1 polished — green strips both ends, wash on top, soft glow meeting the bottom band.</div><div class="card">a card, like the result view</div><div class="card">another card to scroll past</div></main>
-</body></html>`);
-});
-// TEMP diagnostic step 8: the owner's requested preview — a REAL-looking call status page with a
-// FULL-PAGE gradient (tone at top → dark), root colour = tone so the top strip tints, one page per
-// verdict tone (?tone=in|out|unk|soon, in-page switcher). This is the candidate design to nail the top.
-app.get("/tinttest8", (c) => {
-  c.header("Cache-Control", "no-store");
-  const T: Record<string, { wash: string; title: string; tc: string; sub: string }> = {
-    in:   { wash: "#266440", title: "In stock!",        tc: "#4ADE80", sub: "They have it right now — go get it." },
-    out:  { wash: "#6b2427", title: "Not in",           tc: "#EF4444", sub: "Sold out at this store today." },
-    unk:  { wash: "#6c5419", title: "Couldn’t tell", tc: "#FBBF24", sub: "We couldn’t quite make out the answer." },
-    soon: { wash: "#6e490f", title: "Restock incoming", tc: "#F0A32E", sub: "A shipment lands soon. Be first when it drops." },
-  };
-  const tone = String(c.req.query("tone") || "in");
-  const t = T[tone] || T.in;
-  const sw = (Object.keys(T) as (keyof typeof T)[]).map((k) => `<a href="/tinttest8?tone=${k}" style="color:#fff;text-decoration:none;font-weight:800;font-size:12px;padding:6px 11px;border-radius:16px;border:1px solid rgba(255,255,255,.25);background:${k === tone ? "rgba(255,255,255,.18)" : "transparent"}">${String(k).toUpperCase()}</a>`).join(" ");
-  return c.html(`<!doctype html><html lang="en" style="background-color:${t.wash}"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>tint test 8 — ${tone}</title>
-<link rel="preload" href="/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
-<style>
-@font-face{font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;src:url(/fonts/inter-var-latin.woff2) format('woff2')}
-:root{--bg:#0C0C12;--sheet:#1A1A24;--border:rgba(255,255,255,.08)}
-*{box-sizing:border-box}
-body{margin:0;padding:0;min-height:100dvh;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;
-  background:linear-gradient(180deg,${t.wash} 0px,${t.wash} 140px,var(--bg) 100dvh)}
-header{padding:14px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;background:transparent;z-index:20}
-.logo{font-size:19px;font-weight:900;letter-spacing:-.5px}
-.logo b{color:#4ADE80}
-.pill{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700;margin-left:auto}
-main{padding:10px 20px 40px;max-width:520px;margin:0 auto;width:100%}
-.rchip{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.3);border-radius:16px;padding:6px 13px;font-size:11px;font-weight:800;letter-spacing:1.5px;margin:8px 0 14px}
-.rchip .dot{width:7px;height:7px;border-radius:50%;background:${t.tc}}
-h1{font-size:40px;line-height:1.05;margin:0 0 10px;letter-spacing:-1.5px;font-weight:900;color:${t.tc}}
-.sub{color:#d9d9e2;font-size:16px;margin:0 0 22px}
-.cta{display:block;width:100%;text-align:center;background:transparent;border:1.5px solid #4ADE80;color:#4ADE80;font-weight:900;font-size:15px;letter-spacing:1px;padding:16px;border-radius:999px;text-transform:uppercase;box-shadow:0 0 22px rgba(74,222,128,.25);margin-bottom:28px}
-.tl{border-left:2px solid rgba(74,222,128,.5);padding-left:18px;margin-left:6px}
-.tl .step{margin-bottom:14px}
-.tl .t{font-weight:800;font-size:16px}
-.tl .m{color:#9a9aa8;font-size:14px;margin-top:6px}
-.bub{background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:13px 15px;margin:10px 0}
-.bub .who{font-size:10.5px;font-weight:800;letter-spacing:1.2px;color:#8a8a96;margin-bottom:5px}
-.bub.ai .who{color:#4ADE80}
-.sw{display:flex;gap:8px;margin:0 0 6px}
-</style></head><body>
-<header><span class="logo">Check <b>it</b></span><span class="pill">My ✓</span></header>
-<main>
-<div class="sw">${sw}</div>
-<div class="rchip"><span class="dot"></span> RESULT</div>
-<h1>${t.title}</h1>
-<p class="sub">${t.sub}</p>
-<a class="cta" href="#">Check another store →</a>
-<div class="tl">
-<div class="step"><div class="t">Ringing the store</div><div class="m">It’s ringing… 9s · We’ve connected · A person picked up</div></div>
-<div class="step"><div class="t" style="color:#4ADE80">Asking about Pokémon</div>
-<div class="bub"><div class="who">STAFF</div>How can I help you?</div>
-<div class="bub ai"><div class="who">CHECK AI</div>Hi there! I was just checking, do you have any Pokémon cards in stock right now?</div>
-<div class="bub"><div class="who">STAFF</div>Um, yeah, give me a second to check…</div>
-<div class="bub ai"><div class="who">CHECK AI</div>No worries, take your time!</div>
-</div>
-</div>
-</main>
-</body></html>`);
-});
-app.get("/tinttest6", (c) => {
-  c.header("Cache-Control", "no-store");
-  return c.html(`<!doctype html><html lang="en" style="background-color:#0C0C12"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#266440">
-<title>tint test 6</title>
-<style>
-:root{--bg:#0C0C12;--sheet:#1A1A24;--border:rgba(255,255,255,.08)}
-*{box-sizing:border-box}
-body{margin:0;padding:0;min-height:100dvh;background:transparent;color:#fff;font-family:-apple-system,system-ui,sans-serif}
-body::before{content:"";position:absolute;left:0;top:0;width:100%;height:460px;background:linear-gradient(180deg,#266440 0px,#266440 160px,var(--bg) 460px);z-index:-1;pointer-events:none}
-header{padding:14px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;background:transparent;z-index:20}
-.logo{font-size:19px;font-weight:900}
-.pill{display:inline-flex;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border);border-radius:20px;padding:7px 12px;font-size:13px;font-weight:700;margin-left:auto}
-main{padding:14px 20px;max-width:520px;margin:0 auto;width:100%}
-.card{background:var(--sheet);border:1px solid var(--border);border-radius:18px;padding:22px;margin-top:200px}
-</style></head><body>
-<header><span class="logo">Check <b>it</b></span><span class="pill">My ✓</span></header>
-<main><div style="font-weight:800;text-align:center">test 6: theme-color green for the TOP, dark page colour for the BOTTOM, gradient wash like the real design.</div><div class="card">a card, like the result view</div></main>
-</body></html>`);
-});
-// Preview-only: the redesigned result/live UI served from checkit-demo.html, so the live
-// site keeps the current design while we evaluate the new one. /demo?brand=<slug> picks a vertical.
-app.get("/demo", (c) => {
-  c.header("Cache-Control", "no-store");
-  const host = (c.req.header("host") || "").toLowerCase();
-  return c.html(renderRunner(resolveBrand(host, c.req.query("brand") || "pokemon"), host, "checkit-demo.html"));
-});
-app.get("/demo/:slug", (c) => {
-  c.header("Cache-Control", "no-store");
-  const host = (c.req.header("host") || "").toLowerCase();
-  return c.html(renderRunner(resolveBrand(host, c.req.param("slug")), host, "checkit-demo.html"));
-});
 // Verticals as PATHS on the apex (checkitforme.com/pokemon, /onepiece, /toppsbasketball, /needoh) —
 // same brand resolution as the subdomains, keyed off the slug. This is what lets the product switcher
 // link to clean same-domain paths instead of subdomain hops.
@@ -895,7 +664,7 @@ setDeltaBarge(async (s, _speech) => {
 });
 
 // ---- Health ----
-app.get("/api/health", (c) => c.json({ ok: true }));
+app.get("/api/health", (c) => c.json({ ok: true, commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null }));
 
 // ---- Phone-first auth (Clerk-free): SMS code → our session → caller-ID verify call ----
 // Step 1: send an SMS code to the cell (browser auto-fills it). Rate-limited (SMS costs money).
@@ -3973,24 +3742,30 @@ const GTM_SEED: { id: string; title: string; detail: string; area: "backend" | "
   { id: "readme-copy", title: "Copy agent owns + fully updates the ReadMe", detail: "Spin up a copy agent with access to the ReadMe repo (+ Fungibles); fully write/polish the Check ReadMe. Solve the cross-repo access.", area: "ops", agent: "copy", critical: true, status: "todo" },
   { id: "discord-support", title: "Discord support agent + FAQ routing (Helicone)", detail: "Working Discord; same support agent. Cheap-model FAQ from the ReadMe → escalate to a smart model → ticket to a support email if unresolved.", area: "backend", agent: "discord", critical: true, status: "todo" },
   { id: "alerts-forms", title: "Every alert form works end-to-end", detail: "Email/SMS restock alerts actually send; branded email; Twilio A2P 10DLC live for texts; user can view/edit their email + cell in My Checks.", area: "backend", agent: "devops", critical: true, status: "todo" },
-  { id: "zones-test", title: "Zones tested at scale", detail: "Call many stores at once and watch the combined multi-store report render correctly.", area: "backend", agent: "qa", critical: true, status: "todo" },
+  { id: "zones-test", title: "Zones tested at scale", detail: "Call many stores at once and watch the combined multi-store report render correctly.", area: "backend", agent: "devops", critical: true, status: "todo" },
   { id: "store-request-form", title: "Store-request form lands in the backend", detail: "A store submitted from the site shows up in the admin queue.", area: "backend", agent: "devops", critical: true, status: "todo" },
-  { id: "referrals", title: "Refer-a-friend works + is tracked", detail: "Track who referred whom; both parties actually receive their free checks, everywhere a free check is promised.", area: "backend", agent: "qa", critical: true, status: "todo" },
+  { id: "referrals", title: "Refer-a-friend works + is tracked", detail: "Track who referred whom; both parties actually receive their free checks, everywhere a free check is promised.", area: "backend", agent: "devops", critical: true, status: "todo" },
   { id: "voice-rotation", title: "Workflows / persona / script + voice rotation", detail: "Rotate scripts and voices, confirm they work well, and lock the voice you like.", area: "ops", agent: "website", critical: false, status: "todo" },
   { id: "thrift-hobby-workflows", title: "Thrift + hobby call workflows built", detail: "Done and ready (gated off until launch, even for paid).", area: "ops", agent: "website", critical: false, status: "todo" },
   { id: "multibrand-scripts", title: "One Piece / NeeDoh / Topps NBA call scripts", detail: "Set up retailer call scripts for these product types just like Pokémon — the agent calls and asks for One Piece TCG, NeeDoh, and Topps NBA at the right stores.", area: "ops", agent: "website", critical: false, status: "todo" },
   { id: "paid-plans-e2e", title: "Paid plans — full real-card end-to-end test", detail: "Sign up with a real credit card and confirm the whole flow: checkout → Stripe → entitlement → credits.", area: "backend", agent: "devops", critical: true, status: "todo" },
-  { id: "site-paths-tested", title: "Every website path tested pre-launch", detail: "Walk every page/flow and confirm it behaves exactly as built.", area: "frontend", agent: "qa", critical: true, status: "todo" },
+  { id: "site-paths-tested", title: "Every website path tested pre-launch", detail: "Walk every page/flow and confirm it behaves exactly as built.", area: "frontend", agent: "website", critical: true, status: "todo" },
   { id: "copy-color-sweep", title: "Copy sweep + product-page colors", detail: "Copy reads well everywhere; product-page colors render right per brand (Pokémon vs NeeDoh, etc.).", area: "frontend", agent: "copy", critical: true, status: "todo" },
   { id: "multi-brand-workflows", title: "Non-Pokémon call workflows", detail: "Workflows set up so the agent can call and ask for Topps NBA, One Piece, etc. — not just Pokémon.", area: "ops", agent: "data", critical: true, status: "todo" },
   { id: "discord-plan", title: "Discord community set up + planned", detail: "Free area vs. flagged paid-customer community; channel plan (share scores, talk stores). Stand up a planning agent.", area: "ops", agent: "discord", critical: false, status: "todo" },
-  { id: "spanish", title: "Spanish + live translation button", detail: "Confirm Spanish works and the translate button engages when a store speaks Spanish.", area: "frontend", agent: "qa", critical: true, status: "todo" },
+  { id: "spanish", title: "Spanish + live translation button", detail: "Confirm Spanish works and the translate button engages when a store speaks Spanish.", area: "frontend", agent: "website", critical: true, status: "todo" },
   { id: "statuses-new", title: "New call statuses surface in Admin", detail: "When a never-seen status comes back, it shows up in the Admin statuses area so we can build it into behavior.", area: "backend", agent: "admin", critical: false, status: "todo" },
   { id: "hobby-thrift-data", title: "Populate hobby + thrift stores nationwide", detail: "Data: hobby stores with open/close times; a nationwide thrift + hobby search (like the main-chain sweep) to populate many more.", area: "backend", agent: "data", critical: false, status: "todo" },
   { id: "x-autopost", title: "X account + daily auto-posting agent", detail: "Create the X account; an agent posts cool info daily. Keep the business hands-free.", area: "ops", agent: "social", critical: false, status: "todo" },
-  { id: "repo-split", title: "Extract Check into its own repo", detail: "Major overhaul — pause everything and rip Check out of Fungibles into a clean repo. (Post-launch; expect breakage.)", area: "ops", agent: "devops", critical: false, status: "todo" },
   { id: "store-data-one-source", title: "Store data: one dataset everywhere", detail: "Staging is the curation home; curated store data auto-syncs to prod (field-scoped, diffs-only, drafts stay staging-only via the published flag). Learned call data never overwritten. Built; needs STORE_SYNC_URL + STORE_SYNC_TOKEN set on the staging service to activate.", area: "backend", agent: "devops", critical: true, status: "doing" },
   { id: "admin-redesign-reports", title: "Admin redesign — reports tell a story", detail: "Audit every report/card for performance, necessity, and placement: there are so many it feels like false positives. Cut or merge the noise, regroup what's left into one beginning-to-end story of the business (pulse -> calls -> money -> growth). Owner runs 5 Design comps off docs/design/STYLE_GUIDE.md; Design delivers comps, Admin implements.", area: "frontend", agent: "design", critical: false, status: "todo" },
+  { id: "repo-split", title: "Extract Check into its own repo", detail: "Done 2026-07 — you are in it (nocodehandsfree/checkitforme, branches staging/main). Full history kept.", area: "ops", agent: "devops", critical: false, status: "done" },
+  { id: "db-backups", title: "Database backups + tested restore", detail: "Railway snapshots exist on the prod volume; still need off-box copies (R2), staging coverage, and a documented TESTED restore.", area: "backend", agent: "devops", critical: true, status: "todo" },
+  { id: "error-monitoring", title: "Error monitoring + alerting on prod", detail: "Exception tracking + uptime alert (site-health only walks pages on demand). Owner gets pinged when prod throws or goes down.", area: "backend", agent: "devops", critical: true, status: "todo" },
+  { id: "posthog-live", title: "PostHog wired + verified capturing", detail: "Owner has the account — add the API key to Railway vars (staging + prod) and VERIFY events actually arrive from every page.", area: "backend", agent: "devops", critical: true, status: "todo" },
+  { id: "helicone-live", title: "Helicone set up + verified", detail: "LLM usage/cost tracking routed through Helicone and visible in its dashboard; needed before the support agents go live.", area: "backend", agent: "devops", critical: false, status: "todo" },
+  { id: "legal-consent", title: "Legal pages + call-recording consent", detail: "Real ToS + Privacy (the /p/privacy page currently 404s an asset), plus a reviewed consent/disclosure story for AI calls + recordings (TCPA / two-party states). Gates public marketing.", area: "ops", agent: "owner", critical: true, status: "todo" },
+  { id: "admin-redesign", title: "Admin matches the website design", detail: "Restyle app.html to the approved website comp/tokens (one design system) — after Design finishes the comp↔site gap analysis.", area: "frontend", agent: "design", critical: false, status: "todo" },
   { id: "deck-video", title: "Finalize the check deck + share video", detail: "Not critical for launch.", area: "ops", agent: "owner", critical: false, status: "todo" },
   { id: "analytics", title: "Analytics ready on production", detail: "The non-GA analytics tool (API key already set) is live on prod tracking every page, so we can see paths + optimize after launch.", area: "backend", agent: "devops", critical: true, status: "todo" },
   // DevOps-surfaced items (my lane) —

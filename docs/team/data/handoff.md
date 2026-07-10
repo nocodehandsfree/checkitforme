@@ -71,7 +71,7 @@ this wrong erodes user trust in the whole product. Data integrity ALWAYS wins.
   schema changes outside store tables (request from **DevOps**).
 
 ## Read (in order) — open only what you need
-1. `/HANDOFF.md` · `docs/shared/ARCHITECTURE.md`
+1. `/CLAUDE.md` · `docs/shared/ARCHITECTURE.md`
 2. **`docs/data/provenance.md`** — where ALL store data comes from + the one-source-of-truth rule
    (every surface reads the same DB rows). **Read this first** so you never introduce a parallel list.
 3. **`docs/data/store-schema.md`** — the full store-data reference: every collector field →
@@ -94,7 +94,7 @@ this wrong erodes user trust in the whole product. Data integrity ALWAYS wins.
   **Admin** (admin UI) or **Website** (consumer UI); you supply the rows + assets, they render.
 - **Loading data:** dry-run first (`tsx scripts/import-stores.ts <file> … --dry`), then the real run.
   Import is an idempotent upsert keyed on phone — safe to re-run; appending can't create dupes.
-- Work on the **staging** branch `claude/checkitforme-website-takeover-pagiis`; push = live at
+- Work on the **staging** branch `staging`; push = live at
   staging.checkitforme.com in ~3 min. Promote to prod by merging staging → prod.
 
 ## Roadmap (later)

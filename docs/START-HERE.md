@@ -5,15 +5,14 @@ Every folder below has a README that explains its contents **right on the folder
 | Folder | What lives there | Who it's for |
 |---|---|---|
 | `team/` | **One folder per agent**: `handoff.md` (stable lane) + `checkpoint.md` (current state, updated every "Checkpoint") | Each agent — your ONLY starting point |
-| `owner/` | `new-chat-prompts.md` (paste-ready chat starters) · `GUIDEBOOK.md` (business in plain English) | Fungie |
+| `owner/` | `new-chat-prompts.md` (paste-ready chat starters); business reference = the book (readme.com) | Fungie |
 | `shared/` | Code rules · architecture · **API contract** · runbook · gotchas | Everyone, only when a task needs it |
 | `design/` | **ALL design**: `brand/` (the logo) · `STYLE_GUIDE.md` (the look) · `comps/` (boards) · `copy/` (the voice) | Design, Website, Copy |
 | `specs/` | **Active builds only** — one file/folder per feature; ships → moves to `archive/` | The lanes building them |
 | `data/` | Store-data reference + `samples/` (raw .json/.csv kept apart from docs) | Data Dev |
 | `business/` | Roadmap | Owner + DevOps |
-| `finance/` | Cost model + calculator (deeper economics live on the prod branch: `CALL_ECONOMICS.md`, `CHECKPOINT.md`) | Owner + DevOps |
+| `finance/` | Cost model + calculator (`CALL_ECONOMICS.md` is in `business/` pending merge into `COST_MODEL.md`) | Owner + DevOps |
 | `archive/` | Done or superseded — "where did X go?" answers | Anyone |
-| `handoffs/` | ⚠️ Transition stubs only (old paths → `team/`), deleted after 2026-07-14 | Nobody new |
 
 ## The rules (what keeps this clean — DevOps enforces)
 1. **Docs root stays empty** except this file. Everything lives in a folder with a README.

@@ -61,7 +61,7 @@ control, and **tooltip.** You can't write good words for a tool you don't unders
 
 ## Where things live
 - **Brand + visual voice:** `docs/team/website/handoff.md` → `docs/design/STYLE_GUIDE.md` (colors, type, components).
-- **What the product does (so your words are true):** `HANDOFF.md`, `docs/business/ROADMAP.md`.
+- **What the product does (so your words are true):** `CLAUDE.md`, `docs/business/ROADMAP.md`.
 - **The premium "✔️+" feature names** you'll be selling: `docs/business/ROADMAP.md`.
 - **Brand pack / name:** `docs/design/brand/BRAND.md`.
 
@@ -71,3 +71,6 @@ friend texted it, not a brand?** If not, rewrite. That's the whole job.
 
 ---
 _New lane. Pair with Design (`design.md`) for anything visual; flag cross-lane changes to Admin/Web._
+
+## You also own the book
+All public/customer docs on readme.com (project Checkitforme, branch `v1.0` mirror). Publishing how-to: `how-to-publish.md` in this folder. The book is the customer-facing source of truth for how Check works + FAQs — keep it in lockstep with the real plans/pricing (`src/plans.ts` is code truth).

@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": { "node": ">=22" },
   "description": "Schedule natural-sounding calls to local retailers asking whether a product (e.g. Pokémon) arrived.",
   "scripts": {
     "dev": "tsx watch src/server.ts",

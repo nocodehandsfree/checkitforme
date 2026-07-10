@@ -262,7 +262,7 @@
   .wfmhead{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}
   .wfmname{font-size:15px;font-weight:800;color:#f3f3f7}
   .wfmdef{font-size:10.5px;font-weight:800;color:var(--green);background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);border-radius:7px;padding:2px 7px;margin-left:8px;white-space:nowrap}
-  .wfmacts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex:0 0 auto}
+  .wfmacts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex:1 1 100%;min-width:0}
   .wfmacts .ghost{display:inline-flex;align-items:center;gap:5px}
   .wfmtrash{color:var(--muted);padding:7px 9px}
   .wfmtrash:hover{color:var(--red)}
@@ -3775,7 +3775,7 @@ function renderWorkflowMgr(){
           ${wfmVoiceChips(wi,w)}
           <select onchange="wfmAddVoice(${wi},this.value)"><option value="">+ Add a voice…</option>${WFM_VOICES.map(v=>`<option value="${esch(v.id)}">${esch(v.name)}${v.cloned?' (cloned)':''}</option>`).join('')}</select></div>
         <div><label>Persona</label><select onchange="wfmSetField(${wi},'persona',this.value)">${wfmPersonaOpts(w.persona)}</select></div>
-        <div><label>Call lane <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· Delta = recorded clips, ~2.5¢</span></label><select onchange="wfmSetField(${wi},'lane',this.value)"><option value="charlie"${(w.lane||'charlie')!=='delta'?' selected':''}>Charlie · live agent</option><option value="delta"${w.lane==='delta'?' selected':''}>Delta · recorded clips</option></select></div>
+        <div><label>Call lane <span data-tip="Delta plays recorded clips read by a cheap classifier, about 2.5¢ a call. Charlie is the live agent on the whole call."></span></label><select onchange="wfmSetField(${wi},'lane',this.value)"><option value="charlie"${(w.lane||'charlie')!=='delta'?' selected':''}>Charlie · live agent</option><option value="delta"${w.lane==='delta'?' selected':''}>Delta · recorded clips</option></select></div>
       </div>
       ${wfmDeltaEditor(wi,w)}
     </div>`;
@@ -3793,12 +3793,12 @@ async function wfmSetField(wi,field,val){ const w=WF.list[wi]; if(!w) return; w[
 // Set-first flow: after a YES ask the set, then the type; after a NO ask the restock day.
 function wfmFu(w,slot){ const f=w&&w.followups&&w.followups[slot]; return Array.isArray(f)?f:[]; }
 function wfmDeltaEditor(wi,w){ if((w.lane||'charlie')!=='delta') return '';
-  const box=(slot,label,ph)=>`<div style="margin-top:8px"><span class="meta" style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-strong)">${label}</span><textarea rows="2" style="font-size:12.5px;margin-top:3px;width:100%" oninput="wfmGrow(this)" onchange="wfmSetFollowup(${wi},'${slot}',this.value)" placeholder="${esch(ph)}">${esch(wfmFu(w,slot).join('\n'))}</textarea></div>`;
-  return `<div class="wfmmeta" style="grid-template-columns:1fr;border-top:1px dashed var(--border);margin-top:2px;padding-top:10px">
-    <div><label>Delta follow-ups <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· one per line, rotated per call. {category} fills in. Blank = use the built-in defaults.</span></label>
-    ${box('set','After a YES: ask the set (first)','Oh nice! Do you know which set it is?')}
-    ${box('type','After the set: ask the product type','Gotcha, are those booster packs or tins?')}
-    ${box('no','On a NO: ask the restock day','Ah, no worries. What day do you usually get shipments in?')}
+  const box=(slot,label,ph)=>`<div style="margin-top:10px"><span class="meta" style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-strong)">${label}</span><textarea rows="2" style="font-size:12.5px;margin-top:3px;width:100%" oninput="wfmGrow(this)" onchange="wfmSetFollowup(${wi},'${slot}',this.value)" placeholder="${esch(ph)}">${esch(wfmFu(w,slot).join('\n'))}</textarea></div>`;
+  return `<div class="wfmmeta" style="grid-template-columns:1fr;border-top:1px dashed var(--border);margin-top:2px;padding-top:12px">
+    <div><label>Delta follow-ups <span data-tip="One per line, rotated per call like the openers. {category} fills in. Leave a box blank to use the built-in default."></span></label>
+    ${box('set','Set (asked first)','Oh nice! Which set is it?')}
+    ${box('type','Product type','Booster packs or a tin?')}
+    ${box('no','Restock day (on a no)','What day do you get shipments in?')}
     </div></div>`;
 }
 async function wfmSetFollowup(wi,slot,text){ const w=WF.list[wi]; if(!w) return; if(!w.followups||typeof w.followups!=='object') w.followups={}; const arr=(text||'').split('\n').map(x=>x.trim()).filter(Boolean); if(arr.length) w.followups[slot]=arr; else delete w.followups[slot]; await wfmSaveList(); toast('Follow-up saved'); }

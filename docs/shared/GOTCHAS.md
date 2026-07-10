@@ -24,19 +24,10 @@ worse than no comment. Several entries below started as wrong comments.)
   until `in-progress`.
 - **Dead air makes clerks hang up.** Use eager turn-taking + a soft-timeout filler so a slow turn says "I'm here!"
   instead of going silent.
-- **ABC / connect-on-human is a DB setting, not code — and a DB wipe silently turns it OFF.** `policy.flags.
-  connectOnHuman` (the cost lever — keep ElevenLabs/Charlie asleep through the tree+hold, wake only on the human)
-  defaults to `false` in code (`policy.ts`); the live value lives in the `policy_json` DB setting. The 2026-06 prod
-  wipe reset it to the code default → Charlie silently billed the **whole** call again (real data: avg 64s = 46s nav
-  **billed** + 28s talk). Same for `bail.enabled`. **Check `GET /api/policy` after ANY DB restore**; expected prod =
-  `connectOnHuman:true, bail.enabled:true`. The calculator's "Hybrid $0.07/min · running today" line is the benchmark
-  this must match.
-- **Mapping's learned time-to-human (`chains.avgTreeSeconds`) is NOT yet wired into live calls.** `buildRestockVars`
-  returns `dtmf/say/maxTalk` but not the timer, so ABC opens via a VAD **guess**, not the exact mapped second. Wiring
-  `connectAtSec = avgTreeSeconds` through `buildRestockVars`→`placeBridgeCall` makes voice-tree chains (CVS) open
-  deterministically. Until then, mapping the time-to-human doesn't pay off on the call itself.
-
-## Frontend (checkit.html)
+- **Connect-on-human is baked ALWAYS-ON in code now** (server.ts `connectOnHuman ?? true`, commit 480cacf) — no DB toggle can silently disable it anymore. But other policy flags (e.g. `bail.enabled`) still live in the `policy_json` DB setting: **check `GET /api/policy` after ANY DB restore.**
+- **Store logos have an owner-approved process — follow it, don't reinvent it.** Logos are the stores' brands; the owner signs off on how they look. `checkitforme.com/logo-wall` is the ultimate source of truth — logos FEED from that page. It + `docs/data/store-logos.md` ARE the process that finally worked — new logos go through it; never invent a new sizing approach or batch-resize existing approved logos.
+- **"Visual regression" = stale cache until proven otherwise.** Several "regressions" were device/SW cache (2026-07 hobby art). Hard-refresh / bump the SW cache version FIRST; reproduce fresh before touching code.
+- **Every user-facing string ships with its Spanish in the SAME commit.** ES gaps were caught late ~23 times (even the primary CTA). No literal strings — through `t()` with the ES value, same commit.
 - **iOS Safari only applies `<meta theme-color>` at PAGE LOAD** — a later JS change is ignored. The status-bar
   tint must be **baked into the served HTML** (server `?tone=` → `renderRunner`, `server.ts`). Also needs the
   device's "Allow Website Tinting" ON (default on).
@@ -44,8 +35,6 @@ worse than no comment. Several entries below started as wrong comments.)
   `viewport-fit=cover` (the body paints *under* the bar). That's why "Add to Home Screen" tints when web doesn't.
 
 ## Infra / branches
-- **GitHub defaults to `main` = the card app (dead for us).** voice-caller lives on two branches: staging
-  `…pagiis` (dev) and prod `…OcyMS` (promote target).
 - **`config.staging.on` is what makes the staging service behave as staging** — `true` on the
   voice-caller-staging service, `false` on prod. The code branches on it in ~20 spots (`server.ts`, `auth.ts`,
   `staging-sim.ts`): simulated calls, the staging login code, staging websocket host. Don't remove

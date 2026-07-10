@@ -1,79 +1,70 @@
 # Check - Mapping — CHECKPOINT (current state)
+## ▶ Next mission (owner, 2026-07-09) — first task in the new repo
+Map the REST of the stores using the new converging engine (it's deployed on prod). Optimize for the
+FASTEST path through each tree — earliest-accepted press/say time, barge-in shortcuts — not just
+reaching a human. Capture per-chain barge-in rules in the recipe (see docs/specs/call-metrics/brief.md).
 
-> **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
-> keep under ~80 lines: prune finished items (history lives in git commits, not here).
+> **Volatile — update at every "Checkpoint".** Newest on top, bullets not prose, under ~80 lines.
+> Prune finished items (history lives in git commits).
 
-## Carry-over (2026-07-07 — for the new repo)
-*(80-line cap waived for this section. Written because chat memory does NOT survive the repo move.)*
+## NOW — speed pass (the "other 50%")
+- **Owner mandate (this session):** reaching a human is only half. The other half is reaching them
+  **as fast as possible**, for EVERY store — press the digit / barge the word ("general" CVS-style) as
+  EARLY as the IVR accepts, not after the whole menu. "Mapping engine must reflect this."
+- **BUILT — converging optimizer** (`mapper.ts`): the optimize stage used to nibble one 5s cut per step
+  and stop. Now each barge step **binary-searches the earliest second the IVR still accepts** the
+  press/word (seed at midpoint of prev→this step, bisect until window ≤3s). Key correctness bit: a real
+  early-accept shows up as a **time gain**; "reached but no gain" = press was DROPPED and the recovery
+  brain saved it at the old time → treat as too-early, back off. Lock = **fastest proven**, not
+  first-reached. DTMF + voice both. Commit **8b422db** (staging, pushed) / cherry-pick **eb2e2a9** (prod
+  branch, NOT deployed).
+- **BLOCKED on owner decision:** prod push was auto-gated (production deploy needs explicit OK). Explained
+  to owner: Admin + consumer site + calling engine + recipe DB are the SAME production service — mapping
+  in Admin writes the prod DB the consumer app reads. Two separate actions: (1) **RUN a pass = no deploy**
+  (engine already live from #421) → only old 5s-nibble gains; (2) **ship the 1-file mapper upgrade = a
+  prod deploy** (zero consumer UI touched) → full convergence. Awaiting: run-now vs deploy-then-run.
+- **BEFORE snapshot captured** → `scratchpad/board_before.json` (73 locked). Slowest keypad (speed-pass
+  targets): Ralphs 126s(181 CA), Acme 112, Safeway 102, Costco 97, Menards 94, BJ's 90, Vons 87(CA),
+  Star Market 80, Meijer 75, Shaw's/Wegmans 73… Direct-ring chains already instant (Walmart 10, Kroger
+  10, Dollar General 0) — skip. **Do NOT touch CVS** (owner). Owe owner a before→after speed table.
+- **Timing:** daytime gate = 9am–8pm LOCAL; at session pause it was 18:43 PT / 21:43 ET → only west-coast
+  stores still open. Plan: west-coast slowest-first tonight, then schedule tomorrow-AM east→west.
+- Admin API: `https://admin.checkitforme.com`, header `x-admin-token: adm_e4f43d88c4b920740a41ee26a5253679`
+  (still valid). Start a chain: `POST /api/admin/mapper/start {chainId}`; poll `GET .../mapper/state`.
+  `trainer/list` is heavy (CF 524 on cold server — use `-m 100`).
 
-**Memory starts at:** my visible memory of this chat starts at the initial **Mapping Operator briefing**
-("You're the Mapping Operator for Check It For Me…" — biggest-first, tier 5→4→3 stop-at-3, East-Coast-first,
-pick a first store then run autonomously). It was one very long session; I don't believe a compaction summary
-was injected, so I can see the whole arc, but the earliest specifics are the least certain.
+## #1 TRAP (most important)
+- Auto-nav (gemini-flash-lite) **0-hammers** when it can't parse an option → FALSE "no human path".
+  **ALL 8 chains I once flagged "no operator" were callable once press-tested.** NEVER call a chain dead
+  from an auto-caller failure. Method: `POST trainer/document {chainId}` → read the FULL menu
+  (`menuPrompts`; greeting is long, human option often announced LAST) → identify associate/operator/CS
+  option → press-test (`reactivePress:{digit,max:2}` or `barge` + `confirm:true`) → `trainer/lock`.
 
-**#1 TRAP (most important):** the auto-nav (gemini-flash-lite) **0-hammers** when it can't parse an option →
-this produces FALSE "no human path / info-only" conclusions. **ALL 8 chains I flagged "no operator" were
-callable once press-tested.** NEVER declare a chain a dead end from an auto-caller failure. Reliable method:
-1) `POST /api/admin/trainer/document {chainId}` and read the FULL menu (all IVR steps + `menuPrompts`) — the
-greeting is long and the human option is often announced LAST (Burlington's "press 8" came AFTER an "invalid
-entry, goodbye" that cut my earlier captures short); listen through the whole loop, sometimes twice.
-2) identify the associate/operator/CS option. 3) press-test it: `reactivePress:{digit:N,max:2}` or
-`barge:{plan:[{action:"press",value:"N",at:sec}]}` with `confirm:true`. 4) lock via
-`POST /api/admin/trainer/lock {chainId,recipe,confidence}`.
+## Other traps (not in git)
+- STT **garbles digits** — don't trust the announced digit, press-test each candidate.
+- confirm-mode `REDIRECT_RE` misreads a clerk's "hold on"/"let me check" as a redirect → blocks a legit
+  lock (Kohl's, Wegmans hit this; a retry fixed it). Worth fixing.
+- nav false-fires "human" on a **recorded greeting** ("thank you for calling OfficeMax…") ~8-11s in.
 
-**Other traps (written nowhere):**
-- STT **garbles the digits** ("press 2 for associate" but 2 gave directions). Don't trust the announced/parsed
-  digit — press-test each candidate.
-- confirm-mode `REDIRECT_RE` mis-reads a real clerk's "hold on" / "let me check" as a redirect → blocks a legit
-  lock (Kohl's, Wegmans hit `review` this way; a retry converted them). Worth fixing.
-- nav false-fires "human" on a **recorded greeting** ("Hello, thank you for calling OfficeMax…") ~8-11s in — a
-  recording, not a person.
+## Chain human-paths found (DTMF)
+- TJX cluster TJ Maxx/HomeGoods/Marshalls = **press 4** ~14-44s. Marshalls **un-muted** this session.
+- Pick 'n Save = **press 7** ~20s. Blain's F&F = **press 2** ~57s. BJ's = press 3 (bakery) ~90s, no
+  general operator. Burlington = **press 1 (Eng) → press 8** — NOT a dead end (was wrongly flagged).
+- Meijer(64)/Menards(65) LOCKED but reach the **WRONG desk** — re-map now CS-targeting is live.
 
-**Chain human-paths found this session (DTMF — for dtmfShortcut/answerPath):**
-- TJX cluster TJ Maxx(79)/HomeGoods(7)/Marshalls(21) = **press 4** (store associate) ~14-44s. Marshalls was
-  **un-muted** this session (`PATCH /api/chains/21 {muted:false}`).
-- Pick 'n Save(69) = **press 7** (customer service) ~20s. Blain's F&F(40) = **press 2** (customer service) ~57s.
-- BJ's Wholesale(85) = **press 3** (bakery dept) ~90s slow; no general operator (7=receiving→voicemail).
-- Burlington(27) = **press 1 (English) → press 8** (speak with the store) ~78s. *NOT a dead end — I was wrong.*
-- Meijer(64,75s) & Menards(65,94s) are LOCKED but reach the **WRONG desk** (Meijer→corporate pickup-care,
-  Menards→random dept code), not CS — **re-map now that CS-targeting is live.**
+## PARTIAL / follow-up
+- Office Depot(67), Publix(70): reachable, no clean single DTMF → left to live AI caller. Family Dollar(28):
+  callable but store-INCONSISTENT — needs a known-good store from Data Dev.
+- **Drift-verify sweep NOT done** on pre-existing locked chains (original mandate). Mapper `verify` phase
+  does this — the speed pass's verify step doubles as the drift-check; fold them together.
 
-**PARTIAL / not locked — need follow-up:**
-- Office Depot(67): reachable (depts print/Tech/supplies/furniture + an "associate" sub-prompt) but NO clean
-  single DTMF — recording-heavy, multi-step, STT-scrambled. `navStatus=review`. Left to the live #421 AI caller.
-- Publix(70): auto-attendant "press 1 → 'all other service departments' press 5"; reachable but press-1→5
-  timing varies by store; barge test inconclusive. `navStatus=attempted`. Left to AI caller.
-- Family Dollar(28): Data Dev says callable ("press 1 for store personnel") but **store-INCONSISTENT** — 3 of my
-  test stores hit the corporate "your call cannot be transferred / use website" recording. Not locked. Needs a
-  known-good store/number from Data Dev.
-- **Drift-verify pass NOT DONE:** the original mandate said "verify locked ones for drift." I mapped unmapped
-  chains all day but never ran a systematic re-verify on the ~48 pre-existing locked chains. Mapper has a
-  `verify` phase for this — do a drift sweep in the new repo.
+## Owner rules / decisions
+- **Muted = never call. Period** (uncallable). **Kiosks ARE callable.** Chips independent & combine.
+- Don't invent tiers — `data/source/chain-scoring-2026-06/chain_scores_final.csv`. GameStop/TJX = tier 2.
+- Mapping Operator touches code only when owner directs (this session: the speed-convergence build +
+  promotion, by request). Done = demonstrated on staging w/ evidence; short testable contract before build;
+  replies outcome-first bullets. **Never push code while a call is live** (redeploy kills it).
 
-**UNSURE (verify in new repo):**
-- Do live consumer calls to *un-locked* chains (Office Depot, Publix) actually fall back to the #421 AI
-  navigator, or do they need a locked recipe? I claimed AI-caller handles them but did not verify the live path.
-- Locked recipes use fixed `atSec` press timings (e.g. Burlington press1@13/press8@40). Type-ahead should carry
-  them and recipe.ts may re-time, but I did NOT spot-check a live consumer call. Slow/dept paths (BJ's 90s,
-  Burlington 78s, Blain's 57s, conf 70-85) may ring long or vary by store.
-
-**Owner preferences / decisions (nowhere else):**
-- **Muted = never call. Period** — muted BECAUSE uncallable (call center / no store line / repack). No "sweep."
-- **Kiosks ARE callable** (kiosk mode). Chips (online/sellsPacks/hasKiosk/muted) are **independent & combine**.
-- Don't invent tier scores — `data/source/chain-scoring-2026-06/chain_scores_final.csv`, rubric
-  `docs/specs/scoring.md`. GameStop / TJX = tier 2 (over-MSRP).
-- Mapping Operator does **not touch code** unless the owner explicitly directs it (this session the owner had me
-  build + promote #421 by request). **NEW rule (from new repo on): done = demonstrated on staging with evidence;
-  a 5-10 line testable contract precedes any build; replies are outcome-first short bullets.**
-
-**State:** board = **74 chains locked** at chat end (session start 48; +26 net). Recipes live in the **prod DB**
-(retailers/chains), NOT git. #421 is LIVE on prod (fast-forwarded commit b3eddfc onto the prod branch) AND
-present in staging (this branch). Staging has since evolved (c55e46d direct-null-seconds fix, KNOWN_24H).
-Admin API: `https://admin.checkitforme.com`, header `x-admin-token: <ADMIN_TOKEN>`.
-
-**Waiting on:** nothing blocking. Data Dev to: un-flag Burlington (callable, press 1→8), stamp the DTMFs above,
-triage Family Dollar to a working store.
-
-## Current work
-- Session done. All callable tier-5/4/3 chains locked or handed to the AI caller; 74 locked. Next lane owner:
-  start with the **drift-verify sweep** + re-map the two wrong-desk chains (Meijer, Menards).
+## State
+- Board = **73 locked**. Recipes live in the **prod DB**, not git. Converging engine on staging; awaiting
+  owner OK to deploy to prod + run the speed pass west→ (east tomorrow AM).

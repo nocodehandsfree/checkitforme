@@ -45,3 +45,4 @@
   working/stocked?" instead of the shipment question. Spec: the kiosk spec in git history (`src/voice/prompts.ts`).
 
 When you finish something: move it to git history; leave Current focus set for the next chat.
+- **Owner ask 2026-07-07:** Chains page — add a collapse/roll-up control for the store list so the mapping area is reachable without scrolling forever.
