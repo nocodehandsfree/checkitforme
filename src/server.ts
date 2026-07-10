@@ -510,10 +510,10 @@ app.get("/logos/:file", (c) => {
     return c.body(buf, 200, { "Content-Type": ct });
   } catch { return c.notFound(); }
 });
-// Restructured logo folders (logos-restructure, 07-10): brand/ = Check marks, products/ = the four
+// Logo folders (logos-restructure, 07-10): brand/ = Check marks, products/ = the four
 // product-brand logos, pokemon/{eras,sets,banners} = the Pokémon set system (banners = the old
-// set-banners + sets/banners merged). The old flat routes above/below KEEP SERVING until the owner
-// OKs deleting the old copies — both trees are live during the migration.
+// set-banners + sets/banners merged). The pre-restructure flat tree (root-level marks, eras/,
+// sets/, set-banners/) and its routes were deleted after the owner's staging sign-off.
 for (const dir of ["brand", "products", "pokemon/eras", "pokemon/sets", "pokemon/banners"]) {
   app.get(`/logos/${dir}/:file`, (c) => {
     const send = (rel: string) => {
@@ -526,7 +526,7 @@ for (const dir of ["brand", "products", "pokemon/eras", "pokemon/sets", "pokemon
     const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
     try { return send(file); }
     catch {
-      // banners keep the old /logos/set-banners contract: a missing set banner serves the shared
+      // banners keep the old set-banners contract: a missing set banner serves the shared
       // Pokémon fallback so a card never shows a broken image; everything else 404s.
       if (dir === "pokemon/banners") { try { return send("_fallback.png"); } catch { return c.notFound(); } }
       return c.notFound();
@@ -543,37 +543,6 @@ app.get("/fonts/:file", (c) => {
     c.header("Cache-Control", "public, max-age=31536000, immutable");
     return c.body(buf, 200, { "Content-Type": "font/woff2" });
   } catch { return c.notFound(); }
-});
-// LEGACY Pokémon set-asset routes (pre logos-restructure). /pub/pokemon-sets now derives
-// /logos/pokemon/{sets,banners,eras} paths (routes above); these old routes keep serving the old
-// copies until the owner OKs deleting them. A missing set banner falls back to the shared Pokémon
-// banner (_fallback.png) so a card never shows a broken image; a missing logo 404s so the front
-// end renders its own text fallback.
-app.get("/logos/sets/:file", (c) => {
-  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
-  try {
-    const buf = readFileSync(join(here, `../public/logos/sets/${file}`));
-    c.header("Cache-Control", "public, max-age=86400");
-    return c.body(buf, 200, { "Content-Type": "image/png" });
-  } catch { return c.notFound(); }
-});
-app.get("/logos/eras/:file", (c) => {
-  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
-  try {
-    const buf = readFileSync(join(here, `../public/logos/eras/${file}`));
-    c.header("Cache-Control", "public, max-age=86400");
-    return c.body(buf, 200, { "Content-Type": "image/png" });
-  } catch { return c.notFound(); }
-});
-app.get("/logos/set-banners/:file", (c) => {
-  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
-  const send = (rel: string) => {
-    const buf = readFileSync(join(here, `../public/logos/set-banners/${rel}`));
-    c.header("Cache-Control", "public, max-age=86400");
-    return c.body(buf, 200, { "Content-Type": "image/png" });
-  };
-  try { return send(file); }
-  catch { try { return send("_fallback.png"); } catch { return c.notFound(); } }
 });
 app.get("/robots.txt", (c) => {
   const host = (c.req.header("host") || "").toLowerCase();
@@ -1083,7 +1052,7 @@ app.get("/logo-wall", async (c) => {
 });
 // Pokémon TCG set logos — the "swap-to" wall for the Hobby picker. Era pills → set cards
 // ([logo] · code · name · release), data-driven from data/pokemon-sets.json (data-dev's catalog)
-// + the downloaded logos in public/logos/sets/. QA page only; no auth (public logos + set names).
+// + the downloaded logos in public/logos/pokemon/sets/. QA page only; no auth (public logos + set names).
 app.get("/logo-wall/sets", async (c) => {
   const nslug = (x: any) => String(x || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
   // Asset lookup by set NAME (logos + dominant colour) from the full pokemontcg.io catalog — so
@@ -1235,27 +1204,6 @@ app.get("/logos/chains/:file", (c) => {
     return c.body(buf, 200, { "Content-Type": ext === "svg" ? "image/svg+xml" : ext === "webp" ? "image/webp" : "image/png" });
   } catch { return c.notFound(); }
 });
-// Pokémon TCG set logos (for /logo-wall/sets) — same static-serve pattern as chain logos.
-app.get("/logos/sets/:file", (c) => {
-  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
-  try {
-    const buf = readFileSync(join(here, `../public/logos/sets/${file}`));
-    const ext = file.split(".").pop()?.toLowerCase();
-    c.header("Cache-Control", "public, max-age=86400");
-    return c.body(buf, 200, { "Content-Type": ext === "svg" ? "image/svg+xml" : ext === "webp" ? "image/webp" : "image/png" });
-  } catch { return c.notFound(); }
-});
-// Full-art set BANNER images (key art) for /logo-wall/sets — drop <apiId>.jpg into public/logos/sets/banners/.
-app.get("/logos/sets/banners/:file", (c) => {
-  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
-  try {
-    const buf = readFileSync(join(here, `../public/logos/sets/banners/${file}`));
-    const ext = file.split(".").pop()?.toLowerCase();
-    c.header("Cache-Control", "public, max-age=86400");
-    return c.body(buf, 200, { "Content-Type": ext === "webp" ? "image/webp" : ext === "png" ? "image/png" : "image/jpeg" });
-  } catch { return c.notFound(); }
-});
-
 // ---- Chain logo upload + migration (logo-r2-keystone spec, git history) ----
 // Upload a chain's logo straight to shared R2 and point the chain row at it (logo_url). Server-side PUT
 // via a presigned URL — one request from the Admin. ?wide=1 / ?dark=1 set the render flags. After this
