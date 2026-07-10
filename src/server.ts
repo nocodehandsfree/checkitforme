@@ -716,7 +716,9 @@ setDeltaBarge(async (s, _speech) => {
       },
     });
     const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
-    return `<?xml version="1.0" encoding="UTF-8"?><Response><Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
+    // Stop the D-lane audio fork first — the bridge fans out the same audio to the same listen room,
+    // so leaving the fork running would double every frame in the listener's ear.
+    return `<?xml version="1.0" encoding="UTF-8"?><Response><Stop><Stream name="deltatap"/></Stop><Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   } catch (e) {
     console.error("[delta] barge setup failed", e);
     return null;
