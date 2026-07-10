@@ -7,7 +7,12 @@
   circular checkmark **as the C** + "heck" (that's the footer logo on the site). The mark alone =
   `docs/design/brand/check-brandmark.svg`. The favicon `public/logos/check-icon.png` is the APP ICON —
   never use it as an in-page logo. Full pack: `docs/design/brand/checkbrandpack.zip`.
-- **Deliver** new comps into `docs/design/comps/` (this chat can't always push — hand to the owner or a lane that can).
+- **Deliver straight to the repo — no downloads, no owner in the middle.** This chat has the
+  **"Claude design" connector** (a GitHub write server): read the guides with `get_file_contents`,
+  push finished comps into `docs/design/comps/` on branch `staging` with `create_or_update_file`
+  (pass the file's `sha` when updating), and reply with the commit link as proof. If a write fails,
+  show the exact error — do NOT hand files back to the owner as a workaround; the connector working
+  IS part of the job. (Ignore any other GitHub connector in the chat; only "Claude design" can write.)
 - Verify on `staging.checkitforme.com`. If the system doesn't cover something, propose it — don't guess.
 
 ## Current work
