@@ -31,7 +31,7 @@ import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MO
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
-import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, type Recipe } from "./calls/recipe";
+import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
 import { opsAlert, watchdogTick, watchdogState, backupTick, backupNow, backupState } from "./ops-watch";
 import { harvestHoursTick } from "./hours-harvest";
@@ -1403,6 +1403,19 @@ app.get("/pub/stores/near", async (c) => {
   const ringsDirectChain = new Set(chainRows.filter((x) => x.ringsDirect === true).map((x) => x.id));
   const treeMappedChain = new Set(chainRows.filter((x) => x.treeStatus === "learned" || x.treeStatus === "verified").map((x) => x.id));
   const READY_TYPES = new Set(["Hobby", "Thrift"]);
+  // Time-to-a-human for the consumer UI ("manage the expectation before the call"). Three honest
+  // states, EVIDENCE-only — never a guess: {kind:"direct"} = the chain is known to ring straight to a
+  // person · {kind:"menu", seconds} = mapped phone tree, seconds from the same guarded number the live
+  // call uses (connectAtSecFor — bogus/stray avgTreeSeconds can never leak here) · null = not mapped
+  // yet, the front-end shows nothing.
+  const chainById = new Map(chainRows.map((x) => [x.id, x]));
+  const reachFor = (chainId: number | null): { kind: "direct" } | { kind: "menu"; seconds: number } | null => {
+    const ch = chainId != null ? chainById.get(chainId) : null;
+    if (!ch) return null;
+    if (ch.navType === "direct" || ch.ringsDirect === true || ch.answerPath === "direct_human") return { kind: "direct" };
+    const s = connectAtSecFor(ch);
+    return s != null ? { kind: "menu", seconds: s } : null;
+  };
 
   let rows: (typeof retailers.$inferSelect)[];
   if (hasLoc) {
@@ -1485,6 +1498,7 @@ app.get("/pub/stores/near", async (c) => {
         online: r.online === true,
         isMSRP: r.chainId ? isMSRPByChain.get(r.chainId) !== false : true, // false = third-party, may exceed MSRP
         mapsUri: r.mapsUri || null,
+        reach: reachFor(r.chainId), // time-to-a-human: {kind:"direct"} | {kind:"menu",seconds} | null (unmapped → show nothing)
         miles, openState: openState(r.hours, r.timezone) };
     })
     .filter((r) => r.ownerOnly || !hasLoc || r.miles == null || r.miles <= radius) // owner-only store is never distance-filtered
