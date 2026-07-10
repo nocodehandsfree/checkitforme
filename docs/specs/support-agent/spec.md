@@ -1,64 +1,70 @@
-# Support agent — spec & contract (v1, awaiting owner sign-off)
-**What this is · who it's for:** the contract for the tiered support agent, written by Support from
-`brief.md`. Owner approves this BEFORE any build. Numbers are per-answer costs at today's list prices.
+# Support agent — spec & contract (v2, owner-approved ladder, building now)
+**What this is · who it's for:** the contract for the tiered support agent. v2 reflects the owner's
+decisions (2026-07-10): cheap tiers thoroughly vet before money is spent · NO emails from users —
+an escalation FORM sends the transcript to support@checkitforme.com · Discord deferred until Pops
+builds it · trouble-ticket system later.
 
 ## The end state (planned backwards)
-A visitor on any brand site — or a paid customer in Discord — asks a question and gets a correct,
-book-grounded answer in seconds for about half a cent. Hard questions silently ride up to a smarter
-model. Truly stuck ones land in the owner's inbox with the full transcript. Every well-answered
-question gets reviewed, approved, and folded back into the knowledge base, so tier 1 keeps getting
-smarter and escalations keep shrinking.
+A visitor on any brand site asks a question and gets a correct, book-grounded answer in seconds —
+usually for free, never for more than pennies. Hard questions silently ride up the ladder, each
+rung vetting before the next spends more. If even the top model can't fix it, the user fills out a
+short form; the transcript lands at support@checkitforme.com and in Admin. Every well-answered
+question gets reviewed, approved, and folded back into the knowledge base, so the free tiers keep
+absorbing more volume and the paid tiers keep shrinking.
 
 ## Contract — "done" means all of these are true
-1. Site chat: visitor asks "how do stock checks work" on any brand domain → correct book-grounded answer in under 5 seconds.
-2. Discord: paid customer asks the same in their support channel → same brain, same quality answer.
-3. Tier 1 can't answer (confidence gate fails) → conversation auto-escalates to the expensive model; the user never sees tier machinery.
-4. Tier 2 still stuck → full transcript emails support@checkitforme.com and the user is told a human will follow up.
-5. The agent never invents policy: every answer is grounded in retrieved book/KB passages; no grounding → escalate, never guess.
-6. Every resolved conversation lands in an Admin review queue; approved Q&As are embedded into qdrant and tier 1 uses them on the next ask.
-7. Repeat questions measurably stop escalating (the compounding loop works — visible in the dashboard).
-8. English and Spanish both work end to end (site copy ships both per copy law).
-9. Admin shows a support dashboard: volume, tier used, cost per answer, escalation rate.
-10. GTM items `support-agent` and `discord-support` close.
+1. Site chat: visitor asks "how do stock checks work" on any brand domain → correct book-grounded answer in seconds.
+2. Repeat of an approved question → served from the qdrant answer cache, $0, no model call.
+3. Ladder order holds: cache → free model → cheap paid → expensive; each rung runs only when the one below failed its confidence gate. User never sees tier machinery.
+4. Ladder exhausted (or user asks for a human) → short form (name · email · what's wrong) → full transcript emails support@checkitforme.com. No email address is ever shown; nobody can email us directly.
+5. The agent never invents policy: answers grounded in retrieved book/KB passages; no grounding → escalate, never guess.
+6. Every resolved conversation lands in an Admin review queue; approved Q&As embed into qdrant and serve as tier 0 on the next ask.
+7. English and Spanish both work end to end (all widget strings ship both, same commit).
+8. Admin endpoint reports: volume, tier that answered, cost per answer, escalation rate.
+9. Discord: ladder is exposed as one internal function so the Discord bot (Pops) plugs in later without rework.
+10. GTM item `support-agent` closes (`discord-support` stays open for the bot).
 
 ## The ladder — model + cost per answer
-All calls route through the existing `src/llm.ts` gateway (Helicone), same as everything else, so
-cost tracking is automatic. Anthropic provider is already wired in the admin agent.
+All calls route through the existing `src/llm.ts` gateway (Helicone) — cost tracking automatic.
+Models are env-configurable (`SUPPORT_MODEL_FREE/CHEAP/BIG`); defaults below run on keys funded TODAY.
+Anthropic key isn't on Railway yet, so the big tier defaults to GPT-4o and flips to Claude Opus by
+changing one env var once Anthropic is funded ("dial in the price piece" = tune this without code).
 
-| Tier | What | Model | Cost per answer |
+| Rung | What | Default model | Cost per answer |
 |---|---|---|---|
-| 1 | Chat + Discord, RAG over book/KB | Claude Haiku 4.5 ($1 in / $5 out per MTok) | **≈ $0.005** (~4K in incl. retrieved context, ~300 out; cached system prompt cuts it further) |
-| 2 | Escalated troubleshooting, multi-turn | Claude Sonnet 4.6 ($3/$15) | **≈ $0.15** per escalated conversation (~3 exchanges). Opus 4.8 option ($5/$25): ≈ $0.40 |
-| 3 | Email to support@ (human = owner) | none | **$0** model cost |
-| — | Embeddings + qdrant lookup | small embedding model; qdrant already on Railway | < $0.001/query, effectively free |
-| — | Knowledge loop (nightly digest of resolved convos → draft KB entries for review) | Haiku via Batch API (50% off) | pennies per day |
+| 0 | Answer cache (approved Q&As in qdrant) | none | **$0** |
+| 1 | Free model + RAG | gemini-2.5-flash-lite (free tier; already our call workhorse) | **≈ $0** |
+| 2 | Cheap paid retry + self-check | gpt-4o-mini ($0.15/$0.60 per MTok) — or claude-haiku-4-5 | **≈ $0.002** |
+| 3 | Big-model troubleshoot, multi-turn | gpt-4o today → claude-opus-4-8 when funded | **≈ $0.10–0.40** per escalated conversation |
+| 4 | Escalation form → email to support@ + Admin queue | none | **$0** |
+| — | Embeddings (index + per-query) | text-embedding-3-small ($0.02/MTok) via Helicone | < $0.001/query |
 
-**Blended:** if tier 1 handles 90% of volume (the design goal), average ≈ **$0.02 per answered question**.
-1,000 questions/month ≈ $20. The loop pushes this DOWN over time as tier 1 recall improves.
+**Per customer per month** (from the modeling the owner approved): typical ≈ **2–5¢**, heavy user with
+one gnarly issue ≈ **20¢**. Blended ≈ **$0.02 per answered question** at a 90% sub-big-tier hit rate,
+trending DOWN as the answer cache compounds.
 
 ## How it works (one paragraph per piece)
-- **Retrieval:** the book (readme.com source, branch `v1.0`) is chunked and embedded into qdrant.
-  Approved Q&A history is a second collection. Tier 1 retrieves top passages, answers ONLY from them.
-- **Confidence gate:** tier 1 self-reports whether the retrieved passages actually answer the
-  question. No → tier 2 with the same context. Tier 2 stuck or user asks for a human → tier 3 email.
-- **Surfaces:** one chat backend, two fronts — site widget (Webbie places it) and a Discord bot in
-  the paid-customers channel (Pops owns the bot token + hosting). Same session store, same ladder.
-- **Knowledge loop:** resolved conversations queue in Admin. Owner (or Copper) approves → embedded
-  into qdrant immediately. Recurring themes get flagged to Copper as candidates for the book itself —
-  the book stays canonical; the Q&A collection is the fast-moving layer on top.
-- **Guardrails:** paid-customer Discord only (per brief); site chat is public but rate-limited per
-  IP; no account actions in v1 (answers + escalation only — no refunds, no plan changes by the bot).
+- **Retrieval:** the book (branch `v1.0`, public) is fetched from GitHub, chunked per section, and
+  embedded into qdrant (`http://qdrant.railway.internal:6333`, already running — new `QDRANT_URL`
+  env var). Approved Q&A history is a second collection doubling as the tier-0 answer cache.
+- **Confidence gate:** each rung answers ONLY from retrieved passages and self-reports whether they
+  actually answer the question. Fail → next rung, same context. Big model fails or user asks for a
+  human → escalation form.
+- **Escalation form (no raw email):** name · email · description, prefilled context; submit sends
+  the transcript to support@checkitforme.com via Brevo (existing alerts pattern) and stores a ticket
+  row — the hook for the future trouble-ticket system.
+- **Surfaces:** one internal `answerSupport()` ladder; site widget now, Discord bot later (Pops).
+- **Knowledge loop:** resolved conversations queue in Admin; approve → embedded into qdrant
+  immediately. The book stays canonical; the Q&A collection is the fast-moving layer on top.
+- **Guardrails:** site chat public but rate-limited per IP; answers + escalation only — no account
+  actions, no refunds, no plan changes by the bot.
 
 ## Coordination
 - **Copper** — owns the book; approves KB entries that touch policy wording; gets flagged themes.
-- **Pops** — Discord bot + token, support@ email routing, qdrant service care, any new Railway vars.
-- **Webbie** — where the chat widget lives on the site; widget follows STYLE_GUIDE.
+- **Pops** — Discord bot (later), qdrant service care, `QDRANT_URL` + (staging) `BREVO_API_KEY` vars.
+- **Webbie** — chat widget placement; widget follows STYLE_GUIDE.
 
-## Build order (after owner sign-off)
-1. RAG pipeline: book → chunks → qdrant + retrieval endpoint (testable alone).
-2. Tier 1 answer engine + confidence gate behind one internal API.
-3. Site chat widget (EN/ES) → 4. Discord bot → 5. Email escalation → 6. Review queue + dashboard → 7. Loop live.
-
-## Open decisions (owner)
-- Tier 2 model: Sonnet (~$0.15/escalation) or Opus (~$0.40) — spec assumes Sonnet.
-- Review queue approver: owner only, or Copper can approve non-policy entries too?
+## Build order (in flight)
+1. RAG pipeline: book → chunks → qdrant + retrieval (admin reindex endpoint). 2. Ladder behind one
+internal function + public chat API. 3. Site widget EN/ES + escalation form → Brevo. 4. Review
+queue + stats endpoints. 5. Verify on staging against this contract.
