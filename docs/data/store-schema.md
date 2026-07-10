@@ -195,7 +195,7 @@ populate `carries` (the categories the store actually stocks) since that's what 
    slug, and (b) every active chain has a logo asset. Missing-logo chains → flag for an asset add.
 4. **General cleanup** — Places-sourced staleness (closed/relocated stores), unconfirmed carriers
    (Dunham's, Giant Eagle, Hibbett, HomeGoods, Ollie's, Tractor Supply, Wegmans, WinCo), and the
-   muted repack-only chains (Marshalls, TJ Maxx). See `data/stores-master/COVERAGE_REPORT.md`.
+   muted repack-only chains (Marshalls, TJ Maxx). See `docs/data/COVERAGE_REPORT.md`.
 
 ---
 

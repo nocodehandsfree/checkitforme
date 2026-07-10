@@ -1,7 +1,7 @@
 # Stores master dataset (collector drop, 2026-06-12; Places-junk scrub 2026-06-13)
 
 **101,953 callable US stores · 80 chains · audited clean** (0 bad/duplicate phones, 0 dupes).
-Parts are gzipped JSON arrays — `gunzip -k *.gz` to use. See COVERAGE_REPORT.md for gaps.
+Parts are gzipped JSON arrays — `gunzip -k *.gz` to use. Coverage gaps: `docs/data/COVERAGE_REPORT.md` (moved out of this data dir; the datasets stay here).
 
 **Places-junk scrub (2026-06-13):** removed 724 Google-Places text-search false positives —
 non-retail businesses that matched an ambiguous chain name (e.g. "Spencer's" → a Miami sculpture

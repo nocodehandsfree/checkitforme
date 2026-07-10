@@ -79,7 +79,7 @@ this wrong erodes user trust in the whole product. Data integrity ALWAYS wins.
    load a file. (This is also the doc handed to the planning chat for new data.)
 4. **`docs/data/scoring.md`** — the 1–5 tier rubric (`retailers.tier`), derived from the owner's
    scoring package now committed at `data/source/chain-scoring-2026-06/`.
-5. `data/stores-master/README.md` + `COVERAGE_REPORT.md` · `docs/shared/STOCK_AND_GEO_API.md` (store shapes)
+5. `data/stores-master/README.md` + `docs/data/COVERAGE_REPORT.md` · `docs/shared/STOCK_AND_GEO_API.md` (store shapes)
 6. The `retailers`/`chains` tables in `src/db/schema.ts` · `src/stores-import.ts`
 
 ## How you access files & keep the lane clean (process)

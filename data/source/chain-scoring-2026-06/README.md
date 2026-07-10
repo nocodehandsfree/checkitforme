@@ -7,11 +7,15 @@ the canonical rubric and the per-chain values live here; the live numbers are de
 > Until now this package lived only as an upload outside the repo. That's why the scoring rubric
 > "wasn't anywhere" when someone went looking. It is now version-controlled. **Do not delete.**
 
-## Files (as delivered)
+## Files
+The **data** (CSVs) lives here; the **written specs** (the two `.md` docs) moved to `docs/data/` so
+prose lives with the docs and this dir stays data-only. The CSVs are read by code
+(`src/server.ts` reads `chain_scores_final.csv`) and never move.
+
 | File | Rows | What it is |
 |---|---|---|
-| `SCORING_MODEL_spec.md` | — | **The Fungibles Score, v4** — the definitive 1–5 tier rubric (the gate, the five tiers, the variables, the formula, worked examples, channel tags). |
-| `DEV_HANDOFF_final.md` | — | Import instructions + baked-in status fixes + the kiosk reconciliation rule + confirmed distributors + display-name changes. |
+| → `docs/data/SCORING_MODEL_spec.md` | — | **The Fungibles Score, v4** — the definitive 1–5 tier rubric (the gate, the five tiers, the variables, the formula, worked examples, channel tags). |
+| → `docs/data/DEV_HANDOFF_final.md` | — | Import instructions + baked-in status fixes + the kiosk reconciliation rule + confirmed distributors + display-name changes. |
 | `chain_scores_final.csv` | 85 chains | Per-chain `tier_1_5`, `tier_name`, `channel`, `ownership_model`, `distributor`, `visibility`, store count, `has_kiosk`, `kiosk_status`, `score_note`. |
 | `chain_logistics_merged.csv` | 22 chains | Per-chain `shipment_day` + dated evidence + source URL + phone-tree note. |
 | `chain_products_merged.csv` | 264 rows | Per-(chain × product) `status`, `evidence_tier`, `evidence_date`, `evidence_source`, `note`. |
@@ -34,5 +38,5 @@ is the upstream source it was derived from.
 ## Re-applying / refreshing the scores
 To restamp chain tiers from `chain_scores_final.csv`, map `chain_name_exact` → the `chains` row and
 set `retailers.tier` on its stores (importer `tier` field, or a bulk admin patch). `chain_name_exact`
-is the join key; mind the display-name changes in `DEV_HANDOFF_final.md` (e.g. "Hallmark Gold Crown"
+is the join key; mind the display-name changes in `docs/data/DEV_HANDOFF_final.md` (e.g. "Hallmark Gold Crown"
 → "Hallmark") — keep the old DB string mapped underneath.

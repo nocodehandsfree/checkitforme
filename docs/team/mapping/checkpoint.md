@@ -29,8 +29,9 @@ reaching a human. Capture per-chain barge-in rules in the recipe (see docs/specs
   10, Dollar General 0) — skip. **Do NOT touch CVS** (owner). Owe owner a before→after speed table.
 - **Timing:** daytime gate = 9am–8pm LOCAL; at session pause it was 18:43 PT / 21:43 ET → only west-coast
   stores still open. Plan: west-coast slowest-first tonight, then schedule tomorrow-AM east→west.
-- Admin API: `https://admin.checkitforme.com`, header `x-admin-token: adm_e4f43d88c4b920740a41ee26a5253679`
-  (still valid). Start a chain: `POST /api/admin/mapper/start {chainId}`; poll `GET .../mapper/state`.
+- Admin API: `https://admin.checkitforme.com`, header `x-admin-token: <ADMIN_TOKEN>` (owner rule:
+  secrets in memory/secret-store only, never in files — get the live token from the owner).
+  Start a chain: `POST /api/admin/mapper/start {chainId}`; poll `GET .../mapper/state`.
   `trainer/list` is heavy (CF 524 on cold server — use `-m 100`).
 
 ## #1 TRAP (most important)

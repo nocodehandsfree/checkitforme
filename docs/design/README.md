@@ -5,6 +5,7 @@
 | `STYLE_GUIDE.md` | The look: type, color, spacing, raised/carved depth system, components. References the one comp + the copy voice; they reference back. |
 | `comps/` | The one approved design board: `NEW_CHECK_COMPS.dc.html` (the visual comp). View: `tsx scripts/render-comps.ts board`. See `comps/README.md`. (The old `NEW_CHECK_COMPS.html` bundle is retired to `docs/archive/`.) |
 | `copy/` | `COPY_STYLE_GUIDE.md` — the voice: how we write. Owns every customer-facing string. |
+| `emails/` | Rendered email design mocks (the look). Email **build specs** live in `specs/alerts/`. |
 
 Live-vs-comp proof (screenshots of the shipped `?skin=v2` site next to each spec): `../specs/design-gap/inventory.html`.
 

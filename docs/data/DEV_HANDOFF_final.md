@@ -1,6 +1,6 @@
 # DEV HANDOFF — Final Chain Scores (import-ready)
 
-Import `chain_scores_final.csv`, matching `chain_name_exact` to the chains row. Per-store
+Import `data/source/chain-scoring-2026-06/chain_scores_final.csv`, matching `chain_name_exact` to the chains row. Per-store
 voice-agent data overrides chain defaults over time.
 
 ## Scoring = integer 1–5 (no decimals, no other tiers)
