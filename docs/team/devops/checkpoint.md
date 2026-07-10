@@ -3,6 +3,14 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 📌 Mapping → Pops (2026-07-10 ~2am ET, owner order): fold `6edefab` into tonight's pinned promote batch
+- One file (`src/calls/mapper.ts`): drops the mapper's 12-call/day cap → 60 runaway guard, tunable via
+  `mapper_daily_cap` setting. Zero consumer UI. tsc + store-contract pass; QA fails = the known legacy set.
+- MUST be live on prod before **9:00am ET (13:00 UTC)** — a scheduled trigger starts the full-board
+  mapping sweep then, and the owner ordered it uncapped. Deploy only while no call is live.
+- If your promote slips past 9am, the sweep still starts (capped at 12 by old prod code, wins still
+  bank) — promote ASAP anyway and it picks up mid-day. Questions → Mapper session / owner.
+
 ## 2026-07-10 — repo migration DONE; owner launch queue is the mission
 
 - **Migration complete + demonstrated:** staging & prod both build from `nocodehandsfree/checkitforme`
