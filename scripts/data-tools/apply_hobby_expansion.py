@@ -39,16 +39,24 @@ def is_bigbox_or_kiosk(name):
     if KIOSK_RE.search(name or ""): return True
     return any(n == b or n.startswith(b + " ") for b in BIGBOX)
 
+import tempfile
 def req(method, path, data=None):
     cmd = ["curl", "-s", "--max-time", "180", "-X", method,
            "-H", f"x-admin-token: {TOK}", "-H", f"User-Agent: {UA}"]
+    tmp = None
     if data is not None:
-        cmd += ["-H", "content-type: application/json", "-d", json.dumps(data)]
+        # body via @file — large batches overflow argv ("Argument list too long")
+        tmp = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+        json.dump(data, tmp); tmp.close()
+        cmd += ["-H", "content-type: application/json", "--data-binary", "@" + tmp.name]
     cmd.append(BASE + path)
-    for _ in range(4):
-        out = subprocess.run(cmd, capture_output=True, text=True).stdout
-        try: return json.loads(out)
-        except Exception: time.sleep(2)
+    try:
+        for _ in range(4):
+            out = subprocess.run(cmd, capture_output=True, text=True).stdout
+            try: return json.loads(out)
+            except Exception: time.sleep(2)
+    finally:
+        if tmp: os.unlink(tmp.name)
     raise SystemExit("api not responding")
 
 def norm(p):
@@ -74,13 +82,28 @@ while True:
     if len(rows) < 20000: break
 print("existing phones:", len(allphones), "| existing hobby-family addresses:", len(alladdr))
 
+def normalize(rec):
+    """WPN records carry a single postalAddress string + phoneNumber; parse into our shape."""
+    if rec.get("postalAddress") and not rec.get("address"):
+        parts = [p.strip() for p in rec["postalAddress"].split(",") if p.strip()]
+        if len(parts) >= 5:
+            rec["country"] = parts[-1]; rec["zip"] = re.sub(r"\D", "", parts[-2])[:5]
+            rec["state"] = parts[-3]; rec["city"] = parts[-4]
+            rec["address"] = ", ".join(parts[:-4])
+        rec["phone"] = rec.get("phoneNumber")
+    return rec
+
 drops = {k: 0 for k in ("no_store", "bigbox_kiosk", "non_us", "no_phone", "toll_free", "bad_state",
                         "no_name", "no_address", "dupe_phone", "dupe_address")}
 seen = set(); seen_addr = set(); out = []
-for line in open(SRC):
-    try: rec = json.loads(line)
+srclines = []
+for fn in SRC.split(","):
+    fn = fn.strip()
+    if fn and os.path.exists(fn): srclines += open(fn).readlines()
+for line in srclines:
+    try: rec = normalize(json.loads(line))
     except Exception: continue
-    if rec.get("skip") or not rec.get("name"): drops["no_store"] += 1; continue
+    if rec.get("_pt_done") or rec.get("skip") or not rec.get("name"): drops["no_store"] += 1; continue
     if is_bigbox_or_kiosk(rec.get("name")): drops["bigbox_kiosk"] += 1; continue
     country = (rec.get("country") or "US").upper()
     st = (rec.get("state") or "").strip().upper()
