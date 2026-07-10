@@ -58,6 +58,17 @@
   182 same-address/different-phone DUPES (phone-only dedupe would have double-listed them — big trap),
   2 toll-free 1-800 call-center numbers (not a human at THAT store), 13 Canadian. Tools:
   `expand_{goodwill,savers,salvationarmy}.py` → `apply_thrift_expansion.py --apply`.
+- **Hobby COUNT expansion — cardshophub re-swept 2026-07-10, 0 net-new (source EXHAUSTED).** Harvested
+  all 6,669 shop pages (`harvest_cardshophub.py`, clean Store JSON-LD). Gated result: **2,365 big-box
+  (GameStop alone 2,214 — NEVER re-chain per rule) + kiosks dropped, 4,038 already ours by phone, 248
+  no phone, 0 truly-new independents.** Our 4,119 Independent Card Shop already captures every callable
+  independent cardshophub lists. Reusable big-box/kiosk filter now in `apply_hobby_expansion.py` for
+  future directory sweeps. **To grow hobby further we need NEW sources** (other directories, or paid
+  WebSearch metro sweeps — spend-gated).
+- **NEXT expansion sources (all need a decision):** thrift = new CHAINS not yet in DB (Habitat ReStore
+  ~900 US, Buffalo Exchange, Plato's Closet / Once Upon a Child, St. Vincent de Paul, ARC) — each a fresh
+  locator harvest + a new chip/logo (owner's brand lane). hobby = other shop directories or WebSearch
+  metro sweeps (org spend — owner approval). The 3 big thrift chains + cardshophub are now fully mined.
 - **Env facts (verified):** python urllib AND headless Chromium are proxy-blocked here; Google/Bing/DDG
   bot-block curl. Free direct-Google scraping is impossible from this box — that's owner's-local only.
 - **PROD front-end BEHIND staging — needs a promote (not my lane to deploy; flagged to owner):** the `type`

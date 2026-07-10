@@ -23,6 +23,21 @@ US = {'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA'
 TOLLFREE = {"800", "888", "877", "866", "855", "844", "833", "822"}
 HOBBY_CHAINS = {"Independent Card Shop", "Comic Book Shop", "Burbank Sportscards", "PokeMall TCG",
                 "Cards and Coffee", "Cash Cards Unlimited", "CoreTCG", "LA Sports Cards"}
+# Big-box / franchise brands cardshophub lists because they stock TCG — NEVER import these as
+# "Independent Card Shop" (checkpoint rule: never re-chain big-box from directories). They belong to
+# their own chains (handled separately) or not at all.
+BIGBOX = ["gamestop", "game x change", "gamexchange", "vintage stock", "entertainmart",
+          "media reload", "2nd & charles", "barnes & noble", "books-a-million", "target",
+          "walmart", "wal-mart", "meijer", "kroger", "five below", "walgreens", "cvs pharmacy",
+          "costco", "sam's club", "bj's wholesale", "best buy", "hot topic", "f.y.e",
+          "disc replay", "disc traders", "book-off", "kohl's", "macy's"]
+# Unstaffed vending machines / kiosks — no human at the location to answer a stock call.
+KIOSK_RE = re.compile(r"vending\s*machine|\bkiosk\b|fan stand|fanatics stand", re.I)
+def is_bigbox_or_kiosk(name):
+    # prefix match (not arbitrary substring) so "On Target Cards" isn't caught by "target"
+    n = (name or "").strip().lower()
+    if KIOSK_RE.search(name or ""): return True
+    return any(n == b or n.startswith(b + " ") for b in BIGBOX)
 
 def req(method, path, data=None):
     cmd = ["curl", "-s", "--max-time", "180", "-X", method,
@@ -59,13 +74,14 @@ while True:
     if len(rows) < 20000: break
 print("existing phones:", len(allphones), "| existing hobby-family addresses:", len(alladdr))
 
-drops = {k: 0 for k in ("no_store", "non_us", "no_phone", "toll_free", "bad_state",
+drops = {k: 0 for k in ("no_store", "bigbox_kiosk", "non_us", "no_phone", "toll_free", "bad_state",
                         "no_name", "no_address", "dupe_phone", "dupe_address")}
 seen = set(); seen_addr = set(); out = []
 for line in open(SRC):
     try: rec = json.loads(line)
     except Exception: continue
     if rec.get("skip") or not rec.get("name"): drops["no_store"] += 1; continue
+    if is_bigbox_or_kiosk(rec.get("name")): drops["bigbox_kiosk"] += 1; continue
     country = (rec.get("country") or "US").upper()
     st = (rec.get("state") or "").strip().upper()
     if country not in ("US", "USA", "UNITED STATES") or st not in US:
