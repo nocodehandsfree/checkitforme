@@ -41,6 +41,10 @@ const CHAINS = [
 ].map(([id, name, before, notBefore, prio]) => ({ id, name, before, notBefore, prio, done: false }));
 
 const RETARGET = new Set([64, 65]); // Meijer, Menards → aim at customer service before mapping
+// Resume support: SKIP="64,36,..." marks chains already completed in a previous (killed) run.
+for (const id of (process.env.SKIP || "").split(",").map(Number).filter(Boolean)) {
+  const c = CHAINS.find((x) => x.id === id); if (c) c.done = true;
+}
 const CHAIN_TIMEOUT_MIN = 55;       // 12-call cap × (150s call + 75s gap) ≈ 45 min worst case
 const HARD_STOP_ET = 22 * 60 + 30;  // 10:30pm ET — nothing is open past 8pm local anywhere by then
 
@@ -63,7 +67,8 @@ while (CHAINS.some((c) => !c.done)) {
       line({ event: "retarget", chain: c.name, res: t });
     }
     const start = await api("POST", "/api/admin/mapper/start", { chainId: c.id });
-    if (!start.started) { line({ event: "start-refused", chain: c.name, id: c.id, error: start.error }); continue; }
+    // "already mapping" = an orphaned run from a killed driver — adopt it (poll to completion) rather than skip.
+    if (!start.started && !/already mapping/i.test(start.error || "")) { line({ event: "start-refused", chain: c.name, id: c.id, error: start.error }); continue; }
     line({ event: "chain-start", chain: c.name, id: c.id, before: c.before, benchmark: start.benchmark });
     const deadline = Date.now() + CHAIN_TIMEOUT_MIN * 60 * 1000;
     let last = null;
