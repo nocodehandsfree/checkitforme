@@ -7,7 +7,24 @@
 > Clean split with the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/the body wash), **I own
 > view/mode/nav**. Don't blind-edit the tint — it's fragile.
 
-## ▶ Doing now — owner UI-polish pass on staging (screenshot-driven)
+## ▶ Doing now — public/logos restructure (07-10, COPY-first protocol)
+- **Inventory DONE.** DB (staging+prod identical): chains.logoUrl = 96 R2 URLs (logos.fungibles.com), 10
+  relative `/logos/chains/…`, 23 null (filesystem resolver, also chains/). NO DB row references root-level
+  `/logos/<file>`, sets/, eras/, or set-banners — set/era paths are derived server-side from set codes
+  (`/pub/pokemon-sets`), no DB fields. → chains/ = DB-referenced (does NOT move); everything else = code-only.
+- **Fun store row** (chain "Fungibles", id 120 both envs) points at R2 `chain-logos/fungibles.png`, not a
+  repo file. Repo `chains/fungibles.png` is only its filesystem fallback. Plan: copy → `chains/fun.png`,
+  extend PATCH /api/chains/:id to accept logoUrl, repoint staging row → `/logos/chains/fun.png` after
+  deploy; prod row repoint only AFTER promote. fungibles-64/-f/root fungibles.png = unreferenced relics
+  (root one appears in a CSS comment only). Root `pokemon.png` + `checkitforme.png` also code-unreferenced.
+- **New structure (copies, old paths keep serving):** logos/brand/ (all Check marks), logos/products/
+  (pokemon onepiece topps needoh), logos/pokemon/{eras,sets,banners} (banners = set-banners + sets/banners
+  merged; only stem overlap `_fallback` but .png vs .jpeg so no collision). New server routes added
+  alongside old. SW is RETIRED (self-destruct stub, no precache) — no cache version to bump; manifest icon
+  gets ?v bump instead.
+- **DELETE NOTHING until owner OK** — old copies AND fungibles originals both wait for the gate.
+
+## ▶ Paused — owner UI-polish pass on staging (screenshot-driven)
 Rapid back-and-forth: owner screenshots staging, I fix, push, he re-verifies. All staging until he confirms,
 then I port to prod. Keep replies outcome-first.
 

@@ -296,7 +296,7 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   const cat = (q.cat || brand.category || "cards").slice(0, 60);
   const plainName = brand.name.replace(/<[^>]+>/g, "");
   // In-stock share: just the brand mark + two punchy lines (no "is it in stock?" hero, "Found!" pill, or "powered by").
-  const ogImage = inStock ? `https://${host}/logos/check-mark.png` : `https://${host}/og/${brand.key}.png`;
+  const ogImage = inStock ? `https://${host}/logos/brand/check-mark.png` : `https://${host}/og/${brand.key}.png`;
   const site = `https://${host}/`;
   const title = inStock ? `🔥 ${store}` : `👀 ${store}: watching for ${cat}`;
   const desc = inStock
@@ -500,6 +500,29 @@ app.get("/logos/:file", (c) => {
     return c.body(buf, 200, { "Content-Type": ct });
   } catch { return c.notFound(); }
 });
+// Restructured logo folders (logos-restructure, 07-10): brand/ = Check marks, products/ = the four
+// product-brand logos, pokemon/{eras,sets,banners} = the Pokémon set system (banners = the old
+// set-banners + sets/banners merged). The old flat routes above/below KEEP SERVING until the owner
+// OKs deleting the old copies — both trees are live during the migration.
+for (const dir of ["brand", "products", "pokemon/eras", "pokemon/sets", "pokemon/banners"]) {
+  app.get(`/logos/${dir}/:file`, (c) => {
+    const send = (rel: string) => {
+      const buf = readFileSync(join(here, `../public/logos/${dir}/${rel}`));
+      const ext = rel.split(".").pop()?.toLowerCase();
+      const ct = ext === "png" ? "image/png" : ext === "svg" ? "image/svg+xml" : ext === "webp" ? "image/webp" : "image/jpeg";
+      c.header("Cache-Control", "public, max-age=86400");
+      return c.body(buf, 200, { "Content-Type": ct });
+    };
+    const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
+    try { return send(file); }
+    catch {
+      // banners keep the old /logos/set-banners contract: a missing set banner serves the shared
+      // Pokémon fallback so a card never shows a broken image; everything else 404s.
+      if (dir === "pokemon/banners") { try { return send("_fallback.png"); } catch { return c.notFound(); } }
+      return c.notFound();
+    }
+  });
+}
 // Self-hosted webfonts (Inter variable) — Google Fonts is unreachable for users behind DNS
 // ad-blockers, and the design only reads as the design in Inter. One origin, one file.
 app.get("/fonts/:file", (c) => {
@@ -511,11 +534,11 @@ app.get("/fonts/:file", (c) => {
     return c.body(buf, 200, { "Content-Type": "font/woff2" });
   } catch { return c.notFound(); }
 });
-// Pokémon set assets — same repo/logo-wall system as chains, dropped by the logo lane at the exact
-// paths /pub/pokemon-sets derives from each set code: set logo -> /logos/sets/<logoKey>.png, set
-// banner -> /logos/set-banners/<logoKey>.png, era logo -> /logos/eras/<era-slug>.png. All PNG. A
-// missing set banner falls back to the shared Pokémon banner (_fallback.png) so a card never shows a
-// broken image; a missing logo 404s so the front end renders its own text fallback.
+// LEGACY Pokémon set-asset routes (pre logos-restructure). /pub/pokemon-sets now derives
+// /logos/pokemon/{sets,banners,eras} paths (routes above); these old routes keep serving the old
+// copies until the owner OKs deleting them. A missing set banner falls back to the shared Pokémon
+// banner (_fallback.png) so a card never shows a broken image; a missing logo 404s so the front
+// end renders its own text fallback.
 app.get("/logos/sets/:file", (c) => {
   const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
   try {
@@ -930,7 +953,7 @@ app.get("/logo-wall", async (c) => {
   //    "take up the box, be the main attraction"): these are wordmark logos, not 52px store marks.
   //    Grouped by era; a set with no logo file yet shows a striped gap so the wall reveals what's missing.
   const listPng = (dir: string) => { try { return new Set(readdirSync(join(here, dir)).filter((f) => /\.png$/i.test(f))); } catch { return new Set<string>(); } };
-  const setLogoFiles = listPng("../public/logos/sets"), eraLogoFiles = listPng("../public/logos/eras"), bannerFiles = listPng("../public/logos/set-banners");
+  const setLogoFiles = listPng("../public/logos/pokemon/sets"), eraLogoFiles = listPng("../public/logos/pokemon/eras"), bannerFiles = listPng("../public/logos/pokemon/banners");
   const pslug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   let pokeEras: Array<{ era: string; slug: string; hasEra: boolean; sets: Array<{ code: string; name: string; key: string; has: boolean; banner: boolean }> }> = [];
   try {
@@ -942,11 +965,11 @@ app.get("/logo-wall", async (c) => {
   const pokeSection = pokeEras.length ? `
   <div id="pokeArea" hidden>
     <h2>Pokémon set tiles · ${pokeSetCount} sets</h2>
-    <div class="sub">The exact composite the hobby wall renders — set art (<code>/logos/set-banners</code>) with the set logo (<code>/logos/sets</code>) raised on top, area-normalized. Grouped by era.</div>
+    <div class="sub">The exact composite the hobby wall renders — set art (<code>/logos/pokemon/banners</code>) with the set logo (<code>/logos/pokemon/sets</code>) raised on top, area-normalized. Grouped by era.</div>
     ${pokeEras.map((e) => `
-    <div class="pera">${e.hasEra ? `<img src="/logos/eras/${e.slug}.png?v=73" alt="">` : ""}<span class="en">${esc(e.era)}</span><span class="ec">${e.sets.filter((s) => s.has).length}/${e.sets.length}</span></div>
+    <div class="pera">${e.hasEra ? `<img src="/logos/pokemon/eras/${e.slug}.png?v=73" alt="">` : ""}<span class="en">${esc(e.era)}</span><span class="ec">${e.sets.filter((s) => s.has).length}/${e.sets.length}</span></div>
     <div class="pgrid">${e.sets.map((s) => s.has
-      ? `<div class="pset"><div class="ptile">${s.banner ? `<img class="pbg" src="/logos/set-banners/${s.key}.png?v=73" alt="">` : ""}<img class="plogo" src="/logos/sets/${s.key}.png?v=73" alt="" onload="pnorm(this)"></div><div class="pnm">${esc(s.code)}<span>${esc(s.name)}</span></div></div>`
+      ? `<div class="pset"><div class="ptile">${s.banner ? `<img class="pbg" src="/logos/pokemon/banners/${s.key}.png?v=73" alt="">` : ""}<img class="plogo" src="/logos/pokemon/sets/${s.key}.png?v=73" alt="" onload="pnorm(this)"></div><div class="pnm">${esc(s.code)}<span>${esc(s.name)}</span></div></div>`
       : `<div class="pset"><div class="ptile pmiss"><span class="pcode">${esc(s.code)}</span></div><div class="pnm" style="opacity:.5">${esc(s.code)}<span>no logo yet</span></div></div>`).join("")}</div>`).join("")}
   </div>` : "";
   return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1054,7 +1077,7 @@ app.get("/logo-wall/sets", async (c) => {
   const logoByName = new Map<string, string | null>();
   let catalog: any = { eras: [] };
   try {
-    catalog = JSON.parse(readFileSync(join(here, "../public/logos/sets/_catalog.json"), "utf8"));
+    catalog = JSON.parse(readFileSync(join(here, "../public/logos/pokemon/sets/_catalog.json"), "utf8"));
     for (const e of catalog.eras || []) for (const s of e.sets || []) logoByName.set(nslug(s.name), s.logoFile);
   } catch { /* not built yet */ }
   // Data source: prefer website-dev's expanded feed catalog (data/pokemon-sets.json) the moment it
@@ -1074,9 +1097,9 @@ app.get("/logo-wall/sets", async (c) => {
   const logoOf = (s: any) => s.logoFile || logoByName.get(nslug(s.name)) || null;
   // Real banner key-art in public/logos/sets/banners/<name>.<ext>; else the shared Pokémon fallback.
   let bannerFiles = new Set<string>();
-  try { bannerFiles = new Set(readdirSync(join(here, "../public/logos/sets/banners")).filter((f) => /\.(jpe?g|png|webp)$/i.test(f))); } catch { /* none yet */ }
+  try { bannerFiles = new Set(readdirSync(join(here, "../public/logos/pokemon/banners")).filter((f) => /\.(jpe?g|png|webp)$/i.test(f))); } catch { /* none yet */ }
   const bannerFor = (s: any) => { for (const k of [nslug(s.name), nslug(s.code), nslug(s.apiId)]) { if (!k) continue; for (const ext of ["jpeg", "jpg", "png", "webp"]) if (bannerFiles.has(k + "." + ext)) return k + "." + ext; } return null; };
-  const fallbackBanner = bannerFiles.has("_fallback.jpeg") ? "/logos/sets/banners/_fallback.jpeg" : null;
+  const fallbackBanner = bannerFiles.has("_fallback.jpeg") ? "/logos/pokemon/banners/_fallback.jpeg" : null;
   const totalSets = eras.reduce((n, e) => n + e.sets.length, 0);
   const withLogo = eras.reduce((n, e) => n + e.sets.filter((s) => logoOf(s)).length, 0);
   const withBanner = eras.reduce((n, e) => n + e.sets.filter((s) => bannerFor(s)).length, 0);
@@ -1084,16 +1107,16 @@ app.get("/logo-wall/sets", async (c) => {
   const logoCard = (s: any) => {
     const lf = logoOf(s);
     const art = lf
-      ? `<div class="setart"><img src="/logos/sets/${lf}?v=2" alt="" loading="lazy"></div>`
+      ? `<div class="setart"><img src="/logos/pokemon/sets/${lf}?v=2" alt="" loading="lazy"></div>`
       : `<div class="setart noimg"><span>${esc(s.name)}</span><small>logo coming soon</small></div>`;
     return `<div class="setcard">${art}<div class="setname">${esc(s.name)}</div><div class="setmeta">${esc(s.code)} · ${esc(fmt(s.release))}</div></div>`;
   };
   const bannerCard = (s: any) => {
     const bf = bannerFor(s);
-    const art = bf ? `/logos/sets/banners/${bf}` : fallbackBanner;
+    const art = bf ? `/logos/pokemon/banners/${bf}` : fallbackBanner;
     if (!art) return `<div class="banner noimg"><span>${esc(s.name)}</span><small>banner coming soon</small></div>`;
     const lf = logoOf(s);
-    const logo = lf ? `<img class="blogo" src="/logos/sets/${lf}?v=2" alt="" loading="lazy">` : "";
+    const logo = lf ? `<img class="blogo" src="/logos/pokemon/sets/${lf}?v=2" alt="" loading="lazy">` : "";
     return `<div class="banner${bf ? "" : " fb"}"><img class="bart" src="${art}" alt="" loading="lazy">${logo}<div class="bcap"><b>${esc(s.name)}</b><span>${esc(s.code)} · ${esc(fmt(s.release))}</span></div></div>`;
   };
   const pills = eras.map((e, i) => `<button type="button" class="pill${i === def ? " on" : ""}" data-era="${i}">${esc(e.era)} <small>${e.sets.length}</small></button>`).join("");
@@ -1681,19 +1704,19 @@ app.get("/pub/pokemon-sets", async (c) => {
   // in for chains (NOT the R2 bucket). Logo dev drops files at exactly these paths, the front end
   // renders feed.logo/banner with a text fallback until each asset lands, and the images ship with
   // the same branch/promotion as the code. Zero coordination.
-  //   set logo  -> public/logos/sets/<logoKey>.png        (served at /logos/sets/…)
-  //   set banner-> public/logos/set-banners/<logoKey>.png (served at /logos/set-banners/…)
-  //   era logo  -> public/logos/eras/<era-slug>.png       (served at /logos/eras/…)
+  //   set logo  -> public/logos/pokemon/sets/<logoKey>.png    (served at /logos/pokemon/sets/…)
+  //   set banner-> public/logos/pokemon/banners/<logoKey>.png (served at /logos/pokemon/banners/…)
+  //   era logo  -> public/logos/pokemon/eras/<era-slug>.png   (served at /logos/pokemon/eras/…)
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   // Cache-bust: the service worker caches /logos/* cache-first, so bump this whenever the set assets
   // are re-cut and the front end will request fresh URLs (old cached copies are orphaned harmlessly).
-  const av = "?v=8";
-  const v = { ...file, logoBase: "/logos", eras: file.eras.map((e) => ({ ...e,
-    slug: slug(e.era), logo: `/logos/eras/${slug(e.era)}.png${av}`,
+  const av = "?v=9";
+  const v = { ...file, logoBase: "/logos/pokemon", eras: file.eras.map((e) => ({ ...e,
+    slug: slug(e.era), logo: `/logos/pokemon/eras/${slug(e.era)}.png${av}`,
     sets: e.sets.map((s) => ({ ...s,
       logoKey: slug(String(s.code)),
-      logo: `/logos/sets/${slug(String(s.code))}.png${av}`,
-      banner: `/logos/set-banners/${slug(String(s.code))}.png${av}`,
+      logo: `/logos/pokemon/sets/${slug(String(s.code))}.png${av}`,
+      banner: `/logos/pokemon/banners/${slug(String(s.code))}.png${av}`,
       products: orderProducts([...(bySet.get(norm(String(s.name))) ?? new Map<string, number | null>()).entries()].map(([type, retail]) => ({ type: prettyType(type), retail }))) })) })) };
   pokemonSetsCache = { t: Date.now(), v };
   return c.json(v);
@@ -3896,12 +3919,18 @@ app.patch("/api/chains/:id", async (c) => {
   if (b.stockCheckConfidence !== undefined) patch.stockCheckConfidence = b.stockCheckConfidence || null; // e.g. "spotty" = inconsistent stock (off-price/thrift), not a reliable MSRP source
   if (b.sellMethods !== undefined) patch.sellMethods = b.sellMethods || null; // CSV: in_store|pickup|ship
   if (typeof b.isMSRP === "boolean") patch.isMSRP = b.isMSRP;
+  // Logo pointer repoint (logos-restructure): accepts a shared-R2 URL or a same-origin /logos/… path;
+  // null/"" clears it back to the filesystem resolver. Flags ride along like POST /api/chains/:id/logo.
+  if (b.logoUrl !== undefined) patch.logoUrl = b.logoUrl || null;
+  if (typeof b.logoWide === "boolean") patch.logoWide = b.logoWide;
+  if (typeof b.logoDark === "boolean") patch.logoDark = b.logoDark;
   // Invariant: a direct-answer chain has no menu, so it must carry NO tree-seconds — a stray value arms
   // the connect-timer and mutes the agent (silent-agent bug). Enforce it here too, so a manual admin edit
   // that flips a chain to direct can't recreate it (the learn/trainer paths already guard this).
   if (patch.ringsDirect === true || patch.answerPath === "direct_human") patch.avgTreeSeconds = null;
   const [row] = await db.update(chains).set(patch).where(eq(chains.id, Number(c.req.param("id")))).returning();
   invalidateRefCache();
+  if (patch.logoUrl !== undefined || patch.logoWide !== undefined || patch.logoDark !== undefined) await refreshChainLogoDb();
   return c.json(row);
 });
 

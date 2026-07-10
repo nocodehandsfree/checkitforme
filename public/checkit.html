@@ -49,8 +49,8 @@
 }catch(e){}})();</script>
 <meta name="x-rev" content="tonebake-r116" />
 __BRAND_HEAD__
-<link rel="icon" type="image/png" href="/logos/check-icon.png?v=2">
-<link rel="apple-touch-icon" href="/logos/check-icon.png?v=2">
+<link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
+<link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
 <!-- Inter is SELF-HOSTED (variable weight 100-900): Google Fonts is blocked on some users' networks
      (DNS ad-blockers), which silently swapped the whole site to the system font — the design is only
      the design in Inter. One origin, one file, no third-party dependency. -->
@@ -678,7 +678,7 @@ __BRAND_HEAD__
   .sharetile:active{transform:scale(.96)}
   .sharetile .lbl{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
   /* Auth/account brand band: full-bleed banner that IS the F logo's own background —
-     sampled from logos/fungibles.png so the mark sits on it seamlessly */
+     sampled from the old Runnr-era fungibles mark so the mark sits on it seamlessly */
   #authOverlay .modal{overflow:hidden}
   /* account sheet can grow (Earn expands) — cap it to the viewport and scroll so Sign out stays reachable */
   #acctOverlay .modal{max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
@@ -1892,7 +1892,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   <div class="modal" style="position:relative;max-width:400px;text-align:left;padding:0;overflow:hidden">
     <div class="p6d-head">
       <div class="p6d-bar"></div>
-      <div class="buy6b-logo" style="justify-content:center"><img src="/logos/checkplus.png" alt="Check+" style="height:30px;width:auto"></div>
+      <div class="buy6b-logo" style="justify-content:center"><img src="/logos/brand/checkplus.png" alt="Check+" style="height:30px;width:auto"></div>
       <div style="margin-top:12px;font-size:30px;font-weight:900;letter-spacing:-1px" data-i18n="up6d.title">You're in.</div>
       <div id="paid_sub" style="margin-top:6px;font-size:14px;font-weight:600;color:rgba(255,255,255,.8)"></div>
     </div>
@@ -1912,7 +1912,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
      Comp = BOTTOM SHEET: grabber, left lockup, 26/900 title, plain bold-check lines, white-label capsule. -->
 <div class="overlay" id="upsellOverlay" onclick="if(event.target===this)closeUpsell()">
   <div class="modal" style="position:relative;max-width:400px;text-align:left;padding:22px 20px">
-    <div class="buy6b-logo" style="justify-content:flex-start;margin:0 0 14px"><img src="/logos/checkplus.png" alt="Check+" style="height:26px;width:auto"></div>
+    <div class="buy6b-logo" style="justify-content:flex-start;margin:0 0 14px"><img src="/logos/brand/checkplus.png" alt="Check+" style="height:26px;width:auto"></div>
     <div style="font-size:26px;font-weight:900;letter-spacing:-.8px;line-height:1.2" data-i18n="up6a.title">That was your free check.<br>Ready for the good stuff?</div>
     <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px" id="up6a_rows"></div>
     <button class="cta" id="up6a_cta" style="margin-top:20px;width:100%" onclick="closeUpsell();openBuy()"><span data-i18n="up6a.cta">See Check+ plans</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
@@ -1943,7 +1943,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
       <span class="co-title" data-i18n="co.title">Checkout</span>
     </div>
     <div class="co-summary">
-      <div class="co-logo"><img src="/logos/checkplus.png" alt="Check+" style="width:30px;height:auto"></div>
+      <div class="co-logo"><img src="/logos/brand/checkplus.png" alt="Check+" style="width:30px;height:auto"></div>
       <div style="min-width:0;flex:1">
         <div class="co-plan" id="co_plan">—</div>
         <div class="co-sub" id="co_sub"></div>
@@ -2673,7 +2673,7 @@ function applyFlags(){
 function renderFooter(){
   const L=(POLICY.links)||{}, by=$('footYear'); if(by) by.textContent=new Date().getFullYear();
   const fb=$('footBrand'); if(fb) fb.textContent='';  // the brand name lives inside the logo now
-  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:30px;width:auto;object-fit:contain;border-radius:0;display:block;margin:-4px 0">`; }
+  const fm=$('footMark'); if(fm){ fm.innerHTML=`<img src="/logos/brand/check.png?v=2" alt="Check It For Me" style="height:30px;width:auto;object-fit:contain;border-radius:0;display:block;margin:-4px 0">`; }
   // v2 footer = THREE centered lines: the links row, a tidy CENTERED cluster [logo · socials · lang], then
   // the © line ALONE, centered, at the very bottom (owner 07-08 — was tucked next to the logo). Was
   // logo-left / socials-right which spread into an awkward wide gap on desktop; centered reads the same
@@ -2970,7 +2970,7 @@ function openAuth(){
   setTimeout(()=>{try{$('auth_phone').focus();}catch(e){}},90);
 }
 function closeAuth(){ $('authOverlay').classList.remove('on'); }
-function authMark(){ return `<img src="/logos/check.png?v=1" alt="Check It For Me" style="height:30px;width:auto;display:block">`; }
+function authMark(){ return `<img src="/logos/brand/check.png?v=2" alt="Check It For Me" style="height:30px;width:auto;display:block">`; }
 // ---- Phone sign-in (Twilio SMS → our session token). The ONLY auth flow. ----
 let AUTH_PHONE='';
 // "Welcome back" vs "First check's on us" — detected live as they finish typing their number.
@@ -3668,8 +3668,8 @@ const ICO={
 let FCID=0;
 // The Fungibles check — our logo-grade checkmark (secondary purple flowing into go-green).
 function FCHK(sz){ sz=sz||16;
-  // The owner's EXACT checkmark asset (public/logos/fcheck.png). NEVER recreate it as SVG/CSS — use the file.
-  return `<img src="/logos/fcheck.png?v=7" alt="" width="${sz}" height="${sz}" style="display:inline-block;vertical-align:middle;object-fit:contain">`;
+  // The owner's EXACT checkmark asset (public/logos/brand/fcheck.png). NEVER recreate it as SVG/CSS — use the file.
+  return `<img src="/logos/brand/fcheck.png?v=8" alt="" width="${sz}" height="${sz}" style="display:inline-block;vertical-align:middle;object-fit:contain">`;
 }
 function setI(id,html){ const e=$(id); if(e) e.innerHTML=html; }
 function renderIcons(){
@@ -5598,7 +5598,7 @@ function hobbyPickEra(i){ HOBBY.era=HOBBY.data.eras[i]; renderHobbySets(); markH
 // P3 — composited SQUARE tiles (owner 2026-07-03): darkened set key art as the field + the set logo
 // raised on top with a drop shadow, area-normalized so every logo carries equal visual weight. JUST
 // DROPPED chip on fresh releases; future sets stay, badged UPCOMING (feed rule: badge, don’t drop);
-// strip below = code · date. Art -> /logos/set-banners/<key>, logo -> /logos/sets/<key> (both from feed).
+// strip below = code · date. Art -> /logos/pokemon/banners/<key>, logo -> /logos/pokemon/sets/<key> (both from feed).
 function renderHobbySets(){
   // P3 comp: inside the big card — centered title + sub, accent-ringed ERA CHIP (logo · 'N sets' ·
   // Change key), then a 2-COL GRID of square set tiles (art+logo composite, chips, code+date strip);
@@ -6279,7 +6279,7 @@ function openBuy(reason){
     let lg=$('buy6blogo');
     if(!lg){ lg=document.createElement('div'); lg.id='buy6blogo'; lg.className='buy6b-logo';
       const h3=$('buy_title'); h3.parentElement.insertBefore(lg,h3); }
-    lg.innerHTML=`<img src="/logos/checkplus.png" alt="Check+" style="height:26px;width:auto">`;
+    lg.innerHTML=`<img src="/logos/brand/checkplus.png" alt="Check+" style="height:26px;width:auto">`;
     if(!$('buy_grid')){ const g=document.createElement('div'); g.id='buy_grid';
       const bc=$('billcycle'); bc.parentElement.insertBefore(g,bc); }
     renderBuyGrid();
