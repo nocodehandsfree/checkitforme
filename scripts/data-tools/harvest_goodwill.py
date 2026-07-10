@@ -147,13 +147,17 @@ for i, s in enumerate(matched):
         if (row.get("ServiceName") or "") == "Retail Store": svc = row; break
     out = {"id": s["id"]}
     if hit["closed"]:
-        for d in DAYS: out[d.lower()] = "closed"      # API says location closed -> deactivate path
+        for d in DAYS: out[d.lower()] = "closed"      # API's LocationClosedDate set -> deactivate path
     elif not svc:
         for d in DAYS: out[d.lower()] = "unknown"     # no retail service listed -> don't guess
     else:
         for d in DAYS:
             o, c = to24(svc.get(f"{d}OpeningTime")), to24(svc.get(f"{d}ClosingTime"))
             out[d.lower()] = f"{o}-{c}" if o and c else ("closed" if svc.get(f"{d}OpeningTime") in (None, "", "Closed") else "unknown")
+        # all-7 'closed' here just means the chain didn't publish hours (empty fields) — that is
+        # NO DATA, not a closure. Only LocationClosedDate may drive the deactivate path.
+        if all(out[d.lower()] == "closed" for d in DAYS):
+            for d in DAYS: out[d.lower()] = "unknown"
     results.append(out)
 save_state()
 

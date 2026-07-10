@@ -44,9 +44,13 @@
   with no Google hours panel. STOP waving the hobby tail; hand it to the owner's local machine** (list:
   regen `hobby_nohours.py`, minus `scripts/data-tools/hobby_done_ids.txt`). Hobby: 4,360 active, ~1,580
   missing hours (63% coverage). Patch is hours-only by id; import would blank carries/lat/lng.
-- **Thrift hours — 3,479 stores, ALL missing (0%), NEXT UP:** Goodwill 2,925 / Salvation Army 369 /
-  Savers 177 / Unique 8. All chain storefronts with locator sites that answer plain curl (Savers verified
-  2026-07-10) → **harvest hours FREE from chain locators first**; WebSearch waves only for the residue.
+- **Thrift hours — DONE 0%→85% (2,965/3,479) 2026-07-10, $0 spent, verified live:** Goodwill 87%
+  (locator ajax API; GWNONCE gotcha in script header) · Salvation Army 65% (satruck API free-text parser;
+  ~91 unparseable stay unknown) · Savers+Unique 100% (stores.savers.com pages). Harvesters in
+  `scripts/data-tools/harvest_*.py`, all feed `agg_hobby.py --apply`. Residue: ~386 Goodwill no-data,
+  ~128 SA (37 not in their locator + 91 unparseable), 2 unmatched — WebSearch-wave or owner's-machine
+  material. **Steward rules learned: empty hour fields ≠ closed; parsed prose NEVER deactivates a store**
+  (both guards are in the code now — first drafts would have wrongly deactivated 361+9 live stores).
 - **Env facts (verified):** python urllib AND headless Chromium are proxy-blocked here; Google/Bing/DDG
   bot-block curl. Free direct-Google scraping is impossible from this box — that's owner's-local only.
 - **PROD front-end BEHIND staging — needs a promote (not my lane to deploy; flagged to owner):** the `type`
