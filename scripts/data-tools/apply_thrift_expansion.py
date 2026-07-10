@@ -33,14 +33,27 @@ def req(method, path, data=None):
 def norm(p):
     d = re.sub(r"\D", "", str(p or "")); return d[-10:] if len(d) >= 10 else None
 
-# live DB phones (fresh)
-allphones = set(); off = 0
+def akey(street, city, state):
+    """(house number, letters-only city, state) — same physical store even if the phone differs.
+    A chain locator often lists a store under a different number than we stored (Google vs official);
+    without this, importing by phone alone would DUPLICATE the storefront."""
+    num = (re.match(r"\s*(\d+)", street or "") or [None, ""])[1] if street else ""
+    return (num, re.sub(r"[^a-z]", "", (city or "").lower()), (state or "").upper())
+
+# live DB phones + thrift-family addresses (fresh)
+allphones = set(); alladdr = set(); off = 0
+chains = req("GET", "/api/admin/table-dump?name=chains&limit=5000")["rows"]
+cname = {c["id"]: (c.get("name") or "") for c in chains}
+THRIFT_CHAINS = {"Savers", "Unique", "Value Village", "Goodwill", "Salvation Army"}
 while True:
     rows = req("GET", f"/api/admin/table-dump?name=retailers&limit=20000&offset={off}")["rows"]
     if not rows: break
     for r in rows:
         p = norm(r.get("phone"))
         if p: allphones.add(p)
+        if cname.get(r.get("chainId")) in THRIFT_CHAINS:
+            city = (r.get("location") or "").split(",")[0].strip()
+            alladdr.add(akey(r.get("address"), city, r.get("state")))
     off += len(rows)
     if len(rows) < 20000: break
 
@@ -60,15 +73,17 @@ def valid(rec, drops):
     rec = dict(rec); rec["phone"] = ph; rec["state"] = st
     return rec
 
-drops = {k: 0 for k in ("no_phone", "toll_free", "bad_state", "no_name", "no_address", "dupe")}
-seen = set(); out = []; by = {}
+drops = {k: 0 for k in ("no_phone", "toll_free", "bad_state", "no_name", "no_address", "dupe_phone", "dupe_address")}
+seen = set(); seen_addr = set(); out = []; by = {}
 for fn in ("gw_new.json", "sv_new.json", "sa_new.json"):
     if not os.path.exists(fn): continue
     for rec in json.load(open(fn)):
         v = valid(rec, drops)
         if not v: continue
-        if v["phone"] in allphones or v["phone"] in seen: drops["dupe"] += 1; continue
-        seen.add(v["phone"]); out.append(v)
+        if v["phone"] in allphones or v["phone"] in seen: drops["dupe_phone"] += 1; continue
+        ak = akey(v.get("address"), v.get("city"), v["state"])
+        if ak in alladdr or ak in seen_addr: drops["dupe_address"] += 1; continue
+        seen.add(v["phone"]); seen_addr.add(ak); out.append(v)
         by[v["chain"]] = by.get(v["chain"], 0) + 1
 
 print(f"{'DRY' if DRY else 'APPLY'} — valid new stores: {len(out)} | by chain: {by}")
