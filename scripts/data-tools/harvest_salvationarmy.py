@@ -36,40 +36,69 @@ def norm_phone(p):
     return d[-10:] if len(d) >= 10 else None
 
 TIME = r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)"
+TIMESPAN = TIME + r"\s*(?:-|–|to)\s*" + TIME
+DAYTOKEN = r"(?:mon|tues?|wed(?:nes)?|thur?s?|fri|sat(?:ur)?|sun)(?:day)?"
+DAYRANGE = rf"({DAYTOKEN})\s*(?:-|–|through|thru|to)\s*({DAYTOKEN})"
+
 def to24(h, m, ap):
     h = int(h); m = m or "00"
     if ap == "pm" and h != 12: h += 12
     if ap == "am" and h == 12: h = 0
     return f"{h:02d}:{m}"
 
+def daykey(tok):
+    return DAYIDX.get(tok[:3])  # first 3 letters uniquely identify the day
+
 def parse_hours(text):
-    """'Monday - Saturday: 10am-6pm, Sunday: Closed' -> per-day dict; None if nothing parsed."""
+    """Salvation Army free-text hours -> per-day dict; None if nothing confidently parsed.
+
+    Handles labels ('Store Hours:'), '|'-separated sections (donation-only sections dropped),
+    days-first AND time-first orders, 'TO' separators, minute-less times, 'Closed Sunday'.
+    A bare time with no day anywhere = ambiguous -> None (never guess).
+    """
     text = (text or "").strip().lower()
     if not text: return None
-    out = [None] * 7  # None = not mentioned
-    found = False
-    for seg in re.split(r"[,;\n]+", text):
-        seg = seg.strip()
-        if not seg: continue
-        m = re.match(r"([a-z]+)\s*(?:-|–|to|through|thru)\s*([a-z]+)\s*:?\s*(.*)", seg)
-        days = None
-        if m and m.group(1) in DAYIDX and m.group(2) in DAYIDX:
-            a, b = DAYIDX[m.group(1)], DAYIDX[m.group(2)]
-            days = list(range(a, b + 1)) if a <= b else list(range(a, 7)) + list(range(0, b + 1))
-            rest = m.group(3)
-        else:
-            m = re.match(r"([a-z]+)\s*:?\s*(.*)", seg)
-            if m and m.group(1) in DAYIDX:
-                days = [DAYIDX[m.group(1)]]; rest = m.group(2)
-        if days is None: continue
-        if "closed" in (rest or ""):
-            for d in days: out[d] = "closed"
-            found = True; continue
-        tm = re.search(TIME + r"\s*(?:-|–|to)\s*" + TIME, rest or "")
-        if not tm: continue
-        span = f"{to24(tm.group(1), tm.group(2), tm.group(3))}-{to24(tm.group(4), tm.group(5), tm.group(6))}"
-        for d in days: out[d] = span
-        found = True
+    # keep sections that are about the store; drop donation-center-only sections
+    sections = [s for s in text.split("|")
+                if "donation" not in s or "store" in s]
+    out = [None] * 7; found = False
+    for section in sections:
+        section = re.sub(r"^[^:]*hours\s*:", " ", section)  # strip 'Store & Donation Hours:' labels
+        section_found_before = found
+        for seg in re.split(r"[,;.\n]+", section):
+            seg = seg.strip()
+            if not seg: continue
+            days = None
+            m = re.search(DAYRANGE, seg)
+            if m:
+                a, b = daykey(m.group(1)), daykey(m.group(2))
+                if a is not None and b is not None:
+                    days = list(range(a, b + 1)) if a <= b else list(range(a, 7)) + list(range(0, b + 1))
+            else:
+                toks = [daykey(t) for t in re.findall(DAYTOKEN, seg)]
+                toks = [t for t in toks if t is not None]
+                if toks: days = toks
+            if days is None: continue
+            if "closed" in seg:
+                for d in days: out[d] = "closed"
+                found = True; continue
+            tm = re.search(TIMESPAN, seg)
+            if not tm: continue
+            span = f"{to24(tm.group(1), tm.group(2), tm.group(3))}-{to24(tm.group(4), tm.group(5), tm.group(6))}"
+            for d in days: out[d] = span
+            found = True
+        if not (found and not section_found_before):
+            # section fallback: '10 am - 7 pm, Mon - Sat' (comma separates time from days) —
+            # exactly one timespan + one day-range in the whole section pairs them safely
+            spans = re.findall(TIMESPAN, section)
+            ranges = re.findall(DAYRANGE, section)
+            if len(spans) == 1 and len(ranges) == 1:
+                a, b = daykey(ranges[0][0]), daykey(ranges[0][1])
+                if a is not None and b is not None:
+                    span = f"{to24(*spans[0][:3])}-{to24(*spans[0][3:])}"
+                    for d in (range(a, b + 1) if a <= b else list(range(a, 7)) + list(range(0, b + 1))):
+                        out[d] = span
+                    found = True
     if not found: return None
     return {DAYS[i]: (out[i] if out[i] else "closed") for i in range(7)}  # unmentioned = closed
 
