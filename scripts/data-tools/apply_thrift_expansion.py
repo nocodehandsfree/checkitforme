@@ -44,7 +44,7 @@ def akey(street, city, state):
 allphones = set(); alladdr = set(); off = 0
 chains = req("GET", "/api/admin/table-dump?name=chains&limit=5000")["rows"]
 cname = {c["id"]: (c.get("name") or "") for c in chains}
-THRIFT_CHAINS = {"Savers", "Unique", "Value Village", "Goodwill", "Salvation Army"}
+THRIFT_CHAINS = {"Savers", "Unique", "Value Village", "Goodwill", "Salvation Army", "Habitat ReStore"}
 while True:
     rows = req("GET", f"/api/admin/table-dump?name=retailers&limit=20000&offset={off}")["rows"]
     if not rows: break
@@ -74,10 +74,21 @@ def valid(rec, drops):
     return rec
 
 drops = {k: 0 for k in ("no_phone", "toll_free", "bad_state", "no_name", "no_address", "dupe_phone", "dupe_address")}
+def load_recs(fn):
+    if fn.endswith(".jsonl"):
+        recs = []
+        for line in open(fn):
+            try:
+                o = json.loads(line)
+                if o.get("name") and o.get("phone"): recs.append(o)
+            except Exception: pass
+        return recs
+    return json.load(open(fn))
+
 seen = set(); seen_addr = set(); out = []; by = {}
-for fn in ("gw_new.json", "sv_new.json", "sa_new.json"):
+for fn in ("gw_new.json", "sv_new.json", "sa_new.json", "hab_new_raw.jsonl"):
     if not os.path.exists(fn): continue
-    for rec in json.load(open(fn)):
+    for rec in load_recs(fn):
         v = valid(rec, drops)
         if not v: continue
         if v["phone"] in allphones or v["phone"] in seen: drops["dupe_phone"] += 1; continue
