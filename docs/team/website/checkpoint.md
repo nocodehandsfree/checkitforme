@@ -35,8 +35,13 @@
   on back, zones in the stack · map pin/ZIP = MANUAL_LOC, GPS recheck can't snap back (regression) ·
   Topps → "NBA Cards" (test updated) · 🏃💨 → 📦 · "No answer = no charge" period gone.
 - VERIFIED on staging (screenshots in chat): EN+ES homepages, kiosk tab, footers, ES terms sheet, gray
-  pill, add-store sheet, Topps page. NOT drivable without owner's account: verdict-page items on a real
-  call, zones save round-trip, plan/checkout flows — owner to spot-check on his next pass.
+  pill, add-store sheet, Topps page. NIGHT RUN (throwaway account via STAGING_LOGIN_CODE): verdict page
+  (date/time line, one up-arrow share, even glow, tight footer), unclear copy breaks before "Read",
+  back button result→builder, Sign out top-right, plans ring on featured tier, checkout sheet carries the
+  ringed plan. Night fixes shipped: upgrade capsule said $NaN/mo (tierPrice fed cents) + replayed calls
+  keep ts. STILL NOT verified: zone SAVE round-trip (needs entitlement; the on-page Stripe element hung
+  at "Loading secure payment…" for the test account so no test-card sub — worth a look), history/calendar
+  SPEED on a loaded account, live-call flows, PWA self-heal.
 - ANSWERS (checkout, items 30-34): the "$5 back when you pay by bank" banner, the Success/Blocked/
   Disputed/Bank/Down icons, and the dead bank search are all INSIDE Stripe's payment iframe. Staging runs
   Stripe TEST mode: those icons ARE the test-mode fake banks, and bank search is dead because there are
