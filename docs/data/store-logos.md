@@ -165,6 +165,13 @@ fix it in the UI.
 - **Source a clean original** when the existing asset is low-res: official **vector** (Wikimedia
   Commons SVG, rendered at high density with `sharp`) or the **app icon**
   (iTunes Search API → `artworkUrl512`), then strip white + trim as above.
+  - *Fetch a Commons SVG the robust way* — don't hand-guess the hashed `upload.wikimedia.org`
+    path (it 404s). Let Commons resolve the filename for you:
+    `curl -sL -o out.svg "https://commons.wikimedia.org/wiki/Special:FilePath/<Exact_File_Name.svg>"`
+    then render with `sharp('out.svg',{density:300})`.
+  - *App-icon caveat:* many icons are the wordmark on a **colored box** (e.g. Best Buy = white
+    "BEST BUY" on blue). Flood-fill only strips **white**, so a colored box survives and violates
+    "no boxes / mark-only." When the icon is a box, prefer the **vector mark** instead.
 - **Ship it:** save `<slug>.png`, set/confirm `_meta.json` (`w`/`d`), **bump the `?v=` cache** in
   `chainLogoInfo`, push to the deploy branch, and QA on `/logo-wall` at true tile size.
 
