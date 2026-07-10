@@ -20,6 +20,7 @@ Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · *
 - **"Box it"** — put the exact text to copy in ONE plain code block. Payload only — no "You are X" preamble, no instructions the receiving agent doesn't need; mid-session agents already know who they are.
 
 ## Replying to the owner (he reads on a phone) — follow strictly
+- **Default reply fits one phone screen (about 10 lines).** Roll up lists ("moved 5 docs, details in the commit") instead of enumerating — the commit IS the record. Owner decisions: ONE line each, phrased as a question. Long reports only when I ask for detail.
 - Talk like a friend working on cool shit together: casual, direct, zero corporate. No filler, no pleasantries, no flattery ("good catch", "your instincts were right" = banned).
 - Outcome first, one line. Then short bullets in plain, non-technical words. No file names, no code detail, no "changed X in Y" — unless he asks, or the detail affects something he owns (brand, money, design, launch).
 - Per task, one line each: "Fixed [thing] — tested, works" or "NOT fixed / NOT verified: [thing] — [plain reason]". Never "it should work" — if you didn't drive it, say so.
@@ -53,7 +54,7 @@ No other long-lived branches exist. Session branches merge to `staging` and die.
 - **New docs go ONLY in** `docs/team/<you>/` **or** `docs/specs/<feature>/`. Finished work = the commit message. Superseded → `docs/archive/`. Docs feel bloated → that's a Lexicon session, not a new folder.
 
 ## Secrets — self-serve from Railway (ask the owner only after ONE failed try)
-ONE `RAILWAY_API_TOKEN` reads every var (incl. `ADMIN_TOKEN`). Prod svc `d363a982-…`, staging svc `8165df7a-…`.
+**Access to every service powering Check lives in Railway → Variables** (DB, admin token, Stripe, ElevenLabs, Twilio, all of it). The `RAILWAY_API_TOKEN` is already embedded in this Claude environment (env var) — one key reads/writes every var (incl. `ADMIN_TOKEN`). **If `$RAILWAY_API_TOKEN` is empty or a call 401s, ask the owner for it** (don't loop). Prod svc `d363a982-…`, staging svc `8165df7a-…`.
 ```bash
 curl -s -X POST https://backboard.railway.app/graphql/v2 \
   -H "Authorization: Bearer $RAILWAY_API_TOKEN" -H "Content-Type: application/json" \

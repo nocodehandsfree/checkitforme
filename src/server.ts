@@ -32,7 +32,8 @@ import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, setDeltaBarge } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
 import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, type Recipe } from "./calls/recipe";
-import { llm } from "./llm";
+import { llm, heli } from "./llm";
+import { opsAlert, watchdogTick, watchdogState, backupTick, backupNow, backupState } from "./ops-watch";
 import { harvestHoursTick } from "./hours-harvest";
 import { createSchedule, listSchedulesDetailed, deleteSchedule, customerScheduleTick } from "./customer-schedules";
 import { cachedCategories, cachedChains, cachedRetailers, categoryLabelMap, retailerMap, invalidateRefCache } from "./refcache";
@@ -213,6 +214,15 @@ async function verifyClerkToken(authHeader: string | undefined): Promise<{ id: s
 const page = (file: string) => readFileSync(join(here, `../public/${file}`), "utf8");
 const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+// ---- PostHog (product analytics) — activates from Railway vars alone (POSTHOG_KEY [+ POSTHOG_HOST]);
+// no key baked in the repo, key absent = no-op. Injected server-side before </body> on every served
+// page (all consumer brand domains + admin) so one place covers every page; the dated `defaults`
+// turns on history-change pageviews, which the SPA needs for per-view tracking.
+const PH_SNIPPET = process.env.POSTHOG_KEY
+  ? `<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init(${JSON.stringify(process.env.POSTHOG_KEY)},{api_host:${JSON.stringify(process.env.POSTHOG_HOST || "https://us.i.posthog.com")},defaults:"2025-05-24"})</script>`
+  : "";
+const withAnalytics = (html: string) => (PH_SNIPPET && html.includes("</body>")) ? html.replace("</body>", `${PH_SNIPPET}</body>`) : html;
+
 /** FAQ + HowTo structured data per vertical — Google rich-result eligibility for the PPC/SEO push. */
 function seoGraph(brand: ReturnType<typeof resolveBrand>, plainName: string) {
   const prod = brand.category || "trading cards & collectibles";
@@ -276,7 +286,7 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
   // the very first paint the verdict colour with zero JS dependency; the in-page rv-* class system takes
   // over (and drops the baked class via dropBakedTone) as soon as the app renders a view.
   const toneClass = /^(in|out|unk|soon)$/.test(tone) ? ` class="tone-${tone}"` : "";
-  return page(file)
+  return withAnalytics(page(file))
     .replace('<html lang="en">', `<html lang="en"${toneClass}>`)
     .replace(/__BRAND_HEAD__/g, head)
     .replace(/__BRAND_JSON__/g, JSON.stringify({ key: brand.key, name: brand.name, category: brand.category, accent: brand.accent, accent2: brand.accent2 || brand.accent, logoUrl: brand.logoUrl || "", emoji: brand.emoji }))
@@ -296,7 +306,7 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
   const cat = (q.cat || brand.category || "cards").slice(0, 60);
   const plainName = brand.name.replace(/<[^>]+>/g, "");
   // In-stock share: just the brand mark + two punchy lines (no "is it in stock?" hero, "Found!" pill, or "powered by").
-  const ogImage = inStock ? `https://${host}/logos/check-mark.png` : `https://${host}/og/${brand.key}.png`;
+  const ogImage = inStock ? `https://${host}/logos/brand/check-mark.png` : `https://${host}/og/${brand.key}.png`;
   const site = `https://${host}/`;
   const title = inStock ? `🔥 ${store}` : `👀 ${store}: watching for ${cat}`;
   const desc = inStock
@@ -439,7 +449,7 @@ const rootHandler = (c: Context) => {
   const consumer = config.staging.on
     ? (!(host.startsWith("caller.") || host.startsWith("admin.")) || !!override)
     : (host.startsWith("runner.") || brand.key !== "runner" || !!override);
-  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "") : page("app.html"));
+  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "") : withAnalytics(page("app.html")));
 };
 app.get("/", rootHandler);
 // Clean admin deep-links (/feedback, /trees, …): one STATIC route per admin section, all serving the same
@@ -500,6 +510,29 @@ app.get("/logos/:file", (c) => {
     return c.body(buf, 200, { "Content-Type": ct });
   } catch { return c.notFound(); }
 });
+// Logo folders (logos-restructure, 07-10): brand/ = Check marks, products/ = the four
+// product-brand logos, pokemon/{eras,sets,banners} = the Pokémon set system (banners = the old
+// set-banners + sets/banners merged). The pre-restructure flat tree (root-level marks, eras/,
+// sets/, set-banners/) and its routes were deleted after the owner's staging sign-off.
+for (const dir of ["brand", "products", "pokemon/eras", "pokemon/sets", "pokemon/banners"]) {
+  app.get(`/logos/${dir}/:file`, (c) => {
+    const send = (rel: string) => {
+      const buf = readFileSync(join(here, `../public/logos/${dir}/${rel}`));
+      const ext = rel.split(".").pop()?.toLowerCase();
+      const ct = ext === "png" ? "image/png" : ext === "svg" ? "image/svg+xml" : ext === "webp" ? "image/webp" : "image/jpeg";
+      c.header("Cache-Control", "public, max-age=86400");
+      return c.body(buf, 200, { "Content-Type": ct });
+    };
+    const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
+    try { return send(file); }
+    catch {
+      // banners keep the old set-banners contract: a missing set banner serves the shared
+      // Pokémon fallback so a card never shows a broken image; everything else 404s.
+      if (dir === "pokemon/banners") { try { return send("_fallback.png"); } catch { return c.notFound(); } }
+      return c.notFound();
+    }
+  });
+}
 // Self-hosted webfonts (Inter variable) — Google Fonts is unreachable for users behind DNS
 // ad-blockers, and the design only reads as the design in Inter. One origin, one file.
 app.get("/fonts/:file", (c) => {
@@ -510,37 +543,6 @@ app.get("/fonts/:file", (c) => {
     c.header("Cache-Control", "public, max-age=31536000, immutable");
     return c.body(buf, 200, { "Content-Type": "font/woff2" });
   } catch { return c.notFound(); }
-});
-// Pokémon set assets — same repo/logo-wall system as chains, dropped by the logo lane at the exact
-// paths /pub/pokemon-sets derives from each set code: set logo -> /logos/sets/<logoKey>.png, set
-// banner -> /logos/set-banners/<logoKey>.png, era logo -> /logos/eras/<era-slug>.png. All PNG. A
-// missing set banner falls back to the shared Pokémon banner (_fallback.png) so a card never shows a
-// broken image; a missing logo 404s so the front end renders its own text fallback.
-app.get("/logos/sets/:file", (c) => {
-  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
-  try {
-    const buf = readFileSync(join(here, `../public/logos/sets/${file}`));
-    c.header("Cache-Control", "public, max-age=86400");
-    return c.body(buf, 200, { "Content-Type": "image/png" });
-  } catch { return c.notFound(); }
-});
-app.get("/logos/eras/:file", (c) => {
-  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
-  try {
-    const buf = readFileSync(join(here, `../public/logos/eras/${file}`));
-    c.header("Cache-Control", "public, max-age=86400");
-    return c.body(buf, 200, { "Content-Type": "image/png" });
-  } catch { return c.notFound(); }
-});
-app.get("/logos/set-banners/:file", (c) => {
-  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
-  const send = (rel: string) => {
-    const buf = readFileSync(join(here, `../public/logos/set-banners/${rel}`));
-    c.header("Cache-Control", "public, max-age=86400");
-    return c.body(buf, 200, { "Content-Type": "image/png" });
-  };
-  try { return send(file); }
-  catch { try { return send("_fallback.png"); } catch { return c.notFound(); } }
 });
 app.get("/robots.txt", (c) => {
   const host = (c.req.header("host") || "").toLowerCase();
@@ -665,6 +667,10 @@ setDeltaBarge(async (s, _speech) => {
 
 // ---- Health ----
 app.get("/api/health", (c) => c.json({ ok: true, commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null }));
+
+// ---- Ops (admin-gated by the /api/* wall): watchdog + backup visibility, manual backup trigger ----
+app.get("/api/ops/status", (c) => c.json({ env: config.staging.on ? "staging" : "production", watchdog: watchdogState(), backup: backupState() }));
+app.post("/api/ops/backup-now", async (c) => c.json(await backupNow()));
 
 // ---- Phone-first auth (Clerk-free): SMS code → our session → caller-ID verify call ----
 // Step 1: send an SMS code to the cell (browser auto-fills it). Rate-limited (SMS costs money).
@@ -930,7 +936,7 @@ app.get("/logo-wall", async (c) => {
   //    "take up the box, be the main attraction"): these are wordmark logos, not 52px store marks.
   //    Grouped by era; a set with no logo file yet shows a striped gap so the wall reveals what's missing.
   const listPng = (dir: string) => { try { return new Set(readdirSync(join(here, dir)).filter((f) => /\.png$/i.test(f))); } catch { return new Set<string>(); } };
-  const setLogoFiles = listPng("../public/logos/sets"), eraLogoFiles = listPng("../public/logos/eras"), bannerFiles = listPng("../public/logos/set-banners");
+  const setLogoFiles = listPng("../public/logos/pokemon/sets"), eraLogoFiles = listPng("../public/logos/pokemon/eras"), bannerFiles = listPng("../public/logos/pokemon/banners");
   const pslug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   let pokeEras: Array<{ era: string; slug: string; hasEra: boolean; sets: Array<{ code: string; name: string; key: string; has: boolean; banner: boolean }> }> = [];
   try {
@@ -942,11 +948,11 @@ app.get("/logo-wall", async (c) => {
   const pokeSection = pokeEras.length ? `
   <div id="pokeArea" hidden>
     <h2>Pokémon set tiles · ${pokeSetCount} sets</h2>
-    <div class="sub">The exact composite the hobby wall renders — set art (<code>/logos/set-banners</code>) with the set logo (<code>/logos/sets</code>) raised on top, area-normalized. Grouped by era.</div>
+    <div class="sub">The exact composite the hobby wall renders — set art (<code>/logos/pokemon/banners</code>) with the set logo (<code>/logos/pokemon/sets</code>) raised on top, area-normalized. Grouped by era.</div>
     ${pokeEras.map((e) => `
-    <div class="pera">${e.hasEra ? `<img src="/logos/eras/${e.slug}.png?v=73" alt="">` : ""}<span class="en">${esc(e.era)}</span><span class="ec">${e.sets.filter((s) => s.has).length}/${e.sets.length}</span></div>
+    <div class="pera">${e.hasEra ? `<img src="/logos/pokemon/eras/${e.slug}.png?v=73" alt="">` : ""}<span class="en">${esc(e.era)}</span><span class="ec">${e.sets.filter((s) => s.has).length}/${e.sets.length}</span></div>
     <div class="pgrid">${e.sets.map((s) => s.has
-      ? `<div class="pset"><div class="ptile">${s.banner ? `<img class="pbg" src="/logos/set-banners/${s.key}.png?v=73" alt="">` : ""}<img class="plogo" src="/logos/sets/${s.key}.png?v=73" alt="" onload="pnorm(this)"></div><div class="pnm">${esc(s.code)}<span>${esc(s.name)}</span></div></div>`
+      ? `<div class="pset"><div class="ptile">${s.banner ? `<img class="pbg" src="/logos/pokemon/banners/${s.key}.png?v=73" alt="">` : ""}<img class="plogo" src="/logos/pokemon/sets/${s.key}.png?v=73" alt="" onload="pnorm(this)"></div><div class="pnm">${esc(s.code)}<span>${esc(s.name)}</span></div></div>`
       : `<div class="pset"><div class="ptile pmiss"><span class="pcode">${esc(s.code)}</span></div><div class="pnm" style="opacity:.5">${esc(s.code)}<span>no logo yet</span></div></div>`).join("")}</div>`).join("")}
   </div>` : "";
   return c.html(`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1046,7 +1052,7 @@ app.get("/logo-wall", async (c) => {
 });
 // Pokémon TCG set logos — the "swap-to" wall for the Hobby picker. Era pills → set cards
 // ([logo] · code · name · release), data-driven from data/pokemon-sets.json (data-dev's catalog)
-// + the downloaded logos in public/logos/sets/. QA page only; no auth (public logos + set names).
+// + the downloaded logos in public/logos/pokemon/sets/. QA page only; no auth (public logos + set names).
 app.get("/logo-wall/sets", async (c) => {
   const nslug = (x: any) => String(x || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
   // Asset lookup by set NAME (logos + dominant colour) from the full pokemontcg.io catalog — so
@@ -1054,7 +1060,7 @@ app.get("/logo-wall/sets", async (c) => {
   const logoByName = new Map<string, string | null>();
   let catalog: any = { eras: [] };
   try {
-    catalog = JSON.parse(readFileSync(join(here, "../public/logos/sets/_catalog.json"), "utf8"));
+    catalog = JSON.parse(readFileSync(join(here, "../public/logos/pokemon/sets/_catalog.json"), "utf8"));
     for (const e of catalog.eras || []) for (const s of e.sets || []) logoByName.set(nslug(s.name), s.logoFile);
   } catch { /* not built yet */ }
   // Data source: prefer website-dev's expanded feed catalog (data/pokemon-sets.json) the moment it
@@ -1074,9 +1080,9 @@ app.get("/logo-wall/sets", async (c) => {
   const logoOf = (s: any) => s.logoFile || logoByName.get(nslug(s.name)) || null;
   // Real banner key-art in public/logos/sets/banners/<name>.<ext>; else the shared Pokémon fallback.
   let bannerFiles = new Set<string>();
-  try { bannerFiles = new Set(readdirSync(join(here, "../public/logos/sets/banners")).filter((f) => /\.(jpe?g|png|webp)$/i.test(f))); } catch { /* none yet */ }
+  try { bannerFiles = new Set(readdirSync(join(here, "../public/logos/pokemon/banners")).filter((f) => /\.(jpe?g|png|webp)$/i.test(f))); } catch { /* none yet */ }
   const bannerFor = (s: any) => { for (const k of [nslug(s.name), nslug(s.code), nslug(s.apiId)]) { if (!k) continue; for (const ext of ["jpeg", "jpg", "png", "webp"]) if (bannerFiles.has(k + "." + ext)) return k + "." + ext; } return null; };
-  const fallbackBanner = bannerFiles.has("_fallback.jpeg") ? "/logos/sets/banners/_fallback.jpeg" : null;
+  const fallbackBanner = bannerFiles.has("_fallback.jpeg") ? "/logos/pokemon/banners/_fallback.jpeg" : null;
   const totalSets = eras.reduce((n, e) => n + e.sets.length, 0);
   const withLogo = eras.reduce((n, e) => n + e.sets.filter((s) => logoOf(s)).length, 0);
   const withBanner = eras.reduce((n, e) => n + e.sets.filter((s) => bannerFor(s)).length, 0);
@@ -1084,16 +1090,16 @@ app.get("/logo-wall/sets", async (c) => {
   const logoCard = (s: any) => {
     const lf = logoOf(s);
     const art = lf
-      ? `<div class="setart"><img src="/logos/sets/${lf}?v=2" alt="" loading="lazy"></div>`
+      ? `<div class="setart"><img src="/logos/pokemon/sets/${lf}?v=2" alt="" loading="lazy"></div>`
       : `<div class="setart noimg"><span>${esc(s.name)}</span><small>logo coming soon</small></div>`;
     return `<div class="setcard">${art}<div class="setname">${esc(s.name)}</div><div class="setmeta">${esc(s.code)} · ${esc(fmt(s.release))}</div></div>`;
   };
   const bannerCard = (s: any) => {
     const bf = bannerFor(s);
-    const art = bf ? `/logos/sets/banners/${bf}` : fallbackBanner;
+    const art = bf ? `/logos/pokemon/banners/${bf}` : fallbackBanner;
     if (!art) return `<div class="banner noimg"><span>${esc(s.name)}</span><small>banner coming soon</small></div>`;
     const lf = logoOf(s);
-    const logo = lf ? `<img class="blogo" src="/logos/sets/${lf}?v=2" alt="" loading="lazy">` : "";
+    const logo = lf ? `<img class="blogo" src="/logos/pokemon/sets/${lf}?v=2" alt="" loading="lazy">` : "";
     return `<div class="banner${bf ? "" : " fb"}"><img class="bart" src="${art}" alt="" loading="lazy">${logo}<div class="bcap"><b>${esc(s.name)}</b><span>${esc(s.code)} · ${esc(fmt(s.release))}</span></div></div>`;
   };
   const pills = eras.map((e, i) => `<button type="button" class="pill${i === def ? " on" : ""}" data-era="${i}">${esc(e.era)} <small>${e.sets.length}</small></button>`).join("");
@@ -1198,27 +1204,6 @@ app.get("/logos/chains/:file", (c) => {
     return c.body(buf, 200, { "Content-Type": ext === "svg" ? "image/svg+xml" : ext === "webp" ? "image/webp" : "image/png" });
   } catch { return c.notFound(); }
 });
-// Pokémon TCG set logos (for /logo-wall/sets) — same static-serve pattern as chain logos.
-app.get("/logos/sets/:file", (c) => {
-  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
-  try {
-    const buf = readFileSync(join(here, `../public/logos/sets/${file}`));
-    const ext = file.split(".").pop()?.toLowerCase();
-    c.header("Cache-Control", "public, max-age=86400");
-    return c.body(buf, 200, { "Content-Type": ext === "svg" ? "image/svg+xml" : ext === "webp" ? "image/webp" : "image/png" });
-  } catch { return c.notFound(); }
-});
-// Full-art set BANNER images (key art) for /logo-wall/sets — drop <apiId>.jpg into public/logos/sets/banners/.
-app.get("/logos/sets/banners/:file", (c) => {
-  const file = (c.req.param("file") || "").replace(/[^a-z0-9._-]/gi, "");
-  try {
-    const buf = readFileSync(join(here, `../public/logos/sets/banners/${file}`));
-    const ext = file.split(".").pop()?.toLowerCase();
-    c.header("Cache-Control", "public, max-age=86400");
-    return c.body(buf, 200, { "Content-Type": ext === "webp" ? "image/webp" : ext === "png" ? "image/png" : "image/jpeg" });
-  } catch { return c.notFound(); }
-});
-
 // ---- Chain logo upload + migration (logo-r2-keystone spec, git history) ----
 // Upload a chain's logo straight to shared R2 and point the chain row at it (logo_url). Server-side PUT
 // via a presigned URL — one request from the Admin. ?wide=1 / ?dark=1 set the render flags. After this
@@ -1681,19 +1666,19 @@ app.get("/pub/pokemon-sets", async (c) => {
   // in for chains (NOT the R2 bucket). Logo dev drops files at exactly these paths, the front end
   // renders feed.logo/banner with a text fallback until each asset lands, and the images ship with
   // the same branch/promotion as the code. Zero coordination.
-  //   set logo  -> public/logos/sets/<logoKey>.png        (served at /logos/sets/…)
-  //   set banner-> public/logos/set-banners/<logoKey>.png (served at /logos/set-banners/…)
-  //   era logo  -> public/logos/eras/<era-slug>.png       (served at /logos/eras/…)
+  //   set logo  -> public/logos/pokemon/sets/<logoKey>.png    (served at /logos/pokemon/sets/…)
+  //   set banner-> public/logos/pokemon/banners/<logoKey>.png (served at /logos/pokemon/banners/…)
+  //   era logo  -> public/logos/pokemon/eras/<era-slug>.png   (served at /logos/pokemon/eras/…)
   const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   // Cache-bust: the service worker caches /logos/* cache-first, so bump this whenever the set assets
   // are re-cut and the front end will request fresh URLs (old cached copies are orphaned harmlessly).
-  const av = "?v=8";
-  const v = { ...file, logoBase: "/logos", eras: file.eras.map((e) => ({ ...e,
-    slug: slug(e.era), logo: `/logos/eras/${slug(e.era)}.png${av}`,
+  const av = "?v=9";
+  const v = { ...file, logoBase: "/logos/pokemon", eras: file.eras.map((e) => ({ ...e,
+    slug: slug(e.era), logo: `/logos/pokemon/eras/${slug(e.era)}.png${av}`,
     sets: e.sets.map((s) => ({ ...s,
       logoKey: slug(String(s.code)),
-      logo: `/logos/sets/${slug(String(s.code))}.png${av}`,
-      banner: `/logos/set-banners/${slug(String(s.code))}.png${av}`,
+      logo: `/logos/pokemon/sets/${slug(String(s.code))}.png${av}`,
+      banner: `/logos/pokemon/banners/${slug(String(s.code))}.png${av}`,
       products: orderProducts([...(bySet.get(norm(String(s.name))) ?? new Map<string, number | null>()).entries()].map(([type, retail]) => ({ type: prettyType(type), retail }))) })) })) };
   pokemonSetsCache = { t: Date.now(), v };
   return c.json(v);
@@ -2719,9 +2704,9 @@ app.post("/pub/translate", async (c) => {
   // Target language: English by default; Spanish when the UI is in Spanish mode.
   const lang = to === "es" ? "Spanish" : "English";
   try {
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    const r = await fetch("https://oai.helicone.ai/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "content-type": "application/json" },
+      headers: { Authorization: `Bearer ${key}`, "content-type": "application/json", ...heli("translate") },
       body: JSON.stringify({
         model: "gpt-4o-mini", max_tokens: 800, temperature: 0,
         messages: [{ role: "user", content: `Translate this phone-call transcript to natural ${lang}. Keep each "Agent:" and "Clerk:" speaker label on its own line, exactly as given. If it's already ${lang}, return it unchanged. Output only the translation, no preamble.\n\n${text}` }],
@@ -3769,7 +3754,7 @@ const GTM_SEED: { id: string; title: string; detail: string; area: "backend" | "
   { id: "deck-video", title: "Finalize the check deck + share video", detail: "Not critical for launch.", area: "ops", agent: "owner", critical: false, status: "todo" },
   { id: "analytics", title: "Analytics ready on production", detail: "The non-GA analytics tool (API key already set) is live on prod tracking every page, so we can see paths + optimize after launch.", area: "backend", agent: "devops", critical: true, status: "todo" },
   // DevOps-surfaced items (my lane) —
-  { id: "cheap-lane-wiring", title: "Move leftover call paths onto the cheap bridge lane", detail: "Scheduled checks, zone fires, admin call-now, and the /pub/check fallback still ride the pricey direct-agent path. Wiring, not a build — straight cost cut. (CALL_ECONOMICS §2)", area: "backend", agent: "devops", critical: false, status: "todo" },
+  { id: "cheap-lane-wiring", title: "Move leftover call paths onto the cheap bridge lane", detail: "Scheduled checks, zone fires, admin call-now, and the /pub/check fallback still ride the pricey direct-agent path. Wiring, not a build — straight cost cut. (COST_MODEL Part II §2)", area: "backend", agent: "devops", critical: false, status: "todo" },
   { id: "price-editor", title: "Admin price-editor → Stripe", detail: "Change any monthly price / PAYG rate in admin and push straight to Stripe, no code change.", area: "backend", agent: "devops", critical: false, status: "todo" },
   { id: "money-endpoint-guard", title: "Money-endpoint rate limits + security headers", detail: "Per-IP limits on the four call-placing endpoints + baseline security headers. Shipped.", area: "backend", agent: "devops", critical: true, status: "done" },
 ];
@@ -3896,12 +3881,18 @@ app.patch("/api/chains/:id", async (c) => {
   if (b.stockCheckConfidence !== undefined) patch.stockCheckConfidence = b.stockCheckConfidence || null; // e.g. "spotty" = inconsistent stock (off-price/thrift), not a reliable MSRP source
   if (b.sellMethods !== undefined) patch.sellMethods = b.sellMethods || null; // CSV: in_store|pickup|ship
   if (typeof b.isMSRP === "boolean") patch.isMSRP = b.isMSRP;
+  // Logo pointer repoint (logos-restructure): accepts a shared-R2 URL or a same-origin /logos/… path;
+  // null/"" clears it back to the filesystem resolver. Flags ride along like POST /api/chains/:id/logo.
+  if (b.logoUrl !== undefined) patch.logoUrl = b.logoUrl || null;
+  if (typeof b.logoWide === "boolean") patch.logoWide = b.logoWide;
+  if (typeof b.logoDark === "boolean") patch.logoDark = b.logoDark;
   // Invariant: a direct-answer chain has no menu, so it must carry NO tree-seconds — a stray value arms
   // the connect-timer and mutes the agent (silent-agent bug). Enforce it here too, so a manual admin edit
   // that flips a chain to direct can't recreate it (the learn/trainer paths already guard this).
   if (patch.ringsDirect === true || patch.answerPath === "direct_human") patch.avgTreeSeconds = null;
   const [row] = await db.update(chains).set(patch).where(eq(chains.id, Number(c.req.param("id")))).returning();
   invalidateRefCache();
+  if (patch.logoUrl !== undefined || patch.logoWide !== undefined || patch.logoDark !== undefined) await refreshChainLogoDb();
   return c.json(row);
 });
 
@@ -5029,6 +5020,8 @@ setInterval(() => withLock("store-sync", 280, storeSyncTick).catch((e) => consol
 setInterval(() => withLock("harvest", 110, harvestHoursTick).catch((e) => console.error("harvest:", e)), 120_000); // self-updating hours (policy-gated, off by default)
 setInterval(() => withLock("cust-sched", 85, customerScheduleTick).catch((e) => console.error("cust-sched:", e)), 90_000); // subscriber auto-checks (policy-gated)
 setInterval(() => withLock("gmail-receipts", 25, gmailReceiptTick).catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)
+setInterval(() => withLock("ops-watch", 55, watchdogTick).catch((e) => console.error("ops-watch:", e)), 60_000); // cross-env down detector → owner alert
+setInterval(() => withLock("ops-backup", 3500, backupTick).catch((e) => console.error("ops-backup:", e)), 3_600_000); // daily encrypted DB backup → R2
 refreshChainLogoDb().catch(() => {}); // DB-first chain-logo cache: initial load + refresh (no lock — read-only, idempotent)
 setInterval(() => refreshChainLogoDb().catch(() => {}), 60_000);
 
@@ -5042,8 +5035,8 @@ setInterval(() => refreshChainLogoDb().catch(() => {}), 60_000);
 // A Gmail IMAP socket timeout emitted an unhandled 'error' event and killed the WHOLE process —
 // site, admin, and live calls. Background integrations (IMAP, webhooks, ticks) must never be able
 // to take the service down: log loudly, keep serving. Truly broken state still surfaces in logs.
-process.on("uncaughtException", (e) => console.error("[FATAL-CAUGHT] uncaughtException (service kept alive):", e?.stack || String(e)));
-process.on("unhandledRejection", (e) => console.error("[FATAL-CAUGHT] unhandledRejection (service kept alive):", (e as Error)?.stack || String(e)));
+process.on("uncaughtException", (e) => { console.error("[FATAL-CAUGHT] uncaughtException (service kept alive):", e?.stack || String(e)); void opsAlert("crash", "uncaughtException (kept alive)", String(e?.stack || e).slice(0, 500)); });
+process.on("unhandledRejection", (e) => { console.error("[FATAL-CAUGHT] unhandledRejection (service kept alive):", (e as Error)?.stack || String(e)); void opsAlert("crash", "unhandledRejection (kept alive)", String((e as Error)?.stack || e).slice(0, 500)); });
 
 process.once("SIGTERM", () => {
   const started = Date.now();

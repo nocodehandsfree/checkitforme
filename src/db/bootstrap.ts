@@ -257,7 +257,8 @@ export async function bootstrap() {
 async function seedFunStore() {
   const phone = (process.env.FUN_STORE_PHONE || "").trim();
   if (!phone) return;
-  // A "Fungibles" chain purely so the store renders the Fungibles brand mark (logos/chains/fungibles.png).
+  // A "Fungibles" chain purely so the store renders the Fun brand mark (logos/chains/fun.png; the
+  // chain row's logo_url points at it — the old Runnr-era fungibles.png name is being retired).
   let chain = (await db.select().from(chains).where(eq(chains.name, "Fungibles")))[0];
   if (!chain) {
     await db.insert(chains).values({ name: "Fungibles", type: "Fungibles" });

@@ -21,7 +21,9 @@ import { isCallingPaused } from "../redis";
 import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, NavRecipe, NavStep } from "./navigator";
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
 
-const DAILY_CAP = 12;        // calls per chain per day — past this, a human should look at it
+const DAILY_CAP = 60;        // runaway guard only — owner 2026-07-10: the old 12/day cap is gone, a
+                             // sweep converges every mapped chain in one day. Tune without a deploy
+                             // via the "mapper_daily_cap" setting (0/unset = this default).
 const GAP_SEC = 75;          // spacing between calls to the same chain (politeness + IVR cool-down)
 const CALL_MAX_SEC = 150;    // per-call watch window (slow IVRs take ~95s to a human)
 const BASELINE_TRIES = 5;    // no human in this many attempts → needs-review, stop burning calls
@@ -178,7 +180,8 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
   if (ch.muted) return { error: `${ch.name} is muted — skipped (no direct store line / owner-hidden)` };
   if (ch.callTarget === false) return { error: `${ch.name} has no direct store line (online-only / call-center) — skipped` };
   const usedToday = Number((await getSetting(`mapper_calls:${chainId}:${today()}`)) || 0);
-  if (usedToday >= DAILY_CAP) return { error: `daily cap reached (${DAILY_CAP}) — try tomorrow or raise the cap` };
+  const cap = Number((await getSetting("mapper_daily_cap")) || 0) || DAILY_CAP;
+  if (usedToday >= cap) return { error: `daily cap reached (${cap}) — raise the "mapper_daily_cap" setting if this is a real sweep` };
   // #1: the owner-set desk to aim for (customer service by default; a chosen department for dept-only chains).
   const target = ((await getSetting(`nav_target:${chainId}`)) || "").trim() || undefined;
 
@@ -205,7 +208,7 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
       run.updatedAt = Date.now();
       // ---- guards ----
       if (await isCallingPaused()) { run.stopReason = "global kill-switch"; break; }
-      if (run.callsToday >= DAILY_CAP) { run.stopReason = `daily cap (${DAILY_CAP} calls)`; run.phase = run.baseline ? run.phase : "needs-review"; break; }
+      if (run.callsToday >= cap) { run.stopReason = `daily cap (${cap} calls)`; run.phase = run.baseline ? run.phase : "needs-review"; break; }
       const ex = run.phase === "optimize" ? run.experiments.find((e) => e.status === "pending") : undefined;
       if (run.phase === "optimize" && !ex) { // nothing left to test → final lock below
         run.phase = "locked"; break;

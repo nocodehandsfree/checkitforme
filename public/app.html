@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <meta name="x-rev" content="admin-r44" />
 <title>Check It For Me · Admin</title>
-<link rel="icon" type="image/png" href="/logos/check-icon.png?v=1">
-<link rel="apple-touch-icon" href="/logos/check-icon.png?v=1">
+<link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=2">
+<link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
@@ -566,7 +566,7 @@
 </head>
 <body class="authwait">
 <header>
-  <a class="hmark" href="https://checkitforme.com" title="Back to Check It For Me" style="display:flex;align-items:center"><img src="/logos/check.png?v=1" alt="Check It For Me" style="height:22px;width:auto;object-fit:contain;display:block"></a>
+  <a class="hmark" href="https://checkitforme.com" title="Back to Check It For Me" style="display:flex;align-items:center"><img src="/logos/brand/check.png?v=2" alt="Check It For Me" style="height:22px;width:auto;object-fit:contain;display:block"></a>
   <span class="dot" title="live"></span>
   <span class="sub" id="clock"></span>
 </header>
@@ -2310,7 +2310,7 @@ function bubbles(t){
     const m=line.match(/^(Agent|Clerk):\s*(.*)$/);
     if(!m) return `<div class="bub-note">${esch(line)}</div>`;
     const who=m[1]==='Agent'?'a':'c';
-    return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'<img src="/logos/check.png?v=1" alt="CheckIt" style="height:12px;width:auto;vertical-align:middle;display:inline-block">':'Staff'}</span>${esch(m[2])}</div>`;
+    return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'<img src="/logos/brand/check.png?v=2" alt="CheckIt" style="height:12px;width:auto;vertical-align:middle;display:inline-block">':'Staff'}</span>${esch(m[2])}</div>`;
   }).join('')+'</div>';
 }
 let RETAILERS=[];
@@ -2585,7 +2585,7 @@ function storeDetailsHTML(r){
 }
 // Product logos for the verticals we actually support, one line. Per-logo [h,w] because the source art
 // has different padding — Topps (wordmark) reads bigger, NeeDoh is sized to match Pokémon / One Piece.
-const PROD_LOGOS=[[/pok[eé]?mon/i,'/logos/chains/pokemon_vending.svg','Pokémon',20,20],[/one[\s-]?piece/i,'/logos/onepiece.png','One Piece',20,20],[/topps/i,'/logos/topps.png','Topps',23,31],[/nee[\s-]?doh/i,'/logos/needoh.png','NeeDoh',21,21]];
+const PROD_LOGOS=[[/pok[eé]?mon/i,'/logos/chains/pokemon_vending.svg','Pokémon',20,20],[/one[\s-]?piece/i,'/logos/products/onepiece.png','One Piece',20,20],[/topps/i,'/logos/products/topps.png','Topps',23,31],[/nee[\s-]?doh/i,'/logos/products/needoh.png','NeeDoh',21,21]];
 function prodLogos(carries){
   const s=String(carries||''); let out=''; const seen={};
   for(const t of PROD_LOGOS){ if(t[0].test(s)&&!seen[t[1]]){ seen[t[1]]=1; out+=`<img src="${t[1]}" alt="${esch(t[2])}" title="${esch(t[2])}" loading="lazy" style="height:${t[3]}px;width:${t[4]}px">`; } }
@@ -3378,7 +3378,7 @@ function lucideSvg(name,size,col){ const inner=LUCIDE[name]; if(!inner) return "
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">${inner}</svg>`; }
 function toneCol(c){ return /^#/.test(c||"")?c:(c==="in"?"#4ADE80":c==="out"?"#EF4444":c==="soon"?"#F59E0B":c==="gray"?"#9CA3AF":"#F4D03F"); }
 function statusIcon(val,color,size){ size=size||24; const col=toneCol(color);
-  if(val==="in_stock"||val==="✅") return `<img src="/logos/check-brandmark.svg" alt="" style="width:${size}px;height:${size}px;object-fit:contain">`;
+  if(val==="in_stock"||val==="✅") return `<img src="/logos/brand/check-brandmark.svg" alt="" style="width:${size}px;height:${size}px;object-fit:contain">`;
   if(LUCIDE[val]) return lucideSvg(val,size,col);
   return vmark(val,color,size); }
 let _iconPickCb=null;
@@ -3929,9 +3929,9 @@ function prodMark(name,size){
   size=size||15; const s=String(name==null?'':name).trim();
   const img=(src,alt)=>`<img src="${src}" alt="${alt}" title="${alt}" style="height:${size}px;width:${size}px;vertical-align:-3px;object-fit:contain;display:inline-block">`;
   if(/pok[eé]?mon/i.test(s)) return img('/logos/chains/pokemon_vending.svg','Pokémon');
-  if(/one[\s-]?piece/i.test(s)) return img('/logos/onepiece.png','One Piece');
-  if(/topps/i.test(s)) return img('/logos/topps.png','Topps');
-  if(/nee[\s-]?doh/i.test(s)) return img('/logos/needoh.png','NeeDoh');
+  if(/one[\s-]?piece/i.test(s)) return img('/logos/products/onepiece.png','One Piece');
+  if(/topps/i.test(s)) return img('/logos/products/topps.png','Topps');
+  if(/nee[\s-]?doh/i.test(s)) return img('/logos/products/needoh.png','NeeDoh');
   return esch(s);
 }
 // ---- Drawn icon system (matches the consumer front end — zero raw emoji in chrome) ----

@@ -7,7 +7,23 @@
 > Clean split with the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/the body wash), **I own
 > view/mode/nav**. Don't blind-edit the tint — it's fragile.
 
-## ▶ Doing now — owner UI-polish pass on staging (screenshot-driven)
+## ✅ DONE on staging — public/logos restructure + cleanup (07-10, owner OK'd the logo wall)
+- **Final tree:** logos/brand/ (Check marks) · logos/products/ (pokemon onepiece topps needoh) ·
+  logos/pokemon/{eras,sets,banners} · logos/chains/ (untouched, DB-referenced). Old flat tree +
+  legacy routes DELETED (cleanup commit 38bd0c5, after restructure 6c13b1e). Zero fungibles-named
+  files in public/. pokemon/banners keeps missing→_fallback.png. /logos/:file root route kept.
+- **Fun store:** renders chains/fun.png; STAGING chain row (id 120) repointed ✓. PATCH /api/chains/:id
+  now accepts logoUrl/logoWide/logoDark.
+- **Verified post-cleanup on staging 38bd0c5:** new URLs 200, old URLs 404 at origin (a few still 200
+  from Cloudflare edge cache, max-age 86400 → self-expires), /pub/pokemon-sets emits /logos/pokemon/…,
+  logo-wall + sets wall + 4 homepages + retail/kiosk/thrift lists = zero broken images (screenshots in chat).
+- **⏭ AT PROMOTE TIME (the only leftovers):** 1) repoint PROD Fungibles row (id 120) → logoUrl
+  "/logos/chains/fun.png?v=1" via PATCH /api/chains/120 right after prod deploys (until then it serves
+  the R2 fungibles URL — fine). 2) R2 bucket still hosts chain-logos/fungibles.png — outside public/,
+  out of scope, harmless. NOTE: staging today also carries others' batches (docs shuffle, PostHog,
+  Helicone routing, backup-restore) — promote takes all of it unless DevOps splits.
+
+## ▶ Paused — owner UI-polish pass on staging (screenshot-driven)
 Rapid back-and-forth: owner screenshots staging, I fix, push, he re-verifies. All staging until he confirms,
 then I port to prod. Keep replies outcome-first.
 

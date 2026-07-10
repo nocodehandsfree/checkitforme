@@ -7,11 +7,11 @@ Every folder below has a README that explains its contents **right on the folder
 | `team/` | **One folder per agent**: `handoff.md` (stable lane) + `checkpoint.md` (current state, updated every "Checkpoint") | Each agent — your ONLY starting point |
 | `owner/` | `new-chat-prompts.md` (paste-ready chat starters); business reference = the book (readme.com) | Fungie |
 | `shared/` | Code rules · architecture · **API contract** · runbook · gotchas | Everyone, only when a task needs it |
-| `design/` | **ALL design**: `brand/` (the logo) · `STYLE_GUIDE.md` (the look) · `comps/` (boards) · `copy/` (the voice) | Design, Website, Copy |
+| `design/` | **ALL design**: `brand/` (the logo) · `STYLE_GUIDE.md` (the look) · `comps/` (boards) · `copy/` (the voice) · `emails/` (email mocks) | Design, Website, Copy |
 | `specs/` | **Active builds only** — one file/folder per feature; ships → moves to `archive/` | The lanes building them |
 | `data/` | Store-data reference + `samples/` (raw .json/.csv kept apart from docs) | Data Dev |
 | `business/` | Roadmap | Owner + DevOps |
-| `finance/` | Cost model + calculator (`CALL_ECONOMICS.md` is in `business/` pending merge into `COST_MODEL.md`) | Owner + DevOps |
+| `finance/` | Cost model + calculator (`COST_MODEL.md` — per-check economics + call anatomy/lanes/pricing, one doc) | Owner + DevOps |
 | `archive/` | Done or superseded — "where did X go?" answers | Anyone |
 
 ## The rules (what keeps this clean — DevOps enforces)

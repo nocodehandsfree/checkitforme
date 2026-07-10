@@ -1,7 +1,7 @@
 # The Fungibles Score — how tiers work in this codebase
 
-**Canonical, repo-native rubric.** This is the v4 scoring model (`data/source/chain-scoring-2026-06/
-SCORING_MODEL_spec.md`) reconciled to the **actual schema** and the **current prod behavior**. When
+**Canonical, repo-native rubric.** This is the v4 scoring model (`docs/data/SCORING_MODEL_spec.md`)
+reconciled to the **actual schema** and the **current prod behavior**. When
 the upstream spec and the running code disagree, this doc describes what the code does today; the
 upstream package is the design intent.
 

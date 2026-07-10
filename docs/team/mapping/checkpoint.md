@@ -7,6 +7,9 @@ reaching a human. Capture per-chain barge-in rules in the recipe (see docs/specs
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets not prose, under ~80 lines.
 > Prune finished items (history lives in git commits).
 
+*(Below = the mapper's final fungibles session state, ported as-is 2026-07-10 from commit d3e8542;
+only the live admin token was redacted per the secrets rule.)*
+
 ## NOW — speed pass (the "other 50%")
 - **Owner mandate (this session):** reaching a human is only half. The other half is reaching them
   **as fast as possible**, for EVERY store — press the digit / barge the word ("general" CVS-style) as
@@ -18,19 +21,32 @@ reaching a human. Capture per-chain barge-in rules in the recipe (see docs/specs
   brain saved it at the old time → treat as too-early, back off. Lock = **fastest proven**, not
   first-reached. DTMF + voice both. Commit **8b422db** (staging, pushed) / cherry-pick **eb2e2a9** (prod
   branch, NOT deployed).
-- **BLOCKED on owner decision:** prod push was auto-gated (production deploy needs explicit OK). Explained
-  to owner: Admin + consumer site + calling engine + recipe DB are the SAME production service — mapping
-  in Admin writes the prod DB the consumer app reads. Two separate actions: (1) **RUN a pass = no deploy**
-  (engine already live from #421) → only old 5s-nibble gains; (2) **ship the 1-file mapper upgrade = a
-  prod deploy** (zero consumer UI touched) → full convergence. Awaiting: run-now vs deploy-then-run.
+- **NOT DEPLOYED — awaiting owner OK.** The converging engine is committed to **staging** (8b422db,
+  pushed & safe). It was also cherry-picked onto the **prod branch as eb2e2a9**, but that push was
+  auto-gated (production deploy needs explicit OK) and **never pushed — it lives ONLY as a local branch
+  and dies with this container.** No loss: eb2e2a9 is identical to 8b422db; recreate by cherry-picking
+  8b422db onto the prod branch again. Admin + consumer site + calling engine + recipe DB are the SAME
+  prod service, so upgrading the mapper = a prod deploy (zero consumer UI touched). **To get "fastest":
+  deploy eb2e2a9 (or re-cherry-pick 8b422db) to prod. Until then prod runs the old 5s-nibble engine and
+  the fastest-path sweep must NOT run.**
+  **[Fact-check at port 2026-07-10 (DevOps): STALE — the converging engine (f20e5f0) is in this repo's
+  `main` AND `staging`; it reached prod with the repo migration. The "must NOT run" block is lifted;
+  no cherry-pick needed.]**
+- **NO CALLS placed this session. Prod unchanged — board still 73 locked at OLD baseline speeds.**
+- **Handoff to next Mapper agent (new repo):** boot from THIS checkpoint. Two blockers to close first:
+  (1) confirm this file actually migrated to the new repo's working branch; (2) confirm the converging
+  engine is deployed to prod (it is NOT yet). Arm a real 9am-ET scheduled trigger (the daytime gate
+  blocks early calls, it does NOT start them); re-snapshot before-times at boot (scratchpad snapshot is
+  gone); one mapper at a time; skip navType:direct; don't touch CVS; re-map Meijer/Menards; drift-verify
+  as you go. *(Port note: blockers 1 + 2 are now both closed — file migrated, engine on prod.)*
 - **BEFORE snapshot captured** → `scratchpad/board_before.json` (73 locked). Slowest keypad (speed-pass
   targets): Ralphs 126s(181 CA), Acme 112, Safeway 102, Costco 97, Menards 94, BJ's 90, Vons 87(CA),
   Star Market 80, Meijer 75, Shaw's/Wegmans 73… Direct-ring chains already instant (Walmart 10, Kroger
   10, Dollar General 0) — skip. **Do NOT touch CVS** (owner). Owe owner a before→after speed table.
 - **Timing:** daytime gate = 9am–8pm LOCAL; at session pause it was 18:43 PT / 21:43 ET → only west-coast
   stores still open. Plan: west-coast slowest-first tonight, then schedule tomorrow-AM east→west.
-- Admin API: `https://admin.checkitforme.com`, header `x-admin-token: adm_e4f43d88c4b920740a41ee26a5253679`
-  (still valid). Start a chain: `POST /api/admin/mapper/start {chainId}`; poll `GET .../mapper/state`.
+- Admin API: `https://admin.checkitforme.com`, header `x-admin-token: <ADMIN_TOKEN>` (in Railway).
+  Start a chain: `POST /api/admin/mapper/start {chainId}`; poll `GET .../mapper/state`.
   `trainer/list` is heavy (CF 524 on cold server — use `-m 100`).
 
 ## #1 TRAP (most important)
@@ -66,5 +82,7 @@ reaching a human. Capture per-chain barge-in rules in the recipe (see docs/specs
   replies outcome-first bullets. **Never push code while a call is live** (redeploy kills it).
 
 ## State
-- Board = **73 locked**. Recipes live in the **prod DB**, not git. Converging engine on staging; awaiting
-  owner OK to deploy to prod + run the speed pass west→ (east tomorrow AM).
+- Board = **73 locked** (all still at OLD baseline speeds — nothing re-mapped this session). Recipes live
+  in the **prod DB**, not git. Converging engine committed to staging (8b422db); prod cherry-pick
+  (eb2e2a9) NOT pushed/deployed *(see fact-check note above: engine IS on prod post-migration)*.
+  Next: new agent arms 9am-ET sweep west→east.
