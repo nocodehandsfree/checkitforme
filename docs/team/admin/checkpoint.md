@@ -2,47 +2,86 @@
 
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
+> *(Over the cap right now because the fungibles ADMIN-HANDOFF content was ported in below,
+> per owner 2026-07-10 — secrets stripped. Next Addie session: prune hard at boot.)*
 
-## Current focus — staged plan (do in order; KEEP UPDATED)
-0a. [ ] **🅿️ DevOps → Admin (owner 2026-07-03): add the PREMIUM-FEATURE TOGGLE MATRIX to God View →
-   Plans.** Backend is done — `GET /api/admin/plans` now returns `features:[{key,label}]` (8 features)
-   and each tier carries `features:{key:bool}`. Add a matrix UI (features × the 4 tiers = checkboxes)
-   under the price/quota editors. Save exactly what you already do — `POST /api/admin/plans` accepts
-   `features` per tier verbatim (no shape change needed). Default is ALL ON for every paid tier; the
-   owner toggles individual cells. After saving, the existing **Publish to Stripe** button applies
-   prices; features are app-enforced entitlements (no Stripe price). PAYG has no features by design.
-   The 4 tiers (Family/Collector/Hunter/Operator) + PAYG are already live + published to Stripe (test).
-0. [ ] **DevOps → Admin (owner rule 2026-07-02): Workflows must power BOTH envs from the one Admin.**
-   Today Admin edits PROD's workflows only (per-env DBs; staging's `vt_*` settings get edited via
-   staging's own API). Build an **environment picker** on the Workflows screen: Prod | Staging, where
-   Staging reads/writes `staging.checkitforme.com/api/*` (its own ADMIN_TOKEN — coordinate the
-   cross-origin auth with DevOps before building). Envs stay independent: owner tests a workflow on
-   staging, then deliberately applies the winner to prod. No auto-sync.
-0b. [ ] **🅿️ Per-customer account view (owner 2026-07-04) — spec `docs/specs/admin-user-view.md`.**
-   Make each Users row clickable → a detail panel showing their plan/tier, entitlements (the 8
-   features), credits (quota+PAYG), saved zones, schedules, recent checks + lifetime spend. DevOps
-   builds `GET /api/admin/users/:id` + a grant-credits endpoint; you build the panel + comp/grant actions.
-0c. [ ] **🗑️ Remove the Admin "Zones" area (owner 2026-07-04).** Owner manages zones from their own
-   account now (consumer Manage Zones). Delete the Zones tab/UI in `public/app.html` (~30 refs).
-   DevOps removes the `/api/zones*` endpoints when consumer `/app/zones` ships (no gap). The zones
-   ENGINE stays — don't touch the tables/service.
-1. [ ] **Fix the admin** so it's up to date (it lagged during the website/admin split).
-2. [ ] **Voice-switcher + tree-learner ready to test** — confirm the Haiku-nav → Sonnet-human switch
-   (`connectOnHuman` flag + Helicone) and the phone-tree learner (Tree Trainer) are wired. Code:
-   `src/llm.ts`, `src/voice/bridge.ts`, `src/calls/tree-learn.ts`; spec: the caller-tech spec in git history.
-3. [ ] **Clean up the admin UI** to match the website's look; correct **call-status icons** (verdict marks). (Fungie will give look/feel detail.)
-4. [ ] **Spec + build the AGENT PERSONAS (you own the plan).** The agents: the in-admin "Admin dev"
-   agent, an on-site **customer-support** agent, a **Discord** support bot, and **call routing** —
-   all through the **Helicone gateway** (`src/llm.ts`), cheapest-model-per-job, with **3-tier
-   escalation** (FAQ → Claude → human ticket) and a **RAG knowledge base** (Qdrant) that grows as
-   customers ask. Goal: one operator runs support + ops via agents. Read first:
-   `docs/business/ROADMAP.md`, `docs/business/ROADMAP.md`, `docs/finance/COST_MODEL.md`. Spec before building.
-5. [ ] **With personas in place, run the voice-switcher + tree-learning TEST** — a bench test call:
-   cheap model navigates the IVR → Sonnet takes over on human pickup → the tree is learned + written
-   back. Show which model handled each phase + the cost. (`connectOnHuman` OFF except on the bench.)
-- [ ] (supports Website) "Create your agent" caller-ID panel using `/auth/callerid/start` + `/status`.
-- [ ] (voice) **Kiosk call script** — when `kioskMode` is set, the agent asks "is your Pokémon kiosk
-  working/stocked?" instead of the shipment question. Spec: the kiosk spec in git history (`src/voice/prompts.ts`).
+## Ported 2026-07-10 from fungibles `ADMIN-HANDOFF` (bcae071), secrets stripped
 
-When you finish something: move it to git history; leave Current focus set for the next chat.
-- **Owner ask 2026-07-07:** Chains page — add a collapse/roll-up control for the store list so the mapping area is reachable without scrolling forever.
+**Lanes:** Addie owns `public/app.html` (admin SPA) + `/api/*` in `src/server.ts`. Consumer site = Website.
+Backend/Stripe = DevOps. Voice tuning = Website. Mapper runs = Mapping.
+
+**Branch/deploy/access (new-repo reality):** work on **`staging`** → owner verifies on
+staging.checkitforme.com → promote. Branch is SHARED — fetch + rebase before push. Push auto-deploys
+(SIGTERM drain protects live calls). **ADMIN_TOKEN**: in Railway (same on staging + prod), header
+`x-admin-token`. **RAILWAY_API_TOKEN**: in Railway/owner (fetch any secret with it) — project
+`889e332c-…`, env `7cbf9327-…`; svcs: prod `d363a982-…`, staging `8165df7a-…`, card-app `03d5f34f-…`
+(holds CLOUDFLARE_API_TOKEN; checkitforme.com CF zone `fd03cb4a`). URLs: admin.checkitforme.com,
+staging.checkitforme.com, staging Railway `voice-caller-staging-production.up.railway.app`.
+
+**Hard-won rules:** NEVER ship routing/route patterns without a local boot test (a `:param{regex}`
+route crashed Hono = full outage; boot with dummy EL vars, curl the routes). Copy guide before UI copy:
+fewest words, tooltips over paragraphs, NO em-dashes. Every app.html edit: `grep -c '</script>'` = 2 +
+`node --check` the inline script; `npx tsc --noEmit` = 0 for src edits. No model id in commits/PRs.
+
+**🎯 Delta production lane (built, on staging, NOT human-live-tested — ADDIE'S #1 with owner's 8-call feedback):**
+- Lane choice: workflow carries `lane:"delta"|"charlie"`; `triggerCall` runs `deltaStoreCall` when the
+  store's workflow.lane is delta, else live agent.
+- Engine `src/calls/tapedeck.ts`: bench + store modes — opener → gemini-2.5-flash-lite classifier →
+  set-first follow-up → restock-day on a no → wrap. `deltaDecide()` pure + unit-tested
+  (`scripts/test-delta.ts`, 17 cases). Voice/openers/follow-ups from the workflow, rotated per call.
+- Charlie barge-in (`setDeltaBarge`): off-script "question" at the opener hands the SAME live call to the
+  paid agent; fail-safe wraps clean, never dead air. Hard 5-min Twilio TimeLimit.
+- Finalize (`finalizeDeltaSession`): clip-flow outcome → call_results verdict, charge once on definitive
+  answer, notify, stamp `retailers.shipmentDay`. Barged calls finalize via the EL poll.
+- Control UI: Workflows → per-workflow Call-lane toggle + editable Delta follow-ups (`wfmDeltaEditor`).
+- Staging config: **Branson Test** = lane:delta + persona Branson; **Fun** store (106361) assigned to it →
+  ONLY Fun runs Delta (owner: test only to the Fun store). Default = Branson Global (charlie).
+- Verified: tsc clean, 17 tests green, boots, staging healthy. Barge-in needs a live off-script call.
+- Limits: name echo only on Charlie/barge (clips can't say names); Delta classifier has no "doesn't carry".
+
+**Voice fixes shipped (staging, live lane):** bare "no" no longer misreads as does_not_carry (carry/sell/
+stock words required); `askShipmentDay` defaults ON everywhere + agent asks next-shipment day on a no;
+in-stock follow-up = set-first (`PREMIUM_FOLLOWUP`).
+
+**Fun-store dead-air (context, fixed):** bogus `avgTreeSeconds=19` from passive tree-learn muted the agent
+19s. Fixed via `connectAtSecFor` + write-side guard. **Data Dev still owes:** null stale `avgTreeSeconds`
+on ~30 direct chains (harmless but UI shows contradictory "rings direct · 19s to human").
+
+**Locked decisions:** Pricing Family $4.99/15 · Collector $9.99/30 · Hunter $19.99/100 · Operator
+$49.99/300; PAYG 99¢→60¢ over 10→100; premium = sub-only w/ admin toggle matrix; text alerts metered
+(Family 5/mo), email free. ONE follow-up for everyone (Delta is cheap; PAYG calls still end fast).
+Delta everywhere is the ROI plan; Charlie for hobby/off-script depth.
+
+**OPEN (ported priority order):**
+1. Owner's 8-call feedback on voice + Delta — tune from it (set-first, restock-day, barge-in).
+2. Alert emails must match `docs/design/emails/` AND render in Outlook (tables, inline CSS, VML); send a
+   test. A2P 10DLC at final Twilio stage — prep SMS end-to-end the day it approves.
+3. Show pills for unclear statuses even from Fun/owner-only store (god-view excludes Fun from headline —
+   surface Fun's `no_clear_answer` elsewhere).
+4. Remove the Schedules nav button.
+5. Dashboard cleanup: hero 5→3 vitals (Checks 24h · Reach 30d · EL credits), drop Confirms/Margin/pulse/
+   Money, keep Call-time, demote Data-health.
+6. Price-editor + tier↔feature matrix (w/ DevOps) · per-customer panel (DevOps builds the endpoint).
+7. Zero-data-for-launch "Reset for launch" (destructive; snapshot first). EL credits use-or-lose window.
+
+**Delegated (track):** Mapping — re-run the 13 "attempted", then Marshalls/Macy's/AAFES, skip kiosks.
+Data Dev — null stale avgTreeSeconds; confirm `_CVS Pharmacy at Target` (1375, muted) isn't double-counted.
+**Do not chase:** owner's laptop Safari stuck on old staging design (personal cache).
+
+## Pre-port staged plan (older; merge with the OPEN list above as you work)
+0a. [ ] 🅿️ Premium-feature TOGGLE MATRIX in God View → Plans (backend done: `GET /api/admin/plans`
+    returns `features:[{key,label}]` + per-tier `features:{key:bool}`; save verbatim via POST; Publish
+    applies prices; features are app-enforced). *(Plans are now published LIVE on prod, 2026-07-10.)*
+0. [ ] Workflows must power BOTH envs from the one Admin — env picker Prod|Staging (staging reads/writes
+    its own API + token; coordinate cross-origin auth with DevOps).
+0b. [ ] Per-customer account view — spec `docs/specs/admin-user-view.md` (DevOps builds the endpoints).
+0c. [ ] 🗑️ Remove the Admin "Zones" area (~30 refs in app.html); engine/tables stay.
+1. [ ] Fix the admin so it's up to date (lagged during the website/admin split).
+2. [ ] Voice-switcher + tree-learner ready to test (`connectOnHuman` + Helicone; Tree Trainer wiring).
+3. [ ] Clean up admin UI to match the website's look; correct call-status icons.
+4. [ ] Spec + build the AGENT PERSONAS (in-admin dev agent, on-site support, Discord bot, call routing —
+    all via `src/llm.ts` gateway, cheapest-model-per-job, 3-tier escalation, Qdrant RAG). Spec first.
+5. [ ] Then run the voice-switcher + tree-learning bench TEST (model-per-phase + cost shown).
+- [ ] (Website) "Create your agent" caller-ID panel using `/auth/callerid/start` + `/status`.
+- [ ] (voice) Kiosk call script (`kioskMode` → "is your Pokémon kiosk working/stocked?").
+- [ ] Owner 2026-07-07: Chains page — collapse/roll-up control for the store list.
