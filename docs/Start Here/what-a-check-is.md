@@ -1,12 +1,21 @@
 ---
-title: "What a \"check\" is"
+title: What a check is
 hidden: false
 ---
 
-A **check** is one call to one store about one thing. It's the unit you spend. "Free check," "1 check," "checks left," that's the currency.
+A **check** is one call to one store about one thing. It's what you spend.
 
-Your **first check is free**, no card needed. After that you either buy checks as you go or get a monthly bundle on a plan. A check only gets spent when we come back with a real yes or no. Everything else is on the house.
+Your first check is free. No card needed.
 
-> **One check. One store. One straight answer.**
->
-> The word "call" is the literal phone call we place. The word "check" is what you spend. When in doubt, you think in checks.
+<p align="center"><img src="https://raw.githubusercontent.com/nocodehandsfree/checkitforme/v1.0/assets/book-first-check.png" width="300" alt="First check's on us" /></p>
+
+A check only gets spent when we bring back a real yes or no. Everything else is on the house.
+
+Two words we keep straight, everywhere in the app:
+
+- A **check** is what you spend.
+- A **call** is the literal phone call we place.
+
+> ✅ **One check. One store. One straight answer.**
+
+Next: [The store map](doc:the-store-map)

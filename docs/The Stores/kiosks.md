@@ -1,10 +1,16 @@
 ---
-title: "Kiosks, the Pokémon vending machines"
+title: Kiosks
 hidden: false
 ---
 
-These are the official TPCi vending machines, usually tucked inside a supermarket. They dispense sealed Pokémon product at exact MSRP, with no staff and no markup, which is why a kiosk store is always rated Best Chance.
+Kiosks are the official Pokémon vending machines, usually tucked inside a supermarket. Sealed product at exact list price. No staff, no markup. That's why a kiosk store always rates Best Chance.
 
-There's one hard rule: a store only counts as a kiosk if it's on the **official machine list**. If it's not on that list, it's not a kiosk, full stop. That keeps the map from filling up with wishful thinking.
+<p align="center"><img src="https://raw.githubusercontent.com/nocodehandsfree/checkitforme/v1.0/assets/book-kiosks.png" width="300" alt="Kiosk hunting in the app" /></p>
 
-A check on a kiosk asks a different question than a shelf check. There's nobody to ask about a shipment, so the call just confirms the machine is **powered on and stocked**, because they go down, get switched off, and run dry on their own cycles. Shoppers help keep them honest too: forward a machine's email receipt and it's hard proof it was working at that moment (and it earns you credit).
+One hard rule keeps the map honest: a store only counts as a kiosk if it's on the official machine list. Not on the list? Not a kiosk. Full stop.
+
+A kiosk check asks a different question than a shelf check. There's nobody to ask about shipments, so the call confirms the machine is powered on and stocked. Machines go down, get unplugged, and run dry on their own schedule.
+
+Bought something at one? Forward the machine's email receipt and you've proven it was working that minute. It earns you a check, too.
+
+Next: [Meet Check AI](doc:meet-check-ai)

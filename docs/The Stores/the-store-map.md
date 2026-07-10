@@ -1,9 +1,9 @@
 ---
-title: "The store universe"
+title: The store map
 hidden: false
 ---
 
-Behind every check is one of the most complete maps of retail in the country: **over 105,000 real store locations** across **120+ retail chains**, about **97% of the shelves** where Pokémon actually lands at list price, grouped under national brands plus card shops, thrift stores, and the official Pokémon vending machines.
+Behind every check is one of the most complete maps of retail in the country: **over 105,000 real store locations across 120+ chains.** That's about 97% of the shelves where Pokémon lands at list price.
 
 <p align="center">
 <img src="https://checkitforme.com/logos/chains/target.png" height="40" alt="Target" />&nbsp;&nbsp;
@@ -20,8 +20,14 @@ Behind every check is one of the most complete maps of retail in the country: **
 <img src="https://checkitforme.com/logos/chains/five_below.png" height="40" alt="Five Below" />
 </p>
 
-When you open the app, that's the haystack we search for the needle near you, and it's built on one rule that keeps everything honest: **there's a single source of truth.** Every store you see is read live from one database, no screen keeps its own private list, no hardcoded names, no stale spreadsheet. When a store gets fixed, it's fixed everywhere at once.
+And we don't just have a list. We keep a live file on every single store:
 
-### Stores vs. brands
+- A phone line that reaches **that store**, not a national call center.
+- Real hours, in the store's own time zone, so we know if it's open right now.
+- What it carries, line by line.
+- Its restock rhythm, the day shipments usually land, learned from real calls.
+- The exact route through its phone menu to reach a human fast.
 
-A **brand** (a "chain") is Target, or CVS, or Barnes & Noble. It carries the logo, the reliability rating, and the map of how its phone system works. A **store** is one physical Target on one street: its address, its hours, its own confirmed restock day. Anything true for the whole brand is inherited by every location; anything local lives on the store.
+One more thing keeps it honest: everything reads from a single live database. When a store gets fixed, it's fixed everywhere at once. No stale spreadsheets.
+
+Next: [Store types](doc:store-types)
