@@ -213,6 +213,15 @@ async function verifyClerkToken(authHeader: string | undefined): Promise<{ id: s
 const page = (file: string) => readFileSync(join(here, `../public/${file}`), "utf8");
 const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+// ---- PostHog (product analytics) — activates from Railway vars alone (POSTHOG_KEY [+ POSTHOG_HOST]);
+// no key baked in the repo, key absent = no-op. Injected server-side before </body> on every served
+// page (all consumer brand domains + admin) so one place covers every page; the dated `defaults`
+// turns on history-change pageviews, which the SPA needs for per-view tracking.
+const PH_SNIPPET = process.env.POSTHOG_KEY
+  ? `<script>!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);posthog.init(${JSON.stringify(process.env.POSTHOG_KEY)},{api_host:${JSON.stringify(process.env.POSTHOG_HOST || "https://us.i.posthog.com")},defaults:"2025-05-24"})</script>`
+  : "";
+const withAnalytics = (html: string) => (PH_SNIPPET && html.includes("</body>")) ? html.replace("</body>", `${PH_SNIPPET}</body>`) : html;
+
 /** FAQ + HowTo structured data per vertical — Google rich-result eligibility for the PPC/SEO push. */
 function seoGraph(brand: ReturnType<typeof resolveBrand>, plainName: string) {
   const prod = brand.category || "trading cards & collectibles";
@@ -276,7 +285,7 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
   // the very first paint the verdict colour with zero JS dependency; the in-page rv-* class system takes
   // over (and drops the baked class via dropBakedTone) as soon as the app renders a view.
   const toneClass = /^(in|out|unk|soon)$/.test(tone) ? ` class="tone-${tone}"` : "";
-  return page(file)
+  return withAnalytics(page(file))
     .replace('<html lang="en">', `<html lang="en"${toneClass}>`)
     .replace(/__BRAND_HEAD__/g, head)
     .replace(/__BRAND_JSON__/g, JSON.stringify({ key: brand.key, name: brand.name, category: brand.category, accent: brand.accent, accent2: brand.accent2 || brand.accent, logoUrl: brand.logoUrl || "", emoji: brand.emoji }))
@@ -439,7 +448,7 @@ const rootHandler = (c: Context) => {
   const consumer = config.staging.on
     ? (!(host.startsWith("caller.") || host.startsWith("admin.")) || !!override)
     : (host.startsWith("runner.") || brand.key !== "runner" || !!override);
-  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "") : page("app.html"));
+  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "") : withAnalytics(page("app.html")));
 };
 app.get("/", rootHandler);
 // Clean admin deep-links (/feedback, /trees, …): one STATIC route per admin section, all serving the same
