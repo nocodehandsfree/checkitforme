@@ -58,13 +58,15 @@
   182 same-address/different-phone DUPES (phone-only dedupe would have double-listed them — big trap),
   2 toll-free 1-800 call-center numbers (not a human at THAT store), 13 Canadian. Tools:
   `expand_{goodwill,savers,salvationarmy}.py` → `apply_thrift_expansion.py --apply`.
-- **Hobby COUNT expansion — cardshophub re-swept 2026-07-10, 0 net-new (source EXHAUSTED).** Harvested
-  all 6,669 shop pages (`harvest_cardshophub.py`, clean Store JSON-LD). Gated result: **2,365 big-box
-  (GameStop alone 2,214 — NEVER re-chain per rule) + kiosks dropped, 4,038 already ours by phone, 248
-  no phone, 0 truly-new independents.** Our 4,119 Independent Card Shop already captures every callable
-  independent cardshophub lists. Reusable big-box/kiosk filter now in `apply_hobby_expansion.py` for
-  future directory sweeps. **To grow hobby further we need NEW sources** (other directories, or paid
-  WebSearch metro sweeps — spend-gated).
+- **Hobby COUNT expansion — WPN +2,664 game stores 2026-07-10 (Independent Card Shop 4,119→6,697).**
+  Wizards Play Network public GraphQL (`api.tabletop.wizards.com/silverbeak-griffin-service/graphql`,
+  query `getStoresByLocation`, no auth) lists local game/TCG stores nationwide. `harvest_wpn.py` national
+  point-grid sweep found 4,835 unique; gates → 2,664 net-new US independents (dropped 606 non-US, 544
+  big-box GameStop, 866 dupe-phone, 139 dupe-address). All active w/ phone+address, 51 states. **NO
+  HOURS in source → hours-backfill needed** (same as ReStore). `apply_hobby_expansion.py` parses WPN
+  postalAddress, multi-source, @file POST.
+- **cardshophub re-sweep — EXHAUSTED (0 net-new).** All 6,669 pages harvested; every callable independent
+  already ours, only big-box (GameStop 2,214) + no-phone remained. Big-box/kiosk filter reusable.
 - **NEW CHAIN added — Habitat ReStore +748 US stores 2026-07-10** (chain id 130, type Thrift, all
   active w/ phone+address, 49 states; 45 Canadian + 3 toll-free + 1 dupe dropped). Source
   `harvest_habitat_restore.py` (habitat.org /local/restore?zip= national sweep). **NO HOURS in source
