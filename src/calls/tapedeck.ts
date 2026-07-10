@@ -243,12 +243,18 @@ export function tapedeckTwiml(id: string): string {
   const s = sessions.get(id);
   if (!s) return twiml("<Hangup/>");
   s.status = "live";
+  // LIVE AUDIO TAP: fork both sides of the call into the listen room ("delta:<id>") so the browser
+  // hears a D-lane call exactly like a Charlie call. <Start><Stream> is a one-way media fork that
+  // keeps running across every later TwiML document (each /step response) until the call ends — the
+  // /twilio-media WS handler fans the frames out to /listen listeners. Without this the owner heard
+  // NOTHING on Delta calls (07-10: "no longer hear the audio") — Delta has no EL bridge to tap.
+  const tap = `<Start><Stream name="deltatap" url="wss://${HOST}/twilio-media?room=delta:${id}" track="both_tracks"><Parameter name="room" value="delta:${id}"/></Stream></Start>`;
   // Don't open into dead air. Listen for the pickup ("hello?") before the opener plays — that's how a
   // real inbound greeting works. The opener fires on the first /step hit (handled in tapedeckStep).
   // SHORT first wait (3s, not 8): a silent pickup used to leave ~10s of dead air before the opener
   // (owner 07-10 calls 1/2/7: "took too long to say anything"). If nobody greets us within ~3s of the
   // answer, the redirect fires and the opener plays anyway.
-  return twiml(`<Pause length="1"/>${gather(id, 3)}`);
+  return twiml(`${tap}<Pause length="1"/>${gather(id, 3)}`);
 }
 
 /** Pure decision for one D-lane turn (no I/O, unit-tested). Given the stage + classified reply, returns
