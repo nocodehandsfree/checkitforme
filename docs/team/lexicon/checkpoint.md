@@ -31,9 +31,13 @@ Checkpoint backlog:
   `voice-caller` (prod) + `voice-caller-staging` (same hash). Generated a fresh `adm_` token, upserted it to
   both via Railway API, verified the read-back (old hash gone). Railway auto-redeploys on the var change. New
   raw value lives only in Railway → Variables (never printed/committed). The leaked history copy is now dead.
-  **Owner: update any server-to-server caller of the old token** (e.g. site checkers / Discord listener posting
-  to `/api/stock/ingest`, local import scripts). Browser admin sessions (signed cookie) survive; a new
-  `/admin-login?token=` needs the new value.
+  Scanned all 6 Railway services for the old token's footprint: the separate **`api` (fungibles) service holds
+  NO admin token** → rotation did NOT break it. Fixed the one internal caller that did carry it — staging
+  `STORE_SYNC_TOKEN` (code says it must equal prod ADMIN_TOKEN) → updated to the new value, so the (disarmed)
+  store-sync stays valid when re-armed. **Owner: the site checkers / Discord cook-group listener post to
+  `/api/stock/ingest` with the admin token — that app is a separate repo/deploy (not in this Railway project),
+  so if it hardcodes the old token it's locked out now and needs the new value.** Browser admin sessions
+  (signed cookie) survive; a new `/admin-login?token=` needs the new value.
 - **CLAUDE.md:** now says `RAILWAY_API_TOKEN` is embedded in the Claude env (ask the owner only if it 401s).
 - **`team/design/checkpoint.md` = 165 lines, left as-is** — the file itself declares "80-line cap waived for
   this section" (owner-sanctioned, twice) for the tint + design-gap carry-overs. Not pruning without owner OK.
