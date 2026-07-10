@@ -171,6 +171,12 @@ export async function bootstrap() {
     sql: "UPDATE statuses SET label=?, note=? WHERE key='no_clear_answer' AND label='No clear answer'",
     args: ["Got a “maybe”", "A human answered but wouldn't commit. Their exact words are below — you make the call."],
   }).catch(() => {});
+  // One-time copy fix (owner 07-10): sold-out note becomes two short sentences so the verdict sub
+  // breaks cleanly per sentence — only touches the row if it still carries the old default.
+  await client.execute({
+    sql: "UPDATE statuses SET note=? WHERE key='sold_out' AND note=?",
+    args: ["{store} had it. It's gone for now.", "{store} had it, but it's gone for now."],
+  }).catch(() => {});
   // Kiosks (crowd refresh intel) + restock watches — created idempotently.
   await client.execute(`CREATE TABLE IF NOT EXISTS kiosks (
     id INTEGER PRIMARY KEY AUTOINCREMENT, retailer_id INTEGER, label TEXT NOT NULL,

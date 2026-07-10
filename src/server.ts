@@ -2691,6 +2691,7 @@ app.get("/pub/result/:cid", async (c) => {
       status: row.status,
       confirmed: row.confirmed,
       statusKey: row.statusKey,
+      ts: (row.startedAt || 0) * 1000,       // call start (ms) — the status page shows date + time (owner 07-10)
       productDetail: row.productDetail,      // e.g. "3-pack blister · Surging Sparks" — null if not captured
       shipmentDay: row.shipmentDayHeard ?? (o?.shipmentDay ?? null),
       summary: row.summary ?? o?.summary ?? "",
@@ -2717,10 +2718,10 @@ app.get("/pub/result/:cid", async (c) => {
       completedAt: Math.floor(Date.now() / 1000),
     }).where(eq(callResults.id, row.id));
     if (row.finderUserId && consensus.definitive) await chargeCallOnce(row.id, row.finderUserId);
-    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, productDetail, shipmentDay: o.shipmentDay, summary: o.summary, transcript: o.transcript });
+    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, summary: o.summary, transcript: o.transcript });
   }
   // Truly mid-call → progress only, never a verdict (so a wrong key can't flash before the real one).
-  return c.json(o ?? { status: "in_progress", transcript: "", summary: "" });
+  return c.json(o ? { ...o, ts: row?.startedAt ? row.startedAt * 1000 : undefined } : { status: "in_progress", transcript: "", summary: "", ts: row?.startedAt ? row.startedAt * 1000 : undefined });
 });
 // Live, mid-call transcript: returns whatever the agent + clerk have said SO FAR (no audio needed).
 app.get("/pub/live/:cid", async (c) => {
