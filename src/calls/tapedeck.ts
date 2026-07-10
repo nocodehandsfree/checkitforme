@@ -38,6 +38,7 @@ export interface TdSession {
   needType: boolean; // after asking the set, do we still owe the product-type question?
   clarified?: boolean; // used our one "sorry, I was asking..." already
   nudged?: boolean;  // used our one "hello, you still there?" silence nudge already
+  forked?: boolean;  // audio fork to the listen room already opened (guard against TwiML refetch → double audio)
   workflow: string; // which workflow drove this call (shown in the log)
   // ---- store (production) mode ----
   mode: "bench" | "store";
@@ -248,7 +249,9 @@ export function tapedeckTwiml(id: string): string {
   // keeps running across every later TwiML document (each /step response) until the call ends — the
   // /twilio-media WS handler fans the frames out to /listen listeners. Without this the owner heard
   // NOTHING on Delta calls (07-10: "no longer hear the audio") — Delta has no EL bridge to tap.
-  const tap = `<Start><Stream name="deltatap" url="wss://${HOST}/twilio-media?room=delta:${id}" track="both_tracks"><Parameter name="room" value="delta:${id}"/></Stream></Start>`;
+  // Guarded (s.forked): a Twilio TwiML refetch must not open a second fork = doubled audio.
+  const tap = s.forked ? "" : `<Start><Stream name="deltatap" url="wss://${HOST}/twilio-media?room=delta:${id}" track="both_tracks"><Parameter name="room" value="delta:${id}"/></Stream></Start>`;
+  s.forked = true;
   // Don't open into dead air. Listen for the pickup ("hello?") before the opener plays — that's how a
   // real inbound greeting works. The opener fires on the first /step hit (handled in tapedeckStep).
   // SHORT first wait (3s, not 8): a silent pickup used to leave ~10s of dead air before the opener
