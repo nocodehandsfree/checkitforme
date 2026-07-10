@@ -334,8 +334,9 @@ __BRAND_HEAD__
   .rverdict.in .rpill{color:var(--green);background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.32)}
   .rverdict.unk .rpill{color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.32)}
   .rverdict.soon .rpill{color:#F59E0B;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.32)}
+  .rverdict.pend .rpill{color:#9CA3AF;background:rgba(156,163,175,.10);border:1px solid rgba(156,163,175,.28)} /* getting-result = neutral gray, never the unclear yellow */
   .rtitle2{font-size:30px;font-weight:900;letter-spacing:-1px;line-height:1.05;margin-top:14px}
-  .rverdict.out .rtitle2{color:var(--red)} .rverdict.in .rtitle2{color:var(--green)} .rverdict.unk .rtitle2{color:#FBBF24} .rverdict.soon .rtitle2{color:#F59E0B}
+  .rverdict.out .rtitle2{color:var(--red)} .rverdict.in .rtitle2{color:var(--green)} .rverdict.unk .rtitle2{color:#FBBF24} .rverdict.soon .rtitle2{color:#F59E0B} .rverdict.pend .rtitle2{color:#C6C6D0}
   /* In-stock verdict title: gradient fill + glow (per the motion spec). @supports so any browser without
      background-clip:text keeps the solid-green title above instead of going invisible. */
   @supports ((-webkit-background-clip:text) or (background-clip:text)){
@@ -371,6 +372,7 @@ __BRAND_HEAD__
   .ctl.ctl-out::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 56%,var(--red) 100%)}
   .ctl.ctl-unk::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 56%,#FBBF24 100%)}
   .ctl.ctl-soon::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 56%,#F59E0B 100%)}
+  .ctl.ctl-pend::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 56%,#9CA3AF 100%)}
   .ctl-dot{position:absolute;left:1px;width:9px;height:9px;border-radius:50%;background:#2c2c38;z-index:1}
   /* roll-up header: "Calling {store}…" — tap to fold the step log up/down. FIRST dot is green. */
   .reach{margin:0 0 12px}
@@ -396,9 +398,9 @@ __BRAND_HEAD__
   /* bottom call-status: the last dot + a coloured verdict line (no "confirmed") */
   .ctl-status{position:relative;padding-left:24px;margin-top:12px;display:flex;align-items:center}
   .ctl-status .ctl-dot{top:50%;transform:translateY(-50%)}
-  .ctl-status.tl-out .ctl-dot{background:var(--red)} .ctl-status.tl-in .ctl-dot{background:var(--green);box-shadow:0 0 8px rgba(74,222,128,.5)} .ctl-status.tl-unk .ctl-dot{background:#FBBF24} .ctl-status.tl-soon .ctl-dot{background:#F59E0B}
+  .ctl-status.tl-out .ctl-dot{background:var(--red)} .ctl-status.tl-in .ctl-dot{background:var(--green);box-shadow:0 0 8px rgba(74,222,128,.5)} .ctl-status.tl-unk .ctl-dot{background:#FBBF24} .ctl-status.tl-soon .ctl-dot{background:#F59E0B} .ctl-status.tl-pend .ctl-dot{background:#9CA3AF}
   .ctl-status .status-txt{font-weight:800;font-size:13.5px}
-  .ctl-status.tl-out .status-txt{color:var(--red)} .ctl-status.tl-in .status-txt{color:var(--green)} .ctl-status.tl-unk .status-txt{color:#FBBF24} .ctl-status.tl-soon .status-txt{color:#F59E0B}
+  .ctl-status.tl-out .status-txt{color:var(--red)} .ctl-status.tl-in .status-txt{color:var(--green)} .ctl-status.tl-unk .status-txt{color:#FBBF24} .ctl-status.tl-soon .status-txt{color:#F59E0B} .ctl-status.tl-pend .status-txt{color:#9CA3AF}
   /* result */
   .verdict{text-align:center;padding:16px 0 8px}
   .vmark{width:78px;height:78px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;position:relative}
@@ -1648,21 +1650,14 @@ html[data-skin="v2"] #result>*{order:4}
 html[data-skin="v2"] #result>.upmod{order:5}
 html[data-skin="v2"] #result>.foot{order:6}
 html[data-skin="v2"] .vmark{display:none}
-/* Comp timeline: left rail (green dot → gradient line → verdict dot) + full-width labeled cards. */
-html[data-skin="v2"] .ctlv2{display:flex;gap:14px;margin-top:10px}
-html[data-skin="v2"] .ctlv2-rail{width:12px;display:flex;flex-direction:column;align-items:center;flex-shrink:0;margin-bottom:9px} /* stop the rail line at the terminus dot's center (½ the verdict line), not below it (owner 07-04) */
-html[data-skin="v2"] .ctlv2-rail .d1{width:10px;height:10px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px rgba(74,222,128,.6);flex-shrink:0}
-html[data-skin="v2"] .ctlv2-rail .ln{flex:1;width:2px}
-html[data-skin="v2"] .ctlv2-rail .d2{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+/* Comp timeline, FLAT (owner 07-10: no indenting — the call log runs straight down, left-adjusted).
+   The old left rail is gone; the "Ringing" header and the verdict line carry small INLINE dots. */
+html[data-skin="v2"] .ctlv2{display:block;margin-top:10px}
 html[data-skin="v2"] .ctlv2 details>summary{display:flex;align-items:baseline;justify-content:space-between;list-style:none;cursor:pointer}
 html[data-skin="v2"] .ctlv2 details>summary::-webkit-details-marker{display:none}
 html[data-skin="v2"] .ctlv2-steps{margin-top:10px;display:flex;flex-direction:column;gap:8px;font-size:14px;font-weight:500;color:#DCDCE6} /* near-white — #5C5C68 sank into the verdict bloom (owner 07-09) */
-html[data-skin="v2"] .ctlv2-steps .cur{color:#4ADE80;font-weight:700;position:relative}
-html[data-skin="v2"] .ctlv2-steps .cur::before{content:"";position:absolute;left:-24px;top:50%;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor}
-html[data-skin="v2"] .ctl-term{position:relative}
-html[data-skin="v2"] .ctl-term::before{content:"";position:absolute;left:-25px;top:50%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;background:currentColor;box-shadow:0 0 6px currentColor}
+html[data-skin="v2"] .ctlv2-steps .cur{color:#4ADE80;font-weight:700}
 html[data-skin="v2"] #convo_body{padding-left:0}
-html[data-skin="v2"] .ctlv2-rail .d2{display:none} /* the verdict line carries its own dot — two dots doubled up */
 html[data-skin="v2"] .ctlv2-bub{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:12px 15px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .ctlv2-bub .who{font-size:10px;font-weight:700;letter-spacing:.13em;color:#8A8A96}
 html[data-skin="v2"] .ctlv2-bub.ai .who{color:#4ADE80}
@@ -2495,7 +2490,7 @@ const I18N={ es:{
   'stn.too_busy':'{store} estaba saturado. Sin cargo.',
   'sub.in':'<b>{s}</b> tiene <b>{c}</b>. Ve por ello antes de que se agote.','sub.in.named':'<b>{s}</b> tiene <b>{p}</b>. Ve por ello antes de que se agote.',
   'sub.out':'<b>{s}</b> no tiene <b>{c}</b> en stock ahora mismo.','sub.soldout':'{s} está agotado de <b>{c}</b> ahora mismo.',
-  'term.in':'En stock','term.out':'No está en stock','term.soon':'Reabastecimiento confirmado · {d}','term.unk':'Sin respuesta clara',
+  'term.in':'En stock','term.out':'No está en stock','term.soon':'Reabastecimiento confirmado · {d}','term.soon2':'Reabastecimiento confirmado','term.unk':'Sin respuesta clara','term.getting':'Obteniendo el resultado…',
   'res.conversation':'Conversación','res.result':'Resultado',
   'pre.again.body':'{o} {a}. ¿Verificar de nuevo?','pre.again.no':'Ahora no',
   'rail.backcal':'Volver al calendario','rail.noneday':'Sin verificaciones ese día','rail.noneday2':'Sin verificaciones este día.','rail.pickanother':'← Elegir otro día',
@@ -4208,10 +4203,12 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
   // Steps list — DROP the first "Calling {store}…" step (the roll-up header carries it, so the store
   // name shows ONCE). Greyed text, no dots; the final connection step turns green ✓ when we got a person.
   if(isV2()){
-    // 6m comp structure: left gradient rail; steps under a collapsible "Ringing the store… · N steps"
-    // header; CONVERSATION eyebrow; FULL-WIDTH labeled cards (STAFF muted / CHECK AI green); the
-    // verdict line closes the block. Same node ids (#convo_body) so translate/repaints keep working.
-    const TONE={in:'#4ADE80',out:'#EF4444',unk:'#FBBF24',soon:'#F59E0B'};
+    // 6m comp structure, FLAT (owner 07-10 call 8: no indenting — the call log runs straight down the
+    // page, left-adjusted). The left gradient rail is gone; a small inline dot marks the "Ringing"
+    // header and the verdict line instead. Steps under the collapsible header; conversation cards
+    // full-width. Same node ids (#convo_body) so translate/repaints keep working. 'pend' = neutral
+    // gray while the verdict is still being pulled (never the unclear yellow).
+    const TONE={in:'#4ADE80',out:'#EF4444',unk:'#FBBF24',soon:'#F59E0B',pend:'#9CA3AF'};
     const tone=TONE[(status&&status.cls)||'unk']||'#FBBF24';
     const live=finalElapsed==null&&!(status&&status.title);
     const stepRows=steps.slice(1).map((s,idx)=>{
@@ -4229,11 +4226,10 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
       return `<div class="ctlv2-bub${ai?' ai':''}"><div class="who">${ai?esc(t('lbl.agent','CHECK AI').toUpperCase()):esc(t('lbl.assoc','STAFF').toUpperCase())}</div><div class="tx">${esc(m[2])}</div></div>`; }).join('');
     // Verdict line + the "1 check used" note on the SAME row, note pinned right (owner 07-07).
     const usedTxt=status&&status.used?status.used:'';
-    const vline=(status&&(status.term||status.title))?`<div class="ctl-term" style="margin-top:14px;font-size:15px;font-weight:800;color:${tone};display:flex;align-items:center;justify-content:space-between;gap:12px"><span>${esc(status.term||status.title)}</span>${usedTxt?`<span style="font-size:11.5px;font-weight:600;color:#6B6B78;white-space:nowrap">${esc(usedTxt)}</span>`:''}</div>`:'';
+    const vline=(status&&(status.term||status.title))?`<div class="ctl-term" style="margin-top:14px;font-size:15px;font-weight:800;color:${tone};display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="display:inline-flex;align-items:center;gap:9px;min-width:0"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${tone};flex:0 0 auto"></span>${esc(status.term||status.title)}</span>${usedTxt?`<span style="font-size:11.5px;font-weight:600;color:#6B6B78;white-space:nowrap">${esc(usedTxt)}</span>`:''}</div>`:'';
     return `<div class="ctlv2" style="margin-bottom:22px">
-      <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80 100%':`color-mix(in srgb,#4ADE80 35%,${tone}) 60%,${tone} 100%`})"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
       <div style="flex:1;min-width:0">
-        <details open><summary><span style="font-size:15px;font-weight:700">${t('step.ringing','Ringing the store…').replace(/[…\u2026.]+\s*$/,'')}</span><span style="text-align:right"><span style="font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''} ⌃</span>${status&&status.ts?`<span style="display:block;margin-top:2px;font-size:11px;font-weight:600;color:#66666F">${new Date(status.ts).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'short',day:'numeric'})} · ${new Date(status.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}</span>`:''}</span></summary>
+        <details open><summary><span style="display:inline-flex;align-items:center;gap:9px;font-size:15px;font-weight:700"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#4ADE80;flex:0 0 auto;box-shadow:0 0 8px rgba(74,222,128,.6)"></span>${t('step.ringing','Ringing the store…').replace(/[…\u2026.]+\s*$/,'')}</span><span style="text-align:right"><span style="font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''} ⌃</span>${status&&status.ts?`<span style="display:block;margin-top:2px;font-size:11px;font-weight:600;color:#66666F">${new Date(status.ts).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'short',day:'numeric'})} · ${new Date(status.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}</span>`:''}</span></summary>
           <div class="ctlv2-steps">${stepEls}</div>
         </details>
         <div id="convo_body" style="margin-top:12px;display:flex;flex-direction:column;gap:9px">${bubs||(live?`<div class="cs-wait">${t('live.waitperson','Reaching a person…')}</div>`:'')}</div>
@@ -4421,6 +4417,9 @@ async function startCheckLive(){
       // the call is connected → flip to "Answered" and fall STRAIGHT through to pull the transcript
       // (no wasted cycle), instead of sitting on "Ringing…".
       const bs=await api('/pub/bridge/'+r.room);
+      // Twilio says the call was ANSWERED → show "We've connected" NOW, even if the agent hasn't
+      // engaged yet (owner 07-10 call 6: the log sat on "waiting" ~35s into a connected call).
+      if(bs&&bs.callProgress&&/^(in-progress|answered)$/.test(bs.callProgress.status)) liveStage(3);
       if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; liveStage(3);
         // Only show steps that ACTUALLY happen. We used to auto-advance to "Listening to the menu" on a 3.5s
         // timer to fill the gap — but on a store that answers directly (no IVR) that step never occurred and
@@ -4576,7 +4575,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -4596,7 +4595,7 @@ function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _l
 let NAV_VIEW='builder';
 function navMark(view){
   if(view!=='builder') HUNT_STEP=''; // leaving the builder ends the hobby-hunt back-stack
-  try{ document.body.classList.toggle('rview', view==='result'); if(view!=='result'){ ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); } }catch(e){} // result-only top treatment (transparent nav + color wash)
+  try{ document.body.classList.toggle('rview', view==='result'); if(view!=='result'){ ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); } }catch(e){} // result-only top treatment (transparent nav + color wash)
   try{ if(view!=='builder') hideCallSheet(); }catch(e){} // the call sheet belongs to the builder only
   try{ setThemeTone(); renderCallRail(); }catch(e){}
   if(view===NAV_VIEW) return;
@@ -4751,7 +4750,7 @@ function showResult(o, cid){
   let cls='unk', big='📵', title=t('v.noanswer','Nobody answered'), note=t('note.unreached',"We couldn't reach anyone at the store. No charge. Try again in a bit.");
   // Instant-flip placeholder: the call just ended and we flipped here immediately with the streamed
   // conversation; the real verdict is still being pulled and will repaint over this in a moment.
-  if(o.status==='pending'){ cls='unk'; big='⏳'; title=t('v.getting','Getting the answer…'); note=t('note.getting',"The call just finished. Pulling the result."); }
+  if(o.status==='pending'){ cls='pend'; big='⏳'; title=t('v.getting','Getting the answer…'); note=t('note.getting',"The call just finished. Pulling the result."); } // 'pend' = NEUTRAL GRAY while the verdict is pulled — never the yellow "unclear" look (owner 07-10 call 2)
   // Statuses registry first — the owner-edited single source of truth (with ES variants by key).
   else if(o.statusKey && RSTATUSES[o.statusKey]){
     const s=RSTATUSES[o.statusKey];
@@ -4929,17 +4928,21 @@ function showResult(o, cid){
   // stop here; the fresh load re-renders this exact result with the right bar. Pending never qualifies.
   if(o.status && o.status!=='pending' && ensureToneLoaded(cls,cid)) return;
   // Tone the body-level top wash for this verdict (the wash itself is CSS on body.rview::before).
-  ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c));
+  ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c));
   document.body.classList.add('rv-'+cls);
   dropBakedTone(); // first paint is over — the rv-* system owns the tone from here
   try{ setThemeTone(); }catch(e){} // tint the browser status-bar strip to this verdict's tone (in-app fallback)
   // Unclear verdict → point them at the transcript AND ask for a quick one-tap label. That label is the
   // training signal: it tells us what the answer REALLY was on the calls our consensus couldn't call.
   // Verdict-specific terminus line at the bottom of the timeline (distinct from the big verdict title).
+  // "Restock confirmed": only append "· {day}" when the clerk named a REAL day — a generic "soon"
+  // adds nothing, so drop the word and the dot (owner 07-10 call 3).
+  const _rawDay=String(o.shipmentDay||'').trim().toLowerCase();
   const termLabel = cls==='in' ? t('term.in',"In stock.")
     : cls==='out' ? t('term.out','Not in stock')
-    : cls==='soon' ? tf('term.soon','Restock confirmed · {d}',{d:esc(fmtShipDay(o.shipmentDay)||'soon')})
-    : cls==='unk' ? t('term.unk','No clear answer') : '';
+    : cls==='soon' ? ((!_rawDay||_rawDay==='soon'||_rawDay==='pronto') ? t('term.soon2','Restock confirmed') : tf('term.soon','Restock confirmed · {d}',{d:esc(fmtShipDay(o.shipmentDay))}))
+    : cls==='unk' ? t('term.unk','No clear answer')
+    : cls==='pend' ? t('term.getting','Getting result…') : '';
   const showFeedback = o.status==='completed' && cls==='unk' && !!o.transcript && cid && !String(cid).startsWith('local:');
   // New unclear copy: name the product, hand the call to the human (the transcript is right below).
   if(showFeedback){ note = t('note.fbk','We couldn’t quite make out the answer.<br>Read the convo and tell us what you think.'); }
@@ -5236,7 +5239,7 @@ function showTodayLanding(forceCal){
   stopLiveTimers(); if($('hangup_btn'))$('hangup_btn').style.display='none';
   ['live','builder','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
   document.body.classList.remove('fabbed');
-  ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); // neutral (dark) — no verdict tone
+  ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); // neutral (dark) — no verdict tone
   RAIL_F.date=''; RAIL_F.store=''; RAIL_F.tone=''; RAIL_CID=null; LASTRES=null; RAIL_CAL_M=null;
   // Logged out (e.g. a freshly-installed Home-Screen app has its OWN empty storage) → your checks live in
   // your account, so show a clear Sign-in CTA instead of an empty "No checks today" that looks broken.
