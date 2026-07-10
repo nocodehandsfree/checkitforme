@@ -38,14 +38,17 @@
   (`/api/hours/backfill`, ~1-2¢/store) — use the FREE WebSearch-subagent wave method below.
 
 ## NOT DONE / PARTIAL / WAITING
-- **Hours backfill — re-derived from live DB 2026-07-10 (old ~3,360 count was stale):** Hobby 4,360 active,
-  **1,595 missing hours (63% coverage)**, all with real phones, 1,547 wave-eligible (US+city). **Thrift
-  3,479 active, ALL 3,479 missing hours (0%)** — the thrift harvest imported with no hours. Combined
-  backlog ~5,074. Wave 1 (420 hobby stores) built, ready to fire. **WAITING on owner: confirm org monthly
-  spend reset before launching WebSearch waves** (each wave = 14 subagents; never the paid server lookup).
-  Tools now in `scripts/data-tools/` (curl-only — python urllib AND headless browser are proxy-blocked in
-  this env, verified; free direct-Google scraping impossible from here — owner's local machine covers
-  consumer-env cases). Patch is hours-only by id; import would blank carries/lat/lng.
+- **Hobby hours — wave 1 RAN + VERIFIED 2026-07-10** (420 tail stores, 14 WebSearch subagents): 11 hours
+  written, 4 permanently-closed deactivated, 3 fake "24/7" artifacts blocked (guard now in `agg_hobby.py`),
+  402 all-unknown skipped. **Hit rate 3.6% — the 1,127 remaining tail is mostly home-based online sellers
+  with no Google hours panel. STOP waving the hobby tail; hand it to the owner's local machine** (list:
+  regen `hobby_nohours.py`, minus `scripts/data-tools/hobby_done_ids.txt`). Hobby: 4,360 active, ~1,580
+  missing hours (63% coverage). Patch is hours-only by id; import would blank carries/lat/lng.
+- **Thrift hours — 3,479 stores, ALL missing (0%), NEXT UP:** Goodwill 2,925 / Salvation Army 369 /
+  Savers 177 / Unique 8. All chain storefronts with locator sites that answer plain curl (Savers verified
+  2026-07-10) → **harvest hours FREE from chain locators first**; WebSearch waves only for the residue.
+- **Env facts (verified):** python urllib AND headless Chromium are proxy-blocked here; Google/Bing/DDG
+  bot-block curl. Free direct-Google scraping is impossible from this box — that's owner's-local only.
 - **PROD front-end BEHIND staging — needs a promote (not my lane to deploy; flagged to owner):** the `type`
   filter (`typeF`, `server.ts`) + hobby store data are staging-only; prod `/pub/stores/near` ignores `type`.
 - **Older-era set PRICES — intentionally omitted** (out of print → no honest retail price); an era→price

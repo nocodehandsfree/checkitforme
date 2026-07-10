@@ -44,9 +44,15 @@ for f in files:
         if rid is None: continue
         merged[int(rid)] = {d: canon_day(row.get(d)) for d in DAYS}
 
+def allday(v):
+    # "open 24 hours" on an indie card shop is a Google online-listing artifact, not door hours
+    return isinstance(v, list) and v[0] == "00:00" and v[1] in ("00:00", "23:59")
+
 updates = {}  # id -> canonical hours json string
-deactivate = []; skipped_unknown = 0; mixed = 0
+deactivate = []; skipped_unknown = 0; skipped_247 = 0; mixed = 0
 for rid, days in merged.items():
+    if all(allday(days[d]) for d in DAYS):
+        skipped_247 += 1; continue                     # 24/7 artifact -> never trust, leave NULL
     known = [d for d in DAYS if isinstance(days[d], list)]
     unknown = [d for d in DAYS if days[d] == "?"]
     closed = [d for d in DAYS if days[d] is None]
@@ -58,7 +64,7 @@ for rid, days in merged.items():
     clean = {d: (None if days[d] in (None, "?") else days[d]) for d in DAYS}  # unknown day -> closed (safe direction)
     updates[rid] = json.dumps(clean, separators=(",", ":"))
 
-print(f"{'DRY' if DRY else 'APPLY'} — files:{len(files)}  ids:{len(merged)}  import:{len(updates)}  deactivate:{len(deactivate)}  skip-unknown:{skipped_unknown}  (mixed known+unknown:{mixed})")
+print(f"{'DRY' if DRY else 'APPLY'} — files:{len(files)}  ids:{len(merged)}  import:{len(updates)}  deactivate:{len(deactivate)}  skip-unknown:{skipped_unknown}  skip-24/7-artifact:{skipped_247}  (mixed known+unknown:{mixed})")
 
 # group ids by identical hours json to cut call count
 groups = {}

@@ -21,6 +21,14 @@ Rough working tools, preserved so they aren't lost in the repo migration. Adapt 
 - `agg_hobby.py` — aggregate the WebSearch-subagent JSON outputs (`$OUT/hb*.json`) → canonical hours →
   id-keyed `POST /api/stores/patch`. `--apply` to write; all-7-closed → deactivate; all-unknown → skip.
 - Flow: `hobby_nohours.py` → `build_wave.py` → 14 WebSearch subagents write id-keyed JSON → `agg_hobby.py --apply`.
+- `hobby_done_ids.txt` (committed here) = every id already attempted by a wave, including the
+  all-unknown skips. Copy it into your working dir before `build_wave.py` so waves never re-pay for a
+  store that already came back empty. APPEND this wave's attempted ids and re-commit after each wave.
+- Wave-1 reality check (2026-07-10): 420 tail stores → 11 hours + 4 permanently-closed + 3 fake "24/7"
+  blocked; 402 all-unknown. The no-hours tail is mostly home-based online sellers with no Google hours
+  panel — do NOT keep burning waves on it; it's owner's-local-machine territory. Thrift is the opposite:
+  all chains (Goodwill/Salvation Army/Savers), and their locator sites answer plain curl — harvest
+  hours FREE from locators before any WebSearch spend.
 - ⚠️ WebSearch subagents bill the ORG's monthly Claude spend (this is what paused the loop). Confirm reset first.
   NEVER use the server's OpenAI/Gemini hours lookup — that bills the owner (forbidden).
 
