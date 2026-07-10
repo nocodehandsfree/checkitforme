@@ -51,7 +51,7 @@ control, and **tooltip.** You can't write good words for a tool you don't unders
    in `public/app.html`. Click **every** tab and tool: Calls, Stores, Chains/Mapping, Statuses,
    Designer/Voice, Policy/God-view, Zones, Kiosks.
 2. **Map it:** for each screen, note what it does, who uses it, and what's confusing.
-3. **Write it:** produce a **copy deck** — work the COPY QUEUE in `loops/site-redesign/MANIFEST.md` — with, per screen:
+3. **Write it:** produce a **copy deck** — work the COPY QUEUE in `docs/archive/loops/site-redesign/MANIFEST.md` (the site-redesign loop is finished/archived) — with, per screen:
    section titles, button labels, helper text, empty states, and **a one-line tooltip for every control**
    (plain ELI5 — e.g. *Connect-on-human:* "don't start paying for the agent until a real person picks up").
 4. **Hand off:** Admin implements your approved copy into `app.html`. You write the words; you don't have

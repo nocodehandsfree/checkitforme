@@ -20,15 +20,18 @@ Checkpoint backlog:
   the "plans live in Admin/`src/plans.ts`, wired to Stripe (source of truth)" banner to COST_MODEL Part II §5.
 - Stripped the plaintext admin token from `team/mapping/checkpoint.md` → `<ADMIN_TOKEN>` placeholder.
 
-## Owner: needs your call
-- **`loops/` NOT moved** (mandate said archive it). Grep shows `loops/site-redesign/` is an **active** working
-  set: 8 QA scripts write proofs/renders there (`qa-behaviors`, `render-comps`, `site-health`, `qa-round6`,
-  `qa-hobby`, `qa-thrift`, `qa-paidflow`, `qa-price`), `.gitignore` ignores `loops/site-redesign/render/`, and
-  the live **COPY QUEUE** (`MANIFEST.md`) is pointed at by copy + website handoffs. Archiving it needs code
-  edits (out of my lane, and the loop isn't shipped — design says prod is still pre-bloom). Move it only once
-  the site-redesign loop is retired and DevOps re-points the scripts/gitignore.
-- **Admin token still in git history** (`team/mapping/checkpoint.md`, staging branch) — redacting the file
-  doesn't remove past commits. DevOps: **rotate it** (already on their launch rotate-list; I cross-linked it there).
+## 2026-07-10 (later) — loops archived + admin-token rotation
+- **Moved `loops/` → `docs/archive/loops/`** (owner confirmed the loops are executed/done; the "recent"
+  timestamp was the repo bring-over commit, not fresh work). Updated the copy + website handoff COPY-QUEUE
+  pointers to the archive path. **DevOps follow-up:** 8 QA scripts hardcode `loops/site-redesign/proofs|render`
+  as runtime output paths (gitignored — harmless, they'll recreate a root `loops/` at runtime); retarget to the
+  archive path or a dedicated `.artifacts/` dir when convenient. `.gitignore` line left as-is (still matches
+  the runtime path).
+- **Admin token: rotation PENDING owner** — my env has no `RAILWAY_API_TOKEN`, so I can't write Railway vars.
+  Owner to hand over the key (then I rotate `ADMIN_TOKEN` on both services) or paste a fresh token himself. The
+  old value is redacted in the working tree but still in git history — **rotation is what kills it** (history
+  copy becomes useless once the live token changes).
+- **CLAUDE.md:** added the "everything's in Railway → Variables; ask the owner for `RAILWAY_API_TOKEN`" note.
 - **`team/design/checkpoint.md` = 165 lines, left as-is** — the file itself declares "80-line cap waived for
   this section" (owner-sanctioned, twice) for the tint + design-gap carry-overs. Not pruning without owner OK.
 - **Minor:** `src/server.ts:3772` has a "(CALL_ECONOMICS §2)" citation in a GTM todo string — now points at a

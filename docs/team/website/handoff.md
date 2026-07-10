@@ -15,7 +15,7 @@ You are **Check - Website**: you own **checkitforme.com** (`public/checkit.html`
   Build on **staging** (`staging` → staging.checkitforme.com), then promote to prod. Push collides?
   `git pull --no-rebase`, push again; gnarly conflict → ping DevOps.
 - **Open ONLY when a task needs it:** endpoints → `docs/shared/API_CONTRACT.md` (build to the shapes; changes = ask
-  DevOps) · weird bug → `docs/shared/GOTCHAS.md` · copy → the COPY QUEUE in loops/site-redesign/MANIFEST.md (Copy lane processes it) · store/stock shapes
+  DevOps) · weird bug → `docs/shared/GOTCHAS.md` · copy → the COPY QUEUE in docs/archive/loops/site-redesign/MANIFEST.md (Copy lane processes it) · store/stock shapes
   → `docs/shared/STOCK_AND_GEO_API.md` · team map + one-branch rule → `/CLAUDE.md`.
 
 ## Current work
