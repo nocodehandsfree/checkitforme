@@ -34,10 +34,22 @@ function isGemini(model: string): boolean { return model.startsWith("gemini"); }
 // Helicone endpoint with the Groq key. The prefix is stripped before the real model name is sent.
 function isGroq(model: string): boolean { return model.startsWith("groq:") || model.startsWith("groq/"); }
 
+// Gemini is on a quota'd key (free-tier 429s exhausted it mid-call on 2026-07-10 and every Delta
+// classify silently became "unclear"). A dead brain is worse than a slightly pricier one: any Gemini
+// failure falls back to a cheap OpenAI model so live calls keep understanding people.
+const GEMINI_FALLBACK = process.env.GEMINI_FALLBACK_MODEL || "gpt-4o-mini";
+
 /** One call, any model, always through Helicone. Returns the text (or JSON string when json:true). */
 export async function llm(model: string, input: string | LlmMsg[], opts: LlmOpts = {}): Promise<string> {
   const messages: LlmMsg[] = typeof input === "string" ? [{ role: "user", content: input }] : input;
-  if (isGemini(model)) return geminiCall(model, messages, opts);
+  if (isGemini(model)) {
+    try { return await geminiCall(model, messages, opts); }
+    catch (e) {
+      console.error(`[llm] gemini ${model} failed (${String((e as Error)?.message || e).slice(0, 140)}) -> fallback ${GEMINI_FALLBACK} [job=${opts.job || "?"}]`);
+      if (!config.openaiKey) throw e;
+      return openaiCall(GEMINI_FALLBACK, messages, opts);
+    }
+  }
   if (isGroq(model)) return groqCall(model.replace(/^groq[:/]/, ""), messages, opts);
   return openaiCall(model, messages, opts);
 }
