@@ -1,65 +1,53 @@
 {
- "capturedAt": "2026-07-10T23:40:00Z (7:40pm ET, post-sweep)",
+ "capturedAt": "2026-07-10T23:55:00Z (7:55pm ET, final post-sweep incl. manual fixes)",
  "source": "GET admin.checkitforme.com/api/admin/trainer/list",
  "chains": [
   {
    "id": 1,
    "name": "Target",
    "navType": "keypad",
-   "navStatus": "learning",
-   "navSeconds": 72,
+   "navStatus": "locked",
+   "navSeconds": 42,
    "navRecipe": {
     "type": "keypad",
     "steps": [
      {
       "action": "press",
-      "value": "0",
-      "atSec": 31
-     }
-    ],
-    "seconds": 72,
-    "menu": [
-     {
-      "digit": "1",
-      "label": "reach a specific Department"
+      "value": "2",
+      "atSec": 18
      },
      {
-      "digit": "2",
-      "label": ""
-     },
-     {
-      "digit": "3",
-      "label": ""
+      "action": "press",
+      "value": "2",
+      "atSec": 30
      }
     ],
-    "menuPrompts": [
-     "Thank you for calling. The Woodland Hills Target store for hours and location information, press, 1 to reach a specific Department, press 2.",
-     "To someone in the pharmacy press 3.",
-     "Sorry, I didn't get that for hours and location information, press 1 to reach a specific Department, press 2.",
-     "To someone in the pharmacy press 3."
-    ],
+    "seconds": 42,
+    "target": "specific department",
     "ringVariable": true
    },
-   "navUpdatedAt": 1783726636
+   "navUpdatedAt": 1783727020
   },
   {
    "id": 2,
    "name": "Walmart",
    "navType": "keypad",
-   "navStatus": "learning",
-   "navSeconds": 10,
+   "navStatus": "locked",
+   "navSeconds": 130,
    "navRecipe": {
     "type": "keypad",
-    "seconds": 10,
     "steps": [
      {
       "action": "press",
       "value": "9",
-      "atSec": 4
+      "atSec": 33
      }
-    ]
+    ],
+    "seconds": 130,
+    "target": "store operator",
+    "ringVariable": true
    },
-   "navUpdatedAt": 1783726635
+   "navUpdatedAt": 1783727020
   },
   {
    "id": 3,
