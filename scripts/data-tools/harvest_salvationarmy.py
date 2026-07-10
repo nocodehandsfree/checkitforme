@@ -100,6 +100,11 @@ def parse_hours(text):
                         out[d] = span
                     found = True
     if not found: return None
+    if not any(isinstance(v, str) and "-" in v for v in out if v):
+        # only 'closed' fragments parsed ('...10-8 Closed Sunday' with am/pm-less times we skip) —
+        # an all-closed result from TEXT is always a partial parse, never a real closure. No guessing,
+        # and NEVER deactivate a store off parsed prose.
+        return None
     return {DAYS[i]: (out[i] if out[i] else "closed") for i in range(7)}  # unmentioned = closed
 
 # ---- our SA rows without hours
