@@ -39,7 +39,7 @@ console.log("▶ brandSwitcher");
 const sw = brandSwitcher();
 ok(!sw.some((b) => b.key === "runner"), "switcher excludes the default 'all products' brand");
 ok(sw.length === allBrandKeys().length - 1, "switcher = every vertical except the default");
-ok(sw.find((b) => b.key === "topps")?.tag === "NBA", "topps carries the 'NBA' qualifier tag");
+ok(sw.find((b) => b.key === "topps")?.tag === "NBA Cards", "topps carries the 'NBA Cards' qualifier tag (owner 07-10: header says NBA Cards, the logo says Topps)");
 ok(!("tag" in (sw.find((b) => b.key === "poke") || {})), "poke has no tag (logo doesn't need a qualifier)");
 ok(sw.every((b) => typeof b.logoUrl === "string"), "every entry has a (possibly empty) logoUrl string");
 

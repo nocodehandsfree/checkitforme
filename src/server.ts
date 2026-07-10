@@ -279,15 +279,12 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
       ...seoGraph(brand, plainName),
     ] })}</script>`,
   ].join("\n");
-  // Status-bar tone for verdict deep-links (?call=…&tone=in|out|unk|soon): baked as a CLASS on the
-  // literal served <html> tag (the html.tone-* static CSS lives in checkit.html). iOS samples the page
-  // background for the status bar at FIRST PAINT — a tone applied later by script (boot/fetch timing)
-  // often misses that sample and leaves the bar dark in plain Safari. Baking the class server-side makes
-  // the very first paint the verdict colour with zero JS dependency; the in-page rv-* class system takes
-  // over (and drops the baked class via dropBakedTone) as soon as the app renders a view.
-  const toneClass = /^(in|out|unk|soon)$/.test(tone) ? ` class="tone-${tone}"` : "";
+  // Verdict-tone baking RETIRED (owner 07-10, polish items 24-25): a deep link must load NEUTRAL and
+  // only take the verdict color once the result is actually rendered client-side. The ?tone= param is
+  // still accepted (old share links carry it) but no longer paints anything at first paint.
+  void tone;
   return withAnalytics(page(file))
-    .replace('<html lang="en">', `<html lang="en"${toneClass}>`)
+    .replace('<html lang="en">', `<html lang="en">`)
     .replace(/__BRAND_HEAD__/g, head)
     .replace(/__BRAND_JSON__/g, JSON.stringify({ key: brand.key, name: brand.name, category: brand.category, accent: brand.accent, accent2: brand.accent2 || brand.accent, logoUrl: brand.logoUrl || "", emoji: brand.emoji }))
     .replace(/__BRAND_LOGO__/g, brand.logo || `${brand.emoji} ${brand.name}`)
@@ -396,7 +393,8 @@ const DEFAULT_PAGES: Record<string, string> = {
 <h2 ${H2}>The fine print</h2>
 <p>The service is "as is." As far as the law allows, we're not on the hook for a missed item, a wrong answer, or a wasted trip. If it ever comes to it, our max liability is what you paid us in the last 30 days.</p>
 <h2 ${H2}>Changes</h2>
-<p>We may update these terms. Keep using the app and that's a yes. Questions? Hit the Contact page.</p>`,
+<p>We may update these terms. Keep using the app and that's a yes. Questions? Hit the Contact page.</p>
+<p style="margin-top:22px"><a href="/p/privacy" onclick="if(window.openPage){openPage('privacy');return false}">Privacy Policy →</a></p>`,
   privacy: `<p>Here's what <b>Check It For Me</b> (checkitforme.com) collects, and why. Short version: we grab what we need to run your checks. We don't sell your info.</p>
 <h2 ${H2}>What we collect</h2>
 <ul>
@@ -412,6 +410,58 @@ const DEFAULT_PAGES: Record<string, string> = {
 <h2 ${H2}>Your data, your call</h2>
 <p>We keep your account and history until you ask us to delete it. Want a copy, or a delete? Hit the Contact page. You can turn off location any time in your browser.</p>`,
 };
+// Hand-written Spanish for the footer pages (copy law 3: every string ships its Spanish). Same voice,
+// no dashes, fewest words. Served whenever the app asks with ?lang=es; the owner's policy.pages
+// overrides are English-only, so Spanish always comes from here.
+const PAGE_TITLES_ES: Record<string, string> = { about: "Acerca de", contact: "Contacto", faq: "Preguntas", terms: "Términos del servicio", privacy: "Política de privacidad" };
+const DEFAULT_PAGES_ES: Record<string, string> = {
+  about: `<p><b>Check It For Me</b> averigua si lo que buscas está en el estante. Por teléfono. Para que no cruces la ciudad por nada.</p>
+<p>Eliges una tienda y un producto. Check AI llama a la tienda, pregunta al personal y te manda la respuesta. Llamada real. Respuesta directa. Sin bots que se hacen pasar por ti. Sin refrescar una página toda la noche.</p>
+<h2 ${H2}>Por qué lo hicimos</h2>
+<p>Los lanzamientos con hype se agotan en minutos. Las páginas de las tiendas dicen "en stock" cuando ya no queda nada. Una llamada de 30 segundos resuelve todo. Nosotros la hicimos de un toque.</p>
+<h2 ${H2}>¿Quieres la versión completa?</h2>
+<p>Cómo funciona, de arriba a abajo, está en <a href="${RM}" target="_blank" rel="noopener">checkitforme.readme.io</a>.</p>`,
+  contact: `<p>La forma más rápida de contactarnos es <b>Discord</b>. Nuestro bot de soporte responde lo común en segundos, a cualquier hora. Un humano atiende el resto.</p>
+<p>¿Quieres agregar una tienda? Hazlo en la app. Cuenta, luego Gana, luego <i>Agrega tu tienda</i>. Cuando tu tienda esté disponible, tu próxima verificación va por nuestra cuenta.</p>
+<p>No damos soporte por teléfono ni correo a propósito. Con gastos bajos, las verificaciones siguen baratas.</p>`,
+  faq: `<h2 ${H2}>¿Qué hace Check It For Me?</h2>
+<p>Eliges una tienda y un producto. Check AI llama a la tienda y pregunta si está en stock. Recibes la respuesta, normalmente en un par de minutos.</p>
+<h2 ${H2}>¿Es confiable?</h2>
+<p>Te decimos exactamente lo que dijo el personal, con la hora y toda la conversación. Los estantes cambian rápido, así que toma cada respuesta como "ahora mismo".</p>
+<h2 ${H2}>¿Cuánto cuesta?</h2>
+<p>Pagas en verificaciones. Compra un paquete chico o suscríbete por una carga mensual. Las cuentas nuevas reciben una verificación gratis para probar. Gana más agregando una tienda, invitando a un amigo o publicando un logro.</p>
+<h2 ${H2}>¿Lo compran por mí?</h2>
+<p>No. Confirmamos que está ahí. La compra es tuya.</p>
+<h2 ${H2}>¿Y si nadie contesta?</h2>
+<p>Sin respuesta = sin cargo.</p>
+<p style="margin-top:26px"><a href="${RM}" target="_blank" rel="noopener" style="display:inline-block;padding:13px 22px;border-radius:14px;font-weight:800;text-decoration:none;border:1.5px solid currentColor">Lee la guía completa →</a></p>`,
+  terms: `<p>Al usar <b>Check It For Me</b> (checkitforme.com) aceptas estos términos. Si no, no pasa nada. Solo no lo uses.</p>
+<h2 ${H2}>Qué hacemos</h2>
+<p>Llamamos a tiendas y preguntamos si algo está en stock, luego te contamos lo que dijeron. Las respuestas son una foto del momento. Las tiendas a veces se equivocan, así que no podemos garantizar que el artículo esté, ni el precio, ni que siga ahí cuando llegues.</p>
+<h2 ${H2}>Verificaciones y pagos</h2>
+<p>Pagas con verificaciones, en paquetes o incluidas en un plan. Stripe procesa la tarjeta. Una verificación se gasta cuando coloca una llamada. Las que no uses se pueden reembolsar si lo pides. Las gastadas no. Los planes se renuevan hasta que canceles, y puedes cancelar cuando quieras para el siguiente ciclo.</p>
+<h2 ${H2}>Juega limpio</h2>
+<p>No nos uses para acosar a una tienda, hacer llamadas sin motivo real, revender el servicio o romper la ley. Podemos pausar cuentas que abusen del servicio o de las tiendas.</p>
+<h2 ${H2}>La letra chica</h2>
+<p>El servicio se ofrece "tal cual". Hasta donde la ley lo permite, no respondemos por un artículo perdido, una respuesta equivocada o un viaje en vano. Si llegara el caso, nuestra responsabilidad máxima es lo que nos pagaste en los últimos 30 días.</p>
+<h2 ${H2}>Cambios</h2>
+<p>Podemos actualizar estos términos. Si sigues usando la app, es un sí. ¿Preguntas? Ve a la página de Contacto.</p>
+<p style="margin-top:22px"><a href="/p/privacy" onclick="if(window.openPage){openPage('privacy');return false}">Política de privacidad →</a></p>`,
+  privacy: `<p>Esto es lo que <b>Check It For Me</b> (checkitforme.com) recopila, y para qué. Versión corta: tomamos lo necesario para hacer tus verificaciones. No vendemos tu información.</p>
+<h2 ${H2}>Qué recopilamos</h2>
+<ul>
+<li><b>Tu número de celular.</b> Es tu forma de iniciar sesión. Y llamamos a tiendas en tu nombre, así que se requiere un número verificado. Sin número, no hay verificaciones.</li>
+<li><b>Tus verificaciones.</b> La tienda, el producto, el resultado, la conversación de la llamada.</li>
+<li><b>Ubicación aproximada.</b> Solo si la permites, para mostrarte tiendas cerca. Di que no y busca por código postal.</li>
+<li><b>Datos de pago.</b> Los maneja Stripe. Nunca vemos tu tarjeta completa.</li>
+</ul>
+<h2 ${H2}>Cómo la usamos</h2>
+<p>Para colocar tus llamadas, mostrar tu historial, cobrar, frenar abusos y afinar la precisión. Eso es todo.</p>
+<h2 ${H2}>Quién la ve</h2>
+<p>Solo los proveedores que hacen que funcione. Un proveedor de voz para las llamadas, uno de inicio de sesión y Stripe para pagos. La manejan por nosotros bajo sus propios términos. No vendemos tu información personal.</p>
+<h2 ${H2}>Tus datos, tú decides</h2>
+<p>Guardamos tu cuenta e historial hasta que pidas borrarlos. ¿Quieres una copia, o borrar todo? Ve a la página de Contacto. Puedes apagar la ubicación cuando quieras en tu navegador.</p>`,
+};
 app.get("/p/:slug", async (c) => {
   const slug = c.req.param("slug").toLowerCase();
   if (!(slug in PAGE_TITLES)) return c.notFound();
@@ -420,18 +470,21 @@ app.get("/p/:slug", async (c) => {
   const brand = resolveBrand(host, c.req.query("brand"));
   const pol = await getPolicy();
   const plain = brand.name.replace(/<[^>]+>/g, "");
-  const body = ((pol.pages as Record<string, string>)[slug] || "").trim()
+  const es = (c.req.query("lang") || "").toLowerCase() === "es";
+  const title = es ? (PAGE_TITLES_ES[slug] || PAGE_TITLES[slug]) : PAGE_TITLES[slug];
+  const body = (es && DEFAULT_PAGES_ES[slug])
+    || ((pol.pages as Record<string, string>)[slug] || "").trim()
     || DEFAULT_PAGES[slug]
     || `<p>This page is on the way. Check back soon.</p>`;
   // In-app sheet: the consumer page fetches the content instead of navigating away from the app.
-  if (c.req.query("partial")) return c.json({ title: PAGE_TITLES[slug], body });
-  return c.html(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(PAGE_TITLES[slug])} · ${esc(plain)}</title><meta name="robots" content="index,follow">
+  if (c.req.query("partial")) return c.json({ title, body });
+  return c.html(`<!doctype html><html lang="${es ? "es" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(title)} · ${esc(plain)}</title><meta name="robots" content="index,follow">
 <style>*{box-sizing:border-box}body{margin:0;background:#0A0A0E;color:#e9e9f0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.65}
 .wrap{max-width:680px;margin:0 auto;padding:28px 22px 80px}a.home{color:${brand.accent};text-decoration:none;font-weight:800;font-size:15px}
 h1{font-size:30px;margin:26px 0 14px}.body{color:#c2c2cf;font-size:16px}.body a{color:${brand.accent}}.muted{color:#7a7a88;font-size:13px;margin-top:40px}</style></head>
 <style>.fab{position:fixed;right:18px;bottom:22px;width:58px;height:58px;border-radius:50%;background:${brand.accent};color:#06210f;border:none;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:60;text-decoration:none}</style>
-<body><div class="wrap"><a class="home" href="/">← ${esc(plain)}</a><h1>${esc(PAGE_TITLES[slug])}</h1><div class="body">${body}</div>
+<body><div class="wrap"><a class="home" href="/">← ${esc(plain)}</a><h1>${esc(title)}</h1><div class="body">${body}</div>
 <div class="muted">© ${new Date().getFullYear()} ${esc(plain)}</div></div>
 <a class="fab" href="/" title="Back" aria-label="Back to ${esc(plain)}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="#06210f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
 </body></html>`);

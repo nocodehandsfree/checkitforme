@@ -260,6 +260,7 @@ __BRAND_HEAD__
   .live-wait{color:var(--muted);font-size:13px;text-align:center;padding:16px 8px;line-height:1.5}
   /* ── result v2: boxless verdict + boxless "The call" header (mirrors checkit-demo look) ── */
   .rverdict{position:relative;padding:2px 2px 0;margin-bottom:4px}
+  .rwhen{margin-top:6px;font-size:12px;font-weight:600;color:rgba(255,255,255,.55)} /* when the call happened (owner 07-10 items 48-49) */
   .rverdict>*{position:relative}
   /* ── Verdict tone wash + iOS Safari chrome tint ──────────────────────────────────────────────
      PROVEN ON-DEVICE (owner, tinttest1-8): modern iOS Safari paints its chrome strips (status-bar
@@ -313,7 +314,7 @@ __BRAND_HEAD__
      so the wash reaches the top. The nav pills + day-picker take a BARELY-green fill (level 3) so they
      read as sitting on a green page without looking like dark chips. */
   body.rview header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
-  body.rview main{padding-top:18px}
+  body.rview main{padding-top:18px;flex:0 0 auto} /* short results: footer hugs the content instead of pinning to the viewport bottom (owner 07-10 item 51) */
   /* Header chips take the VERDICT's tone (not always green) so the whole top — status bar → nav →
      verdict — reads as one continuous color. Green chips on an amber/red result broke that. */
   body.rview.rv-in .pill,body.rview.rv-in .vsw-trig,body.rview.rv-in .railcal{background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.16)}
@@ -784,7 +785,7 @@ __BRAND_HEAD__
   .foot-bottom{display:flex;align-items:center;justify-content:flex-start;gap:9px;padding-top:16px}
   .foot-fav{display:flex;align-items:center;flex:0 0 auto}
   .foot-fav svg{width:24px;height:24px;border-radius:7px}
-  .foot-copy{color:#6a6a76;font-size:9px;font-weight:600;line-height:1;display:flex;align-items:center;position:relative;top:2px}
+  .foot-copy{color:#6a6a76;font-size:9px;font-weight:600;line-height:1;display:inline-block;position:relative;top:2px}
   .foot-brandname{color:var(--accent,var(--green))}
   .langtop{appearance:none;-webkit-appearance:none;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;font-size:12px;font-weight:800;border-radius:20px;padding:7px 28px 7px 12px;cursor:pointer;flex:0 0 auto;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M0.5 0.5h8L4.5 5.5z' fill='%23ffffff'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
   .pill.account.anon{background:rgba(255,203,5,.12);border-color:rgba(255,203,5,.4);color:#fff}
@@ -1156,13 +1157,16 @@ html[data-skin="v2"] .foot-links a{font-size:13px;font-weight:600;color:#8A8A96}
 html[data-skin="v2"] .foot-social a,html[data-skin="v2"] .foot-social button{width:36px;height:36px;border-radius:50%;background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 /* Toasts (T1/§5.4): bottom capsule, green success gradient + dark-green text. */
 /* T1 EXACT: 14.5/800, pad 12/22, comp shadows (deep drop + inner top light). */
-html[data-skin="v2"] .toast{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#0C2916;border:0;border-radius:22px;font-size:14px;font-weight:800;padding:12px 20px;box-shadow:0 14px 30px -8px rgba(25,177,69,.5),inset 0 1px 0 rgba(255,255,255,.35);max-width:calc(100vw - 36px);white-space:normal;text-align:center;line-height:1.35;bottom:34px;box-sizing:border-box}
-html[data-skin="v2"] .toast.tneutral{background:linear-gradient(180deg,#31313A 0%,#26262C 100%);color:#FFF;box-shadow:0 14px 30px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.12)}
-html[data-skin="v2"] .toast.oneline{white-space:nowrap;max-width:none} /* map hint etc. — one line, never wraps */
-html[data-skin="v2"] .toast.taccent{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;box-shadow:0 14px 30px -8px color-mix(in srgb,var(--accent,#FFCB05) 45%,transparent),inset 0 1px 0 rgba(255,255,255,.4)}
+/* Bottom-notification LAW (owner + copy guide rule 4): ONE line, GRAY pill, WHITE Inter text — always,
+   every page, both languages. Green/accent pill variants are retired on purpose: .tneutral/.taccent
+   stay as no-ops so old call sites keep working. Ellipsis is the safety net; the real fix for a long
+   message is shorter copy. */
+html[data-skin="v2"] .toast{display:block;background:linear-gradient(180deg,#31313A 0%,#26262C 100%);color:#FFF;font-family:Inter,-apple-system,system-ui,sans-serif;border:0;border-radius:999px;font-size:14px;font-weight:800;padding:12px 20px;box-shadow:0 14px 30px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.12);max-width:calc(100vw - 36px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1.35;bottom:34px;box-sizing:border-box}
+html[data-skin="v2"] .toast b{color:#FFF}
+html[data-skin="v2"] .toast.tneutral,html[data-skin="v2"] .toast.taccent,html[data-skin="v2"] .toast.oneline{background:linear-gradient(180deg,#31313A 0%,#26262C 100%);color:#FFF;white-space:nowrap}
 /* IS1 EXACT: share = white 12.5/800/.13em label capsule (icon left, arrow right); action tiles 2-col. */
 html[data-skin="v2"] .smbtn.is1s{display:flex;align-items:center;justify-content:space-between;width:100%;color:#FFF;font-size:12.5px;letter-spacing:.13em;padding:13px 22px}
-html[data-skin="v2"] .is1g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+html[data-skin="v2"] .is1g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}
 html[data-skin="v2"] .is1t{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:11px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left}
 html[data-skin="v2"] .is1t:active{transform:translateY(2px)}
 html[data-skin="v2"] .is1t .tl{width:32px;height:32px;border-radius:10px;background:rgba(74,222,128,.12);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
@@ -1306,7 +1310,7 @@ html[data-skin="v2"] .fbk-b:active{transform:translateY(2px);box-shadow:0 4px 8p
 html[data-skin="v2"] .fbk-ic{width:34px;height:34px}
 /* In-stock actions (IS1/§5.9): SHARE = green ring capsule; Too far?/Grabbed it? = raised cards
    with green icon tiles. */
-html[data-skin="v2"] .smbtn{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#4ADE80;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 28px -8px rgba(25,177,69,.45)}
+html[data-skin="v2"] .smbtn{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#4ADE80;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 0 26px -4px rgba(25,177,69,.38)}
 html[data-skin="v2"] .act2{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .act2:active{transform:translateY(2px)}
 /* Restock module R1 EXACTNESS: raised gradient card r20; rows are CARVED wells (#1B1B20 inset) with
@@ -1376,7 +1380,8 @@ html[data-skin="v2"] .ho-conn{width:2px;background:rgba(255,255,255,.1)}
 html[data-skin="v2"] .ho-step.done .ho-conn{background:#4ADE80}
 html[data-skin="v2"] .ho-card{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:16px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);padding:13px 14px}
 html[data-skin="v2"] .ho-step:not(.active):not(.done) .ho-card{opacity:.5}
-html[data-skin="v2"] .ho-toggle{background:#1B1B20;border:0;border-radius:999px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
+html[data-skin="v2"] .ho-toggle{background:#1B1B20;border:0;border-radius:999px;padding:5px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
+html[data-skin="v2"] .ho-toggle button{border-radius:999px;padding:10px 12px;overflow:hidden;text-overflow:ellipsis}
 html[data-skin="v2"] .ho-toggle button.on{background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 /* RN1/RN2 EXACTNESS — head: 32px raised ‹ circle, 19/800 title + 12/600 sub; job card raised r16 w/
    CARVED 40px icon tile; step eyebrows 10/700/.15em; primary CTAs = green RING capsules w/ white
@@ -1410,7 +1415,7 @@ html[data-skin="v2"] .ho-link{text-decoration:none;font-size:12px;font-weight:60
    FIND MY STORES = green ring capsule w/ WHITE tracked label (was a raised neutral key). */
 html[data-skin="v2"] .card{padding:16px 16px 20px}
 html[data-skin="v2"] .findhead .step{font-size:10.5px;font-weight:700;letter-spacing:.15em;color:#8A8A96}
-html[data-skin="v2"] .opencount{font-size:12px;font-weight:600;color:#8A8A96}
+html[data-skin="v2"] .opencount{font-size:12px;font-weight:600;color:#8A8A96;min-width:0;overflow:hidden;text-overflow:ellipsis}
 html[data-skin="v2"] .rsl-lbl{font-size:13px;font-weight:600;color:#8A8A96}
 html[data-skin="v2"] .rsl-val{font-size:17px;font-weight:800}
 html[data-skin="v2"] .rsl-val i{font-size:12px;font-weight:600;color:#8A8A96}
@@ -1450,7 +1455,8 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zwrap{max-width:460px;margin:0 auto;padding:6px 14px 24px}
 #zones .zbuild{display:flex;flex-direction:column;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
 #zones .zhead{display:flex;align-items:center;gap:10px;margin:6px 2px 12px}
-#zones .zhead b{font-size:19px;font-weight:800;letter-spacing:-.3px;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#zones .zhead b{font-size:20px;font-weight:800;letter-spacing:-.3px;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #zones{font-family:Inter,-apple-system,system-ui,sans-serif}
 #zones .zback{width:34px;height:34px;flex:0 0 auto;border:0;border-radius:50%;background:linear-gradient(180deg,#2F2F36,#26262B);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#8A8A96;font-size:17px;cursor:pointer}
 #zones .zcard{padding:15px 16px;margin-top:12px}
 #zones .znm{font-size:16.5px;font-weight:800}
@@ -1460,9 +1466,8 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zempty{text-align:center;color:#8A8A96;font-size:14.5px;line-height:1.5;padding:30px 24px 6px;text-wrap:balance}
 /* controls */
 #zones .zsearch{position:relative;margin:0 0 10px}
-#zones .zsearch input{width:100%;box-sizing:border-box;padding-right:104px}
-#zones .zsearch .zgo{position:absolute;right:5px;top:5px;bottom:5px;border:0;border-radius:9px;padding:0 14px;background:#33333c;color:#e6e6ee;font-weight:800;font-size:13px;cursor:pointer}
-#zones .zsearch .zgps{position:absolute;right:52px;top:5px;bottom:5px;width:38px;border:0;border-radius:9px;background:#33333c;color:var(--accent,#4ADE80);display:grid;place-items:center;cursor:pointer}
+#zones .zsearch input{width:100%;box-sizing:border-box;padding-right:56px}
+#zones .zsearch .zgps{position:absolute;right:5px;top:5px;bottom:5px;width:38px;border:0;border-radius:9px;background:#33333c;color:var(--accent,#4ADE80);display:grid;place-items:center;cursor:pointer}
 #zones .zseg{display:flex;background:#1B1B20;border-radius:12px;padding:4px;gap:4px;margin-bottom:12px}
 #zones .zseg button{flex:1;border:0;background:transparent;color:#8A8A96;font-weight:800;font-size:13.5px;padding:9px;border-radius:9px;cursor:pointer}
 #zones .zseg button.on{background:linear-gradient(180deg,#31313A,#28282E);color:#fff;box-shadow:0 6px 12px -6px rgba(0,0,0,.6)}
@@ -1475,7 +1480,7 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 /* stage: fixed-height map or a capped scrolling list — flows above the footer, never under browser chrome */
 #zones .zstage{display:flex;flex-direction:column}
 #zones #zmap{height:46vh;min-height:300px;border-radius:16px;overflow:hidden;background:#15151c}
-#zones .zlist{max-height:54vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+#zones .zlist{max-height:54vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:6px 8px}
 #zones .zpin{background:none;border:0}
 /* store row = retail .store look + leading check + green ring when picked (logos identical to retail) */
 #zones .zpick{cursor:pointer;position:relative;margin-top:9px}
@@ -1583,6 +1588,13 @@ html[data-skin="v2"] #scorePostOv .modal{width:100%;max-width:none!important;bor
 html[data-skin="v2"] #scorePostOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
 html[data-skin="v2"] #scorePostOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 html[data-skin="v2"] #scorePostOv .modal>.x{display:none!important}
+/* Add-your-store, "Tell me when it's back" and Auto-check slide up as bottom sheets too
+   (owner 07-10, polish items 20 + 59 + 60 — they were centered popups). Same recipe as scorePostOv. */
+html[data-skin="v2"] #storeReqOverlay,html[data-skin="v2"] #watchOverlay,html[data-skin="v2"] #scheduleOverlay{align-items:flex-end;padding:0}
+html[data-skin="v2"] #storeReqOverlay .modal,html[data-skin="v2"] #watchOverlay .modal,html[data-skin="v2"] #scheduleOverlay .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
+html[data-skin="v2"] #storeReqOverlay .modal::before,html[data-skin="v2"] #watchOverlay .modal::before,html[data-skin="v2"] #scheduleOverlay .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
+html[data-skin="v2"] #storeReqOverlay.on .modal,html[data-skin="v2"] #watchOverlay.on .modal,html[data-skin="v2"] #scheduleOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
+html[data-skin="v2"] #storeReqOverlay .modal>.x,html[data-skin="v2"] #watchOverlay .modal>.x,html[data-skin="v2"] #scheduleOverlay .modal>.x{display:none!important}
 html[data-skin="v2"] #buyOverlay .modal{overflow-y:auto;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
 /* 6c CHECKOUT (v2) — branded on-site Stripe Elements page. Bottom sheet, comp tokens: raised order
    card, carved "or pay with card" divider, Payment Element in the well, green SUBSCRIBE ring capsule. */
@@ -1676,7 +1688,9 @@ html[data-skin="v2"] body.rview .tbtn{background:rgba(255,255,255,.07);border:1p
 html[data-skin="v2"] .iconbtn,html[data-skin="v2"] .railnav,html[data-skin="v2"] .railsel,html[data-skin="v2"] .vsrow,html[data-skin="v2"] .ho-back,html[data-skin="v2"] .ho-job,html[data-skin="v2"] .ho-btn.ghost,html[data-skin="v2"] .ho-pm button,html[data-skin="v2"] .earnbox{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 /* .kin was mis-swept into the raised group — form FIELDS are carved wells (§5.12/R3), never raised. */
 html[data-skin="v2"] .kin{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px}
-html[data-skin="v2"] .ho-stepper,html[data-skin="v2"] .ho-msg,html[data-skin="v2"] .ho-seg{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+html[data-skin="v2"] .ho-stepper,html[data-skin="v2"] .ho-msg{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+html[data-skin="v2"] .ho-seg{background:#1B1B20;border:0;border-radius:999px;padding:5px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+html[data-skin="v2"] .ho-seg button{border-radius:999px;overflow:hidden;text-overflow:ellipsis}
 html[data-skin="v2"] .rcal-big{background:#26262B;border:0;border-radius:22px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 html[data-skin="v2"] .langtop,html[data-skin="v2"] .grouphdr,html[data-skin="v2"] .ho-dv{border:0}
 html[data-skin="v2"] .leaflet-popup-content-wrapper{background:#26262B;border:0;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
@@ -1690,7 +1704,8 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 <body>
 <!-- Hard-refresh of a result deep-link: apply the verdict treatment (wash + transparent nav) NOW, so
      the page paints fully toned from the first frame (boot() shows #result; restoreCall confirms it). -->
-<script>(function(){try{ if(window.__bootTone){ document.body.classList.add('rview','rv-'+window.__bootTone); } }catch(e){}})();</script>
+<!-- tone pre-paint removed (owner 07-10): the page stays neutral until the result actually renders;
+     the rv-* wash is applied by showResult once data is loaded. -->
 <header>
   <div class="brandbar">
     <div class="vsw" id="vsw">
@@ -1726,9 +1741,8 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
         <button class="modetab" data-mode="kiosk" onclick="setMode('kiosk')"><span class="mti" id="mti_kiosk"></span><span data-i18n="mode.kiosk">Kiosks</span></button>
       </div>
       <div id="findbody">
-      <div class="findhead">
-        <div class="step" style="margin:0" id="findstep" data-i18n="find.step">① Find your store</div>
-        <div style="display:flex;align-items:center;gap:10px"><button class="maptgl" id="maptoggle" onclick="toggleMap()" style="display:none">Map</button><div class="opencount" id="store_count"></div></div>
+      <div class="findhead" style="justify-content:flex-end">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0"><button class="maptgl" id="maptoggle" onclick="toggleMap()" style="display:none" data-i18n="map.map">Map</button><div class="opencount" id="store_count"></div></div>
       </div>
       <div class="searchwrap">
         <input id="search" placeholder="Search by store or city…" data-i18n-ph="search.ph" oninput="onSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();geocodeSearch();}" autocomplete="off">
@@ -1758,7 +1772,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     </div>
 
     <button class="callkey" id="checkBtn" onclick="startCheck()" style="display:none" data-i18n="cs.cta">Check this store</button>
-    <div class="foot" id="chargefoot" style="display:none;margin-top:10px" data-i18n="charge"><b>No answer = no charge.</b></div>
+    <div class="foot" id="chargefoot" style="display:none;margin-top:10px" data-i18n="charge"><b>No answer = no charge</b></div>
     <!-- Sell-methods card: live online stock / ways to get it / resale warning / notify.
          Replaces the call button for non-callable chains (Micro Center, Amazon). -->
     <div id="sellmeta" style="display:none;margin-top:12px"></div>
@@ -1859,7 +1873,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   </div>
   <div class="csheet-prod" id="cs_prod"></div>
   <button class="csheet-call" id="cs_call" onclick="startCheck()"><span class="cs-l"><svg width="30" height="30" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span data-i18n="cs.cta">Check this store</span></span><svg class="cs-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
-  <div class="csheet-charge" data-i18n="charge"><b>No answer = no charge.</b></div>
+  <div class="csheet-charge" data-i18n="charge"><b>No answer = no charge</b></div>
 </div>
 
 
@@ -1869,8 +1883,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <a href="/p/about" onclick="openPage('about');return false" data-i18n="foot.about">About</a>
     <a href="/p/faq" onclick="openPage('faq');return false" data-i18n="foot.faq">FAQ</a>
     <a href="/p/contact" onclick="openPage('contact');return false" data-i18n="foot.contact">Contact</a>
-    <a href="/p/terms" onclick="openPage('terms');return false" data-i18n="foot.terms">Terms</a>
-    <a href="/p/privacy" onclick="openPage('privacy');return false" data-i18n="foot.privacy">Privacy</a>
+    <a href="/p/terms" onclick="openPage('terms');return false" data-i18n="foot.legal">Legal</a>
   </nav>
   <div class="foot-meta">
     <div class="foot-social" id="footSocials" style="display:flex"></div>
@@ -2321,8 +2334,8 @@ const I18N={ es:{
   'hist.count':'{n} verificaciones en {m}','hist.inmonth':'verificaciones en',
   'trust.pick':'Elige una tienda','trust.call':'Verificamos en vivo','trust.answer':'Respuesta + prueba',
   'value':'Evita el viaje de <b>$10 en gasolina</b> a un estante agotado',
-  'mode.call':'Verificar una tienda','mode.kiosk':'Kioscos','find.step':'① Encuentra tu tienda','find.kiosk':'① Encuentra un kiosco',
-  'charge':'<b>Sin respuesta = sin cargo.</b>',
+  'mode.call':'Tiendas','mode.kiosk':'Kiosco','find.step':'① Encuentra tu tienda','find.kiosk':'① Encuentra un kiosco',
+  'charge':'<b>Sin respuesta = sin cargo</b>',
   'find.radius':'Radio de búsqueda','find.specific':'¿Algo específico?','find.specific.note':'(opcional) fija el producto exacto',
   'cat.step':'② ¿Qué estás buscando?','cat.note':'',
   'cta.pick':'Elige una tienda para verificar','cta.another':'Verificar otra tienda',
@@ -2336,7 +2349,7 @@ const I18N={ es:{
   'live.convo':'Conversación','live.steps':'Progreso de la llamada','cs.call':'Llamada','lbl.assoc':'Asociado','lbl.menu':'Menú','lbl.agent':'Check AI',
   'up.restock':'No te pierdas el reabastecimiento','up.restock.sub':'Te avisamos por mensaje en cuanto vuelva.','up.checkback':'Vuelve pronto','up.checkback.sub':'Reabastecen seguido. Vuelve en un día o dos.','up.watch':'Avísame cuando vuelva','up.watch.sub':'Una alerta en cuanto una llamada lo confirme.','up.sched':'Auto-verificar en días de envío','up.sched.sub':'Llamamos por ti en días de reabastecimiento.',
   'hist.title':'Tus verificaciones','hist.new':'+ Nueva','hist.empty':'Aún no hay verificaciones. Haz una y aparecerá aquí.',
-  'foot.cta':'¿No ves tu tienda? Agrégala →','foot.about':'Acerca de','foot.contact':'Contacto','foot.faq':'Preguntas','foot.terms':'Términos','foot.privacy':'Privacidad','foot.success':'Logros',
+  'foot.cta':'¿No ves tu tienda? Agrégala →','foot.about':'Acerca de','foot.contact':'Contacto','foot.faq':'Preguntas','foot.terms':'Términos','foot.privacy':'Privacidad','foot.legal':'Legal','foot.success':'Logros',
   'kioskhint':'<span style="display:flex;align-items:center;gap:7px;font-weight:800;white-space:nowrap"><span id="khspark"></span> ¿En un kiosco? ¡Verificación gratis!</span><a onclick="openReceipt()" style="display:inline-block;margin-top:5px;color:var(--purple);font-weight:800;cursor:pointer">Usa nuestro correo al pagar o reenvía tu recibo →</a>',
   'v.in':'¡En stock!','v.out':'No está en stock','v.unclear':'Nos dieron un “quizás”','v.soldout':'Agotado','v.noanswer':'Nadie contestó','v.hold':'En espera','v.soon':'¡Reabastecimiento en camino!','note.soon':'Llega un envío <b>{d}</b>. Sé el primero cuando caiga.',
   'search.ph':'Busca por tienda o ciudad…',
@@ -2359,7 +2372,7 @@ const I18N={ es:{
   'empty.far.title':'Aún no estamos en tu zona…','empty.far.sub':'¡Llegaste temprano! Sé el primero en saber cuando {b} llegue cerca de ti.','empty.far.cta':'🔔 Avísame cuando lleguen',
   'tick.found':'¡Encontrado!','tick.restock':'Reabastecimiento en camino','besttag':'Más probable','bestwhy':'buenas probabilidades ahora',
   'mode.hobby':'Hobby','find.hobby':'① Encuentra una tienda de cartas','find.hobbystore':'① Ahora elige una tienda de cartas','hob.hunting':'BUSCANDO','hob.shopprices':'PRECIOS DE TIENDA','empty.hobby':'No hay tiendas de cartas en {r} mi. Amplía el radio.','hob.pickexact':'Elige el set o producto exacto',
-  'mode.thrift':'Segunda mano','find.thrift':'① Encuentra una tienda de segunda mano','empty.thrift':'No hay tiendas de segunda mano en {r} mi. Amplía el radio.',
+  'mode.thrift':'Segundas','find.thrift':'① Encuentra una tienda de segunda mano','empty.thrift':'No hay tiendas de segunda mano en {r} mi. Amplía el radio.',
   'co.title':'Pago','co.change':'Cambiar','co.orcard':'O paga con tarjeta','co.loading':'Cargando pago seguro…','co.subscribe':'Suscribirse','co.pay':'Pagar','co.cancel':'Cancela cuando quieras','co.secured':'Protegido por','co.processing':'Procesando…','co.failed':'El pago no se procesó. Inténtalo de nuevo.','co.redirect':'Abriendo pago seguro…','co.checksmo':'verificaciones al mes','co.monthly':'mensual','co.annual':'anual','co.paygsub':'Pago único · las verificaciones no caducan',
   'ph.quoted':'Precio indicado','ph.overmsrp':'sobre el precio de lista','ph.title':'Precios encontrados','ph.best':'MEJOR','ph.oos':'agotado',
   'plan.member':'Miembro',
@@ -2368,7 +2381,7 @@ const I18N={ es:{
   'kioskonly':'Solo kiosco','kiosk.precall':'Solo kiosco. Preguntaremos si su kiosco está funcionando y surtido, no por un envío.',
   'closednow':'· cerrado ahora','store.soon':'¡Agregando tienda pronto!','store.soonchip':'Muy pronto',
   // live view
-  'pre.had':'tenían en stock','pre.notin':'no tenían','pre.unclear':'sin respuesta clara','pre.again':'Verificaste {s} {a}. {o}. ¿Verificar de nuevo?','pre.note':'Verificaste {s} {a}. {o}',
+  'pre.had':'en stock','pre.notin':'sin stock','pre.unclear':'sin respuesta clara','pre.again':'Verificaste {s} {a}. {o}. ¿Verificar de nuevo?','pre.note':'{s} {a} · {o}',
   'live.mute':'🔇 Quita el silencio del teléfono para escuchar la llamada','live.calling':'📞 Colocando la llamada…','live.ringing':'📞 Timbrando…','live.connected':'✅ Contestaron. Escuchando…','live.talking':'🙋 Hablando con un empleado…','live.ivr':'🔢 Navegando el menú telefónico…','live.getting':'⏳ Obteniendo el resultado…','live.loading':'Cargando tu llamada…','live.connecting':'Conectando…',
   'live.live':'🔊 EN VIVO. Estás escuchando la llamada','live.hangup':'■ Detener y colgar','live.proof':'🔴 En vivo. La conversación según sucede','live.foot':'Un momento. Las tiendas contestan, te ponen en espera y conversan. Vale los 2 minutos.',
   // result page
@@ -2428,7 +2441,7 @@ const I18N={ es:{
   // schedule modal
   'sch.perk':'Beneficio de miembro Check+','sch.title':'Auto-verificación','sch.days':'¿Qué días?','sch.time':'Hora más temprana para llamar','sch.where':'Agrega tu celular o correo','sch.ph':'correo o teléfono','sch.cta':'Activar auto-verificación →','sch.setting':'Configurando…','sch.on.days':'📅 Auto-verificación activa. Llamaremos esos días','sch.on.ship':'📅 Auto-verificación activa. Llamaremos el día de envío de esta tienda','sch.canceled':'Auto-verificación cancelada','sch.cancelfail':'No se pudo cancelar. Inténtalo de nuevo',
   // waitlist modal
-  'wl.title':'Te enviamos un correo cuando lancemos aquí','wl.sub':'Deja tu correo. En cuanto lleguemos a tu zona, eres el primero en saberlo.','wl.ph':'tu correo','wl.cta':'Unirme a la lista →','wl.adding':'Agregándote…','wl.done':"🙌 Estás en la lista. Te enviamos un correo en cuanto lancemos cerca de ti",
+  'wl.title':'Te enviamos un correo cuando lancemos aquí','wl.sub':'Deja tu correo. En cuanto lleguemos a tu zona, eres el primero en saberlo.','wl.ph':'tu correo','wl.cta':'Unirme a la lista →','wl.adding':'Agregándote…','wl.done':"🙌 Estás en la lista",
   // refer modal
   'ref.title':'Da {n} verificaciones, recibe {n}','ref.sub':'Cuando un amigo se registre con tu enlace y haga su primera verificación, <b>ambos</b> reciben {n} verificaciones gratis.','ref.row':'Invita a un amigo. Ambos reciben una verificación gratis','ref.sub.one':'Se une con tu enlace y hace una verificación. Una verificación gratis para <b>los dos</b>.','ref.sub.n':'Se une con tu enlace y hace una verificación. <b>{n} verificaciones gratis</b> para los dos.','ref.copy':'copiar','ref.copied2':'copiado ✓','ref.signin':'toca aquí para tu enlace de invitación','ref.t.text':'Texto','ref.t.post':'Publicar','ref.t.more':'Más','ref.msg.r1':'una verificación gratis','ref.msg.rN':'{n} verificaciones gratis','ref.msg':'¡Oye! Mira esta tecnología, está increíble.\nNos ayuda a encontrar rápido sobres, cajas y ETBs de {x} a precio de tienda.\nRegístrate y los dos recibimos {r}:','ref.msg.simple':'¡Oye! Mira esta tecnología, está increíble.\nNos ayuda a encontrar {x} en stock a precio de tienda.\nRegístrate y los dos recibimos {r}:','ref.sms':'Mándalo a un amigo','ref.post':'𝕏 Publicar','ref.joined':'🎉 {n} ya se unieron','ref.loading':'Cargando tu enlace…','ref.welcome':'🎁 ¡Bienvenido! {n} verificaciones gratis agregadas',
   // receipt modal
@@ -2441,7 +2454,7 @@ const I18N={ es:{
   // driver / runner teaser
   'dd.tag':'Vista previa · próximamente','dd.title':'Que un local lo recoja','dd.sub':'¿Muy lejos para manejar? Manda a un conductor de Uber/Lyft cercano a comprarlo y enviártelo. Él paga <b>$0 de su bolsillo</b>, tú solo pones el bono.','dd.instock':'En stock','dd.s1':'Define el <b style="color:var(--green)">bono</b> del conductor (ej. $25) sobre su tarifa','dd.s2':'Pide el viaje en <b>Uber</b> o <b>Lyft</b>. Recogida en la tienda','dd.s3':'Envía una tarjeta prepagada (producto + envío) + un mensaje listo','dd.s4':'Él lo compra, lo envía y toca <b>Listo</b> → tu bono se libera al instante','dd.sees':'lo que ve el conductor','dd.pickup':'Tienes una recogida de <span style="color:var(--green)">$25</span> 🏃','dd.applepay':'Agregar tarjeta a Apple Pay (60 seg)','dd.cta':'Quiero acceso anticipado →','dd.noted':'Anotado. Te buscamos para el acceso anticipado 🤝','dd.grab':'recoger en {s} → te lo envían',
   // generic errors / toasts / misc
-  'err.generic':'No se procesó. Vuelve a intentarlo.','err.sendcode':'No pudimos enviar un código. Inténtalo de nuevo.','err.verify':'No se pudo verificar. Inténtalo de nuevo.','err.post':'No se pudo publicar. Inténtalo de nuevo.','err.upload':'La foto no se subió. Inténtalo de nuevo.','err.photobig':'La foto pesa demasiado. Prueba con una más pequeña.','auth.verifying':'Verificando…','map.list':'Lista','store.closed':'Cerrado','toast.nocall':'. No se hizo la llamada.','auth.welcome':"✓ Ya entraste",'err.email':'Ingresa un correo válido','err.usonly':'Por ahora solo enviamos SMS a números de EE. UU.','err.toofast':'Espera un momento e inténtalo de nuevo.','auth.sending':'Enviando…','auth.resending':'Reenviando…','err.contact':'Ingresa un correo o teléfono válido.','err.pickstore':'Elige una tienda primero',
+  'err.generic':'No se procesó. Vuelve a intentarlo.','err.sendcode':'No pudimos enviar un código. Inténtalo de nuevo.','err.verify':'No se pudo verificar. Inténtalo de nuevo.','err.post':'No se pudo publicar. Inténtalo de nuevo.','err.upload':'La foto no se subió. Inténtalo de nuevo.','err.photobig':'La foto pesa demasiado. Prueba con una más pequeña.','auth.verifying':'Verificando…','map.list':'Lista','map.map':'Mapa','store.closed':'Cerrado','toast.nocall':'. No se hizo la llamada.','auth.welcome':"✓ Ya entraste",'err.email':'Ingresa un correo válido','err.usonly':'Por ahora solo enviamos SMS a números de EE. UU.','err.toofast':'Espera un momento e inténtalo de nuevo.','auth.sending':'Enviando…','auth.resending':'Reenviando…','err.contact':'Ingresa un correo o teléfono válido.','err.pickstore':'Elige una tienda primero',
   'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la verificación','toast.callgone':'Esa verificación ya no está disponible','toast.toosoon':'Acabas de verificar esta tienda — vuelve a verificar en unos {n} min.','toast.loadingcall':'Cargando tu verificación…','toast.loadingcall2':'Cargando tu verificación','toast.translate.fail':'No se pudo traducir eso.','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Aquí está la lista.','map.nostores':'No hay tiendas aquí. Mueve el mapa a otro lugar.','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
   'find.me':'Encuentra mis tiendas','find.near':'cerca de ti, abiertas ahora',
   'scores.title':'Logros de la caza','scores.post':'Publica el tuyo →','scores.first':'¡Muéstranos el botín!',
@@ -2449,7 +2462,7 @@ const I18N={ es:{
   'ho.ship.hint':'El empaque y el envío van en la tarjeta del conductor. Lo envía de regreso y te llega el rastreo por texto.','ho.home.hint':'El conductor lo lleva directo a tu puerta. Sin envío, sin esperar el correo.',
   'ho.s1.label':'Confirmar','ho.s1.title':'¿A dónde debe llegar?','ho.s1.cta':'Se ve bien →','ho.s2.label':'La oferta','ho.s2.title':'Define el bono del conductor','ho.s2.cta':'Fijar el bono →',
   'ho.s3.label':'Resérvalo','ho.s3.title':'Pide el viaje tú mismo','ho.s3.cta':'Un conductor aceptó →','ho.s4.label':'Manda el trato','ho.s4.title':'Pega esto en el chat del conductor','ho.s4.copy':'Copiar mensaje y enlace','ho.s4.cta':'El conductor va en camino →','ho.s4.retry':'¿Dijo que no? Cancela y prueba el siguiente','ho.s4.preview':'Mira lo que ve el conductor',
-  'ho.s5.label':'Cierre','ho.s5.title':'Libera el bono y califica','ho.s5.cta':'Confirmar entrega y liberar el bono','ho.copied':'Copiado. Pégalo en el chat del conductor',
+  'ho.s5.label':'Cierre','ho.s5.title':'Libera el bono y califica','ho.s5.cta':'Confirmar entrega y liberar el bono','ho.copied':'Copiado para el chat del conductor',
   'ho.done.title':'Bono liberado. Listo','ho.done.ship':'Va en camino. Te mandamos el número de rastreo en cuanto escaneen la etiqueta.','ho.done.home':'Va hacia tu puerta. Te llega un texto cuando el conductor lo marque entregado.','ho.done.cta':'Volver a la cacería',
   'rail.all.stores':'Todas las tiendas','rail.all':'Todas las verificaciones','rail.other':'Sin respuesta / dudosa','rail.stores':'Tiendas','rail.calls':'Verificaciones','rail.allday':'Ver todos los días',
   'demo.verdictlbl':'el veredicto','auth.google':'Continuar con Google','auth.discord':'Continuar con Discord','auth.or':'o con tu correo','demo.sys':'Navegando el menú telefónico…','demo.thanks':'¡Perfecto, gracias!','demo.proof':'Persona real · hace 2 min · transcripción completa como prueba.',
@@ -2475,7 +2488,7 @@ const I18N={ es:{
   'live.s1':'Llamando a la tienda…','live.s2':'Está timbrando…','live.s3':'Conectamos','live.s4':'Escuchando el menú…','live.s5':'Navegando el menú…','live.s6':'Transferido al mostrador','live.s7':'Contestó una persona','live.s8':'Preguntando por {p}',
   'live.item':'tu producto','live.store':'la tienda','live.waitperson':'Buscando a una persona…','live.noconvo':'No hay conversación en vivo en esta llamada.',
   'step.one':'paso','step.many':'pasos','step.ringing':'Llamando a la tienda…',
-  'note.fbk':'No pudimos entender bien la respuesta. Lee la conversación y dinos qué opinas.',
+  'note.fbk':'No pudimos entender bien la respuesta.<br>Lee la conversación y dinos qué opinas.',
   'note.getting':'La llamada acaba de terminar. Obteniendo el resultado.',
   'v.getting':'Obteniendo la respuesta…','v.unclear2':'No supimos decir',
   'st.too_busy':'Muy ocupados para revisar',
@@ -2501,7 +2514,7 @@ const I18N={ es:{
   // Manage Zones (premium) — validation, location + save flow
   'zones.title':'Mis zonas','zones.new':'Nueva zona','zones.newz':'Nueva zona','zones.edit':'Editar zona',
   'zones.save':'Guardar zona','zones.saving':'Guardando…','zones.saved':'Zona guardada',
-  'zones.pickone':'Elige al menos una tienda para guardar esta zona.','zones.needname':'Ponle un nombre a tu zona antes de guardar.',
+  'zones.pickone':'Elige una tienda primero','zones.needname':'Ponle nombre a tu zona',
   'zones.nameph2':'Nombra esta zona','zones.locating':'Buscando tu ubicación…',
   'zones.norad':'No hay tiendas en {r} mi. Prueba un radio mayor.','zones.needloc':'Toca el pin o busca un código postal para ver tiendas.',
   'zones.locph':'Busca un código postal o ciudad…','zones.go':'Ir','zones.list':'Lista','zones.map':'Mapa',
@@ -2519,7 +2532,7 @@ function t(key,en){ return (I18N[LANG]&&I18N[LANG][key])||en; }
 const HERO_I18N={es:{
   'Pokémon':'Pokémon <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
   'One Piece TCG':'One Piece <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
-  'Topps NBA':'Topps NBA <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
+  'Topps NBA':'Cartas NBA <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
   'NeeDoh':'NeeDoh <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
 }};
 function isV2(){ return document.documentElement.getAttribute('data-skin')==='v2'; }
@@ -2696,7 +2709,7 @@ function renderFooter(){
 // "Don't see your store?" submission.
 function openStoreReq(){ ['sr_name','sr_city','sr_note','sr_contact'].forEach(id=>{const e=$(id);if(e){e.value='';markFld(e,false);}}); $('sr_err').textContent='';
   const bd=$('sr_body'), dn=$('sr_done'); if(bd)bd.style.display=''; if(dn)dn.style.display='none'; // reset to the form (not a leftover success state)
-  track('storereq_open'); $('storeReqOverlay').classList.add('on'); setTimeout(()=>{try{$('sr_name').focus();}catch(e){}},80); }
+  track('storereq_open'); $('storeReqOverlay').classList.add('on'); sheetPush('storereq'); setTimeout(()=>{try{$('sr_name').focus();}catch(e){}},80); }
 function closeStoreReq(){ $('storeReqOverlay').classList.remove('on'); acctReturn(); }
 async function submitStoreReq(){
   const name=($('sr_name').value||'').trim(), city=($('sr_city').value||'').trim();
@@ -2776,6 +2789,7 @@ async function boot(){
 // permission) → nothing happens, the cached location stands.
 function silentLocRecheck(){
   try{
+    if(MANUAL_LOC) return; // they dropped a pin / searched a ZIP on purpose — do NOT snap back to GPS (regression: map pin jumped home)
     if(!navigator.geolocation || !navigator.permissions || !navigator.permissions.query) return;
     navigator.permissions.query({name:'geolocation'}).then(p=>{
       if(!p || p.state!=='granted') return; // only when already allowed — never trigger the OS prompt here
@@ -2834,7 +2848,7 @@ async function submitWaitlist(){
   btn.disabled=false; btn.textContent=t('wl.cta','Join the list →');
   if(!r||r.error){ $('wl_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
   track('waitlist_join');
-  closeWaitlist(); toast(t('wl.done',"🙌 You're on the list. We'll email you the moment we launch near you."));
+  closeWaitlist(); toast(t('wl.done',"🙌 You're on the list"));
 }
 
 // --- Referrals: give free checks, get free checks ---
@@ -3101,7 +3115,7 @@ function openAccount(fromPop){
     head.innerHTML=`<div style="display:flex;justify-content:center;padding:12px 0 10px"><span style="width:44px;height:6px;border-radius:99px;background:rgba(255,255,255,.5)"></span></div><div class="wash">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <span style="display:flex;align-items:center;gap:4px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('acct.my','My')}</span>${FCHK(24)}</span>
-          <span></span>
+          <button onclick="doSignOut()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);color:#FFF;font-size:13px;font-weight:700;padding:8px 14px;border-radius:999px;cursor:pointer">${t('acct.signout','Sign out')}</button>
         </div>
         <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between">
           <span style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:rgba(255,255,255,.8);white-space:nowrap">${esc(idn.primary)}<button onclick="editPhone()" aria-label="Change number" style="background:none;border:0;padding:2px;cursor:pointer;display:inline-flex"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg></button></span>
@@ -3280,6 +3294,7 @@ function shipmentDayShort(s){ if(!s||!s.shipmentDay) return ''; const k=String(s
 function shipmentLine(s){ const d=shipmentDayShort(s); return d?`<div class="hrs" style="color:${AC2()}">${t('restocks','🚚 usually restocks')} ${esc(d)}</div>`:''; }
 // --- Geolocation + radius ---
 let USER_LOC=null, RADIUS=5, LAST_STORES=[];
+let MANUAL_LOC=false; // true after a pin drop / ZIP search — the user chose that spot; GPS rechecks must not override it
 function miBetween(a,b,c,d){ // haversine, miles
   const R=3958.8, rad=x=>x*Math.PI/180;
   const dLat=rad(c-a), dLng=rad(d-b);
@@ -3338,7 +3353,7 @@ async function geocodeSearch(){
   const r=await api('/pub/geocode?'+(isZip?'zip=':'q=')+encodeURIComponent(q));
   if(r&&!r.error&&r.lat!=null){
     // Clear the box so the store list isn't ALSO text-filtered by the ZIP (that filter hid every store).
-    $('search').value=''; setUserLoc(r.lat,r.lng); toast(tf('toast.searchmi','{q} · stores within {n} mi',{q:q,n:RADIUS}),'neutral'); return true;
+    $('search').value=''; MANUAL_LOC=true; setUserLoc(r.lat,r.lng); toast(tf('toast.searchmi','{q} · stores within {n} mi',{q:q,n:RADIUS}),'neutral'); return true;
   }
   if(!isZip){ fetchNear(); } // not a known place — try it as a store/location search
   return false;
@@ -3361,6 +3376,7 @@ function findMe(after){
   if(!navigator.geolocation){ toast(t('toast.noloc','Location not supported on this device')); return; }
   const b=$('findbtn'); if(b)b.classList.add('loading'); toast(t('toast.locating2','Locating stores'),'neutral');
   navigator.geolocation.getCurrentPosition(p=>{
+    MANUAL_LOC=false; // explicit "find me" → GPS is the boss again
     setUserLoc(p.coords.latitude,p.coords.longitude);
     if(typeof after==='function') after();
   }, err=>{ if(b)b.classList.remove('loading'); toast(err.code===1?t('toast.locblocked',"Location blocked. Enable it in your browser settings."):t('toast.locfail','Couldn’t get your location')); }, {enableHighAccuracy:true,timeout:8000});
@@ -3393,7 +3409,7 @@ function mapLegendHtml(){
 }
 function toggleMap(forceOpen){
   const mv=$('mapview'), sl=$('storelist'), btn=$('maptoggle'), lg=$('maplegend');
-  if(mv.style.display==='block' && !forceOpen){ mv.style.display='none'; sl.style.display=''; if(lg)lg.style.display='none'; if(btn){btn.classList.remove('on'); btn.textContent='Map';} return; }
+  if(mv.style.display==='block' && !forceOpen){ mv.style.display='none'; sl.style.display=''; if(lg)lg.style.display='none'; if(btn){btn.classList.remove('on'); btn.textContent=t('map.map','Map');} return; }
   sl.style.display='none'; mv.style.display='block'; if(lg){ lg.innerHTML=mapLegendHtml(); lg.style.display='flex'; } if(btn){btn.classList.add('on'); btn.textContent=t('map.list','List');} track('map_open'); loadMap();
   if(isMaster()){ toast(t('toast.zoomout','Pinch to zoom, tap to drop a pin.'),'neutral'); try{ $('toast').classList.add('oneline'); }catch(_){ } } // dark (not green), forced to one line
 }
@@ -3419,7 +3435,7 @@ function initMap(){
     // tail of a gesture, and when a master DOES drop a pin on an open map, keep their current zoom (don't refit).
     MAP.on('movestart zoomstart dragstart',()=>{ MAP_GESTURING=true; });
     MAP.on('moveend zoomend dragend',()=>{ clearTimeout(window.__mapg); window.__mapg=setTimeout(()=>{ MAP_GESTURING=false; },260); });
-    MAP.on('click',(e)=>{ if(!isMaster() && !hasFeature('any_town')) return; if(MAP_GESTURING) return; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng,true); toast(t('toast.locating2','Locating stores'),'neutral'); });
+    MAP.on('click',(e)=>{ if(!isMaster() && !hasFeature('any_town')) return; if(MAP_GESTURING) return; MANUAL_LOC=true; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng,true); toast(t('toast.locating2','Locating stores'),'neutral'); });
     MAP_FIT_NEXT=true; // first paint → frame the search radius (then it stays put until a new location)
     setTimeout(()=>MAP.invalidateSize(),60); renderMapPins();
   }catch(e){ toast(t('toast.maploading',"Map didn't load. Here's the list.")); toggleMap(); }
@@ -3496,7 +3512,7 @@ function setMode(m){
     track('mode_switch',{mode:m}); return;
   }
   exitHunt(); HUNT_STEP=''; const _lb0=$('hoblockbar'); if(_lb0) _lb0.style.display='none';
-  $('findstep').textContent = m==='kiosk'?t('find.kiosk','① Find a kiosk'):m==='thrift'?t('find.thrift','① Find a thrift store'):t('find.step','① Find your store');
+  { const fs=$('findstep'); if(fs) fs.textContent = m==='kiosk'?t('find.kiosk','① Find a kiosk'):m==='thrift'?t('find.thrift','① Find a thrift store'):t('find.step','① Find your store'); }
   if(USER_LOC && (wasHobby || wasThrift || m==='thrift' || setMode._wasHobby)) fetchNear(); // hobby/thrift changes -> refetch the right slice
   setMode._wasHobby=false;
   // The call-only bits (category, call button, charge note) hide in kiosk mode.
@@ -3597,7 +3613,7 @@ function renderStores(){
   const cnt=$('store_count');
   if(cnt) cnt.innerHTML = `<span class="odot"></span>${openCount} ${kiosk?t('count.kiosks','kiosks'):t('count.open','open')}${USER_LOC?` · ${RADIUS} mi`:''}`;
   const emptyMsg=()=>{
-    if(kiosk) return USER_LOC?tf('empty.kiosk',`No kiosks mapped within ${RADIUS} mi yet. They're crowd-built. Bought from one? <a onclick="openReceipt()" style="color:var(--purple);font-weight:700;cursor:pointer">Email a receipt</a> to put it on the map.`,{r:RADIUS}):t('empty.kiosk.tap','Tap the pin to find vending machines near you.');
+    if(kiosk) return USER_LOC?tf('empty.kiosk',`No kiosks mapped within ${RADIUS} mi yet. They're crowd-built. Bought from one? <a onclick="openReceipt()" style="color:var(--purple);font-weight:700;cursor:pointer">Email a receipt</a> to put it on the map.`,{r:RADIUS}):t('empty.search',"No matches. Try a different search, or tap the pin for stores nearby.");
     if(!USER_LOC) return t('empty.search',"No matches. Try a different search, or tap the pin for stores nearby.");
     const nearest=STORES.reduce((m,s)=>{ const d=storeMi(s); return (d!=null&&d<m)?d:m; },1e9);
     // Only show the "not in your area" waitlist if we've searched WIDE (max radius) and still found
@@ -3607,7 +3623,7 @@ function renderStores(){
     if(MODE==='thrift') return tf('empty.thrift',`No thrift stores within ${RADIUS} mi. Try a bigger radius.`,{r:RADIUS});
     return tf('empty.radius',`No open stores within ${RADIUS} mi. Try a bigger radius.`,{r:RADIUS});
   };
-  if(!USER_LOC && !q && !kiosk){
+  if(!USER_LOC && !q){
     // One action — search, or tap to locate. (The old store-type wall stays gone.)
     $('storelist').innerHTML = `
       <button class="findbtn-primary" onclick="findMe()" style="margin-top:2px">${ICO.pin('currentColor')} ${t('find.me','Find my stores')}</button>`;
@@ -3713,8 +3729,8 @@ function renderIcons(){
 function goHome(){ location.href='/'; }
 async function openPage(slug){
   $('pg_title').textContent=''; $('pg_body').innerHTML='…';
-  $('pageOverlay').classList.add('on'); track('page_open',{slug});
-  const r=await api('/p/'+slug+'?partial=1');
+  $('pageOverlay').classList.add('on'); sheetPush('page'); track('page_open',{slug});
+  const r=await api('/p/'+slug+'?partial=1&lang='+encodeURIComponent(LANG||'en'));
   if(!r||r.error||!r.body){ $('pg_body').innerHTML=t('err.generic',"That didn't go through. Give it another try."); return; }
   $('pg_title').textContent=r.title||''; $('pg_body').innerHTML=r.body;
 }
@@ -4588,8 +4604,7 @@ function navMark(view){
     const sp=new URLSearchParams(location.search);
     if(view==='history'||view==='success'){ sp.set('v',view); sp.delete('call'); } else sp.delete('v');
     const url=location.pathname+(sp.toString()?'?'+sp.toString():'');
-    if(NAV_VIEW==='builder') history.pushState({v:view},'',url);
-    else history.replaceState({v:view},'',url);
+    history.pushState({v:view},'',url); // every view = one entry: back returns to the LAST view, not home (owner 07-10 item 6)
   }catch(e){}
   NAV_VIEW=view;
 }
@@ -4614,17 +4629,23 @@ function dropBakedTone(){ try{ ['tone-in','tone-out','tone-unk','tone-soon'].for
 // the old theme-color-meta nav it replaces is what tinted the bottom bar; do not bring that meta back.
 let TONE_NAV_DONE=false;
 function ensureToneLoaded(cls,cid){
-  try{
-    if(TONE_NAV_DONE||!cid||!{in:1,out:1,unk:1,soon:1}[cls]) return false;
-    if(navigator.standalone||!/iP(hone|ad|od)/.test(navigator.userAgent||'')) return false;
-    TONE_NAV_DONE=true; // one shot per page load, hit or miss
-    if((window.__loadTone||'')===cls) return false; // server already baked this tone — the bar is right
-    var sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',cid); sp.set('tone',cls);
-    location.replace(location.pathname+'?'+sp.toString());
-    return true;
-  }catch(_){ return false; }
+  // Retired (owner 07-10, polish items 24-25): the page must stay neutral until the result renders, so
+  // there is no baked-tone first paint to reconcile — and the one-shot reload it used to trigger was a
+  // whole extra page load on deep links. rv-* applied at render is now the only tone source.
+  return false;
 }
+function sheetPush(tag){ try{ if(!(history.state&&history.state.v==='sheet'&&history.state.s===tag)) history.pushState({v:'sheet',s:tag},''); }catch(_){ } }
 window.addEventListener('popstate',(ev)=>{
+  // Back with a sheet open closes THAT sheet and stays put (owner 07-10 item 6).
+  try{
+    const OPEN=[['coOverlay',()=>closeCheckout()],['buyOverlay',()=>closeBuy()],['pageOverlay',()=>closePage()],['watchOverlay',()=>closeWatch()],['scheduleOverlay',()=>closeSchedule()],['storeReqOverlay',()=>closeStoreReq()]];
+    for(const [id,fn] of OPEN){ const o=$(id); if(o&&o.classList.contains('on')){ try{ fn(); }catch(_){ o.classList.remove('on'); } return; } }
+  }catch(_){ }
+  // Zones: back leaves the zones screen for wherever you were; forward re-enters it.
+  try{ const z=$('zones');
+    if(ev&&ev.state&&ev.state.v==='zones'){ if(z&&z.classList.contains('hidden')) openZones(); return; }
+    if(z&&!z.classList.contains('hidden')){ zoneStopPoll(); z.classList.add('hidden'); const sp0=new URLSearchParams(location.search); if(!sp0.get('call')&&!sp0.get('v')){ backToBuilder(); return; } }
+  }catch(_){ }
   // History-driven account nav: back AND forward walk the sheet's sections; leaving the sheet's
   // states closes it; a check opened FROM the sheet returns to its tab.
   try{ const st=ev&&ev.state, ov=$('acctOverlay'), open=ov&&ov.classList.contains('on');
@@ -4828,7 +4849,9 @@ function showResult(o, cid){
     const truck='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35a1 1 0 0 0-.78-.38H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>';
     const cam='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg>';
     const tileBtn=(ic,ti,su,fn)=>`<button class="is1t" onclick="${fn}"><span class="tl">${ic}</span><span><span class="a">${esc(ti)}</span><span class="b">${esc(su)}</span></span></button>`;
-    return (F.shareCards!==false?`<button class="smbtn is1s" onclick="shareFind()"><span style="display:inline-flex;align-items:center;gap:9px">${up}<span>${t('res.share','Share your score')}</span></span>${arr}</button>`:'')
+    void arr; // retired (owner 07-10 items 53-56): one arrow only — the share icon, far right, pointing up
+    const upR='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>';
+    return (F.shareCards!==false?`<button class="smbtn is1s" onclick="shareFind()"><span>${t('res.share','Share your score')}</span>${upR}</button>`:'')
       +`<div class="is1g">${F.driverHandoff!==false?tileBtn(truck,dT,dS,'openDriverDemo()'):''}${F.community?tileBtn(cam,cT,cS,'openScorePop()'):''}</div>`;
   })() : [
     F.shareCards!==false?`<button class="act2 gr" onclick="shareFind()">${ICO.mega('currentColor')} ${t('res.share','Share your score')}</button>`:'',
@@ -4919,7 +4942,7 @@ function showResult(o, cid){
     : cls==='unk' ? t('term.unk','No clear answer') : '';
   const showFeedback = o.status==='completed' && cls==='unk' && !!o.transcript && cid && !String(cid).startsWith('local:');
   // New unclear copy: name the product, hand the call to the human (the transcript is right below).
-  if(showFeedback){ note = t('note.fbk','We couldn’t quite make out the answer. Read the convo and tell us what you think.'); }
+  if(showFeedback){ note = t('note.fbk','We couldn’t quite make out the answer.<br>Read the convo and tell us what you think.'); }
   // Feedback = an end-of-call survey (the four statuses), shown ABOVE the CTA on an unclear verdict.
   // No copy inside the poll box itself — the detailed status message above already says what to do.
   const feedbackBlock = showFeedback ? `
@@ -4936,6 +4959,7 @@ function showResult(o, cid){
       <div class="rnav" id="rnav"></div>
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
       <div class="rtitle2">${esc(showFeedback ? t('v.unclear2','Couldn’t tell') : vTitle)}</div>
+      ${o.ts?`<div class="rwhen">${esc(new Date(o.ts).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'short',month:'short',day:'numeric'}))} · ${esc(new Date(o.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'}))}</div>`:''}
       ${note?`<div class="rsub">${nl2(fillP(note,o,cls))}</div>`:''}
       ${priceLineHTML(o)}
       ${breakdown}
@@ -5092,7 +5116,7 @@ async function toggleTranslate(){
 function loadHist(){ try{ return JSON.parse(localStorage.getItem('runnr_history')||'[]'); }catch{ return []; } }
 // #17 — before placing, remind me when I last called this store + the outcome; confirm a re-call within 24h.
 function lastCallFor(storeId){ return loadHist().find(e=>e.storeId===storeId&&e.ts)||null; }
-function callOutcomeLabel(e){ return e.confirmed===true?t('pre.had','they had it in stock'):e.confirmed===false?t('pre.notin',"they didn't have it"):t('pre.unclear','no clear answer'); }
+function callOutcomeLabel(e){ return e.confirmed===true?t('pre.had','in stock'):e.confirmed===false?t('pre.notin','not in stock'):t('pre.unclear','no clear answer'); }
 async function preCallGate(){
   const e=lastCallFor(SEL_STORE&&SEL_STORE.id); if(!e) return true;
   const nm=splitStoreName(SEL_STORE.name||''); const headline=[nm.base,nm.branch].filter(Boolean).join(' '); const base=nm.base;
@@ -5101,7 +5125,7 @@ async function preCallGate(){
     const logoHTML=`<span class="railchip${railClass({storeId:SEL_STORE.id,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}" style="display:grid">${railFace({storeId:SEL_STORE.id,storeName:SEL_STORE.name,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}</span>`;
     return await confirmAgain({store:headline, logoHTML, body:tf('pre.again.body','{o} {a}. Check again?',{o:String(callOutcomeLabel(e)||'').toLowerCase(),a:timeAgo(e.ts)})});
   }
-  toast(tf('pre.note','You checked {s} {a} · {o}',{s:base,a:ago,o:callOutcomeLabel(e)}),'neutral');
+  toast(tf('pre.note','Checked {s} {a} · {o}',{s:base,a:ago,o:callOutcomeLabel(e)}),'neutral');
   await new Promise(r=>setTimeout(r,2200));
   return true;
 }
@@ -5341,8 +5365,7 @@ function acctTab(which,fromPop){
       row(`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="stroke:${AC2}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`,t('acct.row.zones','Manage Zones'),hasFeature('zone_sweeps')?t('acct.row.zones.sub','Check a whole area in one tap.'):t('acct.row.zones.locked','Check+ · check every store near you at once'),"ACCT_RETURN='overview';closeAccount();openZones()")+
       row(gift,t('acct.row.earn','Earn free checks'),t('acct.row.earn.sub','4 ways. Open to everyone.'),"acctTab('earn')")+
       `<div id="acctScheds"></div>`+
-      caps+
-      `<button onclick="doSignOut()" style="display:block;width:100%;margin-top:16px;background:none;border:0;text-align:center;font-size:13px;font-weight:700;color:#7C7C88;cursor:pointer">${t('acct.signout','Sign out')}</button>`;
+      caps; // Sign out moved to the sheet header (upper right, owner 07-10)
     renderAcctScheds(); if(!(window.SCHEDS&&window.SCHEDS.length)) try{ loadSchedules(); }catch(_){ }
     return;
   }
@@ -5721,7 +5744,7 @@ function hobbyPickProduct(pi){
   const _bl=$('builder'); if(_bl) _bl.classList.remove('hidden');
   document.querySelectorAll('.modetab').forEach(b=>b.classList.toggle('on',b.dataset.mode==='hobby'));
   const cc=$('catcard'); if(cc) cc.style.display='none';
-  $('findstep').textContent=t('find.hobbystore','① Now pick a card shop');
+  { const fs=$('findstep'); if(fs) fs.textContent=t('find.hobbystore','① Now pick a card shop'); }
   // Locked-product banner above the shop list (no toast — owner-averse; this gives lasting context).
   let lb=$('hoblockbar');
   if(!lb){ lb=document.createElement('div'); lb.id='hoblockbar'; const sl=$('storelist'); if(sl&&sl.parentElement) sl.parentElement.insertBefore(lb,sl); }
@@ -5742,13 +5765,14 @@ let ZONES={ sel:new Set(), storeById:new Map(), editId:null, radius:5, run:null,
 function zHideAll(){ try{ exitHunt(); }catch(_){ } try{ if(typeof HUNT_STEP!=='undefined') HUNT_STEP=''; }catch(_){ }
   try{ document.body.classList.remove('rview','rv-in','rv-out','rv-soon','rv-unk'); dropBakedTone(); }catch(_){ } // drop the result-view verdict wash (else a red "out of stock" bg bleeds under zones)
   ['builder','live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); } // exitHunt: else body.huntmode keeps #hobby (era/set art) visible under the zones view
-function zShow(){ const z=$('zones'); if(z){ z.classList.remove('hidden'); } }
+function zShow(){ const z=$('zones'); if(z){ z.classList.remove('hidden'); } const w=$('hcalwrap'); if(w) w.style.display='none'; }
 function zoneStopPoll(){ if(ZONES.poll){ clearInterval(ZONES.poll); ZONES.poll=null; } }
 function backFromZones(){ zoneStopPoll(); const z=$('zones'); if(z) z.classList.add('hidden'); try{ backToBuilder(); }catch(_){ } try{ openAccount(); }catch(_){ } }
 const zHead=(title,back)=>`<div class="zhead"><button class="zback" onclick="${back||'backFromZones()'}" aria-label="Back">‹</button><b>${esc(title)}</b><span style="width:34px"></span></div>`;
 async function openZones(){
   if(!isAuthed()){ try{ openAuth(); }catch(_){ } return; }
   zHideAll(); zShow();
+  try{ if(!(history.state&&history.state.v==='zones')) history.pushState({v:'zones'},''); }catch(_){ } // back leaves zones for the previous view (item 6)
   if(!hasFeature('zone_sweeps')){ zonesUpsell(); return; }
   window.scrollTo({top:0}); renderZonesList();
 }
@@ -5840,7 +5864,7 @@ function renderZoneBuild(){
     : `<div class="zempty2">${USER_LOC?tf('zones.norad','No stores in {r} mi. Try a bigger radius.',{r:R}):t('zones.needloc','Tap the pin or search a ZIP to see stores.')}</div>`;
   z.innerHTML=`<div class="zbuild">
     ${zHead(ZONES.editId?t('zones.edit','Edit zone'):t('zones.newz','New zone'),'renderZonesList()')}
-    <div class="zsearch"><input id="z_loc" class="kin" placeholder="${t('zones.locph','Search a ZIP or town…')}" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();zoneGeocode();}"><button class="zgps" onclick="zoneGPS()" aria-label="Use my location">${ICO.pin('currentColor')}</button><button class="zgo" onclick="zoneGeocode()">${t('zones.go','Go')}</button></div>
+    <div class="zsearch"><input id="z_loc" class="kin" placeholder="${t('zones.locph','Search a ZIP or town…')}" autocomplete="off" oninput="zoneSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();zoneGeocode();}"><button class="zgps" onclick="zoneGPS()" aria-label="Use my location">${ICO.pin('currentColor')}</button></div>
     <div class="zseg"><button class="${!map?'on':''}" onclick="if(ZONES.mapOpen)zoneToggleMap()">${t('zones.list','List')}</button><button class="${map?'on':''}" onclick="if(!ZONES.mapOpen)zoneToggleMap()">${t('zones.map','Map')}</button></div>
     <div class="zradrow"><span class="zradlbl">${t('zones.radius','Radius')}</span>${rings}<span class="zradmi">mi</span><button class="zaddall" onclick="zoneAddRadius()">＋ ${t('zones.addallshort','Add all')}</button></div>
     <div class="zstage">
@@ -5866,14 +5890,17 @@ function zoneToggle(id){ const add=!ZONES.sel.has(id); if(add){ ZONES.sel.add(id
 function zoneAddRadius(){ zoneBuildStores().forEach(s=>{ const mi=storeMi(s); if(mi!=null && mi<=(ZONES.radius||5)){ ZONES.sel.add(s.id); ZONES.storeById.set(s.id,s); } }); if(ZONES.mapOpen){ zoneMapDraw(); zoneBarSync(); } else renderZoneBuild(); }
 // --- Zone location search + map ('pin a zone'): type a ZIP/town or tap the map to recenter, tap pins to add ---
 let ZMAP=null, ZMARKERS={}, ZRING=null;
-async function zoneGeocode(){
-  const q=($('z_loc')&&$('z_loc').value||'').trim(); if(q.length<3){ toast(t('zones.typloc','Type a ZIP or town first.')); return; }
+// Auto-search while typing (owner 07-10, items 36-37): the Go button is gone — a pause after 3+ chars
+// geocodes on its own. Enter still works for the impatient.
+function zoneSearchInput(){ clearTimeout(window.__zgeo); const q=($('z_loc')&&$('z_loc').value||'').trim(); if(q.length<3) return; window.__zgeo=setTimeout(()=>{ zoneGeocode(true); },650); }
+async function zoneGeocode(silent){
+  const q=($('z_loc')&&$('z_loc').value||'').trim(); if(q.length<3){ if(silent!==true) toast(t('zones.typloc','Type a ZIP or town first.')); return; }
   const isZip=/^\d{5}$/.test(q); let r=null;
   try{ r=await api('/pub/geocode?'+(isZip?'zip=':'q=')+encodeURIComponent(q)); }catch(_){ }
   if(r&&!r.error&&r.lat!=null){ USER_LOC={lat:r.lat,lng:r.lng}; await zoneEnsureStores();
     if(ZONES.mapOpen){ if(ZMAP){ try{ ZMAP.setView([r.lat,r.lng],12); }catch(_){ } } zoneMapDraw(); zoneBarSync(); } else renderZoneBuild();
     toast(tf('zones.located','Centered on {q}',{q}),'neutral'); }
-  else toast(t('zones.noplace',"Couldn't find that place."));
+  else if(silent!==true) toast(t('zones.noplace',"Couldn't find that place."));
 }
 function zoneToggleMap(){ ZONES.mapOpen=!ZONES.mapOpen; renderZoneBuild(); }
 function zoneMapEnsure(){
@@ -5915,14 +5942,14 @@ async function zoneSave(){
   const nm=$('z_name'); const name=(nm&&nm.value||'').trim();
   // Validate both: at least one store AND a name. Flag every missing field so the user sees all at once.
   let bad=false;
-  if(!ids.length){ toast(t('zones.pickone','Pick at least one store to save this zone.'),'accent'); bad=true; }
-  if(!name){ markFld(nm,true); if(ids.length) toast(t('zones.needname','Name your zone before saving.'),'accent'); bad=true; }
+  if(!ids.length){ toast(t('zones.pickone','Pick a store first'),'neutral'); bad=true; }
+  if(!name){ markFld(nm,true); if(ids.length) toast(t('zones.needname','Name your zone first'),'neutral'); bad=true; }
   if(bad){ if(nm&&!name) try{ nm.focus(); }catch(_){ } return; }
   const btn=$('z_save'); if(btn){ btn.disabled=true; btn.textContent=t('zones.saving','Saving…'); }
   try{
     if(ZONES.editId) await appApi('/app/zones/'+ZONES.editId,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({name,retailerIds:ids})});
     else await appApi('/app/zones',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name,retailerIds:ids})});
-    toast(t('zones.saved','Zone saved'),'neutral'); renderZonesList();
+    toast(t('zones.saved','Zone saved'),'neutral'); ZONES.list=null; renderZonesList(); // drop the cache: the list must show the zone that was just saved
   }catch(e){ if(btn){ btn.disabled=false; btn.textContent=t('zones.save','Save zone'); } toast(t('err.generic',"That didn't go through. Give it another try.")); }
 }
 // ---- Screen C — the live zone-check report ----
@@ -6234,6 +6261,9 @@ function renderBuyPlans(){
   $('buy_plans').innerHTML=html;
 }
 let SEL_TIER_KEY=null, BUY_MODE='plans', PACK_IDX=1;
+// One source of truth for "which tier is selected when you haven't tapped anything" (items 26-27):
+// your CURRENT plan if you're on one, else the featured tier. Continue buys exactly what's ringed.
+function defaultTierKey(){ const _t=tiers(); const cur=ACCOUNT&&ACCOUNT.subTier; if(cur&&_t.some(x=>x.key===cur)) return cur; const f=_t.find(x=>x.featured); return (f||_t[0]||{}).key||null; }
 function setBuyMode(m,btn){ BUY_MODE=m; document.querySelectorAll('#buymode button').forEach(b=>b.classList.toggle('on',b===btn)); const bc=$('billcycle'); if(bc) bc.style.display=(m==='packs'?'none':''); renderBuyPlans(); }
 function setPackIdx(i){ const packs=paygBundles(); PACK_IDX=Math.max(0,Math.min(packs.length-1, i|0));
   const pk=packs[PACK_IDX]; if(!pk) return;
@@ -6248,7 +6278,7 @@ function pickTier(k){
 function buyContinue(){
   if(BUY_MODE==='packs'){ const packs=paygBundles(); const pk=packs[Math.max(0,Math.min(packs.length-1,PACK_IDX))];
     if(pk){ openCheckout('payg:'+pk.checks, false, pk.cents, pk.checks+' '+t('plan.checks','checks'), t('co.paygsub','One-time · checks never expire')); } return; }
-  const _t=tiers(); const ti=_t.find(x=>x.key===SEL_TIER_KEY)||_t[0]; if(!ti) return;
+  const _t=tiers(); const ti=_t.find(x=>x.key===SEL_TIER_KEY)||_t.find(x=>x.key===defaultTierKey())||_t[0]; if(!ti) return;
   const cents=BILLING_ANNUAL?(ti.annualCents||Math.round(ti.cents*12*0.83/100)*100):ti.cents;
   const cyc=BILLING_ANNUAL?t('co.annual','annual'):t('co.monthly','monthly');
   openCheckout(ti.key, BILLING_ANNUAL, cents, ti.name+' · '+cyc, (ti.checks||0).toLocaleString()+' '+t('co.checksmo','checks a month'));
@@ -6263,6 +6293,7 @@ function renderBuyGrid(){
 }
 function openBuy(reason){
   if(!isAuthed()){ toast(t('toast.signupfirst','Sign up first to add checks')); signUp(); return; }
+  SEL_TIER_KEY=defaultTierKey(); // every open starts from YOUR plan / the featured tier — a pick from last time never sticks (items 26-27)
   const lead=$('buy_lead');
   if(reason==='manage'){ $('buy_title').textContent=t('plan.title','Your plan'); lead.style.display='none'; }
   else if(reason==='out'){ $('buy_title').textContent=t('up.out',"You're out of checks"); lead.style.display=''; lead.textContent=t('buy.out.lead',"Your next find is one check away."); }
@@ -6290,9 +6321,9 @@ function openBuy(reason){
   }catch(_){} }
   setI('buy_note', `${ICO.lock('#7a7a88')} ${t('buy.secure2','Secure checkout via Stripe')}`);
   track('buy_open',{reason:reason||'manual'});
-  $('buyOverlay').classList.add('on');
+  $('buyOverlay').classList.add('on'); sheetPush('buy');
   // Live plans may not be cached yet on first open — fetch, then re-render tiles + grid in place.
-  if(!PLANS){ loadPlans().then(p=>{ if(p&&$('buyOverlay').classList.contains('on')){ try{ renderBuyPlans(); if(isV2()) renderBuyGrid(); }catch(_){ } } }); }
+  if(!PLANS){ loadPlans().then(p=>{ if(p&&$('buyOverlay').classList.contains('on')){ try{ SEL_TIER_KEY=defaultTierKey(); renderBuyPlans(); if(isV2()) renderBuyGrid(); }catch(_){ } } }); } // live tiers may rename keys — re-derive the default
 }
 function closeBuy(){ const m=document.querySelector('#buyOverlay .modal'); if(m){ m.style.transform=''; m.style.transition=''; } $('buyOverlay').classList.remove('on'); acctReturn(); }
 
@@ -6312,7 +6343,7 @@ function coAppearance(){ return { theme:'night', variables:{ colorPrimary:'#19B1
   rules:{ '.Input':{ backgroundColor:'#1B1B20', border:'none', boxShadow:'inset 0 2px 6px rgba(0,0,0,.45)', padding:'14px 16px', color:'#fff' },
     '.Input:focus':{ boxShadow:'inset 0 2px 6px rgba(0,0,0,.45), 0 0 0 2px rgba(25,177,69,.5)' },
     '.Label':{ color:'#8A8A96', fontWeight:'600', fontSize:'12.5px' },
-    '.Tab,.Block':{ backgroundColor:'#1B1B20', border:'none' }, '.Tab--selected':{ boxShadow:'0 0 0 2px rgba(25,177,69,.6)' } } }; }
+    '.Tab,.Block':{ backgroundColor:'#1B1B20', border:'none' }, '.Tab--selected':{ boxShadow:'0 0 0 2px rgba(25,177,69,.6)' }, '.TabLabel':{ fontSize:'12px' } } }; }
 function coCtaLabel(){ const isSub=!/^payg:/.test(String(CO&&CO.kind)); const per=isSub?(CO&&CO.annual?t('plan.yr','/yr'):t('plan.mo','/mo')):'';
   return (isSub?t('co.subscribe','Subscribe'):t('co.pay','Pay'))+' · '+money((CO&&CO.amountCents)||0)+per; }
 async function openCheckout(kind, annual, amountCents, planLabel, planSub){
@@ -6324,7 +6355,7 @@ async function openCheckout(kind, annual, amountCents, planLabel, planSub){
   setI('co_trust', `${t('co.cancel','Cancel anytime')} · ${ICO.lock('#7a7a88')} ${t('co.secured','Secured by')} <b>Stripe</b>`);
   setT('co_err',''); const ld=$('co_loading'); if(ld) ld.style.display='';
   const cta=$('co_cta'); if(cta) cta.disabled=true;
-  $('coOverlay').classList.add('on'); track('checkout_open',{kind});
+  $('coOverlay').classList.add('on'); sheetPush('co'); track('checkout_open',{kind});
   try{
     const r=await appApi('/app/checkout-intent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,annual:!!annual})});
     if(!r||r.error||!r.clientSecret||!r.publishableKey){ return coFallback(); }
@@ -6421,7 +6452,7 @@ async function openWatch(){
   $('watch_err').textContent=''; $('watch_contact').value=''; $('watch_contact').style.display=''; { const wb=$('watch_btn'); if(wb){ wb.textContent=t('watch.cta','Watch this store →'); wb.onclick=submitWatch; } } { const ws=$('watch_sub'); if(ws) ws.innerHTML=t('watch.sub',"We'll ping you the instant anyone confirms it in stock here."); }
   const sub=$('watch_sub'); if(sub) sub.textContent=LANG==='es'?`Te avisamos en cuanto alguien confirme ${findProductLabel()} en stock en ${findStoreName()}.`:`We'll ping you the instant anyone confirms ${findProductLabel()} in stock at ${findStoreName()}.`;
   track('watch_open',{retailerId:SEL_STORE.id});
-  $('watchOverlay').classList.add('on'); setTimeout(()=>{try{$('watch_contact').focus();}catch(e){}},80);
+  $('watchOverlay').classList.add('on'); sheetPush('watch'); setTimeout(()=>{try{$('watch_contact').focus();}catch(e){}},80);
   // Social proof: surface how many others are already waiting on this store.
 
 }
@@ -6530,7 +6561,7 @@ function openHandoff(){
       <button class="ho-btn primary" onclick="hoFinish()">${t('ho.s5.cta',"Release the bonus →")}</button>`)}
     </div>
     <div id="ho_done" style="display:none" class="ho-done">
-      <div class="big">🏃💨</div>
+      <div class="big">📦</div>
       <h2>${t('ho.done.title',"Bonus released. You're done.")}</h2>
       <p id="ho_donep">${t('ho.done.ship',"It's on its way. We'll text you the tracking number the moment the label scans.")}</p>
       <button class="ho-btn primary" style="margin-top:22px" onclick="backToBuilder()">${t('ho.done.cta','Back to the hunt')}</button>
@@ -6567,7 +6598,7 @@ function hoAdvance(n){
 function hoCopy(){
   const raw=($('ho_msg')&&$('ho_msg').dataset.raw)||'';
   try{ navigator.clipboard.writeText(raw); }catch(e){}
-  toast(t('ho.copied',"Copied. Paste it in the driver chat."),'neutral');
+  toast(t('ho.copied','Copied for the driver chat'),'neutral');
 }
 function hoStar(v){ HO.rating=v; document.querySelectorAll('#ho_stars span').forEach((x,i)=>x.classList.toggle('lit',i<v)); }
 function hoFinish(){ $('ho_steps').style.display='none'; document.querySelector('#handoff .ho-job').style.display='none'; $('ho_done').style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); track('handoff_done',{bonus:HO.bonus,drop:HO.drop,rating:HO.rating}); }
@@ -6863,7 +6894,7 @@ function openSchedule(){
   const cw=$('sch_contact'); if(cw) cw.value=''; // keep the number OUT of the box (it's a grey placeholder); we default to the account contact on submit
   $('sch_days').innerHTML=DOWLBL.map(([v,l])=>`<div class="chip" data-d="${v}" onclick="toggleSchDay('${v}',this)" style="cursor:pointer;text-align:center;padding:9px 0;font-size:13px">${l}</div>`).join('');
   track('schedule_open',{retailerId:SEL_STORE.id});
-  $('scheduleOverlay').classList.add('on');
+  $('scheduleOverlay').classList.add('on'); sheetPush('sched');
 }
 function toggleSchDay(v,el){ if(SCH_DAYS.has(v)){ SCH_DAYS.delete(v); el.classList.remove('sel'); } else { SCH_DAYS.add(v); el.classList.add('sel'); } }
 function closeSchedule(){ $('scheduleOverlay').classList.remove('on'); }

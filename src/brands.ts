@@ -109,7 +109,7 @@ const BRANDS: Brand[] = [
     emoji: "🏀",
     short: "Topps NBA",
     art: `<svg viewBox="0 0 120 120" width="96" height="96" aria-hidden="true"><path d="M60 14l11 22 24 3.5-17.5 17 4 24L60 67.5 38.5 80.5l4-24L25 39.5l24-3.5z" fill="#E4002B"/><path d="M60 14l11 22 24 3.5-17.5 17 4 24L60 67.5 38.5 80.5l4-24L25 39.5l24-3.5z" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>`,
-    headline: 'Topps NBA cards <span class="g">in stock?</span><br>We\'ll check for you.',
+    headline: 'NBA cards <span class="g">in stock?</span><br>We\'ll check for you.',
     sub: "Pick your store. We call it for real, ask if the Topps basketball is in, and show you the answer with proof — before you head out.",
     title: "Topps NBA cards in stock near you — Check It For Me",
     desc: "Find Topps NBA basketball cards in stock near you. We call local stores for real, ask if the latest sets are on the shelf, and show you the answer with proof in ~2 minutes.",
@@ -170,6 +170,6 @@ export function brandForPath(slug: string): Brand | null {
 export function brandSwitcher(): Array<{ key: string; slug: string; label: string; emoji: string; logoUrl: string; tag?: string }> {
   // tag: when the logo already spells the brand, show the logo + just the missing qualifier
   // (Topps logo says "Topps" → tag "NBA" → reads "Topps NBA" without doubling the word).
-  const TAG: Record<string, string> = { topps: "NBA" };
+  const TAG: Record<string, string> = { topps: "NBA Cards" };
   return BRANDS.filter((b) => b.key !== "runner").map((b) => ({ key: b.key, slug: b.slug, label: b.short, emoji: b.emoji, logoUrl: b.logoUrl || "", ...(TAG[b.key] ? { tag: TAG[b.key] } : {}) }));
 }
