@@ -1699,8 +1699,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 <body>
 <!-- Hard-refresh of a result deep-link: apply the verdict treatment (wash + transparent nav) NOW, so
      the page paints fully toned from the first frame (boot() shows #result; restoreCall confirms it). -->
-<!-- tone pre-paint removed (owner 07-10): the page stays neutral until the result actually renders;
-     the rv-* wash is applied by showResult once data is loaded. -->
+<script>(function(){try{ if(window.__bootTone){ document.body.classList.add('rview','rv-'+window.__bootTone); } }catch(e){}})();</script>
 <header>
   <div class="brandbar">
     <div class="vsw" id="vsw">
@@ -2363,11 +2362,11 @@ const I18N={ es:{
   'empty.kiosk':'Aún no hay kioscos en {r} mi. Los agrega la comunidad. ¿Compraste en uno? <a onclick="openReceipt()" style="color:var(--purple);font-weight:700;cursor:pointer">Envía tu recibo</a> para ponerlo en el mapa.',
   'empty.kiosk.tap':'Toca el pin para encontrar máquinas cerca de ti.',
   'empty.search':'Sin resultados. Prueba otra búsqueda, o toca el pin para ver tiendas cerca de ti.',
-  'empty.radius':'No hay tiendas abiertas en {r} mi. Amplía el radio.',
+  'empty.radius':'No hay tiendas abiertas en {r} mi.<br>Amplía el radio.',
   'empty.far.title':'Aún no estamos en tu zona…','empty.far.sub':'¡Llegaste temprano! Sé el primero en saber cuando {b} llegue cerca de ti.','empty.far.cta':'🔔 Avísame cuando lleguen',
   'tick.found':'¡Encontrado!','tick.restock':'Reabastecimiento en camino','besttag':'Más probable','bestwhy':'buenas probabilidades ahora',
-  'mode.hobby':'Hobby','find.hobby':'① Encuentra una tienda de cartas','find.hobbystore':'① Ahora elige una tienda de cartas','hob.hunting':'BUSCANDO','hob.shopprices':'PRECIOS DE TIENDA','empty.hobby':'No hay tiendas de cartas en {r} mi. Amplía el radio.','hob.pickexact':'Elige el set o producto exacto',
-  'mode.thrift':'Segundas','find.thrift':'① Encuentra una tienda de segunda mano','empty.thrift':'No hay tiendas de segunda mano en {r} mi. Amplía el radio.',
+  'mode.hobby':'Hobby','find.hobby':'① Encuentra una tienda de cartas','find.hobbystore':'① Ahora elige una tienda de cartas','hob.hunting':'BUSCANDO','hob.shopprices':'PRECIOS DE TIENDA','empty.hobby':'No hay tiendas de cartas en {r} mi.<br>Amplía el radio.','hob.pickexact':'Elige el set o producto exacto',
+  'mode.thrift':'Segundas','find.thrift':'① Encuentra una tienda de segunda mano','empty.thrift':'No hay tiendas de segunda mano en {r} mi.<br>Amplía el radio.',
   'co.title':'Pago','co.change':'Cambiar','co.orcard':'O paga con tarjeta','co.loading':'Cargando pago seguro…','co.subscribe':'Suscribirse','co.pay':'Pagar','co.cancel':'Cancela cuando quieras','co.secured':'Protegido por','co.processing':'Procesando…','co.failed':'El pago no se procesó. Inténtalo de nuevo.','co.redirect':'Abriendo pago seguro…','co.checksmo':'verificaciones al mes','co.monthly':'mensual','co.annual':'anual','co.paygsub':'Pago único · las verificaciones no caducan',
   'ph.quoted':'Precio indicado','ph.overmsrp':'sobre el precio de lista','ph.title':'Precios encontrados','ph.best':'MEJOR','ph.oos':'agotado',
   'plan.member':'Miembro',
@@ -2517,7 +2516,7 @@ const I18N={ es:{
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
   'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
-  'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.ask2':'Nuevo nombre para esta zona:','zones.delete.ask':'¿Eliminar esta zona? No se puede deshacer.',
+  'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
 } };
 // {x}/{n}/{r}/{b}/{s}/{p}/{m} placeholder fill for translated strings.
 function tf(key,en,vars){ let s=t(key,en); if(vars) for(const k in vars) s=s.split('{'+k+'}').join(vars[k]); return s; }
@@ -2593,6 +2592,8 @@ function ensureModeChips(){
 function setLang(l){ LANG=l; localStorage.setItem('runnr_lang',l); applyLang();
   // Re-render everything built in JS so a language flip is instant and complete.
   try{ renderDemo(); renderStores(); renderChips(); syncCta(); renderAuth(); loadFinds(); loadSchedules(); loadRefer(); renderCallRail(); }catch(e){}
+  try{ loadCommunity(); }catch(e){} // scores strip ("Show us the goods!") is JS-rendered — re-localize it too
+  try{ document.querySelectorAll('.modetab[data-mode="hobby"],.modetab[data-mode="thrift"]').forEach(b=>b.remove()); ensureModeChips(); document.querySelectorAll('.modetab').forEach(b=>b.classList.toggle('on',b.dataset.mode===MODE)); }catch(e){} // injected chips carry baked labels — rebuild them in the new language
   // …including whatever view/sheet is open right now — no hard refresh needed.
   try{
     if($('live') && !$('live').classList.contains('hidden')) renderLiveMsg(); // flip mid-call → re-localize the live step log too
@@ -3110,7 +3111,7 @@ function openAccount(fromPop){
     head.innerHTML=`<div style="display:flex;justify-content:center;padding:12px 0 10px"><span style="width:44px;height:6px;border-radius:99px;background:rgba(255,255,255,.5)"></span></div><div class="wash">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <span style="display:flex;align-items:center;gap:4px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('acct.my','My')}</span>${FCHK(24)}</span>
-          <button onclick="doSignOut()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);color:#FFF;font-size:13px;font-weight:700;padding:8px 14px;border-radius:999px;cursor:pointer">${t('acct.signout','Sign out')}</button>
+          <button onclick="doSignOut()" style="background:none;border:0;padding:4px 2px;color:rgba(255,255,255,.85);font-size:14px;font-weight:700;cursor:pointer;text-decoration:underline dashed rgba(255,255,255,.4);text-underline-offset:4px">${t('acct.signout','Sign out')}</button>
         </div>
         <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between">
           <span style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:rgba(255,255,255,.8);white-space:nowrap">${esc(idn.primary)}<button onclick="editPhone()" aria-label="Change number" style="background:none;border:0;padding:2px;cursor:pointer;display:inline-flex"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg></button></span>
@@ -3493,6 +3494,7 @@ function setRadiusIdx(idx){
 }
 function setRadius(mi){ const i=RADII.indexOf(mi); setRadiusIdx(i<0?2:i); }
 function setMode(m){
+  try{ zoneStopPoll(); const _z=$('zones'); if(_z) _z.classList.add('hidden'); }catch(_){ } // zones never lingers under a mode tab (owner 07-10)
   const wasHobby=(MODE==='hobby');
   const wasThrift=(MODE==='thrift');
   MODE=m;
@@ -3614,9 +3616,9 @@ function renderStores(){
     // Only show the "not in your area" waitlist if we've searched WIDE (max radius) and still found
     // nothing. At a small radius an empty result just means "widen" — not that we don't serve here.
     if(nearest>50 && RADIUS>=20) return `<div style="text-align:center;padding:6px 4px"><div style="font-size:32px;margin-bottom:6px">📍</div><div class="nm" style="margin-bottom:4px">${t('empty.far.title',"We're not in your area… yet")}</div><div class="meta" style="margin-bottom:12px">${tf('empty.far.sub',`You're early! Be the first to know the moment ${esc(brandName())} launches near you.`,{b:esc(brandName())})}</div><button class="cta" onclick="openWaitlist()">${t('empty.far.cta','🔔 Notify me when you launch here')}</button></div>`;
-    if(MODE==='hobby') return tf('empty.hobby',`No card shops within ${RADIUS} mi. Try a bigger radius.`,{r:RADIUS});
-    if(MODE==='thrift') return tf('empty.thrift',`No thrift stores within ${RADIUS} mi. Try a bigger radius.`,{r:RADIUS});
-    return tf('empty.radius',`No open stores within ${RADIUS} mi. Try a bigger radius.`,{r:RADIUS});
+    if(MODE==='hobby') return tf('empty.hobby',`No card shops within ${RADIUS} mi.<br>Try a bigger radius.`,{r:RADIUS});
+    if(MODE==='thrift') return tf('empty.thrift',`No thrift stores within ${RADIUS} mi.<br>Try a bigger radius.`,{r:RADIUS});
+    return tf('empty.radius',`No open stores within ${RADIUS} mi.<br>Try a bigger radius.`,{r:RADIUS});
   };
   if(!USER_LOC && !q){
     // One action — search, or tap to locate. (The old store-type wall stays gone.)
@@ -4575,7 +4577,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -4628,10 +4630,15 @@ function dropBakedTone(){ try{ ['tone-in','tone-out','tone-unk','tone-soon'].for
 // the old theme-color-meta nav it replaces is what tinted the bottom bar; do not bring that meta back.
 let TONE_NAV_DONE=false;
 function ensureToneLoaded(cls,cid){
-  // Retired (owner 07-10, polish items 24-25): the page must stay neutral until the result renders, so
-  // there is no baked-tone first paint to reconcile — and the one-shot reload it used to trigger was a
-  // whole extra page load on deep links. rv-* applied at render is now the only tone source.
-  return false;
+  try{
+    if(TONE_NAV_DONE||!cid||!{in:1,out:1,unk:1,soon:1}[cls]) return false;
+    if(navigator.standalone||!/iP(hone|ad|od)/.test(navigator.userAgent||'')) return false;
+    TONE_NAV_DONE=true; // one shot per page load, hit or miss
+    if((window.__loadTone||'')===cls) return false; // server already baked this tone — the bar is right
+    var sp=new URLSearchParams(location.search); sp.delete('v'); sp.set('call',cid); sp.set('tone',cls);
+    location.replace(location.pathname+'?'+sp.toString());
+    return true;
+  }catch(_){ return false; }
 }
 function sheetPush(tag){ try{ if(!(history.state&&history.state.v==='sheet'&&history.state.s===tag)) history.pushState({v:'sheet',s:tag},''); }catch(_){ } }
 window.addEventListener('popstate',(ev)=>{
@@ -5198,6 +5205,8 @@ async function ensureHistCache(){
       // re-stamped by the old repaint bug (fixed 2026-07-02) — or that were saved nameless.
       if(s.storeName&&e.storeName!==s.storeName){ e.storeName=s.storeName; e.storeId=s.storeId; e.logoUrl=s.logoUrl||e.logoUrl; fixed=true; }
       else if(s.storeName&&e.storeId==null){ e.storeId=s.storeId; fixed=true; }
+      if(!e.logoUrl&&s.logoUrl){ e.logoUrl=s.logoUrl; e.logoWide=s.logoWide; e.logoDark=s.logoDark; fixed=true; } // old rows saved before we kept the logo
+      if(!e.location&&(s.location||s.address)){ e.location=s.location||s.address; fixed=true; }
       if(s.ts&&e.ts&&Math.abs(e.ts-s.ts)>15*60000){ e.ts=s.ts; fixed=true; } });
     if(fixed) localStorage.setItem('runnr_history', JSON.stringify(h.slice(0,60)));
     const seen=new Set(h.map(x=>x.cid));
@@ -5394,7 +5403,7 @@ function acctTab(which,fromPop){
     const TONECOL={in:'#4ADE80',out:'#FF8080',soon:'#F5B301',unk:'#9CA3AF'};
     const cell=(nv,lb,tn)=>`<div onclick="actTone('${tn}')" style="text-align:center;cursor:pointer;${ACT_TONE===tn?'background:rgba(255,255,255,.05);border-radius:12px;':''}padding:2px 0"><div style="font-size:18px;font-weight:800;color:${ACT_TONE&&ACT_TONE!==tn?'rgba(255,255,255,.35)':(TONECOL[tn]||'#FFF')}">${nv}</div><div style="margin-top:2px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#8A8A96">${lb}</div></div>`;
     const vlabel=e=>{ const tn=railTone(e); return tn==='in'?t('v.in','In stock!'):tn==='out'?t('v.out','Not in stock'):tn==='soon'?t('v.soon','Restock incoming!'):t('fbk.unsure','Unclear'); };
-    const agoTx=e=>{ try{ return agoStr(e.ts); }catch(_){ return ''; } };
+    const agoTx=e=>{ try{ return agoStr(Math.floor(e.ts/1000)); }catch(_){ return ''; } }; // agoStr wants seconds — ms made every call 'just now'
     const lastPool=(ACT_TONE?scope.filter(e=>railTone(e)===ACT_TONE):hist);
     const last=lastPool.slice(0,ACT_TONE?6:3).map(e=>`<button onclick="ACCT_RETURN='activity';closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:11px;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:9px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left">
       <span style="width:40px;height:40px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${e.logoUrl?`<img src="${esc(e.logoUrl)}" style="width:32px;height:32px;object-fit:contain" alt="">`:`<span style="font-size:11px;font-weight:900;color:#CDCDD8">${esc((railBase(e.storeName)||'?').slice(0,2).toUpperCase())}</span>`}</span>
@@ -5805,11 +5814,14 @@ function zonePaintList(list){
   const cards=(list||[]).map(zn=>{
     const n=zn.checkCount!=null?zn.checkCount:(zn.stores?zn.stores.length:0);
     const last=zn.lastRun?`<div class="zlast">${t('zones.last','last check')} ${esc(zAgo(zn.lastRun.at))} · ${zn.lastRun.inStock||0} ${t('zones.instock','in stock')}</div>`:`<div class="zlast">${t('zones.never','not checked yet')}</div>`;
+    const faces=(zn.stores||[]).slice(0,6).map(st=>`<span class="ic ${st.logoDark?'lite':''} ${st.logoWide?'widelogo':''}" style="width:34px;height:34px;border-radius:10px;flex:0 0 auto">${st.logoUrl?`<img loading="lazy" decoding="async" src="${esc(st.logoUrl)}" alt="" style="${st.logoWide?'width:28px;height:auto;max-height:22px':'width:26px;height:26px'};object-fit:contain">`:`<span style="font-size:10px;font-weight:900;color:#CDCDD8">${esc((st.name||'?').split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase())}</span>`}</span>`).join('')
+      +(((zn.stores||[]).length>6)?`<span style="font-size:11px;font-weight:700;color:#8A8A96;align-self:center">+${(zn.stores||[]).length-6}</span>`:'');
     return `<div class="card zcard">
       <div style="display:flex;align-items:flex-start;gap:10px">
         <div style="flex:1;min-width:0"><div class="znm">${esc(zn.name||t('zones.untitled','Untitled zone'))}</div><div class="zsub">${n} ${n===1?t('zones.store','store'):t('zones.stores','stores')}</div>${last}</div>
         <button class="zmore" onclick="zoneMenu(${zn.id},event)" aria-label="Edit">⋯</button>
       </div>
+      ${faces?`<div style="display:flex;gap:7px;margin-top:11px;overflow:hidden">${faces}</div>`:''}
       <button class="cta sm" style="margin-top:12px;width:100%" onclick="zoneCheckAll(${zn.id})">${t('zones.checkall','Check all')}${zn.checkCents!=null?' · '+money(zn.checkCents):''} →</button>
     </div>`;
   }).join('');
@@ -5818,18 +5830,35 @@ function zonePaintList(list){
     <button class="cta" style="margin-top:16px;width:100%" onclick="zoneNew()">＋ ${t('zones.new','New zone')}</button></div>`;
 }
 function zAgo(at){ try{ const s=Math.max(1,Math.floor((Date.now()-new Date(at).getTime())/1000)); if(s<3600) return Math.floor(s/60)+'m'; if(s<86400) return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; }catch(_){ return ''; } }
+// One pop-up shell for every zone dialog — the SAME big-card modal the rest of the app uses
+// (radius 26, 20/900 title, raised keys, stroke icons; owner 07-10: no native prompt/confirm, no emoji).
+function zPop(html){ let ov=$('zmenuOv');
+  if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='zmenuOv'; ov.onclick=e=>{ if(e.target===ov) ov.classList.remove('on'); }; document.body.appendChild(ov); }
+  ov.innerHTML=`<div class="modal" style="max-width:340px;text-align:left">${html}</div>`; ov.classList.add('on'); }
+function zPopClose(){ const ov=$('zmenuOv'); if(ov) ov.classList.remove('on'); }
+const Z_ROWBTN='display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border:0;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;font-size:15px;font-weight:700;cursor:pointer;text-align:left';
+const Z_ICO_PEN='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>';
+const Z_ICO_TRASH='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF7B7B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+const zTile=ic=>`<span style="width:34px;height:34px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ic}</span>`;
 function zoneMenu(id,ev){ if(ev)ev.stopPropagation();
   const zn=((ZONES.list||[]).find(x=>x.id===id))||{};
-  let ov=$('zmenuOv');
-  if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='zmenuOv'; ov.onclick=e=>{ if(e.target===ov) ov.classList.remove('on'); }; document.body.appendChild(ov); }
-  ov.innerHTML=`<div class="modal" style="max-width:340px;text-align:left"><h3 style="margin:2px 0 4px">${esc(zn.name||t('zones.untitled','Untitled zone'))}</h3>
-    <div class="meta" style="margin-bottom:14px">${t('zones.menu.sub','Rename or delete this zone.')}</div>
-    <button class="cta sm" style="width:100%;margin-bottom:10px" onclick="$('zmenuOv').classList.remove('on');zoneRenamePrompt(${id})">${t('zones.rename','Rename')}</button>
-    <button class="cta sm" style="width:100%;background:rgba(239,68,68,.12);border:1.5px solid rgba(239,68,68,.4);color:#FF8A8A;box-shadow:none" onclick="$('zmenuOv').classList.remove('on');zoneDeleteConfirm(${id})">🗑 ${t('zones.delete','Delete zone')}</button></div>`;
-  ov.classList.add('on');
+  zPop(`<h3 style="margin:2px 0 14px;font-size:20px;font-weight:900;letter-spacing:-.4px">${esc(zn.name||t('zones.untitled','Untitled zone'))}</h3>
+    <button style="${Z_ROWBTN};margin-bottom:10px" onclick="zoneRenamePrompt(${id})">${zTile(Z_ICO_PEN)}${t('zones.rename','Rename')}</button>
+    <button style="${Z_ROWBTN}" onclick="zoneDeleteConfirm(${id})">${zTile(Z_ICO_TRASH)}<span style="color:#FF8A8A">${t('zones.delete','Delete zone')}</span></button>`);
 }
-function zoneRenamePrompt(id){ const cur=((ZONES.list||[]).find(x=>x.id===id)||{}).name||''; const nm=prompt(t('zones.rename.ask2','New name for this zone:'),cur); if(nm==null) return; const v=nm.trim(); if(!v){ toast(t('zones.needname','Give the zone a name.')); return; } zoneRename(id,v); } // blank = cancel, NEVER delete
-function zoneDeleteConfirm(id){ if(confirm(t('zones.delete.ask','Delete this zone? This can\'t be undone.'))) zoneDelete(id); }
+function zoneRenamePrompt(id){
+  const cur=((ZONES.list||[]).find(x=>x.id===id)||{}).name||'';
+  zPop(`<h3 style="margin:2px 0 14px;font-size:20px;font-weight:900;letter-spacing:-.4px">${t('zones.rename','Rename')}</h3>
+    <input id="zrn_in" value="${esc(cur)}" maxlength="40" style="width:100%;box-sizing:border-box;background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;padding:14px 16px;font-size:16px;font-weight:600;color:#fff;margin-bottom:14px">
+    <button class="cta" style="width:100%" onclick="(function(){const v=($('zrn_in').value||'').trim(); if(!v){ toast(t('zones.needname','Name your zone first'),'neutral'); return; } zPopClose(); zoneRename(${id},v);})()">${t('zones.rename.save','Save name')}</button>`);
+  setTimeout(()=>{ try{ $('zrn_in').focus(); $('zrn_in').select(); }catch(_){ } },60);
+}
+function zoneDeleteConfirm(id){
+  zPop(`<h3 style="margin:2px 0 8px;font-size:20px;font-weight:900;letter-spacing:-.4px">${t('zones.delete','Delete zone')}</h3>
+    <div class="meta" style="margin-bottom:16px">${t('zones.delete.sure','This can\'t be undone.')}</div>
+    <button style="${Z_ROWBTN};justify-content:center;margin-bottom:10px" onclick="zPopClose();zoneDelete(${id})"><span style="color:#FF8A8A">${t('zones.delete.yes','Yes, delete it')}</span></button>
+    <button style="${Z_ROWBTN};justify-content:center" onclick="zPopClose()">${t('zones.keep','Keep it')}</button>`);
+}
 async function zoneRename(id,name){ try{ await appApi('/app/zones/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({name})}); }catch(_){ } renderZonesList(); }
 async function zoneDelete(id){ try{ await appApi('/app/zones/'+id,{method:'DELETE'}); }catch(_){ } renderZonesList(); }
 // ---- Screen A — build / edit a zone ----
@@ -5957,8 +5986,19 @@ async function zoneSave(){
 }
 // ---- Screen C — the live zone-check report ----
 async function zoneCheckAll(id){
-  let quoteTxt=''; try{ const zl=await appApi('/app/zones'); const zn=(Array.isArray(zl)?zl:(zl&&zl.zones)||[]).find(x=>x.id===id); if(zn&&zn.checkCents!=null) quoteTxt=' ('+money(zn.checkCents)+')'; }catch(_){ }
-  if(!confirm(tf('zones.confirm','Check all stores in this zone?{q} 1 check per store.',{q:quoteTxt}))) return;
+  const zn=((ZONES.list||[]).find(x=>x.id===id))||{};
+  // Nothing open right now → no call to place; say so instead of asking for an OK (owner 07-10).
+  const openN=(zn.stores||[]).filter(st=>st.callable!==false && !isClosed(st)).length;
+  if((zn.stores||[]).length && !openN){ toast(t('zones.allclosed','All stores in this zone are closed'),'neutral'); return; }
+  const goOn=await new Promise(res=>{
+    zPop(`<h3 style="margin:2px 0 8px;font-size:20px;font-weight:900;letter-spacing:-.4px">${t('zones.confirm.title','Check all stores in this zone?')}</h3>
+      <div class="meta" style="margin-bottom:16px">${t('zones.confirm.per','1 check per store.')}${zn.checkCents!=null?'<br>'+money(zn.checkCents):''}</div>
+      <button class="cta" style="width:100%;margin-bottom:10px" id="zca_go">${t('zones.checkall','Check all')} →</button>
+      <button style="${Z_ROWBTN};justify-content:center" id="zca_no">${t('pre.again.no','Not now')}</button>`);
+    $('zca_go').onclick=()=>{ zPopClose(); res(true); }; $('zca_no').onclick=()=>{ zPopClose(); res(false); };
+    $('zmenuOv').onclick=e=>{ if(e.target===$('zmenuOv')){ zPopClose(); res(false); } };
+  });
+  if(!goOn) return;
   let run=null; try{ run=await appApi('/app/zones/'+id+'/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({categoryId:(BRAND_CAT&&BRAND_CAT.id)||SEL_CAT||undefined})}); }catch(e){ run={error:'net'}; }
   if(!run||run.error){ toast(run&&run.error==='no_credits'?t('zones.nocredits','Not enough checks for the whole zone.'):t('err.generic',"That didn't go through. Give it another try.")); if(run&&run.error==='no_credits'){ setTimeout(()=>{ backToBuilder(); openBuy(); },600); } return; }
   ZONES.run={ id, runId:run.runId, name:run.name||'' }; renderZoneRun(); zoneStartPoll();
@@ -6346,7 +6386,7 @@ function coAppearance(){ return { theme:'night', variables:{ colorPrimary:'#19B1
   rules:{ '.Input':{ backgroundColor:'#1B1B20', border:'none', boxShadow:'inset 0 2px 6px rgba(0,0,0,.45)', padding:'14px 16px', color:'#fff' },
     '.Input:focus':{ boxShadow:'inset 0 2px 6px rgba(0,0,0,.45), 0 0 0 2px rgba(25,177,69,.5)' },
     '.Label':{ color:'#8A8A96', fontWeight:'600', fontSize:'12.5px' },
-    '.Tab,.Block':{ backgroundColor:'#1B1B20', border:'none' }, '.Tab--selected':{ boxShadow:'0 0 0 2px rgba(25,177,69,.6)' }, '.TabLabel':{ fontSize:'12px' } } }; }
+    '.Tab,.Block':{ backgroundColor:'#1B1B20', border:'none', padding:'10px 8px' }, '.Tab--selected':{ boxShadow:'0 0 0 2px rgba(25,177,69,.6)' }, '.TabLabel':{ fontSize:'11px' }, '.TabIcon':{ marginBottom:'4px' } } }; }
 function coCtaLabel(){ const isSub=!/^payg:/.test(String(CO&&CO.kind)); const per=isSub?(CO&&CO.annual?t('plan.yr','/yr'):t('plan.mo','/mo')):'';
   return (isSub?t('co.subscribe','Subscribe'):t('co.pay','Pay'))+' · '+money((CO&&CO.amountCents)||0)+per; }
 async function openCheckout(kind, annual, amountCents, planLabel, planSub){
@@ -6412,6 +6452,9 @@ sheetDrag('buyOverlay', ()=>closeBuy());
 sheetDrag('pageOverlay', ()=>closePage()); // footer pages are a bottom sheet now — swipe down to dismiss
 sheetDrag('acctOverlay', ()=>{ try{ closeAccount(true); }catch(_){ } }); // sheetDrag already ran the slide-down → instant hide
 sheetDrag('coOverlay', ()=>{ try{ closeCheckout(); }catch(_){ } });
+sheetDrag('storeReqOverlay', ()=>{ try{ closeStoreReq(); }catch(_){ } });
+sheetDrag('watchOverlay', ()=>{ try{ closeWatch(); }catch(_){ } });
+sheetDrag('scheduleOverlay', ()=>{ try{ closeSchedule(); }catch(_){ } });
 async function buy(kind, annual){
   if(!isAuthed()){ signUp(); return; }
   $('buy_note').textContent=t('buy.opening','Opening secure checkout…');
