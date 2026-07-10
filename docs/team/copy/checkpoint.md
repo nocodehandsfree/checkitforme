@@ -10,8 +10,11 @@
 - **Publishing changed**: branch `v1.0` has bi-directional GitHub sync with ReadMe. Edit the branch,
   push, done. NEVER create pages via API (makes duplicate slugs). Full how-to: `how-to-publish.md`.
 - Plans pages verified against live `/pub/plans` (Family/Collector/Hunter/Operator + PAYG ladder).
-- **Internal manuals shipped**: `docs/shared/ADMIN_MANUAL.md` + `docs/shared/WEBSITE_MANUAL.md`
-  (every tab, every feature, line refs). Branch `claude/docs-overhaul-public-manuals-smlohx`, PR #6.
+- **Internal manuals shipped**: `docs/shared/ADMIN_MANUAL.md` + `WEBSITE_MANUAL.md` +
+  `SYSTEM_MANUAL.md` (owner asked for EVERYTHING: backend, features, processes, the offer — the
+  system manual covers call engine, lanes A/B/C/D, money, growth loops, data platform, ops, plus a
+  quirks list incl. spend counter fed by nothing + MRR using the legacy $4.99 constant). Branch
+  `claude/docs-overhaul-public-manuals-smlohx`, PR #6.
 - **Copy gap analysis done** (EN+ES, site + admin, vs the hard rules). Numbered list sent to the
   owner for a vote. NOT fixed yet — waiting on approval. Biggest items: default toast pill is GREEN
   (31 call sites, rule says gray) · whole Zones feature has no Spanish (26 keys) · 6 rekeyed strings
