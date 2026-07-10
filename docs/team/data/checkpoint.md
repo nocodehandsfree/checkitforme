@@ -51,6 +51,13 @@
   ~128 SA (37 not in their locator + 91 unparseable), 2 unmatched — WebSearch-wave or owner's-machine
   material. **Steward rules learned: empty hour fields ≠ closed; parsed prose NEVER deactivates a store**
   (both guards are in the code now — first drafts would have wrongly deactivated 361+9 live stores).
+- **Thrift store COUNT expansion — DONE 2026-07-10, +41 real new stores** (Goodwill 8, Savers 2,
+  Salvation Army 31; 29 with hours). Mined the same chain locators for stores missing from our DB.
+  **The honest yield is small: chain locators overwhelmingly cover stores we already have.** Integrity
+  gates (in `apply_thrift_expansion.py`) dropped: 748 Goodwill donation-drop-off bins (not shoppable),
+  182 same-address/different-phone DUPES (phone-only dedupe would have double-listed them — big trap),
+  2 toll-free 1-800 call-center numbers (not a human at THAT store), 13 Canadian. Tools:
+  `expand_{goodwill,savers,salvationarmy}.py` → `apply_thrift_expansion.py --apply`.
 - **Env facts (verified):** python urllib AND headless Chromium are proxy-blocked here; Google/Bing/DDG
   bot-block curl. Free direct-Google scraping is impossible from this box — that's owner's-local only.
 - **PROD front-end BEHIND staging — needs a promote (not my lane to deploy; flagged to owner):** the `type`
