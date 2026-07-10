@@ -279,12 +279,15 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
       ...seoGraph(brand, plainName),
     ] })}</script>`,
   ].join("\n");
-  // Verdict-tone baking RETIRED (owner 07-10, polish items 24-25): a deep link must load NEUTRAL and
-  // only take the verdict color once the result is actually rendered client-side. The ?tone= param is
-  // still accepted (old share links carry it) but no longer paints anything at first paint.
-  void tone;
+  // Status-bar tone for verdict deep-links (?call=…&tone=in|out|unk|soon): baked as a CLASS on the
+  // literal served <html> tag (the html.tone-* static CSS lives in checkit.html). iOS samples the page
+  // background for the status bar at FIRST PAINT — a tone applied later by script (boot/fetch timing)
+  // often misses that sample and leaves the bar dark in plain Safari. Baking the class server-side makes
+  // the very first paint the verdict colour with zero JS dependency; the in-page rv-* class system takes
+  // over (and drops the baked class via dropBakedTone) as soon as the app renders a view.
+  const toneClass = /^(in|out|unk|soon)$/.test(tone) ? ` class="tone-${tone}"` : "";
   return withAnalytics(page(file))
-    .replace('<html lang="en">', `<html lang="en">`)
+    .replace('<html lang="en">', `<html lang="en"${toneClass}>`)
     .replace(/__BRAND_HEAD__/g, head)
     .replace(/__BRAND_JSON__/g, JSON.stringify({ key: brand.key, name: brand.name, category: brand.category, accent: brand.accent, accent2: brand.accent2 || brand.accent, logoUrl: brand.logoUrl || "", emoji: brand.emoji }))
     .replace(/__BRAND_LOGO__/g, brand.logo || `${brand.emoji} ${brand.name}`)
@@ -2926,7 +2929,15 @@ async function zoneAuth(authHeader?: string): Promise<
 async function zoneView(z: typeof zones.$inferSelect) {
   const links = await db.select().from(zoneRetailers).where(eq(zoneRetailers.zoneId, z.id));
   const rows = links.length ? await db.select().from(retailers).where(inArray(retailers.id, links.map((l) => l.retailerId))) : [];
-  const stores = rows.map((r) => ({ retailerId: r.id, name: r.name, location: r.location || "", callable: r.sellsPacks !== false }));
+  // Zone cards show the member stores' logos + open state (owner 07-10): same chainLogoInfo + openState
+  // the consumer store list rides, so the card and the check-all gate agree with the rest of the app.
+  const chainNames = rows.length ? new Map((await db.select().from(chains)).map((x) => [x.id, x.name])) : new Map();
+  const stores = rows.map((r) => {
+    const chainName = (r.chainId && chainNames.get(r.chainId)) || null;
+    const l = chainLogoInfo(chainName || r.name.split(/—|–| - /)[0]);
+    return { retailerId: r.id, name: r.name, location: r.location || "", callable: r.sellsPacks !== false,
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, openState: openState(r.hours, r.timezone) };
+  });
   const last = (await db.select().from(callResults).where(like(callResults.zoneRunId, `z${z.id}-%`)).orderBy(desc(callResults.startedAt)).limit(1))[0];
   let lastRun = null;
   if (last?.zoneRunId) {
