@@ -23,9 +23,33 @@
   out of scope, harmless. NOTE: staging today also carries others' batches (docs shuffle, PostHog,
   Helicone routing, backup-restore) — promote takes all of it unless DevOps splits.
 
-## ▶ Paused — owner UI-polish pass on staging (screenshot-driven)
-Rapid back-and-forth: owner screenshots staging, I fix, push, he re-verifies. All staging until he confirms,
-then I port to prod. Keep replies outcome-first.
+## ✅ SHIPPED to staging — site-wide polish contract 07-10 (items 6-73, commit 7a9c7c1 + follow-up)
+- Contract lives in chat (owner list + shots in docs/specs/ui-polish/shots). Fixed: ES layout breaks
+  (tabs/count/footer) + footer pages hand-translated (?lang=es) + Legal collapse (guide 5.14) · pill LAW
+  (gray/white/one-line, EN+ES, variants retired) · kiosk = same big-button flow, ① labels gone · Sign out
+  top-right of sheet · add-store/watch/auto-check = bottom sheets · plans default = your tier/featured,
+  Continue buys the ringed one · tone pre-paint fully retired (server bake + boot script + rebake reload;
+  the reload was ALSO the calendar/deep-link delay) · call date/time on verdict · share = one up-arrow far
+  right, even glow, footer hugs content · unclear copy breaks before "Read" · zones: fresh list after save,
+  auto-search (Go gone), carved list well, cal chip hidden · back button: views push entries, sheets close
+  on back, zones in the stack · map pin/ZIP = MANUAL_LOC, GPS recheck can't snap back (regression) ·
+  Topps → "NBA Cards" (test updated) · 🏃💨 → 📦 · "No answer = no charge" period gone.
+- VERIFIED on staging (screenshots in chat): EN+ES homepages, kiosk tab, footers, ES terms sheet, gray
+  pill, add-store sheet, Topps page. NOT drivable without owner's account: verdict-page items on a real
+  call, zones save round-trip, plan/checkout flows — owner to spot-check on his next pass.
+- ANSWERS (checkout, items 30-34): the "$5 back when you pay by bank" banner, the Success/Blocked/
+  Disputed/Bank/Down icons, and the dead bank search are all INSIDE Stripe's payment iframe. Staging runs
+  Stripe TEST mode: those icons ARE the test-mode fake banks, and bank search is dead because there are
+  only six fake banks to search. The $5-back is Stripe's own promo (they fund it) for paying by bank;
+  Stripe decides who sees it — no config toggle I could find (unverified beyond docs skim). "Cash App Pay"
+  is Stripe's official method name inside the iframe — not renamable; I shrank tab labels so it stops
+  crushing the last tab. On LIVE mode real banks appear and search works.
+- PWA (43-45): the home-screen app was rendering the RETIRED service worker's cache. The self-destruct
+  worker + page-load unregister + no-store HTML are all live; opening the installed app once online
+  self-heals it (or delete + re-add). No further code fix exists on our side.
+- Guide notes for CD/Copper: add-store/watch/auto-check are now SHEETS (owner order — 5.11 says popups);
+  footer runs Scores·About·FAQ·Contact·Legal (5.14 to-do done); "No answer = no charge" lost its period
+  (copy-guide spine shows one); toast law = gray only (5.4's green/accent pills retired).
 
 ## ✅ Just shipped to STAGING (07-09, awaiting owner verify → then promote to prod)
 - **Unmapped-store "coming soon"** (`callReady:false`): greyed row + "Coming soon" chip; tap → toast
