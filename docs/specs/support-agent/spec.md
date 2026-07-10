@@ -64,7 +64,19 @@ trending DOWN as the answer cache compounds.
 - **Pops** — Discord bot (later), qdrant service care, `QDRANT_URL` + (staging) `BREVO_API_KEY` vars.
 - **Webbie** — chat widget placement; widget follows STYLE_GUIDE.
 
-## Build order (in flight)
-1. RAG pipeline: book → chunks → qdrant + retrieval (admin reindex endpoint). 2. Ladder behind one
-internal function + public chat API. 3. Site widget EN/ES + escalation form → Brevo. 4. Review
-queue + stats endpoints. 5. Verify on staging against this contract.
+## Verification so far (2026-07-10, pre-merge)
+Everything below was DRIVEN, not assumed. Remaining items need the code on staging (qdrant is
+private-network only, so retrieval can't run off Railway).
+- ✓ Contract 3 gates: real models (Flash-Lite → 4o-mini → 4o) climbed the full ladder locally with
+  staging keys; empty retrieval → every rung said "not sure", never guessed (contract 5 ✓), big
+  rung ended with escalate → form. Triple-cascade cost: $0.0027.
+- ✓ Contract 4 path: ticket endpoint stores the row and emails via Brevo when the key is present
+  (staging has no BREVO_API_KEY yet → stored-not-emailed, logged; DevOps: need BREVO_API_KEY on staging).
+- ✓ Contract 6 flow: resolve(helped) → review queue → approve/reject endpoints (13-assertion smoke
+  suite in test-all.sh; approve→embed needs qdrant, verified on staging).
+- ✓ Contract 7: ES answer came back in Spanish; every widget string has its ES twin same-commit.
+- ✓ Contract 8: /api/support/stats returns volume, byMaxTier, cost, escalations, tickets.
+- ✓ Full test-all.sh: all suites pass except 4 browser-QA failures that fail IDENTICALLY on the
+  base staging commit (legacy baseline, per DevOps checkpoint) — zero new failures from this work.
+- NOT verified yet (needs merge → staging): reindex → grounded answers from the book, tier-0 cache
+  hit after an approve, widget driven in a real browser on staging.checkitforme.com.

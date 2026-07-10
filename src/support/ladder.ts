@@ -46,7 +46,7 @@ Rules, all hard:
 - Reply in the language of the user's last message (English or Spanish).
 - Talk like a friend who already did the annoying thing for you: plain words, short sentences, no corporate filler. No dashes inside sentences. No emoji.
 - You cannot take account actions (no refunds, no plan changes, no placing checks). For those, or anything you can't resolve, set needs_human true.
-Respond with strict JSON: {"answer": string, "confident": boolean, "needs_human": boolean}. "confident" means the passages genuinely covered it. Set needs_human true when the user asks for a person or the issue needs a human (billing disputes, bugs, account changes).`;
+Respond with strict JSON: {"answer": string, "confident": boolean, "needs_human": boolean}. "confident" means the passages genuinely covered it. Set needs_human true ONLY when the user explicitly asks for a person, or the issue requires someone to act on their account (billing disputes, refunds, plan changes, a bug report). A question you simply can't answer from the passages is NOT needs_human: answer that you're not sure and set confident false.`;
 
 export interface LadderResult {
   reply: string;
