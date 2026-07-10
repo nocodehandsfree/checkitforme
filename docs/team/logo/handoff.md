@@ -62,6 +62,12 @@ re-create it from store-logos.md §6 if the scratch dir is gone. QA by compositi
 ## Workflow with the owner (from STATUS.md — obey)
 - Process in **chunks of 10, alphabetical**. Fix a chunk → send ONE contact sheet at the real
   phone size → owner approves → **lock it**. Never re-touch a locked logo.
+- **Contact sheets show ONLY the chunk under review.** Never include locked logos as
+  "comparison" tiles — the owner reads everything on a sheet as new work and it breaks trust.
+  Compare against locked neighbors privately; send him just the new ones, labeled.
+- Note: a repo file can differ from live (`logos.fungibles.com/chain-logos/<slug>.png` — R2
+  wins at render). Before judging or re-working ANY existing logo, diff repo vs R2 first
+  (walmart.png differs today: repo has a newer un-migrated rework).
 - **NO global/universal normalize passes** — they silently regressed approved logos. Per-logo only.
 - Legend in STATUS.md: ✅ locked · 🔧 in progress · ⬜ todo (needs owner image).
 
