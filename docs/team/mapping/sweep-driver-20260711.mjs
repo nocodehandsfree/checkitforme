@@ -26,6 +26,11 @@ const QUEUE = [
   [123,"PokeMall TCG"],
 ].map(([id, name]) => ({ id, name, tries: 0 }));
 
+// SKIP_IDS (comma list) — chains to hold out this run. Used when the no-downgrade guard isn't live on
+// prod yet: skip the already-locked "retry for speed" chains so an unlucky re-call can't downgrade them.
+const SKIP = new Set((process.env.SKIP_IDS || "").split(",").map((s) => Number(s.trim())).filter(Boolean));
+if (SKIP.size) { for (let i = QUEUE.length - 1; i >= 0; i--) if (SKIP.has(QUEUE[i].id)) QUEUE.splice(i, 1); }
+
 const CHAIN_TIMEOUT_MIN = 55, HARD_STOP_ET = 21;  // stop new chains after 9pm ET (stores closing)
 line({ event: "day2-start", chains: QUEUE.length });
 const requeue = [];
