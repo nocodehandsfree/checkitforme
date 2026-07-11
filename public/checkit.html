@@ -553,15 +553,15 @@ __BRAND_HEAD__
   .toast svg path,.toast svg circle{stroke:#06210f}
   .toast.show{transform:translateX(-50%) translateY(0)}
   .hidden{display:none}
-  /* Support Messenger launcher: a thin muted-yellow tab in the bottom-right corner, always there. */
+  /* Support Messenger launcher: a thin check-green tab in the bottom-right corner, always there. */
   .suplaunch{position:fixed;right:0;bottom:calc(26px + env(safe-area-inset-bottom));z-index:70;cursor:pointer;border:none;
     width:30px;height:52px;border-radius:14px 0 0 14px;display:grid;place-items:center;
-    background:color-mix(in srgb, var(--accent,#FFCB05) 76%, #3d2e00);
+    background:var(--green,#4ADE80);
     box-shadow:-7px 7px 20px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.28),inset 1px 0 0 rgba(0,0,0,.08);
     transition:width .12s,transform .1s}
   .suplaunch:hover{width:35px}
   .suplaunch:active{transform:translateX(1px)}
-  .suplaunch svg{width:18px;height:18px;stroke:#2a2205}
+  .suplaunch svg{width:18px;height:18px;stroke:#06210f}
   body:has(.overlay.on) .suplaunch,body:has(.csheet.on) .suplaunch,body:has(.supwrap.on) .suplaunch{display:none}
   .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:flex;flex-direction:column;
     /* a touch deeper than the raw brand yellow — the neon read too bright in the panel (owner 07-11) */
@@ -1281,7 +1281,7 @@ html[data-skin="v2"] .modetab.on .mti{color:var(--accent,#FFCB05)}
 html[data-skin="v2"] header{background:transparent;border-bottom:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
 html[data-skin="v2"] .hero h1{font-size:30px;font-weight:900;letter-spacing:-1px;line-height:1.15}
 /* Footer (§5.14): two tight rows on the strip; links 13/600 muted; social circles raised 36px. */
-html[data-skin="v2"] .site-footer{padding:22px 18px}
+html[data-skin="v2"] .site-footer{padding:22px 18px calc(78px + env(safe-area-inset-bottom))} /* reserve the bottom-right corner for the always-on support tab + clear Safari's URL bar so no footer row hides behind it (owner 07-11) */
 html[data-skin="v2"] .foot-links a{font-size:13px;font-weight:600;color:#8A8A96}
 html[data-skin="v2"] .foot-social a,html[data-skin="v2"] .foot-social button{width:36px;height:36px;border-radius:50%;background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 /* Toasts (T1/§5.4): bottom capsule, green success gradient + dark-green text. */
