@@ -831,9 +831,11 @@ __BRAND_HEAD__
 
   /* ── 2024 redesign: tight mobile-first header, ticker, trust strip, custom marks ── */
   .brandbar{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 auto}
-  /* Zones takes over the page (owner 07-11): drop the product switcher in the upper-left. Brandbar
-     stays as the flex spacer so the credits pill holds the right edge. */
-  body.zoning .vsw{display:none}
+  /* Zones takes over the whole page (owner 07-11): the fixed zone frame carries its OWN header
+     (back · title · credits), so hide the app's global header entirely — no product switcher, no
+     duplicate credits pill poking through. */
+  body.zoning header{display:none}
+  body.zoning .supbub{display:none} /* the zone frame is a full takeover — no floating support bubble over Save */
   .logomark{width:30px;height:30px;flex:0 0 auto;cursor:pointer;display:grid;place-items:center}
   .logomark svg{display:block}
   .iconbtn{flex:0 0 auto;width:38px;height:38px;border-radius:11px;background:var(--sheet);border:1px solid var(--border);display:grid;place-items:center;cursor:pointer;color:#bdbdcb;padding:0}
