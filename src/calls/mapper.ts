@@ -179,6 +179,12 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
   // the store, so a "recipe" is meaningless and it wastes a real call.
   if (ch.muted) return { error: `${ch.name} is muted — skipped (no direct store line / owner-hidden)` };
   if (ch.callTarget === false) return { error: `${ch.name} has no direct store line (online-only / call-center) — skipped` };
+  // Rings-direct chains have NO phone tree — a person answers straight through. Independents + co-ops
+  // (thrift banners, local card shops, Ace) are defaulted to direct in code (curated list + boot pass),
+  // so there is nothing to map. Mapping them wastes calls AND a stray chain-level recipe (e.g. Ace's old
+  // "press 4") mutes the live agent on every store that actually rings direct. Co-ops with no uniform
+  // tree get per-store nav learned from real calls, not one chain recipe — never map them as one tree.
+  if (ch.ringsDirect === true || ch.answerPath === "direct_human") return { error: `${ch.name} rings direct (no phone tree) — skipped, nothing to map` };
   const usedToday = Number((await getSetting(`mapper_calls:${chainId}:${today()}`)) || 0);
   const cap = Number((await getSetting("mapper_daily_cap")) || 0) || DAILY_CAP;
   if (usedToday >= cap) return { error: `daily cap reached (${cap}) — raise the "mapper_daily_cap" setting if this is a real sweep` };

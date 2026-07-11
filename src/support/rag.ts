@@ -6,13 +6,36 @@
 import { embed, embedOne } from "./embed";
 import { BOOK, QA, ensureCollection, resetCollection, upsert, search, idFor, type Hit } from "./qdrant";
 
+// The book is the single source of truth on ReadMe. llms.txt indexes every page; each page has a
+// .md we fetch for the text and a human URL we link to from the Help tab. Falls back to the GitHub
+// v1.0 mirror if ReadMe is unreachable, so a reindex never comes back empty.
+const README = process.env.SUPPORT_README_BASE || "https://checkitforme.readme.io";
 const REPO = "nocodehandsfree/checkitforme";
 const BRANCH = "v1.0";
 
-interface BookChunk { path: string; title: string; text: string }
+interface BookChunk { key: string; title: string; text: string; url: string }
 
-/** Pull every book page from the v1.0 branch (public repo — no token needed). */
-async function fetchBook(): Promise<BookChunk[]> {
+const cleanMd = (raw: string) => raw
+  .replace(/^---[\s\S]*?---\n/, "")
+  .replace(/<p[^>]*>[\s\S]*?<\/p>/g, "")
+  .replace(/<img[^>]*>/g, "")
+  .trim();
+
+/** Parse llms.txt (`- [Title](https://…/docs/slug.md)`) and fetch each page's markdown. */
+async function fetchFromReadme(): Promise<BookChunk[]> {
+  const idx = await fetch(`${README}/llms.txt`).then((r) => r.ok ? r.text() : "");
+  const links = [...idx.matchAll(/-\s*\[([^\]]+)\]\((https?:\/\/[^)]+?\.md)\)/g)].map((m) => ({ title: m[1].trim(), mdUrl: m[2] }));
+  const chunks: BookChunk[] = [];
+  for (const l of links) {
+    const raw = await fetch(l.mdUrl).then((r) => r.ok ? r.text() : "").catch(() => "");
+    const text = cleanMd(raw);
+    if (text) chunks.push({ key: l.mdUrl, title: l.title, text, url: l.mdUrl.replace(/\.md$/, "") });
+  }
+  return chunks;
+}
+
+/** Fallback: the GitHub v1.0 mirror of the book. */
+async function fetchFromRepo(): Promise<BookChunk[]> {
   const tree = await fetch(`https://api.github.com/repos/${REPO}/git/trees/${BRANCH}?recursive=1`)
     .then((r) => r.json()) as { tree?: { path: string; type: string }[] };
   const pages = (tree.tree || []).filter((t) => t.type === "blob" && t.path.startsWith("docs/") && t.path.endsWith(".md"));
@@ -20,26 +43,24 @@ async function fetchBook(): Promise<BookChunk[]> {
   for (const p of pages) {
     const raw = await fetch(`https://raw.githubusercontent.com/${REPO}/${BRANCH}/${encodeURI(p.path)}`).then((r) => r.text());
     const title = /^---[\s\S]*?title:\s*(.+?)\n[\s\S]*?---/.exec(raw)?.[1]?.trim() || p.path;
-    const text = raw
-      .replace(/^---[\s\S]*?---\n/, "")          // frontmatter
-      .replace(/<p[^>]*>[\s\S]*?<\/p>/g, "")     // inline html (images)
-      .replace(/<img[^>]*>/g, "")
-      .trim();
-    if (text) chunks.push({ path: p.path, title, text });
+    const text = cleanMd(raw);
+    if (text) chunks.push({ key: p.path, title, text, url: `${README}/docs/${p.path.split("/").pop()!.replace(/\.md$/, "")}` });
   }
   return chunks;
 }
 
-/** Rebuild the book collection. Returns how many pages were indexed. */
+/** Rebuild the book collection from ReadMe (repo mirror fallback). Returns how many pages indexed. */
 export async function reindexBook(): Promise<number> {
-  const chunks = await fetchBook();
+  let chunks: BookChunk[] = [];
+  try { chunks = await fetchFromReadme(); } catch (e) { console.error("[support] readme fetch", (e as Error).message.slice(0, 120)); }
+  if (!chunks.length) chunks = await fetchFromRepo();
   if (!chunks.length) throw new Error("book fetch returned no pages");
   const vectors = await embed(chunks.map((c) => `${c.title}\n\n${c.text}`));
   await resetCollection(BOOK);
   await upsert(BOOK, chunks.map((c, i) => ({
-    id: idFor(c.path),
+    id: idFor(c.key),
     vector: vectors[i],
-    payload: { title: c.title, path: c.path, text: c.text },
+    payload: { title: c.title, url: c.url, text: c.text },
   })));
   return chunks.length;
 }
@@ -54,7 +75,27 @@ export async function addQa(question: string, answer: string, conversationId: nu
   }]);
 }
 
-export interface SearchHit { title: string; snippet: string; score: number }
+// The FAQ tab reads Copper's top-questions page on ReadMe (single source). Parsed + cached 10 min
+// so tapping the tab is instant and people can read answers without ever chatting.
+export interface FaqItem { q: string; a: string; url: string }
+let faqCache: { t: number; v: FaqItem[] } | null = null;
+export async function getFaq(): Promise<FaqItem[]> {
+  if (faqCache && Date.now() - faqCache.t < 600_000) return faqCache.v;
+  let md = "";
+  try { md = await fetch(`${README}/docs/common-questions.md`).then((r) => r.ok ? r.text() : ""); } catch { /* fall through */ }
+  const items: FaqItem[] = [];
+  for (const m of md.matchAll(/\*\*\d+\.\s*(.+?)\*\*\s*\n([\s\S]*?)(?=\n\s*\*\*\d+\.|\n#|\nStill stuck|$)/g)) {
+    const q = m[1].trim();
+    const body = m[2].trim();
+    const url = /\[[^\]]+\]\((https?:\/\/[^)]+)\)/.exec(body)?.[1] || "";
+    const a = body.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1").replace(/\s+/g, " ").trim();
+    if (q && a) items.push({ q, a, url });
+  }
+  if (items.length) faqCache = { t: Date.now(), v: items };
+  return items;
+}
+
+export interface SearchHit { title: string; snippet: string; url: string; score: number }
 /** Semantic search over the book only — powers the Help tab search + instant answers (no model spend). */
 export async function searchBook(query: string, limit = 5): Promise<SearchHit[]> {
   const v = await embedOne(query);
@@ -62,6 +103,7 @@ export async function searchBook(query: string, limit = 5): Promise<SearchHit[]>
   return hits.map((h) => ({
     title: String(h.payload.title || ""),
     snippet: String(h.payload.text || "").replace(/\s+/g, " ").slice(0, 240),
+    url: String(h.payload.url || ""),
     score: h.score,
   }));
 }

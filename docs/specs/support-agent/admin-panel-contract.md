@@ -1,22 +1,30 @@
 # Support ⇄ Admin — panel contract (what the Admin Support tab expects)
-**What this is · who it's for:** the exact response shapes the Admin → Support tab (built by Addie,
-2026-07-11) reads from the Support lane's endpoints. Support: build to this or ping Addie's chat
-BEFORE diverging — the panel is already live on staging and degrades to an "APIs aren't live yet"
-empty state until these exist.
+**What this is · who it's for:** the response shapes the Admin → Support tab (built by Addie,
+2026-07-11) reads from the Support lane's endpoints. Updated same day to match the shapes the
+Support backend actually ships — the panel now reads BOTH the original names and the live ones.
+Support: extend freely, but ping Addie's chat before renaming existing fields.
 
 ## GET /api/support/stats?range=today|7d|30d
+Live shape (2026-07-11). Panel hides any stat whose field is absent — no dashes.
 ```jsonc
 {
-  "total": 42,
+  "range": "7d",
+  "conversations": 42,           // total chats ("total" also accepted)
+  "members": 30, "guests": 12,   // shown as a breakdown chip
   "selfServed": 35,
   "escalated": 7,
-  "escalationRate": 17,          // percent; optional — panel derives from escalated/total if absent
-  "avgMessages": 4.2,
-  "ticketsEmailed": 3,
+  "escalationRate": 17,          // percent; derived from escalated/conversations if absent
+  "resolved": 33,
+  "pendingReview": 2,
+  "tickets": 3,                  // human-email tickets ("ticketsEmailed" also accepted)
+  "estCostUsd": 0.41,            // rendered as $0.41
   "byCategory": { "technical": 12, "bug": 6, "billing": 9, "partnerships": 1, "how_checks_work": 10, "other": 4 },
-  "topQuestions": [ { "q": "How do credits work?", "n": 6 } ]   // also accepts {question,count}
+  "byMaxTier": { "1": 30, "2": 9, "3": 3 },   // chips via tier labels (Tier 1 / Tier 2 / Human email)
+  "models": { "free": "…", "cheap": "…", "big": "…" }   // informational; panel ignores
 }
 ```
+Optional extras the panel still renders if Support ever adds them: `avgMessages` (stat),
+`topQuestions: [{q,n}]` (list, also accepts `{question,count}`).
 
 ## GET /api/support/chats?category=&account=all|members|guests&since=&until=&q=
 `since`/`until` are unix seconds. Response: an array (or `{chats:[...]}`), newest first:

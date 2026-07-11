@@ -73,7 +73,7 @@ __BRAND_HEAD__
   /* form controls do NOT inherit fonts by default — without this, every button renders the
      system font instead of Inter. One line keeps typography identical across the whole site. */
   button,select,textarea{font-family:inherit}
-  html{-webkit-text-size-adjust:100%;background:#20202A;color-scheme:dark;touch-action:manipulation}/* neutral root = GRAY (owner 07-11: the top strip was black, comp is gray). iOS samples this bg-COLOR for the status strip; verdict tone-* classes override it. manipulation = scroll/pan OK, no double-tap-zoom */
+  html{-webkit-text-size-adjust:100%;background:#1D1D22;color-scheme:dark;touch-action:manipulation}/* neutral root = the EXACT v2 site gray #1D1D22 (owner 07-11: top strip was black at first paint; must match the page top-to-bottom). iOS samples this bg-COLOR for the status strip; verdict tone-* override it. */
   html,body{max-width:100%;overflow-x:hidden}
   /* No visible scrollbar (it lingers in the Home-Screen/standalone app) — touch scrolling still works. */
   html,body{scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{width:0;height:0;display:none}
@@ -282,9 +282,10 @@ __BRAND_HEAD__
   html.tone-out body,body.rview.rv-out{background:linear-gradient(180deg,var(--bg) 0px,#6b2427 110px,#6b2427 230px,var(--bg) 100dvh)}
   html.tone-unk body,body.rview.rv-unk{background:linear-gradient(180deg,var(--bg) 0px,#6c5419 110px,#6c5419 230px,var(--bg) 100dvh)}
   html.tone-soon body,body.rview.rv-soon{background:linear-gradient(180deg,var(--bg) 0px,#6e490f 110px,#6e490f 230px,var(--bg) 100dvh)}
-  /* NEUTRAL (no verdict) top = gray band that fades into the page — was near-black, comp is gray (owner 07-11).
-     Verdict tones above override this; only the untoned homepage/history/etc. get the gray top. */
-  html:not(.tone-in):not(.tone-out):not(.tone-unk):not(.tone-soon) body:not(.rview){background:linear-gradient(180deg,#20202A 0px,#20202A 92px,var(--bg) 210px)}
+  /* NEUTRAL (no verdict): the page background is ONE solid gray = var(--bg) (#1D1D22 in v2), identical
+     top to bottom, matching the root strip (owner 07-11 — no gradient, no mismatched shade). Verdict
+     tones above override this for result pages. */
+  html:not(.tone-in):not(.tone-out):not(.tone-unk):not(.tone-soon) body:not(.rview){background:var(--bg)}
   @media (display-mode: standalone){
     html.tone-in,html:has(body.rview.rv-in){background-color:#266440;background-image:linear-gradient(180deg,#266440 0px,#266440 140px,var(--bg) 100dvh)}
     html.tone-out,html:has(body.rview.rv-out){background-color:#6b2427;background-image:linear-gradient(180deg,#6b2427 0px,#6b2427 140px,var(--bg) 100dvh)}
@@ -300,8 +301,11 @@ __BRAND_HEAD__
      colour AND the body wash to the regular dark for the duration — the :has() rules undo themselves
      the moment the sheet closes. ID/class specificity + !important out-ranks every tone rule above,
      including the standalone media block and the v2 skin's body background. */
-  html:has(#acctOverlay.on),html:has(#buyOverlay.on),html:has(#pageOverlay.on),html:has(.csheet.on),html:has(.supsheet.on){background:#0C0C12!important}
-  html:has(#acctOverlay.on) body,html:has(#buyOverlay.on) body,html:has(#pageOverlay.on) body,html:has(.csheet.on) body,html:has(.supsheet.on) body{background:var(--bg)!important}
+  html:has(#acctOverlay.on),html:has(#buyOverlay.on),html:has(#pageOverlay.on),html:has(.csheet.on){background:#0C0C12!important}
+  html:has(#acctOverlay.on) body,html:has(#buyOverlay.on) body,html:has(#pageOverlay.on) body,html:has(.csheet.on) body{background:var(--bg)!important}
+  /* Messenger open: tint the ROOT bg to the header colour so iOS samples it for the status strip —
+     the header dome then fills seamlessly to the very top edge of the phone (no black notch band). */
+  html:has(.supwrap.on){background:#1A1A20!important}
   /* SCROLLED: iOS paints ONE colour at both chrome strips, so a toned top forces a toned band behind
      the bottom address pill — which clashes once the dark lower page/footer is on screen (owner 07-09:
      "look like there's nothing there"). Middle path: the chrome is toned while the verdict is in view
@@ -549,39 +553,117 @@ __BRAND_HEAD__
   .toast svg path,.toast svg circle{stroke:#06210f}
   .toast.show{transform:translateX(-50%) translateY(0)}
   .hidden{display:none}
-  /* Support chat: floating bubble + slide-up sheet (matches the call sheet — grabber, no X) */
-  .supbub{position:fixed;right:16px;bottom:18px;z-index:70;width:54px;height:54px;border-radius:999px;border:none;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#2D2D34,#27272D);
-    box-shadow:0 10px 30px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1);transition:transform .12s}
-  .supbub:active{transform:translateY(2px)}
-  .supbub svg{width:24px;height:24px;stroke:var(--accent,#FFCB05)}
-  body:has(.overlay.on) .supbub,body:has(.csheet.on) .supbub,body:has(.supsheet.on) .supbub{display:none}
-  .supsheet{position:fixed;left:0;right:0;bottom:0;z-index:80;max-width:520px;margin:0 auto;
-    background:#26262B;border-radius:28px 28px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7);
-    padding:10px 20px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;max-height:86vh;
-    transform:translateY(112%);transition:transform .28s cubic-bezier(.32,.72,0,1);touch-action:none}
-  .supsheet.on{transform:translateY(0)}
-  .supsheet-handle{width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,.22);margin:0 auto 14px;flex:0 0 auto}
-  .supsheet h3{margin:0 2px 12px;font-size:20px;font-weight:800;letter-spacing:-.3px;text-align:center}
-  .supmsgs{flex:1 1 auto;min-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px 0 4px;-webkit-overflow-scrolling:touch}
-  .supm{max-width:86%;padding:10px 13px;border-radius:16px;font-size:15px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
-  .supm.me{align-self:flex-end;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);color:#EAEAF0}
-  .supm.bot{align-self:flex-start;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 4px 14px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08)}
+  /* Support Messenger: small low-key GRAY tab pinned to the RIGHT EDGE (thumb height), icon only */
+  .suplaunch{position:fixed;right:0;top:64%;z-index:70;transform:translateY(-50%);cursor:pointer;border:none;
+    width:34px;height:54px;border-radius:13px 0 0 13px;background:#26262C;display:grid;place-items:center;
+    box-shadow:-5px 6px 16px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05);opacity:.72;transition:opacity .12s,width .12s}
+  .suplaunch:hover{opacity:1;width:38px}
+  .suplaunch:active{opacity:1}
+  .suplaunch svg{width:20px;height:20px;stroke:#9a9aa8}
+  body:has(.overlay.on) .suplaunch,body:has(.csheet.on) .suplaunch,body:has(.supwrap.on) .suplaunch{display:none}
+  .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:flex;flex-direction:column;
+    /* a touch deeper than the raw brand yellow — the neon read too bright in the panel (owner 07-11) */
+    --sup-accent:color-mix(in srgb, var(--accent,#FFCB05) 73%, #14110a);
+    background:#141418;transform:translateX(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);opacity:0;pointer-events:none}
+  .supwrap.on{transform:translateX(0);opacity:1;pointer-events:auto}
+  @media(min-width:720px){ .supwrap{width:420px;border-left:1px solid rgba(255,255,255,.06);box-shadow:-24px 0 60px -20px rgba(0,0,0,.7)} }
+  /* Header dome: fill up into the notch (safe-area) so it feels like real app chrome to the top edge */
+  .sup-hd{flex:0 0 auto;display:flex;align-items:center;gap:11px;padding:calc(14px + env(safe-area-inset-top)) 15px 13px;background:#1A1A20}
+  .sup-hd .hbtn{width:34px;height:34px;border-radius:999px;border:none;background:transparent;color:#c2c2cf;cursor:pointer;display:grid;place-items:center;flex:0 0 auto}
+  .sup-hd .hbtn svg{width:20px;height:20px;stroke:#c2c2cf}
+  /* Close: the approved v2 round dark button */
+  .sup-hd .hclose{width:32px;height:32px;border-radius:50%;background:linear-gradient(180deg,#2F2F36 0%,#26262B 100%);
+    box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#8A8A96}
+  .sup-hd .hclose svg{width:15px;height:15px;stroke:#8A8A96}
+  .sup-hd .htitle{flex:1;min-width:0}
+  .sup-hd .htitle b{display:block;font-size:16px;font-weight:800;letter-spacing:-.2px}
+  .sup-hd .htitle span{display:block;font-size:12.5px;color:#8A8A96;margin-top:1px}
+  .sup-hd .hmark{width:30px;height:30px;display:grid;place-items:center;flex:0 0 auto}
+  .sup-hd .hmark img{width:30px;height:30px;object-fit:contain}
+  /* FAQ accordion */
+  .sup-faq{display:flex;flex-direction:column;padding-bottom:26px}
+  #sup_convos{padding-bottom:8px}
+  /* Messages tab: a pinned "start a new chat" pill at the bottom of the window */
+  .sup-newchat{position:sticky;bottom:0;margin-top:auto;padding:12px 16px calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(180deg,rgba(20,20,24,0),#141418 40%)}
+  .sup-newchat button{width:100%;border:none;cursor:pointer;border-radius:999px;padding:14px 18px;font:800 14.5px Inter;
+    background:var(--sup-accent);color:#1f1900;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 8px 22px rgba(0,0,0,.4)}
+  .sup-newchat button svg{width:18px;height:18px;stroke:#1f1900}
+  .faq-item{margin:10px 16px 0;background:linear-gradient(180deg,#22222A,#1c1c22);border-radius:14px;box-shadow:0 4px 12px rgba(0,0,0,.25);overflow:hidden}
+  .faq-q{width:100%;border:none;background:transparent;cursor:pointer;color:#EAEAF0;font:600 14.5px Inter;text-align:left;
+    padding:14px;display:flex;align-items:center;gap:10px;line-height:1.35}
+  .faq-q .fqn{flex:0 0 auto;color:var(--sup-accent);font-weight:800}
+  .faq-q .fchev{margin-left:auto;flex:0 0 auto;stroke:#6B6B7B;transition:transform .18s}
+  .faq-item.open .faq-q .fchev{transform:rotate(90deg)}
+  .faq-a{display:none;padding:0 14px 14px;color:#c2c2cf;font-size:14px;line-height:1.55}
+  .faq-item.open .faq-a{display:block}
+  .faq-a a.more{display:inline-block;margin-top:8px;color:var(--sup-accent);font-weight:700;font-size:13px;text-decoration:none}
+  .sup-body{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column}
+  .sup-view{display:none;flex-direction:column;flex:1;min-height:0}
+  .sup-view.on{display:flex}
+  /* Home */
+  .sup-hero{padding:24px 20px 20px;background:linear-gradient(160deg,#22222A,#16161B)}
+  .sup-hero h2{margin:0;font-size:24px;font-weight:800;letter-spacing:-.5px;line-height:1.2}
+  .sup-hero p{margin:8px 0 0;color:#9a9aa8;font-size:14.5px}
+  .sup-banner{margin:14px 20px 0;padding:12px 14px;border-radius:12px;background:#2a2415;color:#f5d488;font-size:13.5px;line-height:1.45;display:none}
+  .sup-banner.on{display:block}
+  .sup-card{margin:16px 16px 0;background:linear-gradient(180deg,#22222A,#1c1c22);border-radius:16px;padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.05)}
+  .sup-ask{width:100%;margin-top:2px;border:none;cursor:pointer;border-radius:12px;padding:15px 16px;font:800 15px Inter;
+    background:var(--sup-accent);color:#1f1900;display:flex;align-items:center;justify-content:space-between;box-shadow:0 6px 18px color-mix(in srgb,var(--sup-accent) 24%,transparent)}
+  .sup-ask svg{width:20px;height:20px;stroke:#1f1900}
+  .sup-recent{margin:16px 16px 0;font-size:12.5px;color:#8A8A96;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+  /* Rows (conversations, articles, topics) */
+  .sup-row{display:flex;align-items:center;gap:12px;margin:10px 16px 0;padding:14px;border-radius:14px;cursor:pointer;
+    background:linear-gradient(180deg,#22222A,#1c1c22);box-shadow:0 4px 12px rgba(0,0,0,.25);color:#EAEAF0;text-align:left;border:none;width:calc(100% - 32px);font:inherit}
+  .sup-row:active{transform:translateY(1px)}
+  .sup-row .rmain{flex:1;min-width:0}
+  .sup-row .rtitle{font-size:14.5px;font-weight:600;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .sup-row .rsub{font-size:11px;color:#77777f;margin-top:3px;display:flex;align-items:center;gap:6px}
+  .sup-row .rchip{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--sup-accent);background:color-mix(in srgb,var(--sup-accent) 13%,transparent);padding:2px 7px;border-radius:999px}
+  .sup-row .rdate{font-size:11px;color:#77777f}
+  .sup-row .rarrow{color:#6B6B7B;flex:0 0 auto}
+  .sup-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#8A8A96;text-align:center;padding:40px 30px}
+  .sup-empty svg{width:34px;height:34px;stroke:#4a4a54}
+  .sup-empty b{color:#c2c2cf;font-size:15px}
+  /* Search box */
+  .sup-search{margin:14px 16px 0;position:relative}
+  .sup-search input{width:100%;background:#1B1B20;color:#EAEAF0;border:none;border-radius:12px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:13px 14px 13px 40px;font:500 16px Inter;outline:none}
+  .sup-search svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:#6B6B7B}
+  /* Chat */
+  .supmsgs{flex:1 1 auto;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:16px;-webkit-overflow-scrolling:touch}
+  .supm{max-width:88%;padding:11px 14px;border-radius:16px;font-size:15px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+  .supm.me{align-self:flex-end;background:#fff;color:#111;border-bottom-right-radius:5px}
+  .supm.bot{align-self:flex-start;background:#26262C;color:#EAEAF0;border-bottom-left-radius:5px}
+  .supm.att{align-self:flex-start;font-size:12px;color:#8A8A96;padding:2px 4px 8px;margin-top:-4px}
   .supm.dots span{display:inline-block;width:7px;height:7px;border-radius:50%;background:#8A8A98;margin-right:4px;animation:loaddot 1.25s ease-in-out infinite}
   .supm.dots span:nth-child(2){animation-delay:.18s}.supm.dots span:nth-child(3){animation-delay:.36s}
-  .suprow{display:flex;gap:10px;align-items:flex-end;flex:0 0 auto;margin-top:10px}
-  .supin{flex:1;min-width:0;resize:none;background:#1B1B20;color:#EAEAF0;border:none;border-radius:16px;
-    box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:13px 15px;font:500 16px Inter;line-height:1.4;
-    min-height:50px;max-height:120px;outline:none}
-  .supin::placeholder{color:#6B6B7B;font-style:italic}
-  .supsend{flex:0 0 auto;width:50px;height:50px;border-radius:999px;border:none;cursor:pointer;background:var(--accent,#FFCB05);
-    display:grid;place-items:center;box-shadow:0 6px 18px color-mix(in srgb,var(--accent,#FFCB05) 30%,transparent);transition:transform .08s}
+  .sup-foot{flex:0 0 auto;padding:12px 16px calc(10px + env(safe-area-inset-bottom));background:#1A1A20}
+  .suphelp{display:none;gap:8px;margin:0 0 10px;flex-wrap:wrap}
+  .suphelp.on{display:flex}
+  .suphelp button{border:none;cursor:pointer;border-radius:999px;padding:9px 14px;font-weight:700;font-size:12.5px;background:#26262C;color:#c2c2cf}
+  .suphelp button.ghost{background:transparent;color:#6B6B7B;text-decoration:underline}
+  .suprow{display:flex;gap:10px;align-items:flex-end}
+  .supin{flex:1;min-width:0;resize:none;background:#232329;color:#EAEAF0;border:none;border-radius:16px;padding:13px 15px;font:500 16px Inter;line-height:1.4;min-height:50px;max-height:120px;outline:none}
+  .supin::placeholder{color:#6B6B7B}
+  .supclip{flex:0 0 auto;width:44px;height:44px;border-radius:999px;border:none;cursor:pointer;background:#232329;display:grid;place-items:center}
+  .supclip svg{width:20px;height:20px;stroke:#9a9aa8} .supclip.hide{display:none}
+  .supsend{flex:0 0 auto;width:50px;height:50px;border-radius:999px;border:none;cursor:pointer;background:var(--sup-accent);display:grid;place-items:center;transition:transform .08s}
   .supsend:active{transform:translateY(1px)} .supsend:disabled{opacity:.5}
   .supsend svg{width:22px;height:22px;stroke:#1f1900}
-  .suphelp{display:none;justify-content:center;gap:8px;margin:2px 0 4px;flex:0 0 auto}
-  .suphelp.on{display:flex}
-  .suphelp button{border:none;cursor:pointer;border-radius:999px;padding:9px 15px;font-weight:800;font-size:12.5px;
-    background:#1B1B20;color:#c2c2cf;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+  .sup-priv{text-align:center;font-size:11px;color:#6B6B7B;margin-top:9px}
+  .sup-priv a{color:#8A8A96}
+  /* Topic picker + ticket form */
+  .sup-pad{padding:20px 16px;display:flex;flex-direction:column;gap:0}
+  .sup-pad h2{margin:0 4px 4px;font-size:19px;font-weight:800;letter-spacing:-.3px}
+  .sup-pad .sub{margin:0 4px 12px;color:#9a9aa8;font-size:14px}
+  .sup-attn{margin:8px 4px 0;font-size:12.5px;color:#8A8A96}
+  .sup-shot{margin:10px 4px 0;display:flex;align-items:center;gap:10px;font-size:13px;color:#c2c2cf}
+  .sup-shot img{width:44px;height:44px;object-fit:cover;border-radius:8px}
+  /* Bottom tab bar */
+  .sup-tabs{flex:0 0 auto;display:flex;background:#16161B;border-top:1px solid rgba(255,255,255,.06)}
+  .sup-tabs button{flex:1;border:none;background:transparent;cursor:pointer;padding:9px 0 calc(8px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:3px;color:#6B6B7B;font:700 11px Inter}
+  .sup-tabs button svg{width:22px;height:22px;stroke:#6B6B7B}
+  .sup-tabs button.on{color:var(--sup-accent)} .sup-tabs button.on svg{stroke:var(--sup-accent)}
   /* find-me + radius toolbar */
   .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
   .findbtn{display:inline-flex;align-items:center;gap:6px;background:var(--ptint);border:1px solid var(--pline);color:var(--purple);font-weight:800;font-size:13px;padding:9px 13px;border-radius:11px;cursor:pointer;white-space:nowrap}
@@ -831,9 +913,12 @@ __BRAND_HEAD__
 
   /* ── 2024 redesign: tight mobile-first header, ticker, trust strip, custom marks ── */
   .brandbar{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 auto}
-  /* Zones takes over the page (owner 07-11): drop the product switcher in the upper-left. Brandbar
-     stays as the flex spacer so the credits pill holds the right edge. */
-  body.zoning .vsw{display:none}
+  /* Zones is a full-screen takeover: hide the app header + support bubble WHILE the zone frame is
+     showing. Driven by the frame's own visibility (:has(#zones:not(.hidden))) — NOT a toggled body
+     class — so it auto-restores the instant you leave zones and can never get stuck hiding the
+     homepage header (that was the bug behind the dead My-checks pill). owner 07-11. */
+  body:has(#zones:not(.hidden)) header,
+  body:has(#zones:not(.hidden)) .supbub{display:none}
   .logomark{width:30px;height:30px;flex:0 0 auto;cursor:pointer;display:grid;place-items:center}
   .logomark svg{display:block}
   .iconbtn{flex:0 0 auto;width:38px;height:38px;border-radius:11px;background:var(--sheet);border:1px solid var(--border);display:grid;place-items:center;cursor:pointer;color:#bdbdcb;padding:0}
@@ -1276,6 +1361,10 @@ html[data-skin="v2"] .csheet-call{padding:14px 24px}
 html[data-skin="v2"] #cs_call{justify-content:space-between}
 html[data-skin="v2"] #cs_call .cs-l>svg{width:20px;height:20px}
 html[data-skin="v2"] #cs_call .cs-arrow{display:block;flex:0 0 auto}
+/* Product mark sits just LEFT of the arrow so you can see WHAT you're checking (owner 07-11) */
+html[data-skin="v2"] #cs_call .cs-arrowbox{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+html[data-skin="v2"] #cs_call .cs-ghost{display:grid;place-items:center;width:24px;height:24px;flex:0 0 auto}
+html[data-skin="v2"] #cs_call .cs-ghost svg,html[data-skin="v2"] #cs_call .cs-ghost img{width:24px;height:24px;object-fit:contain}
 html[data-skin="v2"] .csheet-charge{color:#8A8A96;font-size:12.5px;font-weight:600}
 html[data-skin="v2"] .csheet-charge b{color:#CDCDD8}
 html[data-skin="v2"] .cs-key{background:transparent;border:0;box-shadow:none;animation:none;padding:13px 2px}
@@ -1553,15 +1642,18 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zrbody{background:#1B1B20;border-radius:0 0 13px 13px;padding:8px 12px 12px;margin-bottom:2px}
 /* ===== Zones LOCKED FRAME (owner 07-11 comp): full-screen takeover — header pinned top, only the
    middle scrolls, basket bar pinned bottom. Nothing bleeds under the header. ===== */
-body.zoning{overflow:hidden}
-#zones .zframe{position:fixed;inset:0;z-index:40;background:#1D1D22;display:flex;flex-direction:column;font-family:Inter,-apple-system,system-ui,sans-serif}
+/* Frame sits ABOVE the app header + support bubble (z-index 80) so it fully covers them — no sticky
+   body class to hide them (that was getting stuck and breaking the homepage). Overlays are z 4000 so
+   they still open over the frame. height:100dvh = the VISIBLE viewport, so the basket + last store row
+   clear iOS Safari's bottom toolbar (owner 07-11). */
+#zones .zframe{position:fixed;top:0;left:0;right:0;height:100dvh;z-index:80;background:#1D1D22;display:flex;flex-direction:column;font-family:Inter,-apple-system,system-ui,sans-serif}
 #zones .zf-head{flex:none;position:relative;z-index:3;background:linear-gradient(180deg,#26262C 0%,#1E1E23 100%);box-shadow:0 16px 28px -18px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.05);border-bottom:1px solid rgba(0,0,0,.35);padding-top:env(safe-area-inset-top)}
 #zones .zf-hrow{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px 14px}
 #zones .zf-title{position:absolute;left:0;right:0;text-align:center;font:800 20px Inter;letter-spacing:-.3px;color:#fff;pointer-events:none}
 #zones .zf-back{width:40px;height:40px;flex:0 0 auto;border-radius:50%;border:0;background:linear-gradient(180deg,#33333B,#292930);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);color:#fff;font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;position:relative;z-index:1}
 #zones .zf-cred{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;background:linear-gradient(180deg,#33333B,#292930);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);white-space:nowrap;font:900 14px Inter;color:#4ADE80;position:relative;z-index:1}
 #zones .zf-sub{flex:none;padding:14px 16px 6px;background:#1D1D22}
-#zones .zf-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:16px}
+#zones .zf-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:16px;display:flex;flex-direction:column}
 #zones .zf-scroll.tight{padding:2px 16px 14px}
 #zones .zf-scroll.basketpad{padding-bottom:220px}
 #zones .zf-foot{flex:none}
@@ -1569,10 +1661,14 @@ body.zoning{overflow:hidden}
 #zones .zbasket{position:absolute;left:0;right:0;bottom:0;z-index:5;background:linear-gradient(180deg,#2A2A31,#212127);box-shadow:0 -18px 34px -12px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.08);border-radius:26px 26px 0 0;padding:15px 18px calc(20px + env(safe-area-inset-bottom));transform:translateY(112%);transition:transform .28s cubic-bezier(.2,.8,.3,1)}
 #zones .zbasket.up{transform:translateY(0)}
 #zones .zbkhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;font:900 14px Inter;color:#fff;white-space:nowrap}
-#zones .zchips{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;-webkit-overflow-scrolling:touch}
+/* basket = just the LOGOS (owner 07-11), wrapping so every pick shows; small X badge to drop one */
+#zones .zchips{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;max-height:150px;overflow-y:auto}
 #zones .zchips::-webkit-scrollbar{display:none}
-#zones .zchip{flex:none;display:flex;align-items:center;gap:8px;padding:7px 10px 7px 7px;border-radius:999px;background:rgba(255,255,255,.05);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);white-space:nowrap}
-#zones .zchip .cx{border:0;background:none;padding:0;cursor:pointer;display:inline-flex;color:#8A8A96}
+#zones .zchip{flex:none;position:relative;width:46px;height:46px;border-radius:12px;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:visible}
+#zones .zchip:not(:has(img)){background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5)}
+#zones .zchip img{max-width:34px;max-height:34px;object-fit:contain}
+#zones .zchip.widelogo img{max-width:40px;max-height:30px}
+#zones .zchip .cx{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#3A3A44;border:2px solid #23232B;color:#E5E5EC;display:grid;place-items:center;cursor:pointer;padding:0}
 #zones .zbkrow{display:flex;gap:12px}
 #zones .zbkrow input{flex:1;min-width:0;height:52px;background:#1B1B20;border:none;outline:none;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5);padding:0 18px;color:#fff;font:500 16px Inter}
 #zones .zbksave{flex:none;padding:2.5px;border-radius:14px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 12px 26px -8px rgba(74,222,128,.5);cursor:pointer;border:0}
@@ -1587,7 +1683,13 @@ body.zoning{overflow:hidden}
 #zones .zc-pill.in{background:rgba(74,222,128,.14);color:#4ADE80} #zones .zc-pill.none{background:rgba(255,255,255,.05);color:#8A8A96}
 #zones .zc-when{font:600 12.5px Inter;color:#7C7C88;white-space:nowrap}
 #zones .zc-faces{display:flex;gap:9px;margin:18px 0 20px;flex-wrap:wrap}
-#zones .zc-face{width:44px;height:44px;border-radius:12px;flex:none;background:#1F1F25;box-shadow:0 3px 7px -3px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;overflow:hidden}
+/* zone-card logo tiles: IDENTICAL to the homepage store logo (#1F1F25 tile, img max 34, gradient
+   fallback for no-logo, wide logos wider) — owner 07-11 "make them exactly like the homepage". */
+#zones .zc-face{width:44px;height:44px;border-radius:12px;flex:none;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:hidden}
+#zones .zc-face:not(:has(img)){background:linear-gradient(145deg,#34343D,#23232B);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 -2px 3px rgba(0,0,0,.4),0 3px 7px -1px rgba(0,0,0,.5)}
+#zones .zc-face img{max-width:34px;max-height:34px;object-fit:contain}
+#zones .zc-face.widelogo img{max-width:40px;max-height:30px}
+#zones .zfooter{margin-top:auto}
 #zones .zc-more{width:44px;height:44px;border-radius:12px;flex:none;background:#23232A;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;color:#8A8A96;font:800 13px Inter}
 #zones .zc-go{align-self:flex-end;padding:2.5px;border-radius:999px;background:linear-gradient(120deg,#FFE066 0%,#FFCB05 55%,#8A6D00 100%);box-shadow:0 12px 26px -10px rgba(255,203,5,.45);cursor:pointer;border:0}
 #zones .zc-go>span{display:flex;background:#20202A;border-radius:999px;padding:13px 20px;align-items:center;gap:9px;white-space:nowrap;font:800 12.5px Inter;letter-spacing:.12em;text-transform:uppercase;color:#FFCB05}
@@ -1968,7 +2070,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <div style="min-width:0;flex:1"><div class="csheet-nm" id="cs_nm"></div><div class="csheet-addr" id="cs_addr"></div></div>
   </div>
   <div class="csheet-prod" id="cs_prod"></div>
-  <button class="csheet-call" id="cs_call" onclick="startCheck()"><span class="cs-l"><svg width="30" height="30" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span data-i18n="cs.cta">Check this store</span></span><svg class="cs-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+  <button class="csheet-call" id="cs_call" onclick="startCheck()"><span class="cs-l"><svg width="30" height="30" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span data-i18n="cs.cta">Check this store</span></span><span class="cs-arrowbox"><span class="cs-ghost" id="cs_ghost" aria-hidden="true"></span><svg class="cs-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span></button>
   <div class="csheet-reach" id="cs_reach" style="display:none;margin-top:9px;text-align:center;font-size:12.5px;font-weight:600;color:#8A8A96"></div>
 </div>
 
@@ -1977,8 +2079,8 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   <nav class="foot-links">
     <a onclick="openSuccess()" data-i18n="foot.success">Scores</a>
     <a href="/p/about" onclick="openPage('about');return false" data-i18n="foot.about">About</a>
-    <a href="/p/faq" onclick="openPage('faq');return false" data-i18n="foot.faq">FAQ</a>
-    <a href="/p/contact" onclick="openPage('contact');return false" data-i18n="foot.contact">Contact</a>
+    <a href="https://checkitforme.readme.io" onclick="openGuide();return false" data-i18n="foot.guide">Guide</a>
+    <a href="#" onclick="openSupport();return false" data-i18n="foot.help">Help</a>
     <a href="/p/terms" onclick="openPage('terms');return false" data-i18n="foot.terms">Terms</a>
     <a href="/p/privacy" onclick="openPage('privacy');return false" data-i18n="foot.privacy">Privacy</a>
   </nav>
@@ -2367,43 +2469,101 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   </div>
 </div>
 
-<button class="supbub" id="supBub" onclick="openSupport()" aria-label="Support chat">
-  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+<button class="suplaunch" id="supTab" onclick="openSupport()" aria-label="Chat with us">
+  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
 </button>
-<div class="csheet-bd" id="supSheetBd" onclick="closeSupport()"></div>
-<div class="supsheet" id="supSheet" aria-hidden="true">
-  <div class="supsheet-handle"></div>
-  <div id="sup_chat" style="display:flex;flex-direction:column;min-height:0;flex:1">
-    <h3 data-i18n="sup.title">Ask us anything</h3>
-    <div class="supmsgs" id="sup_msgs"></div>
-    <div class="suphelp" id="sup_help">
-      <button onclick="supHelped(true)" data-i18n="sup.yes">That answered it</button>
-      <button onclick="openSupportForm()" data-i18n="sup.no">I need a person</button>
+<div class="supwrap" id="supWrap" aria-hidden="true">
+  <div class="sup-hd" id="sup_hd">
+    <button class="hbtn" id="sup_back" onclick="supBack()" style="display:none" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <div class="hmark"><img src="/logos/brand/check-brandmark-1024.png" alt="Check"></div>
+    <div class="htitle"><b id="sup_htitle">Home</b><span id="sup_hsub" data-i18n="sup.hd.sub">Check AI answers in seconds</span></div>
+    <button class="hbtn hclose" onclick="closeSupport()" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div class="sup-body">
+    <!-- HOME -->
+    <div class="sup-view on" id="supv_home">
+      <div class="sup-hero">
+        <h2 data-i18n="sup.hero">How can we help?</h2>
+        <p data-i18n="sup.hero.sub">Read a quick answer, or ask about checks, stores, and plans.</p>
+      </div>
+      <div class="sup-banner" id="sup_banner"></div>
+      <div class="sup-card">
+        <button class="sup-ask" onclick="supStartNew()"><span data-i18n="sup.ask">Ask a question</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+      </div>
+      <div class="sup-recent" id="sup_recent_lbl" style="display:none" data-i18n="sup.recent">Recent</div>
+      <div id="sup_home_recent"></div>
+      <div style="height:16px"></div>
     </div>
-    <div class="suprow">
-      <textarea id="sup_in" class="supin" rows="1" data-i18n-ph="ph.support" placeholder="Type your question" oninput="supGrow(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendSupport();}"></textarea>
-      <button class="supsend" id="sup_send" onclick="sendSupport()" aria-label="Send">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
-      </button>
+    <!-- MESSAGES (history) -->
+    <div class="sup-view" id="supv_msgs">
+      <div id="sup_convos"></div>
+      <div class="sup-newchat">
+        <button onclick="supStartNew()"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="sup.newchat">Ask a new question</span></button>
+      </div>
+    </div>
+    <!-- FAQ (Copper's top questions, read without chatting) -->
+    <div class="sup-view" id="supv_help">
+      <div class="sup-search"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="sup_q" data-i18n-ph="sup.searchph" placeholder="Search the FAQ" oninput="supFaqFilter(this.value)"></div>
+      <div class="sup-faq" id="sup_faq_list"></div>
+    </div>
+    <!-- TOPIC PICKER -->
+    <div class="sup-view" id="supv_topic">
+      <div class="sup-pad">
+        <h2 data-i18n="sup.topic.title">What's it about?</h2>
+        <div class="sub" data-i18n="sup.topic.sub">Pick one so we can help faster.</div>
+        <div id="sup_topics"></div>
+      </div>
+    </div>
+    <!-- CHAT -->
+    <div class="sup-view" id="supv_chat">
+      <div class="supmsgs" id="sup_msgs"></div>
+      <div class="sup-foot">
+        <div class="suphelp" id="sup_help">
+          <button onclick="supHelped(true)" data-i18n="sup.yes">That answered it</button>
+          <button id="sup_human" class="ghost" onclick="openSupportForm()" style="display:none" data-i18n="sup.human">Talk to a human</button>
+        </div>
+        <div class="suprow">
+          <button class="supclip hide" id="sup_clip" onclick="supPickShot()" aria-label="Attach screenshot"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+          <input type="file" id="sup_file" accept="image/*" style="display:none" onchange="supShotChosen(this)">
+          <textarea id="sup_in" class="supin" rows="1" data-i18n-ph="ph.support" placeholder="Type your question" oninput="supGrow(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendSupport();}"></textarea>
+          <button class="supsend" id="sup_send" onclick="sendSupport()" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg></button>
+        </div>
+        <div class="sup-priv" data-i18n="sup.priv">Grounded in our help docs. Not legal or financial advice.</div>
+      </div>
+    </div>
+    <!-- TICKET FORM (buried human path) -->
+    <div class="sup-view" id="supv_form">
+      <div class="sup-pad">
+        <h2 data-i18n="sup.form.title">Leave it with us</h2>
+        <div class="sub" data-i18n="sup.form.sub">Tell us where to reach you. A person will email you back.</div>
+        <label class="klbl" data-i18n="sup.form.name">Your name</label>
+        <input id="supf_name" class="kin" autocomplete="name" data-i18n-ph="ph.supname" placeholder="First name works">
+        <label class="klbl" data-i18n="sup.form.email">Email</label>
+        <input id="supf_email" class="kin" type="email" inputmode="email" autocomplete="email" data-i18n-ph="ph.cellmail" placeholder="your email">
+        <label class="klbl" data-i18n="sup.form.msg">What's going on</label>
+        <input id="supf_msg" class="kin" data-i18n-ph="ph.supmsg" placeholder="The short version is fine">
+        <div class="sup-shot" id="supf_shot" style="display:none"></div>
+        <div id="supf_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
+        <button class="cta" id="supf_btn" onclick="submitSupportTicket()" style="margin-top:10px;width:100%" data-i18n="sup.form.send">Send it over</button>
+        <button onclick="supBack()" style="margin-top:10px;width:100%;background:none;border:none;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer" data-i18n="sup.form.back">Back to the chat</button>
+      </div>
+    </div>
+    <!-- DONE -->
+    <div class="sup-view" id="supv_done">
+      <div class="sup-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+        <b data-i18n="sup.done.title">Got it. We're on it.</b>
+        <div data-i18n="sup.done.body">A person will email you back soon.</div>
+        <button class="cta" onclick="supGo('home')" style="margin-top:10px" data-i18n="sup.done.cta">Done</button>
+      </div>
     </div>
   </div>
-  <div id="sup_form" style="display:none;text-align:left">
-    <h3 data-i18n="sup.form.title">Leave it with us</h3>
-    <div class="meta" style="margin:-6px 2px 14px;text-align:center" data-i18n="sup.form.sub">Tell us where to reach you. A person will email you back.</div>
-    <label class="klbl" data-i18n="sup.form.name">Your name</label>
-    <input id="supf_name" class="kin" autocomplete="name" data-i18n-ph="ph.supname" placeholder="First name works">
-    <label class="klbl" data-i18n="sup.form.email">Email</label>
-    <input id="supf_email" class="kin" type="email" inputmode="email" autocomplete="email" data-i18n-ph="ph.cellmail" placeholder="your email">
-    <label class="klbl" data-i18n="sup.form.msg">What's going on</label>
-    <input id="supf_msg" class="kin" data-i18n-ph="ph.supmsg" placeholder="The short version is fine">
-    <div id="supf_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
-    <button class="cta" id="supf_btn" onclick="submitSupportTicket()" style="margin-top:8px;width:100%" data-i18n="sup.form.send">Send it over</button>
-    <button onclick="backToSupportChat()" style="margin-top:10px;width:100%;background:none;border:none;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer" data-i18n="sup.form.back">Back to the chat</button>
-  </div>
-  <div id="sup_done" style="display:none;text-align:center;padding:6px 2px 2px">
-    <h3 data-i18n="sup.done.title">Got it. We're on it.</h3>
-    <div class="meta" style="line-height:1.5" data-i18n="sup.done.body">A person will email you back soon.</div>
-    <button class="cta" onclick="closeSupport()" style="margin-top:16px;width:100%" data-i18n="sup.done.cta">Done</button>
+  <div class="sup-tabs" id="sup_tabs">
+    <button id="supt_home" class="on" onclick="supGo('home')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span data-i18n="sup.tab.home">Home</span></button>
+    <button id="supt_msgs" onclick="supGo('msgs')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg><span data-i18n="sup.tab.msgs">Messages</span></button>
+    <button id="supt_help" onclick="supGo('help')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg><span data-i18n="sup.tab.faq">FAQ</span></button>
   </div>
 </div>
 
@@ -2491,7 +2651,7 @@ const I18N={ es:{
   'live.convo':'Conversación','live.steps':'Progreso de la llamada','cs.call':'Llamada','lbl.assoc':'Asociado','lbl.menu':'Menú','lbl.agent':'Check AI',
   'up.restock':'No te pierdas el reabastecimiento','up.restock.sub':'Te avisamos por mensaje en cuanto vuelva.','up.checkback':'Vuelve pronto','up.checkback.sub':'Reabastecen seguido. Vuelve en un día o dos.','up.watch':'Avísame cuando vuelva','up.watch.sub':'Una alerta en cuanto una llamada lo confirme.','up.sched':'Auto-verificar en días de envío','up.sched.sub':'Llamamos por ti en días de reabastecimiento.',
   'hist.title':'Tus verificaciones','hist.new':'+ Nueva','hist.empty':'Aún no hay verificaciones. Haz una y aparecerá aquí.',
-  'foot.cta':'¿No ves tu tienda? Agrégala →','foot.about':'Acerca de','foot.contact':'Contacto','foot.faq':'Preguntas','foot.terms':'Términos','foot.privacy':'Privacidad','foot.legal':'Legal','foot.success':'Logros',
+  'foot.cta':'¿No ves tu tienda? Agrégala →','foot.about':'Acerca de','foot.help':'Ayuda','foot.guide':'Guía','foot.terms':'Términos','foot.privacy':'Privacidad','foot.legal':'Legal','foot.success':'Logros',
   'kioskhint':'<span style="display:flex;align-items:center;gap:7px;font-weight:800;white-space:nowrap"><span id="khspark"></span> ¿En un kiosco? ¡Verificación gratis!</span><a onclick="openReceipt()" style="display:inline-block;margin-top:5px;color:var(--purple);font-weight:800;cursor:pointer">Usa nuestro correo al pagar o reenvía tu recibo →</a>',
   'v.in':'¡En stock!','v.out':'No está en stock','v.unclear':'Nos dieron un “quizás”','v.soldout':'Agotado','v.noanswer':'Nadie contestó','v.hold':'En espera','v.soon':'¡Reabastecimiento en camino!','note.soon':'Llega un envío <b>{d}</b>. Sé el primero cuando caiga.',
   'search.ph':'Busca por tienda o ciudad…',
@@ -2666,11 +2826,23 @@ const I18N={ es:{
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
   'zones.confirm.title2':'¿Verificar {n} {s} abiertas?','zones.storeword':'tienda','zones.storesword':'tiendas','zones.checkallN':'Verificar las {n}','zones.removeall':'Quitar todo','zones.isclosed':'está cerrada','zones.areclosed':'están cerradas','zones.stillcall':'Aún podemos llamar a las {n} abiertas.','zones.and':'y','zones.andmore':'y {n} más','zones.astore':'Una tienda',
-  'sup.title':'Pregúntanos lo que sea',
+  'sup.hd.sub':'Check AI responde en segundos','sup.chat.sub':'El equipo también puede ayudar',
+  'sup.hero':'¿Cómo te ayudamos?','sup.hero.sub':'Lee una respuesta rápida, o pregunta sobre checks, tiendas y planes.',
+  'sup.ask':'Hacer una pregunta','sup.newchat':'Haz una nueva pregunta','sup.recent':'Reciente',
+  'sup.tab.home':'Inicio','sup.tab.msgs':'Mensajes','sup.tab.faq':'FAQ','sup.faq.sub':'Respuestas rápidas, sin esperar',
+  'sup.searchph':'Busca en el FAQ','sup.topic.title':'¿De qué se trata?','sup.topic.sub':'Elige uno para ayudarte más rápido.',
+  'sup.priv':'Basado en nuestra ayuda. No es asesoría legal ni financiera.','sup.attrib':'Check AI · ahora',
+  'sup.today':'Hoy','sup.yesterday':'Ayer','sup.untitled':'Chat',
+  'sup.nomsg':'Aún no hay mensajes','sup.nomsg.sub':'Tus chats anteriores aparecen aquí.',
+  'sup.faq.none':'Cargando el FAQ','sup.faq.none2':'Vuelve en un momento.','sup.readmore':'Leer la respuesta completa →',
+  'sup.browseall':'Ver todos los artículos de ayuda',
+  'sup.greet.bug':'Lamento que algo falló. Cuéntame qué pasó y agrega una captura si puedes.',
+  'sup.shotok':'Captura adjunta','sup.uploading':'Subiendo…','sup.uploadfail':'No se pudo adjuntar la imagen.',
   'sup.hello':'¡Hola! Pregúntame lo que sea sobre checks, tiendas o planes.',
-  'ph.support':'Escribe tu pregunta','sup.send':'Enviar',
-  'sup.yes':'Eso lo resolvió','sup.no':'Necesito una persona','sup.thanks':'Gracias por avisarnos.',
-  'sup.stuck':'Puedo pasar esto a una persona. Toca abajo y nos encargamos.',
+  'ph.support':'Escribe tu pregunta',
+  'sup.yes':'Eso lo resolvió','sup.human':'Hablar con una persona','sup.thanks':'Gracias por avisarnos.',
+  'sup.tryagain':'Quizá me falta algo. ¿Me das un poco más de detalle?',
+  'sup.stuck':'No pude resolver esto. ¿Quieres que una persona lo revise?',
   'sup.form.title':'Déjalo con nosotros','sup.form.sub':'Dinos dónde contactarte. Una persona te responderá por correo.',
   'sup.form.name':'Tu nombre','ph.supname':'Con tu nombre basta','sup.form.email':'Correo',
   'sup.form.msg':'Qué está pasando','ph.supmsg':'La versión corta está bien',
@@ -2868,67 +3040,191 @@ function openStoreReq(){ ['sr_name','sr_city','sr_note','sr_contact'].forEach(id
   track('storereq_open'); $('storeReqOverlay').classList.add('on'); sheetPush('storereq'); setTimeout(()=>{try{$('sr_name').focus();}catch(e){}},80); }
 function closeStoreReq(){ $('storeReqOverlay').classList.remove('on'); acctReturn(); }
 
-// ---- Support chat (the ladder lives server-side; this is just the conversation UI) ----
-let SUP_SID=sessionStorage.getItem('cifm_support_sid')||''; let SUP_LASTQ='';
+// ---- Support Messenger (Intercom-style: right tab → full-screen panel, bottom tabs) ----
+// The ladder + RAG live server-side; this is the whole client surface. Answers are grounded in the
+// book (readme.com); the human path is buried and only surfaces after the AI can't resolve.
+const SUP_BOOK='https://checkitforme.readme.io';
+let SUP_SID=''; let SUP_CAT='other'; let SUP_SHOT=null; let SUP_VIEW='home'; let SUP_STARTED=false; let SUP_ESC=0;
+const SUP_CATS=[
+  ['how_checks_work','How checks work','Cómo funcionan los checks'],
+  ['technical','A technical question','Una pregunta técnica'],
+  ['bug','Report a bug','Reportar un error'],
+  ['billing','Billing','Facturación'],
+  ['partnerships','Partnerships','Alianzas'],
+  ['other','Something else','Otra cosa'],
+];
+const supCatLabel=(k)=>{ const r=SUP_CATS.find(x=>x[0]===k); return r?(LANG==='es'?r[2]:r[1]):k; };
+// Guest chats aren't tied to an account, so remember their session ids locally for the Messages tab.
+function supGuestLog(){ try{ return JSON.parse(localStorage.getItem('cifm_sup_guest')||'[]'); }catch(e){ return []; } }
+function supGuestAdd(sid,title,cat){ if(!sid) return; let a=supGuestLog().filter(x=>x.sessionId!==sid);
+  a.unshift({sessionId:sid,title:title||'',category:cat||'other',updatedAt:Math.floor(Date.now()/1000)}); localStorage.setItem('cifm_sup_guest',JSON.stringify(a.slice(0,30))); }
 function supGrow(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
-function openSupport(){ $('sup_form').style.display='none'; $('sup_done').style.display='none'; $('sup_chat').style.display='flex';
-  if(!$('sup_msgs').children.length) supBubbleMsg('bot', t('sup.hello',"Hey! Ask me anything about how checks, stores, or plans work."));
-  const el=$('supSheet'); el.style.transition=''; el.style.transform=''; el.classList.add('on'); el.setAttribute('aria-hidden','false');
-  $('supSheetBd').classList.add('on'); setTimeout(()=>{try{$('sup_in').focus();}catch(e){}},260); }
-function closeSupport(){ const el=$('supSheet'); el.style.transition=''; el.style.transform=''; el.classList.remove('on'); el.setAttribute('aria-hidden','true'); $('supSheetBd').classList.remove('on'); }
-function supBubbleMsg(kind,text){ const d=document.createElement('div'); d.className='supm '+(kind==='me'?'me':'bot');
-  d.textContent=text; $('sup_msgs').appendChild(d); $('sup_msgs').scrollTop=1e6; return d; }
+function supDate(ts){ const d=new Date(ts*1000), day=864e5;
+  const midnight=new Date(); midnight.setHours(0,0,0,0);
+  if(d.getTime()>=midnight.getTime()) return t('sup.today','Today');
+  const loc=LANG==='es'?'es':'en';
+  const tm=d.toLocaleTimeString(loc,{hour:'numeric',minute:'2-digit'});
+  if(d.getTime()>=midnight.getTime()-day) return t('sup.yesterday','Yesterday')+', '+tm;
+  return d.toLocaleDateString(loc,{month:'short',day:'numeric'})+', '+tm; }
+
+function openGuide(){ try{track('guide_open');}catch(_){} window.open('https://checkitforme.readme.io','_blank','noopener'); }
+function openSupport(){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supGo('home'); }
+function closeSupport(){ const el=$('supWrap'); el.classList.remove('on'); el.setAttribute('aria-hidden','true'); }
+
+// Low-level view switch + header/tabbar config.
+function supShow(view,opts){ opts=opts||{}; SUP_VIEW=view;
+  ['home','msgs','help','topic','chat','form','done'].forEach(v=>$('supv_'+v).classList.toggle('on',v===view));
+  $('sup_back').style.display=opts.back?'grid':'none';
+  $('sup_htitle').textContent=opts.title||'Help';
+  $('sup_hsub').textContent=opts.sub||'';
+  $('sup_tabs').style.display=opts.tabs===false?'none':'flex';
+  ['home','msgs','help'].forEach(v=>$('supt_'+v).classList.toggle('on',v===view));
+}
+// Bottom-tab navigation.
+function supGo(tab){
+  if(tab==='home'){ supShow('home',{title:t('sup.tab.home','Home'),sub:t('sup.hd.sub','Check AI answers in seconds')}); supRenderHome(); }
+  else if(tab==='msgs'){ supShow('msgs',{title:t('sup.tab.msgs','Messages')}); supRenderConvos(); }
+  else if(tab==='help'){ supShow('help',{title:t('sup.tab.faq','FAQ'),sub:t('sup.faq.sub','Quick answers, no waiting')}); supRenderFaq(); }
+  else if(tab==='chat'){ supShow('chat',{title:'Check AI',sub:t('sup.chat.sub','The team can also help'),back:true,tabs:false}); }
+}
+// Header back arrow: chat/topic/form → home; done handled by its own button.
+function supBack(){ if(SUP_VIEW==='form'){ supShow('chat',{title:'Check AI',sub:t('sup.chat.sub','The team can also help'),back:true,tabs:false}); return; } supGo('home'); }
+
+// HOME
+async function supRenderHome(){
+  const b=await api('/pub/support/banner'); const txt=b&&(LANG==='es'?b.es:b.en);
+  const ban=$('sup_banner'); if(txt){ ban.textContent='⚠️ '+txt; ban.classList.add('on'); } else ban.classList.remove('on');
+  const convos=await supLoadConvos();
+  const lbl=$('sup_recent_lbl'), box=$('sup_home_recent'); box.innerHTML='';
+  if(convos.length){ lbl.style.display='block';
+    convos.slice(0,2).forEach(cv=>box.appendChild(supConvoRow(cv))); } else lbl.style.display='none';
+}
+// MESSAGES (history)
+async function supRenderConvos(){
+  const box=$('sup_convos'); box.innerHTML='';
+  const convos=await supLoadConvos();
+  if(!convos.length){ box.innerHTML=`<div class="sup-empty"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><b>${esc(t('sup.nomsg','No messages yet'))}</b><div>${esc(t('sup.nomsg.sub','Your past chats show up here.'))}</div></div>`; return; }
+  convos.forEach(cv=>box.appendChild(supConvoRow(cv)));
+}
+function supConvoRow(cv){ const el=document.createElement('button'); el.className='sup-row'; el.onclick=()=>supOpenConversation(cv.sessionId);
+  el.innerHTML=`<div class="rmain"><div class="rtitle">${esc(cv.title||t('sup.untitled','Chat'))}</div>
+    <div class="rsub"><span class="rchip">${esc(supCatLabel(cv.category))}</span> · ${esc(supDate(cv.updatedAt||cv.createdAt))}</div></div>
+    <svg class="rarrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+  return el; }
+async function supLoadConvos(){
+  let out=[]; const token=localStorage.getItem('cifm_token');
+  if(token){ const r=await appApi('/app/support/conversations'); if(r&&r.conversations) out=r.conversations; }
+  const seen=new Set(out.map(x=>x.sessionId));
+  supGuestLog().forEach(g=>{ if(!seen.has(g.sessionId)) out.push(g); });
+  return out.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+}
+// FAQ — Copper's top questions, read inline (accordion). No chat, no model spend. Client-side filter.
+let SUP_FAQ=null;
+async function supRenderFaq(){
+  if(!SUP_FAQ){ const r=await api('/pub/support/faq'); SUP_FAQ=(r&&r.items)||[]; }
+  supFaqDraw(SUP_FAQ);
+}
+function supFaqDraw(items){ const box=$('sup_faq_list'); box.innerHTML='';
+  if(!items.length){ box.innerHTML=`<div class="sup-empty"><b>${esc(t('sup.faq.none','FAQ is loading'))}</b><div>${esc(t('sup.faq.none2','Check back in a moment.'))}</div></div>`; return; }
+  items.forEach((it,i)=>{ const item=document.createElement('div'); item.className='faq-item';
+    const more=it.url?`<a class="more" href="${esc(it.url)}" target="_blank" rel="noopener">${esc(t('sup.readmore','Read the full answer →'))}</a>`:'';
+    item.innerHTML=`<button class="faq-q"><span class="fqn">${i+1}.</span><span>${esc(it.q)}</span>
+      <svg class="fchev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+      <div class="faq-a">${esc(it.a)}${more}</div>`;
+    item.querySelector('.faq-q').onclick=()=>item.classList.toggle('open');
+    box.appendChild(item); });
+  const a=document.createElement('a'); a.href=SUP_BOOK+'/docs/common-questions'; a.target='_blank'; a.rel='noopener';
+  a.className='sup-row'; a.style.color='var(--accent,#FFCB05)'; a.style.marginTop='14px';
+  a.innerHTML=`<div class="rmain"><div class="rtitle">${esc(t('sup.browseall','Browse all help articles'))}</div></div>`;
+  box.appendChild(a);
+}
+function supFaqFilter(q){ q=(q||'').trim().toLowerCase(); if(!SUP_FAQ) return;
+  if(!q){ supFaqDraw(SUP_FAQ); return; }
+  supFaqDraw(SUP_FAQ.filter(it=>(it.q+' '+it.a).toLowerCase().includes(q)));
+}
+
+// TOPIC PICKER → new chat
+function supStartNew(){ supShow('topic',{title:t('sup.tab.home','Home'),back:true,tabs:false});
+  const box=$('sup_topics'); box.innerHTML='';
+  SUP_CATS.forEach(([k])=>{ const el=document.createElement('button'); el.className='sup-row'; el.onclick=()=>supPickTopic(k);
+    el.innerHTML=`<div class="rmain"><div class="rtitle">${esc(supCatLabel(k))}</div></div><svg class="rarrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+    box.appendChild(el); });
+}
+function supPickTopic(cat){ SUP_CAT=cat; supFreshChat(); supGo('chat');
+  $('sup_clip').classList.toggle('hide',cat!=='bug');
+  const greet=cat==='bug'?t('sup.greet.bug',"Sorry that broke. Tell me what happened and add a screenshot if you can.")
+    :t('sup.hello',"Hey! Ask me anything about how checks, stores, or plans work.");
+  supBubbleMsg('bot',greet);
+  setTimeout(()=>{try{$('sup_in').focus();}catch(e){}},260);
+}
+function supFreshChat(){ SUP_SID=''; SUP_SHOT=null; SUP_STARTED=true; SUP_ESC=0; $('sup_msgs').innerHTML=''; $('sup_help').classList.remove('on'); $('sup_human').style.display='none'; $('supf_shot').style.display='none'; }
+
+// CHAT
+function supBubbleMsg(kind,text,attrib){ const d=document.createElement('div'); d.className='supm '+(kind==='me'?'me':'bot');
+  d.textContent=text; $('sup_msgs').appendChild(d);
+  if(kind==='bot'&&attrib!==false){ const a=document.createElement('div'); a.className='supm att'; a.textContent=t('sup.attrib','Check AI · just now'); $('sup_msgs').appendChild(a); }
+  $('sup_msgs').scrollTop=1e6; return d; }
 async function sendSupport(){
   const inp=$('sup_in'), msg=(inp.value||'').trim(); if(!msg) return;
-  inp.value=''; supGrow(inp); SUP_LASTQ=msg; $('sup_help').classList.remove('on');
-  supBubbleMsg('me',msg);
+  inp.value=''; supGrow(inp); $('sup_help').classList.remove('on');
+  supBubbleMsg('me',msg,false);
   const btn=$('sup_send'); btn.disabled=true;
   const dots=document.createElement('div'); dots.className='supm bot dots'; dots.innerHTML='<span></span><span></span><span></span>';
   $('sup_msgs').appendChild(dots); $('sup_msgs').scrollTop=1e6;
-  const r=await api('/pub/support/chat',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({sessionId:SUP_SID||undefined,message:msg,lang:LANG})});
+  const r=await appApi('/pub/support/chat',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({sessionId:SUP_SID||undefined,message:msg,lang:LANG,category:SUP_CAT})});
   dots.remove(); btn.disabled=false;
   if(!r||r.error==='network'||(!r.reply&&!r.escalate)){ supBubbleMsg('bot', t('err.generic',"That didn't go through. Give it another try.")); return; }
-  if(r.sessionId){ SUP_SID=r.sessionId; sessionStorage.setItem('cifm_support_sid',SUP_SID); }
+  if(r.sessionId){ SUP_SID=r.sessionId; supGuestAdd(SUP_SID,msg,SUP_CAT); }
   if(r.reply) supBubbleMsg('bot',r.reply);
-  if(r.escalate){ supBubbleMsg('bot', t('sup.stuck',"I can get a person on this. Tap below and we'll take it from here.")); openSupportFormSoft(); }
-  else $('sup_help').classList.add('on');
+  // Keep the human path buried: on the first time the AI can't resolve, ask for more detail and keep
+  // trying. Only after it's genuinely failed twice in this chat do we reveal "Talk to a human".
+  if(r.escalate){ SUP_ESC++;
+    if(SUP_ESC>=2){ supBubbleMsg('bot', t('sup.stuck',"I still couldn't crack this one. Want a person to take a look?"),false); supOfferHuman(); }
+    else { supBubbleMsg('bot', t('sup.tryagain',"I might be missing something. Can you give me a bit more detail?"),false); $('sup_help').classList.add('on'); $('sup_human').style.display='none'; }
+  } else { $('sup_help').classList.add('on'); $('sup_human').style.display='none'; }
 }
+// The buried human path — revealed only after repeated AI failure.
+function supOfferHuman(){ $('sup_help').classList.add('on'); $('sup_human').style.display=''; }
 async function supHelped(yes){ $('sup_help').classList.remove('on');
-  if(SUP_SID) api('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:yes})});
+  if(SUP_SID) appApi('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:yes})});
   toast(t('sup.thanks','Thanks for letting us know.'),'neutral'); }
-function openSupportFormSoft(){ $('sup_help').classList.add('on'); const b=$('sup_help').children[0]; if(b) b.style.display='none'; }
-function openSupportForm(){ if(SUP_SID) api('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:false})});
-  $('sup_chat').style.display='none'; $('sup_done').style.display='none'; $('sup_form').style.display='block';
-  $('supf_msg').value=SUP_LASTQ||''; $('supf_err').textContent=''; setTimeout(()=>$('supf_name').focus(),80); }
-function backToSupportChat(){ $('sup_form').style.display='none'; $('sup_chat').style.display='flex';
-  const b=$('sup_help').children[0]; if(b) b.style.display=''; }
-// Swipe the grabber/sheet down to dismiss (matches the call sheet). Ignore drags that start on the
-// scrollable message list or the textarea so scrolling + typing aren't hijacked.
-(function supSheetSwipe(){
-  let y0=0, dy=0, drag=false;
-  const sh=()=>$('supSheet');
-  document.addEventListener('touchstart',e=>{ const el=sh(); if(!el||!el.classList.contains('on'))return;
-    if(!e.target.closest('#supSheet'))return; if(e.target.closest('#sup_msgs')||e.target.closest('#sup_in'))return;
-    y0=e.touches[0].clientY; dy=0; drag=true; el.style.transition='none'; },{passive:true});
-  document.addEventListener('touchmove',e=>{ if(!drag)return; dy=Math.max(0,e.touches[0].clientY-y0); sh().style.transform='translateY('+dy+'px)'; },{passive:true});
-  document.addEventListener('touchend',()=>{ if(!drag)return; drag=false; const el=sh();
-    el.style.transition='transform .28s cubic-bezier(.32,.72,0,1)';
-    if(dy>90){ el.style.transform='translateY(112%)'; $('supSheetBd').classList.remove('on');
-      setTimeout(()=>{ el.classList.remove('on'); el.setAttribute('aria-hidden','true'); el.style.transition=''; el.style.transform=''; },300);
-    } else { el.style.transform=''; } });
-})();
+async function supOpenConversation(sid){ SUP_STARTED=true; SUP_SID=sid; $('sup_msgs').innerHTML=''; $('sup_help').classList.remove('on');
+  supGo('chat');
+  const r=await api('/pub/support/conversation/'+encodeURIComponent(sid));
+  if(r&&r.messages){ SUP_CAT=r.category||'other'; $('sup_clip').classList.toggle('hide',SUP_CAT!=='bug');
+    r.messages.forEach(m=>supBubbleMsg(m.role==='user'?'me':'bot',m.content,false)); }
+}
+
+// Buried human form
+function openSupportForm(){ if(SUP_SID) appApi('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:false})});
+  supShow('form',{title:t('sup.form.title','Leave it with us'),back:true,tabs:false});
+  $('supf_err').textContent=''; const shot=$('supf_shot');
+  if(SUP_SHOT){ shot.style.display='flex'; shot.innerHTML=`<img src="${esc(SUP_SHOT)}"><span>${esc(t('sup.shotok','Screenshot attached'))}</span>`; } else shot.style.display='none';
+  setTimeout(()=>{try{$('supf_name').focus();}catch(e){}},80); }
 async function submitSupportTicket(){
   const name=($('supf_name').value||'').trim(), email=($('supf_email').value||'').trim(), msg=($('supf_msg').value||'').trim();
   const bad=(el,is)=>{ if(typeof markFld==='function') markFld(el,is); };
   bad($('supf_name'),!name); bad($('supf_email'),!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)); bad($('supf_msg'),!msg);
   if(!name||!msg||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $('supf_err').textContent=t('sup.form.err','Fill in your name, a real email, and what happened.'); return; }
   const btn=$('supf_btn'); btn.disabled=true; btn.textContent=t('toast.submitting','Submitting…');
-  const r=await api('/pub/support/ticket',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({sessionId:SUP_SID||undefined,name,email,message:msg})});
+  const debug={ brand:(BRAND&&BRAND.key)||'', page:location.pathname, lastCheckId:(LASTRES&&LASTRES.cid)||null, ua:navigator.userAgent.slice(0,160) };
+  const r=await appApi('/pub/support/ticket',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({sessionId:SUP_SID||undefined,name,email,message:msg,category:SUP_CAT,screenshotUrl:SUP_SHOT||undefined,debug})});
   btn.disabled=false; btn.textContent=t('sup.form.send','Send it over');
   if(!r||r.error){ $('supf_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
-  track&&track('support_ticket'); $('sup_form').style.display='none'; $('sup_done').style.display='block';
+  track&&track('support_ticket'); supShow('done',{title:t('sup.form.title','Leave it with us'),tabs:false});
+}
+// Screenshot attach (bug chats): pick → presigned R2 upload → keep the public URL for the ticket.
+function supPickShot(){ $('sup_file').click(); }
+async function supShotChosen(input){ const f=input.files&&input.files[0]; if(!f) return;
+  toast(t('sup.uploading','Uploading…'),'neutral');
+  const ext=(f.name.split('.').pop()||'jpg').toLowerCase();
+  const pre=await api('/pub/support/upload-url',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ext,contentType:f.type||'image/jpeg'})});
+  if(!pre||!pre.uploadUrl){ toast(t('sup.uploadfail','Could not attach that image.'),'neutral'); return; }
+  const put=await fetch(pre.uploadUrl,{method:'PUT',body:f,headers:{'content-type':f.type||'image/jpeg'}}).catch(()=>null);
+  if(!put||!put.ok){ toast(t('sup.uploadfail','Could not attach that image.'),'neutral'); return; }
+  SUP_SHOT=pre.publicUrl; supBubbleMsg('me','📎 '+t('sup.shotok','Screenshot attached'),false);
 }
 async function submitStoreReq(){
   const name=($('sr_name').value||'').trim(), city=($('sr_city').value||'').trim();
@@ -4216,9 +4512,15 @@ function renderCallSheet(){
   const prod = SEL_KIOSK ? t('cta.kioskword','kiosk') : (hob?SEL_PRODUCT:catLabels());
   // Hobby (locked product): "We'll check on pricing and availability for {set} {product}". Everyone else:
   // just the category. NO "costs 1 check" on any of it (owner 07-09), NO "pick the exact set" link.
-  const pe=$('cs_prod'); if(pe) pe.innerHTML = hob
-    ? `${t('cs.hobask',"We'll check on pricing and availability for")} ${esc(prod)}`
-    : esc(prod);
+  // Hobby keeps its descriptive line; kiosk keeps its word. The plain brand category (e.g. "Pokémon")
+  // is dropped here — it read awkward on its own — and shown instead as a faded product ball tucked
+  // behind the button arrow (owner 07-11), so you still see WHAT you're checking.
+  const pe=$('cs_prod'); if(pe){
+    if(hob){ pe.innerHTML=`${t('cs.hobask',"We'll check on pricing and availability for")} ${esc(prod)}`; pe.style.display=''; }
+    else if(SEL_KIOSK){ pe.innerHTML=esc(prod); pe.style.display=''; }
+    else { pe.innerHTML=''; pe.style.display='none'; }
+  }
+  const gh=$('cs_ghost'); if(gh){ const art=document.getElementById('heroart'); gh.innerHTML = (art&&art.innerHTML)?art.innerHTML:''; }
   // Time-to-a-human (DD's reach field): set the expectation BEFORE they spend the check.
   // Evidence-only — unmapped stores show nothing.
   const re=$('cs_reach'); if(re){ const r=s.reach;
@@ -6047,9 +6349,8 @@ async function renderZonesList(){
   if(list==null){ if(!Array.isArray(ZONES.list)) zonePaintList([]); return; } // network hiccup — keep whatever's on screen
   ZONES.list=list; zonePaintList(list);
 }
-function zoneFace(st){
-  return `<div class="zc-face">${st.logoUrl?`<img loading="lazy" decoding="async" src="${esc(st.logoUrl)}" alt="" style="width:100%;height:100%;object-fit:contain;padding:${st.logoWide?'22%':'17%'}">`:`<span style="font-size:11px;font-weight:900;color:#CDCDD8">${esc((st.name||'?').split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase())}</span>`}</div>`;
-}
+// Same renderer the homepage store rows use (storeFace) so zone logos are byte-for-byte identical.
+function zoneFace(st){ return `<div class="zc-face ${st.logoDark?'lite':''} ${st.logoWide?'widelogo':''}">${storeFace(st)}</div>`; }
 function zonePaintList(list){
   const z=$('zones'); if(!z) return;
   const CHK='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"></path></svg>';
@@ -6068,7 +6369,7 @@ function zonePaintList(list){
       <div class="zc-row"><button class="zc-go" onclick="zoneCheckAll(${zn.id})"><span>${t('zones.checkzone','Check this zone')}${ZGOARR}</span></button></div>
     </div>`;
   }).join('');
-  const foot=`<div class="zfooter"><div class="fl"><a onclick="openSuccess()">${t('foot.success','Scores')}</a><a onclick="openPage('about')">${t('foot.about','About')}</a><a onclick="openPage('faq')">${t('foot.faq','FAQ')}</a><a onclick="openPage('contact')">${t('foot.contact','Contact')}</a><a onclick="openPage('terms')">${t('foot.terms','Terms')}</a><a onclick="openPage('privacy')">${t('foot.privacy','Privacy')}</a></div><div style="font:600 11px Inter;color:#5C5C68">© <span>${new Date().getFullYear()}</span> High Science LLC</div></div>`;
+  const foot=`<div class="zfooter"><div class="fl"><a onclick="openSuccess()">${t('foot.success','Scores')}</a><a onclick="openPage('about')">${t('foot.about','About')}</a><a onclick="openGuide()">${t('foot.guide','Guide')}</a><a onclick="openSupport()">${t('foot.help','Help')}</a><a onclick="openPage('terms')">${t('foot.terms','Terms')}</a><a onclick="openPage('privacy')">${t('foot.privacy','Privacy')}</a></div><div style="font:600 11px Inter;color:#5C5C68">© <span>${new Date().getFullYear()}</span> High Science LLC</div></div>`;
   z.innerHTML=`<div class="zframe">${zFrameHead(t('zones.title','My Zones'))}
     <div class="zf-scroll">
       <button class="znew" onclick="zoneNew()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg><span>${t('zones.new','New zone')}</span></button>
@@ -6150,7 +6451,7 @@ function renderZoneBuild(){
       <div class="zseg"><button class="${!map?'on':''}" onclick="if(ZONES.mapOpen)zoneToggleMap()">${t('zones.list','List')}</button><button class="${map?'on':''}" onclick="if(!ZONES.mapOpen)zoneToggleMap()">${t('zones.map','Map')}</button></div>
       <div class="zradrow"><span class="zradlbl">${t('zones.radius','Radius')}</span>${rings}<span class="zradmi">mi</span><button class="zaddall${zoneAllInRadiusSelected()?' on':''}" onclick="zoneToggleAll()">${zoneAllInRadiusSelected()?t('zones.removeall','Remove all'):'＋ '+t('zones.addallshort','Add all')}</button></div>
     </div>
-    <div class="zf-scroll tight${map?' mapmode':''}${(n&&!map)?' basketpad':''}" style="${map?'overflow:hidden':''}">
+    <div class="zf-scroll tight${map?' mapmode':''}" style="${map?'overflow:hidden':''}">
       <div id="zmap" style="display:${map?'block':'none'};height:100%"></div>
       <div class="zlist" style="display:${map?'none':'block'};max-height:none;background:none;box-shadow:none;padding:0">${rows}</div>
     </div>
@@ -6161,11 +6462,13 @@ function renderZoneBuild(){
     </div></div>
   </div>`;
   if(map) setTimeout(zoneMapEnsure,30); // (re)build the Leaflet map into the fresh #zmap node
+  zoneSyncBasketPad();
 }
 // Removable chips for every selected store (owner 07-11 comp basket bar).
+// Basket = logos only (owner 07-11): a homepage-style logo tile per pick + a small X badge to remove it.
 function zoneChipsHTML(){
   return [...ZONES.sel].map(id=>{ const s=ZONES.storeById.get(id)||(STORES||[]).find(x=>x.id===id)||{}; const nm=railBase(s.name||'')||t('zones.astore','Store');
-    return `<div class="zchip"><span class="zc-face" style="width:28px;height:28px;border-radius:8px">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="" style="width:100%;height:100%;object-fit:contain;padding:15%">`:`<span style="font-size:10px;font-weight:900;color:#CDCDD8">${esc(nm.slice(0,2).toUpperCase())}</span>`}</span><span style="font:700 12px Inter;color:#EDEDF2;white-space:nowrap">${esc(nm)}</span><button class="cx" onclick="zoneToggle(${id})" aria-label="Remove"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>`;
+    return `<div class="zchip ${s.logoDark?'lite':''} ${s.logoWide?'widelogo':''}" title="${esc(nm)}">${storeFace(s)}<button class="cx" onclick="zoneToggle(${id})" aria-label="Remove"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>`;
   }).join('');
 }
 // Sync the basket (count · chips · slide up/down) + the Add-all toggle in place, no full re-render.
@@ -6173,9 +6476,12 @@ function zoneBarSync(){ const n=ZONES.sel.size;
   const c=$('z_count'); if(c) c.textContent=`${n} ${n===1?t('zones.store','store'):t('zones.stores','stores')}`;
   const ch=$('zChips'); if(ch) ch.innerHTML=zoneChipsHTML();
   const bk=$('zBasket'); if(bk) bk.classList.toggle('up',n>0);
-  const sc=document.querySelector('#zones .zf-scroll'); if(sc&&!sc.classList.contains('mapmode')) sc.classList.toggle('basketpad',n>0);
   const aa=document.querySelector('#zones .zaddall'); if(aa){ const all=zoneAllInRadiusSelected(); aa.classList.toggle('on',all); aa.innerHTML=all?t('zones.removeall','Remove all'):'＋ '+t('zones.addallshort','Add all'); }
+  zoneSyncBasketPad();
 }
+// Pad the store list bottom by the basket's ACTUAL height so the last store always clears it (the
+// basket grows as logos wrap, so a fixed pad wasn't enough). Measured next frame after the reflow.
+function zoneSyncBasketPad(){ requestAnimationFrame(()=>{ const sc=document.querySelector('#zones .zf-scroll'), bk=$('zBasket'); if(!sc) return; if(sc.classList.contains('mapmode')){ sc.style.paddingBottom=''; return; } sc.style.paddingBottom=(ZONES.sel.size>0&&bk)?(bk.offsetHeight+18)+'px':''; }); }
 function zoneGPS(){ try{ toast(t('zones.locating','Finding your location…'),'neutral'); }catch(_){ } findMe(async()=>{ await zoneEnsureStores(); if(ZONES.mapOpen){ if(ZMAP&&USER_LOC){ try{ ZMAP.setView([USER_LOC.lat,USER_LOC.lng],12); }catch(_){ } } zoneMapDraw(); zoneBarSync(); } else renderZoneBuild(); }); }
 function zoneToggle(id){ const add=!ZONES.sel.has(id); if(add){ ZONES.sel.add(id); const s=(STORES||[]).find(x=>x.id===id); if(s) ZONES.storeById.set(id,s); } else ZONES.sel.delete(id);
   // update the tapped row + footer in place (keeps the list scroll position)
@@ -6254,7 +6560,7 @@ async function zoneSave(){
   try{
     if(ZONES.editId) await appApi('/app/zones/'+ZONES.editId,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({name,retailerIds:ids})});
     else await appApi('/app/zones',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name,retailerIds:ids})});
-    toast(t('zones.saved','Zone saved'),'neutral'); ZONES.list=null; renderZonesList(); // drop the cache: the list must show the zone that was just saved
+    toast(t('zones.saved','Zone saved'),'neutral'); renderZonesList(); // keep the list + "New zone" button on screen while it refetches (nulling the cache showed a spinner and ate the first tap on New zone)
   }catch(e){ if(btn){ btn.disabled=false; btn.textContent=t('zones.save','Save zone'); } toast(t('err.generic',"That didn't go through. Give it another try.")); }
 }
 // ---- Screen C — the live zone-check report ----

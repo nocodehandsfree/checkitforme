@@ -15,12 +15,12 @@ import {
 } from "./db/schema";
 import { answerSupport, resolveConversation, SUPPORT_MODELS, SUPPORT_CATEGORIES, type SupportCategory } from "./support/ladder";
 import { submitTicket } from "./support/tickets";
-import { addQa, reindexBook, searchBook } from "./support/rag";
+import { addQa, reindexBook, searchBook, getFaq } from "./support/rag";
 import { config } from "./config";
 import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
-import { importZonesData, geocodeMissing } from "./db/import-data";
+import { importZonesData, geocodeMissing, backfillDirectChains } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus } from "./store-sync";
 import { openState } from "./store-hours";
@@ -361,34 +361,27 @@ app.get("/s", (c) => {
   return c.html(renderShare(brand, host, q));
 });
 
-// Static content pages (about/contact/faq/terms/privacy) — branded, owner-editable via policy.pages.
-const PAGE_TITLES: Record<string, string> = { about: "About", contact: "Contact", faq: "FAQ", terms: "Terms of Service", privacy: "Privacy Policy" };
+// Static content pages (about/contact/terms/privacy) — branded, owner-editable via policy.pages.
+// (FAQ retired → the book / the messenger FAQ tab; see the /p/faq redirect below.)
+const PAGE_TITLES: Record<string, string> = { about: "About", contact: "Contact", terms: "Terms of Service", privacy: "Privacy Policy" };
 // Real, shipped content for the legal/info pages so none of them read "coming soon". Owner-overridable
 // per brand via policy.pages (a non-empty override wins); this is the version-controlled fallback that
 // serves on every brand + environment. Rendered inside .body — plain HTML (<h2>/<p>/<ul>) only.
 const H2 = 'style="font-size:19px;font-weight:800;color:#e9e9f0;margin:26px 0 8px"';
 const RM = "https://checkitforme.readme.io"; // the source-of-truth docs (how it works, full FAQ)
 const DEFAULT_PAGES: Record<string, string> = {
-  about: `<p><b>Check It For Me</b> finds out if the thing you want is on the shelf. By phone. So you don't drive across town for nothing.</p>
-<p>You pick a store and a product. Check AI calls the store, asks the staff, and sends you the answer. Real call. Straight answer. No bots pretending to be you. No camping a refresh page.</p>
+  about: `<p><b>Check It For Me</b> finds out if the thing you want is actually on the shelf. By phone. So you don't drive across town for nothing.</p>
+<p>You pick a store and a product. Check AI calls the store, asks a real person, and sends you the answer. Real call, straight answer. No bots pretending to be you, no camping a refresh page at midnight.</p>
 <h2 ${H2}>Why we built it</h2>
-<p>Hyped drops sell out in minutes. Store websites say "in stock" when it's long gone. A 30 second call cuts through it. We made that call one tap.</p>
+<p>We're collectors. We lived the same broken hunt everyone lives: a set drops, every website says sold out in the time it takes to blink, and somewhere across town a truck just dropped a case nobody has found yet. The shelf has it. The internet has no idea.</p>
+<p>So we did the one thing that actually works. We called the store. It worked every single time. The problem was never the information. It was that calling twelve stores, sitting through twelve phone trees, to ask one tiny question, is nobody's idea of a good night.</p>
+<p>So we taught an AI to make that call. Wait through the hold music, work the menu, reach a real human, ask the one question that matters. Then we made it one tap. That's the whole company: the annoying part, done for you, with the receipt to prove it.</p>
+<p>We only cover the stuff that truly sells out and rewards the hunt: Pokémon, One Piece, Topps NBA, and NeeDoh. And you only pay when we get you a real answer. No answer, no charge. That one is wired into the system, not printed on a poster.</p>
 <h2 ${H2}>Want the deep version?</h2>
-<p>How it works, top to bottom, lives at <a href="${RM}" target="_blank" rel="noopener">checkitforme.readme.io</a>.</p>`,
+<p>How it all works, top to bottom, lives in the book: <a href="${RM}" target="_blank" rel="noopener">checkitforme.readme.io</a>.</p>`,
   contact: `<p>Fastest way to reach us is <b>Discord</b>. Our support bot answers the common stuff in seconds, any time. A human picks up the rest.</p>
 <p>Want a store added? Do it right in the app. Account, then Earn, then <i>Add your store</i>. When a store you asked for goes live, your next check is on us.</p>
 <p>We skip phone and email support on purpose. Low overhead is how checks stay cheap.</p>`,
-  faq: `<h2 ${H2}>What does Check It For Me do?</h2>
-<p>You pick a store and a product. Check AI calls the store and asks if it's in stock. You get the answer, usually in a couple minutes.</p>
-<h2 ${H2}>Is it right?</h2>
-<p>We tell you exactly what the staff said, with the time and the whole convo. Shelves move fast, so read every answer as "right now."</p>
-<h2 ${H2}>What's it cost?</h2>
-<p>You pay in checks. Grab a small pack or subscribe for a monthly stack. New accounts get a free check to try it. Earn more by adding a store, inviting a friend, or posting a score.</p>
-<h2 ${H2}>Do you buy it for me?</h2>
-<p>No. We confirm it's there. The grab is yours.</p>
-<h2 ${H2}>No answer?</h2>
-<p>No answer = no charge.</p>
-<p style="margin-top:26px"><a href="${RM}" target="_blank" rel="noopener" style="display:inline-block;padding:13px 22px;border-radius:14px;font-weight:800;text-decoration:none;border:1.5px solid currentColor">Read the full guide →</a></p>`,
   terms: `<p>By using <b>Check It For Me</b> (checkitforme.com) you're good with these terms. If not, no hard feelings. Just don't use it.</p>
 <h2 ${H2}>What we do</h2>
 <p>We call stores and ask if something's in stock, then tell you what they said. Answers are a snapshot. Stores get it wrong sometimes, so we can't promise the item is there, or the price, or that it'll still be there when you show up.</p>
@@ -419,28 +412,20 @@ const DEFAULT_PAGES: Record<string, string> = {
 // Hand-written Spanish for the footer pages (copy law 3: every string ships its Spanish). Same voice,
 // no dashes, fewest words. Served whenever the app asks with ?lang=es; the owner's policy.pages
 // overrides are English-only, so Spanish always comes from here.
-const PAGE_TITLES_ES: Record<string, string> = { about: "Acerca de", contact: "Contacto", faq: "Preguntas", terms: "Términos del servicio", privacy: "Política de privacidad" };
+const PAGE_TITLES_ES: Record<string, string> = { about: "Acerca de", contact: "Contacto", terms: "Términos del servicio", privacy: "Política de privacidad" };
 const DEFAULT_PAGES_ES: Record<string, string> = {
-  about: `<p><b>Check It For Me</b> averigua si lo que buscas está en el estante. Por teléfono. Para que no cruces la ciudad por nada.</p>
-<p>Eliges una tienda y un producto. Check AI llama a la tienda, pregunta al personal y te manda la respuesta. Llamada real. Respuesta directa. Sin bots que se hacen pasar por ti. Sin refrescar una página toda la noche.</p>
+  about: `<p><b>Check It For Me</b> averigua si lo que buscas de verdad está en el estante. Por teléfono. Para que no cruces la ciudad por nada.</p>
+<p>Eliges una tienda y un producto. Check AI llama a la tienda, pregunta a una persona real y te manda la respuesta. Llamada real, respuesta directa. Sin bots que se hacen pasar por ti, sin refrescar una página toda la noche.</p>
 <h2 ${H2}>Por qué lo hicimos</h2>
-<p>Los lanzamientos con hype se agotan en minutos. Las páginas de las tiendas dicen "en stock" cuando ya no queda nada. Una llamada de 30 segundos resuelve todo. Nosotros la hicimos de un toque.</p>
+<p>Somos coleccionistas. Vivimos la misma cacería rota que todos: sale un set, cada página dice agotado en lo que dura un parpadeo, y en algún lugar de la ciudad un camión acaba de dejar una caja que nadie ha encontrado. El estante lo tiene. El internet no tiene idea.</p>
+<p>Así que hicimos lo único que funciona. Llamamos a la tienda. Funcionó siempre. El problema nunca fue la información. Era que llamar a doce tiendas, aguantar doce menús de teléfono, para hacer una sola preguntita, no es idea de nadie de una buena noche.</p>
+<p>Así que le enseñamos a una IA a hacer esa llamada. Aguantar la música de espera, navegar el menú, llegar a una persona real, hacer la única pregunta que importa. Y lo hicimos de un toque. Esa es toda la empresa: la parte molesta, hecha por ti, con la prueba en mano.</p>
+<p>Solo cubrimos lo que de verdad se agota y premia la cacería: Pokémon, One Piece, Topps NBA y NeeDoh. Y solo pagas cuando te conseguimos una respuesta real. Sin respuesta, sin cargo. Eso está en el sistema, no en un póster.</p>
 <h2 ${H2}>¿Quieres la versión completa?</h2>
-<p>Cómo funciona, de arriba a abajo, está en <a href="${RM}" target="_blank" rel="noopener">checkitforme.readme.io</a>.</p>`,
+<p>Cómo funciona todo, de arriba a abajo, está en el libro: <a href="${RM}" target="_blank" rel="noopener">checkitforme.readme.io</a>.</p>`,
   contact: `<p>La forma más rápida de contactarnos es <b>Discord</b>. Nuestro bot de soporte responde lo común en segundos, a cualquier hora. Un humano atiende el resto.</p>
 <p>¿Quieres agregar una tienda? Hazlo en la app. Cuenta, luego Gana, luego <i>Agrega tu tienda</i>. Cuando tu tienda esté disponible, tu próxima verificación va por nuestra cuenta.</p>
 <p>No damos soporte por teléfono ni correo a propósito. Con gastos bajos, las verificaciones siguen baratas.</p>`,
-  faq: `<h2 ${H2}>¿Qué hace Check It For Me?</h2>
-<p>Eliges una tienda y un producto. Check AI llama a la tienda y pregunta si está en stock. Recibes la respuesta, normalmente en un par de minutos.</p>
-<h2 ${H2}>¿Es confiable?</h2>
-<p>Te decimos exactamente lo que dijo el personal, con la hora y toda la conversación. Los estantes cambian rápido, así que toma cada respuesta como "ahora mismo".</p>
-<h2 ${H2}>¿Cuánto cuesta?</h2>
-<p>Pagas en verificaciones. Compra un paquete chico o suscríbete por una carga mensual. Las cuentas nuevas reciben una verificación gratis para probar. Gana más agregando una tienda, invitando a un amigo o publicando un logro.</p>
-<h2 ${H2}>¿Lo compran por mí?</h2>
-<p>No. Confirmamos que está ahí. La compra es tuya.</p>
-<h2 ${H2}>¿Y si nadie contesta?</h2>
-<p>Sin respuesta = sin cargo.</p>
-<p style="margin-top:26px"><a href="${RM}" target="_blank" rel="noopener" style="display:inline-block;padding:13px 22px;border-radius:14px;font-weight:800;text-decoration:none;border:1.5px solid currentColor">Lee la guía completa →</a></p>`,
   terms: `<p>Al usar <b>Check It For Me</b> (checkitforme.com) aceptas estos términos. Si no, no pasa nada. Solo no lo uses.</p>
 <h2 ${H2}>Qué hacemos</h2>
 <p>Llamamos a tiendas y preguntamos si algo está en stock, luego te contamos lo que dijeron. Las respuestas son una foto del momento. Las tiendas a veces se equivocan, así que no podemos garantizar que el artículo esté, ni el precio, ni que siga ahí cuando llegues.</p>
@@ -468,6 +453,9 @@ const DEFAULT_PAGES_ES: Record<string, string> = {
 <h2 ${H2}>Tus datos, tú decides</h2>
 <p>Guardamos tu cuenta e historial hasta que pidas borrarlos. ¿Quieres una copia, o borrar todo? Ve a la página de Contacto. Puedes apagar la ubicación cuando quieras en tu navegador.</p>`,
 };
+// FAQ retired → the book (the one FAQ source of truth; the messenger FAQ tab reads it too).
+// Registered before /p/:slug so it wins.
+app.get("/p/faq", (c) => c.redirect(RM, 301));
 app.get("/p/:slug", async (c) => {
   const slug = c.req.param("slug").toLowerCase();
   if (!(slug in PAGE_TITLES)) return c.notFound();
@@ -861,12 +849,10 @@ function chainLogoFile(name: string | null | undefined): string | null {
   for (const slug of cands) for (const ext of ["png", "webp", "svg"]) {
     if (files.has(`${slug}.${ext}`)) return `${slug}.${ext}`;
   }
-  // Fuzzy pass: "Franklin's Ace Hardware" matches ace_hardware.png, "Trudy's Hallmark" → hallmark.png.
-  const hay = ` ${name.toLowerCase().replace(/[^a-z0-9]+/g, " ")} `;
-  for (const f of files) {
-    const stem = f.replace(/\.(png|webp|svg)$/i, "").replace(/_/g, " ");
-    if (stem.length > 3 && hay.includes(` ${stem} `)) return f;
-  }
+  // Deliberately NO fuzzy stem-in-name fallback: it was a footgun that could hand a future chain an
+  // unrelated brand's logo (e.g. a "Pak N Save" picking up another file whose stem appears in the name).
+  // Resolution is now explicit only — DB logoUrl (chainLogoInfo, first) then exact chain-slug variants
+  // above. If a chain ever genuinely needs aliasing, add a curated alias→file map, never substring guessing.
   return null;
 }
 // DB-first logo (logo-r2-keystone spec, git history): chains.logo_url (shared R2) wins over the per-branch
@@ -2197,7 +2183,11 @@ app.post("/api/admin/table-load", async (c) => {
   if (b.mode === "replace") await db.delete(tbl);
   for (let i = 0; i < rows.length; i += 500) await db.insert(tbl).values(rows.slice(i, i + 500) as never);
   invalidateRefCache();
-  return c.json({ table: name, mode: b.mode || "append", inserted: rows.length });
+  // The mirror pulls prod's LEARNED nav (Ace's "press 4 @ 10s") into staging's chains. Re-enforce the
+  // curated direct default right here so it wins over the mirror — a table-load is a runtime action, so
+  // relying on the boot pass alone would leave these chains clobbered until the next redeploy.
+  if (name === "chains") await backfillDirectChains();
+  return c.json({ table: name, mode: b.mode || "append", inserted: rows.length, ...(name === "chains" ? { directEnforced: true } : {}) });
 });
 // NOTE: there is deliberately NO staging→prod data promote. PROD is the source of truth for live
 // business data (calls, customers, reports); the Admin manages it directly. CONFIG/feature work flows
@@ -4223,6 +4213,36 @@ app.post("/pub/support/search", async (c) => {
   if (q.length < 2) return c.json({ hits: [] });
   try { return c.json({ hits: await searchBook(q, 5) }); }
   catch (e) { console.error("[support] search", e); return c.json({ hits: [] }); }
+});
+// FAQ tab — Copper's top-15 questions from the ReadMe, parsed server-side (cached). No chat needed.
+app.get("/pub/support/faq", async (c) => {
+  try { return c.json({ items: await getFaq() }); }
+  catch (e) { console.error("[support] faq", e); return c.json({ items: [] }); }
+});
+// Known-issue banner shown at the top of the Messenger home. Admin sets it; public reads it.
+app.get("/pub/support/banner", async (c) => {
+  const en = (await getSetting("support_banner_en")) || "";
+  const es = (await getSetting("support_banner_es")) || "";
+  return c.json({ en, es });
+});
+app.post("/api/support/banner", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  await setSetting("support_banner_en", String(b.en || "").slice(0, 240));
+  await setSetting("support_banner_es", String(b.es || "").slice(0, 240));
+  return c.json({ ok: true });
+});
+// Presigned R2 URL for a bug screenshot (bytes go straight to R2, never our server). Not gated by
+// the community flag — this is the bug-report attach path.
+app.post("/pub/support/upload-url", async (c) => {
+  const rl = rlCheck("supportTicket", clientIp(c.req.raw.headers), LIMITS.supportTicket);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  const cfg = r2Config();
+  if (!cfg) return c.json({ error: "uploads_not_configured" }, 503);
+  const b = await c.req.json().catch(() => ({}));
+  const ext = String(b.ext || "jpg").replace(/[^a-z0-9]/gi, "").slice(0, 4);
+  const key = photoKey(ext).replace(/^community\//, "support/");
+  const { uploadUrl, publicUrl } = await presignPut(key, cfg, b.contentType || "image/jpeg");
+  return c.json({ uploadUrl, publicUrl, key });
 });
 // The signed-in user's own past conversations (the Messages tab), newest first.
 app.get("/app/support/conversations", async (c) => {

@@ -23,6 +23,22 @@
   out of scope, harmless. NOTE: staging today also carries others' batches (docs shuffle, PostHog,
   Helicone routing, backup-restore) — promote takes all of it unless DevOps splits.
 
+## ✅ 07-11 batch 2 — zones REBUILT to comp + 5 extras (shipped e025dbf, verified on staging)
+- **Zones = locked frame now** (owner: "you did not implement this properly at all"). List/create/run are
+  one fixed full-viewport flex column: header pinned, middle scrolls only, basket bar pinned bottom.
+  Global header + support FAB hidden in zones. Create flow has the **slide-up basket** (removable store
+  chips + name + Save). Comp cards (status pill, logo tiles +N, Check this zone). VERIFIED via Playwright
+  render of both frames (screenshots): frame/head/scroll/basket all present, no JS errors, no overlaps.
+- **Gray top:** neutral (non-verdict) top is gray now (#20202A→page fade + html bg #1D1D22), was near-black.
+  Verified in-browser; iOS status-bar strip should be confirmed on-device (that's the sampled bg-color).
+- **Coming-soon tag:** moved off the 2-line-clamped name → no more "…" ellipsis after "Coming soon".
+- **Activity last-checks:** status WORD replaced with the §5.7 status icon chip.
+- **Edit-phone X:** auth/edit-cell close now the standard v2 round gradient chip (was a bare thin X).
+- **Map:** logo pins fall back to monogram if the logo fails (no blank pins) · tap-to-pin now recenters
+  (panTo) so it locks to the new spot · map mode fetches a wider radius so zoomed-out shows pins.
+- Style guide §5.4/§5.14/§5.17 updated; My Zones comp saved to comps/.
+- PARKED (owner other chat): PAYG slider alignment + pricing.
+
 ## ✅ 07-11 batch — pill law + zones + footer (shipped f5c6577, verified on staging)
 - **New bottom-notification pill** (owner comp): gray `#2E2E35→#25252B`, white 14.5/800, thin glowing
   white outline that pulses (box-shadow, keeps ellipsis), one line, never green. NEW copy law: fragments

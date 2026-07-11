@@ -46,11 +46,29 @@ const CHAIN_TYPES: Record<string, string> = {
 };
 export const chainType = (name?: string | null): string => (name && CHAIN_TYPES[name]) || "Other";
 
+// Per-store-nav chains: independents + co-ops where EACH LOCATION is its own operation, so there is no
+// single uniform corporate phone tree. They must default to DIRECT — a chain-level tree recipe mutes the
+// agent on the many stores that ring straight to a human (silent-agent bug). Ace Hardware is the sharp
+// case: a co-op of ~4,800 independently-run stores; one learned "press 4 @ 10s" was arming the mute-timer
+// on every one of them off a single sample. Only true multi-store chains with ONE real menu (Walmart,
+// Kroger, CVS…) should ever reach the tree-mapper. Curated (not a store-count/type guess) on purpose.
+const DIRECT_DEFAULT_CHAINS = new Set<string>([
+  "Goodwill", "Savers", "Value Village", "Salvation Army", "Salvation Army Family Store",
+  "Unique", "Unique Thrift Store", "Habitat ReStore", "Plato's Closet", "Buffalo Exchange",
+  "2nd Ave Value Stores", "Independent Card Shop", "Comic Book Shop", "Cards and Coffee",
+  "PokeMall TCG", "Burbank Sportscards", "CoreTCG", "Cash Cards Unlimited", "LA Sports Cards",
+  "Ace Hardware", "Franklin's Ace Hardware",
+]);
+export const isDirectDefaultChain = (name?: string | null): boolean => !!name && DIRECT_DEFAULT_CHAINS.has(name);
+
 async function chainId(name?: string): Promise<number | null> {
   if (!name) return null;
   const found = (await db.select().from(chains).where(eq(chains.name, name)))[0];
   if (found) return found.id;
-  const [row] = await db.insert(chains).values({ name, type: chainType(name), callTarget: true }).returning();
+  const [row] = await db.insert(chains).values({
+    name, type: chainType(name), callTarget: true,
+    ...(isDirectDefaultChain(name) ? { ringsDirect: true, answerPath: "direct_human" } : {}),
+  }).returning();
   return row.id;
 }
 
@@ -63,6 +81,24 @@ export async function backfillChainTypes(): Promise<void> {
     if (c.type && c.type !== "Other") continue; // manual/typed rows are authoritative
     const t = chainType(c.name);
     if (c.type !== t) await db.update(chains).set({ type: t }).where(eq(chains.id, c.id));
+  }
+}
+
+/** ENFORCE the direct default on per-store-nav chains (independents + co-ops). Unlike backfillChainTypes
+ * this is NOT fill-only: for these curated chains a chain-level phone tree is ALWAYS wrong (every store
+ * is its own operation), so any tree that creeps in — e.g. the learned-nav refresh re-pulling Ace's old
+ * "press 4" from prod — is cleared. Runs on boot AFTER backfillChainTypes, and again after any chains
+ * table-load (the prod→staging mirror), so the curated flag always wins over learned data.
+ * Nulls the tree markers (the connect-timer guard then never arms); keeps phoneTreeDefault as a note. */
+export async function backfillDirectChains(): Promise<void> {
+  for (const c of await db.select().from(chains)) {
+    if (!DIRECT_DEFAULT_CHAINS.has(c.name)) continue;
+    const drifted = c.ringsDirect !== true || c.answerPath !== "direct_human" ||
+      c.avgTreeSeconds != null || c.navSeconds != null || c.dtmfShortcut != null || c.navRecipe != null;
+    if (drifted) await db.update(chains).set({
+      ringsDirect: true, answerPath: "direct_human",
+      avgTreeSeconds: null, navSeconds: null, dtmfShortcut: null, navRecipe: null,
+    }).where(eq(chains.id, c.id));
   }
 }
 

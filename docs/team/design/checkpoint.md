@@ -3,6 +3,26 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-11 — comps split: website + admin boards (CD)
+
+- **The one comp is now two:** `comps/WEBSITE_COMPS.dc.html` (the site, renamed from
+  `NEW_CHECK_COMPS.dc.html`) + `comps/ADMIN_COMPS.dc.html` (the admin, NEW). ONE style guide and
+  ONE copy guide cover both. All live references updated (design READMEs, STYLE_GUIDE header +
+  footer, `scripts/render-comps.ts`, design-gap brief); `docs/archive/` left as history.
+- **⚠️ One manual step:** the site board is 1.3MB, over my tooling's push cap, so the physical
+  rename needs `git mv docs/design/comps/NEW_CHECK_COMPS.dc.html docs/design/comps/WEBSITE_COMPS.dc.html`.
+  Until it runs, the docs point at the new name and the old file still carries the old one.
+- **⚖️ STANDING RULE (owner, record kept in comps/README.md too): every NEW admin feature gets
+  comped in `ADMIN_COMPS.dc.html` FIRST, then built.**
+- **The admin system (on the board):** five page types — LIVE · REPORT · LOG · CRUD · CONSOLE —
+  and one report grammar (range · hero · wells · one list · footnote). Accordions become peek rows
+  that navigate; hover tooltips become gray one-liners; floating pagers become a Show more key;
+  dashboard hero goes 5→3 vitals (Checks · Reach · Credits); Policy splits into console + queues;
+  Zones leaves the admin. Per-section mapping is the last card on the board.
+- **Missing doc:** `docs/design/copy/COPY_STYLE_GUIDE_ADMIN.md` was requested as the admin copy
+  authority but does not exist anywhere in the repo. Admin board copy follows `COPY_STYLE_GUIDE.md`
+  until Copy writes the admin one.
+
 ## Carry-over (2026-07-09 — iOS tint / Safari-chrome lane — for the new repo)
 
 _Separate retiring chat (tint specialist). Lane: iOS status-bar/chrome tint + consumer status-page

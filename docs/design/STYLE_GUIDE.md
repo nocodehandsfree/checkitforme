@@ -2,9 +2,10 @@
 
 The single visual source of truth for **checkitforme.com** ("Check") and its admin/vertical
 surfaces — the **elevated / soft-depth** skin the live site runs. Every spec here is extracted 1:1
-from the one approved master board in this folder: **`comps/NEW_CHECK_COMPS.dc.html`** (the visual
-comp — this guide and that board reference each other; the guide is the words for what the board
-shows). The old self-contained bundle `NEW_CHECK_COMPS.html` was a generated duplicate and is
+from the approved master boards in this folder: **`comps/WEBSITE_COMPS.dc.html`** (the site) and
+**`comps/ADMIN_COMPS.dc.html`** (the admin) — this guide and those boards reference each other; the
+guide is the words for what the boards show. Standing rule (owner): every NEW admin feature gets
+comped in `ADMIN_COMPS.dc.html` FIRST, then built. The old self-contained bundle `NEW_CHECK_COMPS.html` was a generated duplicate and is
 retired to `docs/archive/`.
 
 **This doc is one of three that reference each other — keep them in sync:**
@@ -235,8 +236,14 @@ carved, links green. Driver preview on near-black `#141419`; Apple-Pay key white
 26px, green lit. Footer: "Powered by Fungibles · runner.fungibles.com".
 
 ### 5.17 Zones (My Zones — check a whole area) (owner 07-11 comp)
-Full-page takeover: **the product switcher in the upper-left is hidden** while in zones (`body.zoning`);
-the zone screen carries its own back + title, credits pill holds the right edge. **Build:** search a
+**Locked frame, not a page.** Every zone screen is one fixed full-viewport flex column: header pinned
+top, **only the middle scrolls**, action bar pinned bottom — nothing bleeds under the header. The app's
+**global header + support bubble are hidden** in zones (`body.zoning`); the frame carries its own header
+(back · centered title · credits pill on the right). List = New-zone button + zone cards + footer at the
+end of the scroll. Create = locked search/radius sub-header + scrolling store list + **basket bar that
+rides up from the bottom** as you pick stores (removable store chips + name field + Save). Run report is
+the same frame (pinned header, scrolling results). **Zone card:** name + kebab, status pill (green
+"N in stock" / grey "Not checked yet"), "N stores · ago", up to 4 logo tiles + "+N", "Check this zone". **Build:** search a
 ZIP/town, radius ring (1·2·5·10 mi), list or map. **Load every store in the radius regardless of
 open/closed** — closed ones show a `closed` tag but are still selectable (you build a zone once, call it
 whenever). **Add all** is one button with two states: once every in-radius store is picked it flips to
@@ -277,5 +284,5 @@ tile/banner 16 · poll/day key 11–14 · selection ring = inner + 2 · logo slo
 
 ---
 
-_Owned by Design. Screens: `NEW_CHECK_COMPS.html` (this folder). Words:
+_Owned by Design. Screens: `comps/WEBSITE_COMPS.dc.html` + `comps/ADMIN_COMPS.dc.html`. Words:
 `docs/design/copy/COPY_STYLE_GUIDE.md`._

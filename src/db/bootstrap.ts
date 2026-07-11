@@ -5,7 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { db, client } from "./client";
 import { categories, chains, retailers } from "./schema";
 import { seed, seedCatalogSupplement } from "./seed";
-import { backfillChainTypes } from "./import-data";
+import { backfillChainTypes, backfillDirectChains } from "./import-data";
 import { getSetting, setSetting } from "./settings";
 import { seedStockCheckIntel } from "../stock/intel";
 import { seedSellMethods } from "../stock/sellmethods";
@@ -274,6 +274,7 @@ export async function bootstrap() {
   const supp = await seedCatalogSupplement();
   if (supp) console.log(`Catalog supplement: +${supp} products.`);
   await backfillChainTypes(); // ensure every chain has a store-category for filtering
+  await backfillDirectChains(); // independents + co-ops (Ace) default to DIRECT — no chain-level tree can mute the agent
   await seedStockCheckIntel(); // classify chains site-rail vs call-rail (insert-if-absent)
   await seedSellMethods();      // per-chain ways-to-get-it + MSRP flag (insert-if-absent)
   await seedFunStore();         // owner-only "Fun" rehearsal store (only if FUN_STORE_PHONE is set)
