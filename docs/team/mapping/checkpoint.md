@@ -1,6 +1,19 @@
 # Check - Mapping — CHECKPOINT (current state)
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets not prose, under ~80 lines.
 
+## CORRECTION (owner, 2026-07-11 eve) — the independent shops ARE mappable = DIRECT
+- **I was WRONG to call thrift/small shops "not mappable."** Owner: Goodwill, Ace, etc. answer DIRECTLY
+  (no tree). My "voicemail" calls were just NO-ANSWERS (nobody picked up that minute), not "no human path."
+  A direct-answer store IS the map — easier than a tree.
+- **Locked DIRECT (10, live):** Goodwill(116), Ace Hardware(35), Habitat ReStore(130), Salvation Army(117),
+  Savers(118), Unique(119), Comic Book Shop(129), Cards and Coffee(124), PokeMall TCG(123), Independent
+  Card Shop(128, already was).
+- **RULE:** independent / single-location "chains" (thrift banners, local card/hobby shops) = mark DIRECT,
+  don't run them through the tree-mapper. Only real multi-store chains have trees worth mapping.
+- **Data gap (for Data Dev):** direct-vs-tree isn't in the imported store data — it's a chain-level nav
+  field the mapper fills. Independents came in "unmapped" and got tree-mapped by default. Better: default
+  independent/single-location chains to DIRECT at import so they never hit the tree-mapper.
+
 ## DAY-2 sweep (2026-07-11, from 9am ET) — IN PROGRESS, guard NOT on prod
 - **Guard `6feff66` is on STAGING, not prod** (prod=598a16a; Pops shipped an unrelated account-reset
   feature overnight). So the 12 locked "retry" chains are HELD (driver SKIP_IDS) — no re-downgrade risk.
