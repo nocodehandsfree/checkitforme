@@ -1,6 +1,15 @@
 # Check - Mapping — CHECKPOINT (current state)
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets not prose, under ~80 lines.
 
+## POST-SWEEP owner fixes (2026-07-10 ~8:45pm ET)
+- **AAFES (33) MUTED** — owner: not calling Army/Air Force exchanges. Out of the calling pool + hidden
+  from consumers. (Also resolved its bug: the sweep had mis-locked it as type:direct/no-steps — moot now.)
+- **Meijer (64) tagged `callTarget:false`** — no direct store line (all paths hit Meijer's national care
+  center). Owner: should've been tagged already. Engine now SKIPS it; still consumer-visible via site
+  stock (per-store pickup availability). Keeps the 71s care-center recipe but won't be re-mapped.
+- **Rule reinforced:** military exchanges = muted. National-call-center chains (no direct store line) =
+  `callTarget:false`, not mapped. Check both flags before adding a chain to a sweep.
+
 ## DONE — 2026-07-10 speed + drift sweep (full board)
 - **All 39 mapped chains swept** (converging engine, uncapped). Every one reaches a verified human.
   Full before→after per chain: `docs/team/mapping/report-2026-07-10.md`. Snapshots:
