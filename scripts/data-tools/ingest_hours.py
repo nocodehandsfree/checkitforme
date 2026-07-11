@@ -6,13 +6,18 @@ A whole-store "unknown" (no day tokens, or a lone 'unknown') -> skipped (leave t
 Per-day 'unknown' or an INVALID range (close <= open, not a midnight wrap) -> that day left null.
 All-null result -> skipped (never deactivate a freshly-added store off a Google miss).
 
-Usage: python3 ingest_hours.py <response.txt> [--apply]   (DRY default)
+Usage: python3 ingest_hours.py <response.txt> [sent_batch.txt] [--apply]   (DRY default)
+  Pass the batch file that was sent to reconcile: every id sent must come back exactly once.
+  If any are missing, they're listed and the ingest ABORTS (fix the response first) unless --force.
 Token: ADMIN_TOKEN env or .atok. curl subprocess ONLY.
 """
 import json, os, re, subprocess, sys, time, tempfile
 
 DRY = "--apply" not in sys.argv
-SRC = [a for a in sys.argv[1:] if not a.startswith("--")][0]
+FORCE = "--force" in sys.argv
+pos = [a for a in sys.argv[1:] if not a.startswith("--")]
+SRC = pos[0]
+SENT = pos[1] if len(pos) > 1 else None
 BASE = os.environ.get("BASE", "https://staging.checkitforme.com")
 TOK = os.environ.get("ADMIN_TOKEN") or open(".atok").read().strip()
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
@@ -81,6 +86,22 @@ for line in open(SRC):
 print(f"{'DRY' if DRY else 'APPLY'} — {SRC}")
 print(f"lines:{stats['lines']} write-hours:{stats['written']} skip-unknown:{stats['skip_unknown']} "
       f"all-null-skip:{stats['all_null_skip']} invalid-days-nulled:{stats['bad_days']}")
+
+# reconcile against the exact ids we sent — nothing dropped, nothing invented
+if SENT:
+    sent_ids = [m.group(1) for line in open(SENT) if (m := re.match(r"\s*(\d+)\s*\|", line))]
+    got_ids = [str(x) for line in open(SRC) if (m := re.match(r"\s*(\d+)\s*\|", line)) for x in [m.group(1)]]
+    sset, gset = set(sent_ids), set(got_ids)
+    missing = [i for i in sent_ids if i not in gset]
+    extra = [i for i in got_ids if i not in sset]
+    dup = sorted({i for i in gset if got_ids.count(i) > 1})
+    print(f"RECONCILE — sent:{len(sent_ids)} returned:{len(got_ids)} "
+          f"missing:{len(missing)} extra:{len(extra)} duplicated:{len(dup)}")
+    if missing: print("  MISSING ids (re-request these):", ",".join(missing))
+    if extra:   print("  EXTRA ids (returned but not sent):", ",".join(extra))
+    if dup:     print("  DUPLICATED ids:", ",".join(dup))
+    if (missing or extra or dup) and not FORCE and not DRY:
+        sys.exit("ABORT — reconciliation failed; fix the response or pass --force")
 if DRY:
     for rid in list(updates)[:3]: print("  ", rid, "->", updates[rid])
     sys.exit(0)
