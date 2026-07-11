@@ -73,7 +73,7 @@ __BRAND_HEAD__
   /* form controls do NOT inherit fonts by default — without this, every button renders the
      system font instead of Inter. One line keeps typography identical across the whole site. */
   button,select,textarea{font-family:inherit}
-  html{-webkit-text-size-adjust:100%;background:#20202A;color-scheme:dark;touch-action:manipulation}/* neutral root = GRAY (owner 07-11: the top strip was black, comp is gray). iOS samples this bg-COLOR for the status strip; verdict tone-* classes override it. manipulation = scroll/pan OK, no double-tap-zoom */
+  html{-webkit-text-size-adjust:100%;background:#1D1D22;color-scheme:dark;touch-action:manipulation}/* neutral root = the EXACT v2 site gray #1D1D22 (owner 07-11: top strip was black at first paint; must match the page top-to-bottom). iOS samples this bg-COLOR for the status strip; verdict tone-* override it. */
   html,body{max-width:100%;overflow-x:hidden}
   /* No visible scrollbar (it lingers in the Home-Screen/standalone app) — touch scrolling still works. */
   html,body{scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{width:0;height:0;display:none}
@@ -282,9 +282,10 @@ __BRAND_HEAD__
   html.tone-out body,body.rview.rv-out{background:linear-gradient(180deg,var(--bg) 0px,#6b2427 110px,#6b2427 230px,var(--bg) 100dvh)}
   html.tone-unk body,body.rview.rv-unk{background:linear-gradient(180deg,var(--bg) 0px,#6c5419 110px,#6c5419 230px,var(--bg) 100dvh)}
   html.tone-soon body,body.rview.rv-soon{background:linear-gradient(180deg,var(--bg) 0px,#6e490f 110px,#6e490f 230px,var(--bg) 100dvh)}
-  /* NEUTRAL (no verdict) top = gray band that fades into the page — was near-black, comp is gray (owner 07-11).
-     Verdict tones above override this; only the untoned homepage/history/etc. get the gray top. */
-  html:not(.tone-in):not(.tone-out):not(.tone-unk):not(.tone-soon) body:not(.rview){background:linear-gradient(180deg,#20202A 0px,#20202A 92px,var(--bg) 210px)}
+  /* NEUTRAL (no verdict): the page background is ONE solid gray = var(--bg) (#1D1D22 in v2), identical
+     top to bottom, matching the root strip (owner 07-11 — no gradient, no mismatched shade). Verdict
+     tones above override this for result pages. */
+  html:not(.tone-in):not(.tone-out):not(.tone-unk):not(.tone-soon) body:not(.rview){background:var(--bg)}
   @media (display-mode: standalone){
     html.tone-in,html:has(body.rview.rv-in){background-color:#266440;background-image:linear-gradient(180deg,#266440 0px,#266440 140px,var(--bg) 100dvh)}
     html.tone-out,html:has(body.rview.rv-out){background-color:#6b2427;background-image:linear-gradient(180deg,#6b2427 0px,#6b2427 140px,var(--bg) 100dvh)}
@@ -1332,11 +1333,10 @@ html[data-skin="v2"] .csheet-call{padding:14px 24px}
 html[data-skin="v2"] #cs_call{justify-content:space-between}
 html[data-skin="v2"] #cs_call .cs-l>svg{width:20px;height:20px}
 html[data-skin="v2"] #cs_call .cs-arrow{display:block;flex:0 0 auto}
-/* Product ball sits faded BEHIND the arrow so you can see WHAT you're checking (owner 07-11) */
-html[data-skin="v2"] #cs_call .cs-arrowbox{position:relative;display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex:0 0 auto}
-html[data-skin="v2"] #cs_call .cs-ghost{position:absolute;inset:0;display:grid;place-items:center;opacity:.35;pointer-events:none}
-html[data-skin="v2"] #cs_call .cs-ghost svg,html[data-skin="v2"] #cs_call .cs-ghost img{width:32px;height:32px;object-fit:contain}
-html[data-skin="v2"] #cs_call .cs-arrowbox .cs-arrow{position:relative;z-index:1}
+/* Product mark sits just LEFT of the arrow so you can see WHAT you're checking (owner 07-11) */
+html[data-skin="v2"] #cs_call .cs-arrowbox{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+html[data-skin="v2"] #cs_call .cs-ghost{display:grid;place-items:center;width:24px;height:24px;flex:0 0 auto}
+html[data-skin="v2"] #cs_call .cs-ghost svg,html[data-skin="v2"] #cs_call .cs-ghost img{width:24px;height:24px;object-fit:contain}
 html[data-skin="v2"] .csheet-charge{color:#8A8A96;font-size:12.5px;font-weight:600}
 html[data-skin="v2"] .csheet-charge b{color:#CDCDD8}
 html[data-skin="v2"] .cs-key{background:transparent;border:0;box-shadow:none;animation:none;padding:13px 2px}
