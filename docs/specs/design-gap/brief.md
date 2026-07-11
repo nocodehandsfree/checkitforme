@@ -6,7 +6,7 @@ The site shipped changes the original comp never got. Comps, style guide, and li
 
 ## Steps (one Design chat)
 1. **Extract reality:** pull the live tokens (colors, type scale, spacing, radii) and component patterns out of `public/checkit.html` as deployed on staging.
-2. **Screenshot pass:** capture every page of `staging.checkitforme.com` (use the `scripts/site-health.mjs` page list) and the comp boards (`docs/design/comps/NEW_CHECK_COMPS.html`).
+2. **Screenshot pass:** capture every page of `staging.checkitforme.com` (use the `scripts/site-health.mjs` page list) and the comp boards (`docs/design/comps/WEBSITE_COMPS.dc.html` + `docs/design/comps/ADMIN_COMPS.dc.html`).
 3. **Drift list:** for each element where comp ≠ site, one bullet — element · comp says · site does. Post in the checkpoint as bullets (no tables — owner reads on phone).
 4. **Owner votes** per bullet: site wins / comp wins.
 5. **Apply votes:** update `STYLE_GUIDE.md` to the voted truth. Archive the comp board to `docs/archive/` as `-SUPERSEDED` (or regenerate a fresh comp that matches the guide 1:1).
@@ -18,4 +18,4 @@ ONE self-contained HTML inventory (`docs/specs/design-gap/inventory.html`): scre
 ## Done when
 - `STYLE_GUIDE.md` matches the live site 1:1 (spot-check 5 pages).
 - All logos/brand assets live in `docs/design/brand/` and are listed in its README.
-- Comps folder holds exactly ONE current board (everything else archived).
+- Comps folder holds exactly one current board per surface (`WEBSITE_COMPS.dc.html` + `ADMIN_COMPS.dc.html`; everything else archived).
