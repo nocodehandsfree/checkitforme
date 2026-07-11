@@ -1515,13 +1515,13 @@ async function tdCall(){
   document.getElementById("td_status").textContent="dialing…";
   document.getElementById("td_feed").innerHTML="";
   clearInterval(TD_POLL); TD_POLL=setInterval(tdPoll,1500); tdPoll();
-  toast("Calling you — pick up and answer like a clerk");
+  toast("Calling you — pick up and answer like Staff");
 }
 async function tdPoll(){
   if(!TD_ID) return;
   const s=await api("/api/admin/tapedeck/session/"+TD_ID);
   if(!s||s.error) return;
-  document.getElementById("td_status").textContent=s.status==="live"?"● live — answer like a clerk (try a weird reply too)":s.status;
+  document.getElementById("td_status").textContent=s.status==="live"?"● live — answer like Staff (try a weird reply too)":s.status;
   document.getElementById("td_feed").innerHTML=(s.steps||[]).map(st=>{
     const us=st.who==="us";
     return `<div style="display:grid;grid-template-columns:34px 1fr;gap:8px;font-size:12.5px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
