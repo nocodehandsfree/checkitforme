@@ -2065,8 +2065,8 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   <nav class="foot-links">
     <a onclick="openSuccess()" data-i18n="foot.success">Scores</a>
     <a href="/p/about" onclick="openPage('about');return false" data-i18n="foot.about">About</a>
-    <a href="/p/faq" onclick="openPage('faq');return false" data-i18n="foot.faq">FAQ</a>
-    <a href="/p/contact" onclick="openPage('contact');return false" data-i18n="foot.contact">Contact</a>
+    <a href="https://checkitforme.readme.io" onclick="openGuide();return false" data-i18n="foot.guide">Guide</a>
+    <a href="#" onclick="openSupport();return false" data-i18n="foot.help">Help</a>
     <a href="/p/terms" onclick="openPage('terms');return false" data-i18n="foot.terms">Terms</a>
     <a href="/p/privacy" onclick="openPage('privacy');return false" data-i18n="foot.privacy">Privacy</a>
   </nav>
@@ -2637,7 +2637,7 @@ const I18N={ es:{
   'live.convo':'Conversación','live.steps':'Progreso de la llamada','cs.call':'Llamada','lbl.assoc':'Asociado','lbl.menu':'Menú','lbl.agent':'Check AI',
   'up.restock':'No te pierdas el reabastecimiento','up.restock.sub':'Te avisamos por mensaje en cuanto vuelva.','up.checkback':'Vuelve pronto','up.checkback.sub':'Reabastecen seguido. Vuelve en un día o dos.','up.watch':'Avísame cuando vuelva','up.watch.sub':'Una alerta en cuanto una llamada lo confirme.','up.sched':'Auto-verificar en días de envío','up.sched.sub':'Llamamos por ti en días de reabastecimiento.',
   'hist.title':'Tus verificaciones','hist.new':'+ Nueva','hist.empty':'Aún no hay verificaciones. Haz una y aparecerá aquí.',
-  'foot.cta':'¿No ves tu tienda? Agrégala →','foot.about':'Acerca de','foot.contact':'Contacto','foot.faq':'Preguntas','foot.terms':'Términos','foot.privacy':'Privacidad','foot.legal':'Legal','foot.success':'Logros',
+  'foot.cta':'¿No ves tu tienda? Agrégala →','foot.about':'Acerca de','foot.help':'Ayuda','foot.guide':'Guía','foot.terms':'Términos','foot.privacy':'Privacidad','foot.legal':'Legal','foot.success':'Logros',
   'kioskhint':'<span style="display:flex;align-items:center;gap:7px;font-weight:800;white-space:nowrap"><span id="khspark"></span> ¿En un kiosco? ¡Verificación gratis!</span><a onclick="openReceipt()" style="display:inline-block;margin-top:5px;color:var(--purple);font-weight:800;cursor:pointer">Usa nuestro correo al pagar o reenvía tu recibo →</a>',
   'v.in':'¡En stock!','v.out':'No está en stock','v.unclear':'Nos dieron un “quizás”','v.soldout':'Agotado','v.noanswer':'Nadie contestó','v.hold':'En espera','v.soon':'¡Reabastecimiento en camino!','note.soon':'Llega un envío <b>{d}</b>. Sé el primero cuando caiga.',
   'search.ph':'Busca por tienda o ciudad…',
@@ -3053,6 +3053,7 @@ function supDate(ts){ const d=new Date(ts*1000), day=864e5;
   if(d.getTime()>=midnight.getTime()-day) return t('sup.yesterday','Yesterday')+', '+tm;
   return d.toLocaleDateString(loc,{month:'short',day:'numeric'})+', '+tm; }
 
+function openGuide(){ try{track('guide_open');}catch(_){} window.open('https://checkitforme.readme.io','_blank','noopener'); }
 function openSupport(){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supGo('home'); }
 function closeSupport(){ const el=$('supWrap'); el.classList.remove('on'); el.setAttribute('aria-hidden','true'); }
 
@@ -6355,7 +6356,7 @@ function zonePaintList(list){
       <div class="zc-row"><button class="zc-go" onclick="zoneCheckAll(${zn.id})"><span>${t('zones.checkzone','Check this zone')}${ZGOARR}</span></button></div>
     </div>`;
   }).join('');
-  const foot=`<div class="zfooter"><div class="fl"><a onclick="openSuccess()">${t('foot.success','Scores')}</a><a onclick="openPage('about')">${t('foot.about','About')}</a><a onclick="openPage('faq')">${t('foot.faq','FAQ')}</a><a onclick="openPage('contact')">${t('foot.contact','Contact')}</a><a onclick="openPage('terms')">${t('foot.terms','Terms')}</a><a onclick="openPage('privacy')">${t('foot.privacy','Privacy')}</a></div><div style="font:600 11px Inter;color:#5C5C68">© <span>${new Date().getFullYear()}</span> High Science LLC</div></div>`;
+  const foot=`<div class="zfooter"><div class="fl"><a onclick="openSuccess()">${t('foot.success','Scores')}</a><a onclick="openPage('about')">${t('foot.about','About')}</a><a onclick="openGuide()">${t('foot.guide','Guide')}</a><a onclick="openSupport()">${t('foot.help','Help')}</a><a onclick="openPage('terms')">${t('foot.terms','Terms')}</a><a onclick="openPage('privacy')">${t('foot.privacy','Privacy')}</a></div><div style="font:600 11px Inter;color:#5C5C68">© <span>${new Date().getFullYear()}</span> High Science LLC</div></div>`;
   z.innerHTML=`<div class="zframe">${zFrameHead(t('zones.title','My Zones'))}
     <div class="zf-scroll">
       <button class="znew" onclick="zoneNew()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg><span>${t('zones.new','New zone')}</span></button>
