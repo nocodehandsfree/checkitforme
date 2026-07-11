@@ -73,7 +73,7 @@ __BRAND_HEAD__
   /* form controls do NOT inherit fonts by default — without this, every button renders the
      system font instead of Inter. One line keeps typography identical across the whole site. */
   button,select,textarea{font-family:inherit}
-  html{-webkit-text-size-adjust:100%;background:#0C0C12;color-scheme:dark;touch-action:manipulation}/* manipulation = scroll/pan OK, but no double-tap-to-zoom (was zooming the page on taps near the call arrows) */
+  html{-webkit-text-size-adjust:100%;background:#20202A;color-scheme:dark;touch-action:manipulation}/* neutral root = GRAY (owner 07-11: the top strip was black, comp is gray). iOS samples this bg-COLOR for the status strip; verdict tone-* classes override it. manipulation = scroll/pan OK, no double-tap-zoom */
   html,body{max-width:100%;overflow-x:hidden}
   /* No visible scrollbar (it lingers in the Home-Screen/standalone app) — touch scrolling still works. */
   html,body{scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{width:0;height:0;display:none}
@@ -282,6 +282,9 @@ __BRAND_HEAD__
   html.tone-out body,body.rview.rv-out{background:linear-gradient(180deg,var(--bg) 0px,#6b2427 110px,#6b2427 230px,var(--bg) 100dvh)}
   html.tone-unk body,body.rview.rv-unk{background:linear-gradient(180deg,var(--bg) 0px,#6c5419 110px,#6c5419 230px,var(--bg) 100dvh)}
   html.tone-soon body,body.rview.rv-soon{background:linear-gradient(180deg,var(--bg) 0px,#6e490f 110px,#6e490f 230px,var(--bg) 100dvh)}
+  /* NEUTRAL (no verdict) top = gray band that fades into the page — was near-black, comp is gray (owner 07-11).
+     Verdict tones above override this; only the untoned homepage/history/etc. get the gray top. */
+  html:not(.tone-in):not(.tone-out):not(.tone-unk):not(.tone-soon) body:not(.rview){background:linear-gradient(180deg,#20202A 0px,#20202A 92px,var(--bg) 210px)}
   @media (display-mode: standalone){
     html.tone-in,html:has(body.rview.rv-in){background-color:#266440;background-image:linear-gradient(180deg,#266440 0px,#266440 140px,var(--bg) 100dvh)}
     html.tone-out,html:has(body.rview.rv-out){background-color:#6b2427;background-image:linear-gradient(180deg,#6b2427 0px,#6b2427 140px,var(--bg) 100dvh)}
@@ -1669,6 +1672,10 @@ html[data-skin="v2"] #acctv2panel{padding-bottom:22px!important}
 /* Capsule w/ WHITE tracked label + right arrow (comp CTA shape) — shared. */
 html[data-skin="v2"] .capsW{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:18px;background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#FFF;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;padding:14px 24px;box-shadow:0 12px 28px -8px rgba(25,177,69,.45);cursor:pointer}
 html[data-skin="v2"] #acctOverlay .x{display:none}
+/* Edit-phone / auth close X: use the SAME round gradient chip as every other v2 sheet (owner 07-11 —
+   the bare thin X was the odd one out). Neutralize the base ::before thin-X and adopt .modal .x chrome. */
+html[data-skin="v2"] #authOverlay .x{width:32px;height:32px;border-radius:50%;background:linear-gradient(180deg,#2F2F36 0%,#26262B 100%);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);display:grid;place-items:center;color:#8A8A96;font-size:15px;line-height:1;top:14px;right:14px;z-index:6}
+html[data-skin="v2"] #authOverlay .x::before{display:none}
 html[data-skin="v2"] .acctv2head .wash{background:#266440;padding:10px 18px 46px} /* Lens E: comp 10, was 14 */
 html[data-skin="v2"] .acctv2head .stats{margin:-28px 18px 0;display:flex;gap:10px}
 html[data-skin="v2"] .acctv2head .stat2,html[data-skin="v2"] #paid_stats .stat2{flex:1;background:linear-gradient(180deg,#31313A 0%,#26262B 100%);border-radius:16px;padding:14px 0;text-align:center;box-shadow:0 14px 26px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1)}
@@ -3732,7 +3739,7 @@ function storeRowHtml(s){
   const soonTag=notReady?` <span class="soontag">${t('store.soonchip','Coming soon')}</span>`:'';
   return `<div class="store ${sel}${isClosed(s)?' shut':''}${notReady?' coming':''}" onclick="pickStore(${s.id})">
     <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${storeFace(s)}</div>
-    <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)}${shopTag}${soonTag}</div><div class="lo">${dot}${meta}</div></div>
+    <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)}${shopTag}</div><div class="lo">${soonTag?soonTag+' ':''}${dot}${meta}</div></div>
     ${right}</div>`;
 }
 function renderStores(){
@@ -5587,7 +5594,7 @@ function acctTab(which,fromPop){
     const last=lastPool.slice(0,ACT_TONE?6:3).map(e=>`<button onclick="ACCT_RETURN='activity';closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:11px;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:9px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left">
       <span style="width:40px;height:40px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${e.logoUrl?`<img src="${esc(e.logoUrl)}" style="width:32px;height:32px;object-fit:contain" alt="">`:`<span style="font-size:11px;font-weight:900;color:#CDCDD8">${esc((railBase(e.storeName)||'?').slice(0,2).toUpperCase())}</span>`}</span>
       <span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span style="display:block;margin-top:2px;font-size:11.5px;font-weight:600;color:#8A8A96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.location||e.address||'')}</span></span>
-      <span style="text-align:right;flex:0 0 auto"><span style="display:block;font-size:12.5px;font-weight:700;color:rgba(255,255,255,.7)">${vlabel(e)}</span><span style="display:block;margin-top:2px;font-size:11px;font-weight:600;color:#8A8A96">${agoTx(e)}</span></span>
+      <span style="flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px">${v2StatusChip(railTone(e),22)}<span style="font-size:11px;font-weight:600;color:#8A8A96">${agoTx(e)}</span></span>
     </button>`).join('');
     const arrow=(d,dis)=>`<button ${dis?'disabled':''} onclick="actWeek(${d})" style="flex:0 0 auto;width:26px;height:26px;border:0;border-radius:9px;background:${dis?'rgba(255,255,255,.04)':'linear-gradient(180deg,#31313A 0%,#26262C 100%)'};color:${dis?'#4A4A52':'#CDCDD8'};display:flex;align-items:center;justify-content:center;cursor:${dis?'default':'pointer'};box-shadow:${dis?'none':'0 6px 10px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)'}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="${d<0?'M15 18l-6-6 6-6':'M9 18l6-6-6-6'}"/></svg></button>`;
     const calico='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>';
