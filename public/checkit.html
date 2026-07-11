@@ -922,7 +922,8 @@ __BRAND_HEAD__
      class — so it auto-restores the instant you leave zones and can never get stuck hiding the
      homepage header (that was the bug behind the dead My-checks pill). owner 07-11. */
   body:has(#zones:not(.hidden)) header,
-  body:has(#zones:not(.hidden)) .supbub{display:none}
+  body:has(#zones:not(.hidden)) .supbub,
+  body:has(#zones:not(.hidden)) .suplaunch{display:none}
   .logomark{width:30px;height:30px;flex:0 0 auto;cursor:pointer;display:grid;place-items:center}
   .logomark svg{display:block}
   .iconbtn{flex:0 0 auto;width:38px;height:38px;border-radius:11px;background:var(--sheet);border:1px solid var(--border);display:grid;place-items:center;cursor:pointer;color:#bdbdcb;padding:0}
