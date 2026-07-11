@@ -23,12 +23,17 @@
   out of scope, harmless. NOTE: staging today also carries others' batches (docs shuffle, PostHog,
   Helicone routing, backup-restore) — promote takes all of it unless DevOps splits.
 
-## 🔴 CROSS-LANE: live-call AUDIO lost on Delta-lane stores (owner 14:40, Franklin's Ace call)
-- **DevOps/Addie: need audio on D-lane live checks.** f61bed2 routes live checks on lane:delta stores
-  through the tapedeck engine; its listen room streams TRANSCRIPT lines only (src/calls/tapedeck.ts:57)
-  — no Twilio media into the room, so the browser "listen live" is silent. The Charlie path bridges
-  audio via Twilio <Connect><Stream> (src/voice/bridge.ts); Delta needs the same media fork or its EL
-  conversation audio relayed. Not touched from this lane — the pipe is yours.
+## ✅ Delta-lane live AUDIO — FIXED (f899f2a, was the 🔴 cross-lane blocker)
+- tapedeck.ts now adds a passive `<Start><Stream track="both_tracks">` fork into room delta:<id> so
+  Twilio media reaches the SAME rooms→/listen→playMu pipe the old system used. Front-end player
+  untouched (all iOS unlock/jitter/guard workarounds intact). Addie shipped an identical fork
+  concurrently — merged (his name/room format + my s.forked refetch guard); no dup audio.
+- Owner testing Delta live NOW. If a call is silent, get the store name and debug immediately.
+
+## ✅ Reach line placement (owner 07-11)
+- Moved reach line BELOW the sheet button (was above); removed "No answer = no charge" from the sheet.
+  Shortened copy → "~{n} sec to reach a human" / ES "~{n} seg para llegar a una persona". Verified in
+  served staging HTML (166e956): order prod→button→reach, charge div gone. Shows only for mapped stores.
 
 ## ✅ 14:40 owner batch (this deploy)
 - Live rail no longer runs past the current step ("Reaching a person…" moved out of the rail row) ·
@@ -42,7 +47,10 @@
 ## ✅ 03:14 owner batch — SHIPPED + verified (commit 7da6019)
 - **TINT fully restored** (my mistake: removing the baked tone for items 24-25 broke the tint lane's
   iOS nav/status-bar work). Server bakes tone-* again (verified live: html class="tone-in" served).
-  Items 24-25 (no color pre-load) now CONFLICT with the tint design — needs owner + tint-dev ruling.
+  Items 24-25 (no color pre-load) CLARIFIED by owner 07-11: it's narrower than I feared — don't paint
+  the RESULT verdict color until status is confirmed; stay neutral during the call. That does NOT fight
+  the tint lane (status-bar/bg). TODO once owner confirms: neutral-until-status on the result page only.
+  Rail/indenting CLOSED: owner meant left-align the call-log steps (already so) — not the timeline rail.
 - Verified on staging: Sign out = plain link top right · empty store list breaks per sentence EN+ES ·
   Activity ago labels real ("2h ago"/"1d ago"; was ms-vs-seconds → everything said "just now") ·
   '¡Muéstranos el botín!' + chips re-render on language flip. Shipped, not yet driven: zone-card logos,
