@@ -553,17 +553,15 @@ __BRAND_HEAD__
   .toast svg path,.toast svg circle{stroke:#06210f}
   .toast.show{transform:translateX(-50%) translateY(0)}
   .hidden{display:none}
-  /* Support Messenger launcher: a solid LIGHT tab pinned to the RIGHT EDGE (thumb height), icon only.
-     Tucks away (slides off) while the user scrolls/interacts, glides back when the page is at rest. */
-  .suplaunch{position:fixed;right:0;top:64%;z-index:70;transform:translateY(-50%);cursor:pointer;border:none;
-    width:42px;height:62px;border-radius:16px 0 0 16px;display:grid;place-items:center;
-    background:linear-gradient(180deg,#F5F5F9,#E3E3EC);
-    box-shadow:-8px 9px 24px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.7),inset 1px 0 0 rgba(0,0,0,.05);
-    transition:transform .3s cubic-bezier(.32,.72,0,1),opacity .22s,width .12s}
-  .suplaunch:hover{width:48px}
-  .suplaunch:active{transform:translateY(-50%) translateX(1px)}
-  .suplaunch svg{width:23px;height:23px;stroke:#1A1A20}
-  .suplaunch.tucked{transform:translateY(-50%) translateX(118%);opacity:0;pointer-events:none}
+  /* Support Messenger launcher: a thin muted-yellow tab in the bottom-right corner, always there. */
+  .suplaunch{position:fixed;right:0;bottom:calc(26px + env(safe-area-inset-bottom));z-index:70;cursor:pointer;border:none;
+    width:30px;height:52px;border-radius:14px 0 0 14px;display:grid;place-items:center;
+    background:color-mix(in srgb, var(--accent,#FFCB05) 76%, #3d2e00);
+    box-shadow:-7px 7px 20px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.28),inset 1px 0 0 rgba(0,0,0,.08);
+    transition:width .12s,transform .1s}
+  .suplaunch:hover{width:35px}
+  .suplaunch:active{transform:translateX(1px)}
+  .suplaunch svg{width:18px;height:18px;stroke:#2a2205}
   body:has(.overlay.on) .suplaunch,body:has(.csheet.on) .suplaunch,body:has(.supwrap.on) .suplaunch{display:none}
   .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:flex;flex-direction:column;
     /* a touch deeper than the raw brand yellow — the neon read too bright in the panel (owner 07-11) */
@@ -3073,16 +3071,6 @@ function supDate(ts){ const d=new Date(ts*1000), day=864e5;
   return d.toLocaleDateString(loc,{month:'short',day:'numeric'})+', '+tm; }
 
 function openGuide(){ try{track('guide_open');}catch(_){} window.open('https://checkitforme.readme.io','_blank','noopener'); }
-// Tuck the launcher away while the page is being scrolled/interacted with; glide it back at rest,
-// so it's always there if they get lost but never sits over content they're actively reading.
-let SUP_TAB_T=null;
-function supTabTuck(){ const el=$('supTab'); if(!el||el.classList.contains('tucked')) { supTabRearm(); return; } el.classList.add('tucked'); supTabRearm(); }
-function supTabRearm(){ clearTimeout(SUP_TAB_T); SUP_TAB_T=setTimeout(()=>{ const el=$('supTab'); if(el) el.classList.remove('tucked'); },1100); }
-// capture:true catches scrolls from inner scroll containers too (scroll doesn't bubble). wheel +
-// touchmove cover the gesture even when the page itself doesn't move.
-window.addEventListener('scroll',supTabTuck,{passive:true,capture:true});
-window.addEventListener('wheel',supTabTuck,{passive:true});
-window.addEventListener('touchmove',supTabTuck,{passive:true});
 function openSupport(){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supGo('home'); }
 function closeSupport(){ const el=$('supWrap'); el.classList.remove('on'); el.setAttribute('aria-hidden','true'); }
 
