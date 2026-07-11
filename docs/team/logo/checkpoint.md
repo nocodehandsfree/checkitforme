@@ -14,11 +14,24 @@ _Newest on top. Keep ≤80 lines. Finished items drop off — git keeps history.
   (`bash scripts/promote.sh`) — owner-gated, not done. R2-migrate the 5 after promote so
   the `logo_url` pointers travel too.
 
-## ⚠️ Flag for owner / Webbie — "unique" fuzzy-match collision
-`chainLogoFile()`'s fuzzy pass matches any store whose name contains the word "unique"
-(staging has ~6: "Unique Card Depot", "Unique Emporium", "B. Unique", …). Once unique.png
-merges, those unrelated stores will show the thrift-store logo. Fix belongs in render code
-(exact-match guard for generic-word chains) — NOT an asset fix. Owner to decide.
+## ⚠️ Single-source + explicit-binding (owner directive 07-11 — DD/Webbie own it)
+Owner wants: ONE logo source (kill the repo-file vs R2 duplication) + logos bound to the
+store's CHAIN, not matched by name. Individual stores (no chain) fall back to the store-type
+icon already shown on site. No new "individual vs chain" field needed — `retailers.chainId`
+(set = chain → `chains.logoUrl`; null = individual → type icon) already encodes it.
+**Owner said "we're on top of it"** — DD/Webbie driving; not my lane to build.
+
+Measured on staging (offline, replicating `chainLogoFile` on all 111,098 stores by name —
+FILESYSTEM path only, does NOT see the DB-first `chainId→chains.logoUrl` path, so fuzzy is an
+UPPER bound on reliance):
+- 115 exact-slug (clean) · ~91,853 fuzzy-name-only · ~19,130 no logo (generic icon).
+- Top fuzzy carriers: dollar_general 20k, dollar_tree 9k, walgreens 7.7k, family_dollar 7k,
+  walmart 4.6k, ace_hardware 4.5k…
+- The number that sizes the job (DD query): of the ~92k, how many already have a real
+  `chainId` link (safe) vs only survive on the name-guess (would drop to generic if guess is
+  removed). Until that's known, safest small fix = anchor the fuzzy match so it can't hit a
+  loose generic word ("unique","pak"). The "unique" collision (Unique Card Depot etc.) is a
+  subset of this.
 
 ## Sourcing notes (this batch)
 - Habitat ReStore: mark-only (house emblem) from official vector (en.wiki
