@@ -67,7 +67,7 @@ async function main() {
 
   if (mode === "board") {
     const srv = await serveDesign();
-    await page.goto(`http://127.0.0.1:${srv.port}/NEW_CHECK_COMPS.html`, { waitUntil: "load", timeout: 60000 });
+    await page.goto(`http://127.0.0.1:${srv.port}/WEBSITE_COMPS.dc.html`, { waitUntil: "load", timeout: 60000 });
     await page.waitForTimeout(6000);
     const h = await page.evaluate(() => document.documentElement.scrollHeight);
     const n = Math.min(20, Math.ceil(h / 1100));
