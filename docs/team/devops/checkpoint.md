@@ -3,16 +3,29 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 📌 Mapping → Pops (2026-07-11): promote TWO mapper.ts fixes (both on staging, tsc clean, no consumer UI)
-1. **No-downgrade guard** (`6feff66`): the VERIFY stage re-locked whatever it last reached even when SLOWER
-   than the shipped recipe → 8 chains downgraded live during the sweep. Guard: never overwrite a locked
-   recipe with a slower re-measure. The 11 regressed chains were already hand-restored, so prod is correct
-   today; this stops it recurring on the next re-map.
-2. **Skip rings-direct chains** (`52d2c77`): tree-mapper now skips any chain with ringsDirect=true or
-   answerPath=direct_human. Independents/co-ops (thrift, local card shops, Ace) have no tree — mapping them
-   wastes calls and a stray chain recipe (Ace's old "press 4") muted the live agent on direct-ring stores.
-- Both should ride the next promote before Mapper runs the 12 held locked-retry chains. Prod=598a16a still
-  lacks both. Once live, Mapper finishes those 12 (guard makes it safe).
+## ✅ 2026-07-11 late — big batch LIVE on prod main 25be309, all green
+- **Full staging→main merge landed on prod** (another session pushed it, not a pinned promote). Prod =
+  25be309, healthy across all 4 brand sites + stores API + plans + admin + webhook (400 on bad sig).
+  Carried the whole team's staging work (Zones rebuild, Support Messenger v3, Delta audio+Groq, footer/
+  Guide/Help, design comps, my nav+logo + delete-endpoint). Owner briefed: nothing broke, nothing lost,
+  NO rollback (rollback would pull live team work off prod). Next controlled push waits till team checks
+  in — **6 commits on staging ahead of main** right now, captured, safe.
+- **Nav+logo hardening (mine, LIVE + verified on prod):** independents/co-ops default DIRECT via curated
+  `DIRECT_DEFAULT_CHAINS` + `isDirectDefaultChain` (import-data.ts) applied at chain-insert in both import
+  paths; `backfillDirectChains` enforces on boot AFTER backfillChainTypes AND after any `chains` table-load
+  (the prod→staging mirror is a runtime action — boot alone wouldn't re-fix it). Verified on prod: Ace +
+  Goodwill/Salvation Army/Unique/Independent Card Shop/Comic Book Shop all ringsDirect=true, tree nulled →
+  silent-agent bug dead. Logo resolver: dropped the fuzzy stem-in-name fallback (footgun; 0 stores rode it),
+  explicit-only now (DB logoUrl → exact slug). Both from DD findings `docs/specs/{logo-resolver-hardening,
+  independent-direct-nav}`. Mapper fixes 6feff66 (no-downgrade) + 52d2c77 (skip rings-direct) also live.
+- **Account delete/reset — SHIPPED + owner-facing:** `POST /api/admin/users/:id/delete` (?dry=1 preview;
+  wipes account + checks/schedules/alerts/zones/requests/watches, cancels live Stripe sub) + **Reset account
+  button** in admin Users panel. Used it to wipe `phone:+14243126356` to a blank slate for owner's signup→
+  free-call→upgrade→pay test. Backend 428c6a6, button 598a16a.
+- **GitHub write MCP connector LIVE:** Railway svc `github-mcp` (node:22 + supergateway wrapping the
+  reference server), URL `https://github-mcp-production-3726.up.railway.app/mcp` (path IS the credential).
+  Owner-owned PAT (repo write) in svc var. Verified: real commit landed on staging + reverted. For Design
+  chats to write to the repo. **PAT + URL onto the rotate-at-launch list** (PAT was pasted in chat).
 
 ## ✅ PROMOTED 2026-07-10 07:20Z — pin 6edefab → prod main 10bdc65, all green
 - Pinned promote executed (merge tree == pin, Website polish 7a9c7c1 excluded). Prod health shows
@@ -45,12 +58,11 @@
 4. **Helicone DONE** — llm.ts gateway existed; routed the 8 bypasses (store-hours, store-phone,
    admin-agent×3, translate) with job tags; VERIFIED logged (query-clickhouse endpoint; plain
    /v1/request/query lags — use query-clickhouse).
-5. **Ops-watch SHIPPED on staging** — cross-env watchdog live (staging⇄prod /api/health, 3 misses →
-   email+SMS via existing Brevo/Twilio creds, throttled 30min), crash guards now alert, daily encrypted
-   DB backup → R2 (AES-256-GCM; bucket is PUBLIC-served so plaintext never lands there) + restore
-   script `scripts/restore-backup.mjs`. ⛔ BLOCKED: classifier denied creating BACKUP_ENC_KEY
-   (owner must name it — then backup+tested-restore complete). Endpoints: `/api/ops/status`,
-   `/api/ops/backup-now` (admin-gated).
+5. **Ops-watch DONE** — cross-env watchdog live (staging⇄prod /api/health, 3 misses → email+SMS via
+   Brevo/Twilio, throttled 30min), crash guards alert, daily encrypted DB backup → R2 (AES-256-GCM;
+   bucket is public-served so plaintext never lands there). BACKUP_ENC_KEY set both envs (owner named
+   it); backup RAN on staging + prod, **restore TESTED** (`scripts/restore-backup.mjs` — signed S3 GET,
+   integrity_check ok, 27 tables, 111k stores). Endpoints `/api/ops/status`, `/api/ops/backup-now`.
 6. **Discord** — not started; needs owner (server creation is his account).
 7. **Cleanups** — citation retargeted ✓; fungibles Actions secret waits on owner token rotation.
 
@@ -75,7 +87,7 @@ scripts/data-tools/ 8 files (abcfd8f7, clean — token read from file path, not 
 - [~] **Transcript IDOR** — backend shipped, flag off; waiting on Website Bearer header → flip on.
 - **Security pre-PUBLIC hardening** (owner: rotate at launch): RAILWAY_API_TOKEN, GITHUB_PAT, TiDB pw,
   the mapper `x-admin-token` committed in team/mapping history (redacted but in git history),
-  STRIPE_WEBHOOK_SECRET on staging.
+  STRIPE_WEBHOOK_SECRET on staging, **the github-mcp PAT + its connector URL (both pasted in chat)**.
 - **Website asks:** `section=thrift` opt-in on `/pub/stores/near` (Thrift stores stay muted);
   `GET /pub/store/:id` single-store fetch (same shape as near; gate owner-only stores).
 - **Real-store launch:** press **Start fresh** (stats_since) when it begins; then resume mapping.
