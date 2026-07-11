@@ -1,6 +1,11 @@
 # Support — checkpoint
 **What this is:** current state. Newest on top, ≤80 lines.
 
+- 2026-07-11 (2) — Widget REDESIGN per owner: it's a slide-up bottom sheet now (grabber + swipe /
+  backdrop to close, NO X), the input is a growing textarea (room to type), send is a small round
+  button, dropped the redundant subtitle. Verified with a local screenshot. NOTE for CD/Design:
+  owner has moved OFF centered pop-ups-with-an-X for dialogs — STYLE_GUIDE still says forms are
+  centered pop-ups; flag to reconcile.
 - 2026-07-11 — LIVE ON STAGING and driven end to end (owner approved merge; PR #5 merged).
   ✓ reindex (18 book pages → qdrant) ✓ grounded EN + ES answers ✓ resolve → review → approve →
   embedded ✓ re-ask hit the $0 cache tier ✓ ticket stored ✓ stats live. Whole drive: $0.0005.
