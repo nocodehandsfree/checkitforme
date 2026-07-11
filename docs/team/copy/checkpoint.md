@@ -2,6 +2,19 @@
 
 > **Volatile file — update THIS at every "Checkpoint".**
 
+## 2026-07-10 session, round 2 (owner feedback on the book)
+- Book expanded to **46 pages / 8 categories** (v3): added Using Check (7), Check+ (10, one page
+  per premium feature), Earn free checks (5), Help (6). It's the CS agent's knowledge base now,
+  every fact pulled from live prod (referral reward = 3 checks live, not the 1 in policy docs;
+  SMS caps 5/15/40/150; community auto-approve ON).
+- Removed in-body "Next:" links (ReadMe renders its own at page bottom) + the admin screenshots
+  (owner: wait for admin redesign).
+- ReadMe template branding is dashboard-only (no API): theme kit ready at
+  `docs/team/copy/readme-theme/` (custom.css + custom.js matching STYLE_GUIDE; the JS puts the
+  full page list in the mobile slide-out). Owner needs to paste it in ReadMe → Appearance.
+- Features documented as "rolling out": store holds, your voice, restock TEXTS (A2P pending).
+  Driver handoff deliberately NOT in the book (demo stage).
+
 ## 2026-07-10 session (book overhaul + manuals + copy audit)
 - Copper owns ALL words INCLUDING the book (owner re-confirmed; the separate "readme role" idea is dead).
 - **Book rebuilt and live** on checkitforme.readme.io: 4 categories (Start Here · The Stores ·
