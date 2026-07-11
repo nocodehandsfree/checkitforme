@@ -59,6 +59,18 @@ npm init -y && npm i sharp     # sharp 0.35.x installs clean on node 22
 re-create it from store-logos.md §6 if the scratch dir is gone. QA by compositing the PNG onto a
 `#191920` tile at 42px inside a 52px square and viewing it — that IS the wall.
 
+## Promote to prod (owner standing rule 07-11)
+Logos must reach **production**, because Admin runs on live PROD data — a logo only shows in
+Admin once it's on prod. So: **after a logo batch is owner-approved on staging, promote it to
+prod** (`bash scripts/promote.sh`).
+- ⚠️ **`promote.sh` ships ALL of staging → main, not just logos.** Before running it, check
+  `git log --oneline origin/main..origin/staging`. If the gap is only your logo work (+ safe
+  docs), promote. If another lane has in-flight/unverified work sitting on staging, **do NOT
+  promote — ping the owner first.** Never drag another lane's unshipped work to prod to get a
+  logo out.
+- After promote, verify on `checkitforme.com/logos/chains/<slug>.png` (true prod) + confirm it
+  shows in Admin. Then R2-migrate if the logo needs a DB-first pointer.
+
 ## Workflow with the owner (from STATUS.md — obey)
 - Process in **chunks of 10, alphabetical**. Fix a chunk → send ONE contact sheet at the real
   phone size → owner approves → **lock it**. Never re-touch a locked logo.
