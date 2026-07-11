@@ -548,3 +548,50 @@ export const discordChannels = sqliteTable("discord_channels", {
   lastIngestAt: integer("last_ingest_at"),
   createdAt: integer("created_at").notNull().default(now),
 });
+
+/**
+ * Support agent (the ladder behind site chat, Discord later). Conversations carry the highest
+ * rung reached + an estimated cost; messages carry which rung/model answered; tickets are the
+ * escalation-form submissions (the hook for the future trouble-ticket system). Resolved+helped
+ * conversations enter the review queue (review_status pending → approved/rejected); approving
+ * embeds the Q&A into qdrant as the tier-0 answer cache.
+ */
+export const supportConversations = sqliteTable(
+  "support_conversations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    sessionId: text("session_id").notNull().unique(), // widget-held uuid; no account required
+    lang: text("lang").notNull().default("en"),
+    status: text("status").notNull().default("open"), // open | escalated | resolved | unhelped
+    reviewStatus: text("review_status"),              // null | pending | approved | rejected
+    maxTier: integer("max_tier").notNull().default(0),
+    costUsd: real("cost_usd").notNull().default(0),   // estimate; Helicone has the exact spend
+    createdAt: integer("created_at").notNull().default(now),
+    updatedAt: integer("updated_at").notNull().default(now),
+  },
+  (t) => ({ byReview: index("support_convo_review_idx").on(t.reviewStatus, t.updatedAt) }),
+);
+
+export const supportMessages = sqliteTable(
+  "support_messages",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    conversationId: integer("conversation_id").notNull().references(() => supportConversations.id, { onDelete: "cascade" }),
+    role: text("role").notNull(),   // user | assistant
+    content: text("content").notNull(),
+    tier: integer("tier"),          // rung that answered (assistant rows): 0 cache … 3 big
+    model: text("model"),           // model id, or "cache" / "error"
+    createdAt: integer("created_at").notNull().default(now),
+  },
+  (t) => ({ byConvo: index("support_msg_convo_idx").on(t.conversationId) }),
+);
+
+export const supportTickets = sqliteTable("support_tickets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  conversationId: integer("conversation_id").references(() => supportConversations.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  message: text("message").notNull(),
+  emailedOk: integer("emailed_ok", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at").notNull().default(now),
+});

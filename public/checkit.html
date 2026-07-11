@@ -546,6 +546,26 @@ __BRAND_HEAD__
   .toast svg path,.toast svg circle{stroke:#06210f}
   .toast.show{transform:translateX(-50%) translateY(0)}
   .hidden{display:none}
+  /* Support chat: floating bubble + pop-up conversation (raised surfaces, no hairlines) */
+  .supbub{position:fixed;right:16px;bottom:18px;z-index:70;width:54px;height:54px;border-radius:999px;border:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#2D2D34,#27272D);
+    box-shadow:0 10px 30px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1);transition:transform .12s}
+  .supbub:active{transform:translateY(2px)}
+  .supbub svg{width:24px;height:24px;stroke:var(--accent,#FFCB05)}
+  body:has(.overlay.on) .supbub,body:has(.csheet.on) .supbub{display:none}
+  .supmsgs{background:#17171C;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px;
+    height:min(46vh,340px);overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin:10px 0}
+  .supm{max-width:86%;padding:10px 13px;border-radius:14px;font-size:15px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+  .supm.me{align-self:flex-end;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);color:#EAEAF0}
+  .supm.bot{align-self:flex-start;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 4px 14px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08)}
+  .supm.dots span{display:inline-block;width:7px;height:7px;border-radius:50%;background:#8A8A98;margin-right:4px;animation:loaddot 1.25s ease-in-out infinite}
+  .supm.dots span:nth-child(2){animation-delay:.18s}.supm.dots span:nth-child(3){animation-delay:.36s}
+  .suprow{display:flex;gap:8px;align-items:stretch}
+  .suprow .kin{flex:1;margin:0}
+  .suphelp{display:none;justify-content:center;gap:8px;margin:2px 0 8px}
+  .suphelp.on{display:flex}
+  .suphelp button{border:none;cursor:pointer;border-radius:999px;padding:8px 14px;font-weight:800;font-size:12.5px;
+    background:#1B1B20;color:#c2c2cf;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
   /* find-me + radius toolbar */
   .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
   .findbtn{display:inline-flex;align-items:center;gap:6px;background:var(--ptint);border:1px solid var(--pline);color:var(--purple);font-weight:800;font-size:13px;padding:9px 13px;border-radius:11px;cursor:pointer;white-space:nowrap}
@@ -2274,6 +2294,46 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   </div>
 </div>
 
+<button class="supbub" id="supBub" onclick="openSupport()" aria-label="Support chat">
+  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+</button>
+<div class="overlay" id="supportOverlay" onclick="if(event.target===this)closeSupport()">
+  <div class="modal" style="position:relative;max-width:430px;text-align:left">
+    <span class="x" onclick="closeSupport()">×</span>
+    <div id="sup_chat">
+      <h3 style="margin:6px 0 2px;text-align:center" data-i18n="sup.title">Ask us anything</h3>
+      <div class="meta" style="text-align:center" data-i18n="sup.sub">Real answers about checks, stores, and plans.</div>
+      <div class="supmsgs" id="sup_msgs"></div>
+      <div class="suphelp" id="sup_help">
+        <button onclick="supHelped(true)" data-i18n="sup.yes">That answered it</button>
+        <button onclick="openSupportForm()" data-i18n="sup.no">I need a person</button>
+      </div>
+      <div class="suprow">
+        <input id="sup_in" class="kin" data-i18n-ph="ph.support" placeholder="Type your question" onkeydown="if(event.key==='Enter')sendSupport()">
+        <button class="cta" id="sup_send" onclick="sendSupport()" style="min-width:88px" data-i18n="sup.send">Send</button>
+      </div>
+    </div>
+    <div id="sup_form" style="display:none">
+      <h3 style="margin:6px 0 2px;text-align:center" data-i18n="sup.form.title">Leave it with us</h3>
+      <div class="meta" style="margin-bottom:14px;text-align:center" data-i18n="sup.form.sub">Tell us where to reach you. A person will email you back.</div>
+      <label class="klbl" data-i18n="sup.form.name">Your name</label>
+      <input id="supf_name" class="kin" autocomplete="name" data-i18n-ph="ph.supname" placeholder="First name works">
+      <label class="klbl" data-i18n="sup.form.email">Email</label>
+      <input id="supf_email" class="kin" type="email" inputmode="email" autocomplete="email" data-i18n-ph="ph.cellmail" placeholder="your email">
+      <label class="klbl" data-i18n="sup.form.msg">What's going on</label>
+      <input id="supf_msg" class="kin" data-i18n-ph="ph.supmsg" placeholder="The short version is fine">
+      <div id="supf_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
+      <button class="cta" id="supf_btn" onclick="submitSupportTicket()" style="margin-top:8px;width:100%" data-i18n="sup.form.send">Send it over</button>
+      <button onclick="backToSupportChat()" style="margin-top:10px;width:100%;background:none;border:none;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer" data-i18n="sup.form.back">Back to the chat</button>
+    </div>
+    <div id="sup_done" style="display:none;text-align:center;padding:6px 2px 2px">
+      <h3 style="margin:2px 0 6px" data-i18n="sup.done.title">Got it. We're on it.</h3>
+      <div class="meta" style="line-height:1.5" data-i18n="sup.done.body">A person will email you back soon.</div>
+      <button class="cta" onclick="closeSupport()" style="margin-top:16px;width:100%" data-i18n="sup.done.cta">Done</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -2527,6 +2587,17 @@ const I18N={ es:{
   'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
+  'sup.title':'Pregúntanos lo que sea','sup.sub':'Respuestas reales sobre checks, tiendas y planes.',
+  'sup.hello':'¡Hola! Pregúntame lo que sea sobre checks, tiendas o planes.',
+  'ph.support':'Escribe tu pregunta','sup.send':'Enviar',
+  'sup.yes':'Eso lo resolvió','sup.no':'Necesito una persona','sup.thanks':'Gracias por avisarnos.',
+  'sup.stuck':'Puedo pasar esto a una persona. Toca abajo y nos encargamos.',
+  'sup.form.title':'Déjalo con nosotros','sup.form.sub':'Dinos dónde contactarte. Una persona te responderá por correo.',
+  'sup.form.name':'Tu nombre','ph.supname':'Con tu nombre basta','sup.form.email':'Correo',
+  'sup.form.msg':'Qué está pasando','ph.supmsg':'La versión corta está bien',
+  'sup.form.send':'Envíalo','sup.form.back':'Volver al chat',
+  'sup.form.err':'Pon tu nombre, un correo real y qué pasó.',
+  'sup.done.title':'Recibido. Nos encargamos.','sup.done.body':'Una persona te escribirá pronto por correo.','sup.done.cta':'Listo',
 } };
 // {x}/{n}/{r}/{b}/{s}/{p}/{m} placeholder fill for translated strings.
 function tf(key,en,vars){ let s=t(key,en); if(vars) for(const k in vars) s=s.split('{'+k+'}').join(vars[k]); return s; }
@@ -2717,6 +2788,52 @@ function openStoreReq(){ ['sr_name','sr_city','sr_note','sr_contact'].forEach(id
   const bd=$('sr_body'), dn=$('sr_done'); if(bd)bd.style.display=''; if(dn)dn.style.display='none'; // reset to the form (not a leftover success state)
   track('storereq_open'); $('storeReqOverlay').classList.add('on'); sheetPush('storereq'); setTimeout(()=>{try{$('sr_name').focus();}catch(e){}},80); }
 function closeStoreReq(){ $('storeReqOverlay').classList.remove('on'); acctReturn(); }
+
+// ---- Support chat (the ladder lives server-side; this is just the conversation UI) ----
+let SUP_SID=sessionStorage.getItem('cifm_support_sid')||''; let SUP_LASTQ='';
+function openSupport(){ $('sup_form').style.display='none'; $('sup_done').style.display='none'; $('sup_chat').style.display='block';
+  if(!$('sup_msgs').children.length) supBubbleMsg('bot', t('sup.hello',"Hey! Ask me anything about how checks, stores, or plans work."));
+  $('supportOverlay').classList.add('on'); setTimeout(()=>$('sup_in').focus(),120); }
+function closeSupport(){ $('supportOverlay').classList.remove('on'); }
+function supBubbleMsg(kind,text){ const d=document.createElement('div'); d.className='supm '+(kind==='me'?'me':'bot');
+  d.textContent=text; $('sup_msgs').appendChild(d); $('sup_msgs').scrollTop=1e6; return d; }
+async function sendSupport(){
+  const inp=$('sup_in'), msg=(inp.value||'').trim(); if(!msg) return;
+  inp.value=''; SUP_LASTQ=msg; $('sup_help').classList.remove('on');
+  supBubbleMsg('me',msg);
+  const btn=$('sup_send'); btn.disabled=true;
+  const dots=document.createElement('div'); dots.className='supm bot dots'; dots.innerHTML='<span></span><span></span><span></span>';
+  $('sup_msgs').appendChild(dots); $('sup_msgs').scrollTop=1e6;
+  const r=await api('/pub/support/chat',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({sessionId:SUP_SID||undefined,message:msg,lang:LANG})});
+  dots.remove(); btn.disabled=false;
+  if(!r||r.error==='network'||(!r.reply&&!r.escalate)){ supBubbleMsg('bot', t('err.generic',"That didn't go through. Give it another try.")); return; }
+  if(r.sessionId){ SUP_SID=r.sessionId; sessionStorage.setItem('cifm_support_sid',SUP_SID); }
+  if(r.reply) supBubbleMsg('bot',r.reply);
+  if(r.escalate){ supBubbleMsg('bot', t('sup.stuck',"I can get a person on this. Tap below and we'll take it from here.")); openSupportFormSoft(); }
+  else $('sup_help').classList.add('on');
+}
+async function supHelped(yes){ $('sup_help').classList.remove('on');
+  if(SUP_SID) api('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:yes})});
+  toast(t('sup.thanks','Thanks for letting us know.'),'neutral'); }
+function openSupportFormSoft(){ $('sup_help').classList.add('on'); const b=$('sup_help').children[0]; if(b) b.style.display='none'; }
+function openSupportForm(){ if(SUP_SID) api('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:false})});
+  $('sup_chat').style.display='none'; $('sup_done').style.display='none'; $('sup_form').style.display='block';
+  $('supf_msg').value=SUP_LASTQ||''; $('supf_err').textContent=''; setTimeout(()=>$('supf_name').focus(),80); }
+function backToSupportChat(){ $('sup_form').style.display='none'; $('sup_chat').style.display='block';
+  const b=$('sup_help').children[0]; if(b) b.style.display=''; }
+async function submitSupportTicket(){
+  const name=($('supf_name').value||'').trim(), email=($('supf_email').value||'').trim(), msg=($('supf_msg').value||'').trim();
+  const bad=(el,is)=>{ if(typeof markFld==='function') markFld(el,is); };
+  bad($('supf_name'),!name); bad($('supf_email'),!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)); bad($('supf_msg'),!msg);
+  if(!name||!msg||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $('supf_err').textContent=t('sup.form.err','Fill in your name, a real email, and what happened.'); return; }
+  const btn=$('supf_btn'); btn.disabled=true; btn.textContent=t('toast.submitting','Submitting…');
+  const r=await api('/pub/support/ticket',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({sessionId:SUP_SID||undefined,name,email,message:msg})});
+  btn.disabled=false; btn.textContent=t('sup.form.send','Send it over');
+  if(!r||r.error){ $('supf_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
+  track&&track('support_ticket'); $('sup_form').style.display='none'; $('sup_done').style.display='block';
+}
 async function submitStoreReq(){
   const name=($('sr_name').value||'').trim(), city=($('sr_city').value||'').trim();
   // Require BOTH the store name AND its city — a name alone (e.g. "fungie") isn't enough to find & add it.

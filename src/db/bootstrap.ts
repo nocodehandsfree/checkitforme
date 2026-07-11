@@ -235,6 +235,20 @@ export async function bootstrap() {
     id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id TEXT NOT NULL UNIQUE, label TEXT, chain TEXT,
     category TEXT NOT NULL DEFAULT 'Pokémon', note TEXT, active INTEGER NOT NULL DEFAULT 1,
     last_ingest_at INTEGER, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+  // Support agent: conversations (ladder state + review queue), messages, escalation tickets.
+  await client.execute(`CREATE TABLE IF NOT EXISTS support_conversations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL UNIQUE, lang TEXT NOT NULL DEFAULT 'en',
+    status TEXT NOT NULL DEFAULT 'open', review_status TEXT, max_tier INTEGER NOT NULL DEFAULT 0,
+    cost_usd REAL NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+  await client.execute("CREATE INDEX IF NOT EXISTS support_convo_review_idx ON support_conversations(review_status, updated_at)").catch(() => {});
+  await client.execute(`CREATE TABLE IF NOT EXISTS support_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id INTEGER NOT NULL, role TEXT NOT NULL,
+    content TEXT NOT NULL, tier INTEGER, model TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+  await client.execute("CREATE INDEX IF NOT EXISTS support_msg_convo_idx ON support_messages(conversation_id)").catch(() => {});
+  await client.execute(`CREATE TABLE IF NOT EXISTS support_tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id INTEGER, name TEXT NOT NULL, email TEXT NOT NULL,
+    message TEXT NOT NULL, emailed_ok INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
   // One-time: stock the anonymous free-check pool for launch (each visitor gets 1 free check).
   if (!(await getSetting("pub_credits_initialized"))) {
     await setSetting("pub_credits", "250");

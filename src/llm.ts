@@ -33,6 +33,7 @@ function isGemini(model: string): boolean { return model.startsWith("gemini"); }
 // Groq is OpenAI-compatible; flag it with a `groq:` (or `groq/`) prefix so we route to Groq's
 // Helicone endpoint with the Groq key. The prefix is stripped before the real model name is sent.
 function isGroq(model: string): boolean { return model.startsWith("groq:") || model.startsWith("groq/"); }
+function isAnthropic(model: string): boolean { return model.startsWith("claude"); }
 
 // A dead brain is worse than a slightly pricier one: Gemini (free-tier 429s exhausted it mid-call on
 // 2026-07-10 and every Delta classify silently became "unclear") and Groq failures both fall back to
@@ -52,6 +53,7 @@ export async function llm(model: string, input: string | LlmMsg[], opts: LlmOpts
   const messages: LlmMsg[] = typeof input === "string" ? [{ role: "user", content: input }] : input;
   if (isGemini(model)) return withOpenAIFallback(`gemini ${model}`, () => geminiCall(model, messages, opts), messages, opts);
   if (isGroq(model)) return withOpenAIFallback(`groq ${model}`, () => groqCall(model.replace(/^groq[:/]/, ""), messages, opts), messages, opts);
+  if (isAnthropic(model)) return anthropicCall(model, messages, opts);
   return openaiCall(model, messages, opts);
 }
 
@@ -91,6 +93,31 @@ async function groqCall(model: string, messages: LlmMsg[], o: LlmOpts): Promise<
   if (!r.ok) throw new Error(`llm groq ${r.status}: ${(await r.text()).slice(0, 160)}`);
   const d = (await r.json()) as { choices?: { message?: { content?: string } }[] };
   return d.choices?.[0]?.message?.content ?? "";
+}
+
+// Anthropic via Helicone. Claude has no response_format; json:true is enforced by the caller's
+// prompt ("respond with strict JSON") — same convention our support prompts already follow.
+async function anthropicCall(model: string, messages: LlmMsg[], o: LlmOpts): Promise<string> {
+  const key = config.anthropicKey;
+  if (!key) throw new Error("ANTHROPIC_API_KEY not set");
+  const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n");
+  const rest = messages.filter((m) => m.role !== "system");
+  const r = await fetch("https://anthropic.helicone.ai/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": key, "anthropic-version": "2023-06-01", "Content-Type": "application/json",
+      ...heli(o.job, o.cache),
+    },
+    body: JSON.stringify({
+      model,
+      ...(system ? { system } : {}),
+      messages: rest.map((m) => ({ role: m.role, content: m.content })),
+      max_tokens: o.maxTokens ?? 512,
+    }),
+  });
+  if (!r.ok) throw new Error(`llm anthropic ${r.status}: ${(await r.text()).slice(0, 160)}`);
+  const d = (await r.json()) as { content?: { type: string; text?: string }[] };
+  return (d.content || []).filter((b) => b.type === "text").map((b) => b.text || "").join("");
 }
 
 async function geminiCall(model: string, messages: LlmMsg[], o: LlmOpts): Promise<string> {

@@ -11,8 +11,11 @@ import { WebSocketServer, type WebSocket } from "ws";
 import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql } from "drizzle-orm";
 import { db, client } from "./db/client";
 import {
-  alertSends, alertSubscriptions, callResults, categories, chains, communityPosts, customerSchedules, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, waitlist, watches, zones, zoneRetailers,
+  alertSends, alertSubscriptions, callResults, categories, chains, communityPosts, customerSchedules, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, supportConversations, supportMessages, supportTickets, waitlist, watches, zones, zoneRetailers,
 } from "./db/schema";
+import { answerSupport, resolveConversation, SUPPORT_MODELS } from "./support/ladder";
+import { submitTicket } from "./support/tickets";
+import { addQa, reindexBook } from "./support/rag";
 import { config } from "./config";
 import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
@@ -4162,6 +4165,105 @@ app.get("/app/my-store-requests", async (c) => {
   return c.json({
     reward,
     requests: rows.map((r) => ({ id: r.id, storeName: r.storeName, city: r.city, status: r.status, rewarded: !!r.rewardedAt, createdAt: r.createdAt })),
+  });
+});
+
+// ---- Support agent (the ladder: cache → free → cheap → big → escalation form) ----
+// Public chat. sessionId is a widget-held uuid; the ladder answers from the book + approved Q&As.
+app.post("/pub/support/chat", async (c) => {
+  const rl = rlCheck("support", clientIp(c.req.raw.headers), LIMITS.support);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  const b = await c.req.json().catch(() => ({}));
+  const message = String(b.message || "").trim();
+  if (!message) return c.json({ error: "message required" }, 400);
+  const sessionId = /^[\w-]{8,64}$/.test(String(b.sessionId || "")) ? String(b.sessionId) : crypto.randomUUID();
+  const lang = b.lang === "es" ? "es" : "en";
+  try {
+    const r = await answerSupport(sessionId, message, lang);
+    return c.json({ sessionId, reply: r.reply, escalate: r.escalate });
+  } catch (e) {
+    console.error("[support] chat", e);
+    return c.json({ sessionId, reply: null, escalate: true, error: "unavailable" }, 500);
+  }
+});
+// Thumbs up/down at the end of a chat. helped=true → review queue (the knowledge loop's intake).
+app.post("/pub/support/resolve", async (c) => {
+  const rl = rlCheck("support", clientIp(c.req.raw.headers), LIMITS.support);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  const b = await c.req.json().catch(() => ({}));
+  const ok = await resolveConversation(String(b.sessionId || ""), !!b.helped);
+  return c.json({ ok });
+});
+// Escalation form — the only path to a human. Emails the transcript to the support inbox.
+app.post("/pub/support/ticket", async (c) => {
+  const rl = rlCheck("supportTicket", clientIp(c.req.raw.headers), LIMITS.supportTicket);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  const b = await c.req.json().catch(() => ({}));
+  const name = String(b.name || "").trim(), email = String(b.email || "").trim(), message = String(b.message || "").trim();
+  if (!name || !message) return c.json({ error: "name and message required" }, 400);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return c.json({ error: "invalid_email" }, 400);
+  const sessionId = /^[\w-]{8,64}$/.test(String(b.sessionId || "")) ? String(b.sessionId) : null;
+  const t = await submitTicket(sessionId, name, email, message);
+  return c.json({ ok: true, ticketId: t.id });
+});
+// Admin: rebuild the book index in qdrant (run after Copper edits the book).
+app.post("/api/support/reindex", async (c) => {
+  try {
+    const pages = await reindexBook();
+    return c.json({ ok: true, pages });
+  } catch (e) {
+    return c.json({ error: String((e as Error).message).slice(0, 200) }, 500);
+  }
+});
+// Admin: review queue — resolved conversations awaiting approve/reject into the answer cache.
+app.get("/api/support/review", async (c) => {
+  const convos = await db.select().from(supportConversations)
+    .where(eq(supportConversations.reviewStatus, "pending"))
+    .orderBy(desc(supportConversations.updatedAt)).limit(50);
+  const out = [];
+  for (const cv of convos) {
+    const msgs = await db.select().from(supportMessages)
+      .where(eq(supportMessages.conversationId, cv.id)).orderBy(supportMessages.id);
+    out.push({ id: cv.id, lang: cv.lang, maxTier: cv.maxTier, costUsd: cv.costUsd, updatedAt: cv.updatedAt,
+      messages: msgs.map((m) => ({ role: m.role, content: m.content, tier: m.tier })) });
+  }
+  return c.json({ conversations: out });
+});
+// Admin: approve embeds the Q&A into the qdrant answer cache; reject just clears it from the queue.
+app.post("/api/support/review/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const b = await c.req.json().catch(() => ({}));
+  const convo = (await db.select().from(supportConversations).where(eq(supportConversations.id, id)).limit(1))[0];
+  if (!convo) return c.json({ error: "not_found" }, 404);
+  if (b.action === "approve") {
+    const msgs = await db.select().from(supportMessages)
+      .where(eq(supportMessages.conversationId, id)).orderBy(supportMessages.id);
+    const question = String(b.question || msgs.find((m) => m.role === "user")?.content || "").trim();
+    const answer = String(b.answer || [...msgs].reverse().find((m) => m.role === "assistant")?.content || "").trim();
+    if (!question || !answer) return c.json({ error: "no_qa_pair" }, 400);
+    await addQa(question, answer, id);
+    await db.update(supportConversations).set({ reviewStatus: "approved" }).where(eq(supportConversations.id, id));
+    return c.json({ ok: true, embedded: true });
+  }
+  await db.update(supportConversations).set({ reviewStatus: "rejected" }).where(eq(supportConversations.id, id));
+  return c.json({ ok: true, embedded: false });
+});
+// Admin: the dashboard numbers — volume, who answered, spend, escalation rate.
+app.get("/api/support/stats", async (c) => {
+  const convos = await db.select().from(supportConversations);
+  const tickets = await db.select({ n: sql<number>`count(*)` }).from(supportTickets);
+  const byTier: Record<number, number> = {};
+  let cost = 0;
+  for (const cv of convos) { byTier[cv.maxTier] = (byTier[cv.maxTier] || 0) + 1; cost += cv.costUsd; }
+  return c.json({
+    models: SUPPORT_MODELS,
+    conversations: convos.length,
+    byMaxTier: byTier,
+    escalated: convos.filter((cv) => cv.status === "escalated").length,
+    resolved: convos.filter((cv) => cv.status === "resolved").length,
+    pendingReview: convos.filter((cv) => cv.reviewStatus === "pending").length,
+    tickets: tickets[0]?.n || 0,
+    estCostUsd: Math.round(cost * 10000) / 10000,
   });
 });
 
