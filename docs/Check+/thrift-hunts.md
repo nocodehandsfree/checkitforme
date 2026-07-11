@@ -1,9 +1,9 @@
 ---
 title: Thrift hunts
 ---
-The thrift store treasure hunt, without driving to ten Goodwills.
+When somebody clears out an old collection, it often ends up on a thrift store shelf for pocket change. **Thrift hunts** is how you find it without driving to ten Goodwills.
 
-Flip on the **Thrift** tab and the store list swaps to thrift stores and secondhand shops near you. These are the places where somebody's old binder collection shows up on a shelf for pocket change.
+Flip on the **Thrift** tab and the store list swaps to thrift stores and secondhand shops near you. This is old Pokémon that people got rid of: binders, loose cards, the box from a childhood bedroom, priced like junk because the store has no idea what it is.
 
 Thrift is its own kind of bet, which is why it's a separate mode:
 
