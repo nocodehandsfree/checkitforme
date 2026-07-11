@@ -152,8 +152,8 @@
   /* Tooltip: TAP to show (works on mobile — hover doesn't exist on touch). A small ⓘ marks tappable hints. */
   [data-tip]{cursor:help}
   label[data-tip],span[data-tip],.name[data-tip],b[data-tip]{display:inline-flex;align-items:center;gap:4px}
-  [data-tip]::after{content:"ⓘ";font-size:13px;color:var(--purple);font-style:normal;font-weight:700;line-height:1;margin:-4px 0 -4px 1px;padding:4px;vertical-align:middle;opacity:.85;cursor:pointer}
-  [data-tip]:active::after{opacity:1;color:#c4b5fd}
+  [data-tip]::after{content:"ⓘ";font-size:13px;color:var(--muted);font-style:normal;font-weight:700;line-height:1;margin:-4px 0 -4px 1px;padding:4px;vertical-align:middle;opacity:.85;cursor:pointer}
+  [data-tip]:active::after{opacity:1;color:#fff}
   #tiptip{position:fixed;z-index:9000;max-width:262px;background:#06060a;color:#e8e8f2;font:500 12.5px/1.45 Inter,-apple-system,sans-serif;font-style:normal;padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 30px rgba(0,0,0,.6)}
   /* Settings page: sections reuse the global details.card chevron (green circle, top-right). */
   details.card.setsec>summary{align-items:center}
