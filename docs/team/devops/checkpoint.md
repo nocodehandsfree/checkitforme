@@ -3,13 +3,16 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 📌 Mapping → Pops (2026-07-10 ~9pm ET): promote `6feff66` (one file, src/calls/mapper.ts)
-- Fixes a real bug the sweep exposed: the mapper's VERIFY stage re-locked whatever it last reached even
-  when SLOWER than the recipe already shipped → 8 chains got downgraded live (Sam's, Walgreens, Dick's,
-  Jewel, Fleet Farm, Food 4 Less, Blain's, Safeway). Guard added: never overwrite a locked recipe with a
-  slower re-measure; keep the faster one and optimize from there. tsc clean. Zero consumer UI.
-- Not urgent (no sweep running now) but should ride the next promote before any re-map. The 11 regressed
-  chains were already hand-restored to their fast recipes via trainer/lock, so prod is correct today.
+## 📌 Mapping → Pops (2026-07-11): promote TWO mapper.ts fixes (both on staging, tsc clean, no consumer UI)
+1. **No-downgrade guard** (`6feff66`): the VERIFY stage re-locked whatever it last reached even when SLOWER
+   than the shipped recipe → 8 chains downgraded live during the sweep. Guard: never overwrite a locked
+   recipe with a slower re-measure. The 11 regressed chains were already hand-restored, so prod is correct
+   today; this stops it recurring on the next re-map.
+2. **Skip rings-direct chains** (`52d2c77`): tree-mapper now skips any chain with ringsDirect=true or
+   answerPath=direct_human. Independents/co-ops (thrift, local card shops, Ace) have no tree — mapping them
+   wastes calls and a stray chain recipe (Ace's old "press 4") muted the live agent on direct-ring stores.
+- Both should ride the next promote before Mapper runs the 12 held locked-retry chains. Prod=598a16a still
+  lacks both. Once live, Mapper finishes those 12 (guard makes it safe).
 
 ## ✅ PROMOTED 2026-07-10 07:20Z — pin 6edefab → prod main 10bdc65, all green
 - Pinned promote executed (merge tree == pin, Website polish 7a9c7c1 excluded). Prod health shows
