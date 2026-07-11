@@ -1,6 +1,23 @@
 # Check - Mapping — CHECKPOINT (current state)
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets not prose, under ~80 lines.
 
+## DAY-2 sweep (2026-07-11, from 9am ET) — IN PROGRESS, guard NOT on prod
+- **Guard `6feff66` is on STAGING, not prod** (prod=598a16a; Pops shipped an unrelated account-reset
+  feature overnight). So the 12 locked "retry" chains are HELD (driver SKIP_IDS) — no re-downgrade risk.
+  **Owner nudge outstanding:** Pops must promote 6feff66 before those 12 re-run.
+- **Wins:** Burlington 78→53 (keypad, live-locked) · Independent Card Shop → locked DIRECT (~13s).
+- **Thrift = NOT chain-mappable** (owner asked, we tested): Goodwill + Habitat ReStore both needs-review;
+  a diagnostic listen call to Goodwill heard NO menu, NO human = voicemail/recorded line. Thrift stores are
+  independently operated (like Ace) → per-store live-AI caller, not a chain recipe. Did NOT burn calls on
+  Salvation Army/Savers/Unique (same pattern).
+- **Small shops = hit/miss:** Independent Card locked direct; Comic Book Shop = voicemail (no human).
+  PokeMall TCG + Cards and Coffee = stores not open yet → retry PM.
+- **Container reclaim killed the local driver** (nohup dies with the container; local git even reverts to a
+  stale commit — remote is truth). Lesson: don't rely on a local long-running process; the mapper RUN
+  survives server-side → drive one-chain-per-check-in or read results from mapper/state.
+- **NEXT (afternoon ~2pm ET check-in):** retry PokeMall/Cards&Coffee/Macy's when open; re-check guard on
+  prod → if promoted, run the 12 held chains; then write report-2026-07-11.md + reply to owner.
+
 ## RESTORED + root cause (2026-07-10 ~9pm ET) — 11 chains that got slower
 - **Owner caught it:** the after-column had 11 chains SLOWER than before. That's a fail — the whole point
   is faster. All 11 hand-restored via trainer/lock to last night's faster recipes (verified live):
