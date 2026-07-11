@@ -5,8 +5,8 @@
   ✓ reindex (18 book pages → qdrant) ✓ grounded EN + ES answers ✓ resolve → review → approve →
   embedded ✓ re-ask hit the $0 cache tier ✓ ticket stored ✓ stats live. Whole drive: $0.0005.
   Prompt tune shipped after drive: "check" never translated in ES replies (was "cheque").
-  OPEN: BREVO_API_KEY copy prod→staging blocked by session permissions — owner authorizes, then
-  tickets email support@ (they store fine meanwhile). Owner is UI-testing the widget on staging.
+  BREVO_API_KEY copied prod→staging (owner authorized) and PROVEN: Brevo log shows the test
+  ticket delivered to support@ and opened. Owner is UI-testing the widget on staging.
   Big-tier flip when Anthropic funded: SUPPORT_MODEL_BIG=claude-opus-4-8 (llm.ts anthropic branch).
   Discord later: plug the bot into answerSupport() in src/support/ladder.ts.
 - 2026-07-10 (2) — Whole path built: ladder (cache→free→cheap→big, SUPPORT_MODEL_* env-tunable),
