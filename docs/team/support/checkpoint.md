@@ -1,6 +1,14 @@
 # Support — checkpoint
 **What this is:** current state. Newest on top, ≤80 lines.
 
+- 2026-07-11 (4) — Owner design pass, LIVE: launcher is now a small low-key GRAY chat icon pinned
+  bottom-right (thumb reach, tiny footprint, no "Help" label); header shows the Check BRAND MARK
+  upper-left + the approved v2 round-dark X; exact Lucide icons, dropped the 👋 emoji. Help tab is
+  now a REAL FAQ — Copper's 15 questions from readme/common-questions rendered as an inline
+  accordion (read without chatting) + search filter + links to full pages (/pub/support/faq,
+  cached). Human path buried harder: "Talk to a human" hidden until the AI fails to resolve TWICE
+  in a chat (first fail asks for more detail). Verified live: FAQ 15 items, gray launcher, brand
+  mark, approved X all served. FAQ source = Copper's readme page; edit there → reflects (10min cache).
 - 2026-07-11 (3) — v3 MESSENGER SHIPPED + LIVE on staging. Intercom-style: right-edge Help tab →
   full-screen panel (right-drawer desktop), bottom tabs Home/Messages/Help. Home (greeting +
   admin known-issue banner + Ask a question + recent), Messages (history w/ dates, account +
