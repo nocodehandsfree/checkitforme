@@ -1,15 +1,17 @@
 # Support — checkpoint
 **What this is:** current state. Newest on top, ≤80 lines.
 
-- 2026-07-10 (2) — WHOLE PATH BUILT on branch `claude/support-lane-spec-7hd2aj` (PR #5 → staging).
-  Ladder (cache→free→cheap→big, env-tunable via SUPPORT_MODEL_*), book→qdrant RAG, site chat
-  widget EN/ES, escalation form → Brevo → support@, review queue + stats. Verified locally with
-  real keys: full ladder climb, never-guess rule, ES replies, 13-assertion smoke suite in
-  test-all.sh. Browser-QA failures = legacy baseline (proved identical on base commit).
-  BLOCKED on merge to staging for: reindex+grounded answers, cache-hit test, live widget drive.
-  Needs from Pops: BREVO_API_KEY on staging (tickets store-but-don't-email without it).
-  Big-tier model flip once Anthropic funded: set SUPPORT_MODEL_BIG=claude-opus-4-8 (llm.ts now
-  has an anthropic branch). Discord: plug the bot into answerSupport() in src/support/ladder.ts.
+- 2026-07-11 — LIVE ON STAGING and driven end to end (owner approved merge; PR #5 merged).
+  ✓ reindex (18 book pages → qdrant) ✓ grounded EN + ES answers ✓ resolve → review → approve →
+  embedded ✓ re-ask hit the $0 cache tier ✓ ticket stored ✓ stats live. Whole drive: $0.0005.
+  Prompt tune shipped after drive: "check" never translated in ES replies (was "cheque").
+  OPEN: BREVO_API_KEY copy prod→staging blocked by session permissions — owner authorizes, then
+  tickets email support@ (they store fine meanwhile). Owner is UI-testing the widget on staging.
+  Big-tier flip when Anthropic funded: SUPPORT_MODEL_BIG=claude-opus-4-8 (llm.ts anthropic branch).
+  Discord later: plug the bot into answerSupport() in src/support/ladder.ts.
+- 2026-07-10 (2) — Whole path built: ladder (cache→free→cheap→big, SUPPORT_MODEL_* env-tunable),
+  book→qdrant RAG, chat widget EN/ES, escalation form → Brevo → support@, review queue + stats,
+  13-assertion smoke suite in test-all.sh. Browser-QA failures = legacy baseline (proved on base).
 - 2026-07-10 (1) — Spec v2 owner-approved: no user-facing email (form → support@), cheap tiers vet
   before money, Discord deferred, ticket system later. Cost model in spec.
 - 2026-07-09 — Lane created at the repo split.
