@@ -2,9 +2,10 @@
 
 The single visual source of truth for **checkitforme.com** ("Check") and its admin/vertical
 surfaces — the **elevated / soft-depth** skin the live site runs. Every spec here is extracted 1:1
-from the one approved master board in this folder: **`comps/NEW_CHECK_COMPS.dc.html`** (the visual
-comp — this guide and that board reference each other; the guide is the words for what the board
-shows). The old self-contained bundle `NEW_CHECK_COMPS.html` was a generated duplicate and is
+from the approved master boards in this folder: **`comps/WEBSITE_COMPS.dc.html`** (the site) and
+**`comps/ADMIN_COMPS.dc.html`** (the admin) — this guide and those boards reference each other; the
+guide is the words for what the boards show. Standing rule (owner): every NEW admin feature gets
+comped in `ADMIN_COMPS.dc.html` FIRST, then built. The old self-contained bundle `NEW_CHECK_COMPS.html` was a generated duplicate and is
 retired to `docs/archive/`.
 
 **This doc is one of three that reference each other — keep them in sync:**
@@ -283,5 +284,5 @@ tile/banner 16 · poll/day key 11–14 · selection ring = inner + 2 · logo slo
 
 ---
 
-_Owned by Design. Screens: `NEW_CHECK_COMPS.html` (this folder). Words:
+_Owned by Design. Screens: `comps/WEBSITE_COMPS.dc.html` + `comps/ADMIN_COMPS.dc.html`. Words:
 `docs/design/copy/COPY_STYLE_GUIDE.md`._
