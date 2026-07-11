@@ -4151,8 +4151,23 @@ async function loadUsers(){
           <span class="upill ${planCls(u.plan)}">${esch(u.plan)}</span>
           <div class="umeta" style="margin-top:5px">${u.credits} credits · ${u.callsMade} call${u.callsMade===1?'':'s'} · ${money(u.spentCents)}</div>
           ${u.comp?'':`<button class="ghost" style="font-size:10.5px;padding:5px 9px;margin-top:7px" onclick="toggleStaff('${esch(u.id)}',${u.manualStaff?'false':'true'})">${u.manualStaff?'Unmark':'Mark admin/test'}</button>`}
+          <button class="ghost" style="font-size:10.5px;padding:5px 9px;margin-top:7px;color:#ef4444" onclick="resetAccount('${esch(u.id)}','${esch(u.phone||u.email||u.id)}')">Reset account</button>
         </div>
       </div>`).join('');
+}
+// Wipe an account back to brand new (account + its checks, alerts, schedules, zones, requests) and
+// cancel any live subscription. Previews the exact counts first, then asks once before deleting.
+async function resetAccount(id,label){
+  const enc=encodeURIComponent(id);
+  const dry=await api('/api/admin/users/'+enc+'/delete?dry=1',{method:'POST'});
+  if(!dry||dry.error){ toast('Could not read that account'); return; }
+  const w=dry.wouldRemove||{};
+  const owned=(w.callResults||0)+(w.customerSchedules||0)+(w.alertSubscriptions||0)+(w.storeRequests||0)+(w.communityPosts||0)+(w.zones||0)+(w.watches||0);
+  const subs=(dry.stripeSubsToCancel||[]).length;
+  const lines=['Reset '+label+' to a brand new account?','','Removes the account plus '+owned+' owned item'+(owned===1?'':'s')+' (checks, alerts, schedules, zones).'+(subs?(' Cancels '+subs+' live subscription'+(subs===1?'':'s')+'.'):'' ),'','This cannot be undone.'];
+  if(!confirm(lines.join('\n'))) return;
+  const r=await api('/api/admin/users/'+enc+'/delete',{method:'POST'});
+  if(r&&r.ok){ toast(label+' reset to brand new'); loadUsers(); } else toast('Could not reset that account');
 }
 async function toggleStaff(id,on){ const r=await api('/api/admin/users/staff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,on})}); if(r&&!r.error){ toast(on?'Flagged as admin/test. Won’t count as a customer':'Unflagged'); loadUsers(); } else toast('Could not update'); }
 // ---- Restock intel (God View → Restock): network view + per-store breakdown on tap ----
