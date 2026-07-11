@@ -8,8 +8,11 @@ _Newest on top. Keep ≤80 lines. Finished items drop off — git keeps history.
   pak_n_save (vector-traced red, 2 lines), payless_foods (owner's P mark). Cache `?v=78`.
   Iterations were sizing + color per owner review — all tight canvases (square-canvas
   padding was the "renders small" bug; locked set is trimmed tight).
-- **Next: merge PR #7 to staging** and QA staging.checkitforme.com/logo-wall live, then
-  R2-migrate the new 5 (`POST /api/chains/:id/logo`) so they travel to prod like the rest.
+- **MERGED to staging** (PR #7, merge `c99d0ad`) + VERIFIED live: all 5 render on
+  staging.checkitforme.com/logo-wall at cache v78, files byte-match the locked assets.
+- **Not yet on prod.** To reach checkitforme.com they need a staging→main promote
+  (`bash scripts/promote.sh`) — owner-gated, not done. R2-migrate the 5 after promote so
+  the `logo_url` pointers travel too.
 
 ## ⚠️ Flag for owner / Webbie — "unique" fuzzy-match collision
 `chainLogoFile()`'s fuzzy pass matches any store whose name contains the word "unique"
