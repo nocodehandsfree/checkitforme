@@ -235,8 +235,14 @@ carved, links green. Driver preview on near-black `#141419`; Apple-Pay key white
 26px, green lit. Footer: "Powered by Fungibles · runner.fungibles.com".
 
 ### 5.17 Zones (My Zones — check a whole area) (owner 07-11 comp)
-Full-page takeover: **the product switcher in the upper-left is hidden** while in zones (`body.zoning`);
-the zone screen carries its own back + title, credits pill holds the right edge. **Build:** search a
+**Locked frame, not a page.** Every zone screen is one fixed full-viewport flex column: header pinned
+top, **only the middle scrolls**, action bar pinned bottom — nothing bleeds under the header. The app's
+**global header + support bubble are hidden** in zones (`body.zoning`); the frame carries its own header
+(back · centered title · credits pill on the right). List = New-zone button + zone cards + footer at the
+end of the scroll. Create = locked search/radius sub-header + scrolling store list + **basket bar that
+rides up from the bottom** as you pick stores (removable store chips + name field + Save). Run report is
+the same frame (pinned header, scrolling results). **Zone card:** name + kebab, status pill (green
+"N in stock" / grey "Not checked yet"), "N stores · ago", up to 4 logo tiles + "+N", "Check this zone". **Build:** search a
 ZIP/town, radius ring (1·2·5·10 mi), list or map. **Load every store in the radius regardless of
 open/closed** — closed ones show a `closed` tag but are still selectable (you build a zone once, call it
 whenever). **Add all** is one button with two states: once every in-radius store is picked it flips to
