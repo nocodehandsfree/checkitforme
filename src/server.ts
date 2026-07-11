@@ -895,7 +895,7 @@ function chainLogoInfo(name: string | null | undefined): { url: string | null; w
   const f = chainLogoFile(name); // filesystem fallback (pre-migration, and unchained store names)
   if (!f) return { url: null, wide: false, dark: false };
   const m = logoMeta()[f] || { w: 0, d: 0 };
-  return { url: `/logos/chains/${f}?v=75`, wide: m.w === 1, dark: m.d === 1 };
+  return { url: `/logos/chains/${f}?v=76`, wide: m.w === 1, dark: m.d === 1 };
 }
 
 // ---- Distributor-driven carries (data/distributors.json) ----
@@ -988,7 +988,7 @@ app.get("/logo-wall", async (c) => {
     const m = meta[f] || { w: 0, d: 0 };
     const info = fileInfo.get(f);
     const cls = (m.d === 1 ? " lite" : "") + (m.w === 1 ? " widelogo" : "");
-    return `<div class="cell" data-type="${esc(info?.type || "Other")}" data-treat="${treatKey(m)}"><div class="ic${cls}"><img src="/logos/chains/${f}?v=75" alt=""></div><div class="nm">${esc(info?.name || pretty(f))}</div></div>`;
+    return `<div class="cell" data-type="${esc(info?.type || "Other")}" data-treat="${treatKey(m)}"><div class="ic${cls}"><img src="/logos/chains/${f}?v=76" alt=""></div><div class="nm">${esc(info?.name || pretty(f))}</div></div>`;
   };
   // ── Pokémon set & era logos — same repo/logo-wall system as chains, but shown BIG (owner 2026-07-03:
   //    "take up the box, be the main attraction"): these are wordmark logos, not 52px store marks.
