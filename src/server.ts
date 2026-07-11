@@ -3024,7 +3024,16 @@ app.post("/app/zones/:id/check", async (c) => {
     : (await db.select().from(categories).where(eq(categories.key, "pokemon")))[0];
   if (!cat) return c.json({ error: "category_not_found" }, 400);
   const links = await db.select().from(zoneRetailers).where(eq(zoneRetailers.zoneId, id));
-  const rows = (await db.select().from(retailers).where(inArray(retailers.id, links.map((l) => l.retailerId)))).filter((r) => r.sellsPacks !== false);
+  const allRows = (await db.select().from(retailers).where(inArray(retailers.id, links.map((l) => l.retailerId)))).filter((r) => r.sellsPacks !== false);
+  // Skip stores we KNOW are closed right now — a closed store can't be reached, so don't burn the
+  // check on it (owner 07-11: "STORE XYZ is closed but we can still call STORE ABC"). Unknown hours
+  // still get called. The confirm sheet already warned the user which ones we're skipping.
+  const rows = [];
+  for (const r of allRows) {
+    const os = openState(r.hours, r.timezone);
+    if (os.known && !os.open) continue;
+    rows.push(r);
+  }
   const runId = `z${id}-${crypto.randomUUID()}`;
   const isPrivate = await isFinderPrivate(g.a);
   const placed: { retailerId: number; cid: string | null }[] = [];

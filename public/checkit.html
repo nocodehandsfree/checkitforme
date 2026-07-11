@@ -828,6 +828,9 @@ __BRAND_HEAD__
 
   /* ── 2024 redesign: tight mobile-first header, ticker, trust strip, custom marks ── */
   .brandbar{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 auto}
+  /* Zones takes over the page (owner 07-11): drop the product switcher in the upper-left. Brandbar
+     stays as the flex spacer so the credits pill holds the right edge. */
+  body.zoning .vsw{display:none}
   .logomark{width:30px;height:30px;flex:0 0 auto;cursor:pointer;display:grid;place-items:center}
   .logomark svg{display:block}
   .iconbtn{flex:0 0 auto;width:38px;height:38px;border-radius:11px;background:var(--sheet);border:1px solid var(--border);display:grid;place-items:center;cursor:pointer;color:#bdbdcb;padding:0}
@@ -1515,6 +1518,7 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zrad.on{background:linear-gradient(180deg,#5BEA93,#19B145);color:#04240f;box-shadow:0 6px 12px -6px rgba(25,177,69,.5)}
 #zones .zradmi{font-size:12px;font-weight:700;color:#7C7C88}
 #zones .zaddall{margin-left:auto;border:0;background:rgba(74,222,128,.1);border-radius:999px;padding:8px 14px;color:#4ADE80;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+#zones .zaddall.on{background:rgba(255,123,123,.12);color:#FF9B9B} /* flipped to Remove-all */
 /* stage: fixed-height map or a capped scrolling list — flows above the footer, never under browser chrome */
 #zones .zstage{display:flex;flex-direction:column}
 #zones #zmap{height:46vh;min-height:300px;border-radius:16px;overflow:hidden;background:#15151c}
@@ -2608,6 +2612,7 @@ const I18N={ es:{
   'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
+  'zones.confirm.title2':'¿Verificar {n} {s} abiertas?','zones.storeword':'tienda','zones.storesword':'tiendas','zones.checkallN':'Verificar las {n}','zones.removeall':'Quitar todo','zones.isclosed':'está cerrada','zones.areclosed':'están cerradas','zones.stillcall':'Aún podemos llamar a las {n} abiertas.','zones.and':'y','zones.andmore':'y {n} más','zones.astore':'Una tienda',
   'sup.title':'Pregúntanos lo que sea',
   'sup.hello':'¡Hola! Pregúntame lo que sea sobre checks, tiendas o planes.',
   'ph.support':'Escribe tu pregunta','sup.send':'Enviar',
@@ -4748,7 +4753,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); }catch(_){ } TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -5951,7 +5956,7 @@ let ZONES={ sel:new Set(), storeById:new Map(), editId:null, radius:5, run:null,
 function zHideAll(){ try{ exitHunt(); }catch(_){ } try{ if(typeof HUNT_STEP!=='undefined') HUNT_STEP=''; }catch(_){ }
   try{ document.body.classList.remove('rview','rv-in','rv-out','rv-soon','rv-unk'); dropBakedTone(); }catch(_){ } // drop the result-view verdict wash (else a red "out of stock" bg bleeds under zones)
   ['builder','live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); } // exitHunt: else body.huntmode keeps #hobby (era/set art) visible under the zones view
-function zShow(){ const z=$('zones'); if(z){ z.classList.remove('hidden'); } const w=$('hcalwrap'); if(w) w.style.display='none'; }
+function zShow(){ const z=$('zones'); if(z){ z.classList.remove('hidden'); } const w=$('hcalwrap'); if(w) w.style.display='none'; try{ document.body.classList.add('zoning'); }catch(_){ } }
 function zoneStopPoll(){ if(ZONES.poll){ clearInterval(ZONES.poll); ZONES.poll=null; } }
 function backFromZones(){ zoneStopPoll(); const z=$('zones'); if(z) z.classList.add('hidden'); try{ backToBuilder(); }catch(_){ } try{ openAccount(); }catch(_){ } }
 const zHead=(title,back)=>`<div class="zhead"><button class="zback" onclick="${back||'backFromZones()'}" aria-label="Back">‹</button><b>${esc(title)}</b><span style="width:34px"></span></div>`;
@@ -5996,7 +6001,7 @@ function zonePaintList(list){
         <button class="zmore" onclick="zoneMenu(${zn.id},event)" aria-label="Edit">⋯</button>
       </div>
       ${faces?`<div style="display:flex;gap:7px;margin-top:11px;overflow:hidden">${faces}</div>`:''}
-      <button class="cta sm" style="margin-top:12px;width:100%" onclick="zoneCheckAll(${zn.id})">${t('zones.checkall','Check all')}${zn.checkCents!=null?' · '+money(zn.checkCents):''} →</button>
+      <button class="cta sm" style="margin-top:12px;width:100%" onclick="zoneCheckAll(${zn.id})">${t('zones.checkall','Check all')} →</button>
     </div>`;
   }).join('');
   z.innerHTML=`<div class="zwrap">${zHead(t('zones.title','Manage Zones'))}
@@ -6072,7 +6077,7 @@ function renderZoneBuild(){
     ${zHead(ZONES.editId?t('zones.edit','Edit zone'):t('zones.newz','New zone'),'renderZonesList()')}
     <div class="zsearch"><input id="z_loc" class="kin" placeholder="${t('zones.locph','Search a ZIP or town…')}" autocomplete="off" oninput="zoneSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();zoneGeocode();}"><button class="zgps" onclick="zoneGPS()" aria-label="Use my location">${ICO.pin('currentColor')}</button></div>
     <div class="zseg"><button class="${!map?'on':''}" onclick="if(ZONES.mapOpen)zoneToggleMap()">${t('zones.list','List')}</button><button class="${map?'on':''}" onclick="if(!ZONES.mapOpen)zoneToggleMap()">${t('zones.map','Map')}</button></div>
-    <div class="zradrow"><span class="zradlbl">${t('zones.radius','Radius')}</span>${rings}<span class="zradmi">mi</span><button class="zaddall" onclick="zoneAddRadius()">＋ ${t('zones.addallshort','Add all')}</button></div>
+    <div class="zradrow"><span class="zradlbl">${t('zones.radius','Radius')}</span>${rings}<span class="zradmi">mi</span><button class="zaddall${zoneAllInRadiusSelected()?' on':''}" onclick="zoneToggleAll()">${zoneAllInRadiusSelected()?t('zones.removeall','Remove all'):'＋ '+t('zones.addallshort','Add all')}</button></div>
     <div class="zstage">
       <div id="zmap" style="display:${map?'block':'none'}"></div>
       <div class="zlist" style="display:${map?'none':'block'}">${rows}</div>
@@ -6093,7 +6098,14 @@ function zoneToggle(id){ const add=!ZONES.sel.has(id); if(add){ ZONES.sel.add(id
   if(row){ row.classList.toggle('picked',add); const ck=row.querySelector('.zck'); if(ck) ck.innerHTML=add?ZCHECK:''; } else renderZoneBuild();
   zoneBarSync();
 }
-function zoneAddRadius(){ zoneBuildStores().forEach(s=>{ const mi=storeMi(s); if(mi!=null && mi<=(ZONES.radius||5)){ ZONES.sel.add(s.id); ZONES.storeById.set(s.id,s); } }); if(ZONES.mapOpen){ zoneMapDraw(); zoneBarSync(); } else renderZoneBuild(); }
+// Stores that fall inside the current radius ring (the ones "Add all" acts on).
+function zoneRadiusStores(){ return zoneBuildStores().filter(s=>{ const mi=storeMi(s); return mi!=null && mi<=(ZONES.radius||5); }); }
+function zoneAllInRadiusSelected(){ const rs=zoneRadiusStores(); return rs.length>0 && rs.every(s=>ZONES.sel.has(s.id)); }
+// One button, two states (owner 07-11): adds every in-radius store, and once they're all in it flips to
+// "Remove all" so a tap clears them back out.
+function zoneToggleAll(){ const rs=zoneRadiusStores(); const allOn=rs.length>0 && rs.every(s=>ZONES.sel.has(s.id));
+  rs.forEach(s=>{ if(allOn){ ZONES.sel.delete(s.id); } else { ZONES.sel.add(s.id); ZONES.storeById.set(s.id,s); } });
+  if(ZONES.mapOpen){ zoneMapDraw(); zoneBarSync(); } else renderZoneBuild(); }
 // --- Zone location search + map ('pin a zone'): type a ZIP/town or tap the map to recenter, tap pins to add ---
 let ZMAP=null, ZMARKERS={}, ZRING=null;
 // Auto-search while typing (owner 07-10, items 36-37): the Go button is gone — a pause after 3+ chars
@@ -6159,15 +6171,28 @@ async function zoneSave(){
   }catch(e){ if(btn){ btn.disabled=false; btn.textContent=t('zones.save','Save zone'); } toast(t('err.generic',"That didn't go through. Give it another try.")); }
 }
 // ---- Screen C — the live zone-check report ----
+function isClosedSafe(st){ try{ return isClosed(st); }catch(_){ return false; } }
 async function zoneCheckAll(id){
   const zn=((ZONES.list||[]).find(x=>x.id===id))||{};
+  const all=(zn.stores||[]).filter(st=>st.callable!==false);
+  const openStores=all.filter(st=>!isClosedSafe(st));
+  const closedStores=all.filter(st=>isClosedSafe(st));
+  const openN=openStores.length;
   // Nothing open right now → no call to place; say so instead of asking for an OK (owner 07-10).
-  const openN=(zn.stores||[]).filter(st=>st.callable!==false && !isClosed(st)).length;
-  if((zn.stores||[]).length && !openN){ toast(t('zones.allclosed','All stores in this zone are closed'),'neutral'); return; }
+  if(all.length && !openN){ toast(t('zones.allclosed','All stores in this zone are closed'),'neutral'); return; }
+  // Some closed → warn WHICH ones, reassure we'll still call the open ones (owner 07-11). Closed stores
+  // are skipped server-side so no check is wasted. NO price shown (owner 07-11).
+  let closedWarn='';
+  if(closedStores.length){
+    const nm=closedStores.map(s=>esc(s.name||s.storeName||t('zones.astore','A store')));
+    const names=nm.length<=2?nm.join(nm.length===2?' '+t('zones.and','and')+' ':''):nm[0]+' '+tf('zones.andmore','and {n} more',{n:nm.length-1});
+    const verb=closedStores.length>1?t('zones.areclosed','are closed'):t('zones.isclosed','is closed');
+    closedWarn=`<div style="margin:0 0 16px;text-align:left;color:#f0c79a;background:rgba(232,154,74,.12);border:1px solid rgba(232,154,74,.35);border-radius:12px;padding:11px 13px;font-size:13.5px;line-height:1.45;font-weight:600"><b style="color:#f6d3a6">${names}</b> ${verb}. ${tf('zones.stillcall','We can still call the {n} that are open.',{n:openN})}</div>`;
+  }
   const goOn=await new Promise(res=>{
-    zPop(`<h3 style="margin:2px 0 8px;font-size:20px;font-weight:900;letter-spacing:-.4px">${t('zones.confirm.title','Check all stores in this zone?')}</h3>
-      <div class="meta" style="margin-bottom:16px">${t('zones.confirm.per','1 check per store.')}${zn.checkCents!=null?'<br>'+money(zn.checkCents):''}</div>
-      <button class="cta" style="width:100%;margin-bottom:10px" id="zca_go">${t('zones.checkall','Check all')} →</button>
+    zPop(`<h3 style="margin:2px 0 8px;font-size:20px;font-weight:900;letter-spacing:-.4px">${tf('zones.confirm.title2','Check {n} open {s}?',{n:openN,s:openN===1?t('zones.storeword','store'):t('zones.storesword','stores')})}</h3>
+      ${closedWarn||`<div class="meta" style="margin-bottom:16px">${t('zones.confirm.per','1 check per store.')}</div>`}
+      <button class="cta" style="width:100%;margin-bottom:10px" id="zca_go">${tf('zones.checkallN','Check all {n}',{n:openN})} →</button>
       <button style="${Z_ROWBTN};justify-content:center" id="zca_no">${t('pre.again.no','Not now')}</button>`);
     $('zca_go').onclick=()=>{ zPopClose(); res(true); }; $('zca_no').onclick=()=>{ zPopClose(); res(false); };
     $('zmenuOv').onclick=e=>{ if(e.target===$('zmenuOv')){ zPopClose(); res(false); } };
