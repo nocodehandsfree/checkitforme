@@ -15,8 +15,14 @@
 - **Container reclaim killed the local driver** (nohup dies with the container; local git even reverts to a
   stale commit — remote is truth). Lesson: don't rely on a local long-running process; the mapper RUN
   survives server-side → drive one-chain-per-check-in or read results from mapper/state.
-- **NEXT (afternoon ~2pm ET check-in):** retry PokeMall/Cards&Coffee/Macy's when open; re-check guard on
-  prod → if promoted, run the 12 held chains; then write report-2026-07-11.md + reply to owner.
+- **PM update (2pm ET):** guard STILL not on prod (598a16a) → 12 held chains NOT run. Afternoon retries
+  Cards&Coffee/Macy's = voicemail/no-human (same per-store pattern); Comic Book Shop too. Full day-2
+  report: `docs/team/mapping/report-2026-07-11.md`.
+- **Day-2 verdict:** 2 wins (Burlington 78→53, Independent Card direct). Thrift + single-location/
+  shop-in-shop shops = per-store, NOT chain-mappable (like Ace) → leave to live per-store caller.
+- **STILL BLOCKED:** the 12 locked "retry" chains need guard `6feff66` promoted before they re-run.
+  When prod != 598a16a and mapper.ts has `slowerThanLocked`, run ids 2,1,73,32,40,26,10,58,47,48,20,23
+  one at a time, each after<=before vs baseline. Walmart/Target also need a daylight human-detect listen.
 
 ## RESTORED + root cause (2026-07-10 ~9pm ET) — 11 chains that got slower
 - **Owner caught it:** the after-column had 11 chains SLOWER than before. That's a fail — the whole point
