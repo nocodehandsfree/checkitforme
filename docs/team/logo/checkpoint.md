@@ -3,12 +3,13 @@
 _Newest on top. Keep ≤80 lines. Finished items drop off — git keeps history._
 
 ## Now
-- **Shipped the 5 missing chains** (commit `f11b29a` on `claude/logo-asset-lane-setup-8rx7ep`,
-  PR #7 → staging): habitat_restore, unique, metro_market, pak_n_save, payless_foods.
-  All sourced from real marks, `_meta` set, cache bumped `?v=74`, STATUS rows updated.
-  Verified locally at the exact tile math (52px / 42 sq / 44×34 wide) against locked
-  neighbors. **NOT verified on staging /logo-wall** — needs the PR merged to `staging` first.
-- **Awaiting owner approval** of the 5 (contact sheet sent in chat 07-10).
+- **Batch of 5 LOCKED by owner 07-10** (through commit `4736e87`, PR #7 → staging):
+  habitat_restore, unique, metro_market (= copy of locked mariano_s per owner),
+  pak_n_save (vector-traced red, 2 lines), payless_foods (owner's P mark). Cache `?v=78`.
+  Iterations were sizing + color per owner review — all tight canvases (square-canvas
+  padding was the "renders small" bug; locked set is trimmed tight).
+- **Next: merge PR #7 to staging** and QA staging.checkitforme.com/logo-wall live, then
+  R2-migrate the new 5 (`POST /api/chains/:id/logo`) so they travel to prod like the rest.
 
 ## ⚠️ Flag for owner / Webbie — "unique" fuzzy-match collision
 `chainLogoFile()`'s fuzzy pass matches any store whose name contains the word "unique"
