@@ -793,7 +793,7 @@ __BRAND_HEAD__
   .rcptwait{display:flex;align-items:center;justify-content:center;gap:10px;color:#cfcfd8;font-size:13.5px;font-weight:600;padding:6px 0}
   .rcptspin{width:16px;height:16px;flex:0 0 auto;border-radius:50%;border:2px solid var(--pline);border-top-color:var(--purple);animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .site-footer{border-top:0;margin-top:18px;padding:20px 22px 26px;background:transparent} /* borderless + transparent: the page ends in the same var(--bg) the canvas continues with — nothing for the bottom bar to contrast against (owner 07-09) */
+  .site-footer{border-top:1px solid rgba(255,255,255,.07);margin-top:18px;padding:20px 22px 26px;background:transparent} /* light hairline delineates the footer (owner 07-11); bg still transparent */
   /* one tight link row + one meta row — and when the floating back fab is up (.fabbed),
      the footer reserves the fab's WHOLE corner (58px + 22px gap ≈ 80px each way) so no row —
      copyright, socials, language — can ever sit under the thumb button. */
@@ -1173,7 +1173,7 @@ html[data-skin="v2"] input{background:#1B1B20;border:0;border-radius:14px;box-sh
 /* Pills: raised chrome. */
 html[data-skin="v2"] .pill,html[data-skin="v2"] .vsw-trig{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.1)}
 /* Footer strip. */
-html[data-skin="v2"] .site-footer{background:transparent;border-top:0} /* transparent so the footer blends into the page — no grey band/line at its top edge (owner 07-09) */
+html[data-skin="v2"] .site-footer{background:transparent;border-top:1px solid rgba(255,255,255,.07)} /* light hairline so the footer reads as a footer (owner 07-11); still no grey band/fill */
 /* S2 store-type switcher (comp-exact; launch state = Retail + Kiosk keys). Carved track, raised
    active key, icons tint via currentColor (#4ADE80 active / #7C7C88 idle). */
 html[data-skin="v2"] .modetabs{background:#1B1B20;border:0;border-radius:999px;padding:5px;gap:2px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
@@ -1196,9 +1196,12 @@ html[data-skin="v2"] .foot-social a,html[data-skin="v2"] .foot-social button{wid
    every page, both languages. Green/accent pill variants are retired on purpose: .tneutral/.taccent
    stay as no-ops so old call sites keep working. Ellipsis is the safety net; the real fix for a long
    message is shorter copy. */
-html[data-skin="v2"] .toast{display:block;background:linear-gradient(180deg,#31313A 0%,#26262C 100%);color:#FFF;font-family:Inter,-apple-system,system-ui,sans-serif;border:0;border-radius:999px;font-size:14px;font-weight:800;padding:12px 20px;box-shadow:0 14px 30px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.12);max-width:calc(100vw - 36px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1.35;bottom:34px;box-sizing:border-box}
+html[data-skin="v2"] .toast{display:block;background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);color:rgba(255,255,255,.92);font-family:Inter,-apple-system,system-ui,sans-serif;border:0;border-radius:999px;font-size:14.5px;font-weight:800;padding:13px 22px;max-width:calc(100vw - 36px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1.35;bottom:34px;box-sizing:border-box;animation:toastGlow 2.6s ease-in-out infinite}
 html[data-skin="v2"] .toast b{color:#FFF}
-html[data-skin="v2"] .toast.tneutral,html[data-skin="v2"] .toast.taccent,html[data-skin="v2"] .toast.oneline{background:linear-gradient(180deg,#31313A 0%,#26262C 100%);color:#FFF;white-space:nowrap}
+html[data-skin="v2"] .toast.tneutral,html[data-skin="v2"] .toast.taccent,html[data-skin="v2"] .toast.oneline{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);color:rgba(255,255,255,.92);white-space:nowrap}
+/* Bottom-notification pill (owner 07-11 comp): thin glowing white outline that softly pulses. box-shadow
+   (not a pseudo) so overflow:hidden ellipsis stays intact. Stays gray + one line, never green. */
+@keyframes toastGlow{0%,100%{box-shadow:0 10px 24px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.1),0 0 0 1px rgba(255,255,255,.20),0 0 12px 1px rgba(255,255,255,.07)}50%{box-shadow:0 10px 24px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.1),0 0 0 1px rgba(255,255,255,.45),0 0 18px 3px rgba(255,255,255,.22),0 0 34px 8px rgba(255,255,255,.10)}}
 /* IS1 EXACT: share = white 12.5/800/.13em label capsule (icon left, arrow right); action tiles 2-col. */
 html[data-skin="v2"] .smbtn.is1s{display:flex;align-items:center;justify-content:space-between;width:100%;color:#FFF;font-size:12.5px;letter-spacing:.13em;padding:13px 22px}
 html[data-skin="v2"] .is1g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}
@@ -1919,7 +1922,8 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <a href="/p/about" onclick="openPage('about');return false" data-i18n="foot.about">About</a>
     <a href="/p/faq" onclick="openPage('faq');return false" data-i18n="foot.faq">FAQ</a>
     <a href="/p/contact" onclick="openPage('contact');return false" data-i18n="foot.contact">Contact</a>
-    <a href="/p/terms" onclick="openPage('terms');return false" data-i18n="foot.legal">Legal</a>
+    <a href="/p/terms" onclick="openPage('terms');return false" data-i18n="foot.terms">Terms</a>
+    <a href="/p/privacy" onclick="openPage('privacy');return false" data-i18n="foot.privacy">Privacy</a>
   </nav>
   <div class="foot-meta">
     <div class="foot-social" id="footSocials" style="display:flex"></div>
@@ -2376,7 +2380,12 @@ let POLICY={flags:{driverHandoff:true,restockAlerts:true,shareCards:true,kiosks:
 let LEAD_PENDING=null, AUTH_PENDING=null;
 const $=id=>document.getElementById(id);
 const markFld=(el,on)=>{ if(!el)return; el.classList.toggle('fld-err',!!on); if(on&&!el.__fldClr){ el.__fldClr=1; el.addEventListener('input',()=>el.classList.remove('fld-err'),{once:false}); } };
-const toast=(m,kind)=>{const t=$('toast');t.innerHTML=m;t.classList.remove('tneutral','taccent','oneline');if(kind)t.classList.add('t'+kind);t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}; // kind: undefined=green success · 'neutral' raised dark · 'accent' yellow (T1 §5.4; styled under v2 only). '.oneline' (added by caller after) forces nowrap.
+// Bottom-notification COPY LAW (owner 07-11 pill comp): notifications are fragments, not sentences —
+// no sentence periods or commas, ever. Applied at render so every toast obeys it and future copy can't
+// break it. Decimals (4.00) and thousands (1,000) are protected: only a mark FOLLOWED by space/end is a
+// clause mark and gets dropped. Same rule for Spanish. HTML (<b>, <br>) passes through untouched.
+function pillCopy(m){ if(typeof m!=='string') return m; return m.replace(/([.,])(?=\s|<|$)/g,'').replace(/\s{2,}/g,' ').trim(); }
+const toast=(m,kind)=>{const t=$('toast');t.innerHTML=pillCopy(m);t.classList.remove('tneutral','taccent','oneline');if(kind)t.classList.add('t'+kind);t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}; // kind: undefined=green success · 'neutral' raised dark · 'accent' yellow (T1 §5.4; styled under v2 only). '.oneline' (added by caller after) forces nowrap.
 // ── i18n (rollout-ready; Spanish live, other languages fall back to English until filled) ──
 const LANGS=[['en','EN'],['es','ES']];
 const I18N={ es:{
