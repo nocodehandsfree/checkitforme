@@ -10,13 +10,22 @@ import { supportConversations, supportMessages, supportTickets } from "../db/sch
 const INBOX = process.env.SUPPORT_INBOX || "support@checkitforme.com";
 const TIER_LABEL = ["cache", "free", "cheap", "big"];
 
-export async function submitTicket(sessionId: string | null, name: string, email: string, message: string): Promise<{ id: number; emailed: boolean }> {
+export interface TicketOpts {
+  category?: string;
+  screenshotUrl?: string | null;
+  debug?: Record<string, unknown> | null;  // auto-captured on bug reports: {brand, page, lastCheckId, ua}
+}
+
+export async function submitTicket(sessionId: string | null, name: string, email: string, message: string, opts: TicketOpts = {}): Promise<{ id: number; emailed: boolean }> {
   const convo = sessionId
     ? (await db.select().from(supportConversations).where(eq(supportConversations.sessionId, sessionId)).limit(1))[0]
     : undefined;
+  const category = opts.category || convo?.category || "other";
   const row = (await db.insert(supportTickets).values({
-    conversationId: convo?.id ?? null,
+    conversationId: convo?.id ?? null, category,
     name: name.slice(0, 120), email: email.slice(0, 200), message: message.slice(0, 4000),
+    screenshotUrl: opts.screenshotUrl || null,
+    debug: opts.debug ? JSON.stringify(opts.debug).slice(0, 2000) : null,
     emailedOk: false, createdAt: Math.floor(Date.now() / 1000),
   }).returning())[0];
 
@@ -30,8 +39,11 @@ export async function submitTicket(sessionId: string | null, name: string, email
   }
 
   const emailed = await emailInbox(
-    `Support ticket #${row.id} from ${name}`,
-    [`From: ${name} <${email}>`, "", `Their words:\n${message}`, "", `Chat transcript:\n${transcript}`].join("\n"),
+    `[${category}] Support ticket #${row.id} from ${name}`,
+    [`From: ${name} <${email}>`, `Category: ${category}`,
+      opts.screenshotUrl ? `Screenshot: ${opts.screenshotUrl}` : "",
+      opts.debug ? `Debug: ${JSON.stringify(opts.debug)}` : "",
+      "", `Their words:\n${message}`, "", `Chat transcript:\n${transcript}`].filter(Boolean).join("\n"),
   );
   if (emailed) await db.update(supportTickets).set({ emailedOk: true }).where(eq(supportTickets.id, row.id));
   return { id: row.id, emailed };

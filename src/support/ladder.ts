@@ -55,16 +55,43 @@ export interface LadderResult {
   conversationId: number;
 }
 
+export const SUPPORT_CATEGORIES = ["technical", "bug", "billing", "partnerships", "how_checks_work", "other"] as const;
+export type SupportCategory = typeof SUPPORT_CATEGORIES[number];
+// Per-category nudge appended to the system prompt so the AI frames the answer for the intent. The
+// human path stays buried either way — these only shape how the AI tries first.
+const CATEGORY_HINT: Record<string, string> = {
+  billing: "This is a billing question. Answer from the plans and pricing passages. Only set needs_human for a real dispute or a change to their account you cannot make.",
+  partnerships: "This is a partnership or business inquiry. Answer what the book covers; if it needs a real person to evaluate a deal, set needs_human after you've given what you can.",
+  bug: "The user is reporting something broken. Help them try the obvious fixes first from the passages; if it's a genuine bug, set needs_human so they can attach details.",
+  technical: "This is a technical/how-to question. Walk them through it from the passages.",
+  how_checks_work: "They want to understand how checks work. Explain plainly from the book.",
+  other: "",
+};
+
+export interface AnswerOpts {
+  lang?: string;
+  category?: SupportCategory;
+  account?: { id: string; phone?: string } | null;
+  checkContext?: string;   // a short readout of the signed-in user's recent checks, for grounded specifics
+}
+
 /** Answer one user message inside a conversation. Creates the conversation on first call. */
-export async function answerSupport(sessionId: string, userMessage: string, lang?: string): Promise<LadderResult> {
+export async function answerSupport(sessionId: string, userMessage: string, opts: AnswerOpts = {}): Promise<LadderResult> {
   const now = Math.floor(Date.now() / 1000);
+  const category = SUPPORT_CATEGORIES.includes(opts.category as SupportCategory) ? opts.category! : "other";
   let convo = (await db.select().from(supportConversations)
     .where(eq(supportConversations.sessionId, sessionId)).limit(1))[0];
   if (!convo) {
     const ins = await db.insert(supportConversations)
-      .values({ sessionId, lang: lang || "en", status: "open", maxTier: 0, costUsd: 0, createdAt: now, updatedAt: now })
+      .values({ sessionId, lang: opts.lang || "en", category, accountId: opts.account?.id || null,
+        accountPhone: opts.account?.phone || null, title: userMessage.slice(0, 120),
+        status: "open", maxTier: 0, costUsd: 0, createdAt: now, updatedAt: now })
       .returning();
     convo = ins[0];
+  } else if (opts.account?.id && !convo.accountId) {
+    // User signed in mid-conversation — attach the account now.
+    await db.update(supportConversations).set({ accountId: opts.account.id, accountPhone: opts.account.phone || null })
+      .where(eq(supportConversations.id, convo.id));
   }
   await db.insert(supportMessages).values({
     conversationId: convo.id, role: "user", content: userMessage.slice(0, 2000), tier: null, model: null, createdAt: now,
@@ -83,8 +110,10 @@ export async function answerSupport(sessionId: string, userMessage: string, lang
     return finish(convo.id, ctx.qaBest.answer, 0, "cache", false, 0, now);
   }
 
+  const catHint = CATEGORY_HINT[convo.category || category] || "";
+  const checkBlock = opts.checkContext ? `\n\nThis signed-in customer's recent checks (use for specifics, never invent):\n${opts.checkContext}` : "";
   const msgs: LlmMsg[] = [
-    { role: "system", content: `${SYSTEM}\n\nReference passages:\n${ctx.passages || "(none found)"}` },
+    { role: "system", content: `${SYSTEM}${catHint ? `\n\n${catHint}` : ""}\n\nReference passages:\n${ctx.passages || "(none found)"}${checkBlock}` },
     ...history.slice(-8).map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
   ];
   const inChars = msgs.reduce((n, m) => n + m.content.length, 0);

@@ -562,6 +562,10 @@ export const supportConversations = sqliteTable(
     id: integer("id").primaryKey({ autoIncrement: true }),
     sessionId: text("session_id").notNull().unique(), // widget-held uuid; no account required
     lang: text("lang").notNull().default("en"),
+    category: text("category").notNull().default("other"), // technical|bug|billing|partnerships|how_checks_work|other
+    accountId: text("account_id"),                    // phone-session user id when signed in, else null (guest)
+    accountPhone: text("account_phone"),              // denormalized for the Admin list (avoid a join per row)
+    title: text("title"),                             // first user line — the Admin/Messages list label
     status: text("status").notNull().default("open"), // open | escalated | resolved | unhelped
     reviewStatus: text("review_status"),              // null | pending | approved | rejected
     maxTier: integer("max_tier").notNull().default(0),
@@ -569,7 +573,11 @@ export const supportConversations = sqliteTable(
     createdAt: integer("created_at").notNull().default(now),
     updatedAt: integer("updated_at").notNull().default(now),
   },
-  (t) => ({ byReview: index("support_convo_review_idx").on(t.reviewStatus, t.updatedAt) }),
+  (t) => ({
+    byReview: index("support_convo_review_idx").on(t.reviewStatus, t.updatedAt),
+    byCat: index("support_convo_cat_idx").on(t.category, t.updatedAt),
+    byAccount: index("support_convo_acct_idx").on(t.accountId, t.updatedAt),
+  }),
 );
 
 export const supportMessages = sqliteTable(
@@ -589,9 +597,12 @@ export const supportMessages = sqliteTable(
 export const supportTickets = sqliteTable("support_tickets", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   conversationId: integer("conversation_id").references(() => supportConversations.id, { onDelete: "set null" }),
+  category: text("category").notNull().default("other"),
   name: text("name").notNull(),
   email: text("email").notNull(),
   message: text("message").notNull(),
+  screenshotUrl: text("screenshot_url"),  // R2 URL of a bug screenshot the user attached, if any
+  debug: text("debug"),                   // json: {brand, page, lastCheckId, ua} auto-captured on bug reports
   emailedOk: integer("emailed_ok", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at").notNull().default(now),
 });

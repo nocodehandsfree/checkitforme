@@ -54,6 +54,18 @@ export async function addQa(question: string, answer: string, conversationId: nu
   }]);
 }
 
+export interface SearchHit { title: string; snippet: string; score: number }
+/** Semantic search over the book only — powers the Help tab search + instant answers (no model spend). */
+export async function searchBook(query: string, limit = 5): Promise<SearchHit[]> {
+  const v = await embedOne(query);
+  const hits = await search(BOOK, v, limit);
+  return hits.map((h) => ({
+    title: String(h.payload.title || ""),
+    snippet: String(h.payload.text || "").replace(/\s+/g, " ").slice(0, 240),
+    score: h.score,
+  }));
+}
+
 export interface Retrieved { passages: string; qaBest: { score: number; answer: string } | null }
 
 /** One embed, two searches: top book pages + top approved Q&As, packaged for the prompt. */

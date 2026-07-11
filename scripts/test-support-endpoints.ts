@@ -62,8 +62,50 @@ async function main() {
   const stats = await r.json();
   ok(r.status === 200 && stats.conversations === 1 && stats.tickets === 1, "stats counts conversations + tickets");
   ok(typeof stats.models?.big === "string", "stats reports the configured ladder models");
+  ok(typeof stats.byCategory === "object" && typeof stats.escalationRate === "number", "stats has byCategory + escalationRate");
+
+  // ---- v3: categories, account linkage, ticket extras, admin list APIs ----
+  // A member conversation in a category, seeded directly (avoids needing model keys).
+  const [mcv] = await db.insert(supportConversations).values({
+    sessionId: "test-session-billing1", lang: "en", category: "billing", accountId: "acct_9",
+    accountPhone: "+13105550199", title: "Why was I charged twice", status: "escalated",
+    maxTier: 3, costUsd: 0.02, createdAt: now, updatedAt: now,
+  }).returning();
+  await db.insert(supportMessages).values({ conversationId: mcv.id, role: "user", content: "Why was I charged twice", tier: null, model: null, createdAt: now });
+
+  // Ticket with category + screenshot + debug (a bug report).
+  r = await fetch(`${base}/pub/support/ticket`, { method: "POST", headers: pub, body: JSON.stringify({
+    name: "Bugger", email: "bug@example.com", message: "map is blank", category: "bug",
+    screenshotUrl: "https://cdn.example.com/shot.png", debug: { brand: "pokemon", page: "/stores", ua: "iPhone" } }) });
+  ok(r.status === 200, "bug ticket with screenshot+debug accepted");
+  const bugTix = (await db.select().from(supportTickets)).find((t) => t.category === "bug");
+  ok(!!bugTix && bugTix.screenshotUrl === "https://cdn.example.com/shot.png" && !!bugTix.debug, "bug ticket stored category+screenshot+debug");
+
+  // Admin chats list + filters.
+  r = await fetch(`${base}/api/support/chats`, { headers: admin });
+  const chats = (await r.json()).chats;
+  ok(r.status === 200 && Array.isArray(chats) && chats.length >= 2, "chats list returns conversations");
+  ok(chats.some((x: { category: string }) => x.category === "billing"), "chats carry category");
+  r = await fetch(`${base}/api/support/chats?category=billing`, { headers: admin });
+  const billing = (await r.json()).chats;
+  ok(billing.length === 1 && billing[0].accountPhone === "+13105550199", "filter by category=billing");
+  r = await fetch(`${base}/api/support/chats?account=members`, { headers: admin });
+  ok((await r.json()).chats.every((x: { accountId: string | null }) => x.accountId), "filter account=members → only members");
+  r = await fetch(`${base}/api/support/chats?account=guests`, { headers: admin });
+  ok((await r.json()).chats.every((x: { accountId: string | null }) => !x.accountId), "filter account=guests → only guests");
+
+  // Admin chat detail carries transcript + ticket.
+  r = await fetch(`${base}/api/support/chats/${mcv.id}`, { headers: admin });
+  const detail = await r.json();
+  ok(r.status === 200 && detail.account?.phone === "+13105550199" && detail.messages.length === 1, "chat detail has account + transcript");
+
+  // Search endpoint: empty query short-circuits (no qdrant needed).
+  r = await fetch(`${base}/pub/support/search`, { method: "POST", headers: pub, body: JSON.stringify({ q: "a" }) });
+  ok(r.status === 200 && Array.isArray((await r.json()).hits), "search returns hits array (short query → empty)");
 
   // Admin gate: no token → the /api wall must hold.
+  r = await fetch(`${base}/api/support/chats`);
+  ok(r.status === 401 || r.status === 403, "chats without admin token rejected");
   r = await fetch(`${base}/api/support/stats`);
   ok(r.status === 401 || r.status === 403, "stats without admin token rejected");
 

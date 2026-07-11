@@ -249,6 +249,16 @@ export async function bootstrap() {
   await client.execute(`CREATE TABLE IF NOT EXISTS support_tickets (
     id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id INTEGER, name TEXT NOT NULL, email TEXT NOT NULL,
     message TEXT NOT NULL, emailed_ok INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+  // v3 Messenger: categories, account linkage, titles on conversations; category/screenshot/debug on tickets.
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN category TEXT NOT NULL DEFAULT 'other'").catch(() => {});
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN account_id TEXT").catch(() => {});
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN account_phone TEXT").catch(() => {});
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN title TEXT").catch(() => {});
+  await client.execute("CREATE INDEX IF NOT EXISTS support_convo_cat_idx ON support_conversations(category, updated_at)").catch(() => {});
+  await client.execute("CREATE INDEX IF NOT EXISTS support_convo_acct_idx ON support_conversations(account_id, updated_at)").catch(() => {});
+  await client.execute("ALTER TABLE support_tickets ADD COLUMN category TEXT NOT NULL DEFAULT 'other'").catch(() => {});
+  await client.execute("ALTER TABLE support_tickets ADD COLUMN screenshot_url TEXT").catch(() => {});
+  await client.execute("ALTER TABLE support_tickets ADD COLUMN debug TEXT").catch(() => {});
   // One-time: stock the anonymous free-check pool for launch (each visitor gets 1 free check).
   if (!(await getSetting("pub_credits_initialized"))) {
     await setSetting("pub_credits", "250");
