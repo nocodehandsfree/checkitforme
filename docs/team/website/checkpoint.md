@@ -23,9 +23,94 @@
   out of scope, harmless. NOTE: staging today also carries others' batches (docs shuffle, PostHog,
   Helicone routing, backup-restore) — promote takes all of it unless DevOps splits.
 
-## ▶ Paused — owner UI-polish pass on staging (screenshot-driven)
-Rapid back-and-forth: owner screenshots staging, I fix, push, he re-verifies. All staging until he confirms,
-then I port to prod. Keep replies outcome-first.
+## ✅ 07-11 batch — pill law + zones + footer (shipped f5c6577, verified on staging)
+- **New bottom-notification pill** (owner comp): gray `#2E2E35→#25252B`, white 14.5/800, thin glowing
+  white outline that pulses (box-shadow, keeps ellipsis), one line, never green. NEW copy law: fragments
+  not sentences — no periods or commas ever, both langs. Enforced at render via `pillCopy()` (protects
+  4.00 decimals + 1,000 thousands). VERIFIED: "The store is closed, we will try again. 0.3 mi" →
+  "The store is closed we will try again 0.3 mi". `.tneutral/.taccent` stay no-ops.
+- **Footer:** hairline top border (owner reversed 07-09 borderless call) + restored Terms + Privacy links,
+  dropped Legal. VERIFIED served: Scores About FAQ Contact Terms Privacy.
+- **Zones:** product switcher hidden in zones view (`body.zoning .vsw`, VERIFIED block→none) · confirm sheet
+  warns which stores are closed + "we can still call the N open" (amber panel), closed stores SKIPPED
+  server-side in the sweep (openState filter in /app/zones/:id/check) so no wasted check · Add-all button
+  now TOGGLES to "Remove all" (red) once all in-radius picked · price/check-count removed from confirm +
+  zone card (owner "remove price"). Builder already loads closed stores (marks them) — no change needed.
+- **Out-of-checks (answered owner Q):** already exists both places — single check `credits<=0 → openBuy('out')`;
+  zone sweep server pre-flights `canAffordZone` → `no_credits` → pill + openBuy. Book's "we make sure you
+  have enough before starting" is really enforced (server-side). Tidied to pill-law wording.
+- **Style guide LOCKED:** §5.4 (pill), §5.14 (footer), NEW §5.17 (zones). Owner's My Zones comp saved to
+  comps/MY_ZONES_COMP.dc.html + README note (fold into main board on next regen).
+- **PARKED (owner circling back in another chat):** PAYG slider not aligning to 10/100 + pricing off. NOT touched.
+
+## ✅ Delta-lane live AUDIO — FIXED (f899f2a, was the 🔴 cross-lane blocker)
+- tapedeck.ts now adds a passive `<Start><Stream track="both_tracks">` fork into room delta:<id> so
+  Twilio media reaches the SAME rooms→/listen→playMu pipe the old system used. Front-end player
+  untouched (all iOS unlock/jitter/guard workarounds intact). Addie shipped an identical fork
+  concurrently — merged (his name/room format + my s.forked refetch guard); no dup audio.
+- Owner testing Delta live NOW. If a call is silent, get the store name and debug immediately.
+
+## ✅ Reach line placement (owner 07-11)
+- Moved reach line BELOW the sheet button (was above); removed "No answer = no charge" from the sheet.
+  Shortened copy → "~{n} sec to reach a human" / ES "~{n} seg para llegar a una persona". Verified in
+  served staging HTML (166e956): order prod→button→reach, charge div gone. Shows only for mapped stores.
+
+## ✅ 14:40 owner batch (this deploy)
+- Live rail no longer runs past the current step ("Reaching a person…" moved out of the rail row) ·
+  verdict sub = one sentence per line (nlSent, rsub only) · sold-out copy → "{store} had it. It's gone
+  for now." (seed + one-time DB migration, owner edits untouched) · /pub/result now returns ts and the
+  status page falls back to the local call-start clock, so date+time shows on FRESH calls too ·
+  call sheet shows DD's reach field ("About {n} seconds to reach a human" / "This store picks up
+  directly", EN+ES) · Cash App label: CONFIRMED in Stripe docs the element's method labels are not
+  customizable — only options are dropping the Cash App method or a custom-built method picker.
+
+## ✅ 03:14 owner batch — SHIPPED + verified (commit 7da6019)
+- **TINT fully restored** (my mistake: removing the baked tone for items 24-25 broke the tint lane's
+  iOS nav/status-bar work). Server bakes tone-* again (verified live: html class="tone-in" served).
+  Items 24-25 (no color pre-load) CLARIFIED by owner 07-11: it's narrower than I feared — don't paint
+  the RESULT verdict color until status is confirmed; stay neutral during the call. That does NOT fight
+  the tint lane (status-bar/bg). TODO once owner confirms: neutral-until-status on the result page only.
+  Rail/indenting CLOSED: owner meant left-align the call-log steps (already so) — not the timeline rail.
+- Verified on staging: Sign out = plain link top right · empty store list breaks per sentence EN+ES ·
+  Activity ago labels real ("2h ago"/"1d ago"; was ms-vs-seconds → everything said "just now") ·
+  '¡Muéstranos el botín!' + chips re-render on language flip. Shipped, not yet driven: zone-card logos,
+  styled zone menus/confirm (needs entitled account), all-closed check-all block, swipe-close on the
+  3 new sheets, old-history logo/location heal, Stripe 11px tab labels.
+- "Back from Too far → homepage": could NOT reproduce (result→back lands on the check in tests both
+  before and after). Watch for it on the owner's account flow (came from calendar?).
+
+## ✅ SHIPPED to staging — site-wide polish contract 07-10 (items 6-73, commit 7a9c7c1 + follow-up)
+- Contract lives in chat (owner list + shots in docs/specs/ui-polish/shots). Fixed: ES layout breaks
+  (tabs/count/footer) + footer pages hand-translated (?lang=es) + Legal collapse (guide 5.14) · pill LAW
+  (gray/white/one-line, EN+ES, variants retired) · kiosk = same big-button flow, ① labels gone · Sign out
+  top-right of sheet · add-store/watch/auto-check = bottom sheets · plans default = your tier/featured,
+  Continue buys the ringed one · tone pre-paint fully retired (server bake + boot script + rebake reload;
+  the reload was ALSO the calendar/deep-link delay) · call date/time on verdict · share = one up-arrow far
+  right, even glow, footer hugs content · unclear copy breaks before "Read" · zones: fresh list after save,
+  auto-search (Go gone), carved list well, cal chip hidden · back button: views push entries, sheets close
+  on back, zones in the stack · map pin/ZIP = MANUAL_LOC, GPS recheck can't snap back (regression) ·
+  Topps → "NBA Cards" (test updated) · 🏃💨 → 📦 · "No answer = no charge" period gone.
+- VERIFIED on staging (screenshots in chat): EN+ES homepages, kiosk tab, footers, ES terms sheet, gray
+  pill, add-store sheet, Topps page. NIGHT RUN (throwaway account via STAGING_LOGIN_CODE): verdict page
+  (date/time line, one up-arrow share, even glow, tight footer), unclear copy breaks before "Read",
+  back button result→builder, Sign out top-right, plans ring on featured tier, checkout sheet carries the
+  ringed plan. Night fixes shipped: upgrade capsule said $NaN/mo (tierPrice fed cents) + replayed calls
+  keep ts. STILL NOT verified: zone SAVE round-trip (needs entitlement; the on-page Stripe element hung
+  at "Loading secure payment…" for the test account so no test-card sub — worth a look), history/calendar
+  SPEED on a loaded account, live-call flows, PWA self-heal.
+- ANSWERS (checkout, items 30-34): the "$5 back when you pay by bank" banner, the Success/Blocked/
+  Disputed/Bank/Down icons, and the dead bank search are all INSIDE Stripe's payment iframe. Staging runs
+  Stripe TEST mode: those icons ARE the test-mode fake banks, and bank search is dead because there are
+  only six fake banks to search. The $5-back is Stripe's own promo (they fund it) for paying by bank;
+  Stripe decides who sees it — no config toggle I could find (unverified beyond docs skim). "Cash App Pay"
+  is Stripe's official method name inside the iframe — not renamable; I shrank tab labels so it stops
+  crushing the last tab. On LIVE mode real banks appear and search works.
+- PWA (43-45): the home-screen app was rendering the RETIRED service worker's cache. The self-destruct
+  worker + page-load unregister + no-store HTML are all live; opening the installed app once online
+  self-heals it (or delete + re-add). No further code fix exists on our side.
+- Guide notes for CD/Copper: add-store/watch/auto-check are now SHEETS (owner order — 5.11 says popups);
+  footer runs Scores·About·FAQ·Contact·Legal (5.14 to-do done); "No answer = no charge" lost its period
+  (copy-guide spine shows one); toast law = gray only (5.4's green/accent pills retired).
 
 ## ✅ Just shipped to STAGING (07-09, awaiting owner verify → then promote to prod)
 - **Unmapped-store "coming soon"** (`callReady:false`): greyed row + "Coming soon" chip; tap → toast

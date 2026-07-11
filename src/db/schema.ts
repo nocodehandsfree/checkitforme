@@ -548,3 +548,61 @@ export const discordChannels = sqliteTable("discord_channels", {
   lastIngestAt: integer("last_ingest_at"),
   createdAt: integer("created_at").notNull().default(now),
 });
+
+/**
+ * Support agent (the ladder behind site chat, Discord later). Conversations carry the highest
+ * rung reached + an estimated cost; messages carry which rung/model answered; tickets are the
+ * escalation-form submissions (the hook for the future trouble-ticket system). Resolved+helped
+ * conversations enter the review queue (review_status pending → approved/rejected); approving
+ * embeds the Q&A into qdrant as the tier-0 answer cache.
+ */
+export const supportConversations = sqliteTable(
+  "support_conversations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    sessionId: text("session_id").notNull().unique(), // widget-held uuid; no account required
+    lang: text("lang").notNull().default("en"),
+    category: text("category").notNull().default("other"), // technical|bug|billing|partnerships|how_checks_work|other
+    accountId: text("account_id"),                    // phone-session user id when signed in, else null (guest)
+    accountPhone: text("account_phone"),              // denormalized for the Admin list (avoid a join per row)
+    title: text("title"),                             // first user line — the Admin/Messages list label
+    status: text("status").notNull().default("open"), // open | escalated | resolved | unhelped
+    reviewStatus: text("review_status"),              // null | pending | approved | rejected
+    maxTier: integer("max_tier").notNull().default(0),
+    costUsd: real("cost_usd").notNull().default(0),   // estimate; Helicone has the exact spend
+    createdAt: integer("created_at").notNull().default(now),
+    updatedAt: integer("updated_at").notNull().default(now),
+  },
+  (t) => ({
+    byReview: index("support_convo_review_idx").on(t.reviewStatus, t.updatedAt),
+    byCat: index("support_convo_cat_idx").on(t.category, t.updatedAt),
+    byAccount: index("support_convo_acct_idx").on(t.accountId, t.updatedAt),
+  }),
+);
+
+export const supportMessages = sqliteTable(
+  "support_messages",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    conversationId: integer("conversation_id").notNull().references(() => supportConversations.id, { onDelete: "cascade" }),
+    role: text("role").notNull(),   // user | assistant
+    content: text("content").notNull(),
+    tier: integer("tier"),          // rung that answered (assistant rows): 0 cache … 3 big
+    model: text("model"),           // model id, or "cache" / "error"
+    createdAt: integer("created_at").notNull().default(now),
+  },
+  (t) => ({ byConvo: index("support_msg_convo_idx").on(t.conversationId) }),
+);
+
+export const supportTickets = sqliteTable("support_tickets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  conversationId: integer("conversation_id").references(() => supportConversations.id, { onDelete: "set null" }),
+  category: text("category").notNull().default("other"),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  message: text("message").notNull(),
+  screenshotUrl: text("screenshot_url"),  // R2 URL of a bug screenshot the user attached, if any
+  debug: text("debug"),                   // json: {brand, page, lastCheckId, ua} auto-captured on bug reports
+  emailedOk: integer("emailed_ok", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at").notNull().default(now),
+});

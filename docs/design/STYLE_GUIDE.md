@@ -137,10 +137,14 @@ STORE"). Glow `0 12px 28px -8px` in the ring color at ~.45.
 
 ### 5.4 Pills & toasts
 Raised gradient pills on dark pages; **glass on any verdict wash**. RESULT chip border tints to the
-verdict. **Bottom toasts**: capsule pills that slide up from the bottom edge, hold ~2.4s, slide
-away — green success `linear-gradient(180deg,#5BEA93,#34C268)` + dark-green text (`✓ You're in`),
-neutral raised dark (`Link copied`), accent `#FFE066→#FFCB05` + dark text (`1 check refunded`).
-14.5/800, one at a time, centered.
+verdict. **Bottom notification (the pill)** — one look for every notification (owner 07-11 comp):
+a capsule that slides up from the bottom edge, holds ~2.4s, slides away. **Always gray**
+`linear-gradient(180deg,#2E2E35,#25252B)`, white `rgba(255,255,255,.92)` 14.5/800, radius 999,
+one line + ellipsis, centered, with a **thin glowing white outline that softly pulses** around it
+(box-shadow, ~2.6s). **Never green, never accent.** `.tneutral/.taccent` are retired no-ops.
+**Copy law — notifications are fragments, not sentences: no periods and no commas, ever** (both
+languages; decimals `4.00` and thousands `1,000` are protected). Enforced at render by `pillCopy()`
+so future copy can't break it. e.g. `The store is closed` · `No one picked up we will try again`.
 
 ### 5.5 Selection ring
 Selected row/tile/day = 1.5–2px accent-gradient ring wrapper, inner fill `#23232A` (green ring for
@@ -208,10 +212,11 @@ contact field.
 ### 5.14 Footer (locked)
 On the `#17171C` strip, **one centered, unified cluster — desktop = mobile** (shipped: commit
 9a39fd4; the original comp split wordmark-left / socials-right). Links on one line —
-`Scores About FAQ Contact Legal` 13/600 muted, EN dropdown pill, then wordmark + ©2026 and
+`Scores About FAQ Contact Terms Privacy` 13/600 muted, EN dropdown pill, then wordmark + ©2026 and
 the Discord/X 36px raised circles, all centered. Tight: padding ~22px 18px.
-**`Legal` is a single link that covers both Terms and Privacy** (owner-confirmed). **Site to-do:**
-the live footer still lists `Terms` and `Privacy` separately — collapse them into one `Legal` link.
+**Terms and Privacy are two separate links, no `Legal`** (owner 07-11 — reversed the earlier collapse;
+lays out better as two). A **light hairline** `border-top:1px solid rgba(255,255,255,.07)` sits at the
+footer's top edge so it reads as a footer, over the otherwise transparent/blended background.
 
 ### 5.15 Scores ("Scores from the hunt")
 Yellow trophy + 21/900 title + accent **Post** pill (camera icon, `#FFE066→#FFCB05`, dark text).
@@ -229,7 +234,20 @@ raised −/+ keys. Copy stays lean: "A one-time card covers item + tax + shippin
 carved, links green. Driver preview on near-black `#141419`; Apple-Pay key white. Rating stars
 26px, green lit. Footer: "Powered by Fungibles · runner.fungibles.com".
 
-### 5.17 Toolbox rest
+### 5.17 Zones (My Zones — check a whole area) (owner 07-11 comp)
+Full-page takeover: **the product switcher in the upper-left is hidden** while in zones (`body.zoning`);
+the zone screen carries its own back + title, credits pill holds the right edge. **Build:** search a
+ZIP/town, radius ring (1·2·5·10 mi), list or map. **Load every store in the radius regardless of
+open/closed** — closed ones show a `closed` tag but are still selectable (you build a zone once, call it
+whenever). **Add all** is one button with two states: once every in-radius store is picked it flips to
+**Remove all** (red-tinted) so a tap clears them back out. **No price and no check-count anywhere in the
+zone flow** — not on the card, not on the confirm (owner 07-11). **Confirm sheet:** if any store is
+closed, warn which ones by name and reassure `We can still call the N that are open` (amber panel);
+closed stores are **skipped server-side** so no check is wasted. Title `Check N open stores?`, button
+`Check all N`. Out of checks → the pill says so and the buy sheet opens (single checks and sweeps both
+pre-flight affordability before starting).
+
+### 5.18 Toolbox rest
 Wells/slider (24px white thumb, green glow) · search inputs · call timeline (2px line, 3 dots,
 green → verdict; STAFF muted / CHECK AI green bubble labels) · art placeholders (45° stripes
 `#2B2B33/#25252C` + mono label) unchanged from the board.

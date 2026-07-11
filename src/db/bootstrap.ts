@@ -171,6 +171,12 @@ export async function bootstrap() {
     sql: "UPDATE statuses SET label=?, note=? WHERE key='no_clear_answer' AND label='No clear answer'",
     args: ["Got a “maybe”", "A human answered but wouldn't commit. Their exact words are below — you make the call."],
   }).catch(() => {});
+  // One-time copy fix (owner 07-10): sold-out note becomes two short sentences so the verdict sub
+  // breaks cleanly per sentence — only touches the row if it still carries the old default.
+  await client.execute({
+    sql: "UPDATE statuses SET note=? WHERE key='sold_out' AND note=?",
+    args: ["{store} had it. It's gone for now.", "{store} had it, but it's gone for now."],
+  }).catch(() => {});
   // Kiosks (crowd refresh intel) + restock watches — created idempotently.
   await client.execute(`CREATE TABLE IF NOT EXISTS kiosks (
     id INTEGER PRIMARY KEY AUTOINCREMENT, retailer_id INTEGER, label TEXT NOT NULL,
@@ -229,6 +235,30 @@ export async function bootstrap() {
     id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id TEXT NOT NULL UNIQUE, label TEXT, chain TEXT,
     category TEXT NOT NULL DEFAULT 'Pokémon', note TEXT, active INTEGER NOT NULL DEFAULT 1,
     last_ingest_at INTEGER, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+  // Support agent: conversations (ladder state + review queue), messages, escalation tickets.
+  await client.execute(`CREATE TABLE IF NOT EXISTS support_conversations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL UNIQUE, lang TEXT NOT NULL DEFAULT 'en',
+    status TEXT NOT NULL DEFAULT 'open', review_status TEXT, max_tier INTEGER NOT NULL DEFAULT 0,
+    cost_usd REAL NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+  await client.execute("CREATE INDEX IF NOT EXISTS support_convo_review_idx ON support_conversations(review_status, updated_at)").catch(() => {});
+  await client.execute(`CREATE TABLE IF NOT EXISTS support_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id INTEGER NOT NULL, role TEXT NOT NULL,
+    content TEXT NOT NULL, tier INTEGER, model TEXT, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+  await client.execute("CREATE INDEX IF NOT EXISTS support_msg_convo_idx ON support_messages(conversation_id)").catch(() => {});
+  await client.execute(`CREATE TABLE IF NOT EXISTS support_tickets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id INTEGER, name TEXT NOT NULL, email TEXT NOT NULL,
+    message TEXT NOT NULL, emailed_ok INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+  // v3 Messenger: categories, account linkage, titles on conversations; category/screenshot/debug on tickets.
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN category TEXT NOT NULL DEFAULT 'other'").catch(() => {});
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN account_id TEXT").catch(() => {});
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN account_phone TEXT").catch(() => {});
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN title TEXT").catch(() => {});
+  await client.execute("CREATE INDEX IF NOT EXISTS support_convo_cat_idx ON support_conversations(category, updated_at)").catch(() => {});
+  await client.execute("CREATE INDEX IF NOT EXISTS support_convo_acct_idx ON support_conversations(account_id, updated_at)").catch(() => {});
+  await client.execute("ALTER TABLE support_tickets ADD COLUMN category TEXT NOT NULL DEFAULT 'other'").catch(() => {});
+  await client.execute("ALTER TABLE support_tickets ADD COLUMN screenshot_url TEXT").catch(() => {});
+  await client.execute("ALTER TABLE support_tickets ADD COLUMN debug TEXT").catch(() => {});
   // One-time: stock the anonymous free-check pool for launch (each visitor gets 1 free check).
   if (!(await getSetting("pub_credits_initialized"))) {
     await setSetting("pub_credits", "250");

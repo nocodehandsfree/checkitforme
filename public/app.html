@@ -566,7 +566,7 @@
 </head>
 <body class="authwait">
 <header>
-  <a class="hmark" href="https://checkitforme.com" title="Back to Check It For Me" style="display:flex;align-items:center"><img src="/logos/brand/check.png?v=2" alt="Check It For Me" style="height:22px;width:auto;object-fit:contain;display:block"></a>
+  <a class="hmark" href="#dash" title="Back to God View" onclick="showSection('dash');return false" style="display:flex;align-items:center;cursor:pointer"><img src="/logos/brand/check.png?v=2" alt="Check It For Me" style="height:22px;width:auto;object-fit:contain;display:block"></a>
   <span class="dot" title="live"></span>
   <span class="sub" id="clock"></span>
 </header>
@@ -740,7 +740,43 @@
   <section id="feedback">
     <h2 data-tip="When a check ends unclear, the customer taps what they actually saw. This is the review and training queue. Fix where we were wrong and it corrects the call record.">Feedback</h2>
     <div id="fb_summary"></div>
+    <div id="fb_unclear"></div>
     <div id="fb_list"><div class="empty">Loading…</div></div>
+  </section>
+
+  <section id="support">
+    <h2 data-tip="Every live support chat from the site and Discord: who asked, what category, which AI tier answered, and whether it self-served or escalated. Click a chat for the full transcript.">Support</h2>
+    <div class="card report">
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div class="name">Snapshot</div>
+        <select id="sup_range" onchange="supSetRange(this.value)" style="width:auto;font-size:12.5px;padding:6px 26px 6px 9px;margin:0">
+          <option value="today">Today</option>
+          <option value="7d" selected>Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+        </select>
+      </div>
+      <div class="stats" id="sup_stats" style="margin-bottom:0"><div class="empty">Loading…</div></div>
+      <div id="sup_cats" style="margin-top:10px"></div>
+      <div id="sup_top" style="margin-top:10px"></div>
+    </div>
+    <div class="filters">
+      <select id="sup_f_cat" onchange="supFilter()">
+        <option value="">All categories</option>
+        <option value="technical">Technical</option>
+        <option value="bug">Bug</option>
+        <option value="billing">Billing</option>
+        <option value="partnerships">Partnerships</option>
+        <option value="how_checks_work">How checks work</option>
+        <option value="other">Other</option>
+      </select>
+      <select id="sup_f_acct" onchange="supFilter()">
+        <option value="all">Members + guests</option>
+        <option value="members">Members only</option>
+        <option value="guests">Guests only</option>
+      </select>
+      <input id="sup_f_q" type="search" placeholder="Search chats…" oninput="supSearch()" style="max-width:220px">
+    </div>
+    <div id="sup_list"><div class="empty">Loading…</div></div>
   </section>
   <section id="results"><h2>Recent calls</h2>
     <div class="filters">
@@ -1217,12 +1253,13 @@ let CATEGORIES = [];
 const NAV_GROUPS={
   godview:  {label:'God View', ico:'bolt',  tabs:[['dash','Live','bolt'],['users','Users','card'],['restock','Restock','cal'],['alerts','Alerts','note'],['growth','Policy','rise'],['calc','Calc','sliders'],['plans','Plans','card']]},
   stores:   {label:'Stores',   ico:'store', tabs:[['retailers','Intel','chart'],['search','Search','search'],['add','Add','store'],['receipts','Kiosk','tag']]},
-  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['schedules','Schedules','cal'],['feedback','Feedback','chart'],['statuses','Statuses','tag'],['trees','Chains','tree'],['settings','App','sliders']]},
+  calls:    {label:'Calls',    ico:'phone', tabs:[['results','Calls','phone'],['feedback','Feedback','chart'],['statuses','Statuses','tag'],['trees','Chains','tree'],['settings','App','sliders']]},
   voice:    {label:'Voice',    ico:'mic',   tabs:[['designer','Designer','flask'],['workflows','Workflows','note'],['testing','Testing','phone-call'],['fun','Fun','sliders']]},
+  help:     {label:'Support',  ico:'chat',  tabs:[['support','Chats','chat']]},
   launch:   {label:'Launch',   ico:'trophy',tabs:[['gtm','Go-to-Market','check']]},
 };
 const SECTION_GROUP={}; Object.entries(NAV_GROUPS).forEach(([g,o])=>o.tabs.forEach(t=>SECTION_GROUP[t[0]]=g));
-const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), alerts:()=>loadAlerts(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), feedback:()=>loadFeedback(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
+const TAB_LOADERS={ retailers:()=>loadStoreIntel(), search:()=>loadRetailers(), users:()=>loadUsers(), growth:()=>loadGrowth(), fun:()=>loadVoices(), designer:()=>initDesigner(), workflows:()=>loadWorkflowMgr(), testing:()=>loadTesting(), restock:()=>loadRestock(), alerts:()=>loadAlerts(), dash:()=>{loadDash();loadGwPulse();loadCallHealth();loadCredits();}, calc:()=>calcInit(), plans:()=>loadPlans(), receipts:()=>{loadReceipts();loadGwKiosks();}, trees:()=>{loadChains();loadTrainer();}, statuses:()=>loadStatusReg(), results:()=>loadResults(), feedback:()=>loadFeedback(), support:()=>loadSupport(), settings:()=>{loadSettings();loadLiveListen();loadDefaultWorkflow();loadAdvancedPolicy();}, gtm:()=>loadGtm() };
 const GROUP_LAST={}; let CUR_GROUP='godview';
 let NAV_RESTORING=false, NAV_BOOTED=false; // browser Back/Forward walks the admin's own tab history
 let FB_OPEN=0; // unreviewed poll disagreements — count badge on the Calls ▸ Feedback tab
@@ -1285,6 +1322,13 @@ async function loadGtm(){
 }
 // Accidental-delete recovery: one tap re-adds any default items missing from the saved list.
 let GTM_MISSING=[];
+// X on the restore bar: the missing defaults are gone ON PURPOSE (finished work, retired items) —
+// tell the server to stop offering them. Gone for good; an explicit Restore can still bring them back.
+async function gtmDismissMissing(){
+  const r=await api('/api/gtm/dismiss-defaults',{method:'POST'});
+  if(r&&r.ok){ GTM_MISSING=[]; toast('Dismissed. They will not be offered again'); renderGtm(); }
+  else toast('Could not dismiss');
+}
 async function gtmRestore(){
   const r=await api('/api/gtm/restore-defaults',{method:'POST'});
   if(r&&r.ok){ GTM_ITEMS=r.items||GTM_ITEMS; GTM_MISSING=[]; toast('Restored '+r.restored+' item(s)'); renderGtm(); }
@@ -1306,7 +1350,7 @@ function renderGtm(){
     return true;
   });
   const el=document.getElementById('gtm_list'); if(!el) return;
-  const rb=GTM_MISSING.length?('<div class="card" style="margin-bottom:8px;display:flex;align-items:center;gap:10px;border:1px solid rgba(251,191,36,.4)"><span class="meta" style="flex:1;color:#FBBF24">'+GTM_MISSING.length+' default item(s) missing (deleted?): '+GTM_MISSING.map(m=>esch(m.title)).join(' · ')+'</span><button type="button" class="btn" onclick="gtmRestore()">Restore</button></div>'):'';
+  const rb=GTM_MISSING.length?('<div class="card" style="margin-bottom:8px;display:flex;align-items:center;gap:10px;border:1px solid rgba(251,191,36,.4)"><span class="meta" style="flex:1;color:#FBBF24">'+GTM_MISSING.length+' default item(s) missing (deleted?): '+GTM_MISSING.map(m=>esch(m.title)).join(' · ')+'</span><button type="button" class="btn" onclick="gtmRestore()">Restore</button><button type="button" class="ghost" onclick="gtmDismissMissing()" title="These are gone on purpose. Stop offering them." style="padding:6px 11px;font-size:14px;line-height:1">✕</button></div>'):'';
   if(!list.length){ el.innerHTML=rb+'<div class="empty">Nothing here — adjust the filters or add an item.</div>'; return; }
   const dot={todo:'#64748b',doing:'#fbbf24',done:'#4ADE80'}, next={todo:'doing',doing:'done',done:'todo'};
   el.innerHTML=rb+list.map(i=>{
@@ -1869,11 +1913,14 @@ function calcSetRev(v){ CALC.revenue=v===''?0:(parseFloat(v)||0); calcUpdate(); 
 function calcSetLane(l){ CALC.lane=l; calcSync(); calcUpdate(); }
 function calcSetEsc(v){ CALC.deltaEsc=parseInt(v,10)||0; const e=document.getElementById('calc_escval'); if(e) e.textContent=CALC.deltaEsc; calcUpdate(); }
 function calcSetReach(v){ CALC.reach=parseInt(v,10)||45; const e=document.getElementById('calc_reachval'); if(e) e.textContent=CALC.reach; calcUpdate(); }
-function calcSetUsage(v){ CALC.usage=parseInt(v,10)||100; const e=document.getElementById('calc_usageval'); if(e) e.textContent=CALC.usage; renderPlans(); }
-function calcSetPlan(i,f,v){ if(!CALC.plans[i]) return; CALC.plans[i][f]=(f==='name')?v:(parseFloat(v)||0); renderPlans(); }
-function calcAddPlan(){ CALC.plans.push({name:'New plan',price:9.99,checks:30}); renderPlans(); }
-function calcDelPlan(i){ CALC.plans.splice(i,1); renderPlans(); }
-function renderPlans(){
+function calcSetUsage(v){ CALC.usage=parseInt(v,10)||100; const e=document.getElementById('calc_usageval'); if(e) e.textContent=CALC.usage; calcRenderPlans(); }
+function calcSetPlan(i,f,v){ if(!CALC.plans[i]) return; CALC.plans[i][f]=(f==='name')?v:(parseFloat(v)||0); calcRenderPlans(); }
+function calcAddPlan(){ CALC.plans.push({name:'New plan',price:9.99,checks:30}); calcRenderPlans(); }
+function calcDelPlan(i){ CALC.plans.splice(i,1); calcRenderPlans(); }
+// calcRenderPlans: the Calc tab's what-if pricing table (#calc_plans). It was named renderPlans and,
+// being declared later, SHADOWED the Plans tab's renderPlans — which is why Plans sat on "Loading…"
+// forever (fetch fine, render into a null #calc_plans, silent return). Owner 07-11 "plans isn't loading".
+function calcRenderPlans(){
   const el=document.getElementById('calc_plans'); if(!el) return;
   const cpc=calcPerCheck().perCheck, use=Math.max(0,Math.min(1,(CALC.usage||100)/100));
   const money=v=>calcMoney(v), pct=(a,b)=>b>0?(((a-b)/a)*100):0;
@@ -1923,7 +1970,7 @@ function calcUpdate(){
   const mEl=document.getElementById('calc_margin'); if(mEl){ mEl.textContent=margin.toFixed(1)+'%'; mEl.style.color=mc; }
   const ret=total>0?CALC.revenue/total:0, rEl=document.getElementById('calc_return'); if(rEl){ rEl.textContent=ret.toFixed(1)+'×'; rEl.style.color=ret>=1?'var(--green)':'#FF6B6B'; }
   set('calc_sentence',`At ${calcMoney(CALC.revenue)} revenue/call, cost is <b style="color:var(--text-primary)">${calcMoney(total)}</b> → margin = <b style="color:${mc}">${margin.toFixed(1)}%</b>.`);
-  renderPlans();
+  calcRenderPlans();
 }
 async function loadDash(){
   loadCallTiming();
@@ -2250,9 +2297,11 @@ function splitName(n){ return {base:(n||'').trim(),branch:''}; }
 function logoTile(o){
   o=o||{};
   if(o.logoUrl) return `<div class="slogo${o.logoDark?' lite':''}${o.logoWide?' widelogo':''}"><img loading="lazy" decoding="async" src="${esch(o.logoUrl)}" alt=""></div>`;
-  // Independent hobby/thrift shops have no real logo — show the storefront icon (like the consumer
-  // site) instead of inventing a name-tile. Other logoless stores keep the wordmark fallback.
-  if(o.type==='Hobby'||o.type==='Thrift') return `<div class="slogo" style="display:grid;place-items:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F4D03F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M5 11.5V20h14v-8.5"/><path d="M9 20v-5h6v5"/></svg></div>`;
+  // Independent hobby/thrift shops have no real logo — show the SAME icons the consumer site uses
+  // (checkit.html SVG_STORE / SVG_TAG, owner 07-04: Hobby = storefront, Thrift = price-tag), not an
+  // admin-only variant. Other logoless stores keep the wordmark fallback.
+  if(o.type==='Hobby') return `<div class="slogo" style="display:grid;place-items:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l1.6-4.2h12.8L20 9"/><path d="M5 9v9.5h14V9"/><path d="M4 9h16"/><path d="M10 18.5V14h4v4.5"/></svg></div>`;
+  if(o.type==='Thrift') return `<div class="slogo" style="display:grid;place-items:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".9" fill="#FFCB05"/></svg></div>`;
   return `<div class="slogo">${storeWordmark(o.name,o.type)}</div>`;
 }
 // Name-only stores/chains (no logo file) show THEIR real name as a tight two-line wordmark —
@@ -2281,6 +2330,9 @@ async function loadFeedback(){
   const sum=document.getElementById('fb_summary');
   const st=(n,l,cls)=>`<div class="stat"><div class="n"${cls?` style="color:${cls}"`:''}>${n}</div><div class="l">${l}</div></div>`;
   if(sum) sum.innerHTML=`<div class="card report"><div class="stats" style="margin-bottom:0">${st(openDis,'to review',openDis?'#F4D03F':'')}${st(rows.filter(r=>r.disagree).length,'disagreements')}${st(rows.length,'responses')}</div></div>`;
+  // Unclear-status pills (incl. Fun/owner-only checks — the god-view headline filters those out ON
+  // PURPOSE; this tab is the unfiltered surface, so the owner can confirm status data flows end to end).
+  loadFbUnclear();
   if(!rows.length){ list.innerHTML='<div class="empty">No poll responses yet. They appear when a customer taps what they saw after an unclear check.</div>'; return; }
   const UV={in:'In stock',out:'Not in',soon:'Restocking',unsure:'Unclear'};
   const ours=r=>r.confirmed===1?'In stock':r.confirmed===0?'Not in':(r.status_key?String(r.status_key).replace(/_/g,' '):'—');
@@ -2302,8 +2354,105 @@ async function loadFeedback(){
     </div>`;
   }).join('');
 }
+async function loadFbUnclear(){
+  const el=document.getElementById('fb_unclear'); if(!el) return;
+  try{
+    const rc=await api('/api/results?limit=120');
+    const unk=(rc&&Array.isArray(rc.rows)?rc.rows:[]).filter(r=>r.statusKey==='no_clear_answer').slice(0,15);
+    if(!unk.length){ el.innerHTML=''; return; }
+    el.innerHTML=`<div class="card"><div class="meta" style="margin-bottom:8px">Unclear checks · newest ${unk.length} · Fun included</div><div class="row" style="gap:6px;flex-wrap:wrap">${unk.map(r=>`<span class="chip-sm" style="color:#F4D03F;background:rgba(244,208,63,.12)">${esch(String(r.retailer||('#'+r.retailerId)).split('—')[0].trim())} · no clear answer · ${agoTs(r.startedAt)}</span>`).join('')}</div></div>`;
+  }catch(_){ el.innerHTML=''; }
+}
 async function fbReview(id){ const r=await api('/api/feedback/'+id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}); toast((r&&r.ok)?'Marked reviewed':"Couldn't update"); loadFeedback(); }
 async function fbCorrect(id,verdict){ const r=await api('/api/feedback/'+id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({correct:verdict})}); toast((r&&r.ok)?'Corrected + reviewed':"Couldn't update"); loadFeedback(); }
+
+// ---- Support: live chats from the support agent (site + Discord). Reads the Support lane's
+// /api/support/* endpoints (contract: docs/specs/support-agent/admin-panel-contract.md — ping
+// Support before changing shapes). Snapshot + filterable chat list + a transcript drawer with the
+// uploaded screenshot, auto-captured debug info, and the customer's account details. ----
+const SUP={range:'7d',cat:'',acct:'all',q:''};
+const SUP_CATS={technical:'Technical',bug:'Bug',billing:'Billing',partnerships:'Partnerships',how_checks_work:'How checks work',other:'Other'};
+let SUP_SEARCH_T=null;
+function supSetRange(v){ SUP.range=v; loadSupport(); }
+function supFilter(){ SUP.cat=(document.getElementById('sup_f_cat')||{}).value||''; SUP.acct=(document.getElementById('sup_f_acct')||{}).value||'all'; loadSupportChats(); }
+function supSearch(){ clearTimeout(SUP_SEARCH_T); SUP_SEARCH_T=setTimeout(()=>{ SUP.q=(document.getElementById('sup_f_q')||{}).value||''; loadSupportChats(); },300); }
+function supSince(){ if(SUP.range==='today'){ const d=new Date(); d.setHours(0,0,0,0); return Math.floor(d.getTime()/1000); } return Math.floor(Date.now()/1000)-(SUP.range==='30d'?30:7)*86400; }
+const supCatChip=(c)=>`<span class="chip-sm">${esch(SUP_CATS[c]||c||'Other')}</span>`;
+const supTier=(t)=>t==null?'':(String(t)==='3'||t==='human'?'Human email':String(t)==='2'||t==='smart'?'Tier 2':'Tier 1');
+function supStatusPill(s){
+  const k=String(s||'open');
+  const cls=k==='resolved'?'g':(k==='escalated'?'a':'');
+  return `<span class="pill ${cls}" style="font-size:10.5px;padding:3px 9px">${esch(k)}</span>`;
+}
+async function loadSupport(){ loadSupportStats(); loadSupportChats(); }
+async function loadSupportStats(){
+  const el=document.getElementById('sup_stats'); if(!el) return;
+  const r=await api('/api/support/stats?range='+encodeURIComponent(SUP.range));
+  if(!r||r.error){ el.innerHTML='<div class="empty">Support APIs aren\'t live yet — the Support lane is building them. This panel lights up on its own once they land.</div>'; const c=document.getElementById('sup_cats'); if(c)c.innerHTML=''; const t=document.getElementById('sup_top'); if(t)t.innerHTML=''; return; }
+  const st=(n,l)=>`<div class="stat"><div class="n">${n==null?'—':esch(String(n))}</div><div class="l">${l}</div></div>`;
+  const escRate=r.escalationRate!=null?r.escalationRate:(r.total?Math.round(100*(r.escalated||0)/r.total):0);
+  el.innerHTML=st(r.total,'requests')+st(r.selfServed,'self-served')+st(r.escalated,'escalated')+st(escRate+'%','escalation rate')+st(r.avgMessages,'avg msgs / chat')+st(r.ticketsEmailed,'tickets emailed');
+  const cats=document.getElementById('sup_cats');
+  if(cats){ const by=r.byCategory||{}; const ks=Object.keys(by);
+    cats.innerHTML=ks.length?`<div class="meta" style="margin-bottom:6px">By category</div><div class="row" style="gap:6px;flex-wrap:wrap">${ks.map(k=>`<span class="chip-sm">${esch(SUP_CATS[k]||k)} · ${by[k]}</span>`).join('')}</div>`:''; }
+  const top=document.getElementById('sup_top');
+  if(top){ const qs=r.topQuestions||[];
+    top.innerHTML=qs.length?`<div class="meta" style="margin-bottom:6px">Top questions</div>`+qs.slice(0,8).map(q=>`<div class="rsbar"><span class="rsbl" style="flex-basis:auto">${esch(q.q||q.question||String(q))}</span><b>${q.n||q.count||''}</b></div>`).join(''):''; }
+}
+async function loadSupportChats(){
+  const el=document.getElementById('sup_list'); if(!el) return;
+  const p=new URLSearchParams({account:SUP.acct,since:String(supSince())});
+  if(SUP.cat)p.set('category',SUP.cat); if(SUP.q)p.set('q',SUP.q);
+  const r=await api('/api/support/chats?'+p.toString());
+  const rows=Array.isArray(r)?r:(r&&Array.isArray(r.chats)?r.chats:null);
+  if(!rows){ el.innerHTML='<div class="empty">No chat data yet — waiting on the Support lane\'s API.</div>'; return; }
+  if(!rows.length){ el.innerHTML='<div class="empty">No chats match these filters.</div>'; return; }
+  el.innerHTML=rows.map(c=>{
+    const who=c.account?(c.account.email||c.account.phone||c.account.label||'Member'):'Guest';
+    const member=!!c.account;
+    return `<div class="card" style="cursor:pointer" onclick="openSupChat('${esch(String(c.id))}')">
+      <div class="row" style="justify-content:space-between;align-items:flex-start;gap:10px">
+        <div style="min-width:0">
+          <div style="font-size:13.5px"><b>${esch(who)}</b>${member?'':' <span class="meta" style="text-transform:none">guest</span>'} ${supCatChip(c.category)}</div>
+          <div class="meta" style="text-transform:none;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:520px">${esch((c.lastMessage||c.snippet||'').slice(0,140))}</div>
+        </div>
+        <div style="flex:0 0 auto;text-align:right">
+          ${supStatusPill(c.status)}
+          <div class="meta" style="text-transform:none;margin-top:5px">${esch(supTier(c.tier))}${c.tier!=null?' · ':''}${agoTs(c.createdAt||c.created_at)}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function openSupChat(id){
+  const r=await api('/api/support/chats/'+encodeURIComponent(id));
+  if(!r||r.error){ toast('Could not load that chat'); return; }
+  const msgs=Array.isArray(r.transcript)?r.transcript:(Array.isArray(r.messages)?r.messages:[]);
+  const bub=(m)=>{ const ours=m.role!=='user'&&m.role!=='customer';
+    return `<div class="bub ${ours?'a':'c'}" style="margin:0 0 8px;${ours?'margin-left:auto':''}"><span class="nm">${ours?'Support AI':'Customer'}</span>${esch(String(m.text||m.content||''))}</div>`; };
+  const acct=r.account?Object.entries({Email:r.account.email,Phone:r.account.phone,Plan:r.account.subscription||r.account.plan,Credits:r.account.credits,'Checks made':r.account.callsMade}).filter(([,v])=>v!=null&&v!=='').map(([k,v])=>`<div class="rsbar"><span class="rsbl" style="flex-basis:auto">${k}</span><b>${esch(String(v))}</b></div>`).join(''):'<div class="meta" style="text-transform:none">Guest — not signed in.</div>';
+  const dbg=r.debug?(typeof r.debug==='string'?r.debug:JSON.stringify(r.debug,null,2)):'';
+  const shot=r.screenshotUrl||r.screenshot;
+  supDrawer(`
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="name" style="margin:0">Chat ${esch(String(r.id||id))} ${supCatChip(r.category)} ${supStatusPill(r.status)}</div>
+      <button class="ghost" style="font-size:13px;padding:6px 11px" onclick="document.getElementById('sup_drawer').remove()">Close</button>
+    </div>
+    <div class="meta" style="text-transform:none;margin-bottom:12px">${esch(supTier(r.tier))}${r.tier!=null?' · ':''}${agoTs(r.createdAt||r.created_at)}</div>
+    <div style="display:flex;flex-direction:column;margin-bottom:14px">${msgs.map(bub).join('')||'<div class="empty">No transcript.</div>'}</div>
+    ${shot?`<div class="name" style="font-size:13px;margin-bottom:6px">Screenshot</div><a href="${esch(shot)}" target="_blank" rel="noopener"><img src="${esch(shot)}" alt="Customer screenshot" style="max-width:100%;border:1px solid var(--border);border-radius:10px;margin-bottom:14px"></a>`:''}
+    ${dbg?`<div class="name" style="font-size:13px;margin-bottom:6px">Debug info</div><pre style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;margin:0 0 14px">${esch(dbg)}</pre>`:''}
+    <div class="name" style="font-size:13px;margin-bottom:6px">Account</div>${acct}
+  `);
+}
+function supDrawer(html){
+  let d=document.getElementById('sup_drawer');
+  if(!d){ d=document.createElement('div'); d.id='sup_drawer';
+    d.style.cssText='position:fixed;inset:0;z-index:9200;background:rgba(8,8,12,.6);backdrop-filter:blur(3px);display:flex;justify-content:flex-end';
+    d.onclick=(e)=>{ if(e.target===d) d.remove(); };
+    document.body.appendChild(d); }
+  d.innerHTML=`<div style="width:min(560px,100vw);height:100dvh;overflow-y:auto;background:var(--sheet);border-left:1px solid var(--border-strong);padding:18px 16px 44px">${html}</div>`;
+}
 function bubbles(t){
   if(!t) return '';
   return '<div class="chat">'+t.split('\n').filter(Boolean).map(line=>{
@@ -3965,7 +4114,7 @@ const ICONS={
 };
 function ICO(name,size,color){ const i=ICONS[name]; if(!i) return ''; size=size||18;
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color||'currentColor'}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto">${i}</svg>`; }
-const NAV_ICO={dash:'bolt',retailers:'store',results:'phone',playbook:'tree',growth:'rise',business:'money',map:'map',schedules:'cal',zones:'target',catalog:'tag',labs:'flask',settings:'gear'};
+const NAV_ICO={dash:'bolt',retailers:'store',results:'phone',playbook:'tree',growth:'rise',business:'money',map:'map',zones:'target',catalog:'tag',labs:'flask',settings:'gear'};
 const EMOJI_ICO={'⚡':'bolt','💰':'money','💳':'card','✂':'scissors','📞':'phone','📊':'chart','📈':'rise','🏆':'trophy','🏪':'store','📍':'pin','🎚':'sliders','🧪':'flask','🔎':'search','📝':'note','🌳':'tree','🏷':'tag','🎙':'mic','🎯':'target','📦':'box','🔧':'gear','⚙':'gear','🔑':'key','🗺':'map','📅':'cal','💬':'chat','✅':'check','🛒':'cart','🔴':'live'};
 // One pass: nav tabs get an icon + label; every emoji-led header/button swaps the emoji for a drawn mark.
 function decorateChrome(){

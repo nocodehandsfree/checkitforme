@@ -11,14 +11,17 @@ import { WebSocketServer, type WebSocket } from "ws";
 import { and, desc, eq, gte, inArray, isNull, like, lte, notInArray, or, sql } from "drizzle-orm";
 import { db, client } from "./db/client";
 import {
-  alertSends, alertSubscriptions, callResults, categories, chains, communityPosts, customerSchedules, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, waitlist, watches, zones, zoneRetailers,
+  alertSends, alertSubscriptions, callResults, categories, chains, communityPosts, customerSchedules, discordChannels, kiosks, kioskReceipts, kioskReports, leads, products, retailers, schedules, scheduleTargets, statuses, storeRequests, supportConversations, supportMessages, supportTickets, waitlist, watches, zones, zoneRetailers,
 } from "./db/schema";
+import { answerSupport, resolveConversation, SUPPORT_MODELS, SUPPORT_CATEGORIES, type SupportCategory } from "./support/ladder";
+import { submitTicket } from "./support/tickets";
+import { addQa, reindexBook, searchBook } from "./support/rag";
 import { config } from "./config";
 import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus } from "./store-sync";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
@@ -29,9 +32,9 @@ import { runAdminAgent, AGENT_MODELS } from "./agent/admin-agent";
 import { queueTreeRelearn, TREE_MODEL } from "./calls/tree-learn";
 import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MODEL, confirmAskedStores, navAskAudio } from "./calls/navigator";
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
-import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, setDeltaBarge } from "./calls/tapedeck";
+import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
-import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, type Recipe } from "./calls/recipe";
+import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
 import { opsAlert, watchdogTick, watchdogState, backupTick, backupNow, backupState } from "./ops-watch";
 import { harvestHoursTick } from "./hours-harvest";
@@ -396,7 +399,8 @@ const DEFAULT_PAGES: Record<string, string> = {
 <h2 ${H2}>The fine print</h2>
 <p>The service is "as is." As far as the law allows, we're not on the hook for a missed item, a wrong answer, or a wasted trip. If it ever comes to it, our max liability is what you paid us in the last 30 days.</p>
 <h2 ${H2}>Changes</h2>
-<p>We may update these terms. Keep using the app and that's a yes. Questions? Hit the Contact page.</p>`,
+<p>We may update these terms. Keep using the app and that's a yes. Questions? Hit the Contact page.</p>
+<p style="margin-top:22px"><a href="/p/privacy" onclick="if(window.openPage){openPage('privacy');return false}">Privacy Policy →</a></p>`,
   privacy: `<p>Here's what <b>Check It For Me</b> (checkitforme.com) collects, and why. Short version: we grab what we need to run your checks. We don't sell your info.</p>
 <h2 ${H2}>What we collect</h2>
 <ul>
@@ -412,6 +416,58 @@ const DEFAULT_PAGES: Record<string, string> = {
 <h2 ${H2}>Your data, your call</h2>
 <p>We keep your account and history until you ask us to delete it. Want a copy, or a delete? Hit the Contact page. You can turn off location any time in your browser.</p>`,
 };
+// Hand-written Spanish for the footer pages (copy law 3: every string ships its Spanish). Same voice,
+// no dashes, fewest words. Served whenever the app asks with ?lang=es; the owner's policy.pages
+// overrides are English-only, so Spanish always comes from here.
+const PAGE_TITLES_ES: Record<string, string> = { about: "Acerca de", contact: "Contacto", faq: "Preguntas", terms: "Términos del servicio", privacy: "Política de privacidad" };
+const DEFAULT_PAGES_ES: Record<string, string> = {
+  about: `<p><b>Check It For Me</b> averigua si lo que buscas está en el estante. Por teléfono. Para que no cruces la ciudad por nada.</p>
+<p>Eliges una tienda y un producto. Check AI llama a la tienda, pregunta al personal y te manda la respuesta. Llamada real. Respuesta directa. Sin bots que se hacen pasar por ti. Sin refrescar una página toda la noche.</p>
+<h2 ${H2}>Por qué lo hicimos</h2>
+<p>Los lanzamientos con hype se agotan en minutos. Las páginas de las tiendas dicen "en stock" cuando ya no queda nada. Una llamada de 30 segundos resuelve todo. Nosotros la hicimos de un toque.</p>
+<h2 ${H2}>¿Quieres la versión completa?</h2>
+<p>Cómo funciona, de arriba a abajo, está en <a href="${RM}" target="_blank" rel="noopener">checkitforme.readme.io</a>.</p>`,
+  contact: `<p>La forma más rápida de contactarnos es <b>Discord</b>. Nuestro bot de soporte responde lo común en segundos, a cualquier hora. Un humano atiende el resto.</p>
+<p>¿Quieres agregar una tienda? Hazlo en la app. Cuenta, luego Gana, luego <i>Agrega tu tienda</i>. Cuando tu tienda esté disponible, tu próxima verificación va por nuestra cuenta.</p>
+<p>No damos soporte por teléfono ni correo a propósito. Con gastos bajos, las verificaciones siguen baratas.</p>`,
+  faq: `<h2 ${H2}>¿Qué hace Check It For Me?</h2>
+<p>Eliges una tienda y un producto. Check AI llama a la tienda y pregunta si está en stock. Recibes la respuesta, normalmente en un par de minutos.</p>
+<h2 ${H2}>¿Es confiable?</h2>
+<p>Te decimos exactamente lo que dijo el personal, con la hora y toda la conversación. Los estantes cambian rápido, así que toma cada respuesta como "ahora mismo".</p>
+<h2 ${H2}>¿Cuánto cuesta?</h2>
+<p>Pagas en verificaciones. Compra un paquete chico o suscríbete por una carga mensual. Las cuentas nuevas reciben una verificación gratis para probar. Gana más agregando una tienda, invitando a un amigo o publicando un logro.</p>
+<h2 ${H2}>¿Lo compran por mí?</h2>
+<p>No. Confirmamos que está ahí. La compra es tuya.</p>
+<h2 ${H2}>¿Y si nadie contesta?</h2>
+<p>Sin respuesta = sin cargo.</p>
+<p style="margin-top:26px"><a href="${RM}" target="_blank" rel="noopener" style="display:inline-block;padding:13px 22px;border-radius:14px;font-weight:800;text-decoration:none;border:1.5px solid currentColor">Lee la guía completa →</a></p>`,
+  terms: `<p>Al usar <b>Check It For Me</b> (checkitforme.com) aceptas estos términos. Si no, no pasa nada. Solo no lo uses.</p>
+<h2 ${H2}>Qué hacemos</h2>
+<p>Llamamos a tiendas y preguntamos si algo está en stock, luego te contamos lo que dijeron. Las respuestas son una foto del momento. Las tiendas a veces se equivocan, así que no podemos garantizar que el artículo esté, ni el precio, ni que siga ahí cuando llegues.</p>
+<h2 ${H2}>Verificaciones y pagos</h2>
+<p>Pagas con verificaciones, en paquetes o incluidas en un plan. Stripe procesa la tarjeta. Una verificación se gasta cuando coloca una llamada. Las que no uses se pueden reembolsar si lo pides. Las gastadas no. Los planes se renuevan hasta que canceles, y puedes cancelar cuando quieras para el siguiente ciclo.</p>
+<h2 ${H2}>Juega limpio</h2>
+<p>No nos uses para acosar a una tienda, hacer llamadas sin motivo real, revender el servicio o romper la ley. Podemos pausar cuentas que abusen del servicio o de las tiendas.</p>
+<h2 ${H2}>La letra chica</h2>
+<p>El servicio se ofrece "tal cual". Hasta donde la ley lo permite, no respondemos por un artículo perdido, una respuesta equivocada o un viaje en vano. Si llegara el caso, nuestra responsabilidad máxima es lo que nos pagaste en los últimos 30 días.</p>
+<h2 ${H2}>Cambios</h2>
+<p>Podemos actualizar estos términos. Si sigues usando la app, es un sí. ¿Preguntas? Ve a la página de Contacto.</p>
+<p style="margin-top:22px"><a href="/p/privacy" onclick="if(window.openPage){openPage('privacy');return false}">Política de privacidad →</a></p>`,
+  privacy: `<p>Esto es lo que <b>Check It For Me</b> (checkitforme.com) recopila, y para qué. Versión corta: tomamos lo necesario para hacer tus verificaciones. No vendemos tu información.</p>
+<h2 ${H2}>Qué recopilamos</h2>
+<ul>
+<li><b>Tu número de celular.</b> Es tu forma de iniciar sesión. Y llamamos a tiendas en tu nombre, así que se requiere un número verificado. Sin número, no hay verificaciones.</li>
+<li><b>Tus verificaciones.</b> La tienda, el producto, el resultado, la conversación de la llamada.</li>
+<li><b>Ubicación aproximada.</b> Solo si la permites, para mostrarte tiendas cerca. Di que no y busca por código postal.</li>
+<li><b>Datos de pago.</b> Los maneja Stripe. Nunca vemos tu tarjeta completa.</li>
+</ul>
+<h2 ${H2}>Cómo la usamos</h2>
+<p>Para colocar tus llamadas, mostrar tu historial, cobrar, frenar abusos y afinar la precisión. Eso es todo.</p>
+<h2 ${H2}>Quién la ve</h2>
+<p>Solo los proveedores que hacen que funcione. Un proveedor de voz para las llamadas, uno de inicio de sesión y Stripe para pagos. La manejan por nosotros bajo sus propios términos. No vendemos tu información personal.</p>
+<h2 ${H2}>Tus datos, tú decides</h2>
+<p>Guardamos tu cuenta e historial hasta que pidas borrarlos. ¿Quieres una copia, o borrar todo? Ve a la página de Contacto. Puedes apagar la ubicación cuando quieras en tu navegador.</p>`,
+};
 app.get("/p/:slug", async (c) => {
   const slug = c.req.param("slug").toLowerCase();
   if (!(slug in PAGE_TITLES)) return c.notFound();
@@ -420,18 +476,21 @@ app.get("/p/:slug", async (c) => {
   const brand = resolveBrand(host, c.req.query("brand"));
   const pol = await getPolicy();
   const plain = brand.name.replace(/<[^>]+>/g, "");
-  const body = ((pol.pages as Record<string, string>)[slug] || "").trim()
+  const es = (c.req.query("lang") || "").toLowerCase() === "es";
+  const title = es ? (PAGE_TITLES_ES[slug] || PAGE_TITLES[slug]) : PAGE_TITLES[slug];
+  const body = (es && DEFAULT_PAGES_ES[slug])
+    || ((pol.pages as Record<string, string>)[slug] || "").trim()
     || DEFAULT_PAGES[slug]
     || `<p>This page is on the way. Check back soon.</p>`;
   // In-app sheet: the consumer page fetches the content instead of navigating away from the app.
-  if (c.req.query("partial")) return c.json({ title: PAGE_TITLES[slug], body });
-  return c.html(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(PAGE_TITLES[slug])} · ${esc(plain)}</title><meta name="robots" content="index,follow">
+  if (c.req.query("partial")) return c.json({ title, body });
+  return c.html(`<!doctype html><html lang="${es ? "es" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(title)} · ${esc(plain)}</title><meta name="robots" content="index,follow">
 <style>*{box-sizing:border-box}body{margin:0;background:#0A0A0E;color:#e9e9f0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.65}
 .wrap{max-width:680px;margin:0 auto;padding:28px 22px 80px}a.home{color:${brand.accent};text-decoration:none;font-weight:800;font-size:15px}
 h1{font-size:30px;margin:26px 0 14px}.body{color:#c2c2cf;font-size:16px}.body a{color:${brand.accent}}.muted{color:#7a7a88;font-size:13px;margin-top:40px}</style></head>
 <style>.fab{position:fixed;right:18px;bottom:22px;width:58px;height:58px;border-radius:50%;background:${brand.accent};color:#06210f;border:none;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:60;text-decoration:none}</style>
-<body><div class="wrap"><a class="home" href="/">← ${esc(plain)}</a><h1>${esc(PAGE_TITLES[slug])}</h1><div class="body">${body}</div>
+<body><div class="wrap"><a class="home" href="/">← ${esc(plain)}</a><h1>${esc(title)}</h1><div class="body">${body}</div>
 <div class="muted">© ${new Date().getFullYear()} ${esc(plain)}</div></div>
 <a class="fab" href="/" title="Back" aria-label="Back to ${esc(plain)}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M14.5 5L8 12l6.5 7" stroke="#06210f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
 </body></html>`);
@@ -643,7 +702,9 @@ setDeltaBarge(async (s, _speech) => {
     const v = await buildRestockVars(chk.retailerId, chk.categoryId, undefined, [], undefined);
     if (!v || !v.retailer?.phone) return null;
     const pol = await getPolicy();
-    const room = crypto.randomUUID();
+    // Reuse the D-lane listen room ("delta:<session>") so a consumer watching the call live keeps
+    // getting transcript lines + audio when Charlie takes over mid-call.
+    const room = "delta:" + s.id;
     setBridgeContext(room, {
       agentId: config.voice.agentId,
       dynamicVars: v.dynamicVars,
@@ -658,7 +719,9 @@ setDeltaBarge(async (s, _speech) => {
       },
     });
     const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
-    return `<?xml version="1.0" encoding="UTF-8"?><Response><Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
+    // Stop the D-lane audio fork first — the bridge fans out the same audio to the same listen room,
+    // so leaving the fork running would double every frame in the listener's ear.
+    return `<?xml version="1.0" encoding="UTF-8"?><Response><Stop><Stream name="deltatap"/></Stop><Connect><Stream url="wss://${host}/bridge?room=${room}"><Parameter name="room" value="${room}" /></Stream></Connect></Response>`;
   } catch (e) {
     console.error("[delta] barge setup failed", e);
     return null;
@@ -837,7 +900,7 @@ function chainLogoInfo(name: string | null | undefined): { url: string | null; w
   const f = chainLogoFile(name); // filesystem fallback (pre-migration, and unchained store names)
   if (!f) return { url: null, wide: false, dark: false };
   const m = logoMeta()[f] || { w: 0, d: 0 };
-  return { url: `/logos/chains/${f}?v=73`, wide: m.w === 1, dark: m.d === 1 };
+  return { url: `/logos/chains/${f}?v=78`, wide: m.w === 1, dark: m.d === 1 };
 }
 
 // ---- Distributor-driven carries (data/distributors.json) ----
@@ -930,7 +993,7 @@ app.get("/logo-wall", async (c) => {
     const m = meta[f] || { w: 0, d: 0 };
     const info = fileInfo.get(f);
     const cls = (m.d === 1 ? " lite" : "") + (m.w === 1 ? " widelogo" : "");
-    return `<div class="cell" data-type="${esc(info?.type || "Other")}" data-treat="${treatKey(m)}"><div class="ic${cls}"><img src="/logos/chains/${f}?v=73" alt=""></div><div class="nm">${esc(info?.name || pretty(f))}</div></div>`;
+    return `<div class="cell" data-type="${esc(info?.type || "Other")}" data-treat="${treatKey(m)}"><div class="ic${cls}"><img src="/logos/chains/${f}?v=78" alt=""></div><div class="nm">${esc(info?.name || pretty(f))}</div></div>`;
   };
   // ── Pokémon set & era logos — same repo/logo-wall system as chains, but shown BIG (owner 2026-07-03:
   //    "take up the box, be the main attraction"): these are wordmark logos, not 52px store marks.
@@ -1345,6 +1408,19 @@ app.get("/pub/stores/near", async (c) => {
   const ringsDirectChain = new Set(chainRows.filter((x) => x.ringsDirect === true).map((x) => x.id));
   const treeMappedChain = new Set(chainRows.filter((x) => x.treeStatus === "learned" || x.treeStatus === "verified").map((x) => x.id));
   const READY_TYPES = new Set(["Hobby", "Thrift"]);
+  // Time-to-a-human for the consumer UI ("manage the expectation before the call"). Three honest
+  // states, EVIDENCE-only — never a guess: {kind:"direct"} = the chain is known to ring straight to a
+  // person · {kind:"menu", seconds} = mapped phone tree, seconds from the same guarded number the live
+  // call uses (connectAtSecFor — bogus/stray avgTreeSeconds can never leak here) · null = not mapped
+  // yet, the front-end shows nothing.
+  const chainById = new Map(chainRows.map((x) => [x.id, x]));
+  const reachFor = (chainId: number | null): { kind: "direct" } | { kind: "menu"; seconds: number } | null => {
+    const ch = chainId != null ? chainById.get(chainId) : null;
+    if (!ch) return null;
+    if (ch.navType === "direct" || ch.ringsDirect === true || ch.answerPath === "direct_human") return { kind: "direct" };
+    const s = connectAtSecFor(ch);
+    return s != null ? { kind: "menu", seconds: s } : null;
+  };
 
   let rows: (typeof retailers.$inferSelect)[];
   if (hasLoc) {
@@ -1427,6 +1503,7 @@ app.get("/pub/stores/near", async (c) => {
         online: r.online === true,
         isMSRP: r.chainId ? isMSRPByChain.get(r.chainId) !== false : true, // false = third-party, may exceed MSRP
         mapsUri: r.mapsUri || null,
+        reach: reachFor(r.chainId), // time-to-a-human: {kind:"direct"} | {kind:"menu",seconds} | null (unmapped → show nothing)
         miles, openState: openState(r.hours, r.timezone) };
     })
     .filter((r) => r.ownerOnly || !hasLoc || r.miles == null || r.miles <= radius) // owner-only store is never distance-filtered
@@ -2591,6 +2668,23 @@ app.get("/pub/result/:cid", async (c) => {
   const cid = c.req.param("cid");
   if (!(await canReadTranscript(c, cid))) return c.json({ error: "unauthorized" }, 401);
   if (config.staging.on && isSimId(cid)) return c.json(simResult(cid)); // preview: simulated verdict
+  // D-lane call ("delta:<session>"): the verdict lives in OUR row (written by the Delta finalize hook),
+  // never in ElevenLabs. A Charlie barge-in repoints the row's providerCallId at the EL conversation,
+  // so fall back to resolving the row through the live session's callId.
+  if (cid.startsWith("delta:")) {
+    const s = tdSession(cid.slice(6));
+    let row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
+    if (!row && s?.check) row = (await db.select().from(callResults).where(eq(callResults.id, s.check.callId)))[0];
+    if (row && row.status && row.status !== "in_progress" && row.status !== "dialing") {
+      return c.json({
+        status: row.status, confirmed: row.confirmed, statusKey: row.statusKey,
+        productDetail: row.productDetail, shipmentDay: row.shipmentDayHeard ?? null,
+        summary: row.summary ?? "", transcript: row.transcript ?? "",
+        durationSecs: row.callSeconds ?? undefined,
+      });
+    }
+    return c.json({ status: "in_progress", transcript: row?.transcript ?? (s ? tdTranscript(s) : ""), summary: "" });
+  }
   const o = await provider.getConversation(cid);
   // Prefer the FINALIZED row once it exists — it carries the consensus verdict (the reconciled
   // status_key/confirmed) and the captured product detail, which the live outcome does not. While the
@@ -2602,6 +2696,7 @@ app.get("/pub/result/:cid", async (c) => {
       status: row.status,
       confirmed: row.confirmed,
       statusKey: row.statusKey,
+      ts: (row.startedAt || 0) * 1000,       // call start (ms) — the status page shows date + time (owner 07-10)
       productDetail: row.productDetail,      // e.g. "3-pack blister · Surging Sparks" — null if not captured
       shipmentDay: row.shipmentDayHeard ?? (o?.shipmentDay ?? null),
       summary: row.summary ?? o?.summary ?? "",
@@ -2616,10 +2711,11 @@ app.get("/pub/result/:cid", async (c) => {
   // first verdict the UI ever shows is already the final one.
   if (row && o && o.status === "completed") {
     const label = (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label;
-    // Speed: only spend the second-read LLM when ElevenLabs was UNCLEAR (the case it actually rescues).
-    // A decisive EL yes/no/sold-out/doesn't-carry confirms instantly — no extra round-trip.
-    const second = (o.confirmed === null && !o.soldOut && !o.doesNotSell) ? await classifyVerdict(o.transcript, label || "the product") : null;
-    const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, second);
+    // Speed: only spend the verdict-DECIDING second read when ElevenLabs was UNCLEAR (the case it
+    // actually rescues). A decisive yes still gets an extraction-only read for the set/product form.
+    const needSecond = o.confirmed === null && !o.soldOut && !o.doesNotSell;
+    const second = (needSecond || o.confirmed === true) ? await classifyVerdict(o.transcript, label || "the product") : null;
+    const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, needSecond ? second : null);
     const productDetail = productDetailLabel(second);
     await db.update(callResults).set({
       status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey,
@@ -2627,15 +2723,43 @@ app.get("/pub/result/:cid", async (c) => {
       completedAt: Math.floor(Date.now() / 1000),
     }).where(eq(callResults.id, row.id));
     if (row.finderUserId && consensus.definitive) await chargeCallOnce(row.id, row.finderUserId);
-    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, productDetail, shipmentDay: o.shipmentDay, summary: o.summary, transcript: o.transcript });
+    return c.json({ ...(o ?? {}), status: o.status, confirmed: consensus.confirmed, statusKey: consensus.statusKey, ts: (row.startedAt || 0) * 1000, productDetail, shipmentDay: o.shipmentDay, summary: o.summary, transcript: o.transcript });
   }
   // Truly mid-call → progress only, never a verdict (so a wrong key can't flash before the real one).
-  return c.json(o ?? { status: "in_progress", transcript: "", summary: "" });
+  return c.json(o ? { ...o, ts: row?.startedAt ? row.startedAt * 1000 : undefined } : { status: "in_progress", transcript: "", summary: "", ts: row?.startedAt ? row.startedAt * 1000 : undefined });
 });
 // Live, mid-call transcript: returns whatever the agent + clerk have said SO FAR (no audio needed).
 app.get("/pub/live/:cid", async (c) => {
   if (!(await canReadTranscript(c, c.req.param("cid")))) return c.json({ error: "unauthorized" }, 401);
   if (config.staging.on && isSimId(c.req.param("cid"))) return c.json(simLive(c.req.param("cid"))); // preview: simulated live transcript
+  // D-lane call: the live transcript is the session's own step log (no ElevenLabs). After a Charlie
+  // barge-in, EL owns the rest of the call — proxy its live lines and append them to the clip turns.
+  const dcid = c.req.param("cid");
+  if (dcid.startsWith("delta:")) {
+    const s = tdSession(dcid.slice(6));
+    if (s) {
+      let tail = "";
+      let elLive: boolean | null = null;
+      if (s.escalated && s.check) {
+        try {
+          const row = (await db.select().from(callResults).where(eq(callResults.id, s.check.callId)))[0];
+          const conv = row?.providerCallId && !row.providerCallId.startsWith("delta:") ? row.providerCallId : null;
+          if (conv) {
+            const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${conv}`, { headers: { "xi-api-key": config.voice.apiKey } });
+            if (r.ok) {
+              const d = (await r.json()) as { status?: string; transcript?: { role: string; message: string | null }[] };
+              tail = (d.transcript ?? []).filter((t) => t.message).map((t) => `${t.role === "agent" ? "Agent" : "Clerk"}: ${t.message}`).join("\n");
+              elLive = !["done", "completed", "failed"].includes(d.status ?? "");
+            }
+          }
+        } catch { /* keep the clip turns only */ }
+      }
+      const done = elLive === null ? (s.status === "done" || s.status === "failed") : !elLive;
+      return c.json({ live: !done, status: done ? "done" : "in_progress", transcript: [tdTranscript(s), tail].filter(Boolean).join("\n") });
+    }
+    const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, dcid)))[0];
+    return c.json({ live: false, status: row?.status || "done", transcript: row?.transcript || "" });
+  }
   try {
     const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${c.req.param("cid")}`, { headers: { "xi-api-key": config.voice.apiKey } });
     if (!r.ok) return c.json({ live: true, status: "in_progress", transcript: "" });
@@ -2825,7 +2949,15 @@ async function zoneAuth(authHeader?: string): Promise<
 async function zoneView(z: typeof zones.$inferSelect) {
   const links = await db.select().from(zoneRetailers).where(eq(zoneRetailers.zoneId, z.id));
   const rows = links.length ? await db.select().from(retailers).where(inArray(retailers.id, links.map((l) => l.retailerId))) : [];
-  const stores = rows.map((r) => ({ retailerId: r.id, name: r.name, location: r.location || "", callable: r.sellsPacks !== false }));
+  // Zone cards show the member stores' logos + open state (owner 07-10): same chainLogoInfo + openState
+  // the consumer store list rides, so the card and the check-all gate agree with the rest of the app.
+  const chainNames = rows.length ? new Map((await db.select().from(chains)).map((x) => [x.id, x.name])) : new Map();
+  const stores = rows.map((r) => {
+    const chainName = (r.chainId && chainNames.get(r.chainId)) || null;
+    const l = chainLogoInfo(chainName || r.name.split(/—|–| - /)[0]);
+    return { retailerId: r.id, name: r.name, location: r.location || "", callable: r.sellsPacks !== false,
+      logoUrl: l.url, logoWide: l.wide, logoDark: l.dark, openState: openState(r.hours, r.timezone) };
+  });
   const last = (await db.select().from(callResults).where(like(callResults.zoneRunId, `z${z.id}-%`)).orderBy(desc(callResults.startedAt)).limit(1))[0];
   let lastRun = null;
   if (last?.zoneRunId) {
@@ -2892,7 +3024,16 @@ app.post("/app/zones/:id/check", async (c) => {
     : (await db.select().from(categories).where(eq(categories.key, "pokemon")))[0];
   if (!cat) return c.json({ error: "category_not_found" }, 400);
   const links = await db.select().from(zoneRetailers).where(eq(zoneRetailers.zoneId, id));
-  const rows = (await db.select().from(retailers).where(inArray(retailers.id, links.map((l) => l.retailerId)))).filter((r) => r.sellsPacks !== false);
+  const allRows = (await db.select().from(retailers).where(inArray(retailers.id, links.map((l) => l.retailerId)))).filter((r) => r.sellsPacks !== false);
+  // Skip stores we KNOW are closed right now — a closed store can't be reached, so don't burn the
+  // check on it (owner 07-11: "STORE XYZ is closed but we can still call STORE ABC"). Unknown hours
+  // still get called. The confirm sheet already warned the user which ones we're skipping.
+  const rows = [];
+  for (const r of allRows) {
+    const os = openState(r.hours, r.timezone);
+    if (os.known && !os.open) continue;
+    rows.push(r);
+  }
   const runId = `z${id}-${crypto.randomUUID()}`;
   const isPrivate = await isFinderPrivate(g.a);
   const placed: { retailerId: number; cid: string | null }[] = [];
@@ -3823,10 +3964,24 @@ app.get("/api/gtm", async (c) => {
   try { const raw = await getSetting("gtm_checklist"); if (raw) { const p = JSON.parse(raw); if (Array.isArray(p?.items)) items = p.items; } }
   catch { /* fall back to seed */ }
   // Self-healing: report any seeded default that's no longer in the saved list (accidental delete) so
-  // the UI can offer a one-tap restore — the owner shouldn't need to remember what vanished.
+  // the UI can offer a one-tap restore — the owner shouldn't need to remember what vanished. Items the
+  // owner DISMISSED (X on the restore bar: "these are gone on purpose") stay gone for good.
+  const dismissed = new Set<string>(JSON.parse((await getSetting("gtm_dismissed_defaults")) || "[]"));
   const have = new Set(items.map((i: { id?: string }) => i.id));
-  const missingDefaults = GTM_SEED.filter((s) => !have.has(s.id)).map((s) => ({ id: s.id, title: s.title }));
+  const missingDefaults = GTM_SEED.filter((s) => !have.has(s.id) && !dismissed.has(s.id)).map((s) => ({ id: s.id, title: s.title }));
   return c.json({ items, missingDefaults });
+});
+// X on the restore bar: mark the currently-missing defaults as intentionally gone — the bar never
+// offers them again. An explicit restore-defaults still resurrects them (it ignores dismissals).
+app.post("/api/gtm/dismiss-defaults", async (c) => {
+  let items: typeof GTM_SEED = GTM_SEED;
+  try { const raw = await getSetting("gtm_checklist"); if (raw) { const p = JSON.parse(raw); if (Array.isArray(p?.items)) items = p.items; } }
+  catch { /* seed */ }
+  const have = new Set(items.map((i) => i.id));
+  const prev = new Set<string>(JSON.parse((await getSetting("gtm_dismissed_defaults")) || "[]"));
+  for (const s of GTM_SEED) if (!have.has(s.id)) prev.add(s.id);
+  await setSetting("gtm_dismissed_defaults", JSON.stringify([...prev]));
+  return c.json({ ok: true, dismissed: prev.size });
 });
 // One-tap restore: re-append any seeded defaults missing from the saved list (status reset to todo).
 app.post("/api/gtm/restore-defaults", async (c) => {
@@ -4033,6 +4188,199 @@ app.get("/app/my-store-requests", async (c) => {
   return c.json({
     reward,
     requests: rows.map((r) => ({ id: r.id, storeName: r.storeName, city: r.city, status: r.status, rewarded: !!r.rewardedAt, createdAt: r.createdAt })),
+  });
+});
+
+// ---- Support agent (the ladder: cache → free → cheap → big → escalation form) ----
+// Public chat. sessionId is a widget-held uuid; the ladder answers from the book + approved Q&As.
+app.post("/pub/support/chat", async (c) => {
+  const rl = rlCheck("support", clientIp(c.req.raw.headers), LIMITS.support);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  const b = await c.req.json().catch(() => ({}));
+  const message = String(b.message || "").trim();
+  if (!message) return c.json({ error: "message required" }, 400);
+  const sessionId = /^[\w-]{8,64}$/.test(String(b.sessionId || "")) ? String(b.sessionId) : crypto.randomUUID();
+  const lang = b.lang === "es" ? "es" : "en";
+  const category = SUPPORT_CATEGORIES.includes(b.category) ? (b.category as SupportCategory) : "other";
+  // Attribute to the signed-in account when a phone-session bearer is present (anonymous still works).
+  const u = await verifyClerkToken(c.req.header("Authorization")).catch(() => null);
+  try {
+    const r = await answerSupport(sessionId, message, {
+      lang, category, account: u ? { id: u.id, phone: (u as { phone?: string }).phone } : null,
+    });
+    return c.json({ sessionId, reply: r.reply, escalate: r.escalate });
+  } catch (e) {
+    console.error("[support] chat", e);
+    return c.json({ sessionId, reply: null, escalate: true, error: "unavailable" }, 500);
+  }
+});
+// Instant answers over the book (Help tab search + search-ahead) — no model spend, just retrieval.
+app.post("/pub/support/search", async (c) => {
+  const rl = rlCheck("support", clientIp(c.req.raw.headers), LIMITS.support);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  const b = await c.req.json().catch(() => ({}));
+  const q = String(b.q || "").trim();
+  if (q.length < 2) return c.json({ hits: [] });
+  try { return c.json({ hits: await searchBook(q, 5) }); }
+  catch (e) { console.error("[support] search", e); return c.json({ hits: [] }); }
+});
+// The signed-in user's own past conversations (the Messages tab), newest first.
+app.get("/app/support/conversations", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ conversations: [] });
+  const rows = await db.select().from(supportConversations)
+    .where(eq(supportConversations.accountId, u.id))
+    .orderBy(desc(supportConversations.updatedAt)).limit(30);
+  return c.json({ conversations: rows.map((r) => ({ id: r.id, sessionId: r.sessionId, category: r.category, title: r.title, status: r.status, createdAt: r.createdAt, updatedAt: r.updatedAt })) });
+});
+// Re-open one conversation's transcript (owner of the session, by sessionId — no account needed for guests).
+app.get("/pub/support/conversation/:sessionId", async (c) => {
+  const sid = c.req.param("sessionId");
+  if (!/^[\w-]{8,64}$/.test(sid)) return c.json({ error: "bad_session" }, 400);
+  const cv = (await db.select().from(supportConversations).where(eq(supportConversations.sessionId, sid)).limit(1))[0];
+  if (!cv) return c.json({ error: "not_found" }, 404);
+  const msgs = await db.select().from(supportMessages).where(eq(supportMessages.conversationId, cv.id)).orderBy(supportMessages.id);
+  return c.json({ sessionId: cv.sessionId, category: cv.category, status: cv.status, createdAt: cv.createdAt,
+    messages: msgs.map((m) => ({ role: m.role, content: m.content })) });
+});
+// Thumbs up/down at the end of a chat. helped=true → review queue (the knowledge loop's intake).
+app.post("/pub/support/resolve", async (c) => {
+  const rl = rlCheck("support", clientIp(c.req.raw.headers), LIMITS.support);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  const b = await c.req.json().catch(() => ({}));
+  const ok = await resolveConversation(String(b.sessionId || ""), !!b.helped);
+  return c.json({ ok });
+});
+// Escalation form — the only path to a human. Emails the transcript to the support inbox.
+app.post("/pub/support/ticket", async (c) => {
+  const rl = rlCheck("supportTicket", clientIp(c.req.raw.headers), LIMITS.supportTicket);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  const b = await c.req.json().catch(() => ({}));
+  const name = String(b.name || "").trim(), email = String(b.email || "").trim(), message = String(b.message || "").trim();
+  if (!name || !message) return c.json({ error: "name and message required" }, 400);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return c.json({ error: "invalid_email" }, 400);
+  const sessionId = /^[\w-]{8,64}$/.test(String(b.sessionId || "")) ? String(b.sessionId) : null;
+  const category = SUPPORT_CATEGORIES.includes(b.category) ? String(b.category) : undefined;
+  const screenshotUrl = typeof b.screenshotUrl === "string" && /^https?:\/\//.test(b.screenshotUrl) ? b.screenshotUrl : null;
+  const debug = b.debug && typeof b.debug === "object" ? b.debug : null;
+  const t = await submitTicket(sessionId, name, email, message, { category, screenshotUrl, debug });
+  return c.json({ ok: true, ticketId: t.id });
+});
+// Admin: rebuild the book index in qdrant (run after Copper edits the book).
+app.post("/api/support/reindex", async (c) => {
+  try {
+    const pages = await reindexBook();
+    return c.json({ ok: true, pages });
+  } catch (e) {
+    return c.json({ error: String((e as Error).message).slice(0, 200) }, 500);
+  }
+});
+// Admin: review queue — resolved conversations awaiting approve/reject into the answer cache.
+app.get("/api/support/review", async (c) => {
+  const convos = await db.select().from(supportConversations)
+    .where(eq(supportConversations.reviewStatus, "pending"))
+    .orderBy(desc(supportConversations.updatedAt)).limit(50);
+  const out = [];
+  for (const cv of convos) {
+    const msgs = await db.select().from(supportMessages)
+      .where(eq(supportMessages.conversationId, cv.id)).orderBy(supportMessages.id);
+    out.push({ id: cv.id, lang: cv.lang, maxTier: cv.maxTier, costUsd: cv.costUsd, updatedAt: cv.updatedAt,
+      messages: msgs.map((m) => ({ role: m.role, content: m.content, tier: m.tier })) });
+  }
+  return c.json({ conversations: out });
+});
+// Admin: approve embeds the Q&A into the qdrant answer cache; reject just clears it from the queue.
+app.post("/api/support/review/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const b = await c.req.json().catch(() => ({}));
+  const convo = (await db.select().from(supportConversations).where(eq(supportConversations.id, id)).limit(1))[0];
+  if (!convo) return c.json({ error: "not_found" }, 404);
+  if (b.action === "approve") {
+    const msgs = await db.select().from(supportMessages)
+      .where(eq(supportMessages.conversationId, id)).orderBy(supportMessages.id);
+    const question = String(b.question || msgs.find((m) => m.role === "user")?.content || "").trim();
+    const answer = String(b.answer || [...msgs].reverse().find((m) => m.role === "assistant")?.content || "").trim();
+    if (!question || !answer) return c.json({ error: "no_qa_pair" }, 400);
+    await addQa(question, answer, id);
+    await db.update(supportConversations).set({ reviewStatus: "approved" }).where(eq(supportConversations.id, id));
+    return c.json({ ok: true, embedded: true });
+  }
+  await db.update(supportConversations).set({ reviewStatus: "rejected" }).where(eq(supportConversations.id, id));
+  return c.json({ ok: true, embedded: false });
+});
+// Admin: live-chats list for the dashboard. Filters: category, account (all|members|guests),
+// since/until (unix seconds), q (title/message contains). Newest first.
+app.get("/api/support/chats", async (c) => {
+  const q = c.req.query();
+  const conds: Array<ReturnType<typeof eq>> = [];
+  if (q.category && SUPPORT_CATEGORIES.includes(q.category as SupportCategory)) conds.push(eq(supportConversations.category, q.category));
+  if (q.account === "members") conds.push(sql`${supportConversations.accountId} is not null` as never);
+  else if (q.account === "guests") conds.push(sql`${supportConversations.accountId} is null` as never);
+  const since = Number(q.since), until = Number(q.until);
+  if (Number.isFinite(since) && since > 0) conds.push(sql`${supportConversations.updatedAt} >= ${since}` as never);
+  if (Number.isFinite(until) && until > 0) conds.push(sql`${supportConversations.updatedAt} <= ${until}` as never);
+  if (q.q) conds.push(sql`${supportConversations.title} like ${"%" + q.q + "%"}` as never);
+  let sel = db.select().from(supportConversations).$dynamic();
+  if (conds.length) sel = sel.where(and(...conds));
+  const rows = await sel.orderBy(desc(supportConversations.updatedAt)).limit(Math.min(Number(q.limit) || 100, 200));
+  const counts = new Map<number, number>();
+  if (rows.length) {
+    const ids = rows.map((r) => r.id);
+    for (const mc of await db.select({ cid: supportMessages.conversationId, n: sql<number>`count(*)` }).from(supportMessages)
+      .where(inArray(supportMessages.conversationId, ids)).groupBy(supportMessages.conversationId)) counts.set(mc.cid, Number(mc.n));
+  }
+  return c.json({ chats: rows.map((r) => ({
+    id: r.id, category: r.category, accountId: r.accountId, accountPhone: r.accountPhone,
+    title: r.title, maxTier: r.maxTier, status: r.status, escalated: r.status === "escalated",
+    msgCount: counts.get(r.id) || 0, createdAt: r.createdAt, updatedAt: r.updatedAt,
+  })) });
+});
+// Admin: one chat's full transcript + any escalation ticket (screenshot/debug) + account summary.
+app.get("/api/support/chats/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const cv = (await db.select().from(supportConversations).where(eq(supportConversations.id, id)).limit(1))[0];
+  if (!cv) return c.json({ error: "not_found" }, 404);
+  const msgs = await db.select().from(supportMessages).where(eq(supportMessages.conversationId, id)).orderBy(supportMessages.id);
+  const ticket = (await db.select().from(supportTickets).where(eq(supportTickets.conversationId, id)).orderBy(desc(supportTickets.id)).limit(1))[0] || null;
+  return c.json({
+    id: cv.id, category: cv.category, status: cv.status, lang: cv.lang, maxTier: cv.maxTier, costUsd: cv.costUsd,
+    account: cv.accountId ? { id: cv.accountId, phone: cv.accountPhone } : null,
+    createdAt: cv.createdAt, updatedAt: cv.updatedAt,
+    messages: msgs.map((m) => ({ role: m.role, content: m.content, tier: m.tier, model: m.model, createdAt: m.createdAt })),
+    ticket: ticket ? { id: ticket.id, name: ticket.name, email: ticket.email, message: ticket.message,
+      screenshotUrl: ticket.screenshotUrl, debug: ticket.debug ? JSON.parse(ticket.debug) : null, emailedOk: ticket.emailedOk } : null,
+  });
+});
+// Admin: the dashboard numbers — volume, category mix, who answered, escalation, CSAT, spend.
+app.get("/api/support/stats", async (c) => {
+  const range = c.req.query("range");
+  const cutoff = range === "today" ? Math.floor(Date.now() / 1000) - 86400
+    : range === "7d" ? Math.floor(Date.now() / 1000) - 7 * 86400
+    : range === "30d" ? Math.floor(Date.now() / 1000) - 30 * 86400 : 0;
+  const all = await db.select().from(supportConversations);
+  const convos = cutoff ? all.filter((cv) => cv.updatedAt >= cutoff) : all;
+  const tickets = await db.select({ n: sql<number>`count(*)` }).from(supportTickets);
+  const byTier: Record<number, number> = {}, byCategory: Record<string, number> = {};
+  let cost = 0;
+  for (const cv of convos) {
+    byTier[cv.maxTier] = (byTier[cv.maxTier] || 0) + 1;
+    byCategory[cv.category] = (byCategory[cv.category] || 0) + 1;
+    cost += cv.costUsd;
+  }
+  const escalated = convos.filter((cv) => cv.status === "escalated").length;
+  const resolved = convos.filter((cv) => cv.status === "resolved").length;
+  return c.json({
+    models: SUPPORT_MODELS, range: range || "all",
+    conversations: convos.length,
+    members: convos.filter((cv) => cv.accountId).length,
+    guests: convos.filter((cv) => !cv.accountId).length,
+    byMaxTier: byTier, byCategory,
+    escalated, resolved,
+    escalationRate: convos.length ? Math.round((escalated / convos.length) * 100) : 0,
+    selfServed: convos.length - escalated,
+    pendingReview: all.filter((cv) => cv.reviewStatus === "pending").length,
+    tickets: tickets[0]?.n || 0,
+    estCostUsd: Math.round(cost * 10000) / 10000,
   });
 });
 
@@ -4897,6 +5245,19 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
   if (await isCallingPaused()) return { error: "calling_paused" }; // global spend kill-switch
   const primary = categoryIds[0];
   const extras = categoryIds.slice(1);
+  // D-lane routing (the gap that sent the owner's 07-09 Fun tests to Charlie): when the store's
+  // assigned workflow runs lane "delta", the LIVE check path must run the recorded-clip engine too,
+  // not just triggerCall's non-live path. The synthetic "delta:<session>" id doubles as the room —
+  // the live view follows it through /pub/bridge + /pub/live + the same listen-room WebSocket.
+  try {
+    const ret = (await db.select().from(retailers).where(eq(retailers.id, retailerId)))[0];
+    const wf = ret ? await resolveWorkflow(ret.id, ret.chainId ?? null).catch(() => null) : null;
+    if (wf?.lane === "delta") {
+      const r = await triggerCall({ retailerId, categoryId: primary, mode: "restock", specificProduct, finderUserId: finder?.userId ?? undefined, isPrivate: finder?.isPrivate ?? false, kioskMode });
+      if (r.providerCallId) return { room: r.providerCallId };
+      return { error: "delta call did not start" };
+    }
+  } catch (e) { return { error: String((e as Error)?.message || e) }; }
   // Resolve the SAME three-tier vars (global + chain + store phone tree, clarification, etc.) the
   // scheduled calls use — Listen-live was previously running on the bare global prompt only.
   const v = await buildRestockVars(retailerId, primary, specificProduct, extras, kioskMode);
@@ -4921,6 +5282,19 @@ async function bridgeStoreCall(retailerId: number, categoryIds: number[], specif
 app.get("/pub/bridge/:room", (c) => {
   const room = c.req.param("room");
   if (config.staging.on && isSimId(room)) return c.json({ conversationId: room, wsHost: STAGING_HOST }); // sim: room IS the conversation id
+  // D-lane room: the room IS the conversation id, but only hand it out once the store PICKED UP
+  // (session leaves "dialing" when Twilio fetches the answer TwiML) — mirrors EL, where the conv id
+  // lands at engage, so the UI's "We've connected" step fires at the real pickup. A finished/expired
+  // session returns the id straight away so a reopened call can still resolve its result.
+  if (room.startsWith("delta:")) {
+    const s = tdSession(room.slice(6));
+    const answered = !s || s.status !== "dialing";
+    return c.json({
+      conversationId: answered ? room : null,
+      wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST,
+      callProgress: s ? { status: s.status === "dialing" ? "ringing" : s.status === "live" ? "in-progress" : "completed", at: Date.now() } : null,
+    });
+  }
   // callProgress = the REAL Twilio state (ringing/answered/…) so the live timeline shows what's actually
   // happening, not an inferred guess. null until the first status callback lands.
   return c.json({ conversationId: bridgeConversationId(room), wsHost: config.staging.on ? STAGING_HOST : RAILWAY_HOST, callProgress: roomCallProgress.get(room) ?? null });
@@ -4960,8 +5334,11 @@ app.post("/webhooks/elevenlabs", async (c) => {
       let restockDayHeard: string | null = null;
       if (o.status === "completed") {
         const label = row ? (await db.select({ label: categories.label }).from(categories).where(eq(categories.id, row.categoryId)))[0]?.label : undefined;
-        const second = (o.confirmed === null && !o.soldOut && !o.doesNotSell) ? await classifyVerdict(o.transcript, label || "the product") : null;
-        const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, second);
+        // Verdict-deciding second read only when EL was unclear; on a confirmed YES it still runs for
+        // EXTRACTION ONLY (set + product form), which decisive calls used to drop (owner 07-10 call 8).
+        const needSecond = o.confirmed === null && !o.soldOut && !o.doesNotSell;
+        const second = (needSecond || o.confirmed === true) ? await classifyVerdict(o.transcript, label || "the product") : null;
+        const consensus = reconcile({ confirmed: o.confirmed, soldOut: o.soldOut, doesNotSell: o.doesNotSell, statusKey: o.statusKey }, needSecond ? second : null);
         confirmed = consensus.confirmed; statusKey = consensus.statusKey; definitive = consensus.definitive;
         productDetail = productDetailLabel(second);
         restockDayHeard = second?.restockDay ?? null; // staff-volunteered restock day, captured even unprompted
@@ -5031,6 +5408,13 @@ const relayEnd = (room: string) => {
   const msg = JSON.stringify({ ended: true });
   for (const ws of set) if (ws.readyState === 1) ws.send(msg);
 };
+// D-lane live view: stream every Delta turn + the hang-up into the same listen room the browser
+// watches ("delta:<session>"), so a D-lane check streams like an EL call. Registered here (not in
+// the engine) so tapedeck stays free of WebSocket imports.
+setDeltaRelay(
+  (s, role, text) => relayLine("delta:" + s.id, role, text),
+  (s) => relayEnd("delta:" + s.id),
+);
 const wssTwilio = new WebSocketServer({ noServer: true });
 const wssListen = new WebSocketServer({ noServer: true });
 const wssBridge = new WebSocketServer({ noServer: true });

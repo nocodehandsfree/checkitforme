@@ -14,3 +14,9 @@ generated duplicate and now lives in `docs/archive/`.
 
 **View it:** `tsx scripts/render-comps.ts board` (the `.dc.html` renders through the dc-runtime).
 `vendor/` holds the pinned Inter fonts + React runtime so it renders offline.
+
+**`MY_ZONES_COMP.dc.html`** — the owner's 07-11 My Zones board (self-contained; open in a browser).
+It locks the **bottom-notification pill** (thin glowing outline, gray, fragment copy — no periods or
+commas) and the **zones** screens (list · basket bar · check-this-zone confirm · actions sheet). The
+words for both are in **`../STYLE_GUIDE.md` §5.4 (pill) and §5.17 (zones)**. Shipped to staging
+2026-07-11; fold these screens into the main board on the next board regen.

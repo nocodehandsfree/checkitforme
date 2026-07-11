@@ -73,7 +73,7 @@ __BRAND_HEAD__
   /* form controls do NOT inherit fonts by default — without this, every button renders the
      system font instead of Inter. One line keeps typography identical across the whole site. */
   button,select,textarea{font-family:inherit}
-  html{-webkit-text-size-adjust:100%;background:#0C0C12;color-scheme:dark;touch-action:manipulation}/* manipulation = scroll/pan OK, but no double-tap-to-zoom (was zooming the page on taps near the call arrows) */
+  html{-webkit-text-size-adjust:100%;background:#20202A;color-scheme:dark;touch-action:manipulation}/* neutral root = GRAY (owner 07-11: the top strip was black, comp is gray). iOS samples this bg-COLOR for the status strip; verdict tone-* classes override it. manipulation = scroll/pan OK, no double-tap-zoom */
   html,body{max-width:100%;overflow-x:hidden}
   /* No visible scrollbar (it lingers in the Home-Screen/standalone app) — touch scrolling still works. */
   html,body{scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{width:0;height:0;display:none}
@@ -260,6 +260,7 @@ __BRAND_HEAD__
   .live-wait{color:var(--muted);font-size:13px;text-align:center;padding:16px 8px;line-height:1.5}
   /* ── result v2: boxless verdict + boxless "The call" header (mirrors checkit-demo look) ── */
   .rverdict{position:relative;padding:2px 2px 0;margin-bottom:4px}
+  .rwhen{margin-top:6px;font-size:12px;font-weight:600;color:rgba(255,255,255,.55)} /* when the call happened (owner 07-10 items 48-49) */
   .rverdict>*{position:relative}
   /* ── Verdict tone wash + iOS Safari chrome tint ──────────────────────────────────────────────
      PROVEN ON-DEVICE (owner, tinttest1-8): modern iOS Safari paints its chrome strips (status-bar
@@ -281,6 +282,9 @@ __BRAND_HEAD__
   html.tone-out body,body.rview.rv-out{background:linear-gradient(180deg,var(--bg) 0px,#6b2427 110px,#6b2427 230px,var(--bg) 100dvh)}
   html.tone-unk body,body.rview.rv-unk{background:linear-gradient(180deg,var(--bg) 0px,#6c5419 110px,#6c5419 230px,var(--bg) 100dvh)}
   html.tone-soon body,body.rview.rv-soon{background:linear-gradient(180deg,var(--bg) 0px,#6e490f 110px,#6e490f 230px,var(--bg) 100dvh)}
+  /* NEUTRAL (no verdict) top = gray band that fades into the page — was near-black, comp is gray (owner 07-11).
+     Verdict tones above override this; only the untoned homepage/history/etc. get the gray top. */
+  html:not(.tone-in):not(.tone-out):not(.tone-unk):not(.tone-soon) body:not(.rview){background:linear-gradient(180deg,#20202A 0px,#20202A 92px,var(--bg) 210px)}
   @media (display-mode: standalone){
     html.tone-in,html:has(body.rview.rv-in){background-color:#266440;background-image:linear-gradient(180deg,#266440 0px,#266440 140px,var(--bg) 100dvh)}
     html.tone-out,html:has(body.rview.rv-out){background-color:#6b2427;background-image:linear-gradient(180deg,#6b2427 0px,#6b2427 140px,var(--bg) 100dvh)}
@@ -296,8 +300,8 @@ __BRAND_HEAD__
      colour AND the body wash to the regular dark for the duration — the :has() rules undo themselves
      the moment the sheet closes. ID/class specificity + !important out-ranks every tone rule above,
      including the standalone media block and the v2 skin's body background. */
-  html:has(#acctOverlay.on),html:has(#buyOverlay.on),html:has(#pageOverlay.on),html:has(.csheet.on){background:#0C0C12!important}
-  html:has(#acctOverlay.on) body,html:has(#buyOverlay.on) body,html:has(#pageOverlay.on) body,html:has(.csheet.on) body{background:var(--bg)!important}
+  html:has(#acctOverlay.on),html:has(#buyOverlay.on),html:has(#pageOverlay.on),html:has(.csheet.on),html:has(.supsheet.on){background:#0C0C12!important}
+  html:has(#acctOverlay.on) body,html:has(#buyOverlay.on) body,html:has(#pageOverlay.on) body,html:has(.csheet.on) body,html:has(.supsheet.on) body{background:var(--bg)!important}
   /* SCROLLED: iOS paints ONE colour at both chrome strips, so a toned top forces a toned band behind
      the bottom address pill — which clashes once the dark lower page/footer is on screen (owner 07-09:
      "look like there's nothing there"). Middle path: the chrome is toned while the verdict is in view
@@ -313,7 +317,7 @@ __BRAND_HEAD__
      so the wash reaches the top. The nav pills + day-picker take a BARELY-green fill (level 3) so they
      read as sitting on a green page without looking like dark chips. */
   body.rview header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
-  body.rview main{padding-top:18px}
+  body.rview main{padding-top:18px;flex:0 0 auto} /* short results: footer hugs the content instead of pinning to the viewport bottom (owner 07-10 item 51) */
   /* Header chips take the VERDICT's tone (not always green) so the whole top — status bar → nav →
      verdict — reads as one continuous color. Green chips on an amber/red result broke that. */
   body.rview.rv-in .pill,body.rview.rv-in .vsw-trig,body.rview.rv-in .railcal{background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.16)}
@@ -333,8 +337,9 @@ __BRAND_HEAD__
   .rverdict.in .rpill{color:var(--green);background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.32)}
   .rverdict.unk .rpill{color:#FBBF24;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.32)}
   .rverdict.soon .rpill{color:#F59E0B;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.32)}
+  .rverdict.pend .rpill{color:#9CA3AF;background:rgba(156,163,175,.10);border:1px solid rgba(156,163,175,.28)} /* getting-result = neutral gray, never the unclear yellow */
   .rtitle2{font-size:30px;font-weight:900;letter-spacing:-1px;line-height:1.05;margin-top:14px}
-  .rverdict.out .rtitle2{color:var(--red)} .rverdict.in .rtitle2{color:var(--green)} .rverdict.unk .rtitle2{color:#FBBF24} .rverdict.soon .rtitle2{color:#F59E0B}
+  .rverdict.out .rtitle2{color:var(--red)} .rverdict.in .rtitle2{color:var(--green)} .rverdict.unk .rtitle2{color:#FBBF24} .rverdict.soon .rtitle2{color:#F59E0B} .rverdict.pend .rtitle2{color:#C6C6D0}
   /* In-stock verdict title: gradient fill + glow (per the motion spec). @supports so any browser without
      background-clip:text keeps the solid-green title above instead of going invisible. */
   @supports ((-webkit-background-clip:text) or (background-clip:text)){
@@ -370,6 +375,7 @@ __BRAND_HEAD__
   .ctl.ctl-out::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 56%,var(--red) 100%)}
   .ctl.ctl-unk::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 56%,#FBBF24 100%)}
   .ctl.ctl-soon::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 56%,#F59E0B 100%)}
+  .ctl.ctl-pend::before{background:linear-gradient(180deg,var(--green) 0%,var(--green) 56%,#9CA3AF 100%)}
   .ctl-dot{position:absolute;left:1px;width:9px;height:9px;border-radius:50%;background:#2c2c38;z-index:1}
   /* roll-up header: "Calling {store}…" — tap to fold the step log up/down. FIRST dot is green. */
   .reach{margin:0 0 12px}
@@ -395,9 +401,9 @@ __BRAND_HEAD__
   /* bottom call-status: the last dot + a coloured verdict line (no "confirmed") */
   .ctl-status{position:relative;padding-left:24px;margin-top:12px;display:flex;align-items:center}
   .ctl-status .ctl-dot{top:50%;transform:translateY(-50%)}
-  .ctl-status.tl-out .ctl-dot{background:var(--red)} .ctl-status.tl-in .ctl-dot{background:var(--green);box-shadow:0 0 8px rgba(74,222,128,.5)} .ctl-status.tl-unk .ctl-dot{background:#FBBF24} .ctl-status.tl-soon .ctl-dot{background:#F59E0B}
+  .ctl-status.tl-out .ctl-dot{background:var(--red)} .ctl-status.tl-in .ctl-dot{background:var(--green);box-shadow:0 0 8px rgba(74,222,128,.5)} .ctl-status.tl-unk .ctl-dot{background:#FBBF24} .ctl-status.tl-soon .ctl-dot{background:#F59E0B} .ctl-status.tl-pend .ctl-dot{background:#9CA3AF}
   .ctl-status .status-txt{font-weight:800;font-size:13.5px}
-  .ctl-status.tl-out .status-txt{color:var(--red)} .ctl-status.tl-in .status-txt{color:var(--green)} .ctl-status.tl-unk .status-txt{color:#FBBF24} .ctl-status.tl-soon .status-txt{color:#F59E0B}
+  .ctl-status.tl-out .status-txt{color:var(--red)} .ctl-status.tl-in .status-txt{color:var(--green)} .ctl-status.tl-unk .status-txt{color:#FBBF24} .ctl-status.tl-soon .status-txt{color:#F59E0B} .ctl-status.tl-pend .status-txt{color:#9CA3AF}
   /* result */
   .verdict{text-align:center;padding:16px 0 8px}
   .vmark{width:78px;height:78px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;position:relative}
@@ -543,6 +549,39 @@ __BRAND_HEAD__
   .toast svg path,.toast svg circle{stroke:#06210f}
   .toast.show{transform:translateX(-50%) translateY(0)}
   .hidden{display:none}
+  /* Support chat: floating bubble + slide-up sheet (matches the call sheet — grabber, no X) */
+  .supbub{position:fixed;right:16px;bottom:18px;z-index:70;width:54px;height:54px;border-radius:999px;border:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#2D2D34,#27272D);
+    box-shadow:0 10px 30px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1);transition:transform .12s}
+  .supbub:active{transform:translateY(2px)}
+  .supbub svg{width:24px;height:24px;stroke:var(--accent,#FFCB05)}
+  body:has(.overlay.on) .supbub,body:has(.csheet.on) .supbub,body:has(.supsheet.on) .supbub{display:none}
+  .supsheet{position:fixed;left:0;right:0;bottom:0;z-index:80;max-width:520px;margin:0 auto;
+    background:#26262B;border-radius:28px 28px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7);
+    padding:10px 20px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;max-height:86vh;
+    transform:translateY(112%);transition:transform .28s cubic-bezier(.32,.72,0,1);touch-action:none}
+  .supsheet.on{transform:translateY(0)}
+  .supsheet-handle{width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,.22);margin:0 auto 14px;flex:0 0 auto}
+  .supsheet h3{margin:0 2px 12px;font-size:20px;font-weight:800;letter-spacing:-.3px;text-align:center}
+  .supmsgs{flex:1 1 auto;min-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px 0 4px;-webkit-overflow-scrolling:touch}
+  .supm{max-width:86%;padding:10px 13px;border-radius:16px;font-size:15px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+  .supm.me{align-self:flex-end;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);color:#EAEAF0}
+  .supm.bot{align-self:flex-start;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 4px 14px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08)}
+  .supm.dots span{display:inline-block;width:7px;height:7px;border-radius:50%;background:#8A8A98;margin-right:4px;animation:loaddot 1.25s ease-in-out infinite}
+  .supm.dots span:nth-child(2){animation-delay:.18s}.supm.dots span:nth-child(3){animation-delay:.36s}
+  .suprow{display:flex;gap:10px;align-items:flex-end;flex:0 0 auto;margin-top:10px}
+  .supin{flex:1;min-width:0;resize:none;background:#1B1B20;color:#EAEAF0;border:none;border-radius:16px;
+    box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:13px 15px;font:500 16px Inter;line-height:1.4;
+    min-height:50px;max-height:120px;outline:none}
+  .supin::placeholder{color:#6B6B7B;font-style:italic}
+  .supsend{flex:0 0 auto;width:50px;height:50px;border-radius:999px;border:none;cursor:pointer;background:var(--accent,#FFCB05);
+    display:grid;place-items:center;box-shadow:0 6px 18px color-mix(in srgb,var(--accent,#FFCB05) 30%,transparent);transition:transform .08s}
+  .supsend:active{transform:translateY(1px)} .supsend:disabled{opacity:.5}
+  .supsend svg{width:22px;height:22px;stroke:#1f1900}
+  .suphelp{display:none;justify-content:center;gap:8px;margin:2px 0 4px;flex:0 0 auto}
+  .suphelp.on{display:flex}
+  .suphelp button{border:none;cursor:pointer;border-radius:999px;padding:9px 15px;font-weight:800;font-size:12.5px;
+    background:#1B1B20;color:#c2c2cf;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
   /* find-me + radius toolbar */
   .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
   .findbtn{display:inline-flex;align-items:center;gap:6px;background:var(--ptint);border:1px solid var(--pline);color:var(--purple);font-weight:800;font-size:13px;padding:9px 13px;border-radius:11px;cursor:pointer;white-space:nowrap}
@@ -757,7 +796,7 @@ __BRAND_HEAD__
   .rcptwait{display:flex;align-items:center;justify-content:center;gap:10px;color:#cfcfd8;font-size:13.5px;font-weight:600;padding:6px 0}
   .rcptspin{width:16px;height:16px;flex:0 0 auto;border-radius:50%;border:2px solid var(--pline);border-top-color:var(--purple);animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .site-footer{border-top:0;margin-top:18px;padding:20px 22px 26px;background:transparent} /* borderless + transparent: the page ends in the same var(--bg) the canvas continues with — nothing for the bottom bar to contrast against (owner 07-09) */
+  .site-footer{border-top:1px solid rgba(255,255,255,.07);margin-top:18px;padding:20px 22px 26px;background:transparent} /* light hairline delineates the footer (owner 07-11); bg still transparent */
   /* one tight link row + one meta row — and when the floating back fab is up (.fabbed),
      the footer reserves the fab's WHOLE corner (58px + 22px gap ≈ 80px each way) so no row —
      copyright, socials, language — can ever sit under the thumb button. */
@@ -784,7 +823,7 @@ __BRAND_HEAD__
   .foot-bottom{display:flex;align-items:center;justify-content:flex-start;gap:9px;padding-top:16px}
   .foot-fav{display:flex;align-items:center;flex:0 0 auto}
   .foot-fav svg{width:24px;height:24px;border-radius:7px}
-  .foot-copy{color:#6a6a76;font-size:9px;font-weight:600;line-height:1;display:flex;align-items:center;position:relative;top:2px}
+  .foot-copy{color:#6a6a76;font-size:9px;font-weight:600;line-height:1;display:inline-block;position:relative;top:2px}
   .foot-brandname{color:var(--accent,var(--green))}
   .langtop{appearance:none;-webkit-appearance:none;background:var(--sheet);border:1px solid var(--border);color:#e9e9f0;font-size:12px;font-weight:800;border-radius:20px;padding:7px 28px 7px 12px;cursor:pointer;flex:0 0 auto;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6' viewBox='0 0 9 6'%3E%3Cpath d='M0.5 0.5h8L4.5 5.5z' fill='%23ffffff'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center}
   .pill.account.anon{background:rgba(255,203,5,.12);border-color:rgba(255,203,5,.4);color:#fff}
@@ -792,6 +831,9 @@ __BRAND_HEAD__
 
   /* ── 2024 redesign: tight mobile-first header, ticker, trust strip, custom marks ── */
   .brandbar{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 auto}
+  /* Zones takes over the page (owner 07-11): drop the product switcher in the upper-left. Brandbar
+     stays as the flex spacer so the credits pill holds the right edge. */
+  body.zoning .vsw{display:none}
   .logomark{width:30px;height:30px;flex:0 0 auto;cursor:pointer;display:grid;place-items:center}
   .logomark svg{display:block}
   .iconbtn{flex:0 0 auto;width:38px;height:38px;border-radius:11px;background:var(--sheet);border:1px solid var(--border);display:grid;place-items:center;cursor:pointer;color:#bdbdcb;padding:0}
@@ -1137,7 +1179,7 @@ html[data-skin="v2"] input{background:#1B1B20;border:0;border-radius:14px;box-sh
 /* Pills: raised chrome. */
 html[data-skin="v2"] .pill,html[data-skin="v2"] .vsw-trig{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.1)}
 /* Footer strip. */
-html[data-skin="v2"] .site-footer{background:transparent;border-top:0} /* transparent so the footer blends into the page — no grey band/line at its top edge (owner 07-09) */
+html[data-skin="v2"] .site-footer{background:transparent;border-top:1px solid rgba(255,255,255,.07)} /* light hairline so the footer reads as a footer (owner 07-11); still no grey band/fill */
 /* S2 store-type switcher (comp-exact; launch state = Retail + Kiosk keys). Carved track, raised
    active key, icons tint via currentColor (#4ADE80 active / #7C7C88 idle). */
 html[data-skin="v2"] .modetabs{background:#1B1B20;border:0;border-radius:999px;padding:5px;gap:2px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
@@ -1156,13 +1198,19 @@ html[data-skin="v2"] .foot-links a{font-size:13px;font-weight:600;color:#8A8A96}
 html[data-skin="v2"] .foot-social a,html[data-skin="v2"] .foot-social button{width:36px;height:36px;border-radius:50%;background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 /* Toasts (T1/§5.4): bottom capsule, green success gradient + dark-green text. */
 /* T1 EXACT: 14.5/800, pad 12/22, comp shadows (deep drop + inner top light). */
-html[data-skin="v2"] .toast{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#0C2916;border:0;border-radius:22px;font-size:14px;font-weight:800;padding:12px 20px;box-shadow:0 14px 30px -8px rgba(25,177,69,.5),inset 0 1px 0 rgba(255,255,255,.35);max-width:calc(100vw - 36px);white-space:normal;text-align:center;line-height:1.35;bottom:34px;box-sizing:border-box}
-html[data-skin="v2"] .toast.tneutral{background:linear-gradient(180deg,#31313A 0%,#26262C 100%);color:#FFF;box-shadow:0 14px 30px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.12)}
-html[data-skin="v2"] .toast.oneline{white-space:nowrap;max-width:none} /* map hint etc. — one line, never wraps */
-html[data-skin="v2"] .toast.taccent{background:linear-gradient(180deg,color-mix(in srgb,var(--accent,#FFCB05) 70%,#FFF) 0%,var(--accent,#FFCB05) 100%);color:#26251E;box-shadow:0 14px 30px -8px color-mix(in srgb,var(--accent,#FFCB05) 45%,transparent),inset 0 1px 0 rgba(255,255,255,.4)}
+/* Bottom-notification LAW (owner + copy guide rule 4): ONE line, GRAY pill, WHITE Inter text — always,
+   every page, both languages. Green/accent pill variants are retired on purpose: .tneutral/.taccent
+   stay as no-ops so old call sites keep working. Ellipsis is the safety net; the real fix for a long
+   message is shorter copy. */
+html[data-skin="v2"] .toast{display:block;background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);color:rgba(255,255,255,.92);font-family:Inter,-apple-system,system-ui,sans-serif;border:0;border-radius:999px;font-size:14.5px;font-weight:800;padding:13px 22px;max-width:calc(100vw - 36px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1.35;bottom:34px;box-sizing:border-box;animation:toastGlow 2.6s ease-in-out infinite}
+html[data-skin="v2"] .toast b{color:#FFF}
+html[data-skin="v2"] .toast.tneutral,html[data-skin="v2"] .toast.taccent,html[data-skin="v2"] .toast.oneline{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);color:rgba(255,255,255,.92);white-space:nowrap}
+/* Bottom-notification pill (owner 07-11 comp): thin glowing white outline that softly pulses. box-shadow
+   (not a pseudo) so overflow:hidden ellipsis stays intact. Stays gray + one line, never green. */
+@keyframes toastGlow{0%,100%{box-shadow:0 10px 24px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.1),0 0 0 1px rgba(255,255,255,.20),0 0 12px 1px rgba(255,255,255,.07)}50%{box-shadow:0 10px 24px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.1),0 0 0 1px rgba(255,255,255,.45),0 0 18px 3px rgba(255,255,255,.22),0 0 34px 8px rgba(255,255,255,.10)}}
 /* IS1 EXACT: share = white 12.5/800/.13em label capsule (icon left, arrow right); action tiles 2-col. */
 html[data-skin="v2"] .smbtn.is1s{display:flex;align-items:center;justify-content:space-between;width:100%;color:#FFF;font-size:12.5px;letter-spacing:.13em;padding:13px 22px}
-html[data-skin="v2"] .is1g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+html[data-skin="v2"] .is1g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}
 html[data-skin="v2"] .is1t{display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:11px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left}
 html[data-skin="v2"] .is1t:active{transform:translateY(2px)}
 html[data-skin="v2"] .is1t .tl{width:32px;height:32px;border-radius:10px;background:rgba(74,222,128,.12);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
@@ -1306,7 +1354,7 @@ html[data-skin="v2"] .fbk-b:active{transform:translateY(2px);box-shadow:0 4px 8p
 html[data-skin="v2"] .fbk-ic{width:34px;height:34px}
 /* In-stock actions (IS1/§5.9): SHARE = green ring capsule; Too far?/Grabbed it? = raised cards
    with green icon tiles. */
-html[data-skin="v2"] .smbtn{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#4ADE80;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 12px 28px -8px rgba(25,177,69,.45)}
+html[data-skin="v2"] .smbtn{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#4ADE80;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;box-shadow:0 0 26px -4px rgba(25,177,69,.38)}
 html[data-skin="v2"] .act2{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .act2:active{transform:translateY(2px)}
 /* Restock module R1 EXACTNESS: raised gradient card r20; rows are CARVED wells (#1B1B20 inset) with
@@ -1376,7 +1424,8 @@ html[data-skin="v2"] .ho-conn{width:2px;background:rgba(255,255,255,.1)}
 html[data-skin="v2"] .ho-step.done .ho-conn{background:#4ADE80}
 html[data-skin="v2"] .ho-card{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:16px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);padding:13px 14px}
 html[data-skin="v2"] .ho-step:not(.active):not(.done) .ho-card{opacity:.5}
-html[data-skin="v2"] .ho-toggle{background:#1B1B20;border:0;border-radius:999px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
+html[data-skin="v2"] .ho-toggle{background:#1B1B20;border:0;border-radius:999px;padding:5px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
+html[data-skin="v2"] .ho-toggle button{border-radius:999px;padding:10px 12px;overflow:hidden;text-overflow:ellipsis}
 html[data-skin="v2"] .ho-toggle button.on{background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 /* RN1/RN2 EXACTNESS — head: 32px raised ‹ circle, 19/800 title + 12/600 sub; job card raised r16 w/
    CARVED 40px icon tile; step eyebrows 10/700/.15em; primary CTAs = green RING capsules w/ white
@@ -1410,7 +1459,7 @@ html[data-skin="v2"] .ho-link{text-decoration:none;font-size:12px;font-weight:60
    FIND MY STORES = green ring capsule w/ WHITE tracked label (was a raised neutral key). */
 html[data-skin="v2"] .card{padding:16px 16px 20px}
 html[data-skin="v2"] .findhead .step{font-size:10.5px;font-weight:700;letter-spacing:.15em;color:#8A8A96}
-html[data-skin="v2"] .opencount{font-size:12px;font-weight:600;color:#8A8A96}
+html[data-skin="v2"] .opencount{font-size:12px;font-weight:600;color:#8A8A96;min-width:0;overflow:hidden;text-overflow:ellipsis}
 html[data-skin="v2"] .rsl-lbl{font-size:13px;font-weight:600;color:#8A8A96}
 html[data-skin="v2"] .rsl-val{font-size:17px;font-weight:800}
 html[data-skin="v2"] .rsl-val i{font-size:12px;font-weight:600;color:#8A8A96}
@@ -1450,7 +1499,8 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zwrap{max-width:460px;margin:0 auto;padding:6px 14px 24px}
 #zones .zbuild{display:flex;flex-direction:column;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
 #zones .zhead{display:flex;align-items:center;gap:10px;margin:6px 2px 12px}
-#zones .zhead b{font-size:19px;font-weight:800;letter-spacing:-.3px;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#zones .zhead b{font-size:20px;font-weight:800;letter-spacing:-.3px;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #zones{font-family:Inter,-apple-system,system-ui,sans-serif}
 #zones .zback{width:34px;height:34px;flex:0 0 auto;border:0;border-radius:50%;background:linear-gradient(180deg,#2F2F36,#26262B);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#8A8A96;font-size:17px;cursor:pointer}
 #zones .zcard{padding:15px 16px;margin-top:12px}
 #zones .znm{font-size:16.5px;font-weight:800}
@@ -1460,9 +1510,8 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zempty{text-align:center;color:#8A8A96;font-size:14.5px;line-height:1.5;padding:30px 24px 6px;text-wrap:balance}
 /* controls */
 #zones .zsearch{position:relative;margin:0 0 10px}
-#zones .zsearch input{width:100%;box-sizing:border-box;padding-right:104px}
-#zones .zsearch .zgo{position:absolute;right:5px;top:5px;bottom:5px;border:0;border-radius:9px;padding:0 14px;background:#33333c;color:#e6e6ee;font-weight:800;font-size:13px;cursor:pointer}
-#zones .zsearch .zgps{position:absolute;right:52px;top:5px;bottom:5px;width:38px;border:0;border-radius:9px;background:#33333c;color:var(--accent,#4ADE80);display:grid;place-items:center;cursor:pointer}
+#zones .zsearch input{width:100%;box-sizing:border-box;padding-right:56px}
+#zones .zsearch .zgps{position:absolute;right:5px;top:5px;bottom:5px;width:38px;border:0;border-radius:9px;background:#33333c;color:var(--accent,#4ADE80);display:grid;place-items:center;cursor:pointer}
 #zones .zseg{display:flex;background:#1B1B20;border-radius:12px;padding:4px;gap:4px;margin-bottom:12px}
 #zones .zseg button{flex:1;border:0;background:transparent;color:#8A8A96;font-weight:800;font-size:13.5px;padding:9px;border-radius:9px;cursor:pointer}
 #zones .zseg button.on{background:linear-gradient(180deg,#31313A,#28282E);color:#fff;box-shadow:0 6px 12px -6px rgba(0,0,0,.6)}
@@ -1472,10 +1521,11 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zrad.on{background:linear-gradient(180deg,#5BEA93,#19B145);color:#04240f;box-shadow:0 6px 12px -6px rgba(25,177,69,.5)}
 #zones .zradmi{font-size:12px;font-weight:700;color:#7C7C88}
 #zones .zaddall{margin-left:auto;border:0;background:rgba(74,222,128,.1);border-radius:999px;padding:8px 14px;color:#4ADE80;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+#zones .zaddall.on{background:rgba(255,123,123,.12);color:#FF9B9B} /* flipped to Remove-all */
 /* stage: fixed-height map or a capped scrolling list — flows above the footer, never under browser chrome */
 #zones .zstage{display:flex;flex-direction:column}
 #zones #zmap{height:46vh;min-height:300px;border-radius:16px;overflow:hidden;background:#15151c}
-#zones .zlist{max-height:54vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+#zones .zlist{max-height:54vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:6px 8px}
 #zones .zpin{background:none;border:0}
 /* store row = retail .store look + leading check + green ring when picked (logos identical to retail) */
 #zones .zpick{cursor:pointer;position:relative;margin-top:9px}
@@ -1501,6 +1551,52 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zrlbl{display:block;font-size:12px;font-weight:700;margin-top:2px} #zones .zrlbl.t-in{color:#4ADE80} #zones .zrlbl.t-out{color:#EF4444} #zones .zrlbl.t-unk{color:#FBBF24} #zones .zrlbl.t-live{color:#8A8A96}
 #zones .zri{font-size:18px;flex:0 0 auto} #zones .zrchev{color:#7C7C88;flex:0 0 auto}
 #zones .zrbody{background:#1B1B20;border-radius:0 0 13px 13px;padding:8px 12px 12px;margin-bottom:2px}
+/* ===== Zones LOCKED FRAME (owner 07-11 comp): full-screen takeover — header pinned top, only the
+   middle scrolls, basket bar pinned bottom. Nothing bleeds under the header. ===== */
+body.zoning{overflow:hidden}
+#zones .zframe{position:fixed;inset:0;z-index:40;background:#1D1D22;display:flex;flex-direction:column;font-family:Inter,-apple-system,system-ui,sans-serif}
+#zones .zf-head{flex:none;position:relative;z-index:3;background:linear-gradient(180deg,#26262C 0%,#1E1E23 100%);box-shadow:0 16px 28px -18px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.05);border-bottom:1px solid rgba(0,0,0,.35);padding-top:env(safe-area-inset-top)}
+#zones .zf-hrow{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px 14px}
+#zones .zf-title{position:absolute;left:0;right:0;text-align:center;font:800 20px Inter;letter-spacing:-.3px;color:#fff;pointer-events:none}
+#zones .zf-back{width:40px;height:40px;flex:0 0 auto;border-radius:50%;border:0;background:linear-gradient(180deg,#33333B,#292930);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);color:#fff;font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;position:relative;z-index:1}
+#zones .zf-cred{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;background:linear-gradient(180deg,#33333B,#292930);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);white-space:nowrap;font:900 14px Inter;color:#4ADE80;position:relative;z-index:1}
+#zones .zf-sub{flex:none;padding:14px 16px 6px;background:#1D1D22}
+#zones .zf-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:16px}
+#zones .zf-scroll.tight{padding:2px 16px 14px}
+#zones .zf-scroll.basketpad{padding-bottom:220px}
+#zones .zf-foot{flex:none}
+/* create-flow slide-up basket — absolute so it overlays the bottom (no reserved gap when empty) */
+#zones .zbasket{position:absolute;left:0;right:0;bottom:0;z-index:5;background:linear-gradient(180deg,#2A2A31,#212127);box-shadow:0 -18px 34px -12px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.08);border-radius:26px 26px 0 0;padding:15px 18px calc(20px + env(safe-area-inset-bottom));transform:translateY(112%);transition:transform .28s cubic-bezier(.2,.8,.3,1)}
+#zones .zbasket.up{transform:translateY(0)}
+#zones .zbkhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;font:900 14px Inter;color:#fff;white-space:nowrap}
+#zones .zchips{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;-webkit-overflow-scrolling:touch}
+#zones .zchips::-webkit-scrollbar{display:none}
+#zones .zchip{flex:none;display:flex;align-items:center;gap:8px;padding:7px 10px 7px 7px;border-radius:999px;background:rgba(255,255,255,.05);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);white-space:nowrap}
+#zones .zchip .cx{border:0;background:none;padding:0;cursor:pointer;display:inline-flex;color:#8A8A96}
+#zones .zbkrow{display:flex;gap:12px}
+#zones .zbkrow input{flex:1;min-width:0;height:52px;background:#1B1B20;border:none;outline:none;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5);padding:0 18px;color:#fff;font:500 16px Inter}
+#zones .zbksave{flex:none;padding:2.5px;border-radius:14px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 12px 26px -8px rgba(74,222,128,.5);cursor:pointer;border:0}
+#zones .zbksave>span{display:flex;height:100%;background:#20202A;border-radius:12px;padding:0 22px;align-items:center;justify-content:center;white-space:nowrap;font:800 13px Inter;letter-spacing:.1em;text-transform:uppercase;color:#4ADE80}
+/* comp zone card (list) */
+#zones .zc{background:#26262B;border-radius:26px;padding:20px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.04);margin-bottom:16px}
+#zones .zc-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#zones .zc-nm{font:900 21px Inter;letter-spacing:-.4px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#zones .zc-kebab{width:38px;height:38px;flex:none;border:0;border-radius:50%;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);cursor:pointer;display:grid;place-items:center}
+#zones .zc-meta{display:flex;align-items:center;gap:10px;margin-top:12px}
+#zones .zc-pill{display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:999px;font:900 11px Inter;letter-spacing:.04em;text-transform:uppercase}
+#zones .zc-pill.in{background:rgba(74,222,128,.14);color:#4ADE80} #zones .zc-pill.none{background:rgba(255,255,255,.05);color:#8A8A96}
+#zones .zc-when{font:600 12.5px Inter;color:#7C7C88;white-space:nowrap}
+#zones .zc-faces{display:flex;gap:9px;margin:18px 0 20px;flex-wrap:wrap}
+#zones .zc-face{width:44px;height:44px;border-radius:12px;flex:none;background:#1F1F25;box-shadow:0 3px 7px -3px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;overflow:hidden}
+#zones .zc-more{width:44px;height:44px;border-radius:12px;flex:none;background:#23232A;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;color:#8A8A96;font:800 13px Inter}
+#zones .zc-go{align-self:flex-end;padding:2.5px;border-radius:999px;background:linear-gradient(120deg,#FFE066 0%,#FFCB05 55%,#8A6D00 100%);box-shadow:0 12px 26px -10px rgba(255,203,5,.45);cursor:pointer;border:0}
+#zones .zc-go>span{display:flex;background:#20202A;border-radius:999px;padding:13px 20px;align-items:center;gap:9px;white-space:nowrap;font:800 12.5px Inter;letter-spacing:.12em;text-transform:uppercase;color:#FFCB05}
+#zones .zc-row{display:flex;justify-content:flex-end}
+#zones .znew{background:linear-gradient(180deg,#2E2E35,#25252B);border-radius:18px;height:56px;display:flex;align-items:center;justify-content:center;gap:11px;box-shadow:0 12px 22px -12px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1);cursor:pointer;white-space:nowrap;margin-bottom:18px;border:0;width:100%}
+#zones .znew span{font:800 13px Inter;letter-spacing:.13em;text-transform:uppercase;color:#4ADE80}
+#zones .zfooter{padding:30px 6px 26px;text-align:center}
+#zones .zfooter .fl{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 16px;margin-bottom:18px}
+#zones .zfooter .fl a{font:600 13px Inter;color:#8A8A96;cursor:pointer}
 /* Sign-up plans (6b/§5.5/§3): raised tiles; the SELECTED tier takes the MUTED-yellow ring + #26251E
    fill — it must never fight a green CTA on the same screen. */
 html[data-skin="v2"] .plan{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:16px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
@@ -1583,6 +1679,13 @@ html[data-skin="v2"] #scorePostOv .modal{width:100%;max-width:none!important;bor
 html[data-skin="v2"] #scorePostOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
 html[data-skin="v2"] #scorePostOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 html[data-skin="v2"] #scorePostOv .modal>.x{display:none!important}
+/* Add-your-store, "Tell me when it's back" and Auto-check slide up as bottom sheets too
+   (owner 07-10, polish items 20 + 59 + 60 — they were centered popups). Same recipe as scorePostOv. */
+html[data-skin="v2"] #storeReqOverlay,html[data-skin="v2"] #watchOverlay,html[data-skin="v2"] #scheduleOverlay{align-items:flex-end;padding:0}
+html[data-skin="v2"] #storeReqOverlay .modal,html[data-skin="v2"] #watchOverlay .modal,html[data-skin="v2"] #scheduleOverlay .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
+html[data-skin="v2"] #storeReqOverlay .modal::before,html[data-skin="v2"] #watchOverlay .modal::before,html[data-skin="v2"] #scheduleOverlay .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
+html[data-skin="v2"] #storeReqOverlay.on .modal,html[data-skin="v2"] #watchOverlay.on .modal,html[data-skin="v2"] #scheduleOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
+html[data-skin="v2"] #storeReqOverlay .modal>.x,html[data-skin="v2"] #watchOverlay .modal>.x,html[data-skin="v2"] #scheduleOverlay .modal>.x{display:none!important}
 html[data-skin="v2"] #buyOverlay .modal{overflow-y:auto;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
 /* 6c CHECKOUT (v2) — branded on-site Stripe Elements page. Bottom sheet, comp tokens: raised order
    card, carved "or pay with card" divider, Payment Element in the well, green SUBSCRIBE ring capsule. */
@@ -1615,6 +1718,10 @@ html[data-skin="v2"] #acctv2panel{padding-bottom:22px!important}
 /* Capsule w/ WHITE tracked label + right arrow (comp CTA shape) — shared. */
 html[data-skin="v2"] .capsW{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:18px;background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;border:2.5px solid transparent;border-radius:999px;color:#FFF;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;padding:14px 24px;box-shadow:0 12px 28px -8px rgba(25,177,69,.45);cursor:pointer}
 html[data-skin="v2"] #acctOverlay .x{display:none}
+/* Edit-phone / auth close X: use the SAME round gradient chip as every other v2 sheet (owner 07-11 —
+   the bare thin X was the odd one out). Neutralize the base ::before thin-X and adopt .modal .x chrome. */
+html[data-skin="v2"] #authOverlay .x{width:32px;height:32px;border-radius:50%;background:linear-gradient(180deg,#2F2F36 0%,#26262B 100%);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);display:grid;place-items:center;color:#8A8A96;font-size:15px;line-height:1;top:14px;right:14px;z-index:6}
+html[data-skin="v2"] #authOverlay .x::before{display:none}
 html[data-skin="v2"] .acctv2head .wash{background:#266440;padding:10px 18px 46px} /* Lens E: comp 10, was 14 */
 html[data-skin="v2"] .acctv2head .stats{margin:-28px 18px 0;display:flex;gap:10px}
 html[data-skin="v2"] .acctv2head .stat2,html[data-skin="v2"] #paid_stats .stat2{flex:1;background:linear-gradient(180deg,#31313A 0%,#26262B 100%);border-radius:16px;padding:14px 0;text-align:center;box-shadow:0 14px 26px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1)}
@@ -1636,7 +1743,9 @@ html[data-skin="v2"] #result>*{order:4}
 html[data-skin="v2"] #result>.upmod{order:5}
 html[data-skin="v2"] #result>.foot{order:6}
 html[data-skin="v2"] .vmark{display:none}
-/* Comp timeline: left rail (green dot → gradient line → verdict dot) + full-width labeled cards. */
+/* Comp timeline: left rail (green dot → gradient line → verdict dot) + full-width labeled cards.
+   (Rail restored 07-10 — the owner asked where it went; the flat "no indenting" cut took the whole
+   timeline with it.) */
 html[data-skin="v2"] .ctlv2{display:flex;gap:14px;margin-top:10px}
 html[data-skin="v2"] .ctlv2-rail{width:12px;display:flex;flex-direction:column;align-items:center;flex-shrink:0;margin-bottom:9px} /* stop the rail line at the terminus dot's center (½ the verdict line), not below it (owner 07-04) */
 html[data-skin="v2"] .ctlv2-rail .d1{width:10px;height:10px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px rgba(74,222,128,.6);flex-shrink:0}
@@ -1676,7 +1785,9 @@ html[data-skin="v2"] body.rview .tbtn{background:rgba(255,255,255,.07);border:1p
 html[data-skin="v2"] .iconbtn,html[data-skin="v2"] .railnav,html[data-skin="v2"] .railsel,html[data-skin="v2"] .vsrow,html[data-skin="v2"] .ho-back,html[data-skin="v2"] .ho-job,html[data-skin="v2"] .ho-btn.ghost,html[data-skin="v2"] .ho-pm button,html[data-skin="v2"] .earnbox{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 /* .kin was mis-swept into the raised group — form FIELDS are carved wells (§5.12/R3), never raised. */
 html[data-skin="v2"] .kin{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px}
-html[data-skin="v2"] .ho-stepper,html[data-skin="v2"] .ho-msg,html[data-skin="v2"] .ho-seg{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+html[data-skin="v2"] .ho-stepper,html[data-skin="v2"] .ho-msg{background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+html[data-skin="v2"] .ho-seg{background:#1B1B20;border:0;border-radius:999px;padding:5px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+html[data-skin="v2"] .ho-seg button{border-radius:999px;overflow:hidden;text-overflow:ellipsis}
 html[data-skin="v2"] .rcal-big{background:#26262B;border:0;border-radius:22px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
 html[data-skin="v2"] .langtop,html[data-skin="v2"] .grouphdr,html[data-skin="v2"] .ho-dv{border:0}
 html[data-skin="v2"] .leaflet-popup-content-wrapper{background:#26262B;border:0;box-shadow:0 24px 48px -12px rgba(0,0,0,.7)}
@@ -1726,9 +1837,8 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
         <button class="modetab" data-mode="kiosk" onclick="setMode('kiosk')"><span class="mti" id="mti_kiosk"></span><span data-i18n="mode.kiosk">Kiosks</span></button>
       </div>
       <div id="findbody">
-      <div class="findhead">
-        <div class="step" style="margin:0" id="findstep" data-i18n="find.step">① Find your store</div>
-        <div style="display:flex;align-items:center;gap:10px"><button class="maptgl" id="maptoggle" onclick="toggleMap()" style="display:none">Map</button><div class="opencount" id="store_count"></div></div>
+      <div class="findhead" style="justify-content:flex-end">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0"><button class="maptgl" id="maptoggle" onclick="toggleMap()" style="display:none" data-i18n="map.map">Map</button><div class="opencount" id="store_count"></div></div>
       </div>
       <div class="searchwrap">
         <input id="search" placeholder="Search by store or city…" data-i18n-ph="search.ph" oninput="onSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();geocodeSearch();}" autocomplete="off">
@@ -1758,7 +1868,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     </div>
 
     <button class="callkey" id="checkBtn" onclick="startCheck()" style="display:none" data-i18n="cs.cta">Check this store</button>
-    <div class="foot" id="chargefoot" style="display:none;margin-top:10px" data-i18n="charge"><b>No answer = no charge.</b></div>
+    <div class="foot" id="chargefoot" style="display:none;margin-top:10px" data-i18n="charge"><b>No answer = no charge</b></div>
     <!-- Sell-methods card: live online stock / ways to get it / resale warning / notify.
          Replaces the call button for non-callable chains (Micro Center, Amazon). -->
     <div id="sellmeta" style="display:none;margin-top:12px"></div>
@@ -1859,7 +1969,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   </div>
   <div class="csheet-prod" id="cs_prod"></div>
   <button class="csheet-call" id="cs_call" onclick="startCheck()"><span class="cs-l"><svg width="30" height="30" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span data-i18n="cs.cta">Check this store</span></span><svg class="cs-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
-  <div class="csheet-charge" data-i18n="charge"><b>No answer = no charge.</b></div>
+  <div class="csheet-reach" id="cs_reach" style="display:none;margin-top:9px;text-align:center;font-size:12.5px;font-weight:600;color:#8A8A96"></div>
 </div>
 
 
@@ -2257,6 +2367,46 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   </div>
 </div>
 
+<button class="supbub" id="supBub" onclick="openSupport()" aria-label="Support chat">
+  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+</button>
+<div class="csheet-bd" id="supSheetBd" onclick="closeSupport()"></div>
+<div class="supsheet" id="supSheet" aria-hidden="true">
+  <div class="supsheet-handle"></div>
+  <div id="sup_chat" style="display:flex;flex-direction:column;min-height:0;flex:1">
+    <h3 data-i18n="sup.title">Ask us anything</h3>
+    <div class="supmsgs" id="sup_msgs"></div>
+    <div class="suphelp" id="sup_help">
+      <button onclick="supHelped(true)" data-i18n="sup.yes">That answered it</button>
+      <button onclick="openSupportForm()" data-i18n="sup.no">I need a person</button>
+    </div>
+    <div class="suprow">
+      <textarea id="sup_in" class="supin" rows="1" data-i18n-ph="ph.support" placeholder="Type your question" oninput="supGrow(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendSupport();}"></textarea>
+      <button class="supsend" id="sup_send" onclick="sendSupport()" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+      </button>
+    </div>
+  </div>
+  <div id="sup_form" style="display:none;text-align:left">
+    <h3 data-i18n="sup.form.title">Leave it with us</h3>
+    <div class="meta" style="margin:-6px 2px 14px;text-align:center" data-i18n="sup.form.sub">Tell us where to reach you. A person will email you back.</div>
+    <label class="klbl" data-i18n="sup.form.name">Your name</label>
+    <input id="supf_name" class="kin" autocomplete="name" data-i18n-ph="ph.supname" placeholder="First name works">
+    <label class="klbl" data-i18n="sup.form.email">Email</label>
+    <input id="supf_email" class="kin" type="email" inputmode="email" autocomplete="email" data-i18n-ph="ph.cellmail" placeholder="your email">
+    <label class="klbl" data-i18n="sup.form.msg">What's going on</label>
+    <input id="supf_msg" class="kin" data-i18n-ph="ph.supmsg" placeholder="The short version is fine">
+    <div id="supf_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
+    <button class="cta" id="supf_btn" onclick="submitSupportTicket()" style="margin-top:8px;width:100%" data-i18n="sup.form.send">Send it over</button>
+    <button onclick="backToSupportChat()" style="margin-top:10px;width:100%;background:none;border:none;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer" data-i18n="sup.form.back">Back to the chat</button>
+  </div>
+  <div id="sup_done" style="display:none;text-align:center;padding:6px 2px 2px">
+    <h3 data-i18n="sup.done.title">Got it. We're on it.</h3>
+    <div class="meta" style="line-height:1.5" data-i18n="sup.done.body">A person will email you back soon.</div>
+    <button class="cta" onclick="closeSupport()" style="margin-top:16px;width:100%" data-i18n="sup.done.cta">Done</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -2287,7 +2437,12 @@ let POLICY={flags:{driverHandoff:true,restockAlerts:true,shareCards:true,kiosks:
 let LEAD_PENDING=null, AUTH_PENDING=null;
 const $=id=>document.getElementById(id);
 const markFld=(el,on)=>{ if(!el)return; el.classList.toggle('fld-err',!!on); if(on&&!el.__fldClr){ el.__fldClr=1; el.addEventListener('input',()=>el.classList.remove('fld-err'),{once:false}); } };
-const toast=(m,kind)=>{const t=$('toast');t.innerHTML=m;t.classList.remove('tneutral','taccent','oneline');if(kind)t.classList.add('t'+kind);t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}; // kind: undefined=green success · 'neutral' raised dark · 'accent' yellow (T1 §5.4; styled under v2 only). '.oneline' (added by caller after) forces nowrap.
+// Bottom-notification COPY LAW (owner 07-11 pill comp): notifications are fragments, not sentences —
+// no sentence periods or commas, ever. Applied at render so every toast obeys it and future copy can't
+// break it. Decimals (4.00) and thousands (1,000) are protected: only a mark FOLLOWED by space/end is a
+// clause mark and gets dropped. Same rule for Spanish. HTML (<b>, <br>) passes through untouched.
+function pillCopy(m){ if(typeof m!=='string') return m; return m.replace(/([.,])(?=\s|<|$)/g,'').replace(/\s{2,}/g,' ').trim(); }
+const toast=(m,kind)=>{const t=$('toast');t.innerHTML=pillCopy(m);t.classList.remove('tneutral','taccent','oneline');if(kind)t.classList.add('t'+kind);t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}; // kind: undefined=green success · 'neutral' raised dark · 'accent' yellow (T1 §5.4; styled under v2 only). '.oneline' (added by caller after) forces nowrap.
 // ── i18n (rollout-ready; Spanish live, other languages fall back to English until filled) ──
 const LANGS=[['en','EN'],['es','ES']];
 const I18N={ es:{
@@ -2321,8 +2476,8 @@ const I18N={ es:{
   'hist.count':'{n} verificaciones en {m}','hist.inmonth':'verificaciones en',
   'trust.pick':'Elige una tienda','trust.call':'Verificamos en vivo','trust.answer':'Respuesta + prueba',
   'value':'Evita el viaje de <b>$10 en gasolina</b> a un estante agotado',
-  'mode.call':'Verificar una tienda','mode.kiosk':'Kioscos','find.step':'① Encuentra tu tienda','find.kiosk':'① Encuentra un kiosco',
-  'charge':'<b>Sin respuesta = sin cargo.</b>',
+  'mode.call':'Tiendas','mode.kiosk':'Kiosco','find.step':'① Encuentra tu tienda','find.kiosk':'① Encuentra un kiosco',
+  'charge':'<b>Sin respuesta = sin cargo</b>',
   'find.radius':'Radio de búsqueda','find.specific':'¿Algo específico?','find.specific.note':'(opcional) fija el producto exacto',
   'cat.step':'② ¿Qué estás buscando?','cat.note':'',
   'cta.pick':'Elige una tienda para verificar','cta.another':'Verificar otra tienda',
@@ -2336,7 +2491,7 @@ const I18N={ es:{
   'live.convo':'Conversación','live.steps':'Progreso de la llamada','cs.call':'Llamada','lbl.assoc':'Asociado','lbl.menu':'Menú','lbl.agent':'Check AI',
   'up.restock':'No te pierdas el reabastecimiento','up.restock.sub':'Te avisamos por mensaje en cuanto vuelva.','up.checkback':'Vuelve pronto','up.checkback.sub':'Reabastecen seguido. Vuelve en un día o dos.','up.watch':'Avísame cuando vuelva','up.watch.sub':'Una alerta en cuanto una llamada lo confirme.','up.sched':'Auto-verificar en días de envío','up.sched.sub':'Llamamos por ti en días de reabastecimiento.',
   'hist.title':'Tus verificaciones','hist.new':'+ Nueva','hist.empty':'Aún no hay verificaciones. Haz una y aparecerá aquí.',
-  'foot.cta':'¿No ves tu tienda? Agrégala →','foot.about':'Acerca de','foot.contact':'Contacto','foot.faq':'Preguntas','foot.terms':'Términos','foot.privacy':'Privacidad','foot.success':'Logros',
+  'foot.cta':'¿No ves tu tienda? Agrégala →','foot.about':'Acerca de','foot.contact':'Contacto','foot.faq':'Preguntas','foot.terms':'Términos','foot.privacy':'Privacidad','foot.legal':'Legal','foot.success':'Logros',
   'kioskhint':'<span style="display:flex;align-items:center;gap:7px;font-weight:800;white-space:nowrap"><span id="khspark"></span> ¿En un kiosco? ¡Verificación gratis!</span><a onclick="openReceipt()" style="display:inline-block;margin-top:5px;color:var(--purple);font-weight:800;cursor:pointer">Usa nuestro correo al pagar o reenvía tu recibo →</a>',
   'v.in':'¡En stock!','v.out':'No está en stock','v.unclear':'Nos dieron un “quizás”','v.soldout':'Agotado','v.noanswer':'Nadie contestó','v.hold':'En espera','v.soon':'¡Reabastecimiento en camino!','note.soon':'Llega un envío <b>{d}</b>. Sé el primero cuando caiga.',
   'search.ph':'Busca por tienda o ciudad…',
@@ -2355,11 +2510,11 @@ const I18N={ es:{
   'empty.kiosk':'Aún no hay kioscos en {r} mi. Los agrega la comunidad. ¿Compraste en uno? <a onclick="openReceipt()" style="color:var(--purple);font-weight:700;cursor:pointer">Envía tu recibo</a> para ponerlo en el mapa.',
   'empty.kiosk.tap':'Toca el pin para encontrar máquinas cerca de ti.',
   'empty.search':'Sin resultados. Prueba otra búsqueda, o toca el pin para ver tiendas cerca de ti.',
-  'empty.radius':'No hay tiendas abiertas en {r} mi. Amplía el radio.',
+  'empty.radius':'No hay tiendas abiertas en {r} mi.<br>Amplía el radio.',
   'empty.far.title':'Aún no estamos en tu zona…','empty.far.sub':'¡Llegaste temprano! Sé el primero en saber cuando {b} llegue cerca de ti.','empty.far.cta':'🔔 Avísame cuando lleguen',
   'tick.found':'¡Encontrado!','tick.restock':'Reabastecimiento en camino','besttag':'Más probable','bestwhy':'buenas probabilidades ahora',
-  'mode.hobby':'Hobby','find.hobby':'① Encuentra una tienda de cartas','find.hobbystore':'① Ahora elige una tienda de cartas','hob.hunting':'BUSCANDO','hob.shopprices':'PRECIOS DE TIENDA','empty.hobby':'No hay tiendas de cartas en {r} mi. Amplía el radio.','hob.pickexact':'Elige el set o producto exacto',
-  'mode.thrift':'Segunda mano','find.thrift':'① Encuentra una tienda de segunda mano','empty.thrift':'No hay tiendas de segunda mano en {r} mi. Amplía el radio.',
+  'mode.hobby':'Hobby','find.hobby':'① Encuentra una tienda de cartas','find.hobbystore':'① Ahora elige una tienda de cartas','hob.hunting':'BUSCANDO','hob.shopprices':'PRECIOS DE TIENDA','empty.hobby':'No hay tiendas de cartas en {r} mi.<br>Amplía el radio.','hob.pickexact':'Elige el set o producto exacto',
+  'mode.thrift':'Segundas','find.thrift':'① Encuentra una tienda de segunda mano','empty.thrift':'No hay tiendas de segunda mano en {r} mi.<br>Amplía el radio.',
   'co.title':'Pago','co.change':'Cambiar','co.orcard':'O paga con tarjeta','co.loading':'Cargando pago seguro…','co.subscribe':'Suscribirse','co.pay':'Pagar','co.cancel':'Cancela cuando quieras','co.secured':'Protegido por','co.processing':'Procesando…','co.failed':'El pago no se procesó. Inténtalo de nuevo.','co.redirect':'Abriendo pago seguro…','co.checksmo':'verificaciones al mes','co.monthly':'mensual','co.annual':'anual','co.paygsub':'Pago único · las verificaciones no caducan',
   'ph.quoted':'Precio indicado','ph.overmsrp':'sobre el precio de lista','ph.title':'Precios encontrados','ph.best':'MEJOR','ph.oos':'agotado',
   'plan.member':'Miembro',
@@ -2368,7 +2523,7 @@ const I18N={ es:{
   'kioskonly':'Solo kiosco','kiosk.precall':'Solo kiosco. Preguntaremos si su kiosco está funcionando y surtido, no por un envío.',
   'closednow':'· cerrado ahora','store.soon':'¡Agregando tienda pronto!','store.soonchip':'Muy pronto',
   // live view
-  'pre.had':'tenían en stock','pre.notin':'no tenían','pre.unclear':'sin respuesta clara','pre.again':'Verificaste {s} {a}. {o}. ¿Verificar de nuevo?','pre.note':'Verificaste {s} {a}. {o}',
+  'pre.had':'en stock','pre.notin':'sin stock','pre.unclear':'sin respuesta clara','pre.again':'Verificaste {s} {a}. {o}. ¿Verificar de nuevo?','pre.note':'{s} {a} · {o}',
   'live.mute':'🔇 Quita el silencio del teléfono para escuchar la llamada','live.calling':'📞 Colocando la llamada…','live.ringing':'📞 Timbrando…','live.connected':'✅ Contestaron. Escuchando…','live.talking':'🙋 Hablando con un empleado…','live.ivr':'🔢 Navegando el menú telefónico…','live.getting':'⏳ Obteniendo el resultado…','live.loading':'Cargando tu llamada…','live.connecting':'Conectando…',
   'live.live':'🔊 EN VIVO. Estás escuchando la llamada','live.hangup':'■ Detener y colgar','live.proof':'🔴 En vivo. La conversación según sucede','live.foot':'Un momento. Las tiendas contestan, te ponen en espera y conversan. Vale los 2 minutos.',
   // result page
@@ -2428,7 +2583,7 @@ const I18N={ es:{
   // schedule modal
   'sch.perk':'Beneficio de miembro Check+','sch.title':'Auto-verificación','sch.days':'¿Qué días?','sch.time':'Hora más temprana para llamar','sch.where':'Agrega tu celular o correo','sch.ph':'correo o teléfono','sch.cta':'Activar auto-verificación →','sch.setting':'Configurando…','sch.on.days':'📅 Auto-verificación activa. Llamaremos esos días','sch.on.ship':'📅 Auto-verificación activa. Llamaremos el día de envío de esta tienda','sch.canceled':'Auto-verificación cancelada','sch.cancelfail':'No se pudo cancelar. Inténtalo de nuevo',
   // waitlist modal
-  'wl.title':'Te enviamos un correo cuando lancemos aquí','wl.sub':'Deja tu correo. En cuanto lleguemos a tu zona, eres el primero en saberlo.','wl.ph':'tu correo','wl.cta':'Unirme a la lista →','wl.adding':'Agregándote…','wl.done':"🙌 Estás en la lista. Te enviamos un correo en cuanto lancemos cerca de ti",
+  'wl.title':'Te enviamos un correo cuando lancemos aquí','wl.sub':'Deja tu correo. En cuanto lleguemos a tu zona, eres el primero en saberlo.','wl.ph':'tu correo','wl.cta':'Unirme a la lista →','wl.adding':'Agregándote…','wl.done':"🙌 Estás en la lista",
   // refer modal
   'ref.title':'Da {n} verificaciones, recibe {n}','ref.sub':'Cuando un amigo se registre con tu enlace y haga su primera verificación, <b>ambos</b> reciben {n} verificaciones gratis.','ref.row':'Invita a un amigo. Ambos reciben una verificación gratis','ref.sub.one':'Se une con tu enlace y hace una verificación. Una verificación gratis para <b>los dos</b>.','ref.sub.n':'Se une con tu enlace y hace una verificación. <b>{n} verificaciones gratis</b> para los dos.','ref.copy':'copiar','ref.copied2':'copiado ✓','ref.signin':'toca aquí para tu enlace de invitación','ref.t.text':'Texto','ref.t.post':'Publicar','ref.t.more':'Más','ref.msg.r1':'una verificación gratis','ref.msg.rN':'{n} verificaciones gratis','ref.msg':'¡Oye! Mira esta tecnología, está increíble.\nNos ayuda a encontrar rápido sobres, cajas y ETBs de {x} a precio de tienda.\nRegístrate y los dos recibimos {r}:','ref.msg.simple':'¡Oye! Mira esta tecnología, está increíble.\nNos ayuda a encontrar {x} en stock a precio de tienda.\nRegístrate y los dos recibimos {r}:','ref.sms':'Mándalo a un amigo','ref.post':'𝕏 Publicar','ref.joined':'🎉 {n} ya se unieron','ref.loading':'Cargando tu enlace…','ref.welcome':'🎁 ¡Bienvenido! {n} verificaciones gratis agregadas',
   // receipt modal
@@ -2441,7 +2596,7 @@ const I18N={ es:{
   // driver / runner teaser
   'dd.tag':'Vista previa · próximamente','dd.title':'Que un local lo recoja','dd.sub':'¿Muy lejos para manejar? Manda a un conductor de Uber/Lyft cercano a comprarlo y enviártelo. Él paga <b>$0 de su bolsillo</b>, tú solo pones el bono.','dd.instock':'En stock','dd.s1':'Define el <b style="color:var(--green)">bono</b> del conductor (ej. $25) sobre su tarifa','dd.s2':'Pide el viaje en <b>Uber</b> o <b>Lyft</b>. Recogida en la tienda','dd.s3':'Envía una tarjeta prepagada (producto + envío) + un mensaje listo','dd.s4':'Él lo compra, lo envía y toca <b>Listo</b> → tu bono se libera al instante','dd.sees':'lo que ve el conductor','dd.pickup':'Tienes una recogida de <span style="color:var(--green)">$25</span> 🏃','dd.applepay':'Agregar tarjeta a Apple Pay (60 seg)','dd.cta':'Quiero acceso anticipado →','dd.noted':'Anotado. Te buscamos para el acceso anticipado 🤝','dd.grab':'recoger en {s} → te lo envían',
   // generic errors / toasts / misc
-  'err.generic':'No se procesó. Vuelve a intentarlo.','err.sendcode':'No pudimos enviar un código. Inténtalo de nuevo.','err.verify':'No se pudo verificar. Inténtalo de nuevo.','err.post':'No se pudo publicar. Inténtalo de nuevo.','err.upload':'La foto no se subió. Inténtalo de nuevo.','err.photobig':'La foto pesa demasiado. Prueba con una más pequeña.','auth.verifying':'Verificando…','map.list':'Lista','store.closed':'Cerrado','toast.nocall':'. No se hizo la llamada.','auth.welcome':"✓ Ya entraste",'err.email':'Ingresa un correo válido','err.usonly':'Por ahora solo enviamos SMS a números de EE. UU.','err.toofast':'Espera un momento e inténtalo de nuevo.','auth.sending':'Enviando…','auth.resending':'Reenviando…','err.contact':'Ingresa un correo o teléfono válido.','err.pickstore':'Elige una tienda primero',
+  'err.generic':'No se procesó. Vuelve a intentarlo.','err.sendcode':'No pudimos enviar un código. Inténtalo de nuevo.','err.verify':'No se pudo verificar. Inténtalo de nuevo.','err.post':'No se pudo publicar. Inténtalo de nuevo.','err.upload':'La foto no se subió. Inténtalo de nuevo.','err.photobig':'La foto pesa demasiado. Prueba con una más pequeña.','auth.verifying':'Verificando…','map.list':'Lista','map.map':'Mapa','store.closed':'Cerrado','toast.nocall':'. No se hizo la llamada.','auth.welcome':"✓ Ya entraste",'err.email':'Ingresa un correo válido','err.usonly':'Por ahora solo enviamos SMS a números de EE. UU.','err.toofast':'Espera un momento e inténtalo de nuevo.','auth.sending':'Enviando…','auth.resending':'Reenviando…','err.contact':'Ingresa un correo o teléfono válido.','err.pickstore':'Elige una tienda primero',
   'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la verificación','toast.callgone':'Esa verificación ya no está disponible','toast.toosoon':'Acabas de verificar esta tienda — vuelve a verificar en unos {n} min.','toast.loadingcall':'Cargando tu verificación…','toast.loadingcall2':'Cargando tu verificación','toast.translate.fail':'No se pudo traducir eso.','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Aquí está la lista.','map.nostores':'No hay tiendas aquí. Mueve el mapa a otro lugar.','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
   'find.me':'Encuentra mis tiendas','find.near':'cerca de ti, abiertas ahora',
   'scores.title':'Logros de la caza','scores.post':'Publica el tuyo →','scores.first':'¡Muéstranos el botín!',
@@ -2449,7 +2604,7 @@ const I18N={ es:{
   'ho.ship.hint':'El empaque y el envío van en la tarjeta del conductor. Lo envía de regreso y te llega el rastreo por texto.','ho.home.hint':'El conductor lo lleva directo a tu puerta. Sin envío, sin esperar el correo.',
   'ho.s1.label':'Confirmar','ho.s1.title':'¿A dónde debe llegar?','ho.s1.cta':'Se ve bien →','ho.s2.label':'La oferta','ho.s2.title':'Define el bono del conductor','ho.s2.cta':'Fijar el bono →',
   'ho.s3.label':'Resérvalo','ho.s3.title':'Pide el viaje tú mismo','ho.s3.cta':'Un conductor aceptó →','ho.s4.label':'Manda el trato','ho.s4.title':'Pega esto en el chat del conductor','ho.s4.copy':'Copiar mensaje y enlace','ho.s4.cta':'El conductor va en camino →','ho.s4.retry':'¿Dijo que no? Cancela y prueba el siguiente','ho.s4.preview':'Mira lo que ve el conductor',
-  'ho.s5.label':'Cierre','ho.s5.title':'Libera el bono y califica','ho.s5.cta':'Confirmar entrega y liberar el bono','ho.copied':'Copiado. Pégalo en el chat del conductor',
+  'ho.s5.label':'Cierre','ho.s5.title':'Libera el bono y califica','ho.s5.cta':'Confirmar entrega y liberar el bono','ho.copied':'Copiado para el chat del conductor',
   'ho.done.title':'Bono liberado. Listo','ho.done.ship':'Va en camino. Te mandamos el número de rastreo en cuanto escaneen la etiqueta.','ho.done.home':'Va hacia tu puerta. Te llega un texto cuando el conductor lo marque entregado.','ho.done.cta':'Volver a la cacería',
   'rail.all.stores':'Todas las tiendas','rail.all':'Todas las verificaciones','rail.other':'Sin respuesta / dudosa','rail.stores':'Tiendas','rail.calls':'Verificaciones','rail.allday':'Ver todos los días',
   'demo.verdictlbl':'el veredicto','auth.google':'Continuar con Google','auth.discord':'Continuar con Discord','auth.or':'o con tu correo','demo.sys':'Navegando el menú telefónico…','demo.thanks':'¡Perfecto, gracias!','demo.proof':'Persona real · hace 2 min · transcripción completa como prueba.',
@@ -2464,7 +2619,7 @@ const I18N={ es:{
   'sc.crew':'Presume con la banda','sc.scored':'¡La conseguiste!','sc.snap':'Toma tu foto. Publícala.','sc.photo':'Tu foto','sc.caption':'Descripción','sc.name':'Tu nombre / usuario','sc.optional':'(opcional)','sc.ph.caption':'¡Saqué un Charizard en el Target de Sunset!','sc.ph.handle':'@tuusuario','sc.post':'Publicar en el muro →','sc.uploading':'Subiendo…','sc.err.big':'La foto pesa demasiado (máx. 12 MB).','sc.err.nophoto':'Agrega una foto primero',
   'ph.schednum':'Escribe tu número','ph.storereq':'ej. Target, Thousand Oaks','ph.storecity':'ej. Thousand Oaks, CA','ph.storedetails':'dirección, qué productos, etc.','ph.kiosk':'ej. Albertsons, Sunset Blvd, LA','ph.kioskhint':'ej. A veces se salta la reposición de los :03',
   'toast.searchmi':'📍 {q}. Tiendas a {n} mi','toast.zoomout':'Pellizca para acercar, toca para fijar un punto','toast.community':'La comunidad llega pronto','toast.locupdated':'Actualizado a tu ubicación actual',
-  'cs.costs':'cuesta 1 verificación','cs.toggle':'Ver pasos de la llamada','cs.hobask':'Verificaremos precio y disponibilidad de',
+  'cs.costs':'cuesta 1 verificación','cs.reach.menu':'~{n} seg para llegar a una persona','cs.reach.direct':'Esta tienda contesta directo','cs.toggle':'Ver pasos de la llamada','cs.hobask':'Verificaremos precio y disponibilidad de',
   'err.storename':'Agrega el nombre de la tienda',
   'fbk.in':'En stock','fbk.out':'No está','fbk.soon':'Reabasteciendo','fbk.unsure':'Sin claridad',
   'fbk.q':'¿Puedes deducirlo de la conversación de abajo? ¿Qué opinas?',
@@ -2475,14 +2630,14 @@ const I18N={ es:{
   'live.s1':'Llamando a la tienda…','live.s2':'Está timbrando…','live.s3':'Conectamos','live.s4':'Escuchando el menú…','live.s5':'Navegando el menú…','live.s6':'Transferido al mostrador','live.s7':'Contestó una persona','live.s8':'Preguntando por {p}',
   'live.item':'tu producto','live.store':'la tienda','live.waitperson':'Buscando a una persona…','live.noconvo':'No hay conversación en vivo en esta llamada.',
   'step.one':'paso','step.many':'pasos','step.ringing':'Llamando a la tienda…',
-  'note.fbk':'No pudimos entender bien la respuesta. Lee la conversación y dinos qué opinas.',
+  'note.fbk':'No pudimos entender bien la respuesta.<br>Lee la conversación y dinos qué opinas.',
   'note.getting':'La llamada acaba de terminar. Obteniendo el resultado.',
   'v.getting':'Obteniendo la respuesta…','v.unclear2':'No supimos decir',
   'st.too_busy':'Muy ocupados para revisar',
   'stn.too_busy':'{store} estaba saturado. Sin cargo.',
   'sub.in':'<b>{s}</b> tiene <b>{c}</b>. Ve por ello antes de que se agote.','sub.in.named':'<b>{s}</b> tiene <b>{p}</b>. Ve por ello antes de que se agote.',
   'sub.out':'<b>{s}</b> no tiene <b>{c}</b> en stock ahora mismo.','sub.soldout':'{s} está agotado de <b>{c}</b> ahora mismo.',
-  'term.in':'En stock','term.out':'No está en stock','term.soon':'Reabastecimiento confirmado · {d}','term.unk':'Sin respuesta clara',
+  'term.in':'En stock','term.out':'No está en stock','term.soon':'Reabastecimiento confirmado · {d}','term.soon2':'Reabastecimiento confirmado','term.unk':'Sin respuesta clara','term.getting':'Obteniendo el resultado…',
   'res.conversation':'Conversación','res.result':'Resultado',
   'pre.again.body':'{o} {a}. ¿Verificar de nuevo?','pre.again.no':'Ahora no',
   'rail.backcal':'Volver al calendario','rail.noneday':'Sin verificaciones ese día','rail.noneday2':'Sin verificaciones este día.','rail.pickanother':'← Elegir otro día',
@@ -2499,9 +2654,9 @@ const I18N={ es:{
   'ho.msg.home':'llévalo a mi casa (dirección en el enlace)','ho.msg.ship':'déjalo en USPS para enviarlo. El franqueo va en la tarjeta',
   'ho.msg':'¡Hola! Recogida pagada rápida 🏃 Yo cubro el producto + un bono de ${b} para ti al entregarlo.\n\n1) Toca para agregar una tarjeta prepagada a Apple Pay (60 seg):\n   checkitforme.com/d/4QK9\n2) En {s}, toma 1 {p}\n3) Paga con esa tarjeta (solo sirve para esta compra)\n4) Luego {d}\n\nToca Listo en el enlace y tus ${b} llegan al instante. ¡¡Gracias!! 🙏',
   // Manage Zones (premium) — validation, location + save flow
-  'zones.title':'Mis zonas','zones.new':'Nueva zona','zones.newz':'Nueva zona','zones.edit':'Editar zona',
+  'zones.title':'Mis zonas','zones.new':'Nueva zona','zones.newz':'Crear una zona','zones.edit':'Editar zona','zones.checkzone':'Verificar esta zona','zones.checked':'Verificada','zones.nameph3':'Ponle nombre…',
   'zones.save':'Guardar zona','zones.saving':'Guardando…','zones.saved':'Zona guardada',
-  'zones.pickone':'Elige al menos una tienda para guardar esta zona.','zones.needname':'Ponle un nombre a tu zona antes de guardar.',
+  'zones.pickone':'Elige una tienda primero','zones.needname':'Ponle nombre a tu zona',
   'zones.nameph2':'Nombra esta zona','zones.locating':'Buscando tu ubicación…',
   'zones.norad':'No hay tiendas en {r} mi. Prueba un radio mayor.','zones.needloc':'Toca el pin o busca un código postal para ver tiendas.',
   'zones.locph':'Busca un código postal o ciudad…','zones.go':'Ir','zones.list':'Lista','zones.map':'Mapa',
@@ -2509,7 +2664,19 @@ const I18N={ es:{
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
   'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
-  'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.ask2':'Nuevo nombre para esta zona:','zones.delete.ask':'¿Eliminar esta zona? No se puede deshacer.',
+  'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
+  'zones.confirm.title2':'¿Verificar {n} {s} abiertas?','zones.storeword':'tienda','zones.storesword':'tiendas','zones.checkallN':'Verificar las {n}','zones.removeall':'Quitar todo','zones.isclosed':'está cerrada','zones.areclosed':'están cerradas','zones.stillcall':'Aún podemos llamar a las {n} abiertas.','zones.and':'y','zones.andmore':'y {n} más','zones.astore':'Una tienda',
+  'sup.title':'Pregúntanos lo que sea',
+  'sup.hello':'¡Hola! Pregúntame lo que sea sobre checks, tiendas o planes.',
+  'ph.support':'Escribe tu pregunta','sup.send':'Enviar',
+  'sup.yes':'Eso lo resolvió','sup.no':'Necesito una persona','sup.thanks':'Gracias por avisarnos.',
+  'sup.stuck':'Puedo pasar esto a una persona. Toca abajo y nos encargamos.',
+  'sup.form.title':'Déjalo con nosotros','sup.form.sub':'Dinos dónde contactarte. Una persona te responderá por correo.',
+  'sup.form.name':'Tu nombre','ph.supname':'Con tu nombre basta','sup.form.email':'Correo',
+  'sup.form.msg':'Qué está pasando','ph.supmsg':'La versión corta está bien',
+  'sup.form.send':'Envíalo','sup.form.back':'Volver al chat',
+  'sup.form.err':'Pon tu nombre, un correo real y qué pasó.',
+  'sup.done.title':'Recibido. Nos encargamos.','sup.done.body':'Una persona te escribirá pronto por correo.','sup.done.cta':'Listo',
 } };
 // {x}/{n}/{r}/{b}/{s}/{p}/{m} placeholder fill for translated strings.
 function tf(key,en,vars){ let s=t(key,en); if(vars) for(const k in vars) s=s.split('{'+k+'}').join(vars[k]); return s; }
@@ -2519,7 +2686,7 @@ function t(key,en){ return (I18N[LANG]&&I18N[LANG][key])||en; }
 const HERO_I18N={es:{
   'Pokémon':'Pokémon <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
   'One Piece TCG':'One Piece <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
-  'Topps NBA':'Topps NBA <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
+  'Topps NBA':'Cartas NBA <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
   'NeeDoh':'NeeDoh <span class="g">¿en stock?</span><br>Lo verificamos por ti.',
 }};
 function isV2(){ return document.documentElement.getAttribute('data-skin')==='v2'; }
@@ -2585,6 +2752,8 @@ function ensureModeChips(){
 function setLang(l){ LANG=l; localStorage.setItem('runnr_lang',l); applyLang();
   // Re-render everything built in JS so a language flip is instant and complete.
   try{ renderDemo(); renderStores(); renderChips(); syncCta(); renderAuth(); loadFinds(); loadSchedules(); loadRefer(); renderCallRail(); }catch(e){}
+  try{ loadCommunity(); }catch(e){} // scores strip ("Show us the goods!") is JS-rendered — re-localize it too
+  try{ document.querySelectorAll('.modetab[data-mode="hobby"],.modetab[data-mode="thrift"]').forEach(b=>b.remove()); ensureModeChips(); document.querySelectorAll('.modetab').forEach(b=>b.classList.toggle('on',b.dataset.mode===MODE)); }catch(e){} // injected chips carry baked labels — rebuild them in the new language
   // …including whatever view/sheet is open right now — no hard refresh needed.
   try{
     if($('live') && !$('live').classList.contains('hidden')) renderLiveMsg(); // flip mid-call → re-localize the live step log too
@@ -2696,8 +2865,71 @@ function renderFooter(){
 // "Don't see your store?" submission.
 function openStoreReq(){ ['sr_name','sr_city','sr_note','sr_contact'].forEach(id=>{const e=$(id);if(e){e.value='';markFld(e,false);}}); $('sr_err').textContent='';
   const bd=$('sr_body'), dn=$('sr_done'); if(bd)bd.style.display=''; if(dn)dn.style.display='none'; // reset to the form (not a leftover success state)
-  track('storereq_open'); $('storeReqOverlay').classList.add('on'); setTimeout(()=>{try{$('sr_name').focus();}catch(e){}},80); }
+  track('storereq_open'); $('storeReqOverlay').classList.add('on'); sheetPush('storereq'); setTimeout(()=>{try{$('sr_name').focus();}catch(e){}},80); }
 function closeStoreReq(){ $('storeReqOverlay').classList.remove('on'); acctReturn(); }
+
+// ---- Support chat (the ladder lives server-side; this is just the conversation UI) ----
+let SUP_SID=sessionStorage.getItem('cifm_support_sid')||''; let SUP_LASTQ='';
+function supGrow(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
+function openSupport(){ $('sup_form').style.display='none'; $('sup_done').style.display='none'; $('sup_chat').style.display='flex';
+  if(!$('sup_msgs').children.length) supBubbleMsg('bot', t('sup.hello',"Hey! Ask me anything about how checks, stores, or plans work."));
+  const el=$('supSheet'); el.style.transition=''; el.style.transform=''; el.classList.add('on'); el.setAttribute('aria-hidden','false');
+  $('supSheetBd').classList.add('on'); setTimeout(()=>{try{$('sup_in').focus();}catch(e){}},260); }
+function closeSupport(){ const el=$('supSheet'); el.style.transition=''; el.style.transform=''; el.classList.remove('on'); el.setAttribute('aria-hidden','true'); $('supSheetBd').classList.remove('on'); }
+function supBubbleMsg(kind,text){ const d=document.createElement('div'); d.className='supm '+(kind==='me'?'me':'bot');
+  d.textContent=text; $('sup_msgs').appendChild(d); $('sup_msgs').scrollTop=1e6; return d; }
+async function sendSupport(){
+  const inp=$('sup_in'), msg=(inp.value||'').trim(); if(!msg) return;
+  inp.value=''; supGrow(inp); SUP_LASTQ=msg; $('sup_help').classList.remove('on');
+  supBubbleMsg('me',msg);
+  const btn=$('sup_send'); btn.disabled=true;
+  const dots=document.createElement('div'); dots.className='supm bot dots'; dots.innerHTML='<span></span><span></span><span></span>';
+  $('sup_msgs').appendChild(dots); $('sup_msgs').scrollTop=1e6;
+  const r=await api('/pub/support/chat',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({sessionId:SUP_SID||undefined,message:msg,lang:LANG})});
+  dots.remove(); btn.disabled=false;
+  if(!r||r.error==='network'||(!r.reply&&!r.escalate)){ supBubbleMsg('bot', t('err.generic',"That didn't go through. Give it another try.")); return; }
+  if(r.sessionId){ SUP_SID=r.sessionId; sessionStorage.setItem('cifm_support_sid',SUP_SID); }
+  if(r.reply) supBubbleMsg('bot',r.reply);
+  if(r.escalate){ supBubbleMsg('bot', t('sup.stuck',"I can get a person on this. Tap below and we'll take it from here.")); openSupportFormSoft(); }
+  else $('sup_help').classList.add('on');
+}
+async function supHelped(yes){ $('sup_help').classList.remove('on');
+  if(SUP_SID) api('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:yes})});
+  toast(t('sup.thanks','Thanks for letting us know.'),'neutral'); }
+function openSupportFormSoft(){ $('sup_help').classList.add('on'); const b=$('sup_help').children[0]; if(b) b.style.display='none'; }
+function openSupportForm(){ if(SUP_SID) api('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:false})});
+  $('sup_chat').style.display='none'; $('sup_done').style.display='none'; $('sup_form').style.display='block';
+  $('supf_msg').value=SUP_LASTQ||''; $('supf_err').textContent=''; setTimeout(()=>$('supf_name').focus(),80); }
+function backToSupportChat(){ $('sup_form').style.display='none'; $('sup_chat').style.display='flex';
+  const b=$('sup_help').children[0]; if(b) b.style.display=''; }
+// Swipe the grabber/sheet down to dismiss (matches the call sheet). Ignore drags that start on the
+// scrollable message list or the textarea so scrolling + typing aren't hijacked.
+(function supSheetSwipe(){
+  let y0=0, dy=0, drag=false;
+  const sh=()=>$('supSheet');
+  document.addEventListener('touchstart',e=>{ const el=sh(); if(!el||!el.classList.contains('on'))return;
+    if(!e.target.closest('#supSheet'))return; if(e.target.closest('#sup_msgs')||e.target.closest('#sup_in'))return;
+    y0=e.touches[0].clientY; dy=0; drag=true; el.style.transition='none'; },{passive:true});
+  document.addEventListener('touchmove',e=>{ if(!drag)return; dy=Math.max(0,e.touches[0].clientY-y0); sh().style.transform='translateY('+dy+'px)'; },{passive:true});
+  document.addEventListener('touchend',()=>{ if(!drag)return; drag=false; const el=sh();
+    el.style.transition='transform .28s cubic-bezier(.32,.72,0,1)';
+    if(dy>90){ el.style.transform='translateY(112%)'; $('supSheetBd').classList.remove('on');
+      setTimeout(()=>{ el.classList.remove('on'); el.setAttribute('aria-hidden','true'); el.style.transition=''; el.style.transform=''; },300);
+    } else { el.style.transform=''; } });
+})();
+async function submitSupportTicket(){
+  const name=($('supf_name').value||'').trim(), email=($('supf_email').value||'').trim(), msg=($('supf_msg').value||'').trim();
+  const bad=(el,is)=>{ if(typeof markFld==='function') markFld(el,is); };
+  bad($('supf_name'),!name); bad($('supf_email'),!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)); bad($('supf_msg'),!msg);
+  if(!name||!msg||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $('supf_err').textContent=t('sup.form.err','Fill in your name, a real email, and what happened.'); return; }
+  const btn=$('supf_btn'); btn.disabled=true; btn.textContent=t('toast.submitting','Submitting…');
+  const r=await api('/pub/support/ticket',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({sessionId:SUP_SID||undefined,name,email,message:msg})});
+  btn.disabled=false; btn.textContent=t('sup.form.send','Send it over');
+  if(!r||r.error){ $('supf_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
+  track&&track('support_ticket'); $('sup_form').style.display='none'; $('sup_done').style.display='block';
+}
 async function submitStoreReq(){
   const name=($('sr_name').value||'').trim(), city=($('sr_city').value||'').trim();
   // Require BOTH the store name AND its city — a name alone (e.g. "fungie") isn't enough to find & add it.
@@ -2776,6 +3008,7 @@ async function boot(){
 // permission) → nothing happens, the cached location stands.
 function silentLocRecheck(){
   try{
+    if(MANUAL_LOC) return; // they dropped a pin / searched a ZIP on purpose — do NOT snap back to GPS (regression: map pin jumped home)
     if(!navigator.geolocation || !navigator.permissions || !navigator.permissions.query) return;
     navigator.permissions.query({name:'geolocation'}).then(p=>{
       if(!p || p.state!=='granted') return; // only when already allowed — never trigger the OS prompt here
@@ -2834,7 +3067,7 @@ async function submitWaitlist(){
   btn.disabled=false; btn.textContent=t('wl.cta','Join the list →');
   if(!r||r.error){ $('wl_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
   track('waitlist_join');
-  closeWaitlist(); toast(t('wl.done',"🙌 You're on the list. We'll email you the moment we launch near you."));
+  closeWaitlist(); toast(t('wl.done',"🙌 You're on the list"));
 }
 
 // --- Referrals: give free checks, get free checks ---
@@ -3101,7 +3334,7 @@ function openAccount(fromPop){
     head.innerHTML=`<div style="display:flex;justify-content:center;padding:12px 0 10px"><span style="width:44px;height:6px;border-radius:99px;background:rgba(255,255,255,.5)"></span></div><div class="wash">
         <div style="display:flex;align-items:center;justify-content:space-between">
           <span style="display:flex;align-items:center;gap:4px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('acct.my','My')}</span>${FCHK(24)}</span>
-          <span></span>
+          <button onclick="doSignOut()" style="background:none;border:0;padding:4px 2px;color:rgba(255,255,255,.85);font-size:14px;font-weight:700;cursor:pointer;text-decoration:underline dashed rgba(255,255,255,.4);text-underline-offset:4px">${t('acct.signout','Sign out')}</button>
         </div>
         <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between">
           <span style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:rgba(255,255,255,.8);white-space:nowrap">${esc(idn.primary)}<button onclick="editPhone()" aria-label="Change number" style="background:none;border:0;padding:2px;cursor:pointer;display:inline-flex"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg></button></span>
@@ -3264,7 +3497,7 @@ function isClosed(s){ return s && s.openState && s.openState.known && !s.openSta
 // Kiosk-only = has a vending kiosk but no shelf stock (hasKiosk && !sellsPacks). Callable, but with a
 // different script ("is your kiosk working/stocked?") — we send kioskMode:true for them.
 function isKioskOnly(s){ return !!(s && s.hasKiosk && s.sellsPacks===false); }
-function tLbl(l){ if(LANG!=='es'||!l) return l; return String(l).replace(/\bOpen\b/g,'Abierto').replace(/\bClosed\b/g,'Cerrado').replace(/\btill\b/g,'hasta').replace(/\bCloses?\b/g,'Cierra').replace(/\bOpens?\b/g,'Abre'); }
+function tLbl(l){ if(LANG!=='es'||!l) return l; return String(l).replace(/\bLikely closed\b/gi,'Quizás cerrado').replace(/\bOpen\b/g,'Abierto').replace(/\bClosed\b/gi,'Cerrado').replace(/\btill\b/g,'hasta').replace(/\bCloses?\b/g,'Cierra').replace(/\bOpens?\b/g,'Abre'); }
 function hoursLine(s){
   const o=s&&s.openState; if(!o||!o.label) return '';
   const col = o.open ? 'var(--green)' : 'var(--red)';
@@ -3280,6 +3513,7 @@ function shipmentDayShort(s){ if(!s||!s.shipmentDay) return ''; const k=String(s
 function shipmentLine(s){ const d=shipmentDayShort(s); return d?`<div class="hrs" style="color:${AC2()}">${t('restocks','🚚 usually restocks')} ${esc(d)}</div>`:''; }
 // --- Geolocation + radius ---
 let USER_LOC=null, RADIUS=5, LAST_STORES=[];
+let MANUAL_LOC=false; // true after a pin drop / ZIP search — the user chose that spot; GPS rechecks must not override it
 function miBetween(a,b,c,d){ // haversine, miles
   const R=3958.8, rad=x=>x*Math.PI/180;
   const dLat=rad(c-a), dLng=rad(d-b);
@@ -3338,7 +3572,7 @@ async function geocodeSearch(){
   const r=await api('/pub/geocode?'+(isZip?'zip=':'q=')+encodeURIComponent(q));
   if(r&&!r.error&&r.lat!=null){
     // Clear the box so the store list isn't ALSO text-filtered by the ZIP (that filter hid every store).
-    $('search').value=''; setUserLoc(r.lat,r.lng); toast(tf('toast.searchmi','{q} · stores within {n} mi',{q:q,n:RADIUS}),'neutral'); return true;
+    $('search').value=''; MANUAL_LOC=true; setUserLoc(r.lat,r.lng); toast(tf('toast.searchmi','{q} · stores within {n} mi',{q:q,n:RADIUS}),'neutral'); return true;
   }
   if(!isZip){ fetchNear(); } // not a known place — try it as a store/location search
   return false;
@@ -3361,6 +3595,7 @@ function findMe(after){
   if(!navigator.geolocation){ toast(t('toast.noloc','Location not supported on this device')); return; }
   const b=$('findbtn'); if(b)b.classList.add('loading'); toast(t('toast.locating2','Locating stores'),'neutral');
   navigator.geolocation.getCurrentPosition(p=>{
+    MANUAL_LOC=false; // explicit "find me" → GPS is the boss again
     setUserLoc(p.coords.latitude,p.coords.longitude);
     if(typeof after==='function') after();
   }, err=>{ if(b)b.classList.remove('loading'); toast(err.code===1?t('toast.locblocked',"Location blocked. Enable it in your browser settings."):t('toast.locfail','Couldn’t get your location')); }, {enableHighAccuracy:true,timeout:8000});
@@ -3393,7 +3628,7 @@ function mapLegendHtml(){
 }
 function toggleMap(forceOpen){
   const mv=$('mapview'), sl=$('storelist'), btn=$('maptoggle'), lg=$('maplegend');
-  if(mv.style.display==='block' && !forceOpen){ mv.style.display='none'; sl.style.display=''; if(lg)lg.style.display='none'; if(btn){btn.classList.remove('on'); btn.textContent='Map';} return; }
+  if(mv.style.display==='block' && !forceOpen){ mv.style.display='none'; sl.style.display=''; if(lg)lg.style.display='none'; if(btn){btn.classList.remove('on'); btn.textContent=t('map.map','Map');} return; }
   sl.style.display='none'; mv.style.display='block'; if(lg){ lg.innerHTML=mapLegendHtml(); lg.style.display='flex'; } if(btn){btn.classList.add('on'); btn.textContent=t('map.list','List');} track('map_open'); loadMap();
   if(isMaster()){ toast(t('toast.zoomout','Pinch to zoom, tap to drop a pin.'),'neutral'); try{ $('toast').classList.add('oneline'); }catch(_){ } } // dark (not green), forced to one line
 }
@@ -3419,7 +3654,7 @@ function initMap(){
     // tail of a gesture, and when a master DOES drop a pin on an open map, keep their current zoom (don't refit).
     MAP.on('movestart zoomstart dragstart',()=>{ MAP_GESTURING=true; });
     MAP.on('moveend zoomend dragend',()=>{ clearTimeout(window.__mapg); window.__mapg=setTimeout(()=>{ MAP_GESTURING=false; },260); });
-    MAP.on('click',(e)=>{ if(!isMaster() && !hasFeature('any_town')) return; if(MAP_GESTURING) return; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng,true); toast(t('toast.locating2','Locating stores'),'neutral'); });
+    MAP.on('click',(e)=>{ if(!isMaster() && !hasFeature('any_town')) return; if(MAP_GESTURING) return; MANUAL_LOC=true; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng,true); toast(t('toast.locating2','Locating stores'),'neutral'); });
     MAP_FIT_NEXT=true; // first paint → frame the search radius (then it stays put until a new location)
     setTimeout(()=>MAP.invalidateSize(),60); renderMapPins();
   }catch(e){ toast(t('toast.maploading',"Map didn't load. Here's the list.")); toggleMap(); }
@@ -3482,6 +3717,7 @@ function setRadiusIdx(idx){
 }
 function setRadius(mi){ const i=RADII.indexOf(mi); setRadiusIdx(i<0?2:i); }
 function setMode(m){
+  try{ zoneStopPoll(); const _z=$('zones'); if(_z) _z.classList.add('hidden'); }catch(_){ } // zones never lingers under a mode tab (owner 07-10)
   const wasHobby=(MODE==='hobby');
   const wasThrift=(MODE==='thrift');
   MODE=m;
@@ -3496,7 +3732,7 @@ function setMode(m){
     track('mode_switch',{mode:m}); return;
   }
   exitHunt(); HUNT_STEP=''; const _lb0=$('hoblockbar'); if(_lb0) _lb0.style.display='none';
-  $('findstep').textContent = m==='kiosk'?t('find.kiosk','① Find a kiosk'):m==='thrift'?t('find.thrift','① Find a thrift store'):t('find.step','① Find your store');
+  { const fs=$('findstep'); if(fs) fs.textContent = m==='kiosk'?t('find.kiosk','① Find a kiosk'):m==='thrift'?t('find.thrift','① Find a thrift store'):t('find.step','① Find your store'); }
   if(USER_LOC && (wasHobby || wasThrift || m==='thrift' || setMode._wasHobby)) fetchNear(); // hobby/thrift changes -> refetch the right slice
   setMode._wasHobby=false;
   // The call-only bits (category, call button, charge note) hide in kiosk mode.
@@ -3549,7 +3785,7 @@ function storeRowHtml(s){
   const soonTag=notReady?` <span class="soontag">${t('store.soonchip','Coming soon')}</span>`:'';
   return `<div class="store ${sel}${isClosed(s)?' shut':''}${notReady?' coming':''}" onclick="pickStore(${s.id})">
     <div class="ic ${s.logoDark?"lite":""} ${s.logoWide?"widelogo":""}">${storeFace(s)}</div>
-    <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)}${shopTag}${soonTag}</div><div class="lo">${dot}${meta}</div></div>
+    <div style="min-width:0;flex:1"><div class="nm">${inMark}${esc(s.name)}${shopTag}</div><div class="lo">${soonTag?soonTag+' ':''}${dot}${meta}</div></div>
     ${right}</div>`;
 }
 function renderStores(){
@@ -3597,17 +3833,17 @@ function renderStores(){
   const cnt=$('store_count');
   if(cnt) cnt.innerHTML = `<span class="odot"></span>${openCount} ${kiosk?t('count.kiosks','kiosks'):t('count.open','open')}${USER_LOC?` · ${RADIUS} mi`:''}`;
   const emptyMsg=()=>{
-    if(kiosk) return USER_LOC?tf('empty.kiosk',`No kiosks mapped within ${RADIUS} mi yet. They're crowd-built. Bought from one? <a onclick="openReceipt()" style="color:var(--purple);font-weight:700;cursor:pointer">Email a receipt</a> to put it on the map.`,{r:RADIUS}):t('empty.kiosk.tap','Tap the pin to find vending machines near you.');
+    if(kiosk) return USER_LOC?tf('empty.kiosk',`No kiosks mapped within ${RADIUS} mi yet. They're crowd-built. Bought from one? <a onclick="openReceipt()" style="color:var(--purple);font-weight:700;cursor:pointer">Email a receipt</a> to put it on the map.`,{r:RADIUS}):t('empty.search',"No matches. Try a different search, or tap the pin for stores nearby.");
     if(!USER_LOC) return t('empty.search',"No matches. Try a different search, or tap the pin for stores nearby.");
     const nearest=STORES.reduce((m,s)=>{ const d=storeMi(s); return (d!=null&&d<m)?d:m; },1e9);
     // Only show the "not in your area" waitlist if we've searched WIDE (max radius) and still found
     // nothing. At a small radius an empty result just means "widen" — not that we don't serve here.
     if(nearest>50 && RADIUS>=20) return `<div style="text-align:center;padding:6px 4px"><div style="font-size:32px;margin-bottom:6px">📍</div><div class="nm" style="margin-bottom:4px">${t('empty.far.title',"We're not in your area… yet")}</div><div class="meta" style="margin-bottom:12px">${tf('empty.far.sub',`You're early! Be the first to know the moment ${esc(brandName())} launches near you.`,{b:esc(brandName())})}</div><button class="cta" onclick="openWaitlist()">${t('empty.far.cta','🔔 Notify me when you launch here')}</button></div>`;
-    if(MODE==='hobby') return tf('empty.hobby',`No card shops within ${RADIUS} mi. Try a bigger radius.`,{r:RADIUS});
-    if(MODE==='thrift') return tf('empty.thrift',`No thrift stores within ${RADIUS} mi. Try a bigger radius.`,{r:RADIUS});
-    return tf('empty.radius',`No open stores within ${RADIUS} mi. Try a bigger radius.`,{r:RADIUS});
+    if(MODE==='hobby') return tf('empty.hobby',`No card shops within ${RADIUS} mi.<br>Try a bigger radius.`,{r:RADIUS});
+    if(MODE==='thrift') return tf('empty.thrift',`No thrift stores within ${RADIUS} mi.<br>Try a bigger radius.`,{r:RADIUS});
+    return tf('empty.radius',`No open stores within ${RADIUS} mi.<br>Try a bigger radius.`,{r:RADIUS});
   };
-  if(!USER_LOC && !q && !kiosk){
+  if(!USER_LOC && !q){
     // One action — search, or tap to locate. (The old store-type wall stays gone.)
     $('storelist').innerHTML = `
       <button class="findbtn-primary" onclick="findMe()" style="margin-top:2px">${ICO.pin('currentColor')} ${t('find.me','Find my stores')}</button>`;
@@ -3713,8 +3949,8 @@ function renderIcons(){
 function goHome(){ location.href='/'; }
 async function openPage(slug){
   $('pg_title').textContent=''; $('pg_body').innerHTML='…';
-  $('pageOverlay').classList.add('on'); track('page_open',{slug});
-  const r=await api('/p/'+slug+'?partial=1');
+  $('pageOverlay').classList.add('on'); sheetPush('page'); track('page_open',{slug});
+  const r=await api('/p/'+slug+'?partial=1&lang='+encodeURIComponent(LANG||'en'));
   if(!r||r.error||!r.body){ $('pg_body').innerHTML=t('err.generic',"That didn't go through. Give it another try."); return; }
   $('pg_title').textContent=r.title||''; $('pg_body').innerHTML=r.body;
 }
@@ -3983,6 +4219,12 @@ function renderCallSheet(){
   const pe=$('cs_prod'); if(pe) pe.innerHTML = hob
     ? `${t('cs.hobask',"We'll check on pricing and availability for")} ${esc(prod)}`
     : esc(prod);
+  // Time-to-a-human (DD's reach field): set the expectation BEFORE they spend the check.
+  // Evidence-only — unmapped stores show nothing.
+  const re=$('cs_reach'); if(re){ const r=s.reach;
+    if(r&&r.kind==='menu'&&r.seconds>0){ re.textContent=tf('cs.reach.menu','~{n} sec to reach a human',{n:Math.max(15,Math.round(r.seconds/5)*5)}); re.style.display=''; }
+    else if(r&&r.kind==='direct'){ re.textContent=t('cs.reach.direct','This store picks up directly'); re.style.display=''; }
+    else re.style.display='none'; }
 }
 function showCallSheet(){ const el=$('csheet'); if(!el) return; const already=el.classList.contains('on'); renderCallSheet();
   if(!already){ // guarantee the slide UP from the bottom: pin to off-screen, reflow, then release to .on
@@ -4192,10 +4434,11 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
   // Steps list — DROP the first "Calling {store}…" step (the roll-up header carries it, so the store
   // name shows ONCE). Greyed text, no dots; the final connection step turns green ✓ when we got a person.
   if(isV2()){
-    // 6m comp structure: left gradient rail; steps under a collapsible "Ringing the store… · N steps"
-    // header; CONVERSATION eyebrow; FULL-WIDTH labeled cards (STAFF muted / CHECK AI green); the
-    // verdict line closes the block. Same node ids (#convo_body) so translate/repaints keep working.
-    const TONE={in:'#4ADE80',out:'#EF4444',unk:'#FBBF24',soon:'#F59E0B'};
+    // 6m comp structure: left gradient rail (RESTORED 07-10 — owner asked where the timeline went);
+    // steps under the collapsible "Ringing the store… · N steps" header; conversation cards
+    // full-width. Same node ids (#convo_body) so translate/repaints keep working. 'pend' = neutral
+    // gray while the verdict is still being pulled (never the unclear yellow).
+    const TONE={in:'#4ADE80',out:'#EF4444',unk:'#FBBF24',soon:'#F59E0B',pend:'#9CA3AF'};
     const tone=TONE[(status&&status.cls)||'unk']||'#FBBF24';
     const live=finalElapsed==null&&!(status&&status.title);
     const stepRows=steps.slice(1).map((s,idx)=>{
@@ -4217,13 +4460,13 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     return `<div class="ctlv2" style="margin-bottom:22px">
       <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80 100%':`color-mix(in srgb,#4ADE80 35%,${tone}) 60%,${tone} 100%`})"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
       <div style="flex:1;min-width:0">
-        <details open><summary><span style="font-size:15px;font-weight:700">${t('step.ringing','Ringing the store…').replace(/[…\u2026.]+\s*$/,'')}</span><span style="text-align:right"><span style="font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''} ⌃</span>${status&&status.ts?`<span style="display:block;margin-top:2px;font-size:11px;font-weight:600;color:#66666F">${new Date(status.ts).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'short',day:'numeric'})} · ${new Date(status.ts).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}</span>`:''}</span></summary>
+        <details open><summary><span style="font-size:15px;font-weight:700">${t('step.ringing','Ringing the store…').replace(/[…\u2026.]+\s*$/,'')}</span><span style="text-align:right"><span style="font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''} ⌃</span>${(status&&status.ts)||(live&&LIVE_T0)?`<span style="display:block;margin-top:2px;font-size:11px;font-weight:600;color:#66666F">${new Date((status&&status.ts)||LIVE_T0).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'short',day:'numeric'})} · ${new Date((status&&status.ts)||LIVE_T0).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}</span>`:''}</span></summary>
           <div class="ctlv2-steps">${stepEls}</div>
         </details>
-        <div id="convo_body" style="margin-top:12px;display:flex;flex-direction:column;gap:9px">${bubs||(live?`<div class="cs-wait">${t('live.waitperson','Reaching a person…')}</div>`:'')}</div>
+        <div id="convo_body" style="${bubs?'margin-top:12px;':''}display:flex;flex-direction:column;gap:9px">${bubs}</div>
         ${vline}
       </div>
-    </div>`;
+    </div>${(live&&!bubs)?`<div class="cs-wait" style="margin:6px 0 22px 26px">${t('live.waitperson','Reaching a person…')}</div>`:''}`;
   }
   const stepRows = steps.slice(1).map((s,idx)=>{
     const realI=idx+1; let secs=null; // seconds this step took (real timings only — derived steps are all at:0)
@@ -4405,6 +4648,9 @@ async function startCheckLive(){
       // the call is connected → flip to "Answered" and fall STRAIGHT through to pull the transcript
       // (no wasted cycle), instead of sitting on "Ringing…".
       const bs=await api('/pub/bridge/'+r.room);
+      // Twilio says the call was ANSWERED → show "We've connected" NOW, even if the agent hasn't
+      // engaged yet (owner 07-10 call 6: the log sat on "waiting" ~35s into a connected call).
+      if(bs&&bs.callProgress&&/^(in-progress|answered)$/.test(bs.callProgress.status)) liveStage(3);
       if(bs&&bs.conversationId){ cid=bs.conversationId; LIVE_CID=cid; liveStage(3);
         // Only show steps that ACTUALLY happen. We used to auto-advance to "Listening to the menu" on a 3.5s
         // timer to fill the gap — but on a store that answers directly (no IVR) that step never occurred and
@@ -4560,7 +4806,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); }catch(_){ } TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -4580,7 +4826,7 @@ function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _l
 let NAV_VIEW='builder';
 function navMark(view){
   if(view!=='builder') HUNT_STEP=''; // leaving the builder ends the hobby-hunt back-stack
-  try{ document.body.classList.toggle('rview', view==='result'); if(view!=='result'){ ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); } }catch(e){} // result-only top treatment (transparent nav + color wash)
+  try{ document.body.classList.toggle('rview', view==='result'); if(view!=='result'){ ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); } }catch(e){} // result-only top treatment (transparent nav + color wash)
   try{ if(view!=='builder') hideCallSheet(); }catch(e){} // the call sheet belongs to the builder only
   try{ setThemeTone(); renderCallRail(); }catch(e){}
   if(view===NAV_VIEW) return;
@@ -4588,8 +4834,7 @@ function navMark(view){
     const sp=new URLSearchParams(location.search);
     if(view==='history'||view==='success'){ sp.set('v',view); sp.delete('call'); } else sp.delete('v');
     const url=location.pathname+(sp.toString()?'?'+sp.toString():'');
-    if(NAV_VIEW==='builder') history.pushState({v:view},'',url);
-    else history.replaceState({v:view},'',url);
+    history.pushState({v:view},'',url); // every view = one entry: back returns to the LAST view, not home (owner 07-10 item 6)
   }catch(e){}
   NAV_VIEW=view;
 }
@@ -4624,7 +4869,18 @@ function ensureToneLoaded(cls,cid){
     return true;
   }catch(_){ return false; }
 }
+function sheetPush(tag){ try{ if(!(history.state&&history.state.v==='sheet'&&history.state.s===tag)) history.pushState({v:'sheet',s:tag},''); }catch(_){ } }
 window.addEventListener('popstate',(ev)=>{
+  // Back with a sheet open closes THAT sheet and stays put (owner 07-10 item 6).
+  try{
+    const OPEN=[['coOverlay',()=>closeCheckout()],['buyOverlay',()=>closeBuy()],['pageOverlay',()=>closePage()],['watchOverlay',()=>closeWatch()],['scheduleOverlay',()=>closeSchedule()],['storeReqOverlay',()=>closeStoreReq()]];
+    for(const [id,fn] of OPEN){ const o=$(id); if(o&&o.classList.contains('on')){ try{ fn(); }catch(_){ o.classList.remove('on'); } return; } }
+  }catch(_){ }
+  // Zones: back leaves the zones screen for wherever you were; forward re-enters it.
+  try{ const z=$('zones');
+    if(ev&&ev.state&&ev.state.v==='zones'){ if(z&&z.classList.contains('hidden')) openZones(); return; }
+    if(z&&!z.classList.contains('hidden')){ zoneStopPoll(); z.classList.add('hidden'); const sp0=new URLSearchParams(location.search); if(!sp0.get('call')&&!sp0.get('v')){ backToBuilder(); return; } }
+  }catch(_){ }
   // History-driven account nav: back AND forward walk the sheet's sections; leaving the sheet's
   // states closes it; a check opened FROM the sheet returns to its tab.
   try{ const st=ev&&ev.state, ov=$('acctOverlay'), open=ov&&ov.classList.contains('on');
@@ -4673,6 +4929,8 @@ async function sendFeedback(v){
 // Status-detail formatting rule: a new sentence starts a new line — but a single sentence never
 // wraps across two lines on its own (each sentence is its own non-wrapping line).
 function nl2(s){ if(typeof isV2==='function'&&isV2()) return String(s==null?'':s); return String(s==null?'':s).replace(/([.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡])/g,'$1<br>'); }
+// Verdict-sub law (copy guide): each sentence on its own line. Skips strings that brought their own <br>.
+function nlSent(s){ s=String(s==null?'':s); if(s.includes('<br')) return s; return s.replace(/([.!?…])\s+(?=[A-ZÁÉÍÓÚÑ¿¡])/g,'$1<br>'); }
 // Registry/owner-written notes can use a {product} token — we fill it with the live product name (bolded),
 // so the owner writes the message in Admin and it still reads "…check if Pokémon was in stock…".
 function fillP(s,o,tn){ try{ const oc=(o&&Array.isArray(o.cats)&&o.cats[0])||(o&&o.category)||''; // the CALL's own saved category — beats a generic 'it' when the picker state isn't loaded (deep link / server-history reopen)
@@ -4713,6 +4971,7 @@ function pricesFoundHTML(o){ // cross-store cheapest-first list for the checked 
     return `<div class="ph-row${isBest?' best':''}"><span class="ph-st">${esc(r.store||'—')}${isBest?` <span class="besttag">${t('ph.best','BEST')}</span>`:''}${r.inStock?'':` <span class="ph-oos">${t('ph.oos','out')}</span>`}</span><span class="ph-pr">${money(r.cents)}</span></div>`; }).join('');
   return `<div class="ph-panel"><div class="ph-h">${t('ph.title','Prices found')}</div>${li}</div>`; }
 function showResult(o, cid){
+  try{ if(o && !o.ts && LIVE_T0) o._t0=LIVE_T0; }catch(_){ } // fresh call: server ts may lag — use the start time we clocked locally
   try{ exitHunt(); }catch(_){ }
   try{ recordResultPrice(o); }catch(_){ }
   resultCacheSet(cid,o);
@@ -4730,7 +4989,7 @@ function showResult(o, cid){
   let cls='unk', big='📵', title=t('v.noanswer','Nobody answered'), note=t('note.unreached',"We couldn't reach anyone at the store. No charge. Try again in a bit.");
   // Instant-flip placeholder: the call just ended and we flipped here immediately with the streamed
   // conversation; the real verdict is still being pulled and will repaint over this in a moment.
-  if(o.status==='pending'){ cls='unk'; big='⏳'; title=t('v.getting','Getting the answer…'); note=t('note.getting',"The call just finished. Pulling the result."); }
+  if(o.status==='pending'){ cls='pend'; big='⏳'; title=t('v.getting','Getting the answer…'); note=t('note.getting',"The call just finished. Pulling the result."); } // 'pend' = NEUTRAL GRAY while the verdict is pulled — never the yellow "unclear" look (owner 07-10 call 2)
   // Statuses registry first — the owner-edited single source of truth (with ES variants by key).
   else if(o.statusKey && RSTATUSES[o.statusKey]){
     const s=RSTATUSES[o.statusKey];
@@ -4828,7 +5087,9 @@ function showResult(o, cid){
     const truck='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35a1 1 0 0 0-.78-.38H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>';
     const cam='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></svg>';
     const tileBtn=(ic,ti,su,fn)=>`<button class="is1t" onclick="${fn}"><span class="tl">${ic}</span><span><span class="a">${esc(ti)}</span><span class="b">${esc(su)}</span></span></button>`;
-    return (F.shareCards!==false?`<button class="smbtn is1s" onclick="shareFind()"><span style="display:inline-flex;align-items:center;gap:9px">${up}<span>${t('res.share','Share your score')}</span></span>${arr}</button>`:'')
+    void arr; // retired (owner 07-10 items 53-56): one arrow only — the share icon, far right, pointing up
+    const upR='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg>';
+    return (F.shareCards!==false?`<button class="smbtn is1s" onclick="shareFind()"><span>${t('res.share','Share your score')}</span>${upR}</button>`:'')
       +`<div class="is1g">${F.driverHandoff!==false?tileBtn(truck,dT,dS,'openDriverDemo()'):''}${F.community?tileBtn(cam,cT,cS,'openScorePop()'):''}</div>`;
   })() : [
     F.shareCards!==false?`<button class="act2 gr" onclick="shareFind()">${ICO.mega('currentColor')} ${t('res.share','Share your score')}</button>`:'',
@@ -4906,20 +5167,24 @@ function showResult(o, cid){
   // stop here; the fresh load re-renders this exact result with the right bar. Pending never qualifies.
   if(o.status && o.status!=='pending' && ensureToneLoaded(cls,cid)) return;
   // Tone the body-level top wash for this verdict (the wash itself is CSS on body.rview::before).
-  ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c));
+  ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c));
   document.body.classList.add('rv-'+cls);
   dropBakedTone(); // first paint is over — the rv-* system owns the tone from here
   try{ setThemeTone(); }catch(e){} // tint the browser status-bar strip to this verdict's tone (in-app fallback)
   // Unclear verdict → point them at the transcript AND ask for a quick one-tap label. That label is the
   // training signal: it tells us what the answer REALLY was on the calls our consensus couldn't call.
   // Verdict-specific terminus line at the bottom of the timeline (distinct from the big verdict title).
+  // "Restock confirmed": only append "· {day}" when the clerk named a REAL day — a generic "soon"
+  // adds nothing, so drop the word and the dot (owner 07-10 call 3).
+  const _rawDay=String(o.shipmentDay||'').trim().toLowerCase();
   const termLabel = cls==='in' ? t('term.in',"In stock.")
     : cls==='out' ? t('term.out','Not in stock')
-    : cls==='soon' ? tf('term.soon','Restock confirmed · {d}',{d:esc(fmtShipDay(o.shipmentDay)||'soon')})
-    : cls==='unk' ? t('term.unk','No clear answer') : '';
+    : cls==='soon' ? ((!_rawDay||_rawDay==='soon'||_rawDay==='pronto') ? t('term.soon2','Restock confirmed') : tf('term.soon','Restock confirmed · {d}',{d:esc(fmtShipDay(o.shipmentDay))}))
+    : cls==='unk' ? t('term.unk','No clear answer')
+    : cls==='pend' ? t('term.getting','Getting result…') : '';
   const showFeedback = o.status==='completed' && cls==='unk' && !!o.transcript && cid && !String(cid).startsWith('local:');
   // New unclear copy: name the product, hand the call to the human (the transcript is right below).
-  if(showFeedback){ note = t('note.fbk','We couldn’t quite make out the answer. Read the convo and tell us what you think.'); }
+  if(showFeedback){ note = t('note.fbk','We couldn’t quite make out the answer.<br>Read the convo and tell us what you think.'); }
   // Feedback = an end-of-call survey (the four statuses), shown ABOVE the CTA on an unclear verdict.
   // No copy inside the poll box itself — the detailed status message above already says what to do.
   const feedbackBlock = showFeedback ? `
@@ -4936,7 +5201,8 @@ function showResult(o, cid){
       <div class="rnav" id="rnav"></div>
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
       <div class="rtitle2">${esc(showFeedback ? t('v.unclear2','Couldn’t tell') : vTitle)}</div>
-      ${note?`<div class="rsub">${nl2(fillP(note,o,cls))}</div>`:''}
+      ${(o.ts||o._t0)?`<div class="rwhen">${esc(new Date(o.ts||o._t0).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'short',month:'short',day:'numeric'}))} · ${esc(new Date(o.ts||o._t0).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'}))}</div>`:''}
+      ${note?`<div class="rsub">${nlSent(fillP(note,o,cls))}</div>`:''}
       ${priceLineHTML(o)}
       ${breakdown}
     </div>
@@ -5092,7 +5358,7 @@ async function toggleTranslate(){
 function loadHist(){ try{ return JSON.parse(localStorage.getItem('runnr_history')||'[]'); }catch{ return []; } }
 // #17 — before placing, remind me when I last called this store + the outcome; confirm a re-call within 24h.
 function lastCallFor(storeId){ return loadHist().find(e=>e.storeId===storeId&&e.ts)||null; }
-function callOutcomeLabel(e){ return e.confirmed===true?t('pre.had','they had it in stock'):e.confirmed===false?t('pre.notin',"they didn't have it"):t('pre.unclear','no clear answer'); }
+function callOutcomeLabel(e){ return e.confirmed===true?t('pre.had','in stock'):e.confirmed===false?t('pre.notin','not in stock'):t('pre.unclear','no clear answer'); }
 async function preCallGate(){
   const e=lastCallFor(SEL_STORE&&SEL_STORE.id); if(!e) return true;
   const nm=splitStoreName(SEL_STORE.name||''); const headline=[nm.base,nm.branch].filter(Boolean).join(' '); const base=nm.base;
@@ -5101,7 +5367,7 @@ async function preCallGate(){
     const logoHTML=`<span class="railchip${railClass({storeId:SEL_STORE.id,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}" style="display:grid">${railFace({storeId:SEL_STORE.id,storeName:SEL_STORE.name,logoUrl:SEL_STORE.logoUrl,logoWide:SEL_STORE.logoWide,logoDark:SEL_STORE.logoDark})}</span>`;
     return await confirmAgain({store:headline, logoHTML, body:tf('pre.again.body','{o} {a}. Check again?',{o:String(callOutcomeLabel(e)||'').toLowerCase(),a:timeAgo(e.ts)})});
   }
-  toast(tf('pre.note','You checked {s} {a} · {o}',{s:base,a:ago,o:callOutcomeLabel(e)}),'neutral');
+  toast(tf('pre.note','Checked {s} {a} · {o}',{s:base,a:ago,o:callOutcomeLabel(e)}),'neutral');
   await new Promise(r=>setTimeout(r,2200));
   return true;
 }
@@ -5171,6 +5437,8 @@ async function ensureHistCache(){
       // re-stamped by the old repaint bug (fixed 2026-07-02) — or that were saved nameless.
       if(s.storeName&&e.storeName!==s.storeName){ e.storeName=s.storeName; e.storeId=s.storeId; e.logoUrl=s.logoUrl||e.logoUrl; fixed=true; }
       else if(s.storeName&&e.storeId==null){ e.storeId=s.storeId; fixed=true; }
+      if(!e.logoUrl&&s.logoUrl){ e.logoUrl=s.logoUrl; e.logoWide=s.logoWide; e.logoDark=s.logoDark; fixed=true; } // old rows saved before we kept the logo
+      if(!e.location&&(s.location||s.address)){ e.location=s.location||s.address; fixed=true; }
       if(s.ts&&e.ts&&Math.abs(e.ts-s.ts)>15*60000){ e.ts=s.ts; fixed=true; } });
     if(fixed) localStorage.setItem('runnr_history', JSON.stringify(h.slice(0,60)));
     const seen=new Set(h.map(x=>x.cid));
@@ -5212,7 +5480,7 @@ function showTodayLanding(forceCal){
   stopLiveTimers(); if($('hangup_btn'))$('hangup_btn').style.display='none';
   ['live','builder','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');});
   document.body.classList.remove('fabbed');
-  ['rv-in','rv-out','rv-soon','rv-unk'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); // neutral (dark) — no verdict tone
+  ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); // neutral (dark) — no verdict tone
   RAIL_F.date=''; RAIL_F.store=''; RAIL_F.tone=''; RAIL_CID=null; LASTRES=null; RAIL_CAL_M=null;
   // Logged out (e.g. a freshly-installed Home-Screen app has its OWN empty storage) → your checks live in
   // your account, so show a clear Sign-in CTA instead of an empty "No checks today" that looks broken.
@@ -5264,7 +5532,7 @@ async function openHistEntry(e){
   // A never-connected call (synthetic "local:" id) has no server transcript — rebuild its verdict from
   // the fields we saved at call time and show it directly (no /pub/result fetch).
   if(String(e.cid).startsWith('local:')){
-    showResult({ status:e.status, confirmed:e.confirmed, soldOut:!!e.soldOut, doesNotSell:!!e.doesNotSell, shipmentDay:e.shipmentDay||null, statusKey:e.statusKey||null, transcript:'', summary:'', cats:e.cats||[], categoryResults:e.categoryResults||null, savedSteps:e.steps||null }, e.cid);
+    showResult({ status:e.status, confirmed:e.confirmed, soldOut:!!e.soldOut, doesNotSell:!!e.doesNotSell, shipmentDay:e.shipmentDay||null, statusKey:e.statusKey||null, transcript:'', summary:'', cats:e.cats||[], categoryResults:e.categoryResults||null, savedSteps:e.steps||null, ts:e.ts||null }, e.cid);
     return;
   }
   // Replaying a past call — go straight to the transcript. Never flash the live "calling" view.
@@ -5273,7 +5541,7 @@ async function openHistEntry(e){
   // screen with ZERO network wait; the /pub/result fetch below only fills in the full transcript.
   const cached=resultCacheGet(e.cid);
   if(cached){ cached.cats=e.cats||cached.cats; if(!cached.categoryResults&&e.categoryResults) cached.categoryResults=e.categoryResults; if(e.steps) cached.savedSteps=e.steps; showResult(cached, e.cid); }
-  else { showResult({ status:e.status, confirmed:e.confirmed, soldOut:!!e.soldOut, doesNotSell:!!e.doesNotSell, shipmentDay:e.shipmentDay||null, statusKey:e.statusKey||null, transcript:'', summary:'', cats:e.cats||[], categoryResults:e.categoryResults||null, savedSteps:e.steps||null }, e.cid); }
+  else { showResult({ status:e.status, confirmed:e.confirmed, soldOut:!!e.soldOut, doesNotSell:!!e.doesNotSell, shipmentDay:e.shipmentDay||null, statusKey:e.statusKey||null, transcript:'', summary:'', cats:e.cats||[], categoryResults:e.categoryResults||null, savedSteps:e.steps||null, ts:e.ts||null }, e.cid); }
   // No spinner — we already painted. Fetch the full transcript in the background and re-render if richer.
   const o=await appApi('/pub/result/'+encodeURIComponent(e.cid));
   if(!o||o.error||o.status==='in_progress'){ if(cached||e.status) return; HIST_BAD.add(e.cid); HIST_CACHE=HIST_CACHE.filter(x=>x.cid!==e.cid); toast(t('toast.callgone',"That check is no longer available")); openHistory(); return; }
@@ -5331,7 +5599,7 @@ function acctTab(which,fromPop){
     const total=histList().filter(e=>e.cid).length;
     const histSub=member?tf('hist.count','{n} checks in {m}',{n:mrun,m:mon}):(total===1?t('acct.run1','1 check run'):tf('acct.runN','{n} checks run',{n:total}));
     const arr2='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>';
-    const fromP=(typeof tiers==='function'&&tiers()[0])?tierPrice(tiers()[0].cents)+t('plan.mo','/mo'):'';
+    const fromP=(typeof tiers==='function'&&tiers()[0])?tierPrice(tiers()[0])+t('plan.mo','/mo'):''; // tierPrice takes the tier object — .cents made this '$NaN/mo'
     const caps=member
       ?`<button class="capsW" onclick="closeAccount();backToBuilder()"><span>${t('acct.runcheck','Run a check')}</span>${arr2}</button>`
       :`<button class="capsW" onclick="ACCT_RETURN='overview';closeAccount();openBuy()"><span style="display:inline-flex;align-items:center;gap:9px"><svg width="18" height="18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${t('acct.upgrade2','Upgrade')} · ${t('acct.from','from')} ${esc(fromP)}</span></span>${arr2}</button>`;
@@ -5341,8 +5609,7 @@ function acctTab(which,fromPop){
       row(`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="stroke:${AC2}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`,t('acct.row.zones','Manage Zones'),hasFeature('zone_sweeps')?t('acct.row.zones.sub','Check a whole area in one tap.'):t('acct.row.zones.locked','Check+ · check every store near you at once'),"ACCT_RETURN='overview';closeAccount();openZones()")+
       row(gift,t('acct.row.earn','Earn free checks'),t('acct.row.earn.sub','4 ways. Open to everyone.'),"acctTab('earn')")+
       `<div id="acctScheds"></div>`+
-      caps+
-      `<button onclick="doSignOut()" style="display:block;width:100%;margin-top:16px;background:none;border:0;text-align:center;font-size:13px;font-weight:700;color:#7C7C88;cursor:pointer">${t('acct.signout','Sign out')}</button>`;
+      caps; // Sign out moved to the sheet header (upper right, owner 07-10)
     renderAcctScheds(); if(!(window.SCHEDS&&window.SCHEDS.length)) try{ loadSchedules(); }catch(_){ }
     return;
   }
@@ -5368,12 +5635,12 @@ function acctTab(which,fromPop){
     const TONECOL={in:'#4ADE80',out:'#FF8080',soon:'#F5B301',unk:'#9CA3AF'};
     const cell=(nv,lb,tn)=>`<div onclick="actTone('${tn}')" style="text-align:center;cursor:pointer;${ACT_TONE===tn?'background:rgba(255,255,255,.05);border-radius:12px;':''}padding:2px 0"><div style="font-size:18px;font-weight:800;color:${ACT_TONE&&ACT_TONE!==tn?'rgba(255,255,255,.35)':(TONECOL[tn]||'#FFF')}">${nv}</div><div style="margin-top:2px;font-size:9.5px;font-weight:700;letter-spacing:.12em;color:#8A8A96">${lb}</div></div>`;
     const vlabel=e=>{ const tn=railTone(e); return tn==='in'?t('v.in','In stock!'):tn==='out'?t('v.out','Not in stock'):tn==='soon'?t('v.soon','Restock incoming!'):t('fbk.unsure','Unclear'); };
-    const agoTx=e=>{ try{ return agoStr(e.ts); }catch(_){ return ''; } };
+    const agoTx=e=>{ try{ return agoStr(Math.floor(e.ts/1000)); }catch(_){ return ''; } }; // agoStr wants seconds — ms made every call 'just now'
     const lastPool=(ACT_TONE?scope.filter(e=>railTone(e)===ACT_TONE):hist);
     const last=lastPool.slice(0,ACT_TONE?6:3).map(e=>`<button onclick="ACCT_RETURN='activity';closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:11px;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:9px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left">
       <span style="width:40px;height:40px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${e.logoUrl?`<img src="${esc(e.logoUrl)}" style="width:32px;height:32px;object-fit:contain" alt="">`:`<span style="font-size:11px;font-weight:900;color:#CDCDD8">${esc((railBase(e.storeName)||'?').slice(0,2).toUpperCase())}</span>`}</span>
       <span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span style="display:block;margin-top:2px;font-size:11.5px;font-weight:600;color:#8A8A96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.location||e.address||'')}</span></span>
-      <span style="text-align:right;flex:0 0 auto"><span style="display:block;font-size:12.5px;font-weight:700;color:rgba(255,255,255,.7)">${vlabel(e)}</span><span style="display:block;margin-top:2px;font-size:11px;font-weight:600;color:#8A8A96">${agoTx(e)}</span></span>
+      <span style="flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px">${v2StatusChip(railTone(e),22)}<span style="font-size:11px;font-weight:600;color:#8A8A96">${agoTx(e)}</span></span>
     </button>`).join('');
     const arrow=(d,dis)=>`<button ${dis?'disabled':''} onclick="actWeek(${d})" style="flex:0 0 auto;width:26px;height:26px;border:0;border-radius:9px;background:${dis?'rgba(255,255,255,.04)':'linear-gradient(180deg,#31313A 0%,#26262C 100%)'};color:${dis?'#4A4A52':'#CDCDD8'};display:flex;align-items:center;justify-content:center;cursor:${dis?'default':'pointer'};box-shadow:${dis?'none':'0 6px 10px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)'}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="${d<0?'M15 18l-6-6 6-6':'M9 18l6-6-6-6'}"/></svg></button>`;
     const calico='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>';
@@ -5721,7 +5988,7 @@ function hobbyPickProduct(pi){
   const _bl=$('builder'); if(_bl) _bl.classList.remove('hidden');
   document.querySelectorAll('.modetab').forEach(b=>b.classList.toggle('on',b.dataset.mode==='hobby'));
   const cc=$('catcard'); if(cc) cc.style.display='none';
-  $('findstep').textContent=t('find.hobbystore','① Now pick a card shop');
+  { const fs=$('findstep'); if(fs) fs.textContent=t('find.hobbystore','① Now pick a card shop'); }
   // Locked-product banner above the shop list (no toast — owner-averse; this gives lasting context).
   let lb=$('hoblockbar');
   if(!lb){ lb=document.createElement('div'); lb.id='hoblockbar'; const sl=$('storelist'); if(sl&&sl.parentElement) sl.parentElement.insertBefore(lb,sl); }
@@ -5742,24 +6009,31 @@ let ZONES={ sel:new Set(), storeById:new Map(), editId:null, radius:5, run:null,
 function zHideAll(){ try{ exitHunt(); }catch(_){ } try{ if(typeof HUNT_STEP!=='undefined') HUNT_STEP=''; }catch(_){ }
   try{ document.body.classList.remove('rview','rv-in','rv-out','rv-soon','rv-unk'); dropBakedTone(); }catch(_){ } // drop the result-view verdict wash (else a red "out of stock" bg bleeds under zones)
   ['builder','live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); } // exitHunt: else body.huntmode keeps #hobby (era/set art) visible under the zones view
-function zShow(){ const z=$('zones'); if(z){ z.classList.remove('hidden'); } }
+function zShow(){ const z=$('zones'); if(z){ z.classList.remove('hidden'); } const w=$('hcalwrap'); if(w) w.style.display='none'; try{ document.body.classList.add('zoning'); }catch(_){ } }
 function zoneStopPoll(){ if(ZONES.poll){ clearInterval(ZONES.poll); ZONES.poll=null; } }
 function backFromZones(){ zoneStopPoll(); const z=$('zones'); if(z) z.classList.add('hidden'); try{ backToBuilder(); }catch(_){ } try{ openAccount(); }catch(_){ } }
 const zHead=(title,back)=>`<div class="zhead"><button class="zback" onclick="${back||'backFromZones()'}" aria-label="Back">‹</button><b>${esc(title)}</b><span style="width:34px"></span></div>`;
+// Locked frame header (owner 07-11 comp): back · centered title · credits pill. Same on every zone screen.
+const ZCRED_ICO='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex:0 0 auto"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function zCredits(){ try{ if(ACCOUNT&&(ACCOUNT.comp||ACCOUNT.credits==null&&ACCOUNT.subscription==='active')) return '∞'; const c=ACCOUNT?ACCOUNT.credits:0; return (c==null?0:c); }catch(_){ return 0; } }
+const zFrameHead=(title,back)=>`<div class="zf-head"><div class="zf-hrow"><button class="zf-back" onclick="${back||'backFromZones()'}" aria-label="Back">‹</button><div class="zf-title">${esc(title)}</div><span class="zf-cred">${ZCRED_ICO}${zCredits()}</span></div></div>`;
+const ZKEBAB='<svg width="20" height="20" viewBox="0 0 24 24" fill="#8A8A96"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg>';
+const ZGOARR='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15"></path><path d="M13 6l6 6-6 6"></path></svg>';
 async function openZones(){
   if(!isAuthed()){ try{ openAuth(); }catch(_){ } return; }
   zHideAll(); zShow();
+  try{ if(!(history.state&&history.state.v==='zones')) history.pushState({v:'zones'},''); }catch(_){ } // back leaves zones for the previous view (item 6)
   if(!hasFeature('zone_sweeps')){ zonesUpsell(); return; }
   window.scrollTo({top:0}); renderZonesList();
 }
 function zonesUpsell(){
-  $('zones').innerHTML=`<div class="zwrap">${zHead(t('zones.title','Manage Zones'))}
-    <div class="card" style="text-align:center;padding:28px 20px">
+  $('zones').innerHTML=`<div class="zframe">${zFrameHead(t('zones.title','My Zones'))}
+    <div class="zf-scroll"><div class="card" style="text-align:center;padding:28px 20px;margin-top:6px">
       <div style="font-size:36px">🗺️</div>
       <div style="font-size:19px;font-weight:800;margin-top:10px;letter-spacing:-.3px">${t('zones.up.title','Check every store near you in one tap')}</div>
       <div style="color:#8A8A96;font-size:13.5px;margin-top:9px;line-height:1.55">${t('zones.up.sub','Save a group of stores as a zone, then check them all at once and watch every result live. A Check+ member perk.')}</div>
       <button class="cta" style="margin-top:20px;width:100%" onclick="zoneStopPoll();$('zones').classList.add('hidden');backToBuilder();ACCT_RETURN='';openBuy()">${t('zones.up.cta','See Check+ plans')} →</button>
-    </div></div>`;
+    </div></div></div>`;
 }
 // ---- Screen B — My Zones list ----
 async function renderZonesList(){
@@ -5768,41 +6042,70 @@ async function renderZonesList(){
   // Paint the cached list instantly (no spinner) when we've loaded zones before this session, then refresh
   // silently underneath — the /app/zones round-trip is the slow part; the user shouldn't stare at loaddots.
   if(Array.isArray(ZONES.list)) zonePaintList(ZONES.list);
-  else z.innerHTML=`<div class="zwrap">${zHead(t('zones.title','Manage Zones'))}<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:40px 0"><span></span><span></span><span></span></div></div>`;
+  else z.innerHTML=`<div class="zframe">${zFrameHead(t('zones.title','My Zones'))}<div class="zf-scroll"><div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:40px 0"><span></span><span></span><span></span></div></div></div>`;
   let list=null; try{ const r=await appApi('/app/zones'); if(Array.isArray(r)) list=r; else if(r&&Array.isArray(r.zones)) list=r.zones; }catch(_){ }
   if(list==null){ if(!Array.isArray(ZONES.list)) zonePaintList([]); return; } // network hiccup — keep whatever's on screen
   ZONES.list=list; zonePaintList(list);
 }
+function zoneFace(st){
+  return `<div class="zc-face">${st.logoUrl?`<img loading="lazy" decoding="async" src="${esc(st.logoUrl)}" alt="" style="width:100%;height:100%;object-fit:contain;padding:${st.logoWide?'22%':'17%'}">`:`<span style="font-size:11px;font-weight:900;color:#CDCDD8">${esc((st.name||'?').split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase())}</span>`}</div>`;
+}
 function zonePaintList(list){
   const z=$('zones'); if(!z) return;
+  const CHK='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4.5 4.5L19 7"></path></svg>';
   const cards=(list||[]).map(zn=>{
-    const n=zn.checkCount!=null?zn.checkCount:(zn.stores?zn.stores.length:0);
-    const last=zn.lastRun?`<div class="zlast">${t('zones.last','last check')} ${esc(zAgo(zn.lastRun.at))} · ${zn.lastRun.inStock||0} ${t('zones.instock','in stock')}</div>`:`<div class="zlast">${t('zones.never','not checked yet')}</div>`;
-    return `<div class="card zcard">
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="flex:1;min-width:0"><div class="znm">${esc(zn.name||t('zones.untitled','Untitled zone'))}</div><div class="zsub">${n} ${n===1?t('zones.store','store'):t('zones.stores','stores')}</div>${last}</div>
-        <button class="zmore" onclick="zoneMenu(${zn.id},event)" aria-label="Edit">⋯</button>
-      </div>
-      <button class="cta sm" style="margin-top:12px;width:100%" onclick="zoneCheckAll(${zn.id})">${t('zones.checkall','Check all')}${zn.checkCents!=null?' · '+money(zn.checkCents):''} →</button>
+    const stores=zn.stores||[]; const n=zn.checkCount!=null?zn.checkCount:stores.length;
+    const inN=zn.lastRun?(zn.lastRun.inStock||0):0;
+    const pill=zn.lastRun
+      ? (inN>0?`<span class="zc-pill in">${CHK}${inN} ${t('zones.instock','in stock')}</span>`:`<span class="zc-pill none">${t('zones.checked','Checked')}</span>`)
+      : `<span class="zc-pill none">${t('zones.never','Not checked yet')}</span>`;
+    const when=`${n} ${n===1?t('zones.store','store'):t('zones.stores','stores')}${zn.lastRun?' · '+esc(zAgo(zn.lastRun.at)):''}`;
+    const faces=stores.slice(0,4).map(zoneFace).join('')+(stores.length>4?`<div class="zc-more">+${stores.length-4}</div>`:'');
+    return `<div class="zc">
+      <div class="zc-top"><div class="zc-nm">${esc(zn.name||t('zones.untitled','Untitled zone'))}</div><button class="zc-kebab" onclick="zoneMenu(${zn.id},event)" aria-label="Zone actions">${ZKEBAB}</button></div>
+      <div class="zc-meta">${pill}<span class="zc-when">${when}</span></div>
+      ${faces?`<div class="zc-faces">${faces}</div>`:'<div style="height:14px"></div>'}
+      <div class="zc-row"><button class="zc-go" onclick="zoneCheckAll(${zn.id})"><span>${t('zones.checkzone','Check this zone')}${ZGOARR}</span></button></div>
     </div>`;
   }).join('');
-  z.innerHTML=`<div class="zwrap">${zHead(t('zones.title','Manage Zones'))}
-    ${cards||`<div class="zempty">${t('zones.empty','Save the stores near you as a zone, then check them all in one tap.')}</div>`}
-    <button class="cta" style="margin-top:16px;width:100%" onclick="zoneNew()">＋ ${t('zones.new','New zone')}</button></div>`;
+  const foot=`<div class="zfooter"><div class="fl"><a onclick="openSuccess()">${t('foot.success','Scores')}</a><a onclick="openPage('about')">${t('foot.about','About')}</a><a onclick="openPage('faq')">${t('foot.faq','FAQ')}</a><a onclick="openPage('contact')">${t('foot.contact','Contact')}</a><a onclick="openPage('terms')">${t('foot.terms','Terms')}</a><a onclick="openPage('privacy')">${t('foot.privacy','Privacy')}</a></div><div style="font:600 11px Inter;color:#5C5C68">© <span>${new Date().getFullYear()}</span> High Science LLC</div></div>`;
+  z.innerHTML=`<div class="zframe">${zFrameHead(t('zones.title','My Zones'))}
+    <div class="zf-scroll">
+      <button class="znew" onclick="zoneNew()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg><span>${t('zones.new','New zone')}</span></button>
+      ${cards||`<div class="zempty">${t('zones.empty','Save the stores near you as a zone, then check them all in one tap.')}</div>`}
+      ${foot}
+    </div></div>`;
 }
 function zAgo(at){ try{ const s=Math.max(1,Math.floor((Date.now()-new Date(at).getTime())/1000)); if(s<3600) return Math.floor(s/60)+'m'; if(s<86400) return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; }catch(_){ return ''; } }
+// One pop-up shell for every zone dialog — the SAME big-card modal the rest of the app uses
+// (radius 26, 20/900 title, raised keys, stroke icons; owner 07-10: no native prompt/confirm, no emoji).
+function zPop(html){ let ov=$('zmenuOv');
+  if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='zmenuOv'; ov.onclick=e=>{ if(e.target===ov) ov.classList.remove('on'); }; document.body.appendChild(ov); }
+  ov.innerHTML=`<div class="modal" style="max-width:340px;text-align:left">${html}</div>`; ov.classList.add('on'); }
+function zPopClose(){ const ov=$('zmenuOv'); if(ov) ov.classList.remove('on'); }
+const Z_ROWBTN='display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border:0;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;font-size:15px;font-weight:700;cursor:pointer;text-align:left';
+const Z_ICO_PEN='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>';
+const Z_ICO_TRASH='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF7B7B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+const zTile=ic=>`<span style="width:34px;height:34px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ic}</span>`;
 function zoneMenu(id,ev){ if(ev)ev.stopPropagation();
   const zn=((ZONES.list||[]).find(x=>x.id===id))||{};
-  let ov=$('zmenuOv');
-  if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='zmenuOv'; ov.onclick=e=>{ if(e.target===ov) ov.classList.remove('on'); }; document.body.appendChild(ov); }
-  ov.innerHTML=`<div class="modal" style="max-width:340px;text-align:left"><h3 style="margin:2px 0 4px">${esc(zn.name||t('zones.untitled','Untitled zone'))}</h3>
-    <div class="meta" style="margin-bottom:14px">${t('zones.menu.sub','Rename or delete this zone.')}</div>
-    <button class="cta sm" style="width:100%;margin-bottom:10px" onclick="$('zmenuOv').classList.remove('on');zoneRenamePrompt(${id})">${t('zones.rename','Rename')}</button>
-    <button class="cta sm" style="width:100%;background:rgba(239,68,68,.12);border:1.5px solid rgba(239,68,68,.4);color:#FF8A8A;box-shadow:none" onclick="$('zmenuOv').classList.remove('on');zoneDeleteConfirm(${id})">🗑 ${t('zones.delete','Delete zone')}</button></div>`;
-  ov.classList.add('on');
+  zPop(`<h3 style="margin:2px 0 14px;font-size:20px;font-weight:900;letter-spacing:-.4px">${esc(zn.name||t('zones.untitled','Untitled zone'))}</h3>
+    <button style="${Z_ROWBTN};margin-bottom:10px" onclick="zoneRenamePrompt(${id})">${zTile(Z_ICO_PEN)}${t('zones.rename','Rename')}</button>
+    <button style="${Z_ROWBTN}" onclick="zoneDeleteConfirm(${id})">${zTile(Z_ICO_TRASH)}<span style="color:#FF8A8A">${t('zones.delete','Delete zone')}</span></button>`);
 }
-function zoneRenamePrompt(id){ const cur=((ZONES.list||[]).find(x=>x.id===id)||{}).name||''; const nm=prompt(t('zones.rename.ask2','New name for this zone:'),cur); if(nm==null) return; const v=nm.trim(); if(!v){ toast(t('zones.needname','Give the zone a name.')); return; } zoneRename(id,v); } // blank = cancel, NEVER delete
-function zoneDeleteConfirm(id){ if(confirm(t('zones.delete.ask','Delete this zone? This can\'t be undone.'))) zoneDelete(id); }
+function zoneRenamePrompt(id){
+  const cur=((ZONES.list||[]).find(x=>x.id===id)||{}).name||'';
+  zPop(`<h3 style="margin:2px 0 14px;font-size:20px;font-weight:900;letter-spacing:-.4px">${t('zones.rename','Rename')}</h3>
+    <input id="zrn_in" value="${esc(cur)}" maxlength="40" style="width:100%;box-sizing:border-box;background:#1B1B20;border:0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;padding:14px 16px;font-size:16px;font-weight:600;color:#fff;margin-bottom:14px">
+    <button class="cta" style="width:100%" onclick="(function(){const v=($('zrn_in').value||'').trim(); if(!v){ toast(t('zones.needname','Name your zone first'),'neutral'); return; } zPopClose(); zoneRename(${id},v);})()">${t('zones.rename.save','Save name')}</button>`);
+  setTimeout(()=>{ try{ $('zrn_in').focus(); $('zrn_in').select(); }catch(_){ } },60);
+}
+function zoneDeleteConfirm(id){
+  zPop(`<h3 style="margin:2px 0 8px;font-size:20px;font-weight:900;letter-spacing:-.4px">${t('zones.delete','Delete zone')}</h3>
+    <div class="meta" style="margin-bottom:16px">${t('zones.delete.sure','This can\'t be undone.')}</div>
+    <button style="${Z_ROWBTN};justify-content:center;margin-bottom:10px" onclick="zPopClose();zoneDelete(${id})"><span style="color:#FF8A8A">${t('zones.delete.yes','Yes, delete it')}</span></button>
+    <button style="${Z_ROWBTN};justify-content:center" onclick="zPopClose()">${t('zones.keep','Keep it')}</button>`);
+}
 async function zoneRename(id,name){ try{ await appApi('/app/zones/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({name})}); }catch(_){ } renderZonesList(); }
 async function zoneDelete(id){ try{ await appApi('/app/zones/'+id,{method:'DELETE'}); }catch(_){ } renderZonesList(); }
 // ---- Screen A — build / edit a zone ----
@@ -5815,7 +6118,9 @@ async function zoneEnsureStores(){
   if(!USER_LOC){ try{ await new Promise(res=>{ findMe(res); setTimeout(res,4000); }); }catch(_){ } }
   // Zones are RETAIL sweeps: fetch the general callable list fresh (never the leftover hobby/thrift
   // slice the last mode left in STORES), so the builder never shows card shops or a stale filter.
-  if(USER_LOC){ try{ const u=`/pub/stores/near?lat=${USER_LOC.lat}&lng=${USER_LOC.lng}&radius=${Math.max(10,ZONES.radius||5)}&limit=200`; const r=await appApi(u); if(r&&Array.isArray(r.stores)) STORES=r.stores; }catch(_){ } }
+  // Map open → fetch a WIDER net so zoomed-out panning still shows pins; list mode keeps it tight.
+  const fetchRad=ZONES.mapOpen?Math.max(25,(ZONES.radius||5)*4):Math.max(10,ZONES.radius||5);
+  if(USER_LOC){ try{ const u=`/pub/stores/near?lat=${USER_LOC.lat}&lng=${USER_LOC.lng}&radius=${fetchRad}&limit=200`; const r=await appApi(u); if(r&&Array.isArray(r.stores)) STORES=r.stores; }catch(_){ } }
   (STORES||[]).forEach(s=>ZONES.storeById.set(s.id,s));
 }
 function zoneBuildStores(){ const R=ZONES.radius||5; const seen=new Map();
@@ -5838,24 +6143,39 @@ function renderZoneBuild(){
   const rings=[1,2,5,10].map(r=>`<button class="zrad ${R===r?'on':''}" onclick="zoneSetRadius(${r})">${r}</button>`).join('');
   const rows=stores.length?stores.map(zoneRowHTML).join('')
     : `<div class="zempty2">${USER_LOC?tf('zones.norad','No stores in {r} mi. Try a bigger radius.',{r:R}):t('zones.needloc','Tap the pin or search a ZIP to see stores.')}</div>`;
-  z.innerHTML=`<div class="zbuild">
-    ${zHead(ZONES.editId?t('zones.edit','Edit zone'):t('zones.newz','New zone'),'renderZonesList()')}
-    <div class="zsearch"><input id="z_loc" class="kin" placeholder="${t('zones.locph','Search a ZIP or town…')}" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();zoneGeocode();}"><button class="zgps" onclick="zoneGPS()" aria-label="Use my location">${ICO.pin('currentColor')}</button><button class="zgo" onclick="zoneGeocode()">${t('zones.go','Go')}</button></div>
-    <div class="zseg"><button class="${!map?'on':''}" onclick="if(ZONES.mapOpen)zoneToggleMap()">${t('zones.list','List')}</button><button class="${map?'on':''}" onclick="if(!ZONES.mapOpen)zoneToggleMap()">${t('zones.map','Map')}</button></div>
-    <div class="zradrow"><span class="zradlbl">${t('zones.radius','Radius')}</span>${rings}<span class="zradmi">mi</span><button class="zaddall" onclick="zoneAddRadius()">＋ ${t('zones.addallshort','Add all')}</button></div>
-    <div class="zstage">
-      <div id="zmap" style="display:${map?'block':'none'}"></div>
-      <div class="zlist" style="display:${map?'none':'block'}">${rows}</div>
+  z.innerHTML=`<div class="zframe">
+    ${zFrameHead(ZONES.editId?t('zones.edit','Edit zone'):t('zones.newz','Create a zone'),'renderZonesList()')}
+    <div class="zf-sub">
+      <div class="zsearch"><input id="z_loc" class="kin" placeholder="${t('zones.locph','Search a ZIP or town…')}" autocomplete="off" oninput="zoneSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();zoneGeocode();}"><button class="zgps" onclick="zoneGPS()" aria-label="Use my location">${ICO.pin('currentColor')}</button></div>
+      <div class="zseg"><button class="${!map?'on':''}" onclick="if(ZONES.mapOpen)zoneToggleMap()">${t('zones.list','List')}</button><button class="${map?'on':''}" onclick="if(!ZONES.mapOpen)zoneToggleMap()">${t('zones.map','Map')}</button></div>
+      <div class="zradrow"><span class="zradlbl">${t('zones.radius','Radius')}</span>${rings}<span class="zradmi">mi</span><button class="zaddall${zoneAllInRadiusSelected()?' on':''}" onclick="zoneToggleAll()">${zoneAllInRadiusSelected()?t('zones.removeall','Remove all'):'＋ '+t('zones.addallshort','Add all')}</button></div>
     </div>
-    <div class="zfoot">
-      <div class="zcount"><b id="z_count">${n}</b> ${n===1?t('zones.selstore','store selected'):t('zones.selstores','stores selected')}</div>
-      <input id="z_name" class="zname" placeholder="${t('zones.nameph2','Name this zone')}" value="${esc(ZONES.name||'')}" maxlength="40" oninput="ZONES.name=this.value">
-      <button class="cta" id="z_save" style="width:100%;box-sizing:border-box" onclick="zoneSave()">${t('zones.save','Save zone')}${n?' · '+n:''}</button>
+    <div class="zf-scroll tight${map?' mapmode':''}${(n&&!map)?' basketpad':''}" style="${map?'overflow:hidden':''}">
+      <div id="zmap" style="display:${map?'block':'none'};height:100%"></div>
+      <div class="zlist" style="display:${map?'none':'block'};max-height:none;background:none;box-shadow:none;padding:0">${rows}</div>
     </div>
+    <div class="zf-foot"><div class="zbasket${n?' up':''}" id="zBasket">
+      <div class="zbkhead"><span id="z_count">${n} ${n===1?t('zones.store','store'):t('zones.stores','stores')}</span></div>
+      <div class="zchips" id="zChips">${zoneChipsHTML()}</div>
+      <div class="zbkrow"><input id="z_name" placeholder="${t('zones.nameph3','Name it…')}" value="${esc(ZONES.name||'')}" maxlength="40" oninput="ZONES.name=this.value"><button class="zbksave" id="z_save" onclick="zoneSave()"><span>${t('zones.save','Save zone')}</span></button></div>
+    </div></div>
   </div>`;
   if(map) setTimeout(zoneMapEnsure,30); // (re)build the Leaflet map into the fresh #zmap node
 }
-function zoneBarSync(){ const n=ZONES.sel.size; const c=$('z_count'); if(c) c.textContent=n; const sv=$('z_save'); if(sv) sv.textContent=t('zones.save','Save zone')+(n?' · '+n:''); }
+// Removable chips for every selected store (owner 07-11 comp basket bar).
+function zoneChipsHTML(){
+  return [...ZONES.sel].map(id=>{ const s=ZONES.storeById.get(id)||(STORES||[]).find(x=>x.id===id)||{}; const nm=railBase(s.name||'')||t('zones.astore','Store');
+    return `<div class="zchip"><span class="zc-face" style="width:28px;height:28px;border-radius:8px">${s.logoUrl?`<img src="${esc(s.logoUrl)}" alt="" style="width:100%;height:100%;object-fit:contain;padding:15%">`:`<span style="font-size:10px;font-weight:900;color:#CDCDD8">${esc(nm.slice(0,2).toUpperCase())}</span>`}</span><span style="font:700 12px Inter;color:#EDEDF2;white-space:nowrap">${esc(nm)}</span><button class="cx" onclick="zoneToggle(${id})" aria-label="Remove"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>`;
+  }).join('');
+}
+// Sync the basket (count · chips · slide up/down) + the Add-all toggle in place, no full re-render.
+function zoneBarSync(){ const n=ZONES.sel.size;
+  const c=$('z_count'); if(c) c.textContent=`${n} ${n===1?t('zones.store','store'):t('zones.stores','stores')}`;
+  const ch=$('zChips'); if(ch) ch.innerHTML=zoneChipsHTML();
+  const bk=$('zBasket'); if(bk) bk.classList.toggle('up',n>0);
+  const sc=document.querySelector('#zones .zf-scroll'); if(sc&&!sc.classList.contains('mapmode')) sc.classList.toggle('basketpad',n>0);
+  const aa=document.querySelector('#zones .zaddall'); if(aa){ const all=zoneAllInRadiusSelected(); aa.classList.toggle('on',all); aa.innerHTML=all?t('zones.removeall','Remove all'):'＋ '+t('zones.addallshort','Add all'); }
+}
 function zoneGPS(){ try{ toast(t('zones.locating','Finding your location…'),'neutral'); }catch(_){ } findMe(async()=>{ await zoneEnsureStores(); if(ZONES.mapOpen){ if(ZMAP&&USER_LOC){ try{ ZMAP.setView([USER_LOC.lat,USER_LOC.lng],12); }catch(_){ } } zoneMapDraw(); zoneBarSync(); } else renderZoneBuild(); }); }
 function zoneToggle(id){ const add=!ZONES.sel.has(id); if(add){ ZONES.sel.add(id); const s=(STORES||[]).find(x=>x.id===id); if(s) ZONES.storeById.set(id,s); } else ZONES.sel.delete(id);
   // update the tapped row + footer in place (keeps the list scroll position)
@@ -5863,17 +6183,27 @@ function zoneToggle(id){ const add=!ZONES.sel.has(id); if(add){ ZONES.sel.add(id
   if(row){ row.classList.toggle('picked',add); const ck=row.querySelector('.zck'); if(ck) ck.innerHTML=add?ZCHECK:''; } else renderZoneBuild();
   zoneBarSync();
 }
-function zoneAddRadius(){ zoneBuildStores().forEach(s=>{ const mi=storeMi(s); if(mi!=null && mi<=(ZONES.radius||5)){ ZONES.sel.add(s.id); ZONES.storeById.set(s.id,s); } }); if(ZONES.mapOpen){ zoneMapDraw(); zoneBarSync(); } else renderZoneBuild(); }
+// Stores that fall inside the current radius ring (the ones "Add all" acts on).
+function zoneRadiusStores(){ return zoneBuildStores().filter(s=>{ const mi=storeMi(s); return mi!=null && mi<=(ZONES.radius||5); }); }
+function zoneAllInRadiusSelected(){ const rs=zoneRadiusStores(); return rs.length>0 && rs.every(s=>ZONES.sel.has(s.id)); }
+// One button, two states (owner 07-11): adds every in-radius store, and once they're all in it flips to
+// "Remove all" so a tap clears them back out.
+function zoneToggleAll(){ const rs=zoneRadiusStores(); const allOn=rs.length>0 && rs.every(s=>ZONES.sel.has(s.id));
+  rs.forEach(s=>{ if(allOn){ ZONES.sel.delete(s.id); } else { ZONES.sel.add(s.id); ZONES.storeById.set(s.id,s); } });
+  if(ZONES.mapOpen){ zoneMapDraw(); zoneBarSync(); } else renderZoneBuild(); }
 // --- Zone location search + map ('pin a zone'): type a ZIP/town or tap the map to recenter, tap pins to add ---
 let ZMAP=null, ZMARKERS={}, ZRING=null;
-async function zoneGeocode(){
-  const q=($('z_loc')&&$('z_loc').value||'').trim(); if(q.length<3){ toast(t('zones.typloc','Type a ZIP or town first.')); return; }
+// Auto-search while typing (owner 07-10, items 36-37): the Go button is gone — a pause after 3+ chars
+// geocodes on its own. Enter still works for the impatient.
+function zoneSearchInput(){ clearTimeout(window.__zgeo); const q=($('z_loc')&&$('z_loc').value||'').trim(); if(q.length<3) return; window.__zgeo=setTimeout(()=>{ zoneGeocode(true); },650); }
+async function zoneGeocode(silent){
+  const q=($('z_loc')&&$('z_loc').value||'').trim(); if(q.length<3){ if(silent!==true) toast(t('zones.typloc','Type a ZIP or town first.')); return; }
   const isZip=/^\d{5}$/.test(q); let r=null;
   try{ r=await api('/pub/geocode?'+(isZip?'zip=':'q=')+encodeURIComponent(q)); }catch(_){ }
   if(r&&!r.error&&r.lat!=null){ USER_LOC={lat:r.lat,lng:r.lng}; await zoneEnsureStores();
     if(ZONES.mapOpen){ if(ZMAP){ try{ ZMAP.setView([r.lat,r.lng],12); }catch(_){ } } zoneMapDraw(); zoneBarSync(); } else renderZoneBuild();
     toast(tf('zones.located','Centered on {q}',{q}),'neutral'); }
-  else toast(t('zones.noplace',"Couldn't find that place."));
+  else if(silent!==true) toast(t('zones.noplace',"Couldn't find that place."));
 }
 function zoneToggleMap(){ ZONES.mapOpen=!ZONES.mapOpen; renderZoneBuild(); }
 function zoneMapEnsure(){
@@ -5888,7 +6218,7 @@ function zoneMapInit(){
   const c=USER_LOC?[USER_LOC.lat,USER_LOC.lng]:[34.15,-118.63];
   ZMAP=L.map('zmap',{zoomControl:false,attributionControl:false}).setView(c, USER_LOC?12:10);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',{maxZoom:19,minZoom:3,subdomains:'abcd'}).addTo(ZMAP);
-  ZMAP.on('click', async (e)=>{ USER_LOC={lat:e.latlng.lat,lng:e.latlng.lng}; await zoneEnsureStores(); zoneMapDraw(); zoneBarSync(); toast(t('zones.recentered','Zone recentered here'),'neutral'); });
+  ZMAP.on('click', async (e)=>{ USER_LOC={lat:e.latlng.lat,lng:e.latlng.lng}; try{ ZMAP.panTo([USER_LOC.lat,USER_LOC.lng]); }catch(_){ } await zoneEnsureStores(); zoneMapDraw(); zoneBarSync(); toast(t('zones.recentered','Zone recentered here'),'neutral'); }); // panTo so the new pin locks to center (owner 07-11)
   setTimeout(()=>{ try{ ZMAP.invalidateSize(); }catch(_){ } zoneMapDraw(); },60);
 }
 function zoneMapDraw(){
@@ -5899,7 +6229,9 @@ function zoneMapDraw(){
   zoneBuildStores().forEach(s=>{ if(s.lat==null||s.lng==null) return; const on=ZONES.sel.has(s.id); const sz=on?36:32;
     // same logo-pin look as the retail map: dark disc + the store's logo (monogram fallback); selected = green ring + check badge
     const mono=(s.name||'').split(/[\s.]+/).filter(w=>w&&!/^(&|and|the|of|at)$/i.test(w)).slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?';
-    const face=s.logoUrl?`<img src="${esc(s.logoUrl)}" style="width:20px;height:20px;object-fit:contain" alt="">`:`<span style="font-size:11px;font-weight:900;color:#CDCDD8">${esc(mono)}</span>`;
+    // Monogram sits BEHIND; the logo (opaque bg) covers it when it loads and onerror hides a broken
+    // logo so the monogram shows through — no more blank pins when a logo fails to fetch (owner 07-11).
+    const face=`<span style="position:absolute;font-size:11px;font-weight:900;color:#CDCDD8">${esc(mono)}</span>${s.logoUrl?`<img src="${esc(s.logoUrl)}" style="position:relative;width:20px;height:20px;object-fit:contain;background:#17171E" alt="" onerror="this.style.display='none'">`:''}`;
     const badge=on?`<span style="position:absolute;right:-3px;top:-3px;width:15px;height:15px;border-radius:50%;background:#4ADE80;border:2px solid #121216;display:grid;place-items:center"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>`:'';
     const m=L.marker([s.lat,s.lng],{icon:L.divIcon({className:'zpin',html:`<span style="position:relative;display:grid;place-items:center;width:${sz}px;height:${sz}px;border-radius:50%;background:#17171E;border:2px solid ${on?'#4ADE80':'#3A3A44'};box-shadow:${on?'0 0 11px rgba(74,222,128,.7)':'0 2px 8px rgba(0,0,0,.55)'}">${face}${badge}</span>`,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]})}).addTo(ZMAP);
     m.on('click',(ev)=>{ try{ ev.originalEvent&&ev.originalEvent.stopPropagation&&ev.originalEvent.stopPropagation(); }catch(_){ } zoneMapToggle(s.id); });
@@ -5915,20 +6247,44 @@ async function zoneSave(){
   const nm=$('z_name'); const name=(nm&&nm.value||'').trim();
   // Validate both: at least one store AND a name. Flag every missing field so the user sees all at once.
   let bad=false;
-  if(!ids.length){ toast(t('zones.pickone','Pick at least one store to save this zone.'),'accent'); bad=true; }
-  if(!name){ markFld(nm,true); if(ids.length) toast(t('zones.needname','Name your zone before saving.'),'accent'); bad=true; }
+  if(!ids.length){ toast(t('zones.pickone','Pick a store first'),'neutral'); bad=true; }
+  if(!name){ markFld(nm,true); if(ids.length) toast(t('zones.needname','Name your zone first'),'neutral'); bad=true; }
   if(bad){ if(nm&&!name) try{ nm.focus(); }catch(_){ } return; }
   const btn=$('z_save'); if(btn){ btn.disabled=true; btn.textContent=t('zones.saving','Saving…'); }
   try{
     if(ZONES.editId) await appApi('/app/zones/'+ZONES.editId,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({name,retailerIds:ids})});
     else await appApi('/app/zones',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name,retailerIds:ids})});
-    toast(t('zones.saved','Zone saved'),'neutral'); renderZonesList();
+    toast(t('zones.saved','Zone saved'),'neutral'); ZONES.list=null; renderZonesList(); // drop the cache: the list must show the zone that was just saved
   }catch(e){ if(btn){ btn.disabled=false; btn.textContent=t('zones.save','Save zone'); } toast(t('err.generic',"That didn't go through. Give it another try.")); }
 }
 // ---- Screen C — the live zone-check report ----
+function isClosedSafe(st){ try{ return isClosed(st); }catch(_){ return false; } }
 async function zoneCheckAll(id){
-  let quoteTxt=''; try{ const zl=await appApi('/app/zones'); const zn=(Array.isArray(zl)?zl:(zl&&zl.zones)||[]).find(x=>x.id===id); if(zn&&zn.checkCents!=null) quoteTxt=' ('+money(zn.checkCents)+')'; }catch(_){ }
-  if(!confirm(tf('zones.confirm','Check all stores in this zone?{q} 1 check per store.',{q:quoteTxt}))) return;
+  const zn=((ZONES.list||[]).find(x=>x.id===id))||{};
+  const all=(zn.stores||[]).filter(st=>st.callable!==false);
+  const openStores=all.filter(st=>!isClosedSafe(st));
+  const closedStores=all.filter(st=>isClosedSafe(st));
+  const openN=openStores.length;
+  // Nothing open right now → no call to place; say so instead of asking for an OK (owner 07-10).
+  if(all.length && !openN){ toast(t('zones.allclosed','All stores in this zone are closed'),'neutral'); return; }
+  // Some closed → warn WHICH ones, reassure we'll still call the open ones (owner 07-11). Closed stores
+  // are skipped server-side so no check is wasted. NO price shown (owner 07-11).
+  let closedWarn='';
+  if(closedStores.length){
+    const nm=closedStores.map(s=>esc(s.name||s.storeName||t('zones.astore','A store')));
+    const names=nm.length<=2?nm.join(nm.length===2?' '+t('zones.and','and')+' ':''):nm[0]+' '+tf('zones.andmore','and {n} more',{n:nm.length-1});
+    const verb=closedStores.length>1?t('zones.areclosed','are closed'):t('zones.isclosed','is closed');
+    closedWarn=`<div style="margin:0 0 16px;text-align:left;color:#f0c79a;background:rgba(232,154,74,.12);border:1px solid rgba(232,154,74,.35);border-radius:12px;padding:11px 13px;font-size:13.5px;line-height:1.45;font-weight:600"><b style="color:#f6d3a6">${names}</b> ${verb}. ${tf('zones.stillcall','We can still call the {n} that are open.',{n:openN})}</div>`;
+  }
+  const goOn=await new Promise(res=>{
+    zPop(`<h3 style="margin:2px 0 8px;font-size:20px;font-weight:900;letter-spacing:-.4px">${tf('zones.confirm.title2','Check {n} open {s}?',{n:openN,s:openN===1?t('zones.storeword','store'):t('zones.storesword','stores')})}</h3>
+      ${closedWarn||`<div class="meta" style="margin-bottom:16px">${t('zones.confirm.per','1 check per store.')}</div>`}
+      <button class="cta" style="width:100%;margin-bottom:10px" id="zca_go">${tf('zones.checkallN','Check all {n}',{n:openN})} →</button>
+      <button style="${Z_ROWBTN};justify-content:center" id="zca_no">${t('pre.again.no','Not now')}</button>`);
+    $('zca_go').onclick=()=>{ zPopClose(); res(true); }; $('zca_no').onclick=()=>{ zPopClose(); res(false); };
+    $('zmenuOv').onclick=e=>{ if(e.target===$('zmenuOv')){ zPopClose(); res(false); } };
+  });
+  if(!goOn) return;
   let run=null; try{ run=await appApi('/app/zones/'+id+'/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({categoryId:(BRAND_CAT&&BRAND_CAT.id)||SEL_CAT||undefined})}); }catch(e){ run={error:'net'}; }
   if(!run||run.error){ toast(run&&run.error==='no_credits'?t('zones.nocredits','Not enough checks for the whole zone.'):t('err.generic',"That didn't go through. Give it another try.")); if(run&&run.error==='no_credits'){ setTimeout(()=>{ backToBuilder(); openBuy(); },600); } return; }
   ZONES.run={ id, runId:run.runId, name:run.name||'' }; renderZoneRun(); zoneStartPoll();
@@ -5954,7 +6310,8 @@ function renderZoneRun(){
       <span class="zrchev">▸</span>
     </button><div class="zrbody" style="display:none"></div>`; }).join('');
   const live=total>done;
-  $('zones').innerHTML=`<div class="zwrap zrun">${zHead(r.name||t('zones.report','Zone check'),'renderZonesList()')}
+  $('zones').innerHTML=`<div class="zframe">${zFrameHead(r.name||t('zones.report','Zone check'),'renderZonesList()')}
+    <div class="zf-scroll">
     <div class="card" style="padding:14px 16px">
       <div class="zdots">${dots}</div>
       <div class="zsummary">${done} ${t('zones.done','done')}${live?' · '+(total-done)+' '+t('zones.checkingw','checking'):''}</div>
@@ -5962,6 +6319,7 @@ function renderZoneRun(){
     </div>
     <div class="zrlist">${rows||`<div class="card" style="text-align:center;color:#8A8A96;padding:20px">${t('zones.starting','Starting the sweep…')}</div>`}</div>
     <div class="zbar"><div class="zbarrow" style="gap:10px">${live?`<button class="findbtn-primary" style="flex:1" onclick="zoneStopAll()">${t('zones.stopall','Stop all')}</button>`:''}<button class="cta sm" style="flex:1" onclick="zoneShare()">${t('zones.share','Share results')}</button></div></div>
+    </div>
   </div>`;
 }
 async function zoneExpand(cid,btn){ if(!cid) return; const body=btn.nextElementSibling; if(!body) return;
@@ -6234,6 +6592,9 @@ function renderBuyPlans(){
   $('buy_plans').innerHTML=html;
 }
 let SEL_TIER_KEY=null, BUY_MODE='plans', PACK_IDX=1;
+// One source of truth for "which tier is selected when you haven't tapped anything" (items 26-27):
+// your CURRENT plan if you're on one, else the featured tier. Continue buys exactly what's ringed.
+function defaultTierKey(){ const _t=tiers(); const cur=ACCOUNT&&ACCOUNT.subTier; if(cur&&_t.some(x=>x.key===cur)) return cur; const f=_t.find(x=>x.featured); return (f||_t[0]||{}).key||null; }
 function setBuyMode(m,btn){ BUY_MODE=m; document.querySelectorAll('#buymode button').forEach(b=>b.classList.toggle('on',b===btn)); const bc=$('billcycle'); if(bc) bc.style.display=(m==='packs'?'none':''); renderBuyPlans(); }
 function setPackIdx(i){ const packs=paygBundles(); PACK_IDX=Math.max(0,Math.min(packs.length-1, i|0));
   const pk=packs[PACK_IDX]; if(!pk) return;
@@ -6248,7 +6609,7 @@ function pickTier(k){
 function buyContinue(){
   if(BUY_MODE==='packs'){ const packs=paygBundles(); const pk=packs[Math.max(0,Math.min(packs.length-1,PACK_IDX))];
     if(pk){ openCheckout('payg:'+pk.checks, false, pk.cents, pk.checks+' '+t('plan.checks','checks'), t('co.paygsub','One-time · checks never expire')); } return; }
-  const _t=tiers(); const ti=_t.find(x=>x.key===SEL_TIER_KEY)||_t[0]; if(!ti) return;
+  const _t=tiers(); const ti=_t.find(x=>x.key===SEL_TIER_KEY)||_t.find(x=>x.key===defaultTierKey())||_t[0]; if(!ti) return;
   const cents=BILLING_ANNUAL?(ti.annualCents||Math.round(ti.cents*12*0.83/100)*100):ti.cents;
   const cyc=BILLING_ANNUAL?t('co.annual','annual'):t('co.monthly','monthly');
   openCheckout(ti.key, BILLING_ANNUAL, cents, ti.name+' · '+cyc, (ti.checks||0).toLocaleString()+' '+t('co.checksmo','checks a month'));
@@ -6263,6 +6624,7 @@ function renderBuyGrid(){
 }
 function openBuy(reason){
   if(!isAuthed()){ toast(t('toast.signupfirst','Sign up first to add checks')); signUp(); return; }
+  SEL_TIER_KEY=defaultTierKey(); // every open starts from YOUR plan / the featured tier — a pick from last time never sticks (items 26-27)
   const lead=$('buy_lead');
   if(reason==='manage'){ $('buy_title').textContent=t('plan.title','Your plan'); lead.style.display='none'; }
   else if(reason==='out'){ $('buy_title').textContent=t('up.out',"You're out of checks"); lead.style.display=''; lead.textContent=t('buy.out.lead',"Your next find is one check away."); }
@@ -6290,9 +6652,9 @@ function openBuy(reason){
   }catch(_){} }
   setI('buy_note', `${ICO.lock('#7a7a88')} ${t('buy.secure2','Secure checkout via Stripe')}`);
   track('buy_open',{reason:reason||'manual'});
-  $('buyOverlay').classList.add('on');
+  $('buyOverlay').classList.add('on'); sheetPush('buy');
   // Live plans may not be cached yet on first open — fetch, then re-render tiles + grid in place.
-  if(!PLANS){ loadPlans().then(p=>{ if(p&&$('buyOverlay').classList.contains('on')){ try{ renderBuyPlans(); if(isV2()) renderBuyGrid(); }catch(_){ } } }); }
+  if(!PLANS){ loadPlans().then(p=>{ if(p&&$('buyOverlay').classList.contains('on')){ try{ SEL_TIER_KEY=defaultTierKey(); renderBuyPlans(); if(isV2()) renderBuyGrid(); }catch(_){ } } }); } // live tiers may rename keys — re-derive the default
 }
 function closeBuy(){ const m=document.querySelector('#buyOverlay .modal'); if(m){ m.style.transform=''; m.style.transition=''; } $('buyOverlay').classList.remove('on'); acctReturn(); }
 
@@ -6312,7 +6674,7 @@ function coAppearance(){ return { theme:'night', variables:{ colorPrimary:'#19B1
   rules:{ '.Input':{ backgroundColor:'#1B1B20', border:'none', boxShadow:'inset 0 2px 6px rgba(0,0,0,.45)', padding:'14px 16px', color:'#fff' },
     '.Input:focus':{ boxShadow:'inset 0 2px 6px rgba(0,0,0,.45), 0 0 0 2px rgba(25,177,69,.5)' },
     '.Label':{ color:'#8A8A96', fontWeight:'600', fontSize:'12.5px' },
-    '.Tab,.Block':{ backgroundColor:'#1B1B20', border:'none' }, '.Tab--selected':{ boxShadow:'0 0 0 2px rgba(25,177,69,.6)' } } }; }
+    '.Tab,.Block':{ backgroundColor:'#1B1B20', border:'none', padding:'10px 8px' }, '.Tab--selected':{ boxShadow:'0 0 0 2px rgba(25,177,69,.6)' }, '.TabLabel':{ fontSize:'11px' }, '.TabIcon':{ marginBottom:'4px' } } }; }
 function coCtaLabel(){ const isSub=!/^payg:/.test(String(CO&&CO.kind)); const per=isSub?(CO&&CO.annual?t('plan.yr','/yr'):t('plan.mo','/mo')):'';
   return (isSub?t('co.subscribe','Subscribe'):t('co.pay','Pay'))+' · '+money((CO&&CO.amountCents)||0)+per; }
 async function openCheckout(kind, annual, amountCents, planLabel, planSub){
@@ -6324,7 +6686,7 @@ async function openCheckout(kind, annual, amountCents, planLabel, planSub){
   setI('co_trust', `${t('co.cancel','Cancel anytime')} · ${ICO.lock('#7a7a88')} ${t('co.secured','Secured by')} <b>Stripe</b>`);
   setT('co_err',''); const ld=$('co_loading'); if(ld) ld.style.display='';
   const cta=$('co_cta'); if(cta) cta.disabled=true;
-  $('coOverlay').classList.add('on'); track('checkout_open',{kind});
+  $('coOverlay').classList.add('on'); sheetPush('co'); track('checkout_open',{kind});
   try{
     const r=await appApi('/app/checkout-intent',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind,annual:!!annual})});
     if(!r||r.error||!r.clientSecret||!r.publishableKey){ return coFallback(); }
@@ -6378,6 +6740,9 @@ sheetDrag('buyOverlay', ()=>closeBuy());
 sheetDrag('pageOverlay', ()=>closePage()); // footer pages are a bottom sheet now — swipe down to dismiss
 sheetDrag('acctOverlay', ()=>{ try{ closeAccount(true); }catch(_){ } }); // sheetDrag already ran the slide-down → instant hide
 sheetDrag('coOverlay', ()=>{ try{ closeCheckout(); }catch(_){ } });
+sheetDrag('storeReqOverlay', ()=>{ try{ closeStoreReq(); }catch(_){ } });
+sheetDrag('watchOverlay', ()=>{ try{ closeWatch(); }catch(_){ } });
+sheetDrag('scheduleOverlay', ()=>{ try{ closeSchedule(); }catch(_){ } });
 async function buy(kind, annual){
   if(!isAuthed()){ signUp(); return; }
   $('buy_note').textContent=t('buy.opening','Opening secure checkout…');
@@ -6421,7 +6786,7 @@ async function openWatch(){
   $('watch_err').textContent=''; $('watch_contact').value=''; $('watch_contact').style.display=''; { const wb=$('watch_btn'); if(wb){ wb.textContent=t('watch.cta','Watch this store →'); wb.onclick=submitWatch; } } { const ws=$('watch_sub'); if(ws) ws.innerHTML=t('watch.sub',"We'll ping you the instant anyone confirms it in stock here."); }
   const sub=$('watch_sub'); if(sub) sub.textContent=LANG==='es'?`Te avisamos en cuanto alguien confirme ${findProductLabel()} en stock en ${findStoreName()}.`:`We'll ping you the instant anyone confirms ${findProductLabel()} in stock at ${findStoreName()}.`;
   track('watch_open',{retailerId:SEL_STORE.id});
-  $('watchOverlay').classList.add('on'); setTimeout(()=>{try{$('watch_contact').focus();}catch(e){}},80);
+  $('watchOverlay').classList.add('on'); sheetPush('watch'); setTimeout(()=>{try{$('watch_contact').focus();}catch(e){}},80);
   // Social proof: surface how many others are already waiting on this store.
 
 }
@@ -6530,7 +6895,7 @@ function openHandoff(){
       <button class="ho-btn primary" onclick="hoFinish()">${t('ho.s5.cta',"Release the bonus →")}</button>`)}
     </div>
     <div id="ho_done" style="display:none" class="ho-done">
-      <div class="big">🏃💨</div>
+      <div class="big">📦</div>
       <h2>${t('ho.done.title',"Bonus released. You're done.")}</h2>
       <p id="ho_donep">${t('ho.done.ship',"It's on its way. We'll text you the tracking number the moment the label scans.")}</p>
       <button class="ho-btn primary" style="margin-top:22px" onclick="backToBuilder()">${t('ho.done.cta','Back to the hunt')}</button>
@@ -6567,7 +6932,7 @@ function hoAdvance(n){
 function hoCopy(){
   const raw=($('ho_msg')&&$('ho_msg').dataset.raw)||'';
   try{ navigator.clipboard.writeText(raw); }catch(e){}
-  toast(t('ho.copied',"Copied. Paste it in the driver chat."),'neutral');
+  toast(t('ho.copied','Copied for the driver chat'),'neutral');
 }
 function hoStar(v){ HO.rating=v; document.querySelectorAll('#ho_stars span').forEach((x,i)=>x.classList.toggle('lit',i<v)); }
 function hoFinish(){ $('ho_steps').style.display='none'; document.querySelector('#handoff .ho-job').style.display='none'; $('ho_done').style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); track('handoff_done',{bonus:HO.bonus,drop:HO.drop,rating:HO.rating}); }
@@ -6863,7 +7228,7 @@ function openSchedule(){
   const cw=$('sch_contact'); if(cw) cw.value=''; // keep the number OUT of the box (it's a grey placeholder); we default to the account contact on submit
   $('sch_days').innerHTML=DOWLBL.map(([v,l])=>`<div class="chip" data-d="${v}" onclick="toggleSchDay('${v}',this)" style="cursor:pointer;text-align:center;padding:9px 0;font-size:13px">${l}</div>`).join('');
   track('schedule_open',{retailerId:SEL_STORE.id});
-  $('scheduleOverlay').classList.add('on');
+  $('scheduleOverlay').classList.add('on'); sheetPush('sched');
 }
 function toggleSchDay(v,el){ if(SCH_DAYS.has(v)){ SCH_DAYS.delete(v); el.classList.remove('sel'); } else { SCH_DAYS.add(v); el.classList.add('sel'); } }
 function closeSchedule(){ $('scheduleOverlay').classList.remove('on'); }

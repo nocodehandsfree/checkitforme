@@ -45,6 +45,10 @@ export const LIMITS: Record<string, Limit> = {
   // than a handful a minute; farming/DoS does. Comp/owner accounts bypass this (owner tests call-by-
   // call on the Fun store). Per-IP so an anonymous /pub/check flood can't drain the pool or rack cost.
   check: { windowMs: 60_000, max: 8 },           // real paid checks: 8/min/IP
+  // Support chat: each message can spend model tokens, so tighter than pubRead. A real
+  // conversation is a message every 10-30s; 10/min leaves headroom. Tickets send an email.
+  support: { windowMs: 60_000, max: 10 },        // chat messages: 10/min/IP
+  supportTicket: { windowMs: 60 * 60_000, max: 5 }, // escalation forms: 5/hr/IP
 };
 
 /** Client IP from trusted proxy headers. Prefer `cf-connecting-ip` — Cloudflare OVERWRITES it with

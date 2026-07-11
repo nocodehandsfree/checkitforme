@@ -31,7 +31,14 @@ Auth:
   "sellsPacks": true, "hasKiosk": false,
   "openState": { "open": true, "known": true, "label": "Open until 10 PM" },
   // /pub/stores/near ALSO includes:
-  "miles": 2.4, "callable": true, "stockCheckMethod": "call", "mapsUri": "https://…"
+  "miles": 2.4, "callable": true, "stockCheckMethod": "call", "mapsUri": "https://…",
+  // reach = time-to-a-human, for setting the caller's expectation BEFORE the call. Evidence-only,
+  // never a guess (Copper's three states):
+  //   {"kind":"direct"}              → "reaches a human right away" (chain known to ring straight to a person)
+  //   {"kind":"menu","seconds":60}   → "about 60 seconds through the menu" (mapped tree; same guarded
+  //                                     number the live call uses to time its connect)
+  //   null                           → chain not mapped yet — SHOW NOTHING
+  "reach": { "kind": "menu", "seconds": 60 }
 }
 
 // Status (from /pub/statuses) — the verdict registry

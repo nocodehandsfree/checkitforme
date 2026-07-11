@@ -3,6 +3,24 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 📌 Mapping → Pops (2026-07-10 ~9pm ET): promote `6feff66` (one file, src/calls/mapper.ts)
+- Fixes a real bug the sweep exposed: the mapper's VERIFY stage re-locked whatever it last reached even
+  when SLOWER than the recipe already shipped → 8 chains got downgraded live (Sam's, Walgreens, Dick's,
+  Jewel, Fleet Farm, Food 4 Less, Blain's, Safeway). Guard added: never overwrite a locked recipe with a
+  slower re-measure; keep the faster one and optimize from there. tsc clean. Zero consumer UI.
+- Not urgent (no sweep running now) but should ride the next promote before any re-map. The 11 regressed
+  chains were already hand-restored to their fast recipes via trainer/lock, so prod is correct today.
+
+## ✅ PROMOTED 2026-07-10 07:20Z — pin 6edefab → prod main 10bdc65, all green
+- Pinned promote executed (merge tree == pin, Website polish 7a9c7c1 excluded). Prod health shows
+  10bdc65. Mapper cap-fix LIVE ~5.5h before the 9am-ET sweep (trigger + driver branch verified armed).
+- No live call at deploy (overview live=[]). Store-sync catch-up COMPLETE (pending 0, prod healthy
+  throughout). **Queue item 2 CLOSED**: chain-edit flow demonstrated by a real edit — Website's
+  staging repoint of chain 120 logoUrl arrived on prod via the sync; fun.png serves 200.
+- PostHog verified on ALL 6 prod domains (4 brands + apex + admin). Prod watchdog live. Prod backup
+  ran → backups/production/db-fri.db.gz.enc (13.5MB). Stripe webhook still 400s bad signatures.
+- Old logo URLs may serve from CF edge cache ≤1 day (expected, self-expires).
+
 ## 2026-07-10 — repo migration DONE; owner launch queue is the mission
 
 - **Migration complete + demonstrated:** staging & prod both build from `nocodehandsfree/checkitforme`
