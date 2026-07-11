@@ -4,6 +4,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "./db/client";
 import { retailers, chains } from "./db/schema";
+import { isDirectDefaultChain } from "./db/import-data";
 
 const REGION: Record<string, string> = {};
 const set = (r: string, sts: string[]) => sts.forEach((s) => (REGION[s] = r));
@@ -146,7 +147,12 @@ async function chainId(name?: string, type?: string): Promise<number | null> {
     if (type && (!found.type || found.type === "Other")) await db.update(chains).set({ type }).where(eq(chains.id, found.id));
     return found.id;
   }
-  const [row] = await db.insert(chains).values({ name, ...(type ? { type } : {}) }).returning();
+  const [row] = await db.insert(chains).values({
+    name, ...(type ? { type } : {}),
+    // Independents + co-ops ring per-store direct — default them so they never enter the tree-mapper
+    // and a chain-level tree can't mute the agent (backfillDirectChains keeps enforcing it on boot).
+    ...(isDirectDefaultChain(name) ? { ringsDirect: true, answerPath: "direct_human" } : {}),
+  }).returning();
   return row.id;
 }
 

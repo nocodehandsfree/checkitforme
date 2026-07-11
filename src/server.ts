@@ -20,7 +20,7 @@ import { config } from "./config";
 import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
-import { importZonesData, geocodeMissing } from "./db/import-data";
+import { importZonesData, geocodeMissing, backfillDirectChains } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus } from "./store-sync";
 import { openState } from "./store-hours";
@@ -849,12 +849,10 @@ function chainLogoFile(name: string | null | undefined): string | null {
   for (const slug of cands) for (const ext of ["png", "webp", "svg"]) {
     if (files.has(`${slug}.${ext}`)) return `${slug}.${ext}`;
   }
-  // Fuzzy pass: "Franklin's Ace Hardware" matches ace_hardware.png, "Trudy's Hallmark" → hallmark.png.
-  const hay = ` ${name.toLowerCase().replace(/[^a-z0-9]+/g, " ")} `;
-  for (const f of files) {
-    const stem = f.replace(/\.(png|webp|svg)$/i, "").replace(/_/g, " ");
-    if (stem.length > 3 && hay.includes(` ${stem} `)) return f;
-  }
+  // Deliberately NO fuzzy stem-in-name fallback: it was a footgun that could hand a future chain an
+  // unrelated brand's logo (e.g. a "Pak N Save" picking up another file whose stem appears in the name).
+  // Resolution is now explicit only — DB logoUrl (chainLogoInfo, first) then exact chain-slug variants
+  // above. If a chain ever genuinely needs aliasing, add a curated alias→file map, never substring guessing.
   return null;
 }
 // DB-first logo (logo-r2-keystone spec, git history): chains.logo_url (shared R2) wins over the per-branch
@@ -2185,7 +2183,11 @@ app.post("/api/admin/table-load", async (c) => {
   if (b.mode === "replace") await db.delete(tbl);
   for (let i = 0; i < rows.length; i += 500) await db.insert(tbl).values(rows.slice(i, i + 500) as never);
   invalidateRefCache();
-  return c.json({ table: name, mode: b.mode || "append", inserted: rows.length });
+  // The mirror pulls prod's LEARNED nav (Ace's "press 4 @ 10s") into staging's chains. Re-enforce the
+  // curated direct default right here so it wins over the mirror — a table-load is a runtime action, so
+  // relying on the boot pass alone would leave these chains clobbered until the next redeploy.
+  if (name === "chains") await backfillDirectChains();
+  return c.json({ table: name, mode: b.mode || "append", inserted: rows.length, ...(name === "chains" ? { directEnforced: true } : {}) });
 });
 // NOTE: there is deliberately NO staging→prod data promote. PROD is the source of truth for live
 // business data (calls, customers, reports); the Admin manages it directly. CONFIG/feature work flows
