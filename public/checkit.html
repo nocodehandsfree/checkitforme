@@ -1278,6 +1278,11 @@ html[data-skin="v2"] .csheet-call{padding:14px 24px}
 html[data-skin="v2"] #cs_call{justify-content:space-between}
 html[data-skin="v2"] #cs_call .cs-l>svg{width:20px;height:20px}
 html[data-skin="v2"] #cs_call .cs-arrow{display:block;flex:0 0 auto}
+/* Product ball sits faded BEHIND the arrow so you can see WHAT you're checking (owner 07-11) */
+html[data-skin="v2"] #cs_call .cs-arrowbox{position:relative;display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex:0 0 auto}
+html[data-skin="v2"] #cs_call .cs-ghost{position:absolute;inset:0;display:grid;place-items:center;opacity:.35;pointer-events:none}
+html[data-skin="v2"] #cs_call .cs-ghost svg,html[data-skin="v2"] #cs_call .cs-ghost img{width:32px;height:32px;object-fit:contain}
+html[data-skin="v2"] #cs_call .cs-arrowbox .cs-arrow{position:relative;z-index:1}
 html[data-skin="v2"] .csheet-charge{color:#8A8A96;font-size:12.5px;font-weight:600}
 html[data-skin="v2"] .csheet-charge b{color:#CDCDD8}
 html[data-skin="v2"] .cs-key{background:transparent;border:0;box-shadow:none;animation:none;padding:13px 2px}
@@ -1970,7 +1975,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <div style="min-width:0;flex:1"><div class="csheet-nm" id="cs_nm"></div><div class="csheet-addr" id="cs_addr"></div></div>
   </div>
   <div class="csheet-prod" id="cs_prod"></div>
-  <button class="csheet-call" id="cs_call" onclick="startCheck()"><span class="cs-l"><svg width="30" height="30" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span data-i18n="cs.cta">Check this store</span></span><svg class="cs-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+  <button class="csheet-call" id="cs_call" onclick="startCheck()"><span class="cs-l"><svg width="30" height="30" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span data-i18n="cs.cta">Check this store</span></span><span class="cs-arrowbox"><span class="cs-ghost" id="cs_ghost" aria-hidden="true"></span><svg class="cs-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span></button>
   <div class="csheet-reach" id="cs_reach" style="display:none;margin-top:9px;text-align:center;font-size:12.5px;font-weight:600;color:#8A8A96"></div>
 </div>
 
@@ -4218,9 +4223,15 @@ function renderCallSheet(){
   const prod = SEL_KIOSK ? t('cta.kioskword','kiosk') : (hob?SEL_PRODUCT:catLabels());
   // Hobby (locked product): "We'll check on pricing and availability for {set} {product}". Everyone else:
   // just the category. NO "costs 1 check" on any of it (owner 07-09), NO "pick the exact set" link.
-  const pe=$('cs_prod'); if(pe) pe.innerHTML = hob
-    ? `${t('cs.hobask',"We'll check on pricing and availability for")} ${esc(prod)}`
-    : esc(prod);
+  // Hobby keeps its descriptive line; kiosk keeps its word. The plain brand category (e.g. "Pokémon")
+  // is dropped here — it read awkward on its own — and shown instead as a faded product ball tucked
+  // behind the button arrow (owner 07-11), so you still see WHAT you're checking.
+  const pe=$('cs_prod'); if(pe){
+    if(hob){ pe.innerHTML=`${t('cs.hobask',"We'll check on pricing and availability for")} ${esc(prod)}`; pe.style.display=''; }
+    else if(SEL_KIOSK){ pe.innerHTML=esc(prod); pe.style.display=''; }
+    else { pe.innerHTML=''; pe.style.display='none'; }
+  }
+  const gh=$('cs_ghost'); if(gh){ const art=document.getElementById('heroart'); gh.innerHTML = (art&&art.innerHTML)?art.innerHTML:''; }
   // Time-to-a-human (DD's reach field): set the expectation BEFORE they spend the check.
   // Evidence-only — unmapped stores show nothing.
   const re=$('cs_reach'); if(re){ const r=s.reach;
