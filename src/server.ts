@@ -3964,10 +3964,24 @@ app.get("/api/gtm", async (c) => {
   try { const raw = await getSetting("gtm_checklist"); if (raw) { const p = JSON.parse(raw); if (Array.isArray(p?.items)) items = p.items; } }
   catch { /* fall back to seed */ }
   // Self-healing: report any seeded default that's no longer in the saved list (accidental delete) so
-  // the UI can offer a one-tap restore — the owner shouldn't need to remember what vanished.
+  // the UI can offer a one-tap restore — the owner shouldn't need to remember what vanished. Items the
+  // owner DISMISSED (X on the restore bar: "these are gone on purpose") stay gone for good.
+  const dismissed = new Set<string>(JSON.parse((await getSetting("gtm_dismissed_defaults")) || "[]"));
   const have = new Set(items.map((i: { id?: string }) => i.id));
-  const missingDefaults = GTM_SEED.filter((s) => !have.has(s.id)).map((s) => ({ id: s.id, title: s.title }));
+  const missingDefaults = GTM_SEED.filter((s) => !have.has(s.id) && !dismissed.has(s.id)).map((s) => ({ id: s.id, title: s.title }));
   return c.json({ items, missingDefaults });
+});
+// X on the restore bar: mark the currently-missing defaults as intentionally gone — the bar never
+// offers them again. An explicit restore-defaults still resurrects them (it ignores dismissals).
+app.post("/api/gtm/dismiss-defaults", async (c) => {
+  let items: typeof GTM_SEED = GTM_SEED;
+  try { const raw = await getSetting("gtm_checklist"); if (raw) { const p = JSON.parse(raw); if (Array.isArray(p?.items)) items = p.items; } }
+  catch { /* seed */ }
+  const have = new Set(items.map((i) => i.id));
+  const prev = new Set<string>(JSON.parse((await getSetting("gtm_dismissed_defaults")) || "[]"));
+  for (const s of GTM_SEED) if (!have.has(s.id)) prev.add(s.id);
+  await setSetting("gtm_dismissed_defaults", JSON.stringify([...prev]));
+  return c.json({ ok: true, dismissed: prev.size });
 });
 // One-tap restore: re-append any seeded defaults missing from the saved list (status reset to todo).
 app.post("/api/gtm/restore-defaults", async (c) => {

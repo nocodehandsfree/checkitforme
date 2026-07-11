@@ -566,7 +566,7 @@
 </head>
 <body class="authwait">
 <header>
-  <a class="hmark" href="https://checkitforme.com" title="Back to Check It For Me" style="display:flex;align-items:center"><img src="/logos/brand/check.png?v=2" alt="Check It For Me" style="height:22px;width:auto;object-fit:contain;display:block"></a>
+  <a class="hmark" href="#dash" title="Back to God View" onclick="showSection('dash');return false" style="display:flex;align-items:center;cursor:pointer"><img src="/logos/brand/check.png?v=2" alt="Check It For Me" style="height:22px;width:auto;object-fit:contain;display:block"></a>
   <span class="dot" title="live"></span>
   <span class="sub" id="clock"></span>
 </header>
@@ -1322,6 +1322,13 @@ async function loadGtm(){
 }
 // Accidental-delete recovery: one tap re-adds any default items missing from the saved list.
 let GTM_MISSING=[];
+// X on the restore bar: the missing defaults are gone ON PURPOSE (finished work, retired items) —
+// tell the server to stop offering them. Gone for good; an explicit Restore can still bring them back.
+async function gtmDismissMissing(){
+  const r=await api('/api/gtm/dismiss-defaults',{method:'POST'});
+  if(r&&r.ok){ GTM_MISSING=[]; toast('Dismissed. They will not be offered again'); renderGtm(); }
+  else toast('Could not dismiss');
+}
 async function gtmRestore(){
   const r=await api('/api/gtm/restore-defaults',{method:'POST'});
   if(r&&r.ok){ GTM_ITEMS=r.items||GTM_ITEMS; GTM_MISSING=[]; toast('Restored '+r.restored+' item(s)'); renderGtm(); }
@@ -1343,7 +1350,7 @@ function renderGtm(){
     return true;
   });
   const el=document.getElementById('gtm_list'); if(!el) return;
-  const rb=GTM_MISSING.length?('<div class="card" style="margin-bottom:8px;display:flex;align-items:center;gap:10px;border:1px solid rgba(251,191,36,.4)"><span class="meta" style="flex:1;color:#FBBF24">'+GTM_MISSING.length+' default item(s) missing (deleted?): '+GTM_MISSING.map(m=>esch(m.title)).join(' · ')+'</span><button type="button" class="btn" onclick="gtmRestore()">Restore</button></div>'):'';
+  const rb=GTM_MISSING.length?('<div class="card" style="margin-bottom:8px;display:flex;align-items:center;gap:10px;border:1px solid rgba(251,191,36,.4)"><span class="meta" style="flex:1;color:#FBBF24">'+GTM_MISSING.length+' default item(s) missing (deleted?): '+GTM_MISSING.map(m=>esch(m.title)).join(' · ')+'</span><button type="button" class="btn" onclick="gtmRestore()">Restore</button><button type="button" class="ghost" onclick="gtmDismissMissing()" title="These are gone on purpose. Stop offering them." style="padding:6px 11px;font-size:14px;line-height:1">✕</button></div>'):'';
   if(!list.length){ el.innerHTML=rb+'<div class="empty">Nothing here — adjust the filters or add an item.</div>'; return; }
   const dot={todo:'#64748b',doing:'#fbbf24',done:'#4ADE80'}, next={todo:'doing',doing:'done',done:'todo'};
   el.innerHTML=rb+list.map(i=>{
@@ -1906,11 +1913,14 @@ function calcSetRev(v){ CALC.revenue=v===''?0:(parseFloat(v)||0); calcUpdate(); 
 function calcSetLane(l){ CALC.lane=l; calcSync(); calcUpdate(); }
 function calcSetEsc(v){ CALC.deltaEsc=parseInt(v,10)||0; const e=document.getElementById('calc_escval'); if(e) e.textContent=CALC.deltaEsc; calcUpdate(); }
 function calcSetReach(v){ CALC.reach=parseInt(v,10)||45; const e=document.getElementById('calc_reachval'); if(e) e.textContent=CALC.reach; calcUpdate(); }
-function calcSetUsage(v){ CALC.usage=parseInt(v,10)||100; const e=document.getElementById('calc_usageval'); if(e) e.textContent=CALC.usage; renderPlans(); }
-function calcSetPlan(i,f,v){ if(!CALC.plans[i]) return; CALC.plans[i][f]=(f==='name')?v:(parseFloat(v)||0); renderPlans(); }
-function calcAddPlan(){ CALC.plans.push({name:'New plan',price:9.99,checks:30}); renderPlans(); }
-function calcDelPlan(i){ CALC.plans.splice(i,1); renderPlans(); }
-function renderPlans(){
+function calcSetUsage(v){ CALC.usage=parseInt(v,10)||100; const e=document.getElementById('calc_usageval'); if(e) e.textContent=CALC.usage; calcRenderPlans(); }
+function calcSetPlan(i,f,v){ if(!CALC.plans[i]) return; CALC.plans[i][f]=(f==='name')?v:(parseFloat(v)||0); calcRenderPlans(); }
+function calcAddPlan(){ CALC.plans.push({name:'New plan',price:9.99,checks:30}); calcRenderPlans(); }
+function calcDelPlan(i){ CALC.plans.splice(i,1); calcRenderPlans(); }
+// calcRenderPlans: the Calc tab's what-if pricing table (#calc_plans). It was named renderPlans and,
+// being declared later, SHADOWED the Plans tab's renderPlans — which is why Plans sat on "Loading…"
+// forever (fetch fine, render into a null #calc_plans, silent return). Owner 07-11 "plans isn't loading".
+function calcRenderPlans(){
   const el=document.getElementById('calc_plans'); if(!el) return;
   const cpc=calcPerCheck().perCheck, use=Math.max(0,Math.min(1,(CALC.usage||100)/100));
   const money=v=>calcMoney(v), pct=(a,b)=>b>0?(((a-b)/a)*100):0;
@@ -1960,7 +1970,7 @@ function calcUpdate(){
   const mEl=document.getElementById('calc_margin'); if(mEl){ mEl.textContent=margin.toFixed(1)+'%'; mEl.style.color=mc; }
   const ret=total>0?CALC.revenue/total:0, rEl=document.getElementById('calc_return'); if(rEl){ rEl.textContent=ret.toFixed(1)+'×'; rEl.style.color=ret>=1?'var(--green)':'#FF6B6B'; }
   set('calc_sentence',`At ${calcMoney(CALC.revenue)} revenue/call, cost is <b style="color:var(--text-primary)">${calcMoney(total)}</b> → margin = <b style="color:${mc}">${margin.toFixed(1)}%</b>.`);
-  renderPlans();
+  calcRenderPlans();
 }
 async function loadDash(){
   loadCallTiming();
@@ -2287,9 +2297,11 @@ function splitName(n){ return {base:(n||'').trim(),branch:''}; }
 function logoTile(o){
   o=o||{};
   if(o.logoUrl) return `<div class="slogo${o.logoDark?' lite':''}${o.logoWide?' widelogo':''}"><img loading="lazy" decoding="async" src="${esch(o.logoUrl)}" alt=""></div>`;
-  // Independent hobby/thrift shops have no real logo — show the storefront icon (like the consumer
-  // site) instead of inventing a name-tile. Other logoless stores keep the wordmark fallback.
-  if(o.type==='Hobby'||o.type==='Thrift') return `<div class="slogo" style="display:grid;place-items:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F4D03F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M5 11.5V20h14v-8.5"/><path d="M9 20v-5h6v5"/></svg></div>`;
+  // Independent hobby/thrift shops have no real logo — show the SAME icons the consumer site uses
+  // (checkit.html SVG_STORE / SVG_TAG, owner 07-04: Hobby = storefront, Thrift = price-tag), not an
+  // admin-only variant. Other logoless stores keep the wordmark fallback.
+  if(o.type==='Hobby') return `<div class="slogo" style="display:grid;place-items:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l1.6-4.2h12.8L20 9"/><path d="M5 9v9.5h14V9"/><path d="M4 9h16"/><path d="M10 18.5V14h4v4.5"/></svg></div>`;
+  if(o.type==='Thrift') return `<div class="slogo" style="display:grid;place-items:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".9" fill="#FFCB05"/></svg></div>`;
   return `<div class="slogo">${storeWordmark(o.name,o.type)}</div>`;
 }
 // Name-only stores/chains (no logo file) show THEIR real name as a tight two-line wordmark —
