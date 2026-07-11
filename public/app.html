@@ -465,6 +465,10 @@
   details.card[open]>summary::after{transform:rotate(180deg);background-color:rgba(74,222,128,.12);border-color:rgba(74,222,128,.45)}
   .chip-draft{font-size:10px;background:#FBBF24;color:#1a1a24;border-radius:6px;padding:2px 6px;font-weight:800;margin-left:6px}
   /* Calls: clean clickable table — one row per call, expands to detail */
+  /* LOG rows: raised card per call, day groups above, status chip right (board 1c) */
+  .lrow{background:var(--raise);border-radius:14px;box-shadow:var(--raise-sh);padding:11px 13px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:10px}
+  .lrow .cs-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lrow .cs-meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .calltable{padding:4px 16px}
   .callrow{border-top:1px solid var(--border)}
   .callrow:first-child{border-top:none}
@@ -820,7 +824,8 @@
     </div>
     <div id="sup_list"><div class="empty">Loading…</div></div>
   </section>
-  <section id="results"><h2>Recent calls</h2>
+  <section id="results">
+    <div style="display:flex;align-items:baseline;gap:10px"><h2 style="margin-bottom:16px">Calls</h2><div class="meta" id="res_count" style="margin-top:0"></div></div>
     <div class="filters">
       <select id="r_cat" onchange="renderResults()"><option value="">All products</option></select>
       <select id="r_sort" onchange="renderResults()">
@@ -831,12 +836,7 @@
       </select>
     </div>
     <div id="resultList"><div class="empty">Loading…</div></div>
-    <div id="res_pager" style="position:fixed;right:14px;bottom:16px;z-index:50;display:none;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border-strong);border-radius:14px;padding:7px 9px;box-shadow:0 10px 28px rgba(0,0,0,.55)">
-      <select id="res_size" onchange="setResSize(this.value)" title="Calls per page" style="width:auto;font-size:12.5px;padding:7px 26px 7px 9px;margin:0"><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select>
-      <button class="ghost" id="res_prev" onclick="resPage(-1)" aria-label="Previous page" style="padding:8px 13px;font-size:16px;line-height:1">←</button>
-      <span id="res_pageind" class="meta" style="min-width:46px;text-align:center;font-size:12.5px">1 / 1</span>
-      <button class="ghost" id="res_next" onclick="resPage(1)" aria-label="Next page" style="padding:8px 13px;font-size:16px;line-height:1">→</button>
-    </div>
+    <div id="res_more"></div>
   </section>
 
 
@@ -3699,25 +3699,25 @@ async function addRetailer(){
   toast('Store added'); loadRetailers();
 }
 
-let RESULT_STORE_FILTER=null, RESULTS=[], RES_PAGE=0, RES_SIZE=10, RES_TOTAL=0;
+let RESULT_STORE_FILTER=null, RESULTS=[], RES_PAGE=0, RES_SIZE=50, RES_TOTAL=0;
 // Paginated calls: fetch ONE page (server limit/offset) so the page loads fast. Page-size + arrows live
 // in a floating bar (bottom-right) for one-handed mobile paging.
-async function loadResults(page){
-  if(typeof page==='number') RES_PAGE=Math.max(0,page);
+async function loadResults(more){
   const box=document.getElementById('resultList'); if(box&&!RESULTS.length) box.innerHTML='<div class="empty">Loading…</div>';
+  if(!more) RES_PAGE=0;
   const d=await api('/api/results?limit='+RES_SIZE+'&offset='+(RES_PAGE*RES_SIZE));
-  RESULTS=(d&&Array.isArray(d.rows))?d.rows:(Array.isArray(d)?d:[]);
+  const page=(d&&Array.isArray(d.rows))?d.rows:(Array.isArray(d)?d:[]);
+  RESULTS=more?RESULTS.concat(page):page;
   RES_TOTAL=(d&&typeof d.total==='number')?d.total:RESULTS.length;
-  renderResults(); renderResPager();
+  renderResults();
 }
-function setResSize(n){ RES_SIZE=Number(n)||10; RES_PAGE=0; loadResults(); }
-function resPage(delta){ const pages=Math.max(1,Math.ceil(RES_TOTAL/RES_SIZE)); RES_PAGE=Math.min(pages-1,Math.max(0,RES_PAGE+delta)); loadResults(); try{document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){} }
-function renderResPager(){
-  const pages=Math.max(1,Math.ceil(RES_TOTAL/RES_SIZE)); if(RES_PAGE>pages-1) RES_PAGE=Math.max(0,pages-1);
-  const ind=document.getElementById('res_pageind'); if(ind) ind.textContent=(RES_PAGE+1)+' / '+pages;
-  const pv=document.getElementById('res_prev'); if(pv){ pv.disabled=RES_PAGE<=0; pv.style.opacity=pv.disabled?.4:1; }
-  const nx=document.getElementById('res_next'); if(nx){ nx.disabled=RES_PAGE>=pages-1; nx.style.opacity=nx.disabled?.4:1; }
-  const bar=document.getElementById('res_pager'); if(bar) bar.style.display=RES_TOTAL>0?'flex':'none';
+function resMore(){ RES_PAGE++; loadResults(true); }
+// Day groups for the LOG pattern: Today · Yesterday · weekday, month day.
+function dayLabel(unix){
+  const d=new Date(unix*1000), n=new Date();
+  if(d.toDateString()===n.toDateString()) return 'Today';
+  if(d.toDateString()===new Date(n.getTime()-864e5).toDateString()) return 'Yesterday';
+  return d.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
 }
 function renderResults(){
   let rows=RESULTS.slice();
@@ -3733,26 +3733,73 @@ function renderResults(){
   else if(sort==='store') rows.sort((a,b)=>(a.retailer||'').localeCompare(b.retailer||''));
   else if(sort==='category') rows.sort((a,b)=>(a.category||'').localeCompare(b.category||''));
   else if(sort==='outcome') rows.sort((a,b)=>outRank(a)-outRank(b)||(b.startedAt||0)-(a.startedAt||0));
+  const cnt=document.getElementById('res_count'); if(cnt) cnt.textContent=RES_TOTAL?RES_TOTAL+' total':'';
   const el=document.getElementById('resultList'); if(!el) return;
-  const banner = RESULT_STORE_FILTER ? `<div class="card" style="border-color:rgba(74,222,128,.3)"><div class="row"><div class="grow meta">Filtered to one store (from your alert link).</div><button class="ghost" onclick="RESULT_STORE_FILTER=null;renderResults()">Show all</button></div></div>` : '';
-  if(!rows.length){el.innerHTML=banner+'<div class="empty">No calls'+(RESULT_STORE_FILTER?' for this store yet.':' yet.')+'</div>';return;}
-  el.innerHTML=banner+'<div class="card calltable">'+rows.map(r=>{
+  const banner = RESULT_STORE_FILTER ? `<div class="card"><div class="row"><div class="grow meta">Filtered to one store (from your alert link).</div><button class="ghost" onclick="RESULT_STORE_FILTER=null;renderResults()">Show all</button></div></div>` : '';
+  if(!rows.length){el.innerHTML=banner+'<div class="empty">No calls'+(RESULT_STORE_FILTER?' for this store yet.':' yet.')+'</div>'; const m0=document.getElementById('res_more'); if(m0) m0.innerHTML=''; return;}
+  const grouped=(sort==='newest'||sort==='oldest');
+  let out=banner, lastDay=null;
+  rows.forEach(r=>{
+    const dl=grouped?dayLabel(r.startedAt):null;
+    if(dl&&dl!==lastDay){ out+=`<div class="rephead" style="padding:${lastDay?'20px':'8px'} 4px 8px">${dl}</div>`; lastDay=dl; }
     const vv=customerVerdict(r);
     const nm=splitName(r.retailer||'?');
     const time=new Date(r.startedAt*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-    const detail=(r.summary?`<div class="meta" style="color:#ddd;margin-bottom:8px">${esch(r.summary)}</div>`:'')+(r.transcript?bubbles(r.transcript):'');
-    return `<details class="callrow">
-      <summary>
-        ${logoTile({...r,name:r.retailer})}
-        <div class="grow">
-          <div class="cs-name">${esch(nm.base)}${nm.branch?` <span style="color:var(--muted);font-weight:500">${esch(nm.branch)}</span>`:''}</div>
-          <div class="cs-meta">${catFilter?'':esch(r.category||'')+' · '}${agoTs(r.startedAt)} · ${time}${r.shipmentDayHeard?' · ships '+esch(r.shipmentDayHeard):''}</div>
-        </div>
-        <span class="cv" style="color:${vv.c}">${statusIcon(vv.e,vv.c,22)}<span>${esch(vv.t)}</span></span>
-      </summary>
-      <div class="calldetail">${detail||'<span class="meta">No transcript captured for this call.</span>'}</div>
-    </details>`;
-  }).join('')+'</div>';
+    out+=`<div class="lrow" onclick="openCallSheet(${r.id})">
+      ${logoTile({...r,name:r.retailer})}
+      <div class="grow" style="min-width:0">
+        <div class="cs-name">${esch(nm.base)}${nm.branch?` <span style="color:var(--muted);font-weight:500">${esch(nm.branch)}</span>`:''}</div>
+        <div class="cs-meta">${catFilter?'':esch(r.category||'')+' · '}${agoTs(r.startedAt)} · ${time}${r.shipmentDayHeard?' · ships '+esch(r.shipmentDayHeard):''}</div>
+      </div>
+      <span class="cv" style="color:${vv.c}">${statusIcon(vv.e,vv.c,22)}<span>${esch(vv.t)}</span></span>
+    </div>`;
+  });
+  el.innerHTML=out;
+  const more=document.getElementById('res_more');
+  if(more) more.innerHTML=(RESULTS.length<RES_TOTAL)?`<div style="display:flex;justify-content:center;padding:18px 0 0"><button class="ghost" style="padding:12px 26px;font-size:12.5px;font-weight:800;letter-spacing:.13em" onclick="resMore()">SHOW ${Math.min(RES_SIZE,RES_TOTAL-RESULTS.length)} MORE</button></div>`:'';
+}
+// The call sheet (board 1d): verdict, timeline, transcript, fix key.
+function openCallSheet(id){
+  const r=RESULTS.find(x=>x.id===id); if(!r) return;
+  const vv=customerVerdict(r);
+  const nm=splitName(r.retailer||'?');
+  const time=new Date(r.startedAt*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+  const dur=r.callSeconds?Math.floor(r.callSeconds/60)+':'+String(r.callSeconds%60).padStart(2,'0'):null;
+  const tmark=(on,last)=>`<div style="display:flex;gap:12px;align-items:flex-start">${last?`<div style="width:11px;height:11px;border-radius:50%;background:${on?'var(--green)':'rgba(255,255,255,.2)'};${on?'box-shadow:0 0 8px var(--green)':''}"></div>`:`<div style="display:flex;flex-direction:column;align-items:center"><div style="width:11px;height:11px;border-radius:50%;background:${on?'var(--green)':'rgba(255,255,255,.2)'}"></div><div style="width:2px;height:26px;background:${on?'rgba(74,222,128,.4)':'rgba(255,255,255,.1)'}"></div></div>`}`;
+  const tl=[];
+  tl.push(tmark(true)+`<div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,.72);margin-top:-1px">Dialed <span style="color:var(--muted);font-weight:500">${time}</span></div></div>`);
+  if(r.navSeconds!=null) tl.push(tmark(true)+`<div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,.72);margin-top:-1px">Reached a person <span style="color:var(--muted);font-weight:500">${Math.floor(r.navSeconds/60)}:${String(r.navSeconds%60).padStart(2,'0')} in</span></div></div>`);
+  tl.push(tmark(r.status==='completed',true)+`<div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,.72);margin-top:-1px">Verdict <span style="color:var(--muted);font-weight:500">${dur?dur+' in':'—'}</span></div></div>`);
+  const host=document.getElementById('callsheet_host')||(()=>{const d=document.createElement('div');d.id='callsheet_host';d.style.display='none';document.body.appendChild(d);return d;})();
+  host.innerHTML=`<div id="pk_callsheet">
+    <div class="row" style="gap:12px;margin-bottom:4px">${logoTile({...r,name:r.retailer,size:44})}
+      <div class="grow" style="min-width:0"><div style="font-size:16px;font-weight:800;letter-spacing:-.2px;color:#fff">${esch(nm.base)}${nm.branch?' '+esch(nm.branch):''}</div>
+      <div class="cs-meta">${esch(r.category||'')} · ${dayLabel(r.startedAt).toLowerCase()==='today'?'today':dayLabel(r.startedAt)} ${time}${dur?' · '+dur+' on the line':''}</div></div></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:14px">
+      <div style="width:8px;height:8px;border-radius:50%;background:${vv.c};box-shadow:0 0 8px ${vv.c}"></div>
+      <div style="font-size:19px;font-weight:900;letter-spacing:-.4px;color:${vv.c}">${esch(vv.t)}</div>
+    </div>
+    ${r.summary?`<div style="font-size:13px;font-weight:500;color:rgba(255,255,255,.72);margin-top:6px;line-height:1.5">${esch(r.summary)}</div>`:''}
+    <div style="display:flex;flex-direction:column;margin-top:18px;padding-left:5px">${tl.join('')}</div>
+    <div style="margin-top:18px">${r.transcript?bubbles(r.transcript):'<span class="meta">No transcript captured for this call.</span>'}</div>
+    <div style="display:flex;gap:10px;margin-top:20px;align-items:center;justify-content:space-between">
+      <button class="ghost" style="letter-spacing:.1em;font-weight:800" onclick="fixVerdict(${r.id})">FIX THE VERDICT</button>
+      <div style="font-size:11.5px;font-weight:600;color:var(--dim)">Fixing it corrects the call record</div>
+    </div>
+  </div>`;
+  peekOpen('pk_callsheet','');
+}
+// Fix the verdict: cycle to the correct answer and PATCH the record.
+async function fixVerdict(id){
+  const r=RESULTS.find(x=>x.id===id); if(!r) return;
+  const cur=r.confirmed===true?'in stock':r.confirmed===false?'not in stock':'unclear';
+  const next=prompt('This call is recorded as "'+cur+'". Type the correct verdict: yes, no, or unclear');
+  if(next==null) return;
+  const v=next.trim().toLowerCase();
+  const confirmed=v==='yes'||v==='in stock'?true:v==='no'||v==='not in stock'?false:v==='unclear'?null:undefined;
+  if(confirmed===undefined){ toast('Use yes, no, or unclear'); return; }
+  const res=await api('/api/results/'+id+'/verdict',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({confirmed})});
+  if(res&&res.ok){ toast('Verdict corrected'); peekClose(); loadResults(); } else toast('Could not update the record');
 }
 
 
