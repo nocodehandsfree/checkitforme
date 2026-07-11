@@ -366,12 +366,15 @@ const PAGE_TITLES: Record<string, string> = { about: "About", contact: "Contact"
 const H2 = 'style="font-size:19px;font-weight:800;color:#e9e9f0;margin:26px 0 8px"';
 const RM = "https://checkitforme.readme.io"; // the source-of-truth docs (how it works, full FAQ)
 const DEFAULT_PAGES: Record<string, string> = {
-  about: `<p><b>Check It For Me</b> finds out if the thing you want is on the shelf. By phone. So you don't drive across town for nothing.</p>
-<p>You pick a store and a product. Check AI calls the store, asks the staff, and sends you the answer. Real call. Straight answer. No bots pretending to be you. No camping a refresh page.</p>
+  about: `<p><b>Check It For Me</b> finds out if the thing you want is actually on the shelf. By phone. So you don't drive across town for nothing.</p>
+<p>You pick a store and a product. Check AI calls the store, asks a real person, and sends you the answer. Real call, straight answer. No bots pretending to be you, no camping a refresh page at midnight.</p>
 <h2 ${H2}>Why we built it</h2>
-<p>Hyped drops sell out in minutes. Store websites say "in stock" when it's long gone. A 30 second call cuts through it. We made that call one tap.</p>
+<p>We're collectors. We lived the same broken hunt everyone lives: a set drops, every website says sold out in the time it takes to blink, and somewhere across town a truck just dropped a case nobody has found yet. The shelf has it. The internet has no idea.</p>
+<p>So we did the one thing that actually works. We called the store. It worked every single time. The problem was never the information. It was that calling twelve stores, sitting through twelve phone trees, to ask one tiny question, is nobody's idea of a good night.</p>
+<p>So we taught an AI to make that call. Wait through the hold music, work the menu, reach a real human, ask the one question that matters. Then we made it one tap. That's the whole company: the annoying part, done for you, with the receipt to prove it.</p>
+<p>We only cover the stuff that truly sells out and rewards the hunt: Pokémon, One Piece, Topps NBA, and NeeDoh. And you only pay when we get you a real answer. No answer, no charge. That one is wired into the system, not printed on a poster.</p>
 <h2 ${H2}>Want the deep version?</h2>
-<p>How it works, top to bottom, lives at <a href="${RM}" target="_blank" rel="noopener">checkitforme.readme.io</a>.</p>`,
+<p>How it all works, top to bottom, lives in the book: <a href="${RM}" target="_blank" rel="noopener">checkitforme.readme.io</a>.</p>`,
   contact: `<p>Fastest way to reach us is <b>Discord</b>. Our support bot answers the common stuff in seconds, any time. A human picks up the rest.</p>
 <p>Want a store added? Do it right in the app. Account, then Earn, then <i>Add your store</i>. When a store you asked for goes live, your next check is on us.</p>
 <p>We skip phone and email support on purpose. Low overhead is how checks stay cheap.</p>`,
