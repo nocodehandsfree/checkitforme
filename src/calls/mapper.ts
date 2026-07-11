@@ -275,6 +275,20 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
       if (run.phase === "verify" || run.phase === "listen" || run.phase === "baseline") {
         const wasVerify = run.phase === "verify";
         if (reached && recipe) {
+          // NEVER downgrade a locked recipe. A verify re-call that reaches a human SLOWER than the
+          // recipe we already ship is ring/menu variance, not a better path — keep the faster recipe
+          // and try to beat it from there, don't overwrite the live time with the slow sample. (Fresh
+          // baseline discovery has no prior lock, so it always keeps what it just found.)
+          const prior = run.benchmark;
+          const slowerThanLocked = wasVerify && !!lockedRecipe && typeof secs === "number" && typeof prior === "number" && secs > prior;
+          if (slowerThanLocked) {
+            run.baseline = lockedRecipe as NavRecipe; run.best = lockedRecipe as NavRecipe;
+            run.experiments = buildExperiments(run, lockedRecipe as NavRecipe);
+            run.phase = run.experiments.length ? "optimize" : "locked";
+            run.log.push({ n: run.attempt, phase: "verify", store: store.name, outcome: `re-measured ${secs}s — SLOWER than the locked ${prior}s (ring/menu variance); KEPT the faster recipe`, seconds: secs });
+            if (run.phase === "locked") { await finalizeAndLock(run, chainId, lockedRecipe as NavRecipe, s?.confidence ?? null); break; }
+            await sleep(GAP_SEC * 1000); continue;
+          }
           run.baseline = recipe as NavRecipe; run.best = recipe as NavRecipe;
           await finalizeAndLock(run, chainId, recipe as NavRecipe, s?.confidence ?? null); // usable by live checks NOW
           run.experiments = buildExperiments(run, recipe as NavRecipe);
