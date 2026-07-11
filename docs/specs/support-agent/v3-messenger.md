@@ -31,20 +31,27 @@ filter by category / account / day, opens any transcript, and reads a reporting 
 11. Admin API exposes: list chats filtered by category, by account vs guest, by day; open one transcript; a stats snapshot (volume today/7d/30d, by category, self-served vs escalated, escalation rate, avg messages, tickets, top questions).
 12. Everything ships EN + ES same commit.
 
-## Placement & shape (the low-footprint launcher)
-- **Launcher:** a vertical tab pinned to the right edge, mid-height, ~34px wide, rounded on the left,
-  brand-accent hairline, label "Help" rotated vertical + a small chat glyph. Hover/well-known affordance.
-  Replaces the round bubble. Hidden while any sheet/overlay is open.
-- **Panel desktop:** docks to the right, ~380px, full height, own scroll; the site is dimmed only
-  lightly (or not at all) so it never feels like a takeover.
-- **Panel mobile:** the v2 slide-up sheet, taller (min 86vh), same internals.
-- **Views inside the panel:** Home (search + FAQ + your conversations) · Chat (a single conversation)
-  · New-chat topic picker · Bug form (with photo attach) · Buried "talk to a person" form.
+## Placement & shape (owner locked from Intercom shots, 2026-07-11)
+Full-screen Messenger, not a corner panel. Intercom-style with a bottom tab bar.
+- **Launcher:** a tall slim "Help" tab pinned to the right edge (~34px wide, rounded left, brand
+  accent), vertical "Help" label + chat glyph. Replaces the round bubble. Click → the Messenger
+  slides in and TAKES OVER the screen (full-screen on phones; a full-height generous drawer on
+  desktop ~420px, or full-screen — more real estate is the point, footprint when closed is tiny).
+- **Bottom tab bar inside the panel:** Home · Messages · Help (News later).
+  - **Home:** greeting, a known-issue banner slot (admin-toggled) at the top, one big "Ask a
+    question" button → topic picker → chat, and a peek of the most recent conversation.
+  - **Messages:** conversation history — every past chat with the date it started; empty state
+    "No messages yet." Tap one → reopen its full transcript.
+  - **Help:** the FAQ (Copper-owned content — see below) + search over it.
+- **Chat view:** full-height conversation, AI attribution line under bot messages ("Check AI · just
+  now"), input with a paperclip (attach screenshot on bug chats) + send. Privacy line in the footer.
+- **Header:** back arrow (to the tab bar) + close X (collapse back to the launcher).
 
-## Are we pulling from the readme? — yes
-The book is the readme.com customer docs, mirrored on branch `v1.0`. `reindexBook()` fetches every
-`docs/**/*.md` from it into qdrant; FAQ + search + every answer are grounded there. Copper edits the
-book, we reindex, the Messenger reflects it. No second content source.
+## Content sources
+- **AI answers + Help search:** grounded in the book (readme.com mirror, branch `v1.0`) via qdrant.
+- **FAQ (the Help tab list):** Copper writes it; owner decides how it's served to us (his call,
+  2026-07-11). Build the Help tab to render an FAQ list from a single source we agree on (a JSON the
+  owner/Copper edits, or a book section) — leave that source pluggable, don't auto-scrape the book.
 
 ## Reach-a-human is the last resort (owner: "absolutely the last option")
 The human/ticket path is never a visible button on Home or in a fresh chat. It appears ONLY when the
@@ -78,12 +85,12 @@ date), filters (category, member/guest, day/7d/30d, text search), a transcript d
 screenshot + debug + account), and a reporting snapshot (totals, by-category bars, self-served vs
 escalated, escalation rate, tickets, top questions). Consumes the APIs above.
 
-## Extra ideas on the table (owner to pick)
-1. **Contextual open:** deep-link the panel from anywhere (failed check → opens pre-scoped "was this verdict wrong?").
-2. **Status banner:** a one-line "known issue" banner at the top of Home (e.g. "some Target stores ringing busy today") to kill duplicate reports; toggled from Admin.
-3. **Check-aware answers:** signed-in users' check history handed to the AI so it can say "your last check to Store X…" for specific, grounded help.
-4. **CSAT after resolve:** the thumbs already feed the cache; also roll a satisfaction number into the Admin snapshot.
-5. **Auto-debug on bugs:** attach brand/page/last-check-id/browser to every bug ticket so they're actionable without back-and-forth.
+## Extra ideas — owner decisions (2026-07-11)
+- ✓ IN — **Known-issue banner** (admin-toggled, top of Home).
+- ✓ IN — **Check-aware answers** (signed-in check history handed to the AI: "your last check to X…").
+- ✓ IN — **Auto-debug on bug tickets** (silently attach brand/page/last-check-id/browser; invisible to user, makes bugs reproducible).
+- ⏸ PARKED — **Deep-link / contextual open** (panel opens pre-scoped from a failed check). Skip for now.
+- Also rolling **CSAT** (the thumbs) into the Admin snapshot.
 
 ## Build order (Support)
 1. Schema + categories + account linkage + `/pub/support/search` + admin list/stats APIs (backend first, testable).
