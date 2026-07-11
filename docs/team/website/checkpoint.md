@@ -23,6 +23,22 @@
   out of scope, harmless. NOTE: staging today also carries others' batches (docs shuffle, PostHog,
   Helicone routing, backup-restore) — promote takes all of it unless DevOps splits.
 
+## ✅ 07-11 batch 3 — zones frame BUGFIX round (owner tested, many issues) — shipped ea857cf
+- **Root cause of "footer pushed up" + "My-checks pill dead":** the `body.zoning` class (hid header +
+  overflow:hidden) was STICKING when you left zones via a footer link → homepage header hidden + scroll
+  locked. FIX: hide header + support launcher via `body:has(#zones:not(.hidden))` — DOM-state driven, no
+  toggled class, auto-restores on exit. VERIFIED: header display flex(home)→none(zones)→flex(after).
+- **Frame cut off by Safari toolbar** (stores + basket clipped): frame was `inset:0` (100vh, behind the
+  toolbar). FIX: `height:100dvh` + z-index 80. Basket + last row now clear the toolbar.
+- **Basket "barely opens":** chips are now LOGOS ONLY (owner: no names), wrap to multiple rows so all
+  picks show; list bottom-padding measures the basket's real height so nothing hides behind it.
+- **Zone-card + basket logos** now render via `storeFace()` = byte-identical to the homepage store tiles
+  (#1F1F25 tile / gradient monogram fallback / img max 34).
+- **Footer** pinned to the bottom of the list (`margin-top:auto` on the flex-column scroll).
+- **"New zone doesn't trigger right away":** zoneSave nulled the cache → spinner (no button) ate the first
+  tap. FIX: keep the list + New-zone button on screen during the refetch.
+- NOTE: support widget was renamed `.supbub`→`.suplaunch` by another lane; hide rule covers both.
+
 ## ✅ 07-11 batch 2 — zones REBUILT to comp + 5 extras (shipped e025dbf, verified on staging)
 - **Zones = locked frame now** (owner: "you did not implement this properly at all"). List/create/run are
   one fixed full-viewport flex column: header pinned, middle scrolls only, basket bar pinned bottom.
