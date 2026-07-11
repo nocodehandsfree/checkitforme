@@ -58,6 +58,23 @@ log) · qa-round6 / qa-gating / qa-admin-plans fail IDENTICALLY on the pre-sessi
 **Known edge (accepted):** a BARGED Delta call reopened from history >15 min later (after the
 in-memory session expires) can't resolve `delta:<id>` → shows in_progress. Rare, owner-facing only.
 
+## 2026-07-11 additions (post-checkpoint, same session)
+- **Delta call 97 root cause:** free-tier GEMINI_API_KEY 429'd → every classify threw → clear "we
+  don't" became "unclear" + tone-deaf "Awesome!" wrap. Fixed: llm() gateway falls back to gpt-4o-mini
+  on ANY gemini/groq failure; Delta classifier now **groq:llama-3.3-70b-versatile** (benched: correct
+  on every line, ~300ms from staging; DELTA_CLASSIFY_MODEL env override); neutral wrapNo clip (slot 8)
+  for non-yes endings. Verified live via /api/admin/llm-ping.
+- **Delta live audio:** owner heard nothing on Delta (no EL bridge to tap — NOT a Safari bug, Webbie
+  called off). tapedeckTwiml now <Start><Stream name=deltatap> forks both tracks into the listen room;
+  barge TwiML <Stop>s the fork before <Connect> so frames never double. NOT verified by ear — owner's
+  next call is the proof.
+- **Support tab in Admin (77eacd6→):** new nav group; snapshot (requests/self-served/escalated/rate/
+  avg msgs/tickets emailed, by-category, top questions), filterable chat list, transcript drawer w/
+  screenshot + debug + account. Degrades gracefully until Support's APIs land. Contract for Support:
+  `docs/specs/support-agent/admin-panel-contract.md`.
+- **Owner owes:** Delta test round 2 (reminder trigger set, 45m). CD owes: Admin design comp
+  (prompt handed to owner; comps → website + admin split in docs/design/comps/).
+
 **OPEN (priority order):**
 1. Owner runs the next Fun test round → THE first real Delta live test (incl. barge-in on an
    off-script call). Tune again from that feedback.
