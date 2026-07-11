@@ -23,6 +23,26 @@
   out of scope, harmless. NOTE: staging today also carries others' batches (docs shuffle, PostHog,
   Helicone routing, backup-restore) — promote takes all of it unless DevOps splits.
 
+## ✅ 07-11 batch — pill law + zones + footer (shipped f5c6577, verified on staging)
+- **New bottom-notification pill** (owner comp): gray `#2E2E35→#25252B`, white 14.5/800, thin glowing
+  white outline that pulses (box-shadow, keeps ellipsis), one line, never green. NEW copy law: fragments
+  not sentences — no periods or commas ever, both langs. Enforced at render via `pillCopy()` (protects
+  4.00 decimals + 1,000 thousands). VERIFIED: "The store is closed, we will try again. 0.3 mi" →
+  "The store is closed we will try again 0.3 mi". `.tneutral/.taccent` stay no-ops.
+- **Footer:** hairline top border (owner reversed 07-09 borderless call) + restored Terms + Privacy links,
+  dropped Legal. VERIFIED served: Scores About FAQ Contact Terms Privacy.
+- **Zones:** product switcher hidden in zones view (`body.zoning .vsw`, VERIFIED block→none) · confirm sheet
+  warns which stores are closed + "we can still call the N open" (amber panel), closed stores SKIPPED
+  server-side in the sweep (openState filter in /app/zones/:id/check) so no wasted check · Add-all button
+  now TOGGLES to "Remove all" (red) once all in-radius picked · price/check-count removed from confirm +
+  zone card (owner "remove price"). Builder already loads closed stores (marks them) — no change needed.
+- **Out-of-checks (answered owner Q):** already exists both places — single check `credits<=0 → openBuy('out')`;
+  zone sweep server pre-flights `canAffordZone` → `no_credits` → pill + openBuy. Book's "we make sure you
+  have enough before starting" is really enforced (server-side). Tidied to pill-law wording.
+- **Style guide LOCKED:** §5.4 (pill), §5.14 (footer), NEW §5.17 (zones). Owner's My Zones comp saved to
+  comps/MY_ZONES_COMP.dc.html + README note (fold into main board on next regen).
+- **PARKED (owner circling back in another chat):** PAYG slider not aligning to 10/100 + pricing off. NOT touched.
+
 ## ✅ Delta-lane live AUDIO — FIXED (f899f2a, was the 🔴 cross-lane blocker)
 - tapedeck.ts now adds a passive `<Start><Stream track="both_tracks">` fork into room delta:<id> so
   Twilio media reaches the SAME rooms→/listen→playMu pipe the old system used. Front-end player
