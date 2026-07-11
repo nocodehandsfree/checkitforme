@@ -1,18 +1,51 @@
 ---
-title: Common questions
+title: Top questions
 ---
-**Do you actually call the store?** Yes. A real phone call over the real phone network, answered by a real employee. The transcript on your result is the proof.
+The 15 things people ask most. Tap a topic for the full page.
 
-**How long does a check take?** Usually about two minutes, phone menu included.
+**1. Do you actually call the store?**
+Yes. A real phone call over the real phone network, answered by a real employee. The transcript on your result is the proof.
 
-**What does a check cost?** Your first is free. After that, plan checks (from $4.99 a month for 15) or pay as you go (99¢ each in the small pack, down to 60¢ in the big one).
+**2. What's a "check"?**
+One call, to one store, about one product. It's what you spend. See [What a check is](doc:what-a-check-is).
 
-**Why can't I check the same store again right away?** Shelves don't change in an hour, so we cap the same store and product to once an hour and save you the check.
+**3. What does it cost?**
+Your first check is free. After that, a plan (from $4.99 a month for 15 checks) or pay as you go (99¢ each down to 60¢ in bulk). See [Plans](doc:plans).
 
-**Do checks expire?** Plan checks reset each month. Pay as you go checks never expire.
+**4. What if nobody answers?**
+It's free. No answer, busy line, endless hold, closed store: you keep your check, every time. See [No answer = no charge](doc:no-answer-no-charge).
 
-**Do stores mind?** We're polite, quick, and we ask one question, the same one you'd ask. Staff talk to a friendly caller for about thirty seconds.
+**5. How long does a check take?**
+Usually about two minutes, phone menu included.
 
-**What products do you cover?** Pokémon, One Piece, Topps NBA, and NeeDoh. Each has its own site, one account works everywhere.
+**6. I drove over and it was gone. What happened?**
+A check is a moment in time, and hot sets move fast. Read the transcript to see exactly what the store said, and tap the buttons to tell us if we got it wrong. See [Wrong verdict](doc:wrong-verdict).
 
-**Is my info safe?** We sign you in with a texted code, so there's no password to leak, and we store only what runs your checks. See [Privacy](doc:privacy).
+**7. Why can't I check the same store again right away?**
+Shelves don't change in an hour, so we cap the same store and product to once an hour and save you the check.
+
+**8. Do my checks expire?**
+Plan checks reset each month. Pay as you go checks never expire.
+
+**9. What can I hunt?**
+Pokémon, One Piece, Topps NBA, and NeeDoh. One account works across all of them.
+
+**10. How do I earn free checks?**
+Invite a friend (3 checks each), add a missing store, or forward a kiosk receipt. See [Invite a friend](doc:invite-a-friend).
+
+**11. What is Check+?**
+The membership. Every paid plan unlocks the full set of power tools: zone sweeps, restock alerts, auto checks, and more. See [What Check+ is](doc:what-check-plus-is).
+
+**12. Can I check stores in another city?**
+Yes, with Any town on Check+. Hunt anywhere, not just near you. See [Any town](doc:any-town).
+
+**13. Can it call from my own number?**
+Yes. Verify your number once and every check dials as you, so more stores pick up. See [Caller ID](doc:caller-id).
+
+**14. Do stores mind the calls?**
+We're polite, quick, and ask one question, the same one you would. It takes staff about thirty seconds.
+
+**15. How do I cancel?**
+Manage plan, then cancel. No hoops. Your pay as you go checks stay yours. See [Cancel anytime](doc:cancel-anytime).
+
+Still stuck? [Contact us](doc:contact-us).
