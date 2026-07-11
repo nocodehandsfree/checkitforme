@@ -10,5 +10,3 @@ One hard rule keeps the map honest: a store only counts as a kiosk if it's on th
 A kiosk check asks a different question than a shelf check. There's nobody to ask about shipments, so the call confirms the machine is powered on and stocked. Machines go down, get unplugged, and run dry on their own schedule.
 
 Bought something at one? Forward the machine's email receipt and you've proven it was working that minute. It earns you a check, too.
-
-Next: [Meet Check AI](doc:meet-check-ai)

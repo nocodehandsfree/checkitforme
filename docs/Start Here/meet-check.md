@@ -18,5 +18,3 @@ It works for the stuff that actually sells out: **Pokémon, One Piece, Topps Chr
 > 📗 **The promise**
 >
 > First check's on us. And **no answer = no charge.** If we can't get you a clear yes or no, you don't spend a thing.
-
-Next: [How a check works](doc:how-a-check-works)

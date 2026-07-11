@@ -8,5 +8,3 @@ Here's what actually happens between your tap and your verdict.
 3. **We reach a person.** Most stores answer with a menu. Check AI knows the fastest route through each one and works it straight to a human.
 4. **We ask.** One clear question, then we listen. The whole exchange streams to your phone live.
 5. **We read the answer twice.** Two independent reads decide the verdict. If they disagree, we don't guess. You get an honest "couldn't tell" and it's free.
-
-Next: [Beating phone trees](doc:beating-phone-trees)

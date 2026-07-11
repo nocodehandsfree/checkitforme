@@ -10,5 +10,3 @@ The clever part is how it gets to that person. Every store's phone system is one
 - **Voice menu.** The kind that wants you to say "front desk." We say the right words and get routed straight through.
 
 It learns each store's fastest path once and reuses it on every call after that. The calls get quicker and cheaper over time.
-
-Next: [The life of a check](doc:the-life-of-a-check)

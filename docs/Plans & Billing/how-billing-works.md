@@ -9,5 +9,3 @@ title: How billing works
 Cancel any time. You keep your pay as you go balance. The monthly checks just stop refilling.
 
 And a check is only charged on a real, answered verdict, decided after the call. You never get charged mid call or on a maybe.
-
-Next: [No answer = no charge](doc:no-answer-no-charge)

@@ -8,5 +8,3 @@ Three steps. You barely lift a finger.
 3. **You get the verdict.** The moment the call wraps, you get a plain answer, color coded so you know before you even read it.
 
 <p align="center"><img src="https://raw.githubusercontent.com/nocodehandsfree/checkitforme/v1.0/assets/book-store-detail.png" width="300" alt="One tap checks the store" /></p>
-
-Next: [Your verdict](doc:your-verdict)

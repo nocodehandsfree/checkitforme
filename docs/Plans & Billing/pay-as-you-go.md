@@ -11,6 +11,4 @@ No subscription? Buy a bundle of checks. The balance never expires, and the pric
 | 75 checks | $47.99 | 64¢ |
 | 100 checks | $60.00 | 60¢ |
 
-Bundles cover the core move: call a store, check the shelf. [Premium features](doc:premium-features) stay subscription only.
-
-Next: [How billing works](doc:how-billing-works)
+Bundles cover the core move: call a store, check the shelf. [Check+ features](doc:what-check-plus-is) stay subscription only.

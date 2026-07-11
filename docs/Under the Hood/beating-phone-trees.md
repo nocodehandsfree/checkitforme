@@ -11,10 +11,4 @@ Here's the money trick: the smart, expensive part of Check AI stays asleep while
 
 That's not just nerd pride. It's what makes **no answer = no charge** affordable. Reaching a human costs us so little that we can eat every call that doesn't.
 
-Here's the operator's map of it, every chain sorted by how we reach a human:
-
-![Chain phone system mapping](https://raw.githubusercontent.com/nocodehandsfree/checkitforme/v1.0/assets/admin-chains-map.png)
-
-On a mapped chain, a person is on the line in seconds, not minutes.
-
-Next: [Proof, not guesses](doc:proof-not-guesses)
+On a mapped chain, a person is on the line in seconds, not minutes. And every call teaches the map a little more, so it only gets faster.

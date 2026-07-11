@@ -17,5 +17,3 @@ It's a best chance, never a promise. A small store that restocks like clockwork 
 The top picks show up right in the app as **Best Bets**:
 
 <p align="center"><img src="https://raw.githubusercontent.com/nocodehandsfree/checkitforme/v1.0/assets/book-stores.png" width="300" alt="Best Bets in the store list" /></p>
-
-Next: [Kiosks](doc:kiosks)

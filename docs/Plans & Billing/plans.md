@@ -14,6 +14,4 @@ Pay for a year up front and it's 17% off. That's about two months free.
 
 Plan checks reset each cycle and don't roll over. Need more mid month? Grab a [pay as you go](doc:pay-as-you-go) bundle. Those never expire.
 
-Every plan also unlocks the full set of [premium features](doc:premium-features).
-
-Next: [Premium features](doc:premium-features)
+Every plan also unlocks the full set of [Check+ features](doc:what-check-plus-is).

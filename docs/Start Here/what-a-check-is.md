@@ -15,5 +15,3 @@ Two words we keep straight, everywhere in the app:
 - A **call** is the literal phone call we place.
 
 > ✅ **One check. One store. One straight answer.**
-
-Next: [The store map](doc:the-store-map)

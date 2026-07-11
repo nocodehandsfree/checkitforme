@@ -10,5 +10,3 @@ Everything else is free, automatically. Nobody answered. The line was busy. Endl
 > 🛡️ **You pay for answers, not attempts.**
 >
 > The charge is decided by the server after the call, on the verdict alone. A dead end call can't quietly cost you.
-
-Next: [Privacy](doc:privacy)

@@ -16,5 +16,3 @@ And we don't just have a list. We keep a live file on every single store:
 - The exact route through its phone menu to reach a human fast.
 
 One more thing keeps it honest: everything reads from a single live database. When a store gets fixed, it's fixed everywhere at once. No stale spreadsheets.
-
-Next: [Store types](doc:store-types)
