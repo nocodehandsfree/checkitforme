@@ -1,6 +1,23 @@
 # Check - Mapping — CHECKPOINT (current state)
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets not prose, under ~80 lines.
 
+## RESTORED + root cause (2026-07-10 ~9pm ET) — 11 chains that got slower
+- **Owner caught it:** the after-column had 11 chains SLOWER than before. That's a fail — the whole point
+  is faster. All 11 hand-restored via trainer/lock to last night's faster recipes (verified live):
+  Walmart 130→10, Target 42→16, Blain's 92→57, Sam's 57→44, Walgreens 45→34, Albertsons 77→68,
+  Dick's 29→24, Fleet Farm 62→57, Jewel 70→65, Safeway 104→102, Food 4 Less 56→55.
+- **ROOT CAUSE (real engine bug):** the VERIFY stage re-locked whatever it last reached even when SLOWER
+  than the shipped recipe — no compare to the existing time. Ring/menu variance on a re-call → a slower
+  sample overwrote a faster lock. (Optimize does it right; verify didn't.) Hit 8 of the 11.
+  - Walmart/Target: different — the fast press stopped registering a human (Walmart rode a call-volume
+    hold to 130s; Target's press-through didn't confirm a person) → engine relearned a long path. Needs a
+    daylight listen: is the fast path still reaching a human, or is human-detection missing it?
+  - Albertsons: 0s call-drop on the Safeway/Albertsons/Vons phone platform killed capture → needs-review.
+- **FIX BUILT:** `6feff66` on staging — guard so a verify NEVER downgrades a locked recipe (keep faster,
+  optimize from there). tsc clean. Handed to Pops for next promote. This alone prevents 8 of the 11.
+- **Correction to the sweep report's spin:** "nothing got slower" was WRONG — several genuinely locked
+  slower and shipped live. Report/checkpoint below corrected.
+
 ## POST-SWEEP owner fixes (2026-07-10 ~8:45pm ET)
 - **AAFES (33) MUTED** — owner: not calling Army/Air Force exchanges. Out of the calling pool + hidden
   from consumers. (Also resolved its bug: the sweep had mis-locked it as type:direct/no-steps — moot now.)
