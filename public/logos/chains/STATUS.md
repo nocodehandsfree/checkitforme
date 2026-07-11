@@ -179,8 +179,8 @@ Legend: ✅ locked (owner-approved) · 🔧 in progress · ⬜ todo
 | Savers | tags mark only | 🔧 | brand mark only per owner |
 | Uwajimaya | scallop mark only | 🔧 | brand mark only, white, per owner |
 | Woodman's | "WOODMAN'S" + apple | 🔧 | name + apple only, enlarged per owner |
-| Metro Market | m + green leaf | 🔧 | official app icon (Kroger Co.), de-boxed; same brown m + leaf family as Mariano's (Roundy's siblings, same brown) |
-| Pak 'n Save | "Pak 'n / $ave" 2 lines | 🔧 | real Pak 'n $ave Foods lettering (BOTW scan of the print logo), lozenge border dropped + "Foods" dropped, stacked 2 lines, brand red #E41720 (Albertsons guidelines), lifted a touch for the dark tile |
+| Metro Market | m + green leaf | 🔧 | owner's call: reuse the locked Mariano's M+leaf (sibling Roundy's brands, same mark family) — metro_market.png is a copy of mariano_s.png |
+| Pak 'n Save | "Pak 'n / $ave" 2 lines | 🔧 | real Pak 'n $ave Foods lettering vector-traced crisp from the print logo, lozenge + "Foods" dropped, stacked 2 lines, brand red #E41720 |
 | Payless Foods | red P + green leaf | 🔧 | owner-supplied mark (their real P-with-leaf), white stripped incl. the P counter. (Their yellow-box sign lockup was v1 — owner picked the P mark) |
 | Unique | red "unique" wordmark | 🔧 | official Savers asset (uni-us-logo SVG from stores.savers.com), ® dropped, w:1 |
 | Habitat ReStore | Habitat house mark, green | 🔧 | mark-only from the official Habitat lockup (en.wiki vector), recolored brand green #54B848; stores not in DB yet — alt treatment ("ReStore" wordmark) needs a clean source if owner prefers |
