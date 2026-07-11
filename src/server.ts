@@ -15,7 +15,7 @@ import {
 } from "./db/schema";
 import { answerSupport, resolveConversation, SUPPORT_MODELS, SUPPORT_CATEGORIES, type SupportCategory } from "./support/ladder";
 import { submitTicket } from "./support/tickets";
-import { addQa, reindexBook, searchBook } from "./support/rag";
+import { addQa, reindexBook, searchBook, getFaq } from "./support/rag";
 import { config } from "./config";
 import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
@@ -4223,6 +4223,11 @@ app.post("/pub/support/search", async (c) => {
   if (q.length < 2) return c.json({ hits: [] });
   try { return c.json({ hits: await searchBook(q, 5) }); }
   catch (e) { console.error("[support] search", e); return c.json({ hits: [] }); }
+});
+// FAQ tab — Copper's top-15 questions from the ReadMe, parsed server-side (cached). No chat needed.
+app.get("/pub/support/faq", async (c) => {
+  try { return c.json({ items: await getFaq() }); }
+  catch (e) { console.error("[support] faq", e); return c.json({ items: [] }); }
 });
 // Known-issue banner shown at the top of the Messenger home. Admin sets it; public reads it.
 app.get("/pub/support/banner", async (c) => {

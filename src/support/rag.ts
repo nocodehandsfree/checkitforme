@@ -75,6 +75,26 @@ export async function addQa(question: string, answer: string, conversationId: nu
   }]);
 }
 
+// The FAQ tab reads Copper's top-questions page on ReadMe (single source). Parsed + cached 10 min
+// so tapping the tab is instant and people can read answers without ever chatting.
+export interface FaqItem { q: string; a: string; url: string }
+let faqCache: { t: number; v: FaqItem[] } | null = null;
+export async function getFaq(): Promise<FaqItem[]> {
+  if (faqCache && Date.now() - faqCache.t < 600_000) return faqCache.v;
+  let md = "";
+  try { md = await fetch(`${README}/docs/common-questions.md`).then((r) => r.ok ? r.text() : ""); } catch { /* fall through */ }
+  const items: FaqItem[] = [];
+  for (const m of md.matchAll(/\*\*\d+\.\s*(.+?)\*\*\s*\n([\s\S]*?)(?=\n\s*\*\*\d+\.|\n#|\nStill stuck|$)/g)) {
+    const q = m[1].trim();
+    const body = m[2].trim();
+    const url = /\[[^\]]+\]\((https?:\/\/[^)]+)\)/.exec(body)?.[1] || "";
+    const a = body.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1").replace(/\s+/g, " ").trim();
+    if (q && a) items.push({ q, a, url });
+  }
+  if (items.length) faqCache = { t: Date.now(), v: items };
+  return items;
+}
+
 export interface SearchHit { title: string; snippet: string; url: string; score: number }
 /** Semantic search over the book only — powers the Help tab search + instant answers (no model spend). */
 export async function searchBook(query: string, limit = 5): Promise<SearchHit[]> {
