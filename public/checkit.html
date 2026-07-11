@@ -1908,9 +1908,8 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <div style="min-width:0;flex:1"><div class="csheet-nm" id="cs_nm"></div><div class="csheet-addr" id="cs_addr"></div></div>
   </div>
   <div class="csheet-prod" id="cs_prod"></div>
-  <div class="csheet-reach" id="cs_reach" style="display:none;margin-top:7px;font-size:12.5px;font-weight:600;color:#8A8A96"></div>
   <button class="csheet-call" id="cs_call" onclick="startCheck()"><span class="cs-l"><svg width="30" height="30" viewBox="0 0 46 46" aria-hidden="true" style="overflow:visible"><path class="cs-wv" d="M28 9A5.5 5.5 0 0 1 33.6 14.8"/><path class="cs-wv w2" d="M27.4 5.8A9 9 0 0 1 37.2 15.6"/><g transform="rotate(-6 23 23) translate(10 10) scale(1.083)"><path class="cs-ph" d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.05 15.05 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2 2 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.95z"/></g></svg> <span data-i18n="cs.cta">Check this store</span></span><svg class="cs-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
-  <div class="csheet-charge" data-i18n="charge"><b>No answer = no charge</b></div>
+  <div class="csheet-reach" id="cs_reach" style="display:none;margin-top:9px;text-align:center;font-size:12.5px;font-weight:600;color:#8A8A96"></div>
 </div>
 
 
@@ -2554,7 +2553,7 @@ const I18N={ es:{
   'sc.crew':'Presume con la banda','sc.scored':'¡La conseguiste!','sc.snap':'Toma tu foto. Publícala.','sc.photo':'Tu foto','sc.caption':'Descripción','sc.name':'Tu nombre / usuario','sc.optional':'(opcional)','sc.ph.caption':'¡Saqué un Charizard en el Target de Sunset!','sc.ph.handle':'@tuusuario','sc.post':'Publicar en el muro →','sc.uploading':'Subiendo…','sc.err.big':'La foto pesa demasiado (máx. 12 MB).','sc.err.nophoto':'Agrega una foto primero',
   'ph.schednum':'Escribe tu número','ph.storereq':'ej. Target, Thousand Oaks','ph.storecity':'ej. Thousand Oaks, CA','ph.storedetails':'dirección, qué productos, etc.','ph.kiosk':'ej. Albertsons, Sunset Blvd, LA','ph.kioskhint':'ej. A veces se salta la reposición de los :03',
   'toast.searchmi':'📍 {q}. Tiendas a {n} mi','toast.zoomout':'Pellizca para acercar, toca para fijar un punto','toast.community':'La comunidad llega pronto','toast.locupdated':'Actualizado a tu ubicación actual',
-  'cs.costs':'cuesta 1 verificación','cs.reach.menu':'Unos {n} segundos para llegar a una persona','cs.reach.direct':'Esta tienda contesta directo','cs.toggle':'Ver pasos de la llamada','cs.hobask':'Verificaremos precio y disponibilidad de',
+  'cs.costs':'cuesta 1 verificación','cs.reach.menu':'~{n} seg para llegar a una persona','cs.reach.direct':'Esta tienda contesta directo','cs.toggle':'Ver pasos de la llamada','cs.hobask':'Verificaremos precio y disponibilidad de',
   'err.storename':'Agrega el nombre de la tienda',
   'fbk.in':'En stock','fbk.out':'No está','fbk.soon':'Reabasteciendo','fbk.unsure':'Sin claridad',
   'fbk.q':'¿Puedes deducirlo de la conversación de abajo? ¿Qué opinas?',
@@ -4156,7 +4155,7 @@ function renderCallSheet(){
   // Time-to-a-human (DD's reach field): set the expectation BEFORE they spend the check.
   // Evidence-only — unmapped stores show nothing.
   const re=$('cs_reach'); if(re){ const r=s.reach;
-    if(r&&r.kind==='menu'&&r.seconds>0){ re.textContent=tf('cs.reach.menu','About {n} seconds to reach a human',{n:Math.max(15,Math.round(r.seconds/5)*5)}); re.style.display=''; }
+    if(r&&r.kind==='menu'&&r.seconds>0){ re.textContent=tf('cs.reach.menu','~{n} sec to reach a human',{n:Math.max(15,Math.round(r.seconds/5)*5)}); re.style.display=''; }
     else if(r&&r.kind==='direct'){ re.textContent=t('cs.reach.direct','This store picks up directly'); re.style.display=''; }
     else re.style.display='none'; }
 }
