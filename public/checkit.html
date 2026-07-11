@@ -549,39 +549,93 @@ __BRAND_HEAD__
   .toast svg path,.toast svg circle{stroke:#06210f}
   .toast.show{transform:translateX(-50%) translateY(0)}
   .hidden{display:none}
-  /* Support chat: floating bubble + slide-up sheet (matches the call sheet — grabber, no X) */
-  .supbub{position:fixed;right:16px;bottom:18px;z-index:70;width:54px;height:54px;border-radius:999px;border:none;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#2D2D34,#27272D);
-    box-shadow:0 10px 30px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1);transition:transform .12s}
-  .supbub:active{transform:translateY(2px)}
-  .supbub svg{width:24px;height:24px;stroke:var(--accent,#FFCB05)}
-  body:has(.overlay.on) .supbub,body:has(.csheet.on) .supbub,body:has(.supsheet.on) .supbub{display:none}
-  .supsheet{position:fixed;left:0;right:0;bottom:0;z-index:80;max-width:520px;margin:0 auto;
-    background:#26262B;border-radius:28px 28px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7);
-    padding:10px 20px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;max-height:86vh;
-    transform:translateY(112%);transition:transform .28s cubic-bezier(.32,.72,0,1);touch-action:none}
-  .supsheet.on{transform:translateY(0)}
-  .supsheet-handle{width:40px;height:5px;border-radius:3px;background:rgba(255,255,255,.22);margin:0 auto 14px;flex:0 0 auto}
-  .supsheet h3{margin:0 2px 12px;font-size:20px;font-weight:800;letter-spacing:-.3px;text-align:center}
-  .supmsgs{flex:1 1 auto;min-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px 0 4px;-webkit-overflow-scrolling:touch}
-  .supm{max-width:86%;padding:10px 13px;border-radius:16px;font-size:15px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
-  .supm.me{align-self:flex-end;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);color:#EAEAF0}
-  .supm.bot{align-self:flex-start;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 4px 14px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08)}
+  /* Support Messenger: right-edge launcher tab + full-screen (mobile) / right-drawer (desktop) panel */
+  .suptab{position:fixed;right:0;top:42%;z-index:70;transform:translateY(-50%);cursor:pointer;border:none;
+    display:flex;flex-direction:column;align-items:center;gap:7px;padding:15px 8px;border-radius:14px 0 0 14px;
+    background:linear-gradient(180deg,#2D2D34,#212127);color:var(--accent,#FFCB05);
+    box-shadow:-6px 8px 24px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.08);transition:padding .12s,transform .12s}
+  .suptab:hover{padding-right:12px}
+  .suptab:active{transform:translateY(-50%) translateX(1px)}
+  .suptab svg{width:20px;height:20px;stroke:var(--accent,#FFCB05)}
+  .suptab .tl{font:800 11px Inter;letter-spacing:.16em;text-transform:uppercase;writing-mode:vertical-rl;transform:rotate(180deg)}
+  body:has(.overlay.on) .suptab,body:has(.csheet.on) .suptab,body:has(.supwrap.on) .suptab{display:none}
+  .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:flex;flex-direction:column;
+    background:#141418;transform:translateX(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);opacity:0;pointer-events:none}
+  .supwrap.on{transform:translateX(0);opacity:1;pointer-events:auto}
+  @media(min-width:720px){ .supwrap{width:420px;border-left:1px solid rgba(255,255,255,.06);box-shadow:-24px 0 60px -20px rgba(0,0,0,.7)} }
+  .sup-hd{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:16px 16px 14px;background:#1A1A20}
+  .sup-hd .hbtn{width:34px;height:34px;border-radius:999px;border:none;background:transparent;color:#c2c2cf;cursor:pointer;display:grid;place-items:center;flex:0 0 auto}
+  .sup-hd .hbtn svg{width:20px;height:20px;stroke:#c2c2cf}
+  .sup-hd .htitle{flex:1;min-width:0}
+  .sup-hd .htitle b{display:block;font-size:16px;font-weight:800;letter-spacing:-.2px}
+  .sup-hd .htitle span{display:block;font-size:12.5px;color:#8A8A96;margin-top:1px}
+  .sup-hd .hmark{width:34px;height:34px;border-radius:10px;background:var(--accent,#FFCB05);display:grid;place-items:center;flex:0 0 auto}
+  .sup-hd .hmark svg{width:19px;height:19px;stroke:#1f1900}
+  .sup-body{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column}
+  .sup-view{display:none;flex-direction:column;flex:1;min-height:0}
+  .sup-view.on{display:flex}
+  /* Home */
+  .sup-hero{padding:24px 20px 20px;background:linear-gradient(160deg,#22222A,#16161B)}
+  .sup-hero h2{margin:0;font-size:24px;font-weight:800;letter-spacing:-.5px;line-height:1.2}
+  .sup-hero p{margin:8px 0 0;color:#9a9aa8;font-size:14.5px}
+  .sup-banner{margin:14px 20px 0;padding:12px 14px;border-radius:12px;background:#2a2415;color:#f5d488;font-size:13.5px;line-height:1.45;display:none}
+  .sup-banner.on{display:block}
+  .sup-card{margin:16px 16px 0;background:linear-gradient(180deg,#22222A,#1c1c22);border-radius:16px;padding:16px;box-shadow:0 6px 18px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.05)}
+  .sup-ask{width:100%;margin-top:2px;border:none;cursor:pointer;border-radius:12px;padding:15px 16px;font:800 15px Inter;
+    background:var(--accent,#FFCB05);color:#1f1900;display:flex;align-items:center;justify-content:space-between;box-shadow:0 6px 18px color-mix(in srgb,var(--accent,#FFCB05) 26%,transparent)}
+  .sup-ask svg{width:20px;height:20px;stroke:#1f1900}
+  .sup-recent{margin:16px 16px 0;font-size:12.5px;color:#8A8A96;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+  /* Rows (conversations, articles, topics) */
+  .sup-row{display:flex;align-items:center;gap:12px;margin:10px 16px 0;padding:14px;border-radius:14px;cursor:pointer;
+    background:linear-gradient(180deg,#22222A,#1c1c22);box-shadow:0 4px 12px rgba(0,0,0,.25);color:#EAEAF0;text-align:left;border:none;width:calc(100% - 32px);font:inherit}
+  .sup-row:active{transform:translateY(1px)}
+  .sup-row .rmain{flex:1;min-width:0}
+  .sup-row .rtitle{font-size:14.5px;font-weight:600;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .sup-row .rsub{font-size:12px;color:#8A8A96;margin-top:3px;display:flex;align-items:center;gap:6px}
+  .sup-row .rchip{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--accent,#FFCB05);background:color-mix(in srgb,var(--accent,#FFCB05) 14%,transparent);padding:2px 7px;border-radius:999px}
+  .sup-row .rarrow{color:#6B6B7B;flex:0 0 auto}
+  .sup-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#8A8A96;text-align:center;padding:40px 30px}
+  .sup-empty svg{width:34px;height:34px;stroke:#4a4a54}
+  .sup-empty b{color:#c2c2cf;font-size:15px}
+  /* Search box */
+  .sup-search{margin:14px 16px 0;position:relative}
+  .sup-search input{width:100%;background:#1B1B20;color:#EAEAF0;border:none;border-radius:12px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:13px 14px 13px 40px;font:500 16px Inter;outline:none}
+  .sup-search svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:#6B6B7B}
+  /* Chat */
+  .supmsgs{flex:1 1 auto;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:16px;-webkit-overflow-scrolling:touch}
+  .supm{max-width:88%;padding:11px 14px;border-radius:16px;font-size:15px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+  .supm.me{align-self:flex-end;background:#fff;color:#111;border-bottom-right-radius:5px}
+  .supm.bot{align-self:flex-start;background:#26262C;color:#EAEAF0;border-bottom-left-radius:5px}
+  .supm.att{align-self:flex-start;font-size:12px;color:#8A8A96;padding:2px 4px 8px;margin-top:-4px}
   .supm.dots span{display:inline-block;width:7px;height:7px;border-radius:50%;background:#8A8A98;margin-right:4px;animation:loaddot 1.25s ease-in-out infinite}
   .supm.dots span:nth-child(2){animation-delay:.18s}.supm.dots span:nth-child(3){animation-delay:.36s}
-  .suprow{display:flex;gap:10px;align-items:flex-end;flex:0 0 auto;margin-top:10px}
-  .supin{flex:1;min-width:0;resize:none;background:#1B1B20;color:#EAEAF0;border:none;border-radius:16px;
-    box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:13px 15px;font:500 16px Inter;line-height:1.4;
-    min-height:50px;max-height:120px;outline:none}
-  .supin::placeholder{color:#6B6B7B;font-style:italic}
-  .supsend{flex:0 0 auto;width:50px;height:50px;border-radius:999px;border:none;cursor:pointer;background:var(--accent,#FFCB05);
-    display:grid;place-items:center;box-shadow:0 6px 18px color-mix(in srgb,var(--accent,#FFCB05) 30%,transparent);transition:transform .08s}
+  .sup-foot{flex:0 0 auto;padding:12px 16px calc(10px + env(safe-area-inset-bottom));background:#1A1A20}
+  .suphelp{display:none;gap:8px;margin:0 0 10px;flex-wrap:wrap}
+  .suphelp.on{display:flex}
+  .suphelp button{border:none;cursor:pointer;border-radius:999px;padding:9px 14px;font-weight:700;font-size:12.5px;background:#26262C;color:#c2c2cf}
+  .suphelp button.ghost{background:transparent;color:#6B6B7B;text-decoration:underline}
+  .suprow{display:flex;gap:10px;align-items:flex-end}
+  .supin{flex:1;min-width:0;resize:none;background:#232329;color:#EAEAF0;border:none;border-radius:16px;padding:13px 15px;font:500 16px Inter;line-height:1.4;min-height:50px;max-height:120px;outline:none}
+  .supin::placeholder{color:#6B6B7B}
+  .supclip{flex:0 0 auto;width:44px;height:44px;border-radius:999px;border:none;cursor:pointer;background:#232329;display:grid;place-items:center}
+  .supclip svg{width:20px;height:20px;stroke:#9a9aa8} .supclip.hide{display:none}
+  .supsend{flex:0 0 auto;width:50px;height:50px;border-radius:999px;border:none;cursor:pointer;background:var(--accent,#FFCB05);display:grid;place-items:center;transition:transform .08s}
   .supsend:active{transform:translateY(1px)} .supsend:disabled{opacity:.5}
   .supsend svg{width:22px;height:22px;stroke:#1f1900}
-  .suphelp{display:none;justify-content:center;gap:8px;margin:2px 0 4px;flex:0 0 auto}
-  .suphelp.on{display:flex}
-  .suphelp button{border:none;cursor:pointer;border-radius:999px;padding:9px 15px;font-weight:800;font-size:12.5px;
-    background:#1B1B20;color:#c2c2cf;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
+  .sup-priv{text-align:center;font-size:11px;color:#6B6B7B;margin-top:9px}
+  .sup-priv a{color:#8A8A96}
+  /* Topic picker + ticket form */
+  .sup-pad{padding:20px 16px;display:flex;flex-direction:column;gap:0}
+  .sup-pad h2{margin:0 4px 4px;font-size:19px;font-weight:800;letter-spacing:-.3px}
+  .sup-pad .sub{margin:0 4px 12px;color:#9a9aa8;font-size:14px}
+  .sup-attn{margin:8px 4px 0;font-size:12.5px;color:#8A8A96}
+  .sup-shot{margin:10px 4px 0;display:flex;align-items:center;gap:10px;font-size:13px;color:#c2c2cf}
+  .sup-shot img{width:44px;height:44px;object-fit:cover;border-radius:8px}
+  /* Bottom tab bar */
+  .sup-tabs{flex:0 0 auto;display:flex;background:#16161B;border-top:1px solid rgba(255,255,255,.06)}
+  .sup-tabs button{flex:1;border:none;background:transparent;cursor:pointer;padding:9px 0 calc(8px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:3px;color:#6B6B7B;font:700 11px Inter}
+  .sup-tabs button svg{width:22px;height:22px;stroke:#6B6B7B}
+  .sup-tabs button.on{color:var(--accent,#FFCB05)} .sup-tabs button.on svg{stroke:var(--accent,#FFCB05)}
   /* find-me + radius toolbar */
   .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
   .findbtn{display:inline-flex;align-items:center;gap:6px;background:var(--ptint);border:1px solid var(--pline);color:var(--purple);font-weight:800;font-size:13px;padding:9px 13px;border-radius:11px;cursor:pointer;white-space:nowrap}
@@ -2374,43 +2428,99 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   </div>
 </div>
 
-<button class="supbub" id="supBub" onclick="openSupport()" aria-label="Support chat">
+<button class="suptab" id="supTab" onclick="openSupport()" aria-label="Help">
   <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+  <span class="tl" data-i18n="sup.help">Help</span>
 </button>
-<div class="csheet-bd" id="supSheetBd" onclick="closeSupport()"></div>
-<div class="supsheet" id="supSheet" aria-hidden="true">
-  <div class="supsheet-handle"></div>
-  <div id="sup_chat" style="display:flex;flex-direction:column;min-height:0;flex:1">
-    <h3 data-i18n="sup.title">Ask us anything</h3>
-    <div class="supmsgs" id="sup_msgs"></div>
-    <div class="suphelp" id="sup_help">
-      <button onclick="supHelped(true)" data-i18n="sup.yes">That answered it</button>
-      <button onclick="openSupportForm()" data-i18n="sup.no">I need a person</button>
+<div class="supwrap" id="supWrap" aria-hidden="true">
+  <div class="sup-hd" id="sup_hd">
+    <button class="hbtn" id="sup_back" onclick="supBack()" style="display:none" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+    <div class="hmark"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div>
+    <div class="htitle"><b id="sup_htitle">Help</b><span id="sup_hsub" data-i18n="sup.hd.sub">Check AI answers in seconds</span></div>
+    <button class="hbtn" onclick="closeSupport()" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div class="sup-body">
+    <!-- HOME -->
+    <div class="sup-view on" id="supv_home">
+      <div class="sup-hero">
+        <h2 data-i18n="sup.hero">Hi there 👋<br>How can we help?</h2>
+        <p data-i18n="sup.hero.sub">Ask anything about checks, stores, and plans.</p>
+      </div>
+      <div class="sup-banner" id="sup_banner"></div>
+      <div class="sup-card">
+        <button class="sup-ask" onclick="supStartNew()"><span data-i18n="sup.ask">Ask a question</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+      </div>
+      <div class="sup-recent" id="sup_recent_lbl" style="display:none" data-i18n="sup.recent">Recent</div>
+      <div id="sup_home_recent"></div>
+      <div style="height:16px"></div>
     </div>
-    <div class="suprow">
-      <textarea id="sup_in" class="supin" rows="1" data-i18n-ph="ph.support" placeholder="Type your question" oninput="supGrow(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendSupport();}"></textarea>
-      <button class="supsend" id="sup_send" onclick="sendSupport()" aria-label="Send">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
-      </button>
+    <!-- MESSAGES (history) -->
+    <div class="sup-view" id="supv_msgs">
+      <div id="sup_convos"></div>
+    </div>
+    <!-- HELP (FAQ + search over the book) -->
+    <div class="sup-view" id="supv_help">
+      <div class="sup-search"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="sup_q" data-i18n-ph="sup.searchph" placeholder="Search for help" oninput="supSearch(this.value)"></div>
+      <div id="sup_help_list"></div>
+    </div>
+    <!-- TOPIC PICKER -->
+    <div class="sup-view" id="supv_topic">
+      <div class="sup-pad">
+        <h2 data-i18n="sup.topic.title">What's it about?</h2>
+        <div class="sub" data-i18n="sup.topic.sub">Pick one so we can help faster.</div>
+        <div id="sup_topics"></div>
+      </div>
+    </div>
+    <!-- CHAT -->
+    <div class="sup-view" id="supv_chat">
+      <div class="supmsgs" id="sup_msgs"></div>
+      <div class="sup-foot">
+        <div class="suphelp" id="sup_help">
+          <button onclick="supHelped(true)" data-i18n="sup.yes">That answered it</button>
+          <button class="ghost" onclick="openSupportForm()" data-i18n="sup.no">Still stuck</button>
+        </div>
+        <div class="suprow">
+          <button class="supclip hide" id="sup_clip" onclick="supPickShot()" aria-label="Attach screenshot"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+          <input type="file" id="sup_file" accept="image/*" style="display:none" onchange="supShotChosen(this)">
+          <textarea id="sup_in" class="supin" rows="1" data-i18n-ph="ph.support" placeholder="Type your question" oninput="supGrow(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendSupport();}"></textarea>
+          <button class="supsend" id="sup_send" onclick="sendSupport()" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg></button>
+        </div>
+        <div class="sup-priv" data-i18n="sup.priv">Grounded in our help docs. Not legal or financial advice.</div>
+      </div>
+    </div>
+    <!-- TICKET FORM (buried human path) -->
+    <div class="sup-view" id="supv_form">
+      <div class="sup-pad">
+        <h2 data-i18n="sup.form.title">Leave it with us</h2>
+        <div class="sub" data-i18n="sup.form.sub">Tell us where to reach you. A person will email you back.</div>
+        <label class="klbl" data-i18n="sup.form.name">Your name</label>
+        <input id="supf_name" class="kin" autocomplete="name" data-i18n-ph="ph.supname" placeholder="First name works">
+        <label class="klbl" data-i18n="sup.form.email">Email</label>
+        <input id="supf_email" class="kin" type="email" inputmode="email" autocomplete="email" data-i18n-ph="ph.cellmail" placeholder="your email">
+        <label class="klbl" data-i18n="sup.form.msg">What's going on</label>
+        <input id="supf_msg" class="kin" data-i18n-ph="ph.supmsg" placeholder="The short version is fine">
+        <div class="sup-shot" id="supf_shot" style="display:none"></div>
+        <div id="supf_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
+        <button class="cta" id="supf_btn" onclick="submitSupportTicket()" style="margin-top:10px;width:100%" data-i18n="sup.form.send">Send it over</button>
+        <button onclick="supBack()" style="margin-top:10px;width:100%;background:none;border:none;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer" data-i18n="sup.form.back">Back to the chat</button>
+      </div>
+    </div>
+    <!-- DONE -->
+    <div class="sup-view" id="supv_done">
+      <div class="sup-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+        <b data-i18n="sup.done.title">Got it. We're on it.</b>
+        <div data-i18n="sup.done.body">A person will email you back soon.</div>
+        <button class="cta" onclick="supGo('home')" style="margin-top:10px" data-i18n="sup.done.cta">Done</button>
+      </div>
     </div>
   </div>
-  <div id="sup_form" style="display:none;text-align:left">
-    <h3 data-i18n="sup.form.title">Leave it with us</h3>
-    <div class="meta" style="margin:-6px 2px 14px;text-align:center" data-i18n="sup.form.sub">Tell us where to reach you. A person will email you back.</div>
-    <label class="klbl" data-i18n="sup.form.name">Your name</label>
-    <input id="supf_name" class="kin" autocomplete="name" data-i18n-ph="ph.supname" placeholder="First name works">
-    <label class="klbl" data-i18n="sup.form.email">Email</label>
-    <input id="supf_email" class="kin" type="email" inputmode="email" autocomplete="email" data-i18n-ph="ph.cellmail" placeholder="your email">
-    <label class="klbl" data-i18n="sup.form.msg">What's going on</label>
-    <input id="supf_msg" class="kin" data-i18n-ph="ph.supmsg" placeholder="The short version is fine">
-    <div id="supf_err" style="color:#ff6b6b;font-size:13px;margin-top:6px;min-height:16px"></div>
-    <button class="cta" id="supf_btn" onclick="submitSupportTicket()" style="margin-top:8px;width:100%" data-i18n="sup.form.send">Send it over</button>
-    <button onclick="backToSupportChat()" style="margin-top:10px;width:100%;background:none;border:none;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer" data-i18n="sup.form.back">Back to the chat</button>
-  </div>
-  <div id="sup_done" style="display:none;text-align:center;padding:6px 2px 2px">
-    <h3 data-i18n="sup.done.title">Got it. We're on it.</h3>
-    <div class="meta" style="line-height:1.5" data-i18n="sup.done.body">A person will email you back soon.</div>
-    <button class="cta" onclick="closeSupport()" style="margin-top:16px;width:100%" data-i18n="sup.done.cta">Done</button>
+  <div class="sup-tabs" id="sup_tabs">
+    <button id="supt_home" class="on" onclick="supGo('home')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span data-i18n="sup.tab.home">Home</span></button>
+    <button id="supt_msgs" onclick="supGo('msgs')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span data-i18n="sup.tab.msgs">Messages</span></button>
+    <button id="supt_help" onclick="supGo('help')"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg><span data-i18n="sup.tab.help">Help</span></button>
   </div>
 </div>
 
@@ -2673,11 +2783,23 @@ const I18N={ es:{
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
   'zones.confirm.title2':'¿Verificar {n} {s} abiertas?','zones.storeword':'tienda','zones.storesword':'tiendas','zones.checkallN':'Verificar las {n}','zones.removeall':'Quitar todo','zones.isclosed':'está cerrada','zones.areclosed':'están cerradas','zones.stillcall':'Aún podemos llamar a las {n} abiertas.','zones.and':'y','zones.andmore':'y {n} más','zones.astore':'Una tienda',
-  'sup.title':'Pregúntanos lo que sea',
+  'sup.help':'Ayuda','sup.hd.sub':'Check AI responde en segundos','sup.chat.sub':'El equipo también puede ayudar',
+  'sup.hero':'¡Hola! 👋<br>¿Cómo te ayudamos?','sup.hero.sub':'Pregunta lo que sea sobre checks, tiendas y planes.',
+  'sup.ask':'Hacer una pregunta','sup.recent':'Reciente',
+  'sup.tab.home':'Inicio','sup.tab.msgs':'Mensajes','sup.tab.help':'Ayuda',
+  'sup.searchph':'Busca ayuda','sup.topic.title':'¿De qué se trata?','sup.topic.sub':'Elige uno para ayudarte más rápido.',
+  'sup.priv':'Basado en nuestra ayuda. No es asesoría legal ni financiera.','sup.attrib':'Check AI · ahora',
+  'sup.today':'Hoy','sup.yesterday':'Ayer','sup.untitled':'Chat',
+  'sup.nomsg':'Aún no hay mensajes','sup.nomsg.sub':'Tus chats anteriores aparecen aquí.',
+  'sup.pop1':'¿Cómo funciona un check?','sup.pop2':'¿Qué pasa si la tienda no contesta?','sup.pop3':'¿Cuánto cuesta un check?',
+  'sup.pop4':'¿Cómo agrego mi tienda?','sup.pop5':'¿Cómo leo mi resultado?',
+  'sup.browseall':'Ver todos los artículos de ayuda','sup.askthis':'Pregúntale a Check AI:',
+  'sup.greet.bug':'Lamento que algo falló. Cuéntame qué pasó y agrega una captura si puedes.',
+  'sup.shotok':'Captura adjunta','sup.uploading':'Subiendo…','sup.uploadfail':'No se pudo adjuntar la imagen.',
   'sup.hello':'¡Hola! Pregúntame lo que sea sobre checks, tiendas o planes.',
-  'ph.support':'Escribe tu pregunta','sup.send':'Enviar',
-  'sup.yes':'Eso lo resolvió','sup.no':'Necesito una persona','sup.thanks':'Gracias por avisarnos.',
-  'sup.stuck':'Puedo pasar esto a una persona. Toca abajo y nos encargamos.',
+  'ph.support':'Escribe tu pregunta',
+  'sup.yes':'Eso lo resolvió','sup.no':'Sigo atascado','sup.thanks':'Gracias por avisarnos.',
+  'sup.stuck':'Puedo pasar esto a una persona si quieres. Toca abajo y nos encargamos.',
   'sup.form.title':'Déjalo con nosotros','sup.form.sub':'Dinos dónde contactarte. Una persona te responderá por correo.',
   'sup.form.name':'Tu nombre','ph.supname':'Con tu nombre basta','sup.form.email':'Correo',
   'sup.form.msg':'Qué está pasando','ph.supmsg':'La versión corta está bien',
@@ -2875,67 +2997,188 @@ function openStoreReq(){ ['sr_name','sr_city','sr_note','sr_contact'].forEach(id
   track('storereq_open'); $('storeReqOverlay').classList.add('on'); sheetPush('storereq'); setTimeout(()=>{try{$('sr_name').focus();}catch(e){}},80); }
 function closeStoreReq(){ $('storeReqOverlay').classList.remove('on'); acctReturn(); }
 
-// ---- Support chat (the ladder lives server-side; this is just the conversation UI) ----
-let SUP_SID=sessionStorage.getItem('cifm_support_sid')||''; let SUP_LASTQ='';
+// ---- Support Messenger (Intercom-style: right tab → full-screen panel, bottom tabs) ----
+// The ladder + RAG live server-side; this is the whole client surface. Answers are grounded in the
+// book (readme.com); the human path is buried and only surfaces after the AI can't resolve.
+const SUP_BOOK='https://checkitforme.readme.io';
+let SUP_SID=''; let SUP_CAT='other'; let SUP_SHOT=null; let SUP_VIEW='home'; let SUP_STARTED=false;
+const SUP_CATS=[
+  ['how_checks_work','How checks work','Cómo funcionan los checks'],
+  ['technical','A technical question','Una pregunta técnica'],
+  ['bug','Report a bug','Reportar un error'],
+  ['billing','Billing','Facturación'],
+  ['partnerships','Partnerships','Alianzas'],
+  ['other','Something else','Otra cosa'],
+];
+const supCatLabel=(k)=>{ const r=SUP_CATS.find(x=>x[0]===k); return r?(LANG==='es'?r[2]:r[1]):k; };
+// Guest chats aren't tied to an account, so remember their session ids locally for the Messages tab.
+function supGuestLog(){ try{ return JSON.parse(localStorage.getItem('cifm_sup_guest')||'[]'); }catch(e){ return []; } }
+function supGuestAdd(sid,title,cat){ if(!sid) return; let a=supGuestLog().filter(x=>x.sessionId!==sid);
+  a.unshift({sessionId:sid,title:title||'',category:cat||'other',updatedAt:Math.floor(Date.now()/1000)}); localStorage.setItem('cifm_sup_guest',JSON.stringify(a.slice(0,30))); }
 function supGrow(el){ el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
-function openSupport(){ $('sup_form').style.display='none'; $('sup_done').style.display='none'; $('sup_chat').style.display='flex';
-  if(!$('sup_msgs').children.length) supBubbleMsg('bot', t('sup.hello',"Hey! Ask me anything about how checks, stores, or plans work."));
-  const el=$('supSheet'); el.style.transition=''; el.style.transform=''; el.classList.add('on'); el.setAttribute('aria-hidden','false');
-  $('supSheetBd').classList.add('on'); setTimeout(()=>{try{$('sup_in').focus();}catch(e){}},260); }
-function closeSupport(){ const el=$('supSheet'); el.style.transition=''; el.style.transform=''; el.classList.remove('on'); el.setAttribute('aria-hidden','true'); $('supSheetBd').classList.remove('on'); }
-function supBubbleMsg(kind,text){ const d=document.createElement('div'); d.className='supm '+(kind==='me'?'me':'bot');
-  d.textContent=text; $('sup_msgs').appendChild(d); $('sup_msgs').scrollTop=1e6; return d; }
+function supDate(ts){ const d=new Date(ts*1000), now=Date.now(), day=864e5;
+  const midnight=new Date(); midnight.setHours(0,0,0,0);
+  if(d.getTime()>=midnight.getTime()) return t('sup.today','Today');
+  if(d.getTime()>=midnight.getTime()-day) return t('sup.yesterday','Yesterday');
+  return d.toLocaleDateString(LANG==='es'?'es':'en',{month:'short',day:'numeric'}); }
+
+function openSupport(){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supGo('home'); }
+function closeSupport(){ const el=$('supWrap'); el.classList.remove('on'); el.setAttribute('aria-hidden','true'); }
+
+// Low-level view switch + header/tabbar config.
+function supShow(view,opts){ opts=opts||{}; SUP_VIEW=view;
+  ['home','msgs','help','topic','chat','form','done'].forEach(v=>$('supv_'+v).classList.toggle('on',v===view));
+  $('sup_back').style.display=opts.back?'grid':'none';
+  $('sup_htitle').textContent=opts.title||'Help';
+  $('sup_hsub').textContent=opts.sub||'';
+  $('sup_tabs').style.display=opts.tabs===false?'none':'flex';
+  ['home','msgs','help'].forEach(v=>$('supt_'+v).classList.toggle('on',v===view));
+}
+// Bottom-tab navigation.
+function supGo(tab){
+  if(tab==='home'){ supShow('home',{title:t('sup.tab.home','Home'),sub:t('sup.hd.sub','Check AI answers in seconds')}); supRenderHome(); }
+  else if(tab==='msgs'){ supShow('msgs',{title:t('sup.tab.msgs','Messages')}); supRenderConvos(); }
+  else if(tab==='help'){ supShow('help',{title:t('sup.tab.help','Help')}); supRenderHelp(); }
+  else if(tab==='chat'){ supShow('chat',{title:'Check AI',sub:t('sup.chat.sub','The team can also help'),back:true,tabs:false}); }
+}
+// Header back arrow: chat/topic/form → home; done handled by its own button.
+function supBack(){ if(SUP_VIEW==='form'){ supShow('chat',{title:'Check AI',sub:t('sup.chat.sub','The team can also help'),back:true,tabs:false}); return; } supGo('home'); }
+
+// HOME
+async function supRenderHome(){
+  const b=await api('/pub/support/banner'); const txt=b&&(LANG==='es'?b.es:b.en);
+  const ban=$('sup_banner'); if(txt){ ban.textContent='⚠️ '+txt; ban.classList.add('on'); } else ban.classList.remove('on');
+  const convos=await supLoadConvos();
+  const lbl=$('sup_recent_lbl'), box=$('sup_home_recent'); box.innerHTML='';
+  if(convos.length){ lbl.style.display='block';
+    convos.slice(0,2).forEach(cv=>box.appendChild(supConvoRow(cv))); } else lbl.style.display='none';
+}
+// MESSAGES (history)
+async function supRenderConvos(){
+  const box=$('sup_convos'); box.innerHTML='';
+  const convos=await supLoadConvos();
+  if(!convos.length){ box.innerHTML=`<div class="sup-empty"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><b>${esc(t('sup.nomsg','No messages yet'))}</b><div>${esc(t('sup.nomsg.sub','Your past chats show up here.'))}</div></div>`; return; }
+  convos.forEach(cv=>box.appendChild(supConvoRow(cv)));
+}
+function supConvoRow(cv){ const el=document.createElement('button'); el.className='sup-row'; el.onclick=()=>supOpenConversation(cv.sessionId);
+  el.innerHTML=`<div class="rmain"><div class="rtitle">${esc(cv.title||t('sup.untitled','Chat'))}</div>
+    <div class="rsub"><span class="rchip">${esc(supCatLabel(cv.category))}</span> · ${esc(supDate(cv.updatedAt||cv.createdAt))}</div></div>
+    <svg class="rarrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+  return el; }
+async function supLoadConvos(){
+  let out=[]; const token=localStorage.getItem('cifm_token');
+  if(token){ const r=await appApi('/app/support/conversations'); if(r&&r.conversations) out=r.conversations; }
+  const seen=new Set(out.map(x=>x.sessionId));
+  supGuestLog().forEach(g=>{ if(!seen.has(g.sessionId)) out.push(g); });
+  return out.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+}
+// HELP (search over the book + popular + link out to the readme)
+let SUP_SEARCH_T=null;
+function supRenderHelp(){ if(!$('sup_help_list').dataset.init){ $('sup_help_list').dataset.init='1'; supHelpDefault(); } }
+function supHelpDefault(){ const box=$('sup_help_list'); box.innerHTML='';
+  const POP=[t('sup.pop1','How does a check work?'),t('sup.pop2','What happens if the store does not answer?'),
+    t('sup.pop3','How much does a check cost?'),t('sup.pop4','How do I add my store?'),t('sup.pop5','How do I read my verdict?')];
+  POP.forEach(q=>{ const el=document.createElement('button'); el.className='sup-row'; el.onclick=()=>supAskFromHelp(q);
+    el.innerHTML=`<div class="rmain"><div class="rtitle">${esc(q)}</div></div><svg class="rarrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+    box.appendChild(el); });
+  const a=document.createElement('a'); a.href=SUP_BOOK+'/docs/common-questions'; a.target='_blank'; a.rel='noopener';
+  a.className='sup-row'; a.style.color='var(--accent,#FFCB05)';
+  a.innerHTML=`<div class="rmain"><div class="rtitle">${esc(t('sup.browseall','Browse all help articles'))}</div></div>`;
+  box.appendChild(a);
+}
+function supSearch(q){ q=(q||'').trim(); clearTimeout(SUP_SEARCH_T);
+  if(q.length<2){ supHelpDefault(); return; }
+  SUP_SEARCH_T=setTimeout(async()=>{
+    const r=await api('/pub/support/search',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({q})});
+    const box=$('sup_help_list'); box.innerHTML=''; const hits=(r&&r.hits)||[];
+    if(!hits.length){ const el=document.createElement('button'); el.className='sup-row'; el.onclick=()=>supAskFromHelp(q);
+      el.innerHTML=`<div class="rmain"><div class="rtitle">${esc(t('sup.askthis','Ask Check AI:'))} “${esc(q)}”</div></div>`; box.appendChild(el); return; }
+    hits.forEach(h=>{ const el=document.createElement('button'); el.className='sup-row'; el.onclick=()=>supAskFromHelp(h.title);
+      el.innerHTML=`<div class="rmain"><div class="rtitle">${esc(h.title)}</div><div class="rsub">${esc(h.snippet)}</div></div>
+        <svg class="rarrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+      box.appendChild(el); });
+  },260);
+}
+function supAskFromHelp(q){ SUP_CAT='how_checks_work'; supFreshChat(); supGo('chat'); $('sup_in').value=q; sendSupport(); }
+
+// TOPIC PICKER → new chat
+function supStartNew(){ supShow('topic',{title:t('sup.tab.home','Home'),back:true,tabs:false});
+  const box=$('sup_topics'); box.innerHTML='';
+  SUP_CATS.forEach(([k])=>{ const el=document.createElement('button'); el.className='sup-row'; el.onclick=()=>supPickTopic(k);
+    el.innerHTML=`<div class="rmain"><div class="rtitle">${esc(supCatLabel(k))}</div></div><svg class="rarrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
+    box.appendChild(el); });
+}
+function supPickTopic(cat){ SUP_CAT=cat; supFreshChat(); supGo('chat');
+  $('sup_clip').classList.toggle('hide',cat!=='bug');
+  const greet=cat==='bug'?t('sup.greet.bug',"Sorry that broke. Tell me what happened and add a screenshot if you can.")
+    :t('sup.hello',"Hey! Ask me anything about how checks, stores, or plans work.");
+  supBubbleMsg('bot',greet);
+  setTimeout(()=>{try{$('sup_in').focus();}catch(e){}},260);
+}
+function supFreshChat(){ SUP_SID=''; SUP_SHOT=null; SUP_STARTED=true; $('sup_msgs').innerHTML=''; $('sup_help').classList.remove('on'); $('supf_shot').style.display='none'; }
+
+// CHAT
+function supBubbleMsg(kind,text,attrib){ const d=document.createElement('div'); d.className='supm '+(kind==='me'?'me':'bot');
+  d.textContent=text; $('sup_msgs').appendChild(d);
+  if(kind==='bot'&&attrib!==false){ const a=document.createElement('div'); a.className='supm att'; a.textContent=t('sup.attrib','Check AI · just now'); $('sup_msgs').appendChild(a); }
+  $('sup_msgs').scrollTop=1e6; return d; }
 async function sendSupport(){
   const inp=$('sup_in'), msg=(inp.value||'').trim(); if(!msg) return;
-  inp.value=''; supGrow(inp); SUP_LASTQ=msg; $('sup_help').classList.remove('on');
-  supBubbleMsg('me',msg);
+  inp.value=''; supGrow(inp); $('sup_help').classList.remove('on');
+  supBubbleMsg('me',msg,false);
   const btn=$('sup_send'); btn.disabled=true;
   const dots=document.createElement('div'); dots.className='supm bot dots'; dots.innerHTML='<span></span><span></span><span></span>';
   $('sup_msgs').appendChild(dots); $('sup_msgs').scrollTop=1e6;
-  const r=await api('/pub/support/chat',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({sessionId:SUP_SID||undefined,message:msg,lang:LANG})});
+  const r=await appApi('/pub/support/chat',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({sessionId:SUP_SID||undefined,message:msg,lang:LANG,category:SUP_CAT})});
   dots.remove(); btn.disabled=false;
   if(!r||r.error==='network'||(!r.reply&&!r.escalate)){ supBubbleMsg('bot', t('err.generic',"That didn't go through. Give it another try.")); return; }
-  if(r.sessionId){ SUP_SID=r.sessionId; sessionStorage.setItem('cifm_support_sid',SUP_SID); }
+  if(r.sessionId){ SUP_SID=r.sessionId; supGuestAdd(SUP_SID,msg,SUP_CAT); }
   if(r.reply) supBubbleMsg('bot',r.reply);
-  if(r.escalate){ supBubbleMsg('bot', t('sup.stuck',"I can get a person on this. Tap below and we'll take it from here.")); openSupportFormSoft(); }
+  if(r.escalate){ supBubbleMsg('bot', t('sup.stuck',"I can get a person on this if you want. Tap below and we'll take it from here."),false); supOfferHuman(); }
   else $('sup_help').classList.add('on');
 }
+// The buried human path: only ever revealed here, after the AI could not resolve.
+function supOfferHuman(){ $('sup_help').classList.add('on'); const yes=$('sup_help').children[0]; if(yes) yes.style.display='none'; }
 async function supHelped(yes){ $('sup_help').classList.remove('on');
-  if(SUP_SID) api('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:yes})});
+  if(SUP_SID) appApi('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:yes})});
   toast(t('sup.thanks','Thanks for letting us know.'),'neutral'); }
-function openSupportFormSoft(){ $('sup_help').classList.add('on'); const b=$('sup_help').children[0]; if(b) b.style.display='none'; }
-function openSupportForm(){ if(SUP_SID) api('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:false})});
-  $('sup_chat').style.display='none'; $('sup_done').style.display='none'; $('sup_form').style.display='block';
-  $('supf_msg').value=SUP_LASTQ||''; $('supf_err').textContent=''; setTimeout(()=>$('supf_name').focus(),80); }
-function backToSupportChat(){ $('sup_form').style.display='none'; $('sup_chat').style.display='flex';
-  const b=$('sup_help').children[0]; if(b) b.style.display=''; }
-// Swipe the grabber/sheet down to dismiss (matches the call sheet). Ignore drags that start on the
-// scrollable message list or the textarea so scrolling + typing aren't hijacked.
-(function supSheetSwipe(){
-  let y0=0, dy=0, drag=false;
-  const sh=()=>$('supSheet');
-  document.addEventListener('touchstart',e=>{ const el=sh(); if(!el||!el.classList.contains('on'))return;
-    if(!e.target.closest('#supSheet'))return; if(e.target.closest('#sup_msgs')||e.target.closest('#sup_in'))return;
-    y0=e.touches[0].clientY; dy=0; drag=true; el.style.transition='none'; },{passive:true});
-  document.addEventListener('touchmove',e=>{ if(!drag)return; dy=Math.max(0,e.touches[0].clientY-y0); sh().style.transform='translateY('+dy+'px)'; },{passive:true});
-  document.addEventListener('touchend',()=>{ if(!drag)return; drag=false; const el=sh();
-    el.style.transition='transform .28s cubic-bezier(.32,.72,0,1)';
-    if(dy>90){ el.style.transform='translateY(112%)'; $('supSheetBd').classList.remove('on');
-      setTimeout(()=>{ el.classList.remove('on'); el.setAttribute('aria-hidden','true'); el.style.transition=''; el.style.transform=''; },300);
-    } else { el.style.transform=''; } });
-})();
+async function supOpenConversation(sid){ SUP_STARTED=true; SUP_SID=sid; $('sup_msgs').innerHTML=''; $('sup_help').classList.remove('on');
+  supGo('chat');
+  const r=await api('/pub/support/conversation/'+encodeURIComponent(sid));
+  if(r&&r.messages){ SUP_CAT=r.category||'other'; $('sup_clip').classList.toggle('hide',SUP_CAT!=='bug');
+    r.messages.forEach(m=>supBubbleMsg(m.role==='user'?'me':'bot',m.content,false)); }
+}
+
+// Buried human form
+function openSupportForm(){ if(SUP_SID) appApi('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:false})});
+  supShow('form',{title:t('sup.form.title','Leave it with us'),back:true,tabs:false});
+  $('supf_err').textContent=''; const shot=$('supf_shot');
+  if(SUP_SHOT){ shot.style.display='flex'; shot.innerHTML=`<img src="${esc(SUP_SHOT)}"><span>${esc(t('sup.shotok','Screenshot attached'))}</span>`; } else shot.style.display='none';
+  setTimeout(()=>{try{$('supf_name').focus();}catch(e){}},80); }
 async function submitSupportTicket(){
   const name=($('supf_name').value||'').trim(), email=($('supf_email').value||'').trim(), msg=($('supf_msg').value||'').trim();
   const bad=(el,is)=>{ if(typeof markFld==='function') markFld(el,is); };
   bad($('supf_name'),!name); bad($('supf_email'),!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)); bad($('supf_msg'),!msg);
   if(!name||!msg||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ $('supf_err').textContent=t('sup.form.err','Fill in your name, a real email, and what happened.'); return; }
   const btn=$('supf_btn'); btn.disabled=true; btn.textContent=t('toast.submitting','Submitting…');
-  const r=await api('/pub/support/ticket',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({sessionId:SUP_SID||undefined,name,email,message:msg})});
+  const debug={ brand:(BRAND&&BRAND.key)||'', page:location.pathname, lastCheckId:(LASTRES&&LASTRES.cid)||null, ua:navigator.userAgent.slice(0,160) };
+  const r=await appApi('/pub/support/ticket',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({sessionId:SUP_SID||undefined,name,email,message:msg,category:SUP_CAT,screenshotUrl:SUP_SHOT||undefined,debug})});
   btn.disabled=false; btn.textContent=t('sup.form.send','Send it over');
   if(!r||r.error){ $('supf_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
-  track&&track('support_ticket'); $('sup_form').style.display='none'; $('sup_done').style.display='block';
+  track&&track('support_ticket'); supShow('done',{title:t('sup.form.title','Leave it with us'),tabs:false});
+}
+// Screenshot attach (bug chats): pick → presigned R2 upload → keep the public URL for the ticket.
+function supPickShot(){ $('sup_file').click(); }
+async function supShotChosen(input){ const f=input.files&&input.files[0]; if(!f) return;
+  toast(t('sup.uploading','Uploading…'),'neutral');
+  const ext=(f.name.split('.').pop()||'jpg').toLowerCase();
+  const pre=await api('/pub/support/upload-url',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ext,contentType:f.type||'image/jpeg'})});
+  if(!pre||!pre.uploadUrl){ toast(t('sup.uploadfail','Could not attach that image.'),'neutral'); return; }
+  const put=await fetch(pre.uploadUrl,{method:'PUT',body:f,headers:{'content-type':f.type||'image/jpeg'}}).catch(()=>null);
+  if(!put||!put.ok){ toast(t('sup.uploadfail','Could not attach that image.'),'neutral'); return; }
+  SUP_SHOT=pre.publicUrl; supBubbleMsg('me','📎 '+t('sup.shotok','Screenshot attached'),false);
 }
 async function submitStoreReq(){
   const name=($('sr_name').value||'').trim(), city=($('sr_city').value||'').trim();

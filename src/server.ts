@@ -4224,6 +4224,31 @@ app.post("/pub/support/search", async (c) => {
   try { return c.json({ hits: await searchBook(q, 5) }); }
   catch (e) { console.error("[support] search", e); return c.json({ hits: [] }); }
 });
+// Known-issue banner shown at the top of the Messenger home. Admin sets it; public reads it.
+app.get("/pub/support/banner", async (c) => {
+  const en = (await getSetting("support_banner_en")) || "";
+  const es = (await getSetting("support_banner_es")) || "";
+  return c.json({ en, es });
+});
+app.post("/api/support/banner", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  await setSetting("support_banner_en", String(b.en || "").slice(0, 240));
+  await setSetting("support_banner_es", String(b.es || "").slice(0, 240));
+  return c.json({ ok: true });
+});
+// Presigned R2 URL for a bug screenshot (bytes go straight to R2, never our server). Not gated by
+// the community flag — this is the bug-report attach path.
+app.post("/pub/support/upload-url", async (c) => {
+  const rl = rlCheck("supportTicket", clientIp(c.req.raw.headers), LIMITS.supportTicket);
+  if (!rl.ok) return c.json({ error: "rate_limited", retryAfter: rl.retryAfter }, 429);
+  const cfg = r2Config();
+  if (!cfg) return c.json({ error: "uploads_not_configured" }, 503);
+  const b = await c.req.json().catch(() => ({}));
+  const ext = String(b.ext || "jpg").replace(/[^a-z0-9]/gi, "").slice(0, 4);
+  const key = photoKey(ext).replace(/^community\//, "support/");
+  const { uploadUrl, publicUrl } = await presignPut(key, cfg, b.contentType || "image/jpeg");
+  return c.json({ uploadUrl, publicUrl, key });
+});
 // The signed-in user's own past conversations (the Messages tab), newest first.
 app.get("/app/support/conversations", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
