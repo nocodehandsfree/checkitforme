@@ -1,14 +1,19 @@
-# Check It For Me — Copy Style Guide
+# Check It For Me — Website Copy Style Guide
+
+**Scope: consumer-facing words only** — the site (`checkit.html`), the book, emails and texts.
+The **Admin dashboard has its own guide**: `COPY_STYLE_GUIDE_ADMIN.md` (different reader, different
+rules). Names for the product, the AI, and the person at the store are shared across both (see
+"Names" below).
 
 ## ⛔ Hard rules (owner) — these keep getting violated; non-negotiable
 1. **No dashes inside sentences.** No em dashes, no hyphens as connectors. Write the whole sentence out. (CI warns on em dashes in the HTML.)
 2. **Never break a sentence badly across lines.** No orphan words (a wrapped line must never carry one leftover word). If copy needs two lines, balance them and break at a natural pause; if it fits on one line, keep it on one.
 3. **Every string ships with its Spanish in the SAME commit** — and the Spanish is length-checked in the layout (Spanish runs longer; it must never break the page, the footer, or push controls off-screen).
-4. **Bottom notifications: ONE line, GRAY pill. Always.** Never green, in English AND Spanish. Message too long for one line? Shorten the copy using this guide — never wrap it.
+4. **Bottom notifications: ONE line, both languages.** Shorten the copy to fit; never wrap. The *look* (color, shape, animation) is Design's call — match the notification component in `STYLE_GUIDE.md`, whatever it is today. This guide owns the words, not the pill color. (It used to say "gray, never green"; that was copy dictating design and it's retired.)
 5. **No copy without this guide open. No visual change without STYLE_GUIDE.md + the comp.** (Boot-doc design-fidelity rule; this is the copy half.)
 
 > For any agent (or human) writing words a customer reads. Write to this and you won't need a review.
-> Sibling to `BRAND.md` (the logo). This one is the voice.
+> Sibling to `BRAND.md` (the logo). This one is the voice. Admin words → `COPY_STYLE_GUIDE_ADMIN.md`.
 
 ---
 

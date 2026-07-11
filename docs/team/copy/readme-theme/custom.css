@@ -1,0 +1,76 @@
+/* ============================================================
+   Check theme for ReadMe (checkitforme.readme.io)
+   Matches docs/design/STYLE_GUIDE.md: Inter, page #1D1D22,
+   cards #26262B, green #4ADE80, depth instead of borders.
+   Paste into ReadMe dashboard: Appearance → Custom Code → CSS.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  --check-green: #4ADE80;
+  --check-page: #1D1D22;
+  --check-card: #26262B;
+  --check-well: #1B1B20;
+  --check-strip: #17171C;
+  --check-muted: #8A8A96;
+}
+
+/* Type + page */
+body, .rm-ReadMe, .rm-Guides {
+  font-family: Inter, -apple-system, system-ui, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+}
+.rm-Guides, .rm-Container, main { background: var(--check-page) !important; }
+
+/* Header: flat strip, no gradient triangles */
+.rm-Header, .rm-Header_gradient { background: var(--check-strip) !important; background-image: none !important; }
+.rm-Header-bottom { background: var(--check-strip) !important; border-bottom: none !important; box-shadow: 0 8px 16px -12px rgba(0,0,0,.6); }
+.rm-Logo-img { max-height: 30px; width: auto; }
+
+/* Sidebar: eyebrow headings + green active, no hairlines */
+.rm-Sidebar { background: transparent !important; border-right: none !important; }
+.rm-Sidebar-heading {
+  font-size: 10.5px !important; font-weight: 700 !important;
+  letter-spacing: .15em !important; text-transform: uppercase !important;
+  color: var(--check-muted) !important;
+}
+.rm-Sidebar-link { color: rgba(255,255,255,.72) !important; border-radius: 11px !important; }
+.rm-Sidebar-link.active {
+  color: var(--check-green) !important;
+  background: linear-gradient(180deg, #2E2E35 0%, #25252B 100%) !important;
+  box-shadow: 0 8px 14px -8px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+}
+
+/* Content: raised cards, carved wells, round images */
+.rm-Article { color: rgba(255,255,255,.85); }
+.rm-Article h1 { font-weight: 900 !important; letter-spacing: -1px; }
+.rm-Article h2, .rm-Article h3 { font-weight: 800 !important; letter-spacing: -.3px; }
+.rm-Article img { border-radius: 16px; }
+.rm-Article blockquote, .rm-Article .callout {
+  background: var(--check-card) !important;
+  border: none !important; border-radius: 16px !important;
+  box-shadow: 0 8px 14px -8px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+}
+.rm-Article table { border-radius: 14px; overflow: hidden; }
+.rm-Article table, .rm-Article th, .rm-Article td { border-color: rgba(255,255,255,.06) !important; }
+.rm-Article th { background: var(--check-strip) !important; }
+.rm-Article tr { background: var(--check-card) !important; }
+.rm-Article a { color: var(--check-green); text-decoration: underline dashed rgba(74,222,128,.55); text-underline-offset: 4px; }
+
+/* Next/prev pagination cards: raised row cards */
+.rm-Pagination a, [class*="PaginationControls"] a {
+  background: linear-gradient(180deg, #2D2D34 0%, #27272D 100%) !important;
+  border: none !important; border-radius: 14px !important;
+  box-shadow: 0 8px 14px -8px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07);
+}
+
+/* Search toggle: carved well */
+.rm-SearchToggle {
+  background: var(--check-well) !important; border: none !important;
+  border-radius: 999px !important; box-shadow: inset 0 2px 6px rgba(0,0,0,.45);
+}
+
+/* ---- Mobile flyout: full page list (filled by custom JS) ---- */
+.check-flyout-nav { display: block; margin-top: 10px; max-height: 70vh; overflow-y: auto; padding-bottom: 24px; }
+.check-flyout-nav .rm-Sidebar-heading { padding: 14px 0 4px; }
+.check-flyout-nav .rm-Sidebar-link { display: block; padding: 9px 10px; font-size: 15px; font-weight: 600; }
