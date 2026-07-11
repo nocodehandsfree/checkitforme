@@ -358,8 +358,10 @@ app.get("/s", (c) => {
   return c.html(renderShare(brand, host, q));
 });
 
-// Static content pages (about/contact/faq/terms/privacy) — branded, owner-editable via policy.pages.
-const PAGE_TITLES: Record<string, string> = { about: "About", contact: "Contact", faq: "FAQ", terms: "Terms of Service", privacy: "Privacy Policy" };
+// Static content pages (about/contact/terms/privacy) — branded, owner-editable via policy.pages.
+// (FAQ retired → the book; see the /p/faq redirect below.)
+// FAQ retired 2026-07-11: the book (ReadMe) is the single FAQ source of truth. /p/faq now 301s there.
+const PAGE_TITLES: Record<string, string> = { about: "About", contact: "Contact", terms: "Terms of Service", privacy: "Privacy Policy" };
 // Real, shipped content for the legal/info pages so none of them read "coming soon". Owner-overridable
 // per brand via policy.pages (a non-empty override wins); this is the version-controlled fallback that
 // serves on every brand + environment. Rendered inside .body — plain HTML (<h2>/<p>/<ul>) only.
@@ -378,17 +380,6 @@ const DEFAULT_PAGES: Record<string, string> = {
   contact: `<p>Fastest way to reach us is <b>Discord</b>. Our support bot answers the common stuff in seconds, any time. A human picks up the rest.</p>
 <p>Want a store added? Do it right in the app. Account, then Earn, then <i>Add your store</i>. When a store you asked for goes live, your next check is on us.</p>
 <p>We skip phone and email support on purpose. Low overhead is how checks stay cheap.</p>`,
-  faq: `<h2 ${H2}>What does Check It For Me do?</h2>
-<p>You pick a store and a product. Check AI calls the store and asks if it's in stock. You get the answer, usually in a couple minutes.</p>
-<h2 ${H2}>Is it right?</h2>
-<p>We tell you exactly what the staff said, with the time and the whole convo. Shelves move fast, so read every answer as "right now."</p>
-<h2 ${H2}>What's it cost?</h2>
-<p>You pay in checks. Grab a small pack or subscribe for a monthly stack. New accounts get a free check to try it. Earn more by adding a store, inviting a friend, or posting a score.</p>
-<h2 ${H2}>Do you buy it for me?</h2>
-<p>No. We confirm it's there. The grab is yours.</p>
-<h2 ${H2}>No answer?</h2>
-<p>No answer = no charge.</p>
-<p style="margin-top:26px"><a href="${RM}" target="_blank" rel="noopener" style="display:inline-block;padding:13px 22px;border-radius:14px;font-weight:800;text-decoration:none;border:1.5px solid currentColor">Read the full guide →</a></p>`,
   terms: `<p>By using <b>Check It For Me</b> (checkitforme.com) you're good with these terms. If not, no hard feelings. Just don't use it.</p>
 <h2 ${H2}>What we do</h2>
 <p>We call stores and ask if something's in stock, then tell you what they said. Answers are a snapshot. Stores get it wrong sometimes, so we can't promise the item is there, or the price, or that it'll still be there when you show up.</p>
@@ -415,6 +406,8 @@ const DEFAULT_PAGES: Record<string, string> = {
 <h2 ${H2}>Your data, your call</h2>
 <p>We keep your account and history until you ask us to delete it. Want a copy, or a delete? Hit the Contact page. You can turn off location any time in your browser.</p>`,
 };
+// Retired page → the book (the one FAQ source of truth). Registered before /p/:slug so it wins.
+app.get("/p/faq", (c) => c.redirect(RM, 301));
 app.get("/p/:slug", async (c) => {
   const slug = c.req.param("slug").toLowerCase();
   if (!(slug in PAGE_TITLES)) return c.notFound();
