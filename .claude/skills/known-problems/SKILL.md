@@ -83,3 +83,8 @@ The source is the home for the fix — this file just helps you recognize the sh
 
 > Recheck: these cite live docs/code; when a fix lands the source updates, not this file. If an entry
 > and the code disagree (like the skin gate did), the CODE wins — flag the stale doc.
+
+## "Wait, is there a SECOND Admin?" (2026-07-12)
+- **Symptom:** someone mentions a staging admin / another admin URL; owner sees designs "on staging" that aren't on admin.checkitforme.com.
+- **Root cause:** an agent built a temporary staging viewing door for an admin redesign. Owner doctrine (restated for the third time that week): ONE Admin at admin.checkitforme.com, fed by production (plus staging-only testing areas INSIDE it). The staging service is a code-rehearsal replica, never a place anyone is told to "go look at admin."
+- **Status:** door deleted; "map of surfaces is FROZEN" rule added to CLAUDE.md. Admin UI changes ship staging(branch)→promote, reviewed on THE Admin.
