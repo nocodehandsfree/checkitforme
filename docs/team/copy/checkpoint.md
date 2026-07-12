@@ -38,14 +38,23 @@ All code + copy now lives on `staging` (not a side branch — that was the mista
   (defers to Design). `COPY_STYLE_GUIDE_ADMIN.md` created for Claude Design's admin comp.
 - Internal manuals on staging: `docs/shared/ADMIN_MANUAL.md · WEBSITE_MANUAL.md · SYSTEM_MANUAL.md`.
 
-## Owner action items (only he can do)
-- **ReadMe dashboard** (no API for this — confirmed): Appearance → set logo to
-  `checkitforme.com/logos/brand/check.png`, favicon `check-icon.png`, and paste
-  `docs/team/copy/readme-theme/custom.css` + `custom.js` (hides the flyout logo, puts the full
-  page list in the left slide-out, matches the site).
-- **Promote staging → main** when happy, to push all of this to checkitforme.com.
+## ⏳ WAITING ON OWNER (Copper is tracking these; follow up if silent)
+1. **Promote staging → main** — pushes the footer (Guide/Help), About rewrite, FAQ retire, and all
+   the EN+ES copy fixes to the real checkitforme.com. Everything is deployed + verified on staging.
+2. **Book review** — owner going page by page; round-1 notes applied, more coming.
+3. **ReadMe design** — deep CSS/nav control is a PAID ReadMe tier (owner saw the paywall, 07-11) →
+   PARKED. The logo/favicon swap is free basic appearance if he ever wants it
+   (`check.png` / `check-icon.png`). Theme kit sits ready at `docs/team/copy/readme-theme/`.
+4. **Public developer API** — owner asked, decided NOT now. Capture as a future GTM idea only if he
+   says so; otherwise leave it.
+5. **Voice polish** (deferred to his review): watch.left, cs.reach.menu, sup.faq.* wording.
+6. **Rolling-out features** — when Delta multi-product / your-voice / store-holds actually ship,
+   update the book pages that say "rolling out."
 
-## Open / next
-- Owner is reviewing the book page by page; more notes coming.
-- Voice polish deferred (his review pass): watch.left, cs.reach.menu, sup.faq.* wording.
-- Pre-existing (not copy): admin Schedules tab blank; MRR uses legacy $4.99; qa-design off-palette colors.
+_Follow-up scheduled (send_later) to re-surface this list if the owner goes quiet._
+
+## Flagged to other lanes (not owner's job, for awareness)
+- Admin → Calls → Schedules tab is blank (no section/loader).
+- MRR stat uses the legacy $4.99 constant (understates once anyone buys a bigger plan).
+- "Spend today" counter on the calling kill-switch is fed by nothing (reads 0).
+- qa-design: pre-existing off-palette colors in v2 scope.
