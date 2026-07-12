@@ -976,6 +976,10 @@ __BRAND_HEAD__
   .grouphdr{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px;color:var(--gh-tx,#c6c6d2);border:1px solid var(--gh-bd,rgba(255,255,255,.12));background:rgba(10,10,14,.6);margin:16px 0 7px}
   .grouphdr:first-child{margin-top:4px}
   .grouphdr.g5{--gh-bd:rgba(43,255,136,.5);--gh-tx:#6df2a6}
+  /* List-header row: green "Best bets" pill (same as the old g5 header) + open count + Map toggle. */
+  .listhdr{display:flex}
+  .lh-label{display:inline-flex;align-items:center;font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px;color:#6df2a6;border:1px solid rgba(43,255,136,.5);background:rgba(10,10,14,.6);white-space:nowrap}
+  .lh-label:empty{display:none}
   .grouphdr.g4{--gh-bd:rgba(41,212,255,.5);--gh-tx:#7fdcff}
   .grouphdr.g3{--gh-bd:rgba(255,158,44,.5);--gh-tx:#ffb866}
   .grouphdr .ghstar{display:none}
@@ -1575,9 +1579,10 @@ html[data-skin="v2"] .hob-era{display:block;width:82%;margin:0 auto 26px;backgro
 html[data-skin="v2"] .hob-era:active{transform:translateY(3px) scale(.97)}
 /* Era picker: a search box + 2-col grid of era BUTTON-CARDS (logo art up top, name + set count below).
    Imagery stays front and center, but they're tappable cards you can filter, not a wall of big logos. */
-html[data-skin="v2"] .hob-search{display:flex;align-items:center;gap:8px;margin-top:16px;background:#20202a;border:1.5px solid #3a3a46;border-radius:14px;padding:0 8px 0 12px}
-html[data-skin="v2"] .hob-search .ic{display:inline-flex;flex:0 0 auto;opacity:.8}
-html[data-skin="v2"] .hob-search input{flex:1;min-width:0;background:none;border:0;outline:none;color:#fff;font-size:16px;font-weight:600;padding:13px 4px}
+html[data-skin="v2"] .hob-search{display:flex;align-items:center;gap:9px;margin-top:16px;background:#1B1B20;border:0;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:0 12px}
+html[data-skin="v2"] .hob-search .ic{display:inline-flex;flex:0 0 auto;opacity:.7}
+html[data-skin="v2"] .hob-search input{flex:1;min-width:0;background:none;border:0;outline:none;color:#fff;font-size:16px;font-weight:600;padding:14px 0}
+html[data-skin="v2"] .hob-search input::placeholder{font-style:normal}
 html[data-skin="v2"] .hob-search input::placeholder{color:#8A8A96;font-weight:600}
 html[data-skin="v2"] .hob-search .clr{display:none;flex:0 0 auto;width:26px;height:26px;border:0;border-radius:50%;background:rgba(255,255,255,.08);color:#cfcfd9;font-size:16px;line-height:1;cursor:pointer;place-items:center}
 html[data-skin="v2"] #hobEraGrid{min-width:0}
@@ -1950,9 +1955,6 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
         <button class="modetab" data-mode="kiosk" onclick="setMode('kiosk')"><span class="mti" id="mti_kiosk"></span><span data-i18n="mode.kiosk">Kiosks</span></button>
       </div>
       <div id="findbody">
-      <div class="findhead" style="justify-content:flex-end">
-        <div style="display:flex;align-items:center;gap:10px;min-width:0"><button class="maptgl" id="maptoggle" onclick="toggleMap()" style="display:none" data-i18n="map.map">Map</button><div class="opencount" id="store_count"></div></div>
-      </div>
       <div class="searchwrap">
         <input id="search" placeholder="Search by store or city…" data-i18n-ph="search.ph" oninput="onSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();geocodeSearch();}" autocomplete="off">
         <button class="locbtn" id="findbtn" onclick="findMe()" title="Use my location" aria-label="Find stores near me"></button>
@@ -1965,6 +1967,13 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
         </div>
       </div>
       <div id="kioskhint" data-i18n="kioskhint" style="display:none;background:var(--ptint);border:1px solid var(--pline);border-radius:12px;padding:12px 13px;margin-top:12px;font-size:13.5px;color:#e6e2f7;line-height:1.55"><span style="display:flex;align-items:center;gap:7px;font-weight:800;white-space:nowrap"><span id="khspark"></span> At a kiosk? Get a free check</span><a onclick="openReceipt()" style="display:inline-block;margin-top:5px;color:var(--purple);font-weight:800;cursor:pointer">Use our email at checkout, or forward your receipt →</a></div>
+      <!-- List header (owner 07-12): "Best bets · N open" on the left, Map toggle on the right — just
+           above the stores. Lives OUTSIDE #storelist so the Map toggle survives the list→map swap. -->
+      <div class="listhdr" id="listhdr" style="display:none;align-items:center;gap:9px;margin:14px 2px 0">
+        <span class="lh-label" id="lh_label"></span>
+        <div class="opencount" id="store_count"></div>
+        <button class="maptgl" id="maptoggle" onclick="toggleMap()" style="display:none;margin-left:auto" data-i18n="map.map">Map</button>
+      </div>
       <div class="storelist" id="storelist" style="margin-top:12px"></div>
       <div id="mapview" style="display:none"></div>
       <div id="maplegend" class="maplegend" style="display:none"></div>
@@ -4172,7 +4181,14 @@ function renderStores(){
   else { list=list.slice(0,40); }
   LAST_STORES=list; if($('mapview') && $('mapview').style.display==='block') renderMapPins();
   const cnt=$('store_count');
-  if(cnt) cnt.innerHTML = `<span class="odot"></span>${openCount} ${kiosk?t('count.kiosks','kiosks'):t('count.open','open')}${USER_LOC?` · ${RADIUS} mi`:''}`;
+  // "N open" only — miles dropped (the search-radius row already shows mi). owner 07-12.
+  if(cnt) cnt.innerHTML = `<span class="odot"></span>${openCount} ${kiosk?t('count.kiosks','kiosks'):t('count.open','open')}`;
+  // List header: "Best bets" leads it in tier view (the label moved out of the group list into this row);
+  // show it whenever we have a store list to head. Map toggle lives here so it survives the list↔map swap.
+  const lh=$('listhdr'), lhl=$('lh_label');
+  if(lhl) lhl.textContent = (TIER_VIEW && t5.length) ? t('grp.best','Best bets') : '';
+  if(lh) lh.style.display = (list.length && (USER_LOC||q)) ? 'flex' : 'none';
+  { const mt=$('maptoggle'); if(mt) mt.style.display = (list.length && USER_LOC && !kiosk) ? '' : 'none'; }
   const emptyMsg=()=>{
     if(kiosk) return USER_LOC?tf('empty.kiosk',`No kiosks mapped within ${RADIUS} mi yet. They're crowd-built. Bought from one? <a onclick="openReceipt()" style="color:var(--purple);font-weight:700;cursor:pointer">Email a receipt</a> to put it on the map.`,{r:RADIUS}):t('empty.search',"No matches. Try a different search, or tap the pin for stores nearby.");
     if(!USER_LOC) return t('empty.search',"No matches. Try a different search, or tap the pin for stores nearby.");
@@ -4192,7 +4208,7 @@ function renderStores(){
   }
   if(TIER_VIEW){
     let html='';
-    if(t5.length) html+=`<div class="grouphdr g5">${t('grp.best','Best bets')}</div>`+t5.map(storeRowHtml).join('');
+    if(t5.length) html+=t5.map(storeRowHtml).join(''); // "Best bets" label lives in #listhdr now (owner 07-12)
     if(t4.length) html+=`<div class="grouphdr g4">${t('grp.mostly','Mostly reliable')}</div>`+t4.map(storeRowHtml).join('');
     if(rest.length) html+=`<div class="grouphdr g3">${t('grp.spotty','Spotty')}</div>`+rest.map(storeRowHtml).join('');
     $('storelist').innerHTML = html || `<div class="lo" style="padding:14px;color:var(--muted)">${emptyMsg()}</div>`;
