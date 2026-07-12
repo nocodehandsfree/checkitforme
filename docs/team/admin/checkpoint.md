@@ -41,7 +41,25 @@ board's section map assigns each one). No page is genuinely-novel, so no CD stop
 | 21 | Support · support (Chats) | REPORT over LOG | ✓ 1g | report grammar + chat log |
 | 22 | Launch · gtm (Go-to-Market) | checklist CRUD | pattern 1e | checklist rows |
 
+### SHIPPED
+- **Shared kit v1** (top of app.html `<style>`): `.k-eyebrow/.k-title/.k-sub/.k-note/.k-raise`, comp-accurate
+  raised vitals (`.v` upgraded to the 2D gradient + 34px hero + .15em label), `.peek` row, and **ONE
+  sheet** (`openSheet/closeSheet`, bottom slide-up, grabber+swipe+scrim dismiss, borrows live DOM nodes
+  so ids/interactivity survive). Screenshot harness: `scripts/admin-preview.mjs` (stubs the API, renders
+  a real section at 390–420px for side-by-sides).
+- **dash (Live) → matches comp 1b.** 5 accordions killed → 3 vitals + 5 peek rows (Money·Pulse·Timing·
+  Health·Credits), each headline on the row, tap opens the full report in the shared sheet. Money row
+  deep-links to Calc. Side-by-side verified vs comp_1b. tsc 0 errors; sheet open/dismiss/restore verified.
+  No dashboard nav-only tile existed to kill (dash had none; the God-View "Calc" square lives in the group
+  nav, addressed when the shell/1a is rebuilt).
+
+**Shell (1a) note (my lane, next):** current group nav is pill buttons; comp 1a wants the segmented mode
+switcher (raised track, active group grows + labels, rest as icons) + "heck" wordmark + ADMIN badge. Not a
+CD gap — build from 1a. Also the `/logos/brand/check-icon.png` header logo → swap to `docs/design/brand`
+brandmark per comp.
+
 ### Build order (comped screens first → extract shared kit ONCE, prove it, then reuse)
+0. ✅ kit v1 + dash (1b)  ·  next:
 1. Shared kit (tokens/classes at top of app.html) + dash (LIVE, 1b)
 2. results Calls LOG + call sheet (1c/1d)  →  3. settings/App CONSOLE (1i) + fun
 4. workflows CRUD + edit sheet (1e/1f)  →  5. support REPORT-over-LOG (1g)  →  6. restock REPORT (1h)

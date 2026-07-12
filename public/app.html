@@ -281,11 +281,42 @@
   /* Live dashboard: 5-vital hero + collapsed rows (color = state; Design card radius 16) */
   .herog{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px}
   .herog .v:first-child{grid-column:1/-1}
-  .v{background:var(--surface-1);border:1px solid var(--border);border-radius:16px;padding:16px}
-  .v .n{font-size:22px;font-weight:800;line-height:1;letter-spacing:-.5px}
-  .v.big .n{font-size:30px}
-  .v .l{color:var(--text-muted);font-size:10.5px;margin-top:8px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
-  .v .n.g{color:var(--green)} .v .n.a{color:#FBBF24} .v .n.r{color:var(--red)} .v .n.m{color:var(--text-strong)}
+  .v{background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:16px;padding:14px 16px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+  .v .n{font-size:24px;font-weight:900;line-height:1;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
+  .v.big{padding:16px 18px} .v.big .n{font-size:34px;letter-spacing:-1.2px}
+  .v .l{color:#8A8A96;font-size:10.5px;margin-top:6px;text-transform:uppercase;letter-spacing:.15em;font-weight:700}
+  .v .n.g{color:var(--green)} .v .n.a{color:#F59E0B} .v .n.r{color:var(--red)} .v .n.m{color:#fff}
+  /* ==========================================================================
+     ADMIN KIT — comp-accurate shared components (ADMIN_COMPS.dc.html + docs/design/admin/DATA_DISPLAY.md).
+     Raised gradient cards, one of each control, defined once and reused on every page.
+     Grow this block when a page needs a control that isn't here yet; never style a one-off.
+     ========================================================================== */
+  .k-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96;margin:22px 4px 10px}
+  .k-eyebrow:first-child{margin-top:2px}
+  .k-title{font-size:20px;font-weight:800;letter-spacing:-.3px;color:#fff;margin:0}
+  .k-sub{font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:2px}
+  .k-note{font-size:11.5px;font-weight:600;color:#5C5C68;padding:16px 4px 0;line-height:1.5}
+  .k-raise{background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+  /* Peek row — replaces every dash accordion. Headline is ON the row; tapping opens depth in the sheet. */
+  .peek{background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:13px 14px;display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:none;color:inherit;font-family:inherit;cursor:pointer;margin-bottom:10px;transition:transform .08s}
+  .peek:active{transform:translateY(1px)}
+  .peek .pk-main{flex:1;min-width:0}
+  .peek .pk-t{font-size:14px;font-weight:700;color:#fff}
+  .peek .pk-s{font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px;line-height:1.35}
+  .peek .pk-fact{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap;color:rgba(255,255,255,.85)}
+  .peek .pk-fact.g{color:var(--green)} .peek .pk-fact.a{color:#F59E0B} .peek .pk-fact.r{color:var(--red)}
+  .peek .pk-chev{flex:0 0 auto;width:15px;height:15px;color:#5C5C68}
+  .peek .pk-bar{height:6px;background:#1B1B20;border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);margin-top:8px;overflow:hidden}
+  .peek .pk-bar>i{display:block;height:100%;border-radius:999px}
+  /* ONE sheet — bottom slide-up. Dismiss on grabber / swipe-down / scrim tap (DATA_DISPLAY §1). */
+  .sheet-scrim{position:fixed;inset:0;background:rgba(5,6,9,.66);opacity:0;pointer-events:none;transition:opacity .22s;z-index:60}
+  .sheet-scrim.on{opacity:1;pointer-events:auto}
+  .sheet{position:fixed;left:50%;bottom:0;width:min(100%,480px);background:#26262B;border-radius:24px 24px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7);z-index:61;transform:translate(-50%,100%);transition:transform .26s cubic-bezier(.22,1,.36,1);max-height:88vh;display:flex;flex-direction:column;padding:0 20px calc(26px + env(safe-area-inset-bottom))}
+  .sheet.on{transform:translate(-50%,0)}
+  .sheet .grab{align-self:center;width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.16);margin:10px 0 6px;flex:0 0 auto}
+  .sheet .sh-title{font-size:20px;font-weight:800;letter-spacing:-.3px;margin:4px 0 2px}
+  .sheet .sh-sub{font-size:12px;font-weight:600;color:#8A8A96;margin-bottom:6px}
+  .sheet .sh-body{overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:6px}
   .drow{background:var(--surface-1);border:1px solid var(--border);border-radius:16px;margin-bottom:12px;overflow:hidden}
   .drow>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px}
   .drow>summary::-webkit-details-marker{display:none}
@@ -576,20 +607,50 @@
 
   <!-- GOD VIEW: the day's command center — vitals above the fold, business folded in -->
   <section id="dash" class="active">
-    <h2 style="margin-bottom:2px">Today</h2>
-    <div class="meta" id="d_date" style="margin:0 0 20px">Loading…</div>
+    <div class="k-title">Today</div>
+    <div class="k-sub" id="d_date">Loading…</div>
     <div class="herog" id="d_hero"></div>
-    <details class="drow"><summary><span class="rl">Today's pulse</span><span class="rr" id="drs_pulse"><span class="chev">▾</span></span></summary><div class="rbody" id="gw_pulse" style="padding-top:2px">Loading…</div></details>
-    <details class="drow"><summary><span class="rl">Money</span><span class="rr" id="drs_money"><span class="chev">▾</span></span></summary><div class="rbody"><div class="stats" id="d_money"></div></div><a class="goto" href="#calc" onclick="showSection('calc');return false">Open the full money view in Calc →</a></details>
-    <details class="drow"><summary><span class="rl">Call time &amp; cost</span><span class="rr" id="drs_timing"><span class="chev">▾</span></span></summary><div class="rbody"><div class="meta" data-tip="We're billed for the whole call (ring, menu, hold, talk), so reaching someone is real cost." style="margin:2px 0 10px">Time to reach a person vs. talk time.</div><div class="stats" id="d_timing"></div><div id="d_timing_model"></div><div id="d_timing_status"></div><details style="margin-top:8px"><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details></div></details>
-    <details class="drow"><summary><span class="rl">Call data health</span><span class="rr" id="drs_dhealth"><span class="chev">▾</span></span></summary><div class="rbody"><div class="meta" data-tip="Real dialed calls vs. seed and rehearsal. The true first call ignores seed rows and the Fun store." style="margin:2px 0 10px">Real dialed calls vs. seed and rehearsal.</div><div id="d_health" class="meta">Loading…</div></div><a class="goto" href="#results" onclick="showSection('results');return false">Open the call log in Calls →</a></details>
-    <details class="drow"><summary><span class="rl">ElevenLabs credits</span><span class="rr" id="drs_credits"><span class="chev">▾</span></span></summary><div class="rbody">
-      <div style="height:10px;background:var(--terminal);border-radius:6px;overflow:hidden;margin:4px 0 8px"><div id="credit_bar" style="height:100%;width:0%;background:var(--green);transition:width .3s"></div></div>
-      <div id="credit_body" class="meta">Loading…</div>
-      <div id="credit_stats" class="meta" style="margin-top:6px"></div>
-      <div class="meta" id="credit_src" style="margin-top:6px"></div>
-      <div id="credit_limit_wrap" style="display:none;margin-top:12px"><div class="hint" style="margin-bottom:8px">Estimate from the last 31 days.</div><div class="row" style="gap:8px"><input id="credit_limit" type="number" placeholder="Plan size, e.g. 100000" style="flex:1"><button class="ghost" onclick="saveCreditLimit()">Save</button></div></div>
-    </div></details>
+    <div class="k-eyebrow">Reports</div>
+    <button class="peek" onclick="dashSheet('money')">
+      <div class="pk-main"><div class="pk-t">Money</div><div class="pk-s">Revenue, profit and margin</div></div>
+      <div class="pk-fact g" id="pk_money">—</div>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+    <button class="peek" onclick="dashSheet('pulse')">
+      <div class="pk-main"><div class="pk-t">Today's pulse</div><div class="pk-s">Members, scores and signups</div></div>
+      <div class="pk-fact" id="pk_pulse">—</div>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+    <button class="peek" onclick="dashSheet('timing')">
+      <div class="pk-main"><div class="pk-t">Call time and cost</div><div class="pk-s">Time to reach a person vs talk time</div></div>
+      <div class="pk-fact" id="pk_timing">—</div>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+    <button class="peek" onclick="dashSheet('health')">
+      <div class="pk-main"><div class="pk-t">Call health</div><div class="pk-s">Real dialed calls vs seed and rehearsal</div></div>
+      <div class="pk-fact" id="pk_health">—</div>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+    <button class="peek" onclick="dashSheet('credits')">
+      <div class="pk-main"><div class="pk-t">Credits</div><div class="pk-bar"><i id="pk_credit_bar" style="width:0%;background:var(--green)"></i></div></div>
+      <div class="pk-fact" id="pk_credits">—</div>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+    <div class="k-note">Tap a row for the full report.</div>
+    <!-- hidden detail holders — the existing loaders populate these; dashSheet() lifts them into the shared sheet -->
+    <div id="dash_details" style="display:none">
+      <div id="ds_money"><div class="stats" id="d_money"></div><a class="goto" href="#calc" onclick="closeSheet();showSection('calc');return false">Open the full money view in Calc →</a></div>
+      <div id="ds_pulse" data-sheet-title="Today's pulse"><div id="gw_pulse">Loading…</div></div>
+      <div id="ds_timing" data-sheet-title="Call time and cost" data-sheet-sub="Time to reach a person vs talk time"><div class="stats" id="d_timing"></div><div id="d_timing_model"></div><div id="d_timing_status"></div><div class="k-eyebrow">Per-store averages</div><div id="d_timing_stores"></div></div>
+      <div id="ds_health" data-sheet-title="Call health" data-sheet-sub="Real dialed calls vs seed and rehearsal"><div id="d_health" class="meta">Loading…</div><a class="goto" href="#results" onclick="closeSheet();showSection('results');return false">Open the call log in Calls →</a></div>
+      <div id="ds_credits" data-sheet-title="ElevenLabs credits">
+        <div style="height:10px;background:var(--terminal);border-radius:6px;overflow:hidden;margin:4px 0 8px"><div id="credit_bar" style="height:100%;width:0%;background:var(--green);transition:width .3s"></div></div>
+        <div id="credit_body" class="meta">Loading…</div>
+        <div id="credit_stats" class="meta" style="margin-top:6px"></div>
+        <div class="meta" id="credit_src" style="margin-top:6px"></div>
+        <div id="credit_limit_wrap" style="display:none;margin-top:12px"><div class="hint" style="margin-bottom:8px">Estimate from the last 31 days.</div><div class="row" style="gap:8px"><input id="credit_limit" type="number" placeholder="Plan size, e.g. 100000" style="flex:1"><button class="ghost" onclick="saveCreditLimit()">Save</button></div></div>
+      </div>
+    </div>
   </section>
   <section id="calc"><div id="calc_root"></div></section>
   <section id="plans"><div id="plans_root"></div></section>
@@ -1225,6 +1286,42 @@ function showAuthGate(){
   document.body.appendChild(d);
 }
 const toast = (m) => { const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); };
+// ---- ONE shared sheet (DATA_DISPLAY §1: every sheet dismisses via grabber, swipe-down, scrim tap). ----
+// openSheet(title, sub, bodyHTML): slides a bottom sheet up over the page. Reused by peek-row reports,
+// the call sheet, edit sheets, transcripts — build the sheet once, never a bespoke modal.
+let _sheetEls=null;
+function _ensureSheet(){
+  if(_sheetEls) return _sheetEls;
+  const scrim=document.createElement('div'); scrim.className='sheet-scrim'; scrim.onclick=closeSheet;
+  const sheet=document.createElement('div'); sheet.className='sheet';
+  sheet.innerHTML='<div class="grab"></div><div class="sh-title"></div><div class="sh-sub"></div><div class="sh-body"></div>';
+  document.body.appendChild(scrim); document.body.appendChild(sheet);
+  // swipe the sheet down to dismiss (grabber + header drag)
+  let y0=null,dy=0;
+  const down=e=>{ y0=(e.touches?e.touches[0]:e).clientY; dy=0; sheet.style.transition='none'; };
+  const move=e=>{ if(y0==null) return; dy=Math.max(0,(e.touches?e.touches[0]:e).clientY-y0); sheet.style.transform='translate(-50%,'+dy+'px)'; };
+  const up=()=>{ if(y0==null) return; sheet.style.transition=''; if(dy>90) closeSheet(); else sheet.style.transform=''; y0=null; };
+  const grab=sheet.querySelector('.grab');
+  [grab, sheet.querySelector('.sh-title')].forEach(h=>{ h.addEventListener('touchstart',down,{passive:true}); h.addEventListener('touchmove',move,{passive:true}); h.addEventListener('touchend',up); });
+  _sheetEls={scrim,sheet,title:sheet.querySelector('.sh-title'),sub:sheet.querySelector('.sh-sub'),body:sheet.querySelector('.sh-body')};
+  return _sheetEls;
+}
+let _sheetBorrow=null; // {node, home} — a live DOM node lent to the sheet, returned to its home on close
+function openSheet(title,sub,body){
+  const s=_ensureSheet(); _restoreBorrow();
+  s.title.textContent=title||''; s.title.style.display=title?'':'none';
+  s.sub.innerHTML=sub||''; s.sub.style.display=sub?'':'none';
+  if(body&&body.nodeType===1){ // a live node: borrow it so ids + interactivity stay intact (no duplicate ids)
+    _sheetBorrow={node:body, home:body.parentNode, next:body.nextSibling};
+    s.body.innerHTML=''; s.body.appendChild(body);
+  } else { s.body.innerHTML=body||''; }
+  s.body.scrollTop=0; s.sheet.style.transform='';
+  requestAnimationFrame(()=>{ s.scrim.classList.add('on'); s.sheet.classList.add('on'); });
+  try{ setTimeout(decorateChrome,20); }catch(_){}
+}
+function _restoreBorrow(){ if(!_sheetBorrow) return; const b=_sheetBorrow; _sheetBorrow=null; if(b.home){ if(b.next) b.home.insertBefore(b.node,b.next); else b.home.appendChild(b.node); } }
+function closeSheet(){ if(!_sheetEls) return; _sheetEls.scrim.classList.remove('on'); _sheetEls.sheet.classList.remove('on'); setTimeout(_restoreBorrow,280); }
+window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
 // Tap-to-show tooltip — works on mobile (hover doesn't). Tap a hint → bubble; tap again/elsewhere → gone.
 let _tipFor=null;
 document.addEventListener('click',e=>{
@@ -1696,7 +1793,7 @@ async function loadCallTiming(){
   if(!d||d.error||!d.aggregate||!d.aggregate.calls){ el.innerHTML='<div class="meta">No timed calls yet. This fills in as calls come through.</div>'; if(md)md.innerHTML=''; if(stt)stt.innerHTML=''; if(se)se.innerHTML=''; return; }
   const a=d.aggregate, tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   el.innerHTML = tile(secsFmt(a.avgTalkSec),'avg talk','green')+tile(secsFmt(a.avgNavSec),'avg to human')+tile(secsFmt(a.avgCallSec),'avg call')+tile(a.totalMinutes+'m','total minutes')+tile(a.calls,'calls timed');
-  const _st=document.getElementById('drs_timing'); if(_st) _st.innerHTML=`${secsFmt(a.avgTalkSec)} talk · ${a.calls} call${a.calls===1?'':'s'} <span class="chev">▾</span>`;
+  const _pk=document.getElementById('pk_timing'); if(_pk){ _pk.textContent=`${secsFmt(a.avgNavSec)} to human`; _pk.className='pk-fact'; }
   // By model (Charlie direct · Alpha tone tree · Bravo voice tree) — the split that matters: time-to-human + talk per call type.
   if(md) md.innerHTML=(d.byModel&&d.byModel.length)?('<div class="rgrp" style="margin-top:12px">By model · all-time <span data-tip="Alpha and Bravo talk time still counts phone-menu time until we tag the live-human handoff per call. Charlie (direct) is exact."></span></div>'
     +d.byModel.map(m=>`<div class="repline"><span class="rl"><b style="color:#e8e8f0">${esch(m.model)}</b> <span class="meta">· ${esch(m.type)} · ${m.n} call${m.n===1?'':'s'}</span></span><b>${secsFmt(m.avgNavSec)} to human · <span style="color:var(--green)">${secsFmt(m.avgTalkSec)} talk</span> · ${secsFmt(m.avgCallSec)} call</b></div>`).join('')):'';
@@ -1978,8 +2075,8 @@ async function loadDash(){
   const [o,m,ri,c]=await Promise.all([api('/api/admin/overview'),api('/api/admin/metrics'),api('/api/admin/restock-intel'),api('/api/credits')]);
   const de=document.getElementById('d_date'); if(de) de.textContent=new Date().toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
   const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
-  // ---- Hero: the 5 vitals you check first. Color = state, before you read the number. ----
-  const checks=(o&&o.today)?(o.today.calls||0):0, confirms=(o&&o.today)?(o.today.confirms||0):0;
+  // ---- Three vitals (comp 1b): color reads the state before the number does. ----
+  const checks=(o&&o.today)?(o.today.calls||0):0;
   const af=(ri&&ri.answerFunnel)||{}; const reach=af.dialed?Math.round((af.reachedHuman/af.dialed)*100):null;
   const pctLeft=(c&&c.limit)?Math.max(0,Math.min(100,Math.round((c.remaining/c.limit)*100))):null;
   const margin=(m&&m.marginPct!=null)?Math.round(m.marginPct):null;
@@ -1987,20 +2084,32 @@ async function loadDash(){
   const hero=document.getElementById('d_hero');
   if(hero) hero.innerHTML=
     v(checks,'Checks today',checks>0?'g':'m',true)+
-    v(confirms,'Confirms',confirms>0?'g':'m')+
-    v(reach==null?'—':reach+'%','Reach rate',reach==null?'m':(reach>=60?'g':reach>=30?'a':'r'))+
-    v(pctLeft==null?'—':pctLeft+'%','Credits left',pctLeft==null?'m':(pctLeft>40?'g':pctLeft>15?'a':'r'))+
-    v(margin==null?'—':margin+'%','Margin',margin==null?'m':(margin>0?'g':margin<0?'r':'m'));
-  // ---- Money row + summary ----
+    v(reach==null?'—':reach+'%','Reach 30d',reach==null?'m':(reach>=60?'g':reach>=30?'a':'r'))+
+    v(pctLeft==null?'—':pctLeft+'%','Credits left',pctLeft==null?'m':(pctLeft>40?'g':pctLeft>15?'a':'r'));
+  // ---- Peek-row facts (the headline stays on the row; the sheet holds the full report). ----
+  const set=(id,txt,cls)=>{ const e=document.getElementById(id); if(e){ e.textContent=txt; if(cls!==undefined) e.className='pk-fact'+(cls?' '+cls:''); } };
   if(o&&!o.error) CHAIN_STATS=o.chainStats||[];
   if(m&&!m.error){
     const dm=document.getElementById('d_money'); if(dm) dm.innerHTML=
       st($$(m.revenueCents),'revenue')+st($$(m.profitCents),m.profitCents>=0?'profit':'loss',m.profitCents>=0?'green':'')+
       st(margin!=null?margin+'%':'—','margin',(margin||0)>0?'green':'')+st($$(m.mrrCents)+'/mo','MRR (monthly)')+
       st($$(m.cogs?.totalCents),'Costs')+st(m.callsMade!=null?m.callsMade:'—','paid calls')+st(m.users,'users')+st(m.subscribers,'members');
-    const s=document.getElementById('drs_money'); if(s) s.innerHTML=`${esch($$(m.profitCents))} · ${margin!=null?margin+'%':'—'} <span class="chev">▾</span>`;
+    set('pk_money',`${$$(m.profitCents)} · ${margin!=null?margin+'%':'—'}`, m.profitCents>=0?'g':'r');
   }
-  const dh=document.getElementById('drs_dhealth'); if(dh&&af.dialed) dh.innerHTML=`${af.dialed} dialed · ${reach}% reached <span class="chev">▾</span>`;
+  if(af.dialed) set('pk_health',`${af.dialed} dialed`,'');
+  if(c&&!c.error){
+    const kLeft=c.remaining!=null?Math.round(c.remaining/1000)+'k left':'—';
+    set('pk_credits',kLeft, pctLeft==null?'':(pctLeft>40?'g':pctLeft>15?'a':'r'));
+    const bar=document.getElementById('pk_credit_bar'); if(bar&&pctLeft!=null){ bar.style.width=pctLeft+'%'; bar.style.background=pctLeft>40?'var(--green)':pctLeft>15?'#F59E0B':'var(--red)'; }
+  }
+}
+// Lift a hidden detail holder into the shared sheet. Title/sub come from the peek or the holder's data-attrs.
+function dashSheet(key){
+  const holder=document.getElementById('ds_'+key); if(!holder) return;
+  const titles={money:'Money',pulse:"Today's pulse",timing:'Call time and cost',health:'Call health',credits:'ElevenLabs credits'};
+  const subs={money:'Revenue, profit and margin',timing:'Time to reach a person vs talk time',health:'Real dialed calls vs seed and rehearsal',credits:'Estimated from the last 31 days'};
+  holder.style.display=''; // it lives hidden in #dash_details; unhide while borrowed by the sheet
+  openSheet(holder.getAttribute('data-sheet-title')||titles[key]||'', holder.getAttribute('data-sheet-sub')||subs[key]||'', holder);
 }
 
 // ---- Bail library: per-rule toggles saved to policy.bail (enforcement stays staged) ----
@@ -4251,6 +4360,7 @@ async function loadGwPulse(){
     `</div>`+sub('Stats baseline')+
     `<div class="meta" style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;line-height:1.6">Real-call stats (Pulse · Restock · Call timing) ${d.statsSince?('count from <b style="color:#cfcfd8">'+new Date(d.statsSince*1000).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})+'</b>'):'count <b style="color:#cfcfd8">everything</b>'}.<button class="ghost" style="font-size:10.5px;padding:5px 10px" onclick="startFresh(false)">Start fresh</button>${d.statsSince?'<button class="ghost" style="font-size:10.5px;padding:5px 10px" onclick="startFresh(true)">Count all again</button>':''}</div>`;
   const s=document.getElementById('drs_pulse'); if(s) s.innerHTML=`${a.checks||0} checks · ${secsFmt(a.avgTalkSec||0)} avg <span class="chev">▾</span>`;
+  const pk=document.getElementById('pk_pulse'); if(pk){ pk.textContent=`${f.signups||0} new · ${cm.posts||0} score${(cm.posts||0)===1?'':'s'}`; pk.className='pk-fact'; }
 }
 // Stamp a "count from now" cutoff so real-call stats reset for the live launch. Test calls are unaffected.
 async function startFresh(clear){
