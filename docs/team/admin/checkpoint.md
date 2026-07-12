@@ -3,60 +3,91 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 2026-07-11 late session — ADMIN REDESIGN to CD's board (in flight, phases 1-3 SHIPPED to staging)
+## 2026-07-10 session (owner's 8-call feedback) — SHIPPED to staging, awaiting owner live test
 
-**The board:** `docs/design/comps/ADMIN_COMPS.dc.html` (landed via owner upload after CD's connector
-502'd; sha256-verified against CD's split parts; committed). Five page types: LIVE · REPORT · LOG ·
-CRUD · CONSOLE. Standing rule recorded in comps/README + STYLE_GUIDE: comp first, then build.
+**THE finding:** all 8 of the owner's 07-09 calls ran CHARLIE, not Delta. Two reasons:
+(1) they hit the OLD pre-repo-split staging deploy, and (2) the LIVE check path
+(`bridgeStoreCall`, what the site's Check button uses) never looked at `workflow.lane` at all —
+only `triggerCall` did. Delta is STILL un-live-tested. Fixed + shipped (f61bed2):
+- check-live now routes lane:delta stores to the D-lane; synthetic id `delta:<session>` doubles as
+  room + conversation id → /pub/bridge, /pub/live, /pub/result + the listen WebSocket all follow a
+  Delta call. Charlie barge-in reuses the same room, /pub/live proxies EL after a barge.
+- EL poller (`ingestPending`) skips `delta:` ids; Delta finalize still writes the verdict.
+- **NEXT OWNER TEST = the real first Delta live test.** Watch for: opener timing, set follow-up
+  ("Chaos Rising" example), tin/packs on unknown set, hello-nudge on silence, barge-in on off-script.
 
-**Shipped (verified by Playwright screenshots at 390px, admin host, local boot + real API):**
-- Phase 1 — skin + shell: raised/carved tokens (#1D1D22 page, raised gradient cards, carved wells,
-  key pills, gradient-ring CTA, gray glowing toast pill), brandmark+"heck"+ADMIN header w/ live clock,
-  carved group track (active group grows + shows name), raised section pills (active glows green).
-- Phase 2 — Live page (board 1b): 3 vitals (Checks today big · Reach 30d · Credits left) + peek rows
-  (Money→Calc, pulse, call time+cost, call health, credits w/ bar) + reusable bottom sheet
-  (`peekOpen`/`peekClose` moves report bodies in/out so loader ids keep working). Accordions gone.
-- Phase 3 — Calls = LOG (board 1c/1d): day groups (Today/Yesterday/weekday), raised rows, status
-  chips, SHOW 50 MORE key (floating pager deleted), call sheet w/ verdict glow dot + timeline
-  (dialed/reached/verdict from navSeconds/callSeconds) + transcript bubbles + FIX THE VERDICT →
-  new `PATCH /api/results/:id/verdict` (validated + tested; sets confirmed + statusKey).
-- Sweep: tooltips ⓘ gray not purple; subnav purple → green; goto links green.
+**Voice tuning shipped (both lanes):** no dashes in ANY spoken line (Charlie prompt rule + de-dashed
+examples; Delta defaults were clean) · set question always gives an example set name · unknown set →
+ask "booster packs or a tin?" instead of ending · restock-day ask also fires on "restock coming soon"
+and pushes once for the specific day (elevenlabs.ts ask_shipment_day) · dead-quiet pickup → agent says
+"Hello?" (Charlie prompt rule; Delta = new clip 7 nudge) · Delta pre-opener wait 8s→3s (dead-air fix) ·
+classifier + verdict pass map "three packs in one" → 3-pack blister.
 
-**Still open on the redesign (next phases):**
-1. Workflows CRUD rows + edit sheet (board 1e/1f) — skin carried the current cards; anatomy not comp yet.
-   Env picker Prod|Staging BLOCKED: no cross-env API exists — needs DevOps before it can be honest.
-2. Support exact report grammar order (hero → wells → chips → list; current is close).
-3. Intel pages (retailers/restock/kiosk) to the REPORT grammar; App settings to CONSOLE toggles.
-4. Zones leaves the admin per board section map (~30 refs); engine stays.
-5. CD flagged: COPY_STYLE_GUIDE_ADMIN.md doesn't exist — Copper's lane.
-- **Drive staging.admin like a user after deploy** (local visual pass done; staging drive pending).
+**Verdict/productDetail fix:** decisive in-stock calls now run the extraction second-read too (verdict
+untouched — extraction only), so set + product form land in productDetail (was null on ALL 8 calls).
 
-**Test state:** tsc 0 · app.html </script>=2 + node --check OK · qa-round6/qa-gating fail on
-pre-session baseline (legacy) · **qa-design (checkit.html token audit) fails on WEBSITE colors —
-not admin's diff; Webbie's recent pushes introduced off-system hexes. Flag to Webbie.**
+**checkit.html live view (shipped):** pending verdict = neutral GRAY "Getting result…" (new `pend`
+tone; never yellow unclear) · "Restock confirmed · soon" drops the generic suffix (keeps "· Tuesday") ·
+Twilio answered signal flips "We've connected" immediately.
+**⚖️ SETTLED — timeline rail STAYS (owner ruling 07-10, do not re-flatten):** I read call 8's "no
+indenting" as "remove the rail" and cut the whole vertical timeline; the owner immediately asked where
+it went and Webbie restored it (e34d72b). The call-8 flat-log reading is DEAD. qa-behaviors asserts
+the rail dots again (4dc3250). Any future "flatter" ask needs the owner's explicit words + screenshot.
 
-## Earlier 2026-07-11 (same day, shipped + promoted)
-- **Delta lane:** all-8-calls-ran-Charlie root cause fixed (bridgeStoreCall lane routing, f61bed2);
-  classifier = groq:llama-3.3-70b (free-Gemini 429 was the "unclear" bug); wrapNo clip; deltatap
-  audio fork + barge <Stop>; voice tuning both lanes (no dashes spoken, set example, hello nudge,
-  restock-day push). **Delta round 2 by owner still owed — reminder armed.** Known edge: barged
-  Delta call reopened >15min later shows in_progress (session expired; accepted).
-- **Alert emails** rebuilt to Design mock w/ Outlook VML (tests sent; owner must confirm in Outlook).
-- **SMS A2P runbook:** set TWILIO_MESSAGING_SERVICE_SID when approval lands → Alerts test →
-  Twilio console (30034 = not active yet).
-- **Support tab** shipped + promoted; stats read the live backend shape (conversations/tickets/
-  byMaxTier/estCostUsd; absent stats hide). Contract: docs/specs/support-agent/admin-panel-contract.md.
-- **Owner batch promoted:** logo→God View, Schedules gone, Plans-loading fix (calcRenderPlans shadow),
-  hobby/thrift icons match site, GTM restore-bar X (POST /api/gtm/dismiss-defaults).
+**Alert emails (42768ed):** renderBrandedEmail rebuilt to Design's approved mock — #08090D board,
+wordmark image, gradient card w/ solid Outlook fallback, Inter-black headline (serif was wrong),
+filled capsule CTA w/ white label + VML roundrect for Outlook, mock-accurate modules. Two test emails
+SENT to owner (welcome + store_added) from staging (BREVO_API_KEY copied prod→staging via Railway).
+**NOT verified: actual Outlook rendering — owner must open the test in Outlook.** Restock-as-EMAIL has
+no test path (restock is SMS-channel in sendTestAlert) — small follow-up if owner wants to see E3.
+
+**SMS / A2P prep:** creds present both envs (TWILIO_SMS_FROM set; code auto-prefers
+TWILIO_MESSAGING_SERVICE_SID when set). Approval-day runbook: if A2P lands on a Messaging Service,
+set TWILIO_MESSAGING_SERVICE_SID in Railway → Admin → God View → Alerts → test "restock" to owner
+phone → confirm delivery in Twilio console (error 30034 = A2P not active yet). Delivery chips +
+send log already on the Alerts tab.
+
+**Admin (cbc2928):** Feedback tab now has an "Unclear checks" pill strip from the unfiltered
+/api/results (Fun included; god-view headline filter untouched) · Schedules nav tab deleted
+(section was already gone). app.html verified: </script>=2, node --check OK.
+
+**Tests:** tsc 0 errors · 18/18 delta units green · qa-behaviors green (assertions updated to the flat
+log) · qa-round6 / qa-gating / qa-admin-plans fail IDENTICALLY on the pre-session baseline 93d19c1
+(legacy failures, already attributed by DevOps — not from this session).
+
+**Known edge (accepted):** a BARGED Delta call reopened from history >15 min later (after the
+in-memory session expires) can't resolve `delta:<id>` → shows in_progress. Rare, owner-facing only.
+
+## 2026-07-11 additions (post-checkpoint, same session)
+- **Delta call 97 root cause:** free-tier GEMINI_API_KEY 429'd → every classify threw → clear "we
+  don't" became "unclear" + tone-deaf "Awesome!" wrap. Fixed: llm() gateway falls back to gpt-4o-mini
+  on ANY gemini/groq failure; Delta classifier now **groq:llama-3.3-70b-versatile** (benched: correct
+  on every line, ~300ms from staging; DELTA_CLASSIFY_MODEL env override); neutral wrapNo clip (slot 8)
+  for non-yes endings. Verified live via /api/admin/llm-ping.
+- **Delta live audio:** owner heard nothing on Delta (no EL bridge to tap — NOT a Safari bug, Webbie
+  called off). tapedeckTwiml now <Start><Stream name=deltatap> forks both tracks into the listen room;
+  barge TwiML <Stop>s the fork before <Connect> so frames never double. NOT verified by ear — owner's
+  next call is the proof.
+- **Support tab in Admin (77eacd6→):** new nav group; snapshot (requests/self-served/escalated/rate/
+  avg msgs/tickets emailed, by-category, top questions), filterable chat list, transcript drawer w/
+  screenshot + debug + account. Degrades gracefully until Support's APIs land. Contract for Support:
+  `docs/specs/support-agent/admin-panel-contract.md`.
+- **Owner owes:** Delta test round 2 (reminder trigger set, 45m). CD owes: Admin design comp
+  (prompt handed to owner; comps → website + admin split in docs/design/comps/).
 
 **OPEN (priority order):**
-1. Finish redesign phases above, then drive staging + promote when owner approves the look.
-2. Owner: Delta test round 2 (Fun store, staging) → tune from feedback.
-3. Owner: confirm alert-email rendering in Outlook.
-4. A2P approval day → SMS end-to-end per runbook.
-5. Premium toggle matrix in Plans (qa-admin-plans lives here) · per-customer account view (specs) ·
-   dashboard hero done via redesign.
+1. Owner runs the next Fun test round → THE first real Delta live test (incl. barge-in on an
+   off-script call). Tune again from that feedback.
+2. Owner confirms the test emails in OUTLOOK match docs/design/emails/ mock.
+3. A2P approval day → SMS end-to-end per runbook above.
+4. 🅿️ Premium-feature TOGGLE MATRIX in God View → Plans (qa-admin-plans failures live here —
+   backend done, matrix UI missing/regressed).
+5. Workflows env picker Prod|Staging (one Admin powers both; cross-origin auth w/ DevOps).
+6. Per-customer account view (spec docs/specs/admin-user-view.md; DevOps builds endpoints).
+7. Remove Admin "Zones" area (~30 refs in app.html); engine/tables stay.
+8. Dashboard hero 5→3 vitals (Checks 24h · Reach 30d · EL credits) · Chains page roll-up control ·
+   call-metrics brief items 2-3 (per-chain metrics + model-routing audit in Admin) · Delta write-up
+   into CHEAP_NAV_ARCHITECTURE.md (call-metrics brief item 5).
 
 **Delegated (track):** Data Dev — null stale avgTreeSeconds on ~30 direct chains. Mapping — 13
-"attempted" re-runs. Webbie — qa-design off-system colors in checkit.html. **Do not chase:** owner's
-laptop Safari stuck on old staging design (cache).
+"attempted" re-runs. **Do not chase:** owner's laptop Safari stuck on old staging design (cache).

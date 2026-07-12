@@ -5046,17 +5046,6 @@ app.get("/api/results", async (c) => {
   }) });
 });
 
-// Fix the verdict (Admin → call sheet): the owner corrects a call record whose read was wrong.
-// Sets confirmed + the matching customer-facing status key on the one row. Yes/no/unclear only.
-app.patch("/api/results/:id/verdict", async (c) => {
-  const id = Number(c.req.param("id")); if (!id) return c.json({ error: "id required" }, 400);
-  const b = (await c.req.json().catch(() => ({}))) as { confirmed?: boolean | null };
-  if (b.confirmed !== true && b.confirmed !== false && b.confirmed !== null) return c.json({ error: "confirmed must be true, false or null" }, 400);
-  const statusKey = b.confirmed === true ? "in_stock" : b.confirmed === false ? "not_in_stock" : "no_clear_answer";
-  await db.update(callResults).set({ confirmed: b.confirmed, statusKey }).where(eq(callResults.id, id));
-  return c.json({ ok: true, confirmed: b.confirmed, statusKey });
-});
-
 // ---- Actions ----
 app.post("/api/call-now", async (c) => {
   const b = await c.req.json();
