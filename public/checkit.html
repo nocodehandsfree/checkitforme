@@ -84,7 +84,7 @@ __BRAND_HEAD__
     /* Paint BOTH safe areas explicitly. viewport-fit=cover extends the page into the home-indicator
        zone at the bottom — leaving it unpadded meant the body's paint stopped short of the screen edge
        and the gap rendered as a permanent stripe above the bottom bar (devops 07-09). */
-    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
+    padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + var(--suplaunch-h,40px)) 0;
     display:flex;flex-direction:column;min-height:100dvh}
   /* No ambient color anywhere on the body — solid dark on every page, top and bottom (kills the green
      that kept tinting the iOS Safari bars / showing through on the homepage + call history). */
@@ -553,18 +553,23 @@ __BRAND_HEAD__
   .toast svg path,.toast svg circle{stroke:#06210f}
   .toast.show{transform:translateX(-50%) translateY(0)}
   .hidden{display:none}
-  /* Support launcher: a super-skinny check-green vertical "help" tab on the right edge. Tucks away
-     while the user moves around (scroll/interact) and glides back at rest. Shows on every page,
-     including the slide-up sheets, so help is one tap away wherever they are. */
-  .suplaunch{position:fixed;right:0;top:64%;transform:translateY(-50%);z-index:82;cursor:pointer;border:none;
-    padding:9px 4px;border-radius:9px 0 0 9px;display:flex;align-items:center;justify-content:center;
-    background:var(--green,#4ADE80);
-    box-shadow:-5px 5px 14px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.28);
-    transition:transform .3s cubic-bezier(.32,.72,0,1),opacity .22s,padding .12s}
-  .suplaunch .tl{writing-mode:vertical-rl;text-orientation:upright;font:800 10px Inter;letter-spacing:1.5px;color:#06210f;text-transform:lowercase}
-  .suplaunch:hover{padding-left:7px}
-  .suplaunch:active{transform:translateY(-50%) translateX(1px)}
-  .suplaunch.tucked{transform:translateY(-50%) translateX(120%);opacity:0;pointer-events:none}
+  /* Support launcher: a super-skinny "handle" docked dead-center on the very bottom edge — a grab notch
+     up top so it reads as pull-up-able, a check-green chat dot, and the word "help". Tucks straight down
+     while the user moves around (scroll/interact) and glides back at rest, so it never sits over content
+     you're reading. The page reserves --suplaunch-h at its foot so at rest the handle sits BELOW the last
+     content, not on top of it. Shows on every page, including the slide-up sheets. */
+  .suplaunch{position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:82;cursor:pointer;border:none;
+    display:flex;align-items:center;gap:7px;padding:8px 16px calc(8px + env(safe-area-inset-bottom));
+    background:rgba(30,30,38,.92);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.10);border-bottom:none;border-radius:14px 14px 0 0;
+    box-shadow:0 -6px 20px rgba(0,0,0,.35);
+    transition:transform .3s cubic-bezier(.32,.72,0,1),opacity .22s}
+  .suplaunch .grip{position:absolute;top:3px;left:50%;transform:translateX(-50%);width:26px;height:3px;border-radius:2px;background:rgba(255,255,255,.22)}
+  .suplaunch .dot{width:16px;height:16px;border-radius:50%;background:var(--green,#4ADE80);display:flex;align-items:center;justify-content:center;flex:0 0 16px}
+  .suplaunch .dot svg{width:10px;height:10px;stroke:#06210f;fill:none;stroke-width:2.4}
+  .suplaunch .tl{font:800 12px Inter;letter-spacing:.02em;color:#efeff4;text-transform:lowercase}
+  .suplaunch:active{transform:translateX(-50%) translateY(1px)}
+  .suplaunch.tucked{transform:translateX(-50%) translateY(120%);opacity:0;pointer-events:none}
   body:has(.supwrap.on) .suplaunch{display:none}
   .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:flex;flex-direction:column;
     /* a touch deeper than the raw brand yellow — the neon read too bright in the panel (owner 07-11) */
@@ -2476,6 +2481,8 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 </div>
 
 <button class="suplaunch" id="supTab" onclick="openSupport()" aria-label="Help">
+  <span class="grip" aria-hidden="true"></span>
+  <span class="dot" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-11.9 7.6L3 21l1.9-6A8.4 8.4 0 1 1 21 11.5z"/></svg></span>
   <span class="tl" data-i18n="sup.help">help</span>
 </button>
 <div class="supwrap" id="supWrap" aria-hidden="true">
