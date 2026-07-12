@@ -44,6 +44,22 @@ async function seedStatuses() {
   }
 }
 
+// Seed the owner-named unmappable reasons (DD chain-cleanup 2026-07-11, audit item 4). FILL-ONLY: sets
+// the reason only where blank, so a later curated edit in admin is never clobbered on boot. Match by
+// exact chain name. Add more here as they're identified, or set per-chain via PATCH /api/chains/:id.
+async function seedUnmappableReasons() {
+  const reasons: Record<string, string> = {
+    "Amazon": "online-only", "Best Buy": "online-only", "Micro Center": "online-only",
+    "Aldi": "no store line",
+  };
+  for (const [name, reason] of Object.entries(reasons)) {
+    await client.execute({
+      sql: "UPDATE chains SET unmappable_reason=? WHERE name=? AND (unmappable_reason IS NULL OR unmappable_reason='')",
+      args: [reason, name],
+    }).catch(() => {});
+  }
+}
+
 export async function bootstrap() {
   await migrate(db, { migrationsFolder: "./drizzle" });
   // Accounts table (Runnr customers) — created idempotently, outside the migration set.
@@ -84,6 +100,8 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE chains ADD COLUMN tree_verified_at INTEGER").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN rings_direct INTEGER").catch(() => {});
   await client.execute("ALTER TABLE chains ADD COLUMN tree_note TEXT").catch(() => {});
+  // WHY a chain can't be mapped/called, stored not inferred (audit item 4, DD 2026-07-11).
+  await client.execute("ALTER TABLE chains ADD COLUMN unmappable_reason TEXT").catch(() => {});
   // Retailers: weekly hours JSON + region grouping + soft-remove (added post-migration).
   await client.execute("ALTER TABLE retailers ADD COLUMN hours TEXT").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN state TEXT").catch(() => {});
@@ -275,6 +293,7 @@ export async function bootstrap() {
   if (supp) console.log(`Catalog supplement: +${supp} products.`);
   await backfillChainTypes(); // ensure every chain has a store-category for filtering
   await backfillDirectChains(); // independents + co-ops (Ace) default to DIRECT — no chain-level tree can mute the agent
+  await seedUnmappableReasons(); // seed the owner-named unmappable reasons (only where blank — never clobbers a curated edit)
   await seedStockCheckIntel(); // classify chains site-rail vs call-rail (insert-if-absent)
   await seedSellMethods();      // per-chain ways-to-get-it + MSRP flag (insert-if-absent)
   await seedFunStore();         // owner-only "Fun" rehearsal store (only if FUN_STORE_PHONE is set)

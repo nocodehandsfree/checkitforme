@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+  <style>
+    html,body{margin:0;padding:0;background:#08090D}
+    a{color:#4ADE80;text-decoration:none}
+    a:hover{color:#5BEA93;text-decoration:underline}
+    ::selection{background:rgba(74,222,128,.25)}
+  </style>
+</helmet>
+
+<section style="min-height:100vh;background:#08090D;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:56px 60px 140px;display:flex;flex-direction:column;gap:64px">
+
+  <!-- ============ BOARD HEADER ============ -->
+  <div style="display:flex;flex-direction:column;gap:18px;max-width:1160px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <img src="../brand/check-brandmark.svg" alt="Check" style="width:34px;height:34px">
+      <div style="font-size:34px;font-weight:900;letter-spacing:-1px">Admin comps</div>
+      <div style="background:#26262B;border-radius:999px;padding:6px 14px;font-size:10.5px;font-weight:900;letter-spacing:.12em;color:#8A8A96;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">ADMIN.CHECKITFORME.COM</div>
+    </div>
+    <div style="font-size:15px;font-weight:500;color:#8A8A96;max-width:720px;line-height:1.5">The admin in the site's skin. Same tokens, same components, same voice. It differs only where operator density demands it. Managed from a phone, so every screen is one thumb wide.</div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:stretch">
+      <div style="background:#26262B;border-radius:20px;padding:18px 22px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);max-width:400px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#4ADE80">Standing rule</div>
+        <div style="font-size:16px;font-weight:800;letter-spacing:-.2px;line-height:1.35">Every new admin feature gets comped on this board first, then built.</div>
+        <div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.5">Words follow the copy guide. Look follows the style guide. The site board is <span style="font-family:ui-monospace,monospace;font-size:11.5px;color:#CDCDD8">WEBSITE_COMPS.dc.html</span> in this folder.</div>
+      </div>
+      <div style="background:#26262B;border-radius:20px;padding:18px 22px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);max-width:640px;display:flex;flex-direction:column;gap:10px">
+        <div style="font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#FFCB05">Five page types, one grammar</div>
+        <div style="display:grid;grid-template-columns:92px 1fr;gap:6px 14px;font-size:12.5px;line-height:1.5">
+          <div style="font-weight:900;color:#fff">LIVE</div><div style="color:#8A8A96;font-weight:500">Three vitals, then peek rows. The whole business at a glance. <a href="#1b">1b</a></div>
+          <div style="font-weight:900;color:#fff">REPORT</div><div style="color:#8A8A96;font-weight:500">Range, hero, wells, one list, footnote. Every intel page uses it. <a href="#1g">1g</a></div>
+          <div style="font-weight:900;color:#fff">LOG</div><div style="color:#8A8A96;font-weight:500">Filter pills, day groups, rows with status chips, a Show more key. <a href="#1c">1c</a></div>
+          <div style="font-weight:900;color:#fff">CRUD</div><div style="color:#8A8A96;font-weight:500">A list of things you own, a New capsule, an edit sheet. <a href="#1e">1e</a></div>
+          <div style="font-weight:900;color:#fff">CONSOLE</div><div style="color:#8A8A96;font-weight:500">Toggle rows and pickers. Settings only, no data. <a href="#1i">1i</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <!-- ============ RECOMMENDATIONS ============ -->
+  <div style="display:flex;flex-direction:column;gap:14px;max-width:1160px">
+    <div style="font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">How this cleans up the mess</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px">
+      <div style="background:#17171C;border-radius:16px;padding:16px 18px;box-shadow:inset 0 2px 6px rgba(0,0,0,.35)"><div style="font-size:13.5px;font-weight:800;margin-bottom:4px">Accordions are gone</div><div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.5">Every collapsed section becomes a peek row. It shows its headline number and opens its own screen. Nothing hides, nothing stacks.</div></div>
+      <div style="background:#17171C;border-radius:16px;padding:16px 18px;box-shadow:inset 0 2px 6px rgba(0,0,0,.35)"><div style="font-size:13.5px;font-weight:800;margin-bottom:4px">One report grammar</div><div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.5">Store intel, restock intel, kiosk intel, support snapshot, testing summary. All of them read the same: range, hero, wells, one list.</div></div>
+      <div style="background:#17171C;border-radius:16px;padding:16px 18px;box-shadow:inset 0 2px 6px rgba(0,0,0,.35)"><div style="font-size:13.5px;font-weight:800;margin-bottom:4px">Five vitals become three</div><div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.5">Checks today, reach, credits. Money and margin move into the Money peek row. Color reads the state before the number does.</div></div>
+      <div style="background:#17171C;border-radius:16px;padding:16px 18px;box-shadow:inset 0 2px 6px rgba(0,0,0,.35)"><div style="font-size:13.5px;font-weight:800;margin-bottom:4px">Tooltips become gray lines</div><div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.5">Hover does not exist on a phone. Any control that needs explaining gets one gray line under it, written to the copy guide.</div></div>
+      <div style="background:#17171C;border-radius:16px;padding:16px 18px;box-shadow:inset 0 2px 6px rgba(0,0,0,.35)"><div style="font-size:13.5px;font-weight:800;margin-bottom:4px">Pagers become a key</div><div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.5">The floating pager covered list rows on a phone. Long lists end in one raised Show more key instead.</div></div>
+      <div style="background:#17171C;border-radius:16px;padding:16px 18px;box-shadow:inset 0 2px 6px rgba(0,0,0,.35)"><div style="font-size:13.5px;font-weight:800;margin-bottom:4px">Policy splits in two</div><div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.5">Flags and pricing stay as a console. Store requests, waitlist and moderation become queues in the LOG pattern. Zones leaves the admin, the engine stays.</div></div>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ 1a SHELL ============ -->
+  <div id="1a" style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+    <div style="width:270px;display:flex;flex-direction:column;gap:10px;padding-top:8px">
+      <div style="display:flex;align-items:center;gap:10px"><div style="min-width:30px;height:30px;border-radius:9px;background:#26262B;display:grid;place-items:center;font-size:13px;font-weight:900;color:#4ADE80;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)">1a</div><div style="font-size:19px;font-weight:900;letter-spacing:-.3px">The shell</div></div>
+      <div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.6">Two levels, no horizontal scroll. The group track is the site's mode switcher, carved with one raised key. The active group grows and shows its name, the rest sit as icons. Sections ride below as raised pills, active pill lights green. Header scrolls away like the site.</div>
+      <div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.6">The gray pill at the bottom is the one notification look. Always gray, one line, fragments with no periods and no commas.</div>
+    </div>
+    <div data-screen-label="Admin shell" style="width:390px;background:#1D1D22;border-radius:40px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);overflow:hidden;flex:0 0 auto;display:flex;flex-direction:column;min-height:700px;position:relative">
+      <div style="display:flex;align-items:center;gap:9px;padding:20px 20px 12px">
+        <img src="../brand/check-brandmark.svg" alt="" style="width:22px;height:22px">
+        <div style="font-size:18px;font-weight:900;letter-spacing:-.4px;margin-left:-4px">heck</div>
+        <div style="font-size:9px;font-weight:900;letter-spacing:.08em;color:#8A8A96;background:#1B1B20;border-radius:6px;padding:3px 7px;box-shadow:inset 0 2px 4px rgba(0,0,0,.4)">ADMIN</div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px #4ADE80"></div><div style="font-family:ui-monospace,monospace;font-size:11.5px;color:#8A8A96">2:41 PM</div></div>
+      </div>
+      <div style="padding:4px 16px 0">
+        <div style="display:flex;gap:4px;background:#1B1B20;border-radius:999px;padding:5px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)">
+          <div style="flex:2.1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 4px;border-radius:999px;background:linear-gradient(180deg,#31313A,#28282E);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 5 13h6l-1 9 8-11h-6z"></path></svg>
+            <span style="font-size:11.5px;font-weight:800;color:#fff">God View</span>
+          </div>
+          <div style="flex:1;display:grid;place-items:center;padding:9px 0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7C7C88" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16l-1.2-4.5H5.2zM5 9v11h14V9M9 20v-6h6v6"></path></svg></div>
+          <div style="flex:1;display:grid;place-items:center;padding:9px 0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7C7C88" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4c0 8.3 6.7 15 15 15l1-4-4.5-1.5-2 2c-2.8-1.3-5-3.5-6.3-6.3l2-2L8.7 3z"></path></svg></div>
+          <div style="flex:1;display:grid;place-items:center;padding:9px 0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7C7C88" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6 11a6 6 0 0 0 12 0M12 17v4"></path></svg></div>
+          <div style="flex:1;display:grid;place-items:center;padding:9px 0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7C7C88" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l2.2-3.2A8 8 0 1 1 21 12z"></path></svg></div>
+          <div style="flex:1;display:grid;place-items:center;padding:9px 0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7C7C88" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 5H5a3 3 0 0 0 3 4M16 5h3a3 3 0 0 1-3 4M12 13v4M8 21h8"></path></svg></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;padding:12px 16px 4px;overflow:hidden">
+        <div style="padding:8px 15px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1),0 0 14px rgba(74,222,128,.22);font-size:12px;font-weight:800;color:#4ADE80;flex:0 0 auto">Live</div>
+        <div style="padding:8px 15px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:12px;font-weight:700;color:#8A8A96;flex:0 0 auto">Users</div>
+        <div style="padding:8px 15px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:12px;font-weight:700;color:#8A8A96;flex:0 0 auto">Restock</div>
+        <div style="padding:8px 15px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:12px;font-weight:700;color:#8A8A96;flex:0 0 auto">Alerts</div>
+        <div style="padding:8px 15px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:12px;font-weight:700;color:#8A8A96;flex:0 0 auto">Policy</div>
+      </div>
+      <div style="flex:1;margin:14px 16px;border-radius:16px;background:repeating-linear-gradient(45deg,#2B2B33 0 10px,#25252C 10px 20px);opacity:.35;display:grid;place-items:center"><div style="font-family:ui-monospace,monospace;font-size:11px;color:#CDCDD8;background:#1D1D22;padding:6px 10px;border-radius:8px">section content</div></div>
+      <div style="position:absolute;left:0;right:0;bottom:22px;display:flex;justify-content:center">
+        <div style="background:linear-gradient(180deg,#2E2E35,#25252B);border-radius:999px;padding:11px 22px;font-size:14.5px;font-weight:800;color:rgba(255,255,255,.92);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.35),0 0 18px rgba(255,255,255,.18);white-space:nowrap">Workflow saved</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 1b LIVE DASHBOARD ============ -->
+  <div id="1b" style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+    <div style="width:270px;display:flex;flex-direction:column;gap:10px;padding-top:8px">
+      <div style="display:flex;align-items:center;gap:10px"><div style="min-width:30px;height:30px;border-radius:9px;background:#26262B;display:grid;place-items:center;font-size:13px;font-weight:900;color:#4ADE80;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)">1b</div><div style="font-size:19px;font-weight:900;letter-spacing:-.3px">Live · the LIVE page</div></div>
+      <div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.6">God View opens here. Three vitals, color first. Below them, every old accordion is now a peek row: the headline is already on it, the chevron opens the full report. No expanding, no scroll traps.</div>
+      <div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.6">Money opens Calc. Call time and call health open reports inside Calls. Credits opens its own report with the plan bar.</div>
+    </div>
+    <div data-screen-label="Live dashboard" style="width:390px;background:#1D1D22;border-radius:40px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);overflow:hidden;flex:0 0 auto;padding-bottom:28px">
+      <div style="display:flex;align-items:center;gap:9px;padding:20px 20px 4px">
+        <img src="../brand/check-brandmark.svg" alt="" style="width:22px;height:22px">
+        <div style="font-size:18px;font-weight:900;letter-spacing:-.4px;margin-left:-4px">heck</div>
+        <div style="font-size:9px;font-weight:900;letter-spacing:.08em;color:#8A8A96;background:#1B1B20;border-radius:6px;padding:3px 7px;box-shadow:inset 0 2px 4px rgba(0,0,0,.4)">ADMIN</div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px #4ADE80"></div><div style="font-family:ui-monospace,monospace;font-size:11.5px;color:#8A8A96">2:41 PM</div></div>
+      </div>
+      <div style="padding:18px 20px 0">
+        <div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Today</div>
+        <div style="font-size:12px;font-weight:600;color:#8A8A96;margin-top:2px">Friday, July 11</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px 16px 0">
+        <div style="grid-column:1/-1;background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:16px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:16px 18px">
+          <div style="font-size:34px;font-weight:900;letter-spacing:-1.2px;color:#4ADE80;font-variant-numeric:tabular-nums">24</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96;margin-top:2px">Checks today</div>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:16px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:14px 16px">
+          <div style="font-size:24px;font-weight:900;letter-spacing:-.6px;color:#4ADE80;font-variant-numeric:tabular-nums">62%</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96;margin-top:2px">Reach 30d</div>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:16px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:14px 16px">
+          <div style="font-size:24px;font-weight:900;letter-spacing:-.6px;color:#F59E0B;font-variant-numeric:tabular-nums">31%</div>
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96;margin-top:2px">Credits left</div>
+        </div>
+      </div>
+      <div style="padding:22px 20px 8px;font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">Reports</div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:0 16px">
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:13px 14px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">Money</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">Opens the full view in Calc</div></div>
+          <div style="font-size:14px;font-weight:800;color:#4ADE80;font-variant-numeric:tabular-nums;white-space:nowrap">$412 · 34%</div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:13px 14px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">Today's pulse</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">Members, scores and signups</div></div>
+          <div style="font-size:14px;font-weight:800;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums;white-space:nowrap">3 new · 1 score</div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:13px 14px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">Call time and cost</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">Time to reach a person vs talk time</div></div>
+          <div style="font-size:14px;font-weight:800;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums;white-space:nowrap">1:48 · $0.41</div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:13px 14px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">Call health</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">Real dialed calls vs seed and rehearsal</div></div>
+          <div style="font-size:14px;font-weight:800;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums;white-space:nowrap">118 dialed</div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:13px 14px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:700">Credits</div>
+            <div style="height:6px;background:#1B1B20;border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);margin-top:8px;overflow:hidden"><div style="width:31%;height:100%;background:#F59E0B;border-radius:999px"></div></div>
+          </div>
+          <div style="font-size:14px;font-weight:800;color:#F59E0B;font-variant-numeric:tabular-nums;white-space:nowrap">31k left</div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+        </div>
+      </div>
+      <div style="padding:16px 20px 0;font-size:11.5px;font-weight:600;color:#5C5C68">Tap a row for the full report.</div>
+    </div>
+  </div>
+
+  <!-- ============ 1c CALLS LOG + 1d CALL SHEET ============ -->
+  <div id="1c" style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+    <div style="width:270px;display:flex;flex-direction:column;gap:10px;padding-top:8px">
+      <div style="display:flex;align-items:center;gap:10px"><div style="min-width:30px;height:30px;border-radius:9px;background:#26262B;display:grid;place-items:center;font-size:13px;font-weight:900;color:#4ADE80;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)">1c</div><div style="font-size:19px;font-weight:900;letter-spacing:-.3px">Calls · the LOG page</div></div>
+      <div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.6">The busiest screen in the admin. Filter pills up top, rows grouped by day, the site's status icon set on the right. Chain logos ride the logo slot, independents get the embossed initials tile. A row opens the call sheet, <a href="#1d">1d</a>.</div>
+      <div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.6">Alerts sends, testing logs and support chats reuse this exact anatomy.</div>
+    </div>
+    <div data-screen-label="Calls log" style="width:390px;background:#1D1D22;border-radius:40px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);overflow:hidden;flex:0 0 auto;padding-bottom:28px">
+      <div style="padding:22px 20px 0;display:flex;align-items:baseline;gap:10px">
+        <div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Calls</div>
+        <div style="font-size:12px;font-weight:600;color:#8A8A96">118 this week</div>
+      </div>
+      <div style="display:flex;gap:8px;padding:14px 16px 0">
+        <div style="display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:12px;font-weight:700;color:rgba(255,255,255,.85)">All products <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+        <div style="display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:12px;font-weight:700;color:rgba(255,255,255,.85)">Newest <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+      </div>
+      <div style="padding:20px 20px 8px;font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">Today</div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:0 16px">
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:11px 13px;display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:11px;background:#1F1F25;display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)"><div style="width:16px;height:16px;border-radius:50%;background:#CC0000;display:grid;place-items:center"><div style="width:7px;height:7px;border-radius:50%;background:#fff"></div></div></div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Target <span style="color:#8A8A96;font-weight:500">Glendale</span></div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">Pokémon · 12m ago · 2:14 PM</div></div>
+          <div style="display:flex;align-items:center;gap:7px"><div style="width:26px;height:26px;border-radius:50%;background:rgba(74,222,128,.15);display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg></div></div>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:11px 13px;display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;font-size:13px;font-weight:900;color:#CDCDD8;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)">CT</div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Collector's Toybox</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">One Piece · 1h ago · 1:02 PM</div></div>
+          <div style="display:flex;align-items:center;gap:6px"><div style="width:26px;height:26px;border-radius:50%;background:rgba(245,158,11,.15);display:grid;place-items:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h11v8H2zM13 10h4l3 3v2h-7"></path><circle cx="6" cy="17" r="1.6"></circle><circle cx="16" cy="17" r="1.6"></circle></svg></div><div style="font-size:11px;font-weight:800;color:#F59E0B">Tue</div></div>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:11px 13px;display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:11px;background:#1F1F25;display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)"><div style="font-size:10px;font-weight:900;color:#E31837;letter-spacing:-.5px">GS</div></div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">GameStop <span style="color:#8A8A96;font-weight:500">Burbank</span></div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">Pokémon · 2h ago · 12:31 PM</div></div>
+          <div style="display:flex;align-items:center;gap:6px"><div style="width:26px;height:26px;border-radius:50%;background:rgba(239,68,68,.15);display:grid;place-items:center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg></div><div style="font-size:11px;font-weight:800;color:#EF4444">Out</div></div>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:11px 13px;display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;font-size:13px;font-weight:900;color:#CDCDD8;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)">HP</div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Hobby Planet</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">Pokémon · 3h ago · 11:48 AM</div></div>
+          <div style="width:26px;height:26px;border-radius:50%;background:rgba(251,191,36,.15);display:grid;place-items:center;font-size:14px;font-weight:900;color:#FBBF24">?</div>
+        </div>
+      </div>
+      <div style="padding:20px 20px 8px;font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">Yesterday</div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:0 16px">
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:11px 13px;display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:11px;background:#1F1F25;display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)"><div style="width:16px;height:16px;border-radius:3px;background:#0071CE"></div></div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Walmart <span style="color:#8A8A96;font-weight:500">Porter Ranch</span></div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">Topps · 6:12 PM</div></div>
+          <div style="width:26px;height:26px;border-radius:50%;background:rgba(74,222,128,.15);display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:center;padding:18px 16px 0">
+        <div style="padding:12px 26px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:12.5px;font-weight:800;letter-spacing:.13em;color:rgba(255,255,255,.85)">SHOW 50 MORE</div>
+      </div>
+    </div>
+    <div id="1d" data-screen-label="Call sheet" style="width:390px;background:#1D1D22;border-radius:40px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);overflow:hidden;flex:0 0 auto;position:relative;display:flex;flex-direction:column;justify-content:flex-end;min-height:780px">
+      <div style="position:absolute;inset:0;background:rgba(5,6,9,.66)"></div>
+      <div style="position:absolute;top:22px;left:0;right:0;display:flex;justify-content:center"><div style="min-width:26px;height:26px;border-radius:8px;background:#26262B;display:grid;place-items:center;font-size:12px;font-weight:900;color:#4ADE80;padding:0 8px">1d · the call sheet</div></div>
+      <div style="position:relative;background:#26262B;border-radius:28px 28px 40px 40px;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7);padding:10px 20px 30px">
+        <div style="display:flex;justify-content:center;padding:2px 0 14px"><div style="width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.16)"></div></div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:44px;height:44px;border-radius:12px;background:#1F1F25;display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)"><div style="width:18px;height:18px;border-radius:50%;background:#CC0000;display:grid;place-items:center"><div style="width:8px;height:8px;border-radius:50%;background:#fff"></div></div></div>
+          <div style="flex:1;min-width:0"><div style="font-size:16px;font-weight:800;letter-spacing:-.2px">Target Glendale</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">Pokémon · today 2:14 PM · 1:52 on the line</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:16px">
+          <div style="width:8px;height:8px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px #4ADE80"></div>
+          <div style="font-size:19px;font-weight:900;letter-spacing:-.4px;color:#4ADE80">In stock. Confirmed.</div>
+        </div>
+        <div style="font-size:13px;font-weight:500;color:rgba(255,255,255,.72);margin-top:6px;line-height:1.5">Staff checked the card aisle and confirmed <b style="color:#fff">Prismatic Evolutions</b> boosters on the shelf.</div>
+        <div style="display:flex;flex-direction:column;gap:0;margin-top:18px;padding-left:5px">
+          <div style="display:flex;gap:12px;align-items:flex-start"><div style="display:flex;flex-direction:column;align-items:center"><div style="width:11px;height:11px;border-radius:50%;background:#4ADE80"></div><div style="width:2px;height:26px;background:rgba(74,222,128,.4)"></div></div><div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,.72);margin-top:-1px">Dialed <span style="color:#8A8A96;font-weight:500">2:14:05</span></div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><div style="display:flex;flex-direction:column;align-items:center"><div style="width:11px;height:11px;border-radius:50%;background:#4ADE80"></div><div style="width:2px;height:26px;background:rgba(74,222,128,.4)"></div></div><div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,.72);margin-top:-1px">Reached a person <span style="color:#8A8A96;font-weight:500">0:42 in</span></div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start"><div style="width:11px;height:11px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px #4ADE80"></div><div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,.72);margin-top:-1px">Verdict <span style="color:#8A8A96;font-weight:500">1:52 in</span></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px">
+          <div style="align-self:flex-start;max-width:85%"><div style="font-size:9px;font-weight:900;letter-spacing:.08em;color:#8A8A96;margin:0 0 4px 4px">STAFF</div><div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:10px 14px;font-size:14px;font-weight:500;line-height:1.45;color:rgba(255,255,255,.85)">Yeah we got the new Prismatic boosters in this morning.</div></div>
+          <div style="align-self:flex-end;max-width:85%"><div style="font-size:9px;font-weight:900;letter-spacing:.08em;color:#4ADE80;margin:0 0 4px 4px">CHECK AI</div><div style="background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:10px 14px;font-size:14px;font-weight:500;line-height:1.45;color:rgba(255,255,255,.85)">Perfect, thank you so much. Have a good one!</div></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px;align-items:center;justify-content:space-between">
+          <div style="padding:11px 18px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:12.5px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.85)">FIX THE VERDICT</div>
+          <div style="font-size:11.5px;font-weight:600;color:#5C5C68">Fixing it corrects the call record</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 1e WORKFLOWS CRUD + 1f EDIT SHEET ============ -->
+  <div id="1e" style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+    <div style="width:270px;display:flex;flex-direction:column;gap:10px;padding-top:8px">
+      <div style="display:flex;align-items:center;gap:10px"><div style="min-width:30px;height:30px;border-radius:9px;background:#26262B;display:grid;place-items:center;font-size:13px;font-weight:900;color:#4ADE80;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)">1e</div><div style="font-size:19px;font-weight:900;letter-spacing:-.3px">Workflows · the CRUD page</div></div>
+      <div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.6">Things you own render as rows: icon tile, name, one meta line, a badge if one is special. One green capsule to make a new one. The env track up top answers the owner's Prod and Staging ask.</div>
+      <div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.6">Editing happens in a sheet, <a href="#1f">1f</a>. Stores, statuses, chains, plans and templates all reuse this anatomy.</div>
+    </div>
+    <div data-screen-label="Workflows" style="width:390px;background:#1D1D22;border-radius:40px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);overflow:hidden;flex:0 0 auto;padding-bottom:28px">
+      <div style="padding:22px 20px 0;display:flex;align-items:center;gap:10px">
+        <div style="flex:1"><div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Workflows</div><div style="font-size:12px;font-weight:600;color:#8A8A96;margin-top:2px">A workflow is an opener set, a voice and a persona.</div></div>
+      </div>
+      <div style="padding:16px 16px 0">
+        <div style="display:flex;gap:4px;background:#1B1B20;border-radius:999px;padding:5px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);width:200px">
+          <div style="flex:1.2;text-align:center;padding:8px 0;border-radius:999px;background:linear-gradient(180deg,#31313A,#28282E);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:12px;font-weight:800;color:#fff">Prod</div>
+          <div style="flex:1;text-align:center;padding:8px 0;font-size:12px;font-weight:700;color:#7C7C88">Staging</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:16px 16px 0">
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:12px 14px;display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:11px;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);display:grid;place-items:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CDCDD8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6 11a6 6 0 0 0 12 0M12 17v4"></path></svg></div>
+          <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px;font-weight:700">Friendly Sam</div><div style="font-size:8.5px;font-weight:900;letter-spacing:.06em;color:#4ADE80;background:rgba(74,222,128,.13);border-radius:6px;padding:3px 6px">DEFAULT</div></div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:2px">Sam voice · 3 openers · 212 calls this week</div></div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:12px 14px;display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:11px;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);display:grid;place-items:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CDCDD8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6 11a6 6 0 0 0 12 0M12 17v4"></path></svg></div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">Direct Dana</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:2px">Dana voice · 2 openers · big chains</div></div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:12px 14px;display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:11px;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);display:grid;place-items:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CDCDD8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6 11a6 6 0 0 0 12 0M12 17v4"></path></svg></div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">Hobby Shop Casual</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:2px">Sam voice · 4 openers · hobby stores</div></div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:center;padding:22px 16px 0">
+        <div style="border-radius:999px;padding:2.5px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 12px 28px -8px rgba(74,222,128,.45)"><div style="background:#20202A;border-radius:999px;padding:13px 26px;font-size:13px;font-weight:800;letter-spacing:.13em;color:#fff">NEW WORKFLOW →</div></div>
+      </div>
+      <div style="padding:14px 20px 0;font-size:11.5px;font-weight:600;color:#5C5C68;text-align:center">The default powers every store unless a chain overrides it.</div>
+    </div>
+    <div id="1f" data-screen-label="Workflow edit sheet" style="width:390px;background:#1D1D22;border-radius:40px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);overflow:hidden;flex:0 0 auto;position:relative;display:flex;flex-direction:column;justify-content:flex-end;min-height:780px">
+      <div style="position:absolute;inset:0;background:rgba(5,6,9,.66)"></div>
+      <div style="position:absolute;top:22px;left:0;right:0;display:flex;justify-content:center"><div style="min-width:26px;height:26px;border-radius:8px;background:#26262B;display:grid;place-items:center;font-size:12px;font-weight:900;color:#4ADE80;padding:0 8px">1f · the edit sheet</div></div>
+      <div style="position:relative;background:#26262B;border-radius:28px 28px 40px 40px;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7);padding:10px 20px 30px">
+        <div style="display:flex;justify-content:center;padding:2px 0 14px"><div style="width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.16)"></div></div>
+        <div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Friendly Sam</div>
+        <div style="font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96;margin:18px 0 8px">Name</div>
+        <div style="background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:14px 16px;font-size:16px;font-weight:500;color:#fff">Friendly Sam</div>
+        <div style="font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96;margin:16px 0 8px">Voice</div>
+        <div style="background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:14px 16px;font-size:16px;font-weight:500;color:#fff;display:flex;align-items:center;justify-content:space-between">Sam · cloned <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+        <div style="font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96;margin:16px 0 8px">Openers · rotate per call</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px 16px;font-size:14px;font-weight:500;color:rgba(255,255,255,.85);line-height:1.4">Heyy! checking if you got any Pokémon in?</div>
+          <div style="background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px 16px;font-size:14px;font-weight:500;color:rgba(255,255,255,.85);line-height:1.4">Hi there! quick one, any Pokémon cards on the shelf today?</div>
+          <div style="background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px 16px;font-size:14px;font-weight:500;color:rgba(255,255,255,.85);line-height:1.4;display:flex;align-items:center;justify-content:center;color:#8A8A96;font-weight:700;font-size:13px">+ Add an opener</div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:22px;align-items:center;justify-content:space-between">
+          <div style="padding:12px 18px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:12.5px;font-weight:800;letter-spacing:.1em;color:rgba(255,255,255,.85)">MAKE DEFAULT</div>
+          <div style="border-radius:999px;padding:2.5px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 12px 28px -8px rgba(74,222,128,.45)"><div style="background:#20202A;border-radius:999px;padding:12px 30px;font-size:13px;font-weight:800;letter-spacing:.13em;color:#fff">SAVE →</div></div>
+        </div>
+        <div style="text-align:center;margin-top:18px;font-size:12.5px;font-weight:700;color:#EF4444;opacity:.8">Delete this workflow</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 1g SUPPORT ============ -->
+  <div id="1g" style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+    <div style="width:270px;display:flex;flex-direction:column;gap:10px;padding-top:8px">
+      <div style="display:flex;align-items:center;gap:10px"><div style="min-width:30px;height:30px;border-radius:9px;background:#26262B;display:grid;place-items:center;font-size:13px;font-weight:900;color:#4ADE80;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)">1g</div><div style="font-size:19px;font-weight:900;letter-spacing:-.3px">Support · REPORT over LOG</div></div>
+      <div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.6">The report grammar in full: range track, hero number, three wells, then the chat log below it. Green check means the AI handled it, amber arrow means it went to a human. A chat row opens the transcript sheet, same anatomy as <a href="#1d">1d</a>.</div>
+      <div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.6">Restock intel, store intel and kiosk intel are this same page with different wells and a different list.</div>
+    </div>
+    <div data-screen-label="Support" style="width:390px;background:#1D1D22;border-radius:40px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);overflow:hidden;flex:0 0 auto;padding-bottom:28px">
+      <div style="padding:22px 20px 0;display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Support</div>
+        <div style="display:flex;gap:4px;background:#1B1B20;border-radius:999px;padding:4px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)">
+          <div style="padding:7px 12px;font-size:11px;font-weight:700;color:#7C7C88">Today</div>
+          <div style="padding:7px 12px;border-radius:999px;background:linear-gradient(180deg,#31313A,#28282E);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:11px;font-weight:800;color:#fff">7d</div>
+          <div style="padding:7px 12px;font-size:11px;font-weight:700;color:#7C7C88">30d</div>
+        </div>
+      </div>
+      <div style="padding:18px 20px 0;display:flex;align-items:baseline;gap:10px">
+        <div style="font-size:34px;font-weight:900;letter-spacing:-1.2px;font-variant-numeric:tabular-nums">31</div>
+        <div style="font-size:13px;font-weight:600;color:#8A8A96">chats this week</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:14px 16px 0">
+        <div style="background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px 6px;text-align:center"><div style="font-size:19px;font-weight:900;letter-spacing:-.4px;color:#4ADE80;font-variant-numeric:tabular-nums">84%</div><div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8A8A96;margin-top:3px">Self served</div></div>
+        <div style="background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px 6px;text-align:center"><div style="font-size:19px;font-weight:900;letter-spacing:-.4px;color:#F59E0B;font-variant-numeric:tabular-nums">5</div><div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8A8A96;margin-top:3px">Escalated</div></div>
+        <div style="background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px 6px;text-align:center"><div style="font-size:19px;font-weight:900;letter-spacing:-.4px;color:#fff;font-variant-numeric:tabular-nums">3.2</div><div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8A8A96;margin-top:3px">Msgs avg</div></div>
+      </div>
+      <div style="display:flex;gap:7px;padding:14px 16px 0;flex-wrap:wrap">
+        <div style="padding:7px 12px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:11px;font-weight:700;color:rgba(255,255,255,.85)">Billing · 9</div>
+        <div style="padding:7px 12px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:11px;font-weight:700;color:rgba(255,255,255,.85)">How checks work · 7</div>
+        <div style="padding:7px 12px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:11px;font-weight:700;color:rgba(255,255,255,.85)">Bugs · 4</div>
+      </div>
+      <div style="padding:20px 20px 8px;font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">Chats</div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:0 16px">
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:11px 13px;display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;font-size:13px;font-weight:900;color:#CDCDD8;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)">MR</div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Why did my check not go through?</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">Member · billing · 12m ago</div></div>
+          <div style="width:26px;height:26px;border-radius:50%;background:rgba(245,158,11,.15);display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"></path></svg></div>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:11px 13px;display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;font-size:13px;font-weight:900;color:#CDCDD8;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)">G</div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Do you check Costco?</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">Guest · how checks work · 1h ago</div></div>
+          <div style="width:26px;height:26px;border-radius:50%;background:rgba(74,222,128,.15);display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg></div>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:11px 13px;display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;font-size:13px;font-weight:900;color:#CDCDD8;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)">JT</div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">The live audio cut out mid call</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">Member · bug · 3h ago</div></div>
+          <div style="width:26px;height:26px;border-radius:50%;background:rgba(74,222,128,.15);display:grid;place-items:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:center;padding:18px 16px 0">
+        <div style="padding:12px 26px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:12.5px;font-weight:800;letter-spacing:.13em;color:rgba(255,255,255,.85)">SHOW 50 MORE</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 1h REPORT TEMPLATE + 1i CONSOLE ============ -->
+  <div id="1h" style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+    <div style="width:270px;display:flex;flex-direction:column;gap:10px;padding-top:8px">
+      <div style="display:flex;align-items:center;gap:10px"><div style="min-width:30px;height:30px;border-radius:9px;background:#26262B;display:grid;place-items:center;font-size:13px;font-weight:900;color:#4ADE80;box-shadow:inset 0 1px 0 rgba(255,255,255,.08)">1h</div><div style="font-size:19px;font-weight:900;letter-spacing:-.3px">The REPORT grammar</div></div>
+      <div style="font-size:12.5px;font-weight:500;color:#8A8A96;line-height:1.6">Restock intel as the exemplar. Every report is exactly this: range track, one hero answer, at most three wells, one ranked list, one gray footnote. Anything deeper is a drill in, never a longer page.</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-family:ui-monospace,monospace;font-size:11px;color:#CDCDD8;background:#17171C;border-radius:14px;padding:14px 16px;box-shadow:inset 0 2px 6px rgba(0,0,0,.35)">
+        <div><span style="color:#4ADE80">01</span> range track</div>
+        <div><span style="color:#4ADE80">02</span> hero answer</div>
+        <div><span style="color:#4ADE80">03</span> wells, max three</div>
+        <div><span style="color:#4ADE80">04</span> the one list</div>
+        <div><span style="color:#4ADE80">05</span> gray footnote</div>
+      </div>
+    </div>
+    <div data-screen-label="Restock intel report" style="width:390px;background:#1D1D22;border-radius:40px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);overflow:hidden;flex:0 0 auto;padding-bottom:28px">
+      <div style="padding:22px 20px 0;display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="font-size:20px;font-weight:800;letter-spacing:-.3px">Restock intel</div>
+        <div style="display:flex;gap:4px;background:#1B1B20;border-radius:999px;padding:4px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)">
+          <div style="padding:7px 12px;font-size:11px;font-weight:700;color:#7C7C88">7d</div>
+          <div style="padding:7px 12px;border-radius:999px;background:linear-gradient(180deg,#31313A,#28282E);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:11px;font-weight:800;color:#fff">30d</div>
+          <div style="padding:7px 12px;font-size:11px;font-weight:700;color:#7C7C88">90d</div>
+        </div>
+      </div>
+      <div style="padding:18px 20px 0">
+        <div style="font-size:30px;font-weight:900;letter-spacing:-1px">Tuesday</div>
+        <div style="font-size:13px;font-weight:600;color:#8A8A96;margin-top:2px">is the biggest restock day across your stores</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:16px 16px 0">
+        <div style="background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px 6px;text-align:center"><div style="font-size:19px;font-weight:900;letter-spacing:-.4px;color:#fff;font-variant-numeric:tabular-nums">41</div><div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8A8A96;margin-top:3px">Days heard</div></div>
+        <div style="background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px 6px;text-align:center"><div style="font-size:19px;font-weight:900;letter-spacing:-.4px;color:#fff;font-variant-numeric:tabular-nums">9</div><div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8A8A96;margin-top:3px">Chains</div></div>
+        <div style="background:#1B1B20;border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px 6px;text-align:center"><div style="font-size:19px;font-weight:900;letter-spacing:-.4px;color:#4ADE80;font-variant-numeric:tabular-nums">78%</div><div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8A8A96;margin-top:3px">Kept the day</div></div>
+      </div>
+      <div style="padding:20px 20px 8px;font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">By chain</div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:0 16px">
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:11px 13px;display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:11px;background:#1F1F25;display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)"><div style="width:16px;height:16px;border-radius:50%;background:#CC0000;display:grid;place-items:center"><div style="width:7px;height:7px;border-radius:50%;background:#fff"></div></div></div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">Target</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">12 heard · 89% kept</div></div>
+          <div style="font-size:13px;font-weight:800;color:rgba(255,255,255,.85)">Tue + Fri</div>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:11px 13px;display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:11px;background:#1F1F25;display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)"><div style="font-size:10px;font-weight:900;color:#E31837;letter-spacing:-.5px">GS</div></div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">GameStop</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">8 heard · 71% kept</div></div>
+          <div style="font-size:13px;font-weight:800;color:rgba(255,255,255,.85)">Thu</div>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:11px 13px;display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:11px;background:#1F1F25;display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)"><div style="width:16px;height:16px;border-radius:3px;background:#0071CE"></div></div>
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">Walmart</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">7 heard · 64% kept</div></div>
+          <div style="font-size:13px;font-weight:800;color:rgba(255,255,255,.85)">Wed</div>
+        </div>
+      </div>
+      <div style="padding:16px 20px 0;font-size:11.5px;font-weight:600;color:#5C5C68">Learned from real calls. Tap a chain for its stores.</div>
+    </div>
+    <div id="1i" data-screen-label="App console" style="width:390px;background:#1D1D22;border-radius:40px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);overflow:hidden;flex:0 0 auto;padding-bottom:28px;align-self:flex-start">
+      <div style="position:relative">
+        <div style="position:absolute;top:16px;right:16px;min-width:26px;height:26px;border-radius:8px;background:#26262B;display:grid;place-items:center;font-size:12px;font-weight:900;color:#4ADE80;padding:0 8px">1i · the CONSOLE page</div>
+      </div>
+      <div style="padding:22px 20px 0">
+        <div style="font-size:20px;font-weight:800;letter-spacing:-.3px">App</div>
+        <div style="font-size:12px;font-weight:600;color:#8A8A96;margin-top:2px">App wide defaults. Per store settings live in Stores.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:16px 16px 0">
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:13px 14px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">Customers hear calls live</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">Streams call audio and a hang up button</div></div>
+          <div style="width:46px;height:27px;border-radius:999px;background:#4ADE80;box-shadow:inset 0 1px 2px rgba(0,0,0,.2);position:relative;flex:0 0 auto"><div style="position:absolute;top:2.5px;right:2.5px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.3)"></div></div>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:13px 14px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">Default workflow</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">Every call uses it unless a chain overrides</div></div>
+          <div style="display:flex;align-items:center;gap:7px;padding:9px 14px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:12px;font-weight:700;color:rgba(255,255,255,.85);flex:0 0 auto">Friendly Sam <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+        </div>
+        <div style="background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);padding:13px 14px;display:flex;align-items:center;gap:12px">
+          <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">Advanced policy</div><div style="font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px">Raw JSON, dev escape hatch</div></div>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+        </div>
+      </div>
+      <div style="padding:16px 20px 0;font-size:11.5px;font-weight:600;color:#5C5C68">Toggles save on tap. No save button on a console.</div>
+    </div>
+  </div>
+
+  <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+  <!-- ============ SECTION MAP ============ -->
+  <div style="display:flex;flex-direction:column;gap:14px;max-width:1160px">
+    <div style="font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96">Where every section lands</div>
+    <div style="background:#26262B;border-radius:20px;padding:20px 24px;box-shadow:0 24px 48px -12px rgba(0,0,0,.7);display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:8px 28px;font-size:12.5px;line-height:1.8">
+      <div><span style="font-weight:800;color:#fff">God View</span><span style="color:#8A8A96;font-weight:500"> · Live is LIVE · Users, Restock and Calc are REPORTs · Alerts is CRUD over a LOG · Plans is CRUD · Policy is CONSOLE plus queues</span></div>
+      <div><span style="font-weight:800;color:#fff">Stores</span><span style="color:#8A8A96;font-weight:500"> · Intel is a REPORT · Search is a LOG with filters and the map as a drill in · Add is a CRUD form · Kiosk is a REPORT over a LOG</span></div>
+      <div><span style="font-weight:800;color:#fff">Calls</span><span style="color:#8A8A96;font-weight:500"> · Calls is the LOG · Feedback is a queue LOG · Statuses and Chains are CRUD · App is CONSOLE</span></div>
+      <div><span style="font-weight:800;color:#fff">Voice</span><span style="color:#8A8A96;font-weight:500"> · Designer and Workflows are CRUD · Testing is a LOG with a report strip · Fun is CONSOLE</span></div>
+      <div><span style="font-weight:800;color:#fff">Support</span><span style="color:#8A8A96;font-weight:500"> · REPORT over a LOG, comped at <a href="#1g">1g</a></span></div>
+      <div><span style="font-weight:800;color:#fff">Launch</span><span style="color:#8A8A96;font-weight:500"> · Go to Market is a checklist CRUD</span></div>
+    </div>
+  </div>
+  </sc-if>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showNotes&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Board&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return { showNotes: this.props.showNotes ?? true };
+  }
+}
+</script>
+</body>
+</html>

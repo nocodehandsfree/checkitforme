@@ -12,11 +12,17 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
 <style>
   :root{
-    /* core colors (shared with Fungibles Design System v1.3) */
-    --bg:#0C0C12; --sheet:#1A1A24; --terminal:#0A0A0E;
-    --green:#4ADE80; --green-dark:#22C55E; --purple:#A78BFA; --yellow:#F4D03F;
-    --orange:#E89A4A; --red:#EF4444; --muted:#6B6B7B;
-    --sheet-bg:#1A1A24; --terminal-bg:#0A0A0E; --teal:#0D9488;
+    /* core colors — the site's raised/carved skin (ADMIN_COMPS.dc.html board, 2026-07-11) */
+    --bg:#1D1D22; --sheet:#26262B; --terminal:#1B1B20;
+    --green:#4ADE80; --green-dark:#22C55E; --purple:#A78BFA; --yellow:#FBBF24;
+    --orange:#F59E0B; --red:#EF4444; --muted:#8A8A96; --dim:#5C5C68;
+    --sheet-bg:#26262B; --terminal-bg:#1B1B20; --teal:#0D9488;
+    /* the three depths of the skin */
+    --raise:linear-gradient(180deg,#2D2D34,#27272D);
+    --raise-key:linear-gradient(180deg,#2E2E35,#25252B);
+    --raise-sh:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);
+    --key-sh:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);
+    --carve-sh:inset 0 2px 6px rgba(0,0,0,.45);
     /* surfaces (rgba, never solid) */
     --surface-1:rgba(255,255,255,.03); --surface-2:rgba(255,255,255,.05); --surface-3:rgba(255,255,255,.08);
     --glass:rgba(45,45,65,.75); --glass-blur:blur(12px) saturate(1.6);
@@ -45,31 +51,32 @@
   html,body{max-width:100%;overflow-x:hidden}
   header,nav,main,section,.card,.stats,.filters,.ractions{max-width:100%}
   *{touch-action:manipulation}   /* kill iOS double-tap zoom on EVERY element (was interactive-only, so cards/text/numbers on Restock + Store-Intel still zoomed on double-tap). manipulation keeps scroll/pan + pinch, only drops double-tap-zoom; any element needing pan-x/none overrides via its own rule. */
-  body{background:var(--bg);color:#e6e6ef;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;margin:0;padding:0;touch-action:manipulation;
-    background-image:radial-gradient(1200px 500px at 50% -100px,rgba(74,222,128,.08),transparent 70%)}
-  header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;position:sticky;top:0;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:30}
-  header h1{font-size:19px;margin:0;letter-spacing:-.3px;font-weight:900}
-  header h1 b{color:var(--green)}
-  header .hmark{display:flex;align-items:center;flex:0 0 auto}
-  header .dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:livepulse 2s ease-in-out infinite}
+  body{background:var(--bg);color:#e6e6ef;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;margin:0;padding:0;touch-action:manipulation}
+  /* Header scrolls away like the site; the nav track sticks. */
+  header{padding:18px 20px 8px;display:flex;align-items:center;gap:9px;background:var(--bg)}
+  header .hmark{display:flex;align-items:center;gap:0;flex:0 0 auto}
+  header .hword{font-size:18px;font-weight:900;letter-spacing:-.4px;color:#fff;margin-left:-4px}
+  header .hchip{font-size:9px;font-weight:900;letter-spacing:.08em;color:var(--muted);background:var(--terminal);border-radius:6px;padding:3px 7px;box-shadow:inset 0 2px 4px rgba(0,0,0,.4);margin-left:8px}
+  header .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:livepulse 2s ease-in-out infinite}
   @keyframes livepulse{0%,100%{opacity:1}50%{opacity:.4}}
-  /* cards lift slightly on hover — same calm depth as the consumer cards */
-  .card{transition:border-color .15s,transform .08s}
-  .card:hover{border-color:rgba(255,255,255,.14)}
-  /* section headings get the brand's green tick bar — ties admin to the front end */
-  h2{position:relative;padding-left:12px}
-  h2::before{content:"";position:absolute;left:0;top:0;bottom:2px;width:3px;border-radius:2px;background:linear-gradient(180deg,var(--purple),var(--green))}
-  header .sub{color:var(--muted);font-size:12.5px;margin-left:auto;font-family:ui-monospace,monospace}
-  nav{display:flex;gap:6px;padding:10px 20px;border-bottom:1px solid var(--border);flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;position:sticky;top:57px;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:29}
-  nav::-webkit-scrollbar{display:none}
-  nav button{flex:0 0 auto;background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 15px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;transition:.12s}
-  nav button:hover{color:#fff;border-color:rgba(255,255,255,.2)}
-  nav button.active{background:rgba(74,222,128,.13);border-color:rgba(74,222,128,.4);color:var(--green);box-shadow:0 0 14px rgba(74,222,128,.18)}
+  h2{position:relative}
+  header .sub{color:var(--muted);font-size:11.5px;margin-left:6px;font-family:ui-monospace,monospace}
+  header .hright{margin-left:auto;display:flex;align-items:center;gap:7px}
+  /* The group track: the site's mode switcher, carved with one raised key. Active grows and shows
+     its name (CSS collapses the label on the rest), sections ride below as raised pills. */
+  .navwrap{position:sticky;top:0;z-index:30;background:var(--bg);padding:8px 16px 2px}
+  nav{display:flex;gap:4px;background:var(--terminal);border-radius:999px;padding:5px;box-shadow:var(--carve-sh)}
+  nav button{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;background:transparent;border:none;color:#7C7C88;padding:9px 4px;border-radius:999px;cursor:pointer;font-size:11.5px;font-weight:800;white-space:nowrap;transition:flex .18s ease,background .18s,color .18s}
+  nav button span{display:none}
+  nav button svg{flex:0 0 auto}
+  nav button.active{flex:2.1;background:linear-gradient(180deg,#31313A,#28282E);box-shadow:var(--key-sh);color:#fff}
+  nav button.active span{display:inline}
+  nav button.active svg{stroke:var(--green);color:var(--green)}
   main{padding:24px 20px 96px;max-width:1000px;margin:0 auto}
   section{display:none} section.active{display:block;animation:secIn .16s ease}
   @keyframes secIn{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
-  h2{font-size:19px;letter-spacing:-.2px;color:#fff;margin:2px 0 16px;font-weight:800;line-height:1.2;text-transform:none}
-  .card{background:var(--surface-1);border:1px solid var(--border-default);border-radius:var(--r-card);padding:20px;margin-bottom:16px}
+  h2{font-size:20px;letter-spacing:-.3px;color:#fff;margin:2px 0 16px;font-weight:800;line-height:1.2;text-transform:none}
+  .card{background:var(--raise);border:none;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:var(--raise-sh)}
   .row{display:flex;align-items:center;gap:12px}
   .grow{flex:1;min-width:0}
   .name{font-weight:700;font-size:15px;letter-spacing:-.1px;color:#f3f3f7}
@@ -79,27 +86,29 @@
   .s-red{background:rgba(239,68,68,.14);color:var(--red)}
   .s-amber{background:rgba(232,154,74,.14);color:var(--orange)}
   .s-gray{background:rgba(255,255,255,.06);color:var(--muted)}
-  button.act{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;border:none;padding:8px 15px;border-radius:var(--r-btn);font-weight:700;cursor:pointer;font-size:13px;
-    box-shadow:0 2px 7px -3px rgba(52,197,107,.40);transition:filter .12s,transform .08s}
-  button.act:hover{filter:brightness(1.05)} button.act:active{transform:translateY(1px)}
-  button.ghost{background:var(--surface-1);border:1px solid var(--border-medium);color:var(--text-strong);padding:8px 15px;border-radius:var(--r-btn);cursor:pointer;font-size:13px;font-weight:600;transition:border-color .12s,background .12s}
-  button.ghost:hover{border-color:var(--border-strong);background:var(--surface-2)}
+  /* Green CTA = the site's gradient-ring capsule (ring drawn with border-box layering) */
+  button.act{background:linear-gradient(#20202A,#20202A) padding-box,linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%) border-box;color:#fff;border:2.5px solid transparent;padding:9px 18px;border-radius:999px;font-weight:800;cursor:pointer;font-size:12.5px;letter-spacing:.06em;
+    box-shadow:0 12px 28px -8px rgba(74,222,128,.35);transition:filter .12s,transform .08s}
+  button.act:hover{filter:brightness(1.1)} button.act:active{transform:translateY(1px)}
+  /* Secondary = a raised key */
+  button.ghost{background:var(--raise-key);border:none;color:rgba(255,255,255,.85);padding:10px 16px;border-radius:999px;cursor:pointer;font-size:12.5px;font-weight:700;box-shadow:var(--key-sh);transition:filter .12s}
+  button.ghost:hover{filter:brightness(1.12)}
   /* action-button rows: align to the RIGHT so the primary tap target sits under your thumb */
   .btnrow{display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
   .btnrow.split{justify-content:space-between}
-  input,textarea{background:rgba(255,255,255,.04);border:1px solid var(--border-medium);color:#fff;padding:13px 15px;border-radius:var(--r-btn);font-size:16px;font-weight:500;font-family:inherit;width:100%;max-width:100%}
-  input:focus,textarea:focus{outline:none;border-color:rgba(74,222,128,.30);box-shadow:0 0 0 2px rgba(74,222,128,.10)}
+  input,textarea{background:var(--terminal);border:none;color:#fff;padding:13px 15px;border-radius:14px;font-size:16px;font-weight:500;font-family:inherit;width:100%;max-width:100%;box-shadow:var(--carve-sh)}
+  input:focus,textarea:focus{outline:none;box-shadow:var(--carve-sh),0 0 0 2px rgba(74,222,128,.22)}
   select{
     -webkit-appearance:none;-moz-appearance:none;appearance:none;
-    background-color:rgba(255,255,255,.04);
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234ADE80' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
-    background-repeat:no-repeat;background-position:right 14px center;
-    border:1px solid var(--border-medium);color:var(--text-body);padding:12px 36px 12px 15px;border-radius:var(--r-btn);
-    font-size:13px;font-weight:500;font-family:Inter,-apple-system,system-ui,sans-serif;letter-spacing:0;width:100%;max-width:100%;cursor:pointer;transition:border-color .15s,box-shadow .15s;
+    background-color:transparent;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234ADE80' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>"),var(--raise-key);
+    background-repeat:no-repeat,no-repeat;background-position:right 14px center,center;background-size:12px,cover;
+    border:none;color:rgba(255,255,255,.85);padding:12px 36px 12px 16px;border-radius:999px;box-shadow:var(--key-sh);
+    font-size:12.5px;font-weight:700;font-family:Inter,-apple-system,system-ui,sans-serif;letter-spacing:0;width:100%;max-width:100%;cursor:pointer;transition:filter .15s;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  select:hover{border-color:var(--border-strong)}
-  select:focus{outline:none;border-color:rgba(74,222,128,.30);box-shadow:0 0 0 2px rgba(74,222,128,.10)}
-  select option{background:#15151f;color:#e8e8f0;font-weight:500}
+  select:hover{filter:brightness(1.1)}
+  select:focus{outline:none;box-shadow:var(--key-sh),0 0 0 2px rgba(74,222,128,.22)}
+  select option{background:#1B1B20;color:#e8e8f0;font-weight:500}
   label{display:block;font-size:10px;color:var(--text-tertiary);margin:16px 0 8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
   /* labels that WRAP a control (checkbox/day pill/toggle) keep normal case + size — the uppercase micro-label is for field labels only */
   label:has(input),label:has(select){text-transform:none;font-size:13px;font-weight:600;letter-spacing:0;color:inherit}
@@ -137,13 +146,14 @@
   .fld textarea{resize:vertical;line-height:1.4}
   .transcript{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12.5px;color:#cfcfe0;background:var(--terminal);border-radius:10px;padding:12px;margin-top:10px}
   .empty{color:var(--muted);font-size:13px;padding:30px;text-align:center}
-  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--sheet);border:1px solid var(--border);padding:12px 18px;border-radius:12px;font-size:13px;opacity:0;transition:.2s}
+  /* The one notification look: gray raised pill, thin glowing white outline, one line. */
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--raise-key);border:none;padding:11px 22px;border-radius:999px;font-size:14.5px;font-weight:800;color:rgba(255,255,255,.92);white-space:nowrap;box-shadow:var(--key-sh),0 0 0 1px rgba(255,255,255,.35),0 0 18px rgba(255,255,255,.18);opacity:0;transition:.2s;z-index:9600}
   .toast.show{opacity:1}
   /* Tooltip: TAP to show (works on mobile — hover doesn't exist on touch). A small ⓘ marks tappable hints. */
   [data-tip]{cursor:help}
   label[data-tip],span[data-tip],.name[data-tip],b[data-tip]{display:inline-flex;align-items:center;gap:4px}
-  [data-tip]::after{content:"ⓘ";font-size:13px;color:var(--purple);font-style:normal;font-weight:700;line-height:1;margin:-4px 0 -4px 1px;padding:4px;vertical-align:middle;opacity:.85;cursor:pointer}
-  [data-tip]:active::after{opacity:1;color:#c4b5fd}
+  [data-tip]::after{content:"ⓘ";font-size:13px;color:var(--muted);font-style:normal;font-weight:700;line-height:1;margin:-4px 0 -4px 1px;padding:4px;vertical-align:middle;opacity:.85;cursor:pointer}
+  [data-tip]:active::after{opacity:1;color:#fff}
   #tiptip{position:fixed;z-index:9000;max-width:262px;background:#06060a;color:#e8e8f2;font:500 12.5px/1.45 Inter,-apple-system,sans-serif;font-style:normal;padding:9px 11px;border-radius:9px;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 30px rgba(0,0,0,.6)}
   /* Settings page: sections reuse the global details.card chevron (green circle, top-right). */
   details.card.setsec>summary{align-items:center}
@@ -281,11 +291,31 @@
   /* Live dashboard: 5-vital hero + collapsed rows (color = state; Design card radius 16) */
   .herog{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px}
   .herog .v:first-child{grid-column:1/-1}
-  .v{background:var(--surface-1);border:1px solid var(--border);border-radius:16px;padding:16px}
-  .v .n{font-size:22px;font-weight:800;line-height:1;letter-spacing:-.5px}
-  .v.big .n{font-size:30px}
-  .v .l{color:var(--text-muted);font-size:10.5px;margin-top:8px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
-  .v .n.g{color:var(--green)} .v .n.a{color:#FBBF24} .v .n.r{color:var(--red)} .v .n.m{color:var(--text-strong)}
+  .v{background:var(--raise);border:none;border-radius:16px;padding:16px 18px;box-shadow:var(--raise-sh)}
+  .v .n{font-size:24px;font-weight:900;line-height:1;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
+  .v.big .n{font-size:34px;letter-spacing:-1.2px}
+  .v .l{color:var(--muted);font-size:10.5px;margin-top:6px;text-transform:uppercase;letter-spacing:.15em;font-weight:700}
+  .v .n.g{color:var(--green)} .v .n.a{color:var(--orange)} .v .n.r{color:var(--red)} .v .n.m{color:var(--text-strong)}
+  /* Peek rows: the headline is already on the row, the chevron opens the full report. */
+  .rephead{padding:8px 4px;font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--muted)}
+  .peeks{display:flex;flex-direction:column;gap:10px}
+  .peek{background:var(--raise);border-radius:14px;box-shadow:var(--raise-sh);padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer}
+  .peek .pk-l{flex:1;min-width:0}
+  .peek .pk-t{font-size:14px;font-weight:700;color:#fff}
+  .peek .pk-s{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:1px}
+  .peek .pk-v{font-size:14px;font-weight:800;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .peek .pk-v.g{color:var(--green)} .peek .pk-v.a{color:var(--orange)} .peek .pk-v.r{color:var(--red)}
+  .credbar{height:6px;background:var(--terminal);border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);margin-top:8px;overflow:hidden}
+  .credbar>div{height:100%;background:var(--orange);border-radius:999px;transition:width .3s}
+  /* The bottom sheet: every drill-in opens here (reports, call sheet, edit sheets). */
+  .adsheet-wrap{position:fixed;inset:0;z-index:9400;background:rgba(5,6,9,.66);display:none;align-items:flex-end;justify-content:center}
+  .adsheet-wrap.open{display:flex}
+  .adsheet{background:var(--sheet);border-radius:28px 28px 0 0;box-shadow:0 -24px 48px -12px rgba(0,0,0,.7);padding:10px 20px 30px;width:100%;max-width:560px;max-height:86dvh;overflow-y:auto;animation:sheetUp .22s ease}
+  @keyframes sheetUp{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+  .adsheet .grab{display:flex;justify-content:center;padding:2px 0 14px;cursor:pointer}
+  .adsheet .grab i{width:40px;height:5px;border-radius:999px;background:rgba(255,255,255,.16);display:block}
+  .adsheet h3{font-size:20px;font-weight:800;letter-spacing:-.3px;margin:0 0 12px;color:#fff}
+  .adsheet .card{background:var(--terminal);box-shadow:var(--carve-sh)}
   .drow{background:var(--surface-1);border:1px solid var(--border);border-radius:16px;margin-bottom:12px;overflow:hidden}
   .drow>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px}
   .drow>summary::-webkit-details-marker{display:none}
@@ -293,7 +323,8 @@
   .drow .rr{color:var(--text-muted);font-size:13px;display:flex;align-items:center;gap:8px;white-space:nowrap}
   .drow .chev{transition:.2s;opacity:.7} .drow[open] .chev{transform:rotate(180deg)}
   .drow .rbody{padding:0 16px 16px}
-  .drow .goto{color:var(--purple);font-size:13px;font-weight:700;text-decoration:none;display:block;padding:2px 16px 16px}
+  .goto{color:var(--green);font-size:13px;font-weight:700;text-decoration:none;display:block;padding:10px 0 0}
+  .drow .goto{padding:2px 16px 16px}
   .wfmsub{font-size:12.5px;font-weight:700;letter-spacing:-.1px;color:var(--text-strong);margin:16px 0 8px}
   .wfmsub .meta{font-weight:500;color:var(--muted)}
   .wfmop{display:flex;gap:6px;align-items:flex-start;margin-bottom:3px}
@@ -434,6 +465,10 @@
   details.card[open]>summary::after{transform:rotate(180deg);background-color:rgba(74,222,128,.12);border-color:rgba(74,222,128,.45)}
   .chip-draft{font-size:10px;background:#FBBF24;color:#1a1a24;border-radius:6px;padding:2px 6px;font-weight:800;margin-left:6px}
   /* Calls: clean clickable table — one row per call, expands to detail */
+  /* LOG rows: raised card per call, day groups above, status chip right (board 1c) */
+  .lrow{background:var(--raise);border-radius:14px;box-shadow:var(--raise-sh);padding:11px 13px;display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:10px}
+  .lrow .cs-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lrow .cs-meta{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .calltable{padding:4px 16px}
   .callrow{border-top:1px solid var(--border)}
   .callrow:first-child{border-top:none}
@@ -486,7 +521,7 @@
   .daychip.on{color:var(--green);background:transparent;border:none}
   .catchip{display:inline-flex;align-items:center;gap:8px;background:var(--sheet);border:1px solid var(--border);border-radius:14px;padding:12px 16px;font-weight:800;font-size:13px}
   .empty{color:var(--muted);font-size:13px;padding:34px 20px;text-align:center;background:var(--sheet);border:1px dashed var(--border);border-radius:16px}
-  body.authwait header,body.authwait nav,body.authwait main,body.authwait .agent-fab,body.authwait .agent-panel{display:none}
+  body.authwait header,body.authwait nav,body.authwait .navwrap,body.authwait .subnav2,body.authwait main,body.authwait .agent-fab,body.authwait .agent-panel{display:none}
   /* drawn-icon chrome (replaces emoji) */
   .name{font-weight:800;display:flex;align-items:center}
   .hdico{display:inline-flex;align-items:center;margin-right:8px;color:var(--green);flex:0 0 auto}
@@ -496,13 +531,13 @@
   nav button svg{opacity:.85} nav button.active svg{opacity:1}
   .subnav button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
   /* second-level nav (sections within a group) — quieter than the primary tabs, wraps, never scrolls */
-  .subnav2{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:9px 20px;border-bottom:1px solid var(--border);background:rgba(12,12,18,.6)}
+  .subnav2{display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 10px;background:var(--bg)}
   .subnav2::-webkit-scrollbar{display:none} .subnav2{scrollbar-width:none}
-  .subnav2 button{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid transparent;color:var(--muted);padding:6px 13px;border-radius:16px;cursor:pointer;font-size:12.5px;font-weight:700;white-space:nowrap;transition:.12s}
-  .subnav2 button:hover{color:#fff;border-color:rgba(255,255,255,.16)}
-  .subnav2 button.active{background:rgba(167,139,250,.14);border-color:rgba(167,139,250,.42);color:#c4b5fd}
+  .subnav2 button{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;background:var(--raise-key);border:none;color:var(--muted);padding:8px 15px;border-radius:999px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;box-shadow:var(--key-sh);transition:color .12s,box-shadow .12s}
+  .subnav2 button:hover{color:#fff}
+  .subnav2 button.active{color:var(--green);font-weight:800;box-shadow:var(--key-sh),0 0 14px rgba(74,222,128,.22)}
   .subnav2 button svg{opacity:.8} .subnav2 button.active svg{opacity:1}
-  @media(max-width:560px){ .subnav2{padding:9px 14px} }
+  @media(max-width:560px){ .subnav2{padding:12px 14px 10px} }
   .subnav2.ovf{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent)}
   button.act .hdico,button.ghost .hdico{color:inherit;margin-right:6px}
   details.card>summary .name,details.tr>summary{display:inline-flex}
@@ -566,11 +601,13 @@
 </head>
 <body class="authwait">
 <header>
-  <a class="hmark" href="#dash" title="Back to God View" onclick="showSection('dash');return false" style="display:flex;align-items:center;cursor:pointer"><img src="/logos/brand/check.png?v=2" alt="Check It For Me" style="height:22px;width:auto;object-fit:contain;display:block"></a>
-  <span class="dot" title="live"></span>
-  <span class="sub" id="clock"></span>
+  <a class="hmark" href="#dash" title="Back to God View" onclick="showSection('dash');return false" style="cursor:pointer;text-decoration:none"><img src="/logos/brand/check-brandmark.svg?v=2" alt="C" style="width:22px;height:22px;display:block"><span class="hword">heck</span></a>
+  <span class="hchip">ADMIN</span>
+  <span class="hright"><span class="dot" title="live"></span><span class="sub" id="clock"></span></span>
 </header>
-<nav id="grpnav"><!-- five groups, no horizontal scroll; sub-nav below switches sections within a group --></nav>
+<div class="navwrap">
+  <nav id="grpnav"><!-- the group track: active group grows and shows its name --></nav>
+</div>
 <div class="subnav2" id="subnav2"></div>
 <main>
 
@@ -579,17 +616,26 @@
     <h2 style="margin-bottom:2px">Today</h2>
     <div class="meta" id="d_date" style="margin:0 0 20px">Loading…</div>
     <div class="herog" id="d_hero"></div>
-    <details class="drow"><summary><span class="rl">Today's pulse</span><span class="rr" id="drs_pulse"><span class="chev">▾</span></span></summary><div class="rbody" id="gw_pulse" style="padding-top:2px">Loading…</div></details>
-    <details class="drow"><summary><span class="rl">Money</span><span class="rr" id="drs_money"><span class="chev">▾</span></span></summary><div class="rbody"><div class="stats" id="d_money"></div></div><a class="goto" href="#calc" onclick="showSection('calc');return false">Open the full money view in Calc →</a></details>
-    <details class="drow"><summary><span class="rl">Call time &amp; cost</span><span class="rr" id="drs_timing"><span class="chev">▾</span></span></summary><div class="rbody"><div class="meta" data-tip="We're billed for the whole call (ring, menu, hold, talk), so reaching someone is real cost." style="margin:2px 0 10px">Time to reach a person vs. talk time.</div><div class="stats" id="d_timing"></div><div id="d_timing_model"></div><div id="d_timing_status"></div><details style="margin-top:8px"><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details></div></details>
-    <details class="drow"><summary><span class="rl">Call data health</span><span class="rr" id="drs_dhealth"><span class="chev">▾</span></span></summary><div class="rbody"><div class="meta" data-tip="Real dialed calls vs. seed and rehearsal. The true first call ignores seed rows and the Fun store." style="margin:2px 0 10px">Real dialed calls vs. seed and rehearsal.</div><div id="d_health" class="meta">Loading…</div></div><a class="goto" href="#results" onclick="showSection('results');return false">Open the call log in Calls →</a></details>
-    <details class="drow"><summary><span class="rl">ElevenLabs credits</span><span class="rr" id="drs_credits"><span class="chev">▾</span></span></summary><div class="rbody">
-      <div style="height:10px;background:var(--terminal);border-radius:6px;overflow:hidden;margin:4px 0 8px"><div id="credit_bar" style="height:100%;width:0%;background:var(--green);transition:width .3s"></div></div>
-      <div id="credit_body" class="meta">Loading…</div>
-      <div id="credit_stats" class="meta" style="margin-top:6px"></div>
-      <div class="meta" id="credit_src" style="margin-top:6px"></div>
-      <div id="credit_limit_wrap" style="display:none;margin-top:12px"><div class="hint" style="margin-bottom:8px">Estimate from the last 31 days.</div><div class="row" style="gap:8px"><input id="credit_limit" type="number" placeholder="Plan size, e.g. 100000" style="flex:1"><button class="ghost" onclick="saveCreditLimit()">Save</button></div></div>
-    </div></details>
+    <div class="rephead">Reports</div>
+    <div class="peeks">
+      <div class="peek" onclick="showSection('calc')"><div class="pk-l"><div class="pk-t">Money</div><div class="pk-s">Opens the full view in Calc</div></div><div class="pk-v g" id="drs_money"></div><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+      <div class="peek" onclick="peekOpen('gw_pulse','Today&#39;s pulse')"><div class="pk-l"><div class="pk-t">Today's pulse</div><div class="pk-s">Members, scores and signups</div></div><div class="pk-v" id="drs_pulse"></div><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+      <div class="peek" onclick="peekOpen('pk_timing','Call time and cost')"><div class="pk-l"><div class="pk-t">Call time and cost</div><div class="pk-s">Time to reach a person vs talk time</div></div><div class="pk-v" id="drs_timing"></div><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+      <div class="peek" onclick="peekOpen('pk_health','Call health')"><div class="pk-l"><div class="pk-t">Call health</div><div class="pk-s">Real dialed calls vs seed and rehearsal</div></div><div class="pk-v" id="drs_dhealth"></div><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+      <div class="peek" onclick="peekOpen('pk_credits','Credits')"><div class="pk-l"><div class="pk-t">Credits</div><div class="credbar"><div id="credit_bar" style="width:0%"></div></div></div><div class="pk-v" id="drs_credits"></div><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+    </div>
+    <div class="meta" style="margin-top:14px;color:var(--dim)">Tap a row for the full report.</div>
+    <div id="peek_store" style="display:none">
+      <div id="gw_pulse">Loading…</div>
+      <div id="pk_timing"><div class="meta" style="margin:2px 0 10px">We are billed for the whole call (ring, menu, hold, talk), so reaching someone is real cost.</div><div class="stats" id="d_timing"></div><div id="d_timing_model"></div><div id="d_timing_status"></div><details style="margin-top:8px"><summary class="meta" style="cursor:pointer">Per-store averages</summary><div id="d_timing_stores" style="margin-top:8px"></div></details></div>
+      <div id="pk_health"><div class="meta" style="margin:2px 0 10px">The true first call ignores seed rows and the Fun store.</div><div id="d_health" class="meta">Loading…</div><a class="goto" href="#results" onclick="peekClose();showSection('results');return false">Open the call log in Calls →</a></div>
+      <div id="pk_credits">
+        <div id="credit_body" class="meta">Loading…</div>
+        <div id="credit_stats" class="meta" style="margin-top:6px"></div>
+        <div class="meta" id="credit_src" style="margin-top:6px"></div>
+        <div id="credit_limit_wrap" style="display:none;margin-top:12px"><div class="hint" style="margin-bottom:8px">Estimate from the last 31 days.</div><div class="row" style="gap:8px"><input id="credit_limit" type="number" placeholder="Plan size, e.g. 100000" style="flex:1"><button class="ghost" onclick="saveCreditLimit()">Save</button></div></div>
+      </div>
+    </div>
   </section>
   <section id="calc"><div id="calc_root"></div></section>
   <section id="plans"><div id="plans_root"></div></section>
@@ -778,7 +824,8 @@
     </div>
     <div id="sup_list"><div class="empty">Loading…</div></div>
   </section>
-  <section id="results"><h2>Recent calls</h2>
+  <section id="results">
+    <div style="display:flex;align-items:baseline;gap:10px"><h2 style="margin-bottom:16px">Calls</h2><div class="meta" id="res_count" style="margin-top:0"></div></div>
     <div class="filters">
       <select id="r_cat" onchange="renderResults()"><option value="">All products</option></select>
       <select id="r_sort" onchange="renderResults()">
@@ -789,12 +836,7 @@
       </select>
     </div>
     <div id="resultList"><div class="empty">Loading…</div></div>
-    <div id="res_pager" style="position:fixed;right:14px;bottom:16px;z-index:50;display:none;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border-strong);border-radius:14px;padding:7px 9px;box-shadow:0 10px 28px rgba(0,0,0,.55)">
-      <select id="res_size" onchange="setResSize(this.value)" title="Calls per page" style="width:auto;font-size:12.5px;padding:7px 26px 7px 9px;margin:0"><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select>
-      <button class="ghost" id="res_prev" onclick="resPage(-1)" aria-label="Previous page" style="padding:8px 13px;font-size:16px;line-height:1">←</button>
-      <span id="res_pageind" class="meta" style="min-width:46px;text-align:center;font-size:12.5px">1 / 1</span>
-      <button class="ghost" id="res_next" onclick="resPage(1)" aria-label="Next page" style="padding:8px 13px;font-size:16px;line-height:1">→</button>
-    </div>
+    <div id="res_more"></div>
   </section>
 
 
@@ -1184,6 +1226,9 @@
     </div>
   </section>
 </main>
+<div class="adsheet-wrap" id="adsheet_wrap" onclick="if(event.target===this)peekClose()">
+  <div class="adsheet"><div class="grab" onclick="peekClose()"><i></i></div><h3 id="adsheet_title"></h3><div id="adsheet_body"></div></div>
+</div>
 <div class="toast" id="toast"></div>
 
 <!-- In-admin Claude agent ("Admin dev") — chat to manage the store DB by conversation -->
@@ -1305,6 +1350,25 @@ window.addEventListener('popstate', (e)=>{
   const id=e.state&&e.state.tab; if(!id||!SECTION_GROUP[id]) return;
   NAV_RESTORING=true; try{ showSection(id); } finally { NAV_RESTORING=false; }
 });
+// ---- The bottom sheet. peekOpen moves a report body INTO the sheet (ids keep working for the
+//      loaders), peekClose puts every borrowed body back where it lives. ----
+const PEEK_HOME={};
+function peekOpen(id,title){
+  const body=document.getElementById(id); if(!body) return;
+  const w=document.getElementById('adsheet_wrap'), s=document.getElementById('adsheet_body'), t=document.getElementById('adsheet_title');
+  if(!w||!s||!t) return;
+  peekClose();
+  if(!PEEK_HOME[id]) PEEK_HOME[id]=body.parentElement;
+  t.textContent=title||'';
+  s.appendChild(body); body.style.display='block';
+  w.classList.add('open'); document.body.style.overflow='hidden';
+}
+function peekClose(){
+  const w=document.getElementById('adsheet_wrap'), s=document.getElementById('adsheet_body');
+  if(!w||!s) return;
+  [...s.children].forEach(n=>{ if(PEEK_HOME[n.id]){ n.style.display='none'; PEEK_HOME[n.id].appendChild(n); } });
+  w.classList.remove('open'); document.body.style.overflow='';
+}
 
 // ---- Go-to-Market launch checklist. Fetches /api/gtm, renders with area+agent+status filters,
 //      ticks items off (todo → doing → done), and lets the owner add/remove. The client owns the list
@@ -1515,13 +1579,13 @@ async function tdCall(){
   document.getElementById("td_status").textContent="dialing…";
   document.getElementById("td_feed").innerHTML="";
   clearInterval(TD_POLL); TD_POLL=setInterval(tdPoll,1500); tdPoll();
-  toast("Calling you — pick up and answer like a clerk");
+  toast("Calling you — pick up and answer like Staff");
 }
 async function tdPoll(){
   if(!TD_ID) return;
   const s=await api("/api/admin/tapedeck/session/"+TD_ID);
   if(!s||s.error) return;
-  document.getElementById("td_status").textContent=s.status==="live"?"● live — answer like a clerk (try a weird reply too)":s.status;
+  document.getElementById("td_status").textContent=s.status==="live"?"● live — answer like Staff (try a weird reply too)":s.status;
   document.getElementById("td_feed").innerHTML=(s.steps||[]).map(st=>{
     const us=st.who==="us";
     return `<div style="display:grid;grid-template-columns:34px 1fr;gap:8px;font-size:12.5px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
@@ -1696,7 +1760,7 @@ async function loadCallTiming(){
   if(!d||d.error||!d.aggregate||!d.aggregate.calls){ el.innerHTML='<div class="meta">No timed calls yet. This fills in as calls come through.</div>'; if(md)md.innerHTML=''; if(stt)stt.innerHTML=''; if(se)se.innerHTML=''; return; }
   const a=d.aggregate, tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   el.innerHTML = tile(secsFmt(a.avgTalkSec),'avg talk','green')+tile(secsFmt(a.avgNavSec),'avg to human')+tile(secsFmt(a.avgCallSec),'avg call')+tile(a.totalMinutes+'m','total minutes')+tile(a.calls,'calls timed');
-  const _st=document.getElementById('drs_timing'); if(_st) _st.innerHTML=`${secsFmt(a.avgTalkSec)} talk · ${a.calls} call${a.calls===1?'':'s'} <span class="chev">▾</span>`;
+  const _st=document.getElementById('drs_timing'); if(_st) _st.innerHTML=`${secsFmt(a.avgTalkSec)} talk · ${a.calls} call${a.calls===1?'':'s'}`;
   // By model (Charlie direct · Alpha tone tree · Bravo voice tree) — the split that matters: time-to-human + talk per call type.
   if(md) md.innerHTML=(d.byModel&&d.byModel.length)?('<div class="rgrp" style="margin-top:12px">By model · all-time <span data-tip="Alpha and Bravo talk time still counts phone-menu time until we tag the live-human handoff per call. Charlie (direct) is exact."></span></div>'
     +d.byModel.map(m=>`<div class="repline"><span class="rl"><b style="color:#e8e8f0">${esch(m.model)}</b> <span class="meta">· ${esch(m.type)} · ${m.n} call${m.n===1?'':'s'}</span></span><b>${secsFmt(m.avgNavSec)} to human · <span style="color:var(--green)">${secsFmt(m.avgTalkSec)} talk</span> · ${secsFmt(m.avgCallSec)} call</b></div>`).join('')):'';
@@ -1984,13 +2048,12 @@ async function loadDash(){
   const pctLeft=(c&&c.limit)?Math.max(0,Math.min(100,Math.round((c.remaining/c.limit)*100))):null;
   const margin=(m&&m.marginPct!=null)?Math.round(m.marginPct):null;
   const v=(n,l,cls,big)=>`<div class="v${big?' big':''}"><div class="n ${cls}">${n}</div><div class="l">${esch(l)}</div></div>`;
+  // Three vitals, color first (board 1b). Money and margin live on the Money peek row.
   const hero=document.getElementById('d_hero');
   if(hero) hero.innerHTML=
     v(checks,'Checks today',checks>0?'g':'m',true)+
-    v(confirms,'Confirms',confirms>0?'g':'m')+
-    v(reach==null?'—':reach+'%','Reach rate',reach==null?'m':(reach>=60?'g':reach>=30?'a':'r'))+
-    v(pctLeft==null?'—':pctLeft+'%','Credits left',pctLeft==null?'m':(pctLeft>40?'g':pctLeft>15?'a':'r'))+
-    v(margin==null?'—':margin+'%','Margin',margin==null?'m':(margin>0?'g':margin<0?'r':'m'));
+    v(reach==null?'—':reach+'%','Reach 30d',reach==null?'m':(reach>=60?'g':reach>=30?'a':'r'))+
+    v(pctLeft==null?'—':pctLeft+'%','Credits left',pctLeft==null?'m':(pctLeft>40?'g':pctLeft>15?'a':'r'));
   // ---- Money row + summary ----
   if(o&&!o.error) CHAIN_STATS=o.chainStats||[];
   if(m&&!m.error){
@@ -1998,9 +2061,9 @@ async function loadDash(){
       st($$(m.revenueCents),'revenue')+st($$(m.profitCents),m.profitCents>=0?'profit':'loss',m.profitCents>=0?'green':'')+
       st(margin!=null?margin+'%':'—','margin',(margin||0)>0?'green':'')+st($$(m.mrrCents)+'/mo','MRR (monthly)')+
       st($$(m.cogs?.totalCents),'Costs')+st(m.callsMade!=null?m.callsMade:'—','paid calls')+st(m.users,'users')+st(m.subscribers,'members');
-    const s=document.getElementById('drs_money'); if(s) s.innerHTML=`${esch($$(m.profitCents))} · ${margin!=null?margin+'%':'—'} <span class="chev">▾</span>`;
+    const s=document.getElementById('drs_money'); if(s) s.innerHTML=`${esch($$(m.profitCents))} · ${margin!=null?margin+'%':'—'}`;
   }
-  const dh=document.getElementById('drs_dhealth'); if(dh&&af.dialed) dh.innerHTML=`${af.dialed} dialed · ${reach}% reached <span class="chev">▾</span>`;
+  const dh=document.getElementById('drs_dhealth'); if(dh&&af.dialed) dh.innerHTML=`${af.dialed} dialed · ${reach}% reached`;
 }
 
 // ---- Bail library: per-rule toggles saved to policy.bail (enforcement stays staged) ----
@@ -3636,25 +3699,25 @@ async function addRetailer(){
   toast('Store added'); loadRetailers();
 }
 
-let RESULT_STORE_FILTER=null, RESULTS=[], RES_PAGE=0, RES_SIZE=10, RES_TOTAL=0;
+let RESULT_STORE_FILTER=null, RESULTS=[], RES_PAGE=0, RES_SIZE=50, RES_TOTAL=0;
 // Paginated calls: fetch ONE page (server limit/offset) so the page loads fast. Page-size + arrows live
 // in a floating bar (bottom-right) for one-handed mobile paging.
-async function loadResults(page){
-  if(typeof page==='number') RES_PAGE=Math.max(0,page);
+async function loadResults(more){
   const box=document.getElementById('resultList'); if(box&&!RESULTS.length) box.innerHTML='<div class="empty">Loading…</div>';
+  if(!more) RES_PAGE=0;
   const d=await api('/api/results?limit='+RES_SIZE+'&offset='+(RES_PAGE*RES_SIZE));
-  RESULTS=(d&&Array.isArray(d.rows))?d.rows:(Array.isArray(d)?d:[]);
+  const page=(d&&Array.isArray(d.rows))?d.rows:(Array.isArray(d)?d:[]);
+  RESULTS=more?RESULTS.concat(page):page;
   RES_TOTAL=(d&&typeof d.total==='number')?d.total:RESULTS.length;
-  renderResults(); renderResPager();
+  renderResults();
 }
-function setResSize(n){ RES_SIZE=Number(n)||10; RES_PAGE=0; loadResults(); }
-function resPage(delta){ const pages=Math.max(1,Math.ceil(RES_TOTAL/RES_SIZE)); RES_PAGE=Math.min(pages-1,Math.max(0,RES_PAGE+delta)); loadResults(); try{document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){} }
-function renderResPager(){
-  const pages=Math.max(1,Math.ceil(RES_TOTAL/RES_SIZE)); if(RES_PAGE>pages-1) RES_PAGE=Math.max(0,pages-1);
-  const ind=document.getElementById('res_pageind'); if(ind) ind.textContent=(RES_PAGE+1)+' / '+pages;
-  const pv=document.getElementById('res_prev'); if(pv){ pv.disabled=RES_PAGE<=0; pv.style.opacity=pv.disabled?.4:1; }
-  const nx=document.getElementById('res_next'); if(nx){ nx.disabled=RES_PAGE>=pages-1; nx.style.opacity=nx.disabled?.4:1; }
-  const bar=document.getElementById('res_pager'); if(bar) bar.style.display=RES_TOTAL>0?'flex':'none';
+function resMore(){ RES_PAGE++; loadResults(true); }
+// Day groups for the LOG pattern: Today · Yesterday · weekday, month day.
+function dayLabel(unix){
+  const d=new Date(unix*1000), n=new Date();
+  if(d.toDateString()===n.toDateString()) return 'Today';
+  if(d.toDateString()===new Date(n.getTime()-864e5).toDateString()) return 'Yesterday';
+  return d.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
 }
 function renderResults(){
   let rows=RESULTS.slice();
@@ -3670,26 +3733,73 @@ function renderResults(){
   else if(sort==='store') rows.sort((a,b)=>(a.retailer||'').localeCompare(b.retailer||''));
   else if(sort==='category') rows.sort((a,b)=>(a.category||'').localeCompare(b.category||''));
   else if(sort==='outcome') rows.sort((a,b)=>outRank(a)-outRank(b)||(b.startedAt||0)-(a.startedAt||0));
+  const cnt=document.getElementById('res_count'); if(cnt) cnt.textContent=RES_TOTAL?RES_TOTAL+' total':'';
   const el=document.getElementById('resultList'); if(!el) return;
-  const banner = RESULT_STORE_FILTER ? `<div class="card" style="border-color:rgba(74,222,128,.3)"><div class="row"><div class="grow meta">Filtered to one store (from your alert link).</div><button class="ghost" onclick="RESULT_STORE_FILTER=null;renderResults()">Show all</button></div></div>` : '';
-  if(!rows.length){el.innerHTML=banner+'<div class="empty">No calls'+(RESULT_STORE_FILTER?' for this store yet.':' yet.')+'</div>';return;}
-  el.innerHTML=banner+'<div class="card calltable">'+rows.map(r=>{
+  const banner = RESULT_STORE_FILTER ? `<div class="card"><div class="row"><div class="grow meta">Filtered to one store (from your alert link).</div><button class="ghost" onclick="RESULT_STORE_FILTER=null;renderResults()">Show all</button></div></div>` : '';
+  if(!rows.length){el.innerHTML=banner+'<div class="empty">No calls'+(RESULT_STORE_FILTER?' for this store yet.':' yet.')+'</div>'; const m0=document.getElementById('res_more'); if(m0) m0.innerHTML=''; return;}
+  const grouped=(sort==='newest'||sort==='oldest');
+  let out=banner, lastDay=null;
+  rows.forEach(r=>{
+    const dl=grouped?dayLabel(r.startedAt):null;
+    if(dl&&dl!==lastDay){ out+=`<div class="rephead" style="padding:${lastDay?'20px':'8px'} 4px 8px">${dl}</div>`; lastDay=dl; }
     const vv=customerVerdict(r);
     const nm=splitName(r.retailer||'?');
     const time=new Date(r.startedAt*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-    const detail=(r.summary?`<div class="meta" style="color:#ddd;margin-bottom:8px">${esch(r.summary)}</div>`:'')+(r.transcript?bubbles(r.transcript):'');
-    return `<details class="callrow">
-      <summary>
-        ${logoTile({...r,name:r.retailer})}
-        <div class="grow">
-          <div class="cs-name">${esch(nm.base)}${nm.branch?` <span style="color:var(--muted);font-weight:500">${esch(nm.branch)}</span>`:''}</div>
-          <div class="cs-meta">${catFilter?'':esch(r.category||'')+' · '}${agoTs(r.startedAt)} · ${time}${r.shipmentDayHeard?' · ships '+esch(r.shipmentDayHeard):''}</div>
-        </div>
-        <span class="cv" style="color:${vv.c}">${statusIcon(vv.e,vv.c,22)}<span>${esch(vv.t)}</span></span>
-      </summary>
-      <div class="calldetail">${detail||'<span class="meta">No transcript captured for this call.</span>'}</div>
-    </details>`;
-  }).join('')+'</div>';
+    out+=`<div class="lrow" onclick="openCallSheet(${r.id})">
+      ${logoTile({...r,name:r.retailer})}
+      <div class="grow" style="min-width:0">
+        <div class="cs-name">${esch(nm.base)}${nm.branch?` <span style="color:var(--muted);font-weight:500">${esch(nm.branch)}</span>`:''}</div>
+        <div class="cs-meta">${catFilter?'':esch(r.category||'')+' · '}${agoTs(r.startedAt)} · ${time}${r.shipmentDayHeard?' · ships '+esch(r.shipmentDayHeard):''}</div>
+      </div>
+      <span class="cv" style="color:${vv.c}">${statusIcon(vv.e,vv.c,22)}<span>${esch(vv.t)}</span></span>
+    </div>`;
+  });
+  el.innerHTML=out;
+  const more=document.getElementById('res_more');
+  if(more) more.innerHTML=(RESULTS.length<RES_TOTAL)?`<div style="display:flex;justify-content:center;padding:18px 0 0"><button class="ghost" style="padding:12px 26px;font-size:12.5px;font-weight:800;letter-spacing:.13em" onclick="resMore()">SHOW ${Math.min(RES_SIZE,RES_TOTAL-RESULTS.length)} MORE</button></div>`:'';
+}
+// The call sheet (board 1d): verdict, timeline, transcript, fix key.
+function openCallSheet(id){
+  const r=RESULTS.find(x=>x.id===id); if(!r) return;
+  const vv=customerVerdict(r);
+  const nm=splitName(r.retailer||'?');
+  const time=new Date(r.startedAt*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+  const dur=r.callSeconds?Math.floor(r.callSeconds/60)+':'+String(r.callSeconds%60).padStart(2,'0'):null;
+  const tmark=(on,last)=>`<div style="display:flex;gap:12px;align-items:flex-start">${last?`<div style="width:11px;height:11px;border-radius:50%;background:${on?'var(--green)':'rgba(255,255,255,.2)'};${on?'box-shadow:0 0 8px var(--green)':''}"></div>`:`<div style="display:flex;flex-direction:column;align-items:center"><div style="width:11px;height:11px;border-radius:50%;background:${on?'var(--green)':'rgba(255,255,255,.2)'}"></div><div style="width:2px;height:26px;background:${on?'rgba(74,222,128,.4)':'rgba(255,255,255,.1)'}"></div></div>`}`;
+  const tl=[];
+  tl.push(tmark(true)+`<div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,.72);margin-top:-1px">Dialed <span style="color:var(--muted);font-weight:500">${time}</span></div></div>`);
+  if(r.navSeconds!=null) tl.push(tmark(true)+`<div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,.72);margin-top:-1px">Reached a person <span style="color:var(--muted);font-weight:500">${Math.floor(r.navSeconds/60)}:${String(r.navSeconds%60).padStart(2,'0')} in</span></div></div>`);
+  tl.push(tmark(r.status==='completed',true)+`<div style="font-size:12.5px;font-weight:600;color:rgba(255,255,255,.72);margin-top:-1px">Verdict <span style="color:var(--muted);font-weight:500">${dur?dur+' in':'—'}</span></div></div>`);
+  const host=document.getElementById('callsheet_host')||(()=>{const d=document.createElement('div');d.id='callsheet_host';d.style.display='none';document.body.appendChild(d);return d;})();
+  host.innerHTML=`<div id="pk_callsheet">
+    <div class="row" style="gap:12px;margin-bottom:4px">${logoTile({...r,name:r.retailer,size:44})}
+      <div class="grow" style="min-width:0"><div style="font-size:16px;font-weight:800;letter-spacing:-.2px;color:#fff">${esch(nm.base)}${nm.branch?' '+esch(nm.branch):''}</div>
+      <div class="cs-meta">${esch(r.category||'')} · ${dayLabel(r.startedAt).toLowerCase()==='today'?'today':dayLabel(r.startedAt)} ${time}${dur?' · '+dur+' on the line':''}</div></div></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:14px">
+      <div style="width:8px;height:8px;border-radius:50%;background:${vv.c};box-shadow:0 0 8px ${vv.c}"></div>
+      <div style="font-size:19px;font-weight:900;letter-spacing:-.4px;color:${vv.c}">${esch(vv.t)}</div>
+    </div>
+    ${r.summary?`<div style="font-size:13px;font-weight:500;color:rgba(255,255,255,.72);margin-top:6px;line-height:1.5">${esch(r.summary)}</div>`:''}
+    <div style="display:flex;flex-direction:column;margin-top:18px;padding-left:5px">${tl.join('')}</div>
+    <div style="margin-top:18px">${r.transcript?bubbles(r.transcript):'<span class="meta">No transcript captured for this call.</span>'}</div>
+    <div style="display:flex;gap:10px;margin-top:20px;align-items:center;justify-content:space-between">
+      <button class="ghost" style="letter-spacing:.1em;font-weight:800" onclick="fixVerdict(${r.id})">FIX THE VERDICT</button>
+      <div style="font-size:11.5px;font-weight:600;color:var(--dim)">Fixing it corrects the call record</div>
+    </div>
+  </div>`;
+  peekOpen('pk_callsheet','');
+}
+// Fix the verdict: cycle to the correct answer and PATCH the record.
+async function fixVerdict(id){
+  const r=RESULTS.find(x=>x.id===id); if(!r) return;
+  const cur=r.confirmed===true?'in stock':r.confirmed===false?'not in stock':'unclear';
+  const next=prompt('This call is recorded as "'+cur+'". Type the correct verdict: yes, no, or unclear');
+  if(next==null) return;
+  const v=next.trim().toLowerCase();
+  const confirmed=v==='yes'||v==='in stock'?true:v==='no'||v==='not in stock'?false:v==='unclear'?null:undefined;
+  if(confirmed===undefined){ toast('Use yes, no, or unclear'); return; }
+  const res=await api('/api/results/'+id+'/verdict',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({confirmed})});
+  if(res&&res.ok){ toast('Verdict corrected'); peekClose(); loadResults(); } else toast('Could not update the record');
 }
 
 
@@ -3773,7 +3883,7 @@ async function loadCredits(){
   document.getElementById('credit_src').textContent = c.source==='live' ? 'live balance' : 'estimated · last 31d';
   if(c.limit){
     const pctLeft = Math.max(0, Math.min(100, Math.round((c.remaining/c.limit)*100)));
-    const _sc=document.getElementById('drs_credits'); if(_sc) _sc.innerHTML=`${pctLeft}% left <span class="chev">▾</span>`;
+    const _sc=document.getElementById('drs_credits'); if(_sc){ _sc.innerHTML=`${pctLeft}% left`; _sc.className='pk-v '+(pctLeft>40?'g':pctLeft>15?'a':'r'); }
     document.getElementById('credit_body').innerHTML =
       `<b style="color:#fff;font-size:16px">${fmtN(c.remaining)}</b> credits left of ${fmtN(c.limit)} <span style="color:var(--muted)">(${pctLeft}% left)</span>`;
     const bar=document.getElementById('credit_bar');           // bar shows what's LEFT (full = plenty)
@@ -4250,7 +4360,7 @@ async function loadGwPulse(){
       st(cm.watches||0,'watching')+st(cm.kioskReports||0,'kiosk intel')+st(cm.posts||0,'scores')+st(cm.postsPending||0,'pending')+st(cm.newLeads7d||0,'new leads 7d')+
     `</div>`+sub('Stats baseline')+
     `<div class="meta" style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;line-height:1.6">Real-call stats (Pulse · Restock · Call timing) ${d.statsSince?('count from <b style="color:#cfcfd8">'+new Date(d.statsSince*1000).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})+'</b>'):'count <b style="color:#cfcfd8">everything</b>'}.<button class="ghost" style="font-size:10.5px;padding:5px 10px" onclick="startFresh(false)">Start fresh</button>${d.statsSince?'<button class="ghost" style="font-size:10.5px;padding:5px 10px" onclick="startFresh(true)">Count all again</button>':''}</div>`;
-  const s=document.getElementById('drs_pulse'); if(s) s.innerHTML=`${a.checks||0} checks · ${secsFmt(a.avgTalkSec||0)} avg <span class="chev">▾</span>`;
+  const s=document.getElementById('drs_pulse'); if(s) s.innerHTML=`${a.checks||0} checks · ${secsFmt(a.avgTalkSec||0)} avg`;
 }
 // Stamp a "count from now" cutoff so real-call stats reset for the live launch. Test calls are unaffected.
 async function startFresh(clear){

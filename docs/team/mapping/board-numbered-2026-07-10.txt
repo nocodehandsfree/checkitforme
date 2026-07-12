@@ -1,0 +1,88 @@
+FASTER — mapped this sweep      Was>Now  %
+ 1. Scheels         59>18   69%
+ 2. Costco          97>35   64%
+ 3. BJ's            90>34   62%
+ 4. Big 5           34>13   62%
+ 5. Marshalls       44>20   55%
+ 6. Ralphs         126>59   53%
+ 7. Staples         60>29   52%
+ 8. Pick n Save     20>10   50%
+ 9. Smith's         62>32   48%
+10. TJ Maxx         23>12   48%
+11. Pavilions       47>25   47%
+12. Menards         94>57   39%
+13. Wegmans         73>46   37%
+14. Vons            87>57   34%
+15. Academy         36>24   33%
+16. Acme           112>77   31%
+17. B&N             37>29   22%
+18. Books-A-Mil     60>50   17%
+19. GameStop        36>30   17%
+20. Shaw's          73>67    8%
+21. HomeGoods       14>13    7%
+22. Randalls        70>65    7%
+23. Tom Thumb       69>66    4%
+24. Star Market     80>78    2%
+
+CALL TOMORROW (28)
+25. Goodwill       thrift
+26. Habitat ReStor thrift
+27. Salvation Army thrift
+28. Savers         thrift
+29. Unique         thrift
+30. Ace Hardware   needs a hand
+31. Albertsons     retry for speed
+32. Blain's F&F    retry for speed
+33. Burlington     retry for speed
+34. Cards and Coff not mapped yet
+35. Comic Book Sho not mapped yet
+36. Dick's         retry for speed
+37. Family Dollar  not mapped yet
+38. Fleet Farm     retry for speed
+39. Food 4 Less    retry for speed
+40. Independent Ca not mapped yet
+41. Jewel-Osco     retry for speed
+42. Kohl's         retry for speed
+43. Macy's (Toys R not mapped yet
+44. Micro Center   not mapped yet
+45. Office Depot / needs a hand
+46. PokeMall TCG   not mapped yet
+47. Publix         not mapped yet
+48. Safeway        retry for speed
+49. Sam's Club     retry for speed
+50. Target         retry for speed
+51. Walgreens      retry for speed
+52. Walmart        retry for speed
+
+DIAL DIRECT — already instant (31)
+53. Bi-Mart
+54. BoxLunch
+55. City Market
+56. Claire's
+57. Dollar General
+58. Dollar Tree
+59. Dunham's Sports
+60. Five Below
+61. Fred Meyer
+62. Fry's
+63. Gelson's
+64. Giant Eagle
+65. Hallmark Gold Cr
+66. Harris Teeter
+67. Hibbett Sports
+68. Hobby Lobby
+69. Hot Topic
+70. Hy-Vee
+71. King Soopers
+72. Kroger
+73. Lowe's
+74. Mariano's
+75. Michaels
+76. Ollie's Bargain 
+77. QFC
+78. Ross Dress for L
+79. Sheetz
+80. Tokyo Japanese L
+81. Tractor Supply
+82. Wawa
+83. WinCo Foods

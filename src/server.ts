@@ -4070,6 +4070,7 @@ app.patch("/api/chains/:id", async (c) => {
   if (b.avgTreeSeconds !== undefined) patch.avgTreeSeconds = Number.isFinite(Number(b.avgTreeSeconds)) && Number(b.avgTreeSeconds) > 0 ? Number(b.avgTreeSeconds) : null;
   if (typeof b.repackOnly === "boolean") patch.repackOnly = b.repackOnly;
   if (typeof b.muted === "boolean") patch.muted = b.muted;
+  if (b.unmappableReason !== undefined) patch.unmappableReason = b.unmappableReason || null; // stored mute reason (online-only / no store line / …)
   // Per-store call settings (Settings page): talk-time cap + voicemail/closed auto-hangup.
   if (b.maxTalkSeconds !== undefined) patch.maxTalkSeconds = Number.isFinite(Number(b.maxTalkSeconds)) && Number(b.maxTalkSeconds) > 0 ? Number(b.maxTalkSeconds) : null;
   if (typeof b.hangupOnVoicemail === "boolean") patch.hangupOnVoicemail = b.hangupOnVoicemail;
@@ -4758,7 +4759,13 @@ app.get("/api/admin/tree/list", async (c) => {
   const chs = await db.select().from(chains).orderBy(chains.name);
   const rows = await db.select({ cid: retailers.chainId, n: sql<number>`count(*)` }).from(retailers).where(eq(retailers.active, true)).groupBy(retailers.chainId);
   const cnt = new Map(rows.map((r) => [r.cid, Number(r.n || 0)]));
-  return c.json({ model: TREE_MODEL, chains: chs.map((ch) => ({ id: ch.id, name: ch.name, type: ch.type, stores: cnt.get(ch.id) || 0, treeStatus: ch.treeStatus, ringsDirect: ch.ringsDirect, dtmf: ch.dtmfShortcut, answerPath: ch.answerPath, avgTreeSeconds: ch.avgTreeSeconds, note: ch.treeNote || ch.phoneTreeDefault, learnedAt: ch.treeLearnedAt, verifiedAt: ch.treeVerifiedAt, muted: ch.muted })) });
+  // The mapping board must MATCH the store data: only real, mappable chains. Hide non-mappable rows so
+  // Mapping isn't flying blind through phantom/merge/mall clutter — a chain with 0 active stores has
+  // nothing to call, a muted chain is quarantined (CVS-at-Target, online-only), and a "_" name is a
+  // retired merge-stub. `?all=1` returns the unfiltered set for debugging.
+  const showAll = c.req.query("all") === "1";
+  const visible = showAll ? chs : chs.filter((ch) => !ch.muted && !(ch.name || "").startsWith("_") && (cnt.get(ch.id) || 0) > 0);
+  return c.json({ model: TREE_MODEL, chains: visible.map((ch) => ({ id: ch.id, name: ch.name, type: ch.type, stores: cnt.get(ch.id) || 0, treeStatus: ch.treeStatus, ringsDirect: ch.ringsDirect, dtmf: ch.dtmfShortcut, answerPath: ch.answerPath, avgTreeSeconds: ch.avgTreeSeconds, note: ch.treeNote || ch.phoneTreeDefault, learnedAt: ch.treeLearnedAt, verifiedAt: ch.treeVerifiedAt, muted: ch.muted })) });
 });
 app.post("/api/admin/tree/discover", async (c) => {
   const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; count?: number };
@@ -5037,6 +5044,17 @@ app.get("/api/results", async (c) => {
     const l = chainLogoInfo(ret ? ((ret.chainId && names.get(ret.chainId)) || ret.name.split(/—|–| - /)[0]) : null);
     return { ...r, retailer: ret?.name, category: cMap.get(r.categoryId), logoUrl: l.url, logoWide: l.wide, logoDark: l.dark };
   }) });
+});
+
+// Fix the verdict (Admin → call sheet): the owner corrects a call record whose read was wrong.
+// Sets confirmed + the matching customer-facing status key on the one row. Yes/no/unclear only.
+app.patch("/api/results/:id/verdict", async (c) => {
+  const id = Number(c.req.param("id")); if (!id) return c.json({ error: "id required" }, 400);
+  const b = (await c.req.json().catch(() => ({}))) as { confirmed?: boolean | null };
+  if (b.confirmed !== true && b.confirmed !== false && b.confirmed !== null) return c.json({ error: "confirmed must be true, false or null" }, 400);
+  const statusKey = b.confirmed === true ? "in_stock" : b.confirmed === false ? "not_in_stock" : "no_clear_answer";
+  await db.update(callResults).set({ confirmed: b.confirmed, statusKey }).where(eq(callResults.id, id));
+  return c.json({ ok: true, confirmed: b.confirmed, statusKey });
 });
 
 // ---- Actions ----

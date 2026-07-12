@@ -1,10 +1,11 @@
-import csv, os, shutil
+import csv, os, shutil, sys
+SRC = sys.argv[1] if len(sys.argv) > 1 else "hobby_nohours.csv"
 done=set()
 try:
     done={int(x) for x in open("hobby_done_ids.txt").read().split(",") if x.strip()}
 except: pass
 US={'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC','PR'}
-rows=[r for r in csv.DictReader(open("hobby_nohours.csv"))
+rows=[r for r in csv.DictReader(open(SRC))
       if r["state"] in US and r["city"].strip() and r["phone"] and int(r["id"]) not in done]
 rows.sort(key=lambda r:(r["state"],r["city"],r["name"]))
 shutil.rmtree("hobbybatches",ignore_errors=True); os.makedirs("hobbybatches")

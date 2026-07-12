@@ -553,14 +553,24 @@ __BRAND_HEAD__
   .toast svg path,.toast svg circle{stroke:#06210f}
   .toast.show{transform:translateX(-50%) translateY(0)}
   .hidden{display:none}
-  /* Support Messenger: small low-key GRAY tab pinned to the RIGHT EDGE (thumb height), icon only */
-  .suplaunch{position:fixed;right:0;top:64%;z-index:70;transform:translateY(-50%);cursor:pointer;border:none;
-    width:34px;height:54px;border-radius:13px 0 0 13px;background:#26262C;display:grid;place-items:center;
-    box-shadow:-5px 6px 16px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05);opacity:.72;transition:opacity .12s,width .12s}
-  .suplaunch:hover{opacity:1;width:38px}
-  .suplaunch:active{opacity:1}
-  .suplaunch svg{width:20px;height:20px;stroke:#9a9aa8}
-  body:has(.overlay.on) .suplaunch,body:has(.csheet.on) .suplaunch,body:has(.supwrap.on) .suplaunch{display:none}
+  /* Support launcher: a super-skinny SOLID "handle" that hangs from the very TOP edge, dead-center — a
+     grab notch on its free (bottom) edge so it reads as pull-down-able, a check-green chat dot, and the
+     word "help". Docked at the top on purpose: iOS Safari's floating bottom address bar overlays page
+     content and safe-area-inset-bottom doesn't reserve for it, so anything at the bottom fights the URL
+     bar and jumps mid-scroll — the top edge is stable. Fully opaque (never see-through). Tucks straight
+     UP while the user moves around and glides back at rest. Shows on every page, incl. the slide sheets. */
+  .suplaunch{position:fixed;left:50%;top:0;transform:translateX(-50%);z-index:82;cursor:pointer;border:none;
+    display:flex;align-items:center;gap:7px;padding:calc(6px + env(safe-area-inset-top)) 16px 9px;
+    background:#22222C;border:1px solid rgba(255,255,255,.12);border-top:none;border-radius:0 0 14px 14px;
+    box-shadow:0 7px 20px rgba(0,0,0,.42);
+    transition:transform .3s cubic-bezier(.32,.72,0,1),opacity .22s}
+  .suplaunch .grip{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:26px;height:3px;border-radius:2px;background:rgba(255,255,255,.22)}
+  .suplaunch .dot{width:16px;height:16px;border-radius:50%;background:var(--green,#4ADE80);display:flex;align-items:center;justify-content:center;flex:0 0 16px}
+  .suplaunch .dot svg{width:10px;height:10px;stroke:#06210f;fill:none;stroke-width:2.4}
+  .suplaunch .tl{font:800 12px Inter;letter-spacing:.02em;color:#efeff4;text-transform:lowercase}
+  .suplaunch:active{transform:translateX(-50%) translateY(-1px)}
+  .suplaunch.tucked{transform:translateX(-50%) translateY(-120%);opacity:0;pointer-events:none}
+  body:has(.supwrap.on) .suplaunch{display:none}
   .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:flex;flex-direction:column;
     /* a touch deeper than the raw brand yellow — the neon read too bright in the panel (owner 07-11) */
     --sup-accent:color-mix(in srgb, var(--accent,#FFCB05) 73%, #14110a);
@@ -918,7 +928,8 @@ __BRAND_HEAD__
      class — so it auto-restores the instant you leave zones and can never get stuck hiding the
      homepage header (that was the bug behind the dead My-checks pill). owner 07-11. */
   body:has(#zones:not(.hidden)) header,
-  body:has(#zones:not(.hidden)) .supbub{display:none}
+  body:has(#zones:not(.hidden)) .supbub,
+  body:has(#zones:not(.hidden)) .suplaunch{display:none}
   .logomark{width:30px;height:30px;flex:0 0 auto;cursor:pointer;display:grid;place-items:center}
   .logomark svg{display:block}
   .iconbtn{flex:0 0 auto;width:38px;height:38px;border-radius:11px;background:var(--sheet);border:1px solid var(--border);display:grid;place-items:center;cursor:pointer;color:#bdbdcb;padding:0}
@@ -2287,12 +2298,12 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <!-- Step 2: 6-digit code -->
     <div id="auth_step_code" style="display:none">
       <h3 style="margin:0 0 4px;font-size:21px" data-i18n="auth.checkphone">Check your phone</h3>
-      <div class="meta" id="auth_codesent" style="margin-bottom:16px">We've texted <b id="auth_codeto" style="color:#e6e6ee"></b><br>enter the code below</div>
+      <div class="meta" id="auth_codesent" style="margin-bottom:16px"><span data-i18n="auth.wetexted">We've texted</span> <b id="auth_codeto" style="color:#e6e6ee"></b><br><span data-i18n="auth.entercode">enter the code below</span></div>
       <div id="auth_devhint" style="display:none;margin-bottom:16px;font-size:13px;color:#FFCB05;background:rgba(255,203,5,.1);border:1px solid rgba(255,203,5,.3);border-radius:10px;padding:9px 12px;line-height:1.5">⚙️ Staging. No real text sent. Code prefilled, just tap Verify.</div>
       <input id="auth_code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" oninput="if((this.value||'').replace(/\D/g,'').length>=6) phoneVerify()" onkeydown="if(event.key==='Enter')phoneVerify()" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 13px;font-size:26px;font-weight:800;letter-spacing:.5em;box-sizing:border-box;text-align:center">
       <div id="auth_codeerr" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
       <button class="cta sm" id="auth_verify" onclick="phoneVerify()" data-i18n="auth.verify" style="margin-top:4px;width:100%;background:var(--green);color:#06210f">Verify →</button>
-      <div style="margin-top:13px;font-size:13px;color:var(--muted)">Didn't get it? <a onclick="phoneStart(true)" style="color:var(--purple);font-weight:700;cursor:pointer">Resend</a> · <a onclick="authBack()" style="color:var(--purple);font-weight:700;cursor:pointer">Change number</a></div>
+      <div style="margin-top:13px;font-size:13px;color:var(--muted)"><span data-i18n="auth.notget">Didn't get it?</span> <a onclick="phoneStart(true)" data-i18n="auth.resend" style="color:var(--purple);font-weight:700;cursor:pointer">Resend</a> · <a onclick="authBack()" data-i18n="auth.changenum" style="color:var(--purple);font-weight:700;cursor:pointer">Change number</a></div>
     </div>
   </div>
 </div>
@@ -2469,8 +2480,10 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   </div>
 </div>
 
-<button class="suplaunch" id="supTab" onclick="openSupport()" aria-label="Chat with us">
-  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+<button class="suplaunch" id="supTab" onclick="openSupport()" aria-label="Help">
+  <span class="grip" aria-hidden="true"></span>
+  <span class="dot" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-11.9 7.6L3 21l1.9-6A8.4 8.4 0 1 1 21 11.5z"/></svg></span>
+  <span class="tl" data-i18n="sup.help">help</span>
 </button>
 <div class="supwrap" id="supWrap" aria-hidden="true">
   <div class="sup-hd" id="sup_hd">
@@ -2511,8 +2524,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <!-- TOPIC PICKER -->
     <div class="sup-view" id="supv_topic">
       <div class="sup-pad">
-        <h2 data-i18n="sup.topic.title">What's it about?</h2>
-        <div class="sub" data-i18n="sup.topic.sub">Pick one so we can help faster.</div>
+        <div class="sub" style="margin-top:2px" data-i18n="sup.topic.sub">Pick one so we can help faster.</div>
         <div id="sup_topics"></div>
       </div>
     </div>
@@ -2756,8 +2768,8 @@ const I18N={ es:{
   // driver / runner teaser
   'dd.tag':'Vista previa · próximamente','dd.title':'Que un local lo recoja','dd.sub':'¿Muy lejos para manejar? Manda a un conductor de Uber/Lyft cercano a comprarlo y enviártelo. Él paga <b>$0 de su bolsillo</b>, tú solo pones el bono.','dd.instock':'En stock','dd.s1':'Define el <b style="color:var(--green)">bono</b> del conductor (ej. $25) sobre su tarifa','dd.s2':'Pide el viaje en <b>Uber</b> o <b>Lyft</b>. Recogida en la tienda','dd.s3':'Envía una tarjeta prepagada (producto + envío) + un mensaje listo','dd.s4':'Él lo compra, lo envía y toca <b>Listo</b> → tu bono se libera al instante','dd.sees':'lo que ve el conductor','dd.pickup':'Tienes una recogida de <span style="color:var(--green)">$25</span> 🏃','dd.applepay':'Agregar tarjeta a Apple Pay (60 seg)','dd.cta':'Quiero acceso anticipado →','dd.noted':'Anotado. Te buscamos para el acceso anticipado 🤝','dd.grab':'recoger en {s} → te lo envían',
   // generic errors / toasts / misc
-  'err.generic':'No se procesó. Vuelve a intentarlo.','err.sendcode':'No pudimos enviar un código. Inténtalo de nuevo.','err.verify':'No se pudo verificar. Inténtalo de nuevo.','err.post':'No se pudo publicar. Inténtalo de nuevo.','err.upload':'La foto no se subió. Inténtalo de nuevo.','err.photobig':'La foto pesa demasiado. Prueba con una más pequeña.','auth.verifying':'Verificando…','map.list':'Lista','map.map':'Mapa','store.closed':'Cerrado','toast.nocall':'. No se hizo la llamada.','auth.welcome':"✓ Ya entraste",'err.email':'Ingresa un correo válido','err.usonly':'Por ahora solo enviamos SMS a números de EE. UU.','err.toofast':'Espera un momento e inténtalo de nuevo.','auth.sending':'Enviando…','auth.resending':'Reenviando…','err.contact':'Ingresa un correo o teléfono válido.','err.pickstore':'Elige una tienda primero',
-  'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la verificación','toast.callgone':'Esa verificación ya no está disponible','toast.toosoon':'Acabas de verificar esta tienda — vuelve a verificar en unos {n} min.','toast.loadingcall':'Cargando tu verificación…','toast.loadingcall2':'Cargando tu verificación','toast.translate.fail':'No se pudo traducir eso.','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Aquí está la lista.','map.nostores':'No hay tiendas aquí. Mueve el mapa a otro lugar.','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
+  'err.generic':'No se procesó. Vuelve a intentarlo.','err.sendcode':'No pudimos enviar un código. Inténtalo de nuevo.','err.verify':'No se pudo verificar. Inténtalo de nuevo.','err.post':'No se pudo publicar. Inténtalo de nuevo.','err.upload':'La foto no se subió. Inténtalo de nuevo.','err.photobig':'La foto pesa demasiado. Prueba con una más pequeña.','auth.verifying':'Verificando…','map.list':'Lista','map.map':'Mapa','store.closed':'Cerrado','toast.nocall':'. No se hizo la llamada.','auth.welcome':"✓ Ya entraste",'err.email':'Ese correo no se ve bien. ¿Lo revisas?','err.usonly':'Por ahora solo enviamos SMS a números de EE. UU.','err.toofast':'Espera un momento e inténtalo de nuevo.','auth.sending':'Enviando…','auth.resending':'Reenviando…','err.contact':'Ingresa un correo o teléfono válido.','err.pickstore':'Elige una tienda primero',
+  'toast.signupfirst':'Regístrate para agregar verificaciones','toast.freeused':'Tu verificación gratis ya se usó. Regístrate para seguir','toast.joinalerts':'Únete para crear alertas','toast.signupauto':'Regístrate para auto-verificaciones','toast.callstart.fail':'No se pudo iniciar la verificación','toast.callgone':'Esa verificación ya no está disponible','toast.toosoon':'Acabas de verificar esta tienda. Vuelve a verificar en unos {n} min.','toast.loadingcall':'Cargando tu verificación…','toast.loadingcall2':'Cargando tu verificación','toast.translate.fail':'No se pudo traducir eso.','toast.payment':'🎉 Pago recibido. Agregando tus verificaciones…','toast.locating':'Buscando tiendas cerca de ti','toast.noloc':'Tu dispositivo no permite ubicación','toast.locblocked':'Ubicación bloqueada. Actívala en tu navegador','toast.locfail':'No pudimos obtener tu ubicación','toast.maploading':'El mapa no cargó. Aquí está la lista.','map.nostores':'No hay tiendas aquí. Mueve el mapa a otro lugar.','toast.linksoon':'Enlace disponible pronto','toast.storethanks':"🙌 ¡Gracias! Trabajaremos en agregar esa tienda",'toast.submitting':'Enviando…','toast.closed':'🔒 {x}. No se hizo la llamada',
   'find.me':'Encuentra mis tiendas','find.near':'cerca de ti, abiertas ahora',
   'scores.title':'Logros de la caza','scores.post':'Publica el tuyo →','scores.first':'¡Muéstranos el botín!',
   'ho.title':'Pásalo a un conductor','ho.sub':'Él lo compra. Y te lo lleva a tu puerta o te lo envía.','ho.ship':'Envíamelo','ho.home':'Tráelo a mi casa','ho.ship.btn':'📦 Envíamelo','ho.home.btn':'🏠 Tráelo a mi casa',
@@ -2826,7 +2838,7 @@ const I18N={ es:{
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
   'zones.confirm.title2':'¿Verificar {n} {s} abiertas?','zones.storeword':'tienda','zones.storesword':'tiendas','zones.checkallN':'Verificar las {n}','zones.removeall':'Quitar todo','zones.isclosed':'está cerrada','zones.areclosed':'están cerradas','zones.stillcall':'Aún podemos llamar a las {n} abiertas.','zones.and':'y','zones.andmore':'y {n} más','zones.astore':'Una tienda',
-  'sup.hd.sub':'Check AI responde en segundos','sup.chat.sub':'El equipo también puede ayudar',
+  'sup.help':'ayuda','sup.hd.sub':'Check AI responde en segundos','sup.chat.sub':'El equipo también puede ayudar',
   'sup.hero':'¿Cómo te ayudamos?','sup.hero.sub':'Lee una respuesta rápida, o pregunta sobre checks, tiendas y planes.',
   'sup.ask':'Hacer una pregunta','sup.newchat':'Haz una nueva pregunta','sup.recent':'Reciente',
   'sup.tab.home':'Inicio','sup.tab.msgs':'Mensajes','sup.tab.faq':'FAQ','sup.faq.sub':'Respuestas rápidas, sin esperar',
@@ -2850,6 +2862,34 @@ const I18N={ es:{
   'sup.form.err':'Pon tu nombre, un correo real y qué pasó.',
   'sup.done.title':'Recibido. Nos encargamos.','sup.done.body':'Una persona te escribirá pronto por correo.','sup.done.cta':'Listo',
 } };
+// Spanish parity fills (Copper, 2026-07-11): keys that were shipping English inside the ES UI.
+Object.assign(I18N.es, {
+  'zones.up.title':'Verifica todas las tiendas cercanas de un toque',
+  'zones.up.sub':'Guarda tus tiendas como una zona. Verifícalas todas a la vez y míralo en vivo. Solo Check+.',
+  'zones.up.cta':'Ver planes Check+',
+  'zones.instock':'en stock','zones.never':'Aún no verificada',
+  'zones.empty':'Guarda las tiendas cercanas como zona y verifícalas todas de un toque.',
+  'zones.check':'verificación','zones.checks':'verificaciones',
+  'zones.rin':'En stock','zones.rlive':'Verificando…','zones.rout':'No está en stock','zones.runk':'Sin respuesta',
+  'zones.report':'Verificación de zona','zones.checkingw':'verificando','zones.done':'listas','zones.no':'sin','zones.noans':'sin respuesta',
+  'zones.starting':'Iniciando el barrido…','zones.share':'Compartir resultados','zones.stopall':'Detener todo',
+  'zones.notx':'Aún no hay transcripción.','zones.stopped':'Deteniendo el barrido…','zones.copied':'Copiado al portapapeles',
+  'zones.sharemsg':'Acabo de verificar {n} tiendas con Check. {i} lo tenían en stock 👀',
+  'zones.nocredits':'Te faltan unas verificaciones para toda la zona.',
+  'ref.both2':'Ambos reciben <b style="color:#fff">{n} {c} gratis</b> cuando se registran.',
+  'ref.check1':'verificación','ref.checkN':'verificaciones',
+  'ref.sharemsg2':'Oye, mira esta herramienta. Está buenísima.\nNos ayuda a encontrar productos virales en stock rapidísimo, como Pokémon. {r}',
+  'acct.filtered':'Mostrando','acct.row.zones':'Administrar zonas',
+  'acct.row.zones.locked':'Check+ · verifica todas tus tiendas cercanas a la vez',
+  'acct.row.zones.sub':'Verifica toda una zona de un toque.',
+  'sc.noinstock':'Aquí solo salen las tiendas donde lo encontraste en stock. Haz una verificación primero.',
+  'sc.noinstock.q':'Ninguna verificación en stock coincide.','sc.pop.title':'Publica tu logro',
+  'sch.on.days2':'Auto-verificación activa','sch.on.ship2':'Auto-verificación activa · el día de envío de esta tienda',
+  'sched.step2':'Tus auto-verificaciones','sched.step.note2':'llamamos en días de envío',
+  'toast.anytown':'Otras ciudades necesitan Check+. ¿Te apuntas?',
+  'toast.locating2':'Buscando tiendas','toast.payment2':'🎉 Pago recibido. Agregando tus verificaciones…',
+  'auth.wetexted':'Te enviamos un mensaje a','auth.entercode':'escribe el código abajo','auth.notget':'¿No llegó?','auth.resend':'Reenviar','auth.changenum':'Cambiar número',
+});
 // {x}/{n}/{r}/{b}/{s}/{p}/{m} placeholder fill for translated strings.
 function tf(key,en,vars){ let s=t(key,en); if(vars) for(const k in vars) s=s.split('{'+k+'}').join(vars[k]); return s; }
 let LANG=localStorage.getItem('runnr_lang')||((navigator.language||'en').slice(0,2));
@@ -3068,7 +3108,15 @@ function supDate(ts){ const d=new Date(ts*1000), day=864e5;
   return d.toLocaleDateString(loc,{month:'short',day:'numeric'})+', '+tm; }
 
 function openGuide(){ try{track('guide_open');}catch(_){} window.open('https://checkitforme.readme.io','_blank','noopener'); }
-function openSupport(){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supGo('home'); }
+// Tuck the launcher away while the page is being scrolled/interacted with; glide it back at rest.
+let SUP_TAB_T=null;
+function supTabTuck(){ const el=$('supTab'); if(el&&!el.classList.contains('tucked')) el.classList.add('tucked');
+  clearTimeout(SUP_TAB_T); SUP_TAB_T=setTimeout(()=>{ const e=$('supTab'); if(e) e.classList.remove('tucked'); },1100); }
+window.addEventListener('scroll',supTabTuck,{passive:true,capture:true});
+window.addEventListener('wheel',supTabTuck,{passive:true});
+window.addEventListener('touchmove',supTabTuck,{passive:true});
+// Open straight to "What's it about?" (the topic picker) — most people arrive wanting to ask/report.
+function openSupport(){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supStartNew(); }
 function closeSupport(){ const el=$('supWrap'); el.classList.remove('on'); el.setAttribute('aria-hidden','true'); }
 
 // Low-level view switch + header/tabbar config.
@@ -3090,14 +3138,11 @@ function supGo(tab){
 // Header back arrow: chat/topic/form → home; done handled by its own button.
 function supBack(){ if(SUP_VIEW==='form'){ supShow('chat',{title:'Check AI',sub:t('sup.chat.sub','The team can also help'),back:true,tabs:false}); return; } supGo('home'); }
 
-// HOME
+// HOME — news & announcements (recent chats live in Messages now, not duplicated here).
 async function supRenderHome(){
   const b=await api('/pub/support/banner'); const txt=b&&(LANG==='es'?b.es:b.en);
-  const ban=$('sup_banner'); if(txt){ ban.textContent='⚠️ '+txt; ban.classList.add('on'); } else ban.classList.remove('on');
-  const convos=await supLoadConvos();
-  const lbl=$('sup_recent_lbl'), box=$('sup_home_recent'); box.innerHTML='';
-  if(convos.length){ lbl.style.display='block';
-    convos.slice(0,2).forEach(cv=>box.appendChild(supConvoRow(cv))); } else lbl.style.display='none';
+  const ban=$('sup_banner'); if(txt){ ban.textContent='📣 '+txt; ban.classList.add('on'); } else ban.classList.remove('on');
+  $('sup_recent_lbl').style.display='none'; $('sup_home_recent').innerHTML='';
 }
 // MESSAGES (history)
 async function supRenderConvos(){
@@ -3143,8 +3188,8 @@ function supFaqFilter(q){ q=(q||'').trim().toLowerCase(); if(!SUP_FAQ) return;
   supFaqDraw(SUP_FAQ.filter(it=>(it.q+' '+it.a).toLowerCase().includes(q)));
 }
 
-// TOPIC PICKER → new chat
-function supStartNew(){ supShow('topic',{title:t('sup.tab.home','Home'),back:true,tabs:false});
+// TOPIC PICKER → new chat. This is also the entry screen (tabs shown, no back arrow).
+function supStartNew(){ supShow('topic',{title:t('sup.topic.title',"What's it about?"),tabs:true});
   const box=$('sup_topics'); box.innerHTML='';
   SUP_CATS.forEach(([k])=>{ const el=document.createElement('button'); el.className='sup-row'; el.onclick=()=>supPickTopic(k);
     el.innerHTML=`<div class="rmain"><div class="rtitle">${esc(supCatLabel(k))}</div></div><svg class="rarrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
@@ -3186,9 +3231,9 @@ async function sendSupport(){
 }
 // The buried human path — revealed only after repeated AI failure.
 function supOfferHuman(){ $('sup_help').classList.add('on'); $('sup_human').style.display=''; }
-async function supHelped(yes){ $('sup_help').classList.remove('on');
+async function supHelped(yes){ $('sup_help').classList.remove('on'); SUP_STARTED=false;
   if(SUP_SID) appApi('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:yes})});
-  toast(t('sup.thanks','Thanks for letting us know.'),'neutral'); }
+  toast(t('sup.thanks','Thanks for letting us know.'),'neutral'); supGo('home'); }
 async function supOpenConversation(sid){ SUP_STARTED=true; SUP_SID=sid; $('sup_msgs').innerHTML=''; $('sup_help').classList.remove('on');
   supGo('chat');
   const r=await api('/pub/support/conversation/'+encodeURIComponent(sid));
@@ -3854,7 +3899,7 @@ function onSearchInput(){ clearTimeout(SEARCH_T); SEARCH_T=setTimeout(async()=>{
 // Free/PAYG can only search within their own ~20 mi area; jumping to another ZIP/area is a Check+ perk.
 function anyTownUpsell(){
   try{ $('search').value=''; }catch(_){ }
-  try{ toast(t('toast.anytown','Checking another area is a Check+ feature — upgrade to search any town.'),'accent'); }catch(_){ }
+  try{ toast(t('toast.anytown','Other towns need Check+. Want in?'),'accent'); }catch(_){ }
   try{ ACCT_RETURN=''; openBuy(); }catch(_){ } // the plans sheet is the upgrade path
 }
 // Master-only: type a city/ZIP → land there (same box). Non-master: just a normal store/city search.
@@ -4464,7 +4509,7 @@ function openLead(){ $('lead_err').textContent=''; $('leadOverlay').classList.ad
 function closeLead(){ $('leadOverlay').classList.remove('on'); }
 async function submitLead(){
   const e=($('lead_email').value||'').trim();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ markFld($('lead_email'),true); $('lead_err').textContent=t('err.email','Please enter a valid email.'); return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ markFld($('lead_email'),true); $('lead_err').textContent=t('err.email','That email looks off. Try again?'); return; }
   $('lead_btn').disabled=true; $('lead_btn').textContent=t('lead.wait','One sec…');
   try{ await api('/pub/lead',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:e,source:'runner_free'})}); }catch(err){}
   localStorage.setItem('runnr_lead_email',e);
@@ -4627,7 +4672,7 @@ async function startCheck(){
 
   const useApp=isAuthed();
   const r=await (useApp?appApi:api)(useApp?'/app/check':'/pub/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
-  if(r.error){ clearInterval(phaseT);clearInterval(elT); backToBuilder(); if(r.error==='no_credits'){ openBuy('out'); } else if(r.error==='unauthorized'){ signIn(); } else if(r.error==='too_soon'){ toast(r.message||tf('toast.toosoon','You just checked this store — check again in about {n} min.',{n:r.retryAfterMin||60}),'accent'); } else if(r.error==='store_closed'){ toast('🔒 '+(r.label||t('store.closed','Store is closed'))+t('toast.nocall','. No call placed.')); } else toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
+  if(r.error){ clearInterval(phaseT);clearInterval(elT); backToBuilder(); if(r.error==='no_credits'){ openBuy('out'); } else if(r.error==='unauthorized'){ signIn(); } else if(r.error==='too_soon'){ toast(r.message||tf('toast.toosoon','You just checked this store. Check again in about {n} min.',{n:r.retryAfterMin||60}),'accent'); } else if(r.error==='store_closed'){ toast('🔒 '+(r.label||t('store.closed','Store is closed'))+t('toast.nocall','. No call placed.')); } else toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
   const cid=r.providerCallId;
   try{ history.replaceState({},'','/?call='+encodeURIComponent(cid)); }catch(e){}
   const stop=()=>{ clearInterval(POLL);clearInterval(phaseT);clearInterval(elT); };
@@ -4913,7 +4958,7 @@ async function startCheckLive(){
   let secs=0; const elT=setInterval(()=>{ secs+=1; },1000); // counts toward the hard cap only — no on-screen timer
   LIVE_TIMERS=[elT];
   const r=await (useApp?appApi:api)(useApp?'/app/check-live':'/pub/check-live',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryIds:SEL_CATS,specificProduct:SEL_PRODUCT,kioskMode:!!SEL_KIOSK})});
-  if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='too_soon'){ toast(r.message||tf('toast.toosoon','You just checked this store — check again in about {n} min.',{n:r.retryAfterMin||60}),'accent'); } else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x}. No call placed.',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
+  if(r.error||!r.room){ clearInterval(elT); stopAudio(); backToBuilder(); if(r.error==='no_credits')openBuy('out'); else if(r.error==='unauthorized')signIn(); else if(r.error==='too_soon'){ toast(r.message||tf('toast.toosoon','You just checked this store. Check again in about {n} min.',{n:r.retryAfterMin||60}),'accent'); } else if(r.error==='store_closed'){ toast(tf('toast.closed','🔒 {x}. No call placed.',{x:tLbl(r.label||'Store is closed')})); } else toast(t('toast.callstart.fail',"Couldn't start the check")); return; }
   LIVE_ROOM=r.room; if(canListen) $('hangup_btn').style.display='';
   // Transcript + stage stream over the WS for EVERYONE — instant, the moment ElevenLabs emits a line
   // (no poll lag, no waiting on the conversation-id). Audio only PLAYS for listeners (canListen).
@@ -6333,7 +6378,7 @@ function zonesUpsell(){
     <div class="zf-scroll"><div class="card" style="text-align:center;padding:28px 20px;margin-top:6px">
       <div style="font-size:36px">🗺️</div>
       <div style="font-size:19px;font-weight:800;margin-top:10px;letter-spacing:-.3px">${t('zones.up.title','Check every store near you in one tap')}</div>
-      <div style="color:#8A8A96;font-size:13.5px;margin-top:9px;line-height:1.55">${t('zones.up.sub','Save a group of stores as a zone, then check them all at once and watch every result live. A Check+ member perk.')}</div>
+      <div style="color:#8A8A96;font-size:13.5px;margin-top:9px;line-height:1.55">${t('zones.up.sub','Save your stores as a zone. Check them all at once, watch it live. Check+ only.')}</div>
       <button class="cta" style="margin-top:20px;width:100%" onclick="zoneStopPoll();$('zones').classList.add('hidden');backToBuilder();ACCT_RETURN='';openBuy()">${t('zones.up.cta','See Check+ plans')} →</button>
     </div></div></div>`;
 }
@@ -6592,7 +6637,7 @@ async function zoneCheckAll(id){
   });
   if(!goOn) return;
   let run=null; try{ run=await appApi('/app/zones/'+id+'/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({categoryId:(BRAND_CAT&&BRAND_CAT.id)||SEL_CAT||undefined})}); }catch(e){ run={error:'net'}; }
-  if(!run||run.error){ toast(run&&run.error==='no_credits'?t('zones.nocredits','Not enough checks for the whole zone.'):t('err.generic',"That didn't go through. Give it another try.")); if(run&&run.error==='no_credits'){ setTimeout(()=>{ backToBuilder(); openBuy(); },600); } return; }
+  if(!run||run.error){ toast(run&&run.error==='no_credits'?t('zones.nocredits','You\'re a few checks short for the whole zone.'):t('err.generic',"That didn't go through. Give it another try.")); if(run&&run.error==='no_credits'){ setTimeout(()=>{ backToBuilder(); openBuy(); },600); } return; }
   ZONES.run={ id, runId:run.runId, name:run.name||'' }; renderZoneRun(); zoneStartPoll();
 }
 function zoneStartPoll(){ zoneStopPoll(); ZONES.poll=setInterval(zonePollTick,1800); zonePollTick(); }
@@ -7309,7 +7354,7 @@ async function submitKiosk(){
   track('kiosk_report',{authed:isAuthed()});
   closeKiosk();
   if(r.reward&&r.reward.credits){ if(ACCOUNT)ACCOUNT.credits=(ACCOUNT.credits||0)+r.reward.credits; renderAuth(); toast(tf('k.thanks.credits','🎁 Thanks! '+r.reward.credits+' free check'+(r.reward.credits>1?'s':'')+' added',{n:r.reward.credits})); }
-  else if(r.reward&&r.reward.freeCheck){ localStorage.removeItem('runnr_free_used'); toast(t('k.thanks.free',"🎁 Thanks! Your free check is unlocked. Go check a store")); }
+  else if(r.reward&&r.reward.freeCheck){ localStorage.removeItem('runnr_free_used'); toast(t('k.thanks.free',"🎁 Thanks! Your free check is ready. Go check a store")); }
   else toast(t('k.thanks','🙌 Thanks for the intel!'));
 }
 
@@ -7422,7 +7467,7 @@ function succFilter(){
   if(lb) lb.onclick=SUCC_STORE?function(){ succClear(); }:function(){ findMe(succFilter); };
   if(SUCC_STORE){ $('succ_storelist').innerHTML=''; return; }
   const list=succInStockStores().filter(st=>!q||storeMatch(st.name+' '+(st.location||''),q));
-  if(!list.length){ $('succ_storelist').innerHTML=`<div class="lo" style="padding:11px 3px;color:var(--muted);font-size:12.5px;line-height:1.5">${q?t('sc.noinstock.q','No in-stock check matches that.'):t('sc.noinstock','Only stores where you found it in stock show here — run a check first.')}</div>`; return; }
+  if(!list.length){ $('succ_storelist').innerHTML=`<div class="lo" style="padding:11px 3px;color:var(--muted);font-size:12.5px;line-height:1.5">${q?t('sc.noinstock.q','No in-stock check matches that.'):t('sc.noinstock','Only stores where you found it in stock show here. Run a check first.')}</div>`; return; }
   $('succ_storelist').innerHTML=list.slice(0,6).map(st=>`<div class="store" onclick="succPick(${st.id})" style="margin-top:8px"><div class="ic">${st.logoUrl?`<img src="${esc(st.logoUrl)}" alt="" style="width:22px;height:22px;object-fit:contain">`:storeWordmark(st.name,st.storeType)}</div><div style="min-width:0;flex:1"><div class="nm">${esc(st.name)}</div><div class="lo">${esc(st.location||'')}</div></div></div>`).join('');
 }
 let SUCC_SEQ=0;

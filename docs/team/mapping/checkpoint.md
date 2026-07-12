@@ -1,60 +1,46 @@
 # Check - Mapping — CHECKPOINT (current state)
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets not prose, under ~80 lines.
 
-## NOW — 9am-ET sweep ARMED, cap fix with Pops (2026-07-10 ~2am ET)
-- **Trigger `trig_0176tgdJaj2QBXYCXW3Nuh5V` fires 9:00am ET today (13:00 UTC)** into the Mapper session
-  and STARTS the run (real scheduled start, not the daytime gate). One-shot, auto-disables after firing.
-- **Driver:** `docs/team/mapping/sweep-driver-20260710.mjs` (session branch, see below) — east→west
-  waves (ET 9:00 / CT 10:00 / MT 11:00 / PT noon, ET clock), ONE chain at a time (start → poll
-  mapper/state until locked/needs-review → next), slowest-first in open waves, 55-min chain timeout,
-  hard stop 10:30pm ET. 39 targets = locked keypad/voice. **Skips navType:direct (33, already instant)
-  and CVS (owner).** Engine gates (muted / no store line) trusted as-is.
-- **CAP KILLED (owner order, pipeline per owner):** 12/day cap → 60 runaway guard + `mapper_daily_cap`
-  setting override. Landed on **staging `6edefab`**; owner said do NOT self-promote — **Pops folds it
-  into tonight's pinned promote batch** (note left top of docs/team/devops/checkpoint.md).
-  **At 9am: verify prod /api/health commit contains 6edefab.** If not, sweep starts anyway (old 12-cap,
-  wins still bank per-win via finalizeAndLock) and picks up the cap mid-day when Pops promotes.
-- **Meijer(64) + Menards(65) re-map:** driver POSTs `mapper/target="customer service"` first, runs them
-  first in their waves. Watch: verify-replay may re-lock the wrong desk — then manual re-map per #1 trap
-  playbook. Both locked recipes reach the WRONG desk today.
-- **Prod engine VERIFIED converging** (/api/health = d089c31 = main tip with binary-search mapper.ts).
-  Drift-verify = the engine's verify phase, runs per chain automatically.
-- **BEFORE-baseline committed:** `docs/team/mapping/baseline-2026-07-10-before.json` (session branch) —
-  73 locked. Slowest keypad: Ralphs 126, Acme 112, Safeway 102, Costco 97, Menards 94, BJ's 90, Vons 87,
-  Star Market 80, Meijer 75. Owed after run: after-snapshot + before→after report + phone summary.
-- **Branch:** `claude/mapper-checkpoint-scheduling-tbtnps` (PR #3 → staging, draft) holds baseline +
-  driver + reports. Cap fix + team notes went straight to staging (owner-directed).
-- Admin API: `https://admin.checkitforme.com`, `x-admin-token` (fetch from Railway prod vars, never in
-  files). `POST /api/admin/mapper/start {chainId}` · `GET .../mapper/state` ·
-  `POST .../mapper/target {chainId,target}`. `trainer/list` heavy — `-m 100`.
+## State (2026-07-11 eve) — sweep COMPLETE, nothing pending
+- Board healthy: **39 mapped chains verified reaching a human.** Recipes live in prod DB.
+- Both mapper fixes LIVE on prod (`25be309`, owner promoted): no-downgrade guard `6feff66` +
+  skip-rings-direct `52d2c77`. Guard PROVEN in prod (Safeway/Kohl's/Jewel/Dick's re-measured slower
+  and KEPT their faster locks).
+- 12 held "retry" chains re-run under the guard: only Kohl's improved (67→62); rest held at floor.
+  Full table: `report-2026-07-11.md`.
+- Next mapper work is owner-directed. OPEN QUESTION from owner: why did some stores' time-to-human
+  get LONGER — bring numbers (which stores, seconds added, cost impact), not a story.
 
-## #1 TRAP (most important)
-- Auto-nav 0-hammers when it can't parse an option → FALSE "no human path". ALL 8 chains once flagged
-  "no operator" were callable once press-tested. NEVER call a chain dead from an auto-caller failure.
-  Method: `POST trainer/document {chainId}` → read FULL `menuPrompts` (human option often LAST) →
-  press-test (`reactivePress:{digit,max:2}` or `barge` + `confirm:true`) → `trainer/lock`.
+## Independents / co-ops = DIRECT (owner correction 2026-07-11)
+- Thrift banners + local card/hobby shops answer DIRECTLY — mark DIRECT, never tree-map them.
+  Curated `DIRECT_DEFAULT_CHAINS` + boot backfill (`0b8d077`) enforces it; don't hand-lock (boot
+  overwrites). 10 locked DIRECT incl. Goodwill, Ace, Habitat ReStore, Salvation Army, Savers.
+- A no-answer call ≠ "no human path" — it's just nobody picked up that minute.
+- For Data Dev: default independent/single-location chains to DIRECT at import.
 
-## Other traps (not in git)
-- STT garbles digits — press-test each candidate, don't trust the announced digit.
-- confirm-mode `REDIRECT_RE` misreads "hold on"/"let me check" as a redirect → blocked legit locks
-  (Kohl's, Wegmans; retry fixed). Worth fixing.
-- nav false-fires "human" on recorded greetings ("thank you for calling…") ~8-11s in.
+## Sweep results (2026-07-10/11, detail in reports/)
+- Big cuts: Ralphs 126→59, Costco 97→35, BJ's 90→34, Menards 94→57, Burlington 78→53, Staples
+  60→29, Scheels 59→18, Marshalls 44→20, Walmart 130→10, Target 42→16 (post-restore).
+- Root-cause fixed: VERIFY could re-lock a SLOWER sample over a faster recipe (hit 11 chains,
+  owner caught it, all hand-restored). Guard `6feff66` prevents recurrence — verify never downgrades.
+- Old "before" numbers were often lucky single samples; trust the engine's re-measure.
+- AAFES **MUTED** (owner: never call military exchanges). Meijer `callTarget:false` (national call
+  center only — check both flags before adding a chain to a sweep). CVS skipped by owner.
+- Ace/Office Depot/Publix: franchise/store-varying trees → live per-store caller, no chain recipe.
 
-## Chain human-paths found (DTMF)
-- TJX cluster (TJ Maxx/HomeGoods/Marshalls) = press 4 ~14-44s. Pick 'n Save = press 7 ~20s.
-  Blain's F&F = press 2 ~57s. BJ's = press 3 (bakery) ~90s, no general operator.
-  Burlington = press 1 (Eng) → press 8 — NOT a dead end (was wrongly flagged).
+## Infra
+- Daily cap: 12/day hard-code replaced by 60 runaway-guard + `mapper_daily_cap` setting (prod).
+- Sweep driver `sweep-driver-20260710.mjs` (resume/SKIP after container restart). Container reclaim
+  kills local nohup processes — the mapper RUN survives server-side; drive per-check-in, remote is truth.
 
-## PARTIAL / follow-up
-- Office Depot(67), Publix(70): reachable, no clean single DTMF → left to live AI caller.
-- Family Dollar(28): callable but store-INCONSISTENT — needs a known-good store from Data Dev.
+## #1 TRAP (keep)
+- Auto-nav 0-hammers when it can't parse an option → FALSE "no human path". NEVER call a chain dead
+  from an auto-caller failure. Method: `trainer/document` (listen-only) → read FULL menuPrompts
+  (human option often LAST) → press-test (`barge`+`confirm:true`) → `trainer/lock` truthful target.
 
-## Owner rules / decisions
-- Muted = never call. Kiosks ARE callable. Chips independent & combine.
-- Don't invent tiers — `data/source/chain-scoring-2026-06/chain_scores_final.csv`.
-- Never push code while a call is live (redeploy kills it). Done = demonstrated w/ evidence.
-- Explicit owner naming required for prod pushes — Pops owns promote batches.
+## Other traps (keep)
+- STT garbles digits — press-test each candidate. Recorded greetings false-fire "human" ~8-13s in.
 
-## State
-- Board = 73 locked (33 direct / 39 keypad / 1 voice=CVS), all at OLD baseline speeds until the sweep.
-- Recipes live in the prod DB, not git. Sweep armed 9am ET 2026-07-10; cap fix staged for Pops's promote.
+## Owner rules (keep)
+- Muted = never call. Never push code while a call is live. Done = demonstrated w/ evidence.
+- Pops owns prod promote batches; explicit owner naming before prod pushes.

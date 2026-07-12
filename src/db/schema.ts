@@ -52,6 +52,9 @@ export const chains = sqliteTable("chains", {
   repackOnly: integer("repack_only", { mode: "boolean" }).notNull().default(false),
   // Owner kill-switch: muted chains are hidden from the consumer store list (no calls placed).
   muted: integer("muted", { mode: "boolean" }).notNull().default(false),
+  // WHY a chain is unmappable/muted, stored not inferred: "online-only" (Amazon/Best Buy/Micro Center),
+  // "no store line" (Aldi), etc. Curated data (syncs staging→prod); editable via PATCH /api/chains/:id.
+  unmappableReason: text("unmappable_reason"),
   // ---- Stock-check rail: how we know what's on the shelf WITHOUT a call ----
   // "site" = the chain's website shows real per-store inventory (free, instant, at scale);
   // "call" = no reliable online stock, use the phone rail. null = unclassified → treated as call.
