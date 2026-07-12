@@ -246,8 +246,44 @@ function seoGraph(brand: ReturnType<typeof resolveBrand>, plainName: string) {
   ];
 }
 
+// Coming-soon splash: the ONLY public HTML while config.comingSoon is on. Check wordmark + the owner's
+// launch line + the four product-type icons. Standalone (no app JS), dark on-brand, noindex.
+const COMING_SOON_ICONS = ["pokemon", "onepiece", "topps", "needoh"];
+function renderComingSoon(_host: string): string {
+  const line = "Find insanely hard to get products on the shelves at retail prices.";
+  const icons = COMING_SOON_ICONS.map(
+    (k) => `<img src="/logos/products/${k}.png" alt="" width="60" height="60" loading="eager">`
+  ).join("");
+  return `<!doctype html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Check — coming soon</title>
+<link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
+<link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0C0C12;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;
+  min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:34px;padding:40px 24px calc(40px + env(safe-area-inset-bottom));text-align:center}
+.cs-logo{width:min(240px,60vw);height:auto;display:block}
+.cs-line{font-size:19px;line-height:1.45;font-weight:700;letter-spacing:-.2px;
+  max-width:340px;text-wrap:balance;color:#EDEDF2}
+.cs-icons{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
+.cs-icons img{width:60px;height:60px;object-fit:contain;
+  filter:drop-shadow(0 8px 18px rgba(0,0,0,.45))}
+@media(max-width:360px){.cs-icons{gap:14px}.cs-icons img{width:52px;height:52px}}
+</style></head><body>
+<img class="cs-logo" src="/logos/brand/check.png?v=2" alt="Check">
+<p class="cs-line">${esc(line)}</p>
+<div class="cs-icons">${icons}</div>
+</body></html>`;
+}
+
 /** Render the consumer page branded for a vertical micro-site (resolved from the subdomain). */
 function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html", tone = ""): string {
+  if (config.comingSoon) return renderComingSoon(host); // public gate — admin/app.html is never routed here
   const canonical = `https://${host}/`;
   const plainName = brand.name.replace(/<[^>]+>/g, "");
   const ogImage = `https://${host}/og/${brand.key}.png`;
@@ -304,6 +340,7 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
 // Bots read the dynamic OG title/description (brand image stays static = reliable on every platform);
 // humans see a styled card + a CTA back into the app. Pure string render — no deps, cache-friendly.
 function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Record<string, string>): string {
+  if (config.comingSoon) return renderComingSoon(host); // public gate
   const inStock = (q.v || "in") === "in";
   const store = (q.store || "a local store").slice(0, 80);
   const cat = (q.cat || brand.category || "cards").slice(0, 60);
