@@ -553,23 +553,17 @@ __BRAND_HEAD__
   .toast svg path,.toast svg circle{stroke:#06210f}
   .toast.show{transform:translateX(-50%) translateY(0)}
   .hidden{display:none}
-  /* Support launcher: a super-skinny SOLID "handle" that hangs from the very TOP edge, dead-center — a
-     grab notch on its free (bottom) edge so it reads as pull-down-able, a check-green chat dot, and the
-     word "help". Docked at the top on purpose: iOS Safari's floating bottom address bar overlays page
-     content and safe-area-inset-bottom doesn't reserve for it, so anything at the bottom fights the URL
-     bar and jumps mid-scroll — the top edge is stable. Fully opaque (never see-through). Tucks straight
-     UP while the user moves around and glides back at rest. Shows on every page, incl. the slide sheets. */
-  .suplaunch{position:fixed;left:50%;top:0;transform:translateX(-50%);z-index:82;cursor:pointer;border:none;
-    display:flex;align-items:center;gap:7px;padding:calc(6px + env(safe-area-inset-top)) 16px 9px;
-    background:#22222C;border:1px solid rgba(255,255,255,.12);border-top:none;border-radius:0 0 14px 14px;
-    box-shadow:0 7px 20px rgba(0,0,0,.42);
-    transition:transform .3s cubic-bezier(.32,.72,0,1),opacity .22s}
-  .suplaunch .grip{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:26px;height:3px;border-radius:2px;background:rgba(255,255,255,.22)}
-  .suplaunch .dot{width:16px;height:16px;border-radius:50%;background:var(--green,#4ADE80);display:flex;align-items:center;justify-content:center;flex:0 0 16px}
-  .suplaunch .dot svg{width:10px;height:10px;stroke:#06210f;fill:none;stroke-width:2.4}
-  .suplaunch .tl{font:800 12px Inter;letter-spacing:.02em;color:#efeff4;text-transform:lowercase}
-  .suplaunch:active{transform:translateX(-50%) translateY(-1px)}
-  .suplaunch.tucked{transform:translateX(-50%) translateY(-120%);opacity:0;pointer-events:none}
+  /* Support Messenger launcher: the low-key GRAY chat tab (icon only, #26262C, 72% opacity), the exact
+     design owner approved — dropped all the way to the BOTTOM-right corner. Auto-hides (slides off the
+     right edge) while the user scrolls/interacts and glides back at rest. */
+  .suplaunch{position:fixed;right:0;bottom:calc(18px + env(safe-area-inset-bottom));z-index:82;cursor:pointer;border:none;
+    width:34px;height:54px;border-radius:13px 0 0 13px;background:#26262C;display:grid;place-items:center;
+    box-shadow:-5px 6px 16px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05);opacity:.72;
+    transition:opacity .12s,width .12s,transform .3s cubic-bezier(.32,.72,0,1)}
+  .suplaunch:hover{opacity:1;width:38px}
+  .suplaunch:active{opacity:1}
+  .suplaunch svg{width:20px;height:20px;stroke:#9a9aa8}
+  .suplaunch.tucked{transform:translateX(120%);opacity:0;pointer-events:none}
   body:has(.supwrap.on) .suplaunch{display:none}
   .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:flex;flex-direction:column;
     /* a touch deeper than the raw brand yellow — the neon read too bright in the panel (owner 07-11) */
@@ -2494,10 +2488,8 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   </div>
 </div>
 
-<button class="suplaunch" id="supTab" onclick="openSupport()" aria-label="Help">
-  <span class="grip" aria-hidden="true"></span>
-  <span class="dot" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-11.9 7.6L3 21l1.9-6A8.4 8.4 0 1 1 21 11.5z"/></svg></span>
-  <span class="tl" data-i18n="sup.help">help</span>
+<button class="suplaunch" id="supTab" onclick="openSupport()" aria-label="Chat with us">
+  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
 </button>
 <div class="supwrap" id="supWrap" aria-hidden="true">
   <div class="sup-hd" id="sup_hd">
