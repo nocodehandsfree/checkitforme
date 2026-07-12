@@ -55,10 +55,10 @@ const tierDef = (key: string, name: string, monthlyCents: number, checksPerMonth
 export const DEFAULT_PLANS: PlansConfig = {
   tiers: [
     // smsAlertsPerMonth = restock-text budget per tier (COGS control; owner: Family = 5). Email is uncapped.
-    tierDef("family",   "Family",   499,  15,  5),
-    tierDef("collector", "Collector", 999,  30,  15),
-    tierDef("hunter",   "Hunter",   1999, 100,  40),
-    tierDef("operator", "Operator", 4999, 300, 150),
+    tierDef("family",   "Family",   499,  20,  5),
+    tierDef("collector", "Collector", 999,  50,  15),
+    tierDef("hunter",   "Hunter",   1999, 125,  40),
+    tierDef("operator", "Operator", 4999, 400, 150),
   ],
   // PAYG: per-check slides 99¢ (10) → 60¢ (100) with volume (owner, 2026-07-03).
   payg: {
