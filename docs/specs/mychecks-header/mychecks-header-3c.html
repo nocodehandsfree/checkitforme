@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Checks — header (approved 3C / 4A)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #0C0D11; font-family: Inter, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 48px 16px; }
+  a { color: #4ADE80; text-decoration: none; }
+  a:hover { color: #6EE7A0; }
+</style>
+</head>
+<body>
+  <!--
+    APPROVED: My Checks top section, direction 3C ("Mark as watermark") with Sign out placement 4A
+    ("Sign out at the foot"). Owner sign-off 2026-07-11.
+    Design tokens per docs/design/STYLE_GUIDE.md. This file is the visual reference for the header
+    only; the body (tabs + rows + RUN A CHECK) is shown unchanged so the header reads in context.
+    Header changes vs. current live:
+      1. Slide-down grabber zone is the SAME grey as the section (#1D1D22), not black.
+      2. Header green is the MUTED brand green gradient #2C8E57 -> #20693F (kept off the neon RUN green).
+      3. No plan pill. Plan now reads under Manage plan ("Unlimited . billed monthly").
+      4. Sign out = small underlined grey text at the FOOT of the sheet, below RUN A CHECK.
+         (Moved out of the header top-right so it no longer collides with the corner watermark.)
+      5. Check brandmark = oversized faint watermark blooming from the top-right corner, uncontested.
+      6. Phone number leads big (26/900), email directly beneath.
+      7. CHECKS LEFT / CHECKS TODAY tiles still float up over the header (margin-top:-40px), as before.
+    Implementation notes for eng:
+      - The email line ("jordan@email.com") is a PLACEHOLDER. This is where the signed-in customer's
+        email renders at runtime; wire it to the account/session email.
+      - This section slides UP from the bottom of the screen. Give the sheet real bottom padding /
+        safe-area buffer (this reference reserves 32px below the Sign out link) so the Sign out link
+        is not clipped or hidden by the screen edge on the slide-up — that was a problem previously.
+  -->
+  <div style="width:394px;border-radius:38px;background:#1D1D22;overflow:hidden;box-shadow:0 40px 80px -30px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.04);">
+    <!-- slide-down grabber, same grey as section -->
+    <div style="height:46px;background:#1D1D22;display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px;"><div style="width:40px;height:5px;border-radius:999px;background:#3E3E46;"></div></div>
+
+    <!-- HEADER 3C (watermark) — no Sign out here; it lives at the foot -->
+    <div style="position:relative;overflow:hidden;background:linear-gradient(180deg,#2C8E57 0%,#20693F 100%);padding:20px 20px 54px;">
+      <svg width="180" height="180" viewBox="0 0 24 24" style="position:absolute;top:-42px;right:-46px;opacity:.16;"><circle cx="12" cy="12" r="11" fill="#8CF7B4"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#20693F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div style="position:relative;">
+        <span style="font-size:10.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.8);">My Checks</span>
+      </div>
+      <div style="position:relative;margin-top:16px;">
+        <div style="display:flex;align-items:center;gap:10px;"><span style="font-size:26px;font-weight:900;letter-spacing:-1px;color:#fff;white-space:nowrap;">(310) 666-2331</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div>
+        <!-- Placeholder: signed-in customer email renders here at runtime -->
+        <div style="font-size:13.5px;font-weight:600;color:rgba(255,255,255,.68);margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">jordan@email.com</div>
+      </div>
+    </div>
+
+    <!-- BODY (unchanged reference) -->
+    <div style="padding:0 20px 32px;">
+      <div style="display:flex;gap:12px;margin-top:-40px;position:relative;z-index:2;">
+        <div style="flex:1;text-align:center;padding:20px 8px;border-radius:18px;background:linear-gradient(180deg,#2A2A31,#232329);box-shadow:0 12px 22px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.08);"><div style="font-size:30px;font-weight:900;color:#fff;line-height:1;">&#8734;</div><div style="font-size:11.5px;font-weight:700;letter-spacing:.12em;color:#8A8A96;margin-top:8px;">CHECKS LEFT</div></div>
+        <div style="flex:1;text-align:center;padding:20px 8px;border-radius:18px;background:linear-gradient(180deg,#2A2A31,#232329);box-shadow:0 12px 22px -8px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.08);"><div style="font-size:30px;font-weight:900;color:#fff;line-height:1;">0</div><div style="font-size:11.5px;font-weight:700;letter-spacing:.12em;color:#8A8A96;margin-top:8px;">CHECKS TODAY</div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px;">
+        <div style="display:flex;align-items:center;margin:0 2px 2px;">
+          <div style="background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 6px 12px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08);border-radius:12px;padding:11px 20px;"><span style="color:#4ADE80;font-weight:800;font-size:16px;">Overview</span></div>
+          <div style="flex:1;text-align:center;"><span style="color:#8A8A96;font-weight:700;font-size:16px;">Activity</span></div>
+          <div style="flex:1;text-align:center;"><span style="color:#8A8A96;font-weight:700;font-size:16px;">Earn</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:15px;padding:15px 16px;border-radius:14px;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);">
+          <div style="width:46px;height:46px;flex:none;border-radius:12px;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="#FFCB05"><path d="M12 2.5l1.8 6.2 6.2 1.8-6.2 1.8L12 18.5l-1.8-6.2L4 10.5l6.2-1.8z"/></svg></div>
+          <div style="flex:1;min-width:0;"><div style="color:#fff;font-weight:700;font-size:17px;letter-spacing:-.2px;">Manage plan</div><div style="color:#8A8A96;font-weight:600;font-size:13.5px;margin-top:2px;">Unlimited &middot; billed monthly</div></div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B6B7B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+        </div>
+        <div style="display:flex;align-items:center;gap:15px;padding:15px 16px;border-radius:14px;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);">
+          <div style="width:46px;height:46px;flex:none;border-radius:12px;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="3"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="16" y1="2.5" x2="16" y2="6.5"/></svg></div>
+          <div style="flex:1;min-width:0;"><div style="color:#fff;font-weight:700;font-size:17px;letter-spacing:-.2px;">Check history</div><div style="color:#8A8A96;font-weight:600;font-size:13.5px;margin-top:2px;">27 checks in July</div></div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B6B7B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+        </div>
+        <div style="display:flex;align-items:center;gap:15px;padding:15px 16px;border-radius:14px;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);">
+          <div style="width:46px;height:46px;flex:none;border-radius:12px;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.5 7-11a7 7 0 0 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></div>
+          <div style="flex:1;min-width:0;"><div style="color:#fff;font-weight:700;font-size:17px;letter-spacing:-.2px;">Manage Zones</div><div style="color:#8A8A96;font-weight:600;font-size:13.5px;margin-top:2px;">Check a whole area in one tap.</div></div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B6B7B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+        </div>
+        <div style="display:flex;align-items:center;gap:15px;padding:15px 16px;border-radius:14px;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);">
+          <div style="width:46px;height:46px;flex:none;border-radius:12px;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4.5" rx="1"/><path d="M4.5 12.5V20a1 1 0 0 0 1 1h13a1 1 0 0 0 1-1v-7.5"/><line x1="12" y1="8" x2="12" y2="21"/><path d="M12 8S10.5 3.5 8 3.5 5.5 8 8 8zM12 8s1.5-4.5 4-4.5S18.5 8 16 8z"/></svg></div>
+          <div style="flex:1;min-width:0;"><div style="color:#fff;font-weight:700;font-size:17px;letter-spacing:-.2px;">Earn free checks</div><div style="color:#8A8A96;font-weight:600;font-size:13.5px;margin-top:2px;">4 ways. Open to everyone.</div></div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B6B7B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+        </div>
+        <div style="margin-top:6px;padding:2.5px;border-radius:999px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 12px 28px -8px rgba(74,222,128,.5);">
+          <div style="display:flex;align-items:center;justify-content:space-between;background:#20202A;border-radius:999px;padding:18px 26px;"><span style="color:#fff;font-weight:800;font-size:15px;letter-spacing:.14em;">RUN A CHECK</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"/><polyline points="14 6 20 12 14 18"/></svg></div>
+        </div>
+        <!-- Sign out at the foot (4A). Keep the sheet's bottom padding (32px above) so this clears the slide-up edge. -->
+        <div style="text-align:center;margin-top:18px;"><a href="#" style="font-size:13px;font-weight:600;color:#7A7A86;text-decoration:underline;text-underline-offset:3px;">Sign out</a></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

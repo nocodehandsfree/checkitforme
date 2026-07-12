@@ -38,8 +38,8 @@ Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · *
 |---|---|
 | `staging` | branch **=** site `staging.checkitforme.com` **=** Railway svc `voice-caller-staging`. All code work HERE. |
 | `main` (prod) | branch **=** PRODUCTION `checkitforme.com` **=** Railway svc `voice-caller`. Never push it directly. |
-| promote | merge verified `staging` → `main` (`bash scripts/promote.sh`). The ONLY way prod code changes. |
-| Admin | `admin.checkitforme.com` — operator dashboard on live PROD data (plus staging-only testing areas); where the owner manages customers and runs the business. Owner-side changes made there (workflows, designer, settings) are live immediately. |
+| promote | merge verified `staging` → `main` (`bash scripts/promote.sh`). The ONLY way prod code changes. **It ships the WHOLE staging branch** — everything on staging rides along, not just your feature. So: big new customer-visible features stay behind a flag (or unmerged) until the owner blesses them, and before anyone asks for a promote they say WHAT ELSE is on staging that will ship with it. |
+| Admin | `admin.checkitforme.com` — the operator dashboard; where the owner manages customers and runs the business. **There is ONE Admin. "staging Admin" and "prod Admin" are banned words** — staging/prod applies to the WEBSITE only. Admin is internal (no customers), so it gets no rehearsal copy and no review dance: admin UI work (`public/app.html`) ships straight through to Admin in small page-sized commits, and brief Admin breakage pre-launch is an accepted cost. Shared server code still rides the normal staging→promote train. Owner-side changes made in Admin (workflows, designer, settings) are live data, immediately. |
 | Fun store | owner-only test store (Admin → Testing). Test calls go here; never touches real-store stats. |
 | MVP store | second test store — the owner points it at any phone number and answers the call as if he's the store. |
 | the book | branch `v1.0` — readme.com customer-docs mirror. Copper's lane only; never merge it either way. |
@@ -54,6 +54,16 @@ handing him a merge is a protocol violation. (Prod is different: only `promote`,
 - **Contract first — and plan BACKWARDS.** Non-trivial build → first write the end state as if it already shipped, then derive the steps backwards from it (plan from the goal, not toward it). Turn that into 5–10 one-line testable assertions of "done" BEFORE coding (in chat; `docs/specs/<feature>/` if cross-lane). Build to that list.
 - **Design fidelity — nothing visual or written without the guides.** Any UI/UX or copy change: open `docs/design/STYLE_GUIDE.md` (and `docs/design/copy/COPY_STYLE_GUIDE.md` for words) FIRST and match it — components, logos, icons, fonts, colors. The guide beats what's currently in the code; think the guide is wrong? Flag it, don't freestyle. NEVER re-introduce a reverted design.
 - **Copy laws (violated constantly — memorize):** no dashes inside sentences, write it out · no bad line wraps (no orphan words; balanced two-liners; one line if it fits) · every string ships its Spanish in the SAME commit, length-checked so it can't break the layout · bottom notifications = ONE line, GRAY pill, never green, both languages.
+- **Your lane's code is YOURS to build.** Data owns schema/endpoints/how data is served; Website and
+  Admin own their screens; DevOps owns infra. If it lives in your lane, you build it — "handing off"
+  work you own is a violation. Hand off ONLY what you genuinely cannot touch (another lane's screens,
+  infra, prod promote, money) — and even then, build your side first.
+- **The map of surfaces is FROZEN.** One consumer site (`checkitforme.com` + brand subdomains;
+  rehearsal replica at `staging.checkitforme.com`) and ONE Admin (`admin.checkitforme.com`) — full
+  stop. NEVER create a new domain, subdomain, route, door, dashboard, or "temporary viewing URL" —
+  not even for 20 minutes — without the owner naming it first. Owner needs to preview consumer work →
+  staging site. Admin work → promote, he reviews on THE Admin (it's owner-only; that's safe). This
+  rule exists because it was broken twice and cost real trust.
 - **Autonomous.** Don't ask permission — staging makes mistakes cheap. Need another lane? Leave a `DevOps: need X` note and keep going. Pause only for the owner to run a test-store call.
 - **Push the moment it's built — never wait to be asked.** `git push` is part of building, not a separate step: commit AND push in the SAME turn, then report. `staging.checkitforme.com` only shows what's PUSHED (Railway auto-deploys on push), so unpushed work = the owner can't test it = NOT done. Never say "done" with a commit still sitting local, and never end a turn leaving the owner something to push.
 - **Done = demonstrated, never claimed.** `npx tsc --noEmit` + `bash scripts/test-all.sh`, push, then drive your feature on `staging.checkitforme.com` like a user. Report the contract ✓/✗ with evidence (URL → action → observed). Can't verify? Say "NOT verified: X". "Should work" is banned.
