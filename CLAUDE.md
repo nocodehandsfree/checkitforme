@@ -38,7 +38,7 @@ Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · *
 |---|---|
 | `staging` | branch **=** site `staging.checkitforme.com` **=** Railway svc `voice-caller-staging`. All code work HERE. |
 | `main` (prod) | branch **=** PRODUCTION `checkitforme.com` **=** Railway svc `voice-caller`. Never push it directly. |
-| promote | merge verified `staging` → `main` (`bash scripts/promote.sh`). The ONLY way prod code changes. |
+| promote | merge verified `staging` → `main` (`bash scripts/promote.sh`). The ONLY way prod code changes. **It ships the WHOLE staging branch** — everything on staging rides along, not just your feature. So: big new customer-visible features stay behind a flag (or unmerged) until the owner blesses them, and before anyone asks for a promote they say WHAT ELSE is on staging that will ship with it. |
 | Admin | `admin.checkitforme.com` — operator dashboard on live PROD data (plus staging-only testing areas); where the owner manages customers and runs the business. Owner-side changes made there (workflows, designer, settings) are live immediately. |
 | Fun store | owner-only test store (Admin → Testing). Test calls go here; never touches real-store stats. |
 | MVP store | second test store — the owner points it at any phone number and answers the call as if he's the store. |
