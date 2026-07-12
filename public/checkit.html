@@ -917,13 +917,9 @@ __BRAND_HEAD__
 
   /* ── 2024 redesign: tight mobile-first header, ticker, trust strip, custom marks ── */
   .brandbar{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 auto}
-  /* Zones is a full-screen takeover: hide the app header + support bubble WHILE the zone frame is
-     showing. Driven by the frame's own visibility (:has(#zones:not(.hidden))) — NOT a toggled body
-     class — so it auto-restores the instant you leave zones and can never get stuck hiding the
-     homepage header (that was the bug behind the dead My-checks pill). owner 07-11. */
-  body:has(#zones:not(.hidden)) header,
-  body:has(#zones:not(.hidden)) .supbub,
-  body:has(#zones:not(.hidden)) .suplaunch{display:none}
+  /* Zones is a bottom-sheet slide-up (owner 07-12), same chrome as My checks — the #shScrim dims the
+     header + support bubble behind it, so no body-class header-hide is needed (that was the old
+     full-screen-takeover approach). */
   .logomark{width:30px;height:30px;flex:0 0 auto;cursor:pointer;display:grid;place-items:center}
   .logomark svg{display:block}
   .iconbtn{flex:0 0 auto;width:38px;height:38px;border-radius:11px;background:var(--sheet);border:1px solid var(--border);display:grid;place-items:center;cursor:pointer;color:#bdbdcb;padding:0}
@@ -977,12 +973,16 @@ __BRAND_HEAD__
   .hback{width:36px;height:36px;flex:0 0 auto;border:0;border-radius:50%;background:linear-gradient(180deg,#2F2F36,#26262B);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#cfcfd8;font-size:19px;line-height:1;cursor:pointer;display:grid;place-items:center}
   /* Full-page sheets (My Zones · Check history) slide up when opened (owner 07-12) — only on OPEN,
      via the .sliding class set in JS, so internal re-renders don't replay it. */
-  /* Check history = a full-page bottom SHEET (owner 07-12). While body.histsheet is on, #result IS the
-     fixed slide surface; .hup releases it up from the bottom edge. Scoped to history so call-results
-     are untouched. Header + support chrome hide behind it like the other sheets. */
-  body.histsheet #result{position:fixed;top:0;left:0;right:0;height:100dvh;z-index:4300;background:#1D1D22;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;transform:translateY(100%);transition:transform .34s cubic-bezier(.32,.72,0,1);will-change:transform;padding:16px 16px calc(24px + env(safe-area-inset-bottom));margin:0}
+  /* Check history = a bottom-sheet slide-up, identical chrome to My checks (owner 07-12): rounded top,
+     ~88vh, a dark scrim (#shScrim) dims everything behind, drag pill at the top. While body.histsheet is
+     on, #result IS the sheet surface; .hup releases it up from the bottom edge. Scoped to history so
+     live call-results are untouched. */
+  #shScrim{position:fixed;inset:0;background:rgba(5,6,9,.66);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:4290;opacity:0;visibility:hidden;transition:opacity .34s,visibility .34s}
+  #shScrim.on{opacity:1;visibility:visible}
+  body:has(#shScrim.on){overflow:hidden}  /* lock the page behind an open Check history / My Zones sheet */
+  body.histsheet #result{position:fixed;left:0;right:0;bottom:0;top:auto;height:86vh;z-index:4300;background:#1D1D22;border-radius:28px 28px 0 0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;transform:translateY(100%);transition:transform .34s cubic-bezier(.32,.72,0,1);will-change:transform;padding:6px 16px calc(24px + env(safe-area-inset-bottom));margin:0}
   body.histsheet.hup #result{transform:translateY(0)}
-  body.histsheet header,body.histsheet .supbub,body.histsheet .suplaunch{display:none}
+  body.histsheet #result::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 12px}
   .grouphdr.g4{--gh-bd:rgba(41,212,255,.5);--gh-tx:#7fdcff}
   .grouphdr.g3{--gh-bd:rgba(255,158,44,.5);--gh-tx:#ffb866}
   .grouphdr .ghstar{display:none}
@@ -1608,9 +1608,11 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zbuild{display:flex;flex-direction:column;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
 #zones .zhead{display:flex;align-items:center;gap:10px;margin:6px 2px 12px}
 #zones .zhead b{font-size:20px;font-weight:800;letter-spacing:-.3px;flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  /* My Zones = a full-page bottom SHEET (owner 07-12): slides UP over My checks, slides DOWN to dismiss. */
-  #zones{position:fixed;top:0;left:0;right:0;height:100dvh;z-index:4300;transform:translateY(100%);transition:transform .34s cubic-bezier(.32,.72,0,1);will-change:transform;font-family:Inter,-apple-system,system-ui,sans-serif}
+  /* My Zones = a bottom-sheet slide-up (owner 07-12), identical to My checks: rounded top, ~88vh, the
+     #shScrim dims everything behind, drag pill at the top. Slides UP from the bottom, DOWN to dismiss. */
+  #zones{position:fixed;left:0;right:0;bottom:0;top:auto;height:86vh;z-index:4300;background:#1D1D22;border-radius:28px 28px 0 0;overflow:hidden;transform:translateY(100%);transition:transform .34s cubic-bezier(.32,.72,0,1);will-change:transform;font-family:Inter,-apple-system,system-ui,sans-serif}
   #zones.up{transform:translateY(0)}
+  #zones .zframe::before{content:'';display:block;flex:0 0 auto;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 2px}
 #zones .zback{width:34px;height:34px;flex:0 0 auto;border:0;border-radius:50%;background:linear-gradient(180deg,#2F2F36,#26262B);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#8A8A96;font-size:17px;cursor:pointer}
 #zones .zcard{padding:15px 16px;margin-top:12px}
 #zones .znm{font-size:16.5px;font-weight:800}
@@ -2044,6 +2046,9 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 
   <!-- HISTORY -->
   <div id="history" class="hidden"></div>
+
+  <!-- Shared bottom-sheet scrim: dims + blurs everything behind Check history / My Zones, tap to close. -->
+  <div id="shScrim" onclick="shScrimTap()"></div>
 
   <!-- MANAGE ZONES (premium zone_sweeps — build a zone, check a whole area in one tap) -->
   <div id="zones" class="hidden"></div>
@@ -5172,7 +5177,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); }catch(_){ } TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('up'); document.body.classList.remove('histsheet','hup'); shScrim(false); }catch(_){ } /* clear any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -5245,7 +5250,7 @@ window.addEventListener('popstate',(ev)=>{
   // Zones: back leaves the zones screen for wherever you were; forward re-enters it.
   try{ const z=$('zones');
     if(ev&&ev.state&&ev.state.v==='zones'){ if(z&&z.classList.contains('hidden')) openZones(); return; }
-    if(z&&!z.classList.contains('hidden')){ zoneStopPoll(); z.classList.add('hidden'); const sp0=new URLSearchParams(location.search); if(!sp0.get('call')&&!sp0.get('v')){ backToBuilder(); return; } }
+    if(z&&z.classList.contains('up')){ zoneStopPoll(); z.classList.remove('up'); shScrim(false); const sp0=new URLSearchParams(location.search); setTimeout(()=>{ try{ z.classList.add('hidden'); if(!sp0.get('call')&&!sp0.get('v')) backToBuilder(); }catch(_){ } },340); return; }
   }catch(_){ }
   // History-driven account nav: back AND forward walk the sheet's sections; leaving the sheet's
   // states closes it; a check opened FROM the sheet returns to its tab.
@@ -5337,6 +5342,7 @@ function pricesFoundHTML(o){ // cross-store cheapest-first list for the checked 
     return `<div class="ph-row${isBest?' best':''}"><span class="ph-st">${esc(r.store||'—')}${isBest?` <span class="besttag">${t('ph.best','BEST')}</span>`:''}${r.inStock?'':` <span class="ph-oos">${t('ph.oos','out')}</span>`}</span><span class="ph-pr">${money(r.cents)}</span></div>`; }).join('');
   return `<div class="ph-panel"><div class="ph-h">${t('ph.title','Prices found')}</div>${li}</div>`; }
 function showResult(o, cid){
+  try{ document.body.classList.remove('histsheet','hup'); shScrim(false); }catch(_){ } // opening an actual check leaves the history sheet for the full verdict view (owner 07-12)
   try{ if(o && !o.ts && LIVE_T0) o._t0=LIVE_T0; }catch(_){ } // fresh call: server ts may lag — use the start time we clocked locally
   try{ exitHunt(); }catch(_){ }
   try{ recordResultPrice(o); }catch(_){ }
@@ -5825,7 +5831,7 @@ function histList(){
 // "My checks" lands on TODAY for the CURRENT product. A check made today → open it. None today → the
 // today-landing (NOT some old in-stock result from days ago); the calendar there still reaches past days.
 function openHistory(forceCal){
-  try{ document.body.classList.add('histsheet'); requestAnimationFrame(()=>{ try{ document.body.classList.add('hup'); }catch(_){ } }); }catch(_){ } // slide UP as a bottom sheet over My checks (owner 07-12)
+  try{ shScrim(true); document.body.classList.add('histsheet'); requestAnimationFrame(()=>{ try{ document.body.classList.add('hup'); }catch(_){ } }); }catch(_){ } // slide UP as a bottom sheet, scrim behind (owner 07-12)
   const today=tsDay(Date.now());
   const todayMatch=e=>e.cid && railInCat(e) && tsDay(e.ts)===today;
   // Snappy: open instantly from local history if there's a check from today.
@@ -5844,7 +5850,10 @@ function openHistory(forceCal){
 // state with a CTA to check a store. Reuses the result-view chrome so the calendar/switcher are present.
 // Back out of Check history → straight to My checks (owner 07-12: history had NO way back). Lands on
 // the account tab you came from (acctReturn) so it feels like closing a slide-up over My checks.
-function closeHistory(){ try{ document.body.classList.remove('hup'); }catch(_){ } try{ if(!(typeof acctReturn==='function' && acctReturn())) openAccount(); }catch(_){ } setTimeout(()=>{ try{ document.body.classList.remove('histsheet'); backToBuilder(); }catch(_){ } },340); } // slide DOWN, reveal My checks (owner 07-12)
+function closeHistory(){ try{ document.body.classList.remove('hup'); shScrim(false); }catch(_){ } try{ if(!(typeof acctReturn==='function' && acctReturn())) openAccount(); }catch(_){ } setTimeout(()=>{ try{ document.body.classList.remove('histsheet'); backToBuilder(); }catch(_){ } },340); } // slide DOWN, reveal My checks (owner 07-12)
+// Shared bottom-sheet scrim helpers (Check history + My Zones behave exactly like the My checks sheet).
+function shScrim(on){ try{ const s=$('shScrim'); if(s) s.classList.toggle('on', !!on); }catch(_){ } }
+function shScrimTap(){ try{ if(document.body.classList.contains('histsheet')){ closeHistory(); return; } const z=$('zones'); if(z && z.classList.contains('up')){ backFromZones(); } }catch(_){ } }
 function showTodayLanding(forceCal){
   try{ exitHunt(); }catch(_){ } // clear body.huntmode too — else the era/set art stays under the calendar/history view
   stopLiveTimers(); if($('hangup_btn'))$('hangup_btn').style.display='none';
@@ -6379,9 +6388,9 @@ let ZONES={ sel:new Set(), storeById:new Map(), editId:null, radius:5, run:null,
 function zHideAll(){ try{ exitHunt(); }catch(_){ } try{ if(typeof HUNT_STEP!=='undefined') HUNT_STEP=''; }catch(_){ }
   try{ document.body.classList.remove('rview','rv-in','rv-out','rv-soon','rv-unk'); dropBakedTone(); }catch(_){ } // drop the result-view verdict wash (else a red "out of stock" bg bleeds under zones)
   ['builder','live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); } // exitHunt: else body.huntmode keeps #hobby (era/set art) visible under the zones view
-function zShow(){ const z=$('zones'); if(z){ z.classList.remove('hidden'); void z.offsetHeight; z.classList.add('up'); } const w=$('hcalwrap'); if(w) w.style.display='none'; try{ document.body.classList.add('zoning'); }catch(_){ } } // slide UP as a bottom sheet (owner 07-12)
+function zShow(){ try{ shScrim(true); }catch(_){ } const z=$('zones'); if(z){ z.classList.remove('hidden'); void z.offsetHeight; z.classList.add('up'); } const w=$('hcalwrap'); if(w) w.style.display='none'; try{ document.body.classList.add('zoning'); }catch(_){ } } // slide UP as a bottom sheet, scrim behind (owner 07-12)
 function zoneStopPoll(){ if(ZONES.poll){ clearInterval(ZONES.poll); ZONES.poll=null; } }
-function backFromZones(){ zoneStopPoll(); const z=$('zones'); if(z) z.classList.remove('up'); try{ if(!(typeof acctReturn==='function' && acctReturn())) openAccount(); }catch(_){ } setTimeout(()=>{ try{ backToBuilder(); }catch(_){ } },340); } // slide DOWN → reveal My checks (owner 07-12)
+function backFromZones(){ zoneStopPoll(); const z=$('zones'); if(z) z.classList.remove('up'); try{ shScrim(false); }catch(_){ } try{ if(!(typeof acctReturn==='function' && acctReturn())) openAccount(); }catch(_){ } setTimeout(()=>{ try{ backToBuilder(); }catch(_){ } },340); } // slide DOWN → reveal My checks (owner 07-12)
 const zHead=(title,back)=>`<div class="zhead"><button class="zback" onclick="${back||'backFromZones()'}" aria-label="Back">‹</button><b>${esc(title)}</b><span style="width:34px"></span></div>`;
 // Locked frame header (owner 07-11 comp): back · centered title · credits pill. Same on every zone screen.
 const ZCRED_ICO='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex:0 0 auto"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -6402,7 +6411,7 @@ function zonesUpsell(){
       <div style="font-size:36px">🗺️</div>
       <div style="font-size:19px;font-weight:800;margin-top:10px;letter-spacing:-.3px">${t('zones.up.title','Check every store near you in one tap')}</div>
       <div style="color:#8A8A96;font-size:13.5px;margin-top:9px;line-height:1.55">${t('zones.up.sub','Save your stores as a zone. Check them all at once, watch it live. Check+ only.')}</div>
-      <button class="cta" style="margin-top:20px;width:100%" onclick="zoneStopPoll();$('zones').classList.add('hidden');backToBuilder();ACCT_RETURN='';openBuy()">${t('zones.up.cta','See Check+ plans')} →</button>
+      <button class="cta" style="margin-top:20px;width:100%" onclick="zoneStopPoll();$('zones').classList.remove('up');shScrim(false);$('zones').classList.add('hidden');backToBuilder();ACCT_RETURN='';openBuy()">${t('zones.up.cta','See Check+ plans')} →</button>
     </div></div></div>`;
 }
 // ---- Screen B — My Zones list ----
