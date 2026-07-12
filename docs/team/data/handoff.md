@@ -98,6 +98,15 @@ this wrong erodes user trust in the whole product. Data integrity ALWAYS wins.
   staging.checkitforme.com in ~3 min. Promote to prod by merging staging → prod.
 
 ## Roadmap (later)
+- **Show "time to reach a human" on the call button / call log / status (owner idea 2026-07-10).**
+  Data ALREADY EXISTS: `chains.avgTreeSeconds` (seconds through the phone menu to a live person),
+  learned automatically by the phone-tree mapping — no new field, no new collection. Gaps to close:
+  (1) **plumbing (DevOps/DD):** `avgTreeSeconds` is only in the admin/mapping API today, NOT in the
+  consumer store payload (`/pub/stores/near`) — add it so Webbie can read it. (2) **copy (Copper), 3
+  states, never guess:** `ringsDirect` → "reaches a human right away"; mapped tree with a number →
+  "about {n}s through the menu"; unmapped (`avgTreeSeconds` null / `treeStatus` not learned) → show
+  nothing. (3) It's a LEARNED field (refreshes prod→staging, never hand-promoted). Queued behind the
+  fastest-path-to-human mapping that fills it.
 - **Hobby: one best-price report (after zones).** Today Hobby is manual. The user picks the exact
   product (series, set, type), calls each nearby hobby shop one at a time, hears the price, and decides
   for themselves. When **zones** ship, turn this into one report: fan out to the nearest 3 or 4 hobby
