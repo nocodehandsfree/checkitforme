@@ -6,6 +6,17 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash), **I own view/mode/nav** —
 > don't blind-edit the tint, it's fragile.
 
+## ✅ Just shipped (07-12)
+- **PROD is coming-soon.** `COMING_SOON=1` env (prod svc) → `renderComingSoon` splash (Check wordmark +
+  "Find insanely hard to get products on the shelves at retail prices." + 4 product icons) replaces ALL
+  public HTML (renderRunner + renderShare). Admin/API/assets untouched. Flip `COMING_SOON=0` on prod to
+  re-open. Verified live: apex+brands gated, caller.* admin still loads. Copy tweak: "shelfs"→"shelves",
+  capitalized "Find" (flagged to owner). English only — Spanish pending owner call.
+- **Check history + My Zones = real bottom slide-ups** (owner rejected the full-page-view version twice).
+  `#zones` fixed z4300 translateY(100→0) via `.up`; history via `body.histsheet #result` + `.hup`. Slide
+  UP over My checks, slide DOWN returns to My checks (openAccount under). zShow/backFromZones/openHistory/
+  closeHistory wired; `#zmenuOv` bumped z4600. Verified logged-in on staging (mid-frames caught sliding).
+
 ## ⏳ OPEN — needs owner / other lanes
 - **Promote the 07-09→07-11 staging batch to prod** once owner signs off (staging carries many lanes'
   work — DevOps takes it all unless it's split).

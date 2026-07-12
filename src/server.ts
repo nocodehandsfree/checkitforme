@@ -273,11 +273,15 @@ body{background:#0C0C12;color:#fff;font-family:Inter,-apple-system,system-ui,san
 .cs-icons{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
 .cs-icons img{width:60px;height:60px;object-fit:contain;
   filter:drop-shadow(0 8px 18px rgba(0,0,0,.45))}
+.cs-soon{position:fixed;left:0;right:0;bottom:calc(30px + env(safe-area-inset-bottom));
+  text-align:center;font-size:12px;font-weight:700;letter-spacing:.22em;
+  text-transform:uppercase;color:#6E6E7A}
 @media(max-width:360px){.cs-icons{gap:14px}.cs-icons img{width:52px;height:52px}}
 </style></head><body>
 <img class="cs-logo" src="/logos/brand/check.png?v=2" alt="Check">
 <p class="cs-line">${esc(line)}</p>
 <div class="cs-icons">${icons}</div>
+<div class="cs-soon">Coming soon</div>
 </body></html>`;
 }
 
