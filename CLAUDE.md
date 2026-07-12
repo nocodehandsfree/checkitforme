@@ -54,6 +54,10 @@ handing him a merge is a protocol violation. (Prod is different: only `promote`,
 - **Contract first — and plan BACKWARDS.** Non-trivial build → first write the end state as if it already shipped, then derive the steps backwards from it (plan from the goal, not toward it). Turn that into 5–10 one-line testable assertions of "done" BEFORE coding (in chat; `docs/specs/<feature>/` if cross-lane). Build to that list.
 - **Design fidelity — nothing visual or written without the guides.** Any UI/UX or copy change: open `docs/design/STYLE_GUIDE.md` (and `docs/design/copy/COPY_STYLE_GUIDE.md` for words) FIRST and match it — components, logos, icons, fonts, colors. The guide beats what's currently in the code; think the guide is wrong? Flag it, don't freestyle. NEVER re-introduce a reverted design.
 - **Copy laws (violated constantly — memorize):** no dashes inside sentences, write it out · no bad line wraps (no orphan words; balanced two-liners; one line if it fits) · every string ships its Spanish in the SAME commit, length-checked so it can't break the layout · bottom notifications = ONE line, GRAY pill, never green, both languages.
+- **Your lane's code is YOURS to build.** Data owns schema/endpoints/how data is served; Website and
+  Admin own their screens; DevOps owns infra. If it lives in your lane, you build it — "handing off"
+  work you own is a violation. Hand off ONLY what you genuinely cannot touch (another lane's screens,
+  infra, prod promote, money) — and even then, build your side first.
 - **The map of surfaces is FROZEN.** One consumer site (`checkitforme.com` + brand subdomains;
   rehearsal replica at `staging.checkitforme.com`) and ONE Admin (`admin.checkitforme.com`) — full
   stop. NEVER create a new domain, subdomain, route, door, dashboard, or "temporary viewing URL" —
