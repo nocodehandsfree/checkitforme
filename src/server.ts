@@ -503,15 +503,6 @@ app.get("/", rootHandler);
 // SPA; the client reads location.pathname to pick the section. Static-only on purpose — the earlier
 // :param{regex} attempt crashed Hono's router on boot. These names never collide with /api, /pub, /r, /s, etc.
 for (const s of ["dash","users","restock","growth","calc","plans","retailers","search","add","zones","receipts","results","schedules","feedback","statuses","trees","settings","designer","workflows","testing","fun","gtm"]) app.get("/" + s, rootHandler);
-// STAGING ONLY: staging.checkitforme.com/admin opens the admin app directly — there is no staging
-// admin domain (admin.* points at prod), so this is how the owner reviews admin work before promote.
-// Same admin_session wall as everywhere (the cookie is set on .checkitforme.com, so a prod admin
-// login carries over). Prod keeps this path off — admin.* is the only prod door.
-app.get("/admin", (c) => {
-  if (!config.staging.on) return c.notFound();
-  c.header("Cache-Control", "no-store, no-cache, must-revalidate");
-  return c.html(withAnalytics(page("app.html")));
-});
 app.get("/r", (c) => { c.header("Cache-Control", "no-store"); const h=(c.req.header("host") || "").toLowerCase(); return c.html(renderRunner(resolveBrand(h, c.req.query("brand")), h, "checkit.html", c.req.query("tone") || "")); });
 // Verticals as PATHS on the apex (checkitforme.com/pokemon, /onepiece, /toppsbasketball, /needoh) —
 // same brand resolution as the subdomains, keyed off the slug. This is what lets the product switcher
