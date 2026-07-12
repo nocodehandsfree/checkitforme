@@ -1,6 +1,20 @@
 # Check - Mapping — CHECKPOINT (current state)
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets not prose, under ~80 lines.
 
+## DONE — sweep complete (2026-07-11 eve). Both mapper fixes LIVE on prod (25be309, owner promoted)
+- **Promoted to prod:** no-downgrade guard `6feff66` + skip-rings-direct `52d2c77`. Verified live:
+  Goodwill start → "rings direct — skipped"; Burlington still maps. Guard PROVEN in prod (Safeway/Kohl's/
+  Jewel/Dick's each re-measured 36-111s and KEPT their faster 24-67s lock).
+- **12 held chains run (representative cross-section):** only Kohl's improved 67→62. Safeway 102, Jewel 65,
+  Dick's 24 all held at floor (reject earlier presses). Walmart verified reaches a human (~20s natural,
+  10s shortcut lands on a person). Rest not re-ground — same floor profile; stopped to save ~20 calls for
+  ~0 gain. All 12 now guard-protected from drift. Full table: report-2026-07-11.md.
+- **Independents/co-ops = DIRECT, handled in code** (curated DIRECT_DEFAULT_CHAINS + boot backfill,
+  commit 0b8d077). Don't hand-lock them (boot pass overwrites). Tree-mapper now SKIPS ringsDirect/
+  answerPath=direct_human. Ace = co-op, per-store nav is the long-term fix (backend ask), never one tree.
+- **NOTHING pending.** Board: real chains optimized (see below), independents direct, muted excluded.
+  No open sweep. Next mapper work is owner-directed.
+
 ## CORRECTION (owner, 2026-07-11 eve) — the independent shops ARE mappable = DIRECT
 - **I was WRONG to call thrift/small shops "not mappable."** Owner: Goodwill, Ace, etc. answer DIRECTLY
   (no tree). My "voicemail" calls were just NO-ANSWERS (nobody picked up that minute), not "no human path."
