@@ -27,52 +27,17 @@
   Owner-owned PAT (repo write) in svc var. Verified: real commit landed on staging + reverted. For Design
   chats to write to the repo. **PAT + URL onto the rotate-at-launch list** (PAT was pasted in chat).
 
-## ✅ PROMOTED 2026-07-10 07:20Z — pin 6edefab → prod main 10bdc65, all green
-- Pinned promote executed (merge tree == pin, Website polish 7a9c7c1 excluded). Prod health shows
-  10bdc65. Mapper cap-fix LIVE ~5.5h before the 9am-ET sweep (trigger + driver branch verified armed).
-- No live call at deploy (overview live=[]). Store-sync catch-up COMPLETE (pending 0, prod healthy
-  throughout). **Queue item 2 CLOSED**: chain-edit flow demonstrated by a real edit — Website's
-  staging repoint of chain 120 logoUrl arrived on prod via the sync; fun.png serves 200.
-- PostHog verified on ALL 6 prod domains (4 brands + apex + admin). Prod watchdog live. Prod backup
-  ran → backups/production/db-fri.db.gz.enc (13.5MB). Stripe webhook still 400s bad signatures.
-- Old logo URLs may serve from CF edge cache ≤1 day (expected, self-expires).
-
-## 2026-07-10 — repo migration DONE; owner launch queue is the mission
-
-- **Migration complete + demonstrated:** staging & prod both build from `nocodehandsfree/checkitforme`
-  (services repointed; stale `railwayConfigFile: voice-caller/railway.json` was the silent build-killer —
-  now `railway.json`, rootDirectory ""). `/api/health` on both returns the running commit sha.
-  Promote pipeline proven end-to-end (promote.sh → auto-deploy → health shows main tip).
-- **Leftover:** delete the two `claude/checkit-export-*` branches on fungibles (use direct-PAT push
-  trick below). Owner to rotate RAILWAY_API_TOKEN (pasted in chat again 2026-07-10).
-
-## OWNER QUEUE (2026-07-10, top-down) — status after first pass
-1. **Stripe LIVE: DONE except owner's real-card test.** Plans published on prod (5 live products,
-   in_sync), NEW live webhook `we_1TrVv98…` → checkitforme.com/webhooks/stripe, its whsec on prod svc
-   (bad-signature → 400 verified live), OLD `caller.fungibles.com` endpoint disabled.
-2. **Store sync ARMED + catch-up in flight** — first tick clean (4.5k rows, prod healthy, no event-loop
-   starvation). ~97k pending @04:56Z, ≈4.8k/5min. THEN: chain-edit staging→prod flow test to close.
-3. **PostHog BUILT + verified on staging** (server-side snippet, every page, both env vars set; capture
-   accepted `{"status":"Ok"}`, event `deploy_verify_posthog_wiring` in dashboard). Prod+admin = after
-   next promote (see blocker below).
-4. **Helicone DONE** — llm.ts gateway existed; routed the 8 bypasses (store-hours, store-phone,
-   admin-agent×3, translate) with job tags; VERIFIED logged (query-clickhouse endpoint; plain
-   /v1/request/query lags — use query-clickhouse).
-5. **Ops-watch DONE** — cross-env watchdog live (staging⇄prod /api/health, 3 misses → email+SMS via
-   Brevo/Twilio, throttled 30min), crash guards alert, daily encrypted DB backup → R2 (AES-256-GCM;
-   bucket is public-served so plaintext never lands there). BACKUP_ENC_KEY set both envs (owner named
-   it); backup RAN on staging + prod, **restore TESTED** (`scripts/restore-backup.mjs` — signed S3 GET,
-   integrity_check ok, 27 tables, 111k stores). Endpoints `/api/ops/status`, `/api/ops/backup-now`.
-6. **Discord** — not started; needs owner (server creation is his account).
-7. **Cleanups** — citation retargeted ✓; fungibles Actions secret waits on owner token rotation.
-
-**PROMOTE BLOCKER LIFTED (owner + evidence 2026-07-10):** ALL of today's QA failures (design tokens,
-qa-round6, qa-gating, qa-admin-plans) reproduce on the UNTOUCHED migration baseline adc3b12 (worktree
-rerun) → legacy, not Website's new work, not promote blockers. Legacy fixes = their own task.
-**Ported from fungibles takeover branch (owner sweep):** mapping checkpoint (d3e8542, live token
-redacted + deploy fact-check: converging engine IS on prod), ADMIN-HANDOFF content → team/admin
-checkpoint (bcae071, ADMIN_TOKEN + RAILWAY_API_TOKEN values stripped — that file leaked both),
-scripts/data-tools/ 8 files (abcfd8f7, clean — token read from file path, not hardcoded).
+## Launch queue (2026-07-10 → all DONE unless flagged; full detail in git history)
+- **Repo migration DONE** — both svcs build from `nocodehandsfree/checkitforme` (the stale
+  `railwayConfigFile: voice-caller/railway.json` path was the silent build-killer; now `railway.json`).
+- **Stripe LIVE on prod** — 5 live products, live webhook `we_1TrVv98…`, bad-sig 400 verified.
+  ⏳ **Owner still owes the real-card test** on checkitforme.com (424 number wiped to blank slate for it).
+- **Store-sync DONE** (full ~110k catch-up, prod healthy; chain-edit staging→prod proven).
+  **PostHog + Helicone DONE** (verified all 6 prod domains / job-tagged, query-clickhouse to read logs).
+- **Still open:** Discord (owner makes the server); fungibles Actions secret (waits on token rotation);
+  delete the two `claude/checkit-export-*` branches on fungibles (direct-PAT push, git proxy 403s deletes).
+- **QA failures** (design tokens, qa-round6/gating/admin-plans) = LEGACY — reproduce on baseline adc3b12,
+  NOT promote blockers. Migration ports (mapping/admin checkpoints, data-tools) done, secrets stripped.
 
 ## NOT DONE (older lane items, still real)
 - **Cheap-bridge lane for leftover call paths** (scheduled checks, zone fires, admin call-now,
