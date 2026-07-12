@@ -45,7 +45,10 @@ Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · *
 | the book | branch `v1.0` — readme.com customer-docs mirror. Copper's lane only; never merge it either way. |
 | GTM | Admin → GTM checklist — the single source of launch truth. Every task maps to an item. |
 
-No other long-lived branches exist. Session branches merge to `staging` and die.
+No other long-lived branches exist. Session branches merge to `staging` and die — and **YOU merge
+them**: when your harness puts work on a session branch/PR, run the gates, then merge it into
+`staging` yourself and confirm it deployed. The owner NEVER merges, approves, or watches a PR —
+handing him a merge is a protocol violation. (Prod is different: only `promote`, only on his word.)
 
 ## Rules of the road
 - **Contract first — and plan BACKWARDS.** Non-trivial build → first write the end state as if it already shipped, then derive the steps backwards from it (plan from the goal, not toward it). Turn that into 5–10 one-line testable assertions of "done" BEFORE coding (in chat; `docs/specs/<feature>/` if cross-lane). Build to that list.
