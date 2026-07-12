@@ -41,6 +41,11 @@ export const config = {
     user: process.env.STAGING_USER ?? "",
     pass: process.env.STAGING_PASS ?? "",
   },
+  // Coming-soon gate: COMING_SOON=1 replaces every PUBLIC consumer page (the site + share links) with
+  // a coming-soon splash so the public can't use the site yet. Admin (app.html on caller.*/admin.*),
+  // the API, and static assets are untouched — the operator dashboard stays fully live. Toggle via the
+  // env var; no redeploy of code needed. Prod leaves it unset until launch.
+  comingSoon: process.env.COMING_SOON === "1",
   // Outbound calling/SMS is live everywhere EXCEPT a staging deploy that hasn't opted in. This is
   // the single switch every outbound-dial path checks (assertCallsEnabled / config.callsEnabled).
   callsEnabled: process.env.STAGING === "1" ? process.env.STAGING_CALLS === "1" : true,

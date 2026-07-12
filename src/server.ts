@@ -246,8 +246,44 @@ function seoGraph(brand: ReturnType<typeof resolveBrand>, plainName: string) {
   ];
 }
 
+// Coming-soon splash: the ONLY public HTML while config.comingSoon is on. Check wordmark + the owner's
+// launch line + the four product-type icons. Standalone (no app JS), dark on-brand, noindex.
+const COMING_SOON_ICONS = ["pokemon", "onepiece", "topps", "needoh"];
+function renderComingSoon(_host: string): string {
+  const line = "Find insanely hard to get products on the shelves at retail prices.";
+  const icons = COMING_SOON_ICONS.map(
+    (k) => `<img src="/logos/products/${k}.png" alt="" width="60" height="60" loading="eager">`
+  ).join("");
+  return `<!doctype html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Check — coming soon</title>
+<link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
+<link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#0C0C12;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;
+  min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:34px;padding:40px 24px calc(40px + env(safe-area-inset-bottom));text-align:center}
+.cs-logo{width:min(240px,60vw);height:auto;display:block}
+.cs-line{font-size:19px;line-height:1.45;font-weight:700;letter-spacing:-.2px;
+  max-width:340px;text-wrap:balance;color:#EDEDF2}
+.cs-icons{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap}
+.cs-icons img{width:60px;height:60px;object-fit:contain;
+  filter:drop-shadow(0 8px 18px rgba(0,0,0,.45))}
+@media(max-width:360px){.cs-icons{gap:14px}.cs-icons img{width:52px;height:52px}}
+</style></head><body>
+<img class="cs-logo" src="/logos/brand/check.png?v=2" alt="Check">
+<p class="cs-line">${esc(line)}</p>
+<div class="cs-icons">${icons}</div>
+</body></html>`;
+}
+
 /** Render the consumer page branded for a vertical micro-site (resolved from the subdomain). */
 function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html", tone = ""): string {
+  if (config.comingSoon) return renderComingSoon(host); // public gate — admin/app.html is never routed here
   const canonical = `https://${host}/`;
   const plainName = brand.name.replace(/<[^>]+>/g, "");
   const ogImage = `https://${host}/og/${brand.key}.png`;
@@ -304,6 +340,7 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
 // Bots read the dynamic OG title/description (brand image stays static = reliable on every platform);
 // humans see a styled card + a CTA back into the app. Pure string render — no deps, cache-friendly.
 function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Record<string, string>): string {
+  if (config.comingSoon) return renderComingSoon(host); // public gate
   const inStock = (q.v || "in") === "in";
   const store = (q.store || "a local store").slice(0, 80);
   const cat = (q.cat || brand.category || "cards").slice(0, 60);
@@ -3923,13 +3960,13 @@ const GTM_SEED: { id: string; title: string; detail: string; area: "backend" | "
   { id: "statuses-new", title: "New call statuses surface in Admin", detail: "When a never-seen status comes back, it shows up in the Admin statuses area so we can build it into behavior.", area: "backend", agent: "admin", critical: false, status: "todo" },
   { id: "hobby-thrift-data", title: "Populate hobby + thrift stores nationwide", detail: "Data: hobby stores with open/close times; a nationwide thrift + hobby search (like the main-chain sweep) to populate many more.", area: "backend", agent: "data", critical: false, status: "todo" },
   { id: "x-autopost", title: "X account + daily auto-posting agent", detail: "Create the X account; an agent posts cool info daily. Keep the business hands-free.", area: "ops", agent: "social", critical: false, status: "todo" },
-  { id: "store-data-one-source", title: "Store data: one dataset everywhere", detail: "Staging is the curation home; curated store data auto-syncs to prod (field-scoped, diffs-only, drafts stay staging-only via the published flag). Learned call data never overwritten. Built; needs STORE_SYNC_URL + STORE_SYNC_TOKEN set on the staging service to activate.", area: "backend", agent: "devops", critical: true, status: "doing" },
+  { id: "store-data-one-source", title: "Store data: one dataset everywhere", detail: "Staging is the curation home; curated store data auto-syncs to prod (field-scoped, diffs-only). LIVE: STORE_SYNC set, full catch-up done, a chain edit proven flowing staging to prod.", area: "backend", agent: "devops", critical: true, status: "done" },
   { id: "admin-redesign-reports", title: "Admin redesign — reports tell a story", detail: "Audit every report/card for performance, necessity, and placement: there are so many it feels like false positives. Cut or merge the noise, regroup what's left into one beginning-to-end story of the business (pulse -> calls -> money -> growth). Owner runs 5 Design comps off docs/design/STYLE_GUIDE.md; Design delivers comps, Admin implements.", area: "frontend", agent: "design", critical: false, status: "todo" },
   { id: "repo-split", title: "Extract Check into its own repo", detail: "Done 2026-07 — you are in it (nocodehandsfree/checkitforme, branches staging/main). Full history kept.", area: "ops", agent: "devops", critical: false, status: "done" },
-  { id: "db-backups", title: "Database backups + tested restore", detail: "Railway snapshots exist on the prod volume; still need off-box copies (R2), staging coverage, and a documented TESTED restore.", area: "backend", agent: "devops", critical: true, status: "todo" },
-  { id: "error-monitoring", title: "Error monitoring + alerting on prod", detail: "Exception tracking + uptime alert (site-health only walks pages on demand). Owner gets pinged when prod throws or goes down.", area: "backend", agent: "devops", critical: true, status: "todo" },
-  { id: "posthog-live", title: "PostHog wired + verified capturing", detail: "Owner has the account — add the API key to Railway vars (staging + prod) and VERIFY events actually arrive from every page.", area: "backend", agent: "devops", critical: true, status: "todo" },
-  { id: "helicone-live", title: "Helicone set up + verified", detail: "LLM usage/cost tracking routed through Helicone and visible in its dashboard; needed before the support agents go live.", area: "backend", agent: "devops", critical: false, status: "todo" },
+  { id: "db-backups", title: "Database backups + tested restore", detail: "Nightly encrypted DB backup to R2 (AES-256-GCM) on both envs; restore SCRIPT proven end to end (integrity check + row counts). scripts/restore-backup.mjs.", area: "backend", agent: "devops", critical: true, status: "done" },
+  { id: "error-monitoring", title: "Error monitoring + alerting on prod", detail: "Cross-env watchdog (staging and prod ping each other, 3 misses = owner email+SMS) + crash guards that alert. LIVE both envs.", area: "backend", agent: "devops", critical: true, status: "done" },
+  { id: "posthog-live", title: "PostHog wired + verified capturing", detail: "Server-side snippet on every page; keys set both envs; capture VERIFIED live on all consumer domains + admin.", area: "backend", agent: "devops", critical: true, status: "done" },
+  { id: "helicone-live", title: "Helicone set up + verified", detail: "Every model call routed through the Helicone gateway with per-job tags; VERIFIED logging in the dashboard.", area: "backend", agent: "devops", critical: false, status: "done" },
   { id: "legal-consent", title: "Legal pages + call-recording consent", detail: "Real ToS + Privacy (the /p/privacy page currently 404s an asset), plus a reviewed consent/disclosure story for AI calls + recordings (TCPA / two-party states). Gates public marketing.", area: "ops", agent: "owner", critical: true, status: "todo" },
   { id: "admin-redesign", title: "Admin matches the website design", detail: "Restyle app.html to the approved website comp/tokens (one design system) — after Design finishes the comp↔site gap analysis.", area: "frontend", agent: "design", critical: false, status: "todo" },
   { id: "deck-video", title: "Finalize the check deck + share video", detail: "Not critical for launch.", area: "ops", agent: "owner", critical: false, status: "todo" },
@@ -3953,12 +3990,18 @@ app.get("/api/gtm", async (c) => {
   let items = GTM_SEED;
   try { const raw = await getSetting("gtm_checklist"); if (raw) { const p = JSON.parse(raw); if (Array.isArray(p?.items)) items = p.items; } }
   catch { /* fall back to seed */ }
-  // Self-healing: report any seeded default that's no longer in the saved list (accidental delete) so
-  // the UI can offer a one-tap restore — the owner shouldn't need to remember what vanished. Items the
-  // owner DISMISSED (X on the restore bar: "these are gone on purpose") stay gone for good.
+  // FINISHED WORK IS NEVER LOST: a completed default (seed status "done") that's missing from the saved
+  // list is auto-restored here — as done — and persisted. So a done item always shows on the board as
+  // Done and can NEVER sit in the dismissible "missing" bar (where an X could bury it). This is the fix
+  // for "completed tasks weren't showing as done, and clicking X felt like it lost finished work."
+  const have0 = new Set(items.map((i: { id?: string }) => i.id));
+  const healed = GTM_SEED.filter((s) => s.status === "done" && !have0.has(s.id));
+  if (healed.length) { items = [...items, ...healed]; await setSetting("gtm_checklist", JSON.stringify({ items, updatedAt: Date.now() })); }
+  // Report only NOT-done seeded defaults still missing (genuine deletes the owner may restore/dismiss).
+  // Items the owner DISMISSED stay gone. Done items are handled above, never offered here.
   const dismissed = new Set<string>(JSON.parse((await getSetting("gtm_dismissed_defaults")) || "[]"));
   const have = new Set(items.map((i: { id?: string }) => i.id));
-  const missingDefaults = GTM_SEED.filter((s) => !have.has(s.id) && !dismissed.has(s.id)).map((s) => ({ id: s.id, title: s.title }));
+  const missingDefaults = GTM_SEED.filter((s) => s.status !== "done" && !have.has(s.id) && !dismissed.has(s.id)).map((s) => ({ id: s.id, title: s.title }));
   return c.json({ items, missingDefaults });
 });
 // X on the restore bar: mark the currently-missing defaults as intentionally gone — the bar never
@@ -3969,17 +4012,21 @@ app.post("/api/gtm/dismiss-defaults", async (c) => {
   catch { /* seed */ }
   const have = new Set(items.map((i) => i.id));
   const prev = new Set<string>(JSON.parse((await getSetting("gtm_dismissed_defaults")) || "[]"));
-  for (const s of GTM_SEED) if (!have.has(s.id)) prev.add(s.id);
+  // NEVER dismiss a COMPLETED default — finished work can't be thrown away by the X. Only not-done
+  // missing defaults are dismissable (done ones are auto-restored by GET /api/gtm anyway).
+  for (const s of GTM_SEED) if (s.status !== "done" && !have.has(s.id)) prev.add(s.id);
   await setSetting("gtm_dismissed_defaults", JSON.stringify([...prev]));
   return c.json({ ok: true, dismissed: prev.size });
 });
-// One-tap restore: re-append any seeded defaults missing from the saved list (status reset to todo).
+// One-tap restore: re-append any seeded defaults missing from the saved list, KEEPING the seed's real
+// status (a completed default comes back as done, not reset to todo — otherwise Restore would erase
+// that it was finished).
 app.post("/api/gtm/restore-defaults", async (c) => {
   let items: typeof GTM_SEED = GTM_SEED;
   try { const raw = await getSetting("gtm_checklist"); if (raw) { const p = JSON.parse(raw); if (Array.isArray(p?.items)) items = p.items; } }
   catch { /* seed */ }
   const have = new Set(items.map((i) => i.id));
-  const restored = GTM_SEED.filter((s) => !have.has(s.id)).map((s) => ({ ...s, status: "todo" as const }));
+  const restored = GTM_SEED.filter((s) => !have.has(s.id));
   const next = [...items, ...restored];
   await setSetting("gtm_checklist", JSON.stringify({ items: next, updatedAt: Date.now() }));
   return c.json({ ok: true, restored: restored.length, items: next });
