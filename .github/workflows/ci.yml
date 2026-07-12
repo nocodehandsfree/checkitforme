@@ -50,17 +50,23 @@ jobs:
           ./gitleaks detect --source . --redact --no-banner --exit-code 1
 
   docs-lint:
-    name: Checkpoint size (cap ~80 lines)
+    name: Checkpoint size (warn 80+, fail 120+)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: warn on bloated checkpoints
+      - name: checkpoint size — warn over 80, FAIL over 120
         run: |
+          fail=0
           for f in docs/team/*/checkpoint.md; do
             n=$(wc -l < "$f")
-            [ "$n" -gt 100 ] && echo "::warning file=$f::$f is $n lines (cap ~80) — Lexicon: prune it"
+            if [ "$n" -gt 120 ]; then
+              echo "::error file=$f::$f is $n lines (hard cap 120) — Lexicon: prune it"
+              fail=1
+            elif [ "$n" -gt 80 ]; then
+              echo "::warning file=$f::$f is $n lines (cap ~80) — Lexicon: prune it"
+            fi
           done
-          exit 0
+          exit $fail
       - name: copy lint (warn) — banned tokens in user-facing HTML
         run: |
           for w in '—' 'Runnr' 'Fungie' 'Clerk'; do
