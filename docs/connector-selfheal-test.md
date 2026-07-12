@@ -1,1 +1,1 @@
-stateful supergateway self-heal verification
+stateful self-heal verification
