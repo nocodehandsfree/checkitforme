@@ -2,6 +2,12 @@
 
 > **Volatile file — update THIS at every "Checkpoint".**
 
+## 2026-07-11 — PRICING UPDATED (live prod + code + book)
+Plan checks/month raised (dollar prices unchanged): Family 15→20 · Collector 30→50 ·
+Hunter 100→125 · Operator 300→400. Applied 3 places: live prod config via `POST /api/admin/plans`
+(effective now, no Stripe republish since $ unchanged), `src/plans.ts` DEFAULT_PLANS (staging),
+and the book (plans.md + common-questions.md). SMS caps unchanged (5/15/40/150).
+
 ## 2026-07-11 — shipped to STAGING (deployed, verified)
 All code + copy now lives on `staging` (not a side branch — that was the mistake, corrected).
 
