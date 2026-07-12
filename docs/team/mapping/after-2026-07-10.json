@@ -1,0 +1,1995 @@
+{
+ "capturedAt": "2026-07-10T23:55:00Z (7:55pm ET, final post-sweep incl. manual fixes)",
+ "source": "GET admin.checkitforme.com/api/admin/trainer/list",
+ "chains": [
+  {
+   "id": 1,
+   "name": "Target",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 42,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "2",
+      "atSec": 18
+     },
+     {
+      "action": "press",
+      "value": "2",
+      "atSec": 30
+     }
+    ],
+    "seconds": 42,
+    "target": "specific department",
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783727020
+  },
+  {
+   "id": 2,
+   "name": "Walmart",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 130,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "9",
+      "atSec": 33
+     }
+    ],
+    "seconds": 130,
+    "target": "store operator",
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783727020
+  },
+  {
+   "id": 3,
+   "name": "Amazon",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 5,
+   "name": "CVS",
+   "navType": "voice",
+   "navStatus": "locked",
+   "navSeconds": 80,
+   "navRecipe": {
+    "type": "voice",
+    "steps": [
+     {
+      "action": "say",
+      "value": "no",
+      "atSec": 26
+     },
+     {
+      "action": "say",
+      "value": "front",
+      "atSec": 38
+     },
+     {
+      "action": "say",
+      "value": "general",
+      "atSec": 48
+     }
+    ],
+    "seconds": 80
+   },
+   "navUpdatedAt": 1782961430
+  },
+  {
+   "id": 6,
+   "name": "Franklin's Ace Hardware",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 7,
+   "name": "HomeGoods",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 13,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "4",
+      "atSec": 3
+     }
+    ],
+    "seconds": 13,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783725178
+  },
+  {
+   "id": 8,
+   "name": "Ross Dress for Less",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 0,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 0,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409712
+  },
+  {
+   "id": 9,
+   "name": "Five Below",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 29,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 29,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409698
+  },
+  {
+   "id": 10,
+   "name": "Walgreens",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 45,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 4
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 16
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 24
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 28
+     }
+    ],
+    "seconds": 45,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783722880
+  },
+  {
+   "id": 11,
+   "name": "Big 5 Sporting Goods",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 13,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "2",
+      "atSec": 3
+     }
+    ],
+    "seconds": 13,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783723012
+  },
+  {
+   "id": 12,
+   "name": "Hot Topic",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 0,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 0,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409705
+  },
+  {
+   "id": 13,
+   "name": "BoxLunch",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 21,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 21,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409692
+  },
+  {
+   "id": 14,
+   "name": "Barnes & Noble",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 29,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 6
+     }
+    ],
+    "seconds": 29,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783719667
+  },
+  {
+   "id": 15,
+   "name": "Ralphs",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 59,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 38
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 41
+     }
+    ],
+    "seconds": 59,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783701543
+  },
+  {
+   "id": 16,
+   "name": "Pavilions",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 25,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "7",
+      "atSec": 15
+     }
+    ],
+    "seconds": 25,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783716412
+  },
+  {
+   "id": 17,
+   "name": "Tokyo Japanese Lifestyle",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 19,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 19,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409732
+  },
+  {
+   "id": 18,
+   "name": "Hallmark",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 21,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 21,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409703
+  },
+  {
+   "id": 19,
+   "name": "Spencer's",
+   "navType": null,
+   "navStatus": "attempted",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": 1783210579
+  },
+  {
+   "id": 20,
+   "name": "Dick's Sporting Goods",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 29,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 6
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 13
+     }
+    ],
+    "seconds": 29,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783723412
+  },
+  {
+   "id": 21,
+   "name": "Marshalls",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 20,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "4",
+      "atSec": 6
+     }
+    ],
+    "seconds": 20,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783717440
+  },
+  {
+   "id": 22,
+   "name": "Dollar Tree",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 34,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 34,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409697
+  },
+  {
+   "id": 23,
+   "name": "Kohl's",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 67,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 40
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 43
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 52
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 57
+     }
+    ],
+    "seconds": 67,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783707528
+  },
+  {
+   "id": 24,
+   "name": "Staples",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 29,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 22
+     }
+    ],
+    "seconds": 29,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783710598
+  },
+  {
+   "id": 25,
+   "name": "Michaels",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 24,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 24
+   },
+   "navUpdatedAt": 1782750703
+  },
+  {
+   "id": 26,
+   "name": "Sam's Club",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 57,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 41
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 46
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 50
+     }
+    ],
+    "seconds": 57,
+    "menu": [
+     {
+      "digit": "0",
+      "label": "repeat this menu"
+     },
+     {
+      "digit": "1",
+      "label": "pharmacy"
+     },
+     {
+      "digit": "2",
+      "label": "pharmacy"
+     },
+     {
+      "digit": "3",
+      "label": ""
+     },
+     {
+      "digit": "4",
+      "label": "Bakery"
+     },
+     {
+      "digit": "5",
+      "label": "optical"
+     },
+     {
+      "digit": "7",
+      "label": "optical"
+     }
+    ],
+    "menuPrompts": [
+     "Thanks for calling your local Sam's Club. We love having you, as part of the Sam's Club family for Club hours, press 1 for pharmacy, press 2, for Tire & Battery Center. Press 3, for Bakery, press 4.",
+     "Fresh Meat and Deli press 5 for optical press 7, for Cafe Presse 8.",
+     "To speak to a member service. Associate press 0 to repeat this menu. Press star.",
+     "For Club hours, press 1 for pharmacy, press 2.",
+     "Battery Center for Club hours, press 1.",
+     "Press 2."
+    ],
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783719200
+  },
+  {
+   "id": 27,
+   "name": "Burlington",
+   "navType": "keypad",
+   "navStatus": "attempted",
+   "navSeconds": 78,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "1",
+      "atSec": 13
+     },
+     {
+      "action": "press",
+      "value": "8",
+      "atSec": 40
+     }
+    ],
+    "seconds": 78
+   },
+   "navUpdatedAt": 1783555384
+  },
+  {
+   "id": 28,
+   "name": "Family Dollar",
+   "navType": null,
+   "navStatus": "attempted",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": 1783553856
+  },
+  {
+   "id": 29,
+   "name": "Dollar General",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 0,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 0
+   },
+   "navUpdatedAt": 1782748397
+  },
+  {
+   "id": 30,
+   "name": "GameStop",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 30,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "1",
+      "atSec": 15
+     }
+    ],
+    "seconds": 30,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783721639
+  },
+  {
+   "id": 31,
+   "name": "Vons",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 57,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "8",
+      "atSec": 32
+     }
+    ],
+    "seconds": 57,
+    "target": "customer service",
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783705652
+  },
+  {
+   "id": 32,
+   "name": "Albertsons",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 77,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "8",
+      "atSec": 50
+     }
+    ],
+    "seconds": 77,
+    "target": "customer service",
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783706314
+  },
+  {
+   "id": 33,
+   "name": "AAFES (Army & Air Force Exchange)",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": null,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 52
+   },
+   "navUpdatedAt": 1783717301
+  },
+  {
+   "id": 34,
+   "name": "Academy Sports + Outdoors",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 24,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "2",
+      "atSec": 6
+     },
+     {
+      "action": "press",
+      "value": "2",
+      "atSec": 16
+     }
+    ],
+    "seconds": 24,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783721214
+  },
+  {
+   "id": 35,
+   "name": "Ace Hardware",
+   "navType": "keypad",
+   "navStatus": "review",
+   "navSeconds": 56,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "1",
+      "atSec": 12
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 42
+     }
+    ],
+    "seconds": 56
+   },
+   "navUpdatedAt": 1783714730
+  },
+  {
+   "id": 36,
+   "name": "Acme",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 77,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 38
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 51
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 65
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 71
+     }
+    ],
+    "seconds": 77,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783691438
+  },
+  {
+   "id": 37,
+   "name": "Aldi",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 38,
+   "name": "Best Buy",
+   "navType": null,
+   "navStatus": "learning",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": 1781829745
+  },
+  {
+   "id": 39,
+   "name": "Bi-Mart",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 19,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 19
+   },
+   "navUpdatedAt": 1783354301
+  },
+  {
+   "id": 40,
+   "name": "Blain's Farm & Fleet",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 92,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "2",
+      "atSec": 6
+     }
+    ],
+    "seconds": 92,
+    "menu": [
+     {
+      "digit": "1",
+      "label": "tires batteries or oil changes"
+     },
+     {
+      "digit": "2",
+      "label": "tires batteries or oil changes"
+     },
+     {
+      "digit": "3",
+      "label": "brakes chassis or suspension"
+     },
+     {
+      "digit": "4",
+      "label": "automotive accessories chemicals and supplies"
+     }
+    ],
+    "menuPrompts": [
+     "if your car is in the shop or has been recently serviced press 1 for tires batteries or oil changes, press 2,",
+     "Brakes chassis or suspension, press 3 and for automotive accessories chemicals and supplies, press 4.",
+     "If your car is in the shop or has been recently serviced press 1 for tires batteries or oil changes, press 2 for brakes chassis or suspension press 3.",
+     "Automotive accessories, chemicals and supplies, press 4.",
+     "If your car is in the shop or has been recently serviced press 1 for tires batteries or oil changes, press 2 for brakes chassis or suspension press 3.",
+     "Automotive accessories, chemicals and supplies, press 4."
+    ],
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783712500
+  },
+  {
+   "id": 41,
+   "name": "Books-A-Million",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 50,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "1",
+      "atSec": 13
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 36
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 42
+     }
+    ],
+    "seconds": 50,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783711691
+  },
+  {
+   "id": 42,
+   "name": "Buc-ee's",
+   "navType": null,
+   "navStatus": "review",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": 1782928486
+  },
+  {
+   "id": 43,
+   "name": "City Market",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 10,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 10,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409694
+  },
+  {
+   "id": 44,
+   "name": "Claire's",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 14,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 14,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409695
+  },
+  {
+   "id": 45,
+   "name": "Costco",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 35,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "1",
+      "atSec": 14
+     }
+    ],
+    "seconds": 35,
+    "target": "administrative staff"
+   },
+   "navUpdatedAt": 1783692387
+  },
+  {
+   "id": 46,
+   "name": "Dunham's Sports",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 15,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 15
+   },
+   "navUpdatedAt": 1783348938
+  },
+  {
+   "id": 47,
+   "name": "Fleet Farm",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 62,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 38
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 41
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 52
+     }
+    ],
+    "seconds": 62,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783713371
+  },
+  {
+   "id": 48,
+   "name": "Food 4 Less",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 56,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 37
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 41
+     }
+    ],
+    "seconds": 56,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783715842
+  },
+  {
+   "id": 49,
+   "name": "Fred Meyer",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 10,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 10,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409699
+  },
+  {
+   "id": 50,
+   "name": "Fry's",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 6,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 6,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409700
+  },
+  {
+   "id": 51,
+   "name": "Gelson's",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 22,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 22,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409702
+  },
+  {
+   "id": 52,
+   "name": "Giant Eagle",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 44,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 44
+   },
+   "navUpdatedAt": 1783349024
+  },
+  {
+   "id": 53,
+   "name": "Hallmark Gold Crown",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 23,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 23
+   },
+   "navUpdatedAt": 1783375834
+  },
+  {
+   "id": 54,
+   "name": "Harris Teeter",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 18,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 18,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409704
+  },
+  {
+   "id": 55,
+   "name": "Hibbett Sports",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 48,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 48
+   },
+   "navUpdatedAt": 1783378662
+  },
+  {
+   "id": 56,
+   "name": "Hobby Lobby",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 28,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 28,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409704
+  },
+  {
+   "id": 57,
+   "name": "Hy-Vee",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 42,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 42
+   },
+   "navUpdatedAt": 1783348861
+  },
+  {
+   "id": 58,
+   "name": "Jewel-Osco",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 70,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 22
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 29
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 49
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 55
+     }
+    ],
+    "seconds": 70,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783709370
+  },
+  {
+   "id": 59,
+   "name": "King Soopers",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 8,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 8,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409707
+  },
+  {
+   "id": 60,
+   "name": "Kroger",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 10,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 10,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409707
+  },
+  {
+   "id": 61,
+   "name": "Lowe's",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 24,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 24
+   },
+   "navUpdatedAt": 1782749496
+  },
+  {
+   "id": 62,
+   "name": "Macy's (Toys R Us shop-in-shop)",
+   "navType": null,
+   "navStatus": "attempted",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": 1783380339
+  },
+  {
+   "id": 63,
+   "name": "Mariano's",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 8,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 8,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409708
+  },
+  {
+   "id": 64,
+   "name": "Meijer",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 71,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 51
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 65
+     }
+    ],
+    "seconds": 71,
+    "target": "service desk (via Meijer corporate care \u2014 no direct store line; agent asks for transfer)",
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783706361
+  },
+  {
+   "id": 65,
+   "name": "Menards",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 57,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "216",
+      "atSec": 20
+     }
+    ],
+    "seconds": 57,
+    "target": "front end",
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783693348
+  },
+  {
+   "id": 66,
+   "name": "Micro Center",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 67,
+   "name": "Office Depot / OfficeMax",
+   "navType": null,
+   "navStatus": "review",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": 1783385869
+  },
+  {
+   "id": 68,
+   "name": "Ollie's Bargain Outlet",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 61,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 61
+   },
+   "navUpdatedAt": 1783378227
+  },
+  {
+   "id": 69,
+   "name": "Pick 'n Save",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 10,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "7",
+      "atSec": 3
+     }
+    ],
+    "seconds": 10,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783723703
+  },
+  {
+   "id": 70,
+   "name": "Publix",
+   "navType": null,
+   "navStatus": "attempted",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": 1783554173
+  },
+  {
+   "id": 71,
+   "name": "QFC",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 6,
+   "navRecipe": {
+    "type": "direct",
+    "seconds": 6,
+    "steps": []
+   },
+   "navUpdatedAt": 1782409709
+  },
+  {
+   "id": 72,
+   "name": "Randalls",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 65,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 21
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 26
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 43
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 51
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 58
+     }
+    ],
+    "seconds": 65,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783698935
+  },
+  {
+   "id": 73,
+   "name": "Safeway",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 104,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 33
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 46
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 59
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 68
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 90
+     }
+    ],
+    "seconds": 104,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783704333
+  },
+  {
+   "id": 74,
+   "name": "Scheels",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 18,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 12
+     }
+    ],
+    "seconds": 18,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783712255
+  },
+  {
+   "id": 75,
+   "name": "Shaw's",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 67,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 24
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 37
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 55
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 57
+     }
+    ],
+    "seconds": 67,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783696531
+  },
+  {
+   "id": 76,
+   "name": "Sheetz",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 44,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 44
+   },
+   "navUpdatedAt": 1783346990
+  },
+  {
+   "id": 77,
+   "name": "Smith's",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 32,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 16
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 27
+     }
+    ],
+    "seconds": 32,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783709952
+  },
+  {
+   "id": 78,
+   "name": "Star Market",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 78,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 34
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 46
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 55
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 70
+     }
+    ],
+    "seconds": 78,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783694716
+  },
+  {
+   "id": 79,
+   "name": "TJ Maxx",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 12,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "4",
+      "atSec": 3
+     }
+    ],
+    "seconds": 12,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783723556
+  },
+  {
+   "id": 80,
+   "name": "Tom Thumb",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 66,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 13
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 42
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 46
+     },
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 54
+     }
+    ],
+    "seconds": 66,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783700611
+  },
+  {
+   "id": 81,
+   "name": "Tractor Supply",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 46,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 46
+   },
+   "navUpdatedAt": 1783344168
+  },
+  {
+   "id": 82,
+   "name": "Wawa",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 10,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 10
+   },
+   "navUpdatedAt": 1783344564
+  },
+  {
+   "id": 83,
+   "name": "Wegmans",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 46,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "0",
+      "atSec": 29
+     }
+    ],
+    "seconds": 46,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783697140
+  },
+  {
+   "id": 84,
+   "name": "WinCo Foods",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 36,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 36
+   },
+   "navUpdatedAt": 1782973433
+  },
+  {
+   "id": 85,
+   "name": "BJ's Wholesale",
+   "navType": "keypad",
+   "navStatus": "locked",
+   "navSeconds": 34,
+   "navRecipe": {
+    "type": "keypad",
+    "steps": [
+     {
+      "action": "press",
+      "value": "3",
+      "atSec": 6
+     }
+    ],
+    "seconds": 34,
+    "ringVariable": true
+   },
+   "navUpdatedAt": 1783692014
+  },
+  {
+   "id": 86,
+   "name": "Woodman's Market",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 87,
+   "name": "Metro Market",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 88,
+   "name": "Westland Shopping Center",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 89,
+   "name": "H-E-B",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 92,
+   "name": "The Citadel Mall",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 93,
+   "name": "Chapel Hills Mall",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 95,
+   "name": "Lucky Supermarkets",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 96,
+   "name": "Pak N Save",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 97,
+   "name": "FoodMaxx",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 98,
+   "name": "Capitola Mall",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 99,
+   "name": "H Mart Aurora",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 100,
+   "name": "Pokemon Vending",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 101,
+   "name": "West Valley Mall",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 102,
+   "name": "H Mart Portland",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 103,
+   "name": "Tacoma Mall",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 104,
+   "name": "H Mart Redmond",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 106,
+   "name": "Stop & Shop",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 107,
+   "name": "Payless Foods",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 108,
+   "name": "H Mart Federal Way",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 109,
+   "name": "The Commons at Federal Way",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 110,
+   "name": "H Mart Lynnwood",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 111,
+   "name": "Uwajimaya",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 112,
+   "name": "River Oaks Center",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 113,
+   "name": "Ford City Mall",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 114,
+   "name": "H Mart Niles",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 116,
+   "name": "Goodwill",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 117,
+   "name": "Salvation Army",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 118,
+   "name": "Savers",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 119,
+   "name": "Unique",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 120,
+   "name": "Fungibles",
+   "navType": "direct",
+   "navStatus": "locked",
+   "navSeconds": 19,
+   "navRecipe": {
+    "type": "direct",
+    "steps": [],
+    "seconds": 19
+   },
+   "navUpdatedAt": 1782409701
+  },
+  {
+   "id": 121,
+   "name": "MVPs",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 122,
+   "name": "Burbank Sportscards",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 123,
+   "name": "PokeMall TCG",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 124,
+   "name": "Cards and Coffee",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 125,
+   "name": "Cash Cards Unlimited",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 126,
+   "name": "CoreTCG",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 127,
+   "name": "LA Sports Cards",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 128,
+   "name": "Independent Card Shop",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 129,
+   "name": "Comic Book Shop",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  },
+  {
+   "id": 130,
+   "name": "Habitat ReStore",
+   "navType": null,
+   "navStatus": "unmapped",
+   "navSeconds": null,
+   "navRecipe": null,
+   "navUpdatedAt": null
+  }
+ ]
+}
