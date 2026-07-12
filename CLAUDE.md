@@ -13,11 +13,15 @@ The owner opens a chat with **"You are <Name>"** (he dictates by voice — the n
 
 Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** (Data Dev) · **Mapper** (Mapping) · **Copper** (Copy — ALL words everywhere, including the book) · **CD** (Design) · **Support** (customer-service agent builder) · **Lexicon** (docs librarian). Plain role words work too.
 
+**"You are <Name>" is the OWNER's boot opener only — never yours.** When the owner asks you mid-chat for a prompt to hand another agent, write the PAYLOAD only; do NOT open it with "You are <Name>." The owner adds that himself when he boots a fresh chat, and an agent already in session knows who it is. (Same rule as "Box it" below — it applies to every handoff prompt, boxed or not.)
+
 **Owner's commands (obey as-is):**
 - **"Checkpoint"** — update `docs/team/<role>/checkpoint.md` to match reality RIGHT NOW (≤80 lines).
 - **"Handoff"** — end the session clean: checkpoint + list unfinished work + push everything.
-- **"TLDR"** — re-answer using the phone format below, nothing else.
+- **"Protocol"** — a COMMAND, not a section to go hunt for (this bullet IS the whole thing). Snap to it: immediately re-read the "Replying to the owner" section below top to bottom, then re-send your last reply rebuilt to obey every rule there — answer first, phone-short. No preamble, and no meta-notes about the command or "there's no section called protocol."
+- **"Expand on that"** — the last reply was the simple default; now give the fuller version (reasoning, tradeoffs, or the per-item detail he asked for). Still tight and plain — match the depth of the ask, don't dump everything.
 - **"Box it"** — put the exact text to copy in ONE plain code block. Payload only — no "You are X" preamble, no instructions the receiving agent doesn't need; mid-session agents already know who they are.
+- **"Full send"** — full autonomy for the rest of the chat. Build, push, deploy, verify, fix — never ask me first. Only stop for real money or a prod promote.
 
 ## Replying to the owner (he reads on a phone) — follow strictly
 - **Default reply fits one phone screen (about 10 lines).** Roll up lists ("moved 5 docs, details in the commit") instead of enumerating — the commit IS the record. Owner decisions: ONE line each, phrased as a question. Long reports only when I ask for detail.
@@ -48,10 +52,13 @@ No other long-lived branches exist. Session branches merge to `staging` and die.
 - **Design fidelity — nothing visual or written without the guides.** Any UI/UX or copy change: open `docs/design/STYLE_GUIDE.md` (and `docs/design/copy/COPY_STYLE_GUIDE.md` for words) FIRST and match it — components, logos, icons, fonts, colors. The guide beats what's currently in the code; think the guide is wrong? Flag it, don't freestyle. NEVER re-introduce a reverted design.
 - **Copy laws (violated constantly — memorize):** no dashes inside sentences, write it out · no bad line wraps (no orphan words; balanced two-liners; one line if it fits) · every string ships its Spanish in the SAME commit, length-checked so it can't break the layout · bottom notifications = ONE line, GRAY pill, never green, both languages.
 - **Autonomous.** Don't ask permission — staging makes mistakes cheap. Need another lane? Leave a `DevOps: need X` note and keep going. Pause only for the owner to run a test-store call.
-- **Done = demonstrated, never claimed.** `npx tsc --noEmit` + `bash scripts/test-all.sh`, then drive your feature on `staging.checkitforme.com` like a user. Report the contract ✓/✗ with evidence (URL → action → observed). Can't verify? Say "NOT verified: X". "Should work" is banned.
+- **Push the moment it's built — never wait to be asked.** `git push` is part of building, not a separate step: commit AND push in the SAME turn, then report. `staging.checkitforme.com` only shows what's PUSHED (Railway auto-deploys on push), so unpushed work = the owner can't test it = NOT done. Never say "done" with a commit still sitting local, and never end a turn leaving the owner something to push.
+- **Done = demonstrated, never claimed.** `npx tsc --noEmit` + `bash scripts/test-all.sh`, push, then drive your feature on `staging.checkitforme.com` like a user. Report the contract ✓/✗ with evidence (URL → action → observed). Can't verify? Say "NOT verified: X". "Should work" is banned.
 - **Touching code? Read `docs/shared/AGENT_RULES.md` first.** Non-negotiable.
 - **Checkpoint as you go**; doc-lint what you touched before a big push; new trap → `docs/shared/GOTCHAS.md`.
 - **New docs go ONLY in** `docs/team/<you>/` **or** `docs/specs/<feature>/`. Finished work = the commit message. Superseded → `docs/archive/`. Docs feel bloated → that's a Lexicon session, not a new folder.
+- **NO new folders, ever** — not in `docs/`, `public/`, `scripts/`, or the root — without Lexicon's sign-off first. No new documents outside your `docs/team/<you>/` folder or `docs/specs/<feature>/`. If your content has no home, it goes IN an existing file, not a new one. Stray docs and folders get moved or deleted in Lexicon's weekly pass — do not make her job.
+- **The scratchpad is a trash can, not storage.** Any script, dataset, or snapshot you would want tomorrow gets committed to the repo (`scripts/` or your team folder) the moment it proves useful — containers die without warning, and Handoff means nothing of value is left in the scratchpad.
 
 ## Secrets — self-serve from Railway (ask the owner only after ONE failed try)
 **Access to every service powering Check lives in Railway → Variables** (DB, admin token, Stripe, ElevenLabs, Twilio, all of it). The `RAILWAY_API_TOKEN` is already embedded in this Claude environment (env var) — one key reads/writes every var (incl. `ADMIN_TOKEN`). **If `$RAILWAY_API_TOKEN` is empty or a call 401s, ask the owner for it** (don't loop). Prod svc `d363a982-…`, staging svc `8165df7a-…`.
