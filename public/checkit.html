@@ -553,16 +553,19 @@ __BRAND_HEAD__
   .toast svg path,.toast svg circle{stroke:#06210f}
   .toast.show{transform:translateX(-50%) translateY(0)}
   .hidden{display:none}
-  /* Support Messenger launcher: a thin check-green tab in the bottom-right corner, always there. */
-  .suplaunch{position:fixed;right:0;bottom:calc(26px + env(safe-area-inset-bottom));z-index:70;cursor:pointer;border:none;
-    width:30px;height:52px;border-radius:14px 0 0 14px;display:grid;place-items:center;
+  /* Support launcher: a super-skinny check-green vertical "help" tab on the right edge. Tucks away
+     while the user moves around (scroll/interact) and glides back at rest. Shows on every page,
+     including the slide-up sheets, so help is one tap away wherever they are. */
+  .suplaunch{position:fixed;right:0;top:64%;transform:translateY(-50%);z-index:82;cursor:pointer;border:none;
+    padding:9px 4px;border-radius:9px 0 0 9px;display:flex;align-items:center;justify-content:center;
     background:var(--green,#4ADE80);
-    box-shadow:-7px 7px 20px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.28),inset 1px 0 0 rgba(0,0,0,.08);
-    transition:width .12s,transform .1s}
-  .suplaunch:hover{width:35px}
-  .suplaunch:active{transform:translateX(1px)}
-  .suplaunch svg{width:18px;height:18px;stroke:#06210f}
-  body:has(.overlay.on) .suplaunch,body:has(.csheet.on) .suplaunch,body:has(.supwrap.on) .suplaunch{display:none}
+    box-shadow:-5px 5px 14px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.28);
+    transition:transform .3s cubic-bezier(.32,.72,0,1),opacity .22s,padding .12s}
+  .suplaunch .tl{writing-mode:vertical-rl;text-orientation:upright;font:800 10px Inter;letter-spacing:1.5px;color:#06210f;text-transform:lowercase}
+  .suplaunch:hover{padding-left:7px}
+  .suplaunch:active{transform:translateY(-50%) translateX(1px)}
+  .suplaunch.tucked{transform:translateY(-50%) translateX(120%);opacity:0;pointer-events:none}
+  body:has(.supwrap.on) .suplaunch{display:none}
   .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:flex;flex-direction:column;
     /* a touch deeper than the raw brand yellow — the neon read too bright in the panel (owner 07-11) */
     --sup-accent:color-mix(in srgb, var(--accent,#FFCB05) 73%, #14110a);
@@ -1281,7 +1284,7 @@ html[data-skin="v2"] .modetab.on .mti{color:var(--accent,#FFCB05)}
 html[data-skin="v2"] header{background:transparent;border-bottom:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
 html[data-skin="v2"] .hero h1{font-size:30px;font-weight:900;letter-spacing:-1px;line-height:1.15}
 /* Footer (§5.14): two tight rows on the strip; links 13/600 muted; social circles raised 36px. */
-html[data-skin="v2"] .site-footer{padding:22px 18px calc(78px + env(safe-area-inset-bottom))} /* reserve the bottom-right corner for the always-on support tab + clear Safari's URL bar so no footer row hides behind it (owner 07-11) */
+html[data-skin="v2"] .site-footer{padding:22px 18px}
 html[data-skin="v2"] .foot-links a{font-size:13px;font-weight:600;color:#8A8A96}
 html[data-skin="v2"] .foot-social a,html[data-skin="v2"] .foot-social button{width:36px;height:36px;border-radius:50%;background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border:0;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1)}
 /* Toasts (T1/§5.4): bottom capsule, green success gradient + dark-green text. */
@@ -2472,8 +2475,8 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   </div>
 </div>
 
-<button class="suplaunch" id="supTab" onclick="openSupport()" aria-label="Chat with us">
-  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+<button class="suplaunch" id="supTab" onclick="openSupport()" aria-label="Help">
+  <span class="tl" data-i18n="sup.help">help</span>
 </button>
 <div class="supwrap" id="supWrap" aria-hidden="true">
   <div class="sup-hd" id="sup_hd">
@@ -2514,8 +2517,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
     <!-- TOPIC PICKER -->
     <div class="sup-view" id="supv_topic">
       <div class="sup-pad">
-        <h2 data-i18n="sup.topic.title">What's it about?</h2>
-        <div class="sub" data-i18n="sup.topic.sub">Pick one so we can help faster.</div>
+        <div class="sub" style="margin-top:2px" data-i18n="sup.topic.sub">Pick one so we can help faster.</div>
         <div id="sup_topics"></div>
       </div>
     </div>
@@ -2829,7 +2831,7 @@ const I18N={ es:{
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
   'zones.confirm.title2':'¿Verificar {n} {s} abiertas?','zones.storeword':'tienda','zones.storesword':'tiendas','zones.checkallN':'Verificar las {n}','zones.removeall':'Quitar todo','zones.isclosed':'está cerrada','zones.areclosed':'están cerradas','zones.stillcall':'Aún podemos llamar a las {n} abiertas.','zones.and':'y','zones.andmore':'y {n} más','zones.astore':'Una tienda',
-  'sup.hd.sub':'Check AI responde en segundos','sup.chat.sub':'El equipo también puede ayudar',
+  'sup.help':'ayuda','sup.hd.sub':'Check AI responde en segundos','sup.chat.sub':'El equipo también puede ayudar',
   'sup.hero':'¿Cómo te ayudamos?','sup.hero.sub':'Lee una respuesta rápida, o pregunta sobre checks, tiendas y planes.',
   'sup.ask':'Hacer una pregunta','sup.newchat':'Haz una nueva pregunta','sup.recent':'Reciente',
   'sup.tab.home':'Inicio','sup.tab.msgs':'Mensajes','sup.tab.faq':'FAQ','sup.faq.sub':'Respuestas rápidas, sin esperar',
@@ -3099,7 +3101,15 @@ function supDate(ts){ const d=new Date(ts*1000), day=864e5;
   return d.toLocaleDateString(loc,{month:'short',day:'numeric'})+', '+tm; }
 
 function openGuide(){ try{track('guide_open');}catch(_){} window.open('https://checkitforme.readme.io','_blank','noopener'); }
-function openSupport(){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supGo('home'); }
+// Tuck the launcher away while the page is being scrolled/interacted with; glide it back at rest.
+let SUP_TAB_T=null;
+function supTabTuck(){ const el=$('supTab'); if(el&&!el.classList.contains('tucked')) el.classList.add('tucked');
+  clearTimeout(SUP_TAB_T); SUP_TAB_T=setTimeout(()=>{ const e=$('supTab'); if(e) e.classList.remove('tucked'); },1100); }
+window.addEventListener('scroll',supTabTuck,{passive:true,capture:true});
+window.addEventListener('wheel',supTabTuck,{passive:true});
+window.addEventListener('touchmove',supTabTuck,{passive:true});
+// Open straight to "What's it about?" (the topic picker) — most people arrive wanting to ask/report.
+function openSupport(){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supStartNew(); }
 function closeSupport(){ const el=$('supWrap'); el.classList.remove('on'); el.setAttribute('aria-hidden','true'); }
 
 // Low-level view switch + header/tabbar config.
@@ -3121,14 +3131,11 @@ function supGo(tab){
 // Header back arrow: chat/topic/form → home; done handled by its own button.
 function supBack(){ if(SUP_VIEW==='form'){ supShow('chat',{title:'Check AI',sub:t('sup.chat.sub','The team can also help'),back:true,tabs:false}); return; } supGo('home'); }
 
-// HOME
+// HOME — news & announcements (recent chats live in Messages now, not duplicated here).
 async function supRenderHome(){
   const b=await api('/pub/support/banner'); const txt=b&&(LANG==='es'?b.es:b.en);
-  const ban=$('sup_banner'); if(txt){ ban.textContent='⚠️ '+txt; ban.classList.add('on'); } else ban.classList.remove('on');
-  const convos=await supLoadConvos();
-  const lbl=$('sup_recent_lbl'), box=$('sup_home_recent'); box.innerHTML='';
-  if(convos.length){ lbl.style.display='block';
-    convos.slice(0,2).forEach(cv=>box.appendChild(supConvoRow(cv))); } else lbl.style.display='none';
+  const ban=$('sup_banner'); if(txt){ ban.textContent='📣 '+txt; ban.classList.add('on'); } else ban.classList.remove('on');
+  $('sup_recent_lbl').style.display='none'; $('sup_home_recent').innerHTML='';
 }
 // MESSAGES (history)
 async function supRenderConvos(){
@@ -3174,8 +3181,8 @@ function supFaqFilter(q){ q=(q||'').trim().toLowerCase(); if(!SUP_FAQ) return;
   supFaqDraw(SUP_FAQ.filter(it=>(it.q+' '+it.a).toLowerCase().includes(q)));
 }
 
-// TOPIC PICKER → new chat
-function supStartNew(){ supShow('topic',{title:t('sup.tab.home','Home'),back:true,tabs:false});
+// TOPIC PICKER → new chat. This is also the entry screen (tabs shown, no back arrow).
+function supStartNew(){ supShow('topic',{title:t('sup.topic.title',"What's it about?"),tabs:true});
   const box=$('sup_topics'); box.innerHTML='';
   SUP_CATS.forEach(([k])=>{ const el=document.createElement('button'); el.className='sup-row'; el.onclick=()=>supPickTopic(k);
     el.innerHTML=`<div class="rmain"><div class="rtitle">${esc(supCatLabel(k))}</div></div><svg class="rarrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
@@ -3217,9 +3224,9 @@ async function sendSupport(){
 }
 // The buried human path — revealed only after repeated AI failure.
 function supOfferHuman(){ $('sup_help').classList.add('on'); $('sup_human').style.display=''; }
-async function supHelped(yes){ $('sup_help').classList.remove('on');
+async function supHelped(yes){ $('sup_help').classList.remove('on'); SUP_STARTED=false;
   if(SUP_SID) appApi('/pub/support/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sessionId:SUP_SID,helped:yes})});
-  toast(t('sup.thanks','Thanks for letting us know.'),'neutral'); }
+  toast(t('sup.thanks','Thanks for letting us know.'),'neutral'); supGo('home'); }
 async function supOpenConversation(sid){ SUP_STARTED=true; SUP_SID=sid; $('sup_msgs').innerHTML=''; $('sup_help').classList.remove('on');
   supGo('chat');
   const r=await api('/pub/support/conversation/'+encodeURIComponent(sid));
