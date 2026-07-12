@@ -980,6 +980,11 @@ __BRAND_HEAD__
   .listhdr{display:flex}
   .lh-label{display:inline-flex;align-items:center;font-size:11px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px;color:#6df2a6;border:1px solid rgba(43,255,136,.5);background:rgba(10,10,14,.6);white-space:nowrap}
   .lh-label:empty{display:none}
+  .hback{width:36px;height:36px;flex:0 0 auto;border:0;border-radius:50%;background:linear-gradient(180deg,#2F2F36,#26262B);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#cfcfd8;font-size:19px;line-height:1;cursor:pointer;display:grid;place-items:center}
+  /* Full-page sheets (My Zones · Check history) slide up when opened (owner 07-12) — only on OPEN,
+     via the .sliding class set in JS, so internal re-renders don't replay it. */
+  @keyframes sheetUp{from{transform:translateY(46px);opacity:.35}to{transform:translateY(0);opacity:1}}
+  #zones.sliding .zframe,#result.sliding{animation:sheetUp .3s cubic-bezier(.2,.8,.3,1)}
   .grouphdr.g4{--gh-bd:rgba(41,212,255,.5);--gh-tx:#7fdcff}
   .grouphdr.g3{--gh-bd:rgba(255,158,44,.5);--gh-tx:#ffb866}
   .grouphdr .ghstar{display:none}
@@ -5822,6 +5827,7 @@ function histList(){
 // "My checks" lands on TODAY for the CURRENT product. A check made today → open it. None today → the
 // today-landing (NOT some old in-stock result from days ago); the calendar there still reaches past days.
 function openHistory(forceCal){
+  try{ const r=$('result'); if(r){ r.classList.add('sliding'); setTimeout(()=>{try{r.classList.remove('sliding');}catch(_){}},400); } }catch(_){ } // slide up on open (owner 07-12)
   const today=tsDay(Date.now());
   const todayMatch=e=>e.cid && railInCat(e) && tsDay(e.ts)===today;
   // Snappy: open instantly from local history if there's a check from today.
@@ -5838,6 +5844,9 @@ function openHistory(forceCal){
 }
 // The empty-today screen: clean header (product switcher + calendar to browse past days) and an empty
 // state with a CTA to check a store. Reuses the result-view chrome so the calendar/switcher are present.
+// Back out of Check history → straight to My checks (owner 07-12: history had NO way back). Lands on
+// the account tab you came from (acctReturn) so it feels like closing a slide-up over My checks.
+function closeHistory(){ try{ backToBuilder(); }catch(_){ } try{ if(typeof acctReturn==='function' && acctReturn()) return; }catch(_){ } try{ openAccount(); }catch(_){ } }
 function showTodayLanding(forceCal){
   try{ exitHunt(); }catch(_){ } // clear body.huntmode too — else the era/set art stays under the calendar/history view
   stopLiveTimers(); if($('hangup_btn'))$('hangup_btn').style.display='none';
@@ -5848,7 +5857,7 @@ function showTodayLanding(forceCal){
   // Logged out (e.g. a freshly-installed Home-Screen app has its OWN empty storage) → your checks live in
   // your account, so show a clear Sign-in CTA instead of an empty "No checks today" that looks broken.
   if(!isAuthed()){
-    $('result').innerHTML=(isV2()?`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 2px 2px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('hist.title','Check history')}</span><span></span></div><div style="padding:0 2px 8px;font-size:12.5px;font-weight:600;color:#8A8A96">${(()=>{try{const now=new Date();const nn=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length;return nn+' '+t('hist.inmonth','checks in')+' '+now.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long'});}catch(_){return ''}})()}</div>`:'')+`
+    $('result').innerHTML=(isV2()?`<div style="display:flex;align-items:center;gap:10px;padding:4px 2px 2px"><button onclick="closeHistory()" class="hback" aria-label="Back">‹</button><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('hist.title','Check history')}</span></div><div style="padding:0 2px 8px;font-size:12.5px;font-weight:600;color:#8A8A96">${(()=>{try{const now=new Date();const nn=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length;return nn+' '+t('hist.inmonth','checks in')+' '+now.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long'});}catch(_){return ''}})()}</div>`:'')+`
       <div class="todaywrap">
         <div class="emptybox" style="margin-top:24px">
           <span style="opacity:.45;filter:grayscale(.7)">${FCHK(42)}</span>
@@ -5861,7 +5870,7 @@ function showTodayLanding(forceCal){
     navMark('result');
     return;
   }
-  $('result').innerHTML=(isV2()?`<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 2px 2px"><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('hist.title','Check history')}</span><span></span></div><div style="padding:0 2px 8px;font-size:12.5px;font-weight:600;color:#8A8A96">${(()=>{try{const now=new Date();const nn=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length;return nn+' '+t('hist.inmonth','checks in')+' '+now.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long'});}catch(_){return ''}})()}</div>`:'')+`
+  $('result').innerHTML=(isV2()?`<div style="display:flex;align-items:center;gap:10px;padding:4px 2px 2px"><button onclick="closeHistory()" class="hback" aria-label="Back">‹</button><span style="font-size:20px;font-weight:800;letter-spacing:-.3px">${t('hist.title','Check history')}</span></div><div style="padding:0 2px 8px;font-size:12.5px;font-weight:600;color:#8A8A96">${(()=>{try{const now=new Date();const nn=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length;return nn+' '+t('hist.inmonth','checks in')+' '+now.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long'});}catch(_){return ''}})()}</div>`:'')+`
     <div class="todaywrap">
       <div class="emptybox" style="margin-top:6px;${forceCal?'display:none':''}">
         <span style="opacity:.45;filter:grayscale(.7)">${FCHK(42)}</span>
@@ -6374,7 +6383,7 @@ function zHideAll(){ try{ exitHunt(); }catch(_){ } try{ if(typeof HUNT_STEP!=='u
   ['builder','live','result','history','success','handoff','hobby'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); } // exitHunt: else body.huntmode keeps #hobby (era/set art) visible under the zones view
 function zShow(){ const z=$('zones'); if(z){ z.classList.remove('hidden'); } const w=$('hcalwrap'); if(w) w.style.display='none'; try{ document.body.classList.add('zoning'); }catch(_){ } }
 function zoneStopPoll(){ if(ZONES.poll){ clearInterval(ZONES.poll); ZONES.poll=null; } }
-function backFromZones(){ zoneStopPoll(); const z=$('zones'); if(z) z.classList.add('hidden'); try{ backToBuilder(); }catch(_){ } try{ openAccount(); }catch(_){ } }
+function backFromZones(){ zoneStopPoll(); const z=$('zones'); if(z) z.classList.add('hidden'); try{ backToBuilder(); }catch(_){ } try{ if(typeof acctReturn==='function' && acctReturn()) return; }catch(_){ } try{ openAccount(); }catch(_){ } } // back → My checks (owner 07-12)
 const zHead=(title,back)=>`<div class="zhead"><button class="zback" onclick="${back||'backFromZones()'}" aria-label="Back">‹</button><b>${esc(title)}</b><span style="width:34px"></span></div>`;
 // Locked frame header (owner 07-11 comp): back · centered title · credits pill. Same on every zone screen.
 const ZCRED_ICO='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex:0 0 auto"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -6385,6 +6394,7 @@ const ZGOARR='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke
 async function openZones(){
   if(!isAuthed()){ try{ openAuth(); }catch(_){ } return; }
   zHideAll(); zShow();
+  try{ const z=$('zones'); z.classList.add('sliding'); setTimeout(()=>{try{z.classList.remove('sliding');}catch(_){}},400); }catch(_){ } // slide up on open (owner 07-12)
   try{ if(!(history.state&&history.state.v==='zones')) history.pushState({v:'zones'},''); }catch(_){ } // back leaves zones for the previous view (item 6)
   if(!hasFeature('zone_sweeps')){ zonesUpsell(); return; }
   window.scrollTo({top:0}); renderZonesList();
