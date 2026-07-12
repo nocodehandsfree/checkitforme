@@ -10,7 +10,7 @@ Yes. A real phone call over the real phone network, answered by a real employee.
 One call, to one store, about one product. It's what you spend. See [What a check is](doc:what-a-check-is).
 
 **3. What does it cost?**
-Your first check is free. After that, a plan (from $4.99 a month for 15 checks) or pay as you go (99¢ each down to 60¢ in bulk). See [Plans](doc:plans).
+Your first check is free. After that, a plan (from $4.99 a month for 20 checks) or pay as you go (99¢ each down to 60¢ in bulk). See [Plans](doc:plans).
 
 **4. What if nobody answers?**
 It's free. No answer, busy line, endless hold, closed store: you keep your check, every time. See [No answer = no charge](doc:no-answer-no-charge).

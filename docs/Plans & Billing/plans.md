@@ -5,10 +5,10 @@ Check has four monthly plans. Every plan includes a set number of checks each mo
 
 | Plan | Monthly | Checks a month |
 |---|---|---|
-| **Family** | $4.99 | 15 |
-| **Collector** | $9.99 | 30 |
-| **Hunter** | $19.99 | 100 |
-| **Operator** | $49.99 | 300 |
+| **Family** | $4.99 | 20 |
+| **Collector** | $9.99 | 50 |
+| **Hunter** | $19.99 | 125 |
+| **Operator** | $49.99 | 400 |
 
 Pay for a year up front and it's 17% off. That's about two months free.
 
