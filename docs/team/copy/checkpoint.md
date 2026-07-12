@@ -39,17 +39,19 @@ All code + copy now lives on `staging` (not a side branch — that was the mista
 - Internal manuals on staging: `docs/shared/ADMIN_MANUAL.md · WEBSITE_MANUAL.md · SYSTEM_MANUAL.md`.
 
 ## ⏳ WAITING ON OWNER (Copper is tracking these; follow up if silent)
-1. **Promote staging → main** — pushes the footer (Guide/Help), About rewrite, FAQ retire, and all
-   the EN+ES copy fixes to the real checkitforme.com. Everything is deployed + verified on staging.
-2. **Book review** — owner going page by page; round-1 notes applied, more coming.
-3. **ReadMe design** — deep CSS/nav control is a PAID ReadMe tier (owner saw the paywall, 07-11) →
-   PARKED. The logo/favicon swap is free basic appearance if he ever wants it
-   (`check.png` / `check-icon.png`). Theme kit sits ready at `docs/team/copy/readme-theme/`.
-4. **Public developer API** — owner asked, decided NOT now. Capture as a future GTM idea only if he
-   says so; otherwise leave it.
-5. **Voice polish** (deferred to his review): watch.left, cs.reach.menu, sup.faq.* wording.
-6. **Rolling-out features** — when Delta multi-product / your-voice / store-holds actually ship,
+1. **Prod push is OWNER-BATCHED** (07-11): do NOT promote staging→main piecemeal. Prod is way
+   behind + not going live yet; owner does ONE massive push later. Everything Copper shipped sits
+   verified on staging, ready for that push. Nothing to do here but wait.
+2. **ReadMe appearance** (free settings, dashboard-only — owner applies): sent transparent
+   `check-mark.png` (favicon) + `check.png` (logo). Recommended recipe delivered 07-11:
+   Layout Modern · Logo=check.png (delete old jpg) · Favicon=check-mark.png · Brand/Link color
+   #4ADE80 (fixes the contrast warning) · Theme Dark · Typography Bigger · Header Solid dark, no
+   triangle overlay. Deep CSS/nav = PAID tier → parked.
+3. **Book review** — owner going page by page; round-1 notes applied, more coming.
+4. **Voice polish** (deferred to his review): watch.left, cs.reach.menu, sup.faq.* wording.
+5. **Rolling-out features** — when Delta multi-product / your-voice / store-holds actually ship,
    update the book pages that say "rolling out."
+6. **Public developer API** — asked, declined for now.
 
 _Follow-up scheduled (send_later) to re-surface this list if the owner goes quiet._
 
