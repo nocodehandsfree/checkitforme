@@ -6,6 +6,14 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
+# Browser suites need playwright (present in agent sandboxes, not in plain CI). Skip LOUDLY, never
+# silently: CI without playwright gets a SKIPPED line, not a fake pass. Wire playwright+chromium into
+# CI (cached) to make these run there too — DevOps item.
+if ! node -e "import('playwright')" >/dev/null 2>&1; then
+  echo "⚠ SKIPPED: playwright not installed — browser suites did not run (install playwright to enable)"
+  exit 0
+fi
+
 PORT=8797
 DB="file:$(pwd)/.t-browser.db"
 BASE="http://127.0.0.1:$PORT"
