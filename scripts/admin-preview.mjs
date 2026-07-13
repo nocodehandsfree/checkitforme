@@ -3,7 +3,7 @@ import { chromium } from '@playwright/test';
 const [section, out, width] = process.argv.slice(2);
 
 const FIX = {
-  '/api/admin/overview': { today:{ calls:24, confirms:15 }, chainStats:[] },
+  '/api/admin/overview': { today:{ calls:24, confirms:15 }, days:[12,15,9,18,13,20,24], chainStats:[] },
   '/api/admin/metrics': { revenueCents:41200, profitCents:14000, marginPct:34, mrrCents:9900, cogs:{totalCents:27200}, callsMade:118, users:52, subscribers:11, marginPct_:34 },
   '/api/admin/restock-intel': { answerFunnel:{ dialed:118, reachedHuman:73 } },
   '/api/credits': { remaining:31000, limit:100000 },
@@ -23,11 +23,16 @@ await page.addInitScript((fix) => {
     return new Response(JSON.stringify({}), { status:200, headers:{'content-type':'application/json'} });
   };
 }, FIX);
+await page.route('**/logos/**', route => { // absolute asset paths break under file:// — serve them from public/
+  const p = new URL(route.request().url()).pathname;
+  route.fulfill({ path: process.cwd() + '/public' + p }).catch(() => route.abort());
+});
 await page.goto('file://' + process.cwd() + '/public/app.html', { waitUntil: 'domcontentloaded' }).catch(e=>console.error('goto', e.message));
 await page.waitForTimeout(300);
 await page.evaluate((sec) => { try { showSection(sec); } catch(e){} }, section);
 await page.waitForTimeout(900);
-const el = page.locator('#' + section);
-await el.screenshot({ path: out }).catch(async e => { console.error('el shot failed', e.message); await page.screenshot({ path: out, fullPage:true }); });
+const full = process.argv[5] === 'full'; // 5th arg 'full' → whole page (shell + section), else section only
+if (full) await page.screenshot({ path: out, fullPage: true });
+else await page.locator('#' + section).screenshot({ path: out }).catch(async e => { console.error('el shot failed', e.message); await page.screenshot({ path: out, fullPage:true }); });
 await browser.close();
 console.log('wrote', out);

@@ -41,22 +41,33 @@ board's section map assigns each one). No page is genuinely-novel, so no CD stop
 | 21 | Support · support (Chats) | REPORT over LOG | ✓ 1g | report grammar + chat log |
 | 22 | Launch · gtm (Go-to-Market) | checklist CRUD | pattern 1e | checklist rows |
 
-### SHIPPED
-- **Shared kit v1** (top of app.html `<style>`): `.k-eyebrow/.k-title/.k-sub/.k-note/.k-raise`, comp-accurate
-  raised vitals (`.v` upgraded to the 2D gradient + 34px hero + .15em label), `.peek` row, and **ONE
-  sheet** (`openSheet/closeSheet`, bottom slide-up, grabber+swipe+scrim dismiss, borrows live DOM nodes
-  so ids/interactivity survive). Screenshot harness: `scripts/admin-preview.mjs` (stubs the API, renders
-  a real section at 390–420px for side-by-sides).
-- **dash (Live) → matches comp 1b.** 5 accordions killed → 3 vitals + 5 peek rows (Money·Pulse·Timing·
-  Health·Credits), each headline on the row, tap opens the full report in the shared sheet. Money row
-  deep-links to Calc. Side-by-side verified vs comp_1b. tsc 0 errors; sheet open/dismiss/restore verified.
-  No dashboard nav-only tile existed to kill (dash had none; the God-View "Calc" square lives in the group
-  nav, addressed when the shell/1a is rebuilt).
+### ⚖️ OWNER RULING 07-13 (supersedes comp 1b where they differ) — THE design bar for every page
+First 1b-faithful dash build = REJECTED ("did not follow the comp" as a whole screen + comp itself too
+flat). Approved instead: my full-screen mock. The rules it sets:
+- **Hero answers the page in one number** + honest trend chip + 7-day spark (no fake data — hide until real).
+- **Color with intent, iOS-Settings style:** rows calm/dark, ONE tinted icon per row (scan by color),
+  values colored only when state matters. Never a rainbow, never dead gray.
+- **Copy stripped to nouns + numbers:** "Money · $140", "Call time · 1:48". Explainers live in the SHEET
+  sub, never on the row. No sentence subs on rows.
+- Page title 26px/800. Vitals numbers ALWAYS colored (owner caught black 62/31 in mock v1).
 
-**Shell (1a) note (my lane, next):** current group nav is pill buttons; comp 1a wants the segmented mode
-switcher (raised track, active group grows + labels, rest as icons) + "heck" wordmark + ADMIN badge. Not a
-CD gap — build from 1a. Also the `/logos/brand/check-icon.png` header logo → swap to `docs/design/brand`
-brandmark per comp.
+### SHIPPED
+- **Shared kit v1**: k-eyebrow/k-title/k-sub/k-note, raised vitals `.v`, `.peek` row (+`.pk-ic` tinted
+  icon slot), `.heroc` hero card (trend+spark), **ONE sheet** (grabber+swipe+scrim dismiss; borrows live
+  DOM so ids survive). Harness `scripts/admin-preview.mjs` (stub API, per-section or `full` shots).
+- **Shell (comp 1a + approved mock):** brandmark+Check+ADMIN header, carved group track w/ one raised
+  active key (icons-only idle), raised section pills w/ green active glow, page bg → #1D1D22 tokens.
+  Header scrolls away; active pill auto-scrolls into view. Old pages verified legible under new shell.
+- **dash (Live) → matches APPROVED MOCK.** Hero 24 + trend + spark · 2 colored vitals · 5 icon rows
+  (Money $140·34% · Members 3 new · Call time 1:48 · Call health 118·62% · Credits bar+31k) · sheet
+  holds all depth. tsc 0 · test-all: only pre-existing failures (qa-design off-system colors = consumer
+  scope, verified identical on baseline; CATEGORIES.map + `.some` page errors = baseline too).
+- **server.ts `/api/admin/overview` + `days[7]`** (daily real-call counts) feeds trend+spark. Staging-first:
+  Admin's API is prod, so chip+spark stay HIDDEN on Admin until next promote. UI degrades clean.
+
+**CD gap (board update owed):** the approved 07-13 dash mock supersedes board 1b — fold it into
+ADMIN_COMPS (hero+trend+spark, icon rows, no row subs). Board rule says comp first; owner approved the
+mock in chat, board needs the backfill.
 
 ### Build order (comped screens first → extract shared kit ONCE, prove it, then reuse)
 0. ✅ kit v1 + dash (1b)  ·  next:

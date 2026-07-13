@@ -3874,7 +3874,13 @@ app.get("/api/admin/overview", async (c) => {
     id: r.id, store: (stores.get(r.retailerId)?.name || "?").split("—")[0].trim(), category: cats.get(r.categoryId) || "",
     status: r.status, confirmed: r.confirmed, at: r.startedAt, secs: r.completedAt ? r.completedAt - r.startedAt : null, cid: r.providerCallId,
   }));
-  return c.json({ live, today: slice(d1), week: slice(d7), month: slice(d30), avgCallSeconds30d: avg(durs), chainStats, recentCalls });
+  // Seven trailing 24h buckets (oldest first) — feeds the dashboard's trend chip + sparkline.
+  // days[6] matches today (last 24h); days[5] is "yesterday" for the vs-yesterday delta.
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const from = now - (7 - i) * 86400, to = now - (6 - i) * 86400;
+    return recent.filter((r) => r.startedAt >= from && r.startedAt < to).length;
+  });
+  return c.json({ live, today: slice(d1), week: slice(d7), month: slice(d30), days, avgCallSeconds30d: avg(durs), chainStats, recentCalls });
 });
 
 // ---- Settings (master toggles) ----

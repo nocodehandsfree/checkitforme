@@ -13,7 +13,7 @@
 <style>
   :root{
     /* core colors (shared with Fungibles Design System v1.3) */
-    --bg:#0C0C12; --sheet:#1A1A24; --terminal:#0A0A0E;
+    --bg:#1D1D22; --sheet:#26262B; --terminal:#1B1B20;
     --green:#4ADE80; --green-dark:#22C55E; --purple:#A78BFA; --yellow:#F4D03F;
     --orange:#E89A4A; --red:#EF4444; --muted:#6B6B7B;
     --sheet-bg:#1A1A24; --terminal-bg:#0A0A0E; --teal:#0D9488;
@@ -45,13 +45,14 @@
   html,body{max-width:100%;overflow-x:hidden}
   header,nav,main,section,.card,.stats,.filters,.ractions{max-width:100%}
   *{touch-action:manipulation}   /* kill iOS double-tap zoom on EVERY element (was interactive-only, so cards/text/numbers on Restock + Store-Intel still zoomed on double-tap). manipulation keeps scroll/pan + pinch, only drops double-tap-zoom; any element needing pan-x/none overrides via its own rule. */
-  body{background:var(--bg);color:#e6e6ef;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;margin:0;padding:0;touch-action:manipulation;
-    background-image:radial-gradient(1200px 500px at 50% -100px,rgba(74,222,128,.08),transparent 70%)}
-  header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;position:sticky;top:0;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:30}
-  header h1{font-size:19px;margin:0;letter-spacing:-.3px;font-weight:900}
-  header h1 b{color:var(--green)}
-  header .hmark{display:flex;align-items:center;flex:0 0 auto}
-  header .dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:livepulse 2s ease-in-out infinite}
+  body{background:var(--bg);color:#e6e6ef;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;margin:0;padding:0;touch-action:manipulation}
+  /* Shell (comp 1a + owner-approved 07-12 dash mock): wordmark header, carved group track w/ one
+     raised active key, raised section pills. Header scrolls away; nothing sticky but the content. */
+  header{padding:18px 20px 8px;display:flex;align-items:center;gap:9px}
+  header .hmark{display:flex;align-items:center;gap:8px;flex:0 0 auto;text-decoration:none}
+  header .wm{font-size:18px;font-weight:900;letter-spacing:-.5px;color:#fff}
+  header .adm{font-size:9px;font-weight:900;letter-spacing:.1em;color:#8A8A96;background:#17171C;border-radius:6px;padding:4px 7px;box-shadow:inset 0 2px 4px rgba(0,0,0,.4)}
+  header .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:livepulse 2s ease-in-out infinite}
   @keyframes livepulse{0%,100%{opacity:1}50%{opacity:.4}}
   /* cards lift slightly on hover — same calm depth as the consumer cards */
   .card{transition:border-color .15s,transform .08s}
@@ -59,12 +60,13 @@
   /* section headings get the brand's green tick bar — ties admin to the front end */
   h2{position:relative;padding-left:12px}
   h2::before{content:"";position:absolute;left:0;top:0;bottom:2px;width:3px;border-radius:2px;background:linear-gradient(180deg,var(--purple),var(--green))}
-  header .sub{color:var(--muted);font-size:12.5px;margin-left:auto;font-family:ui-monospace,monospace}
-  nav{display:flex;gap:6px;padding:10px 20px;border-bottom:1px solid var(--border);flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;position:sticky;top:57px;background:rgba(12,12,18,.85);backdrop-filter:blur(10px);z-index:29}
-  nav::-webkit-scrollbar{display:none}
-  nav button{flex:0 0 auto;background:transparent;border:1px solid var(--border);color:var(--muted);padding:8px 15px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;transition:.12s}
-  nav button:hover{color:#fff;border-color:rgba(255,255,255,.2)}
-  nav button.active{background:rgba(74,222,128,.13);border-color:rgba(74,222,128,.4);color:var(--green);box-shadow:0 0 14px rgba(74,222,128,.18)}
+  header .sub{color:var(--muted);font-size:11.5px;margin-left:auto;font-family:ui-monospace,monospace;display:flex;align-items:center;gap:7px}
+  nav{display:flex;gap:4px;background:#1B1B20;border-radius:999px;padding:5px;margin:2px 16px 0;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
+  nav button{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;background:transparent;border:none;color:#7C7C88;padding:9px 0;border-radius:999px;cursor:pointer;transition:flex .18s ease,background .15s}
+  nav button span{display:none}
+  nav button svg{flex:0 0 auto}
+  nav button.active{flex:2.4;background:linear-gradient(180deg,#31313A,#28282E);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:var(--green)}
+  nav button.active span{display:inline;font-size:11.5px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   main{padding:24px 20px 96px;max-width:1000px;margin:0 auto}
   section{display:none} section.active{display:block;animation:secIn .16s ease}
   @keyframes secIn{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
@@ -279,8 +281,7 @@
   .tctime{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--text-muted)}
   .tctime b{color:#e8e8f0;font-variant-numeric:tabular-nums}
   /* Live dashboard: 5-vital hero + collapsed rows (color = state; Design card radius 16) */
-  .herog{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px}
-  .herog .v:first-child{grid-column:1/-1}
+  .herog{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:4px}
   .v{background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:16px;padding:14px 16px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
   .v .n{font-size:24px;font-weight:900;line-height:1;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
   .v.big{padding:16px 18px} .v.big .n{font-size:34px;letter-spacing:-1.2px}
@@ -293,7 +294,21 @@
      ========================================================================== */
   .k-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96;margin:22px 4px 10px}
   .k-eyebrow:first-child{margin-top:2px}
-  .k-title{font-size:20px;font-weight:800;letter-spacing:-.3px;color:#fff;margin:0}
+  .k-title{font-size:26px;font-weight:800;letter-spacing:-.6px;color:#fff;margin:0}
+  /* Hero card — the ONE number the page answers with, plus an honest trend + 7-day spark. */
+  .heroc{background:var(--sheet);border-radius:20px;box-shadow:0 12px 22px -12px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);padding:18px 20px;display:flex;align-items:flex-end;gap:14px;margin:16px 0 12px}
+  .heroc .hn{font-size:46px;font-weight:900;letter-spacing:-2px;line-height:.9;font-variant-numeric:tabular-nums;color:var(--green)}
+  .heroc .hn.m{color:#fff}
+  .heroc .hl{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8A8A96;margin-top:8px}
+  .heroc .trend{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:var(--green);background:rgba(74,222,128,.12);border-radius:999px;padding:3px 9px;margin-top:9px}
+  .heroc .trend.dn{color:#8A8A96;background:rgba(255,255,255,.06)}
+  .heroc .spark{margin-left:auto;display:flex;align-items:flex-end;gap:3px;height:44px}
+  .heroc .spark i{width:5px;border-radius:2px;background:rgba(74,222,128,.35);min-height:3px}
+  .heroc .spark i.hi{background:var(--green)}
+  /* Peek-row icon slot — one tinted icon per report so the eye scans by color, not by reading. */
+  .peek .pk-ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto}
+  .peek .pk-t{font-size:15px}
+  .peek .pk-fact{font-size:15px}
   .k-sub{font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:2px}
   .k-note{font-size:11.5px;font-weight:600;color:#5C5C68;padding:16px 4px 0;line-height:1.5}
   .k-raise{background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
@@ -527,13 +542,12 @@
   nav button svg{opacity:.85} nav button.active svg{opacity:1}
   .subnav button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
   /* second-level nav (sections within a group) — quieter than the primary tabs, wraps, never scrolls */
-  .subnav2{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:9px 20px;border-bottom:1px solid var(--border);background:rgba(12,12,18,.6)}
+  .subnav2{display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 2px}
   .subnav2::-webkit-scrollbar{display:none} .subnav2{scrollbar-width:none}
-  .subnav2 button{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid transparent;color:var(--muted);padding:6px 13px;border-radius:16px;cursor:pointer;font-size:12.5px;font-weight:700;white-space:nowrap;transition:.12s}
-  .subnav2 button:hover{color:#fff;border-color:rgba(255,255,255,.16)}
-  .subnav2 button.active{background:rgba(167,139,250,.14);border-color:rgba(167,139,250,.42);color:#c4b5fd}
-  .subnav2 button svg{opacity:.8} .subnav2 button.active svg{opacity:1}
-  @media(max-width:560px){ .subnav2{padding:9px 14px} }
+  .subnav2 button{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#8A8A96;padding:8px 15px;border-radius:999px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;transition:color .12s}
+  .subnav2 button:hover{color:#fff}
+  .subnav2 button.active{color:var(--green);font-weight:800;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1),0 0 14px rgba(74,222,128,.22)}
+  .subnav2 button svg{display:none}
   .subnav2.ovf{-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to right,#000 calc(100% - 26px),transparent)}
   button.act .hdico,button.ghost .hdico{color:inherit;margin-right:6px}
   details.card>summary .name,details.tr>summary{display:inline-flex}
@@ -597,9 +611,12 @@
 </head>
 <body class="authwait">
 <header>
-  <a class="hmark" href="#dash" title="Back to God View" onclick="showSection('dash');return false" style="display:flex;align-items:center;cursor:pointer"><img src="/logos/brand/check.png?v=2" alt="Check It For Me" style="height:22px;width:auto;object-fit:contain;display:block"></a>
-  <span class="dot" title="live"></span>
-  <span class="sub" id="clock"></span>
+  <a class="hmark" href="#dash" title="Back to God View" onclick="showSection('dash');return false">
+    <img src="/logos/brand/check-brandmark.svg" alt="" style="width:24px;height:24px;display:block">
+    <span class="wm">Check</span>
+    <span class="adm">ADMIN</span>
+  </a>
+  <span class="sub"><span class="dot" title="live"></span><span id="clock"></span></span>
 </header>
 <nav id="grpnav"><!-- five groups, no horizontal scroll; sub-nav below switches sections within a group --></nav>
 <div class="subnav2" id="subnav2"></div>
@@ -609,41 +626,55 @@
   <section id="dash" class="active">
     <div class="k-title">Today</div>
     <div class="k-sub" id="d_date">Loading…</div>
+    <div class="heroc">
+      <div>
+        <div class="hn m" id="d_checks">—</div>
+        <div class="hl">Checks today</div>
+        <div class="trend" id="d_trend" style="display:none"></div>
+      </div>
+      <div class="spark" id="d_spark"></div>
+    </div>
     <div class="herog" id="d_hero"></div>
     <div class="k-eyebrow">Reports</div>
     <button class="peek" onclick="dashSheet('money')">
-      <div class="pk-main"><div class="pk-t">Money</div><div class="pk-s">Revenue, profit and margin</div></div>
+      <div class="pk-ic" style="background:rgba(74,222,128,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+      <div class="pk-main"><div class="pk-t">Money</div></div>
       <div class="pk-fact g" id="pk_money">—</div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
     <button class="peek" onclick="dashSheet('pulse')">
-      <div class="pk-main"><div class="pk-t">Today's pulse</div><div class="pk-s">Members, scores and signups</div></div>
+      <div class="pk-ic" style="background:rgba(167,139,250,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#A78BFA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
+      <div class="pk-main"><div class="pk-t">Members</div></div>
       <div class="pk-fact" id="pk_pulse">—</div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
     <button class="peek" onclick="dashSheet('timing')">
-      <div class="pk-main"><div class="pk-t">Call time and cost</div><div class="pk-s">Time to reach a person vs talk time</div></div>
+      <div class="pk-ic" style="background:rgba(96,165,250,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+      <div class="pk-main"><div class="pk-t">Call time</div></div>
       <div class="pk-fact" id="pk_timing">—</div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
     <button class="peek" onclick="dashSheet('health')">
-      <div class="pk-main"><div class="pk-t">Call health</div><div class="pk-s">Real dialed calls vs seed and rehearsal</div></div>
+      <div class="pk-ic" style="background:rgba(96,165,250,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#60A5FA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg></div>
+      <div class="pk-main"><div class="pk-t">Call health</div></div>
       <div class="pk-fact" id="pk_health">—</div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
     <button class="peek" onclick="dashSheet('credits')">
-      <div class="pk-main"><div class="pk-t">Credits</div><div class="pk-bar"><i id="pk_credit_bar" style="width:0%;background:var(--green)"></i></div></div>
+      <div class="pk-ic" style="background:rgba(245,158,11,.14)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 5 13h6l-1 9 8-11h-6z"/></svg></div>
+      <div class="pk-main"><div class="pk-t">Credits</div></div>
+      <div class="pk-bar" style="width:64px;margin:0"><i id="pk_credit_bar" style="width:0%;background:var(--green)"></i></div>
       <div class="pk-fact" id="pk_credits">—</div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
-    <div class="k-note">Tap a row for the full report.</div>
+    <div class="k-note">Tap any row for the full report.</div>
     <!-- hidden detail holders — the existing loaders populate these; dashSheet() lifts them into the shared sheet -->
     <div id="dash_details" style="display:none">
       <div id="ds_money"><div class="stats" id="d_money"></div><a class="goto" href="#calc" onclick="closeSheet();showSection('calc');return false">Open the full money view in Calc →</a></div>
-      <div id="ds_pulse" data-sheet-title="Today's pulse"><div id="gw_pulse">Loading…</div></div>
-      <div id="ds_timing" data-sheet-title="Call time and cost" data-sheet-sub="Time to reach a person vs talk time"><div class="stats" id="d_timing"></div><div id="d_timing_model"></div><div id="d_timing_status"></div><div class="k-eyebrow">Per-store averages</div><div id="d_timing_stores"></div></div>
-      <div id="ds_health" data-sheet-title="Call health" data-sheet-sub="Real dialed calls vs seed and rehearsal"><div id="d_health" class="meta">Loading…</div><a class="goto" href="#results" onclick="closeSheet();showSection('results');return false">Open the call log in Calls →</a></div>
-      <div id="ds_credits" data-sheet-title="ElevenLabs credits">
+      <div id="ds_pulse"><div id="gw_pulse">Loading…</div></div>
+      <div id="ds_timing"><div class="stats" id="d_timing"></div><div id="d_timing_model"></div><div id="d_timing_status"></div><div class="k-eyebrow">Per-store averages</div><div id="d_timing_stores"></div></div>
+      <div id="ds_health"><div id="d_health" class="meta">Loading…</div><a class="goto" href="#results" onclick="closeSheet();showSection('results');return false">Open the call log in Calls →</a></div>
+      <div id="ds_credits">
         <div style="height:10px;background:var(--terminal);border-radius:6px;overflow:hidden;margin:4px 0 8px"><div id="credit_bar" style="height:100%;width:0%;background:var(--green);transition:width .3s"></div></div>
         <div id="credit_body" class="meta">Loading…</div>
         <div id="credit_stats" class="meta" style="margin-top:6px"></div>
@@ -1386,7 +1417,7 @@ function showSection(id, fromGroup){
   if(!fromGroup && g!==CUR_GROUP){ showGroup(g, id); return; }
   GROUP_LAST[g]=id;
   document.querySelectorAll('section').forEach(s=>s.classList.toggle('active',s.id===id));
-  document.querySelectorAll('#subnav2 button').forEach(b=>b.classList.toggle('active',b.dataset.sec===id));
+  document.querySelectorAll('#subnav2 button').forEach(b=>{ const on=b.dataset.sec===id; b.classList.toggle('active',on); if(on) try{ b.scrollIntoView({block:'nearest',inline:'center'}); }catch(_){} });
   localStorage.setItem('active_tab', id);
   // Record this view in browser history so Back/Forward walks the admin's tabs instead of escaping to
   // wherever you came from (Google). First view replaces the entry; later views push.
@@ -1793,7 +1824,7 @@ async function loadCallTiming(){
   if(!d||d.error||!d.aggregate||!d.aggregate.calls){ el.innerHTML='<div class="meta">No timed calls yet. This fills in as calls come through.</div>'; if(md)md.innerHTML=''; if(stt)stt.innerHTML=''; if(se)se.innerHTML=''; return; }
   const a=d.aggregate, tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   el.innerHTML = tile(secsFmt(a.avgTalkSec),'avg talk','green')+tile(secsFmt(a.avgNavSec),'avg to human')+tile(secsFmt(a.avgCallSec),'avg call')+tile(a.totalMinutes+'m','total minutes')+tile(a.calls,'calls timed');
-  const _pk=document.getElementById('pk_timing'); if(_pk){ _pk.textContent=`${secsFmt(a.avgNavSec)} to human`; _pk.className='pk-fact'; }
+  const _pk=document.getElementById('pk_timing'); if(_pk){ _pk.textContent=secsFmt(a.avgNavSec); _pk.className='pk-fact'; }
   // By model (Charlie direct · Alpha tone tree · Bravo voice tree) — the split that matters: time-to-human + talk per call type.
   if(md) md.innerHTML=(d.byModel&&d.byModel.length)?('<div class="rgrp" style="margin-top:12px">By model · all-time <span data-tip="Alpha and Bravo talk time still counts phone-menu time until we tag the live-human handoff per call. Charlie (direct) is exact."></span></div>'
     +d.byModel.map(m=>`<div class="repline"><span class="rl"><b style="color:#e8e8f0">${esch(m.model)}</b> <span class="meta">· ${esch(m.type)} · ${m.n} call${m.n===1?'':'s'}</span></span><b>${secsFmt(m.avgNavSec)} to human · <span style="color:var(--green)">${secsFmt(m.avgTalkSec)} talk</span> · ${secsFmt(m.avgCallSec)} call</b></div>`).join('')):'';
@@ -2075,16 +2106,24 @@ async function loadDash(){
   const [o,m,ri,c]=await Promise.all([api('/api/admin/overview'),api('/api/admin/metrics'),api('/api/admin/restock-intel'),api('/api/credits')]);
   const de=document.getElementById('d_date'); if(de) de.textContent=new Date().toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
   const st=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
-  // ---- Three vitals (comp 1b): color reads the state before the number does. ----
+  // ---- Hero: THE number (checks today) + honest trend and 7-day spark (owner-approved 07-12 mock). ----
   const checks=(o&&o.today)?(o.today.calls||0):0;
+  const hn=document.getElementById('d_checks'); if(hn){ hn.textContent=checks; hn.className='hn'+(checks>0?'':' m'); }
+  const days=(o&&Array.isArray(o.days))?o.days:null; // [7 daily counts, oldest first] — needs the server update; hide until it lands
+  const tr=document.getElementById('d_trend'), sp=document.getElementById('d_spark');
+  if(days&&days.length>=2){
+    const y=days[days.length-2], delta=checks-y;
+    if(tr){ tr.style.display='inline-flex'; tr.className='trend'+(delta>=0?'':' dn'); tr.textContent=(delta>=0?'▲ ':'▼ ')+Math.abs(delta)+' vs yesterday'; }
+    if(sp){ const mx=Math.max(...days,1); sp.innerHTML=days.map((n,i)=>`<i${i===days.length-1?' class="hi"':''} style="height:${Math.max(7,Math.round(n/mx*100))}%"></i>`).join(''); }
+  } else { if(tr) tr.style.display='none'; if(sp) sp.innerHTML=''; }
+  // ---- Two vitals: color reads the state before the number does. ----
   const af=(ri&&ri.answerFunnel)||{}; const reach=af.dialed?Math.round((af.reachedHuman/af.dialed)*100):null;
   const pctLeft=(c&&c.limit)?Math.max(0,Math.min(100,Math.round((c.remaining/c.limit)*100))):null;
   const margin=(m&&m.marginPct!=null)?Math.round(m.marginPct):null;
-  const v=(n,l,cls,big)=>`<div class="v${big?' big':''}"><div class="n ${cls}">${n}</div><div class="l">${esch(l)}</div></div>`;
+  const v=(n,l,cls)=>`<div class="v"><div class="n ${cls}">${n}</div><div class="l">${esch(l)}</div></div>`;
   const hero=document.getElementById('d_hero');
   if(hero) hero.innerHTML=
-    v(checks,'Checks today',checks>0?'g':'m',true)+
-    v(reach==null?'—':reach+'%','Reach 30d',reach==null?'m':(reach>=60?'g':reach>=30?'a':'r'))+
+    v(reach==null?'—':reach+'%','Reach · 30d',reach==null?'m':(reach>=60?'g':reach>=30?'a':'r'))+
     v(pctLeft==null?'—':pctLeft+'%','Credits left',pctLeft==null?'m':(pctLeft>40?'g':pctLeft>15?'a':'r'));
   // ---- Peek-row facts (the headline stays on the row; the sheet holds the full report). ----
   const set=(id,txt,cls)=>{ const e=document.getElementById(id); if(e){ e.textContent=txt; if(cls!==undefined) e.className='pk-fact'+(cls?' '+cls:''); } };
@@ -2094,11 +2133,11 @@ async function loadDash(){
       st($$(m.revenueCents),'revenue')+st($$(m.profitCents),m.profitCents>=0?'profit':'loss',m.profitCents>=0?'green':'')+
       st(margin!=null?margin+'%':'—','margin',(margin||0)>0?'green':'')+st($$(m.mrrCents)+'/mo','MRR (monthly)')+
       st($$(m.cogs?.totalCents),'Costs')+st(m.callsMade!=null?m.callsMade:'—','paid calls')+st(m.users,'users')+st(m.subscribers,'members');
-    set('pk_money',`${$$(m.profitCents)} · ${margin!=null?margin+'%':'—'}`, m.profitCents>=0?'g':'r');
+    set('pk_money',`$${Math.round((m.profitCents||0)/100)} · ${margin!=null?margin+'%':'—'}`, m.profitCents>=0?'g':'r');
   }
-  if(af.dialed) set('pk_health',`${af.dialed} dialed`,'');
+  if(af.dialed) set('pk_health',`${af.dialed} · ${reach}%`, reach>=60?'g':reach>=30?'a':'r');
   if(c&&!c.error){
-    const kLeft=c.remaining!=null?Math.round(c.remaining/1000)+'k left':'—';
+    const kLeft=c.remaining!=null?Math.round(c.remaining/1000)+'k':'—';
     set('pk_credits',kLeft, pctLeft==null?'':(pctLeft>40?'g':pctLeft>15?'a':'r'));
     const bar=document.getElementById('pk_credit_bar'); if(bar&&pctLeft!=null){ bar.style.width=pctLeft+'%'; bar.style.background=pctLeft>40?'var(--green)':pctLeft>15?'#F59E0B':'var(--red)'; }
   }
@@ -2106,8 +2145,8 @@ async function loadDash(){
 // Lift a hidden detail holder into the shared sheet. Title/sub come from the peek or the holder's data-attrs.
 function dashSheet(key){
   const holder=document.getElementById('ds_'+key); if(!holder) return;
-  const titles={money:'Money',pulse:"Today's pulse",timing:'Call time and cost',health:'Call health',credits:'ElevenLabs credits'};
-  const subs={money:'Revenue, profit and margin',timing:'Time to reach a person vs talk time',health:'Real dialed calls vs seed and rehearsal',credits:'Estimated from the last 31 days'};
+  const titles={money:'Money',pulse:'Members',timing:'Call time',health:'Call health',credits:'Credits'};
+  const subs={money:'Revenue, profit and margin',pulse:'Signups, scores and activity today',timing:'Time to reach a person vs talk time',health:'Real dialed calls vs seed and rehearsal',credits:'ElevenLabs · estimated from the last 31 days'};
   holder.style.display=''; // it lives hidden in #dash_details; unhide while borrowed by the sheet
   openSheet(holder.getAttribute('data-sheet-title')||titles[key]||'', holder.getAttribute('data-sheet-sub')||subs[key]||'', holder);
 }
@@ -4360,7 +4399,7 @@ async function loadGwPulse(){
     `</div>`+sub('Stats baseline')+
     `<div class="meta" style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;line-height:1.6">Real-call stats (Pulse · Restock · Call timing) ${d.statsSince?('count from <b style="color:#cfcfd8">'+new Date(d.statsSince*1000).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})+'</b>'):'count <b style="color:#cfcfd8">everything</b>'}.<button class="ghost" style="font-size:10.5px;padding:5px 10px" onclick="startFresh(false)">Start fresh</button>${d.statsSince?'<button class="ghost" style="font-size:10.5px;padding:5px 10px" onclick="startFresh(true)">Count all again</button>':''}</div>`;
   const s=document.getElementById('drs_pulse'); if(s) s.innerHTML=`${a.checks||0} checks · ${secsFmt(a.avgTalkSec||0)} avg <span class="chev">▾</span>`;
-  const pk=document.getElementById('pk_pulse'); if(pk){ pk.textContent=`${f.signups||0} new · ${cm.posts||0} score${(cm.posts||0)===1?'':'s'}`; pk.className='pk-fact'; }
+  const pk=document.getElementById('pk_pulse'); if(pk){ pk.textContent=`${f.signups||0} new`; pk.className='pk-fact'; }
 }
 // Stamp a "count from now" cutoff so real-call stats reset for the live launch. Test calls are unaffected.
 async function startFresh(clear){
@@ -4638,7 +4677,7 @@ async function srStatus(id,status){ const r=await api('/api/store-requests/'+id,
 async function modCommunity(id,approved){ const r=await api('/api/community/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({approved})}); toast((r&&!r.error)?(approved?'Approved':'Hidden'):"Couldn't update the post"); loadGwCommunity(); }
 async function delCommunity(id){ const r=await api('/api/community/'+id,{method:'DELETE'}); toast((r&&!r.error)?'Deleted':"Couldn't delete the post"); loadGwCommunity(); }
 
-function clock(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString(); }
+function clock(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}); }
 setInterval(clock,1000); clock();
 
 // Clerk fully removed. The admin is gated SERVER-SIDE by the signed `admin_session` cookie (minted by
