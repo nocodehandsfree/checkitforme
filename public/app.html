@@ -1309,31 +1309,27 @@
   </section>
 
   <section id="gtm">
-    <h2>Go-to-Market</h2>
-    <div class="meta" style="margin:-4px 0 12px">Everything left before we're live. Tick items off; filter by who owns them or where the work sits. Add your own anytime.</div>
-    <div class="card" style="margin-bottom:12px">
-      <div id="gtm_bar" class="meta" style="font-weight:800;color:#fff;font-size:14px">Loading…</div>
-      <div id="gtm_progress" style="height:8px;border-radius:6px;background:rgba(255,255,255,.06);margin:9px 0 2px;overflow:hidden"><div id="gtm_progress_fill" style="height:100%;width:0%;background:linear-gradient(90deg,#4ADE80,#22c55e);transition:width .3s"></div></div>
-    </div>
-    <div class="card" style="margin-bottom:12px">
-      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
-        <span class="meta" style="font-size:11px">Area</span>
-        <select id="gtm_f_area" onchange="renderGtm()" style="flex:0 0 auto"><option value="">All</option><option value="backend">Backend</option><option value="frontend">Frontend</option><option value="ops">Ops / Growth</option></select>
-        <span class="meta" style="font-size:11px">Agent</span>
-        <select id="gtm_f_agent" onchange="renderGtm()" style="flex:0 0 auto"></select>
-        <span class="meta" style="font-size:11px">Show</span>
-        <select id="gtm_f_status" onchange="renderGtm()" style="flex:0 0 auto"><option value="open">Open</option><option value="">All</option><option value="done">Done</option><option value="critical">Launch-critical</option></select>
-      </div>
+    <div class="k-title">Go-to-Market</div>
+    <div class="k-sub">Everything left before we're live.</div>
+    <div class="k-hero"><span class="n" id="gtm_hero_n">—</span><span class="l" id="gtm_bar">Loading…</span></div>
+    <div style="height:8px;background:var(--terminal);border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);margin:12px 0 0;overflow:hidden"><div id="gtm_progress_fill" style="height:100%;width:0%;background:linear-gradient(90deg,#4ADE80,#22c55e);border-radius:999px;transition:width .3s"></div></div>
+    <div class="k-filters">
+      <select class="k-filter" id="gtm_f_area" onchange="renderGtm()"><option value="">All areas</option><option value="backend">Backend</option><option value="frontend">Frontend</option><option value="ops">Ops / Growth</option></select>
+      <select class="k-filter" id="gtm_f_agent" onchange="renderGtm()"></select>
+      <select class="k-filter" id="gtm_f_status" onchange="renderGtm()"><option value="open">Open</option><option value="">All</option><option value="done">Done</option><option value="critical">Launch-critical</option></select>
     </div>
     <div id="gtm_list"><div class="empty">Loading…</div></div>
-    <div class="card" style="margin-top:12px">
-      <div class="name" style="font-size:13px">Add an item</div>
-      <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:8px">
-        <input id="gtm_new_title" placeholder="What needs doing" style="flex:1 1 240px">
-        <select id="gtm_new_area" style="flex:0 0 auto"><option value="backend">Backend</option><option value="frontend">Frontend</option><option value="ops" selected>Ops / Growth</option></select>
-        <select id="gtm_new_agent" style="flex:0 0 auto"></select>
-        <label class="meta" style="font-size:11px;display:inline-flex;align-items:center;gap:5px"><input type="checkbox" id="gtm_new_crit"> Launch-critical</label>
-        <button type="button" class="btn" onclick="gtmAdd()">Add</button>
+    <button class="k-cta" onclick="sheetFromHolder('ds_gtmadd','Add an item','It joins the list as To do')"><span>ADD AN ITEM →</span></button>
+    <div id="gtm_details" style="display:none">
+      <div id="ds_gtmadd">
+        <label style="margin-top:4px">What needs doing</label>
+        <input id="gtm_new_title" placeholder="e.g. Verify the SMS sender" onkeydown="if(event.key==='Enter')gtmAdd()">
+        <div class="grid2" style="margin-top:12px">
+          <div><label style="margin-top:0">Area</label><select id="gtm_new_area"><option value="backend">Backend</option><option value="frontend">Frontend</option><option value="ops" selected>Ops / Growth</option></select></div>
+          <div><label style="margin-top:0">Agent</label><select id="gtm_new_agent"></select></div>
+        </div>
+        <label style="text-transform:none;font-size:13px;font-weight:600;letter-spacing:0;display:inline-flex;align-items:center;gap:8px;margin-top:14px"><input type="checkbox" id="gtm_new_crit"> Launch-critical</label>
+        <div class="btnrow"><button type="button" class="act" onclick="gtmAdd()">Add it</button></div>
       </div>
     </div>
   </section>
@@ -1529,6 +1525,7 @@ function renderGtm(){
   const fStatus=(document.getElementById('gtm_f_status')||{}).value; const showStat=(fStatus===undefined)?'open':fStatus;
   const done=GTM_ITEMS.filter(i=>i.status==='done').length, total=GTM_ITEMS.length;
   const crit=GTM_ITEMS.filter(i=>i.critical), critDone=crit.filter(i=>i.status==='done').length;
+  const heroN=document.getElementById('gtm_hero_n'); if(heroN) heroN.textContent=(total?Math.round(done/total*100):0)+'%';
   const bar=document.getElementById('gtm_bar'); if(bar) bar.textContent=`${done}/${total} done · launch-critical ${critDone}/${crit.length}`;
   const fill=document.getElementById('gtm_progress_fill'); if(fill) fill.style.width=(total?Math.round(done/total*100):0)+'%';
   let list=GTM_ITEMS.filter(i=>{
@@ -1540,24 +1537,24 @@ function renderGtm(){
     return true;
   });
   const el=document.getElementById('gtm_list'); if(!el) return;
-  const rb=GTM_MISSING.length?('<div class="card" style="margin-bottom:8px;display:flex;align-items:center;gap:10px;border:1px solid rgba(251,191,36,.4)"><span class="meta" style="flex:1;color:#FBBF24">'+GTM_MISSING.length+' default item(s) missing (deleted?): '+GTM_MISSING.map(m=>esch(m.title)).join(' · ')+'</span><button type="button" class="btn" onclick="gtmRestore()">Restore</button><button type="button" class="ghost" onclick="gtmDismissMissing()" title="These are gone on purpose. Stop offering them." style="padding:6px 11px;font-size:14px;line-height:1">✕</button></div>'):'';
+  const rb=GTM_MISSING.length?('<div class="peek static" style="box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 14px rgba(251,191,36,.15)"><span class="pk-m" style="flex:1;color:#FBBF24;white-space:normal">'+GTM_MISSING.length+' default item(s) missing (deleted?): '+GTM_MISSING.map(m=>esch(m.title)).join(' · ')+'</span><button type="button" class="act" onclick="gtmRestore()">Restore</button><button type="button" class="ghost" onclick="gtmDismissMissing()" title="These are gone on purpose. Stop offering them." style="padding:6px 11px;font-size:14px;line-height:1">✕</button></div>'):'';
   if(!list.length){ el.innerHTML=rb+'<div class="empty">Nothing here — adjust the filters or add an item.</div>'; return; }
-  const dot={todo:'#64748b',doing:'#fbbf24',done:'#4ADE80'}, next={todo:'doing',doing:'done',done:'todo'};
+  const dot={todo:'#64748b',doing:'#fbbf24',done:'#4ADE80'};
   el.innerHTML=rb+list.map(i=>{
     const idx=GTM_ITEMS.indexOf(i);
     const strike=i.status==='done'?'text-decoration:line-through;opacity:.55':'';
-    return `<div class="card" style="display:flex;gap:11px;align-items:flex-start;margin-bottom:8px">
-      <button type="button" title="Cycle status" onclick="gtmCycle(${idx})" style="flex:0 0 auto;margin-top:2px;width:20px;height:20px;border-radius:50%;border:2px solid ${dot[i.status]};background:${i.status==='done'?dot.done:'transparent'};cursor:pointer"></button>
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:700;color:#fff;font-size:14px;${strike}">${esch(i.title)}${i.critical?' <span style="color:#f87171;font-size:10px;font-weight:800;vertical-align:middle">● LAUNCH</span>':''}</div>
-        ${i.detail?`<div class="meta" style="font-size:12px;margin-top:3px;${strike}">${esch(i.detail)}</div>`:''}
-        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-          <span class="meta" style="font-size:10.5px;background:rgba(167,139,250,.14);border:1px solid rgba(167,139,250,.35);color:#c4b5fd;padding:1px 8px;border-radius:10px">${esch(gtmAgentLabel(i.agent))}</span>
-          <span class="meta" style="font-size:10.5px;background:rgba(255,255,255,.05);border:1px solid var(--border);padding:1px 8px;border-radius:10px">${esch(GTM_AREA[i.area]||i.area)}</span>
-          <span class="meta" style="font-size:10.5px;color:${dot[i.status]}">${i.status==='doing'?'In progress':i.status==='done'?'Done':'To do'}</span>
+    return `<div class="peek static" style="align-items:flex-start">
+      <button type="button" title="Cycle status" onclick="gtmCycle(${idx})" style="flex:0 0 auto;margin-top:2px;width:22px;height:22px;border-radius:50%;border:2px solid ${dot[i.status]};background:${i.status==='done'?dot.done:'transparent'};cursor:pointer;box-shadow:${i.status==='done'?'0 0 8px rgba(74,222,128,.4)':'none'}"></button>
+      <div class="pk-main">
+        <div class="pk-t" style="${strike}">${esch(i.title)}${i.critical?' <span style="color:#f87171;font-size:9px;font-weight:900;vertical-align:2px;letter-spacing:.06em">● LAUNCH</span>':''}</div>
+        ${i.detail?`<div class="pk-m" style="white-space:normal;${strike}">${esch(i.detail)}</div>`:''}
+        <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <span class="k-pill" style="padding:4px 10px;font-size:10px;color:#c4b5fd">${esch(gtmAgentLabel(i.agent))}</span>
+          <span class="k-pill" style="padding:4px 10px;font-size:10px">${esch(GTM_AREA[i.area]||i.area)}</span>
+          <span style="font-size:10.5px;font-weight:800;color:${dot[i.status]}">${i.status==='doing'?'In progress':i.status==='done'?'Done':'To do'}</span>
         </div>
       </div>
-      <button type="button" title="Remove" onclick="gtmDelete(${idx})" style="flex:0 0 auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1">×</button>
+      <button type="button" title="Remove" onclick="gtmDelete(${idx})" style="flex:0 0 auto;background:none;border:none;color:#5C5C68;cursor:pointer;font-size:16px;line-height:1;padding:4px">×</button>
     </div>`;
   }).join('');
 }
@@ -1568,7 +1565,7 @@ function gtmAdd(){
   const t=(document.getElementById('gtm_new_title')||{}).value||''; if(!t.trim()) return;
   GTM_ITEMS.unshift({ id:'', title:t.trim(), detail:'', area:(document.getElementById('gtm_new_area')||{}).value||'ops', agent:(document.getElementById('gtm_new_agent')||{}).value||'owner', critical:!!(document.getElementById('gtm_new_crit')||{}).checked, status:'todo' });
   document.getElementById('gtm_new_title').value=''; document.getElementById('gtm_new_crit').checked=false;
-  renderGtm(); gtmSave();
+  closeSheet(); renderGtm(); gtmSave(); toast('Added to the list');
 }
 
 // ---- Receipts: shoppers email a receipt → parsed into kiosk_receipts → a free check. "Claimed"

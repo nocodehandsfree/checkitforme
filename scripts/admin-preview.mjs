@@ -29,6 +29,13 @@ const FIX = {
   '/api/chains': [],
   '/api/feedback': [],
   '/api/retailers': [],
+  '/api/gtm': { items:[
+    {id:'1',title:'A2P SMS approval',detail:'Twilio campaign pending carrier review',area:'backend',agent:'devops',critical:true,status:'doing'},
+    {id:'2',title:'Outlook email render check',detail:'',area:'frontend',agent:'design',critical:false,status:'todo'},
+    {id:'3',title:'Store sync nightly job',detail:'',area:'backend',agent:'data',critical:true,status:'done'},
+    {id:'4',title:'Launch tweet thread',detail:'',area:'ops',agent:'social',critical:false,status:'todo'},
+  ], missingDefaults:[] },
+
   '/api/support/stats': { conversations:31, selfServed:26, escalated:5, avgMessages:3.2, pendingReview:2, tickets:4, estCostUsd:1.84, byCategory:{billing:9, how_checks_work:7, bug:4, other:11}, topQuestions:[{q:'Why did my check not go through?',n:6},{q:'Do you check Costco?',n:4},{q:'How do refunds work?',n:3}] },
   '/api/support/chats': [
     { id:'c1', account:{email:'mr@example.com'}, category:'billing', status:'escalated', tier:2, createdAt:Math.floor(Date.now()/1000)-720, lastMessage:'Why did my check not go through?' },
