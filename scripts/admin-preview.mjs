@@ -27,6 +27,11 @@ const FIX = {
   '/api/admin/workflow-assignments': { 'Direct Dana': { chains:[{name:'Target'},{name:'GameStop'}], stores:[] }, 'Hobby Shop Casual': { chains:[], stores:[{name:'Hobby Planet',location:'Glendale'}] } },
   '/api/categories': [ {id:1,label:'Pokémon'}, {id:2,label:'One Piece TCG'}, {id:3,label:'Topps NBA'} ],
   '/api/chains': [],
+  '/api/admin/test-calls': (()=>{ const now=Math.floor(Date.now()/1000); return { count:12, summary:{avgNavSec:34,avgTalkSec:71,avgCallSec:118}, rows:[
+    { workflow:'Friendly Sam', status:'in_stock', started:now-1800, navSec:28, talkSec:64, callSec:101, opener:{label:'#2', said:'Hi there! quick one, any Pokémon cards on the shelf today?'} },
+    { workflow:'Hobby Shop Casual', status:'no_clear_answer', started:now-7200, navSec:41, talkSec:88, callSec:140, opener:{label:'#1', said:'Hey! you guys get any Pokémon in this week?'} },
+    { workflow:null, status:'nobody_answered', started:now-90000, navSec:null, talkSec:null, callSec:62, opener:{} },
+  ]}; })(),
   '/api/feedback': (()=>{ const now=Math.floor(Date.now()/1000); return [
     { id:1, store:'Hobby Planet', created_at:now-3600, confirmed:null, status_key:'no_clear_answer', user_verdict:'in', disagree:1, reviewed:0, transcript:'Agent: Any Pokémon in?\nClerk: Umm maybe, check back.' },
     { id:2, store:'Target Glendale', created_at:now-9000, confirmed:1, status_key:'in_stock', user_verdict:'in', disagree:0, reviewed:0 },
