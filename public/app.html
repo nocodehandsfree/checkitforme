@@ -330,6 +330,20 @@
   /* Console rows: the peek anatomy without the tap (control sits on the row). */
   .peek.static{cursor:default}
   .peek.static:active{transform:none}
+  /* REPORT grammar kit (comp 1h): range track · hero answer · wells (max 3) · pills · one list. */
+  .k-range{display:flex;gap:4px;background:var(--terminal);border-radius:999px;padding:4px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);flex:0 0 auto}
+  .k-range button{border:none;background:transparent;color:#7C7C88;font-size:11px;font-weight:700;padding:7px 12px;border-radius:999px;cursor:pointer;font-family:inherit}
+  .k-range button.on{background:linear-gradient(180deg,#31313A,#28282E);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#fff;font-weight:800}
+  .k-hero{display:flex;align-items:baseline;gap:10px;padding:14px 4px 0}
+  .k-hero .n{font-size:34px;font-weight:900;letter-spacing:-1.2px;font-variant-numeric:tabular-nums;color:#fff}
+  .k-hero .l{font-size:13px;font-weight:600;color:#8A8A96}
+  .k-wells{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px}
+  .k-well{background:var(--terminal);border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px 6px;text-align:center}
+  .k-well .n{font-size:19px;font-weight:900;letter-spacing:-.4px;font-variant-numeric:tabular-nums;color:#fff}
+  .k-well .n.g{color:var(--green)} .k-well .n.a{color:#F59E0B} .k-well .n.r{color:var(--red)}
+  .k-well .l{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8A8A96;margin-top:3px}
+  .k-pills{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
+  .k-pill{padding:7px 12px;border-radius:999px;background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);font-size:11px;font-weight:700;color:rgba(255,255,255,.85)}
   /* THE capsule CTA (comp 1e) — green ring gradient, dark fill, one per page. */
   .k-cta{display:block;margin:22px auto 0;border-radius:999px;padding:2.5px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 12px 28px -8px rgba(74,222,128,.45);border:none;cursor:pointer;font-family:inherit;transition:transform .08s}
   .k-cta:active{transform:translateY(2px)}
@@ -875,22 +889,25 @@
   </section>
 
   <section id="support">
-    <h2 data-tip="Every live support chat from the site and Discord: who asked, what category, which AI tier answered, and whether it self-served or escalated. Click a chat for the full transcript.">Support</h2>
-    <div class="card report">
-      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div class="name">Snapshot</div>
-        <select id="sup_range" onchange="supSetRange(this.value)" style="width:auto;font-size:12.5px;padding:6px 26px 6px 9px;margin:0">
-          <option value="today">Today</option>
-          <option value="7d" selected>Last 7 days</option>
-          <option value="30d">Last 30 days</option>
-        </select>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div class="k-title">Support</div>
+      <div class="k-range" id="sup_rangetrack">
+        <button data-r="today" onclick="supSetRange('today')">Today</button>
+        <button data-r="7d" class="on" onclick="supSetRange('7d')">7d</button>
+        <button data-r="30d" onclick="supSetRange('30d')">30d</button>
       </div>
-      <div class="stats" id="sup_stats" style="margin-bottom:0"><div class="empty">Loading…</div></div>
-      <div id="sup_cats" style="margin-top:10px"></div>
-      <div id="sup_top" style="margin-top:10px"></div>
     </div>
-    <div class="filters">
-      <select id="sup_f_cat" onchange="supFilter()">
+    <div class="k-hero"><span class="n" id="sup_hero_n">—</span><span class="l" id="sup_hero_l">chats</span></div>
+    <div class="k-wells" id="sup_wells" style="display:none"></div>
+    <div class="k-pills" id="sup_cats"></div>
+    <div id="sup_stats" style="display:none"></div>
+    <button class="peek" id="sup_top_row" style="display:none;margin-top:14px" onclick="sheetFromHolder('ds_suptop','Top questions','What people ask most in this range')">
+      <div class="pk-main"><div class="pk-t">Top questions</div></div>
+      <div class="pk-fact" id="sup_top_fact"></div>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+    <div class="k-filters">
+      <select class="k-filter" id="sup_f_cat" onchange="supFilter()">
         <option value="">All categories</option>
         <option value="technical">Technical</option>
         <option value="bug">Bug</option>
@@ -899,14 +916,16 @@
         <option value="how_checks_work">How checks work</option>
         <option value="other">Other</option>
       </select>
-      <select id="sup_f_acct" onchange="supFilter()">
+      <select class="k-filter" id="sup_f_acct" onchange="supFilter()">
         <option value="all">Members + guests</option>
         <option value="members">Members only</option>
         <option value="guests">Guests only</option>
       </select>
-      <input id="sup_f_q" type="search" placeholder="Search chats…" oninput="supSearch()" style="max-width:220px">
     </div>
+    <input id="sup_f_q" type="search" placeholder="Search chats…" oninput="supSearch()" style="margin-top:10px;font-size:14px;padding:11px 15px">
+    <div class="k-eyebrow">Chats</div>
     <div id="sup_list"><div class="empty">Loading…</div></div>
+    <div id="sup_details" style="display:none"><div id="ds_suptop"></div></div>
   </section>
   <section id="results">
     <div class="k-title">Calls</div>
@@ -2577,7 +2596,7 @@ async function fbCorrect(id,verdict){ const r=await api('/api/feedback/'+id+'/re
 const SUP={range:'7d',cat:'',acct:'all',q:''};
 const SUP_CATS={technical:'Technical',bug:'Bug',billing:'Billing',partnerships:'Partnerships',how_checks_work:'How checks work',other:'Other'};
 let SUP_SEARCH_T=null;
-function supSetRange(v){ SUP.range=v; loadSupport(); }
+function supSetRange(v){ SUP.range=v; document.querySelectorAll('#sup_rangetrack button').forEach(b=>b.classList.toggle('on',b.dataset.r===v)); loadSupport(); }
 function supFilter(){ SUP.cat=(document.getElementById('sup_f_cat')||{}).value||''; SUP.acct=(document.getElementById('sup_f_acct')||{}).value||'all'; loadSupportChats(); }
 function supSearch(){ clearTimeout(SUP_SEARCH_T); SUP_SEARCH_T=setTimeout(()=>{ SUP.q=(document.getElementById('sup_f_q')||{}).value||''; loadSupportChats(); },300); }
 function supSince(){ if(SUP.range==='today'){ const d=new Date(); d.setHours(0,0,0,0); return Math.floor(d.getTime()/1000); } return Math.floor(Date.now()/1000)-(SUP.range==='30d'?30:7)*86400; }
@@ -2590,25 +2609,39 @@ function supStatusPill(s){
 }
 async function loadSupport(){ loadSupportStats(); loadSupportChats(); }
 async function loadSupportStats(){
-  const el=document.getElementById('sup_stats'); if(!el) return;
+  const heroN=document.getElementById('sup_hero_n'), heroL=document.getElementById('sup_hero_l');
+  const wells=document.getElementById('sup_wells'), cats=document.getElementById('sup_cats');
+  const topRow=document.getElementById('sup_top_row');
   const r=await api('/api/support/stats?range='+encodeURIComponent(SUP.range));
-  if(!r||r.error){ el.innerHTML='<div class="empty">Support APIs aren\'t live yet — the Support lane is building them. This panel lights up on its own once they land.</div>'; const c=document.getElementById('sup_cats'); if(c)c.innerHTML=''; const t=document.getElementById('sup_top'); if(t)t.innerHTML=''; return; }
-  const st=(n,l)=>n==null?'':`<div class="stat"><div class="n">${esch(String(n))}</div><div class="l">${l}</div></div>`;
+  const rangeWord={today:'chats today','7d':'chats this week','30d':'chats this month'}[SUP.range]||'chats';
+  if(!r||r.error){
+    if(heroN)heroN.textContent='—'; if(heroL)heroL.textContent='Support APIs aren\'t live yet. This lights up on its own once they land.';
+    if(wells){wells.style.display='none';} if(cats)cats.innerHTML=''; if(topRow)topRow.style.display='none';
+    return;
+  }
   const total=r.conversations!=null?r.conversations:r.total;
-  const tickets=r.tickets!=null?r.tickets:r.ticketsEmailed;
-  const escRate=r.escalationRate!=null?r.escalationRate:(total?Math.round(100*(r.escalated||0)/total):null);
-  const cost=r.estCostUsd!=null?('$'+Number(r.estCostUsd).toFixed(2)):null;
-  el.innerHTML=st(total,'chats')+st(r.selfServed,'self-served')+st(r.escalated,'escalated')+st(escRate!=null?escRate+'%':null,'escalation rate')+st(r.pendingReview,'pending review')+st(tickets,'tickets emailed')+st(r.avgMessages,'avg msgs / chat')+st(cost,'est LLM cost');
-  const cats=document.getElementById('sup_cats');
-  if(cats){ const by=r.byCategory||{}; const tiers=r.byMaxTier||{};
-    const mix=(r.members||r.guests)?[`<span class="chip-sm">${r.members||0} member${r.members===1?'':'s'} · ${r.guests||0} guest${r.guests===1?'':'s'}</span>`]:[];
-    const chips=Object.keys(by).map(k=>`<span class="chip-sm">${esch(SUP_CATS[k]||k)} · ${by[k]}</span>`)
-      .concat(Object.keys(tiers).map(k=>`<span class="chip-sm">${esch(supTier(k)||('Tier '+k))} · ${tiers[k]}</span>`))
-      .concat(mix).join('');
-    cats.innerHTML=chips?`<div class="meta" style="margin-bottom:6px">Breakdown</div><div class="row" style="gap:6px;flex-wrap:wrap">${chips}</div>`:''; }
-  const top=document.getElementById('sup_top');
-  if(top){ const qs=r.topQuestions||[];
-    top.innerHTML=qs.length?`<div class="meta" style="margin-bottom:6px">Top questions</div>`+qs.slice(0,8).map(q=>`<div class="rsbar"><span class="rsbl" style="flex-basis:auto">${esch(q.q||q.question||String(q))}</span><b>${q.n||q.count||''}</b></div>`).join(''):''; }
+  if(heroN)heroN.textContent=total!=null?total:'—';
+  if(heroL)heroL.textContent=rangeWord;
+  // Wells, max three (comp 1g): self served green · escalated amber · avg msgs plain.
+  const selfPct=(r.selfServed!=null&&total)?Math.round(100*r.selfServed/total)+'%':(r.selfServed!=null?String(r.selfServed):'—');
+  const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${esch(String(n))}</div><div class="l">${l}</div></div>`;
+  if(wells){ wells.style.display=''; wells.innerHTML=
+    well(selfPct,'Self served','g')+well(r.escalated!=null?r.escalated:'—','Escalated',(r.escalated||0)>0?'a':'')+well(r.avgMessages!=null?r.avgMessages:'—','Msgs avg',''); }
+  // One pill per fact worth a glance; everything deeper waits for the chat rows.
+  if(cats){ const by=r.byCategory||{};
+    const pills=Object.keys(by).map(k=>`<span class="k-pill">${esch(SUP_CATS[k]||k)} · ${by[k]}</span>`);
+    if(r.pendingReview) pills.push(`<span class="k-pill" style="color:#FBBF24">Pending review · ${r.pendingReview}</span>`);
+    if(r.tickets!=null||r.ticketsEmailed!=null) pills.push(`<span class="k-pill">Tickets · ${r.tickets!=null?r.tickets:r.ticketsEmailed}</span>`);
+    if(r.estCostUsd!=null) pills.push(`<span class="k-pill">LLM $${Number(r.estCostUsd).toFixed(2)}</span>`);
+    cats.innerHTML=pills.join(''); }
+  // Top questions drill in on a peek row — the report keeps ONE list (the chats).
+  const qs=r.topQuestions||[], holder=document.getElementById('ds_suptop');
+  if(topRow&&holder){
+    if(qs.length){ topRow.style.display='';
+      const f=document.getElementById('sup_top_fact'); if(f)f.textContent=qs.length;
+      holder.innerHTML=qs.slice(0,12).map(q=>`<div class="repline"><span class="rl">${esch(q.q||q.question||String(q))}</span><b>${q.n||q.count||''}</b></div>`).join('');
+    } else topRow.style.display='none';
+  }
 }
 async function loadSupportChats(){
   const el=document.getElementById('sup_list'); if(!el) return;
@@ -2618,21 +2651,24 @@ async function loadSupportChats(){
   const rows=Array.isArray(r)?r:(r&&Array.isArray(r.chats)?r.chats:null);
   if(!rows){ el.innerHTML='<div class="empty">No chat data yet — waiting on the Support lane\'s API.</div>'; return; }
   if(!rows.length){ el.innerHTML='<div class="empty">No chats match these filters.</div>'; return; }
+  // Log rows (comp 1g): initials tile · the question · who/category/when · right icon = how it ended
+  // (green check = the AI handled it, amber up arrow = went to a human, yellow ? = pending).
   el.innerHTML=rows.map(c=>{
     const who=c.account?(c.account.email||c.account.phone||c.account.label||'Member'):'Guest';
     const member=!!c.account;
-    return `<div class="card" style="cursor:pointer" onclick="openSupChat('${esch(String(c.id))}')">
-      <div class="row" style="justify-content:space-between;align-items:flex-start;gap:10px">
-        <div style="min-width:0">
-          <div style="font-size:13.5px"><b>${esch(who)}</b>${member?'':' <span class="meta" style="text-transform:none">guest</span>'} ${supCatChip(c.category)}</div>
-          <div class="meta" style="text-transform:none;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:520px">${esch((c.lastMessage||c.snippet||'').slice(0,140))}</div>
-        </div>
-        <div style="flex:0 0 auto;text-align:right">
-          ${supStatusPill(c.status)}
-          <div class="meta" style="text-transform:none;margin-top:5px">${esch(supTier(c.tier))}${c.tier!=null?' · ':''}${agoTs(c.createdAt||c.created_at)}</div>
-        </div>
-      </div>
-    </div>`;
+    const snippet=(c.lastMessage||c.snippet||'').slice(0,90)||'(no messages)';
+    const k=String(c.status||'open');
+    const st=k==='escalated'
+      ? `<span class="stc" style="background:rgba(245,158,11,.15)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>`
+      : k==='resolved'
+      ? `<span class="stc" style="background:rgba(74,222,128,.15)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></span>`
+      : `<span class="stc" style="background:rgba(251,191,36,.15);color:#FBBF24;font-size:14px;font-weight:900">?</span>`;
+    return `<button class="peek" onclick="openSupChat('${esch(String(c.id))}')">
+      <span class="pk-logo"><span class="slogo emboss" style="width:38px;height:38px;border-radius:11px">${esch((who.replace(/[^A-Za-z0-9]/g,'').slice(0,2)||'G').toUpperCase())}</span></span>
+      <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(snippet)}</span>
+      <span class="pk-m" style="display:block">${member?'Member':'Guest'} · ${esch((SUP_CATS[c.category]||c.category||'other').toLowerCase())} · ${agoTs(c.createdAt||c.created_at)}</span></span>
+      <span class="pk-st">${st}</span>
+    </button>`;
   }).join('');
 }
 async function openSupChat(id){
@@ -2644,25 +2680,13 @@ async function openSupChat(id){
   const acct=r.account?Object.entries({Email:r.account.email,Phone:r.account.phone,Plan:r.account.subscription||r.account.plan,Credits:r.account.credits,'Checks made':r.account.callsMade}).filter(([,v])=>v!=null&&v!=='').map(([k,v])=>`<div class="rsbar"><span class="rsbl" style="flex-basis:auto">${k}</span><b>${esch(String(v))}</b></div>`).join(''):'<div class="meta" style="text-transform:none">Guest — not signed in.</div>';
   const dbg=r.debug?(typeof r.debug==='string'?r.debug:JSON.stringify(r.debug,null,2)):'';
   const shot=r.screenshotUrl||r.screenshot;
-  supDrawer(`
-    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div class="name" style="margin:0">Chat ${esch(String(r.id||id))} ${supCatChip(r.category)} ${supStatusPill(r.status)}</div>
-      <button class="ghost" style="font-size:13px;padding:6px 11px" onclick="document.getElementById('sup_drawer').remove()">Close</button>
-    </div>
-    <div class="meta" style="text-transform:none;margin-bottom:12px">${esch(supTier(r.tier))}${r.tier!=null?' · ':''}${agoTs(r.createdAt||r.created_at)}</div>
-    <div style="display:flex;flex-direction:column;margin-bottom:14px">${msgs.map(bub).join('')||'<div class="empty">No transcript.</div>'}</div>
-    ${shot?`<div class="name" style="font-size:13px;margin-bottom:6px">Screenshot</div><a href="${esch(shot)}" target="_blank" rel="noopener"><img src="${esch(shot)}" alt="Customer screenshot" style="max-width:100%;border:1px solid var(--border);border-radius:10px;margin-bottom:14px"></a>`:''}
-    ${dbg?`<div class="name" style="font-size:13px;margin-bottom:6px">Debug info</div><pre style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;margin:0 0 14px">${esch(dbg)}</pre>`:''}
-    <div class="name" style="font-size:13px;margin-bottom:6px">Account</div>${acct}
-  `);
-}
-function supDrawer(html){
-  let d=document.getElementById('sup_drawer');
-  if(!d){ d=document.createElement('div'); d.id='sup_drawer';
-    d.style.cssText='position:fixed;inset:0;z-index:9200;background:rgba(8,8,12,.6);backdrop-filter:blur(3px);display:flex;justify-content:flex-end';
-    d.onclick=(e)=>{ if(e.target===d) d.remove(); };
-    document.body.appendChild(d); }
-  d.innerHTML=`<div style="width:min(560px,100vw);height:100dvh;overflow-y:auto;background:var(--sheet);border-left:1px solid var(--border-strong);padding:18px 16px 44px">${html}</div>`;
+  const who=r.account?(r.account.email||r.account.phone||r.account.label||'Member'):'Guest';
+  openSheet(who,
+    `${esch(SUP_CATS[r.category]||r.category||'Other')} · ${esch(String(r.status||'open'))}${r.tier!=null?' · '+esch(supTier(r.tier)):''} · ${agoTs(r.createdAt||r.created_at)}`,
+    `<div style="display:flex;flex-direction:column;margin-bottom:14px" class="chat">${msgs.map(bub).join('')||'<div class="empty">No transcript.</div>'}</div>
+    ${shot?`<div class="k-eyebrow">Screenshot</div><a href="${esch(shot)}" target="_blank" rel="noopener"><img src="${esch(shot)}" alt="Customer screenshot" style="max-width:100%;border-radius:14px;margin-bottom:14px"></a>`:''}
+    ${dbg?`<div class="k-eyebrow">Debug info</div><pre style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;padding:12px;margin:0 0 14px">${esch(dbg)}</pre>`:''}
+    <div class="k-eyebrow">Account</div>${acct}`);
 }
 function bubbles(t){
   if(!t) return '';

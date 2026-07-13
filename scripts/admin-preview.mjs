@@ -23,6 +23,13 @@ const FIX = {
   '/api/chains': [],
   '/api/feedback': [],
   '/api/retailers': [],
+  '/api/support/stats': { conversations:31, selfServed:26, escalated:5, avgMessages:3.2, pendingReview:2, tickets:4, estCostUsd:1.84, byCategory:{billing:9, how_checks_work:7, bug:4, other:11}, topQuestions:[{q:'Why did my check not go through?',n:6},{q:'Do you check Costco?',n:4},{q:'How do refunds work?',n:3}] },
+  '/api/support/chats': [
+    { id:'c1', account:{email:'mr@example.com'}, category:'billing', status:'escalated', tier:2, createdAt:Math.floor(Date.now()/1000)-720, lastMessage:'Why did my check not go through?' },
+    { id:'c2', account:null, category:'how_checks_work', status:'resolved', tier:1, createdAt:Math.floor(Date.now()/1000)-3600, lastMessage:'Do you check Costco?' },
+    { id:'c3', account:{email:'jt@example.com'}, category:'bug', status:'resolved', tier:1, createdAt:Math.floor(Date.now()/1000)-10800, lastMessage:'The live audio cut out mid call' },
+    { id:'c4', account:null, category:'other', status:'open', tier:1, createdAt:Math.floor(Date.now()/1000)-14000, lastMessage:'Can I gift checks to a friend?' },
+  ],
   '/api/statuses': [
     {key:'in_stock',label:'In stock',emoji:'in_stock',color:'#4ADE80',tone:'in',note:"They've got {product} in. go get it."},
     {key:'not_in_stock',label:'Out',emoji:'circle-x',color:'#EF4444',tone:'out',note:''},
