@@ -27,7 +27,11 @@ const FIX = {
   '/api/admin/workflow-assignments': { 'Direct Dana': { chains:[{name:'Target'},{name:'GameStop'}], stores:[] }, 'Hobby Shop Casual': { chains:[], stores:[{name:'Hobby Planet',location:'Glendale'}] } },
   '/api/categories': [ {id:1,label:'Pokémon'}, {id:2,label:'One Piece TCG'}, {id:3,label:'Topps NBA'} ],
   '/api/chains': [],
-  '/api/feedback': [],
+  '/api/feedback': (()=>{ const now=Math.floor(Date.now()/1000); return [
+    { id:1, store:'Hobby Planet', created_at:now-3600, confirmed:null, status_key:'no_clear_answer', user_verdict:'in', disagree:1, reviewed:0, transcript:'Agent: Any Pokémon in?\nClerk: Umm maybe, check back.' },
+    { id:2, store:'Target Glendale', created_at:now-9000, confirmed:1, status_key:'in_stock', user_verdict:'in', disagree:0, reviewed:0 },
+    { id:3, store:'GameStop Burbank', created_at:now-90000, confirmed:0, status_key:'not_in_stock', user_verdict:'out', disagree:0, reviewed:1 },
+  ]; })(),
   '/api/retailers': [],
   '/api/gtm': { items:[
     {id:'1',title:'A2P SMS approval',detail:'Twilio campaign pending carrier review',area:'backend',agent:'devops',critical:true,status:'doing'},
@@ -44,10 +48,10 @@ const FIX = {
     { id:'c4', account:null, category:'other', status:'open', tier:1, createdAt:Math.floor(Date.now()/1000)-14000, lastMessage:'Can I gift checks to a friend?' },
   ],
   '/api/statuses': [
-    {key:'in_stock',label:'In stock',emoji:'in_stock',color:'#4ADE80',tone:'in',note:"They've got {product} in. go get it."},
-    {key:'not_in_stock',label:'Out',emoji:'circle-x',color:'#EF4444',tone:'out',note:''},
-    {key:'no_clear_answer',label:'Unclear',emoji:'circle-help',color:'#FBBF24',tone:'unclear',note:''},
-    {key:'nobody_answered',label:'No answer',emoji:'phone-off',color:'#9CA3AF',tone:'unclear',note:''},
+    {id:1,key:'in_stock',label:'In stock',emoji:'in_stock',color:'#4ADE80',tone:'in',note:"They've got {product} in. go get it.",sort:1},
+    {id:2,key:'not_in_stock',label:'Out',emoji:'circle-x',color:'#EF4444',tone:'out',note:'Sold out at this store right now.',sort:2},
+    {id:3,key:'no_clear_answer',label:'Unclear',emoji:'circle-help',color:'#FBBF24',tone:'unk',note:'Staff could not confirm either way.',sort:3},
+    {id:4,key:'nobody_answered',label:'No answer',emoji:'phone-off',color:'#9CA3AF',tone:'unk',note:'',sort:4},
   ],
   '/api/results': (()=>{ const now=Math.floor(Date.now()/1000); return { total:118, rows:[
     { id:1, retailer:'Target Glendale', retailerId:11, category:'Pokémon', status:'completed', confirmed:true, startedAt:now-720, completedAt:now-608, productName:'Prismatic Evolutions boosters', summary:'Staff checked the card aisle and confirmed boosters on the shelf.', transcript:'Agent: Hi! Quick one, any Pokémon cards on the shelf today?\nClerk: Yeah we got the new Prismatic boosters in this morning.\nAgent: Perfect, thank you so much. Have a good one!' },

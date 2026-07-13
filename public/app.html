@@ -881,9 +881,11 @@
   </section>
 
   <section id="feedback">
-    <h2 data-tip="When a check ends unclear, the customer taps what they actually saw. This is the review and training queue. Fix where we were wrong and it corrects the call record.">Feedback</h2>
+    <div class="k-title">Feedback</div>
+    <div class="k-sub">What customers said they saw after an unclear check. Correcting fixes the call record.</div>
     <div id="fb_summary"></div>
     <div id="fb_unclear"></div>
+    <div class="k-eyebrow">Review queue</div>
     <div id="fb_list"><div class="empty">Loading…</div></div>
   </section>
 
@@ -1232,21 +1234,20 @@
     </section>
 
     <section id="statuses">
-    <h2>Statuses</h2>
-    <div id="pb_statuses">
-      <div class="card">
-        <div class="name" data-tip="Edit the icon, label, color or tone. Consumer + Test Bench verdicts update instantly">What customers see</div>
-        <div id="st_list"><div class="empty">Loading…</div></div>
-        <div style="height:1px;background:var(--border);margin:16px 0"></div>
-        <div class="name" style="font-size:13px">Add a status</div>
-        <div class="row" style="gap:8px">
+    <div class="k-title">Statuses</div>
+    <div class="k-sub">The verdicts customers see. Edits go live instantly.</div>
+    <div id="st_list" style="margin-top:16px"><div class="empty">Loading…</div></div>
+    <button class="k-cta" onclick="sheetFromHolder('ds_staddform','New status','Display is instant. Detecting it on calls needs the extraction wired.')"><span>NEW STATUS →</span></button>
+    <div id="st_details" style="display:none">
+      <div id="ds_staddform">
+        <div class="row" style="gap:8px;margin-top:4px">
           <button type="button" class="sticon-btn" id="st_new_icon_btn" onclick="pickNewStatusIcon()" title="Pick an icon"><span class="meta" style="font-size:10px">icon</span></button>
           <input type="hidden" id="st_new_emoji" value="">
           <input id="st_new_label" placeholder="Label (e.g. Holding one for you)" style="flex:1">
         </div>
-        <input id="st_new_note" placeholder="Message the customer sees" style="margin-top:6px">
-        <div class="meta" style="margin-top:5px;font-size:10.5px;line-height:1.45">Use <code>{product}</code> for the live product name · <code>&lt;b&gt;…&lt;/b&gt;</code> to bold.</div>
-        <div class="row" style="gap:8px;margin-top:6px">
+        <input id="st_new_note" placeholder="Message the customer sees" style="margin-top:10px">
+        <div class="meta" style="margin-top:6px;font-size:10.5px;line-height:1.45">Use <code>{product}</code> for the live product name · <code>&lt;b&gt;…&lt;/b&gt;</code> to bold.</div>
+        <div class="row" style="gap:8px;margin-top:12px">
           <select id="st_new_tone" style="max-width:170px">
             <option value="in">In stock</option>
             <option value="out">Not in stock</option>
@@ -2547,31 +2548,35 @@ async function loadFeedback(){
   const openDis=rows.filter(r=>r.disagree&&!r.reviewed).length;
   FB_OPEN=openDis; { const _b=document.querySelector('#subnav2 button[data-sec="feedback"] .fbbadge'); if(_b){ _b.textContent=FB_OPEN>0?FB_OPEN:''; _b.style.display=FB_OPEN>0?'inline-block':'none'; } }
   const sum=document.getElementById('fb_summary');
-  const st=(n,l,cls)=>`<div class="stat"><div class="n"${cls?` style="color:${cls}"`:''}>${n}</div><div class="l">${l}</div></div>`;
-  if(sum) sum.innerHTML=`<div class="card report"><div class="stats" style="margin-bottom:0">${st(openDis,'to review',openDis?'#F4D03F':'')}${st(rows.filter(r=>r.disagree).length,'disagreements')}${st(rows.length,'responses')}</div></div>`;
+  const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${n}</div><div class="l">${l}</div></div>`;
+  if(sum) sum.innerHTML=`<div class="k-wells">${well(openDis,'To review',openDis?'a':'')}${well(rows.filter(r=>r.disagree).length,'Disagreed','')}${well(rows.length,'Responses','')}</div>`;
   // Unclear-status pills (incl. Fun/owner-only checks — the god-view headline filters those out ON
   // PURPOSE; this tab is the unfiltered surface, so the owner can confirm status data flows end to end).
   loadFbUnclear();
   if(!rows.length){ list.innerHTML='<div class="empty">No poll responses yet. They appear when a customer taps what they saw after an unclear check.</div>'; return; }
   const UV={in:'In stock',out:'Not in',soon:'Restocking',unsure:'Unclear'};
   const ours=r=>r.confirmed===1?'In stock':r.confirmed===0?'Not in':(r.status_key?String(r.status_key).replace(/_/g,' '):'—');
+  FB_ROWS=rows;
   list.innerHTML=rows.map(r=>{
-    const tx=r.transcript?`<div id="fbtx_${r.id}" class="meta" style="display:none;white-space:pre-wrap;text-transform:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;line-height:1.55">${esch(r.transcript)}</div>`:'';
     const canCorrect=r.disagree&&!r.reviewed&&(r.user_verdict==='in'||r.user_verdict==='out');
-    return `<div class="card" style="${r.disagree&&!r.reviewed?'border-color:#F4D03F':''}">
-      <div class="row" style="justify-content:space-between;align-items:flex-start;gap:10px">
-        <div style="min-width:0">
-          <div style="font-size:13.5px"><b>${esch(r.store||'Unknown store')}</b> <span class="meta" style="text-transform:none">${agoTs(r.created_at)}</span></div>
-          <div class="meta" style="text-transform:none;margin-top:4px">We said <b>${esch(ours(r))}</b> · they said <b>${esch(UV[r.user_verdict]||r.user_verdict||'?')}</b>${r.disagree?' <span class="chip-sm" style="color:#F4D03F;background:rgba(244,208,63,.12)">user disagreed</span>':''}${r.reviewed?' <span class="chip-sm" style="color:var(--text-muted)">reviewed</span>':''}</div>
+    const open=r.disagree&&!r.reviewed;
+    return `<div class="peek static" style="align-items:flex-start${open?';box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 14px rgba(244,208,63,.14)':''}">
+      <div class="pk-main">
+        <div class="pk-t">${esch(r.store||'Unknown store')} <span style="color:#8A8A96;font-weight:500;font-size:11.5px">${agoTs(r.created_at)}</span></div>
+        <div class="pk-m" style="white-space:normal">We said <b style="color:#fff">${esch(ours(r))}</b> · they said <b style="color:${open?'#F4D03F':'#fff'}">${esch(UV[r.user_verdict]||r.user_verdict||'?')}</b>${r.reviewed?' · reviewed':''}</div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+          ${r.transcript?`<button class="ghost" style="font-size:12px;padding:5px 10px" onclick="fbTranscript(${r.id})">Transcript</button>`:''}
+          ${canCorrect?`<button class="act" style="font-size:12px;padding:5px 10px" onclick="fbCorrect(${r.id},'${r.user_verdict}')">Correct → ${esch(UV[r.user_verdict])}</button>`:''}
+          ${!r.reviewed?`<button class="ghost" style="font-size:12px;padding:5px 10px" onclick="fbReview(${r.id})">Mark reviewed</button>`:''}
         </div>
-        <div class="row" style="gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
-          ${r.transcript?`<button class="ghost" style="font-size:12px;padding:5px 9px" onclick="var e=document.getElementById('fbtx_${r.id}');e.style.display=e.style.display==='block'?'none':'block'">Transcript</button>`:''}
-          ${canCorrect?`<button class="act" style="font-size:12px;padding:5px 9px" onclick="fbCorrect(${r.id},'${r.user_verdict}')">Correct → ${esch(UV[r.user_verdict])}</button>`:''}
-          ${!r.reviewed?`<button class="ghost" style="font-size:12px;padding:5px 9px" onclick="fbReview(${r.id})">Mark reviewed</button>`:''}
-        </div>
-      </div>${tx}
+      </div>
     </div>`;
   }).join('');
+}
+let FB_ROWS=[];
+function fbTranscript(id){
+  const r=FB_ROWS.find(x=>x.id===id); if(!r||!r.transcript) return;
+  openSheet(r.store||'Transcript', agoTs(r.created_at), bubbles(r.transcript)||`<div class="meta" style="white-space:pre-wrap">${esch(r.transcript)}</div>`);
 }
 async function loadFbUnclear(){
   const el=document.getElementById('fb_unclear'); if(!el) return;
@@ -2579,7 +2584,7 @@ async function loadFbUnclear(){
     const rc=await api('/api/results?limit=120');
     const unk=(rc&&Array.isArray(rc.rows)?rc.rows:[]).filter(r=>r.statusKey==='no_clear_answer').slice(0,15);
     if(!unk.length){ el.innerHTML=''; return; }
-    el.innerHTML=`<div class="card"><div class="meta" style="margin-bottom:8px">Unclear checks · newest ${unk.length} · Fun included</div><div class="row" style="gap:6px;flex-wrap:wrap">${unk.map(r=>`<span class="chip-sm" style="color:#F4D03F;background:rgba(244,208,63,.12)">${esch(String(r.retailer||('#'+r.retailerId)).split('—')[0].trim())} · no clear answer · ${agoTs(r.startedAt)}</span>`).join('')}</div></div>`;
+    el.innerHTML=`<div class="k-eyebrow">Unclear checks · newest ${unk.length} · Fun included</div><div class="k-pills" style="margin-top:0">${unk.map(r=>`<span class="k-pill" style="color:#F4D03F">${esch(String(r.retailer||('#'+r.retailerId)).split('—')[0].trim())} · ${agoTs(r.startedAt)}</span>`).join('')}</div>`;
   }catch(_){ el.innerHTML=''; }
 }
 async function fbReview(id){ const r=await api('/api/feedback/'+id+'/review',{method:'POST',headers:{'content-type':'application/json'},body:'{}'}); toast((r&&r.ok)?'Marked reviewed':"Couldn't update"); loadFeedback(); }
@@ -3783,25 +3788,39 @@ function statusAutoSave(el){ const card=el.closest("[data-sid]"); if(!card) retu
   const body={}; card.querySelectorAll("[data-f]").forEach(i=>{ body[i.dataset.f]=i.value; });
   clearTimeout(_stSaveT[id]); _stSaveT[id]=setTimeout(async()=>{
     const r=await api("/api/statuses/"+id,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
-    if(r&&r.id){ STATUSES[r.key]=r; toast("Saved ✓"); }
+    if(r&&r.id){ STATUSES[r.key]=r; renderStatuses(); toast("Saved ✓"); }
   }, 450); }
 
+// ---- Statuses as CRUD rows (comp 1e): light list, editing in the shared sheet. ----
+const ST_TONES={in:'In stock',out:'Not in stock',unk:'Check failed',soon:'Restock coming'};
 function renderStatuses(list){
   const el=document.getElementById('st_list'); if(!el) return;
   const rows=(list||Object.values(STATUSES)).slice().sort((a,b)=>(a.sort||0)-(b.sort||0));
   el.innerHTML = rows.length ? rows.map(s=>`
-    <div class="card" style="padding:12px;margin-bottom:8px" data-sid="${s.id}">
-      <div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap">
+    <button class="peek" onclick="stSheet(${s.id})">
+      <span class="pk-ic" style="background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);width:38px;height:38px;border-radius:11px">${statusIcon(s.emoji,s.color||s.tone,20)}</span>
+      <span class="pk-main"><span class="pk-t" style="display:block">${escH(s.label)}</span>
+      <span class="pk-m" style="display:block">${ST_TONES[s.tone]||s.tone||''}${s.note?' · '+escH(String(s.note).replace(/<[^>]*>/g,'').slice(0,48)):''}</span></span>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>`).join('') : '<div class="empty">No statuses yet.</div>';
+}
+function stSheet(id){
+  const s=Object.values(STATUSES).find(x=>x.id===id); if(!s) return;
+  openSheet(s.label, ST_TONES[s.tone]||'', `
+    <div data-sid="${s.id}">
+      <div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap;margin-top:4px">
         <button type="button" class="sticon-btn" onclick="statusPickIcon(this)" title="Change the icon">${statusIcon(s.emoji,s.color||s.tone,24)}</button>
         <input type="hidden" data-f="emoji" value="${escH(s.emoji)}">
         <input value="${escH(s.label)}" data-f="label" onchange="statusAutoSave(this)" style="flex:1;min-width:0;font-size:15px" placeholder="Label">
         ${s.key==='in_stock'
           ? `<input type="color" value="#4ADE80" data-f="color" disabled title="Locked to brand green. matches the logo" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1.5px solid var(--green);background:none;flex:0 0 auto;cursor:not-allowed">`
-          : `<input type="color" value="${escH(s.color)}" data-f="color" oninput="statusRecolor(this)" onchange="statusAutoSave(this)" title="Icon color" style="width:42px;height:42px;padding:2px;border-radius:9px;border:1px solid var(--border);background:none;flex:0 0 auto">`}
+          : `<input type="color" value="${escH(s.color)}" data-f="color" oninput="statusRecolor(this)" onchange="statusAutoSave(this)" title="Icon color" style="width:42px;height:42px;padding:2px;border-radius:9px;border:none;background:none;flex:0 0 auto">`}
       </div>
-      <textarea data-f="note" rows="3" onchange="statusAutoSave(this)" placeholder="Message the customer sees" style="margin-top:10px;font-size:13px;line-height:1.5">${escH(s.note)}</textarea>
-      <div class="meta" style="margin-top:5px;font-size:10.5px;line-height:1.45">Use <code>{product}</code> for the live product name · <code>&lt;b&gt;…&lt;/b&gt;</code> to bold.</div>
-      <div class="row" style="gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
+      <div class="k-eyebrow">Message the customer sees</div>
+      <textarea data-f="note" rows="3" onchange="statusAutoSave(this)" placeholder="Message the customer sees" style="font-size:14px;line-height:1.5">${escH(s.note)}</textarea>
+      <div class="meta" style="margin-top:6px;font-size:10.5px;line-height:1.45">Use <code>{product}</code> for the live product name · <code>&lt;b&gt;…&lt;/b&gt;</code> to bold.</div>
+      <div class="k-eyebrow">Meaning</div>
+      <div class="row" style="gap:8px;align-items:center;flex-wrap:wrap">
         <select data-f="tone" onchange="statusToneChange(this);statusAutoSave(this)" title="Verdict bucket. sets the color + filter" style="flex:0 0 auto;max-width:180px">
           <option value="in"${s.tone==='in'?' selected':''}>In stock</option>
           <option value="out"${s.tone==='out'?' selected':''}>Not in stock</option>
@@ -3809,9 +3828,9 @@ function renderStatuses(list){
           <option value="soon"${s.tone==='soon'?' selected':''}>Restock coming</option>
         </select>
         <span class="meta" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">key: <code>${escH(s.key)}</code></span>
-        <button class="ghost" onclick="saveStatus(${s.id},this)" style="flex:0 0 auto">Save</button>
       </div>
-    </div>`).join('') : '<div class="empty">No statuses yet.</div>';
+      <div class="k-note" style="padding-left:0">Edits save as you type and go live for customers immediately.</div>
+    </div>`);
 }
 async function saveStatus(id,btn){
   const card=btn.closest('[data-sid]'); const body={};
