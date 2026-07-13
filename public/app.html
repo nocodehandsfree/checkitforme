@@ -746,39 +746,29 @@
     <div id="restock_net"><div class="empty">Loading…</div></div>
   </section>
   <section id="alerts">
-    <h2>Alerts</h2>
-    <div class="meta" style="margin:0 0 12px">The messages we send customers, who's signed up, and every send. <span data-tip="Restock alerts go by text (each plan gets a monthly cap, it's a cost line). Store-live, waitlist and welcome go by email. Restock texts stay stubbed until the Twilio number clears carrier registration; email is live now via Brevo. Anything not yet deliverable is logged as 'stubbed' so you can watch the flow."></span></div>
-    <div class="card">
-      <div class="name">Delivery status</div>
-      <div id="al_status" class="meta">Loading…</div>
+    <div class="k-title">Alerts</div>
+    <div class="k-sub">The messages we send customers, and every send. Restock rides text, the rest ride email.</div>
+    <div class="k-eyebrow">Delivery status</div>
+    <div id="al_status" class="meta">Loading…</div>
+    <div class="k-eyebrow">This month</div>
+    <div id="al_rollup" class="meta">Loading…</div>
+    <div class="k-eyebrow">Message templates · tokens fill per send: {store} {product} {city} {name}</div>
+    <div id="al_templates">Loading…</div>
+    <div class="btnrow"><span id="al_saved" class="meta"></span><button class="act" onclick="saveAlertTemplates()">Save messages</button></div>
+    <div class="k-eyebrow">Send yourself a test</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select id="al_test_event" class="k-filter">
+        <option value="welcome">Welcome (email)</option>
+        <option value="store_added">Store went live (email)</option>
+        <option value="waitlist">We’re live in your area (email)</option>
+        <option value="restock">Restock (text)</option>
+      </select>
+      <input id="al_test_to" type="text" placeholder="your email (or phone for restock)" style="flex:1;min-width:180px;font-size:14px;padding:10px 14px">
+      <button class="act" onclick="sendAlertTest()">Send test</button>
     </div>
-    <div class="card">
-      <div class="name">This month</div>
-      <div id="al_rollup" class="meta">Loading…</div>
-    </div>
-    <div class="card">
-      <div class="name">Message templates <span data-tip="Tokens fill in per send: {store} {product} {city} {name}. Keep the copy-guide voice — a friend who did you a favor, no dashes, 'check' is the unit."></span></div>
-      <div id="al_templates">Loading…</div>
-      <div style="margin-top:12px"><button class="act" onclick="saveAlertTemplates()">Save messages</button> <span id="al_saved" class="meta"></span></div>
-    </div>
-    <div class="card">
-      <div class="name">Send yourself a test <span data-tip="Fires the chosen message to any address with sample data (Target Glendale, 151 Booster Box). Email sends for real via Brevo. Restock is a text and will show 'stubbed' until the Twilio number is live."></span></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <select id="al_test_event" style="background:var(--terminal);border:1px solid var(--border);border-radius:8px;padding:8px 9px;color:var(--text-strong);font-size:12.5px">
-          <option value="welcome">Welcome (email)</option>
-          <option value="store_added">Store went live (email)</option>
-          <option value="waitlist">We’re live in your area (email)</option>
-          <option value="restock">Restock (text)</option>
-        </select>
-        <input id="al_test_to" type="text" placeholder="your email (or phone for restock)" style="flex:1;min-width:180px;background:var(--terminal);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text-strong);font-size:13px">
-        <button class="act" onclick="sendAlertTest()">Send test</button>
-      </div>
-      <div id="al_test_out" class="meta" style="margin-top:8px;font-size:12px"></div>
-    </div>
-    <div class="card">
-      <div class="name">Recent sends</div>
-      <div id="al_log" class="meta">Loading…</div>
-    </div>
+    <div id="al_test_out" class="meta" style="margin-top:8px;font-size:12px"></div>
+    <div class="k-eyebrow">Recent sends</div>
+    <div id="al_log" class="meta">Loading…</div>
   </section>
   <section id="workflows">
     <div class="k-title">Workflows</div>
@@ -851,7 +841,9 @@
   </section>
 
   <section id="add">
-    <h2>Add a store</h2>
+    <div class="k-title">Add a store</div>
+    <div class="k-sub">Goes live for customers as soon as it saves.</div>
+    <div style="height:12px"></div>
     <div class="card">
       <div class="grid2">
         <div><label>Name</label><input id="r_name" placeholder="Barnes & Noble Brentwood"></div>
@@ -948,50 +940,33 @@
 
   <section id="catalog"><h2>Tracked categories</h2><div id="catList"><div class="empty">Loading…</div></div></section>
   <section id="receipts">
-    <h2>Kiosk</h2>
-    <div class="card report">
-      <div class="name">Kiosk intel</div>
-      <div id="gw_kiosks" class="meta">Loading…</div>
-    </div>
-    <div class="card report">
-      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:4px">
-        <div class="name">Emailed-in receipts</div>
-        <button class="ghost" style="font-size:12.5px;padding:5px 10px" onclick="inspectInbox()">Inspect inbox</button>
-        <span data-tip="Reads the ingest inbox and shows how each email parsed, whether a receipt landed, and why." style="margin-left:7px;cursor:help"></span>
-      </div>
-      <div class="meta" id="rcpt_status" style="margin-bottom:8px">Loading…</div>
-      <div id="rcpt_debug" class="meta" style="margin-bottom:8px"></div>
-      <div id="rcptList"><div class="empty">Loading…</div></div>
-    </div>
+    <div class="k-title">Kiosk</div>
+    <div class="k-sub">Price intel from customer receipts.</div>
+    <div class="k-eyebrow">Kiosk intel</div>
+    <div id="gw_kiosks" class="meta">Loading…</div>
+    <div class="k-eyebrow" style="display:flex;align-items:center;justify-content:space-between">Emailed-in receipts
+      <button class="ghost" style="font-size:12px;padding:5px 10px;text-transform:none;letter-spacing:0" onclick="inspectInbox()">Inspect inbox</button></div>
+    <div class="meta" id="rcpt_status" style="margin-bottom:8px">Loading…</div>
+    <div id="rcpt_debug" class="meta" style="margin-bottom:8px"></div>
+    <div id="rcptList"><div class="empty">Loading…</div></div>
   </section>
 
   <section id="growth">
-    <h2>Policy</h2>
-    <div class="card">
-      <div class="name">Feature flags</div>
-      <div id="gw_flags" class="meta">Loading…</div>
-    </div>
-    <div class="card">
-      <div class="name">Pricing &amp; rewards</div>
-      <div id="gw_pricing" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
-      <div style="margin-top:12px"><button class="act" onclick="savePolicyForm()">Save pricing</button></div>
-    </div>
-    <div class="card">
-      <div class="name">Restock watches</div>
-      <div id="gw_watches" class="meta">Loading…</div>
-    </div>
-    <div class="card">
-      <div class="name">Community moderation</div>
-      <div id="gw_community" class="meta">Loading…</div>
-    </div>
-    <div class="card">
-      <div class="name">Store requests</div>
-      <div id="gw_storereqs" class="meta">Loading…</div>
-    </div>
-    <div class="card">
-      <div class="name">Launch waitlist</div>
-      <div id="gw_waitlist" class="meta">Loading…</div>
-    </div>
+    <div class="k-title">Policy</div>
+    <div class="k-sub">Flags and pricing up top. The queues below are live customer requests.</div>
+    <div class="k-eyebrow">Feature flags · live for customers on tap</div>
+    <div id="gw_flags" class="meta">Loading…</div>
+    <div class="k-eyebrow">Pricing and rewards</div>
+    <div id="gw_pricing" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
+    <div class="btnrow"><button class="act" onclick="savePolicyForm()">Save pricing</button></div>
+    <div class="k-eyebrow">Restock watches</div>
+    <div id="gw_watches" class="meta">Loading…</div>
+    <div class="k-eyebrow">Community moderation</div>
+    <div id="gw_community" class="meta">Loading…</div>
+    <div class="k-eyebrow">Store requests</div>
+    <div id="gw_storereqs" class="meta">Loading…</div>
+    <div class="k-eyebrow">Launch waitlist</div>
+    <div id="gw_waitlist" class="meta">Loading…</div>
   </section>
 
   <section id="settings">
