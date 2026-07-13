@@ -27,6 +27,7 @@ const FIX = {
   '/api/admin/workflow-assignments': { 'Direct Dana': { chains:[{name:'Target'},{name:'GameStop'}], stores:[] }, 'Hobby Shop Casual': { chains:[], stores:[{name:'Hobby Planet',location:'Glendale'}] } },
   '/api/categories': [ {id:1,label:'Pokémon'}, {id:2,label:'One Piece TCG'}, {id:3,label:'Topps NBA'} ],
   '/api/chains': [],
+  '/api/admin/store-intel': { total:101967, callable:84210, states:50, chains:212, byProduct:{'Pokemon':64890,'One Piece':22140,'Topps':18730,'NeeDoh':9210}, types:['Big box','Hobby','Grocery','Pharmacy','Thrift'], byType:[{type:'Big box',n:41200},{type:'Grocery',n:28800},{type:'Hobby',n:9100}], topRegions:[{region:'West Coast',n:22400},{region:'Southeast',n:18100}], topChecks:[{name:'Target Glendale',location:'Glendale',n:44},{name:'GameStop Burbank',location:'Burbank',n:31}] },
   '/api/admin/users': (()=>{ const now=Math.floor(Date.now()/1000); return [
     { id:'u1', phone:'+13105551234', email:'sam@example.com', plan:'Subscriber', credits:22, callsMade:38, spentCents:2497, createdAt:now-86400*20, callerIdVerified:true },
     { id:'u2', phone:'+18185550000', plan:'Pay-as-you-go', credits:3, callsMade:9, spentCents:180, createdAt:now-86400*6 },

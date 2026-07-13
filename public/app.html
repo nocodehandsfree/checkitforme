@@ -795,13 +795,12 @@
   </section>
 
   <section id="retailers">
-    <h2>Store intel</h2>
-    <div id="storecoverage" class="card report" style="display:none;margin-bottom:10px"></div>
-    <div class="card report"><div class="stats" id="storeintel" style="margin-bottom:0"></div></div>
-    <div id="storecarries" class="card report" style="display:none"></div>
-    <details id="storereports" class="card report" open style="display:none"><summary><span class="name">Reports</span></summary>
-      <div id="rep_body" style="margin-top:10px"></div>
-    </details>
+    <div class="k-title">Store intel</div>
+    <div class="k-sub">The store book, at a glance.</div>
+    <div id="storeintel"></div>
+    <div id="storecarries" style="display:none"></div>
+    <div id="storereports" style="display:none"><div id="rep_body"></div></div>
+    <div id="storecoverage" style="display:none;margin-top:14px"></div>
   </section>
 
   <section id="search">
@@ -2774,30 +2773,36 @@ async function loadStoreIntel(){
   loadCoverage();
   const d=await api('/api/admin/store-intel'); if(!d||d.error){ el.innerHTML=''; return; }
   const fmt=n=>Number(n||0).toLocaleString('en-US');   // exact, comma-grouped (101,967 — not "102k")
-  const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${fmt(n)}</div><div class="l">${l}</div></div>`;
-  // Four headline tiles only — the per-product counts move into ONE box below (was a circle per product).
-  el.innerHTML = tile(d.total,'total stores','green')+tile(d.callable,'callable')+tile(d.states,'states')+tile(d.chains,'chains');
+  // Report grammar: hero = the store book's size · wells = callable/states/chains · one list = carries.
+  const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${fmt(n)}</div><div class="l">${l}</div></div>`;
+  el.innerHTML=`<div class="k-hero"><span class="n">${fmt(d.total)}</span><span class="l">stores tracked</span></div>
+    <div class="k-wells">${well(d.callable,'Callable','g')}${well(d.states,'States','')}${well(d.chains,'Chains','')}</div>`;
   const bp=d.byProduct||{};
   const items=Object.entries(bp).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]);
   const cw=document.getElementById('storecarries');
   if(cw){ if(items.length){ cw.style.display='';
-      cw.innerHTML=`<div class="name">Stores that carry each product <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">(of ${fmt(d.total)} total)</span></div>`
-        +`<div class="carrygrid">`+items.map(([p,n])=>`<div class="carryrow"><span>${prodMark(p,16)} ${esch(p)}</span><b>${fmt(n)}</b></div>`).join('')+`</div>`;
+      cw.innerHTML=`<div class="k-eyebrow">Carry each product · of ${fmt(d.total)}</div>`
+        +items.map(([p,n])=>`<div class="repline"><span class="rl">${prodMark(p,16)} ${esch(p)}</span><b>${fmt(n)}</b></div>`).join('');
     } else cw.style.display='none'; }
   // Fill the store-type filter from the full chain-type list, and the product filter from the carry list.
   if(Array.isArray(d.types)&&d.types.length) fillTypeFilter(d.types);
   if(items.length) fillOptions('f_carries', items.map(([p])=>p), 'Any product');
   fillOptions('f_region', ['West Coast','Northwest','Southwest','Midwest','Southeast','Northeast'], 'All regions');
-  // Reports — stores by type, top regions, most-checked stores.
+  // Depth: by-type / regions / most-checked ride drill-in rows into the sheet (a report never gets longer).
   const rep=document.getElementById('storereports'), rb=document.getElementById('rep_body');
   if(rep&&rb){
     const line=(l,n)=>`<div class="repline"><span class="rl">${esch(l)}</span><b>${fmt(n)}</b></div>`;
-    const col=(title,rows)=>`<div class="repcol"><div class="repttl">${esch(title)}</div>${rows||'<div class="meta">—</div>'}</div>`;
     const byType=(d.byType||[]).slice(0,12).map(x=>line(x.type,x.n)).join('');
     const regions=(d.topRegions||[]).map(x=>line(x.region,x.n)).join('');
     const checks=(d.topChecks||[]).map(x=>line(x.location?`${x.name} · ${x.location}`:x.name,x.n)).join('');
-    if(byType||regions||checks){ rep.style.display=''; rep.open=true; // Intel reports stay expanded (owner ask)
-      rb.innerHTML=`<div class="repgrid">${col('By store type',byType)}${col('Top regions',regions)}${col('Most-checked stores',checks)}</div>`;
+    const chev='<svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+    const peek=(t,fact,holder)=>`<button class="peek" onclick="sheetFromHolder('${holder}','${esch(t)}','')"><span class="pk-main"><span class="pk-t" style="display:block">${esch(t)}</span></span><span class="pk-fact">${esch(fact)}</span>${chev}</button>`;
+    if(byType||regions||checks){ rep.style.display='';
+      rb.innerHTML=`<div class="k-eyebrow">Reports</div>`
+        +(byType?peek('By store type',(d.byType||[]).length,'ds_sitype'):'')
+        +(regions?peek('Top regions',(d.topRegions||[])[0]?(d.topRegions||[])[0].region:'','ds_siregion'):'')
+        +(checks?peek('Most checked stores',(d.topChecks||[]).length,'ds_sichecks'):'')
+        +`<div style="display:none"><div id="ds_sitype">${byType}</div><div id="ds_siregion">${regions}</div><div id="ds_sichecks">${checks}</div></div>`;
     } else rep.style.display='none';
   }
 }
