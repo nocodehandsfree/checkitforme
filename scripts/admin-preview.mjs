@@ -27,6 +27,11 @@ const FIX = {
   '/api/admin/workflow-assignments': { 'Direct Dana': { chains:[{name:'Target'},{name:'GameStop'}], stores:[] }, 'Hobby Shop Casual': { chains:[], stores:[{name:'Hobby Planet',location:'Glendale'}] } },
   '/api/categories': [ {id:1,label:'Pokémon'}, {id:2,label:'One Piece TCG'}, {id:3,label:'Topps NBA'} ],
   '/api/chains': [],
+  '/api/admin/users': (()=>{ const now=Math.floor(Date.now()/1000); return [
+    { id:'u1', phone:'+13105551234', email:'sam@example.com', plan:'Subscriber', credits:22, callsMade:38, spentCents:2497, createdAt:now-86400*20, callerIdVerified:true },
+    { id:'u2', phone:'+18185550000', plan:'Pay-as-you-go', credits:3, callsMade:9, spentCents:180, createdAt:now-86400*6 },
+    { id:'u3', email:'owner@checkitforme.com', plan:'Comp / owner', comp:true, credits:999, callsMade:210, spentCents:0, createdAt:now-86400*90, staff:true },
+  ]; })(),
   '/api/admin/test-calls': (()=>{ const now=Math.floor(Date.now()/1000); return { count:12, summary:{avgNavSec:34,avgTalkSec:71,avgCallSec:118}, rows:[
     { workflow:'Friendly Sam', status:'in_stock', started:now-1800, navSec:28, talkSec:64, callSec:101, opener:{label:'#2', said:'Hi there! quick one, any Pokémon cards on the shelf today?'} },
     { workflow:'Hobby Shop Casual', status:'no_clear_answer', started:now-7200, navSec:41, talkSec:88, callSec:140, opener:{label:'#1', said:'Hey! you guys get any Pokémon in this week?'} },

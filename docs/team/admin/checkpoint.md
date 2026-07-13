@@ -3,97 +3,55 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 2026-07-12 — ADMIN DATA-DISPLAY REDESIGN (Addie, fresh) — IN PROGRESS
+## 2026-07-13 — ADMIN DATA-DISPLAY REDESIGN (Addie) — 13/22 pages live on Admin
 
-**Mission:** the real redesign — design the DATA, not a reskin. Law = `docs/design/admin/DATA_DISPLAY.md`.
-Look = `ADMIN_COMPS.dc.html` + `STYLE_GUIDE.md`. Words = `copy/COPY_STYLE_GUIDE_ADMIN.md`.
-Board maps 5 page types (LIVE·REPORT·LOG·CRUD·CONSOLE) and one report grammar (range·hero·wells·one list·footnote).
+### ⚖️ OWNER RULING 07-13 (supersedes comp 1b where they differ) — THE design bar
+First comp-faithful dash was REJECTED (didn't follow the comp as a whole screen; comp itself too flat).
+Approved: my full-screen mock. Its laws for every page:
+- Hero answers the page in ONE number/word + honest trend/spark (hide until real data exists, never fake).
+- Color with intent, iOS-Settings style: calm rows, ONE tinted icon per row, values colored only when
+  state matters. Vitals numbers ALWAYS colored (owner caught black 62/31%).
+- Copy = nouns + numbers ("Money · $140"). Explainers live in the SHEET sub, never on rows.
+- Page title 26px/800.
 
-**Known crimes live in code now (measured):** 43 `details.card` accordions · 66 `data-tip` tooltips ·
-9 floating-pager refs. Comps ban all three (accordions→peek rows, tooltips→one gray line, pager→Show more key).
+### DONE (each: build → screenshot → push; zero page errors, tsc 0 each push)
+dash (approved mock: hero+trend+spark, 2 vitals, icon rows) · **shell** (brandmark header, carved group
+track w/ raised active key, section pills, bg #1D1D22) · results/Calls (1c log + 1d call sheet, initials
+logTile, truck+day restock fact, SHOW 50 MORE) · settings/App (1i: k-switch, pill picker, policy JSON in
+sheet) · fun · workflows (1e rows + 1f edit sheet, live re-render) · support (1g: wells/pills/top-questions
+drill-in, chat rows, drawer→sheet) · restock (1h: hero answer, wells, funnel/landing/days drill-ins,
+by-store list + store sheet) · gtm (progress hero+bar, pill filters, dot-cycle rows, add-in-sheet) ·
+feedback (wells, amber-glow queue rows, transcript sheet) · statuses (CRUD rows + edit sheet, autosave) ·
+testing (hero+wells strip, log rows) · users (wells, account rows, detail sheet w/ Mark test + Reset).
 
-### PHASE 0 — page inventory (THE plan). 6 groups · 22 sections.
-Comp = dedicated screen on the board. Pattern = reuse the archetype's comped anatomy (not novel — the
-board's section map assigns each one). No page is genuinely-novel, so no CD stop at archetype level.
+### KIT (defined once in app.html <style>, comments point at comps)
+.peek (+pk-ic/pk-logo/pk-m/pk-st/pk-bar/.static) · ONE sheet (openSheet/closeSheet/sheetFromHolder;
+borrows live DOM, grabber/swipe/scrim/Esc dismiss) · .k-switch · select.k-filter · .k-key · .k-cta ·
+.k-badge · .k-danger · .k-range/.k-hero/.k-wells/.k-pills (report grammar) · .k-eyebrow/.k-title/.k-sub/
+.k-note · raised .card + carved inputs/textarea global tokens · .slogo.emboss initials tile ·
+comp-1d bubbles. Harness: scripts/admin-preview.mjs (stub API fixtures, `full` flag for shell shots).
 
-| # | Group·Section (nav label) | Archetype | Comp? | Current state → target |
-|--|--|--|--|--|
-| 1 | God View · dash (Live) | LIVE | ✓ 1b | dash tiles + accordions → 3 vitals + peek rows; KILL Calc nav-only square |
-| 2 | God View · users (Users) | REPORT | pattern 1h | build to report grammar |
-| 3 | God View · restock (Restock) | REPORT | ✓ 1h (exemplar) | match the exemplar exactly |
-| 4 | God View · alerts (Alerts) | CRUD over LOG | pattern 1e+1c | send log = LOG rows; delivery chips |
-| 5 | God View · growth (Policy) | CONSOLE + queues | pattern 1i+1c | flags=console; requests/waitlist/mod=LOG queues |
-| 6 | God View · calc (Calc) | REPORT | pattern 1h | report grammar, read-only |
-| 7 | God View · plans (Plans) | CRUD | pattern 1e | 8 accordions → CRUD rows + edit sheet |
-| 8 | Stores · retailers (Intel) | REPORT | pattern 1h | report grammar |
-| 9 | Stores · search (Search) | LOG (map drill-in) | pattern 1c | filters + LOG rows; map = drill-in |
-| 10 | Stores · add (Add) | CRUD form | pattern 1e/1f | form fields, kit inputs |
-| 11 | Stores · receipts (Kiosk) | REPORT over LOG | pattern 1g | report strip + log |
-| 12 | Calls · results (Calls) | LOG | ✓ 1c (+1d sheet) | 5 accordion/card hits → LOG rows + call sheet |
-| 13 | Calls · feedback (Feedback) | queue LOG | pattern 1c | queue rows |
-| 14 | Calls · statuses (Statuses) | CRUD | pattern 1e | 5 accordion hits → CRUD rows + sheet |
-| 15 | Calls · trees (Chains) | CRUD | pattern 1e | CRUD rows + mapping drill-in |
-| 16 | Calls · settings (App) | CONSOLE | ✓ 1i | toggle rows; no save button on console |
-| 17 | Voice · designer (Designer) | CRUD | pattern 1e | CRUD |
-| 18 | Voice · workflows (Workflows) | CRUD | ✓ 1e (+1f sheet) | CRUD rows + edit sheet + env track |
-| 19 | Voice · testing (Testing) | LOG + report strip | pattern 1c+1g | report strip + call log |
-| 20 | Voice · fun (Fun) | CONSOLE | pattern 1i | toggle rows |
-| 21 | Support · support (Chats) | REPORT over LOG | ✓ 1g | report grammar + chat log |
-| 22 | Launch · gtm (Go-to-Market) | checklist CRUD | pattern 1e | checklist rows |
+### REMAINING (9): build from kit patterns, one page/push at a time
+alerts (CRUD-over-LOG) · growth/Policy (CONSOLE + queues; SPLIT per board: flags+pricing console, store
+requests/waitlist/moderation as queue LOGs; Zones AREA REMOVAL = open item #7 below) · calc (REPORT,
+read-only) · plans (CRUD + the premium toggle-matrix backlog item) · retailers/Intel (REPORT) · search
+(LOG w/ filters; map = drill-in) · add (CRUD form) · receipts/Kiosk (REPORT over LOG) · designer (CRUD
+steps; heaviest — consider its own session) · trees/Chains (CRUD + mapping drill-in).
 
-### ⚖️ OWNER RULING 07-13 (supersedes comp 1b where they differ) — THE design bar for every page
-First 1b-faithful dash build = REJECTED ("did not follow the comp" as a whole screen + comp itself too
-flat). Approved instead: my full-screen mock. The rules it sets:
-- **Hero answers the page in one number** + honest trend chip + 7-day spark (no fake data — hide until real).
-- **Color with intent, iOS-Settings style:** rows calm/dark, ONE tinted icon per row (scan by color),
-  values colored only when state matters. Never a rainbow, never dead gray.
-- **Copy stripped to nouns + numbers:** "Money · $140", "Call time · 1:48". Explainers live in the SHEET
-  sub, never on the row. No sentence subs on rows.
-- Page title 26px/800. Vitals numbers ALWAYS colored (owner caught black 62/31 in mock v1).
+### Notes for next session
+- days[] added to /api/admin/overview (server.ts, my lane) → trend chip + spark HIDE on Admin until a
+  promote ships it. Not a bug.
+- test-all: only pre-existing failures (qa-design off-system = consumer scope · CATEGORIES.map/.some
+  page errors exist on baseline). Verified on baseline at session start.
+- **CD gap:** approved 07-13 dash mock supersedes board 1b — ADMIN_COMPS needs the backfill (hero+trend+
+  spark, icon rows, no row subs). Also new: initials logTile in logs (board shows it, code now matches).
+- data-tip ⓘ tooltips still live on NOT-yet-redesigned pages; they convert to gray lines per page.
+- supDrawer removed; statuses saveStatus() now unused by UI (autosave covers it) — safe, left in place.
 
-### PAGES DONE (build → screenshot vs comp/system → pushed, one commit each)
-1. **dash** (LIVE, approved mock) · 2. **results/Calls** (LOG 1c + call sheet 1d) · 3. **settings/App**
-(CONSOLE 1i) · 4. **fun** (console) + global raised-card/carved-input skin · 5. **workflows** (CRUD 1e +
-edit sheet 1f, live-refresh) · 6. **support** (REPORT-over-LOG 1g; drawer killed → sheet) · 7. **restock**
-(REPORT 1h exemplar; hero answer + wells + drill-in sheets + by-store list + store sheet).
-Kit now holds: peek row/log row/console row · ONE sheet · switch · pill dropdown · raised key · capsule
-CTA · badges · range track · hero · wells · pills · danger action. REMAINING (build from these patterns):
-users, alerts, growth/Policy, calc, plans, retailers/Intel, search, add, receipts/Kiosk, feedback,
-statuses, trees/Chains, designer, testing, gtm.
-
-### SHIPPED
-- **Shared kit v1**: k-eyebrow/k-title/k-sub/k-note, raised vitals `.v`, `.peek` row (+`.pk-ic` tinted
-  icon slot), `.heroc` hero card (trend+spark), **ONE sheet** (grabber+swipe+scrim dismiss; borrows live
-  DOM so ids survive). Harness `scripts/admin-preview.mjs` (stub API, per-section or `full` shots).
-- **Shell (comp 1a + approved mock):** brandmark+Check+ADMIN header, carved group track w/ one raised
-  active key (icons-only idle), raised section pills w/ green active glow, page bg → #1D1D22 tokens.
-  Header scrolls away; active pill auto-scrolls into view. Old pages verified legible under new shell.
-- **dash (Live) → matches APPROVED MOCK.** Hero 24 + trend + spark · 2 colored vitals · 5 icon rows
-  (Money $140·34% · Members 3 new · Call time 1:48 · Call health 118·62% · Credits bar+31k) · sheet
-  holds all depth. tsc 0 · test-all: only pre-existing failures (qa-design off-system colors = consumer
-  scope, verified identical on baseline; CATEGORIES.map + `.some` page errors = baseline too).
-- **server.ts `/api/admin/overview` + `days[7]`** (daily real-call counts) feeds trend+spark. Staging-first:
-  Admin's API is prod, so chip+spark stay HIDDEN on Admin until next promote. UI degrades clean.
-
-**CD gap (board update owed):** the approved 07-13 dash mock supersedes board 1b — fold it into
-ADMIN_COMPS (hero+trend+spark, icon rows, no row subs). Board rule says comp first; owner approved the
-mock in chat, board needs the backfill.
-
-### Build order (comped screens first → extract shared kit ONCE, prove it, then reuse)
-0. ✅ kit v1 + dash (1b)  ·  next:
-1. Shared kit (tokens/classes at top of app.html) + dash (LIVE, 1b)
-2. results Calls LOG + call sheet (1c/1d)  →  3. settings/App CONSOLE (1i) + fun
-4. workflows CRUD + edit sheet (1e/1f)  →  5. support REPORT-over-LOG (1g)  →  6. restock REPORT (1h)
-Then pattern pages by archetype: REPORTs (users, calc, retailers, receipts) · LOGs (search, feedback,
-testing) · CRUD (plans, statuses, trees, designer, add, gtm) · CONSOLE+queues (growth).
-**Rule: one page at a time. Screenshot vs comp/system → matches → push (app.html only, ONE Admin) →
-checkpoint → next. Never hold 2 pages unpushed. Shared server code (if any) goes staging-first.**
-
-**CD gaps found:** none yet (fill as encountered).
-
-### Carried backlog (NON-redesign — do not lose, not this session's focus)
-- Premium-feature toggle matrix in God View ▸ Plans (qa-admin-plans fails; backend done, matrix UI missing).
-- Workflows env picker Prod|Staging (cross-origin auth w/ DevOps).
-- Per-customer account view (spec docs/specs/admin-user-view.md; DevOps builds endpoints).
-- Owner owes: Delta live test round 2; confirm test emails render in Outlook; A2P approval → SMS e2e.
+### Carried backlog (non-redesign)
+- Premium toggle matrix in Plans (qa-admin-plans; backend done, UI missing) — fold into plans page pass.
+- Workflows env picker Prod|Staging (cross-origin auth w/ DevOps) — comp 1e shows the track; needs API.
+- Per-customer account view (docs/specs/admin-user-view.md; DevOps endpoints) — users page now has the
+  sheet to host it.
+- Owner owes: Delta live test round 2 · Outlook email check · A2P day → SMS e2e per old runbook.
 - Data Dev: null stale avgTreeSeconds on ~30 direct chains. Mapping: 13 "attempted" re-runs.

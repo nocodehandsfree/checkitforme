@@ -736,8 +736,9 @@
   <section id="calc"><div id="calc_root"></div></section>
   <section id="plans"><div id="plans_root"></div></section>
   <section id="users">
-    <h2>Users</h2>
-    <div class="card report"><div id="users_list" class="meta">Loading…</div></div>
+    <div class="k-title">Users</div>
+    <div class="k-sub" id="users_sub">Everyone with an account.</div>
+    <div id="users_list"><div class="empty">Loading…</div></div>
   </section>
   <section id="restock">
     <div class="k-title">Restock intel</div>
@@ -4602,23 +4603,42 @@ async function loadUsers(){
   const d=await api('/api/admin/users');
   if(!Array.isArray(d)){ el.textContent='Could not load users.'; return; }
   if(!d.length){ el.innerHTML='<div class="empty">No signups yet.</div>'; return; }
+  USERS_ROWS=d;
   const real=d.filter(u=>!u.staff);
   const money=c=>'$'+((c||0)/100).toFixed(2);
+  const sub=document.getElementById('users_sub');
+  if(sub) sub.textContent=`${real.length} real signup${real.length===1?'':'s'} · ${d.length} account${d.length===1?'':'s'} total`;
+  const members=d.filter(u=>u.plan==='Subscriber').length, payg=d.filter(u=>u.plan==='Pay-as-you-go').length;
+  const revenue=d.reduce((s,u)=>s+(u.spentCents||0),0);
+  const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${n}</div><div class="l">${l}</div></div>`;
+  const planFact=u=>u.plan==='Subscriber'?['Member','g']:u.plan==='Pay-as-you-go'?['PAYG','a']:(u.comp||u.plan==='Comp / owner')?['Comp','']:u.manualStaff||u.plan==='Admin / test'?['Test','']:[u.plan||'—',''];
+  el.innerHTML=`<div class="k-wells" style="margin-bottom:14px">${well(members,'Members',members?'g':'')}${well(payg,'Pay as you go',payg?'a':'')}${well(money(revenue),'Spent all time','')}</div>`
+    + d.map((u,i)=>{
+      const pf=planFact(u), who=u.phone||u.email||u.id;
+      return `<button class="peek" onclick="userSheet(${i})">
+        <span class="pk-logo"><span class="slogo emboss" style="width:38px;height:38px;border-radius:11px">${esch(String(who).replace(/[^A-Za-z0-9]/g,'').slice(-2).toUpperCase()||'??')}</span></span>
+        <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(who)}</span>
+        <span class="pk-m" style="display:block">${u.credits} credits · ${u.callsMade} call${u.callsMade===1?'':'s'} · ${money(u.spentCents)}</span></span>
+        <span class="pk-fact ${pf[1]}">${esch(pf[0])}</span>
+        <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>`;
+    }).join('');
+}
+let USERS_ROWS=[];
+function userSheet(i){
+  const u=USERS_ROWS[i]; if(!u) return;
+  const money=c=>'$'+((c||0)/100).toFixed(2);
   const when=s=>{ if(!s) return '—'; const dt=new Date(s*1000); return dt.toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})+' · '+dt.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}); };
-  const planCls=p=>p==='Subscriber'?'in':p==='Pay-as-you-go'?'soon':(p==='Comp / owner'||p==='Admin / test')?'gray':'out';
-  el.innerHTML=`<div class="meta" style="margin-bottom:12px">${d.length} account${d.length===1?'':'s'} · <b style="color:var(--green)">${real.length} real signup${real.length===1?'':'s'}</b> <span style="color:var(--text-tertiary)">(excludes comp/owner + admin/test)</span></div>`
-    + d.map(u=>`<div class="urow">
-        <div class="ugrow">
-          <div class="uname">${esch(u.phone||u.email||u.id)}${u.comp?'<span class="ucomp">comp</span>':(u.manualStaff?'<span class="ucomp">admin/test</span>':'')}</div>
-          <div class="umeta">${(u.email&&u.phone)?esch(u.email)+' · ':''}signed up ${esch(when(u.createdAt))}${u.callerIdVerified?' · <span style="color:var(--green)">caller-ID ✓</span>':''}</div>
-        </div>
-        <div class="uright">
-          <span class="upill ${planCls(u.plan)}">${esch(u.plan)}</span>
-          <div class="umeta" style="margin-top:5px">${u.credits} credits · ${u.callsMade} call${u.callsMade===1?'':'s'} · ${money(u.spentCents)}</div>
-          ${u.comp?'':`<button class="ghost" style="font-size:10.5px;padding:5px 9px;margin-top:7px" onclick="toggleStaff('${esch(u.id)}',${u.manualStaff?'false':'true'})">${u.manualStaff?'Unmark':'Mark admin/test'}</button>`}
-          <button class="ghost" style="font-size:10.5px;padding:5px 9px;margin-top:7px;color:#ef4444" onclick="resetAccount('${esch(u.id)}','${esch(u.phone||u.email||u.id)}')">Reset account</button>
-        </div>
-      </div>`).join('');
+  const line=(k,v)=>`<div class="repline"><span class="rl">${k}</span><b>${v}</b></div>`;
+  openSheet(u.phone||u.email||u.id, esch(u.plan||''),
+    line('Signed up',esch(when(u.createdAt)))
+    +(u.email?line('Email',esch(u.email)):'')+(u.phone?line('Phone',esch(u.phone)):'')
+    +line('Credits',u.credits)+line('Checks made',u.callsMade)+line('Spent',money(u.spentCents))
+    +line('Caller ID',u.callerIdVerified?'<span style="color:var(--green)">verified</span>':'not verified')
+    +`<div class="btnrow split" style="margin-top:18px">
+      ${u.comp?'<span></span>':`<button class="ghost" onclick="closeSheet();toggleStaff('${esch(u.id)}',${u.manualStaff?'false':'true'})">${u.manualStaff?'Unmark admin/test':'Mark admin/test'}</button>`}
+    </div>
+    <button class="k-danger" onclick="closeSheet();resetAccount('${esch(u.id)}','${esch(u.phone||u.email||u.id)}')">Reset this account</button>`);
 }
 // Wipe an account back to brand new (account + its checks, alerts, schedules, zones, requests) and
 // cancel any live subscription. Previews the exact counts first, then asks once before deleting.
