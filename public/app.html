@@ -309,6 +309,20 @@
   .peek .pk-ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto}
   .peek .pk-t{font-size:15px}
   .peek .pk-fact{font-size:15px}
+  /* THE dropdown as a pill (filters atop logs/lists) — auto width, raised, green chevron. */
+  select.k-filter{width:auto;max-width:60vw;background-color:transparent;background-image:linear-gradient(180deg,#2E2E35,#25252B),url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%234ADE80' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");background-origin:border-box;background-repeat:no-repeat,no-repeat;background-position:center,right 13px center;border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:9px 32px 9px 15px;font-size:12px;font-weight:700;color:rgba(255,255,255,.85)}
+  .k-filters{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+  /* THE raised key — Show more, secondary page actions. Uppercase, letterspaced. */
+  .k-key{display:block;margin:18px auto 0;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border-radius:999px;padding:12px 26px;font-size:12.5px;font-weight:800;letter-spacing:.13em;color:rgba(255,255,255,.85);cursor:pointer;font-family:inherit;transition:transform .08s}
+  .k-key:active{transform:translateY(2px)}
+  /* Log row — the peek anatomy with a logo tile + status icon instead of icon + chevron. */
+  .peek .pk-logo{flex:0 0 auto}
+  .peek .pk-logo .slogo{width:38px;height:38px;border-radius:11px}
+  .peek .pk-m{font-size:11.5px;font-weight:600;color:#8A8A96;margin-top:1px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .peek .pk-st{display:flex;align-items:center;gap:6px;flex:0 0 auto;font-size:11px;font-weight:800}
+  .peek .pk-st .stc{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto}
+  /* Embossed initials tile — the log's fallback for stores with no logo art (comp 1c). */
+  .slogo.emboss{background:linear-gradient(145deg,#34343D,#23232B);display:grid;place-items:center;font-size:13px;font-weight:900;color:#CDCDD8;box-shadow:inset 0 1px 0 rgba(255,255,255,.08);letter-spacing:0}
   .k-sub{font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:2px}
   .k-note{font-size:11.5px;font-weight:600;color:#5C5C68;padding:16px 4px 0;line-height:1.5}
   .k-raise{background:linear-gradient(180deg,#2D2D34,#27272D);border-radius:14px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
@@ -518,12 +532,13 @@
   .vpill .ve{font-size:22px;line-height:1}
   .vpill.in{color:var(--green)} .vpill.out{color:var(--red)} .vpill.unk{color:var(--yellow)} .vpill.gray{color:var(--muted)} .vpill.soon{color:#F59E0B}
   .chat{display:flex;flex-direction:column;gap:8px;margin-top:10px}
-  .bub{max-width:84%;padding:9px 13px;border-radius:16px;font-size:13px;line-height:1.42;word-wrap:break-word;overflow-wrap:anywhere}
-  .bub .nm{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;opacity:.75;margin-bottom:3px}
-  .bub.a{align-self:flex-end;background:linear-gradient(180deg,rgba(74,222,128,.2),rgba(74,222,128,.13));border:1px solid rgba(74,222,128,.32);color:#eafff2;border-bottom-right-radius:5px}
+  /* Transcript bubbles (comp 1d): STAFF = raised card, left · CHECK AI = carved well, right. No borders. */
+  .bub{max-width:85%;padding:10px 14px;border-radius:14px;font-size:14px;font-weight:500;line-height:1.45;word-wrap:break-word;overflow-wrap:anywhere;color:rgba(255,255,255,.85)}
+  .bub .nm{display:block;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+  .bub.a{align-self:flex-end;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
   .bub.a .nm{color:var(--green)}
-  .bub.c{align-self:flex-start;background:#20202b;border:1px solid var(--border);color:#e9e9f2;border-bottom-left-radius:5px}
-  .bub.c .nm{color:var(--purple)}
+  .bub.c{align-self:flex-start;background:linear-gradient(180deg,#2D2D34,#27272D);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
+  .bub.c .nm{color:#8A8A96}
   .bub-note{align-self:center;font-size:12.5px;color:var(--muted);font-style:italic;text-align:center;padding:2px 0}
   details.tr{margin-top:10px}
   details.tr>summary{list-style:none;cursor:pointer;font-size:12.5px;color:var(--purple);font-weight:700;display:inline-flex;align-items:center;gap:6px}
@@ -870,23 +885,19 @@
     </div>
     <div id="sup_list"><div class="empty">Loading…</div></div>
   </section>
-  <section id="results"><h2>Recent calls</h2>
-    <div class="filters">
-      <select id="r_cat" onchange="renderResults()"><option value="">All products</option></select>
-      <select id="r_sort" onchange="renderResults()">
-        <option value="newest">Sort: newest</option>
+  <section id="results">
+    <div class="k-title">Calls</div>
+    <div class="k-sub" id="res_count">Loading…</div>
+    <div class="k-filters">
+      <select class="k-filter" id="r_cat" onchange="renderResults()"><option value="">All products</option></select>
+      <select class="k-filter" id="r_sort" onchange="renderResults()">
+        <option value="newest">Newest</option>
         <option value="oldest">Oldest</option>
         <option value="store">Store A–Z</option>
-        <option value="outcome">Outcome · in stock first</option>
+        <option value="outcome">In stock first</option>
       </select>
     </div>
     <div id="resultList"><div class="empty">Loading…</div></div>
-    <div id="res_pager" style="position:fixed;right:14px;bottom:16px;z-index:50;display:none;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border-strong);border-radius:14px;padding:7px 9px;box-shadow:0 10px 28px rgba(0,0,0,.55)">
-      <select id="res_size" onchange="setResSize(this.value)" title="Calls per page" style="width:auto;font-size:12.5px;padding:7px 26px 7px 9px;margin:0"><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select>
-      <button class="ghost" id="res_prev" onclick="resPage(-1)" aria-label="Previous page" style="padding:8px 13px;font-size:16px;line-height:1">←</button>
-      <span id="res_pageind" class="meta" style="min-width:46px;text-align:center;font-size:12.5px">1 / 1</span>
-      <button class="ghost" id="res_next" onclick="resPage(1)" aria-label="Next page" style="padding:8px 13px;font-size:16px;line-height:1">→</button>
-    </div>
   </section>
 
 
@@ -2452,6 +2463,15 @@ function logoTile(o){
   if(o.type==='Thrift') return `<div class="slogo" style="display:grid;place-items:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".9" fill="#FFCB05"/></svg></div>`;
   return `<div class="slogo">${storeWordmark(o.name,o.type)}</div>`;
 }
+// Log rows only (comp 1c): chain art rides the logo slot; ANY logoless store gets the embossed
+// initials tile. Store cards elsewhere keep logoTile's consumer-parity wordmark fallback.
+function logTile(o){
+  o=o||{};
+  if(o.logoUrl) return logoTile(o);
+  const words=String(o.name||'').replace(/['’.]/g,'').split(/\s+/).filter(w=>/^[A-Za-z0-9]/.test(w));
+  const ini=(words.length>=2?words[0][0]+words[1][0]:String(words[0]||'?').slice(0,2)).toUpperCase();
+  return `<div class="slogo emboss">${esch(ini)}</div>`;
+}
 // Name-only stores/chains (no logo file) show THEIR real name as a tight two-line wordmark —
 // ported verbatim from checkit.html so the fallback is identical on both surfaces.
 function storeWordmark(name,type){
@@ -2614,7 +2634,7 @@ function bubbles(t){
     const m=line.match(/^(Agent|Clerk):\s*(.*)$/);
     if(!m) return `<div class="bub-note">${esch(line)}</div>`;
     const who=m[1]==='Agent'?'a':'c';
-    return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'<img src="/logos/brand/check.png?v=2" alt="CheckIt" style="height:12px;width:auto;vertical-align:middle;display:inline-block">':'Staff'}</span>${esch(m[2])}</div>`;
+    return `<div class="bub ${who}"><span class="nm">${m[1]==='Agent'?'Check AI':'Staff'}</span>${esch(m[2])}</div>`;
   }).join('')+'</div>';
 }
 let RETAILERS=[];
@@ -3784,7 +3804,7 @@ async function addRetailer(){
   toast('Store added'); loadRetailers();
 }
 
-let RESULT_STORE_FILTER=null, RESULTS=[], RES_PAGE=0, RES_SIZE=10, RES_TOTAL=0;
+let RESULT_STORE_FILTER=null, RESULTS=[], RES_PAGE=0, RES_SIZE=50, RES_TOTAL=0;
 // Paginated calls: fetch ONE page (server limit/offset) so the page loads fast. Page-size + arrows live
 // in a floating bar (bottom-right) for one-handed mobile paging.
 async function loadResults(page){
@@ -3793,16 +3813,27 @@ async function loadResults(page){
   const d=await api('/api/results?limit='+RES_SIZE+'&offset='+(RES_PAGE*RES_SIZE));
   RESULTS=(d&&Array.isArray(d.rows))?d.rows:(Array.isArray(d)?d:[]);
   RES_TOTAL=(d&&typeof d.total==='number')?d.total:RESULTS.length;
-  renderResults(); renderResPager();
+  renderResults();
 }
-function setResSize(n){ RES_SIZE=Number(n)||10; RES_PAGE=0; loadResults(); }
-function resPage(delta){ const pages=Math.max(1,Math.ceil(RES_TOTAL/RES_SIZE)); RES_PAGE=Math.min(pages-1,Math.max(0,RES_PAGE+delta)); loadResults(); try{document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){} }
-function renderResPager(){
-  const pages=Math.max(1,Math.ceil(RES_TOTAL/RES_SIZE)); if(RES_PAGE>pages-1) RES_PAGE=Math.max(0,pages-1);
-  const ind=document.getElementById('res_pageind'); if(ind) ind.textContent=(RES_PAGE+1)+' / '+pages;
-  const pv=document.getElementById('res_prev'); if(pv){ pv.disabled=RES_PAGE<=0; pv.style.opacity=pv.disabled?.4:1; }
-  const nx=document.getElementById('res_next'); if(nx){ nx.disabled=RES_PAGE>=pages-1; nx.style.opacity=nx.disabled?.4:1; }
-  const bar=document.getElementById('res_pager'); if(bar) bar.style.display=RES_TOTAL>0?'flex':'none';
+// Show more = APPEND the next page (comp bans the floating pager; the log grows in place).
+async function loadMoreResults(){
+  RES_PAGE++;
+  const d=await api('/api/results?limit='+RES_SIZE+'&offset='+(RES_PAGE*RES_SIZE));
+  const more=(d&&Array.isArray(d.rows))?d.rows:(Array.isArray(d)?d:[]);
+  const seen=new Set(RESULTS.map(r=>r.id)); RESULTS=RESULTS.concat(more.filter(r=>!seen.has(r.id)));
+  if(d&&typeof d.total==='number') RES_TOTAL=d.total;
+  renderResults();
+}
+// Day headers: Today · Yesterday · weekday for the last week · short date beyond.
+function dayLabel(unix){
+  if(!unix) return '';
+  const d=new Date(unix*1000), now=new Date();
+  const day0=x=>new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();
+  const diff=Math.round((day0(now)-day0(d))/86400000);
+  if(diff<=0) return 'Today';
+  if(diff===1) return 'Yesterday';
+  if(diff<7) return d.toLocaleDateString([],{weekday:'long'});
+  return d.toLocaleDateString([],{month:'short',day:'numeric'});
 }
 function renderResults(){
   let rows=RESULTS.slice();
@@ -3816,28 +3847,49 @@ function renderResults(){
   if(sort==='newest') rows.sort((a,b)=>(b.startedAt||0)-(a.startedAt||0));
   else if(sort==='oldest') rows.sort((a,b)=>(a.startedAt||0)-(b.startedAt||0));
   else if(sort==='store') rows.sort((a,b)=>(a.retailer||'').localeCompare(b.retailer||''));
-  else if(sort==='category') rows.sort((a,b)=>(a.category||'').localeCompare(b.category||''));
   else if(sort==='outcome') rows.sort((a,b)=>outRank(a)-outRank(b)||(b.startedAt||0)-(a.startedAt||0));
+  const cnt=document.getElementById('res_count'); if(cnt) cnt.textContent=RES_TOTAL?RES_TOTAL+(RES_TOTAL===1?' call':' calls'):' ';
   const el=document.getElementById('resultList'); if(!el) return;
-  const banner = RESULT_STORE_FILTER ? `<div class="card" style="border-color:rgba(74,222,128,.3)"><div class="row"><div class="grow meta">Filtered to one store (from your alert link).</div><button class="ghost" onclick="RESULT_STORE_FILTER=null;renderResults()">Show all</button></div></div>` : '';
-  if(!rows.length){el.innerHTML=banner+'<div class="empty">No calls'+(RESULT_STORE_FILTER?' for this store yet.':' yet.')+'</div>';return;}
-  el.innerHTML=banner+'<div class="card calltable">'+rows.map(r=>{
+  const banner = RESULT_STORE_FILTER ? `<div class="peek" style="cursor:default"><div class="pk-main"><div class="pk-t">One store only</div><div class="pk-m">Opened from an alert link</div></div><button class="ghost" onclick="RESULT_STORE_FILTER=null;renderResults()">Show all</button></div>` : '';
+  if(!rows.length){el.innerHTML=banner+'<div class="empty">No calls yet. Run one from Search or Chains.</div>';return;}
+  const grouped=(sort==='newest'||sort==='oldest');
+  let html=banner, lastDay=null;
+  rows.forEach(r=>{
+    const day=grouped?dayLabel(r.startedAt):null;
+    if(grouped&&day!==lastDay){ html+=`<div class="k-eyebrow">${esch(day)}</div>`; lastDay=day; }
     const vv=customerVerdict(r);
     const nm=splitName(r.retailer||'?');
     const time=new Date(r.startedAt*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-    const detail=(r.summary?`<div class="meta" style="color:#ddd;margin-bottom:8px">${esch(r.summary)}</div>`:'')+(r.transcript?bubbles(r.transcript):'');
-    return `<details class="callrow">
-      <summary>
-        ${logoTile({...r,name:r.retailer})}
-        <div class="grow">
-          <div class="cs-name">${esch(nm.base)}${nm.branch?` <span style="color:var(--muted);font-weight:500">${esch(nm.branch)}</span>`:''}</div>
-          <div class="cs-meta">${catFilter?'':esch(r.category||'')+' · '}${agoTs(r.startedAt)} · ${time}${r.shipmentDayHeard?' · ships '+esch(r.shipmentDayHeard):''}</div>
-        </div>
-        <span class="cv" style="color:${vv.c}">${statusIcon(vv.e,vv.c,22)}<span>${esch(vv.t)}</span></span>
-      </summary>
-      <div class="calldetail">${detail||'<span class="meta">No transcript captured for this call.</span>'}</div>
-    </details>`;
-  }).join('')+'</div>';
+    // Right-side fact, comp-style: green in-stock = the brandmark alone (self-evident) · a heard
+    // restock day = amber truck + short day · anything else = the registry icon + its label.
+    const tone=(STATUSES[vv.key]&&STATUSES[vv.key].tone)||(vv.key==='in_stock'?'in':'');
+    const st=(tone==='in')
+      ? statusIcon(vv.e,vv.c,24)
+      : r.shipmentDayHeard ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7h11v8H2zM13 10h4l3 3v2h-7"/><circle cx="6" cy="17" r="1.6"/><circle cx="16" cy="17" r="1.6"/></svg><span style="color:#F59E0B">${esch(String(r.shipmentDayHeard).slice(0,3))}</span>`
+      : `${statusIcon(vv.e,vv.c,20)}<span>${esch(vv.t)}</span>`;
+    html+=`<button class="peek" onclick="openCallSheet('${esch(String(r.id))}')">
+      <span class="pk-logo">${logTile({...r,name:r.retailer})}</span>
+      <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(nm.base)}${nm.branch?` <span style="color:#8A8A96;font-weight:500">${esch(nm.branch)}</span>`:''}</span>
+      <span class="pk-m" style="display:block">${catFilter?'':esch(r.category||'')+' · '}${agoTs(r.startedAt)} · ${time}</span></span>
+      <span class="pk-st" style="color:${vv.c}">${st}</span>
+    </button>`;
+  });
+  if(RESULTS.length<RES_TOTAL) html+=`<button class="k-key" onclick="loadMoreResults()">SHOW ${Math.min(RES_SIZE,RES_TOTAL-RESULTS.length)} MORE</button>`;
+  el.innerHTML=html;
+}
+// The call sheet (comp 1d): store head, colored verdict, summary, then the transcript.
+function openCallSheet(id){
+  const r=RESULTS.find(x=>String(x.id)===String(id)); if(!r) return;
+  const vv=customerVerdict(r);
+  const time=new Date(r.startedAt*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+  const dur=(r.completedAt&&r.startedAt)?Math.max(0,r.completedAt-r.startedAt):null;
+  const sub=[r.category,dayLabel(r.startedAt).toLowerCase()+' '+time,dur!=null?fmtClock(dur)+' on the line':null].filter(Boolean).join(' · ');
+  const body=
+    `<div style="display:flex;align-items:center;gap:8px;margin:6px 0 2px"><span style="width:8px;height:8px;border-radius:50%;background:${vv.c};box-shadow:0 0 8px ${vv.c};flex:0 0 auto"></span><span style="font-size:19px;font-weight:900;letter-spacing:-.4px;color:${vv.c}">${esch(vv.t)}</span></div>`
+    +(vv.n?`<div style="font-size:13px;font-weight:500;color:rgba(255,255,255,.72);margin-top:4px;line-height:1.5">${esch(vv.n)}</div>`:'')
+    +(r.summary?`<div style="font-size:13px;font-weight:500;color:rgba(255,255,255,.72);margin-top:8px;line-height:1.5">${esch(r.summary)}</div>`:'')
+    +(r.transcript?`<div style="margin-top:14px">${bubbles(r.transcript)}</div>`:'<div class="empty" style="padding:18px 0">No transcript captured for this call.</div>');
+  openSheet(r.retailer||'Store', esch(sub), body);
 }
 
 
