@@ -1657,12 +1657,12 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
    they still open over the frame. height:100dvh = the VISIBLE viewport, so the basket + last store row
    clear iOS Safari's bottom toolbar (owner 07-11). */
 #zones .zframe{flex:1;min-height:0;background:#1D1D22;display:flex;flex-direction:column;font-family:Inter,-apple-system,system-ui,sans-serif}
-#zones .zf-head{flex:none;position:relative;z-index:3;background:linear-gradient(180deg,#26262C 0%,#1E1E23 100%);box-shadow:0 16px 28px -18px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.05);border-bottom:1px solid rgba(0,0,0,.35)}
-#zones .zf-hrow{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px 14px}
-#zones .zf-title{position:absolute;left:0;right:0;text-align:center;font:800 20px Inter;letter-spacing:-.3px;color:#fff;pointer-events:none}
-#zones .zf-back{width:40px;height:40px;flex:0 0 auto;border-radius:50%;border:0;background:linear-gradient(180deg,#33333B,#292930);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);color:#fff;font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;position:relative;z-index:1}
-#zones .zf-cred{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:999px;background:linear-gradient(180deg,#33333B,#292930);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);white-space:nowrap;font:900 14px Inter;color:#4ADE80;position:relative;z-index:1}
-#zones .zf-sub{flex:none;padding:14px 16px 6px;background:#1D1D22}
+/* Clean sheet header (owner 07-13): no gray gradient bar (that read as a duplicate "My checks" header /
+   a gray box under the drag handle) — just the big title on the sheet background, like Check history. */
+#zones .zf-head{flex:none;display:flex;align-items:center;gap:12px;background:transparent;padding:2px 18px 12px}
+#zones .zf-title{font-size:22px;font-weight:900;letter-spacing:-.4px;color:#fff;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#zones .zf-back{width:38px;height:38px;flex:0 0 auto;border-radius:50%;border:0;background:linear-gradient(180deg,#33333B,#292930);box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);color:#fff;font-size:19px;line-height:1;cursor:pointer;display:grid;place-items:center}
+#zones .zf-sub{flex:none;padding:6px 16px 6px;background:transparent}
 #zones .zf-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:16px;display:flex;flex-direction:column}
 #zones .zf-scroll.tight{padding:2px 16px 14px}
 #zones .zf-scroll.basketpad{padding-bottom:220px}
@@ -1775,7 +1775,7 @@ html[data-skin="v2"] .p6d-live .buygrid-h{color:#8A8A96}
 html[data-skin="v2"] #acctOverlay,html[data-skin="v2"] #buyOverlay,html[data-skin="v2"] #pageOverlay,html[data-skin="v2"] #zones,html[data-skin="v2"] #histOverlay{align-items:flex-end;padding:0}
 /* My Zones + Check history: same bottom-sheet recipe as #pageOverlay — flex column, pinned grab handle,
    the .zframe / .hist-scroll body is the only scroller. (owner 07-12) */
-html[data-skin="v2"] #zones .modal,html[data-skin="v2"] #histOverlay .modal{display:flex;flex-direction:column;padding:0;overflow:hidden;width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:86vh;margin:0;background:#1D1D22}
+html[data-skin="v2"] #zones .modal,html[data-skin="v2"] #histOverlay .modal{display:flex;flex-direction:column;padding:0;overflow:hidden;width:100%;max-width:none!important;border-radius:28px 28px 0 0;height:88vh;max-height:88vh;margin:0;background:#1D1D22}
 html[data-skin="v2"] #zones .modal::before,html[data-skin="v2"] #histOverlay .modal::before{content:'';display:block;flex:0 0 auto;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:10px auto 8px}
 html[data-skin="v2"] #zones.on .modal,html[data-skin="v2"] #histOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 18px calc(22px + env(safe-area-inset-bottom))}
@@ -6372,9 +6372,9 @@ const zHead=(title,back)=>`<div class="zhead"><button class="zback" onclick="${b
 // Locked frame header (owner 07-11 comp): back · centered title · credits pill. Same on every zone screen.
 const ZCRED_ICO='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="flex:0 0 auto"><circle cx="12" cy="12" r="10" fill="#4CF286"/><path d="M7.5 12.5l3 3 6-6.5" stroke="#0C2916" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 function zCredits(){ try{ if(ACCOUNT&&(ACCOUNT.comp||ACCOUNT.credits==null&&ACCOUNT.subscription==='active')) return '∞'; const c=ACCOUNT?ACCOUNT.credits:0; return (c==null?0:c); }catch(_){ return 0; } }
-// No back button on the top-level My Zones (it's a slide-up — drag down / tap behind to close). The
-// build/report sub-screens pass `back` (renderZonesList) for within-sheet nav back to the list.
-const zFrameHead=(title,back)=>`<div class="zf-head"><div class="zf-hrow">${back?`<button class="zf-back" onclick="${back}" aria-label="Back">‹</button>`:'<span style="width:40px;flex:0 0 auto"></span>'}<div class="zf-title">${esc(title)}</div><span class="zf-cred">${ZCRED_ICO}${zCredits()}</span></div></div>`;
+// Clean header: just the title (no credits pill — that read as "repeating My checks"). No back button on
+// the top-level My Zones (it's a slide-up: drag down / tap behind). Sub-screens pass `back` for list nav.
+const zFrameHead=(title,back)=>`<div class="zf-head">${back?`<button class="zf-back" onclick="${back}" aria-label="Back">‹</button>`:''}<div class="zf-title">${esc(title)}</div></div>`;
 const ZKEBAB='<svg width="20" height="20" viewBox="0 0 24 24" fill="#8A8A96"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg>';
 const ZGOARR='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15"></path><path d="M13 6l6 6-6 6"></path></svg>';
 async function openZones(){
