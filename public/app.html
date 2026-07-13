@@ -740,10 +740,9 @@
     <div class="card report"><div id="users_list" class="meta">Loading…</div></div>
   </section>
   <section id="restock">
-    <h2>Restock intel</h2>
-    <div class="meta" style="margin:0 0 12px">When stores restock, and what's landing. <span data-tip="Learned from real call data. Tap a store for its own breakdown."></span></div>
-    <div id="restock_detail"></div>
-    <div id="restock_net" class="meta">Loading…</div>
+    <div class="k-title">Restock intel</div>
+    <div class="k-sub">When stores restock, and what's landing.</div>
+    <div id="restock_net"><div class="empty">Loading…</div></div>
   </section>
   <section id="alerts">
     <h2>Alerts</h2>
@@ -4618,80 +4617,85 @@ async function toggleStaff(id,on){ const r=await api('/api/admin/users/staff',{m
 function rsBar(label,n,max,cls){ return `<div class="rsbar"><span class="rsbl">${esch(label)}</span><span class="rsbt"><span class="rsbf ${cls||''}" style="width:${max?Math.round(n/max*100):0}%"></span></span><b>${n}</b></div>`; }
 async function loadRestock(){
   const net=document.getElementById('restock_net'); if(!net) return;
-  const det=document.getElementById('restock_detail'); if(det) det.innerHTML='';
   const d=await api('/api/admin/restock-intel');
-  if(!d||d.error){ net.textContent='No restock data yet. fills in as confirmed calls land.'; return; }
+  if(!d||d.error){ net.innerHTML='<div class="empty">No restock data yet. Fills in as confirmed calls land.</div>'; return; }
   const t=d.totals||{};
   const tile=(n,l,cls)=>`<div class="stat${cls?' '+cls:''}"><div class="n">${n}</div><div class="l">${l}</div></div>`;
   const dMax=Math.max(1,...(d.shipmentDays||[]).map(x=>x.n));
   const fMax=Math.max(1,...(d.productForms||[]).map(x=>x.n));
   const cMax=Math.max(1,...(d.byCategory||[]).map(x=>x.n));
-  // Call reality funnel — the honest read of what calls achieved (most never reach a human).
   const af=d.answerFunnel||{};
   const reach=af.dialed?Math.round(af.reachedHuman/af.dialed*100):null;
-  const v=(n,l,cls,big)=>`<div class="v${big?' big':''}"><div class="n ${cls||'m'}">${n}</div><div class="l">${esch(l)}</div></div>`;
-  const drow=(label,meta,body,open)=>`<details class="drow"${open?' open':''}><summary><span class="rl">${esch(label)}</span><span class="rr">${meta||''} <span class="chev">▾</span></span></summary><div class="rbody">${body}</div></details>`;
-  // Hero: the restock vitals you check first. Color = state before you read the number.
-  const hero=`<div class="herog">`
-    +v((t.confirmRate||0)+'%','Confirm rate',(t.confirmRate||0)>0?'g':'m',true)
-    +v(t.confirms||0,'Confirms',(t.confirms||0)>0?'g':'m')
-    +v(reach==null?'—':reach+'%','Reach a human',reach==null?'m':(reach>=60?'g':reach>=30?'a':'r'))
-    +v(t.confirms7d||0,'Last 7 days',(t.confirms7d||0)>0?'g':'m')
-    +v(t.checks||0,'Checks','m')
+  const chev='<svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+  // Report grammar (comp 1h): hero ANSWER · three wells · drill-in peeks · ONE list · footnote.
+  const topDay=(d.shipmentDays&&d.shipmentDays[0])?d.shipmentDays[0].day:'';
+  const daysHeard=(d.shipmentDays||[]).reduce((s,x)=>s+(x.n||0),0);
+  const hero=topDay
+    ? `<div style="padding:14px 4px 0"><div style="font-size:30px;font-weight:900;letter-spacing:-1px;color:#fff">${esch(topDay)}</div><div style="font-size:13px;font-weight:600;color:#8A8A96;margin-top:2px">is the biggest restock day across your stores</div></div>`
+    : `<div class="k-hero"><span class="n">—</span><span class="l">no restock days learned yet</span></div>`;
+  const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${esch(String(n))}</div><div class="l">${l}</div></div>`;
+  const wells=`<div class="k-wells">`
+    +well(daysHeard,'Days heard','')
+    +well(t.confirms||0,'Confirms',(t.confirms||0)>0?'g':'')
+    +well(reach==null?'—':reach+'%','Reach rate',reach==null?'':(reach>=60?'g':reach>=30?'a':'r'))
     +`</div>`;
-  // Call reality funnel — the honest read of what calls achieved (collapsed).
+  // Drill-ins (a report never gets longer, it gets deeper): call reality · what's landing · day tally.
   let funnelBody='';
   if(af&&af.dialed){
     const fc=s=>{ if(!s)return ''; const dt=new Date(s*1000); return dt.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); };
     const b=af.buckets||{}, dial=af.dialed||1;
-    const brow=(ic,label,n,cls)=>`<div class="rsbar"><span class="rsbl" style="flex-basis:188px">${ic} ${esch(label)}</span><span class="rsbt"><span class="rsbf ${cls||''}" style="width:${Math.round((n||0)/dial*100)}%"></span></span><b>${n||0}</b></div>`;
+    const brow=(label,n,cls)=>`<div class="rsbar"><span class="rsbl" style="flex-basis:168px">${esch(label)}</span><span class="rsbt"><span class="rsbf ${cls||''}" style="width:${Math.round((n||0)/dial*100)}%"></span></span><b>${n||0}</b></div>`;
     const chrow=x=>{ const pct=x.dialed?Math.round(x.reached/x.dialed*100):0, cls=pct>=80?'':(pct>=40?'soon':'bad'); return `<div class="rsbar"><span class="rsbl">${esch(x.chain)}</span><span class="rsbt"><span class="rsbf ${cls}" style="width:${pct}%"></span></span><b>${x.reached}/${x.dialed}</b></div>`; };
     funnelBody=`<div class="meta" style="margin:0 0 10px">Read from the transcripts, not the saved status${af.firstCall?' · first store call '+fc(af.firstCall):''}.</div>`
       +`<div class="stats">${tile(af.dialed,'dialed')}${tile(af.reachedHuman,'reached a human','purple')}${tile(af.gotAnswer,'got an answer','green')}</div>`
-      +brow('✅','In stock',b.in_stock,'')
-      +brow('📦','Just landed · not shelved',b.got_some,'soon')
-      +brow('❌','Not in stock',b.not_in,'bad')
-      +brow('☎️','Picked up · no answer',b.reached_no_answer,'soon')
-      +brow('🤖','Never reached a human',b.never_reached,'bad')
-      +`<div class="rgrp" style="margin-top:16px">Reach rate by chain <span class="meta">· where a human actually picks up</span></div>`
+      +brow('In stock',b.in_stock,'')
+      +brow('Just landed · not shelved',b.got_some,'soon')
+      +brow('Not in stock',b.not_in,'bad')
+      +brow('Picked up · no answer',b.reached_no_answer,'soon')
+      +brow('Never reached a human',b.never_reached,'bad')
+      +`<div class="k-eyebrow">Reach rate by chain</div>`
       +((af.byChain||[]).map(chrow).join('')||'<div class="meta">—</div>');
   }
   const daysBody=(d.shipmentDays||[]).slice(0,7).map(x=>rsBar(x.day,x.n,dMax)).join('')||'<div class="meta">No days learned yet.</div>';
-  const landingBody=`<div class="rgrp" style="margin-top:0">Product forms</div>`+((d.productForms||[]).slice(0,8).map(x=>rsBar(x.form,x.n,fMax)).join('')||'<div class="meta">none captured yet</div>')
-    +`<div class="rgrp">Top sets</div>`+((d.productSets||[]).slice(0,12).map(x=>`<span class="rschip">${esch(x.set)} <b>${x.n}</b></span>`).join('')||'<div class="meta">none named yet</div>')
-    +`<div class="rgrp">By category</div>`+((d.byCategory||[]).map(x=>rsBar(x.category,x.n,cMax)).join('')||'<div class="meta">—</div>');
-  const storesBody=(d.topStores||[]).map(s=>`<div class="repline rsrow" onclick="openStoreRestock(${s.id})"><span class="rl">${esch(s.store)}${s.location?' <span class="meta">· '+esch(s.location)+'</span>':(s.region?' <span class="meta">· '+esch(s.region)+'</span>':'')}</span><b>${s.bestDay?esch(s.bestDay)+' · ':''}<span style="color:var(--green)">${s.confirms} hit${s.confirms===1?'':'s'}</span></b></div>`).join('')||'<div class="meta">No confirmed restocks yet.</div>';
-  const topDay=(d.shipmentDays&&d.shipmentDays[0])?d.shipmentDays[0].day:'';
+  const landingBody=`<div class="k-eyebrow" style="margin-top:0">Product forms</div>`+((d.productForms||[]).slice(0,8).map(x=>rsBar(x.form,x.n,fMax)).join('')||'<div class="meta">none captured yet</div>')
+    +`<div class="k-eyebrow">Top sets</div>`+((d.productSets||[]).slice(0,12).map(x=>`<span class="k-pill" style="margin:0 4px 6px 0;display:inline-block">${esch(x.set)} <b>${x.n}</b></span>`).join('')||'<div class="meta">none named yet</div>')
+    +`<div class="k-eyebrow">By category</div>`+((d.byCategory||[]).map(x=>rsBar(x.category,x.n,cMax)).join('')||'<div class="meta">—</div>');
   const topForm=(d.productForms&&d.productForms[0])?d.productForms[0].form:'';
+  const peek=(t2,fact,holder)=>`<button class="peek" onclick="sheetFromHolder('${holder}','${esch(t2)}','')">
+    <span class="pk-main"><span class="pk-t" style="display:block">${esch(t2)}</span></span><span class="pk-fact">${esch(fact)}</span>${chev}</button>`;
+  // ONE list: the stores that actually restock, best day + hits on the row, tap = full breakdown.
+  const storeRows=(d.topStores||[]).map(s=>`<button class="peek" onclick="openStoreRestock(${s.id})">
+      <span class="pk-logo"><span class="slogo emboss" style="width:38px;height:38px;border-radius:11px">${esch((String(s.store||'?').replace(/['’.]/g,'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('')||'?').toUpperCase())}</span></span>
+      <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(s.store)}</span>
+      <span class="pk-m" style="display:block">${esch(s.location||s.region||'')}${(s.location||s.region)?' · ':''}${s.confirms} hit${s.confirms===1?'':'s'}</span></span>
+      <span class="pk-fact g">${esch(s.bestDay||'')}</span>${chev}</button>`).join('')||'<div class="empty">No confirmed restocks yet.</div>';
   net.innerHTML=
-    hero
-    +(funnelBody?drow('Call reality',`${af.reachedHuman||0}/${af.dialed||0} reached`,funnelBody):'')
-    +drow('Restock days',topDay?esch(topDay)+' leads':'what staff told us',daysBody)
-    +drow("What's landing",topForm?esch(topForm)+' leads':'forms · sets · category',landingBody)
-    +drow('Top restock stores',(d.topStores||[]).length+' store'+((d.topStores||[]).length===1?'':'s'),storesBody);
+    hero+wells
+    +`<div style="height:14px"></div>`
+    +(funnelBody?peek('Call reality',`${af.reachedHuman||0}/${af.dialed||0} reached`,'ds_rsfunnel'):'')
+    +peek('Restock days',topDay||'—','ds_rsdays')
+    +peek("What's landing",topForm||'—','ds_rsland')
+    +`<div class="k-eyebrow">By store</div>`+storeRows
+    +`<div class="k-note">Learned from real calls. Tap a store for its breakdown.</div>`
+    +`<div id="rs_details" style="display:none"><div id="ds_rsfunnel">${funnelBody}</div><div id="ds_rsdays">${daysBody}</div><div id="ds_rsland">${landingBody}</div></div>`;
 }
 async function openStoreRestock(id){
-  const det=document.getElementById('restock_detail'); if(!det) return;
-  det.innerHTML='<div class="card report"><div class="meta">Loading store…</div></div>'; det.scrollIntoView({behavior:'smooth',block:'start'});
   const d=await api('/api/admin/store-restock/'+id);
-  if(!d||d.error){ det.innerHTML=''; toast('No restock data for this store'); return; }
+  if(!d||d.error){ toast('No restock data for this store'); return; }
   const low=d.confidence<3;
   const sMax=Math.max(1,...(d.staffSaid.tally||[]).map(x=>x.n));
   const eMax=Math.max(1,...(d.empirical.byWeekday||[]).map(x=>x.confirms));
   const pfMax=Math.max(1,...(d.products.forms||[]).map(x=>x.n));
   const bcMax=Math.max(1,...(d.byCategory||[]).map(x=>x.n));
   const ago=s=>{ if(!s)return 'never'; const m=Math.floor(Date.now()/1000)-s; if(m<86400)return Math.max(1,Math.floor(m/3600))+'h ago'; return Math.floor(m/86400)+'d ago'; };
-  det.innerHTML=`<div class="card report" style="border-color:rgba(74,222,128,.28)">
-    <button class="ghost" style="float:right;font-size:10.5px;padding:5px 9px" onclick="document.getElementById('restock_detail').innerHTML=''">✕</button>
-    <div class="name">${esch(d.store)}${d.location?' <span class="meta" style="font-weight:500">· '+esch(d.location)+'</span>':''}</div>
-    <div style="font-size:30px;font-weight:800;color:${low?'var(--text-muted)':'var(--green)'};line-height:1.1;letter-spacing:-.02em">${d.bestDay||'Learning…'}</div>
-    <div class="meta" style="margin-bottom:12px">${d.bestDay?('best restock day · based on '+d.confidence+' hit'+(d.confidence===1?'':'s')+(low?' (low confidence)':'')):'not enough data yet'}${d.storedShipmentDay?' · stored: '+esch(d.storedShipmentDay):''} · last confirm ${esch(ago(d.lastConfirm))}</div>
-    <div class="rgrp">Staff said</div>${(d.staffSaid.tally||[]).map(x=>rsBar(x.day,x.n,sMax)).join('')||'<div class="meta">nothing yet</div>'}
-    <div class="rgrp" style="margin-top:12px">Confirmed in stock · by weekday</div>${(d.empirical.byWeekday||[]).map(x=>rsBar(x.day,x.confirms,eMax,'soon')).join('')}
-    <div class="rgrp" style="margin-top:12px">Product forms</div>${(d.products.forms||[]).map(x=>rsBar(x.form,x.n,pfMax)).join('')||'<div class="meta">none captured</div>'}
-    ${(d.products.sets||[]).length?'<div class="rgrp" style="margin-top:12px">Sets</div>'+(d.products.sets||[]).map(x=>`<span class="rschip">${esch(x.set)} <b>${x.n}</b></span>`).join(''):''}
-    <div class="rgrp" style="margin-top:12px">By category</div>${(d.byCategory||[]).map(x=>rsBar(x.category,x.n,bcMax)).join('')||'<div class="meta">—</div>'}
-  </div>`;
+  openSheet(d.store, esch([d.location,'last confirm '+ago(d.lastConfirm)].filter(Boolean).join(' · ')),
+    `<div style="font-size:30px;font-weight:900;letter-spacing:-1px;color:${low?'#8A8A96':'var(--green)'};line-height:1.1">${d.bestDay||'Learning…'}</div>
+    <div class="meta" style="margin-bottom:12px">${d.bestDay?('best restock day · '+d.confidence+' hit'+(d.confidence===1?'':'s')+(low?' (low confidence)':'')):'not enough data yet'}${d.storedShipmentDay?' · stored: '+esch(d.storedShipmentDay):''}</div>
+    <div class="k-eyebrow">Staff said</div>${(d.staffSaid.tally||[]).map(x=>rsBar(x.day,x.n,sMax)).join('')||'<div class="meta">nothing yet</div>'}
+    <div class="k-eyebrow">Confirmed in stock · by weekday</div>${(d.empirical.byWeekday||[]).map(x=>rsBar(x.day,x.confirms,eMax,'soon')).join('')}
+    <div class="k-eyebrow">Product forms</div>${(d.products.forms||[]).map(x=>rsBar(x.form,x.n,pfMax)).join('')||'<div class="meta">none captured</div>'}
+    ${(d.products.sets||[]).length?'<div class="k-eyebrow">Sets</div>'+(d.products.sets||[]).map(x=>`<span class="k-pill" style="margin:0 4px 6px 0;display:inline-block">${esch(x.set)} <b>${x.n}</b></span>`).join(''):''}
+    <div class="k-eyebrow">By category</div>${(d.byCategory||[]).map(x=>rsBar(x.category,x.n,bcMax)).join('')||'<div class="meta">—</div>'}`);
 }
 async function loadGwIntel(){
   const el=document.getElementById('gw_intel'); if(!el) return;

@@ -51,6 +51,16 @@ flat). Approved instead: my full-screen mock. The rules it sets:
   sub, never on the row. No sentence subs on rows.
 - Page title 26px/800. Vitals numbers ALWAYS colored (owner caught black 62/31 in mock v1).
 
+### PAGES DONE (build → screenshot vs comp/system → pushed, one commit each)
+1. **dash** (LIVE, approved mock) · 2. **results/Calls** (LOG 1c + call sheet 1d) · 3. **settings/App**
+(CONSOLE 1i) · 4. **fun** (console) + global raised-card/carved-input skin · 5. **workflows** (CRUD 1e +
+edit sheet 1f, live-refresh) · 6. **support** (REPORT-over-LOG 1g; drawer killed → sheet) · 7. **restock**
+(REPORT 1h exemplar; hero answer + wells + drill-in sheets + by-store list + store sheet).
+Kit now holds: peek row/log row/console row · ONE sheet · switch · pill dropdown · raised key · capsule
+CTA · badges · range track · hero · wells · pills · danger action. REMAINING (build from these patterns):
+users, alerts, growth/Policy, calc, plans, retailers/Intel, search, add, receipts/Kiosk, feedback,
+statuses, trees/Chains, designer, testing, gtm.
+
 ### SHIPPED
 - **Shared kit v1**: k-eyebrow/k-title/k-sub/k-note, raised vitals `.v`, `.peek` row (+`.pk-ic` tinted
   icon slot), `.heroc` hero card (trend+spark), **ONE sheet** (grabber+swipe+scrim dismiss; borrows live
