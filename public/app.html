@@ -274,7 +274,7 @@
   .wfmtrash:hover{color:var(--red)}
   .wfmasg{margin-top:7px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
   .wfmasglab{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
-  .wfmpin{font-size:12.5px;color:var(--text-body);background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:2px 8px;white-space:nowrap}
+  .wfmpin{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:rgba(255,255,255,.85);background:linear-gradient(180deg,#2E2E35,#25252B);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);border:none;border-radius:999px;padding:7px 13px;white-space:nowrap}
   /* testing log */
   .tcrow{padding:11px 0;border-top:1px solid var(--border)}
   .tcrow:first-of-type{border-top:none}
@@ -330,6 +330,15 @@
   /* Console rows: the peek anatomy without the tap (control sits on the row). */
   .peek.static{cursor:default}
   .peek.static:active{transform:none}
+  /* THE capsule CTA (comp 1e) — green ring gradient, dark fill, one per page. */
+  .k-cta{display:block;margin:22px auto 0;border-radius:999px;padding:2.5px;background:linear-gradient(120deg,#5BEA93 0%,#19B145 55%,#0B5A2C 100%);box-shadow:0 12px 28px -8px rgba(74,222,128,.45);border:none;cursor:pointer;font-family:inherit;transition:transform .08s}
+  .k-cta:active{transform:translateY(2px)}
+  .k-cta>span{display:block;background:#20202A;border-radius:999px;padding:13px 26px;font-size:13px;font-weight:800;letter-spacing:.13em;color:#fff}
+  /* Tiny badge on a row (DEFAULT, FALLBACK). */
+  .k-badge{display:inline-block;font-size:8.5px;font-weight:900;letter-spacing:.06em;color:var(--green);background:rgba(74,222,128,.13);border-radius:6px;padding:3px 6px;margin-left:8px;vertical-align:2px}
+  .k-badge.gray{color:#8A8A96;background:rgba(255,255,255,.07)}
+  /* Red destructive text action, bottom of an edit sheet (comp 1f). */
+  .k-danger{display:block;margin:18px auto 4px;background:none;border:none;font-size:12.5px;font-weight:700;color:var(--red);opacity:.8;cursor:pointer;font-family:inherit;text-align:center}
   /* THE switch (comp 1i) — saves on tap, green = on. */
   .k-switch{width:46px;height:27px;border-radius:999px;background:#1B1B20;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);position:relative;flex:0 0 auto;border:none;cursor:pointer;transition:background .18s;padding:0}
   .k-switch::after{content:'';position:absolute;top:2.5px;left:2.5px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.3);transition:left .18s}
@@ -370,9 +379,9 @@
   .wfmsub .meta{font-weight:500;color:var(--muted)}
   .wfmop{display:flex;gap:6px;align-items:flex-start;margin-bottom:3px}
   /* openers read as soft, WRAPPING script text (matches the Designer's .optext), with a quiet hover/focus affordance for inline edit — not abrasive single-line form boxes */
-  .wfmop textarea{flex:1;min-width:0;background:transparent;border:1px solid transparent;border-radius:7px;color:var(--text-strong);font:500 13.5px/1.45 Inter;padding:6px 8px;resize:none;overflow:hidden;white-space:pre-wrap;word-break:break-word}
-  .wfmop textarea:hover{background:var(--surface-1)}
-  .wfmop textarea:focus{background:var(--surface-2);border-color:var(--border);outline:none}
+  /* Opener rows in the edit sheet read as carved script wells (comp 1f). */
+  .wfmop textarea{flex:1;min-width:0;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;color:rgba(255,255,255,.85);font-family:inherit;font-weight:500;font-size:14px;line-height:1.4;padding:12px 16px;resize:none;overflow:hidden;white-space:pre-wrap;word-break:break-word}
+  .wfmop textarea:focus{outline:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45),0 0 0 2px rgba(74,222,128,.25)}
   .wfmop input[type=checkbox]{flex:0 0 auto;margin-top:7px}
   .wfmop .opdel{flex:0 0 auto;padding:5px 8px;color:var(--muted);margin-top:2px}
   .wfmop .opdel:hover{color:var(--red)}
@@ -758,9 +767,11 @@
     </div>
   </section>
   <section id="workflows">
-    <h2>Workflows</h2>
-    <div class="meta" style="margin:0 0 12px">Each workflow is a saved <b>opener set + voice + persona</b>. <span data-tip="The ★ default powers every store; assign others per chain/store in Stores. Build new ones in Voice → Designer, then edit openers here."></span></div>
-    <div id="wfm_list" class="meta">Loading…</div>
+    <div class="k-title">Workflows</div>
+    <div class="k-sub">A workflow is an opener set, a voice and a persona.</div>
+    <div id="wfm_list" style="margin-top:16px"><div class="empty">Loading…</div></div>
+    <button class="k-cta" onclick="showSection('designer')"><span>NEW WORKFLOW →</span></button>
+    <div class="k-note" style="text-align:center">The default powers every store unless a chain overrides it.<br>New workflows are built in the Designer.</div>
   </section>
   <section id="testing">
     <h2>Testing</h2>
@@ -4104,63 +4115,92 @@ function wfmVoiceChips(wi,w){
   const vs=wfmVoices(w);
   if(!vs.length) return '<div class="meta" style="margin:2px 0 6px">Default voice — add one or more below.</div>';
   return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px">${vs.map((id,vi)=>
-    `<span class="wfmasgpin" style="display:inline-flex;align-items:center;gap:5px">${esch(wfmVoiceName(id))}${vs.length>1&&vi===0?' <span class="meta" style="font-weight:500">first</span>':''}<a onclick="wfmDelVoice(${wi},${vi})" title="Remove from rotation" style="cursor:pointer;font-weight:900">×</a></span>`).join('')}</div>`;
+    `<span class="wfmpin">${esch(wfmVoiceName(id))}${vs.length>1&&vi===0?' <span class="meta" style="font-weight:500">first</span>':''}<a onclick="wfmDelVoice(${wi},${vi})" title="Remove from rotation" style="cursor:pointer;font-weight:900;color:#8A8A96">×</a></span>`).join('')}</div>`;
 }
 async function wfmAddVoice(wi,id){ if(!id) return; const w=WF.list[wi]; if(!w) return; const vs=wfmVoices(w); if(vs.includes(id)){ toast('Already in the rotation'); renderWorkflowMgr(); return; } vs.push(id); w.voices=vs; w.voiceId=vs[0]; renderWorkflowMgr(); await wfmSaveList(); toast(vs.length>1?'Added. '+vs.length+' voices now rotate on this workflow':'Voice set'); }
 async function wfmDelVoice(wi,vi){ const w=WF.list[wi]; if(!w) return; const vs=wfmVoices(w); vs.splice(vi,1); w.voices=vs; w.voiceId=vs[0]||''; renderWorkflowMgr(); await wfmSaveList(); toast('Removed from the rotation'); }
 function wfmPersonaOpts(sel){ return '<option value="">No persona</option>'+(PERSONAS||[]).map(p=>`<option value="${esch(p.name)}"${p.name===sel?' selected':''}>${esch(p.name)}</option>`).join(''); }
 function wfmAssignCount(name){ let n=0; const ch=WF.chains||{}, st=WF.stores||{}; for(const k in ch) if(ch[k]===name)n++; for(const k in st) if(st[k]===name)n++; return n; }
+// ---- Workflows as a CRUD list (comp 1e): light rows, ALL editing inside the shared sheet (1f). ----
+let WFM_SHEET=null; // which sheet is open: {type:'global'} | {type:'wf', wi} | null
+const wfMicIcon='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#CDCDD8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6 11a6 6 0 0 0 12 0M12 17v4"></path></svg>';
+function wfRowMeta(w){
+  const vs=wfmVoices(w);
+  const voice=vs.length>1?vs.length+' voices':vs.length===1?wfmVoiceName(vs[0])+' voice':'default voice';
+  const ops=(Array.isArray(w.openers)?w.openers.length:0);
+  return `${voice} · ${ops} opener${ops===1?'':'s'} · ${(w.lane==='delta')?'Delta':'Charlie'}`;
+}
 function renderWorkflowMgr(){
-  const el=document.getElementById('wfm_list'); if(!el) return;
-  const list=WF.list||[];
+  const el=document.getElementById('wfm_list');
+  if(el){
+    const g=WFM_GLOBAL||[], list=WF.list||[];
+    const row=(icon,name,badge,meta,onclick)=>`<button class="peek" onclick="${onclick}">
+      <span class="pk-ic" style="background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);width:38px;height:38px;border-radius:11px">${icon}</span>
+      <span class="pk-main"><span class="pk-t" style="display:block">${esch(name)}${badge||''}</span><span class="pk-m" style="display:block">${meta}</span></span>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>`;
+    el.innerHTML =
+      row(wfMicIcon,'Global openers','<span class="k-badge gray">FALLBACK</span>',`${g.filter(o=>o.on).length} of ${g.length} rotating · when nothing overrides`,'wfSheetGlobal()')
+      +(WF.list||[]).map((w,wi)=>row(wfMicIcon,w.name,WF.def===w.name?'<span class="k-badge">DEFAULT</span>':'',esch(wfRowMeta(w)),`wfSheet(${wi})`)).join('')
+      +(list.length?'':'<div class="empty">No saved workflows yet. Build one in the Designer.</div>');
+  }
+  // A sheet is open: rebuild its body in place so every auto-save handler shows its result live.
+  if(WFM_SHEET&&_sheetEls&&_sheetEls.sheet.classList.contains('on')){
+    const keep=_sheetEls.body.scrollTop;
+    _sheetEls.body.innerHTML=(WFM_SHEET.type==='global')?wfSheetGlobalBody():wfSheetBody(WFM_SHEET.wi);
+    _sheetEls.body.scrollTop=keep;
+    _sheetEls.body.querySelectorAll('.wfmop textarea').forEach(wfmGrow);
+  } else WFM_SHEET=null;
+}
+function wfSheetGlobalBody(){
   const g=WFM_GLOBAL||[];
-  const globalCard=`<div class="wfm">
-    <div class="wfmhead"><div style="flex:1;min-width:0"><span class="wfmname">Global openers</span><span class="wfmdef" style="color:var(--text-muted);background:var(--surface-2);border-color:var(--border)">every store · unless a workflow overrides</span>
-      <div class="meta" style="margin-top:3px">${g.filter(o=>o.on).length} of ${g.length} rotating</div></div></div>
-    <div class="wfmsub">Openers <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· tick = in rotation</span></div>
+  return `<div class="k-eyebrow">Openers · tick = in rotation</div>
     <div class="wfmops">
-      ${g.map((o,i)=>`<div class="wfmop"><input type="checkbox" ${o.on?'checked':''} onchange="wfgToggle(${i},this.checked)" title="In rotation"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfgEdit(${i},this.value)">${esch(o.text)}</textarea><button class="ghost opdel" onclick="wfgDel(${i})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('')||'<div class="meta" style="padding:4px 0 8px">No global openers.</div>'}
-      <div class="wfmadd"><input id="wfg_add" placeholder="Add a global opener. e.g. Hey! Got any {category} in?" onkeydown="if(event.key==='Enter')wfgAdd()"><button class="act" onclick="wfgAdd()">Add</button></div>
+      ${g.map((o,i)=>`<div class="wfmop"><input type="checkbox" ${o.on?'checked':''} onchange="wfgToggle(${i},this.checked)" title="In rotation"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfgEdit(${i},this.value)">${esch(o.text)}</textarea><button class="ghost opdel" onclick="wfgDel(${i})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('')||'<div class="empty" style="padding:10px 0">No global openers.</div>'}
+      <div class="wfmadd"><input id="wfg_add" placeholder="Hey! Got any {category} in?" onkeydown="if(event.key==='Enter')wfgAdd()"><button class="act" onclick="wfgAdd()">Add</button></div>
     </div>
-  </div>`;
-  const wfCards=list.length?list.map((w,wi)=>{
-    const isDef=WF.def===w.name; const ops=Array.isArray(w.openers)?w.openers:[];
-    const a=(WFM_ASSIGN&&WFM_ASSIGN[w.name])||{stores:[],chains:[]};
-    const pins=[...(a.chains||[]).map(c=>`<span class="wfmpin">${esch(c.name)} · chain</span>`), ...(a.stores||[]).map(s=>`<span class="wfmpin">${esch(s.name)}${s.location?' · '+esch(s.location):''}</span>`)];
-    const asgLine = isDef
-      ? `<div class="wfmasg"><span class="meta">Powers every store, unless a workflow below is assigned to it.</span>${pins.length?'<span class="wfmasglab" style="margin-left:4px">also pinned:</span>'+pins.join(''):''}</div>`
-      : (pins.length
-          ? `<div class="wfmasg"><span class="wfmasglab">On</span>${pins.join('')}</div>`
-          : `<div class="wfmasg"><span class="meta">Not assigned yet. Assign it from a store or chain row, or Set default.</span></div>`);
-    return `<div class="wfm${isDef?' def':''}">
-      <div class="wfmhead">
-        <div style="flex:1 1 100%;min-width:0"><span class="wfmname">${esch(w.name)}</span>${isDef?'<span class="wfmdef">★ default · all stores</span>':''}
-          <div class="meta" style="margin-top:3px">${ops.length} opener${ops.length===1?'':'s'} · ${(vv=>vv.length>1?vv.length+' voices (rotating)':vv.length===1?'custom voice':'default voice')(wfmVoices(w))} · ${esch(w.persona||'no persona')}</div>
-          ${asgLine}</div>
-        <div class="wfmacts">
-          <button class="ghost" onclick="editWorkflowInDesigner(${wi})" title="Open in the Designer to tweak voice, tuning &amp; openers">${lucideSvg('sliders-horizontal',14,'currentColor')}Edit in Designer</button>
-          <button class="ghost" onclick="wfmClone(${wi})">Clone</button>
-          ${isDef?'':`<button class="ghost" onclick="wfmSetDefault(${wi})">Set default</button>`}
-          <button class="ghost wfmtrash" onclick="wfmDelete(${wi})" title="Delete workflow">${lucideSvg('trash-2',15,'currentColor')}</button>
-        </div>
-      </div>
-      <div class="wfmsub" style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span>Openers <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· rotated round-robin every call</span></span><button class="ghost" style="font-size:10.5px;padding:4px 9px;text-transform:none;letter-spacing:0;display:inline-flex;align-items:center;gap:4px" onclick="wfmResetRotation(${wi})" title="Next call to this workflow starts at opener #1 and voice #1">${lucideSvg('rotate-ccw',12,'currentColor')}Reset rotation</button></div>
-      <div class="wfmops">
-        ${ops.map((o,oi)=>`<div class="wfmop"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfmEditOpener(${wi},${oi},this.value)">${esch(o)}</textarea><button class="ghost opdel" onclick="wfmDelOpener(${wi},${oi})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('')||'<div class="meta" style="padding:4px 0 8px">No openers. calls fall back to the global opener.</div>'}
-        <div class="wfmadd"><input id="wfmadd_${wi}" placeholder="Add an opener. e.g. Hey! You guys get any {category} in?" onkeydown="if(event.key==='Enter')wfmAddOpener(${wi})"><button class="act" onclick="wfmAddOpener(${wi})">Add</button></div>
-      </div>
-      <div class="wfmmeta">
-        <div><label>Voices <span class="meta" style="text-transform:none;letter-spacing:0;font-weight:500">· 2+ rotate per call, like openers</span></label>
-          ${wfmVoiceChips(wi,w)}
-          <select onchange="wfmAddVoice(${wi},this.value)"><option value="">+ Add a voice…</option>${WFM_VOICES.map(v=>`<option value="${esch(v.id)}">${esch(v.name)}${v.cloned?' (cloned)':''}</option>`).join('')}</select></div>
-        <div><label>Persona</label><select onchange="wfmSetField(${wi},'persona',this.value)">${wfmPersonaOpts(w.persona)}</select></div>
-        <div><label>Call lane <span data-tip="Delta plays recorded clips read by a cheap classifier, about 2.5¢ a call. Charlie is the live agent on the whole call."></span></label><select onchange="wfmSetField(${wi},'lane',this.value)"><option value="charlie"${(w.lane||'charlie')!=='delta'?' selected':''}>Charlie · live agent</option><option value="delta"${w.lane==='delta'?' selected':''}>Delta · recorded clips</option></select></div>
-      </div>
-      ${wfmDeltaEditor(wi,w)}
-    </div>`;
-  }).join(''):'<div class="meta" style="margin:4px 2px 0">No saved workflows yet. Build one in <b>Voice → Designer</b> to override these per store.</div>';
-  el.innerHTML = globalCard + wfCards;
-  el.querySelectorAll('.wfmop textarea').forEach(wfmGrow); // size opener boxes to their wrapped text
+    <div class="k-note" style="padding-left:0">Edits save as you go. These fire only when no workflow covers a store.</div>`;
+}
+function wfSheetGlobal(){
+  WFM_SHEET={type:'global'};
+  openSheet('Global openers','The fallback script · every store, unless a workflow overrides',wfSheetGlobalBody());
+}
+function wfSheetBody(wi){
+  const w=WF.list[wi]; if(!w) return '';
+  const isDef=WF.def===w.name, ops=Array.isArray(w.openers)?w.openers:[];
+  const a=(WFM_ASSIGN&&WFM_ASSIGN[w.name])||{stores:[],chains:[]};
+  const pins=[...(a.chains||[]).map(c=>`<span class="wfmpin">${esch(c.name)} · chain</span>`), ...(a.stores||[]).map(s=>`<span class="wfmpin">${esch(s.name)}${s.location?' · '+esch(s.location):''}</span>`)];
+  return `
+    <div class="k-eyebrow">Voices · 2+ rotate per call</div>
+    ${wfmVoiceChips(wi,w)}
+    <select onchange="wfmAddVoice(${wi},this.value)"><option value="">+ Add a voice…</option>${WFM_VOICES.map(v=>`<option value="${esch(v.id)}">${esch(v.name)}${v.cloned?' (cloned)':''}</option>`).join('')}</select>
+    <div class="k-eyebrow" style="display:flex;align-items:center;justify-content:space-between">Openers · rotate per call
+      <button class="ghost" style="font-size:10.5px;padding:4px 9px;text-transform:none;letter-spacing:0" onclick="wfmResetRotation(${wi})" title="Next call starts at opener #1 and voice #1">${lucideSvg('rotate-ccw',12,'currentColor')} Reset rotation</button></div>
+    <div class="wfmops">
+      ${ops.map((o,oi)=>`<div class="wfmop"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfmEditOpener(${wi},${oi},this.value)">${esch(o)}</textarea><button class="ghost opdel" onclick="wfmDelOpener(${wi},${oi})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('')||'<div class="empty" style="padding:10px 0">No openers. Calls fall back to the global set.</div>'}
+      <div class="wfmadd"><input id="wfmadd_${wi}" placeholder="Hey! You guys get any {category} in?" onkeydown="if(event.key==='Enter')wfmAddOpener(${wi})"><button class="act" onclick="wfmAddOpener(${wi})">Add</button></div>
+    </div>
+    <div class="grid2" style="margin-top:14px">
+      <div><label style="margin-top:0">Persona</label><select onchange="wfmSetField(${wi},'persona',this.value)">${wfmPersonaOpts(w.persona)}</select></div>
+      <div><label style="margin-top:0">Call lane</label><select onchange="wfmSetField(${wi},'lane',this.value)"><option value="charlie"${(w.lane||'charlie')!=='delta'?' selected':''}>Charlie · live agent</option><option value="delta"${w.lane==='delta'?' selected':''}>Delta · recorded clips</option></select></div>
+    </div>
+    ${wfmDeltaEditor(wi,w)}
+    <div class="k-eyebrow">Where it runs</div>
+    <div class="wfmasg">${isDef?`<span class="meta">Powers every store unless a workflow overrides it.</span>`:(pins.length?pins.join(''):'<span class="meta">Not assigned yet. Assign it from a chain or store, or make it the default.</span>')}</div>
+    <div class="btnrow split" style="margin-top:18px">
+      <span style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="ghost" onclick="editWorkflowInDesigner(${wi});closeSheet()">${lucideSvg('sliders-horizontal',14,'currentColor')} Designer</button>
+        <button class="ghost" onclick="wfmClone(${wi})">Clone</button>
+      </span>
+      ${isDef?'':`<button class="act" onclick="wfmSetDefault(${wi})">Make default</button>`}
+    </div>
+    <button class="k-danger" onclick="wfmDelete(${wi})">Delete this workflow</button>`;
+}
+function wfSheet(wi){
+  const w=WF.list[wi]; if(!w) return;
+  WFM_SHEET={type:'wf',wi};
+  openSheet(w.name,(WF.def===w.name?'★ Default · ':'')+esch(wfRowMeta(w)),wfSheetBody(wi));
+  if(_sheetEls) _sheetEls.body.querySelectorAll('.wfmop textarea').forEach(wfmGrow);
 }
 function wfmGrow(t){ if(!t) return; t.style.height='auto'; t.style.height=(t.scrollHeight)+'px'; }
 async function wfmSaveList(){ const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WF.list)})}); return !!(r&&!r.error); }
@@ -4219,7 +4259,7 @@ function applyWorkflowToDesigner(w){
   toast('Loaded “'+w.name+'” into the Designer');
 }
 async function wfmSetDefault(wi){ const w=WF.list[wi]; if(!w) return; WF.def=w.name; const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:w.name})}); renderWorkflowMgr(); toast((r&&!r.error)?(w.name+' powers all stores now'):'Could not set default'); }
-async function wfmDelete(wi){ const w=WF.list[wi]; if(!w) return; if(!confirm('Delete workflow “'+w.name+'”?\nStores assigned to it fall back to the default.')) return; const wasDef=WF.def===w.name; WF.list=WF.list.filter((x,i)=>i!==wi); if(wasDef){ WF.def=''; await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:''})}); } renderWorkflowMgr(); await wfmSaveList(); toast('Workflow deleted'); }
+async function wfmDelete(wi){ const w=WF.list[wi]; if(!w) return; if(!confirm('Delete workflow “'+w.name+'”?\nStores assigned to it fall back to the default.')) return; const wasDef=WF.def===w.name; WF.list=WF.list.filter((x,i)=>i!==wi); if(wasDef){ WF.def=''; await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:''})}); } WFM_SHEET=null; closeSheet(); renderWorkflowMgr(); await wfmSaveList(); toast('Workflow deleted'); }
 // Reset this workflow's opener rotation so the next call to it starts at opener #1 (predictable testing).
 async function wfmResetRotation(wi){ const w=WF.list[wi]; if(!w) return; const r=await api('/api/admin/reset-rotation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workflow:w.name})}); toast((r&&r.ok)?'Rotation reset. Next call uses opener #1.':'Could not reset rotation'); }
 // Testing tab — the Fun-store test-call log (workflow · opener used · status · timing). Owner-only data.
