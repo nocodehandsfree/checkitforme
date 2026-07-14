@@ -25,10 +25,13 @@
   recipe mechanics (text-only prompt); paths that stay direct on purpose = tree-lab learning calls,
   simulator/bench/talk (dial own phone), caller-ID verify. Proof: zones suite 21/21 w/ flag-on
   section, full suite green (minus legacy design-tokens), boot test + local gate GREEN.
-- **Owner build queue (2026-07-14): promote HOLD** on call-path work. Remaining: call-failed
-  reasons, echo fix (both call code → session branch), zones backend (already SHIPPED — verify
-  premise before re-doing), admin per-customer view, Webbie's two API asks. Rotation list written
-  (rotation-list.md); handoff stubs were already deleted.
+- **Owner build queue (2026-07-14) — ALL SIX DONE.** On PR #18 (held till promote clears): cheap-
+  bridge wiring, call-failed real reasons (voicemail/busy/bad_number; voicemail no longer mislabeled
+  "closed"), bridge echo gate (agent's own audio can't come back as phantom Clerk lines — BARGE_THRESH
+  needs a Fun-store bench before promote). On staging (live): admin per-customer view backend
+  (GET /api/admin/users/:id + grant endpoint, 14/14) and ?section=thrift opt-in on stores/near (5/5).
+  Zones backend + GET /pub/store/:id were ALREADY shipped — both checkpoint asks were stale.
+  Rotation list written (rotation-list.md); handoff stubs already deleted (Lexicon).
 
 ## ✅ 2026-07-11 late — big batch LIVE on prod main 25be309, all green
 - **Full staging→main merge landed on prod** (another session pushed it, not a pinned promote). Prod =
@@ -62,18 +65,10 @@
   NOT promote blockers.
 
 ## NOT DONE (older lane items, still real)
-- **Cheap-bridge lane for leftover call paths** (scheduled checks, zone fires, admin call-now,
-  `/pub/check` fallback) — COST_MODEL.md Part II §2; biggest cost cut, "a wiring decision, not a build".
-- **Manage Zones backend (consumer)** — spec `docs/archive/manage-zones-SHIPPED.md`; engine exists.
-- **Admin per-customer view backend** (`docs/specs/admin-user-view.md`); Admin builds the panel.
 - **Remove `/api/zones*` admin endpoints** (keep the zones engine).
 - **Admin price-editor → Stripe** (GTM `price-editor`).
-- **Kill "Call failed" → real reasons** (map EL termination_reason → voicemail/busy/bad_number).
-- **Transcript echo** — bridge feeds agent audio back as clerk input; fix at bridge.
 - [~] **Transcript IDOR** — backend shipped, flag off; waiting on Website Bearer header → flip on.
 - **Security pre-PUBLIC hardening** — full launch-day list now lives in `rotation-list.md` (this folder).
-- **Website asks:** `section=thrift` opt-in on `/pub/stores/near` (Thrift stores stay muted);
-  `GET /pub/store/:id` single-store fetch (same shape as near; gate owner-only stores).
 - **Real-store launch:** press **Start fresh** (stats_since) when it begins; then resume mapping.
 - **Standalone Store API service** — ships WITH the repo split; flag+sync is the interim.
 - /app/me `catalog` serves stale SUB/PACKS constants — align when touching billing.
