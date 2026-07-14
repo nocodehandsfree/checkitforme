@@ -6,6 +6,15 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash), **I own view/mode/nav** —
 > don't blind-edit the tint, it's fragile.
 
+## ✅ Shipped (07-14 night, batch 5 — PR #16 merged, staging deploy verified)
+1. **Radius stops ½/1/2/5/10 mi** (20 gone; default 5). Server /pub/stores/near min-clamp now 0.5.
+   Live-verified: staging serves the new ticks; radius 0.5/1/5 at Pacoima → 0/3/69 stores (scales right).
+2. **Map reach = Check+ perk:** mapApplyLimits() locks non-any_town accounts inside the radius ring
+   (maxBounds + minZoom=ring fit; zoom-IN free). Verified both tiers headless (free bounced to minZoom 11
+   bounded; comp roams to 3 unbounded). Leaflet/tiles are CDN — headless verify uses local stubs.
+3. **Zone sweep cap 25:** builder refuses a 26th pick, Add-all takes NEAREST 25 (+gray pill, +es);
+   server 400s zone_too_big on bigger legacy zones; client maps it to the same pill. One tap ≤25 calls.
+
 ## ✅ Shipped (07-14 late, batch 4 — PR #15 merged, staging deploy verified)
 Owner-approved share overhaul + chat fixes + fast checks:
 1. **Three share surfaces, one approved voice** (en+es, reward stays Admin-dynamic): refer (ONE
