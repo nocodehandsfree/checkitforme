@@ -45,13 +45,10 @@
 - **Kill "Call failed" → real reasons** (map EL termination_reason → voicemail/busy/bad_number).
 - **Transcript echo** — bridge feeds agent audio back as clerk input; fix at bridge.
 - [~] **Transcript IDOR** — backend shipped, flag off; waiting on Website Bearer header → flip on.
-- **Security pre-PUBLIC hardening** (owner: rotate at launch): RAILWAY_API_TOKEN, GITHUB_PAT, TiDB pw,
-  the mapper `x-admin-token` committed in team/mapping history (redacted but in git history),
-  STRIPE_WEBHOOK_SECRET on staging, **the github-mcp PAT + its connector URL (both pasted in chat)**.
+- **Security pre-PUBLIC hardening** — full launch-day list now lives in `rotation-list.md` (this folder).
 - **Website asks:** `section=thrift` opt-in on `/pub/stores/near` (Thrift stores stay muted);
   `GET /pub/store/:id` single-store fetch (same shape as near; gate owner-only stores).
 - **Real-store launch:** press **Start fresh** (stats_since) when it begins; then resume mapping.
-- **Delete transition stubs** `docs/handoffs/*` after 2026-07-14; doc-prune queue (not active sets).
 - **Standalone Store API service** — ships WITH the repo split; flag+sync is the interim.
 - /app/me `catalog` serves stale SUB/PACKS constants — align when touching billing.
 - **NO ANSWER (owner):** close #379? decide #364? (#420/#421 safe to close — superseded.)
