@@ -171,7 +171,7 @@ app.use("*", async (c, next) => {
   if (config.comingSoon && c.req.method === "GET" && !peekOk(code, getCookie(c, "peek"))) {
     const host = (c.req.header("host") || "").toLowerCase();
     const adminHost = host.startsWith("caller.") || host.startsWith("admin.");
-    if (!adminHost && !GATE_SKIP.test(c.req.path)) return c.html(renderComingSoon(host));
+    if (!adminHost && !GATE_SKIP.test(c.req.path)) return c.html(renderComingSoon(host) + `<!--G code=${JSON.stringify(code)} pcLen=${config.peekCode.length} ok=${peekOk(code, getCookie(c, "peek"))} path=${c.req.path}-->`);
   }
   return next();
 });
