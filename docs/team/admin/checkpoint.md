@@ -3,7 +3,27 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 2026-07-13 — ADMIN DATA-DISPLAY REDESIGN (Addie) — merged to STAGING (63ebbb1), Admin awaits promote
+## 2026-07-14 — FINAL BOARD LANDED + FULL-FIDELITY PASS (Addie) — all on staging, Admin awaits promote
+
+**CD's FINAL board (14 screens, 1a-1i + 2a-2e) landed at docs/design/comps/ADMIN_COMPS.dc.html** (unbundled
+from the owner's standalone export; opens in a browser). Everything below built + verified against it:
+- **Shell 1a EXACT:** brandmark-as-C + "heck" wordmark, ADMIN carved chip, dot+clock mono; track = carved
+  #1B1B20, active key flex 2.1 w/ 14px stroke-2 icons; pills 12px. Toast = THE gray pill (white ring,
+  14.5/800, one line) + all toast copy swept to fragments (no periods/commas).
+- **2a Launch:** title+«N of M shipped», 6px bar, status-group eyebrows (To do/In progress/Done), comp rows
+  (circle→green check when done, LAUNCH chip, yellow agent + carved area chips, 2-line clamp), carved
+  restore strip w/ Restore key + names in sheet, SHOW MORE at 20.
+- **2b Testing:** opener → single amber letter, mono meta (human/talk/total), uppercase tinted status pills.
+- **2c Designer:** horizontal step rail (done=green check, current=numbered glow ring, later=carved lock),
+  step title+gray sub, Back key + «Next: X» capsule pinned (sticky bottom).
+- **2d Kiosk:** carved intel strip (cadence green), Received/Claimed/Unclaimed wells, Inspect key,
+  «Why some don't count →» sheet, receipt rows name-first + mono meta + state chips.
+- **2e Chains:** shipped earlier; muted-last sort.
+- **Search:** k-title + count, floating pager KILLED → SHOW MORE, map = sheet drill-in (invalidateSize on
+  open), Policy flag tooltips → gray lines, page title token 20px/800 board-wide.
+- **Verified:** all 22 pages rendered @390 (3 contact sheets), 7 interactive flows green (call/wf/status/
+  gtm-add/map sheets, designer stepper, chains rows), 0 page errors, tsc 0.
+**⚠️ Admin (prod) shows the OLD design until a promote — owner's word needed.**
 
 **Owner's 4-screenshot pass (all fixed + on staging):** emoji stripped app-wide (lucide/brandmark only) ·
 Alerts rollup/sends aligned as replines + label case unified · Policy pricing now MIRRORS Plans read-only

@@ -63,6 +63,12 @@ const FIX = {
     { id:3, chainId:null, name:'105 Beyblade', location:'Warwick, RI', storeType:'Other', carries:'Topps' },
     { id:4, chainId:9, name:'Goodwill', location:'Owasso, OK', storeType:'Thrift', logoUrl:'/logos/brand/check-icon.png', carries:'' },
   ],
+  '/api/kiosks': [ { label:'Pok\u00e9mon kiosk \u00b7 Smoke Albertsons', category:'Pok\u00e9mon', refreshSummary:':03 & :33 \u00b7 every 30 min', reports:4 } ],
+  '/api/kiosk-receipts': (()=>{ const now=Math.floor(Date.now()/1000); return [
+    { product:'Scarlet & Violet White Flare Booster Bundle (6 Packs)', machineId:'Q00523', total:'29.57', orderId:'76701601', txnAt:'Jul 9', createdAt:now-86400*2 },
+    { product:'Scarlet & Violet Journey Together Booster Pack (10 cards)', machineId:'Q00523', total:'4.93', orderId:'76701651', txnAt:'Jul 9', createdAt:now-86400*2 },
+    { product:'Mega Evolution \u2014 Perfect Order Booster Pack (10 Cards)', machineId:'Q00523', total:'4.93', orderId:'75089379', txnAt:'Jun 15', createdAt:now-86400*26, claimedBy:'u1' },
+  ]; })(),
   '/api/gtm': { items:[
     {id:'1',title:'A2P SMS approval',detail:'Twilio campaign pending carrier review',area:'backend',agent:'devops',critical:true,status:'doing'},
     {id:'2',title:'Outlook email render check',detail:'',area:'frontend',agent:'design',critical:false,status:'todo'},

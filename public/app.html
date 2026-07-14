@@ -48,10 +48,10 @@
   body{background:var(--bg);color:#e6e6ef;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;margin:0;padding:0;touch-action:manipulation}
   /* Shell (comp 1a + owner-approved 07-12 dash mock): wordmark header, carved group track w/ one
      raised active key, raised section pills. Header scrolls away; nothing sticky but the content. */
-  header{padding:18px 20px 8px;display:flex;align-items:center;gap:9px}
-  header .hmark{display:flex;align-items:center;gap:8px;flex:0 0 auto;text-decoration:none}
-  header .wm{font-size:18px;font-weight:900;letter-spacing:-.5px;color:#fff}
-  header .adm{font-size:9px;font-weight:900;letter-spacing:.1em;color:#8A8A96;background:#17171C;border-radius:6px;padding:4px 7px;box-shadow:inset 0 2px 4px rgba(0,0,0,.4)}
+  header{padding:20px 20px 12px;display:flex;align-items:center;gap:9px}
+  header .hmark{display:flex;align-items:center;gap:9px;flex:0 0 auto;text-decoration:none}
+  header .wm{font-size:18px;font-weight:900;letter-spacing:-.4px;color:#fff;margin-left:-13px}
+  header .adm{font-size:9px;font-weight:900;letter-spacing:.08em;color:#8A8A96;background:#1B1B20;border-radius:6px;padding:3px 7px;box-shadow:inset 0 2px 4px rgba(0,0,0,.4)}
   header .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:livepulse 2s ease-in-out infinite}
   @keyframes livepulse{0%,100%{opacity:1}50%{opacity:.4}}
   /* cards lift slightly on hover — same calm depth as the consumer cards */
@@ -61,11 +61,11 @@
   h2{position:relative;padding-left:12px}
   h2::before{content:"";position:absolute;left:0;top:0;bottom:2px;width:3px;border-radius:2px;background:linear-gradient(180deg,var(--purple),var(--green))}
   header .sub{color:var(--muted);font-size:11.5px;margin-left:auto;font-family:ui-monospace,monospace;display:flex;align-items:center;gap:7px}
-  nav{display:flex;gap:4px;background:#1B1B20;border-radius:999px;padding:5px;margin:2px 16px 0;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
+  nav{display:flex;gap:4px;background:#1B1B20;border-radius:999px;padding:5px;margin:4px 16px 0;box-shadow:inset 0 2px 6px rgba(0,0,0,.45)}
   nav button{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;background:transparent;border:none;color:#7C7C88;padding:9px 0;border-radius:999px;cursor:pointer;transition:flex .18s ease,background .15s}
   nav button span{display:none}
   nav button svg{flex:0 0 auto}
-  nav button.active{flex:2.4;background:linear-gradient(180deg,#31313A,#28282E);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:var(--green)}
+  nav button.active{flex:2.1;padding:9px 4px;background:linear-gradient(180deg,#31313A,#28282E);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:var(--green)}
   nav button.active span{display:inline;font-size:11.5px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   main{padding:24px 20px 96px;max-width:1000px;margin:0 auto}
   section{display:none} section.active{display:block;animation:secIn .16s ease}
@@ -143,7 +143,8 @@
   .fld textarea{resize:vertical;line-height:1.4}
   .transcript{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12.5px;color:#cfcfe0;background:var(--terminal);border-radius:10px;padding:12px;margin-top:10px}
   .empty{color:var(--muted);font-size:13px;padding:30px;text-align:center}
-  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--sheet);border:1px solid var(--border);padding:12px 18px;border-radius:12px;font-size:13px;opacity:0;transition:.2s}
+  /* THE notification (comp 1a): ONE gray pill, bottom center — raised, thin white ring, one line. */
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,#2E2E35,#25252B);border:none;padding:11px 22px;border-radius:999px;font-size:14.5px;font-weight:800;color:rgba(255,255,255,.92);box-shadow:0 8px 16px -8px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.35),0 0 18px rgba(255,255,255,.18);white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:.2s;z-index:70;pointer-events:none}
   .toast.show{opacity:1}
   /* Tooltip: TAP to show (works on mobile — hover doesn't exist on touch). A small ⓘ marks tappable hints. */
   [data-tip]{cursor:help}
@@ -299,7 +300,7 @@
      ========================================================================== */
   .k-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A8A96;margin:22px 4px 10px}
   .k-eyebrow:first-child{margin-top:2px}
-  .k-title{font-size:26px;font-weight:800;letter-spacing:-.6px;color:#fff;margin:0}
+  .k-title{font-size:20px;font-weight:800;letter-spacing:-.3px;color:#fff;margin:0}
   /* Hero card — the ONE number the page answers with, plus an honest trend + 7-day spark. */
   .heroc{background:var(--sheet);border-radius:20px;box-shadow:0 12px 22px -12px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);padding:18px 20px;display:flex;align-items:flex-end;gap:14px;margin:16px 0 12px}
   .heroc .hn{font-size:46px;font-weight:900;letter-spacing:-2px;line-height:.9;font-variant-numeric:tabular-nums;color:var(--green)}
@@ -593,7 +594,7 @@
   nav button svg{opacity:.85} nav button.active svg{opacity:1}
   .subnav button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
   /* second-level nav (sections within a group) — quieter than the primary tabs, wraps, never scrolls */
-  .subnav2{display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 2px}
+  .subnav2{display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:12px 16px 4px}
   .subnav2::-webkit-scrollbar{display:none} .subnav2{scrollbar-width:none}
   .subnav2 button{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:#8A8A96;padding:8px 15px;border-radius:999px;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap;transition:color .12s}
   .subnav2 button:hover{color:#fff}
@@ -663,8 +664,8 @@
 <body class="authwait">
 <header>
   <a class="hmark" href="#dash" title="Back to God View" onclick="showSection('dash');return false">
-    <img src="/logos/brand/check-brandmark.svg" alt="" style="width:24px;height:24px;display:block">
-    <span class="wm">Check</span>
+    <img src="/logos/brand/check-brandmark.svg" alt="" style="width:22px;height:22px;display:block">
+    <span class="wm">heck</span>
     <span class="adm">ADMIN</span>
   </a>
   <span class="sub"><span class="dot" title="live"></span><span id="clock"></span></span>
@@ -780,7 +781,7 @@
   </section>
   <section id="testing">
     <div class="k-title">Testing</div>
-    <div class="k-sub">The test-call log. Fun and MVP stores only, never real stores.</div>
+    <div class="k-sub">Owner only · Fun stores</div>
     <div id="testing_summary"></div>
     <div id="testing_log"><div class="empty">Loading…</div></div>
   </section>
@@ -795,7 +796,9 @@
   </section>
 
   <section id="search">
-    <h2>Search stores</h2>
+    <div class="k-title">Search stores</div>
+    <div class="k-sub" id="search_sub">Every store we can call.</div>
+    <div style="height:12px"></div>
     <div class="filters">
       <input id="f_search" placeholder="Search name, city, ZIP…" oninput="onAdminSearch()">
       <button type="button" class="fbtn" id="filters_btn" onclick="toggleFilters()" aria-expanded="false">Filters<span id="filters_count" class="fcount"></span><span class="msel-car">▾</span></button>
@@ -828,17 +831,15 @@
       <button type="button" class="ghost fclear" onclick="clearStoreFilters()">Clear filters</button>
     </div>
     <div id="retailerList"></div>
-    <div id="store_pager" style="position:fixed;right:14px;bottom:16px;z-index:50;display:none;align-items:center;gap:7px;background:var(--sheet);border:1px solid var(--border-strong);border-radius:14px;padding:7px 9px;box-shadow:0 10px 28px rgba(0,0,0,.55)">
-      <select id="store_size" onchange="setStoreSize(this.value)" title="Stores per page" style="width:auto;font-size:12.5px;padding:7px 26px 7px 9px;margin:0"><option value="10">10</option><option value="20">20</option><option value="50">50</option><option value="100">100</option></select>
-      <button class="ghost" id="store_prev" onclick="storePage(-1)" aria-label="Previous page" style="padding:8px 13px;font-size:16px;line-height:1">←</button>
-      <span id="store_pageind" class="meta" style="min-width:46px;text-align:center;font-size:12.5px">1 / 1</span>
-      <button class="ghost" id="store_next" onclick="storePage(1)" aria-label="Next page" style="padding:8px 13px;font-size:16px;line-height:1">→</button>
-    </div>
-    <details class="card" id="map_card" ontoggle="if(this.open){ensureMap();loadMap();}" style="margin-top:16px">
-      <summary><span class="name" data-tip="green = in · red = not in · amber = unclear · gray = uncalled">Map these results</span></summary>
-      <div style="margin:12px 0 10px"><button class="ghost" onclick="locateMe()">Zoom to my location</button></div>
+    <button class="k-key" id="store_more" onclick="storeShowMore()" style="display:none">SHOW MORE</button>
+    <button class="peek" style="margin-top:16px" onclick="mapSheet()">
+      <div class="pk-main"><div class="pk-t">Map these results</div><div class="pk-m">green in · red not in · amber unclear · gray uncalled</div></div>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+    <div id="search_details" style="display:none"><div id="ds_map">
+      <div style="margin:2px 0 10px"><button class="ghost" onclick="locateMe()">Zoom to my location</button></div>
       <div id="leafletmap"></div>
-    </details>
+    </div></div>
   </section>
 
   <section id="add">
@@ -941,13 +942,13 @@
 
   <section id="catalog"><h2>Tracked categories</h2><div id="catList"><div class="empty">Loading…</div></div></section>
   <section id="receipts">
-    <div class="k-title">Kiosk</div>
-    <div class="k-sub">Price intel from customer receipts.</div>
-    <div class="k-eyebrow">Kiosk intel</div>
-    <div id="gw_kiosks" class="meta">Loading…</div>
+    <div class="k-title">Kiosk intel</div>
+    <div id="gw_kiosks" style="margin-top:14px"><div class="empty">Loading…</div></div>
+    <div class="k-wells" id="rcpt_wells" style="display:none"></div>
     <div class="k-eyebrow" style="display:flex;align-items:center;justify-content:space-between">Emailed-in receipts
-      <button class="ghost" style="font-size:12px;padding:5px 10px;text-transform:none;letter-spacing:0" onclick="inspectInbox()">Inspect inbox</button></div>
-    <div class="meta" id="rcpt_status" style="margin-bottom:8px">Loading…</div>
+      <button class="k-key" style="margin:0;padding:8px 14px;font-size:11px;letter-spacing:.06em;text-transform:none" onclick="inspectInbox()">Inspect</button></div>
+    <div style="font-size:12px;font-weight:700;color:#8A8A96;margin:-2px 0 10px;cursor:pointer" onclick="openSheet('Why some don\u2019t count','', '<div class=\'meta\' style=\'line-height:1.6\'>Only kiosk receipts land here: we need a Machine ID, or a product plus a total. A normal store or online receipt won\u2019t parse, so it never becomes a free check.</div>')">Why some don&rsquo;t count &rarr;</div>
+    <div id="rcpt_status" style="display:none"></div>
     <div id="rcpt_debug" class="meta" style="margin-bottom:8px"></div>
     <div id="rcptList"><div class="empty">Loading…</div></div>
   </section>
@@ -997,17 +998,15 @@
   </section>
 
   <section id="designer">
-    <h2>Designer</h2>
-    <div class="card" id="d_rail" style="padding:14px 16px;margin-bottom:12px"></div>
-    <div class="dnav" id="d_nav">
-      <button class="ghost" id="d_back" onclick="dBack()">‹ Back</button>
-      <div class="meta" id="d_nav_label" style="flex:1;text-align:center;font-weight:700;color:var(--text-strong)"></div>
-      <button class="act" id="d_fwd" onclick="dFwd()">Next ›</button>
-    </div>
+    <div class="k-title">Designer</div>
+    <div id="d_rail" style="display:flex;align-items:center;margin:18px 2px 0"></div>
+    <div id="d_nav_label" style="font-size:20px;font-weight:800;letter-spacing:-.3px;margin-top:18px"></div>
+    <div id="d_nav_sub" class="k-sub"></div>
+    <div style="height:12px"></div>
     <div id="d_steps">
 
       <div class="card dstep" data-step="1">
-        <div class="name">Step 1 · Voice</div>
+        
         <label>Voice</label>
         <select id="vs_select"></select>
         <div id="vs_active" class="meta" style="margin-top:6px"></div>
@@ -1021,7 +1020,7 @@
       </div>
 
       <div class="card dstep" data-step="2" style="display:none">
-        <div class="name">Step 2 · Voice feel</div>
+        
         <div class="card" style="background:var(--surface-1);margin-bottom:12px">
           <label style="margin-top:0;display:flex;justify-content:space-between;align-items:baseline">Speed (cadence) <span id="sb_speed_val" class="hint" style="font-style:normal"></span></label>
           <input id="sb_speed" type="range" min="0.7" max="1.2" step="0.01" style="width:100%" oninput="sbLabels()">
@@ -1064,7 +1063,7 @@
       </div>
 
       <div class="card dstep" data-step="3" style="display:none">
-        <div class="name">Step 3 · Script</div>
+        
         <div class="meta" style="margin:2px 0 12px">The openers this workflow rotates through. <span data-tip="These are your shared scripts. Tick the ones to rotate on live calls. Once the workflow is saved, you can also fine-tune its openers per store on the Workflows page."></span></div>
         <label data-tip="Use {category}, fills in Pokémon, One Piece, etc.">Write a new opener</label>
         <textarea id="rot_opener_new" rows="3" style="font-size:13px;line-height:1.5" placeholder="e.g. Heyy! Got any {category} in today?"></textarea>
@@ -1074,7 +1073,7 @@
       </div>
 
       <div class="card dstep" data-step="4" style="display:none">
-        <div class="name">Step 4 · Persona</div>
+        
         <label data-tip="The persona live calls use for this workflow. Build one below, then tap it here to select it.">Persona for this workflow</label>
         <div id="wf_persona_pick" class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:4px"></div>
         <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
@@ -1099,7 +1098,7 @@
       </div>
 
       <div class="card dstep" data-step="5" style="display:none">
-        <div class="name">Step 5 · Rotation</div>
+        
         <label>Scripts in rotation</label>
         <div id="rot_opener_list2" style="margin-top:4px" class="meta">Add scripts in Step 3.</div>
         <label style="margin-top:16px" data-tip="Tick 2+ and live calls alternate between them, one per call. Tick just one to always use that voice.">Voices in rotation</label>
@@ -1109,7 +1108,7 @@
       </div>
 
       <div class="card dstep" data-step="6" style="display:none">
-        <div class="name">Step 6 · Test <span class="meta" style="font-weight:500">· optional</span></div>
+        
         <div class="meta" style="margin:2px 0 12px">Rings your phone so you can hear the voice, tuning, and openers before you save. <span data-tip="A quick gut-check. Staging (staging.checkitforme.com) is still the full end-to-end test with real store calls."></span></div>
         <label>Store</label><select id="sim_store" onchange="previewMaybe()"><option value="" disabled selected>Loading stores</option></select>
         <label>Category to ask about</label><select id="sim_cat" onchange="previewMaybe()"></select>
@@ -1132,14 +1131,18 @@
       </div>
 
       <div class="card dstep" data-step="7" style="display:none">
-        <div class="name">Step 7 · Save workflow</div>
+        
         <label>Workflow name</label><input id="wf_name" placeholder="e.g. Warm Pokémon v2">
         <div class="btnrow"><button class="ghost" onclick="saveWorkflow()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save workflow</button></div>
         <div class="meta" id="wf_msg" style="margin-top:8px">Saved workflows appear in Calls → Settings to assign to chains.</div>
       </div>
 
     </div>
-    </section>
+        <div class="dnav" id="d_nav" style="position:sticky;bottom:14px;margin-top:18px;display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:5">
+      <button class="k-key" id="d_back" onclick="dBack()" style="margin:0">&lsaquo; Back</button>
+      <button class="k-cta" id="d_fwd" onclick="dFwd()" style="margin:0"><span id="d_fwd_label" style="padding:12px 24px">Next &rarr;</span></button>
+    </div>
+  </section>
 
     <section id="trees">
     <div style="display:flex;align-items:baseline;gap:10px"><div class="k-title">Chains</div><div class="k-sub" id="set_pickcount" style="margin-top:0"></div></div>
@@ -1287,10 +1290,8 @@
   </section>
 
   <section id="gtm">
-    <div class="k-title">Go-to-Market</div>
-    <div class="k-sub">Everything left before we're live.</div>
-    <div class="k-hero"><span class="n" id="gtm_hero_n">—</span><span class="l" id="gtm_bar">Loading…</span></div>
-    <div style="height:8px;background:var(--terminal);border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);margin:12px 0 0;overflow:hidden"><div id="gtm_progress_fill" style="height:100%;width:0%;background:linear-gradient(90deg,#4ADE80,#22c55e);border-radius:999px;transition:width .3s"></div></div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px"><div class="k-title" style="font-size:20px;letter-spacing:-.3px">Launch</div><div id="gtm_bar" style="font-size:12px;font-weight:600;color:#8A8A96">Loading…</div></div>
+    <div style="height:6px;background:var(--terminal);border-radius:999px;box-shadow:inset 0 2px 4px rgba(0,0,0,.45);margin-top:10px;overflow:hidden"><div id="gtm_progress_fill" style="height:100%;width:0%;background:var(--green);border-radius:999px;transition:width .3s"></div></div>
     <div class="k-filters">
       <select class="k-filter" id="gtm_f_area" onchange="renderGtm()"><option value="">All areas</option><option value="backend">Backend</option><option value="frontend">Frontend</option><option value="ops">Ops / Growth</option></select>
       <select class="k-filter" id="gtm_f_agent" onchange="renderGtm()"></select>
@@ -1435,7 +1436,7 @@ async function refreshFbBadge(){
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
   nav.innerHTML=Object.entries(NAV_GROUPS).map(([g,o])=>
-    `<button data-grp="${g}" onclick="showGroup('${g}','${o.tabs[0][0]}')">${ICO(o.ico,16)}<span style="vertical-align:middle">${esch(o.label)}</span></button>`).join('');
+    `<button data-grp="${g}" onclick="showGroup('${g}','${o.tabs[0][0]}')">${ICO(o.ico,14,null,2)}<span style="vertical-align:middle">${esch(o.label)}</span></button>`).join('');
 }
 function showGroup(g, sectionId){
   const grp=NAV_GROUPS[g]; if(!grp) return; CUR_GROUP=g;
@@ -1490,7 +1491,7 @@ let GTM_MISSING=[];
 // tell the server to stop offering them. Gone for good; an explicit Restore can still bring them back.
 async function gtmDismissMissing(){
   const r=await api('/api/gtm/dismiss-defaults',{method:'POST'});
-  if(r&&r.ok){ GTM_MISSING=[]; toast('Dismissed. They will not be offered again'); renderGtm(); }
+  if(r&&r.ok){ GTM_MISSING=[]; toast('Dismissed · They will not be offered again'); renderGtm(); }
   else toast('Could not dismiss');
 }
 async function gtmRestore(){
@@ -1503,8 +1504,7 @@ function renderGtm(){
   const fStatus=(document.getElementById('gtm_f_status')||{}).value; const showStat=(fStatus===undefined)?'open':fStatus;
   const done=GTM_ITEMS.filter(i=>i.status==='done').length, total=GTM_ITEMS.length;
   const crit=GTM_ITEMS.filter(i=>i.critical), critDone=crit.filter(i=>i.status==='done').length;
-  const heroN=document.getElementById('gtm_hero_n'); if(heroN) heroN.textContent=(total?Math.round(done/total*100):0)+'%';
-  const bar=document.getElementById('gtm_bar'); if(bar) bar.textContent=`${done}/${total} done · launch-critical ${critDone}/${crit.length}`;
+  const bar=document.getElementById('gtm_bar'); if(bar) bar.textContent=`${done} of ${total} shipped · critical ${critDone}/${crit.length}`;
   const fill=document.getElementById('gtm_progress_fill'); if(fill) fill.style.width=(total?Math.round(done/total*100):0)+'%';
   let list=GTM_ITEMS.filter(i=>{
     if(fArea&&i.area!==fArea) return false;
@@ -1515,27 +1515,50 @@ function renderGtm(){
     return true;
   });
   const el=document.getElementById('gtm_list'); if(!el) return;
-  const rb=GTM_MISSING.length?('<div class="peek static" style="box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 14px rgba(251,191,36,.15)"><span class="pk-m" style="flex:1;color:#FBBF24;white-space:normal">'+GTM_MISSING.length+' default item(s) missing (deleted?): '+GTM_MISSING.map(m=>esch(m.title)).join(' · ')+'</span><button type="button" class="act" onclick="gtmRestore()">Restore</button><button type="button" class="ghost" onclick="gtmDismissMissing()" title="These are gone on purpose. Stop offering them." style="padding:6px 11px;font-size:14px;line-height:1">✕</button></div>'):'';
+  // Restore strip (comp 2a): one carved line + a Restore key — the deleted names live one tap away.
+  const rb=GTM_MISSING.length?(`<div style="margin:14px 0 0;background:var(--terminal);border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px 14px;display:flex;align-items:center;gap:12px">
+      <span style="width:28px;height:28px;border-radius:50%;background:rgba(245,158,11,.15);display:grid;place-items:center;flex:0 0 auto"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 21 19H3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg></span>
+      <span style="flex:1;min-width:0;font-size:13px;font-weight:700;cursor:pointer" onclick="gtmMissingSheet()">${GTM_MISSING.length} default${GTM_MISSING.length===1?'':'s'} deleted</span>
+      <button type="button" class="k-key" style="margin:0;padding:8px 14px;font-size:11px;letter-spacing:.06em" onclick="gtmRestore()">Restore</button>
+      <button type="button" onclick="gtmDismissMissing()" title="Gone on purpose" style="background:none;border:none;color:#5C5C68;cursor:pointer;font-size:15px;line-height:1;padding:2px">×</button>
+    </div>`):'';
   if(!list.length){ el.innerHTML=rb+'<div class="empty">Nothing here — adjust the filters or add an item.</div>'; return; }
-  const dot={todo:'#64748b',doing:'#fbbf24',done:'#4ADE80'};
-  el.innerHTML=rb+list.map(i=>{
-    const idx=GTM_ITEMS.indexOf(i);
-    const strike=i.status==='done'?'text-decoration:line-through;opacity:.55':'';
-    return `<div class="peek static" style="align-items:flex-start">
-      <button type="button" title="Cycle status" onclick="gtmCycle(${idx})" style="flex:0 0 auto;margin-top:2px;width:22px;height:22px;border-radius:50%;border:2px solid ${dot[i.status]};background:${i.status==='done'?dot.done:'transparent'};cursor:pointer;box-shadow:${i.status==='done'?'0 0 8px rgba(74,222,128,.4)':'none'}"></button>
+  // Comp 2a row: circle + one-line title + LAUNCH chip · description clamped to two · agent/area chips.
+  const row=i=>{
+    const idx=GTM_ITEMS.indexOf(i), isDone=i.status==='done', isDoing=i.status==='doing';
+    const circle=isDone
+      ? `<button type="button" title="Cycle status" onclick="gtmCycle(${idx})" style="flex:0 0 auto;margin-top:1px;width:22px;height:22px;border-radius:50%;border:none;background:var(--green);box-shadow:0 0 8px rgba(74,222,128,.4);cursor:pointer;display:grid;place-items:center;padding:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#06210f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></button>`
+      : `<button type="button" title="Cycle status" onclick="gtmCycle(${idx})" style="flex:0 0 auto;margin-top:1px;width:22px;height:22px;border-radius:50%;border:2px solid ${isDoing?'#FBBF24':'rgba(255,255,255,.2)'};background:transparent;cursor:pointer;padding:0"></button>`;
+    return `<div class="peek static" style="align-items:flex-start${isDone?';opacity:.55':''}">
+      ${circle}
       <div class="pk-main">
-        <div class="pk-t" style="${strike}">${esch(i.title)}${i.critical?' <span style="color:#f87171;font-size:9px;font-weight:900;vertical-align:2px;letter-spacing:.06em">● LAUNCH</span>':''}</div>
-        ${i.detail?`<div class="pk-m" style="white-space:normal;${strike}">${esch(i.detail)}</div>`:''}
-        <div style="margin-top:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-          <span class="k-pill" style="padding:4px 10px;font-size:10px;color:#c4b5fd">${esch(gtmAgentLabel(i.agent))}</span>
-          <span class="k-pill" style="padding:4px 10px;font-size:10px">${esch(GTM_AREA[i.area]||i.area)}</span>
-          <span style="font-size:10.5px;font-weight:800;color:${dot[i.status]}">${i.status==='doing'?'In progress':i.status==='done'?'Done':'To do'}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="font-size:14.5px;font-weight:700;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;${isDone?'text-decoration:line-through':''}">${esch(i.title)}</div>
+          ${i.critical?'<span style="font-size:8.5px;font-weight:900;letter-spacing:.06em;color:#EF4444;background:rgba(239,68,68,.14);border-radius:6px;padding:3px 6px;flex:0 0 auto">LAUNCH</span>':''}
+          <button type="button" title="Remove" onclick="gtmDelete(${idx})" style="flex:0 0 auto;background:none;border:none;color:#5C5C68;cursor:pointer;font-size:15px;line-height:1;padding:0 2px">×</button>
+        </div>
+        ${i.detail?`<div style="font-size:12px;font-weight:500;color:#8A8A96;line-height:1.45;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esch(i.detail)}</div>`:''}
+        <div style="display:flex;align-items:center;gap:7px;margin-top:9px">
+          <span style="font-size:9px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:#FFCB05;background:rgba(255,203,5,.13);border-radius:7px;padding:4px 8px">${esch(gtmAgentLabel(i.agent))}</span>
+          <span style="font-size:9px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:#8A8A96;background:var(--terminal);box-shadow:inset 0 2px 4px rgba(0,0,0,.4);border-radius:7px;padding:4px 8px">${esch(GTM_AREA[i.area]||i.area)}</span>
         </div>
       </div>
-      <button type="button" title="Remove" onclick="gtmDelete(${idx})" style="flex:0 0 auto;background:none;border:none;color:#5C5C68;cursor:pointer;font-size:16px;line-height:1;padding:4px">×</button>
     </div>`;
-  }).join('');
+  };
+  // Group under status eyebrows (comp 2a: "To do · 5"), capped with a Show-more key.
+  const groups=[['todo','To do'],['doing','In progress'],['done','Done']];
+  let html=rb, shownCount=0, hiddenCount=0;
+  groups.forEach(([st,label])=>{
+    const items=list.filter(i=>(i.status||'todo')===st);
+    if(!items.length) return;
+    html+=`<div class="k-eyebrow">${label} · ${items.length}</div>`;
+    items.forEach(i=>{ if(shownCount<GTM_LIMIT){ html+=row(i); shownCount++; } else hiddenCount++; });
+  });
+  if(hiddenCount) html+=`<button class="k-key" onclick="GTM_LIMIT+=50;renderGtm()">SHOW ${Math.min(50,hiddenCount)} MORE</button>`;
+  el.innerHTML=html;
 }
+let GTM_LIMIT=20;
+function gtmMissingSheet(){ openSheet('Missing defaults','Deleted from the list · Restore brings them back', GTM_MISSING.map(m=>`<div class="repline"><span class="rl">${esch(m.title)}</span></div>`).join('')||'<div class="empty">None</div>'); }
 async function gtmSave(){ const r=await api('/api/gtm',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({items:GTM_ITEMS})}); if(r&&r.items) GTM_ITEMS=r.items; renderGtm(); }
 function gtmCycle(idx){ const it=GTM_ITEMS[idx]; if(!it) return; const next={todo:'doing',doing:'done',done:'todo'}; const to=next[it.status]||'todo'; if(to==='done'&&!confirm('Mark "'+it.title+'" as DONE?\n\n(Done items are hidden from the default Open view.)')) return; it.status=to; renderGtm(); gtmSave(); }
 function gtmDelete(idx){ const it=GTM_ITEMS[idx]; if(!it) return; if(!confirm('Remove "'+it.title+'"?')) return; GTM_ITEMS.splice(idx,1); renderGtm(); gtmSave(); }
@@ -1550,22 +1573,28 @@ function gtmAdd(){
 //      means the reward was granted to that device/account. Server: /api/kiosk-receipts, flow in
 //      src/gmail-receipts.ts (Gmail IMAP, policy flag kioskReceipts + GMAIL_USER/APP_PASSWORD). ----
 async function loadReceipts(){
-  const list=document.getElementById('rcptList'), stat=document.getElementById('rcpt_status');
+  const list=document.getElementById('rcptList'), wells=document.getElementById('rcpt_wells');
   if(!list) return;
   const rows=await api('/api/kiosk-receipts');
-  if(!Array.isArray(rows)){ list.innerHTML='<div class="empty">Could not load receipts.</div>'; if(stat)stat.textContent='—'; return; }
-  const ago=s=>{ if(!s)return '—'; const m=Math.floor(Date.now()/1000)-s; if(m<3600)return Math.max(1,Math.floor(m/60))+'m ago'; if(m<86400)return Math.floor(m/3600)+'h ago'; return Math.floor(m/86400)+'d ago'; };
+  if(!Array.isArray(rows)){ list.innerHTML='<div class="empty">Could not load receipts.</div>'; return; }
+  const ago=s=>{ if(!s)return '\u2014'; const m=Math.floor(Date.now()/1000)-s; if(m<3600)return Math.max(1,Math.floor(m/60))+'m'; if(m<86400)return Math.floor(m/3600)+'h'; return Math.floor(m/86400)+'d'; };
   const claimed=rows.filter(r=>r.claimedBy).length;
-  if(stat) stat.innerHTML=`<b>${rows.length}</b> received · <b>${claimed}</b> claimed a free check. <span class="hint" data-tip="Only kiosk receipts land here (a Machine ID, or product + total). A normal store or online receipt won't.">why some don’t count</span>`;
+  if(wells){ wells.style.display='';
+    wells.innerHTML=`<div class="k-well"><div class="n">${rows.length}</div><div class="l">Received</div></div>
+      <div class="k-well"><div class="n${claimed?' g':' a'}">${claimed}</div><div class="l">Claimed</div></div>
+      <div class="k-well"><div class="n">${rows.filter(r=>!r.claimedBy).length}</div><div class="l">Unclaimed</div></div>`; }
   if(!rows.length){ list.innerHTML='<div class="empty">No receipts yet. They show up once a shopper emails one in and we can read it.</div>'; return; }
+  // Comp 2d rows: name-first clamped to two lines, ONE mono meta line, state chip + age muted.
   list.innerHTML=rows.map(r=>{
-    const badge=r.claimedBy?'<span class="tag-verified">✓ free check granted</span>':'<span class="pill">unclaimed</span>';
-    const bits=[r.machineId?`Machine ${esch(r.machineId)}`:'',r.total?`$${esch(r.total)}`:'',r.orderId?`Order ${esch(r.orderId)}`:'',r.txnAt?esch(r.txnAt):''].filter(Boolean).join(' · ');
-    return `<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:10px">
-      <div style="min-width:0"><div class="name">${esch(r.product||'(no product parsed)')}</div>
-      <div class="meta">${bits||'—'}</div></div>
-      <div style="text-align:right;flex:0 0 auto"><div>${badge}</div><div class="meta" style="margin-top:5px">${ago(r.createdAt)}</div></div>
-    </div></div>`;
+    const bits=[r.machineId?esch(r.machineId):'',r.total?('$'+esch(r.total)):'',r.orderId?('#'+esch(r.orderId)):'',r.txnAt?esch(r.txnAt):''].filter(Boolean).join(' \u00b7 ');
+    return `<div class="peek static" style="display:block">
+      <div style="font-size:14.5px;font-weight:700;letter-spacing:-.2px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esch(r.product||'(no product parsed)')}</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11.5px;color:#8A8A96;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${bits||'\u2014'}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:9px">
+        ${r.claimedBy?'<span style="font-size:9px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--green);background:rgba(74,222,128,.13);border-radius:7px;padding:4px 8px">Claimed</span>':'<span style="font-size:9px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:#8A8A96;background:var(--terminal);box-shadow:inset 0 2px 4px rgba(0,0,0,.4);border-radius:7px;padding:4px 8px">Unclaimed</span>'}
+        <span style="margin-left:auto;font-size:11px;font-weight:600;color:#5C5C68">${ago(r.createdAt)}</span>
+      </div>
+    </div>`;
   }).join('');
 }
 // Admin diagnostic: read the ingest inbox and show what the parser does with each email (incl. rejects),
@@ -1849,7 +1878,7 @@ async function loadTreeLab(){
 async function tlOne(kind,chainId,btn){ const o=btn.textContent; btn.textContent='…'; btn.disabled=true;
   const r=await api('/api/admin/tree/'+kind,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({chainId})});
   btn.textContent=o; btn.disabled=false;
-  toast(r&&r.ok?`Calling ${r.retailer||'a store'}, ${kind} running. Refresh in a minute`:`Couldn't place: ${(r&&r.error)||'error'}`);
+  toast(r&&r.ok?`Calling ${r.retailer||'a store'} · ${kind} running · refresh in a minute`:`Couldn't place · ${(r&&r.error)||'error'}`);
 }
 async function tlBatch(kind){ const n=Number(document.getElementById('tl_count').value)||5; const msg=document.getElementById('tl_msg'); if(msg)msg.textContent='Placing calls…';
   const r=await api('/api/admin/tree/'+kind,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({count:n})});
@@ -2318,16 +2347,28 @@ let DSTEP=1, DMAX=1;
 const DLABELS=['Voice','Voice feel','Script','Persona','Rotation','Test','Save workflow'];
 function dRender(){
   const rail=document.getElementById('d_rail');
-  if(rail) rail.innerHTML='<div class="meta" style="margin-bottom:10px;text-transform:uppercase;letter-spacing:1.2px;font-size:10px;font-weight:700">How it flows</div><div style="display:flex;flex-direction:column;gap:9px">'+DLABELS.map((lbl,i)=>{
-    const n=i+1, done=n<DMAX||(n===DMAX&&n<DSTEP), now=n===DSTEP, lock=n>DMAX;
-    const icon = (n<DMAX)?lucideSvg('check',13,'#06210f'):lock?lucideSvg('lock',12,'#6b6b7b'):n;
-    const cls = now?'now':(n<DMAX?'done':'lock'); const col=(now)?'var(--green)':(n<DMAX?'var(--green)':'var(--text-tertiary)');
-    return `<div onclick="${n<=DMAX?'dGo('+n+')':''}" style="display:flex;align-items:center;gap:10px;color:${col};${n<=DMAX?'cursor:pointer':''}"><span class="rdot ${cls}">${icon}</span><span style="font-size:13px;font-weight:${now?'800':'600'}">${n} · ${lbl}</span></div>`;
-  }).join('')+'</div>';
+  const DSUBS=['Pick or clone the voice that makes the calls','How the voice sounds on the line','The openers this call rotates through','A named personality composed into the call','What rotates per call','Ring yourself before you save','Name it and save the workflow'];
+  if(rail){
+    // Comp 2c rail: done = filled green check · current = numbered ring with a soft glow · later = carved lock.
+    const dot=n=>{
+      const done=n<DSTEP, now=n===DSTEP, open=n<=DMAX;
+      if(now) return `<div onclick="dGo(${n})" style="width:30px;height:30px;border-radius:50%;background:#20202A;border:2px solid var(--green);box-shadow:0 0 0 5px rgba(74,222,128,.14);display:grid;place-items:center;flex:0 0 auto;font-size:12px;font-weight:900;color:var(--green);cursor:pointer">${n}</div>`;
+      if(done) return `<div onclick="dGo(${n})" style="width:26px;height:26px;border-radius:50%;background:var(--green);display:grid;place-items:center;flex:0 0 auto;cursor:pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#12271A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></div>`;
+      return `<div ${open?`onclick="dGo(${n})" style="cursor:pointer;`:'style="'}width:26px;height:26px;border-radius:50%;background:#1B1B20;box-shadow:inset 0 2px 4px rgba(0,0,0,.5);display:grid;place-items:center;flex:0 0 auto"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5C5C68" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>`;
+    };
+    const seg=n=>{ // connector after step n
+      if(n<DSTEP-1) return '<div style="flex:1;height:2px;background:var(--green)"></div>';
+      if(n===DSTEP-1) return '<div style="flex:1;height:2px;background:linear-gradient(90deg,var(--green),rgba(74,222,128,.25))"></div>';
+      return '<div style="flex:1;height:2px;background:#1B1B20;box-shadow:inset 0 1px 2px rgba(0,0,0,.5)"></div>';
+    };
+    rail.innerHTML=DLABELS.map((_,i)=>dot(i+1)+(i<DLABELS.length-1?seg(i+1):'')).join('');
+  }
   document.querySelectorAll('#d_steps .dstep').forEach(el=>{ el.style.display = Number(el.dataset.step)===DSTEP ? '' : 'none'; });
-  const lbl=document.getElementById('d_nav_label'); if(lbl) lbl.textContent='Step '+DSTEP+' · '+DLABELS[DSTEP-1];
+  const lbl=document.getElementById('d_nav_label'); if(lbl) lbl.textContent='Step '+DSTEP+' \u00b7 '+DLABELS[DSTEP-1];
+  const sub=document.getElementById('d_nav_sub'); if(sub) sub.textContent=DSUBS[DSTEP-1]||'';
   const bk=document.getElementById('d_back'); if(bk) bk.style.visibility=DSTEP>1?'visible':'hidden';
-  const fw=document.getElementById('d_fwd'); if(fw){ if(DSTEP>=7){ fw.style.visibility='hidden'; } else { fw.style.visibility='visible'; fw.textContent='Next: '+DLABELS[DSTEP]+' ›'; } }
+  const fw=document.getElementById('d_fwd'), fl=document.getElementById('d_fwd_label');
+  if(fw){ if(DSTEP>=7){ fw.style.visibility='hidden'; } else { fw.style.visibility='visible'; if(fl) fl.textContent='Next: '+DLABELS[DSTEP]; } }
 }
 function dGo(n){ if(n>DMAX) return; if(n<DSTEP) DMAX=n; DSTEP=n; dRender(); const e=document.querySelector('#designer'); if(e) e.scrollIntoView({behavior:'smooth',block:'start'}); }
 function dNext(n){ DMAX=Math.max(DMAX,n); dGo(n); }
@@ -2391,7 +2432,7 @@ function pnLoad(i){ const p=PERSONAS[i]; if(!p) return; PN_EDIT=i;
   document.getElementById('pn_greet').value=p.greet||'';
   pnEditHint();
   const d=document.getElementById('designer'); if(d) d.scrollIntoView({behavior:'smooth',block:'start'});
-  toast('Loaded \u201c'+(p.name||'')+'\u201d. edit, then Save.');
+  toast('Loaded \u201c'+(p.name||'')+'\u201d · edit then Save');
 }
 function pnCancel(){ PN_EDIT=-1; pnClearForm(); pnEditHint(); }
 async function pnDelete(i){ const p=PERSONAS[i]; if(!p) return; if(!confirm('Delete persona \u201c'+p.name+'\u201d?')) return;
@@ -2444,7 +2485,7 @@ async function vsToggleRec(){
     VS_REC.onstop=()=>{ VS_BLOB=new Blob(VS_CHUNKS,{type:'audio/webm'}); const u=URL.createObjectURL(VS_BLOB); const a=document.getElementById('vs_play'); a.src=u; a.style.display=''; document.getElementById('vs_clone').disabled=false; stream.getTracks().forEach(t=>t.stop()); clearInterval(VS_TIMER); btn.innerHTML='<span style="color:var(--red)">●</span> Record'; btn.style.color=''; };
     VS_REC.start(); btn.innerHTML='<span style="color:var(--red)">■</span> Stop'; btn.style.color='#EF4444';
     let s=0; const rt=document.getElementById('vs_rectime'); VS_TIMER=setInterval(()=>{ s++; rt.textContent=s+'s'; },1000);
-  }catch(e){ toast('Mic blocked. Allow microphone access.'); }
+  }catch(e){ toast('Mic blocked · Allow microphone access'); }
 }
 async function vsClone(){
   const name=(document.getElementById('vs_name').value||'').trim();
@@ -2895,7 +2936,7 @@ async function bulkEdit(action){
   if(body.active===false) RETAILERS=RETAILERS.filter(r=>r.active!==false);
   SEL.clear(); renderRetailers(); toast(`${ok}/${ids.length} updated`);
 }
-let STORE_PAGE=0, STORE_SIZE=10;
+let STORE_PAGE=0, STORE_SIZE=30;
 // Store Search row: per-store only — logo · name · location · hours · call track-record. Tap to expand
 // (what they carry, the in-stock/not-in/restock tally, Call store + a per-store workflow). Chain-level
 // stuff (verify, online, soft-delete, category, shipping) lives on the chain Settings page, not here.
@@ -2987,7 +3028,7 @@ function storeTap(id, ev){
     const s=STORE_TAP[id]||{}; s.tapTimer=0; STORE_TAP[id]=s;
     if(s.recall||s.calling||!s.armed) return;
     const r=RETAILERS.find(x=>x.id===id); if(!r) return;
-    const os=r.openState||{}; if(os.known && !os.open){ toast('Closed, no call placed'); return; }
+    const os=r.openState||{}; if(os.known && !os.open){ toast('Closed · no call placed'); return; }
     const lc=r.lastCall, recent=lc&&lc.startedAt&&(Date.now()/1000-lc.startedAt)<86400;
     if(recent) openRecall(id,r); else openCallConfirm(id,r);
   }, 450);
@@ -3078,13 +3119,14 @@ function closeStoreCall(id, ev){ if(ev)ev.stopPropagation();
 }
 function onStoreFilter(){ STORE_PAGE=0; syncFilterCount(); renderRetailers(); }
 function setStoreSize(n){ STORE_SIZE=Number(n)||10; STORE_PAGE=0; renderRetailers(); }
-function storePage(delta){ STORE_PAGE=Math.max(0,STORE_PAGE+delta); renderRetailers(); try{document.getElementById('search').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){} }
+function storeShowMore(){ STORE_SIZE+=50; renderRetailers(); }
 function renderStorePager(total){
-  const pages=Math.max(1,Math.ceil(total/STORE_SIZE));
-  const ind=document.getElementById('store_pageind'); if(ind) ind.textContent=(STORE_PAGE+1)+' / '+pages;
-  const pv=document.getElementById('store_prev'); if(pv){ pv.disabled=STORE_PAGE<=0; pv.style.opacity=pv.disabled?.4:1; }
-  const nx=document.getElementById('store_next'); if(nx){ nx.disabled=STORE_PAGE>=pages-1; nx.style.opacity=nx.disabled?.4:1; }
-  const bar=document.getElementById('store_pager'); if(bar) bar.style.display=total>0?'flex':'none';
+  // Comp rule: long lists end in a Show-more key — never a floating pager over the rows.
+  const more=document.getElementById('store_more'); if(!more) return;
+  const shown=Math.min(total,(STORE_PAGE+1)*STORE_SIZE);
+  more.style.display=total>shown?'':'none';
+  more.textContent='SHOW '+Math.min(50,total-shown)+' MORE';
+  const sub=document.getElementById('search_sub'); if(sub&&total) sub.textContent=total.toLocaleString('en-US')+' stores match';
 }
 // Which product to ask about on a call — the store's primary carried product, else the default category.
 function defaultCatFor(r){ const carries=(r&&r.carries)?r.carries.split(',').map(x=>x.trim().toLowerCase()).filter(Boolean):[]; for(const c of (CATEGORIES||[])){ const lbl=(c.label||'').toLowerCase(); if(lbl&&carries.some(cn=>cn.includes(lbl)||lbl.includes(cn))) return c.id; } return (CATEGORIES&&CATEGORIES[0])?CATEGORIES[0].id:null; }
@@ -3105,7 +3147,7 @@ async function labCall(){
   toast('Calling…');
   const r=await api('/api/talk',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone,mode,personality,name,voiceId})});
   if(r&&r.error){toast("Couldn't place the call: "+r.error);return;}
-  toast('Call placed. Answer it!');
+  toast('Call placed · Answer it!');
   if(r&&r.providerCallId) pollTranscript(r.providerCallId);
 }
 // --- Store simulator: agent calls YOUR phone; result records against the chosen store ---
@@ -3205,7 +3247,7 @@ function ssRenderStore(){
     +row('Online','Sells online. pickup or shipped.',SS.cOnline,tog(maj('Online'),'ssToggleOnline()'))
     +row('Stock verified','Confirmed it carries (vs just suspected).',SS.cVerified,tog(maj('Verified'),'ssToggleVerified()'));
 }
-async function ssMute(){ if(!SS) return; if(!confirm('Are you sure you want to mute this store?')) return; if(await ssPatch('muted',true)){ SS.muted=true; ssRenderStore(); toast('Muted, dropped from customers'); } }
+async function ssMute(){ if(!SS) return; if(!confirm('Are you sure you want to mute this store?')) return; if(await ssPatch('muted',true)){ SS.muted=true; ssRenderStore(); toast('Muted · dropped from customers'); } }
 async function ssActivate(){ if(!SS) return; if(await ssPatch('muted',false)){ SS.muted=false; ssRenderStore(); toast('Active'); } }
 async function ssClearRepack(){ if(!SS) return; if(await ssPatch('repackOnly',false)){ SS.repack=false; ssRenderStore(); toast('Repack-only cleared'); } }
 async function ssSetType(v){ if(!SS) return; SS.type=v; if(await ssPatch('type',v)) toast('Type: '+v); }
@@ -3467,12 +3509,12 @@ async function benchCall(){
   const specificProduct = tree==='specific' ? v('sim_specific') : '';
   if(!retailerId||!categoryId){toast('Pick a store and category');return;}
   if(!toNumber){toast('Enter your phone number');return;}
-  if(tree==='specific'&&!specificProduct){toast('Name the specific product, or switch to general');return;}
+  if(tree==='specific'&&!specificProduct){toast('Name the specific product · or switch to general');return;}
   // Rotate voice + opener for THIS call (test-only, visible in the line above the button).
   const sv=document.getElementById('sim_voice'); let voiceId=sv?sv.value:'';
   const pool=poolVoices(); if(voiceId==='__rotate__') voiceId = pool.length ? pool[TEST_ROT.call%pool.length].id : '';
   const active=OPENERS.filter(o=>o.on); const opening = active.length ? active[TEST_ROT.call%active.length].text : undefined;
-  toast('Calling you. Answer like you work there!');
+  toast('Calling you · Answer like you work there!');
   const r=await api('/api/bench/call',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId,categoryId,mode,toNumber,specificProduct,voiceId,opening})});
   if(r&&r.error){toast("Couldn't call you: "+r.error);return;}
   TEST_ROT.call++; refreshTestRotation();
@@ -3579,7 +3621,7 @@ async function loadPreset(){
   const name=document.getElementById('vt_preset').value; if(!name){ toast('Pick a saved script'); return; }
   const t=await api('/api/voice-presets/apply',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name})});
   if(t&&t.error){ toast("Couldn't load the preset: "+t.error); return; }
-  await loadSandbox(); toast('Loaded “'+name+'” into the draft. Test it, then apply to stores');
+  await loadSandbox(); toast('Loaded “'+name+'” into the draft · test then apply');
 }
 async function removePreset(){
   const name=document.getElementById('vt_preset').value; if(!name){ toast('Pick a saved script'); return; }
@@ -3844,7 +3886,7 @@ async function saveStatus(id,btn){
   const card=btn.closest('[data-sid]'); const body={};
   card.querySelectorAll('[data-f]').forEach(i=>{ body[i.dataset.f]=i.value; });
   const r=await api('/api/statuses/'+id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  if(r&&r.id){ STATUSES[r.key]=r; toast('Saved. Live in Check It For Me and Test Bench now'); }
+  if(r&&r.id){ STATUSES[r.key]=r; toast('Saved · Live in Check It For Me and Test Bench now'); }
   else toast("Couldn't save the status");
 }
 function pickNewStatusIcon(){ openIconPicker(n=>{ document.getElementById('st_new_emoji').value=n; document.getElementById('st_new_icon_btn').innerHTML=statusIcon(n,'#9CA3AF',22); }, document.getElementById('st_new_emoji').value); }
@@ -3870,7 +3912,7 @@ async function callNow(id){
   if(!catId){ toast('No product category configured'); return; }
   toast('Dialing…');
   await api('/api/call-now',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:id,categoryId:catId})});
-  toast('Call placed. The result lands in this store’s record shortly.');
+  toast('Call placed · The result lands in this store’s record shortly');
 }
 async function mapCall(id){
   const cat=(CATEGORIES.find(c=>/pok/i.test(c.label))||CATEGORIES[0]);
@@ -4003,6 +4045,10 @@ function pinColor(r){
   if(r.lastCall&&r.lastCall.status==='completed'&&r.lastCall.confirmed===false) return '#EF4444';
   if(r.lastCall&&r.lastCall.status==='completed') return '#E89A4A';
   return '#6B6B7B';
+}
+function mapSheet(){
+  sheetFromHolder('ds_map','Map these results','green in · red not in · amber unclear · gray uncalled');
+  setTimeout(()=>{ ensureMap(); try{ MAP&&MAP.invalidateSize(); }catch(_){}} ,350);
 }
 function ensureMap(){
   if(!MAP){
@@ -4164,7 +4210,7 @@ function wfmVoiceChips(wi,w){
   return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px">${vs.map((id,vi)=>
     `<span class="wfmpin">${esch(wfmVoiceName(id))}${vs.length>1&&vi===0?' <span class="meta" style="font-weight:500">first</span>':''}<a onclick="wfmDelVoice(${wi},${vi})" title="Remove from rotation" style="cursor:pointer;font-weight:900;color:#8A8A96">×</a></span>`).join('')}</div>`;
 }
-async function wfmAddVoice(wi,id){ if(!id) return; const w=WF.list[wi]; if(!w) return; const vs=wfmVoices(w); if(vs.includes(id)){ toast('Already in the rotation'); renderWorkflowMgr(); return; } vs.push(id); w.voices=vs; w.voiceId=vs[0]; renderWorkflowMgr(); await wfmSaveList(); toast(vs.length>1?'Added. '+vs.length+' voices now rotate on this workflow':'Voice set'); }
+async function wfmAddVoice(wi,id){ if(!id) return; const w=WF.list[wi]; if(!w) return; const vs=wfmVoices(w); if(vs.includes(id)){ toast('Already in the rotation'); renderWorkflowMgr(); return; } vs.push(id); w.voices=vs; w.voiceId=vs[0]; renderWorkflowMgr(); await wfmSaveList(); toast(vs.length>1?'Added · '+vs.length+' voices now rotate':'Voice set'); }
 async function wfmDelVoice(wi,vi){ const w=WF.list[wi]; if(!w) return; const vs=wfmVoices(w); vs.splice(vi,1); w.voices=vs; w.voiceId=vs[0]||''; renderWorkflowMgr(); await wfmSaveList(); toast('Removed from the rotation'); }
 function wfmPersonaOpts(sel){ return '<option value="">No persona</option>'+(PERSONAS||[]).map(p=>`<option value="${esch(p.name)}"${p.name===sel?' selected':''}>${esch(p.name)}</option>`).join(''); }
 function wfmAssignCount(name){ let n=0; const ch=WF.chains||{}, st=WF.stores||{}; for(const k in ch) if(ch[k]===name)n++; for(const k in st) if(st[k]===name)n++; return n; }
@@ -4268,7 +4314,7 @@ function wfmDeltaEditor(wi,w){ if((w.lane||'charlie')!=='delta') return '';
     </div></div>`;
 }
 async function wfmSetFollowup(wi,slot,text){ const w=WF.list[wi]; if(!w) return; if(!w.followups||typeof w.followups!=='object') w.followups={}; const arr=(text||'').split('\n').map(x=>x.trim()).filter(Boolean); if(arr.length) w.followups[slot]=arr; else delete w.followups[slot]; await wfmSaveList(); toast('Follow-up saved'); }
-async function wfmClone(wi){ const w=WF.list[wi]; if(!w) return; const name=(prompt('Name for the cloned workflow:', w.name+' copy')||'').trim(); if(!name) return; if(WF.list.some(x=>x.name===name)){ toast('A workflow named “'+name+'” already exists'); return; } const copy=JSON.parse(JSON.stringify(w)); copy.name=name; copy.savedAt=Date.now(); WF.list.push(copy); renderWorkflowMgr(); await wfmSaveList(); toast('Cloned as “'+name+'”. Edit it below, then assign it to a store'); }
+async function wfmClone(wi){ const w=WF.list[wi]; if(!w) return; const name=(prompt('Name for the cloned workflow:', w.name+' copy')||'').trim(); if(!name) return; if(WF.list.some(x=>x.name===name)){ toast('A workflow named “'+name+'” already exists'); return; } const copy=JSON.parse(JSON.stringify(w)); copy.name=name; copy.savedAt=Date.now(); WF.list.push(copy); renderWorkflowMgr(); await wfmSaveList(); toast('Cloned as “'+name+'” · edit then assign'); }
 // ---- Round-trip: open an existing workflow back in the Designer (the only place to tweak tuning) ----
 let EDIT_TARGET=null; // a workflow staged to load into the Designer once its async loaders settle
 // Designer tab loader: await the voice/persona/store loaders FIRST, then (if we arrived via "Edit in
@@ -4308,9 +4354,9 @@ function applyWorkflowToDesigner(w){
 async function wfmSetDefault(wi){ const w=WF.list[wi]; if(!w) return; WF.def=w.name; const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:w.name})}); renderWorkflowMgr(); toast((r&&!r.error)?(w.name+' powers all stores now'):'Could not set default'); }
 async function wfmDelete(wi){ const w=WF.list[wi]; if(!w) return; if(!confirm('Delete workflow “'+w.name+'”?\nStores assigned to it fall back to the default.')) return; const wasDef=WF.def===w.name; WF.list=WF.list.filter((x,i)=>i!==wi); if(wasDef){ WF.def=''; await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({defaultWorkflow:''})}); } WFM_SHEET=null; closeSheet(); renderWorkflowMgr(); await wfmSaveList(); toast('Workflow deleted'); }
 // Reset this workflow's opener rotation so the next call to it starts at opener #1 (predictable testing).
-async function wfmResetRotation(wi){ const w=WF.list[wi]; if(!w) return; const r=await api('/api/admin/reset-rotation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workflow:w.name})}); toast((r&&r.ok)?'Rotation reset. Next call uses opener #1.':'Could not reset rotation'); }
+async function wfmResetRotation(wi){ const w=WF.list[wi]; if(!w) return; const r=await api('/api/admin/reset-rotation',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({workflow:w.name})}); toast((r&&r.ok)?'Rotation reset · next call uses opener #1':'Could not reset rotation'); }
 // Testing tab — the Fun-store test-call log (workflow · opener used · status · timing). Owner-only data.
-function tcStatusPill(key){ const F=({in_stock:['In stock','#4ADE80'],not_in_stock:['Not in','#EF4444'],sold_out:['Sold out','#EF4444'],does_not_sell:["Doesn't carry",'#EF4444'],no_clear_answer:['Maybe','#FBBF24'],too_busy:['Too busy','#FBBF24'],left_on_hold:['On hold','#FBBF24'],nobody_answered:['No answer','#9CA3AF'],closed:['Closed','#9CA3AF'],failed:['Failed','#FBBF24'],completed:['Done','#9CA3AF'],admin_hangup:['Canceled','#9CA3AF']})[key]||[key||'—','#9CA3AF']; return `<span class="tcpill" style="color:${F[1]};border-color:${F[1]}44;background:${F[1]}14">${esch(F[0])}</span>`; }
+function tcStatusPill(key){ const F=({in_stock:['In stock','#4ADE80'],not_in_stock:['Not in','#EF4444'],sold_out:['Sold out','#EF4444'],does_not_sell:["Doesn't carry",'#EF4444'],no_clear_answer:['Maybe','#FBBF24'],too_busy:['Too busy','#FBBF24'],left_on_hold:['On hold','#FBBF24'],nobody_answered:['No answer','#9CA3AF'],closed:['Closed','#9CA3AF'],failed:['Failed','#FBBF24'],completed:['Done','#9CA3AF'],admin_hangup:['Canceled','#9CA3AF']})[key]||[key||'—','#9CA3AF']; return `<span style="font-size:9.5px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:${F[1]};background:${F[1]}24;border-radius:999px;padding:4px 10px;white-space:nowrap">${esch(F[0])}</span>`; }
 async function loadTesting(){
   const sum=document.getElementById('testing_summary'), log=document.getElementById('testing_log');
   if(!sum||!log) return;
@@ -4320,23 +4366,19 @@ async function loadTesting(){
   // Report strip over the log (comp: Testing is a LOG with a report strip).
   const well=(n,l,cls)=>`<div class="k-well"><div class="n${cls?' '+cls:''}">${n}</div><div class="l">${l}</div></div>`;
   sum.innerHTML=`<div class="k-hero"><span class="n">${d.count||0}</span><span class="l">test calls</span></div>
-    <div class="k-wells">${well(secsFmt(s.avgNavSec||0),'To human','')}${well(secsFmt(s.avgTalkSec||0),'Talk','g')}${well(secsFmt(s.avgCallSec||0),'Total','')}</div>
+    <div class="k-wells">${well(secsFmt(s.avgNavSec||0),'To human','')}${well(secsFmt(s.avgTalkSec||0),'Avg talk','g')}${well(secsFmt(s.avgCallSec||0),'Avg total','')}</div>
     <div class="k-eyebrow">Call log</div>`;
   const when=u=>{ if(!u)return '—'; const dt=new Date(u*1000); return dt.toLocaleDateString([],{month:'short',day:'numeric'})+' '+dt.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}); };
   const t=v=>v!=null?secsFmt(v):'—';
   log.innerHTML=((d.rows||[]).map(r=>{
         const op=r.opener||{};
-        const opLine = op.said ? `${op.label?'<b style="color:var(--purple)">'+esch(op.label)+'</b> · ':''}${esch(op.said)}` : '<span style="color:#5C5C68">opener not captured</span>';
-        return `<div class="peek static" style="align-items:flex-start">
-          <div class="pk-main">
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="pk-t">${r.workflow?esch(r.workflow):'<span style="color:#8A8A96;font-weight:500">no workflow</span>'}</span>${tcStatusPill(r.status)}<span style="margin-left:auto;font-size:11px;font-weight:600;color:#8A8A96">${esch(when(r.started))}</span></div>
-            <div class="pk-m" style="white-space:normal;margin-top:5px">${opLine}</div>
-            <div style="display:flex;gap:14px;margin-top:7px;font-size:11.5px;font-weight:600;color:#8A8A96">
-              <span>to human <b style="color:#fff;font-variant-numeric:tabular-nums">${t(r.navSec)}</b></span>
-              <span>talk <b style="color:var(--green);font-variant-numeric:tabular-nums">${t(r.talkSec)}</b></span>
-              <span>total <b style="color:#fff;font-variant-numeric:tabular-nums">${t(r.callSec)}</b></span>
-            </div>
-          </div>
+        // The opener that repeated on every row is now a single letter (comp 2b).
+        const m=String(op.label||'').match(/(\d+)/);
+        const letter=m?String.fromCharCode(64+Math.min(26,Math.max(1,Number(m[1])))):(op.said?'A':'·');
+        const dt=r.started?new Date(r.started*1000).toLocaleDateString([],{month:'short',day:'numeric'}):'—';
+        return `<div class="peek static" style="display:block">
+          <div style="display:flex;align-items:center;gap:9px"><div style="font-size:14px;font-weight:700">${r.workflow?esch(r.workflow):'<span style="color:#8A8A96;font-weight:500">no workflow</span>'}</div>${tcStatusPill(r.status)}<div style="margin-left:auto;font-size:11px;font-weight:600;color:#8A8A96;white-space:nowrap">${esch(dt)}</div></div>
+          <div style="font-family:ui-monospace,monospace;font-size:11.5px;color:#8A8A96;margin-top:8px"><span style="color:#FFCB05;font-weight:800" title="${esch(op.said||'opener not captured')}">${letter}</span> · human <span style="color:#CDCDD8">${t(r.navSec)}</span> · talk <span style="color:#4ADE80">${t(r.talkSec)}</span> · total <span style="color:#CDCDD8">${t(r.callSec)}</span></div>
         </div>`;
       }).join('') || '<div class="empty">No test calls yet. Call the Fun store.</div>');
 }
@@ -4435,8 +4477,8 @@ const ICONS={
   check:'<circle cx="12" cy="12" r="9.5" fill="currentColor" stroke="none"/><path d="M7.5 12.4l3.1 3.1L16.5 9" stroke="#06210f" stroke-width="2.4"/>',
   cart:'<path d="M4 5h2l1.6 9.5h9.2L19 8H7"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/>',
 };
-function ICO(name,size,color){ const i=ICONS[name]; if(!i) return ''; size=size||18;
-  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color||'currentColor'}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto">${i}</svg>`; }
+function ICO(name,size,color,sw){ const i=ICONS[name]; if(!i) return ''; size=size||18;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color||'currentColor'}" stroke-width="${sw||1.7}" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;flex:0 0 auto">${i}</svg>`; }
 const NAV_ICO={dash:'bolt',retailers:'store',results:'phone',playbook:'tree',growth:'rise',business:'money',map:'map',zones:'target',catalog:'tag',labs:'flask',settings:'gear'};
 const EMOJI_ICO={'⚡':'bolt','💰':'money','💳':'card','✂':'scissors','📞':'phone','📊':'chart','📈':'rise','🏆':'trophy','🏪':'store','📍':'pin','🎚':'sliders','🧪':'flask','🔎':'search','📝':'note','🌳':'tree','🏷':'tag','🎙':'mic','🎯':'target','📦':'box','🔧':'gear','⚙':'gear','🔑':'key','🗺':'map','📅':'cal','💬':'chat','✅':'check','🛒':'cart','🔴':'live'};
 // One pass: nav tabs get an icon + label; every emoji-led header/button swaps the emoji for a drawn mark.
@@ -4510,7 +4552,7 @@ async function sendAlertTest(){
   const r=await api('/api/alerts/test',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event,to})});
   if(!r||r.error){ if(out){ out.style.color='#F87171'; out.textContent='Error: '+((r&&r.error)||'no response'); } return; }
   // sent = it actually went out; stubbed = the provider key/number isn't live yet.
-  if(r.status==='sent'){ if(out){ out.style.color='var(--green)'; out.textContent='✅ Sent to '+to+' — check your '+(r.channel==='sms'?'phone':'inbox (and spam)')+'.'; } toast('Test sent'); }
+  if(r.status==='sent'){ if(out){ out.style.color='var(--green)'; out.textContent='Sent to '+to+' — check your '+(r.channel==='sms'?'phone':'inbox (and spam)'); } toast('Test sent'); }
   else if(r.status==='stubbed'){ if(out){ out.style.color='#F59E0B'; out.textContent='Logged but NOT delivered — '+(r.channel==='sms'?'the Twilio number isn’t live yet (pending A2P).':'Brevo key not set on this service.')+' ('+(r.detail||'')+')'; } }
   else{ if(out){ out.style.color='#F59E0B'; out.textContent=r.status+(r.detail?(' · '+r.detail):''); } }
   loadAlerts();
@@ -4522,11 +4564,10 @@ async function loadGrowth(){
   const f=POL.flags||{};
   document.getElementById('gw_flags').innerHTML=FLAG_GROUPS.map(g=>
     `<div style="margin-bottom:14px"><div class="meta" style="font-weight:700;color:var(--text-muted);margin:2px 0 6px">${g.title}</div>`+
-    g.flags.map(fl=>{const k=fl[0];return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0">
-      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--text);flex:1;min-width:0">
-        <input type="checkbox" ${f[k]?'checked':''} onchange="toggleFlag('${k}',this.checked)">
-        <span>${fl[1]}</span></label>
-      <span data-tip="${String(fl[2]).replace(/"/g,'&quot;')}" style="flex-shrink:0;padding:4px"></span></div>`;}).join('')+
+    g.flags.map(fl=>{const k=fl[0];return `<div style="padding:7px 0">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;color:var(--text)">
+        <input type="checkbox" ${f[k]?'checked':''} onchange="toggleFlag('${k}',this.checked)" style="margin-top:3px">
+        <span style="flex:1;min-width:0"><span style="font-weight:600">${fl[1]}</span><span style="display:block;font-size:11.5px;font-weight:500;color:#8A8A96;line-height:1.4;margin-top:2px">${esch(String(fl[2]))}</span></span></label></div>`;}).join('')+
     `</div>`
   ).join('');
   // pricing
@@ -4570,7 +4611,7 @@ async function loadGwPulse(){
 async function startFresh(clear){
   if(!clear && !confirm('Start fresh?\n\nReal-call stats (Pulse, Restock, Call timing) will only count calls placed from NOW on. So launch-day dialing starts clean. Test/Fun calls are unaffected, and this is reversible (“Count all again”).')) return;
   const r=await api('/api/admin/stats-since',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(clear?{clear:true}:{})});
-  if(r&&r.ok){ toast(clear?'Counting all calls again':'Fresh start. Real-call stats now count from today.'); loadGwPulse(); if(typeof loadCallHealth==='function')loadCallHealth(); } else toast('Could not update');
+  if(r&&r.ok){ toast(clear?'Counting all calls again':'Fresh start · stats count from today'); loadGwPulse(); if(typeof loadCallHealth==='function')loadCallHealth(); } else toast('Could not update');
 }
 // Call data health — the unfiltered truth about call_results (real dialed calls vs seed/rehearsal/
 // never-placed), + a dry-run cleanup preview. Read-only: no delete button (purge is run deliberately).
@@ -4658,7 +4699,7 @@ async function resetAccount(id,label){
   const r=await api('/api/admin/users/'+enc+'/delete',{method:'POST'});
   if(r&&r.ok){ toast(label+' reset to brand new'); loadUsers(); } else toast('Could not reset that account');
 }
-async function toggleStaff(id,on){ const r=await api('/api/admin/users/staff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,on})}); if(r&&!r.error){ toast(on?'Flagged as admin/test. Won’t count as a customer':'Unflagged'); loadUsers(); } else toast('Could not update'); }
+async function toggleStaff(id,on){ const r=await api('/api/admin/users/staff',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,on})}); if(r&&!r.error){ toast(on?'Flagged as admin/test · not a customer':'Unflagged'); loadUsers(); } else toast('Could not update'); }
 // ---- Restock intel (God View → Restock): network view + per-store breakdown on tap ----
 function rsBar(label,n,max,cls){ return `<div class="rsbar"><span class="rsbl">${esch(label)}</span><span class="rsbt"><span class="rsbf ${cls||''}" style="width:${max?Math.round(n/max*100):0}%"></span></span><b>${n}</b></div>`; }
 async function loadRestock(){
@@ -4812,10 +4853,14 @@ async function backfillRegions(){
 }
 async function loadGwKiosks(){
   const ks=await api('/api/kiosks');
-  const el=document.getElementById('gw_kiosks');
-  if(!Array.isArray(ks)||!ks.length){ el.textContent='No kiosk reports yet.'; return; }
-  const dd=s=>esch(String(s||'').replace(/\s+—\s+/g,' · '));
-  el.innerHTML=ks.map(k=>`<div style="padding:8px 0;border-top:1px solid var(--border)"><b style="color:var(--text)">${dd(k.label)}</b> · ${prodMark(k.category,14)}<br><span style="color:var(--green)">${dd(k.refreshSummary||'none yet')}</span> · ${k.reports||0} report${k.reports===1?'':'s'}</div>`).join('');
+  const el=document.getElementById('gw_kiosks'); if(!el) return;
+  if(!Array.isArray(ks)||!ks.length){ el.innerHTML='<div class="empty">No kiosk reports yet.</div>'; return; }
+  const dd=x=>esch(String(x||'').replace(/\s+\u2014\s+/g,' \u00b7 '));
+  // Comp 2d: machine, store and cadence fold into one carved intel strip per kiosk.
+  el.innerHTML=ks.map(k=>`<div style="background:var(--terminal);border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px 14px;margin-bottom:10px">
+      <div style="font-size:14px;font-weight:700">${dd(k.label)}</div>
+      <div style="font-size:12px;font-weight:600;color:#8A8A96;margin-top:3px"><span style="color:var(--green);font-weight:800">${dd(k.refreshSummary||'no cadence yet')}</span> \u00b7 ${k.reports||0} report${k.reports===1?'':'s'} \u00b7 ${prodMark(k.category,13)}</div>
+    </div>`).join('');
 }
 async function loadGwWatches(){
   const ws=await api('/api/watches');
