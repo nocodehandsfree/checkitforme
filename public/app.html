@@ -107,7 +107,7 @@
   select option{background:#15151f;color:#e8e8f0;font-weight:500}
   label{display:block;font-size:10px;color:var(--text-tertiary);margin:16px 0 8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
   /* labels that WRAP a control (checkbox/day pill/toggle) keep normal case + size — the uppercase micro-label is for field labels only */
-  label:has(input),label:has(select){text-transform:none;font-size:13px;font-weight:600;letter-spacing:0;color:inherit}
+  label:has(input),label:has(select),label:has(textarea){text-transform:none;font-size:13px;font-weight:600;letter-spacing:0;color:inherit}
   input[type=checkbox],input[type=radio],input[type=range]{box-shadow:none;padding:0}
   /* unified custom checkbox — brand green when checked, everywhere */
   input[type=checkbox]{appearance:none;-webkit-appearance:none;width:15px;height:15px;min-width:15px;padding:0;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.26);border-radius:5px;background:var(--terminal);cursor:pointer;flex:0 0 auto;position:relative;transition:background .12s,border-color .12s;vertical-align:middle;accent-color:var(--green);margin:0}
@@ -959,6 +959,7 @@
     <div class="k-eyebrow">Pricing and rewards</div>
     <div id="gw_pricing" style="display:grid;grid-template-columns:1fr 1fr;gap:10px"></div>
     <div class="btnrow"><button class="act" onclick="savePolicyForm()">Save pricing</button></div>
+    <div id="gw_plansmirror"></div>
     <div class="k-eyebrow">Restock watches</div>
     <div id="gw_watches" class="meta">Loading…</div>
     <div class="k-eyebrow">Community moderation</div>
@@ -1570,7 +1571,7 @@ async function loadReceipts(){
 // so we can see whether a receipt arrived and why it did/didn't land. Read-only; admin-gated server-side.
 async function inspectInbox(){
   const el=document.getElementById('rcpt_debug'); if(!el) return;
-  el.innerHTML='🔍 Reading restocktimer@gmail.com…';
+  el.innerHTML='Reading restocktimer@gmail.com…';
   const d=await api('/api/admin/receipts/inbox-debug?hours=72');
   if(!d||!d.ok){ el.innerHTML='<span style="color:#ff6b6b">Inbox read failed: '+esch((d&&d.error)||'unknown')+'</span>'; return; }
   if(!d.configured){ el.innerHTML='<span style="color:#FBBF24">Gmail not configured (no creds set).</span>'; return; }
@@ -1593,7 +1594,7 @@ const secsFmt=s=>s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):(s||0)+
 let TR_POLL=null, TR_SESSION=null, TR_CHAIN=null, TR_STORE='', TR_RESULT=null, TR_CONFIRM=false, TR_OPTS={};
 // One-tap Helicone routing check: pings the cheap nav model live through the gateway (no phone call).
 async function testHelicone(model){
-  const el=$('tr_heli'); if(el) el.innerHTML='<span style="color:#9aa">⚡ Pinging Helicone…</span>';
+  const el=$('tr_heli'); if(el) el.innerHTML='<span style="color:#9aa">Pinging Helicone…</span>';
   const r=await api('/api/admin/llm-ping'+(model?('?model='+encodeURIComponent(model)):''));
   if(!el) return;
   if(r&&r.ok) el.innerHTML='<span style="color:var(--green)">✓ Helicone OK</span> · model <b>'+escH(r.model)+'</b> · '+r.ms+'ms · sample “'+escH(r.sample||'')+'”'+(r.heliconeConfigured?'':' · <span style="color:#FBBF24">⚠ HELICONE_API_KEY not set</span>');
@@ -1737,8 +1738,8 @@ async function mapperPoll(){
   const rec=run.best||run.baseline||{};
   const menu=Array.isArray(rec.menu)?rec.menu:[];
   const menuHtml=menu.length?('<div class="meta" style="margin-top:6px">Menu heard: '+menu.map(o=>'<code>'+esch(o.digit)+'</code> '+esch(o.label||'?')).join(' · ')+'</div>'):'';
-  const varHtml=rec.ringVariable?'<div class="meta" style="margin-top:4px;color:#FBBF24">⚠ Variable ring (department pickup) — time-to-human varies call to call</div>':'';
-  const tgtHtml=run.target?('<div class="meta" style="margin-top:4px">🎯 Target: <b>'+esch(run.target)+'</b></div>'):'';
+  const varHtml=rec.ringVariable?'<div class="meta" style="margin-top:4px;color:#FBBF24">Variable ring (department pickup) — time-to-human varies call to call</div>':'';
+  const tgtHtml=run.target?('<div class="meta" style="margin-top:4px">Target: <b>'+esch(run.target)+'</b></div>'):'';
   const needHtml=run.needsTarget?('<div style="margin-top:8px;background:rgba(251,191,36,.1);border:1px solid #FBBF24;border-radius:10px;padding:9px 11px">'
     +'<div class="meta" style="color:#FBBF24">No customer-service option in this menu — which desk should we press for card stock?</div>'
     +'<div class="row" style="gap:6px;margin-top:6px"><input id="mapper_target_in" placeholder="e.g. customer service, front, sporting goods" style="flex:1;min-width:120px"/>'
@@ -1768,7 +1769,7 @@ async function trDocument(chainId,name,opts){
   try{ live.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}
   const body=opts.confirm?{chainId,confirm:true,product:opts.product||'Pokémon cards'}:{chainId};
   const r=await api('/api/admin/trainer/document',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  if(!r||r.error){ document.getElementById('tr_live_status').textContent='✖ '+((r&&r.error)||'could not start'); return; }
+  if(!r||r.error){ document.getElementById('tr_live_status').textContent='Could not start: '+((r&&r.error)||'error'); return; }
   TR_SESSION=r.sessionId;
   if(TR_POLL) clearInterval(TR_POLL);
   TR_POLL=setInterval(trPoll,1500); trPoll();
@@ -1793,24 +1794,24 @@ async function trPoll(){
     // CONFIRM-mode redirect: we reached a human but they sent us elsewhere (wrong desk) — captured, not lockable.
     if(s.confirm==='redirect'){
       res.innerHTML=`<div style="background:rgba(245,158,11,.1);border:1px solid #f59e0b;border-radius:12px;padding:12px">
-        <div class="name" style="color:#f59e0b">↪︎ Reached a person, wrong desk (they redirected us)</div>
+        <div class="name" style="color:#f59e0b">Reached a person, wrong desk (they redirected us)</div>
         <div class="meta" style="margin-top:5px">They said: “${esch(s.redirectTo||'(transfer)')}”. Captured. Call back rotates to a fresh store.</div>
-        <div class="row" style="gap:8px;margin-top:10px"><button class="ghost" onclick="trRetry()">↻ Try another store</button></div></div>`;
+        <div class="row" style="gap:8px;margin-top:10px"><button class="ghost" onclick="trRetry()">Try another store</button></div></div>`;
     } else if(s.status==='human'&&s.recipe){
       TR_RESULT={chainId:TR_CHAIN,recipe:s.recipe,confidence:s.confidence||0};
       const steps=s.recipe.steps.map(x=>x.action==='press'?('press '+x.value+' @'+x.atSec+'s'):('say "'+x.value+'" @'+x.atSec+'s')).join('  →  ')||'picked up directly';
       const rightDesk=s.confirm==='answered'?`<div class="meta" style="color:var(--green);margin-top:3px">✓ Right desk (they answered the stock question)</div>`:'';
       res.innerHTML=`<div style="background:rgba(74,222,128,.1);border:1px solid var(--green);border-radius:12px;padding:12px">
-        <div class="name" style="color:var(--green)">✅ Reached a human in ${s.recipe.seconds}s · ${esch(s.recipe.type)}</div>
+        <div class="name" style="color:var(--green)">Reached a human in ${s.recipe.seconds}s · ${esch(s.recipe.type)}</div>
         ${rightDesk}
         <div class="meta" style="margin-top:5px">${esch(steps)}</div>
         <div class="row" style="gap:8px;margin-top:10px">
-          <button class="act" onclick="trLock()">🔒 Lock this recipe</button>
-          <button class="ghost" onclick="trRetry()">↻ Try again (go faster)</button></div></div>`;
+          <button class="act" onclick="trLock()">Lock this recipe</button>
+          <button class="ghost" onclick="trRetry()">Try again (go faster)</button></div></div>`;
     } else {
       res.innerHTML=`<div style="background:rgba(239,68,68,.1);border:1px solid var(--red);border-radius:12px;padding:12px">
-        <div class="name" style="color:var(--red)">✖ Didn't reach a human</div>
-        <div class="row" style="gap:8px;margin-top:10px"><button class="ghost" onclick="trRetry()">↻ Try again</button></div></div>`;
+        <div class="name" style="color:var(--red)">Didn't reach a human</div>
+        <div class="row" style="gap:8px;margin-top:10px"><button class="ghost" onclick="trRetry()">Try again</button></div></div>`;
     }
   }
 }
@@ -1818,7 +1819,7 @@ function trRetry(){ if(TR_CHAIN) trDocument(TR_CHAIN,TR_STORE,TR_OPTS); }
 async function trLock(){
   if(!TR_RESULT) return;
   const r=await api('/api/admin/trainer/lock',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(TR_RESULT)});
-  if(r&&r.ok){ toast('🔒 Locked'); document.getElementById('tr_live').style.display='none'; loadTrainer(); loadChains(); }
+  if(r&&r.ok){ toast('Locked'); document.getElementById('tr_live').style.display='none'; loadTrainer(); loadChains(); }
   else toast('Could not lock');
 }
 // ---- Phone Tree Lab ----
@@ -1998,6 +1999,15 @@ function calcInit(){
   if(!target) return;
   if(!target.querySelector('#calc_total')) target.innerHTML=calcShell();
   CALC.ready=true; calcSync(); calcUpdate();
+  calcSyncPlans(); // the ROI plan ladder mirrors the Plans tab (owner 07-13: plans must match)
+}
+let CALC_PLANS_SYNCED=false;
+async function calcSyncPlans(){
+  if(CALC_PLANS_SYNCED) return;
+  const d=await api('/api/admin/plans');
+  if(!d||d.error||!Array.isArray(d.tiers)||!d.tiers.length) return;
+  CALC.plans=d.tiers.map(t=>({name:t.name,price:(t.monthlyCents||0)/100,checks:t.checksPerMonth||0}));
+  CALC_PLANS_SYNCED=true; calcRenderPlans(); calcUpdate();
 }
 function calcShell(){
   const seg=Object.keys(CALC_STORE).map(t=>`<button type="button" id="calc_seg_${t}" onclick="calcPick('${t}')" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border-radius:11px;border:1px solid var(--border);background:var(--surface-1);color:var(--text-muted);cursor:pointer;text-align:left;font:inherit"><span style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px">${calcDot(CALC_STORE[t].nc)}${t}</span><span style="font-size:10.5px;color:var(--text-tertiary)">${CALC_STORE[t].sub}</span></button>`).join('');
@@ -2483,12 +2493,13 @@ function splitName(n){ return {base:(n||'').trim(),branch:''}; }
 function logoTile(o){
   o=o||{};
   if(o.logoUrl) return `<div class="slogo${o.logoDark?' lite':''}${o.logoWide?' widelogo':''}"><img loading="lazy" decoding="async" src="${esch(o.logoUrl)}" alt=""></div>`;
-  // Independent hobby/thrift shops have no real logo — show the SAME icons the consumer site uses
-  // (checkit.html SVG_STORE / SVG_TAG, owner 07-04: Hobby = storefront, Thrift = price-tag), not an
-  // admin-only variant. Other logoless stores keep the wordmark fallback.
-  if(o.type==='Hobby') return `<div class="slogo" style="display:grid;place-items:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l1.6-4.2h12.8L20 9"/><path d="M5 9v9.5h14V9"/><path d="M4 9h16"/><path d="M10 18.5V14h4v4.5"/></svg></div>`;
-  if(o.type==='Thrift') return `<div class="slogo" style="display:grid;place-items:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".9" fill="#FFCB05"/></svg></div>`;
-  return `<div class="slogo">${storeWordmark(o.name,o.type)}</div>`;
+  // Same icons the consumer site uses (checkit.html storeFace). The server sends the chain type as
+  // `storeType` (older callers pass `type`). Owner 07-13: any NON-CHAIN store without logo art gets
+  // the hobby storefront icon like the website — the wordmark tile is only for logoless CHAINS.
+  const st=o.storeType||o.type;
+  if(st==='Thrift') return `<div class="slogo" style="display:grid;place-items:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".9" fill="#FFCB05"/></svg></div>`;
+  if(st==='Hobby'||!o.chainId) return `<div class="slogo" style="display:grid;place-items:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l1.6-4.2h12.8L20 9"/><path d="M5 9v9.5h14V9"/><path d="M4 9h16"/><path d="M10 18.5V14h4v4.5"/></svg></div>`;
+  return `<div class="slogo">${storeWordmark(o.name,st)}</div>`;
 }
 // Log rows only (comp 1c): chain art rides the logo slot; ANY logoless store gets the embossed
 // initials tile. Store cards elsewhere keep logoTile's consumer-parity wordmark fallback.
@@ -2975,7 +2986,7 @@ function storeTap(id, ev){
     const s=STORE_TAP[id]||{}; s.tapTimer=0; STORE_TAP[id]=s;
     if(s.recall||s.calling||!s.armed) return;
     const r=RETAILERS.find(x=>x.id===id); if(!r) return;
-    const os=r.openState||{}; if(os.known && !os.open){ toast('🔒 Closed, no call placed'); return; }
+    const os=r.openState||{}; if(os.known && !os.open){ toast('Closed, no call placed'); return; }
     const lc=r.lastCall, recent=lc&&lc.startedAt&&(Date.now()/1000-lc.startedAt)<86400;
     if(recent) openRecall(id,r); else openCallConfirm(id,r);
   }, 450);
@@ -3017,7 +3028,7 @@ async function placeStoreCall(id){
   const st=STORE_TAP[id]||{}; st.recall=false; st.calling=true; st.armed=true; STORE_TAP[id]=st;
   renderCallView(id, r);
   const resp=await api('/api/call-now',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:id,categoryId:catId})});
-  if(!resp||resp.error){ toast(/closed/i.test((resp&&resp.error)||'')?'🔒 Closed, no call placed':'Could not place the call'); closeStoreCall(id); return; }
+  if(!resp||resp.error){ toast(/closed/i.test((resp&&resp.error)||'')?'Closed, no call placed':'Could not place the call'); closeStoreCall(id); return; }
   st.cid=resp.providerCallId; st.callSid=resp.callSid; STORE_TAP[id]=st;
   scPoll(id, resp.providerCallId);
 }
@@ -3384,7 +3395,7 @@ async function saveChainTree(){
   else document.getElementById('pt_status').textContent="Couldn't save the phone menu.";
 }
 // All-chains table: 30-day stats from the god view + one-tap mute/repack flips.
-const PATH_LBL={direct_human:'🙋 direct',simple_ivr:'🔢 simple menu',deep_ivr:'🌀 deep menu'};
+const PATH_LBL={direct_human:'direct',simple_ivr:'simple menu',deep_ivr:'deep menu'};
 let CHAIN_STATS=[], CHAIN_FILTER='';
 function chainFilter(v){ CHAIN_FILTER=v||''; renderChainList(); }
 function renderChainList(){
@@ -3424,7 +3435,7 @@ async function loadPreview(){
   const body=document.getElementById('pv_body');
   if(!p||p.error){ document.getElementById('pv_meta').textContent='Could not load preview.'; body.style.display='none'; return; }
   const src = p.usedStoreOverride ? 'store override' : (p.phoneTree ? 'chain menu ('+(p.chainName||'chain')+')' : 'global rules only, no phone tree');
-  const dtmf = p.dtmf ? ` · <span style="color:var(--yellow,#F4D03F)">⌨️ auto-press ${p.dtmf}</span>` : '';
+  const dtmf = p.dtmf ? ` · <span style="color:var(--yellow,#F4D03F)">auto-press ${p.dtmf}</span>` : '';
   document.getElementById('pv_meta').innerHTML = `<b>${p.retailerName}</b> · phone menu source: <span style="color:var(--green)">${src}</span>${dtmf}`;
   body.textContent=p.prompt; body.style.display='';
 }
@@ -3530,7 +3541,7 @@ async function pushSandboxToStores(){
   await api('/api/sandbox-tuning',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(sandboxBody())});
   const r=await api('/api/sandbox-tuning/apply-to-stores',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
   if(r&&r.error){ document.getElementById('sb_status').textContent="Couldn't apply to stores: "+r.error; toast("Couldn't apply to stores: "+r.error); return; }
-  document.getElementById('sb_status').textContent='✅ LIVE on '+(r.applied||0)+' store agent(s). every store call now uses this.';
+  document.getElementById('sb_status').textContent='LIVE on '+(r.applied||0)+' store agent(s). every store call now uses this.';
   toast('Applied to all store calls'); loadLiveStrip();
 }
 // --- Script library (saved tuning profiles, loaded into the DRAFT) ---
@@ -3573,7 +3584,7 @@ function playMu(b64,track){
   if(LL_NEXT[track]==null) LL_NEXT[track]=LL_CTX.currentTime+0.35;        // per-track timeline -> agent & clerk mix
   const at=Math.max(LL_NEXT[track], LL_CTX.currentTime+0.04);
   src.start(at); LL_NEXT[track]=at+buf.duration;
-  if((++LL_FRAMES)%25===0) setLL('🔴 LIVE. listening… ('+Math.round(LL_FRAMES*0.02/2)+'s)');
+  if((++LL_FRAMES)%25===0) setLL('LIVE. listening… ('+Math.round(LL_FRAMES*0.02/2)+'s)');
 }
 async function callAndListen(){
   const phone=(document.getElementById('ll_phone').value||'').trim();
@@ -3583,12 +3594,12 @@ async function callAndListen(){
   try{ LL_CTX=new (window.AudioContext||window.webkitAudioContext)(); await LL_CTX.resume(); }catch(e){ setLL('Audio blocked by browser.'); btn.disabled=false; return; }
   const t=await api('/api/talk',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone,mode:'restock'})});
   if(!t||t.error||!t.providerCallId){ setLL('Could not place call: '+((t&&t.error)||'error')); btn.disabled=false; return; }
-  setLL('📞 Call placed. waiting for the store to pick up…');
+  setLL('Call placed. waiting for the store to pick up…');
   const m=await api('/api/monitor/start',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({providerCallId:t.providerCallId})});
   if(!m||m.error||!m.room){ setLL('Could not start live audio: '+((m&&m.error)||'error')); btn.disabled=false; return; }
   const url='wss://'+m.wsHost+'/listen?room='+encodeURIComponent(m.room);
   LL_WS=new WebSocket(url);
-  LL_WS.onopen=()=>{ setLL('🔴 LIVE. listening…'); document.getElementById('ll_stop').style.display=''; };
+  LL_WS.onopen=()=>{ setLL('LIVE. listening…'); document.getElementById('ll_stop').style.display=''; };
   LL_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data); if(d.audio) playMu(d.audio,d.track); }catch(e){} };
   LL_WS.onclose=()=>{ setLL('Audio ended.'); document.getElementById('ll_stop').style.display='none'; btn.disabled=false; };
   LL_WS.onerror=()=>{ setLL('Audio connection error. The call may still be going.'); };
@@ -3605,9 +3616,9 @@ async function bridgeCall(){
   try{ LL_CTX=new (window.AudioContext||window.webkitAudioContext)(); await LL_CTX.resume(); }catch(e){ setBC('Audio blocked by browser.'); btn.disabled=false; return; }
   const m=await api('/api/bridge/call',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({toNumber:phone})});
   if(!m||m.error||!m.room){ setBC('Call failed: '+((m&&m.error)||'error')); btn.disabled=false; return; }
-  setBC('📞 Calling '+phone+'. connecting live audio…');
+  setBC('Calling '+phone+'. connecting live audio…');
   LL_WS=new WebSocket('wss://'+m.wsHost+'/listen?room='+encodeURIComponent(m.room));
-  LL_WS.onopen=()=>{ setBC('🔴 LIVE. answer the phone and you should hear yourself here.'); document.getElementById('bc_stop').style.display=''; };
+  LL_WS.onopen=()=>{ setBC('LIVE. answer the phone and you should hear yourself here.'); document.getElementById('bc_stop').style.display=''; };
   LL_WS.onmessage=ev=>{ try{ const d=JSON.parse(ev.data); if(d.audio) playMu(d.audio,d.track); }catch(e){} };
   LL_WS.onclose=()=>{ setBC('Audio ended.'); document.getElementById('bc_stop').style.display='none'; btn.disabled=false; };
   LL_WS.onerror=()=>{ setBC('Audio connection error.'); };
@@ -3680,7 +3691,7 @@ function customerVerdict(o){
     return {e:s.emoji, t:s.label, c:s.color, n, key};
   }
   // Registry not loaded yet (first paint) — minimal built-in fallback keeps the row sane.
-  const F=({in_stock:['✅','In stock','#4ADE80'],sold_out:['🕐','Sold out','#EF4444'],does_not_sell:['🚫',"They don't carry it",'#EF4444'],not_in_stock:['❌','Not in stock','#EF4444'],no_clear_answer:['🤔','Got a “maybe”','#FBBF24'],nobody_answered:['📵','Nobody answered','#9CA3AF'],closed:['🔒','Store closed','#9CA3AF'],failed:['⚠️','Call failed','#FBBF24'],admin_hangup:['·','Admin canceled','#9CA3AF']})[key]||['📵','Nobody answered','#9CA3AF'];
+  const F=({in_stock:['in_stock','In stock','#4ADE80'],sold_out:['clock','Sold out','#EF4444'],does_not_sell:['ban',"They don't carry it",'#EF4444'],not_in_stock:['circle-x','Not in stock','#EF4444'],no_clear_answer:['circle-help','Got a “maybe”','#FBBF24'],nobody_answered:['phone-off','Nobody answered','#9CA3AF'],closed:['lock','Store closed','#9CA3AF'],failed:['octagon-alert','Call failed','#FBBF24'],admin_hangup:['minus','Admin canceled','#9CA3AF']})[key]||['phone-off','Nobody answered','#9CA3AF'];
   return {e:F[0],t:F[1],c:F[2],n:(key==='failed'&&o.failureReason)?o.failureReason:'',key};
 }
 function pollTranscript(cid, pre){
@@ -4454,13 +4465,13 @@ async function loadAlerts(){
   const roll=log.rollup||{}, rEl=document.getElementById('al_rollup');
   if(rEl){ const ks=Object.keys(roll); const subs=log.subscribers||{};
     rEl.innerHTML=`<div class="stats"><div class="stat"><div class="n">${subs.total||0}</div><div class="l">signed up</div></div><div class="stat"><div class="n">${Object.values(roll).reduce((a,b)=>a+b,0)}</div><div class="l">sends this month</div></div></div>`
-      +(ks.length?`<div style="margin-top:8px">`+ks.sort().map(k=>{const [ev,ch,st]=k.split('.');return `<div class="rsbar"><span class="rsbl">${esch(ev)} · ${esch(ch)} · ${esch(st)}</span><b>${roll[k]}</b></div>`;}).join('')+`</div>`:'<div class="meta" style="margin-top:6px">No sends yet this month.</div>'); }
+      +(ks.length?`<div style="margin-top:8px">`+ks.sort().map(k=>{const [ev,ch,st]=k.split('.');return `<div class="repline"><span class="rl">${esch(ev)} · ${esch(ch)} · ${esch(st)}</span><b>${roll[k]}</b></div>`;}).join('')+`</div>`:'<div class="meta" style="margin-top:6px">No sends yet this month.</div>'); }
   // Recent sends
   const lg=document.getElementById('al_log'), recent=log.recent||[];
   if(lg){ lg.innerHTML=recent.length?recent.slice(0,60).map(r=>{
       const when=r.at?new Date(r.at*1000).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}):'';
       const stcls=r.status==='sent'?'g':(r.status==='stubbed'?'a':'r');
-      return `<div class="rsbar"><span class="rsbl" style="flex-basis:auto">${esch(r.event)} → ${esch(r.to||r.userId||'—')}</span><span class="pill ${stcls}">${esch(r.status)}</span><span class="meta" style="margin-left:8px">${esch(when)}</span></div>`;
+      return `<div class="repline"><span class="rl">${esch(r.event)} → ${esch(r.to||r.userId||'—')}</span><b style="font-weight:600;color:#8A8A96;white-space:nowrap">${esch(when)} <span class="pill ${stcls}" style="margin-left:6px">${esch(r.status)}</span></b></div>`;
     }).join(''):'No sends yet.'; }
 }
 async function saveAlertTemplates(){
@@ -4512,14 +4523,11 @@ async function loadGrowth(){
     fld('gw_kreward','Kiosk reward (checks)',(POL.rewards||{}).kioskRefreshChecks)+
     fld('gw_referral','Referral reward (checks · both)',(POL.rewards||{}).referralChecks)+
     fld('gw_storeadd','Store-add reward (checks · on go-live)',(POL.rewards||{}).storeAddChecks)+
-    fld('gw_subcents','Membership price (¢/mo)',sub.cents)+
-    fld('gw_subcredits','Membership checks/mo',sub.credits)+
-    fld('gw_subper','Member per-check (¢)',sub.perCallCents)+
     fld('gw_headstart','Finds headstart (min)',(POL.finds||{}).headstartMin)+
     fld('gw_ga4','GA4 measurement id',POL.ga4Id||'');
-  // Volume top-up tiers — set in the checkout build (Stripe), surfaced read-only so they're not edited via raw JSON.
-  const packs=(POL.catalog||{}).packs||{};
-  if(Object.keys(packs).length) document.getElementById('gw_pricing').innerHTML += `<div class="meta" style="grid-column:1/-1;margin-top:2px"><b style="color:#c7c7d2">Volume tiers</b> <span data-tip="Top-up packs. Set in the checkout build (Stripe), read-only here."></span><div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap">${Object.values(packs).map(pk=>`<span style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12.5px;color:#dcdce6">${pk.credits} checks · $${(pk.cents/100).toFixed(0)}</span>`).join('')}</div></div>`;
+  // Memberships + PAYG bundles are OWNED BY PLANS (vt_plans → Stripe). Mirror them read-only here so
+  // this page can never drift from the Plans tab again (owner 07-13: pricing must match Plans).
+  loadGwPlansMirror();
   loadGwPulse(); loadGwIntel(); loadGwKiosks(); loadGwWatches(); loadGwCommunity(); loadGwWaitlist(); loadGwStoreReqs();
 }
 async function loadGwPulse(){
@@ -4745,10 +4753,21 @@ async function toggleFlag(key,on){
   await api('/api/policy',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({flags:{[key]:on}})});
   toast((on?'Enabled ':'Disabled ')+key); loadGrowth();
 }
+// Membership + PAYG numbers live in Plans; this page shows them read-only and links across.
+async function loadGwPlansMirror(){
+  const box=document.getElementById('gw_plansmirror'); if(!box) return;
+  const d=await api('/api/admin/plans');
+  if(!d||d.error||!Array.isArray(d.tiers)){ box.innerHTML=''; return; }
+  const money=c=>'$'+((c||0)/100).toFixed(2);
+  box.innerHTML=`<div class="k-eyebrow" style="margin-top:18px">Memberships · set in Plans</div>`
+    +d.tiers.map(t=>`<div class="repline"><span class="rl">${esch(t.name)}</span><b>${money(t.monthlyCents)}/mo · ${t.checksPerMonth} checks</b></div>`).join('')
+    +((d.payg&&Array.isArray(d.payg.bundles)&&d.payg.bundles.length)?`<div class="k-eyebrow">PAYG bundles · set in Plans</div><div class="k-pills" style="margin-top:0">`
+      +d.payg.bundles.map(b=>`<span class="k-pill">${b.checks} checks · ${money(b.cents)}</span>`).join('')+`</div>`:'')
+    +`<a class="goto" href="#plans" onclick="showSection('plans');return false" style="padding:10px 0 0">Edit them in Plans →</a>`;
+}
 async function savePolicyForm(){
   const n=id=>{const x=Number(document.getElementById(id).value);return isFinite(x)?x:undefined;};
-  const patch={pricing:{perCallCents:n('gw_percall'),minPurchaseCents:n('gw_minpur'),freeChecks:n('gw_free'),
-      sub:Object.assign({},(POL.pricing||{}).sub,{cents:n('gw_subcents'),credits:n('gw_subcredits'),perCallCents:n('gw_subper')})},
+  const patch={pricing:{perCallCents:n('gw_percall'),minPurchaseCents:n('gw_minpur'),freeChecks:n('gw_free')},
     rewards:{kioskRefreshChecks:n('gw_kreward'),referralChecks:n('gw_referral'),storeAddChecks:n('gw_storeadd')},
     finds:Object.assign({},POL.finds,{headstartMin:n('gw_headstart')}),
     ga4Id:document.getElementById('gw_ga4').value.trim()};

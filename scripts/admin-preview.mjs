@@ -16,7 +16,7 @@ const FIX = {
   '/api/admin/call-timing': { aggregate:{ calls:40, avgTalkSec:80, avgNavSec:108, avgCallSec:150, totalMinutes:100 }, byModel:[{model:'Charlie',type:'direct',n:22,avgNavSec:42,avgTalkSec:70,avgCallSec:120}], byStatus:[], byStore:[{name:'Target Glendale',n:6,avgTalkSec:75,avgNavSec:40,avgCallSec:118}] },
   '/api/admin/pulse': { funnel:{ leads:9, signups:3, paying:4, members:11, revenueCents:41200 }, activity:{ checks:24, checks24h:24, confirms:15, avgTalkSec:80, avgCallSec:150 }, community:{ watches:14, kioskReports:3, posts:1, postsPending:0, newLeads7d:5 }, statsSince:null },
   '/api/admin/call-health': { real:118, seed:12, rehearsal:6, firstReal:'2026-06-01', dialed:118, reached:73 },
-  '/api/policy': { flags:{ liveListen:true }, pricing:{}, bail:{} },
+  '/api/policy': { flags:{ liveListen:true }, pricing:{ perCallCents:25, minPurchaseCents:500, freeChecks:1 }, rewards:{ kioskRefreshChecks:1, referralChecks:3, storeAddChecks:1 }, finds:{ headstartMin:10 }, bail:{} },
   '/api/settings': { vt_workflows: JSON.stringify([
       {name:'Friendly Sam', voices:['v1'], openers:['Heyy! checking if you got any {category} in?','Hi there! quick one, any {category} cards on the shelf today?','Yo! any {category} restocks lately?'], persona:'Casual Sam', lane:'charlie'},
       {name:'Direct Dana', voices:['v2'], openers:['Hi, do you have {category} in stock?','Quick question, any {category} available?'], persona:'', lane:'charlie'},
@@ -27,6 +27,12 @@ const FIX = {
   '/api/admin/workflow-assignments': { 'Direct Dana': { chains:[{name:'Target'},{name:'GameStop'}], stores:[] }, 'Hobby Shop Casual': { chains:[], stores:[{name:'Hobby Planet',location:'Glendale'}] } },
   '/api/categories': [ {id:1,label:'Pokémon'}, {id:2,label:'One Piece TCG'}, {id:3,label:'Topps NBA'} ],
   '/api/chains': [],
+  '/api/admin/plans': { tiers:[
+    {key:'family',name:'Family',monthlyCents:499,checksPerMonth:20},
+    {key:'collector',name:'Collector',monthlyCents:999,checksPerMonth:50},
+    {key:'hunter',name:'Hunter',monthlyCents:1999,checksPerMonth:125},
+    {key:'operator',name:'Operator',monthlyCents:4999,checksPerMonth:400},
+  ], payg:{ bundles:[{checks:10,cents:990},{checks:25,cents:1999},{checks:50,cents:3499},{checks:75,cents:4799},{checks:100,cents:6000}] } },
   '/api/admin/store-intel': { total:101967, callable:84210, states:50, chains:212, byProduct:{'Pokemon':64890,'One Piece':22140,'Topps':18730,'NeeDoh':9210}, types:['Big box','Hobby','Grocery','Pharmacy','Thrift'], byType:[{type:'Big box',n:41200},{type:'Grocery',n:28800},{type:'Hobby',n:9100}], topRegions:[{region:'West Coast',n:22400},{region:'Southeast',n:18100}], topChecks:[{name:'Target Glendale',location:'Glendale',n:44},{name:'GameStop Burbank',location:'Burbank',n:31}] },
   '/api/admin/users': (()=>{ const now=Math.floor(Date.now()/1000); return [
     { id:'u1', phone:'+13105551234', email:'sam@example.com', plan:'Subscriber', credits:22, callsMade:38, spentCents:2497, createdAt:now-86400*20, callerIdVerified:true },
@@ -43,7 +49,12 @@ const FIX = {
     { id:2, store:'Target Glendale', created_at:now-9000, confirmed:1, status_key:'in_stock', user_verdict:'in', disagree:0, reviewed:0 },
     { id:3, store:'GameStop Burbank', created_at:now-90000, confirmed:0, status_key:'not_in_stock', user_verdict:'out', disagree:0, reviewed:1 },
   ]; })(),
-  '/api/retailers': [],
+  '/api/retailers': [
+    { id:1, chainId:null, name:'1 Stop Card Shop', location:'Hillsboro, OR', storeType:'Hobby', carries:'Topps' },
+    { id:2, chainId:null, name:'1 Stop Card Shop and Games', location:'Lake Oswego, OR', storeType:'Hobby', carries:'Pokemon, One Piece, Topps' },
+    { id:3, chainId:null, name:'105 Beyblade', location:'Warwick, RI', storeType:'Other', carries:'Topps' },
+    { id:4, chainId:9, name:'Goodwill', location:'Owasso, OK', storeType:'Thrift', logoUrl:'/logos/brand/check-icon.png', carries:'' },
+  ],
   '/api/gtm': { items:[
     {id:'1',title:'A2P SMS approval',detail:'Twilio campaign pending carrier review',area:'backend',agent:'devops',critical:true,status:'doing'},
     {id:'2',title:'Outlook email render check',detail:'',area:'frontend',agent:'design',critical:false,status:'todo'},
