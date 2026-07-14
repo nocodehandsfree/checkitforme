@@ -149,6 +149,22 @@ if (config.staging.on) {
   });
 }
 
+// ---- Peek door ----
+// A secret ?peek=<PEEK_CODE> link (code lives in Railway) skips the coming-soon splash for THAT browser
+// only: matching the code sets a root-domain cookie (shared across every brand subdomain), so the owner
+// can browse the live site as a real customer while the public still sees the splash. peekOk() = code in
+// the query (instant bypass on the magic link) OR the cookie already set. Rotate PEEK_CODE to revoke all.
+const peekOk = (peekQ?: string, peekCookie?: string): boolean =>
+  !!config.peekCode && (peekQ === config.peekCode || peekCookie === config.peekCode);
+app.use("*", async (c, next) => {
+  const code = c.req.query("peek");
+  if (code && config.peekCode && code === config.peekCode) {
+    const domain = cookieRootDomain(c.req.header("host"));
+    setCookie(c, "peek", config.peekCode, { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 24 * 180, ...(domain ? { domain } : {}) });
+  }
+  return next();
+});
+
 // ---- Auth — phone/SMS sessions only (Clerk fully removed). ----
 // Owner phones that double as admin login: signing into the consumer site with one of these ALSO
 // authenticates the operator dashboard (which runs on a sibling subdomain). Set ADMIN_PHONES on
@@ -286,8 +302,8 @@ body{background:#0C0C12;color:#fff;font-family:Inter,-apple-system,system-ui,san
 }
 
 /** Render the consumer page branded for a vertical micro-site (resolved from the subdomain). */
-function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html", tone = ""): string {
-  if (config.comingSoon) return renderComingSoon(host); // public gate — admin/app.html is never routed here
+function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html", tone = "", peek = false): string {
+  if (config.comingSoon && !peek) return renderComingSoon(host); // public gate — admin/app.html is never routed here; peek link bypasses
   const canonical = `https://${host}/`;
   const plainName = brand.name.replace(/<[^>]+>/g, "");
   const ogImage = `https://${host}/og/${brand.key}.png`;
@@ -343,8 +359,8 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
 // ---- Share landing: a find-specific page that unfurls richly on socials and converts the visitor.
 // Bots read the dynamic OG title/description (brand image stays static = reliable on every platform);
 // humans see a styled card + a CTA back into the app. Pure string render — no deps, cache-friendly.
-function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Record<string, string>): string {
-  if (config.comingSoon) return renderComingSoon(host); // public gate
+function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Record<string, string>, peek = false): string {
+  if (config.comingSoon && !peek) return renderComingSoon(host); // public gate; peek link bypasses
   const inStock = (q.v || "in") === "in";
   const store = (q.store || "a local store").slice(0, 80);
   const cat = (q.cat || brand.category || "cards").slice(0, 60);
@@ -399,7 +415,7 @@ app.get("/s", (c) => {
   const host = (c.req.header("host") || "").toLowerCase();
   const brand = resolveBrand(host, c.req.query("brand"));
   const q = { store: c.req.query("store") || "", cat: c.req.query("cat") || "", v: c.req.query("v") || "in" };
-  return c.html(renderShare(brand, host, q));
+  return c.html(renderShare(brand, host, q, peekOk(c.req.query("peek"), getCookie(c, "peek"))));
 });
 
 // Static content pages (about/contact/terms/privacy) — branded, owner-editable via policy.pages.
@@ -537,14 +553,14 @@ const rootHandler = (c: Context) => {
   const consumer = config.staging.on
     ? (!(host.startsWith("caller.") || host.startsWith("admin.")) || !!override)
     : (host.startsWith("runner.") || brand.key !== "runner" || !!override);
-  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "") : withAnalytics(page("app.html")));
+  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "", peekOk(c.req.query("peek"), getCookie(c, "peek"))) : withAnalytics(page("app.html")));
 };
 app.get("/", rootHandler);
 // Clean admin deep-links (/feedback, /trees, …): one STATIC route per admin section, all serving the same
 // SPA; the client reads location.pathname to pick the section. Static-only on purpose — the earlier
 // :param{regex} attempt crashed Hono's router on boot. These names never collide with /api, /pub, /r, /s, etc.
 for (const s of ["dash","users","restock","growth","calc","plans","retailers","search","add","zones","receipts","results","schedules","feedback","statuses","trees","settings","designer","workflows","testing","fun","gtm"]) app.get("/" + s, rootHandler);
-app.get("/r", (c) => { c.header("Cache-Control", "no-store"); const h=(c.req.header("host") || "").toLowerCase(); return c.html(renderRunner(resolveBrand(h, c.req.query("brand")), h, "checkit.html", c.req.query("tone") || "")); });
+app.get("/r", (c) => { c.header("Cache-Control", "no-store"); const h=(c.req.header("host") || "").toLowerCase(); return c.html(renderRunner(resolveBrand(h, c.req.query("brand")), h, "checkit.html", c.req.query("tone") || "", peekOk(c.req.query("peek"), getCookie(c, "peek")))); });
 // Verticals as PATHS on the apex (checkitforme.com/pokemon, /onepiece, /toppsbasketball, /needoh) —
 // same brand resolution as the subdomains, keyed off the slug. This is what lets the product switcher
 // link to clean same-domain paths instead of subdomain hops.
@@ -552,7 +568,7 @@ for (const slug of ["pokemon", "onepiece", "toppsbasketball", "needoh"]) {
   app.get(`/${slug}`, (c) => {
     c.header("Cache-Control", "no-cache"); // see "/" — bfcache-friendly, still always revalidated
     const host = (c.req.header("host") || "").toLowerCase();
-    return c.html(renderRunner(resolveBrand(host, slug), host, "checkit.html", c.req.query("tone") || ""));
+    return c.html(renderRunner(resolveBrand(host, slug), host, "checkit.html", c.req.query("tone") || "", peekOk(c.req.query("peek"), getCookie(c, "peek"))));
   });
 }
 // Minimal "first-time visitor" preview of the apex homepage — same page; the client (body.peek)
@@ -560,7 +576,7 @@ for (const slug of ["pokemon", "onepiece", "toppsbasketball", "needoh"]) {
 app.get("/peek", (c) => {
   c.header("Cache-Control", "no-store");
   const host = (c.req.header("host") || "").toLowerCase();
-  return c.html(renderRunner(resolveBrand(host), host));
+  return c.html(renderRunner(resolveBrand(host), host, "checkit.html", "", peekOk(c.req.query("peek"), getCookie(c, "peek"))));
 });
 // Branded share cards (1200×630 PNGs) — what X/iMessage/Discord unfurl for every link.
 app.get("/og/:file", (c) => {
