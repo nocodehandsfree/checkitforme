@@ -6,7 +6,23 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash), **I own view/mode/nav** —
 > don't blind-edit the tint, it's fragile.
 
-## ✅ Shipped (07-14) — My Zones: comp-vs-page list, all fixed + verified headless (390×844 iPhone)
+## ✅ Shipped (07-14 pm, batch 2 — PR #12 merged to staging, deploy verified)
+1. **My checks header = approved 3C/4A comp** (docs/specs/mychecks-header): muted green wash, watermark
+   check top-right, MY CHECKS eyebrow, phone 26/900 + email under, Sign out now a grey underlined link
+   at the FOOT below RUN A CHECK (free + member overviews), plan pill gone → plan reads under Manage
+   plan ('Unlimited · billed monthly', +es). Sheet+grabber = #1D1D22. qa-design allowlist +5 comp tokens.
+2. **"Solid top/bottom" while sheets open:** zones/history/zone-dialog sheets were missing from the
+   root-tint `:has()` rules (root stayed #1D1D22 while the page dimmed → slabs behind iOS chrome). Now
+   in the same rule as acct/buy/page. NB the bare-page root #1D1D22 is CORRECT (v2 --bg) — do NOT set
+   #0C0C12 there; the design-lane "root stays #0C0C12" note refers to the sheet-open/dim state.
+   NOT verified on a real iPhone (headless can't show iOS chrome) — owner to eyeball.
+3. **New-zone button crushed to a sliver** with 2+ zone cards: `.zf-scroll` flex-column children were
+   shrinking → `#zones .zf-scroll>*{flex:0 0 auto}`. Verified locally with the owner's exact 2-zone
+   scenario (56px again); staging zones list needs a Check+ account so re-check there is owner's tap.
+4. **Add store:** dropped 'Tell us which store to add.' — line now leads with the free-check incentive
+   (en+es). Verified live on staging.
+
+## ✅ Shipped (07-14 am, batch 1 — PR #11) — My Zones: comp-vs-page list, all fixed + verified headless (390×844 iPhone)
 Method: comp screenshotted (MY_ZONES_COMP.dc.html) → measured page → fixed the diff list one at a time,
 re-screenshotting each. Staging site is splash-gated (blocker below) so verification ran on a LOCAL
 server at the same commit + stubbed store data; geometry + screenshots per fix.
