@@ -43,6 +43,7 @@ export interface Policy {
     stockSignals: boolean;           // free real-time stock rail (site checkers + Discord drops) in the consumer UI
     requirePhoneSignup: boolean;     // identity = a verified PHONE: no anonymous calls; free checks granted to the account on signup
     connectOnHuman: boolean;         // cost saver: don't open the (billed) ElevenLabs agent until a human is detected — OFF until bench-tested
+    cheapBridgeAll: boolean;         // cost saver: route the NON-live check paths (scheduled checks, zone fires, admin call-now, /pub+/app check) through the connect-on-human bridge w/ Mapper recipes — OFF until tested per path
     oneCheckPerStorePerDay: boolean; // anti-abuse + cost: reuse a recent result instead of re-calling the same store+product within 24h
     transcriptAuth: boolean;         // privacy: a finder-attributed call's result/transcript is readable only by that finder or admin — OFF until the consumer UI sends the session token on /pub/result + /pub/live
   };
@@ -85,7 +86,7 @@ export const DEFAULT_POLICY: Policy = {
     kiosks: true, hobby: true, thrift: true, shareCards: true, multiProduct: true, specificSets: true,
     community: false, communityAutoApprove: false, referrals: true, kioskReceipts: true,
     liveListen: false, stockSignals: true, requirePhoneSignup: false, connectOnHuman: false,
-    oneCheckPerStorePerDay: false, transcriptAuth: false,
+    cheapBridgeAll: false, oneCheckPerStorePerDay: false, transcriptAuth: false,
   },
   bail: {
     enabled: false,

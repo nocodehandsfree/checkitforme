@@ -4,7 +4,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "./db/client";
 import { customerSchedules, retailers, categories, watches } from "./db/schema";
-import { triggerCall, storeOpenInfo } from "./calls/service";
+import { bridgeCheckCall, triggerCall, storeOpenInfo } from "./calls/service";
 import { getAccount, chargeOneCredit, isComp, spendableCredits } from "./billing";
 import { getPolicy } from "./policy";
 
@@ -72,7 +72,10 @@ export async function customerScheduleTick(): Promise<number> {
       const gate = await storeOpenInfo(r.retailerId);
       if (gate && gate.known && !gate.open) continue;             // closed now — try a later tick today
       try {
-        await triggerCall({ retailerId: r.retailerId, categoryId: r.categoryId, mode: "restock", specificProduct: r.specificProduct ?? undefined, finderUserId: r.finderUserId, isPrivate: !comp && subbed && pol.finds.subscriberPrivateAlways });
+        // Cheap lane (COST_MODEL §6: "scheduled checks FIRST" — subscription volume): recipe nav +
+        // billed agent only on human. Flag off = the original direct dial, unchanged.
+        const place = pol.flags.cheapBridgeAll ? bridgeCheckCall : triggerCall;
+        await place({ retailerId: r.retailerId, categoryId: r.categoryId, mode: "restock", specificProduct: r.specificProduct ?? undefined, finderUserId: r.finderUserId, isPrivate: !comp && subbed && pol.finds.subscriberPrivateAlways });
         if (!comp) await chargeOneCredit(r.finderUserId);
         // Ensure they get the alert when it lands (reuse the watch path; idempotent-ish).
         if (r.contact) {

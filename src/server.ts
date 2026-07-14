@@ -21,7 +21,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing, backfillDirectChains } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus } from "./store-sync";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
@@ -118,6 +118,7 @@ import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
 import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls } from "./voice/bridge";
+import { placeBridgeCall, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
@@ -693,8 +694,7 @@ app.get("/sitemap.xml", (c) => {
 // ---- Custom telephony bridge (rebuild milestone 1) ----
 // TwiML Twilio fetches when OUR bridge call connects: stream the call's audio to our WS.
 // Twilio's media stream is pinned to the direct Railway domain (verified WS path; avoids Cloudflare).
-const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
-const STAGING_HOST = "voice-caller-staging-production.up.railway.app"; // wsHost for simulated staging calls
+// Hosts live in bridge-place.ts (placeBridgeCall builds its callback URLs from them too).
 app.all("/twiml/bridge", (c) => {
   const room = c.req.query("room") || "";
   // Chain keypad shortcut (e.g. B&N "0@3"): send it as REAL carrier DTMF via <Play digits>
@@ -2710,7 +2710,9 @@ app.post("/pub/check", async (c) => {
   if (config.staging.on && !config.callsEnabled) return c.json(simStartCall()); // preview: simulated call, no real dial
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   try {
-    const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, kioskMode });
+    // Cheap lane when flagged: same response contract — the bridge:<room> id polls /pub/result like any cid.
+    const place = (await getPolicy()).flags.cheapBridgeAll ? bridgeCheckCall : triggerCall;
+    const r = await place({ retailerId, categoryId, mode: "restock", specificProduct, kioskMode });
     return c.json({ providerCallId: r.providerCallId, status: r.status });
   } catch (e) { return c.json({ error: String(e) }, 400); }
 });
@@ -2744,9 +2746,23 @@ async function canReadTranscript(c: { req: { header: (n: string) => string | und
   return !!u && u.id === row.finderUserId;
 }
 app.get("/pub/result/:cid", async (c) => {
-  const cid = c.req.param("cid");
+  let cid = c.req.param("cid");
   if (!(await canReadTranscript(c, cid))) return c.json({ error: "unauthorized" }, 401);
   if (config.staging.on && isSimId(cid)) return c.json(simResult(cid)); // preview: simulated verdict
+  // Headless bridge check ("bridge:<room>"): pre-connect the row rides the room id; at connect it is
+  // repointed at the EL conversation. Resolve room → conv id and fall through to the normal EL path;
+  // before/without a connect, report the row's own state (dialing, or the finalizer's no_answer).
+  if (cid.startsWith("bridge:")) {
+    const convId = bridgeConversationId(cid.slice(7));
+    if (convId) cid = convId;
+    else {
+      const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
+      if (row && row.status !== "dialing" && row.status !== "in_progress" && row.status !== "queued") {
+        return c.json({ status: row.status, confirmed: row.confirmed, statusKey: row.statusKey, productDetail: row.productDetail, summary: row.summary ?? "", transcript: row.transcript ?? "" });
+      }
+      return c.json({ status: "in_progress", transcript: "", summary: "" });
+    }
+  }
   // D-lane call ("delta:<session>"): the verdict lives in OUR row (written by the Delta finalize hook),
   // never in ElevenLabs. A Charlie barge-in repoints the row's providerCallId at the EL conversation,
   // so fall back to resolving the row through the live session's callId.
@@ -2813,7 +2829,13 @@ app.get("/pub/live/:cid", async (c) => {
   if (config.staging.on && isSimId(c.req.param("cid"))) return c.json(simLive(c.req.param("cid"))); // preview: simulated live transcript
   // D-lane call: the live transcript is the session's own step log (no ElevenLabs). After a Charlie
   // barge-in, EL owns the rest of the call — proxy its live lines and append them to the clip turns.
-  const dcid = c.req.param("cid");
+  let dcid = c.req.param("cid");
+  // Headless bridge check: same room → conv-id resolution as /pub/result. No conv yet = still dialing.
+  if (dcid.startsWith("bridge:")) {
+    const convId = bridgeConversationId(dcid.slice(7));
+    if (convId) dcid = convId;
+    else return c.json({ status: "in_progress", transcript: "", summary: "" });
+  }
   if (dcid.startsWith("delta:")) {
     const s = tdSession(dcid.slice(6));
     if (s) {
@@ -2840,7 +2862,7 @@ app.get("/pub/live/:cid", async (c) => {
     return c.json({ live: false, status: row?.status || "done", transcript: row?.transcript || "" });
   }
   try {
-    const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${c.req.param("cid")}`, { headers: { "xi-api-key": config.voice.apiKey } });
+    const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${dcid}`, { headers: { "xi-api-key": config.voice.apiKey } });
     if (!r.ok) return c.json({ live: true, status: "in_progress", transcript: "" });
     const d = (await r.json()) as { status?: string; transcript?: { role: string; message: string | null }[] };
     const transcript = (d.transcript ?? []).filter((t) => t.message).map((t) => `${t.role === "agent" ? "Agent" : "Clerk"}: ${t.message}`).join("\n");
@@ -2976,7 +2998,9 @@ app.post("/app/check", async (c) => {
     }
   }
   try {
-    const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a), kioskMode });
+    // Cheap lane when flagged: same response contract — the bridge:<room> id polls /pub/result like any cid.
+    const place = (await getPolicy()).flags.cheapBridgeAll ? bridgeCheckCall : triggerCall;
+    const r = await place({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a), kioskMode });
     return c.json({ providerCallId: r.providerCallId, status: r.status });
   } catch (e) { return c.json({ error: String(e) }, 400); }
 });
@@ -3121,9 +3145,10 @@ app.post("/app/zones/:id/check", async (c) => {
   const isPrivate = await isFinderPrivate(g.a);
   const placed: { retailerId: number; cid: string | null }[] = [];
   const sids: string[] = [];
+  const viaBridge = (await getPolicy()).flags.cheapBridgeAll; // cheap lane: recipe nav + agent only on human
   for (const s of rows) {
     try {
-      const r = await triggerCall({ retailerId: s.id, categoryId: cat.id, mode: "restock", finderUserId: g.u.id, isPrivate, zoneRunId: runId });
+      const r = await (viaBridge ? bridgeCheckCall : triggerCall)({ retailerId: s.id, categoryId: cat.id, mode: "restock", finderUserId: g.u.id, isPrivate, zoneRunId: runId });
       placed.push({ retailerId: s.id, cid: (r as { providerCallId?: string }).providerCallId ?? null });
       const sid = (r as { callSid?: string }).callSid; if (sid) sids.push(sid);
     } catch (e) { console.error("zone check failed", s.id, e); placed.push({ retailerId: s.id, cid: null }); }
@@ -5165,7 +5190,9 @@ app.post("/api/call-now", async (c) => {
     // again" deliberately and expects a real call every time. (triggerCall throws store_closed for a
     // closed store, which the handler surfaces as {error} below.)
     const finderUserId = b.finderUserId ?? ("phone:" + (process.env.OWNER_PHONE || "+13106662331"));
-    return c.json(await triggerCall({ isPrivate: true, ...b, finderUserId, force: true }));
+    // Cheap lane when flagged (bridgeCheckCall falls back to the direct path for carry/overrides).
+    const place = (await getPolicy()).flags.cheapBridgeAll ? bridgeCheckCall : triggerCall;
+    return c.json(await place({ isPrivate: true, ...b, finderUserId, force: true }));
   } catch (e) {
     return c.json({ error: String((e as Error)?.message || e) }, 400);
   }
@@ -5295,47 +5322,21 @@ app.get("/api/conversation/:cid", async (c) => {
   return c.json(o ?? { status: "in_progress", transcript: "", summary: "" });
 });
 // Custom telephony bridge (milestone 1): place OUR own Twilio call; its audio streams to our WS.
-// Place a bridged Twilio call (our number -> destination) running the restock agent. Returns the room.
-async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null; voiceId?: string | null; voiceTuning?: Record<string, unknown> | null }): Promise<{ room?: string; error?: string }> {
-  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
-  if (!sid || !tok) return { error: "twilio not configured" };
-  const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
-  const room = crypto.randomUUID();
-  // Dial AS the customer's verified number when we have it (phone-first model); else the house line.
-  const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
-  const pol = await getPolicy();
-  setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
-  const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
-  const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${host}/twiml/bridge?room=${room}` });
-  // REAL call-progress feed: Twilio POSTs each transition so the live timeline shows what's actually
-  // happening (dialing → ringing → answered → done) instead of guessing from timers.
-  body.set("StatusCallback", `https://${host}/twiml/bridge-status?room=${room}`);
-  body.set("StatusCallbackMethod", "POST");
-  for (const ev of ["initiated", "ringing", "answered", "completed"]) body.append("StatusCallbackEvent", ev);
-  // Hard cost cap: Twilio kills the call at TimeLimit seconds, no exceptions — the profit guarantee.
-  if (opts?.timeLimitSec && opts.timeLimitSec > 0) body.set("TimeLimit", String(Math.floor(opts.timeLimitSec)));
-  const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls.json`, {
-    method: "POST",
-    headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
-  if (!r.ok) return { error: `twilio call failed: ${r.status} ${await r.text()}` };
-  const d = (await r.json()) as { sid?: string };
-  if (d.sid) { roomCallSids.set(room, d.sid); setTimeout(() => roomCallSids.delete(room), 10 * 60 * 1000); }
-  return { room };
-}
-const roomCallSids = new Map<string, string>(); // room -> Twilio callSid (for hang-up)
-// REAL Twilio call progress per room: { status: queued|initiated|ringing|in-progress|completed|… , at }.
-// Fed by /twiml/bridge-status (Twilio's StatusCallback), read by /pub/bridge/:room so the live UI is truthful.
-const roomCallProgress = new Map<string, { status: string; at: number }>();
+// placeBridgeCall + the room maps live in src/voice/bridge-place.ts so the non-HTTP callers
+// (scheduled checks, zone fires) can ride the bridge too. The TwiML/status routes stay here.
 app.post("/twiml/bridge-status", async (c) => {
   const room = c.req.query("room") || "";
   const form = await c.req.parseBody().catch(() => ({} as Record<string, unknown>));
   const status = String((form as Record<string, unknown>).CallStatus || "");
   if (room && status) {
     roomCallProgress.set(room, { status, at: Date.now() });
-    if (["completed", "busy", "failed", "no-answer", "canceled"].includes(status))
+    if (["completed", "busy", "failed", "no-answer", "canceled"].includes(status)) {
       setTimeout(() => roomCallProgress.delete(room), 60_000);
+      // Headless bridge calls (schedules/zones/admin call-now) registered a finalizer so a call
+      // that ended without reaching a human still lands a terminal callResults row.
+      const fin = roomFinalizers.get(room);
+      if (fin) { roomFinalizers.delete(room); try { fin(status); } catch (e) { console.error("bridge finalizer:", e); } }
+    }
   }
   return c.body(null, 204);
 });

@@ -91,6 +91,18 @@ async function main() {
   const stop = await J(await fetch(`${base}/app/zones/run/${encodeURIComponent(chk.runId)}/stop`, { method: "POST", headers: auth }));
   ok(stop.ok === true, "stop returns ok");
 
+  console.log("▶ cheap-bridge lane (flags.cheapBridgeAll): fire still groups + terminalizes rows");
+  // Flag ON → the zone fire rides bridgeCheckCall. Twilio creds are absent in tests, so each bridge
+  // placement fails fast — proving the SAME zoneRunId grouping + a terminal (failed) row per store,
+  // with no dial possible. Flag restored OFF after (the shipped default).
+  await setPolicy({ flags: { cheapBridgeAll: true } } as never);
+  const chk2 = await J(await fetch(`${base}/app/zones/${zid}/check`, { method: "POST", headers: auth, body: JSON.stringify({}) }));
+  ok(typeof chk2.runId === "string" && chk2.runId.startsWith(`z${zid}-`), `bridge-lane runId shaped z<id>-<uuid> — got ${chk2.runId}`);
+  const run2 = await J(await fetch(`${base}/app/zones/run/${encodeURIComponent(chk2.runId)}`, { headers: auth }));
+  ok(run2.total === 2, `bridge-lane run groups both checks — got ${run2.total}`);
+  ok(run2.done === run2.total, "bridge-lane rows reach a terminal state (failed fast, no dial possible)");
+  await setPolicy({ flags: { cheapBridgeAll: false } } as never);
+
   console.log("▶ delete");
   ok((await J(await fetch(`${base}/app/zones/${zid}`, { method: "DELETE", headers: auth }))).ok === true, "delete returns ok");
   ok((await J(await fetch(`${base}/app/zones`, { headers: auth }))).length === 0, "list empty after delete");
