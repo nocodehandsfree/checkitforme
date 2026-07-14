@@ -486,9 +486,11 @@ export async function bridgeCheckCall(a: TriggerArgs) {
     void (async () => {
       const cur = (await db.select().from(callResults).where(eq(callResults.id, row.id)))[0];
       if (!cur || cur.status !== "dialing") return; // conv id landed → EL ingest owns the verdict
+      // Twilio's terminal status IS the real reason on this lane (EL never joined): map it to the
+      // statuses-registry key so the customer sees busy/bad-number, never a bare "call failed".
+      const statusKey = ({ busy: "busy", failed: "bad_number" } as Record<string, string>)[twilioStatus] ?? "nobody_answered";
       await db.update(callResults).set({
-        status: "no_answer", confirmed: null, statusKey: "nobody_answered", // busy/voicemail granularity comes with the real-reasons work
-
+        status: "no_answer", confirmed: null, statusKey,
         summary: `Bridge call ended before a human answered (${twilioStatus}).`,
         completedAt: Math.floor(Date.now() / 1000),
       }).where(eq(callResults.id, row.id));
