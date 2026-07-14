@@ -27,17 +27,12 @@
   Owner-owned PAT (repo write) in svc var. Verified: real commit landed on staging + reverted. For Design
   chats to write to the repo. **PAT + URL onto the rotate-at-launch list** (PAT was pasted in chat).
 
-## Launch queue (2026-07-10 → all DONE unless flagged; full detail in git history)
-- **Repo migration DONE** — both svcs build from `nocodehandsfree/checkitforme` (the stale
-  `railwayConfigFile: voice-caller/railway.json` path was the silent build-killer; now `railway.json`).
-- **Stripe LIVE on prod** — 5 live products, live webhook `we_1TrVv98…`, bad-sig 400 verified.
-  ⏳ **Owner still owes the real-card test** on checkitforme.com (424 number wiped to blank slate for it).
-- **Store-sync DONE** (full ~110k catch-up, prod healthy; chain-edit staging→prod proven).
-  **PostHog + Helicone DONE** (verified all 6 prod domains / job-tagged, query-clickhouse to read logs).
+## Launch queue leftovers (repo migration / Stripe live / store-sync / PostHog+Helicone all DONE — git history)
+- ⏳ **Owner still owes the real-card test** on checkitforme.com (424 number wiped to blank slate for it).
 - **Still open:** Discord (owner makes the server); fungibles Actions secret (waits on token rotation);
   delete the two `claude/checkit-export-*` branches on fungibles (direct-PAT push, git proxy 403s deletes).
 - **QA failures** (design tokens, qa-round6/gating/admin-plans) = LEGACY — reproduce on baseline adc3b12,
-  NOT promote blockers. Migration ports (mapping/admin checkpoints, data-tools) done, secrets stripped.
+  NOT promote blockers.
 
 ## NOT DONE (older lane items, still real)
 - **Cheap-bridge lane for leftover call paths** (scheduled checks, zone fires, admin call-now,
