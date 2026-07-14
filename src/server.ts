@@ -304,7 +304,7 @@ body{background:#0C0C12;color:#fff;font-family:Inter,-apple-system,system-ui,san
 
 /** Render the consumer page branded for a vertical micro-site (resolved from the subdomain). */
 function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html", tone = "", peek = false): string {
-  if (config.comingSoon && !peek) return renderComingSoon(host); // public gate — admin/app.html is never routed here; peek link bypasses
+  if (config.comingSoon && !peek) return renderComingSoon(host) + `<!--rrpeek=${JSON.stringify(peek)}-->`; // public gate — admin/app.html is never routed here; peek link bypasses
   const canonical = `https://${host}/`;
   const plainName = brand.name.replace(/<[^>]+>/g, "");
   const ogImage = `https://${host}/og/${brand.key}.png`;
