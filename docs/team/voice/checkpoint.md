@@ -3,6 +3,8 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-14 — lane renamed by the owner: **Echo** (was Ringo). Same lane, same files.
+
 ## 2026-07-11 — lane created (transferred from Admin/Addie). Read handoff.md first.
 
 **Current focus:** Delta live test round 2 — the whole D-lane is coded, unit-tested (18/18) and
