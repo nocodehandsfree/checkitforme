@@ -3,13 +3,18 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 📌 Mapping → Pops (2026-07-10 ~9pm ET): promote `6feff66` (one file, src/calls/mapper.ts)
-- Fixes a real bug the sweep exposed: the mapper's VERIFY stage re-locked whatever it last reached even
-  when SLOWER than the recipe already shipped → 8 chains got downgraded live (Sam's, Walgreens, Dick's,
-  Jewel, Fleet Farm, Food 4 Less, Blain's, Safeway). Guard added: never overwrite a locked recipe with a
-  slower re-measure; keep the faster one and optimize from there. tsc clean. Zero consumer UI.
-- Not urgent (no sweep running now) but should ride the next promote before any re-map. The 11 regressed
-  chains were already hand-restored to their fast recipes via trainer/lock, so prod is correct today.
+## 📌 Mapping → DevOps (2026-07-11 night): sync chain MAPPING fields PROD→STAGING (pre-launch blocker)
+- **Problem:** every mapped chain shows GRAY (callReady:false) on the staging website even though it's
+  fully mapped on prod. Cause: mapping is decoupled from staging — the staging DB has no mapping fields.
+  Confirmed: staging /pub/stores/near Tractor Supply callReady=false; prod=true.
+- **Ask:** one-time copy of the chain-level mapping fields prod→staging, keyed by chain id/name:
+  navStatus, navRecipe, navType, navSeconds, ringsDirect, treeStatus, treeNote, phoneTreeDefault,
+  dtmfShortcut, answerPath, avgTreeSeconds, treeLearnedAt, treeVerifiedAt.
+- **Careful:** the existing store-sync runs staging→prod (staging is curation source). This prod→staging
+  copy must touch ONLY those chain nav/tree fields and must not be clobbered by the store sync, or
+  overwrite staging's store-level curation. Decide: one-time copy now, or make the staging site read
+  chain-mapping from prod authoritatively.
+- Mapper engine fixes (guard 6feff66 + skip-rings-direct 52d2c77) already promoted to prod 25be309.
 
 ## ✅ PROMOTED 2026-07-10 07:20Z — pin 6edefab → prod main 10bdc65, all green
 - Pinned promote executed (merge tree == pin, Website polish 7a9c7c1 excluded). Prod health shows
