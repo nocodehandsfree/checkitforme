@@ -3,6 +3,24 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## ✅ 2026-07-14 — LAUNCH GATE shipped + it caught a real revenue bug (both on staging a7f11b7)
+- **`bash scripts/launch-gate.sh` = THE promote gate.** One command, GREEN today (24 journeys):
+  signup, store find→call sheet, upgrade+pay (Stripe TEST 4242 through the REAL webhook), schedules,
+  zones, admin API, 4 brand skins vs live staging; dial-side journeys (check→verdict, zone fire) vs a
+  local throwaway server (calls hard-disabled — staging has STAGING_CALLS=1, gate NEVER dials).
+  `prod` target = read-only post-promote subset + Admin UI tabs. Docs: tests/e2e/README.md.
+- **REVENUE BUG fixed (gate found it, run #1):** Stripe API ≥2025 moved the invoice line price id
+  (pricing.price_details.price); invoice.paid handler read old line.price.id → embedded-Elements
+  subscribers PAID AND GOT NO PLAN. Fixed in billing.ts + unit test with the live payload shape.
+  **Owner's real-card prod test would have hit this — fix must ride the next promote.**
+  Also fixed 2 stale stripe-test expectations (plan-ladder change) — those "legacy" reds are real greens now.
+- Gate notes: agent-sandbox proxy resets TLS 1.3 → config caps browser at TLS 1.2; ~8 gate runs/hr
+  max (signup rate limit); each staging run makes one throwaway account + one Stripe TEST sub.
+- **Owner build queue (2026-07-14): promote HOLD** — call-path work stays off staging until PM's
+  promote clears. Next: cheap-bridge wiring + Mapper-recipe audit (build on session branch
+  claude/check-pops-devops-cul4v8), then call-failed reasons, echo fix, zones/admin-view backends,
+  Webbie's two API asks. Rotation list written (rotation-list.md); handoff stubs were already deleted.
+
 ## ✅ 2026-07-11 late — big batch LIVE on prod main 25be309, all green
 - **Full staging→main merge landed on prod** (another session pushed it, not a pinned promote). Prod =
   25be309, healthy across all 4 brand sites + stores API + plans + admin + webhook (400 on bad sig).
@@ -37,7 +55,6 @@
 ## NOT DONE (older lane items, still real)
 - **Cheap-bridge lane for leftover call paths** (scheduled checks, zone fires, admin call-now,
   `/pub/check` fallback) — COST_MODEL.md Part II §2; biggest cost cut, "a wiring decision, not a build".
-- **All-paths Playwright harness** (pre-launch gate; harness is mine, card test is owner's).
 - **Manage Zones backend (consumer)** — spec `docs/archive/manage-zones-SHIPPED.md`; engine exists.
 - **Admin per-customer view backend** (`docs/specs/admin-user-view.md`); Admin builds the panel.
 - **Remove `/api/zones*` admin endpoints** (keep the zones engine).
