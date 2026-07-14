@@ -16,10 +16,19 @@
   Also fixed 2 stale stripe-test expectations (plan-ladder change) — those "legacy" reds are real greens now.
 - Gate notes: agent-sandbox proxy resets TLS 1.3 → config caps browser at TLS 1.2; ~8 gate runs/hr
   max (signup rate limit); each staging run makes one throwaway account + one Stripe TEST sub.
-- **Owner build queue (2026-07-14): promote HOLD** — call-path work stays off staging until PM's
-  promote clears. Next: cheap-bridge wiring + Mapper-recipe audit (build on session branch
-  claude/check-pops-devops-cul4v8), then call-failed reasons, echo fix, zones/admin-view backends,
-  Webbie's two API asks. Rotation list written (rotation-list.md); handoff stubs were already deleted.
+- **CHEAP-BRIDGE WIRING BUILT + HELD — PR #18 (draft, session branch, do NOT merge until PM's
+  promote clears; Pops merges after).** All 7 leftover call paths (customer+admin scheduled checks,
+  consumer+admin zone fires, admin call-now, /pub/check, /app/check) now route through the
+  connect-on-human bridge = Mapper recipes (dtmf/say/connectAtSec) actually drive the nav, billed
+  agent opens only on a human. Gated by NEW policy flag `cheapBridgeAll` (default OFF — flip in
+  Admin → Policy per env after Fun-store testing). Audit verdict: direct-agent lane never used
+  recipe mechanics (text-only prompt); paths that stay direct on purpose = tree-lab learning calls,
+  simulator/bench/talk (dial own phone), caller-ID verify. Proof: zones suite 21/21 w/ flag-on
+  section, full suite green (minus legacy design-tokens), boot test + local gate GREEN.
+- **Owner build queue (2026-07-14): promote HOLD** on call-path work. Remaining: call-failed
+  reasons, echo fix (both call code → session branch), zones backend (already SHIPPED — verify
+  premise before re-doing), admin per-customer view, Webbie's two API asks. Rotation list written
+  (rotation-list.md); handoff stubs were already deleted.
 
 ## ✅ 2026-07-11 late — big batch LIVE on prod main 25be309, all green
 - **Full staging→main merge landed on prod** (another session pushed it, not a pinned promote). Prod =
