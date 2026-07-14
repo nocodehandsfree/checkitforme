@@ -565,6 +565,10 @@ __BRAND_HEAD__
   .suplaunch svg{width:20px;height:20px;stroke:#9a9aa8}
   .suplaunch.tucked{transform:translateX(120%);opacity:0;pointer-events:none}
   body:has(.supwrap.on) .suplaunch{display:none}
+  /* Zones + Check history sheets: the launcher is gone while they're up (guide §5.17 — it was
+     floating OVER the sheet and covering Save zone; the overlay's z4000 can't beat it because
+     MAIN's stacking context traps it, so hide it outright). */
+  body.zoning .suplaunch,body:has(#histOverlay.on) .suplaunch{display:none}
   .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:flex;flex-direction:column;
     /* a touch deeper than the raw brand yellow — the neon read too bright in the panel (owner 07-11) */
     --sup-accent:color-mix(in srgb, var(--accent,#FFCB05) 73%, #14110a);
@@ -1614,11 +1618,14 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zseg{display:flex;background:#1B1B20;border-radius:12px;padding:4px;gap:4px;margin-bottom:12px}
 #zones .zseg button{flex:1;border:0;background:transparent;color:#8A8A96;font-weight:800;font-size:13.5px;padding:9px;border-radius:9px;cursor:pointer}
 #zones .zseg button.on{background:linear-gradient(180deg,#31313A,#28282E);color:#fff;box-shadow:0 6px 12px -6px rgba(0,0,0,.6)}
-#zones .zradrow{display:flex;align-items:center;gap:7px;margin:0 0 12px}
-#zones .zradlbl{font-size:12.5px;font-weight:700;color:#8A8A96}
-#zones .zrad{min-width:38px;height:32px;padding:0 8px;border:0;border-radius:9px;background:#1B1B20;color:#B9B9C4;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:inset 0 2px 5px rgba(0,0,0,.45)}
-#zones .zrad.on{background:linear-gradient(180deg,#5BEA93,#19B145);color:#04240f;box-shadow:0 6px 12px -6px rgba(25,177,69,.5)}
-#zones .zradmi{font-size:12px;font-weight:700;color:#7C7C88}
+/* Radius = ONE carved capsule track, keys inside; selected key = raised + muted-yellow ring + yellow
+   number (comp; §8 bans a green selection next to the green Add-all CTA). */
+#zones .zradrow{display:flex;align-items:center;gap:8px;margin:0 0 12px}
+#zones .zradlbl{font:700 11px Inter;letter-spacing:.08em;text-transform:uppercase;color:#8A8A96}
+#zones .zradtrack{flex:1;min-width:0;display:flex;align-items:center;gap:5px;background:#1B1B20;border-radius:999px;padding:5px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5)}
+#zones .zrad{flex:1;min-width:0;height:34px;padding:0;border:0;border-radius:999px;background:transparent;color:#8A8A96;font:800 13px Inter;cursor:pointer}
+#zones .zrad.on{background:linear-gradient(180deg,#31313A,#28282E);color:#FFCB05;box-shadow:0 6px 12px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08),0 0 0 1.5px rgba(255,203,5,.5)}
+#zones .zradmi{font:800 12px Inter;color:#6B6B7B;padding:0 8px 0 3px}
 #zones .zaddall{margin-left:auto;border:0;background:rgba(74,222,128,.1);border-radius:999px;padding:8px 14px;color:#4ADE80;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap}
 #zones .zaddall.on{background:rgba(255,123,123,.12);color:#FF9B9B} /* flipped to Remove-all */
 /* stage: fixed-height map or a capped scrolling list — flows above the footer, never under browser chrome */
@@ -1666,6 +1673,9 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zf-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:16px;display:flex;flex-direction:column}
 #zones .zf-scroll.tight{padding:2px 16px 14px}
 #zones .zf-scroll.basketpad{padding-bottom:220px}
+/* ONE scroller: inside the frame the store list flows in .zf-scroll (which owns the scrolling + the
+   basket pad) — never its own inner scroll window (that chopped rows at its edge, owner 07-14). */
+#zones .zf-scroll .zlist{max-height:none;overflow-y:visible}
 #zones .zf-foot{flex:none}
 /* create-flow slide-up basket — absolute so it overlays the bottom (no reserved gap when empty) */
 #zones .zbasket{position:absolute;left:0;right:0;bottom:0;z-index:5;background:linear-gradient(180deg,#2A2A31,#212127);box-shadow:0 -18px 34px -12px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.08);border-radius:26px 26px 0 0;padding:15px 18px calc(20px + env(safe-area-inset-bottom));transform:translateY(112%);transition:transform .28s cubic-bezier(.2,.8,.3,1)}
@@ -1701,8 +1711,8 @@ html[data-skin="v2"] .hob-prod:active{transform:translateY(2px)}
 #zones .zc-face.widelogo img{max-width:40px;max-height:30px}
 #zones .zfooter{margin-top:auto}
 #zones .zc-more{width:44px;height:44px;border-radius:12px;flex:none;background:#23232A;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;color:#8A8A96;font:800 13px Inter}
-#zones .zc-go{align-self:flex-end;padding:2.5px;border-radius:999px;background:linear-gradient(120deg,#FFE066 0%,#FFCB05 55%,#8A6D00 100%);box-shadow:0 12px 26px -10px rgba(255,203,5,.45);cursor:pointer;border:0}
-#zones .zc-go>span{display:flex;background:#20202A;border-radius:999px;padding:13px 20px;align-items:center;gap:9px;white-space:nowrap;font:800 12.5px Inter;letter-spacing:.12em;text-transform:uppercase;color:#FFCB05}
+#zones .zc-go,#zmenuOv .zc-go{align-self:flex-end;padding:2.5px;border-radius:999px;background:linear-gradient(120deg,#FFE066 0%,#FFCB05 55%,#8A6D00 100%);box-shadow:0 12px 26px -10px rgba(255,203,5,.45);cursor:pointer;border:0}
+#zones .zc-go>span,#zmenuOv .zc-go>span{display:flex;background:#20202A;border-radius:999px;padding:13px 20px;align-items:center;gap:9px;white-space:nowrap;font:800 12.5px Inter;letter-spacing:.12em;text-transform:uppercase;color:#FFCB05}
 #zones .zc-row{display:flex;justify-content:flex-end}
 #zones .znew{background:linear-gradient(180deg,#2E2E35,#25252B);border-radius:18px;height:56px;display:flex;align-items:center;justify-content:center;gap:11px;box-shadow:0 12px 22px -12px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1);cursor:pointer;white-space:nowrap;margin-bottom:18px;border:0;width:100%}
 #zones .znew span{font:800 13px Inter;letter-spacing:.13em;text-transform:uppercase;color:#4ADE80}
@@ -1775,9 +1785,15 @@ html[data-skin="v2"] .p6d-live .buygrid-h{color:#8A8A96}
 html[data-skin="v2"] #acctOverlay,html[data-skin="v2"] #buyOverlay,html[data-skin="v2"] #pageOverlay,html[data-skin="v2"] #zones,html[data-skin="v2"] #histOverlay{align-items:flex-end;padding:0}
 /* My Zones + Check history: same bottom-sheet recipe as #pageOverlay — flex column, pinned grab handle,
    the .zframe / .hist-scroll body is the only scroller. (owner 07-12) */
-html[data-skin="v2"] #zones .modal,html[data-skin="v2"] #histOverlay .modal{display:flex;flex-direction:column;padding:0;overflow:hidden;width:100%;max-width:none!important;border-radius:28px 28px 0 0;height:88vh;max-height:88vh;margin:0;background:#1D1D22}
+html[data-skin="v2"] #zones .modal,html[data-skin="v2"] #histOverlay .modal{display:flex;flex-direction:column;padding:0;overflow:hidden;width:100%;max-width:none!important;border-radius:28px 28px 0 0;height:88vh;max-height:88vh;height:88dvh;max-height:88dvh;margin:0;background:#1D1D22} /* dvh = VISIBLE viewport, so the basket clears the iOS bottom toolbar (vh fallback for old Safari) */
 html[data-skin="v2"] #zones .modal::before,html[data-skin="v2"] #histOverlay .modal::before{content:'';display:block;flex:0 0 auto;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:10px auto 8px}
 html[data-skin="v2"] #zones.on .modal,html[data-skin="v2"] #histOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
+/* Zone dialogs (actions menu / rename / delete / check confirm) = bottom sheets too — the comp shows
+   them sliding up from the bottom edge over the dimmed zones list, same recipe as scorePostOv. */
+html[data-skin="v2"] #zmenuOv{align-items:flex-end;padding:0}
+html[data-skin="v2"] #zmenuOv .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
+html[data-skin="v2"] #zmenuOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
+html[data-skin="v2"] #zmenuOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 18px calc(22px + env(safe-area-inset-bottom))}
 /* Footer links (About/FAQ/Terms/Privacy/Contact) slide up as a bottom sheet, like every other panel.
    Flex column: the grab handle + title stay pinned; only the body scrolls (owner 07-06: the top used to
@@ -2844,7 +2860,7 @@ const I18N={ es:{
   'zones.locph':'Busca un código postal o ciudad…','zones.go':'Ir','zones.list':'Lista','zones.map':'Mapa',
   'zones.radius':'Radio','zones.addallshort':'Agregar todo','zones.selstore':'tienda seleccionada','zones.selstores':'tiendas seleccionadas',
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
-  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado',
+  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
   'zones.confirm.title2':'¿Verificar {n} {s} abiertas?','zones.storeword':'tienda','zones.storesword':'tiendas','zones.checkallN':'Verificar las {n}','zones.removeall':'Quitar todo','zones.isclosed':'está cerrada','zones.areclosed':'están cerradas','zones.stillcall':'Aún podemos llamar a las {n} abiertas.','zones.and':'y','zones.andmore':'y {n} más','zones.astore':'Una tienda',
@@ -6434,20 +6450,23 @@ function zonePaintList(list){
     </div></div>`;
 }
 function zAgo(at){ try{ const s=Math.max(1,Math.floor((Date.now()-new Date(at).getTime())/1000)); if(s<3600) return Math.floor(s/60)+'m'; if(s<86400) return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; }catch(_){ return ''; } }
-// One pop-up shell for every zone dialog — the SAME big-card modal the rest of the app uses
-// (radius 26, 20/900 title, raised keys, stroke icons; owner 07-10: no native prompt/confirm, no emoji).
+// One shell for every zone dialog (actions menu, rename, delete, check confirm) — a BOTTOM SHEET like
+// every other slide-up (grab handle, slides from the bottom edge, drag down to dismiss). The comp shows
+// the actions menu and the check confirm as sheets over the dimmed zones list (owner 07-11 comp).
 function zPop(html){ let ov=$('zmenuOv');
-  if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='zmenuOv'; ov.style.zIndex='4600'; ov.onclick=e=>{ if(e.target===ov) ov.classList.remove('on'); }; document.body.appendChild(ov); } // above the zones sheet (z4300, owner 07-12)
-  ov.innerHTML=`<div class="modal" style="max-width:340px;text-align:left">${html}</div>`; ov.classList.add('on'); }
+  if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='zmenuOv'; ov.style.zIndex='4600'; ov.onclick=e=>{ if(e.target===ov) ov.classList.remove('on'); }; document.body.appendChild(ov); try{ sheetDrag('zmenuOv', zPopClose); }catch(_){ } } // above the zones sheet (z4300, owner 07-12)
+  ov.innerHTML=`<div class="modal" style="text-align:left">${html}</div>`; ov.classList.add('on'); }
 function zPopClose(){ const ov=$('zmenuOv'); if(ov) ov.classList.remove('on'); }
 const Z_ROWBTN='display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border:0;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;font-size:15px;font-weight:700;cursor:pointer;text-align:left';
 const Z_ICO_PEN='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>';
 const Z_ICO_TRASH='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF7B7B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
+const Z_ICO_STORES='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/><path d="M5 12v8h14v-8"/><path d="M9 20v-5h6v5"/></svg>';
 const zTile=ic=>`<span style="width:34px;height:34px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${ic}</span>`;
 function zoneMenu(id,ev){ if(ev)ev.stopPropagation();
   const zn=((ZONES.list||[]).find(x=>x.id===id))||{};
   zPop(`<h3 style="margin:2px 0 14px;font-size:20px;font-weight:900;letter-spacing:-.4px">${esc(zn.name||t('zones.untitled','Untitled zone'))}</h3>
     <button style="${Z_ROWBTN};margin-bottom:10px" onclick="zoneRenamePrompt(${id})">${zTile(Z_ICO_PEN)}${t('zones.rename','Rename')}</button>
+    <button style="${Z_ROWBTN};margin-bottom:10px" onclick="zPopClose();zoneEdit(${id})">${zTile(Z_ICO_STORES)}${t('zones.editstores','Edit stores')}</button>
     <button style="${Z_ROWBTN}" onclick="zoneDeleteConfirm(${id})">${zTile(Z_ICO_TRASH)}<span style="color:#FF8A8A">${t('zones.delete','Delete zone')}</span></button>`);
 }
 function zoneRenamePrompt(id){
@@ -6505,7 +6524,7 @@ function renderZoneBuild(){
     <div class="zf-sub">
       <div class="zsearch"><input id="z_loc" class="kin" placeholder="${t('zones.locph','Search a ZIP or town…')}" autocomplete="off" oninput="zoneSearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();zoneGeocode();}"><button class="zgps" onclick="zoneGPS()" aria-label="Use my location">${ICO.pin('currentColor')}</button></div>
       <div class="zseg"><button class="${!map?'on':''}" onclick="if(ZONES.mapOpen)zoneToggleMap()">${t('zones.list','List')}</button><button class="${map?'on':''}" onclick="if(!ZONES.mapOpen)zoneToggleMap()">${t('zones.map','Map')}</button></div>
-      <div class="zradrow"><span class="zradlbl">${t('zones.radius','Radius')}</span>${rings}<span class="zradmi">mi</span><button class="zaddall${zoneAllInRadiusSelected()?' on':''}" onclick="zoneToggleAll()">${zoneAllInRadiusSelected()?t('zones.removeall','Remove all'):'＋ '+t('zones.addallshort','Add all')}</button></div>
+      <div class="zradrow"><span class="zradlbl">${t('zones.radius','Radius')}</span><div class="zradtrack">${rings}<span class="zradmi">mi</span></div><button class="zaddall${zoneAllInRadiusSelected()?' on':''}" onclick="zoneToggleAll()">${zoneAllInRadiusSelected()?t('zones.removeall','Remove all'):'＋ '+t('zones.addallshort','Add all')}</button></div>
     </div>
     <div class="zf-scroll tight${map?' mapmode':''}" style="${map?'overflow:hidden':''}">
       <div id="zmap" style="display:${map?'block':'none'};height:100%"></div>
@@ -6641,7 +6660,7 @@ async function zoneCheckAll(id){
   const goOn=await new Promise(res=>{
     zPop(`<h3 style="margin:2px 0 8px;font-size:20px;font-weight:900;letter-spacing:-.4px">${tf('zones.confirm.title2','Check {n} open {s}?',{n:openN,s:openN===1?t('zones.storeword','store'):t('zones.storesword','stores')})}</h3>
       ${closedWarn||`<div class="meta" style="margin-bottom:16px">${t('zones.confirm.per','1 check per store.')}</div>`}
-      <button class="cta" style="width:100%;margin-bottom:10px" id="zca_go">${tf('zones.checkallN','Check all {n}',{n:openN})} →</button>
+      <button class="zc-go" style="width:100%;margin-bottom:10px;display:block" id="zca_go"><span style="justify-content:center">${tf('zones.checkallN','Check all {n}',{n:openN})}${ZGOARR}</span></button>
       <button style="${Z_ROWBTN};justify-content:center" id="zca_no">${t('pre.again.no','Not now')}</button>`);
     $('zca_go').onclick=()=>{ zPopClose(); res(true); }; $('zca_no').onclick=()=>{ zPopClose(); res(false); };
     $('zmenuOv').onclick=e=>{ if(e.target===$('zmenuOv')){ zPopClose(); res(false); } };
