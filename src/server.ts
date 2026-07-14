@@ -78,6 +78,19 @@ async function requesterIsComp(authHeader?: string): Promise<boolean> {
   } catch { return false; }
 }
 
+/** Premium feature map for the requester (empty when signed-out / PAYG). `any_town` = search past the
+ *  free radius cap (Check Plus). Comp/owner → all features on. */
+async function requesterFeatures(authHeader?: string): Promise<Record<string, boolean>> {
+  if (!authHeader) return {};
+  try {
+    const u = await verifyClerkToken(authHeader);
+    if (!u) return {};
+    const a = await getAccount(u.id, u.email);
+    const comp = isCompAccount(a) || isComp(u.email || undefined);
+    return await accountFeatures(a?.subTier, comp);
+  } catch { return {}; }
+}
+
 /** Is this an owner-only demo store ("Fun")? Used to 404 it for everyone but the master account. */
 async function isOwnerOnlyStore(retailerId: number): Promise<boolean> {
   const r = (await db.select({ ownerOnly: retailers.ownerOnly }).from(retailers).where(eq(retailers.id, retailerId)))[0];
@@ -1525,7 +1538,15 @@ app.get("/pub/stores/near", async (c) => {
   const state = (c.req.query("state") || "").trim().toUpperCase();
   const q = (c.req.query("q") || "").trim().toLowerCase();
   if (!hasLoc && !state && !q) return c.json({ error: "lat+lng (or state / q) required" }, 400);
-  const radius = Math.min(Math.max(Number(c.req.query("radius") || 25), 0.5), 150); // 0.5 = the new half-mile consumer stop (owner 07-14)
+  // Radius ladder (owner 2026-07-11): 0.5 / 1 / 2 / 5 / 10 mi. Free + PAYG cap at 10mi; the "any_town"
+  // entitlement (Check Plus) unlocks the full range (zoom anywhere). A capped request that finds nothing
+  // dialable still gets the single nearest callable store (rural fallback below) so the screen isn't blank.
+  const anyTown = ((await requesterFeatures(c.req.header("Authorization"))).any_town === true);
+  const FREE_MAX_MI = 10, HARD_MAX_MI = 150, DEFAULT_MI = 5;
+  const maxRadius = anyTown ? HARD_MAX_MI : FREE_MAX_MI;
+  const wantRadius = Math.max(Number(c.req.query("radius") || DEFAULT_MI), 0.5);
+  const radius = Math.min(wantRadius, maxRadius);
+  const radiusCapped = wantRadius > maxRadius; // UI surfaces the Check Plus upsell when true
   const limit = Math.min(Math.max(Number(c.req.query("limit") || 60), 1), 200);
   const offset = Math.max(Number(c.req.query("offset") || 0), 0);
   // 🔒 Text-search hardening (data-exposure lockdown): the q-only path is the one way to page the store
@@ -1632,17 +1653,8 @@ app.get("/pub/stores/near", async (c) => {
     const ownerStores = await db.select().from(retailers).where(and(eq(retailers.active, true), eq(retailers.ownerOnly, true)));
     for (const o of ownerStores) if (!have.has(o.id)) rows.push(o);
   }
-  const all = rows
-    .filter((r) => comp || !r.ownerOnly)
-    // Muted chains never surface — except Thrift-type chains when the Thrift chip explicitly opted in.
-    .filter((r) => !(r.chainId && mutedChains.has(r.chainId)) || (thriftOptIn && r.chainId != null && types.get(r.chainId) === "Thrift"))
-    .filter((r) => !mode
-      || (mode === "call" && callable(r))
-      || (mode === "kiosk" && r.hasKiosk === true)
-      || (mode === "site" && r.chainId != null && stockMethod.get(r.chainId) === "site"))
-    .filter((r) => !typeF || (((r.chainId && types.get(r.chainId)) || "Other") === typeF))
-    .filter((r) => !q || qTokenMatch(`${r.name} ${r.location || ""}`, q))
-    .map((r) => {
+  // Per-store consumer shape — shared by the main list and the rural fallback so both emit identical rows.
+  const shape = (r: typeof retailers.$inferSelect) => {
       const miles = hasLoc && r.lat != null && r.lng != null ? Math.round(haversineMi(lat, lng, r.lat, r.lng) * 10) / 10 : null;
       const chainName = (r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0];
       return { id: r.id, chainId: r.chainId, name: r.name, location: r.location, address: r.address || null, storeType: (r.chainId && types.get(r.chainId)) || "Other",
@@ -1662,10 +1674,39 @@ app.get("/pub/stores/near", async (c) => {
         isMSRP: r.chainId ? isMSRPByChain.get(r.chainId) !== false : true, // false = third-party, may exceed MSRP
         mapsUri: r.mapsUri || null,
         reach: reachFor(r.chainId), // time-to-a-human: {kind:"direct"} | {kind:"menu",seconds} | null (unmapped → show nothing)
+        beyondRadius: false as boolean, // set true only on the rural-fallback store (nearest dialable past the radius)
         miles, openState: openState(r.hours, r.timezone) };
-    })
+  };
+  const all = rows
+    .filter((r) => comp || !r.ownerOnly)
+    // Muted chains never surface — except Thrift-type chains when the Thrift chip explicitly opted in.
+    .filter((r) => !(r.chainId && mutedChains.has(r.chainId)) || (thriftOptIn && r.chainId != null && types.get(r.chainId) === "Thrift"))
+    .filter((r) => !mode
+      || (mode === "call" && callable(r))
+      || (mode === "kiosk" && r.hasKiosk === true)
+      || (mode === "site" && r.chainId != null && stockMethod.get(r.chainId) === "site"))
+    .filter((r) => !typeF || (((r.chainId && types.get(r.chainId)) || "Other") === typeF))
+    .filter((r) => !q || qTokenMatch(`${r.name} ${r.location || ""}`, q))
+    .map(shape)
     .filter((r) => r.ownerOnly || !hasLoc || r.miles == null || r.miles <= radius) // owner-only store is never distance-filtered
     .sort((a, b) => (a.miles ?? 9e9) - (b.miles ?? 9e9) || a.name.localeCompare(b.name));
+  // Rural fallback: nothing dialable inside the radius → surface the single NEAREST callable+ready store
+  // (up to 40mi out) so a rural screen is never blank. Only runs when the in-radius set has none, so it's
+  // free in dense metros. Flagged beyondRadius so the UI can badge the distance / prompt Check Plus.
+  let fallbackStore: ReturnType<typeof shape> | null = null;
+  if (hasLoc && !mode && !all.some((r) => r.callable && r.callReady)) {
+    const wide = bboxAround(lat, lng, 40);
+    const near = (await db.select().from(retailers).where(and(
+      eq(retailers.active, true),
+      gte(retailers.lat, wide.latMin), lte(retailers.lat, wide.latMax),
+      gte(retailers.lng, wide.lngMin), lte(retailers.lng, wide.lngMax),
+    )))
+      .filter((r) => !(r.chainId && mutedChains.has(r.chainId)) && callable(r) && r.lat != null && r.lng != null)
+      .map((r) => ({ r, mi: haversineMi(lat, lng, r.lat as number, r.lng as number) }))
+      .filter((x) => x.mi > radius)
+      .sort((a, b) => a.mi - b.mi);
+    for (const x of near) { const s = shape(x.r); if (s.callReady) { s.beyondRadius = true; fallbackStore = s; break; } }
+  }
   // Owner-only stores are pinned into the response (never lost to the distance sort + page limit),
   // so the owner always gets the "Fun" store no matter how far away they are.
   const owned = all.filter((r) => r.ownerOnly);
@@ -1684,7 +1725,10 @@ app.get("/pub/stores/near", async (c) => {
   }
   const pinIds = new Set([...owned, ...nearestT5].map((r) => r.id));
   const rest = all.filter((r) => !r.ownerOnly && !pinIds.has(r.id));
-  return c.json({ total: all.length, offset, limit, stores: [...owned, ...nearestT5, ...rest.slice(offset, offset + limit)] });
+  const stores = [...owned, ...nearestT5, ...rest.slice(offset, offset + limit)];
+  if (fallbackStore && !stores.some((s) => s.id === fallbackStore!.id)) stores.push(fallbackStore);
+  // radiusMax + radiusCapped let the UI cap the picker and prompt Check Plus; beyondRadius flags the rural pin.
+  return c.json({ total: all.length + (fallbackStore ? 1 : 0), offset, limit, radiusMax: maxRadius, radiusCapped, stores });
 });
 
 // Single-store fetch (consumer): backfills address/logo/hours for a REOPENED call whose store sits
