@@ -1450,7 +1450,7 @@ app.get("/pub/stores/near", async (c) => {
   const state = (c.req.query("state") || "").trim().toUpperCase();
   const q = (c.req.query("q") || "").trim().toLowerCase();
   if (!hasLoc && !state && !q) return c.json({ error: "lat+lng (or state / q) required" }, 400);
-  const radius = Math.min(Math.max(Number(c.req.query("radius") || 25), 1), 150);
+  const radius = Math.min(Math.max(Number(c.req.query("radius") || 25), 0.5), 150); // 0.5 = the new half-mile consumer stop (owner 07-14)
   const limit = Math.min(Math.max(Number(c.req.query("limit") || 60), 1), 200);
   const offset = Math.max(Number(c.req.query("offset") || 0), 0);
   // 🔒 Text-search hardening (data-exposure lockdown): the q-only path is the one way to page the store
@@ -3103,6 +3103,10 @@ app.post("/app/zones/:id/check", async (c) => {
     : (await db.select().from(categories).where(eq(categories.key, "pokemon")))[0];
   if (!cat) return c.json({ error: "category_not_found" }, 400);
   const links = await db.select().from(zoneRetailers).where(eq(zoneRetailers.zoneId, id));
+  // Sweep cap (owner 07-14): one tap never places more than 25 calls — protects telephony/agent
+  // concurrency for everyone else. The builder caps selection at 25 too; legacy bigger zones get a
+  // clean error instead of a silent partial sweep.
+  if (links.length > 25) return c.json({ error: "zone_too_big", max: 25 }, 400);
   const allRows = (await db.select().from(retailers).where(inArray(retailers.id, links.map((l) => l.retailerId)))).filter((r) => r.sellsPacks !== false);
   // Skip stores we KNOW are closed right now — a closed store can't be reached, so don't burn the
   // check on it (owner 07-11: "STORE XYZ is closed but we can still call STORE ABC"). Unknown hours

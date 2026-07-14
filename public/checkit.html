@@ -693,7 +693,7 @@ __BRAND_HEAD__
   .findbtn-primary:active{transform:scale(.99)}
   .findbtn-primary.on{background:rgba(74,222,128,.14);border-color:rgba(74,222,128,.5);color:var(--green)}
   .rlabel{flex:0 0 auto;align-self:center;color:var(--muted);font-size:12px;font-weight:700;margin-right:2px}
-  /* distance slider — snaps to 1/2/5/10/20 mi stops; thumb lines up with the ticks; live results */
+  /* distance slider — snaps to ½/1/2/5/10 mi stops; thumb lines up with the ticks; live results */
   .rsl{padding:2px}
   .rsl-top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:11px}
   .rsl-lbl{color:var(--muted);font-size:12px;font-weight:700}
@@ -1998,9 +1998,9 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
       </div>
       <div id="rchips" class="rsl" style="display:none;margin-top:14px">
         <div class="rsl-top"><span class="rsl-lbl" data-i18n="find.radius">Search radius</span><span class="rsl-val"><span id="rsl_val">5</span><i>mi</i></span></div>
-        <input type="range" class="rng" id="rng" min="0" max="4" step="1" value="2" oninput="setRadiusIdx(+this.value)" aria-label="Search radius">
+        <input type="range" class="rng" id="rng" min="0" max="4" step="1" value="3" oninput="setRadiusIdx(+this.value)" aria-label="Search radius">
         <div class="rng-ticks" id="rng_ticks">
-          <span onclick="setRadiusIdx(0)">1</span><span onclick="setRadiusIdx(1)">2</span><span class="on" onclick="setRadiusIdx(2)">5</span><span onclick="setRadiusIdx(3)">10</span><span onclick="setRadiusIdx(4)">20</span>
+          <span onclick="setRadiusIdx(0)">½</span><span onclick="setRadiusIdx(1)">1</span><span onclick="setRadiusIdx(2)">2</span><span class="on" onclick="setRadiusIdx(3)">5</span><span onclick="setRadiusIdx(4)">10</span>
         </div>
       </div>
       <div id="kioskhint" data-i18n="kioskhint" style="display:none;background:var(--ptint);border:1px solid var(--pline);border-radius:12px;padding:12px 13px;margin-top:12px;font-size:13.5px;color:#e6e2f7;line-height:1.55"><span style="display:flex;align-items:center;gap:7px;font-weight:800;white-space:nowrap"><span id="khspark"></span> At a kiosk? Get a free check</span><a onclick="openReceipt()" style="display:inline-block;margin-top:5px;color:var(--purple);font-weight:800;cursor:pointer">Use our email at checkout, or forward your receipt →</a></div>
@@ -2882,7 +2882,7 @@ const I18N={ es:{
   'zones.locph':'Busca un código postal o ciudad…','zones.go':'Ir','zones.list':'Lista','zones.map':'Mapa',
   'zones.radius':'Radio','zones.addallshort':'Agregar todo','zones.selstore':'tienda seleccionada','zones.selstores':'tiendas seleccionadas',
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
-  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas',
+  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.max25':'Máximo 25 tiendas por zona',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
   'zones.confirm.title2':'¿Verificar {n} {s} abiertas?','zones.storeword':'tienda','zones.storesword':'tiendas','zones.checkallN':'Verificar las {n}','zones.removeall':'Quitar todo','zones.isclosed':'está cerrada','zones.areclosed':'están cerradas','zones.stillcall':'Aún podemos llamar a las {n} abiertas.','zones.and':'y','zones.andmore':'y {n} más','zones.astore':'Una tienda',
@@ -3912,7 +3912,7 @@ function fmtShipDay(s){ if(!s) return ''; const raw=String(s).trim(); if(LANG!==
 function shipmentDayShort(s){ if(!s||!s.shipmentDay) return ''; const k=String(s.shipmentDay).trim().toLowerCase(); return DAYABBR[k]||(s.shipmentDay.length<=3?s.shipmentDay:s.shipmentDay.slice(0,3)); }
 function shipmentLine(s){ const d=shipmentDayShort(s); return d?`<div class="hrs" style="color:${AC2()}">${t('restocks','🚚 usually restocks')} ${esc(d)}</div>`:''; }
 // --- Geolocation + radius ---
-let USER_LOC=null, RADIUS=5, LAST_STORES=[];
+let USER_LOC=null, RADIUS=5, LAST_STORES=[];  // default 5 mi = slider idx 3 in the new ½–10 stops
 let MANUAL_LOC=false; // true after a pin drop / ZIP search — the user chose that spot; GPS rechecks must not override it
 function miBetween(a,b,c,d){ // haversine, miles
   const R=3958.8, rad=x=>x*Math.PI/180;
@@ -3927,7 +3927,7 @@ let NEAR_SEQ=0;
 async function fetchNear(){
   const q=($('search')&&$('search').value||'').trim();
   let url=null;
-  if(USER_LOC) url=`/pub/stores/near?lat=${USER_LOC.lat}&lng=${USER_LOC.lng}&radius=${Math.max(RADIUS,1)}&limit=200${MODE==='hobby'?'&type=Hobby':''}${MODE==='thrift'?'&type=Thrift':''}`;
+  if(USER_LOC) url=`/pub/stores/near?lat=${USER_LOC.lat}&lng=${USER_LOC.lng}&radius=${Math.max(RADIUS,0.5)}&limit=200${MODE==='hobby'?'&type=Hobby':''}${MODE==='thrift'?'&type=Thrift':''}`;
   else if(q.length>=2) url=`/pub/stores/near?q=${encodeURIComponent(q)}&limit=60${MODE==='hobby'?'&type=Hobby':''}${MODE==='thrift'?'&type=Thrift':''}`;
   if(!url){ STORES=[]; renderStores(); return; }
   const seq=++NEAR_SEQ;
@@ -4056,6 +4056,7 @@ function initMap(){
     MAP.on('moveend zoomend dragend',()=>{ clearTimeout(window.__mapg); window.__mapg=setTimeout(()=>{ MAP_GESTURING=false; },260); });
     MAP.on('click',(e)=>{ if(!isMaster() && !hasFeature('any_town')) return; if(MAP_GESTURING) return; MANUAL_LOC=true; placeMyPin(e.latlng.lat,e.latlng.lng,true); setUserLoc(e.latlng.lat,e.latlng.lng,true); toast(t('toast.locating2','Locating stores'),'neutral'); });
     MAP_FIT_NEXT=true; // first paint → frame the search radius (then it stays put until a new location)
+    mapApplyLimits();
     setTimeout(()=>MAP.invalidateSize(),60); renderMapPins();
   }catch(e){ toast(t('toast.maploading',"Map didn't load. Here's the list.")); toggleMap(); }
 }
@@ -4066,6 +4067,7 @@ function placeMyPin(lat,lng,fromTap){
   const m=RADIUS*1609.34;
   if(MY_RING) MY_RING.setLatLng([lat,lng]).setRadius(m); else MY_RING=L.circle([lat,lng],{radius:m,color:'#A78BFA',weight:1,fillColor:'#A78BFA',fillOpacity:.07}).addTo(MAP);
   if(!fromTap){ try{MAP.panTo([lat,lng]);}catch(_){} } // recenter only on first place, not on every tap
+  mapApplyLimits();
 }
 function renderMapPins(){
   if(!MAP||!window.L) return;
@@ -4102,13 +4104,21 @@ function renderMapPins(){
   const mv=$('mapview'); if(mv){ let me=$('mapEmpty'); if(!me){ me=document.createElement('div'); me.id='mapEmpty'; mv.appendChild(me); } me.textContent=t('map.nostores','No stores found. Zoom somewhere else.'); me.classList.toggle('on', USER_LOC && MAP_MARKERS.length===0); }
 }
 function mapPick(id){ pickStore(id); try{ if(MAP) MAP.closePopup(); }catch(e){} }
-const RADII=[1,2,5,10,20];
+// Map reach is the Check+ perk (any_town): free accounts keep the map INSIDE their radius ring —
+// they can zoom in on their own area but can't roam/zoom out past it (owner 07-14). Check+/master
+// roam free. Re-applied whenever the ring moves or resizes.
+function mapApplyLimits(){ if(!MAP) return; try{
+  const locked = !isMaster() && !hasFeature('any_town');
+  if(locked && MY_RING){ const b=MY_RING.getBounds().pad(.35); MAP.options.maxBoundsViscosity=1; MAP.setMaxBounds(b); MAP.setMinZoom(Math.max(3, MAP.getBoundsZoom(b))); }
+  else { MAP.options.maxBoundsViscosity=0; MAP.setMaxBounds(null); MAP.setMinZoom(3); }
+}catch(_){ } }
+const RADII=[0.5,1,2,5,10]; // owner 07-14: ½–10 mi for everyone; 20 is gone (farther reach = the Check+ any-town map)
 function setRadiusIdx(idx){
   idx=Math.max(0,Math.min(4, idx|0)); RADIUS=RADII[idx];
   const rng=$('rng'); if(rng){ if(+rng.value!==idx) rng.value=idx; rng.style.setProperty('--fill', (idx/4*100)+'%'); }
-  const v=$('rsl_val'); if(v) v.textContent=RADIUS;
+  const v=$('rsl_val'); if(v) v.textContent=(RADIUS===0.5?'½':RADIUS);
   document.querySelectorAll('#rng_ticks span').forEach((s,i)=>s.classList.toggle('on', i===idx));
-  if(MY_RING && USER_LOC){ try{ MY_RING.setRadius(RADIUS*1609.34); }catch(_){} } // grow/shrink the radius ring with the slider
+  if(MY_RING && USER_LOC){ try{ MY_RING.setRadius(RADIUS*1609.34); mapApplyLimits(); }catch(_){} } // grow/shrink the radius ring with the slider (+ re-fit the free-account lock)
   if(USER_LOC) fetchNear(); else renderStores(); // wider/narrower radius = reload the nearby slice
   // Touching the radius = "show me what's around ME" — quietly re-sync to the real position too
   // (owner 2026-07-02: drove to the next town, slider still searched the old spot). Debounced;
@@ -6595,7 +6605,9 @@ function zoneBarSync(){ const n=ZONES.sel.size;
 // basket grows as logos wrap, so a fixed pad wasn't enough). Measured next frame after the reflow.
 function zoneSyncBasketPad(){ requestAnimationFrame(()=>{ const sc=document.querySelector('#zones .zf-scroll'), bk=$('zBasket'); if(!sc) return; if(sc.classList.contains('mapmode')){ sc.style.paddingBottom=''; return; } sc.style.paddingBottom=(ZONES.sel.size>0&&bk)?(bk.offsetHeight+18)+'px':''; }); }
 function zoneGPS(){ try{ toast(t('zones.locating','Finding your location…'),'neutral'); }catch(_){ } findMe(async()=>{ await zoneEnsureStores(); if(ZONES.mapOpen){ if(ZMAP&&USER_LOC){ try{ ZMAP.setView([USER_LOC.lat,USER_LOC.lng],12); }catch(_){ } } zoneMapDraw(); zoneBarSync(); } else renderZoneBuild(); }); }
-function zoneToggle(id){ const add=!ZONES.sel.has(id); if(add){ ZONES.sel.add(id); const s=(STORES||[]).find(x=>x.id===id); if(s) ZONES.storeById.set(id,s); } else ZONES.sel.delete(id);
+function zoneToggle(id){ const add=!ZONES.sel.has(id);
+  if(add && ZONES.sel.size>=25){ toast(t('zones.max25','Zones max out at 25 stores'),'neutral'); return; } // sweep cap (owner 07-14)
+  if(add){ ZONES.sel.add(id); const s=(STORES||[]).find(x=>x.id===id); if(s) ZONES.storeById.set(id,s); } else ZONES.sel.delete(id);
   // update the tapped row + footer in place (keeps the list scroll position)
   const row=document.querySelector('#zones .zlist .zpick[onclick="zoneToggle('+id+')"]');
   if(row){ row.classList.toggle('picked',add); const ck=row.querySelector('.zck'); if(ck) ck.innerHTML=add?ZCHECK:''; } else renderZoneBuild();
@@ -6607,7 +6619,9 @@ function zoneAllInRadiusSelected(){ const rs=zoneRadiusStores(); return rs.lengt
 // One button, two states (owner 07-11): adds every in-radius store, and once they're all in it flips to
 // "Remove all" so a tap clears them back out.
 function zoneToggleAll(){ const rs=zoneRadiusStores(); const allOn=rs.length>0 && rs.every(s=>ZONES.sel.has(s.id));
-  rs.forEach(s=>{ if(allOn){ ZONES.sel.delete(s.id); } else { ZONES.sel.add(s.id); ZONES.storeById.set(s.id,s); } });
+  if(allOn){ rs.forEach(s=>ZONES.sel.delete(s.id)); }
+  else { let hitCap=false; for(const s of rs){ if(ZONES.sel.has(s.id)) continue; if(ZONES.sel.size>=25){ hitCap=true; break; } ZONES.sel.add(s.id); ZONES.storeById.set(s.id,s); } // nearest first — the list is distance-sorted
+    if(hitCap) toast(t('zones.max25','Zones max out at 25 stores'),'neutral'); }
   if(ZONES.mapOpen){ zoneMapDraw(); zoneBarSync(); } else renderZoneBuild(); }
 // --- Zone location search + map ('pin a zone'): type a ZIP/town or tap the map to recenter, tap pins to add ---
 let ZMAP=null, ZMARKERS={}, ZRING=null;
@@ -6704,7 +6718,7 @@ async function zoneCheckAll(id){
   });
   if(!goOn) return;
   let run=null; try{ run=await appApi('/app/zones/'+id+'/check',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({categoryId:(BRAND_CAT&&BRAND_CAT.id)||SEL_CAT||undefined})}); }catch(e){ run={error:'net'}; }
-  if(!run||run.error){ toast(run&&run.error==='no_credits'?t('zones.nocredits','You\'re a few checks short for the whole zone.'):t('err.generic',"That didn't go through. Give it another try.")); if(run&&run.error==='no_credits'){ setTimeout(()=>{ backToBuilder(); openBuy(); },600); } return; }
+  if(!run||run.error){ toast(run&&run.error==='zone_too_big'?t('zones.max25','Zones max out at 25 stores'):run&&run.error==='no_credits'?t('zones.nocredits','You\'re a few checks short for the whole zone.'):t('err.generic',"That didn't go through. Give it another try."), run&&run.error==='zone_too_big'?'neutral':undefined); if(run&&run.error==='no_credits'){ setTimeout(()=>{ backToBuilder(); openBuy(); },600); } return; }
   ZONES.run={ id, runId:run.runId, name:run.name||'' }; renderZoneRun(); zoneStartPoll();
 }
 function zoneStartPoll(){ zoneStopPoll(); ZONES.poll=setInterval(zonePollTick,1800); zonePollTick(); }
