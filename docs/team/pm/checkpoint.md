@@ -3,19 +3,17 @@
 > promotes to prod on the owner's word, and keeps the owner focused on the one thing that matters.
 > Talk to the owner like a friend, plain words, no jargon (he reads on a phone). Newest on top.
 
-## 🔴 FIRST JOB — untangle prod, then ONE clean promote (2026-07-14 14:xx)
-Prod is in a half-state and needs a careful hand BEFORE the card test:
-- Prod is RUNNING commit `4f9427c` (has peek — peek link works, owner confirmed live).
-- BUT `main` branch tip reads `c99e402` (older, no peek) and prod≠main. Pops pushed peek
-  straight to prod out-of-band, so prod and the main branch don't match.
-- `staging` (03a05ed) is 64 ahead of main and carries the LATEST website + admin redesign + zones + peek.
-- Owner wants Admin live on prod. Do NOT let Addie or Pops "push their piece" — there is ONE promote,
-  it ships the whole staging branch. Everyone pushing pieces is what tangled prod.
-- YOUR job: reconcile main to what prod is actually running, then do ONE clean staging→main promote,
-  watch Railway deploy it, verify /api/health matches the new commit AND the peek link still works.
-  Check CI first (was red on: off-brand colors = Webbie's, gitleaks = Pops's dead tokens — neither
-  breaks the site, but tell the owner before shipping red). Revert is one command if it goes wrong.
-- After that promote: prod = latest everything, peek works, and the owner runs the card test.
+## 🔴 FIRST JOB — ONE clean promote when the owner gives Webbie's go-ahead (2026-07-14)
+Verified live 07-14: the tangle is half-resolved already.
+- `main` tip = `4f9427c` (peek commit) and prod /api/health serves exactly that → prod == main. RECONCILED.
+- `staging` is 46 ahead of main (latest website + zones + admin redesign + rules). Staging health serves its tip.
+- Peek debug endpoints: removed forward in 7a80866; grep of staging tree clean; /api/peek-check on staging
+  401s same as any unknown route (blanket gate) — nothing debug left to ship.
+- Webbie is MID-CHANGES on staging right now (owner's word). Promote ships the WHOLE branch, so the ONE
+  promote waits for the owner's explicit "Webbie is done" go-ahead — he authorized the promote itself already.
+- On go-ahead: check CI (known likely reds: off-brand colors = Webbie's, gitleaks = dead tokens — tell owner
+  before shipping red) → `bash scripts/promote.sh` → watch Railway → verify prod /api/health = new commit AND
+  peek link still works → owner runs the card test.
 
 ## THE ONE THING (say it every time until done)
 - **Live card purchase test on prod.** Fresh customer → free check → upgrade → real credit card.
