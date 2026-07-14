@@ -786,6 +786,7 @@ setDeltaBarge(async (s, _speech) => {
 
 // ---- Health ----
 app.get("/api/health", (c) => c.json({ ok: true, commit: process.env.RAILWAY_GIT_COMMIT_SHA ?? null }));
+app.get("/api/peek-check", (c) => c.json({ build: "peekcheck-v1", pcLen: config.peekCode ? config.peekCode.length : 0, comingSoon: config.comingSoon, q: c.req.query("peek") ?? null, qMatch: c.req.query("peek") === config.peekCode, ok: peekOk(c.req.query("peek"), getCookie(c, "peek")) }));
 
 // ---- Ops (admin-gated by the /api/* wall): watchdog + backup visibility, manual backup trigger ----
 app.get("/api/ops/status", (c) => c.json({ env: config.staging.on ? "staging" : "production", watchdog: watchdogState(), backup: backupState() }));
