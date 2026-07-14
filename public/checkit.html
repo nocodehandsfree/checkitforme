@@ -46,7 +46,13 @@
   if(!sp.has('call')) return;
   var cls=localStorage.getItem('cifm_cls:'+sp.get('call'))||localStorage.getItem('cifm_cls_last');
   if(cls && {in:1,out:1,unk:1,soon:1}[cls]) window.__bootTone=cls; // recall verdict tone for the at-load wash
+  // Deep-linked check: the homepage must NEVER paint first (this 2MB page parses for a beat on a phone
+  // before boot() runs, and the hero flashed through — owner 07-14 "too much lag"). Hide it from the very
+  // first frame via a root class, and start the result fetch NOW so the network runs during the parse.
+  document.documentElement.classList.add('restoring');
+  window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
+<style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
 <meta name="x-rev" content="tonebake-r116" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
@@ -564,11 +570,18 @@ __BRAND_HEAD__
   .suplaunch:active{opacity:1}
   .suplaunch svg{width:20px;height:20px;stroke:#9a9aa8}
   .suplaunch.tucked{transform:translateX(120%);opacity:0;pointer-events:none}
-  body:has(.supwrap.on) .suplaunch{display:none}
   /* Zones + Check history sheets: the launcher is gone while they're up (guide §5.17 — it was
      floating OVER the sheet and covering Save zone; the overlay's z4000 can't beat it because
      MAIN's stacking context traps it, so hide it outright). */
   body.zoning .suplaunch,body:has(#histOverlay.on) .suplaunch{display:none}
+  /* Chat OPEN: the launcher stays put and flips to a CLOSE tab (owner 07-14 — the top X is a reach;
+     the thumb is already at the launcher spot). Lifted above the composer so it never covers Send.
+     Declared AFTER the hide rules so it wins when chat opens over zones/history. */
+  body:has(.supwrap.on) .suplaunch{display:grid;bottom:calc(112px + env(safe-area-inset-bottom));z-index:83;opacity:1}
+  .suplaunch .ic-x{display:none}
+  body:has(.supwrap.on) .suplaunch .ic-chat{display:none}
+  body:has(.supwrap.on) .suplaunch .ic-x{display:block}
+  body:has(.supwrap.on) .suplaunch.tucked{transform:none;opacity:1;pointer-events:auto} /* no auto-tuck while it's the close button */
   .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:flex;flex-direction:column;
     /* a touch deeper than the raw brand yellow — the neon read too bright in the panel (owner 07-11) */
     --sup-accent:color-mix(in srgb, var(--accent,#FFCB05) 73%, #14110a);
@@ -2516,8 +2529,9 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
   </div>
 </div>
 
-<button class="suplaunch" id="supTab" onclick="openSupport()" aria-label="Chat with us">
-  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+<button class="suplaunch" id="supTab" onclick="supTabClick()" aria-label="Chat with us">
+  <svg class="ic-chat" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+  <svg class="ic-x" viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
 </button>
 <div class="supwrap" id="supWrap" aria-hidden="true">
   <div class="sup-hd" id="sup_hd">
@@ -2776,7 +2790,7 @@ const I18N={ es:{
   // lead modal
   'lead.title':'Tu primera verificación es gratis','lead.sub':'Solo tu correo. Sin tarjeta.','lead.cta':'Reclama mi verificación gratis →','lead.wait':'Un segundo…',
   // share modal
-  'share.msg':'¡Mira esto!','share.title':'Comparte el hallazgo','share.sub':'Avísale a tu gente antes de que se agote.','share.post':'𝕏  Publicar','share.sms':'💬  Mándalo','share.copy':'Copiar','share.copied':'Copiado. Pégalo donde quieras 📋',
+  'share.msg':'¡Mira esto!','share.msg2':'Oye. {s} tiene {p} en stock ahora mismo. Una IA llamó a la tienda por mí. Míralo:','share.title':'Comparte el hallazgo','share.sub':'Avísale a tu gente antes de que se agote.','share.post':'𝕏  Publicar','share.sms':'💬  Mándalo','share.copy':'Copiar','share.copied':'Copiado. Pégalo donde quieras 📋',
   // sell-methods card
   'sm.resale':'Reventa. El precio puede superar el MSRP','sm.livechk':'Consultando stock en línea…','sm.nolive':'Aún no hay señal en línea. Activa un aviso de reposición',
   'sm.in':'En stock en línea ahora','sm.low':'Poco stock en línea','sm.out':'Agotado en línea',
@@ -2908,11 +2922,11 @@ Object.assign(I18N.es, {
   'zones.report':'Verificación de zona','zones.checkingw':'verificando','zones.done':'listas','zones.no':'sin','zones.noans':'sin respuesta',
   'zones.starting':'Iniciando el barrido…','zones.share':'Compartir resultados','zones.stopall':'Detener todo',
   'zones.notx':'Aún no hay transcripción.','zones.stopped':'Deteniendo el barrido…','zones.copied':'Copiado al portapapeles',
-  'zones.sharemsg':'Acabo de verificar {n} tiendas con Check. {i} lo tenían en stock 👀',
+  'zones.sharemsg2':'Acabo de poner a una IA a llamar {n} tiendas a la vez. {i} lo tenían en stock. Una locura:',
   'zones.nocredits':'Te faltan unas verificaciones para toda la zona.',
   'ref.both2':'Ambos reciben <b style="color:#fff">{n} {c} gratis</b> cuando se registran.',
   'ref.check1':'verificación','ref.checkN':'verificaciones',
-  'ref.sharemsg2':'Oye, mira esta herramienta. Está buenísima.\nNos ayuda a encontrar productos virales en stock rapidísimo, como Pokémon. {r}',
+  'ref.msg2':'¡Oye! Mira esta tecnología, está increíble.\nUna IA llama a las tiendas y encuentra {x} en stock a precio de tienda.\nRegístrate y los dos recibimos {r}:','ref.cardsword':'cartas',
   'acct.filtered':'Mostrando','acct.row.zones':'Administrar zonas',
   'acct.row.zones.locked':'Check+ · verifica todas tus tiendas cercanas a la vez',
   'acct.row.zones.sub':'Verifica toda una zona de un toque.',
@@ -3150,8 +3164,16 @@ window.addEventListener('scroll',supTabTuck,{passive:true,capture:true});
 window.addEventListener('wheel',supTabTuck,{passive:true});
 window.addEventListener('touchmove',supTabTuck,{passive:true});
 // Open straight to "What's it about?" (the topic picker) — most people arrive wanting to ask/report.
+function supTabClick(){ const w=$('supWrap'); if(w&&w.classList.contains('on')) closeSupport(); else openSupport(); } // one tab, two jobs: open, then close from the same thumb spot (owner 07-14)
 function openSupport(){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supStartNew(); }
-function closeSupport(){ const el=$('supWrap'); el.classList.remove('on'); el.setAttribute('aria-hidden','true'); }
+function closeSupport(){ const el=$('supWrap'); el.classList.remove('on'); el.setAttribute('aria-hidden','true');
+  // iOS wouldn't repaint its chrome strips after the chat's root tint dropped (bottom stayed the chat
+  // color until a manual refresh — owner 07-14). Poke it: drop the keyboard, force a root style
+  // recalc, and give the page a 1px scroll nudge so Safari re-samples the root color.
+  try{ if(document.activeElement&&document.activeElement.blur) document.activeElement.blur(); }catch(_){ }
+  try{ const de=document.documentElement; const cur=getComputedStyle(de).backgroundColor; de.style.backgroundColor=cur; void de.offsetHeight; requestAnimationFrame(()=>{ de.style.backgroundColor=''; }); }catch(_){ } // re-assert the SAME color so nothing flashes; the style change itself is the poke
+  try{ const y=window.scrollY; window.scrollTo(0,y+1); requestAnimationFrame(()=>window.scrollTo(0,y)); }catch(_){ }
+}
 
 // Low-level view switch + header/tabbar config.
 function supShow(view,opts){ opts=opts||{}; SUP_VIEW=view;
@@ -3343,7 +3365,8 @@ async function boot(){
     const dot='display:inline-block;width:11px;height:11px;border-radius:50%;background:#EAEAF0;animation:loaddot 1.25s ease-in-out infinite';
     r.innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:48vh;gap:16px;font-family:Inter,-apple-system,system-ui,sans-serif">'
       +'<div style="font-size:24px;font-weight:800;letter-spacing:-.02em;color:#fff">'+esc(t('toast.loadingcall2',"Loading your check"))+'</div>'
-      +'<div style="display:flex;gap:9px;align-items:center"><span style="'+dot+'"></span><span style="'+dot+';animation-delay:.18s"></span><span style="'+dot+';animation-delay:.36s"></span></div></div>'; } }
+      +'<div style="display:flex;gap:9px;align-items:center"><span style="'+dot+'"></span><span style="'+dot+';animation-delay:.18s"></span><span style="'+dot+';animation-delay:.36s"></span></div></div>'; }
+    try{ document.documentElement.classList.remove('restoring'); }catch(_){ } } // JS owns the hide from here (the early root class covered the parse window)
   // PAINT FIRST — header, hero, switcher, logo, language + auth all come from injected brand data, so
   // render them instantly instead of waiting on the network (this is what made the header slow to appear).
   initGA();
@@ -3467,12 +3490,11 @@ async function loadRefer(){
 function referMessage(){
   const r=(REFER&&REFER.reward)||1;
   const reward=r===1?t('ref.msg.r1','a free check'):tf('ref.msg.rN','{n} free checks',{n:r});
-  const c=(BRAND&&BRAND.category)||'cards';
-  const isCards=!/needoh/i.test(c); // card verticals get the pack/box/ETB line
-  return isCards
-    ? tf('ref.msg',"Yo! Check this tech out. It's sick.\nHelps us quickly find {x} packs, booster boxes and ETBs at retail prices.\nSign up and we both get {r}:",{x:c,r:reward})
-    : tf('ref.msg.simple',"Yo! Check this tech out. It's sick.\nHelps us quickly find {x} in stock at retail prices.\nSign up and we both get {r}:",{x:c,r:reward});
+  return tf('ref.msg2',"Yo! Check this tech out. It's sick.\nAn AI calls stores and finds {x} in stock at retail prices.\nSign up and we both get {r}:",{x:brandProduct(),r:reward});
 }
+// The product people share about, per brand + language: "Pokémon cards" / "cartas Pokémon" / "NeeDoh".
+function brandProduct(){ const c=((BRAND&&BRAND.category)||'Pokémon').replace(/\s*TCG$/i,''); const cards=!/needoh/i.test(c);
+  if(!cards) return c; return LANG==='es' ? 'cartas '+c : c+' '+t('ref.cardsword','cards'); }
 function copyRefer(){
   if(!REFER||!REFER.code){ openAuth(); return; } // anon: the link lives behind a 10-second signup
   try{ navigator.clipboard.writeText(referLink(REFER.code)); }catch(e){}
@@ -3759,7 +3781,8 @@ function closeScorePop(){
   if(c&&hm&&hm.parent){ try{ hm.parent.insertBefore(c,hm.next); }catch(_){ hm.parent.appendChild(c); } c.style.display='none'; }
   COMPOSER=false;
 }
-function inviteMsg(link){ const n=POLICY.referralChecks||1; return tf('ref.sharemsg2',"Yo! Check this tech out. It's sick.\nHelps us quickly find viral products in stock like Pokémon cards at retail prices.\nSign up and we both get {n} free {c}: ",{n,c:n===1?t('ref.check1','check'):t('ref.checkN','checks')})+link; }
+function inviteMsg(link){ const n=POLICY.referralChecks||1; const reward=n===1?t('ref.msg.r1','a free check'):tf('ref.msg.rN','{n} free checks',{n});
+  return tf('ref.msg2',"Yo! Check this tech out. It's sick.\nAn AI calls stores and finds {x} in stock at retail prices.\nSign up and we both get {r}:",{x:brandProduct(),r:reward})+' '+link; } // ONE referral message everywhere (owner 07-14 approved copy)
 async function acctInvitePanel(btn){
   try{ if(!REFER||!REFER.code){ await loadRefer(); } }catch(_){ }
   const link=(REFER&&REFER.code)?referLink(REFER.code):location.origin;
@@ -3853,7 +3876,10 @@ async function restoreCall(cid, storeName, catName){
   // so the store name/category are already resolved synchronously and the header is correct.)
   const cached = known ? resultCacheGet(cid) : null;
   if(cached){ if(known&&known.steps) cached.savedSteps=known.steps; showResult(cached, cid); }
-  const o=await appApi('/pub/result/'+encodeURIComponent(cid));
+  // Deep-link boot already fired this fetch during the HTML parse (early <head> script) — consume it
+  // instead of starting a second round-trip (owner 07-14: checks must open faster).
+  let o=null; if(window.__callPrefetch){ o=await window.__callPrefetch; window.__callPrefetch=null; }
+  if(!o||o.error) o=await appApi('/pub/result/'+encodeURIComponent(cid));
   if(!o||o.error||o.status==='in_progress'){ if(cached) return; toast(t('toast.callgone',"That check is no longer available")); backToBuilder(); return; }
   let srvRow=null;
   if(!known && isAuthed()){ try{ srvRow=(await fetchServerHistory()).find(x=>x.cid===cid)||null; }catch(_){ } }
@@ -5193,7 +5219,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ document.documentElement.classList.remove('restoring'); }catch(_){ } /* deep-link hide must never survive into the homepage */ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
@@ -6720,7 +6746,10 @@ async function zoneExpand(cid,btn){ if(!cid) return; const body=btn.nextElementS
   try{ const o=await appApi('/pub/result/'+encodeURIComponent(cid)); const tx=(o&&o.transcript)||''; body.innerHTML=tx?chatBubbles(tx):`<div class="lo" style="padding:8px 4px;color:#8A8A96">${t('zones.notx','No transcript yet.')}</div>`; }catch(_){ body.innerHTML=`<div class="lo" style="padding:8px 4px;color:#8A8A96">${t('zones.notx','No transcript yet.')}</div>`; }
 }
 async function zoneStopAll(){ const r=ZONES.run; if(!r) return; try{ await appApi('/app/zones/run/'+r.runId+'/stop',{method:'POST'}); }catch(_){ } toast(t('zones.stopped','Stopping the sweep…'),'neutral'); setTimeout(zonePollTick,600); }
-function zoneShare(){ const r=ZONES.run; const d=(r&&r.data)||{}; const sm=d.summary||{}; const txt=tf('zones.sharemsg','Just checked {n} stores with Check. {i} had it in stock 👀',{n:d.total||0,i:sm.inStock||0}); try{ if(navigator.share){ navigator.share({text:txt+' '+location.origin}); } else { navigator.clipboard.writeText(txt+' '+location.origin); toast(t('zones.copied','Copied to clipboard'),'neutral'); } }catch(_){ } }
+function zoneShare(){ const r=ZONES.run; const d=(r&&r.data)||{}; const sm=d.summary||{}; const n=d.total||0, i=sm.inStock||0;
+  const txt=tf('zones.sharemsg2','Just had an AI call {n} stores at once. {i} had it in stock. This thing is nuts:',{n,i});
+  const url=location.origin+'/s?k=zone&n='+n+'&i='+i; // zone landing → the zone unfurl card (owner 07-14)
+  try{ if(navigator.share){ navigator.share({text:txt+' '+url}); } else { navigator.clipboard.writeText(txt+' '+url); toast(t('zones.copied','Copied to clipboard'),'neutral'); } }catch(_){ } }
 // ==== /ZONES ======================================================================================
 // ---- Call switcher: hop call-to-call; filter by store and outcome (scales to 20+ calls) ----
 let RAIL_F={store:'',tone:''}, RAIL_CID=null;
@@ -7150,7 +7179,7 @@ async function buy(kind, annual){
 function findProductLabel(){ return ((ASKED_CATS&&ASKED_CATS.length)?ASKED_CATS.map(x=>x.label).filter(Boolean).join(', '):catLabels())||'cards'; }
 function findStoreName(){ return (SEL_STORE&&SEL_STORE.name)?SEL_STORE.name.split('—')[0].trim():'a local store'; }
 function brandName(){ return ((BRAND&&BRAND.name)||'Check It For Me').replace(/<[^>]+>/g,'').trim(); }
-function shareMessage(){ return t('share.msg','Yo check this out!'); } // the link unfurl carries the whole story
+function shareMessage(){ return tf('share.msg2','Yo. {s} has {p} in stock right now. An AI called the store for me. Check it:',{s:findStoreName(),p:brandProduct()}); } // owner 07-14 approved copy; the unfurl card carries the visual
 // A find-specific landing URL that unfurls richly on socials (dynamic OG title/description).
 function shareUrl(){ return location.origin+'/s?store='+encodeURIComponent(findStoreName())+'&cat='+encodeURIComponent(findProductLabel())+'&v=in'; }
 

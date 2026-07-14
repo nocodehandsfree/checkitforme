@@ -159,7 +159,7 @@ const peekOk = (peekQ?: string, peekCookie?: string): boolean =>
 // Paths that must stay live even while the coming-soon splash is up: assets (incl. the splash's own
 // logos), consumer + admin APIs, telephony webhooks, admin login. Everything else on a consumer host
 // is a page and gets the splash (unless the browser has a valid peek).
-const GATE_SKIP = /^\/(api|pub|app|auth|webhooks|logos|og|fonts|media|sw\.js|manifest|robots|favicon|\.well-known|twiml|nav|tapedeck|bridge|listen|twilio-media|admin-login|admin-logout|health)\b/;
+const GATE_SKIP = /^\/(api|pub|app|auth|webhooks|logos|og|fonts|media|sw\.js|manifest|robots|favicon|\.well-known|twiml|nav|tapedeck|bridge|listen|twilio-media|admin-login|admin-logout|health|s)\b/; // `s` = the share landing: link-preview bots must see the unfurl cards even while the splash is up (owner 07-14)
 app.use("*", async (c, next) => {
   const code = c.req.query("peek");
   if (code && config.peekCode && code === config.peekCode) {
@@ -171,7 +171,7 @@ app.use("*", async (c, next) => {
   if (config.comingSoon && c.req.method === "GET" && !peekOk(code, getCookie(c, "peek"))) {
     const host = (c.req.header("host") || "").toLowerCase();
     const adminHost = host.startsWith("caller.") || host.startsWith("admin.");
-    if (!adminHost && !GATE_SKIP.test(c.req.path)) return c.html(renderComingSoon(host));
+    if (!adminHost && !GATE_SKIP.test(c.req.path)) return c.html(renderComingSoon(host, !!c.req.query("ref")));
   }
   return next();
 });
@@ -276,8 +276,19 @@ function seoGraph(brand: ReturnType<typeof resolveBrand>, plainName: string) {
 // Coming-soon splash: the ONLY public HTML while config.comingSoon is on. Check wordmark + the owner's
 // launch line + the four product-type icons. Standalone (no app JS), dark on-brand, noindex.
 const COMING_SOON_ICONS = ["pokemon", "onepiece", "topps", "needoh"];
-function renderComingSoon(_host: string): string {
+function renderComingSoon(_host: string, refShare = false): string {
   const line = "Find insanely hard to get products on the shelves at retail prices.";
+  // Even gated, a shared link must unfurl right: bots read these tags while humans see the splash.
+  const ogImage = `https://${_host}/og/${refShare ? "card-refer" : "runner"}.png`;
+  const ogTitle = refShare ? "We both get a free check." : "Check — coming soon";
+  const og = [
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:title" content="${esc(ogTitle)}">`,
+    `<meta property="og:description" content="${esc(line)}">`,
+    `<meta property="og:image" content="${ogImage}">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:image" content="${ogImage}">`,
+  ].join("\n");
   const icons = COMING_SOON_ICONS.map(
     (k) => `<img src="/logos/products/${k}.png" alt="" width="60" height="60" loading="eager">`
   ).join("");
@@ -286,6 +297,7 @@ function renderComingSoon(_host: string): string {
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <title>Check — coming soon</title>
+${og}
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
 <style>
@@ -313,11 +325,12 @@ body{background:#0C0C12;color:#fff;font-family:Inter,-apple-system,system-ui,san
 }
 
 /** Render the consumer page branded for a vertical micro-site (resolved from the subdomain). */
-function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html", tone = "", peek = false): string {
+function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html", tone = "", peek = false, refShare = false): string {
   void peek; // coming-soon gate now lives in the single middleware above (peek bypass handled there)
   const canonical = `https://${host}/`;
   const plainName = brand.name.replace(/<[^>]+>/g, "");
-  const ogImage = `https://${host}/og/${brand.key}.png`;
+  // Invite links (?ref=CODE) unfurl with the referral card (owner 07-14) — the page itself is the app.
+  const ogImage = refShare ? `https://${host}/og/card-refer.png` : `https://${host}/og/${brand.key}.png`;
   const head = [
     `<title>${esc(brand.title)}</title>`,
     `<meta name="description" content="${esc(brand.desc)}">`,
@@ -372,16 +385,24 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
 // humans see a styled card + a CTA back into the app. Pure string render — no deps, cache-friendly.
 function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Record<string, string>, peek = false): string {
   void peek; // coming-soon gate now lives in the single middleware above (peek bypass handled there)
+  const zone = q.k === "zone"; // zone-sweep share: "{i} of {n} stores had it"
   const inStock = (q.v || "in") === "in";
   const store = (q.store || "a local store").slice(0, 80);
   const cat = (q.cat || brand.category || "cards").slice(0, 60);
   const plainName = brand.name.replace(/<[^>]+>/g, "");
-  // In-stock share: just the brand mark + two punchy lines (no "is it in stock?" hero, "Found!" pill, or "powered by").
-  const ogImage = inStock ? `https://${host}/logos/brand/check-mark.png` : `https://${host}/og/${brand.key}.png`;
   const site = `https://${host}/`;
-  const title = inStock ? `🔥 ${store}` : `👀 ${store}: watching for ${cat}`;
-  const desc = inStock
-    ? `${cat} in stock!`
+  // Unfurl cards (owner 07-14): section-reflective images with the brandmark + copy baked in.
+  // In-stock find → the per-brand "X in stock" card (store name rides og:title under the image);
+  // zone share → the zone card; out-of-stock keeps the brand hero card.
+  const findCard = `https://${host}/og/card-find-${brand.key}.png`;
+  const ogImage = zone ? `https://${host}/og/card-zone.png` : inStock ? findCard : `https://${host}/og/${brand.key}.png`;
+  const zN = Math.max(0, Number(q.n) || 0), zI = Math.max(0, Number(q.i) || 0);
+  const title = zone ? `${zI} of ${zN} stores had it in stock`
+    : inStock ? `${cat} in stock at ${store}` : `👀 ${store}: watching for ${cat}`;
+  const desc = zone
+    ? `One tap checked every store in the area. No answer = no charge.`
+    : inStock
+    ? `Check AI called the store and confirmed it. No answer = no charge.`
     : `Not in yet — but ${plainName} will catch the restock. Check any store near you with one tap.`;
   const head = [
     `<title>${esc(title)}</title>`,
@@ -394,7 +415,7 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
     `<meta property="og:description" content="${esc(desc)}">`,
     `<meta property="og:url" content="https://${host}/s?store=${encodeURIComponent(store)}&cat=${encodeURIComponent(cat)}&v=${inStock ? "in" : "out"}">`,
     `<meta property="og:image" content="${ogImage}">`,
-    `<meta name="twitter:card" content="${inStock ? "summary" : "summary_large_image"}">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${esc(title)}">`,
     `<meta name="twitter:description" content="${esc(desc)}">`,
     `<meta name="twitter:image" content="${ogImage}">`,
@@ -425,7 +446,7 @@ app.get("/s", (c) => {
   c.header("Cache-Control", "public, max-age=300");
   const host = (c.req.header("host") || "").toLowerCase();
   const brand = resolveBrand(host, c.req.query("brand"));
-  const q = { store: c.req.query("store") || "", cat: c.req.query("cat") || "", v: c.req.query("v") || "in" };
+  const q = { store: c.req.query("store") || "", cat: c.req.query("cat") || "", v: c.req.query("v") || "in", k: c.req.query("k") || "", n: c.req.query("n") || "", i: c.req.query("i") || "" };
   return c.html(renderShare(brand, host, q, peekOk(c.req.query("peek"), getCookie(c, "peek"))));
 });
 
@@ -564,7 +585,7 @@ const rootHandler = (c: Context) => {
   const consumer = config.staging.on
     ? (!(host.startsWith("caller.") || host.startsWith("admin.")) || !!override)
     : (host.startsWith("runner.") || brand.key !== "runner" || !!override);
-  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "", peekOk(c.req.query("peek"), getCookie(c, "peek"))) : withAnalytics(page("app.html")));
+  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "", peekOk(c.req.query("peek"), getCookie(c, "peek")), !!c.req.query("ref")) : withAnalytics(page("app.html")));
 };
 app.get("/", rootHandler);
 // Clean admin deep-links (/feedback, /trees, …): one STATIC route per admin section, all serving the same
@@ -579,7 +600,7 @@ for (const slug of ["pokemon", "onepiece", "toppsbasketball", "needoh"]) {
   app.get(`/${slug}`, (c) => {
     c.header("Cache-Control", "no-cache"); // see "/" — bfcache-friendly, still always revalidated
     const host = (c.req.header("host") || "").toLowerCase();
-    return c.html(renderRunner(resolveBrand(host, slug), host, "checkit.html", c.req.query("tone") || ""));
+    return c.html(renderRunner(resolveBrand(host, slug), host, "checkit.html", c.req.query("tone") || "", false, !!c.req.query("ref")));
   });
 }
 // Minimal "first-time visitor" preview of the apex homepage — same page; the client (body.peek)
