@@ -11,7 +11,7 @@ The owner opens a chat with **"You are <Name>"** (he dictates by voice — the n
 3. If your `checkpoint.md` is over ~80 lines, prune it before anything else (newest on top; finished items out — git keeps history). Bloated checkpoints are why chats die.
 4. Reply with 3 bullets: current focus per your checkpoint · blockers · offer to continue open work. Then take the owner's task.
 
-Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** (Data Dev) · **Mapper** (Mapping) · **Copper** (Copy — ALL words everywhere, including the book) · **Ringo** (Voice tech — call lanes ABC/Delta/Charlie, recordings, verdicts, cost per call) · **CD** (Design) · **Support** (customer-service agent builder) · **Lexicon** (docs librarian). Plain role words work too.
+Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** (Data Dev) · **Mapper** (Mapping) · **Copper** (Copy — ALL words everywhere, including the book) · **Echo** (Voice tech — call lanes ABC/Delta/Charlie, recordings, verdicts, cost per call) · **CD** (Design) · **Support** (customer-service agent builder) · **Lexicon** (docs librarian). Plain role words work too.
 
 **"You are <Name>" is the OWNER's boot opener only — never yours.** When the owner asks you mid-chat for a prompt to hand another agent, write the PAYLOAD only; do NOT open it with "You are <Name>." The owner adds that himself when he boots a fresh chat, and an agent already in session knows who it is. (Same rule as "Box it" below — it applies to every handoff prompt, boxed or not.)
 
