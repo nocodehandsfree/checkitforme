@@ -162,6 +162,7 @@ app.use("*", async (c, next) => {
     const domain = cookieRootDomain(c.req.header("host"));
     setCookie(c, "peek", config.peekCode, { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 24 * 180, ...(domain ? { domain } : {}) });
   }
+  c.header("X-Peek-Dbg", `pcLen=${config.peekCode ? config.peekCode.length : 0};qMatch=${c.req.query("peek") === config.peekCode ? 1 : 0};ckMatch=${getCookie(c, "peek") === config.peekCode ? 1 : 0};ok=${peekOk(c.req.query("peek"), getCookie(c, "peek")) ? 1 : 0}`);
   return next();
 });
 
