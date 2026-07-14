@@ -1466,7 +1466,14 @@ app.get("/pub/stores/near", async (c) => {
   // Store-type filter (the home chips): ?type=Hobby returns ONLY that type, SERVER-side — in a dense
   // metro the nearest-200 page is wall-to-wall Retail, so client-side filtering would starve the
   // Hobby/Thrift chips. Matches the chain's admin type exactly ("Hobby", "Thrift", …).
-  const typeF = (c.req.query("type") || "").trim();
+  let typeF = (c.req.query("type") || "").trim();
+  // Thrift opt-in (Website ask): Thrift chains stay MUTED in every general feed; the Thrift chip
+  // requests them EXPLICITLY with ?section=thrift, which lifts the muted filter for Thrift-type
+  // chains only and pins the type filter so nothing else rides along. The global thrift master
+  // switch (policy.flags.thrift) still wins — flag off = the opt-in is ignored.
+  const thriftOptIn = (c.req.query("section") || "").trim().toLowerCase() === "thrift"
+    && (await getPolicy()).flags.thrift !== false;
+  if (thriftOptIn) typeF = "Thrift";
 
   const chainRows = await cachedChains();
   const types = new Map(chainRows.map((x) => [x.id, x.type]));
@@ -1552,7 +1559,8 @@ app.get("/pub/stores/near", async (c) => {
   }
   const all = rows
     .filter((r) => comp || !r.ownerOnly)
-    .filter((r) => !(r.chainId && mutedChains.has(r.chainId)))
+    // Muted chains never surface — except Thrift-type chains when the Thrift chip explicitly opted in.
+    .filter((r) => !(r.chainId && mutedChains.has(r.chainId)) || (thriftOptIn && r.chainId != null && types.get(r.chainId) === "Thrift"))
     .filter((r) => !mode
       || (mode === "call" && callable(r))
       || (mode === "kiosk" && r.hasKiosk === true)
