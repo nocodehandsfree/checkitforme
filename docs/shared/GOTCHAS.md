@@ -62,3 +62,11 @@ worse than no comment. Several entries below started as wrong comments.)
   "unclear". The llm() gateway now falls back to a cheap OpenAI model on ANY Gemini failure (llm.ts,
   GEMINI_FALLBACK_MODEL, default gpt-4o-mini) — but the real fix is billing on the Gemini key.
   /api/admin/llm-ping is the quick check; note Cloudflare replaces the app's JSON 502 with its own error page.
+- **Headless Chromium in a Claude session CANNOT reach staging over HTTPS** (`ERR_CONNECTION_RESET`
+  direct AND through the egress proxy — the proxy resets Chromium's TLS ClientHello; curl/Node OpenSSL
+  are fine). Two working recipes (2026-07-14, website lane): (a) tiny Node loopback bridge that relays
+  `http://127.0.0.1:8899/*` → `https://staging.checkitforme.com/*` via fetch, point Chromium at the
+  bridge; (b) better for UI verification: boot `src/server.ts` locally (`STAGING=1`, throwaway
+  `DATABASE_URL=file:...`, `COMP_PHONES=<your test phone>` for gated features, login code `000000`) and
+  Playwright-route-stub `/pub/stores/near` + `/app/zones*` with canned JSON. Staging's DB is NOT
+  network-reachable (libSQL file on the Railway volume) — don't try to point a local server at it.
