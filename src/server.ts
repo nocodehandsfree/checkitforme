@@ -156,13 +156,23 @@ if (config.staging.on) {
 // the query (instant bypass on the magic link) OR the cookie already set. Rotate PEEK_CODE to revoke all.
 const peekOk = (peekQ?: string, peekCookie?: string): boolean =>
   !!config.peekCode && (peekQ === config.peekCode || peekCookie === config.peekCode);
+// Paths that must stay live even while the coming-soon splash is up: assets (incl. the splash's own
+// logos), consumer + admin APIs, telephony webhooks, admin login. Everything else on a consumer host
+// is a page and gets the splash (unless the browser has a valid peek).
+const GATE_SKIP = /^\/(api|pub|app|auth|webhooks|logos|og|fonts|media|sw\.js|manifest|robots|favicon|\.well-known|twiml|nav|tapedeck|bridge|listen|twilio-media|admin-login|admin-logout|health)\b/;
 app.use("*", async (c, next) => {
   const code = c.req.query("peek");
   if (code && config.peekCode && code === config.peekCode) {
     const domain = cookieRootDomain(c.req.header("host"));
     setCookie(c, "peek", config.peekCode, { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 24 * 180, ...(domain ? { domain } : {}) });
   }
-  c.header("X-Peek-Dbg", `pcLen=${config.peekCode ? config.peekCode.length : 0};qMatch=${c.req.query("peek") === config.peekCode ? 1 : 0};ckMatch=${getCookie(c, "peek") === config.peekCode ? 1 : 0};ok=${peekOk(c.req.query("peek"), getCookie(c, "peek")) ? 1 : 0}`);
+  // ONE coming-soon decision point: gate consumer page loads here so the peek bypass is reliable. A
+  // valid ?peek code (instant, on the magic link) or the peek cookie skips it for that browser only.
+  if (config.comingSoon && c.req.method === "GET" && !peekOk(code, getCookie(c, "peek"))) {
+    const host = (c.req.header("host") || "").toLowerCase();
+    const adminHost = host.startsWith("caller.") || host.startsWith("admin.");
+    if (!adminHost && !GATE_SKIP.test(c.req.path)) return c.html(renderComingSoon(host));
+  }
   return next();
 });
 
@@ -304,7 +314,7 @@ body{background:#0C0C12;color:#fff;font-family:Inter,-apple-system,system-ui,san
 
 /** Render the consumer page branded for a vertical micro-site (resolved from the subdomain). */
 function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html", tone = "", peek = false): string {
-  if (config.comingSoon && !peek) return renderComingSoon(host) + `<!--rrpeek=${JSON.stringify(peek)}-->`; // public gate — admin/app.html is never routed here; peek link bypasses
+  void peek; // coming-soon gate now lives in the single middleware above (peek bypass handled there)
   const canonical = `https://${host}/`;
   const plainName = brand.name.replace(/<[^>]+>/g, "");
   const ogImage = `https://${host}/og/${brand.key}.png`;
@@ -361,7 +371,7 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
 // Bots read the dynamic OG title/description (brand image stays static = reliable on every platform);
 // humans see a styled card + a CTA back into the app. Pure string render — no deps, cache-friendly.
 function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Record<string, string>, peek = false): string {
-  if (config.comingSoon && !peek) return renderComingSoon(host); // public gate; peek link bypasses
+  void peek; // coming-soon gate now lives in the single middleware above (peek bypass handled there)
   const inStock = (q.v || "in") === "in";
   const store = (q.store || "a local store").slice(0, 80);
   const cat = (q.cat || brand.category || "cards").slice(0, 60);
