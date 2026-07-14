@@ -59,7 +59,9 @@ async function main() {
     billing_reason: "subscription_cycle", customer: "cus_TEST1", amount_paid: 499,
   } } });
   row = (await db.select().from(accounts).where(eq(accounts.clerkUserId, buyer.clerkUserId)))[0];
-  ok(row.quotaCredits === 15, "renewal RESETS quota to Family's 15 (no rollover)");
+  // Derive the expected quota from the live ladder — hardcoding it went stale when the ladder changed.
+  const familyQuota = (await getPlans()).tiers.find((t) => t.key === "family")!.checksPerMonth;
+  ok(row.quotaCredits === familyQuota, `renewal RESETS quota to Family's ${familyQuota} (no rollover)`);
 
   console.log("▶ subscription_create with no mapped price → no-op (hosted path already granted)");
   const beforeCreate = row.credits;
@@ -75,8 +77,12 @@ async function main() {
   ok(row.subscription === "none", "subscription flips off on cancellation");
 
   console.log("▶ embedded Elements: subscription_create invoice sets the tier (no checkout.session)");
-  // Give a tier a price id so the webhook can map invoice → tier.
-  const cfg = await getPlans(); cfg.tiers[1].monthlyPriceId = "price_COLL_M"; await savePlans(cfg);
+  // Give the collector tier a price id so the webhook can map invoice → tier (look it up by key —
+  // indexing tiers[1] broke silently when the ladder was reordered).
+  const cfg = await getPlans();
+  const coll = cfg.tiers.find((t) => t.key === "collector")!;
+  coll.monthlyPriceId = "price_COLL_M"; await savePlans(cfg);
+  const collQuota = coll.checksPerMonth;
   const el = await getAccountByPhone("+13105550777");
   await db.update(accounts).set({ stripeCustomerId: "cus_EL1" }).where(eq(accounts.clerkUserId, el.clerkUserId));
   await handleStripeEvent({ type: "invoice.paid", data: { object: {
@@ -84,7 +90,19 @@ async function main() {
     lines: { data: [{ price: { id: "price_COLL_M" } }] },
   } } });
   let er = (await db.select().from(accounts).where(eq(accounts.clerkUserId, el.clerkUserId)))[0];
-  ok(er.subscription === "active" && er.subTier === "collector" && er.quotaCredits === 30, "Elements first invoice → active Collector w/ 30 quota");
+  ok(er.subscription === "active" && er.subTier === "collector" && er.quotaCredits === collQuota, `Elements first invoice → active Collector w/ ${collQuota} quota`);
+
+  console.log("▶ embedded Elements: NEW Stripe payload shape (pricing.price_details.price) also maps the tier");
+  // Stripe API ≥2025 (e.g. 2026-05-27.dahlia) drops line.price — the id lives at
+  // line.pricing.price_details.price. Live staging events carry THIS shape.
+  const el2 = await getAccountByPhone("+13105550778");
+  await db.update(accounts).set({ stripeCustomerId: "cus_EL2" }).where(eq(accounts.clerkUserId, el2.clerkUserId));
+  await handleStripeEvent({ type: "invoice.paid", data: { object: {
+    billing_reason: "subscription_create", customer: "cus_EL2", amount_paid: 999,
+    lines: { data: [{ pricing: { price_details: { price: "price_COLL_M", product: "prod_X" } }, type: "price_details" }] },
+  } } });
+  const er2 = (await db.select().from(accounts).where(eq(accounts.clerkUserId, el2.clerkUserId)))[0];
+  ok(er2.subscription === "active" && er2.subTier === "collector" && er2.quotaCredits === collQuota, `new-shape invoice.paid → active Collector w/ ${collQuota} quota`);
 
   console.log("▶ embedded Elements: PAYG payment_intent.succeeded grants once (idempotent)");
   const beforePayg = er.credits;

@@ -13,3 +13,7 @@ loops/site-redesign/render/
 # QA-suite screenshot output (scripts/qa-*.mjs regenerate these on every test-all run) — not source.
 # The tracked copies were deliberately dropped twice (eab62dc, c686b4f); keep them out for good.
 loops/site-redesign/proofs/
+
+# Playwright launch-gate artifacts
+test-results/
+playwright-report/
