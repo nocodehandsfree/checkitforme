@@ -36,6 +36,7 @@ const TOKENS = new Set([
   "#1D1D22","#26262B","#2D2D34","#27272D","#2E2E35","#25252B","#31313A","#28282E","#1B1B20",
   "#17171C","#20202A","#23232A","#1F1F25","#34343D","#23232B","#08090D","#26251E","#141419",
   "#2F2F36", // R2/R3 comp: modal ✕-circle gradient top (key raised ON the #26262B card)
+  "#2C8E57","#20693F","#8CF7B4","#3E3E46","#7A7A86", // 3C/4A My-checks header comp (owner 07-11, docs/specs/mychecks-header): muted green wash gradient · watermark mint · grabber pill · foot Sign-out grey
   "#D9D9E0","#F4F4F6","#0B0B0F", // RN2 comp: paste-message text · driver pay key fill/text
   "#4ADE80","#4CF286","#5BEA93","#19B145","#0B5A2C","#34C268","#06210F","#0C2916","#26262C",
   "#F5B301","#FF8080","#9CA3AF", // verdict-tone dots/stats (soon amber · out soft-red · unclear grey — owner: unclear must not read as restock yellow)
