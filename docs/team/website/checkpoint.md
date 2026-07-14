@@ -6,16 +6,24 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash), **I own view/mode/nav** —
 > don't blind-edit the tint, it's fragile.
 
-## ✅ Just shipped (07-12)
-- **PROD is coming-soon.** `COMING_SOON=1` env (prod svc) → `renderComingSoon` splash (Check wordmark +
-  "Find insanely hard to get products on the shelves at retail prices." + 4 product icons) replaces ALL
-  public HTML (renderRunner + renderShare). Admin/API/assets untouched. Flip `COMING_SOON=0` on prod to
-  re-open. Verified live: apex+brands gated, caller.* admin still loads. Copy tweak: "shelfs"→"shelves",
-  capitalized "Find" (flagged to owner). English only — Spanish pending owner call.
-- **Check history + My Zones = real bottom slide-ups** (owner rejected the full-page-view version twice).
-  `#zones` fixed z4300 translateY(100→0) via `.up`; history via `body.histsheet #result` + `.hup`. Slide
-  UP over My checks, slide DOWN returns to My checks (openAccount under). zShow/backFromZones/openHistory/
-  closeHistory wired; `#zmenuOv` bumped z4600. Verified logged-in on staging (mid-frames caught sliding).
+## ✅ Just shipped (07-13)
+- **PROD is coming-soon (LIVE).** `COMING_SOON=1` on the PROD Railway svc → `renderComingSoon` splash
+  (Check wordmark + "Find insanely hard to get products on the shelves at retail prices." + 4 product
+  icons + "COMING SOON" pinned at the bottom) replaces ALL public HTML (renderRunner + renderShare).
+  Admin/API/assets untouched. **To re-open the site: set `COMING_SOON=0` on prod svc `d363a982…`.**
+  Code = `config.comingSoon` + `renderComingSoon()` in src/server.ts. Copy: fixed "shelfs"→"shelves",
+  cap "Find". English only — Spanish still pending owner call.
+- **Check history + My Zones = real `.overlay/.modal` bottom sheets** — the SAME recipe as Add store /
+  My checks (owner rejected full-page views AND a CSS-hack sheet before this). `#zones` + `#histOverlay`
+  are `.overlay`; content renders into `#zmodal` / `#histmodal` (persistent modal so sheetUpV2 doesn't
+  replay on internal nav). In the v2 sheet CSS group (flex-end, 88vh fixed, rounded top, drag handle,
+  sheetUpV2). `sheetDrag()` drags them down; backdrop tap / browser-back close them; return to My checks
+  via acctReturn/openAccount. Zones renders retarget `#zmodal`; `zHideAll` no longer hides bg views (so
+  the site shows dimmed behind, like Add store). Header is clean/transparent — no gray gradient bar, no
+  credits pill (read as a duplicate My checks header), no top-level back button. Verified logged-in on
+  staging (geometry top≈101/88vh, no JS errors, build-view list scrolls + basket visible).
+- **OPEN owner questions:** (1) build/report sub-screen still has a small ‹ back-to-list button — keep or
+  kill? (2) the **new My checks header** Design comp (5ee11aa) is NOT built into the live site yet — build it?
 
 ## ⏳ OPEN — needs owner / other lanes
 - **Promote the 07-09→07-11 staging batch to prod** once owner signs off (staging carries many lanes'
