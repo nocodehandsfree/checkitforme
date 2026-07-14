@@ -3,7 +3,14 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 2026-07-13 — ADMIN DATA-DISPLAY REDESIGN (Addie) — 13/22 pages live on Admin
+## 2026-07-13 — ADMIN DATA-DISPLAY REDESIGN (Addie) — merged to STAGING (63ebbb1), Admin awaits promote
+
+**Owner's 4-screenshot pass (all fixed + on staging):** emoji stripped app-wide (lucide/brandmark only) ·
+Alerts rollup/sends aligned as replines + label case unified · Policy pricing now MIRRORS Plans read-only
+(legacy membership fields removed from UI; ROI calc plans hydrate from /api/admin/plans) · logoTile reads
+storeType + any non-chain without logo art gets the website's hobby storefront icon.
+**⚠️ Admin (prod) still shows the OLD design until a promote — owner's word needed. Riding along: the
+website's zones/history bottom sheets, peek-door splash link, voice-lane docs (~24 commits).**
 
 ### ⚖️ OWNER RULING 07-13 (supersedes comp 1b where they differ) — THE design bar
 First comp-faithful dash was REJECTED (didn't follow the comp as a whole screen; comp itself too flat).
