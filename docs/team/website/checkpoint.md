@@ -6,51 +6,35 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash), **I own view/mode/nav** —
 > don't blind-edit the tint, it's fragile.
 
-## ✅ Shipped (07-14 pm, batch 2 — PR #12 merged to staging, deploy verified)
-1. **My checks header = approved 3C/4A comp** (docs/specs/mychecks-header): muted green wash, watermark
-   check top-right, MY CHECKS eyebrow, phone 26/900 + email under, Sign out now a grey underlined link
-   at the FOOT below RUN A CHECK (free + member overviews), plan pill gone → plan reads under Manage
-   plan ('Unlimited · billed monthly', +es). Sheet+grabber = #1D1D22. qa-design allowlist +5 comp tokens.
-2. **"Solid top/bottom" while sheets open:** zones/history/zone-dialog sheets were missing from the
-   root-tint `:has()` rules (root stayed #1D1D22 while the page dimmed → slabs behind iOS chrome). Now
-   in the same rule as acct/buy/page. NB the bare-page root #1D1D22 is CORRECT (v2 --bg) — do NOT set
-   #0C0C12 there; the design-lane "root stays #0C0C12" note refers to the sheet-open/dim state.
-   NOT verified on a real iPhone (headless can't show iOS chrome) — owner to eyeball.
-3. **New-zone button crushed to a sliver** with 2+ zone cards: `.zf-scroll` flex-column children were
-   shrinking → `#zones .zf-scroll>*{flex:0 0 auto}`. Verified locally with the owner's exact 2-zone
-   scenario (56px again); staging zones list needs a Check+ account so re-check there is owner's tap.
-4. **Add store:** dropped 'Tell us which store to add.' — line now leads with the free-check incentive
-   (en+es). Verified live on staging.
+## ✅ Shipped (07-14 late, batch 4 — PR #15 merged, staging deploy verified)
+Owner-approved share overhaul + chat fixes + fast checks:
+1. **Three share surfaces, one approved voice** (en+es, reward stays Admin-dynamic): refer (ONE
+   message, replaces 3 divergent strings), check result ("…An AI called the store for me. Check it:"),
+   zone results ("Just had an AI call {n} stores at once…"). 7 unfurl cards in public/og/ (refer,
+   zone, find×5 brands; brandmark + Inter, 1200×630). /s?k=zone landing carries live counts in og:title.
+2. **Splash-proof sharing:** /s joined GATE_SKIP; the coming-soon page carries og tags (refer card on
+   ?ref) so previews unfurl even gated. Verified in COMING_SOON=1 mode locally + live tags on staging.
+3. **Chat:** launcher flips to a CLOSE tab when chat opens (same thumb spot, lifted above the composer);
+   closeSupport pokes iOS to repaint chrome (keyboard blur + same-color root re-assert + 1px scroll).
+   iPhone chrome repaint NOT verifiable headless — owner to eyeball.
+4. **Deep-linked checks:** html.restoring hides the homepage from the FIRST frame + /pub/result
+   prefetch fires during the HTML parse (restoreCall consumes it). 6× CPU throttle: zero homepage
+   frames, fetch at +239ms, straight into the result.
+FLAG: og:image URLs ride the INTERNAL railway host (c.req header behind the proxy) — pre-existing on
+every og tag, previews still load; a public-host constant would be cleaner (DevOps/next pass).
+NB (07-14): the session container rolled back once mid-day — pushed work survived on origin; only
+uncommitted work needed replaying. Push early, push often.
 
-## ✅ Shipped (07-14 am, batch 1 — PR #11) — My Zones: comp-vs-page list, all fixed + verified headless (390×844 iPhone)
-Method: comp screenshotted (MY_ZONES_COMP.dc.html) → measured page → fixed the diff list one at a time,
-re-screenshotting each. Staging site is splash-gated (blocker below) so verification ran on a LOCAL
-server at the same commit + stubbed store data; geometry + screenshots per fix.
-1. **Store cut off (owner screenshot) FIXED:** `.zlist` kept its own `overflow-y:auto` scroll window from
-   the old layout; the basket pad on `.zf-scroll` squeezed it to ~251px and rows CHOPPED at its edge while
-   `.zf-scroll` itself never scrolled (sh==ch). Now ONE scroller (`#zones .zf-scroll .zlist{max-height:
-   none;overflow-y:visible}`) — verified: last row scrolls fully clear of the basket (row b=594 < basket
-   t=612).
-2. **Support bubble over SAVE ZONE FIXED:** `.suplaunch` (z82 root context) paints over the sheet
-   (overlay z4000 is trapped in MAIN's stacking context). Hidden under `body.zoning` + `#histOverlay.on`
-   (guide §5.17). Verified display:none both cases.
-3. **Radius row rebuilt to comp:** carved capsule track, keys flex inside, `mi` in-track, selected key =
-   raised + muted-yellow 1.5px ring + yellow number (§8: no green selection next to green Add-all).
-4. **Zone dialogs = bottom sheets (comp screens 3–4):** zPop (actions menu / rename / delete / check
-   confirm) was a centered pop-up → now slides from the bottom edge, grab handle, drag-down dismiss
-   (sheetDrag bound on create). Confirm CTA = yellow ring capsule like CHECK THIS ZONE (comp).
-5. **"Edit stores" added to the zone actions menu** (comp had it; `zoneEdit()` existed but was
-   unreachable). ES `'zones.editstores':'Editar tiendas'` same commit.
-6. **Sheets 88vh→88dvh** (zones+history): visible-viewport height so the basket clears iOS Safari's
-   toolbar; vh kept as fallback.
-Comp items NOT built (superseded — do not re-introduce): name-text basket chips (owner 07-11: logos
-only), "N checks · $" in basket/confirm (guide: no price/check-count anywhere in zone flow).
-Flags found, not chased: run-report rows use emoji ✅❌📞 (guide §8 bans emoji — needs an owner call /
-icon-set pass) · qa-design "off-system colors" fails on 12 LEGACY tokens (fails identically on HEAD
-before my diff; mine removed one offender). Playwright-vs-proxy trap + local-verify recipe → GOTCHAS.
-**BLOCKER for owner:** staging svc has `COMING_SOON=1` → staging.checkitforme.com shows the coming-soon
-splash, so nothing can be reviewed there. I'm blocked from flipping service vars in this session
-(permission wall). Owner: set COMING_SOON=0 on the staging svc (8165df7a…) or tell DevOps.
+## ✅ Shipped (07-14, batches 1–3 — PRs #11 #12 #13, all merged + deploy-verified)
+My Zones/checks slide-up overhaul against MY_ZONES_COMP + §5.17, the approved 3C/4A My-checks header,
+and fixes the owner screenshot-reported. Full detail = the PR bodies + commits; headline list:
+zones one-scroller (store cut-off), support bubble hidden in zones/history, comp radius track
+(yellow ring), zone dialogs as bottom sheets + Edit stores (+es), 88dvh sheets, 3C/4A header
+(watermark corner-pinned after a .wm class collision), root-tint :has() for zones/history/zmenu,
+New-zone unsquash (`#zones .zf-scroll>*{flex:0 0 auto}`), Add store copy trim (+es).
+Do NOT re-introduce: name-text basket chips, price/check-count in zone flow, green radius selection.
+Flags: run-report emoji ✅❌ vs §8 (owner call pending) · qa-design fails on 12 LEGACY tokens (pre-
+existing; my comp tokens are allowlisted).
 
 ## ✅ Just shipped (07-13)
 - **PROD is coming-soon (LIVE).** `COMING_SOON=1` on the PROD Railway svc → `renderComingSoon` splash
