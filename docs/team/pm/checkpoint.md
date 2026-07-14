@@ -3,6 +3,20 @@
 > promotes to prod on the owner's word, and keeps the owner focused on the one thing that matters.
 > Talk to the owner like a friend, plain words, no jargon (he reads on a phone). Newest on top.
 
+## 🔴 FIRST JOB — untangle prod, then ONE clean promote (2026-07-14 14:xx)
+Prod is in a half-state and needs a careful hand BEFORE the card test:
+- Prod is RUNNING commit `4f9427c` (has peek — peek link works, owner confirmed live).
+- BUT `main` branch tip reads `c99e402` (older, no peek) and prod≠main. Pops pushed peek
+  straight to prod out-of-band, so prod and the main branch don't match.
+- `staging` (03a05ed) is 64 ahead of main and carries the LATEST website + admin redesign + zones + peek.
+- Owner wants Admin live on prod. Do NOT let Addie or Pops "push their piece" — there is ONE promote,
+  it ships the whole staging branch. Everyone pushing pieces is what tangled prod.
+- YOUR job: reconcile main to what prod is actually running, then do ONE clean staging→main promote,
+  watch Railway deploy it, verify /api/health matches the new commit AND the peek link still works.
+  Check CI first (was red on: off-brand colors = Webbie's, gitleaks = Pops's dead tokens — neither
+  breaks the site, but tell the owner before shipping red). Revert is one command if it goes wrong.
+- After that promote: prod = latest everything, peek works, and the owner runs the card test.
+
 ## THE ONE THING (say it every time until done)
 - **Live card purchase test on prod.** Fresh customer → free check → upgrade → real credit card.
   It's the last launch gate. Blocked only until the peek door reaches prod (see below).
