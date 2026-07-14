@@ -1864,7 +1864,7 @@ html[data-skin="v2"] #authOverlay .x::before{display:none}
    No Sign out up here (foot of the sheet) and no plan pill (plan reads under Manage plan). */
 html[data-skin="v2"] #acctOverlay .modal{background:#1D1D22} /* comp: whole sheet incl. grabber zone = section grey, not black */
 html[data-skin="v2"] .acctv2head .wash{position:relative;overflow:hidden;background:linear-gradient(180deg,#2C8E57 0%,#20693F 100%);padding:20px 20px 54px}
-html[data-skin="v2"] .acctv2head .wash .wm{position:absolute;top:-42px;right:-46px;opacity:.16}
+html[data-skin="v2"] .acctv2head .wash .acwm{position:absolute;top:-42px;right:-46px;width:180px;height:180px;opacity:.16} /* NOT .wm — a legacy .wm{width:100%} rule grabs that name and re-centers the mark (owner 07-14: corner was off) */
 html[data-skin="v2"] .acctv2head .stats{margin:-40px 18px 0;display:flex;gap:10px;position:relative;z-index:2}
 html[data-skin="v2"] .acctv2head .stat2,html[data-skin="v2"] #paid_stats .stat2{flex:1;background:linear-gradient(180deg,#31313A 0%,#26262B 100%);border-radius:16px;padding:14px 0;text-align:center;box-shadow:0 14px 26px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.1)}
 html[data-skin="v2"] .acctv2head .stat2 b,html[data-skin="v2"] #paid_stats .stat2 b{font-size:24px;font-weight:800;display:block}
@@ -3708,7 +3708,7 @@ function openAccount(fromPop){
     // MY CHECKS eyebrow, phone leads big with the email beneath. Sign out lives at the sheet FOOT and
     // the plan reads under Manage plan — neither renders up here anymore.
     head.innerHTML=`<div style="display:flex;justify-content:center;align-items:flex-end;height:46px;padding-bottom:8px;background:#1D1D22"><span style="width:40px;height:5px;border-radius:999px;background:#3E3E46"></span></div><div class="wash">
-        <svg class="wm" width="180" height="180" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#8CF7B4"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#20693F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg class="acwm" width="180" height="180" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#8CF7B4"/><path d="M6.5 12.4 L10.3 16 L17.5 8" stroke="#20693F" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <div style="position:relative"><span style="font-size:10.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.8)">${t('acct.checks','My checks')}</span></div>
         <div style="position:relative;margin-top:16px">
           <div style="display:flex;align-items:center;gap:10px"><span style="font-size:26px;font-weight:900;letter-spacing:-1px;color:#fff;white-space:nowrap">${esc(idn.primary)}</span><button onclick="editPhone()" aria-label="Change number" style="background:none;border:0;padding:2px;cursor:pointer;display:inline-flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div>
