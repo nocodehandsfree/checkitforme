@@ -33,29 +33,13 @@
   Zones backend + GET /pub/store/:id were ALREADY shipped — both checkpoint asks were stale.
   Rotation list written (rotation-list.md); handoff stubs already deleted (Lexicon).
 
-## ✅ 2026-07-11 late — big batch LIVE on prod main 25be309, all green
-- **Full staging→main merge landed on prod** (another session pushed it, not a pinned promote). Prod =
-  25be309, healthy across all 4 brand sites + stores API + plans + admin + webhook (400 on bad sig).
-  Carried the whole team's staging work (Zones rebuild, Support Messenger v3, Delta audio+Groq, footer/
-  Guide/Help, design comps, my nav+logo + delete-endpoint). Owner briefed: nothing broke, nothing lost,
-  NO rollback (rollback would pull live team work off prod). Next controlled push waits till team checks
-  in — **6 commits on staging ahead of main** right now, captured, safe.
-- **Nav+logo hardening (mine, LIVE + verified on prod):** independents/co-ops default DIRECT via curated
-  `DIRECT_DEFAULT_CHAINS` + `isDirectDefaultChain` (import-data.ts) applied at chain-insert in both import
-  paths; `backfillDirectChains` enforces on boot AFTER backfillChainTypes AND after any `chains` table-load
-  (the prod→staging mirror is a runtime action — boot alone wouldn't re-fix it). Verified on prod: Ace +
-  Goodwill/Salvation Army/Unique/Independent Card Shop/Comic Book Shop all ringsDirect=true, tree nulled →
-  silent-agent bug dead. Logo resolver: dropped the fuzzy stem-in-name fallback (footgun; 0 stores rode it),
-  explicit-only now (DB logoUrl → exact slug). Both from DD findings `docs/specs/{logo-resolver-hardening,
-  independent-direct-nav}`. Mapper fixes 6feff66 (no-downgrade) + 52d2c77 (skip rings-direct) also live.
-- **Account delete/reset — SHIPPED + owner-facing:** `POST /api/admin/users/:id/delete` (?dry=1 preview;
-  wipes account + checks/schedules/alerts/zones/requests/watches, cancels live Stripe sub) + **Reset account
-  button** in admin Users panel. Used it to wipe `phone:+14243126356` to a blank slate for owner's signup→
-  free-call→upgrade→pay test. Backend 428c6a6, button 598a16a.
-- **GitHub write MCP connector LIVE:** Railway svc `github-mcp` (node:22 + supergateway wrapping the
-  reference server), URL `https://github-mcp-production-3726.up.railway.app/mcp` (path IS the credential).
-  Owner-owned PAT (repo write) in svc var. Verified: real commit landed on staging + reverted. For Design
-  chats to write to the repo. **PAT + URL onto the rotate-at-launch list** (PAT was pasted in chat).
+## ✅ 2026-07-11 — big batch LIVE on prod main 25be309, all green (detail in git history)
+- Full staging→main merge on prod (whole team's work; no rollback needed). Nav+logo hardening
+  verified live (independents ring DIRECT, silent-agent bug dead; logo resolver explicit-only).
+- Account delete/reset shipped (`POST /api/admin/users/:id/delete` + admin Reset button); the 424
+  number is wiped to a blank slate for the owner's signup→pay test.
+- GitHub write MCP connector live for Design chats (Railway svc `github-mcp`; PAT + URL are on the
+  rotation list — both were pasted in chat).
 
 ## Launch queue leftovers (repo migration / Stripe live / store-sync / PostHog+Helicone all DONE — git history)
 - ⏳ **Owner still owes the real-card test** on checkitforme.com (424 number wiped to blank slate for it).
