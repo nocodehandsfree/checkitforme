@@ -3799,6 +3799,78 @@ app.get("/api/admin/users", async (c) => {
     };
   }));
 });
+// Per-customer detail view (docs/specs/admin-user-view.md): everything one account is set up
+// with, in one call — identity/plan/entitlements/credits, their zones + schedules, last 20 checks.
+app.get("/api/admin/users/:id", async (c) => {
+  const id = decodeURIComponent(c.req.param("id"));
+  const a = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
+  if (!a) return c.json({ error: "not_found" }, 404);
+  const comp = isComp(a.email) || isCompAccount(a);
+  const staff = comp || (await staffAccountIds()).has(a.clerkUserId);
+  const features = await accountFeatures(a.subTier, comp);
+  const tier = a.subTier ? (await getPlans()).tiers.find((t) => t.key === a.subTier) ?? null : null;
+
+  const zs = await db.select().from(zones).where(eq(zones.ownerUserId, id));
+  const zoneLinks = zs.length ? await db.select().from(zoneRetailers).where(inArray(zoneRetailers.zoneId, zs.map((z) => z.id))) : [];
+  const lastRunByZone = new Map<number, number>();
+  if (zs.length) {
+    for (const z of zs) {
+      const last = (await db.select().from(callResults).where(like(callResults.zoneRunId, `z${z.id}-%`)).orderBy(desc(callResults.startedAt)).limit(1))[0];
+      if (last?.startedAt) lastRunByZone.set(z.id, last.startedAt);
+    }
+  }
+  const scheds = (await db.select().from(customerSchedules).where(eq(customerSchedules.finderUserId, id))).filter((s) => s.active);
+  const recent = await db.select().from(callResults).where(eq(callResults.finderUserId, id)).orderBy(desc(callResults.startedAt)).limit(20);
+  const stores = await retailerMap();
+  const cats = new Map((await db.select().from(categories)).map((x) => [x.id, x.label]));
+  const DOWS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  return c.json({
+    id: a.clerkUserId,
+    phone: a.phone || (a.clerkUserId.startsWith("phone:") ? a.clerkUserId.slice(6) : null),
+    email: a.email || null,
+    createdAt: a.createdAt, comp, staff,
+    subscription: {
+      status: comp ? "active" : (a.subscription ?? "none"),
+      tier: comp ? "founder" : (a.subTier ?? null),
+      tierName: comp ? "Founder" : (tier?.name ?? null),
+      priceCents: tier?.monthlyCents ?? null,
+      renewsAt: a.subRenewsAt || null,
+    },
+    entitlements: features,
+    credits: {
+      quota: comp ? 9999 : (a.quotaCredits ?? 0),
+      payg: comp ? 9999 : (a.credits ?? 0),
+      total: comp ? 9999 : spendableCredits(a),
+      checksMade: a.callsMade ?? 0,
+      lifetimeSpendCents: a.totalSpentCents ?? 0,
+    },
+    zones: zs.map((z) => ({ id: z.id, name: z.name, stores: zoneLinks.filter((l) => l.zoneId === z.id).length, lastRun: lastRunByZone.get(z.id) ?? null })),
+    schedules: scheds.map((s) => ({
+      id: s.id,
+      target: (stores.get(s.retailerId)?.name || "A store").split("—")[0].trim(),
+      category: cats.get(s.categoryId) || "cards",
+      days: (s.daysOfWeek || "").split(",").filter(Boolean).map((d) => DOWS[Number(d)] ?? d).join(", ") || "shipment day",
+      time: s.timeLocal || "10:00",
+    })),
+    recentChecks: recent.map((r) => ({
+      cid: r.providerCallId, store: stores.get(r.retailerId)?.name || "A store",
+      category: cats.get(r.categoryId) || "cards", status: r.status, statusKey: r.statusKey, at: r.startedAt,
+    })),
+  });
+});
+// Grant free checks to an account (support/ops action from the detail panel).
+app.post("/api/admin/users/:id/grant", async (c) => {
+  const id = decodeURIComponent(c.req.param("id"));
+  const { checks } = await c.req.json().catch(() => ({}));
+  const n = Math.round(Number(checks));
+  if (!n || n < 1 || n > 1000) return c.json({ error: "checks must be 1-1000" }, 400);
+  const a = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
+  if (!a) return c.json({ error: "not_found" }, 404);
+  await grantCredits(id, n, 0);
+  const after = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
+  return c.json({ ok: true, granted: n, credits: after?.credits ?? null });
+});
 // Flag / unflag an account as admin/test (won't count as a customer).
 app.post("/api/admin/users/staff", async (c) => {
   const { id, on } = await c.req.json().catch(() => ({}));
