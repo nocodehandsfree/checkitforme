@@ -23,14 +23,14 @@ from the owner's standalone export; opens in a browser). Everything below built 
   open), Policy flag tooltips → gray lines, page title token 20px/800 board-wide.
 - **Verified:** all 22 pages rendered @390 (3 contact sheets), 7 interactive flows green (call/wf/status/
   gtm-add/map sheets, designer stepper, chains rows), 0 page errors, tsc 0.
-**⚠️ Admin (prod) shows the OLD design until a promote — owner's word needed.**
+**⚠️ PROMOTE = POPS' JOB (owner 07-14): Pops promotes everything once Webbie finishes; owner tests the
+redesign ON PRODUCTION after that and brings feedback back to this lane. Do NOT run promote.sh from here.**
 
 **Owner's 4-screenshot pass (all fixed + on staging):** emoji stripped app-wide (lucide/brandmark only) ·
 Alerts rollup/sends aligned as replines + label case unified · Policy pricing now MIRRORS Plans read-only
 (legacy membership fields removed from UI; ROI calc plans hydrate from /api/admin/plans) · logoTile reads
 storeType + any non-chain without logo art gets the website's hobby storefront icon.
-**⚠️ Admin (prod) still shows the OLD design until a promote — owner's word needed. Riding along: the
-website's zones/history bottom sheets, peek-door splash link, voice-lane docs (~24 commits).**
+
 
 ### ⚖️ OWNER RULING 07-13 (supersedes comp 1b where they differ) — THE design bar
 First comp-faithful dash was REJECTED (didn't follow the comp as a whole screen; comp itself too flat).
