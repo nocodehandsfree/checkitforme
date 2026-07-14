@@ -26,7 +26,15 @@ const FIX = {
   '/api/voices': { voices:[{id:'v1',name:'Sam',cloned:true},{id:'v2',name:'Dana',cloned:true},{id:'v3',name:'Branson',cloned:true}], active:'v1' },
   '/api/admin/workflow-assignments': { 'Direct Dana': { chains:[{name:'Target'},{name:'GameStop'}], stores:[] }, 'Hobby Shop Casual': { chains:[], stores:[{name:'Hobby Planet',location:'Glendale'}] } },
   '/api/categories': [ {id:1,label:'Pokémon'}, {id:2,label:'One Piece TCG'}, {id:3,label:'Topps NBA'} ],
-  '/api/chains': [],
+  '/api/chains': [
+    { id:1, name:'Academy Sports', tier:5, navStatus:'locked', stores:{n:42}, type:'Big box' },
+    { id:2, name:'Ace Hardware', tier:4, navStatus:'locked', stores:{n:63}, type:'Hardware' },
+    { id:3, name:'CVS Pharmacy', tier:5, navStatus:'locked', stores:{n:51}, logoUrl:'/logos/brand/check-icon.png', type:'Pharmacy' },
+    { id:4, name:'Aldi', tier:3, navStatus:'locked', stores:{n:118}, type:'Grocery' },
+    { id:5, name:'Acme Markets', tier:null, navStatus:null, muted:true, stores:{n:12}, type:'Grocery' },
+    { id:6, name:"Gelson's Market", tier:null, navStatus:null, stores:{n:27}, type:'Grocery' },
+    { id:7, name:'Walmart', tier:2, navStatus:'locked', stores:{n:204}, type:'Big box' },
+  ],
   '/api/admin/plans': { tiers:[
     {key:'family',name:'Family',monthlyCents:499,checksPerMonth:20},
     {key:'collector',name:'Collector',monthlyCents:999,checksPerMonth:50},
