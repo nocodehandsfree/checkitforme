@@ -4750,6 +4750,15 @@ app.get("/app/alerts/me", async (c) => {
   if (!u) return c.json({ error: "unauthorized" }, 401);
   return c.json(await myAlerts(u.id));
 });
+// Turn one alert off (the My Checks alerts sheet). Only the caller's own subscriptions.
+app.post("/app/alerts/unsubscribe", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const { id } = await c.req.json().catch(() => ({}));
+  if (!id) return c.json({ error: "id required" }, 400);
+  await db.update(alertSubscriptions).set({ active: 0 }).where(and(eq(alertSubscriptions.id, Number(id)), eq(alertSubscriptions.userId, u.id)));
+  return c.json(await myAlerts(u.id));
+});
 
 // ---- Admin: editable alert message templates + the send log (tracking) ----
 app.get("/api/alerts/templates", async (c) => c.json(await getAlertTemplatesPublic()));
