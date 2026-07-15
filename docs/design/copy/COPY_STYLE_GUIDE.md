@@ -63,11 +63,13 @@ Jargon with no plain gloss: IVR · DTMF · E.164 · COGS · MRR.
 ---
 
 ## Status verdicts (how the call went)
-- **Title + 2 lines max.** First line short (never wraps to a 3rd).
-- Each sentence on its own line.
-- Tokens fill live and bold: `{store}` `{product}` `{category}` `{day}`.
-- **Color = meaning:** green go · red no-go · amber unclear · gray neutral.
+Two parts, and they are NOT interchangeable:
+- **Headline** (the big verdict line, `.rtitle2`) — the **biggest text on the whole page**. Because it's this large, it carries the verdict alone in **1 to 3 words** and **must never wrap** on a phone. `In stock.` · `Not in stock.` · `Couldn't tell.` · `No answer.` · `Restock incoming.`
+- **Subhead** (the smaller line under it, `.rsub`) — one friend-voice line of detail. **One sentence, two lines max**, never a third. Tokens fill live and bold: `{store}` `{product}` `{category}` `{day}`.
+- **Color = meaning:** green go · red no-go · amber unclear · gray neutral. The headline itself takes the verdict's tone color.
 - **A green shield = "no charge."** Don't write the words.
+
+*Sizes/weights for the headline and subhead live in `STYLE_GUIDE.md §3` (Design's lane) — this doc owns only the words. The headline was enlarged on 2026-07-15, so keep it shorter than ever: if it could ever run to two lines, cut it.*
 
 ## Color = instruction
 The eye should read the state before the brain reads the words. Lean on green / red / amber and icons so a glance tells the story. Prefer an image to a sentence.
