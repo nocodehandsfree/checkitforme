@@ -57,7 +57,7 @@
   header{padding:20px 20px 12px;display:flex;align-items:center;gap:9px}
   header .hmark{display:flex;align-items:center;gap:9px;flex:0 0 auto;text-decoration:none}
   header .wm{font-size:18px;font-weight:900;letter-spacing:-.4px;color:#fff;margin-left:-13px}
-  header .adm{font-size:9px;font-weight:900;letter-spacing:.08em;color:#8A8A96;background:#1B1B20;border-radius:6px;padding:3px 7px;box-shadow:inset 0 2px 4px rgba(0,0,0,.4)}
+  header .adm{font-size:9px;font-weight:900;letter-spacing:.08em;color:#8A8A96;background:#1B1B20;border-radius:6px;padding:3px 7px;box-shadow:inset 0 2px 4px rgba(0,0,0,.4);position:relative;top:1px;line-height:1} /* optical center against the wordmark's cap height */
   header .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:livepulse 2s ease-in-out infinite}
   @keyframes livepulse{0%,100%{opacity:1}50%{opacity:.4}}
   /* cards lift slightly on hover — same calm depth as the consumer cards */
@@ -92,24 +92,25 @@
   button.act{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;border:none;padding:8px 15px;border-radius:var(--r-btn);font-weight:700;cursor:pointer;font-size:13px;
     box-shadow:0 2px 7px -3px rgba(52,197,107,.40);transition:filter .12s,transform .08s}
   button.act:hover{filter:brightness(1.05)} button.act:active{transform:translateY(1px)}
-  button.ghost{background:var(--surface-1);border:1px solid var(--border-medium);color:var(--text-strong);padding:8px 15px;border-radius:var(--r-btn);cursor:pointer;font-size:13px;font-weight:600;transition:border-color .12s,background .12s}
-  button.ghost:hover{border-color:var(--border-strong);background:var(--surface-2)}
+  /* Secondary action = RAISED key (style guide: no hairline borders — depth separates). */
+  button.ghost{background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:var(--text-strong);padding:9px 15px;border-radius:var(--r-btn);cursor:pointer;font-size:13px;font-weight:700;transition:filter .12s}
+  button.ghost:hover{filter:brightness(1.12)}
   /* action-button rows: align to the RIGHT so the primary tap target sits under your thumb */
   .btnrow{display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
   .btnrow.split{justify-content:space-between}
   /* Inputs are CARVED wells (comp 1f): dark fill + inset shadow, no border. */
   input,textarea{background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);color:#fff;padding:13px 15px;border-radius:14px;font-size:16px;font-weight:500;font-family:inherit;width:100%;max-width:100%}
   input:focus,textarea:focus{outline:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45),0 0 0 2px rgba(74,222,128,.25)}
+  /* Selects are CARVED wells like inputs (comp 1f) — no hairline outline boxes. */
   select{
     -webkit-appearance:none;-moz-appearance:none;appearance:none;
-    background-color:rgba(255,255,255,.04);
+    background-color:var(--terminal);
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234ADE80' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
     background-repeat:no-repeat;background-position:right 14px center;
-    border:1px solid var(--border-medium);color:var(--text-body);padding:12px 36px 12px 15px;border-radius:var(--r-btn);
-    font-size:13px;font-weight:500;font-family:Inter,-apple-system,system-ui,sans-serif;letter-spacing:0;width:100%;max-width:100%;cursor:pointer;transition:border-color .15s,box-shadow .15s;
+    border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);color:var(--text-strong);padding:12px 36px 12px 15px;border-radius:14px;
+    font-size:13px;font-weight:600;font-family:Inter,-apple-system,system-ui,sans-serif;letter-spacing:0;width:100%;max-width:100%;cursor:pointer;transition:box-shadow .15s;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  select:hover{border-color:var(--border-strong)}
-  select:focus{outline:none;border-color:rgba(74,222,128,.30);box-shadow:0 0 0 2px rgba(74,222,128,.10)}
+  select:focus{outline:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45),0 0 0 2px rgba(74,222,128,.25)}
   select option{background:#15151f;color:#e8e8f0;font-weight:500}
   label{display:block;font-size:10px;color:var(--text-tertiary);margin:16px 0 8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
   /* labels that WRAP a control (checkbox/day pill/toggle) keep normal case + size — the uppercase micro-label is for field labels only */
@@ -406,8 +407,9 @@
   .wfmop textarea{flex:1;min-width:0;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;color:rgba(255,255,255,.85);font-family:inherit;font-weight:500;font-size:14px;line-height:1.4;padding:12px 16px;resize:none;overflow:hidden;white-space:pre-wrap;word-break:break-word}
   .wfmop textarea:focus{outline:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45),0 0 0 2px rgba(74,222,128,.25)}
   .wfmop input[type=checkbox]{flex:0 0 auto;margin-top:7px}
-  .wfmop .opdel{flex:0 0 auto;padding:5px 8px;color:var(--muted);margin-top:2px}
-  .wfmop .opdel:hover{color:var(--red)}
+  /* the per-opener remove is a QUIET x, not a raised pill — override the ghost key look */
+  .wfmop .opdel{flex:0 0 auto;padding:5px 8px;color:var(--muted);margin-top:2px;background:transparent;box-shadow:none}
+  .wfmop .opdel:hover{color:var(--red);filter:none}
   .wfmadd{display:flex;gap:7px;align-items:center;margin-top:9px}
   .wfmadd input{flex:1;min-width:0}
   .wfmmeta{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
@@ -929,7 +931,8 @@
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <div class="k-title">Support</div>
       <div style="display:flex;align-items:center;gap:8px">
-        <button class="ghost" style="font-size:12px;padding:6px 11px" onclick="supReindex(this)" data-tip="Re-reads the whole help book into the agent's memory. Do this after Copper updates the book so answers use the latest wording.">Update from the book</button>
+        <!-- "Update from the book" moved OFF this header (owner 07-15: crowded + confusing). supReindex()
+             still works; it re-homes into Copper's book-update flow when that lands. -->
         <div class="k-range" id="sup_rangetrack">
           <button data-r="today" onclick="supSetRange('today')">Today</button>
           <button data-r="7d" class="on" onclick="supSetRange('7d')">7d</button>
@@ -1520,14 +1523,14 @@ async function refreshFbBadge(){
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
   nav.innerHTML=Object.entries(NAV_GROUPS).map(([g,o])=>
-    `<button data-grp="${g}" onclick="showGroup('${g}','${o.tabs[0][0]}')">${ICO(o.ico,14,null,2)}<span style="vertical-align:middle">${esch(o.label)}</span></button>`).join('');
+    `<button data-grp="${g}" onclick="showGroup('${g}','${o.tabs[0][0]}')">${ICO(o.ico,18,null,2)}<span style="vertical-align:middle">${esch(o.label)}</span></button>`).join('');
 }
 function showGroup(g, sectionId){
   const grp=NAV_GROUPS[g]; if(!grp) return; CUR_GROUP=g;
   document.querySelectorAll('#grpnav button').forEach(b=>b.classList.toggle('active',b.dataset.grp===g));
   const sn=document.getElementById('subnav2');
   if(sn){ sn.style.display = grp.tabs.length>1?'flex':'none';
-    sn.innerHTML=grp.tabs.map(t=>`<button data-sec="${t[0]}" onclick="showSection('${t[0]}')">${ICO(t[2],15)}<span style="vertical-align:middle">${esch(t[1])}</span>${t[0]==='feedback'?`<span class="fbbadge" style="display:${FB_OPEN>0?'inline-block':'none'};background:#F4D03F;color:#111;font-size:10px;font-weight:800;border-radius:20px;padding:1px 6px;margin-left:5px">${FB_OPEN>0?FB_OPEN:''}</span>`:''}</button>`).join('');
+    sn.innerHTML=grp.tabs.map(t=>`<button data-sec="${t[0]}" onclick="showSection('${t[0]}')">${ICO(t[2],17)}<span style="vertical-align:middle">${esch(t[1])}</span>${t[0]==='feedback'?`<span class="fbbadge" style="display:${FB_OPEN>0?'inline-block':'none'};background:#F4D03F;color:#111;font-size:10px;font-weight:800;border-radius:20px;padding:1px 6px;margin-left:5px">${FB_OPEN>0?FB_OPEN:''}</span>`:''}</button>`).join('');
     const setFade=()=>sn.classList.toggle('ovf', sn.scrollWidth - sn.scrollLeft > sn.clientWidth + 2); // fade the right edge while tabs are off-screen
     sn.onscroll=setFade; requestAnimationFrame(setFade); }
   if(g==='calls') refreshFbBadge();
@@ -2277,7 +2280,9 @@ async function loadDash(){
   const hn=document.getElementById('d_checks'); if(hn){ hn.textContent=checks; hn.className='hn'+(checks>0?'':' m'); }
   const days=(o&&Array.isArray(o.days))?o.days:null; // [7 daily counts, oldest first] — needs the server update; hide until it lands
   const tr=document.getElementById('d_trend'), sp=document.getElementById('d_spark');
-  if(days&&days.length>=2){
+  // Honest data only (owner law): a week of zeros renders NOTHING — no flat dots, no "0 vs yesterday".
+  const anyActivity=!!(days&&days.some(n=>n>0))||checks>0;
+  if(days&&days.length>=2&&anyActivity){
     const y=days[days.length-2], delta=checks-y;
     if(tr){ tr.style.display='inline-flex'; tr.className='trend'+(delta>=0?'':' dn'); tr.textContent=(delta>=0?'▲ ':'▼ ')+Math.abs(delta)+' vs yesterday'; }
     if(sp){ const mx=Math.max(...days,1); sp.innerHTML=days.map((n,i)=>`<i${i===days.length-1?' class="hi"':''} style="height:${Math.max(7,Math.round(n/mx*100))}%"></i>`).join(''); }
