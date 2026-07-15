@@ -3,6 +3,24 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-15 — ALERT EMAILS ALL BRANDED + DECOUPLED ADMIN SHIP PATH IN USE (Addie)
+- **Admin UI now ships WITHOUT a promote:** commit app.html to staging, then `bash scripts/ship-admin.sh`
+  (Pops built it; prod server has the endpoint). Live now: override @ 0e093ee. Server code still promotes.
+- **Mystery email SOLVED:** "In stock: Fun — Pokémon" to trackalackaalerts@gmail.com = the hands-free
+  OWNER ping (notifyInStock, fires on every confirmed in-stock call), sent to staging's OWNER_EMAIL env
+  var (= trackalackaalerts@gmail.com, ALERT_CHANNEL=email). NOT a second signup. FROM noreply@fungibles.com
+  is ALERT_FROM_EMAIL's default — flagged to owner (changing domain needs Brevo domain verification).
+- **Every alert email now rides the ONE branded template** (19941fa): owner in-stock ping (was hand-rolled
+  "CheckIt" HTML) · restock-watch emails (were unbranded "Runnr"!) · notifyContact fallback rebranded.
+  renderBrandedEmail: {url} deep-links the CTA, empty paragraphs drop.
+- **Restock alerts can ride EMAIL now:** sendAlert channel override, fanoutRestock honors the sub's
+  channel, restock email templates editable in Admin (empty-save guarded against blanking defaults 0e093ee).
+- **Admin test-send covers all types:** welcome / store went live / waitlist / restock email / restock
+  text / owner in-stock ping. VERIFIED: all 5 email types real-sent via staging Brevo (5× "sent" w/
+  messageIds) to trackalackaalerts@gmail.com for the owner to eyeball.
+- ⚠ Server-side alert changes are STAGING-ONLY until next promote (Pops has one queued). On THE Admin
+  today: 3 old email tests work; the 2 new types show a "ships with the next promote" line.
+
 ## 2026-07-14 — FINAL BOARD LANDED + FULL-FIDELITY PASS (Addie) — all on staging, Admin awaits promote
 
 **CD's FINAL board (14 screens, 1a-1i + 2a-2e) landed at docs/design/comps/ADMIN_COMPS.dc.html** (unbundled
