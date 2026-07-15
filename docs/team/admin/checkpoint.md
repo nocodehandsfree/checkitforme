@@ -3,6 +3,30 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-15b — EMAIL SYSTEM REBUILT TO COMPS V2 (Addie) — staging 63b43bd, Admin UI shipped
+- **Comps v2 landed:** docs/design/emails/check-email-alerts-design.html (E1-E4). EMAIL_DESIGN matches it.
+- **Gmail dark-mode mystery solved:** Gmail inverts solid colors but NOT gradients — the card's gradient
+  stayed dark while its white text flipped dark (owner's broken screenshot). Card is now flat #14141A +
+  color-scheme meta: dark clients show the true comp, Gmail-dark shows a clean light-flipped version.
+  There is NO way to fully stop Gmail's recolor; coherent inversion is the industry-correct fix.
+- **FROM = noreply@checkitforme.com NOW LIVE** (checkitforme.com was already authenticated in Brevo;
+  created sender id 3 via API, flipped ALERT_FROM_EMAIL on both services). Sender name "Check".
+- **welcome is DEAD → confirm_email:** adding/changing an email sends the branded confirm ask; NO alert
+  email flows until confirmed (accounts.email_verified_at, sendAlert + watch sends gate on it).
+  /confirm-email + /unsubscribe (signed HMAC links, RFC 8058 one-click, EN+ES branded pages) VERIFIED
+  live on staging (bad token → error page; confirm → "You're set."; unsub → kills subs + unverifies).
+- **Owner ping is Admin-editable:** Alerts page "Your in stock ping" (channel email/text/call/off +
+  address; settings beat env). Endpoints /api/admin/owner-alert GET/POST.
+- **Data cleaned (PROD):** 4 legacy email-only Clerk accounts deleted (2 fun@, 2 jared@reitzin.com, zero
+  usage; one had 4 old community posts). Prod = ONE account: phone:+13106662331 w/ fun@fungibles.
+  ⚠ POST-PROMOTE TODO: re-set his email via /api/admin/users/phone:+13106662331/email on PROD so
+  email_verified_at stamps (new column arrives with the promote; until then his prod email is unverified).
+- **Verified:** 5 email types real-sent from the new sender (5× messageIds) · confirm/unsub driven e2e ·
+  tsc 0 · test-all green (only the documented consumer qa-design baseline fail) · Admin UI @ 63b43bd.
+- Server-side email changes are STAGING-ONLY until next promote. On THE Admin today: owner-ping block +
+  new test types show graceful errors until then. Webbie owes: My Checks email row + alerts slide-up
+  (?alerts=1 deep link), email edit UI. Waitlist has NO signup front-end yet (flagged to owner).
+
 ## 2026-07-15 — ALERT EMAILS ALL BRANDED + DECOUPLED ADMIN SHIP PATH IN USE (Addie)
 - **Admin UI now ships WITHOUT a promote:** commit app.html to staging, then `bash scripts/ship-admin.sh`
   (Pops built it; prod server has the endpoint). Live now: override @ 0e093ee. Server code still promotes.
