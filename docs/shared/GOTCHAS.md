@@ -42,6 +42,14 @@ worse than no comment. Several entries below started as wrong comments.)
   `viewport-fit=cover` (the body paints *under* the bar). That's why "Add to Home Screen" tints when web doesn't.
 
 ## Infra / branches
+- **Admin traffic does NOT reliably arrive on a host starting with `admin.`/`caller.`** — prod edge
+  routing can hand the app other hostnames for the same service. The app's real admin-vs-consumer
+  decision is brand resolution (`resolveBrand(host).key === "runner"` and not `runner.*` = admin), in
+  `rootHandler`. Any host-based gate MUST reuse that decision, never a `startsWith()` check: the 07-15
+  promote shipped a coming-soon middleware with a naive prefix check and it served the splash to THE
+  Admin on prod (fixed same night, 48dcb1d). Corollary: `COMING_SOON` is only ever `1` on prod, so
+  splash-gate code paths CANNOT be rehearsed on staging — verify them by booting locally with
+  `COMING_SOON=1` and curling with explicit `Host:` headers (both with and without `STAGING=1`).
 - **`config.staging.on` is what makes the staging service behave as staging** — `true` on the
   voice-caller-staging service, `false` on prod. The code branches on it in ~20 spots (`server.ts`, `auth.ts`,
   `staging-sim.ts`): simulated calls, the staging login code, staging websocket host. Don't remove
