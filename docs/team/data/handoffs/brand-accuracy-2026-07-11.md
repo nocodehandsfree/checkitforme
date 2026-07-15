@@ -43,3 +43,17 @@ after owner approval at promote time).
 - Dollar General One Piece is "likely" (moderate evidence) — held OFF per your certainty rule. Confirm?
 - Comic Book Shop (321) claims One Piece chain-wide with no evidence row — kept ON (comic shops
   plausibly carry it + the call verifies). Flip off if you want strict-evidence-only.
+
+## UPDATE (same day): owner's distributor deep-research delivered + Stage 1 applied
+Doc archived at `docs/data/distributor-map-2026.md`. Owner's rule: **an Excell account carries
+One Piece AND Topps.** Applied on staging (4,731 rows + 84 flag flips):
+- One Piece + Topps ADDED to: Five Below (1,966 — reverses my earlier strict-evidence strip),
+  Hot Topic (+Topps), BoxLunch (+Topps), Claire's (+both), Hobby Lobby (+both).
+- **H-E-B (84) flipped DUAL** — TPCi kiosk AND Excell shelf account; renders in Retail + Kiosk with
+  Pokémon/One Piece/Topps. Verified live (San Antonio).
+- Validated by the doc's Stage-2 hold list: my strips of Dollar General/Dollar Tree/Family Dollar(OP)/
+  Books-A-Million stand. Albertsons-family shelf = LOW-MED → stays Sports-only from sightings.
+- `fix_brand_carries.py` updated to the full target state (dry-run on staging: 0 drift) — the one
+  script to run on PROD at promote.
+- Noted for later: TPCi is ACQUIRING Excell (announced 2026-02-19) — re-verify the map when it closes.
+  Aldi is a confirmed Excell account but we carry 1 muted Aldi store (no callable line) — future gap.
