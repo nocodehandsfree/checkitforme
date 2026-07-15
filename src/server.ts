@@ -1,7 +1,7 @@
 // Voice Caller server — REST API for the dashboard, the ElevenLabs post-call
 // webhook, a result poller, and the schedule ticker. Runs locally (Node) and
 // deploys to Railway/Cloudflare unchanged.
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync as fsReaddirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { serve } from "@hono/node-server";
@@ -250,6 +250,26 @@ async function verifyClerkToken(authHeader: string | undefined): Promise<{ id: s
 // admin_session cookie (operator dashboard).
 const page = (file: string) => readFileSync(join(here, `../public/${file}`), "utf8");
 const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+// ---- Admin UI decoupled ship path (owner 2026-07-15) ----
+// THE Admin (admin.checkitforme.com) is served by THIS prod service (the DB is SQLite on this
+// service's volume — no second service can read it), but its UI no longer waits on a full
+// staging→main promote: scripts/ship-admin.sh POSTs public/app.html straight here and the file
+// lands on the persistent volume, served immediately. The repo copy bundled at the last promote
+// stays the FALLBACK — a missing/corrupt override can only ever degrade to "older but working".
+// Shared server code still ships ONLY via the normal promote train; this moves the admin UI alone.
+const ADMIN_UI_DIR = join(process.env.RAILWAY_VOLUME_MOUNT_PATH || ".", "admin-ui");
+const ADMIN_UI_LIVE = join(ADMIN_UI_DIR, "app.html");
+const ADMIN_UI_META = join(ADMIN_UI_DIR, "meta.json");
+const ADMIN_UI_KEEP = 5; // archived previous versions for rollback
+/** The admin shell: volume override if present + sane, else the repo copy from the last promote. */
+function adminUiHtml(): string {
+  try {
+    const html = readFileSync(ADMIN_UI_LIVE, "utf8");
+    if (html.includes("</html>") && html.includes("grpnav")) return html; // sanity: complete + really the admin shell
+  } catch { /* no override staged — bundled copy serves */ }
+  return page("app.html");
+}
 
 // ---- PostHog (product analytics) — activates from Railway vars alone (POSTHOG_KEY [+ POSTHOG_HOST]);
 // no key baked in the repo, key absent = no-op. Injected server-side before </body> on every served
@@ -592,7 +612,7 @@ const rootHandler = (c: Context) => {
   const consumer = config.staging.on
     ? (!(host.startsWith("caller.") || host.startsWith("admin.")) || !!override)
     : (host.startsWith("runner.") || brand.key !== "runner" || !!override);
-  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "", peekOk(c.req.query("peek"), getCookie(c, "peek")), !!c.req.query("ref")) : withAnalytics(page("app.html")));
+  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "", peekOk(c.req.query("peek"), getCookie(c, "peek")), !!c.req.query("ref")) : withAnalytics(adminUiHtml()));
 };
 app.get("/", rootHandler);
 // Clean admin deep-links (/feedback, /trees, …): one STATIC route per admin section, all serving the same
@@ -3814,6 +3834,43 @@ app.get("/api/admin/users", async (c) => {
     };
   }));
 });
+// ---- Admin UI ship path (see adminUiHtml above). All under the /api/* admin wall. ----
+// Deploy: raw text/html body = the new app.html. Atomic (tmp + rename); the outgoing version is
+// archived for rollback (last 5 kept). x-commit header stamps provenance into meta.json.
+app.post("/api/admin/ui-deploy", async (c) => {
+  const html = await c.req.text();
+  if (html.length > 8_000_000) return c.json({ error: "too_large" }, 413);
+  if (!html.includes("</html>") || !html.includes("grpnav")) return c.json({ error: "not_the_admin_shell", hint: "body must be the complete public/app.html" }, 400);
+  mkdirSync(ADMIN_UI_DIR, { recursive: true });
+  const now = Math.floor(Date.now() / 1000);
+  if (existsSync(ADMIN_UI_LIVE)) renameSync(ADMIN_UI_LIVE, join(ADMIN_UI_DIR, `app.${now}.html`));
+  const archives = fsReaddirSync(ADMIN_UI_DIR).filter((f) => /^app\.\d+\.html$/.test(f)).sort();
+  for (const f of archives.slice(0, Math.max(0, archives.length - ADMIN_UI_KEEP))) unlinkSync(join(ADMIN_UI_DIR, f));
+  const tmp = join(ADMIN_UI_DIR, "app.html.tmp");
+  writeFileSync(tmp, html);
+  renameSync(tmp, ADMIN_UI_LIVE); // atomic swap — in-flight requests see old or new, never partial
+  const meta = { commit: c.req.header("x-commit") || null, at: now, bytes: html.length };
+  writeFileSync(ADMIN_UI_META, JSON.stringify(meta));
+  return c.json({ ok: true, ...meta });
+});
+// Roll back to the most recently archived version (repeatable while archives remain).
+app.post("/api/admin/ui-rollback", async (c) => {
+  const archives = existsSync(ADMIN_UI_DIR) ? fsReaddirSync(ADMIN_UI_DIR).filter((f) => /^app\.\d+\.html$/.test(f)).sort() : [];
+  const prev = archives[archives.length - 1];
+  if (!prev) return c.json({ error: "nothing_to_roll_back_to", hint: "no archived versions — the bundled repo copy is what serves without an override" }, 404);
+  renameSync(join(ADMIN_UI_DIR, prev), ADMIN_UI_LIVE);
+  writeFileSync(ADMIN_UI_META, JSON.stringify({ commit: null, at: Math.floor(Date.now() / 1000), bytes: readFileSync(ADMIN_UI_LIVE, "utf8").length, rolledBackFrom: prev }));
+  return c.json({ ok: true, restored: prev });
+});
+// What's live: override (with provenance) or the bundled repo copy.
+app.get("/api/admin/ui-version", async (c) => {
+  const override = existsSync(ADMIN_UI_LIVE);
+  let meta: Record<string, unknown> | null = null;
+  try { meta = JSON.parse(readFileSync(ADMIN_UI_META, "utf8")); } catch { /* no meta */ }
+  const archives = existsSync(ADMIN_UI_DIR) ? fsReaddirSync(ADMIN_UI_DIR).filter((f) => /^app\.\d+\.html$/.test(f)).sort() : [];
+  return c.json({ source: override ? "override" : "bundled", meta: override ? meta : null, archived: archives.length });
+});
+
 // Per-customer detail view (docs/specs/admin-user-view.md): everything one account is set up
 // with, in one call — identity/plan/entitlements/credits, their zones + schedules, last 20 checks.
 app.get("/api/admin/users/:id", async (c) => {
