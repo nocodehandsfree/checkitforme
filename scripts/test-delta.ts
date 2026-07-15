@@ -2,7 +2,7 @@
 // product type, skip whatever the clerk already named), the restock-day ask on a no, the clarify-once
 // rule, and the in/out verdict mapping. Pure function, no DB/network (run with dummy EL env so config
 // loads). The off-script "question" barge is handled in tapedeckStep, not here.
-import { deltaDecide, deltaTurnTuning } from "../src/calls/tapedeck";
+import { deltaDecide, deltaTurnTuning, deltaSilence } from "../src/calls/tapedeck";
 
 let fail = 0;
 const eq = (got: unknown, want: unknown, label: string) => {
@@ -42,14 +42,25 @@ eq(D("askedDay", "day").clip, 4, "answered the restock day → wrap");
 eq(D("askedType", "unclear").next, "done", "any askedType reply ends the call");
 
 // --- turn-taking tuning: the workflow's Beat + Reply timeout drive the Twilio Gather ---
-eq(deltaTurnTuning({}), { waitSecs: 8, endpoint: "auto" }, "no tuning → 8s wait, auto endpointing");
-eq(deltaTurnTuning({ turnEagerness: "eager" }).endpoint, "1", "Beat eager → reply ~1s after they stop");
-eq(deltaTurnTuning({ turnEagerness: "patient" }).endpoint, "3", "Beat patient → a full 3s pause");
-eq(deltaTurnTuning({ turnEagerness: "normal" }).endpoint, "auto", "Beat normal → Twilio auto endpointing");
-eq(deltaTurnTuning({ turnTimeout: 45 }).waitSecs, 15, "Charlie's 45s reply timeout clamps to Delta's 15s cap");
-eq(deltaTurnTuning({ turnTimeout: 1 }).waitSecs, 3, "reply timeout floors at 3s");
+// Endpointing is seconds of trailing silence before we treat them as done. Floor 2s so a thinking
+// pause never cuts a clerk off mid-answer (owner 07-15: eager=1s hung up before "it's a tin").
+eq(deltaTurnTuning({}), { waitSecs: 10, endpoint: "3" }, "no tuning → 10s to start, 3s of thinking room");
+eq(deltaTurnTuning({ turnEagerness: "eager" }).endpoint, "2", "Beat eager → 2s of give (snappiest, still never cuts mid-word)");
+eq(deltaTurnTuning({ turnEagerness: "patient" }).endpoint, "5", "Beat patient → a full 5s pause allowed");
+eq(deltaTurnTuning({ turnEagerness: "normal" }).endpoint, "3", "Beat normal → 3s of give");
+eq(deltaTurnTuning({ turnTimeout: 45 }).waitSecs, 20, "Charlie's 45s reply timeout clamps to Delta's 20s cap");
+eq(deltaTurnTuning({ turnTimeout: 1 }).waitSecs, 4, "reply-to-start floors at 4s");
 eq(deltaTurnTuning({ turnTimeout: 10 }).waitSecs, 10, "in-range reply timeout passes through");
-eq(deltaTurnTuning({ turnTimeout: "nope" }), { waitSecs: 8, endpoint: "auto" }, "garbage tuning falls back to defaults");
+eq(deltaTurnTuning({ turnTimeout: "nope" }), { waitSecs: 10, endpoint: "3" }, "garbage tuning falls back to defaults");
+
+// --- silence patience: NEVER hang up mid-answer; two gentle prompts, then a neutral wrap ---
+// (owner 07-15: eager cutoff + a turn>=3 silence hangup cut a clerk off before "it's a tin".)
+eq(deltaSilence({ stage: "opener", silence: 1 }), { action: "nudge", clip: 7 }, "1st silence at opener → 'you there?' nudge, keep listening");
+eq(deltaSilence({ stage: "askedSet", silence: 1 }), { action: "wait", clip: 9 }, "1st silence mid-question → 'take your time', keep listening");
+eq(deltaSilence({ stage: "askedType", silence: 2 }), { action: "wait", clip: 9 }, "2nd silence mid-question → still patient, never hang up");
+eq(deltaSilence({ stage: "askedType", silence: 3 }), { action: "wrap", clip: 8 }, "3rd consecutive silence → neutral graceful wrap (clip 8, never celebratory)");
+eq(deltaSilence({ stage: "askedDay", silence: 2 }), { action: "wait", clip: 9 }, "restock-day silence is patient too");
+eq(deltaSilence({ stage: "opener", silence: 3 }), { action: "wrap", clip: 8 }, "nobody ever speaks → neutral wrap after two nudges");
 
 if (fail) { console.error(`delta: ${fail} test(s) FAILED`); process.exit(1); }
 console.log("delta: all passed");
