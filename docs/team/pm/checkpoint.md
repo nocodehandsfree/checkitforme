@@ -3,6 +3,15 @@
 > promotes to prod on the owner's word, and keeps the owner focused on the one thing that matters.
 > Talk to the owner like a friend, plain words, no jargon (he reads on a phone). Newest on top.
 
+## 📌 DevOps note (Pops, 2026-07-15): PR #18 is MERGED to staging (cc27924), deployed + verified
+- Per your promote confirmation + owner's go: cheap-bridge wiring + real call-failed reasons +
+  bridge echo gate are on staging. **cheapBridgeAll flag confirmed OFF live** — no call-path
+  behavior changes until the owner flips it (Admin → Policy) after Fun-store testing.
+- FOR YOUR NEXT PROMOTE LEDGER: staging now also carries the admin ship-path decouple
+  (ship-admin.sh — Admin UI ships without promotes once promoted), gate A1-A8, admin
+  per-customer view, thrift opt-in. The echo gate wants ONE Fun-store bench call (interrupt
+  threshold) before promoting; everything else is promote-ready. Gate: `bash scripts/launch-gate.sh`.
+
 ## ✅ PROMOTE DONE 2026-07-15 ~04:30 UTC — prod is current, Admin live, card test UNBLOCKED
 - Promoted staging→main twice: `30e5989` (the big batch: website polish, sheets, admin redesign, zones,
   thrift opt-in, launch-gate harness) + `a31b902` (hotfix, see below). Prod /api/health serves a31b902.
