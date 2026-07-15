@@ -50,7 +50,8 @@ import { check as rlCheck, clientIp, LIMITS } from "./ratelimit";
 import { isGmailConfigured, gmailReceiptTick, debugRecentInbox } from "./gmail-receipts";
 import { rankBets } from "./best-bet";
 import { referralStatus, claimReferral } from "./referrals";
-import { sendAlert, sendAnonEmail, sendTestAlert, sendOwnerInStockEmail, alertSubscribe, myAlerts, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
+import { sendAlert, sendAnonEmail, sendTestAlert, sendOwnerInStockEmail, sendConfirmEmail, checkEmailToken, alertSubscribe, myAlerts, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
+import { ownerAlertPrefs } from "./calls/notify";
 
 /** 409-style gate: returns a closed payload if we KNOW the store is closed right now, else null. */
 async function closedGate(retailerId: number): Promise<{ error: string; label: string } | null> {
@@ -901,13 +902,59 @@ app.post("/app/email", async (c) => {
   const e = String(email || "").trim().toLowerCase();
   if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return c.json({ error: "invalid_email" }, 400);
   const before = await getAccount(u.id);
-  const isFirstEmail = e && !before?.email; // going from no email → an email = time for the welcome
-  await db.update(accounts).set({ email: e || null }).where(eq(accounts.clerkUserId, u.id));
+  const changed = e !== (before?.email || ""); // new or different address → it needs confirming again
+  await db.update(accounts).set({ email: e || null, ...(changed ? { emailVerifiedAt: null } : {}) }).where(eq(accounts.clerkUserId, u.id));
   // Opt-in email → Brevo (newsletter/alerts). Fire-and-forget so the UI isn't blocked on Brevo.
   if (e) brevoUpsertContact(e, { PHONE: u.phone || "" }).catch(() => {});
-  // First time we have an address to reach them → send the branded welcome (first check on us).
-  if (isFirstEmail) { try { await sendAlert(u.id, "welcome", {}, { to: e }); } catch { /* never block saving the email */ } }
-  return c.json({ ok: true, email: e || null });
+  // New/changed address → ask them to confirm it. No alert email flows until they tap the link.
+  if (e && changed) { try { await sendConfirmEmail(u.id, e); } catch { /* never block saving the email */ } }
+  return c.json({ ok: true, email: e || null, verified: !changed && !!before?.emailVerifiedAt });
+});
+
+// ---- Email confirm + one-click unsubscribe (the two live links every alert email carries) ----
+// Tiny branded landing page (dark board, wordmark, one line + Spanish, one CTA back to the site).
+function emailLandingPage(title: string, line: string, lineEs: string, cta: string): string {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · Check It For Me</title>
+<style>body{margin:0;background:#08090D;color:#fff;font-family:Inter,'Segoe UI',Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center}
+.card{max-width:420px;margin:16px;background:#14141A;border-radius:26px;padding:34px 36px}
+h1{font-size:30px;font-weight:900;letter-spacing:-1px;margin:18px 0 0}p{color:#B9B9C4;font-size:15px;line-height:1.5;margin:14px 0 0}.es{color:#8A8A96;font-size:13px}
+a.cta{display:block;text-align:center;margin-top:26px;background:#16161C;border:2px solid #4ADE80;border-radius:999px;padding:17px 24px;color:#fff;font-weight:800;font-size:13px;letter-spacing:1.6px;text-decoration:none;text-transform:uppercase}</style></head>
+<body><div class="card"><img src="/logos/brand/check.png" alt="Check" style="height:26px;display:block">
+<h1>${title}</h1><p>${line}</p><p class="es">${lineEs}</p><a class="cta" href="/">${cta}&nbsp;&nbsp;&rarr;</a></div></body></html>`;
+}
+// Confirm: the signed link from the confirm email. Marks every account carrying this address verified.
+app.get("/confirm-email", async (c) => {
+  const e = String(c.req.query("e") || "").trim().toLowerCase();
+  if (!e || !checkEmailToken(e, String(c.req.query("t") || ""))) {
+    return c.html(emailLandingPage("That link didn't work.", "It may have expired. Add your email again on the site and we'll send a fresh one.", "Puede que haya caducado. Vuelve a agregar tu correo en el sitio y te enviaremos otro.", "Back to the site"), 400);
+  }
+  await db.update(accounts).set({ emailVerifiedAt: Math.floor(Date.now() / 1000) }).where(eq(accounts.email, e));
+  return c.html(emailLandingPage("You're set.", "Email confirmed. Your alerts will land here from now on.", "Correo confirmado. Tus alertas llegarán aquí de ahora en adelante.", "Back to the site"));
+});
+// Unsubscribe: signed one-click. Kills every EMAIL alert for this address (subscriptions + watches)
+// and un-verifies it so nothing else emails them until they re-confirm. GET renders the page;
+// POST serves RFC 8058 one-click (the List-Unsubscribe-Post header) — same effect, no body needed.
+async function unsubscribeEmail(e: string): Promise<void> {
+  const owners = await db.select().from(accounts).where(eq(accounts.email, e));
+  for (const a of owners) {
+    await db.update(alertSubscriptions).set({ active: 0 }).where(and(eq(alertSubscriptions.userId, a.clerkUserId), eq(alertSubscriptions.channel, "email")));
+  }
+  await db.update(accounts).set({ emailVerifiedAt: null }).where(eq(accounts.email, e));
+  await db.update(watches).set({ active: false }).where(eq(watches.contact, e));
+}
+app.get("/unsubscribe", async (c) => {
+  const e = String(c.req.query("e") || "").trim().toLowerCase();
+  if (!e || !checkEmailToken(e, String(c.req.query("t") || ""))) {
+    return c.html(emailLandingPage("That link didn't work.", "We couldn't match this unsubscribe link. Manage alerts from your account on the site instead.", "No pudimos validar este enlace. Administra tus alertas desde tu cuenta en el sitio.", "Back to the site"), 400);
+  }
+  await unsubscribeEmail(e);
+  return c.html(emailLandingPage("You're unsubscribed.", "No more alert emails to this address. You can turn them back on from your account any time.", "No enviaremos más alertas a este correo. Puedes reactivarlas desde tu cuenta cuando quieras.", "Back to the site"));
+});
+app.post("/unsubscribe", async (c) => {
+  const e = String(c.req.query("e") || "").trim().toLowerCase();
+  if (!e || !checkEmailToken(e, String(c.req.query("t") || ""))) return c.json({ error: "bad_token" }, 400);
+  await unsubscribeEmail(e);
+  return c.json({ ok: true });
 });
 
 // Clerk-free admin login: visit /admin-login?token=ADMIN_TOKEN once → sets a signed httpOnly
@@ -4709,7 +4756,7 @@ app.get("/api/alerts/templates", async (c) => c.json(await getAlertTemplatesPubl
 // Admin: fire one template to yourself with sample data — the fastest way to eyeball a real send.
 app.post("/api/alerts/test", async (c) => {
   const b = await c.req.json().catch(() => ({}));
-  const event = String(b.event || "welcome");
+  const event = String(b.event || "confirm_email");
   const to = String(b.to || "").trim();
   const channel = b.channel === "email" ? "email" as const : b.channel === "sms" ? "sms" as const : undefined;
   if (!to) return c.json({ error: "recipient required" }, 400);
@@ -4717,9 +4764,36 @@ app.post("/api/alerts/test", async (c) => {
   if (event === "instock_owner") {
     return c.json(await sendOwnerInStockEmail(to, { store: "Target Glendale", product: "151 Booster Box", day: "Tuesdays", url: "https://checkitforme.com" }, { test: true }));
   }
-  if (!["restock", "store_added", "waitlist", "welcome"].includes(event)) return c.json({ error: "bad_event" }, 400);
-  const r = await sendTestAlert(event as "restock" | "store_added" | "waitlist" | "welcome", to, channel);
+  if (!["restock", "store_added", "waitlist", "confirm_email"].includes(event)) return c.json({ error: "bad_event" }, 400);
+  const r = await sendTestAlert(event as "restock" | "store_added" | "waitlist" | "confirm_email", to, channel);
   return c.json(r);
+});
+// Owner's hands-free in-stock ping: address + channel, editable live (settings beat the env defaults).
+app.get("/api/admin/owner-alert", async (c) => c.json(await ownerAlertPrefs()));
+app.post("/api/admin/owner-alert", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  if (b.email !== undefined) {
+    const e = String(b.email || "").trim().toLowerCase();
+    if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return c.json({ error: "invalid_email" }, 400);
+    await setSetting("owner_alert_email", e);
+  }
+  if (b.channel !== undefined) {
+    const ch = String(b.channel);
+    if (!["email", "sms", "call", "off"].includes(ch)) return c.json({ error: "bad_channel" }, 400);
+    await setSetting("owner_alert_channel", ch);
+  }
+  return c.json(await ownerAlertPrefs());
+});
+// Set/clear an account's email from Admin (support action). Admin-set addresses count as confirmed.
+app.post("/api/admin/users/:id/email", async (c) => {
+  const id = decodeURIComponent(c.req.param("id"));
+  const b = await c.req.json().catch(() => ({}));
+  const e = String(b.email || "").trim().toLowerCase();
+  if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return c.json({ error: "invalid_email" }, 400);
+  const a = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
+  if (!a) return c.json({ error: "not_found" }, 404);
+  await db.update(accounts).set({ email: e || null, emailVerifiedAt: e ? Math.floor(Date.now() / 1000) : null }).where(eq(accounts.clerkUserId, id));
+  return c.json({ ok: true, email: e || null });
 });
 app.patch("/api/alerts/templates", async (c) => {
   try { return c.json(await setAlertTemplates(await c.req.json())); } catch (e) { return c.json({ error: String(e) }, 400); }

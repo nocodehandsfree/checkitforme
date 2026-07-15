@@ -263,6 +263,7 @@ export const settings = sqliteTable("settings", {
 export const accounts = sqliteTable("accounts", {
   clerkUserId: text("clerk_user_id").primaryKey(), // Clerk id, OR "phone:<E.164>" for phone-first users
   email: text("email"),
+  emailVerifiedAt: integer("email_verified_at"), // set when they tap the confirm-email link; alert emails require it
   phone: text("phone"),         // E.164 cell for phone-first (Clerk-free) identity
   callerId: text("caller_id"),  // verified caller-ID number for this account's outbound calls
   credits: integer("credits").notNull().default(0),           // PAYG balance — never expires, additive

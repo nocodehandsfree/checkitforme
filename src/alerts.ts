@@ -6,39 +6,44 @@
 // as "stubbed". Email goes out live via Brevo (BREVO_API_KEY, already set); a per-event brevoTemplateId
 // swaps the inline HTML for Design's branded template when it's ready. Nothing
 // throws — a send that can't complete is recorded, never crashes a trigger.
+import { createHmac } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db } from "./db/client";
-import { alertSubscriptions, alertSends } from "./db/schema";
+import { accounts, alertSubscriptions, alertSends } from "./db/schema";
 import { getSetting, setSetting } from "./db/settings";
 import { getAccount, isCompAccount } from "./billing";
 import { getPlans } from "./plans";
 import { config } from "./config";
 
-export type AlertEvent = "restock" | "store_added" | "waitlist" | "welcome";
+// "welcome" is dead (owner 2026-07-15): there is no email-only signup — everyone signs up by phone,
+// email is optional and added later. What replaced it: "confirm_email", sent when someone adds an
+// email address; no alert email goes out until they tap confirm.
+export type AlertEvent = "restock" | "store_added" | "waitlist" | "confirm_email";
 export type Channel = "sms" | "email";
-export const EVENT_CHANNEL: Record<AlertEvent, Channel> = { restock: "sms", store_added: "email", waitlist: "email", welcome: "email" };
+export const EVENT_CHANNEL: Record<AlertEvent, Channel> = { restock: "sms", store_added: "email", waitlist: "email", confirm_email: "email" };
 
 // brevoTemplateId: when Claude Design's branded email is built in Brevo, drop its template id here
 // (per event, editable in Admin) and we send that instead of the inline HTML — tokens flow as params.
 export interface AlertTemplate { sms?: string; emailSubject?: string; emailBody?: string; brevoTemplateId?: number }
 // Defaults (copy-guide voice). Admin can override any field live via `alerts_json` (setAlertTemplates).
+// Subjects mirror the comp board's inbox previews (docs/design/emails/): subject = headline.
 export const DEFAULT_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   restock: {
     sms: "{product} is back at {store}. Go grab it before it's gone. checkitforme.com",
-    emailSubject: "{product} is back at {store}.",
-    emailBody: "{store} just told us they have {product} again. This stuff doesn't sit long. Go grab it.",
+    emailSubject: "{product}'s back.",
+    emailBody: "{store} in {city} has it again. This stuff doesn't sit long.",
   },
   store_added: {
-    emailSubject: "{store} is live. Your check is on us.",
-    emailBody: "You asked us to add {store} in {city}. It's live now. Your next check is on us. Go put it to work.",
+    emailSubject: "You got your store.",
+    emailBody: "{store} in {city} is live. Your next check's on us. Pick your product, we call the staff, you get the answer.",
   },
   waitlist: {
-    emailSubject: "We're live in {city}.",
-    emailBody: "You wanted us in {city}. We just went live. Pick a store near you and we'll check it for you.",
+    emailSubject: "{city}, we made it.",
+    emailBody: "Your wait is over. You can now check any store near you. First one on us!",
   },
-  welcome: {
-    emailSubject: "You're in. First check is on us.",
-    emailBody: "Welcome to Check It For Me. Pick a store and a product, we call the store, you get the answer. Your first check is on us.",
+  confirm_email: {
+    emailSubject: "Confirm your email.",
+    emailBody: "You added this address for alerts. Confirm it's yours and we'll send them here.",
   },
 };
 
@@ -105,6 +110,19 @@ async function twilioSms(to: string, body: string): Promise<{ ok: boolean; detai
 }
 function escHtml(s: string): string { return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string)); }
 
+// ---- signed email tokens: power the one-click Unsubscribe + Confirm-email links. HMAC over the
+// lowercased address, so a link can't be forged for someone else's inbox. ----
+export function emailToken(email: string): string {
+  const secret = process.env.SESSION_SECRET || "dev-insecure-secret-change-me";
+  return createHmac("sha256", secret).update(email.trim().toLowerCase()).digest("hex").slice(0, 24);
+}
+export function checkEmailToken(email: string, token: string): boolean {
+  return !!email && !!token && emailToken(email) === token;
+}
+const siteUrl = () => (config.appUrl || "https://checkitforme.com").replace(/\/$/, "");
+export const manageAlertsUrl = () => `${siteUrl()}/?alerts=1`;
+export const unsubscribeUrl = (email: string) => `${siteUrl()}/unsubscribe?e=${encodeURIComponent(email.trim().toLowerCase())}&t=${emailToken(email)}`;
+
 // Per-event design content, ported from Claude Design's email mockups (kicker + serif headline + body
 // paragraphs + a middle module + one CTA). Tokens stay live; copy is editable here in git.
 type EmailModule =
@@ -115,27 +133,28 @@ interface EmailDesign { kicker: string; kickerColor: string; headline: string; b
 // "instock_owner" = the hands-free owner ping (a call just confirmed stock) — same branded shell,
 // its own copy. It's ops-only, so it isn't in DEFAULT_TEMPLATES (not editable, no metering).
 type EmailKind = AlertEvent | "instock_owner";
+// Source of truth: docs/design/emails/check-email-alerts-design.html (E1-E4, v2 board 2026-07-15).
 const EMAIL_DESIGN: Record<EmailKind, EmailDesign> = {
   store_added: {
     kicker: "YOUR STORE'S LIVE", kickerColor: "#4ADE80", headline: "You got your store.",
     body: ["**{store}** in {city} is live. Your next check's on us.", "Pick your product, we call the staff, you get the answer."],
-    module: { type: "chip", text: "1 free check, ready" }, cta: "Use my free check", url: "https://checkitforme.com",
+    cta: "Use my free check", url: "https://checkitforme.com",
   },
   waitlist: {
     kicker: "NOW LIVE NEAR YOU", kickerColor: "#4ADE80", headline: "{city}, we made it.",
-    body: ["You waited. Now check any store near you. Pick one, we call, you get the answer.", "Every check is a real call. One store, one straight answer."],
-    module: { type: "chip", text: "First check's on us" }, cta: "Check a store", url: "https://checkitforme.com",
+    body: ["Your wait is over. You can now check any store near you.", "First one on us!"],
+    cta: "Use my free check", url: "https://checkitforme.com",
   },
   restock: {
     kicker: "BACK IN STOCK", kickerColor: "#FFCB05", headline: "{product}'s back.",
     body: ["**{store}** in {city} has it again. This stuff doesn't sit long."],
     module: { type: "product", title: "{product}", sub: "{store} · {city}", badge: "SPOTTED TODAY" }, cta: "See the details", url: "https://checkitforme.com",
   },
-  welcome: {
-    kicker: "WELCOME", kickerColor: "#4ADE80", headline: "You're in.",
-    body: ["We call the store so you don't have to. You get a straight answer, about two minutes."],
-    module: { type: "steps", steps: [["1", "Pick a store and a product"], ["2", "Check AI calls the staff"], ["3", "You get a straight answer"], ["✓", "First check's on us"]] },
-    cta: "Run my first check", url: "https://checkitforme.com",
+  confirm_email: {
+    kicker: "CONFIRM YOUR EMAIL", kickerColor: "#4ADE80", headline: "One tap and you're set.",
+    body: ["You added this address for alerts. Confirm it's yours and we'll send them here."],
+    module: { type: "chip", text: "{email}" },
+    cta: "Confirm my email", url: "https://checkitforme.com",
   },
   instock_owner: {
     kicker: "CALL CONFIRMED", kickerColor: "#4ADE80", headline: "It's in stock.",
@@ -174,10 +193,13 @@ function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | numb
  *  Check wordmark image, gradient card, Inter-black headline, module card, filled capsule CTA with
  *  the green ring. Table layout + inline styles + MSO conditionals: Outlook (Word engine) gets a
  *  solid-color card fallback and a VML roundrect button, so it renders clean there too. */
-function renderBrandedEmail(event: EmailKind, _subject: string, _body: string, tokens: Record<string, string | number | undefined> = {}): string {
+function renderBrandedEmail(event: EmailKind, _subject: string, _body: string, tokens: Record<string, string | number | undefined> = {}, to = ""): string {
   const d = EMAIL_DESIGN[event];
   // A {url} token deep-links the CTA (owner alert → the call; watch alert → the store). Else the design's default.
   const url = String(tokens.url || d.url);
+  // Footer links are LIVE: manage → the site's alerts sheet; unsubscribe → the signed one-click kill.
+  const manageUrl = manageAlertsUrl();
+  const unsubUrl = to ? unsubscribeUrl(to) : `${siteUrl()}/unsubscribe`;
   // Paragraphs whose tokens fill to nothing (e.g. no restock day heard) are dropped, not rendered as gaps.
   const bodyHtml = d.body.filter((p) => fill(p.replace(/\*\*/g, ""), tokens)).map((p, i) => i === 0
     ? `<tr><td style="padding-top:15px;font-size:17px;line-height:1.5;color:#D1D1DA;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
@@ -199,16 +221,22 @@ function renderBrandedEmail(event: EmailKind, _subject: string, _body: string, t
       </td></tr></table>
     <!--<![endif]-->
   </td></tr>`;
+  // NB: NO background-image gradient on the card. Gmail's dark-mode recolor inverts solid colors but
+  // NOT gradients — a gradient card stays dark while its white text flips dark = unreadable (the
+  // 2026-07-15 broken screenshot). All-solid colors keep Gmail's inversion coherent: dark clients see
+  // the true comp, Gmail-dark sees a clean light-flipped version. color-scheme hints keep Apple Mail honest.
   return `<!doctype html>
 <html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">
+<style>:root{color-scheme:dark;supported-color-schemes:dark}</style>
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
 </head><body style="margin:0;padding:0;background:#08090D" bgcolor="#08090D">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#08090D" style="background:#08090D;margin:0;padding:0"><tr><td align="center" style="padding:22px 16px 30px">
     <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
       <tr><td style="padding:0 0 22px"><img src="https://checkitforme.com/logos/brand/check.png" width="104" height="33" alt="Check" style="display:block;width:104px;height:33px;border:0"></td></tr>
-      <tr><td bgcolor="#14141A" style="background:#14141A;background-image:linear-gradient(180deg,#191920 0%,#111117 100%);border-radius:26px;padding:30px 40px">
+      <tr><td bgcolor="#14141A" style="background:#14141A;border-radius:26px;padding:30px 40px">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           <tr><td style="font-size:10.5px;font-weight:700;letter-spacing:1.6px;color:${d.kickerColor};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
           <tr><td style="padding-top:14px;font-size:33px;font-weight:900;color:#FFFFFF;line-height:1.1;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
@@ -218,7 +246,7 @@ function renderBrandedEmail(event: EmailKind, _subject: string, _body: string, t
         </table>
       </td></tr>
       <tr><td style="padding:22px 2px 0;font-family:${FONT};font-size:12.5px;color:#8A8A96">
-        <a href="https://checkitforme.com/account" style="color:#8A8A96;text-decoration:none">Manage alerts</a><span style="color:#333340">&nbsp;&middot;&nbsp;</span><a href="https://checkitforme.com/unsubscribe" style="color:#8A8A96;text-decoration:none">Unsubscribe</a>
+        <a href="${manageUrl}" style="color:#8A8A96;text-decoration:none">Manage alerts</a><span style="color:#333340">&nbsp;&middot;&nbsp;</span><a href="${unsubUrl}" style="color:#8A8A96;text-decoration:none">Unsubscribe</a>
       </td></tr>
     </table>
     <!--[if mso]></td></tr></table><![endif]-->
@@ -227,12 +255,14 @@ function renderBrandedEmail(event: EmailKind, _subject: string, _body: string, t
 async function espEmail(to: string, subject: string, body: string, opts: { templateId?: number; params?: Record<string, string | number | undefined>; event?: EmailKind } = {}): Promise<{ ok: boolean; detail: string }> {
   const key = config.alerts.brevoApiKey;
   if (!key) return { ok: false, detail: "email_not_configured" }; // BREVO_API_KEY unset → stubbed
-  const sender = { name: "Check It For Me", email: config.alerts.senderEmail };
+  const sender = { name: "Check", email: config.alerts.senderEmail };
+  // One-click unsubscribe headers: inbox providers surface their own Unsubscribe button from these.
+  const headers = { "List-Unsubscribe": `<${unsubscribeUrl(to)}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" };
   // Prefer a branded Brevo template (Design owns the look) when its id is set; else our email-safe template.
   const payload: Record<string, unknown> = opts.templateId
-    ? { sender, to: [{ email: to }], templateId: opts.templateId, params: opts.params || {} }
-    : { sender, to: [{ email: to }], subject,
-        htmlContent: opts.event ? renderBrandedEmail(opts.event, subject, body, opts.params || {})
+    ? { sender, to: [{ email: to }], templateId: opts.templateId, params: opts.params || {}, headers }
+    : { sender, to: [{ email: to }], subject, headers,
+        htmlContent: opts.event ? renderBrandedEmail(opts.event, subject, body, opts.params || {}, to)
           : `<div style="font-family:Inter,Arial,sans-serif;color:#111;max-width:520px"><p style="font-size:15px;line-height:1.55">${escHtml(body)}</p></div>`,
         textContent: `${subject}\n\n${body}\n\nCheck It For Me · checkitforme.com` };
   try {
@@ -253,6 +283,11 @@ export async function sendAlert(userId: string, event: AlertEvent, tokens: Recor
   const to = opts.to || (channel === "sms" ? account?.phone : account?.email) || "";
   const tagged = (d?: string) => [opts.tag, d].filter(Boolean).join(" ") || undefined;
   if (!to) { await log(userId, event, channel, null, "skipped_nocontact", tagged()); return { status: "skipped_nocontact" }; }
+  // No alert email before the address is confirmed (confirm_email itself is the confirmation ask).
+  if (channel === "email" && event !== "confirm_email" && !opts.to && !account?.emailVerifiedAt) {
+    await log(userId, event, channel, to, "skipped_unverified", tagged());
+    return { status: "skipped_unverified" };
+  }
 
   if (channel === "sms") {
     const { left, cap } = await smsAlertsLeft(userId);
@@ -287,10 +322,28 @@ export async function sendAnonEmail(event: AlertEvent, tokens: Record<string, st
  *  Watches are contact-based (no account), so this skips metering. */
 export async function sendRestockEmailTo(to: string, tokens: Record<string, string | number | undefined>, opts: { tag?: string } = {}): Promise<{ status: string; detail?: string }> {
   if (!to || !to.includes("@")) { await log(null, "restock", "email", to || null, "skipped_nocontact", opts.tag); return { status: "skipped_nocontact" }; }
+  // Only confirmed addresses get alert email: the contact must belong to an account that tapped
+  // the confirm link. (Every user has a phone account — an orphan email watch never sends.)
+  const owner = (await db.select().from(accounts).where(eq(accounts.email, to.trim().toLowerCase()))).find((a) => a.emailVerifiedAt);
+  if (!owner) { await log(null, "restock", "email", to, "skipped_unverified", opts.tag); return { status: "skipped_unverified" }; }
   const tpls = await getAlertTemplates();
   const subject = fill(tpls.restock.emailSubject, tokens), body = fill(tpls.restock.emailBody, tokens);
   const res = await espEmail(to, subject, body, { templateId: tpls.restock.brevoTemplateId, params: strTokens(tokens), event: "restock" });
   const status = res.ok ? "sent" : "stubbed"; await log(null, "restock", "email", to, status, [opts.tag, res.detail].filter(Boolean).join(" "));
+  return { status, detail: res.detail };
+}
+
+/** The "confirm this address is yours" ask, sent whenever someone adds/changes their email. The CTA
+ *  carries the signed confirm link; no alert email flows to the address until it's tapped. */
+export async function sendConfirmEmail(userId: string | null, to: string): Promise<{ status: string; detail?: string }> {
+  if (!to || !to.includes("@")) { await log(userId, "confirm_email", "email", to || null, "skipped_nocontact"); return { status: "skipped_nocontact" }; }
+  const e = to.trim().toLowerCase();
+  const tpls = await getAlertTemplates();
+  const confirmUrl = `${siteUrl()}/confirm-email?e=${encodeURIComponent(e)}&t=${emailToken(e)}${userId ? `&u=${encodeURIComponent(userId)}` : ""}`;
+  const tokens = { email: e, url: confirmUrl };
+  const res = await espEmail(e, fill(tpls.confirm_email.emailSubject, tokens), fill(tpls.confirm_email.emailBody, tokens),
+    { templateId: tpls.confirm_email.brevoTemplateId, params: tokens, event: "confirm_email" });
+  const status = res.ok ? "sent" : "stubbed"; await log(userId, "confirm_email", "email", e, status, res.detail);
   return { status, detail: res.detail };
 }
 
@@ -313,7 +366,7 @@ export async function sendOwnerInStockEmail(to: string, t: { store: string; prod
 /** Admin "send me a test": fires any one template to an address/phone with realistic sample tokens,
  *  bypassing metering + subscriptions. Logged with status "test" prefix so it's obvious in the feed.
  *  channel override lets restock be tested over EMAIL as well as text. */
-const SAMPLE_TOKENS: Record<string, string> = { store: "Target Glendale", product: "151 Booster Box", city: "Glendale", name: "there" };
+const SAMPLE_TOKENS: Record<string, string> = { store: "Target Glendale", product: "151 Booster Box", city: "Glendale", name: "there", email: "you@example.com" };
 export async function sendTestAlert(event: AlertEvent, to: string, channelOverride?: Channel): Promise<{ status: string; detail?: string; channel: Channel }> {
   const channel = channelOverride || EVENT_CHANNEL[event];
   const tpls = await getAlertTemplates();
@@ -324,8 +377,9 @@ export async function sendTestAlert(event: AlertEvent, to: string, channelOverri
     await log(null, event, "sms", to, res.ok ? "test_sent" : "test_stubbed", res.detail);
     return { status: res.ok ? "sent" : "stubbed", detail: res.detail, channel };
   }
-  const subject = fill(tpls[event].emailSubject, SAMPLE_TOKENS), body = fill(tpls[event].emailBody, SAMPLE_TOKENS);
-  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: SAMPLE_TOKENS, event });
+  const tk = { ...SAMPLE_TOKENS, email: to }; // confirm test shows the real recipient in the chip
+  const subject = fill(tpls[event].emailSubject, tk), body = fill(tpls[event].emailBody, tk);
+  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: tk, event });
   await log(null, event, "email", to, res.ok ? "test_sent" : "test_stubbed", res.detail);
   return { status: res.ok ? "sent" : "stubbed", detail: res.detail, channel };
 }

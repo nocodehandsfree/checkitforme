@@ -3,12 +3,26 @@
 // or "sms" (Twilio — blocked by US carriers until A2P 10DLC registration). Best-effort.
 import { config } from "../config";
 import { sendOwnerInStockEmail } from "../alerts";
+import { getSetting } from "../db/settings";
 
 const esc = (s: string) => s.replace(/[<>&'"]/g, (c) =>
   ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c]!));
 
+/** The owner's live ping preferences: Admin-set (settings) beats the env defaults, so the address
+ *  and channel are editable on the Alerts page without a deploy. channel "off" silences it. */
+export async function ownerAlertPrefs(): Promise<{ channel: string; email: string; phone: string }> {
+  const [ch, em] = await Promise.all([getSetting("owner_alert_channel"), getSetting("owner_alert_email")]);
+  return {
+    channel: ch || config.alerts.channel,
+    email: em || config.alerts.ownerEmail || "",
+    phone: config.alerts.ownerPhone || "",
+  };
+}
+
 export async function notifyInStock(store: string, category: string, retailerId: number, shipmentDay?: string | null) {
-  const { channel, ownerPhone, fromNumber, twilioSid, twilioToken, ownerEmail } = config.alerts;
+  const { fromNumber, twilioSid, twilioToken } = config.alerts;
+  const { channel, email: ownerEmail, phone: ownerPhone } = await ownerAlertPrefs();
+  if (channel === "off") return;
   const line = `${store} just confirmed ${category} is in stock${shipmentDay ? `, they restock ${shipmentDay}` : ""}.`;
   const link = `${config.appUrl}/?store=${retailerId}`;
 

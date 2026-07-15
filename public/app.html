@@ -139,8 +139,8 @@
   /* Alerts editor fields (God View → Alerts) */
   .fld{display:block;margin-bottom:8px} .fld:last-child{margin-bottom:0}
   .fld .fl{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:4px}
-  .fld input,.fld textarea{background:var(--terminal);border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text-strong);font-size:13px;font-family:inherit}
-  .fld textarea{resize:vertical;line-height:1.4}
+  .fld input,.fld textarea{background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:12px;padding:12px 14px;color:var(--text-strong);font-size:14px;font-family:inherit;width:100%;max-width:100%;box-sizing:border-box}
+  .fld textarea{resize:vertical;line-height:1.45}
   .transcript{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12.5px;color:#cfcfe0;background:var(--terminal);border-radius:10px;padding:12px;margin-top:10px}
   .empty{color:var(--muted);font-size:13px;padding:30px;text-align:center}
   /* THE notification (comp 1a): ONE gray pill, bottom center — raised, thin white ring, one line. */
@@ -773,20 +773,33 @@
     <div class="k-sub">The messages we send customers, and every send. Restock rides text or email, the rest ride email.</div>
     <div class="k-eyebrow">Delivery status</div>
     <div id="al_status" class="meta">Loading…</div>
+    <div class="k-eyebrow">Your in stock ping</div>
+    <div class="k-sub" style="margin:0 0 8px">Fires when a call confirms stock. Pick where it lands.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select id="oa_channel" class="k-filter" onchange="saveOwnerAlert()">
+        <option value="email">Email</option>
+        <option value="sms">Text</option>
+        <option value="call">Call</option>
+        <option value="off">Off</option>
+      </select>
+      <input id="oa_email" type="email" placeholder="where it lands" style="flex:1;min-width:180px;font-size:14px;padding:10px 14px" onblur="saveOwnerAlert()">
+    </div>
+    <div id="oa_out" class="meta" style="margin-top:8px;font-size:12px"></div>
     <div class="k-eyebrow">This month</div>
     <div id="al_rollup" class="meta">Loading…</div>
-    <div class="k-eyebrow">Message templates · tokens fill per send: {store} {product} {city} {name}</div>
+    <div class="k-eyebrow">Message templates</div>
+    <div class="k-sub" style="margin:0 0 8px">Tokens fill per send: {store} {product} {city} {email}</div>
     <div id="al_templates">Loading…</div>
     <div class="btnrow"><span id="al_saved" class="meta"></span><button class="act" onclick="saveAlertTemplates()">Save messages</button></div>
     <div class="k-eyebrow">Send yourself a test</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <select id="al_test_event" class="k-filter">
-        <option value="welcome">Welcome (email)</option>
+        <option value="confirm_email">Confirm your email (email)</option>
         <option value="store_added">Store went live (email)</option>
         <option value="waitlist">We’re live in your area (email)</option>
         <option value="restock_email">Restock (email)</option>
         <option value="restock">Restock (text)</option>
-        <option value="instock_owner">Call confirmed stock, owner ping (email)</option>
+        <option value="instock_owner">Your in stock ping (email)</option>
       </select>
       <input id="al_test_to" type="text" placeholder="your email (or phone for the text)" style="flex:1;min-width:180px;font-size:14px;padding:10px 14px">
       <button class="act" onclick="sendAlertTest()">Send test</button>
@@ -4637,17 +4650,36 @@ function decorateChrome(){
 }
 // ---- Alerts (God View → Alerts): editable message templates, subscribers, and the send log ----
 const AL_EVENTS=[
-  ['restock','Restock (text or email)','both','Sent when a store restocks a product they’re watching, on whichever channel they picked. Texts count against the plan’s monthly cap, emails are free.'],
-  ['store_added','Store went live (email)','email','Sent when a store a customer requested goes live. Their free check is already granted.'],
-  ['waitlist','We’re live in your area (email)','email','Sent to a waitlist signup when we launch in their region.'],
-  ['welcome','Welcome (email)','email','First email after signup. First check is on us.'],
+  ['restock','Restock (text or email)','both','Fires on a confirmed restock, on the channel they picked. Texts count against the plan cap.'],
+  ['store_added','Store went live (email)','email','Their requested store went live. Free check granted.'],
+  ['waitlist','We’re live in your area (email)','email','A waitlist signup’s region just launched.'],
+  ['confirm_email','Confirm your email (email)','email','Someone added an email. No alerts until they tap confirm.'],
 ];
 let AL_TPL={};
 function alField(id,label,val,tall){ return `<label class="fld"><span class="fl">${esch(label)}</span>`
   +(tall?`<textarea id="${id}" rows="3" style="width:100%;box-sizing:border-box">${esch(val||'')}</textarea>`
         :`<input id="${id}" type="text" value="${esch(val||'')}" style="width:100%;box-sizing:border-box">`)+`</label>`; }
+let OA_LOADED=false;
+async function loadOwnerAlert(){
+  const r=await api('/api/admin/owner-alert');
+  if(!r||r.error) return;
+  const ch=document.getElementById('oa_channel'), em=document.getElementById('oa_email');
+  if(ch) ch.value=r.channel||'email';
+  if(em) em.value=r.email||'';
+  OA_LOADED=true;
+}
+async function saveOwnerAlert(){
+  if(!OA_LOADED) return; // never save the empty pre-load state over the real prefs
+  const ch=(document.getElementById('oa_channel')||{}).value||'email';
+  const em=((document.getElementById('oa_email')||{}).value||'').trim();
+  const out=document.getElementById('oa_out');
+  const r=await api('/api/admin/owner-alert',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({channel:ch,email:em})});
+  if(!r||r.error){ if(out){ out.style.color='#F87171'; out.textContent= (r&&r.error)==='invalid_email'?'That email does not look right':'Could not save'; } return; }
+  if(out){ out.style.color=''; out.textContent= r.channel==='off'?'Ping is off':('Ping rides '+(r.channel==='email'?('email · '+(r.email||'no address set')):r.channel)); }
+}
 async function loadAlerts(){
   const tEl=document.getElementById('al_templates'); if(!tEl) return;
+  loadOwnerAlert();
   AL_TPL=await api('/api/alerts/templates')||{};
   tEl.innerHTML=AL_EVENTS.map(([k,label,chan,hint])=>{
     const t=AL_TPL[k]||{};
@@ -4692,7 +4724,7 @@ async function saveAlertTemplates(){
   else toast('Could not save messages');
 }
 async function sendAlertTest(){
-  const pick=(document.getElementById('al_test_event')||{}).value||'welcome';
+  const pick=(document.getElementById('al_test_event')||{}).value||'confirm_email';
   // "restock_email" is the UI's name for restock over the email channel; the server takes event+channel.
   const req= pick==='restock_email' ? {event:'restock',channel:'email'} : {event:pick};
   const to=((document.getElementById('al_test_to')||{}).value||'').trim();

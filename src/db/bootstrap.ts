@@ -84,6 +84,8 @@ export async function bootstrap() {
   )`);
   // Chains: deterministic keypad shortcut column (added post-migration; SQLite has no IF NOT EXISTS for columns).
   await client.execute("ALTER TABLE zones ADD COLUMN owner_user_id TEXT").catch(() => {});
+  // Email confirmation: alert emails only send once the address is confirmed (confirm-email flow).
+  await client.execute("ALTER TABLE accounts ADD COLUMN email_verified_at INTEGER").catch(() => {});
   await client.execute("ALTER TABLE retailers ADD COLUMN published INTEGER NOT NULL DEFAULT 1").catch(() => {});
   // Store-request reward loop: attribute the submitter + guard the one-time go-live free-check grant.
   await client.execute("ALTER TABLE store_requests ADD COLUMN user_id TEXT").catch(() => {});
