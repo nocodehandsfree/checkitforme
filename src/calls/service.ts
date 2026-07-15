@@ -39,16 +39,10 @@ import { classifyVerdict, reconcile, productDetailLabel } from "../voice/verdict
 
 const DEFAULT_OPENER = "Heyy! I was just checking to see if you guys got any {category} in?";
 
-// Round-robin picker for call rotation (opener variants / voice pool). In-memory; resets on restart.
-const rotCounters = new Map<string, number>();
-function rotatePick<T>(key: string, list: T[]): T | undefined {
-  if (!list.length) return undefined;
-  const n = (rotCounters.get(key) ?? -1) + 1; rotCounters.set(key, n);
-  return list[n % list.length];
-}
-/** Reset a rotation so the NEXT pick lands on the first item (opener #1) — powers the Workflows
- *  "Reset rotation" button, so a test run is predictable A → B → C instead of mid-cycle. */
-export function resetRotation(key: string): void { rotCounters.set(key, -1); }
+// Round-robin rotation lives in rotate.ts, shared with the D-lane so both lanes advance the SAME
+// counters (owner 2026-07-15: two voices on a workflow must alternate call to call, either lane).
+import { rotatePick, resetRotation } from "./rotate";
+export { resetRotation };
 
 // ---- Workflows: the Voice→Designer "voice + script + persona + voice tuning" bundle, assignable
 // per store / per chain / as the global default. resolveWorkflow picks one for a store and composes

@@ -10,6 +10,7 @@
 import { llm } from "../llm";
 import { config } from "../config";
 import { getSetting } from "../db/settings";
+import { rotatePick } from "./rotate";
 
 const HOST = config.staging.on ? "voice-caller-staging-production.up.railway.app" : "voice-caller-production-2d6b.up.railway.app";
 // The live-turn brain. Groq's llama-3.3-70b won the 2026-07-10 bench: correct on every classify line
@@ -93,10 +94,9 @@ const gather = (id: string, timeoutSec?: number) => {
 };
 const play = (id: string, i: number) => `<Play>https://${HOST}/tapedeck/clip?session=${id}&amp;i=${i}</Play>`;
 
-// One variant per call, rotated across calls. Clip slots:
+// One variant per call, rotated round-robin across calls (shared counters with the C-lane). Clip slots:
 // 0 opener · 1 ask-SET · 2 ask-TYPE · 3 restock-day · 4 wrap (confirmed yes) · 5 clarify ·
 // 6 escalate (Charlie) · 7 hello (silence nudge) · 8 wrapNo (neutral goodbye for no / unclear)
-function pick<T>(arr: T[] | undefined, fb: T): T { return arr && arr.length ? arr[Math.floor(Math.random() * arr.length)] : fb; }
 
 // Defaults used when a workflow hasn't defined its own follow-up scripts. No dashes (owner rule);
 // commas carry the pauses. {category} is filled at synth time.
@@ -104,7 +104,9 @@ function pick<T>(arr: T[] | undefined, fb: T): T { return arr && arr.length ? ar
 // what "set" means. The example is edit-per-workflow on the Workflows page when a brand needs its own.
 const DEFAULT_FOLLOWUPS: Record<string, string[]> = {
   set: ["Oh nice! Is it Chaos Rising? Or do you know the name of the set?", "Awesome, any idea which set it is? Like Chaos Rising, or a different one?", "Oh sweet, do you know the name of the set? Like Chaos Rising?"],
-  type: ["Gotcha, do you know if it's booster packs or a tin?", "No worries, is it like booster packs, or more like a box or a tin?"],
+  // Context-neutral phrasing: this clip plays after a set ANSWER and after "I don't know the set",
+  // so no variant may assume either (owner 07-15: "No worries" read like it presumed confusion).
+  type: ["Gotcha, do you know if it's booster packs or a tin?", "And is it booster packs, or more like a box or a tin?"],
   no: ["Ah, no worries. Any idea what day you usually get card shipments in?", "Okay no problem, do you know when your next shipment usually lands?"],
   wrap: ["Awesome, thanks so much! Have a good one!", "Perfect, thank you so much, take care!"],
   clarify: ["Oh sorry, I was just asking if you have any {category} in stock right now?"],
@@ -175,18 +177,25 @@ async function synthClip(voiceId: string, text: string, tuning: Record<string, u
   } catch (e) { console.error("[tapedeck] synth", e); return null; }
 }
 
-/** Synthesize the 8 rotated clips for a call from a resolved workflow. */
+/** Synthesize the 8 rotated clips for a call from a resolved workflow. Every slot ROTATES round-robin
+ *  (shared counters with the C-lane — "opener:<wf>" is the same sequence Charlie advances), so two
+ *  variants alternate call to call instead of repeating at random. */
 async function synthClips(wf: TdWorkflow, voiceId: string, cat: string): Promise<{ texts: string[]; clips: (Buffer | null)[] }> {
+  const fu = (slot: keyof typeof DEFAULT_FOLLOWUPS) => {
+    const arr = wf.followups[slot];
+    return rotatePick(`fu:${wf.name}:${slot}`, arr && arr.length ? arr : DEFAULT_FOLLOWUPS[slot]) || DEFAULT_FOLLOWUPS[slot][0];
+  };
+  const openers = wf.openers && wf.openers.length ? wf.openers : ["Heyy! I was just checking, do you have any {category} in stock right now?"];
   const texts = [
-    fillCat(pick(wf.openers, "Heyy! I was just checking, do you have any {category} in stock right now?"), cat),
-    fillCat(pick(wf.followups.set, DEFAULT_FOLLOWUPS.set[0]), cat),
-    fillCat(pick(wf.followups.type, DEFAULT_FOLLOWUPS.type[0]), cat),
-    fillCat(pick(wf.followups.no, DEFAULT_FOLLOWUPS.no[0]), cat),
-    fillCat(pick(wf.followups.wrap, DEFAULT_FOLLOWUPS.wrap[0]), cat),
-    fillCat(pick(wf.followups.clarify, DEFAULT_FOLLOWUPS.clarify[0]), cat),
-    fillCat(pick(wf.followups.escalate, DEFAULT_FOLLOWUPS.escalate[0]), cat),
-    fillCat(pick(wf.followups.hello, DEFAULT_FOLLOWUPS.hello[0]), cat),
-    fillCat(pick(wf.followups.wrapNo, DEFAULT_FOLLOWUPS.wrapNo[0]), cat),
+    fillCat(rotatePick(`opener:${wf.name}`, openers) || openers[0], cat),
+    fillCat(fu("set"), cat),
+    fillCat(fu("type"), cat),
+    fillCat(fu("no"), cat),
+    fillCat(fu("wrap"), cat),
+    fillCat(fu("clarify"), cat),
+    fillCat(fu("escalate"), cat),
+    fillCat(fu("hello"), cat),
+    fillCat(fu("wrapNo"), cat),
   ];
   const clips = await Promise.all(texts.map((t) => synthClip(voiceId, t, wf.tuning)));
   return { texts, clips };
@@ -223,7 +232,7 @@ export async function tapedeckCall(phone: string, workflowName?: string): Promis
     if (s.phone === to && (s.status === "dialing" || s.status === "live")) return { error: "a rehearsal call to this number is already live — hang up first" };
   }
   const wf = await resolveTapedeckWorkflow(workflowName);
-  const voiceId = pick(wf.voices, wf.voiceId);
+  const voiceId = rotatePick(`voice:${wf.name}`, wf.voices) || wf.voiceId; // same round-robin counter Charlie advances
   const { texts, clips } = await synthClips(wf, voiceId, "Pokémon cards");
   if (clips.some((c) => !c)) return { error: "clip synthesis failed — check ElevenLabs credits" };
 
@@ -244,7 +253,7 @@ export async function deltaStoreCall(check: DeltaCheck, workflowName?: string): 
   const to = check.toNumber.replace(/[^\d+]/g, "");
   if (!/^\+?\d{10,15}$/.test(to)) return { error: "store has no dialable number" };
   const wf = await resolveTapedeckWorkflow(workflowName);
-  const voiceId = pick(wf.voices, wf.voiceId);
+  const voiceId = rotatePick(`voice:${wf.name}`, wf.voices) || wf.voiceId; // same round-robin counter Charlie advances
   const { texts, clips } = await synthClips(wf, voiceId, check.categoryLabel);
   if (clips.some((c) => !c)) return { error: "clip synthesis failed — check ElevenLabs credits" };
 
