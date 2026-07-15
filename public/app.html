@@ -1103,8 +1103,8 @@
             <div><label style="margin-top:0">Line to say</label><input id="sb_soft_msg" type="text" placeholder="Yeah, hi, I'm here!"></div>
           </div>
         </div>
-        <div class="btnrow"><button class="ghost" onclick="loadSandbox()">Reload</button><button class="ghost" onclick="applySandbox()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save draft</button></div>
-        <div class="meta" id="sb_status" style="margin-top:8px"></div>
+        <div class="meta" id="sb_status" style="margin:10px 0 4px"></div>
+        <div class="btnrow" style="margin-top:6px"><button class="ghost" onclick="loadSandbox()">Reload</button><button class="ghost" onclick="applySandbox()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save draft</button></div>
       </div>
 
       <div class="card dstep" data-step="3" style="display:none">
@@ -1145,11 +1145,10 @@
 
       <div class="card dstep" data-step="5" style="display:none">
         
-        <label>Scripts in rotation</label>
-        <div id="rot_opener_list2" style="margin-top:4px" class="meta">Add scripts in Step 3.</div>
-        <label style="margin-top:16px" data-tip="Tick 2+ and live calls alternate between them, one per call. Tick just one to always use that voice.">Voices in rotation</label>
-        <div id="rot_voices" class="meta" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px">Loading voices…</div>
-        <div class="meta" style="margin-top:8px">Live calls rotate through the ticked voices and scripts, one per call.</div>
+        <div class="meta" id="rot_script_note" style="margin:2px 0 12px">Your Step 3 scripts rotate on their own, a different one each call. This step only picks the voices.</div>
+        <label style="margin-top:4px" data-tip="Tick 2+ and live calls alternate between them, one per call. Tick just one to always use that voice.">Voices in rotation</label>
+        <div id="rot_voices" class="meta" style="margin-top:4px">Loading voices…</div>
+        <div class="meta" style="margin-top:8px">Next call uses the next ticked voice AND the next script, automatically.</div>
         <div class="btnrow"><button class="ghost" onclick="saveRotation(this)"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>Save rotation</button><span class="meta" id="rot_msg"></span></div>
       </div>
 
@@ -2336,7 +2335,10 @@ let VS_REC=null, VS_CHUNKS=[], VS_BLOB=null, VS_TIMER=null;
 async function loadVoices(){
   const sel=document.getElementById('vs_select'); if(!sel) return;
   const d=await api('/api/voices'); if(!d||d.error){ sel.innerHTML='<option>could not load voices</option>'; return; }
-  sel.innerHTML='<option value="" disabled selected>Choose a voice</option>'+(d.voices||[]).map(v=>`<option value="${v.id}">${esch(v.name)}${v.cloned?' (cloned)':''}${v.id===d.active?' · LIVE now':''}</option>`).join('');
+  // Grouped picker: the voices YOU cloned first, stock library after (owner 07-15: separate mine from out-of-the-box).
+  const _vg=(label,arr)=>arr.length?`<optgroup label="${label}">`+arr.map(v=>`<option value="${v.id}">${esch(v.name)}${v.id===d.active?' · LIVE now':''}</option>`).join('')+'</optgroup>':'';
+  const _mine=(d.voices||[]).filter(v=>v.cloned), _stock=(d.voices||[]).filter(v=>!v.cloned);
+  sel.innerHTML='<option value="" disabled selected>Choose a voice</option>'+_vg('Your voices',_mine)+_vg('Built-in',_stock);
   const act=(d.voices||[]).find(v=>v.id===d.active);
   document.getElementById('vs_active').textContent = act?`Live now: ${act.name}`:`Live voice id: ${d.active}`;
   // Mirror the voice list into the "Call me" + "Talk to me" pickers (test a clone without going live).
@@ -2350,7 +2352,12 @@ async function loadRotation(voices){
   const box=document.getElementById('rot_voices'); if(!box) return;
   const s=await api('/api/settings')||{};
   const pool=new Set(((s.vt_voice_pool||'').split(',').map(x=>x.trim()).filter(Boolean)));
-  box.innerHTML=(voices||[]).map(v=>`<label class="day" style="margin:0"><input type="checkbox" class="rotvoice" value="${v.id}" data-name="${esch(v.name)}" onchange="syncTestVoices()" ${pool.has(v.id)?'checked':''}> ${esch(v.name)}${v.cloned?' (cloned)':''}</label>`).join('')||'<span class="meta">No voices.</span>';
+  // Two clean groups (owner 07-15): the voices you cloned up top, the stock library tucked below a
+  // divider, so the page isn't one wall of voices.
+  const chip=v=>`<label class="day" style="margin:0"><input type="checkbox" class="rotvoice" value="${v.id}" data-name="${esch(v.name)}" onchange="syncTestVoices()" ${pool.has(v.id)?'checked':''}> ${esch(v.name)}</label>`;
+  const mine=(voices||[]).filter(v=>v.cloned), stock=(voices||[]).filter(v=>!v.cloned);
+  const grp=(label,arr)=>arr.length?`<div class="meta" style="margin:10px 0 4px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:10.5px">${label}</div><div style="display:flex;flex-wrap:wrap;gap:10px">${arr.map(chip).join('')}</div>`:'';
+  box.innerHTML=(grp('Your voices',mine)+grp('Built-in voices',stock))||'<span class="meta">No voices.</span>';
   OPENERS=openersFromSettings(s); renderOpeners(); syncTestVoices();
 }
 // Openers = a LIBRARY of scripts, each on/off. Ticked ones rotate on live calls (vt_opener_variants);
@@ -2366,8 +2373,11 @@ function firstActiveOpener(){ const a=OPENERS.filter(o=>o.on); return a.length?a
 function renderOpeners(){
   const box=document.getElementById('rot_opener_list');
   if(box) box.innerHTML = OPENERS.length ? OPENERS.map((o,i)=>`<label class="oprow"><input type="checkbox" ${o.on?'checked':''} onchange="toggleOpener(${i},this.checked)"><span class="optext">${esch(o.text)}</span><button class="ghost opdel" title="Remove" onclick="deleteOpener(${i})">${lucideSvg('x',14,'currentColor')}</button></label>`).join('') : '<div class="meta" style="padding:8px 0">No openers yet. write one above.</div>';
-  const box2=document.getElementById('rot_opener_list2'); // Step 5 (Rotation) mirrors the same list
-  if(box2) box2.innerHTML = OPENERS.length ? OPENERS.map((o,i)=>`<label class="oprow"><input type="checkbox" ${o.on?'checked':''} onchange="toggleOpener(${i},this.checked)"><span class="optext">${esch(o.text)}</span></label>`).join('') : '<div class="meta" style="padding:8px 0">Add scripts in Step 3.</div>';
+  // Step 5 no longer mirrors the script list (owner 07-15: scripts rotate on their own; step 5 is voices
+  // only) — just keep its count line honest.
+  const note=document.getElementById('rot_script_note'); const onCt=OPENERS.filter(o=>o.on).length;
+  if(note) note.textContent = onCt>1 ? `Your ${onCt} Step 3 scripts rotate on their own, a different one each call. This step only picks the voices.`
+    : onCt===1 ? 'Your one Step 3 script plays on every call. This step only picks the voices.' : 'No scripts yet. Add them in Step 3. This step only picks the voices.';
   const on=OPENERS.filter(o=>o.on).length;
   const c=document.getElementById('rot_opener_count'); if(c) c.textContent=OPENERS.length?('· '+on+' of '+OPENERS.length+' rotating'):'';
   refreshTestRotation();
@@ -4322,7 +4332,10 @@ async function wfgAdd(){ const inp=document.getElementById('wfg_add'); const t=(
 async function wfgDel(i){ if(WFM_GLOBAL[i]==null) return; WFM_GLOBAL.splice(i,1); renderWorkflowMgr(); await wfgSave(); toast('Opener removed'); }
 async function wfgEdit(i,text){ if(WFM_GLOBAL[i]==null) return; const t=(text||'').trim(); if(!t){ WFM_GLOBAL.splice(i,1); renderWorkflowMgr(); } else { WFM_GLOBAL[i].text=t; } await wfgSave(); }
 async function wfgToggle(i,on){ if(WFM_GLOBAL[i]){ WFM_GLOBAL[i].on=on; await wfgSave(); } }
-function wfmVoiceOpts(sel){ return '<option value="">Default voice</option>'+WFM_VOICES.map(v=>`<option value="${esch(v.id)}"${v.id===sel?' selected':''}>${esch(v.name)}${v.cloned?' (cloned)':''}</option>`).join(''); }
+function wfmVoiceGroups(fmt){ const mine=WFM_VOICES.filter(v=>v.cloned), stock=WFM_VOICES.filter(v=>!v.cloned);
+  const g=(label,arr)=>arr.length?`<optgroup label="${label}">`+arr.map(fmt).join('')+'</optgroup>':'';
+  return g('Your voices',mine)+g('Built-in',stock); }
+function wfmVoiceOpts(sel){ return '<option value="">Default voice</option>'+wfmVoiceGroups(v=>`<option value="${esch(v.id)}"${v.id===sel?' selected':''}>${esch(v.name)}</option>`); }
 // ---- Voice strip: a workflow can carry SEVERAL voices; the call path rotates them round-robin
 // (per-workflow counter, same as openers — "Reset rotation" restarts both). voices[] is the strip;
 // voiceId mirrors voices[0] so older code (Designer, call fallbacks) keeps working untouched.
@@ -4390,7 +4403,7 @@ function wfSheetBody(wi){
   return `
     <div class="k-eyebrow">Voices · 2+ rotate per call</div>
     ${wfmVoiceChips(wi,w)}
-    <select onchange="wfmAddVoice(${wi},this.value)"><option value="">+ Add a voice…</option>${WFM_VOICES.map(v=>`<option value="${esch(v.id)}">${esch(v.name)}${v.cloned?' (cloned)':''}</option>`).join('')}</select>
+    <select onchange="wfmAddVoice(${wi},this.value)"><option value="">+ Add a voice…</option>${wfmVoiceGroups(v=>`<option value="${esch(v.id)}">${esch(v.name)}</option>`)}</select>
     <div class="k-eyebrow" style="display:flex;align-items:center;justify-content:space-between">Openers · rotate per call
       <button class="ghost" style="font-size:10.5px;padding:4px 9px;text-transform:none;letter-spacing:0" onclick="wfmResetRotation(${wi})" title="Next call starts at opener #1 and voice #1">${lucideSvg('rotate-ccw',12,'currentColor')} Reset rotation</button></div>
     <div class="wfmops">
@@ -4433,7 +4446,7 @@ async function wfmSetField(wi,field,val){ const w=WF.list[wi]; if(!w) return; w[
 // always shows the exact lines a call can play (owner 2026-07-15: no invisible hardcoded scripts).
 const DELTA_FU_DEFAULTS={
   set:["Oh nice! Is it Chaos Rising? Or do you know the name of the set?","Awesome, any idea which set it is? Like Chaos Rising, or a different one?","Oh sweet, do you know the name of the set? Like Chaos Rising?"],
-  type:["Gotcha, do you know if it's booster packs or a tin?","No worries, is it like booster packs, or more like a box or a tin?"],
+  type:["Gotcha, do you know if it's booster packs or a tin?","And is it booster packs, or more like a box or a tin?"],
   no:["Ah, no worries. Any idea what day you usually get card shipments in?","Okay no problem, do you know when your next shipment usually lands?"],
   wrap:["Awesome, thanks so much! Have a good one!","Perfect, thank you so much, take care!"],
   clarify:["Oh sorry, I was just asking if you have any {category} in stock right now?"],
@@ -4443,7 +4456,7 @@ const DELTA_FU_DEFAULTS={
 };
 const DELTA_FU_SLOTS=[
   ['set','Set question (first thing after a yes)'],
-  ['type','Product type question'],
+  ['type','Product type question (after the set answer, or when they don\'t know the set)'],
   ['no','Restock day question (after a no)'],
   ['wrap','Wrap (confirmed yes only)'],
   ['wrapNo','Goodbye (no / unclear · never upbeat)'],
@@ -4460,14 +4473,24 @@ function wfmSeedDelta(w){
   return seeded;
 }
 function wfmFu(w,slot){ const f=w&&w.followups&&w.followups[slot]; return (Array.isArray(f)&&f.length)?f:DELTA_FU_DEFAULTS[slot]||[]; }
+// Each variant gets its OWN row (owner 07-15: one big box read like one long speech). A slot's rows
+// are different ways to say the SAME line; the call picks the next row each call, like the openers.
 function wfmDeltaEditor(wi,w){ if((w.lane||'charlie')!=='delta') return '';
-  const box=([slot,label])=>`<div style="margin-top:10px"><span class="meta" style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-strong)">${label}</span><textarea rows="2" style="font-size:12.5px;margin-top:3px;width:100%" oninput="wfmGrow(this)" onchange="wfmSetFollowup(${wi},'${slot}',this.value)">${esch(wfmFu(w,slot).join('\n'))}</textarea></div>`;
+  const box=([slot,label])=>{
+    const rows=wfmFu(w,slot).map((t,vi)=>`<div class="wfmop"><textarea rows="1" oninput="wfmGrow(this)" onchange="wfmEditFu(${wi},'${slot}',${vi},this.value)">${esch(t)}</textarea><button class="ghost opdel" onclick="wfmDelFu(${wi},'${slot}',${vi})" title="Remove">${lucideSvg('x',14,'currentColor')}</button></div>`).join('');
+    return `<div style="margin-top:14px"><span class="meta" style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-strong)">${label}</span>
+      <div class="wfmops">${rows}
+      <div class="wfmadd"><input id="wfmfu_${wi}_${slot}" placeholder="Add another way to say it" onkeydown="if(event.key==='Enter')wfmAddFu(${wi},'${slot}')"><button class="act" onclick="wfmAddFu(${wi},'${slot}')">Add</button></div></div></div>`;
+  };
   return `<div class="wfmmeta" style="grid-template-columns:1fr;border-top:1px dashed var(--border);margin-top:2px;padding-top:12px">
-    <div><label>Delta lines · everything a call can say <span data-tip="These ARE the recorded clips, one line per variant, rotated per call like the openers. {category} fills in. Clear a box to restore the built-in line."></span></label>
+    <div><label>Delta lines · everything a call can say <span data-tip="These ARE the recorded clips. {category} fills in."></span></label>
+    <div class="meta" style="margin:4px 0 2px">Each row under a heading is a different way to say that ONE line. A call picks the next row each time, same as the openers. Keep one row to always say the same thing.</div>
     ${DELTA_FU_SLOTS.map(box).join('')}
     </div></div>`;
 }
-async function wfmSetFollowup(wi,slot,text){ const w=WF.list[wi]; if(!w) return; if(!w.followups||typeof w.followups!=='object') w.followups={}; const arr=(text||'').split('\n').map(x=>x.trim()).filter(Boolean); w.followups[slot]=arr.length?arr:(DELTA_FU_DEFAULTS[slot]||[]).slice(); await wfmSaveList(); renderWorkflowMgr(); toast(arr.length?'Line saved':'Built-in line restored'); }
+async function wfmAddFu(wi,slot){ const inp=document.getElementById(`wfmfu_${wi}_${slot}`); const t=((inp&&inp.value)||'').trim(); if(!t) return; const w=WF.list[wi]; if(!w) return; if(!w.followups||typeof w.followups!=='object') w.followups={}; if(!Array.isArray(w.followups[slot])||!w.followups[slot].length) w.followups[slot]=(DELTA_FU_DEFAULTS[slot]||[]).slice(); w.followups[slot].push(t); renderWorkflowMgr(); await wfmSaveList(); toast('Added · rotates with the others'); }
+async function wfmDelFu(wi,slot,vi){ const w=WF.list[wi]; if(!w||!w.followups||!Array.isArray(w.followups[slot])) return; w.followups[slot].splice(vi,1); const restored=!w.followups[slot].length; if(restored) w.followups[slot]=(DELTA_FU_DEFAULTS[slot]||[]).slice(); renderWorkflowMgr(); await wfmSaveList(); toast(restored?'Last one removed · built-in line restored':'Removed'); }
+async function wfmEditFu(wi,slot,vi,text){ const w=WF.list[wi]; if(!w||!w.followups||!Array.isArray(w.followups[slot])) return; const t=(text||'').trim(); if(!t) return wfmDelFu(wi,slot,vi); w.followups[slot][vi]=t; await wfmSaveList(); }
 async function wfmClone(wi){ const w=WF.list[wi]; if(!w) return; const name=(prompt('Name for the cloned workflow:', w.name+' copy')||'').trim(); if(!name) return; if(WF.list.some(x=>x.name===name)){ toast('A workflow named “'+name+'” already exists'); return; } const copy=JSON.parse(JSON.stringify(w)); copy.name=name; copy.savedAt=Date.now(); WF.list.push(copy); renderWorkflowMgr(); await wfmSaveList(); toast('Cloned as “'+name+'” · edit then assign'); }
 // ---- Round-trip: open an existing workflow back in the Designer (the only place to tweak tuning) ----
 let EDIT_TARGET=null; // a workflow staged to load into the Designer once its async loaders settle
