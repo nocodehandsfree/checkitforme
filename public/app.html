@@ -311,6 +311,7 @@
   .heroc .spark{margin-left:auto;display:flex;align-items:flex-end;gap:3px;height:44px}
   .heroc .spark i{width:5px;border-radius:2px;background:rgba(74,222,128,.35);min-height:3px}
   .heroc .spark i.hi{background:var(--green)}
+  #d_heroswipe::-webkit-scrollbar{display:none}
   /* Peek-row icon slot — one tinted icon per report so the eye scans by color, not by reading. */
   .peek .pk-ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:0 0 auto}
   .peek .pk-t{font-size:15px}
@@ -664,8 +665,7 @@
 <body class="authwait">
 <header>
   <a class="hmark" href="#dash" title="Back to God View" onclick="showSection('dash');return false">
-    <img src="/logos/brand/check-brandmark.svg" alt="" style="width:22px;height:22px;display:block">
-    <span class="wm">heck</span>
+    <img src="/logos/brand/check.png?v=2" alt="Check" style="height:22px;width:auto;object-fit:contain;display:block">
     <span class="adm">ADMIN</span>
   </a>
   <span class="sub"><span class="dot" title="live"></span><span id="clock"></span></span>
@@ -678,13 +678,34 @@
   <section id="dash" class="active">
     <div class="k-title">Today</div>
     <div class="k-sub" id="d_date">Loading…</div>
-    <div class="heroc">
-      <div>
-        <div class="hn m" id="d_checks">—</div>
-        <div class="hl">Checks today</div>
-        <div class="trend" id="d_trend" style="display:none"></div>
+    <div id="d_heroswipe" style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;margin:16px 0 8px;scrollbar-width:none" onscroll="dashHeroDots(this)">
+      <div class="heroc" style="flex:0 0 100%;scroll-snap-align:start;margin:0">
+        <div>
+          <div class="hn m" id="d_checks">—</div>
+          <div class="hl">Checks today</div>
+          <div class="trend" id="d_trend" style="display:none"></div>
+        </div>
+        <div class="spark" id="d_spark"></div>
       </div>
-      <div class="spark" id="d_spark"></div>
+      <div class="heroc" style="flex:0 0 100%;scroll-snap-align:start;margin:0">
+        <div>
+          <div class="hn m" id="d_week">—</div>
+          <div class="hl">Checks · 7 days</div>
+          <div class="trend" id="d_week_sub" style="display:none"></div>
+        </div>
+      </div>
+      <div class="heroc" style="flex:0 0 100%;scroll-snap-align:start;margin:0">
+        <div>
+          <div class="hn m" id="d_month">—</div>
+          <div class="hl">Checks · 30 days</div>
+          <div class="trend" id="d_month_sub" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+    <div id="d_herodots" style="display:flex;justify-content:center;gap:6px;margin-bottom:8px">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--green)"></span>
+      <span style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18)"></span>
+      <span style="width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.18)"></span>
     </div>
     <div class="herog" id="d_hero"></div>
     <div class="k-eyebrow">Reports</div>
@@ -1082,8 +1103,8 @@
         <label style="margin-top:8px">Persona name</label><input id="pn_name" placeholder="e.g. Friendly Jared">
         <label>Starting vibe <span class="meta" style="font-weight:500">· optional</span></label>
         <div id="pn_base" class="row" style="gap:6px"></div>
-        <div class="meta" style="margin-top:4px">Your Tone &amp; style below always comes through. a vibe just adds a quick descriptor on top — pick Custom for none.</div>
-        <label>Tone &amp; style <span data-tip="Free text — whatever you write drops straight into the persona (e.g. 'Calm, a little dry humor, never pushy')."></span></label><textarea id="pn_tone" rows="3" style="font-size:13px"></textarea>
+        <div class="meta" style="margin-top:4px">Your Tone &amp; style below always comes through. a vibe just adds a quick descriptor on top. Pick Custom for none.</div>
+        <label>Tone &amp; style <span data-tip="Free text. Whatever you write drops straight into the persona (e.g. 'Calm, a little dry humor, never pushy')."></span></label><textarea id="pn_tone" rows="3" style="font-size:13px"></textarea>
         <label>Style toggles</label>
         <div style="display:flex;flex-direction:column;gap:8px">
           <label class="day" style="margin:0"><input id="pn_slang" type="checkbox"> Casual slang</label>
@@ -1364,13 +1385,25 @@ function _ensureSheet(){
   const sheet=document.createElement('div'); sheet.className='sheet';
   sheet.innerHTML='<div class="grab"></div><div class="sh-title"></div><div class="sh-sub"></div><div class="sh-body"></div>';
   document.body.appendChild(scrim); document.body.appendChild(sheet);
-  // swipe the sheet down to dismiss (grabber + header drag)
-  let y0=null,dy=0;
-  const down=e=>{ y0=(e.touches?e.touches[0]:e).clientY; dy=0; sheet.style.transition='none'; };
-  const move=e=>{ if(y0==null) return; dy=Math.max(0,(e.touches?e.touches[0]:e).clientY-y0); sheet.style.transform='translate(-50%,'+dy+'px)'; };
-  const up=()=>{ if(y0==null) return; sheet.style.transition=''; if(dy>90) closeSheet(); else sheet.style.transform=''; y0=null; };
-  const grab=sheet.querySelector('.grab');
-  [grab, sheet.querySelector('.sh-title')].forEach(h=>{ h.addEventListener('touchstart',down,{passive:true}); h.addEventListener('touchmove',move,{passive:true}); h.addEventListener('touchend',up); });
+  // Thumb-drag ANYWHERE on the sheet to dismiss (same feel as the website's slide-ups): a downward
+  // drag grabs the sheet when its body is scrolled to the top; otherwise the body scrolls normally.
+  const body=sheet.querySelector('.sh-body');
+  let y0=null,dy=0,dragging=false;
+  const down=e=>{ y0=e.touches[0].clientY; dy=0; dragging=false; };
+  const move=e=>{
+    if(y0==null) return;
+    dy=e.touches[0].clientY-y0;
+    if(!dragging){
+      if(dy>6 && (!body||body.scrollTop<=0)){ dragging=true; sheet.style.transition='none'; }
+      else if(dy<-4){ y0=null; return; } // scrolling up inside the body — let it be
+    }
+    if(dragging){ if(e.cancelable) e.preventDefault(); sheet.style.transform='translate(-50%,'+Math.max(0,dy)+'px)'; }
+  };
+  const up=()=>{ if(dragging){ sheet.style.transition=''; if(dy>110) closeSheet(); else sheet.style.transform=''; } y0=null; dy=0; dragging=false; };
+  sheet.addEventListener('touchstart',down,{passive:true});
+  sheet.addEventListener('touchmove',move,{passive:false});
+  sheet.addEventListener('touchend',up);
+  sheet.addEventListener('touchcancel',up);
   _sheetEls={scrim,sheet,title:sheet.querySelector('.sh-title'),sub:sheet.querySelector('.sh-sub'),body:sheet.querySelector('.sh-body')};
   return _sheetEls;
 }
@@ -1522,7 +1555,7 @@ function renderGtm(){
       <button type="button" class="k-key" style="margin:0;padding:8px 14px;font-size:11px;letter-spacing:.06em" onclick="gtmRestore()">Restore</button>
       <button type="button" onclick="gtmDismissMissing()" title="Gone on purpose" style="background:none;border:none;color:#5C5C68;cursor:pointer;font-size:15px;line-height:1;padding:2px">×</button>
     </div>`):'';
-  if(!list.length){ el.innerHTML=rb+'<div class="empty">Nothing here — adjust the filters or add an item.</div>'; return; }
+  if(!list.length){ el.innerHTML=rb+'<div class="empty">Nothing here. Adjust the filters or add an item.</div>'; return; }
   // Comp 2a row: circle + one-line title + LAUNCH chip · description clamped to two · agent/area chips.
   const row=i=>{
     const idx=GTM_ITEMS.indexOf(i), isDone=i.status==='done', isDoing=i.status==='doing';
@@ -1584,21 +1617,28 @@ async function loadReceipts(){
       <div class="k-well"><div class="n${claimed?' g':' a'}">${claimed}</div><div class="l">Claimed</div></div>
       <div class="k-well"><div class="n">${rows.filter(r=>!r.claimedBy).length}</div><div class="l">Unclaimed</div></div>`; }
   if(!rows.length){ list.innerHTML='<div class="empty">No receipts yet. They show up once a shopper emails one in and we can read it.</div>'; return; }
-  // Comp 2d rows: name-first clamped to two lines, ONE mono meta line, state chip + age muted.
-  list.innerHTML=rows.map(r=>{
-    const bits=[r.machineId?esch(r.machineId):'',r.total?('$'+esch(r.total)):'',r.orderId?('#'+esch(r.orderId)):'',r.txnAt?esch(r.txnAt):''].filter(Boolean).join(' \u00b7 ');
-    return `<div class="peek static" style="display:block">
-      <div style="font-size:14.5px;font-weight:700;letter-spacing:-.2px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esch(r.product||'(no product parsed)')}</div>
-      <div style="font-family:ui-monospace,monospace;font-size:11.5px;color:#8A8A96;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${bits||'\u2014'}</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:9px">
-        ${r.claimedBy?'<span style="font-size:9px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--green);background:rgba(74,222,128,.13);border-radius:7px;padding:4px 8px">Claimed</span>':'<span style="font-size:9px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:#8A8A96;background:var(--terminal);box-shadow:inset 0 2px 4px rgba(0,0,0,.4);border-radius:7px;padding:4px 8px">Unclaimed</span>'}
-        <span style="margin-left:auto;font-size:11px;font-weight:600;color:#5C5C68">${ago(r.createdAt)}</span>
-      </div>
-    </div>`;
-  }).join('');
+  // Compact rows (owner 07-15): name + price on the row, EVERYTHING else in the receipt sheet.
+  RCPT_ROWS=rows;
+  list.innerHTML=rows.map((r,i)=>`<button class="peek" onclick="rcptSheet(${i})">
+      <span class="pk-main"><span class="pk-t" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esch(r.product||'(no product parsed)')}</span>
+      <span class="pk-m" style="display:block">${r.claimedBy?'<span style=\'color:var(--green)\'>claimed</span>':'unclaimed'} · ${ago(r.createdAt)} ago</span></span>
+      <span class="pk-fact">${r.total?('$'+esch(r.total)):''}</span>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>`).join('');
 }
 // Admin diagnostic: read the ingest inbox and show what the parser does with each email (incl. rejects),
 // so we can see whether a receipt arrived and why it did/didn't land. Read-only; admin-gated server-side.
+let RCPT_ROWS=[];
+function rcptSheet(i){
+  const r=RCPT_ROWS[i]; if(!r) return;
+  const line=(k,v)=>v?`<div class="repline"><span class="rl">${k}</span><b>${esch(String(v))}</b></div>`:'';
+  openSheet('Receipt', r.claimedBy?'Claimed · free check granted':'Unclaimed',
+    `<div style="font-size:15px;font-weight:700;line-height:1.4;margin:4px 0 10px">${esch(r.product||'(no product parsed)')}</div>`
+    +line('Machine',r.machineId)+line('Total',r.total?('$'+r.total):null)+line('Order',r.orderId?('#'+r.orderId):null)
+    +line('Purchased',r.txnAt)+line('From',r.fromEmail||r.from)+line('Store',r.store||r.storeName)
+    +line('Claimed by',r.claimedBy)
+    +(r.raw?`<div class="k-eyebrow">Raw parse</div><pre style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;padding:12px">${esch(typeof r.raw==='string'?r.raw:JSON.stringify(r.raw,null,2))}</pre>`:''));
+}
 async function inspectInbox(){
   const el=document.getElementById('rcpt_debug'); if(!el) return;
   el.innerHTML='Reading restocktimer@gmail.com…';
@@ -1709,13 +1749,13 @@ async function tdCall(){
   document.getElementById("td_status").textContent="dialing…";
   document.getElementById("td_feed").innerHTML="";
   clearInterval(TD_POLL); TD_POLL=setInterval(tdPoll,1500); tdPoll();
-  toast("Calling you — pick up and answer like Staff");
+  toast("Calling you · pick up and answer like Staff");
 }
 async function tdPoll(){
   if(!TD_ID) return;
   const s=await api("/api/admin/tapedeck/session/"+TD_ID);
   if(!s||s.error) return;
-  document.getElementById("td_status").textContent=s.status==="live"?"● live — answer like Staff (try a weird reply too)":s.status;
+  document.getElementById("td_status").textContent=s.status==="live"?"● live · answer like Staff (try a weird reply too)":s.status;
   document.getElementById("td_feed").innerHTML=(s.steps||[]).map(st=>{
     const us=st.who==="us";
     return `<div style="display:grid;grid-template-columns:34px 1fr;gap:8px;font-size:12.5px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)">
@@ -1771,7 +1811,7 @@ async function mapperPoll(){
   const varHtml=rec.ringVariable?'<div class="meta" style="margin-top:4px;color:#FBBF24">Variable ring (department pickup) — time-to-human varies call to call</div>':'';
   const tgtHtml=run.target?('<div class="meta" style="margin-top:4px">Target: <b>'+esch(run.target)+'</b></div>'):'';
   const needHtml=run.needsTarget?('<div style="margin-top:8px;background:rgba(251,191,36,.1);border:1px solid #FBBF24;border-radius:10px;padding:9px 11px">'
-    +'<div class="meta" style="color:#FBBF24">No customer-service option in this menu — which desk should we press for card stock?</div>'
+    +'<div class="meta" style="color:#FBBF24">No customer-service option in this menu. which desk should we press for card stock?</div>'
     +'<div class="row" style="gap:6px;margin-top:6px"><input id="mapper_target_in" placeholder="e.g. customer service, front, sporting goods" style="flex:1;min-width:120px"/>'
     +'<button class="act" onclick="mapperSetTarget('+run.chainId+')">Set target &amp; re-map</button></div></div>'):'';
   document.getElementById('mapper_bench').innerHTML='Before: <b>'+bench+'</b> to a human · best now: <b style="color:var(--green)">'+best+'</b>'+(run.stopReason?' · '+esch(run.stopReason):'')+tgtHtml+varHtml+menuHtml+needHtml;
@@ -1990,8 +2030,8 @@ function renderPlans(){
   document.getElementById('plans_root').innerHTML=`
     <div class="hero" style="margin-bottom:16px">
       <div class="row" style="justify-content:space-between;align-items:center;gap:12px">
-        <div><div class="hero-eyebrow">Pricing — source of truth</div>
-          <div style="font-size:14px;color:var(--text-muted);margin-top:6px;max-width:440px;line-height:1.5">Edit tiers &amp; the pay-as-you-go ladder, then <b>Publish to Stripe</b>. Quota resets each cycle (no rollover); PAYG credits never expire. Sanity-check margins in <a onclick="showSection('calc')" style="color:var(--green);cursor:pointer">Calc</a>.</div>
+        <div><div class="hero-eyebrow">Pricing</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:6px;line-height:1.5">Edit tiers, then Publish to Stripe. <span style="color:#8A8A96;font-weight:700;cursor:pointer" onclick="openSheet('How pricing works','', '<div class=\'meta\' style=\'line-height:1.7\'>This page is the source of truth for every price. Edit a tier or the pay as you go ladder, then Publish to Stripe.<br><br>Subscription checks reset each cycle with no rollover. PAYG credits never expire.<br><br>Sanity check margins in Calc before publishing.</div>')">More →</span></div>
         </div>
         <button type="button" onclick="publishPlans()" ${anyPending?'':'disabled'} style="background:${anyPending?'linear-gradient(180deg,#5BEA93 0%,#34C268 100%)':'var(--surface-2)'};color:${anyPending?'#06210f':'var(--text-tertiary)'};border:none;font-weight:800;font-size:14px;padding:12px 20px;border-radius:12px;cursor:${anyPending?'pointer':'default'};white-space:nowrap;box-shadow:${anyPending?'0 8px 18px -8px rgba(52,197,107,.5)':'none'}">${anyPending?'Publish to Stripe':'All in sync'}</button>
       </div>
@@ -2019,7 +2059,7 @@ async function publishPlans(){
   toast('Publishing to Stripe…');
   await savePlansDraft();
   const r=await api('/api/admin/plans/publish',{method:'POST'});
-  if(r&&!r.error){ PLANS=r; renderPlans(); toast('Published — all tiers in sync'); }
+  if(r&&!r.error){ PLANS=r; renderPlans(); toast('Published · all tiers in sync'); }
   else toast('Publish failed: '+((r&&r.error)||'error'));
 }
 
@@ -2191,6 +2231,12 @@ async function loadDash(){
     if(tr){ tr.style.display='inline-flex'; tr.className='trend'+(delta>=0?'':' dn'); tr.textContent=(delta>=0?'▲ ':'▼ ')+Math.abs(delta)+' vs yesterday'; }
     if(sp){ const mx=Math.max(...days,1); sp.innerHTML=days.map((n,i)=>`<i${i===days.length-1?' class="hi"':''} style="height:${Math.max(7,Math.round(n/mx*100))}%"></i>`).join(''); }
   } else { if(tr) tr.style.display='none'; if(sp) sp.innerHTML=''; }
+  // ---- Hero pages 2 + 3: the week and the month (slide the hero to reach them). ----
+  const wk=(o&&o.week)||{}, mo=(o&&o.month)||{};
+  const setTxt=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  setTxt('d_week',wk.calls!=null?wk.calls:'—'); setTxt('d_month',mo.calls!=null?mo.calls:'—');
+  const ws=document.getElementById('d_week_sub'); if(ws&&wk.confirms!=null){ ws.style.display='inline-flex'; ws.className='trend'; ws.textContent=wk.confirms+' confirmed'; }
+  const ms=document.getElementById('d_month_sub'); if(ms&&mo.confirms!=null){ ms.style.display='inline-flex'; ms.className='trend'; ms.textContent=mo.confirms+' confirmed'; }
   // ---- Two vitals: color reads the state before the number does. ----
   const af=(ri&&ri.answerFunnel)||{}; const reach=af.dialed?Math.round((af.reachedHuman/af.dialed)*100):null;
   const pctLeft=(c&&c.limit)?Math.max(0,Math.min(100,Math.round((c.remaining/c.limit)*100))):null;
@@ -2222,6 +2268,11 @@ function sheetFromHolder(id,title,sub){
   const holder=document.getElementById(id); if(!holder) return;
   holder.style.display=''; // holders live hidden in their section; unhide while borrowed by the sheet
   openSheet(title||'', sub||'', holder);
+}
+function dashHeroDots(el){
+  const i=Math.round(el.scrollLeft/el.clientWidth);
+  const dots=document.querySelectorAll('#d_herodots span');
+  dots.forEach((d,k)=>{ d.style.background=k===i?'var(--green)':'rgba(255,255,255,.18)'; });
 }
 function dashSheet(key){
   const titles={money:'Money',pulse:'Members',timing:'Call time',health:'Call health',credits:'Credits'};
@@ -2585,23 +2636,36 @@ async function loadFeedback(){
   const UV={in:'In stock',out:'Not in',soon:'Restocking',unsure:'Unclear'};
   const ours=r=>r.confirmed===1?'In stock':r.confirmed===0?'Not in':(r.status_key?String(r.status_key).replace(/_/g,' '):'—');
   FB_ROWS=rows;
+  // The call is the point (owner 07-15): the row shows the disagreement, the SHEET shows the call.
   list.innerHTML=rows.map(r=>{
-    const canCorrect=r.disagree&&!r.reviewed&&(r.user_verdict==='in'||r.user_verdict==='out');
     const open=r.disagree&&!r.reviewed;
-    return `<div class="peek static" style="align-items:flex-start${open?';box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 14px rgba(244,208,63,.14)':''}">
-      <div class="pk-main">
-        <div class="pk-t">${esch(r.store||'Unknown store')} <span style="color:#8A8A96;font-weight:500;font-size:11.5px">${agoTs(r.created_at)}</span></div>
-        <div class="pk-m" style="white-space:normal">We said <b style="color:#fff">${esch(ours(r))}</b> · they said <b style="color:${open?'#F4D03F':'#fff'}">${esch(UV[r.user_verdict]||r.user_verdict||'?')}</b>${r.reviewed?' · reviewed':''}</div>
-        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
-          ${r.transcript?`<button class="ghost" style="font-size:12px;padding:5px 10px" onclick="fbTranscript(${r.id})">Transcript</button>`:''}
-          ${canCorrect?`<button class="act" style="font-size:12px;padding:5px 10px" onclick="fbCorrect(${r.id},'${r.user_verdict}')">Correct → ${esch(UV[r.user_verdict])}</button>`:''}
-          ${!r.reviewed?`<button class="ghost" style="font-size:12px;padding:5px 10px" onclick="fbReview(${r.id})">Mark reviewed</button>`:''}
-        </div>
-      </div>
-    </div>`;
+    return `<button class="peek" onclick="fbSheet(${r.id})" style="align-items:flex-start${open?';box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07),0 0 14px rgba(244,208,63,.14)':''}">
+      <span class="pk-main">
+        <span class="pk-t" style="display:block">${esch(r.store||'Unknown store')} <span style="color:#8A8A96;font-weight:500;font-size:11.5px">${agoTs(r.created_at)}</span></span>
+        <span class="pk-m" style="display:block;white-space:normal">We said <b style="color:#fff">${esch(ours(r))}</b> · they saw <b style="color:${open?'#F4D03F':'#fff'}">${esch(UV[r.user_verdict]||r.user_verdict||'?')}</b>${r.reviewed?' · reviewed':''}</span>
+      </span>
+      ${open?'<span style="font-size:9px;font-weight:900;letter-spacing:.06em;color:#F4D03F;background:rgba(244,208,63,.13);border-radius:6px;padding:3px 6px;flex:0 0 auto;margin-top:2px">REVIEW</span>':''}
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-top:4px"><path d="M9 6l6 6-6 6"/></svg>
+    </button>`;
   }).join('');
 }
-let FB_ROWS=[];
+// The feedback sheet: the disagreement up top, the CALL underneath, the fix actions at the thumb.
+function fbSheet(id){
+  const r=FB_ROWS.find(x=>x.id===id); if(!r) return;
+  const UV={in:'In stock',out:'Not in',soon:'Restocking',unsure:'Unclear'};
+  const ours=x=>x.confirmed===1?'In stock':x.confirmed===0?'Not in':(x.status_key?String(x.status_key).replace(/_/g,' '):'—');
+  const canCorrect=r.disagree&&!r.reviewed&&(r.user_verdict==='in'||r.user_verdict==='out');
+  openSheet(r.store||'Feedback', agoTs(r.created_at),
+    `<div style="display:flex;gap:10px;margin:4px 0 14px">
+      <div style="flex:1;background:var(--terminal);border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px;text-align:center"><div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8A8A96">We said</div><div style="font-size:15px;font-weight:800;margin-top:4px">${esch(ours(r))}</div></div>
+      <div style="flex:1;background:var(--terminal);border-radius:14px;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);padding:12px;text-align:center"><div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#F4D03F">They saw</div><div style="font-size:15px;font-weight:800;margin-top:4px;color:#F4D03F">${esch(UV[r.user_verdict]||r.user_verdict||'?')}</div></div>
+    </div>`
+    +(r.transcript?`<div class="k-eyebrow" style="margin-top:0">The call</div>${bubbles(r.transcript)}`:'<div class="empty" style="padding:12px 0">No transcript captured for this call.</div>')
+    +`<div class="btnrow split" style="margin-top:18px">
+      ${!r.reviewed?`<button class="ghost" onclick="closeSheet();fbReview(${r.id})">Mark reviewed</button>`:'<span></span>'}
+      ${canCorrect?`<button class="act" onclick="closeSheet();fbCorrect(${r.id},'${r.user_verdict}')">Correct → ${esch(UV[r.user_verdict])}</button>`:''}
+    </div>`);
+}
 function fbTranscript(id){
   const r=FB_ROWS.find(x=>x.id===id); if(!r||!r.transcript) return;
   openSheet(r.store||'Transcript', agoTs(r.created_at), bubbles(r.transcript)||`<div class="meta" style="white-space:pre-wrap">${esch(r.transcript)}</div>`);
@@ -2678,7 +2742,7 @@ async function loadSupportChats(){
   if(SUP.cat)p.set('category',SUP.cat); if(SUP.q)p.set('q',SUP.q);
   const r=await api('/api/support/chats?'+p.toString());
   const rows=Array.isArray(r)?r:(r&&Array.isArray(r.chats)?r.chats:null);
-  if(!rows){ el.innerHTML='<div class="empty">No chat data yet — waiting on the Support lane\'s API.</div>'; return; }
+  if(!rows){ el.innerHTML='<div class="empty">No chat data yet. Waiting on the Support lane\'s API.</div>'; return; }
   if(!rows.length){ el.innerHTML='<div class="empty">No chats match these filters.</div>'; return; }
   // Log rows (comp 1g): initials tile · the question · who/category/when · right icon = how it ended
   // (green check = the AI handled it, amber up arrow = went to a human, yellow ? = pending).
@@ -3744,7 +3808,10 @@ function customerVerdict(o){
   const key=verdictKey(o), s=STATUSES[key];
   if(s){
     let n=(key==='failed'&&o.failureReason)?o.failureReason:(s.note||'');
-    n=n.replace(/\{product\}/g, o.productName||'it');   // {product} token → the live product name (registry-driven)
+    // Registry tokens → live values from the call row (owner 07-15: notes showed raw {store}/{category}).
+    n=n.replace(/\{product\}/g, o.productName||o.category||'it')
+       .replace(/\{category\}/g, o.category||o.productName||'it')
+       .replace(/\{store\}/g, (o.retailer||o.store||'This store').split(/—|–| - /)[0].trim());
     if(!n && s.tone==='in' && o.productName) n="They've got "+o.productName+" in. go get it.";
     return {e:s.emoji, t:s.label, c:s.color, n, key};
   }
@@ -4206,7 +4273,7 @@ function wfmVoices(w){ return (Array.isArray(w.voices)&&w.voices.length)?w.voice
 function wfmVoiceName(id){ const v=WFM_VOICES.find(x=>x.id===id); return v?v.name:(id?id.slice(0,10)+'…':''); }
 function wfmVoiceChips(wi,w){
   const vs=wfmVoices(w);
-  if(!vs.length) return '<div class="meta" style="margin:2px 0 6px">Default voice — add one or more below.</div>';
+  if(!vs.length) return '<div class="meta" style="margin:2px 0 6px">Default voice. Add one or more below.</div>';
   return `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px">${vs.map((id,vi)=>
     `<span class="wfmpin">${esch(wfmVoiceName(id))}${vs.length>1&&vi===0?' <span class="meta" style="font-weight:500">first</span>':''}<a onclick="wfmDelVoice(${wi},${vi})" title="Remove from rotation" style="cursor:pointer;font-weight:900;color:#8A8A96">×</a></span>`).join('')}</div>`;
 }
@@ -4523,7 +4590,7 @@ async function loadAlerts(){
   const roll=log.rollup||{}, rEl=document.getElementById('al_rollup');
   if(rEl){ const ks=Object.keys(roll); const subs=log.subscribers||{};
     rEl.innerHTML=`<div class="stats"><div class="stat"><div class="n">${subs.total||0}</div><div class="l">signed up</div></div><div class="stat"><div class="n">${Object.values(roll).reduce((a,b)=>a+b,0)}</div><div class="l">sends this month</div></div></div>`
-      +(ks.length?`<div style="margin-top:8px">`+ks.sort().map(k=>{const [ev,ch,st]=k.split('.');return `<div class="repline"><span class="rl">${esch(ev)} · ${esch(ch)} · ${esch(st)}</span><b>${roll[k]}</b></div>`;}).join('')+`</div>`:'<div class="meta" style="margin-top:6px">No sends yet this month.</div>'); }
+      +(ks.length?`<div style="margin-top:8px">`+ks.sort().map(k=>{const [ev,ch,st]=k.split('.');return `<div class="repline"><span class="rl">${esch(String(ev).replace(/_/g,' '))} · ${esch(ch)} · ${esch(st)}</span><b>${roll[k]}</b></div>`;}).join('')+`</div>`:'<div class="meta" style="margin-top:6px">No sends yet this month.</div>'); }
   // Recent sends
   const lg=document.getElementById('al_log'), recent=log.recent||[];
   if(lg){ lg.innerHTML=recent.length?recent.slice(0,60).map(r=>{
@@ -4552,8 +4619,8 @@ async function sendAlertTest(){
   const r=await api('/api/alerts/test',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event,to})});
   if(!r||r.error){ if(out){ out.style.color='#F87171'; out.textContent='Error: '+((r&&r.error)||'no response'); } return; }
   // sent = it actually went out; stubbed = the provider key/number isn't live yet.
-  if(r.status==='sent'){ if(out){ out.style.color='var(--green)'; out.textContent='Sent to '+to+' — check your '+(r.channel==='sms'?'phone':'inbox (and spam)'); } toast('Test sent'); }
-  else if(r.status==='stubbed'){ if(out){ out.style.color='#F59E0B'; out.textContent='Logged but NOT delivered — '+(r.channel==='sms'?'the Twilio number isn’t live yet (pending A2P).':'Brevo key not set on this service.')+' ('+(r.detail||'')+')'; } }
+  if(r.status==='sent'){ if(out){ out.style.color='var(--green)'; out.textContent='Sent to '+to+' · check your '+(r.channel==='sms'?'phone':'inbox (and spam)'); } toast('Test sent'); }
+  else if(r.status==='stubbed'){ if(out){ out.style.color='#F59E0B'; out.textContent='Logged but NOT delivered · '+(r.channel==='sms'?'the Twilio number isn’t live yet (pending A2P).':'Brevo key not set on this service.')+' ('+(r.detail||'')+')'; } }
   else{ if(out){ out.style.color='#F59E0B'; out.textContent=r.status+(r.detail?(' · '+r.detail):''); } }
   loadAlerts();
 }
