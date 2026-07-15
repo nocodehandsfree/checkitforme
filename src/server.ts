@@ -170,8 +170,15 @@ app.use("*", async (c, next) => {
   // valid ?peek code (instant, on the magic link) or the peek cookie skips it for that browser only.
   if (config.comingSoon && c.req.method === "GET" && !peekOk(code, getCookie(c, "peek"))) {
     const host = (c.req.header("host") || "").toLowerCase();
-    const adminHost = host.startsWith("caller.") || host.startsWith("admin.");
-    if (!adminHost && !GATE_SKIP.test(c.req.path)) return c.html(renderComingSoon(host, !!c.req.query("ref")));
+    // Consumer-vs-admin here MUST mirror rootHandler's decision exactly. In prod, Admin traffic can
+    // reach the app on hosts that don't literally start with admin./caller. (edge routing) — those
+    // resolve to the default "runner" brand, which is how rootHandler serves them app.html. A naive
+    // startsWith() check here served the coming-soon splash to THE Admin (2026-07-15).
+    const override = c.req.query("brand");
+    const consumerHost = config.staging.on
+      ? (!(host.startsWith("caller.") || host.startsWith("admin.")) || !!override)
+      : (host.startsWith("runner.") || resolveBrand(host, override).key !== "runner" || !!override);
+    if (consumerHost && !GATE_SKIP.test(c.req.path)) return c.html(renderComingSoon(host, !!c.req.query("ref")));
   }
   return next();
 });
