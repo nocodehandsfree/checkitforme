@@ -263,10 +263,10 @@ function fillHtmlBold(t: string, tk: Record<string, string | number | undefined>
 // turned the old light base into gray mush), and light-mode clients show the dark comp as intended.
 function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | number | undefined>): string {
   if (!m) return "";
-  const wrap = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1B1B20;border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
-  if (m.type === "chip") return wrap(`<span style="font-size:14px;font-weight:700;color:#FFFFFF;font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
+  const wrap = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="mod" style="background:#1B1B20;border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
+  if (m.type === "chip") return wrap(`<span class="mt" style="font-size:14px;font-weight:700;color:#FFFFFF;font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
   if (m.type === "product") return wrap(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-    <td style="font-family:${FONT}"><div style="font-size:16px;font-weight:800;color:#FFFFFF">${escHtml(fill(m.title, tk))}</div><div style="font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
+    <td style="font-family:${FONT}"><div class="mt" style="font-size:16px;font-weight:800;color:#FFFFFF">${escHtml(fill(m.title, tk))}</div><div class="ms" style="font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
     <td align="right" valign="middle"><span style="display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.6px;color:#4ADE80;background:#122019;border-radius:999px;padding:6px 12px;font-family:${FONT}">${escHtml(m.badge)}</span></td></tr></table>`, "16px 18px", 16);
   const rows = m.steps.map((s, i) => {
     const last = i === m.steps.length - 1;
@@ -291,8 +291,8 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, _body: st
   const showUnsub = event !== "confirm_email";
   // Paragraphs whose tokens fill to nothing (e.g. no restock day heard) are dropped, not rendered as gaps.
   const bodyHtml = d.body.filter((p) => fill(p.replace(/\*\*/g, ""), tokens)).map((p, i) => i === 0
-    ? `<tr><td style="padding-top:15px;font-size:17px;line-height:1.5;color:#D1D1DA;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
-    : `<tr><td style="padding-top:16px;font-size:14px;line-height:1.5;color:#B9B9C4;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
+    ? `<tr><td class="p1" style="padding-top:15px;font-size:17px;line-height:1.5;color:#D1D1DA;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
+    : `<tr><td class="p2" style="padding-top:16px;font-size:14px;line-height:1.5;color:#B9B9C4;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
   const ctaLabel = `${escHtml(d.cta).toUpperCase()}&nbsp;&nbsp;&rarr;`;
   // Capsule CTA: filled #16161C, 2px green ring, WHITE label. Outlook can't round a td, so MSO gets
   // a VML roundrect (arcsize 50% = full capsule) and everyone else gets the styled <a>.
@@ -318,27 +318,40 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, _body: st
   const footer = showUnsub
     ? `<a href="${manageUrl}" style="color:#8A8A96;text-decoration:none">${manageEs}</a><span style="color:#333340">&nbsp;&middot;&nbsp;</span><a href="${unsubUrl}" style="color:#8A8A96;text-decoration:none">${unsubEs}</a>`
     : `<a href="${manageUrl}" style="color:#8A8A96;text-decoration:none">${manageEs}</a>`;
+  // [data-ogsc]/[data-ogsb]: Outlook (web + New Outlook, sometimes mobile) stamps these attributes on
+  // elements it recolors. Re-asserting our dark values under them reclaims the gray-mush render as far
+  // as Outlook allows. It is undocumented + unreliable on Outlook mobile — best effort, not a guarantee.
   return `<!doctype html>
 <html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">
-<style>:root{color-scheme:dark;supported-color-schemes:dark}</style>
+<style>
+:root{color-scheme:dark;supported-color-schemes:dark}
+[data-ogsc] .board,[data-ogsb] .board{background:#08090D!important}
+[data-ogsc] .card,[data-ogsb] .card{background:#14141A!important}
+[data-ogsc] .mod,[data-ogsb] .mod{background:#1B1B20!important}
+[data-ogsc] .hl{color:#FFFFFF!important}
+[data-ogsc] .kick{color:${d.kickerColor}!important}
+[data-ogsc] .p1{color:#D1D1DA!important}[data-ogsc] .p2{color:#B9B9C4!important}
+[data-ogsc] .mt{color:#FFFFFF!important}[data-ogsc] .ms{color:#8A8A96!important}
+[data-ogsc] .ft,[data-ogsc] .ft a{color:#8A8A96!important}
+</style>
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
 </head><body style="margin:0;padding:0;background:#08090D" bgcolor="#08090D">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#08090D" style="background:#08090D;margin:0;padding:0"><tr><td align="center" style="padding:22px 16px 30px">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#08090D" class="board" style="background:#08090D;margin:0;padding:0"><tr><td align="center" style="padding:22px 16px 30px">
     <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
       <tr><td style="padding:0 0 22px"><img src="https://checkitforme.com/logos/brand/check.png" width="104" height="33" alt="Check" style="display:block;width:104px;height:33px;border:0"></td></tr>
-      <tr><td bgcolor="#14141A" style="background:#14141A;border-radius:26px;padding:30px 40px">
+      <tr><td bgcolor="#14141A" class="card" style="background:#14141A;border-radius:26px;padding:30px 40px">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          <tr><td style="font-size:10.5px;font-weight:700;letter-spacing:1.6px;color:${d.kickerColor};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
-          <tr><td style="padding-top:14px;font-size:33px;font-weight:900;color:#FFFFFF;line-height:1.1;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
+          <tr><td class="kick" style="font-size:10.5px;font-weight:700;letter-spacing:1.6px;color:${d.kickerColor};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
+          <tr><td class="hl" style="padding-top:14px;font-size:33px;font-weight:900;color:#FFFFFF;line-height:1.1;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
           ${bodyHtml}
           ${moduleHtml(d.module, tokens)}
           ${cta}
         </table>
       </td></tr>
-      <tr><td style="padding:22px 2px 0;font-family:${FONT};font-size:12.5px;color:#8A8A96">${footer}</td></tr>
+      <tr><td class="ft" style="padding:22px 2px 0;font-family:${FONT};font-size:12.5px;color:#8A8A96">${footer}</td></tr>
     </table>
     <!--[if mso]></td></tr></table><![endif]-->
   </td></tr></table></body></html>`;
