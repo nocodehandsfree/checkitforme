@@ -1837,6 +1837,15 @@ html[data-skin="v2"] #storeReqOverlay .modal::before,html[data-skin="v2"] #watch
 html[data-skin="v2"] #storeReqOverlay.on .modal,html[data-skin="v2"] #watchOverlay.on .modal,html[data-skin="v2"] #scheduleOverlay.on .modal,html[data-skin="v2"] #inviteOverlay.on .modal,html[data-skin="v2"] #receiptOverlay.on .modal,html[data-skin="v2"] #kioskOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 html[data-skin="v2"] #storeReqOverlay .modal>.x,html[data-skin="v2"] #watchOverlay .modal>.x,html[data-skin="v2"] #scheduleOverlay .modal>.x{display:none!important}
 html[data-skin="v2"] #inviteOverlay .modal>.x,html[data-skin="v2"] #receiptOverlay .modal>.x,html[data-skin="v2"] #kioskOverlay .modal>.x{display:none!important}
+/* Every remaining centered pop-up joins the bottom-sheet family (owner 07-14: one unified nav —
+   sign-in / edit cell, share, check-again, caller-id, kiosk-call confirm, lead, paid, score, waitlist).
+   All of them close on backdrop tap; drag-down binds below with the others. */
+html[data-skin="v2"] #authOverlay,html[data-skin="v2"] #againOverlay,html[data-skin="v2"] #cidOverlay,html[data-skin="v2"] #kcallOverlay,html[data-skin="v2"] #leadOverlay,html[data-skin="v2"] #paidOverlay,html[data-skin="v2"] #scoreOverlay,html[data-skin="v2"] #shareOverlay,html[data-skin="v2"] #waitlistOverlay{align-items:flex-end;padding:0}
+html[data-skin="v2"] #authOverlay .modal,html[data-skin="v2"] #againOverlay .modal,html[data-skin="v2"] #cidOverlay .modal,html[data-skin="v2"] #kcallOverlay .modal,html[data-skin="v2"] #leadOverlay .modal,html[data-skin="v2"] #paidOverlay .modal,html[data-skin="v2"] #scoreOverlay .modal,html[data-skin="v2"] #shareOverlay .modal,html[data-skin="v2"] #waitlistOverlay .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
+html[data-skin="v2"] #authOverlay .modal::before,html[data-skin="v2"] #againOverlay .modal::before,html[data-skin="v2"] #cidOverlay .modal::before,html[data-skin="v2"] #kcallOverlay .modal::before,html[data-skin="v2"] #leadOverlay .modal::before,html[data-skin="v2"] #paidOverlay .modal::before,html[data-skin="v2"] #scoreOverlay .modal::before,html[data-skin="v2"] #shareOverlay .modal::before,html[data-skin="v2"] #waitlistOverlay .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
+html[data-skin="v2"] #authOverlay.on .modal,html[data-skin="v2"] #againOverlay.on .modal,html[data-skin="v2"] #cidOverlay.on .modal,html[data-skin="v2"] #kcallOverlay.on .modal,html[data-skin="v2"] #leadOverlay.on .modal,html[data-skin="v2"] #paidOverlay.on .modal,html[data-skin="v2"] #scoreOverlay.on .modal,html[data-skin="v2"] #shareOverlay.on .modal,html[data-skin="v2"] #waitlistOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
+html[data-skin="v2"] #authOverlay .modal>.x,html[data-skin="v2"] #againOverlay .modal>.x,html[data-skin="v2"] #cidOverlay .modal>.x,html[data-skin="v2"] #kcallOverlay .modal>.x,html[data-skin="v2"] #leadOverlay .modal>.x,html[data-skin="v2"] #paidOverlay .modal>.x,html[data-skin="v2"] #scoreOverlay .modal>.x,html[data-skin="v2"] #shareOverlay .modal>.x,html[data-skin="v2"] #waitlistOverlay .modal>.x{display:none!important}
+
 html[data-skin="v2"] #buyOverlay .modal{overflow-y:auto;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
 /* 6c CHECKOUT (v2) — branded on-site Stripe Elements page. Bottom sheet, comp tokens: raised order
    card, carved "or pay with card" divider, Payment Element in the well, green SUBSCRIBE ring capsule. */
@@ -7193,6 +7202,15 @@ sheetDrag('watchOverlay', ()=>{ try{ closeWatch(); }catch(_){ } });
 sheetDrag('scheduleOverlay', ()=>{ try{ closeSchedule(); }catch(_){ } });
 sheetDrag('receiptOverlay', ()=>{ try{ closeReceipt(); }catch(_){ } });
 sheetDrag('kioskOverlay', ()=>{ try{ closeKiosk(); }catch(_){ } });
+sheetDrag('authOverlay', ()=>{ try{ closeAuth(); }catch(_){ } });
+sheetDrag('againOverlay', ()=>{ try{ closeAgain(); }catch(_){ } });
+sheetDrag('cidOverlay', ()=>{ try{ closeCallerId(); }catch(_){ } });
+sheetDrag('kcallOverlay', ()=>{ try{ closeKioskConfirm(); }catch(_){ } });
+sheetDrag('leadOverlay', ()=>{ try{ closeLead(); }catch(_){ } });
+sheetDrag('paidOverlay', ()=>{ try{ closePaid(); }catch(_){ } });
+sheetDrag('scoreOverlay', ()=>{ try{ closeScore(); }catch(_){ } });
+sheetDrag('shareOverlay', ()=>{ try{ closeShare(); }catch(_){ } });
+sheetDrag('waitlistOverlay', ()=>{ try{ closeWaitlist(); }catch(_){ } });
 async function buy(kind, annual){
   if(!isAuthed()){ signUp(); return; }
   $('buy_note').textContent=t('buy.opening','Opening secure checkout…');
