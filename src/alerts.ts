@@ -18,9 +18,9 @@ import { config } from "./config";
 // "welcome" is dead (owner 2026-07-15): there is no email-only signup — everyone signs up by phone,
 // email is optional and added later. What replaced it: "confirm_email", sent when someone adds an
 // email address; no alert email goes out until they tap confirm.
-export type AlertEvent = "restock" | "store_added" | "waitlist" | "confirm_email";
+export type AlertEvent = "restock" | "store_added" | "waitlist" | "confirm_email" | "auto_check";
 export type Channel = "sms" | "email";
-export const EVENT_CHANNEL: Record<AlertEvent, Channel> = { restock: "sms", store_added: "email", waitlist: "email", confirm_email: "email" };
+export const EVENT_CHANNEL: Record<AlertEvent, Channel> = { restock: "sms", store_added: "email", waitlist: "email", confirm_email: "email", auto_check: "sms" };
 
 // brevoTemplateId: when Claude Design's branded email is built in Brevo, drop its template id here
 // (per event, editable in Admin) and we send that instead of the inline HTML — tokens flow as params.
@@ -44,6 +44,11 @@ export const DEFAULT_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   confirm_email: {
     emailSubject: "Confirm your email.",
     emailBody: "You added this address for alerts. Confirm it's yours and we'll send them here.",
+  },
+  auto_check: {
+    sms: "Auto check done: {store}. {result}. See the call at checkitforme.com",
+    emailSubject: "Auto check: {result}.",
+    emailBody: "Your auto check just called {store} about {product}. Result: {result}.",
   },
 };
 
@@ -156,6 +161,12 @@ const EMAIL_DESIGN: Record<EmailKind, EmailDesign> = {
     module: { type: "chip", text: "{email}" },
     cta: "Confirm my email", url: "https://checkitforme.com",
   },
+  auto_check: {
+    kicker: "AUTO CHECK", kickerColor: "#A78BFA", headline: "{result}.",
+    body: ["Your auto check just called **{store}** about **{product}**."],
+    module: { type: "product", title: "{product}", sub: "{store}", badge: "AUTO CHECK" },
+    cta: "See the call", url: "https://checkitforme.com",
+  },
   instock_owner: {
     kicker: "CALL CONFIRMED", kickerColor: "#4ADE80", headline: "It's in stock.",
     body: ["A call just confirmed **{product}** is on the shelf at **{store}**.", "{dayline}"],
@@ -163,47 +174,58 @@ const EMAIL_DESIGN: Record<EmailKind, EmailDesign> = {
     cta: "See the call", url: "https://checkitforme.com",
   },
 };
+// Kickers per theme: the dark board's bright kickers wash out on white, so the LIGHT base uses the
+// deeper cut of the same hue and the dark @media variant restores the comp's original color.
+const KICKER_LIGHT: Record<string, string> = { "#4ADE80": "#16A34A", "#FFCB05": "#B45309", "#A78BFA": "#7C3AED" };
 const FONT = "Inter,'Segoe UI',Arial,sans-serif";
-/** Escape + fill, with **{token}** segments rendered bold-white (the mock bolds {store}/{product}). */
+/** Token fill that KEEPS surrounding whitespace (fill() trims, which ate the space after a bold run). */
+function fillRaw(t: string, tokens: Record<string, string | number | undefined>): string {
+  let s = t;
+  for (const k of Object.keys(tokens)) s = s.split(`{${k}}`).join(String(tokens[k] ?? ""));
+  return s.replace(/\{[a-z]+\}/gi, "");
+}
+/** Escape + fill, with **{token}** segments rendered bold (theme-aware via .em-b). */
 function fillHtmlBold(t: string, tk: Record<string, string | number | undefined>): string {
   return t.split(/(\*\*[^*]+\*\*)/).map((seg) => {
     const m = seg.match(/^\*\*([^*]+)\*\*$/);
-    if (m) return `<b style="color:#FFFFFF;font-weight:700">${escHtml(fill(m[1], tk))}</b>`;
-    return escHtml(fill(seg, tk));
+    if (m) return `<b class="em-b" style="color:#0B0B10;font-weight:700">${escHtml(fillRaw(m[1], tk))}</b>`;
+    return escHtml(fillRaw(seg, tk));
   }).join("");
 }
+// LIGHT is the inline base (light-mode clients + Gmail, which strips media queries but auto-darkens a
+// light email acceptably); the .em-* classes get the true dark comp back via prefers-color-scheme.
 function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | number | undefined>): string {
   if (!m) return "";
-  // Module card: #1B1B20 rounded (Outlook squares the corners off — acceptable, still a solid card).
-  const wrap = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1B1B20;border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
-  if (m.type === "chip") return wrap(`<span style="font-size:14px;font-weight:700;color:#FFFFFF;font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
+  const wrap = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="em-mod" style="background:#F2F2F4;border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
+  if (m.type === "chip") return wrap(`<span class="em-mt" style="font-size:14px;font-weight:700;color:#0B0B10;font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
   if (m.type === "product") return wrap(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-    <td style="font-family:${FONT}"><div style="font-size:16px;font-weight:800;color:#FFFFFF">${escHtml(fill(m.title, tk))}</div><div style="font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
-    <td align="right" valign="middle"><span style="display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.6px;color:#4ADE80;background:#122019;border-radius:999px;padding:6px 12px;font-family:${FONT}">${escHtml(m.badge)}</span></td></tr></table>`, "16px 18px", 16);
-  // steps: 26px numbered circles (#22222A; the ✓ row #122019), 1px #26262E dividers inset 18px
+    <td style="font-family:${FONT}"><div class="em-mt" style="font-size:16px;font-weight:800;color:#0B0B10">${escHtml(fill(m.title, tk))}</div><div class="em-ms" style="font-size:12.5px;font-weight:600;color:#6B6B76;margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
+    <td align="right" valign="middle"><span class="em-bdg" style="display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.6px;color:#15803D;background:#E4F5EB;border-radius:999px;padding:6px 12px;font-family:${FONT}">${escHtml(m.badge)}</span></td></tr></table>`, "16px 18px", 16);
+  // steps: 26px numbered circles, hairline dividers inset 18px (both themed via classes)
   const rows = m.steps.map((s, i) => {
     const last = i === m.steps.length - 1;
-    return `${i ? `<tr><td colspan="2" style="padding:0 18px"><div style="height:1px;line-height:1px;font-size:0;background:#26262E">&nbsp;</div></td></tr>` : ""}<tr>
-    <td width="57" valign="middle" style="padding:${i ? "12px" : "16px"} 0 ${last ? "16px" : "12px"} 18px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="26" height="26" align="center" valign="middle" style="width:26px;height:26px;border-radius:50%;background:${last ? "#122019" : "#22222A"};color:#4ADE80;font-size:12px;font-weight:800;font-family:${FONT}">${escHtml(s[0])}</td></tr></table></td>
-    <td valign="middle" style="padding:${i ? "12px" : "16px"} 18px ${last ? "16px" : "12px"} 0;font-size:15px;font-weight:${last ? 700 : 600};color:#FFFFFF;font-family:${FONT}">${escHtml(s[1])}</td></tr>`;
+    return `${i ? `<tr><td colspan="2" style="padding:0 18px"><div class="em-div" style="height:1px;line-height:1px;font-size:0;background:#E4E4EA">&nbsp;</div></td></tr>` : ""}<tr>
+    <td width="57" valign="middle" style="padding:${i ? "12px" : "16px"} 0 ${last ? "16px" : "12px"} 18px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="26" height="26" align="center" valign="middle" class="${last ? "em-stc2" : "em-stc"}" style="width:26px;height:26px;border-radius:50%;background:${last ? "#E4F5EB" : "#E9E9EE"};color:#16A34A;font-size:12px;font-weight:800;font-family:${FONT}">${escHtml(s[0])}</td></tr></table></td>
+    <td valign="middle" class="em-mt" style="padding:${i ? "12px" : "16px"} 18px ${last ? "16px" : "12px"} 0;font-size:15px;font-weight:${last ? 700 : 600};color:#0B0B10;font-family:${FONT}">${escHtml(s[1])}</td></tr>`;
   }).join("");
-  return `<tr><td style="padding-top:22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#1B1B20;border-radius:16px">${rows}</table></td></tr>`;
+  return `<tr><td style="padding-top:22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="em-mod" style="background:#F2F2F4;border-radius:16px">${rows}</table></td></tr>`;
 }
 /** Email-safe branded HTML matching Design's approved mock (docs/design/emails/): #08090D board,
  *  Check wordmark image, gradient card, Inter-black headline, module card, filled capsule CTA with
  *  the green ring. Table layout + inline styles + MSO conditionals: Outlook (Word engine) gets a
  *  solid-color card fallback and a VML roundrect button, so it renders clean there too. */
-function renderBrandedEmail(event: EmailKind, _subject: string, _body: string, tokens: Record<string, string | number | undefined> = {}, to = ""): string {
+export function renderBrandedEmail(event: EmailKind, _subject: string, _body: string, tokens: Record<string, string | number | undefined> = {}, to = ""): string {
   const d = EMAIL_DESIGN[event];
   // A {url} token deep-links the CTA (owner alert → the call; watch alert → the store). Else the design's default.
   const url = String(tokens.url || d.url);
   // Footer links are LIVE: manage → the site's alerts sheet; unsubscribe → the signed one-click kill.
   const manageUrl = manageAlertsUrl();
   const unsubUrl = to ? unsubscribeUrl(to) : `${siteUrl()}/unsubscribe`;
+  const kickLight = KICKER_LIGHT[d.kickerColor] || d.kickerColor;
   // Paragraphs whose tokens fill to nothing (e.g. no restock day heard) are dropped, not rendered as gaps.
   const bodyHtml = d.body.filter((p) => fill(p.replace(/\*\*/g, ""), tokens)).map((p, i) => i === 0
-    ? `<tr><td style="padding-top:15px;font-size:17px;line-height:1.5;color:#D1D1DA;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
-    : `<tr><td style="padding-top:16px;font-size:14px;line-height:1.5;color:#B9B9C4;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
+    ? `<tr><td class="em-p1" style="padding-top:15px;font-size:17px;line-height:1.5;color:#3F3F4A;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
+    : `<tr><td class="em-p2" style="padding-top:16px;font-size:14px;line-height:1.5;color:#55555F;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
   const ctaLabel = `${escHtml(d.cta).toUpperCase()}&nbsp;&nbsp;&rarr;`;
   // Capsule CTA: filled #16161C, 2px green ring, WHITE label. Outlook can't round a td, so MSO gets
   // a VML roundrect (arcsize 50% = full capsule) and everyone else gets the styled <a>.
@@ -221,32 +243,51 @@ function renderBrandedEmail(event: EmailKind, _subject: string, _body: string, t
       </td></tr></table>
     <!--<![endif]-->
   </td></tr>`;
-  // NB: NO background-image gradient on the card. Gmail's dark-mode recolor inverts solid colors but
-  // NOT gradients — a gradient card stays dark while its white text flips dark = unreadable (the
-  // 2026-07-15 broken screenshot). All-solid colors keep Gmail's inversion coherent: dark clients see
-  // the true comp, Gmail-dark sees a clean light-flipped version. color-scheme hints keep Apple Mail honest.
+  // THEME CONTRACT (owner 2026-07-15): light system → light email, dark system → the dark comp.
+  // LIGHT is the inline base: light-mode clients show it as-is, and Gmail (which strips
+  // prefers-color-scheme) auto-darkens a light email coherently in its dark theme. Clients that DO
+  // support the media query (Apple Mail, Outlook iOS) get the true dark comp via the .em-* overrides.
+  // NO gradients anywhere — Gmail's recolor skips them and Frankensteins the result (07-15 screenshot).
   return `<!doctype html>
 <html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">
-<style>:root{color-scheme:dark;supported-color-schemes:dark}</style>
+<meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">
+<style>
+:root{color-scheme:light dark;supported-color-schemes:light dark}
+@media (prefers-color-scheme: dark){
+  body,.em-board{background:#08090D!important}
+  .em-card{background:#14141A!important}
+  .em-kick{color:${d.kickerColor}!important}
+  .em-h,.em-mt,.em-b{color:#FFFFFF!important}
+  .em-p1{color:#D1D1DA!important}
+  .em-p2{color:#B9B9C4!important}
+  .em-mod{background:#1B1B20!important}
+  .em-ms{color:#8A8A96!important}
+  .em-bdg{color:#4ADE80!important;background:#122019!important}
+  .em-div{background:#26262E!important}
+  .em-stc{background:#22222A!important;color:#4ADE80!important}
+  .em-stc2{background:#122019!important;color:#4ADE80!important}
+  .em-ft,.em-ftl{color:#8A8A96!important}
+  .em-dot{color:#333340!important}
+}
+</style>
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-</head><body style="margin:0;padding:0;background:#08090D" bgcolor="#08090D">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#08090D" style="background:#08090D;margin:0;padding:0"><tr><td align="center" style="padding:22px 16px 30px">
+</head><body style="margin:0;padding:0;background:#F2F2F5" bgcolor="#F2F2F5">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#F2F2F5" class="em-board" style="background:#F2F2F5;margin:0;padding:0"><tr><td align="center" style="padding:22px 16px 30px">
     <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
       <tr><td style="padding:0 0 22px"><img src="https://checkitforme.com/logos/brand/check.png" width="104" height="33" alt="Check" style="display:block;width:104px;height:33px;border:0"></td></tr>
-      <tr><td bgcolor="#14141A" style="background:#14141A;border-radius:26px;padding:30px 40px">
+      <tr><td bgcolor="#FFFFFF" class="em-card" style="background:#FFFFFF;border-radius:26px;padding:30px 40px">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          <tr><td style="font-size:10.5px;font-weight:700;letter-spacing:1.6px;color:${d.kickerColor};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
-          <tr><td style="padding-top:14px;font-size:33px;font-weight:900;color:#FFFFFF;line-height:1.1;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
+          <tr><td class="em-kick" style="font-size:10.5px;font-weight:700;letter-spacing:1.6px;color:${kickLight};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
+          <tr><td class="em-h" style="padding-top:14px;font-size:33px;font-weight:900;color:#0B0B10;line-height:1.1;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
           ${bodyHtml}
           ${moduleHtml(d.module, tokens)}
           ${cta}
         </table>
       </td></tr>
-      <tr><td style="padding:22px 2px 0;font-family:${FONT};font-size:12.5px;color:#8A8A96">
-        <a href="${manageUrl}" style="color:#8A8A96;text-decoration:none">Manage alerts</a><span style="color:#333340">&nbsp;&middot;&nbsp;</span><a href="${unsubUrl}" style="color:#8A8A96;text-decoration:none">Unsubscribe</a>
+      <tr><td class="em-ft" style="padding:22px 2px 0;font-family:${FONT};font-size:12.5px;color:#6B6B76">
+        <a href="${manageUrl}" class="em-ftl" style="color:#6B6B76;text-decoration:none">Manage alerts</a><span class="em-dot" style="color:#C9C9D2">&nbsp;&middot;&nbsp;</span><a href="${unsubUrl}" class="em-ftl" style="color:#6B6B76;text-decoration:none">Unsubscribe</a>
       </td></tr>
     </table>
     <!--[if mso]></td></tr></table><![endif]-->
@@ -366,7 +407,7 @@ export async function sendOwnerInStockEmail(to: string, t: { store: string; prod
 /** Admin "send me a test": fires any one template to an address/phone with realistic sample tokens,
  *  bypassing metering + subscriptions. Logged with status "test" prefix so it's obvious in the feed.
  *  channel override lets restock be tested over EMAIL as well as text. */
-const SAMPLE_TOKENS: Record<string, string> = { store: "Target Glendale", product: "151 Booster Box", city: "Glendale", name: "there", email: "you@example.com" };
+const SAMPLE_TOKENS: Record<string, string> = { store: "Target Glendale", product: "151 Booster Box", city: "Glendale", name: "there", email: "you@example.com", result: "In stock" };
 export async function sendTestAlert(event: AlertEvent, to: string, channelOverride?: Channel): Promise<{ status: string; detail?: string; channel: Channel }> {
   const channel = channelOverride || EVENT_CHANNEL[event];
   const tpls = await getAlertTemplates();

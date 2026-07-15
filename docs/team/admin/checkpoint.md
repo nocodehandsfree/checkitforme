@@ -3,6 +3,23 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-15c — ROUND 3 (Addie) — staging 8a02abc, Admin UI shipped
+- **Emails are DUAL-THEME now** (owner ask): light inline base + true dark comp via prefers-color-scheme.
+  Gmail strips the media query → gets light + its own coherent auto-dark. Verified both schemes via
+  Playwright colorScheme shots; fillRaw fixed bold runs eating spaces.
+- **Auto check alerts wired end to end:** call_results.customer_schedule_id (new col) links fires to
+  schedules; ALL terminal paths (EL ingest / Delta finalize / bridge no-answer) send the result
+  (statuses label) by text or email per contact. Watch-row hack removed. createSchedule adopts an email
+  contact as the account address + fires the confirm flow. auto_check templates + tests in Admin.
+- **Sheet drag = website physics** (scroller-walk arming, animate-out past 110px, spring back) — fixed
+  the mid-air freeze; synthetic-touch verified full dismissal. Safari bars now translucent gray (html
+  bg #1D1D22 root sampling + apple metas + safe-area padding, the site's proven recipe).
+- **Template rows finally padded** (14/16 inset — the 5x-asked spacing bug was drow cards w/ padding:10px 0).
+- **Owner ping = email or text only** (call/off removed, server 400s others).
+- Restock cross-account CONFIRMED for owner: any account's confirmed call → notifyWatches + fanoutRestock
+  ping every watcher of that store+category, finder irrelevant (service.ts ingest + signals path).
+- Copper reviews ALL admin alert copy next; owner returns with her words for me to implement.
+
 ## 2026-07-15b — EMAIL SYSTEM REBUILT TO COMPS V2 (Addie) — staging 63b43bd, Admin UI shipped
 - **Comps v2 landed:** docs/design/emails/check-email-alerts-design.html (E1-E4). EMAIL_DESIGN matches it.
 - **Gmail dark-mode mystery solved:** Gmail inverts solid colors but NOT gradients — the card's gradient

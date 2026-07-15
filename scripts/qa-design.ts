@@ -38,6 +38,7 @@ const TOKENS = new Set([
   "#2F2F36", // R2/R3 comp: modal ✕-circle gradient top (key raised ON the #26262B card)
   "#2C8E57","#20693F","#8CF7B4","#3E3E46","#7A7A86", // 3C/4A My-checks header comp (owner 07-11, docs/specs/mychecks-header): muted green wash gradient · watermark mint · grabber pill · foot Sign-out grey
   "#D9D9E0","#F4F4F6","#0B0B0F", // RN2 comp: paste-message text · driver pay key fill/text
+  "#15151C","#DCDCE6", // promoted 07-15: the carved input-well dark (13 uses, .kin/menus) · owner-tuned near-white step text that survives the verdict bloom (07-09)
   "#4ADE80","#4CF286","#5BEA93","#19B145","#0B5A2C","#34C268","#06210F","#0C2916","#26262C",
   "#F5B301","#FF8080","#9CA3AF", // verdict-tone dots/stats (soon amber · out soft-red · unclear grey — owner: unclear must not read as restock yellow)
   "#FFCB05","#FFE066","#8A6D00","#EF4444","#FF7B7B","#FBBF24","#F59E0B","#FF9B9B","#7F1D1D",

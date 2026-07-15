@@ -5,10 +5,10 @@ import { db } from "../db/client";
 import { openState, fetchStoreHours } from "../store-hours";
 import { fetchStorePhone } from "../store-phone";
 import {
-  accounts, callResults, categories, chains, retailers, scheduleTargets, schedules, watches, zoneRetailers, zones,
+  accounts, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
 import { chargeOneCredit, isCompAccount } from "../billing";
-import { sendRestockEmailTo } from "../alerts";
+import { sendRestockEmailTo, sendAlert } from "../alerts";
 import { isCallingPaused } from "../redis";
 import { getPolicy } from "../policy";
 
@@ -31,6 +31,31 @@ async function notifyWatches(retailerId: number, categoryId: number, store: stri
     await db.update(watches).set({ active: false, notifiedAt: Math.floor(Date.now() / 1000) }).where(eq(watches.id, w.id));
   }
 }
+/** Auto-check results alert: a scheduled check just reached a terminal state → tell the schedule's
+ *  owner what happened (in stock, not, nobody answered), on the channel their contact implies.
+ *  Email rides the account address (confirm-gated); a phone contact gets the text directly. */
+async function notifyAutoCheckResult(callId: number): Promise<void> {
+  try {
+    const row = (await db.select().from(callResults).where(eq(callResults.id, callId)))[0];
+    if (!row?.customerScheduleId) return;
+    const sched = (await db.select().from(customerSchedules).where(eq(customerSchedules.id, row.customerScheduleId)))[0];
+    if (!sched || !sched.active) return;
+    const store = (await db.select().from(retailers).where(eq(retailers.id, row.retailerId)))[0];
+    const cat = (await db.select().from(categories).where(eq(categories.id, row.categoryId)))[0];
+    const st = row.statusKey ? (await db.select().from(statuses).where(eq(statuses.key, row.statusKey)))[0] : null;
+    const result = st?.label || (row.confirmed === true ? "In stock" : row.confirmed === false ? "Not in stock" : "No clear answer");
+    const tokens = {
+      store: (store?.name || "the store").split("—")[0].trim(),
+      product: sched.specificProduct || cat?.label || "your product",
+      result,
+      url: row.providerCallId ? `${config.appUrl}/?call=${encodeURIComponent(row.providerCallId)}` : config.appUrl,
+    };
+    const contact = (sched.contact || "").trim();
+    if (contact.includes("@")) await sendAlert(sched.finderUserId, "auto_check", tokens, { channel: "email" }); // account email, confirm-gated
+    else await sendAlert(sched.finderUserId, "auto_check", tokens, { channel: "sms", to: contact || undefined });
+  } catch (e) { console.error("auto-check alert:", e); }
+}
+
 import { config } from "../config";
 import { ElevenLabsProvider } from "../voice/elevenlabs";
 import { takeBridgeNav } from "../voice/bridge";
@@ -271,6 +296,7 @@ interface TriggerArgs {
   finderUserId?: string;    // clerk id of whoever placed it (for finds privacy/headstart attribution)
   isPrivate?: boolean;      // keep this find out of the public feed (subscriber perk / paid privacy)
   zoneRunId?: string;       // groups this check into a zone sweep run (Manage Zones report)
+  customerScheduleId?: number; // the auto-check that placed this call → its owner gets a results alert
   kioskMode?: boolean;      // kiosk-only store → agent asks about the vending kiosk, not a shelf shipment (else inferred from the store)
   force?: boolean;          // skip the 24h one-check-per-store dedup (admin "check again" places a real call every time)
 }
@@ -364,7 +390,7 @@ export async function triggerCall(a: TriggerArgs) {
     categoryId: category.id,
     mode,
     status: "dialing",
-    finderUserId: a.finderUserId ?? null, zoneRunId: a.zoneRunId ?? null,
+    finderUserId: a.finderUserId ?? null, zoneRunId: a.zoneRunId ?? null, customerScheduleId: a.customerScheduleId ?? null,
     isPrivate: a.isPrivate ?? false,
   }).returning();
 
@@ -459,7 +485,7 @@ export async function bridgeCheckCall(a: TriggerArgs) {
     categoryId: category.id,
     mode: "restock",
     status: "dialing",
-    finderUserId: a.finderUserId ?? null, zoneRunId: a.zoneRunId ?? null,
+    finderUserId: a.finderUserId ?? null, zoneRunId: a.zoneRunId ?? null, customerScheduleId: a.customerScheduleId ?? null,
     isPrivate: a.isPrivate ?? false,
   }).returning();
 
@@ -495,6 +521,7 @@ export async function bridgeCheckCall(a: TriggerArgs) {
         summary: `Bridge call ended before a human answered (${twilioStatus}).`,
         completedAt: Math.floor(Date.now() / 1000),
       }).where(eq(callResults.id, row.id));
+      await notifyAutoCheckResult(row.id); // an auto-check that never reached a human is still a result
     })().catch((e) => console.error("bridge check finalize:", e));
   });
   // Same response contract as the direct path: callers/clients see in_progress + an id to poll.
@@ -549,6 +576,7 @@ async function finalizeDeltaSession(s: TdSession): Promise<void> {
     await notifyInStock(chk.retailerName, chk.categoryLabel, chk.retailerId, dayHeard || undefined);
     await notifyWatches(chk.retailerId, chk.categoryId, chk.retailerName, chk.categoryLabel);
   }
+  await notifyAutoCheckResult(chk.callId); // no-op unless this call came from an auto-check
   if (dayHeard) await db.update(retailers).set({ shipmentDay: dayHeard }).where(eq(retailers.id, chk.retailerId));
 }
 setDeltaFinalize(finalizeDeltaSession);
@@ -937,6 +965,8 @@ export async function ingestPending(): Promise<number> {
       await notifyInStock(store?.name ?? "A store", primaryLabel, row.retailerId, outcome.shipmentDay);
       await notifyWatches(row.retailerId, row.categoryId, store?.name ?? "A store", primaryLabel);
     }
+    // Auto-check: its owner hears the RESULT of every fire, in or out (watches only ping on in-stock).
+    if (row.customerScheduleId) await notifyAutoCheckResult(row.id);
 
     // Fan out any additional lines covered in the same call into their own result rows.
     for (const [label, conf] of Object.entries(outcome.categoryResults)) {

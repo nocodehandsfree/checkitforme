@@ -481,7 +481,7 @@ app.get("/s", (c) => {
 
 // Static content pages (about/contact/terms/privacy) — branded, owner-editable via policy.pages.
 // (FAQ retired → the book / the messenger FAQ tab; see the /p/faq redirect below.)
-const PAGE_TITLES: Record<string, string> = { about: "About", contact: "Contact", terms: "Terms of Service", privacy: "Privacy Policy" };
+const PAGE_TITLES: Record<string, string> = { about: "About", contact: "Get help", terms: "Terms of Service", privacy: "Privacy Policy" };
 // Real, shipped content for the legal/info pages so none of them read "coming soon". Owner-overridable
 // per brand via policy.pages (a non-empty override wins); this is the version-controlled fallback that
 // serves on every brand + environment. Rendered inside .body — plain HTML (<h2>/<p>/<ul>) only.
@@ -497,7 +497,7 @@ const DEFAULT_PAGES: Record<string, string> = {
 <p>We only cover the stuff that truly sells out and rewards the hunt: Pokémon, One Piece, Topps NBA, and NeeDoh. And you only pay when we get you a real answer. No answer, no charge. That one is wired into the system, not printed on a poster.</p>
 <h2 ${H2}>Want the deep version?</h2>
 <p>How it all works, top to bottom, lives in the book: <a href="${RM}" target="_blank" rel="noopener">checkitforme.readme.io</a>.</p>`,
-  contact: `<p>Fastest way to reach us is <b>Discord</b>. Our support bot answers the common stuff in seconds, any time. A human picks up the rest.</p>
+  contact: `<p>Two fast ways to reach a human. Tap <b>Help</b> in the footer to open the chat, or hop into our <b>Discord</b>. The support bot answers the common stuff in seconds, any time, and a person picks up the rest.</p>
 <p>Want a store added? Do it right in the app. Account, then Earn, then <i>Add your store</i>. When a store you asked for goes live, your next check is on us.</p>
 <p>We skip phone and email support on purpose. Low overhead is how checks stay cheap.</p>`,
   terms: `<p>By using <b>Check It For Me</b> (checkitforme.com) you're good with these terms. If not, no hard feelings. Just don't use it.</p>
@@ -510,7 +510,7 @@ const DEFAULT_PAGES: Record<string, string> = {
 <h2 ${H2}>The fine print</h2>
 <p>The service is "as is." As far as the law allows, we're not on the hook for a missed item, a wrong answer, or a wasted trip. If it ever comes to it, our max liability is what you paid us in the last 30 days.</p>
 <h2 ${H2}>Changes</h2>
-<p>We may update these terms. Keep using the app and that's a yes. Questions? Hit the Contact page.</p>
+<p>We may update these terms. Keep using the app and that's a yes. Questions? Ask us in the app chat or on Discord.</p>
 <p style="margin-top:22px"><a href="/p/privacy" onclick="if(window.openPage){openPage('privacy');return false}">Privacy Policy →</a></p>`,
   privacy: `<p>Here's what <b>Check It For Me</b> (checkitforme.com) collects, and why. Short version: we grab what we need to run your checks. We don't sell your info.</p>
 <h2 ${H2}>What we collect</h2>
@@ -525,12 +525,12 @@ const DEFAULT_PAGES: Record<string, string> = {
 <h2 ${H2}>Who sees it</h2>
 <p>Only the vendors that make it work. A voice provider to place calls, a sign-in provider, and Stripe for payments. They handle it for us under their own terms. We do not sell your personal info.</p>
 <h2 ${H2}>Your data, your call</h2>
-<p>We keep your account and history until you ask us to delete it. Want a copy, or a delete? Hit the Contact page. You can turn off location any time in your browser.</p>`,
+<p>We keep your account and history until you ask us to delete it. Want a copy, or a delete? Ask us in the app chat or on Discord. You can turn off location any time in your browser.</p>`,
 };
 // Hand-written Spanish for the footer pages (copy law 3: every string ships its Spanish). Same voice,
 // no dashes, fewest words. Served whenever the app asks with ?lang=es; the owner's policy.pages
 // overrides are English-only, so Spanish always comes from here.
-const PAGE_TITLES_ES: Record<string, string> = { about: "Acerca de", contact: "Contacto", terms: "Términos del servicio", privacy: "Política de privacidad" };
+const PAGE_TITLES_ES: Record<string, string> = { about: "Acerca de", contact: "Ayuda", terms: "Términos del servicio", privacy: "Política de privacidad" };
 const DEFAULT_PAGES_ES: Record<string, string> = {
   about: `<p><b>Check It For Me</b> averigua si lo que buscas de verdad está en el estante. Por teléfono. Para que no cruces la ciudad por nada.</p>
 <p>Eliges una tienda y un producto. Check AI llama a la tienda, pregunta a una persona real y te manda la respuesta. Llamada real, respuesta directa. Sin bots que se hacen pasar por ti, sin refrescar una página toda la noche.</p>
@@ -541,7 +541,7 @@ const DEFAULT_PAGES_ES: Record<string, string> = {
 <p>Solo cubrimos lo que de verdad se agota y premia la cacería: Pokémon, One Piece, Topps NBA y NeeDoh. Y solo pagas cuando te conseguimos una respuesta real. Sin respuesta, sin cargo. Eso está en el sistema, no en un póster.</p>
 <h2 ${H2}>¿Quieres la versión completa?</h2>
 <p>Cómo funciona todo, de arriba a abajo, está en el libro: <a href="${RM}" target="_blank" rel="noopener">checkitforme.readme.io</a>.</p>`,
-  contact: `<p>La forma más rápida de contactarnos es <b>Discord</b>. Nuestro bot de soporte responde lo común en segundos, a cualquier hora. Un humano atiende el resto.</p>
+  contact: `<p>Dos formas rápidas de hablar con una persona. Toca <b>Ayuda</b> en el pie para abrir el chat, o entra a nuestro <b>Discord</b>. El bot de soporte responde lo común en segundos, a cualquier hora, y una persona atiende el resto.</p>
 <p>¿Quieres agregar una tienda? Hazlo en la app. Cuenta, luego Gana, luego <i>Agrega tu tienda</i>. Cuando tu tienda esté disponible, tu próxima verificación va por nuestra cuenta.</p>
 <p>No damos soporte por teléfono ni correo a propósito. Con gastos bajos, las verificaciones siguen baratas.</p>`,
   terms: `<p>Al usar <b>Check It For Me</b> (checkitforme.com) aceptas estos términos. Si no, no pasa nada. Solo no lo uses.</p>
@@ -554,7 +554,7 @@ const DEFAULT_PAGES_ES: Record<string, string> = {
 <h2 ${H2}>La letra chica</h2>
 <p>El servicio se ofrece "tal cual". Hasta donde la ley lo permite, no respondemos por un artículo perdido, una respuesta equivocada o un viaje en vano. Si llegara el caso, nuestra responsabilidad máxima es lo que nos pagaste en los últimos 30 días.</p>
 <h2 ${H2}>Cambios</h2>
-<p>Podemos actualizar estos términos. Si sigues usando la app, es un sí. ¿Preguntas? Ve a la página de Contacto.</p>
+<p>Podemos actualizar estos términos. Si sigues usando la app, es un sí. ¿Preguntas? Escríbenos en el chat de la app o en Discord.</p>
 <p style="margin-top:22px"><a href="/p/privacy" onclick="if(window.openPage){openPage('privacy');return false}">Política de privacidad →</a></p>`,
   privacy: `<p>Esto es lo que <b>Check It For Me</b> (checkitforme.com) recopila, y para qué. Versión corta: tomamos lo necesario para hacer tus verificaciones. No vendemos tu información.</p>
 <h2 ${H2}>Qué recopilamos</h2>
@@ -569,7 +569,7 @@ const DEFAULT_PAGES_ES: Record<string, string> = {
 <h2 ${H2}>Quién la ve</h2>
 <p>Solo los proveedores que hacen que funcione. Un proveedor de voz para las llamadas, uno de inicio de sesión y Stripe para pagos. La manejan por nosotros bajo sus propios términos. No vendemos tu información personal.</p>
 <h2 ${H2}>Tus datos, tú decides</h2>
-<p>Guardamos tu cuenta e historial hasta que pidas borrarlos. ¿Quieres una copia, o borrar todo? Ve a la página de Contacto. Puedes apagar la ubicación cuando quieras en tu navegador.</p>`,
+<p>Guardamos tu cuenta e historial hasta que pidas borrarlos. ¿Quieres una copia, o borrar todo? Escríbenos en el chat de la app o en Discord. Puedes apagar la ubicación cuando quieras en tu navegador.</p>`,
 };
 // FAQ retired → the book (the one FAQ source of truth; the messenger FAQ tab reads it too).
 // Registered before /p/:slug so it wins.
@@ -3047,6 +3047,8 @@ app.get("/app/me", async (c) => {
     credits: comp ? 9999 : spendableCredits(a), subscription: comp ? "active" : (a?.subscription ?? "none"),
     subTier: comp ? "founder" : (a?.subTier ?? null), quota: comp ? 9999 : (a?.quotaCredits ?? 0), payg: comp ? 9999 : (a?.credits ?? 0), premiumAsks, features,
     comp, callsMade: a?.callsMade ?? 0, phone: a?.phone ?? null,
+    // Alerts email UI (Addie 07-15): the saved address + whether the confirm link was tapped.
+    email: a?.email ?? null, emailVerified: !!a?.emailVerifiedAt,
     // caller_id is only set after Twilio's caller-ID verify call → the "create your agent" panel uses
     // callerIdReady to know whether to prompt for it.
     callerId: a?.callerId ?? null, callerIdReady: !!a?.callerId,
@@ -4775,8 +4777,8 @@ app.post("/api/alerts/test", async (c) => {
   if (event === "instock_owner") {
     return c.json(await sendOwnerInStockEmail(to, { store: "Target Glendale", product: "151 Booster Box", day: "Tuesdays", url: "https://checkitforme.com" }, { test: true }));
   }
-  if (!["restock", "store_added", "waitlist", "confirm_email"].includes(event)) return c.json({ error: "bad_event" }, 400);
-  const r = await sendTestAlert(event as "restock" | "store_added" | "waitlist" | "confirm_email", to, channel);
+  if (!["restock", "store_added", "waitlist", "confirm_email", "auto_check"].includes(event)) return c.json({ error: "bad_event" }, 400);
+  const r = await sendTestAlert(event as "restock" | "store_added" | "waitlist" | "confirm_email" | "auto_check", to, channel);
   return c.json(r);
 });
 // Owner's hands-free in-stock ping: address + channel, editable live (settings beat the env defaults).
@@ -4790,7 +4792,7 @@ app.post("/api/admin/owner-alert", async (c) => {
   }
   if (b.channel !== undefined) {
     const ch = String(b.channel);
-    if (!["email", "sms", "call", "off"].includes(ch)) return c.json({ error: "bad_channel" }, 400);
+    if (!["email", "sms"].includes(ch)) return c.json({ error: "bad_channel" }, 400); // owner: text or email, nothing else
     await setSetting("owner_alert_channel", ch);
   }
   return c.json(await ownerAlertPrefs());

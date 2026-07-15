@@ -3,7 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="admin-r44" />
+<!-- Safari chrome tint = the WEBSITE's proven recipe (checkit.html head): iOS paints both bar strips
+     from the ROOT element's background-COLOR (ignores theme-color), so html carries the page gray and
+     the apple metas + viewport-fit paint content under the bars in standalone. -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Check Admin" />
+<meta name="x-rev" content="admin-r45" />
 <title>Check It For Me · Admin</title>
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=2">
@@ -41,17 +47,17 @@
   }
   *{box-sizing:border-box}
   button,select,textarea,input{font-family:inherit}
-  html{-webkit-text-size-adjust:100%}
+  html{-webkit-text-size-adjust:100%;background:#1D1D22;color-scheme:dark} /* iOS samples THIS bg-color for both Safari bar strips — must equal --bg so the chrome reads translucent-gray like the website, not black/gray defaults */
   html,body{max-width:100%;overflow-x:hidden}
   header,nav,main,section,.card,.stats,.filters,.ractions{max-width:100%}
   *{touch-action:manipulation}   /* kill iOS double-tap zoom on EVERY element (was interactive-only, so cards/text/numbers on Restock + Store-Intel still zoomed on double-tap). manipulation keeps scroll/pan + pinch, only drops double-tap-zoom; any element needing pan-x/none overrides via its own rule. */
-  body{background:var(--bg);color:#e6e6ef;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;margin:0;padding:0;touch-action:manipulation}
+  body{background:var(--bg);color:#e6e6ef;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;margin:0;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);touch-action:manipulation} /* paint both safe areas so standalone/tab edges take the page color (website recipe) */
   /* Shell (comp 1a + owner-approved 07-12 dash mock): wordmark header, carved group track w/ one
      raised active key, raised section pills. Header scrolls away; nothing sticky but the content. */
   header{padding:20px 20px 12px;display:flex;align-items:center;gap:9px}
   header .hmark{display:flex;align-items:center;gap:9px;flex:0 0 auto;text-decoration:none}
   header .wm{font-size:18px;font-weight:900;letter-spacing:-.4px;color:#fff;margin-left:-13px}
-  header .adm{font-size:9px;font-weight:900;letter-spacing:.08em;color:#8A8A96;background:#1B1B20;border-radius:6px;padding:3px 7px;box-shadow:inset 0 2px 4px rgba(0,0,0,.4)}
+  header .adm{font-size:9px;font-weight:900;letter-spacing:.08em;color:#8A8A96;background:#1B1B20;border-radius:6px;padding:3px 7px;box-shadow:inset 0 2px 4px rgba(0,0,0,.4);position:relative;top:1px;line-height:1} /* optical center against the wordmark's cap height */
   header .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:livepulse 2s ease-in-out infinite}
   @keyframes livepulse{0%,100%{opacity:1}50%{opacity:.4}}
   /* cards lift slightly on hover — same calm depth as the consumer cards */
@@ -86,24 +92,25 @@
   button.act{background:linear-gradient(180deg,#5BEA93 0%,#34C268 100%);color:#06210f;border:none;padding:8px 15px;border-radius:var(--r-btn);font-weight:700;cursor:pointer;font-size:13px;
     box-shadow:0 2px 7px -3px rgba(52,197,107,.40);transition:filter .12s,transform .08s}
   button.act:hover{filter:brightness(1.05)} button.act:active{transform:translateY(1px)}
-  button.ghost{background:var(--surface-1);border:1px solid var(--border-medium);color:var(--text-strong);padding:8px 15px;border-radius:var(--r-btn);cursor:pointer;font-size:13px;font-weight:600;transition:border-color .12s,background .12s}
-  button.ghost:hover{border-color:var(--border-strong);background:var(--surface-2)}
+  /* Secondary action = RAISED key (style guide: no hairline borders — depth separates). */
+  button.ghost{background:linear-gradient(180deg,#2E2E35,#25252B);border:none;box-shadow:0 8px 16px -8px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.1);color:var(--text-strong);padding:9px 15px;border-radius:var(--r-btn);cursor:pointer;font-size:13px;font-weight:700;transition:filter .12s}
+  button.ghost:hover{filter:brightness(1.12)}
   /* action-button rows: align to the RIGHT so the primary tap target sits under your thumb */
   .btnrow{display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
   .btnrow.split{justify-content:space-between}
   /* Inputs are CARVED wells (comp 1f): dark fill + inset shadow, no border. */
   input,textarea{background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);color:#fff;padding:13px 15px;border-radius:14px;font-size:16px;font-weight:500;font-family:inherit;width:100%;max-width:100%}
   input:focus,textarea:focus{outline:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45),0 0 0 2px rgba(74,222,128,.25)}
+  /* Selects are CARVED wells like inputs (comp 1f) — no hairline outline boxes. */
   select{
     -webkit-appearance:none;-moz-appearance:none;appearance:none;
-    background-color:rgba(255,255,255,.04);
+    background-color:var(--terminal);
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234ADE80' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
     background-repeat:no-repeat;background-position:right 14px center;
-    border:1px solid var(--border-medium);color:var(--text-body);padding:12px 36px 12px 15px;border-radius:var(--r-btn);
-    font-size:13px;font-weight:500;font-family:Inter,-apple-system,system-ui,sans-serif;letter-spacing:0;width:100%;max-width:100%;cursor:pointer;transition:border-color .15s,box-shadow .15s;
+    border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);color:var(--text-strong);padding:12px 36px 12px 15px;border-radius:14px;
+    font-size:13px;font-weight:600;font-family:Inter,-apple-system,system-ui,sans-serif;letter-spacing:0;width:100%;max-width:100%;cursor:pointer;transition:box-shadow .15s;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  select:hover{border-color:var(--border-strong)}
-  select:focus{outline:none;border-color:rgba(74,222,128,.30);box-shadow:0 0 0 2px rgba(74,222,128,.10)}
+  select:focus{outline:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45),0 0 0 2px rgba(74,222,128,.25)}
   select option{background:#15151f;color:#e8e8f0;font-weight:500}
   label{display:block;font-size:10px;color:var(--text-tertiary);margin:16px 0 8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
   /* labels that WRAP a control (checkbox/day pill/toggle) keep normal case + size — the uppercase micro-label is for field labels only */
@@ -400,8 +407,9 @@
   .wfmop textarea{flex:1;min-width:0;background:var(--terminal);border:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;color:rgba(255,255,255,.85);font-family:inherit;font-weight:500;font-size:14px;line-height:1.4;padding:12px 16px;resize:none;overflow:hidden;white-space:pre-wrap;word-break:break-word}
   .wfmop textarea:focus{outline:none;box-shadow:inset 0 2px 6px rgba(0,0,0,.45),0 0 0 2px rgba(74,222,128,.25)}
   .wfmop input[type=checkbox]{flex:0 0 auto;margin-top:7px}
-  .wfmop .opdel{flex:0 0 auto;padding:5px 8px;color:var(--muted);margin-top:2px}
-  .wfmop .opdel:hover{color:var(--red)}
+  /* the per-opener remove is a QUIET x, not a raised pill — override the ghost key look */
+  .wfmop .opdel{flex:0 0 auto;padding:5px 8px;color:var(--muted);margin-top:2px;background:transparent;box-shadow:none}
+  .wfmop .opdel:hover{color:var(--red);filter:none}
   .wfmadd{display:flex;gap:7px;align-items:center;margin-top:9px}
   .wfmadd input{flex:1;min-width:0}
   .wfmmeta{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
@@ -779,8 +787,6 @@
       <select id="oa_channel" class="k-filter" onchange="saveOwnerAlert()">
         <option value="email">Email</option>
         <option value="sms">Text</option>
-        <option value="call">Call</option>
-        <option value="off">Off</option>
       </select>
       <input id="oa_email" type="email" placeholder="where it lands" style="flex:1;min-width:180px;font-size:14px;padding:10px 14px" onblur="saveOwnerAlert()">
     </div>
@@ -799,6 +805,8 @@
         <option value="waitlist">We’re live in your area (email)</option>
         <option value="restock_email">Restock (email)</option>
         <option value="restock">Restock (text)</option>
+        <option value="auto_check_email">Auto check results (email)</option>
+        <option value="auto_check">Auto check results (text)</option>
         <option value="instock_owner">Your in stock ping (email)</option>
       </select>
       <input id="al_test_to" type="text" placeholder="your email (or phone for the text)" style="flex:1;min-width:180px;font-size:14px;padding:10px 14px">
@@ -922,10 +930,14 @@
   <section id="support">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <div class="k-title">Support</div>
-      <div class="k-range" id="sup_rangetrack">
-        <button data-r="today" onclick="supSetRange('today')">Today</button>
-        <button data-r="7d" class="on" onclick="supSetRange('7d')">7d</button>
-        <button data-r="30d" onclick="supSetRange('30d')">30d</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <!-- "Update from the book" moved OFF this header (owner 07-15: crowded + confusing). supReindex()
+             still works; it re-homes into Copper's book-update flow when that lands. -->
+        <div class="k-range" id="sup_rangetrack">
+          <button data-r="today" onclick="supSetRange('today')">Today</button>
+          <button data-r="7d" class="on" onclick="supSetRange('7d')">7d</button>
+          <button data-r="30d" onclick="supSetRange('30d')">30d</button>
+        </div>
       </div>
     </div>
     <div class="k-hero"><span class="n" id="sup_hero_n">—</span><span class="l" id="sup_hero_l">chats</span></div>
@@ -1414,21 +1426,34 @@ function _ensureSheet(){
   const sheet=document.createElement('div'); sheet.className='sheet';
   sheet.innerHTML='<div class="grab"></div><div class="sh-title"></div><div class="sh-sub"></div><div class="sh-body"></div>';
   document.body.appendChild(scrim); document.body.appendChild(sheet);
-  // Thumb-drag ANYWHERE on the sheet to dismiss (same feel as the website's slide-ups): a downward
-  // drag grabs the sheet when its body is scrolled to the top; otherwise the body scrolls normally.
-  const body=sheet.querySelector('.sh-body');
+  // Thumb-drag ANYWHERE on the sheet to dismiss — the WEBSITE's exact gesture (sheetDrag in
+  // checkit.html): arm only when no scroller between the finger and the sheet is mid-scroll; past the
+  // threshold the sheet continues DOWN off-screen (never freezes mid-air), else it springs back.
   let y0=null,dy=0,dragging=false;
-  const down=e=>{ y0=e.touches[0].clientY; dy=0; dragging=false; };
+  const down=e=>{
+    let el=e.target; while(el&&el!==sheet){ if(el.scrollTop>2) return; el=el.parentElement; } // a mid-scroll list owns the swipe
+    y0=e.touches[0].clientY; dy=0; dragging=false;
+  };
   const move=e=>{
     if(y0==null) return;
     dy=e.touches[0].clientY-y0;
     if(!dragging){
-      if(dy>6 && (!body||body.scrollTop<=0)){ dragging=true; sheet.style.transition='none'; }
-      else if(dy<-4){ y0=null; return; } // scrolling up inside the body — let it be
+      if(dy<=0){ y0=null; return; } // upward = scroll, hand it back
+      if(dy>6){ dragging=true; sheet.style.transition='none'; }
     }
     if(dragging){ if(e.cancelable) e.preventDefault(); sheet.style.transform='translate(-50%,'+Math.max(0,dy)+'px)'; }
   };
-  const up=()=>{ if(dragging){ sheet.style.transition=''; if(dy>110) closeSheet(); else sheet.style.transform=''; } y0=null; dy=0; dragging=false; };
+  const up=()=>{
+    if(dragging){
+      if(dy>110){ // finish the gesture: animate the REST of the way down, then tidy up
+        sheet.style.transition='transform .24s cubic-bezier(.32,.72,0,1)';
+        sheet.style.transform='translate(-50%,112%)';
+        scrim.classList.remove('on');
+        setTimeout(()=>{ sheet.classList.remove('on'); sheet.style.transition=''; sheet.style.transform=''; _restoreBorrow(); },240);
+      } else { sheet.style.transition=''; sheet.style.transform=''; } // snap back up
+    }
+    y0=null; dy=0; dragging=false;
+  };
   sheet.addEventListener('touchstart',down,{passive:true});
   sheet.addEventListener('touchmove',move,{passive:false});
   sheet.addEventListener('touchend',up);
@@ -1450,7 +1475,7 @@ function openSheet(title,sub,body){
   try{ setTimeout(decorateChrome,20); }catch(_){}
 }
 function _restoreBorrow(){ if(!_sheetBorrow) return; const b=_sheetBorrow; _sheetBorrow=null; if(b.home){ if(b.next) b.home.insertBefore(b.node,b.next); else b.home.appendChild(b.node); } }
-function closeSheet(){ if(!_sheetEls) return; _sheetEls.scrim.classList.remove('on'); _sheetEls.sheet.classList.remove('on'); setTimeout(_restoreBorrow,280); }
+function closeSheet(){ if(!_sheetEls) return; _sheetEls.sheet.style.transition=''; _sheetEls.sheet.style.transform=''; _sheetEls.scrim.classList.remove('on'); _sheetEls.sheet.classList.remove('on'); setTimeout(_restoreBorrow,280); }
 window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
 // Tap-to-show tooltip — works on mobile (hover doesn't). Tap a hint → bubble; tap again/elsewhere → gone.
 let _tipFor=null;
@@ -1498,14 +1523,14 @@ async function refreshFbBadge(){
 function renderGroupNav(){
   const nav=document.getElementById('grpnav'); if(!nav) return;
   nav.innerHTML=Object.entries(NAV_GROUPS).map(([g,o])=>
-    `<button data-grp="${g}" onclick="showGroup('${g}','${o.tabs[0][0]}')">${ICO(o.ico,14,null,2)}<span style="vertical-align:middle">${esch(o.label)}</span></button>`).join('');
+    `<button data-grp="${g}" onclick="showGroup('${g}','${o.tabs[0][0]}')">${ICO(o.ico,18,null,2)}<span style="vertical-align:middle">${esch(o.label)}</span></button>`).join('');
 }
 function showGroup(g, sectionId){
   const grp=NAV_GROUPS[g]; if(!grp) return; CUR_GROUP=g;
   document.querySelectorAll('#grpnav button').forEach(b=>b.classList.toggle('active',b.dataset.grp===g));
   const sn=document.getElementById('subnav2');
   if(sn){ sn.style.display = grp.tabs.length>1?'flex':'none';
-    sn.innerHTML=grp.tabs.map(t=>`<button data-sec="${t[0]}" onclick="showSection('${t[0]}')">${ICO(t[2],15)}<span style="vertical-align:middle">${esch(t[1])}</span>${t[0]==='feedback'?`<span class="fbbadge" style="display:${FB_OPEN>0?'inline-block':'none'};background:#F4D03F;color:#111;font-size:10px;font-weight:800;border-radius:20px;padding:1px 6px;margin-left:5px">${FB_OPEN>0?FB_OPEN:''}</span>`:''}</button>`).join('');
+    sn.innerHTML=grp.tabs.map(t=>`<button data-sec="${t[0]}" onclick="showSection('${t[0]}')">${ICO(t[2],17)}<span style="vertical-align:middle">${esch(t[1])}</span>${t[0]==='feedback'?`<span class="fbbadge" style="display:${FB_OPEN>0?'inline-block':'none'};background:#F4D03F;color:#111;font-size:10px;font-weight:800;border-radius:20px;padding:1px 6px;margin-left:5px">${FB_OPEN>0?FB_OPEN:''}</span>`:''}</button>`).join('');
     const setFade=()=>sn.classList.toggle('ovf', sn.scrollWidth - sn.scrollLeft > sn.clientWidth + 2); // fade the right edge while tabs are off-screen
     sn.onscroll=setFade; requestAnimationFrame(setFade); }
   if(g==='calls') refreshFbBadge();
@@ -2255,7 +2280,9 @@ async function loadDash(){
   const hn=document.getElementById('d_checks'); if(hn){ hn.textContent=checks; hn.className='hn'+(checks>0?'':' m'); }
   const days=(o&&Array.isArray(o.days))?o.days:null; // [7 daily counts, oldest first] — needs the server update; hide until it lands
   const tr=document.getElementById('d_trend'), sp=document.getElementById('d_spark');
-  if(days&&days.length>=2){
+  // Honest data only (owner law): a week of zeros renders NOTHING — no flat dots, no "0 vs yesterday".
+  const anyActivity=!!(days&&days.some(n=>n>0))||checks>0;
+  if(days&&days.length>=2&&anyActivity){
     const y=days[days.length-2], delta=checks-y;
     if(tr){ tr.style.display='inline-flex'; tr.className='trend'+(delta>=0?'':' dn'); tr.textContent=(delta>=0?'▲ ':'▼ ')+Math.abs(delta)+' vs yesterday'; }
     if(sp){ const mx=Math.max(...days,1); sp.innerHTML=days.map((n,i)=>`<i${i===days.length-1?' class="hi"':''} style="height:${Math.max(7,Math.round(n/mx*100))}%"></i>`).join(''); }
@@ -2829,13 +2856,43 @@ async function openSupChat(id){
   const acct=r.account?Object.entries({Email:r.account.email,Phone:r.account.phone,Plan:r.account.subscription||r.account.plan,Credits:r.account.credits,'Checks made':r.account.callsMade}).filter(([,v])=>v!=null&&v!=='').map(([k,v])=>`<div class="rsbar"><span class="rsbl" style="flex-basis:auto">${k}</span><b>${esch(String(v))}</b></div>`).join(''):'<div class="meta" style="text-transform:none">Guest — not signed in.</div>';
   const dbg=r.debug?(typeof r.debug==='string'?r.debug:JSON.stringify(r.debug,null,2)):'';
   const shot=r.screenshotUrl||r.screenshot;
+  const firstQ=msgs.find(m=>m.role==='user'||m.role==='customer')||{};
+  const lastA=[...msgs].reverse().find(m=>m.role!=='user'&&m.role!=='customer')||{};
+  const teachQ=String(firstQ.text||firstQ.content||'');
+  const teachA=String(lastA.text||lastA.content||'');
   const who=r.account?(r.account.email||r.account.phone||r.account.label||'Member'):'Guest';
   openSheet(who,
     `${esch(SUP_CATS[r.category]||r.category||'Other')} · ${esch(String(r.status||'open'))}${r.tier!=null?' · '+esch(supTier(r.tier)):''} · ${agoTs(r.createdAt||r.created_at)}`,
     `<div style="display:flex;flex-direction:column;margin-bottom:14px" class="chat">${msgs.map(bub).join('')||'<div class="empty">No transcript.</div>'}</div>
     ${shot?`<div class="k-eyebrow">Screenshot</div><a href="${esch(shot)}" target="_blank" rel="noopener"><img src="${esch(shot)}" alt="Customer screenshot" style="max-width:100%;border-radius:14px;margin-bottom:14px"></a>`:''}
     ${dbg?`<div class="k-eyebrow">Debug info</div><pre style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;padding:12px;margin:0 0 14px">${esch(dbg)}</pre>`:''}
+    <div class="card" style="margin-bottom:14px;border-color:rgba(74,222,128,.3)">
+      <div class="k-eyebrow">Teach the right answer</div>
+      <div class="meta" style="text-transform:none;margin:2px 0 9px">Correct what it should have said. Saved answers get served the next time someone asks this.</div>
+      <div class="fld"><label style="font-size:11px;display:block;margin-bottom:4px">Question</label><textarea id="sup_teach_q" rows="2">${esch(teachQ)}</textarea></div>
+      <div class="fld" style="margin-top:9px"><label style="font-size:11px;display:block;margin-bottom:4px">Right answer</label><textarea id="sup_teach_a" rows="4">${esch(teachA)}</textarea></div>
+      <button class="act" style="margin-top:11px" onclick="supTeach('${esch(String(r.id||id))}')">Save as approved answer</button>
+    </div>
     <div class="k-eyebrow">Account</div>${acct}`);
+}
+// Teach: save a corrected question+answer as an approved pair. It embeds into the answer cache, so the
+// next time someone asks this the agent serves your wording verbatim instead of reasoning fresh.
+async function supTeach(id){
+  const q=((document.getElementById('sup_teach_q')||{}).value||'').trim();
+  const a=((document.getElementById('sup_teach_a')||{}).value||'').trim();
+  if(!q||!a){ toast('Add a question and the right answer first'); return; }
+  const r=await api('/api/support/review/'+encodeURIComponent(id),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'approve',question:q,answer:a})});
+  if(r&&r.ok){ toast('Saved. It will use this next time.'); closeSheet(); }
+  else toast('Could not save that answer');
+}
+// Update from the book: re-read the whole help book into the agent's memory (after Copper edits it).
+async function supReindex(btn){
+  const label=btn?btn.textContent:'';
+  if(btn){ btn.disabled=true; btn.textContent='Reading…'; }
+  const r=await api('/api/support/reindex',{method:'POST'});
+  if(btn){ btn.disabled=false; btn.textContent=label||'Update from the book'; }
+  if(r&&r.ok) toast('Reloaded the book: '+(r.pages!=null?r.pages+' pages':'done'));
+  else toast('Could not reload the book');
 }
 function bubbles(t){
   if(!t) return '';
@@ -4674,6 +4731,7 @@ function decorateChrome(){
 // ---- Alerts (God View → Alerts): editable message templates, subscribers, and the send log ----
 const AL_EVENTS=[
   ['restock','Restock (text or email)','both','Fires on a confirmed restock, on the channel they picked. Texts count against the plan cap.'],
+  ['auto_check','Auto check results (text or email)','both','Fires after every auto check with what the call found.'],
   ['store_added','Store went live (email)','email','Their requested store went live. Free check granted.'],
   ['waitlist','We’re live in your area (email)','email','A waitlist signup’s region just launched.'],
   ['confirm_email','Confirm your email (email)','email','Someone added an email. No alerts until they tap confirm.'],
@@ -4698,7 +4756,7 @@ async function saveOwnerAlert(){
   const out=document.getElementById('oa_out');
   const r=await api('/api/admin/owner-alert',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({channel:ch,email:em})});
   if(!r||r.error){ if(out){ out.style.color='#F87171'; out.textContent= (r&&r.error)==='invalid_email'?'That email does not look right':'Could not save'; } return; }
-  if(out){ out.style.color=''; out.textContent= r.channel==='off'?'Ping is off':('Ping rides '+(r.channel==='email'?('email · '+(r.email||'no address set')):r.channel)); }
+  if(out){ out.style.color=''; out.textContent='Ping rides '+(r.channel==='email'?('email · '+(r.email||'no address set')):'text · '+(r.phone||'no number set')); }
 }
 async function loadAlerts(){
   const tEl=document.getElementById('al_templates'); if(!tEl) return;
@@ -4709,7 +4767,7 @@ async function loadAlerts(){
     const sms=alField('al_'+k+'_sms','Text message',t.sms,true);
     const email=alField('al_'+k+'_subj','Email subject',t.emailSubject,false)+alField('al_'+k+'_body','Email body',t.emailBody,true);
     const body= chan==='sms'?sms : chan==='email'?email : sms+email;
-    return `<div class="drow" style="padding:10px 0;border-top:1px solid var(--border)"><div class="name" style="margin-bottom:2px">${esch(label)}</div><div class="meta" style="margin:0 0 8px">${esch(hint)}</div>${body}</div>`;
+    return `<div class="drow" style="padding:14px 16px"><div class="name" style="margin-bottom:2px">${esch(label)}</div><div class="meta" style="margin:0 0 10px">${esch(hint)}</div>${body}</div>`;
   }).join('');
   const log=await api('/api/alerts/log')||{};
   // Delivery banner: green when the provider creds are set, amber "stubbed" until then.
@@ -4748,8 +4806,8 @@ async function saveAlertTemplates(){
 }
 async function sendAlertTest(){
   const pick=(document.getElementById('al_test_event')||{}).value||'confirm_email';
-  // "restock_email" is the UI's name for restock over the email channel; the server takes event+channel.
-  const req= pick==='restock_email' ? {event:'restock',channel:'email'} : {event:pick};
+  // "<event>_email" is the UI's name for a text-first event over the email channel; the server takes event+channel.
+  const req= pick.endsWith('_email')&&pick!=='confirm_email' ? {event:pick.replace(/_email$/,''),channel:'email'} : {event:pick};
   const to=((document.getElementById('al_test_to')||{}).value||'').trim();
   const out=document.getElementById('al_test_out');
   if(!to){ if(out){ out.style.color='#F59E0B'; out.textContent='Enter where to send it first.'; } return; }
