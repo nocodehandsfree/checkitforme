@@ -32,10 +32,14 @@
 4. Pops small build: enforce per-tier SMS caps (smsAlertsPerMonth is data-only today).
 5. Week-in-review + hum-better report (owner asked; queued).
 
-## In flight right now
-- **DD:** gray-but-mapped stores + Food 4 Less/Ralphs kiosk-only — data-side, ships via store API.
-  Owner retest = O10 in docs/specs/launch-journeys/JOURNEYS.md.
-- **Addie:** more Admin changes rolling; after ship-admin rehearsal she's off the promote train.
+## In flight right now (owner update 2026-07-15 late)
+- Owner driving the pre-market punch list himself through the lanes: alerts verified working +
+  Addie usability fixes · Echo/Delta rounds going well, call-presentation tweaks in progress ·
+  Copper + Support building the customer-support path. His deadline frame: **Friday = Chris
+  conversation** (possible deal/onboard) — he's clearing must-haves before then.
+- **Card test (O1) still NOT reported done** — everything else orbits it; keep it front and center.
+- DD: gray-but-mapped + kiosk-only fixes — data-side; owner retest = O10 in launch-journeys.
+- Owner asked earlier for a week-in-review + hum-better report — good Friday/Chris prep; offered.
 
 ## CI health (check before every promote)
 - Known reds: off-brand colors in the v2 skin (cosmetic; Webbie's) and gitleaks (dead tokens; Pops
