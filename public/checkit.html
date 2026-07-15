@@ -421,6 +421,13 @@ __BRAND_HEAD__
   .verdict.in .vmark::before{background:var(--green)} .verdict.out .vmark::before{background:var(--red)} .verdict.unk .vmark::before{background:#FBBF24} .verdict.soon .vmark::before{background:#F59E0B}
   .vmark>svg,.vmark>span{position:relative;z-index:1}
   .verdict .title{font-size:25px;font-weight:900;letter-spacing:-.6px;line-height:1.08}
+  /* The store this call went to — logo tile + name right under the when-line (owner 07-15: no
+     guessing which store a result page belongs to). Same tile recipe as the homepage rows. */
+  .rstore{display:flex;align-items:center;gap:9px;margin:12px 0 2px;min-width:0}
+  .rstore-ic{width:30px;height:30px;border-radius:9px;background:#1F1F25;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none}
+  .rstore-ic img{max-width:22px;max-height:22px;object-fit:contain}
+  .rstore-nm{font:700 14.5px Inter;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rstore-lo{font:600 12.5px Inter;color:rgba(255,255,255,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .verdict.in .title{color:var(--green)} .verdict.out .title{color:var(--red)} .verdict.unk .title{color:#FBBF24} .verdict.soon .title{color:#F59E0B}
   .vstore{text-align:center;color:#d6d6e0;font-size:14.5px;font-weight:600;margin-top:9px}
   /* combined call header: store + verdict status + timing in one box at the top */
@@ -1806,10 +1813,10 @@ html[data-skin="v2"] #zones .modal::before,html[data-skin="v2"] #histOverlay .mo
 html[data-skin="v2"] #zones.on .modal,html[data-skin="v2"] #histOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 /* Zone dialogs (actions menu / rename / delete / check confirm) = bottom sheets too — the comp shows
    them sliding up from the bottom edge over the dimmed zones list, same recipe as scorePostOv. */
-html[data-skin="v2"] #zmenuOv{align-items:flex-end;padding:0}
-html[data-skin="v2"] #zmenuOv .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
-html[data-skin="v2"] #zmenuOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
-html[data-skin="v2"] #zmenuOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
+html[data-skin="v2"] #zmenuOv,html[data-skin="v2"] #emailOv,html[data-skin="v2"] #alertsOv{align-items:flex-end;padding:0}
+html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[data-skin="v2"] #alertsOv .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
+html[data-skin="v2"] #zmenuOv .modal::before,html[data-skin="v2"] #emailOv .modal::before,html[data-skin="v2"] #alertsOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
+html[data-skin="v2"] #zmenuOv.on .modal,html[data-skin="v2"] #emailOv.on .modal,html[data-skin="v2"] #alertsOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 18px calc(22px + env(safe-area-inset-bottom))}
 /* Footer links (About/FAQ/Terms/Privacy/Contact) slide up as a bottom sheet, like every other panel.
    Flex column: the grab handle + title stay pinned; only the body scrolls (owner 07-06: the top used to
@@ -2276,8 +2283,9 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 <div class="overlay" id="watchOverlay" onclick="if(event.target===this)closeWatch()">
   <div class="modal" style="position:relative;max-width:400px;text-align:center">
     <span class="x" onclick="closeWatch()">×</span>
-    <h3 style="margin-bottom:6px"><span class="mico" id="watchIco"></span><span data-i18n="watch.title">Tell me when it's back</span></h3>
-    <div class="meta" style="margin-bottom:16px" id="watch_sub" data-i18n="watch.sub">We'll ping you the instant anyone confirms it in stock here.</div>
+    <div style="display:flex;justify-content:center;margin-bottom:6px"><span class="mico" id="watchIco"></span></div>
+    <h3 style="margin-bottom:6px;text-align:center"><span data-i18n="watch.title">Tell me when it's back</span></h3>
+    <div class="meta" style="margin-bottom:16px;text-align:center" id="watch_sub" data-i18n="watch.sub">We'll ping you the instant anyone confirms it in stock here.</div>
     <input id="watch_contact" type="text" inputmode="email" autocomplete="email" placeholder="email or phone number" data-i18n-ph="watch.ph" style="width:100%;background:#15151c;color:#fff;border:1px solid var(--border);border-radius:12px;padding:14px 12px;font-size:16px;box-sizing:border-box">
     <div id="watch_err" style="color:#ff6b6b;font-size:13px;margin-top:8px;min-height:16px"></div>
     <button class="cta" id="watch_btn" onclick="submitWatch()" style="margin-top:6px;width:100%" data-i18n="watch.cta">Watch this store →</button>
@@ -2287,8 +2295,9 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 <div class="overlay" id="scheduleOverlay" onclick="if(event.target===this)closeSchedule()">
   <div class="modal" style="position:relative;max-width:420px;text-align:left">
     <span class="x" onclick="closeSchedule()">×</span>
-    <div style="display:flex;gap:10px;align-items:flex-start;margin:2px 0 14px"><span class="mico" id="schIco" style="margin-top:2px"></span><div style="min-width:0"><h3 style="margin:0" data-i18n="sch.title">Auto-check</h3>
-    <p style="margin:4px 0 0;color:#b9b9c8;font-size:13px;line-height:1.5" data-i18n="sch.body">We'll check <b id="sch_store">the store</b> automatically and ping you with the results.<b id="sch_cat" style="display:none"></b></p></div></div>
+    <div style="display:flex;justify-content:center;margin:2px 0 6px"><span class="mico" id="schIco"></span></div>
+    <h3 style="margin:0;text-align:center" data-i18n="sch.title">Auto-check</h3>
+    <p style="margin:4px 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5;text-align:center" data-i18n="sch.body">We'll check <b id="sch_store">the store</b> automatically and ping you with the results.<b id="sch_cat" style="display:none"></b></p>
     <label class="klbl" data-i18n="sch.days">Which days?</label>
     <div id="sch_days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:6px 0 8px"></div>
     <label class="klbl" data-i18n="sch.time">Earliest call time</label>
@@ -2894,7 +2903,7 @@ const I18N={ es:{
   'zones.locph':'Busca un código postal o ciudad…','zones.go':'Ir','zones.list':'Lista','zones.map':'Mapa',
   'zones.radius':'Radio','zones.addallshort':'Agregar todo','zones.selstore':'tienda seleccionada','zones.selstores':'tiendas seleccionadas',
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
-  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.max25':'Máximo 25 tiendas por zona',
+  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.max25':'Máximo 25 tiendas por zona','em.title':'Tu correo','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Avisos de reposición y auto-verificación de esta cuenta.','alerts.none':'Aún no hay alertas. Vigila una tienda o activa una auto-verificación y aparecerá aquí.','alerts.off':'Apagar','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y auto-verificación.',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
   'zones.confirm.title2':'¿Verificar {n} {s} abiertas?','zones.storeword':'tienda','zones.storesword':'tiendas','zones.checkallN':'Verificar las {n}','zones.removeall':'Quitar todo','zones.isclosed':'está cerrada','zones.areclosed':'están cerradas','zones.stillcall':'Aún podemos llamar a las {n} abiertas.','zones.and':'y','zones.andmore':'y {n} más','zones.astore':'Una tienda',
@@ -3398,6 +3407,7 @@ async function boot(){
   else if(sp.get('show')==='signup'&&isV2()) setTimeout(()=>{try{openUpsell();}catch(e){}},400);   // HIDDEN sign-up preview: 6a → SEE PLANS → 6b sheet
   else if(sp.get('show')==='paid'&&isV2()) setTimeout(()=>{try{openPaid();}catch(e){}},600);      // HIDDEN 6d you're-in preview
   else if(sp.get('show')==='mychecks'&&isV2()) setTimeout(()=>{try{openHistory();}catch(e){}},400);  // HIDDEN My-checks preview (6e–6i)
+  else if(sp.get('alerts')) setTimeout(()=>{ try{ openAccount(); setTimeout(()=>{ try{ openAlerts(); }catch(_){ } },450); }catch(e){} },400); // email footer links land HERE (Addie 07-15)
   else if(sp.get('v')==='success') openSuccess();
   // HYDRATE — dynamic data loads in the background, then re-render only the parts that need it.
   const [c,st,pol]=await Promise.all([api('/pub/categories'),api('/pub/statuses').catch(()=>null),api('/pub/policy').catch(()=>null)]);
@@ -3746,7 +3756,7 @@ function openAccount(fromPop){
         <div style="position:relative"><span style="font-size:10.5px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.8)">${t('acct.checks','My checks')}</span></div>
         <div style="position:relative;margin-top:16px">
           <div style="display:flex;align-items:center;gap:10px"><span style="font-size:26px;font-weight:900;letter-spacing:-1px;color:#fff;white-space:nowrap">${esc(idn.primary)}</span><button onclick="editPhone()" aria-label="Change number" style="background:none;border:0;padding:2px;cursor:pointer;display:inline-flex"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div>
-          ${idn.secondary?`<div style="font-size:13.5px;font-weight:600;color:rgba(255,255,255,.68);margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(idn.secondary)}</div>`:''}
+          ${(ACCOUNT&&ACCOUNT.email)?`<div style="display:flex;align-items:center;gap:8px;margin-top:5px;min-width:0"><span style="font-size:13.5px;font-weight:600;color:rgba(255,255,255,.68);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(ACCOUNT.email)}</span><button onclick="editEmail()" aria-label="Change email" style="background:none;border:0;padding:2px;cursor:pointer;display:inline-flex;flex:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div>${ACCOUNT.emailVerified?'':`<div style="font-size:11.5px;font-weight:600;color:rgba(255,255,255,.5);margin-top:3px">${t('em.confirm','Check your inbox to confirm')}</div>`}`:`<button onclick="editEmail()" style="background:none;border:0;padding:0;margin-top:6px;font-size:13px;font-weight:600;color:rgba(255,255,255,.68);text-decoration:underline;text-underline-offset:3px;cursor:pointer">${t('em.add','Add your email for alerts')}</button>`}
         </div></div>
       <div class="stats"><div class="stat2"><b>${esc(left)}</b><i>${esc(t('acct.stat.left','Checks left').toUpperCase())}</i></div><div class="stat2"><b>${run}</b><i>${esc(t('acct.stat.run2','Checks today').toUpperCase())}</i></div></div>
       <div class="tabs">
@@ -4362,8 +4372,8 @@ function renderIcons(){
   setI('succ_fileico', ICO.cam('#A78BFA').replace('width="15" height="15"','width="18" height="18"'));
   setI('scTrophy', ICO.trophy(AC()).replace('width="14" height="14"','width="20" height="20"'));
   setI('succCam', ICO.cam('#06210f').replace('width="15" height="15"','width="16" height="16"'));
-  setI('watchIco', ICO.bell(AC1()).replace('width="15" height="15"','width="20" height="20"'));
-  setI('schIco', ICO.cal(AC()).replace('width="15" height="15"','width="26" height="26"'));
+  setI('watchIco', ICO.bell(AC1()).replace('width="15" height="15"','width="28" height="28"'));
+  setI('schIco', ICO.cal(AC1()).replace('width="15" height="15"','width="28" height="28"'));
   setI('rcptMark', ICO.kioskMini(AC1()).replace('width="18" height="18"','width="28" height="28"'));
   setI('kIco', ICO.kioskMini(AC1()).replace('width="18" height="18"','width="20" height="20"'));
   setI('shareIco', ICO.mega(AC2()).replace('width="15" height="15"','width="20" height="20"'));
@@ -4897,7 +4907,7 @@ function combinedTimelineHTML(steps, transcript, finalElapsed, status){
     return `<div class="ctlv2" style="margin-bottom:22px">
       <div class="ctlv2-rail"><span class="d1"></span><span class="ln" style="background:linear-gradient(180deg,#4ADE80 0%,${live?'#4ADE80 100%':`color-mix(in srgb,#4ADE80 35%,${tone}) 60%,${tone} 100%`})"></span><span class="d2" style="background:${live?'#4ADE80':tone};${live?'box-shadow:0 0 8px rgba(74,222,128,.6)':''}"></span></div>
       <div style="flex:1;min-width:0">
-        <details open><summary><span style="font-size:15px;font-weight:700">${t('step.ringing','Ringing the store…').replace(/[…\u2026.]+\s*$/,'')}</span><span style="text-align:right"><span style="font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''} ⌃</span>${(status&&status.ts)||(live&&LIVE_T0)?`<span style="display:block;margin-top:2px;font-size:11px;font-weight:600;color:#66666F">${new Date((status&&status.ts)||LIVE_T0).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'short',day:'numeric'})} · ${new Date((status&&status.ts)||LIVE_T0).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'})}</span>`:''}</span></summary>
+        <details open><summary><span style="font-size:15px;font-weight:700">${t('step.ringing','Ringing the store…').replace(/[…\u2026.]+\s*$/,'')}</span><span style="text-align:right"><span style="font-size:13px;font-weight:600;color:#8A8A96">${stepRows.length+1} ${stepRows.length+1===1?t('step.one','step'):t('step.many','steps')}${totalS?` · ${totalS}s`:''} ⌃</span></span></summary>
           <div class="ctlv2-steps">${stepEls}</div>
         </details>
         <div id="convo_body" style="${bubs?'margin-top:12px;':''}display:flex;flex-direction:column;gap:9px">${bubs}</div>
@@ -5640,6 +5650,7 @@ function showResult(o, cid){
       <span class="rpill"><span class="d"></span>${t('res.result','Result')}</span>
       <div class="rtitle2">${esc(showFeedback ? t('v.unclear2','Couldn’t tell') : vTitle)}</div>
       ${(o.ts||o._t0)?`<div class="rwhen">${esc(new Date(o.ts||o._t0).toLocaleDateString(LANG==='es'?'es-ES':'en-US',{weekday:'short',month:'short',day:'numeric'}))} · ${esc(new Date(o.ts||o._t0).toLocaleTimeString(LANG==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit'}))}</div>`:''}
+      ${SEL_STORE&&SEL_STORE.name?`<div class="rstore"><span class="rstore-ic ${SEL_STORE.logoDark?'lite':''} ${SEL_STORE.logoWide?'widelogo':''}">${storeFace(SEL_STORE)}</span><span class="rstore-nm">${esc(SEL_STORE.name)}</span>${SEL_STORE.location?`<span class="rstore-lo">${esc(SEL_STORE.location)}</span>`:''}</div>`:''}
       ${note?`<div class="rsub">${nlSent(fillP(note,o,cls))}</div>`:''}
       ${priceLineHTML(o)}
       ${breakdown}
@@ -6037,6 +6048,7 @@ function acctTab(which,fromPop){
     panel.innerHTML=
       (member?row(spark,t('acct.row.plan','Manage plan'),compAcct?t('plan.unlcycle','Unlimited · billed monthly'):t('plan.cycle','Billed monthly · cancel anytime'),"ACCT_RETURN='overview';closeAccount();openBuy('manage')"):'')+
       row(calic,t('acct.row.hist','Check history'),histSub,"ACCT_RETURN='overview';closeAccount();openHistory(true)")+
+      row(`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="stroke:${AC2}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`,t('acct.row.alerts','Alerts'),t('acct.row.alerts.sub','Restock and auto-check pings.'),"openAlerts()")+
       row(`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="stroke:${AC2}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`,t('acct.row.zones','Manage Zones'),hasFeature('zone_sweeps')?t('acct.row.zones.sub','Check a whole area in one tap.'):t('acct.row.zones.locked','Check+ · check every store near you at once'),"ACCT_RETURN='overview';closeAccount();openZones()")+
       row(gift,t('acct.row.earn','Earn free checks'),t('acct.row.earn.sub','4 ways. Open to everyone.'),"acctTab('earn')")+
       `<div id="acctScheds"></div>`+
@@ -6519,6 +6531,53 @@ function zPop(html){ let ov=$('zmenuOv');
   if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='zmenuOv'; ov.style.zIndex='4600'; ov.onclick=e=>{ if(e.target===ov) ov.classList.remove('on'); }; document.body.appendChild(ov); try{ sheetDrag('zmenuOv', zPopClose); }catch(_){ } } // above the zones sheet (z4300, owner 07-12)
   ov.innerHTML=`<div class="modal" style="text-align:left">${html}</div>`; ov.classList.add('on'); }
 function zPopClose(){ const ov=$('zmenuOv'); if(ov) ov.classList.remove('on'); }
+// ---- Alerts email (Addie 07-15): edit sheet + the alerts list sheet ----
+function sheetShell(id, closeFn){ let ov=$(id);
+  if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id=id; ov.style.zIndex='4600';
+    ov.onclick=e=>{ if(e.target===ov) ov.classList.remove('on'); };
+    document.body.appendChild(ov); try{ sheetDrag(id, ()=>ov.classList.remove('on')); }catch(_){ } }
+  return ov; }
+function editEmail(){ const ov=sheetShell('emailOv');
+  ov.innerHTML=`<div class="modal" style="text-align:left">
+    <div style="display:flex;justify-content:center;margin-bottom:6px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
+    <h3 style="margin:2px 0 4px;text-align:center">${t('em.title','Your email')}</h3>
+    <div class="meta" style="margin-bottom:14px;text-align:center">${t('em.sub','Alerts and restock pings land here.')}</div>
+    <input id="em_in" type="email" class="kin" placeholder="${t('em.ph','you@email.com')}" value="${esc((ACCOUNT&&ACCOUNT.email)||'')}" style="width:100%;box-sizing:border-box;margin-bottom:12px">
+    <div id="em_err" style="color:#ff6b6b;font-size:13px;min-height:16px"></div>
+    <button class="cta" id="em_btn" style="width:100%" onclick="saveEmail()">${t('em.save','Save email')} →</button></div>`;
+  ov.classList.add('on'); setTimeout(()=>{ try{ $('em_in').focus(); }catch(_){ } },80);
+}
+async function saveEmail(){ const e=($('em_in').value||'').trim().toLowerCase();
+  if(e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ markFld($('em_in'),true); return; }
+  const b=$('em_btn'); b.disabled=true; b.textContent=t('em.saving','Saving…');
+  const r=await appApi('/app/email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:e})});
+  b.disabled=false; b.textContent=t('em.save','Save email')+' →';
+  if(!r||r.error){ $('em_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
+  if(ACCOUNT){ ACCOUNT.email=r.email; ACCOUNT.emailVerified=!!r.verified; }
+  $('emailOv').classList.remove('on');
+  if(r.email&&!r.verified) toast(t('em.confirm','Check your inbox to confirm'),'neutral');
+  try{ openAccount(); }catch(_){ } // repaint the header with the new address/state
+}
+// The alerts sheet: everything you're subscribed to, one Turn off per row (GET /app/alerts/me).
+async function openAlerts(){ const ov=sheetShell('alertsOv');
+  const shell=rows=>`<div class="modal" style="text-align:left">
+    <div style="display:flex;justify-content:center;margin-bottom:6px">${ICO.bell(AC1()).replace('width="15" height="15"','width="28" height="28"')}</div>
+    <h3 style="margin:2px 0 4px;text-align:center">${t('alerts.title','Alerts')}</h3>
+    <div class="meta" style="margin-bottom:14px;text-align:center">${t('alerts.sub','Restock and auto-check pings tied to this account.')}</div>
+    <div id="alertsList">${rows}</div></div>`;
+  ov.innerHTML=shell(`<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`);
+  ov.classList.add('on');
+  const me=await appApi('/app/alerts/me');
+  const paint=me2=>{ const subs=(me2&&me2.subscriptions)||[];
+    $('alertsList').innerHTML = subs.length? subs.map(x=>`<div style="display:flex;align-items:center;gap:12px;margin-top:10px;padding:13px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">
+        <span style="flex:1;min-width:0"><span style="display:block;font-size:14.5px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(x.productLabel||t('alerts.acheck','A check'))}</span><span style="display:block;margin-top:2px;font-size:12px;font-weight:600;color:#8A8A96">${x.kind==='schedule'?t('alerts.k.sched','Auto-check'):t('alerts.k.restock','Restock alert')} · ${x.channel==='sms'?t('alerts.c.sms','text'):t('alerts.c.email','email')}</span></span>
+        <button onclick="alertOff(${x.id})" style="flex:none;background:rgba(255,123,123,.12);border:0;border-radius:999px;padding:8px 14px;color:#FF9B9B;font:800 12px Inter;cursor:pointer">${t('alerts.off','Turn off')}</button></div>`).join('')
+      : `<div class="meta" style="text-align:center;padding:18px 8px">${t('alerts.none','No alerts yet. Watch a store or turn on an auto-check and it shows up here.')}</div>`; };
+  paint(me);
+  window.__alertsPaint=paint;
+}
+async function alertOff(id){ const r=await appApi('/app/alerts/unsubscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id})});
+  if(r&&!r.error&&window.__alertsPaint) window.__alertsPaint(r); else toast(t('err.generic',"That didn't go through. Give it another try.")); }
 const Z_ROWBTN='display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border:0;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;font-size:15px;font-weight:700;cursor:pointer;text-align:left';
 const Z_ICO_PEN='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>';
 const Z_ICO_TRASH='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF7B7B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';
@@ -7274,6 +7333,9 @@ async function submitWatch(){
   btn.disabled=false; btn.textContent=t('watch.cta','Watch this store →');
   if((!r||r.error)&&(!sub||sub.error)){ $('watch_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
   track('watch_set',{retailerId:SEL_STORE.id,channel});
+  // Typed an email and the account has none saved → save it as THE account email so the branded
+  // confirm email fires (Addie 07-15). Fire-and-forget: the watch itself is already registered.
+  if(isEmail&&isAuthed()&&ACCOUNT&&!ACCOUNT.email){ try{ appApi('/app/email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:c})}).then(r=>{ if(r&&!r.error){ ACCOUNT.email=r.email; ACCOUNT.emailVerified=!!r.verified; } }); }catch(_){ } }
   // In-place confirmation (owner: no toasts, no crowd counts). The input goes away; the box tells
   // them the ONE next step, then how the alert lands. Verification wiring = Admin build.
   $('watch_contact').style.display='none';

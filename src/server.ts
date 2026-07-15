@@ -3047,6 +3047,8 @@ app.get("/app/me", async (c) => {
     credits: comp ? 9999 : spendableCredits(a), subscription: comp ? "active" : (a?.subscription ?? "none"),
     subTier: comp ? "founder" : (a?.subTier ?? null), quota: comp ? 9999 : (a?.quotaCredits ?? 0), payg: comp ? 9999 : (a?.credits ?? 0), premiumAsks, features,
     comp, callsMade: a?.callsMade ?? 0, phone: a?.phone ?? null,
+    // Alerts email UI (Addie 07-15): the saved address + whether the confirm link was tapped.
+    email: a?.email ?? null, emailVerified: !!a?.emailVerifiedAt,
     // caller_id is only set after Twilio's caller-ID verify call → the "create your agent" panel uses
     // callerIdReady to know whether to prompt for it.
     callerId: a?.callerId ?? null, callerIdReady: !!a?.callerId,
