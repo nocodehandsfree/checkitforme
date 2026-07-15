@@ -343,7 +343,10 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
       statusKey = onHold ? "left_on_hold" : (langBarrier ? "language_barrier" : (tooBusy ? "too_busy" : "no_clear_answer"));
     }
   } else {
-    statusKey = ({ no_answer: "nobody_answered", failed: "failed", closed: "closed" } as Record<string, string>)[status] ?? "nobody_answered";
+    // Non-completed: prefer the SPECIFIC carrier reason (voicemail/busy/bad_number/closed) over the
+    // generic per-status fallback — "Call failed" should be the reason of last resort, not the default.
+    statusKey = failureStatusKey(d.metadata?.termination_reason)
+      ?? (({ no_answer: "nobody_answered", failed: "failed", closed: "closed" } as Record<string, string>)[status] ?? "nobody_answered");
   }
 
   // Timing: total connected length + time-to-LIVE-human. The handoff is when our agent first ASKS a
@@ -382,6 +385,19 @@ function normalize(d: ElevenLabsConversation): CallOutcome {
   };
 }
 
+/** Map a provider/carrier termination reason to the SPECIFIC statuses-registry key, so a failed
+ *  call shows its real reason (voicemail / busy / bad number / closed) instead of a bare
+ *  "Call failed" or a mislabeled "Store's closed". Pure + exported for unit tests. */
+export function failureStatusKey(reason: string | null | undefined): "voicemail" | "busy" | "bad_number" | "closed" | null {
+  const r = (reason ?? "").trim();
+  if (!r) return null;
+  if (/voicemail|answering machine|machine detect/i.test(r)) return "voicemail";
+  if (/\bbusy\b/i.test(r)) return "busy";
+  if (/invalid|unallocated|not in service|unassigned|disconnected number|bad number|blacklist|rejected by carrier/i.test(r)) return "bad_number";
+  if (/\bclosed\b/i.test(r)) return "closed";
+  return null;
+}
+
 /** Turn an ElevenLabs termination reason into a plain-English, actionable message. */
 function explainFailure(d: ElevenLabsConversation): string | null {
   if (mapStatus(d) !== "failed") return null;
@@ -395,8 +411,11 @@ function explainFailure(d: ElevenLabsConversation): string | null {
 
 function mapStatus(d: ElevenLabsConversation): CallOutcome["status"] {
   if (d.status === "failed") return "failed";
-  // Agent hit a voicemail / answering machine / "we're closed" recording and bailed.
-  if (/voicemail|answering machine|closed/i.test(d.metadata?.termination_reason ?? "")) return "closed";
+  // A voicemail/answering machine is a NO-ANSWER, not "closed" — the store may be wide open with
+  // nobody at the phone. Only a "we're closed" recording maps to closed. (statusKey carries the
+  // specific voicemail reason via failureStatusKey.)
+  if (/voicemail|answering machine/i.test(d.metadata?.termination_reason ?? "")) return "no_answer";
+  if (/closed/i.test(d.metadata?.termination_reason ?? "")) return "closed";
   const secs = d.metadata?.call_duration_secs ?? 0;
   // Connected and exchanged speech → completed; otherwise treat as no-answer.
   if (secs > 0 && (d.transcript?.some((t) => t.role !== "agent") ?? false)) return "completed";

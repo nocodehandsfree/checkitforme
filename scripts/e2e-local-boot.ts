@@ -27,10 +27,13 @@ async function main() {
   // Explicit ids so local.spec.ts can reference them without discovery round-trips.
   // (Categories come from bootstrap's own seed — pokemon is id 1; don't double-seed them.)
   const open24 = JSON.stringify({ mon: "24h", tue: "24h", wed: "24h", thu: "24h", fri: "24h", sat: "24h", sun: "24h" });
+  const closedAll = JSON.stringify({ mon: null, tue: null, wed: null, thu: null, fri: null, sat: null, sun: null });
   await db.insert(retailers).values([
     { id: 9001, name: "Gate Store A", location: "Los Angeles, CA", lat: 34.05, lng: -118.24, active: true, phone: "+13105550101", hours: open24 } as any,
     { id: 9002, name: "Gate Store B", location: "Los Angeles, CA", lat: 34.06, lng: -118.25, active: true, phone: "+13105550102", hours: open24 } as any,
     { id: 9003, name: "Gate Kiosk (not callable)", location: "Los Angeles, CA", lat: 34.07, lng: -118.26, active: true, phone: "+13105550103", sellsPacks: false, hours: open24 } as any,
+    // Known-closed store (all days null) for the closed-card journey (A6).
+    { id: 9004, name: "Gate Closed Store", location: "Los Angeles, CA", lat: 34.055, lng: -118.245, active: true, phone: "+13105550104", hours: closedAll } as any,
   ]).onConflictDoNothing();
 
   await import("../src/server");

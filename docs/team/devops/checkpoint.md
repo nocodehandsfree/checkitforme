@@ -3,6 +3,22 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-15 — admin ship-path decouple + gate A1-A8 BUILT, held for Addie's quiet window
+- **HOLDING two local staging commits** (owner: no pushes while Addie iterates on the Admin;
+  watcher pushes when origin/staging is quiet 30 min): (1) admin decouple — Admin UI ships via
+  `bash scripts/ship-admin.sh` (volume override on the prod svc, atomic swap, rollback, bundled
+  fallback; NO new domain/service/DNS; enabling server change rides the next promote) — 12/12;
+  (2) launch gate A1-A8 from docs/specs/launch-journeys — PAYG locked-features, zero-credit
+  upsell, both pools, Stripe-test cancel (also cleans up each run's test sub), gates × account
+  type, closed/kiosk cards, annual price parity, prod-gate peek entry. local 7/7 · staging
+  journeys 9/9 · prod 15/15 GREEN.
+- **Promote LANDED (b20ff75, 07-15) → PR #18 hold is OVER**: merge it into staging in the same
+  quiet-window push (cheapBridgeAll still default OFF; echo-gate BARGE_THRESH still needs a
+  Fun-store bench BEFORE the NEXT promote).
+- **[blocked] audit for the owner:** referrals = BUILT (engine+UI+tests; GTM card stale).
+  Alerts = mostly built; genuinely left: per-tier SMS-cap enforcement (small backend, mine),
+  A2P 10DLC registration (owner paperwork), email branding, My-Checks contact form (Webbie).
+
 ## ✅ 2026-07-14 — LAUNCH GATE shipped + it caught a real revenue bug (both on staging a7f11b7)
 - **`bash scripts/launch-gate.sh` = THE promote gate.** One command, GREEN today (24 journeys):
   signup, store find→call sheet, upgrade+pay (Stripe TEST 4242 through the REAL webhook), schedules,

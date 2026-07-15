@@ -3,7 +3,7 @@ import { chromium } from '@playwright/test';
 const [section, out, width] = process.argv.slice(2);
 
 const FIX = {
-  '/api/admin/overview': { today:{ calls:24, confirms:15 }, days:[12,15,9,18,13,20,24], chainStats:[] },
+  '/api/admin/overview': { today:{ calls:24, confirms:15 }, week:{ calls:118, confirms:41 }, month:{ calls:302, confirms:97 }, days:[12,15,9,18,13,20,24], chainStats:[] },
   '/api/admin/metrics': { revenueCents:41200, profitCents:14000, marginPct:34, mrrCents:9900, cogs:{totalCents:27200}, callsMade:118, users:52, subscribers:11, marginPct_:34 },
   '/api/admin/restock-intel': { totals:{ confirms:41, confirmRate:35, checks:118, confirms7d:9, confirms30d:32 },
     answerFunnel:{ dialed:118, reachedHuman:73, gotAnswer:64, firstCall:1751000000, buckets:{in_stock:38,got_some:6,not_in:20,reached_no_answer:9,never_reached:45}, byChain:[{chain:'Target',dialed:24,reached:21},{chain:'GameStop',dialed:18,reached:12},{chain:'Walmart',dialed:16,reached:7}] },

@@ -27,6 +27,7 @@ async function notifyWatches(retailerId: number, categoryId: number, store: stri
 import { config } from "../config";
 import { ElevenLabsProvider } from "../voice/elevenlabs";
 import { takeBridgeNav } from "../voice/bridge";
+import { placeBridgeCall, roomFinalizers } from "../voice/bridge-place";
 import { learnTreeFromTranscript, consumeTreeRelearn } from "./tree-learn";
 import { connectAtSecFor } from "./recipe";
 import { deltaStoreCall, setDeltaFinalize, tdTranscript, type TdSession } from "./tapedeck";
@@ -420,6 +421,85 @@ export async function triggerCall(a: TriggerArgs) {
   }
 }
 
+/** Place a HEADLESS connect-on-human bridge check (no listen room) — the cheap lane for the
+ *  machine-initiated paths (scheduled checks, zone fires, admin call-now, plain /pub+/app checks).
+ *  Same guards + callResults linkage as triggerCall, but the dial rides placeBridgeCall, so the
+ *  Mapper recipe artifacts (dtmf / spoken nav / connectAtSec) navigate the tree and the billed EL
+ *  agent opens only once a human answers. Delta-lane stores still route to the D-lane engine via
+ *  triggerCall. Gated by policy.flags.cheapBridgeAll at each call site — OFF = nothing changes. */
+export async function bridgeCheckCall(a: TriggerArgs) {
+  // Only the plain restock check rides the bridge lane. Carry-mode intel calls, custom question
+  // templates, and any override (simulator/bench dial your own phone, explicit agent) keep the
+  // direct path — those aren't tree-navigation checks, so the recipe artifacts don't apply.
+  if ((a.mode ?? "restock") !== "restock" || a.question || a.voiceId || a.agentOverride || a.toOverride) return triggerCall(a);
+  if (await isCallingPaused()) throw new Error("calling_paused"); // global spend kill-switch
+  const retailer = (await db.select().from(retailers).where(eq(retailers.id, a.retailerId)))[0];
+  if (!retailer) throw new Error(`retailer ${a.retailerId} not found`);
+  if (retailer.phone.startsWith("nophone:")) throw new Error(`retailer ${a.retailerId} has no dialable phone (site-check store)`);
+  const os = openState(retailer.hours, retailer.timezone);
+  if (os.known && !os.open) throw new Error("store_closed:" + os.label);
+  const category = (await db.select().from(categories).where(eq(categories.id, a.categoryId)))[0];
+  if (!category) throw new Error(`category ${a.categoryId} not found`);
+
+  // Same dedup + Delta routing decisions as triggerCall — one policy, two lanes.
+  if (a.finderUserId && !a.force && !retailer.ownerOnly && (await getPolicy()).flags.oneCheckPerStorePerDay) {
+    const recent = await findRecentCheck(a.finderUserId, retailer.id, category.id);
+    if (recent) return { ...recent, deduped: true };
+  }
+  const wf = await resolveWorkflow(retailer.id, retailer.chainId ?? null).catch(() => null);
+  if (wf?.lane === "delta") return triggerCall(a); // D-lane is already the cheap engine for its stores
+
+  const v = await buildRestockVars(a.retailerId, a.categoryId, a.specificProduct ?? a.clarification, undefined, a.kioskMode);
+  if (!v) throw new Error("restock vars unavailable");
+
+  const [row] = await db.insert(callResults).values({
+    scheduleId: a.scheduleId ?? null,
+    retailerId: retailer.id,
+    categoryId: category.id,
+    mode: "restock",
+    status: "dialing",
+    finderUserId: a.finderUserId ?? null, zoneRunId: a.zoneRunId ?? null,
+    isPrivate: a.isPrivate ?? false,
+  }).returning();
+
+  // Phone-first: dial AS the finder's verified number when present (same as the live bridge path).
+  let from: string | undefined;
+  if (a.finderUserId) {
+    const acct = (await db.select().from(accounts).where(eq(accounts.clerkUserId, a.finderUserId)))[0];
+    if (acct?.callerId) from = acct.callerId;
+  }
+  const pol = await getPolicy();
+  const r = await placeBridgeCall(v.retailer.phone, v.dynamicVars, (convId) => {
+    // Human reached, billed agent open — hand the row to the normal EL ingest by conv id.
+    db.update(callResults).set({ providerCallId: convId, status: "in_progress" }).where(eq(callResults.id, row.id))
+      .catch((e) => console.error("bridge check connect update:", e));
+  }, v.dtmf, { from, timeLimitSec: v.maxTalk ?? pol.bail.maxCallSeconds, say: v.say, connectAtSec: v.connectAtSec ?? undefined, voiceId: v.voiceId, voiceTuning: v.voiceTuning });
+  if (r.error || !r.room) {
+    await db.update(callResults).set({ status: "failed", summary: r.error || "bridge call failed" }).where(eq(callResults.id, row.id));
+    throw new Error(r.error || "bridge call failed");
+  }
+  const providerCallId = `bridge:${r.room}`;
+  await db.update(callResults).set({ providerCallId }).where(eq(callResults.id, row.id));
+  // If the call ends without ever reaching a human (voicemail hang-up, busy, no answer), no conv id
+  // ever lands — the room finalizer closes the row so zone runs / schedules still reach a terminal state.
+  roomFinalizers.set(r.room, (twilioStatus) => {
+    void (async () => {
+      const cur = (await db.select().from(callResults).where(eq(callResults.id, row.id)))[0];
+      if (!cur || cur.status !== "dialing") return; // conv id landed → EL ingest owns the verdict
+      // Twilio's terminal status IS the real reason on this lane (EL never joined): map it to the
+      // statuses-registry key so the customer sees busy/bad-number, never a bare "call failed".
+      const statusKey = ({ busy: "busy", failed: "bad_number" } as Record<string, string>)[twilioStatus] ?? "nobody_answered";
+      await db.update(callResults).set({
+        status: "no_answer", confirmed: null, statusKey,
+        summary: `Bridge call ended before a human answered (${twilioStatus}).`,
+        completedAt: Math.floor(Date.now() / 1000),
+      }).where(eq(callResults.id, row.id));
+    })().catch((e) => console.error("bridge check finalize:", e));
+  });
+  // Same response contract as the direct path: callers/clients see in_progress + an id to poll.
+  return { ...row, providerCallId, status: "in_progress" as const };
+}
+
 /** Write the verdict for a finished Delta (D-lane) store call. Registered as the tapedeck finalize
  *  hook so the engine needs no DB import. Mirrors the EL-lane finalize in ingestPending: map the
  *  clip-flow outcome to a call_results verdict, charge once on a definitive answer, notify, and stamp
@@ -745,6 +825,7 @@ export async function ingestPending(): Promise<number> {
   for (const row of pending) {
     if (!row.providerCallId) continue;
     if (row.providerCallId.startsWith("delta:")) continue; // D-lane call — its own finalize hook writes the verdict
+    if (row.providerCallId.startsWith("bridge:")) continue; // headless bridge call still dialing — the conv id lands at connect (or the room finalizer closes it)
     const outcome = await provider.getConversation(row.providerCallId);
     if (!outcome) continue; // not finished yet
 
@@ -899,9 +980,10 @@ export async function callZone(zoneId: number, categoryKey = "pokemon") {
   const stores = await db.select().from(retailers).where(inArray(retailers.id, ids));
   let placed = 0;
   const callSids: string[] = []; // Twilio SIDs of the calls we placed → lets the caller cancel the whole zone.
+  const viaBridge = (await getPolicy()).flags.cheapBridgeAll; // cheap lane: recipe nav + agent only on human
   for (const s of stores) {
     try {
-      const r = await triggerCall({ retailerId: s.id, categoryId: cat.id }); placed++;
+      const r = await (viaBridge ? bridgeCheckCall : triggerCall)({ retailerId: s.id, categoryId: cat.id }); placed++;
       const sid = (r as { callSid?: string }).callSid; if (sid) callSids.push(sid);
     } catch (e) { console.error("callZone trigger failed", s.id, e); }
   }
@@ -1160,7 +1242,10 @@ export async function schedulerTick(): Promise<number> {
       ));
       if (already.length) continue;
 
-      await triggerCall({
+      // Cheap lane when flagged on (bridgeCheckCall itself falls back to the direct path for
+      // carry mode / custom questions, so admin intel schedules are unaffected).
+      const place = (await getPolicy()).flags.cheapBridgeAll ? bridgeCheckCall : triggerCall;
+      await place({
         retailerId: retailer.id,
         categoryId: s.categoryId,
         scheduleId: s.id,

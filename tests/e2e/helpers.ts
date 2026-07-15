@@ -50,3 +50,29 @@ export async function injectAuth(page: Page, token: string): Promise<void> {
 export function bearer(token: string): Record<string, string> {
   return { ...UA, Authorization: `Bearer ${token}` };
 }
+
+/** Append the prod peek code (E2E_PEEK) so the gate can walk prod while the splash is up (A8).
+ *  First hit sets the peek cookie for the whole browser context; no-op when E2E_PEEK is unset. */
+export function withPeek(path: string): string {
+  const peek = process.env.E2E_PEEK;
+  if (!peek) return path;
+  return path + (path.includes("?") ? "&" : "?") + "peek=" + encodeURIComponent(peek);
+}
+
+/** Fill Stripe's Payment Element with the 4242 test card and submit via #co_cta. The checkout
+ *  overlay (#coOverlay) must already be open. Shared by the subscription + PAYG pay journeys. */
+export async function payWithTestCard(page: Page): Promise<void> {
+  await expect(page.locator("#coOverlay")).toHaveClass(/on/, { timeout: 20_000 });
+  const frame = page.frameLocator("#co_pay_el iframe").first();
+  const cardNumber = frame.locator('input[name="number"]');
+  if (!(await cardNumber.isVisible().catch(() => false))) {
+    await frame.locator("text=Card").first().click({ timeout: 10_000 }).catch(() => {});
+  }
+  await cardNumber.fill("4242 4242 4242 4242", { timeout: 20_000 });
+  await frame.locator('input[name="expiry"]').fill("12 / 34");
+  await frame.locator('input[name="cvc"]').fill("123");
+  const postal = frame.locator('input[name="postalCode"]');
+  if (await postal.isVisible().catch(() => false)) await postal.fill("90210");
+  await expect(page.locator("#co_cta")).toBeEnabled({ timeout: 20_000 });
+  await page.click("#co_cta");
+}

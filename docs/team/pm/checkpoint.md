@@ -3,46 +3,57 @@
 > promotes to prod on the owner's word, and keeps the owner focused on the one thing that matters.
 > Talk to the owner like a friend, plain words, no jargon (he reads on a phone). Newest on top.
 
-## 🔴 FIRST JOB — ONE clean promote when the owner gives Webbie's go-ahead (2026-07-14)
-Verified live 07-14: the tangle is half-resolved already.
-- `main` tip = `4f9427c` (peek commit) and prod /api/health serves exactly that → prod == main. RECONCILED.
-- `staging` is 46 ahead of main (latest website + zones + admin redesign + rules). Staging health serves its tip.
-- Peek debug endpoints: removed forward in 7a80866; grep of staging tree clean; /api/peek-check on staging
-  401s same as any unknown route (blanket gate) — nothing debug left to ship.
-- Webbie is MID-CHANGES on staging right now (owner's word). Promote ships the WHOLE branch, so the ONE
-  promote waits for the owner's explicit "Webbie is done" go-ahead — he authorized the promote itself already.
-- On go-ahead: check CI (known likely reds: off-brand colors = Webbie's, gitleaks = dead tokens — tell owner
-  before shipping red) → `bash scripts/promote.sh` → watch Railway → verify prod /api/health = new commit AND
-  peek link still works → owner runs the card test.
+## 📌 DevOps note (Pops, 2026-07-15): PR #18 is MERGED to staging (cc27924), deployed + verified
+- Per your promote confirmation + owner's go: cheap-bridge wiring + real call-failed reasons +
+  bridge echo gate are on staging. **cheapBridgeAll flag confirmed OFF live** — no call-path
+  behavior changes until the owner flips it (Admin → Policy) after Fun-store testing.
+- FOR YOUR NEXT PROMOTE LEDGER: staging now also carries the admin ship-path decouple
+  (ship-admin.sh — Admin UI ships without promotes once promoted), gate A1-A8, admin
+  per-customer view, thrift opt-in. The echo gate wants ONE Fun-store bench call (interrupt
+  threshold) before promoting; everything else is promote-ready. Gate: `bash scripts/launch-gate.sh`.
+
+## ✅ PROMOTE DONE 2026-07-15 ~04:30 UTC — prod is current, Admin live, card test UNBLOCKED
+- Promoted staging→main twice: `30e5989` (the big batch: website polish, sheets, admin redesign, zones,
+  thrift opt-in, launch-gate harness) + `a31b902` (hotfix, see below). Prod /api/health serves a31b902.
+- Merge conflicts in server.ts/config.ts from the old out-of-band peek push: resolved by taking staging
+  wholesale; merged tree verified byte-identical to staging before pushing.
+- **Regression caught by the prod launch gate: the new coming-soon middleware splashed THE Admin** (naive
+  `startsWith("admin.")` host check; prod edge hands the app other hostnames). Fixed same night 48dcb1d —
+  gate now mirrors rootHandler's brand-based decision. Trap recorded in docs/shared/GOTCHAS.md.
+- Verified live after fix: Admin root + /results serve the Admin; apex + brand subdomains serve the splash;
+  peek link serves the consumer app; launch-gate prod: admin UI test passes.
+- **DevOps: need X** — launch-gate prod mode: brand-skin tests fail red because the splash blocks a
+  cookie-less browser; the prod pass should enter via the peek link (fetch PEEK_CODE like ADMIN_TOKEN).
+  Until then "prod gate red on 4 brand-skins only" = expected while the splash is up.
+- Known CI red that shipped (owner told): off-brand colors in v2 scope (cosmetic). Playwright browsers in
+  this box: use `/opt/pw-browsers/chromium` via PLAYWRIGHT_BROWSERS_PATH (repo pins a newer build).
 
 ## THE ONE THING (say it every time until done)
-- **Live card purchase test on prod.** Fresh customer → free check → upgrade → real credit card.
-  It's the last launch gate. Blocked only until the peek door reaches prod (see below).
+- **Live card purchase test on prod. UNBLOCKED — owner's move.** Fresh customer via his peek link →
+  free check → upgrade → REAL credit card. It's the last launch gate. (Pops wiped +14243126356 to a
+  blank slate for exactly this; Stripe live products + webhook verified.)
 
-## Launch gate — the exact order
-1. Webbie wraps My Zones + slide-ups → owner says "Handoff".
-2. Pops strips 4 debug commits off staging (52f8089, b3fa6be, c33a65d, 2af8517), confirms clean.
-3. Owner walks staging once as a fake customer (~10 min).
-4. Owner says "promote" → PM checks CI, runs the promote, verifies prod is serving the new commit.
-5. Pops sends the owner his peek link → owner runs the card test on prod.
-6. Pass = launch-ready.
+## After the card test (owner's stated queue)
+1. Delta-vs-Charlie quality testing with the voice lane (owner renames Ringo → **Echo**; handoff
+   at docs/team/voice/). Goal: Delta handles most workflows so cost/call drops.
+2. Pops lands the held cheap-bridge wiring (PR #18, flag `cheapBridgeAll` off) — every call path must
+   ride Mapper's nav recipes; owner's non-negotiable.
+3. Owner owes Pops: Discord server + yes/no on issues #379/#364 (#420/#421 close as superseded).
+4. Week-in-review + how-to-hum-better report (owner asked; queued behind the card test).
 
 ## In flight right now
-- **Peek door:** WORKS, on staging, NOT on prod. Pops built it right; he wasted hours testing prod
-  (which has no peek code, so it can't work there). Just needs debug commits removed, then promote.
-- **Staging is ~59 commits ahead of prod** — peek, zones fixes, admin redesign, all rules/skills.
-  Prod is clean, serving the coming-soon splash correctly.
-- **Addie** (fresh chat, Opus 4.8): rebuilding admin from the comps + docs/design/admin/DATA_DISPLAY.md,
-  page by page, pushing each. Looking better. Not part of the customer test — don't wait on her to promote.
-- **Webbie:** old one got stuck in a loop on My Zones; a fresh-Webbie boot prompt exists. If the current
-  one is unstuck and finishing, let him; if he loops again, replace him.
-- **Ringo** (voice tech — new lane, on the roster): boot when the owner is ready to test Delta. Old
-  Addie was told to write docs/team/voice/handoff.md so Ringo inherits how Delta works + how to test it.
+- **Webbie:** was mid-changes through the night (sheets sweep, thrift chip); everything pushed is live
+  on prod now. His background "boot server" task in the chat UI is his test server — harmless, dies
+  with his chat.
+- **DD:** data-side fixes (gray-but-mapped stores; Food 4 Less/Ralphs to kiosk-only) — DB work, ships
+  itself via the store API, independent of promotes. Confirmed done for the 07-15 promote window.
+- **Addie:** admin redesign shipped in the big promote; owner reviews on THE Admin.
 
 ## CI health (check before every promote)
-- Likely reds: off-brand colors in the v2 skin (Webbie's), and secret-scan until Pops rotates
-  ADMIN_TOKEN + deletes the dead worker script + adds .gitleaksignore. Neither breaks the site,
-  but know what's red BEFORE promoting, not after.
+- Known reds: off-brand colors in the v2 skin (cosmetic; Webbie's) and gitleaks (dead tokens; Pops
+  rotates at launch — rotation list at docs/team/devops/rotation-list.md). Know what's red BEFORE
+  promoting. Full local gate: `npx tsc --noEmit` + `bash scripts/test-all.sh` + `bash
+  scripts/launch-gate.sh staging` (prod mode right after a promote).
 
 ## The rules that got fixed today (all live in CLAUDE.md now)
 - Agents merge their own session branches; the owner NEVER merges.

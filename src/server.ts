@@ -1,7 +1,7 @@
 // Voice Caller server — REST API for the dashboard, the ElevenLabs post-call
 // webhook, a result poller, and the schedule ticker. Runs locally (Node) and
 // deploys to Railway/Cloudflare unchanged.
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync as fsReaddirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { serve } from "@hono/node-server";
@@ -21,7 +21,7 @@ import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing, backfillDirectChains } from "./db/import-data";
-import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
+import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus } from "./store-sync";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
@@ -118,6 +118,7 @@ import { brevoUpsertContact } from "./brevo";
 import { accounts } from "./db/schema";
 import { settings as settingsTbl } from "./db/schema";
 import { handleTwilioBridge, setBridgeContext, bridgeConversationId, bridgeDebug, bridgeLog, takeBridgeDtmf, takeBridgeSay, activeBridgeCalls } from "./voice/bridge";
+import { placeBridgeCall, roomCallSids, roomCallProgress, roomFinalizers, RAILWAY_HOST, STAGING_HOST } from "./voice/bridge-place";
 import { isCallingPaused, setCallingPaused, spendTodayCents, withLock } from "./redis";
 
 assertProdSecurity(); // refuse to boot in prod with an open admin / forgeable sessions
@@ -250,6 +251,26 @@ async function verifyClerkToken(authHeader: string | undefined): Promise<{ id: s
 // admin_session cookie (operator dashboard).
 const page = (file: string) => readFileSync(join(here, `../public/${file}`), "utf8");
 const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+// ---- Admin UI decoupled ship path (owner 2026-07-15) ----
+// THE Admin (admin.checkitforme.com) is served by THIS prod service (the DB is SQLite on this
+// service's volume — no second service can read it), but its UI no longer waits on a full
+// staging→main promote: scripts/ship-admin.sh POSTs public/app.html straight here and the file
+// lands on the persistent volume, served immediately. The repo copy bundled at the last promote
+// stays the FALLBACK — a missing/corrupt override can only ever degrade to "older but working".
+// Shared server code still ships ONLY via the normal promote train; this moves the admin UI alone.
+const ADMIN_UI_DIR = join(process.env.RAILWAY_VOLUME_MOUNT_PATH || ".", "admin-ui");
+const ADMIN_UI_LIVE = join(ADMIN_UI_DIR, "app.html");
+const ADMIN_UI_META = join(ADMIN_UI_DIR, "meta.json");
+const ADMIN_UI_KEEP = 5; // archived previous versions for rollback
+/** The admin shell: volume override if present + sane, else the repo copy from the last promote. */
+function adminUiHtml(): string {
+  try {
+    const html = readFileSync(ADMIN_UI_LIVE, "utf8");
+    if (html.includes("</html>") && html.includes("grpnav")) return html; // sanity: complete + really the admin shell
+  } catch { /* no override staged — bundled copy serves */ }
+  return page("app.html");
+}
 
 // ---- PostHog (product analytics) — activates from Railway vars alone (POSTHOG_KEY [+ POSTHOG_HOST]);
 // no key baked in the repo, key absent = no-op. Injected server-side before </body> on every served
@@ -592,7 +613,7 @@ const rootHandler = (c: Context) => {
   const consumer = config.staging.on
     ? (!(host.startsWith("caller.") || host.startsWith("admin.")) || !!override)
     : (host.startsWith("runner.") || brand.key !== "runner" || !!override);
-  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "", peekOk(c.req.query("peek"), getCookie(c, "peek")), !!c.req.query("ref")) : withAnalytics(page("app.html")));
+  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "", peekOk(c.req.query("peek"), getCookie(c, "peek")), !!c.req.query("ref")) : withAnalytics(adminUiHtml()));
 };
 app.get("/", rootHandler);
 // Clean admin deep-links (/feedback, /trees, …): one STATIC route per admin section, all serving the same
@@ -700,8 +721,7 @@ app.get("/sitemap.xml", (c) => {
 // ---- Custom telephony bridge (rebuild milestone 1) ----
 // TwiML Twilio fetches when OUR bridge call connects: stream the call's audio to our WS.
 // Twilio's media stream is pinned to the direct Railway domain (verified WS path; avoids Cloudflare).
-const RAILWAY_HOST = "voice-caller-production-2d6b.up.railway.app";
-const STAGING_HOST = "voice-caller-staging-production.up.railway.app"; // wsHost for simulated staging calls
+// Hosts live in bridge-place.ts (placeBridgeCall builds its callback URLs from them too).
 app.all("/twiml/bridge", (c) => {
   const room = c.req.query("room") || "";
   // Chain keypad shortcut (e.g. B&N "0@3"): send it as REAL carrier DTMF via <Play digits>
@@ -2725,7 +2745,9 @@ app.post("/pub/check", async (c) => {
   if (config.staging.on && !config.callsEnabled) return c.json(simStartCall()); // preview: simulated call, no real dial
   const closed = await closedGate(Number(retailerId)); if (closed) return c.json(closed, 409);
   try {
-    const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, kioskMode });
+    // Cheap lane when flagged: same response contract — the bridge:<room> id polls /pub/result like any cid.
+    const place = (await getPolicy()).flags.cheapBridgeAll ? bridgeCheckCall : triggerCall;
+    const r = await place({ retailerId, categoryId, mode: "restock", specificProduct, kioskMode });
     return c.json({ providerCallId: r.providerCallId, status: r.status });
   } catch (e) { return c.json({ error: String(e) }, 400); }
 });
@@ -2759,9 +2781,23 @@ async function canReadTranscript(c: { req: { header: (n: string) => string | und
   return !!u && u.id === row.finderUserId;
 }
 app.get("/pub/result/:cid", async (c) => {
-  const cid = c.req.param("cid");
+  let cid = c.req.param("cid");
   if (!(await canReadTranscript(c, cid))) return c.json({ error: "unauthorized" }, 401);
   if (config.staging.on && isSimId(cid)) return c.json(simResult(cid)); // preview: simulated verdict
+  // Headless bridge check ("bridge:<room>"): pre-connect the row rides the room id; at connect it is
+  // repointed at the EL conversation. Resolve room → conv id and fall through to the normal EL path;
+  // before/without a connect, report the row's own state (dialing, or the finalizer's no_answer).
+  if (cid.startsWith("bridge:")) {
+    const convId = bridgeConversationId(cid.slice(7));
+    if (convId) cid = convId;
+    else {
+      const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
+      if (row && row.status !== "dialing" && row.status !== "in_progress" && row.status !== "queued") {
+        return c.json({ status: row.status, confirmed: row.confirmed, statusKey: row.statusKey, productDetail: row.productDetail, summary: row.summary ?? "", transcript: row.transcript ?? "" });
+      }
+      return c.json({ status: "in_progress", transcript: "", summary: "" });
+    }
+  }
   // D-lane call ("delta:<session>"): the verdict lives in OUR row (written by the Delta finalize hook),
   // never in ElevenLabs. A Charlie barge-in repoints the row's providerCallId at the EL conversation,
   // so fall back to resolving the row through the live session's callId.
@@ -2828,7 +2864,13 @@ app.get("/pub/live/:cid", async (c) => {
   if (config.staging.on && isSimId(c.req.param("cid"))) return c.json(simLive(c.req.param("cid"))); // preview: simulated live transcript
   // D-lane call: the live transcript is the session's own step log (no ElevenLabs). After a Charlie
   // barge-in, EL owns the rest of the call — proxy its live lines and append them to the clip turns.
-  const dcid = c.req.param("cid");
+  let dcid = c.req.param("cid");
+  // Headless bridge check: same room → conv-id resolution as /pub/result. No conv yet = still dialing.
+  if (dcid.startsWith("bridge:")) {
+    const convId = bridgeConversationId(dcid.slice(7));
+    if (convId) dcid = convId;
+    else return c.json({ status: "in_progress", transcript: "", summary: "" });
+  }
   if (dcid.startsWith("delta:")) {
     const s = tdSession(dcid.slice(6));
     if (s) {
@@ -2855,7 +2897,7 @@ app.get("/pub/live/:cid", async (c) => {
     return c.json({ live: false, status: row?.status || "done", transcript: row?.transcript || "" });
   }
   try {
-    const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${c.req.param("cid")}`, { headers: { "xi-api-key": config.voice.apiKey } });
+    const r = await fetch(`https://api.elevenlabs.io/v1/convai/conversations/${dcid}`, { headers: { "xi-api-key": config.voice.apiKey } });
     if (!r.ok) return c.json({ live: true, status: "in_progress", transcript: "" });
     const d = (await r.json()) as { status?: string; transcript?: { role: string; message: string | null }[] };
     const transcript = (d.transcript ?? []).filter((t) => t.message).map((t) => `${t.role === "agent" ? "Agent" : "Clerk"}: ${t.message}`).join("\n");
@@ -2991,7 +3033,9 @@ app.post("/app/check", async (c) => {
     }
   }
   try {
-    const r = await triggerCall({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a), kioskMode });
+    // Cheap lane when flagged: same response contract — the bridge:<room> id polls /pub/result like any cid.
+    const place = (await getPolicy()).flags.cheapBridgeAll ? bridgeCheckCall : triggerCall;
+    const r = await place({ retailerId, categoryId, mode: "restock", specificProduct, finderUserId: u.id, isPrivate: await isFinderPrivate(a), kioskMode });
     return c.json({ providerCallId: r.providerCallId, status: r.status });
   } catch (e) { return c.json({ error: String(e) }, 400); }
 });
@@ -3136,9 +3180,10 @@ app.post("/app/zones/:id/check", async (c) => {
   const isPrivate = await isFinderPrivate(g.a);
   const placed: { retailerId: number; cid: string | null }[] = [];
   const sids: string[] = [];
+  const viaBridge = (await getPolicy()).flags.cheapBridgeAll; // cheap lane: recipe nav + agent only on human
   for (const s of rows) {
     try {
-      const r = await triggerCall({ retailerId: s.id, categoryId: cat.id, mode: "restock", finderUserId: g.u.id, isPrivate, zoneRunId: runId });
+      const r = await (viaBridge ? bridgeCheckCall : triggerCall)({ retailerId: s.id, categoryId: cat.id, mode: "restock", finderUserId: g.u.id, isPrivate, zoneRunId: runId });
       placed.push({ retailerId: s.id, cid: (r as { providerCallId?: string }).providerCallId ?? null });
       const sid = (r as { callSid?: string }).callSid; if (sid) sids.push(sid);
     } catch (e) { console.error("zone check failed", s.id, e); placed.push({ retailerId: s.id, cid: null }); }
@@ -3814,6 +3859,43 @@ app.get("/api/admin/users", async (c) => {
     };
   }));
 });
+// ---- Admin UI ship path (see adminUiHtml above). All under the /api/* admin wall. ----
+// Deploy: raw text/html body = the new app.html. Atomic (tmp + rename); the outgoing version is
+// archived for rollback (last 5 kept). x-commit header stamps provenance into meta.json.
+app.post("/api/admin/ui-deploy", async (c) => {
+  const html = await c.req.text();
+  if (html.length > 8_000_000) return c.json({ error: "too_large" }, 413);
+  if (!html.includes("</html>") || !html.includes("grpnav")) return c.json({ error: "not_the_admin_shell", hint: "body must be the complete public/app.html" }, 400);
+  mkdirSync(ADMIN_UI_DIR, { recursive: true });
+  const now = Math.floor(Date.now() / 1000);
+  if (existsSync(ADMIN_UI_LIVE)) renameSync(ADMIN_UI_LIVE, join(ADMIN_UI_DIR, `app.${now}.html`));
+  const archives = fsReaddirSync(ADMIN_UI_DIR).filter((f) => /^app\.\d+\.html$/.test(f)).sort();
+  for (const f of archives.slice(0, Math.max(0, archives.length - ADMIN_UI_KEEP))) unlinkSync(join(ADMIN_UI_DIR, f));
+  const tmp = join(ADMIN_UI_DIR, "app.html.tmp");
+  writeFileSync(tmp, html);
+  renameSync(tmp, ADMIN_UI_LIVE); // atomic swap — in-flight requests see old or new, never partial
+  const meta = { commit: c.req.header("x-commit") || null, at: now, bytes: html.length };
+  writeFileSync(ADMIN_UI_META, JSON.stringify(meta));
+  return c.json({ ok: true, ...meta });
+});
+// Roll back to the most recently archived version (repeatable while archives remain).
+app.post("/api/admin/ui-rollback", async (c) => {
+  const archives = existsSync(ADMIN_UI_DIR) ? fsReaddirSync(ADMIN_UI_DIR).filter((f) => /^app\.\d+\.html$/.test(f)).sort() : [];
+  const prev = archives[archives.length - 1];
+  if (!prev) return c.json({ error: "nothing_to_roll_back_to", hint: "no archived versions — the bundled repo copy is what serves without an override" }, 404);
+  renameSync(join(ADMIN_UI_DIR, prev), ADMIN_UI_LIVE);
+  writeFileSync(ADMIN_UI_META, JSON.stringify({ commit: null, at: Math.floor(Date.now() / 1000), bytes: readFileSync(ADMIN_UI_LIVE, "utf8").length, rolledBackFrom: prev }));
+  return c.json({ ok: true, restored: prev });
+});
+// What's live: override (with provenance) or the bundled repo copy.
+app.get("/api/admin/ui-version", async (c) => {
+  const override = existsSync(ADMIN_UI_LIVE);
+  let meta: Record<string, unknown> | null = null;
+  try { meta = JSON.parse(readFileSync(ADMIN_UI_META, "utf8")); } catch { /* no meta */ }
+  const archives = existsSync(ADMIN_UI_DIR) ? fsReaddirSync(ADMIN_UI_DIR).filter((f) => /^app\.\d+\.html$/.test(f)).sort() : [];
+  return c.json({ source: override ? "override" : "bundled", meta: override ? meta : null, archived: archives.length });
+});
+
 // Per-customer detail view (docs/specs/admin-user-view.md): everything one account is set up
 // with, in one call — identity/plan/entitlements/credits, their zones + schedules, last 20 checks.
 app.get("/api/admin/users/:id", async (c) => {
@@ -5252,7 +5334,9 @@ app.post("/api/call-now", async (c) => {
     // again" deliberately and expects a real call every time. (triggerCall throws store_closed for a
     // closed store, which the handler surfaces as {error} below.)
     const finderUserId = b.finderUserId ?? ("phone:" + (process.env.OWNER_PHONE || "+13106662331"));
-    return c.json(await triggerCall({ isPrivate: true, ...b, finderUserId, force: true }));
+    // Cheap lane when flagged (bridgeCheckCall falls back to the direct path for carry/overrides).
+    const place = (await getPolicy()).flags.cheapBridgeAll ? bridgeCheckCall : triggerCall;
+    return c.json(await place({ isPrivate: true, ...b, finderUserId, force: true }));
   } catch (e) {
     return c.json({ error: String((e as Error)?.message || e) }, 400);
   }
@@ -5382,47 +5466,21 @@ app.get("/api/conversation/:cid", async (c) => {
   return c.json(o ?? { status: "in_progress", transcript: "", summary: "" });
 });
 // Custom telephony bridge (milestone 1): place OUR own Twilio call; its audio streams to our WS.
-// Place a bridged Twilio call (our number -> destination) running the restock agent. Returns the room.
-async function placeBridgeCall(toNumber: string, dynamicVars: Record<string, string>, onConversationId?: (id: string) => void, dtmf?: string | null, opts?: { from?: string; timeLimitSec?: number; connectOnHuman?: boolean; connectAtSec?: number; say?: string | null; voiceId?: string | null; voiceTuning?: Record<string, unknown> | null }): Promise<{ room?: string; error?: string }> {
-  const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
-  if (!sid || !tok) return { error: "twilio not configured" };
-  const e164 = (p: string) => { p = p.replace(/[^\d+]/g, ""); if (p.startsWith("+")) return p; if (p.length === 10) return "+1" + p; if (p.length === 11 && p.startsWith("1")) return "+" + p; return "+" + p; };
-  const room = crypto.randomUUID();
-  // Dial AS the customer's verified number when we have it (phone-first model); else the house line.
-  const from = opts?.from || process.env.BRIDGE_FROM_NUMBER || "+13106662331";
-  const pol = await getPolicy();
-  setBridgeContext(room, { agentId: config.voice.agentId, dynamicVars, onConversationId, dtmf: dtmf || undefined, say: opts?.say || undefined, connectOnHuman: opts?.connectOnHuman ?? true /* baked in: always open the paid agent only once a human answers */, connectAtSec: opts?.connectAtSec, holdMaxSeconds: pol.bail.holdMaxSeconds, voiceId: opts?.voiceId || undefined, voiceTuning: opts?.voiceTuning || undefined });
-  const host = config.staging.on ? STAGING_HOST : RAILWAY_HOST;
-  const body = new URLSearchParams({ To: e164(toNumber), From: from, Url: `https://${host}/twiml/bridge?room=${room}` });
-  // REAL call-progress feed: Twilio POSTs each transition so the live timeline shows what's actually
-  // happening (dialing → ringing → answered → done) instead of guessing from timers.
-  body.set("StatusCallback", `https://${host}/twiml/bridge-status?room=${room}`);
-  body.set("StatusCallbackMethod", "POST");
-  for (const ev of ["initiated", "ringing", "answered", "completed"]) body.append("StatusCallbackEvent", ev);
-  // Hard cost cap: Twilio kills the call at TimeLimit seconds, no exceptions — the profit guarantee.
-  if (opts?.timeLimitSec && opts.timeLimitSec > 0) body.set("TimeLimit", String(Math.floor(opts.timeLimitSec)));
-  const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Calls.json`, {
-    method: "POST",
-    headers: { Authorization: "Basic " + Buffer.from(`${sid}:${tok}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
-  if (!r.ok) return { error: `twilio call failed: ${r.status} ${await r.text()}` };
-  const d = (await r.json()) as { sid?: string };
-  if (d.sid) { roomCallSids.set(room, d.sid); setTimeout(() => roomCallSids.delete(room), 10 * 60 * 1000); }
-  return { room };
-}
-const roomCallSids = new Map<string, string>(); // room -> Twilio callSid (for hang-up)
-// REAL Twilio call progress per room: { status: queued|initiated|ringing|in-progress|completed|… , at }.
-// Fed by /twiml/bridge-status (Twilio's StatusCallback), read by /pub/bridge/:room so the live UI is truthful.
-const roomCallProgress = new Map<string, { status: string; at: number }>();
+// placeBridgeCall + the room maps live in src/voice/bridge-place.ts so the non-HTTP callers
+// (scheduled checks, zone fires) can ride the bridge too. The TwiML/status routes stay here.
 app.post("/twiml/bridge-status", async (c) => {
   const room = c.req.query("room") || "";
   const form = await c.req.parseBody().catch(() => ({} as Record<string, unknown>));
   const status = String((form as Record<string, unknown>).CallStatus || "");
   if (room && status) {
     roomCallProgress.set(room, { status, at: Date.now() });
-    if (["completed", "busy", "failed", "no-answer", "canceled"].includes(status))
+    if (["completed", "busy", "failed", "no-answer", "canceled"].includes(status)) {
       setTimeout(() => roomCallProgress.delete(room), 60_000);
+      // Headless bridge calls (schedules/zones/admin call-now) registered a finalizer so a call
+      // that ended without reaching a human still lands a terminal callResults row.
+      const fin = roomFinalizers.get(room);
+      if (fin) { roomFinalizers.delete(room); try { fin(status); } catch (e) { console.error("bridge finalizer:", e); } }
+    }
   }
   return c.body(null, 204);
 });

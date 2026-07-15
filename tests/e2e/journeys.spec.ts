@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { LOGIN_CODE, UA, bearer, freshPhone, injectAuth, me } from "./helpers";
+import { LOGIN_CODE, UA, bearer, freshPhone, injectAuth, me, mintToken, payWithTestCard } from "./helpers";
 
 // The live-staging user journeys — one fresh account carried through signup → store find →
 // upgrade+pay (Stripe TEST 4242) → scheduled check → zone. Serial by design: each step is the
@@ -51,6 +51,35 @@ test.describe("consumer journeys (staging)", () => {
     await expect(page.locator("#cs_call")).toBeVisible();
   });
 
+  test("A1: PAYG pack (4242) → credits land, premium features STAY locked", async ({ page, request }) => {
+    test.skip(!token, "needs the signup journey's account");
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    await injectAuth(page, token);
+    await page.goto("/");
+    await expect(page.locator("body")).toHaveClass(/authed/, { timeout: 20_000 });
+    const before = await me(request, base, token);
+    // Buy sheet → Pay-as-you-go mode → CONTINUE → Elements 4242.
+    await page.evaluate(() => (window as any).openBuy());
+    await expect(page.locator("#buyOverlay")).toHaveClass(/on/);
+    const paygTab = page.locator("#buymode button").last();
+    await expect(paygTab, "packs toggle renders (v2 buy sheet)").toBeVisible({ timeout: 15_000 });
+    await paygTab.click();
+    await page.click("#buy_cta");
+    await payWithTestCard(page);
+    // payment_intent.succeeded webhook grants PAYG credits; no subscription is created.
+    await expect
+      .poll(async () => (await me(request, base, token)).payg, { timeout: 90_000, intervals: [3_000] })
+      .toBeGreaterThan(before.payg);
+    const after = await me(request, base, token);
+    expect(after.subscription, "PAYG must NOT flip the subscription").toBe("none");
+    expect(Object.values(after.features).every((v) => v === false), "PAYG gets ZERO premium features").toBeTruthy();
+    // A5 (locked half): the gated backends upsell/deny, not error, for a PAYG-only account.
+    const zone = await request.post(`${base}/app/zones`, { headers: bearer(token), data: { name: "x", retailerIds: [1] } });
+    expect([401, 403], `zones locked for PAYG (got ${zone.status()})`).toContain(zone.status());
+    const sched = await request.post(`${base}/app/schedule`, { headers: bearer(token), data: { retailerId: 1, categoryId: 1, daysOfWeek: "1", timeLocal: "10:00" } });
+    expect([402, 403], `schedules locked for PAYG (got ${sched.status()})`).toContain(sched.status());
+  });
+
   test("upgrade + pay: plan tile → Stripe Elements 4242 → subscription active", async ({ page, request }) => {
     test.skip(!token, "needs the signup journey's account");
     await injectAuth(page, token);
@@ -68,23 +97,7 @@ test.describe("consumer journeys (staging)", () => {
     // v2 skin: tap selects, CONTINUE buys. v1: the tap itself starts checkout.
     const cta = page.locator("#buy_cta");
     if (await cta.isVisible().catch(() => false)) await cta.click();
-    await expect(page.locator("#coOverlay")).toHaveClass(/on/, { timeout: 20_000 });
-
-    // Stripe Payment Element (test mode) — fill the 4242 card inside Stripe's iframe.
-    const frame = page.frameLocator("#co_pay_el iframe").first();
-    const cardNumber = frame.locator('input[name="number"]');
-    if (!(await cardNumber.isVisible().catch(() => false))) {
-      // accordion layout: expand the Card method first
-      await frame.locator("text=Card").first().click({ timeout: 10_000 }).catch(() => {});
-    }
-    await cardNumber.fill("4242 4242 4242 4242", { timeout: 20_000 });
-    await frame.locator('input[name="expiry"]').fill("12 / 34");
-    await frame.locator('input[name="cvc"]').fill("123");
-    const postal = frame.locator('input[name="postalCode"]');
-    if (await postal.isVisible().catch(() => false)) await postal.fill("90210");
-
-    await expect(page.locator("#co_cta")).toBeEnabled({ timeout: 20_000 });
-    await page.click("#co_cta");
+    await payWithTestCard(page);
 
     // Entitlement lands via the Stripe TEST webhook → /app/me flips. This asserts the whole
     // billing pipe: intent → confirm → webhook → plan on the account.
@@ -171,5 +184,85 @@ test.describe("consumer journeys (staging)", () => {
       const del = await request.delete(`${base}/app/zones/${zone.id}`, { headers: bearer(token) });
       expect(del.ok(), "zone cleanup delete succeeds").toBeTruthy();
     }
+  });
+
+  test("A3: subscriber tops up PAYG → both pools live on the account", async ({ page, request }) => {
+    test.skip(!token, "needs the signup journey's account");
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    const before = await me(request, base, token);
+    expect(before.subscription, "still subscribed from the pay journey").toBe("active");
+    expect(before.quota, "tier quota pool present").toBeGreaterThan(0);
+    expect(before.payg, "A1's PAYG credits survived subscribing").toBeGreaterThan(0);
+    // Top up again WHILE subscribed — quota untouched, payg grows.
+    await injectAuth(page, token);
+    await page.goto("/");
+    await expect(page.locator("body")).toHaveClass(/authed/, { timeout: 20_000 });
+    await page.evaluate(() => (window as any).openBuy());
+    await expect(page.locator("#buyOverlay")).toHaveClass(/on/);
+    const paygTab = page.locator("#buymode button").last();
+    await expect(paygTab).toBeVisible({ timeout: 15_000 });
+    await paygTab.click();
+    await page.click("#buy_cta");
+    await payWithTestCard(page);
+    await expect
+      .poll(async () => (await me(request, base, token)).payg, { timeout: 90_000, intervals: [3_000] })
+      .toBeGreaterThan(before.payg);
+    const after = await me(request, base, token);
+    expect(after.quota, "quota pool unchanged by a PAYG top-up").toBe(before.quota);
+    expect(after.credits, "displayed balance = quota + payg").toBe(after.quota + after.payg);
+  });
+
+  test("A7: annual checkout price matches the published annual price", async ({ request }) => {
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    const plans = await (await request.get(`${base}/pub/plans`, { headers: UA })).json();
+    const tier = plans.tiers.find((t: any) => t.annualCents > 0) ?? plans.tiers[0];
+    // Fresh throwaway account so the intent's incomplete Stripe sub never touches the journey account.
+    const t7 = await mintToken(request, base, freshPhone());
+    const r = await request.post(`${base}/app/checkout-intent`, {
+      headers: bearer(t7),
+      data: { kind: tier.key, annual: true },
+    });
+    expect(r.ok(), `annual checkout-intent → 200 (got ${r.status()})`).toBeTruthy();
+    const intent = await r.json();
+    expect(intent.amountCents, `charged annual price = published ${tier.annualCents}¢ for ${tier.key}`).toBe(tier.annualCents);
+  });
+
+  test("A4: cancel the subscription → entitlements drop, PAYG credits survive", async ({ request }) => {
+    test.skip(!token, "needs the signup journey's account");
+    const SK = process.env.E2E_STRIPE_SK || "";
+    test.skip(!SK, "set E2E_STRIPE_SK (launch-gate fetches the staging test key) to run the cancel journey");
+    const base = new URL(test.info().project.use.baseURL as string).origin;
+    const before = await me(request, base, token);
+    expect(before.subscription).toBe("active");
+    const paygBefore = before.payg;
+
+    // Find our Stripe TEST customer by the metadata the server stamps at intent creation.
+    const q = encodeURIComponent(`metadata['clerkUserId']:'phone:${PHONE}'`);
+    const found = await request.get(`https://api.stripe.com/v1/customers/search?query=${q}`, {
+      headers: { Authorization: `Bearer ${SK}` },
+    });
+    expect(found.ok(), `stripe customer search → 200 (got ${found.status()})`).toBeTruthy();
+    const customer = (await found.json()).data?.[0]?.id;
+    expect(customer, "journey account has a Stripe customer").toBeTruthy();
+    const subs = await (await request.get(`https://api.stripe.com/v1/subscriptions?customer=${customer}&status=active`, {
+      headers: { Authorization: `Bearer ${SK}` },
+    })).json();
+    expect(subs.data?.length, "one active test subscription to cancel").toBeGreaterThan(0);
+    for (const s of subs.data) {
+      const del = await request.delete(`https://api.stripe.com/v1/subscriptions/${s.id}`, {
+        headers: { Authorization: `Bearer ${SK}` },
+      });
+      expect(del.ok(), `cancel ${s.id} → 200 (got ${del.status()})`).toBeTruthy();
+    }
+    // customer.subscription.deleted webhook → entitlements off; PAYG pool must survive.
+    await expect
+      .poll(async () => (await me(request, base, token)).subscription, { timeout: 90_000, intervals: [3_000] })
+      .toBe("none");
+    const after = await me(request, base, token);
+    expect(after.payg, "PAYG credits survive cancellation").toBe(paygBefore);
+    expect(Object.values(after.features).every((v) => v === false), "premium features off after cancel").toBeTruthy();
+    // A5 (post-cancel half): the gates lock again.
+    const zone = await request.post(`${base}/app/zones`, { headers: bearer(token), data: { name: "x", retailerIds: [1] } });
+    expect([401, 403], `zones locked post-cancel (got ${zone.status()})`).toContain(zone.status());
   });
 });

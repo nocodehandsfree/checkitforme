@@ -164,6 +164,15 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
   const startMs = Date.now();
   const VOICE_THRESH = 350;   // μ-law mean-abs energy that counts as "someone's talking" (tunable)
   const VOICE_FRAMES = 45;    // ~0.9s of sustained voice → treat as a human (tunable)
+  // Echo gate: PSTN lines reflect OUR agent's audio back on the inbound track (no carrier AEC on
+  // media streams), and ElevenLabs then transcribes its own attenuated words as the clerk. We know
+  // exactly when agent audio is playing (we sent it), so while it plays — plus a short reflection
+  // tail — inbound frames are forwarded only if they're loud enough to be a REAL barge-in; line
+  // echo comes back well attenuated. Browser fanout is never gated (listeners hear the true line).
+  let agentPlayingUntil = 0;  // ms epoch when the queued agent audio finishes playing out
+  let echoDropped = 0;        // suppressed-frame counter (logged sparsely for bench tuning)
+  const ECHO_TAIL_MS = 250;   // reflection tail after playback ends (tunable)
+  const BARGE_THRESH = 900;   // inbound energy that still counts as a human interrupting (tunable)
   log(`twilio connected room=${room.slice(0, 8)} ctx=${!!ctx}`);
 
   async function connectEleven() {
@@ -210,6 +219,10 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         if (b64 && twilio.readyState === 1) {
           twilio.send(JSON.stringify({ event: "media", streamSid, media: { payload: b64 } }));
           fanout(room, b64, "agent");
+          // Extend the echo-gate window by this chunk's real playout time (μ-law 8kHz = 8 bytes/ms);
+          // Twilio plays queued audio sequentially, so chunks extend the window back-to-back.
+          const ms = Math.ceil((b64.length * 3) / 4 / 8);
+          agentPlayingUntil = Math.max(agentPlayingUntil, Date.now()) + ms;
         }
       } else if (m.type === "user_transcript") {
         const txt = m.user_transcription_event?.user_transcript; if (txt) try { relayLine?.(room, "Clerk", String(txt)); } catch { /* relay best-effort */ }
@@ -219,6 +232,7 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
         eleven!.send(JSON.stringify({ type: "pong", event_id: m.ping_event?.event_id }));
       } else if (m.type === "interruption") {
         if (twilio.readyState === 1) twilio.send(JSON.stringify({ event: "clear", streamSid }));
+        agentPlayingUntil = 0; // Twilio's playout buffer was cleared — nothing of ours is on the line now
       }
     });
     eleven.on("close", (code: number) => { log(`eleven WS close code=${code} (frames in=${frames})`); signalEnd(); if (twilio.readyState === 1) twilio.close(); });
@@ -291,8 +305,14 @@ export function handleTwilioBridge(twilio: WebSocket, room: string, fanout: (roo
     else if (m.event === "media" && m.media?.payload) {
       frames++;
       const b64 = m.media.payload;
-      fanout(room, b64, "clerk"); // store/clerk audio -> browser
-      if (eleven && ready) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
+      fanout(room, b64, "clerk"); // store/clerk audio -> browser (never gated — listeners hear the true line)
+      // Echo gate: while our agent audio is playing (+ reflection tail), only a LOUD inbound frame
+      // (a real human barging in) reaches ElevenLabs — attenuated line echo of the agent's own voice
+      // is dropped, so it can't come back as a phantom "Clerk:" transcript line.
+      const echoWindow = Date.now() < agentPlayingUntil + ECHO_TAIL_MS;
+      const suppress = echoWindow && frameEnergy(b64) < BARGE_THRESH;
+      if (suppress) { if (++echoDropped % 200 === 1) log(`echo gate: suppressing agent playback echo (dropped=${echoDropped})`); }
+      else if (eleven && ready) eleven.send(JSON.stringify({ user_audio_chunk: b64 }));
       else if (connecting) pending.push(b64);          // committed to connect → buffer for the agent
       else if (ctx?.connectOnHuman && (!ctx.connectAtSec || !ctx.dtmf)) maybeDetectHuman(b64); // VAD when no learned timer — and always on a direct dial, so a stale learned time can't leave a real human waiting
     } else if (m.event === "stop") { log("twilio stop"); signalEnd(); if (eleven) eleven.close(); }
