@@ -2,7 +2,7 @@
 // product type, skip whatever the clerk already named), the restock-day ask on a no, the clarify-once
 // rule, and the in/out verdict mapping. Pure function, no DB/network (run with dummy EL env so config
 // loads). The off-script "question" barge is handled in tapedeckStep, not here.
-import { deltaDecide } from "../src/calls/tapedeck";
+import { deltaDecide, deltaTurnTuning } from "../src/calls/tapedeck";
 
 let fail = 0;
 const eq = (got: unknown, want: unknown, label: string) => {
@@ -40,6 +40,16 @@ eq(D("askedSet", "unclear", false, false, false, false).clip, 4, "set unclear an
 eq(D("askedType", "product").clip, 4, "answered the product type → wrap");
 eq(D("askedDay", "day").clip, 4, "answered the restock day → wrap");
 eq(D("askedType", "unclear").next, "done", "any askedType reply ends the call");
+
+// --- turn-taking tuning: the workflow's Beat + Reply timeout drive the Twilio Gather ---
+eq(deltaTurnTuning({}), { waitSecs: 8, endpoint: "auto" }, "no tuning → 8s wait, auto endpointing");
+eq(deltaTurnTuning({ turnEagerness: "eager" }).endpoint, "1", "Beat eager → reply ~1s after they stop");
+eq(deltaTurnTuning({ turnEagerness: "patient" }).endpoint, "3", "Beat patient → a full 3s pause");
+eq(deltaTurnTuning({ turnEagerness: "normal" }).endpoint, "auto", "Beat normal → Twilio auto endpointing");
+eq(deltaTurnTuning({ turnTimeout: 45 }).waitSecs, 15, "Charlie's 45s reply timeout clamps to Delta's 15s cap");
+eq(deltaTurnTuning({ turnTimeout: 1 }).waitSecs, 3, "reply timeout floors at 3s");
+eq(deltaTurnTuning({ turnTimeout: 10 }).waitSecs, 10, "in-range reply timeout passes through");
+eq(deltaTurnTuning({ turnTimeout: "nope" }), { waitSecs: 8, endpoint: "auto" }, "garbage tuning falls back to defaults");
 
 if (fail) { console.error(`delta: ${fail} test(s) FAILED`); process.exit(1); }
 console.log("delta: all passed");

@@ -1027,7 +1027,13 @@
     <div id="d_steps">
 
       <div class="card dstep" data-step="1">
-        
+
+        <label style="margin-top:0" data-tip="Delta plays recorded clips with a cheap brain picking the next line (~2.5¢ a check) and hands the call to the live agent if the clerk goes off script. Charlie is the live agent on the whole call.">Call lane</label>
+        <select id="des_lane" onchange="desLaneChange()">
+          <option value="charlie">Charlie · live agent on the whole call</option>
+          <option value="delta">Delta · recorded clips, escalates when stuck</option>
+        </select>
+        <div class="meta" id="des_lane_note" style="margin:6px 0 4px"></div>
         <label>Voice</label>
         <select id="vs_select"></select>
         <div id="vs_active" class="meta" style="margin-top:6px"></div>
@@ -1047,10 +1053,13 @@
           <input id="sb_speed" type="range" min="0.7" max="1.2" step="0.01" style="width:100%" oninput="sbLabels()">
           <label style="display:flex;justify-content:space-between;align-items:baseline">Warmth <span id="sb_stability_val" class="hint" style="font-style:normal"></span></label>
           <input id="sb_stability" type="range" min="0.1" max="0.9" step="0.05" style="width:100%" oninput="sbLabels()">
+          <div id="sb_nat_wrap">
           <label style="display:flex;justify-content:space-between;align-items:baseline">Naturalness (smoothness) <span id="sb_latency_val" class="hint" style="font-style:normal"></span></label>
           <input id="sb_latency" type="range" min="0" max="4" step="1" style="width:100%" oninput="sbLabels()">
+          </div>
           <label style="display:flex;justify-content:space-between;align-items:baseline">Reply timeout <span id="sb_tt_val" class="hint" style="font-style:normal"></span></label>
           <input id="sb_turntimeout" type="range" min="3" max="45" step="1" style="width:100%" oninput="document.getElementById('sb_tt_val').textContent=this.value+'s'">
+          <div class="meta" id="sb_delta_hint" style="display:none;margin-top:6px">On Delta: Beat is how fast it replies once you stop talking (Eager is the snappiest). Reply timeout is how long it waits for any reply before the "Hello?" nudge; Delta caps it at 15s.</div>
         </div>
         <div class="grid2">
           <div>
@@ -1072,7 +1081,7 @@
           </div>
         </div>
         <input type="hidden" id="sb_llm" value="claude-sonnet-4-6">
-        <div class="card" style="background:var(--surface-1);margin-top:12px">
+        <div class="card" id="sb_soft_card" style="background:var(--surface-1);margin-top:12px">
           <label class="day" style="margin:0"><input id="sb_soft_on" type="checkbox" onchange="sbSoftToggle()"> Say a quick line if the pause runs long</label>
           <div id="sb_soft_detail" class="grid2" style="margin-top:10px;display:none">
             <div><label style="margin-top:0">After how long</label><div class="row" style="gap:6px"><input id="sb_soft_secs" type="number" min="0.5" max="6" step="0.5" value="1.5" style="max-width:90px"><span class="meta">seconds</span></div></div>
@@ -1095,6 +1104,7 @@
 
       <div class="card dstep" data-step="4" style="display:none">
         
+        <div class="meta" id="pn_delta_note" style="display:none;margin:0 0 10px">Delta plays recorded clips, so the persona never speaks on script. It only takes over if the call escalates to the live agent, so it's still worth setting one.</div>
         <label data-tip="The persona live calls use for this workflow. Build one below, then tap it here to select it.">Persona for this workflow</label>
         <div id="wf_persona_pick" class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:4px"></div>
         <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
@@ -1131,9 +1141,13 @@
       <div class="card dstep" data-step="6" style="display:none">
         
         <div class="meta" style="margin:2px 0 12px">Rings your phone so you can hear the voice, tuning, and openers before you save. <span data-tip="A quick gut-check. Staging (staging.checkitforme.com) is still the full end-to-end test with real store calls."></span></div>
+        <div class="meta" id="sim_delta_hint" style="display:none;margin:2px 0 12px;color:var(--green)">Delta rehearsal: saves this workflow, then dials you and runs the real clip flow. Answer like you work at the store. Go off script to hear the live-agent handoff.</div>
+        <div id="sim_charlie_a">
         <label>Store</label><select id="sim_store" onchange="previewMaybe()"><option value="" disabled selected>Loading stores</option></select>
         <label>Category to ask about</label><select id="sim_cat" onchange="previewMaybe()"></select>
+        </div>
         <label data-tip="The agent dials this number">Your phone</label><input id="sim_phone" placeholder="+13106662331">
+        <div id="sim_charlie_b">
         <label data-tip="Only your rotation voices show here.">Voice for this test</label><select id="sim_voice" onchange="refreshTestRotation()"><option value="">Bench default voice</option></select>
         <details class="card" style="margin:16px 0 0;background:var(--surface-1)">
           <summary><span class="name" style="font-size:13px">Advanced</span></summary>
@@ -1142,6 +1156,7 @@
           <div id="sim_specific_wrap" style="display:none"><label>Specific set / product</label><input id="sim_specific" placeholder="151 booster boxes"></div>
         </details>
         <div id="tb_rot_line" class="meta" style="color:var(--green);font-weight:600;min-height:16px;margin:12px 0 8px"></div>
+        </div>
         <div class="btnrow"><button class="act" onclick="benchCall()">Call me</button></div>
         <div class="card" id="tb_transcript_card" style="display:none;margin-top:16px">
           <div class="row" style="align-items:center;margin-bottom:8px"><div class="grow"><div class="name">Test result</div><div class="meta" id="tb_t_status">Waiting for the call to connect…</div></div><button class="ghost" onclick="hideTranscript('tb')">Clear</button></div>
@@ -2420,6 +2435,20 @@ function dRender(){
   const bk=document.getElementById('d_back'); if(bk) bk.style.visibility=DSTEP>1?'visible':'hidden';
   const fw=document.getElementById('d_fwd'), fl=document.getElementById('d_fwd_label');
   if(fw){ if(DSTEP>=7){ fw.style.visibility='hidden'; } else { fw.style.visibility='visible'; if(fl) fl.textContent='Next: '+DLABELS[DSTEP]; } }
+  // Lane-aware controls: Delta has no live agent, so Charlie-only knobs hide and Delta hints show.
+  const _delta=desLane()==='delta';
+  const _show=(id,on)=>{ const e=document.getElementById(id); if(e) e.style.display=on?'':'none'; };
+  _show('sb_nat_wrap',!_delta); _show('sb_soft_card',!_delta);
+  _show('sb_delta_hint',_delta); _show('pn_delta_note',_delta);
+  _show('sim_delta_hint',_delta); _show('sim_charlie_a',!_delta); _show('sim_charlie_b',!_delta);
+}
+function desLane(){ const e=document.getElementById('des_lane'); return (e&&e.value)==='delta'?'delta':'charlie'; }
+function desLaneChange(){
+  const n=document.getElementById('des_lane_note');
+  if(n) n.textContent = desLane()==='delta'
+    ? 'Recorded clips ask the questions, a cheap brain picks the next line (~2.5¢ a check). Goes off script → the live agent takes over mid-call.'
+    : 'The live agent holds the whole conversation. Smartest, costs the most.';
+  dRender();
 }
 function dGo(n){ if(n>DMAX) return; if(n<DSTEP) DMAX=n; DSTEP=n; dRender(); const e=document.querySelector('#designer'); if(e) e.scrollIntoView({behavior:'smooth',block:'start'}); }
 function dNext(n){ DMAX=Math.max(DMAX,n); dGo(n); }
@@ -2509,14 +2538,16 @@ async function savePersona(){ const name=v('pn_name'); if(!name){ toast('Name th
   PN_EDIT=-1; pnClearForm(); pnEditHint(); renderPersonas();
   toast((r&&!r.error)?(updated?'Persona updated':'Persona saved, selected for this workflow'):"Couldn't save the persona"); }
 async function saveWorkflow(){ const name=v('wf_name'); if(!name){ toast('Name the workflow first'); return; }
-  const wf={name, voiceId:(document.getElementById('vs_select')||{}).value||'', tuning:sandboxBody(), openers:OPENERS.filter(o=>o.on).map(o=>o.text), persona:WF_PERSONA, savedAt:Date.now()};
+  const wf={name, voiceId:(document.getElementById('vs_select')||{}).value||'', tuning:sandboxBody(), openers:OPENERS.filter(o=>o.on).map(o=>o.text), persona:WF_PERSONA, lane:desLane(), savedAt:Date.now()};
   let WFS=[]; const s=await api('/api/settings')||{}; try{ WFS=JSON.parse(s.vt_workflows||'[]'); }catch(e){}
   const i=WFS.findIndex(w=>w.name===name);
   // Preserve the voice-rotation strip (managed in Workflows) across a Designer re-save: the Designer's
   // picked voice becomes slot #1 of the strip; the rest of the rotation is kept.
   if(i>=0 && Array.isArray(WFS[i].voices) && WFS[i].voices.length){ const rest=WFS[i].voices.filter(v=>v&&v!==wf.voiceId); wf.voices=[wf.voiceId,...(wf.voiceId?rest:WFS[i].voices)].filter(Boolean); }
-  // Preserve the Delta lane + follow-up scripts (edited on the Workflows page) across a Designer re-save.
-  if(i>=0){ if(WFS[i].lane) wf.lane=WFS[i].lane; if(WFS[i].followups) wf.followups=WFS[i].followups; }
+  // Preserve the Delta follow-up lines (edited on the Workflows page) across a Designer re-save,
+  // and seed the built-ins on a fresh Delta workflow so the sheet always shows the real lines.
+  if(i>=0 && WFS[i].followups) wf.followups=WFS[i].followups;
+  wfmSeedDelta(wf);
   if(i>=0) WFS[i]=wf; else WFS.push(wf);
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({workflows:JSON.stringify(WFS)})});
   if(window.WF) WF.list=WFS;  // keep the assignment pickers (Settings/Chains/Stores) in sync without a reload
@@ -3565,6 +3596,17 @@ function syncTreeUI(){ const t=document.getElementById('sim_tree'); const w=docu
 // Test Bench self-call: the bench agent (live brain + DRAFT voice) calls YOUR phone with the
 // chosen store's full context. Result records against the store, like the old simulator.
 async function benchCall(){
+  // Delta lane: the rehearsal is the real clip engine — save the workflow (so every tweak rides along),
+  // then have the tapedeck dial you. Store/category/voice pickers are Charlie-bench-only.
+  if(desLane()==='delta'){
+    const toNumber=v('sim_phone'); if(!toNumber){toast('Enter your phone number');return;}
+    const name=v('wf_name'); if(!name){toast('Name the workflow (Step 7) so the rehearsal knows what to play');return;}
+    await saveWorkflow();
+    toast('Calling you on the Delta lane · Answer like you work there!');
+    const r=await api('/api/admin/tapedeck/call',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({phone:toNumber,workflow:name})});
+    if(r&&r.error) toast("Couldn't call you: "+r.error);
+    return;
+  }
   const retailerId=Number(document.getElementById('sim_store').value);
   const categoryId=Number(document.getElementById('sim_cat').value);
   const mode=document.getElementById('sim_mode').value;
@@ -4358,6 +4400,7 @@ function wfSheetBody(wi){
 }
 function wfSheet(wi){
   const w=WF.list[wi]; if(!w) return;
+  if(wfmSeedDelta(w)) wfmSaveList(); // make the built-in Delta lines explicit the first time the sheet opens
   WFM_SHEET={type:'wf',wi};
   openSheet(w.name,(WF.def===w.name?'★ Default · ':'')+esch(wfRowMeta(w)),wfSheetBody(wi));
   if(_sheetEls) _sheetEls.body.querySelectorAll('.wfmop textarea').forEach(wfmGrow);
@@ -4367,20 +4410,49 @@ async function wfmSaveList(){ const r=await api('/api/settings',{method:'PATCH',
 async function wfmAddOpener(wi){ const inp=document.getElementById('wfmadd_'+wi); const t=((inp&&inp.value)||'').trim(); if(!t) return; const w=WF.list[wi]; if(!w) return; if(!Array.isArray(w.openers)) w.openers=[]; w.openers.push(t); renderWorkflowMgr(); await wfmSaveList(); toast('Opener added'); }
 async function wfmDelOpener(wi,oi){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; w.openers.splice(oi,1); renderWorkflowMgr(); await wfmSaveList(); toast('Opener removed'); }
 async function wfmEditOpener(wi,oi,text){ const w=WF.list[wi]; if(!w||!Array.isArray(w.openers)) return; const t=(text||'').trim(); if(!t){ w.openers.splice(oi,1); renderWorkflowMgr(); } else { w.openers[oi]=t; } await wfmSaveList(); }
-async function wfmSetField(wi,field,val){ const w=WF.list[wi]; if(!w) return; w[field]=val; await wfmSaveList(); renderWorkflowMgr(); toast('Saved'); }
-// ---- Delta lane: per-workflow follow-up scripts (recorded clips, rotated). Shown when lane=Delta.
+async function wfmSetField(wi,field,val){ const w=WF.list[wi]; if(!w) return; w[field]=val; if(field==='lane') wfmSeedDelta(w); await wfmSaveList(); renderWorkflowMgr(); toast('Saved'); }
+// ---- Delta lane: per-workflow lines (recorded clips, rotated). Shown when lane=Delta.
 // Set-first flow: after a YES ask the set, then the type; after a NO ask the restock day.
-function wfmFu(w,slot){ const f=w&&w.followups&&w.followups[slot]; return Array.isArray(f)?f:[]; }
+// DELTA_FU_DEFAULTS MUST MIRROR DEFAULT_FOLLOWUPS in src/calls/tapedeck.ts — the engine's copy is what
+// actually plays when a slot is missing; this copy is what gets written INTO a workflow so the sheet
+// always shows the exact lines a call can play (owner 2026-07-15: no invisible hardcoded scripts).
+const DELTA_FU_DEFAULTS={
+  set:["Oh nice! Is it Chaos Rising? Or do you know the name of the set?","Awesome, any idea which set it is? Like Chaos Rising, or a different one?","Oh sweet, do you know the name of the set? Like Chaos Rising?"],
+  type:["Gotcha, do you know if it's booster packs or a tin?","No worries, is it like booster packs, or more like a box or a tin?"],
+  no:["Ah, no worries. Any idea what day you usually get card shipments in?","Okay no problem, do you know when your next shipment usually lands?"],
+  wrap:["Awesome, thanks so much! Have a good one!","Perfect, thank you so much, take care!"],
+  clarify:["Oh sorry, I was just asking if you have any {category} in stock right now?"],
+  escalate:["Oh, one sec,"],
+  hello:["Hello? Anyone there?"],
+  wrapNo:["Okay, no worries. Thanks so much, have a good one!"]
+};
+const DELTA_FU_SLOTS=[
+  ['set','Set question (first thing after a yes)'],
+  ['type','Product type question'],
+  ['no','Restock day question (after a no)'],
+  ['wrap','Wrap (confirmed yes only)'],
+  ['wrapNo','Goodbye (no / unclear · never upbeat)'],
+  ['clarify','Clarify (they did not catch the opener)'],
+  ['hello','Silence nudge'],
+  ['escalate','Handoff line (live agent takes over)']
+];
+// Write the built-in lines INTO the workflow so what the sheet shows IS what plays. Returns true if it changed anything.
+function wfmSeedDelta(w){
+  if(!w||(w.lane||'charlie')!=='delta') return false;
+  if(!w.followups||typeof w.followups!=='object') w.followups={};
+  let seeded=false;
+  for(const [slot] of DELTA_FU_SLOTS){ if(!Array.isArray(w.followups[slot])||!w.followups[slot].length){ w.followups[slot]=DELTA_FU_DEFAULTS[slot].slice(); seeded=true; } }
+  return seeded;
+}
+function wfmFu(w,slot){ const f=w&&w.followups&&w.followups[slot]; return (Array.isArray(f)&&f.length)?f:DELTA_FU_DEFAULTS[slot]||[]; }
 function wfmDeltaEditor(wi,w){ if((w.lane||'charlie')!=='delta') return '';
-  const box=(slot,label,ph)=>`<div style="margin-top:10px"><span class="meta" style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-strong)">${label}</span><textarea rows="2" style="font-size:12.5px;margin-top:3px;width:100%" oninput="wfmGrow(this)" onchange="wfmSetFollowup(${wi},'${slot}',this.value)" placeholder="${esch(ph)}">${esch(wfmFu(w,slot).join('\n'))}</textarea></div>`;
+  const box=([slot,label])=>`<div style="margin-top:10px"><span class="meta" style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text-strong)">${label}</span><textarea rows="2" style="font-size:12.5px;margin-top:3px;width:100%" oninput="wfmGrow(this)" onchange="wfmSetFollowup(${wi},'${slot}',this.value)">${esch(wfmFu(w,slot).join('\n'))}</textarea></div>`;
   return `<div class="wfmmeta" style="grid-template-columns:1fr;border-top:1px dashed var(--border);margin-top:2px;padding-top:12px">
-    <div><label>Delta follow-ups <span data-tip="One per line, rotated per call like the openers. {category} fills in. Leave a box blank to use the built-in default."></span></label>
-    ${box('set','Set (asked first)','Oh nice! Which set is it?')}
-    ${box('type','Product type','Booster packs or a tin?')}
-    ${box('no','Restock day (on a no)','What day do you get shipments in?')}
+    <div><label>Delta lines · everything a call can say <span data-tip="These ARE the recorded clips, one line per variant, rotated per call like the openers. {category} fills in. Clear a box to restore the built-in line."></span></label>
+    ${DELTA_FU_SLOTS.map(box).join('')}
     </div></div>`;
 }
-async function wfmSetFollowup(wi,slot,text){ const w=WF.list[wi]; if(!w) return; if(!w.followups||typeof w.followups!=='object') w.followups={}; const arr=(text||'').split('\n').map(x=>x.trim()).filter(Boolean); if(arr.length) w.followups[slot]=arr; else delete w.followups[slot]; await wfmSaveList(); toast('Follow-up saved'); }
+async function wfmSetFollowup(wi,slot,text){ const w=WF.list[wi]; if(!w) return; if(!w.followups||typeof w.followups!=='object') w.followups={}; const arr=(text||'').split('\n').map(x=>x.trim()).filter(Boolean); w.followups[slot]=arr.length?arr:(DELTA_FU_DEFAULTS[slot]||[]).slice(); await wfmSaveList(); renderWorkflowMgr(); toast(arr.length?'Line saved':'Built-in line restored'); }
 async function wfmClone(wi){ const w=WF.list[wi]; if(!w) return; const name=(prompt('Name for the cloned workflow:', w.name+' copy')||'').trim(); if(!name) return; if(WF.list.some(x=>x.name===name)){ toast('A workflow named “'+name+'” already exists'); return; } const copy=JSON.parse(JSON.stringify(w)); copy.name=name; copy.savedAt=Date.now(); WF.list.push(copy); renderWorkflowMgr(); await wfmSaveList(); toast('Cloned as “'+name+'” · edit then assign'); }
 // ---- Round-trip: open an existing workflow back in the Designer (the only place to tweak tuning) ----
 let EDIT_TARGET=null; // a workflow staged to load into the Designer once its async loaders settle
@@ -4392,7 +4464,7 @@ async function initDesigner(){
     Promise.resolve(typeof loadTestStores==='function'&&loadTestStores()),
     Promise.resolve(typeof loadPersonas==='function'&&loadPersonas()),
   ]); }catch(e){}
-  if(typeof dRender==='function') dRender();
+  if(typeof desLaneChange==='function') desLaneChange(); else if(typeof dRender==='function') dRender();
   if(EDIT_TARGET){ const w=EDIT_TARGET; EDIT_TARGET=null; applyWorkflowToDesigner(w); }
 }
 function editWorkflowInDesigner(wi){ const w=WF.list&&WF.list[wi]; if(!w){ toast('Workflow not found'); return; } EDIT_TARGET=w; showSection('designer'); }
@@ -4401,6 +4473,7 @@ function applyWorkflowToDesigner(w){
   if(!w) return; const g=id=>document.getElementById(id);
   const set=(id,val)=>{ const e=g(id); if(e&&val!=null&&val!=='') e.value=val; };
   set('wf_name', w.name);
+  const laneSel=g('des_lane'); if(laneSel){ laneSel.value=(w.lane==='delta')?'delta':'charlie'; desLaneChange(); }
   const sel=g('vs_select'); if(sel) sel.value=w.voiceId||'';
   const t=w.tuning||{};
   set('sb_speed',t.speed); set('sb_stability',t.stability); set('sb_latency',t.latency);

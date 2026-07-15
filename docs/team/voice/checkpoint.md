@@ -3,6 +3,27 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-15 — Designer ⇄ Workflows ⇄ Delta engine unified (owner mid-test, call 1 done)
+
+- **Owner Delta round 2 in progress on staging:** call 1 (clear YES) passed by ear. Feedback: reply
+  gap too long + clips rushed → fixed via tuning (below). Calls 2-6 still to run (script: handoff §3).
+- **Delta engine now honors workflow tuning** (tapedeck.ts): speed 0.7-1.2 + voice model into clip
+  synth; Beat → Gather endpointing (eager=1s / normal=auto / patient=3s); Reply timeout → mid-call
+  gather wait, clamped 3-15s (`deltaTurnTuning`, unit-tested). Same tuning fields Charlie uses.
+- **Branson Test seeded on BOTH DBs:** tuning {speed .93, eager beat, 8s reply, turbo v2} +
+  all 8 follow-up slots written explicitly (no more invisible hardcoded lines).
+- **Admin UI (app.html):** Designer has a Call-lane picker (step 1), hides Charlie-only knobs on
+  Delta (naturalness, soft-pause line), Delta hints on Beat/Reply-timeout/Persona; step-6 test on a
+  Delta workflow saves then dials via the tapedeck bench; workflow sheet shows ALL 8 Delta lines
+  (auto-seeded), clearing a box restores the built-in. DELTA_FU_DEFAULTS in app.html MUST mirror
+  DEFAULT_FOLLOWUPS in tapedeck.ts.
+- **Copy law sweep:** em-dashes stripped from global openers + vt_opening on staging AND prod.
+- **Persona on Delta = barge-only** (clips never speak it; live agent uses it after escalation).
+  Opener + voice rotation DO work on Delta (random pick per call).
+- test-delta registered in test-all.sh (was missing); now 26 cases green.
+- Admin UI ships via `bash scripts/ship-admin.sh` (Pops' decouple). Server code still staging→promote:
+  prod Delta engine lacks the new tuning knobs until the next promote (staging has them).
+
 ## 2026-07-14 — lane renamed by the owner: **Echo** (was Ringo). Same lane, same files.
 
 ## 2026-07-11 — lane created (transferred from Admin/Addie). Read handoff.md first.
