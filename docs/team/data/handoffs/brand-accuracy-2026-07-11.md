@@ -39,10 +39,11 @@ union-stamped carries → its One Piece/Topps sites still show grocery kiosks + 
 `scripts/data-tools/fix_brand_carries.py` re-runs the whole pass idempotently (BASE=https://checkitforme.com
 after owner approval at promote time).
 
-## Open judgment calls for the owner (1 line each)
-- Dollar General One Piece is "likely" (moderate evidence) — held OFF per your certainty rule. Confirm?
-- Comic Book Shop (321) claims One Piece chain-wide with no evidence row — kept ON (comic shops
-  plausibly carry it + the call verifies). Flip off if you want strict-evidence-only.
+## Judgment calls — RESOLVED by owner 2026-07-11
+- **Dollar General carries One Piece (owner-confirmed)** → added back to all 20,171 stores
+  ("Pokemon TCG,Magic: The Gathering,One Piece TCG,Yu-Gi-Oh"). Topps stays OFF (no evidence, not confirmed).
+- **Comic shops carry One Piece (owner-confirmed)** → Comic Book Shop claims stand; status upgraded
+  from plausible-kept to owner-confirmed. No data change needed.
 
 ## UPDATE (same day): owner's distributor deep-research delivered + Stage 1 applied
 Doc archived at `docs/data/distributor-map-2026.md`. Owner's rule: **an Excell account carries

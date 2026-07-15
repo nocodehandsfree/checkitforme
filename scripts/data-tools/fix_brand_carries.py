@@ -25,7 +25,7 @@ UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML,
 #      Hobby Lobby, H-E-B (+ Kroger banners / CVS / Walgreens / Target / Walmart / B&N already correct).
 #  (b) Everything else: confirmed product evidence only (chain_products_merged.csv; likely = HOLD).
 FIX = {
-    "Dollar General":  "Pokemon TCG,Magic: The Gathering,Yu-Gi-Oh",
+    "Dollar General":  "Pokemon TCG,Magic: The Gathering,One Piece TCG,Yu-Gi-Oh",  # OP owner-confirmed 2026-07-11
     "Dollar Tree":     "Pokemon TCG,Magic: The Gathering,Yu-Gi-Oh",
     "Family Dollar":   "Pokemon TCG,Magic: The Gathering,NeeDoh (Schylling),Sports Cards (Topps/Panini),Squishmallows,Yu-Gi-Oh",
     "Five Below":      "Pokemon TCG,NeeDoh (Schylling),One Piece TCG,Sports Cards (Topps/Panini),Squishmallows,Yu-Gi-Oh",
