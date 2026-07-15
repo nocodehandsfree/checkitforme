@@ -4679,7 +4679,12 @@ async function saveAlertTemplates(){
   for(const [k,,chan] of AL_EVENTS){
     patch[k]={};
     if(chan!=='email'){ const v=(document.getElementById('al_'+k+'_sms')||{}).value; patch[k].sms=v||''; }
-    if(chan!=='sms'){ const subj=(document.getElementById('al_'+k+'_subj')||{}).value, body=(document.getElementById('al_'+k+'_body')||{}).value; patch[k].emailSubject=subj||''; patch[k].emailBody=body||''; }
+    if(chan!=='sms'){
+      const subj=(document.getElementById('al_'+k+'_subj')||{}).value||'', body=(document.getElementById('al_'+k+'_body')||{}).value||'';
+      // Don't save empty email copy the server never offered (old server + 'both' row) — an empty
+      // override would blank the real defaults the moment the server learns the fields.
+      if(subj||body||(AL_TPL[k]&&AL_TPL[k].emailSubject)){ patch[k].emailSubject=subj; patch[k].emailBody=body; }
+    }
   }
   const r=await api('/api/alerts/templates',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(patch)});
   const s=document.getElementById('al_saved');
