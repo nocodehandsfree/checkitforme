@@ -1,5 +1,6 @@
 // Customer alerts — standing opt-ins + sending over SMS/email, per-plan SMS metering, and an audit log.
-// Channels by event (owner): restock = SMS (per-plan capped, COGS), store_added / waitlist / welcome = EMAIL.
+// Channels by event (owner): restock = SMS by default (per-plan capped, COGS), EMAIL when the
+// subscription picked it; store_added / waitlist / welcome = EMAIL.
 // Copy is written to docs/design/copy/COPY_STYLE_GUIDE.md (friend voice, no em-dashes, "check" is the unit).
 // SMS goes out via Twilio once a sending number is configured + A2P/toll-free approved; until then it logs
 // as "stubbed". Email goes out live via Brevo (BREVO_API_KEY, already set); a per-event brevoTemplateId
@@ -22,7 +23,11 @@ export const EVENT_CHANNEL: Record<AlertEvent, Channel> = { restock: "sms", stor
 export interface AlertTemplate { sms?: string; emailSubject?: string; emailBody?: string; brevoTemplateId?: number }
 // Defaults (copy-guide voice). Admin can override any field live via `alerts_json` (setAlertTemplates).
 export const DEFAULT_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
-  restock: { sms: "{product} is back at {store}. Go grab it before it's gone. checkitforme.com" },
+  restock: {
+    sms: "{product} is back at {store}. Go grab it before it's gone. checkitforme.com",
+    emailSubject: "{product} is back at {store}.",
+    emailBody: "{store} just told us they have {product} again. This stuff doesn't sit long. Go grab it.",
+  },
   store_added: {
     emailSubject: "{store} is live. Your check is on us.",
     emailBody: "You asked us to add {store} in {city}. It's live now. Your next check is on us. Go put it to work.",
@@ -79,7 +84,7 @@ export async function smsAlertsLeft(userId: string): Promise<{ left: number | nu
   return { left: Math.max(0, cap - (await smsSentThisMonth(userId))), cap };
 }
 
-async function log(userId: string | null, event: AlertEvent, channel: Channel, toAddr: string | null, status: string, detail?: string) {
+async function log(userId: string | null, event: EmailKind, channel: Channel, toAddr: string | null, status: string, detail?: string) {
   try { await db.insert(alertSends).values({ userId, event, channel, toAddr, status, detail: detail ?? null, monthKey: monthKey() }); } catch { /* logging must never throw */ }
 }
 
@@ -107,7 +112,10 @@ type EmailModule =
   | { type: "product"; title: string; sub: string; badge: string }
   | { type: "steps"; steps: [string, string][] };
 interface EmailDesign { kicker: string; kickerColor: string; headline: string; body: string[]; module?: EmailModule; cta: string; url: string }
-const EMAIL_DESIGN: Record<AlertEvent, EmailDesign> = {
+// "instock_owner" = the hands-free owner ping (a call just confirmed stock) — same branded shell,
+// its own copy. It's ops-only, so it isn't in DEFAULT_TEMPLATES (not editable, no metering).
+type EmailKind = AlertEvent | "instock_owner";
+const EMAIL_DESIGN: Record<EmailKind, EmailDesign> = {
   store_added: {
     kicker: "YOUR STORE'S LIVE", kickerColor: "#4ADE80", headline: "You got your store.",
     body: ["**{store}** in {city} is live. Your next check's on us.", "Pick your product, we call the staff, you get the answer."],
@@ -128,6 +136,12 @@ const EMAIL_DESIGN: Record<AlertEvent, EmailDesign> = {
     body: ["We call the store so you don't have to. You get a straight answer, about two minutes."],
     module: { type: "steps", steps: [["1", "Pick a store and a product"], ["2", "Check AI calls the staff"], ["3", "You get a straight answer"], ["✓", "First check's on us"]] },
     cta: "Run my first check", url: "https://checkitforme.com",
+  },
+  instock_owner: {
+    kicker: "CALL CONFIRMED", kickerColor: "#4ADE80", headline: "It's in stock.",
+    body: ["A call just confirmed **{product}** is on the shelf at **{store}**.", "{dayline}"],
+    module: { type: "product", title: "{product}", sub: "{store}", badge: "CONFIRMED" },
+    cta: "See the call", url: "https://checkitforme.com",
   },
 };
 const FONT = "Inter,'Segoe UI',Arial,sans-serif";
@@ -160,9 +174,12 @@ function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | numb
  *  Check wordmark image, gradient card, Inter-black headline, module card, filled capsule CTA with
  *  the green ring. Table layout + inline styles + MSO conditionals: Outlook (Word engine) gets a
  *  solid-color card fallback and a VML roundrect button, so it renders clean there too. */
-function renderBrandedEmail(event: AlertEvent, _subject: string, _body: string, tokens: Record<string, string | number | undefined> = {}): string {
+function renderBrandedEmail(event: EmailKind, _subject: string, _body: string, tokens: Record<string, string | number | undefined> = {}): string {
   const d = EMAIL_DESIGN[event];
-  const bodyHtml = d.body.map((p, i) => i === 0
+  // A {url} token deep-links the CTA (owner alert → the call; watch alert → the store). Else the design's default.
+  const url = String(tokens.url || d.url);
+  // Paragraphs whose tokens fill to nothing (e.g. no restock day heard) are dropped, not rendered as gaps.
+  const bodyHtml = d.body.filter((p) => fill(p.replace(/\*\*/g, ""), tokens)).map((p, i) => i === 0
     ? `<tr><td style="padding-top:15px;font-size:17px;line-height:1.5;color:#D1D1DA;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
     : `<tr><td style="padding-top:16px;font-size:14px;line-height:1.5;color:#B9B9C4;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
   const ctaLabel = `${escHtml(d.cta).toUpperCase()}&nbsp;&nbsp;&rarr;`;
@@ -170,7 +187,7 @@ function renderBrandedEmail(event: AlertEvent, _subject: string, _body: string, 
   // a VML roundrect (arcsize 50% = full capsule) and everyone else gets the styled <a>.
   const cta = `<tr><td style="padding-top:24px">
     <!--[if mso]>
-    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${d.url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="#4ADE80" strokeweight="2px" fillcolor="#16161C">
+    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="#4ADE80" strokeweight="2px" fillcolor="#16161C">
       <w:anchorlock/>
       <center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.6px;">${ctaLabel}</center>
     </v:roundrect>
@@ -178,7 +195,7 @@ function renderBrandedEmail(event: AlertEvent, _subject: string, _body: string, 
     <!--[if !mso]><!-->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
       <td align="center" style="background:#16161C;border:2px solid #4ADE80;border-radius:999px">
-        <a href="${d.url}" style="display:block;padding:19px 24px;color:#FFFFFF;font-weight:800;font-size:14px;letter-spacing:1.6px;text-decoration:none;font-family:${FONT};text-transform:uppercase">${ctaLabel}</a>
+        <a href="${url}" style="display:block;padding:19px 24px;color:#FFFFFF;font-weight:800;font-size:14px;letter-spacing:1.6px;text-decoration:none;font-family:${FONT};text-transform:uppercase">${ctaLabel}</a>
       </td></tr></table>
     <!--<![endif]-->
   </td></tr>`;
@@ -207,7 +224,7 @@ function renderBrandedEmail(event: AlertEvent, _subject: string, _body: string, 
     <!--[if mso]></td></tr></table><![endif]-->
   </td></tr></table></body></html>`;
 }
-async function espEmail(to: string, subject: string, body: string, opts: { templateId?: number; params?: Record<string, string | number | undefined>; event?: AlertEvent } = {}): Promise<{ ok: boolean; detail: string }> {
+async function espEmail(to: string, subject: string, body: string, opts: { templateId?: number; params?: Record<string, string | number | undefined>; event?: EmailKind } = {}): Promise<{ ok: boolean; detail: string }> {
   const key = config.alerts.brevoApiKey;
   if (!key) return { ok: false, detail: "email_not_configured" }; // BREVO_API_KEY unset → stubbed
   const sender = { name: "Check It For Me", email: config.alerts.senderEmail };
@@ -227,9 +244,10 @@ async function espEmail(to: string, subject: string, body: string, opts: { templ
 }
 
 /** Send one alert to a user. Resolves channel + recipient, meters SMS, sends (or stubs), and logs.
- *  opts.tag is appended to the logged detail (e.g. "r:42" for restock cooldown lookups). */
-export async function sendAlert(userId: string, event: AlertEvent, tokens: Record<string, string | number | undefined> = {}, opts: { to?: string; tag?: string } = {}): Promise<{ status: string; detail?: string }> {
-  const channel = EVENT_CHANNEL[event];
+ *  opts.tag is appended to the logged detail (e.g. "r:42" for restock cooldown lookups).
+ *  opts.channel overrides the event's default channel (restock can ride email when the user picked it). */
+export async function sendAlert(userId: string, event: AlertEvent, tokens: Record<string, string | number | undefined> = {}, opts: { to?: string; tag?: string; channel?: Channel } = {}): Promise<{ status: string; detail?: string }> {
+  const channel = opts.channel || EVENT_CHANNEL[event];
   const account = await getAccount(userId).catch(() => null);
   const tpls = await getAlertTemplates();
   const to = opts.to || (channel === "sms" ? account?.phone : account?.email) || "";
@@ -265,11 +283,39 @@ export async function sendAnonEmail(event: AlertEvent, tokens: Record<string, st
   return { status, detail: res.detail };
 }
 
+/** Email one restock-watch contact (the "tell me when it's back" list) — branded template, logged.
+ *  Watches are contact-based (no account), so this skips metering. */
+export async function sendRestockEmailTo(to: string, tokens: Record<string, string | number | undefined>, opts: { tag?: string } = {}): Promise<{ status: string; detail?: string }> {
+  if (!to || !to.includes("@")) { await log(null, "restock", "email", to || null, "skipped_nocontact", opts.tag); return { status: "skipped_nocontact" }; }
+  const tpls = await getAlertTemplates();
+  const subject = fill(tpls.restock.emailSubject, tokens), body = fill(tpls.restock.emailBody, tokens);
+  const res = await espEmail(to, subject, body, { templateId: tpls.restock.brevoTemplateId, params: strTokens(tokens), event: "restock" });
+  const status = res.ok ? "sent" : "stubbed"; await log(null, "restock", "email", to, status, [opts.tag, res.detail].filter(Boolean).join(" "));
+  return { status, detail: res.detail };
+}
+
+/** The hands-free OWNER ping when a call confirms stock — branded shell, ops copy, deep link to the
+ *  call. Replaces the old hand-rolled HTML in calls/notify.ts. `test` marks the log row. */
+export async function sendOwnerInStockEmail(to: string, t: { store: string; product: string; day?: string | null; url?: string }, opts: { test?: boolean } = {}): Promise<{ status: string; detail?: string; channel: Channel }> {
+  if (!to || !to.includes("@")) { await log(null, "instock_owner", "email", to || null, "skipped_nocontact"); return { status: "skipped_nocontact", channel: "email" }; }
+  const tokens: Record<string, string> = {
+    store: t.store, product: t.product, url: t.url || "https://checkitforme.com",
+    dayline: t.day ? `They said they restock ${t.day}.` : "",
+  };
+  const subject = fill("In stock: {product} at {store}", tokens);
+  const body = fill("A call just confirmed {product} is on the shelf at {store}. {dayline}", tokens);
+  const res = await espEmail(to, subject, body, { params: tokens, event: "instock_owner" });
+  const status = res.ok ? (opts.test ? "test_sent" : "sent") : (opts.test ? "test_stubbed" : "stubbed");
+  await log(null, "instock_owner", "email", to, status, res.detail);
+  return { status: res.ok ? "sent" : "stubbed", detail: res.detail, channel: "email" };
+}
+
 /** Admin "send me a test": fires any one template to an address/phone with realistic sample tokens,
- *  bypassing metering + subscriptions. Logged with status "test" prefix so it's obvious in the feed. */
+ *  bypassing metering + subscriptions. Logged with status "test" prefix so it's obvious in the feed.
+ *  channel override lets restock be tested over EMAIL as well as text. */
 const SAMPLE_TOKENS: Record<string, string> = { store: "Target Glendale", product: "151 Booster Box", city: "Glendale", name: "there" };
-export async function sendTestAlert(event: AlertEvent, to: string): Promise<{ status: string; detail?: string; channel: Channel }> {
-  const channel = EVENT_CHANNEL[event];
+export async function sendTestAlert(event: AlertEvent, to: string, channelOverride?: Channel): Promise<{ status: string; detail?: string; channel: Channel }> {
+  const channel = channelOverride || EVENT_CHANNEL[event];
   const tpls = await getAlertTemplates();
   if (!to) { await log(null, event, channel, null, "test_nocontact"); return { status: "skipped_nocontact", channel }; }
   if (channel === "sms") {
@@ -316,7 +362,8 @@ export async function fanoutRestock(retailerId: number, o: { storeName?: string;
       if (await restockedRecently(s.userId, retailerId)) { skipped++; continue; }
       const product = o.product || s.productLabel || "your product";
       // tag "r:<id>" is stamped into the send's logged detail so the cooldown can find it next time.
-      const res = await sendAlert(s.userId, "restock", { store: o.storeName || "the store", product }, { tag: `r:${retailerId}` });
+      // The subscription's channel rides through: email opt-ins get the branded email, not a text.
+      const res = await sendAlert(s.userId, "restock", { store: o.storeName || "the store", product }, { tag: `r:${retailerId}`, channel: s.channel === "email" ? "email" : "sms" });
       if (res.status === "sent" || res.status === "stubbed") notified++; else skipped++;
     }
   } catch { /* fan-out must never break ingest */ }

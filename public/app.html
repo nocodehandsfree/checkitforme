@@ -770,7 +770,7 @@
   </section>
   <section id="alerts">
     <div class="k-title">Alerts</div>
-    <div class="k-sub">The messages we send customers, and every send. Restock rides text, the rest ride email.</div>
+    <div class="k-sub">The messages we send customers, and every send. Restock rides text or email, the rest ride email.</div>
     <div class="k-eyebrow">Delivery status</div>
     <div id="al_status" class="meta">Loading…</div>
     <div class="k-eyebrow">This month</div>
@@ -784,9 +784,11 @@
         <option value="welcome">Welcome (email)</option>
         <option value="store_added">Store went live (email)</option>
         <option value="waitlist">We’re live in your area (email)</option>
+        <option value="restock_email">Restock (email)</option>
         <option value="restock">Restock (text)</option>
+        <option value="instock_owner">Call confirmed stock, owner ping (email)</option>
       </select>
-      <input id="al_test_to" type="text" placeholder="your email (or phone for restock)" style="flex:1;min-width:180px;font-size:14px;padding:10px 14px">
+      <input id="al_test_to" type="text" placeholder="your email (or phone for the text)" style="flex:1;min-width:180px;font-size:14px;padding:10px 14px">
       <button class="act" onclick="sendAlertTest()">Send test</button>
     </div>
     <div id="al_test_out" class="meta" style="margin-top:8px;font-size:12px"></div>
@@ -4635,7 +4637,7 @@ function decorateChrome(){
 }
 // ---- Alerts (God View → Alerts): editable message templates, subscribers, and the send log ----
 const AL_EVENTS=[
-  ['restock','Restock (text)','sms','Sent by text when a store restocks a product they’re watching. Counts against the plan’s monthly text cap.'],
+  ['restock','Restock (text or email)','both','Sent when a store restocks a product they’re watching, on whichever channel they picked. Texts count against the plan’s monthly cap, emails are free.'],
   ['store_added','Store went live (email)','email','Sent when a store a customer requested goes live. Their free check is already granted.'],
   ['waitlist','We’re live in your area (email)','email','Sent to a waitlist signup when we launch in their region.'],
   ['welcome','Welcome (email)','email','First email after signup. First check is on us.'],
@@ -4649,9 +4651,9 @@ async function loadAlerts(){
   AL_TPL=await api('/api/alerts/templates')||{};
   tEl.innerHTML=AL_EVENTS.map(([k,label,chan,hint])=>{
     const t=AL_TPL[k]||{};
-    const body= chan==='sms'
-      ? alField('al_'+k+'_sms','Text message',t.sms,true)
-      : alField('al_'+k+'_subj','Email subject',t.emailSubject,false)+alField('al_'+k+'_body','Email body',t.emailBody,true);
+    const sms=alField('al_'+k+'_sms','Text message',t.sms,true);
+    const email=alField('al_'+k+'_subj','Email subject',t.emailSubject,false)+alField('al_'+k+'_body','Email body',t.emailBody,true);
+    const body= chan==='sms'?sms : chan==='email'?email : sms+email;
     return `<div class="drow" style="padding:10px 0;border-top:1px solid var(--border)"><div class="name" style="margin-bottom:2px">${esch(label)}</div><div class="meta" style="margin:0 0 8px">${esch(hint)}</div>${body}</div>`;
   }).join('');
   const log=await api('/api/alerts/log')||{};
@@ -4675,8 +4677,9 @@ async function loadAlerts(){
 async function saveAlertTemplates(){
   const patch={};
   for(const [k,,chan] of AL_EVENTS){
-    if(chan==='sms'){ const v=(document.getElementById('al_'+k+'_sms')||{}).value; patch[k]={sms:v||''}; }
-    else{ const subj=(document.getElementById('al_'+k+'_subj')||{}).value, body=(document.getElementById('al_'+k+'_body')||{}).value; patch[k]={emailSubject:subj||'',emailBody:body||''}; }
+    patch[k]={};
+    if(chan!=='email'){ const v=(document.getElementById('al_'+k+'_sms')||{}).value; patch[k].sms=v||''; }
+    if(chan!=='sms'){ const subj=(document.getElementById('al_'+k+'_subj')||{}).value, body=(document.getElementById('al_'+k+'_body')||{}).value; patch[k].emailSubject=subj||''; patch[k].emailBody=body||''; }
   }
   const r=await api('/api/alerts/templates',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(patch)});
   const s=document.getElementById('al_saved');
@@ -4684,13 +4687,15 @@ async function saveAlertTemplates(){
   else toast('Could not save messages');
 }
 async function sendAlertTest(){
-  const event=(document.getElementById('al_test_event')||{}).value||'welcome';
+  const pick=(document.getElementById('al_test_event')||{}).value||'welcome';
+  // "restock_email" is the UI's name for restock over the email channel; the server takes event+channel.
+  const req= pick==='restock_email' ? {event:'restock',channel:'email'} : {event:pick};
   const to=((document.getElementById('al_test_to')||{}).value||'').trim();
   const out=document.getElementById('al_test_out');
   if(!to){ if(out){ out.style.color='#F59E0B'; out.textContent='Enter where to send it first.'; } return; }
   if(out){ out.style.color=''; out.textContent='Sending…'; }
-  const r=await api('/api/alerts/test',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event,to})});
-  if(!r||r.error){ if(out){ out.style.color='#F87171'; out.textContent='Error: '+((r&&r.error)||'no response'); } return; }
+  const r=await api('/api/alerts/test',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({...req,to})});
+  if(!r||r.error){ if(out){ out.style.color='#F87171'; out.textContent= (r&&r.error)==='bad_event' ? 'This test type is not on the live server yet. It ships with the next promote.' : 'Error: '+((r&&r.error)||'no response'); } return; }
   // sent = it actually went out; stubbed = the provider key/number isn't live yet.
   if(r.status==='sent'){ if(out){ out.style.color='var(--green)'; out.textContent='Sent to '+to+' · check your '+(r.channel==='sms'?'phone':'inbox (and spam)'); } toast('Test sent'); }
   else if(r.status==='stubbed'){ if(out){ out.style.color='#F59E0B'; out.textContent='Logged but NOT delivered · '+(r.channel==='sms'?'the Twilio number isn’t live yet (pending A2P).':'Brevo key not set on this service.')+' ('+(r.detail||'')+')'; } }

@@ -2,33 +2,21 @@
 // Channels: "email" (Brevo, works now, includes a deep link), "call" (Twilio voice),
 // or "sms" (Twilio — blocked by US carriers until A2P 10DLC registration). Best-effort.
 import { config } from "../config";
+import { sendOwnerInStockEmail } from "../alerts";
 
 const esc = (s: string) => s.replace(/[<>&'"]/g, (c) =>
   ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c]!));
 
 export async function notifyInStock(store: string, category: string, retailerId: number, shipmentDay?: string | null) {
-  const { channel, ownerPhone, fromNumber, twilioSid, twilioToken, ownerEmail, brevoApiKey, senderEmail } = config.alerts;
+  const { channel, ownerPhone, fromNumber, twilioSid, twilioToken, ownerEmail } = config.alerts;
   const line = `${store} just confirmed ${category} is in stock${shipmentDay ? `, they restock ${shipmentDay}` : ""}.`;
   const link = `${config.appUrl}/?store=${retailerId}`;
 
   try {
     if (channel === "email") {
-      if (!ownerEmail || !brevoApiKey) return;
-      await fetch("https://api.brevo.com/v3/smtp/email", {
-        method: "POST",
-        headers: { "api-key": brevoApiKey, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sender: { name: "CheckIt", email: senderEmail },
-          to: [{ email: ownerEmail }],
-          subject: `🟢 In stock: ${store} — ${category}`,
-          htmlContent: `<div style="font-family:Inter,Arial,sans-serif;color:#111;max-width:520px">
-            <h2 style="color:#16a34a;margin:0 0 8px">${esc(store)} — ${esc(category)} is IN 🟢</h2>
-            <p style="font-size:15px">${esc(line)}</p>
-            <p><a href="${link}" style="display:inline-block;background:#22C55E;color:#06210f;padding:11px 18px;border-radius:8px;text-decoration:none;font-weight:700">See the call &amp; transcript →</a></p>
-            <p style="color:#999;font-size:12px">CheckIt</p></div>`,
-          textContent: `${line}\nSee the call: ${link}`,
-        }),
-      });
+      if (!ownerEmail) return;
+      // The one branded template (alerts.ts) — the old hand-rolled HTML here is gone for good.
+      await sendOwnerInStockEmail(ownerEmail, { store, product: category, day: shipmentDay, url: link });
       return;
     }
 
@@ -51,7 +39,9 @@ export async function notifyInStock(store: string, category: string, retailerId:
   }
 }
 
-/** Notify an arbitrary CUSTOMER (restock watch). Email via Brevo, SMS via Twilio. Best-effort. */
+/** Notify an arbitrary CUSTOMER (restock watch). Email via Brevo, SMS via Twilio. Best-effort.
+ *  NB: restock-watch EMAILS should go through sendRestockEmailTo (alerts.ts) — that's the branded
+ *  template. This email branch is the plain fallback for any other caller. */
 export async function notifyContact(channel: "email" | "sms", contact: string, subject: string, body: string, link?: string) {
   const { fromNumber, twilioSid, twilioToken, brevoApiKey, senderEmail } = config.alerts;
   try {
@@ -61,13 +51,13 @@ export async function notifyContact(channel: "email" | "sms", contact: string, s
         method: "POST",
         headers: { "api-key": brevoApiKey, "Content-Type": "application/json" },
         body: JSON.stringify({
-          sender: { name: "Runnr", email: senderEmail },
+          sender: { name: "Check It For Me", email: senderEmail },
           to: [{ email: contact }],
           subject,
           htmlContent: `<div style="font-family:Inter,Arial,sans-serif;color:#111;max-width:520px">
             <p style="font-size:15px">${esc(body)}</p>
             ${link ? `<p><a href="${link}" style="display:inline-block;background:#22C55E;color:#06210f;padding:11px 18px;border-radius:8px;text-decoration:none;font-weight:700">Check it now →</a></p>` : ""}
-            <p style="color:#999;font-size:12px">Runnr · you asked us to watch this.</p></div>`,
+            <p style="color:#999;font-size:12px">Check It For Me · you asked us to watch this.</p></div>`,
           textContent: `${body}${link ? `\n${link}` : ""}`,
         }),
       });

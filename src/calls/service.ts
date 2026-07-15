@@ -8,6 +8,7 @@ import {
   accounts, callResults, categories, chains, retailers, scheduleTargets, schedules, watches, zoneRetailers, zones,
 } from "../db/schema";
 import { chargeOneCredit, isCompAccount } from "../billing";
+import { sendRestockEmailTo } from "../alerts";
 import { isCallingPaused } from "../redis";
 import { getPolicy } from "../policy";
 
@@ -17,10 +18,16 @@ async function notifyWatches(retailerId: number, categoryId: number, store: stri
     eq(watches.retailerId, retailerId), eq(watches.categoryId, categoryId), eq(watches.active, true),
   ));
   for (const w of open) {
-    await notifyContact(w.channel as "email" | "sms", w.contact,
-      `🟢 Back in stock: ${store} — ${label}`,
-      `${store} just confirmed ${label} is in stock. You asked us to watch this one!`,
-      `${config.appUrl}/?store=${retailerId}`);
+    const link = `${config.appUrl}/?store=${retailerId}`;
+    if (w.channel === "email") {
+      // Branded template (the same one every alert email wears), deep-linked to the store.
+      await sendRestockEmailTo(w.contact, { store, product: label, url: link }, { tag: `watch r:${retailerId}` });
+    } else {
+      await notifyContact("sms", w.contact,
+        `Back in stock: ${label} at ${store}`,
+        `${store} just confirmed ${label} is in stock. You asked us to watch this one!`,
+        link);
+    }
     await db.update(watches).set({ active: false, notifiedAt: Math.floor(Date.now() / 1000) }).where(eq(watches.id, w.id));
   }
 }
