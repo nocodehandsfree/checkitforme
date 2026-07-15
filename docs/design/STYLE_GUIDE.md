@@ -93,7 +93,9 @@ Big-card shadow `0 24px 48px -12px rgba(0,0,0,.7)` · row-card shadow
 
 | Role | Spec |
 |---|---|
-| Hero / verdict title | 30px / 900 / −1px |
+| Verdict headline | 40px / 900 / −1.4px (owner 07-15; was 30) |
+| Verdict subhead (status note) | 16.5px / 650 / 78% white — one flowing block, 2 lines max, never 3 |
+| Verdict date caption | 10.5px / 700 / +tracking UPPERCASE, faint — sits under the RESULT pill, above the headline |
 | Verdict price | 34px / 900 / −1.2px |
 | Modal / pop-up title | 19–21px / 900 / −.4px (long titles drop to 16.5px — NEVER wrap a heading) |
 | Sheet & page titles | 20px / 800 / −.3px |
@@ -162,8 +164,10 @@ independent shops get the embossed tile with 2-letter 900-weight initials — ne
 the P6b poll keys (34px), and the calls-by-day list (24px). Never plain colored dots.
 
 ### 5.8 Verdict pages
-Wash from status bar (§3) → glass pills → glowing RESULT chip → verdict title (30/900, verdict
-color) → price if quoted (34/900) → **max two lines** of sentence, tokens bold — format:
+Wash from status bar (§3) → glass pills → glowing RESULT chip → **date caption** (10.5/700, faint,
+tracked uppercase, under the pill, above the headline) → **headline** (40/900, verdict color) → price
+if quoted (34/900) → **subhead** (16.5/650, 78% white): one flowing sentence block, two lines max
+never three, tokens bold, no manual line breaks (the page strips them). Format:
 `{Store} has a {Set} {Product}. It's {$X over retail}.` (over-retail in `#F59E0B`) → green shine
 CTA → timeline + conversation → verdict line ("In stock. Confirmed.") → in-stock actions (§5.9) →
 YOUR HUNT (logo tiles + status chips, BEST ring) → restock row → "N checks used" → footer.
