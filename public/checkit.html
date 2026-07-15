@@ -3939,8 +3939,8 @@ let NEAR_SEQ=0;
 async function fetchNear(){
   const q=($('search')&&$('search').value||'').trim();
   let url=null;
-  if(USER_LOC) url=`/pub/stores/near?lat=${USER_LOC.lat}&lng=${USER_LOC.lng}&radius=${Math.max(RADIUS,0.5)}&limit=200${MODE==='hobby'?'&type=Hobby':''}${MODE==='thrift'?'&type=Thrift':''}`;
-  else if(q.length>=2) url=`/pub/stores/near?q=${encodeURIComponent(q)}&limit=60${MODE==='hobby'?'&type=Hobby':''}${MODE==='thrift'?'&type=Thrift':''}`;
+  if(USER_LOC) url=`/pub/stores/near?lat=${USER_LOC.lat}&lng=${USER_LOC.lng}&radius=${Math.max(RADIUS,0.5)}&limit=200${MODE==='hobby'?'&type=Hobby':''}${MODE==='thrift'?'&section=thrift':''}`;
+  else if(q.length>=2) url=`/pub/stores/near?q=${encodeURIComponent(q)}&limit=60${MODE==='hobby'?'&type=Hobby':''}${MODE==='thrift'?'&section=thrift':''}`;
   if(!url){ STORES=[]; renderStores(); return; }
   const seq=++NEAR_SEQ;
   STORES_AUTH_TOKEN=PHONE_TOKEN; // record which token this list was fetched under (so login can detect a stale anon list)
