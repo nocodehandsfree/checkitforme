@@ -35,6 +35,8 @@ run "unit: plans + entitlements" "env DATABASE_URL=file:./.t-plans.db $ENV $TSX 
 run "unit: store-sync"  "env DATABASE_URL=file:./.t-sync.db $ENV $TSX scripts/test-storesync.ts; rm -f .t-sync.db"
 run "smoke: zones endpoints" "env DATABASE_URL=file:./.t-zones.db PORT=8791 $ENV $TSX scripts/test-zones-endpoints.ts; rm -f .t-zones.db"
 run "smoke: support endpoints" "env DATABASE_URL=file:./.t-support.db PORT=8794 ADMIN_TOKEN=t $ENV $TSX scripts/test-support-endpoints.ts; rm -f .t-support.db"
+run "smoke: admin user view" "env DATABASE_URL=file:./.t-adminview.db PORT=8793 ADMIN_TOKEN=t $ENV $TSX scripts/test-admin-user-view.ts; rm -f .t-adminview.db"
+run "smoke: thrift opt-in" "env DATABASE_URL=file:./.t-thrift.db PORT=8795 $ENV $TSX scripts/test-thrift-optin.ts; rm -f .t-thrift.db"
 run "integration: growth/CMS/community" "bash scripts/test-growth.sh"
 run "qa: pages (behavior benchmark)" "bash scripts/qa-pages.sh"
 run "qa: design tokens (v2 skin)" "$TSX scripts/qa-design.ts"

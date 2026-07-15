@@ -152,15 +152,26 @@ if (config.staging.on) {
 // ---- Peek door ----
 // A secret ?peek=<PEEK_CODE> link (code lives in Railway) skips the coming-soon splash for THAT browser
 // only: matching the code sets a root-domain cookie (shared across every brand subdomain), so the owner
-// can browse the live site as a real customer while the public still sees the splash. peekOk() = code in
+// can browse prod as a real customer while the public still sees the splash. peekOk() = code present in
 // the query (instant bypass on the magic link) OR the cookie already set. Rotate PEEK_CODE to revoke all.
 const peekOk = (peekQ?: string, peekCookie?: string): boolean =>
   !!config.peekCode && (peekQ === config.peekCode || peekCookie === config.peekCode);
+// Paths that must stay live even while the coming-soon splash is up: assets (incl. the splash's own
+// logos), consumer + admin APIs, telephony webhooks, admin login. Everything else on a consumer host
+// is a page and gets the splash (unless the browser has a valid peek).
+const GATE_SKIP = /^\/(api|pub|app|auth|webhooks|logos|og|fonts|media|sw\.js|manifest|robots|favicon|\.well-known|twiml|nav|tapedeck|bridge|listen|twilio-media|admin-login|admin-logout|health|s)\b/; // `s` = the share landing: link-preview bots must see the unfurl cards even while the splash is up (owner 07-14)
 app.use("*", async (c, next) => {
   const code = c.req.query("peek");
   if (code && config.peekCode && code === config.peekCode) {
     const domain = cookieRootDomain(c.req.header("host"));
     setCookie(c, "peek", config.peekCode, { httpOnly: true, secure: true, sameSite: "Lax", path: "/", maxAge: 60 * 60 * 24 * 180, ...(domain ? { domain } : {}) });
+  }
+  // ONE coming-soon decision point: gate consumer page loads here so the peek bypass is reliable. A
+  // valid ?peek code (instant, on the magic link) or the peek cookie skips it for that browser only.
+  if (config.comingSoon && c.req.method === "GET" && !peekOk(code, getCookie(c, "peek"))) {
+    const host = (c.req.header("host") || "").toLowerCase();
+    const adminHost = host.startsWith("caller.") || host.startsWith("admin.");
+    if (!adminHost && !GATE_SKIP.test(c.req.path)) return c.html(renderComingSoon(host, !!c.req.query("ref")));
   }
   return next();
 });
@@ -265,8 +276,19 @@ function seoGraph(brand: ReturnType<typeof resolveBrand>, plainName: string) {
 // Coming-soon splash: the ONLY public HTML while config.comingSoon is on. Check wordmark + the owner's
 // launch line + the four product-type icons. Standalone (no app JS), dark on-brand, noindex.
 const COMING_SOON_ICONS = ["pokemon", "onepiece", "topps", "needoh"];
-function renderComingSoon(_host: string): string {
+function renderComingSoon(_host: string, refShare = false): string {
   const line = "Find insanely hard to get products on the shelves at retail prices.";
+  // Even gated, a shared link must unfurl right: bots read these tags while humans see the splash.
+  const ogImage = `https://${_host}/og/${refShare ? "card-refer" : "runner"}.png`;
+  const ogTitle = refShare ? "We both get a free check." : "Check — coming soon";
+  const og = [
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:title" content="${esc(ogTitle)}">`,
+    `<meta property="og:description" content="${esc(line)}">`,
+    `<meta property="og:image" content="${ogImage}">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    `<meta name="twitter:image" content="${ogImage}">`,
+  ].join("\n");
   const icons = COMING_SOON_ICONS.map(
     (k) => `<img src="/logos/products/${k}.png" alt="" width="60" height="60" loading="eager">`
   ).join("");
@@ -275,6 +297,7 @@ function renderComingSoon(_host: string): string {
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <title>Check — coming soon</title>
+${og}
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
 <style>
@@ -302,11 +325,12 @@ body{background:#0C0C12;color:#fff;font-family:Inter,-apple-system,system-ui,san
 }
 
 /** Render the consumer page branded for a vertical micro-site (resolved from the subdomain). */
-function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html", tone = "", peek = false): string {
-  if (config.comingSoon && !peek) return renderComingSoon(host); // public gate — admin/app.html is never routed here; peek link bypasses
+function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file = "checkit.html", tone = "", peek = false, refShare = false): string {
+  void peek; // coming-soon gate now lives in the single middleware above (peek bypass handled there)
   const canonical = `https://${host}/`;
   const plainName = brand.name.replace(/<[^>]+>/g, "");
-  const ogImage = `https://${host}/og/${brand.key}.png`;
+  // Invite links (?ref=CODE) unfurl with the referral card (owner 07-14) — the page itself is the app.
+  const ogImage = refShare ? `https://${host}/og/card-refer.png` : `https://${host}/og/${brand.key}.png`;
   const head = [
     `<title>${esc(brand.title)}</title>`,
     `<meta name="description" content="${esc(brand.desc)}">`,
@@ -360,17 +384,25 @@ function renderRunner(brand: ReturnType<typeof resolveBrand>, host: string, file
 // Bots read the dynamic OG title/description (brand image stays static = reliable on every platform);
 // humans see a styled card + a CTA back into the app. Pure string render — no deps, cache-friendly.
 function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Record<string, string>, peek = false): string {
-  if (config.comingSoon && !peek) return renderComingSoon(host); // public gate; peek link bypasses
+  void peek; // coming-soon gate now lives in the single middleware above (peek bypass handled there)
+  const zone = q.k === "zone"; // zone-sweep share: "{i} of {n} stores had it"
   const inStock = (q.v || "in") === "in";
   const store = (q.store || "a local store").slice(0, 80);
   const cat = (q.cat || brand.category || "cards").slice(0, 60);
   const plainName = brand.name.replace(/<[^>]+>/g, "");
-  // In-stock share: just the brand mark + two punchy lines (no "is it in stock?" hero, "Found!" pill, or "powered by").
-  const ogImage = inStock ? `https://${host}/logos/brand/check-mark.png` : `https://${host}/og/${brand.key}.png`;
   const site = `https://${host}/`;
-  const title = inStock ? `🔥 ${store}` : `👀 ${store}: watching for ${cat}`;
-  const desc = inStock
-    ? `${cat} in stock!`
+  // Unfurl cards (owner 07-14): section-reflective images with the brandmark + copy baked in.
+  // In-stock find → the per-brand "X in stock" card (store name rides og:title under the image);
+  // zone share → the zone card; out-of-stock keeps the brand hero card.
+  const findCard = `https://${host}/og/card-find-${brand.key}.png`;
+  const ogImage = zone ? `https://${host}/og/card-zone.png` : inStock ? findCard : `https://${host}/og/${brand.key}.png`;
+  const zN = Math.max(0, Number(q.n) || 0), zI = Math.max(0, Number(q.i) || 0);
+  const title = zone ? `${zI} of ${zN} stores had it in stock`
+    : inStock ? `${cat} in stock at ${store}` : `👀 ${store}: watching for ${cat}`;
+  const desc = zone
+    ? `One tap checked every store in the area. No answer = no charge.`
+    : inStock
+    ? `Check AI called the store and confirmed it. No answer = no charge.`
     : `Not in yet — but ${plainName} will catch the restock. Check any store near you with one tap.`;
   const head = [
     `<title>${esc(title)}</title>`,
@@ -383,7 +415,7 @@ function renderShare(brand: ReturnType<typeof resolveBrand>, host: string, q: Re
     `<meta property="og:description" content="${esc(desc)}">`,
     `<meta property="og:url" content="https://${host}/s?store=${encodeURIComponent(store)}&cat=${encodeURIComponent(cat)}&v=${inStock ? "in" : "out"}">`,
     `<meta property="og:image" content="${ogImage}">`,
-    `<meta name="twitter:card" content="${inStock ? "summary" : "summary_large_image"}">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${esc(title)}">`,
     `<meta name="twitter:description" content="${esc(desc)}">`,
     `<meta name="twitter:image" content="${ogImage}">`,
@@ -414,7 +446,7 @@ app.get("/s", (c) => {
   c.header("Cache-Control", "public, max-age=300");
   const host = (c.req.header("host") || "").toLowerCase();
   const brand = resolveBrand(host, c.req.query("brand"));
-  const q = { store: c.req.query("store") || "", cat: c.req.query("cat") || "", v: c.req.query("v") || "in" };
+  const q = { store: c.req.query("store") || "", cat: c.req.query("cat") || "", v: c.req.query("v") || "in", k: c.req.query("k") || "", n: c.req.query("n") || "", i: c.req.query("i") || "" };
   return c.html(renderShare(brand, host, q, peekOk(c.req.query("peek"), getCookie(c, "peek"))));
 });
 
@@ -553,7 +585,7 @@ const rootHandler = (c: Context) => {
   const consumer = config.staging.on
     ? (!(host.startsWith("caller.") || host.startsWith("admin.")) || !!override)
     : (host.startsWith("runner.") || brand.key !== "runner" || !!override);
-  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "", peekOk(c.req.query("peek"), getCookie(c, "peek"))) : withAnalytics(page("app.html")));
+  return c.html(consumer ? renderRunner(brand, host, "checkit.html", c.req.query("tone") || "", peekOk(c.req.query("peek"), getCookie(c, "peek")), !!c.req.query("ref")) : withAnalytics(page("app.html")));
 };
 app.get("/", rootHandler);
 // Clean admin deep-links (/feedback, /trees, …): one STATIC route per admin section, all serving the same
@@ -568,7 +600,7 @@ for (const slug of ["pokemon", "onepiece", "toppsbasketball", "needoh"]) {
   app.get(`/${slug}`, (c) => {
     c.header("Cache-Control", "no-cache"); // see "/" — bfcache-friendly, still always revalidated
     const host = (c.req.header("host") || "").toLowerCase();
-    return c.html(renderRunner(resolveBrand(host, slug), host, "checkit.html", c.req.query("tone") || "", peekOk(c.req.query("peek"), getCookie(c, "peek"))));
+    return c.html(renderRunner(resolveBrand(host, slug), host, "checkit.html", c.req.query("tone") || "", false, !!c.req.query("ref")));
   });
 }
 // Minimal "first-time visitor" preview of the apex homepage — same page; the client (body.peek)
@@ -1418,7 +1450,7 @@ app.get("/pub/stores/near", async (c) => {
   const state = (c.req.query("state") || "").trim().toUpperCase();
   const q = (c.req.query("q") || "").trim().toLowerCase();
   if (!hasLoc && !state && !q) return c.json({ error: "lat+lng (or state / q) required" }, 400);
-  const radius = Math.min(Math.max(Number(c.req.query("radius") || 25), 1), 150);
+  const radius = Math.min(Math.max(Number(c.req.query("radius") || 25), 0.5), 150); // 0.5 = the new half-mile consumer stop (owner 07-14)
   const limit = Math.min(Math.max(Number(c.req.query("limit") || 60), 1), 200);
   const offset = Math.max(Number(c.req.query("offset") || 0), 0);
   // 🔒 Text-search hardening (data-exposure lockdown): the q-only path is the one way to page the store
@@ -1434,7 +1466,14 @@ app.get("/pub/stores/near", async (c) => {
   // Store-type filter (the home chips): ?type=Hobby returns ONLY that type, SERVER-side — in a dense
   // metro the nearest-200 page is wall-to-wall Retail, so client-side filtering would starve the
   // Hobby/Thrift chips. Matches the chain's admin type exactly ("Hobby", "Thrift", …).
-  const typeF = (c.req.query("type") || "").trim();
+  let typeF = (c.req.query("type") || "").trim();
+  // Thrift opt-in (Website ask): Thrift chains stay MUTED in every general feed; the Thrift chip
+  // requests them EXPLICITLY with ?section=thrift, which lifts the muted filter for Thrift-type
+  // chains only and pins the type filter so nothing else rides along. The global thrift master
+  // switch (policy.flags.thrift) still wins — flag off = the opt-in is ignored.
+  const thriftOptIn = (c.req.query("section") || "").trim().toLowerCase() === "thrift"
+    && (await getPolicy()).flags.thrift !== false;
+  if (thriftOptIn) typeF = "Thrift";
 
   const chainRows = await cachedChains();
   const types = new Map(chainRows.map((x) => [x.id, x.type]));
@@ -1520,7 +1559,8 @@ app.get("/pub/stores/near", async (c) => {
   }
   const all = rows
     .filter((r) => comp || !r.ownerOnly)
-    .filter((r) => !(r.chainId && mutedChains.has(r.chainId)))
+    // Muted chains never surface — except Thrift-type chains when the Thrift chip explicitly opted in.
+    .filter((r) => !(r.chainId && mutedChains.has(r.chainId)) || (thriftOptIn && r.chainId != null && types.get(r.chainId) === "Thrift"))
     .filter((r) => !mode
       || (mode === "call" && callable(r))
       || (mode === "kiosk" && r.hasKiosk === true)
@@ -3071,6 +3111,10 @@ app.post("/app/zones/:id/check", async (c) => {
     : (await db.select().from(categories).where(eq(categories.key, "pokemon")))[0];
   if (!cat) return c.json({ error: "category_not_found" }, 400);
   const links = await db.select().from(zoneRetailers).where(eq(zoneRetailers.zoneId, id));
+  // Sweep cap (owner 07-14): one tap never places more than 25 calls — protects telephony/agent
+  // concurrency for everyone else. The builder caps selection at 25 too; legacy bigger zones get a
+  // clean error instead of a silent partial sweep.
+  if (links.length > 25) return c.json({ error: "zone_too_big", max: 25 }, 400);
   const allRows = (await db.select().from(retailers).where(inArray(retailers.id, links.map((l) => l.retailerId)))).filter((r) => r.sellsPacks !== false);
   // Skip stores we KNOW are closed right now — a closed store can't be reached, so don't burn the
   // check on it (owner 07-11: "STORE XYZ is closed but we can still call STORE ABC"). Unknown hours
@@ -3763,6 +3807,78 @@ app.get("/api/admin/users", async (c) => {
     };
   }));
 });
+// Per-customer detail view (docs/specs/admin-user-view.md): everything one account is set up
+// with, in one call — identity/plan/entitlements/credits, their zones + schedules, last 20 checks.
+app.get("/api/admin/users/:id", async (c) => {
+  const id = decodeURIComponent(c.req.param("id"));
+  const a = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
+  if (!a) return c.json({ error: "not_found" }, 404);
+  const comp = isComp(a.email) || isCompAccount(a);
+  const staff = comp || (await staffAccountIds()).has(a.clerkUserId);
+  const features = await accountFeatures(a.subTier, comp);
+  const tier = a.subTier ? (await getPlans()).tiers.find((t) => t.key === a.subTier) ?? null : null;
+
+  const zs = await db.select().from(zones).where(eq(zones.ownerUserId, id));
+  const zoneLinks = zs.length ? await db.select().from(zoneRetailers).where(inArray(zoneRetailers.zoneId, zs.map((z) => z.id))) : [];
+  const lastRunByZone = new Map<number, number>();
+  if (zs.length) {
+    for (const z of zs) {
+      const last = (await db.select().from(callResults).where(like(callResults.zoneRunId, `z${z.id}-%`)).orderBy(desc(callResults.startedAt)).limit(1))[0];
+      if (last?.startedAt) lastRunByZone.set(z.id, last.startedAt);
+    }
+  }
+  const scheds = (await db.select().from(customerSchedules).where(eq(customerSchedules.finderUserId, id))).filter((s) => s.active);
+  const recent = await db.select().from(callResults).where(eq(callResults.finderUserId, id)).orderBy(desc(callResults.startedAt)).limit(20);
+  const stores = await retailerMap();
+  const cats = new Map((await db.select().from(categories)).map((x) => [x.id, x.label]));
+  const DOWS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  return c.json({
+    id: a.clerkUserId,
+    phone: a.phone || (a.clerkUserId.startsWith("phone:") ? a.clerkUserId.slice(6) : null),
+    email: a.email || null,
+    createdAt: a.createdAt, comp, staff,
+    subscription: {
+      status: comp ? "active" : (a.subscription ?? "none"),
+      tier: comp ? "founder" : (a.subTier ?? null),
+      tierName: comp ? "Founder" : (tier?.name ?? null),
+      priceCents: tier?.monthlyCents ?? null,
+      renewsAt: a.subRenewsAt || null,
+    },
+    entitlements: features,
+    credits: {
+      quota: comp ? 9999 : (a.quotaCredits ?? 0),
+      payg: comp ? 9999 : (a.credits ?? 0),
+      total: comp ? 9999 : spendableCredits(a),
+      checksMade: a.callsMade ?? 0,
+      lifetimeSpendCents: a.totalSpentCents ?? 0,
+    },
+    zones: zs.map((z) => ({ id: z.id, name: z.name, stores: zoneLinks.filter((l) => l.zoneId === z.id).length, lastRun: lastRunByZone.get(z.id) ?? null })),
+    schedules: scheds.map((s) => ({
+      id: s.id,
+      target: (stores.get(s.retailerId)?.name || "A store").split("—")[0].trim(),
+      category: cats.get(s.categoryId) || "cards",
+      days: (s.daysOfWeek || "").split(",").filter(Boolean).map((d) => DOWS[Number(d)] ?? d).join(", ") || "shipment day",
+      time: s.timeLocal || "10:00",
+    })),
+    recentChecks: recent.map((r) => ({
+      cid: r.providerCallId, store: stores.get(r.retailerId)?.name || "A store",
+      category: cats.get(r.categoryId) || "cards", status: r.status, statusKey: r.statusKey, at: r.startedAt,
+    })),
+  });
+});
+// Grant free checks to an account (support/ops action from the detail panel).
+app.post("/api/admin/users/:id/grant", async (c) => {
+  const id = decodeURIComponent(c.req.param("id"));
+  const { checks } = await c.req.json().catch(() => ({}));
+  const n = Math.round(Number(checks));
+  if (!n || n < 1 || n > 1000) return c.json({ error: "checks must be 1-1000" }, 400);
+  const a = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
+  if (!a) return c.json({ error: "not_found" }, 404);
+  await grantCredits(id, n, 0);
+  const after = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
+  return c.json({ ok: true, granted: n, credits: after?.credits ?? null });
+});
 // Flag / unflag an account as admin/test (won't count as a customer).
 app.post("/api/admin/users/staff", async (c) => {
   const { id, on } = await c.req.json().catch(() => ({}));
@@ -3931,7 +4047,13 @@ app.get("/api/admin/overview", async (c) => {
     id: r.id, store: (stores.get(r.retailerId)?.name || "?").split("—")[0].trim(), category: cats.get(r.categoryId) || "",
     status: r.status, confirmed: r.confirmed, at: r.startedAt, secs: r.completedAt ? r.completedAt - r.startedAt : null, cid: r.providerCallId,
   }));
-  return c.json({ live, today: slice(d1), week: slice(d7), month: slice(d30), avgCallSeconds30d: avg(durs), chainStats, recentCalls });
+  // Seven trailing 24h buckets (oldest first) — feeds the dashboard's trend chip + sparkline.
+  // days[6] matches today (last 24h); days[5] is "yesterday" for the vs-yesterday delta.
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const from = now - (7 - i) * 86400, to = now - (6 - i) * 86400;
+    return recent.filter((r) => r.startedAt >= from && r.startedAt < to).length;
+  });
+  return c.json({ live, today: slice(d1), week: slice(d7), month: slice(d30), days, avgCallSeconds30d: avg(durs), chainStats, recentCalls });
 });
 
 // ---- Settings (master toggles) ----

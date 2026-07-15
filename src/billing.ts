@@ -321,7 +321,12 @@ export async function handleStripeEvent(event: StripeEvent) {
       // Embedded-Elements first payment — no checkout.session.completed fires, so set entitlement here
       // from the invoice's price → tier. setSubEntitlement SETS (idempotent) so it's safe even if the
       // hosted path also ran. Revenue is booked once, on create only.
-      const priceId = ((obj.lines as { data?: Array<{ price?: { id?: string } }> } | undefined)?.data?.[0]?.price)?.id;
+      // Stripe API ≥2025 moved the line's price id from `price.id` to `pricing.price_details.price`
+      // (same migration that moved the client_secret — see createCheckoutIntent). Read new, fall back
+      // to old: with only the old read, Elements subscribers PAID AND GOT NOTHING (caught by the
+      // launch gate against staging 2026-07-14).
+      const line = (obj.lines as { data?: Array<{ price?: { id?: string }; pricing?: { price_details?: { price?: string } } }> } | undefined)?.data?.[0];
+      const priceId = line?.pricing?.price_details?.price ?? line?.price?.id;
       const tier = tierByPriceId(await getPlans(), priceId);
       if (tier) { await setSubEntitlement(a.clerkUserId, tier.key, tier.checksPerMonth, customer); await bumpRevenue(a.clerkUserId, amount); }
     }

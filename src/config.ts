@@ -48,7 +48,7 @@ export const config = {
   comingSoon: process.env.COMING_SOON === "1",
   // Peek door: a secret ?peek=<PEEK_CODE> link sets a browser cookie that skips the coming-soon splash
   // for THAT browser only (all brand subdomains via the shared root-domain cookie). Everyone else still
-  // gets the splash. Lets the owner test the live site as a real customer before launch. Rotate to revoke.
+  // gets the splash. Lets the owner test prod as a real customer without going public. Rotate to revoke.
   peekCode: process.env.PEEK_CODE || "",
   // Outbound calling/SMS is live everywhere EXCEPT a staging deploy that hasn't opted in. This is
   // the single switch every outbound-dial path checks (assertCallsEnabled / config.callsEnabled).
