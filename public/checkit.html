@@ -1831,11 +1831,12 @@ html[data-skin="v2"] #scorePostOv.on .modal{animation:sheetUpV2 .34s cubic-bezie
 html[data-skin="v2"] #scorePostOv .modal>.x{display:none!important}
 /* Add-your-store, "Tell me when it's back" and Auto-check slide up as bottom sheets too
    (owner 07-10, polish items 20 + 59 + 60 — they were centered popups). Same recipe as scorePostOv. */
-html[data-skin="v2"] #storeReqOverlay,html[data-skin="v2"] #watchOverlay,html[data-skin="v2"] #scheduleOverlay{align-items:flex-end;padding:0}
-html[data-skin="v2"] #storeReqOverlay .modal,html[data-skin="v2"] #watchOverlay .modal,html[data-skin="v2"] #scheduleOverlay .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
-html[data-skin="v2"] #storeReqOverlay .modal::before,html[data-skin="v2"] #watchOverlay .modal::before,html[data-skin="v2"] #scheduleOverlay .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
-html[data-skin="v2"] #storeReqOverlay.on .modal,html[data-skin="v2"] #watchOverlay.on .modal,html[data-skin="v2"] #scheduleOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
+html[data-skin="v2"] #storeReqOverlay,html[data-skin="v2"] #watchOverlay,html[data-skin="v2"] #scheduleOverlay,html[data-skin="v2"] #inviteOverlay,html[data-skin="v2"] #receiptOverlay,html[data-skin="v2"] #kioskOverlay{align-items:flex-end;padding:0}
+html[data-skin="v2"] #storeReqOverlay .modal,html[data-skin="v2"] #watchOverlay .modal,html[data-skin="v2"] #scheduleOverlay .modal,html[data-skin="v2"] #inviteOverlay .modal,html[data-skin="v2"] #receiptOverlay .modal,html[data-skin="v2"] #kioskOverlay .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
+html[data-skin="v2"] #storeReqOverlay .modal::before,html[data-skin="v2"] #watchOverlay .modal::before,html[data-skin="v2"] #scheduleOverlay .modal::before,html[data-skin="v2"] #inviteOverlay .modal::before,html[data-skin="v2"] #receiptOverlay .modal::before,html[data-skin="v2"] #kioskOverlay .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
+html[data-skin="v2"] #storeReqOverlay.on .modal,html[data-skin="v2"] #watchOverlay.on .modal,html[data-skin="v2"] #scheduleOverlay.on .modal,html[data-skin="v2"] #inviteOverlay.on .modal,html[data-skin="v2"] #receiptOverlay.on .modal,html[data-skin="v2"] #kioskOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 html[data-skin="v2"] #storeReqOverlay .modal>.x,html[data-skin="v2"] #watchOverlay .modal>.x,html[data-skin="v2"] #scheduleOverlay .modal>.x{display:none!important}
+html[data-skin="v2"] #inviteOverlay .modal>.x,html[data-skin="v2"] #receiptOverlay .modal>.x,html[data-skin="v2"] #kioskOverlay .modal>.x{display:none!important}
 html[data-skin="v2"] #buyOverlay .modal{overflow-y:auto;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
 /* 6c CHECKOUT (v2) — branded on-site Stripe Elements page. Bottom sheet, comp tokens: raised order
    card, carved "or pay with card" divider, Payment Element in the well, green SUBSCRIBE ring capsule. */
@@ -2481,6 +2482,7 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 <div class="overlay" id="receiptOverlay" onclick="if(event.target===this)closeReceipt()">
   <div class="modal" style="position:relative;max-width:420px;text-align:center">
     <span class="x" onclick="closeReceipt()">×</span>
+    <div id="rcptMark" style="display:flex;justify-content:center;margin-bottom:6px"></div>
     <div style="font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--purple);margin-bottom:8px" data-i18n="rcpt.tag">Verified intel</div>
     <h3 style="margin:0 0 16px" data-i18n="rcpt.title">Kiosk receipt = free check</h3>
     <div class="rstep"><span class="rnum">1</span><div data-i18n="rcpt.s1">At the kiosk? Enter <b>our email</b> at checkout. The receipt comes straight to us.</div></div>
@@ -2496,8 +2498,9 @@ html[data-skin="v2"] .modal h3{font-weight:900;letter-spacing:-.4px}
 <div class="overlay" id="kioskOverlay" onclick="if(event.target===this)closeKiosk()">
   <div class="modal" style="position:relative;max-width:430px;text-align:left">
     <span class="x" onclick="closeKiosk()">×</span>
-    <div style="font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--purple)" data-i18n="k.tag">Wisdom of the crowd</div>
-    <h3 style="margin:6px 0 2px"><span class="mico" id="kIco"></span><span data-i18n="k.title">Report a kiosk refresh</span></h3>
+    <div id="kMark" style="display:flex;justify-content:center;margin-bottom:6px"><span class="mico" id="kIco"></span></div>
+    <div style="font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--purple);text-align:center" data-i18n="k.tag">Wisdom of the crowd</div>
+    <h3 style="margin:6px 0 2px;text-align:center"><span data-i18n="k.title">Report a kiosk refresh</span></h3>
     <p style="margin:0 0 14px;color:#b9b9c8;font-size:13px;line-height:1.5" data-i18n="k.sub">Spotted a Pokémon kiosk that restocks on a schedule? Drop its timing. Every report earns you <b id="kiosk_reward">a free check</b>.</p>
     <label class="klbl" data-i18n="k.which">Which store &amp; location</label>
     <input id="k_label" data-i18n-ph="ph.kiosk" placeholder="e.g. Albertsons, Sunset Blvd, LA" class="kin">
@@ -3789,9 +3792,9 @@ async function acctInvitePanel(btn){
   const short=link.replace(/^https?:\/\//,'');
   let ov=$('inviteOverlay');
   if(!ov){ ov=document.createElement('div'); ov.className='overlay'; ov.id='inviteOverlay';
-    ov.innerHTML='<div class="modal" style="position:relative;max-width:400px;text-align:left"><span class="x" onclick="closeInvite()">×</span><h3 style="margin:2px 0 2px">'+t('ref.tagline','Give a check, get a check')+'</h3><div id="inviteHost"></div></div>';
+    ov.innerHTML='<div class="modal" style="position:relative;text-align:left"><div style="display:flex;justify-content:center;margin-bottom:6px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="'+AC1()+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 4.8 0 0 1 12 8a4.8 4.8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></svg></div><h3 style="margin:2px 0 2px;text-align:center">'+t('ref.tagline','Give a check, get a check')+'</h3><div id="inviteHost"></div></div>';
     ov.onclick=e=>{ if(e.target===ov) closeInvite(); };
-    document.body.appendChild(ov); }
+    document.body.appendChild(ov); try{ sheetDrag('inviteOverlay', closeInvite); }catch(_){ } }
   const pan=document.createElement('div');
   const btnS='flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0;border:0;border-radius:14px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;font-size:10px;font-weight:800;letter-spacing:.12em;cursor:pointer';
   const ic=(pth)=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${pth}</svg>`;
@@ -4281,6 +4284,7 @@ function agoStr(sec){ const s=Math.floor(Date.now()/1000)-sec; const ago=u=>LANG
 // ── Custom iconography — drawn marks (not stock emoji) that carry the "hunt / signal out" energy ──
 const AC=()=>(BRAND&&BRAND.accent)||'#4ADE80';
 const AC2=()=>(BRAND&&BRAND.accent2)||'#A78BFA';
+const AC1=()=>(BRAND&&BRAND.accent)||'#FFCB05'; // the section accent — every sheet-top icon uses THIS (owner 07-14)
 const ICO={
   logomark:c=>`<svg width="30" height="30" viewBox="0 0 32 32" fill="none"><path d="M21 9.5a9 9 0 0 1 0 13" stroke="${c}" stroke-width="2.4" stroke-linecap="round" opacity=".32"/><path d="M17.6 13a4.4 4.4 0 0 1 0 6" stroke="${c}" stroke-width="2.4" stroke-linecap="round" opacity=".7"/><circle cx="11.5" cy="16" r="4.3" fill="${c}"/></svg>`,
   pokeball:`<svg width="28" height="28" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="#fff" stroke="#0C0C12" stroke-width="7"/><path d="M50 6a44 44 0 0 1 44 44H6A44 44 0 0 1 50 6z" fill="#EE1515"/><rect x="6" y="46" width="88" height="8" fill="#0C0C12"/><circle cx="50" cy="50" r="14" fill="#fff" stroke="#0C0C12" stroke-width="7"/></svg>`,
@@ -4349,14 +4353,15 @@ function renderIcons(){
   setI('succ_fileico', ICO.cam('#A78BFA').replace('width="15" height="15"','width="18" height="18"'));
   setI('scTrophy', ICO.trophy(AC()).replace('width="14" height="14"','width="20" height="20"'));
   setI('succCam', ICO.cam('#06210f').replace('width="15" height="15"','width="16" height="16"'));
-  setI('watchIco', ICO.bell(AC2()).replace('width="15" height="15"','width="20" height="20"'));
+  setI('watchIco', ICO.bell(AC1()).replace('width="15" height="15"','width="20" height="20"'));
   setI('schIco', ICO.cal(AC()).replace('width="15" height="15"','width="26" height="26"'));
-  setI('kIco', ICO.kioskMini(AC2()).replace('width="18" height="18"','width="20" height="20"'));
+  setI('rcptMark', ICO.kioskMini(AC1()).replace('width="18" height="18"','width="28" height="28"'));
+  setI('kIco', ICO.kioskMini(AC1()).replace('width="18" height="18"','width="20" height="20"'));
   setI('shareIco', ICO.mega(AC2()).replace('width="15" height="15"','width="20" height="20"'));
   setI('ddIco', ICO.truck(AC2()).replace('width="15" height="15"','width="20" height="20"'));
   setI('scoreIco', ICO.cam(AC2()).replace('width="15" height="15"','width="20" height="20"'));
   setI('wlMark', ICO.pin(AC2()).replace('width="20" height="20"','width="36" height="36"'));
-  setI('srMark', ICO.store(AC2()).replace('width="18" height="18"','width="36" height="36"'));
+  setI('srMark', ICO.store(AC1()).replace('width="18" height="18"','width="36" height="36"'));
   setI('refIcon', ICO.mega(AC()).replace('width="15" height="15"','width="20" height="20"')); // invite = megaphone (gift is the Earn summary icon now)
   setI('shT1', ICO.msg('#e9e9f0').replace('width="15" height="15"','width="20" height="20"'));
   setI('shT2', ICO.x('#e9e9f0').replace('width="14" height="14"','width="19" height="19"'));
@@ -5905,7 +5910,7 @@ function showTodayLanding(forceCal){
   stopLiveTimers(); if($('hangup_btn'))$('hangup_btn').style.display='none';
   RAIL_F.date=''; RAIL_F.store=''; RAIL_F.tone=''; RAIL_CID=null; LASTRES=null; RAIL_CAL_M=null;
   // Sheet header — big title + this-month count. No back button: it's a slide-up (drag down / tap behind).
-  const hdr=`<div style="padding:2px 2px 0"><div style="font-size:22px;font-weight:900;letter-spacing:-.4px">${t('hist.title','Check history')}</div><div style="padding:3px 0 8px;font-size:12.5px;font-weight:600;color:#8A8A96">${(()=>{try{const now=new Date();const nn=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length;return nn+' '+t('hist.inmonth','checks in')+' '+now.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long'});}catch(_){return ''}})()}</div></div>`;
+  const hdr=`<div style="padding:2px 2px 0;text-align:center"><div style="display:flex;justify-content:center;margin-bottom:8px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg></div><div style="font-size:22px;font-weight:900;letter-spacing:-.4px">${t('hist.title','Check history')}</div><div style="padding:3px 0 8px;font-size:12.5px;font-weight:600;color:#8A8A96">${(()=>{try{const now=new Date();const nn=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length;return nn+' '+t('hist.inmonth','checks in')+' '+now.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long'});}catch(_){return ''}})()}</div></div>`;
   // Logged out → clear Sign-in CTA (your checks live in your account, not local storage).
   if(!isAuthed()){
     $('histmodal').innerHTML=`<div class="hist-scroll">${hdr}
@@ -5970,7 +5975,7 @@ async function openHistEntry(e){
 }
 // ---- My-checks tabs (6e/6f/6g): in-place panels inside the account pop-up. ----
 let ACT_WOFF=0, ACT_DAY=null, ACT_TONE='';
-function actWeek(d){ ACT_WOFF=Math.max(0,ACT_WOFF-d); ACT_DAY=null; ACT_TONE=''; acctTab('activity',true); }
+function actWeek(d){ ACT_WOFF=Math.max(0,ACT_WOFF+d); ACT_DAY=null; ACT_TONE=''; acctTab('activity',true); } // +1 = a week further back, -1 = toward the present (floor 0 = this week)
 function actPick(i){ ACT_DAY=(ACT_DAY===i?null:i); ACT_TONE=''; acctTab('activity',true); }
 function actTone(tn){ ACT_TONE=(ACT_TONE===tn?'':tn); acctTab('activity',true); }
 // Auto-checks block inside My checks (owner: manage them where the account lives; shows the product
@@ -6062,14 +6067,14 @@ function acctTab(which,fromPop){
       <span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span style="display:block;margin-top:2px;font-size:11.5px;font-weight:600;color:#8A8A96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.location||e.address||'')}</span></span>
       <span style="flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px">${v2StatusChip(railTone(e),22)}<span style="font-size:11px;font-weight:600;color:#8A8A96">${agoTx(e)}</span></span>
     </button>`).join('');
-    const arrow=(d,dis)=>`<button ${dis?'disabled':''} onclick="actWeek(${d})" style="flex:0 0 auto;width:26px;height:26px;border:0;border-radius:9px;background:${dis?'rgba(255,255,255,.04)':'linear-gradient(180deg,#31313A 0%,#26262C 100%)'};color:${dis?'#4A4A52':'#CDCDD8'};display:flex;align-items:center;justify-content:center;cursor:${dis?'default':'pointer'};box-shadow:${dis?'none':'0 6px 10px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)'}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="${d<0?'M15 18l-6-6 6-6':'M9 18l6-6-6-6'}"/></svg></button>`;
+    const arrow=(d,dis)=>`<button ${dis?'disabled':''} onclick="actWeek(${d})" style="flex:0 0 auto;width:26px;height:26px;border:0;border-radius:9px;background:${dis?'rgba(255,255,255,.04)':'linear-gradient(180deg,#31313A 0%,#26262C 100%)'};color:${dis?'#4A4A52':'#CDCDD8'};display:flex;align-items:center;justify-content:center;cursor:${dis?'default':'pointer'};box-shadow:${dis?'none':'0 6px 10px -6px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)'}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="${d>0?'M15 18l-6-6 6-6':'M9 18l6-6-6-6'}"/></svg></button>`;
     const calico='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4"/><path d="M16 2v4"/><path d="M3 10h18"/></svg>';
     panel.innerHTML=`<div style="background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:14px 16px;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">
         <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:10px;font-weight:700;letter-spacing:.15em;color:#8A8A96">${esc(t('acct.perweek2','Checks this week').toUpperCase())}</span><a onclick="ACCT_RETURN='activity';closeAccount();openHistory(true)" style="cursor:pointer;display:inline-flex">${calico}</a></div>
         <div style="margin-top:12px;display:flex;align-items:flex-end;gap:6px">
           ${arrow(1,false)}
           <div style="flex:1;display:flex;align-items:flex-end;gap:5px;height:92px">${bars}</div>
-          ${arrow(-1,ACT_WOFF<=0)}
+          ${arrow(-1,ACT_WOFF<=0)} <!-- ‹ back always; › forward only after going back (owner 07-14) -->
         </div>
       </div>
       <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border-radius:16px;padding:13px 0;box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">${cell(tones.in,t('fbk.in','In stock').toUpperCase(),'in')}${cell(tones.out,t('fbk.out','Out').toUpperCase(),'out')}${cell(tones.soon,t('fbk.soon','Restock').toUpperCase(),'soon')}${cell(tones.unk,t('fbk.unsure','Unclear').toUpperCase(),'unk')}</div>
@@ -6437,7 +6442,9 @@ const ZCRED_ICO='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" sty
 function zCredits(){ try{ if(ACCOUNT&&(ACCOUNT.comp||ACCOUNT.credits==null&&ACCOUNT.subscription==='active')) return '∞'; const c=ACCOUNT?ACCOUNT.credits:0; return (c==null?0:c); }catch(_){ return 0; } }
 // Clean header: just the title (no credits pill — that read as "repeating My checks"). No back button on
 // the top-level My Zones (it's a slide-up: drag down / tap behind). Sub-screens pass `back` for list nav.
-const zFrameHead=(title,back)=>`<div class="zf-head">${back?`<button class="zf-back" onclick="${back}" aria-label="Back">‹</button>`:''}<div class="zf-title">${esc(title)}</div></div>`;
+const zFrameHead=(title,back)=>back
+  ? `<div class="zf-head"><button class="zf-back" onclick="${back}" aria-label="Back">‹</button><div class="zf-title">${esc(title)}</div></div>`
+  : `<div class="zf-head" style="flex-direction:column;align-items:center;gap:9px;padding-top:0"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><div class="zf-title">${esc(title)}</div></div>`; // unified sheet nav: icon on top (owner 07-14)
 const ZKEBAB='<svg width="20" height="20" viewBox="0 0 24 24" fill="#8A8A96"><circle cx="5" cy="12" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle></svg>';
 const ZGOARR='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFCB05" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h15"></path><path d="M13 6l6 6-6 6"></path></svg>';
 async function openZones(){
@@ -6913,15 +6920,15 @@ function renderTodayCal(){
   const title=m.toLocaleDateString(LANG==='es'?'es-ES':'en-US',{month:'long',year:'numeric'});
   const dow=(LANG==='es'?['D','L','M','M','J','V','S']:['S','M','T','W','T','F','S']);
   const nav=(d,p)=>`<button onclick="todayCalMonth(${d})" aria-label="${p}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="${d<0?'M14.5 5L8 12l6.5 7':'M9.5 5l6.5 7-6.5 7'}" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
-  const first=new Date(y,mo,1).getDay(), n=new Date(y,mo+1,0).getDate();
+  const n=new Date(y,mo+1,0).getDate();
   const today=tsDay(Date.now());
-  let cells=''; for(let i=0;i<first;i++) cells+='<div></div>';
+  let cells=''; // day 1 in the very first slot — no leading blanks (owner 07-14)
   const schDows=new Set((window.SCHEDS||[]).flatMap(x=>String(x.daysOfWeek||'').split(',').filter(Boolean).map(Number)));
   for(let d=1;d<=n;d++){ const key=y+'-'+String(mo+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); const has=days.has(key), isToday=key===today;
     const sched=schDows.size&&key>=today&&schDows.has(new Date(y,mo,d).getDay());
     cells+=`<div class="rcal-d ${has?'has t-'+(dayTones[key]||'unk'):''} ${sched&&!has?'schday':''} ${isToday?'today':''}" ${has?`onclick="todayPickDay('${key}')"`:''}>${d}</div>`; }
   el.innerHTML=`<div class="rcal-h">${nav(-1,'Previous month')}<b>${esc(title)}</b>${nav(1,'Next month')}</div>
-    <div class="rcal-grid">${dow.map(x=>`<div class="rcal-dow">${x}</div>`).join('')}${cells}</div>`;
+    <div class="rcal-grid">${cells}</div>`;
 }
 function todayCalMonth(d){ const m=new Date(RAIL_CAL_M); RAIL_CAL_M=new Date(m.getFullYear(), m.getMonth()+d, 1).getTime(); renderTodayCal(); }
 function todayPickDay(key){ const calls=histList().filter(e=>e.cid&&e.ts&&railInCat(e)&&tsDay(e.ts)===key).sort((a,b)=>b.ts-a.ts); if(!calls.length){ toast(t('rail.noneday','No checks on that day')); return; } RAIL_F.date=key; RAIL_F.store=''; RAIL_F.tone=''; openHistEntry(calls[0]); }
@@ -7184,6 +7191,8 @@ sheetDrag('zones', ()=>{ try{ backFromZones(); }catch(_){ } });       // drag My
 sheetDrag('histOverlay', ()=>{ try{ closeHistory(); }catch(_){ } });  // drag Check history down to dismiss
 sheetDrag('watchOverlay', ()=>{ try{ closeWatch(); }catch(_){ } });
 sheetDrag('scheduleOverlay', ()=>{ try{ closeSchedule(); }catch(_){ } });
+sheetDrag('receiptOverlay', ()=>{ try{ closeReceipt(); }catch(_){ } });
+sheetDrag('kioskOverlay', ()=>{ try{ closeKiosk(); }catch(_){ } });
 async function buy(kind, annual){
   if(!isAuthed()){ signUp(); return; }
   $('buy_note').textContent=t('buy.opening','Opening secure checkout…');
