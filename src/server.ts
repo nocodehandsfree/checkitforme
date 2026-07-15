@@ -20,7 +20,7 @@ import { config } from "./config";
 import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
-import { importZonesData, geocodeMissing, backfillDirectChains } from "./db/import-data";
+import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus } from "./store-sync";
 import { openState } from "./store-hours";
@@ -5174,6 +5174,35 @@ async function placeChainTreeCall(chainId: number): Promise<{ ok: boolean; error
   }
   return { ok: false, error: "no open store right now (all closed?)" };
 }
+// Sync LEARNED chain-nav fields PROD → STAGING. Nav is learned from real calls on prod; staging is a
+// curation copy that goes stale ("mapped on prod, gray COMING SOON on staging"). The promotion rule:
+// learned fields refresh prod→staging. Keyed by NAME (chain ids differ per env). SKIPS the curated
+// DIRECT_DEFAULT_CHAINS so a stale prod tree (e.g. Ace's old "press 4") can never clobber the
+// independent/co-op direct default. Silent-agent invariant enforced. Admin-gated. `dryRun:true` reports.
+app.post("/api/admin/chains/nav-sync", async (c) => {
+  const b = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  const incoming = (Array.isArray(b) ? b : ((b as Record<string, unknown>).chains as unknown[])) || [];
+  if (!Array.isArray(incoming) || !incoming.length) return c.json({ error: "expected { chains: [{name, …nav}] }" }, 400);
+  const NAV = ["navStatus", "navRecipe", "navType", "navSeconds", "ringsDirect", "treeStatus", "treeNote",
+    "phoneTreeDefault", "dtmfShortcut", "answerPath", "avgTreeSeconds", "treeLearnedAt", "treeVerifiedAt"] as const;
+  const dry = (b as Record<string, unknown>).dryRun === true;
+  const byName = new Map((await db.select().from(chains)).map((x) => [x.name, x]));
+  let updated = 0, skippedDirect = 0, missing = 0;
+  for (const inc of incoming as Record<string, unknown>[]) {
+    const row = inc && typeof inc.name === "string" ? byName.get(inc.name) : null;
+    if (!row) { missing++; continue; }
+    if (isDirectDefaultChain(row.name)) { skippedDirect++; continue; } // never clobber the curated direct default
+    const patch: Record<string, unknown> = {};
+    for (const k of NAV) if (k in inc) patch[k] = inc[k];
+    if (!Object.keys(patch).length) continue;
+    // silent-agent invariant: a direct chain must carry NO tree-seconds
+    if (patch.ringsDirect === true || patch.answerPath === "direct_human") patch.avgTreeSeconds = null;
+    if (!dry) await db.update(chains).set(patch).where(eq(chains.id, row.id));
+    updated++;
+  }
+  if (!dry) invalidateRefCache();
+  return c.json({ [dry ? "wouldUpdate" : "updated"]: updated, skippedDirect, missing, received: incoming.length });
+});
 app.get("/api/admin/tree/list", async (c) => {
   const chs = await db.select().from(chains).orderBy(chains.name);
   const rows = await db.select({ cid: retailers.chainId, n: sql<number>`count(*)` }).from(retailers).where(eq(retailers.active, true)).groupBy(retailers.chainId);
