@@ -40,6 +40,8 @@ export interface TdSession {
   nudged?: boolean;  // used our one "hello, you still there?" silence nudge already
   forked?: boolean;  // audio fork to the listen room already opened (guard against TwiML refetch → double audio)
   workflow: string; // which workflow drove this call (shown in the log)
+  waitSecs?: number;  // mid-call wait for ANY reply before the silence path (workflow Reply timeout)
+  endpoint?: string;  // Twilio speechTimeout: "auto" | seconds — how fast we reply after they stop (Beat)
   // ---- store (production) mode ----
   mode: "bench" | "store";
   check?: DeltaCheck;
@@ -80,10 +82,15 @@ export function tdTranscript(s: TdSession): string {
 
 const esc = (s: string) => s.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c] as string));
 const twiml = (inner: string) => `<?xml version="1.0" encoding="UTF-8"?><Response>${inner}</Response>`;
-const gather = (id: string, timeoutSec = 8) =>
-  `<Gather input="speech" speechTimeout="auto" enhanced="true" speechModel="phone_call" timeout="${timeoutSec}" ` +
+// Endpointing comes from the workflow's Beat (tuning.turnEagerness): eager = reply ~1s after the clerk
+// stops (snappiest, may clip a slow talker) · patient = wait a full 3s · default/normal = Twilio's auto.
+// The wait-for-any-reply window comes from the workflow's Reply timeout (tuning.turnTimeout).
+const gather = (id: string, timeoutSec?: number) => {
+  const s = sessions.get(id);
+  return `<Gather input="speech" speechTimeout="${s?.endpoint || "auto"}" enhanced="true" speechModel="phone_call" timeout="${timeoutSec ?? s?.waitSecs ?? 8}" ` +
   `action="https://${HOST}/tapedeck/step?session=${id}" method="POST"/>` +
   `<Redirect method="POST">https://${HOST}/tapedeck/step?session=${id}&amp;silent=1</Redirect>`;
+};
 const play = (id: string, i: number) => `<Play>https://${HOST}/tapedeck/clip?session=${id}&amp;i=${i}</Play>`;
 
 // One variant per call, rotated across calls. Clip slots:
@@ -137,6 +144,16 @@ export async function resolveTapedeckWorkflow(name?: string): Promise<TdWorkflow
 
 const fillCat = (t: string, cat: string) => t.replace(/\{category\}/g, cat).replace(/\bcards(\s+cards)+\b/gi, "cards");
 
+/** Delta's read of the workflow's turn-taking tuning (same fields Charlie uses, phone-line semantics).
+ *  Reply timeout is clamped to 3–15s here: past ~15s of mid-call silence the nudge/wrap path should own
+ *  the call — Charlie's 45s ceiling makes no sense when every second is billed Twilio time. */
+export function deltaTurnTuning(tuning: Record<string, unknown>): { waitSecs: number; endpoint: string } {
+  const tt = Number(tuning.turnTimeout);
+  const waitSecs = Number.isFinite(tt) && tt > 0 ? Math.min(15, Math.max(3, Math.round(tt))) : 8;
+  const endpoint = tuning.turnEagerness === "eager" ? "1" : tuning.turnEagerness === "patient" ? "3" : "auto";
+  return { waitSecs, endpoint };
+}
+
 /** Synthesize one clip in the given voice, honoring the workflow's tuning (mirrors the mapper). */
 async function synthClip(voiceId: string, text: string, tuning: Record<string, unknown>): Promise<Buffer | null> {
   try {
@@ -145,10 +162,13 @@ async function synthClip(voiceId: string, text: string, tuning: Record<string, u
       similarity_boost: typeof tuning.similarity_boost === "number" ? tuning.similarity_boost : (typeof tuning.similarity === "number" ? tuning.similarity : 0.85),
     };
     if (typeof tuning.style === "number") voice_settings.style = tuning.style;
+    // Speed (cadence) from the Designer, same 0.7–1.2 range ElevenLabs accepts. 1.0 = neutral, skip it.
+    if (typeof tuning.speed === "number" && tuning.speed >= 0.7 && tuning.speed <= 1.2 && tuning.speed !== 1) voice_settings.speed = tuning.speed;
+    const modelId = tuning.modelId === "eleven_flash_v2" ? "eleven_flash_v2" : "eleven_turbo_v2";
     const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_64`, {
       method: "POST",
       headers: { "xi-api-key": config.voice.apiKey, "content-type": "application/json" },
-      body: JSON.stringify({ text, model_id: "eleven_turbo_v2", voice_settings }),
+      body: JSON.stringify({ text, model_id: modelId, voice_settings }),
     });
     if (!r.ok) { console.error("[tapedeck] synth", r.status, (await r.text()).slice(0, 100)); return null; }
     return Buffer.from(await r.arrayBuffer());
@@ -208,7 +228,8 @@ export async function tapedeckCall(phone: string, workflowName?: string): Promis
   if (clips.some((c) => !c)) return { error: "clip synthesis failed — check ElevenLabs credits" };
 
   const id = crypto.randomUUID().slice(0, 8);
-  const session: TdSession = { id, phone: to, startMs: Date.now(), status: "dialing", steps: [], turns: 0, clips: clips as Buffer[], clipText: texts, stage: "opener", needType: false, workflow: wf.name, mode: "bench" };
+  const turn = deltaTurnTuning(wf.tuning);
+  const session: TdSession = { id, phone: to, startMs: Date.now(), status: "dialing", steps: [], turns: 0, clips: clips as Buffer[], clipText: texts, stage: "opener", needType: false, workflow: wf.name, mode: "bench", waitSecs: turn.waitSecs, endpoint: turn.endpoint };
   sessions.set(id, session);
   const r = await placeTwilioCall(session, to);
   if (r.error) { sessions.delete(id); return { error: r.error }; }
@@ -228,9 +249,11 @@ export async function deltaStoreCall(check: DeltaCheck, workflowName?: string): 
   if (clips.some((c) => !c)) return { error: "clip synthesis failed — check ElevenLabs credits" };
 
   const id = crypto.randomUUID().slice(0, 8);
+  const turn = deltaTurnTuning(wf.tuning);
   const session: TdSession = {
     id, phone: to, startMs: Date.now(), status: "dialing", steps: [], turns: 0, clips: clips as Buffer[], clipText: texts,
     stage: "opener", needType: false, workflow: wf.name, mode: "store", check,
+    waitSecs: turn.waitSecs, endpoint: turn.endpoint,
     resConfirmed: null, resStatusKey: "no_clear_answer", resProduct: null, resDay: null,
   };
   sessions.set(id, session);
