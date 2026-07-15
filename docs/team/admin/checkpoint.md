@@ -3,6 +3,17 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-15d — COPPER'S FINAL COPY, EN + ES (Addie) — staging b4813b2, Admin UI shipped
+- All alert copy = Copper's final handoff (docs uploaded). Restock headline 'It's back.' (short, never
+  wraps), badge JUST SPOTTED, CTA See the store. Auto-check/store/waitlist/confirm reworded. Landing
+  pages: 'You're out.' etc. Admin labels/hints updated. Owner ping stays English (internal).
+- BILINGUAL: EMAIL_DESIGN[lang] + ES_TEMPLATES (subjects+SMS) + localized footer + {result} →
+  En stock/No hay/Nadie contestó. accounts.language (new col) drives it; /app/email captures site LANG;
+  defaults English. Verified all 6 emails EN+ES in-browser — match the handoff.
+- Sent EN tests of every type to fun@fungibles.com (6× sent, real messageIds) for owner review.
+- ⚠ Spanish only activates when accounts.language='es'. The site (checkit.html, Webbie's lane) must
+  send `lang` on /app/email for a Spanish user; until it does, everyone's English. ES copy is live + wired.
+
 ## 2026-07-15c — ROUND 3 (Addie) — staging 8a02abc, Admin UI shipped
 - **Emails are DUAL-THEME now** (owner ask): light inline base + true dark comp via prefers-color-scheme.
   Gmail strips the media query → gets light + its own coherent auto-dark. Verified both schemes via
