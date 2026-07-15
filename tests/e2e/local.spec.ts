@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { LOGIN_CODE, UA, bearer, freshPhone, mintToken } from "./helpers";
+import { LOGIN_CODE, UA, bearer, freshPhone, me, mintToken } from "./helpers";
 
 // The DIAL-SIDE journeys — everything that would place a real call on staging (STAGING_CALLS=1
 // there) runs here instead, against a throwaway local server where outbound calling is
@@ -11,6 +11,8 @@ const CAT = 1; // pokemon — seeded by the server's own bootstrap
 const STORE_A = 9001;
 const STORE_B = 9002;
 const KIOSK = 9003;
+const CLOSED = 9004;
+const ADMIN = { "x-admin-token": process.env.ADMIN_TOKEN || "e2e-local-admin", "content-type": "application/json" };
 
 let token = "";
 let base = "";
@@ -112,4 +114,53 @@ test("schedule: member creates → listed → deletes; free account is gated", a
   expect(rows.length).toBeGreaterThan(0);
   const del = await request.delete(`${base}/app/schedules/${rows[0].id}`, { headers: bearer(memberToken) });
   expect(del.ok()).toBeTruthy();
+});
+
+test("A6: closed + kiosk-only store cards carry the right state and (non-)call affordance", async ({ page, request }) => {
+  // API truth first: the feed says exactly what the cards must render.
+  const near = await request.get(`${base}/pub/stores/near?lat=34.05&lng=-118.24&radius=25`, { headers: UA });
+  const stores = (await near.json()).stores as any[];
+  const closed = stores.find((s) => s.id === CLOSED);
+  expect(closed, "closed store in the feed").toBeTruthy();
+  expect(closed.openState?.known && !closed.openState?.open, "closed store is KNOWN closed").toBeTruthy();
+  const kiosk = stores.find((s) => s.id === KIOSK);
+  expect(kiosk, "kiosk-only store in the default feed").toBeTruthy();
+  expect(kiosk.callable, "kiosk-only store is not callable").toBeFalsy();
+  const callMode = await request.get(`${base}/pub/stores/near?lat=34.05&lng=-118.24&radius=25&mode=call`, { headers: UA });
+  const callable = (await callMode.json()).stores as any[];
+  expect(callable.some((s) => s.id === KIOSK), "mode=call excludes the kiosk-only store").toBeFalsy();
+
+  // UI: retail mode HIDES known-closed stores from the list entirely (checkit.html keeps closed
+  // rows only for the hobby/thrift chips, which are off at launch) — so the right affordance to
+  // assert is: open stores render, the closed one is never offered.
+  const t = await mintToken(request, base, freshPhone());
+  await page.addInitScript((tok) => { localStorage.setItem("cifm_token", tok as string); localStorage.setItem("runnr_authed", "1"); }, t);
+  await page.goto("/");
+  await page.fill("#search", "Los Angeles");
+  await page.press("#search", "Enter");
+  await expect(page.locator("#storelist .store", { hasText: "Gate Store A" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator("#storelist .store", { hasText: "Gate Closed Store" }), "known-closed store is never offered in the retail list").toHaveCount(0);
+});
+
+test("A2: last credit gone → the upgrade sheet, never an error", async ({ page, request }) => {
+  // New signups get policy freeChecks — set it to 0 so a fresh account lands with zero credits.
+  const pol = await request.patch(`${base}/api/policy`, { data: { pricing: { freeChecks: 0 } }, headers: ADMIN });
+  expect(pol.ok(), `policy freeChecks=0 (got ${pol.status()})`).toBeTruthy();
+  try {
+    const t = await mintToken(request, base, freshPhone());
+    expect((await me(request, base, t)).credits, "fresh account starts at 0 credits").toBe(0);
+    await page.addInitScript((tok) => { localStorage.setItem("cifm_token", tok as string); localStorage.setItem("runnr_authed", "1"); }, t);
+    await page.goto("/");
+    await expect(page.locator("body")).toHaveClass(/authed/, { timeout: 20_000 });
+    await page.fill("#search", "Los Angeles");
+    await page.press("#search", "Enter");
+    const rows = page.locator("#storelist .store:not(.shut):not(.coming)");
+    await expect(rows.first()).toBeVisible({ timeout: 20_000 });
+    await rows.first().click();
+    await expect(page.locator("#csheet")).toHaveClass(/on/, { timeout: 15_000 });
+    await page.click("#cs_call"); // out of credits → THE money screen, not an error
+    await expect(page.locator("#buyOverlay"), "buy sheet opens on the spent account").toHaveClass(/on/, { timeout: 15_000 });
+  } finally {
+    await request.patch(`${base}/api/policy`, { data: { pricing: { freeChecks: 1 } }, headers: ADMIN });
+  }
 });

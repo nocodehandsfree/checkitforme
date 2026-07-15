@@ -20,13 +20,14 @@ ENV_ID="7cbf9327-357a-415e-9031-d1609aead2b4"
 SVC_STAGING="8165df7a-3bdf-41a5-bdce-24883633a096"
 SVC_PROD="d363a982-e918-4433-b175-defe8faf0ec9"
 
-fetch_admin_token() { # $1 = service id → prints ADMIN_TOKEN or nothing
+fetch_var() { # $1 = service id, $2 = variable name → prints the value or nothing
   [ -z "${RAILWAY_API_TOKEN:-}" ] && return 0
   curl -s -X POST https://backboard.railway.app/graphql/v2 \
     -H "Authorization: Bearer $RAILWAY_API_TOKEN" -H "Content-Type: application/json" \
     -d "{\"query\":\"{ variables(projectId: \\\"$PROJECT_ID\\\", environmentId: \\\"$ENV_ID\\\", serviceId: \\\"$1\\\") }\"}" \
-    | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['variables'].get('ADMIN_TOKEN',''))" 2>/dev/null
+    | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['variables'].get('$2',''))" 2>/dev/null
 }
+fetch_admin_token() { fetch_var "$1" ADMIN_TOKEN; }
 
 if ! node -e "import('@playwright/test')" >/dev/null 2>&1; then
   echo "✗ @playwright/test not installed — run: pnpm install" >&2; exit 1
@@ -43,16 +44,19 @@ case "$MODE" in
   local) run_target local ;;
   staging)
     TOK="${ADMIN_TOKEN:-$(fetch_admin_token $SVC_STAGING)}"
-    run_target staging "ADMIN_TOKEN='$TOK'"
+    SK="${E2E_STRIPE_SK:-$(fetch_var $SVC_STAGING STRIPE_SECRET_KEY)}" # TEST key — powers the A4 cancel journey
+    run_target staging "ADMIN_TOKEN='$TOK' E2E_STRIPE_SK='$SK'"
     ;;
   prod)
     TOK="${ADMIN_TOKEN:-$(fetch_admin_token $SVC_PROD)}"
-    run_target prod "ADMIN_TOKEN='$TOK' E2E_ADMIN_UI=1"
+    PEEK="${E2E_PEEK:-$(fetch_var $SVC_PROD PEEK_CODE)}" # A8: enter past the coming-soon splash like the owner's magic link
+    run_target prod "ADMIN_TOKEN='$TOK' E2E_ADMIN_UI=1 E2E_PEEK='$PEEK'"
     ;;
   full)
     run_target local
     TOK="${ADMIN_TOKEN:-$(fetch_admin_token $SVC_STAGING)}"
-    run_target staging "ADMIN_TOKEN='$TOK'"
+    SK="${E2E_STRIPE_SK:-$(fetch_var $SVC_STAGING STRIPE_SECRET_KEY)}"
+    run_target staging "ADMIN_TOKEN='$TOK' E2E_STRIPE_SK='$SK'"
     ;;
   *) echo "usage: bash scripts/launch-gate.sh [full|staging|local|prod]" >&2; exit 2 ;;
 esac

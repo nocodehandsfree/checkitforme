@@ -23,8 +23,11 @@ Hobby-type chains; Webbie hides the Hobby + Thrift chips; keep `thrift_hunts` en
 7. Subscriber with quota exhausted (can still buy PAYG on top; both pools spend)
 8. Canceled subscriber (Stripe sub ends → entitlements off, PAYG credits must survive)
 9. Comped/premium-granted account (COMP_PHONES / admin grant / Reset account button)
-10. Referral: referrer + referee each get promised free checks — **[blocked]** GTM `referrals`
-    is a critical TODO (devops). Confirm built before testing.
+10. Referral: referrer + referee each get promised free checks — **NOT actually blocked**
+    (DevOps audit 2026-07-15): the engine is BUILT — codes, both-sides grant, self/dupe abuse
+    guards (`src/referrals.ts`, unit suite `scripts/test-referrals.ts` in test-all), consumer UI
+    (`/app/referral` + claim + `?ref=` unfurl). The GTM card is stale; remaining work = flip the
+    card + one `[owner]` walk of the share link on a phone.
 11. Add-a-store reward: store request approved in Admin → `rewardedAt` → credit lands `[owner]`
 
 ## Axis 2 — premium feature gates (× each paid tier vs PAYG vs free)
@@ -47,7 +50,12 @@ real reasons is on DevOps's queue — until it ships, several of these render th
 
 ## Axis 5 — surfaces
 4 brand skins × EN/ES × phone-width. Zone sweep multi-store report. Alerts: restock email +
-SMS (per-tier SMS caps 5/15/40/150 — **[blocked]** GTM `alerts-forms` still todo).
+SMS — **mostly built, not fully blocked** (DevOps audit 2026-07-15): watches + customer
+email/SMS senders exist (`src/calls/notify.ts` notifyContact via Brevo/Twilio), admin views of
+subscriptions + sends exist. Genuinely left: per-tier SMS caps NOT enforced anywhere
+(`smsAlertsPerMonth` is plan data only — small backend build), Twilio A2P 10DLC registration
+(owner paperwork, gates real SMS delivery), email branding pass, and the My-Checks
+edit-contact form (Webbie). The `[owner]` O7 walk stays blocked only on A2P + the form.
 
 ## The journey list
 **Automated already `[gate]`:** signup → code → logged in · find store → call sheet (stop at
@@ -55,16 +63,19 @@ dial) · upgrade → Stripe 4242 → sub active · scheduled check create/list/d
 create/quote/delete · admin API + Admin UI · 4 brand skins · local dial-side: check → verdict,
 zone fire (calls hard-disabled).
 
-**DevOps to add `[auto]`:**
-A1. PAYG bundle purchase (4242) → credits land, premium features STAY locked, upsells render.
-A2. Free account burns last credit → upgrade sheet appears (not an error).
-A3. Subscriber quota-exhausted → PAYG top-up spends from both pools.
-A4. Cancel sub in Stripe test → entitlements drop, PAYG credits survive.
-A5. Each feature gate × (free/PAYG/subscriber): works vs upsells, per Axis 2.
-A6. Closed-store and kiosk-only store cards: correct state, correct (non-)call affordance.
-A7. Annual checkout price = published annual price.
-A8. Prod gate should enter via the peek link (fetch PEEK_CODE like ADMIN_TOKEN) so the 4
-    brand-skin tests stop failing red while the splash is up.
+**Automated by DevOps 2026-07-15 — all `[gate]` now:**
+A1. `[gate]` PAYG pack (4242) → credits land, features stay locked, gated backends upsell not error.
+A2. `[gate]` (local target) zero-credit account presses Check → upgrade sheet, never an error.
+A3. `[gate]` subscriber PAYG top-up → quota + payg pools coexist; balance = quota + payg.
+A4. `[gate]` Stripe-test cancel → entitlements drop, PAYG credits survive, gates re-lock.
+A5. `[gate]` gates × account type: locked for free/PAYG (A1) and post-cancel (A4); working for
+    subscribers (the schedule/zones journeys). Per-tier admin-toggle spot-check stays `[owner]`.
+A6. `[gate]` (local target) known-closed store: correct API state + retail list never offers it
+    (retail hides closed by design — `.shut` rows are hobby/thrift renderings, off at launch);
+    kiosk-only store: callable=false + excluded from mode=call.
+A7. `[gate]` annual checkout-intent amount = published annualCents from /pub/plans.
+A8. `[gate]` prod pass enters via the peek link (PEEK_CODE self-fetched like ADMIN_TOKEN) — brand
+    skins + console checks run green behind the splash; peek cookie covers the whole browser context.
 
 **Owner walks `[owner]` (real phone, real card, ~30 min once the above is green):**
 O1. THE card test: fresh account (wiped 424 number) → free check on a real store → upgrade →
