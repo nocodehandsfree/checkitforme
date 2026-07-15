@@ -3,10 +3,11 @@
 // and the watch alert path. Premium + gated by policy.flags.scheduling and an active membership.
 import { and, eq } from "drizzle-orm";
 import { db } from "./db/client";
-import { customerSchedules, retailers, categories, watches } from "./db/schema";
+import { accounts, customerSchedules, retailers, categories } from "./db/schema";
 import { bridgeCheckCall, triggerCall, storeOpenInfo } from "./calls/service";
 import { getAccount, chargeOneCredit, isComp, spendableCredits } from "./billing";
 import { getPolicy } from "./policy";
+import { sendConfirmEmail } from "./alerts";
 
 const DOW: Record<string, number> = {
   sun: 0, sunday: 0, mon: 1, monday: 1, tue: 2, tuesday: 2, wed: 3, wednesday: 3,
@@ -31,13 +32,26 @@ function dayMatches(daysCsv: string | null | undefined, shipmentDay: string | nu
 export interface ScheduleIn { retailerId: number; categoryId: number; specificProduct?: string; daysOfWeek?: string; timeLocal?: string; contact?: string }
 
 export async function createSchedule(finderUserId: string, s: ScheduleIn) {
+  const contact = s.contact?.trim() || null;
   const [row] = await db.insert(customerSchedules).values({
     finderUserId, retailerId: Number(s.retailerId), categoryId: Number(s.categoryId),
     specificProduct: s.specificProduct?.trim() || null,
     daysOfWeek: s.daysOfWeek?.trim() || null,
     timeLocal: (s.timeLocal || "10:00").trim(),
-    contact: s.contact?.trim() || null,
+    contact,
   }).returning();
+  // An email contact rides the account address (one confirmed email per account): adopt it when the
+  // account has none, and ask them to confirm — results emails won't flow until they tap the link.
+  if (contact && contact.includes("@")) {
+    const e = contact.toLowerCase();
+    const acct = await getAccount(finderUserId).catch(() => null);
+    if (acct && !acct.email) {
+      await db.update(accounts).set({ email: e }).where(eq(accounts.clerkUserId, finderUserId));
+      try { await sendConfirmEmail(finderUserId, e); } catch { /* never block the schedule */ }
+    } else if (acct?.email && !acct.emailVerifiedAt) {
+      try { await sendConfirmEmail(finderUserId, acct.email); } catch { /* nudge the pending confirm */ }
+    }
+  }
   return row;
 }
 export async function listSchedules(finderUserId: string) {
@@ -75,15 +89,10 @@ export async function customerScheduleTick(): Promise<number> {
         // Cheap lane (COST_MODEL §6: "scheduled checks FIRST" — subscription volume): recipe nav +
         // billed agent only on human. Flag off = the original direct dial, unchanged.
         const place = pol.flags.cheapBridgeAll ? bridgeCheckCall : triggerCall;
-        await place({ retailerId: r.retailerId, categoryId: r.categoryId, mode: "restock", specificProduct: r.specificProduct ?? undefined, finderUserId: r.finderUserId, isPrivate: !comp && subbed && pol.finds.subscriberPrivateAlways });
+        // customerScheduleId rides the call → its terminal state fires the auto-check RESULTS alert
+        // (every outcome, in or out) — this replaced the old watch-row hack that only pinged on in-stock.
+        await place({ retailerId: r.retailerId, categoryId: r.categoryId, mode: "restock", specificProduct: r.specificProduct ?? undefined, finderUserId: r.finderUserId, customerScheduleId: r.id, isPrivate: !comp && subbed && pol.finds.subscriberPrivateAlways });
         if (!comp) await chargeOneCredit(r.finderUserId);
-        // Ensure they get the alert when it lands (reuse the watch path; idempotent-ish).
-        if (r.contact) {
-          const ch = r.contact.includes("@") ? "email" : "sms";
-          const existing = (await db.select().from(watches).where(and(eq(watches.retailerId, r.retailerId), eq(watches.categoryId, r.categoryId), eq(watches.contact, r.contact))))[0];
-          if (!existing) await db.insert(watches).values({ contact: r.contact, channel: ch, retailerId: r.retailerId, categoryId: r.categoryId });
-          else if (existing.active === false) await db.update(watches).set({ active: true, notifiedAt: null }).where(eq(watches.id, existing.id));
-        }
         await db.update(customerSchedules).set({ lastRunDay: date }).where(eq(customerSchedules.id, r.id));
         fired++;
       } catch (e) { console.error("customer schedule fire:", e); }

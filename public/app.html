@@ -3,7 +3,13 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="x-rev" content="admin-r44" />
+<!-- Safari chrome tint = the WEBSITE's proven recipe (checkit.html head): iOS paints both bar strips
+     from the ROOT element's background-COLOR (ignores theme-color), so html carries the page gray and
+     the apple metas + viewport-fit paint content under the bars in standalone. -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Check Admin" />
+<meta name="x-rev" content="admin-r45" />
 <title>Check It For Me · Admin</title>
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=2">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=2">
@@ -41,11 +47,11 @@
   }
   *{box-sizing:border-box}
   button,select,textarea,input{font-family:inherit}
-  html{-webkit-text-size-adjust:100%}
+  html{-webkit-text-size-adjust:100%;background:#1D1D22;color-scheme:dark} /* iOS samples THIS bg-color for both Safari bar strips — must equal --bg so the chrome reads translucent-gray like the website, not black/gray defaults */
   html,body{max-width:100%;overflow-x:hidden}
   header,nav,main,section,.card,.stats,.filters,.ractions{max-width:100%}
   *{touch-action:manipulation}   /* kill iOS double-tap zoom on EVERY element (was interactive-only, so cards/text/numbers on Restock + Store-Intel still zoomed on double-tap). manipulation keeps scroll/pan + pinch, only drops double-tap-zoom; any element needing pan-x/none overrides via its own rule. */
-  body{background:var(--bg);color:#e6e6ef;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;margin:0;padding:0;touch-action:manipulation}
+  body{background:var(--bg);color:#e6e6ef;font-family:Inter,-apple-system,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;margin:0;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);touch-action:manipulation} /* paint both safe areas so standalone/tab edges take the page color (website recipe) */
   /* Shell (comp 1a + owner-approved 07-12 dash mock): wordmark header, carved group track w/ one
      raised active key, raised section pills. Header scrolls away; nothing sticky but the content. */
   header{padding:20px 20px 12px;display:flex;align-items:center;gap:9px}
@@ -779,8 +785,6 @@
       <select id="oa_channel" class="k-filter" onchange="saveOwnerAlert()">
         <option value="email">Email</option>
         <option value="sms">Text</option>
-        <option value="call">Call</option>
-        <option value="off">Off</option>
       </select>
       <input id="oa_email" type="email" placeholder="where it lands" style="flex:1;min-width:180px;font-size:14px;padding:10px 14px" onblur="saveOwnerAlert()">
     </div>
@@ -799,6 +803,8 @@
         <option value="waitlist">We’re live in your area (email)</option>
         <option value="restock_email">Restock (email)</option>
         <option value="restock">Restock (text)</option>
+        <option value="auto_check_email">Auto check results (email)</option>
+        <option value="auto_check">Auto check results (text)</option>
         <option value="instock_owner">Your in stock ping (email)</option>
       </select>
       <input id="al_test_to" type="text" placeholder="your email (or phone for the text)" style="flex:1;min-width:180px;font-size:14px;padding:10px 14px">
@@ -1417,21 +1423,34 @@ function _ensureSheet(){
   const sheet=document.createElement('div'); sheet.className='sheet';
   sheet.innerHTML='<div class="grab"></div><div class="sh-title"></div><div class="sh-sub"></div><div class="sh-body"></div>';
   document.body.appendChild(scrim); document.body.appendChild(sheet);
-  // Thumb-drag ANYWHERE on the sheet to dismiss (same feel as the website's slide-ups): a downward
-  // drag grabs the sheet when its body is scrolled to the top; otherwise the body scrolls normally.
-  const body=sheet.querySelector('.sh-body');
+  // Thumb-drag ANYWHERE on the sheet to dismiss — the WEBSITE's exact gesture (sheetDrag in
+  // checkit.html): arm only when no scroller between the finger and the sheet is mid-scroll; past the
+  // threshold the sheet continues DOWN off-screen (never freezes mid-air), else it springs back.
   let y0=null,dy=0,dragging=false;
-  const down=e=>{ y0=e.touches[0].clientY; dy=0; dragging=false; };
+  const down=e=>{
+    let el=e.target; while(el&&el!==sheet){ if(el.scrollTop>2) return; el=el.parentElement; } // a mid-scroll list owns the swipe
+    y0=e.touches[0].clientY; dy=0; dragging=false;
+  };
   const move=e=>{
     if(y0==null) return;
     dy=e.touches[0].clientY-y0;
     if(!dragging){
-      if(dy>6 && (!body||body.scrollTop<=0)){ dragging=true; sheet.style.transition='none'; }
-      else if(dy<-4){ y0=null; return; } // scrolling up inside the body — let it be
+      if(dy<=0){ y0=null; return; } // upward = scroll, hand it back
+      if(dy>6){ dragging=true; sheet.style.transition='none'; }
     }
     if(dragging){ if(e.cancelable) e.preventDefault(); sheet.style.transform='translate(-50%,'+Math.max(0,dy)+'px)'; }
   };
-  const up=()=>{ if(dragging){ sheet.style.transition=''; if(dy>110) closeSheet(); else sheet.style.transform=''; } y0=null; dy=0; dragging=false; };
+  const up=()=>{
+    if(dragging){
+      if(dy>110){ // finish the gesture: animate the REST of the way down, then tidy up
+        sheet.style.transition='transform .24s cubic-bezier(.32,.72,0,1)';
+        sheet.style.transform='translate(-50%,112%)';
+        scrim.classList.remove('on');
+        setTimeout(()=>{ sheet.classList.remove('on'); sheet.style.transition=''; sheet.style.transform=''; _restoreBorrow(); },240);
+      } else { sheet.style.transition=''; sheet.style.transform=''; } // snap back up
+    }
+    y0=null; dy=0; dragging=false;
+  };
   sheet.addEventListener('touchstart',down,{passive:true});
   sheet.addEventListener('touchmove',move,{passive:false});
   sheet.addEventListener('touchend',up);
@@ -1453,7 +1472,7 @@ function openSheet(title,sub,body){
   try{ setTimeout(decorateChrome,20); }catch(_){}
 }
 function _restoreBorrow(){ if(!_sheetBorrow) return; const b=_sheetBorrow; _sheetBorrow=null; if(b.home){ if(b.next) b.home.insertBefore(b.node,b.next); else b.home.appendChild(b.node); } }
-function closeSheet(){ if(!_sheetEls) return; _sheetEls.scrim.classList.remove('on'); _sheetEls.sheet.classList.remove('on'); setTimeout(_restoreBorrow,280); }
+function closeSheet(){ if(!_sheetEls) return; _sheetEls.sheet.style.transition=''; _sheetEls.sheet.style.transform=''; _sheetEls.scrim.classList.remove('on'); _sheetEls.sheet.classList.remove('on'); setTimeout(_restoreBorrow,280); }
 window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
 // Tap-to-show tooltip — works on mobile (hover doesn't). Tap a hint → bubble; tap again/elsewhere → gone.
 let _tipFor=null;
@@ -4707,6 +4726,7 @@ function decorateChrome(){
 // ---- Alerts (God View → Alerts): editable message templates, subscribers, and the send log ----
 const AL_EVENTS=[
   ['restock','Restock (text or email)','both','Fires on a confirmed restock, on the channel they picked. Texts count against the plan cap.'],
+  ['auto_check','Auto check results (text or email)','both','Fires after every auto check with what the call found.'],
   ['store_added','Store went live (email)','email','Their requested store went live. Free check granted.'],
   ['waitlist','We’re live in your area (email)','email','A waitlist signup’s region just launched.'],
   ['confirm_email','Confirm your email (email)','email','Someone added an email. No alerts until they tap confirm.'],
@@ -4731,7 +4751,7 @@ async function saveOwnerAlert(){
   const out=document.getElementById('oa_out');
   const r=await api('/api/admin/owner-alert',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({channel:ch,email:em})});
   if(!r||r.error){ if(out){ out.style.color='#F87171'; out.textContent= (r&&r.error)==='invalid_email'?'That email does not look right':'Could not save'; } return; }
-  if(out){ out.style.color=''; out.textContent= r.channel==='off'?'Ping is off':('Ping rides '+(r.channel==='email'?('email · '+(r.email||'no address set')):r.channel)); }
+  if(out){ out.style.color=''; out.textContent='Ping rides '+(r.channel==='email'?('email · '+(r.email||'no address set')):'text · '+(r.phone||'no number set')); }
 }
 async function loadAlerts(){
   const tEl=document.getElementById('al_templates'); if(!tEl) return;
@@ -4742,7 +4762,7 @@ async function loadAlerts(){
     const sms=alField('al_'+k+'_sms','Text message',t.sms,true);
     const email=alField('al_'+k+'_subj','Email subject',t.emailSubject,false)+alField('al_'+k+'_body','Email body',t.emailBody,true);
     const body= chan==='sms'?sms : chan==='email'?email : sms+email;
-    return `<div class="drow" style="padding:10px 0;border-top:1px solid var(--border)"><div class="name" style="margin-bottom:2px">${esch(label)}</div><div class="meta" style="margin:0 0 8px">${esch(hint)}</div>${body}</div>`;
+    return `<div class="drow" style="padding:14px 16px"><div class="name" style="margin-bottom:2px">${esch(label)}</div><div class="meta" style="margin:0 0 10px">${esch(hint)}</div>${body}</div>`;
   }).join('');
   const log=await api('/api/alerts/log')||{};
   // Delivery banner: green when the provider creds are set, amber "stubbed" until then.
@@ -4781,8 +4801,8 @@ async function saveAlertTemplates(){
 }
 async function sendAlertTest(){
   const pick=(document.getElementById('al_test_event')||{}).value||'confirm_email';
-  // "restock_email" is the UI's name for restock over the email channel; the server takes event+channel.
-  const req= pick==='restock_email' ? {event:'restock',channel:'email'} : {event:pick};
+  // "<event>_email" is the UI's name for a text-first event over the email channel; the server takes event+channel.
+  const req= pick.endsWith('_email')&&pick!=='confirm_email' ? {event:pick.replace(/_email$/,''),channel:'email'} : {event:pick};
   const to=((document.getElementById('al_test_to')||{}).value||'').trim();
   const out=document.getElementById('al_test_out');
   if(!to){ if(out){ out.style.color='#F59E0B'; out.textContent='Enter where to send it first.'; } return; }

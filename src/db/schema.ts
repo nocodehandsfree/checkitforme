@@ -491,6 +491,7 @@ export const callResults = sqliteTable(
     providerCallId: text("provider_call_id"), // ElevenLabs conversation id
     finderUserId: text("finder_user_id"), // clerk id of whoever placed it (null = anon/free)
     zoneRunId: text("zone_run_id"), // groups the checks of one zone sweep (z<zoneId>-<uuid>) for the report
+    customerScheduleId: integer("customer_schedule_id"), // auto-check that fired this call → results alert to its owner
     isPrivate: integer("is_private", { mode: "boolean" }).default(false), // never show in public finds feed
     startedAt: integer("started_at").notNull().default(now),
     completedAt: integer("completed_at"),

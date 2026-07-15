@@ -4777,8 +4777,8 @@ app.post("/api/alerts/test", async (c) => {
   if (event === "instock_owner") {
     return c.json(await sendOwnerInStockEmail(to, { store: "Target Glendale", product: "151 Booster Box", day: "Tuesdays", url: "https://checkitforme.com" }, { test: true }));
   }
-  if (!["restock", "store_added", "waitlist", "confirm_email"].includes(event)) return c.json({ error: "bad_event" }, 400);
-  const r = await sendTestAlert(event as "restock" | "store_added" | "waitlist" | "confirm_email", to, channel);
+  if (!["restock", "store_added", "waitlist", "confirm_email", "auto_check"].includes(event)) return c.json({ error: "bad_event" }, 400);
+  const r = await sendTestAlert(event as "restock" | "store_added" | "waitlist" | "confirm_email" | "auto_check", to, channel);
   return c.json(r);
 });
 // Owner's hands-free in-stock ping: address + channel, editable live (settings beat the env defaults).
@@ -4792,7 +4792,7 @@ app.post("/api/admin/owner-alert", async (c) => {
   }
   if (b.channel !== undefined) {
     const ch = String(b.channel);
-    if (!["email", "sms", "call", "off"].includes(ch)) return c.json({ error: "bad_channel" }, 400);
+    if (!["email", "sms"].includes(ch)) return c.json({ error: "bad_channel" }, 400); // owner: text or email, nothing else
     await setSetting("owner_alert_channel", ch);
   }
   return c.json(await ownerAlertPrefs());
