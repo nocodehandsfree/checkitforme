@@ -922,10 +922,13 @@
   <section id="support">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <div class="k-title">Support</div>
-      <div class="k-range" id="sup_rangetrack">
-        <button data-r="today" onclick="supSetRange('today')">Today</button>
-        <button data-r="7d" class="on" onclick="supSetRange('7d')">7d</button>
-        <button data-r="30d" onclick="supSetRange('30d')">30d</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="ghost" style="font-size:12px;padding:6px 11px" onclick="supReindex(this)" data-tip="Re-reads the whole help book into the agent's memory. Do this after Copper updates the book so answers use the latest wording.">Update from the book</button>
+        <div class="k-range" id="sup_rangetrack">
+          <button data-r="today" onclick="supSetRange('today')">Today</button>
+          <button data-r="7d" class="on" onclick="supSetRange('7d')">7d</button>
+          <button data-r="30d" onclick="supSetRange('30d')">30d</button>
+        </div>
       </div>
     </div>
     <div class="k-hero"><span class="n" id="sup_hero_n">—</span><span class="l" id="sup_hero_l">chats</span></div>
@@ -2829,13 +2832,43 @@ async function openSupChat(id){
   const acct=r.account?Object.entries({Email:r.account.email,Phone:r.account.phone,Plan:r.account.subscription||r.account.plan,Credits:r.account.credits,'Checks made':r.account.callsMade}).filter(([,v])=>v!=null&&v!=='').map(([k,v])=>`<div class="rsbar"><span class="rsbl" style="flex-basis:auto">${k}</span><b>${esch(String(v))}</b></div>`).join(''):'<div class="meta" style="text-transform:none">Guest — not signed in.</div>';
   const dbg=r.debug?(typeof r.debug==='string'?r.debug:JSON.stringify(r.debug,null,2)):'';
   const shot=r.screenshotUrl||r.screenshot;
+  const firstQ=msgs.find(m=>m.role==='user'||m.role==='customer')||{};
+  const lastA=[...msgs].reverse().find(m=>m.role!=='user'&&m.role!=='customer')||{};
+  const teachQ=String(firstQ.text||firstQ.content||'');
+  const teachA=String(lastA.text||lastA.content||'');
   const who=r.account?(r.account.email||r.account.phone||r.account.label||'Member'):'Guest';
   openSheet(who,
     `${esch(SUP_CATS[r.category]||r.category||'Other')} · ${esch(String(r.status||'open'))}${r.tier!=null?' · '+esch(supTier(r.tier)):''} · ${agoTs(r.createdAt||r.created_at)}`,
     `<div style="display:flex;flex-direction:column;margin-bottom:14px" class="chat">${msgs.map(bub).join('')||'<div class="empty">No transcript.</div>'}</div>
     ${shot?`<div class="k-eyebrow">Screenshot</div><a href="${esch(shot)}" target="_blank" rel="noopener"><img src="${esch(shot)}" alt="Customer screenshot" style="max-width:100%;border-radius:14px;margin-bottom:14px"></a>`:''}
     ${dbg?`<div class="k-eyebrow">Debug info</div><pre style="white-space:pre-wrap;word-break:break-word;font-size:11.5px;background:var(--terminal);box-shadow:inset 0 2px 6px rgba(0,0,0,.45);border-radius:14px;padding:12px;margin:0 0 14px">${esch(dbg)}</pre>`:''}
+    <div class="card" style="margin-bottom:14px;border-color:rgba(74,222,128,.3)">
+      <div class="k-eyebrow">Teach the right answer</div>
+      <div class="meta" style="text-transform:none;margin:2px 0 9px">Correct what it should have said. Saved answers get served the next time someone asks this.</div>
+      <div class="fld"><label style="font-size:11px;display:block;margin-bottom:4px">Question</label><textarea id="sup_teach_q" rows="2">${esch(teachQ)}</textarea></div>
+      <div class="fld" style="margin-top:9px"><label style="font-size:11px;display:block;margin-bottom:4px">Right answer</label><textarea id="sup_teach_a" rows="4">${esch(teachA)}</textarea></div>
+      <button class="act" style="margin-top:11px" onclick="supTeach('${esch(String(r.id||id))}')">Save as approved answer</button>
+    </div>
     <div class="k-eyebrow">Account</div>${acct}`);
+}
+// Teach: save a corrected question+answer as an approved pair. It embeds into the answer cache, so the
+// next time someone asks this the agent serves your wording verbatim instead of reasoning fresh.
+async function supTeach(id){
+  const q=((document.getElementById('sup_teach_q')||{}).value||'').trim();
+  const a=((document.getElementById('sup_teach_a')||{}).value||'').trim();
+  if(!q||!a){ toast('Add a question and the right answer first'); return; }
+  const r=await api('/api/support/review/'+encodeURIComponent(id),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'approve',question:q,answer:a})});
+  if(r&&r.ok){ toast('Saved. It will use this next time.'); closeSheet(); }
+  else toast('Could not save that answer');
+}
+// Update from the book: re-read the whole help book into the agent's memory (after Copper edits it).
+async function supReindex(btn){
+  const label=btn?btn.textContent:'';
+  if(btn){ btn.disabled=true; btn.textContent='Reading…'; }
+  const r=await api('/api/support/reindex',{method:'POST'});
+  if(btn){ btn.disabled=false; btn.textContent=label||'Update from the book'; }
+  if(r&&r.ok) toast('Reloaded the book: '+(r.pages!=null?r.pages+' pages':'done'));
+  else toast('Could not reload the book');
 }
 function bubbles(t){
   if(!t) return '';
