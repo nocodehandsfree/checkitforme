@@ -40,6 +40,7 @@ export interface TdSession {
   clarified?: boolean; // used our one "sorry, I was asking..." already
   nudged?: boolean;  // used our one "hello, you still there?" silence nudge already
   silence?: number;  // consecutive silent turns (resets on any real speech) — patience before wrapping
+  onHold?: boolean;  // clerk said "hold on, let me check" — wait patiently, don't treat quiet as a no-answer
   forked?: boolean;  // audio fork to the listen room already opened (guard against TwiML refetch → double audio)
   workflow: string; // which workflow drove this call (shown in the log)
   waitSecs?: number;  // mid-call wait for ANY reply before the silence path (workflow Reply timeout)
@@ -108,8 +109,8 @@ const play = (id: string, i: number) => `<Play>https://${HOST}/tapedeck/clip?ses
 
 // One variant per call, rotated round-robin across calls (shared counters with the C-lane). Clip slots:
 // 0 opener · 1 ask-SET · 2 ask-TYPE · 3 restock-day · 4 wrap (confirmed yes) · 5 clarify ·
-// 6 escalate (Charlie) · 7 hello (silence nudge at the opener) · 8 wrapNo (neutral goodbye) ·
-// 9 wait (patience re-prompt when a clerk goes quiet mid-answer — "no rush, take your time")
+// 6 escalate (Charlie) · 7 hello ("you still there?" for DEAD AIR — nobody spoke) · 8 wrapNo (neutral
+// goodbye) · 9 wait ("no rush, take your time" — ONLY when the clerk asks to hold / goes to check)
 
 // Defaults used when a workflow hasn't defined its own follow-up scripts. No dashes (owner rule);
 // commas carry the pauses. {category} is filled at synth time.
@@ -124,7 +125,7 @@ const DEFAULT_FOLLOWUPS: Record<string, string[]> = {
   wrap: ["Awesome, thanks so much! Have a good one!", "Perfect, thank you so much, take care!"],
   clarify: ["Oh sorry, I was just asking if you have any {category} in stock right now?"],
   escalate: ["Oh, one sec,"],
-  hello: ["Hello? Anyone there?"],
+  hello: ["Hello? You still there?", "Hey, you still with me?"],
   // Neutral goodbye for a no / sold-out / unclear ending. NEVER the celebratory wrap — "Awesome!"
   // after "we don't have any" read as tone-deaf (owner 07-10 Delta test, call 97).
   wrapNo: ["Okay, no worries. Thanks so much, have a good one!"],
@@ -337,14 +338,39 @@ export function deltaDecide(o: { stage: Stage; label: string; gotSet: boolean; g
   return { clip: 4, next: "done", note: `answered our follow-up (${label}) → wrap` };
 }
 
-/** Pure decision for a SILENT turn (unit-tested). We never hang up while waiting on an answer: the
- *  first two silences get a gentle prompt (a "you there?" at the opener, a "no rush, take your time"
- *  mid-question), and only a third consecutive silence wraps the call neutrally. `silence` is the
- *  running count AFTER incrementing for this turn. Clips: 7 hello · 9 wait · 8 neutral wrap. */
-export interface SilenceDecision { action: "nudge" | "wait" | "wrap"; clip: number }
-export function deltaSilence(o: { stage: Stage; silence: number }): SilenceDecision {
-  if (o.silence <= 2) return o.stage === "opener" ? { action: "nudge", clip: 7 } : { action: "wait", clip: 9 };
+const HOLD_WAIT_SECS = 18; // per-cycle wait while a clerk is off checking stock (they walked away)
+
+/** Pure decision for a turn where nobody answered (unit-tested). Two very different silences (owner
+ *  07-15): DEAD AIR (nobody said anything) → "Hello? You still there?" — never "take your time".
+ *  A HELD LINE (they said "hold on, let me check", so `onHold`) → wait quietly while they check, one
+ *  gentle "still there?" if it drags, then in a real store call hand the wait to Charlie (who can sit
+ *  through hold music and re-engage) rather than guess. `silence` is the count AFTER incrementing.
+ *  Clips: 7 hello ("you still there?") · 8 neutral wrap. clip -1 = play nothing, just keep listening. */
+export interface SilenceDecision { action: "nudge" | "holdwait" | "barge" | "wrap"; clip: number }
+export function deltaSilence(o: { stage: Stage; silence: number; onHold?: boolean; canBarge?: boolean }): SilenceDecision {
+  if (o.onHold) {
+    if (o.silence <= 2) return { action: "holdwait", clip: -1 };      // they're checking — wait quietly, don't nag
+    if (o.silence === 3) return { action: "nudge", clip: 7 };          // long hold → one gentle "still there?"
+    if (o.canBarge) return { action: "barge", clip: -1 };             // real store call → let Charlie sit the hold out
+    return { action: "wrap", clip: 8 };
+  }
+  if (o.silence <= 2) return { action: "nudge", clip: 7 };            // dead air → "Hello? You still there?"
   return { action: "wrap", clip: 8 };
+}
+
+/** Hand the SAME live call to Charlie (store mode only). Returns the handoff TwiML, or null when the
+ *  handoff can't be set up (bench mode, no hook, or the bridge failed) so the caller falls back. */
+async function tryDeltaBarge(s: TdSession, speech: string, why: string): Promise<string | null> {
+  if (s.mode !== "store" || !deltaBarge) return null;
+  try {
+    const handoff = await deltaBarge(s, speech);
+    if (handoff) {
+      s.escalated = true; s.stage = "done";
+      pushStep(s, { who: "us", text: "[Charlie takes over]", atSec: Math.round((Date.now() - s.startMs) / 1000), label: why });
+      return handoff;
+    }
+  } catch (e) { console.error("[delta] barge failed", e); }
+  return null;
 }
 
 /** One turn: classify the reply, answer with the matching clip. Set-first flow: yes → ask the SET →
@@ -365,13 +391,18 @@ export async function tapedeckStep(id: string, speech: string): Promise<string> 
   // "turns>=3 → hang up" cut clerks off mid-answer (owner 07-15).
   if (s.turns > 12 || atSec > 165) return endCall(s, s.resConfirmed === true ? 4 : 8);
   if (speech && speech.trim()) { pushStep(s, { who: "you", text: speech.trim().slice(0, 200), atSec }); s.silence = 0; }
-  else { // silence: they're thinking, went to look, or didn't hear us. Reassure and keep listening —
-    // never hang up while we're waiting on an answer (owner 07-15: "if there's no give ... this won't work").
+  else { // NOBODY SPOKE. Dead air and a held line are different (owner 07-15): dead air → "you still
+    // there?"; a line they put us on hold to check → wait quietly, then let Charlie sit out a long hold.
     s.silence = (s.silence || 0) + 1;
-    const sd = deltaSilence({ stage: s.stage, silence: s.silence });
+    const sd = deltaSilence({ stage: s.stage, silence: s.silence, onHold: !!s.onHold, canBarge: s.mode === "store" && !!deltaBarge });
+    if (sd.action === "barge") {
+      const h = await tryDeltaBarge(s, "the clerk put us on hold to check stock, please wait for them and finish the check", "long hold → Charlie takes the wait");
+      return h ?? endCall(s, s.resConfirmed === true ? 4 : 8);
+    }
     if (sd.action === "wrap") return endCall(s, sd.clip); // truly gone quiet → neutral graceful wrap
-    pushStep(s, { who: "us", text: s.clipText[sd.clip], atSec, label: `silence while awaiting ${s.stage} → ${sd.action}, keep listening` });
-    return twiml(`${play(id, sd.clip)}${gather(id)}`);
+    if (sd.action === "holdwait") return twiml(gather(id, HOLD_WAIT_SECS)); // checking — listen quietly, no clip
+    pushStep(s, { who: "us", text: s.clipText[sd.clip], atSec, label: `silence (${s.onHold ? "on hold" : "dead air"}) → ${sd.action}` });
+    return twiml(`${play(id, sd.clip)}${gather(id, s.onHold ? HOLD_WAIT_SECS : undefined)}`);
   }
 
   const t0 = Date.now();
@@ -379,12 +410,13 @@ export async function tapedeckStep(id: string, speech: string): Promise<string> 
   try {
     const cat = s.check?.categoryLabel || "Pokémon cards";
     const out = await llm(CLASSIFY_MODEL, `You are on a phone call to a store checking if ${cat} are in stock. The clerk just replied: "${speech.trim().slice(0, 200)}"
-Return ONLY JSON: {"label":"yes|no|day|product|question|unclear","set":"<set name they named, else empty>","type":"<packs|booster box|tin|etb|3-pack blister|singles, else empty>","day":"<shipment day/timing they named, else empty>"}
+Return ONLY JSON: {"label":"yes|no|day|product|question|hold|unclear","set":"<set name they named, else empty>","type":"<packs|booster box|tin|etb|3-pack blister|singles, else empty>","day":"<shipment day/timing they named, else empty>"}
 - yes: they have some in stock ("yeah we got a few", "we do")
 - no: they don't / sold out
 - day: they named a day or shipment timing
 - product: they named a product type or set
 - question: THEY asked something back ("who's this?", "for pickup?")
+- hold: they asked us to WAIT or are going to CHECK, with no answer yet ("hold on", "one sec", "let me check", "let me go look", "hang on", "gimme a minute", "let me see if we have any"). This is NOT a no.
 - unclear: genuinely can't tell / garbled
 Staff describe products loosely, so map descriptions to the trade name: "three packs in one" / "a pack with three smaller packs inside" = "3-pack blister"; "the big box with packs" = "booster box"; "the little box with a promo" = "etb".
 Phone transcription mishears words: "10" or "ten" where a product type belongs almost always means "tin" (the metal box) — never treat a bare number as a set name. "E T B" / "easy B" = "etb".`, { job: "tapedeck", json: true, temperature: 0, maxTokens: 60 });
@@ -399,19 +431,29 @@ Phone transcription mishears words: "10" or "ten" where a product type belongs a
   if (typeName) s.resProduct = [s.resProduct, typeName].filter(Boolean).join(", ");
   if (dayName) s.resDay = dayName;
 
+  // "Hold on, let me check" — the most common real reply (owner 07-15: "this happens a lot"). Reassure
+  // with "no rush, take your time", DON'T advance (they haven't answered), and give a long window since
+  // they physically walked away. Once on hold, transcribed noise / hold music also keeps us waiting.
+  if (label === "hold") {
+    s.onHold = true; s.silence = 0;
+    pushStep(s, { who: "us", text: s.clipText[9], atSec, label: "clerk is checking → reassure, hold the line", ms });
+    return twiml(`${play(id, 9)}${gather(id, HOLD_WAIT_SECS)}`);
+  }
+  if (s.onHold && label === "unclear") { // ambient noise / hold music while they check — keep waiting patiently
+    s.silence = (s.silence || 0) + 1;
+    const sd = deltaSilence({ stage: s.stage, silence: s.silence, onHold: true, canBarge: s.mode === "store" && !!deltaBarge });
+    if (sd.action === "barge") { const h = await tryDeltaBarge(s, "the clerk put us on hold to check stock, please wait for them and finish the check", "long hold → Charlie takes the wait"); return h ?? endCall(s, s.resConfirmed === true ? 4 : 8); }
+    if (sd.action === "wrap") return endCall(s, sd.clip);
+    if (sd.action === "nudge") { pushStep(s, { who: "us", text: s.clipText[7], atSec, label: "long hold → still there?", ms }); return twiml(`${play(id, 7)}${gather(id, HOLD_WAIT_SECS)}`); }
+    return twiml(gather(id, HOLD_WAIT_SECS)); // holdwait — listen quietly
+  }
+  s.onHold = false; // any real, classifiable answer means they're back with us
+
   // Off-script / stuck at the opener → hand the SAME call to Charlie (store mode). Fail-safe: if the
   // handoff can't be set up, fall through to the escalate clip so the call still ends gracefully.
   if (label === "question" && s.stage === "opener") {
-    if (s.mode === "store" && deltaBarge) {
-      try {
-        const handoff = await deltaBarge(s, speech.trim());
-        if (handoff) {
-          s.escalated = true; s.stage = "done";
-          pushStep(s, { who: "us", text: "[Charlie takes over]", atSec: Math.round((Date.now() - s.startMs) / 1000), label: `off-script → Charlie barged in (${ms}ms classify)`, ms });
-          return handoff;
-        }
-      } catch (e) { console.error("[delta] barge failed, falling back to escalate clip", e); }
-    }
+    const h = await tryDeltaBarge(s, speech.trim(), `off-script → Charlie barged in (${ms}ms classify)`);
+    if (h) return h;
     pushStep(s, { who: "us", text: s.clipText[6], atSec: Math.round((Date.now() - s.startMs) / 1000), label: `off-script → escalate (no live handoff)`, ms });
     return endCall(s, 6);
   }

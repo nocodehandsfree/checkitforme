@@ -4508,7 +4508,7 @@ const DELTA_FU_DEFAULTS={
   wrap:["Awesome, thanks so much! Have a good one!","Perfect, thank you so much, take care!"],
   clarify:["Oh sorry, I was just asking if you have any {category} in stock right now?"],
   escalate:["Oh, one sec,"],
-  hello:["Hello? Anyone there?"],
+  hello:["Hello? You still there?","Hey, you still with me?"],
   wrapNo:["Okay, no worries. Thanks so much, have a good one!"],
   wait:["No rush, take your time.","No worries, whenever you're ready."]
 };
@@ -4518,9 +4518,9 @@ const DELTA_FU_SLOTS=[
   ['no','Restock day question (after a no)'],
   ['wrap','Wrap (confirmed yes only)'],
   ['wrapNo','Goodbye (no / unclear · never upbeat)'],
-  ['wait','Take your time (played when they go quiet mid answer)'],
+  ['wait','Take your time (ONLY when they ask to hold / go check stock)'],
+  ['hello','Still there? (when the line goes quiet and nobody spoke)'],
   ['clarify','Clarify (they did not catch the opener)'],
-  ['hello','Silence nudge (played when they never respond at the start)'],
   ['escalate','Handoff line (live agent takes over)']
 ];
 // Write the built-in lines INTO the workflow so what the sheet shows IS what plays. Returns true if it changed anything.
