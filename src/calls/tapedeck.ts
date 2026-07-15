@@ -43,6 +43,7 @@ export interface TdSession {
   workflow: string; // which workflow drove this call (shown in the log)
   waitSecs?: number;  // mid-call wait for ANY reply before the silence path (workflow Reply timeout)
   endpoint?: string;  // Twilio speechTimeout: "auto" | seconds — how fast we reply after they stop (Beat)
+  hints?: string;     // Twilio ASR vocabulary bias — the product words clerks actually say ("tin" not "10")
   // ---- store (production) mode ----
   mode: "bench" | "store";
   check?: DeltaCheck;
@@ -88,10 +89,17 @@ const twiml = (inner: string) => `<?xml version="1.0" encoding="UTF-8"?><Respons
 // The wait-for-any-reply window comes from the workflow's Reply timeout (tuning.turnTimeout).
 const gather = (id: string, timeoutSec?: number) => {
   const s = sessions.get(id);
-  return `<Gather input="speech" speechTimeout="${s?.endpoint || "auto"}" enhanced="true" speechModel="phone_call" timeout="${timeoutSec ?? s?.waitSecs ?? 8}" ` +
+  return `<Gather input="speech" speechTimeout="${s?.endpoint || "auto"}" enhanced="true" speechModel="phone_call" timeout="${timeoutSec ?? s?.waitSecs ?? 8}"${s?.hints ? ` hints="${esc(s.hints)}"` : ""} ` +
   `action="https://${HOST}/tapedeck/step?session=${id}" method="POST"/>` +
   `<Redirect method="POST">https://${HOST}/tapedeck/step?session=${id}&amp;silent=1</Redirect>`;
 };
+// The vocabulary Twilio's transcriber should EXPECT on these calls — the owner's 07-15 test heard
+// "tin" as "10", which then read as a set name. Biasing ASR beats correcting it after the fact.
+export function deltaHints(categoryLabel: string): string {
+  return `tin, tins, booster pack, booster packs, booster box, booster boxes, elite trainer box, ETB, ` +
+    `blister, three pack blister, sleeved, singles, bundle, in stock, sold out, all gone, on the shelf, ` +
+    `shipment, restock, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday, ${categoryLabel}`;
+}
 const play = (id: string, i: number) => `<Play>https://${HOST}/tapedeck/clip?session=${id}&amp;i=${i}</Play>`;
 
 // One variant per call, rotated round-robin across calls (shared counters with the C-lane). Clip slots:
@@ -238,7 +246,7 @@ export async function tapedeckCall(phone: string, workflowName?: string): Promis
 
   const id = crypto.randomUUID().slice(0, 8);
   const turn = deltaTurnTuning(wf.tuning);
-  const session: TdSession = { id, phone: to, startMs: Date.now(), status: "dialing", steps: [], turns: 0, clips: clips as Buffer[], clipText: texts, stage: "opener", needType: false, workflow: wf.name, mode: "bench", waitSecs: turn.waitSecs, endpoint: turn.endpoint };
+  const session: TdSession = { id, phone: to, startMs: Date.now(), status: "dialing", steps: [], turns: 0, clips: clips as Buffer[], clipText: texts, stage: "opener", needType: false, workflow: wf.name, mode: "bench", waitSecs: turn.waitSecs, endpoint: turn.endpoint, hints: deltaHints("Pokémon cards") };
   sessions.set(id, session);
   const r = await placeTwilioCall(session, to);
   if (r.error) { sessions.delete(id); return { error: r.error }; }
@@ -262,7 +270,7 @@ export async function deltaStoreCall(check: DeltaCheck, workflowName?: string): 
   const session: TdSession = {
     id, phone: to, startMs: Date.now(), status: "dialing", steps: [], turns: 0, clips: clips as Buffer[], clipText: texts,
     stage: "opener", needType: false, workflow: wf.name, mode: "store", check,
-    waitSecs: turn.waitSecs, endpoint: turn.endpoint,
+    waitSecs: turn.waitSecs, endpoint: turn.endpoint, hints: deltaHints(check.categoryLabel),
     resConfirmed: null, resStatusKey: "no_clear_answer", resProduct: null, resDay: null,
   };
   sessions.set(id, session);
@@ -352,7 +360,8 @@ Return ONLY JSON: {"label":"yes|no|day|product|question|unclear","set":"<set nam
 - product: they named a product type or set
 - question: THEY asked something back ("who's this?", "for pickup?")
 - unclear: genuinely can't tell / garbled
-Staff describe products loosely, so map descriptions to the trade name: "three packs in one" / "a pack with three smaller packs inside" = "3-pack blister"; "the big box with packs" = "booster box"; "the little box with a promo" = "etb".`, { job: "tapedeck", json: true, temperature: 0, maxTokens: 60 });
+Staff describe products loosely, so map descriptions to the trade name: "three packs in one" / "a pack with three smaller packs inside" = "3-pack blister"; "the big box with packs" = "booster box"; "the little box with a promo" = "etb".
+Phone transcription mishears words: "10" or "ten" where a product type belongs almost always means "tin" (the metal box) — never treat a bare number as a set name. "E T B" / "easy B" = "etb".`, { job: "tapedeck", json: true, temperature: 0, maxTokens: 60 });
     const j = JSON.parse(out) as { label?: string; set?: string; type?: string; day?: string };
     label = String(j.label || "unclear");
     const clean = (v?: string) => (v && v.trim() && !/^(no|none|n\/?a|unsure|not sure|idk|unknown)$/i.test(v.trim()) ? v.trim() : "");

@@ -511,17 +511,33 @@ async function finalizeDeltaSession(s: TdSession): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
   const answered = !!s.opened; // opener only fires once the pickup is heard
   const status = answered ? "completed" : "no_answer";
-  const confirmed = answered ? (s.resConfirmed ?? null) : null;
-  const statusKey = answered ? (s.resStatusKey || "no_clear_answer") : "nobody_answered";
-  const definitive = confirmed === true || confirmed === false;
+  let confirmed = answered ? (s.resConfirmed ?? null) : null;
+  let statusKey = answered ? (s.resStatusKey || "no_clear_answer") : "nobody_answered";
+  let definitive = confirmed === true || confirmed === false;
+  let productDetail = s.resProduct || null;
+  let dayHeard = s.resDay || null;
+  const transcript = tdTranscript(s);
+  let agreed = true;
+  // SECOND READ (same safety net the C-lane has had all along — owner 07-15: it was NOT wired here).
+  // An independent cheap-LLM read of the transcript; a conflict with the live classifier drops the
+  // verdict to an honest "no clear answer" (not charged), and its extraction fixes transcription
+  // mishears in the product label ("Scarlet and Violet 10" → tin) before anything is shown or stored.
+  if (answered) {
+    const second = await classifyVerdict(transcript, chk.categoryLabel).catch(() => null);
+    const consensus = reconcile({ confirmed, statusKey }, second);
+    confirmed = consensus.confirmed; statusKey = consensus.statusKey; definitive = consensus.definitive; agreed = consensus.agreed;
+    const label = productDetailLabel(second);
+    if (label) productDetail = label; // the second read's trade-name mapping beats raw ASR text
+    if (!dayHeard && second?.restockDay) dayHeard = second.restockDay;
+  }
   await db.update(callResults).set({
     status,
     confirmed,
     statusKey,
-    productDetail: s.resProduct || null,
-    shipmentDayHeard: s.resDay || null,
-    transcript: tdTranscript(s),
-    summary: `Delta lane (${s.workflow}): ${statusKey}`,
+    productDetail,
+    shipmentDayHeard: dayHeard,
+    transcript,
+    summary: `Delta lane (${s.workflow}): ${statusKey}${agreed ? "" : " (reads disagreed → honest unsure)"}`,
     completedAt: now,
     callSeconds: Math.round((Date.now() - s.startMs) / 1000),
   }).where(eq(callResults.id, chk.callId));
@@ -530,10 +546,10 @@ async function finalizeDeltaSession(s: TdSession): Promise<void> {
   if (chk.finderUserId && status === "completed" && definitive) await chargeCallOnce(chk.callId, chk.finderUserId);
 
   if (confirmed === true) {
-    await notifyInStock(chk.retailerName, chk.categoryLabel, chk.retailerId, s.resDay || undefined);
+    await notifyInStock(chk.retailerName, chk.categoryLabel, chk.retailerId, dayHeard || undefined);
     await notifyWatches(chk.retailerId, chk.categoryId, chk.retailerName, chk.categoryLabel);
   }
-  if (s.resDay) await db.update(retailers).set({ shipmentDay: s.resDay }).where(eq(retailers.id, chk.retailerId));
+  if (dayHeard) await db.update(retailers).set({ shipmentDay: dayHeard }).where(eq(retailers.id, chk.retailerId));
 }
 setDeltaFinalize(finalizeDeltaSession);
 
