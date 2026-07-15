@@ -7,7 +7,7 @@ rules). Names for the product, the AI, and the person at the store are shared ac
 
 ## ⛔ Hard rules (owner) — these keep getting violated; non-negotiable
 1. **No dashes inside sentences.** No em dashes, no hyphens as connectors. Write the whole sentence out. (CI warns on em dashes in the HTML.)
-2. **Never break a sentence badly across lines.** No orphan words (a wrapped line must never carry one leftover word). If copy needs two lines, balance them and break at a natural pause; if it fits on one line, keep it on one.
+2. **One line. If it must wrap, the second line is a whole new SENTENCE, never a mid-sentence break.** Default: the whole string fits on one line at its real width on a 390pt phone. If it genuinely needs two lines, write it as two short sentences so the break lands on the period, never mid thought (no "…this / account."). No orphan words. **This holds in Spanish too** (Spanish runs longer, so it wraps first). Test at the actual component width before shipping, not in your head.
 3. **Every string ships with its Spanish in the SAME commit** — and the Spanish is length-checked in the layout (Spanish runs longer; it must never break the page, the footer, or push controls off-screen).
 4. **Bottom notifications: ONE line, both languages.** Shorten the copy to fit; never wrap. The *look* (color, shape, animation) is Design's call — match the notification component in `STYLE_GUIDE.md`, whatever it is today. This guide owns the words, not the pill color. (It used to say "gray, never green"; that was copy dictating design and it's retired.)
 5. **No copy without this guide open. No visual change without STYLE_GUIDE.md + the comp.** (Boot-doc design-fidelity rule; this is the copy half.)
@@ -65,7 +65,7 @@ Jargon with no plain gloss: IVR · DTMF · E.164 · COGS · MRR.
 ## Status verdicts (how the call went)
 Two parts, and they are NOT interchangeable:
 - **Headline** (the big verdict line, `.rtitle2`) — the **biggest text on the whole page**. Because it's this large, it carries the verdict alone in **1 to 3 words** and **must never wrap** on a phone. `In stock.` · `Not in stock.` · `Couldn't tell.` · `No answer.` · `Restock incoming.`
-- **Subhead** (the smaller line under it, `.rsub`) — one friend-voice line of detail. **One sentence, two lines max**, never a third. Tokens fill live and bold: `{store}` `{product}` `{category}` `{day}`.
+- **Subhead** (the smaller line under it, `.rsub`) — one or two short friend-voice sentences. Two lines max, never a third, and if it takes two lines the break lands on the period (second line = second sentence, per hard rule 2). Tokens fill live and bold: `{store}` `{product}` `{category}` `{day}`.
 - **Color = meaning:** green go · red no-go · amber unclear · gray neutral. The headline itself takes the verdict's tone color.
 - **A green shield = "no charge."** Don't write the words.
 
