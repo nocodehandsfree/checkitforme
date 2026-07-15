@@ -39,6 +39,7 @@ export interface TdSession {
   needType: boolean; // after asking the set, do we still owe the product-type question?
   clarified?: boolean; // used our one "sorry, I was asking..." already
   nudged?: boolean;  // used our one "hello, you still there?" silence nudge already
+  silence?: number;  // consecutive silent turns (resets on any real speech) — patience before wrapping
   forked?: boolean;  // audio fork to the listen room already opened (guard against TwiML refetch → double audio)
   workflow: string; // which workflow drove this call (shown in the log)
   waitSecs?: number;  // mid-call wait for ANY reply before the silence path (workflow Reply timeout)
@@ -84,9 +85,12 @@ export function tdTranscript(s: TdSession): string {
 
 const esc = (s: string) => s.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c] as string));
 const twiml = (inner: string) => `<?xml version="1.0" encoding="UTF-8"?><Response>${inner}</Response>`;
-// Endpointing comes from the workflow's Beat (tuning.turnEagerness): eager = reply ~1s after the clerk
-// stops (snappiest, may clip a slow talker) · patient = wait a full 3s · default/normal = Twilio's auto.
-// The wait-for-any-reply window comes from the workflow's Reply timeout (tuning.turnTimeout).
+// Endpointing = how many seconds of SILENCE after the clerk stops before we treat them as done and
+// reply. This is the "give people time to think" lever (owner 07-15: eager=1s cut a clerk off mid
+// "pitch black" and hung up before "it's a tin"). NEVER below 2s — a thinking pause must not end
+// their turn. Beat maps: eager 2s · normal 3s · patient 5s. The wait-for-any-reply-to-START window
+// is the workflow Reply timeout (tuning.turnTimeout), kept generous so hesitation before answering
+// doesn't time out either.
 const gather = (id: string, timeoutSec?: number) => {
   const s = sessions.get(id);
   return `<Gather input="speech" speechTimeout="${s?.endpoint || "auto"}" enhanced="true" speechModel="phone_call" timeout="${timeoutSec ?? s?.waitSecs ?? 8}"${s?.hints ? ` hints="${esc(s.hints)}"` : ""} ` +
@@ -104,7 +108,8 @@ const play = (id: string, i: number) => `<Play>https://${HOST}/tapedeck/clip?ses
 
 // One variant per call, rotated round-robin across calls (shared counters with the C-lane). Clip slots:
 // 0 opener · 1 ask-SET · 2 ask-TYPE · 3 restock-day · 4 wrap (confirmed yes) · 5 clarify ·
-// 6 escalate (Charlie) · 7 hello (silence nudge) · 8 wrapNo (neutral goodbye for no / unclear)
+// 6 escalate (Charlie) · 7 hello (silence nudge at the opener) · 8 wrapNo (neutral goodbye) ·
+// 9 wait (patience re-prompt when a clerk goes quiet mid-answer — "no rush, take your time")
 
 // Defaults used when a workflow hasn't defined its own follow-up scripts. No dashes (owner rule);
 // commas carry the pauses. {category} is filled at synth time.
@@ -123,6 +128,9 @@ const DEFAULT_FOLLOWUPS: Record<string, string[]> = {
   // Neutral goodbye for a no / sold-out / unclear ending. NEVER the celebratory wrap — "Awesome!"
   // after "we don't have any" read as tone-deaf (owner 07-10 Delta test, call 97).
   wrapNo: ["Okay, no worries. Thanks so much, have a good one!"],
+  // Patience line played when the clerk goes quiet WHILE we're waiting for an answer (thinking, or
+  // walked to go look) — reassure and keep listening, never hang up on them (owner 07-15).
+  wait: ["No rush, take your time.", "No worries, whenever you're ready."],
 };
 
 interface TdWorkflow { name: string; voiceId: string; voices: string[]; openers: string[]; tuning: Record<string, unknown>; followups: Record<string, string[]>; lane: string }
@@ -146,7 +154,7 @@ export async function resolveTapedeckWorkflow(name?: string): Promise<TdWorkflow
       voiceId: (typeof wf.voiceId === "string" && wf.voiceId) || voices[0] || config.voice.defaultVoiceId,
       voices, openers,
       tuning: (wf.tuning && typeof wf.tuning === "object") ? (wf.tuning as Record<string, unknown>) : {},
-      followups: { set: slot("set"), type: slot("type"), no: slot("no"), wrap: slot("wrap"), clarify: slot("clarify"), escalate: slot("escalate"), hello: slot("hello"), wrapNo: slot("wrapNo") },
+      followups: { set: slot("set"), type: slot("type"), no: slot("no"), wrap: slot("wrap"), clarify: slot("clarify"), escalate: slot("escalate"), hello: slot("hello"), wrapNo: slot("wrapNo"), wait: slot("wait") },
       lane: typeof wf.lane === "string" ? wf.lane : "charlie",
     };
   } catch { return fb; }
@@ -159,8 +167,11 @@ const fillCat = (t: string, cat: string) => t.replace(/\{category\}/g, cat).repl
  *  the call — Charlie's 45s ceiling makes no sense when every second is billed Twilio time. */
 export function deltaTurnTuning(tuning: Record<string, unknown>): { waitSecs: number; endpoint: string } {
   const tt = Number(tuning.turnTimeout);
-  const waitSecs = Number.isFinite(tt) && tt > 0 ? Math.min(15, Math.max(3, Math.round(tt))) : 8;
-  const endpoint = tuning.turnEagerness === "eager" ? "1" : tuning.turnEagerness === "patient" ? "3" : "auto";
+  // Initial wait for them to START talking — generous (clerks pause to think before answering).
+  const waitSecs = Number.isFinite(tt) && tt > 0 ? Math.min(20, Math.max(4, Math.round(tt))) : 10;
+  // Trailing silence before we decide they're done. Floor 2s so a mid-sentence pause never cuts them
+  // off; Beat only shifts how much extra room on top. Fixed seconds (not "auto") so it's predictable.
+  const endpoint = tuning.turnEagerness === "eager" ? "2" : tuning.turnEagerness === "patient" ? "5" : "3";
   return { waitSecs, endpoint };
 }
 
@@ -204,6 +215,7 @@ async function synthClips(wf: TdWorkflow, voiceId: string, cat: string): Promise
     fillCat(fu("escalate"), cat),
     fillCat(fu("hello"), cat),
     fillCat(fu("wrapNo"), cat),
+    fillCat(fu("wait"), cat),
   ];
   const clips = await Promise.all(texts.map((t) => synthClip(voiceId, t, wf.tuning)));
   return { texts, clips };
@@ -325,6 +337,16 @@ export function deltaDecide(o: { stage: Stage; label: string; gotSet: boolean; g
   return { clip: 4, next: "done", note: `answered our follow-up (${label}) → wrap` };
 }
 
+/** Pure decision for a SILENT turn (unit-tested). We never hang up while waiting on an answer: the
+ *  first two silences get a gentle prompt (a "you there?" at the opener, a "no rush, take your time"
+ *  mid-question), and only a third consecutive silence wraps the call neutrally. `silence` is the
+ *  running count AFTER incrementing for this turn. Clips: 7 hello · 9 wait · 8 neutral wrap. */
+export interface SilenceDecision { action: "nudge" | "wait" | "wrap"; clip: number }
+export function deltaSilence(o: { stage: Stage; silence: number }): SilenceDecision {
+  if (o.silence <= 2) return o.stage === "opener" ? { action: "nudge", clip: 7 } : { action: "wait", clip: 9 };
+  return { action: "wrap", clip: 8 };
+}
+
 /** One turn: classify the reply, answer with the matching clip. Set-first flow: yes → ask the SET →
  *  then the product TYPE (skipping whatever they named); no/day → ask the restock day; off-script
  *  question at the opener → Charlie takes over the same call (store mode) or the escalate clip (bench). */
@@ -339,13 +361,17 @@ export async function tapedeckStep(id: string, speech: string): Promise<string> 
     return twiml(`${play(id, 0)}${gather(id)}`);
   }
   s.turns++;
-  if (s.turns > 8 || atSec > 150) return endCall(s, 4);
-  if (speech && speech.trim()) pushStep(s, { who: "you", text: speech.trim().slice(0, 200), atSec });
-  else { // silence — say "hello, anyone there?" once, then wrap (owner 07-10 call 6: never sit mute)
-    if (s.turns >= 3 || s.nudged) return endCall(s, 4);
-    s.nudged = true;
-    pushStep(s, { who: "us", text: s.clipText[7], atSec, label: "silence → hello nudge" });
-    return twiml(`${play(id, 7)}${gather(id)}`);
+  // Hard safety caps only (a runaway call). Silence is handled patiently below, NOT here — the old
+  // "turns>=3 → hang up" cut clerks off mid-answer (owner 07-15).
+  if (s.turns > 12 || atSec > 165) return endCall(s, s.resConfirmed === true ? 4 : 8);
+  if (speech && speech.trim()) { pushStep(s, { who: "you", text: speech.trim().slice(0, 200), atSec }); s.silence = 0; }
+  else { // silence: they're thinking, went to look, or didn't hear us. Reassure and keep listening —
+    // never hang up while we're waiting on an answer (owner 07-15: "if there's no give ... this won't work").
+    s.silence = (s.silence || 0) + 1;
+    const sd = deltaSilence({ stage: s.stage, silence: s.silence });
+    if (sd.action === "wrap") return endCall(s, sd.clip); // truly gone quiet → neutral graceful wrap
+    pushStep(s, { who: "us", text: s.clipText[sd.clip], atSec, label: `silence while awaiting ${s.stage} → ${sd.action}, keep listening` });
+    return twiml(`${play(id, sd.clip)}${gather(id)}`);
   }
 
   const t0 = Date.now();

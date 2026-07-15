@@ -1086,16 +1086,16 @@
           </div>
           <label style="display:flex;justify-content:space-between;align-items:baseline">Reply timeout <span id="sb_tt_val" class="hint" style="font-style:normal"></span></label>
           <input id="sb_turntimeout" type="range" min="3" max="45" step="1" style="width:100%" oninput="document.getElementById('sb_tt_val').textContent=this.value+'s'">
-          <div class="meta" id="sb_delta_hint" style="display:none;margin-top:6px">On Delta: Beat is how fast it replies once you stop talking (Eager is the snappiest). Reply timeout is how long it waits for any reply before the "Hello?" nudge; Delta caps it at 15s.</div>
+          <div class="meta" id="sb_delta_hint" style="display:none;margin-top:6px">On Delta: Beat is how many seconds a clerk can pause before it assumes they're done and replies. Normal (3s) gives room to think; Patient (5s) gives more; Eager (2s) is snappiest but tighter. It never cuts anyone off mid word, and if they go quiet it says "no rush, take your time" instead of hanging up. Reply timeout is how long it waits for them to start answering.</div>
         </div>
         <div class="grid2">
           <div>
             <label style="margin-top:0">Beat</label>
             <select id="sb_beat" onchange="updateDraftDot()">
               <option value="" disabled selected>Select a beat</option>
-              <option value="normal">Normal (snappy, waits for you to finish)</option>
-              <option value="eager">Eager (fastest, may cut people off)</option>
-              <option value="patient">Patient (long pause, slowest)</option>
+              <option value="normal">Normal (3s to think before it replies)</option>
+              <option value="patient">Patient (5s, most room to think)</option>
+              <option value="eager">Eager (2s, snappiest reply)</option>
             </select>
           </div>
           <div>
@@ -4509,7 +4509,8 @@ const DELTA_FU_DEFAULTS={
   clarify:["Oh sorry, I was just asking if you have any {category} in stock right now?"],
   escalate:["Oh, one sec,"],
   hello:["Hello? Anyone there?"],
-  wrapNo:["Okay, no worries. Thanks so much, have a good one!"]
+  wrapNo:["Okay, no worries. Thanks so much, have a good one!"],
+  wait:["No rush, take your time.","No worries, whenever you're ready."]
 };
 const DELTA_FU_SLOTS=[
   ['set','Set question (first thing after a yes)'],
@@ -4517,8 +4518,9 @@ const DELTA_FU_SLOTS=[
   ['no','Restock day question (after a no)'],
   ['wrap','Wrap (confirmed yes only)'],
   ['wrapNo','Goodbye (no / unclear · never upbeat)'],
+  ['wait','Take your time (played when they go quiet mid answer)'],
   ['clarify','Clarify (they did not catch the opener)'],
-  ['hello','Silence nudge'],
+  ['hello','Silence nudge (played when they never respond at the start)'],
   ['escalate','Handoff line (live agent takes over)']
 ];
 // Write the built-in lines INTO the workflow so what the sheet shows IS what plays. Returns true if it changed anything.
