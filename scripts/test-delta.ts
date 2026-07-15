@@ -53,14 +53,17 @@ eq(deltaTurnTuning({ turnTimeout: 1 }).waitSecs, 4, "reply-to-start floors at 4s
 eq(deltaTurnTuning({ turnTimeout: 10 }).waitSecs, 10, "in-range reply timeout passes through");
 eq(deltaTurnTuning({ turnTimeout: "nope" }), { waitSecs: 10, endpoint: "3" }, "garbage tuning falls back to defaults");
 
-// --- silence patience: NEVER hang up mid-answer; two gentle prompts, then a neutral wrap ---
-// (owner 07-15: eager cutoff + a turn>=3 silence hangup cut a clerk off before "it's a tin".)
-eq(deltaSilence({ stage: "opener", silence: 1 }), { action: "nudge", clip: 7 }, "1st silence at opener → 'you there?' nudge, keep listening");
-eq(deltaSilence({ stage: "askedSet", silence: 1 }), { action: "wait", clip: 9 }, "1st silence mid-question → 'take your time', keep listening");
-eq(deltaSilence({ stage: "askedType", silence: 2 }), { action: "wait", clip: 9 }, "2nd silence mid-question → still patient, never hang up");
-eq(deltaSilence({ stage: "askedType", silence: 3 }), { action: "wrap", clip: 8 }, "3rd consecutive silence → neutral graceful wrap (clip 8, never celebratory)");
-eq(deltaSilence({ stage: "askedDay", silence: 2 }), { action: "wait", clip: 9 }, "restock-day silence is patient too");
-eq(deltaSilence({ stage: "opener", silence: 3 }), { action: "wrap", clip: 8 }, "nobody ever speaks → neutral wrap after two nudges");
+// --- silence: DEAD AIR vs a HELD line are different (owner 07-15) ---
+// Dead air (nobody spoke) → "Hello? You still there?" (clip 7), NEVER "take your time".
+eq(deltaSilence({ stage: "askedSet", silence: 1 }), { action: "nudge", clip: 7 }, "dead air → 'you still there?' (clip 7), not 'take your time'");
+eq(deltaSilence({ stage: "askedType", silence: 2 }), { action: "nudge", clip: 7 }, "2nd dead-air turn → still checking they're there");
+eq(deltaSilence({ stage: "askedType", silence: 3 }), { action: "wrap", clip: 8 }, "3rd dead-air turn → neutral wrap (nobody's home)");
+// Held line (clerk said "hold on, let me check", onHold) → wait quietly, don't nag.
+eq(deltaSilence({ stage: "askedSet", silence: 1, onHold: true }), { action: "holdwait", clip: -1 }, "on hold → wait quietly, no clip (they're checking)");
+eq(deltaSilence({ stage: "askedSet", silence: 2, onHold: true }), { action: "holdwait", clip: -1 }, "still on hold → keep waiting quietly");
+eq(deltaSilence({ stage: "askedSet", silence: 3, onHold: true }), { action: "nudge", clip: 7 }, "long hold → one gentle 'still there?'");
+eq(deltaSilence({ stage: "askedSet", silence: 4, onHold: true, canBarge: true }), { action: "barge", clip: -1 }, "dragging hold on a real store call → Charlie sits it out");
+eq(deltaSilence({ stage: "askedSet", silence: 4, onHold: true, canBarge: false }), { action: "wrap", clip: 8 }, "dragging hold with no barge (bench) → neutral wrap");
 
 if (fail) { console.error(`delta: ${fail} test(s) FAILED`); process.exit(1); }
 console.log("delta: all passed");
