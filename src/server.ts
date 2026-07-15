@@ -898,16 +898,17 @@ app.get("/auth/callerid/status", async (c) => {
 app.post("/app/email", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  const { email } = await c.req.json().catch(() => ({}));
+  const { email, lang } = await c.req.json().catch(() => ({}));
   const e = String(email || "").trim().toLowerCase();
   if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return c.json({ error: "invalid_email" }, 400);
+  const language = lang === "es" ? "es" : lang === "en" ? "en" : undefined; // the site sends its LANG; keep whatever's there otherwise
   const before = await getAccount(u.id);
   const changed = e !== (before?.email || ""); // new or different address → it needs confirming again
-  await db.update(accounts).set({ email: e || null, ...(changed ? { emailVerifiedAt: null } : {}) }).where(eq(accounts.clerkUserId, u.id));
+  await db.update(accounts).set({ email: e || null, ...(language ? { language } : {}), ...(changed ? { emailVerifiedAt: null } : {}) }).where(eq(accounts.clerkUserId, u.id));
   // Opt-in email → Brevo (newsletter/alerts). Fire-and-forget so the UI isn't blocked on Brevo.
   if (e) brevoUpsertContact(e, { PHONE: u.phone || "" }).catch(() => {});
-  // New/changed address → ask them to confirm it. No alert email flows until they tap the link.
-  if (e && changed) { try { await sendConfirmEmail(u.id, e); } catch { /* never block saving the email */ } }
+  // New/changed address → ask them to confirm it (in their language). No alert email flows until they tap.
+  if (e && changed) { try { await sendConfirmEmail(u.id, e, language || (before?.language === "es" ? "es" : "en")); } catch { /* never block saving the email */ } }
   return c.json({ ok: true, email: e || null, verified: !changed && !!before?.emailVerifiedAt });
 });
 
@@ -926,10 +927,10 @@ a.cta{display:block;text-align:center;margin-top:26px;background:#16161C;border:
 app.get("/confirm-email", async (c) => {
   const e = String(c.req.query("e") || "").trim().toLowerCase();
   if (!e || !checkEmailToken(e, String(c.req.query("t") || ""))) {
-    return c.html(emailLandingPage("That link didn't work.", "It may have expired. Add your email again on the site and we'll send a fresh one.", "Puede que haya caducado. Vuelve a agregar tu correo en el sitio y te enviaremos otro.", "Back to the site"), 400);
+    return c.html(emailLandingPage("That link didn't work.", "It may have expired. Add your email again on the site and we'll send a fresh one.", "Puede que haya caducado. Agrega tu correo otra vez en el sitio y te enviamos uno nuevo.", "Back to the site"), 400);
   }
   await db.update(accounts).set({ emailVerifiedAt: Math.floor(Date.now() / 1000) }).where(eq(accounts.email, e));
-  return c.html(emailLandingPage("You're set.", "Email confirmed. Your alerts will land here from now on.", "Correo confirmado. Tus alertas llegarán aquí de ahora en adelante.", "Back to the site"));
+  return c.html(emailLandingPage("You're set.", "Your email is confirmed. Alerts land right here from now on.", "Tu correo está confirmado. Tus alertas llegarán aquí de ahora en adelante.", "Back to the site"));
 });
 // Unsubscribe: signed one-click. Kills every EMAIL alert for this address (subscriptions + watches)
 // and un-verifies it so nothing else emails them until they re-confirm. GET renders the page;
@@ -945,10 +946,10 @@ async function unsubscribeEmail(e: string): Promise<void> {
 app.get("/unsubscribe", async (c) => {
   const e = String(c.req.query("e") || "").trim().toLowerCase();
   if (!e || !checkEmailToken(e, String(c.req.query("t") || ""))) {
-    return c.html(emailLandingPage("That link didn't work.", "We couldn't match this unsubscribe link. Manage alerts from your account on the site instead.", "No pudimos validar este enlace. Administra tus alertas desde tu cuenta en el sitio.", "Back to the site"), 400);
+    return c.html(emailLandingPage("That link didn't work.", "We couldn't match this link. Manage alerts from your account on the site instead.", "No pudimos validar este enlace. Administra tus alertas desde tu cuenta en el sitio.", "Back to the site"), 400);
   }
   await unsubscribeEmail(e);
-  return c.html(emailLandingPage("You're unsubscribed.", "No more alert emails to this address. You can turn them back on from your account any time.", "No enviaremos más alertas a este correo. Puedes reactivarlas desde tu cuenta cuando quieras.", "Back to the site"));
+  return c.html(emailLandingPage("You're out.", "No more alert emails to this address. Turn them back on anytime from your account.", "No más correos de alerta a esta dirección. Puedes reactivarlas cuando quieras desde tu cuenta.", "Back to the site"));
 });
 app.post("/unsubscribe", async (c) => {
   const e = String(c.req.query("e") || "").trim().toLowerCase();

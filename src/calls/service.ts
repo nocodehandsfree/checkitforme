@@ -7,8 +7,8 @@ import { fetchStorePhone } from "../store-phone";
 import {
   accounts, callResults, categories, chains, customerSchedules, retailers, scheduleTargets, schedules, statuses, watches, zoneRetailers, zones,
 } from "../db/schema";
-import { chargeOneCredit, isCompAccount } from "../billing";
-import { sendRestockEmailTo, sendAlert } from "../alerts";
+import { chargeOneCredit, isCompAccount, getAccount } from "../billing";
+import { sendRestockEmailTo, sendAlert, accountLang, localizeResult } from "../alerts";
 import { isCallingPaused } from "../redis";
 import { getPolicy } from "../policy";
 
@@ -44,15 +44,18 @@ async function notifyAutoCheckResult(callId: number): Promise<void> {
     const cat = (await db.select().from(categories).where(eq(categories.id, row.categoryId)))[0];
     const st = row.statusKey ? (await db.select().from(statuses).where(eq(statuses.key, row.statusKey)))[0] : null;
     const result = st?.label || (row.confirmed === true ? "In stock" : row.confirmed === false ? "Not in stock" : "No clear answer");
+    // Language rides the schedule owner's account so {result} and the copy match (Copper's ES).
+    const acct = await getAccount(sched.finderUserId).catch(() => null);
+    const lang = accountLang(acct);
     const tokens = {
       store: (store?.name || "the store").split("—")[0].trim(),
       product: sched.specificProduct || cat?.label || "your product",
-      result,
+      result: localizeResult(result, lang),
       url: row.providerCallId ? `${config.appUrl}/?call=${encodeURIComponent(row.providerCallId)}` : config.appUrl,
     };
     const contact = (sched.contact || "").trim();
-    if (contact.includes("@")) await sendAlert(sched.finderUserId, "auto_check", tokens, { channel: "email" }); // account email, confirm-gated
-    else await sendAlert(sched.finderUserId, "auto_check", tokens, { channel: "sms", to: contact || undefined });
+    if (contact.includes("@")) await sendAlert(sched.finderUserId, "auto_check", tokens, { channel: "email", lang }); // account email, confirm-gated
+    else await sendAlert(sched.finderUserId, "auto_check", tokens, { channel: "sms", to: contact || undefined, lang });
   } catch (e) { console.error("auto-check alert:", e); }
 }
 

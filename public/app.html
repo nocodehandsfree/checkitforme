@@ -778,7 +778,7 @@
   </section>
   <section id="alerts">
     <div class="k-title">Alerts</div>
-    <div class="k-sub">The messages we send customers, and every send. Restock rides text or email, the rest ride email.</div>
+    <div class="k-sub">Every message we send customers, and every send. Restock rides text or email; the rest go by email.</div>
     <div class="k-eyebrow">Delivery status</div>
     <div id="al_status" class="meta">Loading…</div>
     <div class="k-eyebrow">Your in stock ping</div>
@@ -794,7 +794,7 @@
     <div class="k-eyebrow">This month</div>
     <div id="al_rollup" class="meta">Loading…</div>
     <div class="k-eyebrow">Message templates</div>
-    <div class="k-sub" style="margin:0 0 8px">Tokens fill per send: {store} {product} {city} {email}</div>
+    <div class="k-sub" style="margin:0 0 8px">Tokens fill per send: {store} {product} {city} {email} {result}</div>
     <div id="al_templates">Loading…</div>
     <div class="btnrow"><span id="al_saved" class="meta"></span><button class="act" onclick="saveAlertTemplates()">Save messages</button></div>
     <div class="k-eyebrow">Send yourself a test</div>
@@ -809,7 +809,7 @@
         <option value="auto_check">Auto check results (text)</option>
         <option value="instock_owner">Your in stock ping (email)</option>
       </select>
-      <input id="al_test_to" type="text" placeholder="your email (or phone for the text)" style="flex:1;min-width:180px;font-size:14px;padding:10px 14px">
+      <input id="al_test_to" type="text" placeholder="your email (or a phone for the text)" style="flex:1;min-width:180px;font-size:14px;padding:10px 14px">
       <button class="act" onclick="sendAlertTest()">Send test</button>
     </div>
     <div id="al_test_out" class="meta" style="margin-top:8px;font-size:12px"></div>
@@ -4730,11 +4730,11 @@ function decorateChrome(){
 }
 // ---- Alerts (God View → Alerts): editable message templates, subscribers, and the send log ----
 const AL_EVENTS=[
-  ['restock','Restock (text or email)','both','Fires on a confirmed restock, on the channel they picked. Texts count against the plan cap.'],
-  ['auto_check','Auto check results (text or email)','both','Fires after every auto check with what the call found.'],
-  ['store_added','Store went live (email)','email','Their requested store went live. Free check granted.'],
-  ['waitlist','We’re live in your area (email)','email','A waitlist signup’s region just launched.'],
-  ['confirm_email','Confirm your email (email)','email','Someone added an email. No alerts until they tap confirm.'],
+  ['restock','Restock (text or email)','both','Fires on a confirmed restock, on the channel the customer picked. Texts count against their plan’s monthly cap.'],
+  ['auto_check','Auto check results (text or email)','both','Fires after each scheduled auto check, with what the call found.'],
+  ['store_added','Store went live (email)','email','Their requested store just went live. Grants a free check.'],
+  ['waitlist','We’re live in your area (email)','email','A waitlist signup’s area just launched.'],
+  ['confirm_email','Confirm your email (email)','email','Someone added an email. Nothing sends until they tap confirm.'],
 ];
 let AL_TPL={};
 function alField(id,label,val,tall){ return `<label class="fld"><span class="fl">${esch(label)}</span>`
