@@ -48,4 +48,4 @@ We're polite, quick, and ask one question, the same one you would. It takes staf
 **15. How do I cancel?**
 Manage plan, then cancel. No hoops. Your pay as you go checks stay yours. See [Cancel anytime](doc:cancel-anytime).
 
-Still stuck? [Contact us](doc:contact-us).
+Still stuck? [Get help](doc:contact-us).

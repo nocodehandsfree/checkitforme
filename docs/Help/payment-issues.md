@@ -7,7 +7,7 @@ All payments run through **Stripe**, the same processor half the internet uses. 
 
 **Card declined?** That's between your bank and Stripe. Try another card, or your bank's app usually says why.
 
-**Renewal charged but no refill?** Plan checks reset on your billing date automatically. Same fix: reopen the app; then contact us if it still looks wrong.
+**Renewal charged but no refill?** Plan checks reset on your billing date automatically. Same fix: reopen the app; then ask us in the chat or Discord if it still looks wrong.
 
 **Want to change plans?** Upgrade or downgrade from Manage plan in your account. Changes take effect through Stripe and your existing price never changes without you choosing it.
 

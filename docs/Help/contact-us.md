@@ -1,12 +1,11 @@
 ---
-title: Contact us
+title: Get help
 ---
-Fastest: the **Discord**. Link's in the app footer. The team and the community both live there, and most questions get answered in minutes.
+Two ways to reach a human, both fast.
 
-Also good:
+- **Chat, right in the app.** Tap **Help** in the footer to open the chat. Ask anything; a real person picks it up.
+- **Discord.** The team and the community both live there. The link is in the app footer, and most questions get answered in minutes.
 
-- The **Contact** page in the app footer.
-- Found a store with a wrong number or bad hours? Tell us in Discord and it gets fixed for everyone at once.
-- Business stuff (press, partnerships, your chain wants in): the Contact page routes to a human.
+Found a store with a wrong number or bad hours? Tell us in the chat or Discord and it gets fixed for everyone at once. Business stuff, like press, partnerships, or getting your chain added, goes to the same places and reaches a person.
 
 One promise: if the system got something wrong, a real person looks at it. The feedback buttons under any verdict go straight into a review queue we actually read.
