@@ -3,18 +3,9 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 📌 Mapping → DevOps (2026-07-11 night): sync chain MAPPING fields PROD→STAGING (pre-launch blocker)
-- **Problem:** every mapped chain shows GRAY (callReady:false) on the staging website even though it's
-  fully mapped on prod. Cause: mapping is decoupled from staging — the staging DB has no mapping fields.
-  Confirmed: staging /pub/stores/near Tractor Supply callReady=false; prod=true.
-- **Ask:** one-time copy of the chain-level mapping fields prod→staging, keyed by chain id/name:
-  navStatus, navRecipe, navType, navSeconds, ringsDirect, treeStatus, treeNote, phoneTreeDefault,
-  dtmfShortcut, answerPath, avgTreeSeconds, treeLearnedAt, treeVerifiedAt.
-- **Careful:** the existing store-sync runs staging→prod (staging is curation source). This prod→staging
-  copy must touch ONLY those chain nav/tree fields and must not be clobbered by the store sync, or
-  overwrite staging's store-level curation. Decide: one-time copy now, or make the staging site read
-  chain-mapping from prod authoritatively.
-- Mapper engine fixes (guard 6feff66 + skip-rings-direct 52d2c77) already promoted to prod 25be309.
+## Mapping note (2026-07-11): prod→staging mapping sync = OWNER ROUTED TO DATA DEV (their checkpoint),
+   not DevOps. If DD needs the DB mechanism they may pull you in. Mapper engine fixes (guard 6feff66 +
+   skip-rings-direct 52d2c77) already promoted to prod 25be309.
 
 ## ✅ PROMOTED 2026-07-10 07:20Z — pin 6edefab → prod main 10bdc65, all green
 - Pinned promote executed (merge tree == pin, Website polish 7a9c7c1 excluded). Prod health shows

@@ -3,6 +3,18 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 📌 Mapping → DD (2026-07-11 night, owner handed off) — two data fixes for pre-launch render
+1. **Staging behind on mapping → mapped chains show gray "COMING SOON."** Recent maps show
+   callReady:false on staging but locked on prod (Office Depot, Costco, HomeGoods, Burlington all
+   "coming soon" on staging, locked on prod). Copy chain-level mapping fields PROD→STAGING keyed by
+   chain id/name: navStatus, navRecipe, navType, navSeconds, ringsDirect, treeStatus, treeNote,
+   phoneTreeDefault, dtmfShortcut, answerPath, avgTreeSeconds, treeLearnedAt, treeVerifiedAt. Touch
+   ONLY these; don't disturb staging store curation or let the staging→prod store sync clobber it.
+2. **Food 4 Less kiosk/shelf flags wrong** — owner wants it KIOSK-ONLY but it shows in Retail. ~34
+   stores flagged sellsPacks=true (→ Retail), ~26 flagged neither (dead/gray). Set ALL Food 4 Less
+   stores sellsPacks=false + hasKiosk=true. Audit other kiosk-only chains (Vons/Albertsons/Pavilions)
+   for the same inconsistency.
+
 ## KEY FACTS / DECISIONS (written nowhere else — do NOT re-learn the hard way)
 - **ENV:** `staging.checkitforme.com` and `checkitforme.com` are SEPARATE deployments with SEPARATE DBs
   (`DATABASE_URL` per deploy, `src/db/client.ts`). **Staging = source of truth** (edit here first); prod

@@ -6,7 +6,7 @@
 - **The gray was STAGING, not a mapping gap.** All the owner's listed chains are mapped + `callReady:true`
   on PROD (verified via checkitforme.com/pub/stores/near). Staging shows them gray because staging's DB
   doesn't carry the mapping fields — **mapping is decoupled from staging by design.**
-- **→ HANDED TO DEVOPS:** one-time sync of chain mapping fields (navStatus/navRecipe/navType/navSeconds/
+- **→ HANDED TO DATA DEV (owner routed):** sync of chain mapping fields (navStatus/navRecipe/navType/navSeconds/
   ringsDirect/treeStatus/phoneTreeDefault/dtmfShortcut/answerPath/avgTreeSeconds/tree*At) PROD→STAGING so
   the staging site matches for pre-launch validation. Must NOT be clobbered by the staging→prod store sync.
 - **Mapped TODAY (were stuck/unmapped, now locked live):** Walmart(2) review→locked 10s · Office Depot(67)
@@ -23,7 +23,7 @@
 - Ace = co-op, per-store nav is the long-term fix (backend ask), never one chain tree.
 
 ## Open / handed off
-- **DevOps:** prod→staging mapping sync (above). **Admin:** "Can't map" 3rd state + reason display
+- **Data Dev:** prod→staging mapping sync + Food 4 Less kiosk-only flag fix (owner handed off). **Admin:** "Can't map" 3rd state + reason display
   (spec in unmapped-audit-2026-07-11.md). **Data Dev:** already filtered board endpoint 130→97, merged
   H Mart, CVS-at-Target is intentional muted quarantine — done. Muted reasons (Amazon/Best Buy/Micro
   Center = "online only", Aldi = "no store line") to populate.
