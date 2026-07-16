@@ -5151,7 +5151,15 @@ async function startCheckLive(){
   // still covers startup, and finalizeLive is idempotent, so this can only help, never double-fire harmfully.
   ws.onclose=()=>{ try{ if(myGen!==CALL_GEN) return;
     const underway = LIVE_CID||cid||LIVE_TR.length || (LIVE_T0 && (Date.now()-LIVE_T0)>15000);
-    if(underway && $('live') && !$('live').classList.contains('hidden')) finalizeLive(LIVE_CID||cid);
+    if(!(underway && $('live') && !$('live').classList.contains('hidden'))) return;
+    // A socket close is NOT proof the call ended: mid-call the live connection can drop (network / CDN)
+    // while the phone call keeps going (owner 07-16: the page flipped to "getting result" at 0:18 on a
+    // Charlie call that actually ran to 0:25 and answered fine). CONFIRM with the authoritative /pub/live
+    // before finalizing; if it's still live, do nothing — the POLL keeps the transcript flowing and
+    // finalizes at the REAL end. Only finalize immediately when we have no id to confirm with.
+    const _id=LIVE_CID||cid;
+    if(!_id){ finalizeLive(_id); return; }
+    appApi('/pub/live/'+encodeURIComponent(_id)).then(lv=>{ if(lv&&lv.live===false) finalizeLive(_id); }).catch(()=>{});
   }catch(e){} };
   liveStage(2); // dialing → it's ringing
   let cid=null;
@@ -5178,7 +5186,9 @@ async function startCheckLive(){
     const o=await appApi('/pub/live/'+encodeURIComponent(cid));
     if(o&&o.transcript){
       const lines=o.transcript.split('\n').filter(Boolean);
-      if(!LIVE_TR.length) LIVE_TRANSCRIPT=o.transcript; // WS gave nothing yet → render the script from the poll
+      // Adopt the poll's transcript when the WS gave nothing yet OR when the poll has MORE than we've
+      // streamed — so if the live socket dropped mid-call the transcript keeps flowing (owner 07-16).
+      if(!LIVE_TR.length || (o.transcript && o.transcript.length>(LIVE_TRANSCRIPT||'').length)) LIVE_TRANSCRIPT=o.transcript;
       const pitched=AGENT_PITCHED||lines.some(l=>l.startsWith('Agent:')&&AGENT_ASK.test(l)); if(pitched)AGENT_PITCHED=true;
       liveStage(stageForLines(lines, pitched));
       renderLiveMsg();
