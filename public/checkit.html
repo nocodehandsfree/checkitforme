@@ -327,7 +327,7 @@ __BRAND_HEAD__
      so the wash reaches the top. The nav pills + day-picker take a BARELY-green fill (level 3) so they
      read as sitting on a green page without looking like dark chips. */
   body.rview header{background:transparent;border-bottom-color:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
-  body.rview main{padding-top:18px;flex:0 0 auto} /* short results: footer hugs the content instead of pinning to the viewport bottom (owner 07-10 item 51) */
+  body.rview main{padding-top:18px} /* results use the site-default main flex (footer pins to the bottom edge like every other page) — owner 07-15b: the old footer-hug (07-10 item 51) left a dead grey band under the © line on short verdicts; every page must end the same. */
   /* Header chips take the VERDICT's tone (not always green) so the whole top — status bar → nav →
      verdict — reads as one continuous color. Green chips on an amber/red result broke that. */
   body.rview.rv-in .pill,body.rview.rv-in .vsw-trig,body.rview.rv-in .railcal{background:rgba(74,222,128,.05);border-color:rgba(74,222,128,.16)}
@@ -1775,6 +1775,12 @@ html[data-skin="v2"] .buy6b-logo svg{margin-right:-3px}
 html[data-skin="v2"] .buygrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 0}
 html[data-skin="v2"] .buygrid .g{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border-radius:14px;padding:12px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:0 10px 20px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08);font-size:10px;font-weight:700;color:rgba(255,255,255,.85);text-align:center;line-height:1.25}
 html[data-skin="v2"] .buygrid .g svg{flex:0 0 auto}
+html[data-skin="v2"] .buygrid .g{cursor:pointer}
+/* Launch set is small → the boxes grow to fill the room (2-up, roomy). As Admin checks more services
+   on, renderBuyGrid drops the .big class past 6 and the grid tightens back to the compact 4-up. */
+html[data-skin="v2"] .buygrid.big{grid-template-columns:repeat(2,1fr);gap:10px}
+html[data-skin="v2"] .buygrid.big .g{padding:20px 10px 18px;gap:9px;font-size:13px;border-radius:18px}
+html[data-skin="v2"] .buygrid.big .g svg{width:26px;height:26px}
 html[data-skin="v2"] .buygrid-h{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-top:18px}
 html[data-skin="v2"] #billcycle,html[data-skin="v2"] #buymode{display:flex;background:#1B1B20;border:0;border-radius:999px;padding:5px;gap:2px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5);margin:12px 0}
 html[data-skin="v2"] #buymode{margin-top:22px}
@@ -1810,10 +1816,10 @@ html[data-skin="v2"] #zones .modal::before,html[data-skin="v2"] #histOverlay .mo
 html[data-skin="v2"] #zones.on .modal,html[data-skin="v2"] #histOverlay.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 /* Zone dialogs (actions menu / rename / delete / check confirm) = bottom sheets too — the comp shows
    them sliding up from the bottom edge over the dimmed zones list, same recipe as scorePostOv. */
-html[data-skin="v2"] #zmenuOv,html[data-skin="v2"] #emailOv,html[data-skin="v2"] #alertsOv{align-items:flex-end;padding:0}
-html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[data-skin="v2"] #alertsOv .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
-html[data-skin="v2"] #zmenuOv .modal::before,html[data-skin="v2"] #emailOv .modal::before,html[data-skin="v2"] #alertsOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
-html[data-skin="v2"] #zmenuOv.on .modal,html[data-skin="v2"] #emailOv.on .modal,html[data-skin="v2"] #alertsOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
+html[data-skin="v2"] #zmenuOv,html[data-skin="v2"] #emailOv,html[data-skin="v2"] #alertsOv,html[data-skin="v2"] #featOv{align-items:flex-end;padding:0}
+html[data-skin="v2"] #zmenuOv .modal,html[data-skin="v2"] #emailOv .modal,html[data-skin="v2"] #alertsOv .modal,html[data-skin="v2"] #featOv .modal{width:100%;max-width:none!important;border-radius:28px 28px 0 0;margin:0;padding:8px 20px calc(24px + env(safe-area-inset-bottom))}
+html[data-skin="v2"] #zmenuOv .modal::before,html[data-skin="v2"] #emailOv .modal::before,html[data-skin="v2"] #alertsOv .modal::before,html[data-skin="v2"] #featOv .modal::before{content:'';display:block;width:44px;height:6px;border-radius:999px;background:rgba(255,255,255,.4);margin:8px auto 16px}
+html[data-skin="v2"] #zmenuOv.on .modal,html[data-skin="v2"] #emailOv.on .modal,html[data-skin="v2"] #alertsOv.on .modal,html[data-skin="v2"] #featOv.on .modal{animation:sheetUpV2 .34s cubic-bezier(.32,.72,0,1)}
 html[data-skin="v2"] #histOverlay .hist-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px 18px calc(22px + env(safe-area-inset-bottom))}
 /* Footer links (About/FAQ/Terms/Privacy/Contact) slide up as a bottom sheet, like every other panel.
    Flex column: the grab handle + title stay pinned; only the body scrolls (owner 07-06: the top used to
@@ -2706,7 +2712,7 @@ const I18N={ es:{
   'buy6b.title':'Cada función.<br>Elige tus verificaciones.','buy6b.grid':'Todo plan incluye','buy6b.cta':'Continuar',
   'buy6b.f1':'Productos exactos','buy6b.f2':'Barridos de zona','buy6b.f3':'Alertas de reabastecimiento','buy6b.f4':'Verificaciones programadas','buy6b.f5':'Cualquier ciudad','buy6b.f6':'Apartados en tienda','buy6b.f7':'Tu voz','buy6b.f8':'Cacerías thrift',
   'up6a.title':'Esa fue tu verificación gratis.<br>¿Listo para lo bueno?','up6a.cta':'Ver planes Check+','up6a.f1':'Verifica cualquier ciudad de EE. UU.','up6a.f2':'Alertas de reabastecimiento','up6a.f3':'Verifica varias tiendas a la vez',
-  'up6d.title':'Ya estás dentro.','up6d.live':'Ya activo en tu cuenta','up6d.more':'+ 5 más en Administrar plan ›','up6d.cta':'Haz una verificación','up6d.note':'Administra tu plan cuando quieras en Mis verificaciones.',
+  'up6d.title':'Ya estás dentro.','up6d.live':'Ya activo en tu cuenta','up6d.more':'+ 5 más en Administrar plan ›','up6d.moreN':'+ {n} más en Administrar plan ›','up6d.cta':'Haz una verificación','up6d.note':'Administra tu plan cuando quieras en Mis verificaciones.',
   'hob.title':'¿Qué estás cazando?','hob.sub':'Elige tu era. Luego los sets.','hob.sub2':'Sets específicos, sobre retail. Elige un set y luego un producto.',
   'hob.sets':'sets','hob.set':'set','hob.change':'Cambiar','hob.dropped':'Recién salido','hob.upcoming':'Próximamente','hob.retail':'RETAIL',
   'hob.title2':'¿Qué set de Pokémon?','hob.sub3':'Busca o toca una era. Luego los sets.','hob.search':'Busca un set o era','hob.nomatch':'Ninguna era coincide. Prueba otra palabra.',
@@ -2900,7 +2906,8 @@ const I18N={ es:{
   'zones.locph':'Busca un código postal o ciudad…','zones.go':'Ir','zones.list':'Lista','zones.map':'Mapa',
   'zones.radius':'Radio','zones.addallshort':'Agregar todo','zones.selstore':'tienda seleccionada','zones.selstores':'tiendas seleccionadas',
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
-  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.max25':'Máximo 25 tiendas por zona','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Reposición y autoverificación. Solo para esta cuenta.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te avisa por correo apenas vuelva','alerts.d.rsms':'Te avisa por texto apenas vuelva','alerts.d.semail':'Resultados de la autoverificación a tu correo','alerts.d.ssms':'Resultados de la autoverificación a tus textos','alerts.none':'Aún no hay alertas. Vigila una tienda o activa una auto-verificación y aparecerá aquí.','alerts.off':'Apagar','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
+  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.max25':'Máximo 25 tiendas por zona','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Cada alerta que activaste. Aquí las apagas.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo apenas vuelva a estar.','alerts.d.rsms':'Te manda un texto apenas vuelva a estar.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no hay alertas. Vigila una tienda o activa una auto-verificación y aparecerá aquí.','alerts.off':'Apagar','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
+  'feat.d.zone_sweeps':'Guarda tus tiendas como una zona. Un toque las llama todas a la vez. Mira las respuestas llegar en vivo. Cada tienda cuesta una verificación. Sin respuesta, sin cargo.','feat.d.restock_alerts':'Deja de revisar. Te avisamos. Toca Avísame cuando vuelva en un resultado. Vigilamos esa tienda por ti. Apenas llegue producto, te avisamos. Un aviso por reposición, nada de spam.','feat.d.scheduled_checks':'Las tiendas reponen con ritmo. La autoverificación corre en sus días de envío. La respuesta te espera en el celular. Cancela cuando quieras en Mis verificaciones.','feat.d.any_town':'Las cuentas gratis buscan cerca de casa. Cualquier ciudad te suelta la correa. Busca cualquier código postal o ciudad. El mapa salta ahí. Más de 100,000 tiendas.','feat.d.store_holds':'¿Lo encontraste pero estás a 20 minutos? Le pedimos al personal que te aparte uno. Con tu nombre, en la misma llamada.','feat.d.your_voice':'Elige la voz que llama por ti. Quien contesta escucha una voz amable y natural.','feat.d.thrift_hunts':'Colecciones viejas acaban en tiendas de segunda. Precios de risa, nadie las revisó. Activa Thrift y llamamos a las de tu zona. Preguntamos qué hay en la vitrina hoy.','feat.d.hobby_hunts':'Un muro de Pokémon para explorar. Cada era, cada set, cada producto. Con precios de lista. Elige tu objetivo. Cada llamada pide exactamente eso.',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
   'zones.confirm.title2':'¿Verificar {n} {s} abiertas?','zones.storeword':'tienda','zones.storesword':'tiendas','zones.checkallN':'Verificar las {n}','zones.removeall':'Quitar todo','zones.isclosed':'está cerrada','zones.areclosed':'están cerradas','zones.stillcall':'Aún podemos llamar a las {n} abiertas.','zones.and':'y','zones.andmore':'y {n} más','zones.astore':'Una tienda',
@@ -5396,7 +5403,7 @@ function nlSent(s){ s=String(s==null?'':s); if(s.includes('<br')) return s; retu
 // becomes an inline-block: the line breaks between blocks first; a sentence longer than the whole
 // line still wraps inside itself instead of overflowing.
 function sentLines(s){ s=String(s==null?'':s).replace(/<br\s*\/?>/gi,' ').replace(/\s+/g,' ').trim();
-  const parts=s.replace(/([.!?…])\s+(?=[A-ZÁÉÍÓÚÑ¿¡])/g,'$1\u0001').split('\u0001');
+  const parts=s.replace(/([.!?…])\s+(?=[A-Z0-9ÁÉÍÓÚÑ¿¡])/g,'$1\u0001').split('\u0001');
   if(parts.length<2) return s;
   return parts.map(p=>'<span style="display:inline-block">'+p+'</span>').join(' '); }
 // Registry/owner-written notes can use a {product} token — we fill it with the live product name (bolded),
@@ -6190,7 +6197,10 @@ function openPaid(){
   let run=0; try{ const now=new Date(); run=histList().filter(e=>e.ts&&new Date(e.ts).getMonth()===now.getMonth()&&new Date(e.ts).getFullYear()===now.getFullYear()).length; }catch(_){ }
   const st=$('paid_stats'); if(st) st.innerHTML=`<div class="stat2" style="flex:1"><b>${comp?'∞':n}</b><i>${esc(t('acct.stat.left','Checks left').toUpperCase())}</i></div><div class="stat2" style="flex:1"><b>${run}</b><i>${esc(t('acct.stat.run','Checks run').toUpperCase())}</i></div>`;
   const ck='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 12.5l5 5L20 6.5"/></svg>';
-  const ft=$('paid_feats'); if(ft) ft.innerHTML=[t('buy6b.f1','Exact products'),t('buy6b.f3','Restock alerts'),t('buy6b.f2','Zone sweeps')].map(f=>`<div style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:rgba(255,255,255,.85)">${ck}${esc(f)}</div>`).join('');
+  // Live list — the same Admin-driven service set as the buy grid, first three + a true count.
+  const ks=(PLANS&&PLANS.everyPlanGets&&PLANS.everyPlanGets.length)?PLANS.everyPlanGets:['zone_sweeps','restock_alerts','scheduled_checks','any_town','thrift_hunts','hobby_hunts'];
+  const ft=$('paid_feats'); if(ft) ft.innerHTML=ks.slice(0,3).map(k=>`<div style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:rgba(255,255,255,.85)">${ck}${esc(featLabel(k))}</div>`).join('');
+  try{ const mo=document.querySelector('[data-i18n="up6d.more"]'); if(mo){ const extra=ks.length-3; mo.style.display=extra>0?'':'none'; if(extra>0){ mo.removeAttribute('data-i18n'); mo.textContent=tf('up6d.moreN','+ {n} more in Manage plan ›',{n:extra}); } } }catch(_){ }
   $('paidOverlay').classList.add('on'); try{track('paid6d_open');}catch(e){}
 }
 // ---- 6a upsell (v2): send-off into premium right after the FIRST free check result. ----
@@ -6579,7 +6589,7 @@ function editEmail(){ const ov=sheetShell('emailOv');
 async function saveEmail(){ const e=($('em_in').value||'').trim().toLowerCase();
   if(e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ markFld($('em_in'),true); return; }
   const b=$('em_btn'); b.disabled=true; b.textContent=t('em.saving','Saving…');
-  const r=await appApi('/app/email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:e})});
+  const r=await appApi('/app/email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:e,lang:LANG})});
   b.disabled=false; b.textContent=t('em.save','Save email')+' →';
   if(!r||r.error){ $('em_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
   if(ACCOUNT){ ACCOUNT.email=r.email; ACCOUNT.emailVerified=!!r.verified; }
@@ -6592,22 +6602,26 @@ async function openAlerts(){ const ov=sheetShell('alertsOv');
   const shell=rows=>`<div class="modal" style="text-align:left">
     <div style="display:flex;justify-content:center;margin-bottom:6px">${ICO.bell(AC1()).replace('width="15" height="15"','width="28" height="28"')}</div>
     <h3 style="margin:2px 0 4px;text-align:center">${t('alerts.title','Alerts')}</h3>
-    <div class="meta" style="margin-bottom:14px;text-align:center">${t('alerts.sub','Restock and auto check pings. All for this account.')}</div>
+    <div class="meta" style="margin-bottom:14px;text-align:center">${sentLines(t('alerts.sub',"Every alert you've set up. Turn any off here."))}</div>
     <div id="alertsList">${rows}</div></div>`;
   ov.innerHTML=shell(`<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`);
   ov.classList.add('on');
   const me=await appApi('/app/alerts/me');
   const paint=me2=>{ const subs=(me2&&me2.subscriptions)||[];
     $('alertsList').innerHTML = subs.length? subs.map(x=>{
-      // Row copy law (owner 07-15): say WHAT and WHERE on the title ("Pokémon cards at Target"),
-      // then what the ping actually DOES in plain words — never a bare "Restock alert · email".
-      const what=esc(x.productLabel||t('alerts.acheck','A check'));
-      const title=x.storeName?tf('alerts.row.at','{p} at {s}',{p:what,s:esc(x.storeName)}):what;
+      // Row copy law (owner 07-15b): plain English, exactly what it is. Title = product + store.
+      // A stored label can be junk ("cards") — anything short/generic falls back to the category's
+      // real name ("Pokémon cards"). Sub = one friend-voice sentence saying what the alert does.
+      let what=String(x.productLabel||'').trim();
+      const cat=(CATS.find(c=>c.id===x.categoryId)||{}).label||'';
+      if(cat && (!what || (what.length<8 && !/\s/.test(what)) || cat.toLowerCase().endsWith(what.toLowerCase()))) what=cat;
+      if(!what) what=t('alerts.acheck','A check');
+      const title=x.storeName?tf('alerts.row.at','{p} at {s}',{p:esc(what),s:esc(x.storeName)}):esc(what);
       const does=x.kind==='schedule'
-        ? (x.channel==='sms'?t('alerts.d.ssms','Auto check results land in your texts'):t('alerts.d.semail','Auto check results land in your email'))
-        : (x.channel==='sms'?t('alerts.d.rsms','Texts you the moment it restocks'):t('alerts.d.remail','Emails you the moment it restocks'));
+        ? (x.channel==='sms'?t('alerts.d.ssms','Auto checks the store. Texts you the result.'):t('alerts.d.semail','Auto checks the store. Emails you the result.'))
+        : (x.channel==='sms'?t('alerts.d.rsms',"Texts you the moment it's back in stock."):t('alerts.d.remail',"Emails you the moment it's back in stock."));
       return `<div style="display:flex;align-items:center;gap:12px;margin-top:10px;padding:13px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">
-        <span style="flex:1;min-width:0"><span style="display:block;font-size:14.5px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</span><span style="display:block;margin-top:2px;font-size:12px;font-weight:600;color:#8A8A96;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${does}</span></span>
+        <span style="flex:1;min-width:0"><span style="display:block;font-size:14.5px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</span><span style="display:block;margin-top:2px;font-size:12px;font-weight:600;color:#8A8A96;line-height:1.45">${sentLines(does)}</span></span>
         <button onclick="alertOff(${x.id})" style="flex:none;background:rgba(255,123,123,.12);border:0;border-radius:999px;padding:8px 14px;color:#FF9B9B;font:800 12px Inter;cursor:pointer">${t('alerts.off','Turn off')}</button></div>`;}).join('')
       : `<div class="meta" style="text-align:center;padding:18px 8px">${t('alerts.none','No alerts yet. Watch a store or turn on an auto-check and it shows up here.')}</div>`; };
   paint(me);
@@ -7045,7 +7059,7 @@ let BILLING_ANNUAL=false;
 let PLANS=null; // { features:[{key,label}], everyPlanGets:[key…], tiers:[{key,name,monthlyCents,annualCents,checksPerMonth,premiumAsks,features}], payg:[{checks,cents}] }
 async function loadPlans(){ try{ const r=await fetch('/pub/plans').then(x=>x.json()); if(r&&Array.isArray(r.tiers)&&r.tiers.length){ PLANS=r; } }catch(_){ } return PLANS; }
 // Account entitlements (GET /app/me.features): comp → all 8, subscriber → their tier, PAYG/free → none.
-function hasFeature(key){ try{ if(ACCOUNT&&ACCOUNT.comp) return true; return !!(ACCOUNT&&ACCOUNT.features&&ACCOUNT.features[key]); }catch(_){ return false; } }
+function hasFeature(key){ try{ if(key==='exact_products') return true; /* every account since 07-15 (owner) — no longer a premium service */ if(ACCOUNT&&ACCOUNT.comp) return true; return !!(ACCOUNT&&ACCOUNT.features&&ACCOUNT.features[key]); }catch(_){ return false; } }
 // feature-key → the Lucide glyph, so the live "every plan gets" grid draws the right icon per key.
 const FEAT_ICON={
   exact_products:'<path d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"/><path d="M12 22V12"/><path d="m3.3 7 8.7 5 8.7-5"/>',
@@ -7056,7 +7070,28 @@ const FEAT_ICON={
   store_holds:'<path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>',
   your_voice:'<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/>',
   thrift_hunts:'<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>',
+  hobby_hunts:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>', // the set wall
 };
+// What each Check+ service IS, in plain words — condensed from the book (docs/Check+/*, readme.com).
+// Tapping a grid box opens this as a bottom sheet. Keys match the catalog; unknown keys get no sheet.
+const FEAT_INFO={ // every sentence short enough to sit on ONE line at 14px/390pt (copy-guide hard rule 2)
+  zone_sweeps:      ()=>t('feat.d.zone_sweeps',"Save the stores near you as a zone. One tap calls them all at the same time. Watch the answers land live. Each store costs one check. No answer, no charge."),
+  restock_alerts:   ()=>t('feat.d.restock_alerts',"Stop checking. Get told. Tap Tell me when it's back on a result. We watch that store for you. The moment product lands, we ping you. One ping per restock, never spam."),
+  scheduled_checks: ()=>t('feat.d.scheduled_checks',"Stores restock on a rhythm. Auto check runs on their shipment days. The answer is waiting on your phone. Cancel any time from My checks."),
+  any_town:         ()=>t('feat.d.any_town',"Free accounts hunt near home. Any town takes the leash off. Search any ZIP or city. The map jumps there. 100,000+ stores and counting."),
+  store_holds:      ()=>t('feat.d.store_holds',"Found it but you're 20 minutes away? We ask Staff to hold one with your name on it. All on the same call."),
+  your_voice:       ()=>t('feat.d.your_voice',"Pick the calling voice you like best. Staff hears a friendly, natural caller."),
+  thrift_hunts:     ()=>t('feat.d.thrift_hunts',"Old collections end up on thrift shelves. Priced like junk, because nobody checked. Flip on Thrift and we call the shops near you. We ask what's in the case today."),
+  hobby_hunts:      ()=>t('feat.d.hobby_hunts',"A browsable wall of Pokémon. Every era, every set, every product. List prices included. Pick your target. Every call asks the card shops for exactly that."),
+};
+function openFeatInfo(key){ const d=FEAT_INFO[key]; if(!d) return;
+  const ov=sheetShell('featOv');
+  ov.innerHTML=`<div class="modal" style="text-align:left">
+    <div style="display:flex;justify-content:center;margin-bottom:6px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${FEAT_ICON[key]||''}</svg></div>
+    <h3 style="margin:2px 0 8px;text-align:center">${esc(featLabel(key))}</h3>
+    <div class="meta" style="text-align:center;font-size:14px;line-height:1.6;padding:0 4px 4px">${sentLines(d())}</div></div>`;
+  ov.classList.add('on'); track('feat_info',{key});
+}
 function featLabel(key){ const f=(PLANS&&PLANS.features||[]).find(x=>x.key===key); return f?f.label:key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); }
 // The tier tiles: live tiers straight off /pub/plans (fallback to a static ladder only if the fetch failed).
 function tiers(){
@@ -7165,9 +7200,10 @@ function buyContinue(){
 function renderBuyGrid(){
   const g=$('buy_grid'); if(!g) return;
   const I=p=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
-  const keys=(PLANS&&PLANS.everyPlanGets&&PLANS.everyPlanGets.length)?PLANS.everyPlanGets:['exact_products','zone_sweeps','restock_alerts','scheduled_checks','any_town','store_holds','your_voice','thrift_hunts'];
-  const cells=keys.map(k=>`<div class="g">${I(FEAT_ICON[k]||'')}${esc(featLabel(k))}</div>`).join('');
-  g.innerHTML=`<div class="buygrid-h">${t('buy6b.grid','Every plan gets')}</div><div class="buygrid">${cells}</div>`;
+  const keys=(PLANS&&PLANS.everyPlanGets&&PLANS.everyPlanGets.length)?PLANS.everyPlanGets:['zone_sweeps','restock_alerts','scheduled_checks','any_town','thrift_hunts','hobby_hunts'];
+  // Few services (launch) → BIG boxes; the grid tightens up on its own as Admin checks more on (owner 07-15).
+  const cells=keys.map(k=>`<div class="g" role="button" onclick="openFeatInfo('${k}')">${I(FEAT_ICON[k]||'')}${esc(featLabel(k))}</div>`).join('');
+  g.innerHTML=`<div class="buygrid-h">${t('buy6b.grid','Every plan gets')}</div><div class="buygrid${keys.length<=6?' big':''}">${cells}</div>`;
 }
 function openBuy(reason){
   if(!isAuthed()){ toast(t('toast.signupfirst','Sign up first to add checks')); signUp(); return; }
@@ -7365,14 +7401,14 @@ async function submitWatch(){
   // and /app/alerts/subscribe puts it in the metered alerts system (per-plan SMS cap + Admin tracking).
   const [r,sub]=await Promise.all([
     api('/pub/watch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({retailerId:SEL_STORE.id,categoryId:SEL_CAT,contact:c})}),
-    appApi('/app/alerts/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:'restock',retailerId:SEL_STORE.id,categoryId:SEL_CAT,productLabel:findProductLabel(),channel})}),
+    appApi('/app/alerts/subscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({kind:'restock',retailerId:SEL_STORE.id,categoryId:SEL_CAT,productLabel:findProductLabel(),channel,lang:LANG})}),
   ]);
   btn.disabled=false; btn.textContent=t('watch.cta','Watch this store →');
   if((!r||r.error)&&(!sub||sub.error)){ $('watch_err').textContent=t('err.generic',"That didn't go through. Give it another try."); return; }
   track('watch_set',{retailerId:SEL_STORE.id,channel});
   // Typed an email and the account has none saved → save it as THE account email so the branded
   // confirm email fires (Addie 07-15). Fire-and-forget: the watch itself is already registered.
-  if(isEmail&&isAuthed()&&ACCOUNT&&!ACCOUNT.email){ try{ appApi('/app/email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:c})}).then(r=>{ if(r&&!r.error){ ACCOUNT.email=r.email; ACCOUNT.emailVerified=!!r.verified; } }); }catch(_){ } }
+  if(isEmail&&isAuthed()&&ACCOUNT&&!ACCOUNT.email){ try{ appApi('/app/email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:c,lang:LANG})}).then(r=>{ if(r&&!r.error){ ACCOUNT.email=r.email; ACCOUNT.emailVerified=!!r.verified; } }); }catch(_){ } }
   // In-place confirmation (owner: no toasts, no crowd counts). The input goes away; the box tells
   // them the ONE next step, then how the alert lands. Verification wiring = Admin build.
   $('watch_contact').style.display='none';
@@ -7806,7 +7842,7 @@ async function submitSchedule(){
   if(contact){ const isEmail=/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(contact), isPhone=/^[+()\d][-()\s\d]{6,}$/.test(contact); if(!isEmail&&!isPhone){ markFld($('sch_contact'),true); $('sch_err').textContent=''; return; } }
   const btn=$('sch_btn'); btn.disabled=true; btn.textContent=t('sch.setting','Setting it up…');
   const body={ retailerId:SEL_STORE.id, categoryId:SEL_CAT, specificProduct:SEL_PRODUCT||undefined,
-    daysOfWeek:[...SCH_DAYS].join(','), timeLocal:$('sch_time').value||'10:00', contact:contact||undefined };
+    daysOfWeek:[...SCH_DAYS].join(','), timeLocal:$('sch_time').value||'10:00', contact:contact||undefined, lang:LANG };
   const r=await appApi('/app/schedule',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
   btn.disabled=false; btn.textContent=t('sch.cta','Turn on auto-check →');
   if(r&&r.error==='members_only'){ closeSchedule(); openBuy('out'); return; }

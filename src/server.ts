@@ -3037,12 +3037,10 @@ app.get("/app/me", async (c) => {
   if (a && !a.phone && u.phone) {
     await db.update(accounts).set({ phone: u.phone }).where(eq(accounts.clerkUserId, u.id)); a.phone = u.phone;
   }
-  // premiumAsks entitlement (Hunter tier) — the call path / Website consume this to allow exact
-  // set/product/price questions. Comp accounts get everything.
-  // Premium entitlements (subscription-only): per-feature map the UI gates on, plus premiumAsks
-  // (= features.exact_products) for the call path. Comp -> all; PAYG/free -> none.
+  // Premium entitlements (subscription-only): per-feature map the UI gates on. premiumAsks (exact
+  // set/product/price questions on the call) is for EVERY account since 2026-07-15 (owner).
   const features = await accountFeatures(a?.subTier, comp);
-  const premiumAsks = features.exact_products === true;
+  const premiumAsks = true;
   return c.json({
     // Displayed balance = subscription quota + PAYG (both spendable). quota/payg broken out for the UI.
     credits: comp ? 9999 : spendableCredits(a), subscription: comp ? "active" : (a?.subscription ?? "none"),
@@ -3282,6 +3280,9 @@ app.post("/app/schedule", async (c) => {
   if (!isCompAccount(a) && a?.subscription !== "active") return c.json({ error: "members_only" }, 402);
   const b = await c.req.json();
   if (!b.retailerId || !b.categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
+  // The site sends its language with the signup — store it so this account's alerts go out in it.
+  const schedLang = b.lang === "es" ? "es" : b.lang === "en" ? "en" : undefined;
+  if (schedLang) await db.update(accounts).set({ language: schedLang }).where(eq(accounts.clerkUserId, u.id));
   const row = await createSchedule(u.id, { ...b, contact: b.contact || a?.email || undefined });
   return c.json({ ok: true, schedule: row });
 });
@@ -4741,6 +4742,9 @@ app.post("/app/alerts/subscribe", async (c) => {
   if (!u) return c.json({ error: "unauthorized" }, 401);
   const b = await c.req.json().catch(() => ({}));
   await getAccount(u.id, u.email || undefined);
+  // The site sends its language with the signup — store it so this account's alerts go out in it.
+  const subLang = b.lang === "es" ? "es" : b.lang === "en" ? "en" : undefined;
+  if (subLang) await db.update(accounts).set({ language: subLang }).where(eq(accounts.clerkUserId, u.id));
   const r = await alertSubscribe(u.id, {
     kind: b.kind ? String(b.kind) : "restock",
     retailerId: b.retailerId != null ? Number(b.retailerId) : null,
