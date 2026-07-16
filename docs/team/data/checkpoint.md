@@ -25,6 +25,22 @@
 - **NEVER** run the paid hours backfill (`/api/hours/backfill`) or re-chain big-box (GameStop/Target) from directories.
 
 ## IN PROGRESS / WAITING ON OWNER
+- **KIOSK PHONES — DONE 2026-07-16.** All verified-kiosk stores are now dialable except ONE (Payless Foods
+  Athens — Google has no number; only remaining board blocker). Owner googled 178 phones+hours in 3 boxes;
+  applied to BOTH envs address-verified (`ingest_kiosk_contacts.py <resp> <sent-box> --apply`; boxes archived
+  in `docs/team/data/handoffs/`). Held back as WRONG (bad area codes): Fry's Gilbert 102795 "(482)",
+  Mariano's Westchester-IL 102842 "(914)"=NY. 9 all-kiosk chains awaiting Mapper (prompt handed to owner):
+  H-E-B(84, owner-verified PRESS 0), Woodman's(14), Lucky(7), H Mart(6), FoodMaxx(5), Metro Market(5),
+  Stop & Shop(2), Pak N Save(1), Uwajimaya(1).
+- **KIOSK IDENTITY TRAP (GOTCHAS'd):** vending overlay re-binds rows when TPCi moves machines — NEVER patch
+  kiosk rows by DB id across time; match by ADDRESS+state+chain-token. Root fix open: key rows by place,
+  overlay machines via `kiosks` table. TPCi API has NO phone field (why kiosk-born rows had none).
+- **AUTO-SYNC BOTH DIRECTIONS — LIVE 2026-07-16:** `learnedSyncTick` (staging, every 3 min) pulls learned
+  chain-nav PROD→staging (mirror of storeSyncTick staging→prod). Manual: POST /api/admin/learned-sync.
+  NOTE: any hand-set nav on staging gets overwritten from prod within 3 min — map on PROD (it flows down).
+- **ONE DIALABLE RULE:** `chainDialable()` (recipe.ts) = !muted && callTarget && stockCheckMethod!=='site';
+  read by mapping board + batch + single-map. Board rows carry `phones` + `blocker` (data-gap surfacing).
+  Micro Center = site-check (owner: never callable) — off the board, shoppers see "check online".
 - **HOURS backfill loop (ACTIVE):** 3,412 fresh storefronts added this session (Habitat ReStore 748 + WPN
   2,664) came in with phone+address, NO hours. Owner runs them through Google on his phone in chunks (100–150
   at a time), pastes back `id | ... | Mon <val> | …`. `scripts/data-tools/ingest_hours.py <resp> <sent> --apply`
