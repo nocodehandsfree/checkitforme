@@ -256,7 +256,7 @@ function fillRaw(t: string, tokens: Record<string, string | number | undefined>)
 function fillHtmlBold(t: string, tk: Record<string, string | number | undefined>): string {
   return t.split(/(\*\*[^*]+\*\*)/).map((seg) => {
     const m = seg.match(/^\*\*([^*]+)\*\*$/);
-    if (m) return `<b style="color:#FFFFFF;font-weight:700">${escHtml(fillRaw(m[1], tk))}</b>`;
+    if (m) return `<b style="color:#FAFAFA;font-weight:700">${escHtml(fillRaw(m[1], tk))}</b>`;
     return escHtml(fillRaw(seg, tk));
   }).join("");
 }
@@ -265,20 +265,21 @@ function fillHtmlBold(t: string, tk: Record<string, string | number | undefined>
 // Outlook keeps near-black backgrounds black and keeps borders/saturated colors, but it LIGHTENS a
 // dark-gray fill (#14141A/#1B1B20) into gray mush — which is why the old floating card looked awful.
 // So: no floating card, one flat canvas, and modules are BORDERED (border survives) not dark-filled.
-const BOARD = "#000000";       // PURE black — Outlook leaves true black alone (it grays near-blacks)
+const BOARD = "#16161C";       // near-black GRAY. Pure #000/#fff trigger Gmail+Apple aggressive invert
+// (Litmus/EoA); real dark emails (Touch of Modern, Philz, ZoomMate) use dark gray and stay dark everywhere.
 const HAIR = "#2A2A33";        // box border that survives Outlook's recolor (defines the boxes on black)
 function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | number | undefined>): string {
   if (!m) return "";
   const box = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="mod" style="background:${BOARD};border:1px solid ${HAIR};border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
-  if (m.type === "chip") return box(`<span class="mt" style="font-size:15px;font-weight:700;color:#FFFFFF;font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
+  if (m.type === "chip") return box(`<span class="mt" style="font-size:15px;font-weight:700;color:#FAFAFA;font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
   if (m.type === "product") return box(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-    <td style="font-family:${FONT}"><div class="mt" style="font-size:16px;font-weight:800;color:#FFFFFF">${escHtml(fill(m.title, tk))}</div><div class="ms" style="font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
+    <td style="font-family:${FONT}"><div class="mt" style="font-size:16px;font-weight:800;color:#FAFAFA">${escHtml(fill(m.title, tk))}</div><div class="ms" style="font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
     <td align="right" valign="middle"><span style="display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.6px;color:#4ADE80;border:1px solid #235238;border-radius:999px;padding:5px 11px;font-family:${FONT}">${escHtml(m.badge)}</span></td></tr></table>`, "16px 18px", 16);
   const rows = m.steps.map((s, i) => {
     const last = i === m.steps.length - 1;
     return `${i ? `<tr><td colspan="2" style="padding:0 18px"><div style="height:1px;line-height:1px;font-size:0;background:${HAIR}">&nbsp;</div></td></tr>` : ""}<tr>
     <td width="57" valign="middle" style="padding:${i ? "12px" : "16px"} 0 ${last ? "16px" : "12px"} 18px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="26" height="26" align="center" valign="middle" style="width:26px;height:26px;border-radius:50%;border:1px solid #235238;color:#4ADE80;font-size:12px;font-weight:800;font-family:${FONT}">${escHtml(s[0])}</td></tr></table></td>
-    <td valign="middle" style="padding:${i ? "12px" : "16px"} 18px ${last ? "16px" : "12px"} 0;font-size:15px;font-weight:${last ? 700 : 600};color:#FFFFFF;font-family:${FONT}">${escHtml(s[1])}</td></tr>`;
+    <td valign="middle" style="padding:${i ? "12px" : "16px"} 18px ${last ? "16px" : "12px"} 0;font-size:15px;font-weight:${last ? 700 : 600};color:#FAFAFA;font-family:${FONT}">${escHtml(s[1])}</td></tr>`;
   }).join("");
   return `<tr><td style="padding-top:22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BOARD};border:1px solid ${HAIR};border-radius:16px">${rows}</table></td></tr>`;
 }
@@ -313,15 +314,15 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
   // round a td, so MSO gets a VML roundrect (arcsize 50% = full capsule) and everyone else the styled <a>.
   const cta = `<tr><td style="padding-top:24px">
     <!--[if mso]>
-    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="#4ADE80" strokeweight="2px" fillcolor="#000000">
+    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="#4ADE80" strokeweight="2px" fillcolor="#16161C">
       <w:anchorlock/>
-      <center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.6px;">${ctaLabel}</center>
+      <center style="color:#FAFAFA;font-family:Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.6px;">${ctaLabel}</center>
     </v:roundrect>
     <![endif]-->
     <!--[if !mso]><!-->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td align="center" style="background:#000000;border:2px solid #4ADE80;border-radius:999px">
-        <a href="${url}" style="display:block;padding:19px 24px;color:#FFFFFF;font-weight:800;font-size:14px;letter-spacing:1.6px;text-decoration:none;font-family:${FONT};text-transform:uppercase">${ctaLabel}</a>
+      <td align="center" style="background:#16161C;border:2px solid #4ADE80;border-radius:999px">
+        <a href="${url}" style="display:block;padding:19px 24px;color:#FAFAFA;font-weight:800;font-size:14px;letter-spacing:1.6px;text-decoration:none;font-family:${FONT};text-transform:uppercase">${ctaLabel}</a>
       </td></tr></table>
     <!--<![endif]-->
   </td></tr>`;
@@ -338,7 +339,7 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
 :root{color-scheme:dark;supported-color-schemes:dark}
 [data-ogsc] .board,[data-ogsb] .board{background:${BOARD}!important}
 [data-ogsc] .mod,[data-ogsb] .mod{background:${BOARD}!important;border:1px solid ${HAIR}!important}
-[data-ogsc] .hl,[data-ogsc] .mt{color:#FFFFFF!important}
+[data-ogsc] .hl,[data-ogsc] .mt{color:#FAFAFA!important}
 [data-ogsc] .kick{color:${d.kickerColor}!important}
 [data-ogsc] .p1{color:#D1D1DA!important}[data-ogsc] .p2{color:#B9B9C4!important}
 [data-ogsc] .ms{color:#8A8A96!important}
@@ -353,7 +354,7 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
       <tr><td bgcolor="${BOARD}" style="background:${BOARD};padding:24px 26px 0">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
           <tr><td class="kick" style="font-size:11px;font-weight:700;letter-spacing:1.6px;color:${d.kickerColor};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
-          <tr><td class="hl" style="padding-top:12px;font-size:34px;font-weight:900;color:#FFFFFF;line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
+          <tr><td class="hl" style="padding-top:12px;font-size:34px;font-weight:900;color:#FAFAFA;line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
           ${bodyHtml}
           ${moduleHtml(d.module, tokens)}
           ${cta}
