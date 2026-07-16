@@ -596,9 +596,9 @@ __BRAND_HEAD__
      full strength and breathes the check button's green glow (rCtaGlow family) — it replaces the old
      "Something wrong with this check? Tell us" text link. The .invite class rides #supTab only while
      the result view is up (showResult adds, setView removes); everywhere else the tab is untouched. */
-  .suplaunch.invite{opacity:1;width:44px}
-  .suplaunch.invite svg{stroke:#E9E9F0}
-  .suplaunch.invite:not(.tucked){animation:supSlideIn .45s cubic-bezier(.32,.72,0,1),supInviteGlow 2.8s ease-in-out .6s infinite}
+  body.rview .suplaunch.invite{opacity:1;width:44px}
+  body.rview .suplaunch.invite svg{stroke:#E9E9F0}
+  body.rview .suplaunch.invite:not(.tucked){animation:supSlideIn .45s cubic-bezier(.32,.72,0,1),supInviteGlow 2.8s ease-in-out .6s infinite}
   @keyframes supSlideIn{0%{transform:translateX(120%)}100%{transform:translateX(0)}}
   @keyframes supInviteGlow{0%,100%{box-shadow:-5px 6px 16px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05),0 0 0 1px rgba(52,197,107,.25),0 0 14px rgba(52,197,107,.18)}50%{box-shadow:-5px 6px 16px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05),0 0 0 1px rgba(52,197,107,.6),0 0 26px 4px rgba(52,197,107,.42)}}
   .suplaunch.tucked{transform:translateX(120%);opacity:0;pointer-events:none}
@@ -3238,8 +3238,9 @@ window.addEventListener('wheel',supTabTuck,{passive:true});
 window.addEventListener('touchmove',supTabTuck,{passive:true});
 // Open straight to "What's it about?" (the topic picker) — most people arrive wanting to ask/report.
 function supTabClick(){ const w=$('supWrap'); if(w&&w.classList.contains('on')){ closeSupport(); return; }
-  // Post-check glow (result page): the tab IS the old Tell-us link — straight into "make it right".
-  const st=$('supTab'); if(st&&st.classList.contains('invite')){ openSupportTopic('check_issue'); return; }
+  // Post-check glow (result page only — body.rview matches the CSS scope): the tab IS the old
+  // Tell-us link — straight into "make it right".
+  const st=$('supTab'); if(st&&st.classList.contains('invite')&&document.body.classList.contains('rview')){ openSupportTopic('check_issue'); return; }
   openSupport(); } // one tab, two jobs: open, then close from the same thumb spot (owner 07-14)
 function openSupport(){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supStartNew(); }
 // Open support straight into a specific topic (skips the picker). Used by the "report a problem"
@@ -5343,7 +5344,7 @@ async function finalize(cid){
   saveCheckToHistory(res, cid);
   showResult(res, cid);
 }
-function backToBuilder(){ try{ document.documentElement.classList.remove('restoring'); }catch(_){ } /* deep-link hide must never survive into the homepage */ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
+function backToBuilder(){ try{ document.documentElement.classList.remove('restoring'); }catch(_){ } /* deep-link hide must never survive into the homepage */ try{ exitHunt(); const _lb=$('hoblockbar'); if(_lb) _lb.style.display='none'; }catch(_){ } try{ document.body.classList.remove('zoning'); const _z=$('zones'); if(_z) _z.classList.remove('on'); const _h=$('histOverlay'); if(_h) _h.classList.remove('on'); }catch(_){ } /* close any open Check history / My Zones sheet */ TONE_NAV_DONE=false; /* new call coming → let the next verdict re-tint the bar at load */ document.body.classList.remove('fabbed'); document.body.classList.remove('rview'); ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); try{ const _st=$('supTab'); if(_st)_st.classList.remove('invite'); }catch(_){ } /* the post-check glow belongs to the result page only */ try{ setThemeTone(); }catch(e){} if(typeof stopAudio==='function')stopAudio(); stopLiveTimers(); const hb=$('hangup_btn'); if(hb)hb.style.display='none'; ['live','result','history','success','handoff','hobby','zones'].forEach(x=>{const e=$(x);if(e)e.classList.add('hidden');}); $('builder').classList.remove('hidden'); { const _fd=$('finds'); if(_fd&&_fd.children.length)_fd.style.display=''; }
   // Returning to the builder = a FRESH homepage (as if loaded for the first time). Drop ANY store/
   // category left over from a reopened call so it doesn't show pre-selected in the call CTA (which also
   // auto-scrolled to it). The apex site pre-locks Pokémon via BRAND_CAT, so this must NOT be gated on it
