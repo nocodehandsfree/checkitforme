@@ -455,7 +455,7 @@ export async function sendConfirmEmail(userId: string | null, to: string, lang: 
   const confirmUrl = `${siteUrl()}/confirm-email?e=${encodeURIComponent(e)}&t=${emailToken(e)}${userId ? `&u=${encodeURIComponent(userId)}` : ""}`;
   const tokens = { email: e, url: confirmUrl };
   const res = await espEmail(e, fill(tpls.confirm_email.emailSubject, tokens), fill(tpls.confirm_email.emailBody, tokens),
-    { templateId: tpls.confirm_email.brevoTemplateId, params: tokens, event: "confirm_email", lang });
+    { templateId: tpls.confirm_email.brevoTemplateId, params: tokens, event: "confirm_email", lang, bodyRaw: tpls.confirm_email.emailBody }); // bodyRaw = the Admin-edited copy — every other event already passes it; without it the branded email fell back to the design's baked-in text (owner 07-16)
   const status = res.ok ? "sent" : "stubbed"; await log(userId, "confirm_email", "email", e, status, res.detail);
   return { status, detail: res.detail };
 }

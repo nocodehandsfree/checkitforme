@@ -1325,7 +1325,7 @@ html[data-skin="v2"] .foot-social a,html[data-skin="v2"] .foot-social button{wid
    every page, both languages. Green/accent pill variants are retired on purpose: .tneutral/.taccent
    stay as no-ops so old call sites keep working. Ellipsis is the safety net; the real fix for a long
    message is shorter copy. */
-html[data-skin="v2"] .toast{display:block;background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);color:rgba(255,255,255,.92);font-family:Inter,-apple-system,system-ui,sans-serif;border:0;border-radius:999px;font-size:14.5px;font-weight:800;padding:13px 22px;max-width:calc(100vw - 36px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1.35;bottom:34px;box-sizing:border-box;animation:toastGlow 2.6s ease-in-out infinite}
+html[data-skin="v2"] .toast{display:block;background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);color:rgba(255,255,255,.92);font-family:Inter,-apple-system,system-ui,sans-serif;border:0;border-radius:999px;font-size:14.5px;font-weight:800;padding:13px 22px;max-width:calc(100vw - 36px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;line-height:1.35;bottom:34px;box-sizing:border-box;animation:toastGlow 2.6s ease-in-out infinite;z-index:9000} /* ABOVE the sheets (overlays run z-4000/4600) — pills fired from inside a sheet were rendering behind it, invisible (owner 07-16) */
 html[data-skin="v2"] .toast b{color:#FFF}
 html[data-skin="v2"] .toast.tneutral,html[data-skin="v2"] .toast.taccent,html[data-skin="v2"] .toast.oneline{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);color:rgba(255,255,255,.92);white-space:nowrap}
 /* Bottom-notification pill (owner 07-11 comp): thin glowing white outline that softly pulses. box-shadow
@@ -1784,12 +1784,15 @@ html[data-skin="v2"] .buy6b-logo svg{margin-right:-3px}
 html[data-skin="v2"] .buygrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 0}
 html[data-skin="v2"] .buygrid .g{background:linear-gradient(180deg,#2E2E35 0%,#25252B 100%);border-radius:14px;padding:12px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;box-shadow:0 10px 20px -10px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.08);font-size:10px;font-weight:700;color:rgba(255,255,255,.85);text-align:center;line-height:1.25}
 html[data-skin="v2"] .buygrid .g svg{flex:0 0 auto}
-html[data-skin="v2"] .buygrid .g{cursor:pointer}
-/* Launch set is small → the boxes grow to fill the room (2-up, roomy). As Admin checks more services
-   on, renderBuyGrid drops the .big class past 6 and the grid tightens back to the compact 4-up. */
-html[data-skin="v2"] .buygrid.big{grid-template-columns:repeat(2,1fr);gap:10px}
-html[data-skin="v2"] .buygrid.big .g{padding:20px 10px 18px;gap:9px;font-size:13px;border-radius:18px}
-html[data-skin="v2"] .buygrid.big .g svg{width:26px;height:26px}
+/* CONSTANT-HEIGHT service area (owner 07-16): always exactly 2 rows at a fixed row height, so the plan
+   tiles below stay above the fold no matter how many services Admin checks on. Fewer services = wider,
+   roomier boxes (c2/c3); 7+ returns to the compact 4-up look. Column count is set inline per render. */
+html[data-skin="v2"] .buygrid{grid-auto-rows:92px}
+html[data-skin="v2"] .buygrid .g{cursor:pointer;justify-content:center;padding:0 6px}
+html[data-skin="v2"] .buygrid.c2 .g{font-size:13px;gap:9px;border-radius:18px}
+html[data-skin="v2"] .buygrid.c2 .g svg{width:26px;height:26px}
+html[data-skin="v2"] .buygrid.c3 .g{font-size:12px;gap:8px;border-radius:16px}
+html[data-skin="v2"] .buygrid.c3 .g svg{width:22px;height:22px}
 html[data-skin="v2"] .buygrid-h{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-top:18px}
 html[data-skin="v2"] #billcycle,html[data-skin="v2"] #buymode{display:flex;background:#1B1B20;border:0;border-radius:999px;padding:5px;gap:2px;box-shadow:inset 0 2px 6px rgba(0,0,0,.5);margin:12px 0}
 html[data-skin="v2"] #buymode{margin-top:22px}
@@ -6603,7 +6606,7 @@ function editEmail(){ const ov=sheetShell('emailOv');
   ov.innerHTML=`<div class="modal" style="text-align:left">
     <div style="display:flex;justify-content:center;margin-bottom:6px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
     <h3 style="margin:2px 0 14px;text-align:center">${(ACCOUNT&&ACCOUNT.email)?t('em.new','Give us your new email address'):t('em.first','Give us your email address')}</h3>
-    ${(ACCOUNT&&ACCOUNT.email&&!ACCOUNT.emailVerified)?`<div style="margin:-6px 0 14px;text-align:center"><span style="display:block;font-size:13.5px;font-weight:700;color:#FFE066">${esc(ACCOUNT.email)}</span><span class="meta" style="display:block;margin-top:2px">${t('em.confirm','Check your inbox to confirm')}</span><a onclick="resendConfirm()" style="display:inline-block;margin-top:6px;font-size:12.5px;font-weight:700;color:var(--purple);cursor:pointer;text-decoration:underline;text-underline-offset:3px">${t('em.again','Send it again')}</a></div>`:''}
+    ${(ACCOUNT&&ACCOUNT.email&&!ACCOUNT.emailVerified)?`<div style="margin:0 0 16px;padding:13px 14px;border-radius:14px;background:#1B1B20;box-shadow:inset 0 2px 6px rgba(0,0,0,.45);text-align:center"><span style="display:block;font-size:14px;font-weight:800;color:#FFE066;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(ACCOUNT.email)}</span><span class="meta" style="display:block;margin-top:3px;font-size:12.5px">${t('em.confirm','Check your inbox to confirm')}</span><a onclick="resendConfirm()" style="display:inline-block;margin-top:9px;font-size:12.5px;font-weight:800;color:var(--purple);cursor:pointer;text-decoration:underline;text-underline-offset:3px">${t('em.again','Send it again')}</a></div>`:''}
     <input id="em_in" type="email" class="kin" placeholder="${t('em.ph','you@email.com')}" style="width:100%;box-sizing:border-box;margin-bottom:12px">
     <div id="em_err" style="color:#ff6b6b;font-size:13px;min-height:16px"></div>
     <button class="cta" id="em_btn" style="width:100%" onclick="saveEmail()">${t('em.save','Save email')} →</button></div>`;
@@ -7253,10 +7256,16 @@ function buyContinue(){
 function renderBuyGrid(){
   const g=$('buy_grid'); if(!g) return;
   const I=p=>`<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--accent,#FFCB05)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
-  const keys=(PLANS&&PLANS.everyPlanGets&&PLANS.everyPlanGets.length)?PLANS.everyPlanGets:['zone_sweeps','restock_alerts','scheduled_checks','any_town','thrift_hunts','hobby_hunts'];
-  // Few services (launch) → BIG boxes; the grid tightens up on its own as Admin checks more on (owner 07-15).
+  // Admin is the source: whatever the live everyPlanGets says renders — even empty (no invented
+  // fallback jumping back to a default set, owner 07-16). The launch list only paints if /pub/plans
+  // never loaded at all.
+  const keys=PLANS?((PLANS.everyPlanGets&&PLANS.everyPlanGets.length)?PLANS.everyPlanGets:[]):['zone_sweeps','restock_alerts','scheduled_checks','any_town','thrift_hunts','hobby_hunts'];
+  if(!keys.length){ g.innerHTML=''; return; }
+  // CONSTANT-HEIGHT area (owner 07-16): always 2 rows — boxes shrink as Admin checks more services on,
+  // so the plan tiles below never get pushed under the fold.
+  const cols=Math.max(2,Math.ceil(keys.length/2));
   const cells=keys.map(k=>`<div class="g" role="button" onclick="openFeatInfo('${k}')">${I(FEAT_ICON[k]||'')}${esc(featLabel(k))}</div>`).join('');
-  g.innerHTML=`<div class="buygrid-h">${t('buy6b.grid','Every plan gets')}</div><div class="buygrid${keys.length<=6?' big':''}">${cells}</div>`;
+  g.innerHTML=`<div class="buygrid-h">${t('buy6b.grid','Every plan gets')}</div><div class="buygrid c${Math.min(cols,4)}" style="grid-template-columns:repeat(${cols},1fr)">${cells}</div>`;
 }
 function openBuy(reason){
   if(!isAuthed()){ toast(t('toast.signupfirst','Sign up first to add checks')); signUp(); return; }
