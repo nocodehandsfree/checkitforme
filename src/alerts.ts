@@ -208,10 +208,11 @@ const EMAIL_DESIGN_EN: Record<EmailKind, EmailDesign> = {
     cta: "See the call", url: "https://checkitforme.com",
   },
   instock_owner: {
+    // Owner 07-16: nothing below the restock-day line — no product panel, no CTA (he can't open the
+    // customer's account from the email anyway, so "See the call" was a dead button for him).
     kicker: "CALL CONFIRMED", kickerColor: "#4ADE80", headline: "It's in stock.",
     body: ["A call just confirmed **{product}** is on the shelf at **{store}**.", "{dayline}"],
-    module: { type: "product", title: "{product}", sub: "{store}", badge: "CONFIRMED" },
-    cta: "See the call", url: "https://checkitforme.com",
+    cta: "", url: "https://checkitforme.com",
   },
 };
 const EMAIL_DESIGN_ES: Record<EmailKind, EmailDesign> = {
@@ -338,7 +339,8 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
   // Capsule CTA, authored = the Outlook-approved green RING on black with a WHITE label. The Gmail
   // stylesheet swaps it to a DEEP-green filled capsule (#15803D) — deep enough that Gmail's contrast
   // pass leaves the white label and arrow alone (it recolored white on the lighter #16A34A).
-  const cta = `<tr><td style="padding-top:24px">
+  // A design with no CTA label (the owner ping) renders no button row at all.
+  const cta = !d.cta ? "" : `<tr><td style="padding-top:24px">
     <!--[if mso]>
     <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="${D.ctaLine}" strokeweight="2px" fillcolor="${D.board}">
       <w:anchorlock/>
