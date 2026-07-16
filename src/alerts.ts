@@ -256,62 +256,54 @@ function fillRaw(t: string, tokens: Record<string, string | number | undefined>)
 function fillHtmlBold(t: string, tk: Record<string, string | number | undefined>): string {
   return t.split(/(\*\*[^*]+\*\*)/).map((seg) => {
     const m = seg.match(/^\*\*([^*]+)\*\*$/);
-    if (m) return `<b style="${ink("#FFFFFF")};font-weight:700">${escHtml(fillRaw(m[1], tk))}</b>`;
+    if (m) return `<b style="color:#FFFFFF;font-weight:700">${escHtml(fillRaw(m[1], tk))}</b>`;
     return escHtml(fillRaw(seg, tk));
   }).join("");
 }
-// THE RENDERING LAWS (settled over changes #1-#6 with the owner's phone screenshots as the judge —
-// read this before touching ANY color here, it replaces seven failed attempts of archaeology):
-// 1. Gmail iOS dark mode attacks PURE #000000 backgrounds only — it flips them light and dims the
-//    text sitting on them. Dark GRAYS (#08090D board, #16161C card — and Apple's own marketing
-//    emails) it leaves completely alone: white text stays WHITE. So: never author background-color
-//    or bgcolor as #000000. Near-black is safe; pure black is the tripwire.
-//    (Proof: the July 15 card email rendered bright in Gmail while its one pure-#000 element — the
-//    CTA fill — flipped to a white pill. Same phone, same day, side by side.)
-// 2. Outlook mobile repaints background-COLOR on dark fills but never a background IMAGE — a flat
-//    one-color linear-gradient is an image, so every dark surface carries the gradient lock below.
-//    Outlook desktop (Word engine, no gradients) falls back to the bgcolor and does not transform.
-// 3. Gmail strips -webkit-text-fill-color and rewrites <style> colors; blend-mode recovery hacks
-//    work but INVERT hue (white CTA, blue kicker — change #3's crime). With law 1 respected none of
-//    that is needed. ink() stays as harmless belt-and-suspenders for odd WebKit clients.
-// 4. Owner-approved look (2026-07-16, "like Apple's"): black board around a GRAY floating card,
-//    white text, green-ring CTA on near-black fill, Inter via @font-face where clients allow it
-//    (Gmail refuses web fonts and falls back down the stack — that one is physics, not a bug).
-const BOARD = "#08090D"; // outer board (comp) — near-black, NEVER #000000 (law 1)
-const CARD = "#16161C";  // the floating card (comp) — the gray the owner liked in Apple's email
-const CTAFILL = "#0B0C10"; // CTA fill — visually black, safely not #000000 (law 1)
-const TXT = "#FFFFFF";   // headline / bold / CTA label — Gmail keeps it white on non-#000 (law 1)
-const BODY1 = "#B9B9C4"; // body text (comp)
-const BODY2 = "#8A8A96"; // secondary text + footer (comp)
-const HAIR = "#333340";  // box borders (comp)
-const BOXBG = "#1F1F29"; // module fill on the card (comp)
+// ⚖️ THE VERDICT OF 2026-07-16 (a full day of one-change-at-a-time tests, the owner's phone as judge).
+// The winning mechanism is the July 15 card email (commit b108757) VERBATIM: plain solid dark colors —
+// background/bgcolor only. That exact email renders BRIGHT in Gmail iOS dark mode on the owner's
+// phone (screenshot-proven), while every "clever" addition made it worse:
+// - background-image gradient locks → Gmail stops trusting the background and DIMS all text (the
+//   gray-headline plague of changes #1-#6). NO GRADIENTS, EVER.
+// - -webkit-text-fill-color → stripped by Gmail, useless.
+// - mix-blend-mode recovery → works on neutral text but hue-inverts everything else (white CTA pill,
+//   blue kicker). Banned.
+// - pure #000000 backgrounds → Gmail flips them light. Near-black grays are safe.
+// - dark BUTTON fills (#16161C and #000 both) → Gmail flips just the button to a white pill. Fix is
+//   Apple's own: a SATURATED fill (their blue, our brand green) — Gmail preserves saturated colors
+//   (logo, kicker, ring all survived every round). So: CTA = filled green, dark label.
+// Outlook mobile lightens the board to a soft gray — acceptable, owner-approved on screenshots.
+// Outlook desktop (Word) renders bgcolor as authored + the VML button. Apple Mail: as authored.
+const BOARD = "#08090D"; // outer board (comp)
+const CARD = "#14141A";  // the floating card (July 15 proven value)
+const TXT = "#FFFFFF";   // headline / bold — proven bright in Gmail on the card
+const BODY1 = "#D1D1DA"; // first body line (July 15 value)
+const BODY2 = "#B9B9C4"; // later body lines (July 15 value)
+const MUTED = "#8A8A96"; // footer + module subs (comp)
+const BOXBG = "#1B1B20"; // module fill on the card (July 15 value)
 const GRN = "#4ADE80";   // brand green (comp)
 const TINT = "#122019";  // green-tint chip fill (comp)
-/** The lock (law 2): paint a dark surface as an un-repaintable image over its own bgcolor fallback. */
-const lock = (c: string) => `background-color:${c};background-image:linear-gradient(${c},${c})`;
-/** Text lock (change #2): Gmail's dark pass rewrites `color` (the dimmed-gray headline on the owner's
- *  screenshot) but not -webkit-text-fill-color — and Gmail/Outlook mobile render on WebKit/Blink,
- *  where fill-color beats color. `color` stays in as the fallback for non-WebKit engines. */
-const ink = (c: string) => `color:${c};-webkit-text-fill-color:${c}`;
+const CTAINK = "#0B2013";// CTA label on the green fill — near-black green-cast, never #000000
 function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | number | undefined>): string {
   if (!m) return "";
-  const box = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${lock(BOXBG)};border:1px solid ${HAIR};border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
-  if (m.type === "chip") return box(`<span style="font-size:15px;font-weight:700;${ink(TXT)};font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
+  const box = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${BOXBG}" style="background:${BOXBG};border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
+  if (m.type === "chip") return box(`<span style="font-size:14px;font-weight:700;color:${TXT};font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
   if (m.type === "product") return box(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-    <td style="font-family:${FONT}"><div style="font-size:16px;font-weight:800;${ink(TXT)}">${escHtml(fill(m.title, tk))}</div><div style="font-size:12.5px;font-weight:600;${ink(BODY2)};margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
-    <td align="right" valign="middle"><span style="display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.6px;${ink(GRN)};${lock(TINT)};border:1px solid ${HAIR};border-radius:999px;padding:5px 11px;font-family:${FONT}">${escHtml(m.badge)}</span></td></tr></table>`, "16px 18px", 16);
+    <td style="font-family:${FONT}"><div style="font-size:16px;font-weight:800;color:${TXT}">${escHtml(fill(m.title, tk))}</div><div style="font-size:12.5px;font-weight:600;color:${MUTED};margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
+    <td align="right" valign="middle"><span style="display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.6px;color:${GRN};background:${TINT};border-radius:999px;padding:6px 12px;font-family:${FONT}">${escHtml(m.badge)}</span></td></tr></table>`, "16px 18px", 16);
   const rows = m.steps.map((s, i) => {
     const last = i === m.steps.length - 1;
     return `${i ? `<tr><td colspan="2" style="padding:0 18px"><div style="height:1px;line-height:1px;font-size:0;background:#26262E">&nbsp;</div></td></tr>` : ""}<tr>
-    <td width="57" valign="middle" style="padding:${i ? "12px" : "16px"} 0 ${last ? "16px" : "12px"} 18px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="26" height="26" align="center" valign="middle" style="width:26px;height:26px;border-radius:50%;${lock(TINT)};${ink(GRN)};font-size:12px;font-weight:800;font-family:${FONT}">${escHtml(s[0])}</td></tr></table></td>
-    <td valign="middle" style="padding:${i ? "12px" : "16px"} 18px ${last ? "16px" : "12px"} 0;font-size:15px;font-weight:${last ? 700 : 600};${ink(TXT)};font-family:${FONT}">${escHtml(s[1])}</td></tr>`;
+    <td width="57" valign="middle" style="padding:${i ? "12px" : "16px"} 0 ${last ? "16px" : "12px"} 18px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="26" height="26" align="center" valign="middle" style="width:26px;height:26px;border-radius:50%;background:${last ? TINT : "#22222A"};color:${GRN};font-size:12px;font-weight:800;font-family:${FONT}">${escHtml(s[0])}</td></tr></table></td>
+    <td valign="middle" style="padding:${i ? "12px" : "16px"} 18px ${last ? "16px" : "12px"} 0;font-size:15px;font-weight:${last ? 700 : 600};color:${TXT};font-family:${FONT}">${escHtml(s[1])}</td></tr>`;
   }).join("");
-  return `<tr><td style="padding-top:22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${lock(BOXBG)};border:1px solid ${HAIR};border-radius:16px">${rows}</table></td></tr>`;
+  return `<tr><td style="padding-top:22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${BOXBG}" style="background:${BOXBG};border-radius:16px">${rows}</table></td></tr>`;
 }
-/** Email-safe branded HTML matching Design's approved mock (docs/design/emails/): #08090D board
- *  pinned by the gradient lock, Check brandmark, Inter-black headline, bordered modules, green-ring
- *  capsule CTA. Table layout + inline styles + MSO conditionals: Outlook (Word engine) gets a
- *  true-black fallback and a VML roundrect button, so it renders clean there too. */
+/** Email-safe branded HTML: the July-15-proven mechanism (plain solid colors, no gradients, no text
+ *  hacks — see the verdict block above) carrying today's layout: brandmark, floating card, green
+ *  filled CTA, Manage-alerts-only footer. Table layout + inline styles + MSO conditionals: Outlook's
+ *  Word engine gets bgcolor fills and a VML roundrect button. */
 export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw = "", tokens: Record<string, string | number | undefined> = {}, to = "", lang: Lang = "en"): string {
   const d = EMAIL_DESIGN[lang][event];
   // The body paragraphs come from the EDITABLE template (Admin) when present — split into sentences so
@@ -333,31 +325,31 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
   const kick = d.kickerColor;
   // Paragraphs whose tokens fill to nothing (e.g. no restock day heard) are dropped, not rendered as gaps.
   const bodyHtml = bodyLines.filter((p) => fill(p.replace(/\*\*/g, ""), tokens)).map((p, i) => i === 0
-    ? `<tr><td style="padding-top:15px;font-size:17px;line-height:1.5;${ink(BODY1)};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
-    : `<tr><td style="padding-top:16px;font-size:14px;line-height:1.5;${ink(BODY2)};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
+    ? `<tr><td style="padding-top:15px;font-size:17px;line-height:1.5;color:${BODY1};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
+    : `<tr><td style="padding-top:16px;font-size:14px;line-height:1.5;color:${BODY2};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
   const ctaLabel = `${escHtml(d.cta).toUpperCase()}&nbsp;&nbsp;&rarr;`;
-  // Capsule CTA: green RING, white label, near-black fill — NEVER #000000 (law 1: Gmail flips pure
-  // black to a white pill; the owner's July 15 screenshot is the proof). Outlook can't round a td, so
-  // MSO gets a VML roundrect (arcsize 50% = full capsule); everyone else the styled <a>.
+  // Capsule CTA: FILLED brand green, dark label — Apple's pattern from the owner's reference email.
+  // Gmail preserves saturated fills (their blue, our green) but flips DARK button fills to white
+  // pills (#000 and #16161C both, screenshot-proven), so a dark-filled capsule is banned. Outlook
+  // can't round a td, so MSO gets a VML roundrect (arcsize 50% = full capsule).
   const cta = `<tr><td style="padding-top:24px">
     <!--[if mso]>
-    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="${GRN}" strokeweight="1px" fillcolor="${CTAFILL}">
+    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="${GRN}" strokeweight="1px" fillcolor="${GRN}">
       <w:anchorlock/>
-      <center style="${ink(TXT)};font-family:Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.6px;">${ctaLabel}</center>
+      <center style="color:${CTAINK};font-family:Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.6px;">${ctaLabel}</center>
     </v:roundrect>
     <![endif]-->
     <!--[if !mso]><!-->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td align="center" bgcolor="${CTAFILL}" style="${lock(CTAFILL)};border:1px solid ${GRN};border-radius:999px">
-        <a href="${url}" style="display:block;padding:19px 24px;${ink(TXT)};font-weight:800;font-size:14px;letter-spacing:1.6px;text-decoration:none;font-family:${FONT};text-transform:uppercase">${ctaLabel}</a>
+      <td align="center" bgcolor="${GRN}" style="background:${GRN};border-radius:999px">
+        <a href="${url}" style="display:block;padding:19px 24px;color:${CTAINK};font-weight:800;font-size:14px;letter-spacing:1.6px;text-decoration:none;font-family:${FONT};text-transform:uppercase">${ctaLabel}</a>
       </td></tr></table>
     <!--<![endif]-->
   </td></tr>`;
-  const footer = `<a href="${manageUrl}" style="${ink(BODY2)};text-decoration:none">${lang === "es" ? "Administrar alertas" : "Manage alerts"}</a>`;
-  // ONE dark email, the owner-approved Apple look: near-black board, GRAY floating card, no pure
-  // #000000 anywhere (the rendering laws above). Inter loads via @font-face for the clients that
-  // allow web fonts (Apple Mail, some others); Gmail strips @font-face and falls down the stack —
-  // no fix exists for that. @media screen guards the block from Outlook's Word engine.
+  const footer = `<a href="${manageUrl}" style="color:${MUTED};text-decoration:none">${lang === "es" ? "Administrar alertas" : "Manage alerts"}</a>`;
+  // ONE dark email on the July-15-proven mechanism: plain solid colors, color-scheme dark, nothing
+  // clever. Inter loads via @font-face for the clients that allow web fonts (Apple Mail and friends);
+  // Gmail strips @font-face and falls down the stack — client limit, no fix exists.
   return `<!doctype html>
 <html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -369,17 +361,17 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
   @font-face { font-family:'Inter'; font-style:normal; font-weight:900; src:url(https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuBWYAZ9hjp-Ek-_EeA.woff2) format('woff2'); }
 }</style>
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-</head><body class="body" style="margin:0;padding:0;${lock(BOARD)};width:100%" bgcolor="${BOARD}">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BOARD}" style="${lock(BOARD)};margin:0;padding:0;width:100%;min-width:100%"><tr><td align="center" bgcolor="${BOARD}" style="${lock(BOARD)};padding:0">
+</head><body style="margin:0;padding:0;background:${BOARD}" bgcolor="${BOARD}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BOARD}" style="background:${BOARD};margin:0;padding:0;width:100%;min-width:100%"><tr><td align="center" bgcolor="${BOARD}" style="background:${BOARD};padding:0">
     <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BOARD}" style="max-width:600px;width:100%;${lock(BOARD)}">
-      <tr><td bgcolor="${BOARD}" style="${lock(BOARD)};padding:30px 26px 0"><img src="https://checkitforme.com/logos/brand/check-brandmark-1024.png" width="40" height="40" alt="Check" style="display:block;width:40px;height:40px;border:0"></td></tr>
-      <tr><td bgcolor="${BOARD}" style="${lock(BOARD)};padding:24px 20px 0">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${CARD}" style="${lock(CARD)};border-radius:24px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%">
+      <tr><td style="padding:30px 26px 0"><img src="https://checkitforme.com/logos/brand/check-brandmark-1024.png" width="40" height="40" alt="Check" style="display:block;width:40px;height:40px;border:0"></td></tr>
+      <tr><td style="padding:24px 20px 0">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${CARD}" style="background:${CARD};border-radius:24px">
           <tr><td style="padding:26px 24px 30px">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-              <tr><td style="font-size:11px;font-weight:700;letter-spacing:1.6px;${ink(kick)};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
-              <tr><td style="padding-top:12px;font-size:34px;font-weight:900;${ink(TXT)};line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
+              <tr><td style="font-size:11px;font-weight:700;letter-spacing:1.6px;color:${kick};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
+              <tr><td style="padding-top:12px;font-size:34px;font-weight:900;color:${TXT};line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
               ${bodyHtml}
               ${moduleHtml(d.module, tokens)}
               ${cta}
@@ -387,7 +379,7 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
           </td></tr>
         </table>
       </td></tr>
-      <tr><td bgcolor="${BOARD}" style="${lock(BOARD)};padding:24px 26px 34px;font-family:${FONT};font-size:12.5px;${ink(BODY2)}">${footer}</td></tr>
+      <tr><td style="padding:24px 26px 34px;font-family:${FONT};font-size:12.5px;color:${MUTED}">${footer}</td></tr>
     </table>
     <!--[if mso]></td></tr></table><![endif]-->
   </td></tr></table></body></html>`;
