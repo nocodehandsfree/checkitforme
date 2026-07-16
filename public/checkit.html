@@ -307,18 +307,8 @@ __BRAND_HEAD__
      colour AND the body wash to the regular dark for the duration — the :has() rules undo themselves
      the moment the sheet closes. ID/class specificity + !important out-ranks every tone rule above,
      including the standalone media block and the v2 skin's body background. */
-  /* Sheet open → the root stays the SAME page grey as a bare page (owner 07-16: slide-ups were going
-     top-black/bottom-grey; the transparent look must survive a sheet). The dim above washes the page
-     toward this same grey, so strips, backdrop and sheet edge all live in one family. Toned verdict
-     pages still revert to it here, which is what this rule was originally for (owner 07-09). */
-  html:has(#acctOverlay.on),html:has(#buyOverlay.on),html:has(#pageOverlay.on),html:has(.csheet.on),html:has(#zones.on),html:has(#histOverlay.on),html:has(#zmenuOv.on),html:has(#emailOv.on),html:has(#alertsOv.on),html:has(#featOv.on),html:has(#scorePostOv.on){background:#1D1D22!important}
+  html:has(#acctOverlay.on),html:has(#buyOverlay.on),html:has(#pageOverlay.on),html:has(.csheet.on),html:has(#zones.on),html:has(#histOverlay.on),html:has(#zmenuOv.on),html:has(#emailOv.on),html:has(#alertsOv.on),html:has(#featOv.on),html:has(#scorePostOv.on){background:#0C0C12!important}
   html:has(#acctOverlay.on) body,html:has(#buyOverlay.on) body,html:has(#pageOverlay.on) body,html:has(.csheet.on) body,html:has(#zones.on) body,html:has(#histOverlay.on) body,html:has(#zmenuOv.on) body,html:has(#emailOv.on) body,html:has(#alertsOv.on) body,html:has(#featOv.on) body,html:has(#scorePostOv.on) body{background:var(--bg)!important}
-  /* SHEET-EDGE TINT RETURN (owner 07-16): iOS paints BOTH chrome strips with the ROOT colour — the
-     call page blends because the root equals the page edges. The sheet card is a different grey than
-     the root, so its bottom edge sat against the strip like a slab. Same cure as the verdict bloom:
-     the surface returns to the chrome colour at the very edge — a fixed scrim fades every open
-     sheet's last pixels into the root page grey so the bottom strip melts into the page again. */
-  html[data-skin="v2"] #acctOverlay.on::after,html[data-skin="v2"] #buyOverlay.on::after,html[data-skin="v2"] #pageOverlay.on::after,html[data-skin="v2"] .csheet.on::after,html[data-skin="v2"] #zones.on::after,html[data-skin="v2"] #histOverlay.on::after,html[data-skin="v2"] #zmenuOv.on::after,html[data-skin="v2"] #emailOv.on::after,html[data-skin="v2"] #alertsOv.on::after,html[data-skin="v2"] #featOv.on::after,html[data-skin="v2"] #scorePostOv.on::after,html[data-skin="v2"] #authOverlay.on::after,html[data-skin="v2"] #againOverlay.on::after,html[data-skin="v2"] #cidOverlay.on::after,html[data-skin="v2"] #kcallOverlay.on::after,html[data-skin="v2"] #leadOverlay.on::after,html[data-skin="v2"] #paidOverlay.on::after,html[data-skin="v2"] #scoreOverlay.on::after,html[data-skin="v2"] #shareOverlay.on::after,html[data-skin="v2"] #waitlistOverlay.on::after,html[data-skin="v2"] #storeReqOverlay.on::after,html[data-skin="v2"] #watchOverlay.on::after,html[data-skin="v2"] #scheduleOverlay.on::after,html[data-skin="v2"] #inviteOverlay.on::after,html[data-skin="v2"] #receiptOverlay.on::after,html[data-skin="v2"] #kioskOverlay.on::after{content:'';position:fixed;left:0;right:0;bottom:0;height:52px;background:linear-gradient(180deg,rgba(29,29,34,0) 0%,rgba(29,29,34,.5) 55%,rgba(29,29,34,1) 100%);pointer-events:none;z-index:9}
   /* Messenger open: tint the ROOT bg to the header colour so iOS samples it for the status strip —
      the header dome then fills seamlessly to the very top edge of the phone (no black notch band). */
   html:has(.supwrap.on){background:#1A1A20!important}
@@ -1411,7 +1401,7 @@ html[data-skin="v2"] .cs-key{background:transparent;border:0;box-shadow:none;ani
 html[data-skin="v2"] .chip{background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;color:#CDCDD8;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07)}
 html[data-skin="v2"] .chip.sel{color:#4ADE80;background:linear-gradient(180deg,#31313A 0%,#28282E 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1),0 0 14px rgba(74,222,128,.25)}
 /* Pop-ups (§5.11): big card radius 26 over the dim, no grabber, no border. */
-html[data-skin="v2"] .overlay{background:rgba(29,29,34,.8)} /* the dim WASHES toward the page grey, never toward black — the chrome strips stay the same #1D1D22 they are on a bare page, so slide-ups keep the transparent look (owner 07-16) */
+html[data-skin="v2"] .overlay{background:rgba(5,6,9,.66)} /* the ORIGINAL translucent dim — owner 07-16: two attempts at re-tinting the sheet chrome (grey wash, edge scrim) both made it worse and were reverted. Do NOT touch the sheet dim/root/chrome colours again without a design comp. */
 html[data-skin="v2"] #success .fab-back{position:static;width:auto;height:auto;border-radius:999px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);color:#FFF;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);display:flex;align-items:center;gap:8px;margin:18px auto 8px;padding:11px 22px;font-size:12.5px;font-weight:800;letter-spacing:.1em}
 html[data-skin="v2"] #success .fab-back svg{width:15px;height:15px}
 html[data-skin="v2"] #success .fab-back svg path{stroke:#FFF}
@@ -2790,7 +2780,7 @@ const I18N={ es:{
   'note.noanswer':'Sonó y sonó. Nadie contestó. Sin cargo.','note.noanswer.desk':'Pasamos el menú, pero nadie contestó en el mostrador. Sin cargo.',
   'note.unclear':'Alguien contestó pero no dio un sí o no claro. Mira lo que dijeron abajo.',
   'note.voicemail':'Llegamos a una grabadora, no a una persona. Sin cargo.','note.busy':'La línea estaba ocupada. Sin cargo. Intenta en un momento.',
-  'note.ivr':'Nos quedamos atorados en su menú telefónico. Sin cargo.','note.lang':'Contestaron pero no pudimos comunicarnos. Sin cargo.',
+  'note.ivr':'Su menú telefónico nos atoró. Nadie contestó. Sin cargo.','note.lang':'Contestaron pero no pudimos comunicarnos. Sin cargo.',
   'note.badnum':'Ese número no conectó. Sin cargo.','note.closed':'Están cerrados ahora. Sin cargo. Intenta cuando abran.',
   'note.failed':'Algo falló de nuestro lado. Sin cargo.','note.hold':'Fueron a revisar, pero la llamada se cortó en espera. Sin cargo. Intenta de nuevo.',
   'note.unreached':'No pudimos contactar a nadie en la tienda. Sin cargo. Intenta en un rato.',
@@ -2916,7 +2906,7 @@ const I18N={ es:{
   'zones.locph':'Busca un código postal o ciudad…','zones.go':'Ir','zones.list':'Lista','zones.map':'Mapa',
   'zones.radius':'Radio','zones.addallshort':'Agregar todo','zones.selstore':'tienda seleccionada','zones.selstores':'tiendas seleccionadas',
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
-  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.max25':'Máximo 25 tiendas por zona','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Maneja tus alertas de correo y texto.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo apenas vuelva a estar.','alerts.d.rsms':'Te manda un texto apenas vuelva a estar.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no hay alertas. Vigila una tienda o activa una auto-verificación y aparecerá aquí.','alerts.off':'Apagar','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
+  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.max25':'Máximo 25 tiendas por zona','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Maneja tus alertas de correo y texto.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo al volver.','alerts.d.rsms':'Te manda un texto al volver.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no has creado alertas.','alerts.off':'Apagar','alerts.mute':'Silenciar','alerts.unmute':'Activar','alerts.stop':'Parar','alerts.d.muted':'Silenciada. No llega nada hasta activarla.','alerts.mutedpill':'Silenciada. Actívala cuando quieras.','alerts.unmutedpill':'Activada. Te avisaremos.','alerts.stopped':'Cancelamos {x}','alerts.name.restock':'las alertas de reposición de {s}','alerts.name.sched':'las alertas de auto chequeo de {s}','alerts.thatstore':'esa tienda','alerts.thisalert':'esta alerta','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
   'feat.d.zone_sweeps':'Guarda tus tiendas como una zona. Un toque las llama todas a la vez. Mira las respuestas llegar en vivo. Cada tienda cuesta una verificación. Sin respuesta, sin cargo.','feat.d.restock_alerts':'Deja de revisar. Te avisamos. Toca Avísame cuando vuelva en un resultado. Vigilamos esa tienda por ti. Apenas llegue producto, te avisamos. Un aviso por reposición, nada de spam.','feat.d.scheduled_checks':'Las tiendas reponen con ritmo. La autoverificación corre en sus días de envío. La respuesta te espera en el celular. Cancela cuando quieras en Mis verificaciones.','feat.d.any_town':'Las cuentas gratis buscan cerca de casa. Cualquier ciudad te suelta la correa. Busca cualquier código postal o ciudad. El mapa salta ahí. Más de 100,000 tiendas.','feat.d.store_holds':'¿Lo encontraste pero estás a 20 minutos? Le pedimos al personal que te aparte uno. Con tu nombre, en la misma llamada.','feat.d.your_voice':'Elige la voz que llama por ti. Quien contesta escucha una voz amable y natural.','feat.d.thrift_hunts':'Colecciones viejas acaban en tiendas de segunda. Precios de risa, nadie las revisó. Activa Thrift y llamamos a las de tu zona. Preguntamos qué hay en la vitrina hoy.','feat.d.hobby_hunts':'Un muro de Pokémon para explorar. Cada era, cada set, cada producto. Con precios de lista. Elige tu objetivo. Cada llamada pide exactamente eso.',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
@@ -3733,6 +3723,7 @@ function acctIdentity(){
 function openAccount(fromPop){
   if(!isAuthed()) return;
   openAccount._pop=!!fromPop;
+  try{ alertsPrefetch(); }catch(_){ } // warm the alerts list so the Alerts sheet opens instantly
   const idn=acctIdentity();
   $('acct_name').textContent=idn.primary;
   const sub=$('acct_sub'); if(sub){ sub.textContent=idn.secondary; sub.style.display=idn.secondary?'':'none'; }
@@ -5475,6 +5466,7 @@ function showResult(o, cid){
   const _fromLive=(()=>{ try{ return !$('live').classList.contains('hidden'); }catch(_){ return false; } })(); // call just ended → bring them back to the verdict at the top (owner 07-15b)
   try{ const _ho=$('histOverlay'); if(_ho) _ho.classList.remove('on'); }catch(_){ } // opening an actual check leaves the history sheet for the full verdict view (owner 07-12)
   try{ if(o && !o.ts && LIVE_T0) o._t0=LIVE_T0; }catch(_){ } // fresh call: server ts may lag — use the start time we clocked locally
+  try{ if(o && !o.ts && !o._t0 && cid){ const _e=histList().find(x=>x.cid===cid); if(_e&&_e.ts) o.ts=_e.ts; } }catch(_){ } // reopened call with a ts-less payload → the saved history time keeps the date line on EVERY status (owner 07-16)
   try{ exitHunt(); }catch(_){ }
   try{ recordResultPrice(o); }catch(_){ }
   resultCacheSet(cid,o);
@@ -5516,7 +5508,7 @@ function showResult(o, cid){
   else if(o.status==='no_answer'){ cls='unk'; big='📵'; title=t('v.noanswer','Nobody answered'); note=t('note.noanswer',"Rang and rang. Nobody picked up. No charge."); }
   else if(o.status==='voicemail'){ cls='unk'; big='📮'; title=t('st.voicemail','Got their voicemail'); note=t('note.voicemail',"We reached a recording, not a person. No charge."); }
   else if(o.status==='busy'){ cls='unk'; big='📞'; title=t('v.busy','Line was busy'); note=t('note.busy',"Their line was busy. No charge. Try again shortly."); }
-  else if(o.status==='ivr_stuck'){ cls='unk'; big='🔢'; title=t('v.ivr',"Couldn't reach a person"); note=t('note.ivr',"We got stuck in their phone menu and couldn't reach anyone. No charge."); }
+  else if(o.status==='ivr_stuck'){ cls='unk'; big='🔢'; title=t('v.ivr',"Couldn't reach a person"); note=t('note.ivr',"Their phone menu looped us. No person ever picked up. No charge."); }
   else if(o.status==='bad_number'){ cls='unk'; big='☎️'; title=t('v.badnum','Bad number'); note=t('note.badnum',"That number didn't connect. No charge."); }
   else if(o.status==='closed'){ cls='unk'; big='🔒'; title=t('v.closedt','Store closed'); note=t('note.closed',"They're closed right now. No charge. Try again when they're open."); }
   else if(o.status==='failed'){ cls='unk'; big='⚠️'; title=t('v.failed','Call failed'); note=safeReason(o.failureReason)||t('note.failed',"Something went wrong on our end. No charge."); }
@@ -6612,38 +6604,59 @@ async function saveEmail(){ const e=($('em_in').value||'').trim().toLowerCase();
   if(r.email&&!r.verified) toast(t('em.confirm','Check your inbox to confirm'),'neutral');
   try{ openAccount(); }catch(_){ } // repaint the header with the new address/state
 }
-// The alerts sheet: everything you're subscribed to, one Turn off per row (GET /app/alerts/me).
+// The alerts sheet (owner 07-16): every alert with MUTE (pause, stays listed) and STOP (gone for good).
+// Cache-first so the sheet is instant — My checks prefetches the list; the fetch here just refreshes.
+let ALERTS_ME=null;
+function alertsPrefetch(){ try{ appApi('/app/alerts/me').then(r=>{ if(r&&!r.error){ ALERTS_ME=r; if(window.__alertsPaint&&$('alertsOv')&&$('alertsOv').classList.contains('on')) window.__alertsPaint(r); } }); }catch(_){ } }
+// What we call this alert when we talk about it in a pill ("restock alerts for Fun").
+function alertName(x){ const s=x.storeName||t('alerts.thatstore','that store');
+  return x.kind==='schedule'?tf('alerts.name.sched','auto check alerts for {s}',{s}):tf('alerts.name.restock','restock alerts for {s}',{s}); }
 async function openAlerts(){ const ov=sheetShell('alertsOv');
   const shell=rows=>`<div class="modal" style="text-align:left">
     <div style="display:flex;justify-content:center;margin-bottom:6px">${ICO.bell(AC1()).replace('width="15" height="15"','width="28" height="28"')}</div>
     <h3 style="margin:2px 0 4px;text-align:center">${t('alerts.title','Alerts')}</h3>
     <div class="meta" style="margin-bottom:14px;text-align:center">${sentLines(t('alerts.sub','Manage your email and text alerts.'))}</div>
     <div id="alertsList">${rows}</div></div>`;
-  ov.innerHTML=shell(`<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`);
-  ov.classList.add('on');
-  const me=await appApi('/app/alerts/me');
-  const paint=me2=>{ const subs=(me2&&me2.subscriptions)||[];
+  const paint=me2=>{ if(me2) ALERTS_ME=me2; const subs=(me2&&me2.subscriptions)||[];
+    if(!$('alertsList')) return;
     $('alertsList').innerHTML = subs.length? subs.map(x=>{
       // Row copy law (owner 07-16): plain English, exactly what it is. Title = product + store when we
       // have a REAL product name; a junk stored label ("cards") falls back to the category's name from
-      // the server, and if there's no trustworthy name at all the title is just the store. The sub is
-      // one friend-voice sentence saying what the alert does — never a label soup.
+      // the server, and if there's no trustworthy name at all the title is just the store.
       let what=String(x.productLabel||'').trim();
       const cat=String(x.categoryLabel||(CATS.find(c=>c.id===x.categoryId)||{}).label||'').trim();
       if(!what || (what.length<8 && !/\s/.test(what)) || (cat&&cat.toLowerCase().endsWith(what.toLowerCase()))) what=cat;
       const title=(what&&x.storeName)?tf('alerts.row.at','{p} at {s}',{p:esc(what),s:esc(x.storeName)}):esc(what||x.storeName||t('alerts.acheck','A check'));
-      const does=x.kind==='schedule'
-        ? (x.channel==='sms'?t('alerts.d.ssms','Auto checks the store. Texts you the result.'):t('alerts.d.semail','Auto checks the store. Emails you the result.'))
-        : (x.channel==='sms'?t('alerts.d.rsms',"Texts you the moment it's back in stock."):t('alerts.d.remail',"Emails you the moment it's back in stock."));
-      return `<div style="display:flex;align-items:center;gap:12px;margin-top:10px;padding:13px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)">
+      // Short sentences on purpose: the text column next to Mute+Stop is ~240px — every sentence must
+      // hold ONE line there (copy-guide hard rule 2).
+      const does=x.muted?t('alerts.d.muted','Muted. Nothing sends until you unmute.')
+        :x.kind==='schedule'
+        ? (x.channel==='sms'?t('alerts.d.ssms','Auto checks the store. Texts results.'):t('alerts.d.semail','Auto checks the store. Emails results.'))
+        : (x.channel==='sms'?t('alerts.d.rsms',"Texts you when it's back."):t('alerts.d.remail',"Emails you when it's back."));
+      return `<div style="display:flex;align-items:center;gap:10px;margin-top:10px;padding:13px 14px;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 10px 18px -10px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)${x.muted?';opacity:.6':''}">
         <span style="flex:1;min-width:0"><span style="display:block;font-size:14.5px;font-weight:700;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</span><span style="display:block;margin-top:2px;font-size:12px;font-weight:600;color:#8A8A96;line-height:1.45">${sentLines(does)}</span></span>
-        <button onclick="alertOff(${x.id})" style="flex:none;background:rgba(255,123,123,.12);border:0;border-radius:999px;padding:8px 14px;color:#FF9B9B;font:800 12px Inter;cursor:pointer">${t('alerts.off','Turn off')}</button></div>`;}).join('')
-      : `<div class="meta" style="text-align:center;padding:18px 8px">${t('alerts.none','No alerts yet. Watch a store or turn on an auto-check and it shows up here.')}</div>`; };
-  paint(me);
+        <span style="display:flex;flex-direction:column;gap:6px;flex:none">
+          <button onclick="alertMute(${x.id},${x.muted?0:1})" style="background:rgba(255,255,255,.09);border:0;border-radius:999px;padding:7px 13px;color:#CDCDD8;font:800 12px Inter;cursor:pointer">${x.muted?t('alerts.unmute','Unmute'):t('alerts.mute','Mute')}</button>
+          <button onclick="alertStop(${x.id})" style="background:rgba(255,123,123,.12);border:0;border-radius:999px;padding:7px 13px;color:#FF9B9B;font:800 12px Inter;cursor:pointer">${t('alerts.stop','Stop')}</button></span></div>`;}).join('')
+      : `<div class="meta" style="text-align:center;padding:18px 8px">${sentLines(t('alerts.none',"You haven't created any alerts."))}</div>`; };
   window.__alertsPaint=paint;
+  // Instant when the prefetch already landed; dots only on a cold open.
+  ov.innerHTML=shell(ALERTS_ME?'' : `<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`);
+  if(ALERTS_ME) paint(ALERTS_ME);
+  ov.classList.add('on');
+  const me=await appApi('/app/alerts/me');
+  if(me&&!me.error) paint(me);
+  else if(!ALERTS_ME) paint(null);
 }
-async function alertOff(id){ const r=await appApi('/app/alerts/unsubscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id})});
-  if(r&&!r.error&&window.__alertsPaint) window.__alertsPaint(r); else toast(t('err.generic',"That didn't go through. Give it another try.")); }
+function alertRowById(id){ try{ return ((ALERTS_ME&&ALERTS_ME.subscriptions)||[]).find(x=>x.id===id)||null; }catch(_){ return null; } }
+async function alertStop(id){ const x=alertRowById(id);
+  const r=await appApi('/app/alerts/unsubscribe',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id})});
+  if(r&&!r.error){ if(window.__alertsPaint) window.__alertsPaint(r); toast(tf('alerts.stopped','Unsubscribed from {x}',{x:x?alertName(x):t('alerts.thisalert','this alert')}),'neutral'); }
+  else toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); }
+async function alertMute(id,muted){
+  const r=await appApi('/app/alerts/mute',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id,muted:!!muted})});
+  if(r&&!r.error){ if(window.__alertsPaint) window.__alertsPaint(r); toast(muted?t('alerts.mutedpill','Muted. Unmute any time.'):t('alerts.unmutedpill',"Back on. We'll ping you."),'neutral'); }
+  else toast(t('err.generic',"That didn't go through. Give it another try."),'neutral'); }
 const Z_ROWBTN='display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border:0;border-radius:16px;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;font-size:15px;font-weight:700;cursor:pointer;text-align:left';
 const Z_ICO_PEN='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></svg>';
 const Z_ICO_TRASH='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF7B7B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>';

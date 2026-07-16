@@ -526,6 +526,7 @@ export async function fanoutRestock(retailerId: number, o: { storeName?: string;
   try {
     const subs = await db.select().from(alertSubscriptions).where(and(eq(alertSubscriptions.kind, "restock"), eq(alertSubscriptions.active, 1)));
     for (const s of subs) {
+      if (s.muted) { skipped++; continue; } // muted = paused by the customer; never send, never spend cap
       // Match: this store (or an any-store opt-in), and category if the sub pinned one.
       if (s.retailerId != null && s.retailerId !== retailerId) { continue; }
       if (s.categoryId != null && o.categoryId != null && s.categoryId !== o.categoryId) { continue; }
@@ -552,6 +553,12 @@ export async function myAlerts(userId: string) {
   const sms = await smsAlertsLeft(userId);
   return {
     smsAlertsLeft: sms.left, smsAlertsCap: sms.cap,
-    subscriptions: subs.map(({ s, storeName, categoryLabel }) => ({ id: s.id, kind: s.kind, retailerId: s.retailerId, categoryId: s.categoryId, productLabel: s.productLabel, channel: s.channel, storeName: storeName ?? null, categoryLabel: categoryLabel ?? null })),
+    subscriptions: subs.map(({ s, storeName, categoryLabel }) => ({ id: s.id, kind: s.kind, retailerId: s.retailerId, categoryId: s.categoryId, productLabel: s.productLabel, channel: s.channel, muted: !!s.muted, storeName: storeName ?? null, categoryLabel: categoryLabel ?? null })),
   };
+}
+
+/** Mute/unmute one alert (owner 07-16): muted stays listed but never sends. Returns the fresh list. */
+export async function alertMute(userId: string, id: number, muted: boolean) {
+  await db.update(alertSubscriptions).set({ muted: muted ? 1 : 0 }).where(and(eq(alertSubscriptions.id, id), eq(alertSubscriptions.userId, userId)));
+  return myAlerts(userId);
 }

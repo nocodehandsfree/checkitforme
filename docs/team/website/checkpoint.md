@@ -6,6 +6,21 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash), **I own view/mode/nav** —
 > don't blind-edit the tint, it's fragile.
 
+## ✅ Shipped (07-16, batch 8 — tint revert + alerts mute/stop + status audit)
+1. **⛔ TINT: both of my attempts REVERTED** (grey wash + edge scrim, PRs #34/#35) — owner: they killed
+   the translucent slide-up look. Sheets are back to the original dim/root exactly as before I touched
+   them. TWO failed attempts = stop. The slide-up top/bottom chrome question needs the tint owner /
+   a design comp — do NOT freestyle it again (comment at the .overlay dim rule says the same).
+2. **Alerts sheet redo #3**: rows now have MUTE (pauses sends, row dims, "Muted. Nothing sends until you
+   unmute.") and STOP (removes + pill "Unsubscribed from restock alerts for {store}"). Server: muted
+   column + /app/alerts/mute + fan-out skips muted. Sheet is cache-first (My checks prefetches) so it
+   opens instantly. Empty copy: "You haven't created any alerts." Buttons stack vertically so ES labels
+   never squeeze the text into mid-sentence wraps (verified both languages). Email unsubscribe link now
+   goes straight to the alerts sheet (?alerts=1) — the landing page is gone; RFC 8058 POST stays.
+3. **Status audit — all 13 verdicts verified headless**: RESULT pill + date/time + title + sub, zero
+   mid-sentence wraps. Fixed: /pub/result's providerCallId branch never sent ts (the missing in-stock
+   date/time), client also falls back to the saved history time; ivr_stuck copy shortened (EN+ES).
+
 ## ✅ Shipped (07-16 early, batch 7 — owner's late-night list, PR #31)
 1. **Check+ = launch set, Admin-driven**: exact_products OUT of the catalog (every account gets exact
    asks — hasFeature/premiumAsks ungated), hobby_hunts IN, store_holds/your_voice default OFF until

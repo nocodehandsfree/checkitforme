@@ -50,7 +50,7 @@ import { check as rlCheck, clientIp, LIMITS } from "./ratelimit";
 import { isGmailConfigured, gmailReceiptTick, debugRecentInbox } from "./gmail-receipts";
 import { rankBets } from "./best-bet";
 import { referralStatus, claimReferral } from "./referrals";
-import { sendAlert, sendAnonEmail, sendTestAlert, sendOwnerInStockEmail, sendConfirmEmail, checkEmailToken, alertSubscribe, myAlerts, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
+import { sendAlert, sendAnonEmail, sendTestAlert, sendOwnerInStockEmail, sendConfirmEmail, checkEmailToken, alertSubscribe, myAlerts, alertMute, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
 import { ownerAlertPrefs } from "./calls/notify";
 
 /** 409-style gate: returns a closed payload if we KNOW the store is closed right now, else null. */
@@ -956,14 +956,10 @@ async function unsubscribeEmail(e: string): Promise<void> {
   await db.update(accounts).set({ emailVerifiedAt: null }).where(eq(accounts.email, e));
   await db.update(watches).set({ active: false }).where(eq(watches.contact, e));
 }
-app.get("/unsubscribe", async (c) => {
-  const e = String(c.req.query("e") || "").trim().toLowerCase();
-  if (!e || !checkEmailToken(e, String(c.req.query("t") || ""))) {
-    return c.html(emailLandingPage("That link didn't work.", "We couldn't match this link. Manage alerts from your account on the site instead.", "No pudimos validar este enlace. Administra tus alertas desde tu cuenta en el sitio.", "Back to the site"), 400);
-  }
-  await unsubscribeEmail(e);
-  return c.html(emailLandingPage("You're out.", "No more alert emails to this address. Turn them back on anytime from your account.", "No más correos de alerta a esta dirección. Puedes reactivarlas cuando quieras desde tu cuenta.", "Back to the site"));
-});
+// The human unsubscribe click goes straight to the Alerts sheet — they mute or stop the exact alert
+// there (owner 07-16: no unsubscribe landing page, no blanket kill). The POST below stays: it's the
+// RFC 8058 one-click header path mail apps call machine-to-machine.
+app.get("/unsubscribe", async (c) => c.redirect("/?alerts=1"));
 app.post("/unsubscribe", async (c) => {
   const e = String(c.req.query("e") || "").trim().toLowerCase();
   if (!e || !checkEmailToken(e, String(c.req.query("t") || ""))) return c.json({ error: "bad_token" }, 400);
@@ -2885,7 +2881,8 @@ app.get("/pub/result/:cid", async (c) => {
     else {
       const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
       if (row && row.status !== "dialing" && row.status !== "in_progress" && row.status !== "queued") {
-        return c.json({ status: row.status, confirmed: row.confirmed, statusKey: row.statusKey, productDetail: row.productDetail, summary: row.summary ?? "", transcript: row.transcript ?? "" });
+        // ts rides EVERY result branch — the verdict page shows the call's date/time on all statuses (owner 07-16).
+        return c.json({ status: row.status, confirmed: row.confirmed, statusKey: row.statusKey, productDetail: row.productDetail, summary: row.summary ?? "", transcript: row.transcript ?? "", ts: (row.startedAt || 0) * 1000 });
       }
       return c.json({ status: "in_progress", transcript: "", summary: "" });
     }
@@ -4811,6 +4808,14 @@ app.post("/app/alerts/unsubscribe", async (c) => {
   if (!id) return c.json({ error: "id required" }, 400);
   await db.update(alertSubscriptions).set({ active: 0 }).where(and(eq(alertSubscriptions.id, Number(id)), eq(alertSubscriptions.userId, u.id)));
   return c.json(await myAlerts(u.id));
+});
+// Mute = pause without losing the alert (owner 07-16): stays on the sheet, never sends until unmuted.
+app.post("/app/alerts/mute", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const { id, muted } = await c.req.json().catch(() => ({}));
+  if (!id) return c.json({ error: "id required" }, 400);
+  return c.json(await alertMute(u.id, Number(id), !!muted));
 });
 
 // ---- Admin: editable alert message templates + the send log (tracking) ----

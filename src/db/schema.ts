@@ -425,6 +425,7 @@ export const alertSubscriptions = sqliteTable("alert_subscriptions", {
   productLabel: text("product_label"),      // free-text product (e.g. "151 booster box")
   channel: text("channel").notNull().default("sms"), // sms | email
   active: integer("active").notNull().default(1),
+  muted: integer("muted").notNull().default(0),      // 1 = paused: the alert stays on the sheet but never sends (owner 07-16 mute/stop)
   createdAt: integer("created_at").notNull().default(now),
 });
 
