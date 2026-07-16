@@ -6,6 +6,20 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash/sheet chrome), **I own
 > view/mode/nav** — don't blind-edit the tint, it's fragile (see the hard lesson below).
 
+## 🔧 07-16 EVENING — PTR back + per-tier Check+ grid (both driven live on staging, PASS)
+- **Pull-to-refresh restored.** The Android pass's blanket `overscroll-behavior-y:none` killed the
+  owner's pull-to-refresh. Now PTR is blocked ONLY mid-flow (`.overlay.on`, `.csheet.on`, `.supwrap.on`,
+  `body.huntmode`, `#live` visible) via `html:has(...)`; at rest the default is back. REAL verdict =
+  owner's phone (headless shows computed style only).
+- **Check+ grid follows the ringed tier.** Tap a plan → grid re-paints from THAT tier's feature map;
+  header flips "Every plan gets" → "This plan gets" (ES 'Este plan incluye') only when tiers differ;
+  `grid-template-rows:62px 62px` pins the 2-row/132px height so plans never sink below the fold.
+- **Root cause of "unchecking hobby/thrift did nothing": Admin writes PROD's DB, staging site reads
+  STAGING's DB** (GOTCHAS updated). Mirrored his edit into staging config (family: thrift+hobby off)
+  via staging admin API. Store holds/your voice only "worked" because I'd flipped them in staging
+  config myself last session.
+- **Next (owner):** Charlie test calls + check-status page render — boundary in docs/team/voice/checkpoint.md.
+
 ## 📱 ANDROID PASS (07-16, android sub-session) — DONE, merged PRs #44+#45, live (x-rev android-r119)
 - Drove all 28 consumer screens/flows at Pixel 8 viewport (412x915 + 360w) via headless Chromium →
   staging. No overflow-x anywhere; rendering matches iOS. Fixed the Android-only breaks:

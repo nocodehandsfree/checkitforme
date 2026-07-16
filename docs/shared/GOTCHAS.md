@@ -18,6 +18,9 @@ worse than no comment. Several entries below started as wrong comments.)
   and snapshot the volume first. (This wiped prod call history once.)
 - **Staging and prod each have their OWN SQLite DB** (own Railway volume, `file:/data/local.db`). Code flows
   staging → prod (merge); the Admin reads live prod data. An admin-API DB write hits only the env you call.
+  Concrete bite (07-16): owner unchecked plan services in Admin → prod config changed, but the staging site
+  kept showing them (staging's own `vt_plans` copy). Testing an Admin data edit on staging = mirror it into
+  staging's config via `staging.checkitforme.com/admin-login?token=<staging ADMIN_TOKEN>` + the same admin API.
 - **Prod volume has daily+weekly backups** (it had none). Volume `voice-caller-volume`, instance `ca3bbe06-…`.
   Snapshot before any destructive DB op.
 
