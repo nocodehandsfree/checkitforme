@@ -7,8 +7,8 @@
 - **Settings mirror prod→staging LIVE (staging half)** — `src/settings-sync.ts`, pull-only every
   60s: policy (minus staging's in-test call flags cheapBridgeAll/connectOnHuman), vt_plans (minus
   staging's TEST-mode Stripe ids), support banners, statuses registry (exact, incl. deletes).
-  20/20 suite in test-all. **Waits on the next promote** to put the read-only export on prod —
-  puller ticks + self-heals (status: `GET /api/settings-sync/status`, clean "prod export 404" now).
+  20/20 suite in test-all. **FULLY LIVE since the 07-16 promote** — PM verified the puller's
+  status shows ok runs moving real keys (policy_json, vt_plans, statuses) prod→staging every minute.
   Zero overlap with DD's store/learned pipes (asserted in tests; notes swapped in her checkpoint).
 - **Owner's thrift/hobby plan-toggle incident RESOLVED on staging:** his Admin uncheck had landed
   on Family only + Admin edits live on prod which staging can't see yet. I flipped thrift_hunts +

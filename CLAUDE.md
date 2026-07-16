@@ -59,6 +59,25 @@ Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · *
 | the book | branch `v1.0` — readme.com customer-docs mirror. Copper's lane only; never merge it either way. |
 | GTM | Admin → GTM checklist — the single source of launch truth. Every task maps to an item. |
 
+## Ship paths — how your work reaches the real world (check BEFORE waiting on anyone)
+Two deploys of one codebase: the **staging service** (staging site + its own DB) and the **prod
+service** (all consumer domains + THE Admin + the live DB). Every "why isn't my change showing?"
+is answered by one of these lines:
+- **Website / consumer code** — merge your session branch → `staging` → Railway auto-deploys
+  `staging.checkitforme.com` in ~1 min. Reaches PRODUCTION only via promote (PM runs it, owner's
+  word). You never wait for that: leave `PM: promote wanted — <what>` in your checkpoint, move on.
+- **Admin screens (`public/app.html`)** — merge to staging, then `bash scripts/ship-admin.sh` →
+  live on THE Admin in seconds, production website untouched. NEVER wait on a promote for app.html.
+- **Server code (`src/`)** — on the staging service at push; reaches prod only via promote. If the
+  Admin needs your new endpoint on prod, that's a PM note, not a wait.
+- **Data** — the Admin edits LIVE PROD data, immediately. Pipes sync the rest automatically:
+  owner settings (policy / plans / statuses) mirror prod→staging within a minute · curated store
+  fields sync staging→prod · learned phone-nav syncs prod→staging. Owner flips a checkmark in
+  Admin → prod has it instantly, staging within a minute. An admin-API DB write hits ONLY the env
+  you call.
+- **Never park a chat on a wait-timer for someone else's deploy or promote.** Write the dependency
+  down (PM note), take the next task or Handoff. Waiting chats burn money and block the owner.
+
 No other long-lived branches exist. Session branches merge to `staging` and die — and **YOU merge
 them**: when your harness puts work on a session branch/PR, run the gates, then merge it into
 `staging` yourself and confirm it deployed. The owner NEVER merges, approves, or watches a PR —
