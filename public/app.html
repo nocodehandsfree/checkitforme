@@ -2596,10 +2596,10 @@ async function savePersona(){ const name=v('pn_name'); if(!name){ toast('Name th
   if(PN_EDIT>=0 && PERSONAS[PN_EDIT]){ oldName=PERSONAS[PN_EDIT].name; PERSONAS[PN_EDIT]=p; updated=true; }
   else { const idx=PERSONAS.findIndex(x=>x.name===name); if(idx>=0){ oldName=name; PERSONAS[idx]=p; updated=true; } else PERSONAS.push(p); }
   if(updated && oldName && WF_PERSONA===oldName) WF_PERSONA=name;  // follow a rename
-  if(!WF_PERSONA) WF_PERSONA=name;  // first persona auto-selects for the workflow
+  WF_PERSONA=name;  // saving a persona SELECTS it for the workflow you're building (owner 07-16: no re-attach dance)
   const r=await api('/api/settings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({personas:JSON.stringify(PERSONAS)})});
   PN_EDIT=-1; pnClearForm(); pnEditHint(); renderPersonas();
-  toast((r&&!r.error)?(updated?'Persona updated':'Persona saved, selected for this workflow'):"Couldn't save the persona"); }
+  toast((r&&!r.error)?(updated?'Persona updated, selected for this workflow':'Persona saved, selected for this workflow'):"Couldn't save the persona"); }
 async function saveWorkflow(){ const name=v('wf_name'); if(!name){ toast('Name the workflow first'); return; }
   const wf={name, voiceId:(document.getElementById('vs_select')||{}).value||'', tuning:sandboxBody(), openers:OPENERS.filter(o=>o.on).map(o=>o.text), persona:WF_PERSONA, lane:desLane(), savedAt:Date.now()};
   let WFS=[]; const s=await api('/api/settings')||{}; try{ WFS=JSON.parse(s.vt_workflows||'[]'); }catch(e){}

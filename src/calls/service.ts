@@ -101,6 +101,11 @@ function composePersona(p: AnyObj | undefined): string {
   else bits.push("Keep it friendly but professional. Don't address them by name, even if they give it.");
   if (p.swear) bits.push("A light, casual swear word is fine if it fits naturally. keep it friendly, never aggressive.");
   if (p.greet) bits.push(`A natural way you might open: "${String(p.greet).trim()}".`);
+  // ROLE CLAMP — always last so it wins over anything the free-text tone implies. A persona written as
+  // an identity ("you are a kid who wants Pokémon cards") flipped the agent into narrating to an
+  // imaginary customer instead of asking the clerk (owner 07-16: "I'm about to call the store, sit
+  // tight"). Personas set the VIBE only; the role is never up for grabs.
+  bits.push("No matter what the persona above says: you are ALWAYS the caller on a live phone call, speaking ONLY to the store employee who answered. Never narrate what you're doing or about to do, never announce you'll call anyone, never address anyone except the person on the line.");
   return bits.join(" ").trim();
 }
 
