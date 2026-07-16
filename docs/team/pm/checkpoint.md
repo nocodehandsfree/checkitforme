@@ -48,7 +48,7 @@
   staging launch gate 23/23. One earlier red = Cloudflare 502 mid-redeploy (staging restarts on every
   push; don't gate while a push is landing). Cloudflare origin = voice-caller-*.up.railway.app
   (confirms the GOTCHAS hostname trap).
-- **Awaiting owner's word to promote** → levels prod = staging for the fresh start.
+- **PROMOTED 07-16 ~04:15 UTC: prod = staging = 41901e5, verified** (health, Admin, splash, prod gate GREEN). Tint attempt 4 (4d8821b, strips take sheet surface colour) rode along - owner judges it via peek on his phone.
 
 ## Tomorrow's restart plan
 1. Owner sends "Handoff" to every wonky chat (they checkpoint + push), then kills them.
