@@ -24,23 +24,29 @@
 - Friday real-device check: type in the sign-in sheet (keyboard must not cover it), pull-down
   doesn't reload, logos render. Emoji differ slightly (Noto vs Apple) — cosmetic, no action.
 
-## 🤝 HANDOFF (07-16) — state at session end
-- Everything below is MERGED to staging, deploy-verified, and rode the fresh-start PROMOTE the PM ran
-  (prod = staging as of 41901e5). Working tree clean; session branch merged via PRs #29/31/32/34/35/36.
-- **⛔ Hard lesson — sheet-chrome tint:** I attempted the slide-up top/bottom transparency twice
-  (grey wash, edge scrim), both made it worse, both REVERTED. Root cause found by the other dev:
-  fixed-position scrims attached to a TRANSFORMED sheet pin to the sheet, not the viewport. He now
-  owns the fix (his "attempt 4": strips take the sheet's own surface colour). Do NOT touch the
-  overlay dim / root flip / scrims without him + a comp. Owner has NOT yet blessed attempt 4.
-- **Owner actions pending:** (1) uncheck Store holds + Your voice in Admin → Plans (one plan is
-  enough — the grid shows only services EVERY plan has; my API write was permission-blocked).
-  (2) Eyeball on the phone: slide-up chrome (attempt 4), kiosk flow after a hard refresh
-  (worked end-to-end on the live build when I drove it), alerts Mute/Stop, edit cell/email sheets.
-- **`scripts/qa-website-drive.mjs`** (committed): drives all 13 verdict statuses + the alerts
-  mute/stop flow headless against a local staging-mode server; asserts pill/date/headline/sub and
-  the no-mid-sentence-wrap law in EN+ES. Run it before shipping verdict or alerts changes.
+## 🤝 HANDOFF (07-16 afternoon) — state at session end
+- ALL of it merged to staging + deploy-verified; working tree clean; no background tasks. Afternoon
+  batch = PRs #37/38/40/41/42/43 (on top of the morning's #29/31/32/36 below). NOT yet promoted —
+  prod is at the PM's 41901e5 fresh-start; everything after rides the next promote.
+- **07-16 afternoon fixes (each driven live, most with the owner watching):**
+  · Kiosk: 2nd kiosk pick never slid the sheet up — pickKiosk was missing pickStore's CS_DISMISSED
+    reset. · Toasts were z-60 UNDER z-4600 sheets — every pill fired inside a sheet was invisible;
+    now z-9000. · Email edit: pending address = yellow + carved card + "Send it again" (confirm line
+    out of the header); same-pending-address save RE-SENDS the confirmation; every unconfirmed save
+    pills "Confirmation sent." · Confirm-email landing page GONE → 302 to /?emconf=1|0, My checks
+    opens with the confirmed/bad-link pill. · Admin email copy: confirm_email was the one send not
+    passing bodyRaw → design's baked text; Admin copy sends now. · Admin Plans editor: checkbox saves
+    were silently droppable (600ms debounce + no feedback) — now ~60ms + "Saved · live on the site"/
+    "NOT saved" pills + pagehide flush; I also flipped store_holds/your_voice OFF in the staging
+    config via the admin API (owner asked twice). · Check+ grid: NO hardcoded list anywhere — boot
+    prefetch + 3x retry + fixed-height loading dots; always 2 rows at the ORIGINAL 132px footprint
+    (owner: plans must never fall below the fold).
+- **Owner eyeball still pending:** slide-up chrome (other dev's attempt 4), Android real-device
+  checklist (above).
+- **QA drivers (committed):** `scripts/qa-website-drive.mjs` (13 statuses + alerts mute/stop, EN+ES
+  wrap law) · `scripts/qa-android-sweep.mjs` · `scripts/staging-bridge.mjs`. Run before shipping.
 
-## ✅ Shipped this session (07-15 → 07-16, PRs #29/31/32/36 — all verified live)
+## ✅ Shipped earlier this session (07-15 → 07-16 morning, PRs #29/31/32/36 — all verified live)
 1. **My checks:** edit cell/email = icon-top sheets with owner-approved copy; every exit returns to
    My checks; Earn row removed (Earn tab covers it).
 2. **Alerts:** rows read "{product} at {store}" (server joins retailer + category names; junk labels
@@ -65,7 +71,6 @@
 
 ## ⏳ OPEN — needs owner / other lanes
 - **Slide-up chrome (tint lane):** other dev's attempt 4 is on staging/prod — owner verdict pending.
-- **Admin Plans:** owner unchecks Store holds + Your voice (see handoff bullet).
 - **Email rendering** (Outlook/Gmail) — other lane actively iterating (one light design now).
 - **Restock SMS blocked externally** (A2P denied, toll-free pending) — email alerts live.
 - **Service worker PHASE 2** (network-first HTML + offline) — not rebuilt.
