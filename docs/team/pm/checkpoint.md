@@ -9,8 +9,12 @@
 - Owner's day: dedicated EMAILS chat running (dark template must render in all clients; 7 failed
   attempts logged in git — grep "emails") · Webbie wrap-up then FRESH Webbie chat · Addie adding
   system messages · then Echo call session.
-- **CHARLIE FOR ALL ACCOUNTS locked** (Delta built + shelved; Fun store → Branson Global). Echo
-  session = dial in Charlie + call-status page rendering (new Webbie owns the consumer call UI).
+- **CHARLIE FOR ALL ACCOUNTS locked** (Delta built + shelved; Fun store → Branson Global). Owner's
+  sole focus now: Echo/Charlie tuning + verifying Admin persona create/save works end to end.
+  Fresh Webbie + Addie chats standing by for his tasks.
+- **CLOSED 07-16:** emails SETTLED (owner-approved look; chat checkpoints + merges, then dies) ·
+  iOS sheet tint = WON'T FIX (owner decision: leave it; GOTCHAS keeps the history) · DD store data
+  done for launch · Mapper done: 99%+ of available US chains mapped.
 - **Card test folds INTO the Charlie session**: fresh 424 signup (blank slate, NOT comp —
   COMP_PHONES unset, verified) → peek link → free check on a real store (watch status page) →
   upgrade → Family, REAL card → receipts. It's still the last launch gate — keep it front.
