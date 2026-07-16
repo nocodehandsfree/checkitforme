@@ -949,11 +949,17 @@
       <div class="pk-fact" id="sup_top_fact"></div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
+    <button class="peek" id="sup_credits_row" style="display:none;margin-top:10px" onclick="sheetFromHolder('ds_supcredits','Auto-credits','Make-goods the credit machine granted, with the call evidence for each')">
+      <div class="pk-main"><div class="pk-t">Auto-credits</div></div>
+      <div class="pk-fact" id="sup_credits_fact"></div>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
     <div class="k-filters">
       <select class="k-filter" id="sup_f_cat" onchange="supFilter()">
         <option value="">All categories</option>
         <option value="technical">Technical</option>
         <option value="bug">Bug</option>
+        <option value="check_issue">Check problem</option>
         <option value="billing">Billing</option>
         <option value="partnerships">Partnerships</option>
         <option value="how_checks_work">How checks work</option>
@@ -968,7 +974,7 @@
     <input id="sup_f_q" type="search" placeholder="Search chats…" oninput="supSearch()" style="margin-top:10px;font-size:14px;padding:11px 15px">
     <div class="k-eyebrow">Chats</div>
     <div id="sup_list"><div class="empty">Loading…</div></div>
-    <div id="sup_details" style="display:none"><div id="ds_suptop"></div></div>
+    <div id="sup_details" style="display:none"><div id="ds_suptop"></div><div id="ds_supcredits"></div></div>
   </section>
   <section id="results">
     <div class="k-title">Calls</div>
@@ -2788,7 +2794,28 @@ function supStatusPill(s){
   const cls=k==='resolved'?'g':(k==='escalated'?'a':'');
   return `<span class="pill ${cls}" style="font-size:10.5px;padding:3px 9px">${esch(k)}</span>`;
 }
-async function loadSupport(){ loadSupportStats(); loadSupportChats(); }
+async function loadSupport(){ loadSupportStats(); loadSupportChats(); loadSupportCredits(); }
+// Auto-credit audit: every make-good the credit machine granted, with the evidence. Row stays
+// hidden until the first grant exists so the section doesn't ship an empty box.
+async function loadSupportCredits(){
+  const row=document.getElementById('sup_credits_row'), holder=document.getElementById('ds_supcredits');
+  if(!row||!holder) return;
+  const r=await api('/api/support/credits');
+  const g=(r&&Array.isArray(r.grants))?r.grants:[];
+  if(!g.length){ row.style.display='none'; return; }
+  row.style.display='';
+  document.getElementById('sup_credits_fact').textContent=g.length+(g.length===1?' grant':' grants');
+  holder.innerHTML=g.map(x=>{
+    let ev={}; try{ ev=JSON.parse(x.evidence||'{}'); }catch(e){}
+    const why={bad_status:'bad call outcome',short_call:'call too short',failed:'call failed'}[x.reason]||x.reason;
+    const bits=[ev.statusKey?('status '+ev.statusKey):'',(ev.callSeconds!=null)?(ev.callSeconds+'s on the line'):''].filter(Boolean).join(' · ');
+    return `<div class="peek" style="cursor:default">
+      <div class="pk-main"><div class="pk-t">${esch(x.storeName||('check '+x.cid))}</div>
+      <div class="pk-m" style="display:block;white-space:normal">${esch(x.accountId||'')} · ${esch(why)}${bits?' · '+esch(bits):''}${x.suggestedPhone?' · new number found: '+esch(x.suggestedPhone):''}</div></div>
+      <div class="pk-fact">${agoTs(x.grantedAt)}</div>
+    </div>`;
+  }).join('');
+}
 async function loadSupportStats(){
   const heroN=document.getElementById('sup_hero_n'), heroL=document.getElementById('sup_hero_l');
   const wells=document.getElementById('sup_wells'), cats=document.getElementById('sup_cats');

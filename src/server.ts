@@ -16,6 +16,7 @@ import {
 import { answerSupport, resolveConversation, SUPPORT_MODELS, SUPPORT_CATEGORIES, type SupportCategory } from "./support/ladder";
 import { submitTicket } from "./support/tickets";
 import { addQa, reindexBook, searchBook, getFaq } from "./support/rag";
+import { listCreditGrants } from "./support/credits";
 import { config } from "./config";
 import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
@@ -4659,6 +4660,12 @@ app.post("/pub/support/ticket", async (c) => {
   const debug = b.debug && typeof b.debug === "object" ? b.debug : null;
   const t = await submitTicket(sessionId, name, email, message, { category, screenshotUrl, debug });
   return c.json({ ok: true, ticketId: t.id });
+});
+// Admin: credit-machine audit — every auto-grant with the telemetry evidence that justified it,
+// plus the suggested replacement phone when the background re-lookup disagreed with our record.
+app.get("/api/support/credits", async (c) => {
+  const grants = await listCreditGrants(Number(c.req.query("limit")) || 50);
+  return c.json({ grants });
 });
 // Admin: rebuild the book index in qdrant (run after Copper edits the book).
 app.post("/api/support/reindex", async (c) => {

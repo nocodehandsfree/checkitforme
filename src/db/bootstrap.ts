@@ -286,6 +286,14 @@ export async function bootstrap() {
   await client.execute("ALTER TABLE support_tickets ADD COLUMN category TEXT NOT NULL DEFAULT 'other'").catch(() => {});
   await client.execute("ALTER TABLE support_tickets ADD COLUMN screenshot_url TEXT").catch(() => {});
   await client.execute("ALTER TABLE support_tickets ADD COLUMN debug TEXT").catch(() => {});
+  // Credit machine: auto make-good grants for bad checks (one per check ever, capped per account).
+  await client.execute(`CREATE TABLE IF NOT EXISTS support_credit_grants (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, cid INTEGER NOT NULL UNIQUE, account_id TEXT NOT NULL,
+    conversation_id INTEGER, retailer_id INTEGER, store_name TEXT, reason TEXT NOT NULL, evidence TEXT,
+    store_phone TEXT, suggested_phone TEXT, granted_at INTEGER NOT NULL DEFAULT (unixepoch()))`);
+  await client.execute("CREATE INDEX IF NOT EXISTS support_credit_acct_idx ON support_credit_grants(account_id, granted_at)").catch(() => {});
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN credit_decision TEXT").catch(() => {});
+  await client.execute("ALTER TABLE support_conversations ADD COLUMN credit_cid INTEGER").catch(() => {});
   // One-time: stock the anonymous free-check pool for launch (each visitor gets 1 free check).
   if (!(await getSetting("pub_credits_initialized"))) {
     await setSetting("pub_credits", "250");
