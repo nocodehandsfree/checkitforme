@@ -3,15 +3,18 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 2026-07-16 — ALERT EMAILS: ONE LIGHT DESIGN + full editability (Addie) — HANDOFF
-**The email-rendering saga is RESOLVED — do NOT reopen it or go back to a dark email (reverted crime).**
-Root cause (Litmus/Email-on-Acid + 3 real dark emails the owner sent): Gmail (the majority client) is
-built to DARKEN light emails for dark-mode users and show them light otherwise. A DARK email fights that
-→ Gmail flips it to WHITE (the bug chased for hours). Pure #000/#fff also trigger aggressive invert.
-**Fix = ONE clean LIGHT email**: off-white #F3F3F6 page, near-black #15151B text, filled brand-green
-button, NO pure black/white, `color-scheme: light dark` so every client adapts (light in light mode,
-auto-darkened in dark). Verified both schemes in-browser; sent to fun@fungibles + trackalackaalerts +
-restocktimer. All lives in `src/alerts.ts` renderBrandedEmail/moduleHtml.
+## 2026-07-16 (later) — EMAIL RENDERING REOPENED BY THE OWNER — dark + gradient lock (attempt 8)
+The "RESOLVED, do not reopen" light design FAILED on the owner's phone: Gmail iOS dark mode does NOT
+darken light emails — his screenshot shows the white card he hates. He reopened it with a new protocol:
+**one change at a time, a real test email to jcoindefi@gmail.com after each, his screenshots are the
+verdict.** Change #1 (commit `emails: dark canvas pinned with the gradient lock`): dark comp back,
+every dark surface painted twice — flat one-color linear-gradient (an IMAGE; Gmail/Outlook never
+repaint images) + bgcolor #000000 fallback (the one value Outlook keeps black). Off-white #F4F4F6 text,
+comp grays, color-scheme dark. Known risk the test verifies: Gmail may still recolor the TEXT over a
+locked background. Test sent 2026-07-16 18:33 UTC — awaiting the owner's screenshot.
+
+## 2026-07-16 — ALERT EMAILS: full editability (Addie) — HANDOFF
+Prior "one light design" rationale lives in git (`emails: switch to ONE light design`); superseded above.
 - **Email BODY editable in Admin now:** the branded email body renders from the template `emailBody`
   (split by sentence, **bold** + {token}). Editing Admin ▸ Alerts changes the email for real. Restock
   body = "Get going, this stuff doesn't stay on the shelves for very long." (generic — one template
