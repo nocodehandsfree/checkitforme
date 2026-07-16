@@ -263,8 +263,8 @@ function fillHtmlBold(t: string, tk: Record<string, string | number | undefined>
 // Outlook keeps near-black backgrounds black and keeps borders/saturated colors, but it LIGHTENS a
 // dark-gray fill (#14141A/#1B1B20) into gray mush — which is why the old floating card looked awful.
 // So: no floating card, one flat canvas, and modules are BORDERED (border survives) not dark-filled.
-const BOARD = "#0A0A0F";       // near-black canvas Outlook leaves dark
-const HAIR = "#24242C";        // box border that survives Outlook's recolor
+const BOARD = "#000000";       // PURE black — Outlook leaves true black alone (it grays near-blacks)
+const HAIR = "#2A2A33";        // box border that survives Outlook's recolor (defines the boxes on black)
 function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | number | undefined>): string {
   if (!m) return "";
   const box = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="mod" style="background:${BOARD};border:1px solid ${HAIR};border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
