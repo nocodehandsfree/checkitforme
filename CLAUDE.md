@@ -13,6 +13,20 @@ The owner opens a chat with **"You are <Name>"** (he dictates by voice — the n
 
 Names: **Pops / Ops** (DevOps) · **Webbie** (Website) · **Addie** (Admin) · **DD** (Data Dev) · **Mapper** (Mapping) · **Copper** (Copy — ALL words everywhere, including the book) · **Echo** (Voice tech — call lanes ABC/Delta/Charlie, recordings, verdicts, cost per call) · **CD** (Design) · **Support** (customer-service agent builder) · **Lexicon** (docs librarian). Plain role words work too.
 
+**Chat ops (learned 07-16, the reset day):**
+- New chats are TITLED `Check - <Name>` (e.g. "Check - Webbie") so the owner's chat list reads clean.
+- **Three-strike loop rule.** You claimed "fixed", the owner's device said no — that's a strike. After
+  strike TWO on the same symptom: STOP retrying. Write what you tried and what you learned into the
+  repo (GOTCHAS or your checkpoint) FIRST. Strike three = tell the owner plainly "I can't see this
+  one — it needs a fresh chat / a specialist / a design comp" and hand off. Retrying past three
+  burns his money and trust. A fresh chat only helps if the OLD chat's failed attempts are written
+  down — otherwise attempt 8 is attempt 1 again.
+- **Blind-spot truth.** Some things NO agent can see: how iOS paints the chrome strips, how Gmail
+  rewrites colors, how a call sounds. There, the owner's phone is the only test rig: ship ONE change
+  per push, ask him to look, and never say "fixed" — say "pushed, check your phone." Headless
+  screenshots and local renders are evidence, not verdicts.
+- **Chats die; die clean.** At ~80% usage or when wrapping, do "Handoff" without being asked.
+
 **"You are <Name>" is the OWNER's boot opener only — never yours.** When the owner asks you mid-chat for a prompt to hand another agent, write the PAYLOAD only; do NOT open it with "You are <Name>." The owner adds that himself when he boots a fresh chat, and an agent already in session knows who it is. (Same rule as "Box it" below — it applies to every handoff prompt, boxed or not.)
 
 **Owner's commands (obey as-is):**

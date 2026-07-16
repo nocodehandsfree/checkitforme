@@ -41,6 +41,15 @@ worse than no comment. Several entries below started as wrong comments.)
 - **PWA status bar is a different mechanism** — `apple-mobile-web-app-status-bar-style: black-translucent` +
   `viewport-fit=cover` (the body paints *under* the bar). That's why "Add to Home Screen" tints when web doesn't.
 
+## Email rendering (the 07-15/16 Gmail loop — 7+ attempts; read before touching src/alerts.ts)
+- **Outlook Windows renders with Word:** tables + inline styles only, and it GRAYS near-black —
+  pure `#000000` survives, `#0C0C12` does not (437bb02 proved it).
+- **Gmail is the other trap:** strips `<style>` in many contexts, drops body backgrounds unless the
+  wrapper TABLE carries `bgcolor`, and dark-mode rewrites colors. A dark email showing WHITE in
+  Gmail = the background was dropped, not the shade mischosen.
+- Full attempt history: `git log --grep="emails"`. Verdict = the owner's phone screenshots after a
+  REAL test send, one variable per iteration. Owner's requirement: the dark look, everywhere.
+
 ## Infra / branches
 - **Admin traffic does NOT reliably arrive on a host starting with `admin.`/`caller.`** — prod edge
   routing can hand the app other hostnames for the same service. The app's real admin-vs-consumer
