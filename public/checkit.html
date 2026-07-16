@@ -7159,29 +7159,25 @@ const FEAT_ICON={
 // at 14px/390pt (copy-guide hard rule 2). Tapping a grid box opens this as a left-aligned bottom sheet.
 const FEAT_INFO={
   zone_sweeps:{
-    en:{lead:"Call a whole area in one tap.",pts:["Save the stores near you as a zone.","One tap calls them all at the same time.","One check per store. No answer, no charge."]},
-    es:{lead:"Llama a toda una zona de un toque.",pts:["Guarda las tiendas cercanas como zona.","Un toque las llama a todas a la vez.","Un check por tienda. Sin respuesta, sin cargo."]}},
+    en:{lead:"Call a whole area in one tap.",pts:["Save the stores near you as a zone.","One tap calls them all at the same time.","Each store costs one check.","No check. No charge."]},
+    es:{lead:"Llama a toda una zona de un toque.",pts:["Guarda las tiendas cercanas como zona.","Un toque las llama a todas a la vez.","Cada tienda cuesta un check.","Sin check, sin cargo."]}},
   restock_alerts:{
-    en:{lead:"Stop checking. Get told.",pts:["Tap Tell me when it's back on any result.","We watch that store for you.","One ping the moment it lands. Never spam."]},
-    es:{lead:"Deja de revisar. Te avisamos.",pts:["Toca Avísame cuando vuelva en un resultado.","Vigilamos esa tienda por ti.","Un aviso apenas llegue. Nunca spam."]}},
+    en:{lead:"Stop checking. Get told.",pts:["Watch any store for your product.","A call confirms it's back, we ping you.","One alert per restock. That's it."]},
+    es:{lead:"Deja de revisar. Te avisamos.",pts:["Vigila cualquier tienda por tu producto.","Una llamada lo confirma y te avisamos.","Un aviso por reposición. Nada más."]}},
   scheduled_checks:{
-    en:{lead:"We check on a schedule, hands free.",pts:["Set it to a store's shipment days.","The answer is waiting on your phone.","Cancel any time, no lock in."]},
-    es:{lead:"Revisamos solos, en piloto automático.",pts:["Ajústalo a los días de envío de la tienda.","La respuesta te espera en el teléfono.","Cancela cuando quieras, sin ataduras."]}},
+    en:{lead:"We call the store on your schedule.",pts:["Pick a store, set recurring days and times.","The check runs by itself.","A status report lands in your email."]},
+    es:{lead:"Llamamos a la tienda cuando tú digas.",pts:["Elige tienda, días y horas recurrentes.","El check corre solo.","Un reporte te llega al correo."]}},
   any_town:{
     en:{lead:"Hunt any town in America.",pts:["Search any ZIP or city, not just home.","The map jumps there instantly.","100,000+ stores and counting."]},
     es:{lead:"Caza en cualquier ciudad del país.",pts:["Busca por código postal o ciudad.","El mapa salta ahí al instante.","Más de 100,000 tiendas y contando."]}},
-  store_holds:{
-    en:{lead:"Ask the store to hold it for you.",pts:["Found it but you're across town?","We ask Staff to set one aside for you.","All on the same call."]},
-    es:{lead:"Pide que te aparten uno.",pts:["¿Lo encontraste pero estás lejos?","Le pedimos al Staff que aparte uno para ti.","Todo en la misma llamada."]}},
-  your_voice:{
-    en:{lead:"Pick the voice that makes the call.",pts:["Choose the caller you like best.","Staff hears a friendly, natural voice."]},
-    es:{lead:"Elige la voz que hace la llamada.",pts:["Escoge el que más te guste.","El Staff oye una voz amable y natural."]}},
+  // store_holds + your_voice: parked (owner 07-16) — not offered yet, pulled from the interface.
+  // Write their sheets when the features actually ship.
   thrift_hunts:{
-    en:{lead:"Hunt the thrift shelves too.",pts:["Old collections land there, priced like junk.","We call the thrift shops near you.","We ask what's in the case today."]},
-    es:{lead:"Caza también en las tiendas de segunda.",pts:["Ahí llegan colecciones viejas, baratísimas.","Llamamos a las tiendas de segunda cercanas.","Preguntamos qué hay en la vitrina hoy."]}},
+    en:{lead:"Hunt the thrift shelves too.",pts:["Old collections end up there for cheap.","We call the thrift stores near you.","We ask what's on their shelves today."]},
+    es:{lead:"Caza también en las tiendas de segunda.",pts:["Ahí acaban colecciones viejas, baratas.","Llamamos a las tiendas de segunda cercanas.","Preguntamos qué hay en sus estantes hoy."]}},
   hobby_hunts:{
-    en:{lead:"A browsable wall of Pokémon.",pts:["Every era, every set, list prices in.","Pick your target card.","Every call asks the shops for exactly that."]},
-    es:{lead:"Un muro de Pokémon para explorar.",pts:["Toda era, todo set, con precios de lista.","Elige la carta que buscas.","Cada llamada la pide exacta a las tiendas."]}},
+    en:{lead:"Best price across the hobby shops.",pts:["Pick your set and product, tin or booster box.","We call multiple hobby shops for it.","You see who has it at the best price."]},
+    es:{lead:"El mejor precio entre tiendas de cartas.",pts:["Elige set y producto, lata o booster box.","Llamamos a varias tiendas de cartas.","Ves quién lo tiene al mejor precio."]}},
 };
 function featInfo(key){ const c=FEAT_INFO[key]; return c?(c[LANG]||c.en):null; }
 function openFeatInfo(key){ const info=featInfo(key); if(!info) return;

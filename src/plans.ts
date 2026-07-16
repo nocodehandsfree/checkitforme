@@ -13,7 +13,7 @@ export const FEATURES: { key: string; label: string }[] = [
   // not a premium service. premiumAsks stays true everywhere for the existing call-gating call-sites.
   { key: "zone_sweeps",    label: "Zone sweeps" },       // every store near you, one tap
   { key: "restock_alerts", label: "Restock alerts" },
-  { key: "scheduled_checks", label: "Scheduled checks" },// auto-check on a schedule
+  { key: "scheduled_checks", label: "Auto checks" },     // recurring call on your days/times → email report
   { key: "any_town",       label: "Any town" },          // search past the 20-mile radius
   { key: "store_holds",    label: "Store holds" },       // ask the store to hold a product (voice flow in testing)
   { key: "your_voice",     label: "Your voice" },        // personalize the agent voice (in testing)
