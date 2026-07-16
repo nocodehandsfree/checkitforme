@@ -592,6 +592,15 @@ __BRAND_HEAD__
   .suplaunch:hover{opacity:1;width:38px}
   .suplaunch:active{opacity:1}
   .suplaunch svg{width:20px;height:20px;stroke:#9a9aa8}
+  /* Post-check invite (owner 07-16): on a settled RESULT the tab slides out from the right edge at
+     full strength and breathes the check button's green glow (rCtaGlow family) — it replaces the old
+     "Something wrong with this check? Tell us" text link. The .invite class rides #supTab only while
+     the result view is up (showResult adds, setView removes); everywhere else the tab is untouched. */
+  .suplaunch.invite{opacity:1;width:44px}
+  .suplaunch.invite svg{stroke:#E9E9F0}
+  .suplaunch.invite:not(.tucked){animation:supSlideIn .45s cubic-bezier(.32,.72,0,1),supInviteGlow 2.8s ease-in-out .6s infinite}
+  @keyframes supSlideIn{0%{transform:translateX(120%)}100%{transform:translateX(0)}}
+  @keyframes supInviteGlow{0%,100%{box-shadow:-5px 6px 16px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05),0 0 0 1px rgba(52,197,107,.25),0 0 14px rgba(52,197,107,.18)}50%{box-shadow:-5px 6px 16px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.05),0 0 0 1px rgba(52,197,107,.6),0 0 26px 4px rgba(52,197,107,.42)}}
   .suplaunch.tucked{transform:translateX(120%);opacity:0;pointer-events:none}
   /* Zones + Check history sheets: the launcher is gone while they're up (guide §5.17 — it was
      floating OVER the sheet and covering Save zone; the overlay's z4000 can't beat it because
@@ -605,6 +614,8 @@ __BRAND_HEAD__
   body:has(.supwrap.on) .suplaunch .ic-chat{display:none}
   body:has(.supwrap.on) .suplaunch .ic-x{display:block}
   body:has(.supwrap.on) .suplaunch.tucked{transform:none;opacity:1;pointer-events:auto} /* no auto-tuck while it's the close button */
+  body:has(.supwrap.on) .suplaunch.invite{animation:none;width:34px} /* chat open = it's the CLOSE tab; a glowing X reads wrong */
+  body:has(.supwrap.on) .suplaunch.invite svg{stroke:#9a9aa8}
   .supwrap{position:fixed;inset:0 0 0 auto;z-index:81;width:100%;max-width:100%;display:flex;flex-direction:column;
     /* a touch deeper than the raw brand yellow — the neon read too bright in the panel (owner 07-11) */
     --sup-accent:color-mix(in srgb, var(--accent,#FFCB05) 73%, #14110a);
@@ -2947,7 +2958,6 @@ const I18N={ es:{
   'sup.browseall':'Ver todos los artículos de ayuda',
   'sup.greet.bug':'Lamento que algo falló. Cuéntame qué pasó y agrega una captura si puedes.',
   'sup.greet.check':'Perdón, vamos a arreglarlo. ¿Cuál tienda fue y qué salió mal? Un número equivocado, la tienda incorrecta, o un resultado que se ve mal. Una captura ayuda.',
-  'res.report':'¿Algo mal con este check? Avísanos',
   'sup.shotok':'Captura adjunta','sup.uploading':'Subiendo…','sup.uploadfail':'No se pudo adjuntar la imagen.',
   'sup.hello':'¡Hola! Pregúntame lo que sea sobre checks, tiendas o planes.',
   'ph.support':'Escribe tu pregunta',
@@ -3227,7 +3237,10 @@ window.addEventListener('scroll',supTabTuck,{passive:true,capture:true});
 window.addEventListener('wheel',supTabTuck,{passive:true});
 window.addEventListener('touchmove',supTabTuck,{passive:true});
 // Open straight to "What's it about?" (the topic picker) — most people arrive wanting to ask/report.
-function supTabClick(){ const w=$('supWrap'); if(w&&w.classList.contains('on')) closeSupport(); else openSupport(); } // one tab, two jobs: open, then close from the same thumb spot (owner 07-14)
+function supTabClick(){ const w=$('supWrap'); if(w&&w.classList.contains('on')){ closeSupport(); return; }
+  // Post-check glow (result page): the tab IS the old Tell-us link — straight into "make it right".
+  const st=$('supTab'); if(st&&st.classList.contains('invite')){ openSupportTopic('check_issue'); return; }
+  openSupport(); } // one tab, two jobs: open, then close from the same thumb spot (owner 07-14)
 function openSupport(){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supStartNew(); }
 // Open support straight into a specific topic (skips the picker). Used by the "report a problem"
 // link on a check's status/result so a bad number or wrong result lands in check_issue in one tap.
@@ -5350,7 +5363,7 @@ function backToBuilder(){ try{ document.documentElement.classList.remove('restor
 let NAV_VIEW='builder';
 function navMark(view){
   if(view!=='builder') HUNT_STEP=''; // leaving the builder ends the hobby-hunt back-stack
-  try{ document.body.classList.toggle('rview', view==='result'); if(view!=='result'){ ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); } }catch(e){} // result-only top treatment (transparent nav + color wash)
+  try{ document.body.classList.toggle('rview', view==='result'); if(view!=='result'){ ['rv-in','rv-out','rv-soon','rv-unk','rv-pend'].forEach(c=>document.body.classList.remove(c)); dropBakedTone(); const st=$('supTab'); if(st) st.classList.remove('invite'); } }catch(e){} // result-only top treatment (transparent nav + color wash + the support tab's post-check glow)
   try{ if(view!=='builder') hideCallSheet(); }catch(e){} // the call sheet belongs to the builder only
   try{ setThemeTone(); renderCallRail(); }catch(e){}
   if(view===NAV_VIEW) return;
@@ -5765,10 +5778,10 @@ function showResult(o, cid){
       ${canTranslate?`<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button></div>`:''}
       ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed, {cls, title:vTitle, term:termLabel, ts:o.ts, used:(o.status==='pending'?'':(o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one')))})}
     </div>
-    ${o.status==='pending' ? '' : `<div style="text-align:center;margin-top:2px"><button onclick="openSupportTopic('check_issue')" style="background:none;border:none;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer;font-family:inherit;padding:8px 6px">${t('res.report',"Something wrong with this check? Tell us")}</button></div>`}
     ${o.status==='pending' ? '' : (inStock ? inActions : '')}
     ${o.status==='pending' ? '' : upsell}`;
   $('result').classList.remove('hidden');
+  try{ const st=$('supTab'); if(st) st.classList.toggle('invite', !!(o.status&&o.status!=='pending')); }catch(_){ } // post-check: the support tab takes over the old Tell-us link (slide-out + glow, result page only)
   navMark('result');
   // Entrance motion: play ONCE per call, on the CONTENT-READY render. Reopening a past-day call renders
   // twice — a transcript-less placeholder, then the full result — so we must skip the placeholder and
