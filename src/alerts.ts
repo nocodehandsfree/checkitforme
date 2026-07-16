@@ -192,7 +192,7 @@ const EMAIL_DESIGN_EN: Record<EmailKind, EmailDesign> = {
     // Product-first: the HEADLINE is the item that's back (owner 07-15: "what's back?" — name it).
     // No product panel (it repeated the store/city and read as a gray box); store said once in the body.
     // CTA = real action: Get directions opens Google Maps to the store, not a dead website link.
-    kicker: "BACK IN STOCK", kickerColor: "#FFD60A", headline: "{product}",
+    kicker: "BACK IN STOCK", kickerColor: "#FFCB05", headline: "{product}",
     body: ["**{store}** has it right now.", "This stuff moves fast."],
     cta: "Get directions", url: "https://checkitforme.com",
   },
@@ -227,7 +227,7 @@ const EMAIL_DESIGN_ES: Record<EmailKind, EmailDesign> = {
     cta: "Usar mi check gratis", url: "https://checkitforme.com",
   },
   restock: {
-    kicker: "YA DISPONIBLE", kickerColor: "#FFD60A", headline: "{product}",
+    kicker: "YA DISPONIBLE", kickerColor: "#FFCB05", headline: "{product}",
     body: ["**{store}** lo tiene ahora.", "Esto vuela."],
     cta: "Cómo llegar", url: "https://checkitforme.com",
   },
@@ -260,52 +260,53 @@ function fillHtmlBold(t: string, tk: Record<string, string | number | undefined>
     return escHtml(fillRaw(seg, tk));
   }).join("");
 }
-// DARK + GRADIENT LOCK (2026-07-16, owner's change #1 of the one-change-at-a-time pass).
-// The whole 7-attempt saga in one paragraph so nobody repeats it: a dark email set with plain
-// background-COLOR gets repainted — Gmail normalizes dark canvases to white (the white render on the
-// owner's phone), Outlook mobile grays near-blacks (#0A0A0F → mush; only true #000000 held). The one
-// lever none of those attempts used: background IMAGES are never repainted by either client, and a
-// flat one-color linear-gradient IS an image. So every dark surface here is painted twice —
-//   1. a linear-gradient lock (wins wherever gradients render: Gmail, Apple Mail, most clients),
-//   2. a bgcolor fallback of pure #000000 (the one value Outlook's engines keep black when they don't).
-// Structure stays the Outlook-robust one that survived testing: ONE flat canvas, BORDERED modules
-// (borders survive every client), saturated accents, no floating card.
-// BRIGHTNESS PRE-COMP (change #5, owner: "brighter"): Gmail dims every text color by a fixed pass and
-// offers no opt-out, so the whites are authored at pure #FFFFFF and the restock yellow one notch
-// hotter — Gmail's dimming lands them where the comp wants, and everywhere else the extra brightness
-// is barely visible. The old "never pure #FFF" rule guarded against canvas inversion; the gradient
-// lock closed that hole (proven on the owner's screenshots), so pure white text is safe now.
-const BOARD = "#08090D"; // comp board (docs/design/emails mock) — painted via the gradient lock
-const BLACK = "#000000"; // bgcolor fallback where gradients don't render; Outlook keeps true black
-const TXT = "#FFFFFF";   // headline / bold / CTA label — pure white (pre-comp for Gmail's dimming)
+// THE RENDERING LAWS (settled over changes #1-#6 with the owner's phone screenshots as the judge —
+// read this before touching ANY color here, it replaces seven failed attempts of archaeology):
+// 1. Gmail iOS dark mode attacks PURE #000000 backgrounds only — it flips them light and dims the
+//    text sitting on them. Dark GRAYS (#08090D board, #16161C card — and Apple's own marketing
+//    emails) it leaves completely alone: white text stays WHITE. So: never author background-color
+//    or bgcolor as #000000. Near-black is safe; pure black is the tripwire.
+//    (Proof: the July 15 card email rendered bright in Gmail while its one pure-#000 element — the
+//    CTA fill — flipped to a white pill. Same phone, same day, side by side.)
+// 2. Outlook mobile repaints background-COLOR on dark fills but never a background IMAGE — a flat
+//    one-color linear-gradient is an image, so every dark surface carries the gradient lock below.
+//    Outlook desktop (Word engine, no gradients) falls back to the bgcolor and does not transform.
+// 3. Gmail strips -webkit-text-fill-color and rewrites <style> colors; blend-mode recovery hacks
+//    work but INVERT hue (white CTA, blue kicker — change #3's crime). With law 1 respected none of
+//    that is needed. ink() stays as harmless belt-and-suspenders for odd WebKit clients.
+// 4. Owner-approved look (2026-07-16, "like Apple's"): black board around a GRAY floating card,
+//    white text, green-ring CTA on near-black fill, Inter via @font-face where clients allow it
+//    (Gmail refuses web fonts and falls back down the stack — that one is physics, not a bug).
+const BOARD = "#08090D"; // outer board (comp) — near-black, NEVER #000000 (law 1)
+const CARD = "#16161C";  // the floating card (comp) — the gray the owner liked in Apple's email
+const CTAFILL = "#0B0C10"; // CTA fill — visually black, safely not #000000 (law 1)
+const TXT = "#FFFFFF";   // headline / bold / CTA label — Gmail keeps it white on non-#000 (law 1)
 const BODY1 = "#B9B9C4"; // body text (comp)
 const BODY2 = "#8A8A96"; // secondary text + footer (comp)
 const HAIR = "#333340";  // box borders (comp)
-const BOXBG = "#111117"; // module fill under the lock (transparent fallback → the black board shows)
+const BOXBG = "#1F1F29"; // module fill on the card (comp)
 const GRN = "#4ADE80";   // brand green (comp)
 const TINT = "#122019";  // green-tint chip fill (comp)
-/** The lock: paint a dark surface as an un-repaintable image, black attr fallback set separately. */
-const lock = (c: string) => `background-color:${BLACK};background-image:linear-gradient(${c},${c})`;
-/** Module fill: gradient only — where gradients don't render it falls back to the black board. */
-const boxLock = (c: string) => `background-image:linear-gradient(${c},${c})`;
+/** The lock (law 2): paint a dark surface as an un-repaintable image over its own bgcolor fallback. */
+const lock = (c: string) => `background-color:${c};background-image:linear-gradient(${c},${c})`;
 /** Text lock (change #2): Gmail's dark pass rewrites `color` (the dimmed-gray headline on the owner's
  *  screenshot) but not -webkit-text-fill-color — and Gmail/Outlook mobile render on WebKit/Blink,
  *  where fill-color beats color. `color` stays in as the fallback for non-WebKit engines. */
 const ink = (c: string) => `color:${c};-webkit-text-fill-color:${c}`;
 function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | number | undefined>): string {
   if (!m) return "";
-  const box = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${boxLock(BOXBG)};border:1px solid ${HAIR};border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
+  const box = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${lock(BOXBG)};border:1px solid ${HAIR};border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
   if (m.type === "chip") return box(`<span style="font-size:15px;font-weight:700;${ink(TXT)};font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
   if (m.type === "product") return box(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
     <td style="font-family:${FONT}"><div style="font-size:16px;font-weight:800;${ink(TXT)}">${escHtml(fill(m.title, tk))}</div><div style="font-size:12.5px;font-weight:600;${ink(BODY2)};margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
-    <td align="right" valign="middle"><span style="display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.6px;${ink(GRN)};${boxLock(TINT)};border:1px solid ${HAIR};border-radius:999px;padding:5px 11px;font-family:${FONT}">${escHtml(m.badge)}</span></td></tr></table>`, "16px 18px", 16);
+    <td align="right" valign="middle"><span style="display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.6px;${ink(GRN)};${lock(TINT)};border:1px solid ${HAIR};border-radius:999px;padding:5px 11px;font-family:${FONT}">${escHtml(m.badge)}</span></td></tr></table>`, "16px 18px", 16);
   const rows = m.steps.map((s, i) => {
     const last = i === m.steps.length - 1;
     return `${i ? `<tr><td colspan="2" style="padding:0 18px"><div style="height:1px;line-height:1px;font-size:0;background:#26262E">&nbsp;</div></td></tr>` : ""}<tr>
-    <td width="57" valign="middle" style="padding:${i ? "12px" : "16px"} 0 ${last ? "16px" : "12px"} 18px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="26" height="26" align="center" valign="middle" style="width:26px;height:26px;border-radius:50%;${boxLock(TINT)};${ink(GRN)};font-size:12px;font-weight:800;font-family:${FONT}">${escHtml(s[0])}</td></tr></table></td>
+    <td width="57" valign="middle" style="padding:${i ? "12px" : "16px"} 0 ${last ? "16px" : "12px"} 18px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="26" height="26" align="center" valign="middle" style="width:26px;height:26px;border-radius:50%;${lock(TINT)};${ink(GRN)};font-size:12px;font-weight:800;font-family:${FONT}">${escHtml(s[0])}</td></tr></table></td>
     <td valign="middle" style="padding:${i ? "12px" : "16px"} 18px ${last ? "16px" : "12px"} 0;font-size:15px;font-weight:${last ? 700 : 600};${ink(TXT)};font-family:${FONT}">${escHtml(s[1])}</td></tr>`;
   }).join("");
-  return `<tr><td style="padding-top:22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${boxLock(BOXBG)};border:1px solid ${HAIR};border-radius:16px">${rows}</table></td></tr>`;
+  return `<tr><td style="padding-top:22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${lock(BOXBG)};border:1px solid ${HAIR};border-radius:16px">${rows}</table></td></tr>`;
 }
 /** Email-safe branded HTML matching Design's approved mock (docs/design/emails/): #08090D board
  *  pinned by the gradient lock, Check brandmark, Inter-black headline, bordered modules, green-ring
@@ -330,70 +331,63 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
   // the inbox its own one-click unsubscribe, so we stay compliant without the confusing in-body link.
   const manageUrl = manageAlertsUrl();
   const kick = d.kickerColor;
-  // Gmail-only text recovery wrapper — full story at the comment block above the returned HTML.
-  const blend = (inner: string) => `<div class="gb-s"><div class="gb-d">${inner}</div></div>`;
   // Paragraphs whose tokens fill to nothing (e.g. no restock day heard) are dropped, not rendered as gaps.
   const bodyHtml = bodyLines.filter((p) => fill(p.replace(/\*\*/g, ""), tokens)).map((p, i) => i === 0
-    ? `<tr><td style="padding-top:15px;font-size:17px;line-height:1.5;${ink(BODY1)};font-family:${FONT}">${blend(fillHtmlBold(p, tokens))}</td></tr>`
-    : `<tr><td style="padding-top:16px;font-size:14px;line-height:1.5;${ink(BODY2)};font-family:${FONT}">${blend(fillHtmlBold(p, tokens))}</td></tr>`).join("");
+    ? `<tr><td style="padding-top:15px;font-size:17px;line-height:1.5;${ink(BODY1)};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
+    : `<tr><td style="padding-top:16px;font-size:14px;line-height:1.5;${ink(BODY2)};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
   const ctaLabel = `${escHtml(d.cta).toUpperCase()}&nbsp;&nbsp;&rarr;`;
-  // Capsule CTA: green RING on the locked dark fill, off-white label (the site's button, screenshot-
-  // approved). Outlook can't round a td, so MSO gets a VML roundrect (arcsize 50% = full capsule) with
-  // a true-black fill; everyone else the styled <a> over the gradient lock.
+  // Capsule CTA: green RING, white label, near-black fill — NEVER #000000 (law 1: Gmail flips pure
+  // black to a white pill; the owner's July 15 screenshot is the proof). Outlook can't round a td, so
+  // MSO gets a VML roundrect (arcsize 50% = full capsule); everyone else the styled <a>.
   const cta = `<tr><td style="padding-top:24px">
     <!--[if mso]>
-    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="${GRN}" strokeweight="1px" fillcolor="${BLACK}">
+    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="${GRN}" strokeweight="1px" fillcolor="${CTAFILL}">
       <w:anchorlock/>
       <center style="${ink(TXT)};font-family:Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.6px;">${ctaLabel}</center>
     </v:roundrect>
     <![endif]-->
     <!--[if !mso]><!-->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td align="center" bgcolor="${BLACK}" style="${lock(BOARD)};border:1px solid ${GRN};border-radius:999px">
+      <td align="center" bgcolor="${CTAFILL}" style="${lock(CTAFILL)};border:1px solid ${GRN};border-radius:999px">
         <a href="${url}" style="display:block;padding:19px 24px;${ink(TXT)};font-weight:800;font-size:14px;letter-spacing:1.6px;text-decoration:none;font-family:${FONT};text-transform:uppercase">${ctaLabel}</a>
       </td></tr></table>
     <!--<![endif]-->
   </td></tr>`;
   const footer = `<a href="${manageUrl}" style="${ink(BODY2)};text-decoration:none">${lang === "es" ? "Administrar alertas" : "Manage alerts"}</a>`;
-  // ONE dark email, canvas pinned by the gradient lock (see the color block above for the whole story).
-  // color-scheme "dark" tells the clients that honor it this email is already dark — leave it alone.
-  // GMAIL TEXT RECOVERY (change #3, Rémi Parmentier's documented recipe,
-  // hteumeuleu.com/2021/fixing-gmail-dark-mode-css-blend-modes): Gmail dims text colors even over the
-  // locked background (it rewrites `color`, and strips -webkit-text-fill-color too). Fix: wrap the text
-  // in two divs — mix-blend-mode:screen over mix-blend-mode:difference, both bg #000. With the
-  // authored colors that compose to identity; when Gmail dark mode recolors the wrapper backgrounds,
-  // the same math pushes the dimmed text back toward its bright original. The rules live in <style>
-  // under a `u + .body` selector ONLY Gmail matches (it swaps the doctype for a <u>), so every other
-  // client renders plain unstyled divs. GANGA (Gmail app, non-Google account) ignores <style> → falls
-  // back to change #2's dimmed-but-readable render.
-  // SCOPE (change #4, owner's screenshot of #3): difference-blend INVERTS hue, so it may wrap ONLY
-  // neutral (white/gray) text — the owner's proof: the whole-card wrap turned the CTA into a white
-  // pill with a pink ring and the yellow kicker blue. Colored/filled pieces (kicker, CTA, modules,
-  // the logo image) stay OUTSIDE the wrappers: their locked dark fills + saturated colors render
-  // straight in Gmail (dimmed a touch, correct hue) and pixel-true everywhere else.
+  // ONE dark email, the owner-approved Apple look: near-black board, GRAY floating card, no pure
+  // #000000 anywhere (the rendering laws above). Inter loads via @font-face for the clients that
+  // allow web fonts (Apple Mail, some others); Gmail strips @font-face and falls down the stack —
+  // no fix exists for that. @media screen guards the block from Outlook's Word engine.
   return `<!doctype html>
 <html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">
 <style>:root{color-scheme:dark;supported-color-schemes:dark}
-u + .body .gb-s { background:#000000; mix-blend-mode:screen; }
-u + .body .gb-d { background:#000000; mix-blend-mode:difference; }</style>
+@media screen {
+  @font-face { font-family:'Inter'; font-style:normal; font-weight:400; src:url(https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff2) format('woff2'); }
+  @font-face { font-family:'Inter'; font-style:normal; font-weight:700; src:url(https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYAZ9hjp-Ek-_EeA.woff2) format('woff2'); }
+  @font-face { font-family:'Inter'; font-style:normal; font-weight:900; src:url(https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuBWYAZ9hjp-Ek-_EeA.woff2) format('woff2'); }
+}</style>
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-</head><body class="body" style="margin:0;padding:0;${lock(BOARD)};width:100%" bgcolor="${BLACK}">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BLACK}" style="${lock(BOARD)};margin:0;padding:0;width:100%;min-width:100%"><tr><td align="center" bgcolor="${BLACK}" style="${lock(BOARD)};padding:0">
+</head><body class="body" style="margin:0;padding:0;${lock(BOARD)};width:100%" bgcolor="${BOARD}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BOARD}" style="${lock(BOARD)};margin:0;padding:0;width:100%;min-width:100%"><tr><td align="center" bgcolor="${BOARD}" style="${lock(BOARD)};padding:0">
     <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BLACK}" style="max-width:600px;width:100%;${lock(BOARD)}">
-      <tr><td bgcolor="${BLACK}" style="${lock(BOARD)};padding:30px 26px 0"><img src="https://checkitforme.com/logos/brand/check-brandmark-1024.png" width="40" height="40" alt="Check" style="display:block;width:40px;height:40px;border:0"></td></tr>
-      <tr><td bgcolor="${BLACK}" style="${lock(BOARD)};padding:24px 26px 0">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr><td style="font-size:11px;font-weight:700;letter-spacing:1.6px;${ink(kick)};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
-          <tr><td style="padding-top:12px;font-size:34px;font-weight:900;${ink(TXT)};line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${blend(escHtml(fill(d.headline, tokens)))}</td></tr>
-          ${bodyHtml}
-          ${moduleHtml(d.module, tokens)}
-          ${cta}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BOARD}" style="max-width:600px;width:100%;${lock(BOARD)}">
+      <tr><td bgcolor="${BOARD}" style="${lock(BOARD)};padding:30px 26px 0"><img src="https://checkitforme.com/logos/brand/check-brandmark-1024.png" width="40" height="40" alt="Check" style="display:block;width:40px;height:40px;border:0"></td></tr>
+      <tr><td bgcolor="${BOARD}" style="${lock(BOARD)};padding:24px 20px 0">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${CARD}" style="${lock(CARD)};border-radius:24px">
+          <tr><td style="padding:26px 24px 30px">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr><td style="font-size:11px;font-weight:700;letter-spacing:1.6px;${ink(kick)};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
+              <tr><td style="padding-top:12px;font-size:34px;font-weight:900;${ink(TXT)};line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
+              ${bodyHtml}
+              ${moduleHtml(d.module, tokens)}
+              ${cta}
+            </table>
+          </td></tr>
         </table>
       </td></tr>
-      <tr><td bgcolor="${BLACK}" style="${lock(BOARD)};padding:26px 26px 34px;font-family:${FONT};font-size:12.5px;${ink(BODY2)}">${blend(footer)}</td></tr>
+      <tr><td bgcolor="${BOARD}" style="${lock(BOARD)};padding:24px 26px 34px;font-family:${FONT};font-size:12.5px;${ink(BODY2)}">${footer}</td></tr>
     </table>
     <!--[if mso]></td></tr></table><![endif]-->
   </td></tr></table></body></html>`;
