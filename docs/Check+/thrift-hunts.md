@@ -11,4 +11,4 @@ Thrift is its own kind of bet, which is why it's a separate mode:
 - What's there is usually loose and used, not sealed product.
 - When it hits, it hits. That's the whole fun.
 
-A thrift check works like any other: we call, ask what's in the case today, and bring you the answer with the conversation as proof.
+A thrift check works like any other: we call, ask what's on their shelves today, and bring you the answer with the conversation as proof.
