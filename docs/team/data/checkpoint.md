@@ -34,12 +34,13 @@
   Admin API via `curl` subprocess only. TPCi vending API IS reachable (no UA tricks needed).
 - **NEVER** run the paid hours backfill (`/api/hours/backfill`) or re-chain big-box from directories.
 
-## IN PROGRESS
-- **Mapper is mapping NOW (owner confirmed 07-16):** the 9 all-kiosk grocery chains — H-E-B (84 stores,
-  owner-verified PRESS 0 → customer service), Woodman's (14, 24h), Lucky (7), H Mart (6), FoodMaxx (5),
-  Metro Market (5), Stop & Shop (2), Pak N Save (1), Uwajimaya (1) — plus a one-call test of Macy's
-  Toys-R-Us counter (dead-end ⇒ mute, owner approved). Locked nav lands on prod → auto-flows to staging.
-  My side is DONE (phones+hours on both envs); nothing to do unless Mapper hits a data gap.
+## IN PROGRESS (owner away — resume here)
+- **Mapping is at 99.9% (Mapper's final run 07-16):** Publix (1,240) + Woodman's + H Mart locked;
+  Macy's muted. The last 0.1% = the 7 chains whose Google numbers were fabricated (see OPEN below) —
+  once real numbers land, Mapper takes one more pass. H-E-B nav note for that pass: press 0 works but
+  only AFTER the greeting plays (barge at 3s gets dropped — Mapper tested).
+- **NEXT SESSION ON DECK (owner's plan):** owner pulls real numbers from each chain's OWN store
+  locator / Google Maps pins (never the answer box), I ingest address-verified, Mapper finishes.
 - **HOURS backfill loop (PAUSED by owner — resume when he says):** ~3,300 fresh storefronts (Habitat
   ReStore + WPN adds) still hourless. Batch 2 (150) was cut and never pasted back. Flow:
   send box from `docs/team/data/handoffs/hours_needed_fresh.csv` → owner Googles → 
