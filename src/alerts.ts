@@ -9,7 +9,7 @@
 import { createHmac } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db } from "./db/client";
-import { accounts, alertSubscriptions, alertSends, retailers } from "./db/schema";
+import { accounts, alertSubscriptions, alertSends, retailers, categories } from "./db/schema";
 import { getSetting, setSetting } from "./db/settings";
 import { getAccount, isCompAccount } from "./billing";
 import { getPlans } from "./plans";
@@ -534,14 +534,16 @@ export async function fanoutRestock(retailerId: number, o: { storeName?: string;
 
 /** A user's active alert opt-ins + how many restock texts they have left this month. */
 export async function myAlerts(userId: string) {
-  // Store name rides along so the alerts sheet can say WHICH store each ping watches.
-  const subs = await db.select({ s: alertSubscriptions, storeName: retailers.name })
+  // Store + category names ride along so the alerts sheet can say plainly what each ping watches —
+  // stored productLabels can be junk ("cards"); the category's real label is the trustworthy name.
+  const subs = await db.select({ s: alertSubscriptions, storeName: retailers.name, categoryLabel: categories.label })
     .from(alertSubscriptions)
     .leftJoin(retailers, eq(alertSubscriptions.retailerId, retailers.id))
+    .leftJoin(categories, eq(alertSubscriptions.categoryId, categories.id))
     .where(and(eq(alertSubscriptions.userId, userId), eq(alertSubscriptions.active, 1)));
   const sms = await smsAlertsLeft(userId);
   return {
     smsAlertsLeft: sms.left, smsAlertsCap: sms.cap,
-    subscriptions: subs.map(({ s, storeName }) => ({ id: s.id, kind: s.kind, retailerId: s.retailerId, categoryId: s.categoryId, productLabel: s.productLabel, channel: s.channel, storeName: storeName ?? null })),
+    subscriptions: subs.map(({ s, storeName, categoryLabel }) => ({ id: s.id, kind: s.kind, retailerId: s.retailerId, categoryId: s.categoryId, productLabel: s.productLabel, channel: s.channel, storeName: storeName ?? null, categoryLabel: categoryLabel ?? null })),
   };
 }

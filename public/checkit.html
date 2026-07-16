@@ -2906,7 +2906,7 @@ const I18N={ es:{
   'zones.locph':'Busca un código postal o ciudad…','zones.go':'Ir','zones.list':'Lista','zones.map':'Mapa',
   'zones.radius':'Radio','zones.addallshort':'Agregar todo','zones.selstore':'tienda seleccionada','zones.selstores':'tiendas seleccionadas',
   'zones.typloc':'Escribe primero un código postal o ciudad.','zones.located':'Centrado en {q}','zones.noplace':'No encontramos ese lugar.',
-  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.max25':'Máximo 25 tiendas por zona','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Cada alerta que activaste. Aquí las apagas.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo apenas vuelva a estar.','alerts.d.rsms':'Te manda un texto apenas vuelva a estar.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no hay alertas. Vigila una tienda o activa una auto-verificación y aparecerá aquí.','alerts.off':'Apagar','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
+  'zones.recentered':'Zona recentrada aquí','zones.checkall':'Verificar todas','zones.closed':'cerrado','zones.editstores':'Editar tiendas','zones.max25':'Máximo 25 tiendas por zona','em.title':'Tu correo','step.calling':'Llamando','watch.verify.h':'Revisa tu correo para confirmarlo.','watch.verify.hsms':'Te enviaremos un texto para confirmar tu celular.','watch.then2':'Luego te avisamos al instante<br>cuando se confirme en stock.','em.sub':'Las alertas y avisos de reposición llegan aquí.','em.new':'Danos tu nuevo correo','em.first':'Danos tu correo','em.empty':'Escribe tu nuevo correo primero','em.same':'Ese ya es tu correo','em.ph':'tu@correo.com','em.save':'Guardar correo','em.saving':'Guardando…','em.confirm':'Revisa tu correo para confirmar','em.add':'Agrega tu correo para alertas','alerts.title':'Alertas','alerts.sub':'Maneja tus alertas de correo y texto.','alerts.row.at':'{p} en {s}','alerts.d.remail':'Te manda un correo apenas vuelva a estar.','alerts.d.rsms':'Te manda un texto apenas vuelva a estar.','alerts.d.semail':'Verifica la tienda sola. Resultado al correo.','alerts.d.ssms':'Verifica la tienda sola. Resultado por texto.','alerts.none':'Aún no hay alertas. Vigila una tienda o activa una auto-verificación y aparecerá aquí.','alerts.off':'Apagar','alerts.k.sched':'Auto-verificación','alerts.k.restock':'Alerta de reposición','alerts.c.sms':'texto','alerts.c.email':'correo','alerts.acheck':'Una verificación','acct.row.alerts':'Alertas','acct.row.alerts.sub':'Avisos de reposición y autoverificación.',
   'feat.d.zone_sweeps':'Guarda tus tiendas como una zona. Un toque las llama todas a la vez. Mira las respuestas llegar en vivo. Cada tienda cuesta una verificación. Sin respuesta, sin cargo.','feat.d.restock_alerts':'Deja de revisar. Te avisamos. Toca Avísame cuando vuelva en un resultado. Vigilamos esa tienda por ti. Apenas llegue producto, te avisamos. Un aviso por reposición, nada de spam.','feat.d.scheduled_checks':'Las tiendas reponen con ritmo. La autoverificación corre en sus días de envío. La respuesta te espera en el celular. Cancela cuando quieras en Mis verificaciones.','feat.d.any_town':'Las cuentas gratis buscan cerca de casa. Cualquier ciudad te suelta la correa. Busca cualquier código postal o ciudad. El mapa salta ahí. Más de 100,000 tiendas.','feat.d.store_holds':'¿Lo encontraste pero estás a 20 minutos? Le pedimos al personal que te aparte uno. Con tu nombre, en la misma llamada.','feat.d.your_voice':'Elige la voz que llama por ti. Quien contesta escucha una voz amable y natural.','feat.d.thrift_hunts':'Colecciones viejas acaban en tiendas de segunda. Precios de risa, nadie las revisó. Activa Thrift y llamamos a las de tu zona. Preguntamos qué hay en la vitrina hoy.','feat.d.hobby_hunts':'Un muro de Pokémon para explorar. Cada era, cada set, cada producto. Con precios de lista. Elige tu objetivo. Cada llamada pide exactamente eso.',
   'zones.untitled':'Zona sin nombre','zones.store':'tienda','zones.stores':'tiendas',
   'zones.rename':'Renombrar','zones.delete':'Eliminar zona','zones.rename.save':'Guardar nombre','zones.delete.sure':'No se puede deshacer.','zones.delete.yes':'Sí, eliminarla','zones.keep':'Conservarla','zones.allclosed':'Todas las tiendas de esta zona están cerradas','zones.confirm.title':'¿Verificar todas las tiendas de esta zona?','zones.confirm.per':'1 verificación por tienda.',
@@ -3629,16 +3629,19 @@ function openAuth(mode){
   clearTimeout(AUTH_KNOWN_T); AUTH_KNOWN_SEQ++; AUTH_RETURNING=false; setAuthLead(); // fresh start each open
   setTimeout(()=>{try{$('auth_phone').focus();}catch(e){}},90);
 }
-function closeAuth(){ $('authOverlay').classList.remove('on'); }
+function closeAuth(){ $('authOverlay').classList.remove('on');
+  if(AUTH_MODE==='edit'){ AUTH_MODE=''; try{ openAccount(); }catch(_){ } } // change-number came FROM My checks — every way out (verify, swipe, backdrop) lands back there, never the page behind (owner 07-16)
+}
 function authMark(){ return `<img src="/logos/brand/check.png?v=2" alt="Check It For Me" style="height:30px;width:auto;display:block">`; }
-// Edit-cell header — same recipe as the email sheet (icon on top, centered title, no wordmark).
-function authEditHead(){ return `<div style="display:flex;justify-content:center;margin-bottom:6px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg></div><h3 style="margin:2px 0 4px;text-align:center">${t('auth.cell.title','Your cell')}</h3>`; }
+// Edit-cell header — icon on top, then the friendly ask AS the headline (owner 07-16: no "Your cell"
+// label, the instruction IS the title).
+function authEditHead(){ return `<div style="display:flex;justify-content:center;margin-bottom:6px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/></svg></div><h3 style="margin:2px 0 14px;text-align:center">${t('auth.newcell','Give us your new celly')}</h3>`; }
 // ---- Phone sign-in (Twilio SMS → our session token). The ONLY auth flow. ----
 let AUTH_PHONE='';
 // "Welcome back" vs "First check's on us" — detected live as they finish typing their number.
 let AUTH_KNOWN_T=null, AUTH_KNOWN_SEQ=0, AUTH_RETURNING=false, AUTH_MODE='';
 function setAuthLead(){ const el=$('auth_lead'); if(!el) return; el.removeAttribute('data-i18n'); // JS owns this line from here on — a lang repaint must not stomp it
-  if(AUTH_MODE==='edit'){ el.style.cssText='margin:2px 0 14px;text-align:center'; el.textContent=t('auth.newcell','Give us your new celly'); return; } // meta-style sub under the icon-top header
+  if(AUTH_MODE==='edit'){ el.style.display='none'; return; } // the headline already says it — no second line (owner 07-16)
   el.style.cssText='margin:2px 0 14px;font-size:16px;font-weight:800;color:#fff;text-align:center';
   el.textContent = AUTH_RETURNING ? t('auth.welcome.back','Welcome back 👋') : t('auth.phone.lead',"First check's on us!"); }
 function authPhoneKnownCheck(d){
@@ -3698,8 +3701,7 @@ async function phoneVerify(){
   PHONE_TOKEN=r.token; try{ localStorage.setItem('cifm_token',r.token); }catch(_){}
   if(r.account) ACCOUNT=Object.assign({},ACCOUNT||{},r.account);
   track('auth_success',{flow:'phone'});
-  closeAuth(); toast(t('auth.welcome',"✓ You're in"),'neutral'); refreshAuth(); // neutral grey, not the celebratory green (owner 07-07)
-  if(AUTH_MODE==='edit'){ AUTH_MODE=''; try{ openAccount(); }catch(_){ } } // came from My checks (change number) → land back on My checks, not the homepage (owner 07-15)
+  closeAuth(); toast(t('auth.welcome',"✓ You're in"),'neutral'); refreshAuth(); // neutral grey, not the celebratory green (owner 07-07); closeAuth itself returns an edit flow to My checks
 }
 function authBack(){ authStep('email'); $('auth_codeerr').textContent=''; setTimeout(()=>{try{$('auth_phone').focus();}catch(e){}},60); }
 // Custom account sheet
@@ -6577,17 +6579,20 @@ function sheetShell(id, closeFn){ let ov=$(id);
     document.body.appendChild(ov); try{ sheetDrag(id, ()=>ov.classList.remove('on')); }catch(_){ } }
   return ov; }
 function editEmail(){ const ov=sheetShell('emailOv');
+  // Owner 07-16: the friendly ask IS the headline (no "Your email" label, no sub), and the box starts
+  // BLANK like the change-number flow — you type the new address, you don't edit the old one.
   ov.innerHTML=`<div class="modal" style="text-align:left">
     <div style="display:flex;justify-content:center;margin-bottom:6px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
-    <h3 style="margin:2px 0 4px;text-align:center">${t('em.title','Your email')}</h3>
-    <div class="meta" style="margin-bottom:14px;text-align:center">${t('em.sub','Alerts and restock pings land here.')}</div>
-    <input id="em_in" type="email" class="kin" placeholder="${t('em.ph','you@email.com')}" value="${esc((ACCOUNT&&ACCOUNT.email)||'')}" style="width:100%;box-sizing:border-box;margin-bottom:12px">
+    <h3 style="margin:2px 0 14px;text-align:center">${(ACCOUNT&&ACCOUNT.email)?t('em.new','Give us your new email address'):t('em.first','Give us your email address')}</h3>
+    <input id="em_in" type="email" class="kin" placeholder="${t('em.ph','you@email.com')}" style="width:100%;box-sizing:border-box;margin-bottom:12px">
     <div id="em_err" style="color:#ff6b6b;font-size:13px;min-height:16px"></div>
     <button class="cta" id="em_btn" style="width:100%" onclick="saveEmail()">${t('em.save','Save email')} →</button></div>`;
   ov.classList.add('on'); setTimeout(()=>{ try{ $('em_in').focus(); }catch(_){ } },80);
 }
 async function saveEmail(){ const e=($('em_in').value||'').trim().toLowerCase();
-  if(e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ markFld($('em_in'),true); return; }
+  if(!e){ markFld($('em_in'),true); toast(t('em.empty','Type your new email first'),'neutral'); return; } // never close silently on an empty box (owner 07-16)
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){ markFld($('em_in'),true); return; }
+  if(ACCOUNT&&ACCOUNT.email&&e===String(ACCOUNT.email).toLowerCase()){ toast(t('em.same',"That's already your email"),'neutral'); return; } // same address → say so, stay open
   const b=$('em_btn'); b.disabled=true; b.textContent=t('em.saving','Saving…');
   const r=await appApi('/app/email',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:e,lang:LANG})});
   b.disabled=false; b.textContent=t('em.save','Save email')+' →';
@@ -6602,21 +6607,21 @@ async function openAlerts(){ const ov=sheetShell('alertsOv');
   const shell=rows=>`<div class="modal" style="text-align:left">
     <div style="display:flex;justify-content:center;margin-bottom:6px">${ICO.bell(AC1()).replace('width="15" height="15"','width="28" height="28"')}</div>
     <h3 style="margin:2px 0 4px;text-align:center">${t('alerts.title','Alerts')}</h3>
-    <div class="meta" style="margin-bottom:14px;text-align:center">${sentLines(t('alerts.sub',"Every alert you've set up. Turn any off here."))}</div>
+    <div class="meta" style="margin-bottom:14px;text-align:center">${sentLines(t('alerts.sub','Manage your email and text alerts.'))}</div>
     <div id="alertsList">${rows}</div></div>`;
   ov.innerHTML=shell(`<div class="loaddots" style="display:flex;justify-content:center;gap:8px;padding:22px 0"><span></span><span></span><span></span></div>`);
   ov.classList.add('on');
   const me=await appApi('/app/alerts/me');
   const paint=me2=>{ const subs=(me2&&me2.subscriptions)||[];
     $('alertsList').innerHTML = subs.length? subs.map(x=>{
-      // Row copy law (owner 07-15b): plain English, exactly what it is. Title = product + store.
-      // A stored label can be junk ("cards") — anything short/generic falls back to the category's
-      // real name ("Pokémon cards"). Sub = one friend-voice sentence saying what the alert does.
+      // Row copy law (owner 07-16): plain English, exactly what it is. Title = product + store when we
+      // have a REAL product name; a junk stored label ("cards") falls back to the category's name from
+      // the server, and if there's no trustworthy name at all the title is just the store. The sub is
+      // one friend-voice sentence saying what the alert does — never a label soup.
       let what=String(x.productLabel||'').trim();
-      const cat=(CATS.find(c=>c.id===x.categoryId)||{}).label||'';
-      if(cat && (!what || (what.length<8 && !/\s/.test(what)) || cat.toLowerCase().endsWith(what.toLowerCase()))) what=cat;
-      if(!what) what=t('alerts.acheck','A check');
-      const title=x.storeName?tf('alerts.row.at','{p} at {s}',{p:esc(what),s:esc(x.storeName)}):esc(what);
+      const cat=String(x.categoryLabel||(CATS.find(c=>c.id===x.categoryId)||{}).label||'').trim();
+      if(!what || (what.length<8 && !/\s/.test(what)) || (cat&&cat.toLowerCase().endsWith(what.toLowerCase()))) what=cat;
+      const title=(what&&x.storeName)?tf('alerts.row.at','{p} at {s}',{p:esc(what),s:esc(x.storeName)}):esc(what||x.storeName||t('alerts.acheck','A check'));
       const does=x.kind==='schedule'
         ? (x.channel==='sms'?t('alerts.d.ssms','Auto checks the store. Texts you the result.'):t('alerts.d.semail','Auto checks the store. Emails you the result.'))
         : (x.channel==='sms'?t('alerts.d.rsms',"Texts you the moment it's back in stock."):t('alerts.d.remail',"Emails you the moment it's back in stock."));
