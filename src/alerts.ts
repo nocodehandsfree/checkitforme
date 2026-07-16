@@ -41,7 +41,7 @@ export const DEFAULT_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   restock: {
     sms: "{product} is back at {store}. Move fast, this stuff doesn't sit. checkitforme.com",
     emailSubject: "{product} is back at {store}.",
-    emailBody: "**{store}** has it right now. Get going, this stuff doesn't sit on the shelf for long.",
+    emailBody: "**{store}** has it right now. Get going, this stuff doesn't stay on the shelves for very long.",
   },
   store_added: {
     emailSubject: "You got your store.",
