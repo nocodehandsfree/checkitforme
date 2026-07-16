@@ -1,6 +1,18 @@
 # Support — checkpoint
 **What this is:** current state. Newest on top, ≤80 lines.
 
+- 2026-07-16 (2) — CREDIT MACHINE built + 20/20 drive green (owner-approved params: 2 grants per
+  account per 30d · check ≤7 days old · credits only, never cash). check_issue chats now run a
+  deterministic verifier BEFORE any model (src/support/credits.ts): signed-in + charged check +
+  telemetry contradicting the charge (BAD_KEYS from the statuses registry: nobody_answered,
+  bad_number, voicemail, busy, left_on_hold, failed… or <25s call) → instant +1 credit via
+  grantCredits, one grant per cid EVER (unique), evidence JSON on the grant row. Telemetry fine →
+  polite no + ticket. Never charged → says so. Vague → asks which store and re-runs. Money words
+  are deterministic EN/ES strings, model is FORBIDDEN from promising credits. Flywheel: grant
+  snapshots store phone + background re-lookup fills suggested_phone for Data. Admin:
+  GET /api/support/credits + Auto-credits peek row (rides Addie's ship-admin). Suite:
+  scripts/test-credit-machine.ts in test-all.sh. NEXT: Discord bot module (dark until token),
+  weekly low-confidence digest.
 - 2026-07-16 — New support topic `check_issue` ("Something's wrong with my check") LIVE on staging:
   for bad-number / wrong-store / wrong-result reports off the status page. Full path: picker row
   (2nd, EN+ES), tailored greeting asking which store + what went wrong, screenshot attach on, category
