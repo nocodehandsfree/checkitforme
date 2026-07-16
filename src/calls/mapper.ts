@@ -20,6 +20,7 @@ import { getSetting, setSetting } from "../db/settings";
 import { isCallingPaused } from "../redis";
 import { placeNavCall, getNavSession, defaultWorkflowAsk, classifyMode, menuHasCustomerService, NavRecipe, NavStep } from "./navigator";
 import { storeForChain, lockRecipeToChain, recipeFromSteps } from "./trainer-batch";
+import { chainDialable } from "./recipe";
 
 const DAILY_CAP = 60;        // runaway guard only — owner 2026-07-10: the old 12/day cap is gone, a
                              // sweep converges every mapped chain in one day. Tune without a deploy
@@ -174,11 +175,11 @@ export async function startMapper(chainId: number): Promise<{ started?: boolean;
   if (existing?.running) return { error: "already mapping this chain" };
   const ch = (await db.select().from(chains).where(eq(chains.id, chainId)))[0];
   if (!ch) return { error: "chain not found" };
-  // #4: never map a chain with no direct store line — muted (owner-hidden / no line) or callTarget off
-  // (online-only / national call-center, e.g. Micro Center, Best Buy). These answer a call center, not
-  // the store, so a "recipe" is meaningless and it wastes a real call.
-  if (ch.muted) return { error: `${ch.name} is muted — skipped (no direct store line / owner-hidden)` };
-  if (ch.callTarget === false) return { error: `${ch.name} has no direct store line (online-only / call-center) — skipped` };
+  // #4: never map a chain we don't call. chainDialable() is the ONE shared rule (recipe.ts) used by the
+  // board, the overnight batch, and here — muted (owner-hidden), callTarget off (national call-center /
+  // online-only like Micro Center, Best Buy), or site-check (its accurate website is the answer). These
+  // answer a call center or need no call at all, so a "recipe" is meaningless and it wastes a real call.
+  if (!chainDialable(ch)) return { error: `${ch.name} isn't a call target (muted / call-center / check-online) — skipped` };
   // Rings-direct chains have NO phone tree — a person answers straight through. Independents + co-ops
   // (thrift banners, local card shops, Ace) are defaulted to direct in code (curated list + boot pass),
   // so there is nothing to map. Mapping them wastes calls AND a stray chain-level recipe (e.g. Ace's old

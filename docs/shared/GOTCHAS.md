@@ -18,6 +18,9 @@ worse than no comment. Several entries below started as wrong comments.)
   and snapshot the volume first. (This wiped prod call history once.)
 - **Staging and prod each have their OWN SQLite DB** (own Railway volume, `file:/data/local.db`). Code flows
   staging → prod (merge); the Admin reads live prod data. An admin-API DB write hits only the env you call.
+  Concrete bite (07-16): owner unchecked plan services in Admin → prod config changed, but the staging site
+  kept showing them (staging's own `vt_plans` copy). Testing an Admin data edit on staging = mirror it into
+  staging's config via `staging.checkitforme.com/admin-login?token=<staging ADMIN_TOKEN>` + the same admin API.
 - **Prod volume has daily+weekly backups** (it had none). Volume `voice-caller-volume`, instance `ca3bbe06-…`.
   Snapshot before any destructive DB op.
 
@@ -40,6 +43,15 @@ worse than no comment. Several entries below started as wrong comments.)
   device's "Allow Website Tinting" ON (default on).
 - **PWA status bar is a different mechanism** — `apple-mobile-web-app-status-bar-style: black-translucent` +
   `viewport-fit=cover` (the body paints *under* the bar). That's why "Add to Home Screen" tints when web doesn't.
+
+## Email rendering (the 07-15/16 Gmail loop — 7+ attempts; read before touching src/alerts.ts)
+- **Outlook Windows renders with Word:** tables + inline styles only, and it GRAYS near-black —
+  pure `#000000` survives, `#0C0C12` does not (437bb02 proved it).
+- **Gmail is the other trap:** strips `<style>` in many contexts, drops body backgrounds unless the
+  wrapper TABLE carries `bgcolor`, and dark-mode rewrites colors. A dark email showing WHITE in
+  Gmail = the background was dropped, not the shade mischosen.
+- Full attempt history: `git log --grep="emails"`. Verdict = the owner's phone screenshots after a
+  REAL test send, one variable per iteration. Owner's requirement: the dark look, everywhere.
 
 ## Infra / branches
 - **Admin traffic does NOT reliably arrive on a host starting with `admin.`/`caller.`** — prod edge
@@ -78,3 +90,16 @@ worse than no comment. Several entries below started as wrong comments.)
   `DATABASE_URL=file:...`, `COMP_PHONES=<your test phone>` for gated features, login code `000000`) and
   Playwright-route-stub `/pub/stores/near` + `/app/zones*` with canned JSON. Staging's DB is NOT
   network-reachable (libSQL file on the Railway volume) — don't try to point a local server at it.
+- **Kiosk retailer rows are keyed on the MACHINE, and Pokémon MOVES machines — never patch kiosk rows
+  by DB id across time** (2026-07-16, data lane). The vending overlay (`POST /api/kiosks/overlay`)
+  upserts the TPCi machines list by proximity + `nophone:<chain>:<Q-code>` phone keys and re-stamps
+  `externalStoreId`; when TPCi relocates machine Q-codes between host stores (they do, often), a fresh
+  overlay run REWRITES existing rows into different physical stores — same DB id, new identity. A batch
+  of owner-googled phone numbers was applied by id an hour after export and most landed on the wrong
+  stores (an Austin TX number on a San Leandro CA FoodMaxx), on BOTH envs. Fixed by
+  `scripts/data-tools/fix_kiosk_misdial.py` — the pattern to copy: treat the STREET ADDRESS as store
+  identity; write per-store data only to a row whose normalized address+state (plus a chain-name token —
+  plazas share addresses) matches. Also: once a row carries a REAL phone it can never be phone-key-matched
+  by an import again, so the next overlay run inserts a DUPLICATE row for that address — dedupe by
+  address when ingesting. Root fix (open, data lane): store rows should be keyed by PLACE and machines
+  overlaid via the `kiosks` table, not identity-rewritten into `retailers`.

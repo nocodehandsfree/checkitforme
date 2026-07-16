@@ -15,6 +15,7 @@ import { db } from "../db/client";
 import { supportConversations, supportMessages } from "../db/schema";
 import { llm, type LlmMsg } from "../llm";
 import { retrieve } from "./rag";
+import { verifyCheckIssue, creditReply } from "./credits";
 
 export const SUPPORT_MODELS = {
   free: process.env.SUPPORT_MODEL_FREE || "gemini-2.5-flash-lite",
@@ -60,7 +61,7 @@ export interface LadderResult {
   conversationId: number;
 }
 
-export const SUPPORT_CATEGORIES = ["technical", "bug", "billing", "partnerships", "how_checks_work", "other"] as const;
+export const SUPPORT_CATEGORIES = ["technical", "bug", "check_issue", "billing", "partnerships", "how_checks_work", "other"] as const;
 export type SupportCategory = typeof SUPPORT_CATEGORIES[number];
 // Per-category nudge appended to the system prompt so the AI frames the answer for the intent. The
 // human path stays buried either way — these only shape how the AI tries first.
@@ -68,6 +69,7 @@ const CATEGORY_HINT: Record<string, string> = {
   billing: "This is a billing question. Answer from the plans and pricing passages. Only set needs_human for a real dispute or a change to their account you cannot make.",
   partnerships: "This is a partnership or business inquiry. Answer what the book covers; if it needs a real person to evaluate a deal, set needs_human after you've given what you can.",
   bug: "The user is reporting something broken. Help them try the obvious fixes first from the passages; if it's a genuine bug, set needs_human so they can attach details.",
+  check_issue: "The user is reporting that a check went wrong: a wrong or disconnected phone number we called, the wrong store, or a result that looks incorrect. The credit system has already compared their claim to the call record where it could; you are only here because it could not conclude. Acknowledge briefly and sincerely, ask which store or check it was and what specifically was off. NEVER promise, imply, or grant a credit or refund; only the credit system grants. If they push back after being told no, set needs_human true so the team can review.",
   technical: "This is a technical/how-to question. Walk them through it from the passages.",
   how_checks_work: "They want to understand how checks work. Explain plainly from the book.",
   other: "",
@@ -106,6 +108,33 @@ export async function answerSupport(sessionId: string, userMessage: string, opts
     .where(eq(supportMessages.conversationId, convo.id))
     .orderBy(asc(supportMessages.id)).limit(20);
   const firstAsk = !history.some((m) => m.role === "assistant");
+
+  // The credit machine owns check_issue conversations until it reaches a money decision. It runs
+  // BEFORE any model: deterministic evidence checks, deterministic replies, $0. Terminal outcomes
+  // (granted / already / denied / not charged / cap) are recorded on the conversation so it never
+  // re-litigates. Guiding outcomes stay open: "ambiguous" keeps asking until they name the store
+  // (each new message re-runs the verifier, which may then conclude); "guest" and "no recent check"
+  // reply deterministically once, then later messages fall through to the normal ladder, whose
+  // category hint forbids it from ever promising a credit.
+  if ((convo.category || category) === "check_issue" && !convo.creditDecision) {
+    const acctId = opts.account?.id || convo.accountId || null;
+    try {
+      const out = await verifyCheckIssue(acctId, userMessage, convo.id);
+      const terminal = ["granted", "already", "denied_fine", "not_charged", "cap"].includes(out.kind);
+      if (terminal) {
+        await db.update(supportConversations)
+          .set({ creditDecision: out.kind, creditCid: "cid" in out ? out.cid : null })
+          .where(eq(supportConversations.id, convo.id));
+      }
+      if (terminal || out.kind === "ambiguous" || firstAsk) {
+        const r = creditReply(out, convo.lang || opts.lang || "en");
+        return finish(convo.id, r.reply, 0, "credit-machine", r.escalate, 0, now);
+      }
+    } catch (e) {
+      // Verifier down ≠ chat down: log and let the normal ladder answer (its hint forbids promises).
+      console.error("[support] credit machine", (e as Error).message.slice(0, 160));
+    }
+  }
 
   const ctx = await retrieve(userMessage);
 

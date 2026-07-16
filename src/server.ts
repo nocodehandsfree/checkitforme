@@ -16,6 +16,7 @@ import {
 import { answerSupport, resolveConversation, SUPPORT_MODELS, SUPPORT_CATEGORIES, type SupportCategory } from "./support/ladder";
 import { submitTicket } from "./support/tickets";
 import { addQa, reindexBook, searchBook, getFaq } from "./support/rag";
+import { listCreditGrants } from "./support/credits";
 import { config } from "./config";
 import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
@@ -23,6 +24,7 @@ import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
+import { buildSettingsExport, settingsSyncStatus, settingsSyncTick } from "./settings-sync";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -34,7 +36,7 @@ import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MO
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
-import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, type Recipe } from "./calls/recipe";
+import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
 import { opsAlert, watchdogTick, watchdogState, backupTick, backupNow, backupState } from "./ops-watch";
 import { harvestHoursTick } from "./hours-harvest";
@@ -917,12 +919,13 @@ app.post("/app/email", async (c) => {
   const language = lang === "es" ? "es" : lang === "en" ? "en" : undefined; // the site sends its LANG; keep whatever's there otherwise
   const before = await getAccount(u.id);
   const changed = e !== (before?.email || ""); // new or different address → it needs confirming again
+  const resend = !!e && !changed && !before?.emailVerifiedAt; // same still-pending address submitted again = "send the confirmation again" (owner 07-16)
   await db.update(accounts).set({ email: e || null, ...(language ? { language } : {}), ...(changed ? { emailVerifiedAt: null } : {}) }).where(eq(accounts.clerkUserId, u.id));
   // Opt-in email → Brevo (newsletter/alerts). Fire-and-forget so the UI isn't blocked on Brevo.
   if (e) brevoUpsertContact(e, { PHONE: u.phone || "" }).catch(() => {});
-  // New/changed address → ask them to confirm it (in their language). No alert email flows until they tap.
-  if (e && changed) { try { await sendConfirmEmail(u.id, e, language || (before?.language === "es" ? "es" : "en")); } catch { /* never block saving the email */ } }
-  return c.json({ ok: true, email: e || null, verified: !changed && !!before?.emailVerifiedAt });
+  // New/changed address (or a pending resend) → the confirm email goes out in their language.
+  if (e && (changed || resend)) { try { await sendConfirmEmail(u.id, e, language || (before?.language === "es" ? "es" : "en")); } catch { /* never block saving the email */ } }
+  return c.json({ ok: true, email: e || null, verified: !changed && !!before?.emailVerifiedAt, resent: resend });
 });
 
 // ---- Email confirm + one-click unsubscribe (the two live links every alert email carries) ----
@@ -937,13 +940,13 @@ a.cta{display:block;text-align:center;margin-top:26px;background:#16161C;border:
 <h1>${title}</h1><p>${line}</p><p class="es">${lineEs}</p><a class="cta" href="/">${cta}&nbsp;&nbsp;&rarr;</a></div></body></html>`;
 }
 // Confirm: the signed link from the confirm email. Marks every account carrying this address verified.
+// No landing page (owner 07-16): confirm, then drop them straight back on the site — My checks opens
+// with a pill saying the email is confirmed (emconf=1) or that the link didn't work (emconf=0).
 app.get("/confirm-email", async (c) => {
   const e = String(c.req.query("e") || "").trim().toLowerCase();
-  if (!e || !checkEmailToken(e, String(c.req.query("t") || ""))) {
-    return c.html(emailLandingPage("That link didn't work.", "It may have expired. Add your email again on the site and we'll send a fresh one.", "Puede que haya caducado. Agrega tu correo otra vez en el sitio y te enviamos uno nuevo.", "Back to the site"), 400);
-  }
+  if (!e || !checkEmailToken(e, String(c.req.query("t") || ""))) return c.redirect("/?emconf=0");
   await db.update(accounts).set({ emailVerifiedAt: Math.floor(Date.now() / 1000) }).where(eq(accounts.email, e));
-  return c.html(emailLandingPage("You're set.", "Your email is confirmed. Alerts land right here from now on.", "Tu correo está confirmado. Tus alertas llegarán aquí de ahora en adelante.", "Back to the site"));
+  return c.redirect("/?emconf=1");
 });
 // Unsubscribe: signed one-click. Kills every EMAIL alert for this address (subscriptions + watches)
 // and un-verifies it so nothing else emails them until they re-confirm. GET renders the page;
@@ -4311,6 +4314,12 @@ app.post("/api/store-sync", async (c) => {
 });
 app.get("/api/store-sync/status", async (c) => c.json(await syncStatus()));
 
+// Settings sync (src/settings-sync.ts): PROD serves this read-only export; STAGING pulls it every
+// minute and mirrors the owner's Admin edits (policy/plans/banners/statuses — field-scoped).
+// One-way by construction: this endpoint is the only prod side, and it writes nothing.
+app.get("/api/settings-sync/export", async (c) => c.json(await buildSettingsExport()));
+app.get("/api/settings-sync/status", async (c) => c.json(await settingsSyncStatus()));
+
 app.get("/api/gtm", async (c) => {
   let items = GTM_SEED;
   try { const raw = await getSetting("gtm_checklist"); if (raw) { const p = JSON.parse(raw); if (Array.isArray(p?.items)) items = p.items; } }
@@ -4658,6 +4667,12 @@ app.post("/pub/support/ticket", async (c) => {
   const debug = b.debug && typeof b.debug === "object" ? b.debug : null;
   const t = await submitTicket(sessionId, name, email, message, { category, screenshotUrl, debug });
   return c.json({ ok: true, ticketId: t.id });
+});
+// Admin: credit-machine audit — every auto-grant with the telemetry evidence that justified it,
+// plus the suggested replacement phone when the background re-lookup disagreed with our record.
+app.get("/api/support/credits", async (c) => {
+  const grants = await listCreditGrants(Number(c.req.query("limit")) || 50);
+  return c.json({ grants });
 });
 // Admin: rebuild the book index in qdrant (run after Copper edits the book).
 app.post("/api/support/reindex", async (c) => {
@@ -5217,13 +5232,27 @@ app.get("/api/admin/tree/list", async (c) => {
   const chs = await db.select().from(chains).orderBy(chains.name);
   const rows = await db.select({ cid: retailers.chainId, n: sql<number>`count(*)` }).from(retailers).where(eq(retailers.active, true)).groupBy(retailers.chainId);
   const cnt = new Map(rows.map((r) => [r.cid, Number(r.n || 0)]));
-  // The mapping board must MATCH the store data: only real, mappable chains. Hide non-mappable rows so
-  // Mapping isn't flying blind through phantom/merge/mall clutter — a chain with 0 active stores has
-  // nothing to call, a muted chain is quarantined (CVS-at-Target, online-only), and a "_" name is a
-  // retired merge-stub. `?all=1` returns the unfiltered set for debugging.
+  // Per-chain count of stores we can ACTUALLY dial (real phone, not a `nophone:` placeholder). A chain
+  // with stores but 0 phones can never be mapped no matter how many calls we throw at it — the blocker is
+  // a DATA gap (missing phone numbers), not a phone tree. Surfacing this stops the "all stores closed"
+  // misdiagnosis (e.g. the verified-kiosk groceries — H-E-B et al. — are 100% kiosks with 0 phones on file).
+  const prows = await db.select({ cid: retailers.chainId, n: sql<number>`count(*)` }).from(retailers)
+    .where(and(eq(retailers.active, true), sql`${retailers.phone} is not null and ${retailers.phone} not like 'nophone:%'`)).groupBy(retailers.chainId);
+  const pcnt = new Map(prows.map((r) => [r.cid, Number(r.n || 0)]));
+  // The mapping board must MATCH the store data: only real, DIALABLE chains. chainDialable() is the ONE
+  // shared rule (recipe.ts) the board, the overnight batch, and single-chain map all read — a muted,
+  // call-center (callTarget=false), or site-check chain (stockCheckMethod=site, e.g. Micro Center) is
+  // never dialed, so it must not look callable here either. Plus board-only clutter filters: a chain
+  // with 0 active stores has nothing to call, and a "_" name is a retired merge-stub. `?all=1` = unfiltered.
   const showAll = c.req.query("all") === "1";
-  const visible = showAll ? chs : chs.filter((ch) => !ch.muted && !(ch.name || "").startsWith("_") && (cnt.get(ch.id) || 0) > 0);
-  return c.json({ model: TREE_MODEL, chains: visible.map((ch) => ({ id: ch.id, name: ch.name, type: ch.type, stores: cnt.get(ch.id) || 0, treeStatus: ch.treeStatus, ringsDirect: ch.ringsDirect, dtmf: ch.dtmfShortcut, answerPath: ch.answerPath, avgTreeSeconds: ch.avgTreeSeconds, note: ch.treeNote || ch.phoneTreeDefault, learnedAt: ch.treeLearnedAt, verifiedAt: ch.treeVerifiedAt, muted: ch.muted })) });
+  const visible = showAll ? chs : chs.filter((ch) => chainDialable(ch) && !(ch.name || "").startsWith("_") && (cnt.get(ch.id) || 0) > 0);
+  return c.json({ model: TREE_MODEL, chains: visible.map((ch) => {
+    const stores = cnt.get(ch.id) || 0, phones = pcnt.get(ch.id) || 0;
+    // blocker = why this chain can't be mapped even though it's a call target. Today: a data gap where
+    // stores exist but none carry a real phone number (the board shows it so nobody chases hours/trees).
+    const blocker = stores > 0 && phones === 0 ? "no phone numbers on file (data gap)" : null;
+    return { id: ch.id, name: ch.name, type: ch.type, stores, phones, blocker, treeStatus: ch.treeStatus, ringsDirect: ch.ringsDirect, dtmf: ch.dtmfShortcut, answerPath: ch.answerPath, avgTreeSeconds: ch.avgTreeSeconds, note: ch.treeNote || ch.phoneTreeDefault, learnedAt: ch.treeLearnedAt, verifiedAt: ch.treeVerifiedAt, muted: ch.muted };
+  }) });
 });
 app.post("/api/admin/tree/discover", async (c) => {
   const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; count?: number };
@@ -5288,11 +5317,11 @@ app.post("/api/admin/trainer/document", async (c) => {
     }
   }
   if (!r || !r.phone) return c.json({ error: "no callable store for that chain" }, 400);
-  // Respect the global mute list + online-only flag — never trainer-dial a chain with no direct store
-  // line (muted / owner-hidden, or callTarget off = national call-center like Micro Center / Best Buy).
+  // Same shared rule as the board + batch: never trainer-dial a chain we don't call — muted, a national
+  // call-center (callTarget=false, e.g. Micro Center / Best Buy), or a site-check chain (its accurate
+  // website is the answer). chainDialable() is the single source so these can never disagree.
   const _ch = r.chainId != null ? (await db.select().from(chains).where(eq(chains.id, r.chainId)))[0] : undefined;
-  if (_ch?.muted) return c.json({ error: `${_ch.name} is muted — skipped (no trainer call placed)` }, 400);
-  if (_ch?.callTarget === false) return c.json({ error: `${_ch.name} has no direct store line (online-only / call-center) — skipped` }, 400);
+  if (_ch && !chainDialable(_ch)) return c.json({ error: `${_ch.name} isn't a call target (muted / call-center / check-online) — skipped` }, 400);
   if (b.chainId) await db.update(chains).set({ navStatus: "learning", navUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(chains.id, Number(b.chainId)));
   const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, b.barge, b.reactivePress, confirm);
   return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name, confirm: !!confirm });
@@ -5913,6 +5942,7 @@ setInterval(() => withLock("tick", 55, schedulerTick).catch((e) => console.error
 setInterval(() => withLock("geocode", 10, () => geocodeMissing(1)).catch((e) => console.error("geocode:", e)), 3_000);
 setInterval(() => withLock("store-sync", 280, storeSyncTick).catch((e) => console.error("store-sync:", e)), 300_000); // staging→prod curated store data (inert until STORE_SYNC_URL/TOKEN set)
 setInterval(() => withLock("learned-sync", 160, learnedSyncTick).catch((e) => console.error("learned-sync:", e)), 180_000); // prod→staging learned phone-nav (mirror of store-sync; inert off-staging)
+setInterval(() => withLock("settings-sync", 55, settingsSyncTick).catch((e) => console.error("settings-sync:", e)), 60_000); // prod→staging owner settings mirror (staging pulls; inert elsewhere)
 setInterval(() => withLock("harvest", 110, harvestHoursTick).catch((e) => console.error("harvest:", e)), 120_000); // self-updating hours (policy-gated, off by default)
 setInterval(() => withLock("cust-sched", 85, customerScheduleTick).catch((e) => console.error("cust-sched:", e)), 90_000); // subscriber auto-checks (policy-gated)
 setInterval(() => withLock("gmail-receipts", 25, gmailReceiptTick).catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)

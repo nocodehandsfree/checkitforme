@@ -575,6 +575,10 @@ export const supportConversations = sqliteTable(
     title: text("title"),                             // first user line — the Admin/Messages list label
     status: text("status").notNull().default("open"), // open | escalated | resolved | unhelped
     reviewStatus: text("review_status"),              // null | pending | approved | rejected
+    // Credit-machine verdict for check_issue conversations. Terminal money decisions only —
+    // null means the verifier hasn't concluded (it re-runs on each message until it does).
+    creditDecision: text("credit_decision"),          // null | granted | already | denied_fine | not_charged | cap
+    creditCid: integer("credit_cid"),                 // the call_results.id the decision was about
     maxTier: integer("max_tier").notNull().default(0),
     costUsd: real("cost_usd").notNull().default(0),   // estimate; Helicone has the exact spend
     createdAt: integer("created_at").notNull().default(now),
@@ -599,6 +603,30 @@ export const supportMessages = sqliteTable(
     createdAt: integer("created_at").notNull().default(now),
   },
   (t) => ({ byConvo: index("support_msg_convo_idx").on(t.conversationId) }),
+);
+
+/**
+ * Auto-credit grants from the support credit machine. One row per granted (or attempted) make-good
+ * for a bad check — cid is UNIQUE so a check can only ever be credited once, and the 30-day account
+ * cap is counted from here. evidence holds the telemetry snapshot that justified the grant so the
+ * owner can audit every payout in Admin.
+ */
+export const supportCreditGrants = sqliteTable(
+  "support_credit_grants",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    cid: integer("cid").notNull().unique(),           // call_results.id — one grant per check, ever
+    accountId: text("account_id").notNull(),
+    conversationId: integer("conversation_id").references(() => supportConversations.id, { onDelete: "set null" }),
+    retailerId: integer("retailer_id"),
+    storeName: text("store_name"),
+    reason: text("reason").notNull(),                 // bad_status | short_call | failed
+    evidence: text("evidence"),                       // json: {statusKey,status,callSeconds,chargedAt,confirmed}
+    storePhone: text("store_phone"),                  // the number we had at grant time (flagged for re-check)
+    suggestedPhone: text("suggested_phone"),          // web re-lookup result when it differs, for Data to review
+    grantedAt: integer("granted_at").notNull().default(now),
+  },
+  (t) => ({ byAccount: index("support_credit_acct_idx").on(t.accountId, t.grantedAt) }),
 );
 
 export const supportTickets = sqliteTable("support_tickets", {

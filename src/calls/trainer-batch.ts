@@ -11,6 +11,7 @@ import { chains, retailers } from "../db/schema";
 import { placeNavCall, getNavSession, defaultWorkflowAsk } from "./navigator";
 import { isCallingPaused, setBatchState, getBatchState } from "../redis";
 import { openState } from "../store-hours";
+import { chainDialable } from "./recipe";
 
 type Step = { who?: string; action?: string; value?: string; atSec?: number };
 type Recipe = { type?: string; steps?: Array<{ action?: string; value?: string; atSec?: number }>; seconds?: number; menu?: Array<{ digit: string; label: string }>; menuPrompts?: string[]; ringVariable?: boolean; target?: string };
@@ -141,7 +142,9 @@ export async function startBatch(opts: BatchOpts = {}) {
   const callable = await db.select({ chainId: retailers.chainId, phone: retailers.phone })
     .from(retailers).where(eq(retailers.active, true));
   const appChains = new Set(callable.filter((r) => r.chainId && r.phone && !r.phone.startsWith("nophone:") && /\d{7}/.test(r.phone)).map((r) => r.chainId as number));
-  list = list.filter((c) => appChains.has(c.id));
+  // Shared dialable rule (recipe.ts) — same one the board + single-map read, so the batch never wastes a
+  // call on a check-online / call-center / muted chain the other surfaces already exclude.
+  list = list.filter((c) => chainDialable(c) && appChains.has(c.id));
   if (onlyMissing) list = list.filter((c) => c.navStatus !== "locked" && !c.phoneTreeDefault);
   if (opts.limit) list = list.slice(0, opts.limit);
   Object.assign(state, { running: true, stop: false, total: list.length, done: 0, learned: 0, review: 0, skipped: 0, failed: 0, current: "", startedAt: Date.now(), results: [] });

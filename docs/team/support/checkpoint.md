@@ -1,6 +1,30 @@
 # Support — checkpoint
 **What this is:** current state. Newest on top, ≤80 lines.
 
+- 2026-07-16 (2) — CREDIT MACHINE built + 20/20 drive green (owner-approved params: 2 grants per
+  account per 30d · check ≤7 days old · credits only, never cash). check_issue chats now run a
+  deterministic verifier BEFORE any model (src/support/credits.ts): signed-in + charged check +
+  telemetry contradicting the charge (BAD_KEYS from the statuses registry: nobody_answered,
+  bad_number, voicemail, busy, left_on_hold, failed… or <25s call) → instant +1 credit via
+  grantCredits, one grant per cid EVER (unique), evidence JSON on the grant row. Telemetry fine →
+  polite no + ticket. Never charged → says so. Vague → asks which store and re-runs. Money words
+  are deterministic EN/ES strings, model is FORBIDDEN from promising credits. Flywheel: grant
+  snapshots store phone + background re-lookup fills suggested_phone for Data. Admin:
+  GET /api/support/credits + Auto-credits peek row (rides Addie's ship-admin). Suite:
+  scripts/test-credit-machine.ts in test-all.sh. NEXT: Discord bot module (dark until token),
+  weekly low-confidence digest.
+- 2026-07-16 — New support topic `check_issue` ("Something's wrong with my check") LIVE on staging:
+  for bad-number / wrong-store / wrong-result reports off the status page. Full path: picker row
+  (2nd, EN+ES), tailored greeting asking which store + what went wrong, screenshot attach on, category
+  hint routes to a human ticket (escalate) so the team can fix the store record. Admin chip = "Check
+  problem". Plus a subtle "Something wrong with this check? Tell us" link on the result/status page →
+  openSupportTopic('check_issue') (opens support straight into the topic). Verified live: agent
+  apologizes + asks details + escalate:true; served HTML carries topic+link+ES. Admin chip label rides
+  Addie's next Admin deploy.
+- 2026-07-15 — Owner's train-it test debugged: the live Admin DOES have the Teach box (wired to
+  /api/support/review, embed works — proved by approving live, answer serves verbatim). His chat 1 had
+  reviewStatus=None → his Save never registered. Completed it for him; site now serves the partnership
+  answer. NOTE: prod+staging+api all share ONE qdrant (support_qa) — the agent memory is global.
 - 2026-07-15 — ADMIN DECOUPLED FROM PROD (owner): Admin can be pushed/deployed independently of the
   prod consumer site. Do NOT promote for Admin changes. Addie owns the Admin deploy — leave Admin
   work on staging for her, don't line up a prod promote for it.
@@ -37,22 +61,8 @@
   24-assertion smoke green, tsc clean. Spec: docs/specs/support-agent/v3-messenger.md.
   NEXT: hand Addie the dashboard prompt (endpoints live). check-aware answers plumbed (ladder
   takes checkContext) but the check-history readout isn't built yet — quick follow-up.
-- 2026-07-11 (2) — Widget REDESIGN per owner: it's a slide-up bottom sheet now (grabber + swipe /
-  backdrop to close, NO X), the input is a growing textarea (room to type), send is a small round
-  button, dropped the redundant subtitle. Verified with a local screenshot. NOTE for CD/Design:
-  owner has moved OFF centered pop-ups-with-an-X for dialogs — STYLE_GUIDE still says forms are
-  centered pop-ups; flag to reconcile.
-- 2026-07-11 — LIVE ON STAGING and driven end to end (owner approved merge; PR #5 merged).
-  ✓ reindex (18 book pages → qdrant) ✓ grounded EN + ES answers ✓ resolve → review → approve →
-  embedded ✓ re-ask hit the $0 cache tier ✓ ticket stored ✓ stats live. Whole drive: $0.0005.
-  Prompt tune shipped after drive: "check" never translated in ES replies (was "cheque").
-  BREVO_API_KEY copied prod→staging (owner authorized) and PROVEN: Brevo log shows the test
-  ticket delivered to support@ and opened. Owner is UI-testing the widget on staging.
-  Big-tier flip when Anthropic funded: SUPPORT_MODEL_BIG=claude-opus-4-8 (llm.ts anthropic branch).
-  Discord later: plug the bot into answerSupport() in src/support/ladder.ts.
-- 2026-07-10 (2) — Whole path built: ladder (cache→free→cheap→big, SUPPORT_MODEL_* env-tunable),
-  book→qdrant RAG, chat widget EN/ES, escalation form → Brevo → support@, review queue + stats,
-  13-assertion smoke suite in test-all.sh. Browser-QA failures = legacy baseline (proved on base).
-- 2026-07-10 (1) — Spec v2 owner-approved: no user-facing email (form → support@), cheap tiers vet
-  before money, Discord deferred, ticket system later. Cost model in spec.
-- 2026-07-09 — Lane created at the repo split.
+- 2026-07-09..11 — Foundations (details in git log): lane created at repo split; spec v2 approved
+  (form → support@, cheap tiers vet before money); ladder + RAG + widget + tickets + review queue
+  built, driven live ($0.0005 whole drive), Brevo delivery proven. Standing notes: flip
+  SUPPORT_MODEL_BIG=claude-opus-4-8 once Anthropic is funded; STYLE_GUIDE still says centered
+  pop-ups but owner moved to slide-up sheets, CD to reconcile.

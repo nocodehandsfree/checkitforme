@@ -949,11 +949,17 @@
       <div class="pk-fact" id="sup_top_fact"></div>
       <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
     </button>
+    <button class="peek" id="sup_credits_row" style="display:none;margin-top:10px" onclick="sheetFromHolder('ds_supcredits','Auto-credits','Make-goods the credit machine granted, with the call evidence for each')">
+      <div class="pk-main"><div class="pk-t">Auto-credits</div></div>
+      <div class="pk-fact" id="sup_credits_fact"></div>
+      <svg class="pk-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
     <div class="k-filters">
       <select class="k-filter" id="sup_f_cat" onchange="supFilter()">
         <option value="">All categories</option>
         <option value="technical">Technical</option>
         <option value="bug">Bug</option>
+        <option value="check_issue">Check problem</option>
         <option value="billing">Billing</option>
         <option value="partnerships">Partnerships</option>
         <option value="how_checks_work">How checks work</option>
@@ -968,7 +974,7 @@
     <input id="sup_f_q" type="search" placeholder="Search chats…" oninput="supSearch()" style="margin-top:10px;font-size:14px;padding:11px 15px">
     <div class="k-eyebrow">Chats</div>
     <div id="sup_list"><div class="empty">Loading…</div></div>
-    <div id="sup_details" style="display:none"><div id="ds_suptop"></div></div>
+    <div id="sup_details" style="display:none"><div id="ds_suptop"></div><div id="ds_supcredits"></div></div>
   </section>
   <section id="results">
     <div class="k-title">Calls</div>
@@ -2058,7 +2064,7 @@ function numInput(val,oninput,w){ return '<input type="number" min="0" step="1" 
 // recomputes premiumAsks server-side, so unchecking it turns off the exact-product asks too.
 function featMatrix(t,i){
   const feats=(PLANS.features||[]); if(!feats.length) return '';
-  const cell=f=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" ${t.features&&t.features[f.key]?'checked':''} onchange="if(!PLANS.tiers[${i}].features)PLANS.tiers[${i}].features={};PLANS.tiers[${i}].features['${f.key}']=this.checked;plansTouch(${i})" style="width:16px;height:16px;accent-color:var(--green)"><span style="font-size:12.5px;color:var(--text-muted)">${esch(f.label)}</span></label>`;
+  const cell=f=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" ${t.features&&t.features[f.key]?'checked':''} onchange="if(!PLANS.tiers[${i}].features)PLANS.tiers[${i}].features={};PLANS.tiers[${i}].features['${f.key}']=this.checked;plansTouch(${i},true)" style="width:16px;height:16px;accent-color:var(--green)"><span style="font-size:12.5px;color:var(--text-muted)">${esch(f.label)}</span></label>`;
   return `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
     <div style="font-size:11px;letter-spacing:.08em;color:var(--text-tertiary);font-weight:700;margin-bottom:9px">FEATURES IN THIS TIER</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 14px">${feats.map(cell).join('')}</div></div>`;
@@ -2096,17 +2102,22 @@ function renderPlans(){
     <div class="card report">${PLANS.payg.bundles.map(bundleRow).join('')}</div>`;
 }
 // A local edit flips the row to "pending" and auto-saves the config (draft); Publish pushes to Stripe.
+// `fast` (checkbox flips) saves near-instantly — the 600ms debounce is for typing, and an owner who
+// unchecks a feature and leaves the page within it used to lose the edit SILENTLY (owner 07-16).
 let _plansSaveT=null;
-function plansTouch(i){
+function plansTouch(i,fast){
   if(typeof i==='number'&&PLANS.tiers[i]) PLANS.tiers[i].sync='pending';
   PLANS.payg.bundles.forEach(b=>{ if(b.pubCents!==b.cents||!b.priceId) b.sync='pending'; });
-  clearTimeout(_plansSaveT); _plansSaveT=setTimeout(savePlansDraft,600);
+  clearTimeout(_plansSaveT); _plansSaveT=setTimeout(savePlansDraft, fast?60:600);
 }
+window.addEventListener('pagehide',()=>{ if(_plansSaveT){ clearTimeout(_plansSaveT); _plansSaveT=null; savePlansDraft(); } }); // best-effort flush so a quick exit can't drop a pending edit
 async function savePlansDraft(){
+  _plansSaveT=null;
   const body={ tiers:PLANS.tiers.map(t=>({key:t.key,name:t.name,monthlyCents:t.monthlyCents,annualCents:t.annualCents,checksPerMonth:t.checksPerMonth,premiumAsks:t.premiumAsks,features:t.features})),
     payg:PLANS.payg.bundles.map(b=>({checks:b.checks,cents:b.cents})) };
   const r=await api('/api/admin/plans',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  if(r&&!r.error){ PLANS=r; renderPlans(); }
+  if(r&&!r.error){ PLANS=r; renderPlans(); toast('Saved · live on the site'); }
+  else toast('NOT saved — that edit did not go through. Try it again.'); // never lose an owner edit silently
 }
 async function publishPlans(){
   if(!confirm('Publish these prices to Stripe? This creates new Stripe Prices and archives the old ones (existing subscribers keep their current price until they change plans). Products are never deleted.')) return;
@@ -2770,7 +2781,7 @@ async function fbCorrect(id,verdict){ const r=await api('/api/feedback/'+id+'/re
 // Support before changing shapes). Snapshot + filterable chat list + a transcript drawer with the
 // uploaded screenshot, auto-captured debug info, and the customer's account details. ----
 const SUP={range:'7d',cat:'',acct:'all',q:''};
-const SUP_CATS={technical:'Technical',bug:'Bug',billing:'Billing',partnerships:'Partnerships',how_checks_work:'How checks work',other:'Other'};
+const SUP_CATS={technical:'Technical',bug:'Bug',check_issue:'Check problem',billing:'Billing',partnerships:'Partnerships',how_checks_work:'How checks work',other:'Other'};
 let SUP_SEARCH_T=null;
 function supSetRange(v){ SUP.range=v; document.querySelectorAll('#sup_rangetrack button').forEach(b=>b.classList.toggle('on',b.dataset.r===v)); loadSupport(); }
 function supFilter(){ SUP.cat=(document.getElementById('sup_f_cat')||{}).value||''; SUP.acct=(document.getElementById('sup_f_acct')||{}).value||'all'; loadSupportChats(); }
@@ -2783,7 +2794,28 @@ function supStatusPill(s){
   const cls=k==='resolved'?'g':(k==='escalated'?'a':'');
   return `<span class="pill ${cls}" style="font-size:10.5px;padding:3px 9px">${esch(k)}</span>`;
 }
-async function loadSupport(){ loadSupportStats(); loadSupportChats(); }
+async function loadSupport(){ loadSupportStats(); loadSupportChats(); loadSupportCredits(); }
+// Auto-credit audit: every make-good the credit machine granted, with the evidence. Row stays
+// hidden until the first grant exists so the section doesn't ship an empty box.
+async function loadSupportCredits(){
+  const row=document.getElementById('sup_credits_row'), holder=document.getElementById('ds_supcredits');
+  if(!row||!holder) return;
+  const r=await api('/api/support/credits');
+  const g=(r&&Array.isArray(r.grants))?r.grants:[];
+  if(!g.length){ row.style.display='none'; return; }
+  row.style.display='';
+  document.getElementById('sup_credits_fact').textContent=g.length+(g.length===1?' grant':' grants');
+  holder.innerHTML=g.map(x=>{
+    let ev={}; try{ ev=JSON.parse(x.evidence||'{}'); }catch(e){}
+    const why={bad_status:'bad call outcome',short_call:'call too short',failed:'call failed'}[x.reason]||x.reason;
+    const bits=[ev.statusKey?('status '+ev.statusKey):'',(ev.callSeconds!=null)?(ev.callSeconds+'s on the line'):''].filter(Boolean).join(' · ');
+    return `<div class="peek" style="cursor:default">
+      <div class="pk-main"><div class="pk-t">${esch(x.storeName||('check '+x.cid))}</div>
+      <div class="pk-m" style="display:block;white-space:normal">${esch(x.accountId||'')} · ${esch(why)}${bits?' · '+esch(bits):''}${x.suggestedPhone?' · new number found: '+esch(x.suggestedPhone):''}</div></div>
+      <div class="pk-fact">${agoTs(x.grantedAt)}</div>
+    </div>`;
+  }).join('');
+}
 async function loadSupportStats(){
   const heroN=document.getElementById('sup_hero_n'), heroL=document.getElementById('sup_hero_l');
   const wells=document.getElementById('sup_wells'), cats=document.getElementById('sup_cats');
@@ -4367,6 +4399,9 @@ function wfOptions(sel,placeholder){
 let WFM_VOICES=[], WFM_GLOBAL=[], WFM_ASSIGN={}; // WFM_ASSIGN: workflow name -> {stores:[], chains:[]}
 async function loadWorkflowMgr(){
   await loadWorkflows();
+  // Personas power the sheet's Persona dropdown — without this the list renders EMPTY here even when
+  // a persona is saved and bound (owner 07-16: "there's none there" while the binding was fine).
+  try{ if(!PERSONAS.length && typeof loadPersonas==='function') await loadPersonas(); }catch(e){}
   if(!WFM_VOICES.length){ const d=await api('/api/voices'); WFM_VOICES=(d&&d.voices)||[]; }
   const s=await api('/api/settings')||{}; WFM_GLOBAL=wfgFrom(s);
   WFM_ASSIGN=await api('/api/admin/workflow-assignments')||{};

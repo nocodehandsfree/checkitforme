@@ -20,6 +20,17 @@ export function isDirect(r: Recipe): boolean {
   return r.type === "direct" || !(r.steps && r.steps.length);
 }
 
+/** ONE rule for "do we EVER place a call to this chain" — read it from every surface (mapping board,
+ *  overnight batch, single-chain map) so no screen re-decides callability on its own and they can never
+ *  disagree (the Micro-Center-callable-in-Admin bug: the shopper site said "check online" while the
+ *  Admin board still listed it as callable). A chain is dialable only when it's not owner-muted, has a
+ *  real store line (callTarget — false = national call-center / online-only like Micro Center, Best Buy),
+ *  and isn't a site-check chain (stockCheckMethod=site → its shelf-accurate website is the answer, never
+ *  a paid call). Curated field, so it rides store-sync staging→prod and stays identical in both. */
+export function chainDialable(ch: { muted?: boolean | null; callTarget?: boolean | null; stockCheckMethod?: string | null }): boolean {
+  return ch.muted !== true && ch.callTarget !== false && ch.stockCheckMethod !== "site";
+}
+
 /** When to fire a learned step: at the time we ACTUALLY pressed/spoke it during mapping (s.atSec,
  *  seconds from connect) — NOT a flat early 2s. IVRs that don't buffer type-ahead drop a digit
  *  pressed during the greeting (the Big 5 bug: "press 2" learned at 6s fired at 2s, got lost, and
