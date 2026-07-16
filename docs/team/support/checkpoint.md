@@ -1,6 +1,14 @@
 # Support — checkpoint
 **What this is:** current state. Newest on top, ≤80 lines.
 
+- 2026-07-16 (3) — Door-aware check_issue greeting LIVE on staging: the post-check glowing corner
+  tab (Webbie's invite tab, which replaced my old "Tell us" text link) opens NEUTRAL ("How did your
+  check go? …add a screenshot"); the apology greeting ("Sorry, let's make it right") now shows ONLY
+  when someone picks the problem topic by hand. openSupportTopic(cat,src) carries the door; EN+ES;
+  both doors driven via real clicks, zero page errors. Freeze lifted afterward: session branch was
+  already fully merged (PR #5, then direct staging pushes); local copy deleted, remote delete blocked
+  by the git proxy (no GITHUB_PAT reachable) so origin/claude/support-lane-spec-7hd2aj is a stale
+  merged label. NOTHING promoted; promotes stay with PM on the owner's word.
 - 2026-07-16 (2) — CREDIT MACHINE built + 20/20 drive green (owner-approved params: 2 grants per
   account per 30d · check ≤7 days old · credits only, never cash). check_issue chats now run a
   deterministic verifier BEFORE any model (src/support/credits.ts): signed-in + charged check +
@@ -40,27 +48,12 @@
   bottom-right corner, auto-hides (slides off right) on scroll, glides back at rest. Live on staging.
   NOTE: a rogue Claude staging→main merge (02:02 UTC 07-12) swept an in-progress launcher onto PROD;
   flagged to owner, prod left untouched pending his call.
-- 2026-07-11 (4) — Owner design pass, LIVE: launcher is now a small low-key GRAY chat icon pinned
-  bottom-right (thumb reach, tiny footprint, no "Help" label); header shows the Check BRAND MARK
-  upper-left + the approved v2 round-dark X; exact Lucide icons, dropped the 👋 emoji. Help tab is
-  now a REAL FAQ — Copper's 15 questions from readme/common-questions rendered as an inline
-  accordion (read without chatting) + search filter + links to full pages (/pub/support/faq,
-  cached). Human path buried harder: "Talk to a human" hidden until the AI fails to resolve TWICE
-  in a chat (first fail asks for more detail). Verified live: FAQ 15 items, gray launcher, brand
-  mark, approved X all served. FAQ source = Copper's readme page; edit there → reflects (10min cache).
-- 2026-07-11 (3) — v3 MESSENGER SHIPPED + LIVE on staging. Intercom-style: right-edge Help tab →
-  full-screen panel (right-drawer desktop), bottom tabs Home/Messages/Help. Home (greeting +
-  admin known-issue banner + Ask a question + recent), Messages (history w/ dates, account +
-  guest-local), Help (search over book + popular + link to readme pages), topic picker (6 cats),
-  chat (Check AI attribution, bug screenshot attach via R2, buried human path), EN/ES.
-  Backend: category+account+title on convos, screenshot+debug on tickets, /pub/support/search,
-  /banner (+admin toggle), /upload-url, /app/support/conversations, admin /chats +/chats/:id +
-  extended /stats. RAG now reads the ReadMe book via llms.txt (46 pages, repo mirror fallback);
-  Help links to real readme pages. Verified live: reindex 46p, search→book URLs, grounded chat,
-  admin chats list shows category+tier+title. Local screenshots of all 4 views (zero page errors).
-  24-assertion smoke green, tsc clean. Spec: docs/specs/support-agent/v3-messenger.md.
-  NEXT: hand Addie the dashboard prompt (endpoints live). check-aware answers plumbed (ladder
-  takes checkContext) but the check-history readout isn't built yet — quick follow-up.
+- 2026-07-11 — v3 Messenger + owner design pass, LIVE (details in git log + docs/specs/support-agent/
+  v3-messenger.md): full-screen Intercom-style panel (Home/Messages/Help tabs, topic picker, R2 bug
+  screenshots, EN/ES), RAG over the ReadMe book via llms.txt (46 pages), REAL FAQ from Copper's
+  common-questions (10min cache — edit there, it reflects), gray icon-only launcher, brand mark +
+  approved X, human path buried (2 fails to reveal). Open follow-up: check-aware answers are plumbed
+  (ladder takes checkContext) but the check-history readout isn't built.
 - 2026-07-09..11 — Foundations (details in git log): lane created at repo split; spec v2 approved
   (form → support@, cheap tiers vet before money); ladder + RAG + widget + tickets + review queue
   built, driven live ($0.0005 whole drive), Brevo delivery proven. Standing notes: flip
