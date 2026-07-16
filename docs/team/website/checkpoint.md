@@ -3,85 +3,61 @@
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets, prune finished (history = git).
 > Lane: the consumer web app `public/checkit.html` (+ `public/app.html` admin). STAGING-FIRST
 > (`staging` → `staging.checkitforme.com`; promote = apply on the `main` prod branch). Clean split with
-> the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash), **I own view/mode/nav** —
-> don't blind-edit the tint, it's fragile.
+> the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash/sheet chrome), **I own
+> view/mode/nav** — don't blind-edit the tint, it's fragile (see the hard lesson below).
 
-## ✅ Shipped (07-16, batch 8 — tint revert + alerts mute/stop + status audit)
-1. **⛔ TINT: both of my attempts REVERTED** (grey wash + edge scrim, PRs #34/#35) — owner: they killed
-   the translucent slide-up look. Sheets are back to the original dim/root exactly as before I touched
-   them. TWO failed attempts = stop. The slide-up top/bottom chrome question needs the tint owner /
-   a design comp — do NOT freestyle it again (comment at the .overlay dim rule says the same).
-2. **Alerts sheet redo #3**: rows now have MUTE (pauses sends, row dims, "Muted. Nothing sends until you
-   unmute.") and STOP (removes + pill "Unsubscribed from restock alerts for {store}"). Server: muted
-   column + /app/alerts/mute + fan-out skips muted. Sheet is cache-first (My checks prefetches) so it
-   opens instantly. Empty copy: "You haven't created any alerts." Buttons stack vertically so ES labels
-   never squeeze the text into mid-sentence wraps (verified both languages). Email unsubscribe link now
-   goes straight to the alerts sheet (?alerts=1) — the landing page is gone; RFC 8058 POST stays.
-3. **Status audit — all 13 verdicts verified headless**: RESULT pill + date/time + title + sub, zero
-   mid-sentence wraps. Fixed: /pub/result's providerCallId branch never sent ts (the missing in-stock
-   date/time), client also falls back to the saved history time; ivr_stuck copy shortened (EN+ES).
+## 🤝 HANDOFF (07-16) — state at session end
+- Everything below is MERGED to staging, deploy-verified, and rode the fresh-start PROMOTE the PM ran
+  (prod = staging as of 41901e5). Working tree clean; session branch merged via PRs #29/31/32/34/35/36.
+- **⛔ Hard lesson — sheet-chrome tint:** I attempted the slide-up top/bottom transparency twice
+  (grey wash, edge scrim), both made it worse, both REVERTED. Root cause found by the other dev:
+  fixed-position scrims attached to a TRANSFORMED sheet pin to the sheet, not the viewport. He now
+  owns the fix (his "attempt 4": strips take the sheet's own surface colour). Do NOT touch the
+  overlay dim / root flip / scrims without him + a comp. Owner has NOT yet blessed attempt 4.
+- **Owner actions pending:** (1) uncheck Store holds + Your voice in Admin → Plans (one plan is
+  enough — the grid shows only services EVERY plan has; my API write was permission-blocked).
+  (2) Eyeball on the phone: slide-up chrome (attempt 4), kiosk flow after a hard refresh
+  (worked end-to-end on the live build when I drove it), alerts Mute/Stop, edit cell/email sheets.
+- **`scripts/qa-website-drive.mjs`** (committed): drives all 13 verdict statuses + the alerts
+  mute/stop flow headless against a local staging-mode server; asserts pill/date/headline/sub and
+  the no-mid-sentence-wrap law in EN+ES. Run it before shipping verdict or alerts changes.
 
-## ✅ Shipped (07-16 early, batch 7 — owner's late-night list, PR #31)
-1. **Check+ = launch set, Admin-driven**: exact_products OUT of the catalog (every account gets exact
-   asks — hasFeature/premiumAsks ungated), hobby_hunts IN, store_holds/your_voice default OFF until
-   built. Grid + paid-welcome list + "+N more" all render live from /pub/plans.everyPlanGets. Boxes go
-   2-up BIG at ≤6 services, tighten to 4-up as Admin checks more on. Tap a box → bottom sheet explaining
-   the service (copy condensed from the book docs/Check+, wrap-audited EN+ES headless).
-   ⚠️ staging's STORED config still has store_holds/your_voice checked ON (permission classifier blocked
-   me writing the Admin plans config) — owner unchecks 2 boxes in Admin → Plans and they vanish.
-2. **Alerts sheet copy redo** (owner rejected "All for this account" + "cards at Fun"): sub "Every alert
-   you've set up. Turn any off here."; rows = product at store (junk labels fall back to the category
-   name) + one plain sentence for what the alert does. sentLines now also guards sheet copy; digits
-   count as sentence starts.
-3. **Verdict footer consistency**: body.rview main back to site-default flex — footer pins to the bottom
-   edge on short verdicts; dead grey band under © is gone (supersedes 07-10 item 51 by owner 07-15 call).
-4. **Alert language**: /app/email + watch subscribe + auto-check all send lang; server stores it on the
-   account (alerts go out in the customer's language).
-
-## ✅ Shipped (07-15 night, batch 6 — owner's 9-item list)
-1. **Edit cell** returns to My checks after verify (AUTH_MODE='edit' → openAccount()), redesigned to the
-   unified sheet header (phone icon on top, centered, NO wordmark — signup flow keeps the wordmark).
-2. **Earn free checks row** removed from My checks overview (Earn tab covers it).
-3. **Alerts sheet**: sub is ONE line ("Every ping you've turned on, in one place."), rows now say
-   what+where ("Pokémon cards at Fun") + what the ping does in plain words. Server /app/alerts/me
-   carries storeName (join in myAlerts). EN+ES same commit.
-4. **Post your score**: unified icon-top centered header (camera, AC1).
-5. **Verdict sub wrap law** (`sentLines`): multi-sentence subs fit one line or break ONLY at sentence
-   boundaries (inline-block per sentence). "Rang and rang. | Nobody picked up. No charge." mid-sentence
-   wrap is dead. Copy-guide has the general law; the explicit multi-sentence rule → flag Copper.
-6. **In-stock sub pulls Admin**: killed the `note.hasdetail` override that printed raw productDetail
-   ("Fun has set: Scarlet and Violet"). The Admin statuses-registry note ("{store} has {product} in.
-   Go grab it.") is the source; `prodPhrase()` humanizes the raw "form · set" detail into "a Scarlet
-   and Violet tin" (es: "tin de Scarlet and Violet"). Verified headless: exact owner-requested phrasing.
-7. **Tint investigation (no code change — findings)**: result-page top staying dark in browser Safari is
-   the owner-approved 07-09 "MIDDLE BLOOM" design (full top tint = standalone PWA only). The black top
-   band on the owner's live-call screenshots is iOS's own in-call status chrome. Bottom grey bar =
-   Safari tinting its bar from the sheet/page; not paintable from CSS. Header is position:static
-   site-wide — live/result are just the only pages tall enough to scroll it away.
-
-## ✅ Shipped earlier (07-13 → 07-15, batches 1–5 + verdict overhaul — all merged + deploy-verified)
-Zones/checks sheet overhaul + 3C/4A header · share voice + 7 og unfurl cards + /s gate-skip · radius
-½–10mi + Check+ map-reach + 25-store zone cap · unified icon-top sheet nav (yellow accent) + all
-pop-ups → bottom sheets · Addie's alerts email UI (email edit sheet, alerts sheet, ?alerts=1) ·
-verdict redesign (40px headline, micro date, "Calling ⟨logo⟩", calm one-color log, collapse+scroll-top,
-live auto-follow, always-on call-again confirm). Detail = git log / PR bodies (#11-27).
-Do NOT re-introduce: name-text basket chips, price/check-count in zone flow, green radius selection,
-per-status color-flag call log (owner likes the calm one), 3-line subheads.
+## ✅ Shipped this session (07-15 → 07-16, PRs #29/31/32/36 — all verified live)
+1. **My checks:** edit cell = icon-top sheet, headline "Give us your new celly", every exit returns to
+   My checks. Edit email = "Give us your new email address", blank box; empty save prompts, same
+   address says "That's already your email". Earn row removed (Earn tab covers it).
+2. **Alerts:** rows read "{product} at {store}" (server joins retailer + category names; junk labels
+   fall back to the category, else store-only). MUTE pauses sends (muted column, /app/alerts/mute,
+   fan-out skips; row dims) with pill "Muted. Unmute any time."; STOP removes + pill "Unsubscribed
+   from restock alerts for {store}". Cache-first (My checks prefetches) → sheet opens instantly.
+   Empty state "You haven't created any alerts." Sub "Manage your email and text alerts." (owner's
+   words). Email unsubscribe link → /?alerts=1 (landing page gone; RFC 8058 POST kept). Buttons
+   stack vertically so ES labels never squeeze copy into a wrap.
+3. **Verdicts:** sub wrap law site-wide (`sentLines` — fits one line or breaks at the period, digits
+   count as sentence starts). In-stock sub pulls the Admin statuses-registry note; `prodPhrase()`
+   turns raw "Tin · Scarlet and Violet" into "a Scarlet and Violet tin" (EN+ES). Date/time on EVERY
+   status (fixed the ts-less /pub/result branch + history-time fallback; all 13 statuses audited).
+   Footer pins to the bottom edge on short verdicts (dead grey band gone; supersedes 07-10 item 51).
+4. **Check+ = launch set, Admin-driven:** exact_products OUT of the catalog (every account gets exact
+   asks; premiumAsks always true), hobby_hunts IN, store_holds/your_voice default OFF until built —
+   checking them in Admin brings the box back, no code. Boxes 2-up BIG at ≤6 services, auto-tighten
+   past 6. Tap a box → info sheet with book copy (docs/Check+, EN+ES, wrap-audited). Paid-welcome
+   "Now live" list + "+N more" render from the same live list.
+5. **Language:** every email-capturing POST sends the site lang; account stores it; alert emails/texts
+   go out in the customer's language.
 
 ## ⏳ OPEN — needs owner / other lanes
-- **Promote staging → prod** once owner signs off (staging carries many lanes' work).
-- **❗Email template renders PLAIN TEXT in owner's inbox — UNRESOLVED** (Outlook mobile; check
-  renderBrandedEmail on the test path, Brevo image hosting, brevoTemplateId).
-- **Service worker PHASE 2** (network-first HTML + offline fallback) — not rebuilt.
-- **Prod launch flags**: hobby=false, thrift=false on prod at launch.
-- **Restock SMS blocked** (A2P denied, toll-free pending) — email alerts live; re-ask owner.
-- **og:image URLs ride the internal railway host** — works, but a public-host constant is cleaner (DevOps).
-- **Copper flag**: add the explicit wrap law to COPY_STYLE_GUIDE ("a multi-sentence line fits one line
-  or breaks per sentence — never mid-sentence").
+- **Slide-up chrome (tint lane):** other dev's attempt 4 is on staging/prod — owner verdict pending.
+- **Admin Plans:** owner unchecks Store holds + Your voice (see handoff bullet).
+- **Email rendering** (Outlook/Gmail) — other lane actively iterating (one light design now).
+- **Restock SMS blocked externally** (A2P denied, toll-free pending) — email alerts live.
+- **Service worker PHASE 2** (network-first HTML + offline) — not rebuilt.
+- **og:image URLs ride the internal railway host** — works; public-host constant cleaner (DevOps).
 
 ## 🪤 Traps
-Moved to the **`known-problems`** skill (`.claude/skills/known-problems/`) — v2 toast defaults
-green/wraps (pass `'neutral'`, use `.oneline`), `.loaddots` misses deep-link boot paint, direct-dial
-chains need `avgTreeSeconds=null`, backgrounded `npx tsx` gets SIGTERM, Brevo env is `BREVO_API_KEY`,
-`?skin=v2` gate is DEAD. Headless→staging TLS + local-verify recipe = `docs/shared/GOTCHAS.md`.
-#auth_logo is a left-flex wordmark bar — stacked headers must override its container style per mode.
+`known-problems` skill has the full list. New this session: #auth_logo is a left-flex wordmark bar —
+stacked headers must override its container per mode · a fixed-position ::after on a TRANSFORMED
+sheet pins to the sheet, not the viewport (the tint lesson) · bootstrap.ts ALTERs that run BEFORE the
+CREATE TABLE silently no-op on fresh DBs — put the ALTER after the create · alerts sheet text column
+is ~240px next to its buttons; sentences must fit it in BOTH languages · headless→staging TLS +
+local-verify recipe = docs/shared/GOTCHAS.md + scripts/qa-website-drive.mjs.
