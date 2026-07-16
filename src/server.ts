@@ -938,13 +938,13 @@ a.cta{display:block;text-align:center;margin-top:26px;background:#16161C;border:
 <h1>${title}</h1><p>${line}</p><p class="es">${lineEs}</p><a class="cta" href="/">${cta}&nbsp;&nbsp;&rarr;</a></div></body></html>`;
 }
 // Confirm: the signed link from the confirm email. Marks every account carrying this address verified.
+// No landing page (owner 07-16): confirm, then drop them straight back on the site — My checks opens
+// with a pill saying the email is confirmed (emconf=1) or that the link didn't work (emconf=0).
 app.get("/confirm-email", async (c) => {
   const e = String(c.req.query("e") || "").trim().toLowerCase();
-  if (!e || !checkEmailToken(e, String(c.req.query("t") || ""))) {
-    return c.html(emailLandingPage("That link didn't work.", "It may have expired. Add your email again on the site and we'll send a fresh one.", "Puede que haya caducado. Agrega tu correo otra vez en el sitio y te enviamos uno nuevo.", "Back to the site"), 400);
-  }
+  if (!e || !checkEmailToken(e, String(c.req.query("t") || ""))) return c.redirect("/?emconf=0");
   await db.update(accounts).set({ emailVerifiedAt: Math.floor(Date.now() / 1000) }).where(eq(accounts.email, e));
-  return c.html(emailLandingPage("You're set.", "Your email is confirmed. Alerts land right here from now on.", "Tu correo está confirmado. Tus alertas llegarán aquí de ahora en adelante.", "Back to the site"));
+  return c.redirect("/?emconf=1");
 });
 // Unsubscribe: signed one-click. Kills every EMAIL alert for this address (subscriptions + watches)
 // and un-verifies it so nothing else emails them until they re-confirm. GET renders the page;
