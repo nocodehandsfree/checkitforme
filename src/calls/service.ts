@@ -97,7 +97,7 @@ function composePersona(p: AnyObj | undefined): string {
   if (p.slang) bits.push("Use casual, natural slang the way a real local would.");
   // Affection is what controls whether you use the staff member's name. On = warm + first-name once;
   // off = stay professional and never call them by name even if they give it.
-  if (p.affection) bits.push("Be warm and a little affectionate, like chatting with a friendly regular. If they tell you their name, you can use it once, naturally.");
+  if (p.affection) bits.push("Be warm and a little affectionate, like chatting with a friendly regular. If they introduce themselves by name ('this is Bob', 'Maria speaking'), greet them right back with it, like 'oh hi Bob!', and you can use the name once more later, naturally. Never overuse it.");
   else bits.push("Keep it friendly but professional. Don't address them by name, even if they give it.");
   if (p.swear) bits.push("A light, casual swear word is fine if it fits naturally. keep it friendly, never aggressive.");
   if (p.greet) bits.push(`A natural way you might open: "${String(p.greet).trim()}".`);
