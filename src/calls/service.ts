@@ -20,8 +20,8 @@ async function notifyWatches(retailerId: number, categoryId: number, store: stri
   for (const w of open) {
     const link = `${config.appUrl}/?store=${retailerId}`;
     if (w.channel === "email") {
-      // Branded template (the same one every alert email wears), deep-linked to the store.
-      await sendRestockEmailTo(w.contact, { store, product: label, url: link }, { tag: `watch r:${retailerId}` });
+      // Branded template — no url token, so the CTA becomes "Get directions" (Google Maps to the store).
+      await sendRestockEmailTo(w.contact, { store, product: label }, { tag: `watch r:${retailerId}` });
     } else {
       await notifyContact("sms", w.contact,
         `Back in stock: ${label} at ${store}`,

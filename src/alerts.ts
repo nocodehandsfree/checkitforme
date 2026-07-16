@@ -40,7 +40,7 @@ export interface AlertTemplate { sms?: string; emailSubject?: string; emailBody?
 export const DEFAULT_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   restock: {
     sms: "{product} is back at {store}. Move fast, this stuff doesn't sit. checkitforme.com",
-    emailSubject: "It's back at {store}.",
+    emailSubject: "{product} is back at {store}.",
     emailBody: "{store} has it right now. This stuff moves fast.",
   },
   store_added: {
@@ -65,7 +65,7 @@ export const DEFAULT_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
 export const ES_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   restock: {
     sms: "{product} volvió a {store}. Ve rápido, esto no dura. checkitforme.com",
-    emailSubject: "Volvió a {store}.",
+    emailSubject: "{product} volvió a {store}.",
     emailBody: "{store} lo tiene ahora. Esto vuela.",
   },
   store_added: {
@@ -189,11 +189,12 @@ const EMAIL_DESIGN_EN: Record<EmailKind, EmailDesign> = {
     cta: "Use my free check", url: "https://checkitforme.com",
   },
   restock: {
-    // Say it ONCE: kicker = the label, headline = the state, body names the store, module = the item.
-    // (Owner 07-15: store was repeated 3x, "back" 3x — tightened to fewest words.)
-    kicker: "BACK IN STOCK", kickerColor: "#FFCB05", headline: "It's back.",
+    // Product-first: the HEADLINE is the item that's back (owner 07-15: "what's back?" — name it).
+    // No product panel (it repeated the store/city and read as a gray box); store said once in the body.
+    // CTA = real action: Get directions opens Google Maps to the store, not a dead website link.
+    kicker: "BACK IN STOCK", kickerColor: "#FFCB05", headline: "{product}",
     body: ["**{store}** has it right now.", "This stuff moves fast."],
-    module: { type: "product", title: "{product}", sub: "{city}", badge: "JUST SPOTTED" }, cta: "See it on Check", url: "https://checkitforme.com",
+    cta: "Get directions", url: "https://checkitforme.com",
   },
   confirm_email: {
     kicker: "CONFIRM YOUR EMAIL", kickerColor: "#4ADE80", headline: "One tap left.",
@@ -227,9 +228,9 @@ const EMAIL_DESIGN_ES: Record<EmailKind, EmailDesign> = {
     cta: "Usar mi check gratis", url: "https://checkitforme.com",
   },
   restock: {
-    kicker: "YA DISPONIBLE", kickerColor: "#FFCB05", headline: "Volvió.",
+    kicker: "YA DISPONIBLE", kickerColor: "#FFCB05", headline: "{product}",
     body: ["**{store}** lo tiene ahora.", "Esto vuela."],
-    module: { type: "product", title: "{product}", sub: "{city}", badge: "VISTO HOY" }, cta: "Verlo en Check", url: "https://checkitforme.com",
+    cta: "Cómo llegar", url: "https://checkitforme.com",
   },
   confirm_email: {
     kicker: "CONFIRMA TU CORREO", kickerColor: "#4ADE80", headline: "Un toque más.",
@@ -289,8 +290,13 @@ function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | numb
  *  solid-color card fallback and a VML roundrect button, so it renders clean there too. */
 export function renderBrandedEmail(event: EmailKind, _subject: string, _body: string, tokens: Record<string, string | number | undefined> = {}, to = "", lang: Lang = "en"): string {
   const d = EMAIL_DESIGN[lang][event];
-  // A {url} token deep-links the CTA (owner alert → the call; watch alert → the store). Else the design's default.
-  const url = String(tokens.url || d.url);
+  // CTA link: an explicit {url} token wins (owner alert → the call). For restock the real action is
+  // GET DIRECTIONS — a Google Maps search for the store — not a dead website link. Else the design default.
+  const url = tokens.url
+    ? String(tokens.url)
+    : event === "restock" && tokens.store
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(tokens.store))}`
+      : d.url;
   // Footer links are LIVE: manage → the site's alerts sheet; unsubscribe → the signed one-click kill.
   const manageUrl = manageAlertsUrl();
   const unsubUrl = to ? unsubscribeUrl(to) : `${siteUrl()}/unsubscribe`;
