@@ -350,27 +350,41 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
   const footer = `<a href="${manageUrl}" style="${ink(BODY2)};text-decoration:none">${lang === "es" ? "Administrar alertas" : "Manage alerts"}</a>`;
   // ONE dark email, canvas pinned by the gradient lock (see the color block above for the whole story).
   // color-scheme "dark" tells the clients that honor it this email is already dark — leave it alone.
+  // GMAIL TEXT RECOVERY (change #3, Rémi Parmentier's documented recipe,
+  // hteumeuleu.com/2021/fixing-gmail-dark-mode-css-blend-modes): Gmail dims text colors even over the
+  // locked background (it rewrites `color`, and strips -webkit-text-fill-color too). Fix: wrap the text
+  // regions in two divs — mix-blend-mode:screen over mix-blend-mode:difference, both bg #000. With the
+  // authored colors that compose to identity; when Gmail dark mode recolors the wrapper backgrounds,
+  // the same math pushes the dimmed text back toward its bright original. The rules live in <style>
+  // under a `u + .body` selector ONLY Gmail matches (it swaps the doctype for a <u>), so every other
+  // client renders plain unstyled divs. The logo image stays OUTSIDE the wrappers (blends would
+  // recolor image pixels in Gmail). GANGA (Gmail app, non-Google account) ignores <style> → falls
+  // back to change #2's dimmed-but-readable render.
+  const blendOpen = `<div class="gb-s"><div class="gb-d">`;
+  const blendClose = `</div></div>`;
   return `<!doctype html>
 <html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">
-<style>:root{color-scheme:dark;supported-color-schemes:dark}</style>
+<style>:root{color-scheme:dark;supported-color-schemes:dark}
+u + .body .gb-s { background:#000000; mix-blend-mode:screen; }
+u + .body .gb-d { background:#000000; mix-blend-mode:difference; }</style>
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-</head><body style="margin:0;padding:0;${lock(BOARD)};width:100%" bgcolor="${BLACK}">
+</head><body class="body" style="margin:0;padding:0;${lock(BOARD)};width:100%" bgcolor="${BLACK}">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BLACK}" style="${lock(BOARD)};margin:0;padding:0;width:100%;min-width:100%"><tr><td align="center" bgcolor="${BLACK}" style="${lock(BOARD)};padding:0">
     <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BLACK}" style="max-width:600px;width:100%;${lock(BOARD)}">
       <tr><td bgcolor="${BLACK}" style="${lock(BOARD)};padding:30px 26px 0"><img src="https://checkitforme.com/logos/brand/check-brandmark-1024.png" width="40" height="40" alt="Check" style="display:block;width:40px;height:40px;border:0"></td></tr>
       <tr><td bgcolor="${BLACK}" style="${lock(BOARD)};padding:24px 26px 0">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        ${blendOpen}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
           <tr><td style="font-size:11px;font-weight:700;letter-spacing:1.6px;${ink(kick)};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
           <tr><td style="padding-top:12px;font-size:34px;font-weight:900;${ink(TXT)};line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
           ${bodyHtml}
           ${moduleHtml(d.module, tokens)}
           ${cta}
-        </table>
+        </table>${blendClose}
       </td></tr>
-      <tr><td bgcolor="${BLACK}" style="${lock(BOARD)};padding:26px 26px 34px;font-family:${FONT};font-size:12.5px;${ink(BODY2)}">${footer}</td></tr>
+      <tr><td bgcolor="${BLACK}" style="${lock(BOARD)};padding:26px 26px 34px;font-family:${FONT};font-size:12.5px;${ink(BODY2)}">${blendOpen}${footer}${blendClose}</td></tr>
     </table>
     <!--[if mso]></td></tr></table><![endif]-->
   </td></tr></table></body></html>`;
@@ -378,7 +392,7 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
 async function espEmail(to: string, subject: string, body: string, opts: { templateId?: number; params?: Record<string, string | number | undefined>; event?: EmailKind; lang?: Lang; bodyRaw?: string } = {}): Promise<{ ok: boolean; detail: string }> {
   const key = config.alerts.brevoApiKey;
   if (!key) return { ok: false, detail: "email_not_configured" }; // BREVO_API_KEY unset → stubbed
-  const sender = { name: "Check", email: config.alerts.senderEmail };
+  const sender = { name: "Check It For Me", email: config.alerts.senderEmail }; // from-name (owner 07-16)
   // One-click unsubscribe headers: inbox providers surface their own Unsubscribe button from these.
   const headers = { "List-Unsubscribe": `<${unsubscribeUrl(to)}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" };
   // bodyRaw = the editable template copy (with **bold** + {tokens}) → drives the branded email's body so
