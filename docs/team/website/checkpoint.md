@@ -6,6 +6,19 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash/sheet chrome), **I own
 > view/mode/nav** — don't blind-edit the tint, it's fragile (see the hard lesson below).
 
+## 📱 ANDROID PASS (07-16, android sub-session) — merged PR #44, live on staging (x-rev android-r119)
+- Drove all 28 consumer screens/flows at Pixel 8 viewport (412x915 + 360w) via headless Chromium →
+  staging. No overflow-x anywhere; rendering matches iOS. Fixed the Android-only breaks:
+  keyboard covering bottom sheets (`interactive-widget=resizes-content` in the viewport meta),
+  pull-to-refresh reloading mid-flow (`overscroll-behavior-y:none`), dead store logos painting
+  Chrome's broken-image glyph (wmFail() → designed .wm monogram; map pins/switcher icons hide),
+  OTP autofill washing #auth_code. All verified live on staging post-deploy.
+- New tools (committed): `scripts/qa-android-sweep.mjs` (full Android screenshot+diagnostics drive)
+  + `scripts/staging-bridge.mjs` (the GOTCHAS loopback bridge, now a file not a paste).
+- Needs REAL-DEVICE confirmation Friday: keyboard-over-sheet fix feel, no pull-to-refresh, monogram
+  tiles, pinch-zoom question (meta blocks zoom on Android but iOS ignores it — owner call whether
+  to allow zoom for parity), emoji render slightly different (Noto vs Apple — cosmetic, no action).
+
 ## 🤝 HANDOFF (07-16) — state at session end
 - Everything below is MERGED to staging, deploy-verified, and rode the fresh-start PROMOTE the PM ran
   (prod = staging as of 41901e5). Working tree clean; session branch merged via PRs #29/31/32/34/35/36.
