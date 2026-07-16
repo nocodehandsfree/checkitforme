@@ -2931,6 +2931,8 @@ const I18N={ es:{
   'sup.faq.none':'Cargando el FAQ','sup.faq.none2':'Vuelve en un momento.','sup.readmore':'Leer la respuesta completa →',
   'sup.browseall':'Ver todos los artículos de ayuda',
   'sup.greet.bug':'Lamento que algo falló. Cuéntame qué pasó y agrega una captura si puedes.',
+  'sup.greet.check':'Perdón, vamos a arreglarlo. ¿Cuál tienda fue y qué salió mal? Un número equivocado, la tienda incorrecta, o un resultado que se ve mal. Una captura ayuda.',
+  'res.report':'¿Algo mal con este check? Avísanos',
   'sup.shotok':'Captura adjunta','sup.uploading':'Subiendo…','sup.uploadfail':'No se pudo adjuntar la imagen.',
   'sup.hello':'¡Hola! Pregúntame lo que sea sobre checks, tiendas o planes.',
   'ph.support':'Escribe tu pregunta',
@@ -3169,6 +3171,7 @@ const SUP_BOOK='https://checkitforme.readme.io';
 let SUP_SID=''; let SUP_CAT='other'; let SUP_SHOT=null; let SUP_VIEW='home'; let SUP_STARTED=false; let SUP_ESC=0;
 const SUP_CATS=[
   ['how_checks_work','How checks work','Cómo funcionan los checks'],
+  ['check_issue',"Something's wrong with my check",'Algo está mal con mi check'],
   ['technical','A technical question','Una pregunta técnica'],
   ['bug','Report a bug','Reportar un error'],
   ['billing','Billing','Facturación'],
@@ -3200,6 +3203,9 @@ window.addEventListener('touchmove',supTabTuck,{passive:true});
 // Open straight to "What's it about?" (the topic picker) — most people arrive wanting to ask/report.
 function supTabClick(){ const w=$('supWrap'); if(w&&w.classList.contains('on')) closeSupport(); else openSupport(); } // one tab, two jobs: open, then close from the same thumb spot (owner 07-14)
 function openSupport(){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supStartNew(); }
+// Open support straight into a specific topic (skips the picker). Used by the "report a problem"
+// link on a check's status/result so a bad number or wrong result lands in check_issue in one tap.
+function openSupportTopic(cat){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supPickTopic(cat); }
 function closeSupport(){ const el=$('supWrap'); el.classList.remove('on'); el.setAttribute('aria-hidden','true');
   // iOS wouldn't repaint its chrome strips after the chat's root tint dropped (bottom stayed the chat
   // color until a manual refresh — owner 07-14). Poke it: drop the keyboard, force a root style
@@ -3286,8 +3292,9 @@ function supStartNew(){ supShow('topic',{title:t('sup.topic.title',"What's it ab
     box.appendChild(el); });
 }
 function supPickTopic(cat){ SUP_CAT=cat; supFreshChat(); supGo('chat');
-  $('sup_clip').classList.toggle('hide',cat!=='bug');
+  $('sup_clip').classList.toggle('hide',cat!=='bug'&&cat!=='check_issue');
   const greet=cat==='bug'?t('sup.greet.bug',"Sorry that broke. Tell me what happened and add a screenshot if you can.")
+    :cat==='check_issue'?t('sup.greet.check',"Sorry, let's make it right. Which store was it, and what went wrong? A wrong number, the wrong store, or a result that looks off. A screenshot helps.")
     :t('sup.hello',"Hey! Ask me anything about how checks, stores, or plans work.");
   supBubbleMsg('bot',greet);
   setTimeout(()=>{try{$('sup_in').focus();}catch(e){}},260);
@@ -3327,7 +3334,7 @@ async function supHelped(yes){ $('sup_help').classList.remove('on'); SUP_STARTED
 async function supOpenConversation(sid){ SUP_STARTED=true; SUP_SID=sid; $('sup_msgs').innerHTML=''; $('sup_help').classList.remove('on');
   supGo('chat');
   const r=await api('/pub/support/conversation/'+encodeURIComponent(sid));
-  if(r&&r.messages){ SUP_CAT=r.category||'other'; $('sup_clip').classList.toggle('hide',SUP_CAT!=='bug');
+  if(r&&r.messages){ SUP_CAT=r.category||'other'; $('sup_clip').classList.toggle('hide',SUP_CAT!=='bug'&&SUP_CAT!=='check_issue');
     r.messages.forEach(m=>supBubbleMsg(m.role==='user'?'me':'bot',m.content,false)); }
 }
 
@@ -5720,6 +5727,7 @@ function showResult(o, cid){
       ${canTranslate?`<div style="display:flex;justify-content:flex-end;margin-bottom:6px"><button class="tbtn" id="tbtn" onclick="toggleTranslate()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> <span id="tbtn_l">${t('res.translate','Translate')}</span></button></div>`:''}
       ${combinedTimelineHTML(resultSteps, o.transcript||'', finalElapsed, {cls, title:vTitle, term:termLabel, ts:o.ts, used:(o.status==='pending'?'':(o.status==='completed'?t('res.used','1 check used'):t('res.nocharge','No charge for this one')))})}
     </div>
+    ${o.status==='pending' ? '' : `<div style="text-align:center;margin-top:2px"><button onclick="openSupportTopic('check_issue')" style="background:none;border:none;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer;font-family:inherit;padding:8px 6px">${t('res.report',"Something wrong with this check? Tell us")}</button></div>`}
     ${o.status==='pending' ? '' : (inStock ? inActions : '')}
     ${o.status==='pending' ? '' : upsell}`;
   $('result').classList.remove('hidden');

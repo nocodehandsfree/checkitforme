@@ -60,7 +60,7 @@ export interface LadderResult {
   conversationId: number;
 }
 
-export const SUPPORT_CATEGORIES = ["technical", "bug", "billing", "partnerships", "how_checks_work", "other"] as const;
+export const SUPPORT_CATEGORIES = ["technical", "bug", "check_issue", "billing", "partnerships", "how_checks_work", "other"] as const;
 export type SupportCategory = typeof SUPPORT_CATEGORIES[number];
 // Per-category nudge appended to the system prompt so the AI frames the answer for the intent. The
 // human path stays buried either way — these only shape how the AI tries first.
@@ -68,6 +68,7 @@ const CATEGORY_HINT: Record<string, string> = {
   billing: "This is a billing question. Answer from the plans and pricing passages. Only set needs_human for a real dispute or a change to their account you cannot make.",
   partnerships: "This is a partnership or business inquiry. Answer what the book covers; if it needs a real person to evaluate a deal, set needs_human after you've given what you can.",
   bug: "The user is reporting something broken. Help them try the obvious fixes first from the passages; if it's a genuine bug, set needs_human so they can attach details.",
+  check_issue: "The user is reporting that a check went wrong: a wrong or disconnected phone number we called, the wrong store, or a result that looks incorrect. Acknowledge it briefly and sincerely. Ask which store or check it was and what specifically was off if it is not already clear, then set needs_human true so the team can fix the store record and make it right. Do not promise a refund or credit; say the team will look into it and get back to them.",
   technical: "This is a technical/how-to question. Walk them through it from the passages.",
   how_checks_work: "They want to understand how checks work. Explain plainly from the book.",
   other: "",

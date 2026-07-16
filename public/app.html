@@ -2770,7 +2770,7 @@ async function fbCorrect(id,verdict){ const r=await api('/api/feedback/'+id+'/re
 // Support before changing shapes). Snapshot + filterable chat list + a transcript drawer with the
 // uploaded screenshot, auto-captured debug info, and the customer's account details. ----
 const SUP={range:'7d',cat:'',acct:'all',q:''};
-const SUP_CATS={technical:'Technical',bug:'Bug',billing:'Billing',partnerships:'Partnerships',how_checks_work:'How checks work',other:'Other'};
+const SUP_CATS={technical:'Technical',bug:'Bug',check_issue:'Check problem',billing:'Billing',partnerships:'Partnerships',how_checks_work:'How checks work',other:'Other'};
 let SUP_SEARCH_T=null;
 function supSetRange(v){ SUP.range=v; document.querySelectorAll('#sup_rangetrack button').forEach(b=>b.classList.toggle('on',b.dataset.r===v)); loadSupport(); }
 function supFilter(){ SUP.cat=(document.getElementById('sup_f_cat')||{}).value||''; SUP.acct=(document.getElementById('sup_f_acct')||{}).value||'all'; loadSupportChats(); }
