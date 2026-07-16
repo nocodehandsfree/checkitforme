@@ -325,10 +325,12 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
   // the inbox its own one-click unsubscribe, so we stay compliant without the confusing in-body link.
   const manageUrl = manageAlertsUrl();
   const kick = d.kickerColor;
+  // Gmail-only text recovery wrapper — full story at the comment block above the returned HTML.
+  const blend = (inner: string) => `<div class="gb-s"><div class="gb-d">${inner}</div></div>`;
   // Paragraphs whose tokens fill to nothing (e.g. no restock day heard) are dropped, not rendered as gaps.
   const bodyHtml = bodyLines.filter((p) => fill(p.replace(/\*\*/g, ""), tokens)).map((p, i) => i === 0
-    ? `<tr><td style="padding-top:15px;font-size:17px;line-height:1.5;${ink(BODY1)};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
-    : `<tr><td style="padding-top:16px;font-size:14px;line-height:1.5;${ink(BODY2)};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
+    ? `<tr><td style="padding-top:15px;font-size:17px;line-height:1.5;${ink(BODY1)};font-family:${FONT}">${blend(fillHtmlBold(p, tokens))}</td></tr>`
+    : `<tr><td style="padding-top:16px;font-size:14px;line-height:1.5;${ink(BODY2)};font-family:${FONT}">${blend(fillHtmlBold(p, tokens))}</td></tr>`).join("");
   const ctaLabel = `${escHtml(d.cta).toUpperCase()}&nbsp;&nbsp;&rarr;`;
   // Capsule CTA: green RING on the locked dark fill, off-white label (the site's button, screenshot-
   // approved). Outlook can't round a td, so MSO gets a VML roundrect (arcsize 50% = full capsule) with
@@ -353,15 +355,17 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
   // GMAIL TEXT RECOVERY (change #3, Rémi Parmentier's documented recipe,
   // hteumeuleu.com/2021/fixing-gmail-dark-mode-css-blend-modes): Gmail dims text colors even over the
   // locked background (it rewrites `color`, and strips -webkit-text-fill-color too). Fix: wrap the text
-  // regions in two divs — mix-blend-mode:screen over mix-blend-mode:difference, both bg #000. With the
+  // in two divs — mix-blend-mode:screen over mix-blend-mode:difference, both bg #000. With the
   // authored colors that compose to identity; when Gmail dark mode recolors the wrapper backgrounds,
   // the same math pushes the dimmed text back toward its bright original. The rules live in <style>
   // under a `u + .body` selector ONLY Gmail matches (it swaps the doctype for a <u>), so every other
-  // client renders plain unstyled divs. The logo image stays OUTSIDE the wrappers (blends would
-  // recolor image pixels in Gmail). GANGA (Gmail app, non-Google account) ignores <style> → falls
+  // client renders plain unstyled divs. GANGA (Gmail app, non-Google account) ignores <style> → falls
   // back to change #2's dimmed-but-readable render.
-  const blendOpen = `<div class="gb-s"><div class="gb-d">`;
-  const blendClose = `</div></div>`;
+  // SCOPE (change #4, owner's screenshot of #3): difference-blend INVERTS hue, so it may wrap ONLY
+  // neutral (white/gray) text — the owner's proof: the whole-card wrap turned the CTA into a white
+  // pill with a pink ring and the yellow kicker blue. Colored/filled pieces (kicker, CTA, modules,
+  // the logo image) stay OUTSIDE the wrappers: their locked dark fills + saturated colors render
+  // straight in Gmail (dimmed a touch, correct hue) and pixel-true everywhere else.
   return `<!doctype html>
 <html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -376,15 +380,15 @@ u + .body .gb-d { background:#000000; mix-blend-mode:difference; }</style>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BLACK}" style="max-width:600px;width:100%;${lock(BOARD)}">
       <tr><td bgcolor="${BLACK}" style="${lock(BOARD)};padding:30px 26px 0"><img src="https://checkitforme.com/logos/brand/check-brandmark-1024.png" width="40" height="40" alt="Check" style="display:block;width:40px;height:40px;border:0"></td></tr>
       <tr><td bgcolor="${BLACK}" style="${lock(BOARD)};padding:24px 26px 0">
-        ${blendOpen}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
           <tr><td style="font-size:11px;font-weight:700;letter-spacing:1.6px;${ink(kick)};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
-          <tr><td style="padding-top:12px;font-size:34px;font-weight:900;${ink(TXT)};line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
+          <tr><td style="padding-top:12px;font-size:34px;font-weight:900;${ink(TXT)};line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${blend(escHtml(fill(d.headline, tokens)))}</td></tr>
           ${bodyHtml}
           ${moduleHtml(d.module, tokens)}
           ${cta}
-        </table>${blendClose}
+        </table>
       </td></tr>
-      <tr><td bgcolor="${BLACK}" style="${lock(BOARD)};padding:26px 26px 34px;font-family:${FONT};font-size:12.5px;${ink(BODY2)}">${blendOpen}${footer}${blendClose}</td></tr>
+      <tr><td bgcolor="${BLACK}" style="${lock(BOARD)};padding:26px 26px 34px;font-family:${FONT};font-size:12.5px;${ink(BODY2)}">${blend(footer)}</td></tr>
     </table>
     <!--[if mso]></td></tr></table><![endif]-->
   </td></tr></table></body></html>`;
