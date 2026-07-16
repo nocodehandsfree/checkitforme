@@ -2,67 +2,44 @@
 
 > **Volatile file — update THIS at every "Checkpoint".**
 
-## 2026-07-11 — PRICING UPDATED (live prod + code + book)
-Plan checks/month raised (dollar prices unchanged): Family 15→20 · Collector 30→50 ·
-Hunter 100→125 · Operator 300→400. Applied 3 places: live prod config via `POST /api/admin/plans`
-(effective now, no Stripe republish since $ unchanged), `src/plans.ts` DEFAULT_PLANS (staging),
-and the book (plans.md + common-questions.md). SMS caps unchanged (5/15/40/150).
+## 2026-07-15 — Killed the fake "Contact page" (source + bot) + refreshed hero
+The support bot was telling users to "go to the Contact page." Root cause: the book's
+old Contact page + the site's /p/contact fed the RAG, overriding the system prompt.
+Fixed everywhere and verified:
+- **Book (v1.0, pushed):** Help page retitled "Get help" (Discord + in-app chat), dropped
+  the phantom Contact page. common-questions + payment-issues updated.
+- **Site (staging, pushed, tsc clean):** /p/contact retitled "Get help", leads with in-app
+  chat + Discord; every "Hit the Contact page" in Terms/Privacy (EN+ES) → chat/Discord.
+- **Bot re-indexed** (POST /api/support/reindex, 46 pages). Asked it "how do I contact you"
+  → now answers Help chat + Discord, no Contact page. ✓ verified live on staging.
+- **Hero refreshed:** Meet Check image → current staging app (subtle chat, cleaner layout),
+  new file book-home-v2.png (fresh name dodges ReadMe's image cache). Pushed to v1.0.
+- Screenshot rig rebuilt at scratchpad/shot2.mjs (playwright-core + curl-routed fetches;
+  direct chromium can't reach the net here). GET-only so it can never place a check.
 
-## 2026-07-11 — shipped to STAGING (deployed, verified)
-All code + copy now lives on `staging` (not a side branch — that was the mistake, corrected).
+## 2026-07-11 — Pricing + staging copy (still live)
+- Plan checks/month: Family 20 · Collector 50 · Hunter 125 · Operator 400 ($ unchanged).
+  Live prod config + src/plans.ts + book all match.
+- Footer: FAQ→**Guide** (book), Contact→**Help** (chat). /p/faq 301s to the book.
+- 45 ES parity keys added; em dashes pulled from sentences; "unlocked"→"ready"; Admin
+  "clerk"→"Staff". ⚠️ EN default strings are single-quoted JS — an apostrophe breaks the
+  whole <script>; run the node+vm inline-script check before pushing checkit.html.
+- Copy guides: COPY_STYLE_GUIDE scoped to Website; COPY_STYLE_GUIDE_ADMIN for Design.
+- Manuals on staging: ADMIN_MANUAL · WEBSITE_MANUAL · SYSTEM_MANUAL.
 
-**Site copy fixes (checkit.html + app.html), EN+ES:**
-- 45 Spanish parity keys added (Zones feature, referral, account, scores, schedule, toasts) via
-  an `Object.assign(I18N.es, {...})` right after the dict. Two hardcoded auth strings keyed
-  (`auth.wetexted/entercode/notget/resend/changenum`).
-- Em dashes removed from sentences (toast.toosoon EN+ES, sc.noinstock, toast.anytown).
-- Banned word: "unlocked" → "ready" (k.thanks.free).
-- Admin: "answer like a clerk" → "…like Staff" (app.html, 2 spots).
-- Warmer voice: toast.anytown, zones.nocredits, zones.up.sub, err.email.
-- ⚠️ TRAP: EN default strings are single-quoted JS. An apostrophe ("You're") breaks the whole
-  `<script>`. Escape it (`You\'re`) or reword. There's a syntax-check one-liner in the session
-  (node + vm compile of every inline script) — run it before pushing checkit.html.
+## ⏳ WAITING ON OWNER
+1. **Prod push OWNER-BATCHED** — do NOT promote staging→main piecemeal. Everything sits
+   verified on staging for the one big push. (Prod is still the "coming soon" gate.)
+2. **ReadMe appearance** — gradient header is live but reads too bright/flat. Recommended a
+   DARK gradient: Start #14532D (deep green) → End #0A0A0F, keep Brand/Links #4ADE80.
+   Font=Inter done. Nav-as-navigation = paid only (owner won't pay). Contrast ⚠️ harmless
+   on Dark theme. Logo/favicon = owner uploads.
+3. **Email copy** — Addie is building the email messages in Admin. When she's done (owner
+   pings), Copper writes ALL the copy for each one → owner hands to Addie to implement.
+4. **Book review** — owner going page by page; round-2 notes applied, more may come.
+5. **Rolling-out features** — when Delta multi-product / your-voice / store-holds ship,
+   update the book pages that still say "rolling out."
 
-**Footer / FAQ / About (checkit.html + server.ts):**
-- Footer: FAQ→**Guide** (opens the book), Contact→**Help** (opens the live support messenger).
-- `/p/faq` retired → 301 to the book (EN+ES page content removed). Messenger FAQ tab already
-  pulls the book's Top-15 (`/pub/support/faq` → getFaq()).
-- About page rewritten with the founder story + book link (EN+ES).
-
-**The book (branch v1.0 → readme.com), owner feedback pass:**
-- Kiosk: call confirms the machine is **on/working, not shut off** (not "stocked").
-- Exact products: reframed around **multiple products in one call** (Pokémon → One Piece → Topps NBA).
-- Your voice: removed the clone promise (rolling out).
-- Zone sweeps: "all at the same time" + add-by-radius.
-- Thrift: **old collections people got rid of**. Hobby is now its own Check+ row **below** Thrift.
-- Verdict page: added **Restock incoming** + fuller status grouping (from live /pub/statuses).
-- Hero image swapped to the **loaded store list** (52 open, Best Bets).
-- Top-15 FAQ page lives at slug `common-questions` (the messenger's FAQ source).
-
-**Copy guides:**
-- `COPY_STYLE_GUIDE.md` scoped to **Website**; notification rule no longer dictates color
-  (defers to Design). `COPY_STYLE_GUIDE_ADMIN.md` created for Claude Design's admin comp.
-- Internal manuals on staging: `docs/shared/ADMIN_MANUAL.md · WEBSITE_MANUAL.md · SYSTEM_MANUAL.md`.
-
-## ⏳ WAITING ON OWNER (Copper is tracking these; follow up if silent)
-1. **Prod push is OWNER-BATCHED** (07-11): do NOT promote staging→main piecemeal. Prod is way
-   behind + not going live yet; owner does ONE massive push later. Everything Copper shipped sits
-   verified on staging, ready for that push. Nothing to do here but wait.
-2. **ReadMe appearance** (free settings, dashboard-only — owner applies): sent transparent
-   `check-mark.png` (favicon) + `check.png` (logo). Recommended recipe delivered 07-11:
-   Layout Modern · Logo=check.png (delete old jpg) · Favicon=check-mark.png · Brand/Link color
-   #4ADE80 (fixes the contrast warning) · Theme Dark · Typography Bigger · Header Solid dark, no
-   triangle overlay. Deep CSS/nav = PAID tier → parked.
-3. **Book review** — owner going page by page; round-1 notes applied, more coming.
-4. **Voice polish** (deferred to his review): watch.left, cs.reach.menu, sup.faq.* wording.
-5. **Rolling-out features** — when Delta multi-product / your-voice / store-holds actually ship,
-   update the book pages that say "rolling out."
-6. **Public developer API** — asked, declined for now.
-
-_Follow-up scheduled (send_later) to re-surface this list if the owner goes quiet._
-
-## Flagged to other lanes (not owner's job, for awareness)
-- Admin → Calls → Schedules tab is blank (no section/loader).
-- MRR stat uses the legacy $4.99 constant (understates once anyone buys a bigger plan).
-- "Spend today" counter on the calling kill-switch is fed by nothing (reads 0).
-- qa-design: pre-existing off-palette colors in v2 scope.
+## Flagged to other lanes (awareness only)
+- Admin → Calls → Schedules tab blank. MRR stat uses legacy $4.99. Kill-switch "spend
+  today" reads 0. qa-design: off-palette colors in v2 scope.

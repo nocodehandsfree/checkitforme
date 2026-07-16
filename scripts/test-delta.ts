@@ -2,7 +2,7 @@
 // product type, skip whatever the clerk already named), the restock-day ask on a no, the clarify-once
 // rule, and the in/out verdict mapping. Pure function, no DB/network (run with dummy EL env so config
 // loads). The off-script "question" barge is handled in tapedeckStep, not here.
-import { deltaDecide } from "../src/calls/tapedeck";
+import { deltaDecide, deltaTurnTuning, deltaSilence } from "../src/calls/tapedeck";
 
 let fail = 0;
 const eq = (got: unknown, want: unknown, label: string) => {
@@ -40,6 +40,30 @@ eq(D("askedSet", "unclear", false, false, false, false).clip, 4, "set unclear an
 eq(D("askedType", "product").clip, 4, "answered the product type → wrap");
 eq(D("askedDay", "day").clip, 4, "answered the restock day → wrap");
 eq(D("askedType", "unclear").next, "done", "any askedType reply ends the call");
+
+// --- turn-taking tuning: the workflow's Beat + Reply timeout drive the Twilio Gather ---
+// Endpointing is seconds of trailing silence before we treat them as done. Floor 2s so a thinking
+// pause never cuts a clerk off mid-answer (owner 07-15: eager=1s hung up before "it's a tin").
+eq(deltaTurnTuning({}), { waitSecs: 10, endpoint: "3" }, "no tuning → 10s to start, 3s of thinking room");
+eq(deltaTurnTuning({ turnEagerness: "eager" }).endpoint, "2", "Beat eager → 2s of give (snappiest, still never cuts mid-word)");
+eq(deltaTurnTuning({ turnEagerness: "patient" }).endpoint, "5", "Beat patient → a full 5s pause allowed");
+eq(deltaTurnTuning({ turnEagerness: "normal" }).endpoint, "3", "Beat normal → 3s of give");
+eq(deltaTurnTuning({ turnTimeout: 45 }).waitSecs, 20, "Charlie's 45s reply timeout clamps to Delta's 20s cap");
+eq(deltaTurnTuning({ turnTimeout: 1 }).waitSecs, 4, "reply-to-start floors at 4s");
+eq(deltaTurnTuning({ turnTimeout: 10 }).waitSecs, 10, "in-range reply timeout passes through");
+eq(deltaTurnTuning({ turnTimeout: "nope" }), { waitSecs: 10, endpoint: "3" }, "garbage tuning falls back to defaults");
+
+// --- silence: DEAD AIR vs a HELD line are different (owner 07-15) ---
+// Dead air (nobody spoke) → "Hello? You still there?" (clip 7), NEVER "take your time".
+eq(deltaSilence({ stage: "askedSet", silence: 1 }), { action: "nudge", clip: 7 }, "dead air → 'you still there?' (clip 7), not 'take your time'");
+eq(deltaSilence({ stage: "askedType", silence: 2 }), { action: "nudge", clip: 7 }, "2nd dead-air turn → still checking they're there");
+eq(deltaSilence({ stage: "askedType", silence: 3 }), { action: "wrap", clip: 8 }, "3rd dead-air turn → neutral wrap (nobody's home)");
+// Held line (clerk said "hold on, let me check", onHold) → wait quietly, don't nag.
+eq(deltaSilence({ stage: "askedSet", silence: 1, onHold: true }), { action: "holdwait", clip: -1 }, "on hold → wait quietly, no clip (they're checking)");
+eq(deltaSilence({ stage: "askedSet", silence: 2, onHold: true }), { action: "holdwait", clip: -1 }, "still on hold → keep waiting quietly");
+eq(deltaSilence({ stage: "askedSet", silence: 3, onHold: true }), { action: "nudge", clip: 7 }, "long hold → one gentle 'still there?'");
+eq(deltaSilence({ stage: "askedSet", silence: 4, onHold: true, canBarge: true }), { action: "barge", clip: -1 }, "dragging hold on a real store call → Charlie sits it out");
+eq(deltaSilence({ stage: "askedSet", silence: 4, onHold: true, canBarge: false }), { action: "wrap", clip: 8 }, "dragging hold with no barge (bench) → neutral wrap");
 
 if (fail) { console.error(`delta: ${fail} test(s) FAILED`); process.exit(1); }
 console.log("delta: all passed");

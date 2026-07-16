@@ -20,9 +20,9 @@ import { config } from "./config";
 import { assertProdSecurity } from "./security-checks";
 import { bootstrap } from "./db/bootstrap";
 import { allSettings, getSetting, setSetting } from "./db/settings";
-import { importZonesData, geocodeMissing, backfillDirectChains } from "./db/import-data";
+import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
-import { applyStoreSync, storeSyncTick, syncStatus } from "./store-sync";
+import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -50,7 +50,8 @@ import { check as rlCheck, clientIp, LIMITS } from "./ratelimit";
 import { isGmailConfigured, gmailReceiptTick, debugRecentInbox } from "./gmail-receipts";
 import { rankBets } from "./best-bet";
 import { referralStatus, claimReferral } from "./referrals";
-import { sendAlert, sendAnonEmail, sendTestAlert, alertSubscribe, myAlerts, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
+import { sendAlert, sendAnonEmail, sendTestAlert, sendOwnerInStockEmail, sendConfirmEmail, checkEmailToken, alertSubscribe, myAlerts, alertMute, getAlertTemplatesPublic, setAlertTemplates, monthKey, fanoutRestock } from "./alerts";
+import { ownerAlertPrefs } from "./calls/notify";
 
 /** 409-style gate: returns a closed payload if we KNOW the store is closed right now, else null. */
 async function closedGate(retailerId: number): Promise<{ error: string; label: string } | null> {
@@ -75,6 +76,19 @@ async function requesterIsComp(authHeader?: string): Promise<boolean> {
     const a = await getAccount(u.id, u.email);
     return isCompAccount(a) || isComp(u.email || undefined);
   } catch { return false; }
+}
+
+/** Premium feature map for the requester (empty when signed-out / PAYG). `any_town` = search past the
+ *  free radius cap (Check Plus). Comp/owner → all features on. */
+async function requesterFeatures(authHeader?: string): Promise<Record<string, boolean>> {
+  if (!authHeader) return {};
+  try {
+    const u = await verifyClerkToken(authHeader);
+    if (!u) return {};
+    const a = await getAccount(u.id, u.email);
+    const comp = isCompAccount(a) || isComp(u.email || undefined);
+    return await accountFeatures(a?.subTier, comp);
+  } catch { return {}; }
 }
 
 /** Is this an owner-only demo store ("Fun")? Used to 404 it for everyone but the master account. */
@@ -480,7 +494,7 @@ app.get("/s", (c) => {
 
 // Static content pages (about/contact/terms/privacy) — branded, owner-editable via policy.pages.
 // (FAQ retired → the book / the messenger FAQ tab; see the /p/faq redirect below.)
-const PAGE_TITLES: Record<string, string> = { about: "About", contact: "Contact", terms: "Terms of Service", privacy: "Privacy Policy" };
+const PAGE_TITLES: Record<string, string> = { about: "About", contact: "Get help", terms: "Terms of Service", privacy: "Privacy Policy" };
 // Real, shipped content for the legal/info pages so none of them read "coming soon". Owner-overridable
 // per brand via policy.pages (a non-empty override wins); this is the version-controlled fallback that
 // serves on every brand + environment. Rendered inside .body — plain HTML (<h2>/<p>/<ul>) only.
@@ -496,7 +510,7 @@ const DEFAULT_PAGES: Record<string, string> = {
 <p>We only cover the stuff that truly sells out and rewards the hunt: Pokémon, One Piece, Topps NBA, and NeeDoh. And you only pay when we get you a real answer. No answer, no charge. That one is wired into the system, not printed on a poster.</p>
 <h2 ${H2}>Want the deep version?</h2>
 <p>How it all works, top to bottom, lives in the book: <a href="${RM}" target="_blank" rel="noopener">checkitforme.readme.io</a>.</p>`,
-  contact: `<p>Fastest way to reach us is <b>Discord</b>. Our support bot answers the common stuff in seconds, any time. A human picks up the rest.</p>
+  contact: `<p>Two fast ways to reach a human. Tap <b>Help</b> in the footer to open the chat, or hop into our <b>Discord</b>. The support bot answers the common stuff in seconds, any time, and a person picks up the rest.</p>
 <p>Want a store added? Do it right in the app. Account, then Earn, then <i>Add your store</i>. When a store you asked for goes live, your next check is on us.</p>
 <p>We skip phone and email support on purpose. Low overhead is how checks stay cheap.</p>`,
   terms: `<p>By using <b>Check It For Me</b> (checkitforme.com) you're good with these terms. If not, no hard feelings. Just don't use it.</p>
@@ -509,7 +523,7 @@ const DEFAULT_PAGES: Record<string, string> = {
 <h2 ${H2}>The fine print</h2>
 <p>The service is "as is." As far as the law allows, we're not on the hook for a missed item, a wrong answer, or a wasted trip. If it ever comes to it, our max liability is what you paid us in the last 30 days.</p>
 <h2 ${H2}>Changes</h2>
-<p>We may update these terms. Keep using the app and that's a yes. Questions? Hit the Contact page.</p>
+<p>We may update these terms. Keep using the app and that's a yes. Questions? Ask us in the app chat or on Discord.</p>
 <p style="margin-top:22px"><a href="/p/privacy" onclick="if(window.openPage){openPage('privacy');return false}">Privacy Policy →</a></p>`,
   privacy: `<p>Here's what <b>Check It For Me</b> (checkitforme.com) collects, and why. Short version: we grab what we need to run your checks. We don't sell your info.</p>
 <h2 ${H2}>What we collect</h2>
@@ -524,12 +538,12 @@ const DEFAULT_PAGES: Record<string, string> = {
 <h2 ${H2}>Who sees it</h2>
 <p>Only the vendors that make it work. A voice provider to place calls, a sign-in provider, and Stripe for payments. They handle it for us under their own terms. We do not sell your personal info.</p>
 <h2 ${H2}>Your data, your call</h2>
-<p>We keep your account and history until you ask us to delete it. Want a copy, or a delete? Hit the Contact page. You can turn off location any time in your browser.</p>`,
+<p>We keep your account and history until you ask us to delete it. Want a copy, or a delete? Ask us in the app chat or on Discord. You can turn off location any time in your browser.</p>`,
 };
 // Hand-written Spanish for the footer pages (copy law 3: every string ships its Spanish). Same voice,
 // no dashes, fewest words. Served whenever the app asks with ?lang=es; the owner's policy.pages
 // overrides are English-only, so Spanish always comes from here.
-const PAGE_TITLES_ES: Record<string, string> = { about: "Acerca de", contact: "Contacto", terms: "Términos del servicio", privacy: "Política de privacidad" };
+const PAGE_TITLES_ES: Record<string, string> = { about: "Acerca de", contact: "Ayuda", terms: "Términos del servicio", privacy: "Política de privacidad" };
 const DEFAULT_PAGES_ES: Record<string, string> = {
   about: `<p><b>Check It For Me</b> averigua si lo que buscas de verdad está en el estante. Por teléfono. Para que no cruces la ciudad por nada.</p>
 <p>Eliges una tienda y un producto. Check AI llama a la tienda, pregunta a una persona real y te manda la respuesta. Llamada real, respuesta directa. Sin bots que se hacen pasar por ti, sin refrescar una página toda la noche.</p>
@@ -540,7 +554,7 @@ const DEFAULT_PAGES_ES: Record<string, string> = {
 <p>Solo cubrimos lo que de verdad se agota y premia la cacería: Pokémon, One Piece, Topps NBA y NeeDoh. Y solo pagas cuando te conseguimos una respuesta real. Sin respuesta, sin cargo. Eso está en el sistema, no en un póster.</p>
 <h2 ${H2}>¿Quieres la versión completa?</h2>
 <p>Cómo funciona todo, de arriba a abajo, está en el libro: <a href="${RM}" target="_blank" rel="noopener">checkitforme.readme.io</a>.</p>`,
-  contact: `<p>La forma más rápida de contactarnos es <b>Discord</b>. Nuestro bot de soporte responde lo común en segundos, a cualquier hora. Un humano atiende el resto.</p>
+  contact: `<p>Dos formas rápidas de hablar con una persona. Toca <b>Ayuda</b> en el pie para abrir el chat, o entra a nuestro <b>Discord</b>. El bot de soporte responde lo común en segundos, a cualquier hora, y una persona atiende el resto.</p>
 <p>¿Quieres agregar una tienda? Hazlo en la app. Cuenta, luego Gana, luego <i>Agrega tu tienda</i>. Cuando tu tienda esté disponible, tu próxima verificación va por nuestra cuenta.</p>
 <p>No damos soporte por teléfono ni correo a propósito. Con gastos bajos, las verificaciones siguen baratas.</p>`,
   terms: `<p>Al usar <b>Check It For Me</b> (checkitforme.com) aceptas estos términos. Si no, no pasa nada. Solo no lo uses.</p>
@@ -553,7 +567,7 @@ const DEFAULT_PAGES_ES: Record<string, string> = {
 <h2 ${H2}>La letra chica</h2>
 <p>El servicio se ofrece "tal cual". Hasta donde la ley lo permite, no respondemos por un artículo perdido, una respuesta equivocada o un viaje en vano. Si llegara el caso, nuestra responsabilidad máxima es lo que nos pagaste en los últimos 30 días.</p>
 <h2 ${H2}>Cambios</h2>
-<p>Podemos actualizar estos términos. Si sigues usando la app, es un sí. ¿Preguntas? Ve a la página de Contacto.</p>
+<p>Podemos actualizar estos términos. Si sigues usando la app, es un sí. ¿Preguntas? Escríbenos en el chat de la app o en Discord.</p>
 <p style="margin-top:22px"><a href="/p/privacy" onclick="if(window.openPage){openPage('privacy');return false}">Política de privacidad →</a></p>`,
   privacy: `<p>Esto es lo que <b>Check It For Me</b> (checkitforme.com) recopila, y para qué. Versión corta: tomamos lo necesario para hacer tus verificaciones. No vendemos tu información.</p>
 <h2 ${H2}>Qué recopilamos</h2>
@@ -568,7 +582,7 @@ const DEFAULT_PAGES_ES: Record<string, string> = {
 <h2 ${H2}>Quién la ve</h2>
 <p>Solo los proveedores que hacen que funcione. Un proveedor de voz para las llamadas, uno de inicio de sesión y Stripe para pagos. La manejan por nosotros bajo sus propios términos. No vendemos tu información personal.</p>
 <h2 ${H2}>Tus datos, tú decides</h2>
-<p>Guardamos tu cuenta e historial hasta que pidas borrarlos. ¿Quieres una copia, o borrar todo? Ve a la página de Contacto. Puedes apagar la ubicación cuando quieras en tu navegador.</p>`,
+<p>Guardamos tu cuenta e historial hasta que pidas borrarlos. ¿Quieres una copia, o borrar todo? Escríbenos en el chat de la app o en Discord. Puedes apagar la ubicación cuando quieras en tu navegador.</p>`,
 };
 // FAQ retired → the book (the one FAQ source of truth; the messenger FAQ tab reads it too).
 // Registered before /p/:slug so it wins.
@@ -897,17 +911,60 @@ app.get("/auth/callerid/status", async (c) => {
 app.post("/app/email", async (c) => {
   const u = await verifyClerkToken(c.req.header("Authorization"));
   if (!u) return c.json({ error: "unauthorized" }, 401);
-  const { email } = await c.req.json().catch(() => ({}));
+  const { email, lang } = await c.req.json().catch(() => ({}));
   const e = String(email || "").trim().toLowerCase();
   if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return c.json({ error: "invalid_email" }, 400);
+  const language = lang === "es" ? "es" : lang === "en" ? "en" : undefined; // the site sends its LANG; keep whatever's there otherwise
   const before = await getAccount(u.id);
-  const isFirstEmail = e && !before?.email; // going from no email → an email = time for the welcome
-  await db.update(accounts).set({ email: e || null }).where(eq(accounts.clerkUserId, u.id));
+  const changed = e !== (before?.email || ""); // new or different address → it needs confirming again
+  await db.update(accounts).set({ email: e || null, ...(language ? { language } : {}), ...(changed ? { emailVerifiedAt: null } : {}) }).where(eq(accounts.clerkUserId, u.id));
   // Opt-in email → Brevo (newsletter/alerts). Fire-and-forget so the UI isn't blocked on Brevo.
   if (e) brevoUpsertContact(e, { PHONE: u.phone || "" }).catch(() => {});
-  // First time we have an address to reach them → send the branded welcome (first check on us).
-  if (isFirstEmail) { try { await sendAlert(u.id, "welcome", {}, { to: e }); } catch { /* never block saving the email */ } }
-  return c.json({ ok: true, email: e || null });
+  // New/changed address → ask them to confirm it (in their language). No alert email flows until they tap.
+  if (e && changed) { try { await sendConfirmEmail(u.id, e, language || (before?.language === "es" ? "es" : "en")); } catch { /* never block saving the email */ } }
+  return c.json({ ok: true, email: e || null, verified: !changed && !!before?.emailVerifiedAt });
+});
+
+// ---- Email confirm + one-click unsubscribe (the two live links every alert email carries) ----
+// Tiny branded landing page (dark board, wordmark, one line + Spanish, one CTA back to the site).
+function emailLandingPage(title: string, line: string, lineEs: string, cta: string): string {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} · Check It For Me</title>
+<style>body{margin:0;background:#08090D;color:#fff;font-family:Inter,'Segoe UI',Arial,sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center}
+.card{max-width:420px;margin:16px;background:#14141A;border-radius:26px;padding:34px 36px}
+h1{font-size:30px;font-weight:900;letter-spacing:-1px;margin:18px 0 0}p{color:#B9B9C4;font-size:15px;line-height:1.5;margin:14px 0 0}.es{color:#8A8A96;font-size:13px}
+a.cta{display:block;text-align:center;margin-top:26px;background:#16161C;border:2px solid #4ADE80;border-radius:999px;padding:17px 24px;color:#fff;font-weight:800;font-size:13px;letter-spacing:1.6px;text-decoration:none;text-transform:uppercase}</style></head>
+<body><div class="card"><img src="/logos/brand/check.png" alt="Check" style="height:26px;display:block">
+<h1>${title}</h1><p>${line}</p><p class="es">${lineEs}</p><a class="cta" href="/">${cta}&nbsp;&nbsp;&rarr;</a></div></body></html>`;
+}
+// Confirm: the signed link from the confirm email. Marks every account carrying this address verified.
+app.get("/confirm-email", async (c) => {
+  const e = String(c.req.query("e") || "").trim().toLowerCase();
+  if (!e || !checkEmailToken(e, String(c.req.query("t") || ""))) {
+    return c.html(emailLandingPage("That link didn't work.", "It may have expired. Add your email again on the site and we'll send a fresh one.", "Puede que haya caducado. Agrega tu correo otra vez en el sitio y te enviamos uno nuevo.", "Back to the site"), 400);
+  }
+  await db.update(accounts).set({ emailVerifiedAt: Math.floor(Date.now() / 1000) }).where(eq(accounts.email, e));
+  return c.html(emailLandingPage("You're set.", "Your email is confirmed. Alerts land right here from now on.", "Tu correo está confirmado. Tus alertas llegarán aquí de ahora en adelante.", "Back to the site"));
+});
+// Unsubscribe: signed one-click. Kills every EMAIL alert for this address (subscriptions + watches)
+// and un-verifies it so nothing else emails them until they re-confirm. GET renders the page;
+// POST serves RFC 8058 one-click (the List-Unsubscribe-Post header) — same effect, no body needed.
+async function unsubscribeEmail(e: string): Promise<void> {
+  const owners = await db.select().from(accounts).where(eq(accounts.email, e));
+  for (const a of owners) {
+    await db.update(alertSubscriptions).set({ active: 0 }).where(and(eq(alertSubscriptions.userId, a.clerkUserId), eq(alertSubscriptions.channel, "email")));
+  }
+  await db.update(accounts).set({ emailVerifiedAt: null }).where(eq(accounts.email, e));
+  await db.update(watches).set({ active: false }).where(eq(watches.contact, e));
+}
+// The human unsubscribe click goes straight to the Alerts sheet — they mute or stop the exact alert
+// there (owner 07-16: no unsubscribe landing page, no blanket kill). The POST below stays: it's the
+// RFC 8058 one-click header path mail apps call machine-to-machine.
+app.get("/unsubscribe", async (c) => c.redirect("/?alerts=1"));
+app.post("/unsubscribe", async (c) => {
+  const e = String(c.req.query("e") || "").trim().toLowerCase();
+  if (!e || !checkEmailToken(e, String(c.req.query("t") || ""))) return c.json({ error: "bad_token" }, 400);
+  await unsubscribeEmail(e);
+  return c.json({ ok: true });
 });
 
 // Clerk-free admin login: visit /admin-login?token=ADMIN_TOKEN once → sets a signed httpOnly
@@ -1477,7 +1534,15 @@ app.get("/pub/stores/near", async (c) => {
   const state = (c.req.query("state") || "").trim().toUpperCase();
   const q = (c.req.query("q") || "").trim().toLowerCase();
   if (!hasLoc && !state && !q) return c.json({ error: "lat+lng (or state / q) required" }, 400);
-  const radius = Math.min(Math.max(Number(c.req.query("radius") || 25), 0.5), 150); // 0.5 = the new half-mile consumer stop (owner 07-14)
+  // Radius ladder (owner 2026-07-11): 0.5 / 1 / 2 / 5 / 10 mi. Free + PAYG cap at 10mi; the "any_town"
+  // entitlement (Check Plus) unlocks the full range (zoom anywhere). A capped request that finds nothing
+  // dialable still gets the single nearest callable store (rural fallback below) so the screen isn't blank.
+  const anyTown = ((await requesterFeatures(c.req.header("Authorization"))).any_town === true);
+  const FREE_MAX_MI = 10, HARD_MAX_MI = 150, DEFAULT_MI = 5;
+  const maxRadius = anyTown ? HARD_MAX_MI : FREE_MAX_MI;
+  const wantRadius = Math.max(Number(c.req.query("radius") || DEFAULT_MI), 0.5);
+  const radius = Math.min(wantRadius, maxRadius);
+  const radiusCapped = wantRadius > maxRadius; // UI surfaces the Check Plus upsell when true
   const limit = Math.min(Math.max(Number(c.req.query("limit") || 60), 1), 200);
   const offset = Math.max(Number(c.req.query("offset") || 0), 0);
   // 🔒 Text-search hardening (data-exposure lockdown): the q-only path is the one way to page the store
@@ -1584,17 +1649,8 @@ app.get("/pub/stores/near", async (c) => {
     const ownerStores = await db.select().from(retailers).where(and(eq(retailers.active, true), eq(retailers.ownerOnly, true)));
     for (const o of ownerStores) if (!have.has(o.id)) rows.push(o);
   }
-  const all = rows
-    .filter((r) => comp || !r.ownerOnly)
-    // Muted chains never surface — except Thrift-type chains when the Thrift chip explicitly opted in.
-    .filter((r) => !(r.chainId && mutedChains.has(r.chainId)) || (thriftOptIn && r.chainId != null && types.get(r.chainId) === "Thrift"))
-    .filter((r) => !mode
-      || (mode === "call" && callable(r))
-      || (mode === "kiosk" && r.hasKiosk === true)
-      || (mode === "site" && r.chainId != null && stockMethod.get(r.chainId) === "site"))
-    .filter((r) => !typeF || (((r.chainId && types.get(r.chainId)) || "Other") === typeF))
-    .filter((r) => !q || qTokenMatch(`${r.name} ${r.location || ""}`, q))
-    .map((r) => {
+  // Per-store consumer shape — shared by the main list and the rural fallback so both emit identical rows.
+  const shape = (r: typeof retailers.$inferSelect) => {
       const miles = hasLoc && r.lat != null && r.lng != null ? Math.round(haversineMi(lat, lng, r.lat, r.lng) * 10) / 10 : null;
       const chainName = (r.chainId && names.get(r.chainId)) || r.name.split(/—|–| - /)[0];
       return { id: r.id, chainId: r.chainId, name: r.name, location: r.location, address: r.address || null, storeType: (r.chainId && types.get(r.chainId)) || "Other",
@@ -1614,10 +1670,39 @@ app.get("/pub/stores/near", async (c) => {
         isMSRP: r.chainId ? isMSRPByChain.get(r.chainId) !== false : true, // false = third-party, may exceed MSRP
         mapsUri: r.mapsUri || null,
         reach: reachFor(r.chainId), // time-to-a-human: {kind:"direct"} | {kind:"menu",seconds} | null (unmapped → show nothing)
+        beyondRadius: false as boolean, // set true only on the rural-fallback store (nearest dialable past the radius)
         miles, openState: openState(r.hours, r.timezone) };
-    })
+  };
+  const all = rows
+    .filter((r) => comp || !r.ownerOnly)
+    // Muted chains never surface — except Thrift-type chains when the Thrift chip explicitly opted in.
+    .filter((r) => !(r.chainId && mutedChains.has(r.chainId)) || (thriftOptIn && r.chainId != null && types.get(r.chainId) === "Thrift"))
+    .filter((r) => !mode
+      || (mode === "call" && callable(r))
+      || (mode === "kiosk" && r.hasKiosk === true)
+      || (mode === "site" && r.chainId != null && stockMethod.get(r.chainId) === "site"))
+    .filter((r) => !typeF || (((r.chainId && types.get(r.chainId)) || "Other") === typeF))
+    .filter((r) => !q || qTokenMatch(`${r.name} ${r.location || ""}`, q))
+    .map(shape)
     .filter((r) => r.ownerOnly || !hasLoc || r.miles == null || r.miles <= radius) // owner-only store is never distance-filtered
     .sort((a, b) => (a.miles ?? 9e9) - (b.miles ?? 9e9) || a.name.localeCompare(b.name));
+  // Rural fallback: nothing dialable inside the radius → surface the single NEAREST callable+ready store
+  // (up to 40mi out) so a rural screen is never blank. Only runs when the in-radius set has none, so it's
+  // free in dense metros. Flagged beyondRadius so the UI can badge the distance / prompt Check Plus.
+  let fallbackStore: ReturnType<typeof shape> | null = null;
+  if (hasLoc && !mode && !all.some((r) => r.callable && r.callReady)) {
+    const wide = bboxAround(lat, lng, 40);
+    const near = (await db.select().from(retailers).where(and(
+      eq(retailers.active, true),
+      gte(retailers.lat, wide.latMin), lte(retailers.lat, wide.latMax),
+      gte(retailers.lng, wide.lngMin), lte(retailers.lng, wide.lngMax),
+    )))
+      .filter((r) => !(r.chainId && mutedChains.has(r.chainId)) && callable(r) && r.lat != null && r.lng != null)
+      .map((r) => ({ r, mi: haversineMi(lat, lng, r.lat as number, r.lng as number) }))
+      .filter((x) => x.mi > radius)
+      .sort((a, b) => a.mi - b.mi);
+    for (const x of near) { const s = shape(x.r); if (s.callReady) { s.beyondRadius = true; fallbackStore = s; break; } }
+  }
   // Owner-only stores are pinned into the response (never lost to the distance sort + page limit),
   // so the owner always gets the "Fun" store no matter how far away they are.
   const owned = all.filter((r) => r.ownerOnly);
@@ -1636,7 +1721,10 @@ app.get("/pub/stores/near", async (c) => {
   }
   const pinIds = new Set([...owned, ...nearestT5].map((r) => r.id));
   const rest = all.filter((r) => !r.ownerOnly && !pinIds.has(r.id));
-  return c.json({ total: all.length, offset, limit, stores: [...owned, ...nearestT5, ...rest.slice(offset, offset + limit)] });
+  const stores = [...owned, ...nearestT5, ...rest.slice(offset, offset + limit)];
+  if (fallbackStore && !stores.some((s) => s.id === fallbackStore!.id)) stores.push(fallbackStore);
+  // radiusMax + radiusCapped let the UI cap the picker and prompt Check Plus; beyondRadius flags the rural pin.
+  return c.json({ total: all.length + (fallbackStore ? 1 : 0), offset, limit, radiusMax: maxRadius, radiusCapped, stores });
 });
 
 // Single-store fetch (consumer): backfills address/logo/hours for a REOPENED call whose store sits
@@ -2793,7 +2881,8 @@ app.get("/pub/result/:cid", async (c) => {
     else {
       const row = (await db.select().from(callResults).where(eq(callResults.providerCallId, cid)))[0];
       if (row && row.status !== "dialing" && row.status !== "in_progress" && row.status !== "queued") {
-        return c.json({ status: row.status, confirmed: row.confirmed, statusKey: row.statusKey, productDetail: row.productDetail, summary: row.summary ?? "", transcript: row.transcript ?? "" });
+        // ts rides EVERY result branch — the verdict page shows the call's date/time on all statuses (owner 07-16).
+        return c.json({ status: row.status, confirmed: row.confirmed, statusKey: row.statusKey, productDetail: row.productDetail, summary: row.summary ?? "", transcript: row.transcript ?? "", ts: (row.startedAt || 0) * 1000 });
       }
       return c.json({ status: "in_progress", transcript: "", summary: "" });
     }
@@ -2989,17 +3078,17 @@ app.get("/app/me", async (c) => {
   if (a && !a.phone && u.phone) {
     await db.update(accounts).set({ phone: u.phone }).where(eq(accounts.clerkUserId, u.id)); a.phone = u.phone;
   }
-  // premiumAsks entitlement (Hunter tier) — the call path / Website consume this to allow exact
-  // set/product/price questions. Comp accounts get everything.
-  // Premium entitlements (subscription-only): per-feature map the UI gates on, plus premiumAsks
-  // (= features.exact_products) for the call path. Comp -> all; PAYG/free -> none.
+  // Premium entitlements (subscription-only): per-feature map the UI gates on. premiumAsks (exact
+  // set/product/price questions on the call) is for EVERY account since 2026-07-15 (owner).
   const features = await accountFeatures(a?.subTier, comp);
-  const premiumAsks = features.exact_products === true;
+  const premiumAsks = true;
   return c.json({
     // Displayed balance = subscription quota + PAYG (both spendable). quota/payg broken out for the UI.
     credits: comp ? 9999 : spendableCredits(a), subscription: comp ? "active" : (a?.subscription ?? "none"),
     subTier: comp ? "founder" : (a?.subTier ?? null), quota: comp ? 9999 : (a?.quotaCredits ?? 0), payg: comp ? 9999 : (a?.credits ?? 0), premiumAsks, features,
     comp, callsMade: a?.callsMade ?? 0, phone: a?.phone ?? null,
+    // Alerts email UI (Addie 07-15): the saved address + whether the confirm link was tapped.
+    email: a?.email ?? null, emailVerified: !!a?.emailVerifiedAt,
     // caller_id is only set after Twilio's caller-ID verify call → the "create your agent" panel uses
     // callerIdReady to know whether to prompt for it.
     callerId: a?.callerId ?? null, callerIdReady: !!a?.callerId,
@@ -3232,6 +3321,9 @@ app.post("/app/schedule", async (c) => {
   if (!isCompAccount(a) && a?.subscription !== "active") return c.json({ error: "members_only" }, 402);
   const b = await c.req.json();
   if (!b.retailerId || !b.categoryId) return c.json({ error: "retailerId and categoryId required" }, 400);
+  // The site sends its language with the signup — store it so this account's alerts go out in it.
+  const schedLang = b.lang === "es" ? "es" : b.lang === "en" ? "en" : undefined;
+  if (schedLang) await db.update(accounts).set({ language: schedLang }).where(eq(accounts.clerkUserId, u.id));
   const row = await createSchedule(u.id, { ...b, contact: b.contact || a?.email || undefined });
   return c.json({ ok: true, schedule: row });
 });
@@ -3744,8 +3836,10 @@ app.post("/api/admin/reset-rotation", async (c) => {
   const b = await c.req.json().catch(() => ({} as Record<string, unknown>));
   const wf = typeof b.workflow === "string" && b.workflow.trim() ? b.workflow.trim() : "";
   // Reset the workflow's own counters (bridge / listen-live path) AND the global ones (scheduled path),
-  // so the next call starts at opener #1 AND voice #1 no matter which path places it.
-  const keys = wf ? ["opener:" + wf, "opener", "voice:" + wf, "voice"] : ["opener", "voice"];
+  // so the next call starts at opener #1 AND voice #1 no matter which path places it. Delta shares the
+  // same opener/voice counters and adds one per line slot (fu:<wf>:<slot>) — reset those too.
+  const FU_SLOTS = ["set", "type", "no", "wrap", "wrapNo", "clarify", "hello", "escalate"];
+  const keys = wf ? ["opener:" + wf, "opener", "voice:" + wf, "voice", ...FU_SLOTS.map((s) => `fu:${wf}:${s}`)] : ["opener", "voice"];
   keys.forEach(resetRotation);
   return c.json({ ok: true, keys, workflow: wf || null });
 });
@@ -4689,6 +4783,9 @@ app.post("/app/alerts/subscribe", async (c) => {
   if (!u) return c.json({ error: "unauthorized" }, 401);
   const b = await c.req.json().catch(() => ({}));
   await getAccount(u.id, u.email || undefined);
+  // The site sends its language with the signup — store it so this account's alerts go out in it.
+  const subLang = b.lang === "es" ? "es" : b.lang === "en" ? "en" : undefined;
+  if (subLang) await db.update(accounts).set({ language: subLang }).where(eq(accounts.clerkUserId, u.id));
   const r = await alertSubscribe(u.id, {
     kind: b.kind ? String(b.kind) : "restock",
     retailerId: b.retailerId != null ? Number(b.retailerId) : null,
@@ -4703,18 +4800,67 @@ app.get("/app/alerts/me", async (c) => {
   if (!u) return c.json({ error: "unauthorized" }, 401);
   return c.json(await myAlerts(u.id));
 });
+// Turn one alert off (the My Checks alerts sheet). Only the caller's own subscriptions.
+app.post("/app/alerts/unsubscribe", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const { id } = await c.req.json().catch(() => ({}));
+  if (!id) return c.json({ error: "id required" }, 400);
+  await db.update(alertSubscriptions).set({ active: 0 }).where(and(eq(alertSubscriptions.id, Number(id)), eq(alertSubscriptions.userId, u.id)));
+  return c.json(await myAlerts(u.id));
+});
+// Mute = pause without losing the alert (owner 07-16): stays on the sheet, never sends until unmuted.
+app.post("/app/alerts/mute", async (c) => {
+  const u = await verifyClerkToken(c.req.header("Authorization"));
+  if (!u) return c.json({ error: "unauthorized" }, 401);
+  const { id, muted } = await c.req.json().catch(() => ({}));
+  if (!id) return c.json({ error: "id required" }, 400);
+  return c.json(await alertMute(u.id, Number(id), !!muted));
+});
 
 // ---- Admin: editable alert message templates + the send log (tracking) ----
 app.get("/api/alerts/templates", async (c) => c.json(await getAlertTemplatesPublic()));
 // Admin: fire one template to yourself with sample data — the fastest way to eyeball a real send.
 app.post("/api/alerts/test", async (c) => {
   const b = await c.req.json().catch(() => ({}));
-  const event = String(b.event || "welcome");
+  const event = String(b.event || "confirm_email");
   const to = String(b.to || "").trim();
-  if (!["restock", "store_added", "waitlist", "welcome"].includes(event)) return c.json({ error: "bad_event" }, 400);
+  const channel = b.channel === "email" ? "email" as const : b.channel === "sms" ? "sms" as const : undefined;
   if (!to) return c.json({ error: "recipient required" }, 400);
-  const r = await sendTestAlert(event as "restock" | "store_added" | "waitlist" | "welcome", to);
+  // The hands-free owner ping (call confirmed stock) is its own template, email only.
+  if (event === "instock_owner") {
+    return c.json(await sendOwnerInStockEmail(to, { store: "Target Glendale", product: "151 Booster Box", day: "Tuesdays", url: "https://checkitforme.com" }, { test: true }));
+  }
+  if (!["restock", "store_added", "waitlist", "confirm_email", "auto_check"].includes(event)) return c.json({ error: "bad_event" }, 400);
+  const r = await sendTestAlert(event as "restock" | "store_added" | "waitlist" | "confirm_email" | "auto_check", to, channel);
   return c.json(r);
+});
+// Owner's hands-free in-stock ping: address + channel, editable live (settings beat the env defaults).
+app.get("/api/admin/owner-alert", async (c) => c.json(await ownerAlertPrefs()));
+app.post("/api/admin/owner-alert", async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  if (b.email !== undefined) {
+    const e = String(b.email || "").trim().toLowerCase();
+    if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return c.json({ error: "invalid_email" }, 400);
+    await setSetting("owner_alert_email", e);
+  }
+  if (b.channel !== undefined) {
+    const ch = String(b.channel);
+    if (!["email", "sms"].includes(ch)) return c.json({ error: "bad_channel" }, 400); // owner: text or email, nothing else
+    await setSetting("owner_alert_channel", ch);
+  }
+  return c.json(await ownerAlertPrefs());
+});
+// Set/clear an account's email from Admin (support action). Admin-set addresses count as confirmed.
+app.post("/api/admin/users/:id/email", async (c) => {
+  const id = decodeURIComponent(c.req.param("id"));
+  const b = await c.req.json().catch(() => ({}));
+  const e = String(b.email || "").trim().toLowerCase();
+  if (e && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return c.json({ error: "invalid_email" }, 400);
+  const a = (await db.select().from(accounts).where(eq(accounts.clerkUserId, id)))[0];
+  if (!a) return c.json({ error: "not_found" }, 404);
+  await db.update(accounts).set({ email: e || null, emailVerifiedAt: e ? Math.floor(Date.now() / 1000) : null }).where(eq(accounts.clerkUserId, id));
+  return c.json({ ok: true, email: e || null });
 });
 app.patch("/api/alerts/templates", async (c) => {
   try { return c.json(await setAlertTemplates(await c.req.json())); } catch (e) { return c.json({ error: String(e) }, 400); }
@@ -5033,6 +5179,40 @@ async function placeChainTreeCall(chainId: number): Promise<{ ok: boolean; error
   }
   return { ok: false, error: "no open store right now (all closed?)" };
 }
+// Sync LEARNED chain-nav fields PROD → STAGING. Nav is learned from real calls on prod; staging is a
+// curation copy that goes stale ("mapped on prod, gray COMING SOON on staging"). The promotion rule:
+// learned fields refresh prod→staging. Keyed by NAME (chain ids differ per env). SKIPS the curated
+// DIRECT_DEFAULT_CHAINS so a stale prod tree (e.g. Ace's old "press 4") can never clobber the
+// independent/co-op direct default. Silent-agent invariant enforced. Admin-gated. `dryRun:true` reports.
+app.post("/api/admin/chains/nav-sync", async (c) => {
+  const b = await c.req.json().catch(() => ({} as Record<string, unknown>));
+  const incoming = (Array.isArray(b) ? b : ((b as Record<string, unknown>).chains as unknown[])) || [];
+  if (!Array.isArray(incoming) || !incoming.length) return c.json({ error: "expected { chains: [{name, …nav}] }" }, 400);
+  const NAV = ["navStatus", "navRecipe", "navType", "navSeconds", "ringsDirect", "treeStatus", "treeNote",
+    "phoneTreeDefault", "dtmfShortcut", "answerPath", "avgTreeSeconds", "treeLearnedAt", "treeVerifiedAt"] as const;
+  const dry = (b as Record<string, unknown>).dryRun === true;
+  const byName = new Map((await db.select().from(chains)).map((x) => [x.name, x]));
+  let updated = 0, skippedDirect = 0, missing = 0;
+  for (const inc of incoming as Record<string, unknown>[]) {
+    const row = inc && typeof inc.name === "string" ? byName.get(inc.name) : null;
+    if (!row) { missing++; continue; }
+    if (isDirectDefaultChain(row.name)) { skippedDirect++; continue; } // never clobber the curated direct default
+    const patch: Record<string, unknown> = {};
+    for (const k of NAV) if (k in inc) patch[k] = inc[k];
+    if (!Object.keys(patch).length) continue;
+    // silent-agent invariant: a direct chain must carry NO tree-seconds
+    if (patch.ringsDirect === true || patch.answerPath === "direct_human") patch.avgTreeSeconds = null;
+    if (!dry) await db.update(chains).set(patch).where(eq(chains.id, row.id));
+    updated++;
+  }
+  if (!dry) invalidateRefCache();
+  return c.json({ [dry ? "wouldUpdate" : "updated"]: updated, skippedDirect, missing, received: incoming.length });
+});
+// Manual "refresh staging from prod" — the same pull the learned-sync tick runs every 3 min, on demand.
+// Learned phone-nav is born on prod (real calls); this drags it back so staging never lags. Staging-only
+// (prod is the source and returns not_staging). GET reports the last run without pulling.
+app.get("/api/admin/learned-sync", async (c) => c.json(await learnedSyncStatus()));
+app.post("/api/admin/learned-sync", async (c) => c.json(await learnedSyncTick()));
 app.get("/api/admin/tree/list", async (c) => {
   const chs = await db.select().from(chains).orderBy(chains.name);
   const rows = await db.select({ cid: retailers.chainId, n: sql<number>`count(*)` }).from(retailers).where(eq(retailers.active, true)).groupBy(retailers.chainId);
@@ -5732,6 +5912,7 @@ setInterval(() => withLock("ingest", 30, ingestPending).catch((e) => console.err
 setInterval(() => withLock("tick", 55, schedulerTick).catch((e) => console.error("tick:", e)), 60_000);
 setInterval(() => withLock("geocode", 10, () => geocodeMissing(1)).catch((e) => console.error("geocode:", e)), 3_000);
 setInterval(() => withLock("store-sync", 280, storeSyncTick).catch((e) => console.error("store-sync:", e)), 300_000); // staging→prod curated store data (inert until STORE_SYNC_URL/TOKEN set)
+setInterval(() => withLock("learned-sync", 160, learnedSyncTick).catch((e) => console.error("learned-sync:", e)), 180_000); // prod→staging learned phone-nav (mirror of store-sync; inert off-staging)
 setInterval(() => withLock("harvest", 110, harvestHoursTick).catch((e) => console.error("harvest:", e)), 120_000); // self-updating hours (policy-gated, off by default)
 setInterval(() => withLock("cust-sched", 85, customerScheduleTick).catch((e) => console.error("cust-sched:", e)), 90_000); // subscriber auto-checks (policy-gated)
 setInterval(() => withLock("gmail-receipts", 25, gmailReceiptTick).catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)

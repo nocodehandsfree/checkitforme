@@ -1,6 +1,21 @@
 # Support — checkpoint
 **What this is:** current state. Newest on top, ≤80 lines.
 
+- 2026-07-15 — ADMIN DECOUPLED FROM PROD (owner): Admin can be pushed/deployed independently of the
+  prod consumer site. Do NOT promote for Admin changes. Addie owns the Admin deploy — leave Admin
+  work on staging for her, don't line up a prod promote for it.
+- 2026-07-15 — Two fixes shipped to staging. (1) Anti-hallucination: ladder SYSTEM now forbids
+  claiming any page/link/menu exists unless the docs name it, + always-true site facts (real footer
+  links, NO Contact page, partnerships→Discord). Verified LIVE: agent asked "where's the contact
+  page" now answers Discord/footer, no invented page. (2) Admin can finally TRAIN it — the Support
+  chat sheet has a "Teach the right answer" box (question+corrected answer → POST review/:id approve
+  → embeds to cache, served verbatim next time) + an "Update from the book" button (POST reindex,
+  proven live: 46 pages). Verified UI end-to-end locally (openSheet, no page errors). tsc clean.
+- 2026-07-15 — Launcher saga CLOSED: after trying top-edge (owner rejected) and a center bottom
+  handle, landed on the owner-approved GRAY icon-only chat tab (#26262C, 72% opacity) dropped to the
+  bottom-right corner, auto-hides (slides off right) on scroll, glides back at rest. Live on staging.
+  NOTE: a rogue Claude staging→main merge (02:02 UTC 07-12) swept an in-progress launcher onto PROD;
+  flagged to owner, prod left untouched pending his call.
 - 2026-07-11 (4) — Owner design pass, LIVE: launcher is now a small low-key GRAY chat icon pinned
   bottom-right (thumb reach, tiny footprint, no "Help" label); header shows the Check BRAND MARK
   upper-left + the approved v2 round-dark X; exact Lucide icons, dropped the 👋 emoji. Help tab is

@@ -9,18 +9,24 @@ import { getSetting, setSetting } from "./db/settings";
 // Subscription-only entitlements, toggled PER TIER in Admin (data, not hardcoded). PAYG gets none.
 // Labels are the owner's simple names (2026-07-03 image); keys are stable ids the app gates on.
 export const FEATURES: { key: string; label: string }[] = [
-  { key: "exact_products", label: "Exact products" },   // set + product-type asks; multiple products/call
+  // exact_products left the catalog 2026-07-15 (owner): exact-product asks are for EVERY account now,
+  // not a premium service. premiumAsks stays true everywhere for the existing call-gating call-sites.
   { key: "zone_sweeps",    label: "Zone sweeps" },       // every store near you, one tap
   { key: "restock_alerts", label: "Restock alerts" },
   { key: "scheduled_checks", label: "Scheduled checks" },// auto-check on a schedule
   { key: "any_town",       label: "Any town" },          // search past the 20-mile radius
-  { key: "store_holds",    label: "Store holds" },       // ask the store to hold a product
-  { key: "your_voice",     label: "Your voice" },        // personalize / clone the agent voice
-  { key: "thrift_hunts",   label: "Thrift hunts" },      // thrift stores & hobby shops
+  { key: "store_holds",    label: "Store holds" },       // ask the store to hold a product (voice flow in testing)
+  { key: "your_voice",     label: "Your voice" },        // personalize the agent voice (in testing)
+  { key: "thrift_hunts",   label: "Thrift hunts" },      // thrift stores & secondhand shops
+  { key: "hobby_hunts",    label: "Hobby hunts" },       // the set wall + card shops (owner 07-15)
 ];
 export const FEATURE_KEYS = FEATURES.map((f) => f.key);
-/** Default entitlement map for a PAID tier: everything ON (owner default, 2026-07-03). */
-export const allFeaturesOn = (): Record<string, boolean> => Object.fromEntries(FEATURE_KEYS.map((k) => [k, true]));
+// Launch state (owner 2026-07-15): store_holds + your_voice aren't built yet, so they default OFF —
+// checking them on in Admin is all it takes for their box to reappear on the site, no code change.
+const FEATURE_DEFAULT: Record<string, boolean> = { store_holds: false, your_voice: false };
+const featDefault = (k: string): boolean => FEATURE_DEFAULT[k] ?? true;
+/** Default entitlement map for a PAID tier: launch defaults (built services ON, unbuilt OFF). */
+export const allFeaturesOn = (): Record<string, boolean> => Object.fromEntries(FEATURE_KEYS.map((k) => [k, featDefault(k)]));
 export const noFeatures = (): Record<string, boolean> => Object.fromEntries(FEATURE_KEYS.map((k) => [k, false]));
 
 export interface Tier {
@@ -31,7 +37,7 @@ export interface Tier {
   checksPerMonth: number; // subscription quota, reset each billing cycle (no rollover)
   smsAlertsPerMonth: number; // COGS cap: how many restock SMS alerts this tier gets per month (email uncapped)
   features: Record<string, boolean>; // per-tier premium entitlements (admin-editable matrix)
-  premiumAsks: boolean;   // DERIVED = features.exact_products (kept for existing call-gating call-sites)
+  premiumAsks: boolean;   // always true since 2026-07-15 (exact products = every account); kept for existing call-sites
   stripeProductId: string | null;
   monthlyPriceId: string | null;
   annualPriceId: string | null;
@@ -84,7 +90,7 @@ export function normalizePlans(raw: unknown): PlansConfig {
     const monthlyCents = clampCents(t.monthlyCents ?? d.monthlyCents);
     // Feature matrix: coerce each catalog key from the stored config; default ON (owner default).
     const storedF = (t.features && typeof t.features === "object" ? t.features : {}) as Record<string, unknown>;
-    const features = Object.fromEntries(FEATURE_KEYS.map((k) => [k, storedF[k] == null ? true : !!storedF[k]]));
+    const features = Object.fromEntries(FEATURE_KEYS.map((k) => [k, storedF[k] == null ? featDefault(k) : !!storedF[k]]));
     return {
       key: d.key,
       name: String(t.name ?? d.name).slice(0, 40) || d.name,
@@ -93,7 +99,7 @@ export function normalizePlans(raw: unknown): PlansConfig {
       checksPerMonth: Math.max(0, Math.round(Number(t.checksPerMonth ?? d.checksPerMonth) || 0)),
       smsAlertsPerMonth: Math.max(0, Math.round(Number((t as Partial<Tier>).smsAlertsPerMonth ?? d.smsAlertsPerMonth) || 0)),
       features,
-      premiumAsks: !!features.exact_products, // derived: the "exact set/product" call ask
+      premiumAsks: true, // exact set/product asks are for every account now (owner 2026-07-15)
       stripeProductId: t.stripeProductId ?? null,
       monthlyPriceId: t.monthlyPriceId ?? null,
       annualPriceId: t.annualPriceId ?? null,

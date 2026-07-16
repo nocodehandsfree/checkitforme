@@ -2,7 +2,7 @@
 
 The complete map of `admin.checkitforme.com` (source: `public/app.html`, one file; server: `src/server.ts`).
 Written so any agent or human can learn the system from zero. Siblings: `WEBSITE_MANUAL.md` (consumer UI) and `SYSTEM_MANUAL.md` (the backend machinery). Line refs point into `app.html` unless
-prefixed. Admin runs on **live prod data**: almost every save is live for customers the moment you tap it (§11).
+prefixed. Admin runs on **live prod data**: almost every save is live for customers the moment you tap it (§12).
 
 ---
 
@@ -19,16 +19,17 @@ prefixed. Admin runs on **live prod data**: almost every save is live for custom
 
 ## 2. Shell and navigation
 
-Two-level nav: 5 groups, each with sub-tabs (NAV_GROUPS app.html:1217). Active tab persists and
+Two-level nav: **6 groups**, each with sub-tabs (NAV_GROUPS app.html). Active tab persists and
 deep-links as a path (`admin.checkitforme.com/gtm`). Browser Back walks tab history. Toasts, tap
-tooltips (`data-tip`), and per-tab loaders (`TAB_LOADERS` app.html:1225).
+tooltips (`data-tip`), and per-tab loaders (`TAB_LOADERS`).
 
 | Group | Tabs |
 |---|---|
 | God View | Live · Users · Restock · Alerts · Policy · Calc · Plans |
 | Stores | Intel · Search · Add · Kiosk |
-| Calls | Calls · Schedules (BROKEN, §12) · Feedback · Statuses · Chains · App |
+| Calls | Calls · Feedback · Statuses · Chains · App |
 | Voice | Designer · Workflows · Testing · Fun |
+| Support | Chats |
 | Launch | Go-to-Market |
 
 ## 3. God View group
@@ -54,12 +55,21 @@ What real calls have taught us: confirm rate, reach-a-human %, call reality funn
 from staff, what's landing (forms/sets/categories), top restock stores. Tap a store for its personal
 breakdown: best restock day + confidence, confirmed-in-stock by weekday (`/api/admin/store-restock/:id`).
 
-### 3.4 Alerts (`#alerts`, app.html:606)
-Customer notifications. 4 events: `restock` (SMS, counted against each plan's monthly text cap),
-`store_added`, `waitlist`, `welcome` (email via Brevo). SMS stays **stubbed** (logged, not sent) until
-the Twilio number clears A2P registration. Editable message templates with `{store} {product} {city}
-{name}` tokens (`PATCH /api/alerts/templates`), a send-yourself-a-test button (`POST /api/alerts/test`),
-and a recent-sends log.
+### 3.4 Alerts (`#alerts`, app.html)
+Customer notifications, Brevo-branded email + Twilio SMS. Five customer events plus the owner ping:
+- `restock` (text or email, whichever the customer picked; texts count against each plan's monthly
+  cap) · `auto_check` (a scheduled auto check's result; text or email) · `store_added` (email) ·
+  `waitlist` (email) · `confirm_email` (email; `welcome` is retired — there's no email-only signup,
+  everyone joins by phone and adds email later).
+- **Your in stock ping** — the owner-only hands-free email/text when a call confirms stock. Pick the
+  channel + address at the top of the page.
+
+Editable subject/body/SMS per event (`PATCH /api/alerts/templates`, stored in setting `alerts_json`);
+the branded email layout (kicker, headline, module card, CTA) lives in `src/alerts.ts` → `EMAIL_DESIGN`.
+Tokens: `{store} {product} {city} {email} {result}`. Send-yourself-a-test per event and channel
+(`POST /api/alerts/test`), a delivery-status banner (green when Twilio/Brevo creds are set), a month
+rollup, and a recent-sends log. SMS stays **stubbed** (logged, not sent) until the Twilio number clears
+A2P. Final copy source of truth: `docs/team/copy/alert-copy-handoff.md`.
 
 ### 3.5 Policy (`#growth`, app.html:786)
 The business console. Reads `GET /api/policy`, writes `PATCH /api/policy` — **global and instant**.
@@ -178,36 +188,52 @@ Rings your own phone; never touches stores. **Delta rehearsal** ("call me on tap
 pre-recorded clips with the cheap classifier; say something weird to hear where Charlie would barge in.
 **Lab call**: the agent calls any number in any cloned voice with a chosen flow and personality.
 
-## 7. Launch group — GTM (`#gtm`, app.html:1121)
+## 7. Support group — Chats (`#support`, app.html)
+The operator view of the customer support chat. The chat itself is an AI agent (RAG over the book;
+`src/support/ladder.ts` + `src/support/rag.ts`). **Its answers are the Support role's lane — don't
+edit them from here.** This page is for watching and grooming it:
+- **Update from the book** (`POST /api/support/reindex`) — re-reads every book page into the agent's
+  memory. Run it after the book changes so answers use the newest wording (46 pages as of 07-15).
+- Range (Today / 7d / 30d), a hero chat count, category pills, and per-category stats.
+- **Top questions** — what people ask most in the range.
+- Filters: category (Technical / Bug / Billing / Partnerships / How checks work / Other) and members
+  vs guests, plus a chat search.
+- **Chats list** — every conversation with its category and full thread. Resolved chats can be approved
+  into the answer cache (`support_qa`, appended never rebuilt) or rejected (`/api/support/review`; the
+  thumbs on `/pub/support/resolve` feed the queue).
+- Escalation: the agent flips `needs_human` for account actions (refunds, plan changes, real bugs);
+  everything else it answers from the book or says it's not sure. There is no Contact page (07-15).
+
+## 8. Launch group — GTM (`#gtm`, app.html)
 The single source of launch truth. Items have title, detail, area, agent owner, launch-critical flag,
 status todo→doing→done (tap the dot). Filters by area/agent/open/critical. Missing seeded defaults
 offer one-tap Restore. Every task any agent works should map to an item here.
 
-## 8. Admin dev agent (floating chat, app.html:1153)
+## 9. Admin dev agent (floating chat, app.html)
 A chat FAB that manages the store DB conversationally ("add a card shop in Bodega Bay", "mark store
 1423 verified"). Switchable model; replies list the actions it executed.
 
-## 9. Hidden / API-only surfaces (no UI — don't go looking for buttons)
+## 10. Hidden / API-only surfaces (no UI — don't go looking for buttons)
 Global calling kill-switch (`POST /api/admin/calling/pause|resume`) · zones admin API (consumer zones
 are live; admin UI never built) · schedules API · store dedupe/quarantine/relink/grade maintenance
 endpoints · table dump/load · staging→prod `/api/store-sync` (prod-receive only) · `/api/ops/*`
 (watchdog, backup-now) · `#catalog` section exists but is unreachable from nav.
 
-## 10. Staging vs prod
+## 11. Staging vs prod
 Staging (`STAGING=1`) = same app, `noindex`, calls/SMS disabled by default (`STAGING_CALLS=1` /
 `STAGING_SMS=1` to opt in). Consumer checks on staging produce **simulated calls** (scripted 22s fake
 transcript, zero telephony cost; src/staging-sim.ts).
 
-## 11. What's live-instantly for customers (be careful here)
+## 12. What's live-instantly for customers (be careful here)
 Policy flags & pricing/rewards · statuses registry edits · alert templates · community moderation ·
 store-request status · chain mute/settings/workflows · store verify/online/phone edits · workflows,
 openers, personas, voice rotation, apply-draft-to-all-stores · default workflow · live-listen toggle ·
 GTM list. **Plans:** app-side truth immediately; Stripe only changes on Publish. Real calls from
 Search/Chains/Mapper cost real money; bench/Fun/Delta only ring the owner.
 
-## 12. Known gaps (as of 2026-07-10)
-1. **Calls → Schedules tab is blank**: the tab exists in nav but there's no `<section id="schedules">`
-   and no loader — clicking it renders nothing. (Consumer scheduling works; this is the admin view.)
-2. Tooltip typo in Chains → Call settings: "wrapping up.ping up." (app.html:2919).
+## 13. Known gaps (as of 2026-07-15)
+1. **Calls → Schedules admin tab removed** (07-15): the blank tab is gone from the nav. Consumer
+   scheduling is unaffected; there's still no admin view of scheduled checks (schedules API only, §10).
+2. Tooltip typo in Chains → Call settings: "wrapping up.ping up." (app.html).
 3. A pile of dead JS referencing removed HTML (Live Listen card, Bridge Call, Tree Lab, voice presets,
    bail-rules editor) — functions exist, elements don't. Harmless; not reachable from the UI.

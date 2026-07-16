@@ -3,6 +3,76 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
+## 2026-07-15d — COPPER'S FINAL COPY, EN + ES (Addie) — staging b4813b2, Admin UI shipped
+- All alert copy = Copper's final handoff (docs uploaded). Restock headline 'It's back.' (short, never
+  wraps), badge JUST SPOTTED, CTA See the store. Auto-check/store/waitlist/confirm reworded. Landing
+  pages: 'You're out.' etc. Admin labels/hints updated. Owner ping stays English (internal).
+- BILINGUAL: EMAIL_DESIGN[lang] + ES_TEMPLATES (subjects+SMS) + localized footer + {result} →
+  En stock/No hay/Nadie contestó. accounts.language (new col) drives it; /app/email captures site LANG;
+  defaults English. Verified all 6 emails EN+ES in-browser — match the handoff.
+- Sent EN tests of every type to fun@fungibles.com (6× sent, real messageIds) for owner review.
+- ⚠ Spanish only activates when accounts.language='es'. The site (checkit.html, Webbie's lane) must
+  send `lang` on /app/email for a Spanish user; until it does, everyone's English. ES copy is live + wired.
+
+## 2026-07-15c — ROUND 3 (Addie) — staging 8a02abc, Admin UI shipped
+- **Emails are DUAL-THEME now** (owner ask): light inline base + true dark comp via prefers-color-scheme.
+  Gmail strips the media query → gets light + its own coherent auto-dark. Verified both schemes via
+  Playwright colorScheme shots; fillRaw fixed bold runs eating spaces.
+- **Auto check alerts wired end to end:** call_results.customer_schedule_id (new col) links fires to
+  schedules; ALL terminal paths (EL ingest / Delta finalize / bridge no-answer) send the result
+  (statuses label) by text or email per contact. Watch-row hack removed. createSchedule adopts an email
+  contact as the account address + fires the confirm flow. auto_check templates + tests in Admin.
+- **Sheet drag = website physics** (scroller-walk arming, animate-out past 110px, spring back) — fixed
+  the mid-air freeze; synthetic-touch verified full dismissal. Safari bars now translucent gray (html
+  bg #1D1D22 root sampling + apple metas + safe-area padding, the site's proven recipe).
+- **Template rows finally padded** (14/16 inset — the 5x-asked spacing bug was drow cards w/ padding:10px 0).
+- **Owner ping = email or text only** (call/off removed, server 400s others).
+- Restock cross-account CONFIRMED for owner: any account's confirmed call → notifyWatches + fanoutRestock
+  ping every watcher of that store+category, finder irrelevant (service.ts ingest + signals path).
+- Copper reviews ALL admin alert copy next; owner returns with her words for me to implement.
+
+## 2026-07-15b — EMAIL SYSTEM REBUILT TO COMPS V2 (Addie) — staging 63b43bd, Admin UI shipped
+- **Comps v2 landed:** docs/design/emails/check-email-alerts-design.html (E1-E4). EMAIL_DESIGN matches it.
+- **Gmail dark-mode mystery solved:** Gmail inverts solid colors but NOT gradients — the card's gradient
+  stayed dark while its white text flipped dark (owner's broken screenshot). Card is now flat #14141A +
+  color-scheme meta: dark clients show the true comp, Gmail-dark shows a clean light-flipped version.
+  There is NO way to fully stop Gmail's recolor; coherent inversion is the industry-correct fix.
+- **FROM = noreply@checkitforme.com NOW LIVE** (checkitforme.com was already authenticated in Brevo;
+  created sender id 3 via API, flipped ALERT_FROM_EMAIL on both services). Sender name "Check".
+- **welcome is DEAD → confirm_email:** adding/changing an email sends the branded confirm ask; NO alert
+  email flows until confirmed (accounts.email_verified_at, sendAlert + watch sends gate on it).
+  /confirm-email + /unsubscribe (signed HMAC links, RFC 8058 one-click, EN+ES branded pages) VERIFIED
+  live on staging (bad token → error page; confirm → "You're set."; unsub → kills subs + unverifies).
+- **Owner ping is Admin-editable:** Alerts page "Your in stock ping" (channel email/text/call/off +
+  address; settings beat env). Endpoints /api/admin/owner-alert GET/POST.
+- **Data cleaned (PROD):** 4 legacy email-only Clerk accounts deleted (2 fun@, 2 jared@reitzin.com, zero
+  usage; one had 4 old community posts). Prod = ONE account: phone:+13106662331 w/ fun@fungibles.
+  ⚠ POST-PROMOTE TODO: re-set his email via /api/admin/users/phone:+13106662331/email on PROD so
+  email_verified_at stamps (new column arrives with the promote; until then his prod email is unverified).
+- **Verified:** 5 email types real-sent from the new sender (5× messageIds) · confirm/unsub driven e2e ·
+  tsc 0 · test-all green (only the documented consumer qa-design baseline fail) · Admin UI @ 63b43bd.
+- Server-side email changes are STAGING-ONLY until next promote. On THE Admin today: owner-ping block +
+  new test types show graceful errors until then. Webbie owes: My Checks email row + alerts slide-up
+  (?alerts=1 deep link), email edit UI. Waitlist has NO signup front-end yet (flagged to owner).
+
+## 2026-07-15 — ALERT EMAILS ALL BRANDED + DECOUPLED ADMIN SHIP PATH IN USE (Addie)
+- **Admin UI now ships WITHOUT a promote:** commit app.html to staging, then `bash scripts/ship-admin.sh`
+  (Pops built it; prod server has the endpoint). Live now: override @ 0e093ee. Server code still promotes.
+- **Mystery email SOLVED:** "In stock: Fun — Pokémon" to trackalackaalerts@gmail.com = the hands-free
+  OWNER ping (notifyInStock, fires on every confirmed in-stock call), sent to staging's OWNER_EMAIL env
+  var (= trackalackaalerts@gmail.com, ALERT_CHANNEL=email). NOT a second signup. FROM noreply@fungibles.com
+  is ALERT_FROM_EMAIL's default — flagged to owner (changing domain needs Brevo domain verification).
+- **Every alert email now rides the ONE branded template** (19941fa): owner in-stock ping (was hand-rolled
+  "CheckIt" HTML) · restock-watch emails (were unbranded "Runnr"!) · notifyContact fallback rebranded.
+  renderBrandedEmail: {url} deep-links the CTA, empty paragraphs drop.
+- **Restock alerts can ride EMAIL now:** sendAlert channel override, fanoutRestock honors the sub's
+  channel, restock email templates editable in Admin (empty-save guarded against blanking defaults 0e093ee).
+- **Admin test-send covers all types:** welcome / store went live / waitlist / restock email / restock
+  text / owner in-stock ping. VERIFIED: all 5 email types real-sent via staging Brevo (5× "sent" w/
+  messageIds) to trackalackaalerts@gmail.com for the owner to eyeball.
+- ⚠ Server-side alert changes are STAGING-ONLY until next promote (Pops has one queued). On THE Admin
+  today: 3 old email tests work; the 2 new types show a "ships with the next promote" line.
+
 ## 2026-07-14 — FINAL BOARD LANDED + FULL-FIDELITY PASS (Addie) — all on staging, Admin awaits promote
 
 **CD's FINAL board (14 screens, 1a-1i + 2a-2e) landed at docs/design/comps/ADMIN_COMPS.dc.html** (unbundled

@@ -263,6 +263,8 @@ export const settings = sqliteTable("settings", {
 export const accounts = sqliteTable("accounts", {
   clerkUserId: text("clerk_user_id").primaryKey(), // Clerk id, OR "phone:<E.164>" for phone-first users
   email: text("email"),
+  emailVerifiedAt: integer("email_verified_at"), // set when they tap the confirm-email link; alert emails require it
+  language: text("language"),   // "es" → alert emails/texts go out in Spanish; null/"en" → English
   phone: text("phone"),         // E.164 cell for phone-first (Clerk-free) identity
   callerId: text("caller_id"),  // verified caller-ID number for this account's outbound calls
   credits: integer("credits").notNull().default(0),           // PAYG balance — never expires, additive
@@ -423,6 +425,7 @@ export const alertSubscriptions = sqliteTable("alert_subscriptions", {
   productLabel: text("product_label"),      // free-text product (e.g. "151 booster box")
   channel: text("channel").notNull().default("sms"), // sms | email
   active: integer("active").notNull().default(1),
+  muted: integer("muted").notNull().default(0),      // 1 = paused: the alert stays on the sheet but never sends (owner 07-16 mute/stop)
   createdAt: integer("created_at").notNull().default(now),
 });
 
@@ -490,6 +493,7 @@ export const callResults = sqliteTable(
     providerCallId: text("provider_call_id"), // ElevenLabs conversation id
     finderUserId: text("finder_user_id"), // clerk id of whoever placed it (null = anon/free)
     zoneRunId: text("zone_run_id"), // groups the checks of one zone sweep (z<zoneId>-<uuid>) for the report
+    customerScheduleId: integer("customer_schedule_id"), // auto-check that fired this call → results alert to its owner
     isPrivate: integer("is_private", { mode: "boolean" }).default(false), // never show in public finds feed
     startedAt: integer("started_at").notNull().default(now),
     completedAt: integer("completed_at"),
