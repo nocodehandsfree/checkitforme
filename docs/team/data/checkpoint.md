@@ -3,6 +3,16 @@
 > **Volatile — update at every "Checkpoint".** Newest on top, bullets, ≤80 lines. Prune finished
 > items (history lives in git). Access token: Railway staging `ADMIN_TOKEN` → scratchpad `.atok`.
 
+## 📌 DevOps note (Pops, 2026-07-15): NEW sibling pipe — settings-sync, prod→staging (owner ask)
+- `src/settings-sync.ts`: staging PULLS the owner's Admin settings from prod every 60s —
+  policy_json (minus staging's in-test call flags), vt_plans (minus staging's TEST-mode Stripe
+  ids), support banners, the statuses table (exact mirror). **Prod is the truth for settings.**
+- **Non-overlap contract with YOUR store-sync:** settings-sync never touches chains/retailers
+  (its export test asserts that), different lock, different state keys. Your field rules are
+  untouched. If store-sync ever grows a settings key, or you add a curated field that lives in
+  `settings`, flag me first so the two pipes can't fight. Status: `GET /api/settings-sync/status`.
+- Reuses staging's STORE_SYNC_URL/TOKEN (pull needs the same prod credentials your push uses).
+
 ## KEY FACTS / DECISIONS (written nowhere else — do NOT re-learn the hard way)
 - **ENV:** staging & prod are SEPARATE deploys/DBs. **Staging = source of truth**; prod catches up on
   staging→prod push. One admin reads live PROD. Stores auto-propagate via the store API; CHAINS/mapping do NOT.
