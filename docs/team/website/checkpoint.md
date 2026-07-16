@@ -6,18 +6,23 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash/sheet chrome), **I own
 > view/mode/nav** — don't blind-edit the tint, it's fragile (see the hard lesson below).
 
-## 📱 ANDROID PASS (07-16, android sub-session) — merged PR #44, live on staging (x-rev android-r119)
+## 📱 ANDROID PASS (07-16, android sub-session) — DONE, merged PRs #44+#45, live (x-rev android-r119)
 - Drove all 28 consumer screens/flows at Pixel 8 viewport (412x915 + 360w) via headless Chromium →
   staging. No overflow-x anywhere; rendering matches iOS. Fixed the Android-only breaks:
   keyboard covering bottom sheets (`interactive-widget=resizes-content` in the viewport meta),
-  pull-to-refresh reloading mid-flow (`overscroll-behavior-y:none`), dead store logos painting
+  pull-to-refresh reloading mid-flow (`overscroll-behavior-y:none`), failed logo imgs painting
   Chrome's broken-image glyph (wmFail() → designed .wm monogram; map pins/switcher icons hide),
   OTP autofill washing #auth_code. All verified live on staging post-deploy.
+- **Store logos are HEALTHY — don't re-chase.** Broken tiles in the first sweep were a SANDBOX
+  artifact (headless Chromium can't TLS to logos.fungibles.com; relay it like the staging bridge).
+  Verified: 49/49 imgs render with the CDN relayed, 0 fallbacks fire, all 45 unique logo URLs
+  across 5 metros return 200. wmFail stays as insurance for genuinely dead logos.
+- **Owner decisions (07-16): pinch-zoom stays BLOCKED everywhere** (meta unchanged; iOS ignores the
+  flag at the browser level — that side is Safari policy, not ours).
 - New tools (committed): `scripts/qa-android-sweep.mjs` (full Android screenshot+diagnostics drive)
   + `scripts/staging-bridge.mjs` (the GOTCHAS loopback bridge, now a file not a paste).
-- Needs REAL-DEVICE confirmation Friday: keyboard-over-sheet fix feel, no pull-to-refresh, monogram
-  tiles, pinch-zoom question (meta blocks zoom on Android but iOS ignores it — owner call whether
-  to allow zoom for parity), emoji render slightly different (Noto vs Apple — cosmetic, no action).
+- Friday real-device check: type in the sign-in sheet (keyboard must not cover it), pull-down
+  doesn't reload, logos render. Emoji differ slightly (Noto vs Apple) — cosmetic, no action.
 
 ## 🤝 HANDOFF (07-16) — state at session end
 - Everything below is MERGED to staging, deploy-verified, and rode the fresh-start PROMOTE the PM ran
@@ -36,9 +41,8 @@
   the no-mid-sentence-wrap law in EN+ES. Run it before shipping verdict or alerts changes.
 
 ## ✅ Shipped this session (07-15 → 07-16, PRs #29/31/32/36 — all verified live)
-1. **My checks:** edit cell = icon-top sheet, headline "Give us your new celly", every exit returns to
-   My checks. Edit email = "Give us your new email address", blank box; empty save prompts, same
-   address says "That's already your email". Earn row removed (Earn tab covers it).
+1. **My checks:** edit cell/email = icon-top sheets with owner-approved copy; every exit returns to
+   My checks; Earn row removed (Earn tab covers it).
 2. **Alerts:** rows read "{product} at {store}" (server joins retailer + category names; junk labels
    fall back to the category, else store-only). MUTE pauses sends (muted column, /app/alerts/mute,
    fan-out skips; row dims) with pill "Muted. Unmute any time."; STOP removes + pill "Unsubscribed
