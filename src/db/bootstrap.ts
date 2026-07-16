@@ -14,22 +14,22 @@ import { seedSellMethods } from "../stock/sellmethods";
 async function seedStatuses() {
   const rows: Array<[string, string, string, string, string, string]> = [
     // key, emoji, label, tone, color, note
-    ["in_stock", "✅", "In stock!", "in", "#4ADE80", "{store} has {product} in. Go grab it."],
-    ["sold_out", "🕐", "Sold out", "out", "#EF4444", "{store} had it, but it's gone for now."],
-    ["does_not_sell", "🚫", "They don't carry it", "out", "#EF4444", "{store} doesn't sell {category}."],
-    ["not_in_stock", "❌", "Not in stock", "out", "#EF4444", "{store} doesn't have {category} right now."],
-    ["no_clear_answer", "🤔", "Couldn't tell", "unk", "#FBBF24", "We couldn't make out a clear answer."],
-    ["left_on_hold", "⏸️", "Left on hold", "unk", "#FBBF24", "Hold ran long and the call dropped. No charge."],
-    ["too_busy", "🕗", "Too busy to check", "unk", "#FBBF24", "{store} was slammed. No charge."],
-    ["language_barrier", "🗣️", "Couldn't understand each other", "unk", "#FBBF24", "We couldn't communicate. No charge."],
-    ["nobody_answered", "📵", "Nobody answered", "unk", "#9CA3AF", "No one picked up. No charge."],
-    ["voicemail", "📮", "Got their voicemail", "unk", "#9CA3AF", "Reached a recording, not a person. No charge."],
-    ["busy", "📞", "Line was busy", "unk", "#9CA3AF", "Their line was busy. No charge."],
-    ["bad_number", "☎️", "Wrong number", "unk", "#9CA3AF", "That number didn't connect. No charge."],
-    ["closed", "🔒", "Store's closed", "unk", "#9CA3AF", "{store} is closed right now. No charge."],
+    ["in_stock", "✅", "In stock!", "in", "#4ADE80", "{store} has {product}. Go grab it before it's gone."],
+    ["sold_out", "🕐", "Sold out", "out", "#EF4444", "{store} had it, it's gone. Sign up for restock alerts below."],
+    ["does_not_sell", "🚫", "They don't carry it", "out", "#EF4444", "{store} doesn't stock {category} at all."],
+    ["not_in_stock", "❌", "Not in stock", "out", "#EF4444", "{store} is out of {category}. Sign up for restock alerts below."],
+    ["no_clear_answer", "🤔", "Couldn't tell", "unk", "#FBBF24", "We couldn't get a clean yes or no. Read the convo and tell us."],
+    ["left_on_hold", "⏸️", "Left on hold", "unk", "#FBBF24", "They kept us on hold and the call dropped. Try checking later."],
+    ["too_busy", "🕗", "Too busy to check", "unk", "#FBBF24", "{store} was too slammed to check. Try checking later."],
+    ["language_barrier", "🗣️", "Couldn't understand each other", "unk", "#FBBF24", "We couldn't understand each other on the call. Try checking later."],
+    ["nobody_answered", "📵", "Nobody answered", "unk", "#9CA3AF", "Rang and rang, but nobody picked up. Try checking later."],
+    ["voicemail", "📮", "Got their voicemail", "unk", "#9CA3AF", "We got their voicemail. Try checking later."],
+    ["busy", "📞", "Line was busy", "unk", "#9CA3AF", "Their line was busy the whole time. Try checking later."],
+    ["bad_number", "☎️", "Wrong number", "unk", "#9CA3AF", "The number we have for them didn't connect. No check = no charge."],
+    ["closed", "🔒", "Store's closed", "unk", "#9CA3AF", "{store} was closed when we called. Try checking later."],
     // "failed" stays only until carrier failures are mapped to real reasons (voicemail/busy/bad_number/
     // nobody_answered); then it's removed so every call shows a real reason, never a bare "Call failed".
-    ["failed", "⚠️", "Call failed", "unk", "#FBBF24", "Something went wrong on our end. No charge."],
+    ["failed", "⚠️", "Call failed", "unk", "#FBBF24", "The call didn't go through this time. No check = no charge."],
     // Admin ended the call from the dashboard. A NON-RESULT — excluded from every report/aggregate +
     // never billed; reads as "no data" (like a canceled call). Written by the master Stop & hang-up.
     ["admin_hangup", "·", "Admin canceled", "unk", "#9CA3AF", "We ended this call from the dashboard — it doesn't count as a check. No charge."],
@@ -199,7 +199,7 @@ export async function bootstrap() {
   // breaks cleanly per sentence — only touches the row if it still carries the old default.
   await client.execute({
     sql: "UPDATE statuses SET note=? WHERE key='sold_out' AND note=?",
-    args: ["{store} had it. It's gone for now.", "{store} had it, but it's gone for now."],
+    args: ["{store} had it. It's gone for now.", "{store} had it, it's gone. Sign up for restock alerts below."],
   }).catch(() => {});
   // Kiosks (crowd refresh intel) + restock watches — created idempotently.
   await client.execute(`CREATE TABLE IF NOT EXISTS kiosks (
