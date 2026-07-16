@@ -11,6 +11,9 @@
 // Activation: set STORE_SYNC_URL (prod base url) + STORE_SYNC_TOKEN (prod ADMIN_TOKEN) on the STAGING
 // service. Without them (or outside staging) the sender is inert. The receive endpoint lives under
 // /api/* on the target, so it's admin-token gated like every operator route.
+// Sibling pipe, OPPOSITE direction: src/settings-sync.ts mirrors the owner's Admin SETTINGS
+// (policy/plans/banners/statuses) prod→staging. The two never overlap: this module owns the
+// chains/retailers tables; settings-sync never touches them (and its export asserts as much).
 import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "./db/client";

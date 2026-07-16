@@ -18,6 +18,13 @@
 
 ## Open queue (after the Charlie/card session)
 1. Pops: one `ship-admin.sh` rehearsal → Addie ships Admin UI in seconds, no promotes.
+1b. Settings mirror PROD→STAGING — **BUILT + staging half LIVE** (Pops, e0e6e0c; 20/20 suite in
+    test-all). Staging pulls every 60s: policy (minus staging's in-test call flags), vt_plans
+    (minus staging's TEST-mode Stripe ids), support banners, statuses registry. One direction by
+    construction (pull-only; prod never receives a write). **Waiting on ONE thing: the next
+    promote puts the read-only export endpoint on prod** — puller is already ticking and
+    self-heals the moment it lands (status: `GET /api/settings-sync/status`, currently a clean
+    "prod export 404" every minute). THEN PM verifies a real Admin edit flows within a minute.
 2. Pops small build: enforce per-tier SMS caps (`smsAlertsPerMonth` is plan-data-only today).
 3. Owner: Twilio A2P (waiting on Twilio; gates SMS alerts) · Discord server · #379/#364 yes/no ·
    LEGAL/consent (critical GTM, owner-owned, un-started) · hide hobby chains in Admin.

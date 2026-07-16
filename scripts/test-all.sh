@@ -41,6 +41,7 @@ run "unit: credit machine" "env DATABASE_URL=file:./.t-credits.db $ENV $TSX scri
 run "smoke: admin user view" "env DATABASE_URL=file:./.t-adminview.db PORT=8793 ADMIN_TOKEN=t $ENV $TSX scripts/test-admin-user-view.ts; rm -f .t-adminview.db"
 run "smoke: thrift opt-in" "env DATABASE_URL=file:./.t-thrift.db PORT=8795 $ENV $TSX scripts/test-thrift-optin.ts; rm -f .t-thrift.db"
 run "smoke: admin UI ship path" "env DATABASE_URL=file:./.t-uidep2.db PORT=8792 ADMIN_TOKEN=t RAILWAY_VOLUME_MOUNT_PATH=./.t-vol $ENV $TSX scripts/test-admin-ui-deploy.ts; rm -rf .t-uidep2.db .t-vol"
+run "smoke: settings sync" "env DATABASE_URL=file:./.t-setsync.db PORT=8788 ADMIN_TOKEN=t $ENV $TSX scripts/test-settings-sync.ts; rm -f .t-setsync.db"
 run "integration: growth/CMS/community" "bash scripts/test-growth.sh"
 run "qa: pages (behavior benchmark)" "bash scripts/qa-pages.sh"
 run "qa: design tokens (v2 skin)" "$TSX scripts/qa-design.ts"

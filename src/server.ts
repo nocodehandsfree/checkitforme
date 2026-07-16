@@ -24,6 +24,7 @@ import { allSettings, getSetting, setSetting } from "./db/settings";
 import { importZonesData, geocodeMissing, backfillDirectChains, isDirectDefaultChain } from "./db/import-data";
 import { applyPreset, applySandboxToStores, applySandboxTuning, applyVoiceTuning, backfillHours, backfillPhones, benchTestCall, bridgeCheckCall, buildRestockVars, callZone, canAffordZone, chargeCallOnce, cloneVoice, deletePreset, getCreditStatus, getLiveVoice, getSandboxTuning, getVoiceTuning, ingestPending, listPresets, listVoices, placeAdHocCall, previewStorePrompt, provider, refreshHours, resetRotation, resolveWorkflow, retailersWithStatus, reverifyStampedHours, savePreset, schedulerTick, setActiveVoice, storeOpenInfo, triggerCall, findRecentCheck, zoneQuote } from "./calls/service";
 import { applyStoreSync, storeSyncTick, syncStatus, learnedSyncTick, learnedSyncStatus } from "./store-sync";
+import { buildSettingsExport, settingsSyncStatus, settingsSyncTick } from "./settings-sync";
 import { openState } from "./store-hours";
 import { resolveBrand, brandSwitcher, brandForPath } from "./brands";
 import { simStartCall, isSimId, simLive, simResult } from "./staging-sim";
@@ -4313,6 +4314,12 @@ app.post("/api/store-sync", async (c) => {
 });
 app.get("/api/store-sync/status", async (c) => c.json(await syncStatus()));
 
+// Settings sync (src/settings-sync.ts): PROD serves this read-only export; STAGING pulls it every
+// minute and mirrors the owner's Admin edits (policy/plans/banners/statuses — field-scoped).
+// One-way by construction: this endpoint is the only prod side, and it writes nothing.
+app.get("/api/settings-sync/export", async (c) => c.json(await buildSettingsExport()));
+app.get("/api/settings-sync/status", async (c) => c.json(await settingsSyncStatus()));
+
 app.get("/api/gtm", async (c) => {
   let items = GTM_SEED;
   try { const raw = await getSetting("gtm_checklist"); if (raw) { const p = JSON.parse(raw); if (Array.isArray(p?.items)) items = p.items; } }
@@ -5935,6 +5942,7 @@ setInterval(() => withLock("tick", 55, schedulerTick).catch((e) => console.error
 setInterval(() => withLock("geocode", 10, () => geocodeMissing(1)).catch((e) => console.error("geocode:", e)), 3_000);
 setInterval(() => withLock("store-sync", 280, storeSyncTick).catch((e) => console.error("store-sync:", e)), 300_000); // staging→prod curated store data (inert until STORE_SYNC_URL/TOKEN set)
 setInterval(() => withLock("learned-sync", 160, learnedSyncTick).catch((e) => console.error("learned-sync:", e)), 180_000); // prod→staging learned phone-nav (mirror of store-sync; inert off-staging)
+setInterval(() => withLock("settings-sync", 55, settingsSyncTick).catch((e) => console.error("settings-sync:", e)), 60_000); // prod→staging owner settings mirror (staging pulls; inert elsewhere)
 setInterval(() => withLock("harvest", 110, harvestHoursTick).catch((e) => console.error("harvest:", e)), 120_000); // self-updating hours (policy-gated, off by default)
 setInterval(() => withLock("cust-sched", 85, customerScheduleTick).catch((e) => console.error("cust-sched:", e)), 90_000); // subscriber auto-checks (policy-gated)
 setInterval(() => withLock("gmail-receipts", 25, gmailReceiptTick).catch((e) => console.error("gmail-receipts:", e)), 30_000); // ingest kiosk receipts (policy-gated + creds)
