@@ -17,6 +17,8 @@ import { db } from "./db/client";
 import { chains, retailers } from "./db/schema";
 import { getSetting, setSetting } from "./db/settings";
 import { config } from "./config";
+import { invalidateRefCache } from "./refcache";
+import { isDirectDefaultChain } from "./db/import-data";
 
 // ---- The field split (the contract). Curated = Data Dev's dataset, syncs. Everything else = learned/operational, never synced.
 const CHAIN_CURATED = ["type", "callTarget", "repackOnly", "muted", "unmappableReason", "stockCheckMethod", "stockCheckConfidence", "stockCheckNote", "siteStockUrl", "sellMethods", "isMSRP", "maxTalkSeconds", "hangupOnVoicemail", "logoUrl", "logoWide", "logoDark"] as const;
@@ -176,4 +178,67 @@ export async function storeSyncTick(): Promise<void> {
     await stamp({ ok: false, error: String(e).slice(0, 200) }).catch(() => {});
     console.error("[store-sync] tick failed:", String(e).slice(0, 200));
   } finally { running = false; }
+}
+
+// ---- Reverse puller (staging only): learned phone-nav is BORN on prod (real calls only run on prod),
+// so it can never flow up through storeSyncTick — that pipe is curated-only, staging→prod. Without this
+// mirror, a chain prod has mapped (Costco, Michael's…) shows GREY "coming soon" on staging until someone
+// runs a script by hand. This tick pulls the learned nav prod→staging on a schedule so the two never
+// drift again. Field-scoped to exactly the columns store-sync refuses to push (the never-sync set), and
+// it SKIPS the curated direct-default chains so the independent/co-op direct nav is never clobbered.
+// Same activation as the sender: STORE_SYNC_URL (prod base) + STORE_SYNC_TOKEN (prod ADMIN_TOKEN) on staging.
+const CHAIN_LEARNED = ["navStatus", "navRecipe", "navType", "navSeconds", "ringsDirect", "treeStatus", "treeNote",
+  "phoneTreeDefault", "dtmfShortcut", "answerPath", "avgTreeSeconds", "treeLearnedAt", "treeVerifiedAt"] as const;
+let pulling = false;
+export async function learnedSyncStatus() {
+  let lastRun: unknown = null;
+  try { lastRun = JSON.parse((await getSetting("learned_sync_last")) || "null"); } catch { /* none */ }
+  return { enabled: !!(config.staging.on && process.env.STORE_SYNC_URL && process.env.STORE_SYNC_TOKEN), pulling, lastRun };
+}
+/** Pull prod's learned chain-nav into staging. Returns a small summary (also used by the manual endpoint). */
+export async function learnedSyncTick(): Promise<{ ok: boolean; updated?: number; skipped?: number; seen?: number; error?: string }> {
+  if (!config.staging.on) return { ok: false, error: "not_staging" };  // prod is the SOURCE; it never pulls
+  if (pulling) return { ok: false, error: "busy" };
+  const url = process.env.STORE_SYNC_URL, token = process.env.STORE_SYNC_TOKEN;
+  if (!url || !token) return { ok: false, error: "not_activated" };
+  pulling = true;
+  const stamp = async (o: object) => setSetting("learned_sync_last", JSON.stringify({ at: Date.now(), ...o }));
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 30_000);
+    let prodChains: Record<string, unknown>[];
+    try {
+      const r = await fetch(url.replace(/\/$/, "") + "/api/admin/table-dump?name=chains&limit=5000", {
+        headers: { "x-admin-token": token }, signal: ctl.signal,
+      });
+      if (!r.ok) throw new Error(`prod ${r.status}`);
+      prodChains = ((await r.json()) as { rows?: Record<string, unknown>[] }).rows || [];
+    } finally { clearTimeout(timer); }
+    const byName = new Map((await db.select().from(chains)).map((x) => [x.name, x as unknown as Record<string, unknown>]));
+    let updated = 0, skipped = 0;
+    for (const pc of prodChains) {
+      const name = typeof pc.name === "string" ? pc.name : null;
+      const row = name ? byName.get(name) : null;
+      if (!row) continue;
+      if (isDirectDefaultChain(name)) { skipped++; continue; } // curated direct default owns its nav
+      const desired: Record<string, unknown> = {};
+      for (const k of CHAIN_LEARNED) desired[k] = (k in pc) ? pc[k] : row[k];
+      // silent-agent invariant: a direct chain must carry NO tree-seconds (a stray value arms the connect
+      // timer and mutes the agent on a live human).
+      if (desired.ringsDirect === true || desired.answerPath === "direct_human") desired.avgTreeSeconds = null;
+      const cur = JSON.stringify(CHAIN_LEARNED.map((k) => row[k] ?? null));
+      const nxt = JSON.stringify(CHAIN_LEARNED.map((k) => desired[k] ?? null));
+      if (cur === nxt) continue;                                // no change → no write, no cache churn
+      await db.update(chains).set(desired as never).where(eq(chains.id, row.id as number));
+      updated++;
+    }
+    if (updated) invalidateRefCache();
+    await stamp({ ok: true, updated, skipped, seen: prodChains.length });
+    if (updated) console.log(`[learned-sync] pulled nav for ${updated} chain(s) from prod`);
+    return { ok: true, updated, skipped, seen: prodChains.length };
+  } catch (e) {
+    await stamp({ ok: false, error: String(e).slice(0, 200) }).catch(() => {});
+    console.error("[learned-sync] tick failed:", String(e).slice(0, 200));
+    return { ok: false, error: String(e).slice(0, 200) };
+  } finally { pulling = false; }
 }
