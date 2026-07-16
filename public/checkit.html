@@ -7154,24 +7154,45 @@ const FEAT_ICON={
   thrift_hunts:'<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>',
   hobby_hunts:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>', // the set wall
 };
-// What each Check+ service IS, in plain words — condensed from the book (docs/Check+/*, readme.com).
-// Tapping a grid box opens this as a bottom sheet. Keys match the catalog; unknown keys get no sheet.
-const FEAT_INFO={ // every sentence short enough to sit on ONE line at 14px/390pt (copy-guide hard rule 2)
-  zone_sweeps:      ()=>t('feat.d.zone_sweeps',"Save the stores near you as a zone. One tap calls them all at the same time. Watch the answers land live. Each store costs one check. No answer, no charge."),
-  restock_alerts:   ()=>t('feat.d.restock_alerts',"Stop checking. Get told. Tap Tell me when it's back on a result. We watch that store for you. The moment product lands, we ping you. One ping per restock, never spam."),
-  scheduled_checks: ()=>t('feat.d.scheduled_checks',"Stores restock on a rhythm. Auto check runs on their shipment days. The answer is waiting on your phone. Cancel any time from My checks."),
-  any_town:         ()=>t('feat.d.any_town',"Free accounts hunt near home. Any town takes the leash off. Search any ZIP or city. The map jumps there. 100,000+ stores and counting."),
-  store_holds:      ()=>t('feat.d.store_holds',"Found it but you're 20 minutes away? We ask Staff to hold one with your name on it. All on the same call."),
-  your_voice:       ()=>t('feat.d.your_voice',"Pick the calling voice you like best. Staff hears a friendly, natural caller."),
-  thrift_hunts:     ()=>t('feat.d.thrift_hunts',"Old collections end up on thrift shelves. Priced like junk, because nobody checked. Flip on Thrift and we call the shops near you. We ask what's in the case today."),
-  hobby_hunts:      ()=>t('feat.d.hobby_hunts',"A browsable wall of Pokémon. Every era, every set, every product. List prices included. Pick your target. Every call asks the card shops for exactly that."),
+// What each Check+ service IS — a one-line promise plus the concrete "what you get" points.
+// Bilingual inline (LANG-picked), condensed from the book (docs/Check+/*). Every point fits ONE line
+// at 14px/390pt (copy-guide hard rule 2). Tapping a grid box opens this as a left-aligned bottom sheet.
+const FEAT_INFO={
+  zone_sweeps:{
+    en:{lead:"Call a whole area in one tap.",pts:["Save the stores near you as a zone.","One tap calls them all at the same time.","One check per store. No answer, no charge."]},
+    es:{lead:"Llama a toda una zona de un toque.",pts:["Guarda las tiendas cercanas como zona.","Un toque las llama a todas a la vez.","Un check por tienda. Sin respuesta, sin cargo."]}},
+  restock_alerts:{
+    en:{lead:"Stop checking. Get told.",pts:["Tap Tell me when it's back on any result.","We watch that store for you.","One ping the moment it lands. Never spam."]},
+    es:{lead:"Deja de revisar. Te avisamos.",pts:["Toca Avísame cuando vuelva en un resultado.","Vigilamos esa tienda por ti.","Un aviso apenas llegue. Nunca spam."]}},
+  scheduled_checks:{
+    en:{lead:"We check on a schedule, hands free.",pts:["Set it to a store's shipment days.","The answer is waiting on your phone.","Cancel any time, no lock in."]},
+    es:{lead:"Revisamos solos, en piloto automático.",pts:["Ajústalo a los días de envío de la tienda.","La respuesta te espera en el teléfono.","Cancela cuando quieras, sin ataduras."]}},
+  any_town:{
+    en:{lead:"Hunt any town in America.",pts:["Search any ZIP or city, not just home.","The map jumps there instantly.","100,000+ stores and counting."]},
+    es:{lead:"Caza en cualquier ciudad del país.",pts:["Busca por código postal o ciudad.","El mapa salta ahí al instante.","Más de 100,000 tiendas y contando."]}},
+  store_holds:{
+    en:{lead:"Ask the store to hold it for you.",pts:["Found it but you're across town?","We ask Staff to set one aside for you.","All on the same call."]},
+    es:{lead:"Pide que te aparten uno.",pts:["¿Lo encontraste pero estás lejos?","Le pedimos al Staff que aparte uno para ti.","Todo en la misma llamada."]}},
+  your_voice:{
+    en:{lead:"Pick the voice that makes the call.",pts:["Choose the caller you like best.","Staff hears a friendly, natural voice."]},
+    es:{lead:"Elige la voz que hace la llamada.",pts:["Escoge el que más te guste.","El Staff oye una voz amable y natural."]}},
+  thrift_hunts:{
+    en:{lead:"Hunt the thrift shelves too.",pts:["Old collections land there, priced like junk.","We call the thrift shops near you.","We ask what's in the case today."]},
+    es:{lead:"Caza también en las tiendas de segunda.",pts:["Ahí llegan colecciones viejas, baratísimas.","Llamamos a las tiendas de segunda cercanas.","Preguntamos qué hay en la vitrina hoy."]}},
+  hobby_hunts:{
+    en:{lead:"A browsable wall of Pokémon.",pts:["Every era, every set, list prices in.","Pick your target card.","Every call asks the shops for exactly that."]},
+    es:{lead:"Un muro de Pokémon para explorar.",pts:["Toda era, todo set, con precios de lista.","Elige la carta que buscas.","Cada llamada la pide exacta a las tiendas."]}},
 };
-function openFeatInfo(key){ const d=FEAT_INFO[key]; if(!d) return;
+function featInfo(key){ const c=FEAT_INFO[key]; return c?(c[LANG]||c.en):null; }
+function openFeatInfo(key){ const info=featInfo(key); if(!info) return;
+  const ck='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M4 12.5l5 5L20 6.5"/></svg>';
+  const pts=(info.pts||[]).map(p=>`<div style="display:flex;align-items:flex-start;gap:11px;font-size:14px;font-weight:600;color:rgba(255,255,255,.86);line-height:1.45"><span style="margin-top:1px">${ck}</span><span>${esc(p)}</span></div>`).join('');
   const ov=sheetShell('featOv');
   ov.innerHTML=`<div class="modal" style="text-align:left">
-    <div style="display:flex;justify-content:center;margin-bottom:6px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${FEAT_ICON[key]||''}</svg></div>
-    <h3 style="margin:2px 0 8px;text-align:center">${esc(featLabel(key))}</h3>
-    <div class="meta" style="text-align:center;font-size:14px;line-height:1.6;padding:0 4px 4px">${sentLines(d())}</div></div>`;
+    <div style="display:flex;justify-content:center;margin-bottom:8px"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="${AC1()}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${FEAT_ICON[key]||''}</svg></div>
+    <h3 style="margin:2px 0 14px;text-align:center">${esc(featLabel(key))}</h3>
+    <div style="font-size:16px;font-weight:800;color:#fff;letter-spacing:-.2px;margin-bottom:15px;line-height:1.3">${esc(info.lead)}</div>
+    <div style="display:flex;flex-direction:column;gap:12px">${pts}</div></div>`;
   ov.classList.add('on'); track('feat_info',{key});
 }
 function featLabel(key){ const f=(PLANS&&PLANS.features||[]).find(x=>x.key===key); return f?f.label:key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); }
