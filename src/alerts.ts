@@ -256,58 +256,60 @@ function fillRaw(t: string, tokens: Record<string, string | number | undefined>)
 function fillHtmlBold(t: string, tk: Record<string, string | number | undefined>): string {
   return t.split(/(\*\*[^*]+\*\*)/).map((seg) => {
     const m = seg.match(/^\*\*([^*]+)\*\*$/);
-    if (m) return `<b class="em-b" style="color:#15151B;font-weight:700">${escHtml(fillRaw(m[1], tk))}</b>`;
+    if (m) return `<b class="em-b" style="color:#FFFFFF;font-weight:700">${escHtml(fillRaw(m[1], tk))}</b>`;
     return escHtml(fillRaw(seg, tk));
   }).join("");
 }
-// ⚖️ THE VERDICT OF 2026-07-16 — a full day of one-change-at-a-time tests, the owner's phone as judge.
-// WINNING MECHANISM: DUAL-THEME (light inline base + @media (prefers-color-scheme: dark) overrides),
-// the 8a02abc July 15 build — the owner's screenshot of that exact email shows Gmail iOS dark mode
-// HONORING the dark stylesheet: #14141A card, white headline, true kicker color, all bright. Its one
-// bug was the CTA, whose dark fill lived only inline — Gmail transformed the light BASE and flipped
-// that button to a white pill. Rule: EVERY themed element carries an em-* class and appears in the
-// dark block. What a day of screenshots proved about Gmail iOS dark mode:
-// - It transforms the inline rendering as if light (dark-only emails get flipped to white — the
-//   change #7 render), but applies an authored prefers-color-scheme dark block VERBATIM. So the dark
-//   block is the only reliable road to a true dark render in Gmail.
-// - background-image gradient locks make Gmail distrust the element and DIM its text. NO gradients.
-// - -webkit-text-fill-color: stripped. mix-blend-mode recovery: hue-inverts (white pill, blue
-//   kicker). Pure #000000 backgrounds: flipped. All banned.
-// - Saturated fills (Apple's blue, our green) survive everything — the CTA is a filled green capsule
-//   in both themes.
-// Light base doubles as the render for Gmail-light users, GANGA, and ancient clients — clean and
-// owner-accepted ("I could live with it"). Apple Mail / Outlook iOS also honor the dark block.
-const L = { // light inline base (no pure #FFFFFF page)
+// ⚖️ THE FINAL MECHANISM (2026-07-16, a day of screenshot-judged rounds — owner signed off on this
+// split; do NOT change it without new phone evidence):
+// The email is AUTHORED as the flat-black dark design — pure #000000 canvas, yellow kicker, white
+// headline, green-RING CTA with a white label. Outlook mobile keeps true #000000 black and renders
+// it exactly like the owner's approved screenshot; Apple Mail renders as authored.
+// Gmail is the one client that mangles authored-dark (flips it light, dims text — every round proved
+// it), and it is ALSO the one client that matches `u + .body` selectors (it swaps the email's doctype
+// for a <u>). So a Gmail-ONLY stylesheet swaps every themed element to a LIGHT base, which Gmail then
+// auto-darkens into the gray-card dark look the owner accepted — and in Gmail light mode shows as the
+// clean light email. Per-client, on purpose:
+//   Outlook / Apple  → flat black, yellow kicker, green ring, white label (authored, untouched)
+//   Gmail dark       → gray card, warm orange kicker, DEEP-green filled CTA with a white label
+//                      (deep #15803D is the fix: Gmail recolored white on the lighter #16A34A)
+//   Gmail light      → the clean light base
+// Standing bans (each one cost a failed round): background-image gradients (Gmail dims text),
+// -webkit-text-fill-color (stripped), mix-blend-mode recovery (hue-inverts), prefers-color-scheme
+// as the dark path (Gmail ignored it — today's orange-kicker render proved the auto-darkener, not
+// the media query, produced the good result).
+const D = { // authored dark = the flat-black comp (Outlook screenshot-approved 07-15/07-16)
+  board: "#000000", ink: "#FFFFFF", p1: "#D1D1DA", p2: "#B9B9C4", muted: "#8A8A96",
+  box: "#000000", boxLine: "#2A2A33", tint: "#122019", tintInk: "#4ADE80", div: "#26262E",
+  ctaLine: "#4ADE80", ctaInk: "#FFFFFF", step: "#22222A",
+};
+const L = { // Gmail-only light base (u + .body). Gmail auto-darkens this into its gray-card look.
   board: "#F7F7FA", card: "#EDEDF3", ink: "#15151B", p1: "#3F3F4A", p2: "#55555F",
-  muted: "#77777F", box: "#FBFBFD", tint: "#E7F6EC", tintInk: "#15803D", div: "#E4E4EA",
-  cta: "#16A34A", ctaInk: "#FFFFFF", step: "#E9E9F0",
+  muted: "#77777F", box: "#FBFBFD", boxLine: "#E4E4EA", tint: "#E7F6EC", tintInk: "#15803D",
+  div: "#E4E4EA", cta: "#15803D", ctaInk: "#FFFFFF", step: "#E9E9F0",
 };
-const D = { // dark overrides = the comp (July 15 proven values)
-  board: "#08090D", card: "#14141A", ink: "#FFFFFF", p1: "#D1D1DA", p2: "#B9B9C4",
-  muted: "#8A8A96", box: "#1B1B20", tint: "#122019", tintInk: "#4ADE80", div: "#26262E",
-  cta: "#4ADE80", ctaInk: "#0B2013", step: "#22222A",
-};
-// Kickers: saturated comp colors for dark, darker cuts for the light base (contrast on near-white).
-const KICKER_LIGHT: Record<string, string> = { "#4ADE80": "#16A34A", "#FFCB05": "#B45309", "#A78BFA": "#7C3AED" };
+// Gmail kickers: warm cuts whose auto-darkened output lands near the authored color. The yellow
+// maps to amber-600 so Gmail's remix reads orange-gold next to BACK IN STOCK (owner ask), not brown.
+const KICKER_GMAIL: Record<string, string> = { "#4ADE80": "#16A34A", "#FFCB05": "#D97706", "#A78BFA": "#7C3AED" };
 function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | number | undefined>): string {
   if (!m) return "";
-  const box = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="em-mod" bgcolor="${L.box}" style="background:${L.box};border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
-  if (m.type === "chip") return box(`<span class="em-mt" style="font-size:14px;font-weight:700;color:${L.ink};font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
+  const box = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="em-mod" bgcolor="${D.box}" style="background:${D.box};border:1px solid ${D.boxLine};border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
+  if (m.type === "chip") return box(`<span class="em-mt" style="font-size:14px;font-weight:700;color:${D.ink};font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
   if (m.type === "product") return box(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-    <td style="font-family:${FONT}"><div class="em-mt" style="font-size:16px;font-weight:800;color:${L.ink}">${escHtml(fill(m.title, tk))}</div><div class="em-ms" style="font-size:12.5px;font-weight:600;color:${L.muted};margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
-    <td align="right" valign="middle"><span class="em-bdg" style="display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.6px;color:${L.tintInk};background:${L.tint};border-radius:999px;padding:6px 12px;font-family:${FONT}">${escHtml(m.badge)}</span></td></tr></table>`, "16px 18px", 16);
+    <td style="font-family:${FONT}"><div class="em-mt" style="font-size:16px;font-weight:800;color:${D.ink}">${escHtml(fill(m.title, tk))}</div><div class="em-ms" style="font-size:12.5px;font-weight:600;color:${D.muted};margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
+    <td align="right" valign="middle"><span class="em-bdg" style="display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.6px;color:${D.tintInk};background:${D.tint};border-radius:999px;padding:6px 12px;font-family:${FONT}">${escHtml(m.badge)}</span></td></tr></table>`, "16px 18px", 16);
   const rows = m.steps.map((s, i) => {
     const last = i === m.steps.length - 1;
-    return `${i ? `<tr><td colspan="2" style="padding:0 18px"><div class="em-div" style="height:1px;line-height:1px;font-size:0;background:${L.div}">&nbsp;</div></td></tr>` : ""}<tr>
-    <td width="57" valign="middle" style="padding:${i ? "12px" : "16px"} 0 ${last ? "16px" : "12px"} 18px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="26" height="26" align="center" valign="middle" class="${last ? "em-bdg" : "em-stc"}" style="width:26px;height:26px;border-radius:50%;background:${last ? L.tint : L.step};color:${last ? L.tintInk : L.p1};font-size:12px;font-weight:800;font-family:${FONT}">${escHtml(s[0])}</td></tr></table></td>
-    <td valign="middle" class="em-mt" style="padding:${i ? "12px" : "16px"} 18px ${last ? "16px" : "12px"} 0;font-size:15px;font-weight:${last ? 700 : 600};color:${L.ink};font-family:${FONT}">${escHtml(s[1])}</td></tr>`;
+    return `${i ? `<tr><td colspan="2" style="padding:0 18px"><div class="em-div" style="height:1px;line-height:1px;font-size:0;background:${D.div}">&nbsp;</div></td></tr>` : ""}<tr>
+    <td width="57" valign="middle" style="padding:${i ? "12px" : "16px"} 0 ${last ? "16px" : "12px"} 18px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="26" height="26" align="center" valign="middle" class="${last ? "em-bdg" : "em-stc"}" style="width:26px;height:26px;border-radius:50%;background:${last ? D.tint : D.step};color:${last ? D.tintInk : D.p1};font-size:12px;font-weight:800;font-family:${FONT}">${escHtml(s[0])}</td></tr></table></td>
+    <td valign="middle" class="em-mt" style="padding:${i ? "12px" : "16px"} 18px ${last ? "16px" : "12px"} 0;font-size:15px;font-weight:${last ? 700 : 600};color:${D.ink};font-family:${FONT}">${escHtml(s[1])}</td></tr>`;
   }).join("");
-  return `<tr><td style="padding-top:22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="em-mod" bgcolor="${L.box}" style="background:${L.box};border-radius:16px">${rows}</table></td></tr>`;
+  return `<tr><td style="padding-top:22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="em-mod" bgcolor="${D.box}" style="background:${D.box};border:1px solid ${D.boxLine};border-radius:16px">${rows}</table></td></tr>`;
 }
-/** Email-safe branded HTML: DUAL-THEME (see the verdict block above) — light inline base, the dark
- *  comp via @media (prefers-color-scheme: dark) with an em-* class on every themed element (the CTA
- *  included — the July 15 build's one miss). Layout: brandmark, floating card, filled green CTA,
- *  Manage-alerts-only footer, Inter @font-face. MSO gets bgcolor fills + a VML roundrect button. */
+/** Email-safe branded HTML: authored FLAT-BLACK dark (Outlook/Apple render it verbatim — the owner's
+ *  approved screenshot) with a Gmail-only `u + .body` stylesheet that swaps every themed element to
+ *  the light base Gmail can handle (see the mechanism block above). Layout: brandmark, yellow kicker,
+ *  green-ring CTA, Manage-alerts-only footer, Inter @font-face. MSO gets bgcolor fills + VML button. */
 export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw = "", tokens: Record<string, string | number | undefined> = {}, to = "", lang: Lang = "en"): string {
   const d = EMAIL_DESIGN[lang][event];
   // The body paragraphs come from the EDITABLE template (Admin) when present — split into sentences so
@@ -326,71 +328,70 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
   // single alert off — no "Unsubscribe" link. The RFC-8058 List-Unsubscribe header (espEmail) still gives
   // the inbox its own one-click unsubscribe, so we stay compliant without the confusing in-body link.
   const manageUrl = manageAlertsUrl();
-  const kickLight = KICKER_LIGHT[d.kickerColor] || d.kickerColor;
+  const kickGmail = KICKER_GMAIL[d.kickerColor] || d.kickerColor;
   // Paragraphs whose tokens fill to nothing (e.g. no restock day heard) are dropped, not rendered as gaps.
   const bodyHtml = bodyLines.filter((p) => fill(p.replace(/\*\*/g, ""), tokens)).map((p, i) => i === 0
-    ? `<tr><td class="em-p1" style="padding-top:15px;font-size:17px;line-height:1.5;color:${L.p1};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
-    : `<tr><td class="em-p2" style="padding-top:16px;font-size:14px;line-height:1.5;color:${L.p2};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
+    ? `<tr><td class="em-p1" style="padding-top:15px;font-size:17px;line-height:1.5;color:${D.p1};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
+    : `<tr><td class="em-p2" style="padding-top:16px;font-size:14px;line-height:1.5;color:${D.p2};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
   const ctaLabel = `${escHtml(d.cta).toUpperCase()}&nbsp;&nbsp;&rarr;`;
-  // Capsule CTA: FILLED green in both themes (saturated fills are the one thing every client
-  // preserves), and BOTH the fill and the label carry em-* classes so the dark block owns them —
-  // the July 15 build's white-pill bug was exactly this element missing from the dark block.
+  // Capsule CTA, authored = the Outlook-approved green RING on black with a WHITE label. The Gmail
+  // stylesheet swaps it to a DEEP-green filled capsule (#15803D) — deep enough that Gmail's contrast
+  // pass leaves the white label and arrow alone (it recolored white on the lighter #16A34A).
   const cta = `<tr><td style="padding-top:24px">
     <!--[if mso]>
-    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="${L.cta}" strokeweight="1px" fillcolor="${L.cta}">
+    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="${D.ctaLine}" strokeweight="2px" fillcolor="${D.board}">
       <w:anchorlock/>
-      <center style="color:${L.ctaInk};font-family:Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.6px;">${ctaLabel}</center>
+      <center style="color:${D.ctaInk};font-family:Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.6px;">${ctaLabel}</center>
     </v:roundrect>
     <![endif]-->
     <!--[if !mso]><!-->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td align="center" class="em-cta" bgcolor="${L.cta}" style="background:${L.cta};border-radius:999px">
-        <a href="${url}" class="em-ctl" style="display:block;padding:19px 24px;color:${L.ctaInk};font-weight:800;font-size:14px;letter-spacing:1.6px;text-decoration:none;font-family:${FONT};text-transform:uppercase">${ctaLabel}</a>
+      <td align="center" class="em-cta" bgcolor="${D.board}" style="background:${D.board};border:2px solid ${D.ctaLine};border-radius:999px">
+        <a href="${url}" class="em-ctl" style="display:block;padding:19px 24px;color:${D.ctaInk};font-weight:800;font-size:14px;letter-spacing:1.6px;text-decoration:none;font-family:${FONT};text-transform:uppercase">${ctaLabel}</a>
       </td></tr></table>
     <!--<![endif]-->
   </td></tr>`;
-  const footer = `<a href="${manageUrl}" class="em-ftl" style="color:${L.muted};text-decoration:none">${lang === "es" ? "Administrar alertas" : "Manage alerts"}</a>`;
-  // Light base inline; the dark comp rides the prefers-color-scheme block below. Inter loads via
-  // @font-face where clients allow web fonts (Apple Mail and friends); Gmail strips @font-face and
-  // falls down the stack — client limit, no fix exists.
+  const footer = `<a href="${manageUrl}" class="em-ftl" style="color:${D.muted};text-decoration:none">${lang === "es" ? "Administrar alertas" : "Manage alerts"}</a>`;
+  // Authored dark inline; the u + .body block below fires in Gmail ONLY and swaps to the light base.
+  // Inter loads via @font-face where clients allow web fonts; Gmail strips @font-face and falls down
+  // the stack — client limit, no fix exists.
   return `<!doctype html>
 <html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">
 <style>
 :root{color-scheme:light dark;supported-color-schemes:light dark}
-@media (prefers-color-scheme: dark){
-  body,.em-board{background:${D.board}!important}
-  .em-card{background:${D.card}!important}
-  .em-kick{color:${d.kickerColor}!important}
-  .em-h,.em-b,.em-mt{color:${D.ink}!important}
-  .em-p1{color:${D.p1}!important}
-  .em-p2{color:${D.p2}!important}
-  .em-mod{background:${D.box}!important}
-  .em-ms,.em-ft,.em-ftl{color:${D.muted}!important}
-  .em-bdg{color:${D.tintInk}!important;background:${D.tint}!important}
-  .em-div{background:${D.div}!important}
-  .em-stc{background:${D.step}!important;color:${D.p1}!important}
-  .em-cta{background:${D.cta}!important}
-  .em-ctl{color:${D.ctaInk}!important}
-}
+u + .body, u + .body .em-board{background:${L.board}!important}
+u + .body .em-card{background:${L.card}!important}
+u + .body .em-kick{color:${kickGmail}!important}
+u + .body .em-h, u + .body .em-b, u + .body .em-mt{color:${L.ink}!important}
+u + .body .em-p1{color:${L.p1}!important}
+u + .body .em-p2{color:${L.p2}!important}
+u + .body .em-mod{background:${L.box}!important;border-color:${L.boxLine}!important}
+u + .body .em-ms, u + .body .em-ft, u + .body .em-ftl{color:${L.muted}!important}
+u + .body .em-bdg{color:${L.tintInk}!important;background:${L.tint}!important}
+u + .body .em-div{background:${L.div}!important}
+u + .body .em-stc{background:${L.step}!important;color:${L.p1}!important}
+u + .body .em-cta{background:${L.cta}!important;border-color:${L.cta}!important}
+u + .body .em-ctl{color:${L.ctaInk}!important}
+u + .body .em-pad{padding:26px 24px 30px!important}
 @media screen {
   @font-face { font-family:'Inter'; font-style:normal; font-weight:400; src:url(https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff2) format('woff2'); }
   @font-face { font-family:'Inter'; font-style:normal; font-weight:700; src:url(https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYAZ9hjp-Ek-_EeA.woff2) format('woff2'); }
   @font-face { font-family:'Inter'; font-style:normal; font-weight:900; src:url(https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuBWYAZ9hjp-Ek-_EeA.woff2) format('woff2'); }
 }</style>
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-</head><body style="margin:0;padding:0;background:${L.board}" bgcolor="${L.board}">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="em-board" bgcolor="${L.board}" style="background:${L.board};margin:0;padding:0;width:100%;min-width:100%"><tr><td align="center" style="padding:0">
+</head><body class="body" style="margin:0;padding:0;background:${D.board}" bgcolor="${D.board}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="em-board" bgcolor="${D.board}" style="background:${D.board};margin:0;padding:0;width:100%;min-width:100%"><tr><td align="center" style="padding:0">
     <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%">
       <tr><td style="padding:30px 26px 0"><img src="https://checkitforme.com/logos/brand/check-brandmark-1024.png" width="40" height="40" alt="Check" style="display:block;width:40px;height:40px;border:0"></td></tr>
       <tr><td style="padding:24px 20px 0">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="em-card" bgcolor="${L.card}" style="background:${L.card};border-radius:24px">
-          <tr><td style="padding:26px 24px 30px">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="em-card" bgcolor="${D.board}" style="background:${D.board};border-radius:24px">
+          <tr><td class="em-pad" style="padding:2px 4px 30px">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-              <tr><td class="em-kick" style="font-size:11px;font-weight:700;letter-spacing:1.6px;color:${kickLight};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
-              <tr><td class="em-h" style="padding-top:12px;font-size:34px;font-weight:900;color:${L.ink};line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
+              <tr><td class="em-kick" style="font-size:11px;font-weight:700;letter-spacing:1.6px;color:${d.kickerColor};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
+              <tr><td class="em-h" style="padding-top:12px;font-size:34px;font-weight:900;color:${D.ink};line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
               ${bodyHtml}
               ${moduleHtml(d.module, tokens)}
               ${cta}
@@ -398,7 +399,7 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
           </td></tr>
         </table>
       </td></tr>
-      <tr><td class="em-ft" style="padding:24px 26px 34px;font-family:${FONT};font-size:12.5px;color:${L.muted}">${footer}</td></tr>
+      <tr><td class="em-ft" style="padding:24px 26px 34px;font-family:${FONT};font-size:12.5px;color:${D.muted}">${footer}</td></tr>
     </table>
     <!--[if mso]></td></tr></table><![endif]-->
   </td></tr></table></body></html>`;
