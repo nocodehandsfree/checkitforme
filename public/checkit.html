@@ -85,9 +85,11 @@ __BRAND_HEAD__
   button,select,textarea{font-family:inherit}
   html{-webkit-text-size-adjust:100%;background:#1D1D22;color-scheme:dark;touch-action:manipulation}/* neutral root = the EXACT v2 site gray #1D1D22 (owner 07-11: top strip was black at first paint; must match the page top-to-bottom). iOS samples this bg-COLOR for the status strip; verdict tone-* override it. NB in v2 the html[data-skin="v2"] block re-declares this — keep the two in lockstep. */
   /* Android Chrome pull-to-refresh reloads the page on a top overscroll — mid-flow (sheet drag, live
-     call) that's a lost session. iOS has no PTR, just a harmless rubber-band; kill it for parity.
+     call, hobby hunt, support chat) that's a lost session, so PTR is blocked ONLY in those states.
+     At rest the owner USES pull-to-refresh (07-16: a blanket none broke it) — leave the default alone.
      Vertical only — inner lists already contain their own overscroll. */
-  html,body{overscroll-behavior-y:none}
+  html:has(:is(.overlay.on,.csheet.on,.supwrap.on,body.huntmode,#live:not(.hidden))),
+  html:has(:is(.overlay.on,.csheet.on,.supwrap.on,body.huntmode,#live:not(.hidden))) body{overscroll-behavior-y:none}
   html,body{max-width:100%;overflow-x:hidden}
   /* No visible scrollbar (it lingers in the Home-Screen/standalone app) — touch scrolling still works. */
   html,body{scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{width:0;height:0;display:none}
@@ -2731,7 +2733,7 @@ const I18N={ es:{
   'acct.run1':'1 verificación hecha','acct.runN':'{n} verificaciones hechas','acct.runcheck':'Haz una verificación','acct.upgrade2':'Mejorar','acct.from':'desde','acct.signout':'Cerrar sesión',
   'acct.perweek':'Verificaciones por semana','acct.hist':'Historial','acct.8wks':'hace 8 sem','acct.thisweek':'esta semana','acct.last':'Últimas verificaciones','acct.none':'Aún no hay verificaciones.',
   'acct.earn.lead':'Ayuda a la cacería. Te llenamos de verificaciones gratis.',
-  'buy6b.title':'Cada función.<br>Elige tus verificaciones.','buy6b.grid':'Todo plan incluye','buy6b.cta':'Continuar',
+  'buy6b.title':'Cada función.<br>Elige tus verificaciones.','buy6b.grid':'Todo plan incluye','buy6b.gridsel':'Este plan incluye','buy6b.cta':'Continuar',
   'buy6b.f1':'Productos exactos','buy6b.f2':'Barridos de zona','buy6b.f3':'Alertas de reabastecimiento','buy6b.f4':'Verificaciones programadas','buy6b.f5':'Cualquier ciudad','buy6b.f6':'Apartados en tienda','buy6b.f7':'Tu voz','buy6b.f8':'Cacerías thrift',
   'up6a.title':'Esa fue tu verificación gratis.<br>¿Listo para lo bueno?','up6a.cta':'Ver planes Check+','up6a.f1':'Verifica cualquier ciudad de EE. UU.','up6a.f2':'Alertas de reabastecimiento','up6a.f3':'Verifica varias tiendas a la vez',
   'up6d.title':'Ya estás dentro.','up6d.live':'Ya activo en tu cuenta','up6d.more':'+ 5 más en Administrar plan ›','up6d.moreN':'+ {n} más en Administrar plan ›','up6d.cta':'Haz una verificación','up6d.note':'Administra tu plan cuando quieras en Mis verificaciones.',
@@ -7284,7 +7286,7 @@ function setPackIdx(i){ const packs=paygBundles(); PACK_IDX=Math.max(0,Math.min(
   if(pr) pr.textContent=money(pk.cents);
   if(per) per.textContent=t('plan.percheck','about')+' $'+(pk.cents/pk.checks/100).toFixed(2)+' '+t('plan.percheck2','per check')+' · '+t('plan.noexpire','checks never expire'); }
 function pickTier(k){
-  if(isV2()){ SEL_TIER_KEY=k; renderBuyPlans(); return; } // 6b comp: tap selects (ring moves), CONTINUE buys
+  if(isV2()){ SEL_TIER_KEY=k; renderBuyPlans(); renderBuyGrid(); return; } // 6b comp: tap selects (ring moves + the services grid re-paints for the ringed tier), CONTINUE buys
   buyContinue();
 }
 function buyContinue(){
@@ -7302,13 +7304,20 @@ function renderBuyGrid(){
   // Admin is the ONLY source — no hardcoded list, ever. While /pub/plans is in flight the area shows
   // loading dots at the SAME fixed height, then paints once with the truth (owner 07-16).
   if(!PLANS){ g.innerHTML=`<div class="buygrid-h">${t('buy6b.grid','Every plan gets')}</div><div class="buygrid" style="grid-template-columns:1fr"><div class="loaddots" style="grid-row:1/3;display:flex;justify-content:center;align-items:center;gap:8px"><span></span><span></span><span></span></div></div>`; return; }
-  const keys=PLANS.everyPlanGets||[];
+  // The grid follows the RINGED plan (owner 07-16: uncheck a service on a plan in Admin → it hides
+  // here the moment that plan is selected). Plans all identical → the comp's "Every plan gets" line;
+  // plans differ → "This plan gets", because the boxes now describe the selected tier only.
+  const ti=(PLANS.tiers||[]).find(x=>x.key===SEL_TIER_KEY);
+  const setOf=tr=>(PLANS.features||[]).map(f=>f.key).filter(k=>tr&&tr.features&&tr.features[k]).join();
+  const keys=(ti&&ti.features)?setOf(ti).split(',').filter(Boolean):(PLANS.everyPlanGets||[]);
   if(!keys.length){ g.innerHTML=''; return; }
+  const uniform=!ti||(PLANS.tiers||[]).every(tr=>setOf(tr)===setOf(ti));
   // CONSTANT-HEIGHT area (owner 07-16): always 2 rows — boxes shrink as Admin checks more services on,
-  // so the plan tiles below never get pushed under the fold.
+  // so the plan tiles below never get pushed under the fold. grid-template-rows pins the 2-row height
+  // even when a tier has few services checked (auto-rows would collapse to 1 row and shift the plans).
   const cols=Math.max(2,Math.ceil(keys.length/2));
   const cells=keys.map(k=>`<div class="g" role="button" onclick="openFeatInfo('${k}')">${I(FEAT_ICON[k]||'')}${esc(featLabel(k))}</div>`).join('');
-  g.innerHTML=`<div class="buygrid-h">${t('buy6b.grid','Every plan gets')}</div><div class="buygrid c${Math.min(cols,4)}" style="grid-template-columns:repeat(${cols},1fr)">${cells}</div>`;
+  g.innerHTML=`<div class="buygrid-h">${uniform?t('buy6b.grid','Every plan gets'):t('buy6b.gridsel','This plan gets')}</div><div class="buygrid c${Math.min(cols,4)}" style="grid-template-columns:repeat(${cols},1fr);grid-template-rows:62px 62px">${cells}</div>`;
 }
 function openBuy(reason){
   if(!isAuthed()){ toast(t('toast.signupfirst','Sign up first to add checks')); signUp(); return; }
