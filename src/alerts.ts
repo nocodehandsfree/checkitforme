@@ -41,7 +41,7 @@ export const DEFAULT_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   restock: {
     sms: "{product} is back at {store}. Move fast, this stuff doesn't sit. checkitforme.com",
     emailSubject: "It's back at {store}.",
-    emailBody: "{store} in {city} has it again. This stuff moves fast. Go before it's gone.",
+    emailBody: "{store} has it right now. This stuff moves fast.",
   },
   store_added: {
     emailSubject: "You got your store.",
@@ -58,7 +58,7 @@ export const DEFAULT_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   auto_check: {
     sms: "Your auto check called {store}. Result: {result}. See it at checkitforme.com",
     emailSubject: "Auto check: {result}.",
-    emailBody: "Your auto check just called {store} about {product}. Tap in to see exactly what Staff said.",
+    emailBody: "We called {store} about {product}. Here's what they said.",
   },
 };
 // Spanish. Starts from EN defaults, so any field left off falls back to English (never a blank send).
@@ -66,7 +66,7 @@ export const ES_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   restock: {
     sms: "{product} volvió a {store}. Ve rápido, esto no dura. checkitforme.com",
     emailSubject: "Volvió a {store}.",
-    emailBody: "{store} en {city} lo tiene otra vez. Esto vuela. Ve por él antes de que se acabe.",
+    emailBody: "{store} lo tiene ahora. Esto vuela.",
   },
   store_added: {
     emailSubject: "Ya tienes tienda.",
@@ -83,7 +83,7 @@ export const ES_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   auto_check: {
     sms: "Tu check automático llamó a {store}. {result}. Míralo en checkitforme.com",
     emailSubject: "Check automático: {result}.",
-    emailBody: "Tu check automático llamó a {store} por {product}. Toca para ver qué dijo el Staff.",
+    emailBody: "Llamamos a {store} por {product}. Esto es lo que dijeron.",
   },
 };
 
@@ -189,9 +189,11 @@ const EMAIL_DESIGN_EN: Record<EmailKind, EmailDesign> = {
     cta: "Use my free check", url: "https://checkitforme.com",
   },
   restock: {
+    // Say it ONCE: kicker = the label, headline = the state, body names the store, module = the item.
+    // (Owner 07-15: store was repeated 3x, "back" 3x — tightened to fewest words.)
     kicker: "BACK IN STOCK", kickerColor: "#FFCB05", headline: "It's back.",
-    body: ["**{store}** in {city} has it again.", "This stuff moves fast. Go before it's gone."],
-    module: { type: "product", title: "{product}", sub: "{store} · {city}", badge: "JUST SPOTTED" }, cta: "See the store", url: "https://checkitforme.com",
+    body: ["**{store}** has it right now.", "This stuff moves fast."],
+    module: { type: "product", title: "{product}", sub: "{city}", badge: "JUST SPOTTED" }, cta: "See it on Check", url: "https://checkitforme.com",
   },
   confirm_email: {
     kicker: "CONFIRM YOUR EMAIL", kickerColor: "#4ADE80", headline: "One tap left.",
@@ -200,8 +202,9 @@ const EMAIL_DESIGN_EN: Record<EmailKind, EmailDesign> = {
     cta: "Confirm my email", url: "https://checkitforme.com",
   },
   auto_check: {
+    // The module carries the item + store; the body just says we called and points at the result.
     kicker: "AUTO CHECK", kickerColor: "#A78BFA", headline: "{result}.",
-    body: ["Your auto check just called **{store}** about **{product}**.", "Tap in to see exactly what Staff said."],
+    body: ["We called for you. Here's what they said."],
     module: { type: "product", title: "{product}", sub: "{store}", badge: "AUTO CHECK" },
     cta: "See the call", url: "https://checkitforme.com",
   },
@@ -225,8 +228,8 @@ const EMAIL_DESIGN_ES: Record<EmailKind, EmailDesign> = {
   },
   restock: {
     kicker: "YA DISPONIBLE", kickerColor: "#FFCB05", headline: "Volvió.",
-    body: ["**{store}** en {city} lo tiene otra vez.", "Esto vuela. Ve por él antes de que se acabe."],
-    module: { type: "product", title: "{product}", sub: "{store} · {city}", badge: "VISTO HOY" }, cta: "Ver la tienda", url: "https://checkitforme.com",
+    body: ["**{store}** lo tiene ahora.", "Esto vuela."],
+    module: { type: "product", title: "{product}", sub: "{city}", badge: "VISTO HOY" }, cta: "Verlo en Check", url: "https://checkitforme.com",
   },
   confirm_email: {
     kicker: "CONFIRMA TU CORREO", kickerColor: "#4ADE80", headline: "Un toque más.",
@@ -236,7 +239,7 @@ const EMAIL_DESIGN_ES: Record<EmailKind, EmailDesign> = {
   },
   auto_check: {
     kicker: "CHECK AUTOMÁTICO", kickerColor: "#A78BFA", headline: "{result}.",
-    body: ["Tu check automático llamó a **{store}** por **{product}**.", "Toca para ver qué dijo el Staff."],
+    body: ["Llamamos por ti. Esto es lo que dijeron."],
     module: { type: "product", title: "{product}", sub: "{store}", badge: "CHECK AUTO" },
     cta: "Ver la llamada", url: "https://checkitforme.com",
   },
@@ -298,18 +301,18 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, _body: st
     ? `<tr><td class="p1" style="padding-top:15px;font-size:17px;line-height:1.5;color:#D1D1DA;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
     : `<tr><td class="p2" style="padding-top:16px;font-size:14px;line-height:1.5;color:#B9B9C4;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
   const ctaLabel = `${escHtml(d.cta).toUpperCase()}&nbsp;&nbsp;&rarr;`;
-  // Capsule CTA: filled #16161C, 2px green ring, WHITE label. Outlook can't round a td, so MSO gets
-  // a VML roundrect (arcsize 50% = full capsule) and everyone else gets the styled <a>.
+  // Capsule CTA: PURE-black fill (so Outlook can't gray it), 2px green ring, WHITE label. Outlook can't
+  // round a td, so MSO gets a VML roundrect (arcsize 50% = full capsule) and everyone else the styled <a>.
   const cta = `<tr><td style="padding-top:24px">
     <!--[if mso]>
-    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="#4ADE80" strokeweight="2px" fillcolor="#16161C">
+    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="#4ADE80" strokeweight="2px" fillcolor="#000000">
       <w:anchorlock/>
       <center style="color:#FFFFFF;font-family:Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.6px;">${ctaLabel}</center>
     </v:roundrect>
     <![endif]-->
     <!--[if !mso]><!-->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td align="center" style="background:#16161C;border:2px solid #4ADE80;border-radius:999px">
+      <td align="center" style="background:#000000;border:2px solid #4ADE80;border-radius:999px">
         <a href="${url}" style="display:block;padding:19px 24px;color:#FFFFFF;font-weight:800;font-size:14px;letter-spacing:1.6px;text-decoration:none;font-family:${FONT};text-transform:uppercase">${ctaLabel}</a>
       </td></tr></table>
     <!--<![endif]-->
@@ -342,7 +345,7 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, _body: st
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${BOARD}" class="board" style="background:${BOARD};margin:0;padding:0"><tr><td align="center" style="padding:30px 20px 34px">
     <!--[if mso]><table role="presentation" width="560" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" class="board" bgcolor="${BOARD}" style="max-width:560px;width:100%;background:${BOARD}">
-      <tr><td style="padding:0 4px 24px"><img src="https://checkitforme.com/logos/brand/check.png" width="104" height="33" alt="Check" style="display:block;width:104px;height:33px;border:0"></td></tr>
+      <tr><td style="padding:0 4px 24px"><img src="https://checkitforme.com/logos/brand/check-brandmark-1024.png" width="40" height="40" alt="Check" style="display:block;width:40px;height:40px;border:0"></td></tr>
       <tr><td style="padding:0 4px">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           <tr><td class="kick" style="font-size:11px;font-weight:700;letter-spacing:1.6px;color:${d.kickerColor};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
