@@ -917,12 +917,13 @@ app.post("/app/email", async (c) => {
   const language = lang === "es" ? "es" : lang === "en" ? "en" : undefined; // the site sends its LANG; keep whatever's there otherwise
   const before = await getAccount(u.id);
   const changed = e !== (before?.email || ""); // new or different address → it needs confirming again
+  const resend = !!e && !changed && !before?.emailVerifiedAt; // same still-pending address submitted again = "send the confirmation again" (owner 07-16)
   await db.update(accounts).set({ email: e || null, ...(language ? { language } : {}), ...(changed ? { emailVerifiedAt: null } : {}) }).where(eq(accounts.clerkUserId, u.id));
   // Opt-in email → Brevo (newsletter/alerts). Fire-and-forget so the UI isn't blocked on Brevo.
   if (e) brevoUpsertContact(e, { PHONE: u.phone || "" }).catch(() => {});
-  // New/changed address → ask them to confirm it (in their language). No alert email flows until they tap.
-  if (e && changed) { try { await sendConfirmEmail(u.id, e, language || (before?.language === "es" ? "es" : "en")); } catch { /* never block saving the email */ } }
-  return c.json({ ok: true, email: e || null, verified: !changed && !!before?.emailVerifiedAt });
+  // New/changed address (or a pending resend) → the confirm email goes out in their language.
+  if (e && (changed || resend)) { try { await sendConfirmEmail(u.id, e, language || (before?.language === "es" ? "es" : "en")); } catch { /* never block saving the email */ } }
+  return c.json({ ok: true, email: e || null, verified: !changed && !!before?.emailVerifiedAt, resent: resend });
 });
 
 // ---- Email confirm + one-click unsubscribe (the two live links every alert email carries) ----
