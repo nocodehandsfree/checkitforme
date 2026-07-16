@@ -256,7 +256,7 @@ function fillRaw(t: string, tokens: Record<string, string | number | undefined>)
 function fillHtmlBold(t: string, tk: Record<string, string | number | undefined>): string {
   return t.split(/(\*\*[^*]+\*\*)/).map((seg) => {
     const m = seg.match(/^\*\*([^*]+)\*\*$/);
-    if (m) return `<b style="color:#FAFAFA;font-weight:700">${escHtml(fillRaw(m[1], tk))}</b>`;
+    if (m) return `<b style="color:#15151B;font-weight:700">${escHtml(fillRaw(m[1], tk))}</b>`;
     return escHtml(fillRaw(seg, tk));
   }).join("");
 }
@@ -265,23 +265,30 @@ function fillHtmlBold(t: string, tk: Record<string, string | number | undefined>
 // Outlook keeps near-black backgrounds black and keeps borders/saturated colors, but it LIGHTENS a
 // dark-gray fill (#14141A/#1B1B20) into gray mush — which is why the old floating card looked awful.
 // So: no floating card, one flat canvas, and modules are BORDERED (border survives) not dark-filled.
-const BOARD = "#16161C";       // near-black GRAY. Pure #000/#fff trigger Gmail+Apple aggressive invert
-// (Litmus/EoA); real dark emails (Touch of Modern, Philz, ZoomMate) use dark gray and stay dark everywhere.
-const HAIR = "#2A2A33";        // box border that survives Outlook's recolor (defines the boxes on black)
+// LIGHT design (2026-07-15, final): Gmail (the majority client) DARKENS light emails for dark-mode
+// users and shows them light otherwise — its whole system is built for light emails. A dark email
+// fights that and gets flipped to white (the bug we chased for hours). So we ship ONE light email and
+// let every client adapt: light in light mode, auto-darkened in dark mode. No pure #000/#fff anywhere
+// (those trigger ugly inversion). Renders clean in Gmail, Apple Mail, and Outlook.
+const PAGE = "#F3F3F6";  // off-white page (never pure white)
+const INK = "#15151B";   // near-black text (never pure black)
+const HAIR = "#E4E4EA";  // light hairline for boxes
+const GRN = "#16A34A";   // brand green tuned to read on white (button + accents)
+const KICKER_LIGHT: Record<string, string> = { "#4ADE80": "#16A34A", "#FFCB05": "#B45309", "#A78BFA": "#7C3AED" };
 function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | number | undefined>): string {
   if (!m) return "";
-  const box = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="mod" style="background:${BOARD};border:1px solid ${HAIR};border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
-  if (m.type === "chip") return box(`<span class="mt" style="font-size:15px;font-weight:700;color:#FAFAFA;font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
+  const box = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FBFBFD;border:1px solid ${HAIR};border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
+  if (m.type === "chip") return box(`<span style="font-size:15px;font-weight:700;color:${INK};font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
   if (m.type === "product") return box(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-    <td style="font-family:${FONT}"><div class="mt" style="font-size:16px;font-weight:800;color:#FAFAFA">${escHtml(fill(m.title, tk))}</div><div class="ms" style="font-size:12.5px;font-weight:600;color:#8A8A96;margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
-    <td align="right" valign="middle"><span style="display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.6px;color:#4ADE80;border:1px solid #235238;border-radius:999px;padding:5px 11px;font-family:${FONT}">${escHtml(m.badge)}</span></td></tr></table>`, "16px 18px", 16);
+    <td style="font-family:${FONT}"><div style="font-size:16px;font-weight:800;color:${INK}">${escHtml(fill(m.title, tk))}</div><div style="font-size:12.5px;font-weight:600;color:#6B6B76;margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
+    <td align="right" valign="middle"><span style="display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.6px;color:#15803D;background:#E7F6EC;border-radius:999px;padding:5px 11px;font-family:${FONT}">${escHtml(m.badge)}</span></td></tr></table>`, "16px 18px", 16);
   const rows = m.steps.map((s, i) => {
     const last = i === m.steps.length - 1;
     return `${i ? `<tr><td colspan="2" style="padding:0 18px"><div style="height:1px;line-height:1px;font-size:0;background:${HAIR}">&nbsp;</div></td></tr>` : ""}<tr>
-    <td width="57" valign="middle" style="padding:${i ? "12px" : "16px"} 0 ${last ? "16px" : "12px"} 18px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="26" height="26" align="center" valign="middle" style="width:26px;height:26px;border-radius:50%;border:1px solid #235238;color:#4ADE80;font-size:12px;font-weight:800;font-family:${FONT}">${escHtml(s[0])}</td></tr></table></td>
-    <td valign="middle" style="padding:${i ? "12px" : "16px"} 18px ${last ? "16px" : "12px"} 0;font-size:15px;font-weight:${last ? 700 : 600};color:#FAFAFA;font-family:${FONT}">${escHtml(s[1])}</td></tr>`;
+    <td width="57" valign="middle" style="padding:${i ? "12px" : "16px"} 0 ${last ? "16px" : "12px"} 18px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="26" height="26" align="center" valign="middle" style="width:26px;height:26px;border-radius:50%;background:#E7F6EC;color:#15803D;font-size:12px;font-weight:800;font-family:${FONT}">${escHtml(s[0])}</td></tr></table></td>
+    <td valign="middle" style="padding:${i ? "12px" : "16px"} 18px ${last ? "16px" : "12px"} 0;font-size:15px;font-weight:${last ? 700 : 600};color:${INK};font-family:${FONT}">${escHtml(s[1])}</td></tr>`;
   }).join("");
-  return `<tr><td style="padding-top:22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BOARD};border:1px solid ${HAIR};border-radius:16px">${rows}</table></td></tr>`;
+  return `<tr><td style="padding-top:22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FBFBFD;border:1px solid ${HAIR};border-radius:16px">${rows}</table></td></tr>`;
 }
 /** Email-safe branded HTML matching Design's approved mock (docs/design/emails/): #08090D board,
  *  Check wordmark image, gradient card, Inter-black headline, module card, filled capsule CTA with
@@ -305,62 +312,52 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
   // single alert off — no "Unsubscribe" link. The RFC-8058 List-Unsubscribe header (espEmail) still gives
   // the inbox its own one-click unsubscribe, so we stay compliant without the confusing in-body link.
   const manageUrl = manageAlertsUrl();
+  const kick = KICKER_LIGHT[d.kickerColor] || d.kickerColor;
   // Paragraphs whose tokens fill to nothing (e.g. no restock day heard) are dropped, not rendered as gaps.
   const bodyHtml = bodyLines.filter((p) => fill(p.replace(/\*\*/g, ""), tokens)).map((p, i) => i === 0
-    ? `<tr><td class="p1" style="padding-top:15px;font-size:17px;line-height:1.5;color:#D1D1DA;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
-    : `<tr><td class="p2" style="padding-top:16px;font-size:14px;line-height:1.5;color:#B9B9C4;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
+    ? `<tr><td style="padding-top:15px;font-size:17px;line-height:1.5;color:#3C3C44;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
+    : `<tr><td style="padding-top:16px;font-size:14px;line-height:1.5;color:#55555E;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
   const ctaLabel = `${escHtml(d.cta).toUpperCase()}&nbsp;&nbsp;&rarr;`;
-  // Capsule CTA: PURE-black fill (so Outlook can't gray it), 2px green ring, WHITE label. Outlook can't
-  // round a td, so MSO gets a VML roundrect (arcsize 50% = full capsule) and everyone else the styled <a>.
+  // Capsule CTA: FILLED brand green (saturated → survives dark-mode inversion), off-white label. Outlook
+  // can't round a td, so MSO gets a VML roundrect (arcsize 50% = full capsule); everyone else the styled <a>.
   const cta = `<tr><td style="padding-top:24px">
     <!--[if mso]>
-    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="#4ADE80" strokeweight="2px" fillcolor="#16161C">
+    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="${GRN}" strokeweight="1px" fillcolor="${GRN}">
       <w:anchorlock/>
-      <center style="color:#FAFAFA;font-family:Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.6px;">${ctaLabel}</center>
+      <center style="color:#FEFEFE;font-family:Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.6px;">${ctaLabel}</center>
     </v:roundrect>
     <![endif]-->
     <!--[if !mso]><!-->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td align="center" style="background:#16161C;border:2px solid #4ADE80;border-radius:999px">
-        <a href="${url}" style="display:block;padding:19px 24px;color:#FAFAFA;font-weight:800;font-size:14px;letter-spacing:1.6px;text-decoration:none;font-family:${FONT};text-transform:uppercase">${ctaLabel}</a>
+      <td align="center" style="background:${GRN};border-radius:999px">
+        <a href="${url}" style="display:block;padding:19px 24px;color:#FEFEFE;font-weight:800;font-size:14px;letter-spacing:1.6px;text-decoration:none;font-family:${FONT};text-transform:uppercase">${ctaLabel}</a>
       </td></tr></table>
     <!--<![endif]-->
   </td></tr>`;
-  const footer = `<a href="${manageUrl}" style="color:#8A8A96;text-decoration:none">${lang === "es" ? "Administrar alertas" : "Manage alerts"}</a>`;
-  // OUTLOOK-ROBUST: ONE flat near-black canvas (no floating card — a two-tone card is what Outlook
-  // grayed into mush). Content sits directly on the board with padding; the module + CTA are BORDERED
-  // (borders + saturated green survive Outlook's recolor). [data-ogsc]/[data-ogsb] re-assert colors
-  // where Outlook web stamps them. Renders clean in Outlook, Gmail, and Apple Mail alike.
+  const footer = `<a href="${manageUrl}" style="color:#77777F;text-decoration:none">${lang === "es" ? "Administrar alertas" : "Manage alerts"}</a>`;
+  // ONE light email. color-scheme "light dark" tells clients to auto-adapt: light in light mode, cleanly
+  // darkened in dark mode. No pure #000/#fff. No forced dark, no hacks — this is what renders everywhere.
   return `<!doctype html>
 <html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">
-<style>
-:root{color-scheme:dark;supported-color-schemes:dark}
-[data-ogsc] .board,[data-ogsb] .board{background:${BOARD}!important}
-[data-ogsc] .mod,[data-ogsb] .mod{background:${BOARD}!important;border:1px solid ${HAIR}!important}
-[data-ogsc] .hl,[data-ogsc] .mt{color:#FAFAFA!important}
-[data-ogsc] .kick{color:${d.kickerColor}!important}
-[data-ogsc] .p1{color:#D1D1DA!important}[data-ogsc] .p2{color:#B9B9C4!important}
-[data-ogsc] .ms{color:#8A8A96!important}
-[data-ogsc] .ft,[data-ogsc] .ft a{color:#8A8A96!important}
-</style>
+<meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">
+<style>:root{color-scheme:light dark;supported-color-schemes:light dark}</style>
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-</head><body style="margin:0;padding:0;background:${BOARD};width:100%" bgcolor="${BOARD}">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BOARD}" class="board" style="background:${BOARD};margin:0;padding:0;width:100%;min-width:100%"><tr><td align="center" bgcolor="${BOARD}" style="background:${BOARD};padding:0">
+</head><body style="margin:0;padding:0;background:${PAGE};width:100%" bgcolor="${PAGE}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAGE}" style="background:${PAGE};margin:0;padding:0;width:100%;min-width:100%"><tr><td align="center" bgcolor="${PAGE}" style="background:${PAGE};padding:0">
     <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="board" bgcolor="${BOARD}" style="max-width:600px;width:100%;background:${BOARD}">
-      <tr><td bgcolor="${BOARD}" style="background:${BOARD};padding:30px 26px 0"><img src="https://checkitforme.com/logos/brand/check-brandmark-1024.png" width="40" height="40" alt="Check" style="display:block;width:40px;height:40px;border:0"></td></tr>
-      <tr><td bgcolor="${BOARD}" style="background:${BOARD};padding:24px 26px 0">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${PAGE}" style="max-width:600px;width:100%;background:${PAGE}">
+      <tr><td bgcolor="${PAGE}" style="background:${PAGE};padding:30px 26px 0"><img src="https://checkitforme.com/logos/brand/check-brandmark-1024.png" width="40" height="40" alt="Check" style="display:block;width:40px;height:40px;border:0"></td></tr>
+      <tr><td bgcolor="${PAGE}" style="background:${PAGE};padding:24px 26px 0">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr><td class="kick" style="font-size:11px;font-weight:700;letter-spacing:1.6px;color:${d.kickerColor};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
-          <tr><td class="hl" style="padding-top:12px;font-size:34px;font-weight:900;color:#FAFAFA;line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
+          <tr><td style="font-size:11px;font-weight:700;letter-spacing:1.6px;color:${kick};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
+          <tr><td style="padding-top:12px;font-size:34px;font-weight:900;color:${INK};line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
           ${bodyHtml}
           ${moduleHtml(d.module, tokens)}
           ${cta}
         </table>
       </td></tr>
-      <tr><td class="ft" bgcolor="${BOARD}" style="background:${BOARD};padding:26px 26px 34px;font-family:${FONT};font-size:12.5px;color:#8A8A96">${footer}</td></tr>
+      <tr><td bgcolor="${PAGE}" style="background:${PAGE};padding:26px 26px 34px;font-family:${FONT};font-size:12.5px;color:#77777F">${footer}</td></tr>
     </table>
     <!--[if mso]></td></tr></table><![endif]-->
   </td></tr></table></body></html>`;
