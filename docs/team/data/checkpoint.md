@@ -48,9 +48,16 @@
   ({kind:direct} | {kind:menu,seconds} | null, evidence-only). Webbie owns the UI; data side done.
 
 ## OPEN (smaller)
-- Payless Foods Athens: 1 store, NO phone exists anywhere (only board blocker left). Mute or leave.
-- Two owner-googled numbers held back as WRONG: Fry's Gilbert 102795 "(482)" nonexistent area code,
-  Mariano's Westchester-IL 102842 "(914)"=NY number. Re-google someday; chains already mapped.
+- **7 kiosk chains need REAL numbers (Google answer box FABRICATED the last batch — owner dialed 3/3
+  bad; all 105 quarantined to nophone on both envs 07-16 evening):** H-E-B, Lucky, FoodMaxx,
+  Metro Market, Stop & Shop, Pak N Save, Uwajimaya. NEW LAW: phones ONLY from the chain's own store
+  locator or the Google MAPS pin — never the AI answer box. Woodman's + H Mart numbers were real
+  (Mapper locked both). Hours kept (display-only, low risk).
+- **Staging/prod count mismatch to chase:** quarantine found 105 bad numbers on prod but only 33 on
+  staging — something re-imported/overwrote staging retailers again (same phantom as the identity
+  shuffle). Check for dupe rows on the kiosk chains and find WHO runs the overlay.
+- Payless Foods Athens: 1 store, NO phone exists anywhere. Mute or leave.
+- Fry's Gilbert 102795 + Mariano's Westchester-IL 102842: held-back wrong numbers; chains already mapped.
 - Kiosk root fix (my lane, post-launch): key kiosk rows by PLACE, overlay machines via `kiosks` table,
   so TPCi machine moves stop rewriting row identities.
 - Logos needed (real brands): Habitat ReStore, Unique — owner getting. Logo-resolver finding → DevOps

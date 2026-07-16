@@ -1,0 +1,19 @@
+ON DECK: owner dials each number below (the EXACT digits our system dials) and notes:
+MENU / HUMAN / DEAD AIR / WRONG BUSINESS. Same wall as Mapper's 8-chain block.
+Menu on a number our system got silence from = OUR caller is being screened (Echo/Mapper fix).
+Dead air for owner too = bad number (DD re-sources it). Payless skipped (no number exists).
+
+H-E-B Lytle — Lytle, TX — (830) 772-5100
+H-E-B Culebra Rd — San Antonio, TX — (210) 679-2400
+Lucky Supermarkets Redwood City — Redwood City, CA — (650) 364-1845
+FoodMaxx Santa Rosa — Santa Rosa, CA — (707) 523-2895
+Metro Market Madison — Madison, WI — (608) 223-1126
+Stop & Shop Southern Artery — Quincy, MA — (617) 471-1200
+Pak N Save Emeryville — Emeryville, CA — (510) 654-7164
+Uwajimaya Bellevue — Bellevue, WA — (425) 747-9012
+
+OUTCOME (same day): owner dialed the top 3 — ALL BAD (hang-up / bad signal / wrong number).
+Verdict: Google's AI answer box FABRICATED numbers for these chains (Woodman's + H Mart were real —
+Mapper mapped them). All 105 unverified numbers on the 7 failing chains QUARANTINED back to nophone:
+on BOTH envs (hours kept, display-only). NEW LAW: store phone numbers come from the chain's OWN
+store locator (or Google MAPS pin), NEVER the search answer box.
