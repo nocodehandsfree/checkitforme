@@ -3,82 +3,42 @@
 > promotes to prod on the owner's word, and keeps the owner focused on the one thing that matters.
 > Talk to the owner like a friend, plain words, no jargon (he reads on a phone). Newest on top.
 
-## ✅ PROMOTES DONE 2026-07-15 — prod fully current (37f0bca), prod gate 100% GREEN
-- Three promotes tonight: `30e5989` big batch → `a31b902` admin-splash hotfix → `37f0bca` (Addie
-  round-1 fixes, admin ship-path decouple, gate A1-A8, PR #18: cheap-bridge `cheapBridgeAll` OFF +
-  real call-failed reasons + bridge echo gate). Verified live: health=37f0bca, Admin serves, splash
-  up, ship-path /ui-version answers "bundled", launch-gate prod ALL GREEN (A8 peek-entry fixed the
-  brand-skin reds).
-- 07-15 early: prod-edge hostname trap splashed THE Admin; fixed 48dcb1d; recorded in GOTCHAS.
-- Known CI red (owner told, cosmetic): off-brand colors in v2 scope. Playwright here: use
-  /opt/pw-browsers/chromium via PLAYWRIGHT_BROWSERS_PATH.
+## 📍 NOW (2026-07-16) — prod = staging = 41901e5, gate GREEN, fresh-chat reset day
+- Fresh-start promote landed + verified (health, Admin, splash, prod launch gate all green).
+  Tint attempt 4 (4d8821b, strips take sheet surface colour) rode along — owner judges via peek.
+- Owner's day: dedicated EMAILS chat running (dark template must render in all clients; 7 failed
+  attempts logged in git — grep "emails") · Webbie wrap-up then FRESH Webbie chat · Addie adding
+  system messages · then Echo call session.
+- **CHARLIE FOR ALL ACCOUNTS locked** (Delta built + shelved; Fun store → Branson Global). Echo
+  session = dial in Charlie + call-status page rendering (new Webbie owns the consumer call UI).
+- **Card test folds INTO the Charlie session**: fresh 424 signup (blank slate, NOT comp —
+  COMP_PHONES unset, verified) → peek link → free check on a real store (watch status page) →
+  upgrade → Family, REAL card → receipts. It's still the last launch gate — keep it front.
+- Handoffs from Addie + Webbie arriving; fold into this file as they land.
 
-## THE ONE THING — owner's combined test on prod (his plan, 2026-07-15)
-1. Card test as a TRUE customer: 424 number (blank slate; NOT comp — prod COMP_PHONES is unset,
-   verified) → peek link → signup → free check → upgrade → **Family plan, REAL card** → receipts.
-2. THEN PM sets prod `COMP_PHONES=+14243126356` (Railway var; auto-redeploys ~1 min) so his account
-   can see + call the Fun store (ownerOnly needs comp; comp also stops burning his paid checks).
-3. Fun-store Delta calls with Echo (Branson/tape-deck workflow is Fun-store-tied, works on prod).
-   This session doubles as Pops's echo-gate bench check (interrupt threshold) — first calls shipped
-   untuned on purpose; Echo/Pops adjust if clipping/phantom lines show.
-- 424 is also in ADMIN_PHONES (consumer sign-in doubles as Admin login) — expected, harmless.
+## Open queue (after the Charlie/card session)
+1. Pops: one `ship-admin.sh` rehearsal → Addie ships Admin UI in seconds, no promotes.
+2. Pops small build: enforce per-tier SMS caps (`smsAlertsPerMonth` is plan-data-only today).
+3. Owner: Twilio A2P (waiting on Twilio; gates SMS alerts) · Discord server · #379/#364 yes/no ·
+   LEGAL/consent (critical GTM, owner-owned, un-started) · hide hobby chains in Admin.
+4. cheapBridgeAll flip (Admin → Policy) — owner's call, after Charlie economics are settled.
+5. Week-in-review + hum-better one-pager (owner asked; useful before Friday's Chris talk —
+   deal notes live in docs/team/ideas/checkpoint.md).
+6. Owner walk list O2-O10 in docs/specs/launch-journeys/JOURNEYS.md (A1-A8 automated + green).
 
-## After the combined test
-1. Delta-vs-Charlie verdict with Echo → decide cheapBridgeAll flip (Admin → Policy; owner's call).
-2. Pops rehearses `ship-admin.sh` once → Addie ships Admin UI in seconds, no promotes.
-3. Owner: Twilio A2P (waiting on Twilio) · Discord server · #379/#364 yes/no · LEGAL/consent
-   (critical GTM, owner-owned, un-started) · hide hobby chains in Admin (thrift chip already
-   gone — Webbie did it).
-4. Pops small build: enforce per-tier SMS caps (smsAlertsPerMonth is data-only today).
-5. Week-in-review + hum-better report (owner asked; queued).
-
-## 🌙 END-OF-DAY AUDIT 07-16 ~03:45 UTC — reset night, fresh chats tomorrow
-- **Nothing is lost.** All code is on staging; the only dangling work was docs on session branches —
-  folded in tonight (voice strategy checkpoint 41bc33a + ideas/Chris deal thread 4e130f7).
-- **Staging is ~75 commits ahead of prod** (everything since 37f0bca): Addie admin rounds + alerts
-  sheet, 6 email redesign attempts (Gmail loop, latest = ONE light design c773bfa), DD accuracy batch
-  (kiosk=Pokemon-only, distributor map, radius ladder), nav-sync + learned-sync (gray-store fix),
-  voice strategy (LAUNCH CHARLIE, Delta shelved, Fun→Branson Global), alerts mute/stop, copy.
-- **Support's "Admin not on staging" confusion:** Admin = prod service; Addie's work waits on promote
-  (or ship-admin.sh, live on prod but not yet rehearsed). Vocabulary: there is no "staging Admin".
-- **Tint saga closed for tonight:** Webbie's 2 attempts + PM's structural attempt all reverted;
-  staging = clean baseline. Root cause documented (transformed sheets hijack position:fixed) —
-  boxed brief ready for the dedicated iOS tint chat. Only the owner's iPhone judges tint work.
-- **Gate state end-of-day: ALL GREEN** — tsc, full suite (design tokens green for the first time),
-  staging launch gate 23/23. One earlier red = Cloudflare 502 mid-redeploy (staging restarts on every
-  push; don't gate while a push is landing). Cloudflare origin = voice-caller-*.up.railway.app
-  (confirms the GOTCHAS hostname trap).
-- **PROMOTED 07-16 ~04:15 UTC: prod = staging = 41901e5, verified** (health, Admin, splash, prod gate GREEN). Tint attempt 4 (4d8821b, strips take sheet surface colour) rode along - owner judges it via peek on his phone.
-
-## Tomorrow's restart plan
-1. Owner sends "Handoff" to every wonky chat (they checkpoint + push), then kills them.
-2. Fresh boots: iOS tint chat (box in PM chat 07-16) · fresh Addie for EMAILS ONLY (Gmail loop needs
-   one narrow contract) · fresh Webbie. Echo stays (checkpoint current).
-3. Pops: one ship-admin.sh rehearsal → Admin UI independent of promotes for good.
-4. Still owner's: THE card test (O1) · Fun-store Charlie listen · Twilio A2P · legal/consent · Friday
-  Chris talk (deal notes in docs/team/ideas/checkpoint.md).
-
-## CI health (check before every promote)
-- Known reds: off-brand colors in the v2 skin (cosmetic; Webbie's) and gitleaks (dead tokens; Pops
-  rotates at launch — rotation list at docs/team/devops/rotation-list.md). Know what's red BEFORE
-  promoting. Full local gate: `npx tsc --noEmit` + `bash scripts/test-all.sh` + `bash
-  scripts/launch-gate.sh staging` (prod mode right after a promote).
-
-## The rules that got fixed today (all live in CLAUDE.md now)
-- Agents merge their own session branches; the owner NEVER merges.
-- Map of surfaces is FROZEN: one website (+ staging replica), ONE Admin. No new doors/domains ever.
-- "staging"/"prod" = the WEBSITE only. Admin is ONE internal app, ships straight through, no rehearsal copy.
-- Your lane's code is yours to build — don't hand off work you own.
-- Promote ships the WHOLE staging branch — flag/hold unreviewed visible features.
-- Skills exist: build-on-brand, ship-it (done = driven on staging w/ evidence), unblock-yourself,
-  known-problems, reply-simple. "Protocol" = reread reply rules. "Full send" = full autonomy.
-- Claude Design does NOT auto-read CLAUDE.md — its boot prompt lives in docs/team/design/BOOT_PROMPT.md.
-
-## How the owner wants the PM to talk
-- Plain English, like texting a friend who doesn't do tech. No shorthand, no invented words.
-- Outcome first, short. One thing at a time. Hold him to the card test. Revert is always one command,
-  so promoting is low-risk — the safety net is real.
+## Standing facts (prune when stale)
+- Promote = `bash scripts/promote.sh` after tsc + test-all + `launch-gate.sh staging` green; verify
+  prod health + Admin + splash + `launch-gate.sh prod` after. Staging redeploys on EVERY push — a
+  gate run mid-deploy reds with a Cloudflare 502; wait for /api/health, rerun.
+- Cloudflare fronts prod; origin hosts are *.up.railway.app → admin detection is brand-based
+  (GOTCHAS). COMING_SOON only exists on prod; rehearse gate changes locally with Host headers.
+- Playwright in this box: /opt/pw-browsers/chromium via PLAYWRIGHT_BROWSERS_PATH.
+- Tint saga: 4 attempts, 3 reverted, root cause = transformed sheets hijack position:fixed
+  (GOTCHAS). Only the owner's iPhone judges tint work; boxed brief for a tint chat is in PM chat.
+- Vocabulary: there is no "staging Admin" — Admin is ONE app on the prod service.
+- 424 number: in ADMIN_PHONES (expected), NOT in COMP_PHONES. After the card test, set prod
+  COMP_PHONES=+14243126356 so the owner can see/call the Fun store without burning paid checks.
 
 ## Provenance
-State as of 2026-07-14 (the long night: repo cleanup, 5 agent fires, rules moved from chats into the
-repo, peek door built, pricing set to 20/50/125/400). Re-verify prod vs staging with git + /api/health.
+2026-07-16: reset night — end-of-day audit found nothing lost; session-branch docs folded in
+(voice strategy, ideas/Chris thread); 4 promotes total since 07-15. History lives in git log.
