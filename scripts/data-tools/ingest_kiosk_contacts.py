@@ -1,31 +1,30 @@
 """Ingest owner's Google response for the verified-kiosk groceries: phone + hours per store.
 
-Response line:  <stagingId> | (408) 287-5377 | Mon-Fri 6am-12am; Sat-Sun 5am-1am
-                <stagingId> | NOTFOUND
-Hours spec: ';'-separated segments, each "<DayRange> <open>-<close>" with grouped days
-(Mon-Fri / Sat-Sun / Mon-Sun / single Day). "open 24 hours" -> "24h". 12am close = midnight wrap.
+Response line:  <id> | (830) 772-5100 | Mon-Sun 6am-11pm      (or:  <id> | NOTFOUND)
+Sent-box line:  <id> | <name> | <address>, <city>, <ST> <zip>  (the box the owner googled from)
 
-WHY BOTH ENVS DIRECTLY: retailer `phone` is the store-sync JOIN KEY (rows are matched across envs
-by phone), so a phone edit can never ride the sync — patching staging alone would make the next sync
-tick insert a DUPLICATE row on prod and tombstone the old one. So we patch PROD FIRST (matched by
-externalStoreId), then staging; by the time the sync tick fires, both sides carry the same key.
-`hours` is in the never-sync set (learned lane) — same reason it must be written to both directly.
+IDENTITY RULE (GOTCHAS 2026-07-16): kiosk row ids are NOT stable across time — the vending overlay
+rewrites row identities when TPCi relocates machines. The response id is only used to look up the
+SENT box line; the write target is found by NORMALIZED ADDRESS + STATE + chain-name token in the
+LIVE data of each env, independently. No address-verified match -> that number is skipped and listed.
 
-Usage: python3 ingest_kiosk_contacts.py <response.txt> [--apply]   (DRY default; staging-only with --staging-only)
-Tokens: .atok (staging) + .atok_prod (prod) in cwd, or ADMIN_TOKEN/ADMIN_TOKEN_PROD env. curl only.
+Phones also can't ride store-sync (phone IS the cross-env join key) and hours are never-sync, so both
+envs are patched directly: PROD FIRST, then staging (so the sync tick can never mint a dupe row).
+
+Usage: python3 ingest_kiosk_contacts.py <response.txt> <sent_box.txt> [--apply] [--staging-only]
+Tokens: .atok / .atok_prod in cwd (or ADMIN_TOKEN / ADMIN_TOKEN_PROD env). curl subprocess ONLY.
 """
 import json, os, re, subprocess, sys, tempfile, time
 
 DRY = "--apply" not in sys.argv
 STG_ONLY = "--staging-only" in sys.argv
-SRC = [a for a in sys.argv[1:] if not a.startswith("--")][0]
+pos = [a for a in sys.argv[1:] if not a.startswith("--")]
+SRC, SENT = pos[0], pos[1]
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
-STG = "https://staging.checkitforme.com"
-PRD = "https://checkitforme.com"
-tok_s = os.environ.get("ADMIN_TOKEN") or open(".atok").read().strip()
-tok_p = None if STG_ONLY else (os.environ.get("ADMIN_TOKEN_PROD") or open(".atok_prod").read().strip())
+ENVS = [("prod", "https://checkitforme.com", (os.environ.get("ADMIN_TOKEN_PROD") or open(".atok_prod").read().strip()))] if not STG_ONLY else []
+ENVS += [("staging", "https://staging.checkitforme.com", (os.environ.get("ADMIN_TOKEN") or open(".atok").read().strip()))]
 DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-DA = {"mon": 0, "tue": 1, "tues": 1, "wed": 2, "thu": 3, "thur": 3, "thurs": 3, "fri": 4, "sat": 5, "sun": 6}
+DA = {"mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6}
 
 def req(base, tok, method, path, data=None):
     cmd = ["curl", "-s", "--max-time", "180", "-X", method, "-H", f"x-admin-token: {tok}", "-H", f"User-Agent: {UA}"]
@@ -45,7 +44,6 @@ def req(base, tok, method, path, data=None):
         if tmp: os.unlink(tmp.name)
 
 def t24(s):
-    """'6am'/'12am'/'10:30pm' -> 'HH:MM'. 12am->00:00, 12pm->12:00."""
     m = re.match(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)", s.strip().lower())
     if not m: return None
     h, mi, ap = int(m.group(1)), m.group(2) or "00", m.group(3)
@@ -54,19 +52,18 @@ def t24(s):
     return f"{h:02d}:{mi}"
 
 def parse_hours(spec):
-    """'Mon-Fri 6am-12am; Sat-Sun open 24 hours' -> {"mon":[o,c]|"24h",...} or None if unparseable."""
+    """'Mon-Fri 6am-12am; Sat-Sun open 24 hours' -> hours JSON string, or None if unparseable."""
     out = {}
     for seg in spec.split(";"):
         seg = seg.strip()
         if not seg: continue
         m = re.match(r"([A-Za-z]+)(?:\s*-\s*([A-Za-z]+))?\s+(.*)", seg)
         if not m: return None
-        d1 = DA.get(m.group(1).lower()[:4].rstrip("s") if m.group(1).lower()[:4] in ("tues", "thur") else m.group(1).lower()[:3])
-        d2 = DA.get((m.group(2) or m.group(1)).lower()[:3])
-        rest = m.group(3).strip().lower()
+        d1 = DA.get(m.group(1).lower()[:3]); d2 = DA.get((m.group(2) or m.group(1)).lower()[:3])
         if d1 is None or d2 is None: return None
-        if "24 hour" in rest or rest == "24h": val = "24h"
-        elif rest in ("closed",): val = None
+        rest = m.group(3).strip().lower()
+        if "24" in rest and "am" not in rest and "pm" not in rest: val = "24h"
+        elif rest == "closed": val = None
         else:
             tm = re.match(r"(.+?)\s*-\s*(.+)", rest)
             if not tm: return None
@@ -74,7 +71,9 @@ def parse_hours(spec):
             if not o or not c: return None
             val = [o, c]
         for d in range(d1, d2 + 1): out[DAYS[d]] = val
-    return out if len(out) == 7 else None  # every day must be covered — partial weeks stay unwritten
+    return json.dumps(out) if len(out) == 7 else None  # whole week or nothing
+
+def norm(a): return re.sub(r"[^a-z0-9]", "", (a or "").lower())
 
 def norm_phone(s):
     d = re.sub(r"\D", "", s)
@@ -82,57 +81,68 @@ def norm_phone(s):
     if len(d) == 11 and d.startswith("1"): return "+" + d
     return None
 
-rows, notfound, bad = {}, [], []
+def name_token(name):
+    """Chain token from the sent name: leading tokens until >=4 chars ('H-E-B'->'h-e-b', 'H Mart X'->'h mart')."""
+    toks, acc = name.split(), []
+    for t in toks:
+        acc.append(t)
+        if len("".join(acc)) >= 4: break
+    return " ".join(acc).lower()
+
+# sent box: id -> (name, address-part, state)
+sent = {}
+for ln in open(SENT):
+    if not re.match(r"\s*\d+\s*\|", ln): continue
+    i, name, addr = [p.strip() for p in ln.split("|", 2)]
+    stm = re.search(r",\s*([A-Z]{2})\s+\d{5}", addr)
+    street = addr.split(",")[0].strip()
+    sent[int(i)] = (name, street, stm.group(1) if stm else None)
+
+# response: id -> (phone, hoursjson)
+todo, notfound, bad = {}, [], []
 for ln in open(SRC):
     ln = ln.strip()
     if not ln or "|" not in ln: continue
     parts = [p.strip() for p in ln.split("|")]
     sid = int(re.sub(r"\D", "", parts[0]) or 0)
-    if not sid: bad.append(ln); continue
+    if not sid or sid not in sent: bad.append("id not in sent box: " + ln); continue
     if len(parts) < 3 or parts[1].upper() == "NOTFOUND": notfound.append(sid); continue
-    ph = norm_phone(parts[1]); hrs = parse_hours(parts[2])
-    if not ph: bad.append(f"bad phone: {ln}"); continue
-    rows[sid] = {"phone": ph, **({"hours": json.dumps(hrs)} if hrs else {})}
-    if not hrs: bad.append(f"hours unparsed (phone still taken): {ln}")
+    ph = norm_phone(parts[1])
+    if not ph: bad.append("bad phone: " + ln); continue
+    todo[sid] = (ph, parse_hours(parts[2]))
 
-print(f"{'DRY' if DRY else 'APPLY'} | parsed {len(rows)} stores, {len(notfound)} NOTFOUND, {len(bad)} flagged")
+print(f"{'DRY' if DRY else 'APPLY'} | {len(todo)} stores, {len(notfound)} NOTFOUND, {len(bad)} bad")
 for b in bad: print("  !", b)
-if not rows: sys.exit(0)
+missing = [i for i in sent if i not in todo and i not in notfound]
+if missing: print(f"  ! {len(missing)} sent ids came back with NO line: {missing[:20]}")
 
-# staging id -> externalStoreId -> prod id (kiosk rows all carry externalStoreId from the TPCi import)
-stg_all = {}
-off = 0
-while True:
-    rs = req(STG, tok_s, "GET", f"/api/admin/table-dump?name=retailers&limit=20000&offset={off}")["rows"]
-    if not rs: break
-    for r in rs: stg_all[r["id"]] = r
-    off += len(rs)
-    if len(rs) < 20000: break
-ext = {sid: stg_all[sid].get("externalStoreId") for sid in rows if sid in stg_all}
-missing_ext = [sid for sid, e in ext.items() if not e]
-if missing_ext: print("  ! staging rows lacking externalStoreId (staging-only patch):", missing_ext)
-
-prod_by_ext = {}
-if not STG_ONLY:
-    off = 0
+for env, base, tok in ENVS:
+    rows, off = [], 0
     while True:
-        rs = req(PRD, tok_p, "GET", f"/api/admin/table-dump?name=retailers&limit=20000&offset={off}")["rows"]
+        rs = req(base, tok, "GET", f"/api/admin/table-dump?name=retailers&limit=20000&offset={off}")["rows"]
         if not rs: break
-        for r in rs:
-            if r.get("externalStoreId"): prod_by_ext[r["externalStoreId"]] = r["id"]
-        off += len(rs)
+        rows += rs; off += len(rs)
         if len(rs) < 20000: break
-
-plan = []
-for sid, patch in rows.items():
-    pid = prod_by_ext.get(ext.get(sid)) if not STG_ONLY else None
-    plan.append((sid, pid, patch))
-    print(f"  {sid} -> prod {pid or '—'} : {patch['phone']} {'+hours' if 'hours' in patch else ''}")
-if DRY: sys.exit(0)
-
-done_p = done_s = 0
-for sid, pid, patch in plan:  # PROD FIRST (see header), staging second
-    if pid: done_p += req(PRD, tok_p, "POST", "/api/stores/patch", {"where": {"ids": [pid]}, "set": patch}).get("patched", 0)
-for sid, pid, patch in plan:
-    done_s += req(STG, tok_s, "POST", "/api/stores/patch", {"where": {"ids": [sid]}, "set": patch}).get("patched", 0)
-print(f"patched: prod {done_p}, staging {done_s}")
+    by_addr = {}
+    for r in rows:
+        if r.get("address") and r.get("active") is not False:
+            by_addr.setdefault((norm(r["address"]), r.get("state")), []).append(r)
+    ok = skip = already = 0
+    plan = []
+    for sid, (ph, hrs) in todo.items():
+        name, street, st = sent[sid]
+        tokn = name_token(name)
+        cands = [r for r in by_addr.get((norm(street), st), []) if tokn in (r.get("name") or "").lower()]
+        if not cands:
+            print(f"  {env} SKIP {sid} '{name}' — no live row at '{street}, {st}'"); skip += 1; continue
+        r = cands[0]
+        if r.get("phone") == ph and (hrs is None or r.get("hours") == hrs): already += 1; continue
+        patch = {"phone": ph, **({"hours": hrs} if hrs else {})}
+        plan.append((r["id"], patch)); ok += 1
+    print(f"{env}: {ok} to write, {already} already right, {skip} skipped (no address match)")
+    if DRY: continue
+    n = 0
+    for rid, patch in plan:
+        n += req(base, tok, "POST", "/api/stores/patch", {"where": {"ids": [rid]}, "set": patch}).get("patched", 0)
+    print(f"{env}: patched {n}")
+print("\nDRY — nothing written" if DRY else "\nDONE")
