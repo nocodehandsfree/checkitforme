@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+<!-- interactive-widget: Android Chrome 108+ defaults to resizes-visual — the keyboard would COVER our
+     bottom-anchored sheets (auth phone/code, check sheet, zones basket) and the user types blind.
+     resizes-content shrinks the layout viewport instead, so bottom:0 sheets and 100dvh rise above the
+     keyboard. iOS Safari ignores the keyword entirely — zero effect on the proven iOS behavior. -->
 <!-- Status bar tint (regular Safari) — PROVEN ON-DEVICE (tinttest1-8, 07-09): modern iOS Safari paints
      its chrome (the status-bar strip AND the band behind the bottom address pill) from ONE value — the
      ROOT element's background-COLOR. It does not read painted pixels (macOS does), it IGNORES theme-color,
@@ -53,7 +57,7 @@
   window.__callPrefetch=fetch('/pub/result/'+encodeURIComponent(sp.get('call'))).then(function(r){return r.json();}).catch(function(){return null;});
 }catch(e){}})();</script>
 <style>html.restoring #builder,html.restoring .suplaunch,html.restoring #finds{display:none!important}</style>
-<meta name="x-rev" content="sheetchrome-r118" />
+<meta name="x-rev" content="android-r119" />
 __BRAND_HEAD__
 <link rel="icon" type="image/png" href="/logos/brand/check-icon.png?v=3">
 <link rel="apple-touch-icon" href="/logos/brand/check-icon.png?v=3">
@@ -80,6 +84,10 @@ __BRAND_HEAD__
      system font instead of Inter. One line keeps typography identical across the whole site. */
   button,select,textarea{font-family:inherit}
   html{-webkit-text-size-adjust:100%;background:#1D1D22;color-scheme:dark;touch-action:manipulation}/* neutral root = the EXACT v2 site gray #1D1D22 (owner 07-11: top strip was black at first paint; must match the page top-to-bottom). iOS samples this bg-COLOR for the status strip; verdict tone-* override it. NB in v2 the html[data-skin="v2"] block re-declares this — keep the two in lockstep. */
+  /* Android Chrome pull-to-refresh reloads the page on a top overscroll — mid-flow (sheet drag, live
+     call) that's a lost session. iOS has no PTR, just a harmless rubber-band; kill it for parity.
+     Vertical only — inner lists already contain their own overscroll. */
+  html,body{overscroll-behavior-y:none}
   html,body{max-width:100%;overflow-x:hidden}
   /* No visible scrollbar (it lingers in the Home-Screen/standalone app) — touch scrolling still works. */
   html,body{scrollbar-width:none;-ms-overflow-style:none} *::-webkit-scrollbar{width:0;height:0;display:none}
@@ -894,7 +902,9 @@ __BRAND_HEAD__
   #auth_phone::placeholder{color:#5e5e6c;font-style:italic;font-weight:400}
   #auth_phone:focus{outline:none;box-shadow:none;border:none}
   #auth_phonerow:focus-within{border-color:rgba(74,222,128,.45);box-shadow:0 0 0 2px rgba(74,222,128,.12)}
-  /* kill the browser autofill yellow — keep our dark field + white text */
+  /* kill the browser autofill yellow — keep our dark field + white text (auth_code too: Android
+     Chrome autofills the SMS one-time code and washes the field the same way) */
+  #auth_code:-webkit-autofill,#auth_code:-webkit-autofill:hover,#auth_code:-webkit-autofill:focus,#auth_code:-webkit-autofill:active,
   #auth_phone:-webkit-autofill,#auth_phone:-webkit-autofill:hover,#auth_phone:-webkit-autofill:focus,#auth_phone:-webkit-autofill:active{
     -webkit-text-fill-color:#fff;caret-color:#fff;-webkit-box-shadow:0 0 0 1000px #15151c inset;box-shadow:0 0 0 1000px #15151c inset;transition:background-color 99999s ease-out 0s}
   input[type="time"].kin{text-align:left} input[type="time"].kin::-webkit-date-and-time-value{text-align:left}
@@ -3010,9 +3020,20 @@ const SVG_TAG   = p => `<svg width="${p}" height="${p}" viewBox="0 0 24 24" fill
 // A store row's face: real logo if we have one; every HOBBY card shop shows the storefront icon (accent)
 // instead of messy name-initials; everyone else keeps their wordmark tile.
 function storeFace(s){
-  if(s&&s.logoUrl) return `<img src="${esc(s.logoUrl)}" alt="">`;
+  if(s&&s.logoUrl) return `<img src="${esc(s.logoUrl)}" alt="" data-nm="${esc(s.name)}" data-st="${esc(s.storeType||'')}" onerror="wmFail(this)">`;
   if(s&&s.storeType==='Hobby') return SVG_STORE(24);
   return storeWordmark(s&&s.name, s&&s.storeType);
+}
+// A dead logoUrl must never show the browser's broken-image glyph (Android Chrome paints a visible
+// one where iOS leaves a quiet blank) — swap in the designed monogram tile and drop the logo-only
+// tile classes so the backing matches every other monogram.
+function wmFail(img){
+  try{
+    const p=img.parentElement; if(p) p.classList.remove('lite','widelogo');
+    const tmp=document.createElement('span');
+    tmp.innerHTML=(img.dataset.st==='Hobby')?SVG_STORE(24):storeWordmark(img.dataset.nm||'', img.dataset.st||'');
+    img.replaceWith(tmp.firstChild||tmp);
+  }catch(_){ img.style.display='none'; }
 }
 // with a removal branch so un-entitling (logout / admin toggle) drops the chip and bounces out of its mode.
 function ensureModeChips(){
@@ -4142,7 +4163,7 @@ function renderMapPins(){
     const m = s.inStock
       ? L.marker([s.lat,s.lng],{icon:L.divIcon({className:'instkpin',html:`<span style="display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#0C0C12;border:2px solid ${neon||'#2BFF88'};box-shadow:0 0 11px ${neon||'#2BFF88'},0 0 4px ${neon||'#2BFF88'}">${FCHK(16)}</span>`,iconSize:[28,28],iconAnchor:[14,14]})}).addTo(MAP)
       : L.marker([s.lat,s.lng],{icon:L.divIcon({className:'tierpin',html: s.logoUrl
-          ? `<span style="display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#17171E;border:2px solid ${neon||'#3E3E46'};box-shadow:0 2px 10px rgba(0,0,0,.5)${neon?`,0 0 9px ${neon}`:''}"><img src="${esc(s.logoUrl)}" style="width:20px;height:20px;object-fit:contain" alt=""></span>`
+          ? `<span style="display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#17171E;border:2px solid ${neon||'#3E3E46'};box-shadow:0 2px 10px rgba(0,0,0,.5)${neon?`,0 0 9px ${neon}`:''}"><img src="${esc(s.logoUrl)}" style="width:20px;height:20px;object-fit:contain" alt="" onerror="this.style.display='none'"></span>`
           : neon
           ? `<span style="display:block;width:15px;height:15px;border-radius:50%;background:${neon};border:1.5px solid #0C0C12;box-shadow:0 0 9px ${neon},0 0 3px ${neon}"></span>`
           : `<span style="display:block;width:12px;height:12px;border-radius:50%;background:#9aa0b0;border:1.5px solid #0C0C12"></span>`, iconSize: s.logoUrl?[30,30]:(neon?[15,15]:[12,12]), iconAnchor: s.logoUrl?[15,15]:(neon?[8,8]:[6,6])})}).addTo(MAP);
@@ -4485,7 +4506,7 @@ async function loadFinds(){
 }
 // Product switcher (top): jump to another vertical. On a fungibles/runnr domain we hop to the real
 // subdomain; on preview hosts we use ?brand= so it works before DNS.
-function swIcon(b){ return b.logoUrl ? `<img src="${b.logoUrl}" alt="">` : (b.key==='poke'?ICO.pokeball:`<span style="font-size:18px">${b.emoji||''}</span>`); }
+function swIcon(b){ return b.logoUrl ? `<img src="${b.logoUrl}" alt="" onerror="this.style.display='none'">` : (b.key==='poke'?ICO.pokeball:`<span style="font-size:18px">${b.emoji||''}</span>`); }
 // A brand's switcher label: its tag when the logo already spells the name (Topps logo + "NBA"),
 // else its full short name. One rule, used in both the pill and the dropdown.
 function swLbl(b){ return b.tag || b.label; }
@@ -6146,7 +6167,7 @@ function acctTab(which,fromPop){
     const agoTx=e=>{ try{ return agoStr(Math.floor(e.ts/1000)); }catch(_){ return ''; } }; // agoStr wants seconds — ms made every call 'just now'
     const lastPool=(ACT_TONE?scope.filter(e=>railTone(e)===ACT_TONE):hist);
     const last=lastPool.slice(0,ACT_TONE?6:3).map(e=>`<button onclick="ACCT_RETURN='activity';closeAccount();openHistEntry(histList().find(x=>x.cid==='${esc(e.cid)}'))" style="display:flex;align-items:center;gap:11px;width:100%;background:linear-gradient(180deg,#2D2D34 0%,#27272D 100%);border:0;border-radius:14px;padding:9px 12px;box-shadow:0 8px 14px -8px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.07);color:#FFF;cursor:pointer;text-align:left">
-      <span style="width:40px;height:40px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${e.logoUrl?`<img src="${esc(e.logoUrl)}" style="width:32px;height:32px;object-fit:contain" alt="">`:`<span style="font-size:11px;font-weight:900;color:#CDCDD8">${esc((railBase(e.storeName)||'?').slice(0,2).toUpperCase())}</span>`}</span>
+      <span style="width:40px;height:40px;border-radius:11px;background:#1F1F25;display:flex;align-items:center;justify-content:center;flex-shrink:0">${e.logoUrl?`<img src="${esc(e.logoUrl)}" style="width:32px;height:32px;object-fit:contain" alt="" data-nm="${esc(e.storeName)}" onerror="wmFail(this)">`:`<span style="font-size:11px;font-weight:900;color:#CDCDD8">${esc((railBase(e.storeName)||'?').slice(0,2).toUpperCase())}</span>`}</span>
       <span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(railBase(e.storeName)||t('hist.acheck','Store check'))}</span><span style="display:block;margin-top:2px;font-size:11.5px;font-weight:600;color:#8A8A96;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.location||e.address||'')}</span></span>
       <span style="flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px">${v2StatusChip(railTone(e),22)}<span style="font-size:11px;font-weight:600;color:#8A8A96">${agoTx(e)}</span></span>
     </button>`).join('');
@@ -6968,7 +6989,7 @@ function railClass(e){ const st=STORES.find(x=>x.id===e.storeId)||{}; const lu=e
 function railFace(e){
   const st=STORES.find(x=>x.id===e.storeId);
   const lu=e.logoUrl||(st&&st.logoUrl);
-  if(lu) return `<img src="${esc(lu)}" alt="" loading="lazy">`;
+  if(lu) return `<img src="${esc(lu)}" alt="" loading="lazy" data-nm="${esc(e.storeName)}" data-st="${esc((st&&st.storeType)||'')}" onerror="wmFail(this)">`;
   return storeWordmark(e.storeName, st&&st.storeType);
 }
 // Local YYYY-MM-DD for a call's timestamp — used to view a specific day's transcripts.
