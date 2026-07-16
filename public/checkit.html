@@ -3152,7 +3152,12 @@ let PHONE_TOKEN = localStorage.getItem('cifm_token')||'';
 function isAuthed(){ return !!PHONE_TOKEN; }
 function freeUsed(){ return localStorage.getItem('runnr_free_used')==='1'; }
 async function appToken(){ return PHONE_TOKEN; }
-async function appApi(p,opts={}){ const t=await appToken(); const headers=Object.assign({},opts.headers||{},t?{Authorization:'Bearer '+t}:{}); return fetch(p,Object.assign({},opts,{headers})).then(r=>r.json()).catch(()=>({error:'network'})); }
+async function appApi(p,opts={}){
+  // NEVER let a slow/hung auth-token fetch stall the request (owner 07-16: the live-call transcript froze
+  // because every poll tick awaited a token that never resolved). 2.5s cap, then proceed anonymous —
+  // /pub/* endpoints answer anon, and one anonymous tick beats a dead page.
+  let t=null; try{ t=await Promise.race([appToken(), new Promise(res=>setTimeout(()=>res(null),2500))]); }catch(_){ t=null; }
+  const headers=Object.assign({},opts.headers||{},t?{Authorization:'Bearer '+t}:{}); return fetch(p,Object.assign({},opts,{headers})).then(r=>r.json()).catch(()=>({error:'network'})); }
 function initGA(){
   const id=POLICY&&POLICY.ga4Id; if(!id||window.__ga) return; window.__ga=1;
   const s=document.createElement('script'); s.async=true; s.src='https://www.googletagmanager.com/gtag/js?id='+id; document.head.appendChild(s);
@@ -5183,7 +5188,7 @@ async function startCheckLive(){
   }catch(e){} };
   liveStage(2); // dialing → it's ringing
   let cid=null;
-  POLL=setInterval(async()=>{
+  POLL=setInterval(async()=>{ try{
     if(secs>=210){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); return; }
     if(!cid){
       // Resolve the live conversation id (set once the bridge engages ElevenLabs). The moment it lands
@@ -5214,6 +5219,7 @@ async function startCheckLive(){
       renderLiveMsg();
     }
     if(o && o.live===false){ clearInterval(POLL);clearInterval(elT); finalizeLive(cid); }
+  }catch(_){/* one bad tick must NEVER kill the live view — the next tick retries (owner 07-16 freeze) */}
   },1200);
 }
 async function finalizeLive(cid){

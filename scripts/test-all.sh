@@ -46,6 +46,7 @@ run "integration: growth/CMS/community" "bash scripts/test-growth.sh"
 run "qa: pages (behavior benchmark)" "bash scripts/qa-pages.sh"
 run "qa: design tokens (v2 skin)" "$TSX scripts/qa-design.ts"
 run "qa: browser suites (v2 redesign)" "bash scripts/qa-browser.sh"
+run "qa: live call view LOCK (sim)" "env PORT=8798 bash scripts/test-live-view.sh"
 
 echo ""
 echo "════════════════════════════════════════════════"
