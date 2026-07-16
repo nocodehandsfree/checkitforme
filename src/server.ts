@@ -5220,10 +5220,12 @@ app.get("/api/admin/tree/list", async (c) => {
   const cnt = new Map(rows.map((r) => [r.cid, Number(r.n || 0)]));
   // The mapping board must MATCH the store data: only real, mappable chains. Hide non-mappable rows so
   // Mapping isn't flying blind through phantom/merge/mall clutter — a chain with 0 active stores has
-  // nothing to call, a muted chain is quarantined (CVS-at-Target, online-only), and a "_" name is a
-  // retired merge-stub. `?all=1` returns the unfiltered set for debugging.
+  // nothing to call, a muted chain is quarantined (CVS-at-Target, online-only), a "_" name is a retired
+  // merge-stub, and a site-check chain (stockCheckMethod=site, e.g. Micro Center) is NEVER dialed — its
+  // shelf-accurate website is the answer, so it has no phone tree to map and must not look callable here.
+  // `?all=1` returns the unfiltered set for debugging.
   const showAll = c.req.query("all") === "1";
-  const visible = showAll ? chs : chs.filter((ch) => !ch.muted && !(ch.name || "").startsWith("_") && (cnt.get(ch.id) || 0) > 0);
+  const visible = showAll ? chs : chs.filter((ch) => !ch.muted && !(ch.name || "").startsWith("_") && (cnt.get(ch.id) || 0) > 0 && ch.stockCheckMethod !== "site");
   return c.json({ model: TREE_MODEL, chains: visible.map((ch) => ({ id: ch.id, name: ch.name, type: ch.type, stores: cnt.get(ch.id) || 0, treeStatus: ch.treeStatus, ringsDirect: ch.ringsDirect, dtmf: ch.dtmfShortcut, answerPath: ch.answerPath, avgTreeSeconds: ch.avgTreeSeconds, note: ch.treeNote || ch.phoneTreeDefault, learnedAt: ch.treeLearnedAt, verifiedAt: ch.treeVerifiedAt, muted: ch.muted })) });
 });
 app.post("/api/admin/tree/discover", async (c) => {
