@@ -2,6 +2,13 @@
 
 > **Volatile file — update THIS at every "Checkpoint".**
 
+## ⛔ LAW (owner 07-16, after I shipped wrong feature copy twice)
+NEVER write copy for a module from guesses or old docs. Read the module's actual code/flow first
+(src/ + the interface), or ask. Facts that burned me: nothing auto-retries a failed call · "closed"
+result = our hours were wrong · hobby = best PRICE across multiple hobby shops for set+product type ·
+thrift asks SHELVES · auto checks (not "scheduled checks") = recurring call → EMAIL report ·
+store_holds + your_voice are PARKED, not offered · the idiom is "No check. No charge." · never "spam".
+
 ## 2026-07-15 — Killed the fake "Contact page" (source + bot) + refreshed hero
 The support bot was telling users to "go to the Contact page." Root cause: the book's
 old Contact page + the site's /p/contact fed the RAG, overriding the system prompt.
