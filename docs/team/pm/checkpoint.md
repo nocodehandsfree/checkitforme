@@ -32,14 +32,31 @@
 4. Pops small build: enforce per-tier SMS caps (smsAlertsPerMonth is data-only today).
 5. Week-in-review + hum-better report (owner asked; queued).
 
-## In flight right now (owner update 2026-07-15 late)
-- Owner driving the pre-market punch list himself through the lanes: alerts verified working +
-  Addie usability fixes · Echo/Delta rounds going well, call-presentation tweaks in progress ·
-  Copper + Support building the customer-support path. His deadline frame: **Friday = Chris
-  conversation** (possible deal/onboard) — he's clearing must-haves before then.
-- **Card test (O1) still NOT reported done** — everything else orbits it; keep it front and center.
-- DD: gray-but-mapped + kiosk-only fixes — data-side; owner retest = O10 in launch-journeys.
-- Owner asked earlier for a week-in-review + hum-better report — good Friday/Chris prep; offered.
+## 🌙 END-OF-DAY AUDIT 07-16 ~03:45 UTC — reset night, fresh chats tomorrow
+- **Nothing is lost.** All code is on staging; the only dangling work was docs on session branches —
+  folded in tonight (voice strategy checkpoint 41bc33a + ideas/Chris deal thread 4e130f7).
+- **Staging is ~75 commits ahead of prod** (everything since 37f0bca): Addie admin rounds + alerts
+  sheet, 6 email redesign attempts (Gmail loop, latest = ONE light design c773bfa), DD accuracy batch
+  (kiosk=Pokemon-only, distributor map, radius ladder), nav-sync + learned-sync (gray-store fix),
+  voice strategy (LAUNCH CHARLIE, Delta shelved, Fun→Branson Global), alerts mute/stop, copy.
+- **Support's "Admin not on staging" confusion:** Admin = prod service; Addie's work waits on promote
+  (or ship-admin.sh, live on prod but not yet rehearsed). Vocabulary: there is no "staging Admin".
+- **Tint saga closed for tonight:** Webbie's 2 attempts + PM's structural attempt all reverted;
+  staging = clean baseline. Root cause documented (transformed sheets hijack position:fixed) —
+  boxed brief ready for the dedicated iOS tint chat. Only the owner's iPhone judges tint work.
+- **Gate state end-of-day: ALL GREEN** — tsc, full suite (design tokens green for the first time),
+  staging launch gate 23/23. One earlier red = Cloudflare 502 mid-redeploy (staging restarts on every
+  push; don't gate while a push is landing). Cloudflare origin = voice-caller-*.up.railway.app
+  (confirms the GOTCHAS hostname trap).
+- **Awaiting owner's word to promote** → levels prod = staging for the fresh start.
+
+## Tomorrow's restart plan
+1. Owner sends "Handoff" to every wonky chat (they checkpoint + push), then kills them.
+2. Fresh boots: iOS tint chat (box in PM chat 07-16) · fresh Addie for EMAILS ONLY (Gmail loop needs
+   one narrow contract) · fresh Webbie. Echo stays (checkpoint current).
+3. Pops: one ship-admin.sh rehearsal → Admin UI independent of promotes for good.
+4. Still owner's: THE card test (O1) · Fun-store Charlie listen · Twilio A2P · legal/consent · Friday
+  Chris talk (deal notes in docs/team/ideas/checkpoint.md).
 
 ## CI health (check before every promote)
 - Known reds: off-brand colors in the v2 skin (cosmetic; Webbie's) and gitleaks (dead tokens; Pops
