@@ -41,15 +41,15 @@ export const DEFAULT_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   restock: {
     sms: "{product} is back at {store}. Move fast, this stuff doesn't sit. checkitforme.com",
     emailSubject: "{product} is back at {store}.",
-    emailBody: "{store} has it right now. This stuff moves fast.",
+    emailBody: "**{store}** has it right now. Get going, this stuff doesn't sit on the shelf for long.",
   },
   store_added: {
     emailSubject: "You got your store.",
-    emailBody: "{store} in {city} is live, and your next check is on us. Pick a product, Check AI calls the Staff, you get a straight answer.",
+    emailBody: "**{store}** in {city} is live, and your next check is on us. Pick a product, Check AI calls the Staff, you get a straight answer.",
   },
   waitlist: {
     emailSubject: "{city}, we made it.",
-    emailBody: "Check is live in {city}. Call any store near you, right from your phone. Your first check is on us.",
+    emailBody: "Check is live in **{city}**. Call any store near you, right from your phone. Your first check is on us.",
   },
   confirm_email: {
     emailSubject: "Confirm your email.",
@@ -58,7 +58,7 @@ export const DEFAULT_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   auto_check: {
     sms: "Your auto check called {store}. Result: {result}. See it at checkitforme.com",
     emailSubject: "Auto check: {result}.",
-    emailBody: "We called {store} about {product}. Here's what they said.",
+    emailBody: "We called **{store}** about **{product}**. Here's what they said.",
   },
 };
 // Spanish. Starts from EN defaults, so any field left off falls back to English (never a blank send).
@@ -66,15 +66,15 @@ export const ES_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   restock: {
     sms: "{product} volvió a {store}. Ve rápido, esto no dura. checkitforme.com",
     emailSubject: "{product} volvió a {store}.",
-    emailBody: "{store} lo tiene ahora. Esto vuela.",
+    emailBody: "**{store}** lo tiene ahora. Ve rápido, esto no dura mucho.",
   },
   store_added: {
     emailSubject: "Ya tienes tienda.",
-    emailBody: "{store} en {city} ya está, y tu próximo check va por nuestra cuenta. Elige un producto, Check AI llama al Staff y te da una respuesta clara.",
+    emailBody: "**{store}** en {city} ya está, y tu próximo check va por nuestra cuenta. Elige un producto, Check AI llama al Staff y te da una respuesta clara.",
   },
   waitlist: {
     emailSubject: "{city}, ya llegamos.",
-    emailBody: "Check ya está en {city}. Llama a cualquier tienda cerca, desde tu teléfono. Tu primer check va por nuestra cuenta.",
+    emailBody: "Check ya está en **{city}**. Llama a cualquier tienda cerca, desde tu teléfono. Tu primer check va por nuestra cuenta.",
   },
   confirm_email: {
     emailSubject: "Confirma tu correo.",
@@ -83,7 +83,7 @@ export const ES_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   auto_check: {
     sms: "Tu check automático llamó a {store}. {result}. Míralo en checkitforme.com",
     emailSubject: "Check automático: {result}.",
-    emailBody: "Llamamos a {store} por {product}. Esto es lo que dijeron.",
+    emailBody: "Llamamos a **{store}** por **{product}**. Esto es lo que dijeron.",
   },
 };
 
@@ -203,10 +203,9 @@ const EMAIL_DESIGN_EN: Record<EmailKind, EmailDesign> = {
     cta: "Confirm my email", url: "https://checkitforme.com",
   },
   auto_check: {
-    // The module carries the item + store; the body just says we called and points at the result.
+    // No panel: the editable body names the store + product; headline is the result. CTA → the call page.
     kicker: "AUTO CHECK", kickerColor: "#A78BFA", headline: "{result}.",
-    body: ["We called for you. Here's what they said."],
-    module: { type: "product", title: "{product}", sub: "{store}", badge: "AUTO CHECK" },
+    body: ["We called **{store}** about **{product}**.", "Here's what they said."],
     cta: "See the call", url: "https://checkitforme.com",
   },
   instock_owner: {
@@ -240,8 +239,7 @@ const EMAIL_DESIGN_ES: Record<EmailKind, EmailDesign> = {
   },
   auto_check: {
     kicker: "CHECK AUTOMÁTICO", kickerColor: "#A78BFA", headline: "{result}.",
-    body: ["Llamamos por ti. Esto es lo que dijeron."],
-    module: { type: "product", title: "{product}", sub: "{store}", badge: "CHECK AUTO" },
+    body: ["Llamamos a **{store}** por **{product}**.", "Esto es lo que dijeron."],
     cta: "Ver la llamada", url: "https://checkitforme.com",
   },
   instock_owner: EMAIL_DESIGN_EN.instock_owner, // internal → owner reads English
@@ -288,8 +286,13 @@ function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | numb
  *  Check wordmark image, gradient card, Inter-black headline, module card, filled capsule CTA with
  *  the green ring. Table layout + inline styles + MSO conditionals: Outlook (Word engine) gets a
  *  solid-color card fallback and a VML roundrect button, so it renders clean there too. */
-export function renderBrandedEmail(event: EmailKind, _subject: string, _body: string, tokens: Record<string, string | number | undefined> = {}, to = "", lang: Lang = "en"): string {
+export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw = "", tokens: Record<string, string | number | undefined> = {}, to = "", lang: Lang = "en"): string {
   const d = EMAIL_DESIGN[lang][event];
+  // The body paragraphs come from the EDITABLE template (Admin) when present — split into sentences so
+  // the owner can rewrite the message in Admin and the branded email reflects it. Else the design default.
+  const bodyLines = bodyRaw.trim()
+    ? bodyRaw.trim().split(/(?<=[.!?])\s+/).filter(Boolean)
+    : d.body;
   // CTA link: an explicit {url} token wins (owner alert → the call). For restock the real action is
   // GET DIRECTIONS — a Google Maps search for the store — not a dead website link. Else the design default.
   const url = tokens.url
@@ -297,13 +300,12 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, _body: st
     : event === "restock" && tokens.store
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(tokens.store))}`
       : d.url;
-  // Footer links are LIVE: manage → the site's alerts sheet; unsubscribe → the signed one-click kill.
+  // Footer: Manage alerts ONLY (owner 07-15). It deep-links to the site's alerts sheet where they turn a
+  // single alert off — no "Unsubscribe" link. The RFC-8058 List-Unsubscribe header (espEmail) still gives
+  // the inbox its own one-click unsubscribe, so we stay compliant without the confusing in-body link.
   const manageUrl = manageAlertsUrl();
-  const unsubUrl = to ? unsubscribeUrl(to) : `${siteUrl()}/unsubscribe`;
-  // Confirm-email is transactional — you can't unsubscribe from a confirmation, so it shows Manage only.
-  const showUnsub = event !== "confirm_email";
   // Paragraphs whose tokens fill to nothing (e.g. no restock day heard) are dropped, not rendered as gaps.
-  const bodyHtml = d.body.filter((p) => fill(p.replace(/\*\*/g, ""), tokens)).map((p, i) => i === 0
+  const bodyHtml = bodyLines.filter((p) => fill(p.replace(/\*\*/g, ""), tokens)).map((p, i) => i === 0
     ? `<tr><td class="p1" style="padding-top:15px;font-size:17px;line-height:1.5;color:#D1D1DA;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
     : `<tr><td class="p2" style="padding-top:16px;font-size:14px;line-height:1.5;color:#B9B9C4;font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
   const ctaLabel = `${escHtml(d.cta).toUpperCase()}&nbsp;&nbsp;&rarr;`;
@@ -323,11 +325,7 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, _body: st
       </td></tr></table>
     <!--<![endif]-->
   </td></tr>`;
-  const manageEs = lang === "es" ? "Administrar alertas" : "Manage alerts";
-  const unsubEs = lang === "es" ? "Cancelar suscripción" : "Unsubscribe";
-  const footer = showUnsub
-    ? `<a href="${manageUrl}" style="color:#8A8A96;text-decoration:none">${manageEs}</a><span style="color:#333340">&nbsp;&middot;&nbsp;</span><a href="${unsubUrl}" style="color:#8A8A96;text-decoration:none">${unsubEs}</a>`
-    : `<a href="${manageUrl}" style="color:#8A8A96;text-decoration:none">${manageEs}</a>`;
+  const footer = `<a href="${manageUrl}" style="color:#8A8A96;text-decoration:none">${lang === "es" ? "Administrar alertas" : "Manage alerts"}</a>`;
   // OUTLOOK-ROBUST: ONE flat near-black canvas (no floating card — a two-tone card is what Outlook
   // grayed into mush). Content sits directly on the board with padding; the module + CTA are BORDERED
   // (borders + saturated green survive Outlook's recolor). [data-ogsc]/[data-ogsb] re-assert colors
@@ -347,13 +345,13 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, _body: st
 [data-ogsc] .ft,[data-ogsc] .ft a{color:#8A8A96!important}
 </style>
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-</head><body style="margin:0;padding:0;background:${BOARD}" bgcolor="${BOARD}">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${BOARD}" class="board" style="background:${BOARD};margin:0;padding:0"><tr><td align="center" style="padding:30px 20px 34px">
-    <!--[if mso]><table role="presentation" width="560" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
-    <table role="presentation" width="560" cellpadding="0" cellspacing="0" class="board" bgcolor="${BOARD}" style="max-width:560px;width:100%;background:${BOARD}">
-      <tr><td style="padding:0 4px 24px"><img src="https://checkitforme.com/logos/brand/check-brandmark-1024.png" width="40" height="40" alt="Check" style="display:block;width:40px;height:40px;border:0"></td></tr>
-      <tr><td style="padding:0 4px">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+</head><body style="margin:0;padding:0;background:${BOARD};width:100%" bgcolor="${BOARD}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BOARD}" class="board" style="background:${BOARD};margin:0;padding:0;width:100%;min-width:100%"><tr><td align="center" bgcolor="${BOARD}" style="background:${BOARD};padding:0">
+    <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0"><tr><td><![endif]-->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" class="board" bgcolor="${BOARD}" style="max-width:600px;width:100%;background:${BOARD}">
+      <tr><td bgcolor="${BOARD}" style="background:${BOARD};padding:30px 26px 0"><img src="https://checkitforme.com/logos/brand/check-brandmark-1024.png" width="40" height="40" alt="Check" style="display:block;width:40px;height:40px;border:0"></td></tr>
+      <tr><td bgcolor="${BOARD}" style="background:${BOARD};padding:24px 26px 0">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
           <tr><td class="kick" style="font-size:11px;font-weight:700;letter-spacing:1.6px;color:${d.kickerColor};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
           <tr><td class="hl" style="padding-top:12px;font-size:34px;font-weight:900;color:#FFFFFF;line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
           ${bodyHtml}
@@ -361,22 +359,23 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, _body: st
           ${cta}
         </table>
       </td></tr>
-      <tr><td class="ft" style="padding:26px 4px 0;font-family:${FONT};font-size:12.5px;color:#8A8A96">${footer}</td></tr>
+      <tr><td class="ft" bgcolor="${BOARD}" style="background:${BOARD};padding:26px 26px 34px;font-family:${FONT};font-size:12.5px;color:#8A8A96">${footer}</td></tr>
     </table>
     <!--[if mso]></td></tr></table><![endif]-->
   </td></tr></table></body></html>`;
 }
-async function espEmail(to: string, subject: string, body: string, opts: { templateId?: number; params?: Record<string, string | number | undefined>; event?: EmailKind; lang?: Lang } = {}): Promise<{ ok: boolean; detail: string }> {
+async function espEmail(to: string, subject: string, body: string, opts: { templateId?: number; params?: Record<string, string | number | undefined>; event?: EmailKind; lang?: Lang; bodyRaw?: string } = {}): Promise<{ ok: boolean; detail: string }> {
   const key = config.alerts.brevoApiKey;
   if (!key) return { ok: false, detail: "email_not_configured" }; // BREVO_API_KEY unset → stubbed
   const sender = { name: "Check", email: config.alerts.senderEmail };
   // One-click unsubscribe headers: inbox providers surface their own Unsubscribe button from these.
   const headers = { "List-Unsubscribe": `<${unsubscribeUrl(to)}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" };
-  // Prefer a branded Brevo template (Design owns the look) when its id is set; else our email-safe template.
+  // bodyRaw = the editable template copy (with **bold** + {tokens}) → drives the branded email's body so
+  // Admin edits show up. `body` is the already-filled plaintext used for the text/plain part.
   const payload: Record<string, unknown> = opts.templateId
     ? { sender, to: [{ email: to }], templateId: opts.templateId, params: opts.params || {}, headers }
     : { sender, to: [{ email: to }], subject, headers,
-        htmlContent: opts.event ? renderBrandedEmail(opts.event, subject, body, opts.params || {}, to, opts.lang || "en")
+        htmlContent: opts.event ? renderBrandedEmail(opts.event, subject, opts.bodyRaw ?? "", opts.params || {}, to, opts.lang || "en")
           : `<div style="font-family:Inter,Arial,sans-serif;color:#111;max-width:520px"><p style="font-size:15px;line-height:1.55">${escHtml(body)}</p></div>`,
         textContent: `${subject}\n\n${body}\n\nCheck It For Me · checkitforme.com` };
   try {
@@ -413,7 +412,7 @@ export async function sendAlert(userId: string, event: AlertEvent, tokens: Recor
     return { status, detail: res.detail };
   }
   const subject = fill(tpls[event].emailSubject, tokens), body = fill(tpls[event].emailBody, tokens);
-  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: strTokens(tokens), event, lang });
+  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: strTokens(tokens), event, lang, bodyRaw: tpls[event].emailBody });
   const status = res.ok ? "sent" : "stubbed"; await log(userId, event, channel, to, status, tagged(res.detail));
   return { status, detail: res.detail };
 }
@@ -428,7 +427,7 @@ export async function sendAnonEmail(event: AlertEvent, tokens: Record<string, st
   if (!to) { await log(null, event, "email", null, "skipped_nocontact"); return { status: "skipped_nocontact" }; }
   const tpls = await getAlertTemplates(lang);
   const subject = fill(tpls[event].emailSubject, tokens), body = fill(tpls[event].emailBody, tokens);
-  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: strTokens(tokens), event, lang });
+  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: strTokens(tokens), event, lang, bodyRaw: tpls[event].emailBody });
   const status = res.ok ? "sent" : "stubbed"; await log(null, event, "email", to, status, res.detail);
   return { status, detail: res.detail };
 }
@@ -444,7 +443,7 @@ export async function sendRestockEmailTo(to: string, tokens: Record<string, stri
   const lang = accountLang(owner);
   const tpls = await getAlertTemplates(lang);
   const subject = fill(tpls.restock.emailSubject, tokens), body = fill(tpls.restock.emailBody, tokens);
-  const res = await espEmail(to, subject, body, { templateId: tpls.restock.brevoTemplateId, params: strTokens(tokens), event: "restock", lang });
+  const res = await espEmail(to, subject, body, { templateId: tpls.restock.brevoTemplateId, params: strTokens(tokens), event: "restock", lang, bodyRaw: tpls.restock.emailBody });
   const status = res.ok ? "sent" : "stubbed"; await log(null, "restock", "email", to, status, [opts.tag, res.detail].filter(Boolean).join(" "));
   return { status, detail: res.detail };
 }
@@ -496,7 +495,7 @@ export async function sendTestAlert(event: AlertEvent, to: string, channelOverri
   }
   const tk = { ...sample, email: to }; // confirm test shows the real recipient in the chip
   const subject = fill(tpls[event].emailSubject, tk), body = fill(tpls[event].emailBody, tk);
-  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: tk, event, lang });
+  const res = await espEmail(to, subject, body, { templateId: tpls[event].brevoTemplateId, params: tk, event, lang, bodyRaw: tpls[event].emailBody });
   await log(null, event, "email", to, res.ok ? "test_sent" : "test_stubbed", res.detail);
   return { status: res.ok ? "sent" : "stubbed", detail: res.detail, channel };
 }
