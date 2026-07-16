@@ -30,7 +30,7 @@ async function main() {
   } as never).returning())[0];
 
   console.log("\n== 1. charged + no_answer statusKey → GRANTED, +1 credit, then ALREADY ==");
-  const bad = await mkCheck(r1.id, { statusKey: "no_answer", chargedAt: now - 3500, callSeconds: 8 });
+  const bad = await mkCheck(r1.id, { statusKey: "nobody_answered", chargedAt: now - 3500, callSeconds: 8 });
   let res = await answerSupport("sess-grant-1", "The check to Target was a dead number, nobody answered and I got charged", { category: "check_issue", account: { id: USER } });
   ok("reply says credited", /put 1 check back/i.test(res.reply), res.reply);
   ok("no escalation", res.escalate === false);
@@ -56,14 +56,14 @@ async function main() {
 
   console.log("\n== 3. failed + never charged → NOT_CHARGED, no credit needed ==");
   await db.delete(callResults);
-  await mkCheck(r1.id, { statusKey: "no_answer", status: "failed", chargedAt: null, callSeconds: 5 });
+  await mkCheck(r1.id, { statusKey: "nobody_answered", status: "failed", chargedAt: null, callSeconds: 5 });
   res = await answerSupport("sess-free-1", "The Target call failed", { category: "check_issue", account: { id: USER } });
   ok("reply says never charged", /never charged/i.test(res.reply), res.reply);
   ok("no escalation", res.escalate === false);
 
   console.log("\n== 4. two stores, vague message → AMBIGUOUS, then naming the store concludes ==");
   await db.delete(callResults);
-  await mkCheck(r1.id, { statusKey: "no_answer", chargedAt: now - 3000, callSeconds: 6 });
+  await mkCheck(r1.id, { statusKey: "nobody_answered", chargedAt: now - 3000, callSeconds: 6 });
   await mkCheck(r2.id, { statusKey: "in_stock", confirmed: true, chargedAt: now - 2000, callSeconds: 120 });
   res = await answerSupport("sess-amb-1", "my check went to a bad number", { category: "check_issue", account: { id: USER } });
   ok("asks which store, lists both", /Which store/i.test(res.reply) && /Target/.test(res.reply) && /GameStop/.test(res.reply), res.reply);
@@ -73,7 +73,7 @@ async function main() {
   console.log("\n== 5. 30-day cap (2 grants exist) → CAP, human review ==");
   // the two grants from above are inside 30d already
   await db.delete(callResults);
-  await mkCheck(r1.id, { statusKey: "no_answer", chargedAt: now - 1000, callSeconds: 4 });
+  await mkCheck(r1.id, { statusKey: "nobody_answered", chargedAt: now - 1000, callSeconds: 4 });
   res = await answerSupport("sess-cap-1", "target was another dead number, credit me", { category: "check_issue", account: { id: USER } });
   ok("cap reached → needs a person", /needs a person/i.test(res.reply), res.reply);
   ok("escalates", res.escalate === true);
@@ -87,13 +87,13 @@ async function main() {
   console.log("\n== 7. signed in, no checks in window → 7-day rule ==");
   await db.delete(callResults);
   await db.delete(supportCreditGrants); // clear the cap so the 7-day rule is what's tested
-  await mkCheck(r1.id, { statusKey: "no_answer", chargedAt: now - 9 * 86400, startedAt: now - 9 * 86400, callSeconds: 5 });
+  await mkCheck(r1.id, { statusKey: "nobody_answered", chargedAt: now - 9 * 86400, startedAt: now - 9 * 86400, callSeconds: 5 });
   res = await answerSupport("sess-old-1", "my target check last month was a bad number", { category: "check_issue", account: { id: USER } });
   ok("older than 7 days → team review", /last 7 days/i.test(res.reply), res.reply);
 
   console.log("\n== 8. Spanish conversation gets Spanish money words ==");
   await db.delete(callResults);
-  await mkCheck(r1.id, { statusKey: "no_answer", chargedAt: now - 500, callSeconds: 7 });
+  await mkCheck(r1.id, { statusKey: "nobody_answered", chargedAt: now - 500, callSeconds: 7 });
   res = await answerSupport("sess-es-1", "el check a Target fue un número malo", { category: "check_issue", account: { id: USER }, lang: "es" });
   ok("ES grant reply", /devolví 1 check/i.test(res.reply), res.reply);
 

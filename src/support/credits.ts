@@ -20,10 +20,11 @@ const CAP_PER_30D = 2;          // auto-grants per account per rolling 30 days (
 const SHORT_CALL_SECS = 25;     // charged but connected under this → nobody really answered
 
 // statusKeys that mean the customer did NOT get what they paid for. A charged check carrying one
-// of these is machine-verifiable evidence on its own.
+// of these is machine-verifiable evidence on its own. Keys mirror the statuses registry seeded in
+// db/bootstrap.ts (nobody_answered, bad_number, …) — keep in sync with it, not with guesses.
 const BAD_KEYS = new Set([
-  "no_answer", "voicemail", "busy", "failed", "left_on_hold", "disconnected",
-  "wrong_number", "no_human", "hung_up", "dead_line",
+  "nobody_answered", "voicemail", "busy", "bad_number", "left_on_hold", "too_busy",
+  "language_barrier", "closed", "failed", "admin_hangup",
 ]);
 
 export type CreditOutcome =
