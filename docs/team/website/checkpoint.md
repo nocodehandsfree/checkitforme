@@ -6,6 +6,23 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash), **I own view/mode/nav** —
 > don't blind-edit the tint, it's fragile.
 
+## ✅ Shipped (07-16 early, batch 7 — owner's late-night list, PR #31)
+1. **Check+ = launch set, Admin-driven**: exact_products OUT of the catalog (every account gets exact
+   asks — hasFeature/premiumAsks ungated), hobby_hunts IN, store_holds/your_voice default OFF until
+   built. Grid + paid-welcome list + "+N more" all render live from /pub/plans.everyPlanGets. Boxes go
+   2-up BIG at ≤6 services, tighten to 4-up as Admin checks more on. Tap a box → bottom sheet explaining
+   the service (copy condensed from the book docs/Check+, wrap-audited EN+ES headless).
+   ⚠️ staging's STORED config still has store_holds/your_voice checked ON (permission classifier blocked
+   me writing the Admin plans config) — owner unchecks 2 boxes in Admin → Plans and they vanish.
+2. **Alerts sheet copy redo** (owner rejected "All for this account" + "cards at Fun"): sub "Every alert
+   you've set up. Turn any off here."; rows = product at store (junk labels fall back to the category
+   name) + one plain sentence for what the alert does. sentLines now also guards sheet copy; digits
+   count as sentence starts.
+3. **Verdict footer consistency**: body.rview main back to site-default flex — footer pins to the bottom
+   edge on short verdicts; dead grey band under © is gone (supersedes 07-10 item 51 by owner 07-15 call).
+4. **Alert language**: /app/email + watch subscribe + auto-check all send lang; server stores it on the
+   account (alerts go out in the customer's language).
+
 ## ✅ Shipped (07-15 night, batch 6 — owner's 9-item list)
 1. **Edit cell** returns to My checks after verify (AUTH_MODE='edit' → openAccount()), redesigned to the
    unified sheet header (phone icon on top, centered, NO wordmark — signup flow keeps the wordmark).
