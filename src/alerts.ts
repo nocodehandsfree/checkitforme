@@ -53,7 +53,7 @@ export const DEFAULT_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   },
   confirm_email: {
     emailSubject: "Confirm your email.",
-    emailBody: "You added this address for alerts. Tap the button to confirm it's yours, then they'll land right here.",
+    emailBody: "You added this address for alerts.",
   },
   auto_check: {
     sms: "Your auto check called {store}. Result: {result}. See it at checkitforme.com",
@@ -78,7 +78,7 @@ export const ES_TEMPLATES: Record<AlertEvent, AlertTemplate> = {
   },
   confirm_email: {
     emailSubject: "Confirma tu correo.",
-    emailBody: "Agregaste este correo para tus alertas. Toca el botón para confirmarlo y empezarán a llegar aquí.",
+    emailBody: "Agregaste este correo para tus alertas.",
   },
   auto_check: {
     sms: "Tu check automático llamó a {store}. {result}. Míralo en checkitforme.com",
@@ -198,8 +198,7 @@ const EMAIL_DESIGN_EN: Record<EmailKind, EmailDesign> = {
   },
   confirm_email: {
     kicker: "CONFIRM YOUR EMAIL", kickerColor: "#4ADE80", headline: "One tap left.",
-    body: ["You added this address for alerts. Tap below to confirm it's yours, then they'll land right here."],
-    module: { type: "chip", text: "{email}" },
+    body: ["You added this address for alerts."],
     cta: "Confirm my email", url: "https://checkitforme.com",
   },
   auto_check: {
@@ -233,8 +232,7 @@ const EMAIL_DESIGN_ES: Record<EmailKind, EmailDesign> = {
   },
   confirm_email: {
     kicker: "CONFIRMA TU CORREO", kickerColor: "#4ADE80", headline: "Un toque más.",
-    body: ["Agregaste este correo para tus alertas. Toca abajo para confirmarlo y empezarán a llegar aquí."],
-    module: { type: "chip", text: "{email}" },
+    body: ["Agregaste este correo para tus alertas."],
     cta: "Confirmar mi correo", url: "https://checkitforme.com",
   },
   auto_check: {
