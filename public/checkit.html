@@ -2958,6 +2958,7 @@ const I18N={ es:{
   'sup.browseall':'Ver todos los artículos de ayuda',
   'sup.greet.bug':'Lamento que algo falló. Cuéntame qué pasó y agrega una captura si puedes.',
   'sup.greet.check':'Perdón, vamos a arreglarlo. ¿Cuál tienda fue y qué salió mal? Un número equivocado, la tienda incorrecta, o un resultado que se ve mal. Una captura ayuda.',
+  'sup.greet.checkfb':'¿Cómo salió tu check? Si algo se ve mal, cuéntame qué pasó y agrega una captura si puedes.',
   'sup.shotok':'Captura adjunta','sup.uploading':'Subiendo…','sup.uploadfail':'No se pudo adjuntar la imagen.',
   'sup.hello':'¡Hola! Pregúntame lo que sea sobre checks, tiendas o planes.',
   'ph.support':'Escribe tu pregunta',
@@ -3240,12 +3241,14 @@ window.addEventListener('touchmove',supTabTuck,{passive:true});
 function supTabClick(){ const w=$('supWrap'); if(w&&w.classList.contains('on')){ closeSupport(); return; }
   // Post-check glow (result page only — body.rview matches the CSS scope): the tab IS the old
   // Tell-us link — straight into "make it right".
-  const st=$('supTab'); if(st&&st.classList.contains('invite')&&document.body.classList.contains('rview')){ openSupportTopic('check_issue'); return; }
+  // Post-check door: nothing is wrong yet, so pass 'result' → the neutral "How did your check go?"
+  // greeting. The apology greeting stays exclusive to picking the problem topic by hand (owner 07-16).
+  const st=$('supTab'); if(st&&st.classList.contains('invite')&&document.body.classList.contains('rview')){ openSupportTopic('check_issue','result'); return; }
   openSupport(); } // one tab, two jobs: open, then close from the same thumb spot (owner 07-14)
 function openSupport(){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supStartNew(); }
 // Open support straight into a specific topic (skips the picker). Used by the "report a problem"
 // link on a check's status/result so a bad number or wrong result lands in check_issue in one tap.
-function openSupportTopic(cat){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supPickTopic(cat); }
+function openSupportTopic(cat,src){ const el=$('supWrap'); el.classList.add('on'); el.setAttribute('aria-hidden','false'); supPickTopic(cat,src); }
 function closeSupport(){ const el=$('supWrap'); el.classList.remove('on'); el.setAttribute('aria-hidden','true');
   // iOS wouldn't repaint its chrome strips after the chat's root tint dropped (bottom stayed the chat
   // color until a manual refresh — owner 07-14). Poke it: drop the keyboard, force a root style
@@ -3331,9 +3334,12 @@ function supStartNew(){ supShow('topic',{title:t('sup.topic.title',"What's it ab
     el.innerHTML=`<div class="rmain"><div class="rtitle">${esc(supCatLabel(k))}</div></div><svg class="rarrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>`;
     box.appendChild(el); });
 }
-function supPickTopic(cat){ SUP_CAT=cat; supFreshChat(); supGo('chat');
+function supPickTopic(cat,src){ SUP_CAT=cat; supFreshChat(); supGo('chat');
   $('sup_clip').classList.toggle('hide',cat!=='bug'&&cat!=='check_issue');
+  // Same topic, two doors: from the result page nothing is wrong yet, so open neutral ("how did it
+  // go?"); the apology greeting is only for people who PICKED "something's wrong" in the topic list.
   const greet=cat==='bug'?t('sup.greet.bug',"Sorry that broke. Tell me what happened and add a screenshot if you can.")
+    :(cat==='check_issue'&&src==='result')?t('sup.greet.checkfb',"How did your check go? If anything looks off, tell me what happened and add a screenshot if you can.")
     :cat==='check_issue'?t('sup.greet.check',"Sorry, let's make it right. Which store was it, and what went wrong? A wrong number, the wrong store, or a result that looks off. A screenshot helps.")
     :t('sup.hello',"Hey! Ask me anything about how checks, stores, or plans work.");
   supBubbleMsg('bot',greet);
