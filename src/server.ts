@@ -34,7 +34,7 @@ import { placeNavCall, navInitialTwiml, navStep, navEnded, getNavSession, NAV_MO
 import { startMapper, stopMapper, mapperState } from "./calls/mapper";
 import { tapedeckCall, tapedeckTwiml, tapedeckStep, tapedeckEnded, tdClip, tdSession, tdTranscript, setDeltaBarge, setDeltaRelay } from "./calls/tapedeck";
 import { startBatch, batchStatus, stopBatch, resumeBatchIfFlagged } from "./calls/trainer-batch";
-import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, type Recipe } from "./calls/recipe";
+import { isDirect, recipeToTreeText, recipeToDtmf, recipeAnswerPath, connectAtSecFor, chainDialable, type Recipe } from "./calls/recipe";
 import { llm, heli } from "./llm";
 import { opsAlert, watchdogTick, watchdogState, backupTick, backupNow, backupState } from "./ops-watch";
 import { harvestHoursTick } from "./hours-harvest";
@@ -5218,15 +5218,27 @@ app.get("/api/admin/tree/list", async (c) => {
   const chs = await db.select().from(chains).orderBy(chains.name);
   const rows = await db.select({ cid: retailers.chainId, n: sql<number>`count(*)` }).from(retailers).where(eq(retailers.active, true)).groupBy(retailers.chainId);
   const cnt = new Map(rows.map((r) => [r.cid, Number(r.n || 0)]));
-  // The mapping board must MATCH the store data: only real, mappable chains. Hide non-mappable rows so
-  // Mapping isn't flying blind through phantom/merge/mall clutter — a chain with 0 active stores has
-  // nothing to call, a muted chain is quarantined (CVS-at-Target, online-only), a "_" name is a retired
-  // merge-stub, and a site-check chain (stockCheckMethod=site, e.g. Micro Center) is NEVER dialed — its
-  // shelf-accurate website is the answer, so it has no phone tree to map and must not look callable here.
-  // `?all=1` returns the unfiltered set for debugging.
+  // Per-chain count of stores we can ACTUALLY dial (real phone, not a `nophone:` placeholder). A chain
+  // with stores but 0 phones can never be mapped no matter how many calls we throw at it — the blocker is
+  // a DATA gap (missing phone numbers), not a phone tree. Surfacing this stops the "all stores closed"
+  // misdiagnosis (e.g. the verified-kiosk groceries — H-E-B et al. — are 100% kiosks with 0 phones on file).
+  const prows = await db.select({ cid: retailers.chainId, n: sql<number>`count(*)` }).from(retailers)
+    .where(and(eq(retailers.active, true), sql`${retailers.phone} is not null and ${retailers.phone} not like 'nophone:%'`)).groupBy(retailers.chainId);
+  const pcnt = new Map(prows.map((r) => [r.cid, Number(r.n || 0)]));
+  // The mapping board must MATCH the store data: only real, DIALABLE chains. chainDialable() is the ONE
+  // shared rule (recipe.ts) the board, the overnight batch, and single-chain map all read — a muted,
+  // call-center (callTarget=false), or site-check chain (stockCheckMethod=site, e.g. Micro Center) is
+  // never dialed, so it must not look callable here either. Plus board-only clutter filters: a chain
+  // with 0 active stores has nothing to call, and a "_" name is a retired merge-stub. `?all=1` = unfiltered.
   const showAll = c.req.query("all") === "1";
-  const visible = showAll ? chs : chs.filter((ch) => !ch.muted && !(ch.name || "").startsWith("_") && (cnt.get(ch.id) || 0) > 0 && ch.stockCheckMethod !== "site");
-  return c.json({ model: TREE_MODEL, chains: visible.map((ch) => ({ id: ch.id, name: ch.name, type: ch.type, stores: cnt.get(ch.id) || 0, treeStatus: ch.treeStatus, ringsDirect: ch.ringsDirect, dtmf: ch.dtmfShortcut, answerPath: ch.answerPath, avgTreeSeconds: ch.avgTreeSeconds, note: ch.treeNote || ch.phoneTreeDefault, learnedAt: ch.treeLearnedAt, verifiedAt: ch.treeVerifiedAt, muted: ch.muted })) });
+  const visible = showAll ? chs : chs.filter((ch) => chainDialable(ch) && !(ch.name || "").startsWith("_") && (cnt.get(ch.id) || 0) > 0);
+  return c.json({ model: TREE_MODEL, chains: visible.map((ch) => {
+    const stores = cnt.get(ch.id) || 0, phones = pcnt.get(ch.id) || 0;
+    // blocker = why this chain can't be mapped even though it's a call target. Today: a data gap where
+    // stores exist but none carry a real phone number (the board shows it so nobody chases hours/trees).
+    const blocker = stores > 0 && phones === 0 ? "no phone numbers on file (data gap)" : null;
+    return { id: ch.id, name: ch.name, type: ch.type, stores, phones, blocker, treeStatus: ch.treeStatus, ringsDirect: ch.ringsDirect, dtmf: ch.dtmfShortcut, answerPath: ch.answerPath, avgTreeSeconds: ch.avgTreeSeconds, note: ch.treeNote || ch.phoneTreeDefault, learnedAt: ch.treeLearnedAt, verifiedAt: ch.treeVerifiedAt, muted: ch.muted };
+  }) });
 });
 app.post("/api/admin/tree/discover", async (c) => {
   const b = (await c.req.json().catch(() => ({}))) as { chainId?: number; count?: number };
@@ -5291,11 +5303,11 @@ app.post("/api/admin/trainer/document", async (c) => {
     }
   }
   if (!r || !r.phone) return c.json({ error: "no callable store for that chain" }, 400);
-  // Respect the global mute list + online-only flag — never trainer-dial a chain with no direct store
-  // line (muted / owner-hidden, or callTarget off = national call-center like Micro Center / Best Buy).
+  // Same shared rule as the board + batch: never trainer-dial a chain we don't call — muted, a national
+  // call-center (callTarget=false, e.g. Micro Center / Best Buy), or a site-check chain (its accurate
+  // website is the answer). chainDialable() is the single source so these can never disagree.
   const _ch = r.chainId != null ? (await db.select().from(chains).where(eq(chains.id, r.chainId)))[0] : undefined;
-  if (_ch?.muted) return c.json({ error: `${_ch.name} is muted — skipped (no trainer call placed)` }, 400);
-  if (_ch?.callTarget === false) return c.json({ error: `${_ch.name} has no direct store line (online-only / call-center) — skipped` }, 400);
+  if (_ch && !chainDialable(_ch)) return c.json({ error: `${_ch.name} isn't a call target (muted / call-center / check-online) — skipped` }, 400);
   if (b.chainId) await db.update(chains).set({ navStatus: "learning", navUpdatedAt: Math.floor(Date.now() / 1000) }).where(eq(chains.id, Number(b.chainId)));
   const res = await placeNavCall(r.chainId, r.id, r.name, r.phone, b.model, b.hint, b.barge, b.reactivePress, confirm);
   return res.error ? c.json({ error: res.error }, 400) : c.json({ sessionId: res.id, store: r.name, confirm: !!confirm });
