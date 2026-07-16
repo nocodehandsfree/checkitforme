@@ -307,8 +307,15 @@ __BRAND_HEAD__
      colour AND the body wash to the regular dark for the duration — the :has() rules undo themselves
      the moment the sheet closes. ID/class specificity + !important out-ranks every tone rule above,
      including the standalone media block and the v2 skin's body background. */
-  html:has(#acctOverlay.on),html:has(#buyOverlay.on),html:has(#pageOverlay.on),html:has(.csheet.on),html:has(#zones.on),html:has(#histOverlay.on),html:has(#zmenuOv.on){background:#0C0C12!important}
-  html:has(#acctOverlay.on) body,html:has(#buyOverlay.on) body,html:has(#pageOverlay.on) body,html:has(.csheet.on) body,html:has(#zones.on) body,html:has(#histOverlay.on) body,html:has(#zmenuOv.on) body{background:var(--bg)!important}
+  html:has(#acctOverlay.on),html:has(#buyOverlay.on),html:has(#pageOverlay.on),html:has(.csheet.on),html:has(#zones.on),html:has(#histOverlay.on),html:has(#zmenuOv.on),html:has(#emailOv.on),html:has(#alertsOv.on),html:has(#featOv.on),html:has(#scorePostOv.on){background:#0C0C12!important}
+  html:has(#acctOverlay.on) body,html:has(#buyOverlay.on) body,html:has(#pageOverlay.on) body,html:has(.csheet.on) body,html:has(#zones.on) body,html:has(#histOverlay.on) body,html:has(#zmenuOv.on) body,html:has(#emailOv.on) body,html:has(#alertsOv.on) body,html:has(#featOv.on) body,html:has(#scorePostOv.on) body{background:var(--bg)!important}
+  /* SHEET-EDGE TINT RETURN (owner 07-16): iOS paints BOTH chrome strips with the ROOT colour — the
+     call page blends because the root equals the page edges. While a sheet is open the root is the
+     dim-dark above, which matches the TOP, but the sheet itself is the grey card — so the bottom
+     strip sat against grey like a slab and the blend died. Same cure as the verdict bloom: the
+     surface returns to the chrome colour at the very edge. A fixed scrim fades every open sheet's
+     last pixels into the root dark so the bottom strip melts into the page again. */
+  html[data-skin="v2"] #acctOverlay.on::after,html[data-skin="v2"] #buyOverlay.on::after,html[data-skin="v2"] #pageOverlay.on::after,html[data-skin="v2"] .csheet.on::after,html[data-skin="v2"] #zones.on::after,html[data-skin="v2"] #histOverlay.on::after,html[data-skin="v2"] #zmenuOv.on::after,html[data-skin="v2"] #emailOv.on::after,html[data-skin="v2"] #alertsOv.on::after,html[data-skin="v2"] #featOv.on::after,html[data-skin="v2"] #scorePostOv.on::after,html[data-skin="v2"] #authOverlay.on::after,html[data-skin="v2"] #againOverlay.on::after,html[data-skin="v2"] #cidOverlay.on::after,html[data-skin="v2"] #kcallOverlay.on::after,html[data-skin="v2"] #leadOverlay.on::after,html[data-skin="v2"] #paidOverlay.on::after,html[data-skin="v2"] #scoreOverlay.on::after,html[data-skin="v2"] #shareOverlay.on::after,html[data-skin="v2"] #waitlistOverlay.on::after,html[data-skin="v2"] #storeReqOverlay.on::after,html[data-skin="v2"] #watchOverlay.on::after,html[data-skin="v2"] #scheduleOverlay.on::after,html[data-skin="v2"] #inviteOverlay.on::after,html[data-skin="v2"] #receiptOverlay.on::after,html[data-skin="v2"] #kioskOverlay.on::after{content:'';position:fixed;left:0;right:0;bottom:0;height:52px;background:linear-gradient(180deg,rgba(12,12,18,0) 0%,rgba(12,12,18,.5) 55%,rgba(12,12,18,1) 100%);pointer-events:none;z-index:9}
   /* Messenger open: tint the ROOT bg to the header colour so iOS samples it for the status strip —
      the header dome then fills seamlessly to the very top edge of the phone (no black notch band). */
   html:has(.supwrap.on){background:#1A1A20!important}
