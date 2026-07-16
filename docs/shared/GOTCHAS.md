@@ -87,3 +87,16 @@ worse than no comment. Several entries below started as wrong comments.)
   `DATABASE_URL=file:...`, `COMP_PHONES=<your test phone>` for gated features, login code `000000`) and
   Playwright-route-stub `/pub/stores/near` + `/app/zones*` with canned JSON. Staging's DB is NOT
   network-reachable (libSQL file on the Railway volume) — don't try to point a local server at it.
+- **Kiosk retailer rows are keyed on the MACHINE, and Pokémon MOVES machines — never patch kiosk rows
+  by DB id across time** (2026-07-16, data lane). The vending overlay (`POST /api/kiosks/overlay`)
+  upserts the TPCi machines list by proximity + `nophone:<chain>:<Q-code>` phone keys and re-stamps
+  `externalStoreId`; when TPCi relocates machine Q-codes between host stores (they do, often), a fresh
+  overlay run REWRITES existing rows into different physical stores — same DB id, new identity. A batch
+  of owner-googled phone numbers was applied by id an hour after export and most landed on the wrong
+  stores (an Austin TX number on a San Leandro CA FoodMaxx), on BOTH envs. Fixed by
+  `scripts/data-tools/fix_kiosk_misdial.py` — the pattern to copy: treat the STREET ADDRESS as store
+  identity; write per-store data only to a row whose normalized address+state (plus a chain-name token —
+  plazas share addresses) matches. Also: once a row carries a REAL phone it can never be phone-key-matched
+  by an import again, so the next overlay run inserts a DUPLICATE row for that address — dedupe by
+  address when ingesting. Root fix (open, data lane): store rows should be keyed by PLACE and machines
+  overlaid via the `kiosks` table, not identity-rewritten into `retailers`.
