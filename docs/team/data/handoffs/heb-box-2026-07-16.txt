@@ -1,0 +1,85 @@
+SENT 2026-07-16 (reconcile owner's response against these ids+addresses; match by ADDRESS not id)
+102703 | H-E-B Lytle | 19337 McDonald St, Lytle, TX 78052
+102704 | H-E-B Culebra Rd | 15489 Culebra Rd, San Antonio, TX 78253
+102705 | H-E-B Pleasanton | 219 W Oaklawn Rd, Pleasanton, TX 78064
+102706 | H-E-B Potranco Rd | 10718 Potranco Rd, San Antonio, TX 78251
+102707 | H-E-B Alamo Ranch Pkwy | 12125 Alamo Ranch Pkwy, San Antonio, TX 78253
+102708 | H-E-B Kerrville | 300 W Main St, Kerrville, TX 78028
+102709 | H-E-B Marbach Rd | 8219 Marbach Rd, San Antonio, TX 78227
+102710 | H-E-B N Loop 1604 W | 9238 N Loop 1604 W, San Antonio, TX 78249
+102711 | H-E-B Bandera Rd | 5601 Bandera Rd, San Antonio, TX 78238
+102712 | H-E-B Babcock Rd | 5910 Babcock Rd, San Antonio, TX 78240
+102713 | H-E-B SW Military Dr | 735 SW Military Dr, San Antonio, TX 78221
+102714 | H-E-B W Bandera Rd | 420 W Bandera Rd, Boerne, TX 78006
+102715 | H-E-B I-10 | 12777 I-10, San Antonio, TX 78230
+102716 | H-E-B I-10 W | 29388 I-10 W, Boerne, TX 78006
+102717 | H-E-B New Braunfels Ave | 4100 New Braunfels Ave, San Antonio, TX 78223
+102718 | H-E-B 6839 San Pedro Ave | 6839 San Pedro Ave, San Antonio, TX 78216
+102719 | H-E-B West Ave | 11551 West Ave, San Antonio, TX 78213
+102720 | H-E-B E Basse Rd | 999 E Basse Rd, San Antonio, TX 78209
+102721 | H-E-B S WW White Rd | 1015 S WW White Rd, San Antonio, TX 78220
+102722 | H-E-B TX-1604 Loop | 1150 TX-1604 Loop, San Antonio, TX 78248
+102724 | H-E-B Baytown | 6430 Garth Rd, Baytown, TX 77521
+102725 | H-E-B Webster | 18611 Eastfield Dr, Webster, TX 77598
+102727 | H-E-B Pearland Pkwy | 2710 Pearland Pkwy, Pearland, TX 77581
+102735 | H-E-B Austin Hwy | 1520 Austin Hwy, San Antonio, TX 78218
+102739 | H-E-B Georgetown | 1010 W University Ave, Georgetown, TX 78628
+102740 | H-E-B Huntsville | 1702 11th St, Huntsville, TX 77340
+102750 | H-E-B Seguin | 1340 E Court St, Seguin, TX 78155
+102751 | H-E-B I 35 N Frontage Rd | 2965 I 35 N Frontage Rd, New Braunfels, TX 78130
+102752 | H-E-B S Walnut Ave | 651 S Walnut Ave, New Braunfels, TX 78130
+102753 | H-E-B Kyle | 5401 Farm to Market 1626, Kyle, TX 78640
+102754 | H-E-B La Vernia | 14414 U.S. Hwy 87 W, La Vernia, TX 78121
+102755 | H-E-B Bastrop | 104 Hasler Blvd, Bastrop, TX 78602
+102756 | H-E-B Cibolo | 850 FM1103 Suite 100, Cibolo, TX 78108
+102757 | H-E-B East Riverside Oltorf | 2508 E Riverside Dr, East Riverside - Oltorf, TX 78741
+102758 | H-E-B Us-290 | 7901 US-290, Austin, TX 78736
+102759 | H-E-B O'Connor Rd | 14087 O'Connor Rd, San Antonio, TX 78247
+102760 | H-E-B Bulverde Rd | 17238 Bulverde Rd, San Antonio, TX 78247
+102761 | H-E-B West Lake Hills | 701 S Capital of Texas Hwy, West Lake Hills, TX 78746
+102762 | H-E-B Manor | 13100 N FM973, Manor, TX 78653
+102763 | H-E-B U.S. Hwy 281 N | 20935 U.S. Hwy 281 N, San Antonio, TX 78258
+102764 | H-E-B 18140 San Pedro Ave | 18140 San Pedro Ave, San Antonio, TX 78232
+102765 | H-E-B Bee Cave | 12400 State Hwy 71, Bee Cave, TX 78738
+102769 | H-E-B E Palm Valley Blvd | 1700 E Palm Valley Blvd, Round Rock, TX 78664
+102770 | H-E-B Cedar Park | 2800 E Whitestone Blvd, Cedar Park, TX 78613
+102771 | H-E-B Gattis School Rd | 3750 Gattis School Rd, Round Rock, TX 78664
+102772 | H-E-B Us-183 | 14028 US-183, Austin, TX 78717
+102773 | H-E-B 11521 N Fm 620 | 11521 N FM 620, Austin, TX 78726
+102774 | H-E-B North Star | 12407 N Mopac Expy, North Star, TX 78758
+102775 | H-E-B 7301 N Fm 620 | 7301 N FM 620, Austin, TX 78726
+102789 | H-E-B Nelson Way | 25675 Nelson Way, Katy, TX 77494
+102790 | H-E-B Morton Ranch Rd | 24924 Morton Ranch Rd, Katy, TX 77493
+102791 | H-E-B Farm to Market Rd 723 | 9211 Farm to Market Rd 723, Richmond, TX 77406
+102792 | H-E-B S Fry Rd | 6711 S Fry Rd, Katy, TX 77494
+102793 | H-E-B Mason Rd | 1621 Mason Rd, Katy, TX 77450
+102801 | H-E-B Manvel | 17119 Hwy 6, Manvel, TX 77578
+102802 | H-E-B Business Center Dr | 2805 Business Center Dr, Pearland, TX 77584
+102803 | H-E-B Kingwood Dr | 4517 Kingwood Dr, Kingwood, TX 77345
+102804 | H-E-B W Lake Houston Pkwy | 12680 W Lake Houston Pkwy, Houston, TX 77044
+102805 | H-E-B Northpark Dr | 19529 Northpark Dr, Kingwood, TX 77339
+102806 | H-E-B Rayford Rd | 3540 Rayford Rd, Spring, TX 77386
+102821 | H-E-B Southwest Fwy | 19900 Southwest Fwy, Sugar Land, TX 77479
+102823 | H-E-B N Shepherd Dr | 2300 N Shepherd Dr, Houston, TX 77008
+102824 | H-E-B Buffalo Speedway | 5225 Buffalo Speedway, Houston, TX 77005
+102825 | H-E-B Bellaire | 5106 Bissonnet St, Bellaire, TX 77401
+102826 | H-E-B Beechnut St | 4955 Beechnut St, Houston, TX 77096
+102827 | H-E-B Tx-242 | 10200 TX-242, Conroe, TX 77385
+102828 | H-E-B Six Pines Dr | 9595 Six Pines Dr, The Woodlands, TX 77380
+102829 | H-E-B Fm 1488 | 3601 FM 1488, Conroe, TX 77384
+102830 | H-E-B Kuykendahl Rd | 10777 Kuykendahl Rd, The Woodlands, TX 77382
+102831 | H-E-B Kuykendahl Rd | 26500 Kuykendahl Rd, Tomball, TX 77375
+102851 | H-E-B Circle Oak Pkwy | 23500 Circle Oak Pkwy, Richmond, TX 77469
+102852 | H-E-B Hwy 6 | 530 Hwy 6, Sugar Land, TX 77478
+102853 | H-E-B W Grand Pkwy S | 10161 W Grand Pkwy S, Richmond, TX 77407
+102854 | H-E-B Jones Rd | 9503 Jones Rd, Houston, TX 77065
+102855 | H-E-B Northwest Fwy | 24224 Northwest Fwy, Cypress, TX 77429
+102856 | H-E-B Fry Rd | 9722 Fry Rd, Cypress, TX 77433
+102857 | H-E-B Fry Rd | 1550 Fry Rd, Houston, TX 77084
+102858 | H-E-B W Davis St | 3875 W Davis St, Conroe, TX 77304
+102859 | H-E-B Magnolia | 7988 FM 1488, Magnolia, TX 77354
+102877 | H-E-B Champion Forest Dr | 20311 Champion Forest Dr, Spring, TX 77379
+102878 | H-E-B Louetta Rd | 7310 Louetta Rd, Spring, TX 77379
+102879 | H-E-B Louetta Rd | 10919 Louetta Rd, Houston, TX 77070
+102880 | H-E-B Tomball Pkwy | 28520 Tomball Pkwy, Tomball, TX 77375
+102881 | H-E-B Spring Cypress Rd | 14100 Spring Cypress Rd, Cypress, TX 77429
