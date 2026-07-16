@@ -3,15 +3,24 @@
 > **Volatile file — update THIS at every "Checkpoint".** Newest on top, bullets not prose,
 > keep under ~80 lines: prune finished items (history lives in git commits, not here).
 
-## 2026-07-16 (later) — EMAIL RENDERING REOPENED BY THE OWNER — dark + gradient lock (attempt 8)
-The "RESOLVED, do not reopen" light design FAILED on the owner's phone: Gmail iOS dark mode does NOT
-darken light emails — his screenshot shows the white card he hates. He reopened it with a new protocol:
-**one change at a time, a real test email to jcoindefi@gmail.com after each, his screenshots are the
-verdict.** Change #1 (commit `emails: dark canvas pinned with the gradient lock`): dark comp back,
-every dark surface painted twice — flat one-color linear-gradient (an IMAGE; Gmail/Outlook never
-repaint images) + bgcolor #000000 fallback (the one value Outlook keeps black). Off-white #F4F4F6 text,
-comp grays, color-scheme dark. Known risk the test verifies: Gmail may still recolor the TEXT over a
-locked background. Test sent 2026-07-16 18:33 UTC — awaiting the owner's screenshot.
+## 2026-07-16 (final) — EMAIL RENDERING: SOLVED + OWNER SIGNED OFF ("OK we're there", "lock it in")
+Ten screenshot-judged rounds. **The mechanism (do NOT re-litigate; the laws live as the comment block
+at the color constants in `src/alerts.ts` — read them before touching ANY email color):** the email is
+AUTHORED as the flat-black design (pure #000000 canvas, yellow kicker, green-RING CTA, white label) —
+Outlook/Apple render it verbatim. A `u + .body` stylesheet (a selector only GMAIL matches) swaps every
+`em-*`-classed element to a light base that Gmail auto-darkens into its gray-card look. Key Gmail
+truths, each one a failed round: it flips text lightness (dark→white, white→dark — so the Gmail CTA
+label is authored near-black to render white), it mangles authored-dark-only emails, gradient locks
+make it dim text, -webkit-text-fill-color is stripped, blend-mode recovery hue-inverts, and
+prefers-color-scheme did NOT drive the good render. All 6 email designs walked and approved by the
+owner (restock, auto_check, store_added, waitlist, confirm_email, instock_owner). Owner trims shipped:
+confirm_email = no tap-instruction line, no address chip; instock_owner = ends at the restock-day
+line (designs may now have empty cta = no button). From-name "Check It For Me" (code + Brevo sender
+#3, done live). Inter @font-face for clients that allow it; Gmail falls back (client limit).
+- NEW OPEN ASK (owner, no-spend): Gmail sender avatar shows "C" — wants the brandmark. Free path: a
+  Google account for noreply@checkitforme.com with the brandmark as photo (needs human phone-verify).
+  BIMI rejected for now (costs money). Leave until he asks again.
+- Promotes stay with PM on the owner's word — these email changes are STAGING-ONLY until then.
 
 ## 2026-07-16 — ALERT EMAILS: full editability (Addie) — HANDOFF
 Prior "one light design" rationale lives in git (`emails: switch to ONE light design`); superseded above.
@@ -26,7 +35,6 @@ Prior "one light design" rationale lives in git (`emails: switch to ONE light de
 1. Store LOGOS by store name — owner agreed to SKIP in email (images blocked → broken box); wants it on
    the WEBSITE alerts view instead (Webbie's lane). Not built.
 2. Copper to fold my tightened restock/auto_check wording into COPY_STYLE_GUIDE.md.
-3. Owner still to eyeball the LIGHT version in Gmail and bless it.
 4. Webbie owes: My Checks email row + alerts slide-up (?alerts=1 deep link) + email-edit UI; the
    footer "Manage alerts" link points there. Waitlist has NO signup front-end yet.
 
