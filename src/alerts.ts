@@ -284,13 +284,16 @@ const D = { // authored dark = the flat-black comp (Outlook screenshot-approved 
   ctaLine: "#4ADE80", ctaInk: "#FFFFFF", step: "#22222A",
 };
 const L = { // Gmail-only light base (u + .body). Gmail auto-darkens this into its gray-card look.
+  // Gmail's remix INVERTS text lightness: dark text renders WHITE in its dark mode (the headline
+  // proves it every round) and white text gets darkened (the two dead CTA-label rounds). So the CTA
+  // label is authored near-black — dark-on-green in Gmail light, WHITE-on-green in Gmail dark.
   board: "#F7F7FA", card: "#EDEDF3", ink: "#15151B", p1: "#3F3F4A", p2: "#55555F",
   muted: "#77777F", box: "#FBFBFD", boxLine: "#E4E4EA", tint: "#E7F6EC", tintInk: "#15803D",
-  div: "#E4E4EA", cta: "#15803D", ctaInk: "#FFFFFF", step: "#E9E9F0",
+  div: "#E4E4EA", cta: "#22C55E", ctaInk: "#0B2013", step: "#E9E9F0",
 };
 // Gmail kickers: warm cuts whose auto-darkened output lands near the authored color. The yellow
 // maps to amber-600 so Gmail's remix reads orange-gold next to BACK IN STOCK (owner ask), not brown.
-const KICKER_GMAIL: Record<string, string> = { "#4ADE80": "#16A34A", "#FFCB05": "#D97706", "#A78BFA": "#7C3AED" };
+const KICKER_GMAIL: Record<string, string> = { "#4ADE80": "#16A34A", "#FFCB05": "#F59E0B", "#A78BFA": "#7C3AED" };
 function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | number | undefined>): string {
   if (!m) return "";
   const box = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="em-mod" bgcolor="${D.box}" style="background:${D.box};border:1px solid ${D.boxLine};border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
