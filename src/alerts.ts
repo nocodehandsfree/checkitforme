@@ -256,7 +256,7 @@ function fillRaw(t: string, tokens: Record<string, string | number | undefined>)
 function fillHtmlBold(t: string, tk: Record<string, string | number | undefined>): string {
   return t.split(/(\*\*[^*]+\*\*)/).map((seg) => {
     const m = seg.match(/^\*\*([^*]+)\*\*$/);
-    if (m) return `<b style="color:#F4F4F6;font-weight:700">${escHtml(fillRaw(m[1], tk))}</b>`;
+    if (m) return `<b style="${ink("#F4F4F6")};font-weight:700">${escHtml(fillRaw(m[1], tk))}</b>`;
     return escHtml(fillRaw(seg, tk));
   }).join("");
 }
@@ -283,18 +283,22 @@ const TINT = "#122019";  // green-tint chip fill (comp)
 const lock = (c: string) => `background-color:${BLACK};background-image:linear-gradient(${c},${c})`;
 /** Module fill: gradient only — where gradients don't render it falls back to the black board. */
 const boxLock = (c: string) => `background-image:linear-gradient(${c},${c})`;
+/** Text lock (change #2): Gmail's dark pass rewrites `color` (the dimmed-gray headline on the owner's
+ *  screenshot) but not -webkit-text-fill-color — and Gmail/Outlook mobile render on WebKit/Blink,
+ *  where fill-color beats color. `color` stays in as the fallback for non-WebKit engines. */
+const ink = (c: string) => `color:${c};-webkit-text-fill-color:${c}`;
 function moduleHtml(m: EmailModule | undefined, tk: Record<string, string | number | undefined>): string {
   if (!m) return "";
   const box = (inner: string, pad = "15px 18px", radius = 14) => `<tr><td style="padding-top:20px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${boxLock(BOXBG)};border:1px solid ${HAIR};border-radius:${radius}px"><tr><td style="padding:${pad}">${inner}</td></tr></table></td></tr>`;
-  if (m.type === "chip") return box(`<span style="font-size:15px;font-weight:700;color:${TXT};font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
+  if (m.type === "chip") return box(`<span style="font-size:15px;font-weight:700;${ink(TXT)};font-family:${FONT}">${escHtml(fill(m.text, tk))}</span>`);
   if (m.type === "product") return box(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-    <td style="font-family:${FONT}"><div style="font-size:16px;font-weight:800;color:${TXT}">${escHtml(fill(m.title, tk))}</div><div style="font-size:12.5px;font-weight:600;color:${BODY2};margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
-    <td align="right" valign="middle"><span style="display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.6px;color:${GRN};${boxLock(TINT)};border:1px solid ${HAIR};border-radius:999px;padding:5px 11px;font-family:${FONT}">${escHtml(m.badge)}</span></td></tr></table>`, "16px 18px", 16);
+    <td style="font-family:${FONT}"><div style="font-size:16px;font-weight:800;${ink(TXT)}">${escHtml(fill(m.title, tk))}</div><div style="font-size:12.5px;font-weight:600;${ink(BODY2)};margin-top:4px">${escHtml(fill(m.sub, tk))}</div></td>
+    <td align="right" valign="middle"><span style="display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.6px;${ink(GRN)};${boxLock(TINT)};border:1px solid ${HAIR};border-radius:999px;padding:5px 11px;font-family:${FONT}">${escHtml(m.badge)}</span></td></tr></table>`, "16px 18px", 16);
   const rows = m.steps.map((s, i) => {
     const last = i === m.steps.length - 1;
     return `${i ? `<tr><td colspan="2" style="padding:0 18px"><div style="height:1px;line-height:1px;font-size:0;background:#26262E">&nbsp;</div></td></tr>` : ""}<tr>
-    <td width="57" valign="middle" style="padding:${i ? "12px" : "16px"} 0 ${last ? "16px" : "12px"} 18px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="26" height="26" align="center" valign="middle" style="width:26px;height:26px;border-radius:50%;${boxLock(TINT)};color:${GRN};font-size:12px;font-weight:800;font-family:${FONT}">${escHtml(s[0])}</td></tr></table></td>
-    <td valign="middle" style="padding:${i ? "12px" : "16px"} 18px ${last ? "16px" : "12px"} 0;font-size:15px;font-weight:${last ? 700 : 600};color:${TXT};font-family:${FONT}">${escHtml(s[1])}</td></tr>`;
+    <td width="57" valign="middle" style="padding:${i ? "12px" : "16px"} 0 ${last ? "16px" : "12px"} 18px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="26" height="26" align="center" valign="middle" style="width:26px;height:26px;border-radius:50%;${boxLock(TINT)};${ink(GRN)};font-size:12px;font-weight:800;font-family:${FONT}">${escHtml(s[0])}</td></tr></table></td>
+    <td valign="middle" style="padding:${i ? "12px" : "16px"} 18px ${last ? "16px" : "12px"} 0;font-size:15px;font-weight:${last ? 700 : 600};${ink(TXT)};font-family:${FONT}">${escHtml(s[1])}</td></tr>`;
   }).join("");
   return `<tr><td style="padding-top:22px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="${boxLock(BOXBG)};border:1px solid ${HAIR};border-radius:16px">${rows}</table></td></tr>`;
 }
@@ -323,8 +327,8 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
   const kick = d.kickerColor;
   // Paragraphs whose tokens fill to nothing (e.g. no restock day heard) are dropped, not rendered as gaps.
   const bodyHtml = bodyLines.filter((p) => fill(p.replace(/\*\*/g, ""), tokens)).map((p, i) => i === 0
-    ? `<tr><td style="padding-top:15px;font-size:17px;line-height:1.5;color:${BODY1};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
-    : `<tr><td style="padding-top:16px;font-size:14px;line-height:1.5;color:${BODY2};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
+    ? `<tr><td style="padding-top:15px;font-size:17px;line-height:1.5;${ink(BODY1)};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`
+    : `<tr><td style="padding-top:16px;font-size:14px;line-height:1.5;${ink(BODY2)};font-family:${FONT}">${fillHtmlBold(p, tokens)}</td></tr>`).join("");
   const ctaLabel = `${escHtml(d.cta).toUpperCase()}&nbsp;&nbsp;&rarr;`;
   // Capsule CTA: green RING on the locked dark fill, off-white label (the site's button, screenshot-
   // approved). Outlook can't round a td, so MSO gets a VML roundrect (arcsize 50% = full capsule) with
@@ -333,17 +337,17 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
     <!--[if mso]>
     <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:52px;v-text-anchor:middle;width:520px;" arcsize="50%" strokecolor="${GRN}" strokeweight="1px" fillcolor="${BLACK}">
       <w:anchorlock/>
-      <center style="color:${TXT};font-family:Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.6px;">${ctaLabel}</center>
+      <center style="${ink(TXT)};font-family:Arial,sans-serif;font-size:14px;font-weight:800;letter-spacing:1.6px;">${ctaLabel}</center>
     </v:roundrect>
     <![endif]-->
     <!--[if !mso]><!-->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
       <td align="center" bgcolor="${BLACK}" style="${lock(BOARD)};border:1px solid ${GRN};border-radius:999px">
-        <a href="${url}" style="display:block;padding:19px 24px;color:${TXT};font-weight:800;font-size:14px;letter-spacing:1.6px;text-decoration:none;font-family:${FONT};text-transform:uppercase">${ctaLabel}</a>
+        <a href="${url}" style="display:block;padding:19px 24px;${ink(TXT)};font-weight:800;font-size:14px;letter-spacing:1.6px;text-decoration:none;font-family:${FONT};text-transform:uppercase">${ctaLabel}</a>
       </td></tr></table>
     <!--<![endif]-->
   </td></tr>`;
-  const footer = `<a href="${manageUrl}" style="color:${BODY2};text-decoration:none">${lang === "es" ? "Administrar alertas" : "Manage alerts"}</a>`;
+  const footer = `<a href="${manageUrl}" style="${ink(BODY2)};text-decoration:none">${lang === "es" ? "Administrar alertas" : "Manage alerts"}</a>`;
   // ONE dark email, canvas pinned by the gradient lock (see the color block above for the whole story).
   // color-scheme "dark" tells the clients that honor it this email is already dark — leave it alone.
   return `<!doctype html>
@@ -359,14 +363,14 @@ export function renderBrandedEmail(event: EmailKind, _subject: string, bodyRaw =
       <tr><td bgcolor="${BLACK}" style="${lock(BOARD)};padding:30px 26px 0"><img src="https://checkitforme.com/logos/brand/check-brandmark-1024.png" width="40" height="40" alt="Check" style="display:block;width:40px;height:40px;border:0"></td></tr>
       <tr><td bgcolor="${BLACK}" style="${lock(BOARD)};padding:24px 26px 0">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr><td style="font-size:11px;font-weight:700;letter-spacing:1.6px;color:${kick};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
-          <tr><td style="padding-top:12px;font-size:34px;font-weight:900;color:${TXT};line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
+          <tr><td style="font-size:11px;font-weight:700;letter-spacing:1.6px;${ink(kick)};font-family:${FONT}">${escHtml(d.kicker)}</td></tr>
+          <tr><td style="padding-top:12px;font-size:34px;font-weight:900;${ink(TXT)};line-height:1.08;letter-spacing:-1px;font-family:${FONT}">${escHtml(fill(d.headline, tokens))}</td></tr>
           ${bodyHtml}
           ${moduleHtml(d.module, tokens)}
           ${cta}
         </table>
       </td></tr>
-      <tr><td bgcolor="${BLACK}" style="${lock(BOARD)};padding:26px 26px 34px;font-family:${FONT};font-size:12.5px;color:${BODY2}">${footer}</td></tr>
+      <tr><td bgcolor="${BLACK}" style="${lock(BOARD)};padding:26px 26px 34px;font-family:${FONT};font-size:12.5px;${ink(BODY2)}">${footer}</td></tr>
     </table>
     <!--[if mso]></td></tr></table><![endif]-->
   </td></tr></table></body></html>`;
