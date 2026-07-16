@@ -6,6 +6,14 @@
 > the other dev: **he owns the tint CSS** (`__bootTone`/`tone-*`/body wash/sheet chrome), **I own
 > view/mode/nav** — don't blind-edit the tint, it's fragile (see the hard lesson below).
 
+## 🔧 07-16 EVENING pt2 — result page: support tab replaces the Tell-us link (driven live, PASS)
+- "Something wrong with this check? Tell us" link REMOVED (its ES string too). On a SETTLED result the
+  bottom-right support tab slides out (supSlideIn) + breathes the check button's green glow
+  (supInviteGlow, rCtaGlow family); tap = openSupportTopic('check_issue') → "make it right" greet.
+- Scope is belt-and-suspenders: `.invite` class (showResult adds, navMark/backToBuilder remove) AND
+  CSS+tap gated on `body.rview` — backToBuilder skips navMark, so class-only scoping leaked. Pending
+  results and every other page: tab untouched; chat-open close-tab state kills the glow.
+
 ## 🔧 07-16 EVENING — PTR back + per-tier Check+ grid (both driven live on staging, PASS)
 - **Pull-to-refresh restored.** The Android pass's blanket `overscroll-behavior-y:none` killed the
   owner's pull-to-refresh. Now PTR is blocked ONLY mid-flow (`.overlay.on`, `.csheet.on`, `.supwrap.on`,
