@@ -41,14 +41,19 @@ replies to get good — which launching Charlie *generates*. So Charlie-first is
 unknown-set fallback, restock-day push, "Hello?" on dead-quiet pickup. Cheap-lane econ (connect-on-
 human bridge + bail rules) already live → ~5¢/call. This is the launch lane; tune persona/voice next.
 
-**SELF-LEARNING (owner priority — question pending, see reply):**
-- Have TODAY: every call stores full transcript + verdict + timing in `call_results`; verdict
-  reconcile logs agree/disagree; Helicone logs every classify/verdict LLM call. Nav/IVR layer already
-  self-improves (tree learning). = raw material is captured.
-- DON'T have: an automated loop that mines transcripts into a "clerk-said-X → correct-response /
-  situation-type" library — exactly what a future Delta needs. Proposed minimal build: a recurring
-  "learning pass" (agent/cron) over recent calls → append findings to a growing conditions doc + a
-  mishear/alias list the classifiers already read. NOT built. Awaiting owner go/park.
+**SELF-LEARNING = THE priority right after Charlie sounds perfect (owner 07-16, ABOVE Delta).**
+Owner's goal: every call makes the system smarter/sharper on its own. Corpus EXISTS — prod has ~107
+calls, ~96 completed w/ transcripts+verdicts (~65 with a real in/out answer, 20 "no clear answer").
+Feedback plumbing half-built: `call_feedback` table + admin review + a front-end unclear-only survey,
+but it has 0 rows (never fed). The auto-vs-owner split we're building to:
+- AUTOMATIC (no owner notes): mine transcripts for clerk phrasings per verdict, mishears (tin→10),
+  opener answer-rate → auto-score/promote, timing/cost, and the reader-disagreements it already flags.
+  Nav/IVR tree learning already self-improves. = anything objective/measurable from the call itself.
+- NEEDS THE OWNER: ground truth on ambiguous/wrong verdicts (only a human who heard it knows), and
+  taste ("sounded weird/robotic/too fast"). Minimum-effort capture = a MASTER-ACCOUNT front-end flag
+  (owner's number) → right/wrong/sounded-weird tap on ANY call → writes the training table.
+Build plan (park until Charlie is dialed in): (1) read-only mining pass over existing calls (my lane,
+invisible), (2) master-account flag — backend mine, button = Webbie's checkit.html. NOT started.
 
 **OPEN (priority order):**
 1. Fine-tune Charlie for launch: persona on Branson Global, voice, opener, pacing — one change at a time.
