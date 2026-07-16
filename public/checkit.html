@@ -309,17 +309,6 @@ __BRAND_HEAD__
      including the standalone media block and the v2 skin's body background. */
   html:has(#acctOverlay.on),html:has(#buyOverlay.on),html:has(#pageOverlay.on),html:has(.csheet.on),html:has(#zones.on),html:has(#histOverlay.on),html:has(#zmenuOv.on),html:has(#emailOv.on),html:has(#alertsOv.on),html:has(#featOv.on),html:has(#scorePostOv.on){background:#0C0C12!important}
   html:has(#acctOverlay.on) body,html:has(#buyOverlay.on) body,html:has(#pageOverlay.on) body,html:has(.csheet.on) body,html:has(#zones.on) body,html:has(#histOverlay.on) body,html:has(#zmenuOv.on) body,html:has(#emailOv.on) body,html:has(#alertsOv.on) body,html:has(#featOv.on) body,html:has(#scorePostOv.on) body{background:var(--bg)!important}
-  /* STRUCTURAL (PM 07-16) — WHY the two reverted tint attempts never held: the edge scrim lived on
-     the open sheet's own ::after with position:fixed, but the sheets are TRANSFORMED (translateY
-     slide), and a transformed ancestor becomes the containing block for fixed descendants — so
-     "bottom:0" pinned the scrim to the SHEET's box, not the phone's edge. The CSS always looked
-     right and always landed in the wrong place; recoloring it could never fix it. These scrims live
-     on body::before/::after (body is never transformed) gated by :has(open sheet) — genuinely
-     viewport-pinned, top AND bottom, above every sheet layer (overlays run z-4000). Colors match
-     the sheet-open root #0C0C12 above: both iOS strips melt into the dimmed page and the sheet
-     edge instead of seaming. The dim/root/chrome colours themselves are untouched. */
-  html[data-skin="v2"]:has(#acctOverlay.on,#buyOverlay.on,#pageOverlay.on,.csheet.on,#zones.on,#histOverlay.on,#zmenuOv.on,#emailOv.on,#alertsOv.on,#featOv.on,#scorePostOv.on,#authOverlay.on,#againOverlay.on,#cidOverlay.on,#kcallOverlay.on,#leadOverlay.on,#paidOverlay.on,#scoreOverlay.on,#shareOverlay.on,#waitlistOverlay.on,#storeReqOverlay.on,#watchOverlay.on,#scheduleOverlay.on,#inviteOverlay.on,#receiptOverlay.on,#kioskOverlay.on) body::after{content:'';position:fixed;left:0;right:0;bottom:0;height:52px;background:linear-gradient(180deg,rgba(12,12,18,0) 0%,rgba(12,12,18,.5) 55%,rgba(12,12,18,1) 100%);pointer-events:none;z-index:9999}
-  html[data-skin="v2"]:has(#acctOverlay.on,#buyOverlay.on,#pageOverlay.on,.csheet.on,#zones.on,#histOverlay.on,#zmenuOv.on,#emailOv.on,#alertsOv.on,#featOv.on,#scorePostOv.on,#authOverlay.on,#againOverlay.on,#cidOverlay.on,#kcallOverlay.on,#leadOverlay.on,#paidOverlay.on,#scoreOverlay.on,#shareOverlay.on,#waitlistOverlay.on,#storeReqOverlay.on,#watchOverlay.on,#scheduleOverlay.on,#inviteOverlay.on,#receiptOverlay.on,#kioskOverlay.on) body::before{content:'';position:fixed;left:0;right:0;top:0;height:52px;background:linear-gradient(180deg,rgba(12,12,18,1) 0%,rgba(12,12,18,.5) 45%,rgba(12,12,18,0) 100%);pointer-events:none;z-index:9999}
   /* Messenger open: tint the ROOT bg to the header colour so iOS samples it for the status strip —
      the header dome then fills seamlessly to the very top edge of the phone (no black notch band). */
   html:has(.supwrap.on){background:#1A1A20!important}
