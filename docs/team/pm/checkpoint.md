@@ -18,6 +18,10 @@
 
 ## Open queue (after the Charlie/card session)
 1. Pops: one `ship-admin.sh` rehearsal → Addie ships Admin UI in seconds, no promotes.
+1b. Pops building NOW: settings mirror PROD→STAGING (vt_plans, feature/service toggles) so Admin
+    data edits show on the staging site in ~1 min. ONE direction; prod = truth for settings.
+    PM verifies the pipe moves a real change before the owner trusts it. Owner tests staging-first;
+    peek reserved for prod testing later (he is on Echo work until then).
 2. Pops small build: enforce per-tier SMS caps (`smsAlertsPerMonth` is plan-data-only today).
 3. Owner: Twilio A2P (waiting on Twilio; gates SMS alerts) · Discord server · #379/#364 yes/no ·
    LEGAL/consent (critical GTM, owner-owned, un-started) · hide hobby chains in Admin.
