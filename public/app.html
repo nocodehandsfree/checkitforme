@@ -2058,7 +2058,7 @@ function numInput(val,oninput,w){ return '<input type="number" min="0" step="1" 
 // recomputes premiumAsks server-side, so unchecking it turns off the exact-product asks too.
 function featMatrix(t,i){
   const feats=(PLANS.features||[]); if(!feats.length) return '';
-  const cell=f=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" ${t.features&&t.features[f.key]?'checked':''} onchange="if(!PLANS.tiers[${i}].features)PLANS.tiers[${i}].features={};PLANS.tiers[${i}].features['${f.key}']=this.checked;plansTouch(${i})" style="width:16px;height:16px;accent-color:var(--green)"><span style="font-size:12.5px;color:var(--text-muted)">${esch(f.label)}</span></label>`;
+  const cell=f=>`<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" ${t.features&&t.features[f.key]?'checked':''} onchange="if(!PLANS.tiers[${i}].features)PLANS.tiers[${i}].features={};PLANS.tiers[${i}].features['${f.key}']=this.checked;plansTouch(${i},true)" style="width:16px;height:16px;accent-color:var(--green)"><span style="font-size:12.5px;color:var(--text-muted)">${esch(f.label)}</span></label>`;
   return `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
     <div style="font-size:11px;letter-spacing:.08em;color:var(--text-tertiary);font-weight:700;margin-bottom:9px">FEATURES IN THIS TIER</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px 14px">${feats.map(cell).join('')}</div></div>`;
@@ -2096,17 +2096,22 @@ function renderPlans(){
     <div class="card report">${PLANS.payg.bundles.map(bundleRow).join('')}</div>`;
 }
 // A local edit flips the row to "pending" and auto-saves the config (draft); Publish pushes to Stripe.
+// `fast` (checkbox flips) saves near-instantly — the 600ms debounce is for typing, and an owner who
+// unchecks a feature and leaves the page within it used to lose the edit SILENTLY (owner 07-16).
 let _plansSaveT=null;
-function plansTouch(i){
+function plansTouch(i,fast){
   if(typeof i==='number'&&PLANS.tiers[i]) PLANS.tiers[i].sync='pending';
   PLANS.payg.bundles.forEach(b=>{ if(b.pubCents!==b.cents||!b.priceId) b.sync='pending'; });
-  clearTimeout(_plansSaveT); _plansSaveT=setTimeout(savePlansDraft,600);
+  clearTimeout(_plansSaveT); _plansSaveT=setTimeout(savePlansDraft, fast?60:600);
 }
+window.addEventListener('pagehide',()=>{ if(_plansSaveT){ clearTimeout(_plansSaveT); _plansSaveT=null; savePlansDraft(); } }); // best-effort flush so a quick exit can't drop a pending edit
 async function savePlansDraft(){
+  _plansSaveT=null;
   const body={ tiers:PLANS.tiers.map(t=>({key:t.key,name:t.name,monthlyCents:t.monthlyCents,annualCents:t.annualCents,checksPerMonth:t.checksPerMonth,premiumAsks:t.premiumAsks,features:t.features})),
     payg:PLANS.payg.bundles.map(b=>({checks:b.checks,cents:b.cents})) };
   const r=await api('/api/admin/plans',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-  if(r&&!r.error){ PLANS=r; renderPlans(); }
+  if(r&&!r.error){ PLANS=r; renderPlans(); toast('Saved · live on the site'); }
+  else toast('NOT saved — that edit did not go through. Try it again.'); // never lose an owner edit silently
 }
 async function publishPlans(){
   if(!confirm('Publish these prices to Stripe? This creates new Stripe Prices and archives the old ones (existing subscribers keep their current price until they change plans). Products are never deleted.')) return;
